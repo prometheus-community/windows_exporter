@@ -1,4 +1,5 @@
 // returns data points from Win32_OperatingSystem
+// https://msdn.microsoft.com/en-us/library/aa394239(v=vs.85).aspx
 
 package collectors
 
@@ -11,11 +12,14 @@ import (
 
 // A OSCollector is a Prometheus collector for WMI OperatingSystem metrics
 type OSCollector struct {
-	FreePhysicalMemory     *prometheus.Desc
-	FreeSpaceInPagingFiles *prometheus.Desc
-	FreeVirtualMemory      *prometheus.Desc
-	NumberOfProcesses      *prometheus.Desc
-	NumberOfUsers          *prometheus.Desc
+	FreePhysicalMemory      *prometheus.Desc
+	FreeSpaceInPagingFiles  *prometheus.Desc
+	FreeVirtualMemory       *prometheus.Desc
+	NumberOfProcesses       *prometheus.Desc
+	NumberOfUsers           *prometheus.Desc
+	SizeStoredInPagingFiles *prometheus.Desc
+	TotalVirtualMemorySize  *prometheus.Desc
+	TotalVisibleMemorySize  *prometheus.Desc
 }
 
 // NewOSCollector ...
@@ -24,35 +28,56 @@ func NewOSCollector() *OSCollector {
 	return &OSCollector{
 		FreePhysicalMemory: prometheus.NewDesc(
 			prometheus.BuildFQName(wmiNamespace, "os", "free_physical_memory"),
-			"Free physical memory.",
+			"Number, in kilobytes, of physical memory currently unused and available.",
 			nil,
 			nil,
 		),
 
 		FreeSpaceInPagingFiles: prometheus.NewDesc(
 			prometheus.BuildFQName(wmiNamespace, "os", "free_space_in_paging_files"),
-			"Free space in paging files.",
+			"Number, in kilobytes, that can be mapped into the operating system paging files without causing any other pages to be swapped out.",
 			nil,
 			nil,
 		),
 
 		FreeVirtualMemory: prometheus.NewDesc(
 			prometheus.BuildFQName(wmiNamespace, "os", "free_virtual_memory"),
-			"Free virtual memory.",
+			"Number, in kilobytes, of virtual memory currently unused and available.",
 			nil,
 			nil,
 		),
 
 		NumberOfProcesses: prometheus.NewDesc(
 			prometheus.BuildFQName(wmiNamespace, "os", "number_of_processes"),
-			"No. of processes running on the system.",
+			"Number of process contexts currently loaded or running on the operating system.",
 			nil,
 			nil,
 		),
 
 		NumberOfUsers: prometheus.NewDesc(
 			prometheus.BuildFQName(wmiNamespace, "os", "number_of_users"),
-			"No. of users logged in.",
+			"Number of user sessions for which the operating system is storing state information currently.",
+			nil,
+			nil,
+		),
+
+		SizeStoredInPagingFiles: prometheus.NewDesc(
+			prometheus.BuildFQName(wmiNamespace, "os", "size_stored_in_paging_files"),
+			"Total number of kilobytes that can be stored in the operating system paging files.",
+			nil,
+			nil,
+		),
+
+		TotalVirtualMemorySize: prometheus.NewDesc(
+			prometheus.BuildFQName(wmiNamespace, "os", "total_virtual_memory_size"),
+			"Number, in kilobytes, of virtual memory.",
+			nil,
+			nil,
+		),
+
+		TotalVisibleMemorySize: prometheus.NewDesc(
+			prometheus.BuildFQName(wmiNamespace, "os", "total_visible_memory_size"),
+			"Total amount, in kilobytes, of physical memory available to the operating system.",
 			nil,
 			nil,
 		),
@@ -77,14 +102,20 @@ func (c *OSCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- c.FreeVirtualMemory
 	ch <- c.NumberOfProcesses
 	ch <- c.NumberOfUsers
+	ch <- c.SizeStoredInPagingFiles
+	ch <- c.TotalVirtualMemorySize
+	ch <- c.TotalVisibleMemorySize
 }
 
 type Win32_OperatingSystem struct {
-	FreePhysicalMemory     uint64
-	FreeSpaceInPagingFiles uint64
-	FreeVirtualMemory      uint64
-	NumberOfProcesses      uint32
-	NumberOfUsers          uint32
+	FreePhysicalMemory      uint64
+	FreeSpaceInPagingFiles  uint64
+	FreeVirtualMemory       uint64
+	NumberOfProcesses       uint32
+	NumberOfUsers           uint32
+	SizeStoredInPagingFiles uint64
+	TotalVirtualMemorySize  uint64
+	TotalVisibleMemorySize  uint64
 }
 
 func (c *OSCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
@@ -122,6 +153,24 @@ func (c *OSCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, er
 		c.NumberOfUsers,
 		prometheus.GaugeValue,
 		float64(dst[0].NumberOfUsers),
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.SizeStoredInPagingFiles,
+		prometheus.GaugeValue,
+		float64(dst[0].SizeStoredInPagingFiles),
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.TotalVirtualMemorySize,
+		prometheus.GaugeValue,
+		float64(dst[0].TotalVirtualMemorySize),
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.TotalVisibleMemorySize,
+		prometheus.GaugeValue,
+		float64(dst[0].TotalVisibleMemorySize),
 	)
 
 	return nil, nil
