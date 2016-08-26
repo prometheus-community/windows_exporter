@@ -1,5 +1,6 @@
 // returns data points from Win32_OperatingSystem
-// https://msdn.microsoft.com/en-us/library/aa394239(v=vs.85).aspx
+// https://msdn.microsoft.com/en-us/library/aa394239(v=vs.85).aspx - Win32_OperatingSystem class
+// https://msdn.microsoft.com/en-us/library/aa387937(v=vs.85).aspx - CIM_OperatingSystem class
 
 package collectors
 
@@ -15,6 +16,8 @@ type OSCollector struct {
 	FreePhysicalMemory      *prometheus.Desc
 	FreeSpaceInPagingFiles  *prometheus.Desc
 	FreeVirtualMemory       *prometheus.Desc
+	MaxNumberOfProcesses    *prometheus.Desc
+	MaxProcessMemorySize    *prometheus.Desc
 	NumberOfProcesses       *prometheus.Desc
 	NumberOfUsers           *prometheus.Desc
 	SizeStoredInPagingFiles *prometheus.Desc
@@ -43,6 +46,20 @@ func NewOSCollector() *OSCollector {
 		FreeVirtualMemory: prometheus.NewDesc(
 			prometheus.BuildFQName(wmiNamespace, "os", "free_virtual_memory"),
 			"Number, in kilobytes, of virtual memory currently unused and available.",
+			nil,
+			nil,
+		),
+
+		MaxNumberOfProcesses: prometheus.NewDesc(
+			prometheus.BuildFQName(wmiNamespace, "os", "max_number_of_processes"),
+			"Maximum number of process contexts the operating system can support.",
+			nil,
+			nil,
+		),
+
+		MaxProcessMemorySize: prometheus.NewDesc(
+			prometheus.BuildFQName(wmiNamespace, "os", "max_process_memory_size"),
+			"Maximum number, in kilobytes, of memory that can be allocated to a process.",
 			nil,
 			nil,
 		),
@@ -100,6 +117,8 @@ func (c *OSCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- c.FreePhysicalMemory
 	ch <- c.FreeSpaceInPagingFiles
 	ch <- c.FreeVirtualMemory
+	ch <- c.MaxNumberOfProcesses
+	ch <- c.MaxProcessMemorySize
 	ch <- c.NumberOfProcesses
 	ch <- c.NumberOfUsers
 	ch <- c.SizeStoredInPagingFiles
@@ -111,11 +130,15 @@ type Win32_OperatingSystem struct {
 	FreePhysicalMemory      uint64
 	FreeSpaceInPagingFiles  uint64
 	FreeVirtualMemory       uint64
+	MaxNumberOfProcesses    uint32
+	MaxProcessMemorySize    uint64
 	NumberOfProcesses       uint32
 	NumberOfUsers           uint32
 	SizeStoredInPagingFiles uint64
 	TotalVirtualMemorySize  uint64
 	TotalVisibleMemorySize  uint64
+	//NumberOfLicensedUsers   *uint32 // XXX returns 0 on Win7
+	//TotalSwapSpaceSize      *uint64 // XXX returns 0 on Win7
 }
 
 func (c *OSCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
@@ -141,6 +164,18 @@ func (c *OSCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, er
 		c.FreeVirtualMemory,
 		prometheus.GaugeValue,
 		float64(dst[0].FreeVirtualMemory),
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.MaxNumberOfProcesses,
+		prometheus.GaugeValue,
+		float64(dst[0].MaxNumberOfProcesses),
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.MaxProcessMemorySize,
+		prometheus.GaugeValue,
+		float64(dst[0].MaxProcessMemorySize),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
