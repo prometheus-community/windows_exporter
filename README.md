@@ -18,7 +18,7 @@ perf | Exposes Win32_PerfRawData_PerfDisk_LogicalDisk metrics (disk I/O)
 
 ## Roadmap
 
-See [Wiki](wiki/TODO)
+See [Wiki](https://github.com/martinlindhe/wmi_exporter/wiki/TODO)
 
 ## License
 
