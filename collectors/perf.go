@@ -54,238 +54,238 @@ func NewPerfCollector() *PerfCollector {
 	return &PerfCollector{
 		AvgDiskBytesPerRead: prometheus.NewDesc(
 			prometheus.BuildFQName(wmiNamespace, "perf", "avg_disk_bytes_per_read"),
-			"Average number of bytes transferred from the disk during read operations.",
+			"AvgDiskBytesPerRead",
 			nil,
 			nil,
 		),
 
 		AvgDiskBytesPerRead_Base: prometheus.NewDesc(
 			prometheus.BuildFQName(wmiNamespace, "perf", "avg_disk_bytes_per_read_base"),
-			"Base value for AvgDiskBytesPerRead. This value represents the accumulated number of operations that have taken place.",
+			"AvgDiskBytesPerRead_Base",
 			nil,
 			nil,
 		),
 
 		AvgDiskBytesPerTransfer: prometheus.NewDesc(
 			prometheus.BuildFQName(wmiNamespace, "perf", "avg_disk_bytes_per_transfer"),
-			"Average number of bytes transferred to or from the disk during write or read operations.",
+			"AvgDiskBytesPerTransfer",
 			nil,
 			nil,
 		),
 
 		AvgDiskBytesPerTransfer_Base: prometheus.NewDesc(
 			prometheus.BuildFQName(wmiNamespace, "perf", "avg_disk_bytes_per_transfer_base"),
-			"Base value for AvgDiskBytesPerTransfer. This value represents the accumulated number of operations that have taken place.",
+			"AvgDiskBytesPerTransfer_Base",
 			nil,
 			nil,
 		),
 
 		AvgDiskBytesPerWrite: prometheus.NewDesc(
 			prometheus.BuildFQName(wmiNamespace, "perf", "avg_disk_bytes_per_write"),
-			"Average number of bytes transferred to the disk during write operations.",
+			"AvgDiskBytesPerWrite",
 			nil,
 			nil,
 		),
 
 		AvgDiskBytesPerWrite_Base: prometheus.NewDesc(
 			prometheus.BuildFQName(wmiNamespace, "perf", "avg_disk_bytes_per_write_base"),
-			"Base value for AvgDiskBytesPerWrite. This value represents the accumulated number of operations that have taken place.",
+			"AvgDiskBytesPerWrite_Base",
 			nil,
 			nil,
 		),
 
 		AvgDiskQueueLength: prometheus.NewDesc(
 			prometheus.BuildFQName(wmiNamespace, "perf", "avg_disk_queue_length"),
-			"Average number of both read and write requests that were queued for the selected disk during the sample interval.",
+			"AvgDiskQueueLength",
 			nil,
 			nil,
 		),
 
 		AvgDiskReadQueueLength: prometheus.NewDesc(
 			prometheus.BuildFQName(wmiNamespace, "perf", "avg_disk_read_queue_length"),
-			"Average number of read requests that were queued for the selected disk during the sample interval.",
+			"AvgDiskReadQueueLength",
 			nil,
 			nil,
 		),
 
 		AvgDiskSecPerRead: prometheus.NewDesc(
 			prometheus.BuildFQName(wmiNamespace, "perf", "avg_disk_sec_per_read"),
-			"Average time, in seconds, of a read operation of data from the disk.",
+			"AvgDiskSecPerRead",
 			nil,
 			nil,
 		),
 
 		AvgDiskSecPerRead_Base: prometheus.NewDesc(
 			prometheus.BuildFQName(wmiNamespace, "perf", "avg_disk_sec_per_read_base"),
-			"Base value for AvgDiskSecPerRead. This value represents the accumulated number of operations that have taken place.",
+			"AvgDiskSecPerRead_Base",
 			nil,
 			nil,
 		),
 
 		AvgDiskSecPerTransfer: prometheus.NewDesc(
 			prometheus.BuildFQName(wmiNamespace, "perf", "avg_disk_sec_per_transfer"),
-			"Time, in seconds, of the average disk transfer.",
+			"AvgDiskSecPerTransfer",
 			nil,
 			nil,
 		),
 
 		AvgDiskSecPerTransfer_Base: prometheus.NewDesc(
 			prometheus.BuildFQName(wmiNamespace, "perf", "avg_disk_sec_per_transfer_base"),
-			"Base value for AvgDiskSecPerTransfer. This value represents the accumulated number of operations that have taken place.",
+			"AvgDiskSecPerTransfer_Base",
 			nil,
 			nil,
 		),
 
 		AvgDiskSecPerWrite: prometheus.NewDesc(
 			prometheus.BuildFQName(wmiNamespace, "perf", "avg_disk_sec_per_write"),
-			"Average time, in seconds, of a write operation of data to the disk.",
+			"AvgDiskSecPerWrite",
 			nil,
 			nil,
 		),
 
 		AvgDiskSecPerWrite_Base: prometheus.NewDesc(
 			prometheus.BuildFQName(wmiNamespace, "perf", "avg_disk_sec_per_write_base"),
-			"Base value for AvgDiskSecPerWrite. This value represents the accumulated number of operations that have taken place.",
+			"AvgDiskSecPerWrite_Base",
 			nil,
 			nil,
 		),
 
 		AvgDiskWriteQueueLength: prometheus.NewDesc(
 			prometheus.BuildFQName(wmiNamespace, "perf", "avg_disk_write_queue_length"),
-			"Average number of write requests that were queued for the selected disk during the sample interval. The time base is 100 nanoseconds.",
+			"AvgDiskWriteQueueLength",
 			nil,
 			nil,
 		),
 
 		CurrentDiskQueueLength: prometheus.NewDesc(
 			prometheus.BuildFQName(wmiNamespace, "perf", "current_disk_queue_length"),
-			"Number of requests outstanding on the disk at the time the performance data is collected.",
+			"CurrentDiskQueueLength",
 			nil,
 			nil,
 		),
 
 		DiskBytesPerSec: prometheus.NewDesc(
 			prometheus.BuildFQName(wmiNamespace, "perf", "disk_bytes_per_sec"),
-			"Rate at which bytes are transferred to or from the disk during write or read operations.",
+			"DiskBytesPerSec",
 			nil,
 			nil,
 		),
 
 		DiskReadBytesPerSec: prometheus.NewDesc(
 			prometheus.BuildFQName(wmiNamespace, "perf", "disk_read_bytes_per_sec"),
-			"Rate at which bytes are transferred from the disk during read operations.",
+			"DiskReadBytesPerSec",
 			nil,
 			nil,
 		),
 
 		DiskReadsPerSec: prometheus.NewDesc(
 			prometheus.BuildFQName(wmiNamespace, "perf", "disk_reads_per_sec"),
-			"Rate of read operations on the disk.",
+			"DiskReadsPerSec",
 			nil,
 			nil,
 		),
 
 		DiskTransfersPerSec: prometheus.NewDesc(
 			prometheus.BuildFQName(wmiNamespace, "perf", "disk_transfers_per_sec"),
-			"Rate of read and write operations on the disk.",
+			"DiskTransfersPerSec",
 			nil,
 			nil,
 		),
 
 		DiskWriteBytesPerSec: prometheus.NewDesc(
 			prometheus.BuildFQName(wmiNamespace, "perf", "disk_write_bytes_per_sec"),
-			"Rate at which bytes are transferred to the disk during write operations.",
+			"DiskWriteBytesPerSec",
 			nil,
 			nil,
 		),
 
 		DiskWritesPerSec: prometheus.NewDesc(
 			prometheus.BuildFQName(wmiNamespace, "perf", "disk_writes_per_sec"),
-			"Rate of write operations on the disk.",
+			"DiskWritesPerSec",
 			nil,
 			nil,
 		),
 
 		FreeMegabytes: prometheus.NewDesc(
-			prometheus.BuildFQName(wmiNamespace, "perf", "free_megabytes"),
-			"Unallocated space on the disk drive in megabytes.",
+			prometheus.BuildFQName(wmiNamespace, "perf", "free_megabytes"), // XXX in bytes
+			"FreeMegabytes",
 			nil,
 			nil,
 		),
 
 		PercentDiskReadTime: prometheus.NewDesc(
 			prometheus.BuildFQName(wmiNamespace, "perf", "percent_disk_read_time"),
-			"Percentage of elapsed time that the selected disk drive is busy servicing read requests.",
+			"PercentDiskReadTime",
 			nil,
 			nil,
 		),
 
 		PercentDiskReadTime_Base: prometheus.NewDesc(
 			prometheus.BuildFQName(wmiNamespace, "perf", "percent_disk_read_time_base"),
-			"Base value for PercentDiskReadTime.",
+			"PercentDiskReadTime_Base",
 			nil,
 			nil,
 		),
 
 		PercentDiskTime: prometheus.NewDesc(
 			prometheus.BuildFQName(wmiNamespace, "perf", "percent_disk_time"),
-			"Percentage of elapsed time that the selected disk drive is busy servicing read or write requests.",
+			"PercentDiskTime",
 			nil,
 			nil,
 		),
 
 		PercentDiskTime_Base: prometheus.NewDesc(
 			prometheus.BuildFQName(wmiNamespace, "perf", "percent_disk_time_base"),
-			"Base value for PercentDiskTime.",
+			"PercentDiskTime_Base",
 			nil,
 			nil,
 		),
 
 		PercentDiskWriteTime: prometheus.NewDesc(
 			prometheus.BuildFQName(wmiNamespace, "perf", "percent_disk_write_time"),
-			"Percentage of elapsed time that the selected disk drive is busy servicing write requests.",
+			"PercentDiskWriteTime",
 			nil,
 			nil,
 		),
 
 		PercentDiskWriteTime_Base: prometheus.NewDesc(
 			prometheus.BuildFQName(wmiNamespace, "perf", "percent_disk_write_time_base"),
-			"Base value for PercentDiskWriteTime.",
+			"PercentDiskWriteTime_Base",
 			nil,
 			nil,
 		),
 
 		PercentFreeSpace: prometheus.NewDesc(
 			prometheus.BuildFQName(wmiNamespace, "perf", "percent_free_space"),
-			"Ratio of the free space available on the logical disk unit to the total usable space provided by the selected logical disk drive.",
+			"PercentFreeSpace",
 			nil,
 			nil,
 		),
 
 		PercentFreeSpace_Base: prometheus.NewDesc(
 			prometheus.BuildFQName(wmiNamespace, "perf", "percent_free_space_base"),
-			"Base value for PercentFreeSpace.",
+			"PercentFreeSpace_Base",
 			nil,
 			nil,
 		),
 
 		PercentIdleTime: prometheus.NewDesc(
 			prometheus.BuildFQName(wmiNamespace, "perf", "percent_idle_time"),
-			"Percentage of time during the sample interval that the disk was idle.",
+			"PercentIdleTime",
 			nil,
 			nil,
 		),
 
 		PercentIdleTime_Base: prometheus.NewDesc(
 			prometheus.BuildFQName(wmiNamespace, "perf", "percent_idle_time_base"),
-			"Base value for PercentIdleTime.",
+			"PercentIdleTime_Base",
 			nil,
 			nil,
 		),
 
 		SplitIOPerSec: prometheus.NewDesc(
 			prometheus.BuildFQName(wmiNamespace, "perf", "split_io_per_sec"),
-			"Rate at which I/Os to the disk were split into multiple I/Os.",
+			"SplitIOPerSec",
 			nil,
 			nil,
 		),

@@ -1,6 +1,5 @@
 // returns data points from Win32_OperatingSystem
-// https://msdn.microsoft.com/en-us/library/aa394239(v=vs.85).aspx - Win32_OperatingSystem class
-// https://msdn.microsoft.com/en-us/library/aa387937(v=vs.85).aspx - CIM_OperatingSystem class
+// https://msdn.microsoft.com/en-us/library/aa394239 - Win32_OperatingSystem class
 
 package collectors
 
