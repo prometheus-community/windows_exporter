@@ -12,7 +12,8 @@ EXPERIMENTAL, use at your own risk!
 
 Name     | Description
 ---------|-------------
-os | Exposes Win32_OperatingSystem statistics (memory, processes, users)
+os | Exposes Win32_OperatingSystem metrics (memory, processes, users)
+perf | Exposes Win32_PerfRawData_PerfDisk_LogicalDisk metrics (disk I/O)
 
 
 ## License

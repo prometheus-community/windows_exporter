@@ -11,7 +11,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-// A OSCollector is a Prometheus collector for WMI OperatingSystem metrics
+// A OSCollector is a Prometheus collector for WMI Win32_OperatingSystem metrics
 type OSCollector struct {
 	FreePhysicalMemory      *prometheus.Desc
 	FreeSpaceInPagingFiles  *prometheus.Desc
@@ -105,7 +105,7 @@ func NewOSCollector() *OSCollector {
 // to the provided prometheus Metric channel.
 func (c *OSCollector) Collect(ch chan<- prometheus.Metric) {
 	if desc, err := c.collect(ch); err != nil {
-		log.Println("[ERROR] failed collecting process metrics:", desc, err)
+		log.Println("[ERROR] failed collecting os metrics:", desc, err)
 		return
 	}
 }
