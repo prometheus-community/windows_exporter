@@ -13,88 +13,89 @@ import (
 
 // A OSCollector is a Prometheus collector for WMI Win32_OperatingSystem metrics
 type OSCollector struct {
-	FreePhysicalMemoryBytes      *prometheus.Desc
-	FreeSpaceInPagingFilesBytes  *prometheus.Desc
-	FreeVirtualMemoryBytes       *prometheus.Desc
-	ProcessesMax                 *prometheus.Desc
-	ProcessMemoryBytesBytes      *prometheus.Desc
-	Processes                    *prometheus.Desc
-	Users                        *prometheus.Desc
-	SizeStoredInPagingFilesBytes *prometheus.Desc
-	VirtualMemoryBytesTotal      *prometheus.Desc
-	VisibleMemoryBytesTotal      *prometheus.Desc
+	PhysicalMemoryFreeBytes *prometheus.Desc
+	PagingFreeBytes         *prometheus.Desc
+	VirtualMemoryFreeBytes  *prometheus.Desc
+	ProcessesMax            *prometheus.Desc
+	ProcessMemoryMaxBytes   *prometheus.Desc
+	Processes               *prometheus.Desc
+	Users                   *prometheus.Desc
+	PagingMaxBytes          *prometheus.Desc
+	VirtualMemoryBytes      *prometheus.Desc
+	VisibleMemoryBytes      *prometheus.Desc
 }
 
 // NewOSCollector ...
 func NewOSCollector() *OSCollector {
 
 	return &OSCollector{
-		FreePhysicalMemoryBytes: prometheus.NewDesc(
-			prometheus.BuildFQName(wmiNamespace, "os", "free_physical_memory_bytes"),
-			"Physical memory currently unused and available.",
+
+		PagingMaxBytes: prometheus.NewDesc(
+			prometheus.BuildFQName(wmiNamespace, "os", "paging_max_bytes"),
+			"SizeStoredInPagingFiles",
 			nil,
 			nil,
 		),
 
-		FreeSpaceInPagingFilesBytes: prometheus.NewDesc(
-			prometheus.BuildFQName(wmiNamespace, "os", "free_space_in_paging_files_bytes"),
-			"Number of bytes that can be mapped into the operating system paging files without causing any other pages to be swapped out.",
+		PagingFreeBytes: prometheus.NewDesc(
+			prometheus.BuildFQName(wmiNamespace, "os", "paging_free_bytes"),
+			"FreeSpaceInPagingFiles",
 			nil,
 			nil,
 		),
 
-		FreeVirtualMemoryBytes: prometheus.NewDesc(
-			prometheus.BuildFQName(wmiNamespace, "os", "free_virtual_memory_bytes"),
-			"Virtual memory currently unused and available.",
-			nil,
-			nil,
-		),
-
-		ProcessesMax: prometheus.NewDesc(
-			prometheus.BuildFQName(wmiNamespace, "os", "processes_max"),
-			"Maximum number of process contexts the operating system can support.",
-			nil,
-			nil,
-		),
-
-		ProcessMemoryBytesBytes: prometheus.NewDesc(
-			prometheus.BuildFQName(wmiNamespace, "os", "process_memory_bytes_max"),
-			"Maximum bytes of memory that can be allocated to a process.",
+		PhysicalMemoryFreeBytes: prometheus.NewDesc(
+			prometheus.BuildFQName(wmiNamespace, "os", "physical_memory_free_bytes"),
+			"FreePhysicalMemory",
 			nil,
 			nil,
 		),
 
 		Processes: prometheus.NewDesc(
 			prometheus.BuildFQName(wmiNamespace, "os", "processes"),
-			"Number of process contexts currently loaded or running on the operating system.",
+			"NumberOfProcesses",
+			nil,
+			nil,
+		),
+
+		ProcessesMax: prometheus.NewDesc(
+			prometheus.BuildFQName(wmiNamespace, "os", "processes_max"),
+			"MaxNumberOfProcesses",
+			nil,
+			nil,
+		),
+
+		ProcessMemoryMaxBytes: prometheus.NewDesc(
+			prometheus.BuildFQName(wmiNamespace, "os", "process_memory_max_bytes"),
+			"MaxProcessMemorySize",
 			nil,
 			nil,
 		),
 
 		Users: prometheus.NewDesc(
 			prometheus.BuildFQName(wmiNamespace, "os", "users"),
-			"Number of user sessions for which the operating system is storing state information currently.",
+			"NumberOfUsers",
 			nil,
 			nil,
 		),
 
-		SizeStoredInPagingFilesBytes: prometheus.NewDesc(
-			prometheus.BuildFQName(wmiNamespace, "os", "size_stored_in_paging_files_bytes"),
-			"Total number of bytes that can be stored in the operating system paging files.",
+		VirtualMemoryBytes: prometheus.NewDesc(
+			prometheus.BuildFQName(wmiNamespace, "os", "virtual_memory_bytes"),
+			"TotalVirtualMemorySize",
 			nil,
 			nil,
 		),
 
-		VirtualMemoryBytesTotal: prometheus.NewDesc(
-			prometheus.BuildFQName(wmiNamespace, "os", "virtual_memory_bytes_total"),
-			"Total amount of virtual memory.",
+		VisibleMemoryBytes: prometheus.NewDesc(
+			prometheus.BuildFQName(wmiNamespace, "os", "visible_memory_bytes"),
+			"TotalVisibleMemorySize",
 			nil,
 			nil,
 		),
 
-		VisibleMemoryBytesTotal: prometheus.NewDesc(
-			prometheus.BuildFQName(wmiNamespace, "os", "visible_memory_bytes_total"),
-			"Total amount of physical memory available to the operating system.",
+		VirtualMemoryFreeBytes: prometheus.NewDesc(
+			prometheus.BuildFQName(wmiNamespace, "os", "virtual_memory_free_bytes"),
+			"FreeVirtualMemory",
 			nil,
 			nil,
 		),
@@ -114,16 +115,16 @@ func (c *OSCollector) Collect(ch chan<- prometheus.Metric) {
 // The corresponding metric values are sent separately.
 func (c *OSCollector) Describe(ch chan<- *prometheus.Desc) {
 
-	ch <- c.FreePhysicalMemoryBytes
-	ch <- c.FreeSpaceInPagingFilesBytes
-	ch <- c.FreeVirtualMemoryBytes
+	ch <- c.PhysicalMemoryFreeBytes
+	ch <- c.PagingFreeBytes
+	ch <- c.VirtualMemoryFreeBytes
 	ch <- c.ProcessesMax
-	ch <- c.ProcessMemoryBytesBytes
+	ch <- c.ProcessMemoryMaxBytes
 	ch <- c.Processes
 	ch <- c.Users
-	ch <- c.SizeStoredInPagingFilesBytes
-	ch <- c.VirtualMemoryBytesTotal
-	ch <- c.VisibleMemoryBytesTotal
+	ch <- c.PagingMaxBytes
+	ch <- c.VirtualMemoryBytes
+	ch <- c.VisibleMemoryBytes
 }
 
 type Win32_OperatingSystem struct {
@@ -137,8 +138,6 @@ type Win32_OperatingSystem struct {
 	SizeStoredInPagingFiles uint64
 	TotalVirtualMemorySize  uint64
 	TotalVisibleMemorySize  uint64
-	//NumberOfLicensedUsers   *uint32 // XXX returns 0 on Win7
-	//TotalSwapSpaceSize      *uint64 // XXX returns 0 on Win7
 }
 
 func (c *OSCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
@@ -149,19 +148,19 @@ func (c *OSCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, er
 	}
 
 	ch <- prometheus.MustNewConstMetric(
-		c.FreePhysicalMemoryBytes,
+		c.PhysicalMemoryFreeBytes,
 		prometheus.GaugeValue,
 		float64(dst[0].FreePhysicalMemory*1024), // KiB -> bytes
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.FreeSpaceInPagingFilesBytes,
+		c.PagingFreeBytes,
 		prometheus.GaugeValue,
 		float64(dst[0].FreeSpaceInPagingFiles*1024), // KiB -> bytes
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.FreeVirtualMemoryBytes,
+		c.VirtualMemoryFreeBytes,
 		prometheus.GaugeValue,
 		float64(dst[0].FreeVirtualMemory*1024), // KiB -> bytes
 	)
@@ -173,7 +172,7 @@ func (c *OSCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, er
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.ProcessMemoryBytesBytes,
+		c.ProcessMemoryMaxBytes,
 		prometheus.GaugeValue,
 		float64(dst[0].MaxProcessMemorySize*1024), // KiB -> bytes
 	)
@@ -191,19 +190,19 @@ func (c *OSCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, er
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.SizeStoredInPagingFilesBytes,
+		c.PagingMaxBytes,
 		prometheus.GaugeValue,
 		float64(dst[0].SizeStoredInPagingFiles*1024), // KiB -> bytes
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.VirtualMemoryBytesTotal,
+		c.VirtualMemoryBytes,
 		prometheus.GaugeValue,
 		float64(dst[0].TotalVirtualMemorySize*1024), // KiB -> bytes
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.VisibleMemoryBytesTotal,
+		c.VisibleMemoryBytes,
 		prometheus.GaugeValue,
 		float64(dst[0].TotalVisibleMemorySize*1024), // KiB -> bytes
 	)

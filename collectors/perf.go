@@ -1,3 +1,4 @@
+// returns data points from Win32_PerfRawData_PerfDisk_LogicalDisk
 // https://msdn.microsoft.com/en-us/windows/hardware/aa394307(v=vs.71) - Win32_PerfRawData_PerfDisk_LogicalDisk class
 
 package collectors
