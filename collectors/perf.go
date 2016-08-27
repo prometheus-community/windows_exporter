@@ -15,7 +15,7 @@ import (
 
 var (
 	volumeWhitelist = flag.String("collector.perf.volume-whitelist", ".+", "Regexp of volumes to whitelist. Volume name must both match whitelist and not match blacklist to be included.")
-	volumeBlacklist = flag.String("collector.perf.volume-blacklist", "_Total", "Regexp of volumes to blacklist. Volume name must both match whitelist and not match blacklist to be included.")
+	volumeBlacklist = flag.String("collector.perf.volume-blacklist", "", "Regexp of volumes to blacklist. Volume name must both match whitelist and not match blacklist to be included.")
 )
 
 // A PerfCollector is a Prometheus collector for WMI Win32_PerfRawData_PerfDisk_LogicalDisk metrics
@@ -401,7 +401,9 @@ func (c *PerfCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, 
 	}
 
 	for _, volume := range dst {
-		if c.volumeBlacklistPattern.MatchString(volume.Name) || !c.volumeWhitelistPattern.MatchString(volume.Name) {
+		if volume.Name == "_Total" ||
+			c.volumeBlacklistPattern.MatchString(volume.Name) ||
+			!c.volumeWhitelistPattern.MatchString(volume.Name) {
 			continue
 		}
 
