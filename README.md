@@ -20,6 +20,16 @@ The HELP texts shows the WMI data source, please see MSDN documentation for deta
 See [Wiki](https://github.com/martinlindhe/wmi_exporter/wiki/TODO)
 
 
+## Usage
+
+    go get -u github.com/martinlindhe/wmi_exporter
+    cd $env:GOPATH/src/github.com/martinlindhe/wmi_exporter
+    go build .
+    .\wmi_exporter.exe
+
+The prometheus metrics will be exposed on http://localhost:9129
+
+
 ## License
 
 Under [MIT](LICENSE)
