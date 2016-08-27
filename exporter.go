@@ -31,6 +31,7 @@ func NewWmiExporter() *WmiExporter {
 		collectors: []prometheus.Collector{
 			collectors.NewOSCollector(),
 			collectors.NewLogicalDiskCollector(),
+			collectors.NewIISCollector(),
 		},
 	}
 }
