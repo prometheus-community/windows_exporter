@@ -57,7 +57,7 @@ func (c *WmiExporter) Collect(ch chan<- prometheus.Metric) {
 
 func main() {
 	var (
-		addr        = flag.String("telemetry.addr", ":9129", "host:port for WMI exporter")
+		addr        = flag.String("telemetry.addr", ":9182", "host:port for WMI exporter")
 		metricsPath = flag.String("telemetry.path", "/metrics", "URL path for surfacing collected metrics")
 	)
 	flag.Parse()

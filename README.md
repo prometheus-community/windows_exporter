@@ -29,7 +29,7 @@ See [Wiki](https://github.com/martinlindhe/wmi_exporter/wiki/TODO)
     go build .
     .\wmi_exporter.exe
 
-The prometheus metrics will be exposed on [localhost:9129](http://localhost:9129)
+The prometheus metrics will be exposed on [localhost:9182](http://localhost:9182)
 
 
 ## License
