@@ -30,7 +30,7 @@ func NewWmiExporter() *WmiExporter {
 	return &WmiExporter{
 		collectors: []prometheus.Collector{
 			collectors.NewOSCollector(),
-			collectors.NewPerfCollector(),
+			collectors.NewLogicalDiskCollector(),
 		},
 	}
 }
