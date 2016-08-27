@@ -4,10 +4,18 @@
 package collectors
 
 import (
+	"flag"
+	"fmt"
 	"log"
+	"regexp"
 
 	"github.com/StackExchange/wmi"
 	"github.com/prometheus/client_golang/prometheus"
+)
+
+var (
+	volumeWhitelist = flag.String("collector.perf.volume-whitelist", ".+", "Regexp of volumes to whitelist. Volume name must both match whitelist and not match blacklist to be included.")
+	volumeBlacklist = flag.String("collector.perf.volume-blacklist", "_Total", "Regexp of volumes to blacklist. Volume name must both match whitelist and not match blacklist to be included.")
 )
 
 // A PerfCollector is a Prometheus collector for WMI Win32_PerfRawData_PerfDisk_LogicalDisk metrics
@@ -46,6 +54,9 @@ type PerfCollector struct {
 	PercentIdleTime              *prometheus.Desc
 	PercentIdleTime_Base         *prometheus.Desc
 	SplitIOPerSec                *prometheus.Desc
+
+	volumeWhitelistPattern *regexp.Regexp
+	volumeBlacklistPattern *regexp.Regexp
 }
 
 // NewPerfCollector ...
@@ -289,6 +300,9 @@ func NewPerfCollector() *PerfCollector {
 			[]string{"volume"},
 			nil,
 		),
+
+		volumeWhitelistPattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *volumeWhitelist)),
+		volumeBlacklistPattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *volumeBlacklist)),
 	}
 }
 
@@ -387,6 +401,10 @@ func (c *PerfCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, 
 	}
 
 	for _, volume := range dst {
+		if c.volumeBlacklistPattern.MatchString(volume.Name) || !c.volumeWhitelistPattern.MatchString(volume.Name) {
+			continue
+		}
+
 		ch <- prometheus.MustNewConstMetric(
 			c.AvgDiskBytesPerRead,
 			prometheus.GaugeValue,
