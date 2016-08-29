@@ -12,7 +12,7 @@ Prometheus exporter for Windows machines, using the WMI (Windows Management Inst
 Name     | Description
 ---------|-------------
 os | [Win32_OperatingSystem](https://msdn.microsoft.com/en-us/library/aa394239) metrics (memory, processes, users)
-perf | [Win32_PerfRawData_PerfDisk_LogicalDisk](https://msdn.microsoft.com/en-us/windows/hardware/aa394307(v=vs.71)) metrics (disk I/O)
+logical_disk | [Win32_PerfRawData_PerfDisk_LogicalDisk](https://msdn.microsoft.com/en-us/windows/hardware/aa394307(v=vs.71)) metrics (disk I/O)
 
 The HELP texts shows the WMI data source, please see MSDN documentation for details.
 
