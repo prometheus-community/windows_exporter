@@ -1,5 +1,5 @@
 // returns data points from Win32_PerfRawData_W3SVC_WebService
-// https://msdn.microsoft.com/en-us/library/aa394345.aspx - Win32_OperatingSystem class
+// https://msdn.microsoft.com/en-us/library/aa394345 - Win32_OperatingSystem class
 
 package collector
 
