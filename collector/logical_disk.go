@@ -14,6 +14,10 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+func init() {
+	Factories["logical_disk"] = NewLogicalDiskCollector
+}
+
 const (
 	ticksToSecondsScaleFactor = 1 / 1e7
 )
@@ -42,82 +46,82 @@ type LogicalDiskCollector struct {
 }
 
 // NewLogicalDiskCollector ...
-func NewLogicalDiskCollector() *LogicalDiskCollector {
+func NewLogicalDiskCollector() (Collector, error) {
 	const subsystem = "logical_disk"
 
 	return &LogicalDiskCollector{
 		RequestsQueued: prometheus.NewDesc(
-			prometheus.BuildFQName(wmiNamespace, subsystem, "requests_queued"),
+			prometheus.BuildFQName(Namespace, subsystem, "requests_queued"),
 			"The number of requests queued to the disk (LogicalDisk.CurrentDiskQueueLength)",
 			[]string{"volume"},
 			nil,
 		),
 
 		ReadBytesTotal: prometheus.NewDesc(
-			prometheus.BuildFQName(wmiNamespace, subsystem, "read_bytes_total"),
+			prometheus.BuildFQName(Namespace, subsystem, "read_bytes_total"),
 			"The number of bytes transferred from the disk during read operations (LogicalDisk.DiskReadBytesPerSec)",
 			[]string{"volume"},
 			nil,
 		),
 
 		ReadsTotal: prometheus.NewDesc(
-			prometheus.BuildFQName(wmiNamespace, subsystem, "reads_total"),
+			prometheus.BuildFQName(Namespace, subsystem, "reads_total"),
 			"The number of read operations on the disk (LogicalDisk.DiskReadsPerSec)",
 			[]string{"volume"},
 			nil,
 		),
 
 		WriteBytesTotal: prometheus.NewDesc(
-			prometheus.BuildFQName(wmiNamespace, subsystem, "write_bytes_total"),
+			prometheus.BuildFQName(Namespace, subsystem, "write_bytes_total"),
 			"The number of bytes transferred to the disk during write operations (LogicalDisk.DiskWriteBytesPerSec)",
 			[]string{"volume"},
 			nil,
 		),
 
 		WritesTotal: prometheus.NewDesc(
-			prometheus.BuildFQName(wmiNamespace, subsystem, "writes_total"),
+			prometheus.BuildFQName(Namespace, subsystem, "writes_total"),
 			"The number of write operations on the disk (LogicalDisk.DiskWritesPerSec)",
 			[]string{"volume"},
 			nil,
 		),
 
 		ReadTime: prometheus.NewDesc(
-			prometheus.BuildFQName(wmiNamespace, subsystem, "read_seconds_total"),
+			prometheus.BuildFQName(Namespace, subsystem, "read_seconds_total"),
 			"Seconds that the disk was busy servicing read requests (LogicalDisk.PercentDiskReadTime)",
 			[]string{"volume"},
 			nil,
 		),
 
 		WriteTime: prometheus.NewDesc(
-			prometheus.BuildFQName(wmiNamespace, subsystem, "write_seconds_total"),
+			prometheus.BuildFQName(Namespace, subsystem, "write_seconds_total"),
 			"Seconds that the disk was busy servicing write requests (LogicalDisk.PercentDiskWriteTime)",
 			[]string{"volume"},
 			nil,
 		),
 
 		FreeSpace: prometheus.NewDesc(
-			prometheus.BuildFQName(wmiNamespace, subsystem, "free_bytes"),
+			prometheus.BuildFQName(Namespace, subsystem, "free_bytes"),
 			"Free space in bytes (LogicalDisk.PercentFreeSpace)",
 			[]string{"volume"},
 			nil,
 		),
 
 		TotalSpace: prometheus.NewDesc(
-			prometheus.BuildFQName(wmiNamespace, subsystem, "size_bytes"),
+			prometheus.BuildFQName(Namespace, subsystem, "size_bytes"),
 			"Total space in bytes (LogicalDisk.PercentFreeSpace_Base)",
 			[]string{"volume"},
 			nil,
 		),
 
 		IdleTime: prometheus.NewDesc(
-			prometheus.BuildFQName(wmiNamespace, subsystem, "idle_seconds_total"),
+			prometheus.BuildFQName(Namespace, subsystem, "idle_seconds_total"),
 			"Seconds that the disk was idle (LogicalDisk.PercentIdleTime)",
 			[]string{"volume"},
 			nil,
 		),
 
 		SplitIOs: prometheus.NewDesc(
-			prometheus.BuildFQName(wmiNamespace, subsystem, "split_ios_total"),
+			prometheus.BuildFQName(Namespace, subsystem, "split_ios_total"),
 			"The number of I/Os to the disk were split into multiple I/Os (LogicalDisk.SplitIOPerSec)",
 			[]string{"volume"},
 			nil,
@@ -125,33 +129,17 @@ func NewLogicalDiskCollector() *LogicalDiskCollector {
 
 		volumeWhitelistPattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *volumeWhitelist)),
 		volumeBlacklistPattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *volumeBlacklist)),
-	}
+	}, nil
 }
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *LogicalDiskCollector) Collect(ch chan<- prometheus.Metric) {
+func (c *LogicalDiskCollector) Collect(ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ch); err != nil {
 		log.Println("[ERROR] failed collecting logical_disk metrics:", desc, err)
-		return
+		return err
 	}
-}
-
-// Describe sends the descriptors of each metric over to the provided channel.
-// The corresponding metric values are sent separately.
-func (c *LogicalDiskCollector) Describe(ch chan<- *prometheus.Desc) {
-
-	ch <- c.RequestsQueued
-	ch <- c.ReadBytesTotal
-	ch <- c.ReadsTotal
-	ch <- c.WriteBytesTotal
-	ch <- c.WritesTotal
-	ch <- c.ReadTime
-	ch <- c.WriteTime
-	ch <- c.FreeSpace
-	ch <- c.TotalSpace
-	ch <- c.IdleTime
-	ch <- c.SplitIOs
+	return nil
 }
 
 type Win32_PerfRawData_PerfDisk_LogicalDisk struct {

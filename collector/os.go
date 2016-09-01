@@ -10,6 +10,10 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+func init() {
+	Factories["os"] = NewOSCollector
+}
+
 // A OSCollector is a Prometheus collector for WMI Win32_OperatingSystem metrics
 type OSCollector struct {
 	PhysicalMemoryFreeBytes *prometheus.Desc
@@ -25,105 +29,92 @@ type OSCollector struct {
 }
 
 // NewOSCollector ...
-func NewOSCollector() *OSCollector {
+func NewOSCollector() (Collector, error) {
+
+	const subsystem = "os"
 
 	return &OSCollector{
 
 		PagingMaxBytes: prometheus.NewDesc(
-			prometheus.BuildFQName(wmiNamespace, "os", "paging_max_bytes"),
+			prometheus.BuildFQName(Namespace, subsystem, "paging_max_bytes"),
 			"SizeStoredInPagingFiles",
 			nil,
 			nil,
 		),
 
 		PagingFreeBytes: prometheus.NewDesc(
-			prometheus.BuildFQName(wmiNamespace, "os", "paging_free_bytes"),
+			prometheus.BuildFQName(Namespace, subsystem, "paging_free_bytes"),
 			"FreeSpaceInPagingFiles",
 			nil,
 			nil,
 		),
 
 		PhysicalMemoryFreeBytes: prometheus.NewDesc(
-			prometheus.BuildFQName(wmiNamespace, "os", "physical_memory_free_bytes"),
+			prometheus.BuildFQName(Namespace, subsystem, "physical_memory_free_bytes"),
 			"FreePhysicalMemory",
 			nil,
 			nil,
 		),
 
 		Processes: prometheus.NewDesc(
-			prometheus.BuildFQName(wmiNamespace, "os", "processes"),
+			prometheus.BuildFQName(Namespace, subsystem, "processes"),
 			"NumberOfProcesses",
 			nil,
 			nil,
 		),
 
 		ProcessesMax: prometheus.NewDesc(
-			prometheus.BuildFQName(wmiNamespace, "os", "processes_max"),
+			prometheus.BuildFQName(Namespace, subsystem, "processes_max"),
 			"MaxNumberOfProcesses",
 			nil,
 			nil,
 		),
 
 		ProcessMemoryMaxBytes: prometheus.NewDesc(
-			prometheus.BuildFQName(wmiNamespace, "os", "process_memory_max_bytes"),
+			prometheus.BuildFQName(Namespace, subsystem, "process_memory_max_bytes"),
 			"MaxProcessMemorySize",
 			nil,
 			nil,
 		),
 
 		Users: prometheus.NewDesc(
-			prometheus.BuildFQName(wmiNamespace, "os", "users"),
+			prometheus.BuildFQName(Namespace, subsystem, "users"),
 			"NumberOfUsers",
 			nil,
 			nil,
 		),
 
 		VirtualMemoryBytes: prometheus.NewDesc(
-			prometheus.BuildFQName(wmiNamespace, "os", "virtual_memory_bytes"),
+			prometheus.BuildFQName(Namespace, subsystem, "virtual_memory_bytes"),
 			"TotalVirtualMemorySize",
 			nil,
 			nil,
 		),
 
 		VisibleMemoryBytes: prometheus.NewDesc(
-			prometheus.BuildFQName(wmiNamespace, "os", "visible_memory_bytes"),
+			prometheus.BuildFQName(Namespace, subsystem, "visible_memory_bytes"),
 			"TotalVisibleMemorySize",
 			nil,
 			nil,
 		),
 
 		VirtualMemoryFreeBytes: prometheus.NewDesc(
-			prometheus.BuildFQName(wmiNamespace, "os", "virtual_memory_free_bytes"),
+			prometheus.BuildFQName(Namespace, subsystem, "virtual_memory_free_bytes"),
 			"FreeVirtualMemory",
 			nil,
 			nil,
 		),
-	}
+	}, nil
 }
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *OSCollector) Collect(ch chan<- prometheus.Metric) {
+func (c *OSCollector) Collect(ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ch); err != nil {
 		log.Println("[ERROR] failed collecting os metrics:", desc, err)
-		return
+		return err
 	}
-}
-
-// Describe sends the descriptors of each metric over to the provided channel.
-// The corresponding metric values are sent separately.
-func (c *OSCollector) Describe(ch chan<- *prometheus.Desc) {
-
-	ch <- c.PhysicalMemoryFreeBytes
-	ch <- c.PagingFreeBytes
-	ch <- c.VirtualMemoryFreeBytes
-	ch <- c.ProcessesMax
-	ch <- c.ProcessMemoryMaxBytes
-	ch <- c.Processes
-	ch <- c.Users
-	ch <- c.PagingMaxBytes
-	ch <- c.VirtualMemoryBytes
-	ch <- c.VisibleMemoryBytes
+	return nil
 }
 
 type Win32_OperatingSystem struct {
