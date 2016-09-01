@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <?if $(sys.BUILDARCH)=x64 ?>
+    <?define PlatformProgramFiles = "ProgramFiles64Folder" ?>
+  <?else ?>
+    <?define PlatformProgramFiles = "ProgramFilesFolder" ?>
+  <?endif ?>
+
+  <Product Id="*" UpgradeCode="66a6eb5b-1fc2-4b14-a362-5ceec6413308" 
+           Name="WMI Exporter" Version="$(var.Version)" Manufacturer="Martin Lindhe" 
+           Language="1033" Codepage="1252">
+    <Package Id="*" Manufacturer="Martin Lindhe" InstallScope="perMachine" 
+             Description="WMI Exporter $(var.Version) installer" Compressed="yes" />
+    <Media Id="1" Cabinet="wmi_exporter.cab" EmbedCab="yes"/>
+    <MajorUpgrade Schedule="afterInstallExecute" DowngradeErrorMessage="A later version of [ProductName] is already installed. Setup will now exit." />
+
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="$(var.PlatformProgramFiles)">
+        <Directory Id="APPLICATIONROOTDIRECTORY" Name="wmi_exporter" />
+      </Directory>
+    </Directory>
+
+    <ComponentGroup Id="Files" Directory="APPLICATIONROOTDIRECTORY">
+      <Component>
+        <File Id="wmi_exporter.exe" Name="wmi_exporter.exe" Source="Work\wmi_exporter.exe" KeyPath="yes"/>
+      </Component>
+    </ComponentGroup>
+
+    <Feature Id="DefaultFeature" Level="1">
+      <ComponentGroupRef Id="Files" />
+    </Feature>
+  </Product>
+</Wix>
