@@ -191,7 +191,7 @@ func NewIISCollector() *IISCollector {
 // to the provided prometheus Metric channel.
 func (c *IISCollector) Collect(ch chan<- prometheus.Metric) {
 	if desc, err := c.collect(ch); err != nil {
-		log.Println("[ERROR] failed collecting os metrics:", desc, err)
+		log.Println("[ERROR] failed collecting iis metrics:", desc, err)
 		return
 	}
 }
