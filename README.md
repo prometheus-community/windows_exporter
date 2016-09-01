@@ -25,9 +25,10 @@ See [Wiki](https://github.com/martinlindhe/wmi_exporter/wiki/TODO)
 
 ## Usage
 
+    go get -u github.com/kardianos/govendor
     go get -u github.com/martinlindhe/wmi_exporter
     cd $env:GOPATH/src/github.com/martinlindhe/wmi_exporter
-    go build .
+    govendor build +local
     .\wmi_exporter.exe
 
 The prometheus metrics will be exposed on [localhost:9182](http://localhost:9182)

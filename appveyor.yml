@@ -16,8 +16,8 @@ install:
   - 7z x go%GOVERSION%.windows-amd64.zip -y -oC:\ > NUL
   - go version
   - go env
-  - go get -v -t ./...
+  - go get -u github.com/kardianos/govendor
 
 build_script:
-  - go build -v .
-  - go test -v ./...
+  - govendor build -v +local
+  - govendor test -v +local

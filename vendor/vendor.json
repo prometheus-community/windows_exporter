@@ -3,6 +3,12 @@
 	"ignore": "test",
 	"package": [
 		{
+			"checksumSHA1": "2avCvSn0XonfApKKuTMyiQmk7s0=",
+			"path": "github.com/Sirupsen/logrus",
+			"revision": "3ec0642a7fb6488f65b06f9040adc67e3990296a",
+			"revisionTime": "2016-08-29T20:23:21Z"
+		},
+		{
 			"checksumSHA1": "9NR0rrcAT5J76C5xMS4AVksS9o0=",
 			"path": "github.com/StackExchange/wmi",
 			"revision": "e54cbda6595d7293a7a468ccf9525f6bc8887f99",
@@ -63,8 +69,20 @@
 			"revisionTime": "2016-08-29T15:30:39Z"
 		},
 		{
+			"checksumSHA1": "fKMoxZehNhXbklRQy7lpFAVH0XY=",
+			"path": "github.com/prometheus/common/log",
+			"revision": "616e90af75cc300730196d04f3676f838d70414f",
+			"revisionTime": "2016-08-29T15:30:39Z"
+		},
+		{
 			"checksumSHA1": "Jx0GXl5hGnO25s3ryyvtdWHdCpw=",
 			"path": "github.com/prometheus/common/model",
+			"revision": "616e90af75cc300730196d04f3676f838d70414f",
+			"revisionTime": "2016-08-29T15:30:39Z"
+		},
+		{
+			"checksumSHA1": "91KYK0SpvkaMJJA2+BcxbVnyRO0=",
+			"path": "github.com/prometheus/common/version",
 			"revision": "616e90af75cc300730196d04f3676f838d70414f",
 			"revisionTime": "2016-08-29T15:30:39Z"
 		},
