@@ -13,6 +13,10 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+func init() {
+	Factories["iis"] = NewIISCollector
+}
+
 var (
 	siteWhitelist = flag.String("collector.iis.site-whitelist", ".+", "Regexp of sites to whitelist. Site name must both match whitelist and not match blacklist to be included.")
 	siteBlacklist = flag.String("collector.iis.site-blacklist", "", "Regexp of sites to blacklist. Site name must both match whitelist and not match blacklist to be included.")
@@ -48,43 +52,43 @@ type IISCollector struct {
 }
 
 // NewIISCollector ...
-func NewIISCollector() *IISCollector {
+func NewIISCollector() (Collector, error) {
 	const subsystem = "iis"
 
 	return &IISCollector{
 		// Gauges
 		CurrentAnonymousUsers: prometheus.NewDesc(
-			prometheus.BuildFQName(wmiNamespace, subsystem, "current_anonymous_users"),
+			prometheus.BuildFQName(Namespace, subsystem, "current_anonymous_users"),
 			"Number of users who currently have an anonymous connection using the Web service (WebService.CurrentAnonymousUsers)",
 			[]string{"site"},
 			nil,
 		),
 		CurrentBlockedAsyncIORequests: prometheus.NewDesc(
-			prometheus.BuildFQName(wmiNamespace, subsystem, "current_blocked_async_io_requests"),
+			prometheus.BuildFQName(Namespace, subsystem, "current_blocked_async_io_requests"),
 			"Current requests temporarily blocked due to bandwidth throttling settings (WebService.CurrentBlockedAsyncIORequests)",
 			[]string{"site"},
 			nil,
 		),
 		CurrentCGIRequests: prometheus.NewDesc(
-			prometheus.BuildFQName(wmiNamespace, subsystem, "current_cgi_requests"),
+			prometheus.BuildFQName(Namespace, subsystem, "current_cgi_requests"),
 			"Current number of CGI requests being simultaneously processed by the Web service (WebService.CurrentCGIRequests)",
 			[]string{"site"},
 			nil,
 		),
 		CurrentConnections: prometheus.NewDesc(
-			prometheus.BuildFQName(wmiNamespace, subsystem, "current_connections"),
+			prometheus.BuildFQName(Namespace, subsystem, "current_connections"),
 			"Current number of connections established with the Web service (WebService.CurrentConnections)",
 			[]string{"site"},
 			nil,
 		),
 		CurrentISAPIExtensionRequests: prometheus.NewDesc(
-			prometheus.BuildFQName(wmiNamespace, subsystem, "current_isapi_extension_requests"),
+			prometheus.BuildFQName(Namespace, subsystem, "current_isapi_extension_requests"),
 			"Current number of ISAPI requests being simultaneously processed by the Web service (WebService.CurrentISAPIExtensionRequests)",
 			[]string{"site"},
 			nil,
 		),
 		CurrentNonAnonymousUsers: prometheus.NewDesc(
-			prometheus.BuildFQName(wmiNamespace, subsystem, "current_non_anonymous_users"),
+			prometheus.BuildFQName(Namespace, subsystem, "current_non_anonymous_users"),
 			"Number of users who currently have a non-anonymous connection using the Web service (WebService.CurrentNonAnonymousUsers)",
 			[]string{"site"},
 			nil,
@@ -92,91 +96,91 @@ func NewIISCollector() *IISCollector {
 
 		// Counters
 		TotalBytesReceived: prometheus.NewDesc(
-			prometheus.BuildFQName(wmiNamespace, subsystem, "received_bytes_total"),
+			prometheus.BuildFQName(Namespace, subsystem, "received_bytes_total"),
 			"Number of data bytes that have been received by the Web service (WebService.TotalBytesReceived)",
 			[]string{"site"},
 			nil,
 		),
 		TotalBytesSent: prometheus.NewDesc(
-			prometheus.BuildFQName(wmiNamespace, subsystem, "sent_bytes_total"),
+			prometheus.BuildFQName(Namespace, subsystem, "sent_bytes_total"),
 			"Number of data bytes that have been sent by the Web service (WebService.TotalBytesSent)",
 			[]string{"site"},
 			nil,
 		),
 		TotalAnonymousUsers: prometheus.NewDesc(
-			prometheus.BuildFQName(wmiNamespace, subsystem, "anonymous_users_total"),
+			prometheus.BuildFQName(Namespace, subsystem, "anonymous_users_total"),
 			"Total number of users who established an anonymous connection with the Web service (WebService.TotalAnonymousUsers)",
 			[]string{"site"},
 			nil,
 		),
 		TotalBlockedAsyncIORequests: prometheus.NewDesc(
-			prometheus.BuildFQName(wmiNamespace, subsystem, "blocked_async_io_requests_total"),
+			prometheus.BuildFQName(Namespace, subsystem, "blocked_async_io_requests_total"),
 			"Total requests temporarily blocked due to bandwidth throttling settings (WebService.TotalBlockedAsyncIORequests)",
 			[]string{"site"},
 			nil,
 		),
 		TotalCGIRequests: prometheus.NewDesc(
-			prometheus.BuildFQName(wmiNamespace, subsystem, "cgi_requests_total"),
+			prometheus.BuildFQName(Namespace, subsystem, "cgi_requests_total"),
 			"Total CGI requests is the total number of CGI requests (WebService.TotalCGIRequests)",
 			[]string{"site"},
 			nil,
 		),
 		TotalConnectionAttemptsAllInstances: prometheus.NewDesc(
-			prometheus.BuildFQName(wmiNamespace, subsystem, "connection_attempts_all_instances_total"),
+			prometheus.BuildFQName(Namespace, subsystem, "connection_attempts_all_instances_total"),
 			"Number of connections that have been attempted using the Web service (WebService.TotalConnectionAttemptsAllInstances)",
 			[]string{"site"},
 			nil,
 		),
 		TotalRequests: prometheus.NewDesc(
-			prometheus.BuildFQName(wmiNamespace, subsystem, "requests_total"),
+			prometheus.BuildFQName(Namespace, subsystem, "requests_total"),
 			"Number of HTTP requests (WebService.TotalRequests)",
 			[]string{"site", "method"},
 			nil,
 		),
 		TotalFilesReceived: prometheus.NewDesc(
-			prometheus.BuildFQName(wmiNamespace, subsystem, "files_received_total"),
+			prometheus.BuildFQName(Namespace, subsystem, "files_received_total"),
 			"Number of files received by the Web service (WebService.TotalFilesReceived)",
 			[]string{"site"},
 			nil,
 		),
 		TotalFilesSent: prometheus.NewDesc(
-			prometheus.BuildFQName(wmiNamespace, subsystem, "files_sent_total"),
+			prometheus.BuildFQName(Namespace, subsystem, "files_sent_total"),
 			"Number of files sent by the Web service (WebService.TotalFilesSent)",
 			[]string{"site"},
 			nil,
 		),
 		TotalISAPIExtensionRequests: prometheus.NewDesc(
-			prometheus.BuildFQName(wmiNamespace, subsystem, "ipapi_extension_requests_total"),
+			prometheus.BuildFQName(Namespace, subsystem, "ipapi_extension_requests_total"),
 			"ISAPI Extension Requests received (WebService.TotalISAPIExtensionRequests)",
 			[]string{"site"},
 			nil,
 		),
 		TotalLockedErrors: prometheus.NewDesc(
-			prometheus.BuildFQName(wmiNamespace, subsystem, "locked_errors_total"),
+			prometheus.BuildFQName(Namespace, subsystem, "locked_errors_total"),
 			"Number of requests that couldn't be satisfied by the server because the requested resource was locked (WebService.TotalLockedErrors)",
 			[]string{"site"},
 			nil,
 		),
 		TotalLogonAttempts: prometheus.NewDesc(
-			prometheus.BuildFQName(wmiNamespace, subsystem, "logon_attempts_total"),
+			prometheus.BuildFQName(Namespace, subsystem, "logon_attempts_total"),
 			"Number of logons attempts to the Web Service (WebService.TotalLogonAttempts)",
 			[]string{"site"},
 			nil,
 		),
 		TotalNonAnonymousUsers: prometheus.NewDesc(
-			prometheus.BuildFQName(wmiNamespace, subsystem, "non_anonymous_users_total"),
+			prometheus.BuildFQName(Namespace, subsystem, "non_anonymous_users_total"),
 			"Number of users who established a non-anonymous connection with the Web service (WebService.TotalNonAnonymousUsers)",
 			[]string{"site"},
 			nil,
 		),
 		TotalNotFoundErrors: prometheus.NewDesc(
-			prometheus.BuildFQName(wmiNamespace, subsystem, "not_found_errors_total"),
+			prometheus.BuildFQName(Namespace, subsystem, "not_found_errors_total"),
 			"Number of requests that couldn't be satisfied by the server because the requested document could not be found (WebService.TotalNotFoundErrors)",
 			[]string{"site"},
 			nil,
 		),
 		TotalRejectedAsyncIORequests: prometheus.NewDesc(
-			prometheus.BuildFQName(wmiNamespace, subsystem, "rejected_async_io_requests_total"),
+			prometheus.BuildFQName(Namespace, subsystem, "rejected_async_io_requests_total"),
 			"Requests rejected due to bandwidth throttling settings (WebService.TotalRejectedAsyncIORequests)",
 			[]string{"site"},
 			nil,
@@ -184,22 +188,17 @@ func NewIISCollector() *IISCollector {
 
 		siteWhitelistPattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *siteWhitelist)),
 		siteBlacklistPattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *siteBlacklist)),
-	}
+	}, nil
 }
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *IISCollector) Collect(ch chan<- prometheus.Metric) {
+func (c *IISCollector) Collect(ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ch); err != nil {
 		log.Println("[ERROR] failed collecting iis metrics:", desc, err)
-		return
+		return err
 	}
-}
-
-// Describe sends the descriptors of each metric over to the provided channel.
-// The corresponding metric values are sent separately.
-func (c *IISCollector) Describe(ch chan<- *prometheus.Desc) {
-
+	return nil
 }
 
 type Win32_PerfRawData_W3SVC_WebService struct {
