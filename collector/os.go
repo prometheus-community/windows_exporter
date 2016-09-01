@@ -1,7 +1,7 @@
 // returns data points from Win32_OperatingSystem
 // https://msdn.microsoft.com/en-us/library/aa394239 - Win32_OperatingSystem class
 
-package collectors
+package collector
 
 import (
 	"log"

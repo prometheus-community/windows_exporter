@@ -1,4 +1,4 @@
-package collectors
+package collector
 
 const (
 	wmiNamespace = "wmi"

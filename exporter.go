@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/martinlindhe/wmi_exporter/collectors"
+	"github.com/martinlindhe/wmi_exporter/collector"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -29,9 +29,9 @@ var _ prometheus.Collector = &WmiExporter{}
 func NewWmiExporter() *WmiExporter {
 	return &WmiExporter{
 		collectors: []prometheus.Collector{
-			collectors.NewOSCollector(),
-			collectors.NewLogicalDiskCollector(),
-			collectors.NewIISCollector(),
+			collector.NewOSCollector(),
+			collector.NewLogicalDiskCollector(),
+			collector.NewIISCollector(),
 		},
 	}
 }
