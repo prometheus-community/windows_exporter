@@ -15,7 +15,6 @@ import (
 )
 
 const (
-	subsystem                 = "logical_disk"
 	ticksToSecondsScaleFactor = 1 / 1e7
 )
 
@@ -44,6 +43,7 @@ type LogicalDiskCollector struct {
 
 // NewLogicalDiskCollector ...
 func NewLogicalDiskCollector() *LogicalDiskCollector {
+	const subsystem = "logical_disk"
 
 	return &LogicalDiskCollector{
 		RequestsQueued: prometheus.NewDesc(
