@@ -21,15 +21,22 @@ install:
 build_script:
   - govendor build -v +local
   - govendor test -v +local
+  - ps: if($env:APPVEYOR_REPO_TAG -eq "True") { .\installer\build.ps1 -PathToExecutable .\wmi_exporter.exe -Version $env:APPVEYOR_REPO_TAG_NAME -Arch "amd64" }
+
+artifacts:
+  - name: Executable
+    path: wmi_exporter.exe
+  - path: Installer
+    name: '.\installer\Output\wmi_exporter*.msi'
 
 deploy:
-  release: wmi_exporter-v$(appveyor_build_version)
-  description: 'WMI exporter for prometheus'
-  provider: GitHub
-  auth_token:
-    secure: CrXWeTf7qONUOEki5olFfGEUPMLDeHj61koDXV3OVEaLgtACmnVHsKUub9POflda # encrypted token from GitHub
-  draft: false
-  prerelease: false
-  on:
-    branch: master                 # release from master branch only
-    appveyor_repo_tag: true        # deploy on tag push only
+  - provider: GitHub
+    description: WMI Exporter version $(appveyor_build_version)
+    artifact: Executable,Installer
+    auth_token:
+      secure: 'Hello, world'
+    draft: false
+    prerelease: false
+    on:
+      branch: master
+      appveyor_repo_tag: true
