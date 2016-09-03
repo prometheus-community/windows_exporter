@@ -1,6 +1,8 @@
 [CmdletBinding()]
 Param (
   [Parameter(Mandatory=$true)]
+  [String] $PathToExecutable,
+  [Parameter(Mandatory=$true)]
   [String] $Version,
   [Parameter(Mandatory=$false)]
   [ValidateSet("amd64","386")]
@@ -38,16 +40,12 @@ Get-FileIfNotExists "http://download-codeplex.sec.s-msft.com/Download/Release?Pr
 mkdir -Force WiX | Out-Null
 Expand-Archive -Path "${sourceDir}\wix-binaries.zip" -DestinationPath WiX -Force
 
-Write-Verbose "Downloading wmi_exporter..."
-Get-FileIfNotExists "https://github.com/martinlindhe/wmi_exporter/releases/v${Version}_${Arch}.zip" "${sourceDir}\wmi_exporter-${Version}_${Arch}.zip"
-
-Write-Verbose "Unpacking"
-Expand-Archive "${sourceDir}\wmi_exporter-${Version}_${Arch}.zip" -DestinationPath Work -Force
+Copy-Item -Force $PathToExecutable Work/wmi_exporter.exe
 
 Write-Verbose "Creating wmi_exporter-${Version}-${Arch}.msi"
 $wixArch = @{"amd64"="x64"; "386"="x86"}[$Arch]
-$WixOpts = ""
-Invoke-Expression "WiX\candle.exe -nologo -arch $wixArch $WixOpts -out Work\wmi_exporter.wixobj -dVersion=`"$Version`" wmi_exporter.wxs"
-Invoke-Expression "WiX\light.exe -nologo -spdb $WixOpts -out `"Output\wmi_exporter-${Version}-${Arch}.msi`" Work\wmi_exporter.wixobj"
+$wixOpts = ""
+Invoke-Expression "WiX\candle.exe -nologo -arch $wixArch $wixOpts -out Work\wmi_exporter.wixobj -dVersion=`"$Version`" wmi_exporter.wxs"
+Invoke-Expression "WiX\light.exe -nologo -spdb $wixOpts -out `"Output\wmi_exporter-${Version}-${Arch}.msi`" Work\wmi_exporter.wixobj"
 
 Write-Verbose "Done!"
