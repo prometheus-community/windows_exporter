@@ -10,6 +10,15 @@ Param (
 )
 $ErrorActionPreference = "Stop"
 
+# Get absolute path to executable before switching directories
+$PathToExecutable = Resolve-Path $PathToExecutable
+# Set working dir to this directory, reset previous on exit
+Push-Location $PSScriptRoot
+Trap {
+  # Reset working dir on error
+  Pop-Location
+}
+
 if ($PSVersionTable.PSVersion.Major -lt 5) {
   Write-Error "Powershell version 5 required"
   exit 1
@@ -49,3 +58,4 @@ Invoke-Expression "WiX\candle.exe -nologo -arch $wixArch $wixOpts -out Work\wmi_
 Invoke-Expression "WiX\light.exe -nologo -spdb $wixOpts -out `"Output\wmi_exporter-${Version}-${Arch}.msi`" Work\wmi_exporter.wixobj"
 
 Write-Verbose "Done!"
+Pop-Location
