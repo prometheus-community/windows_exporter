@@ -21,13 +21,11 @@ install:
 build_script:
   - govendor build -v +local
   - govendor test -v +local
-  - ps: if($env:APPVEYOR_REPO_TAG -eq "True") { .\installer\build.ps1 -PathToExecutable .\wmi_exporter.exe -Version $env:APPVEYOR_REPO_TAG_NAME -Arch "amd64" }
+  - ps: if($env:APPVEYOR_REPO_TAG -eq "True") { .\installer\build.ps1 -PathToExecutable .\wmi_exporter.exe -Version $env:APPVEYOR_REPO_TAG_NAME -Arch "amd64"; Push-AppveyorArtifact installer\Output\wmi_exporter-$(APPVEYOR_REPO_TAG_NAME)-amd64.msi }
 
 artifacts:
   - name: Executable
     path: wmi_exporter.exe
-  - path: Installer
-    name: '.\installer\Output\wmi_exporter*.msi'
 
 deploy:
   - provider: GitHub
