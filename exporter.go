@@ -153,10 +153,7 @@ func main() {
 		log.Fatalf("Couldn't load collectors: %s", err)
 	}
 
-	log.Infof("Enabled collectors:")
-	for n := range collectors {
-		log.Infof(" - %s", n)
-	}
+	log.Infof("Enabled collectors: %v", strings.Join(keys(collectors), ", "))
 
 	nodeCollector := WmiCollector{collectors: collectors}
 	prometheus.MustRegister(nodeCollector)
@@ -181,6 +178,14 @@ func main() {
 			break
 		}
 	}
+}
+
+func keys(m map[string]collector.Collector) []string {
+	ret := make([]string, 0, len(m))
+	for key, _ := range m {
+		ret = append(ret, key)
+	}
+	return ret
 }
 
 type wmiExporterService struct {
