@@ -21,3 +21,15 @@ install:
 build_script:
   - govendor build -v +local
   - govendor test -v +local
+
+deploy:
+  release: wmi_exporter-v$(appveyor_build_version)
+  description: 'WMI exporter for prometheus'
+  provider: GitHub
+  auth_token:
+    secure: CrXWeTf7qONUOEki5olFfGEUPMLDeHj61koDXV3OVEaLgtACmnVHsKUub9POflda # encrypted token from GitHub
+  draft: false
+  prerelease: false
+  on:
+    branch: master                 # release from master branch only
+    appveyor_repo_tag: true        # deploy on tag push only
