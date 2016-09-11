@@ -105,8 +105,20 @@
 			"revisionTime": "2016-04-21T02:29:30Z"
 		},
 		{
+			"checksumSHA1": "ZcvekRXq6FjnGCznsRqfVTjA+pc=",
+			"path": "golang.org/x/sys/windows/registry",
+			"revision": "b776ec39b3e54652e09028aaaaac9757f4f8211a",
+			"revisionTime": "2016-04-21T02:29:30Z"
+		},
+		{
 			"checksumSHA1": "IRqLaXM/VQRzkbXPuiqOxTb2W0Y=",
 			"path": "golang.org/x/sys/windows/svc",
+			"revision": "b776ec39b3e54652e09028aaaaac9757f4f8211a",
+			"revisionTime": "2016-04-21T02:29:30Z"
+		},
+		{
+			"checksumSHA1": "uVlUSSKplihZG7N+QJ6fzDZ4Kh8=",
+			"path": "golang.org/x/sys/windows/svc/eventlog",
 			"revision": "b776ec39b3e54652e09028aaaaac9757f4f8211a",
 			"revisionTime": "2016-04-21T02:29:30Z"
 		}
