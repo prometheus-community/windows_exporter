@@ -69,10 +69,10 @@
 			"revisionTime": "2016-08-29T15:30:39Z"
 		},
 		{
-			"checksumSHA1": "fKMoxZehNhXbklRQy7lpFAVH0XY=",
+			"checksumSHA1": "vhHhEQUrkCS4NHM3rKoK6Xt5YPY=",
 			"path": "github.com/prometheus/common/log",
-			"revision": "616e90af75cc300730196d04f3676f838d70414f",
-			"revisionTime": "2016-08-29T15:30:39Z"
+			"revision": "76316eadbb7895a0310c6098559b975216dc33bf",
+			"revisionTime": "2016-09-10T11:41:46Z"
 		},
 		{
 			"checksumSHA1": "Jx0GXl5hGnO25s3ryyvtdWHdCpw=",
