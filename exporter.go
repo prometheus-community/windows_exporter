@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"net"
 	"net/http"
 	"os"
 	"sort"
@@ -166,12 +165,13 @@ func main() {
 	log.Infoln("Starting WMI exporter", version.Info())
 	log.Infoln("Build context", version.BuildContext())
 
-	log.Infoln("Listening on", *listenAddress)
-	l, err := net.Listen("tcp", *listenAddress)
-	if err != nil {
-		log.Fatalf("Cannot start WMI exporter: %s", err)
-	}
-	defer l.Close()
+	go func() {
+		log.Infoln("Starting server on", *listenAddress)
+		if err := http.ListenAndServe(*listenAddress, nil); err != nil {
+			log.Fatalf("cannot start WMI exporter: %s", err)
+		}
+	}()
+
 	for {
 		if <-stopCh {
 			log.Info("Shutting down WMI exporter")
