@@ -19,9 +19,16 @@ install:
   - go get -u github.com/kardianos/govendor
 
 build_script:
-  - govendor build -v +local
+  - govendor build -v +p
   - govendor test -v +local
-  - ps: if($env:APPVEYOR_REPO_TAG -eq "True") { .\installer\build.ps1 -PathToExecutable .\wmi_exporter.exe -Version $env:APPVEYOR_REPO_TAG_NAME -Arch "amd64"; Push-AppveyorArtifact installer\Output\wmi_exporter-$(APPVEYOR_REPO_TAG_NAME)-amd64.msi -DeploymentName Installer }
+  - ps: |
+      if($env:APPVEYOR_REPO_TAG -eq "True") {
+        # The MSI version is not semver compliant, so just take the numerical parts
+        $Version = $env:APPVEYOR_REPO_TAG_NAME -replace '^v?([0-9\.]+).*$','$1'
+        Write-Verbose "Setting msi version to $Version"
+        .\installer\build.ps1 -PathToExecutable .\wmi_exporter.exe -Version $Version -Arch "amd64"
+        Push-AppveyorArtifact installer\Output\wmi_exporter-$Version-amd64.msi -DeploymentName Installer
+      }
 
 artifacts:
   - name: Executable
