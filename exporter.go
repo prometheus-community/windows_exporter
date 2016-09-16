@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"golang.org/x/sys/windows/svc"
+
 	"github.com/martinlindhe/wmi_exporter/collector"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
@@ -23,6 +25,7 @@ type WmiCollector struct {
 
 const (
 	defaultCollectors = "logical_disk,os"
+	serviceName       = "wmi_exporter"
 )
 
 var (
@@ -134,15 +137,22 @@ func main() {
 		return
 	}
 
+	isInteractive, err := svc.IsAnInteractiveSession()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	stopCh := make(chan bool)
+	if !isInteractive {
+		go svc.Run(serviceName, &wmiExporterService{stopCh: stopCh})
+	}
+
 	collectors, err := loadCollectors(*enabledCollectors)
 	if err != nil {
 		log.Fatalf("Couldn't load collectors: %s", err)
 	}
 
-	log.Infof("Enabled collectors:")
-	for n := range collectors {
-		log.Infof(" - %s", n)
-	}
+	log.Infof("Enabled collectors: %v", strings.Join(keys(collectors), ", "))
 
 	nodeCollector := WmiCollector{collectors: collectors}
 	prometheus.MustRegister(nodeCollector)
@@ -155,8 +165,52 @@ func main() {
 	log.Infoln("Starting WMI exporter", version.Info())
 	log.Infoln("Build context", version.BuildContext())
 
-	log.Infoln("Listening on", *listenAddress)
-	if err := http.ListenAndServe(*listenAddress, nil); err != nil {
-		log.Fatalf("cannot start WMI exporter: %s", err)
+	go func() {
+		log.Infoln("Starting server on", *listenAddress)
+		if err := http.ListenAndServe(*listenAddress, nil); err != nil {
+			log.Fatalf("cannot start WMI exporter: %s", err)
+		}
+	}()
+
+	for {
+		if <-stopCh {
+			log.Info("Shutting down WMI exporter")
+			break
+		}
 	}
+}
+
+func keys(m map[string]collector.Collector) []string {
+	ret := make([]string, 0, len(m))
+	for key, _ := range m {
+		ret = append(ret, key)
+	}
+	return ret
+}
+
+type wmiExporterService struct {
+	stopCh chan<- bool
+}
+
+func (s *wmiExporterService) Execute(args []string, r <-chan svc.ChangeRequest, changes chan<- svc.Status) (ssec bool, errno uint32) {
+	const cmdsAccepted = svc.AcceptStop | svc.AcceptShutdown
+	changes <- svc.Status{State: svc.StartPending}
+	changes <- svc.Status{State: svc.Running, Accepts: cmdsAccepted}
+loop:
+	for {
+		select {
+		case c := <-r:
+			switch c.Cmd {
+			case svc.Interrogate:
+				changes <- c.CurrentStatus
+			case svc.Stop, svc.Shutdown:
+				s.stopCh <- true
+				break loop
+			default:
+				log.Error(fmt.Sprintf("unexpected control request #%d", c))
+			}
+		}
+	}
+	changes <- svc.Status{State: svc.StopPending}
+	return
 }

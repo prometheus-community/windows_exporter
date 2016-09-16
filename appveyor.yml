@@ -19,17 +19,29 @@ install:
   - go get -u github.com/kardianos/govendor
 
 build_script:
-  - govendor build -v +local
+  - govendor build -v +p
   - govendor test -v +local
+  - ps: |
+      if($env:APPVEYOR_REPO_TAG -eq "True") {
+        # The MSI version is not semver compliant, so just take the numerical parts
+        $Version = $env:APPVEYOR_REPO_TAG_NAME -replace '^v?([0-9\.]+).*$','$1'
+        Write-Verbose "Setting msi version to $Version"
+        .\installer\build.ps1 -PathToExecutable .\wmi_exporter.exe -Version $Version -Arch "amd64"
+        Push-AppveyorArtifact installer\Output\wmi_exporter-$Version-amd64.msi -DeploymentName Installer
+      }
+
+artifacts:
+  - name: Executable
+    path: wmi_exporter.exe
 
 deploy:
-  release: wmi_exporter-v$(appveyor_build_version)
-  description: 'WMI exporter for prometheus'
-  provider: GitHub
-  auth_token:
-    secure: CrXWeTf7qONUOEki5olFfGEUPMLDeHj61koDXV3OVEaLgtACmnVHsKUub9POflda # encrypted token from GitHub
-  draft: false
-  prerelease: false
-  on:
-    branch: master                 # release from master branch only
-    appveyor_repo_tag: true        # deploy on tag push only
+  - provider: GitHub
+    description: WMI Exporter version $(appveyor_build_version)
+    artifact: Executable,Installer
+    auth_token:
+      secure: 'CrXWeTf7qONUOEki5olFfGEUPMLDeHj61koDXV3OVEaLgtACmnVHsKUub9POflda'
+    draft: false
+    prerelease: false
+    on:
+      branch: master
+      appveyor_repo_tag: true
