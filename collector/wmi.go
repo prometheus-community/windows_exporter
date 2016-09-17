@@ -5,6 +5,9 @@ import "github.com/prometheus/client_golang/prometheus"
 // ...
 const (
 	Namespace = "wmi"
+
+	// Conversion factors
+	ticksToSecondsScaleFactor = 1 / 1e7
 )
 
 // Factories ...
