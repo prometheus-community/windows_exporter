@@ -14,93 +14,82 @@ func init() {
 	Factories["os"] = NewOSCollector
 }
 
-// A OSCollector is a Prometheus collector for WMI Win32_OperatingSystem metrics
+// A OSCollector is a Prometheus collector for WMI metrics
 type OSCollector struct {
 	PhysicalMemoryFreeBytes *prometheus.Desc
 	PagingFreeBytes         *prometheus.Desc
 	VirtualMemoryFreeBytes  *prometheus.Desc
-	ProcessesMax            *prometheus.Desc
-	ProcessMemoryMaxBytes   *prometheus.Desc
+	ProcessesLimit          *prometheus.Desc
+	ProcessMemoryLimitBytes *prometheus.Desc
 	Processes               *prometheus.Desc
 	Users                   *prometheus.Desc
-	PagingMaxBytes          *prometheus.Desc
+	PagingLimitBytes        *prometheus.Desc
 	VirtualMemoryBytes      *prometheus.Desc
 	VisibleMemoryBytes      *prometheus.Desc
 }
 
 // NewOSCollector ...
 func NewOSCollector() (Collector, error) {
-
 	const subsystem = "os"
 
 	return &OSCollector{
-
-		PagingMaxBytes: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "paging_max_bytes"),
-			"SizeStoredInPagingFiles",
+		PagingLimitBytes: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "paging_limit_bytes"),
+			"OperatingSystem.SizeStoredInPagingFiles",
 			nil,
 			nil,
 		),
-
 		PagingFreeBytes: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "paging_free_bytes"),
-			"FreeSpaceInPagingFiles",
+			"OperatingSystem.FreeSpaceInPagingFiles",
 			nil,
 			nil,
 		),
-
 		PhysicalMemoryFreeBytes: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "physical_memory_free_bytes"),
-			"FreePhysicalMemory",
+			"OperatingSystem.FreePhysicalMemory",
 			nil,
 			nil,
 		),
-
 		Processes: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "processes"),
-			"NumberOfProcesses",
+			"OperatingSystem.NumberOfProcesses",
 			nil,
 			nil,
 		),
-
-		ProcessesMax: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "processes_max"),
-			"MaxNumberOfProcesses",
+		ProcessesLimit: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "processes_limit"),
+			"OperatingSystem.MaxNumberOfProcesses",
 			nil,
 			nil,
 		),
-
-		ProcessMemoryMaxBytes: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "process_memory_max_bytes"),
-			"MaxProcessMemorySize",
+		ProcessMemoryLimitBytes: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "process_memory_limix_bytes"),
+			"OperatingSystem.MaxProcessMemorySize",
 			nil,
 			nil,
 		),
-
 		Users: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "users"),
-			"NumberOfUsers",
+			"OperatingSystem.NumberOfUsers",
 			nil,
 			nil,
 		),
-
 		VirtualMemoryBytes: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "virtual_memory_bytes"),
-			"TotalVirtualMemorySize",
+			"OperatingSystem.TotalVirtualMemorySize",
 			nil,
 			nil,
 		),
-
 		VisibleMemoryBytes: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "visible_memory_bytes"),
-			"TotalVisibleMemorySize",
+			"OperatingSystem.TotalVisibleMemorySize",
 			nil,
 			nil,
 		),
-
 		VirtualMemoryFreeBytes: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "virtual_memory_free_bytes"),
-			"FreeVirtualMemory",
+			"OperatingSystem.FreeVirtualMemory",
 			nil,
 			nil,
 		),
@@ -132,8 +121,7 @@ type Win32_OperatingSystem struct {
 
 func (c *OSCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_OperatingSystem
-	q := wmi.CreateQuery(&dst, "")
-	if err := wmi.Query(q, &dst); err != nil {
+	if err := wmi.Query(wmi.CreateQuery(&dst, ""), &dst); err != nil {
 		return nil, err
 	}
 
@@ -156,13 +144,13 @@ func (c *OSCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, er
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.ProcessesMax,
+		c.ProcessesLimit,
 		prometheus.GaugeValue,
 		float64(dst[0].MaxNumberOfProcesses),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.ProcessMemoryMaxBytes,
+		c.ProcessMemoryLimitBytes,
 		prometheus.GaugeValue,
 		float64(dst[0].MaxProcessMemorySize*1024), // KiB -> bytes
 	)
@@ -180,7 +168,7 @@ func (c *OSCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, er
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.PagingMaxBytes,
+		c.PagingLimitBytes,
 		prometheus.GaugeValue,
 		float64(dst[0].SizeStoredInPagingFiles*1024), // KiB -> bytes
 	)
