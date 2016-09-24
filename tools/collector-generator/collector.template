@@ -1,0 +1,62 @@
+// returns data points from {{ .Class }}
+// <add link to documentation here> - {{ .Class }} class
+package collector
+import (
+    "log"
+
+    "github.com/StackExchange/wmi"
+    "github.com/prometheus/client_golang/prometheus"
+)
+func init() {
+    Factories["{{ .CollectorName | toLower }}"] = New{{ .CollectorName }}Collector
+}
+// A {{ .CollectorName }}Collector is a Prometheus collector for WMI {{ .Class }} metrics
+type {{ .CollectorName }}Collector struct {
+{{- range $m := .Members }}
+    {{ $m.Name }} *prometheus.Desc
+{{- end }}
+}
+// New{{ .CollectorName }}Collector ...
+func New{{ .CollectorName }}Collector() (Collector, error) {
+    const subsystem = "{{ .CollectorName | toLower }}"
+    return &{{ .CollectorName }}Collector{
+{{- range $m := .Members }}
+        {{ $m.Name }}: prometheus.NewDesc(
+            prometheus.BuildFQName(Namespace, subsystem, "{{ $m.Name | toSnakeCase }}"),
+            "({{ $m.Name }})",
+            nil,
+            nil,
+        ),
+{{- end }}
+    }, nil
+}
+// Collect sends the metric values for each metric
+// to the provided prometheus Metric channel.
+func (c *{{ .CollectorName }}Collector) Collect(ch chan<- prometheus.Metric) error {
+    if desc, err := c.collect(ch); err != nil {
+        log.Println("[ERROR] failed collecting {{ .CollectorName | toLower }} metrics:", desc, err)
+        return err
+    }
+    return nil
+}
+type {{ .Class }} struct {
+    Name string
+{{ range $m := .Members }}
+    {{ $m.Name }} {{ $m.Type }}
+{{- end }}
+}
+func (c *{{ .CollectorName }}Collector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+    var dst []{{ .Class }}
+    q := wmi.CreateQuery(&dst, "")
+    if err := wmi.Query(q, &dst); err != nil {
+        return nil, err
+    }
+    {{ range $m := .Members }}
+    ch <- prometheus.MustNewConstMetric(
+        c.{{ $m.Name }},
+        prometheus.GaugeValue,
+        float64(dst[0].{{ $m.Name }}),
+    )
+    {{ end }}
+    return nil, nil
+}
