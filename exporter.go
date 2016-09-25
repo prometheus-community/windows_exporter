@@ -24,7 +24,7 @@ type WmiCollector struct {
 }
 
 const (
-	defaultCollectors = "logical_disk,os"
+	defaultCollectors = "cpu,logical_disk,os"
 	serviceName       = "wmi_exporter"
 )
 

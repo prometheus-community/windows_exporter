@@ -18,10 +18,6 @@ func init() {
 	Factories["logical_disk"] = NewLogicalDiskCollector
 }
 
-const (
-	ticksToSecondsScaleFactor = 1 / 1e7
-)
-
 var (
 	volumeWhitelist = flag.String("collector.logical_disk.volume-whitelist", ".+", "Regexp of volumes to whitelist. Volume name must both match whitelist and not match blacklist to be included.")
 	volumeBlacklist = flag.String("collector.logical_disk.volume-blacklist", "", "Regexp of volumes to blacklist. Volume name must both match whitelist and not match blacklist to be included.")
