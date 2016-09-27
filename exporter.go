@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"sort"
@@ -158,6 +159,7 @@ func main() {
 	prometheus.MustRegister(nodeCollector)
 
 	http.Handle(*metricsPath, prometheus.Handler())
+	http.HandleFunc("/health", healthCheck)
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, *metricsPath, http.StatusMovedPermanently)
 	})
@@ -180,9 +182,14 @@ func main() {
 	}
 }
 
+func healthCheck(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	io.WriteString(w, `{"status":"ok"}`)
+}
+
 func keys(m map[string]collector.Collector) []string {
 	ret := make([]string, 0, len(m))
-	for key, _ := range m {
+	for key := range m {
 		ret = append(ret, key)
 	}
 	return ret
