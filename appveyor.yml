@@ -4,18 +4,12 @@ os: Windows Server 2012 R2
 
 environment:
   GOPATH: c:\gopath
-  GOVERSION: 1.7
 
 clone_folder: c:\gopath\src\github.com\martinlindhe\wmi_exporter
 
 install:
   - go version
   - set PATH=%GOPATH%\bin;c:\go\bin;%PATH%
-  - rmdir c:\go /s /q
-  - appveyor DownloadFile https://storage.googleapis.com/golang/go%GOVERSION%.windows-amd64.zip
-  - 7z x go%GOVERSION%.windows-amd64.zip -y -oC:\ > NUL
-  - go version
-  - go env
   - go get -u github.com/kardianos/govendor
 
 build_script:
