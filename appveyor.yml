@@ -11,10 +11,11 @@ install:
   - go version
   - set PATH=%GOPATH%\bin;c:\go\bin;%PATH%
   - go get -u github.com/kardianos/govendor
+  - go get -u github.com/prometheus/promu
 
 build_script:
-  - govendor build -v +p
   - govendor test -v +local
+  - promu build -v .
   - ps: |
       if($env:APPVEYOR_REPO_TAG -eq "True") {
         # The MSI version is not semver compliant, so just take the numerical parts
