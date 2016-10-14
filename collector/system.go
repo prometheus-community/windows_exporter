@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Factories["perfos"] = NewSystemCollector
+	Factories["system"] = NewSystemCollector
 }
 
 // A PerfOSCollector is a Prometheus collector for WMI metrics
