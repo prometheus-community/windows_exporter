@@ -4,8 +4,6 @@
 
 Prometheus exporter for Windows machines, using the WMI (Windows Management Instrumentation).
 
-**EXPERIMENTAL, use at your own risk!**
-
 
 ## Collectors
 
