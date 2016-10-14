@@ -39,7 +39,7 @@ msiexec /i <path-to-msi-file> ENABLED_COLLECTORS=os,iis LISTEN_PORT=5000
 
 ## Roadmap
 
-See [Wiki](https://github.com/martinlindhe/wmi_exporter/wiki/TODO)
+See [open issues](https://github.com/martinlindhe/wmi_exporter/issues)
 
 
 ## Usage
