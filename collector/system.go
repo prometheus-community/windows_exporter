@@ -1,4 +1,5 @@
-// returns data points from Win32_PerfRawData_PerfOS_System class (undocumented)
+// returns data points from Win32_PerfRawData_PerfOS_System class
+// https://web.archive.org/web/20050830140516/http://msdn.microsoft.com/library/en-us/wmisdk/wmi/win32_perfrawdata_perfos_system.asp
 
 package collector
 
@@ -13,7 +14,7 @@ func init() {
 	Factories["system"] = NewSystemCollector
 }
 
-// A PerfOSCollector is a Prometheus collector for WMI metrics
+// A SystemCollector is a Prometheus collector for WMI metrics
 type SystemCollector struct {
 	ContextSwitchesTotal     *prometheus.Desc
 	ExceptionDispatchesTotal *prometheus.Desc
