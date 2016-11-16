@@ -55,7 +55,7 @@ func NewSystemCollector() (Collector, error) {
 		),
 		SystemUpTime: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "system_up_time"),
-			"PerfOS_System.SystemUpTime",
+			"SystemUpTime/Frequency_Object",
 			nil,
 			nil,
 		),
@@ -81,10 +81,12 @@ func (c *SystemCollector) Collect(ch chan<- prometheus.Metric) error {
 type Win32_PerfRawData_PerfOS_System struct {
 	ContextSwitchesPersec     uint32
 	ExceptionDispatchesPersec uint32
+	Frequency_Object          uint64
 	ProcessorQueueLength      uint32
 	SystemCallsPersec         uint32
 	SystemUpTime              uint64
 	Threads                   uint32
+	Timestamp_Object          uint64
 }
 
 func (c *SystemCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
@@ -92,6 +94,7 @@ func (c *SystemCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc
 	if err := wmi.Query(wmi.CreateQuery(&dst, ""), &dst); err != nil {
 		return nil, err
 	}
+
 	ch <- prometheus.MustNewConstMetric(
 		c.ContextSwitchesTotal,
 		prometheus.GaugeValue,
@@ -115,7 +118,8 @@ func (c *SystemCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc
 	ch <- prometheus.MustNewConstMetric(
 		c.SystemUpTime,
 		prometheus.GaugeValue,
-		float64(dst[0].SystemUpTime),
+		// convert from Windows timestamp (1 jan 1601) to unix timestamp (1 jan 1970)
+		float64(dst[0].SystemUpTime-116444736000000000)/float64(dst[0].Frequency_Object),
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.Threads,
