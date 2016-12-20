@@ -4,6 +4,11 @@ os: Windows Server 2012 R2
 
 environment:
   GOPATH: c:\gopath
+  matrix:
+    - MSI_ARCH: amd64
+      GOARCH: amd64
+    - MSI_ARCH: x86
+      GOARCH: 386
 
 clone_folder: c:\gopath\src\github.com\martinlindhe\wmi_exporter
 
@@ -23,13 +28,16 @@ build_script:
         # The MSI version is not semver compliant, so just take the numerical parts
         $Version = $env:APPVEYOR_REPO_TAG_NAME -replace '^v?([0-9\.]+).*$','$1'
         Write-Verbose "Setting msi version to $Version"
-        .\installer\build.ps1 -PathToExecutable .\wmi_exporter.exe -Version $Version -Arch "amd64"
-        Push-AppveyorArtifact installer\Output\wmi_exporter-$Version-amd64.msi -DeploymentName Installer
+        .\installer\build.ps1 -PathToExecutable .\wmi_exporter.exe -Version $Version -Arch "$env:MSI_ARCH"
+        Push-AppveyorArtifact installer\Output\wmi_exporter-$Version-$env:MSI_ARCH.msi -DeploymentName Installer
       }
+
+after_build:
+  - 7z a wmi_exporter-%MSI_ARCH%.zip wmi_exporter.exe
 
 artifacts:
   - name: Executable
-    path: wmi_exporter.exe
+    path: 'wmi_exporter-*.zip'
 
 deploy:
   - provider: GitHub
