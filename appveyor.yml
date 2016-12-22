@@ -5,16 +5,16 @@ os: Windows Server 2012 R2
 environment:
   GOPATH: c:\gopath
   matrix:
-    #- MSI_ARCH: amd64
-    #  GO_BUILDARCH: amd64
+    - MSI_ARCH: amd64
+      GOARCH: amd64
     - MSI_ARCH: x86
-      GO_BUILDARCH: 386
+      GOARCH: 386
 
 clone_folder: c:\gopath\src\github.com\martinlindhe\wmi_exporter
 
 install:
   - go version
-  - set PATH=%GOPATH%\bin;c:\go\bin;%PATH%
+  - set PATH=%GOPATH%\bin;c:\go\bin;%GOPATH%\bin\windows_%GOARCH%;%PATH%
   - go get -u github.com/kardianos/govendor
   - go get -u github.com/prometheus/promu
   - choco install gitversion.portable -y
