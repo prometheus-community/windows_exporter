@@ -7,7 +7,7 @@ environment:
   matrix:
     - MSI_ARCH: amd64
       GOARCH: amd64
-    - MSI_ARCH: x86
+    - MSI_ARCH: 386
       GOARCH: 386
 
 clone_folder: c:\gopath\src\github.com\martinlindhe\wmi_exporter
@@ -24,6 +24,7 @@ build_script:
   - govendor test -v +local
   - promu build -v .
   - ps: |
+      $ErrorActionPreference = "Stop"
       if($env:APPVEYOR_REPO_TAG -eq "True") {
         # The MSI version is not semver compliant, so just take the numerical parts
         $Version = $env:APPVEYOR_REPO_TAG_NAME -replace '^v?([0-9\.]+).*$','$1'
