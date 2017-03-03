@@ -9,6 +9,7 @@ Prometheus exporter for Windows machines, using the WMI (Windows Management Inst
 
 Name     | Description | Enabled by default
 ---------|-------------|--------------------
+ad | [Win32_PerfRawData_DirectoryServices_DirectoryServices](https://msdn.microsoft.com/en-us/library/ms803980.aspx) Active Directory | 
 cpu | [Win32_PerfRawData_PerfOS_Processor](https://msdn.microsoft.com/en-us/library/aa394317(v=vs.90).aspx) metrics (cpu usage) | &#10003;
 cs | [Win32_ComputerSystem](https://msdn.microsoft.com/en-us/library/aa394102) metrics (system properties, num cpus/total memory) | &#10003;
 dns | [Win32_PerfRawData_DNS_DNS](https://technet.microsoft.com/en-us/library/cc977686.aspx) metrics (DNS Server) |
