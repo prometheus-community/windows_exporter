@@ -55,6 +55,26 @@ type Win32_Service struct {
 	StartMode string
 }
 
+var (
+	allStates = []string{
+		"stopped",
+		"start pending",
+		"stop pending",
+		"running",
+		"continue pending",
+		"pause pending",
+		"paused",
+		"unknown",
+	}
+	allStartModes = []string{
+		"boot",
+		"system",
+		"auto",
+		"manual",
+		"disabled",
+	}
+)
+
 func (c *serviceCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_Service
 	q := wmi.CreateQuery(&dst, "")
@@ -63,21 +83,33 @@ func (c *serviceCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Des
 	}
 
 	for _, service := range dst {
-		ch <- prometheus.MustNewConstMetric(
-			c.State,
-			prometheus.GaugeValue,
-			1.0,
-			strings.ToLower(service.Name),
-			strings.ToLower(service.State),
-		)
+		for _, state := range allStates {
+			isCurrentState := 0.0
+			if state == strings.ToLower(service.State) {
+				isCurrentState = 1.0
+			}
+			ch <- prometheus.MustNewConstMetric(
+				c.State,
+				prometheus.GaugeValue,
+				isCurrentState,
+				strings.ToLower(service.Name),
+				state,
+			)
+		}
 
-		ch <- prometheus.MustNewConstMetric(
-			c.StartMode,
-			prometheus.GaugeValue,
-			1.0,
-			strings.ToLower(service.Name),
-			strings.ToLower(service.StartMode),
-		)
+		for _, startMode := range allStartModes {
+			isCurrentStartMode := 0.0
+			if startMode == strings.ToLower(service.StartMode) {
+				isCurrentStartMode = 1.0
+			}
+			ch <- prometheus.MustNewConstMetric(
+				c.StartMode,
+				prometheus.GaugeValue,
+				isCurrentStartMode,
+				strings.ToLower(service.Name),
+				startMode,
+			)
+		}
 	}
 	return nil, nil
 }
