@@ -25,8 +25,9 @@ type WmiCollector struct {
 }
 
 const (
-	defaultCollectors = "cpu,cs,logical_disk,net,os,service,system"
-	serviceName       = "wmi_exporter"
+	defaultCollectors            = "cpu,cs,logical_disk,net,os,service,system"
+	defaultCollectorsPlaceholder = "[defaults]"
+	serviceName                  = "wmi_exporter"
 )
 
 var (
@@ -90,9 +91,27 @@ func execute(name string, c collector.Collector, ch chan<- prometheus.Metric) {
 	scrapeDurations.WithLabelValues(name, result).Observe(duration.Seconds())
 }
 
+func expandEnabledCollectors(enabled string) []string {
+	expanded := strings.Replace(enabled, defaultCollectorsPlaceholder, defaultCollectors, -1)
+	separated := strings.Split(expanded, ",")
+	unique := map[string]bool{}
+	for _, s := range separated {
+		if s != "" {
+			unique[s] = true
+		}
+	}
+	result := make([]string, 0, len(unique))
+	for s, _ := range unique {
+		result = append(result, s)
+	}
+	return result
+}
+
 func loadCollectors(list string) (map[string]collector.Collector, error) {
 	collectors := map[string]collector.Collector{}
-	for _, name := range strings.Split(list, ",") {
+	enabled := expandEnabledCollectors(list)
+
+	for _, name := range enabled {
 		fn, ok := collector.Factories[name]
 		if !ok {
 			return nil, fmt.Errorf("collector '%s' not available", name)
@@ -115,7 +134,7 @@ func main() {
 		showVersion       = flag.Bool("version", false, "Print version information.")
 		listenAddress     = flag.String("telemetry.addr", ":9182", "host:port for WMI exporter.")
 		metricsPath       = flag.String("telemetry.path", "/metrics", "URL path for surfacing collected metrics.")
-		enabledCollectors = flag.String("collectors.enabled", filterAvailableCollectors(defaultCollectors), "Comma-separated list of collectors to use.")
+		enabledCollectors = flag.String("collectors.enabled", filterAvailableCollectors(defaultCollectors), "Comma-separated list of collectors to use. Use '[default]' as a placeholder for all the collectors enabled by default")
 		printCollectors   = flag.Bool("collectors.print", false, "If true, print available collectors and exit.")
 	)
 	flag.Parse()
