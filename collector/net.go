@@ -138,18 +138,18 @@ func mangleNetworkName(name string) string {
 }
 
 type Win32_PerfRawData_Tcpip_NetworkInterface struct {
-	BytesReceivedPerSec      uint32
-	BytesSentPerSec          uint32
+	BytesReceivedPerSec      uint64
+	BytesSentPerSec          uint64
 	BytesTotalPerSec         uint64
 	Name                     string
-	PacketsOutboundDiscarded uint32
-	PacketsOutboundErrors    uint32
-	PacketsPerSec            uint32
-	PacketsReceivedDiscarded uint32
-	PacketsReceivedErrors    uint32
-	PacketsReceivedPerSec    uint32
-	PacketsReceivedUnknown   uint32
-	PacketsSentPerSec        uint32
+	PacketsOutboundDiscarded uint64
+	PacketsOutboundErrors    uint64
+	PacketsPerSec            uint64
+	PacketsReceivedDiscarded uint64
+	PacketsReceivedErrors    uint64
+	PacketsReceivedPerSec    uint64
+	PacketsReceivedUnknown   uint64
+	PacketsSentPerSec        uint64
 }
 
 func (c *NetworkCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
