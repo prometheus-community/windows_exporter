@@ -45,7 +45,7 @@ mkdir -Force Work,Output | Out-Null
 Write-Verbose "Downloading files"
 # Somewhat obscure url, points to WiX 3.10 binary release
 Write-Verbose "Downloading WiX..."
-Get-FileIfNotExists "http://download-codeplex.sec.s-msft.com/Download/Release?ProjectName=wix&DownloadId=1504735&FileTime=130906491728530000&Build=21040" "$sourceDir\wix-binaries.zip"
+Get-FileIfNotExists "http://download-codeplex.sec.s-msft.com/Download/Release?ProjectName=wix&DownloadId=1587180&FileTime=131118854877130000&Build=21046" "$sourceDir\wix-binaries.zip"
 mkdir -Force WiX | Out-Null
 Expand-Archive -Path "${sourceDir}\wix-binaries.zip" -DestinationPath WiX -Force
 
