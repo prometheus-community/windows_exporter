@@ -72,7 +72,7 @@ func NewSystemCollector() (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *SystemCollector) Collect(ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ch); err != nil {
-		log.Println("[ERROR] failed collecting os metrics:", desc, err)
+		log.Println("[ERROR] failed collecting system metrics:", desc, err)
 		return err
 	}
 	return nil
