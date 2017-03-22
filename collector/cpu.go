@@ -57,7 +57,7 @@ func NewCPUCollector() (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *CPUCollector) Collect(ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ch); err != nil {
-		log.Println("[ERROR] failed collecting os metrics:", desc, err)
+		log.Println("[ERROR] failed collecting cpu metrics:", desc, err)
 		return err
 	}
 	return nil
