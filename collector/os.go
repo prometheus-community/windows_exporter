@@ -5,7 +5,8 @@ package collector
 
 import (
 	"log"
-
+	"time"
+	
 	"github.com/StackExchange/wmi"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -26,6 +27,8 @@ type OSCollector struct {
 	PagingLimitBytes        *prometheus.Desc
 	VirtualMemoryBytes      *prometheus.Desc
 	VisibleMemoryBytes      *prometheus.Desc
+	Time			*prometheus.Desc
+	Timezone		*prometheus.Desc
 }
 
 // NewOSCollector ...
@@ -49,6 +52,18 @@ func NewOSCollector() (Collector, error) {
 			prometheus.BuildFQName(Namespace, subsystem, "physical_memory_free_bytes"),
 			"OperatingSystem.FreePhysicalMemory",
 			nil,
+			nil,
+		),
+		Time: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "time"),
+			"OperatingSystem.LocalDateTime",
+			nil,
+			nil,
+		),
+		Timezone: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "timezone"),
+			"OperatingSystem.LocalDateTime",
+			[]string{"timezone"},
 			nil,
 		),
 		Processes: prometheus.NewDesc(
@@ -117,6 +132,7 @@ type Win32_OperatingSystem struct {
 	SizeStoredInPagingFiles uint64
 	TotalVirtualMemorySize  uint64
 	TotalVisibleMemorySize  uint64
+	LocalDateTime		time.Time
 }
 
 func (c *OSCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
@@ -129,6 +145,23 @@ func (c *OSCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, er
 		c.PhysicalMemoryFreeBytes,
 		prometheus.GaugeValue,
 		float64(dst[0].FreePhysicalMemory*1024), // KiB -> bytes
+	)
+
+	time := dst[0].LocalDateTime
+	
+	ch <- prometheus.MustNewConstMetric(
+		c.Time,
+		prometheus.GaugeValue,
+		float64(time.Unix()),
+	)
+
+	timezoneName, _ := time.Zone()
+
+	ch <- prometheus.MustNewConstMetric(
+		c.Timezone,
+		prometheus.GaugeValue,
+		1.0,
+		timezoneName,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
