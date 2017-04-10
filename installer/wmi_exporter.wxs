@@ -34,7 +34,7 @@
     <ComponentGroup Id="Files" Directory="APPLICATIONROOTDIRECTORY">
       <Component>
         <File Id="wmi_exporter.exe" Name="wmi_exporter.exe" Source="Work\wmi_exporter.exe" KeyPath="yes">
-          <fw:FirewallException Id="MetricsEndpoint" Name="WMI Exporter (HTTP [LISTEN_PORT])" Description="WMI Exporter HTTP endpoint" Port="[LISTEN_PORT]" Protocol="tcp" Scope="any" />
+          <fw:FirewallException Id="MetricsEndpoint" Name="WMI Exporter (HTTP [LISTEN_PORT])" Description="WMI Exporter HTTP endpoint" Port="[LISTEN_PORT]" Protocol="tcp" Scope="any" IgnoreFailure="yes" />
         </File>
         <ServiceInstall Id="InstallExporterService" Name="wmi_exporter" ErrorControl="normal" Start="auto" Type="ownProcess" Arguments="-log.format logger:eventlog?name=wmi_exporter [CollectorsFlag] [ListenFlag] [MetricsPathFlag]" />
         <ServiceControl Id="ServiceStateControl" Name="wmi_exporter" Remove="uninstall" Start="install" Stop="both" />
