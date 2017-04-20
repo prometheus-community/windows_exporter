@@ -183,7 +183,8 @@ func (c *IISAppPoolCollector) collect(ch chan<- prometheus.Metric) (*prometheus.
 		ch <- prometheus.MustNewConstMetric(
 			c.CurrentApplicationPoolUptime,
 			prometheus.GaugeValue,
-			float64(app.CurrentApplicationPoolUptime),
+			// convert from Windows timestamp (1 jan 1601) to unix timestamp (1 jan 1970)
+			float64(app.CurrentApplicationPoolUptime-116444736000000000),
 			app.Name,
 		)
 
