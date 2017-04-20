@@ -3,15 +3,23 @@
 package collector
 
 import (
+	"flag"
 	"log"
+	"regexp"
+	"fmt"
 
 	"github.com/StackExchange/wmi"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 func init() {
-	Factories["iis_apppool"] = NewIISAppPoolCollector
+	Factories["iis_app"] = NewIISAppPoolCollector
 }
+
+var (
+	appWhitelist = flag.String("collector.iis.app-whitelist", ".+", "Regexp of apps to whitelist. App name must both match whitelist and not match blacklist to be included.")
+	appBlacklist = flag.String("collector.iis.app-blacklist", "", "Regexp of apps to blacklist. App name must both match whitelist and not match blacklist to be included.")
+)
 
 // A IISAppPoolCollector is a Prometheus collector for WMI Win32_PerfRawData_APPPOOLCountersProvider_APPPOOLWAS metrics
 type IISAppPoolCollector struct {
@@ -28,11 +36,14 @@ type IISAppPoolCollector struct {
 	TotalWorkerProcessPingFailures     *prometheus.Desc
 	TotalWorkerProcessShutdownFailures *prometheus.Desc
 	TotalWorkerProcessStartupFailures  *prometheus.Desc
+
+	appWhitelistPattern *regexp.Regexp
+	appBlacklistPattern *regexp.Regexp
 }
 
 // NewIISAppPoolCollector ...
 func NewIISAppPoolCollector() (Collector, error) {
-	const subsystem = "iis_apppool"
+	const subsystem = "iis_app"
 	return &IISAppPoolCollector{
 		CurrentApplicationPoolState: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "current_application_pool_state"),
@@ -166,42 +177,42 @@ func (c *IISAppPoolCollector) collect(ch chan<- prometheus.Metric) (*prometheus.
 			c.CurrentApplicationPoolState,
 			prometheus.GaugeValue,
 			float64(app.CurrentApplicationPoolState),
-			app.NAME
+			app.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.CurrentApplicationPoolUptime,
 			prometheus.GaugeValue,
 			float64(app.CurrentApplicationPoolUptime),
-			app.NAME
+			app.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.CurrentWorkerProcesses,
 			prometheus.GaugeValue,
 			float64(app.CurrentWorkerProcesses),
-			app.NAME
+			app.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.MaximumWorkerProcesses,
 			prometheus.GaugeValue,
 			float64(app.MaximumWorkerProcesses),
-			app.NAME
+			app.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.RecentWorkerProcessFailures,
 			prometheus.GaugeValue,
 			float64(app.RecentWorkerProcessFailures),
-			app.NAME
+			app.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.TimeSinceLastWorkerProcessFailure,
 			prometheus.GaugeValue,
 			float64(app.TimeSinceLastWorkerProcessFailure),
-			app.NAME
+			app.Name,
 		)
 
 		// Counters
@@ -209,49 +220,49 @@ func (c *IISAppPoolCollector) collect(ch chan<- prometheus.Metric) (*prometheus.
 			c.TotalApplicationPoolRecycles,
 			prometheus.CounterValue,
 			float64(app.TotalApplicationPoolRecycles),
-			app.NAME
+			app.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalApplicationPoolUptime,
 			prometheus.CounterValue,
 			float64(app.TotalApplicationPoolUptime),
-			app.NAME
+			app.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalWorkerProcessesCreated,
 			prometheus.CounterValue,
 			float64(app.TotalWorkerProcessesCreated),
-			app.NAME
+			app.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalWorkerProcessFailures,
 			prometheus.CounterValue,
 			float64(app.TotalWorkerProcessFailures),
-			app.NAME
+			app.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalWorkerProcessPingFailures,
 			prometheus.CounterValue,
 			float64(app.TotalWorkerProcessPingFailures),
-			app.NAME
+			app.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalWorkerProcessShutdownFailures,
 			prometheus.CounterValue,
 			float64(app.TotalWorkerProcessShutdownFailures),
-			app.NAME
+			app.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalWorkerProcessStartupFailures,
 			prometheus.CounterValue,
 			float64(app.TotalWorkerProcessStartupFailures),
-			app.NAME
+			app.Name,
 		)
 
 	}
