@@ -1,5 +1,7 @@
-// returns data points from Win32_PerfRawData_W3SVC_WebService
+// returns data points from the following classes:
+// - Win32_PerfRawData_W3SVC_WebService
 // https://msdn.microsoft.com/en-us/library/aa394345 - Win32_OperatingSystem class
+// - Win32_PerfRawData_APPPOOLCountersProvider_APPPOOLWAS
 
 package collector
 
@@ -24,7 +26,8 @@ var (
 	appBlacklist = flag.String("collector.iis.app-blacklist", "", "Regexp of apps to blacklist. App name must both match whitelist and not match blacklist to be included.")
 )
 
-// A IISCollector is a Prometheus collector for WMI Win32_PerfRawData_W3SVC_WebService metrics
+// A IISCollector is a Prometheus collector for WMI Win32_PerfRawData_W3SVC_WebService 
+// and Win32_PerfRawData_APPPOOLCountersProvider_APPPOOLWAS metrics
 type IISCollector struct {
 	CurrentAnonymousUsers         *prometheus.Desc
 	CurrentBlockedAsyncIORequests *prometheus.Desc
