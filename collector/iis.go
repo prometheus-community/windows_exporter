@@ -650,13 +650,20 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 		}
 
 		// Guages
-		ch <- prometheus.MustNewConstMetric(
-			c.CurrentApplicationPoolState,
-			prometheus.GaugeValue,
-			float64(app.CurrentApplicationPoolState),
-			app.Name,
-			ApplicationStates[app.CurrentApplicationPoolState],
-		)
+		for key, label := range ApplicationStates {
+			isCurrentState := 0.0
+			if key == app.CurrentApplicationPoolState {
+				isCurrentState = 1.0
+			}
+			ch <- prometheus.MustNewConstMetric(
+				c.CurrentApplicationPoolState,
+				prometheus.GaugeValue,
+				float64(isCurrentState),
+				app.Name,
+				label,
+			)
+		}
+		
 
 		ch <- prometheus.MustNewConstMetric(
 			c.CurrentApplicationPoolUptime,
