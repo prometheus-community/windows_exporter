@@ -356,6 +356,8 @@ type Win32_PerfRawData_W3SVC_WebService struct {
 
 type Win32_PerfRawData_APPPOOLCountersProvider_APPPOOLWAS struct {
 	Name string
+	Frequency_Object                   uint64
+	Timestamp_Object                   uint64
 
 	CurrentApplicationPoolState        uint32
 	CurrentApplicationPoolUptime       uint64
@@ -668,7 +670,7 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 		ch <- prometheus.MustNewConstMetric(
 			c.CurrentApplicationPoolUptime,
 			prometheus.GaugeValue,
-			float64(app.CurrentApplicationPoolUptime),
+			(float64(app.Timestamp_Object) - float64(app.CurrentApplicationPoolUptime)) / float64(app.Frequency_Object),
 			app.Name,
 		)
 
@@ -711,7 +713,7 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalApplicationPoolUptime,
 			prometheus.CounterValue,
-			float64(app.TotalApplicationPoolUptime),
+			(float64(app.Timestamp_Object) - float64(app.TotalApplicationPoolUptime)) / float64(app.Frequency_Object),
 			app.Name,
 		)
 
