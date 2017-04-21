@@ -217,7 +217,7 @@ func NewIISCollector() (Collector, error) {
 		CurrentApplicationPoolState: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "current_application_pool_state"),
 			"The current status of the application pool (1 - Uninitialized, 2 - Initialized, 3 - Running, 4 - Disabling, 5 - Disabled, 6 - Shutdown Pending, 7 - Delete Pending) (CurrentApplicationPoolState)",
-			[]string{"app"},
+			[]string{"app","state"},
 			nil,
 		),
 		CurrentApplicationPoolUptime: prometheus.NewDesc(
@@ -372,6 +372,15 @@ type Win32_PerfRawData_APPPOOLCountersProvider_APPPOOLWAS struct {
 	TotalWorkerProcessStartupFailures  uint32
 }
 
+var ApplicationStates = map[uint32]string{
+	1: "Uninitialized",
+	2: "Initialized",
+	3: "Running",
+	4: "Disabling",
+	5: "Disabled",
+	6: "Shutdown Pending",
+	7: "Delete Pending",
+}
 
 func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_PerfRawData_W3SVC_WebService
@@ -646,6 +655,7 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 			prometheus.GaugeValue,
 			float64(app.CurrentApplicationPoolState),
 			app.Name,
+			ApplicationStates[app.CurrentApplicationPoolState],
 		)
 
 		ch <- prometheus.MustNewConstMetric(
