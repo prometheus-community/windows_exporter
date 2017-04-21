@@ -658,7 +658,7 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 			ch <- prometheus.MustNewConstMetric(
 				c.CurrentApplicationPoolState,
 				prometheus.GaugeValue,
-				float64(isCurrentState),
+				isCurrentState,
 				app.Name,
 				label,
 			)
