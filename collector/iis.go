@@ -221,7 +221,7 @@ func NewIISCollector() (Collector, error) {
 			nil,
 		),
 		CurrentApplicationPoolUptime: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "current_application_pool_uptime"),
+			prometheus.BuildFQName(Namespace, subsystem, "current_application_pool_start_time"),
 			"The unix timestamp for the application pool start time (CurrentApplicationPoolUptime)",
 			[]string{"app"},
 			nil,
@@ -259,7 +259,7 @@ func NewIISCollector() (Collector, error) {
 			nil,
 		),
 		TotalApplicationPoolUptime: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "total_application_pool_uptime"),
+			prometheus.BuildFQName(Namespace, subsystem, "total_application_pool_start_time"),
 			"The unix timestamp for the application pool of when the Windows Process Activation Service (WAS) started (TotalApplicationPoolUptime)",
 			[]string{"app"},
 			nil,
