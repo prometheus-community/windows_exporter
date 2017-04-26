@@ -222,7 +222,7 @@ func NewIISCollector() (Collector, error) {
 		),
 		CurrentApplicationPoolUptime: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "current_application_pool_uptime"),
-			"The length of time, in seconds, that the application pool has been running since it was started (CurrentApplicationPoolUptime)",
+			"The unix timestamp for the application pool start time (CurrentApplicationPoolUptime)",
 			[]string{"app"},
 			nil,
 		),
@@ -260,7 +260,7 @@ func NewIISCollector() (Collector, error) {
 		),
 		TotalApplicationPoolUptime: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "total_application_pool_uptime"),
-			"The length of time, in seconds, that the application pool has been running since Windows Process Activation Service (WAS) started (TotalApplicationPoolUptime)",
+			"The unix timestamp for the application pool of when the Windows Process Activation Service (WAS) started (TotalApplicationPoolUptime)",
 			[]string{"app"},
 			nil,
 		),
@@ -670,7 +670,8 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 		ch <- prometheus.MustNewConstMetric(
 			c.CurrentApplicationPoolUptime,
 			prometheus.GaugeValue,
-			(float64(app.Timestamp_Object) - float64(app.CurrentApplicationPoolUptime)) / float64(app.Frequency_Object),
+			// convert from Windows timestamp (1 jan 1601) to unix timestamp (1 jan 1970)
+			float64(app.CurrentApplicationPoolUptime - 116444736000000000) / float64(app.Frequency_Object),
 			app.Name,
 		)
 
@@ -713,7 +714,8 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalApplicationPoolUptime,
 			prometheus.CounterValue,
-			(float64(app.Timestamp_Object) - float64(app.TotalApplicationPoolUptime)) / float64(app.Frequency_Object),
+			// convert from Windows timestamp (1 jan 1601) to unix timestamp (1 jan 1970)
+			float64(app.TotalApplicationPoolUptime - 116444736000000000) / float64(app.Frequency_Object),
 			app.Name,
 		)
 
