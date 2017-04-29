@@ -189,9 +189,7 @@ func main() {
 
 	go func() {
 		log.Infoln("Starting server on", *listenAddress)
-		if err := http.ListenAndServe(*listenAddress, nil); err != nil {
-			log.Fatalf("cannot start WMI exporter: %s", err)
-		}
+		log.Fatalf("cannot start WMI exporter: %s", http.ListenAndServe(*listenAddress, nil))
 	}()
 
 	for {
