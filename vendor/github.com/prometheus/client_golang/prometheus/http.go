@@ -62,7 +62,7 @@ func giveBuf(buf *bytes.Buffer) {
 //
 // Deprecated: Please note the issues described in the doc comment of
 // InstrumentHandler. You might want to consider using promhttp.Handler instead
-// (which is non instrumented).
+// (which is not instrumented).
 func Handler() http.Handler {
 	return InstrumentHandler("prometheus", UninstrumentedHandler())
 }
@@ -172,6 +172,9 @@ func nowSeries(t ...time.Time) nower {
 // httputil.ReverseProxy is a prominent example for a handler
 // performing such writes.
 //
+// - It has additional issues with HTTP/2, cf.
+// https://github.com/prometheus/client_golang/issues/272.
+//
 // Upcoming versions of this package will provide ways of instrumenting HTTP
 // handlers that are more flexible and have fewer issues. Please prefer direct
 // instrumentation in the meantime.
@@ -190,6 +193,7 @@ func InstrumentHandlerFunc(handlerName string, handlerFunc func(http.ResponseWri
 		SummaryOpts{
 			Subsystem:   "http",
 			ConstLabels: Labels{"handler": handlerName},
+			Objectives:  map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
 		},
 		handlerFunc,
 	)
@@ -245,23 +249,46 @@ func InstrumentHandlerFuncWithOpts(opts SummaryOpts, handlerFunc func(http.Respo
 		},
 		instLabels,
 	)
+	if err := Register(reqCnt); err != nil {
+		if are, ok := err.(AlreadyRegisteredError); ok {
+			reqCnt = are.ExistingCollector.(*CounterVec)
+		} else {
+			panic(err)
+		}
+	}
 
 	opts.Name = "request_duration_microseconds"
 	opts.Help = "The HTTP request latencies in microseconds."
 	reqDur := NewSummary(opts)
+	if err := Register(reqDur); err != nil {
+		if are, ok := err.(AlreadyRegisteredError); ok {
+			reqDur = are.ExistingCollector.(Summary)
+		} else {
+			panic(err)
+		}
+	}
 
 	opts.Name = "request_size_bytes"
 	opts.Help = "The HTTP request sizes in bytes."
 	reqSz := NewSummary(opts)
+	if err := Register(reqSz); err != nil {
+		if are, ok := err.(AlreadyRegisteredError); ok {
+			reqSz = are.ExistingCollector.(Summary)
+		} else {
+			panic(err)
+		}
+	}
 
 	opts.Name = "response_size_bytes"
 	opts.Help = "The HTTP response sizes in bytes."
 	resSz := NewSummary(opts)
-
-	regReqCnt := MustRegisterOrGet(reqCnt).(*CounterVec)
-	regReqDur := MustRegisterOrGet(reqDur).(Summary)
-	regReqSz := MustRegisterOrGet(reqSz).(Summary)
-	regResSz := MustRegisterOrGet(resSz).(Summary)
+	if err := Register(resSz); err != nil {
+		if are, ok := err.(AlreadyRegisteredError); ok {
+			resSz = are.ExistingCollector.(Summary)
+		} else {
+			panic(err)
+		}
+	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		now := time.Now()
@@ -285,10 +312,10 @@ func InstrumentHandlerFuncWithOpts(opts SummaryOpts, handlerFunc func(http.Respo
 
 		method := sanitizeMethod(r.Method)
 		code := sanitizeCode(delegate.status)
-		regReqCnt.WithLabelValues(method, code).Inc()
-		regReqDur.Observe(elapsed)
-		regResSz.Observe(float64(delegate.written))
-		regReqSz.Observe(float64(<-out))
+		reqCnt.WithLabelValues(method, code).Inc()
+		reqDur.Observe(elapsed)
+		resSz.Observe(float64(delegate.written))
+		reqSz.Observe(float64(<-out))
 	})
 }
 
