@@ -15,6 +15,7 @@ import (
 
 	"github.com/martinlindhe/wmi_exporter/collector"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/log"
 	"github.com/prometheus/common/version"
 )
@@ -177,7 +178,7 @@ func main() {
 	nodeCollector := WmiCollector{collectors: collectors}
 	prometheus.MustRegister(nodeCollector)
 
-	http.Handle(*metricsPath, prometheus.Handler())
+	http.Handle(*metricsPath, promhttp.Handler())
 	http.HandleFunc("/health", healthCheck)
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, *metricsPath, http.StatusMovedPermanently)
@@ -188,9 +189,7 @@ func main() {
 
 	go func() {
 		log.Infoln("Starting server on", *listenAddress)
-		if err := http.ListenAndServe(*listenAddress, nil); err != nil {
-			log.Fatalf("cannot start WMI exporter: %s", err)
-		}
+		log.Fatalf("cannot start WMI exporter: %s", http.ListenAndServe(*listenAddress, nil))
 	}()
 
 	for {
