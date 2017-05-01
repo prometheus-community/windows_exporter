@@ -33,10 +33,10 @@
 			"revisionTime": "2016-07-29T03:38:29Z"
 		},
 		{
-			"checksumSHA1": "SVXOQdpDBh0ihdZ5aIflgdA+Rpw=",
+			"checksumSHA1": "kBeNcaKk56FguvPSUCEaH6AxpRc=",
 			"path": "github.com/golang/protobuf/proto",
-			"revision": "98fa357170587e470c5f27d3c3ea0947b71eb455",
-			"revisionTime": "2016-10-12T20:53:35Z"
+			"revision": "8ee79997227bf9b34611aee7946ae64735e6fd93",
+			"revisionTime": "2016-11-17T03:31:26Z"
 		},
 		{
 			"checksumSHA1": "bKMZjd2wPw13VwoE7mBeSv5djFA=",
@@ -45,16 +45,16 @@
 			"revisionTime": "2016-04-24T11:30:07Z"
 		},
 		{
-			"checksumSHA1": "j2hUoBB8CsFPt3UzMpyOO23U54k=",
+			"checksumSHA1": "OiV+xm/lsxmVkmQXHitpsbXPUMk=",
 			"path": "github.com/prometheus/client_golang/prometheus",
-			"revision": "7d9484283ebefa862b5b7727d4344cfdf9a0d138",
-			"revisionTime": "2017-04-25T21:35:58Z"
+			"revision": "8aae34f3ffc9a93c75efeaad87bb192aa7750900",
+			"revisionTime": "2016-09-12T10:34:28Z"
 		},
 		{
-			"checksumSHA1": "JGmKXK7/1yJTc/Fzl8+P/M/nWc8=",
+			"checksumSHA1": "lG3//eDlwqA4IOuAPrNtLh9G0TA=",
 			"path": "github.com/prometheus/client_golang/prometheus/promhttp",
-			"revision": "7d9484283ebefa862b5b7727d4344cfdf9a0d138",
-			"revisionTime": "2017-04-25T21:35:58Z"
+			"revision": "8aae34f3ffc9a93c75efeaad87bb192aa7750900",
+			"revisionTime": "2016-09-12T10:34:28Z"
 		},
 		{
 			"checksumSHA1": "DvwvOlPNAgRntBzt3b3OSRMS2N4=",
@@ -63,34 +63,34 @@
 			"revisionTime": "2015-02-12T10:17:44Z"
 		},
 		{
-			"checksumSHA1": "mHyjbJ3BWOfUV6q9f5PBt0gaY1k=",
+			"checksumSHA1": "psNQjAMg2W0x8Yq0Kvp3hDBK0AI=",
 			"path": "github.com/prometheus/common/expfmt",
-			"revision": "85637ea67b04b5c3bb25e671dacded2977f8f9f6",
-			"revisionTime": "2016-10-02T21:02:34Z"
+			"revision": "76316eadbb7895a0310c6098559b975216dc33bf",
+			"revisionTime": "2016-09-10T11:41:46Z"
 		},
 		{
 			"checksumSHA1": "GWlM3d2vPYyNATtTFgftS10/A9w=",
 			"path": "github.com/prometheus/common/internal/bitbucket.org/ww/goautoneg",
-			"revision": "85637ea67b04b5c3bb25e671dacded2977f8f9f6",
-			"revisionTime": "2016-10-02T21:02:34Z"
+			"revision": "76316eadbb7895a0310c6098559b975216dc33bf",
+			"revisionTime": "2016-09-10T11:41:46Z"
 		},
 		{
 			"checksumSHA1": "UU6hIfhVjnAYDADQEfE/3T7Ddm8=",
 			"path": "github.com/prometheus/common/log",
-			"revision": "85637ea67b04b5c3bb25e671dacded2977f8f9f6",
-			"revisionTime": "2016-10-02T21:02:34Z"
+			"revision": "76316eadbb7895a0310c6098559b975216dc33bf",
+			"revisionTime": "2016-09-10T11:41:46Z"
 		},
 		{
-			"checksumSHA1": "nFie+rxcX5WdIv1diZ+fu3aj6lE=",
+			"checksumSHA1": "Jx0GXl5hGnO25s3ryyvtdWHdCpw=",
 			"path": "github.com/prometheus/common/model",
-			"revision": "85637ea67b04b5c3bb25e671dacded2977f8f9f6",
-			"revisionTime": "2016-10-02T21:02:34Z"
+			"revision": "76316eadbb7895a0310c6098559b975216dc33bf",
+			"revisionTime": "2016-09-10T11:41:46Z"
 		},
 		{
 			"checksumSHA1": "91KYK0SpvkaMJJA2+BcxbVnyRO0=",
 			"path": "github.com/prometheus/common/version",
-			"revision": "85637ea67b04b5c3bb25e671dacded2977f8f9f6",
-			"revisionTime": "2016-10-02T21:02:34Z"
+			"revision": "76316eadbb7895a0310c6098559b975216dc33bf",
+			"revisionTime": "2016-09-10T11:41:46Z"
 		},
 		{
 			"checksumSHA1": "W218eJZPXJG783fUr/z6IaAZyes=",
@@ -99,34 +99,34 @@
 			"revisionTime": "2016-04-11T19:08:41Z"
 		},
 		{
-			"checksumSHA1": "Xz3hUrPvOYGWTuHrEryoYAj9zwg=",
+			"checksumSHA1": "8fD/im5Kwvy3JgmxulDTambmE8w=",
 			"path": "golang.org/x/sys/unix",
-			"revision": "9bb9f0998d48b31547d975974935ae9b48c7a03c",
-			"revisionTime": "2016-10-11T23:07:22Z"
+			"revision": "a646d33e2ee3172a661fc09bca23bb4889a41bc8",
+			"revisionTime": "2016-07-15T05:43:45Z"
 		},
 		{
 			"checksumSHA1": "fpW2dhGFC6SrVzipJx7fjg2DIH8=",
 			"path": "golang.org/x/sys/windows",
-			"revision": "9bb9f0998d48b31547d975974935ae9b48c7a03c",
-			"revisionTime": "2016-10-11T23:07:22Z"
+			"revision": "a646d33e2ee3172a661fc09bca23bb4889a41bc8",
+			"revisionTime": "2016-07-15T05:43:45Z"
 		},
 		{
 			"checksumSHA1": "PjYlbMS0ttyZYlaevvjA/gV3g1c=",
 			"path": "golang.org/x/sys/windows/registry",
-			"revision": "9bb9f0998d48b31547d975974935ae9b48c7a03c",
-			"revisionTime": "2016-10-11T23:07:22Z"
+			"revision": "a646d33e2ee3172a661fc09bca23bb4889a41bc8",
+			"revisionTime": "2016-07-15T05:43:45Z"
 		},
 		{
 			"checksumSHA1": "IRqLaXM/VQRzkbXPuiqOxTb2W0Y=",
 			"path": "golang.org/x/sys/windows/svc",
-			"revision": "9bb9f0998d48b31547d975974935ae9b48c7a03c",
-			"revisionTime": "2016-10-11T23:07:22Z"
+			"revision": "a646d33e2ee3172a661fc09bca23bb4889a41bc8",
+			"revisionTime": "2016-07-15T05:43:45Z"
 		},
 		{
 			"checksumSHA1": "uVlUSSKplihZG7N+QJ6fzDZ4Kh8=",
 			"path": "golang.org/x/sys/windows/svc/eventlog",
-			"revision": "9bb9f0998d48b31547d975974935ae9b48c7a03c",
-			"revisionTime": "2016-10-11T23:07:22Z"
+			"revision": "a646d33e2ee3172a661fc09bca23bb4889a41bc8",
+			"revisionTime": "2016-07-15T05:43:45Z"
 		}
 	],
 	"rootPath": "github.com/martinlindhe/wmi_exporter"
