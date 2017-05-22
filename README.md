@@ -22,6 +22,8 @@ system | Win32_PerfRawData_PerfOS_System metrics (system calls) | &#10003;
 The HELP texts shows the WMI data source, please see MSDN documentation for details.
 
 ## Installation
+The latest release can be downloaded from the [releases page](https://github.com/martinlindhe/wmi_exporter/releases).
+
 Each release provides a .msi installer. The installer will setup the WMI Exporter as a Windows service, as well as create an exception in the Windows Firewall.
 
 If the installer is run without any parameters, the exporter will run with default settings for enabled collectors, ports, etc. The following parameters are available:
