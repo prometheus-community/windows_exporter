@@ -3,6 +3,8 @@
 package collector
 
 import (
+	"bytes"
+	"flag"
 	"log"
 	"strconv"
 
@@ -13,6 +15,10 @@ import (
 func init() {
 	Factories["process"] = NewProcessCollector
 }
+
+var (
+	processWhereClause = flag.String("collector.process.processes-where", "", "WQL 'where' clause to use in WMI metrics query. Limits the response to the processes you specify and reduces the size of the response.")
+)
 
 // A ProcessCollector is a Prometheus collector for WMI Win32_PerfRawData_PerfProc_Process metrics
 type ProcessCollector struct {
@@ -29,6 +35,8 @@ type ProcessCollector struct {
 	ThreadCount             *prometheus.Desc
 	VirtualBytes            *prometheus.Desc
 	WorkingSet              *prometheus.Desc
+
+	queryWhereClause        string
 }
 
 // NewProcessCollector ...
@@ -113,6 +121,7 @@ func NewProcessCollector() (Collector, error) {
 			[]string{"process", "process_id", "creating_process_id"},
 			nil,
 		),
+		queryWhereClause: *processWhereClause,
 	}, nil
 }
 
@@ -162,7 +171,16 @@ type Win32_PerfRawData_PerfProc_Process struct {
 
 func (c *ProcessCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_PerfRawData_PerfProc_Process
-	q := wmi.CreateQuery(&dst, "")
+
+	var wc bytes.Buffer
+
+	if c.queryWhereClause != "" {
+		wc.WriteString("WHERE ")
+		wc.WriteString(c.queryWhereClause)
+	}
+
+	q := wmi.CreateQuery(&dst, wc.String())
+
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
 	}
