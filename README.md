@@ -18,6 +18,7 @@ net | [Win32_PerfRawData_Tcpip_NetworkInterface](https://technet.microsoft.com/e
 os | [Win32_OperatingSystem](https://msdn.microsoft.com/en-us/library/aa394239) metrics (memory, processes, users) | &#10003;
 service | [Win32_Service](https://msdn.microsoft.com/en-us/library/aa394418(v=vs.85).aspx) metrics (service states) | &#10003;
 system | Win32_PerfRawData_PerfOS_System metrics (system calls) | &#10003;
+vmware | Performance counters installed by the Vmware Guest agent |
 
 The HELP texts shows the WMI data source, please see MSDN documentation for details.
 
