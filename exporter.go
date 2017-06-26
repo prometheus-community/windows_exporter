@@ -13,6 +13,7 @@ import (
 
 	"golang.org/x/sys/windows/svc"
 
+	"github.com/StackExchange/wmi"
 	"github.com/martinlindhe/wmi_exporter/collector"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -130,6 +131,18 @@ func init() {
 	prometheus.MustRegister(version.NewCollector("wmi_exporter"))
 }
 
+func initWbem() {
+	// This initialization prevents a memory leak on WMF 5+. See
+	// https://github.com/martinlindhe/wmi_exporter/issues/77 and linked issues
+	// for details.
+	log.Debugf("Initializing SWbemServices")
+	s, err := wmi.InitializeSWbemServices(wmi.DefaultClient)
+	if err != nil {
+		log.Fatal(err)
+	}
+	wmi.DefaultClient.SWbemServicesClient = s
+}
+
 func main() {
 	var (
 		showVersion       = flag.Bool("version", false, "Print version information.")
@@ -157,6 +170,8 @@ func main() {
 		}
 		return
 	}
+
+	initWbem()
 
 	isInteractive, err := svc.IsAnInteractiveSession()
 	if err != nil {
