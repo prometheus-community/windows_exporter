@@ -42,10 +42,8 @@ function Get-FileIfNotExists {
 $sourceDir = mkdir -Force Source
 mkdir -Force Work,Output | Out-Null
 
-Write-Verbose "Downloading files"
-# Somewhat obscure url, points to WiX 3.10 binary release
 Write-Verbose "Downloading WiX..."
-Get-FileIfNotExists "http://download-codeplex.sec.s-msft.com/Download/Release?ProjectName=wix&DownloadId=1587180&FileTime=131118854877130000&Build=21050" "$sourceDir\wix-binaries.zip"
+Get-FileIfNotExists "https://github.com/wixtoolset/wix3/releases/download/wix311rtm/wix311-binaries.zip" "$sourceDir\wix-binaries.zip"
 mkdir -Force WiX | Out-Null
 Expand-Archive -Path "${sourceDir}\wix-binaries.zip" -DestinationPath WiX -Force
 
