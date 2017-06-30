@@ -1,7 +1,8 @@
 // returns data points from the following classes:
 // - Win32_PerfRawData_W3SVC_WebService
-// https://msdn.microsoft.com/en-us/library/aa394345 - Win32_OperatingSystem class
 // - Win32_PerfRawData_APPPOOLCountersProvider_APPPOOLWAS
+// - Win32_PerfRawData_W3SVCW3WPCounterProvider_W3SVCW3WP
+// - Win32_PerfRawData_W3SVC_WebServiceCache
 
 package collector
 
@@ -22,12 +23,10 @@ func init() {
 var (
 	siteWhitelist = flag.String("collector.iis.site-whitelist", ".+", "Regexp of sites to whitelist. Site name must both match whitelist and not match blacklist to be included.")
 	siteBlacklist = flag.String("collector.iis.site-blacklist", "", "Regexp of sites to blacklist. Site name must both match whitelist and not match blacklist to be included.")
-	appWhitelist = flag.String("collector.iis.app-whitelist", ".+", "Regexp of apps to whitelist. App name must both match whitelist and not match blacklist to be included.")
-	appBlacklist = flag.String("collector.iis.app-blacklist", "", "Regexp of apps to blacklist. App name must both match whitelist and not match blacklist to be included.")
+	appWhitelist  = flag.String("collector.iis.app-whitelist", ".+", "Regexp of apps to whitelist. App name must both match whitelist and not match blacklist to be included.")
+	appBlacklist  = flag.String("collector.iis.app-blacklist", "", "Regexp of apps to blacklist. App name must both match whitelist and not match blacklist to be included.")
 )
 
-// A IISCollector is a Prometheus collector for WMI Win32_PerfRawData_W3SVC_WebService 
-// and Win32_PerfRawData_APPPOOLCountersProvider_APPPOOLWAS metrics
 type IISCollector struct {
 	CurrentAnonymousUsers         *prometheus.Desc
 	CurrentBlockedAsyncIORequests *prometheus.Desc
@@ -54,7 +53,7 @@ type IISCollector struct {
 
 	siteWhitelistPattern *regexp.Regexp
 	siteBlacklistPattern *regexp.Regexp
-	
+
 	CurrentApplicationPoolState        *prometheus.Desc
 	CurrentApplicationPoolUptime       *prometheus.Desc
 	CurrentWorkerProcesses             *prometheus.Desc
@@ -68,6 +67,87 @@ type IISCollector struct {
 	TotalWorkerProcessPingFailures     *prometheus.Desc
 	TotalWorkerProcessShutdownFailures *prometheus.Desc
 	TotalWorkerProcessStartupFailures  *prometheus.Desc
+
+	// Worker process metrics (Win32_PerfRawData_W3SVCW3WPCounterProvider_W3SVCW3WP)
+	ActiveFlushedEntries *prometheus.Desc
+
+	FileCacheMemoryUsage        *prometheus.Desc
+	MaximumFileCacheMemoryUsage *prometheus.Desc
+	FileCacheFlushesTotal       *prometheus.Desc
+	FileCacheQueriesTotal       *prometheus.Desc
+	FileCacheHitsTotal          *prometheus.Desc
+	FilesCached                 *prometheus.Desc
+	FilesCachedTotal            *prometheus.Desc
+	FilesFlushedTotal           *prometheus.Desc
+
+	URICacheFlushesTotal *prometheus.Desc
+	URICacheQueriesTotal *prometheus.Desc
+	URICacheHitsTotal    *prometheus.Desc
+	URIsCached           *prometheus.Desc
+	URIsCachedTotal      *prometheus.Desc
+	URIsFlushedTotal     *prometheus.Desc
+
+	MetadataCached            *prometheus.Desc
+	MetadataCacheFlushes      *prometheus.Desc
+	MetadataCacheQueriesTotal *prometheus.Desc
+	MetadataCacheHitsTotal    *prometheus.Desc
+	MetadataCachedTotal       *prometheus.Desc
+	MetadataFlushedTotal      *prometheus.Desc
+
+	OutputCacheActiveFlushedItems *prometheus.Desc
+	OutputCacheItems              *prometheus.Desc
+	OutputCacheMemoryUsage        *prometheus.Desc
+	OutputCacheQueriesTotal       *prometheus.Desc
+	OutputCacheHitsTotal          *prometheus.Desc
+	OutputCacheFlushedItemsTotal  *prometheus.Desc
+	OutputCacheFlushesTotal       *prometheus.Desc
+
+	Threads        *prometheus.Desc
+	MaximumThreads *prometheus.Desc
+
+	RequestsTotal      *prometheus.Desc
+	RequestsActive     *prometheus.Desc
+	RequestErrorsTotal *prometheus.Desc
+
+	WebSocketRequestsActive      *prometheus.Desc
+	WebSocketConnectionAttempts  *prometheus.Desc
+	WebSocketConnectionsAccepted *prometheus.Desc
+	WebSocketConnectionsRejected *prometheus.Desc
+
+	// Server cache metrics (Win32_PerfRawData_W3SVC_WebServiceCache)
+	// Ugly names, but they collide with the Worker process cache names...
+	ServiceCache_ActiveFlushedEntries *prometheus.Desc
+
+	ServiceCache_FileCacheMemoryUsage        *prometheus.Desc
+	ServiceCache_MaximumFileCacheMemoryUsage *prometheus.Desc
+	ServiceCache_FileCacheFlushesTotal       *prometheus.Desc
+	ServiceCache_FileCacheQueriesTotal       *prometheus.Desc
+	ServiceCache_FileCacheHitsTotal          *prometheus.Desc
+	ServiceCache_FilesCached                 *prometheus.Desc
+	ServiceCache_FilesCachedTotal            *prometheus.Desc
+	ServiceCache_FilesFlushedTotal           *prometheus.Desc
+
+	ServiceCache_URICacheFlushesTotal *prometheus.Desc
+	ServiceCache_URICacheQueriesTotal *prometheus.Desc
+	ServiceCache_URICacheHitsTotal    *prometheus.Desc
+	ServiceCache_URIsCached           *prometheus.Desc
+	ServiceCache_URIsCachedTotal      *prometheus.Desc
+	ServiceCache_URIsFlushedTotal     *prometheus.Desc
+
+	ServiceCache_MetadataCached            *prometheus.Desc
+	ServiceCache_MetadataCacheFlushes      *prometheus.Desc
+	ServiceCache_MetadataCacheQueriesTotal *prometheus.Desc
+	ServiceCache_MetadataCacheHitsTotal    *prometheus.Desc
+	ServiceCache_MetadataCachedTotal       *prometheus.Desc
+	ServiceCache_MetadataFlushedTotal      *prometheus.Desc
+
+	ServiceCache_OutputCacheActiveFlushedItems *prometheus.Desc
+	ServiceCache_OutputCacheItems              *prometheus.Desc
+	ServiceCache_OutputCacheMemoryUsage        *prometheus.Desc
+	ServiceCache_OutputCacheQueriesTotal       *prometheus.Desc
+	ServiceCache_OutputCacheHitsTotal          *prometheus.Desc
+	ServiceCache_OutputCacheFlushedItemsTotal  *prometheus.Desc
+	ServiceCache_OutputCacheFlushesTotal       *prometheus.Desc
 
 	appWhitelistPattern *regexp.Regexp
 	appBlacklistPattern *regexp.Regexp
@@ -211,13 +291,13 @@ func NewIISCollector() (Collector, error) {
 
 		siteWhitelistPattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *siteWhitelist)),
 		siteBlacklistPattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *siteBlacklist)),
-		
+
 		// App Pools
 		// Guages
 		CurrentApplicationPoolState: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "current_application_pool_state"),
 			"The current status of the application pool (1 - Uninitialized, 2 - Initialized, 3 - Running, 4 - Disabling, 5 - Disabled, 6 - Shutdown Pending, 7 - Delete Pending) (CurrentApplicationPoolState)",
-			[]string{"app","state"},
+			[]string{"app", "state"},
 			nil,
 		),
 		CurrentApplicationPoolUptime: prometheus.NewDesc(
@@ -244,7 +324,7 @@ func NewIISCollector() (Collector, error) {
 			[]string{"app"},
 			nil,
 		),
-		
+
 		// Counters
 		TimeSinceLastWorkerProcessFailure: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "time_since_last_worker_process_failure"),
@@ -292,6 +372,400 @@ func NewIISCollector() (Collector, error) {
 			prometheus.BuildFQName(Namespace, subsystem, "total_worker_process_startup_failures"),
 			"The number of times that Windows Process Activation Service (WAS) failed to start a worker process (TotalWorkerProcessStartupFailures)",
 			[]string{"app"},
+			nil,
+		),
+
+		ActiveFlushedEntries: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "worker_cache_active_flushed_entries"),
+			"Number of file handles cached in user-mode that will be closed when all current transfers complete.",
+			[]string{"app"},
+			nil,
+		),
+		FileCacheMemoryUsage: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "worker_file_cache_memory_bytes"),
+			"",
+			[]string{"app"},
+			nil,
+		),
+		MaximumFileCacheMemoryUsage: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "worker_file_cache_max_memory_bytes"),
+			"",
+			[]string{"app"},
+			nil,
+		),
+		FileCacheFlushesTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "worker_file_cache_flushes_total"),
+			"",
+			[]string{"app"},
+			nil,
+		),
+		FileCacheQueriesTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "worker_file_cache_queries_total"),
+			"",
+			[]string{"app"},
+			nil,
+		),
+		FileCacheHitsTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "worker_file_cache_hits_total"),
+			"",
+			[]string{"app"},
+			nil,
+		),
+		FilesCached: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "worker_file_cache_items"),
+			"",
+			[]string{"app"},
+			nil,
+		),
+		FilesCachedTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "worker_file_cache_items_total"),
+			"",
+			[]string{"app"},
+			nil,
+		),
+		FilesFlushedTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "worker_file_cache_items_flushed_total"),
+			"",
+			[]string{"app"},
+			nil,
+		),
+		URICacheFlushesTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "worker_uri_cache_flushes_total"),
+			"",
+			[]string{"app"},
+			nil,
+		),
+		URICacheQueriesTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "worker_uri_cache_queries_total"),
+			"",
+			[]string{"app"},
+			nil,
+		),
+		URICacheHitsTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "worker_uri_cache_hits_total"),
+			"",
+			[]string{"app"},
+			nil,
+		),
+		URIsCached: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "worker_uri_cache_items"),
+			"",
+			[]string{"app"},
+			nil,
+		),
+		URIsCachedTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "worker_uri_cache_items_total"),
+			"",
+			[]string{"app"},
+			nil,
+		),
+		URIsFlushedTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "worker_uri_cache_items_flushed_total"),
+			"",
+			[]string{"app"},
+			nil,
+		),
+		MetadataCached: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "worker_metadata_cache_items"),
+			"",
+			[]string{"app"},
+			nil,
+		),
+		MetadataCacheFlushes: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "worker_metadata_cache_flushes_total"),
+			"",
+			[]string{"app"},
+			nil,
+		),
+		MetadataCacheQueriesTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "worker_metadata_cache_queries_total"),
+			"",
+			[]string{"app"},
+			nil,
+		),
+		MetadataCacheHitsTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "worker_metadata_cache_hits_total"),
+			"",
+			[]string{"app"},
+			nil,
+		),
+		MetadataCachedTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "worker_metadata_cache_items_cached_total"),
+			"",
+			[]string{"app"},
+			nil,
+		),
+		MetadataFlushedTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "worker_metadata_cache_items_flushed_total"),
+			"",
+			[]string{"app"},
+			nil,
+		),
+		OutputCacheActiveFlushedItems: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "worker_output_cache_active_flushed_items"),
+			"",
+			[]string{"app"},
+			nil,
+		),
+		OutputCacheItems: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "worker_output_cache_items"),
+			"",
+			[]string{"app"},
+			nil,
+		),
+		OutputCacheMemoryUsage: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "worker_output_cache_memory_bytes"),
+			"",
+			[]string{"app"},
+			nil,
+		),
+		OutputCacheQueriesTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "worker_output_queries_total"),
+			"",
+			[]string{"app"},
+			nil,
+		),
+		OutputCacheHitsTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "worker_output_cache_hits_total"),
+			"",
+			[]string{"app"},
+			nil,
+		),
+		OutputCacheFlushedItemsTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "worker_output_cache_items_flushed_total"),
+			"",
+			[]string{"app"},
+			nil,
+		),
+		OutputCacheFlushesTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "worker_output_cache_flushes_total"),
+			"",
+			[]string{"app"},
+			nil,
+		),
+		Threads: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "worker_threads"),
+			"",
+			[]string{"app", "state"},
+			nil,
+		),
+		MaximumThreads: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "worker_max_threads"),
+			"",
+			[]string{"app"},
+			nil,
+		),
+		RequestsTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "worker_requests_total"),
+			"",
+			[]string{"app"},
+			nil,
+		),
+		RequestsActive: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "worker_current_requests"),
+			"",
+			[]string{"app"},
+			nil,
+		),
+		RequestErrorsTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "worker_request_errors_total"),
+			"",
+			[]string{"app", "status_code"},
+			nil,
+		),
+		WebSocketRequestsActive: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "worker_current_websocket_requests"),
+			"",
+			[]string{"app"},
+			nil,
+		),
+		WebSocketConnectionAttempts: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "worker_websocket_connection_attempts_total"),
+			"",
+			[]string{"app"},
+			nil,
+		),
+		WebSocketConnectionsAccepted: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "worker_websocket_connection_accepted_total"),
+			"",
+			[]string{"app"},
+			nil,
+		),
+		WebSocketConnectionsRejected: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "worker_websocket_connection_rejected_total"),
+			"",
+			[]string{"app"},
+			nil,
+		),
+
+		///////////
+
+		ServiceCache_ActiveFlushedEntries: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "server_cache_active_flushed_entries"),
+			"Number of file handles cached in user-mode that will be closed when all current transfers complete.",
+			nil,
+			nil,
+		),
+		ServiceCache_FileCacheMemoryUsage: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "server_file_cache_memory_bytes"),
+			"",
+			nil,
+			nil,
+		),
+		ServiceCache_MaximumFileCacheMemoryUsage: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "server_file_cache_max_memory_bytes"),
+			"",
+			nil,
+			nil,
+		),
+		ServiceCache_FileCacheFlushesTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "server_file_cache_flushes_total"),
+			"",
+			nil,
+			nil,
+		),
+		ServiceCache_FileCacheQueriesTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "server_file_cache_queries_total"),
+			"",
+			nil,
+			nil,
+		),
+		ServiceCache_FileCacheHitsTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "server_file_cache_hits_total"),
+			"",
+			nil,
+			nil,
+		),
+		ServiceCache_FilesCached: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "server_file_cache_items"),
+			"",
+			nil,
+			nil,
+		),
+		ServiceCache_FilesCachedTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "server_file_cache_items_total"),
+			"",
+			nil,
+			nil,
+		),
+		ServiceCache_FilesFlushedTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "server_file_cache_items_flushed_total"),
+			"",
+			nil,
+			nil,
+		),
+		ServiceCache_URICacheFlushesTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "server_uri_cache_flushes_total"),
+			"",
+			[]string{"mode"},
+			nil,
+		),
+		ServiceCache_URICacheQueriesTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "server_uri_cache_queries_total"),
+			"",
+			[]string{"mode"},
+			nil,
+		),
+		ServiceCache_URICacheHitsTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "server_uri_cache_hits_total"),
+			"",
+			[]string{"mode"},
+			nil,
+		),
+		ServiceCache_URIsCached: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "server_uri_cache_items"),
+			"",
+			[]string{"mode"},
+			nil,
+		),
+		ServiceCache_URIsCachedTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "server_uri_cache_items_total"),
+			"",
+			[]string{"mode"},
+			nil,
+		),
+		ServiceCache_URIsFlushedTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "server_uri_cache_items_flushed_total"),
+			"",
+			[]string{"mode"},
+			nil,
+		),
+		ServiceCache_MetadataCached: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "server_metadata_cache_items"),
+			"",
+			nil,
+			nil,
+		),
+		ServiceCache_MetadataCacheFlushes: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "server_metadata_cache_flushes_total"),
+			"",
+			nil,
+			nil,
+		),
+		ServiceCache_MetadataCacheQueriesTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "server_metadata_cache_queries_total"),
+			"",
+			nil,
+			nil,
+		),
+		ServiceCache_MetadataCacheHitsTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "server_metadata_cache_hits_total"),
+			"",
+			nil,
+			nil,
+		),
+		ServiceCache_MetadataCachedTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "server_metadata_cache_items_cached_total"),
+			"",
+			nil,
+			nil,
+		),
+		ServiceCache_MetadataFlushedTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "server_metadata_cache_items_flushed_total"),
+			"",
+			nil,
+			nil,
+		),
+		ServiceCache_OutputCacheActiveFlushedItems: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "server_output_cache_active_flushed_items"),
+			"",
+			nil,
+			nil,
+		),
+		ServiceCache_OutputCacheItems: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "server_output_cache_items"),
+			"",
+			nil,
+			nil,
+		),
+		ServiceCache_OutputCacheMemoryUsage: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "server_output_cache_memory_bytes"),
+			"",
+			nil,
+			nil,
+		),
+		ServiceCache_OutputCacheQueriesTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "server_output_cache_queries_total"),
+			"",
+			nil,
+			nil,
+		),
+		ServiceCache_OutputCacheHitsTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "server_output_cache_hits_total"),
+			"",
+			nil,
+			nil,
+		),
+		ServiceCache_OutputCacheFlushedItemsTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "server_output_cache_items_flushed_total"),
+			"",
+			nil,
+			nil,
+		),
+		ServiceCache_OutputCacheFlushesTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "server_output_cache_flushes_total"),
+			"",
+			nil,
 			nil,
 		),
 
@@ -355,9 +829,9 @@ type Win32_PerfRawData_W3SVC_WebService struct {
 }
 
 type Win32_PerfRawData_APPPOOLCountersProvider_APPPOOLWAS struct {
-	Name string
-	Frequency_Object                   uint64
-	Timestamp_Object                   uint64
+	Name             string
+	Frequency_Object uint64
+	Timestamp_Object uint64
 
 	CurrentApplicationPoolState        uint32
 	CurrentApplicationPoolUptime       uint64
@@ -374,6 +848,97 @@ type Win32_PerfRawData_APPPOOLCountersProvider_APPPOOLWAS struct {
 	TotalWorkerProcessStartupFailures  uint32
 }
 
+type Win32_PerfRawData_W3SVCW3WPCounterProvider_W3SVCW3WP struct {
+	Name string
+
+	ActiveFlushedEntries               uint64
+	CurrentFileCacheMemoryUsage        uint64
+	CurrentFilesCached                 uint64
+	CurrentMetadataCached              uint64
+	CurrentURIsCached                  uint64
+	FileCacheFlushes                   uint64
+	FileCacheHits                      uint64
+	FileCacheMisses                    uint64
+	MaximumFileCacheMemoryUsage        uint64
+	MetadataCacheFlushes               uint64
+	MetadataCacheHits                  uint64
+	MetadataCacheMisses                uint64
+	OutputCacheCurrentFlushedItems     uint64
+	OutputCacheCurrentItems            uint64
+	OutputCacheCurrentMemoryUsage      uint64
+	OutputCacheHitsPersec              uint64
+	OutputCacheMissesPersec            uint64
+	OutputCacheTotalFlushedItems       uint64
+	OutputCacheTotalFlushes            uint64
+	OutputCacheTotalHits               uint64
+	OutputCacheTotalMisses             uint64
+	TotalFilesCached                   uint64
+	TotalFlushedFiles                  uint64
+	TotalFlushedMetadata               uint64
+	TotalFlushedURIs                   uint64
+	TotalMetadataCached                uint64
+	TotalURIsCached                    uint64
+	URICacheFlushes                    uint64
+	URICacheHits                       uint64
+	URICacheMisses                     uint64
+	ActiveThreadsCount                 uint64
+	TotalThreads                       uint64
+	MaximumThreadsCount                uint64
+	TotalHTTPRequestsServed            uint64
+	ActiveRequests                     uint64
+	Percent401HTTPResponseSent         uint64
+	Percent403HTTPResponseSent         uint64
+	Percent404HTTPResponseSent         uint64
+	Percent500HTTPResponseSent         uint64
+	WebSocketActiveRequests            uint64
+	WebSocketConnectionAttemptsPerSec  uint64
+	WebSocketConnectionsAcceptedPerSec uint64
+	WebSocketConnectionsRejectedPerSec uint64
+}
+
+type Win32_PerfRawData_W3SVC_WebServiceCache struct {
+	ActiveFlushedEntries           uint32
+	CurrentFileCacheMemoryUsage    uint64
+	CurrentFilesCached             uint32
+	CurrentMetadataCached          uint32
+	CurrentURIsCached              uint32
+	FileCacheFlushes               uint32
+	FileCacheHits                  uint32
+	FileCacheHitsPercent           uint32
+	FileCacheMisses                uint32
+	KernelCurrentURIsCached        uint32
+	KernelTotalFlushedURIs         uint32
+	KernelTotalURIsCached          uint32
+	KernelURICacheFlushes          uint32
+	KernelURICacheHits             uint32
+	KernelURICacheHitsPercent      uint32
+	KernelUriCacheHitsPersec       uint32
+	KernelURICacheMisses           uint32
+	MaximumFileCacheMemoryUsage    uint64
+	MetadataCacheFlushes           uint32
+	MetadataCacheHits              uint32
+	MetadataCacheHitsPercent       uint32
+	MetadataCacheMisses            uint32
+	OutputCacheCurrentFlushedItems uint32
+	OutputCacheCurrentHitsPercent  uint32
+	OutputCacheCurrentItems        uint32
+	OutputCacheCurrentMemoryUsage  uint64
+	OutputCacheTotalFlushedItems   uint32
+	OutputCacheTotalFlushes        uint32
+	OutputCacheTotalHits           uint32
+	OutputCacheTotalMisses         uint32
+	TotalFilesCached               uint32
+	TotalFlushedFiles              uint32
+	TotalFlushedMetadata           uint32
+	TotalFlushedURIs               uint32
+	TotalMetadataCached            uint32
+	TotalURIsCached                uint32
+	URICacheFlushes                uint32
+	URICacheHits                   uint32
+	URICacheHitsPercent            uint32
+	URICacheMisses                 uint32
+}
+
 var ApplicationStates = map[uint32]string{
 	1: "Uninitialized",
 	2: "Initialized",
@@ -383,6 +948,9 @@ var ApplicationStates = map[uint32]string{
 	6: "Shutdown Pending",
 	7: "Delete Pending",
 }
+
+// W3SVCW3WPCounterProvider_W3SVCW3WP returns names prefixed with pid
+var workerProcessNameExtractor = regexp.MustCompile(`^\d+_(.+)$`)
 
 func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_PerfRawData_W3SVC_WebService
@@ -637,7 +1205,7 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 		)
 
 	}
-	
+
 	var dst2 []Win32_PerfRawData_APPPOOLCountersProvider_APPPOOLWAS
 	q2 := wmi.CreateQuery(&dst2, "")
 	if err := wmi.Query(q2, &dst2); err != nil {
@@ -665,13 +1233,12 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 				label,
 			)
 		}
-		
 
 		ch <- prometheus.MustNewConstMetric(
 			c.CurrentApplicationPoolUptime,
 			prometheus.GaugeValue,
 			// convert from Windows timestamp (1 jan 1601) to unix timestamp (1 jan 1970)
-			float64(app.CurrentApplicationPoolUptime - 116444736000000000) / float64(app.Frequency_Object),
+			float64(app.CurrentApplicationPoolUptime-116444736000000000)/float64(app.Frequency_Object),
 			app.Name,
 		)
 
@@ -715,7 +1282,7 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 			c.TotalApplicationPoolUptime,
 			prometheus.CounterValue,
 			// convert from Windows timestamp (1 jan 1601) to unix timestamp (1 jan 1970)
-			float64(app.TotalApplicationPoolUptime - 116444736000000000) / float64(app.Frequency_Object),
+			float64(app.TotalApplicationPoolUptime-116444736000000000)/float64(app.Frequency_Object),
 			app.Name,
 		)
 
@@ -755,6 +1322,525 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 		)
 
 	}
+
+	var dst_worker []Win32_PerfRawData_W3SVCW3WPCounterProvider_W3SVCW3WP
+	q = wmi.CreateQuery(&dst_worker, "")
+	if err := wmi.Query(q, &dst_worker); err != nil {
+		return nil, err
+	}
+	for _, app := range dst_worker {
+		// Extract the apppool name from the format <PID>_<NAME>
+		name := workerProcessNameExtractor.ReplaceAllString(app.Name, "$1")
+		if name == "_Total" ||
+			c.appBlacklistPattern.MatchString(name) ||
+			!c.appWhitelistPattern.MatchString(name) {
+			continue
+		}
+
+		ch <- prometheus.MustNewConstMetric(
+			c.ActiveFlushedEntries,
+			prometheus.GaugeValue,
+			float64(app.ActiveFlushedEntries),
+			name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.FileCacheMemoryUsage,
+			prometheus.GaugeValue,
+			float64(app.CurrentFileCacheMemoryUsage),
+			name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.MaximumFileCacheMemoryUsage,
+			prometheus.CounterValue,
+			float64(app.MaximumFileCacheMemoryUsage),
+			name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.FileCacheFlushesTotal,
+			prometheus.CounterValue,
+			float64(app.TotalFlushedFiles),
+			name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.FileCacheQueriesTotal,
+			prometheus.CounterValue,
+			float64(app.FileCacheHits+app.FileCacheMisses),
+			name,
+		)
+		ch <- prometheus.MustNewConstMetric(
+			c.FileCacheHitsTotal,
+			prometheus.CounterValue,
+			float64(app.FileCacheHits),
+			name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.FilesCached,
+			prometheus.GaugeValue,
+			float64(app.CurrentFilesCached),
+			name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.FilesCachedTotal,
+			prometheus.CounterValue,
+			float64(app.TotalFilesCached),
+			name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.FilesFlushedTotal,
+			prometheus.CounterValue,
+			float64(app.TotalFlushedFiles),
+			name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.URICacheFlushesTotal,
+			prometheus.CounterValue,
+			float64(app.TotalFlushedURIs),
+			name,
+		)
+		ch <- prometheus.MustNewConstMetric(
+			c.URICacheQueriesTotal,
+			prometheus.CounterValue,
+			float64(app.URICacheHits+app.URICacheMisses),
+			name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.URICacheHitsTotal,
+			prometheus.CounterValue,
+			float64(app.URICacheHits),
+			name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.URIsCached,
+			prometheus.GaugeValue,
+			float64(app.CurrentURIsCached),
+			name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.URIsCachedTotal,
+			prometheus.CounterValue,
+			float64(app.TotalURIsCached),
+			name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.URIsFlushedTotal,
+			prometheus.CounterValue,
+			float64(app.TotalFlushedURIs),
+			name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.MetadataCached,
+			prometheus.GaugeValue,
+			float64(app.CurrentMetadataCached),
+			name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.MetadataCacheFlushes,
+			prometheus.CounterValue,
+			float64(app.TotalFlushedMetadata),
+			name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.MetadataCacheQueriesTotal,
+			prometheus.CounterValue,
+			float64(app.MetadataCacheHits+app.MetadataCacheMisses),
+			name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.MetadataCacheHitsTotal,
+			prometheus.CounterValue,
+			float64(app.MetadataCacheHits),
+			name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.MetadataCachedTotal,
+			prometheus.CounterValue,
+			float64(app.TotalMetadataCached),
+			name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.MetadataFlushedTotal,
+			prometheus.CounterValue,
+			float64(app.TotalFlushedMetadata),
+			name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.OutputCacheActiveFlushedItems,
+			prometheus.CounterValue,
+			float64(app.OutputCacheCurrentFlushedItems),
+			name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.OutputCacheItems,
+			prometheus.CounterValue,
+			float64(app.OutputCacheCurrentItems),
+			name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.OutputCacheMemoryUsage,
+			prometheus.CounterValue,
+			float64(app.OutputCacheCurrentMemoryUsage),
+			name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.OutputCacheQueriesTotal,
+			prometheus.CounterValue,
+			float64(app.OutputCacheTotalHits+app.OutputCacheTotalMisses),
+			name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.OutputCacheHitsTotal,
+			prometheus.CounterValue,
+			float64(app.OutputCacheTotalHits),
+			name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.OutputCacheFlushedItemsTotal,
+			prometheus.CounterValue,
+			float64(app.OutputCacheTotalFlushedItems),
+			name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.OutputCacheFlushesTotal,
+			prometheus.CounterValue,
+			float64(app.OutputCacheTotalFlushes),
+			name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.Threads,
+			prometheus.GaugeValue,
+			float64(app.ActiveThreadsCount),
+			name,
+			"busy",
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.Threads,
+			prometheus.GaugeValue,
+			float64(app.TotalThreads),
+			name,
+			"idle",
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.MaximumThreads,
+			prometheus.CounterValue,
+			float64(app.MaximumThreadsCount),
+			name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.RequestsTotal,
+			prometheus.CounterValue,
+			float64(app.TotalHTTPRequestsServed),
+			name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.RequestsActive,
+			prometheus.CounterValue,
+			float64(app.ActiveRequests),
+			name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.RequestErrorsTotal,
+			prometheus.CounterValue,
+			float64(app.Percent401HTTPResponseSent),
+			name,
+			"401",
+		)
+		ch <- prometheus.MustNewConstMetric(
+			c.RequestErrorsTotal,
+			prometheus.CounterValue,
+			float64(app.Percent403HTTPResponseSent),
+			name,
+			"403",
+		)
+		ch <- prometheus.MustNewConstMetric(
+			c.RequestErrorsTotal,
+			prometheus.CounterValue,
+			float64(app.Percent404HTTPResponseSent),
+			name,
+			"404",
+		)
+		ch <- prometheus.MustNewConstMetric(
+			c.RequestErrorsTotal,
+			prometheus.CounterValue,
+			float64(app.Percent500HTTPResponseSent),
+			name,
+			"500",
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.WebSocketRequestsActive,
+			prometheus.CounterValue,
+			float64(app.WebSocketActiveRequests),
+			name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.WebSocketConnectionAttempts,
+			prometheus.CounterValue,
+			float64(app.WebSocketConnectionAttemptsPerSec),
+			name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.WebSocketConnectionsAccepted,
+			prometheus.CounterValue,
+			float64(app.WebSocketConnectionsAcceptedPerSec),
+			name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.WebSocketConnectionsRejected,
+			prometheus.CounterValue,
+			float64(app.WebSocketConnectionsRejectedPerSec),
+			name,
+		)
+
+	}
+
+	var dst_cache []Win32_PerfRawData_W3SVC_WebServiceCache
+	q = wmi.CreateQuery(&dst_cache, "")
+	if err := wmi.Query(q, &dst_cache); err != nil {
+		return nil, err
+	}
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_ActiveFlushedEntries,
+		prometheus.GaugeValue,
+		float64(dst_cache[0].ActiveFlushedEntries),
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_FileCacheMemoryUsage,
+		prometheus.GaugeValue,
+		float64(dst_cache[0].CurrentFileCacheMemoryUsage),
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_MaximumFileCacheMemoryUsage,
+		prometheus.CounterValue,
+		float64(dst_cache[0].MaximumFileCacheMemoryUsage),
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_FileCacheFlushesTotal,
+		prometheus.CounterValue,
+		float64(dst_cache[0].TotalFlushedFiles),
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_FileCacheQueriesTotal,
+		prometheus.CounterValue,
+		float64(dst_cache[0].FileCacheHits+dst_cache[0].FileCacheMisses),
+	)
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_FileCacheHitsTotal,
+		prometheus.CounterValue,
+		float64(dst_cache[0].FileCacheHits),
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_FilesCached,
+		prometheus.GaugeValue,
+		float64(dst_cache[0].CurrentFilesCached),
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_FilesCachedTotal,
+		prometheus.CounterValue,
+		float64(dst_cache[0].TotalFilesCached),
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_FilesFlushedTotal,
+		prometheus.CounterValue,
+		float64(dst_cache[0].TotalFlushedFiles),
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_URICacheFlushesTotal,
+		prometheus.CounterValue,
+		float64(dst_cache[0].TotalFlushedURIs),
+		"user",
+	)
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_URICacheFlushesTotal,
+		prometheus.CounterValue,
+		float64(dst_cache[0].KernelTotalFlushedURIs),
+		"kernel",
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_URICacheQueriesTotal,
+		prometheus.CounterValue,
+		float64(dst_cache[0].URICacheHits+dst_cache[0].URICacheMisses),
+		"user",
+	)
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_URICacheQueriesTotal,
+		prometheus.CounterValue,
+		float64(dst_cache[0].KernelURICacheHits+dst_cache[0].KernelURICacheMisses),
+		"kernel",
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_URICacheHitsTotal,
+		prometheus.CounterValue,
+		float64(dst_cache[0].URICacheHits),
+		"user",
+	)
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_URICacheHitsTotal,
+		prometheus.CounterValue,
+		float64(dst_cache[0].KernelURICacheHits),
+		"kernel",
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_URIsCached,
+		prometheus.GaugeValue,
+		float64(dst_cache[0].CurrentURIsCached),
+		"user",
+	)
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_URIsCached,
+		prometheus.GaugeValue,
+		float64(dst_cache[0].KernelCurrentURIsCached),
+		"kernel",
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_URIsCachedTotal,
+		prometheus.CounterValue,
+		float64(dst_cache[0].TotalURIsCached),
+		"user",
+	)
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_URIsCachedTotal,
+		prometheus.CounterValue,
+		float64(dst_cache[0].KernelTotalURIsCached),
+		"kernel",
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_URIsFlushedTotal,
+		prometheus.CounterValue,
+		float64(dst_cache[0].TotalFlushedURIs),
+		"user",
+	)
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_URIsFlushedTotal,
+		prometheus.CounterValue,
+		float64(dst_cache[0].KernelTotalFlushedURIs),
+		"kernel",
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_MetadataCached,
+		prometheus.GaugeValue,
+		float64(dst_cache[0].CurrentMetadataCached),
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_MetadataCacheFlushes,
+		prometheus.CounterValue,
+		float64(dst_cache[0].TotalFlushedMetadata),
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_MetadataCacheQueriesTotal,
+		prometheus.CounterValue,
+		float64(dst_cache[0].MetadataCacheHits+dst_cache[0].MetadataCacheMisses),
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_MetadataCacheHitsTotal,
+		prometheus.CounterValue,
+		float64(dst_cache[0].MetadataCacheHits),
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_MetadataCachedTotal,
+		prometheus.CounterValue,
+		float64(dst_cache[0].TotalMetadataCached),
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_MetadataFlushedTotal,
+		prometheus.CounterValue,
+		float64(dst_cache[0].TotalFlushedMetadata),
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_OutputCacheActiveFlushedItems,
+		prometheus.CounterValue,
+		float64(dst_cache[0].OutputCacheCurrentFlushedItems),
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_OutputCacheItems,
+		prometheus.CounterValue,
+		float64(dst_cache[0].OutputCacheCurrentItems),
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_OutputCacheMemoryUsage,
+		prometheus.CounterValue,
+		float64(dst_cache[0].OutputCacheCurrentMemoryUsage),
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_OutputCacheQueriesTotal,
+		prometheus.CounterValue,
+		float64(dst_cache[0].OutputCacheTotalHits+dst_cache[0].OutputCacheTotalMisses),
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_OutputCacheHitsTotal,
+		prometheus.CounterValue,
+		float64(dst_cache[0].OutputCacheTotalHits),
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_OutputCacheFlushedItemsTotal,
+		prometheus.CounterValue,
+		float64(dst_cache[0].OutputCacheTotalFlushedItems),
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_OutputCacheFlushesTotal,
+		prometheus.CounterValue,
+		float64(dst_cache[0].OutputCacheTotalFlushes),
+	)
 
 	return nil, nil
 }
