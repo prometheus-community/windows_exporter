@@ -33,21 +33,25 @@ const (
 )
 
 var (
-	scrapeDurations = prometheus.NewSummaryVec(
-		prometheus.SummaryOpts{
-			Namespace: collector.Namespace,
-			Subsystem: "exporter",
-			Name:      "scrape_duration_seconds",
-			Help:      "wmi_exporter: Duration of a scrape job.",
-		},
-		[]string{"collector", "result"},
+	scrapeDurationDesc = prometheus.NewDesc(
+		prometheus.BuildFQName(collector.Namespace, "exporter", "collector_duration_seconds"),
+		"wmi_exporter: Duration of a collection.",
+		[]string{"collector"},
+		nil,
+	)
+	scrapeSuccessDesc = prometheus.NewDesc(
+		prometheus.BuildFQName(collector.Namespace, "exporter", "collector_success"),
+		"wmi_exporter: Whether the collector was successful.",
+		[]string{"collector"},
+		nil,
 	)
 )
 
 // Describe sends all the descriptors of the collectors included to
 // the provided channel.
 func (coll WmiCollector) Describe(ch chan<- *prometheus.Desc) {
-	scrapeDurations.Describe(ch)
+	ch <- scrapeDurationDesc
+	ch <- scrapeSuccessDesc
 }
 
 // Collect sends the collected metrics from each of the collectors to
@@ -63,7 +67,6 @@ func (coll WmiCollector) Collect(ch chan<- prometheus.Metric) {
 		}(name, c)
 	}
 	wg.Wait()
-	scrapeDurations.Collect(ch)
 }
 
 func filterAvailableCollectors(collectors string) string {
@@ -81,16 +84,27 @@ func execute(name string, c collector.Collector, ch chan<- prometheus.Metric) {
 	begin := time.Now()
 	err := c.Collect(ch)
 	duration := time.Since(begin)
-	var result string
+	var success float64
 
 	if err != nil {
 		log.Errorf("ERROR: %s collector failed after %fs: %s", name, duration.Seconds(), err)
-		result = "error"
+		success = 0
 	} else {
 		log.Debugf("OK: %s collector succeeded after %fs.", name, duration.Seconds())
-		result = "success"
+		success = 1
 	}
-	scrapeDurations.WithLabelValues(name, result).Observe(duration.Seconds())
+	ch <- prometheus.MustNewConstMetric(
+		scrapeDurationDesc,
+		prometheus.GaugeValue,
+		duration.Seconds(),
+		name,
+	)
+	ch <- prometheus.MustNewConstMetric(
+		scrapeSuccessDesc,
+		prometheus.GaugeValue,
+		success,
+		name,
+	)
 }
 
 func expandEnabledCollectors(enabled string) []string {
