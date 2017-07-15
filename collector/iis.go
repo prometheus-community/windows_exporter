@@ -9,15 +9,50 @@ package collector
 import (
 	"flag"
 	"fmt"
-	"log"
 	"regexp"
+
+	"golang.org/x/sys/windows/registry"
 
 	"github.com/StackExchange/wmi"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/common/log"
 )
 
 func init() {
 	Factories["iis"] = NewIISCollector
+	iis_version = getIISVersion()
+}
+
+type simple_version struct {
+	major uint64
+	minor uint64
+}
+
+func getIISVersion() simple_version {
+	k, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\Microsoft\InetStp\`, registry.QUERY_VALUE)
+	if err != nil {
+		log.Warnf("Couldn't open registry to determine IIS version: %v\n", err)
+		return simple_version{}
+	}
+	defer k.Close()
+
+	major, _, err := k.GetIntegerValue("MajorVersion")
+	if err != nil {
+		log.Warnf("Couldn't open registry to determine IIS version: %v\n", err)
+		return simple_version{}
+	}
+	minor, _, err := k.GetIntegerValue("MinorVersion")
+	if err != nil {
+		log.Warnf("Couldn't open registry to determine IIS version: %v\n", err)
+		return simple_version{}
+	}
+
+	log.Debugf("Detected IIS %d.%d\n", major, minor)
+
+	return simple_version{
+		major: major,
+		minor: minor,
+	}
 }
 
 var (
@@ -25,6 +60,8 @@ var (
 	siteBlacklist = flag.String("collector.iis.site-blacklist", "", "Regexp of sites to blacklist. Site name must both match whitelist and not match blacklist to be included.")
 	appWhitelist  = flag.String("collector.iis.app-whitelist", ".+", "Regexp of apps to whitelist. App name must both match whitelist and not match blacklist to be included.")
 	appBlacklist  = flag.String("collector.iis.app-blacklist", "", "Regexp of apps to blacklist. App name must both match whitelist and not match blacklist to be included.")
+
+	iis_version = simple_version{}
 )
 
 type IISCollector struct {
@@ -778,7 +815,7 @@ func NewIISCollector() (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *IISCollector) Collect(ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ch); err != nil {
-		log.Println("[ERROR] failed collecting iis metrics:", desc, err)
+		log.Errorf("[ERROR] failed collecting iis metrics:", desc, err)
 		return err
 	}
 	return nil
@@ -851,41 +888,45 @@ type Win32_PerfRawData_APPPOOLCountersProvider_APPPOOLWAS struct {
 type Win32_PerfRawData_W3SVCW3WPCounterProvider_W3SVCW3WP struct {
 	Name string
 
-	ActiveFlushedEntries               uint64
-	CurrentFileCacheMemoryUsage        uint64
-	CurrentFilesCached                 uint64
-	CurrentMetadataCached              uint64
-	CurrentURIsCached                  uint64
-	FileCacheFlushes                   uint64
-	FileCacheHits                      uint64
-	FileCacheMisses                    uint64
-	MaximumFileCacheMemoryUsage        uint64
-	MetadataCacheFlushes               uint64
-	MetadataCacheHits                  uint64
-	MetadataCacheMisses                uint64
-	OutputCacheCurrentFlushedItems     uint64
-	OutputCacheCurrentItems            uint64
-	OutputCacheCurrentMemoryUsage      uint64
-	OutputCacheHitsPersec              uint64
-	OutputCacheMissesPersec            uint64
-	OutputCacheTotalFlushedItems       uint64
-	OutputCacheTotalFlushes            uint64
-	OutputCacheTotalHits               uint64
-	OutputCacheTotalMisses             uint64
-	TotalFilesCached                   uint64
-	TotalFlushedFiles                  uint64
-	TotalFlushedMetadata               uint64
-	TotalFlushedURIs                   uint64
-	TotalMetadataCached                uint64
-	TotalURIsCached                    uint64
-	URICacheFlushes                    uint64
-	URICacheHits                       uint64
-	URICacheMisses                     uint64
-	ActiveThreadsCount                 uint64
-	TotalThreads                       uint64
-	MaximumThreadsCount                uint64
-	TotalHTTPRequestsServed            uint64
-	ActiveRequests                     uint64
+	ActiveFlushedEntries           uint64
+	CurrentFileCacheMemoryUsage    uint64
+	CurrentFilesCached             uint64
+	CurrentMetadataCached          uint64
+	CurrentURIsCached              uint64
+	FileCacheFlushes               uint64
+	FileCacheHits                  uint64
+	FileCacheMisses                uint64
+	MaximumFileCacheMemoryUsage    uint64
+	MetadataCacheFlushes           uint64
+	MetadataCacheHits              uint64
+	MetadataCacheMisses            uint64
+	OutputCacheCurrentFlushedItems uint64
+	OutputCacheCurrentItems        uint64
+	OutputCacheCurrentMemoryUsage  uint64
+	OutputCacheHitsPersec          uint64
+	OutputCacheMissesPersec        uint64
+	OutputCacheTotalFlushedItems   uint64
+	OutputCacheTotalFlushes        uint64
+	OutputCacheTotalHits           uint64
+	OutputCacheTotalMisses         uint64
+	TotalFilesCached               uint64
+	TotalFlushedFiles              uint64
+	TotalFlushedMetadata           uint64
+	TotalFlushedURIs               uint64
+	TotalMetadataCached            uint64
+	TotalURIsCached                uint64
+	URICacheFlushes                uint64
+	URICacheHits                   uint64
+	URICacheMisses                 uint64
+	ActiveThreadsCount             uint64
+	TotalThreads                   uint64
+	MaximumThreadsCount            uint64
+	TotalHTTPRequestsServed        uint64
+	ActiveRequests                 uint64
+}
+type Win32_PerfRawData_W3SVCW3WPCounterProvider_W3SVCW3WP_IIS8 struct {
+	Name string
+
 	Percent401HTTPResponseSent         uint64
 	Percent403HTTPResponseSent         uint64
 	Percent404HTTPResponseSent         uint64
@@ -1567,64 +1608,80 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 			float64(app.ActiveRequests),
 			name,
 		)
+	}
 
-		ch <- prometheus.MustNewConstMetric(
-			c.RequestErrorsTotal,
-			prometheus.CounterValue,
-			float64(app.Percent401HTTPResponseSent),
-			name,
-			"401",
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.RequestErrorsTotal,
-			prometheus.CounterValue,
-			float64(app.Percent403HTTPResponseSent),
-			name,
-			"403",
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.RequestErrorsTotal,
-			prometheus.CounterValue,
-			float64(app.Percent404HTTPResponseSent),
-			name,
-			"404",
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.RequestErrorsTotal,
-			prometheus.CounterValue,
-			float64(app.Percent500HTTPResponseSent),
-			name,
-			"500",
-		)
+	if iis_version.major >= 8 {
+		var dst_worker_iis8 []Win32_PerfRawData_W3SVCW3WPCounterProvider_W3SVCW3WP_IIS8
+		q = createQuery(&dst_worker_iis8, "Win32_PerfRawData_W3SVCW3WPCounterProvider_W3SVCW3WP", "")
+		if err := wmi.Query(q, &dst_worker_iis8); err != nil {
+			return nil, err
+		}
+		for _, app := range dst_worker_iis8 {
+			// Extract the apppool name from the format <PID>_<NAME>
+			name := workerProcessNameExtractor.ReplaceAllString(app.Name, "$1")
+			if name == "_Total" ||
+				c.appBlacklistPattern.MatchString(name) ||
+				!c.appWhitelistPattern.MatchString(name) {
+				continue
+			}
 
-		ch <- prometheus.MustNewConstMetric(
-			c.WebSocketRequestsActive,
-			prometheus.CounterValue,
-			float64(app.WebSocketActiveRequests),
-			name,
-		)
+			ch <- prometheus.MustNewConstMetric(
+				c.RequestErrorsTotal,
+				prometheus.CounterValue,
+				float64(app.Percent401HTTPResponseSent),
+				name,
+				"401",
+			)
+			ch <- prometheus.MustNewConstMetric(
+				c.RequestErrorsTotal,
+				prometheus.CounterValue,
+				float64(app.Percent403HTTPResponseSent),
+				name,
+				"403",
+			)
+			ch <- prometheus.MustNewConstMetric(
+				c.RequestErrorsTotal,
+				prometheus.CounterValue,
+				float64(app.Percent404HTTPResponseSent),
+				name,
+				"404",
+			)
+			ch <- prometheus.MustNewConstMetric(
+				c.RequestErrorsTotal,
+				prometheus.CounterValue,
+				float64(app.Percent500HTTPResponseSent),
+				name,
+				"500",
+			)
 
-		ch <- prometheus.MustNewConstMetric(
-			c.WebSocketConnectionAttempts,
-			prometheus.CounterValue,
-			float64(app.WebSocketConnectionAttemptsPerSec),
-			name,
-		)
+			ch <- prometheus.MustNewConstMetric(
+				c.WebSocketRequestsActive,
+				prometheus.CounterValue,
+				float64(app.WebSocketActiveRequests),
+				name,
+			)
 
-		ch <- prometheus.MustNewConstMetric(
-			c.WebSocketConnectionsAccepted,
-			prometheus.CounterValue,
-			float64(app.WebSocketConnectionsAcceptedPerSec),
-			name,
-		)
+			ch <- prometheus.MustNewConstMetric(
+				c.WebSocketConnectionAttempts,
+				prometheus.CounterValue,
+				float64(app.WebSocketConnectionAttemptsPerSec),
+				name,
+			)
 
-		ch <- prometheus.MustNewConstMetric(
-			c.WebSocketConnectionsRejected,
-			prometheus.CounterValue,
-			float64(app.WebSocketConnectionsRejectedPerSec),
-			name,
-		)
+			ch <- prometheus.MustNewConstMetric(
+				c.WebSocketConnectionsAccepted,
+				prometheus.CounterValue,
+				float64(app.WebSocketConnectionsAcceptedPerSec),
+				name,
+			)
 
+			ch <- prometheus.MustNewConstMetric(
+				c.WebSocketConnectionsRejected,
+				prometheus.CounterValue,
+				float64(app.WebSocketConnectionsRejectedPerSec),
+				name,
+			)
+		}
 	}
 
 	var dst_cache []Win32_PerfRawData_W3SVC_WebServiceCache
