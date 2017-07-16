@@ -5,11 +5,12 @@ package collector
 import (
 	"bytes"
 	"flag"
-	"log"
 	"strconv"
+	"strings"
 
 	"github.com/StackExchange/wmi"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/common/log"
 )
 
 func init() {
@@ -22,26 +23,35 @@ var (
 
 // A ProcessCollector is a Prometheus collector for WMI Win32_PerfRawData_PerfProc_Process metrics
 type ProcessCollector struct {
-	StartTime               *prometheus.Desc
-	CPUTimeTotal            *prometheus.Desc
-	HandleCount             *prometheus.Desc
-	IOBytesTotal            *prometheus.Desc
-	IOOperationsTotal       *prometheus.Desc
-	PageFaultsTotal         *prometheus.Desc
-	PageFileBytes           *prometheus.Desc
-	PoolBytes               *prometheus.Desc
-	PriorityBase            *prometheus.Desc
-	PrivateBytes            *prometheus.Desc
-	ThreadCount             *prometheus.Desc
-	VirtualBytes            *prometheus.Desc
-	WorkingSet              *prometheus.Desc
+	StartTime         *prometheus.Desc
+	CPUTimeTotal      *prometheus.Desc
+	HandleCount       *prometheus.Desc
+	IOBytesTotal      *prometheus.Desc
+	IOOperationsTotal *prometheus.Desc
+	PageFaultsTotal   *prometheus.Desc
+	PageFileBytes     *prometheus.Desc
+	PoolBytes         *prometheus.Desc
+	PriorityBase      *prometheus.Desc
+	PrivateBytes      *prometheus.Desc
+	ThreadCount       *prometheus.Desc
+	VirtualBytes      *prometheus.Desc
+	WorkingSet        *prometheus.Desc
 
-	queryWhereClause        string
+	queryWhereClause string
 }
 
 // NewProcessCollector ...
 func NewProcessCollector() (Collector, error) {
 	const subsystem = "process"
+
+	var wc bytes.Buffer
+	if *processWhereClause != "" {
+		wc.WriteString("WHERE ")
+		wc.WriteString(*processWhereClause)
+	} else {
+		log.Warn("No where-clause specified for process collector. This will generate a very large number of metrics!")
+	}
+
 	return &ProcessCollector{
 		StartTime: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "start_time"),
@@ -121,7 +131,7 @@ func NewProcessCollector() (Collector, error) {
 			[]string{"process", "process_id", "creating_process_id"},
 			nil,
 		),
-		queryWhereClause: *processWhereClause,
+		queryWhereClause: wc.String(),
 	}, nil
 }
 
@@ -129,7 +139,7 @@ func NewProcessCollector() (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *ProcessCollector) Collect(ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ch); err != nil {
-		log.Println("[ERROR] failed collecting process metrics:", desc, err)
+		log.Errorln("[ERROR] failed collecting process metrics:", desc, err)
 		return err
 	}
 	return nil
@@ -171,16 +181,7 @@ type Win32_PerfRawData_PerfProc_Process struct {
 
 func (c *ProcessCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_PerfRawData_PerfProc_Process
-
-	var wc bytes.Buffer
-
-	if c.queryWhereClause != "" {
-		wc.WriteString("WHERE ")
-		wc.WriteString(c.queryWhereClause)
-	}
-
-	q := wmi.CreateQuery(&dst, wc.String())
-
+	q := wmi.CreateQuery(&dst, c.queryWhereClause)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
 	}
@@ -190,7 +191,8 @@ func (c *ProcessCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Des
 		if process.Name == "_Total" {
 			continue
 		}
-		
+		// Duplicate processes are suffixed # and an index number. Remove those.
+		processName := strings.Split(process.Name, "#")[0]
 		pid := strconv.FormatUint(uint64(process.IDProcess), 10)
 		cpid := strconv.FormatUint(uint64(process.CreatingProcessID), 10)
 
@@ -199,7 +201,7 @@ func (c *ProcessCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Des
 			prometheus.GaugeValue,
 			// convert from Windows timestamp (1 jan 1601) to unix timestamp (1 jan 1970)
 			float64(process.ElapsedTime-116444736000000000)/float64(process.Frequency_Object),
-			process.Name,
+			processName,
 			pid,
 			cpid,
 		)
@@ -208,7 +210,7 @@ func (c *ProcessCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Des
 			c.HandleCount,
 			prometheus.GaugeValue,
 			float64(process.HandleCount),
-			process.Name,
+			processName,
 			pid,
 			cpid,
 		)
@@ -217,7 +219,7 @@ func (c *ProcessCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Des
 			c.CPUTimeTotal,
 			prometheus.CounterValue,
 			float64(process.PercentPrivilegedTime)*ticksToSecondsScaleFactor,
-			process.Name,
+			processName,
 			pid,
 			cpid,
 			"privileged",
@@ -227,7 +229,7 @@ func (c *ProcessCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Des
 			c.CPUTimeTotal,
 			prometheus.CounterValue,
 			float64(process.PercentUserTime)*ticksToSecondsScaleFactor,
-			process.Name,
+			processName,
 			pid,
 			cpid,
 			"user",
@@ -237,7 +239,7 @@ func (c *ProcessCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Des
 			c.IOBytesTotal,
 			prometheus.CounterValue,
 			float64(process.IOOtherBytesPersec),
-			process.Name,
+			processName,
 			pid,
 			cpid,
 			"other",
@@ -247,7 +249,7 @@ func (c *ProcessCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Des
 			c.IOOperationsTotal,
 			prometheus.CounterValue,
 			float64(process.IOOtherOperationsPersec),
-			process.Name,
+			processName,
 			pid,
 			cpid,
 			"other",
@@ -257,7 +259,7 @@ func (c *ProcessCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Des
 			c.IOBytesTotal,
 			prometheus.CounterValue,
 			float64(process.IOReadBytesPersec),
-			process.Name,
+			processName,
 			pid,
 			cpid,
 			"read",
@@ -267,7 +269,7 @@ func (c *ProcessCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Des
 			c.IOOperationsTotal,
 			prometheus.CounterValue,
 			float64(process.IOReadOperationsPersec),
-			process.Name,
+			processName,
 			pid,
 			cpid,
 			"read",
@@ -277,7 +279,7 @@ func (c *ProcessCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Des
 			c.IOBytesTotal,
 			prometheus.CounterValue,
 			float64(process.IOWriteBytesPersec),
-			process.Name,
+			processName,
 			pid,
 			cpid,
 			"write",
@@ -287,7 +289,7 @@ func (c *ProcessCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Des
 			c.IOOperationsTotal,
 			prometheus.CounterValue,
 			float64(process.IOWriteOperationsPersec),
-			process.Name,
+			processName,
 			pid,
 			cpid,
 			"write",
@@ -297,7 +299,7 @@ func (c *ProcessCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Des
 			c.PageFaultsTotal,
 			prometheus.CounterValue,
 			float64(process.PageFaultsPersec),
-			process.Name,
+			processName,
 			pid,
 			cpid,
 		)
@@ -306,7 +308,7 @@ func (c *ProcessCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Des
 			c.PageFileBytes,
 			prometheus.GaugeValue,
 			float64(process.PageFileBytes),
-			process.Name,
+			processName,
 			pid,
 			cpid,
 		)
@@ -315,7 +317,7 @@ func (c *ProcessCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Des
 			c.PoolBytes,
 			prometheus.GaugeValue,
 			float64(process.PoolNonpagedBytes),
-			process.Name,
+			processName,
 			pid,
 			cpid,
 			"nonpaged",
@@ -325,7 +327,7 @@ func (c *ProcessCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Des
 			c.PoolBytes,
 			prometheus.GaugeValue,
 			float64(process.PoolPagedBytes),
-			process.Name,
+			processName,
 			pid,
 			cpid,
 			"paged",
@@ -335,7 +337,7 @@ func (c *ProcessCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Des
 			c.PriorityBase,
 			prometheus.GaugeValue,
 			float64(process.PriorityBase),
-			process.Name,
+			processName,
 			pid,
 			cpid,
 		)
@@ -344,7 +346,7 @@ func (c *ProcessCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Des
 			c.PrivateBytes,
 			prometheus.GaugeValue,
 			float64(process.PrivateBytes),
-			process.Name,
+			processName,
 			pid,
 			cpid,
 		)
@@ -353,7 +355,7 @@ func (c *ProcessCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Des
 			c.ThreadCount,
 			prometheus.GaugeValue,
 			float64(process.ThreadCount),
-			process.Name,
+			processName,
 			pid,
 			cpid,
 		)
@@ -362,7 +364,7 @@ func (c *ProcessCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Des
 			c.VirtualBytes,
 			prometheus.GaugeValue,
 			float64(process.VirtualBytes),
-			process.Name,
+			processName,
 			pid,
 			cpid,
 		)
@@ -371,7 +373,7 @@ func (c *ProcessCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Des
 			c.WorkingSet,
 			prometheus.GaugeValue,
 			float64(process.WorkingSet),
-			process.Name,
+			processName,
 			pid,
 			cpid,
 		)
