@@ -157,6 +157,13 @@ func initWbem() {
 	wmi.DefaultClient.SWbemServicesClient = s
 }
 
+func usage() {
+	fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
+	flag.PrintDefaults()
+	fmt.Fprintf(os.Stderr, "\nNote: If executing from Powershell, the flags need to quoted. For example:\n%s\n",
+		"\twmi_exporter \"-collectors.enabled\" iis")
+}
+
 func main() {
 	var (
 		showVersion       = flag.Bool("version", false, "Print version information.")
@@ -165,6 +172,7 @@ func main() {
 		enabledCollectors = flag.String("collectors.enabled", filterAvailableCollectors(defaultCollectors), "Comma-separated list of collectors to use. Use '[default]' as a placeholder for all the collectors enabled by default")
 		printCollectors   = flag.Bool("collectors.print", false, "If true, print available collectors and exit.")
 	)
+	flag.Usage = usage
 	flag.Parse()
 
 	if *showVersion {
