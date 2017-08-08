@@ -1,4 +1,7 @@
 // returns data points from 
+// Win32_PerfRawData_HvStats_HyperVHypervisor
+// Win32_PerfRawData_HvStats_HyperVHypervisorLogicalProcessor
+
 package collector
 
 import (
@@ -8,11 +11,15 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+
 func init() {
 	Factories["hyperv"] = NewHypervCollector
 }
 
-// A HypervCollector is a Prometheus collector for WMI metrics
+
+// A HypervCollector is a Prometheus collector for WMI
+// Win32_PerfRawData_HvStats_HyperVHypervisorLogicalProcessor
+// and Win32_PerfRawData_HvStats_HyperVHypervisor metrics.
 type HypervCollector struct {
 	// Win32_PerfRawData_HvStats_HyperVHypervisor	
 	LogicalProcessors					*prometheus.Desc
@@ -45,7 +52,6 @@ type HypervCollector struct {
 	SchedulerInterruptsPersec			*prometheus.Desc
 	TimerInterruptsPerseu				*prometheus.Desc
 	TotalInterruptsPersec				*prometheus.Desc
-
 }
 
 
@@ -57,14 +63,14 @@ func NewHypervCollector() (Collector, error) {
 
 	return &HypervCollector{
 		LogicalProcessors: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "LogicalProcessors_Number"),
+			prometheus.BuildFQName(Namespace, subsystem, "Logical_Processors_Number"),
 			"The number of logical processors present in the system.",
 			nil,
 			nil,
 		),
 
 		MonitoredNotifications: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "MonitoredNotifications_Number"),
+			prometheus.BuildFQName(Namespace, subsystem, "Monitored_Notifications_Number"),
 			"The number of monitored notifications registered with the hypervisor.",
 			nil,
 			nil,
@@ -78,14 +84,14 @@ func NewHypervCollector() (Collector, error) {
 		),
 
 		TotalPages: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "TotalPages_Number"),
+			prometheus.BuildFQName(Namespace, subsystem, "Total_Pages_Number"),
 			"The number of bootstrap and deposited pages in the hypervisor.",
 			nil,
 			nil,
 		),
 
 		VirtualProcessors: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "VirtualProcessors_Number"),
+			prometheus.BuildFQName(Namespace, subsystem, "Virtual_Processors_Number"),
 			"The number of virtual processors present in the system.",
 			nil,
 			nil,
@@ -306,11 +312,6 @@ type Win32_PerfRawData_HvStats_HyperVHypervisorLogicalProcessor struct {
 	SchedulerInterruptsPersec			uint64
 	TimerInterruptsPerseu				uint64
 	TotalInterruptsPersec				uint64
-}
-
-
-func mbToBytes(mb uint64) float64 {
-	return float64(mb * 1024 * 1024)
 }
 
 
