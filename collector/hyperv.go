@@ -50,7 +50,7 @@ type HypervCollector struct {
 	ProcessorStateFlags					*prometheus.Desc
 	RootVpIndex							*prometheus.Desc
 	SchedulerInterruptsPersec			*prometheus.Desc
-	TimerInterruptsPerseu				*prometheus.Desc
+	TimerInterruptsPersec				*prometheus.Desc
 	TotalInterruptsPersec				*prometheus.Desc
 }
 
@@ -310,7 +310,7 @@ type Win32_PerfRawData_HvStats_HyperVHypervisorLogicalProcessor struct {
 	ProcessorStateFlags					uint64
 	RootVpIndex							uint64
 	SchedulerInterruptsPersec			uint64
-	TimerInterruptsPerseu				uint64
+	TimerInterruptsPersec				uint64
 	TotalInterruptsPersec				uint64
 }
 
@@ -487,9 +487,9 @@ func (c *HypervCollector) collectProce(ch chan<- prometheus.Metric) (*prometheus
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.TimerInterruptsPerseu,
+		c.TimerInterruptsPersec,
 		prometheus.GaugeValue,
-		float64(dst[0].TimerInterruptsPerseu),
+		float64(dst[0].TimerInterruptsPersec),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
