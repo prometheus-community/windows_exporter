@@ -152,12 +152,11 @@ func (c *SMARTCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc,
 
 		poh := 0.
 
-		for i := 0; i < len(disk.VendorSpecific); i += 11 {
+		for i := 0; i < len(disk.VendorSpecific); i += 12 {
 			v := disk.VendorSpecific[i]
 
 			if v == 0 || v == 16 { // field is 0 or 16? (only first row uses 16)
-				if len(disk.VendorSpecific) < i+1 {
-					log.Println("error parsing vendor specific data at", i, ":", disk.VendorSpecific)
+				if len(disk.VendorSpecific) < i+7 {
 					break
 				}
 				v = disk.VendorSpecific[i+1]
@@ -166,7 +165,6 @@ func (c *SMARTCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc,
 					continue
 				}
 				var i3, i6, i7, i8, i9, i10, i11, i12 uint8
-
 				i3 = disk.VendorSpecific[i+3] // smart id
 				i6 = disk.VendorSpecific[i+6] // actual normalized data
 				i7 = disk.VendorSpecific[i+7] // worst normalized data
