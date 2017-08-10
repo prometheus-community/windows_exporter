@@ -360,7 +360,7 @@ func (c *HypervCollector) collectStats(ch chan<- prometheus.Metric) (*prometheus
 
 
 func (c *HypervCollector) collectProce(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
-	var ds []Win32_PerfRawData_HvStats_HyperVHypervisorLogicalProcessor
+	var dst []Win32_PerfRawData_HvStats_HyperVHypervisorLogicalProcessor
 	q := wmi.CreateQuery(&dst, "")
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
