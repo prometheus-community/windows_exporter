@@ -60,6 +60,14 @@ See [open issues](https://github.com/martinlindhe/wmi_exporter/issues)
 The prometheus metrics will be exposed on [localhost:9182](http://localhost:9182)
 
 
+## Examples
+
+Please note: The quotes in the parameter names are required because of how Powershell parses command line arguments.
+
+### Enable only process collector and specify a custom query
+
+    .\wmi_exporter.exe "-collectors.enabled" "process" "-collector.process.processes-where" "Name='firefox'"
+
 ## License
 
 Under [MIT](LICENSE)
