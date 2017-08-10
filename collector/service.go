@@ -3,6 +3,8 @@
 package collector
 
 import (
+	"bytes"
+	"flag"
 	"log"
 	"strings"
 
@@ -14,15 +16,30 @@ func init() {
 	Factories["service"] = NewserviceCollector
 }
 
+var (
+	serviceWhereClause = flag.String("collector.service.services-where", "", "WQL 'where' clause to use in WMI metrics query. Limits the response to the services you specify and reduces the size of the response.")
+)
+
 // A serviceCollector is a Prometheus collector for WMI Win32_Service metrics
 type serviceCollector struct {
 	State     *prometheus.Desc
 	StartMode *prometheus.Desc
+
+	queryWhereClause string
 }
 
 // NewserviceCollector ...
 func NewserviceCollector() (Collector, error) {
 	const subsystem = "service"
+
+	var wc bytes.Buffer
+	if *serviceWhereClause != "" {
+		wc.WriteString("WHERE ")
+		wc.WriteString(*serviceWhereClause)
+	} else {
+		log.Println("warning: No where-clause specified for process collector. This will generate a very large number of metrics!")
+	}
+
 	return &serviceCollector{
 		State: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "state"),
@@ -36,6 +53,7 @@ func NewserviceCollector() (Collector, error) {
 			[]string{"name", "start_mode"},
 			nil,
 		),
+		queryWhereClause: wc.String(),
 	}, nil
 }
 
@@ -77,7 +95,7 @@ var (
 
 func (c *serviceCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_Service
-	q := wmi.CreateQuery(&dst, "")
+	q := wmi.CreateQuery(&dst, c.queryWhereClause)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
 	}
