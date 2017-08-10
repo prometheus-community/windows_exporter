@@ -1,6 +1,4 @@
 // returns data points from MSStorageDriver_ATAPISmartData class
-// in order to function, vendor-specific drivers for your HDD will need to be installed
-// vendor-specific code based on https://exchange.nagios.org/directory/Plugins/Operating-Systems/Windows/NRPE/check_smartwmi-SMART-Monitoring-for-Windows-by-using-builtin-WMI/details
 
 package collector
 
