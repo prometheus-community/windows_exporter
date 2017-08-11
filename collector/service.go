@@ -37,7 +37,7 @@ func NewserviceCollector() (Collector, error) {
 		wc.WriteString("WHERE ")
 		wc.WriteString(*serviceWhereClause)
 	} else {
-		log.Println("warning: No where-clause specified for process collector. This will generate a very large number of metrics!")
+		log.Println("warning: No where-clause specified for service collector. This will generate a very large number of metrics!")
 	}
 
 	return &serviceCollector{
