@@ -53,10 +53,7 @@ type HypervCollector struct {
 }
 
 func NewHypervCollector() (Collector, error) {
-	const subsystem = "hypervisor"
-
-	//func NewDesc(fqName, help string, variableLabels []string, constLabels Labels) *Desc
-	//func BuildFQName(namespace, subsystem, name string) string
+	const subsystem = "hyperv"
 
 	return &HypervCollector{
 		LogicalProcessors: prometheus.NewDesc(
