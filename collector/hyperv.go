@@ -314,9 +314,6 @@ func (c *HypervCollector) collectStats(ch chan<- prometheus.Metric) (*prometheus
 		return nil, err
 	}
 
-	// func MustNewConstMetric(desc *Desc, valueType ValueType,
-	// value float64, labelValues ...string) Metric
-
 	ch <- prometheus.MustNewConstMetric(
 		c.LogicalProcessors,
 		prometheus.GaugeValue,
