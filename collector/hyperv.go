@@ -1,4 +1,4 @@
-// returns data points from 
+// returns data points from
 // Win32_PerfRawData_HvStats_HyperVHypervisor
 // Win32_PerfRawData_HvStats_HyperVHypervisorLogicalProcessor
 
@@ -11,49 +11,46 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-
 func init() {
 	Factories["hyperv"] = NewHypervCollector
 }
-
 
 // A HypervCollector is a Prometheus collector for WMI
 // Win32_PerfRawData_HvStats_HyperVHypervisorLogicalProcessor
 // and Win32_PerfRawData_HvStats_HyperVHypervisor metrics.
 type HypervCollector struct {
-	// Win32_PerfRawData_HvStats_HyperVHypervisor	
-	LogicalProcessors					*prometheus.Desc
-	MonitoredNotifications				*prometheus.Desc
-	Partitions							*prometheus.Desc
-	TotalPages							*prometheus.Desc
-	VirtualProcessors					*prometheus.Desc
+	// Win32_PerfRawData_HvStats_HyperVHypervisor
+	LogicalProcessors      *prometheus.Desc
+	MonitoredNotifications *prometheus.Desc
+	Partitions             *prometheus.Desc
+	TotalPages             *prometheus.Desc
+	VirtualProcessors      *prometheus.Desc
 
 	//Win32_PerfRawData_HvStats_HyperVHypervisorLogicalProcessor
-	C1TransitionsPersec					*prometheus.Desc
-	C2TransitionsPersec					*prometheus.Desc
-	C3TransitionsPersec					*prometheus.Desc
-	ContextSwitchesPersec				*prometheus.Desc
-	Frequency							*prometheus.Desc
-	HardwareInterruptsPersec			*prometheus.Desc
-	InterProcessorInterruptsPersec		*prometheus.Desc
-	InterProcessorInterruptsSentPersec	*prometheus.Desc
-	MonitorTransitionCost				*prometheus.Desc
-	ParkingStatus						*prometheus.Desc
-	PercentC1Time						*prometheus.Desc
-	PercentC2Time						*prometheus.Desc
-	PercentC3Time						*prometheus.Desc
-	PercentGuestRunTime					*prometheus.Desc
-	PercentHypervisorRunTime			*prometheus.Desc
-	PercentIdleTime						*prometheus.Desc
-	PercentofMaxFrequency				*prometheus.Desc
-	PercentTotalRunTime					*prometheus.Desc
-	ProcessorStateFlags					*prometheus.Desc
-	RootVpIndex							*prometheus.Desc
-	SchedulerInterruptsPersec			*prometheus.Desc
-	TimerInterruptsPersec				*prometheus.Desc
-	TotalInterruptsPersec				*prometheus.Desc
+	C1TransitionsPersec                *prometheus.Desc
+	C2TransitionsPersec                *prometheus.Desc
+	C3TransitionsPersec                *prometheus.Desc
+	ContextSwitchesPersec              *prometheus.Desc
+	Frequency                          *prometheus.Desc
+	HardwareInterruptsPersec           *prometheus.Desc
+	InterProcessorInterruptsPersec     *prometheus.Desc
+	InterProcessorInterruptsSentPersec *prometheus.Desc
+	MonitorTransitionCost              *prometheus.Desc
+	ParkingStatus                      *prometheus.Desc
+	PercentC1Time                      *prometheus.Desc
+	PercentC2Time                      *prometheus.Desc
+	PercentC3Time                      *prometheus.Desc
+	PercentGuestRunTime                *prometheus.Desc
+	PercentHypervisorRunTime           *prometheus.Desc
+	PercentIdleTime                    *prometheus.Desc
+	PercentofMaxFrequency              *prometheus.Desc
+	PercentTotalRunTime                *prometheus.Desc
+	ProcessorStateFlags                *prometheus.Desc
+	RootVpIndex                        *prometheus.Desc
+	SchedulerInterruptsPersec          *prometheus.Desc
+	TimerInterruptsPersec              *prometheus.Desc
+	TotalInterruptsPersec              *prometheus.Desc
 }
-
 
 func NewHypervCollector() (Collector, error) {
 	const subsystem = "hypervisor"
@@ -257,10 +254,8 @@ func NewHypervCollector() (Collector, error) {
 			nil,
 			nil,
 		),
-
 	}, nil
 }
-
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
@@ -278,42 +273,39 @@ func (c *HypervCollector) Collect(ch chan<- prometheus.Metric) error {
 	return nil
 }
 
-
 type Win32_PerfRawData_HvStats_HyperVHypervisor struct {
-	LogicalProcessors		uint64
-	MonitoredNotifications  uint64
-	Partitions				uint64
-	TotalPages				uint64
-	VirtualProcessors		uint64
+	LogicalProcessors      uint64
+	MonitoredNotifications uint64
+	Partitions             uint64
+	TotalPages             uint64
+	VirtualProcessors      uint64
 }
-
 
 type Win32_PerfRawData_HvStats_HyperVHypervisorLogicalProcessor struct {
-	C1TransitionsPersec					uint64
-	C2TransitionsPersec					uint64
-	C3TransitionsPersec					uint64
-	ContextSwitchesPersec				uint64
-	Frequency							uint64
-	HardwareInterruptsPersec			uint64
-	InterProcessorInterruptsPersec		uint64
-	InterProcessorInterruptsSentPersec	uint64
-	MonitorTransitionCost				uint64
-	ParkingStatus						uint64
-	PercentC1Time						uint64
-	PercentC2Time						uint64
-	PercentC3Time						uint64
-	PercentGuestRunTime					uint64
-	PercentHypervisorRunTime			uint64
-	PercentIdleTime						uint64
-	PercentofMaxFrequency				uint64
-	PercentTotalRunTime					uint64
-	ProcessorStateFlags					uint64
-	RootVpIndex							uint64
-	SchedulerInterruptsPersec			uint64
-	TimerInterruptsPersec				uint64
-	TotalInterruptsPersec				uint64
+	C1TransitionsPersec                uint64
+	C2TransitionsPersec                uint64
+	C3TransitionsPersec                uint64
+	ContextSwitchesPersec              uint64
+	Frequency                          uint64
+	HardwareInterruptsPersec           uint64
+	InterProcessorInterruptsPersec     uint64
+	InterProcessorInterruptsSentPersec uint64
+	MonitorTransitionCost              uint64
+	ParkingStatus                      uint64
+	PercentC1Time                      uint64
+	PercentC2Time                      uint64
+	PercentC3Time                      uint64
+	PercentGuestRunTime                uint64
+	PercentHypervisorRunTime           uint64
+	PercentIdleTime                    uint64
+	PercentofMaxFrequency              uint64
+	PercentTotalRunTime                uint64
+	ProcessorStateFlags                uint64
+	RootVpIndex                        uint64
+	SchedulerInterruptsPersec          uint64
+	TimerInterruptsPersec              uint64
+	TotalInterruptsPersec              uint64
 }
-
 
 func (c *HypervCollector) collectStats(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_PerfRawData_HvStats_HyperVHypervisor
@@ -322,7 +314,7 @@ func (c *HypervCollector) collectStats(ch chan<- prometheus.Metric) (*prometheus
 		return nil, err
 	}
 
-	// func MustNewConstMetric(desc *Desc, valueType ValueType, 
+	// func MustNewConstMetric(desc *Desc, valueType ValueType,
 	// value float64, labelValues ...string) Metric
 
 	ch <- prometheus.MustNewConstMetric(
@@ -357,7 +349,6 @@ func (c *HypervCollector) collectStats(ch chan<- prometheus.Metric) (*prometheus
 
 	return nil, nil
 }
-
 
 func (c *HypervCollector) collectProce(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_PerfRawData_HvStats_HyperVHypervisorLogicalProcessor
