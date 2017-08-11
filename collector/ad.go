@@ -3,9 +3,10 @@
 package collector
 
 import (
+	"log"
+
 	"github.com/StackExchange/wmi"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/common/log"
 )
 
 func init() {
@@ -454,7 +455,7 @@ func NewADCollector() (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *ADCollector) Collect(ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ch); err != nil {
-		log.Errorf("[ERROR] failed collecting ad metrics:", desc, err)
+		log.Println("[ERROR] failed collecting ad metrics:", desc, err)
 		return err
 	}
 	return nil

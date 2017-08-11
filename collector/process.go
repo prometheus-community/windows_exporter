@@ -5,12 +5,12 @@ package collector
 import (
 	"bytes"
 	"flag"
+	"log"
 	"strconv"
 	"strings"
 
 	"github.com/StackExchange/wmi"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/common/log"
 )
 
 func init() {
@@ -49,7 +49,7 @@ func NewProcessCollector() (Collector, error) {
 		wc.WriteString("WHERE ")
 		wc.WriteString(*processWhereClause)
 	} else {
-		log.Warn("No where-clause specified for process collector. This will generate a very large number of metrics!")
+		log.Println("warning: No where-clause specified for process collector. This will generate a very large number of metrics!")
 	}
 
 	return &ProcessCollector{
@@ -139,7 +139,7 @@ func NewProcessCollector() (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *ProcessCollector) Collect(ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ch); err != nil {
-		log.Errorln("[ERROR] failed collecting process metrics:", desc, err)
+		log.Println("[ERROR] failed collecting process metrics:", desc, err)
 		return err
 	}
 	return nil
