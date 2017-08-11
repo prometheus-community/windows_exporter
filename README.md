@@ -69,6 +69,14 @@ Please note: The quotes in the parameter names are required because of how Power
     .\wmi_exporter.exe "-collectors.enabled" "service" "-collector.service.services-where" "Name='wmi_exporter'"
 
 
+## Examples
+
+Please note: The quotes in the parameter names are required because of how Powershell parses command line arguments.
+
+### Enable only process collector and specify a custom query
+
+    .\wmi_exporter.exe "-collectors.enabled" "process" "-collector.process.processes-where" "Name='firefox'"
+
 ## License
 
 Under [MIT](LICENSE)
