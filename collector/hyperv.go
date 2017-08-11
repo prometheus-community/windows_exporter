@@ -57,196 +57,196 @@ func NewHypervCollector() (Collector, error) {
 
 	return &HypervCollector{
 		LogicalProcessors: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "Logical_Processors_Number"),
+			prometheus.BuildFQName(Namespace, subsystem, "logical_processors_number"),
 			"The number of logical processors present in the system.",
 			nil,
 			nil,
 		),
 
 		MonitoredNotifications: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "Monitored_Notifications_Number"),
+			prometheus.BuildFQName(Namespace, subsystem, "monitored_notifications_number"),
 			"The number of monitored notifications registered with the hypervisor.",
 			nil,
 			nil,
 		),
 
 		Partitions: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "Partitions_Number"),
+			prometheus.BuildFQName(Namespace, subsystem, "partitions_number"),
 			"The number of partitions (virtual machines) present in the system.",
 			nil,
 			nil,
 		),
 
 		TotalPages: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "Total_Pages_Number"),
+			prometheus.BuildFQName(Namespace, subsystem, "pages_total"),
 			"The number of bootstrap and deposited pages in the hypervisor.",
 			nil,
 			nil,
 		),
 
 		VirtualProcessors: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "Virtual_Processors_Number"),
+			prometheus.BuildFQName(Namespace, subsystem, "virtual_processors_number"),
 			"The number of virtual processors present in the system.",
 			nil,
 			nil,
 		),
 
 		C1TransitionsPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "C1_Transitions_Persec"),
+			prometheus.BuildFQName(Namespace, subsystem, "c1_transitions"),
 			"C1 Transitions/sec is the rate that CPU enters the C1 low-power idle state.",
 			nil,
 			nil,
 		),
 
 		C2TransitionsPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "C2_Transitions_Persec"),
+			prometheus.BuildFQName(Namespace, subsystem, "c2_transitions"),
 			"C2 Transitions/sec is the rate that CPU enters the C2 low-power idle state.",
 			nil,
 			nil,
 		),
 
 		C3TransitionsPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "C3_Transitions_Persec"),
+			prometheus.BuildFQName(Namespace, subsystem, "c3_transitions"),
 			"C3 Transitions/sec is the rate that CPU enters the C3 low-power idle state.",
 			nil,
 			nil,
 		),
 
 		ContextSwitchesPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "Context_Switches_Persec"),
-			"The rate of virtual processor context switches on the processor.",
+			prometheus.BuildFQName(Namespace, subsystem, "context_switches"),
+			"The rate of virtual processor context switches on the processor/sec.",
 			nil,
 			nil,
 		),
 
 		Frequency: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "Processor_Frequency"),
+			prometheus.BuildFQName(Namespace, subsystem, "processor_frequency"),
 			"Processor Frequency is the frequency of the current processor in megahertz.",
 			nil,
 			nil,
 		),
 
 		HardwareInterruptsPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "Hardware_Interrupts_Persec"),
+			prometheus.BuildFQName(Namespace, subsystem, "hardware_interrupts"),
 			"The rate of hardware interrupts on the processor (excluding hypervisor interrupts).",
 			nil,
 			nil,
 		),
 
 		InterProcessorInterruptsPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "Inter_Processor_Interrupts_Persec"),
+			prometheus.BuildFQName(Namespace, subsystem, "inter_processor_interrupts"),
 			"The rate of hypervisor inter-processor interrupts delivered to the processor.",
 			nil,
 			nil,
 		),
 
 		InterProcessorInterruptsSentPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "Inter_Processor_Interrupts_Sent_Persec"),
+			prometheus.BuildFQName(Namespace, subsystem, "inter_processor_interrupts_sent"),
 			"The rate of hypervisor inter-processor interrupts sent by the processor.",
 			nil,
 			nil,
 		),
 
 		MonitorTransitionCost: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "Monitor_Transition_Cost"),
+			prometheus.BuildFQName(Namespace, subsystem, "monitor_transition_cost"),
 			"The hardware cost of transitions into the hypervisor.",
 			nil,
 			nil,
 		),
 
 		ParkingStatus: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "Parking_Status"),
+			prometheus.BuildFQName(Namespace, subsystem, "parking_status"),
 			"Parking Status represents whether a processor is parked or not.",
 			nil,
 			nil,
 		),
 
 		PercentC1Time: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "Percent_C1_Time"),
+			prometheus.BuildFQName(Namespace, subsystem, "c1_time_percent"),
 			"% C1 Time is the percentage of time the processor spends in the C1 low-power idle state. % C1 Time is a subset of the total processor idle time.",
 			nil,
 			nil,
 		),
 
 		PercentC2Time: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "Percent_C2_Time"),
+			prometheus.BuildFQName(Namespace, subsystem, "c2_time_percent"),
 			"% C2 Time is the percentage of time the processor spends in the C2 low-power idle state. % C2 Time is a subset of the total processor idle time.",
 			nil,
 			nil,
 		),
 
 		PercentC3Time: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "Percent_C3_Time"),
+			prometheus.BuildFQName(Namespace, subsystem, "c3_time_percent"),
 			"% C3 Time is the percentage of time the processor spends in the C3 low-power idle state. % C3 Time is a subset of the total processor idle time.",
 			nil,
 			nil,
 		),
 
 		PercentGuestRunTime: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "Percent_Guest_Run_Time"),
+			prometheus.BuildFQName(Namespace, subsystem, "guest_run_time_percent"),
 			"The percentage of time spent by the processor in guest code.",
 			nil,
 			nil,
 		),
 
 		PercentHypervisorRunTime: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "Percent_Hypervisor_Run_Time"),
+			prometheus.BuildFQName(Namespace, subsystem, "hypervisor_run_time_percent"),
 			"The percentage of time spent by the processor in hypervisor code.",
 			nil,
 			nil,
 		),
 
 		PercentIdleTime: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "Percent_Idle_Time"),
+			prometheus.BuildFQName(Namespace, subsystem, "idle_time_percent"),
 			"The percentage of time spent by the processor in an idle state.",
 			nil,
 			nil,
 		),
 
 		PercentofMaxFrequency: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "Percent_of_Max_Frequency"),
+			prometheus.BuildFQName(Namespace, subsystem, "max_frequency_percent"),
 			"% of Maximum Frequency is the percentage of the current processor's maximum frequency.",
 			nil,
 			nil,
 		),
 
 		PercentTotalRunTime: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "Percent_Total_Run_Time"),
+			prometheus.BuildFQName(Namespace, subsystem, "total_run_time_percent"),
 			"The percentage of time spent by the processor in guest and hypervisor code.",
 			nil,
 			nil,
 		),
 
 		ProcessorStateFlags: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "Processor_State_Flags"),
+			prometheus.BuildFQName(Namespace, subsystem, "processor_state_flags"),
 			"Processor State Flags",
 			nil,
 			nil,
 		),
 
 		RootVpIndex: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "Root_Virtual_Processor_Index"),
+			prometheus.BuildFQName(Namespace, subsystem, "root_virtual_processor_index"),
 			"Index of the root virtual processor that is affinity bound to this logical processor. A value that is greater than the maximum possible root VP index indicates no binding.",
 			nil,
 			nil,
 		),
 
 		SchedulerInterruptsPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "Scheduler_Interrupts_Persec"),
+			prometheus.BuildFQName(Namespace, subsystem, "scheduler_interrupts_rate"),
 			"The rate of hypervisor scheduler interrupts on the processor.",
 			nil,
 			nil,
 		),
 
 		TimerInterruptsPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "Timer_Interrupts_Persec"),
+			prometheus.BuildFQName(Namespace, subsystem, "timer_interrupts_rate"),
 			"The rate of hypervisor timer interrupts on the processor.",
 			nil,
 			nil,
 		),
 
 		TotalInterruptsPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "Total_Interrupts_Persec"),
+			prometheus.BuildFQName(Namespace, subsystem, "total_interrupts_rate"),
 			"The rate of hardware and hypervisor interrupts/sec.",
 			nil,
 			nil,
