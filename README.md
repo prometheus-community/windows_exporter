@@ -35,7 +35,7 @@ If the installer is run without any parameters, the exporter will run with defau
 
 Name | Description
 -----|------------
-`ENABLED_COLLECTORS` | As the `-collectors.enabled` flag, provide a comma-separated list of enabled collectors
+`ENABLED_COLLECTORS` | As the `--collectors.enabled` flag, provide a comma-separated list of enabled collectors
 `LISTEN_ADDR` | The IP address to bind to. Defaults to 0.0.0.0
 `LISTEN_PORT` | The port to bind to. Defaults to 9182.
 `METRICS_PATH` | The path at which to serve metrics. Defaults to `/metrics`
@@ -64,20 +64,15 @@ The prometheus metrics will be exposed on [localhost:9182](http://localhost:9182
 
 ## Examples
 
-Please note: The quotes in the parameter names are required because of how Powershell parses command line arguments.
-
 ### Enable only service collector and specify a custom query
 
-    .\wmi_exporter.exe "-collectors.enabled" "service" "-collector.service.services-where" "Name='wmi_exporter'"
-
-
-## Examples
-
-Please note: The quotes in the parameter names are required because of how Powershell parses command line arguments.
+    .\wmi_exporter.exe --collectors.enabled "service" --collector.service.services-where "Name='wmi_exporter'"
 
 ### Enable only process collector and specify a custom query
 
-    .\wmi_exporter.exe "-collectors.enabled" "process" "-collector.process.processes-where" "Name='firefox'"
+    .\wmi_exporter.exe --collectors.enabled "process" --collector.process.processes-where "Name LIKE 'firefox%'"
+
+When there are multiple processes with the same name, WMI represents those after the first instance as `process-name#index`. So to get them all, rather than just the first one, the query needs to be a wildcard search.
 
 ## License
 
