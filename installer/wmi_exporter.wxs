@@ -16,14 +16,14 @@
     <MajorUpgrade Schedule="afterInstallExecute" DowngradeErrorMessage="A later version of [ProductName] is already installed. Setup will now exit." />
 
     <Property Id="ENABLED_COLLECTORS" Secure="yes"/>
-    <SetProperty Id="CollectorsFlag" After="InstallFiles" Sequence="execute" Value="-collectors.enabled [ENABLED_COLLECTORS]">ENABLED_COLLECTORS</SetProperty>
+    <SetProperty Id="CollectorsFlag" After="InstallFiles" Sequence="execute" Value="--collectors.enabled [ENABLED_COLLECTORS]">ENABLED_COLLECTORS</SetProperty>
 
     <Property Id="LISTEN_ADDR" Secure="yes" />
     <Property Id="LISTEN_PORT" Secure="yes" Value="9182" />
-    <SetProperty Id="ListenFlag" After="InstallFiles" Sequence="execute" Value="-telemetry.addr [LISTEN_ADDR]:[LISTEN_PORT]">LISTEN_ADDR OR LISTEN_PORT</SetProperty>
+    <SetProperty Id="ListenFlag" After="InstallFiles" Sequence="execute" Value="--telemetry.addr [LISTEN_ADDR]:[LISTEN_PORT]">LISTEN_ADDR OR LISTEN_PORT</SetProperty>
 
     <Property Id="METRICS_PATH" Secure="yes"/>
-    <SetProperty Id="MetricsPathFlag" After="InstallFiles" Sequence="execute" Value="-telemetry.path [METRICS_PATH]">METRICS_PATH</SetProperty>
+    <SetProperty Id="MetricsPathFlag" After="InstallFiles" Sequence="execute" Value="--telemetry.path [METRICS_PATH]">METRICS_PATH</SetProperty>
 
     <Directory Id="TARGETDIR" Name="SourceDir">
       <Directory Id="$(var.PlatformProgramFiles)">
@@ -36,7 +36,7 @@
         <File Id="wmi_exporter.exe" Name="wmi_exporter.exe" Source="Work\wmi_exporter.exe" KeyPath="yes">
           <fw:FirewallException Id="MetricsEndpoint" Name="WMI Exporter (HTTP [LISTEN_PORT])" Description="WMI Exporter HTTP endpoint" Port="[LISTEN_PORT]" Protocol="tcp" Scope="any" IgnoreFailure="yes" />
         </File>
-        <ServiceInstall Id="InstallExporterService" Name="wmi_exporter" DisplayName="WMI exporter" Description="Exports Prometheus metrics from WMI queries" ErrorControl="normal" Start="auto" Type="ownProcess" Arguments="-log.format logger:eventlog?name=wmi_exporter [CollectorsFlag] [ListenFlag] [MetricsPathFlag]" />
+        <ServiceInstall Id="InstallExporterService" Name="wmi_exporter" DisplayName="WMI exporter" Description="Exports Prometheus metrics from WMI queries" ErrorControl="normal" Start="auto" Type="ownProcess" Arguments="--log.format logger:eventlog?name=wmi_exporter [CollectorsFlag] [ListenFlag] [MetricsPathFlag]" />
         <ServiceControl Id="ServiceStateControl" Name="wmi_exporter" Remove="uninstall" Start="install" Stop="both" />
       </Component>
     </ComponentGroup>
