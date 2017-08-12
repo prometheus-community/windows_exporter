@@ -21,7 +21,7 @@ msmq | [Win32_PerfRawData_MSMQ_MSMQQueue](http://wutils.com/wmi/root/cimv2/win32
 mssql | various [SQL Server Performance Objects](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/use-sql-server-objects#SQLServerPOs) metrics  |
 os | [Win32_OperatingSystem](https://msdn.microsoft.com/en-us/library/aa394239) metrics (memory, processes, users) | &#10003;
 process | [Win32_PerfRawData_PerfProc_Process](https://msdn.microsoft.com/en-us/library/aa394323(v=vs.85).aspx) metrics (per-process stats) |
-service | [Win32_Service](https://msdn.microsoft.com/en-us/library/aa394418(v=vs.85).aspx) metrics (service states) | &#10003;
+[service](docs/collector.service.md) | Service state metrics | &#10003;
 system | Win32_PerfRawData_PerfOS_System metrics (system calls) | &#10003;
 tcp | [Win32_PerfRawData_Tcpip_TCPv4](https://msdn.microsoft.com/en-us/library/aa394341(v=vs.85).aspx) metrics (tcp connections) |
 textfile | Read prometheus metrics from a text file | &#10003;
