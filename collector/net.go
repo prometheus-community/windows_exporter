@@ -7,13 +7,13 @@
 package collector
 
 import (
-	"flag"
 	"fmt"
 	"log"
 	"regexp"
 
 	"github.com/StackExchange/wmi"
 	"github.com/prometheus/client_golang/prometheus"
+	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 func init() {
@@ -21,8 +21,14 @@ func init() {
 }
 
 var (
-	nicWhitelist        = flag.String("collector.net.nic-whitelist", ".+", "Regexp of NIC:s to whitelist. NIC name must both match whitelist and not match blacklist to be included.")
-	nicBlacklist        = flag.String("collector.net.nic-blacklist", "", "Regexp of NIC:s to blacklist. NIC name must both match whitelist and not match blacklist to be included.")
+	nicWhitelist = kingpin.Flag(
+		"collector.net.nic-whitelist",
+		"Regexp of NIC:s to whitelist. NIC name must both match whitelist and not match blacklist to be included.",
+	).Default(".+").String()
+	nicBlacklist = kingpin.Flag(
+		"collector.net.nic-blacklist",
+		"Regexp of NIC:s to blacklist. NIC name must both match whitelist and not match blacklist to be included.",
+	).Default("").String()
 	nicNameToUnderscore = regexp.MustCompile("[^a-zA-Z0-9]")
 )
 
