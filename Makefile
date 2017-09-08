@@ -2,4 +2,4 @@ fmt:
 	gofmt -l -w -s .
 
 build:
-	promu build -v .
+	promu build -v
