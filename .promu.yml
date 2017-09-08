@@ -1,6 +1,8 @@
 repository:
     path: github.com/martinlindhe/wmi_exporter
 build:
+    binaries:
+        - name: wmi_exporter
     ldflags: |
         -X {{repoPath}}/vendor/github.com/prometheus/common/version.Version={{.Version}}
         -X {{repoPath}}/vendor/github.com/prometheus/common/version.Revision={{.Revision}}
