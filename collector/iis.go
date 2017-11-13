@@ -415,223 +415,223 @@ func NewIISCollector() (Collector, error) {
 		ActiveFlushedEntries: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "worker_cache_active_flushed_entries"),
 			"Number of file handles cached in user-mode that will be closed when all current transfers complete.",
-			[]string{"app"},
+			[]string{"app", "pid"},
 			nil,
 		),
 		FileCacheMemoryUsage: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "worker_file_cache_memory_bytes"),
 			"",
-			[]string{"app"},
+			[]string{"app", "pid"},
 			nil,
 		),
 		MaximumFileCacheMemoryUsage: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "worker_file_cache_max_memory_bytes"),
 			"",
-			[]string{"app"},
+			[]string{"app", "pid"},
 			nil,
 		),
 		FileCacheFlushesTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "worker_file_cache_flushes_total"),
 			"",
-			[]string{"app"},
+			[]string{"app", "pid"},
 			nil,
 		),
 		FileCacheQueriesTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "worker_file_cache_queries_total"),
 			"",
-			[]string{"app"},
+			[]string{"app", "pid"},
 			nil,
 		),
 		FileCacheHitsTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "worker_file_cache_hits_total"),
 			"",
-			[]string{"app"},
+			[]string{"app", "pid"},
 			nil,
 		),
 		FilesCached: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "worker_file_cache_items"),
 			"",
-			[]string{"app"},
+			[]string{"app", "pid"},
 			nil,
 		),
 		FilesCachedTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "worker_file_cache_items_total"),
 			"",
-			[]string{"app"},
+			[]string{"app", "pid"},
 			nil,
 		),
 		FilesFlushedTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "worker_file_cache_items_flushed_total"),
 			"",
-			[]string{"app"},
+			[]string{"app", "pid"},
 			nil,
 		),
 		URICacheFlushesTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "worker_uri_cache_flushes_total"),
 			"",
-			[]string{"app"},
+			[]string{"app", "pid"},
 			nil,
 		),
 		URICacheQueriesTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "worker_uri_cache_queries_total"),
 			"",
-			[]string{"app"},
+			[]string{"app", "pid"},
 			nil,
 		),
 		URICacheHitsTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "worker_uri_cache_hits_total"),
 			"",
-			[]string{"app"},
+			[]string{"app", "pid"},
 			nil,
 		),
 		URIsCached: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "worker_uri_cache_items"),
 			"",
-			[]string{"app"},
+			[]string{"app", "pid"},
 			nil,
 		),
 		URIsCachedTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "worker_uri_cache_items_total"),
 			"",
-			[]string{"app"},
+			[]string{"app", "pid"},
 			nil,
 		),
 		URIsFlushedTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "worker_uri_cache_items_flushed_total"),
 			"",
-			[]string{"app"},
+			[]string{"app", "pid"},
 			nil,
 		),
 		MetadataCached: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "worker_metadata_cache_items"),
 			"",
-			[]string{"app"},
+			[]string{"app", "pid"},
 			nil,
 		),
 		MetadataCacheFlushes: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "worker_metadata_cache_flushes_total"),
 			"",
-			[]string{"app"},
+			[]string{"app", "pid"},
 			nil,
 		),
 		MetadataCacheQueriesTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "worker_metadata_cache_queries_total"),
 			"",
-			[]string{"app"},
+			[]string{"app", "pid"},
 			nil,
 		),
 		MetadataCacheHitsTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "worker_metadata_cache_hits_total"),
 			"",
-			[]string{"app"},
+			[]string{"app", "pid"},
 			nil,
 		),
 		MetadataCachedTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "worker_metadata_cache_items_cached_total"),
 			"",
-			[]string{"app"},
+			[]string{"app", "pid"},
 			nil,
 		),
 		MetadataFlushedTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "worker_metadata_cache_items_flushed_total"),
 			"",
-			[]string{"app"},
+			[]string{"app", "pid"},
 			nil,
 		),
 		OutputCacheActiveFlushedItems: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "worker_output_cache_active_flushed_items"),
 			"",
-			[]string{"app"},
+			[]string{"app", "pid"},
 			nil,
 		),
 		OutputCacheItems: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "worker_output_cache_items"),
 			"",
-			[]string{"app"},
+			[]string{"app", "pid"},
 			nil,
 		),
 		OutputCacheMemoryUsage: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "worker_output_cache_memory_bytes"),
 			"",
-			[]string{"app"},
+			[]string{"app", "pid"},
 			nil,
 		),
 		OutputCacheQueriesTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "worker_output_queries_total"),
 			"",
-			[]string{"app"},
+			[]string{"app", "pid"},
 			nil,
 		),
 		OutputCacheHitsTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "worker_output_cache_hits_total"),
 			"",
-			[]string{"app"},
+			[]string{"app", "pid"},
 			nil,
 		),
 		OutputCacheFlushedItemsTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "worker_output_cache_items_flushed_total"),
 			"",
-			[]string{"app"},
+			[]string{"app", "pid"},
 			nil,
 		),
 		OutputCacheFlushesTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "worker_output_cache_flushes_total"),
 			"",
-			[]string{"app"},
+			[]string{"app", "pid"},
 			nil,
 		),
 		Threads: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "worker_threads"),
 			"",
-			[]string{"app", "state"},
+			[]string{"app", "pid", "state"},
 			nil,
 		),
 		MaximumThreads: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "worker_max_threads"),
 			"",
-			[]string{"app"},
+			[]string{"app", "pid"},
 			nil,
 		),
 		RequestsTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "worker_requests_total"),
 			"",
-			[]string{"app"},
+			[]string{"app", "pid"},
 			nil,
 		),
 		RequestsActive: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "worker_current_requests"),
 			"",
-			[]string{"app"},
+			[]string{"app", "pid"},
 			nil,
 		),
 		RequestErrorsTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "worker_request_errors_total"),
 			"",
-			[]string{"app", "status_code"},
+			[]string{"app", "pid", "status_code"},
 			nil,
 		),
 		WebSocketRequestsActive: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "worker_current_websocket_requests"),
 			"",
-			[]string{"app"},
+			[]string{"app", "pid"},
 			nil,
 		),
 		WebSocketConnectionAttempts: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "worker_websocket_connection_attempts_total"),
 			"",
-			[]string{"app"},
+			[]string{"app", "pid"},
 			nil,
 		),
 		WebSocketConnectionsAccepted: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "worker_websocket_connection_accepted_total"),
 			"",
-			[]string{"app"},
+			[]string{"app", "pid"},
 			nil,
 		),
 		WebSocketConnectionsRejected: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "worker_websocket_connection_rejected_total"),
 			"",
-			[]string{"app"},
+			[]string{"app", "pid"},
 			nil,
 		),
 
@@ -991,7 +991,7 @@ var ApplicationStates = map[uint32]string{
 }
 
 // W3SVCW3WPCounterProvider_W3SVCW3WP returns names prefixed with pid
-var workerProcessNameExtractor = regexp.MustCompile(`^\d+_(.+)$`)
+var workerProcessNameExtractor = regexp.MustCompile(`^(\d+)_(.+)$`)
 
 func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_PerfRawData_W3SVC_WebService
@@ -1371,18 +1371,21 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 	}
 	for _, app := range dst_worker {
 		// Extract the apppool name from the format <PID>_<NAME>
-		name := workerProcessNameExtractor.ReplaceAllString(app.Name, "$1")
+		name := workerProcessNameExtractor.ReplaceAllString(app.Name, "$2")
 		if name == "_Total" ||
 			c.appBlacklistPattern.MatchString(name) ||
 			!c.appWhitelistPattern.MatchString(name) {
 			continue
 		}
 
+		pid := workerProcessNameExtractor.ReplaceAllString(app.Name, "$1")
+
 		ch <- prometheus.MustNewConstMetric(
 			c.ActiveFlushedEntries,
 			prometheus.GaugeValue,
 			float64(app.ActiveFlushedEntries),
 			name,
+			pid,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -1390,6 +1393,7 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 			prometheus.GaugeValue,
 			float64(app.CurrentFileCacheMemoryUsage),
 			name,
+			pid,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -1397,6 +1401,7 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 			prometheus.CounterValue,
 			float64(app.MaximumFileCacheMemoryUsage),
 			name,
+			pid,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -1404,6 +1409,7 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 			prometheus.CounterValue,
 			float64(app.TotalFlushedFiles),
 			name,
+			pid,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -1411,12 +1417,14 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 			prometheus.CounterValue,
 			float64(app.FileCacheHits+app.FileCacheMisses),
 			name,
+			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.FileCacheHitsTotal,
 			prometheus.CounterValue,
 			float64(app.FileCacheHits),
 			name,
+			pid,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -1424,6 +1432,7 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 			prometheus.GaugeValue,
 			float64(app.CurrentFilesCached),
 			name,
+			pid,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -1431,6 +1440,7 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 			prometheus.CounterValue,
 			float64(app.TotalFilesCached),
 			name,
+			pid,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -1438,6 +1448,7 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 			prometheus.CounterValue,
 			float64(app.TotalFlushedFiles),
 			name,
+			pid,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -1445,12 +1456,14 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 			prometheus.CounterValue,
 			float64(app.TotalFlushedURIs),
 			name,
+			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.URICacheQueriesTotal,
 			prometheus.CounterValue,
 			float64(app.URICacheHits+app.URICacheMisses),
 			name,
+			pid,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -1458,6 +1471,7 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 			prometheus.CounterValue,
 			float64(app.URICacheHits),
 			name,
+			pid,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -1465,6 +1479,7 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 			prometheus.GaugeValue,
 			float64(app.CurrentURIsCached),
 			name,
+			pid,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -1472,6 +1487,7 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 			prometheus.CounterValue,
 			float64(app.TotalURIsCached),
 			name,
+			pid,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -1479,6 +1495,7 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 			prometheus.CounterValue,
 			float64(app.TotalFlushedURIs),
 			name,
+			pid,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -1486,6 +1503,7 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 			prometheus.GaugeValue,
 			float64(app.CurrentMetadataCached),
 			name,
+			pid,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -1493,6 +1511,7 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 			prometheus.CounterValue,
 			float64(app.TotalFlushedMetadata),
 			name,
+			pid,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -1500,6 +1519,7 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 			prometheus.CounterValue,
 			float64(app.MetadataCacheHits+app.MetadataCacheMisses),
 			name,
+			pid,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -1507,6 +1527,7 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 			prometheus.CounterValue,
 			float64(app.MetadataCacheHits),
 			name,
+			pid,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -1514,6 +1535,7 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 			prometheus.CounterValue,
 			float64(app.TotalMetadataCached),
 			name,
+			pid,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -1521,6 +1543,7 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 			prometheus.CounterValue,
 			float64(app.TotalFlushedMetadata),
 			name,
+			pid,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -1528,6 +1551,7 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 			prometheus.CounterValue,
 			float64(app.OutputCacheCurrentFlushedItems),
 			name,
+			pid,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -1535,6 +1559,7 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 			prometheus.CounterValue,
 			float64(app.OutputCacheCurrentItems),
 			name,
+			pid,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -1542,6 +1567,7 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 			prometheus.CounterValue,
 			float64(app.OutputCacheCurrentMemoryUsage),
 			name,
+			pid,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -1549,6 +1575,7 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 			prometheus.CounterValue,
 			float64(app.OutputCacheTotalHits+app.OutputCacheTotalMisses),
 			name,
+			pid,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -1556,6 +1583,7 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 			prometheus.CounterValue,
 			float64(app.OutputCacheTotalHits),
 			name,
+			pid,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -1563,6 +1591,7 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 			prometheus.CounterValue,
 			float64(app.OutputCacheTotalFlushedItems),
 			name,
+			pid,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -1570,6 +1599,7 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 			prometheus.CounterValue,
 			float64(app.OutputCacheTotalFlushes),
 			name,
+			pid,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -1577,6 +1607,7 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 			prometheus.GaugeValue,
 			float64(app.ActiveThreadsCount),
 			name,
+			pid,
 			"busy",
 		)
 
@@ -1585,6 +1616,7 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 			prometheus.GaugeValue,
 			float64(app.TotalThreads),
 			name,
+			pid,
 			"idle",
 		)
 
@@ -1593,6 +1625,7 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 			prometheus.CounterValue,
 			float64(app.MaximumThreadsCount),
 			name,
+			pid,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -1600,6 +1633,7 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 			prometheus.CounterValue,
 			float64(app.TotalHTTPRequestsServed),
 			name,
+			pid,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -1607,6 +1641,7 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 			prometheus.CounterValue,
 			float64(app.ActiveRequests),
 			name,
+			pid,
 		)
 	}
 
@@ -1618,18 +1653,21 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 		}
 		for _, app := range dst_worker_iis8 {
 			// Extract the apppool name from the format <PID>_<NAME>
-			name := workerProcessNameExtractor.ReplaceAllString(app.Name, "$1")
+			name := workerProcessNameExtractor.ReplaceAllString(app.Name, "$2")
 			if name == "_Total" ||
 				c.appBlacklistPattern.MatchString(name) ||
 				!c.appWhitelistPattern.MatchString(name) {
 				continue
 			}
 
+			pid := workerProcessNameExtractor.ReplaceAllString(app.Name, "$1")
+
 			ch <- prometheus.MustNewConstMetric(
 				c.RequestErrorsTotal,
 				prometheus.CounterValue,
 				float64(app.Percent401HTTPResponseSent),
 				name,
+				pid,
 				"401",
 			)
 			ch <- prometheus.MustNewConstMetric(
@@ -1637,6 +1675,7 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 				prometheus.CounterValue,
 				float64(app.Percent403HTTPResponseSent),
 				name,
+				pid,
 				"403",
 			)
 			ch <- prometheus.MustNewConstMetric(
@@ -1644,6 +1683,7 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 				prometheus.CounterValue,
 				float64(app.Percent404HTTPResponseSent),
 				name,
+				pid,
 				"404",
 			)
 			ch <- prometheus.MustNewConstMetric(
@@ -1651,6 +1691,7 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 				prometheus.CounterValue,
 				float64(app.Percent500HTTPResponseSent),
 				name,
+				pid,
 				"500",
 			)
 
@@ -1659,6 +1700,7 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 				prometheus.CounterValue,
 				float64(app.WebSocketActiveRequests),
 				name,
+				pid,
 			)
 
 			ch <- prometheus.MustNewConstMetric(
@@ -1666,6 +1708,7 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 				prometheus.CounterValue,
 				float64(app.WebSocketConnectionAttemptsPerSec),
 				name,
+				pid,
 			)
 
 			ch <- prometheus.MustNewConstMetric(
@@ -1673,6 +1716,7 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 				prometheus.CounterValue,
 				float64(app.WebSocketConnectionsAcceptedPerSec),
 				name,
+				pid,
 			)
 
 			ch <- prometheus.MustNewConstMetric(
@@ -1680,6 +1724,7 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 				prometheus.CounterValue,
 				float64(app.WebSocketConnectionsRejectedPerSec),
 				name,
+				pid,
 			)
 		}
 	}
