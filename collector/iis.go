@@ -909,7 +909,7 @@ type Win32_PerfRawData_W3SVCW3WPCounterProvider_W3SVCW3WP struct {
 	OutputCacheTotalFlushes        uint64
 	OutputCacheTotalHits           uint64
 	OutputCacheTotalMisses         uint64
-	TotalFilesCached               	uint64
+	TotalFilesCached               uint64
 	TotalFlushedFiles              uint64
 	TotalFlushedMetadata           uint64
 	TotalFlushedURIs               uint64
@@ -991,7 +991,7 @@ var ApplicationStates = map[uint32]string{
 }
 
 // W3SVCW3WPCounterProvider_W3SVCW3WP returns names prefixed with pid
-var workerProcessNameExtractor = regexp.MustCompile(`^(\d+)$_(.+)$`)
+var workerProcessNameExtractor = regexp.MustCompile(`^(\d+)_(.+)$`)
 
 func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_PerfRawData_W3SVC_WebService
