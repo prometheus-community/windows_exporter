@@ -143,17 +143,14 @@ func (c *TCPCollector) Collect(ch chan<- prometheus.Metric) error {
 }
 
 type Win32_PerfRawData_Tcpip_TCPv4 struct {
-	Caption                     string
 	ConnectionFailures          uint64
 	ConnectionsActive           uint64
 	ConnectionsEstablished      uint64
 	ConnectionsPassive          uint64
 	ConnectionsReset            uint64
-	Description                 string
 	Frequency_Object            uint64
 	Frequency_PerfTime          uint64
 	Frequency_Sys100NS          uint64
-	Name                        string
 	SegmentsPersec              uint64
 	SegmentsReceivedPersec      uint64
 	SegmentsRetransmittedPersec uint64
