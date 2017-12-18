@@ -20,7 +20,7 @@ os | [Win32_OperatingSystem](https://msdn.microsoft.com/en-us/library/aa394239) 
 process | [Win32_PerfRawData_PerfProc_Process](https://msdn.microsoft.com/en-us/library/aa394323(v=vs.85).aspx) metrics (per-process stats) |
 service | [Win32_Service](https://msdn.microsoft.com/en-us/library/aa394418(v=vs.85).aspx) metrics (service states) | &#10003;
 system | Win32_PerfRawData_PerfOS_System metrics (system calls) | &#10003;
-tcp | [Win32_PerfRawData_Tcpip_TCPv4](https://msdn.microsoft.com/en-us/library/aa394341(v=vs.85).aspx) metrics (tcp connections) | &#10003;
+tcp | [Win32_PerfRawData_Tcpip_TCPv4](https://msdn.microsoft.com/en-us/library/aa394341(v=vs.85).aspx) metrics (tcp connections) |
 vmware | Performance counters installed by the Vmware Guest agent |
 
 The HELP texts shows the WMI data source, please see MSDN documentation for details.
