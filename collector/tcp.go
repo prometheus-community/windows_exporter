@@ -124,7 +124,7 @@ func NewTCPCollector() (Collector, error) {
 			nil,
 		),
 		TimestampSys100NS: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "frequency_sys100ns"),
+			prometheus.BuildFQName(Namespace, subsystem, "timestamp_sys100ns"),
 			"(TCP.TimestampSys100NS)",
 			nil,
 			nil,
