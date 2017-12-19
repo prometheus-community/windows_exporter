@@ -17,15 +17,15 @@ func init() {
 
 // A TCPCollector is a Prometheus collector for WMI Win32_PerfRawData_Tcpip_TCPv4 metrics
 type TCPCollector struct {
-	ConnectionFailures          *prometheus.Desc
-	ConnectionsActive           *prometheus.Desc
-	ConnectionsEstablished      *prometheus.Desc
-	ConnectionsPassive          *prometheus.Desc
-	ConnectionsReset            *prometheus.Desc
-	SegmentsPerSec              *prometheus.Desc
-	SegmentsReceivedPerSec      *prometheus.Desc
-	SegmentsRetransmittedPerSec *prometheus.Desc
-	SegmentsSentPerSec          *prometheus.Desc
+	ConnectionFailures         *prometheus.Desc
+	ConnectionsActive          *prometheus.Desc
+	ConnectionsEstablished     *prometheus.Desc
+	ConnectionsPassive         *prometheus.Desc
+	ConnectionsReset           *prometheus.Desc
+	SegmentsTotal              *prometheus.Desc
+	SegmentsReceivedTotal      *prometheus.Desc
+	SegmentsRetransmittedTotal *prometheus.Desc
+	SegmentsSentTotal          *prometheus.Desc
 }
 
 // NewTCPCollector ...
@@ -63,27 +63,27 @@ func NewTCPCollector() (Collector, error) {
 			nil,
 			nil,
 		),
-		SegmentsPerSec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "segments_per_sec"),
-			"(TCP.SegmentsPerSec)",
+		SegmentsTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "segments_total"),
+			"(TCP.SegmentsTotal)",
 			nil,
 			nil,
 		),
-		SegmentsReceivedPerSec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "segments_received_per_sec"),
-			"(TCP.SegmentsReceivedPerSec)",
+		SegmentsReceivedTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "segments_received_total"),
+			"(TCP.SegmentsReceivedTotal)",
 			nil,
 			nil,
 		),
-		SegmentsRetransmittedPerSec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "segments_retransmitted_per_sec"),
-			"(TCP.SegmentsRetransmittedPerSec)",
+		SegmentsRetransmittedTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "segments_retransmitted_total"),
+			"(TCP.SegmentsRetransmittedTotal)",
 			nil,
 			nil,
 		),
-		SegmentsSentPerSec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "segments_sent_per_sec"),
-			"(TCP.SegmentsSentPerSec)",
+		SegmentsSentTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "segments_sent_total"),
+			"(TCP.SegmentsSentTotal)",
 			nil,
 			nil,
 		),
@@ -147,22 +147,22 @@ func (c *TCPCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 		float64(dst[0].ConnectionsReset),
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.SegmentsPerSec,
+		c.SegmentsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].SegmentsPersec),
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.SegmentsReceivedPerSec,
+		c.SegmentsReceivedTotal,
 		prometheus.CounterValue,
 		float64(dst[0].SegmentsReceivedPersec),
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.SegmentsRetransmittedPerSec,
+		c.SegmentsRetransmittedTotal,
 		prometheus.CounterValue,
 		float64(dst[0].SegmentsRetransmittedPersec),
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.SegmentsSentPerSec,
+		c.SegmentsSentTotal,
 		prometheus.CounterValue,
 		float64(dst[0].SegmentsSentPersec),
 	)
