@@ -44,25 +44,25 @@ func NewMSMQCollector() (Collector, error) {
 //	}
 	return &Win32_PerfRawData_MSMQ_MSMQQueueCollector{
 		BytesinJournalQueue: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "bytesin_journal_queue"),
+			prometheus.BuildFQName(Namespace, subsystem, "bytes_in_journal_queue"),
 			"Size of queue journal in bytes",
 			[]string{"name"},
 			nil,
 		),
 		BytesinQueue: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "bytesin_queue"),
+			prometheus.BuildFQName(Namespace, subsystem, "bytes_in_queue"),
 			"Size of queue in bytes",
 			[]string{"name"},
 			nil,
 		),
 		MessagesinJournalQueue: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "messagesin_journal_queue"),
+			prometheus.BuildFQName(Namespace, subsystem, "messages_in_journal_queue"),
 			"Count messages in queue journal",
 			[]string{"name"},
 			nil,
 		),
 		MessagesinQueue: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "messagesin_queue"),
+			prometheus.BuildFQName(Namespace, subsystem, "messages_in_queue"),
 			"Count messages in queue",
 			[]string{"name"},
 			nil,
