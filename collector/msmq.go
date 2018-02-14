@@ -98,6 +98,11 @@ func (c *Win32_PerfRawData_MSMQ_MSMQQueueCollector) collect(ch chan<- prometheus
 	}
 	
 	for _, msmq := range dst {
+
+		if msmq.Name == "Computer Queues" {
+			continue
+		}
+
 		ch <- prometheus.MustNewConstMetric(
 			c.BytesinJournalQueue,
 			prometheus.GaugeValue,
