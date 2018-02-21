@@ -39,6 +39,7 @@ type NetworkCollector struct {
 	PacketsReceivedTotal     *prometheus.Desc
 	PacketsReceivedUnknown   *prometheus.Desc
 	PacketsSentTotal         *prometheus.Desc
+	CurrentBandwidth         *prometheus.Desc
 
 	nicWhitelistPattern *regexp.Regexp
 	nicBlacklistPattern *regexp.Regexp
@@ -115,6 +116,12 @@ func NewNetworkCollector() (Collector, error) {
 			[]string{"nic"},
 			nil,
 		),
+		CurrentBandwidth: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "current_bandwidth"),
+			"(Network.CurrentBandwidth)",
+			[]string{"nic"},
+			nil,
+		),
 
 		nicWhitelistPattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *nicWhitelist)),
 		nicBlacklistPattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *nicBlacklist)),
@@ -150,6 +157,7 @@ type Win32_PerfRawData_Tcpip_NetworkInterface struct {
 	PacketsReceivedPerSec    uint64
 	PacketsReceivedUnknown   uint64
 	PacketsSentPerSec        uint64
+	CurrentBandwidth         uint64
 }
 
 func (c *NetworkCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
@@ -236,6 +244,12 @@ func (c *NetworkCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Des
 			c.PacketsSentTotal,
 			prometheus.CounterValue,
 			float64(nic.PacketsSentPerSec),
+			name,
+		)
+		ch <- prometheus.MustNewConstMetric(
+			c.CurrentBandwidth,
+			prometheus.CounterValue,
+			float64(nic.CurrentBandwidth),
 			name,
 		)
 	}
