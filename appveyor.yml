@@ -15,13 +15,11 @@ clone_folder: c:\gopath\src\github.com\martinlindhe\wmi_exporter
 install:
   - go version
   - set PATH=%GOPATH%\bin;c:\go\bin;%GOPATH%\bin\windows_%GOARCH%;%PATH%
-  - go get -u github.com/kardianos/govendor
   - go get -u github.com/prometheus/promu
   - choco install gitversion.portable -y
 
 build_script:
   - ps: gitversion /output json /showvariable FullSemVer | Set-Content VERSION -PassThru
-  - govendor test -v +local
   - promu build -v
   - ps: |
       $ErrorActionPreference = "Stop"
