@@ -20,6 +20,7 @@ install:
 
 build_script:
   - ps: gitversion /output json /showvariable FullSemVer | Set-Content VERSION -PassThru
+  - go test -v ./...
   - promu build -v
   - ps: |
       $ErrorActionPreference = "Stop"
