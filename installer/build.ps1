@@ -43,6 +43,7 @@ $sourceDir = mkdir -Force Source
 mkdir -Force Work,Output | Out-Null
 
 Write-Verbose "Downloading WiX..."
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 Get-FileIfNotExists "https://github.com/wixtoolset/wix3/releases/download/wix311rtm/wix311-binaries.zip" "$sourceDir\wix-binaries.zip"
 mkdir -Force WiX | Out-Null
 Expand-Archive -Path "${sourceDir}\wix-binaries.zip" -DestinationPath WiX -Force
