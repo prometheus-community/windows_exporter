@@ -1,2 +1,4 @@
 *.exe
 VERSION
+*.swp
+*.un~

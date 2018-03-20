@@ -31,6 +31,9 @@
       </Directory>
     </Directory>
 
+    <Property Id="TEXTFILE_DIR" Secure="yes"/>
+    <SetProperty Id="TextfileDirFlag" After="InstallFiles" Sequence="execute" Value="-collector.textfile.directory [TEXTFILE_DIR]">TEXTFILE_DIR</SetProperty>
+
     <ComponentGroup Id="Files" Directory="APPLICATIONROOTDIRECTORY">
       <Component>
         <File Id="wmi_exporter.exe" Name="wmi_exporter.exe" Source="Work\wmi_exporter.exe" KeyPath="yes">
