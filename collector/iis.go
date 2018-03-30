@@ -7,7 +7,6 @@
 package collector
 
 import (
-	"flag"
 	"fmt"
 	"log"
 	"regexp"
@@ -16,6 +15,7 @@ import (
 
 	"github.com/StackExchange/wmi"
 	"github.com/prometheus/client_golang/prometheus"
+	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 func init() {
@@ -56,10 +56,10 @@ func getIISVersion() simple_version {
 }
 
 var (
-	siteWhitelist = flag.String("collector.iis.site-whitelist", ".+", "Regexp of sites to whitelist. Site name must both match whitelist and not match blacklist to be included.")
-	siteBlacklist = flag.String("collector.iis.site-blacklist", "", "Regexp of sites to blacklist. Site name must both match whitelist and not match blacklist to be included.")
-	appWhitelist  = flag.String("collector.iis.app-whitelist", ".+", "Regexp of apps to whitelist. App name must both match whitelist and not match blacklist to be included.")
-	appBlacklist  = flag.String("collector.iis.app-blacklist", "", "Regexp of apps to blacklist. App name must both match whitelist and not match blacklist to be included.")
+	siteWhitelist = kingpin.Flag("collector.iis.site-whitelist", "Regexp of sites to whitelist. Site name must both match whitelist and not match blacklist to be included.").Default(".+").String()
+	siteBlacklist = kingpin.Flag("collector.iis.site-blacklist", "Regexp of sites to blacklist. Site name must both match whitelist and not match blacklist to be included.").String()
+	appWhitelist  = kingpin.Flag("collector.iis.app-whitelist", "Regexp of apps to whitelist. App name must both match whitelist and not match blacklist to be included.").Default(".+").String()
+	appBlacklist  = kingpin.Flag("collector.iis.app-blacklist", "Regexp of apps to blacklist. App name must both match whitelist and not match blacklist to be included.").String()
 
 	iis_version = simple_version{}
 )

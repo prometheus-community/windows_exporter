@@ -4,12 +4,12 @@ package collector
 
 import (
 	"bytes"
-	"flag"
 	"log"
 	"strings"
 
 	"github.com/StackExchange/wmi"
 	"github.com/prometheus/client_golang/prometheus"
+	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 func init() {
@@ -17,7 +17,10 @@ func init() {
 }
 
 var (
-	serviceWhereClause = flag.String("collector.service.services-where", "", "WQL 'where' clause to use in WMI metrics query. Limits the response to the services you specify and reduces the size of the response.")
+	serviceWhereClause = kingpin.Flag(
+		"collector.service.services-where",
+		"WQL 'where' clause to use in WMI metrics query. Limits the response to the services you specify and reduces the size of the response.",
+	).Default("").String()
 )
 
 // A serviceCollector is a Prometheus collector for WMI Win32_Service metrics

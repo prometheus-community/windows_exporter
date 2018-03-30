@@ -1,11 +1,9 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"sort"
 	"strings"
 	"sync"
@@ -19,6 +17,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/log"
 	"github.com/prometheus/common/version"
+	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 // WmiCollector implements the prometheus.Collector interface.
@@ -157,28 +156,30 @@ func initWbem() {
 	wmi.DefaultClient.SWbemServicesClient = s
 }
 
-func usage() {
-	fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
-	flag.PrintDefaults()
-	fmt.Fprintf(os.Stderr, "\nNote: If executing from Powershell, the flags need to quoted. For example:\n%s\n",
-		"\twmi_exporter \"-collectors.enabled\" iis")
-}
-
 func main() {
 	var (
-		showVersion       = flag.Bool("version", false, "Print version information.")
-		listenAddress     = flag.String("telemetry.addr", ":9182", "host:port for WMI exporter.")
-		metricsPath       = flag.String("telemetry.path", "/metrics", "URL path for surfacing collected metrics.")
-		enabledCollectors = flag.String("collectors.enabled", filterAvailableCollectors(defaultCollectors), "Comma-separated list of collectors to use. Use '[defaults]' as a placeholder for all the collectors enabled by default")
-		printCollectors   = flag.Bool("collectors.print", false, "If true, print available collectors and exit.")
+		listenAddress = kingpin.Flag(
+			"telemetry.addr",
+			"host:port for WMI exporter.",
+		).Default(":9182").String()
+		metricsPath = kingpin.Flag(
+			"telemetry.path",
+			"URL path for surfacing collected metrics.",
+		).Default("/metrics").String()
+		enabledCollectors = kingpin.Flag(
+			"collectors.enabled",
+			"Comma-separated list of collectors to use. Use '[default]' as a placeholder for all the collectors enabled by default.").
+			Default(filterAvailableCollectors(defaultCollectors)).String()
+		printCollectors = kingpin.Flag(
+			"collectors.print",
+			"If true, print available collectors and exit.",
+		).Bool()
 	)
-	flag.Usage = usage
-	flag.Parse()
 
-	if *showVersion {
-		fmt.Fprintln(os.Stdout, version.Print("wmi_exporter"))
-		os.Exit(0)
-	}
+	log.AddFlags(kingpin.CommandLine)
+	kingpin.Version(version.Print("wmi_exporter"))
+	kingpin.HelpFlag.Short('h')
+	kingpin.Parse()
 
 	if *printCollectors {
 		collectorNames := make(sort.StringSlice, 0, len(collector.Factories))

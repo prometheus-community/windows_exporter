@@ -4,13 +4,13 @@ package collector
 
 import (
 	"bytes"
-	"flag"
 	"log"
 	"strconv"
 	"strings"
 
 	"github.com/StackExchange/wmi"
 	"github.com/prometheus/client_golang/prometheus"
+	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 func init() {
@@ -18,7 +18,10 @@ func init() {
 }
 
 var (
-	processWhereClause = flag.String("collector.process.processes-where", "", "WQL 'where' clause to use in WMI metrics query. Limits the response to the processes you specify and reduces the size of the response.")
+	processWhereClause = kingpin.Flag(
+		"collector.process.processes-where",
+		"WQL 'where' clause to use in WMI metrics query. Limits the response to the processes you specify and reduces the size of the response.",
+	).Default("").String()
 )
 
 // A ProcessCollector is a Prometheus collector for WMI Win32_PerfRawData_PerfProc_Process metrics
