@@ -22,6 +22,7 @@ process | [Win32_PerfRawData_PerfProc_Process](https://msdn.microsoft.com/en-us/
 service | [Win32_Service](https://msdn.microsoft.com/en-us/library/aa394418(v=vs.85).aspx) metrics (service states) | &#10003;
 system | Win32_PerfRawData_PerfOS_System metrics (system calls) | &#10003;
 tcp | [Win32_PerfRawData_Tcpip_TCPv4](https://msdn.microsoft.com/en-us/library/aa394341(v=vs.85).aspx) metrics (tcp connections) |
+textfile | Read prometheus metrics from a text file | &#10003;
 vmware | Performance counters installed by the Vmware Guest agent |
 
 The HELP texts shows the WMI data source, please see MSDN documentation for details.
@@ -39,6 +40,7 @@ Name | Description
 `LISTEN_ADDR` | The IP address to bind to. Defaults to 0.0.0.0
 `LISTEN_PORT` | The port to bind to. Defaults to 9182.
 `METRICS_PATH` | The path at which to serve metrics. Defaults to `/metrics`
+`TEXTFILE_DIR` | As the `--collector.textfile.directory` flag, provide a directory to read text files with metrics from
 
 Parameters are sent to the installer via `msiexec`. Example invocation:
 

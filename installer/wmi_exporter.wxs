@@ -31,12 +31,15 @@
       </Directory>
     </Directory>
 
+    <Property Id="TEXTFILE_DIR" Secure="yes"/>
+    <SetProperty Id="TextfileDirFlag" After="InstallFiles" Sequence="execute" Value="--collector.textfile.directory [TEXTFILE_DIR]">TEXTFILE_DIR</SetProperty>
+
     <ComponentGroup Id="Files" Directory="APPLICATIONROOTDIRECTORY">
       <Component>
         <File Id="wmi_exporter.exe" Name="wmi_exporter.exe" Source="Work\wmi_exporter.exe" KeyPath="yes">
           <fw:FirewallException Id="MetricsEndpoint" Name="WMI Exporter (HTTP [LISTEN_PORT])" Description="WMI Exporter HTTP endpoint" Port="[LISTEN_PORT]" Protocol="tcp" Scope="any" IgnoreFailure="yes" />
         </File>
-        <ServiceInstall Id="InstallExporterService" Name="wmi_exporter" DisplayName="WMI exporter" Description="Exports Prometheus metrics from WMI queries" ErrorControl="normal" Start="auto" Type="ownProcess" Arguments="--log.format logger:eventlog?name=wmi_exporter [CollectorsFlag] [ListenFlag] [MetricsPathFlag]" />
+        <ServiceInstall Id="InstallExporterService" Name="wmi_exporter" DisplayName="WMI exporter" Description="Exports Prometheus metrics from WMI queries" ErrorControl="normal" Start="auto" Type="ownProcess" Arguments="--log.format logger:eventlog?name=wmi_exporter [CollectorsFlag] [ListenFlag] [MetricsPathFlag] [TextfileDirFlag]" />
         <ServiceControl Id="ServiceStateControl" Name="wmi_exporter" Remove="uninstall" Start="install" Stop="both" />
       </Component>
     </ComponentGroup>
