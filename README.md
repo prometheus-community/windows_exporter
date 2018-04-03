@@ -40,7 +40,7 @@ Name | Description
 `LISTEN_ADDR` | The IP address to bind to. Defaults to 0.0.0.0
 `LISTEN_PORT` | The port to bind to. Defaults to 9182.
 `METRICS_PATH` | The path at which to serve metrics. Defaults to `/metrics`
-`TEXTFILE_DIR` | As the `-collector.textfile.directory` flag, provide a directory to read text files with metrics from
+`TEXTFILE_DIR` | As the `--collector.textfile.directory` flag, provide a directory to read text files with metrics from
 
 Parameters are sent to the installer via `msiexec`. Example invocation:
 

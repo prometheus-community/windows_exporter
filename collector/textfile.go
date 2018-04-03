@@ -16,7 +16,6 @@
 package collector
 
 import (
-	"flag"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -30,10 +29,15 @@ import (
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
 	"github.com/prometheus/common/log"
+    kingpin "gopkg.in/alecthomas/kingpin.v2"
 )
 
 var (
-	textFileDirectory = flag.String("collector.textfile.directory", "C:\\Program Files\\wmi_exporter\\textfile_inputs", "Directory to read text files with metrics from.")
+    textFileDirectory = kingpin.Flag(
+        "collector.textfile.directory",
+        "Directory to read text files with metrics from.",
+    ).Default("C:\\Program Files\\wmi_exporter\\textfile_inputs").String()
+
 	textFileAddOnce   sync.Once
 	mtimeDesc         = prometheus.NewDesc(
 		"wmi_textfile_mtime_seconds",
