@@ -22,7 +22,6 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -38,7 +37,6 @@ var (
         "Directory to read text files with metrics from.",
     ).Default("C:\\Program Files\\wmi_exporter\\textfile_inputs").String()
 
-	textFileAddOnce   sync.Once
 	mtimeDesc         = prometheus.NewDesc(
 		"wmi_textfile_mtime_seconds",
 		"Unixtime mtime of textfiles successfully read.",
