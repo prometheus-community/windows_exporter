@@ -4,11 +4,11 @@ package collector
 
 import (
 	"bytes"
-	"log"
 	"strings"
 
 	"github.com/StackExchange/wmi"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/common/log"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -38,7 +38,7 @@ func NewMSMQCollector() (Collector, error) {
 	if *msmqWhereClause != "" {
 		wc.WriteString("WHERE ")
 		wc.WriteString(*msmqWhereClause)
-		log.Println("warning: No where-clause specified for msmq collector. This will generate a very large number of metrics!")
+		log.Warn("No where-clause specified for msmq collector. This will generate a very large number of metrics!")
 	}
 
 	return &Win32_PerfRawData_MSMQ_MSMQQueueCollector{
@@ -74,7 +74,7 @@ func NewMSMQCollector() (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *Win32_PerfRawData_MSMQ_MSMQQueueCollector) Collect(ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ch); err != nil {
-		log.Println("[ERROR] failed collecting msmq metrics:", desc, err)
+		log.Error("failed collecting msmq metrics:", desc, err)
 		return err
 	}
 	return nil

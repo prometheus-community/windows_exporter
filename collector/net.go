@@ -8,11 +8,11 @@ package collector
 
 import (
 	"fmt"
-	"log"
 	"regexp"
 
 	"github.com/StackExchange/wmi"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/common/log"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -138,7 +138,7 @@ func NewNetworkCollector() (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *NetworkCollector) Collect(ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ch); err != nil {
-		log.Println("[ERROR] failed collecting net metrics:", desc, err)
+		log.Error("failed collecting net metrics:", desc, err)
 		return err
 	}
 	return nil

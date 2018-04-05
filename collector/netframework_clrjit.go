@@ -3,10 +3,9 @@
 package collector
 
 import (
-	"log"
-
 	"github.com/StackExchange/wmi"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/common/log"
 )
 
 func init() {
@@ -56,7 +55,7 @@ func NewNETFramework_NETCLRJitCollector() (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *NETFramework_NETCLRJitCollector) Collect(ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ch); err != nil {
-		log.Println("[ERROR] failed collecting win32_perfrawdata_netframework_netclrjit metrics:", desc, err)
+		log.Error("failed collecting win32_perfrawdata_netframework_netclrjit metrics:", desc, err)
 		return err
 	}
 	return nil

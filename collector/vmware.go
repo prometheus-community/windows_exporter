@@ -2,10 +2,9 @@
 package collector
 
 import (
-	"log"
-
 	"github.com/StackExchange/wmi"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/common/log"
 )
 
 func init() {
@@ -161,11 +160,11 @@ func NewVmwareCollector() (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *VmwareCollector) Collect(ch chan<- prometheus.Metric) error {
 	if desc, err := c.collectMem(ch); err != nil {
-		log.Println("[ERROR] failed collecting vmware memory metrics:", desc, err)
+		log.Error("failed collecting vmware memory metrics:", desc, err)
 		return err
 	}
 	if desc, err := c.collectCpu(ch); err != nil {
-		log.Println("[ERROR] failed collecting vmware cpu metrics:", desc, err)
+		log.Error("failed collecting vmware cpu metrics:", desc, err)
 		return err
 	}
 	return nil
