@@ -26,23 +26,21 @@ type Win32_PerfRawData_MSMQ_MSMQQueueCollector struct {
 	BytesinQueue           *prometheus.Desc
 	MessagesinJournalQueue *prometheus.Desc
 	MessagesinQueue        *prometheus.Desc
-	
+
 	queryWhereClause string
 }
 
 // NewWin32_PerfRawData_MSMQ_MSMQQueueCollector ...
 func NewMSMQCollector() (Collector, error) {
 	const subsystem = "msmq"
-	
+
 	var wc bytes.Buffer
 	if *msmqWhereClause != "" {
 		wc.WriteString("WHERE ")
 		wc.WriteString(*msmqWhereClause)
 		log.Println("warning: No where-clause specified for msmq collector. This will generate a very large number of metrics!")
 	}
-// else {
-//		log.Println("warning: No where-clause specified for msmq collector. This will generate a very large number of metrics!")
-//	}
+
 	return &Win32_PerfRawData_MSMQ_MSMQQueueCollector{
 		BytesinJournalQueue: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "bytes_in_journal_queue"),
@@ -97,7 +95,7 @@ func (c *Win32_PerfRawData_MSMQ_MSMQQueueCollector) collect(ch chan<- prometheus
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
 	}
-	
+
 	for _, msmq := range dst {
 
 		if msmq.Name == "Computer Queues" {
@@ -128,6 +126,6 @@ func (c *Win32_PerfRawData_MSMQ_MSMQQueueCollector) collect(ch chan<- prometheus
 			float64(msmq.MessagesinQueue),
 			strings.ToLower(msmq.Name),
 		)
-}
+	}
 	return nil, nil
 }

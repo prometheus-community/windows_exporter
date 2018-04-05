@@ -6,7 +6,7 @@ package collector
 import (
 	"log"
 	"time"
-	
+
 	"github.com/StackExchange/wmi"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -27,8 +27,8 @@ type OSCollector struct {
 	PagingLimitBytes        *prometheus.Desc
 	VirtualMemoryBytes      *prometheus.Desc
 	VisibleMemoryBytes      *prometheus.Desc
-	Time			*prometheus.Desc
-	Timezone		*prometheus.Desc
+	Time                    *prometheus.Desc
+	Timezone                *prometheus.Desc
 }
 
 // NewOSCollector ...
@@ -132,7 +132,7 @@ type Win32_OperatingSystem struct {
 	SizeStoredInPagingFiles uint64
 	TotalVirtualMemorySize  uint64
 	TotalVisibleMemorySize  uint64
-	LocalDateTime		time.Time
+	LocalDateTime           time.Time
 }
 
 func (c *OSCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
@@ -148,7 +148,7 @@ func (c *OSCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, er
 	)
 
 	time := dst[0].LocalDateTime
-	
+
 	ch <- prometheus.MustNewConstMetric(
 		c.Time,
 		prometheus.GaugeValue,

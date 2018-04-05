@@ -28,16 +28,16 @@ import (
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
 	"github.com/prometheus/common/log"
-    kingpin "gopkg.in/alecthomas/kingpin.v2"
+	kingpin "gopkg.in/alecthomas/kingpin.v2"
 )
 
 var (
-    textFileDirectory = kingpin.Flag(
-        "collector.textfile.directory",
-        "Directory to read text files with metrics from.",
-    ).Default("C:\\Program Files\\wmi_exporter\\textfile_inputs").String()
+	textFileDirectory = kingpin.Flag(
+		"collector.textfile.directory",
+		"Directory to read text files with metrics from.",
+	).Default("C:\\Program Files\\wmi_exporter\\textfile_inputs").String()
 
-	mtimeDesc         = prometheus.NewDesc(
+	mtimeDesc = prometheus.NewDesc(
 		"wmi_textfile_mtime_seconds",
 		"Unixtime mtime of textfiles successfully read.",
 		[]string{"file"},
@@ -149,8 +149,8 @@ func convertMetricFamily(metricFamily *dto.MetricFamily, ch chan<- prometheus.Me
 				buckets, values...,
 			)
 		default:
-            log.Errorf("unknown metric type for file")
-            continue
+			log.Errorf("unknown metric type for file")
+			continue
 		}
 		if metricType == dto.MetricType_GAUGE || metricType == dto.MetricType_COUNTER || metricType == dto.MetricType_UNTYPED {
 			ch <- prometheus.MustNewConstMetric(

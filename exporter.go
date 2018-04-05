@@ -116,7 +116,7 @@ func expandEnabledCollectors(enabled string) []string {
 		}
 	}
 	result := make([]string, 0, len(unique))
-	for s, _ := range unique {
+	for s := range unique {
 		result = append(result, s)
 	}
 	return result
