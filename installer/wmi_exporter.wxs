@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"
-     xmlns:fw="http://schemas.microsoft.com/wix/FirewallExtension">
+     xmlns:fw="http://schemas.microsoft.com/wix/FirewallExtension"
+     xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
   <?if $(sys.BUILDARCH)=x64 ?>
     <?define PlatformProgramFiles = "ProgramFiles64Folder" ?>
   <?else ?>
@@ -39,7 +40,9 @@
         <File Id="wmi_exporter.exe" Name="wmi_exporter.exe" Source="Work\wmi_exporter.exe" KeyPath="yes">
           <fw:FirewallException Id="MetricsEndpoint" Name="WMI Exporter (HTTP [LISTEN_PORT])" Description="WMI Exporter HTTP endpoint" Port="[LISTEN_PORT]" Protocol="tcp" Scope="any" IgnoreFailure="yes" />
         </File>
-        <ServiceInstall Id="InstallExporterService" Name="wmi_exporter" DisplayName="WMI exporter" Description="Exports Prometheus metrics from WMI queries" ErrorControl="normal" Start="auto" Type="ownProcess" Arguments="--log.format logger:eventlog?name=wmi_exporter [CollectorsFlag] [ListenFlag] [MetricsPathFlag] [TextfileDirFlag]" />
+        <ServiceInstall Id="InstallExporterService" Name="wmi_exporter" DisplayName="WMI exporter" Description="Exports Prometheus metrics from WMI queries" ErrorControl="normal" Start="auto" Type="ownProcess" Arguments="--log.format logger:eventlog?name=wmi_exporter [CollectorsFlag] [ListenFlag] [MetricsPathFlag] [TextfileDirFlag]">
+          <util:ServiceConfig FirstFailureActionType="restart" SecondFailureActionType="restart" ThirdFailureActionType="restart" RestartServiceDelayInSeconds="5" />
+        </ServiceInstall>
         <ServiceControl Id="ServiceStateControl" Name="wmi_exporter" Remove="uninstall" Start="install" Stop="both" />
       </Component>
     </ComponentGroup>
