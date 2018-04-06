@@ -4,11 +4,11 @@ package collector
 
 import (
 	"bytes"
-	"log"
 	"strings"
 
 	"github.com/StackExchange/wmi"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/common/log"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -40,7 +40,7 @@ func NewserviceCollector() (Collector, error) {
 		wc.WriteString("WHERE ")
 		wc.WriteString(*serviceWhereClause)
 	} else {
-		log.Println("warning: No where-clause specified for service collector. This will generate a very large number of metrics!")
+		log.Warn("No where-clause specified for service collector. This will generate a very large number of metrics!")
 	}
 
 	return &serviceCollector{
@@ -64,7 +64,7 @@ func NewserviceCollector() (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *serviceCollector) Collect(ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ch); err != nil {
-		log.Println("[ERROR] failed collecting service metrics:", desc, err)
+		log.Error("failed collecting service metrics:", desc, err)
 		return err
 	}
 	return nil

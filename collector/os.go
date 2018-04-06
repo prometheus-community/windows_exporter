@@ -4,11 +4,11 @@
 package collector
 
 import (
-	"log"
 	"time"
 
 	"github.com/StackExchange/wmi"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/common/log"
 )
 
 func init() {
@@ -115,7 +115,7 @@ func NewOSCollector() (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *OSCollector) Collect(ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ch); err != nil {
-		log.Println("[ERROR] failed collecting os metrics:", desc, err)
+		log.Error("failed collecting os metrics:", desc, err)
 		return err
 	}
 	return nil

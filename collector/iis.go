@@ -8,13 +8,13 @@ package collector
 
 import (
 	"fmt"
-	"log"
 	"regexp"
 
 	"golang.org/x/sys/windows/registry"
 
 	"github.com/StackExchange/wmi"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/common/log"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -31,23 +31,23 @@ type simple_version struct {
 func getIISVersion() simple_version {
 	k, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\Microsoft\InetStp\`, registry.QUERY_VALUE)
 	if err != nil {
-		log.Println("warning: Couldn't open registry to determine IIS version:", err)
+		log.Warn("Couldn't open registry to determine IIS version:", err)
 		return simple_version{}
 	}
 	defer k.Close()
 
 	major, _, err := k.GetIntegerValue("MajorVersion")
 	if err != nil {
-		log.Println("warning: Couldn't open registry to determine IIS version:", err)
+		log.Warn("Couldn't open registry to determine IIS version:", err)
 		return simple_version{}
 	}
 	minor, _, err := k.GetIntegerValue("MinorVersion")
 	if err != nil {
-		log.Println("warning: Couldn't open registry to determine IIS version:", err)
+		log.Warn("Couldn't open registry to determine IIS version:", err)
 		return simple_version{}
 	}
 
-	log.Printf("Detected IIS %d.%d\n", major, minor)
+	log.Debugf("Detected IIS %d.%d\n", major, minor)
 
 	return simple_version{
 		major: major,
@@ -815,7 +815,7 @@ func NewIISCollector() (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *IISCollector) Collect(ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ch); err != nil {
-		log.Println("[ERROR] failed collecting iis metrics:", desc, err)
+		log.Error("failed collecting iis metrics:", desc, err)
 		return err
 	}
 	return nil

@@ -4,12 +4,12 @@ package collector
 
 import (
 	"bytes"
-	"log"
 	"strconv"
 	"strings"
 
 	"github.com/StackExchange/wmi"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/common/log"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -52,7 +52,7 @@ func NewProcessCollector() (Collector, error) {
 		wc.WriteString("WHERE ")
 		wc.WriteString(*processWhereClause)
 	} else {
-		log.Println("warning: No where-clause specified for process collector. This will generate a very large number of metrics!")
+		log.Warn("No where-clause specified for process collector. This will generate a very large number of metrics!")
 	}
 
 	return &ProcessCollector{
@@ -142,7 +142,7 @@ func NewProcessCollector() (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *ProcessCollector) Collect(ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ch); err != nil {
-		log.Println("[ERROR] failed collecting process metrics:", desc, err)
+		log.Error("failed collecting process metrics:", desc, err)
 		return err
 	}
 	return nil
