@@ -110,19 +110,19 @@ func NewHyperVCollector() (Collector, error) {
 		PhysicalPagesAllocated: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, buildSubsystemName("vid"), "physical_pages_allocated"),
 			"The number of physical pages allocated",
-			nil,
+			[]string{"interface"},
 			nil,
 		),
 		PreferredNUMANodeIndex: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, buildSubsystemName("vid"), "preferred_numa_node_index"),
 			"The preferred NUMA node index associated with this partition",
-			nil,
+			[]string{"interface"},
 			nil,
 		),
 		RemotePhysicalPages: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, buildSubsystemName("vid"), "remote_physical_pages"),
 			"The number of physical pages not allocated from the preferred NUMA node",
-			nil,
+			[]string{"interface"},
 			nil,
 		),
 
@@ -301,127 +301,127 @@ func NewHyperVCollector() (Collector, error) {
 		BroadcastPacketsReceived: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, buildSubsystemName("vswitch"), "broadcast_packets_received_total"),
 			"This represents the total number of broadcast packets received per second by the virtual switch",
-			nil,
+			[]string{"vswitch"},
 			nil,
 		),
 		BroadcastPacketsSent: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, buildSubsystemName("vswitch"), "broadcast_packets_sent_total"),
 			"This represents the total number of broadcast packets sent per second by the virtual switch",
-			nil,
+			[]string{"vswitch"},
 			nil,
 		),
 		Bytes: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, buildSubsystemName("vswitch"), "bytes_total"),
 			"This represents the total number of bytes per second traversing the virtual switch",
-			nil,
+			[]string{"vswitch"},
 			nil,
 		),
 		BytesReceived: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, buildSubsystemName("vswitch"), "bytes_received_total"),
 			"This represents the total number of bytes received per second by the virtual switch",
-			nil,
+			[]string{"vswitch"},
 			nil,
 		),
 		BytesSent: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, buildSubsystemName("vswitch"), "bytes_sent_total"),
 			"This represents the total number of bytes sent per second by the virtual switch",
-			nil,
+			[]string{"vswitch"},
 			nil,
 		),
 		DirectedPacketsReceived: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, buildSubsystemName("vswitch"), "directed_packets_received_total"),
 			"This represents the total number of directed packets received per second by the virtual switch",
-			nil,
+			[]string{"vswitch"},
 			nil,
 		),
 		DirectedPacketsSent: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, buildSubsystemName("vswitch"), "directed_packets_send_total"),
 			"This represents the total number of directed packets sent per second by the virtual switch",
-			nil,
+			[]string{"vswitch"},
 			nil,
 		),
 		DroppedPacketsIncoming: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, buildSubsystemName("vswitch"), "dropped_packets_incoming_total"),
 			"This represents the total number of packet dropped per second by the virtual switch in the incoming direction",
-			nil,
+			[]string{"vswitch"},
 			nil,
 		),
 		DroppedPacketsOutgoing: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, buildSubsystemName("vswitch"), "dropped_packets_outcoming_total"),
 			"This represents the total number of packet dropped per second by the virtual switch in the outgoing direction",
-			nil,
+			[]string{"vswitch"},
 			nil,
 		),
 		ExtensionsDroppedPacketsIncoming: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, buildSubsystemName("vswitch"), "extensions_dropped_packets_incoming_total"),
 			"This represents the total number of packet dropped per second by the virtual switch extensions in the incoming direction",
-			nil,
+			[]string{"vswitch"},
 			nil,
 		),
 		ExtensionsDroppedPacketsOutgoing: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, buildSubsystemName("vswitch"), "extensions_dropped_packets_outcoming_total"),
 			"This represents the total number of packet dropped per second by the virtual switch extensions in the outgoing direction",
-			nil,
+			[]string{"vswitch"},
 			nil,
 		),
 		LearnedMacAddresses: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, buildSubsystemName("vswitch"), "learned_mac_addresses_total"),
 			"This counter represents the total number of learned MAC addresses of the virtual switch",
-			nil,
+			[]string{"vswitch"},
 			nil,
 		),
 		MulticastPacketsReceived: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, buildSubsystemName("vswitch"), "multicast_packets_received_total"),
 			"This represents the total number of multicast packets received per second by the virtual switch",
-			nil,
+			[]string{"vswitch"},
 			nil,
 		),
 		MulticastPacketsSent: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, buildSubsystemName("vswitch"), "multicast_packets_sent_total"),
 			"This represents the total number of multicast packets sent per second by the virtual switch",
-			nil,
+			[]string{"vswitch"},
 			nil,
 		),
 		NumberofSendChannelMoves: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, buildSubsystemName("vswitch"), "number_of_send_channel_moves_total"),
 			"This represents the total number of send channel moves per second on this virtual switch",
-			nil,
+			[]string{"vswitch"},
 			nil,
 		),
 		NumberofVMQMoves: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, buildSubsystemName("vswitch"), "number_of_vmq_moves_total"),
 			"This represents the total number of VMQ moves per second on this virtual switch",
-			nil,
+			[]string{"vswitch"},
 			nil,
 		),
 		PacketsFlooded: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, buildSubsystemName("vswitch"), "packets_flooded_total"),
 			"This counter represents the total number of packets flooded by the virtual switch",
-			nil,
+			[]string{"vswitch"},
 			nil,
 		),
 		Packets: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, buildSubsystemName("vswitch"), "packets_total"),
 			"This represents the total number of packets per second traversing the virtual switch",
-			nil,
+			[]string{"vswitch"},
 			nil,
 		),
 		PacketsReceived: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, buildSubsystemName("vswitch"), "packets_received_total"),
 			"This represents the total number of packets received per second by the virtual switch",
-			nil,
+			[]string{"vswitch"},
 			nil,
 		),
 		PacketsSent: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, buildSubsystemName("vswitch"), "packets_sent_total"),
 			"This represents the total number of packets send per second by the virtual switch",
-			nil,
+			[]string{"vswitch"},
 			nil,
 		),
 		PurgedMacAddresses: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, buildSubsystemName("vswitch"), "purged_mac_addresses_total"),
 			"This counter represents the total number of purged MAC addresses of the virtual switch",
-			nil,
+			[]string{"vswitch"},
 			nil,
 		),
 
@@ -559,18 +559,21 @@ func (c *HyperVCollector) collectVmVid(ch chan<- prometheus.Metric) (*prometheus
 			c.PhysicalPagesAllocated,
 			prometheus.GaugeValue,
 			float64(page.PhysicalPagesAllocated),
+			page.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.PreferredNUMANodeIndex,
 			prometheus.GaugeValue,
 			float64(page.PreferredNUMANodeIndex),
+			page.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.RemotePhysicalPages,
 			prometheus.GaugeValue,
 			float64(page.RemotePhysicalPages),
+			page.Name,
 		)
 
 	}
@@ -869,88 +872,104 @@ func (c *HyperVCollector) collectVmSwitch(ch chan<- prometheus.Metric) (*prometh
 			c.BroadcastPacketsReceived,
 			prometheus.CounterValue,
 			float64(obj.BroadcastPacketsReceivedPersec),
+			obj.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.BroadcastPacketsSent,
 			prometheus.CounterValue,
 			float64(obj.BroadcastPacketsSentPersec),
+			obj.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.Bytes,
 			prometheus.CounterValue,
 			float64(obj.BytesPersec),
+			obj.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.BytesReceived,
 			prometheus.CounterValue,
 			float64(obj.BytesReceivedPersec),
+			obj.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.BytesSent,
 			prometheus.CounterValue,
 			float64(obj.BytesSentPersec),
+			obj.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.DirectedPacketsReceived,
 			prometheus.CounterValue,
 			float64(obj.DirectedPacketsReceivedPersec),
+			obj.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.DirectedPacketsSent,
 			prometheus.CounterValue,
 			float64(obj.DirectedPacketsSentPersec),
+			obj.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.DroppedPacketsIncoming,
 			prometheus.CounterValue,
 			float64(obj.DroppedPacketsIncomingPersec),
+			obj.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.DroppedPacketsOutgoing,
 			prometheus.CounterValue,
 			float64(obj.DroppedPacketsOutgoingPersec),
+			obj.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.ExtensionsDroppedPacketsIncoming,
 			prometheus.CounterValue,
 			float64(obj.ExtensionsDroppedPacketsIncomingPersec),
+			obj.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.ExtensionsDroppedPacketsOutgoing,
 			prometheus.CounterValue,
 			float64(obj.ExtensionsDroppedPacketsOutgoingPersec),
+			obj.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.LearnedMacAddresses,
 			prometheus.CounterValue,
 			float64(obj.LearnedMacAddresses),
+			obj.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.MulticastPacketsReceived,
 			prometheus.CounterValue,
 			float64(obj.MulticastPacketsReceivedPersec),
+			obj.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.MulticastPacketsSent,
 			prometheus.CounterValue,
 			float64(obj.MulticastPacketsSentPersec),
+			obj.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.NumberofSendChannelMoves,
 			prometheus.CounterValue,
 			float64(obj.NumberofSendChannelMovesPersec),
+			obj.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.NumberofVMQMoves,
 			prometheus.CounterValue,
 			float64(obj.NumberofVMQMovesPersec),
+			obj.Name,
 		)
 
 		// ...
@@ -958,23 +977,27 @@ func (c *HyperVCollector) collectVmSwitch(ch chan<- prometheus.Metric) (*prometh
 			c.PacketsFlooded,
 			prometheus.CounterValue,
 			float64(obj.PacketsFlooded),
+			obj.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.Packets,
 			prometheus.CounterValue,
 			float64(obj.PacketsPersec),
+			obj.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.PacketsReceived,
 			prometheus.CounterValue,
 			float64(obj.PacketsReceivedPersec),
+			obj.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.PurgedMacAddresses,
 			prometheus.CounterValue,
 			float64(obj.PurgedMacAddresses),
+			obj.Name,
 		)
 	}
 
@@ -1007,36 +1030,42 @@ func (c *HyperVCollector) collectVmEthernet(ch chan<- prometheus.Metric) (*prome
 			c.AdapterBytesDropped,
 			prometheus.GaugeValue,
 			float64(obj.BytesDropped),
+			obj.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.AdapterBytesReceived,
 			prometheus.CounterValue,
 			float64(obj.BytesReceivedPersec),
+			obj.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.AdapterBytesSent,
 			prometheus.CounterValue,
 			float64(obj.BytesSentPersec),
+			obj.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.AdapterFramesReceived,
 			prometheus.CounterValue,
 			float64(obj.FramesReceivedPersec),
+			obj.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.AdapterFramesDropped,
 			prometheus.CounterValue,
 			float64(obj.FramesDropped),
+			obj.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.AdapterFramesSent,
 			prometheus.CounterValue,
 			float64(obj.FramesSentPersec),
+			obj.Name,
 		)
 
 	}
