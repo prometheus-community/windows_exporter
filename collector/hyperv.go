@@ -32,9 +32,9 @@ type HyperVCollector struct {
 	DeviceInterruptMappings       *prometheus.Desc
 	DeviceInterruptThrottleEvents *prometheus.Desc
 	GPAPages                      *prometheus.Desc
-	GPASpaceModificationsPersec   *prometheus.Desc
+	GPASpaceModifications         *prometheus.Desc
 	IOTLBFlushCost                *prometheus.Desc
-	IOTLBFlushesPersec            *prometheus.Desc
+	IOTLBFlushes                  *prometheus.Desc
 	RecommendedVirtualTLBSize     *prometheus.Desc
 	SkippedTimerTicks             *prometheus.Desc
 	Value1Gdevicepages            *prometheus.Desc
@@ -43,7 +43,7 @@ type HyperVCollector struct {
 	Value2MGPApages               *prometheus.Desc
 	Value4Kdevicepages            *prometheus.Desc
 	Value4KGPApages               *prometheus.Desc
-	VirtualTLBFlushEntiresPersec  *prometheus.Desc
+	VirtualTLBFlushEntires        *prometheus.Desc
 	VirtualTLBPages               *prometheus.Desc
 
 	// Win32_PerfRawData_HvStats_HyperVHypervisor
@@ -57,38 +57,35 @@ type HyperVCollector struct {
 	PercentTotalRunTime      *prometheus.Desc
 
 	// Win32_PerfRawData_NvspSwitchStats_HyperVVirtualSwitch
-	BroadcastPacketsReceivedPersec         *prometheus.Desc
-	BroadcastPacketsSentPersec             *prometheus.Desc
-	BytesPersec                            *prometheus.Desc
-	BytesReceivedPersec                    *prometheus.Desc
-	BytesSentPersec                        *prometheus.Desc
-	DirectedPacketsReceivedPersec          *prometheus.Desc
-	DirectedPacketsSentPersec              *prometheus.Desc
-	DroppedPacketsIncomingPersec           *prometheus.Desc
-	DroppedPacketsOutgoingPersec           *prometheus.Desc
-	ExtensionsDroppedPacketsIncomingPersec *prometheus.Desc
-	ExtensionsDroppedPacketsOutgoingPersec *prometheus.Desc
-	LearnedMacAddresses                    *prometheus.Desc
-	LearnedMacAddressesPersec              *prometheus.Desc
-	MulticastPacketsReceivedPersec         *prometheus.Desc
-	MulticastPacketsSentPersec             *prometheus.Desc
-	NumberofSendChannelMovesPersec         *prometheus.Desc
-	NumberofVMQMovesPersec                 *prometheus.Desc
-	PacketsFlooded                         *prometheus.Desc
-	PacketsFloodedPersec                   *prometheus.Desc
-	PacketsPersec                          *prometheus.Desc
-	PacketsReceivedPersec                  *prometheus.Desc
-	PacketsSentPersec                      *prometheus.Desc
-	PurgedMacAddresses                     *prometheus.Desc
-	PurgedMacAddressesPersec               *prometheus.Desc
+	BroadcastPacketsReceived         *prometheus.Desc
+	BroadcastPacketsSent             *prometheus.Desc
+	Bytes                            *prometheus.Desc
+	BytesReceived                    *prometheus.Desc
+	BytesSent                        *prometheus.Desc
+	DirectedPacketsReceived          *prometheus.Desc
+	DirectedPacketsSent              *prometheus.Desc
+	DroppedPacketsIncoming           *prometheus.Desc
+	DroppedPacketsOutgoing           *prometheus.Desc
+	ExtensionsDroppedPacketsIncoming *prometheus.Desc
+	ExtensionsDroppedPacketsOutgoing *prometheus.Desc
+	LearnedMacAddresses              *prometheus.Desc
+	MulticastPacketsReceived         *prometheus.Desc
+	MulticastPacketsSent             *prometheus.Desc
+	NumberofSendChannelMoves         *prometheus.Desc
+	NumberofVMQMoves                 *prometheus.Desc
+	PacketsFlooded                   *prometheus.Desc
+	Packets                          *prometheus.Desc
+	PacketsReceived                  *prometheus.Desc
+	PacketsSent                      *prometheus.Desc
+	PurgedMacAddresses               *prometheus.Desc
 
 	// Win32_PerfRawData_EthernetPerfProvider_HyperVLegacyNetworkAdapter
-	AdapterBytesDropped         *prometheus.Desc
-	AdapterBytesReceivedPersec  *prometheus.Desc
-	AdapterBytesSentPersec      *prometheus.Desc
-	AdapterFramesDropped        *prometheus.Desc
-	AdapterFramesReceivedPersec *prometheus.Desc
-	AdapterFramesSentPersec     *prometheus.Desc
+	AdapterBytesDropped   *prometheus.Desc
+	AdapterBytesReceived  *prometheus.Desc
+	AdapterBytesSent      *prometheus.Desc
+	AdapterFramesDropped  *prometheus.Desc
+	AdapterFramesReceived *prometheus.Desc
+	AdapterFramesSent     *prometheus.Desc
 }
 
 // NewHyperVCollector ...
@@ -178,8 +175,8 @@ func NewHyperVCollector() (Collector, error) {
 			nil,
 			nil,
 		),
-		GPASpaceModificationsPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, "hv", "gpa_space_modifications_persec"),
+		GPASpaceModifications: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, "hv", "gpa_space_modifications"),
 			"The rate of modifications to the GPA space of the partition",
 			nil,
 			nil,
@@ -190,8 +187,8 @@ func NewHyperVCollector() (Collector, error) {
 			nil,
 			nil,
 		),
-		IOTLBFlushesPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, "hv", "io_tlb_flush_persec"),
+		IOTLBFlushes: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, "hv", "io_tlb_flush"),
 			"The rate of flushes of I/O TLBs of the partition",
 			nil,
 			nil,
@@ -244,8 +241,8 @@ func NewHyperVCollector() (Collector, error) {
 			nil,
 			nil,
 		),
-		VirtualTLBFlushEntiresPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, "hv", "virtual_tlb_flush_entires_persec"),
+		VirtualTLBFlushEntires: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, "hv", "virtual_tlb_flush_entires"),
 			"The rate of flushes of the entire virtual TLB",
 			nil,
 			nil,
@@ -300,147 +297,129 @@ func NewHyperVCollector() (Collector, error) {
 		),
 
 		//
-		BroadcastPacketsReceivedPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, "switch", "broadcast_packets_received_total_persec"),
+		BroadcastPacketsReceived: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, "switch", "broadcast_packets_received_total"),
 			"This represents the total number of broadcast packets received per second by the virtual switch",
 			nil,
 			nil,
 		),
-		BroadcastPacketsSentPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, "switch", "broadcast_packets_sent_total_persec"),
+		BroadcastPacketsSent: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, "switch", "broadcast_packets_sent_total"),
 			"This represents the total number of broadcast packets sent per second by the virtual switch",
 			nil,
 			nil,
 		),
-		BytesPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, "switch", "bytes_total_persec"),
+		Bytes: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, "switch", "bytes_total"),
 			"This represents the total number of bytes per second traversing the virtual switch",
 			nil,
 			nil,
 		),
-		BytesReceivedPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, "switch", "bytes_received_total_persec"),
+		BytesReceived: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, "switch", "bytes_received_total"),
 			"This represents the total number of bytes received per second by the virtual switch",
 			nil,
 			nil,
 		),
-		BytesSentPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, "switch", "bytes_sent_total_persec"),
+		BytesSent: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, "switch", "bytes_sent_total"),
 			"This represents the total number of bytes sent per second by the virtual switch",
 			nil,
 			nil,
 		),
-		DirectedPacketsReceivedPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, "switch", "directed_packets_received_total_persec"),
+		DirectedPacketsReceived: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, "switch", "directed_packets_received_total"),
 			"This represents the total number of directed packets received per second by the virtual switch",
 			nil,
 			nil,
 		),
-		DirectedPacketsSentPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, "switch", "directed_packets_send_total_persec"),
+		DirectedPacketsSent: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, "switch", "directed_packets_send_total"),
 			"This represents the total number of directed packets sent per second by the virtual switch",
 			nil,
 			nil,
 		),
-		DroppedPacketsIncomingPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, "switch", "dropped_packets_incoming_total_persec"),
+		DroppedPacketsIncoming: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, "switch", "dropped_packets_incoming_total"),
 			"This represents the total number of packet dropped per second by the virtual switch in the incoming direction",
 			nil,
 			nil,
 		),
-		DroppedPacketsOutgoingPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, "switch", "dropped_packets_outcoming_total_persec"),
+		DroppedPacketsOutgoing: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, "switch", "dropped_packets_outcoming_total"),
 			"This represents the total number of packet dropped per second by the virtual switch in the outgoing direction",
 			nil,
 			nil,
 		),
-		ExtensionsDroppedPacketsIncomingPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, "switch", "extensions_dropped_packets_incoming_total_persec"),
+		ExtensionsDroppedPacketsIncoming: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, "switch", "extensions_dropped_packets_incoming_total"),
 			"This represents the total number of packet dropped per second by the virtual switch extensions in the incoming direction",
 			nil,
 			nil,
 		),
-		ExtensionsDroppedPacketsOutgoingPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, "switch", "extensions_dropped_packets_outcoming_total_persec"),
+		ExtensionsDroppedPacketsOutgoing: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, "switch", "extensions_dropped_packets_outcoming_total"),
 			"This represents the total number of packet dropped per second by the virtual switch extensions in the outgoing direction",
 			nil,
 			nil,
 		),
 		LearnedMacAddresses: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, "switch", "learned_mac_addresses"),
+			prometheus.BuildFQName(Namespace, "switch", "learned_mac_addresses_total"),
 			"This counter represents the total number of learned MAC addresses of the virtual switch",
 			nil,
 			nil,
 		),
-		LearnedMacAddressesPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, "switch", "learned_mac_addresses_total_persec"),
-			"This represents the total number MAC addresses learned per second by the virtual switch",
-			nil,
-			nil,
-		),
-		MulticastPacketsReceivedPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, "switch", "multicast_packets_received_total_persec"),
+		MulticastPacketsReceived: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, "switch", "multicast_packets_received_total"),
 			"This represents the total number of multicast packets received per second by the virtual switch",
 			nil,
 			nil,
 		),
-		MulticastPacketsSentPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, "switch", "multicast_packets_sent_total_persec"),
+		MulticastPacketsSent: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, "switch", "multicast_packets_sent_total"),
 			"This represents the total number of multicast packets sent per second by the virtual switch",
 			nil,
 			nil,
 		),
-		NumberofSendChannelMovesPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, "switch", "number_of_send_channel_moves_total_persec"),
+		NumberofSendChannelMoves: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, "switch", "number_of_send_channel_moves_total"),
 			"This represents the total number of send channel moves per second on this virtual switch",
 			nil,
 			nil,
 		),
-		NumberofVMQMovesPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, "switch", "number_of_vmq_moves_total_persec"),
+		NumberofVMQMoves: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, "switch", "number_of_vmq_moves_total"),
 			"This represents the total number of VMQ moves per second on this virtual switch",
 			nil,
 			nil,
 		),
 		PacketsFlooded: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, "switch", "packets_flooded"),
+			prometheus.BuildFQName(Namespace, "switch", "packets_flooded_total"),
 			"This counter represents the total number of packets flooded by the virtual switch",
 			nil,
 			nil,
 		),
-		PacketsFloodedPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, "switch", "packets_flooded_total_persec"),
-			"This represents the total number of packets flooded per second by the virtual switch",
-			nil,
-			nil,
-		),
-		PacketsPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, "switch", "packets_total_persec"),
+		Packets: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, "switch", "packets_total"),
 			"This represents the total number of packets per second traversing the virtual switch",
 			nil,
 			nil,
 		),
-		PacketsReceivedPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, "switch", "packets_received_total_persec"),
+		PacketsReceived: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, "switch", "packets_received_total"),
 			"This represents the total number of packets received per second by the virtual switch",
 			nil,
 			nil,
 		),
-		PacketsSentPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, "switch", "packets_sent_total_persec"),
+		PacketsSent: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, "switch", "packets_sent_total"),
 			"This represents the total number of packets send per second by the virtual switch",
 			nil,
 			nil,
 		),
 		PurgedMacAddresses: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, "switch", "purged_mac_addresses"),
+			prometheus.BuildFQName(Namespace, "switch", "purged_mac_addresses_total"),
 			"This counter represents the total number of purged MAC addresses of the virtual switch",
-			nil,
-			nil,
-		),
-		PurgedMacAddressesPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, "switch", "purged_mac_addresses_total_persec"),
-			"This represents the total number MAC addresses purged per second by the virtual switch",
 			nil,
 			nil,
 		),
@@ -448,19 +427,19 @@ func NewHyperVCollector() (Collector, error) {
 		//
 
 		AdapterBytesDropped: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, "ethernet", "bytes_persec"),
+			prometheus.BuildFQName(Namespace, "ethernet", "bytes"),
 			"Bytes Dropped is the number of bytes dropped on the network adapter",
 			nil,
 			nil,
 		),
-		AdapterBytesReceivedPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, "ethernet", "bytes_received_persec"),
+		AdapterBytesReceived: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, "ethernet", "bytes_received"),
 			"Bytes Received/sec is the number of bytes received per second on the network adapter",
 			nil,
 			nil,
 		),
-		AdapterBytesSentPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, "ethernet", "bytes_sent_persec"),
+		AdapterBytesSent: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, "ethernet", "bytes_sent"),
 			"Bytes Sent/sec is the number of bytes sent per second over the network adapter",
 			nil,
 			nil,
@@ -471,14 +450,14 @@ func NewHyperVCollector() (Collector, error) {
 			nil,
 			nil,
 		),
-		AdapterFramesReceivedPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, "ethernet", "frames_received_persec"),
+		AdapterFramesReceived: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, "ethernet", "frames_received"),
 			"Frames Received/sec is the number of frames received per second on the network adapter",
 			nil,
 			nil,
 		),
-		AdapterFramesSentPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, "ethernet", "frames_sent_persec"),
+		AdapterFramesSent: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, "ethernet", "frames_sent"),
 			"Frames Sent/sec is the number of frames sent per second over the network adapter",
 			nil,
 			nil,
@@ -678,8 +657,8 @@ func (c *HyperVCollector) collectVmHv(ch chan<- prometheus.Metric) (*prometheus.
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.GPASpaceModificationsPersec,
-			prometheus.GaugeValue,
+			c.GPASpaceModifications,
+			prometheus.CounterValue,
 			float64(obj.GPASpaceModificationsPersec),
 		)
 
@@ -690,8 +669,8 @@ func (c *HyperVCollector) collectVmHv(ch chan<- prometheus.Metric) (*prometheus.
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.IOTLBFlushesPersec,
-			prometheus.GaugeValue,
+			c.IOTLBFlushes,
+			prometheus.CounterValue,
 			float64(obj.IOTLBFlushesPersec),
 		)
 
@@ -740,8 +719,8 @@ func (c *HyperVCollector) collectVmHv(ch chan<- prometheus.Metric) (*prometheus.
 			float64(obj.Value4KGPApages),
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.VirtualTLBFlushEntiresPersec,
-			prometheus.GaugeValue,
+			c.VirtualTLBFlushEntires,
+			prometheus.CounterValue,
 			float64(obj.VirtualTLBFlushEntiresPersec),
 		)
 		ch <- prometheus.MustNewConstMetric(
@@ -886,64 +865,64 @@ func (c *HyperVCollector) collectVmSwitch(ch chan<- prometheus.Metric) (*prometh
 		}
 
 		ch <- prometheus.MustNewConstMetric(
-			c.BroadcastPacketsReceivedPersec,
-			prometheus.GaugeValue,
+			c.BroadcastPacketsReceived,
+			prometheus.CounterValue,
 			float64(obj.BroadcastPacketsReceivedPersec),
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.BroadcastPacketsSentPersec,
-			prometheus.GaugeValue,
+			c.BroadcastPacketsSent,
+			prometheus.CounterValue,
 			float64(obj.BroadcastPacketsSentPersec),
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.BytesPersec,
-			prometheus.GaugeValue,
+			c.Bytes,
+			prometheus.CounterValue,
 			float64(obj.BytesPersec),
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.BytesReceivedPersec,
-			prometheus.GaugeValue,
+			c.BytesReceived,
+			prometheus.CounterValue,
 			float64(obj.BytesReceivedPersec),
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.BytesSentPersec,
-			prometheus.GaugeValue,
+			c.BytesSent,
+			prometheus.CounterValue,
 			float64(obj.BytesSentPersec),
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.DirectedPacketsReceivedPersec,
-			prometheus.GaugeValue,
+			c.DirectedPacketsReceived,
+			prometheus.CounterValue,
 			float64(obj.DirectedPacketsReceivedPersec),
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.DirectedPacketsSentPersec,
-			prometheus.GaugeValue,
+			c.DirectedPacketsSent,
+			prometheus.CounterValue,
 			float64(obj.DirectedPacketsSentPersec),
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.DroppedPacketsIncomingPersec,
-			prometheus.GaugeValue,
+			c.DroppedPacketsIncoming,
+			prometheus.CounterValue,
 			float64(obj.DroppedPacketsIncomingPersec),
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.DroppedPacketsOutgoingPersec,
-			prometheus.GaugeValue,
+			c.DroppedPacketsOutgoing,
+			prometheus.CounterValue,
 			float64(obj.DroppedPacketsOutgoingPersec),
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.ExtensionsDroppedPacketsIncomingPersec,
-			prometheus.GaugeValue,
+			c.ExtensionsDroppedPacketsIncoming,
+			prometheus.CounterValue,
 			float64(obj.ExtensionsDroppedPacketsIncomingPersec),
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.ExtensionsDroppedPacketsOutgoingPersec,
-			prometheus.GaugeValue,
+			c.ExtensionsDroppedPacketsOutgoing,
+			prometheus.CounterValue,
 			float64(obj.ExtensionsDroppedPacketsOutgoingPersec),
 		)
 
@@ -953,28 +932,23 @@ func (c *HyperVCollector) collectVmSwitch(ch chan<- prometheus.Metric) (*prometh
 			float64(obj.LearnedMacAddresses),
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.LearnedMacAddressesPersec,
-			prometheus.GaugeValue,
-			float64(obj.LearnedMacAddressesPersec),
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.MulticastPacketsReceivedPersec,
-			prometheus.GaugeValue,
+			c.MulticastPacketsReceived,
+			prometheus.CounterValue,
 			float64(obj.MulticastPacketsReceivedPersec),
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.MulticastPacketsSentPersec,
-			prometheus.GaugeValue,
+			c.MulticastPacketsSent,
+			prometheus.CounterValue,
 			float64(obj.MulticastPacketsSentPersec),
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.NumberofSendChannelMovesPersec,
-			prometheus.GaugeValue,
+			c.NumberofSendChannelMoves,
+			prometheus.CounterValue,
 			float64(obj.NumberofSendChannelMovesPersec),
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.NumberofVMQMovesPersec,
-			prometheus.GaugeValue,
+			c.NumberofVMQMoves,
+			prometheus.CounterValue,
 			float64(obj.NumberofVMQMovesPersec),
 		)
 
@@ -986,20 +960,14 @@ func (c *HyperVCollector) collectVmSwitch(ch chan<- prometheus.Metric) (*prometh
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.PacketsFloodedPersec,
-			prometheus.GaugeValue,
-			float64(obj.PacketsFloodedPersec),
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.PacketsPersec,
-			prometheus.GaugeValue,
+			c.Packets,
+			prometheus.CounterValue,
 			float64(obj.PacketsPersec),
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.PacketsReceivedPersec,
-			prometheus.GaugeValue,
+			c.PacketsReceived,
+			prometheus.CounterValue,
 			float64(obj.PacketsReceivedPersec),
 		)
 		ch <- prometheus.MustNewConstMetric(
@@ -1007,13 +975,6 @@ func (c *HyperVCollector) collectVmSwitch(ch chan<- prometheus.Metric) (*prometh
 			prometheus.CounterValue,
 			float64(obj.PurgedMacAddresses),
 		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.PurgedMacAddressesPersec,
-			prometheus.GaugeValue,
-			float64(obj.PurgedMacAddressesPersec),
-		)
-
 	}
 
 	return nil, nil
@@ -1048,32 +1009,32 @@ func (c *HyperVCollector) collectVmEthernet(ch chan<- prometheus.Metric) (*prome
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.AdapterBytesReceivedPersec,
-			prometheus.GaugeValue,
+			c.AdapterBytesReceived,
+			prometheus.CounterValue,
 			float64(obj.BytesReceivedPersec),
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.AdapterBytesSentPersec,
-			prometheus.GaugeValue,
+			c.AdapterBytesSent,
+			prometheus.CounterValue,
 			float64(obj.BytesSentPersec),
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.AdapterFramesReceivedPersec,
-			prometheus.GaugeValue,
+			c.AdapterFramesReceived,
+			prometheus.CounterValue,
 			float64(obj.FramesReceivedPersec),
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.AdapterFramesDropped,
-			prometheus.GaugeValue,
-			float64(obj.BytesSentPersec),
+			prometheus.CounterValue,
+			float64(obj.FramesDropped),
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.AdapterFramesSentPersec,
-			prometheus.GaugeValue,
+			c.AdapterFramesSent,
+			prometheus.CounterValue,
 			float64(obj.FramesSentPersec),
 		)
 
