@@ -1,11 +1,11 @@
 package collector
 
 import (
-	"log"
 	"strings"
 
 	"github.com/StackExchange/wmi"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/common/log"
 )
 
 func init() {
@@ -470,37 +470,37 @@ func NewHyperVCollector() (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *HyperVCollector) Collect(ch chan<- prometheus.Metric) error {
 	if desc, err := c.collectVmHealth(ch); err != nil {
-		log.Println("[ERROR] failed collecting hyperV health status metrics:", desc, err)
+		log.Error("failed collecting hyperV health status metrics:", desc, err)
 		return err
 	}
 
 	if desc, err := c.collectVmVid(ch); err != nil {
-		log.Println("[ERROR] failed collecting hyperV pages metrics:", desc, err)
+		log.Error("failed collecting hyperV pages metrics:", desc, err)
 		return err
 	}
 
 	if desc, err := c.collectVmHv(ch); err != nil {
-		log.Println("[ERROR] failed collecting hyperV hv status metrics:", desc, err)
+		log.Error("failed collecting hyperV hv status metrics:", desc, err)
 		return err
 	}
 
 	if desc, err := c.collectVmProcessor(ch); err != nil {
-		log.Println("[ERROR] failed collecting hyperV processor metrics:", desc, err)
+		log.Error("failed collecting hyperV processor metrics:", desc, err)
 		return err
 	}
 
 	if desc, err := c.collectVmRate(ch); err != nil {
-		log.Println("[ERROR] failed collecting hyperV rate metrics:", desc, err)
+		log.Error("failed collecting hyperV rate metrics:", desc, err)
 		return err
 	}
 
 	if desc, err := c.collectVmSwitch(ch); err != nil {
-		log.Println("[ERROR] failed collecting hyperV switch metrics:", desc, err)
+		log.Error("failed collecting hyperV switch metrics:", desc, err)
 		return err
 	}
 
 	if desc, err := c.collectVmEthernet(ch); err != nil {
-		log.Println("[ERROR] failed collecting hyperV ethernet metrics:", desc, err)
+		log.Error("failed collecting hyperV ethernet metrics:", desc, err)
 		return err
 	}
 	return nil
