@@ -110,19 +110,19 @@ func NewHyperVCollector() (Collector, error) {
 		PhysicalPagesAllocated: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, buildSubsystemName("vid"), "physical_pages_allocated"),
 			"The number of physical pages allocated",
-			[]string{"interface"},
+			[]string{"vm"},
 			nil,
 		),
 		PreferredNUMANodeIndex: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, buildSubsystemName("vid"), "preferred_numa_node_index"),
 			"The preferred NUMA node index associated with this partition",
-			[]string{"interface"},
+			[]string{"vm"},
 			nil,
 		),
 		RemotePhysicalPages: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, buildSubsystemName("vid"), "remote_physical_pages"),
 			"The number of physical pages not allocated from the preferred NUMA node",
-			[]string{"interface"},
+			[]string{"vm"},
 			nil,
 		),
 
