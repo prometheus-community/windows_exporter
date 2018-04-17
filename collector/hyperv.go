@@ -50,11 +50,17 @@ type HyperVCollector struct {
 	LogicalProcessors *prometheus.Desc
 	VirtualProcessors *prometheus.Desc
 
+	// Win32_PerfRawData_HvStats_HyperVHypervisorRootVirtualProcessor
+	HostGuestRunTime      *prometheus.Desc
+	HostHypervisorRunTime *prometheus.Desc
+	HostRemoteRunTime     *prometheus.Desc
+	HostTotalRunTime      *prometheus.Desc
+
 	// Win32_PerfRawData_HvStats_HyperVHypervisorVirtualProcessor
-	PercentGuestRunTime      *prometheus.Desc
-	PercentHypervisorRunTime *prometheus.Desc
-	PercentRemoteRunTime     *prometheus.Desc
-	PercentTotalRunTime      *prometheus.Desc
+	VMGuestRunTime      *prometheus.Desc
+	VMHypervisorRunTime *prometheus.Desc
+	VMRemoteRunTime     *prometheus.Desc
+	VMTotalRunTime      *prometheus.Desc
 
 	// Win32_PerfRawData_NvspSwitchStats_HyperVVirtualSwitch
 	BroadcastPacketsReceived         *prometheus.Desc
@@ -272,28 +278,55 @@ func NewHyperVCollector() (Collector, error) {
 
 		//
 
-		PercentGuestRunTime: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, buildSubsystemName("vcpu"), "guest_run_time"),
+		HostGuestRunTime: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, buildSubsystemName("host_cpu"), "guest_run_time"),
 			"The time spent by the virtual processor in guest code",
 			[]string{"core"},
 			nil,
 		),
-		PercentHypervisorRunTime: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, buildSubsystemName("vcpu"), "hypervisor_run_time"),
+		HostHypervisorRunTime: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, buildSubsystemName("host_cpu"), "hypervisor_run_time"),
 			"The time spent by the virtual processor in hypervisor code",
 			[]string{"core"},
 			nil,
 		),
-		PercentRemoteRunTime: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, buildSubsystemName("vcpu"), "remote_run_time"),
+		HostRemoteRunTime: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, buildSubsystemName("host_cpu"), "remote_run_time"),
 			"The time spent by the virtual processor running on a remote node",
 			[]string{"core"},
 			nil,
 		),
-		PercentTotalRunTime: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, buildSubsystemName("vcpu"), "total_run_time"),
+		HostTotalRunTime: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, buildSubsystemName("host_cpu"), "total_run_time"),
 			"The time spent by the virtual processor in guest and hypervisor code",
 			[]string{"core"},
+			nil,
+		),
+
+		//
+
+		VMGuestRunTime: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_cpu"), "guest_run_time"),
+			"The time spent by the virtual processor in guest code",
+			[]string{"vm", "core"},
+			nil,
+		),
+		VMHypervisorRunTime: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_cpu"), "hypervisor_run_time"),
+			"The time spent by the virtual processor in hypervisor code",
+			[]string{"vm", "core"},
+			nil,
+		),
+		VMRemoteRunTime: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_cpu"), "remote_run_time"),
+			"The time spent by the virtual processor running on a remote node",
+			[]string{"vm", "core"},
+			nil,
+		),
+		VMTotalRunTime: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_cpu"), "total_run_time"),
+			"The time spent by the virtual processor in guest and hypervisor code",
+			[]string{"vm", "core"},
 			nil,
 		),
 
@@ -489,8 +522,13 @@ func (c *HyperVCollector) Collect(ch chan<- prometheus.Metric) error {
 		return err
 	}
 
-	if desc, err := c.collectVmRate(ch); err != nil {
-		log.Error("failed collecting hyperV rate metrics:", desc, err)
+	if desc, err := c.collectHostCpuUsage(ch); err != nil {
+		log.Error("failed collecting hyperV host CPU metrics:", desc, err)
+		return err
+	}
+
+	if desc, err := c.collectVmCpuUsage(ch); err != nil {
+		log.Error("failed collecting hyperV VM CPU metrics:", desc, err)
 		return err
 	}
 
@@ -778,7 +816,7 @@ type Win32_PerfRawData_HvStats_HyperVHypervisorRootVirtualProcessor struct {
 	PercentTotalRunTime      uint64
 }
 
-func (c *HyperVCollector) collectVmRate(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *HyperVCollector) collectHostCpuUsage(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_PerfRawData_HvStats_HyperVHypervisorRootVirtualProcessor
 	if err := wmi.Query(wmi.CreateQuery(&dst, ""), &dst); err != nil {
 		return nil, err
@@ -788,39 +826,97 @@ func (c *HyperVCollector) collectVmRate(ch chan<- prometheus.Metric) (*prometheu
 		if strings.Contains(obj.Name, "_Total") {
 			continue
 		}
-		// Root VP 3
-		names := strings.Split(obj.Name, " ")
-		if len(names) == 0 {
+		// The name format is Root VP <core id>
+		parts := strings.Split(obj.Name, " ")
+		if len(parts) != 3 {
+			log.Warnf("Unexpected format of Name in collectHostCpuUsage: %q", obj.Name)
 			continue
 		}
-		label := names[len(names)-1]
+		coreId := parts[2]
 
 		ch <- prometheus.MustNewConstMetric(
-			c.PercentGuestRunTime,
+			c.HostGuestRunTime,
 			prometheus.GaugeValue,
 			float64(obj.PercentGuestRunTime),
-			label,
+			coreId,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.PercentHypervisorRunTime,
+			c.HostHypervisorRunTime,
 			prometheus.GaugeValue,
 			float64(obj.PercentHypervisorRunTime),
-			label,
+			coreId,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.PercentRemoteRunTime,
+			c.HostRemoteRunTime,
 			prometheus.GaugeValue,
 			float64(obj.PercentRemoteRunTime),
-			label,
+			coreId,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.PercentTotalRunTime,
+			c.HostTotalRunTime,
 			prometheus.GaugeValue,
 			float64(obj.PercentTotalRunTime),
-			label,
+			coreId,
+		)
+
+	}
+
+	return nil, nil
+}
+
+// Win32_PerfRawData_HvStats_HyperVHypervisorVirtualProcessor ...
+type Win32_PerfRawData_HvStats_HyperVHypervisorVirtualProcessor struct {
+	Name                     string
+	PercentGuestRunTime      uint64
+	PercentHypervisorRunTime uint64
+	PercentRemoteRunTime     uint64
+	PercentTotalRunTime      uint64
+}
+
+func (c *HyperVCollector) collectVmCpuUsage(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+	var dst []Win32_PerfRawData_HvStats_HyperVHypervisorVirtualProcessor
+	if err := wmi.Query(wmi.CreateQuery(&dst, ""), &dst); err != nil {
+		return nil, err
+	}
+
+	for _, obj := range dst {
+		if strings.Contains(obj.Name, "_Total") {
+			continue
+		}
+		// The name format is <VM Name>:Hv VP <vcore id>
+		parts := strings.Split(obj.Name, ":")
+		vmName := parts[0]
+		coreId := strings.Split(parts[1], " ")[2]
+
+		ch <- prometheus.MustNewConstMetric(
+			c.VMGuestRunTime,
+			prometheus.GaugeValue,
+			float64(obj.PercentGuestRunTime),
+			vmName, coreId,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.VMHypervisorRunTime,
+			prometheus.GaugeValue,
+			float64(obj.PercentHypervisorRunTime),
+			vmName, coreId,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.VMRemoteRunTime,
+			prometheus.GaugeValue,
+			float64(obj.PercentRemoteRunTime),
+			vmName, coreId,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.VMTotalRunTime,
+			prometheus.GaugeValue,
+			float64(obj.PercentTotalRunTime),
+			vmName, coreId,
 		)
 
 	}
