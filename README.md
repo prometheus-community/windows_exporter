@@ -13,6 +13,7 @@ ad | [Win32_PerfRawData_DirectoryServices_DirectoryServices](https://msdn.micros
 cpu | [Win32_PerfRawData_PerfOS_Processor](https://msdn.microsoft.com/en-us/library/aa394317(v=vs.90).aspx) metrics (cpu usage) | &#10003;
 cs | [Win32_ComputerSystem](https://msdn.microsoft.com/en-us/library/aa394102) metrics (system properties, num cpus/total memory) | &#10003;
 dns | [Win32_PerfRawData_DNS_DNS](https://technet.microsoft.com/en-us/library/cc977686.aspx) metrics (DNS Server) |
+hyperv | Performance counters for Hyper-V hosts | 
 iis | [Win32_PerfRawData_W3SVC_WebService](https://msdn.microsoft.com/en-us/library/aa394345) IIS metrics |
 logical_disk | [Win32_PerfRawData_PerfDisk_LogicalDisk](https://msdn.microsoft.com/en-us/windows/hardware/aa394307(v=vs.71)) metrics (disk I/O) | &#10003;
 net | [Win32_PerfRawData_Tcpip_NetworkInterface](https://technet.microsoft.com/en-us/security/aa394340(v=vs.80)) metrics (network interface I/O) | &#10003;
