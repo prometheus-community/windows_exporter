@@ -463,37 +463,37 @@ func NewHyperVCollector() (Collector, error) {
 		AdapterBytesDropped: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, buildSubsystemName("ethernet"), "bytes_dropped"),
 			"Bytes Dropped is the number of bytes dropped on the network adapter",
-			nil,
+			[]string{"adapter"},
 			nil,
 		),
 		AdapterBytesReceived: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, buildSubsystemName("ethernet"), "bytes_received"),
 			"Bytes received is the number of bytes received on the network adapter",
-			nil,
+			[]string{"adapter"},
 			nil,
 		),
 		AdapterBytesSent: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, buildSubsystemName("ethernet"), "bytes_sent"),
 			"Bytes sent is the number of bytes sent over the network adapter",
-			nil,
+			[]string{"adapter"},
 			nil,
 		),
 		AdapterFramesDropped: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, buildSubsystemName("ethernet"), "frames_dropped"),
 			"Frames Dropped is the number of frames dropped on the network adapter",
-			nil,
+			[]string{"adapter"},
 			nil,
 		),
 		AdapterFramesReceived: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, buildSubsystemName("ethernet"), "frames_received"),
 			"Frames received is the number of frames received on the network adapter",
-			nil,
+			[]string{"adapter"},
 			nil,
 		),
 		AdapterFramesSent: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, buildSubsystemName("ethernet"), "frames_sent"),
 			"Frames sent is the number of frames sent over the network adapter",
-			nil,
+			[]string{"adapter"},
 			nil,
 		),
 	}, nil
