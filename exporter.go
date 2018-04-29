@@ -44,6 +44,16 @@ var (
 		[]string{"collector"},
 		nil,
 	)
+
+	// This can be removed when client_golang exposes this on Windows
+	// (See https://github.com/prometheus/client_golang/issues/376)
+	startTime = float64(time.Now().Unix())
+	startTimeDesc = prometheus.NewDesc(
+		"process_start_time_seconds",
+		"Start time of the process since unix epoch in seconds.",
+		nil,
+		nil,
+	)
 )
 
 // Describe sends all the descriptors of the collectors included to
@@ -65,6 +75,12 @@ func (coll WmiCollector) Collect(ch chan<- prometheus.Metric) {
 			wg.Done()
 		}(name, c)
 	}
+
+	ch <- prometheus.MustNewConstMetric(
+		startTimeDesc,
+		prometheus.CounterValue,
+		startTime,
+	)
 	wg.Wait()
 }
 
