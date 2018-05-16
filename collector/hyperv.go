@@ -1274,6 +1274,7 @@ func (c *HyperVCollector) collectVmEthernet(ch chan<- prometheus.Metric) (*prome
   return nil, nil
 }
 
+// Win32_PerfRawData_Counters_HyperVVirtualStorageDevice ...
 type Win32_PerfRawData_Counters_HyperVVirtualStorageDevice struct {
   Name                  string
   ErrorCount            uint64
@@ -1341,14 +1342,15 @@ func (c *HyperVCollector) collectVmStorage(ch chan<- prometheus.Metric) (*promet
   return nil, nil
 }
 
+// Win32_PerfRawData_NvspNicStats_HyperVVirtualNetworkAdapter ...
 type Win32_PerfRawData_NvspNicStats_HyperVVirtualNetworkAdapter struct {
-  Name                          string
-  BytesReceivedPersec           uint64
-  BytesSentPersec               uint64
-  DroppedPacketsIncomingPersec  uint64
-  DroppedPacketsOutgoingPersec  uint64
-  PacketsReceivedPersec         uint64
-  PacketsSentPersec             uint64
+  Name                         string
+  BytesReceivedPersec          uint64
+  BytesSentPersec              uint64
+  DroppedPacketsIncomingPersec uint64
+  DroppedPacketsOutgoingPersec uint64
+  PacketsReceivedPersec        uint64
+  PacketsSentPersec            uint64
 }
 
 func (c *HyperVCollector) collectVmNetwork(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
