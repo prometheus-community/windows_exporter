@@ -17,6 +17,7 @@ package collector
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -185,6 +186,30 @@ func (c *textFileCollector) exportMTimes(mtimes map[string]time.Time, ch chan<- 
 	}
 }
 
+type carriageReturnFilteringReader struct {
+	r io.Reader
+}
+
+// Read returns data from the underlying io.Reader, but with \r filtered out
+func (cr carriageReturnFilteringReader) Read(p []byte) (int, error) {
+	buf := make([]byte, len(p))
+	n, err := cr.r.Read(buf)
+
+	if err != nil && err != io.EOF {
+		return n, err
+	}
+
+	pi := 0
+	for i := 0; i < n; i++ {
+		if buf[i] != '\r' {
+			p[pi] = buf[i]
+			pi++
+		}
+	}
+
+	return pi, err
+}
+
 // Update implements the Collector interface.
 func (c *textFileCollector) Collect(ch chan<- prometheus.Metric) error {
 	error := 0.0
@@ -203,6 +228,7 @@ fileLoop:
 			continue
 		}
 		path := filepath.Join(c.path, f.Name())
+		log.Debugf("Processing file %q", path)
 		file, err := os.Open(path)
 		if err != nil {
 			log.Errorf("Error opening %q: %v", path, err)
@@ -210,7 +236,7 @@ fileLoop:
 			continue
 		}
 		var parser expfmt.TextParser
-		parsedFamilies, err := parser.TextToMetricFamilies(file)
+		parsedFamilies, err := parser.TextToMetricFamilies(carriageReturnFilteringReader{r: file})
 		file.Close()
 		if err != nil {
 			log.Errorf("Error parsing %q: %v", path, err)
