@@ -96,7 +96,7 @@ type HyperVCollector struct {
 	// Win32_PerfRawData_Counters_HyperVVirtualStorageDevice
 	VMStorageErrorCount            *prometheus.Desc
 	VMStorageQueueLength  	       *prometheus.Desc
-	VMStorageReadBytes.            *prometheus.Desc
+	VMStorageReadBytes             *prometheus.Desc
 	VMStorageReadOperations        *prometheus.Desc
 	VMStorageWriteBytes            *prometheus.Desc
 	VMStorageWriteOperations       *prometheus.Desc
