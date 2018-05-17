@@ -94,20 +94,20 @@ type HyperVCollector struct {
 	AdapterFramesSent     *prometheus.Desc
 
 	// Win32_PerfRawData_Counters_HyperVVirtualStorageDevice
-	VMStorageErrorCount            *prometheus.Desc
-	VMStorageQueueLength  	       *prometheus.Desc
-	VMStorageReadBytes             *prometheus.Desc
-	VMStorageReadOperations        *prometheus.Desc
-	VMStorageWriteBytes            *prometheus.Desc
-	VMStorageWriteOperations       *prometheus.Desc
+	VMStorageErrorCount      *prometheus.Desc
+	VMStorageQueueLength  	 *prometheus.Desc
+	VMStorageReadBytes       *prometheus.Desc
+	VMStorageReadOperations  *prometheus.Desc
+	VMStorageWriteBytes      *prometheus.Desc
+	VMStorageWriteOperations *prometheus.Desc
 
 	// Win32_PerfRawData_NvspNicStats_HyperVVirtualNetworkAdapter
-	VMNetworkBytesReceived                *prometheus.Desc
-	VMNetworkBytesSentPersec              *prometheus.Desc
-	VMNetworkDroppedPacketsIncoming       *prometheus.Desc
-	VMNetworkDroppedPacketsOutgoing       *prometheus.Desc
-	VMNetworkPacketsReceived              *prometheus.Desc
-	VMNetworkPacketsSent                  *prometheus.Desc
+	VMNetworkBytesReceived          *prometheus.Desc
+	VMNetworkBytesSentPersec        *prometheus.Desc
+	VMNetworkDroppedPacketsIncoming *prometheus.Desc
+	VMNetworkDroppedPacketsOutgoing *prometheus.Desc
+	VMNetworkPacketsReceived        *prometheus.Desc
+	VMNetworkPacketsSent            *prometheus.Desc
 }
 
 // NewHyperVCollector ...
