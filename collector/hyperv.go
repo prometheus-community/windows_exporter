@@ -103,7 +103,7 @@ type HyperVCollector struct {
 
 	// Win32_PerfRawData_NvspNicStats_HyperVVirtualNetworkAdapter
 	VMNetworkBytesReceived          *prometheus.Desc
-	VMNetworkBytesSentPersec        *prometheus.Desc
+	VMNetworkBytesSent              *prometheus.Desc
 	VMNetworkDroppedPacketsIncoming *prometheus.Desc
 	VMNetworkDroppedPacketsOutgoing *prometheus.Desc
 	VMNetworkPacketsReceived        *prometheus.Desc
@@ -527,25 +527,25 @@ func NewHyperVCollector() (Collector, error) {
 			[]string{"vm_device"},
 			nil,
 		),
-		VMStorageReadBytesPersec: prometheus.NewDesc(
+		VMStorageReadBytes: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_device"), "bytes_read"),
 			"This counter represents the total number of bytes that have been read per second on this virtual device",
 			[]string{"vm_device"},
 			nil,
 		),
-		VMStorageReadOperationsPerSec: prometheus.NewDesc(
+		VMStorageReadOperations: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_device"), "operations_read"),
 			"This counter represents the number of read operations that have occurred per second on this virtual device",
 			[]string{"vm_device"},
 			nil,
 		),
-		VMStorageWriteBytesPersec: prometheus.NewDesc(
+		VMStorageWriteBytes: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_device"), "bytes_written"),
 			"This counter represents the total number of bytes that have been written per second on this virtual device",
 			[]string{"vm_device"},
 			nil,
 		),
-		VMStorageWriteOperationsPerSec: prometheus.NewDesc(
+		VMStorageWriteOperations: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_device"), "operations_written"),
 			"This counter represents the number of write operations that have occurred per second on this virtual device",
 			[]string{"vm_device"},
@@ -554,37 +554,37 @@ func NewHyperVCollector() (Collector, error) {
 
 		//
 
-		VMNetworkBytesReceivedPersec: prometheus.NewDesc(
+		VMNetworkBytesReceived: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_interface"), "bytes_received"),
 			"This counter represents the total number of bytes received per second by the network adapter",
 			[]string{"vm_interface"},
 			nil,
 		),
-		VMNetworkBytesSentPersec: prometheus.NewDesc(
+		VMNetworkBytesSent: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_interface"), "bytes_sent"),
 			"This counter represents the total number of bytes sent per second by the network adapter",
 			[]string{"vm_interface"},
 			nil,
 		),
-		VMNetworkDroppedPacketsIncomingPersec: prometheus.NewDesc(
+		VMNetworkDroppedPacketsIncoming: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_interface"), "packets_incoming_dropped"),
 			"This counter represents the total number of dropped packets per second in the incoming direction of the network adapter",
 			[]string{"vm_interface"},
 			nil,
 		),
-		VMNetworkDroppedPacketsOutgoingPersec: prometheus.NewDesc(
+		VMNetworkDroppedPacketsOutgoing: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_interface"), "packets_outgoing_dropped"),
 			"This counter represents the total number of dropped packets per second in the outgoing direction of the network adapter",
 			[]string{"vm_interface"},
 			nil,
 		),
-		VMNetworkPacketsReceivedPersec: prometheus.NewDesc(
+		VMNetworkPacketsReceived: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_interface"), "packets_received"),
 			"This counter represents the total number of packets received per second by the network adapter",
 			[]string{"vm_interface"},
 			nil,
 		),
-		VMNetworkPacketsSentPersec: prometheus.NewDesc(
+		VMNetworkPacketsSent: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_interface"), "packets_sent"),
 			"This counter represents the total number of packets sent per second by the network adapter",
 			[]string{"vm_interface"},
@@ -1311,28 +1311,28 @@ func (c *HyperVCollector) collectVmStorage(ch chan<- prometheus.Metric) (*promet
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.VMStorageReadBytesPersec,
+			c.VMStorageReadBytes,
 			prometheus.CounterValue,
 			float64(obj.ReadBytesPersec),
 			obj.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.VMStorageReadOperationsPerSec,
+			c.VMStorageReadOperations,
 			prometheus.CounterValue,
 			float64(obj.ReadOperationsPerSec),
 			obj.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.VMStorageWriteBytesPersec,
+			c.VMStorageWriteBytes,
 			prometheus.CounterValue,
 			float64(obj.WriteBytesPersec),
 			obj.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.VMStorageWriteOperationsPerSec,
+			c.VMStorageWriteOperations,
 			prometheus.CounterValue,
 			float64(obj.WriteOperationsPerSec),
 			obj.Name,
@@ -1365,42 +1365,42 @@ func (c *HyperVCollector) collectVmNetwork(ch chan<- prometheus.Metric) (*promet
 		}
 
 		ch <- prometheus.MustNewConstMetric(
-			c.VMNetworkBytesReceivedPersec,
+			c.VMNetworkBytesReceived,
 			prometheus.CounterValue,
 			float64(obj.BytesReceivedPersec),
 			obj.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.VMNetworkBytesSentPersec,
+			c.VMNetworkBytesSent,
 			prometheus.CounterValue,
 			float64(obj.BytesSentPersec),
 			obj.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.VMNetworkDroppedPacketsIncomingPersec,
+			c.VMNetworkDroppedPacketsIncoming,
 			prometheus.CounterValue,
 			float64(obj.DroppedPacketsIncomingPersec),
 			obj.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.VMNetworkDroppedPacketsOutgoingPersec,
+			c.VMNetworkDroppedPacketsOutgoing,
 			prometheus.CounterValue,
 			float64(obj.DroppedPacketsOutgoingPersec),
 			obj.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.VMNetworkPacketsReceivedPersec,
+			c.VMNetworkPacketsReceived,
 			prometheus.CounterValue,
 			float64(obj.PacketsReceivedPersec),
 			obj.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.VMNetworkPacketsSentPersec,
+			c.VMNetworkPacketsSent,
 			prometheus.CounterValue,
 			float64(obj.PacketsSentPersec),
 			obj.Name,
