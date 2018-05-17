@@ -96,18 +96,18 @@ type HyperVCollector struct {
 	// Win32_PerfRawData_Counters_HyperVVirtualStorageDevice
 	VMStorageErrorCount            *prometheus.Desc
 	VMStorageQueueLength  	       *prometheus.Desc
-	VMStorageReadBytesPersec       *prometheus.Desc
-	VMStorageReadOperationsPerSec  *prometheus.Desc
-	VMStorageWriteBytesPersec      *prometheus.Desc
-	VMStorageWriteOperationsPerSec *prometheus.Desc
+	VMStorageReadBytes.            *prometheus.Desc
+	VMStorageReadOperations        *prometheus.Desc
+	VMStorageWriteBytes            *prometheus.Desc
+	VMStorageWriteOperations       *prometheus.Desc
 
 	// Win32_PerfRawData_NvspNicStats_HyperVVirtualNetworkAdapter
-	VMNetworkBytesReceivedPersec          *prometheus.Desc
+	VMNetworkBytesReceived                *prometheus.Desc
 	VMNetworkBytesSentPersec              *prometheus.Desc
-	VMNetworkDroppedPacketsIncomingPersec *prometheus.Desc
-	VMNetworkDroppedPacketsOutgoingPersec *prometheus.Desc
-	VMNetworkPacketsReceivedPersec        *prometheus.Desc
-	VMNetworkPacketsSentPersec            *prometheus.Desc
+	VMNetworkDroppedPacketsIncoming       *prometheus.Desc
+	VMNetworkDroppedPacketsOutgoing       *prometheus.Desc
+	VMNetworkPacketsReceived              *prometheus.Desc
+	VMNetworkPacketsSent                  *prometheus.Desc
 }
 
 // NewHyperVCollector ...
@@ -516,78 +516,78 @@ func NewHyperVCollector() (Collector, error) {
 		//
 
 		VMStorageErrorCount: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_storage"), "error_count"),
+			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_device"), "error_count"),
 			"This counter represents the total number of errors that have occurred on this virtual device",
-			[]string{"vm_storage"},
+			[]string{"vm_device"},
 			nil,
 		),
 		VMStorageQueueLength: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_storage"), "queue_length"),
+			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_device"), "queue_length"),
 			"This counter represents the current queue length on this virtual device",
-			[]string{"vm_storage"},
+			[]string{"vm_device"},
 			nil,
 		),
 		VMStorageReadBytesPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_storage"), "bytes_read"),
+			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_device"), "bytes_read"),
 			"This counter represents the total number of bytes that have been read per second on this virtual device",
-			[]string{"vm_storage"},
+			[]string{"vm_device"},
 			nil,
 		),
 		VMStorageReadOperationsPerSec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_storage"), "operations_read"),
+			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_device"), "operations_read"),
 			"This counter represents the number of read operations that have occurred per second on this virtual device",
-			[]string{"vm_storage"},
+			[]string{"vm_device"},
 			nil,
 		),
 		VMStorageWriteBytesPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_storage"), "bytes_written"),
+			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_device"), "bytes_written"),
 			"This counter represents the total number of bytes that have been written per second on this virtual device",
-			[]string{"vm_storage"},
+			[]string{"vm_device"},
 			nil,
 		),
 		VMStorageWriteOperationsPerSec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_storage"), "operations_written"),
+			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_device"), "operations_written"),
 			"This counter represents the number of write operations that have occurred per second on this virtual device",
-			[]string{"vm_storage"},
+			[]string{"vm_device"},
 			nil,
 		),
 
 		//
 
 		VMNetworkBytesReceivedPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_network"), "bytes_received"),
+			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_interface"), "bytes_received"),
 			"This counter represents the total number of bytes received per second by the network adapter",
-			[]string{"vm_network"},
+			[]string{"vm_interface"},
 			nil,
 		),
 		VMNetworkBytesSentPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_network"), "bytes_sent"),
+			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_interface"), "bytes_sent"),
 			"This counter represents the total number of bytes sent per second by the network adapter",
-			[]string{"vm_network"},
+			[]string{"vm_interface"},
 			nil,
 		),
 		VMNetworkDroppedPacketsIncomingPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_network"), "packets_incoming_dropped"),
+			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_interface"), "packets_incoming_dropped"),
 			"This counter represents the total number of dropped packets per second in the incoming direction of the network adapter",
-			[]string{"vm_network"},
+			[]string{"vm_interface"},
 			nil,
 		),
 		VMNetworkDroppedPacketsOutgoingPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_network"), "packets_outgoing_dropped"),
+			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_interface"), "packets_outgoing_dropped"),
 			"This counter represents the total number of dropped packets per second in the outgoing direction of the network adapter",
-			[]string{"vm_network"},
+			[]string{"vm_interface"},
 			nil,
 		),
 		VMNetworkPacketsReceivedPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_network"), "packets_received"),
+			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_interface"), "packets_received"),
 			"This counter represents the total number of packets received per second by the network adapter",
-			[]string{"vm_network"},
+			[]string{"vm_interface"},
 			nil,
 		),
 		VMNetworkPacketsSentPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_network"), "packets_sent"),
+			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_interface"), "packets_sent"),
 			"This counter represents the total number of packets sent per second by the network adapter",
-			[]string{"vm_network"},
+			[]string{"vm_interface"},
 			nil,
 		),
 	}, nil
