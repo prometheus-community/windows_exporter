@@ -27,6 +27,7 @@ var (
 type serviceCollector struct {
 	State     *prometheus.Desc
 	StartMode *prometheus.Desc
+	Status    *prometheus.Desc
 
 	queryWhereClause string
 }
@@ -56,6 +57,12 @@ func NewserviceCollector() (Collector, error) {
 			[]string{"name", "start_mode"},
 			nil,
 		),
+		Status: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "status"),
+			"The status of the service (Status)",
+			[]string{"name", "status"},
+			nil,
+		),
 		queryWhereClause: wc.String(),
 	}, nil
 }
@@ -73,6 +80,7 @@ func (c *serviceCollector) Collect(ch chan<- prometheus.Metric) error {
 type Win32_Service struct {
 	Name      string
 	State     string
+	Status    string
 	StartMode string
 }
 
@@ -93,6 +101,20 @@ var (
 		"auto",
 		"manual",
 		"disabled",
+	}
+	allStatuses = []string{
+		"ok",
+		"error",
+		"degraded",
+		"unknown",
+		"pred fail",
+		"starting",
+		"stopping",
+		"service",
+		"stressed",
+		"nonrecover",
+		"no contact",
+		"lost comm",
 	}
 )
 
@@ -129,6 +151,20 @@ func (c *serviceCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Des
 				isCurrentStartMode,
 				strings.ToLower(service.Name),
 				startMode,
+			)
+		}
+
+		for _, status := range allStatuses {
+			isCurrentStatus := 0.0
+			if status == strings.ToLower(service.Status) {
+				isCurrentStatus = 1.0
+			}
+			ch <- prometheus.MustNewConstMetric(
+				c.Status,
+				prometheus.GaugeValue,
+				isCurrentStatus,
+				strings.ToLower(service.Name),
+				status,
 			)
 		}
 	}
