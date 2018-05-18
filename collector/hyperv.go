@@ -92,6 +92,22 @@ type HyperVCollector struct {
 	AdapterFramesDropped  *prometheus.Desc
 	AdapterFramesReceived *prometheus.Desc
 	AdapterFramesSent     *prometheus.Desc
+
+	// Win32_PerfRawData_Counters_HyperVVirtualStorageDevice
+	VMStorageErrorCount      *prometheus.Desc
+	VMStorageQueueLength  	 *prometheus.Desc
+	VMStorageReadBytes       *prometheus.Desc
+	VMStorageReadOperations  *prometheus.Desc
+	VMStorageWriteBytes      *prometheus.Desc
+	VMStorageWriteOperations *prometheus.Desc
+
+	// Win32_PerfRawData_NvspNicStats_HyperVVirtualNetworkAdapter
+	VMNetworkBytesReceived          *prometheus.Desc
+	VMNetworkBytesSent              *prometheus.Desc
+	VMNetworkDroppedPacketsIncoming *prometheus.Desc
+	VMNetworkDroppedPacketsOutgoing *prometheus.Desc
+	VMNetworkPacketsReceived        *prometheus.Desc
+	VMNetworkPacketsSent            *prometheus.Desc
 }
 
 // NewHyperVCollector ...
@@ -496,6 +512,84 @@ func NewHyperVCollector() (Collector, error) {
 			[]string{"adapter"},
 			nil,
 		),
+
+		//
+
+		VMStorageErrorCount: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_device"), "error_count"),
+			"This counter represents the total number of errors that have occurred on this virtual device",
+			[]string{"vm_device"},
+			nil,
+		),
+		VMStorageQueueLength: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_device"), "queue_length"),
+			"This counter represents the current queue length on this virtual device",
+			[]string{"vm_device"},
+			nil,
+		),
+		VMStorageReadBytes: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_device"), "bytes_read"),
+			"This counter represents the total number of bytes that have been read per second on this virtual device",
+			[]string{"vm_device"},
+			nil,
+		),
+		VMStorageReadOperations: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_device"), "operations_read"),
+			"This counter represents the number of read operations that have occurred per second on this virtual device",
+			[]string{"vm_device"},
+			nil,
+		),
+		VMStorageWriteBytes: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_device"), "bytes_written"),
+			"This counter represents the total number of bytes that have been written per second on this virtual device",
+			[]string{"vm_device"},
+			nil,
+		),
+		VMStorageWriteOperations: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_device"), "operations_written"),
+			"This counter represents the number of write operations that have occurred per second on this virtual device",
+			[]string{"vm_device"},
+			nil,
+		),
+
+		//
+
+		VMNetworkBytesReceived: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_interface"), "bytes_received"),
+			"This counter represents the total number of bytes received per second by the network adapter",
+			[]string{"vm_interface"},
+			nil,
+		),
+		VMNetworkBytesSent: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_interface"), "bytes_sent"),
+			"This counter represents the total number of bytes sent per second by the network adapter",
+			[]string{"vm_interface"},
+			nil,
+		),
+		VMNetworkDroppedPacketsIncoming: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_interface"), "packets_incoming_dropped"),
+			"This counter represents the total number of dropped packets per second in the incoming direction of the network adapter",
+			[]string{"vm_interface"},
+			nil,
+		),
+		VMNetworkDroppedPacketsOutgoing: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_interface"), "packets_outgoing_dropped"),
+			"This counter represents the total number of dropped packets per second in the outgoing direction of the network adapter",
+			[]string{"vm_interface"},
+			nil,
+		),
+		VMNetworkPacketsReceived: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_interface"), "packets_received"),
+			"This counter represents the total number of packets received per second by the network adapter",
+			[]string{"vm_interface"},
+			nil,
+		),
+		VMNetworkPacketsSent: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_interface"), "packets_sent"),
+			"This counter represents the total number of packets sent per second by the network adapter",
+			[]string{"vm_interface"},
+			nil,
+		),
 	}, nil
 }
 
@@ -541,6 +635,17 @@ func (c *HyperVCollector) Collect(ch chan<- prometheus.Metric) error {
 		log.Error("failed collecting hyperV ethernet metrics:", desc, err)
 		return err
 	}
+
+	if desc, err := c.collectVmStorage(ch); err != nil {
+		log.Error("failed collecting hyperV virtual storage metrics:", desc, err)
+		return err
+	}
+
+	if desc, err := c.collectVmNetwork(ch); err != nil {
+		log.Error("failed collecting hyperV virtual network metrics:", desc, err)
+		return err
+	}
+
 	return nil
 }
 
@@ -1164,6 +1269,142 @@ func (c *HyperVCollector) collectVmEthernet(ch chan<- prometheus.Metric) (*prome
 			obj.Name,
 		)
 
+	}
+
+	return nil, nil
+}
+
+// Win32_PerfRawData_Counters_HyperVVirtualStorageDevice ...
+type Win32_PerfRawData_Counters_HyperVVirtualStorageDevice struct {
+	Name                  string
+	ErrorCount            uint64
+	QueueLength           uint32
+	ReadBytesPersec       uint64
+	ReadOperationsPerSec  uint64
+	WriteBytesPersec      uint64
+	WriteOperationsPerSec uint64
+}
+
+func (c *HyperVCollector) collectVmStorage(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+	var dst []Win32_PerfRawData_Counters_HyperVVirtualStorageDevice
+	if err := wmi.Query(wmi.CreateQuery(&dst, ""), &dst); err != nil {
+		return nil, err
+	}
+
+	for _, obj := range dst {
+		if strings.Contains(obj.Name, "_Total") {
+			continue
+		}
+
+		ch <- prometheus.MustNewConstMetric(
+			c.VMStorageErrorCount,
+			prometheus.CounterValue,
+			float64(obj.ErrorCount),
+			obj.Name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.VMStorageQueueLength,
+			prometheus.CounterValue,
+			float64(obj.QueueLength),
+			obj.Name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.VMStorageReadBytes,
+			prometheus.CounterValue,
+			float64(obj.ReadBytesPersec),
+			obj.Name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.VMStorageReadOperations,
+			prometheus.CounterValue,
+			float64(obj.ReadOperationsPerSec),
+			obj.Name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.VMStorageWriteBytes,
+			prometheus.CounterValue,
+			float64(obj.WriteBytesPersec),
+			obj.Name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.VMStorageWriteOperations,
+			prometheus.CounterValue,
+			float64(obj.WriteOperationsPerSec),
+			obj.Name,
+		)
+	}
+
+	return nil, nil
+}
+
+// Win32_PerfRawData_NvspNicStats_HyperVVirtualNetworkAdapter ...
+type Win32_PerfRawData_NvspNicStats_HyperVVirtualNetworkAdapter struct {
+	Name                         string
+	BytesReceivedPersec          uint64
+	BytesSentPersec              uint64
+	DroppedPacketsIncomingPersec uint64
+	DroppedPacketsOutgoingPersec uint64
+	PacketsReceivedPersec        uint64
+	PacketsSentPersec            uint64
+}
+
+func (c *HyperVCollector) collectVmNetwork(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+	var dst []Win32_PerfRawData_NvspNicStats_HyperVVirtualNetworkAdapter
+	if err := wmi.Query(wmi.CreateQuery(&dst, ""), &dst); err != nil {
+		return nil, err
+	}
+
+	for _, obj := range dst {
+		if strings.Contains(obj.Name, "_Total") {
+			continue
+		}
+
+		ch <- prometheus.MustNewConstMetric(
+			c.VMNetworkBytesReceived,
+			prometheus.CounterValue,
+			float64(obj.BytesReceivedPersec),
+			obj.Name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.VMNetworkBytesSent,
+			prometheus.CounterValue,
+			float64(obj.BytesSentPersec),
+			obj.Name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.VMNetworkDroppedPacketsIncoming,
+			prometheus.CounterValue,
+			float64(obj.DroppedPacketsIncomingPersec),
+			obj.Name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.VMNetworkDroppedPacketsOutgoing,
+			prometheus.CounterValue,
+			float64(obj.DroppedPacketsOutgoingPersec),
+			obj.Name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.VMNetworkPacketsReceived,
+			prometheus.CounterValue,
+			float64(obj.PacketsReceivedPersec),
+			obj.Name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.VMNetworkPacketsSent,
+			prometheus.CounterValue,
+			float64(obj.PacketsSentPersec),
+			obj.Name,
+		)
 	}
 
 	return nil, nil
