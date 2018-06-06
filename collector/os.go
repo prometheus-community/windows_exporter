@@ -137,7 +137,8 @@ type Win32_OperatingSystem struct {
 
 func (c *OSCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_OperatingSystem
-	if err := wmi.Query(queryAll(&dst), &dst); err != nil {
+	q := queryAll(&dst)
+	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
 	}
 
