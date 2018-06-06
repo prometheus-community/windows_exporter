@@ -612,7 +612,7 @@ type Win32_PerfRawData_DirectoryServices_DirectoryServices struct {
 
 func (c *ADCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_PerfRawData_DirectoryServices_DirectoryServices
-	q := wmi.CreateQuery(&dst, "")
+	q := queryAll(&dst)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
 	}

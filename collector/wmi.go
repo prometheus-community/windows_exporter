@@ -3,9 +3,9 @@ package collector
 import (
 	"bytes"
 	"reflect"
-	"strings"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/common/log"
 )
 
 // ...
@@ -25,29 +25,57 @@ type Collector interface {
 	Collect(ch chan<- prometheus.Metric) (err error)
 }
 
-// This is adapted from StackExchange/wmi/wmi.go, and lets us change the class
-// name being queried for:
-// CreateQuery returns a WQL query string that queries all columns of src. where
-// is an optional string that is appended to the query, to be used with WHERE
-// clauses. In such a case, the "WHERE" string should appear at the beginning.
-func createQuery(src interface{}, class, where string) string {
-	var b bytes.Buffer
-	b.WriteString("SELECT ")
+func className(src interface{}) string {
 	s := reflect.Indirect(reflect.ValueOf(src))
 	t := s.Type()
 	if s.Kind() == reflect.Slice {
 		t = t.Elem()
 	}
-	if t.Kind() != reflect.Struct {
-		return ""
-	}
-	var fields []string
-	for i := 0; i < t.NumField(); i++ {
-		fields = append(fields, t.Field(i).Name)
-	}
-	b.WriteString(strings.Join(fields, ", "))
-	b.WriteString(" FROM ")
+	return t.Name()
+}
+
+func queryAll(src interface{}) string {
+	var b bytes.Buffer
+	b.WriteString("SELECT * FROM ")
+	b.WriteString(className(src))
+
+	log.Debugf("Generated WMI query %s", b.String())
+	return b.String()
+}
+
+func queryAllForClass(src interface{}, class string) string {
+	var b bytes.Buffer
+	b.WriteString("SELECT * FROM ")
 	b.WriteString(class)
-	b.WriteString(" " + where)
+
+	log.Debugf("Generated WMI query %s", b.String())
+	return b.String()
+}
+
+func queryAllWhere(src interface{}, where string) string {
+	var b bytes.Buffer
+	b.WriteString("SELECT * FROM ")
+	b.WriteString(className(src))
+
+	if where != "" {
+		b.WriteString(" WHERE ")
+		b.WriteString(where)
+	}
+
+	log.Debugf("Generated WMI query %s", b.String())
+	return b.String()
+}
+
+func queryAllForClassWhere(src interface{}, class string, where string) string {
+	var b bytes.Buffer
+	b.WriteString("SELECT * FROM ")
+	b.WriteString(class)
+
+	if where != "" {
+		b.WriteString(" WHERE ")
+		b.WriteString(where)
+	}
+
+	log.Debugf("Generated WMI query %s", b.String())
 	return b.String()
 }

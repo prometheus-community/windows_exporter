@@ -119,7 +119,7 @@ type Win32_PerfRawData_NETFramework_NETCLRLoading struct {
 
 func (c *NETFramework_NETCLRLoadingCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_PerfRawData_NETFramework_NETCLRLoading
-	q := wmi.CreateQuery(&dst, "")
+	q := queryAll(&dst)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
 	}

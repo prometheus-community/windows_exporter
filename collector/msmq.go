@@ -3,7 +3,6 @@
 package collector
 
 import (
-	"bytes"
 	"strings"
 
 	"github.com/StackExchange/wmi"
@@ -34,10 +33,7 @@ type Win32_PerfRawData_MSMQ_MSMQQueueCollector struct {
 func NewMSMQCollector() (Collector, error) {
 	const subsystem = "msmq"
 
-	var wc bytes.Buffer
 	if *msmqWhereClause != "" {
-		wc.WriteString("WHERE ")
-		wc.WriteString(*msmqWhereClause)
 		log.Warn("No where-clause specified for msmq collector. This will generate a very large number of metrics!")
 	}
 
@@ -66,7 +62,7 @@ func NewMSMQCollector() (Collector, error) {
 			[]string{"name"},
 			nil,
 		),
-		queryWhereClause: wc.String(),
+		queryWhereClause: *msmqWhereClause,
 	}, nil
 }
 
@@ -91,7 +87,7 @@ type Win32_PerfRawData_MSMQ_MSMQQueue struct {
 
 func (c *Win32_PerfRawData_MSMQ_MSMQQueueCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_PerfRawData_MSMQ_MSMQQueue
-	q := wmi.CreateQuery(&dst, c.queryWhereClause)
+	q := queryAllWhere(&dst, c.queryWhereClause)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
 	}

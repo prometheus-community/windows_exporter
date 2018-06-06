@@ -90,7 +90,8 @@ type Win32_PerfRawData_PerfOS_System struct {
 
 func (c *SystemCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_PerfRawData_PerfOS_System
-	if err := wmi.Query(wmi.CreateQuery(&dst, ""), &dst); err != nil {
+	q := queryAll(&dst)
+	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
 	}
 

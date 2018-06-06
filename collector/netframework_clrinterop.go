@@ -66,7 +66,7 @@ type Win32_PerfRawData_NETFramework_NETCLRInterop struct {
 
 func (c *NETFramework_NETCLRInteropCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_PerfRawData_NETFramework_NETCLRInterop
-	q := wmi.CreateQuery(&dst, "")
+	q := queryAll(&dst)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
 	}

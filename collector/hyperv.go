@@ -95,7 +95,7 @@ type HyperVCollector struct {
 
 	// Win32_PerfRawData_Counters_HyperVVirtualStorageDevice
 	VMStorageErrorCount      *prometheus.Desc
-	VMStorageQueueLength  	 *prometheus.Desc
+	VMStorageQueueLength     *prometheus.Desc
 	VMStorageReadBytes       *prometheus.Desc
 	VMStorageReadOperations  *prometheus.Desc
 	VMStorageWriteBytes      *prometheus.Desc
@@ -657,7 +657,8 @@ type Win32_PerfRawData_VmmsVirtualMachineStats_HyperVVirtualMachineHealthSummary
 
 func (c *HyperVCollector) collectVmHealth(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_PerfRawData_VmmsVirtualMachineStats_HyperVVirtualMachineHealthSummary
-	if err := wmi.Query(wmi.CreateQuery(&dst, ""), &dst); err != nil {
+	q := queryAll(&dst)
+	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
 	}
 
@@ -689,7 +690,8 @@ type Win32_PerfRawData_VidPerfProvider_HyperVVMVidPartition struct {
 
 func (c *HyperVCollector) collectVmVid(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_PerfRawData_VidPerfProvider_HyperVVMVidPartition
-	if err := wmi.Query(wmi.CreateQuery(&dst, ""), &dst); err != nil {
+	q := queryAll(&dst)
+	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
 	}
 
@@ -752,7 +754,8 @@ type Win32_PerfRawData_HvStats_HyperVHypervisorRootPartition struct {
 
 func (c *HyperVCollector) collectVmHv(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_PerfRawData_HvStats_HyperVHypervisorRootPartition
-	if err := wmi.Query(wmi.CreateQuery(&dst, ""), &dst); err != nil {
+	q := queryAll(&dst)
+	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
 	}
 
@@ -889,7 +892,8 @@ type Win32_PerfRawData_HvStats_HyperVHypervisor struct {
 
 func (c *HyperVCollector) collectVmProcessor(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_PerfRawData_HvStats_HyperVHypervisor
-	if err := wmi.Query(wmi.CreateQuery(&dst, ""), &dst); err != nil {
+	q := queryAll(&dst)
+	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
 	}
 
@@ -923,7 +927,8 @@ type Win32_PerfRawData_HvStats_HyperVHypervisorRootVirtualProcessor struct {
 
 func (c *HyperVCollector) collectHostCpuUsage(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_PerfRawData_HvStats_HyperVHypervisorRootVirtualProcessor
-	if err := wmi.Query(wmi.CreateQuery(&dst, ""), &dst); err != nil {
+	q := queryAll(&dst)
+	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
 	}
 
@@ -983,7 +988,8 @@ type Win32_PerfRawData_HvStats_HyperVHypervisorVirtualProcessor struct {
 
 func (c *HyperVCollector) collectVmCpuUsage(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_PerfRawData_HvStats_HyperVHypervisorVirtualProcessor
-	if err := wmi.Query(wmi.CreateQuery(&dst, ""), &dst); err != nil {
+	q := queryAll(&dst)
+	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
 	}
 
@@ -1060,7 +1066,8 @@ type Win32_PerfRawData_NvspSwitchStats_HyperVVirtualSwitch struct {
 
 func (c *HyperVCollector) collectVmSwitch(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_PerfRawData_NvspSwitchStats_HyperVVirtualSwitch
-	if err := wmi.Query(wmi.CreateQuery(&dst, ""), &dst); err != nil {
+	q := queryAll(&dst)
+	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
 	}
 
@@ -1218,7 +1225,8 @@ type Win32_PerfRawData_EthernetPerfProvider_HyperVLegacyNetworkAdapter struct {
 
 func (c *HyperVCollector) collectVmEthernet(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_PerfRawData_EthernetPerfProvider_HyperVLegacyNetworkAdapter
-	if err := wmi.Query(wmi.CreateQuery(&dst, ""), &dst); err != nil {
+	q := queryAll(&dst)
+	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
 	}
 
@@ -1287,7 +1295,8 @@ type Win32_PerfRawData_Counters_HyperVVirtualStorageDevice struct {
 
 func (c *HyperVCollector) collectVmStorage(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_PerfRawData_Counters_HyperVVirtualStorageDevice
-	if err := wmi.Query(wmi.CreateQuery(&dst, ""), &dst); err != nil {
+	q := queryAll(&dst)
+	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
 	}
 
@@ -1355,7 +1364,8 @@ type Win32_PerfRawData_NvspNicStats_HyperVVirtualNetworkAdapter struct {
 
 func (c *HyperVCollector) collectVmNetwork(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_PerfRawData_NvspNicStats_HyperVVirtualNetworkAdapter
-	if err := wmi.Query(wmi.CreateQuery(&dst, ""), &dst); err != nil {
+	q := queryAll(&dst)
+	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
 	}
 

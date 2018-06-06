@@ -3,7 +3,6 @@
 package collector
 
 import (
-	"bytes"
 	"strconv"
 	"strings"
 
@@ -47,11 +46,7 @@ type ProcessCollector struct {
 func NewProcessCollector() (Collector, error) {
 	const subsystem = "process"
 
-	var wc bytes.Buffer
-	if *processWhereClause != "" {
-		wc.WriteString("WHERE ")
-		wc.WriteString(*processWhereClause)
-	} else {
+	if *processWhereClause == "" {
 		log.Warn("No where-clause specified for process collector. This will generate a very large number of metrics!")
 	}
 
@@ -134,7 +129,7 @@ func NewProcessCollector() (Collector, error) {
 			[]string{"process", "process_id", "creating_process_id"},
 			nil,
 		),
-		queryWhereClause: wc.String(),
+		queryWhereClause: *processWhereClause,
 	}, nil
 }
 
@@ -184,7 +179,7 @@ type Win32_PerfRawData_PerfProc_Process struct {
 
 func (c *ProcessCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_PerfRawData_PerfProc_Process
-	q := wmi.CreateQuery(&dst, c.queryWhereClause)
+	q := queryAllWhere(&dst, c.queryWhereClause)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
 	}

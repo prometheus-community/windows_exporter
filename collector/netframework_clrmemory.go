@@ -151,7 +151,7 @@ type Win32_PerfRawData_NETFramework_NETCLRMemory struct {
 
 func (c *NETFramework_NETCLRMemoryCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_PerfRawData_NETFramework_NETCLRMemory
-	q := wmi.CreateQuery(&dst, "")
+	q := queryAll(&dst)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
 	}

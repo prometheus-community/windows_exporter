@@ -995,7 +995,7 @@ var workerProcessNameExtractor = regexp.MustCompile(`^(\d+)_(.+)$`)
 
 func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_PerfRawData_W3SVC_WebService
-	q := wmi.CreateQuery(&dst, "")
+	q := queryAll(&dst)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
 	}
@@ -1248,7 +1248,7 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 	}
 
 	var dst2 []Win32_PerfRawData_APPPOOLCountersProvider_APPPOOLWAS
-	q2 := wmi.CreateQuery(&dst2, "")
+	q2 := queryAll(&dst2)
 	if err := wmi.Query(q2, &dst2); err != nil {
 		return nil, err
 	}
@@ -1365,7 +1365,7 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 	}
 
 	var dst_worker []Win32_PerfRawData_W3SVCW3WPCounterProvider_W3SVCW3WP
-	q = wmi.CreateQuery(&dst_worker, "")
+	q = queryAll(&dst_worker)
 	if err := wmi.Query(q, &dst_worker); err != nil {
 		return nil, err
 	}
@@ -1647,7 +1647,7 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 
 	if iis_version.major >= 8 {
 		var dst_worker_iis8 []Win32_PerfRawData_W3SVCW3WPCounterProvider_W3SVCW3WP_IIS8
-		q = createQuery(&dst_worker_iis8, "Win32_PerfRawData_W3SVCW3WPCounterProvider_W3SVCW3WP", "")
+		q = queryAllForClass(&dst_worker_iis8, "Win32_PerfRawData_W3SVCW3WPCounterProvider_W3SVCW3WP")
 		if err := wmi.Query(q, &dst_worker_iis8); err != nil {
 			return nil, err
 		}
@@ -1730,7 +1730,7 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 	}
 
 	var dst_cache []Win32_PerfRawData_W3SVC_WebServiceCache
-	q = wmi.CreateQuery(&dst_cache, "")
+	q = queryAll(&dst_cache)
 	if err := wmi.Query(q, &dst_cache); err != nil {
 		return nil, err
 	}
