@@ -74,7 +74,7 @@ type Win32_PerfRawData_NETFramework_NETCLRSecurity struct {
 
 func (c *NETFramework_NETCLRSecurityCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_PerfRawData_NETFramework_NETCLRSecurity
-	q := wmi.CreateQuery(&dst, "")
+	q := queryAll(&dst)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
 	}

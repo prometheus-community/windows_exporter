@@ -197,7 +197,7 @@ type Win32_PerfRawData_vmGuestLib_VCPU struct {
 
 func (c *VmwareCollector) collectMem(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_PerfRawData_vmGuestLib_VMem
-	q := wmi.CreateQuery(&dst, "")
+	q := queryAll(&dst)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
 	}
@@ -283,7 +283,7 @@ func mbToBytes(mb uint64) float64 {
 
 func (c *VmwareCollector) collectCpu(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_PerfRawData_vmGuestLib_VCPU
-	q := wmi.CreateQuery(&dst, "")
+	q := queryAll(&dst)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
 	}

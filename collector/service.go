@@ -3,7 +3,6 @@
 package collector
 
 import (
-	"bytes"
 	"strings"
 
 	"github.com/StackExchange/wmi"
@@ -36,11 +35,7 @@ type serviceCollector struct {
 func NewserviceCollector() (Collector, error) {
 	const subsystem = "service"
 
-	var wc bytes.Buffer
-	if *serviceWhereClause != "" {
-		wc.WriteString("WHERE ")
-		wc.WriteString(*serviceWhereClause)
-	} else {
+	if *serviceWhereClause == "" {
 		log.Warn("No where-clause specified for service collector. This will generate a very large number of metrics!")
 	}
 
@@ -63,7 +58,7 @@ func NewserviceCollector() (Collector, error) {
 			[]string{"name", "status"},
 			nil,
 		),
-		queryWhereClause: wc.String(),
+		queryWhereClause: *serviceWhereClause,
 	}, nil
 }
 
@@ -120,7 +115,7 @@ var (
 
 func (c *serviceCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_Service
-	q := wmi.CreateQuery(&dst, c.queryWhereClause)
+	q := queryAllWhere(&dst, c.queryWhereClause)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
 	}

@@ -161,7 +161,7 @@ type Win32_PerfRawData_PerfDisk_LogicalDisk struct {
 
 func (c *LogicalDiskCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_PerfRawData_PerfDisk_LogicalDisk
-	q := wmi.CreateQuery(&dst, "")
+	q := queryAll(&dst)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
 	}

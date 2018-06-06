@@ -99,7 +99,7 @@ type Win32_PerfRawData_NETFramework_NETCLRLocksAndThreads struct {
 
 func (c *NETFramework_NETCLRLocksAndThreadsCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_PerfRawData_NETFramework_NETCLRLocksAndThreads
-	q := wmi.CreateQuery(&dst, "")
+	q := queryAll(&dst)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
 	}

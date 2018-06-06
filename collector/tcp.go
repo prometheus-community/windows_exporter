@@ -114,7 +114,7 @@ type Win32_PerfRawData_Tcpip_TCPv4 struct {
 func (c *TCPCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_PerfRawData_Tcpip_TCPv4
 
-	q := wmi.CreateQuery(&dst, "")
+	q := queryAll(&dst)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
 	}

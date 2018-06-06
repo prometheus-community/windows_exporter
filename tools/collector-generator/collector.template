@@ -46,7 +46,7 @@ type {{ .Class }} struct {
 }
 func (c *{{ .CollectorName }}Collector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
     var dst []{{ .Class }}
-    q := wmi.CreateQuery(&dst, "")
+    q := queryAll(&dst)
     if err := wmi.Query(q, &dst); err != nil {
         return nil, err
     }

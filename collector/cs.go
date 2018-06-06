@@ -56,7 +56,7 @@ type Win32_ComputerSystem struct {
 
 func (c *CSCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_ComputerSystem
-	if err := wmi.Query(wmi.CreateQuery(&dst, ""), &dst); err != nil {
+	if err := wmi.Query(queryAll(&dst), &dst); err != nil {
 		return nil, err
 	}
 

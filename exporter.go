@@ -47,7 +47,7 @@ var (
 
 	// This can be removed when client_golang exposes this on Windows
 	// (See https://github.com/prometheus/client_golang/issues/376)
-	startTime = float64(time.Now().Unix())
+	startTime     = float64(time.Now().Unix())
 	startTimeDesc = prometheus.NewDesc(
 		"process_start_time_seconds",
 		"Start time of the process since unix epoch in seconds.",
@@ -169,6 +169,7 @@ func initWbem() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	wmi.DefaultClient.AllowMissingFields = true
 	wmi.DefaultClient.SWbemServicesClient = s
 }
 

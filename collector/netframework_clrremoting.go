@@ -89,7 +89,7 @@ type Win32_PerfRawData_NETFramework_NETCLRRemoting struct {
 
 func (c *NETFramework_NETCLRRemotingCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_PerfRawData_NETFramework_NETCLRRemoting
-	q := wmi.CreateQuery(&dst, "")
+	q := queryAll(&dst)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
 	}
