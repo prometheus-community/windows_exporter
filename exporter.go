@@ -1,11 +1,9 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"sort"
 	"strings"
 	"sync"
@@ -19,6 +17,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/log"
 	"github.com/prometheus/common/version"
+	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 // WmiCollector implements the prometheus.Collector interface.
@@ -27,7 +26,7 @@ type WmiCollector struct {
 }
 
 const (
-	defaultCollectors            = "cpu,cs,logical_disk,net,os,service,system"
+	defaultCollectors            = "cpu,cs,logical_disk,net,os,service,system,textfile"
 	defaultCollectorsPlaceholder = "[defaults]"
 	serviceName                  = "wmi_exporter"
 )
@@ -43,6 +42,16 @@ var (
 		prometheus.BuildFQName(collector.Namespace, "exporter", "collector_success"),
 		"wmi_exporter: Whether the collector was successful.",
 		[]string{"collector"},
+		nil,
+	)
+
+	// This can be removed when client_golang exposes this on Windows
+	// (See https://github.com/prometheus/client_golang/issues/376)
+	startTime     = float64(time.Now().Unix())
+	startTimeDesc = prometheus.NewDesc(
+		"process_start_time_seconds",
+		"Start time of the process since unix epoch in seconds.",
+		nil,
 		nil,
 	)
 )
@@ -66,6 +75,12 @@ func (coll WmiCollector) Collect(ch chan<- prometheus.Metric) {
 			wg.Done()
 		}(name, c)
 	}
+
+	ch <- prometheus.MustNewConstMetric(
+		startTimeDesc,
+		prometheus.CounterValue,
+		startTime,
+	)
 	wg.Wait()
 }
 
@@ -87,10 +102,10 @@ func execute(name string, c collector.Collector, ch chan<- prometheus.Metric) {
 	var success float64
 
 	if err != nil {
-		log.Errorf("ERROR: %s collector failed after %fs: %s", name, duration.Seconds(), err)
+		log.Errorf("collector %s failed after %fs: %s", name, duration.Seconds(), err)
 		success = 0
 	} else {
-		log.Debugf("OK: %s collector succeeded after %fs.", name, duration.Seconds())
+		log.Debugf("collector %s succeeded after %fs.", name, duration.Seconds())
 		success = 1
 	}
 	ch <- prometheus.MustNewConstMetric(
@@ -117,7 +132,7 @@ func expandEnabledCollectors(enabled string) []string {
 		}
 	}
 	result := make([]string, 0, len(unique))
-	for s, _ := range unique {
+	for s := range unique {
 		result = append(result, s)
 	}
 	return result
@@ -154,31 +169,34 @@ func initWbem() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	wmi.DefaultClient.AllowMissingFields = true
 	wmi.DefaultClient.SWbemServicesClient = s
-}
-
-func usage() {
-	fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
-	flag.PrintDefaults()
-	fmt.Fprintf(os.Stderr, "\nNote: If executing from Powershell, the flags need to quoted. For example:\n%s\n",
-		"\twmi_exporter \"-collectors.enabled\" iis")
 }
 
 func main() {
 	var (
-		showVersion       = flag.Bool("version", false, "Print version information.")
-		listenAddress     = flag.String("telemetry.addr", ":9182", "host:port for WMI exporter.")
-		metricsPath       = flag.String("telemetry.path", "/metrics", "URL path for surfacing collected metrics.")
-		enabledCollectors = flag.String("collectors.enabled", filterAvailableCollectors(defaultCollectors), "Comma-separated list of collectors to use. Use '[defaults]' as a placeholder for all the collectors enabled by default")
-		printCollectors   = flag.Bool("collectors.print", false, "If true, print available collectors and exit.")
+		listenAddress = kingpin.Flag(
+			"telemetry.addr",
+			"host:port for WMI exporter.",
+		).Default(":9182").String()
+		metricsPath = kingpin.Flag(
+			"telemetry.path",
+			"URL path for surfacing collected metrics.",
+		).Default("/metrics").String()
+		enabledCollectors = kingpin.Flag(
+			"collectors.enabled",
+			"Comma-separated list of collectors to use. Use '[default]' as a placeholder for all the collectors enabled by default.").
+			Default(filterAvailableCollectors(defaultCollectors)).String()
+		printCollectors = kingpin.Flag(
+			"collectors.print",
+			"If true, print available collectors and exit.",
+		).Bool()
 	)
-	flag.Usage = usage
-	flag.Parse()
 
-	if *showVersion {
-		fmt.Fprintln(os.Stdout, version.Print("wmi_exporter"))
-		os.Exit(0)
-	}
+	log.AddFlags(kingpin.CommandLine)
+	kingpin.Version(version.Print("wmi_exporter"))
+	kingpin.HelpFlag.Short('h')
+	kingpin.Parse()
 
 	if *printCollectors {
 		collectorNames := make(sort.StringSlice, 0, len(collector.Factories))

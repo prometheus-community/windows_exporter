@@ -3,10 +3,9 @@
 package collector
 
 import (
-	"log"
-
 	"github.com/StackExchange/wmi"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/common/log"
 )
 
 func init() {
@@ -77,7 +76,7 @@ func NewNETFramework_NETCLRLocksAndThreadsCollector() (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *NETFramework_NETCLRLocksAndThreadsCollector) Collect(ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ch); err != nil {
-		log.Println("[ERROR] failed collecting win32_perfrawdata_netframework_netclrlocksandthreads metrics:", desc, err)
+		log.Error("failed collecting win32_perfrawdata_netframework_netclrlocksandthreads metrics:", desc, err)
 		return err
 	}
 	return nil
@@ -100,7 +99,7 @@ type Win32_PerfRawData_NETFramework_NETCLRLocksAndThreads struct {
 
 func (c *NETFramework_NETCLRLocksAndThreadsCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_PerfRawData_NETFramework_NETCLRLocksAndThreads
-	q := wmi.CreateQuery(&dst, "")
+	q := queryAll(&dst)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
 	}

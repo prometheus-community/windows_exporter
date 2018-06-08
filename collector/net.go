@@ -7,13 +7,13 @@
 package collector
 
 import (
-	"flag"
 	"fmt"
-	"log"
 	"regexp"
 
 	"github.com/StackExchange/wmi"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/common/log"
+	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 func init() {
@@ -21,8 +21,14 @@ func init() {
 }
 
 var (
-	nicWhitelist        = flag.String("collector.net.nic-whitelist", ".+", "Regexp of NIC:s to whitelist. NIC name must both match whitelist and not match blacklist to be included.")
-	nicBlacklist        = flag.String("collector.net.nic-blacklist", "", "Regexp of NIC:s to blacklist. NIC name must both match whitelist and not match blacklist to be included.")
+	nicWhitelist = kingpin.Flag(
+		"collector.net.nic-whitelist",
+		"Regexp of NIC:s to whitelist. NIC name must both match whitelist and not match blacklist to be included.",
+	).Default(".+").String()
+	nicBlacklist = kingpin.Flag(
+		"collector.net.nic-blacklist",
+		"Regexp of NIC:s to blacklist. NIC name must both match whitelist and not match blacklist to be included.",
+	).Default("").String()
 	nicNameToUnderscore = regexp.MustCompile("[^a-zA-Z0-9]")
 )
 
@@ -39,6 +45,7 @@ type NetworkCollector struct {
 	PacketsReceivedTotal     *prometheus.Desc
 	PacketsReceivedUnknown   *prometheus.Desc
 	PacketsSentTotal         *prometheus.Desc
+	CurrentBandwidth         *prometheus.Desc
 
 	nicWhitelistPattern *regexp.Regexp
 	nicBlacklistPattern *regexp.Regexp
@@ -115,6 +122,12 @@ func NewNetworkCollector() (Collector, error) {
 			[]string{"nic"},
 			nil,
 		),
+		CurrentBandwidth: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "current_bandwidth"),
+			"(Network.CurrentBandwidth)",
+			[]string{"nic"},
+			nil,
+		),
 
 		nicWhitelistPattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *nicWhitelist)),
 		nicBlacklistPattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *nicBlacklist)),
@@ -125,7 +138,7 @@ func NewNetworkCollector() (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *NetworkCollector) Collect(ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ch); err != nil {
-		log.Println("[ERROR] failed collecting net metrics:", desc, err)
+		log.Error("failed collecting net metrics:", desc, err)
 		return err
 	}
 	return nil
@@ -150,12 +163,13 @@ type Win32_PerfRawData_Tcpip_NetworkInterface struct {
 	PacketsReceivedPerSec    uint64
 	PacketsReceivedUnknown   uint64
 	PacketsSentPerSec        uint64
+	CurrentBandwidth         uint64
 }
 
 func (c *NetworkCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_PerfRawData_Tcpip_NetworkInterface
 
-	q := wmi.CreateQuery(&dst, "")
+	q := queryAll(&dst)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
 	}
@@ -236,6 +250,12 @@ func (c *NetworkCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Des
 			c.PacketsSentTotal,
 			prometheus.CounterValue,
 			float64(nic.PacketsSentPerSec),
+			name,
+		)
+		ch <- prometheus.MustNewConstMetric(
+			c.CurrentBandwidth,
+			prometheus.CounterValue,
+			float64(nic.CurrentBandwidth),
 			name,
 		)
 	}

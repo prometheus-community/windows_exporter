@@ -4,11 +4,11 @@
 package collector
 
 import (
-	"log"
 	"time"
-	
+
 	"github.com/StackExchange/wmi"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/common/log"
 )
 
 func init() {
@@ -27,8 +27,8 @@ type OSCollector struct {
 	PagingLimitBytes        *prometheus.Desc
 	VirtualMemoryBytes      *prometheus.Desc
 	VisibleMemoryBytes      *prometheus.Desc
-	Time			*prometheus.Desc
-	Timezone		*prometheus.Desc
+	Time                    *prometheus.Desc
+	Timezone                *prometheus.Desc
 }
 
 // NewOSCollector ...
@@ -115,7 +115,7 @@ func NewOSCollector() (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *OSCollector) Collect(ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ch); err != nil {
-		log.Println("[ERROR] failed collecting os metrics:", desc, err)
+		log.Error("failed collecting os metrics:", desc, err)
 		return err
 	}
 	return nil
@@ -132,12 +132,13 @@ type Win32_OperatingSystem struct {
 	SizeStoredInPagingFiles uint64
 	TotalVirtualMemorySize  uint64
 	TotalVisibleMemorySize  uint64
-	LocalDateTime		time.Time
+	LocalDateTime           time.Time
 }
 
 func (c *OSCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_OperatingSystem
-	if err := wmi.Query(wmi.CreateQuery(&dst, ""), &dst); err != nil {
+	q := queryAll(&dst)
+	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
 	}
 
@@ -148,7 +149,7 @@ func (c *OSCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, er
 	)
 
 	time := dst[0].LocalDateTime
-	
+
 	ch <- prometheus.MustNewConstMetric(
 		c.Time,
 		prometheus.GaugeValue,

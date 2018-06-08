@@ -4,10 +4,9 @@
 package collector
 
 import (
-	"log"
-
 	"github.com/StackExchange/wmi"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/common/log"
 )
 
 func init() {
@@ -31,37 +30,37 @@ func NewSystemCollector() (Collector, error) {
 	return &SystemCollector{
 		ContextSwitchesTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "context_switches_total"),
-			"PerfOS_System.ContextSwitchesPersec",
+			"Total number of context switches (WMI source: PerfOS_System.ContextSwitchesPersec)",
 			nil,
 			nil,
 		),
 		ExceptionDispatchesTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "exception_dispatches_total"),
-			"PerfOS_System.ExceptionDispatchesPersec",
+			"Total number of exceptions dispatched (WMI source: PerfOS_System.ExceptionDispatchesPersec)",
 			nil,
 			nil,
 		),
 		ProcessorQueueLength: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "processor_queue_length"),
-			"PerfOS_System.ProcessorQueueLength",
+			"Length of processor queue (WMI source: PerfOS_System.ProcessorQueueLength)",
 			nil,
 			nil,
 		),
 		SystemCallsTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "system_calls_total"),
-			"PerfOS_System.SystemCallsPersec",
+			"Total number of system calls (WMI source: PerfOS_System.SystemCallsPersec)",
 			nil,
 			nil,
 		),
 		SystemUpTime: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "system_up_time"),
-			"SystemUpTime/Frequency_Object",
+			"System boot time (WMI source: PerfOS_System.SystemUpTime)",
 			nil,
 			nil,
 		),
 		Threads: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "threads"),
-			"PerfOS_System.Threads",
+			"Current number of threads (WMI source: PerfOS_System.Threads)",
 			nil,
 			nil,
 		),
@@ -72,7 +71,7 @@ func NewSystemCollector() (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *SystemCollector) Collect(ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ch); err != nil {
-		log.Println("[ERROR] failed collecting system metrics:", desc, err)
+		log.Error("failed collecting system metrics:", desc, err)
 		return err
 	}
 	return nil
@@ -91,18 +90,19 @@ type Win32_PerfRawData_PerfOS_System struct {
 
 func (c *SystemCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_PerfRawData_PerfOS_System
-	if err := wmi.Query(wmi.CreateQuery(&dst, ""), &dst); err != nil {
+	q := queryAll(&dst)
+	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
 	}
 
 	ch <- prometheus.MustNewConstMetric(
 		c.ContextSwitchesTotal,
-		prometheus.GaugeValue,
+		prometheus.CounterValue,
 		float64(dst[0].ContextSwitchesPersec),
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.ExceptionDispatchesTotal,
-		prometheus.GaugeValue,
+		prometheus.CounterValue,
 		float64(dst[0].ExceptionDispatchesPersec),
 	)
 	ch <- prometheus.MustNewConstMetric(
@@ -112,7 +112,7 @@ func (c *SystemCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.SystemCallsTotal,
-		prometheus.GaugeValue,
+		prometheus.CounterValue,
 		float64(dst[0].SystemCallsPersec),
 	)
 	ch <- prometheus.MustNewConstMetric(

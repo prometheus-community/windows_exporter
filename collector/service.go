@@ -3,13 +3,12 @@
 package collector
 
 import (
-	"bytes"
-	"flag"
-	"log"
 	"strings"
 
 	"github.com/StackExchange/wmi"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/common/log"
+	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 func init() {
@@ -17,13 +16,17 @@ func init() {
 }
 
 var (
-	serviceWhereClause = flag.String("collector.service.services-where", "", "WQL 'where' clause to use in WMI metrics query. Limits the response to the services you specify and reduces the size of the response.")
+	serviceWhereClause = kingpin.Flag(
+		"collector.service.services-where",
+		"WQL 'where' clause to use in WMI metrics query. Limits the response to the services you specify and reduces the size of the response.",
+	).Default("").String()
 )
 
 // A serviceCollector is a Prometheus collector for WMI Win32_Service metrics
 type serviceCollector struct {
 	State     *prometheus.Desc
 	StartMode *prometheus.Desc
+	Status    *prometheus.Desc
 
 	queryWhereClause string
 }
@@ -32,12 +35,8 @@ type serviceCollector struct {
 func NewserviceCollector() (Collector, error) {
 	const subsystem = "service"
 
-	var wc bytes.Buffer
-	if *serviceWhereClause != "" {
-		wc.WriteString("WHERE ")
-		wc.WriteString(*serviceWhereClause)
-	} else {
-		log.Println("warning: No where-clause specified for service collector. This will generate a very large number of metrics!")
+	if *serviceWhereClause == "" {
+		log.Warn("No where-clause specified for service collector. This will generate a very large number of metrics!")
 	}
 
 	return &serviceCollector{
@@ -53,7 +52,13 @@ func NewserviceCollector() (Collector, error) {
 			[]string{"name", "start_mode"},
 			nil,
 		),
-		queryWhereClause: wc.String(),
+		Status: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "status"),
+			"The status of the service (Status)",
+			[]string{"name", "status"},
+			nil,
+		),
+		queryWhereClause: *serviceWhereClause,
 	}, nil
 }
 
@@ -61,7 +66,7 @@ func NewserviceCollector() (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *serviceCollector) Collect(ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ch); err != nil {
-		log.Println("[ERROR] failed collecting service metrics:", desc, err)
+		log.Error("failed collecting service metrics:", desc, err)
 		return err
 	}
 	return nil
@@ -70,6 +75,7 @@ func (c *serviceCollector) Collect(ch chan<- prometheus.Metric) error {
 type Win32_Service struct {
 	Name      string
 	State     string
+	Status    string
 	StartMode string
 }
 
@@ -91,11 +97,25 @@ var (
 		"manual",
 		"disabled",
 	}
+	allStatuses = []string{
+		"ok",
+		"error",
+		"degraded",
+		"unknown",
+		"pred fail",
+		"starting",
+		"stopping",
+		"service",
+		"stressed",
+		"nonrecover",
+		"no contact",
+		"lost comm",
+	}
 )
 
 func (c *serviceCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_Service
-	q := wmi.CreateQuery(&dst, c.queryWhereClause)
+	q := queryAllWhere(&dst, c.queryWhereClause)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
 	}
@@ -126,6 +146,20 @@ func (c *serviceCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Des
 				isCurrentStartMode,
 				strings.ToLower(service.Name),
 				startMode,
+			)
+		}
+
+		for _, status := range allStatuses {
+			isCurrentStatus := 0.0
+			if status == strings.ToLower(service.Status) {
+				isCurrentStatus = 1.0
+			}
+			ch <- prometheus.MustNewConstMetric(
+				c.Status,
+				prometheus.GaugeValue,
+				isCurrentStatus,
+				strings.ToLower(service.Name),
+				status,
 			)
 		}
 	}

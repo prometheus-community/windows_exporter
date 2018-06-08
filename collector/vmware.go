@@ -2,10 +2,9 @@
 package collector
 
 import (
-	"log"
-
 	"github.com/StackExchange/wmi"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/common/log"
 )
 
 func init() {
@@ -161,11 +160,11 @@ func NewVmwareCollector() (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *VmwareCollector) Collect(ch chan<- prometheus.Metric) error {
 	if desc, err := c.collectMem(ch); err != nil {
-		log.Println("[ERROR] failed collecting vmware memory metrics:", desc, err)
+		log.Error("failed collecting vmware memory metrics:", desc, err)
 		return err
 	}
 	if desc, err := c.collectCpu(ch); err != nil {
-		log.Println("[ERROR] failed collecting vmware cpu metrics:", desc, err)
+		log.Error("failed collecting vmware cpu metrics:", desc, err)
 		return err
 	}
 	return nil
@@ -198,7 +197,7 @@ type Win32_PerfRawData_vmGuestLib_VCPU struct {
 
 func (c *VmwareCollector) collectMem(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_PerfRawData_vmGuestLib_VMem
-	q := wmi.CreateQuery(&dst, "")
+	q := queryAll(&dst)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
 	}
@@ -284,7 +283,7 @@ func mbToBytes(mb uint64) float64 {
 
 func (c *VmwareCollector) collectCpu(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_PerfRawData_vmGuestLib_VCPU
-	q := wmi.CreateQuery(&dst, "")
+	q := queryAll(&dst)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
 	}

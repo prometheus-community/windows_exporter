@@ -3,10 +3,9 @@
 package collector
 
 import (
-	"log"
-
 	"github.com/StackExchange/wmi"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/common/log"
 )
 
 func init() {
@@ -455,7 +454,7 @@ func NewADCollector() (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *ADCollector) Collect(ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ch); err != nil {
-		log.Println("[ERROR] failed collecting ad metrics:", desc, err)
+		log.Error("failed collecting ad metrics:", desc, err)
 		return err
 	}
 	return nil
@@ -613,7 +612,7 @@ type Win32_PerfRawData_DirectoryServices_DirectoryServices struct {
 
 func (c *ADCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_PerfRawData_DirectoryServices_DirectoryServices
-	q := wmi.CreateQuery(&dst, "")
+	q := queryAll(&dst)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
 	}

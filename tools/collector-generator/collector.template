@@ -2,10 +2,9 @@
 // <add link to documentation here> - {{ .Class }} class
 package collector
 import (
-    "log"
-
     "github.com/StackExchange/wmi"
     "github.com/prometheus/client_golang/prometheus"
+    "github.com/prometheus/common/log"
 )
 func init() {
     Factories["{{ .CollectorName | toLower }}"] = New{{ .CollectorName }}Collector
@@ -34,7 +33,7 @@ func New{{ .CollectorName }}Collector() (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *{{ .CollectorName }}Collector) Collect(ch chan<- prometheus.Metric) error {
     if desc, err := c.collect(ch); err != nil {
-        log.Println("[ERROR] failed collecting {{ .CollectorName | toLower }} metrics:", desc, err)
+        log.Error("failed collecting {{ .CollectorName | toLower }} metrics:", desc, err)
         return err
     }
     return nil
@@ -47,7 +46,7 @@ type {{ .Class }} struct {
 }
 func (c *{{ .CollectorName }}Collector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
     var dst []{{ .Class }}
-    q := wmi.CreateQuery(&dst, "")
+    q := queryAll(&dst)
     if err := wmi.Query(q, &dst); err != nil {
         return nil, err
     }

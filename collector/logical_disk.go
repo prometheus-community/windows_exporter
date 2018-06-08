@@ -5,13 +5,13 @@
 package collector
 
 import (
-	"flag"
 	"fmt"
-	"log"
 	"regexp"
 
 	"github.com/StackExchange/wmi"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/common/log"
+	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 func init() {
@@ -19,8 +19,14 @@ func init() {
 }
 
 var (
-	volumeWhitelist = flag.String("collector.logical_disk.volume-whitelist", ".+", "Regexp of volumes to whitelist. Volume name must both match whitelist and not match blacklist to be included.")
-	volumeBlacklist = flag.String("collector.logical_disk.volume-blacklist", "", "Regexp of volumes to blacklist. Volume name must both match whitelist and not match blacklist to be included.")
+	volumeWhitelist = kingpin.Flag(
+		"collector.logical_disk.volume-whitelist",
+		"Regexp of volumes to whitelist. Volume name must both match whitelist and not match blacklist to be included.",
+	).Default(".+").String()
+	volumeBlacklist = kingpin.Flag(
+		"collector.logical_disk.volume-blacklist",
+		"Regexp of volumes to blacklist. Volume name must both match whitelist and not match blacklist to be included.",
+	).Default("").String()
 )
 
 // A LogicalDiskCollector is a Prometheus collector for WMI Win32_PerfRawData_PerfDisk_LogicalDisk metrics
@@ -132,7 +138,7 @@ func NewLogicalDiskCollector() (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *LogicalDiskCollector) Collect(ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ch); err != nil {
-		log.Println("[ERROR] failed collecting logical_disk metrics:", desc, err)
+		log.Error("failed collecting logical_disk metrics:", desc, err)
 		return err
 	}
 	return nil
@@ -155,7 +161,7 @@ type Win32_PerfRawData_PerfDisk_LogicalDisk struct {
 
 func (c *LogicalDiskCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_PerfRawData_PerfDisk_LogicalDisk
-	q := wmi.CreateQuery(&dst, "")
+	q := queryAll(&dst)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
 	}

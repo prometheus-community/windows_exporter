@@ -3,14 +3,13 @@
 package collector
 
 import (
-	"bytes"
-	"flag"
-	"log"
 	"strconv"
 	"strings"
 
 	"github.com/StackExchange/wmi"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/common/log"
+	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 func init() {
@@ -18,7 +17,10 @@ func init() {
 }
 
 var (
-	processWhereClause = flag.String("collector.process.processes-where", "", "WQL 'where' clause to use in WMI metrics query. Limits the response to the processes you specify and reduces the size of the response.")
+	processWhereClause = kingpin.Flag(
+		"collector.process.processes-where",
+		"WQL 'where' clause to use in WMI metrics query. Limits the response to the processes you specify and reduces the size of the response.",
+	).Default("").String()
 )
 
 // A ProcessCollector is a Prometheus collector for WMI Win32_PerfRawData_PerfProc_Process metrics
@@ -44,12 +46,8 @@ type ProcessCollector struct {
 func NewProcessCollector() (Collector, error) {
 	const subsystem = "process"
 
-	var wc bytes.Buffer
-	if *processWhereClause != "" {
-		wc.WriteString("WHERE ")
-		wc.WriteString(*processWhereClause)
-	} else {
-		log.Println("warning: No where-clause specified for process collector. This will generate a very large number of metrics!")
+	if *processWhereClause == "" {
+		log.Warn("No where-clause specified for process collector. This will generate a very large number of metrics!")
 	}
 
 	return &ProcessCollector{
@@ -131,7 +129,7 @@ func NewProcessCollector() (Collector, error) {
 			[]string{"process", "process_id", "creating_process_id"},
 			nil,
 		),
-		queryWhereClause: wc.String(),
+		queryWhereClause: *processWhereClause,
 	}, nil
 }
 
@@ -139,7 +137,7 @@ func NewProcessCollector() (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *ProcessCollector) Collect(ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ch); err != nil {
-		log.Println("[ERROR] failed collecting process metrics:", desc, err)
+		log.Error("failed collecting process metrics:", desc, err)
 		return err
 	}
 	return nil
@@ -181,7 +179,7 @@ type Win32_PerfRawData_PerfProc_Process struct {
 
 func (c *ProcessCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_PerfRawData_PerfProc_Process
-	q := wmi.CreateQuery(&dst, c.queryWhereClause)
+	q := queryAllWhere(&dst, c.queryWhereClause)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
 	}

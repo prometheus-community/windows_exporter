@@ -4,10 +4,9 @@
 package collector
 
 import (
-	"log"
-
 	"github.com/StackExchange/wmi"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/common/log"
 )
 
 func init() {
@@ -44,7 +43,7 @@ func NewCSCollector() (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *CSCollector) Collect(ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ch); err != nil {
-		log.Println("[ERROR] failed collecting cs metrics:", desc, err)
+		log.Error("failed collecting cs metrics:", desc, err)
 		return err
 	}
 	return nil
@@ -57,7 +56,8 @@ type Win32_ComputerSystem struct {
 
 func (c *CSCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_ComputerSystem
-	if err := wmi.Query(wmi.CreateQuery(&dst, ""), &dst); err != nil {
+	q := queryAll(&dst)
+	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
 	}
 

@@ -7,15 +7,15 @@
 package collector
 
 import (
-	"flag"
 	"fmt"
-	"log"
 	"regexp"
 
 	"golang.org/x/sys/windows/registry"
 
 	"github.com/StackExchange/wmi"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/common/log"
+	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 func init() {
@@ -31,23 +31,23 @@ type simple_version struct {
 func getIISVersion() simple_version {
 	k, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\Microsoft\InetStp\`, registry.QUERY_VALUE)
 	if err != nil {
-		log.Println("warning: Couldn't open registry to determine IIS version:", err)
+		log.Warn("Couldn't open registry to determine IIS version:", err)
 		return simple_version{}
 	}
 	defer k.Close()
 
 	major, _, err := k.GetIntegerValue("MajorVersion")
 	if err != nil {
-		log.Println("warning: Couldn't open registry to determine IIS version:", err)
+		log.Warn("Couldn't open registry to determine IIS version:", err)
 		return simple_version{}
 	}
 	minor, _, err := k.GetIntegerValue("MinorVersion")
 	if err != nil {
-		log.Println("warning: Couldn't open registry to determine IIS version:", err)
+		log.Warn("Couldn't open registry to determine IIS version:", err)
 		return simple_version{}
 	}
 
-	log.Printf("Detected IIS %d.%d\n", major, minor)
+	log.Debugf("Detected IIS %d.%d\n", major, minor)
 
 	return simple_version{
 		major: major,
@@ -56,10 +56,10 @@ func getIISVersion() simple_version {
 }
 
 var (
-	siteWhitelist = flag.String("collector.iis.site-whitelist", ".+", "Regexp of sites to whitelist. Site name must both match whitelist and not match blacklist to be included.")
-	siteBlacklist = flag.String("collector.iis.site-blacklist", "", "Regexp of sites to blacklist. Site name must both match whitelist and not match blacklist to be included.")
-	appWhitelist  = flag.String("collector.iis.app-whitelist", ".+", "Regexp of apps to whitelist. App name must both match whitelist and not match blacklist to be included.")
-	appBlacklist  = flag.String("collector.iis.app-blacklist", "", "Regexp of apps to blacklist. App name must both match whitelist and not match blacklist to be included.")
+	siteWhitelist = kingpin.Flag("collector.iis.site-whitelist", "Regexp of sites to whitelist. Site name must both match whitelist and not match blacklist to be included.").Default(".+").String()
+	siteBlacklist = kingpin.Flag("collector.iis.site-blacklist", "Regexp of sites to blacklist. Site name must both match whitelist and not match blacklist to be included.").String()
+	appWhitelist  = kingpin.Flag("collector.iis.app-whitelist", "Regexp of apps to whitelist. App name must both match whitelist and not match blacklist to be included.").Default(".+").String()
+	appBlacklist  = kingpin.Flag("collector.iis.app-blacklist", "Regexp of apps to blacklist. App name must both match whitelist and not match blacklist to be included.").String()
 
 	iis_version = simple_version{}
 )
@@ -815,7 +815,7 @@ func NewIISCollector() (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *IISCollector) Collect(ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ch); err != nil {
-		log.Println("[ERROR] failed collecting iis metrics:", desc, err)
+		log.Error("failed collecting iis metrics:", desc, err)
 		return err
 	}
 	return nil
@@ -995,7 +995,7 @@ var workerProcessNameExtractor = regexp.MustCompile(`^(\d+)_(.+)$`)
 
 func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_PerfRawData_W3SVC_WebService
-	q := wmi.CreateQuery(&dst, "")
+	q := queryAll(&dst)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
 	}
@@ -1248,7 +1248,7 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 	}
 
 	var dst2 []Win32_PerfRawData_APPPOOLCountersProvider_APPPOOLWAS
-	q2 := wmi.CreateQuery(&dst2, "")
+	q2 := queryAll(&dst2)
 	if err := wmi.Query(q2, &dst2); err != nil {
 		return nil, err
 	}
@@ -1365,7 +1365,7 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 	}
 
 	var dst_worker []Win32_PerfRawData_W3SVCW3WPCounterProvider_W3SVCW3WP
-	q = wmi.CreateQuery(&dst_worker, "")
+	q = queryAll(&dst_worker)
 	if err := wmi.Query(q, &dst_worker); err != nil {
 		return nil, err
 	}
@@ -1647,7 +1647,7 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 
 	if iis_version.major >= 8 {
 		var dst_worker_iis8 []Win32_PerfRawData_W3SVCW3WPCounterProvider_W3SVCW3WP_IIS8
-		q = createQuery(&dst_worker_iis8, "Win32_PerfRawData_W3SVCW3WPCounterProvider_W3SVCW3WP", "")
+		q = queryAllForClass(&dst_worker_iis8, "Win32_PerfRawData_W3SVCW3WPCounterProvider_W3SVCW3WP")
 		if err := wmi.Query(q, &dst_worker_iis8); err != nil {
 			return nil, err
 		}
@@ -1730,7 +1730,7 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 	}
 
 	var dst_cache []Win32_PerfRawData_W3SVC_WebServiceCache
-	q = wmi.CreateQuery(&dst_cache, "")
+	q = queryAll(&dst_cache)
 	if err := wmi.Query(q, &dst_cache); err != nil {
 		return nil, err
 	}
