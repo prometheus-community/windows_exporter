@@ -993,15 +993,15 @@ var ApplicationStates = map[uint32]string{
 var workerProcessNameExtractor = regexp.MustCompile(`^(\d+)_(.+)$`)
 
 func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+	if c.iis_version.major < 1 {
+		// if it equals zero we need to go get a version
+		c.iis_version = getIISVersion()
+	}
+
 	var dst []Win32_PerfRawData_W3SVC_WebService
 	q := queryAll(&dst)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
-	}
-
-	if c.iis_version.major == 0 {
-		// if it equals zero we need to go get a version
-		c.iis_version = getIISVersion()
 	}
 
 	for _, site := range dst {
