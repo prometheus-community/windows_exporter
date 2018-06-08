@@ -20,7 +20,6 @@ import (
 
 func init() {
 	Factories["iis"] = NewIISCollector
-	iis_version = getIISVersion()
 }
 
 type simple_version struct {
@@ -30,11 +29,11 @@ type simple_version struct {
 
 func getIISVersion() simple_version {
 	k, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\Microsoft\InetStp\`, registry.QUERY_VALUE)
+	defer k.Close()
 	if err != nil {
 		log.Warn("Couldn't open registry to determine IIS version:", err)
 		return simple_version{}
 	}
-	defer k.Close()
 
 	major, _, err := k.GetIntegerValue("MajorVersion")
 	if err != nil {
@@ -60,8 +59,6 @@ var (
 	siteBlacklist = kingpin.Flag("collector.iis.site-blacklist", "Regexp of sites to blacklist. Site name must both match whitelist and not match blacklist to be included.").String()
 	appWhitelist  = kingpin.Flag("collector.iis.app-whitelist", "Regexp of apps to whitelist. App name must both match whitelist and not match blacklist to be included.").Default(".+").String()
 	appBlacklist  = kingpin.Flag("collector.iis.app-blacklist", "Regexp of apps to blacklist. App name must both match whitelist and not match blacklist to be included.").String()
-
-	iis_version = simple_version{}
 )
 
 type IISCollector struct {
@@ -188,6 +185,8 @@ type IISCollector struct {
 
 	appWhitelistPattern *regexp.Regexp
 	appBlacklistPattern *regexp.Regexp
+
+	iis_version simple_version
 }
 
 // NewIISCollector ...
@@ -1000,6 +999,11 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 		return nil, err
 	}
 
+	if c.iis_version.major == 0 {
+		// if it equals zero we need to go get a version
+		c.iis_version = getIISVersion()
+	}
+
 	for _, site := range dst {
 		if site.Name == "_Total" ||
 			c.siteBlacklistPattern.MatchString(site.Name) ||
@@ -1645,7 +1649,7 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 		)
 	}
 
-	if iis_version.major >= 8 {
+	if c.iis_version.major >= 8 {
 		var dst_worker_iis8 []Win32_PerfRawData_W3SVCW3WPCounterProvider_W3SVCW3WP_IIS8
 		q = queryAllForClass(&dst_worker_iis8, "Win32_PerfRawData_W3SVCW3WPCounterProvider_W3SVCW3WP")
 		if err := wmi.Query(q, &dst_worker_iis8); err != nil {
