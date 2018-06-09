@@ -193,7 +193,7 @@ type IISCollector struct {
 func NewIISCollector() (Collector, error) {
 	const subsystem = "iis"
 
-	return &IISCollector{
+	buildIIS := &IISCollector{
 		// Websites
 		// Gauges
 		CurrentAnonymousUsers: prometheus.NewDesc(
@@ -807,7 +807,11 @@ func NewIISCollector() (Collector, error) {
 
 		appWhitelistPattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *siteWhitelist)),
 		appBlacklistPattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *siteBlacklist)),
-	}, nil
+	}
+
+	buildIIS.iis_version = getIISVersion()
+
+	return buildIIS, nil
 }
 
 // Collect sends the metric values for each metric
@@ -993,11 +997,6 @@ var ApplicationStates = map[uint32]string{
 var workerProcessNameExtractor = regexp.MustCompile(`^(\d+)_(.+)$`)
 
 func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
-	if c.iis_version.major < 1 {
-		// if it equals zero we need to go get a version
-		c.iis_version = getIISVersion()
-	}
-
 	var dst []Win32_PerfRawData_W3SVC_WebService
 	q := queryAll(&dst)
 	if err := wmi.Query(q, &dst); err != nil {
