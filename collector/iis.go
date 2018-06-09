@@ -29,11 +29,11 @@ type simple_version struct {
 
 func getIISVersion() simple_version {
 	k, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\Microsoft\InetStp\`, registry.QUERY_VALUE)
-	defer k.Close()
 	if err != nil {
 		log.Warn("Couldn't open registry to determine IIS version:", err)
 		return simple_version{}
 	}
+	defer k.Close()
 
 	major, _, err := k.GetIntegerValue("MajorVersion")
 	if err != nil {
