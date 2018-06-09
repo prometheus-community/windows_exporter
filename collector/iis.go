@@ -192,7 +192,7 @@ type IISCollector struct {
 // NewIISCollector ...
 func NewIISCollector() (Collector, error) {
 	const subsystem = "iis"
-	
+
 	buildIIS := &IISCollector{
 		// Websites
 		// Gauges
@@ -997,7 +997,6 @@ var ApplicationStates = map[uint32]string{
 var workerProcessNameExtractor = regexp.MustCompile(`^(\d+)_(.+)$`)
 
 func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
-
 	var dst []Win32_PerfRawData_W3SVC_WebService
 	q := queryAll(&dst)
 	if err := wmi.Query(q, &dst); err != nil {
