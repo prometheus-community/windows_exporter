@@ -20,7 +20,6 @@ import (
 
 func init() {
 	Factories["iis"] = NewIISCollector
-	iis_version = getIISVersion()
 }
 
 type simple_version struct {
@@ -60,8 +59,6 @@ var (
 	siteBlacklist = kingpin.Flag("collector.iis.site-blacklist", "Regexp of sites to blacklist. Site name must both match whitelist and not match blacklist to be included.").String()
 	appWhitelist  = kingpin.Flag("collector.iis.app-whitelist", "Regexp of apps to whitelist. App name must both match whitelist and not match blacklist to be included.").Default(".+").String()
 	appBlacklist  = kingpin.Flag("collector.iis.app-blacklist", "Regexp of apps to blacklist. App name must both match whitelist and not match blacklist to be included.").String()
-
-	iis_version = simple_version{}
 )
 
 type IISCollector struct {
@@ -188,13 +185,15 @@ type IISCollector struct {
 
 	appWhitelistPattern *regexp.Regexp
 	appBlacklistPattern *regexp.Regexp
+
+	iis_version simple_version
 }
 
 // NewIISCollector ...
 func NewIISCollector() (Collector, error) {
 	const subsystem = "iis"
 
-	return &IISCollector{
+	buildIIS := &IISCollector{
 		// Websites
 		// Gauges
 		CurrentAnonymousUsers: prometheus.NewDesc(
@@ -808,7 +807,11 @@ func NewIISCollector() (Collector, error) {
 
 		appWhitelistPattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *siteWhitelist)),
 		appBlacklistPattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *siteBlacklist)),
-	}, nil
+	}
+
+	buildIIS.iis_version = getIISVersion()
+
+	return buildIIS, nil
 }
 
 // Collect sends the metric values for each metric
@@ -1645,7 +1648,7 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 		)
 	}
 
-	if iis_version.major >= 8 {
+	if c.iis_version.major >= 8 {
 		var dst_worker_iis8 []Win32_PerfRawData_W3SVCW3WPCounterProvider_W3SVCW3WP_IIS8
 		q = queryAllForClass(&dst_worker_iis8, "Win32_PerfRawData_W3SVCW3WPCounterProvider_W3SVCW3WP")
 		if err := wmi.Query(q, &dst_worker_iis8); err != nil {
