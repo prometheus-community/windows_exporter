@@ -177,12 +177,21 @@ type Win32_PerfRawData_PerfProc_Process struct {
 	WorkingSetPrivate       uint64
 }
 
+type WorkerProcess struct {
+	AppPoolName string
+	ProcessId   uint32
+}
+
 func (c *ProcessCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_PerfRawData_PerfProc_Process
 	q := queryAllWhere(&dst, c.queryWhereClause)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
 	}
+
+	var dst_wp []WorkerProcess
+	q_wp := queryAll(&dst_wp)
+	wmi.QueryNamespace(q_wp, &dst_wp, "root\\WebAdministration")
 
 	for _, process := range dst {
 
@@ -193,6 +202,13 @@ func (c *ProcessCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Des
 		processName := strings.Split(process.Name, "#")[0]
 		pid := strconv.FormatUint(uint64(process.IDProcess), 10)
 		cpid := strconv.FormatUint(uint64(process.CreatingProcessID), 10)
+
+		for _, wp := range dst_wp {
+			if wp.ProcessId == process.IDProcess {
+				processName = strings.Join([]string{processName, wp.AppPoolName}, "_")
+				break
+			}
+		}
 
 		ch <- prometheus.MustNewConstMetric(
 			c.StartTime,
