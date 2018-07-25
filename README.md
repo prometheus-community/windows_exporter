@@ -9,15 +9,16 @@ Prometheus exporter for Windows machines, using the WMI (Windows Management Inst
 
 Name     | Description | Enabled by default
 ---------|-------------|--------------------
-ad | [Win32_PerfRawData_DirectoryServices_DirectoryServices](https://msdn.microsoft.com/en-us/library/ms803980.aspx) Active Directory | 
+ad | [Win32_PerfRawData_DirectoryServices_DirectoryServices](https://msdn.microsoft.com/en-us/library/ms803980.aspx) Active Directory |
 cpu | [Win32_PerfRawData_PerfOS_Processor](https://msdn.microsoft.com/en-us/library/aa394317(v=vs.90).aspx) metrics (cpu usage) | &#10003;
 cs | [Win32_ComputerSystem](https://msdn.microsoft.com/en-us/library/aa394102) metrics (system properties, num cpus/total memory) | &#10003;
 dns | [Win32_PerfRawData_DNS_DNS](https://technet.microsoft.com/en-us/library/cc977686.aspx) metrics (DNS Server) |
-hyperv | Performance counters for Hyper-V hosts | 
+hyperv | Performance counters for Hyper-V hosts |
 iis | [Win32_PerfRawData_W3SVC_WebService](https://msdn.microsoft.com/en-us/library/aa394345) IIS metrics |
 logical_disk | [Win32_PerfRawData_PerfDisk_LogicalDisk](https://msdn.microsoft.com/en-us/windows/hardware/aa394307(v=vs.71)) metrics (disk I/O) | &#10003;
 net | [Win32_PerfRawData_Tcpip_NetworkInterface](https://technet.microsoft.com/en-us/security/aa394340(v=vs.80)) metrics (network interface I/O) | &#10003;
-msmq | [Win32_PerfRawData_MSMQ_MSMQQueue](http://wutils.com/wmi/root/cimv2/win32_perfrawdata_msmq_msmqqueue/) metrics (MSMQ/journal count) | 
+msmq | [Win32_PerfRawData_MSMQ_MSMQQueue](http://wutils.com/wmi/root/cimv2/win32_perfrawdata_msmq_msmqqueue/) metrics (MSMQ/journal count) |
+mssql | various [SQL Server Performance Objects](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/use-sql-server-objects#SQLServerPOs) metrics  |
 os | [Win32_OperatingSystem](https://msdn.microsoft.com/en-us/library/aa394239) metrics (memory, processes, users) | &#10003;
 process | [Win32_PerfRawData_PerfProc_Process](https://msdn.microsoft.com/en-us/library/aa394323(v=vs.85).aspx) metrics (per-process stats) |
 service | [Win32_Service](https://msdn.microsoft.com/en-us/library/aa394418(v=vs.85).aspx) metrics (service states) | &#10003;
