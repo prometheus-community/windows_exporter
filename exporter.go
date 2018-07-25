@@ -235,6 +235,7 @@ func main() {
 
 	http.Handle(*metricsPath, promhttp.Handler())
 	http.HandleFunc("/health", healthCheck)
+	http.HandleFunc("/favicon.ico", notFound)
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, *metricsPath, http.StatusMovedPermanently)
 	})
@@ -258,6 +259,10 @@ func main() {
 func healthCheck(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	io.WriteString(w, `{"status":"ok"}`)
+}
+
+func notFound(w http.ResponseWriter, r *http.Request) {
+	http.NotFound(w, r)
 }
 
 func keys(m map[string]collector.Collector) []string {
