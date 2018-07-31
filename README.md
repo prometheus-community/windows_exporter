@@ -18,7 +18,15 @@ iis | [Win32_PerfRawData_W3SVC_WebService](https://msdn.microsoft.com/en-us/libr
 logical_disk | [Win32_PerfRawData_PerfDisk_LogicalDisk](https://msdn.microsoft.com/en-us/windows/hardware/aa394307(v=vs.71)) metrics (disk I/O) | &#10003;
 net | [Win32_PerfRawData_Tcpip_NetworkInterface](https://technet.microsoft.com/en-us/security/aa394340(v=vs.80)) metrics (network interface I/O) | &#10003;
 msmq | [Win32_PerfRawData_MSMQ_MSMQQueue](http://wutils.com/wmi/root/cimv2/win32_perfrawdata_msmq_msmqqueue/) metrics (MSMQ/journal count) |
-mssql | various [SQL Server Performance Objects](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/use-sql-server-objects#SQLServerPOs) metrics  |
+[mssql] | a meta collector that loads the following mssql_* collectors  |
+mssql_availreplica | [Win32_PerfRawData_MSSQLSERVER_SQLServerAvailabilityReplica](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-availability-replica) metrics (SQL Server Availaility Group Replica) |
+mssql_bufman | [Win32_PerfRawData_MSSQLSERVER_SQLServerBufferManager](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-buffer-manager-object) metrics (SQL Server Buffer Manager) |
+mssql_databases | [Win32_PerfRawData_MSSQLSERVER_SQLServerDatabases](  https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-databases-object) metrics (SQL Servers Databases) |
+mssql_dbreplica | [Win32_PerfRawData_MSSQLSERVER_SQLServerDatabaseReplica](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-database-replica) (SQL Server Database Replica) |
+mssql_genstats | [Win32_PerfRawData_MSSQLSERVER_SQLServerGeneralStatistics](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-general-statistics-object) (SQL Server General Statistics) |
+mssql_locks | [Win32_PerfRawData_MSSQLSERVER_SQLServerLocks](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-locks-object) (SQL Server Locks) |
+mssql_memmgr | [Win32_PerfRawData_MSSQLSERVER_SQLServerMemoryManager](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-memory-manager-object) (SQL Server Memory Manager) |
+mssql_sqlstats | [Win32_PerfRawData_MSSQLSERVER_SQLServerSQLStatistics](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-sql-statistics-object) (SQL Server SQL Statistics) |
 os | [Win32_OperatingSystem](https://msdn.microsoft.com/en-us/library/aa394239) metrics (memory, processes, users) | &#10003;
 process | [Win32_PerfRawData_PerfProc_Process](https://msdn.microsoft.com/en-us/library/aa394323(v=vs.85).aspx) metrics (per-process stats) |
 service | [Win32_Service](https://msdn.microsoft.com/en-us/library/aa394418(v=vs.85).aspx) metrics (service states) | &#10003;

@@ -28,6 +28,8 @@ type WmiCollector struct {
 const (
 	defaultCollectors            = "cpu,cs,logical_disk,net,os,service,system,textfile"
 	defaultCollectorsPlaceholder = "[defaults]"
+	mssqlCollectors              = "mssql_availreplica,mssql_bufman,mssql_databases,mssql_dbreplica,mssql_genstats,mssql_locks,mssql_memmgr,mssql_sqlstats"
+	mssqlCollectorPlaceholder    = "[mssql]"
 	serviceName                  = "wmi_exporter"
 )
 
@@ -124,6 +126,7 @@ func execute(name string, c collector.Collector, ch chan<- prometheus.Metric) {
 
 func expandEnabledCollectors(enabled string) []string {
 	expanded := strings.Replace(enabled, defaultCollectorsPlaceholder, defaultCollectors, -1)
+	expanded = strings.Replace(expanded, mssqlCollectorPlaceholder, mssqlCollectors, -1)
 	separated := strings.Split(expanded, ",")
 	unique := map[string]bool{}
 	for _, s := range separated {
