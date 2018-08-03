@@ -997,7 +997,7 @@ func NewMSSQLCollector() (Collector, error) {
 			nil,
 		),
 		Processesblocked: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "genstatss_blocked_processes"),
+			prometheus.BuildFQName(Namespace, subsystem, "genstats_blocked_processes"),
 			"(GeneralStatistics.Processesblocked)",
 			[]string{"instance"},
 			nil,
