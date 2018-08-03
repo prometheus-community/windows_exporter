@@ -52,21 +52,22 @@ type mssqlInstancesType map[string]string
 func getMSSQLInstances() mssqlInstancesType {
 	sqlInstances := make(mssqlInstancesType)
 
-	// in case querying the registry fails, initialize list to the default instance
-	sqlInstances["MSSQLSERVER"] = ""
+	// in case querying the registry fails, return the default instance
+	sqlDefaultInstance := make(mssqlInstancesType)
+	sqlDefaultInstance["MSSQLSERVER"] = ""
 
 	regkey := `Software\Microsoft\Microsoft SQL Server\Instance Names\SQL`
 	k, err := registry.OpenKey(registry.LOCAL_MACHINE, regkey, registry.QUERY_VALUE)
 	if err != nil {
 		log.Warn("Couldn't open registry to determine SQL instances:", err)
-		return sqlInstances
+		return sqlDefaultInstance
 	}
 	defer k.Close()
 
 	instanceNames, err := k.ReadValueNames(0)
 	if err != nil {
 		log.Warn("Can't ReadSubKeyNames %#v", err)
-		return sqlInstances
+		return sqlDefaultInstance
 	}
 
 	for _, instanceName := range instanceNames {
@@ -78,6 +79,18 @@ func getMSSQLInstances() mssqlInstancesType {
 	log.Debugf("Detected MSSQL Instances: %#v\n", sqlInstances)
 
 	return sqlInstances
+}
+
+// mssqlBuildWMIInstanceClass - a helper function to build the correct WMI class name
+// if default instance, class looks like `Win32_PerfRawData_MSSQLSERVER_SQLServerGeneralStatistics`
+// if instance is 'SQLA` class looks like `Win32_PerfRawData_MSSQLSQLA_MSSQLSQLAGeneralStatistics`
+func mssqlBuildWMIInstanceClass(suffix string, instance string) string {
+	instancePart := "MSSQLSERVER_SQLServer"
+	if instance != "MSSQLSERVER" {
+		instancePart = fmt.Sprintf("MSSQL%s_MSSQL%s", instance, instance)
+	}
+
+	return fmt.Sprintf("Win32_PerfRawData_%s%s", instancePart, suffix)
 }
 
 type mssqlCollectorsMap map[string]mssqlCollectorFunc
@@ -1750,7 +1763,7 @@ func (c *MSSQLCollector) collectAccessMethods(ch chan<- prometheus.Metric, sqlIn
 	var dst []win32PerfRawDataSQLServerAccessMethods
 	log.Debugf("mssql_accessmethods collector iterating sql instance %s.", sqlInstance)
 
-	class := fmt.Sprintf("Win32_PerfRawData_%s_SQLServerAccessMethods", sqlInstance)
+	class := mssqlBuildWMIInstanceClass("AccessMethods", sqlInstance)
 	q := queryAllForClass(&dst, class)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
@@ -2079,7 +2092,7 @@ func (c *MSSQLCollector) collectAvailabilityReplica(ch chan<- prometheus.Metric,
 	var dst []win32PerfRawDataSQLServerAvailabilityReplica
 	log.Debugf("mssql_availreplica collector iterating sql instance %s.", sqlInstance)
 
-	class := fmt.Sprintf("Win32_PerfRawData_%s_SQLServerAvailabilityReplica", sqlInstance)
+	class := mssqlBuildWMIInstanceClass("AvailabilityReplica", sqlInstance)
 	q := queryAllForClassWhere(&dst, class, `Name <> '_Total'`)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
@@ -2183,7 +2196,7 @@ func (c *MSSQLCollector) collectBufferManager(ch chan<- prometheus.Metric, sqlIn
 	var dst []win32PerfRawDataSQLServerBufferManager
 	log.Debugf("mssql_bufman collector iterating sql instance %s.", sqlInstance)
 
-	class := fmt.Sprintf("Win32_PerfRawData_%s_SQLServerBufferManager", sqlInstance)
+	class := mssqlBuildWMIInstanceClass("BufferManager", sqlInstance)
 	q := queryAllForClass(&dst, class)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
@@ -2381,7 +2394,7 @@ func (c *MSSQLCollector) collectDatabaseReplica(ch chan<- prometheus.Metric, sql
 	var dst []win32PerfRawDataSQLServerDatabaseReplica
 	log.Debugf("mssql_dbreplica collector iterating sql instance %s.", sqlInstance)
 
-	class := fmt.Sprintf("Win32_PerfRawData_%s_SQLServerDatabaseReplica", sqlInstance)
+	class := mssqlBuildWMIInstanceClass("DatabaseReplica", sqlInstance)
 	q := queryAllForClassWhere(&dst, class, `Name <> '_Total'`)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
@@ -2615,8 +2628,7 @@ func (c *MSSQLCollector) collectDatabases(ch chan<- prometheus.Metric, sqlInstan
 	var dst []win32PerfRawDataSQLServerDatabases
 	log.Debugf("mssql_databases collector iterating sql instance %s.", sqlInstance)
 
-	class := fmt.Sprintf("Win32_PerfRawData_%s_SQLServerDatabases", sqlInstance)
-
+	class := mssqlBuildWMIInstanceClass("Databases", sqlInstance)
 	q := queryAllForClassWhere(&dst, class, `Name <> '_Total'`)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
@@ -2981,9 +2993,8 @@ func (c *MSSQLCollector) collectGeneralStatistics(ch chan<- prometheus.Metric, s
 	var dst []win32PerfRawDataSQLServerGeneralStatistics
 	log.Debugf("mssql_genstats collector iterating sql instance %s.", sqlInstance)
 
-	class := fmt.Sprintf("Win32_PerfRawData_%s_SQLServerGeneralStatistics", sqlInstance)
+	class := mssqlBuildWMIInstanceClass("GeneralStatistics", sqlInstance)
 	q := queryAllForClass(&dst, class)
-
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
 	}
@@ -3176,7 +3187,7 @@ func (c *MSSQLCollector) collectLocks(ch chan<- prometheus.Metric, sqlInstance s
 	var dst []win32PerfRawDataSQLServerLocks
 	log.Debugf("mssql_locks collector iterating sql instance %s.", sqlInstance)
 
-	class := fmt.Sprintf("Win32_PerfRawData_%s_SQLServerLocks", sqlInstance)
+	class := mssqlBuildWMIInstanceClass("Locks", sqlInstance)
 	q := queryAllForClassWhere(&dst, class, `Name <> '_Total'`)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
@@ -3264,7 +3275,7 @@ func (c *MSSQLCollector) collectMemoryManager(ch chan<- prometheus.Metric, sqlIn
 	var dst []win32PerfRawDataSQLServerMemoryManager
 	log.Debugf("mssql_memmgr collector iterating sql instance %s.", sqlInstance)
 
-	class := fmt.Sprintf("Win32_PerfRawData_%s_SQLServerMemoryManager", sqlInstance)
+	class := mssqlBuildWMIInstanceClass("MemoryManager", sqlInstance)
 	q := queryAllForClass(&dst, class)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
@@ -3434,7 +3445,7 @@ func (c *MSSQLCollector) collectSQLStats(ch chan<- prometheus.Metric, sqlInstanc
 	var dst []win32PerfRawDataSQLServerSQLStatistics
 	log.Debugf("mssql_sqlstats collector iterating sql instance %s.", sqlInstance)
 
-	class := fmt.Sprintf("Win32_PerfRawData_%s_SQLServerSQLStatistics", sqlInstance)
+	class := mssqlBuildWMIInstanceClass("SQLStatistics", sqlInstance)
 	q := queryAllForClass(&dst, class)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
