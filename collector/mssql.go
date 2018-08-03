@@ -37,7 +37,7 @@ var (
 	mssqlEnabledCollectors = kingpin.Flag(
 		"collectors.mssql.classes-enabled",
 		"Comma-separated list of mssql WMI classes to use.").
-		Default(mssqlFilterAvailableClassCollectors()).String()
+		Default(mssqlAvailableClassCollectors()).String()
 
 	mssqlPrintCollectors = kingpin.Flag(
 		"collectors.mssql.class-print",
@@ -80,8 +80,22 @@ func getMSSQLInstances() mssqlInstancesType {
 
 type mssqlCollectorsMap map[string]mssqlCollectorFunc
 
-func mssqlFilterAvailableClassCollectors() string {
+func mssqlAvailableClassCollectors() string {
 	return "availreplica,bufman,databases,dbreplica,genstats,locks,memmgr,sqlstats"
+}
+
+func (c *MSSQLCollector) getMSSQLCollectors() mssqlCollectorsMap {
+	mssqlCollectors := make(mssqlCollectorsMap)
+	mssqlCollectors["availreplica"] = c.collectAvailabilityReplica
+	mssqlCollectors["bufman"] = c.collectBufferManager
+	mssqlCollectors["databases"] = c.collectDatabases
+	mssqlCollectors["dbreplica"] = c.collectDatabaseReplica
+	mssqlCollectors["genstats"] = c.collectGeneralStatistics
+	mssqlCollectors["locks"] = c.collectLocks
+	mssqlCollectors["memmgr"] = c.collectMemoryManager
+	mssqlCollectors["sqlstats"] = c.collectSQLStats
+
+	return mssqlCollectors
 }
 
 func mssqlExpandEnabledCollectors(enabled string) []string {
@@ -97,20 +111,6 @@ func mssqlExpandEnabledCollectors(enabled string) []string {
 		result = append(result, s)
 	}
 	return result
-}
-
-func (c *MSSQLCollector) getMSSQLCollectors() mssqlCollectorsMap {
-	mssqlCollectors := make(mssqlCollectorsMap)
-	mssqlCollectors["availreplica"] = c.collectAvailabilityReplica
-	mssqlCollectors["bufman"] = c.collectBufferManager
-	mssqlCollectors["databases"] = c.collectDatabases
-	mssqlCollectors["dbreplica"] = c.collectDatabaseReplica
-	mssqlCollectors["genstats"] = c.collectGeneralStatistics
-	mssqlCollectors["locks"] = c.collectLocks
-	mssqlCollectors["memmgr"] = c.collectMemoryManager
-	mssqlCollectors["sqlstats"] = c.collectSQLStats
-
-	return mssqlCollectors
 }
 
 func init() {
