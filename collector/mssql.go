@@ -1,4 +1,6 @@
 // returns data points from the following classes:
+// - Win32_PerfRawData_MSSQLSERVER_SQLServerAccessMethods
+//   https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-access-methods-object
 // - Win32_PerfRawData_MSSQLSERVER_SQLServerAvailabilityReplica
 //   https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-availability-replica
 // - Win32_PerfRawData_MSSQLSERVER_SQLServerBufferManager
@@ -81,11 +83,12 @@ func getMSSQLInstances() mssqlInstancesType {
 type mssqlCollectorsMap map[string]mssqlCollectorFunc
 
 func mssqlAvailableClassCollectors() string {
-	return "availreplica,bufman,databases,dbreplica,genstats,locks,memmgr,sqlstats"
+	return "accessmethods,availreplica,bufman,databases,dbreplica,genstats,locks,memmgr,sqlstats"
 }
 
 func (c *MSSQLCollector) getMSSQLCollectors() mssqlCollectorsMap {
 	mssqlCollectors := make(mssqlCollectorsMap)
+	mssqlCollectors["accessmethods"] = c.collectAccessMethods
 	mssqlCollectors["availreplica"] = c.collectAvailabilityReplica
 	mssqlCollectors["bufman"] = c.collectBufferManager
 	mssqlCollectors["databases"] = c.collectDatabases
@@ -123,185 +126,229 @@ type MSSQLCollector struct {
 	mssqlScrapeDurationDesc *prometheus.Desc
 	mssqlScrapeSuccessDesc  *prometheus.Desc
 
+	// Win32_PerfRawData_{instance}_SQLServerAccessMethods
+	AccessMethodsAUcleanupbatches             *prometheus.Desc
+	AccessMethodsAUcleanups                   *prometheus.Desc
+	AccessMethodsByreferenceLobCreateCount    *prometheus.Desc
+	AccessMethodsByreferenceLobUseCount       *prometheus.Desc
+	AccessMethodsCountLobReadahead            *prometheus.Desc
+	AccessMethodsCountPullInRow               *prometheus.Desc
+	AccessMethodsCountPushOffRow              *prometheus.Desc
+	AccessMethodsDeferreddroppedAUs           *prometheus.Desc
+	AccessMethodsDeferredDroppedrowsets       *prometheus.Desc
+	AccessMethodsDroppedrowsetcleanups        *prometheus.Desc
+	AccessMethodsDroppedrowsetsskipped        *prometheus.Desc
+	AccessMethodsExtentDeallocations          *prometheus.Desc
+	AccessMethodsExtentsAllocated             *prometheus.Desc
+	AccessMethodsFailedAUcleanupbatches       *prometheus.Desc
+	AccessMethodsFailedleafpagecookie         *prometheus.Desc
+	AccessMethodsFailedtreepagecookie         *prometheus.Desc
+	AccessMethodsForwardedRecords             *prometheus.Desc
+	AccessMethodsFreeSpacePageFetches         *prometheus.Desc
+	AccessMethodsFreeSpaceScans               *prometheus.Desc
+	AccessMethodsFullScans                    *prometheus.Desc
+	AccessMethodsIndexSearches                *prometheus.Desc
+	AccessMethodsInSysXactwaits               *prometheus.Desc
+	AccessMethodsLobHandleCreateCount         *prometheus.Desc
+	AccessMethodsLobHandleDestroyCount        *prometheus.Desc
+	AccessMethodsLobSSProviderCreateCount     *prometheus.Desc
+	AccessMethodsLobSSProviderDestroyCount    *prometheus.Desc
+	AccessMethodsLobSSProviderTruncationCount *prometheus.Desc
+	AccessMethodsMixedpageallocations         *prometheus.Desc
+	AccessMethodsPagecompressionattempts      *prometheus.Desc
+	AccessMethodsPageDeallocations            *prometheus.Desc
+	AccessMethodsPagesAllocated               *prometheus.Desc
+	AccessMethodsPagescompressed              *prometheus.Desc
+	AccessMethodsPageSplits                   *prometheus.Desc
+	AccessMethodsProbeScans                   *prometheus.Desc
+	AccessMethodsRangeScans                   *prometheus.Desc
+	AccessMethodsScanPointRevalidations       *prometheus.Desc
+	AccessMethodsSkippedGhostedRecords        *prometheus.Desc
+	AccessMethodsTableLockEscalations         *prometheus.Desc
+	AccessMethodsUsedleafpagecookie           *prometheus.Desc
+	AccessMethodsUsedtreepagecookie           *prometheus.Desc
+	AccessMethodsWorkfilesCreated             *prometheus.Desc
+	AccessMethodsWorktablesCreated            *prometheus.Desc
+	AccessMethodsWorktablesFromCacheRatio     *prometheus.Desc
+
 	// Win32_PerfRawData_{instance}_SQLServerAvailabilityReplica
-	BytesReceivedfromReplicaPersec *prometheus.Desc
-	BytesSenttoReplicaPersec       *prometheus.Desc
-	BytesSenttoTransportPersec     *prometheus.Desc
-	FlowControlPersec              *prometheus.Desc
-	FlowControlTimemsPersec        *prometheus.Desc
-	ReceivesfromReplicaPersec      *prometheus.Desc
-	ResentMessagesPersec           *prometheus.Desc
-	SendstoReplicaPersec           *prometheus.Desc
-	SendstoTransportPersec         *prometheus.Desc
+	AvailReplicaBytesReceivedfromReplica *prometheus.Desc
+	AvailReplicaBytesSenttoReplica       *prometheus.Desc
+	AvailReplicaBytesSenttoTransport     *prometheus.Desc
+	AvailReplicaFlowControl              *prometheus.Desc
+	AvailReplicaFlowControlTimems        *prometheus.Desc
+	AvailReplicaReceivesfromReplica      *prometheus.Desc
+	AvailReplicaResentMessages           *prometheus.Desc
+	AvailReplicaSendstoReplica           *prometheus.Desc
+	AvailReplicaSendstoTransport         *prometheus.Desc
 
 	// Win32_PerfRawData_{instance}_SQLServerBufferManager
-	BackgroundwriterpagesPersec   *prometheus.Desc
-	Buffercachehitratio           *prometheus.Desc
-	CheckpointpagesPersec         *prometheus.Desc
-	Databasepages                 *prometheus.Desc
-	Extensionallocatedpages       *prometheus.Desc
-	Extensionfreepages            *prometheus.Desc
-	Extensioninuseaspercentage    *prometheus.Desc
-	ExtensionoutstandingIOcounter *prometheus.Desc
-	ExtensionpageevictionsPersec  *prometheus.Desc
-	ExtensionpagereadsPersec      *prometheus.Desc
-	Extensionpageunreferencedtime *prometheus.Desc
-	ExtensionpagewritesPersec     *prometheus.Desc
-	FreeliststallsPersec          *prometheus.Desc
-	IntegralControllerSlope       *prometheus.Desc
-	LazywritesPersec              *prometheus.Desc
-	Pagelifeexpectancy            *prometheus.Desc
-	PagelookupsPersec             *prometheus.Desc
-	PagereadsPersec               *prometheus.Desc
-	PagewritesPersec              *prometheus.Desc
-	ReadaheadpagesPersec          *prometheus.Desc
-	ReadaheadtimePersec           *prometheus.Desc
-	Targetpages                   *prometheus.Desc
+	BufManBackgroundwriterpages         *prometheus.Desc
+	BufManBuffercachehitratio           *prometheus.Desc
+	BufManCheckpointpages               *prometheus.Desc
+	BufManDatabasepages                 *prometheus.Desc
+	BufManExtensionallocatedpages       *prometheus.Desc
+	BufManExtensionfreepages            *prometheus.Desc
+	BufManExtensioninuseaspercentage    *prometheus.Desc
+	BufManExtensionoutstandingIOcounter *prometheus.Desc
+	BufManExtensionpageevictions        *prometheus.Desc
+	BufManExtensionpagereads            *prometheus.Desc
+	BufManExtensionpageunreferencedtime *prometheus.Desc
+	BufManExtensionpagewrites           *prometheus.Desc
+	BufManFreeliststalls                *prometheus.Desc
+	BufManIntegralControllerSlope       *prometheus.Desc
+	BufManLazywrites                    *prometheus.Desc
+	BufManPagelifeexpectancy            *prometheus.Desc
+	BufManPagelookups                   *prometheus.Desc
+	BufManPagereads                     *prometheus.Desc
+	BufManPagewrites                    *prometheus.Desc
+	BufManReadaheadpages                *prometheus.Desc
+	BufManReadaheadtime                 *prometheus.Desc
+	BufManTargetpages                   *prometheus.Desc
 
 	// Win32_PerfRawData_{instance}_SQLServerDatabaseReplica
-	DatabaseFlowControlDelay        *prometheus.Desc
-	DatabaseFlowControlsPersec      *prometheus.Desc
-	FileBytesReceivedPersec         *prometheus.Desc
-	GroupCommitsPerSec              *prometheus.Desc
-	GroupCommitTime                 *prometheus.Desc
-	LogApplyPendingQueue            *prometheus.Desc
-	LogApplyReadyQueue              *prometheus.Desc
-	LogBytesCompressedPersec        *prometheus.Desc
-	LogBytesDecompressedPersec      *prometheus.Desc
-	LogBytesReceivedPersec          *prometheus.Desc
-	LogCompressionCachehitsPersec   *prometheus.Desc
-	LogCompressionCachemissesPersec *prometheus.Desc
-	LogCompressionsPersec           *prometheus.Desc
-	LogDecompressionsPersec         *prometheus.Desc
-	Logremainingforundo             *prometheus.Desc
-	LogSendQueue                    *prometheus.Desc
-	MirroredWriteTransactionsPersec *prometheus.Desc
-	RecoveryQueue                   *prometheus.Desc
-	RedoblockedPersec               *prometheus.Desc
-	RedoBytesRemaining              *prometheus.Desc
-	RedoneBytesPersec               *prometheus.Desc
-	RedonesPersec                   *prometheus.Desc
-	TotalLogrequiringundo           *prometheus.Desc
-	TransactionDelay                *prometheus.Desc
+	DBReplicaDatabaseFlowControlDelay  *prometheus.Desc
+	DBReplicaDatabaseFlowControls      *prometheus.Desc
+	DBReplicaFileBytesReceived         *prometheus.Desc
+	DBReplicaGroupCommits              *prometheus.Desc
+	DBReplicaGroupCommitTime           *prometheus.Desc
+	DBReplicaLogApplyPendingQueue      *prometheus.Desc
+	DBReplicaLogApplyReadyQueue        *prometheus.Desc
+	DBReplicaLogBytesCompressed        *prometheus.Desc
+	DBReplicaLogBytesDecompressed      *prometheus.Desc
+	DBReplicaLogBytesReceived          *prometheus.Desc
+	DBReplicaLogCompressionCachehits   *prometheus.Desc
+	DBReplicaLogCompressionCachemisses *prometheus.Desc
+	DBReplicaLogCompressions           *prometheus.Desc
+	DBReplicaLogDecompressions         *prometheus.Desc
+	DBReplicaLogremainingforundo       *prometheus.Desc
+	DBReplicaLogSendQueue              *prometheus.Desc
+	DBReplicaMirroredWriteTransactions *prometheus.Desc
+	DBReplicaRecoveryQueue             *prometheus.Desc
+	DBReplicaRedoblocked               *prometheus.Desc
+	DBReplicaRedoBytesRemaining        *prometheus.Desc
+	DBReplicaRedoneBytes               *prometheus.Desc
+	DBReplicaRedones                   *prometheus.Desc
+	DBReplicaTotalLogrequiringundo     *prometheus.Desc
+	DBReplicaTransactionDelay          *prometheus.Desc
 
 	// Win32_PerfRawData_{instance}_SQLServerDatabases
-	ActiveTransactions               *prometheus.Desc
-	BackupPerRestoreThroughputPersec *prometheus.Desc
-	BulkCopyRowsPersec               *prometheus.Desc
-	BulkCopyThroughputPersec         *prometheus.Desc
-	Committableentries               *prometheus.Desc
-	DataFilesSizeKB                  *prometheus.Desc
-	DBCCLogicalScanBytesPersec       *prometheus.Desc
-	GroupCommitTimePersec            *prometheus.Desc
-	LogBytesFlushedPersec            *prometheus.Desc
-	LogCacheHitRatio                 *prometheus.Desc
-	LogCacheReadsPersec              *prometheus.Desc
-	LogFilesSizeKB                   *prometheus.Desc
-	LogFilesUsedSizeKB               *prometheus.Desc
-	LogFlushesPersec                 *prometheus.Desc
-	LogFlushWaitsPersec              *prometheus.Desc
-	LogFlushWaitTime                 *prometheus.Desc
-	LogFlushWriteTimems              *prometheus.Desc
-	LogGrowths                       *prometheus.Desc
-	LogPoolCacheMissesPersec         *prometheus.Desc
-	LogPoolDiskReadsPersec           *prometheus.Desc
-	LogPoolHashDeletesPersec         *prometheus.Desc
-	LogPoolHashInsertsPersec         *prometheus.Desc
-	LogPoolInvalidHashEntryPersec    *prometheus.Desc
-	LogPoolLogScanPushesPersec       *prometheus.Desc
-	LogPoolLogWriterPushesPersec     *prometheus.Desc
-	LogPoolPushEmptyFreePoolPersec   *prometheus.Desc
-	LogPoolPushLowMemoryPersec       *prometheus.Desc
-	LogPoolPushNoFreeBufferPersec    *prometheus.Desc
-	LogPoolReqBehindTruncPersec      *prometheus.Desc
-	LogPoolRequestsOldVLFPersec      *prometheus.Desc
-	LogPoolRequestsPersec            *prometheus.Desc
-	LogPoolTotalActiveLogSize        *prometheus.Desc
-	LogPoolTotalSharedPoolSize       *prometheus.Desc
-	LogShrinks                       *prometheus.Desc
-	LogTruncations                   *prometheus.Desc
-	PercentLogUsed                   *prometheus.Desc
-	ReplPendingXacts                 *prometheus.Desc
-	ReplTransRate                    *prometheus.Desc
-	ShrinkDataMovementBytesPersec    *prometheus.Desc
-	TrackedtransactionsPersec        *prometheus.Desc
-	TransactionsPersec               *prometheus.Desc
-	WriteTransactionsPersec          *prometheus.Desc
-	XTPControllerDLCLatencyPerFetch  *prometheus.Desc
-	XTPControllerDLCPeakLatency      *prometheus.Desc
-	XTPControllerLogProcessedPersec  *prometheus.Desc
-	XTPMemoryUsedKB                  *prometheus.Desc
+	DatabasesActiveTransactions              *prometheus.Desc
+	DatabasesBackupPerRestoreThroughput      *prometheus.Desc
+	DatabasesBulkCopyRows                    *prometheus.Desc
+	DatabasesBulkCopyThroughput              *prometheus.Desc
+	DatabasesCommittableentries              *prometheus.Desc
+	DatabasesDataFilesSizeKB                 *prometheus.Desc
+	DatabasesDBCCLogicalScanBytes            *prometheus.Desc
+	DatabasesGroupCommitTime                 *prometheus.Desc
+	DatabasesLogBytesFlushed                 *prometheus.Desc
+	DatabasesLogCacheHitRatio                *prometheus.Desc
+	DatabasesLogCacheReads                   *prometheus.Desc
+	DatabasesLogFilesSizeKB                  *prometheus.Desc
+	DatabasesLogFilesUsedSizeKB              *prometheus.Desc
+	DatabasesLogFlushes                      *prometheus.Desc
+	DatabasesLogFlushWaits                   *prometheus.Desc
+	DatabasesLogFlushWaitTime                *prometheus.Desc
+	DatabasesLogFlushWriteTimems             *prometheus.Desc
+	DatabasesLogGrowths                      *prometheus.Desc
+	DatabasesLogPoolCacheMisses              *prometheus.Desc
+	DatabasesLogPoolDiskReads                *prometheus.Desc
+	DatabasesLogPoolHashDeletes              *prometheus.Desc
+	DatabasesLogPoolHashInserts              *prometheus.Desc
+	DatabasesLogPoolInvalidHashEntry         *prometheus.Desc
+	DatabasesLogPoolLogScanPushes            *prometheus.Desc
+	DatabasesLogPoolLogWriterPushes          *prometheus.Desc
+	DatabasesLogPoolPushEmptyFreePool        *prometheus.Desc
+	DatabasesLogPoolPushLowMemory            *prometheus.Desc
+	DatabasesLogPoolPushNoFreeBuffer         *prometheus.Desc
+	DatabasesLogPoolReqBehindTrunc           *prometheus.Desc
+	DatabasesLogPoolRequestsOldVLF           *prometheus.Desc
+	DatabasesLogPoolRequests                 *prometheus.Desc
+	DatabasesLogPoolTotalActiveLogSize       *prometheus.Desc
+	DatabasesLogPoolTotalSharedPoolSize      *prometheus.Desc
+	DatabasesLogShrinks                      *prometheus.Desc
+	DatabasesLogTruncations                  *prometheus.Desc
+	DatabasesPercentLogUsed                  *prometheus.Desc
+	DatabasesReplPendingXacts                *prometheus.Desc
+	DatabasesReplTransRate                   *prometheus.Desc
+	DatabasesShrinkDataMovementBytes         *prometheus.Desc
+	DatabasesTrackedtransactions             *prometheus.Desc
+	DatabasesTransactions                    *prometheus.Desc
+	DatabasesWriteTransactions               *prometheus.Desc
+	DatabasesXTPControllerDLCLatencyPerFetch *prometheus.Desc
+	DatabasesXTPControllerDLCPeakLatency     *prometheus.Desc
+	DatabasesXTPControllerLogProcessed       *prometheus.Desc
+	DatabasesXTPMemoryUsedKB                 *prometheus.Desc
 
 	// Win32_PerfRawData_{instance}_SQLServerGeneralStatistics
-	ActiveTempTables              *prometheus.Desc
-	ConnectionResetPersec         *prometheus.Desc
-	EventNotificationsDelayedDrop *prometheus.Desc
-	HTTPAuthenticatedRequests     *prometheus.Desc
-	LogicalConnections            *prometheus.Desc
-	LoginsPersec                  *prometheus.Desc
-	LogoutsPersec                 *prometheus.Desc
-	MarsDeadlocks                 *prometheus.Desc
-	Nonatomicyieldrate            *prometheus.Desc
-	Processesblocked              *prometheus.Desc
-	SOAPEmptyRequests             *prometheus.Desc
-	SOAPMethodInvocations         *prometheus.Desc
-	SOAPSessionInitiateRequests   *prometheus.Desc
-	SOAPSessionTerminateRequests  *prometheus.Desc
-	SOAPSQLRequests               *prometheus.Desc
-	SOAPWSDLRequests              *prometheus.Desc
-	SQLTraceIOProviderLockWaits   *prometheus.Desc
-	Tempdbrecoveryunitid          *prometheus.Desc
-	Tempdbrowsetid                *prometheus.Desc
-	TempTablesCreationRate        *prometheus.Desc
-	TempTablesForDestruction      *prometheus.Desc
-	TraceEventNotificationQueue   *prometheus.Desc
-	Transactions                  *prometheus.Desc
-	UserConnections               *prometheus.Desc
+	GenStatsActiveTempTables              *prometheus.Desc
+	GenStatsConnectionReset               *prometheus.Desc
+	GenStatsEventNotificationsDelayedDrop *prometheus.Desc
+	GenStatsHTTPAuthenticatedRequests     *prometheus.Desc
+	GenStatsLogicalConnections            *prometheus.Desc
+	GenStatsLogins                        *prometheus.Desc
+	GenStatsLogouts                       *prometheus.Desc
+	GenStatsMarsDeadlocks                 *prometheus.Desc
+	GenStatsNonatomicyieldrate            *prometheus.Desc
+	GenStatsProcessesblocked              *prometheus.Desc
+	GenStatsSOAPEmptyRequests             *prometheus.Desc
+	GenStatsSOAPMethodInvocations         *prometheus.Desc
+	GenStatsSOAPSessionInitiateRequests   *prometheus.Desc
+	GenStatsSOAPSessionTerminateRequests  *prometheus.Desc
+	GenStatsSOAPSQLRequests               *prometheus.Desc
+	GenStatsSOAPWSDLRequests              *prometheus.Desc
+	GenStatsSQLTraceIOProviderLockWaits   *prometheus.Desc
+	GenStatsTempdbrecoveryunitid          *prometheus.Desc
+	GenStatsTempdbrowsetid                *prometheus.Desc
+	GenStatsTempTablesCreationRate        *prometheus.Desc
+	GenStatsTempTablesForDestruction      *prometheus.Desc
+	GenStatsTraceEventNotificationQueue   *prometheus.Desc
+	GenStatsTransactions                  *prometheus.Desc
+	GenStatsUserConnections               *prometheus.Desc
 
 	// Win32_PerfRawData_{instance}_SQLServerLocks
-	AverageWaitTimems          *prometheus.Desc
-	LockRequestsPersec         *prometheus.Desc
-	LockTimeoutsPersec         *prometheus.Desc
-	LockTimeoutstimeout0Persec *prometheus.Desc
-	LockWaitsPersec            *prometheus.Desc
-	LockWaitTimems             *prometheus.Desc
-	NumberofDeadlocksPersec    *prometheus.Desc
+	LocksAverageWaitTimems    *prometheus.Desc
+	LocksLockRequests         *prometheus.Desc
+	LocksLockTimeouts         *prometheus.Desc
+	LocksLockTimeoutstimeout0 *prometheus.Desc
+	LocksLockWaits            *prometheus.Desc
+	LocksLockWaitTimems       *prometheus.Desc
+	LocksNumberofDeadlocks    *prometheus.Desc
 
 	// Win32_PerfRawData_{instance}_SQLServerMemoryManager
-	ConnectionMemoryKB       *prometheus.Desc
-	DatabaseCacheMemoryKB    *prometheus.Desc
-	Externalbenefitofmemory  *prometheus.Desc
-	FreeMemoryKB             *prometheus.Desc
-	GrantedWorkspaceMemoryKB *prometheus.Desc
-	LockBlocks               *prometheus.Desc
-	LockBlocksAllocated      *prometheus.Desc
-	LockMemoryKB             *prometheus.Desc
-	LockOwnerBlocks          *prometheus.Desc
-	LockOwnerBlocksAllocated *prometheus.Desc
-	LogPoolMemoryKB          *prometheus.Desc
-	MaximumWorkspaceMemoryKB *prometheus.Desc
-	MemoryGrantsOutstanding  *prometheus.Desc
-	MemoryGrantsPending      *prometheus.Desc
-	OptimizerMemoryKB        *prometheus.Desc
-	ReservedServerMemoryKB   *prometheus.Desc
-	SQLCacheMemoryKB         *prometheus.Desc
-	StolenServerMemoryKB     *prometheus.Desc
-	TargetServerMemoryKB     *prometheus.Desc
-	TotalServerMemoryKB      *prometheus.Desc
+	MemMgrConnectionMemoryKB       *prometheus.Desc
+	MemMgrDatabaseCacheMemoryKB    *prometheus.Desc
+	MemMgrExternalbenefitofmemory  *prometheus.Desc
+	MemMgrFreeMemoryKB             *prometheus.Desc
+	MemMgrGrantedWorkspaceMemoryKB *prometheus.Desc
+	MemMgrLockBlocks               *prometheus.Desc
+	MemMgrLockBlocksAllocated      *prometheus.Desc
+	MemMgrLockMemoryKB             *prometheus.Desc
+	MemMgrLockOwnerBlocks          *prometheus.Desc
+	MemMgrLockOwnerBlocksAllocated *prometheus.Desc
+	MemMgrLogPoolMemoryKB          *prometheus.Desc
+	MemMgrMaximumWorkspaceMemoryKB *prometheus.Desc
+	MemMgrMemoryGrantsOutstanding  *prometheus.Desc
+	MemMgrMemoryGrantsPending      *prometheus.Desc
+	MemMgrOptimizerMemoryKB        *prometheus.Desc
+	MemMgrReservedServerMemoryKB   *prometheus.Desc
+	MemMgrSQLCacheMemoryKB         *prometheus.Desc
+	MemMgrStolenServerMemoryKB     *prometheus.Desc
+	MemMgrTargetServerMemoryKB     *prometheus.Desc
+	MemMgrTotalServerMemoryKB      *prometheus.Desc
 
 	// Win32_PerfRawData_{instance}_SQLServerSQLStatistics
-	AutoParamAttemptsPersec       *prometheus.Desc
-	BatchRequestsPersec           *prometheus.Desc
-	FailedAutoParamsPersec        *prometheus.Desc
-	ForcedParameterizationsPersec *prometheus.Desc
-	GuidedplanexecutionsPersec    *prometheus.Desc
-	MisguidedplanexecutionsPersec *prometheus.Desc
-	SafeAutoParamsPersec          *prometheus.Desc
-	SQLAttentionrate              *prometheus.Desc
-	SQLCompilationsPersec         *prometheus.Desc
-	SQLReCompilationsPersec       *prometheus.Desc
-
-	UnsafeAutoParamsPersec *prometheus.Desc
+	SQLStatsAutoParamAttempts       *prometheus.Desc
+	SQLStatsBatchRequests           *prometheus.Desc
+	SQLStatsFailedAutoParams        *prometheus.Desc
+	SQLStatsForcedParameterizations *prometheus.Desc
+	SQLStatsGuidedplanexecutions    *prometheus.Desc
+	SQLStatsMisguidedplanexecutions *prometheus.Desc
+	SQLStatsSafeAutoParams          *prometheus.Desc
+	SQLStatsSQLAttentionrate        *prometheus.Desc
+	SQLStatsSQLCompilations         *prometheus.Desc
+	SQLStatsSQLReCompilations       *prometheus.Desc
+	SQLStatsUnsafeAutoParams        *prometheus.Desc
 
 	mssqlInstances             mssqlInstancesType
 	mssqlCollectors            mssqlCollectorsMap
@@ -327,56 +374,317 @@ func NewMSSQLCollector() (Collector, error) {
 			[]string{"collector", "instance"},
 			nil,
 		),
+
+		// Win32_PerfRawData_{instance}_SQLServerAccessMethods
+		AccessMethodsAUcleanupbatches: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "accessmethods_au_batch_cleanups"),
+			"(AccessMethods.AUcleanupbatches)",
+			[]string{"instance"},
+			nil,
+		),
+		AccessMethodsAUcleanups: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "accessmethods_au_cleanups"),
+			"(AccessMethods.AUcleanups)",
+			[]string{"instance"},
+			nil,
+		),
+		AccessMethodsByreferenceLobCreateCount: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "accessmethods_by_reference_lob_creates"),
+			"(AccessMethods.ByreferenceLobCreateCount)",
+			[]string{"instance"},
+			nil,
+		),
+		AccessMethodsByreferenceLobUseCount: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "accessmethods_by_reference_lob_uses"),
+			"(AccessMethods.ByreferenceLobUseCount)",
+			[]string{"instance"},
+			nil,
+		),
+		AccessMethodsCountLobReadahead: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "accessmethods_lob_read_aheads"),
+			"(AccessMethods.CountLobReadahead)",
+			[]string{"instance"},
+			nil,
+		),
+		AccessMethodsCountPullInRow: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "accessmethods_column_value_pulls"),
+			"(AccessMethods.CountPullInRow)",
+			[]string{"instance"},
+			nil,
+		),
+		AccessMethodsCountPushOffRow: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "accessmethods_column_value_pushes"),
+			"(AccessMethods.CountPushOffRow)",
+			[]string{"instance"},
+			nil,
+		),
+		AccessMethodsDeferreddroppedAUs: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "accessmethods_deferred_dropped_aus"),
+			"(AccessMethods.DeferreddroppedAUs)",
+			[]string{"instance"},
+			nil,
+		),
+		AccessMethodsDeferredDroppedrowsets: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "accessmethods_deferred_dropped_rowsets"),
+			"(AccessMethods.DeferredDroppedrowsets)",
+			[]string{"instance"},
+			nil,
+		),
+		AccessMethodsDroppedrowsetcleanups: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "accessmethods_dropped_rowset_cleanups"),
+			"(AccessMethods.Droppedrowsetcleanups)",
+			[]string{"instance"},
+			nil,
+		),
+		AccessMethodsDroppedrowsetsskipped: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "accessmethods_dropped_rowset_skips"),
+			"(AccessMethods.Droppedrowsetsskipped)",
+			[]string{"instance"},
+			nil,
+		),
+		AccessMethodsExtentDeallocations: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "accessmethods_extent_deallocations"),
+			"(AccessMethods.ExtentDeallocations)",
+			[]string{"instance"},
+			nil,
+		),
+		AccessMethodsExtentsAllocated: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "accessmethods_extent_allocations"),
+			"(AccessMethods.ExtentsAllocated)",
+			[]string{"instance"},
+			nil,
+		),
+		AccessMethodsFailedAUcleanupbatches: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "accessmethods_au_batch_cleanup_failures"),
+			"(AccessMethods.FailedAUcleanupbatches)",
+			[]string{"instance"},
+			nil,
+		),
+		AccessMethodsFailedleafpagecookie: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "accessmethods_leaf_page_cookie_failures"),
+			"(AccessMethods.Failedleafpagecookie)",
+			[]string{"instance"},
+			nil,
+		),
+		AccessMethodsFailedtreepagecookie: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "accessmethods_tree_page_cookie_failures"),
+			"(AccessMethods.Failedtreepagecookie)",
+			[]string{"instance"},
+			nil,
+		),
+		AccessMethodsForwardedRecords: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "accessmethods_forwarded_records"),
+			"(AccessMethods.ForwardedRecords)",
+			[]string{"instance"},
+			nil,
+		),
+		AccessMethodsFreeSpacePageFetches: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "accessmethods_free_space_page_fetches"),
+			"(AccessMethods.FreeSpacePageFetches)",
+			[]string{"instance"},
+			nil,
+		),
+		AccessMethodsFreeSpaceScans: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "accessmethods_free_space_scans"),
+			"(AccessMethods.FreeSpaceScans)",
+			[]string{"instance"},
+			nil,
+		),
+		AccessMethodsFullScans: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "accessmethods_full_scans"),
+			"(AccessMethods.FullScans)",
+			[]string{"instance"},
+			nil,
+		),
+		AccessMethodsIndexSearches: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "accessmethods_index_searches"),
+			"(AccessMethods.IndexSearches)",
+			[]string{"instance"},
+			nil,
+		),
+		AccessMethodsInSysXactwaits: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "accessmethods_insysxact_waits"),
+			"(AccessMethods.InSysXactwaits)",
+			[]string{"instance"},
+			nil,
+		),
+		AccessMethodsLobHandleCreateCount: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "accessmethods_lob_handle_creates"),
+			"(AccessMethods.LobHandleCreateCount)",
+			[]string{"instance"},
+			nil,
+		),
+		AccessMethodsLobHandleDestroyCount: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "accessmethods_lob_handle_destroys"),
+			"(AccessMethods.LobHandleDestroyCount)",
+			[]string{"instance"},
+			nil,
+		),
+		AccessMethodsLobSSProviderCreateCount: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "accessmethods_lob_ss_provider_creates"),
+			"(AccessMethods.LobSSProviderCreateCount)",
+			[]string{"instance"},
+			nil,
+		),
+		AccessMethodsLobSSProviderDestroyCount: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "accessmethods_lob_ss_provider_destroys"),
+			"(AccessMethods.LobSSProviderDestroyCount)",
+			[]string{"instance"},
+			nil,
+		),
+		AccessMethodsLobSSProviderTruncationCount: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "accessmethods_lob_ss_provider_truncations"),
+			"(AccessMethods.LobSSProviderTruncationCount)",
+			[]string{"instance"},
+			nil,
+		),
+		AccessMethodsMixedpageallocations: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "accessmethods_mixed_page_allocations"),
+			"(AccessMethods.MixedpageallocationsPersec)",
+			[]string{"instance"},
+			nil,
+		),
+		AccessMethodsPagecompressionattempts: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "accessmethods_page_compression_attempts"),
+			"(AccessMethods.PagecompressionattemptsPersec)",
+			[]string{"instance"},
+			nil,
+		),
+		AccessMethodsPageDeallocations: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "accessmethods_page_deallocations"),
+			"(AccessMethods.PageDeallocationsPersec)",
+			[]string{"instance"},
+			nil,
+		),
+		AccessMethodsPagesAllocated: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "accessmethods_page_allocations"),
+			"(AccessMethods.PagesAllocatedPersec)",
+			[]string{"instance"},
+			nil,
+		),
+		AccessMethodsPagescompressed: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "accessmethods_page_compressions"),
+			"(AccessMethods.PagescompressedPersec)",
+			[]string{"instance"},
+			nil,
+		),
+		AccessMethodsPageSplits: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "accessmethods_page_splits"),
+			"(AccessMethods.PageSplitsPersec)",
+			[]string{"instance"},
+			nil,
+		),
+		AccessMethodsProbeScans: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "accessmethods_probe_scans"),
+			"(AccessMethods.ProbeScansPersec)",
+			[]string{"instance"},
+			nil,
+		),
+		AccessMethodsRangeScans: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "accessmethods_range_scans"),
+			"(AccessMethods.RangeScansPersec)",
+			[]string{"instance"},
+			nil,
+		),
+		AccessMethodsScanPointRevalidations: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "accessmethods_scan_point_revalidations"),
+			"(AccessMethods.ScanPointRevalidationsPersec)",
+			[]string{"instance"},
+			nil,
+		),
+		AccessMethodsSkippedGhostedRecords: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "accessmethods_ghost_record_skips"),
+			"(AccessMethods.SkippedGhostedRecordsPersec)",
+			[]string{"instance"},
+			nil,
+		),
+		AccessMethodsTableLockEscalations: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "accessmethods_table_lock_escalations"),
+			"(AccessMethods.TableLockEscalationsPersec)",
+			[]string{"instance"},
+			nil,
+		),
+		AccessMethodsUsedleafpagecookie: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "accessmethods_leaf_page_cookie_uses"),
+			"(AccessMethods.Usedleafpagecookie)",
+			[]string{"instance"},
+			nil,
+		),
+		AccessMethodsUsedtreepagecookie: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "accessmethods_tree_page_cookie_uses"),
+			"(AccessMethods.Usedtreepagecookie)",
+			[]string{"instance"},
+			nil,
+		),
+		AccessMethodsWorkfilesCreated: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "accessmethods_workfile_creates"),
+			"(AccessMethods.WorkfilesCreatedPersec)",
+			[]string{"instance"},
+			nil,
+		),
+		AccessMethodsWorktablesCreated: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "accessmethods_worktables_creates"),
+			"(AccessMethods.WorktablesCreatedPersec)",
+			[]string{"instance"},
+			nil,
+		),
+		AccessMethodsWorktablesFromCacheRatio: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "accessmethods_worktables_from_cache_ratio"),
+			"(AccessMethods.WorktablesFromCacheRatio)",
+			[]string{"instance"},
+			nil,
+		),
+
 		// Win32_PerfRawData_{instance}_SQLServerAvailabilityReplica
-		BytesReceivedfromReplicaPersec: prometheus.NewDesc(
+		AvailReplicaBytesReceivedfromReplica: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "availreplica_received_from_replica_bytes"),
 			"(AvailabilityReplica.BytesReceivedfromReplica)",
 			[]string{"instance", "replica"},
 			nil,
 		),
-		BytesSenttoReplicaPersec: prometheus.NewDesc(
+		AvailReplicaBytesSenttoReplica: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "availreplica_sent_to_replica_bytes"),
 			"(AvailabilityReplica.BytesSenttoReplica)",
 			[]string{"instance", "replica"},
 			nil,
 		),
-		BytesSenttoTransportPersec: prometheus.NewDesc(
+		AvailReplicaBytesSenttoTransport: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "availreplica_sent_to_transport_bytes"),
 			"(AvailabilityReplica.BytesSenttoTransport)",
 			[]string{"instance", "replica"},
 			nil,
 		),
-		FlowControlPersec: prometheus.NewDesc(
+		AvailReplicaFlowControl: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "availreplica_initiated_flow_controls"),
 			"(AvailabilityReplica.FlowControl)",
 			[]string{"instance", "replica"},
 			nil,
 		),
-		FlowControlTimemsPersec: prometheus.NewDesc(
+		AvailReplicaFlowControlTimems: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "availreplica_flow_control_wait_seconds"),
 			"(AvailabilityReplica.FlowControlTimems)",
 			[]string{"instance", "replica"},
 			nil,
 		),
-		ReceivesfromReplicaPersec: prometheus.NewDesc(
+		AvailReplicaReceivesfromReplica: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "availreplica_receives_from_replica"),
 			"(AvailabilityReplica.ReceivesfromReplica)",
 			[]string{"instance", "replica"},
 			nil,
 		),
-		ResentMessagesPersec: prometheus.NewDesc(
+		AvailReplicaResentMessages: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "availreplica_resent_messages"),
 			"(AvailabilityReplica.ResentMessages)",
 			[]string{"instance", "replica"},
 			nil,
 		),
-		SendstoReplicaPersec: prometheus.NewDesc(
+		AvailReplicaSendstoReplica: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "availreplica_sends_to_replica"),
 			"(AvailabilityReplica.SendstoReplica)",
 			[]string{"instance", "replica"},
 			nil,
 		),
-		SendstoTransportPersec: prometheus.NewDesc(
+		AvailReplicaSendstoTransport: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "availreplica_sends_to_transport"),
 			"(AvailabilityReplica.SendstoTransport)",
 			[]string{"instance", "replica"},
@@ -384,133 +692,133 @@ func NewMSSQLCollector() (Collector, error) {
 		),
 
 		// Win32_PerfRawData_{instance}_SQLServerBufferManager
-		BackgroundwriterpagesPersec: prometheus.NewDesc(
+		BufManBackgroundwriterpages: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "bufman_background_writer_pages"),
 			"(BufferManager.Backgroundwriterpages)",
 			[]string{"instance"},
 			nil,
 		),
-		Buffercachehitratio: prometheus.NewDesc(
+		BufManBuffercachehitratio: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "bufman_buffer_cache_hit_ratio"),
 			"(BufferManager.Buffercachehitratio)",
 			[]string{"instance"},
 			nil,
 		),
-		CheckpointpagesPersec: prometheus.NewDesc(
+		BufManCheckpointpages: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "bufman_checkpoint_pages"),
 			"(BufferManager.Checkpointpages)",
 			[]string{"instance"},
 			nil,
 		),
-		Databasepages: prometheus.NewDesc(
+		BufManDatabasepages: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "bufman_database_pages"),
 			"(BufferManager.Databasepages)",
 			[]string{"instance"},
 			nil,
 		),
-		Extensionallocatedpages: prometheus.NewDesc(
+		BufManExtensionallocatedpages: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "bufman_extension_allocated_pages"),
 			"(BufferManager.Extensionallocatedpages)",
 			[]string{"instance"},
 			nil,
 		),
-		Extensionfreepages: prometheus.NewDesc(
+		BufManExtensionfreepages: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "bufman_extension_free_pages"),
 			"(BufferManager.Extensionfreepages)",
 			[]string{"instance"},
 			nil,
 		),
-		Extensioninuseaspercentage: prometheus.NewDesc(
+		BufManExtensioninuseaspercentage: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "bufman_extension_in_use_as_percentage"),
 			"(BufferManager.Extensioninuseaspercentage)",
 			[]string{"instance"},
 			nil,
 		),
-		ExtensionoutstandingIOcounter: prometheus.NewDesc(
+		BufManExtensionoutstandingIOcounter: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "bufman_extension_outstanding_io"),
 			"(BufferManager.ExtensionoutstandingIOcounter)",
 			[]string{"instance"},
 			nil,
 		),
-		ExtensionpageevictionsPersec: prometheus.NewDesc(
+		BufManExtensionpageevictions: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "bufman_extension_page_evictions"),
 			"(BufferManager.Extensionpageevictions)",
 			[]string{"instance"},
 			nil,
 		),
-		ExtensionpagereadsPersec: prometheus.NewDesc(
+		BufManExtensionpagereads: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "bufman_extension_page_reads"),
 			"(BufferManager.Extensionpagereads)",
 			[]string{"instance"},
 			nil,
 		),
-		Extensionpageunreferencedtime: prometheus.NewDesc(
+		BufManExtensionpageunreferencedtime: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "bufman_extension_page_unreferenced_seconds"),
 			"(BufferManager.Extensionpageunreferencedtime)",
 			[]string{"instance"},
 			nil,
 		),
-		ExtensionpagewritesPersec: prometheus.NewDesc(
+		BufManExtensionpagewrites: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "bufman_extension_page_writes"),
 			"(BufferManager.Extensionpagewrites)",
 			[]string{"instance"},
 			nil,
 		),
-		FreeliststallsPersec: prometheus.NewDesc(
+		BufManFreeliststalls: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "bufman_free_list_stalls"),
 			"(BufferManager.Freeliststalls)",
 			[]string{"instance"},
 			nil,
 		),
-		IntegralControllerSlope: prometheus.NewDesc(
+		BufManIntegralControllerSlope: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "bufman_integral_controller_slope"),
 			"(BufferManager.IntegralControllerSlope)",
 			[]string{"instance"},
 			nil,
 		),
-		LazywritesPersec: prometheus.NewDesc(
+		BufManLazywrites: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "bufman_lazywrites"),
 			"(BufferManager.Lazywrites)",
 			[]string{"instance"},
 			nil,
 		),
-		Pagelifeexpectancy: prometheus.NewDesc(
+		BufManPagelifeexpectancy: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "bufman_page_life_expectancy_seconds"),
 			"(BufferManager.Pagelifeexpectancy)",
 			[]string{"instance"},
 			nil,
 		),
-		PagelookupsPersec: prometheus.NewDesc(
+		BufManPagelookups: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "bufman_page_lookups"),
 			"(BufferManager.Pagelookups)",
 			[]string{"instance"},
 			nil,
 		),
-		PagereadsPersec: prometheus.NewDesc(
+		BufManPagereads: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "bufman_page_reads"),
 			"(BufferManager.Pagereads)",
 			[]string{"instance"},
 			nil,
 		),
-		PagewritesPersec: prometheus.NewDesc(
+		BufManPagewrites: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "bufman_page_writes"),
 			"(BufferManager.Pagewrites)",
 			[]string{"instance"},
 			nil,
 		),
-		ReadaheadpagesPersec: prometheus.NewDesc(
+		BufManReadaheadpages: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "bufman_read_ahead_pages"),
 			"(BufferManager.Readaheadpages)",
 			[]string{"instance"},
 			nil,
 		),
-		ReadaheadtimePersec: prometheus.NewDesc(
+		BufManReadaheadtime: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "bufman_read_ahead_issuing_seconds"),
 			"(BufferManager.Readaheadtime)",
 			[]string{"instance"},
 			nil,
 		),
-		Targetpages: prometheus.NewDesc(
+		BufManTargetpages: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "bufman_target_pages"),
 			"(BufferManager.Targetpages)",
 			[]string{"instance"},
@@ -518,145 +826,145 @@ func NewMSSQLCollector() (Collector, error) {
 		),
 
 		// Win32_PerfRawData_{instance}_SQLServerDatabaseReplica
-		DatabaseFlowControlDelay: prometheus.NewDesc(
+		DBReplicaDatabaseFlowControlDelay: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "dbreplica_database_flow_control_wait_seconds"),
 			"(DatabaseReplica.DatabaseFlowControlDelay)",
 			[]string{"instance", "replica"},
 			nil,
 		),
-		DatabaseFlowControlsPersec: prometheus.NewDesc(
+		DBReplicaDatabaseFlowControls: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "dbreplica_database_initiated_flow_controls"),
 			"(DatabaseReplica.DatabaseFlowControls)",
 			[]string{"instance", "replica"},
 			nil,
 		),
-		FileBytesReceivedPersec: prometheus.NewDesc(
+		DBReplicaFileBytesReceived: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "dbreplica_received_file_bytes"),
 			"(DatabaseReplica.FileBytesReceived)",
 			[]string{"instance", "replica"},
 			nil,
 		),
-		GroupCommitsPerSec: prometheus.NewDesc(
+		DBReplicaGroupCommits: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "dbreplica_group_commits"),
 			"(DatabaseReplica.GroupCommits)",
 			[]string{"instance", "replica"},
 			nil,
 		),
-		GroupCommitTime: prometheus.NewDesc(
+		DBReplicaGroupCommitTime: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "dbreplica_group_commit_stall_seconds"),
 			"(DatabaseReplica.GroupCommitTime)",
 			[]string{"instance", "replica"},
 			nil,
 		),
-		LogApplyPendingQueue: prometheus.NewDesc(
+		DBReplicaLogApplyPendingQueue: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "dbreplica_log_apply_pending_queue"),
 			"(DatabaseReplica.LogApplyPendingQueue)",
 			[]string{"instance", "replica"},
 			nil,
 		),
-		LogApplyReadyQueue: prometheus.NewDesc(
+		DBReplicaLogApplyReadyQueue: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "dbreplica_log_apply_ready_queue"),
 			"(DatabaseReplica.LogApplyReadyQueue)",
 			[]string{"instance", "replica"},
 			nil,
 		),
-		LogBytesCompressedPersec: prometheus.NewDesc(
+		DBReplicaLogBytesCompressed: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "dbreplica_log_compressed_bytes"),
 			"(DatabaseReplica.LogBytesCompressed)",
 			[]string{"instance", "replica"},
 			nil,
 		),
-		LogBytesDecompressedPersec: prometheus.NewDesc(
+		DBReplicaLogBytesDecompressed: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "dbreplica_log_decompressed_bytes"),
 			"(DatabaseReplica.LogBytesDecompressed)",
 			[]string{"instance", "replica"},
 			nil,
 		),
-		LogBytesReceivedPersec: prometheus.NewDesc(
+		DBReplicaLogBytesReceived: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "dbreplica_log_received_bytes"),
 			"(DatabaseReplica.LogBytesReceived)",
 			[]string{"instance", "replica"},
 			nil,
 		),
-		LogCompressionCachehitsPersec: prometheus.NewDesc(
+		DBReplicaLogCompressionCachehits: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "dbreplica_log_compression_cachehits"),
 			"(DatabaseReplica.LogCompressionCachehits)",
 			[]string{"instance", "replica"},
 			nil,
 		),
-		LogCompressionCachemissesPersec: prometheus.NewDesc(
+		DBReplicaLogCompressionCachemisses: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "dbreplica_log_compression_cachemisses"),
 			"(DatabaseReplica.LogCompressionCachemisses)",
 			[]string{"instance", "replica"},
 			nil,
 		),
-		LogCompressionsPersec: prometheus.NewDesc(
+		DBReplicaLogCompressions: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "dbreplica_log_compressions"),
 			"(DatabaseReplica.LogCompressions)",
 			[]string{"instance", "replica"},
 			nil,
 		),
-		LogDecompressionsPersec: prometheus.NewDesc(
+		DBReplicaLogDecompressions: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "dbreplica_log_decompressions"),
 			"(DatabaseReplica.LogDecompressions)",
 			[]string{"instance", "replica"},
 			nil,
 		),
-		Logremainingforundo: prometheus.NewDesc(
+		DBReplicaLogremainingforundo: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "dbreplica_log_remaining_for_undo"),
 			"(DatabaseReplica.Logremainingforundo)",
 			[]string{"instance", "replica"},
 			nil,
 		),
-		LogSendQueue: prometheus.NewDesc(
+		DBReplicaLogSendQueue: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "dbreplica_log_send_queue"),
 			"(DatabaseReplica.LogSendQueue)",
 			[]string{"instance", "replica"},
 			nil,
 		),
-		MirroredWriteTransactionsPersec: prometheus.NewDesc(
+		DBReplicaMirroredWriteTransactions: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "dbreplica_mirrored_write_transactions"),
 			"(DatabaseReplica.MirroredWriteTransactions)",
 			[]string{"instance", "replica"},
 			nil,
 		),
-		RecoveryQueue: prometheus.NewDesc(
+		DBReplicaRecoveryQueue: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "dbreplica_recovery_queue_records"),
 			"(DatabaseReplica.RecoveryQueue)",
 			[]string{"instance", "replica"},
 			nil,
 		),
-		RedoblockedPersec: prometheus.NewDesc(
+		DBReplicaRedoblocked: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "dbreplica_redo_blocks"),
 			"(DatabaseReplica.Redoblocked)",
 			[]string{"instance", "replica"},
 			nil,
 		),
-		RedoBytesRemaining: prometheus.NewDesc(
+		DBReplicaRedoBytesRemaining: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "dbreplica_redo_remaining_bytes"),
 			"(DatabaseReplica.RedoBytesRemaining)",
 			[]string{"instance", "replica"},
 			nil,
 		),
-		RedoneBytesPersec: prometheus.NewDesc(
+		DBReplicaRedoneBytes: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "dbreplica_redone_bytes"),
 			"(DatabaseReplica.RedoneBytes)",
 			[]string{"instance", "replica"},
 			nil,
 		),
-		RedonesPersec: prometheus.NewDesc(
+		DBReplicaRedones: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "dbreplica_redones"),
 			"(DatabaseReplica.Redones)",
 			[]string{"instance", "replica"},
 			nil,
 		),
-		TotalLogrequiringundo: prometheus.NewDesc(
+		DBReplicaTotalLogrequiringundo: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "dbreplica_total_log_requiring_undo"),
 			"(DatabaseReplica.TotalLogrequiringundo)",
 			[]string{"instance", "replica"},
 			nil,
 		),
-		TransactionDelay: prometheus.NewDesc(
+		DBReplicaTransactionDelay: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "dbreplica_transaction_delay_seconds"),
 			"(DatabaseReplica.TransactionDelay)",
 			[]string{"instance", "replica"},
@@ -664,277 +972,277 @@ func NewMSSQLCollector() (Collector, error) {
 		),
 
 		// Win32_PerfRawData_{instance}_SQLServerDatabases
-		ActiveTransactions: prometheus.NewDesc(
+		DatabasesActiveTransactions: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "databases_active_transactions"),
 			"(Databases.ActiveTransactions)",
 			[]string{"instance", "database"},
 			nil,
 		),
-		BackupPerRestoreThroughputPersec: prometheus.NewDesc(
+		DatabasesBackupPerRestoreThroughput: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "databases_backup_restore_operations"),
 			"(Databases.BackupPerRestoreThroughput)",
 			[]string{"instance", "database"},
 			nil,
 		),
-		BulkCopyRowsPersec: prometheus.NewDesc(
+		DatabasesBulkCopyRows: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "databases_bulk_copy_rows"),
 			"(Databases.BulkCopyRows)",
 			[]string{"instance", "database"},
 			nil,
 		),
-		BulkCopyThroughputPersec: prometheus.NewDesc(
+		DatabasesBulkCopyThroughput: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "databases_bulk_copy_bytes"),
 			"(Databases.BulkCopyThroughput)",
 			[]string{"instance", "database"},
 			nil,
 		),
-		Committableentries: prometheus.NewDesc(
+		DatabasesCommittableentries: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "databases_commit_table_entries"),
 			"(Databases.Committableentries)",
 			[]string{"instance", "database"},
 			nil,
 		),
-		DataFilesSizeKB: prometheus.NewDesc(
+		DatabasesDataFilesSizeKB: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "databases_data_files_size_bytes"),
 			"(Databases.DataFilesSizeKB)",
 			[]string{"instance", "database"},
 			nil,
 		),
-		DBCCLogicalScanBytesPersec: prometheus.NewDesc(
+		DatabasesDBCCLogicalScanBytes: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "databases_dbcc_logical_scan_bytes"),
 			"(Databases.DBCCLogicalScanBytes)",
 			[]string{"instance", "database"},
 			nil,
 		),
-		GroupCommitTimePersec: prometheus.NewDesc(
+		DatabasesGroupCommitTime: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "databases_group_commit_stall_seconds"),
 			"(Databases.GroupCommitTime)",
 			[]string{"instance", "database"},
 			nil,
 		),
-		LogBytesFlushedPersec: prometheus.NewDesc(
+		DatabasesLogBytesFlushed: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "databases_log_flushed_bytes"),
 			"(Databases.LogBytesFlushed)",
 			[]string{"instance", "database"},
 			nil,
 		),
-		LogCacheHitRatio: prometheus.NewDesc(
+		DatabasesLogCacheHitRatio: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "databases_log_cache_hit_ratio"),
 			"(Databases.LogCacheHitRatio)",
 			[]string{"instance", "database"},
 			nil,
 		),
-		LogCacheReadsPersec: prometheus.NewDesc(
+		DatabasesLogCacheReads: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "databases_log_cache_reads"),
 			"(Databases.LogCacheReads)",
 			[]string{"instance", "database"},
 			nil,
 		),
-		LogFilesSizeKB: prometheus.NewDesc(
+		DatabasesLogFilesSizeKB: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "databases_log_files_size_bytes"),
 			"(Databases.LogFilesSizeKB)",
 			[]string{"instance", "database"},
 			nil,
 		),
-		LogFilesUsedSizeKB: prometheus.NewDesc(
+		DatabasesLogFilesUsedSizeKB: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "databases_log_files_used_size_bytes"),
 			"(Databases.LogFilesUsedSizeKB)",
 			[]string{"instance", "database"},
 			nil,
 		),
-		LogFlushesPersec: prometheus.NewDesc(
+		DatabasesLogFlushes: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "databases_log_flushes"),
 			"(Databases.LogFlushes)",
 			[]string{"instance", "database"},
 			nil,
 		),
-		LogFlushWaitsPersec: prometheus.NewDesc(
+		DatabasesLogFlushWaits: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "databases_log_flush_waits"),
 			"(Databases.LogFlushWaits)",
 			[]string{"instance", "database"},
 			nil,
 		),
-		LogFlushWaitTime: prometheus.NewDesc(
+		DatabasesLogFlushWaitTime: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "databases_log_flush_wait_seconds"),
 			"(Databases.LogFlushWaitTime)",
 			[]string{"instance", "database"},
 			nil,
 		),
-		LogFlushWriteTimems: prometheus.NewDesc(
+		DatabasesLogFlushWriteTimems: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "databases_log_flush_write_seconds"),
 			"(Databases.LogFlushWriteTimems)",
 			[]string{"instance", "database"},
 			nil,
 		),
-		LogGrowths: prometheus.NewDesc(
+		DatabasesLogGrowths: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "databases_log_growths"),
 			"(Databases.LogGrowths)",
 			[]string{"instance", "database"},
 			nil,
 		),
-		LogPoolCacheMissesPersec: prometheus.NewDesc(
+		DatabasesLogPoolCacheMisses: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "databases_log_pool_cache_misses"),
 			"(Databases.LogPoolCacheMisses)",
 			[]string{"instance", "database"},
 			nil,
 		),
-		LogPoolDiskReadsPersec: prometheus.NewDesc(
+		DatabasesLogPoolDiskReads: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "databases_log_pool_disk_reads"),
 			"(Databases.LogPoolDiskReads)",
 			[]string{"instance", "database"},
 			nil,
 		),
-		LogPoolHashDeletesPersec: prometheus.NewDesc(
+		DatabasesLogPoolHashDeletes: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "databases_log_pool_hash_deletes"),
 			"(Databases.LogPoolHashDeletes)",
 			[]string{"instance", "database"},
 			nil,
 		),
-		LogPoolHashInsertsPersec: prometheus.NewDesc(
+		DatabasesLogPoolHashInserts: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "databases_log_pool_hash_inserts"),
 			"(Databases.LogPoolHashInserts)",
 			[]string{"instance", "database"},
 			nil,
 		),
-		LogPoolInvalidHashEntryPersec: prometheus.NewDesc(
+		DatabasesLogPoolInvalidHashEntry: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "databases_log_pool_invalid_hash_entries"),
 			"(Databases.LogPoolInvalidHashEntry)",
 			[]string{"instance", "database"},
 			nil,
 		),
-		LogPoolLogScanPushesPersec: prometheus.NewDesc(
+		DatabasesLogPoolLogScanPushes: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "databases_log_pool_log_scan_pushes"),
 			"(Databases.LogPoolLogScanPushes)",
 			[]string{"instance", "database"},
 			nil,
 		),
-		LogPoolLogWriterPushesPersec: prometheus.NewDesc(
+		DatabasesLogPoolLogWriterPushes: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "databases_log_pool_log_writer_pushes"),
 			"(Databases.LogPoolLogWriterPushes)",
 			[]string{"instance", "database"},
 			nil,
 		),
-		LogPoolPushEmptyFreePoolPersec: prometheus.NewDesc(
+		DatabasesLogPoolPushEmptyFreePool: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "databases_log_pool_empty_free_pool_pushes"),
 			"(Databases.LogPoolPushEmptyFreePool)",
 			[]string{"instance", "database"},
 			nil,
 		),
-		LogPoolPushLowMemoryPersec: prometheus.NewDesc(
+		DatabasesLogPoolPushLowMemory: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "databases_log_pool_low_memory_pushes"),
 			"(Databases.LogPoolPushLowMemory)",
 			[]string{"instance", "database"},
 			nil,
 		),
-		LogPoolPushNoFreeBufferPersec: prometheus.NewDesc(
+		DatabasesLogPoolPushNoFreeBuffer: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "databases_log_pool_no_free_buffer_pushes"),
 			"(Databases.LogPoolPushNoFreeBuffer)",
 			[]string{"instance", "database"},
 			nil,
 		),
-		LogPoolReqBehindTruncPersec: prometheus.NewDesc(
+		DatabasesLogPoolReqBehindTrunc: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "databases_log_pool_req_behind_trunc"),
 			"(Databases.LogPoolReqBehindTrunc)",
 			[]string{"instance", "database"},
 			nil,
 		),
-		LogPoolRequestsOldVLFPersec: prometheus.NewDesc(
+		DatabasesLogPoolRequestsOldVLF: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "databases_log_pool_requests_old_vlf"),
 			"(Databases.LogPoolRequestsOldVLF)",
 			[]string{"instance", "database"},
 			nil,
 		),
-		LogPoolRequestsPersec: prometheus.NewDesc(
+		DatabasesLogPoolRequests: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "databases_log_pool_requests"),
 			"(Databases.LogPoolRequests)",
 			[]string{"instance", "database"},
 			nil,
 		),
-		LogPoolTotalActiveLogSize: prometheus.NewDesc(
+		DatabasesLogPoolTotalActiveLogSize: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "databases_log_pool_total_active_log_bytes"),
 			"(Databases.LogPoolTotalActiveLogSize)",
 			[]string{"instance", "database"},
 			nil,
 		),
-		LogPoolTotalSharedPoolSize: prometheus.NewDesc(
+		DatabasesLogPoolTotalSharedPoolSize: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "databases_log_pool_total_shared_pool_bytes"),
 			"(Databases.LogPoolTotalSharedPoolSize)",
 			[]string{"instance", "database"},
 			nil,
 		),
-		LogShrinks: prometheus.NewDesc(
+		DatabasesLogShrinks: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "databases_log_shrinks"),
 			"(Databases.LogShrinks)",
 			[]string{"instance", "database"},
 			nil,
 		),
-		LogTruncations: prometheus.NewDesc(
+		DatabasesLogTruncations: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "databases_log_truncations"),
 			"(Databases.LogTruncations)",
 			[]string{"instance", "database"},
 			nil,
 		),
-		PercentLogUsed: prometheus.NewDesc(
+		DatabasesPercentLogUsed: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "databases_log_used_percent"),
 			"(Databases.PercentLogUsed)",
 			[]string{"instance", "database"},
 			nil,
 		),
-		ReplPendingXacts: prometheus.NewDesc(
+		DatabasesReplPendingXacts: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "databases_pending_repl_transactions"),
 			"(Databases.ReplPendingTransactions)",
 			[]string{"instance", "database"},
 			nil,
 		),
-		ReplTransRate: prometheus.NewDesc(
+		DatabasesReplTransRate: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "databases_repl_transactions"),
 			"(Databases.ReplTranactions)",
 			[]string{"instance", "database"},
 			nil,
 		),
-		ShrinkDataMovementBytesPersec: prometheus.NewDesc(
+		DatabasesShrinkDataMovementBytes: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "databases_shrink_data_movement_bytes"),
 			"(Databases.ShrinkDataMovementBytes)",
 			[]string{"instance", "database"},
 			nil,
 		),
-		TrackedtransactionsPersec: prometheus.NewDesc(
+		DatabasesTrackedtransactions: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "databases_tracked_transactions"),
 			"(Databases.Trackedtransactions)",
 			[]string{"instance", "database"},
 			nil,
 		),
-		TransactionsPersec: prometheus.NewDesc(
+		DatabasesTransactions: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "databases_transactions"),
 			"(Databases.Transactions)",
 			[]string{"instance", "database"},
 			nil,
 		),
-		WriteTransactionsPersec: prometheus.NewDesc(
+		DatabasesWriteTransactions: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "databases_write_transactions"),
 			"(Databases.WriteTransactions)",
 			[]string{"instance", "database"},
 			nil,
 		),
-		XTPControllerDLCLatencyPerFetch: prometheus.NewDesc(
+		DatabasesXTPControllerDLCLatencyPerFetch: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "databases_xtp_controller_dlc_fetch_latency_seconds"),
 			"(Databases.XTPControllerDLCLatencyPerFetch)",
 			[]string{"instance", "database"},
 			nil,
 		),
-		XTPControllerDLCPeakLatency: prometheus.NewDesc(
+		DatabasesXTPControllerDLCPeakLatency: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "databases_xtp_controller_dlc_peak_latency_seconds"),
 			"(Databases.XTPControllerDLCPeakLatency)",
 			[]string{"instance", "database"},
 			nil,
 		),
-		XTPControllerLogProcessedPersec: prometheus.NewDesc(
+		DatabasesXTPControllerLogProcessed: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "databases_xtp_controller_log_processed_bytes"),
 			"(Databases.XTPControllerLogProcessed)",
 			[]string{"instance", "database"},
 			nil,
 		),
-		XTPMemoryUsedKB: prometheus.NewDesc(
+		DatabasesXTPMemoryUsedKB: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "databases_xtp_memory_used_bytes"),
 			"(Databases.XTPMemoryUsedKB)",
 			[]string{"instance", "database"},
@@ -942,145 +1250,145 @@ func NewMSSQLCollector() (Collector, error) {
 		),
 
 		// Win32_PerfRawData_{instance}_SQLServerGeneralStatistics
-		ActiveTempTables: prometheus.NewDesc(
+		GenStatsActiveTempTables: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "genstats_active_temp_tables"),
 			"(GeneralStatistics.ActiveTempTables)",
 			[]string{"instance"},
 			nil,
 		),
-		ConnectionResetPersec: prometheus.NewDesc(
+		GenStatsConnectionReset: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "genstats_connection_resets"),
 			"(GeneralStatistics.ConnectionReset)",
 			[]string{"instance"},
 			nil,
 		),
-		EventNotificationsDelayedDrop: prometheus.NewDesc(
+		GenStatsEventNotificationsDelayedDrop: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "genstats_event_notifications_delayed_drop"),
 			"(GeneralStatistics.EventNotificationsDelayedDrop)",
 			[]string{"instance"},
 			nil,
 		),
-		HTTPAuthenticatedRequests: prometheus.NewDesc(
+		GenStatsHTTPAuthenticatedRequests: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "genstats_http_authenticated_requests"),
 			"(GeneralStatistics.HTTPAuthenticatedRequests)",
 			[]string{"instance"},
 			nil,
 		),
-		LogicalConnections: prometheus.NewDesc(
+		GenStatsLogicalConnections: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "genstats_logical_connections"),
 			"(GeneralStatistics.LogicalConnections)",
 			[]string{"instance"},
 			nil,
 		),
-		LoginsPersec: prometheus.NewDesc(
+		GenStatsLogins: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "genstats_logins"),
 			"(GeneralStatistics.Logins)",
 			[]string{"instance"},
 			nil,
 		),
-		LogoutsPersec: prometheus.NewDesc(
+		GenStatsLogouts: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "genstats_logouts"),
 			"(GeneralStatistics.Logouts)",
 			[]string{"instance"},
 			nil,
 		),
-		MarsDeadlocks: prometheus.NewDesc(
+		GenStatsMarsDeadlocks: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "genstats_mars_deadlocks"),
 			"(GeneralStatistics.MarsDeadlocks)",
 			[]string{"instance"},
 			nil,
 		),
-		Nonatomicyieldrate: prometheus.NewDesc(
+		GenStatsNonatomicyieldrate: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "genstats_non_atomic_yields"),
 			"(GeneralStatistics.Nonatomicyields)",
 			[]string{"instance"},
 			nil,
 		),
-		Processesblocked: prometheus.NewDesc(
+		GenStatsProcessesblocked: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "genstats_blocked_processes"),
 			"(GeneralStatistics.Processesblocked)",
 			[]string{"instance"},
 			nil,
 		),
-		SOAPEmptyRequests: prometheus.NewDesc(
+		GenStatsSOAPEmptyRequests: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "genstats_soap_empty_requests"),
 			"(GeneralStatistics.SOAPEmptyRequests)",
 			[]string{"instance"},
 			nil,
 		),
-		SOAPMethodInvocations: prometheus.NewDesc(
+		GenStatsSOAPMethodInvocations: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "genstats_soap_method_invocations"),
 			"(GeneralStatistics.SOAPMethodInvocations)",
 			[]string{"instance"},
 			nil,
 		),
-		SOAPSessionInitiateRequests: prometheus.NewDesc(
+		GenStatsSOAPSessionInitiateRequests: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "genstats_soap_session_initiate_requests"),
 			"(GeneralStatistics.SOAPSessionInitiateRequests)",
 			[]string{"instance"},
 			nil,
 		),
-		SOAPSessionTerminateRequests: prometheus.NewDesc(
+		GenStatsSOAPSessionTerminateRequests: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "genstats_soap_session_terminate_requests"),
 			"(GeneralStatistics.SOAPSessionTerminateRequests)",
 			[]string{"instance"},
 			nil,
 		),
-		SOAPSQLRequests: prometheus.NewDesc(
+		GenStatsSOAPSQLRequests: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "genstats_soapsql_requests"),
 			"(GeneralStatistics.SOAPSQLRequests)",
 			[]string{"instance"},
 			nil,
 		),
-		SOAPWSDLRequests: prometheus.NewDesc(
+		GenStatsSOAPWSDLRequests: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "genstats_soapwsdl_requests"),
 			"(GeneralStatistics.SOAPWSDLRequests)",
 			[]string{"instance"},
 			nil,
 		),
-		SQLTraceIOProviderLockWaits: prometheus.NewDesc(
+		GenStatsSQLTraceIOProviderLockWaits: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "genstats_sql_trace_io_provider_lock_waits"),
 			"(GeneralStatistics.SQLTraceIOProviderLockWaits)",
 			[]string{"instance"},
 			nil,
 		),
-		Tempdbrecoveryunitid: prometheus.NewDesc(
+		GenStatsTempdbrecoveryunitid: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "genstats_tempdb_recovery_unit_ids_generated"),
 			"(GeneralStatistics.Tempdbrecoveryunitid)",
 			[]string{"instance"},
 			nil,
 		),
-		Tempdbrowsetid: prometheus.NewDesc(
+		GenStatsTempdbrowsetid: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "genstats_tempdb_rowset_ids_generated"),
 			"(GeneralStatistics.Tempdbrowsetid)",
 			[]string{"instance"},
 			nil,
 		),
-		TempTablesCreationRate: prometheus.NewDesc(
+		GenStatsTempTablesCreationRate: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "genstats_temp_tables_creations"),
 			"(GeneralStatistics.TempTablesCreations)",
 			[]string{"instance"},
 			nil,
 		),
-		TempTablesForDestruction: prometheus.NewDesc(
+		GenStatsTempTablesForDestruction: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "genstats_temp_tables_awaiting_destruction"),
 			"(GeneralStatistics.TempTablesForDestruction)",
 			[]string{"instance"},
 			nil,
 		),
-		TraceEventNotificationQueue: prometheus.NewDesc(
+		GenStatsTraceEventNotificationQueue: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "genstats_trace_event_notification_queue_size"),
 			"(GeneralStatistics.TraceEventNotificationQueue)",
 			[]string{"instance"},
 			nil,
 		),
-		Transactions: prometheus.NewDesc(
+		GenStatsTransactions: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "genstats_transactions"),
 			"(GeneralStatistics.Transactions)",
 			[]string{"instance"},
 			nil,
 		),
-		UserConnections: prometheus.NewDesc(
+		GenStatsUserConnections: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "genstats_user_connections"),
 			"(GeneralStatistics.UserConnections)",
 			[]string{"instance"},
@@ -1088,43 +1396,43 @@ func NewMSSQLCollector() (Collector, error) {
 		),
 
 		// Win32_PerfRawData_{instance}_SQLServerLocks
-		AverageWaitTimems: prometheus.NewDesc(
+		LocksAverageWaitTimems: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "locks_average_wait_seconds"),
 			"(Locks.AverageWaitTimems)",
 			[]string{"instance", "resource"},
 			nil,
 		),
-		LockRequestsPersec: prometheus.NewDesc(
+		LocksLockRequests: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "locks_lock_requests"),
 			"(Locks.LockRequests)",
 			[]string{"instance", "resource"},
 			nil,
 		),
-		LockTimeoutsPersec: prometheus.NewDesc(
+		LocksLockTimeouts: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "locks_lock_timeouts"),
 			"(Locks.LockTimeouts)",
 			[]string{"instance", "resource"},
 			nil,
 		),
-		LockTimeoutstimeout0Persec: prometheus.NewDesc(
+		LocksLockTimeoutstimeout0: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "locks_lock_timeouts_excluding_NOWAIT"),
 			"(Locks.LockTimeoutstimeout0)",
 			[]string{"instance", "resource"},
 			nil,
 		),
-		LockWaitsPersec: prometheus.NewDesc(
+		LocksLockWaits: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "locks_lock_waits"),
 			"(Locks.LockWaits)",
 			[]string{"instance", "resource"},
 			nil,
 		),
-		LockWaitTimems: prometheus.NewDesc(
+		LocksLockWaitTimems: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "locks_lock_wait_seconds"),
 			"(Locks.LockWaitTimems)",
 			[]string{"instance", "resource"},
 			nil,
 		),
-		NumberofDeadlocksPersec: prometheus.NewDesc(
+		LocksNumberofDeadlocks: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "locks_deadlocks"),
 			"(Locks.NumberofDeadlocks)",
 			[]string{"instance", "resource"},
@@ -1132,121 +1440,121 @@ func NewMSSQLCollector() (Collector, error) {
 		),
 
 		// Win32_PerfRawData_{instance}_SQLServerMemoryManager
-		ConnectionMemoryKB: prometheus.NewDesc(
+		MemMgrConnectionMemoryKB: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "memmgr_connection_memory_bytes"),
 			"(MemoryManager.ConnectionMemoryKB)",
 			[]string{"instance"},
 			nil,
 		),
-		DatabaseCacheMemoryKB: prometheus.NewDesc(
+		MemMgrDatabaseCacheMemoryKB: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "memmgr_database_cache_memory_bytes"),
 			"(MemoryManager.DatabaseCacheMemoryKB)",
 			[]string{"instance"},
 			nil,
 		),
-		Externalbenefitofmemory: prometheus.NewDesc(
+		MemMgrExternalbenefitofmemory: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "memmgr_external_benefit_of_memory"),
 			"(MemoryManager.Externalbenefitofmemory)",
 			[]string{"instance"},
 			nil,
 		),
-		FreeMemoryKB: prometheus.NewDesc(
+		MemMgrFreeMemoryKB: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "memmgr_free_memory_bytes"),
 			"(MemoryManager.FreeMemoryKB)",
 			[]string{"instance"},
 			nil,
 		),
-		GrantedWorkspaceMemoryKB: prometheus.NewDesc(
+		MemMgrGrantedWorkspaceMemoryKB: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "memmgr_granted_workspace_memory_bytes"),
 			"(MemoryManager.GrantedWorkspaceMemoryKB)",
 			[]string{"instance"},
 			nil,
 		),
-		LockBlocks: prometheus.NewDesc(
+		MemMgrLockBlocks: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "memmgr_lock_blocks"),
 			"(MemoryManager.LockBlocks)",
 			[]string{"instance"},
 			nil,
 		),
-		LockBlocksAllocated: prometheus.NewDesc(
+		MemMgrLockBlocksAllocated: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "memmgr_allocated_lock_blocks"),
 			"(MemoryManager.LockBlocksAllocated)",
 			[]string{"instance"},
 			nil,
 		),
-		LockMemoryKB: prometheus.NewDesc(
+		MemMgrLockMemoryKB: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "memmgr_lock_memory_bytes"),
 			"(MemoryManager.LockMemoryKB)",
 			[]string{"instance"},
 			nil,
 		),
-		LockOwnerBlocks: prometheus.NewDesc(
+		MemMgrLockOwnerBlocks: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "memmgr_lock_owner_blocks"),
 			"(MemoryManager.LockOwnerBlocks)",
 			[]string{"instance"},
 			nil,
 		),
-		LockOwnerBlocksAllocated: prometheus.NewDesc(
+		MemMgrLockOwnerBlocksAllocated: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "memmgr_allocated_lock_owner_blocks"),
 			"(MemoryManager.LockOwnerBlocksAllocated)",
 			[]string{"instance"},
 			nil,
 		),
-		LogPoolMemoryKB: prometheus.NewDesc(
+		MemMgrLogPoolMemoryKB: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "memmgr_log_pool_memory_bytes"),
 			"(MemoryManager.LogPoolMemoryKB)",
 			[]string{"instance"},
 			nil,
 		),
-		MaximumWorkspaceMemoryKB: prometheus.NewDesc(
+		MemMgrMaximumWorkspaceMemoryKB: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "memmgr_maximum_workspace_memory_bytes"),
 			"(MemoryManager.MaximumWorkspaceMemoryKB)",
 			[]string{"instance"},
 			nil,
 		),
-		MemoryGrantsOutstanding: prometheus.NewDesc(
+		MemMgrMemoryGrantsOutstanding: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "memmgr_outstanding_memory_grants"),
 			"(MemoryManager.MemoryGrantsOutstanding)",
 			[]string{"instance"},
 			nil,
 		),
-		MemoryGrantsPending: prometheus.NewDesc(
+		MemMgrMemoryGrantsPending: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "memmgr_pending_memory_grants"),
 			"(MemoryManager.MemoryGrantsPending)",
 			[]string{"instance"},
 			nil,
 		),
-		OptimizerMemoryKB: prometheus.NewDesc(
+		MemMgrOptimizerMemoryKB: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "memmgr_optimizer_memory_bytes"),
 			"(MemoryManager.OptimizerMemoryKB)",
 			[]string{"instance"},
 			nil,
 		),
-		ReservedServerMemoryKB: prometheus.NewDesc(
+		MemMgrReservedServerMemoryKB: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "memmgr_reserved_server_memory_bytes"),
 			"(MemoryManager.ReservedServerMemoryKB)",
 			[]string{"instance"},
 			nil,
 		),
-		SQLCacheMemoryKB: prometheus.NewDesc(
+		MemMgrSQLCacheMemoryKB: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "memmgr_sql_cache_memory_bytes"),
 			"(MemoryManager.SQLCacheMemoryKB)",
 			[]string{"instance"},
 			nil,
 		),
-		StolenServerMemoryKB: prometheus.NewDesc(
+		MemMgrStolenServerMemoryKB: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "memmgr_stolen_server_memory_bytes"),
 			"(MemoryManager.StolenServerMemoryKB)",
 			[]string{"instance"},
 			nil,
 		),
-		TargetServerMemoryKB: prometheus.NewDesc(
+		MemMgrTargetServerMemoryKB: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "memmgr_target_server_memory_bytes"),
 			"(MemoryManager.TargetServerMemoryKB)",
 			[]string{"instance"},
 			nil,
 		),
-		TotalServerMemoryKB: prometheus.NewDesc(
+		MemMgrTotalServerMemoryKB: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "memmgr_total_server_memory_bytes"),
 			"(MemoryManager.TotalServerMemoryKB)",
 			[]string{"instance"},
@@ -1254,67 +1562,67 @@ func NewMSSQLCollector() (Collector, error) {
 		),
 
 		// Win32_PerfRawData_{instance}_SQLServerSQLStatistics
-		AutoParamAttemptsPersec: prometheus.NewDesc(
+		SQLStatsAutoParamAttempts: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "sqlstats_auto_parameterization_attempts"),
 			"(SQLStatistics.AutoParamAttempts)",
 			[]string{"instance"},
 			nil,
 		),
-		BatchRequestsPersec: prometheus.NewDesc(
+		SQLStatsBatchRequests: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "sqlstats_batch_requests"),
 			"(SQLStatistics.BatchRequests)",
 			[]string{"instance"},
 			nil,
 		),
-		FailedAutoParamsPersec: prometheus.NewDesc(
+		SQLStatsFailedAutoParams: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "sqlstats_failed_auto_parameterization_attempts"),
 			"(SQLStatistics.FailedAutoParams)",
 			[]string{"instance"},
 			nil,
 		),
-		ForcedParameterizationsPersec: prometheus.NewDesc(
+		SQLStatsForcedParameterizations: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "sqlstats_forced_parameterizations"),
 			"(SQLStatistics.ForcedParameterizations)",
 			[]string{"instance"},
 			nil,
 		),
-		GuidedplanexecutionsPersec: prometheus.NewDesc(
+		SQLStatsGuidedplanexecutions: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "sqlstats_guided_plan_executions"),
 			"(SQLStatistics.Guidedplanexecutions)",
 			[]string{"instance"},
 			nil,
 		),
-		MisguidedplanexecutionsPersec: prometheus.NewDesc(
+		SQLStatsMisguidedplanexecutions: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "sqlstats_misguided_plan_executions"),
 			"(SQLStatistics.Misguidedplanexecutions)",
 			[]string{"instance"},
 			nil,
 		),
-		SafeAutoParamsPersec: prometheus.NewDesc(
+		SQLStatsSafeAutoParams: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "sqlstats_safe_auto_parameterization_attempts"),
 			"(SQLStatistics.SafeAutoParams)",
 			[]string{"instance"},
 			nil,
 		),
-		SQLAttentionrate: prometheus.NewDesc(
+		SQLStatsSQLAttentionrate: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "sqlstats_sql_attentions"),
 			"(SQLStatistics.SQLAttentions)",
 			[]string{"instance"},
 			nil,
 		),
-		SQLCompilationsPersec: prometheus.NewDesc(
+		SQLStatsSQLCompilations: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "sqlstats_sql_compilations"),
 			"(SQLStatistics.SQLCompilations)",
 			[]string{"instance"},
 			nil,
 		),
-		SQLReCompilationsPersec: prometheus.NewDesc(
+		SQLStatsSQLReCompilations: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "sqlstats_sql_recompilations"),
 			"(SQLStatistics.SQLReCompilations)",
 			[]string{"instance"},
 			nil,
 		),
-		UnsafeAutoParamsPersec: prometheus.NewDesc(
+		SQLStatsUnsafeAutoParams: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "sqlstats_unsafe_auto_parameterization_attempts"),
 			"(SQLStatistics.UnsafeAutoParams)",
 			[]string{"instance"},
@@ -1392,6 +1700,368 @@ func (c *MSSQLCollector) Collect(ch chan<- prometheus.Metric) error {
 	return nil
 }
 
+type win32PerfRawDataSQLServerAccessMethods struct {
+	AUcleanupbatchesPersec        uint64
+	AUcleanupsPersec              uint64
+	ByreferenceLobCreateCount     uint64
+	ByreferenceLobUseCount        uint64
+	CountLobReadahead             uint64
+	CountPullInRow                uint64
+	CountPushOffRow               uint64
+	DeferreddroppedAUs            uint64
+	DeferredDroppedrowsets        uint64
+	DroppedrowsetcleanupsPersec   uint64
+	DroppedrowsetsskippedPersec   uint64
+	ExtentDeallocationsPersec     uint64
+	ExtentsAllocatedPersec        uint64
+	FailedAUcleanupbatchesPersec  uint64
+	Failedleafpagecookie          uint64
+	Failedtreepagecookie          uint64
+	ForwardedRecordsPersec        uint64
+	FreeSpacePageFetchesPersec    uint64
+	FreeSpaceScansPersec          uint64
+	FullScansPersec               uint64
+	IndexSearchesPersec           uint64
+	InSysXactwaitsPersec          uint64
+	LobHandleCreateCount          uint64
+	LobHandleDestroyCount         uint64
+	LobSSProviderCreateCount      uint64
+	LobSSProviderDestroyCount     uint64
+	LobSSProviderTruncationCount  uint64
+	MixedpageallocationsPersec    uint64
+	PagecompressionattemptsPersec uint64
+	PageDeallocationsPersec       uint64
+	PagesAllocatedPersec          uint64
+	PagescompressedPersec         uint64
+	PageSplitsPersec              uint64
+	ProbeScansPersec              uint64
+	RangeScansPersec              uint64
+	ScanPointRevalidationsPersec  uint64
+	SkippedGhostedRecordsPersec   uint64
+	TableLockEscalationsPersec    uint64
+	Usedleafpagecookie            uint64
+	Usedtreepagecookie            uint64
+	WorkfilesCreatedPersec        uint64
+	WorktablesCreatedPersec       uint64
+	WorktablesFromCacheRatio      uint64
+}
+
+func (c *MSSQLCollector) collectAccessMethods(ch chan<- prometheus.Metric, sqlInstance string) (*prometheus.Desc, error) {
+	var dst []win32PerfRawDataSQLServerAccessMethods
+	log.Debugf("mssql_accessmethods collector iterating sql instance %s.", sqlInstance)
+
+	class := fmt.Sprintf("Win32_PerfRawData_%s_SQLServerAccessMethods", sqlInstance)
+	q := queryAllForClass(&dst, class)
+	if err := wmi.Query(q, &dst); err != nil {
+		return nil, err
+	}
+
+	if len(dst) > 0 {
+		v := dst[0]
+		ch <- prometheus.MustNewConstMetric(
+			c.AccessMethodsAUcleanupbatches,
+			prometheus.CounterValue,
+			float64(v.AUcleanupbatchesPersec),
+			sqlInstance,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.AccessMethodsAUcleanups,
+			prometheus.CounterValue,
+			float64(v.AUcleanupsPersec),
+			sqlInstance,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.AccessMethodsByreferenceLobCreateCount,
+			prometheus.CounterValue,
+			float64(v.ByreferenceLobCreateCount),
+			sqlInstance,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.AccessMethodsByreferenceLobUseCount,
+			prometheus.CounterValue,
+			float64(v.ByreferenceLobUseCount),
+			sqlInstance,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.AccessMethodsCountLobReadahead,
+			prometheus.CounterValue,
+			float64(v.CountLobReadahead),
+			sqlInstance,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.AccessMethodsCountPullInRow,
+			prometheus.CounterValue,
+			float64(v.CountPullInRow),
+			sqlInstance,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.AccessMethodsCountPushOffRow,
+			prometheus.CounterValue,
+			float64(v.CountPushOffRow),
+			sqlInstance,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.AccessMethodsDeferreddroppedAUs,
+			prometheus.GaugeValue,
+			float64(v.DeferreddroppedAUs),
+			sqlInstance,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.AccessMethodsDeferredDroppedrowsets,
+			prometheus.GaugeValue,
+			float64(v.DeferredDroppedrowsets),
+			sqlInstance,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.AccessMethodsDroppedrowsetcleanups,
+			prometheus.CounterValue,
+			float64(v.DroppedrowsetcleanupsPersec),
+			sqlInstance,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.AccessMethodsDroppedrowsetsskipped,
+			prometheus.CounterValue,
+			float64(v.DroppedrowsetsskippedPersec),
+			sqlInstance,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.AccessMethodsExtentDeallocations,
+			prometheus.CounterValue,
+			float64(v.ExtentDeallocationsPersec),
+			sqlInstance,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.AccessMethodsExtentsAllocated,
+			prometheus.CounterValue,
+			float64(v.ExtentsAllocatedPersec),
+			sqlInstance,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.AccessMethodsFailedAUcleanupbatches,
+			prometheus.CounterValue,
+			float64(v.FailedAUcleanupbatchesPersec),
+			sqlInstance,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.AccessMethodsFailedleafpagecookie,
+			prometheus.CounterValue,
+			float64(v.Failedleafpagecookie),
+			sqlInstance,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.AccessMethodsFailedtreepagecookie,
+			prometheus.CounterValue,
+			float64(v.Failedtreepagecookie),
+			sqlInstance,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.AccessMethodsForwardedRecords,
+			prometheus.CounterValue,
+			float64(v.ForwardedRecordsPersec),
+			sqlInstance,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.AccessMethodsFreeSpacePageFetches,
+			prometheus.CounterValue,
+			float64(v.FreeSpacePageFetchesPersec),
+			sqlInstance,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.AccessMethodsFreeSpaceScans,
+			prometheus.CounterValue,
+			float64(v.FreeSpaceScansPersec),
+			sqlInstance,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.AccessMethodsFullScans,
+			prometheus.CounterValue,
+			float64(v.FullScansPersec),
+			sqlInstance,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.AccessMethodsIndexSearches,
+			prometheus.CounterValue,
+			float64(v.IndexSearchesPersec),
+			sqlInstance,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.AccessMethodsInSysXactwaits,
+			prometheus.CounterValue,
+			float64(v.InSysXactwaitsPersec),
+			sqlInstance,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.AccessMethodsLobHandleCreateCount,
+			prometheus.CounterValue,
+			float64(v.LobHandleCreateCount),
+			sqlInstance,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.AccessMethodsLobHandleDestroyCount,
+			prometheus.CounterValue,
+			float64(v.LobHandleDestroyCount),
+			sqlInstance,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.AccessMethodsLobSSProviderCreateCount,
+			prometheus.CounterValue,
+			float64(v.LobSSProviderCreateCount),
+			sqlInstance,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.AccessMethodsLobSSProviderDestroyCount,
+			prometheus.CounterValue,
+			float64(v.LobSSProviderDestroyCount),
+			sqlInstance,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.AccessMethodsLobSSProviderTruncationCount,
+			prometheus.CounterValue,
+			float64(v.LobSSProviderTruncationCount),
+			sqlInstance,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.AccessMethodsMixedpageallocations,
+			prometheus.CounterValue,
+			float64(v.MixedpageallocationsPersec),
+			sqlInstance,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.AccessMethodsPagecompressionattempts,
+			prometheus.CounterValue,
+			float64(v.PagecompressionattemptsPersec),
+			sqlInstance,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.AccessMethodsPageDeallocations,
+			prometheus.CounterValue,
+			float64(v.PageDeallocationsPersec),
+			sqlInstance,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.AccessMethodsPagesAllocated,
+			prometheus.CounterValue,
+			float64(v.PagesAllocatedPersec),
+			sqlInstance,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.AccessMethodsPagescompressed,
+			prometheus.CounterValue,
+			float64(v.PagescompressedPersec),
+			sqlInstance,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.AccessMethodsPageSplits,
+			prometheus.CounterValue,
+			float64(v.PageSplitsPersec),
+			sqlInstance,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.AccessMethodsProbeScans,
+			prometheus.CounterValue,
+			float64(v.ProbeScansPersec),
+			sqlInstance,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.AccessMethodsRangeScans,
+			prometheus.CounterValue,
+			float64(v.RangeScansPersec),
+			sqlInstance,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.AccessMethodsScanPointRevalidations,
+			prometheus.CounterValue,
+			float64(v.ScanPointRevalidationsPersec),
+			sqlInstance,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.AccessMethodsSkippedGhostedRecords,
+			prometheus.CounterValue,
+			float64(v.SkippedGhostedRecordsPersec),
+			sqlInstance,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.AccessMethodsTableLockEscalations,
+			prometheus.CounterValue,
+			float64(v.TableLockEscalationsPersec),
+			sqlInstance,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.AccessMethodsUsedleafpagecookie,
+			prometheus.CounterValue,
+			float64(v.Usedleafpagecookie),
+			sqlInstance,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.AccessMethodsUsedtreepagecookie,
+			prometheus.CounterValue,
+			float64(v.Usedtreepagecookie),
+			sqlInstance,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.AccessMethodsWorkfilesCreated,
+			prometheus.CounterValue,
+			float64(v.WorkfilesCreatedPersec),
+			sqlInstance,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.AccessMethodsWorktablesCreated,
+			prometheus.CounterValue,
+			float64(v.WorktablesCreatedPersec),
+			sqlInstance,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.AccessMethodsWorktablesFromCacheRatio,
+			prometheus.CounterValue,
+			float64(v.WorktablesFromCacheRatio),
+			sqlInstance,
+		)
+	}
+	return nil, nil
+}
+
 type win32PerfRawDataSQLServerAvailabilityReplica struct {
 	Name                           string
 	BytesReceivedfromReplicaPersec uint64
@@ -1419,69 +2089,68 @@ func (c *MSSQLCollector) collectAvailabilityReplica(ch chan<- prometheus.Metric,
 		replicaName := v.Name
 
 		ch <- prometheus.MustNewConstMetric(
-			c.BytesReceivedfromReplicaPersec,
+			c.AvailReplicaBytesReceivedfromReplica,
 			prometheus.CounterValue,
 			float64(v.BytesReceivedfromReplicaPersec),
 			sqlInstance, replicaName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.BytesSenttoReplicaPersec,
+			c.AvailReplicaBytesSenttoReplica,
 			prometheus.CounterValue,
 			float64(v.BytesSenttoReplicaPersec),
 			sqlInstance, replicaName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.BytesSenttoTransportPersec,
+			c.AvailReplicaBytesSenttoTransport,
 			prometheus.CounterValue,
 			float64(v.BytesSenttoTransportPersec),
 			sqlInstance, replicaName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.FlowControlPersec,
+			c.AvailReplicaFlowControl,
 			prometheus.CounterValue,
 			float64(v.FlowControlPersec),
 			sqlInstance, replicaName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.FlowControlTimemsPersec,
+			c.AvailReplicaFlowControlTimems,
 			prometheus.CounterValue,
 			float64(v.FlowControlTimemsPersec)/1000.0,
 			sqlInstance, replicaName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.ReceivesfromReplicaPersec,
+			c.AvailReplicaReceivesfromReplica,
 			prometheus.CounterValue,
 			float64(v.ReceivesfromReplicaPersec),
 			sqlInstance, replicaName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.ResentMessagesPersec,
+			c.AvailReplicaResentMessages,
 			prometheus.CounterValue,
 			float64(v.ResentMessagesPersec),
 			sqlInstance, replicaName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.SendstoReplicaPersec,
+			c.AvailReplicaSendstoReplica,
 			prometheus.CounterValue,
 			float64(v.SendstoReplicaPersec),
 			sqlInstance, replicaName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.SendstoTransportPersec,
+			c.AvailReplicaSendstoTransport,
 			prometheus.CounterValue,
 			float64(v.SendstoTransportPersec),
 			sqlInstance, replicaName,
 		)
 	}
-
 	return nil, nil
 }
 
@@ -1524,154 +2193,154 @@ func (c *MSSQLCollector) collectBufferManager(ch chan<- prometheus.Metric, sqlIn
 		v := dst[0]
 
 		ch <- prometheus.MustNewConstMetric(
-			c.BackgroundwriterpagesPersec,
+			c.BufManBackgroundwriterpages,
 			prometheus.CounterValue,
 			float64(v.BackgroundwriterpagesPersec),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.Buffercachehitratio,
+			c.BufManBuffercachehitratio,
 			prometheus.GaugeValue,
 			float64(v.Buffercachehitratio),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.CheckpointpagesPersec,
+			c.BufManCheckpointpages,
 			prometheus.CounterValue,
 			float64(v.CheckpointpagesPersec),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.Databasepages,
+			c.BufManDatabasepages,
 			prometheus.GaugeValue,
 			float64(v.Databasepages),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.Extensionallocatedpages,
+			c.BufManExtensionallocatedpages,
 			prometheus.GaugeValue,
 			float64(v.Extensionallocatedpages),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.Extensionfreepages,
+			c.BufManExtensionfreepages,
 			prometheus.GaugeValue,
 			float64(v.Extensionfreepages),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.Extensioninuseaspercentage,
+			c.BufManExtensioninuseaspercentage,
 			prometheus.GaugeValue,
 			float64(v.Extensioninuseaspercentage),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.ExtensionoutstandingIOcounter,
+			c.BufManExtensionoutstandingIOcounter,
 			prometheus.GaugeValue,
 			float64(v.ExtensionoutstandingIOcounter),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.ExtensionpageevictionsPersec,
+			c.BufManExtensionpageevictions,
 			prometheus.CounterValue,
 			float64(v.ExtensionpageevictionsPersec),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.ExtensionpagereadsPersec,
+			c.BufManExtensionpagereads,
 			prometheus.CounterValue,
 			float64(v.ExtensionpagereadsPersec),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.Extensionpageunreferencedtime,
+			c.BufManExtensionpageunreferencedtime,
 			prometheus.GaugeValue,
 			float64(v.Extensionpageunreferencedtime),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.ExtensionpagewritesPersec,
+			c.BufManExtensionpagewrites,
 			prometheus.CounterValue,
 			float64(v.ExtensionpagewritesPersec),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.FreeliststallsPersec,
+			c.BufManFreeliststalls,
 			prometheus.CounterValue,
 			float64(v.FreeliststallsPersec),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.IntegralControllerSlope,
+			c.BufManIntegralControllerSlope,
 			prometheus.GaugeValue,
 			float64(v.IntegralControllerSlope),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LazywritesPersec,
+			c.BufManLazywrites,
 			prometheus.CounterValue,
 			float64(v.LazywritesPersec),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.Pagelifeexpectancy,
+			c.BufManPagelifeexpectancy,
 			prometheus.GaugeValue,
 			float64(v.Pagelifeexpectancy),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.PagelookupsPersec,
+			c.BufManPagelookups,
 			prometheus.CounterValue,
 			float64(v.PagelookupsPersec),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.PagereadsPersec,
+			c.BufManPagereads,
 			prometheus.CounterValue,
 			float64(v.PagereadsPersec),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.PagewritesPersec,
+			c.BufManPagewrites,
 			prometheus.CounterValue,
 			float64(v.PagewritesPersec),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.ReadaheadpagesPersec,
+			c.BufManReadaheadpages,
 			prometheus.CounterValue,
 			float64(v.ReadaheadpagesPersec),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.ReadaheadtimePersec,
+			c.BufManReadaheadtime,
 			prometheus.CounterValue,
 			float64(v.ReadaheadtimePersec),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.Targetpages,
+			c.BufManTargetpages,
 			prometheus.GaugeValue,
 			float64(v.Targetpages),
 			sqlInstance,
@@ -1722,168 +2391,168 @@ func (c *MSSQLCollector) collectDatabaseReplica(ch chan<- prometheus.Metric, sql
 		replicaName := v.Name
 
 		ch <- prometheus.MustNewConstMetric(
-			c.DatabaseFlowControlDelay,
+			c.DBReplicaDatabaseFlowControlDelay,
 			prometheus.GaugeValue,
 			float64(v.DatabaseFlowControlDelay),
 			sqlInstance, replicaName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.DatabaseFlowControlsPersec,
+			c.DBReplicaDatabaseFlowControls,
 			prometheus.CounterValue,
 			float64(v.DatabaseFlowControlsPersec),
 			sqlInstance, replicaName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.FileBytesReceivedPersec,
+			c.DBReplicaFileBytesReceived,
 			prometheus.CounterValue,
 			float64(v.FileBytesReceivedPersec),
 			sqlInstance, replicaName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.GroupCommitsPerSec,
+			c.DBReplicaGroupCommits,
 			prometheus.CounterValue,
 			float64(v.GroupCommitsPerSec),
 			sqlInstance, replicaName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.GroupCommitTime,
+			c.DBReplicaGroupCommitTime,
 			prometheus.GaugeValue,
 			float64(v.GroupCommitTime),
 			sqlInstance, replicaName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LogApplyPendingQueue,
+			c.DBReplicaLogApplyPendingQueue,
 			prometheus.GaugeValue,
 			float64(v.LogApplyPendingQueue),
 			sqlInstance, replicaName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LogApplyReadyQueue,
+			c.DBReplicaLogApplyReadyQueue,
 			prometheus.GaugeValue,
 			float64(v.LogApplyReadyQueue),
 			sqlInstance, replicaName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LogBytesCompressedPersec,
+			c.DBReplicaLogBytesCompressed,
 			prometheus.CounterValue,
 			float64(v.LogBytesCompressedPersec),
 			sqlInstance, replicaName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LogBytesDecompressedPersec,
+			c.DBReplicaLogBytesDecompressed,
 			prometheus.CounterValue,
 			float64(v.LogBytesDecompressedPersec),
 			sqlInstance, replicaName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LogBytesReceivedPersec,
+			c.DBReplicaLogBytesReceived,
 			prometheus.CounterValue,
 			float64(v.LogBytesReceivedPersec),
 			sqlInstance, replicaName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LogCompressionCachehitsPersec,
+			c.DBReplicaLogCompressionCachehits,
 			prometheus.CounterValue,
 			float64(v.LogCompressionCachehitsPersec),
 			sqlInstance, replicaName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LogCompressionCachemissesPersec,
+			c.DBReplicaLogCompressionCachemisses,
 			prometheus.CounterValue,
 			float64(v.LogCompressionCachemissesPersec),
 			sqlInstance, replicaName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LogCompressionsPersec,
+			c.DBReplicaLogCompressions,
 			prometheus.CounterValue,
 			float64(v.LogCompressionsPersec),
 			sqlInstance, replicaName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LogDecompressionsPersec,
+			c.DBReplicaLogDecompressions,
 			prometheus.CounterValue,
 			float64(v.LogDecompressionsPersec),
 			sqlInstance, replicaName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.Logremainingforundo,
+			c.DBReplicaLogremainingforundo,
 			prometheus.GaugeValue,
 			float64(v.Logremainingforundo),
 			sqlInstance, replicaName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LogSendQueue,
+			c.DBReplicaLogSendQueue,
 			prometheus.GaugeValue,
 			float64(v.LogSendQueue),
 			sqlInstance, replicaName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.MirroredWriteTransactionsPersec,
+			c.DBReplicaMirroredWriteTransactions,
 			prometheus.CounterValue,
 			float64(v.MirroredWriteTransactionsPersec),
 			sqlInstance, replicaName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.RecoveryQueue,
+			c.DBReplicaRecoveryQueue,
 			prometheus.GaugeValue,
 			float64(v.RecoveryQueue),
 			sqlInstance, replicaName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.RedoblockedPersec,
+			c.DBReplicaRedoblocked,
 			prometheus.CounterValue,
 			float64(v.RedoblockedPersec),
 			sqlInstance, replicaName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.RedoBytesRemaining,
+			c.DBReplicaRedoBytesRemaining,
 			prometheus.GaugeValue,
 			float64(v.RedoBytesRemaining),
 			sqlInstance, replicaName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.RedoneBytesPersec,
+			c.DBReplicaRedoneBytes,
 			prometheus.CounterValue,
 			float64(v.RedoneBytesPersec),
 			sqlInstance, replicaName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.RedonesPersec,
+			c.DBReplicaRedones,
 			prometheus.CounterValue,
 			float64(v.RedonesPersec),
 			sqlInstance, replicaName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.TotalLogrequiringundo,
+			c.DBReplicaTotalLogrequiringundo,
 			prometheus.GaugeValue,
 			float64(v.TotalLogrequiringundo),
 			sqlInstance, replicaName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.TransactionDelay,
+			c.DBReplicaTransactionDelay,
 			prometheus.GaugeValue,
 			float64(v.TransactionDelay)*1000.0,
 			sqlInstance, replicaName,
@@ -1957,322 +2626,322 @@ func (c *MSSQLCollector) collectDatabases(ch chan<- prometheus.Metric, sqlInstan
 		dbName := v.Name
 
 		ch <- prometheus.MustNewConstMetric(
-			c.ActiveTransactions,
+			c.DatabasesActiveTransactions,
 			prometheus.GaugeValue,
 			float64(v.ActiveTransactions),
 			sqlInstance, dbName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.BackupPerRestoreThroughputPersec,
+			c.DatabasesBackupPerRestoreThroughput,
 			prometheus.CounterValue,
 			float64(v.BackupPerRestoreThroughputPersec),
 			sqlInstance, dbName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.BulkCopyRowsPersec,
+			c.DatabasesBulkCopyRows,
 			prometheus.CounterValue,
 			float64(v.BulkCopyRowsPersec),
 			sqlInstance, dbName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.BulkCopyThroughputPersec,
+			c.DatabasesBulkCopyThroughput,
 			prometheus.CounterValue,
 			float64(v.BulkCopyThroughputPersec)*1024,
 			sqlInstance, dbName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.Committableentries,
+			c.DatabasesCommittableentries,
 			prometheus.GaugeValue,
 			float64(v.Committableentries),
 			sqlInstance, dbName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.DataFilesSizeKB,
+			c.DatabasesDataFilesSizeKB,
 			prometheus.GaugeValue,
 			float64(v.DataFilesSizeKB*1024),
 			sqlInstance, dbName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.DBCCLogicalScanBytesPersec,
+			c.DatabasesDBCCLogicalScanBytes,
 			prometheus.CounterValue,
 			float64(v.DBCCLogicalScanBytesPersec),
 			sqlInstance, dbName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.GroupCommitTimePersec,
+			c.DatabasesGroupCommitTime,
 			prometheus.CounterValue,
 			float64(v.GroupCommitTimePersec)/1000000.0,
 			sqlInstance, dbName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LogBytesFlushedPersec,
+			c.DatabasesLogBytesFlushed,
 			prometheus.CounterValue,
 			float64(v.LogBytesFlushedPersec),
 			sqlInstance, dbName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LogCacheHitRatio,
+			c.DatabasesLogCacheHitRatio,
 			prometheus.GaugeValue,
 			float64(v.LogCacheHitRatio),
 			sqlInstance, dbName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LogCacheReadsPersec,
+			c.DatabasesLogCacheReads,
 			prometheus.CounterValue,
 			float64(v.LogCacheReadsPersec),
 			sqlInstance, dbName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LogFilesSizeKB,
+			c.DatabasesLogFilesSizeKB,
 			prometheus.GaugeValue,
 			float64(v.LogFilesSizeKB*1024),
 			sqlInstance, dbName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LogFilesUsedSizeKB,
+			c.DatabasesLogFilesUsedSizeKB,
 			prometheus.GaugeValue,
 			float64(v.LogFilesUsedSizeKB*1024),
 			sqlInstance, dbName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LogFlushesPersec,
+			c.DatabasesLogFlushes,
 			prometheus.CounterValue,
 			float64(v.LogFlushesPersec),
 			sqlInstance, dbName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LogFlushWaitsPersec,
+			c.DatabasesLogFlushWaits,
 			prometheus.CounterValue,
 			float64(v.LogFlushWaitsPersec),
 			sqlInstance, dbName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LogFlushWaitTime,
+			c.DatabasesLogFlushWaitTime,
 			prometheus.GaugeValue,
 			float64(v.LogFlushWaitTime)/1000.0,
 			sqlInstance, dbName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LogFlushWriteTimems,
+			c.DatabasesLogFlushWriteTimems,
 			prometheus.GaugeValue,
 			float64(v.LogFlushWriteTimems)/1000.0,
 			sqlInstance, dbName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LogGrowths,
+			c.DatabasesLogGrowths,
 			prometheus.GaugeValue,
 			float64(v.LogGrowths),
 			sqlInstance, dbName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LogPoolCacheMissesPersec,
+			c.DatabasesLogPoolCacheMisses,
 			prometheus.CounterValue,
 			float64(v.LogPoolCacheMissesPersec),
 			sqlInstance, dbName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LogPoolDiskReadsPersec,
+			c.DatabasesLogPoolDiskReads,
 			prometheus.CounterValue,
 			float64(v.LogPoolDiskReadsPersec),
 			sqlInstance, dbName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LogPoolHashDeletesPersec,
+			c.DatabasesLogPoolHashDeletes,
 			prometheus.CounterValue,
 			float64(v.LogPoolHashDeletesPersec),
 			sqlInstance, dbName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LogPoolHashInsertsPersec,
+			c.DatabasesLogPoolHashInserts,
 			prometheus.CounterValue,
 			float64(v.LogPoolHashInsertsPersec),
 			sqlInstance, dbName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LogPoolInvalidHashEntryPersec,
+			c.DatabasesLogPoolInvalidHashEntry,
 			prometheus.CounterValue,
 			float64(v.LogPoolInvalidHashEntryPersec),
 			sqlInstance, dbName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LogPoolLogScanPushesPersec,
+			c.DatabasesLogPoolLogScanPushes,
 			prometheus.CounterValue,
 			float64(v.LogPoolLogScanPushesPersec),
 			sqlInstance, dbName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LogPoolLogWriterPushesPersec,
+			c.DatabasesLogPoolLogWriterPushes,
 			prometheus.CounterValue,
 			float64(v.LogPoolLogWriterPushesPersec),
 			sqlInstance, dbName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LogPoolPushEmptyFreePoolPersec,
+			c.DatabasesLogPoolPushEmptyFreePool,
 			prometheus.CounterValue,
 			float64(v.LogPoolPushEmptyFreePoolPersec),
 			sqlInstance, dbName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LogPoolPushLowMemoryPersec,
+			c.DatabasesLogPoolPushLowMemory,
 			prometheus.CounterValue,
 			float64(v.LogPoolPushLowMemoryPersec),
 			sqlInstance, dbName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LogPoolPushNoFreeBufferPersec,
+			c.DatabasesLogPoolPushNoFreeBuffer,
 			prometheus.CounterValue,
 			float64(v.LogPoolPushNoFreeBufferPersec),
 			sqlInstance, dbName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LogPoolReqBehindTruncPersec,
+			c.DatabasesLogPoolReqBehindTrunc,
 			prometheus.CounterValue,
 			float64(v.LogPoolReqBehindTruncPersec),
 			sqlInstance, dbName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LogPoolRequestsOldVLFPersec,
+			c.DatabasesLogPoolRequestsOldVLF,
 			prometheus.CounterValue,
 			float64(v.LogPoolRequestsOldVLFPersec),
 			sqlInstance, dbName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LogPoolRequestsPersec,
+			c.DatabasesLogPoolRequests,
 			prometheus.CounterValue,
 			float64(v.LogPoolRequestsPersec),
 			sqlInstance, dbName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LogPoolTotalActiveLogSize,
+			c.DatabasesLogPoolTotalActiveLogSize,
 			prometheus.GaugeValue,
 			float64(v.LogPoolTotalActiveLogSize),
 			sqlInstance, dbName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LogPoolTotalSharedPoolSize,
+			c.DatabasesLogPoolTotalSharedPoolSize,
 			prometheus.GaugeValue,
 			float64(v.LogPoolTotalSharedPoolSize),
 			sqlInstance, dbName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LogShrinks,
+			c.DatabasesLogShrinks,
 			prometheus.GaugeValue,
 			float64(v.LogShrinks),
 			sqlInstance, dbName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LogTruncations,
+			c.DatabasesLogTruncations,
 			prometheus.GaugeValue,
 			float64(v.LogTruncations),
 			sqlInstance, dbName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.PercentLogUsed,
+			c.DatabasesPercentLogUsed,
 			prometheus.GaugeValue,
 			float64(v.PercentLogUsed),
 			sqlInstance, dbName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.ReplPendingXacts,
+			c.DatabasesReplPendingXacts,
 			prometheus.GaugeValue,
 			float64(v.ReplPendingXacts),
 			sqlInstance, dbName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.ReplTransRate,
+			c.DatabasesReplTransRate,
 			prometheus.CounterValue,
 			float64(v.ReplTransRate),
 			sqlInstance, dbName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.ShrinkDataMovementBytesPersec,
+			c.DatabasesShrinkDataMovementBytes,
 			prometheus.CounterValue,
 			float64(v.ShrinkDataMovementBytesPersec),
 			sqlInstance, dbName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.TrackedtransactionsPersec,
+			c.DatabasesTrackedtransactions,
 			prometheus.CounterValue,
 			float64(v.TrackedtransactionsPersec),
 			sqlInstance, dbName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.TransactionsPersec,
+			c.DatabasesTransactions,
 			prometheus.CounterValue,
 			float64(v.TransactionsPersec),
 			sqlInstance, dbName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.WriteTransactionsPersec,
+			c.DatabasesWriteTransactions,
 			prometheus.CounterValue,
 			float64(v.WriteTransactionsPersec),
 			sqlInstance, dbName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.XTPControllerDLCLatencyPerFetch,
+			c.DatabasesXTPControllerDLCLatencyPerFetch,
 			prometheus.GaugeValue,
 			float64(v.XTPControllerDLCLatencyPerFetch),
 			sqlInstance, dbName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.XTPControllerDLCPeakLatency,
+			c.DatabasesXTPControllerDLCPeakLatency,
 			prometheus.GaugeValue,
 			float64(v.XTPControllerDLCPeakLatency)*1000000.0,
 			sqlInstance, dbName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.XTPControllerLogProcessedPersec,
+			c.DatabasesXTPControllerLogProcessed,
 			prometheus.CounterValue,
 			float64(v.XTPControllerLogProcessedPersec),
 			sqlInstance, dbName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.XTPMemoryUsedKB,
+			c.DatabasesXTPMemoryUsedKB,
 			prometheus.GaugeValue,
 			float64(v.XTPMemoryUsedKB*1024),
 			sqlInstance, dbName,
@@ -2322,168 +2991,168 @@ func (c *MSSQLCollector) collectGeneralStatistics(ch chan<- prometheus.Metric, s
 	if len(dst) > 0 {
 		v := dst[0]
 		ch <- prometheus.MustNewConstMetric(
-			c.ActiveTempTables,
+			c.GenStatsActiveTempTables,
 			prometheus.GaugeValue,
 			float64(v.ActiveTempTables),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.ConnectionResetPersec,
+			c.GenStatsConnectionReset,
 			prometheus.CounterValue,
 			float64(v.ConnectionResetPersec),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.EventNotificationsDelayedDrop,
+			c.GenStatsEventNotificationsDelayedDrop,
 			prometheus.GaugeValue,
 			float64(v.EventNotificationsDelayedDrop),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.HTTPAuthenticatedRequests,
+			c.GenStatsHTTPAuthenticatedRequests,
 			prometheus.GaugeValue,
 			float64(v.HTTPAuthenticatedRequests),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LogicalConnections,
+			c.GenStatsLogicalConnections,
 			prometheus.GaugeValue,
 			float64(v.LogicalConnections),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LoginsPersec,
+			c.GenStatsLogins,
 			prometheus.CounterValue,
 			float64(v.LoginsPersec),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LogoutsPersec,
+			c.GenStatsLogouts,
 			prometheus.CounterValue,
 			float64(v.LogoutsPersec),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.MarsDeadlocks,
+			c.GenStatsMarsDeadlocks,
 			prometheus.GaugeValue,
 			float64(v.MarsDeadlocks),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.Nonatomicyieldrate,
+			c.GenStatsNonatomicyieldrate,
 			prometheus.CounterValue,
 			float64(v.Nonatomicyieldrate),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.Processesblocked,
+			c.GenStatsProcessesblocked,
 			prometheus.GaugeValue,
 			float64(v.Processesblocked),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.SOAPEmptyRequests,
+			c.GenStatsSOAPEmptyRequests,
 			prometheus.GaugeValue,
 			float64(v.SOAPEmptyRequests),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.SOAPMethodInvocations,
+			c.GenStatsSOAPMethodInvocations,
 			prometheus.GaugeValue,
 			float64(v.SOAPMethodInvocations),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.SOAPSessionInitiateRequests,
+			c.GenStatsSOAPSessionInitiateRequests,
 			prometheus.GaugeValue,
 			float64(v.SOAPSessionInitiateRequests),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.SOAPSessionTerminateRequests,
+			c.GenStatsSOAPSessionTerminateRequests,
 			prometheus.GaugeValue,
 			float64(v.SOAPSessionTerminateRequests),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.SOAPSQLRequests,
+			c.GenStatsSOAPSQLRequests,
 			prometheus.GaugeValue,
 			float64(v.SOAPSQLRequests),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.SOAPWSDLRequests,
+			c.GenStatsSOAPWSDLRequests,
 			prometheus.GaugeValue,
 			float64(v.SOAPWSDLRequests),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.SQLTraceIOProviderLockWaits,
+			c.GenStatsSQLTraceIOProviderLockWaits,
 			prometheus.GaugeValue,
 			float64(v.SQLTraceIOProviderLockWaits),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.Tempdbrecoveryunitid,
+			c.GenStatsTempdbrecoveryunitid,
 			prometheus.GaugeValue,
 			float64(v.Tempdbrecoveryunitid),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.Tempdbrowsetid,
+			c.GenStatsTempdbrowsetid,
 			prometheus.GaugeValue,
 			float64(v.Tempdbrowsetid),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.TempTablesCreationRate,
+			c.GenStatsTempTablesCreationRate,
 			prometheus.CounterValue,
 			float64(v.TempTablesCreationRate),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.TempTablesForDestruction,
+			c.GenStatsTempTablesForDestruction,
 			prometheus.GaugeValue,
 			float64(v.TempTablesForDestruction),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.TraceEventNotificationQueue,
+			c.GenStatsTraceEventNotificationQueue,
 			prometheus.GaugeValue,
 			float64(v.TraceEventNotificationQueue),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.Transactions,
+			c.GenStatsTransactions,
 			prometheus.GaugeValue,
 			float64(v.Transactions),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.UserConnections,
+			c.GenStatsUserConnections,
 			prometheus.GaugeValue,
 			float64(v.UserConnections),
 			sqlInstance,
@@ -2517,49 +3186,49 @@ func (c *MSSQLCollector) collectLocks(ch chan<- prometheus.Metric, sqlInstance s
 		lockResourceName := v.Name
 
 		ch <- prometheus.MustNewConstMetric(
-			c.AverageWaitTimems,
+			c.LocksAverageWaitTimems,
 			prometheus.GaugeValue,
 			float64(v.AverageWaitTimems)/1000.0,
 			sqlInstance, lockResourceName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LockRequestsPersec,
+			c.LocksLockRequests,
 			prometheus.CounterValue,
 			float64(v.LockRequestsPersec),
 			sqlInstance, lockResourceName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LockTimeoutsPersec,
+			c.LocksLockTimeouts,
 			prometheus.CounterValue,
 			float64(v.LockTimeoutsPersec),
 			sqlInstance, lockResourceName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LockTimeoutstimeout0Persec,
+			c.LocksLockTimeoutstimeout0,
 			prometheus.CounterValue,
 			float64(v.LockTimeoutstimeout0Persec),
 			sqlInstance, lockResourceName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LockWaitsPersec,
+			c.LocksLockWaits,
 			prometheus.CounterValue,
 			float64(v.LockWaitsPersec),
 			sqlInstance, lockResourceName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LockWaitTimems,
+			c.LocksLockWaitTimems,
 			prometheus.GaugeValue,
 			float64(v.LockWaitTimems)/1000.0,
 			sqlInstance, lockResourceName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.NumberofDeadlocksPersec,
+			c.LocksNumberofDeadlocks,
 			prometheus.CounterValue,
 			float64(v.NumberofDeadlocksPersec),
 			sqlInstance, lockResourceName,
@@ -2605,140 +3274,140 @@ func (c *MSSQLCollector) collectMemoryManager(ch chan<- prometheus.Metric, sqlIn
 		v := dst[0]
 
 		ch <- prometheus.MustNewConstMetric(
-			c.ConnectionMemoryKB,
+			c.MemMgrConnectionMemoryKB,
 			prometheus.GaugeValue,
 			float64(v.ConnectionMemoryKB*1024),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.DatabaseCacheMemoryKB,
+			c.MemMgrDatabaseCacheMemoryKB,
 			prometheus.GaugeValue,
 			float64(v.DatabaseCacheMemoryKB*1024),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.Externalbenefitofmemory,
+			c.MemMgrExternalbenefitofmemory,
 			prometheus.GaugeValue,
 			float64(v.Externalbenefitofmemory),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.FreeMemoryKB,
+			c.MemMgrFreeMemoryKB,
 			prometheus.GaugeValue,
 			float64(v.FreeMemoryKB*1024),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.GrantedWorkspaceMemoryKB,
+			c.MemMgrGrantedWorkspaceMemoryKB,
 			prometheus.GaugeValue,
 			float64(v.GrantedWorkspaceMemoryKB*1024),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LockBlocks,
+			c.MemMgrLockBlocks,
 			prometheus.GaugeValue,
 			float64(v.LockBlocks),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LockBlocksAllocated,
+			c.MemMgrLockBlocksAllocated,
 			prometheus.GaugeValue,
 			float64(v.LockBlocksAllocated),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LockMemoryKB,
+			c.MemMgrLockMemoryKB,
 			prometheus.GaugeValue,
 			float64(v.LockMemoryKB*1024),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LockOwnerBlocks,
+			c.MemMgrLockOwnerBlocks,
 			prometheus.GaugeValue,
 			float64(v.LockOwnerBlocks),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LockOwnerBlocksAllocated,
+			c.MemMgrLockOwnerBlocksAllocated,
 			prometheus.GaugeValue,
 			float64(v.LockOwnerBlocksAllocated),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LogPoolMemoryKB,
+			c.MemMgrLogPoolMemoryKB,
 			prometheus.GaugeValue,
 			float64(v.LogPoolMemoryKB*1024),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.MaximumWorkspaceMemoryKB,
+			c.MemMgrMaximumWorkspaceMemoryKB,
 			prometheus.GaugeValue,
 			float64(v.MaximumWorkspaceMemoryKB*1024),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.MemoryGrantsOutstanding,
+			c.MemMgrMemoryGrantsOutstanding,
 			prometheus.GaugeValue,
 			float64(v.MemoryGrantsOutstanding),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.MemoryGrantsPending,
+			c.MemMgrMemoryGrantsPending,
 			prometheus.GaugeValue,
 			float64(v.MemoryGrantsPending),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.OptimizerMemoryKB,
+			c.MemMgrOptimizerMemoryKB,
 			prometheus.GaugeValue,
 			float64(v.OptimizerMemoryKB*1024),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.ReservedServerMemoryKB,
+			c.MemMgrReservedServerMemoryKB,
 			prometheus.GaugeValue,
 			float64(v.ReservedServerMemoryKB*1024),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.SQLCacheMemoryKB,
+			c.MemMgrSQLCacheMemoryKB,
 			prometheus.GaugeValue,
 			float64(v.SQLCacheMemoryKB*1024),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.StolenServerMemoryKB,
+			c.MemMgrStolenServerMemoryKB,
 			prometheus.GaugeValue,
 			float64(v.StolenServerMemoryKB*1024),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.TargetServerMemoryKB,
+			c.MemMgrTargetServerMemoryKB,
 			prometheus.GaugeValue,
 			float64(v.TargetServerMemoryKB*1024),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.TotalServerMemoryKB,
+			c.MemMgrTotalServerMemoryKB,
 			prometheus.GaugeValue,
 			float64(v.TotalServerMemoryKB*1024),
 			sqlInstance,
@@ -2775,82 +3444,81 @@ func (c *MSSQLCollector) collectSQLStats(ch chan<- prometheus.Metric, sqlInstanc
 		v := dst[0]
 
 		ch <- prometheus.MustNewConstMetric(
-			c.AutoParamAttemptsPersec,
+			c.SQLStatsAutoParamAttempts,
 			prometheus.CounterValue,
 			float64(v.AutoParamAttemptsPersec),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.BatchRequestsPersec,
+			c.SQLStatsBatchRequests,
 			prometheus.CounterValue,
 			float64(v.BatchRequestsPersec),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.FailedAutoParamsPersec,
+			c.SQLStatsFailedAutoParams,
 			prometheus.CounterValue,
 			float64(v.FailedAutoParamsPersec),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.ForcedParameterizationsPersec,
+			c.SQLStatsForcedParameterizations,
 			prometheus.CounterValue,
 			float64(v.ForcedParameterizationsPersec),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.GuidedplanexecutionsPersec,
+			c.SQLStatsGuidedplanexecutions,
 			prometheus.CounterValue,
 			float64(v.GuidedplanexecutionsPersec),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.MisguidedplanexecutionsPersec,
+			c.SQLStatsMisguidedplanexecutions,
 			prometheus.CounterValue,
 			float64(v.MisguidedplanexecutionsPersec),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.SafeAutoParamsPersec,
+			c.SQLStatsSafeAutoParams,
 			prometheus.CounterValue,
 			float64(v.SafeAutoParamsPersec),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.SQLAttentionrate,
+			c.SQLStatsSQLAttentionrate,
 			prometheus.CounterValue,
 			float64(v.SQLAttentionrate),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.SQLCompilationsPersec,
+			c.SQLStatsSQLCompilations,
 			prometheus.CounterValue,
 			float64(v.SQLCompilationsPersec),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.SQLReCompilationsPersec,
+			c.SQLStatsSQLReCompilations,
 			prometheus.CounterValue,
 			float64(v.SQLReCompilationsPersec),
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.UnsafeAutoParamsPersec,
+			c.SQLStatsUnsafeAutoParams,
 			prometheus.CounterValue,
 			float64(v.UnsafeAutoParamsPersec),
 			sqlInstance,
 		)
 	}
-
 	return nil, nil
 }
