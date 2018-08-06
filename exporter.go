@@ -185,7 +185,7 @@ func main() {
 		).Default("/metrics").String()
 		enabledCollectors = kingpin.Flag(
 			"collectors.enabled",
-			"Comma-separated list of collectors to use. Use '[default]' as a placeholder for all the collectors enabled by default.").
+			"Comma-separated list of collectors to use. Use '[defaults]' as a placeholder for all the collectors enabled by default.").
 			Default(filterAvailableCollectors(defaultCollectors)).String()
 		printCollectors = kingpin.Flag(
 			"collectors.print",
