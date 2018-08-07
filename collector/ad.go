@@ -3,6 +3,8 @@
 package collector
 
 import (
+	"errors"
+
 	"github.com/StackExchange/wmi"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
@@ -615,6 +617,9 @@ func (c *ADCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, er
 	q := queryAll(&dst)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
+	}
+	if len(dst) == 0 {
+		return nil, errors.New("WMI query returned empty result set")
 	}
 
 	ch <- prometheus.MustNewConstMetric(
