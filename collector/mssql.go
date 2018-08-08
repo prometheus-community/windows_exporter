@@ -1769,309 +1769,311 @@ func (c *MSSQLCollector) collectAccessMethods(ch chan<- prometheus.Metric, sqlIn
 		return nil, err
 	}
 
-	if len(dst) > 0 {
-		v := dst[0]
-		ch <- prometheus.MustNewConstMetric(
-			c.AccessMethodsAUcleanupbatches,
-			prometheus.CounterValue,
-			float64(v.AUcleanupbatchesPersec),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.AccessMethodsAUcleanups,
-			prometheus.CounterValue,
-			float64(v.AUcleanupsPersec),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.AccessMethodsByreferenceLobCreateCount,
-			prometheus.CounterValue,
-			float64(v.ByreferenceLobCreateCount),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.AccessMethodsByreferenceLobUseCount,
-			prometheus.CounterValue,
-			float64(v.ByreferenceLobUseCount),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.AccessMethodsCountLobReadahead,
-			prometheus.CounterValue,
-			float64(v.CountLobReadahead),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.AccessMethodsCountPullInRow,
-			prometheus.CounterValue,
-			float64(v.CountPullInRow),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.AccessMethodsCountPushOffRow,
-			prometheus.CounterValue,
-			float64(v.CountPushOffRow),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.AccessMethodsDeferreddroppedAUs,
-			prometheus.GaugeValue,
-			float64(v.DeferreddroppedAUs),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.AccessMethodsDeferredDroppedrowsets,
-			prometheus.GaugeValue,
-			float64(v.DeferredDroppedrowsets),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.AccessMethodsDroppedrowsetcleanups,
-			prometheus.CounterValue,
-			float64(v.DroppedrowsetcleanupsPersec),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.AccessMethodsDroppedrowsetsskipped,
-			prometheus.CounterValue,
-			float64(v.DroppedrowsetsskippedPersec),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.AccessMethodsExtentDeallocations,
-			prometheus.CounterValue,
-			float64(v.ExtentDeallocationsPersec),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.AccessMethodsExtentsAllocated,
-			prometheus.CounterValue,
-			float64(v.ExtentsAllocatedPersec),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.AccessMethodsFailedAUcleanupbatches,
-			prometheus.CounterValue,
-			float64(v.FailedAUcleanupbatchesPersec),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.AccessMethodsFailedleafpagecookie,
-			prometheus.CounterValue,
-			float64(v.Failedleafpagecookie),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.AccessMethodsFailedtreepagecookie,
-			prometheus.CounterValue,
-			float64(v.Failedtreepagecookie),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.AccessMethodsForwardedRecords,
-			prometheus.CounterValue,
-			float64(v.ForwardedRecordsPersec),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.AccessMethodsFreeSpacePageFetches,
-			prometheus.CounterValue,
-			float64(v.FreeSpacePageFetchesPersec),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.AccessMethodsFreeSpaceScans,
-			prometheus.CounterValue,
-			float64(v.FreeSpaceScansPersec),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.AccessMethodsFullScans,
-			prometheus.CounterValue,
-			float64(v.FullScansPersec),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.AccessMethodsIndexSearches,
-			prometheus.CounterValue,
-			float64(v.IndexSearchesPersec),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.AccessMethodsInSysXactwaits,
-			prometheus.CounterValue,
-			float64(v.InSysXactwaitsPersec),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.AccessMethodsLobHandleCreateCount,
-			prometheus.CounterValue,
-			float64(v.LobHandleCreateCount),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.AccessMethodsLobHandleDestroyCount,
-			prometheus.CounterValue,
-			float64(v.LobHandleDestroyCount),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.AccessMethodsLobSSProviderCreateCount,
-			prometheus.CounterValue,
-			float64(v.LobSSProviderCreateCount),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.AccessMethodsLobSSProviderDestroyCount,
-			prometheus.CounterValue,
-			float64(v.LobSSProviderDestroyCount),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.AccessMethodsLobSSProviderTruncationCount,
-			prometheus.CounterValue,
-			float64(v.LobSSProviderTruncationCount),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.AccessMethodsMixedpageallocations,
-			prometheus.CounterValue,
-			float64(v.MixedpageallocationsPersec),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.AccessMethodsPagecompressionattempts,
-			prometheus.CounterValue,
-			float64(v.PagecompressionattemptsPersec),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.AccessMethodsPageDeallocations,
-			prometheus.CounterValue,
-			float64(v.PageDeallocationsPersec),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.AccessMethodsPagesAllocated,
-			prometheus.CounterValue,
-			float64(v.PagesAllocatedPersec),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.AccessMethodsPagescompressed,
-			prometheus.CounterValue,
-			float64(v.PagescompressedPersec),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.AccessMethodsPageSplits,
-			prometheus.CounterValue,
-			float64(v.PageSplitsPersec),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.AccessMethodsProbeScans,
-			prometheus.CounterValue,
-			float64(v.ProbeScansPersec),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.AccessMethodsRangeScans,
-			prometheus.CounterValue,
-			float64(v.RangeScansPersec),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.AccessMethodsScanPointRevalidations,
-			prometheus.CounterValue,
-			float64(v.ScanPointRevalidationsPersec),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.AccessMethodsSkippedGhostedRecords,
-			prometheus.CounterValue,
-			float64(v.SkippedGhostedRecordsPersec),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.AccessMethodsTableLockEscalations,
-			prometheus.CounterValue,
-			float64(v.TableLockEscalationsPersec),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.AccessMethodsUsedleafpagecookie,
-			prometheus.CounterValue,
-			float64(v.Usedleafpagecookie),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.AccessMethodsUsedtreepagecookie,
-			prometheus.CounterValue,
-			float64(v.Usedtreepagecookie),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.AccessMethodsWorkfilesCreated,
-			prometheus.CounterValue,
-			float64(v.WorkfilesCreatedPersec),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.AccessMethodsWorktablesCreated,
-			prometheus.CounterValue,
-			float64(v.WorktablesCreatedPersec),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.AccessMethodsWorktablesFromCacheRatio,
-			prometheus.CounterValue,
-			float64(v.WorktablesFromCacheRatio),
-			sqlInstance,
-		)
+	if len(dst) == 0 {
+		return nil, errors.New("WMI query returned empty result set")
 	}
+
+	v := dst[0]
+	ch <- prometheus.MustNewConstMetric(
+		c.AccessMethodsAUcleanupbatches,
+		prometheus.CounterValue,
+		float64(v.AUcleanupbatchesPersec),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.AccessMethodsAUcleanups,
+		prometheus.CounterValue,
+		float64(v.AUcleanupsPersec),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.AccessMethodsByreferenceLobCreateCount,
+		prometheus.CounterValue,
+		float64(v.ByreferenceLobCreateCount),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.AccessMethodsByreferenceLobUseCount,
+		prometheus.CounterValue,
+		float64(v.ByreferenceLobUseCount),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.AccessMethodsCountLobReadahead,
+		prometheus.CounterValue,
+		float64(v.CountLobReadahead),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.AccessMethodsCountPullInRow,
+		prometheus.CounterValue,
+		float64(v.CountPullInRow),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.AccessMethodsCountPushOffRow,
+		prometheus.CounterValue,
+		float64(v.CountPushOffRow),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.AccessMethodsDeferreddroppedAUs,
+		prometheus.GaugeValue,
+		float64(v.DeferreddroppedAUs),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.AccessMethodsDeferredDroppedrowsets,
+		prometheus.GaugeValue,
+		float64(v.DeferredDroppedrowsets),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.AccessMethodsDroppedrowsetcleanups,
+		prometheus.CounterValue,
+		float64(v.DroppedrowsetcleanupsPersec),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.AccessMethodsDroppedrowsetsskipped,
+		prometheus.CounterValue,
+		float64(v.DroppedrowsetsskippedPersec),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.AccessMethodsExtentDeallocations,
+		prometheus.CounterValue,
+		float64(v.ExtentDeallocationsPersec),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.AccessMethodsExtentsAllocated,
+		prometheus.CounterValue,
+		float64(v.ExtentsAllocatedPersec),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.AccessMethodsFailedAUcleanupbatches,
+		prometheus.CounterValue,
+		float64(v.FailedAUcleanupbatchesPersec),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.AccessMethodsFailedleafpagecookie,
+		prometheus.CounterValue,
+		float64(v.Failedleafpagecookie),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.AccessMethodsFailedtreepagecookie,
+		prometheus.CounterValue,
+		float64(v.Failedtreepagecookie),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.AccessMethodsForwardedRecords,
+		prometheus.CounterValue,
+		float64(v.ForwardedRecordsPersec),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.AccessMethodsFreeSpacePageFetches,
+		prometheus.CounterValue,
+		float64(v.FreeSpacePageFetchesPersec),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.AccessMethodsFreeSpaceScans,
+		prometheus.CounterValue,
+		float64(v.FreeSpaceScansPersec),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.AccessMethodsFullScans,
+		prometheus.CounterValue,
+		float64(v.FullScansPersec),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.AccessMethodsIndexSearches,
+		prometheus.CounterValue,
+		float64(v.IndexSearchesPersec),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.AccessMethodsInSysXactwaits,
+		prometheus.CounterValue,
+		float64(v.InSysXactwaitsPersec),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.AccessMethodsLobHandleCreateCount,
+		prometheus.CounterValue,
+		float64(v.LobHandleCreateCount),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.AccessMethodsLobHandleDestroyCount,
+		prometheus.CounterValue,
+		float64(v.LobHandleDestroyCount),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.AccessMethodsLobSSProviderCreateCount,
+		prometheus.CounterValue,
+		float64(v.LobSSProviderCreateCount),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.AccessMethodsLobSSProviderDestroyCount,
+		prometheus.CounterValue,
+		float64(v.LobSSProviderDestroyCount),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.AccessMethodsLobSSProviderTruncationCount,
+		prometheus.CounterValue,
+		float64(v.LobSSProviderTruncationCount),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.AccessMethodsMixedpageallocations,
+		prometheus.CounterValue,
+		float64(v.MixedpageallocationsPersec),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.AccessMethodsPagecompressionattempts,
+		prometheus.CounterValue,
+		float64(v.PagecompressionattemptsPersec),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.AccessMethodsPageDeallocations,
+		prometheus.CounterValue,
+		float64(v.PageDeallocationsPersec),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.AccessMethodsPagesAllocated,
+		prometheus.CounterValue,
+		float64(v.PagesAllocatedPersec),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.AccessMethodsPagescompressed,
+		prometheus.CounterValue,
+		float64(v.PagescompressedPersec),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.AccessMethodsPageSplits,
+		prometheus.CounterValue,
+		float64(v.PageSplitsPersec),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.AccessMethodsProbeScans,
+		prometheus.CounterValue,
+		float64(v.ProbeScansPersec),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.AccessMethodsRangeScans,
+		prometheus.CounterValue,
+		float64(v.RangeScansPersec),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.AccessMethodsScanPointRevalidations,
+		prometheus.CounterValue,
+		float64(v.ScanPointRevalidationsPersec),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.AccessMethodsSkippedGhostedRecords,
+		prometheus.CounterValue,
+		float64(v.SkippedGhostedRecordsPersec),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.AccessMethodsTableLockEscalations,
+		prometheus.CounterValue,
+		float64(v.TableLockEscalationsPersec),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.AccessMethodsUsedleafpagecookie,
+		prometheus.CounterValue,
+		float64(v.Usedleafpagecookie),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.AccessMethodsUsedtreepagecookie,
+		prometheus.CounterValue,
+		float64(v.Usedtreepagecookie),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.AccessMethodsWorkfilesCreated,
+		prometheus.CounterValue,
+		float64(v.WorkfilesCreatedPersec),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.AccessMethodsWorktablesCreated,
+		prometheus.CounterValue,
+		float64(v.WorktablesCreatedPersec),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.AccessMethodsWorktablesFromCacheRatio,
+		prometheus.CounterValue,
+		float64(v.WorktablesFromCacheRatio),
+		sqlInstance,
+	)
 	return nil, nil
 }
 
@@ -2201,164 +2203,166 @@ func (c *MSSQLCollector) collectBufferManager(ch chan<- prometheus.Metric, sqlIn
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
 	}
-
-	if len(dst) > 0 {
-		v := dst[0]
-
-		ch <- prometheus.MustNewConstMetric(
-			c.BufManBackgroundwriterpages,
-			prometheus.CounterValue,
-			float64(v.BackgroundwriterpagesPersec),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.BufManBuffercachehitratio,
-			prometheus.GaugeValue,
-			float64(v.Buffercachehitratio),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.BufManCheckpointpages,
-			prometheus.CounterValue,
-			float64(v.CheckpointpagesPersec),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.BufManDatabasepages,
-			prometheus.GaugeValue,
-			float64(v.Databasepages),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.BufManExtensionallocatedpages,
-			prometheus.GaugeValue,
-			float64(v.Extensionallocatedpages),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.BufManExtensionfreepages,
-			prometheus.GaugeValue,
-			float64(v.Extensionfreepages),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.BufManExtensioninuseaspercentage,
-			prometheus.GaugeValue,
-			float64(v.Extensioninuseaspercentage),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.BufManExtensionoutstandingIOcounter,
-			prometheus.GaugeValue,
-			float64(v.ExtensionoutstandingIOcounter),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.BufManExtensionpageevictions,
-			prometheus.CounterValue,
-			float64(v.ExtensionpageevictionsPersec),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.BufManExtensionpagereads,
-			prometheus.CounterValue,
-			float64(v.ExtensionpagereadsPersec),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.BufManExtensionpageunreferencedtime,
-			prometheus.GaugeValue,
-			float64(v.Extensionpageunreferencedtime),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.BufManExtensionpagewrites,
-			prometheus.CounterValue,
-			float64(v.ExtensionpagewritesPersec),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.BufManFreeliststalls,
-			prometheus.CounterValue,
-			float64(v.FreeliststallsPersec),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.BufManIntegralControllerSlope,
-			prometheus.GaugeValue,
-			float64(v.IntegralControllerSlope),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.BufManLazywrites,
-			prometheus.CounterValue,
-			float64(v.LazywritesPersec),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.BufManPagelifeexpectancy,
-			prometheus.GaugeValue,
-			float64(v.Pagelifeexpectancy),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.BufManPagelookups,
-			prometheus.CounterValue,
-			float64(v.PagelookupsPersec),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.BufManPagereads,
-			prometheus.CounterValue,
-			float64(v.PagereadsPersec),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.BufManPagewrites,
-			prometheus.CounterValue,
-			float64(v.PagewritesPersec),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.BufManReadaheadpages,
-			prometheus.CounterValue,
-			float64(v.ReadaheadpagesPersec),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.BufManReadaheadtime,
-			prometheus.CounterValue,
-			float64(v.ReadaheadtimePersec),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.BufManTargetpages,
-			prometheus.GaugeValue,
-			float64(v.Targetpages),
-			sqlInstance,
-		)
+	if len(dst) == 0 {
+		return nil, errors.New("WMI query returned empty result set")
 	}
+
+	v := dst[0]
+
+	ch <- prometheus.MustNewConstMetric(
+		c.BufManBackgroundwriterpages,
+		prometheus.CounterValue,
+		float64(v.BackgroundwriterpagesPersec),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.BufManBuffercachehitratio,
+		prometheus.GaugeValue,
+		float64(v.Buffercachehitratio),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.BufManCheckpointpages,
+		prometheus.CounterValue,
+		float64(v.CheckpointpagesPersec),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.BufManDatabasepages,
+		prometheus.GaugeValue,
+		float64(v.Databasepages),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.BufManExtensionallocatedpages,
+		prometheus.GaugeValue,
+		float64(v.Extensionallocatedpages),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.BufManExtensionfreepages,
+		prometheus.GaugeValue,
+		float64(v.Extensionfreepages),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.BufManExtensioninuseaspercentage,
+		prometheus.GaugeValue,
+		float64(v.Extensioninuseaspercentage),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.BufManExtensionoutstandingIOcounter,
+		prometheus.GaugeValue,
+		float64(v.ExtensionoutstandingIOcounter),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.BufManExtensionpageevictions,
+		prometheus.CounterValue,
+		float64(v.ExtensionpageevictionsPersec),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.BufManExtensionpagereads,
+		prometheus.CounterValue,
+		float64(v.ExtensionpagereadsPersec),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.BufManExtensionpageunreferencedtime,
+		prometheus.GaugeValue,
+		float64(v.Extensionpageunreferencedtime),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.BufManExtensionpagewrites,
+		prometheus.CounterValue,
+		float64(v.ExtensionpagewritesPersec),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.BufManFreeliststalls,
+		prometheus.CounterValue,
+		float64(v.FreeliststallsPersec),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.BufManIntegralControllerSlope,
+		prometheus.GaugeValue,
+		float64(v.IntegralControllerSlope),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.BufManLazywrites,
+		prometheus.CounterValue,
+		float64(v.LazywritesPersec),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.BufManPagelifeexpectancy,
+		prometheus.GaugeValue,
+		float64(v.Pagelifeexpectancy),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.BufManPagelookups,
+		prometheus.CounterValue,
+		float64(v.PagelookupsPersec),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.BufManPagereads,
+		prometheus.CounterValue,
+		float64(v.PagereadsPersec),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.BufManPagewrites,
+		prometheus.CounterValue,
+		float64(v.PagewritesPersec),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.BufManReadaheadpages,
+		prometheus.CounterValue,
+		float64(v.ReadaheadpagesPersec),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.BufManReadaheadtime,
+		prometheus.CounterValue,
+		float64(v.ReadaheadtimePersec),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.BufManTargetpages,
+		prometheus.GaugeValue,
+		float64(v.Targetpages),
+		sqlInstance,
+	)
+
 	return nil, nil
 }
 
@@ -2998,177 +3002,179 @@ func (c *MSSQLCollector) collectGeneralStatistics(ch chan<- prometheus.Metric, s
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
 	}
-
-	if len(dst) > 0 {
-		v := dst[0]
-		ch <- prometheus.MustNewConstMetric(
-			c.GenStatsActiveTempTables,
-			prometheus.GaugeValue,
-			float64(v.ActiveTempTables),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.GenStatsConnectionReset,
-			prometheus.CounterValue,
-			float64(v.ConnectionResetPersec),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.GenStatsEventNotificationsDelayedDrop,
-			prometheus.GaugeValue,
-			float64(v.EventNotificationsDelayedDrop),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.GenStatsHTTPAuthenticatedRequests,
-			prometheus.GaugeValue,
-			float64(v.HTTPAuthenticatedRequests),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.GenStatsLogicalConnections,
-			prometheus.GaugeValue,
-			float64(v.LogicalConnections),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.GenStatsLogins,
-			prometheus.CounterValue,
-			float64(v.LoginsPersec),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.GenStatsLogouts,
-			prometheus.CounterValue,
-			float64(v.LogoutsPersec),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.GenStatsMarsDeadlocks,
-			prometheus.GaugeValue,
-			float64(v.MarsDeadlocks),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.GenStatsNonatomicyieldrate,
-			prometheus.CounterValue,
-			float64(v.Nonatomicyieldrate),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.GenStatsProcessesblocked,
-			prometheus.GaugeValue,
-			float64(v.Processesblocked),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.GenStatsSOAPEmptyRequests,
-			prometheus.GaugeValue,
-			float64(v.SOAPEmptyRequests),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.GenStatsSOAPMethodInvocations,
-			prometheus.GaugeValue,
-			float64(v.SOAPMethodInvocations),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.GenStatsSOAPSessionInitiateRequests,
-			prometheus.GaugeValue,
-			float64(v.SOAPSessionInitiateRequests),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.GenStatsSOAPSessionTerminateRequests,
-			prometheus.GaugeValue,
-			float64(v.SOAPSessionTerminateRequests),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.GenStatsSOAPSQLRequests,
-			prometheus.GaugeValue,
-			float64(v.SOAPSQLRequests),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.GenStatsSOAPWSDLRequests,
-			prometheus.GaugeValue,
-			float64(v.SOAPWSDLRequests),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.GenStatsSQLTraceIOProviderLockWaits,
-			prometheus.GaugeValue,
-			float64(v.SQLTraceIOProviderLockWaits),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.GenStatsTempdbrecoveryunitid,
-			prometheus.GaugeValue,
-			float64(v.Tempdbrecoveryunitid),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.GenStatsTempdbrowsetid,
-			prometheus.GaugeValue,
-			float64(v.Tempdbrowsetid),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.GenStatsTempTablesCreationRate,
-			prometheus.CounterValue,
-			float64(v.TempTablesCreationRate),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.GenStatsTempTablesForDestruction,
-			prometheus.GaugeValue,
-			float64(v.TempTablesForDestruction),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.GenStatsTraceEventNotificationQueue,
-			prometheus.GaugeValue,
-			float64(v.TraceEventNotificationQueue),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.GenStatsTransactions,
-			prometheus.GaugeValue,
-			float64(v.Transactions),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.GenStatsUserConnections,
-			prometheus.GaugeValue,
-			float64(v.UserConnections),
-			sqlInstance,
-		)
+	if len(dst) == 0 {
+		return nil, errors.New("WMI query returned empty result set")
 	}
+
+	v := dst[0]
+	ch <- prometheus.MustNewConstMetric(
+		c.GenStatsActiveTempTables,
+		prometheus.GaugeValue,
+		float64(v.ActiveTempTables),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.GenStatsConnectionReset,
+		prometheus.CounterValue,
+		float64(v.ConnectionResetPersec),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.GenStatsEventNotificationsDelayedDrop,
+		prometheus.GaugeValue,
+		float64(v.EventNotificationsDelayedDrop),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.GenStatsHTTPAuthenticatedRequests,
+		prometheus.GaugeValue,
+		float64(v.HTTPAuthenticatedRequests),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.GenStatsLogicalConnections,
+		prometheus.GaugeValue,
+		float64(v.LogicalConnections),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.GenStatsLogins,
+		prometheus.CounterValue,
+		float64(v.LoginsPersec),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.GenStatsLogouts,
+		prometheus.CounterValue,
+		float64(v.LogoutsPersec),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.GenStatsMarsDeadlocks,
+		prometheus.GaugeValue,
+		float64(v.MarsDeadlocks),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.GenStatsNonatomicyieldrate,
+		prometheus.CounterValue,
+		float64(v.Nonatomicyieldrate),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.GenStatsProcessesblocked,
+		prometheus.GaugeValue,
+		float64(v.Processesblocked),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.GenStatsSOAPEmptyRequests,
+		prometheus.GaugeValue,
+		float64(v.SOAPEmptyRequests),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.GenStatsSOAPMethodInvocations,
+		prometheus.GaugeValue,
+		float64(v.SOAPMethodInvocations),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.GenStatsSOAPSessionInitiateRequests,
+		prometheus.GaugeValue,
+		float64(v.SOAPSessionInitiateRequests),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.GenStatsSOAPSessionTerminateRequests,
+		prometheus.GaugeValue,
+		float64(v.SOAPSessionTerminateRequests),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.GenStatsSOAPSQLRequests,
+		prometheus.GaugeValue,
+		float64(v.SOAPSQLRequests),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.GenStatsSOAPWSDLRequests,
+		prometheus.GaugeValue,
+		float64(v.SOAPWSDLRequests),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.GenStatsSQLTraceIOProviderLockWaits,
+		prometheus.GaugeValue,
+		float64(v.SQLTraceIOProviderLockWaits),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.GenStatsTempdbrecoveryunitid,
+		prometheus.GaugeValue,
+		float64(v.Tempdbrecoveryunitid),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.GenStatsTempdbrowsetid,
+		prometheus.GaugeValue,
+		float64(v.Tempdbrowsetid),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.GenStatsTempTablesCreationRate,
+		prometheus.CounterValue,
+		float64(v.TempTablesCreationRate),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.GenStatsTempTablesForDestruction,
+		prometheus.GaugeValue,
+		float64(v.TempTablesForDestruction),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.GenStatsTraceEventNotificationQueue,
+		prometheus.GaugeValue,
+		float64(v.TraceEventNotificationQueue),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.GenStatsTransactions,
+		prometheus.GaugeValue,
+		float64(v.Transactions),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.GenStatsUserConnections,
+		prometheus.GaugeValue,
+		float64(v.UserConnections),
+		sqlInstance,
+	)
+
 	return nil, nil
 }
 
@@ -3280,150 +3286,152 @@ func (c *MSSQLCollector) collectMemoryManager(ch chan<- prometheus.Metric, sqlIn
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
 	}
-
-	if len(dst) > 0 {
-		v := dst[0]
-
-		ch <- prometheus.MustNewConstMetric(
-			c.MemMgrConnectionMemoryKB,
-			prometheus.GaugeValue,
-			float64(v.ConnectionMemoryKB*1024),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.MemMgrDatabaseCacheMemoryKB,
-			prometheus.GaugeValue,
-			float64(v.DatabaseCacheMemoryKB*1024),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.MemMgrExternalbenefitofmemory,
-			prometheus.GaugeValue,
-			float64(v.Externalbenefitofmemory),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.MemMgrFreeMemoryKB,
-			prometheus.GaugeValue,
-			float64(v.FreeMemoryKB*1024),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.MemMgrGrantedWorkspaceMemoryKB,
-			prometheus.GaugeValue,
-			float64(v.GrantedWorkspaceMemoryKB*1024),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.MemMgrLockBlocks,
-			prometheus.GaugeValue,
-			float64(v.LockBlocks),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.MemMgrLockBlocksAllocated,
-			prometheus.GaugeValue,
-			float64(v.LockBlocksAllocated),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.MemMgrLockMemoryKB,
-			prometheus.GaugeValue,
-			float64(v.LockMemoryKB*1024),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.MemMgrLockOwnerBlocks,
-			prometheus.GaugeValue,
-			float64(v.LockOwnerBlocks),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.MemMgrLockOwnerBlocksAllocated,
-			prometheus.GaugeValue,
-			float64(v.LockOwnerBlocksAllocated),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.MemMgrLogPoolMemoryKB,
-			prometheus.GaugeValue,
-			float64(v.LogPoolMemoryKB*1024),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.MemMgrMaximumWorkspaceMemoryKB,
-			prometheus.GaugeValue,
-			float64(v.MaximumWorkspaceMemoryKB*1024),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.MemMgrMemoryGrantsOutstanding,
-			prometheus.GaugeValue,
-			float64(v.MemoryGrantsOutstanding),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.MemMgrMemoryGrantsPending,
-			prometheus.GaugeValue,
-			float64(v.MemoryGrantsPending),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.MemMgrOptimizerMemoryKB,
-			prometheus.GaugeValue,
-			float64(v.OptimizerMemoryKB*1024),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.MemMgrReservedServerMemoryKB,
-			prometheus.GaugeValue,
-			float64(v.ReservedServerMemoryKB*1024),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.MemMgrSQLCacheMemoryKB,
-			prometheus.GaugeValue,
-			float64(v.SQLCacheMemoryKB*1024),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.MemMgrStolenServerMemoryKB,
-			prometheus.GaugeValue,
-			float64(v.StolenServerMemoryKB*1024),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.MemMgrTargetServerMemoryKB,
-			prometheus.GaugeValue,
-			float64(v.TargetServerMemoryKB*1024),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.MemMgrTotalServerMemoryKB,
-			prometheus.GaugeValue,
-			float64(v.TotalServerMemoryKB*1024),
-			sqlInstance,
-		)
+	if len(dst) == 0 {
+		return nil, errors.New("WMI query returned empty result set")
 	}
+
+	v := dst[0]
+
+	ch <- prometheus.MustNewConstMetric(
+		c.MemMgrConnectionMemoryKB,
+		prometheus.GaugeValue,
+		float64(v.ConnectionMemoryKB*1024),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.MemMgrDatabaseCacheMemoryKB,
+		prometheus.GaugeValue,
+		float64(v.DatabaseCacheMemoryKB*1024),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.MemMgrExternalbenefitofmemory,
+		prometheus.GaugeValue,
+		float64(v.Externalbenefitofmemory),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.MemMgrFreeMemoryKB,
+		prometheus.GaugeValue,
+		float64(v.FreeMemoryKB*1024),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.MemMgrGrantedWorkspaceMemoryKB,
+		prometheus.GaugeValue,
+		float64(v.GrantedWorkspaceMemoryKB*1024),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.MemMgrLockBlocks,
+		prometheus.GaugeValue,
+		float64(v.LockBlocks),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.MemMgrLockBlocksAllocated,
+		prometheus.GaugeValue,
+		float64(v.LockBlocksAllocated),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.MemMgrLockMemoryKB,
+		prometheus.GaugeValue,
+		float64(v.LockMemoryKB*1024),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.MemMgrLockOwnerBlocks,
+		prometheus.GaugeValue,
+		float64(v.LockOwnerBlocks),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.MemMgrLockOwnerBlocksAllocated,
+		prometheus.GaugeValue,
+		float64(v.LockOwnerBlocksAllocated),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.MemMgrLogPoolMemoryKB,
+		prometheus.GaugeValue,
+		float64(v.LogPoolMemoryKB*1024),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.MemMgrMaximumWorkspaceMemoryKB,
+		prometheus.GaugeValue,
+		float64(v.MaximumWorkspaceMemoryKB*1024),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.MemMgrMemoryGrantsOutstanding,
+		prometheus.GaugeValue,
+		float64(v.MemoryGrantsOutstanding),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.MemMgrMemoryGrantsPending,
+		prometheus.GaugeValue,
+		float64(v.MemoryGrantsPending),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.MemMgrOptimizerMemoryKB,
+		prometheus.GaugeValue,
+		float64(v.OptimizerMemoryKB*1024),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.MemMgrReservedServerMemoryKB,
+		prometheus.GaugeValue,
+		float64(v.ReservedServerMemoryKB*1024),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.MemMgrSQLCacheMemoryKB,
+		prometheus.GaugeValue,
+		float64(v.SQLCacheMemoryKB*1024),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.MemMgrStolenServerMemoryKB,
+		prometheus.GaugeValue,
+		float64(v.StolenServerMemoryKB*1024),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.MemMgrTargetServerMemoryKB,
+		prometheus.GaugeValue,
+		float64(v.TargetServerMemoryKB*1024),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.MemMgrTotalServerMemoryKB,
+		prometheus.GaugeValue,
+		float64(v.TotalServerMemoryKB*1024),
+		sqlInstance,
+	)
+
 	return nil, nil
 }
 
@@ -3451,85 +3459,88 @@ func (c *MSSQLCollector) collectSQLStats(ch chan<- prometheus.Metric, sqlInstanc
 		return nil, err
 	}
 
-	if len(dst) > 0 {
-		v := dst[0]
-
-		ch <- prometheus.MustNewConstMetric(
-			c.SQLStatsAutoParamAttempts,
-			prometheus.CounterValue,
-			float64(v.AutoParamAttemptsPersec),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.SQLStatsBatchRequests,
-			prometheus.CounterValue,
-			float64(v.BatchRequestsPersec),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.SQLStatsFailedAutoParams,
-			prometheus.CounterValue,
-			float64(v.FailedAutoParamsPersec),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.SQLStatsForcedParameterizations,
-			prometheus.CounterValue,
-			float64(v.ForcedParameterizationsPersec),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.SQLStatsGuidedplanexecutions,
-			prometheus.CounterValue,
-			float64(v.GuidedplanexecutionsPersec),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.SQLStatsMisguidedplanexecutions,
-			prometheus.CounterValue,
-			float64(v.MisguidedplanexecutionsPersec),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.SQLStatsSafeAutoParams,
-			prometheus.CounterValue,
-			float64(v.SafeAutoParamsPersec),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.SQLStatsSQLAttentionrate,
-			prometheus.CounterValue,
-			float64(v.SQLAttentionrate),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.SQLStatsSQLCompilations,
-			prometheus.CounterValue,
-			float64(v.SQLCompilationsPersec),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.SQLStatsSQLReCompilations,
-			prometheus.CounterValue,
-			float64(v.SQLReCompilationsPersec),
-			sqlInstance,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.SQLStatsUnsafeAutoParams,
-			prometheus.CounterValue,
-			float64(v.UnsafeAutoParamsPersec),
-			sqlInstance,
-		)
+	if len(dst) == 0 {
+		return nil, errors.New("WMI query returned empty result set")
 	}
+
+	v := dst[0]
+
+	ch <- prometheus.MustNewConstMetric(
+		c.SQLStatsAutoParamAttempts,
+		prometheus.CounterValue,
+		float64(v.AutoParamAttemptsPersec),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.SQLStatsBatchRequests,
+		prometheus.CounterValue,
+		float64(v.BatchRequestsPersec),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.SQLStatsFailedAutoParams,
+		prometheus.CounterValue,
+		float64(v.FailedAutoParamsPersec),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.SQLStatsForcedParameterizations,
+		prometheus.CounterValue,
+		float64(v.ForcedParameterizationsPersec),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.SQLStatsGuidedplanexecutions,
+		prometheus.CounterValue,
+		float64(v.GuidedplanexecutionsPersec),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.SQLStatsMisguidedplanexecutions,
+		prometheus.CounterValue,
+		float64(v.MisguidedplanexecutionsPersec),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.SQLStatsSafeAutoParams,
+		prometheus.CounterValue,
+		float64(v.SafeAutoParamsPersec),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.SQLStatsSQLAttentionrate,
+		prometheus.CounterValue,
+		float64(v.SQLAttentionrate),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.SQLStatsSQLCompilations,
+		prometheus.CounterValue,
+		float64(v.SQLCompilationsPersec),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.SQLStatsSQLReCompilations,
+		prometheus.CounterValue,
+		float64(v.SQLReCompilationsPersec),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.SQLStatsUnsafeAutoParams,
+		prometheus.CounterValue,
+		float64(v.UnsafeAutoParamsPersec),
+		sqlInstance,
+	)
+
 	return nil, nil
 }

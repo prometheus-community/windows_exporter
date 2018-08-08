@@ -7,6 +7,7 @@
 package collector
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 
@@ -1738,216 +1739,218 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 		return nil, err
 	}
 
-	if len(dst_cache) > 0 {
-		ch <- prometheus.MustNewConstMetric(
-			c.ServiceCache_ActiveFlushedEntries,
-			prometheus.GaugeValue,
-			float64(dst_cache[0].ActiveFlushedEntries),
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.ServiceCache_FileCacheMemoryUsage,
-			prometheus.GaugeValue,
-			float64(dst_cache[0].CurrentFileCacheMemoryUsage),
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.ServiceCache_MaximumFileCacheMemoryUsage,
-			prometheus.CounterValue,
-			float64(dst_cache[0].MaximumFileCacheMemoryUsage),
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.ServiceCache_FileCacheFlushesTotal,
-			prometheus.CounterValue,
-			float64(dst_cache[0].TotalFlushedFiles),
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.ServiceCache_FileCacheQueriesTotal,
-			prometheus.CounterValue,
-			float64(dst_cache[0].FileCacheHits+dst_cache[0].FileCacheMisses),
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.ServiceCache_FileCacheHitsTotal,
-			prometheus.CounterValue,
-			float64(dst_cache[0].FileCacheHits),
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.ServiceCache_FilesCached,
-			prometheus.GaugeValue,
-			float64(dst_cache[0].CurrentFilesCached),
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.ServiceCache_FilesCachedTotal,
-			prometheus.CounterValue,
-			float64(dst_cache[0].TotalFilesCached),
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.ServiceCache_FilesFlushedTotal,
-			prometheus.CounterValue,
-			float64(dst_cache[0].TotalFlushedFiles),
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.ServiceCache_URICacheFlushesTotal,
-			prometheus.CounterValue,
-			float64(dst_cache[0].TotalFlushedURIs),
-			"user",
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.ServiceCache_URICacheFlushesTotal,
-			prometheus.CounterValue,
-			float64(dst_cache[0].KernelTotalFlushedURIs),
-			"kernel",
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.ServiceCache_URICacheQueriesTotal,
-			prometheus.CounterValue,
-			float64(dst_cache[0].URICacheHits+dst_cache[0].URICacheMisses),
-			"user",
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.ServiceCache_URICacheQueriesTotal,
-			prometheus.CounterValue,
-			float64(dst_cache[0].KernelURICacheHits+dst_cache[0].KernelURICacheMisses),
-			"kernel",
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.ServiceCache_URICacheHitsTotal,
-			prometheus.CounterValue,
-			float64(dst_cache[0].URICacheHits),
-			"user",
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.ServiceCache_URICacheHitsTotal,
-			prometheus.CounterValue,
-			float64(dst_cache[0].KernelURICacheHits),
-			"kernel",
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.ServiceCache_URIsCached,
-			prometheus.GaugeValue,
-			float64(dst_cache[0].CurrentURIsCached),
-			"user",
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.ServiceCache_URIsCached,
-			prometheus.GaugeValue,
-			float64(dst_cache[0].KernelCurrentURIsCached),
-			"kernel",
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.ServiceCache_URIsCachedTotal,
-			prometheus.CounterValue,
-			float64(dst_cache[0].TotalURIsCached),
-			"user",
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.ServiceCache_URIsCachedTotal,
-			prometheus.CounterValue,
-			float64(dst_cache[0].KernelTotalURIsCached),
-			"kernel",
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.ServiceCache_URIsFlushedTotal,
-			prometheus.CounterValue,
-			float64(dst_cache[0].TotalFlushedURIs),
-			"user",
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.ServiceCache_URIsFlushedTotal,
-			prometheus.CounterValue,
-			float64(dst_cache[0].KernelTotalFlushedURIs),
-			"kernel",
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.ServiceCache_MetadataCached,
-			prometheus.GaugeValue,
-			float64(dst_cache[0].CurrentMetadataCached),
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.ServiceCache_MetadataCacheFlushes,
-			prometheus.CounterValue,
-			float64(dst_cache[0].TotalFlushedMetadata),
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.ServiceCache_MetadataCacheQueriesTotal,
-			prometheus.CounterValue,
-			float64(dst_cache[0].MetadataCacheHits+dst_cache[0].MetadataCacheMisses),
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.ServiceCache_MetadataCacheHitsTotal,
-			prometheus.CounterValue,
-			float64(dst_cache[0].MetadataCacheHits),
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.ServiceCache_MetadataCachedTotal,
-			prometheus.CounterValue,
-			float64(dst_cache[0].TotalMetadataCached),
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.ServiceCache_MetadataFlushedTotal,
-			prometheus.CounterValue,
-			float64(dst_cache[0].TotalFlushedMetadata),
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.ServiceCache_OutputCacheActiveFlushedItems,
-			prometheus.CounterValue,
-			float64(dst_cache[0].OutputCacheCurrentFlushedItems),
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.ServiceCache_OutputCacheItems,
-			prometheus.CounterValue,
-			float64(dst_cache[0].OutputCacheCurrentItems),
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.ServiceCache_OutputCacheMemoryUsage,
-			prometheus.CounterValue,
-			float64(dst_cache[0].OutputCacheCurrentMemoryUsage),
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.ServiceCache_OutputCacheQueriesTotal,
-			prometheus.CounterValue,
-			float64(dst_cache[0].OutputCacheTotalHits+dst_cache[0].OutputCacheTotalMisses),
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.ServiceCache_OutputCacheHitsTotal,
-			prometheus.CounterValue,
-			float64(dst_cache[0].OutputCacheTotalHits),
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.ServiceCache_OutputCacheFlushedItemsTotal,
-			prometheus.CounterValue,
-			float64(dst_cache[0].OutputCacheTotalFlushedItems),
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.ServiceCache_OutputCacheFlushesTotal,
-			prometheus.CounterValue,
-			float64(dst_cache[0].OutputCacheTotalFlushes),
-		)
+	if len(dst_cache) == 0 {
+		return nil, errors.New("WMI query returned empty result set")
 	}
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_ActiveFlushedEntries,
+		prometheus.GaugeValue,
+		float64(dst_cache[0].ActiveFlushedEntries),
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_FileCacheMemoryUsage,
+		prometheus.GaugeValue,
+		float64(dst_cache[0].CurrentFileCacheMemoryUsage),
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_MaximumFileCacheMemoryUsage,
+		prometheus.CounterValue,
+		float64(dst_cache[0].MaximumFileCacheMemoryUsage),
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_FileCacheFlushesTotal,
+		prometheus.CounterValue,
+		float64(dst_cache[0].TotalFlushedFiles),
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_FileCacheQueriesTotal,
+		prometheus.CounterValue,
+		float64(dst_cache[0].FileCacheHits+dst_cache[0].FileCacheMisses),
+	)
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_FileCacheHitsTotal,
+		prometheus.CounterValue,
+		float64(dst_cache[0].FileCacheHits),
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_FilesCached,
+		prometheus.GaugeValue,
+		float64(dst_cache[0].CurrentFilesCached),
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_FilesCachedTotal,
+		prometheus.CounterValue,
+		float64(dst_cache[0].TotalFilesCached),
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_FilesFlushedTotal,
+		prometheus.CounterValue,
+		float64(dst_cache[0].TotalFlushedFiles),
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_URICacheFlushesTotal,
+		prometheus.CounterValue,
+		float64(dst_cache[0].TotalFlushedURIs),
+		"user",
+	)
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_URICacheFlushesTotal,
+		prometheus.CounterValue,
+		float64(dst_cache[0].KernelTotalFlushedURIs),
+		"kernel",
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_URICacheQueriesTotal,
+		prometheus.CounterValue,
+		float64(dst_cache[0].URICacheHits+dst_cache[0].URICacheMisses),
+		"user",
+	)
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_URICacheQueriesTotal,
+		prometheus.CounterValue,
+		float64(dst_cache[0].KernelURICacheHits+dst_cache[0].KernelURICacheMisses),
+		"kernel",
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_URICacheHitsTotal,
+		prometheus.CounterValue,
+		float64(dst_cache[0].URICacheHits),
+		"user",
+	)
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_URICacheHitsTotal,
+		prometheus.CounterValue,
+		float64(dst_cache[0].KernelURICacheHits),
+		"kernel",
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_URIsCached,
+		prometheus.GaugeValue,
+		float64(dst_cache[0].CurrentURIsCached),
+		"user",
+	)
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_URIsCached,
+		prometheus.GaugeValue,
+		float64(dst_cache[0].KernelCurrentURIsCached),
+		"kernel",
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_URIsCachedTotal,
+		prometheus.CounterValue,
+		float64(dst_cache[0].TotalURIsCached),
+		"user",
+	)
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_URIsCachedTotal,
+		prometheus.CounterValue,
+		float64(dst_cache[0].KernelTotalURIsCached),
+		"kernel",
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_URIsFlushedTotal,
+		prometheus.CounterValue,
+		float64(dst_cache[0].TotalFlushedURIs),
+		"user",
+	)
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_URIsFlushedTotal,
+		prometheus.CounterValue,
+		float64(dst_cache[0].KernelTotalFlushedURIs),
+		"kernel",
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_MetadataCached,
+		prometheus.GaugeValue,
+		float64(dst_cache[0].CurrentMetadataCached),
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_MetadataCacheFlushes,
+		prometheus.CounterValue,
+		float64(dst_cache[0].TotalFlushedMetadata),
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_MetadataCacheQueriesTotal,
+		prometheus.CounterValue,
+		float64(dst_cache[0].MetadataCacheHits+dst_cache[0].MetadataCacheMisses),
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_MetadataCacheHitsTotal,
+		prometheus.CounterValue,
+		float64(dst_cache[0].MetadataCacheHits),
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_MetadataCachedTotal,
+		prometheus.CounterValue,
+		float64(dst_cache[0].TotalMetadataCached),
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_MetadataFlushedTotal,
+		prometheus.CounterValue,
+		float64(dst_cache[0].TotalFlushedMetadata),
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_OutputCacheActiveFlushedItems,
+		prometheus.CounterValue,
+		float64(dst_cache[0].OutputCacheCurrentFlushedItems),
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_OutputCacheItems,
+		prometheus.CounterValue,
+		float64(dst_cache[0].OutputCacheCurrentItems),
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_OutputCacheMemoryUsage,
+		prometheus.CounterValue,
+		float64(dst_cache[0].OutputCacheCurrentMemoryUsage),
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_OutputCacheQueriesTotal,
+		prometheus.CounterValue,
+		float64(dst_cache[0].OutputCacheTotalHits+dst_cache[0].OutputCacheTotalMisses),
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_OutputCacheHitsTotal,
+		prometheus.CounterValue,
+		float64(dst_cache[0].OutputCacheTotalHits),
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_OutputCacheFlushedItemsTotal,
+		prometheus.CounterValue,
+		float64(dst_cache[0].OutputCacheTotalFlushedItems),
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ServiceCache_OutputCacheFlushesTotal,
+		prometheus.CounterValue,
+		float64(dst_cache[0].OutputCacheTotalFlushes),
+	)
 
 	return nil, nil
 }
