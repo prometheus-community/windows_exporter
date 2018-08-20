@@ -94,6 +94,7 @@ func mssqlBuildWMIInstanceClass(suffix string, instance string) string {
 }
 
 type mssqlCollectorsMap map[string]mssqlCollectorFunc
+type mssqlInvalidClassMap map[string]bool
 
 func mssqlAvailableClassCollectors() string {
 	return "accessmethods,availreplica,bufman,databases,dbreplica,genstats,locks,memmgr,sqlstats"
@@ -365,6 +366,7 @@ type MSSQLCollector struct {
 
 	mssqlInstances             mssqlInstancesType
 	mssqlCollectors            mssqlCollectorsMap
+	mssqlInvalidClasses        mssqlInvalidClassMap
 	mssqlChildCollectorFailure int
 }
 
@@ -1642,7 +1644,8 @@ func NewMSSQLCollector() (Collector, error) {
 			nil,
 		),
 
-		mssqlInstances: getMSSQLInstances(),
+		mssqlInstances:      getMSSQLInstances(),
+		mssqlInvalidClasses: make(mssqlInvalidClassMap),
 	}
 
 	MSSQLCollector.mssqlCollectors = MSSQLCollector.getMSSQLCollectors()
@@ -1662,18 +1665,28 @@ type mssqlCollectorFunc func(ch chan<- prometheus.Metric, sqlInstance string) (*
 
 func (c *MSSQLCollector) execute(name string, fn mssqlCollectorFunc, ch chan<- prometheus.Metric, sqlInstance string, wg *sync.WaitGroup) {
 	defer wg.Done()
+	InvalidClassKey := strings.Join([]string{name, sqlInstance}, "|")
+
+	if _, exists := c.mssqlInvalidClasses[InvalidClassKey]; exists {
+		return
+	}
 
 	begin := time.Now()
 	_, err := fn(ch, sqlInstance)
 	duration := time.Since(begin)
 	var success float64
 
+	if strings.Contains(strings.ToLower(err.Error()), "invalid class") {
+		log.Errorf("Invalid Class error returned.")
+		c.mssqlInvalidClasses[InvalidClassKey] = true
+	}
+
 	if err != nil {
-		log.Errorf("mssql class collector %s failed after %fs: %s", name, duration.Seconds(), err)
+		log.Errorf("mssql class collector %s instance %s failed after %fs: %s", name, sqlInstance, duration.Seconds(), err)
 		success = 0
 		c.mssqlChildCollectorFailure++
 	} else {
-		log.Debugf("mssql class collector %s succeeded after %fs.", name, duration.Seconds())
+		log.Debugf("mssql class collector %s instance %s succeeded after %fs.", name, sqlInstance, duration.Seconds())
 		success = 1
 	}
 	ch <- prometheus.MustNewConstMetric(
@@ -1694,6 +1707,7 @@ func (c *MSSQLCollector) execute(name string, fn mssqlCollectorFunc, ch chan<- p
 // to the provided prometheus Metric channel.
 func (c *MSSQLCollector) Collect(ch chan<- prometheus.Metric) error {
 	wg := sync.WaitGroup{}
+	c.mssqlChildCollectorFailure = 0
 
 	enabled := mssqlExpandEnabledCollectors(*mssqlEnabledCollectors)
 	for sqlInstance := range c.mssqlInstances {
