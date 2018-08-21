@@ -1667,25 +1667,26 @@ func (c *MSSQLCollector) execute(name string, fn mssqlCollectorFunc, ch chan<- p
 	defer wg.Done()
 	InvalidClassKey := strings.Join([]string{name, sqlInstance}, "|")
 
-	if _, exists := c.mssqlInvalidClasses[InvalidClassKey]; exists {
-		return
-	}
-
 	begin := time.Now()
 	_, err := fn(ch, sqlInstance)
 	duration := time.Since(begin)
 	var success float64
 
-	if strings.Contains(strings.ToLower(err.Error()), "invalid class") {
-		log.Errorf("Invalid Class error returned.")
-		c.mssqlInvalidClasses[InvalidClassKey] = true
-	}
-
 	if err != nil {
-		log.Errorf("mssql class collector %s instance %s failed after %fs: %s", name, sqlInstance, duration.Seconds(), err)
+		if strings.Contains(strings.ToLower(err.Error()), "invalid class") {
+			if c.mssqlInvalidClasses[InvalidClassKey] {
+				log.Debugf("mssql class collector %s instance %s failed after %fs: %s", name, sqlInstance, duration.Seconds(), err)
+			} else {
+				log.Errorf("mssql class collector %s instance %s failed after %fs: %s", name, sqlInstance, duration.Seconds(), err)
+				c.mssqlInvalidClasses[InvalidClassKey] = true
+			}
+		} else {
+			log.Errorf("mssql class collector %s instance %s failed after %fs: %s", name, sqlInstance, duration.Seconds(), err)
+		}
 		success = 0
 		c.mssqlChildCollectorFailure++
 	} else {
+		delete(c.mssqlInvalidClasses, InvalidClassKey)
 		log.Debugf("mssql class collector %s instance %s succeeded after %fs.", name, sqlInstance, duration.Seconds())
 		success = 1
 	}
