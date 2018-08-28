@@ -76,7 +76,10 @@ The prometheus metrics will be exposed on [localhost:9182](http://localhost:9182
 
     .\wmi_exporter.exe --collectors.enabled "process" --collector.process.processes-where "Name LIKE 'firefox%'"
 
-When there are multiple processes with the same name, WMI represents those after the first instance as `process-name#index`. So to get them all, rather than just the first one, the query needs to be a wildcard search.
+When there are multiple processes with the same name, WMI represents those after the first instance as `process-name#index`. So to get them all, rather than just the first one, the query needs to be a wildcard search using a `%` character.
+
+Please note that in Windows batch scripts (and when using the `cmd` command prompt), the `%` character is reserved, so it has to be escaped with another `%`. For example, the wildcard syntax for searching for all firefox processes is `firefox%%`.
+
 
 ## License
 
