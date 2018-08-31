@@ -66,7 +66,7 @@ func getMSSQLInstances() mssqlInstancesType {
 
 	instanceNames, err := k.ReadValueNames(0)
 	if err != nil {
-		log.Warn("Can't ReadSubKeyNames %#v", err)
+		log.Warnf("Can't ReadSubKeyNames %#v", err)
 		return sqlDefaultInstance
 	}
 
@@ -87,7 +87,15 @@ func getMSSQLInstances() mssqlInstancesType {
 func mssqlBuildWMIInstanceClass(suffix string, instance string) string {
 	instancePart := "MSSQLSERVER_SQLServer"
 	if instance != "MSSQLSERVER" {
-		instancePart = fmt.Sprintf("MSSQL%s_MSSQL%s", instance, instance)
+		// Instance names can contain some special characters, which are not supported in the WMI class name.
+		// We strip those out.
+		cleanedName := strings.Map(func(r rune) rune {
+			if r == '_' || r == '$' || r == '#' {
+				return -1
+			}
+			return r
+		}, instance)
+		instancePart = fmt.Sprintf("MSSQL%s_MSSQL%s", cleanedName, cleanedName)
 	}
 
 	return fmt.Sprintf("Win32_PerfRawData_%s%s", instancePart, suffix)
