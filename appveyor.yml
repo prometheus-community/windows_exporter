@@ -12,10 +12,14 @@ clone_folder: c:\gopath\src\github.com\martinlindhe\wmi_exporter
 install:
   - set PATH=%GOPATH%\bin;%PATH%
   - go get -u github.com/prometheus/promu
+  - go get -u github.com/alecthomas/gometalinter && gometalinter --install
   - choco install gitversion.portable make -y
 
 test_script:
   - make test
+
+after_test:
+  - make lint
 
 build_script:
   - ps: |

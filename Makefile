@@ -1,13 +1,16 @@
 export GOOS=windows
 
-fmt:
-	gofmt -l -w -s .
-
 build:
 	promu build -v
 
 test:
 	go test -v ./...
+
+lint:
+	gometalinter --vendor --config gometalinter.config ./...
+
+fmt:
+	gofmt -l -w -s .
 
 crossbuild:
 	# The prometheus/golang-builder image for promu crossbuild doesn't exist
