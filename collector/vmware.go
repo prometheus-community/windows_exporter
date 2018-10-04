@@ -1,5 +1,3 @@
-// returns data points from Win32_PerfRawData_vmGuestLib_VMem and Win32_PerfRawData_vmGuestLib_VCPU
-
 // +build windows
 
 package collector

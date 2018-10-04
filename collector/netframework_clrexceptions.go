@@ -1,6 +1,3 @@
-// returns data points from Win32_PerfRawData_NETFramework_NETCLRExceptions
-// <add link to documentation here> - Win32_PerfRawData_NETFramework_NETCLRExceptions class
-
 // +build windows
 
 package collector

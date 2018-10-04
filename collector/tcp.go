@@ -1,7 +1,3 @@
-// returns data points from Win32_PerfRawData_Tcpip_TCPv4
-
-// https://msdn.microsoft.com/en-us/library/aa394341(v=vs.85).aspx (Win32_PerfRawData_Tcpip_TCPv4 class)
-
 // +build windows
 
 package collector
@@ -102,6 +98,8 @@ func (c *TCPCollector) Collect(ch chan<- prometheus.Metric) error {
 	return nil
 }
 
+// Win32_PerfRawData_Tcpip_TCPv4 docs
+// - https://msdn.microsoft.com/en-us/library/aa394341(v=vs.85).aspx
 type Win32_PerfRawData_Tcpip_TCPv4 struct {
 	ConnectionFailures          uint64
 	ConnectionsActive           uint64

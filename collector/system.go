@@ -1,6 +1,3 @@
-// returns data points from Win32_PerfRawData_PerfOS_System class
-// https://web.archive.org/web/20050830140516/http://msdn.microsoft.com/library/en-us/wmisdk/wmi/win32_perfrawdata_perfos_system.asp
-
 // +build windows
 
 package collector
@@ -80,6 +77,8 @@ func (c *SystemCollector) Collect(ch chan<- prometheus.Metric) error {
 	return nil
 }
 
+// Win32_PerfRawData_PerfOS_System docs:
+// - https://web.archive.org/web/20050830140516/http://msdn.microsoft.com/library/en-us/wmisdk/wmi/win32_perfrawdata_perfos_system.asp
 type Win32_PerfRawData_PerfOS_System struct {
 	ContextSwitchesPersec     uint32
 	ExceptionDispatchesPersec uint32

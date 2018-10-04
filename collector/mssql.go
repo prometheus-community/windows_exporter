@@ -1,23 +1,3 @@
-// returns data points from the following classes:
-// - Win32_PerfRawData_MSSQLSERVER_SQLServerAccessMethods
-//   https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-access-methods-object
-// - Win32_PerfRawData_MSSQLSERVER_SQLServerAvailabilityReplica
-//   https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-availability-replica
-// - Win32_PerfRawData_MSSQLSERVER_SQLServerBufferManager
-//   https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-buffer-manager-object
-// - Win32_PerfRawData_MSSQLSERVER_SQLServerDatabaseReplica
-//   https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-database-replica
-// - Win32_PerfRawData_MSSQLSERVER_SQLServerDatabases
-//   https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-databases-object?view=sql-server-2017
-// - Win32_PerfRawData_MSSQLSERVER_SQLServerGeneralStatistics
-//   https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-general-statistics-object
-// - Win32_PerfRawData_MSSQLSERVER_SQLServerLocks
-//   https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-locks-object
-// - Win32_PerfRawData_MSSQLSERVER_SQLServerMemoryManager
-//   https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-memory-manager-object
-// - Win32_PerfRawData_MSSQLSERVER_SQLServerSQLStatistics
-//   https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-sql-statistics-object
-
 // +build windows
 
 package collector
@@ -1723,6 +1703,9 @@ func (c *MSSQLCollector) Collect(ch chan<- prometheus.Metric) error {
 	return nil
 }
 
+// win32PerfRawDataSQLServerAccessMethods docs:
+// - Win32_PerfRawData_MSSQLSERVER_SQLServerAccessMethods
+//   https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-access-methods-object
 type win32PerfRawDataSQLServerAccessMethods struct {
 	AUcleanupbatchesPersec        uint64
 	AUcleanupsPersec              uint64
@@ -2087,6 +2070,8 @@ func (c *MSSQLCollector) collectAccessMethods(ch chan<- prometheus.Metric, sqlIn
 	return nil, nil
 }
 
+// Win32_PerfRawData_MSSQLSERVER_SQLServerAvailabilityReplica docs:
+//   https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-availability-replica
 type win32PerfRawDataSQLServerAvailabilityReplica struct {
 	Name                           string
 	BytesReceivedfromReplicaPersec uint64
@@ -2179,6 +2164,8 @@ func (c *MSSQLCollector) collectAvailabilityReplica(ch chan<- prometheus.Metric,
 	return nil, nil
 }
 
+// Win32_PerfRawData_MSSQLSERVER_SQLServerBufferManager docs:
+//   https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-buffer-manager-object
 type win32PerfRawDataSQLServerBufferManager struct {
 	BackgroundwriterpagesPersec   uint64
 	Buffercachehitratio           uint64
@@ -2376,6 +2363,8 @@ func (c *MSSQLCollector) collectBufferManager(ch chan<- prometheus.Metric, sqlIn
 	return nil, nil
 }
 
+// Win32_PerfRawData_MSSQLSERVER_SQLServerDatabaseReplica docs:
+// - https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-database-replica
 type win32PerfRawDataSQLServerDatabaseReplica struct {
 	Name                            string
 	DatabaseFlowControlDelay        uint64
@@ -2588,6 +2577,8 @@ func (c *MSSQLCollector) collectDatabaseReplica(ch chan<- prometheus.Metric, sql
 	return nil, nil
 }
 
+// Win32_PerfRawData_MSSQLSERVER_SQLServerDatabases docs:
+// - https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-databases-object?view=sql-server-2017
 type win32PerfRawDataSQLServerDatabases struct {
 	Name                             string
 	ActiveTransactions               uint64
@@ -2976,6 +2967,8 @@ func (c *MSSQLCollector) collectDatabases(ch chan<- prometheus.Metric, sqlInstan
 	return nil, nil
 }
 
+// Win32_PerfRawData_MSSQLSERVER_SQLServerGeneralStatistics docs:
+// - https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-general-statistics-object
 type win32PerfRawDataSQLServerGeneralStatistics struct {
 	ActiveTempTables              uint64
 	ConnectionResetPersec         uint64
@@ -3188,6 +3181,8 @@ func (c *MSSQLCollector) collectGeneralStatistics(ch chan<- prometheus.Metric, s
 	return nil, nil
 }
 
+// Win32_PerfRawData_MSSQLSERVER_SQLServerLocks docs:
+// - https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-locks-object
 type win32PerfRawDataSQLServerLocks struct {
 	Name                       string
 	AverageWaitTimems          uint64
@@ -3264,6 +3259,8 @@ func (c *MSSQLCollector) collectLocks(ch chan<- prometheus.Metric, sqlInstance s
 	return nil, nil
 }
 
+// Win32_PerfRawData_MSSQLSERVER_SQLServerMemoryManager docs:
+// - https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-memory-manager-object
 type win32PerfRawDataSQLServerMemoryManager struct {
 	ConnectionMemoryKB       uint64
 	DatabaseCacheMemoryKB    uint64
@@ -3445,6 +3442,8 @@ func (c *MSSQLCollector) collectMemoryManager(ch chan<- prometheus.Metric, sqlIn
 	return nil, nil
 }
 
+// Win32_PerfRawData_MSSQLSERVER_SQLServerSQLStatistics docs:
+// - https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-sql-statistics-object
 type win32PerfRawDataSQLServerSQLStatistics struct {
 	AutoParamAttemptsPersec       uint64
 	BatchRequestsPersec           uint64

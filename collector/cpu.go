@@ -1,6 +1,3 @@
-// returns data points from Win32_PerfRawData_PerfOS_Processor
-// https://msdn.microsoft.com/en-us/library/aa394317(v=vs.90).aspx - Win32_PerfRawData_PerfOS_Processor class
-
 // +build windows
 
 package collector
@@ -66,6 +63,8 @@ func (c *CPUCollector) Collect(ch chan<- prometheus.Metric) error {
 	return nil
 }
 
+// Win32_PerfRawData_PerfOS_Processor docs:
+// - https://msdn.microsoft.com/en-us/library/aa394317(v=vs.90).aspx
 type Win32_PerfRawData_PerfOS_Processor struct {
 	Name                  string
 	C1TransitionsPersec   uint64

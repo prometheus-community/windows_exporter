@@ -1,7 +1,3 @@
-// returns data points from Win32_PerfRawData_DNS_DNS
-// https://msdn.microsoft.com/en-us/library/ms803992.aspx?f=255&MSPPError=-2147217396
-// https://technet.microsoft.com/en-us/library/cc977686.aspx
-
 // +build windows
 
 package collector
@@ -193,6 +189,9 @@ func (c *DNSCollector) Collect(ch chan<- prometheus.Metric) error {
 	return nil
 }
 
+// Win32_PerfRawData_DNS_DNS docs:
+// - https://msdn.microsoft.com/en-us/library/ms803992.aspx?f=255&MSPPError=-2147217396
+// - https://technet.microsoft.com/en-us/library/cc977686.aspx
 type Win32_PerfRawData_DNS_DNS struct {
 	AXFRRequestReceived            uint32
 	AXFRRequestSent                uint32

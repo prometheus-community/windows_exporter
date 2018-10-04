@@ -1,9 +1,3 @@
-// returns data points from the following classes:
-// - Win32_PerfRawData_W3SVC_WebService
-// - Win32_PerfRawData_APPPOOLCountersProvider_APPPOOLWAS
-// - Win32_PerfRawData_W3SVCW3WPCounterProvider_W3SVCW3WP
-// - Win32_PerfRawData_W3SVC_WebServiceCache
-
 // +build windows
 
 package collector

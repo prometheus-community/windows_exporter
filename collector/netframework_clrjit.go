@@ -1,6 +1,3 @@
-// returns data points from Win32_PerfRawData_NETFramework_NETCLRJit
-// <add link to documentation here> - Win32_PerfRawData_NETFramework_NETCLRJit class
-
 // +build windows
 
 package collector

@@ -1,6 +1,3 @@
-// returns data points from Win32_PerfRawData_PerfProc_Process
-// https://msdn.microsoft.com/en-us/library/aa394323(v=vs.85).aspx - Win32_PerfRawData_PerfProc_Process class
-
 // +build windows
 
 package collector
@@ -146,6 +143,8 @@ func (c *ProcessCollector) Collect(ch chan<- prometheus.Metric) error {
 	return nil
 }
 
+// Win32_PerfRawData_PerfProc_Process docs:
+// - https://msdn.microsoft.com/en-us/library/aa394323(v=vs.85).aspx
 type Win32_PerfRawData_PerfProc_Process struct {
 	Name                    string
 	CreatingProcessID       uint32
