@@ -25,7 +25,7 @@ func main() {
 		panic(err)
 	}
 	var data TemplateData
-	if err := json.Unmarshal(bytes, &data); err != nil {
+	if err = json.Unmarshal(bytes, &data); err != nil {
 		panic(err)
 	}
 
@@ -33,7 +33,7 @@ func main() {
 		"toLower":     strings.ToLower,
 		"toSnakeCase": toSnakeCase,
 	}
-	template, err := template.New("template").Funcs(funcs).ParseFiles("collector.template")
+	template, err = template.New("template").Funcs(funcs).ParseFiles("collector.template")
 	if err != nil {
 		panic(err)
 	}
