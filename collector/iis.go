@@ -802,8 +802,8 @@ func NewIISCollector() (Collector, error) {
 			nil,
 		),
 
-		appWhitelistPattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *siteWhitelist)),
-		appBlacklistPattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *siteBlacklist)),
+		appWhitelistPattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *appWhitelist)),
+		appBlacklistPattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *appBlacklist)),
 	}
 
 	buildIIS.iis_version = getIISVersion()
