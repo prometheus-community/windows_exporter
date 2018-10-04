@@ -33,11 +33,11 @@ func main() {
 		"toLower":     strings.ToLower,
 		"toSnakeCase": toSnakeCase,
 	}
-	template, err = template.New("template").Funcs(funcs).ParseFiles("collector.template")
+	tmpl, err := template.New("template").Funcs(funcs).ParseFiles("collector.template")
 	if err != nil {
 		panic(err)
 	}
-	err = template.ExecuteTemplate(os.Stdout, "collector.template", data)
+	err = tmpl.ExecuteTemplate(os.Stdout, "collector.template", data)
 	if err != nil {
 		panic(err)
 	}
