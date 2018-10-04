@@ -980,7 +980,7 @@ type Win32_PerfRawData_W3SVC_WebServiceCache struct {
 	URICacheMisses                 uint32
 }
 
-var ApplicationStates = map[uint32]string{
+var applicationStates = map[uint32]string{
 	1: "Uninitialized",
 	2: "Initialized",
 	3: "Running",
@@ -1261,7 +1261,7 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 		}
 
 		// Guages
-		for key, label := range ApplicationStates {
+		for key, label := range applicationStates {
 			isCurrentState := 0.0
 			if key == app.CurrentApplicationPoolState {
 				isCurrentState = 1.0

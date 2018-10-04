@@ -22,6 +22,7 @@ type CPUCollector struct {
 	DPCsTotal          *prometheus.Desc
 }
 
+// NewCPUCollector constructs a new CPUCollector
 func NewCPUCollector() (Collector, error) {
 	const subsystem = "cpu"
 	return &CPUCollector{
