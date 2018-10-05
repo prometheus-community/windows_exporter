@@ -44,7 +44,12 @@ func getMSSQLInstances() mssqlInstancesType {
 		log.Warn("Couldn't open registry to determine SQL instances:", err)
 		return sqlDefaultInstance
 	}
-	defer k.Close()
+	defer func() {
+		err = k.Close()
+		if err != nil {
+			log.Warnf("Failed to close registry key: %v", err)
+		}
+	}()
 
 	instanceNames, err := k.ReadValueNames(0)
 	if err != nil {

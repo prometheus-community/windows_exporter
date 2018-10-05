@@ -244,7 +244,10 @@ fileLoop:
 			continue
 		}
 		parsedFamilies, err := parser.TextToMetricFamilies(r)
-		file.Close()
+		closeErr := file.Close()
+		if closeErr != nil {
+			log.Warnf("Error closing file: %v", err)
+		}
 		if err != nil {
 			log.Errorf("Error parsing %q: %v", path, err)
 			error = 1.0

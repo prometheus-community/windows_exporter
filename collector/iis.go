@@ -30,7 +30,12 @@ func getIISVersion() simple_version {
 		log.Warn("Couldn't open registry to determine IIS version:", err)
 		return simple_version{}
 	}
-	defer k.Close()
+	defer func() {
+		err = k.Close()
+		if err != nil {
+			log.Warnf("Failed to close registry key: %v", err)
+		}
+	}()
 
 	major, _, err := k.GetIntegerValue("MajorVersion")
 	if err != nil {

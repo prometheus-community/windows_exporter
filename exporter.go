@@ -4,7 +4,6 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"net/http"
 	"sort"
 	"strings"
@@ -222,7 +221,12 @@ func main() {
 
 	stopCh := make(chan bool)
 	if !isInteractive {
-		go svc.Run(serviceName, &wmiExporterService{stopCh: stopCh})
+		go func() {
+			err = svc.Run(serviceName, &wmiExporterService{stopCh: stopCh})
+			if err != nil {
+				log.Errorf("Failed to start service: %v", err)
+			}
+		}()
 	}
 
 	collectors, err := loadCollectors(*enabledCollectors)
@@ -259,7 +263,7 @@ func main() {
 
 func healthCheck(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	io.WriteString(w, `{"status":"ok"}`)
+	fmt.Fprintln(w, `{"status":"ok"}`)
 }
 
 func keys(m map[string]collector.Collector) []string {
