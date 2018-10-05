@@ -487,8 +487,8 @@ type Win32_PerfRawData_DirectoryServices_DirectoryServices struct {
 	DatabasemodifysPersec                                            uint32
 	DatabaserecyclesPersec                                           uint32
 	DigestBindsPersec                                                uint32
-	DRAHighestUSNCommittedHighpart                                   uint32
-	DRAHighestUSNCommittedLowpart                                    uint32
+	DRAHighestUSNCommittedHighpart                                   uint64
+	DRAHighestUSNCommittedLowpart                                    uint64
 	DRAHighestUSNIssuedHighpart                                      uint64
 	DRAHighestUSNIssuedLowpart                                       uint64
 	DRAInboundBytesCompressedBetweenSitesAfterCompressionPersec      uint32
