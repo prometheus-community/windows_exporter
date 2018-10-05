@@ -263,7 +263,10 @@ func main() {
 
 func healthCheck(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintln(w, `{"status":"ok"}`)
+	_, err := fmt.Fprintln(w, `{"status":"ok"}`)
+	if err != nil {
+		log.Debugf("Failed to write to stream: %v", err)
+	}
 }
 
 func keys(m map[string]collector.Collector) []string {
