@@ -6,7 +6,6 @@ import (
 	"github.com/StackExchange/wmi"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
-	"fmt"
 )
 
 func init() {
@@ -55,10 +54,6 @@ type OS_MemoryCollector struct {
 // NewOS_MemoryCollector ...
 func NewOS_MemoryCollector() (Collector, error) {
 	const subsystem = "os_memory"
-
-	// for debugging only!
-	fmt.Println(Namespace)
-	fmt.Println(subsystem)
 
 	return &OS_MemoryCollector{
 		AvailableBytes: prometheus.NewDesc(
@@ -285,7 +280,10 @@ func (c *OS_MemoryCollector) Collect(ch chan<- prometheus.Metric) error {
 }
 
 type Win32_PerfRawData_PerfOS_Memory struct {
-	Name string
+
+//  This variable was apparently part of the class, but never filled,
+//    resulting in a runtime error
+//	Name string
 
 	AvailableBytes                  uint64
 	AvailableKBytes                 uint64
