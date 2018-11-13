@@ -1,14 +1,14 @@
 package collector
 
 import (
-	"testing"
-	"strings"
 	"io/ioutil"
+	"strings"
+	"testing"
 )
 
 func TestCRFilter(t *testing.T) {
 	sr := strings.NewReader("line 1\r\nline 2")
-	cr := carriageReturnFilteringReader{ r: sr }
+	cr := carriageReturnFilteringReader{r: sr}
 	b, err := ioutil.ReadAll(cr)
 	if err != nil {
 		t.Error(err)

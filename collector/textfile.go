@@ -1,3 +1,5 @@
+// Below code originally copied from prometheus/node_exporter/collector/textfile.go:
+//
 // Copyright 2015 The Prometheus Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,11 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// +build !notextfile
-
 package collector
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -29,7 +30,7 @@ import (
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
 	"github.com/prometheus/common/log"
-	kingpin "gopkg.in/alecthomas/kingpin.v2"
+	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 var (
@@ -64,7 +65,7 @@ func NewTextFileCollector() (Collector, error) {
 	}, nil
 }
 
-func convertMetricFamily(metricFamily *dto.MetricFamily, ch chan<- prometheus.Metric) {
+func convertMetricFamily(metricFamily *dto.MetricFamily, ch chan<- prometheus.Metric, seen map[uint64]string, path string) {
 	var valType prometheus.ValueType
 	var val float64
 
@@ -104,6 +105,14 @@ func convertMetricFamily(metricFamily *dto.MetricFamily, ch chan<- prometheus.Me
 				values = append(values, "")
 			}
 		}
+
+		h := hash(metricFamily, metric)
+		if seenIn, ok := seen[h]; ok {
+			repr := friendlyString(*metricFamily.Name, names, values)
+			log.Warnf("Metric %s was read from %s, but has already been collected from file %s, skipping", repr, path, seenIn)
+			continue
+		}
+		seen[h] = path
 
 		metricType := metricFamily.GetType()
 		switch metricType {
@@ -186,34 +195,11 @@ func (c *textFileCollector) exportMTimes(mtimes map[string]time.Time, ch chan<- 
 	}
 }
 
-type carriageReturnFilteringReader struct {
-	r io.Reader
-}
-
-// Read returns data from the underlying io.Reader, but with \r filtered out
-func (cr carriageReturnFilteringReader) Read(p []byte) (int, error) {
-	buf := make([]byte, len(p))
-	n, err := cr.r.Read(buf)
-
-	if err != nil && err != io.EOF {
-		return n, err
-	}
-
-	pi := 0
-	for i := 0; i < n; i++ {
-		if buf[i] != '\r' {
-			p[pi] = buf[i]
-			pi++
-		}
-	}
-
-	return pi, err
-}
-
 // Update implements the Collector interface.
 func (c *textFileCollector) Collect(ch chan<- prometheus.Metric) error {
 	error := 0.0
 	mtimes := map[string]time.Time{}
+	seenMetrics := make(map[uint64]string)
 
 	// Iterate over files and accumulate their metrics.
 	files, err := ioutil.ReadDir(c.path)
@@ -262,7 +248,7 @@ fileLoop:
 		mtimes[f.Name()] = f.ModTime()
 
 		for _, mf := range parsedFamilies {
-			convertMetricFamily(mf, ch)
+			convertMetricFamily(mf, ch, seenMetrics, path)
 		}
 	}
 
@@ -278,4 +264,116 @@ fileLoop:
 		prometheus.GaugeValue, error,
 	)
 	return nil
+}
+
+//
+// End of code copied from prometheus/node_exporter/collector/textfile.go
+//
+
+// Below code copied from prometheus/client_golang/prometheus/fnv.go:
+//
+// Copyright 2018 The Prometheus Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+const (
+	offset64           = 14695981039346656037
+	prime64            = 1099511628211
+	separatorByte byte = 255
+)
+
+// hashNew initializies a new fnv64a hash value.
+func hashNew() uint64 {
+	return offset64
+}
+
+// hashAdd adds a string to a fnv64a hash value, returning the updated hash.
+func hashAdd(h uint64, s string) uint64 {
+	for i := 0; i < len(s); i++ {
+		h ^= uint64(s[i])
+		h *= prime64
+	}
+	return h
+}
+
+// hashAddByte adds a byte to a fnv64a hash value, returning the updated hash.
+func hashAddByte(h uint64, b byte) uint64 {
+	h ^= uint64(b)
+	h *= prime64
+	return h
+}
+
+func hash(mf *dto.MetricFamily, m *dto.Metric) uint64 {
+	h := hashNew()
+	h = hashAdd(h, mf.GetName())
+	h = hashAddByte(h, separatorByte)
+	// Make sure label pairs are sorted. We depend on it for the consistency
+	// check.
+	sort.Sort(prometheus.LabelPairSorter(m.Label))
+	for _, lp := range m.Label {
+		h = hashAdd(h, lp.GetValue())
+		h = hashAddByte(h, separatorByte)
+	}
+
+	return h
+}
+
+//
+// End of code copied from prometheus/client_golang/prometheus/fnv.go
+//
+
+type carriageReturnFilteringReader struct {
+	r io.Reader
+}
+
+// Read returns data from the underlying io.Reader, but with \r filtered out
+func (cr carriageReturnFilteringReader) Read(p []byte) (int, error) {
+	buf := make([]byte, len(p))
+	n, err := cr.r.Read(buf)
+
+	if err != nil && err != io.EOF {
+		return n, err
+	}
+
+	pi := 0
+	for i := 0; i < n; i++ {
+		if buf[i] != '\r' {
+			p[pi] = buf[i]
+			pi++
+		}
+	}
+
+	return pi, err
+}
+
+func friendlyString(name string, labelNames, labelValues []string) string {
+	var bs bytes.Buffer
+
+	sortedNames := make([]string, len(labelNames))
+	copy(sortedNames, labelNames)
+	sort.Strings(sortedNames)
+
+	sortedValues := make([]string, len(labelValues))
+	copy(sortedValues, labelValues)
+	sort.Strings(sortedValues)
+
+	bs.WriteString(name)
+	bs.WriteRune('{')
+	for idx := 0; idx < len(sortedNames); idx++ {
+		bs.WriteString(fmt.Sprintf(`%s="%s"`, sortedNames[idx], sortedValues[idx]))
+		if idx < len(sortedNames)-1 {
+			bs.WriteRune(',')
+		}
+	}
+	bs.WriteRune('}')
+	return bs.String()
 }
