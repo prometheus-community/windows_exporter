@@ -16,6 +16,7 @@ func init() {
 
 // A SystemCollector is a Prometheus collector for WMI metrics
 type SystemCollector struct {
+	BootTimeSeconds          *prometheus.Desc
 	ContextSwitchesTotal     *prometheus.Desc
 	ExceptionDispatchesTotal *prometheus.Desc
 	ProcessorQueueLength     *prometheus.Desc
@@ -29,6 +30,12 @@ func NewSystemCollector() (Collector, error) {
 	const subsystem = "system"
 
 	return &SystemCollector{
+		BootTimeSeconds: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "boot_time_seconds"),
+			"System boot time (WMI source: PerfOS_System.SystemUpTime)",
+			nil,
+			nil,
+		),
 		ContextSwitchesTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "context_switches_total"),
 			"Total number of context switches (WMI source: PerfOS_System.ContextSwitchesPersec)",
@@ -99,6 +106,12 @@ func (c *SystemCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc
 		return nil, errors.New("WMI query returned empty result set")
 	}
 
+	ch <- prometheus.MustNewConstMetric(
+		c.BootTimeSeconds,
+		prometheus.GaugeValue,
+		// convert from Windows timestamp (1 jan 1601) to unix timestamp (1 jan 1970)
+		float64(int64(float64(dst[0].SystemUpTime-116444736000000000)/float64(dst[0].Frequency_Object))),
+	)
 	ch <- prometheus.MustNewConstMetric(
 		c.ContextSwitchesTotal,
 		prometheus.CounterValue,
