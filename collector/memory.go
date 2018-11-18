@@ -9,33 +9,30 @@ import (
 )
 
 func init() {
-	Factories["os_memory"] = NewOS_MemoryCollector
+	Factories["memory"] = NewMemoryCollector
 }
 
-// A OS_MemoryCollector is a Prometheus collector for WMI Win32_PerfRawData_PerfOS_Memory metrics
-type OS_MemoryCollector struct {
+// A MemoryCollector is a Prometheus collector for WMI Win32_PerfRawData_PerfOS_Memory metrics
+type MemoryCollector struct {
 	AvailableBytes                  *prometheus.Desc
-	AvailableKBytes                 *prometheus.Desc
-	AvailableMBytes                 *prometheus.Desc
 	CacheBytes                      *prometheus.Desc
 	CacheBytesPeak                  *prometheus.Desc
-	CacheFaultsPersec               *prometheus.Desc
+	CacheFaultsTotal                *prometheus.Desc
 	CommitLimit                     *prometheus.Desc
 	CommittedBytes                  *prometheus.Desc
-	DemandZeroFaultsPersec          *prometheus.Desc
+	DemandZeroFaultsTotal           *prometheus.Desc
 	FreeAndZeroPageListBytes        *prometheus.Desc
 	FreeSystemPageTableEntries      *prometheus.Desc
 	ModifiedPageListBytes           *prometheus.Desc
-	PageFaultsPersec                *prometheus.Desc
-	PageReadsPersec                 *prometheus.Desc
-	PagesInputPersec                *prometheus.Desc
-	PagesOutputPersec               *prometheus.Desc
-	PagesPersec                     *prometheus.Desc
-	PageWritesPersec                *prometheus.Desc
-	PercentCommittedBytesInUse      *prometheus.Desc
-	PoolNonpagedAllocs              *prometheus.Desc
+	PageFaultsTotal                 *prometheus.Desc
+	SwapPageReadsTotal              *prometheus.Desc
+	SwapPagesReadTotal              *prometheus.Desc
+	SwapPagesWrittenTotal           *prometheus.Desc
+	SwapPageOperationsTotal         *prometheus.Desc
+	SwapPageWritesTotal             *prometheus.Desc
+	PoolNonpagedAllocsTotal         *prometheus.Desc
 	PoolNonpagedBytes               *prometheus.Desc
-	PoolPagedAllocs                 *prometheus.Desc
+	PoolPagedAllocsTotal            *prometheus.Desc
 	PoolPagedBytes                  *prometheus.Desc
 	PoolPagedResidentBytes          *prometheus.Desc
 	StandbyCacheCoreBytes           *prometheus.Desc
@@ -46,31 +43,20 @@ type OS_MemoryCollector struct {
 	SystemCodeTotalBytes            *prometheus.Desc
 	SystemDriverResidentBytes       *prometheus.Desc
 	SystemDriverTotalBytes          *prometheus.Desc
-	TransitionFaultsPersec          *prometheus.Desc
-	TransitionPagesRePurposedPersec *prometheus.Desc
-	WriteCopiesPersec               *prometheus.Desc
+	TransitionFaultsTotal           *prometheus.Desc
+	TransitionPagesRepurposedTotal  *prometheus.Desc
+	WriteCopiesTotal                *prometheus.Desc
 }
 
-// NewOS_MemoryCollector ...
-func NewOS_MemoryCollector() (Collector, error) {
-	const subsystem = "os_memory"
+// NewMemoryCollector ...
+func NewMemoryCollector() (Collector, error) {
+	const subsystem = "memory"
 
-	return &OS_MemoryCollector{
+	return &MemoryCollector{
 		AvailableBytes: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "available_bytes"),
-			"(AvailableBytes)",
-			nil,
-			nil,
-		),
-		AvailableKBytes: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "available_k_bytes"),
-			"(AvailableKBytes)",
-			nil,
-			nil,
-		),
-		AvailableMBytes: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "available_m_bytes"),
-			"(AvailableMBytes)",
+			"The amount of physical memory immediately available for allocation to a process or for system use. It is equal to the sum of memory assigned to"+
+				" the standby (cached), free and zero page lists (AvailableBytes)",
 			nil,
 			nil,
 		),
@@ -86,8 +72,8 @@ func NewOS_MemoryCollector() (Collector, error) {
 			nil,
 			nil,
 		),
-		CacheFaultsPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "cache_faults_persec"),
+		CacheFaultsTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "cache_faults_total"),
 			"(CacheFaultsPersec)",
 			nil,
 			nil,
@@ -104,9 +90,10 @@ func NewOS_MemoryCollector() (Collector, error) {
 			nil,
 			nil,
 		),
-		DemandZeroFaultsPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "demand_zero_faults_persec"),
-			"(DemandZeroFaultsPersec)",
+		DemandZeroFaultsTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "demand_zero_faults_total"),
+			"The number of zeroed pages required to satisfy faults. Zeroed pages, pages emptied of previously stored data and filled with zeros, are a security"+
+				" feature of Windows that prevent processes from seeing data stored by earlier processes that used the memory space (DemandZeroFaults)",
 			nil,
 			nil,
 		),
@@ -128,62 +115,57 @@ func NewOS_MemoryCollector() (Collector, error) {
 			nil,
 			nil,
 		),
-		PageFaultsPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "page_faults_persec"),
+		PageFaultsTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "page_faults_total"),
 			"(PageFaultsPersec)",
 			nil,
 			nil,
 		),
-		PageReadsPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "page_reads_persec"),
-			"(PageReadsPersec)",
+		SwapPageReadsTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "swap_page_reads_total"),
+			"Number of disk page reads (a single read operation reading several pages is still only counted once) (PageReadsPersec)",
 			nil,
 			nil,
 		),
-		PagesInputPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "pages_input_persec"),
-			"(PagesInputPersec)",
+		SwapPagesReadTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "swap_pages_read_total"),
+			"Number of pages read across all page reads (ie counting all pages read even if they are read in a single operation) (PagesInputPersec)",
 			nil,
 			nil,
 		),
-		PagesOutputPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "pages_output_persec"),
-			"(PagesOutputPersec)",
+		SwapPagesWrittenTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "swap_pages_written_total"),
+			"Number of pages written across all page writes (ie counting all pages written even if they are written in a single operation) (PagesOutputPersec)",
 			nil,
 			nil,
 		),
-		PagesPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "pages_persec"),
-			"(PagesPersec)",
+		SwapPageOperationsTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "swap_page_operations_total"),
+			"Total number of swap page read and writes (PagesPersec)",
 			nil,
 			nil,
 		),
-		PageWritesPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "page_writes_persec"),
-			"(PageWritesPersec)",
+		SwapPageWritesTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "swap_page_writes_total"),
+			"Number of disk page writes (a single write operation writing several pages is still only counted once) (PageWritesPersec)",
 			nil,
 			nil,
 		),
-		PercentCommittedBytesInUse: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "percent_committed_bytes_in_use"),
-			"(PercentCommittedBytesInUse)",
-			nil,
-			nil,
-		),
-		PoolNonpagedAllocs: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "pool_nonpaged_allocs"),
-			"(PoolNonpagedAllocs)",
+		PoolNonpagedAllocsTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "pool_nonpaged_allocs_total"),
+			"The number of calls to allocate space in the nonpaged pool. The nonpaged pool is an area of system memory area for objects that cannot be written"+
+				" to disk, and must remain in physical memory as long as they are allocated (PoolNonpagedAllocs)",
 			nil,
 			nil,
 		),
 		PoolNonpagedBytes: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "pool_nonpaged_bytes"),
+			prometheus.BuildFQName(Namespace, subsystem, "pool_nonpaged_bytes_total"),
 			"(PoolNonpagedBytes)",
 			nil,
 			nil,
 		),
-		PoolPagedAllocs: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "pool_paged_allocs"),
+		PoolPagedAllocsTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "pool_paged_allocs_total"),
 			"(PoolPagedAllocs)",
 			nil,
 			nil,
@@ -248,21 +230,21 @@ func NewOS_MemoryCollector() (Collector, error) {
 			nil,
 			nil,
 		),
-		TransitionFaultsPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "transition_faults_persec"),
+		TransitionFaultsTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "transition_faults_total"),
 			"(TransitionFaultsPersec)",
 			nil,
 			nil,
 		),
-		TransitionPagesRePurposedPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "transition_pages_re_purposed_persec"),
+		TransitionPagesRepurposedTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "transition_pages_repurposed_total"),
 			"(TransitionPagesRePurposedPersec)",
 			nil,
 			nil,
 		),
-		WriteCopiesPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "write_copies_persec"),
-			"(WriteCopiesPersec)",
+		WriteCopiesTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "write_copies_total"),
+			"The number of page faults caused by attempting to write that were satisfied by copying the page from elsewhere in physical memory (WriteCopiesPersec)",
 			nil,
 			nil,
 		),
@@ -271,20 +253,15 @@ func NewOS_MemoryCollector() (Collector, error) {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *OS_MemoryCollector) Collect(ch chan<- prometheus.Metric) error {
+func (c *MemoryCollector) Collect(ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ch); err != nil {
-		log.Error("failed collecting os_memory metrics:", desc, err)
+		log.Error("failed collecting memory metrics:", desc, err)
 		return err
 	}
 	return nil
 }
 
 type Win32_PerfRawData_PerfOS_Memory struct {
-
-//  This variable was apparently part of the class, but never filled,
-//    resulting in a runtime error
-//	Name string
-
 	AvailableBytes                  uint64
 	AvailableKBytes                 uint64
 	AvailableMBytes                 uint64
@@ -303,7 +280,6 @@ type Win32_PerfRawData_PerfOS_Memory struct {
 	PagesOutputPersec               uint32
 	PagesPersec                     uint32
 	PageWritesPersec                uint32
-	PercentCommittedBytesInUse      uint32
 	PoolNonpagedAllocs              uint32
 	PoolNonpagedBytes               uint64
 	PoolPagedAllocs                 uint32
@@ -322,7 +298,7 @@ type Win32_PerfRawData_PerfOS_Memory struct {
 	WriteCopiesPersec               uint32
 }
 
-func (c *OS_MemoryCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *MemoryCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_PerfRawData_PerfOS_Memory
 	q := queryAll(&dst)
 	if err := wmi.Query(q, &dst); err != nil {
@@ -333,18 +309,6 @@ func (c *OS_MemoryCollector) collect(ch chan<- prometheus.Metric) (*prometheus.D
 		c.AvailableBytes,
 		prometheus.GaugeValue,
 		float64(dst[0].AvailableBytes),
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.AvailableKBytes,
-		prometheus.GaugeValue,
-		float64(dst[0].AvailableKBytes),
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.AvailableMBytes,
-		prometheus.GaugeValue,
-		float64(dst[0].AvailableMBytes),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
@@ -360,7 +324,7 @@ func (c *OS_MemoryCollector) collect(ch chan<- prometheus.Metric) (*prometheus.D
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.CacheFaultsPersec,
+		c.CacheFaultsTotal,
 		prometheus.GaugeValue,
 		float64(dst[0].CacheFaultsPersec),
 	)
@@ -378,7 +342,7 @@ func (c *OS_MemoryCollector) collect(ch chan<- prometheus.Metric) (*prometheus.D
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.DemandZeroFaultsPersec,
+		c.DemandZeroFaultsTotal,
 		prometheus.GaugeValue,
 		float64(dst[0].DemandZeroFaultsPersec),
 	)
@@ -402,49 +366,43 @@ func (c *OS_MemoryCollector) collect(ch chan<- prometheus.Metric) (*prometheus.D
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.PageFaultsPersec,
+		c.PageFaultsTotal,
 		prometheus.GaugeValue,
 		float64(dst[0].PageFaultsPersec),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.PageReadsPersec,
+		c.SwapPageReadsTotal,
 		prometheus.GaugeValue,
 		float64(dst[0].PageReadsPersec),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.PagesInputPersec,
+		c.SwapPagesReadTotal,
 		prometheus.GaugeValue,
 		float64(dst[0].PagesInputPersec),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.PagesOutputPersec,
+		c.SwapPagesWrittenTotal,
 		prometheus.GaugeValue,
 		float64(dst[0].PagesOutputPersec),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.PagesPersec,
+		c.SwapPageOperationsTotal,
 		prometheus.GaugeValue,
 		float64(dst[0].PagesPersec),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.PageWritesPersec,
+		c.SwapPageWritesTotal,
 		prometheus.GaugeValue,
 		float64(dst[0].PageWritesPersec),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.PercentCommittedBytesInUse,
-		prometheus.GaugeValue,
-		float64(dst[0].PercentCommittedBytesInUse),
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.PoolNonpagedAllocs,
+		c.PoolNonpagedAllocsTotal,
 		prometheus.GaugeValue,
 		float64(dst[0].PoolNonpagedAllocs),
 	)
@@ -456,7 +414,7 @@ func (c *OS_MemoryCollector) collect(ch chan<- prometheus.Metric) (*prometheus.D
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.PoolPagedAllocs,
+		c.PoolPagedAllocsTotal,
 		prometheus.GaugeValue,
 		float64(dst[0].PoolPagedAllocs),
 	)
@@ -522,19 +480,19 @@ func (c *OS_MemoryCollector) collect(ch chan<- prometheus.Metric) (*prometheus.D
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.TransitionFaultsPersec,
+		c.TransitionFaultsTotal,
 		prometheus.GaugeValue,
 		float64(dst[0].TransitionFaultsPersec),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.TransitionPagesRePurposedPersec,
+		c.TransitionPagesRepurposedTotal,
 		prometheus.GaugeValue,
 		float64(dst[0].TransitionPagesRePurposedPersec),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.WriteCopiesPersec,
+		c.WriteCopiesTotal,
 		prometheus.GaugeValue,
 		float64(dst[0].WriteCopiesPersec),
 	)
