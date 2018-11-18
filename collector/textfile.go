@@ -25,6 +25,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dimchansky/utfbom"
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
@@ -236,7 +237,8 @@ fileLoop:
 			continue
 		}
 		var parser expfmt.TextParser
-		parsedFamilies, err := parser.TextToMetricFamilies(carriageReturnFilteringReader{r: file})
+		r := utfbom.SkipOnly(carriageReturnFilteringReader{r: file})
+		parsedFamilies, err := parser.TextToMetricFamilies(r)
 		file.Close()
 		if err != nil {
 			log.Errorf("Error parsing %q: %v", path, err)
