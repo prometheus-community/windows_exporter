@@ -2,8 +2,10 @@
 
 The hyperv collector exposes metrics about the Hyper-V hypervisor
 
-Metric name prefix | `hyperv`
-Classes             | `Win32_PerfRawData_VmmsVirtualMachineStats_HyperVVirtualMachineHealthSummary`, `Win32_PerfRawData_VidPerfProvider_HyperVVMVidPartition`, `Win32_PerfRawData_HvStats_HyperVHypervisorRootPartition`, `Win32_PerfRawData_HvStats_HyperVHypervisor`, `Win32_PerfRawData_HvStats_HyperVHypervisorRootVirtualProcessor`, `Win32_PerfRawData_HvStats_HyperVHypervisorVirtualProcessor`, `Win32_PerfRawData_NvspSwitchStats_HyperVVirtualSwitch`, `Win32_PerfRawData_EthernetPerfProvider_HyperVLegacyNetworkAdapter`, `Win32_PerfRawData_Counters_HyperVVirtualStorageDevice`, `Win32_PerfRawData_NvspNicStats_HyperVVirtualNetworkAdapter`
+|||
+-|-
+Metric name prefix  | `hyperv`
+Classes             | `Win32_PerfRawData_VmmsVirtualMachineStats_HyperVVirtualMachineHealthSummary`<br/>`Win32_PerfRawData_VidPerfProvider_HyperVVMVidPartition`<br/>`Win32_PerfRawData_HvStats_HyperVHypervisorRootPartition`<br/>`Win32_PerfRawData_HvStats_HyperVHypervisor`<br/>`Win32_PerfRawData_HvStats_HyperVHypervisorRootVirtualProcessor`<br/>`Win32_PerfRawData_HvStats_HyperVHypervisorVirtualProcessor`<br/>`Win32_PerfRawData_NvspSwitchStats_HyperVVirtualSwitch`<br/>`Win32_PerfRawData_EthernetPerfProvider_HyperVLegacyNetworkAdapter`<br/>`Win32_PerfRawData_Counters_HyperVVirtualStorageDevice`<br/>`Win32_PerfRawData_NvspNicStats_HyperVVirtualNetworkAdapter`
 Enabled by default? | No
 
 ## Flags

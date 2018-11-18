@@ -2,7 +2,9 @@
 
 The ad collector exposes metrics about a Active Directory Domain Services domain controller
 
-Metric name prefix | `ad`
+|||
+-|-
+Metric name prefix  | `ad`
 Classes             | [`Win32_PerfRawData_DirectoryServices_DirectoryServices`](https://msdn.microsoft.com/en-us/library/ms803980.aspx)
 Enabled by default? | No
 

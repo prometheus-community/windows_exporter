@@ -2,7 +2,9 @@
 
 The %name% collector exposes metrics about ...
 
-Metric name prefix | `%name%`
+|||
+-|-
+Metric name prefix  | `%name%`
 Classes             | [`...`](https://msdn.microsoft.com/en-us/library/...)
 Enabled by default? | Yes/No
 

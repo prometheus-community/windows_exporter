@@ -2,7 +2,9 @@
 
 The netframework_clrjit collector exposes metrics about the dotnet Just-in-Time compiler.
 
-Metric name prefix | `netframework_clrjit`
+|||
+-|-
+Metric name prefix  | `netframework_clrjit`
 Classes             | `Win32_PerfRawData_NETFramework_NETCLRJit`
 Enabled by default? | No
 

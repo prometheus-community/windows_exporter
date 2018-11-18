@@ -2,7 +2,9 @@
 
 The netframework_clrremoting collector exposes metrics about dotnet remoting.
 
-Metric name prefix | `netframework_clrremoting`
+|||
+-|-
+Metric name prefix  | `netframework_clrremoting`
 Classes             | `Win32_PerfRawData_NETFramework_NETCLRRemoting`
 Enabled by default? | No
 

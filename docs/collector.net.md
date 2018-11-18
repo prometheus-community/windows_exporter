@@ -2,7 +2,9 @@
 
 The net collector exposes metrics about network interfaces
 
-Metric name prefix | `net`
+|||
+-|-
+Metric name prefix  | `net`
 Classes             | [`Win32_PerfRawData_Tcpip_NetworkInterface`](https://technet.microsoft.com/en-us/security/aa394340(v=vs.80))
 Enabled by default? | Yes
 

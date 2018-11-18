@@ -2,7 +2,9 @@
 
 The netframework_clrlocksandthreads collector exposes metrics about locks and threads in dotnet applications.
 
-Metric name prefix | `netframework_clrlocksandthreads`
+|||
+-|-
+Metric name prefix  | `netframework_clrlocksandthreads`
 Classes             | `Win32_PerfRawData_NETFramework_NETCLRLocksAndThreads`
 Enabled by default? | No
 

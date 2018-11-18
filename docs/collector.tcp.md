@@ -2,7 +2,9 @@
 
 The tcp collector exposes metrics about the TCP/IPv4 network stack.
 
-Metric name prefix | `tcp`
+|||
+-|-
+Metric name prefix  | `tcp`
 Classes             | [`Win32_PerfRawData_Tcpip_TCPv4`](https://msdn.microsoft.com/en-us/library/aa394341(v=vs.85).aspx)
 Enabled by default? | No
 

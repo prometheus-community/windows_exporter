@@ -2,7 +2,9 @@
 
 The os collector exposes metrics about the operating system
 
-Metric name prefix | `os`
+|||
+-|-
+Metric name prefix  | `os`
 Classes             | [`Win32_OperatingSystem`](https://msdn.microsoft.com/en-us/library/aa394239)
 Enabled by default? | Yes
 

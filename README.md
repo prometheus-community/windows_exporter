@@ -9,22 +9,22 @@ Prometheus exporter for Windows machines, using the WMI (Windows Management Inst
 
 Name     | Description | Enabled by default
 ---------|-------------|--------------------
-[ad](docs/collector.ad.md) | [Win32_PerfRawData_DirectoryServices_DirectoryServices](https://msdn.microsoft.com/en-us/library/ms803980.aspx) Active Directory |
-[cpu](docs/collector.cpu.md) | [Win32_PerfRawData_PerfOS_Processor](https://msdn.microsoft.com/en-us/library/aa394317(v=vs.90).aspx) metrics (cpu usage) | &#10003;
-[cs](docs/collector.cs.md) | [Win32_ComputerSystem](https://msdn.microsoft.com/en-us/library/aa394102) metrics (system properties, num cpus/total memory) | &#10003;
-[dns](docs/collector.dns.md) | [Win32_PerfRawData_DNS_DNS](https://technet.microsoft.com/en-us/library/cc977686.aspx) metrics (DNS Server) |
-[hyperv](docs/collector.hyperv.md) | Performance counters for Hyper-V hosts |
-[iis](docs/collector.iis.md) | [Win32_PerfRawData_W3SVC_WebService](https://msdn.microsoft.com/en-us/library/aa394345) IIS metrics |
-[logical_disk](docs/collector.logical_disk.md) | [Win32_PerfRawData_PerfDisk_LogicalDisk](https://msdn.microsoft.com/en-us/windows/hardware/aa394307(v=vs.71)) metrics (disk I/O) | &#10003;
-[net](docs/collector.net.md) | [Win32_PerfRawData_Tcpip_NetworkInterface](https://technet.microsoft.com/en-us/security/aa394340(v=vs.80)) metrics (network interface I/O) | &#10003;
+[ad](docs/collector.ad.md) | Active Directory Domain Services |
+[cpu](docs/collector.cpu.md) | CPU usage | &#10003;
+[cs](docs/collector.cs.md) | "Computer System" metrics (system properties, num cpus/total memory) | &#10003;
+[dns](docs/collector.dns.md) | DNS Server |
+[hyperv](docs/collector.hyperv.md) | Hyper-V hosts |
+[iis](docs/collector.iis.md) | IIS sites and applications |
+[logical_disk](docs/collector.logical_disk.md) | Logical disks, disk I/O | &#10003;
+[net](docs/collector.net.md) | Network interface I/O | &#10003;
 [memory](docs/collector.memory.md) | Memory usage metrics |
-[msmq](docs/collector.msmq.md) | [Win32_PerfRawData_MSMQ_MSMQQueue](http://wutils.com/wmi/root/cimv2/win32_perfrawdata_msmq_msmqqueue/) metrics (MSMQ/journal count) |
-[mssql](docs/collector.mssql.md) | various [SQL Server Performance Objects](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/use-sql-server-objects#SQLServerPOs) metrics  |
-[os](docs/collector.os.md) | [Win32_OperatingSystem](https://msdn.microsoft.com/en-us/library/aa394239) metrics (memory, processes, users) | &#10003;
-[process](docs/collector.process.md) | [Win32_PerfRawData_PerfProc_Process](https://msdn.microsoft.com/en-us/library/aa394323(v=vs.85).aspx) metrics (per-process stats) |
+[msmq](docs/collector.msmq.md) | MSMQ queues |
+[mssql](docs/collector.mssql.md) | [SQL Server Performance Objects](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/use-sql-server-objects#SQLServerPOs) metrics  |
+[os](docs/collector.os.md) | OS metrics (memory, processes, users) | &#10003;
+[process](docs/collector.process.md) | Per-process metrics |
 [service](docs/collector.service.md) | Service state metrics | &#10003;
-[system](docs/collector.system.md) | Win32_PerfRawData_PerfOS_System metrics (system calls) | &#10003;
-[tcp](docs/collector.tcp.md) | [Win32_PerfRawData_Tcpip_TCPv4](https://msdn.microsoft.com/en-us/library/aa394341(v=vs.85).aspx) metrics (tcp connections) |
+[system](docs/collector.system.md) | System calls | &#10003;
+[tcp](docs/collector.tcp.md) | TCP connections |
 [textfile](docs/collector.textfile.md) | Read prometheus metrics from a text file | &#10003;
 [vmware](docs/collector.vmware.md) | Performance counters installed by the Vmware Guest agent |
 

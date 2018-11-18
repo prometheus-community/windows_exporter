@@ -2,7 +2,9 @@
 
 The netframework_clrmemory collector exposes metrics about memory in dotnet applications.
 
-Metric name prefix | `netframework_clrmemory`
+|||
+-|-
+Metric name prefix  | `netframework_clrmemory`
 Classes             | `Win32_PerfRawData_NETFramework_NETCLRMemory`
 Enabled by default? | No
 

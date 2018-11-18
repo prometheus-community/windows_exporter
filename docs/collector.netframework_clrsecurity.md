@@ -2,7 +2,9 @@
 
 The netframework_clrsecurity collector exposes metrics about security checks in dotnet applications
 
-Metric name prefix | `netframework_clrsecurity`
+|||
+-|-
+Metric name prefix  | `netframework_clrsecurity`
 Classes             | `Win32_PerfRawData_NETFramework_NETCLRSecurity`
 Enabled by default? | No
 

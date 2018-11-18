@@ -2,7 +2,9 @@
 
 The service collector exposes metrics about Windows Services
 
-Metric name prefix | `service`
+|||
+-|-
+Metric name prefix  | `service`
 Classes             | [`Win32_Service`](https://msdn.microsoft.com/en-us/library/aa394418(v=vs.85).aspx)
 Enabled by default? | Yes
 

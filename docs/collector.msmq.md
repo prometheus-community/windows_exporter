@@ -2,7 +2,9 @@
 
 The msmq collector exposes metrics about the queues on a MSMQ server
 
-Metric name prefix | `msmq`
+|||
+-|-
+Metric name prefix  | `msmq`
 Classes             | `Win32_PerfRawData_MSMQ_MSMQQueue`
 Enabled by default? | No
 

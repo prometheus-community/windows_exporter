@@ -2,7 +2,9 @@
 
 The cpu collector exposes metrics about CPU usage
 
-Metric name prefix | `cpu`
+|||
+-|-
+Metric name prefix  | `cpu`
 Classes             | [`Win32_PerfRawData_PerfOS_Processor`](https://msdn.microsoft.com/en-us/library/aa394317(v=vs.90).aspx)
 Enabled by default? | Yes
 

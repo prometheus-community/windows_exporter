@@ -2,7 +2,9 @@
 
 The dns collector exposes metrics about the DNS server
 
-Metric name prefix | `dns`
+|||
+-|-
+Metric name prefix  | `dns`
 Classes             | [`Win32_PerfRawData_DNS_DNS`](https://technet.microsoft.com/en-us/library/cc977686.aspx)
 Enabled by default? | No
 

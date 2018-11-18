@@ -2,7 +2,9 @@
 
 The netframework_clrexceptions collector exposes metrics about CLR exceptions in the dotnet framework.
 
-Metric name prefix | `netframework_clrexceptions`
+|||
+-|-
+Metric name prefix  | `netframework_clrexceptions`
 Classes             | `Win32_PerfRawData_NETFramework_NETCLRExceptions`
 Enabled by default? | No
 

@@ -2,7 +2,9 @@
 
 The netframework_clrloading collector exposes metrics about the dotnet loader.
 
-Metric name prefix | `netframework_clrloading`
+|||
+-|-
+Metric name prefix  | `netframework_clrloading`
 Classes             | `Win32_PerfRawData_NETFramework_NETCLRLoading`
 Enabled by default? | No
 
