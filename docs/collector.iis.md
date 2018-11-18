@@ -2,8 +2,10 @@
 
 The iis collector exposes metrics about the IIS server
 
-Metric name prefix | `iis`
-Classes             | `Win32_PerfRawData_W3SVC_WebService`, `Win32_PerfRawData_APPPOOLCountersProvider_APPPOOLWAS`, `Win32_PerfRawData_W3SVCW3WPCounterProvider_W3SVCW3WP`, `Win32_PerfRawData_W3SVC_WebServiceCache`
+|||
+-|-
+Metric name prefix  | `iis`
+Classes             | `Win32_PerfRawData_W3SVC_WebService`<br/>`Win32_PerfRawData_APPPOOLCountersProvider_APPPOOLWAS`<br/>`Win32_PerfRawData_W3SVCW3WPCounterProvider_W3SVCW3WP`<br/>`Win32_PerfRawData_W3SVC_WebServiceCache`
 Enabled by default? | No
 
 ## Flags

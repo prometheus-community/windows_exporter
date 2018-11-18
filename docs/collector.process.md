@@ -2,7 +2,9 @@
 
 The process collector exposes metrics about processes
 
-Metric name prefix | `process`
+|||
+-|-
+Metric name prefix  | `process`
 Classes             | [`Win32_PerfRawData_PerfProc_Process`](https://msdn.microsoft.com/en-us/library/aa394323(v=vs.85).aspx)
 Enabled by default? | No
 

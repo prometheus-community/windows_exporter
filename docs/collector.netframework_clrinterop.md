@@ -2,7 +2,9 @@
 
 The netframework_clrinterop collector exposes metrics about interop between the dotnet framework and outside components.
 
-Metric name prefix | `netframework_clrinterop`
+|||
+-|-
+Metric name prefix  | `netframework_clrinterop`
 Classes             | `Win32_PerfRawData_NETFramework_NETCLRInterop`
 Enabled by default? | No
 

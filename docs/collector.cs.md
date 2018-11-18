@@ -2,7 +2,9 @@
 
 The cs collector exposes metrics detailing the hardware of the computer system
 
-Metric name prefix | `cs`
+|||
+-|-
+Metric name prefix  | `cs`
 Classes             | [`Win32_ComputerSystem`](https://msdn.microsoft.com/en-us/library/aa394102)
 Enabled by default? | Yes
 

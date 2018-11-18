@@ -2,7 +2,9 @@
 
 The vmware collector exposes metrics about a VMware guest VM
 
-Metric name prefix | `vmware`
+|||
+-|-
+Metric name prefix  | `vmware`
 Classes             | `Win32_PerfRawData_vmGuestLib_VMem`, `Win32_PerfRawData_vmGuestLib_VCPU`
 Enabled by default? | No
 

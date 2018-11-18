@@ -2,7 +2,9 @@
 
 The logical_disk collector exposes metrics about logical disks (in contrast to physical disks)
 
-Metric name prefix | `logical_disk`
+|||
+-|-
+Metric name prefix  | `logical_disk`
 Classes             | [`Win32_PerfRawData_PerfDisk_LogicalDisk`](https://msdn.microsoft.com/en-us/windows/hardware/aa394307(v=vs.71))
 Enabled by default? | Yes
 
