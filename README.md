@@ -25,6 +25,7 @@ Name     | Description | Enabled by default
 [service](docs/collector.service.md) | Service state metrics | &#10003;
 [system](docs/collector.system.md) | System calls | &#10003;
 [tcp](docs/collector.tcp.md) | TCP connections |
+[aspnet_aspnetapplications](docs/collector.aspnet_aspnetapplications.md) | ASP.NET Applications |
 [textfile](docs/collector.textfile.md) | Read prometheus metrics from a text file | &#10003;
 [vmware](docs/collector.vmware.md) | Performance counters installed by the Vmware Guest agent |
 
