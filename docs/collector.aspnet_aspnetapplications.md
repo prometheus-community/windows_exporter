@@ -5,7 +5,7 @@ The aspnet_aspnetapplications collector exposes metrics about ASP.NET Applicatio
 |||
 -|-
 Metric name prefix  | `aspnet_aspnetapplications`
-Classes             | `Win32_PerfFormattedData_ASPNET_ASPNETApplications`
+Classes             | `Win32_PerfRawData_ASPNET_ASPNETApplications"`
 Enabled by default? | No
 
 ## Flags

@@ -1,5 +1,5 @@
-// returns data points from Win32_PerfFormattedData_ASPNET_ASPNETApplications
-// <add link to documentation here> - Win32_PerfFormattedData_ASPNET_ASPNETApplications class
+// returns data points from Win32_PerfRawData_ASPNET_ASPNETApplications
+// <add link to documentation here> - Win32_PerfRawData_ASPNET_ASPNETApplications class
 package collector
 
 import (
@@ -12,7 +12,7 @@ func init() {
 	Factories["aspnet_aspnetapplications"] = Newaspnet_aspnetapplicationsCollector
 }
 
-// A aspnet_aspnetapplicationsCollector is a Prometheus collector for WMI Win32_PerfFormattedData_ASPNET_ASPNETApplications metrics
+// A aspnet_aspnetapplicationsCollector is a Prometheus collector for WMI Win32_PerfRawData_ASPNET_ASPNETApplications metrics
 type aspnet_aspnetapplicationsCollector struct {
 	AnonymousRequests                     *prometheus.Desc
 	AnonymousRequestsPerSec               *prometheus.Desc
@@ -628,7 +628,7 @@ func (c *aspnet_aspnetapplicationsCollector) Collect(ch chan<- prometheus.Metric
 	return nil
 }
 
-type Win32_PerfFormattedData_ASPNET_ASPNETApplications struct {
+type Win32_PerfRawData_ASPNET_ASPNETApplications struct {
 	Name string
 
 	AnonymousRequests                     uint32
@@ -719,7 +719,7 @@ type Win32_PerfFormattedData_ASPNET_ASPNETApplications struct {
 }
 
 func (c *aspnet_aspnetapplicationsCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
-	var dst []Win32_PerfFormattedData_ASPNET_ASPNETApplications
+	var dst []Win32_PerfRawData_ASPNET_ASPNETApplications
 	q := queryAll(&dst)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
