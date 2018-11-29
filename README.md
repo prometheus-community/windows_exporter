@@ -44,11 +44,17 @@ Name | Description
 `LISTEN_PORT` | The port to bind to. Defaults to 9182.
 `METRICS_PATH` | The path at which to serve metrics. Defaults to `/metrics`
 `TEXTFILE_DIR` | As the `--collector.textfile.directory` flag, provide a directory to read text files with metrics from
+`EXTRA_FLAGS` | Allows passing full CLI flags. Defaults to an empty string.
 
-Parameters are sent to the installer via `msiexec`. Example invocation:
+Parameters are sent to the installer via `msiexec`. Example invocations:
 
 ```powershell
 msiexec /i <path-to-msi-file> ENABLED_COLLECTORS=os,iis LISTEN_PORT=5000
+```
+
+Example service collector with a custom query.
+```powershell
+msiexec /i <path-to-msi-file> ENABLED_COLLECTORS=os,service --% EXTRA_FLAGS="--collector.service.services-where ""Name LIKE 'sql%'"""
 ```
 
 ## Roadmap
