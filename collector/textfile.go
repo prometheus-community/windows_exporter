@@ -237,7 +237,12 @@ fileLoop:
 			continue
 		}
 		var parser expfmt.TextParser
-		r := utfbom.SkipOnly(carriageReturnFilteringReader{r: file})
+		r, encoding := utfbom.Skip(carriageReturnFilteringReader{r: file})
+		if err := checkBOM(encoding); err != nil {
+			log.Errorf("Invalid file encoding detected in %s: %s - file must be UTF8", path, err.Error())
+			error = 1.0
+			continue
+		}
 		parsedFamilies, err := parser.TextToMetricFamilies(r)
 		file.Close()
 		if err != nil {
@@ -280,4 +285,22 @@ fileLoop:
 		prometheus.GaugeValue, error,
 	)
 	return nil
+}
+
+func checkBOM(encoding utfbom.Encoding) error {
+	bom := ""
+	switch encoding {
+	case utfbom.Unknown, utfbom.UTF8:
+		return nil
+	case utfbom.UTF16BigEndian:
+		bom = "UTF16BigEndian"
+	case utfbom.UTF16LittleEndian:
+		bom = "UTF16LittleEndian"
+	case utfbom.UTF32BigEndian:
+		bom = "UTF32BigEndian"
+	case utfbom.UTF32LittleEndian:
+		bom = "UTF32LittleEndian"
+	}
+
+	return fmt.Errorf(bom)
 }
