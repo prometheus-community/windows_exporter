@@ -1,6 +1,9 @@
 // returns data points from Win32_PerfRawData_DNS_DNS
 // https://msdn.microsoft.com/en-us/library/ms803992.aspx?f=255&MSPPError=-2147217396
 // https://technet.microsoft.com/en-us/library/cc977686.aspx
+
+// +build windows
+
 package collector
 
 import (

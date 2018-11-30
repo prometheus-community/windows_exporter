@@ -1,5 +1,8 @@
 // returns data points from Win32_PerfRawData_MSMQ_MSMQQueue
 // <add link to documentation here> - Win32_PerfRawData_MSMQ_MSMQQueue class
+
+// +build windows
+
 package collector
 
 import (

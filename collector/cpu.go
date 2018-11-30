@@ -1,5 +1,8 @@
 // returns data points from Win32_PerfRawData_PerfOS_Processor
 // https://msdn.microsoft.com/en-us/library/aa394317(v=vs.90).aspx - Win32_PerfRawData_PerfOS_Processor class
+
+// +build windows
+
 package collector
 
 import (

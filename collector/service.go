@@ -1,5 +1,8 @@
 // returns data points from Win32_Service
 // https://msdn.microsoft.com/en-us/library/aa394418(v=vs.85).aspx - Win32_Service class
+
+// +build windows
+
 package collector
 
 import (

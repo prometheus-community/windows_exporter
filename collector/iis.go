@@ -4,6 +4,8 @@
 // - Win32_PerfRawData_W3SVCW3WPCounterProvider_W3SVCW3WP
 // - Win32_PerfRawData_W3SVC_WebServiceCache
 
+// +build windows
+
 package collector
 
 import (
