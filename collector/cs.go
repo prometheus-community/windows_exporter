@@ -1,6 +1,8 @@
 // returns data points from Win32_ComputerSystem
 // https://msdn.microsoft.com/en-us/library/aa394102 - Win32_ComputerSystem class
 
+// +build windows
+
 package collector
 
 import (

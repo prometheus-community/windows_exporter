@@ -1,6 +1,8 @@
 // returns data points from Win32_PerfRawData_PerfOS_System class
 // https://web.archive.org/web/20050830140516/http://msdn.microsoft.com/library/en-us/wmisdk/wmi/win32_perfrawdata_perfos_system.asp
 
+// +build windows
+
 package collector
 
 import (

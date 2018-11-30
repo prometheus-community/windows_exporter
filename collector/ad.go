@@ -1,5 +1,8 @@
 // returns data points from Win32_PerfRawData_DirectoryServices_DirectoryServices
 // Partial docs: https://msdn.microsoft.com/en-us/library/ms803980.aspx
+
+// +build windows
+
 package collector
 
 import (

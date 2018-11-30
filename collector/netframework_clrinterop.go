@@ -1,5 +1,8 @@
 // returns data points from Win32_PerfRawData_NETFramework_NETCLRInterop
 // <add link to documentation here> - Win32_PerfRawData_NETFramework_NETCLRInterop class
+
+// +build windows
+
 package collector
 
 import (

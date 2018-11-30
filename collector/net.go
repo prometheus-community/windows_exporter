@@ -4,6 +4,8 @@
 // https://msdn.microsoft.com/en-us/library/aa394216 (Win32_NetworkAdapter class)
 // https://msdn.microsoft.com/en-us/library/aa394353 (Win32_PnPEntity class)
 
+// +build windows
+
 package collector
 
 import (

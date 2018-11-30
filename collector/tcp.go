@@ -2,6 +2,8 @@
 
 // https://msdn.microsoft.com/en-us/library/aa394341(v=vs.85).aspx (Win32_PerfRawData_Tcpip_TCPv4 class)
 
+// +build windows
+
 package collector
 
 import (

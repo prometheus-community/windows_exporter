@@ -18,6 +18,8 @@
 // - Win32_PerfRawData_MSSQLSERVER_SQLServerSQLStatistics
 //   https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-sql-statistics-object
 
+// +build windows
+
 package collector
 
 import (
