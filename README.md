@@ -19,14 +19,14 @@ Name     | Description | Enabled by default
 [memory](docs/collector.memory.md) | Memory usage metrics |
 [msmq](docs/collector.msmq.md) | MSMQ queues |
 [mssql](docs/collector.mssql.md) | [SQL Server Performance Objects](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/use-sql-server-objects#SQLServerPOs) metrics  |
-[`netframework_clrexceptions`](docs/collector.netframework_clrexceptions.md)
-[`netframework_clrinterop`](docs/collector.netframework_clrinterop.md)
-[`netframework_clrjit`](docs/collector.netframework_clrjit.md)
-[`netframework_clrloading`](docs/collector.netframework_clrloading.md)
-[`netframework_clrlocksandthreads`](docs/collector.netframework_clrlocksandthreads.md)
-[`netframework_clrmemory`](docs/collector.netframework_clrmemory.md)
-[`netframework_clrremoting`](docs/collector.netframework_clrremoting.md)
-[`netframework_clrsecurity`](docs/collector.netframework_clrsecurity.md)
+[netframework_clrexceptions](docs/collector.netframework_clrexceptions.md) | .NET Framework CLR Exceptions |
+[netframework_clrinterop](docs/collector.netframework_clrinterop.md) | .NET Framework Interop Metrics |
+[netframework_clrjit](docs/collector.netframework_clrjit.md) | .NET Framework JIT metrics |
+[netframework_clrloading](docs/collector.netframework_clrloading.md) | .NET Framework CLR Loading metrics |
+[netframework_clrlocksandthreads](docs/collector.netframework_clrlocksandthreads.md) | .NET Framework locks and metrics threads |
+[netframework_clrmemory](docs/collector.netframework_clrmemory.md) |  .NET Framework Memory metrics |
+[netframework_clrremoting](docs/collector.netframework_clrremoting.md) | .NET Framework Remoting metrics |
+[netframework_clrsecurity](docs/collector.netframework_clrsecurity.md) | .NET Framework Security Check metrics |
 [net](docs/collector.net.md) | Network interface I/O | &#10003;
 [os](docs/collector.os.md) | OS metrics (memory, processes, users) | &#10003;
 [process](docs/collector.process.md) | Per-process metrics |
