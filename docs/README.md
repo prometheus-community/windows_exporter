@@ -9,6 +9,7 @@ This directory contains documentation of the collectors in the WMI exporter, wit
 - [`hyperv`](collector.hyperv.md)
 - [`iis`](collector.iis.md)
 - [`logical_disk`](collector.logical_disk.md)
+- [`memory`](collector.memory.md)
 - [`msmq`](collector.msmq.md)
 - [`mssql`](collector.mssql.md)
 - [`netframework_clrexceptions`](collector.netframework_clrexceptions.md)

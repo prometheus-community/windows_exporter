@@ -16,10 +16,18 @@ Name     | Description | Enabled by default
 [hyperv](docs/collector.hyperv.md) | Hyper-V hosts |
 [iis](docs/collector.iis.md) | IIS sites and applications |
 [logical_disk](docs/collector.logical_disk.md) | Logical disks, disk I/O | &#10003;
-[net](docs/collector.net.md) | Network interface I/O | &#10003;
 [memory](docs/collector.memory.md) | Memory usage metrics |
 [msmq](docs/collector.msmq.md) | MSMQ queues |
 [mssql](docs/collector.mssql.md) | [SQL Server Performance Objects](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/use-sql-server-objects#SQLServerPOs) metrics  |
+[`netframework_clrexceptions`](docs/collector.netframework_clrexceptions.md)
+[`netframework_clrinterop`](docs/collector.netframework_clrinterop.md)
+[`netframework_clrjit`](docs/collector.netframework_clrjit.md)
+[`netframework_clrloading`](docs/collector.netframework_clrloading.md)
+[`netframework_clrlocksandthreads`](docs/collector.netframework_clrlocksandthreads.md)
+[`netframework_clrmemory`](docs/collector.netframework_clrmemory.md)
+[`netframework_clrremoting`](docs/collector.netframework_clrremoting.md)
+[`netframework_clrsecurity`](docs/collector.netframework_clrsecurity.md)
+[net](docs/collector.net.md) | Network interface I/O | &#10003;
 [os](docs/collector.os.md) | OS metrics (memory, processes, users) | &#10003;
 [process](docs/collector.process.md) | Per-process metrics |
 [service](docs/collector.service.md) | Service state metrics | &#10003;
