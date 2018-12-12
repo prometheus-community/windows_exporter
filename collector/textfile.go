@@ -288,19 +288,9 @@ fileLoop:
 }
 
 func checkBOM(encoding utfbom.Encoding) error {
-	bom := ""
-	switch encoding {
-	case utfbom.Unknown, utfbom.UTF8:
+	if encoding == utfbom.Unknown || encoding == utfbom.UTF8 {
 		return nil
-	case utfbom.UTF16BigEndian:
-		bom = "UTF16BigEndian"
-	case utfbom.UTF16LittleEndian:
-		bom = "UTF16LittleEndian"
-	case utfbom.UTF32BigEndian:
-		bom = "UTF32BigEndian"
-	case utfbom.UTF32LittleEndian:
-		bom = "UTF32LittleEndian"
 	}
 
-	return fmt.Errorf(bom)
+	return fmt.Errorf(encoding.String())
 }
