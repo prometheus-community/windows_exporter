@@ -194,7 +194,9 @@ func (c *ProcessCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Des
 
 	var dst_wp []WorkerProcess
 	q_wp := queryAll(&dst_wp)
-	wmi.QueryNamespace(q_wp, &dst_wp, "root\\WebAdministration")
+	if err := wmi.QueryNamespace(q_wp, &dst_wp, "root\\WebAdministration"); err != nil {
+		log.Warnf("failed querying worker processes: %s", err)
+	}
 
 	for _, process := range dst {
 
