@@ -36,3 +36,21 @@ _This collector does not yet have any useful queries added, we would appreciate 
 
 ## Alerting examples
 _This collector does not yet have alerting examples, we would appreciate your help adding them!_
+
+# Example use
+This Powershell script, when run in the `collector.textfile.directory` (default `C:\Program Files\wmi_exporter\textfile_inputs`), generates a valid `.prom` file that should successfully ingested by wmi_exporter.
+
+```Powershell
+$alpha = 42
+$beta = @{ left=3.1415; right=2.718281828; }
+
+Set-Content -Path test1.prom -Encoding Ascii -NoNewline -Value ""
+Add-Content -Path test1.prom -Encoding Ascii -NoNewline -Value "# HELP test_alpha_total Some random metric.`n"
+Add-Content -Path test1.prom -Encoding Ascii -NoNewline -Value "# TYPE test_alpha_total counter`n"
+Add-Content -Path test1.prom -Encoding Ascii -NoNewline -Value "test_alpha_total ${alpha}`n"
+Add-Content -Path test1.prom -Encoding Ascii -NoNewline -Value "# HELP test_beta_bytes Some other metric.`n"
+Add-Content -Path test1.prom -Encoding Ascii -NoNewline -Value "# TYPE test_beta_bytes gauge`n"
+foreach ($k in $beta.Keys) {
+  Add-Content -Path test1.prom -Encoding Ascii -NoNewline -Value "test_beta_bytes{spin=""${k}""} $( $beta[$k] )`n"
+}
+```
