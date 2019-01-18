@@ -18,6 +18,12 @@ Required: No
 
 ## Metrics
 
+The file name has to have the .prom suffix. Example:
+
+```
+C:\Program Files\wmi_exporter\textfile_inputs\my_metrics.prom
+```
+
 Metrics will primarily come from the files on disk. The below listed metrics
 are collected to give information about the reading of the metrics themselves.
 
@@ -27,7 +33,11 @@ Name | Description | Type | Labels
 `wmi_textfile_mtime_seconds` | Unix epoch-formatted mtime (modified time) of textfiles successfully read | gauge | file
 
 ### Example metric
-_This collector does not yet have explained examples, we would appreciate your help adding them!_
+
+```
+my_metric 123
+my_other_metric{some_instance_name="0",mode="some_mode"} 55
+```
 
 ## Useful queries
 _This collector does not yet have any useful queries added, we would appreciate your help adding them!_
