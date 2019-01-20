@@ -1,48 +1,57 @@
 version: "{build}"
 
-os: Windows Server 2012 R2
+os: Visual Studio 2017
+build: off
+stack: go 1.10
 
 environment:
   GOPATH: c:\gopath
-  matrix:
-    - MSI_ARCH: amd64
-      GOARCH: amd64
-    - MSI_ARCH: 386
-      GOARCH: 386
 
 clone_folder: c:\gopath\src\github.com\martinlindhe\wmi_exporter
 
 install:
-  - go version
-  - set PATH=%GOPATH%\bin;c:\go\bin;%GOPATH%\bin\windows_%GOARCH%;%PATH%
+  - set PATH=%GOPATH%\bin;%PATH%
   - go get -u github.com/prometheus/promu
-  - choco install gitversion.portable -y
+  - choco install gitversion.portable make -y
+
+test_script:
+  - make test
 
 build_script:
-  - ps: gitversion /output json /showvariable FullSemVer | Set-Content VERSION -PassThru
-  - go test -v ./...
-  - promu build -v
   - ps: |
       $ErrorActionPreference = "Stop"
-      if($env:APPVEYOR_REPO_TAG -eq "True") {
-        # The MSI version is not semver compliant, so just take the numerical parts
-        $Version = $env:APPVEYOR_REPO_TAG_NAME -replace '^v?([0-9\.]+).*$','$1'
-        Write-Verbose "Setting msi version to $Version"
-        .\installer\build.ps1 -PathToExecutable .\wmi_exporter.exe -Version $Version -Arch "$env:MSI_ARCH"
-        Push-AppveyorArtifact installer\Output\wmi_exporter-$Version-$env:MSI_ARCH.msi -DeploymentName Installer
+      gitversion /output json /showvariable FullSemVer | Set-Content VERSION -PassThru
+      $Version = Get-Content VERSION
+      make crossbuild
+      # GH requires all files to have different names, so add version/arch to differentiate
+      foreach($Arch in "amd64","386") {
+        Rename-Item output\$Arch\wmi_exporter.exe -NewName wmi_exporter-$Version-$Arch.exe
       }
 
 after_build:
-  - 7z a wmi_exporter-%MSI_ARCH%.zip wmi_exporter.exe
+  - ps: |
+      # Build installer packages only on tagged releases
+      if($env:APPVEYOR_REPO_TAG -ne "True") {
+        return
+      }
+      $ErrorActionPreference = "Stop"
+      # The MSI version is not semver compliant, so just take the numerical parts
+      $Version = $env:APPVEYOR_REPO_TAG_NAME -replace '^v?([0-9\.]+).*$','$1'
+      foreach($Arch in "amd64","386") {
+        Write-Verbose "Building wmi_exporter $Version msi for $Arch"
+        .\installer\build.ps1 -PathToExecutable .\output\$Arch\wmi_exporter-$Version-$Arch.exe -Version $Version -Arch "$Arch"
+        Move-Item installer\Output\wmi_exporter-$Version-$Arch.msi output\$Arch\
+      }
+  - promu checksum output\
 
 artifacts:
-  - name: Executable
-    path: 'wmi_exporter-*.zip'
+  - name: Artifacts
+    path: output\**\*
 
 deploy:
   - provider: GitHub
     description: WMI Exporter version $(appveyor_build_version)
-    artifact: Executable,Installer
+    artifact: Artifacts
     auth_token:
       secure: 'CrXWeTf7qONUOEki5olFfGEUPMLDeHj61koDXV3OVEaLgtACmnVHsKUub9POflda'
     draft: false
