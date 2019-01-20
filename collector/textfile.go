@@ -238,7 +238,7 @@ fileLoop:
 		}
 		var parser expfmt.TextParser
 		r, encoding := utfbom.Skip(carriageReturnFilteringReader{r: file})
-		if err := checkBOM(encoding); err != nil {
+		if err = checkBOM(encoding); err != nil {
 			log.Errorf("Invalid file encoding detected in %s: %s - file must be UTF8", path, err.Error())
 			error = 1.0
 			continue
