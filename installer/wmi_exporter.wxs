@@ -49,6 +49,7 @@
           <util:ServiceConfig FirstFailureActionType="restart" SecondFailureActionType="restart" ThirdFailureActionType="restart" RestartServiceDelayInSeconds="5" />
         </ServiceInstall>
         <ServiceControl Id="ServiceStateControl" Name="wmi_exporter" Remove="uninstall" Start="install" Stop="both" />
+        <util:EventSource Log="Application" Name="wmi_exporter" EventMessageFile="%SystemRoot%\System32\EventCreate.exe" />
       </Component>
       <Component Id="CreateTextfileDirectory" Directory="textfile_inputs" Guid="d03ef58a-9cbf-4165-ad39-d143e9b27e14">
         <CreateFolder />
