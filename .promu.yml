@@ -12,3 +12,7 @@ build:
 tarball:
     files:
         - LICENSE
+crossbuild:
+    platforms:
+        - windows/amd64
+        - windows/386
