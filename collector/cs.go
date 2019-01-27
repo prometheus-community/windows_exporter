@@ -1,6 +1,3 @@
-// returns data points from Win32_ComputerSystem
-// https://msdn.microsoft.com/en-us/library/aa394102 - Win32_ComputerSystem class
-
 // +build windows
 
 package collector
@@ -53,6 +50,8 @@ func (c *CSCollector) Collect(ch chan<- prometheus.Metric) error {
 	return nil
 }
 
+// Win32_ComputerSystem docs:
+// - https://msdn.microsoft.com/en-us/library/aa394102
 type Win32_ComputerSystem struct {
 	NumberOfLogicalProcessors uint32
 	TotalPhysicalMemory       uint64

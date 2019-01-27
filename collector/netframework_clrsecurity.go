@@ -1,6 +1,3 @@
-// returns data points from Win32_PerfRawData_NETFramework_NETCLRSecurity
-// <add link to documentation here> - Win32_PerfRawData_NETFramework_NETCLRSecurity class
-
 // +build windows
 
 package collector

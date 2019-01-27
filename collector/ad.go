@@ -1,6 +1,3 @@
-// returns data points from Win32_PerfRawData_DirectoryServices_DirectoryServices
-// Partial docs: https://msdn.microsoft.com/en-us/library/ms803980.aspx
-
 // +build windows
 
 package collector
@@ -465,6 +462,8 @@ func (c *ADCollector) Collect(ch chan<- prometheus.Metric) error {
 	return nil
 }
 
+// Win32_PerfRawData_DirectoryServices_DirectoryServices docs:
+// - https://msdn.microsoft.com/en-us/library/ms803980.aspx
 type Win32_PerfRawData_DirectoryServices_DirectoryServices struct {
 	Name string
 
@@ -488,8 +487,8 @@ type Win32_PerfRawData_DirectoryServices_DirectoryServices struct {
 	DatabasemodifysPersec                                            uint32
 	DatabaserecyclesPersec                                           uint32
 	DigestBindsPersec                                                uint32
-	DRAHighestUSNCommittedHighpart                                   uint32
-	DRAHighestUSNCommittedLowpart                                    uint32
+	DRAHighestUSNCommittedHighpart                                   uint64
+	DRAHighestUSNCommittedLowpart                                    uint64
 	DRAHighestUSNIssuedHighpart                                      uint64
 	DRAHighestUSNIssuedLowpart                                       uint64
 	DRAInboundBytesCompressedBetweenSitesAfterCompressionPersec      uint32

@@ -1,6 +1,3 @@
-// returns data points from Win32_PerfRawData_PerfProc_Process
-// https://msdn.microsoft.com/en-us/library/aa394323(v=vs.85).aspx - Win32_PerfRawData_PerfProc_Process class
-
 // +build windows
 
 package collector
@@ -146,6 +143,8 @@ func (c *ProcessCollector) Collect(ch chan<- prometheus.Metric) error {
 	return nil
 }
 
+// Win32_PerfRawData_PerfProc_Process docs:
+// - https://msdn.microsoft.com/en-us/library/aa394323(v=vs.85).aspx
 type Win32_PerfRawData_PerfProc_Process struct {
 	Name                    string
 	CreatingProcessID       uint32
@@ -195,7 +194,7 @@ func (c *ProcessCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Des
 	var dst_wp []WorkerProcess
 	q_wp := queryAll(&dst_wp)
 	if err := wmi.QueryNamespace(q_wp, &dst_wp, "root\\WebAdministration"); err != nil {
-		log.Warnf("failed querying worker processes: %s", err)
+		log.Debugf("Could not query WebAdministration namespace for IIS worker processes: %v. Skipping", err)
 	}
 
 	for _, process := range dst {

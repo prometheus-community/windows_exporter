@@ -1,7 +1,3 @@
-// returns data points from Win32_PerfRawData_PerfDisk_LogicalDisk
-// https://msdn.microsoft.com/en-us/windows/hardware/aa394307(v=vs.71) - Win32_PerfRawData_PerfDisk_LogicalDisk class
-// https://msdn.microsoft.com/en-us/library/ms803973.aspx - LogicalDisk object reference
-
 // +build windows
 
 package collector
@@ -146,6 +142,9 @@ func (c *LogicalDiskCollector) Collect(ch chan<- prometheus.Metric) error {
 	return nil
 }
 
+// Win32_PerfRawData_PerfDisk_LogicalDisk docs:
+// - https://msdn.microsoft.com/en-us/windows/hardware/aa394307(v=vs.71) - Win32_PerfRawData_PerfDisk_LogicalDisk class
+// - https://msdn.microsoft.com/en-us/library/ms803973.aspx - LogicalDisk object reference
 type Win32_PerfRawData_PerfDisk_LogicalDisk struct {
 	Name                   string
 	CurrentDiskQueueLength uint32

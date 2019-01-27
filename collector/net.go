@@ -1,9 +1,3 @@
-// returns data points from Win32_PerfRawData_Tcpip_NetworkInterface
-
-// https://technet.microsoft.com/en-us/security/aa394340(v=vs.80) (Win32_PerfRawData_Tcpip_NetworkInterface class)
-// https://msdn.microsoft.com/en-us/library/aa394216 (Win32_NetworkAdapter class)
-// https://msdn.microsoft.com/en-us/library/aa394353 (Win32_PnPEntity class)
-
 // +build windows
 
 package collector
@@ -152,6 +146,8 @@ func mangleNetworkName(name string) string {
 	return nicNameToUnderscore.ReplaceAllString(name, "_")
 }
 
+// Win32_PerfRawData_Tcpip_NetworkInterface docs:
+// - https://technet.microsoft.com/en-us/security/aa394340(v=vs.80)
 type Win32_PerfRawData_Tcpip_NetworkInterface struct {
 	BytesReceivedPerSec      uint64
 	BytesSentPerSec          uint64

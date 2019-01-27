@@ -1,9 +1,3 @@
-// returns data points from the following classes:
-// - Win32_PerfRawData_W3SVC_WebService
-// - Win32_PerfRawData_APPPOOLCountersProvider_APPPOOLWAS
-// - Win32_PerfRawData_W3SVCW3WPCounterProvider_W3SVCW3WP
-// - Win32_PerfRawData_W3SVC_WebServiceCache
-
 // +build windows
 
 package collector
@@ -36,7 +30,12 @@ func getIISVersion() simple_version {
 		log.Warn("Couldn't open registry to determine IIS version:", err)
 		return simple_version{}
 	}
-	defer k.Close()
+	defer func() {
+		err = k.Close()
+		if err != nil {
+			log.Warnf("Failed to close registry key: %v", err)
+		}
+	}()
 
 	major, _, err := k.GetIntegerValue("MajorVersion")
 	if err != nil {
@@ -808,8 +807,8 @@ func NewIISCollector() (Collector, error) {
 			nil,
 		),
 
-		appWhitelistPattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *siteWhitelist)),
-		appBlacklistPattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *siteBlacklist)),
+		appWhitelistPattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *appWhitelist)),
+		appBlacklistPattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *appBlacklist)),
 	}
 
 	buildIIS.iis_version = getIISVersion()
@@ -986,7 +985,7 @@ type Win32_PerfRawData_W3SVC_WebServiceCache struct {
 	URICacheMisses                 uint32
 }
 
-var ApplicationStates = map[uint32]string{
+var applicationStates = map[uint32]string{
 	1: "Uninitialized",
 	2: "Initialized",
 	3: "Running",
@@ -1267,7 +1266,7 @@ func (c *IISCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 		}
 
 		// Guages
-		for key, label := range ApplicationStates {
+		for key, label := range applicationStates {
 			isCurrentState := 0.0
 			if key == app.CurrentApplicationPoolState {
 				isCurrentState = 1.0

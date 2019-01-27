@@ -238,13 +238,16 @@ fileLoop:
 		}
 		var parser expfmt.TextParser
 		r, encoding := utfbom.Skip(carriageReturnFilteringReader{r: file})
-		if err := checkBOM(encoding); err != nil {
+		if err = checkBOM(encoding); err != nil {
 			log.Errorf("Invalid file encoding detected in %s: %s - file must be UTF8", path, err.Error())
 			error = 1.0
 			continue
 		}
 		parsedFamilies, err := parser.TextToMetricFamilies(r)
-		file.Close()
+		closeErr := file.Close()
+		if closeErr != nil {
+			log.Warnf("Error closing file: %v", err)
+		}
 		if err != nil {
 			log.Errorf("Error parsing %q: %v", path, err)
 			error = 1.0

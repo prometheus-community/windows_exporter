@@ -1,6 +1,3 @@
-// returns data points from Win32_PerfRawData_NETFramework_NETCLRMemory
-// <add link to documentation here> - Win32_PerfRawData_NETFramework_NETCLRMemory class
-
 // +build windows
 
 package collector
