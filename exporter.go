@@ -40,6 +40,13 @@ var (
 		[]string{"collector"},
 		nil,
 	)
+	scrapeDurationTotal = prometheus.NewHistogram(prometheus.HistogramOpts{
+		Namespace: collector.Namespace,
+		Subsystem: "exporter",
+		Name:      "collector_duration_seconds_total",
+		Help:      "wmi_exporter: Total duration of a collection.",
+		Buckets:   []float64{0.5, 1, 2.5, 5, 10, 15, 20, 25, 30, 45, 60},
+	})
 	scrapeSuccessDesc = prometheus.NewDesc(
 		prometheus.BuildFQName(collector.Namespace, "exporter", "collector_success"),
 		"wmi_exporter: Whether the collector was successful.",
@@ -63,12 +70,15 @@ var (
 func (coll WmiCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- scrapeDurationDesc
 	ch <- scrapeSuccessDesc
+	ch <- scrapeDurationTotal.Desc()
 }
 
 // Collect sends the collected metrics from each of the collectors to
 // prometheus. Collect could be called several times concurrently
 // and thus its run is protected by a single mutex.
 func (coll WmiCollector) Collect(ch chan<- prometheus.Metric) {
+	begin := time.Now()
+
 	wg := sync.WaitGroup{}
 	wg.Add(len(coll.collectors))
 	for name, c := range coll.collectors {
@@ -84,6 +94,10 @@ func (coll WmiCollector) Collect(ch chan<- prometheus.Metric) {
 		startTime,
 	)
 	wg.Wait()
+
+	duration := time.Since(begin)
+	scrapeDurationTotal.Observe(float64(duration))
+	ch <- scrapeDurationTotal
 }
 
 func filterAvailableCollectors(collectors string) string {
