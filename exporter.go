@@ -96,7 +96,7 @@ func (coll WmiCollector) Collect(ch chan<- prometheus.Metric) {
 	wg.Wait()
 
 	duration := time.Since(begin)
-	scrapeDurationTotal.Observe(float64(duration))
+	scrapeDurationTotal.Observe(float64(duration) / float64(time.Second))
 	ch <- scrapeDurationTotal
 }
 
