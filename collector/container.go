@@ -250,6 +250,7 @@ func (c *ContainerMetricsCollector) collect(ch chan<- prometheus.Metric) (*prome
 				float64(interafce.DroppedPacketsOutgoing),
 				containerId, interafce.EndpointId,
 			)
+			break
 		}
 	}
 
