@@ -1,8 +1,6 @@
-// returns containers metrics from HCS
 // https://github.com/Microsoft/hcsshim
 
 // +build windows
-
 package collector
 
 import (
@@ -19,15 +17,18 @@ func init() {
 type ContainerMetricsCollector struct {
 	// Presence
 	ContainerAvailable *prometheus.Desc
+
+	// Number of containers
+	ContainersCount *prometheus.Desc
 	// memory
 	UsageCommitBytes            *prometheus.Desc
 	UsageCommitPeakBytes        *prometheus.Desc
 	UsagePrivateWorkingSetBytes *prometheus.Desc
 
 	// CPU
-	TotalRuntime100ns  *prometheus.Desc
-	RuntimeUser100ns   *prometheus.Desc
-	RuntimeKernel100ns *prometheus.Desc
+	RuntimeTotal  *prometheus.Desc
+	RuntimeUser   *prometheus.Desc
+	RuntimeKernel *prometheus.Desc
 
 	// Network
 	BytesReceived          *prometheus.Desc
@@ -45,6 +46,12 @@ func NewContainerMetricsCollector() (Collector, error) {
 			prometheus.BuildFQName(Namespace, subsystem, "available"),
 			"Available",
 			[]string{"container_id"},
+			nil,
+		),
+		ContainersCount: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "count"),
+			"Number of containers",
+			nil,
 			nil,
 		),
 		UsageCommitBytes: prometheus.NewDesc(
@@ -65,19 +72,19 @@ func NewContainerMetricsCollector() (Collector, error) {
 			[]string{"container_id"},
 			nil,
 		),
-		TotalRuntime100ns: prometheus.NewDesc(
+		RuntimeTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "cpu_usage_seconds_total"),
 			"Total Run time in Seconds",
 			[]string{"container_id"},
 			nil,
 		),
-		RuntimeUser100ns: prometheus.NewDesc(
+		RuntimeUser: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "cpu_usage_seconds_usermode"),
 			"Run Time in User mode in Seconds",
 			[]string{"container_id"},
 			nil,
 		),
-		RuntimeKernel100ns: prometheus.NewDesc(
+		RuntimeKernel: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "cpu_usage_seconds_kernelmode"),
 			"Run time in Kernel mode in Seconds",
 			[]string{"container_id"},
@@ -141,9 +148,16 @@ func (c *ContainerMetricsCollector) collect(ch chan<- prometheus.Metric) (*prome
 		return nil, err
 	}
 
-	if len(containers) == 0 {
-		log.Warn("no containers on node")
+	count := len(containers)
+
+	if count == 0 {
 		return nil, nil
+	} else {
+		ch <- prometheus.MustNewConstMetric(
+			c.ContainersCount,
+			prometheus.GaugeValue,
+			float64(count),
+		)
 	}
 
 	for _, containerDetails := range containers {
@@ -188,67 +202,67 @@ func (c *ContainerMetricsCollector) collect(ch chan<- prometheus.Metric) (*prome
 			containerId,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.TotalRuntime100ns,
+			c.RuntimeTotal,
 			prometheus.CounterValue,
 			float64(cstats.Processor.TotalRuntime100ns)*ticksToSecondsScaleFactor,
 			containerId,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.RuntimeUser100ns,
+			c.RuntimeUser,
 			prometheus.CounterValue,
 			float64(cstats.Processor.RuntimeUser100ns)*ticksToSecondsScaleFactor,
 			containerId,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.RuntimeKernel100ns,
+			c.RuntimeKernel,
 			prometheus.CounterValue,
 			float64(cstats.Processor.RuntimeKernel100ns)*ticksToSecondsScaleFactor,
 			containerId,
 		)
 
 		if len(cstats.Network) == 0 {
-			log.Warn("No Network Stats for container: ", containerId)
+			log.Info("No Network Stats for container: ", containerId)
 			continue
 		}
 
 		networkStats := cstats.Network
 
-		for _, interafce := range networkStats {
+		for _, networkInterface := range networkStats {
 			ch <- prometheus.MustNewConstMetric(
 				c.BytesReceived,
 				prometheus.CounterValue,
-				float64(interafce.BytesReceived),
-				containerId, interafce.EndpointId,
+				float64(networkInterface.BytesReceived),
+				containerId, networkInterface.EndpointId,
 			)
 			ch <- prometheus.MustNewConstMetric(
 				c.BytesSent,
 				prometheus.CounterValue,
-				float64(interafce.BytesSent),
-				containerId, interafce.EndpointId,
+				float64(networkInterface.BytesSent),
+				containerId, networkInterface.EndpointId,
 			)
 			ch <- prometheus.MustNewConstMetric(
 				c.PacketsReceived,
 				prometheus.CounterValue,
-				float64(interafce.PacketsReceived),
-				containerId, interafce.EndpointId,
+				float64(networkInterface.PacketsReceived),
+				containerId, networkInterface.EndpointId,
 			)
 			ch <- prometheus.MustNewConstMetric(
 				c.PacketsSent,
 				prometheus.CounterValue,
-				float64(interafce.PacketsSent),
-				containerId, interafce.EndpointId,
+				float64(networkInterface.PacketsSent),
+				containerId, networkInterface.EndpointId,
 			)
 			ch <- prometheus.MustNewConstMetric(
 				c.DroppedPacketsIncoming,
 				prometheus.CounterValue,
-				float64(interafce.DroppedPacketsIncoming),
-				containerId, interafce.EndpointId,
+				float64(networkInterface.DroppedPacketsIncoming),
+				containerId, networkInterface.EndpointId,
 			)
 			ch <- prometheus.MustNewConstMetric(
 				c.DroppedPacketsOutgoing,
 				prometheus.CounterValue,
-				float64(interafce.DroppedPacketsOutgoing),
-				containerId, interafce.EndpointId,
+				float64(networkInterface.DroppedPacketsOutgoing),
+				containerId, networkInterface.EndpointId,
 			)
 			break
 		}
