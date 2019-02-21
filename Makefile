@@ -1,7 +1,7 @@
 export GOOS=windows
 
 build:
-    dep ensure -add github.com/microsoft/hcsshim
+        dep ensure -add github.com/microsoft/hcsshim
 	promu build -v
 
 test:
