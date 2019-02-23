@@ -14,6 +14,7 @@ install:
   - go get -u github.com/prometheus/promu
   - go get -u github.com/alecthomas/gometalinter && gometalinter --install
   - choco install gitversion.portable make -y
+  - choco install mingw
 
 test_script:
   - make test
