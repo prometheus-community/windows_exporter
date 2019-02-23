@@ -1,6 +1,5 @@
-// https://github.com/Microsoft/hcsshim
-
 // +build windows
+
 package collector
 
 import (
