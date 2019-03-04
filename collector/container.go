@@ -38,6 +38,7 @@ type ContainerMetricsCollector struct {
 	DroppedPacketsOutgoing *prometheus.Desc
 }
 
+// NewContainerMetricsCollector constructs a new ContainerMetricsCollector
 func NewContainerMetricsCollector() (Collector, error) {
 	const subsystem = "container"
 	return &ContainerMetricsCollector{
@@ -151,13 +152,13 @@ func (c *ContainerMetricsCollector) collect(ch chan<- prometheus.Metric) (*prome
 
 	if count == 0 {
 		return nil, nil
-	} else {
-		ch <- prometheus.MustNewConstMetric(
-			c.ContainersCount,
-			prometheus.GaugeValue,
-			float64(count),
-		)
 	}
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ContainersCount,
+		prometheus.GaugeValue,
+		float64(count),
+	)
 
 	for _, containerDetails := range containers {
 		containerId := containerDetails.ID
