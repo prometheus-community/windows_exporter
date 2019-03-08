@@ -150,28 +150,30 @@ func (c *ContainerMetricsCollector) collect(ch chan<- prometheus.Metric) (*prome
 
 	count := len(containers)
 
-	if count == 0 {
-		return nil, nil
-	}
-
 	ch <- prometheus.MustNewConstMetric(
 		c.ContainersCount,
 		prometheus.GaugeValue,
 		float64(count),
 	)
+	if count == 0 {
+		return nil, nil
+	}
 
 	for _, containerDetails := range containers {
 		containerId := containerDetails.ID
 
 		container, err := hcsshim.OpenContainer(containerId)
+		if container != nil {
+			defer container.Close()
+		}
 		if err != nil {
-			log.Error("err in opening container: ", containerId)
+			log.Error("err in opening container: ", containerId, err)
 			continue
 		}
 
 		cstats, err := container.Statistics()
 		if err != nil {
-			log.Error("err in fetching container Statistics: ", containerId)
+			log.Error("err in fetching container Statistics: ", containerId, err)
 			continue
 		}
 		// HCS V1 is for docker runtime. Add the docker:// prefix on container_id
