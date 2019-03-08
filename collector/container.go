@@ -143,7 +143,7 @@ func (c *ContainerMetricsCollector) Collect(ch chan<- prometheus.Metric) error {
 func containerClose(c hcsshim.Container) {
 	err := c.Close()
 	if err != nil {
-		log.Fatal(err)
+		log.Error(err)
 	}
 }
 
