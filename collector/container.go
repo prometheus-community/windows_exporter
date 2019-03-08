@@ -139,6 +139,14 @@ func (c *ContainerMetricsCollector) Collect(ch chan<- prometheus.Metric) error {
 	return nil
 }
 
+// containerClose closes the container resource
+func containerClose(c hcsshim.Container) {
+	err := c.Close()
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
 func (c *ContainerMetricsCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 
 	// Types Container is passed to get the containers compute systems only
@@ -164,7 +172,7 @@ func (c *ContainerMetricsCollector) collect(ch chan<- prometheus.Metric) (*prome
 
 		container, err := hcsshim.OpenContainer(containerId)
 		if container != nil {
-			defer container.Close()
+			defer containerClose(container)
 		}
 		if err != nil {
 			log.Error("err in opening container: ", containerId, err)
