@@ -33,7 +33,7 @@ type Win32_PerfRawData_MSMQ_MSMQQueueCollector struct {
 func NewMSMQCollector() (Collector, error) {
 	const subsystem = "msmq"
 
-	if *msmqWhereClause != "" {
+	if *msmqWhereClause == "" {
 		log.Warn("No where-clause specified for msmq collector. This will generate a very large number of metrics!")
 	}
 
