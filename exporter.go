@@ -68,11 +68,17 @@ func (coll WmiCollector) Describe(ch chan<- *prometheus.Desc) {
 // prometheus. Collect could be called several times concurrently
 // and thus its run is protected by a single mutex.
 func (coll WmiCollector) Collect(ch chan<- prometheus.Metric) {
+	scrapeContext, err := collector.PrepareScrapeContext()
+	if err != nil {
+		ch <- prometheus.NewInvalidMetric(scrapeSuccessDesc, fmt.Errorf("failed to prepare scrape: %v", err))
+		return
+	}
+
 	wg := sync.WaitGroup{}
 	wg.Add(len(coll.collectors))
 	for name, c := range coll.collectors {
 		go func(name string, c collector.Collector) {
-			execute(name, c, ch)
+			execute(name, c, scrapeContext, ch)
 			wg.Done()
 		}(name, c)
 	}
@@ -96,9 +102,9 @@ func filterAvailableCollectors(collectors string) string {
 	return strings.Join(availableCollectors, ",")
 }
 
-func execute(name string, c collector.Collector, ch chan<- prometheus.Metric) {
+func execute(name string, c collector.Collector, ctx *collector.ScrapeContext, ch chan<- prometheus.Metric) {
 	begin := time.Now()
-	err := c.Collect(ch)
+	err := c.Collect(ctx, ch)
 	duration := time.Since(begin)
 	var success float64
 

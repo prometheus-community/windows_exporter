@@ -1687,7 +1687,7 @@ func (c *MSSQLCollector) execute(name string, fn mssqlCollectorFunc, ch chan<- p
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *MSSQLCollector) Collect(ch chan<- prometheus.Metric) error {
+func (c *MSSQLCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	wg := sync.WaitGroup{}
 
 	enabled := mssqlExpandEnabledCollectors(*mssqlEnabledCollectors)
