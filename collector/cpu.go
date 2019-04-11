@@ -148,50 +148,50 @@ func (c *CPUCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 
 		ch <- prometheus.MustNewConstMetric(
 			c.CStateSecondsTotal,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			float64(data.PercentC1Time)*ticksToSecondsScaleFactor,
 			core, "c1",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.CStateSecondsTotal,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			float64(data.PercentC2Time)*ticksToSecondsScaleFactor,
 			core, "c2",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.CStateSecondsTotal,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			float64(data.PercentC3Time)*ticksToSecondsScaleFactor,
 			core, "c3",
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.TimeTotal,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			float64(data.PercentIdleTime)*ticksToSecondsScaleFactor,
 			core, "idle",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.TimeTotal,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			float64(data.PercentInterruptTime)*ticksToSecondsScaleFactor,
 			core, "interrupt",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.TimeTotal,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			float64(data.PercentDPCTime)*ticksToSecondsScaleFactor,
 			core, "dpc",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.TimeTotal,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			float64(data.PercentPrivilegedTime)*ticksToSecondsScaleFactor,
 			core, "privileged",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.TimeTotal,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			float64(data.PercentUserTime)*ticksToSecondsScaleFactor,
 			core, "user",
 		)
