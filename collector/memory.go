@@ -1,5 +1,8 @@
 // returns data points from Win32_PerfRawData_PerfOS_Memory
 // <add link to documentation here> - Win32_PerfRawData_PerfOS_Memory class
+
+// +build windows
+
 package collector
 
 import (

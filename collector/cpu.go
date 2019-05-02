@@ -1,5 +1,5 @@
-// returns data points from Win32_PerfRawData_PerfOS_Processor
-// https://msdn.microsoft.com/en-us/library/aa394317(v=vs.90).aspx - Win32_PerfRawData_PerfOS_Processor class
+// +build windows
+
 package collector
 
 import (
@@ -22,6 +22,7 @@ type CPUCollector struct {
 	DPCsTotal          *prometheus.Desc
 }
 
+// NewCPUCollector constructs a new CPUCollector
 func NewCPUCollector() (Collector, error) {
 	const subsystem = "cpu"
 	return &CPUCollector{
@@ -63,6 +64,8 @@ func (c *CPUCollector) Collect(ch chan<- prometheus.Metric) error {
 	return nil
 }
 
+// Win32_PerfRawData_PerfOS_Processor docs:
+// - https://msdn.microsoft.com/en-us/library/aa394317(v=vs.90).aspx
 type Win32_PerfRawData_PerfOS_Processor struct {
 	Name                  string
 	C1TransitionsPersec   uint64
@@ -145,50 +148,50 @@ func (c *CPUCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 
 		ch <- prometheus.MustNewConstMetric(
 			c.CStateSecondsTotal,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			float64(data.PercentC1Time)*ticksToSecondsScaleFactor,
 			core, "c1",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.CStateSecondsTotal,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			float64(data.PercentC2Time)*ticksToSecondsScaleFactor,
 			core, "c2",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.CStateSecondsTotal,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			float64(data.PercentC3Time)*ticksToSecondsScaleFactor,
 			core, "c3",
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.TimeTotal,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			float64(data.PercentIdleTime)*ticksToSecondsScaleFactor,
 			core, "idle",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.TimeTotal,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			float64(data.PercentInterruptTime)*ticksToSecondsScaleFactor,
 			core, "interrupt",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.TimeTotal,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			float64(data.PercentDPCTime)*ticksToSecondsScaleFactor,
 			core, "dpc",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.TimeTotal,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			float64(data.PercentPrivilegedTime)*ticksToSecondsScaleFactor,
 			core, "privileged",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.TimeTotal,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			float64(data.PercentUserTime)*ticksToSecondsScaleFactor,
 			core, "user",
 		)

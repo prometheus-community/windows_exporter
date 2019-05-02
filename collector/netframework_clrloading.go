@@ -1,5 +1,5 @@
-// returns data points from Win32_PerfRawData_NETFramework_NETCLRLoading
-// <add link to documentation here> - Win32_PerfRawData_NETFramework_NETCLRLoading class
+// +build windows
+
 package collector
 
 import (

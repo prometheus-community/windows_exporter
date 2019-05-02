@@ -1,5 +1,5 @@
-// returns data points from Win32_PerfRawData_MSMQ_MSMQQueue
-// <add link to documentation here> - Win32_PerfRawData_MSMQ_MSMQQueue class
+// +build windows
+
 package collector
 
 import (
@@ -33,7 +33,7 @@ type Win32_PerfRawData_MSMQ_MSMQQueueCollector struct {
 func NewMSMQCollector() (Collector, error) {
 	const subsystem = "msmq"
 
-	if *msmqWhereClause != "" {
+	if *msmqWhereClause == "" {
 		log.Warn("No where-clause specified for msmq collector. This will generate a very large number of metrics!")
 	}
 
