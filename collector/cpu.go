@@ -23,7 +23,12 @@ func getWindowsVersion() float64 {
 	if err != nil {
 		log.Warn("Couldn't open registry", err)
 	}
-	defer k.Close()
+	defer func() {
+		err = k.Close()
+		if err != nil {
+			log.Warnf("Failed to close registry key: %v", err)
+		}
+	}()
 
 	currentv, _, err := k.GetStringValue("CurrentVersion")
 	if err != nil {
