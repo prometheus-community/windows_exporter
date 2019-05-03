@@ -38,7 +38,7 @@ func getWindowsVersion() float64 {
 	}
 
 	currentv_flt, err := strconv.ParseFloat(currentv, 64)
-	//	log.Info(currentv_flt)
+
 	log.Debugf("Detected Windows version %d.%d\n", currentv_flt)
 
 	return currentv_flt
