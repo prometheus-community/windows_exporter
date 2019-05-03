@@ -22,7 +22,7 @@ func getWindowsVersion() float64 {
 	k, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\Microsoft\Windows NT\CurrentVersion`, registry.QUERY_VALUE)
 	if err != nil {
 		log.Warn("Couldn't open registry", err)
-		return currentv_flt
+		return 0
 	}
 	defer func() {
 		err = k.Close()
@@ -34,7 +34,7 @@ func getWindowsVersion() float64 {
 	currentv, _, err := k.GetStringValue("CurrentVersion")
 	if err != nil {
 		log.Warn("Couldn't open registry to determine current Windows version:", err)
-		return currentv_flt
+		return 0
 	}
 
 	currentv_flt, err := strconv.ParseFloat(currentv, 64)
@@ -83,7 +83,7 @@ func NewCPUCollector() (Collector, error) {
 			nil,
 		),
 		ProcessorFrequency: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "core_frequence_MHz"),
+			prometheus.BuildFQName(Namespace, subsystem, "core_frequence_mhz"),
 			"Core frequency in megahertz",
 			[]string{"core"},
 			nil,
@@ -157,6 +157,9 @@ type Win32_PerfRawData_Counters_ProcessorInformation struct {
 func (c *CPUCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	version := getWindowsVersion()
 	// Windows version by number https://docs.microsoft.com/en-us/windows/desktop/sysinfo/operating-system-version
+	// For Windows 2008 or earlier Windows version is 6.0 or lower, so we use Win32_PerfRawData_PerfOS_Processor class
+	// For Windows 2008 R2 or later  Windows version is 6.1 or higher, so we use Win32_PerfRawData_Counters_ProcessorInformation
+	// Value 6.05 was selected just to split between WIndows versions
 	if version > 6.05 {
 		var dst []Win32_PerfRawData_Counters_ProcessorInformation
 		q := queryAll(&dst)
