@@ -122,7 +122,6 @@ type Win32_PerfRawData_PerfOS_Processor struct {
 	PercentUserTime       uint64
 }
 
-// NOTE: This is an alternative class, but it is not as widely available. Decide which to use
 type Win32_PerfRawData_Counters_ProcessorInformation struct {
 	Name                        string
 	AverageIdleTime             uint64
