@@ -245,7 +245,7 @@ func (c *CPUCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 
 		return nil, nil
 
-	} 
+	}
 	var dst []Win32_PerfRawData_PerfOS_Processor
 	q := queryAll(&dst)
 	if err := wmi.Query(q, &dst); err != nil {
@@ -315,7 +315,8 @@ func (c *CPUCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 			prometheus.CounterValue,
 			float64(data.DPCsQueuedPersec),
 			core,
-		}
 		)
-	return nil, nil
 	}
+
+	return nil, nil
+}
