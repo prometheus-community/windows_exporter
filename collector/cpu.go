@@ -325,4 +325,5 @@ func (c *CPUCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 
 		return nil, nil
 	}
+	return nil, nil
 }
