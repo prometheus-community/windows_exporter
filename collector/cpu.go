@@ -30,7 +30,6 @@ func getWindowsVersion() float64 {
 		log.Warn("Couldn't open registry to determine current Windows version:", err)
 	}
 
-	log.Info("Detected Windows %d.%d\n", currentv)
 	currentv_flt, err := strconv.ParseFloat(currentv, 64)
 	//	log.Info(currentv_flt)
 	return currentv_flt
