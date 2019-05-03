@@ -245,85 +245,77 @@ func (c *CPUCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 
 		return nil, nil
 
-	} else {
-		var dst []Win32_PerfRawData_PerfOS_Processor
-		q := queryAll(&dst)
-		if err := wmi.Query(q, &dst); err != nil {
-			return nil, err
-		}
-
-		for _, data := range dst {
-			if strings.Contains(data.Name, "_Total") {
-				continue
-			}
-
-			core := data.Name
-
-			ch <- prometheus.MustNewConstMetric(
-				c.CStateSecondsTotal,
-				prometheus.CounterValue,
-				float64(data.PercentC1Time)*ticksToSecondsScaleFactor,
-				core, "c1",
-			)
-			ch <- prometheus.MustNewConstMetric(
-				c.CStateSecondsTotal,
-				prometheus.CounterValue,
-				float64(data.PercentC2Time)*ticksToSecondsScaleFactor,
-				core, "c2",
-			)
-			ch <- prometheus.MustNewConstMetric(
-				c.CStateSecondsTotal,
-				prometheus.CounterValue,
-				float64(data.PercentC3Time)*ticksToSecondsScaleFactor,
-				core, "c3",
-			)
-
-			ch <- prometheus.MustNewConstMetric(
-				c.TimeTotal,
-				prometheus.CounterValue,
-				float64(data.PercentIdleTime)*ticksToSecondsScaleFactor,
-				core, "idle",
-			)
-			ch <- prometheus.MustNewConstMetric(
-				c.TimeTotal,
-				prometheus.CounterValue,
-				float64(data.PercentInterruptTime)*ticksToSecondsScaleFactor,
-				core, "interrupt",
-			)
-			ch <- prometheus.MustNewConstMetric(
-				c.TimeTotal,
-				prometheus.CounterValue,
-				float64(data.PercentDPCTime)*ticksToSecondsScaleFactor,
-				core, "dpc",
-			)
-			ch <- prometheus.MustNewConstMetric(
-				c.TimeTotal,
-				prometheus.CounterValue,
-				float64(data.PercentPrivilegedTime)*ticksToSecondsScaleFactor,
-				core, "privileged",
-			)
-			ch <- prometheus.MustNewConstMetric(
-				c.TimeTotal,
-				prometheus.CounterValue,
-				float64(data.PercentUserTime)*ticksToSecondsScaleFactor,
-				core, "user",
-			)
-
-			ch <- prometheus.MustNewConstMetric(
-				c.InterruptsTotal,
-				prometheus.CounterValue,
-				float64(data.InterruptsPersec),
-				core,
-			)
-			ch <- prometheus.MustNewConstMetric(
-				c.DPCsTotal,
-				prometheus.CounterValue,
-				float64(data.DPCsQueuedPersec),
-				core,
-			)
-		}
-
-		return nil, nil
+	} 
+	var dst []Win32_PerfRawData_PerfOS_Processor
+	q := queryAll(&dst)
+	if err := wmi.Query(q, &dst); err != nil {
+		return nil, err
 	}
+	for _, data := range dst {
+		if strings.Contains(data.Name, "_Total") {
+			continue
+		}
+		core := data.Name
+		ch <- prometheus.MustNewConstMetric(
+			c.CStateSecondsTotal,
+			prometheus.CounterValue,
+			float64(data.PercentC1Time)*ticksToSecondsScaleFactor,
+			core, "c1",
+		)
+		ch <- prometheus.MustNewConstMetric(
+			c.CStateSecondsTotal,
+			prometheus.CounterValue,
+			float64(data.PercentC2Time)*ticksToSecondsScaleFactor,
+			core, "c2",
+		)
+		ch <- prometheus.MustNewConstMetric(
+			c.CStateSecondsTotal,
+			prometheus.CounterValue,
+			float64(data.PercentC3Time)*ticksToSecondsScaleFactor,
+			core, "c3",
+		)
+		ch <- prometheus.MustNewConstMetric(
+			c.TimeTotal,
+			prometheus.CounterValue,
+			float64(data.PercentIdleTime)*ticksToSecondsScaleFactor,
+			core, "idle",
+		)
+		ch <- prometheus.MustNewConstMetric(
+			c.TimeTotal,
+			prometheus.CounterValue,
+			float64(data.PercentInterruptTime)*ticksToSecondsScaleFactor,
+			core, "interrupt",
+		)
+		ch <- prometheus.MustNewConstMetric(
+			c.TimeTotal,
+			prometheus.CounterValue,
+			float64(data.PercentDPCTime)*ticksToSecondsScaleFactor,
+			core, "dpc",
+		)
+		ch <- prometheus.MustNewConstMetric(
+			c.TimeTotal,
+			prometheus.CounterValue,
+			float64(data.PercentPrivilegedTime)*ticksToSecondsScaleFactor,
+			core, "privileged",
+		)
+		ch <- prometheus.MustNewConstMetric(
+			c.TimeTotal,
+			prometheus.CounterValue,
+			float64(data.PercentUserTime)*ticksToSecondsScaleFactor,
+			core, "user",
+		)
+		ch <- prometheus.MustNewConstMetric(
+			c.InterruptsTotal,
+			prometheus.CounterValue,
+			float64(data.InterruptsPersec),
+			core,
+		)
+		ch <- prometheus.MustNewConstMetric(
+			c.DPCsTotal,
+			prometheus.CounterValue,
+			float64(data.DPCsQueuedPersec),
+			core,
+		}
+		)
 	return nil, nil
-}
+	}
