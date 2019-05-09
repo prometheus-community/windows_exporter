@@ -2,6 +2,8 @@
 
 The memory collector exposes metrics about system memory usage
 
+|||
+-|-
 Metric name prefix  | `memory`
 Classes             | `Win32_PerfRawData_PerfOS_Memory`
 Enabled by default? | Yes
