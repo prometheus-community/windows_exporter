@@ -2,6 +2,8 @@
 
 The container collector exposes metrics about containers running on system
 
+|||
+-|-
 Metric name prefix  | `container`
 Enabled by default? | No
 
