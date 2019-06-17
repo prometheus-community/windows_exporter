@@ -2575,7 +2575,7 @@ func (c *MSSQLCollector) collectDatabaseReplica(ch chan<- prometheus.Metric, sql
 		ch <- prometheus.MustNewConstMetric(
 			c.DBReplicaTransactionDelay,
 			prometheus.GaugeValue,
-			float64(v.TransactionDelay)*1000.0,
+			float64(v.TransactionDelay)/1000.0,
 			sqlInstance, replicaName,
 		)
 	}
