@@ -67,6 +67,7 @@ Name | Description | Type | Labels
 `wmi_mssql_accessmethods_workfile_creates` | _Not yet documented_ | counter | `instance`
 `wmi_mssql_accessmethods_worktables_creates` | _Not yet documented_ | counter | `instance`
 `wmi_mssql_accessmethods_worktables_from_cache_ratio` | _Not yet documented_ | counter | `instance`
+`wmi_mssql_accessmethods_worktables_from_cache_ratio_base` | _Not yet documented_ | counter | `instance`
 `wmi_mssql_availreplica_received_from_replica_bytes` | _Not yet documented_ | counter | `instance`, `replica`
 `wmi_mssql_availreplica_sent_to_replica_bytes` | _Not yet documented_ | counter | `instance`, `replica`
 `wmi_mssql_availreplica_sent_to_transport_bytes` | _Not yet documented_ | counter | `instance`, `replica`
@@ -78,6 +79,7 @@ Name | Description | Type | Labels
 `wmi_mssql_availreplica_sends_to_transport` | _Not yet documented_ | counter | `instance`, `replica`
 `wmi_mssql_bufman_background_writer_pages` | _Not yet documented_ | counter | `instance`
 `wmi_mssql_bufman_buffer_cache_hit_ratio` | _Not yet documented_ | counter | `instance`
+`wmi_mssql_bufman_buffer_cache_hit_ratio_base` | _Not yet documented_ | counter | `instance`
 `wmi_mssql_bufman_checkpoint_pages` | _Not yet documented_ | counter | `instance`
 `wmi_mssql_bufman_database_pages` | _Not yet documented_ | counter | `instance`
 `wmi_mssql_bufman_extension_allocated_pages` | _Not yet documented_ | counter | `instance`
@@ -132,6 +134,7 @@ Name | Description | Type | Labels
 `wmi_mssql_databases_group_commit_stall_seconds` | _Not yet documented_ | counter | `instance`, `database`
 `wmi_mssql_databases_log_flushed_bytes` | _Not yet documented_ | counter | `instance`, `database`
 `wmi_mssql_databases_log_cache_hit_ratio` | _Not yet documented_ | counter | `instance`, `database`
+`wmi_mssql_databases_log_cache_hit_ratio_base` | _Not yet documented_ | counter | `instance`, `database`
 `wmi_mssql_databases_log_cache_reads` | _Not yet documented_ | counter | `instance`, `database`
 `wmi_mssql_databases_log_files_size_bytes` | _Not yet documented_ | counter | `instance`, `database`
 `wmi_mssql_databases_log_files_used_size_bytes` | _Not yet documented_ | counter | `instance`, `database`
@@ -193,6 +196,7 @@ Name | Description | Type | Labels
 `wmi_mssql_genstats_transactions` | _Not yet documented_ | counter | `instance`
 `wmi_mssql_genstats_user_connections` | _Not yet documented_ | counter | `instance`
 `wmi_mssql_locks_average_wait_seconds` | _Not yet documented_ | counter | `instance`, `resource`
+`wmi_mssql_locks_average_wait_seconds_base` | _Not yet documented_ | counter | `instance`, `resource`
 `wmi_mssql_locks_lock_requests` | _Not yet documented_ | counter | `instance`, `resource`
 `wmi_mssql_locks_lock_timeouts` | _Not yet documented_ | counter | `instance`, `resource`
 `wmi_mssql_locks_lock_timeouts_excluding_NOWAIT` | _Not yet documented_ | counter | `instance`, `resource`
@@ -235,7 +239,16 @@ Name | Description | Type | Labels
 _This collector does not yet have explained examples, we would appreciate your help adding them!_
 
 ## Useful queries
-_This collector does not yet have any useful queries added, we would appreciate your help adding them!_
+
+### Buffer Cache Hit Ratio
+
+When you read the counter in perfmon you will get the the percentage pages found in the buffer cache. This percentage is calculated internally based on the total number of cache hits divided by the total number of cache lookups over the last few thousand page accesses.
+This collector retrieves the two internal values separately. In order to give any meaning to the value you will have to calculate the Buffer Cache Hit Ratio in PromQL.
+
+```
+wmi_mssql_bufman_buffer_cache_hit_ratio{instance="host:9182", exported_instance="MSSQLSERVER"} / 
+wmi_mssql_bufman_buffer_cache_hit_ratio_base{instance="host:9182", exported_instance="MSSQLSERVER"}
+```
 
 ## Alerting examples
 _This collector does not yet have alerting examples, we would appreciate your help adding them!_
