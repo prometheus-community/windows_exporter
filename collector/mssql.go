@@ -647,7 +647,7 @@ func NewMSSQLCollector() (Collector, error) {
 			nil,
 		),
 		AccessMethodsWorktablesFromCacheRatio_Base: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "accessmethods_worktables_from_cache_ratio"),
+			prometheus.BuildFQName(Namespace, subsystem, "accessmethods_worktables_from_cache_ratio_base"),
 			"(AccessMethods.WorktablesFromCacheRatio_Base)",
 			[]string{"instance"},
 			nil,
