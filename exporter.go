@@ -5,7 +5,9 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -52,6 +54,12 @@ var (
 		[]string{"collector"},
 		nil,
 	)
+	snapshotDuration = prometheus.NewDesc(
+		prometheus.BuildFQName(collector.Namespace, "exporter", "perflib_snapshot_duration_seconds"),
+		"Duration of perflib snapshot capture",
+		nil,
+		nil,
+	)
 
 	// This can be removed when client_golang exposes this on Windows
 	// (See https://github.com/prometheus/client_golang/issues/376)
@@ -74,7 +82,13 @@ func (coll WmiCollector) Describe(ch chan<- *prometheus.Desc) {
 // Collect sends the collected metrics from each of the collectors to
 // prometheus.
 func (coll WmiCollector) Collect(ch chan<- prometheus.Metric) {
+	t := time.Now()
 	scrapeContext, err := collector.PrepareScrapeContext()
+	ch <- prometheus.MustNewConstMetric(
+		snapshotDuration,
+		prometheus.GaugeValue,
+		time.Since(t).Seconds(),
+	)
 	if err != nil {
 		ch <- prometheus.NewInvalidMetric(scrapeSuccessDesc, fmt.Errorf("failed to prepare scrape: %v", err))
 		return
@@ -91,8 +105,8 @@ func (coll WmiCollector) Collect(ch chan<- prometheus.Metric) {
 	go func() {
 		for {
 			select {
-			case m := <-metricsBuffer:
-				if !stopped {
+			case m, ok := <-metricsBuffer:
+				if ok && !stopped {
 					ch <- m
 				}
 			case <-allDone:
@@ -111,8 +125,8 @@ func (coll WmiCollector) Collect(ch chan<- prometheus.Metric) {
 
 	for name, c := range coll.collectors {
 		go func(name string, c collector.Collector) {
+			defer wg.Done()
 			execute(name, c, scrapeContext, metricsBuffer)
-			wg.Done()
 			delete(remainingCollectors, name)
 		}(name, c)
 	}
@@ -229,10 +243,6 @@ func loadCollectors(list string) (map[string]collector.Collector, error) {
 	return collectors, nil
 }
 
-func init() {
-	prometheus.MustRegister(version.NewCollector("wmi_exporter"))
-}
-
 func initWbem() {
 	// This initialization prevents a memory leak on WMF 5+. See
 	// https://github.com/martinlindhe/wmi_exporter/issues/77 and linked issues
@@ -264,10 +274,10 @@ func main() {
 			"collectors.print",
 			"If true, print available collectors and exit.",
 		).Bool()
-		maxScrapeDuration = kingpin.Flag(
-			"scrape.max-duration",
-			"Time after which collectors are aborted during a scrape",
-		).Default("30s").Duration()
+		timeoutMargin = kingpin.Flag(
+			"scrape.timeout-margin",
+			"Seconds to subtract from the timeout allowed by the client. Tune to allow for overhead or high loads.",
+		).Default("0.5").Float64()
 	)
 
 	log.AddFlags(kingpin.CommandLine)
@@ -312,13 +322,17 @@ func main() {
 
 	log.Infof("Enabled collectors: %v", strings.Join(keys(collectors), ", "))
 
-	exporter := WmiCollector{
-		collectors:        collectors,
-		maxScrapeDuration: *maxScrapeDuration,
+	h := &metricsHandler{
+		timeoutMargin: *timeoutMargin,
+		collectorFactory: func(timeout time.Duration) *WmiCollector {
+			return &WmiCollector{
+				collectors:        collectors,
+				maxScrapeDuration: timeout,
+			}
+		},
 	}
-	prometheus.MustRegister(exporter)
 
-	http.Handle(*metricsPath, promhttp.Handler())
+	http.Handle(*metricsPath, h)
 	http.HandleFunc("/health", healthCheck)
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, *metricsPath, http.StatusMovedPermanently)
@@ -381,4 +395,37 @@ loop:
 	}
 	changes <- svc.Status{State: svc.StopPending}
 	return
+}
+
+type metricsHandler struct {
+	timeoutMargin    float64
+	collectorFactory func(timeout time.Duration) *WmiCollector
+}
+
+func (mh *metricsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	const defaultTimeout = 10.0
+
+	var timeoutSeconds float64
+	if v := r.Header.Get("X-Prometheus-Scrape-Timeout-Seconds"); v != "" {
+		var err error
+		timeoutSeconds, err = strconv.ParseFloat(v, 64)
+		if err != nil {
+			log.Warnf("Couldn't parse X-Prometheus-Scrape-Timeout-Seconds: %q. Defaulting timeout to %d", v, defaultTimeout)
+		}
+	}
+	if timeoutSeconds == 0 {
+		timeoutSeconds = defaultTimeout
+	}
+	timeoutSeconds = timeoutSeconds - mh.timeoutMargin
+
+	reg := prometheus.NewRegistry()
+	reg.MustRegister(mh.collectorFactory(time.Duration(timeoutSeconds * float64(time.Second))))
+	reg.MustRegister(
+		prometheus.NewProcessCollector(os.Getpid(), ""),
+		prometheus.NewGoCollector(),
+		version.NewCollector("wmi_exporter"),
+	)
+
+	h := promhttp.HandlerFor(reg, promhttp.HandlerOpts{})
+	h.ServeHTTP(w, r)
 }
