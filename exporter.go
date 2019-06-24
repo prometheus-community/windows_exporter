@@ -410,7 +410,7 @@ func (mh *metricsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		var err error
 		timeoutSeconds, err = strconv.ParseFloat(v, 64)
 		if err != nil {
-			log.Warnf("Couldn't parse X-Prometheus-Scrape-Timeout-Seconds: %q. Defaulting timeout to %d", v, defaultTimeout)
+			log.Warnf("Couldn't parse X-Prometheus-Scrape-Timeout-Seconds: %q. Defaulting timeout to %f", v, defaultTimeout)
 		}
 	}
 	if timeoutSeconds == 0 {
