@@ -1,11 +1,11 @@
-# tcp collector
+# thermalzone collector
 
 The thermalzone collector exposes metrics about system temps. Note that temperature is given in Kelvin
 
 |||
 -|-
 Metric name prefix  | `thermalzone`
-Classes             | [`Win32_PerfRawData_Counters_ThermalZoneInformation`](https://msdn.microsoft.com/en-us/library/aa394341(v=vs.85).aspx)
+Classes             | [`Win32_PerfRawData_Counters_ThermalZoneInformation`](https://wutils.com/wmi/root/cimv2/win32_perfrawdata_counters_thermalzoneinformation/#temperature_properties)
 Enabled by default? | No
 
 ## Flags
