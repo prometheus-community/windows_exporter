@@ -25,7 +25,7 @@ func NewThermalZoneCollector() (Collector, error) {
 			prometheus.BuildFQName(Namespace, subsystem, "temperature_celsius"),
 			"(Temperature)",
 			[]string{
-				"Name",
+				"name",
 			},
 			nil,
 		),
@@ -33,7 +33,7 @@ func NewThermalZoneCollector() (Collector, error) {
 			prometheus.BuildFQName(Namespace, subsystem, "percent_passive_limit"),
 			"(PercentPassiveLimit)",
 			[]string{
-				"Name",
+				"name",
 			},
 			nil,
 		),
@@ -41,7 +41,7 @@ func NewThermalZoneCollector() (Collector, error) {
 			prometheus.BuildFQName(Namespace, subsystem, "throttle_reasons"),
 			"(ThrottleReasons)",
 			[]string{
-				"Name",
+				"name",
 			},
 			nil,
 		),
