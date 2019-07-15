@@ -12,38 +12,37 @@ func init() {
 
 // A ThermalZoneCollector is a Prometheus collector for WMI Win32_PerfRawData_Counters_ThermalZoneInformation metrics
 type ThermalZoneCollector struct {
-	HighPrecisionTemperature *prometheus.Desc
-	PercentPassiveLimit      *prometheus.Desc
-	Temperature              *prometheus.Desc
-	ThrottleReasons          *prometheus.Desc
+	PercentPassiveLimit *prometheus.Desc
+	Temperature         *prometheus.Desc
+	ThrottleReasons     *prometheus.Desc
 }
 
 // NewThermalZoneCollector ...
 func NewThermalZoneCollector() (Collector, error) {
 	const subsystem = "thermalzone"
 	return &ThermalZoneCollector{
-		HighPrecisionTemperature: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "high_precision_temperature"),
-			"(HighPrecisionTemperature)",
-			nil,
+		Temperature: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "temperature_celsius"),
+			"(Temperature)",
+			[]string{
+				"Name",
+			},
 			nil,
 		),
 		PercentPassiveLimit: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "percent_passive_limit"),
 			"(PercentPassiveLimit)",
-			nil,
-			nil,
-		),
-		Temperature: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "temperature"),
-			"(Temperature)",
-			nil,
+			[]string{
+				"Name",
+			},
 			nil,
 		),
 		ThrottleReasons: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "throttle_reasons"),
 			"(ThrottleReasons)",
-			nil,
+			[]string{
+				"Name",
+			},
 			nil,
 		),
 	}, nil
@@ -60,13 +59,12 @@ func (c *ThermalZoneCollector) Collect(ch chan<- prometheus.Metric) error {
 }
 
 // Win32_PerfRawData_Counters_ThermalZoneInformation docs:
-// - <add link to documentation here>
+// https://wutils.com/wmi/root/cimv2/win32_perfrawdata_counters_thermalzoneinformation/
 type Win32_PerfRawData_Counters_ThermalZoneInformation struct {
 	Name string
 
 	HighPrecisionTemperature uint32
 	PercentPassiveLimit      uint32
-	Temperature              uint32
 	ThrottleReasons          uint32
 }
 
@@ -77,29 +75,29 @@ func (c *ThermalZoneCollector) collect(ch chan<- prometheus.Metric) (*prometheus
 		return nil, err
 	}
 
-	ch <- prometheus.MustNewConstMetric(
-		c.HighPrecisionTemperature,
-		prometheus.GaugeValue,
-		float64(dst[0].HighPrecisionTemperature),
-	)
+	for _, info := range dst {
+		//Divide by 10 and subtract 273.15 to convert decikelvin to celsius
+		ch <- prometheus.MustNewConstMetric(
+			c.Temperature,
+			prometheus.GaugeValue,
+			(float64(info.HighPrecisionTemperature)/10.0)-273.15,
+			info.Name,
+		)
 
-	ch <- prometheus.MustNewConstMetric(
-		c.PercentPassiveLimit,
-		prometheus.GaugeValue,
-		float64(dst[0].PercentPassiveLimit),
-	)
+		ch <- prometheus.MustNewConstMetric(
+			c.PercentPassiveLimit,
+			prometheus.GaugeValue,
+			float64(info.PercentPassiveLimit),
+			info.Name,
+		)
 
-	ch <- prometheus.MustNewConstMetric(
-		c.Temperature,
-		prometheus.GaugeValue,
-		float64(dst[0].Temperature),
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.ThrottleReasons,
-		prometheus.GaugeValue,
-		float64(dst[0].ThrottleReasons),
-	)
+		ch <- prometheus.MustNewConstMetric(
+			c.ThrottleReasons,
+			prometheus.GaugeValue,
+			float64(info.ThrottleReasons),
+			info.Name,
+		)
+	}
 
 	return nil, nil
 }
