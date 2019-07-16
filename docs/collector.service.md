@@ -86,22 +86,22 @@ groups:
 
   # Sends an alert when the 'sqlserveragent' service is not in the running state for 3 minutes. 
   - alert: SQL Server Agent DOWN
-    expr: wmi_service_state{name="SQL",exported_name="sqlserveragent",state="running"} == 0
+    expr: wmi_service_state{instance="SQL",exported_name="sqlserveragent",state="running"} == 0
     for: 3m
     labels:
       severity: high
     annotations:
       summary: "Service {{ $labels.exported_name }} down"
-      description: "Service {{ $labels.exported_name }} on instance {{ $labels.name }} has been down for more than 3 minutes."
+      description: "Service {{ $labels.exported_name }} on instance {{ $labels.instance }} has been down for more than 3 minutes."
       
   # Sends an alert when the 'mssqlserver' service is not in the running state for 3 minutes. 
   - alert: SQL Server DOWN
-    expr: wmi_service_state{name="SQL",exported_name="mssqlserver",state="running"} == 0
+    expr: wmi_service_state{instance="SQL",exported_name="mssqlserver",state="running"} == 0
     for: 3m
     labels:
       severity: high
     annotations:
       summary: "Service {{ $labels.exported_name }} down"
-      description: "Service {{ $labels.exported_name }} on instance {{ $labels.name }} has been down for more than 3 minutes."
+      description: "Service {{ $labels.exported_name }} on instance {{ $labels.instance }} has been down for more than 3 minutes."
 ```
-In this example, `name` is the target label of the host. So each alert will be processed per host, which is then used in the alert description.
+In this example, `instance` is the target label of the host. So each alert will be processed per host, which is then used in the alert description.
