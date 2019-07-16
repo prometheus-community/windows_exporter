@@ -66,10 +66,42 @@ A service can have any of the following statuses:
 Note that there is some overlap with service state.
 
 ### Example metric
-_This collector does not yet have explained examples, we would appreciate your help adding them!_
+Lists the services that have a 'disabled' start mode.
+```
+wmi_service_start_mode{exported_name=~"(mssqlserver|sqlserveragent)",start_mode="disabled"}
+```
 
 ## Useful queries
-_This collector does not yet have any useful queries added, we would appreciate your help adding them!_
+Counts the number of Microsoft SQL Server/Agent Processes
+```
+count(wmi_service_state{exported_name=~"(sqlserveragent|mssqlserver)",state="running"})
+```
 
 ## Alerting examples
-_This collector does not yet have alerting examples, we would appreciate your help adding them!_
+**prometheus.rules**
+```
+groups:
+- name: Microsoft SQL Server Alerts
+  rules:
+
+  # Sends an alert when the 'sqlserveragent' service is not in the running state for 3 minutes. 
+  - alert: SQL Server Agent DOWN
+    expr: wmi_service_state{instance="SQL",exported_name="sqlserveragent",state="running"} == 0
+    for: 3m
+    labels:
+      severity: high
+    annotations:
+      summary: "Service {{ $labels.exported_name }} down"
+      description: "Service {{ $labels.exported_name }} on instance {{ $labels.instance }} has been down for more than 3 minutes."
+      
+  # Sends an alert when the 'mssqlserver' service is not in the running state for 3 minutes. 
+  - alert: SQL Server DOWN
+    expr: wmi_service_state{instance="SQL",exported_name="mssqlserver",state="running"} == 0
+    for: 3m
+    labels:
+      severity: high
+    annotations:
+      summary: "Service {{ $labels.exported_name }} down"
+      description: "Service {{ $labels.exported_name }} on instance {{ $labels.instance }} has been down for more than 3 minutes."
+```
+In this example, `instance` is the target label of the host. So each alert will be processed per host, which is then used in the alert description.
