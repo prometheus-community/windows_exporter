@@ -45,7 +45,7 @@ func NewContainerMetricsCollector() (Collector, error) {
 		ContainerAvailable: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "available"),
 			"Available",
-			[]string{"container_id"},
+			[]string{"container_id", "container_name"},
 			nil,
 		),
 		ContainersCount: prometheus.NewDesc(
@@ -57,73 +57,73 @@ func NewContainerMetricsCollector() (Collector, error) {
 		UsageCommitBytes: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "memory_usage_commit_bytes"),
 			"Memory Usage Commit Bytes",
-			[]string{"container_id"},
+			[]string{"container_id", "container_name"},
 			nil,
 		),
 		UsageCommitPeakBytes: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "memory_usage_commit_peak_bytes"),
 			"Memory Usage Commit Peak Bytes",
-			[]string{"container_id"},
+			[]string{"container_id", "container_name"},
 			nil,
 		),
 		UsagePrivateWorkingSetBytes: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "memory_usage_private_working_set_bytes"),
 			"Memory Usage Private Working Set Bytes",
-			[]string{"container_id"},
+			[]string{"container_id", "container_name"},
 			nil,
 		),
 		RuntimeTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "cpu_usage_seconds_total"),
 			"Total Run time in Seconds",
-			[]string{"container_id"},
+			[]string{"container_id", "container_name"},
 			nil,
 		),
 		RuntimeUser: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "cpu_usage_seconds_usermode"),
 			"Run Time in User mode in Seconds",
-			[]string{"container_id"},
+			[]string{"container_id", "container_name"},
 			nil,
 		),
 		RuntimeKernel: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "cpu_usage_seconds_kernelmode"),
 			"Run time in Kernel mode in Seconds",
-			[]string{"container_id"},
+			[]string{"container_id", "container_name"},
 			nil,
 		),
 		BytesReceived: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "network_receive_bytes_total"),
 			"Bytes Received on Interface",
-			[]string{"container_id", "interface"},
+			[]string{"container_id", "container_name", "interface"},
 			nil,
 		),
 		BytesSent: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "network_transmit_bytes_total"),
 			"Bytes Sent on Interface",
-			[]string{"container_id", "interface"},
+			[]string{"container_id", "container_name", "interface"},
 			nil,
 		),
 		PacketsReceived: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "network_receive_packets_total"),
 			"Packets Received on Interface",
-			[]string{"container_id", "interface"},
+			[]string{"container_id", "container_name", "interface"},
 			nil,
 		),
 		PacketsSent: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "network_transmit_packets_total"),
 			"Packets Sent on Interface",
-			[]string{"container_id", "interface"},
+			[]string{"container_id", "container_name", "interface"},
 			nil,
 		),
 		DroppedPacketsIncoming: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "network_receive_packets_dropped_total"),
 			"Dropped Incoming Packets on Interface",
-			[]string{"container_id", "interface"},
+			[]string{"container_id", "container_name", "interface"},
 			nil,
 		),
 		DroppedPacketsOutgoing: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "network_transmit_packets_dropped_total"),
 			"Dropped Outgoing Packets on Interface",
-			[]string{"container_id", "interface"},
+			[]string{"container_id", "container_name", "interface"},
 			nil,
 		),
 	}, nil
@@ -169,6 +169,7 @@ func (c *ContainerMetricsCollector) collect(ch chan<- prometheus.Metric) (*prome
 
 	for _, containerDetails := range containers {
 		containerId := containerDetails.ID
+		containerName := containerDetails.Name
 
 		container, err := hcsshim.OpenContainer(containerId)
 		if container != nil {
@@ -191,43 +192,43 @@ func (c *ContainerMetricsCollector) collect(ch chan<- prometheus.Metric) (*prome
 			c.ContainerAvailable,
 			prometheus.CounterValue,
 			1,
-			containerId,
+			containerId, containerName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.UsageCommitBytes,
 			prometheus.GaugeValue,
 			float64(cstats.Memory.UsageCommitBytes),
-			containerId,
+			containerId, containerName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.UsageCommitPeakBytes,
 			prometheus.GaugeValue,
 			float64(cstats.Memory.UsageCommitPeakBytes),
-			containerId,
+			containerId, containerName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.UsagePrivateWorkingSetBytes,
 			prometheus.GaugeValue,
 			float64(cstats.Memory.UsagePrivateWorkingSetBytes),
-			containerId,
+			containerId, containerName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.RuntimeTotal,
 			prometheus.CounterValue,
 			float64(cstats.Processor.TotalRuntime100ns)*ticksToSecondsScaleFactor,
-			containerId,
+			containerId, containerName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.RuntimeUser,
 			prometheus.CounterValue,
 			float64(cstats.Processor.RuntimeUser100ns)*ticksToSecondsScaleFactor,
-			containerId,
+			containerId, containerName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.RuntimeKernel,
 			prometheus.CounterValue,
 			float64(cstats.Processor.RuntimeKernel100ns)*ticksToSecondsScaleFactor,
-			containerId,
+			containerId, containerName,
 		)
 
 		if len(cstats.Network) == 0 {
@@ -242,37 +243,37 @@ func (c *ContainerMetricsCollector) collect(ch chan<- prometheus.Metric) (*prome
 				c.BytesReceived,
 				prometheus.CounterValue,
 				float64(networkInterface.BytesReceived),
-				containerId, networkInterface.EndpointId,
+				containerId, containerName, networkInterface.EndpointId,
 			)
 			ch <- prometheus.MustNewConstMetric(
 				c.BytesSent,
 				prometheus.CounterValue,
 				float64(networkInterface.BytesSent),
-				containerId, networkInterface.EndpointId,
+				containerId, containerName, networkInterface.EndpointId,
 			)
 			ch <- prometheus.MustNewConstMetric(
 				c.PacketsReceived,
 				prometheus.CounterValue,
 				float64(networkInterface.PacketsReceived),
-				containerId, networkInterface.EndpointId,
+				containerId, containerName, networkInterface.EndpointId,
 			)
 			ch <- prometheus.MustNewConstMetric(
 				c.PacketsSent,
 				prometheus.CounterValue,
 				float64(networkInterface.PacketsSent),
-				containerId, networkInterface.EndpointId,
+				containerId, containerName, networkInterface.EndpointId,
 			)
 			ch <- prometheus.MustNewConstMetric(
 				c.DroppedPacketsIncoming,
 				prometheus.CounterValue,
 				float64(networkInterface.DroppedPacketsIncoming),
-				containerId, networkInterface.EndpointId,
+				containerId, containerName, networkInterface.EndpointId,
 			)
 			ch <- prometheus.MustNewConstMetric(
 				c.DroppedPacketsOutgoing,
 				prometheus.CounterValue,
 				float64(networkInterface.DroppedPacketsOutgoing),
-				containerId, networkInterface.EndpointId,
+				containerId, containerName, networkInterface.EndpointId,
 			)
 			break
 		}
