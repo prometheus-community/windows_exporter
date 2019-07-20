@@ -12,6 +12,7 @@ Name     | Description | Enabled by default
 [ad](docs/collector.ad.md) | Active Directory Domain Services |
 [cpu](docs/collector.cpu.md) | CPU usage | &#10003;
 [cs](docs/collector.cs.md) | "Computer System" metrics (system properties, num cpus/total memory) | &#10003;
+[container](docs/collector.container.md) | Container metrics | &#10003;
 [dns](docs/collector.dns.md) | DNS Server |
 [hyperv](docs/collector.hyperv.md) | Hyper-V hosts |
 [iis](docs/collector.iis.md) | IIS sites and applications |
