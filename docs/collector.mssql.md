@@ -230,7 +230,7 @@ Name | Description | Type | Labels
 `wmi_mssql_sqlstats_sql_compilations` | _Not yet documented_ | counter | `instance`
 `wmi_mssql_sqlstats_sql_recompilations` | _Not yet documented_ | counter | `instance`
 `wmi_mssql_sqlstats_unsafe_auto_parameterization_attempts` | _Not yet documented_ | counter | `instance`
-`wmi_mssql_sqlerror_errors` | _Not yet documented_ | counter | `instance`, `resource`
+`wmi_mssql_sqlerrors_errors` | _Not yet documented_ | counter | `instance`, `resource`
 
 ### Example metric
 _This collector does not yet have explained examples, we would appreciate your help adding them!_
