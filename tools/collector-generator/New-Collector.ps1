@@ -20,12 +20,12 @@ else {
 $members = @($wmiObject `
     | Get-Member -MemberType Properties `
     | Where-Object { $_.Definition -Match '^u?int' -and $_.Name -NotMatch '_' } `
-    | Select-Object Name, @{Name="Type";Expression={$_.Definition.Split(" ")[0]}}
+    | Select-Object Name, @{Name="Type";Expression={$_.Definition.Split(" ")[0]}})
 $input = @{
     "Class"=$Class;
     "CollectorName"=$CollectorName;
     "Members"=$members
-} | ConvertTo-Json)
+} | ConvertTo-Json
 $outFileName = "..\..\collector\$CollectorName.go".ToLower()
 $input | .\collector-generator.exe | Out-File -NoClobber -Encoding UTF8 $outFileName
 go fmt $outFileName
