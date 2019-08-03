@@ -17,10 +17,10 @@ else {
     $wmiObject = Get-WMIObject -ComputerName $ComputerName -Class $Class
 }
 
-$members = $wmiObject `
+$members = @($wmiObject `
     | Get-Member -MemberType Properties `
     | Where-Object { $_.Definition -Match '^u?int' -and $_.Name -NotMatch '_' } `
-    | Select-Object Name, @{Name="Type";Expression={$_.Definition.Split(" ")[0]}}
+    | Select-Object Name, @{Name="Type";Expression={$_.Definition.Split(" ")[0]}})
 $input = @{
     "Class"=$Class;
     "CollectorName"=$CollectorName;
