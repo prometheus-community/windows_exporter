@@ -361,22 +361,22 @@ type MSSQLCollector struct {
 	SQLStatsUnsafeAutoParams        *prometheus.Desc
 
 	// Win32_PerfRawData_{instance}_SQLServerSQLErrors
-	SQLErrorsTotal                  *prometheus.Desc
+	SQLErrorsTotal *prometheus.Desc
 
 	// Win32_PerfRawData_{instance}_SQLServerTransactions
-	TransactionsFreeSpaceInTempDbKB            *prometheus.Desc
-	TransactionsLongestTransactionRunningTime  *prometheus.Desc
-	TransactionsNonSnapshotVersionTotalActive  *prometheus.Desc
-	TransactionsSnapshotTotalActive            *prometheus.Desc
-	TransactionsTotalActive                    *prometheus.Desc
-	TransactionsUpdateConflictRatio            *prometheus.Desc
-	TransactionsUpdateSnapshotTotalActive      *prometheus.Desc
-	TransactionsVersionCleanupRateKBs          *prometheus.Desc
-	TransactionsVersionGenerationRateKBs       *prometheus.Desc
-	TransactionsVersionStoreSizeKB             *prometheus.Desc
-	TransactionsVersionStoreUnitCount          *prometheus.Desc
-	TransactionsVersionStoreUnitCreation       *prometheus.Desc
-	TransactionsVersionStoreUnitTruncation     *prometheus.Desc
+	TransactionsFreeSpaceInTempDbKB           *prometheus.Desc
+	TransactionsLongestTransactionRunningTime *prometheus.Desc
+	TransactionsNonSnapshotVersionTotalActive *prometheus.Desc
+	TransactionsSnapshotTotalActive           *prometheus.Desc
+	TransactionsTotalActive                   *prometheus.Desc
+	TransactionsUpdateConflictRatio           *prometheus.Desc
+	TransactionsUpdateSnapshotTotalActive     *prometheus.Desc
+	TransactionsVersionCleanupRateKBs         *prometheus.Desc
+	TransactionsVersionGenerationRateKBs      *prometheus.Desc
+	TransactionsVersionStoreSizeKB            *prometheus.Desc
+	TransactionsVersionStoreUnitCount         *prometheus.Desc
+	TransactionsVersionStoreUnitCreation      *prometheus.Desc
+	TransactionsVersionStoreUnitTruncation    *prometheus.Desc
 
 	mssqlInstances             mssqlInstancesType
 	mssqlCollectors            mssqlCollectorsMap
@@ -1666,7 +1666,7 @@ func NewMSSQLCollector() (Collector, error) {
 		),
 
 		// Win32_PerfRawData_{instance}_SQLServerTransactions
-	    TransactionsFreeSpaceInTempDbKB: prometheus.NewDesc(
+		TransactionsFreeSpaceInTempDbKB: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "transactions_tempdb_free_space_bytes"),
 			"(Transactions.FreeSpaceInTempDbKB)",
 			[]string{"instance"},
@@ -1756,7 +1756,7 @@ func NewMSSQLCollector() (Collector, error) {
 			[]string{"instance"},
 			nil,
 		),
-		
+
 		mssqlInstances: getMSSQLInstances(),
 	}
 
@@ -3680,8 +3680,8 @@ func (c *MSSQLCollector) collectSQLStats(ch chan<- prometheus.Metric, sqlInstanc
 }
 
 type win32PerfRawDataSQLServerSQLErrors struct {
-	Name      string
-	Errorssec uint64
+	Name         string
+	ErrorsPersec uint64
 }
 
 // Win32_PerfRawData_MSSQLSERVER_SQLServerErrors docs:
@@ -3702,7 +3702,7 @@ func (c *MSSQLCollector) collectSQLErrors(ch chan<- prometheus.Metric, sqlInstan
 		ch <- prometheus.MustNewConstMetric(
 			c.SQLErrorsTotal,
 			prometheus.CounterValue,
-			float64(v.Errorssec),
+			float64(v.ErrorsPersec),
 			sqlInstance, resource,
 		)
 	}
@@ -3711,19 +3711,19 @@ func (c *MSSQLCollector) collectSQLErrors(ch chan<- prometheus.Metric, sqlInstan
 }
 
 type win32PerfRawDataSqlServerTransactions struct {
-	FreeSpaceInTempDbKB            uint64
+	FreeSpaceintempdbKB            uint64
 	LongestTransactionRunningTime  uint64
 	NonSnapshotVersionTransactions uint64
 	SnapshotTransactions           uint64
 	Transactions                   uint64
-	UpdateConflictRatio            uint64
+	Updateconflictratio            uint64
 	UpdateSnapshotTransactions     uint64
-	VersionCleanupRateKBs          uint64
-	VersionGenerationRateKBs       uint64
+	VersionCleanuprateKBPers       uint64
+	VersionGenerationrateKBPers    uint64
 	VersionStoreSizeKB             uint64
-	VersionStoreUnitCount          uint64
-	VersionStoreUnitCreation       uint64
-	VersionStoreUnitTruncation     uint64
+	VersionStoreunitcount          uint64
+	VersionStoreunitcreation       uint64
+	VersionStoreunittruncation     uint64
 }
 
 // Win32_PerfRawData_MSSQLSERVER_Transactions docs:
@@ -3747,7 +3747,7 @@ func (c *MSSQLCollector) collectTransactions(ch chan<- prometheus.Metric, sqlIns
 	ch <- prometheus.MustNewConstMetric(
 		c.TransactionsFreeSpaceInTempDbKB,
 		prometheus.GaugeValue,
-		float64(v.FreeSpaceInTempDbKB),
+		float64(v.FreeSpaceintempdbKB),
 		sqlInstance,
 	)
 
@@ -3782,7 +3782,7 @@ func (c *MSSQLCollector) collectTransactions(ch chan<- prometheus.Metric, sqlIns
 	ch <- prometheus.MustNewConstMetric(
 		c.TransactionsUpdateConflictRatio,
 		prometheus.GaugeValue,
-		float64(v.UpdateConflictRatio),
+		float64(v.Updateconflictratio),
 		sqlInstance,
 	)
 
@@ -3796,14 +3796,14 @@ func (c *MSSQLCollector) collectTransactions(ch chan<- prometheus.Metric, sqlIns
 	ch <- prometheus.MustNewConstMetric(
 		c.TransactionsVersionCleanupRateKBs,
 		prometheus.GaugeValue,
-		float64(v.VersionCleanupRateKBs),
+		float64(v.VersionCleanuprateKBPers),
 		sqlInstance,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.TransactionsVersionGenerationRateKBs,
 		prometheus.GaugeValue,
-		float64(v.VersionGenerationRateKBs),
+		float64(v.VersionGenerationrateKBPers),
 		sqlInstance,
 	)
 
@@ -3817,21 +3817,21 @@ func (c *MSSQLCollector) collectTransactions(ch chan<- prometheus.Metric, sqlIns
 	ch <- prometheus.MustNewConstMetric(
 		c.TransactionsVersionStoreUnitCount,
 		prometheus.CounterValue,
-		float64(v.VersionStoreUnitCount),
+		float64(v.VersionStoreunitcount),
 		sqlInstance,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.TransactionsVersionStoreUnitCreation,
 		prometheus.CounterValue,
-		float64(v.VersionStoreUnitCreation),
+		float64(v.VersionStoreunitcreation),
 		sqlInstance,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.TransactionsVersionStoreUnitTruncation,
 		prometheus.CounterValue,
-		float64(v.VersionStoreUnitTruncation),
+		float64(v.VersionStoreunittruncation),
 		sqlInstance,
 	)
 
