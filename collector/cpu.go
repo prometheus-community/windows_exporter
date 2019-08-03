@@ -3,44 +3,13 @@
 package collector
 
 import (
-	"strconv"
 	"strings"
 
-	"golang.org/x/sys/windows/registry"
-
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/common/log"
 )
 
 func init() {
 	Factories["cpu"] = newCPUCollector
-}
-
-// A function to get Windows version from registry
-func getWindowsVersion() float64 {
-	k, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\Microsoft\Windows NT\CurrentVersion`, registry.QUERY_VALUE)
-	if err != nil {
-		log.Warn("Couldn't open registry", err)
-		return 0
-	}
-	defer func() {
-		err = k.Close()
-		if err != nil {
-			log.Warnf("Failed to close registry key: %v", err)
-		}
-	}()
-
-	currentv, _, err := k.GetStringValue("CurrentVersion")
-	if err != nil {
-		log.Warn("Couldn't open registry to determine current Windows version:", err)
-		return 0
-	}
-
-	currentv_flt, err := strconv.ParseFloat(currentv, 64)
-
-	log.Debugf("Detected Windows version %f\n", currentv_flt)
-
-	return currentv_flt
 }
 
 type cpuCollectorBasic struct {
@@ -67,10 +36,12 @@ func newCPUCollector() (Collector, error) {
 	const subsystem = "cpu"
 
 	version := getWindowsVersion()
-	// Windows version by number https://docs.microsoft.com/en-us/windows/desktop/sysinfo/operating-system-version
-	// For Windows 2008 or earlier Windows version is 6.0 or lower, where we only have the older "Processor" counters
-	// For Windows 2008 R2 or later Windows version is 6.1 or higher, so we can use "ProcessorInformation" counters
-	// Value 6.05 was selected just to split between Windows versions
+	// For Windows 2008 (version 6.0) or earlier we only have the "Processor"
+	// class. As of Windows 2008 R2 (version 6.1) the more detailed
+	// "ProcessorInformation" set is available (although some of the counters
+	// are added in later versions, so we aren't guaranteed to get all of
+	// them).
+	// Value 6.05 was selected to split between Windows versions.
 	if version < 6.05 {
 		return &cpuCollectorBasic{
 			CStateSecondsTotal: prometheus.NewDesc(

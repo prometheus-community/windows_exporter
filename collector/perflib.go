@@ -64,7 +64,6 @@ func unmarshalObject(obj *perflib.PerfObject, vs interface{}) error {
 			ctr, found := counters[tag]
 			if !found {
 				log.Debugf("missing counter %q, has %v", tag, counters)
-				return fmt.Errorf("could not find counter %q on instance", tag)
 			}
 			if !target.Field(i).CanSet() {
 				return fmt.Errorf("tagged field %v cannot be written to", f)
