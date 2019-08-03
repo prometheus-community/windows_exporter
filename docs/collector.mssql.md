@@ -5,14 +5,14 @@ The mssql collector exposes metrics about the MSSQL server
 |||
 -|-
 Metric name prefix  | `mssql`
-Classes             | [`Win32_PerfRawData_MSSQLSERVER_SQLServerAccessMethods`](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-access-methods-object)<br/>[`Win32_PerfRawData_MSSQLSERVER_SQLServerAvailabilityReplica`](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-availability-replica)<br/>[`Win32_PerfRawData_MSSQLSERVER_SQLServerBufferManager`](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-buffer-manager-object)<br/>[`Win32_PerfRawData_MSSQLSERVER_SQLServerDatabaseReplica`](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-database-replica)<br/>[`Win32_PerfRawData_MSSQLSERVER_SQLServerDatabases`](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-databases-object?view=sql-server-2017)<br/>[`Win32_PerfRawData_MSSQLSERVER_SQLServerGeneralStatistics`](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-general-statistics-object)<br/>[`Win32_PerfRawData_MSSQLSERVER_SQLServerLocks`](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-locks-object)<br/>[`Win32_PerfRawData_MSSQLSERVER_SQLServerMemoryManager`](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-memory-manager-object)<br/>[`Win32_PerfRawData_MSSQLSERVER_SQLServerSQLStatistics`](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-sql-statistics-object)
+Classes             | [`Win32_PerfRawData_MSSQLSERVER_SQLServerAccessMethods`](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-access-methods-object)<br/>[`Win32_PerfRawData_MSSQLSERVER_SQLServerAvailabilityReplica`](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-availability-replica)<br/>[`Win32_PerfRawData_MSSQLSERVER_SQLServerBufferManager`](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-buffer-manager-object)<br/>[`Win32_PerfRawData_MSSQLSERVER_SQLServerDatabaseReplica`](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-database-replica)<br/>[`Win32_PerfRawData_MSSQLSERVER_SQLServerDatabases`](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-databases-object?view=sql-server-2017)<br/>[`Win32_PerfRawData_MSSQLSERVER_SQLServerGeneralStatistics`](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-general-statistics-object)<br/>[`Win32_PerfRawData_MSSQLSERVER_SQLServerLocks`](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-locks-object)<br/>[`Win32_PerfRawData_MSSQLSERVER_SQLServerMemoryManager`](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-memory-manager-object)<br/>[`Win32_PerfRawData_MSSQLSERVER_SQLServerSQLStatistics`](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-sql-statistics-object)<br/>[`Win32_PerfRawData_MSSQLSERVER_SQLServerSQLErrors`](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-sql-errors-object)
 Enabled by default? | No
 
 ## Flags
 
 ### `--collectors.mssql.classes-enabled`
 
-Comma-separated list of MSSQL WMI classes to use. Supported values are `accessmethods`, `availreplica`, `bufman`, `databases`, `dbreplica`, `genstats`, `locks`, `memmgr` and `sqlstats`.
+Comma-separated list of MSSQL WMI classes to use. Supported values are `accessmethods`, `availreplica`, `bufman`, `databases`, `dbreplica`, `genstats`, `locks`, `memmgr`, `sqlstats` and `sqlerrors`.
 
 ### `--collectors.mssql.class-print`
 
@@ -230,6 +230,7 @@ Name | Description | Type | Labels
 `wmi_mssql_sqlstats_sql_compilations` | _Not yet documented_ | counter | `instance`
 `wmi_mssql_sqlstats_sql_recompilations` | _Not yet documented_ | counter | `instance`
 `wmi_mssql_sqlstats_unsafe_auto_parameterization_attempts` | _Not yet documented_ | counter | `instance`
+`wmi_mssql_sql_errors_total` | _Not yet documented_ | counter | `instance`, `resource`
 
 ### Example metric
 _This collector does not yet have explained examples, we would appreciate your help adding them!_

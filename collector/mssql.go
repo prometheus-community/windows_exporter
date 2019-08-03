@@ -91,7 +91,7 @@ func mssqlBuildWMIInstanceClass(suffix string, instance string) string {
 type mssqlCollectorsMap map[string]mssqlCollectorFunc
 
 func mssqlAvailableClassCollectors() string {
-	return "accessmethods,availreplica,bufman,databases,dbreplica,genstats,locks,memmgr,sqlstats"
+	return "accessmethods,availreplica,bufman,databases,dbreplica,genstats,locks,memmgr,sqlstats,sqlerrors"
 }
 
 func (c *MSSQLCollector) getMSSQLCollectors() mssqlCollectorsMap {
@@ -105,6 +105,7 @@ func (c *MSSQLCollector) getMSSQLCollectors() mssqlCollectorsMap {
 	mssqlCollectors["locks"] = c.collectLocks
 	mssqlCollectors["memmgr"] = c.collectMemoryManager
 	mssqlCollectors["sqlstats"] = c.collectSQLStats
+	mssqlCollectors["sqlerrors"] = c.collectSQLErrors
 
 	return mssqlCollectors
 }
@@ -357,6 +358,9 @@ type MSSQLCollector struct {
 	SQLStatsSQLCompilations         *prometheus.Desc
 	SQLStatsSQLReCompilations       *prometheus.Desc
 	SQLStatsUnsafeAutoParams        *prometheus.Desc
+
+	// Win32_PerfRawData_{instance}_SQLServerSQLErrors
+	SQLErrorsTotal                  *prometheus.Desc
 
 	mssqlInstances             mssqlInstancesType
 	mssqlCollectors            mssqlCollectorsMap
@@ -1634,6 +1638,14 @@ func NewMSSQLCollector() (Collector, error) {
 			prometheus.BuildFQName(Namespace, subsystem, "sqlstats_unsafe_auto_parameterization_attempts"),
 			"(SQLStatistics.UnsafeAutoParams)",
 			[]string{"instance"},
+			nil,
+		),
+
+		// Win32_PerfRawData_{instance}_SQLServerSQLErrors
+		SQLErrorsTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "sql_errors_total"),
+			"(SQLErrors.Total)",
+			[]string{"instance", "resource"},
 			nil,
 		),
 
@@ -3555,6 +3567,37 @@ func (c *MSSQLCollector) collectSQLStats(ch chan<- prometheus.Metric, sqlInstanc
 		float64(v.UnsafeAutoParamsPersec),
 		sqlInstance,
 	)
+
+	return nil, nil
+}
+
+type win32PerfRawDataSQLServerSQLErrors struct {
+	Name      string
+	Errorssec uint64
+}
+
+// Win32_PerfRawData_MSSQLSERVER_SQLServerErrors docs:
+// - https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-sql-errors-object
+func (c *MSSQLCollector) collectSQLErrors(ch chan<- prometheus.Metric, sqlInstance string) (*prometheus.Desc, error) {
+	var dst []win32PerfRawDataSQLServerSQLErrors
+	log.Debugf("mssql_sqlerrors collector iterating sql instance %s.", sqlInstance)
+
+	class := mssqlBuildWMIInstanceClass("SQLErrors", sqlInstance)
+	q := queryAllForClassWhere(&dst, class, `Name <> '_Total'`)
+	if err := wmi.Query(q, &dst); err != nil {
+		return nil, err
+	}
+
+	for _, v := range dst {
+		resource := v.Name
+
+		ch <- prometheus.MustNewConstMetric(
+			c.SQLErrorsTotal,
+			prometheus.CounterValue,
+			float64(v.Errorssec),
+			sqlInstance, resource,
+		)
+	}
 
 	return nil, nil
 }
