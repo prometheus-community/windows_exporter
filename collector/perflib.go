@@ -63,10 +63,14 @@ func unmarshalObject(obj *perflib.PerfObject, vs interface{}) error {
 
 			ctr, found := counters[tag]
 			if !found {
-				log.Debugf("missing counter %q, has %v", tag, counters)
+				log.Debugf("missing counter %q, have %v", tag, counterMapKeys(counters))
+				continue
 			}
 			if !target.Field(i).CanSet() {
-				return fmt.Errorf("tagged field %v cannot be written to", f)
+				return fmt.Errorf("tagged field %v cannot be written to", f.Name)
+			}
+			if fieldType := target.Field(i).Type(); fieldType != reflect.TypeOf((*float64)(nil)).Elem() {
+				return fmt.Errorf("tagged field %v has wrong type %v, must be float64", f.Name, fieldType)
 			}
 
 			switch ctr.Def.CounterType {
@@ -85,4 +89,12 @@ func unmarshalObject(obj *perflib.PerfObject, vs interface{}) error {
 	}
 
 	return nil
+}
+
+func counterMapKeys(m map[string]*perflib.PerfCounter) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	return keys
 }
