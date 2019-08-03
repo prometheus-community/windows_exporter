@@ -360,7 +360,7 @@ type MSSQLCollector struct {
 	SQLStatsUnsafeAutoParams        *prometheus.Desc
 
 	// Win32_PerfRawData_{instance}_SQLServerSQLErrors
-	SQLErrorsErrors                 *prometheus.Desc
+	SQLErrorsTotal                  *prometheus.Desc
 
 	mssqlInstances             mssqlInstancesType
 	mssqlCollectors            mssqlCollectorsMap
@@ -1642,9 +1642,9 @@ func NewMSSQLCollector() (Collector, error) {
 		),
 
 		// Win32_PerfRawData_{instance}_SQLServerSQLErrors
-		SQLErrorsErrors: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "sqlerrors_errors"),
-			"(SQLErrors.Errors)",
+		SQLErrorsTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "sql_errors_total"),
+			"(SQLErrors.Total)",
 			[]string{"instance", "resource"},
 			nil,
 		),
@@ -3592,7 +3592,7 @@ func (c *MSSQLCollector) collectSQLErrors(ch chan<- prometheus.Metric, sqlInstan
 		resource := v.Name
 
 		ch <- prometheus.MustNewConstMetric(
-			c.SQLErrorsErrors,
+			c.SQLErrorsTotal,
 			prometheus.CounterValue,
 			float64(v.Errorssec),
 			sqlInstance, resource,
