@@ -12,6 +12,7 @@ Name     | Description | Enabled by default
 [ad](docs/collector.ad.md) | Active Directory Domain Services |
 [cpu](docs/collector.cpu.md) | CPU usage | &#10003;
 [cs](docs/collector.cs.md) | "Computer System" metrics (system properties, num cpus/total memory) | &#10003;
+[container](docs/collector.container.md) | Container metrics |
 [dns](docs/collector.dns.md) | DNS Server |
 [hyperv](docs/collector.hyperv.md) | Hyper-V hosts |
 [iis](docs/collector.iis.md) | IIS sites and applications |
@@ -33,6 +34,7 @@ Name     | Description | Enabled by default
 [service](docs/collector.service.md) | Service state metrics | &#10003;
 [system](docs/collector.system.md) | System calls | &#10003;
 [tcp](docs/collector.tcp.md) | TCP connections |
+[thermalzone](docs/collector.thermalzone.md) | Thermal information
 [textfile](docs/collector.textfile.md) | Read prometheus metrics from a text file | &#10003;
 [vmware](docs/collector.vmware.md) | Performance counters installed by the Vmware Guest agent |
 
