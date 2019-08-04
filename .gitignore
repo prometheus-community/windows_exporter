@@ -3,4 +3,5 @@ VERSION
 *.swp
 *.un~
 output/
+.vscode
 .idea
