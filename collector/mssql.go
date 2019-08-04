@@ -1672,84 +1672,72 @@ func NewMSSQLCollector() (Collector, error) {
 			[]string{"instance"},
 			nil,
 		),
-
 		TransactionsLongestTransactionRunningTime: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "transactions_longest_transaction_running_seconds"),
 			"(Transactions.LongestTransactionRunningTime)",
 			[]string{"instance"},
 			nil,
 		),
-
 		TransactionsNonSnapshotVersionTotalActive: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "transactions_nonsnapshot_version_active_total"),
-			"(Transactions.NonSnapshotVersionTotalActive)",
+			"(Transactions.NonSnapshotVersionTransactions)",
 			[]string{"instance"},
 			nil,
 		),
-
 		TransactionsSnapshotTotalActive: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "transactions_snapshot_active_total"),
-			"(Transactions.SnapshotTotalActive)",
+			"(Transactions.SnapshotTransactions)",
 			[]string{"instance"},
 			nil,
 		),
-
 		TransactionsTotalActive: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "transactions_active_total"),
-			"(Transactions.TotalActive)",
+			"(Transactions.Transactions)",
 			[]string{"instance"},
 			nil,
 		),
-
 		TransactionsUpdateConflictRatio: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "transactions_update_conflict_ratio"),
 			"(Transactions.UpdateConflictRatio)",
 			[]string{"instance"},
 			nil,
 		),
-
 		TransactionsUpdateSnapshotTotalActive: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "transactions_update_snapshot_active_total"),
-			"(Transactions.UpdateSnapshotTotalActive)",
+			"(Transactions.UpdateSnapshotTransactions)",
 			[]string{"instance"},
 			nil,
 		),
-
 		TransactionsVersionCleanupRateKBs: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "transactions_version_cleanup_rate_bytes"),
 			"(Transactions.VersionCleanupRateKBs)",
 			[]string{"instance"},
 			nil,
 		),
-
 		TransactionsVersionGenerationRateKBs: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "transactions_version_generation_rate_bytes"),
 			"(Transactions.VersionGenerationRateKBs)",
 			[]string{"instance"},
 			nil,
 		),
-
 		TransactionsVersionStoreSizeKB: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "transactions_version_store_size_bytes"),
 			"(Transactions.VersionStoreSizeKB)",
 			[]string{"instance"},
 			nil,
 		),
-
 		TransactionsVersionStoreUnitCount: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "transactions_version_store_units"),
 			"(Transactions.VersionStoreUnitCount)",
 			[]string{"instance"},
 			nil,
 		),
-
 		TransactionsVersionStoreUnitCreation: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "transactions_version_store_creation_units"),
 			"(Transactions.VersionStoreUnitCreation)",
 			[]string{"instance"},
 			nil,
 		),
-
 		TransactionsVersionStoreUnitTruncation: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "transactions_version_store_truncation_units"),
 			"(Transactions.VersionStoreUnitTruncation)",
