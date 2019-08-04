@@ -68,7 +68,7 @@ func NewMSMQCollector() (Collector, error) {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Win32_PerfRawData_MSMQ_MSMQQueueCollector) Collect(ch chan<- prometheus.Metric) error {
+func (c *Win32_PerfRawData_MSMQ_MSMQQueueCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ch); err != nil {
 		log.Error("failed collecting msmq metrics:", desc, err)
 		return err

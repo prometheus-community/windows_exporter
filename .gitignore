@@ -4,3 +4,4 @@ VERSION
 *.un~
 output/
 .vscode
+.idea

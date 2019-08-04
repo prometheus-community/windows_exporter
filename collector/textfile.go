@@ -212,7 +212,7 @@ func (cr carriageReturnFilteringReader) Read(p []byte) (int, error) {
 }
 
 // Update implements the Collector interface.
-func (c *textFileCollector) Collect(ch chan<- prometheus.Metric) error {
+func (c *textFileCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	error := 0.0
 	mtimes := map[string]time.Time{}
 

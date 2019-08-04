@@ -597,7 +597,7 @@ func NewHyperVCollector() (Collector, error) {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *HyperVCollector) Collect(ch chan<- prometheus.Metric) error {
+func (c *HyperVCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	if desc, err := c.collectVmHealth(ch); err != nil {
 		log.Error("failed collecting hyperV health status metrics:", desc, err)
 		return err
