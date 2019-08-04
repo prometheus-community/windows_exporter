@@ -53,7 +53,7 @@ func NewNETFramework_NETCLRJitCollector() (Collector, error) {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *NETFramework_NETCLRJitCollector) Collect(ch chan<- prometheus.Metric) error {
+func (c *NETFramework_NETCLRJitCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ch); err != nil {
 		log.Error("failed collecting win32_perfrawdata_netframework_netclrjit metrics:", desc, err)
 		return err

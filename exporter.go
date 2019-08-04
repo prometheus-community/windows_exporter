@@ -5,7 +5,9 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -23,7 +25,8 @@ import (
 
 // WmiCollector implements the prometheus.Collector interface.
 type WmiCollector struct {
-	collectors map[string]collector.Collector
+	maxScrapeDuration time.Duration
+	collectors        map[string]collector.Collector
 }
 
 const (
@@ -45,6 +48,18 @@ var (
 		[]string{"collector"},
 		nil,
 	)
+	scrapeTimeoutDesc = prometheus.NewDesc(
+		prometheus.BuildFQName(collector.Namespace, "exporter", "collector_timeout"),
+		"wmi_exporter: Whether the collector timed out.",
+		[]string{"collector"},
+		nil,
+	)
+	snapshotDuration = prometheus.NewDesc(
+		prometheus.BuildFQName(collector.Namespace, "exporter", "perflib_snapshot_duration_seconds"),
+		"Duration of perflib snapshot capture",
+		nil,
+		nil,
+	)
 
 	// This can be removed when client_golang exposes this on Windows
 	// (See https://github.com/prometheus/client_golang/issues/376)
@@ -64,25 +79,112 @@ func (coll WmiCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- scrapeSuccessDesc
 }
 
-// Collect sends the collected metrics from each of the collectors to
-// prometheus. Collect could be called several times concurrently
-// and thus its run is protected by a single mutex.
-func (coll WmiCollector) Collect(ch chan<- prometheus.Metric) {
-	wg := sync.WaitGroup{}
-	wg.Add(len(coll.collectors))
-	for name, c := range coll.collectors {
-		go func(name string, c collector.Collector) {
-			execute(name, c, ch)
-			wg.Done()
-		}(name, c)
-	}
+type collectorOutcome int
 
+const (
+	pending collectorOutcome = iota
+	success
+	failed
+)
+
+// Collect sends the collected metrics from each of the collectors to
+// prometheus.
+func (coll WmiCollector) Collect(ch chan<- prometheus.Metric) {
 	ch <- prometheus.MustNewConstMetric(
 		startTimeDesc,
 		prometheus.CounterValue,
 		startTime,
 	)
-	wg.Wait()
+
+	t := time.Now()
+	scrapeContext, err := collector.PrepareScrapeContext()
+	ch <- prometheus.MustNewConstMetric(
+		snapshotDuration,
+		prometheus.GaugeValue,
+		time.Since(t).Seconds(),
+	)
+	if err != nil {
+		ch <- prometheus.NewInvalidMetric(scrapeSuccessDesc, fmt.Errorf("failed to prepare scrape: %v", err))
+		return
+	}
+
+	wg := sync.WaitGroup{}
+	wg.Add(len(coll.collectors))
+	collectorOutcomes := make(map[string]collectorOutcome)
+	for name := range coll.collectors {
+		collectorOutcomes[name] = pending
+	}
+
+	metricsBuffer := make(chan prometheus.Metric)
+	l := sync.Mutex{}
+	finished := false
+	go func() {
+		for m := range metricsBuffer {
+			l.Lock()
+			if !finished {
+				ch <- m
+			}
+			l.Unlock()
+		}
+	}()
+
+	for name, c := range coll.collectors {
+		go func(name string, c collector.Collector) {
+			defer wg.Done()
+			outcome := execute(name, c, scrapeContext, metricsBuffer)
+			l.Lock()
+			if !finished {
+				collectorOutcomes[name] = outcome
+			}
+			l.Unlock()
+		}(name, c)
+	}
+
+	allDone := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(allDone)
+	}()
+
+	// Wait until either all collectors finish, or timeout expires
+	select {
+	case <-allDone:
+	case <-time.After(coll.maxScrapeDuration):
+	}
+
+	l.Lock()
+	finished = true
+
+	remainingCollectorNames := make([]string, 0)
+	for name, outcome := range collectorOutcomes {
+		var successValue, timeoutValue float64
+		if outcome == pending {
+			timeoutValue = 1.0
+			remainingCollectorNames = append(remainingCollectorNames, name)
+		}
+		if outcome == success {
+			successValue = 1.0
+		}
+
+		ch <- prometheus.MustNewConstMetric(
+			scrapeSuccessDesc,
+			prometheus.GaugeValue,
+			successValue,
+			name,
+		)
+		ch <- prometheus.MustNewConstMetric(
+			scrapeTimeoutDesc,
+			prometheus.GaugeValue,
+			timeoutValue,
+			name,
+		)
+	}
+
+	if len(remainingCollectorNames) > 0 {
+		log.Warn("Collection timed out, still waiting for ", remainingCollectorNames)
+	}
+
+	l.Unlock()
 }
 
 func filterAvailableCollectors(collectors string) string {
@@ -96,31 +198,23 @@ func filterAvailableCollectors(collectors string) string {
 	return strings.Join(availableCollectors, ",")
 }
 
-func execute(name string, c collector.Collector, ch chan<- prometheus.Metric) {
-	begin := time.Now()
-	err := c.Collect(ch)
-	duration := time.Since(begin)
-	var success float64
-
-	if err != nil {
-		log.Errorf("collector %s failed after %fs: %s", name, duration.Seconds(), err)
-		success = 0
-	} else {
-		log.Debugf("collector %s succeeded after %fs.", name, duration.Seconds())
-		success = 1
-	}
+func execute(name string, c collector.Collector, ctx *collector.ScrapeContext, ch chan<- prometheus.Metric) collectorOutcome {
+	t := time.Now()
+	err := c.Collect(ctx, ch)
+	duration := time.Since(t).Seconds()
 	ch <- prometheus.MustNewConstMetric(
 		scrapeDurationDesc,
 		prometheus.GaugeValue,
-		duration.Seconds(),
+		duration,
 		name,
 	)
-	ch <- prometheus.MustNewConstMetric(
-		scrapeSuccessDesc,
-		prometheus.GaugeValue,
-		success,
-		name,
-	)
+
+	if err != nil {
+		log.Errorf("collector %s failed after %fs: %s", name, duration, err)
+		return failed
+	}
+	log.Debugf("collector %s succeeded after %fs.", name, duration)
+	return success
 }
 
 func expandEnabledCollectors(enabled string) []string {
@@ -157,10 +251,6 @@ func loadCollectors(list string) (map[string]collector.Collector, error) {
 	return collectors, nil
 }
 
-func init() {
-	prometheus.MustRegister(version.NewCollector("wmi_exporter"))
-}
-
 func initWbem() {
 	// This initialization prevents a memory leak on WMF 5+. See
 	// https://github.com/martinlindhe/wmi_exporter/issues/77 and linked issues
@@ -192,6 +282,10 @@ func main() {
 			"collectors.print",
 			"If true, print available collectors and exit.",
 		).Bool()
+		timeoutMargin = kingpin.Flag(
+			"scrape.timeout-margin",
+			"Seconds to subtract from the timeout allowed by the client. Tune to allow for overhead or high loads.",
+		).Default("0.5").Float64()
 	)
 
 	log.AddFlags(kingpin.CommandLine)
@@ -236,10 +330,17 @@ func main() {
 
 	log.Infof("Enabled collectors: %v", strings.Join(keys(collectors), ", "))
 
-	nodeCollector := WmiCollector{collectors: collectors}
-	prometheus.MustRegister(nodeCollector)
+	h := &metricsHandler{
+		timeoutMargin: *timeoutMargin,
+		collectorFactory: func(timeout time.Duration) *WmiCollector {
+			return &WmiCollector{
+				collectors:        collectors,
+				maxScrapeDuration: timeout,
+			}
+		},
+	}
 
-	http.Handle(*metricsPath, promhttp.Handler())
+	http.Handle(*metricsPath, h)
 	http.HandleFunc("/health", healthCheck)
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, *metricsPath, http.StatusMovedPermanently)
@@ -302,4 +403,37 @@ loop:
 	}
 	changes <- svc.Status{State: svc.StopPending}
 	return
+}
+
+type metricsHandler struct {
+	timeoutMargin    float64
+	collectorFactory func(timeout time.Duration) *WmiCollector
+}
+
+func (mh *metricsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	const defaultTimeout = 10.0
+
+	var timeoutSeconds float64
+	if v := r.Header.Get("X-Prometheus-Scrape-Timeout-Seconds"); v != "" {
+		var err error
+		timeoutSeconds, err = strconv.ParseFloat(v, 64)
+		if err != nil {
+			log.Warnf("Couldn't parse X-Prometheus-Scrape-Timeout-Seconds: %q. Defaulting timeout to %f", v, defaultTimeout)
+		}
+	}
+	if timeoutSeconds == 0 {
+		timeoutSeconds = defaultTimeout
+	}
+	timeoutSeconds = timeoutSeconds - mh.timeoutMargin
+
+	reg := prometheus.NewRegistry()
+	reg.MustRegister(mh.collectorFactory(time.Duration(timeoutSeconds * float64(time.Second))))
+	reg.MustRegister(
+		prometheus.NewProcessCollector(os.Getpid(), ""),
+		prometheus.NewGoCollector(),
+		version.NewCollector("wmi_exporter"),
+	)
+
+	h := promhttp.HandlerFor(reg, promhttp.HandlerOpts{})
+	h.ServeHTTP(w, r)
 }

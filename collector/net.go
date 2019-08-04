@@ -132,7 +132,7 @@ func NewNetworkCollector() (Collector, error) {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *NetworkCollector) Collect(ch chan<- prometheus.Metric) error {
+func (c *NetworkCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ch); err != nil {
 		log.Error("failed collecting net metrics:", desc, err)
 		return err
