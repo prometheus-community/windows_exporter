@@ -369,7 +369,7 @@ type MSSQLCollector struct {
 	TransactionsNonSnapshotVersionActiveTotal    *prometheus.Desc
 	TransactionsSnapshotActiveTotal              *prometheus.Desc
 	TransactionsActiveTotal                      *prometheus.Desc
-	TransactionsUpdateConflictRatio              *prometheus.Desc
+	TransactionsUpdateConflictsTotal             *prometheus.Desc
 	TransactionsUpdateSnapshotActiveTotal        *prometheus.Desc
 	TransactionsVersionCleanupRateBytes          *prometheus.Desc
 	TransactionsVersionGenerationRateBytes       *prometheus.Desc
@@ -1696,8 +1696,8 @@ func NewMSSQLCollector() (Collector, error) {
 			[]string{"instance"},
 			nil,
 		),
-		TransactionsUpdateConflictRatio: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "transactions_update_conflict_ratio"),
+		TransactionsUpdateConflictsTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "transactions_update_conflicts_total"),
 			"(Transactions.UpdateConflictRatio)",
 			[]string{"instance"},
 			nil,
@@ -3768,8 +3768,8 @@ func (c *MSSQLCollector) collectTransactions(ch chan<- prometheus.Metric, sqlIns
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.TransactionsUpdateConflictRatio,
-		prometheus.GaugeValue,
+		c.TransactionsUpdateConflictsTotal,
+		prometheus.CounterValue,
 		float64(v.Updateconflictratio),
 		sqlInstance,
 	)

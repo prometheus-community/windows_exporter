@@ -236,7 +236,7 @@ Name | Description | Type | Labels
 `wmi_mssql_transactions_nonsnapshot_version_active_total` | _Not yet documented_ | counter | `instance`
 `wmi_mssql_transactions_snapshot_active_total` | _Not yet documented_ | counter | `instance`
 `wmi_mssql_transactions_active_total` | _Not yet documented_ | counter | `instance`
-`wmi_mssql_transactions_update_conflict_ratio` | _Not yet documented_ | gauge | `instance`
+`wmi_mssql_transactions_update_conflicts_total` | _Not yet documented_ | counter | `instance`
 `wmi_mssql_transactions_update_snapshot_active_total` | _Not yet documented_ | counter | `instance`
 `wmi_mssql_transactions_version_cleanup_rate_bytes` | _Not yet documented_ | gauge | `instance`
 `wmi_mssql_transactions_version_generation_rate_bytes` | _Not yet documented_ | gauge | `instance`
