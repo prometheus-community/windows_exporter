@@ -454,7 +454,7 @@ func NewADCollector() (Collector, error) {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *ADCollector) Collect(ch chan<- prometheus.Metric) error {
+func (c *ADCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ch); err != nil {
 		log.Error("failed collecting ad metrics:", desc, err)
 		return err

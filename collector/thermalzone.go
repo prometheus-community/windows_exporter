@@ -10,8 +10,8 @@ func init() {
 	Factories["thermalzone"] = NewThermalZoneCollector
 }
 
-// A ThermalZoneCollector is a Prometheus collector for WMI Win32_PerfRawData_Counters_ThermalZoneInformation metrics
-type ThermalZoneCollector struct {
+// A thermalZoneCollector is a Prometheus collector for WMI Win32_PerfRawData_Counters_ThermalZoneInformation metrics
+type thermalZoneCollector struct {
 	PercentPassiveLimit *prometheus.Desc
 	Temperature         *prometheus.Desc
 	ThrottleReasons     *prometheus.Desc
@@ -20,7 +20,7 @@ type ThermalZoneCollector struct {
 // NewThermalZoneCollector ...
 func NewThermalZoneCollector() (Collector, error) {
 	const subsystem = "thermalzone"
-	return &ThermalZoneCollector{
+	return &thermalZoneCollector{
 		Temperature: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "temperature_celsius"),
 			"(Temperature)",
@@ -50,7 +50,7 @@ func NewThermalZoneCollector() (Collector, error) {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *ThermalZoneCollector) Collect(ch chan<- prometheus.Metric) error {
+func (c *thermalZoneCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ch); err != nil {
 		log.Error("failed collecting thermalzone metrics:", desc, err)
 		return err
@@ -68,7 +68,7 @@ type Win32_PerfRawData_Counters_ThermalZoneInformation struct {
 	ThrottleReasons          uint32
 }
 
-func (c *ThermalZoneCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *thermalZoneCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_PerfRawData_Counters_ThermalZoneInformation
 	q := queryAll(&dst)
 	if err := wmi.Query(q, &dst); err != nil {

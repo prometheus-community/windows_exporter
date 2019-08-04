@@ -40,12 +40,13 @@ after_build:
         return
       }
       $ErrorActionPreference = "Stop"
+      $BuildVersion = Get-Content VERSION
       # The MSI version is not semver compliant, so just take the numerical parts
-      $Version = $env:APPVEYOR_REPO_TAG_NAME -replace '^v?([0-9\.]+).*$','$1'
+      $MSIVersion = $env:APPVEYOR_REPO_TAG_NAME -replace '^v?([0-9\.]+).*$','$1'
       foreach($Arch in "amd64","386") {
-        Write-Verbose "Building wmi_exporter $Version msi for $Arch"
-        .\installer\build.ps1 -PathToExecutable .\output\$Arch\wmi_exporter-$Version-$Arch.exe -Version $Version -Arch "$Arch"
-        Move-Item installer\Output\wmi_exporter-$Version-$Arch.msi output\$Arch\
+        Write-Verbose "Building wmi_exporter $MSIVersion msi for $Arch"
+        .\installer\build.ps1 -PathToExecutable .\output\$Arch\wmi_exporter-$BuildVersion-$Arch.exe -Version $MSIVersion -Arch "$Arch"
+        Move-Item installer\Output\wmi_exporter-$MSIVersion-$Arch.msi output\$Arch\
       }
   - promu checksum output\
 

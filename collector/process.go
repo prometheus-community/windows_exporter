@@ -135,7 +135,7 @@ func NewProcessCollector() (Collector, error) {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *ProcessCollector) Collect(ch chan<- prometheus.Metric) error {
+func (c *ProcessCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ch); err != nil {
 		log.Error("failed collecting process metrics:", desc, err)
 		return err
