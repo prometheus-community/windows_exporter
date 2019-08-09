@@ -8,7 +8,7 @@ Param (
     [ValidateSet("amd64", "386")]
     [String] $Arch = "amd64"
 )
-$ErrorActionPreference = "Stop"
+# $ErrorActionPreference = "Stop"
 
 # Get absolute path to executable before switching directories
 $PathToExecutable = Resolve-Path $PathToExecutable
