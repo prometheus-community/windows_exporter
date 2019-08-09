@@ -40,6 +40,8 @@ type LogicalDiskCollector struct {
 	FreeSpace       *prometheus.Desc
 	IdleTime        *prometheus.Desc
 	SplitIOs        *prometheus.Desc
+	AvgDiskRead     *prometheus.Desc
+	AvgDiskWrite    *prometheus.Desc
 
 	volumeWhitelistPattern *regexp.Regexp
 	volumeBlacklistPattern *regexp.Regexp
@@ -126,6 +128,20 @@ func NewLogicalDiskCollector() (Collector, error) {
 			[]string{"volume"},
 			nil,
 		),
+		
+		SplitIOs: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "avg_disk_read"),
+			"Average time, in seconds, of a read operation of data from the disk (LogicalDisk.AvgDiskSecPerRead)",
+			[]string{"volume"},
+			nil,
+		),
+		
+	    SplitIOs: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "avg_disk_write"),
+			"Average time, in seconds, of a write operation of data to the disk (LogicalDisk.AvgDiskSecPerWrite)",
+			[]string{"volume"},
+			nil,
+		),
 
 		volumeWhitelistPattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *volumeWhitelist)),
 		volumeBlacklistPattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *volumeBlacklist)),
@@ -158,6 +174,8 @@ type Win32_PerfRawData_PerfDisk_LogicalDisk struct {
 	PercentFreeSpace_Base  uint32
 	PercentIdleTime        uint64
 	SplitIOPerSec          uint32
+	AvgDiskSecPerRead      uint32
+	AvgDiskSecPerWrite     uint32
 }
 
 func (c *LogicalDiskCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
@@ -248,6 +266,20 @@ func (c *LogicalDiskCollector) collect(ch chan<- prometheus.Metric) (*prometheus
 			c.SplitIOs,
 			prometheus.CounterValue,
 			float64(volume.SplitIOPerSec),
+			volume.Name,
+		)
+		
+		ch <- prometheus.MustNewConstMetric(
+			c.SplitIOs,
+			prometheus.CounterValue,
+			float64(volume.AvgDiskSecPerRead),
+			volume.Name,
+		)
+		
+		ch <- prometheus.MustNewConstMetric(
+			c.SplitIOs,
+			prometheus.CounterValue,
+			float64(volume.AvgDiskSecPerWrite),
 			volume.Name,
 		)
 	}
