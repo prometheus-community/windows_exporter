@@ -5,6 +5,7 @@ package main
 import (
 	"fmt"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"sort"
 	"strconv"
@@ -144,6 +145,7 @@ func (coll WmiCollector) Collect(ch chan<- prometheus.Metric) {
 	go func() {
 		wg.Wait()
 		close(allDone)
+		close(metricsBuffer)
 	}()
 
 	// Wait until either all collectors finish, or timeout expires
