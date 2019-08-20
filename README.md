@@ -17,6 +17,7 @@ Name     | Description | Enabled by default
 [hyperv](docs/collector.hyperv.md) | Hyper-V hosts |
 [iis](docs/collector.iis.md) | IIS sites and applications |
 [logical_disk](docs/collector.logical_disk.md) | Logical disks, disk I/O | &#10003;
+[logon](docs/collector.logon.md) | User logon sessions |
 [memory](docs/collector.memory.md) | Memory usage metrics |
 [msmq](docs/collector.msmq.md) | MSMQ queues |
 [mssql](docs/collector.mssql.md) | [SQL Server Performance Objects](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/use-sql-server-objects#SQLServerPOs) metrics  |
