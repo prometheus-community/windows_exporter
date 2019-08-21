@@ -22,23 +22,54 @@ If given, a disk needs to *not* match the blacklist regexp in order for the corr
 
 Name | Description | Type | Labels
 -----|-------------|------|-------
-`requests_queued` | _Not yet documented_ | gauge | `volume`
-`read_bytes_total` | _Not yet documented_ | counter | `volume`
-`reads_total` | _Not yet documented_ | counter | `volume`
-`write_bytes_total` | _Not yet documented_ | counter | `volume`
-`writes_total` | _Not yet documented_ | counter | `volume`
-`read_seconds_total` | _Not yet documented_ | counter | `volume`
-`write_seconds_total` | _Not yet documented_ | counter | `volume`
-`free_bytes` | _Not yet documented_ | gauge | `volume`
-`size_bytes` | _Not yet documented_ | gauge | `volume`
-`idle_seconds_total` | _Not yet documented_ | counter | `volume`
-`split_ios_total` | _Not yet documented_ | counter | `volume`
+`requests_queued` | Number of requests outstanding on the disk at the time the performance data is collected | gauge | `volume`
+`read_bytes_total` | Rate at which bytes are transferred from the disk during read operations | counter | `volume`
+`reads_total` | Rate of read operations on the disk | counter | `volume`
+`write_bytes_total` | Rate at which bytes are transferred to the disk during write operations  | counter | `volume`
+`writes_total` | Rate of write operations on the disk  | counter | `volume`
+`read_seconds_total` | Seconds the disk was busy servicing read requests | counter | `volume`
+`write_seconds_total` | Seconds the disk was busy servicing write requests | counter | `volume`
+`free_bytes` | Unused space of the disk in bytes | gauge | `volume`
+`size_bytes` | Total size of the disk in bytes | gauge | `volume`
+`idle_seconds_total` | Seconds the disk was idle (not servicing read/write requests) | counter | `volume`
+`split_ios_total` | Number of I/Os to the disk split into multiple I/Os | counter | `volume`
 
 ### Example metric
-_This collector does not yet have explained examples, we would appreciate your help adding them!_
+Query the rate of write operations to a disk
+```
+rate(wmi_logical_disk_read_bytes_total{instance="localhost", volume=~"C:"}[2m])
+```
 
 ## Useful queries
-_This collector does not yet have any useful queries added, we would appreciate your help adding them!_
+Calculate rate of total IOPS for disk
+```
+rate(wmi_logical_disk_reads_total{instance="localhost", volume="C:"}[2m]) + rate(wmi_logical_disk_writes_total{instance="localhost", volume="C:"}[2m])
+```
 
 ## Alerting examples
-_This collector does not yet have alerting examples, we would appreciate your help adding them!_
+**prometheus.rules**
+```
+groups:
+- name: Windows Disk Alerts
+  rules:
+
+  # Sends an alert when disk space usage is above 95%
+  - alert: DiskSpaceUsage
+    expr: 100.0 - 100 * (wmi_logical_disk_free_bytes / wmi_logical_disk_size_bytes) > 95
+    for: 10m
+    labels:
+      severity: high
+    annotations:
+      summary: "Disk Space Usage (instance {{ $labels.instance }})"
+      description: "Disk Space on Drive is used more than 95%\n  VALUE = {{ $value }}\n  LABELS: {{ $labels }}"
+
+  # Alerts on disks with over 85% space usage predicted to fill within the next four days
+  - alert: DiskFilling
+    expr: 100 * (wmi_logical_disk_free_bytes / wmi_logical_disk_size_bytes) < 15 and predict_linear(wmi_logical_disk_free_bytes[6h], 4 * 24 * 3600) < 0
+    for: 10m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Disk full in four days (instance {{ $labels.instance }})"
+      description: "{{ $labels.volume }} is expected to fill up within four days. Currently {{ $value | humanize }}% is available.\n VALUE = {{ $value }}\n LABELS: {{ $labels }}"
+```
