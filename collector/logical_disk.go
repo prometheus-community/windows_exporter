@@ -29,17 +29,20 @@ var (
 
 // A LogicalDiskCollector is a Prometheus collector for WMI Win32_PerfRawData_PerfDisk_LogicalDisk metrics
 type LogicalDiskCollector struct {
-	RequestsQueued  *prometheus.Desc
-	ReadBytesTotal  *prometheus.Desc
-	ReadsTotal      *prometheus.Desc
-	WriteBytesTotal *prometheus.Desc
-	WritesTotal     *prometheus.Desc
-	ReadTime        *prometheus.Desc
-	WriteTime       *prometheus.Desc
-	TotalSpace      *prometheus.Desc
-	FreeSpace       *prometheus.Desc
-	IdleTime        *prometheus.Desc
-	SplitIOs        *prometheus.Desc
+	RequestsQueued   *prometheus.Desc
+	ReadBytesTotal   *prometheus.Desc
+	ReadsTotal       *prometheus.Desc
+	WriteBytesTotal  *prometheus.Desc
+	WritesTotal      *prometheus.Desc
+	ReadTime         *prometheus.Desc
+	WriteTime        *prometheus.Desc
+	TotalSpace       *prometheus.Desc
+	FreeSpace        *prometheus.Desc
+	IdleTime         *prometheus.Desc
+	SplitIOs         *prometheus.Desc
+	ReadLatency      *prometheus.Desc
+	WriteLatency     *prometheus.Desc
+	ReadWriteLatency *prometheus.Desc
 
 	volumeWhitelistPattern *regexp.Regexp
 	volumeBlacklistPattern *regexp.Regexp
@@ -127,6 +130,27 @@ func NewLogicalDiskCollector() (Collector, error) {
 			nil,
 		),
 
+		ReadLatency: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "read_latency_seconds_total"),
+			"Shows the average time, in seconds, of a read operation from the disk (LogicalDisk.AvgDiskSecPerRead)",
+			[]string{"volume"},
+			nil,
+		),
+
+		WriteLatency: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "write_latency_seconds_total"),
+			"Shows the average time, in seconds, of a write operation to the disk (LogicalDisk.AvgDiskSecPerWrite)",
+			[]string{"volume"},
+			nil,
+		),
+
+		ReadWriteLatency: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "read_write_latency_seconds_total"),
+			"Shows the time, in seconds, of the average disk transfer (LogicalDisk.AvgDiskSecPerTransfer)",
+			[]string{"volume"},
+			nil,
+		),
+
 		volumeWhitelistPattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *volumeWhitelist)),
 		volumeBlacklistPattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *volumeBlacklist)),
 	}, nil
@@ -158,6 +182,9 @@ type Win32_PerfRawData_PerfDisk_LogicalDisk struct {
 	PercentFreeSpace_Base  uint32
 	PercentIdleTime        uint64
 	SplitIOPerSec          uint32
+	AvgDiskSecPerRead      uint64
+	AvgDiskSecPerWrite     uint64
+	AvgDiskSecPerTransfer  uint64
 }
 
 func (c *LogicalDiskCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
@@ -248,6 +275,27 @@ func (c *LogicalDiskCollector) collect(ch chan<- prometheus.Metric) (*prometheus
 			c.SplitIOs,
 			prometheus.CounterValue,
 			float64(volume.SplitIOPerSec),
+			volume.Name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.ReadLatency,
+			prometheus.CounterValue,
+			float64(volume.AvgDiskSecPerRead),
+			volume.Name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.WriteLatency,
+			prometheus.CounterValue,
+			float64(volume.AvgDiskSecPerWrite),
+			volume.Name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.ReadWriteLatency,
+			prometheus.CounterValue,
+			float64(volume.AvgDiskSecPerTransfer),
 			volume.Name,
 		)
 	}
