@@ -34,10 +34,27 @@ Name | Description | Type | Labels
 `wmi_cpu_processor_performance` | Processor Performance is the average performance of the processor while it is executing instructions, as a percentage of the nominal performance of the processor. On some processors, Processor Performance may exceed 100% | `gauge`
 
 ### Example metric
-_This collector does not yet have explained examples, we would appreciate your help adding them!_
+Show frequency of host CPU cores
+```
+wmi_cpu_core_frequency_mhz{instance="localhost"}
+```
 
 ## Useful queries
-_This collector does not yet have any useful queries added, we would appreciate your help adding them!_
+Show cpu usage by mode.
+```
+sum by (mode) (irate(wmi_cpu_time_total{instance="localhost"}[5m]))
+```
 
 ## Alerting examples
-_This collector does not yet have alerting examples, we would appreciate your help adding them!_
+**prometheus.rules**
+```
+# Alert on hosts with more than 80% CPU usage over a 10 minute period
+- alert: CpuUsage
+  expr: 100 - (avg by (instance) (irate(wmi_cpu_time_total{mode="idle"}[2m])) * 100) > 80
+  for: 10m
+  labels:
+    severity: warning
+  annotations:
+    summary: "CPU Usage (instance {{ $labels.instance }})"
+    description: "CPU Usage is more than 80%\n  VALUE = {{ $value }}\n  LABELS: {{ $labels }}"
+```
