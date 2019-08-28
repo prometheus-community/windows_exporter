@@ -252,7 +252,7 @@ func (c *NetworkCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Des
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.CurrentBandwidth,
-			prometheus.CounterValue,
+			prometheus.GaugeValue,
 			float64(nic.CurrentBandwidth),
 			name,
 		)

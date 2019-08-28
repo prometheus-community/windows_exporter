@@ -33,7 +33,7 @@ Name | Description | Type | Labels
 `wmi_net_packets_received_unknown` | Total packets received by interface that were discarded because of an unknown or unsupported protocol | counter | `nic`
 `wmi_net_packets_total` | Total packets received and transmitted by interface | counter | `nic`
 `wmi_net_packets_sent_total` | Total packets transmitted by interface | counter | `nic`
-`wmi_net_current_bandwidth` | Estimate of the interface's current bandwidth in bits per second (bps) | counter | `nic`
+`wmi_net_current_bandwidth` | Estimate of the interface's current bandwidth in bits per second (bps) | gauge | `nic`
 
 ### Example metric
 Query the rate of transmitted network traffic
