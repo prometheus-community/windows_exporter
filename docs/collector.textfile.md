@@ -12,7 +12,7 @@ Enabled by default? | Yes
 
 ### `--collector.textfile.directory`
 
-The directory containing the files to be ingested. Only files with the extension `.prom` are read.
+The directory containing the files to be ingested. Only files with the extension `.prom` are read. The `.prom` file must end with an empty line feed to work properly.
 
 Default value: `C:\Program Files\wmi_exporter\textfile_inputs`
 
