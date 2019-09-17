@@ -3,6 +3,7 @@ This directory contains documentation of the collectors in the WMI exporter, wit
 
 # Collectors
 - [`ad`](collector.ad.md)
+- [`adfs`](collector.adfs.md)
 - [`cpu`](collector.cpu.md)
 - [`cs`](collector.cs.md)
 - [`dns`](collector.dns.md)
