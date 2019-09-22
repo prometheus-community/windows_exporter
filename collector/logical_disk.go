@@ -279,21 +279,21 @@ func (c *LogicalDiskCollector) collect(ctx *ScrapeContext, ch chan<- prometheus.
 		ch <- prometheus.MustNewConstMetric(
 			c.ReadLatency,
 			prometheus.CounterValue,
-			volume.AvgDiskSecPerRead,
+			volume.AvgDiskSecPerRead*ticksToSecondsScaleFactor,
 			volume.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.WriteLatency,
 			prometheus.CounterValue,
-			volume.AvgDiskSecPerWrite,
+			volume.AvgDiskSecPerWrite*ticksToSecondsScaleFactor,
 			volume.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.ReadWriteLatency,
 			prometheus.CounterValue,
-			volume.AvgDiskSecPerTransfer,
+			volume.AvgDiskSecPerTransfer*ticksToSecondsScaleFactor,
 			volume.Name,
 		)
 	}
