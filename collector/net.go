@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"regexp"
 
-	"github.com/StackExchange/wmi"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -28,7 +27,7 @@ var (
 	nicNameToUnderscore = regexp.MustCompile("[^a-zA-Z0-9]")
 )
 
-// A NetworkCollector is a Prometheus collector for WMI Win32_PerfRawData_Tcpip_NetworkInterface metrics
+// A NetworkCollector is a Prometheus collector for Perflib Network Interface metrics
 type NetworkCollector struct {
 	BytesReceivedTotal       *prometheus.Desc
 	BytesSentTotal           *prometheus.Desc
@@ -133,7 +132,7 @@ func NewNetworkCollector() (Collector, error) {
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *NetworkCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
-	if desc, err := c.collect(ch); err != nil {
+	if desc, err := c.collect(ctx, ch); err != nil {
 		log.Error("failed collecting net metrics:", desc, err)
 		return err
 	}
@@ -141,34 +140,33 @@ func (c *NetworkCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metr
 }
 
 // mangleNetworkName mangles Network Adapter name (non-alphanumeric to _)
-// that is used in Win32_PerfRawData_Tcpip_NetworkInterface.
+// that is used in networkInterface.
 func mangleNetworkName(name string) string {
 	return nicNameToUnderscore.ReplaceAllString(name, "_")
 }
 
 // Win32_PerfRawData_Tcpip_NetworkInterface docs:
 // - https://technet.microsoft.com/en-us/security/aa394340(v=vs.80)
-type Win32_PerfRawData_Tcpip_NetworkInterface struct {
-	BytesReceivedPerSec      uint64
-	BytesSentPerSec          uint64
-	BytesTotalPerSec         uint64
+type networkInterface struct {
+	BytesReceivedPerSec      float64 `perflib:"Bytes Received/sec"`
+	BytesSentPerSec          float64 `perflib:"Bytes Sent/sec"`
+	BytesTotalPerSec         float64 `perflib:"Bytes Total/sec"`
 	Name                     string
-	PacketsOutboundDiscarded uint64
-	PacketsOutboundErrors    uint64
-	PacketsPerSec            uint64
-	PacketsReceivedDiscarded uint64
-	PacketsReceivedErrors    uint64
-	PacketsReceivedPerSec    uint64
-	PacketsReceivedUnknown   uint64
-	PacketsSentPerSec        uint64
-	CurrentBandwidth         uint64
+	PacketsOutboundDiscarded float64 `perflib:"Packets Outbound Discarded"`
+	PacketsOutboundErrors    float64 `perflib:"Packets Outbound Errors"`
+	PacketsPerSec            float64 `perflib:"Packets/sec"`
+	PacketsReceivedDiscarded float64 `perflib:"Packets Received Discarded"`
+	PacketsReceivedErrors    float64 `perflib:"Packets Received Errors"`
+	PacketsReceivedPerSec    float64 `perflib:"Packets Received/sec"`
+	PacketsReceivedUnknown   float64 `perflib:"Packets Received Unknown"`
+	PacketsSentPerSec        float64 `perflib:"Packets Sent/sec"`
+	CurrentBandwidth         float64 `perflib:"Current Bandwidth"`
 }
 
-func (c *NetworkCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
-	var dst []Win32_PerfRawData_Tcpip_NetworkInterface
+func (c *NetworkCollector) collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+	var dst []networkInterface
 
-	q := queryAll(&dst)
-	if err := wmi.Query(q, &dst); err != nil {
+	if err := unmarshalObject(ctx.perfObjects["Network Interface"], &dst); err != nil {
 		return nil, err
 	}
 
@@ -187,76 +185,75 @@ func (c *NetworkCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Des
 		ch <- prometheus.MustNewConstMetric(
 			c.BytesReceivedTotal,
 			prometheus.CounterValue,
-			float64(nic.BytesReceivedPerSec),
+			nic.BytesReceivedPerSec,
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.BytesSentTotal,
 			prometheus.CounterValue,
-			float64(nic.BytesSentPerSec),
+			nic.BytesSentPerSec,
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.BytesTotal,
 			prometheus.CounterValue,
-			float64(nic.BytesTotalPerSec),
+			nic.BytesTotalPerSec,
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.PacketsOutboundDiscarded,
 			prometheus.CounterValue,
-			float64(nic.PacketsOutboundDiscarded),
+			nic.PacketsOutboundDiscarded,
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.PacketsOutboundErrors,
 			prometheus.CounterValue,
-			float64(nic.PacketsOutboundErrors),
+			nic.PacketsOutboundErrors,
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.PacketsTotal,
 			prometheus.CounterValue,
-			float64(nic.PacketsPerSec),
+			nic.PacketsPerSec,
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.PacketsReceivedDiscarded,
 			prometheus.CounterValue,
-			float64(nic.PacketsReceivedDiscarded),
+			nic.PacketsReceivedDiscarded,
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.PacketsReceivedErrors,
 			prometheus.CounterValue,
-			float64(nic.PacketsReceivedErrors),
+			nic.PacketsReceivedErrors,
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.PacketsReceivedTotal,
 			prometheus.CounterValue,
-			float64(nic.PacketsReceivedPerSec),
+			nic.PacketsReceivedPerSec,
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.PacketsReceivedUnknown,
 			prometheus.CounterValue,
-			float64(nic.PacketsReceivedUnknown),
+			nic.PacketsReceivedUnknown,
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.PacketsSentTotal,
 			prometheus.CounterValue,
-			float64(nic.PacketsSentPerSec),
+			nic.PacketsSentPerSec,
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.CurrentBandwidth,
 			prometheus.GaugeValue,
-			float64(nic.CurrentBandwidth),
+			nic.CurrentBandwidth,
 			name,
 		)
 	}
-
 	return nil, nil
 }
