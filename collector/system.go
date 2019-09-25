@@ -3,8 +3,6 @@
 package collector
 
 import (
-	"errors"
-	"github.com/StackExchange/wmi"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
 )
@@ -70,7 +68,7 @@ func NewSystemCollector() (Collector, error) {
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *SystemCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
-	if desc, err := c.collect(ch); err != nil {
+	if desc, err := c.collect(ctx, ch); err != nil {
 		log.Error("failed collecting system metrics:", desc, err)
 		return err
 	}
@@ -79,57 +77,50 @@ func (c *SystemCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metri
 
 // Win32_PerfRawData_PerfOS_System docs:
 // - https://web.archive.org/web/20050830140516/http://msdn.microsoft.com/library/en-us/wmisdk/wmi/win32_perfrawdata_perfos_system.asp
-type Win32_PerfRawData_PerfOS_System struct {
-	ContextSwitchesPersec     uint32
-	ExceptionDispatchesPersec uint32
-	Frequency_Object          uint64
-	ProcessorQueueLength      uint32
-	SystemCallsPersec         uint32
-	SystemUpTime              uint64
-	Threads                   uint32
-	Timestamp_Object          uint64
+type system struct {
+	ContextSwitchesPersec     float64 `perflib:"Context Switches/sec"`
+	ExceptionDispatchesPersec float64 `perflib:"Exception Dispatches/sec"`
+	ProcessorQueueLength      float64 `perflib:"Processor Queue Length"`
+	SystemCallsPersec         float64 `perflib:"System Calls/sec"`
+	SystemUpTime              float64 `perflib:"System Up Time"`
+	Threads                   float64 `perflib:"Threads"`
 }
 
-func (c *SystemCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
-	var dst []Win32_PerfRawData_PerfOS_System
-	q := queryAll(&dst)
-	if err := wmi.Query(q, &dst); err != nil {
+func (c *SystemCollector) collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+	var dst []system
+	if err := unmarshalObject(ctx.perfObjects["System"], &dst); err != nil {
 		return nil, err
-	}
-	if len(dst) == 0 {
-		return nil, errors.New("WMI query returned empty result set")
 	}
 
 	ch <- prometheus.MustNewConstMetric(
 		c.ContextSwitchesTotal,
 		prometheus.CounterValue,
-		float64(dst[0].ContextSwitchesPersec),
+		dst[0].ContextSwitchesPersec,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.ExceptionDispatchesTotal,
 		prometheus.CounterValue,
-		float64(dst[0].ExceptionDispatchesPersec),
+		dst[0].ExceptionDispatchesPersec,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.ProcessorQueueLength,
 		prometheus.GaugeValue,
-		float64(dst[0].ProcessorQueueLength),
+		dst[0].ProcessorQueueLength,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.SystemCallsTotal,
 		prometheus.CounterValue,
-		float64(dst[0].SystemCallsPersec),
+		dst[0].SystemCallsPersec,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.SystemUpTime,
 		prometheus.GaugeValue,
-		// convert from Windows timestamp (1 jan 1601) to unix timestamp (1 jan 1970)
-		float64(dst[0].SystemUpTime-116444736000000000)/float64(dst[0].Frequency_Object),
+		dst[0].SystemUpTime,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.Threads,
 		prometheus.GaugeValue,
-		float64(dst[0].Threads),
+		dst[0].Threads,
 	)
 	return nil, nil
 }
