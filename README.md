@@ -69,6 +69,11 @@ Example service collector with a custom query.
 msiexec /i <path-to-msi-file> ENABLED_COLLECTORS=os,service --% EXTRA_FLAGS="--collector.service.services-where ""Name LIKE 'sql%'"""
 ```
 
+On some older versions of Windows you may need to surround parameter values with double quotes to get the install command parsing properly:
+```powershell
+msiexec /i C:\Users\Administrator\Downloads\wmi_exporter.msi ENABLED_COLLECTORS="ad,iis,logon,memory,process,tcp,thermalzone" TEXTFILE_DIR="C:\custom_metrics\"
+```
+
 ## Roadmap
 
 See [open issues](https://github.com/martinlindhe/wmi_exporter/issues)
