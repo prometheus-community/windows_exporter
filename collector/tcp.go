@@ -136,7 +136,7 @@ func (c *TCPCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.ConnectionsEstablished,
-		prometheus.CounterValue,
+		prometheus.GaugeValue,
 		float64(dst[0].ConnectionsEstablished),
 	)
 	ch <- prometheus.MustNewConstMetric(
