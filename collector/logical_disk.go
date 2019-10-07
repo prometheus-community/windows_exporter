@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"regexp"
 
-	"github.com/StackExchange/wmi"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -27,7 +26,7 @@ var (
 	).Default("").String()
 )
 
-// A LogicalDiskCollector is a Prometheus collector for WMI Win32_PerfRawData_PerfDisk_LogicalDisk metrics
+// A LogicalDiskCollector is a Prometheus collector for perflib logicalDisk metrics
 type LogicalDiskCollector struct {
 	RequestsQueued   *prometheus.Desc
 	ReadBytesTotal   *prometheus.Desc
@@ -159,7 +158,7 @@ func NewLogicalDiskCollector() (Collector, error) {
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *LogicalDiskCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
-	if desc, err := c.collect(ch); err != nil {
+	if desc, err := c.collect(ctx, ch); err != nil {
 		log.Error("failed collecting logical_disk metrics:", desc, err)
 		return err
 	}
@@ -169,28 +168,27 @@ func (c *LogicalDiskCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.
 // Win32_PerfRawData_PerfDisk_LogicalDisk docs:
 // - https://msdn.microsoft.com/en-us/windows/hardware/aa394307(v=vs.71) - Win32_PerfRawData_PerfDisk_LogicalDisk class
 // - https://msdn.microsoft.com/en-us/library/ms803973.aspx - LogicalDisk object reference
-type Win32_PerfRawData_PerfDisk_LogicalDisk struct {
+type logicalDisk struct {
 	Name                   string
-	CurrentDiskQueueLength uint32
-	DiskReadBytesPerSec    uint64
-	DiskReadsPerSec        uint32
-	DiskWriteBytesPerSec   uint64
-	DiskWritesPerSec       uint32
-	PercentDiskReadTime    uint64
-	PercentDiskWriteTime   uint64
-	PercentFreeSpace       uint32
-	PercentFreeSpace_Base  uint32
-	PercentIdleTime        uint64
-	SplitIOPerSec          uint32
-	AvgDiskSecPerRead      uint64
-	AvgDiskSecPerWrite     uint64
-	AvgDiskSecPerTransfer  uint64
+	CurrentDiskQueueLength float64 `perflib:"Current Disk Queue Length"`
+	DiskReadBytesPerSec    float64 `perflib:"Disk Read Bytes/sec"`
+	DiskReadsPerSec        float64 `perflib:"Disk Reads/sec"`
+	DiskWriteBytesPerSec   float64 `perflib:"Disk Write Bytes/sec"`
+	DiskWritesPerSec       float64 `perflib:"Disk Writes/sec"`
+	PercentDiskReadTime    float64 `perflib:"% Disk Read Time"`
+	PercentDiskWriteTime   float64 `perflib:"% Disk Write Time"`
+	PercentFreeSpace       float64 `perflib:"% Free Space_Base"`
+	PercentFreeSpace_Base  float64 `perflib:"Free Megabytes"`
+	PercentIdleTime        float64 `perflib:"% Idle Time"`
+	SplitIOPerSec          float64 `perflib:"Split IO/Sec"`
+	AvgDiskSecPerRead      float64 `perflib:"Avg. Disk sec/Read"`
+	AvgDiskSecPerWrite     float64 `perflib:"Avg. Disk sec/Write"`
+	AvgDiskSecPerTransfer  float64 `perflib:"Avg. Disk sec/Transfer"`
 }
 
-func (c *LogicalDiskCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
-	var dst []Win32_PerfRawData_PerfDisk_LogicalDisk
-	q := queryAll(&dst)
-	if err := wmi.Query(q, &dst); err != nil {
+func (c *LogicalDiskCollector) collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+	var dst []logicalDisk
+	if err := unmarshalObject(ctx.perfObjects["LogicalDisk"], &dst); err != nil {
 		return nil, err
 	}
 
@@ -204,98 +202,98 @@ func (c *LogicalDiskCollector) collect(ch chan<- prometheus.Metric) (*prometheus
 		ch <- prometheus.MustNewConstMetric(
 			c.RequestsQueued,
 			prometheus.GaugeValue,
-			float64(volume.CurrentDiskQueueLength),
+			volume.CurrentDiskQueueLength,
 			volume.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.ReadBytesTotal,
 			prometheus.CounterValue,
-			float64(volume.DiskReadBytesPerSec),
+			volume.DiskReadBytesPerSec,
 			volume.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.ReadsTotal,
 			prometheus.CounterValue,
-			float64(volume.DiskReadsPerSec),
+			volume.DiskReadsPerSec,
 			volume.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.WriteBytesTotal,
 			prometheus.CounterValue,
-			float64(volume.DiskWriteBytesPerSec),
+			volume.DiskWriteBytesPerSec,
 			volume.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.WritesTotal,
 			prometheus.CounterValue,
-			float64(volume.DiskWritesPerSec),
+			volume.DiskWritesPerSec,
 			volume.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.ReadTime,
 			prometheus.CounterValue,
-			float64(volume.PercentDiskReadTime)*ticksToSecondsScaleFactor,
+			volume.PercentDiskReadTime,
 			volume.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.WriteTime,
 			prometheus.CounterValue,
-			float64(volume.PercentDiskWriteTime)*ticksToSecondsScaleFactor,
+			volume.PercentDiskWriteTime,
 			volume.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.FreeSpace,
 			prometheus.GaugeValue,
-			float64(volume.PercentFreeSpace)*1024*1024,
+			volume.PercentFreeSpace_Base*1024*1024,
 			volume.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalSpace,
 			prometheus.GaugeValue,
-			float64(volume.PercentFreeSpace_Base)*1024*1024,
+			volume.PercentFreeSpace*1024*1024,
 			volume.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.IdleTime,
 			prometheus.CounterValue,
-			float64(volume.PercentIdleTime)*ticksToSecondsScaleFactor,
+			volume.PercentIdleTime,
 			volume.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.SplitIOs,
 			prometheus.CounterValue,
-			float64(volume.SplitIOPerSec),
+			volume.SplitIOPerSec,
 			volume.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.ReadLatency,
 			prometheus.CounterValue,
-			float64(volume.AvgDiskSecPerRead),
+			volume.AvgDiskSecPerRead*ticksToSecondsScaleFactor,
 			volume.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.WriteLatency,
 			prometheus.CounterValue,
-			float64(volume.AvgDiskSecPerWrite),
+			volume.AvgDiskSecPerWrite*ticksToSecondsScaleFactor,
 			volume.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.ReadWriteLatency,
 			prometheus.CounterValue,
-			float64(volume.AvgDiskSecPerTransfer),
+			volume.AvgDiskSecPerTransfer*ticksToSecondsScaleFactor,
 			volume.Name,
 		)
 	}
