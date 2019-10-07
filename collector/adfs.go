@@ -119,72 +119,70 @@ func (c *adfsCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric)
 		return err
 	}
 
-	for _, adfs := range adfsData {
-		ch <- prometheus.MustNewConstMetric(
-			c.adLoginConnectionFailures,
-			prometheus.CounterValue,
-			adfs.AdLoginConnectionFailures,
-		)
+	ch <- prometheus.MustNewConstMetric(
+		c.adLoginConnectionFailures,
+		prometheus.CounterValue,
+		adfsData[0].AdLoginConnectionFailures,
+	)
 
-		ch <- prometheus.MustNewConstMetric(
-			c.certificateAuthentications,
-			prometheus.CounterValue,
-			adfs.CertificateAuthentications,
-		)
+	ch <- prometheus.MustNewConstMetric(
+		c.certificateAuthentications,
+		prometheus.CounterValue,
+		adfsData[0].CertificateAuthentications,
+	)
 
-		ch <- prometheus.MustNewConstMetric(
-			c.deviceAuthentications,
-			prometheus.CounterValue,
-			adfs.DeviceAuthentications,
-		)
+	ch <- prometheus.MustNewConstMetric(
+		c.deviceAuthentications,
+		prometheus.CounterValue,
+		adfsData[0].DeviceAuthentications,
+	)
 
-		ch <- prometheus.MustNewConstMetric(
-			c.extranetAccountLockouts,
-			prometheus.CounterValue,
-			adfs.ExtranetAccountLockouts,
-		)
+	ch <- prometheus.MustNewConstMetric(
+		c.extranetAccountLockouts,
+		prometheus.CounterValue,
+		adfsData[0].ExtranetAccountLockouts,
+	)
 
-		ch <- prometheus.MustNewConstMetric(
-			c.federatedAuthentications,
-			prometheus.CounterValue,
-			adfs.FederatedAuthentications,
-		)
+	ch <- prometheus.MustNewConstMetric(
+		c.federatedAuthentications,
+		prometheus.CounterValue,
+		adfsData[0].FederatedAuthentications,
+	)
 
-		ch <- prometheus.MustNewConstMetric(
-			c.passportAuthentications,
-			prometheus.CounterValue,
-			adfs.PassportAuthentications,
-		)
+	ch <- prometheus.MustNewConstMetric(
+		c.passportAuthentications,
+		prometheus.CounterValue,
+		adfsData[0].PassportAuthentications,
+	)
 
-		ch <- prometheus.MustNewConstMetric(
-			c.passiveRequests,
-			prometheus.CounterValue,
-			adfs.PassiveRequests,
-		)
+	ch <- prometheus.MustNewConstMetric(
+		c.passiveRequests,
+		prometheus.CounterValue,
+		adfsData[0].PassiveRequests,
+	)
 
-		ch <- prometheus.MustNewConstMetric(
-			c.passwordChangeFailed,
-			prometheus.CounterValue,
-			adfs.PasswordChangeFailed,
-		)
+	ch <- prometheus.MustNewConstMetric(
+		c.passwordChangeFailed,
+		prometheus.CounterValue,
+		adfsData[0].PasswordChangeFailed,
+	)
 
-		ch <- prometheus.MustNewConstMetric(
-			c.passwordChangeSucceeded,
-			prometheus.CounterValue,
-			adfs.PasswordChangeSucceeded,
-		)
+	ch <- prometheus.MustNewConstMetric(
+		c.passwordChangeSucceeded,
+		prometheus.CounterValue,
+		adfsData[0].PasswordChangeSucceeded,
+	)
 
-		ch <- prometheus.MustNewConstMetric(
-			c.tokenRequests,
-			prometheus.CounterValue,
-			adfs.TokenRequests,
-		)
+	ch <- prometheus.MustNewConstMetric(
+		c.tokenRequests,
+		prometheus.CounterValue,
+		adfsData[0].TokenRequests,
+	)
 
-		ch <- prometheus.MustNewConstMetric(
-			c.windowsIntegratedAuthentications,
-			prometheus.CounterValue,
-			adfs.WindowsIntegratedAuthentications,
-		)
-	}
+	ch <- prometheus.MustNewConstMetric(
+		c.windowsIntegratedAuthentications,
+		prometheus.CounterValue,
+		adfsData[0].WindowsIntegratedAuthentications,
+	)
 	return nil
 }
