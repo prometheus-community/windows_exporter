@@ -5,6 +5,7 @@ The system collector exposes metrics about ...
 |||
 -|-
 Metric name prefix  | `system`
+Data source         | Perflib
 Classes             | [`Win32_PerfRawData_PerfOS_System`](https://web.archive.org/web/20050830140516/http://msdn.microsoft.com/library/en-us/wmisdk/wmi/win32_perfrawdata_perfos_system.asp)
 Enabled by default? | Yes
 
