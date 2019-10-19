@@ -1,8 +1,8 @@
 package perflib
 
 import (
-	"encoding/binary"
 	"io"
+	"encoding/binary"
 	"syscall"
 )
 

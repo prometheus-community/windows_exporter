@@ -2,8 +2,8 @@ package perflib
 
 import (
 	"bytes"
-	"fmt"
 	"strconv"
+	"fmt"
 )
 
 type nameTableLookuper interface {

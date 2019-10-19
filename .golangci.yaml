@@ -1,0 +1,23 @@
+linters:
+  disable-all: true
+  enable:
+  - deadcode
+  - errcheck
+  - golint
+  - govet
+  - gofmt
+  - ineffassign
+  - interfacer
+  - structcheck
+  - unconvert
+  - varcheck
+
+issues:
+  exclude:
+  - don't use underscores in Go names
+  - exported type .+ should have comment or be unexported
+  exclude-rules:
+  - # Golint has many capitalisation complaints on WMI class names
+    text: "`?\\w+`? should be `?\\w+`?"
+    linters:
+    - golint

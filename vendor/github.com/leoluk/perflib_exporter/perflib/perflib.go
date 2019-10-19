@@ -113,10 +113,9 @@ package perflib
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
 	"io"
+	"log"
 	"sort"
-	"strings"
 	"syscall"
 	"unsafe"
 )
@@ -182,11 +181,6 @@ type PerfCounter struct {
 // Error value returned by RegQueryValueEx if the buffer isn't sufficiently large
 const errorMoreData = syscall.Errno(234)
 
-var (
-	bufLenGlobal = uint32(400000)
-	bufLenCostly = uint32(2000000)
-)
-
 // Queries the performance counter buffer using RegQueryValueEx, returning raw bytes. See:
 // https://msdn.microsoft.com/de-de/library/windows/desktop/aa373219(v=vs.85).aspx
 func queryRawData(query string) ([]byte, error) {
@@ -198,14 +192,13 @@ func queryRawData(query string) ([]byte, error) {
 
 	switch query {
 	case "Global":
-		bufLen = bufLenGlobal
+		bufLen = 400000
 	case "Costly":
-		bufLen = bufLenCostly
+		bufLen = 2000000
 	default:
 		// TODO: depends on the number of values requested
 		// need make an educated guess
-		numCounters := len(strings.Split(query, " "))
-		bufLen = uint32(150000 * numCounters)
+		bufLen = uint32(150000 * len(query))
 	}
 
 	buffer = make([]byte, bufLen)
@@ -213,7 +206,7 @@ func queryRawData(query string) ([]byte, error) {
 	name, err := syscall.UTF16PtrFromString(query)
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to encode query string: %v", err)
+		panic(err)
 	}
 
 	for {
@@ -228,31 +221,20 @@ func queryRawData(query string) ([]byte, error) {
 			&bufLen)
 
 		if err == errorMoreData {
+			log.Printf("WARNING: errorMoreData received with buffer length %d (%s)", len(buffer), query)
 			newBuffer := make([]byte, len(buffer)+16384)
 			copy(newBuffer, buffer)
 			buffer = newBuffer
 			continue
 		} else if err != nil {
 			if errno, ok := err.(syscall.Errno); ok {
-				return nil, fmt.Errorf("ReqQueryValueEx failed: %v errno %d", err, uint(errno))
+				log.Println("ReqQueryValueEx: ", uint(errno), err)
 			}
 
 			return nil, err
 		}
 
 		buffer = buffer[:bufLen]
-
-		switch query {
-		case "Global":
-			if bufLen > bufLenGlobal {
-				bufLenGlobal = bufLen
-			}
-		case "Costly":
-			if bufLen > bufLenCostly {
-				bufLenCostly = bufLen
-			}
-		}
-
 		return buffer, nil
 	}
 }
@@ -354,9 +336,9 @@ func QueryPerformanceData(query string) ([]*PerfObject, error) {
 
 				CounterType: def.CounterType,
 
-				IsCounter:           def.CounterType&0x400 == 0x400,
-				IsBaseValue:         def.CounterType&0x00030000 == 0x00030000,
-				IsNanosecondCounter: def.CounterType&0x00100000 == 0x00100000,
+				IsCounter:           def.CounterType&0x400 > 0,
+				IsBaseValue:         def.CounterType&0x20000000 > 0,
+				IsNanosecondCounter: def.CounterType&0x00100000 > 0,
 			}
 		}
 
