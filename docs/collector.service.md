@@ -79,7 +79,7 @@ count(wmi_service_state{exported_name=~"(sqlserveragent|mssqlserver)",state="run
 
 ## Alerting examples
 **prometheus.rules**
-```
+```yaml
 groups:
 - name: Microsoft SQL Server Alerts
   rules:

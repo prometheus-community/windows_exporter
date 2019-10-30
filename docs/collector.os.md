@@ -43,7 +43,7 @@ wmi_os_timezone{timezone != "UTC"}
 
 ## Alerting examples
 **prometheus.rules**
-```
+```yaml
 # Alert on hosts that have exhausted all available physical memory
 - alert: MemoryExhausted
   expr: wmi_os_physical_memory_free_bytes == 0
