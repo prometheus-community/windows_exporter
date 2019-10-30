@@ -49,7 +49,7 @@ rate(wmi_logical_disk_reads_total{instance="localhost", volume="C:"}[2m]) + rate
 
 ## Alerting examples
 **prometheus.rules**
-```
+```yaml
 groups:
 - name: Windows Disk Alerts
   rules:

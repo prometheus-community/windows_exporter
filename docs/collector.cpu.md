@@ -47,7 +47,7 @@ sum by (mode) (irate(wmi_cpu_time_total{instance="localhost"}[5m]))
 
 ## Alerting examples
 **prometheus.rules**
-```
+```yaml
 # Alert on hosts with more than 80% CPU usage over a 10 minute period
 - alert: CpuUsage
   expr: 100 - (avg by (instance) (irate(wmi_cpu_time_total{mode="idle"}[2m])) * 100) > 80
