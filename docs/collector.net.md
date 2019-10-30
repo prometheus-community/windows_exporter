@@ -50,9 +50,9 @@ rate(wmi_net_bytes_total{instance="localhost", nic="Microsoft_Hyper_V_Network_Ad
 
 ## Alerting examples
 **prometheus.rules**
-```
+```yaml
 - alert: NetInterfaceUsage
-  expr: rate(wmi_net_bytes_total[2m]) * 8 / wmi_net_current_bandwidth * 100 > 90
+  expr: rate(wmi_net_bytes_total[2m]) * 8 / wmi_net_current_bandwidth * 100 > 95
   for: 10m
   labels:
     severity: high
