@@ -18,12 +18,15 @@ type MSFT_FSRMQuotaCollector struct {
 	Size        *prometheus.Desc
 	Usage       *prometheus.Desc
 
+
+
 	Description     *prometheus.Desc
 	Disabled        *prometheus.Desc
 	MatchesTemplate *prometheus.Desc
 	SoftLimit       *prometheus.Desc
 	Template        *prometheus.Desc
 	Threshold       *prometheus.Desc
+
 }
 
 // NewMSFT_FSRMQuotaCollector ...
@@ -118,11 +121,13 @@ type MSFT_FSRMQuota struct {
 	Disabled        bool
 	MatchesTemplate bool
 	SoftLimit       bool
+
 }
 
 func (c *MSFT_FSRMQuotaCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []MSFT_FSRMQuota
 	q := queryAll(&dst)
+
 
 	var count int
 
@@ -130,14 +135,25 @@ func (c *MSFT_FSRMQuotaCollector) collect(ch chan<- prometheus.Metric) (*prometh
 		return nil, err
 	}
 
+
 	for _, quota := range dst {
+
 
 		count++
 		Path := quota.Path
 		Template := quota.Template
 		Description := quota.Description
 
+
+
+
+
+
+
+
+
 		ch <- prometheus.MustNewConstMetric(
+
 			c.PeakUsage,
 			prometheus.GaugeValue,
 			float64(quota.PeakUsage),
@@ -174,6 +190,7 @@ func (c *MSFT_FSRMQuotaCollector) collect(ch chan<- prometheus.Metric) (*prometh
 			Template,
 		)
 
+
 		if quota.Disabled {
 			ch <- prometheus.MustNewConstMetric(c.Disabled,
 				prometheus.GaugeValue, 1.0, Path, Template)
@@ -188,6 +205,7 @@ func (c *MSFT_FSRMQuotaCollector) collect(ch chan<- prometheus.Metric) (*prometh
 				1.0,
 				Path,
 				Template,
+
 			)
 		} else {
 			ch <- prometheus.MustNewConstMetric(
@@ -196,6 +214,8 @@ func (c *MSFT_FSRMQuotaCollector) collect(ch chan<- prometheus.Metric) (*prometh
 				0.0,
 				Path,
 				Template,
+
+
 			)
 		}
 		if quota.SoftLimit {
@@ -205,6 +225,8 @@ func (c *MSFT_FSRMQuotaCollector) collect(ch chan<- prometheus.Metric) (*prometh
 				1.0,
 				Path,
 				Template,
+
+
 			)
 
 		} else {
@@ -214,9 +236,11 @@ func (c *MSFT_FSRMQuotaCollector) collect(ch chan<- prometheus.Metric) (*prometh
 				0.0,
 				Path,
 				Template,
+
 			)
 		}
 	}
+
 
 	ch <- prometheus.MustNewConstMetric(
 		c.QuotasCount,
