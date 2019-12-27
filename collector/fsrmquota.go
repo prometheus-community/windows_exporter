@@ -1,15 +1,13 @@
 package collector
 
 import (
-	//"strings"
-
 	"github.com/StackExchange/wmi"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
 )
 
 func init() {
-	Factories["msft_fsrmquota"] = NewMSFT_FSRMQuotaCollector
+	Factories["fsrmquota"] = NewMSFT_FSRMQuotaCollector
 }
 
 // A MSFT_FSRMQuotaCollector is a Prometheus collector for WMI MSFT_FSRMQuota metrics
@@ -32,7 +30,7 @@ type MSFT_FSRMQuotaCollector struct {
 
 // NewMSFT_FSRMQuotaCollector ...
 func NewMSFT_FSRMQuotaCollector() (Collector, error) {
-	const subsystem = "msft_fsrmquota"
+	const subsystem = "fsrmquota"
 	return &MSFT_FSRMQuotaCollector{
 		QuotasCount: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "count"),
@@ -41,57 +39,57 @@ func NewMSFT_FSRMQuotaCollector() (Collector, error) {
 			nil,
 		),
 		PeakUsage: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "peak_usage"),
+			prometheus.BuildFQName(Namespace, subsystem, "peak_usage_bytes"),
 			"The highest amount of disk space usage charged to this quota. (PeakUsage)",
-			[]string{"quotaPath","quotaTemplate"},
+			[]string{"Path","Template"},
 			nil,
 		),
 		Path: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "path"),
-			"A string that represents a valid local path to a folder. Must not exceed the value of MAX_PATH. Required. (Path)",
-			[]string{"quotaPath","quotaTemplate"},
+			"A string that represents a valid local path to a folder. (Path)",
+			[]string{"Path","Template"},
 			nil,
 		),
 		Size: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "size"),
-			"The size of the quota. If the Template property is not provided then the Size property must be provided (Size)",
-			[]string{"quotaPath","quotaTemplate"},
+			prometheus.BuildFQName(Namespace, subsystem, "size_bytes"),
+			"The size of the quota. (Size)",
+			[]string{"Path","Template"},
 			nil,
 		),
 		Usage: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "usage"),
 			"The current amount of disk space usage charged to this quota. (Usage)",
-			[]string{"quotaPath","quotaTemplate"},
+			[]string{"Path","Template"},
 			nil,
 		),
 		Description: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "description"),
-			"A string up to 1KB in size. Optional. The default value is an empty string. (Description)",
-			[]string{"quotaPath","quotaTemplate","quotaDescription"},
+			"Description of the quota (Description)",
+			[]string{"Path","Template","Description"},
 			nil,
 		),
 		Disabled: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "disabled"),
-			"If True, the quota is disabled. The default value is False. (Disabled)",
-			[]string{"quotaPath","quotaTemplate"},
+			"If 1, the quota is disabled. The default value is 0. (Disabled)",
+			[]string{"Path","Template"},
 			nil,
 		),
 		SoftLimit: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "softlimit"),
-			"If True, the quota is a soft limit. If False, the quota is a hard limit. The default value is False. Optional (SoftLimit)",
-			[]string{"quotaPath","quotaTemplate"},
+			"If 1, the quota is a soft limit. If 0, the quota is a hard limit. The default value is 0. Optional (SoftLimit)",
+			[]string{"Path","Template"},
 			nil,
 		),
 		Template: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "template"),
-			"A valid quota template name. Up to 1KB in size. Optional (Template)",
-			[]string{"quotaPath","quotaTemplate"},
+			"Quota template name. (Template)",
+			[]string{"Path","Template"},
 			nil,
 		),
 		MatchesTemplate: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "matchestemplate"),
-			"If True, the property values of this quota match those values of the template from which it was derived. (MatchesTemplate)",
-			[]string{"quotaPath","quotaTemplate"},
+			"If 1, the property values of this quota match those values of the template from which it was derived. (MatchesTemplate)",
+			[]string{"Path","Template"},
 			nil,
 		),
 	}, nil
@@ -108,7 +106,7 @@ func (c *MSFT_FSRMQuotaCollector) Collect(ctx *ScrapeContext, ch chan<- promethe
 }
 
 // MSFT_FSRMQuota docs:
-// - <add link to documentation here>
+// https://docs.microsoft.com/en-us/windows-server/storage/fsrm/fsrm-overview
 type MSFT_FSRMQuota struct {
 	Name string
 
@@ -138,69 +136,69 @@ func (c *MSFT_FSRMQuotaCollector) collect(ch chan<- prometheus.Metric) (*prometh
 		for _, quota := range dst {
 		
 		count++
-		quotaPath := quota.Path
-		quotaTemplate := quota.Template
-		quotaDescription := quota.Description
+		Path := quota.Path
+		Template := quota.Template
+		Description := quota.Description
 		
 	ch <- prometheus.MustNewConstMetric(
 		c.PeakUsage,
 		prometheus.GaugeValue,
 		float64(quota.PeakUsage),
-		quotaPath,
-		quotaTemplate,
+		Path,
+		Template,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.Size,
 		prometheus.GaugeValue,
 		float64(quota.Size),
-		quotaPath,
-		quotaTemplate,
+		Path,
+		Template,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.Usage,
 		prometheus.GaugeValue,
 		float64(quota.Usage),
-		quotaPath,
-		quotaTemplate,
+		Path,
+		Template,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.Description,
 		prometheus.GaugeValue,
 		1.0,
-		quotaPath,quotaTemplate,quotaDescription,
+		Path,Template,Description,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.Template,
 		prometheus.GaugeValue,
 		1.0,
-		quotaPath,
-		quotaTemplate,
+		Path,
+		Template,
 	)
 	
 	if quota.Disabled {
 				ch <- prometheus.MustNewConstMetric(c.Disabled,
-					prometheus.GaugeValue, 1.0, quotaPath,quotaTemplate)
+					prometheus.GaugeValue, 1.0, Path,Template)
 	} else {
 				ch <- prometheus.MustNewConstMetric(c.Disabled,
-					prometheus.GaugeValue, 0.0, quotaPath,quotaTemplate)
+					prometheus.GaugeValue, 0.0, Path,Template)
 	}
 	if quota.MatchesTemplate {
 				ch <- prometheus.MustNewConstMetric(
 					c.MatchesTemplate,
 					prometheus.GaugeValue,
 					1.0,
-					quotaPath,
-					quotaTemplate,
+					Path,
+					Template,
 				)
 	} else {
 				ch <- prometheus.MustNewConstMetric(
 					c.MatchesTemplate,
 					prometheus.GaugeValue,
 					0.0,
-					quotaPath,
-					quotaTemplate,
+					Path,
+					Template,
 				)
 	}	
 	if quota.SoftLimit {
@@ -208,8 +206,8 @@ func (c *MSFT_FSRMQuotaCollector) collect(ch chan<- prometheus.Metric) (*prometh
 					c.SoftLimit,
 					prometheus.GaugeValue,
 					1.0,
-					quotaPath,
-					quotaTemplate,
+					Path,
+					Template,
 					)
 				
 	} else {
@@ -217,8 +215,8 @@ func (c *MSFT_FSRMQuotaCollector) collect(ch chan<- prometheus.Metric) (*prometh
 					c.SoftLimit,
 					prometheus.GaugeValue,
 					0.0,
-					quotaPath,
-					quotaTemplate,
+					Path,
+					Template,
 				)
 	}
 	}
