@@ -25,13 +25,13 @@ Name | Description | Type | Labels
 `wmi_mssql_collector_duration_seconds` | The time taken for each sub-collector to return | counter | `collector`, `instance`
 `wmi_mssql_collector_success` | 1 if sub-collector succeeded, 0 otherwise | counter | `collector`, `instance`
 `wmi_mssql_accessmethods_au_batch_cleanups` | The total number of batches that were completed successfully by the background task that cleans up deferred dropped allocation units | counter | `instance`
-`wmi_mssql_accessmethods_au_cleanups` | The number of allocation units per second that were successfully dropped the background task that cleans up deferred dropped allocation units. Each allocation unit drop requires multiple batches | counter | `instance`
-`wmi_mssql_accessmethods_by_reference_lob_creates` | Count of large object (lob) values that were passed by reference. By-reference lobs are used in certain bulk operations to avoid the cost of passing them by value | counter | `instance`
-`wmi_mssql_accessmethods_by_reference_lob_uses` | Count of by-reference lob values that were used. By-reference lobs are used in certain bulk operations to avoid the cost of passing them by-value | counter | `instance`
-`wmi_mssql_accessmethods_lob_read_aheads` | Count of lob pages on which readahead was issued | counter | `instance`
-`wmi_mssql_accessmethods_column_value_pulls` | Count of column values that were pulled in-row from off-row | counter | `instance`
-`wmi_mssql_accessmethods_column_value_pushes` | Count of column values that were pushed from in-row to off-row | counter | `instance`
-`wmi_mssql_accessmethods_deferred_dropped_aus` | The number of allocation units waiting to be dropped by the background task that cleans up deferred dropped allocation units | counter | `instance`
+`wmi_mssql_accessmethods_au_cleanups` | The total number of allocation units that were successfully dropped the background task that cleans up deferred dropped allocation units. Each allocation unit drop requires multiple batches | counter | `instance`
+`wmi_mssql_accessmethods_by_reference_lob_creates` | The total count of large object (lob) values that were passed by reference. By-reference lobs are used in certain bulk operations to avoid the cost of passing them by value | counter | `instance`
+`wmi_mssql_accessmethods_by_reference_lob_uses` | The total count of by-reference lob values that were used. By-reference lobs are used in certain bulk operations to avoid the cost of passing them by-value | counter | `instance`
+`wmi_mssql_accessmethods_lob_read_aheads` | The total count of lob pages on which readahead was issued | counter | `instance`
+`wmi_mssql_accessmethods_column_value_pulls` | The total count of column values that were pulled in-row from off-row | counter | `instance`
+`wmi_mssql_accessmethods_column_value_pushes` | The total count of column values that were pushed from in-row to off-row | counter | `instance`
+`wmi_mssql_accessmethods_deferred_dropped_aus` | The total number of allocation units waiting to be dropped by the background task that cleans up deferred dropped allocation units | counter | `instance`
 `wmi_mssql_accessmethods_deferred_dropped_rowsets` | The number of rowsets created as a result of aborted online index build operations that are waiting to be dropped by the background task that cleans up deferred dropped rowsets | counter | `instance`
 `wmi_mssql_accessmethods_dropped_rowset_cleanups` | The number of rowsets per second created as a result of aborted online index build operations that were successfully dropped by the background task that cleans up deferred dropped rowsets | counter | `instance`
 `wmi_mssql_accessmethods_dropped_rowset_skips` | The number of rowsets per second created as a result of aborted online index build operations that were skipped by the background task that cleans up deferred dropped rowsets created | counter | `instance`
@@ -97,7 +97,7 @@ Name | Description | Type | Labels
 `wmi_mssql_bufman_page_writes` | Indicates the number of physical database page writes that are issued per second | counter | `instance`
 `wmi_mssql_bufman_read_ahead_pages` | Indicates the number of pages read per second in anticipation of use | counter | `instance`
 `wmi_mssql_bufman_read_ahead_issuing_seconds` | Time (microseconds) spent issuing readahead | counter | `instance`
-`wmi_mssql_bufman_target_pages` | 	Ideal number of pages in the buffer pool | counter | `instance`
+`wmi_mssql_bufman_target_pages` | Ideal number of pages in the buffer pool | counter | `instance`
 `wmi_mssql_dbreplica_database_flow_control_wait_seconds` | _Not yet documented_ | counter | `instance`, `replica`
 `wmi_mssql_dbreplica_database_initiated_flow_controls` | _Not yet documented_ | counter | `instance`, `replica`
 `wmi_mssql_dbreplica_received_file_bytes` | _Not yet documented_ | counter | `instance`, `replica`
@@ -112,7 +112,7 @@ Name | Description | Type | Labels
 `wmi_mssql_dbreplica_log_compression_cachemisses` | _Not yet documented_ | counter | `instance`, `replica`
 `wmi_mssql_dbreplica_log_compressions` | _Not yet documented_ | counter | `instance`, `replica`
 `wmi_mssql_dbreplica_log_decompressions` | _Not yet documented_ | counter | `instance`, `replica`
-`wmi_mssql_dbreplica_log_remaining_for_undo` | The amount of log, in kilobytes, remaining to complete the undo phase | counter | `instance`, `replica`
+`wmi_mssql_dbreplica_log_remaining_for_undo` | The amount of log, in bytes, remaining to complete the undo phase | counter | `instance`, `replica`
 `wmi_mssql_dbreplica_log_send_queue` | Amount of log records in the log files of the primary database, in kilobytes, that haven't been sent to the secondary replica | counter | `instance`, `replica`
 `wmi_mssql_dbreplica_mirrored_write_transactions` | Number of transactions that were written to the primary database and then waited to commit until the log was sent to the secondary database, in the last second | counter | `instance`, `replica`
 `wmi_mssql_dbreplica_recovery_queue_records` | Amount of log records in the log files of the secondary replica that have not been redone | counter | `instance`, `replica`
