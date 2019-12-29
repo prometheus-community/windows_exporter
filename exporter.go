@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	_ "net/http/pprof"
-	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -431,7 +430,7 @@ func (mh *metricsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	reg := prometheus.NewRegistry()
 	reg.MustRegister(mh.collectorFactory(time.Duration(timeoutSeconds * float64(time.Second))))
 	reg.MustRegister(
-		prometheus.NewProcessCollector(os.Getpid(), ""),
+		prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}),
 		prometheus.NewGoCollector(),
 		version.NewCollector("wmi_exporter"),
 	)

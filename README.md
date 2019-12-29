@@ -81,7 +81,6 @@ See [open issues](https://github.com/martinlindhe/wmi_exporter/issues)
 
 ## Usage
 
-    go get -u github.com/golang/dep
     go get -u github.com/prometheus/promu
     go get -u github.com/martinlindhe/wmi_exporter
     cd $env:GOPATH/src/github.com/martinlindhe/wmi_exporter
