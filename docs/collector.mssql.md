@@ -24,7 +24,7 @@ Name | Description | Type | Labels
 -----|-------------|------|-------
 `wmi_mssql_collector_duration_seconds` | The time taken for each sub-collector to return | counter | `collector`, `instance`
 `wmi_mssql_collector_success` | 1 if sub-collector succeeded, 0 otherwise | counter | `collector`, `instance`
-`wmi_mssql_accessmethods_au_batch_cleanups` | The number of batches per second that were completed successfully by the background task that cleans up deferred dropped allocation units | counter | `instance`
+`wmi_mssql_accessmethods_au_batch_cleanups` | The total number of batches that were completed successfully by the background task that cleans up deferred dropped allocation units | counter | `instance`
 `wmi_mssql_accessmethods_au_cleanups` | The number of allocation units per second that were successfully dropped the background task that cleans up deferred dropped allocation units. Each allocation unit drop requires multiple batches | counter | `instance`
 `wmi_mssql_accessmethods_by_reference_lob_creates` | Count of large object (lob) values that were passed by reference. By-reference lobs are used in certain bulk operations to avoid the cost of passing them by value | counter | `instance`
 `wmi_mssql_accessmethods_by_reference_lob_uses` | Count of by-reference lob values that were used. By-reference lobs are used in certain bulk operations to avoid the cost of passing them by-value | counter | `instance`
