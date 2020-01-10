@@ -16,6 +16,7 @@ None
 
 Name | Description | Type | Labels
 -----|-------------|------|-------
+`wmi_os_info` | Contains full product name & version in labels | gauge | `product`, `version`
 `wmi_os_paging_limit_bytes` | Total number of bytes that can be sotred in the operating system paging files. 0 (zero) indicates that there are no paging files | gauge | None
 `wmi_os_paging_free_bytes` | Number of bytes that can be mapped into the operating system paging files without causing any other pages to be swapped out | gauge | None
 `wmi_os_physical_memory_free_bytes` | Bytes of physical memory currently unused and available | gauge | None

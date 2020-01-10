@@ -17,6 +17,7 @@ func init() {
 
 // A OSCollector is a Prometheus collector for WMI metrics
 type OSCollector struct {
+	OSInformation           *prometheus.Desc
 	PhysicalMemoryFreeBytes *prometheus.Desc
 	PagingFreeBytes         *prometheus.Desc
 	VirtualMemoryFreeBytes  *prometheus.Desc
@@ -36,6 +37,12 @@ func NewOSCollector() (Collector, error) {
 	const subsystem = "os"
 
 	return &OSCollector{
+		OSInformation: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "info"),
+			"OperatingSystem.Caption, OperatingSystem.Version",
+			[]string{"product", "version"},
+			nil,
+		),
 		PagingLimitBytes: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "paging_limit_bytes"),
 			"OperatingSystem.SizeStoredInPagingFiles",
@@ -124,9 +131,11 @@ func (c *OSCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) e
 // Win32_OperatingSystem docs:
 // - https://msdn.microsoft.com/en-us/library/aa394239 - Win32_OperatingSystem class
 type Win32_OperatingSystem struct {
+	Caption                 string
 	FreePhysicalMemory      uint64
 	FreeSpaceInPagingFiles  uint64
 	FreeVirtualMemory       uint64
+	LocalDateTime           time.Time
 	MaxNumberOfProcesses    uint32
 	MaxProcessMemorySize    uint64
 	NumberOfProcesses       uint32
@@ -134,7 +143,7 @@ type Win32_OperatingSystem struct {
 	SizeStoredInPagingFiles uint64
 	TotalVirtualMemorySize  uint64
 	TotalVisibleMemorySize  uint64
-	LocalDateTime           time.Time
+	Version                 string
 }
 
 func (c *OSCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
@@ -147,6 +156,14 @@ func (c *OSCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, er
 	if len(dst) == 0 {
 		return nil, errors.New("WMI query returned empty result set")
 	}
+
+	ch <- prometheus.MustNewConstMetric(
+		c.OSInformation,
+		prometheus.GaugeValue,
+		1.0,
+		dst[0].Caption,
+		dst[0].Version,
+	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.PhysicalMemoryFreeBytes,
