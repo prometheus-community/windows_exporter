@@ -7,7 +7,7 @@ test:
 	go test -v ./...
 
 lint:
-	gometalinter --vendor --config gometalinter.config ./...
+	golangci-lint -c .golangci.yaml run
 
 fmt:
 	gofmt -l -w -s .
