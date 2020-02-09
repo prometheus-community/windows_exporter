@@ -12,7 +12,7 @@ import (
 )
 
 func init() {
-	Factories["msmq"] = NewMSMQCollector
+	registerCollector("msmq", NewMSMQCollector)
 }
 
 var (

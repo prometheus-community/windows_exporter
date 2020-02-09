@@ -12,7 +12,7 @@ import (
 )
 
 func init() {
-	Factories["net"] = NewNetworkCollector
+	registerCollector("net", NewNetworkCollector, "Network Interface")
 }
 
 var (

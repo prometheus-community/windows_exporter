@@ -7,7 +7,7 @@ import (
 )
 
 func init() {
-	Factories["thermalzone"] = NewThermalZoneCollector
+	registerCollector("thermalzone", NewThermalZoneCollector)
 }
 
 // A thermalZoneCollector is a Prometheus collector for WMI Win32_PerfRawData_Counters_ThermalZoneInformation metrics

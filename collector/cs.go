@@ -11,7 +11,7 @@ import (
 )
 
 func init() {
-	Factories["cs"] = NewCSCollector
+	registerCollector("cs", NewCSCollector)
 }
 
 // A CSCollector is a Prometheus collector for WMI metrics

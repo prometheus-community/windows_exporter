@@ -9,7 +9,7 @@ import (
 )
 
 func init() {
-	Factories["container"] = NewContainerMetricsCollector
+	registerCollector("container", NewContainerMetricsCollector)
 }
 
 // A ContainerMetricsCollector is a Prometheus collector for containers metrics

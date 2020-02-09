@@ -97,7 +97,11 @@ func (coll WmiCollector) Collect(ch chan<- prometheus.Metric) {
 	)
 
 	t := time.Now()
-	scrapeContext, err := collector.PrepareScrapeContext()
+	cs := make([]string, 0, len(coll.collectors))
+	for name := range coll.collectors {
+		cs = append(cs, name)
+	}
+	scrapeContext, err := collector.PrepareScrapeContext(cs)
 	ch <- prometheus.MustNewConstMetric(
 		snapshotDuration,
 		prometheus.GaugeValue,
@@ -188,17 +192,6 @@ func (coll WmiCollector) Collect(ch chan<- prometheus.Metric) {
 	l.Unlock()
 }
 
-func filterAvailableCollectors(collectors string) string {
-	var availableCollectors []string
-	for _, c := range strings.Split(collectors, ",") {
-		_, ok := collector.Factories[c]
-		if ok {
-			availableCollectors = append(availableCollectors, c)
-		}
-	}
-	return strings.Join(availableCollectors, ",")
-}
-
 func execute(name string, c collector.Collector, ctx *collector.ScrapeContext, ch chan<- prometheus.Metric) collectorOutcome {
 	t := time.Now()
 	err := c.Collect(ctx, ch)
@@ -239,16 +232,13 @@ func loadCollectors(list string) (map[string]collector.Collector, error) {
 	enabled := expandEnabledCollectors(list)
 
 	for _, name := range enabled {
-		fn, ok := collector.Factories[name]
-		if !ok {
-			return nil, fmt.Errorf("collector '%s' not available", name)
-		}
-		c, err := fn()
+		c, err := collector.Build(name)
 		if err != nil {
 			return nil, err
 		}
 		collectors[name] = c
 	}
+
 	return collectors, nil
 }
 
@@ -278,7 +268,7 @@ func main() {
 		enabledCollectors = kingpin.Flag(
 			"collectors.enabled",
 			"Comma-separated list of collectors to use. Use '[defaults]' as a placeholder for all the collectors enabled by default.").
-			Default(filterAvailableCollectors(defaultCollectors)).String()
+			Default(defaultCollectors).String()
 		printCollectors = kingpin.Flag(
 			"collectors.print",
 			"If true, print available collectors and exit.",
@@ -295,8 +285,9 @@ func main() {
 	kingpin.Parse()
 
 	if *printCollectors {
-		collectorNames := make(sort.StringSlice, 0, len(collector.Factories))
-		for n := range collector.Factories {
+		collectors := collector.Available()
+		collectorNames := make(sort.StringSlice, 0, len(collectors))
+		for _, n := range collectors {
 			collectorNames = append(collectorNames, n)
 		}
 		collectorNames.Sort()
