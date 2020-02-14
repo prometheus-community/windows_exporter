@@ -66,7 +66,7 @@ msiexec /i <path-to-msi-file> ENABLED_COLLECTORS=os,iis LISTEN_PORT=5000
 
 Example service collector with a custom query.
 ```powershell
-msiexec /i <path-to-msi-file> ENABLED_COLLECTORS=os,service --% EXTRA_FLAGS="--collector.service.services-where ""Name LIKE 'sql%'"""
+msiexec /i <path-to-msi-file> ENABLED_COLLECTORS=os,service --% EXTRA_FLAGS="--collector.service.services-where ^"Name LIKE 'sql%'^""
 ```
 
 On some older versions of Windows you may need to surround parameter values with double quotes to get the install command parsing properly:
