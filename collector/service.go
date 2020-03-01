@@ -12,7 +12,7 @@ import (
 )
 
 func init() {
-	Factories["service"] = NewserviceCollector
+	registerCollector("service", NewserviceCollector)
 }
 
 var (

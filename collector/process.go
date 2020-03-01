@@ -13,7 +13,7 @@ import (
 )
 
 func init() {
-	Factories["process"] = NewProcessCollector
+	registerCollector("process", NewProcessCollector)
 }
 
 var (

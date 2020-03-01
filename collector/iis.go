@@ -16,7 +16,7 @@ import (
 )
 
 func init() {
-	Factories["iis"] = NewIISCollector
+	registerCollector("iis", NewIISCollector)
 }
 
 type simple_version struct {

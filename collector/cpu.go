@@ -9,7 +9,14 @@ import (
 )
 
 func init() {
-	Factories["cpu"] = newCPUCollector
+	var deps string
+	// See below for 6.05 magic value
+	if getWindowsVersion() > 6.05 {
+		deps = "Processor Information"
+	} else {
+		deps = "Processor"
+	}
+	registerCollector("cpu", newCPUCollector, deps)
 }
 
 type cpuCollectorBasic struct {
@@ -38,7 +45,7 @@ func newCPUCollector() (Collector, error) {
 	version := getWindowsVersion()
 	// For Windows 2008 (version 6.0) or earlier we only have the "Processor"
 	// class. As of Windows 2008 R2 (version 6.1) the more detailed
-	// "ProcessorInformation" set is available (although some of the counters
+	// "Processor Information" set is available (although some of the counters
 	// are added in later versions, so we aren't guaranteed to get all of
 	// them).
 	// Value 6.05 was selected to split between Windows versions.

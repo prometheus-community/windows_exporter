@@ -127,7 +127,7 @@ func mssqlExpandEnabledCollectors(enabled string) []string {
 }
 
 func init() {
-	Factories["mssql"] = NewMSSQLCollector
+	registerCollector("mssql", NewMSSQLCollector)
 }
 
 // A MSSQLCollector is a Prometheus collector for various WMI Win32_PerfRawData_MSSQLSERVER_* metrics

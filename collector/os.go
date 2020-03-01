@@ -12,7 +12,7 @@ import (
 )
 
 func init() {
-	Factories["os"] = NewOSCollector
+	registerCollector("os", NewOSCollector)
 }
 
 // A OSCollector is a Prometheus collector for WMI metrics

@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Factories["tcp"] = NewTCPCollector
+	registerCollector("tcp", NewTCPCollector)
 }
 
 // A TCPCollector is a Prometheus collector for WMI Win32_PerfRawData_Tcpip_TCPv4 metrics

@@ -12,7 +12,7 @@ import (
 )
 
 func init() {
-	Factories["logical_disk"] = NewLogicalDiskCollector
+	registerCollector("logical_disk", NewLogicalDiskCollector, "LogicalDisk")
 }
 
 var (

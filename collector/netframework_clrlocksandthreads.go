@@ -9,7 +9,7 @@ import (
 )
 
 func init() {
-	Factories["netframework_clrlocksandthreads"] = NewNETFramework_NETCLRLocksAndThreadsCollector
+	registerCollector("netframework_clrlocksandthreads", NewNETFramework_NETCLRLocksAndThreadsCollector)
 }
 
 // A NETFramework_NETCLRLocksAndThreadsCollector is a Prometheus collector for WMI Win32_PerfRawData_NETFramework_NETCLRLocksAndThreads metrics

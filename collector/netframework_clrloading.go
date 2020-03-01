@@ -9,7 +9,7 @@ import (
 )
 
 func init() {
-	Factories["netframework_clrloading"] = NewNETFramework_NETCLRLoadingCollector
+	registerCollector("netframework_clrloading", NewNETFramework_NETCLRLoadingCollector)
 }
 
 // A NETFramework_NETCLRLoadingCollector is a Prometheus collector for WMI Win32_PerfRawData_NETFramework_NETCLRLoading metrics
