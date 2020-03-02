@@ -265,6 +265,10 @@ func main() {
 			"telemetry.path",
 			"URL path for surfacing collected metrics.",
 		).Default("/metrics").String()
+		maxRequests = kingpin.Flag(
+			"telemetry.max-requests",
+			"Maximum number of concurrent requests. 0 to disable.",
+		).Default("5").Int()
 		enabledCollectors = kingpin.Flag(
 			"collectors.enabled",
 			"Comma-separated list of collectors to use. Use '[defaults]' as a placeholder for all the collectors enabled by default.").
@@ -332,7 +336,7 @@ func main() {
 		},
 	}
 
-	http.Handle(*metricsPath, h)
+	http.HandleFunc(*metricsPath, withConcurrencyLimit(*maxRequests, h.ServeHTTP))
 	http.HandleFunc("/health", healthCheck)
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, *metricsPath, http.StatusMovedPermanently)
@@ -368,6 +372,25 @@ func keys(m map[string]collector.Collector) []string {
 		ret = append(ret, key)
 	}
 	return ret
+}
+
+func withConcurrencyLimit(n int, next http.HandlerFunc) http.HandlerFunc {
+	if n <= 0 {
+		return next
+	}
+
+	sem := make(chan struct{}, n)
+	return func(w http.ResponseWriter, r *http.Request) {
+		select {
+		case sem <- struct{}{}:
+			defer func() { <-sem }()
+		default:
+			w.WriteHeader(http.StatusServiceUnavailable)
+			_, _ = w.Write([]byte("Too many concurrent requests"))
+			return
+		}
+		next(w, r)
+	}
 }
 
 type wmiExporterService struct {
