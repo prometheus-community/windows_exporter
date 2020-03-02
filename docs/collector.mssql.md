@@ -249,7 +249,27 @@ Name | Description | Type | Labels
 _This collector does not yet have explained examples, we would appreciate your help adding them!_
 
 ## Useful queries
-_This collector does not yet have any useful queries added, we would appreciate your help adding them!_
+
+### Buffer Cache Hit Ratio
+
+When you read the counter in perfmon you will get the the percentage pages found in the buffer cache. This percentage is calculated internally based on the total number of cache hits divided by the total number of cache lookups over the last few thousand page accesses.
+This collector retrieves the two internal values separately. In order to calculate the Buffer Cache Hit Ratio in PromQL.
+
+```
+wmi_mssql_bufman_buffer_cache_hits{instance="host:9182", exported_instance="MSSQLSERVER"} / 
+wmi_mssql_bufman_buffer_cache_lookups{instance="host:9182", exported_instance="MSSQLSERVER"}
+```
+
+This principal can be used for following metrics too:
+- AccessMethodsWorktablesFromCacheHitRatio
+  - accessmethods_worktables_from_cache_hits
+  - accessmethods_worktables_from_cache_lookups
+- LogCacheHitRatio
+  - databases_log_cache_hits
+  - databases_log_cache_lookups
+- AverageLockWaitTime
+  - locks_wait_time_seconds
+  - locks_count
 
 ## Alerting examples
 _This collector does not yet have alerting examples, we would appreciate your help adding them!_
