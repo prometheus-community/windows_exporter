@@ -335,7 +335,13 @@ func main() {
 	http.Handle(*metricsPath, h)
 	http.HandleFunc("/health", healthCheck)
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, *metricsPath, http.StatusMovedPermanently)
+		_, _ = w.Write([]byte(`<html>
+<head><title>WMI Exporter</title></head>
+<body>
+<h1>WMI Exporter</h1>
+<p><a href="` + *metricsPath + `">Metrics</a></p>
+</body>
+</html>`))
 	})
 
 	log.Infoln("Starting WMI exporter", version.Info())
