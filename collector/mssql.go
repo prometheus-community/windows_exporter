@@ -179,7 +179,8 @@ type MSSQLCollector struct {
 	AccessMethodsUsedtreepagecookie           *prometheus.Desc
 	AccessMethodsWorkfilesCreated             *prometheus.Desc
 	AccessMethodsWorktablesCreated            *prometheus.Desc
-	AccessMethodsWorktablesFromCacheRatio     *prometheus.Desc
+	AccessMethodsWorktablesFromCacheHits      *prometheus.Desc
+	AccessMethodsWorktablesFromCacheLookups   *prometheus.Desc
 
 	// Win32_PerfRawData_{instance}_SQLServerAvailabilityReplica
 	AvailReplicaBytesReceivedfromReplica *prometheus.Desc
@@ -194,7 +195,8 @@ type MSSQLCollector struct {
 
 	// Win32_PerfRawData_{instance}_SQLServerBufferManager
 	BufManBackgroundwriterpages         *prometheus.Desc
-	BufManBuffercachehitratio           *prometheus.Desc
+	BufManBuffercachehits               *prometheus.Desc
+	BufManBuffercachelookups            *prometheus.Desc
 	BufManCheckpointpages               *prometheus.Desc
 	BufManDatabasepages                 *prometheus.Desc
 	BufManExtensionallocatedpages       *prometheus.Desc
@@ -252,7 +254,8 @@ type MSSQLCollector struct {
 	DatabasesDBCCLogicalScanBytes            *prometheus.Desc
 	DatabasesGroupCommitTime                 *prometheus.Desc
 	DatabasesLogBytesFlushed                 *prometheus.Desc
-	DatabasesLogCacheHitRatio                *prometheus.Desc
+	DatabasesLogCacheHits                    *prometheus.Desc
+	DatabasesLogCacheLookups                 *prometheus.Desc
 	DatabasesLogCacheReads                   *prometheus.Desc
 	DatabasesLogFilesSizeKB                  *prometheus.Desc
 	DatabasesLogFilesUsedSizeKB              *prometheus.Desc
@@ -317,7 +320,8 @@ type MSSQLCollector struct {
 	GenStatsUserConnections               *prometheus.Desc
 
 	// Win32_PerfRawData_{instance}_SQLServerLocks
-	LocksAverageWaitTimems    *prometheus.Desc
+	LocksWaitTime             *prometheus.Desc
+	LocksCount                *prometheus.Desc
 	LocksLockRequests         *prometheus.Desc
 	LocksLockTimeouts         *prometheus.Desc
 	LocksLockTimeoutstimeout0 *prometheus.Desc
@@ -656,9 +660,15 @@ func NewMSSQLCollector() (Collector, error) {
 			[]string{"instance"},
 			nil,
 		),
-		AccessMethodsWorktablesFromCacheRatio: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "accessmethods_worktables_from_cache_ratio"),
+		AccessMethodsWorktablesFromCacheHits: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "accessmethods_worktables_from_cache_hits"),
 			"(AccessMethods.WorktablesFromCacheRatio)",
+			[]string{"instance"},
+			nil,
+		),
+		AccessMethodsWorktablesFromCacheLookups: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "accessmethods_worktables_from_cache_lookups"),
+			"(AccessMethods.WorktablesFromCacheRatio_Base)",
 			[]string{"instance"},
 			nil,
 		),
@@ -726,9 +736,15 @@ func NewMSSQLCollector() (Collector, error) {
 			[]string{"instance"},
 			nil,
 		),
-		BufManBuffercachehitratio: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "bufman_buffer_cache_hit_ratio"),
+		BufManBuffercachehits: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "bufman_buffer_cache_hits"),
 			"(BufferManager.Buffercachehitratio)",
+			[]string{"instance"},
+			nil,
+		),
+		BufManBuffercachelookups: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "bufman_buffer_cache_lookups"),
+			"(BufferManager.Buffercachehitratio_Base)",
 			[]string{"instance"},
 			nil,
 		),
@@ -1054,9 +1070,15 @@ func NewMSSQLCollector() (Collector, error) {
 			[]string{"instance", "database"},
 			nil,
 		),
-		DatabasesLogCacheHitRatio: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "databases_log_cache_hit_ratio"),
+		DatabasesLogCacheHits: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "databases_log_cache_hits"),
 			"(Databases.LogCacheHitRatio)",
+			[]string{"instance", "database"},
+			nil,
+		),
+		DatabasesLogCacheLookups: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "databases_log_cache_lookups"),
+			"(Databases.LogCacheHitRatio_Base)",
 			[]string{"instance", "database"},
 			nil,
 		),
@@ -1424,9 +1446,15 @@ func NewMSSQLCollector() (Collector, error) {
 		),
 
 		// Win32_PerfRawData_{instance}_SQLServerLocks
-		LocksAverageWaitTimems: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "locks_average_wait_seconds"),
-			"(Locks.AverageWaitTimems)",
+		LocksWaitTime: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "locks_wait_time_seconds"),
+			"(Locks.AverageWaitTimems Total time in seconds which locks have been holding resources)",
+			[]string{"instance", "resource"},
+			nil,
+		),
+		LocksCount: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "locks_count"),
+			"(Locks.AverageWaitTimems_Base count of how often requests have run into locks)",
 			[]string{"instance", "resource"},
 			nil,
 		),
@@ -1863,6 +1891,7 @@ type win32PerfRawDataSQLServerAccessMethods struct {
 	WorkfilesCreatedPersec        uint64
 	WorktablesCreatedPersec       uint64
 	WorktablesFromCacheRatio      uint64
+	WorktablesFromCacheRatio_Base uint64
 }
 
 func (c *MSSQLCollector) collectAccessMethods(ch chan<- prometheus.Metric, sqlInstance string) (*prometheus.Desc, error) {
@@ -2175,9 +2204,16 @@ func (c *MSSQLCollector) collectAccessMethods(ch chan<- prometheus.Metric, sqlIn
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.AccessMethodsWorktablesFromCacheRatio,
+		c.AccessMethodsWorktablesFromCacheHits,
 		prometheus.CounterValue,
 		float64(v.WorktablesFromCacheRatio),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.AccessMethodsWorktablesFromCacheLookups,
+		prometheus.CounterValue,
+		float64(v.WorktablesFromCacheRatio_Base),
 		sqlInstance,
 	)
 	return nil, nil
@@ -2282,6 +2318,7 @@ func (c *MSSQLCollector) collectAvailabilityReplica(ch chan<- prometheus.Metric,
 type win32PerfRawDataSQLServerBufferManager struct {
 	BackgroundwriterpagesPersec   uint64
 	Buffercachehitratio           uint64
+	Buffercachehitratio_Base      uint64
 	CheckpointpagesPersec         uint64
 	Databasepages                 uint64
 	Extensionallocatedpages       uint64
@@ -2327,9 +2364,16 @@ func (c *MSSQLCollector) collectBufferManager(ch chan<- prometheus.Metric, sqlIn
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.BufManBuffercachehitratio,
+		c.BufManBuffercachehits,
 		prometheus.GaugeValue,
 		float64(v.Buffercachehitratio),
+		sqlInstance,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.BufManBuffercachelookups,
+		prometheus.GaugeValue,
+		float64(v.Buffercachehitratio_Base),
 		sqlInstance,
 	)
 
@@ -2704,6 +2748,7 @@ type win32PerfRawDataSQLServerDatabases struct {
 	GroupCommitTimePersec            uint64
 	LogBytesFlushedPersec            uint64
 	LogCacheHitRatio                 uint64
+	LogCacheHitRatio_Base            uint64
 	LogCacheReadsPersec              uint64
 	LogFilesSizeKB                   uint64
 	LogFilesUsedSizeKB               uint64
@@ -2819,9 +2864,16 @@ func (c *MSSQLCollector) collectDatabases(ch chan<- prometheus.Metric, sqlInstan
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.DatabasesLogCacheHitRatio,
+			c.DatabasesLogCacheHits,
 			prometheus.GaugeValue,
 			float64(v.LogCacheHitRatio),
+			sqlInstance, dbName,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.DatabasesLogCacheLookups,
+			prometheus.GaugeValue,
+			float64(v.LogCacheHitRatio_Base),
 			sqlInstance, dbName,
 		)
 
@@ -3299,6 +3351,7 @@ func (c *MSSQLCollector) collectGeneralStatistics(ch chan<- prometheus.Metric, s
 type win32PerfRawDataSQLServerLocks struct {
 	Name                       string
 	AverageWaitTimems          uint64
+	AverageWaitTimems_Base     uint64
 	LockRequestsPersec         uint64
 	LockTimeoutsPersec         uint64
 	LockTimeoutstimeout0Persec uint64
@@ -3321,9 +3374,16 @@ func (c *MSSQLCollector) collectLocks(ch chan<- prometheus.Metric, sqlInstance s
 		lockResourceName := v.Name
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LocksAverageWaitTimems,
+			c.LocksWaitTime,
 			prometheus.GaugeValue,
 			float64(v.AverageWaitTimems)/1000.0,
+			sqlInstance, lockResourceName,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.LocksCount,
+			prometheus.GaugeValue,
+			float64(v.AverageWaitTimems_Base)/1000.0,
 			sqlInstance, lockResourceName,
 		)
 
