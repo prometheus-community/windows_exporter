@@ -137,50 +137,50 @@ type MSSQLCollector struct {
 	mssqlScrapeSuccessDesc  *prometheus.Desc
 
 	// Win32_PerfRawData_{instance}_SQLServerAccessMethods
-	AccessMethodsAUcleanupbatches              *prometheus.Desc
-	AccessMethodsAUcleanups                    *prometheus.Desc
-	AccessMethodsByreferenceLobCreateCount     *prometheus.Desc
-	AccessMethodsByreferenceLobUseCount        *prometheus.Desc
-	AccessMethodsCountLobReadahead             *prometheus.Desc
-	AccessMethodsCountPullInRow                *prometheus.Desc
-	AccessMethodsCountPushOffRow               *prometheus.Desc
-	AccessMethodsDeferreddroppedAUs            *prometheus.Desc
-	AccessMethodsDeferredDroppedrowsets        *prometheus.Desc
-	AccessMethodsDroppedrowsetcleanups         *prometheus.Desc
-	AccessMethodsDroppedrowsetsskipped         *prometheus.Desc
-	AccessMethodsExtentDeallocations           *prometheus.Desc
-	AccessMethodsExtentsAllocated              *prometheus.Desc
-	AccessMethodsFailedAUcleanupbatches        *prometheus.Desc
-	AccessMethodsFailedleafpagecookie          *prometheus.Desc
-	AccessMethodsFailedtreepagecookie          *prometheus.Desc
-	AccessMethodsForwardedRecords              *prometheus.Desc
-	AccessMethodsFreeSpacePageFetches          *prometheus.Desc
-	AccessMethodsFreeSpaceScans                *prometheus.Desc
-	AccessMethodsFullScans                     *prometheus.Desc
-	AccessMethodsIndexSearches                 *prometheus.Desc
-	AccessMethodsInSysXactwaits                *prometheus.Desc
-	AccessMethodsLobHandleCreateCount          *prometheus.Desc
-	AccessMethodsLobHandleDestroyCount         *prometheus.Desc
-	AccessMethodsLobSSProviderCreateCount      *prometheus.Desc
-	AccessMethodsLobSSProviderDestroyCount     *prometheus.Desc
-	AccessMethodsLobSSProviderTruncationCount  *prometheus.Desc
-	AccessMethodsMixedpageallocations          *prometheus.Desc
-	AccessMethodsPagecompressionattempts       *prometheus.Desc
-	AccessMethodsPageDeallocations             *prometheus.Desc
-	AccessMethodsPagesAllocated                *prometheus.Desc
-	AccessMethodsPagescompressed               *prometheus.Desc
-	AccessMethodsPageSplits                    *prometheus.Desc
-	AccessMethodsProbeScans                    *prometheus.Desc
-	AccessMethodsRangeScans                    *prometheus.Desc
-	AccessMethodsScanPointRevalidations        *prometheus.Desc
-	AccessMethodsSkippedGhostedRecords         *prometheus.Desc
-	AccessMethodsTableLockEscalations          *prometheus.Desc
-	AccessMethodsUsedleafpagecookie            *prometheus.Desc
-	AccessMethodsUsedtreepagecookie            *prometheus.Desc
-	AccessMethodsWorkfilesCreated              *prometheus.Desc
-	AccessMethodsWorktablesCreated             *prometheus.Desc
-	AccessMethodsWorktablesFromCacheRatio      *prometheus.Desc
-	AccessMethodsWorktablesFromCacheRatio_Base *prometheus.Desc
+	AccessMethodsAUcleanupbatches             *prometheus.Desc
+	AccessMethodsAUcleanups                   *prometheus.Desc
+	AccessMethodsByreferenceLobCreateCount    *prometheus.Desc
+	AccessMethodsByreferenceLobUseCount       *prometheus.Desc
+	AccessMethodsCountLobReadahead            *prometheus.Desc
+	AccessMethodsCountPullInRow               *prometheus.Desc
+	AccessMethodsCountPushOffRow              *prometheus.Desc
+	AccessMethodsDeferreddroppedAUs           *prometheus.Desc
+	AccessMethodsDeferredDroppedrowsets       *prometheus.Desc
+	AccessMethodsDroppedrowsetcleanups        *prometheus.Desc
+	AccessMethodsDroppedrowsetsskipped        *prometheus.Desc
+	AccessMethodsExtentDeallocations          *prometheus.Desc
+	AccessMethodsExtentsAllocated             *prometheus.Desc
+	AccessMethodsFailedAUcleanupbatches       *prometheus.Desc
+	AccessMethodsFailedleafpagecookie         *prometheus.Desc
+	AccessMethodsFailedtreepagecookie         *prometheus.Desc
+	AccessMethodsForwardedRecords             *prometheus.Desc
+	AccessMethodsFreeSpacePageFetches         *prometheus.Desc
+	AccessMethodsFreeSpaceScans               *prometheus.Desc
+	AccessMethodsFullScans                    *prometheus.Desc
+	AccessMethodsIndexSearches                *prometheus.Desc
+	AccessMethodsInSysXactwaits               *prometheus.Desc
+	AccessMethodsLobHandleCreateCount         *prometheus.Desc
+	AccessMethodsLobHandleDestroyCount        *prometheus.Desc
+	AccessMethodsLobSSProviderCreateCount     *prometheus.Desc
+	AccessMethodsLobSSProviderDestroyCount    *prometheus.Desc
+	AccessMethodsLobSSProviderTruncationCount *prometheus.Desc
+	AccessMethodsMixedpageallocations         *prometheus.Desc
+	AccessMethodsPagecompressionattempts      *prometheus.Desc
+	AccessMethodsPageDeallocations            *prometheus.Desc
+	AccessMethodsPagesAllocated               *prometheus.Desc
+	AccessMethodsPagescompressed              *prometheus.Desc
+	AccessMethodsPageSplits                   *prometheus.Desc
+	AccessMethodsProbeScans                   *prometheus.Desc
+	AccessMethodsRangeScans                   *prometheus.Desc
+	AccessMethodsScanPointRevalidations       *prometheus.Desc
+	AccessMethodsSkippedGhostedRecords        *prometheus.Desc
+	AccessMethodsTableLockEscalations         *prometheus.Desc
+	AccessMethodsUsedleafpagecookie           *prometheus.Desc
+	AccessMethodsUsedtreepagecookie           *prometheus.Desc
+	AccessMethodsWorkfilesCreated             *prometheus.Desc
+	AccessMethodsWorktablesCreated            *prometheus.Desc
+	AccessMethodsWorktablesFromCacheHits      *prometheus.Desc
+	AccessMethodsWorktablesFromCacheLookups   *prometheus.Desc
 
 	// Win32_PerfRawData_{instance}_SQLServerAvailabilityReplica
 	AvailReplicaBytesReceivedfromReplica *prometheus.Desc
@@ -254,8 +254,8 @@ type MSSQLCollector struct {
 	DatabasesDBCCLogicalScanBytes            *prometheus.Desc
 	DatabasesGroupCommitTime                 *prometheus.Desc
 	DatabasesLogBytesFlushed                 *prometheus.Desc
-	DatabasesLogCacheHitRatio                *prometheus.Desc
-	DatabasesLogCacheHitRatio_Base           *prometheus.Desc
+	DatabasesLogCacheHits                    *prometheus.Desc
+	DatabasesLogCacheLookups                 *prometheus.Desc
 	DatabasesLogCacheReads                   *prometheus.Desc
 	DatabasesLogFilesSizeKB                  *prometheus.Desc
 	DatabasesLogFilesUsedSizeKB              *prometheus.Desc
@@ -320,14 +320,14 @@ type MSSQLCollector struct {
 	GenStatsUserConnections               *prometheus.Desc
 
 	// Win32_PerfRawData_{instance}_SQLServerLocks
-	LocksAverageWaitTimems      *prometheus.Desc
-	LocksAverageWaitTimems_Base *prometheus.Desc
-	LocksLockRequests           *prometheus.Desc
-	LocksLockTimeouts           *prometheus.Desc
-	LocksLockTimeoutstimeout0   *prometheus.Desc
-	LocksLockWaits              *prometheus.Desc
-	LocksLockWaitTimems         *prometheus.Desc
-	LocksNumberofDeadlocks      *prometheus.Desc
+	LocksWaitTime             *prometheus.Desc
+	LocksCount                *prometheus.Desc
+	LocksLockRequests         *prometheus.Desc
+	LocksLockTimeouts         *prometheus.Desc
+	LocksLockTimeoutstimeout0 *prometheus.Desc
+	LocksLockWaits            *prometheus.Desc
+	LocksLockWaitTimems       *prometheus.Desc
+	LocksNumberofDeadlocks    *prometheus.Desc
 
 	// Win32_PerfRawData_{instance}_SQLServerMemoryManager
 	MemMgrConnectionMemoryKB       *prometheus.Desc
@@ -660,13 +660,13 @@ func NewMSSQLCollector() (Collector, error) {
 			[]string{"instance"},
 			nil,
 		),
-		AccessMethodsWorktablesFromCacheRatio: prometheus.NewDesc(
+		AccessMethodsWorktablesFromCacheHits: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "accessmethods_worktables_from_cache_hits"),
 			"(AccessMethods.WorktablesFromCacheRatio)",
 			[]string{"instance"},
 			nil,
 		),
-		AccessMethodsWorktablesFromCacheRatio_Base: prometheus.NewDesc(
+		AccessMethodsWorktablesFromCacheLookups: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "accessmethods_worktables_from_cache_lookups"),
 			"(AccessMethods.WorktablesFromCacheRatio_Base)",
 			[]string{"instance"},
@@ -1070,15 +1070,15 @@ func NewMSSQLCollector() (Collector, error) {
 			[]string{"instance", "database"},
 			nil,
 		),
-		DatabasesLogCacheHitRatio: prometheus.NewDesc(
+		DatabasesLogCacheHits: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "databases_log_cache_hits"),
-			"(Databases.LogCacheHits)",
+			"(Databases.LogCacheHitRatio)",
 			[]string{"instance", "database"},
 			nil,
 		),
-		DatabasesLogCacheHitRatio_Base: prometheus.NewDesc(
+		DatabasesLogCacheLookups: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "databases_log_cache_lookups"),
-			"(Databases.LogCacheLookups)",
+			"(Databases.LogCacheHitRatio_Base)",
 			[]string{"instance", "database"},
 			nil,
 		),
@@ -1446,15 +1446,15 @@ func NewMSSQLCollector() (Collector, error) {
 		),
 
 		// Win32_PerfRawData_{instance}_SQLServerLocks
-		LocksAverageWaitTimems: prometheus.NewDesc(
+		LocksWaitTime: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "locks_wait_time_seconds"),
-			"(Locks.LockWaitTime. Total time in ms which locks have been holding resources)",
+			"(Locks.AverageWaitTimems Total time in seconds which locks have been holding resources)",
 			[]string{"instance", "resource"},
 			nil,
 		),
-		LocksAverageWaitTimems_Base: prometheus.NewDesc(
+		LocksCount: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "locks_count"),
-			"(Locks.LockCount. count of how often requests have run into locks)",
+			"(Locks.AverageWaitTimems_Base count of how often requests have run into locks)",
 			[]string{"instance", "resource"},
 			nil,
 		),
@@ -1890,8 +1890,8 @@ type win32PerfRawDataSQLServerAccessMethods struct {
 	Usedtreepagecookie            uint64
 	WorkfilesCreatedPersec        uint64
 	WorktablesCreatedPersec       uint64
-	WorktablesFromCacheHits       uint64
-	WorktablesFromCacheLookups    uint64
+	WorktablesFromCacheRatio      uint64
+	WorktablesFromCacheRatio_Base uint64
 }
 
 func (c *MSSQLCollector) collectAccessMethods(ch chan<- prometheus.Metric, sqlInstance string) (*prometheus.Desc, error) {
@@ -2204,16 +2204,16 @@ func (c *MSSQLCollector) collectAccessMethods(ch chan<- prometheus.Metric, sqlIn
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.AccessMethodsWorktablesFromCacheRatio,
+		c.AccessMethodsWorktablesFromCacheHits,
 		prometheus.CounterValue,
-		float64(v.WorktablesFromCacheHits),
+		float64(v.WorktablesFromCacheRatio),
 		sqlInstance,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.AccessMethodsWorktablesFromCacheRatio_Base,
+		c.AccessMethodsWorktablesFromCacheLookups,
 		prometheus.CounterValue,
-		float64(v.WorktablesFromCacheLookups),
+		float64(v.WorktablesFromCacheRatio_Base),
 		sqlInstance,
 	)
 	return nil, nil
@@ -2317,8 +2317,8 @@ func (c *MSSQLCollector) collectAvailabilityReplica(ch chan<- prometheus.Metric,
 //   https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-buffer-manager-object
 type win32PerfRawDataSQLServerBufferManager struct {
 	BackgroundwriterpagesPersec   uint64
-	Buffercachehits               uint64
-	Buffercachelookups            uint64
+	Buffercachehitratio           uint64
+	Buffercachehitratio_Base      uint64
 	CheckpointpagesPersec         uint64
 	Databasepages                 uint64
 	Extensionallocatedpages       uint64
@@ -2366,14 +2366,14 @@ func (c *MSSQLCollector) collectBufferManager(ch chan<- prometheus.Metric, sqlIn
 	ch <- prometheus.MustNewConstMetric(
 		c.BufManBuffercachehits,
 		prometheus.GaugeValue,
-		float64(v.Buffercachehits),
+		float64(v.Buffercachehitratio),
 		sqlInstance,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.BufManBuffercachelookups,
 		prometheus.GaugeValue,
-		float64(v.Buffercachehits),
+		float64(v.Buffercachehitratio_Base),
 		sqlInstance,
 	)
 
@@ -2747,8 +2747,8 @@ type win32PerfRawDataSQLServerDatabases struct {
 	DBCCLogicalScanBytesPersec       uint64
 	GroupCommitTimePersec            uint64
 	LogBytesFlushedPersec            uint64
-	LogCacheHits                     uint64
-	LogCacheLookups                  uint64
+	LogCacheHitRatio                 uint64
+	LogCacheHitRatio_Base            uint64
 	LogCacheReadsPersec              uint64
 	LogFilesSizeKB                   uint64
 	LogFilesUsedSizeKB               uint64
@@ -2864,16 +2864,16 @@ func (c *MSSQLCollector) collectDatabases(ch chan<- prometheus.Metric, sqlInstan
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.DatabasesLogCacheHitRatio,
+			c.DatabasesLogCacheHits,
 			prometheus.GaugeValue,
-			float64(v.LogCacheHits),
+			float64(v.LogCacheHitRatio),
 			sqlInstance, dbName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.DatabasesLogCacheHitRatio_Base,
+			c.DatabasesLogCacheLookups,
 			prometheus.GaugeValue,
-			float64(v.LogCacheLookups),
+			float64(v.LogCacheHitRatio_Base),
 			sqlInstance, dbName,
 		)
 
@@ -3350,8 +3350,8 @@ func (c *MSSQLCollector) collectGeneralStatistics(ch chan<- prometheus.Metric, s
 // - https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-locks-object
 type win32PerfRawDataSQLServerLocks struct {
 	Name                       string
-	LockWaitTime               uint64
-	LockCount                  uint64
+	AverageWaitTimems          uint64
+	AverageWaitTimems_Base     uint64
 	LockRequestsPersec         uint64
 	LockTimeoutsPersec         uint64
 	LockTimeoutstimeout0Persec uint64
@@ -3374,16 +3374,16 @@ func (c *MSSQLCollector) collectLocks(ch chan<- prometheus.Metric, sqlInstance s
 		lockResourceName := v.Name
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LocksAverageWaitTimems,
+			c.LocksWaitTime,
 			prometheus.GaugeValue,
-			float64(v.LockWaitTime)/1000.0,
+			float64(v.AverageWaitTimems)/1000.0,
 			sqlInstance, lockResourceName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LocksAverageWaitTimems_Base,
+			c.LocksCount,
 			prometheus.GaugeValue,
-			float64(v.LockCount)/1000.0,
+			float64(v.AverageWaitTimems_Base)/1000.0,
 			sqlInstance, lockResourceName,
 		)
 
