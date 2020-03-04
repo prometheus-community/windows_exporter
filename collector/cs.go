@@ -67,7 +67,7 @@ type Win32_ComputerSystem struct {
 	TotalPhysicalMemory       uint64
 	DNSHostname               string
 	Domain                    string
-	Workgroup                 string
+	Workgroup                 *string
 }
 
 func (c *CSCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
@@ -93,7 +93,7 @@ func (c *CSCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, er
 	)
 
 	var fqdn string
-	if dst[0].Domain != dst[0].Workgroup {
+	if dst[0].Workgroup == nil || dst[0].Domain != *dst[0].Workgroup {
 		fqdn = dst[0].DNSHostname + "." + dst[0].Domain
 	} else {
 		fqdn = dst[0].DNSHostname
