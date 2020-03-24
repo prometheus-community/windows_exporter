@@ -5,18 +5,29 @@ The process collector exposes metrics about processes
 |||
 -|-
 Metric name prefix  | `process`
-Classes             | [`Win32_PerfRawData_PerfProc_Process`](https://msdn.microsoft.com/en-us/library/aa394323(v=vs.85).aspx)
+Data source         | Perflib
+Counters            | `Process`
 Enabled by default? | No
 
 ## Flags
 
-### `--collector.process.processes-where`
+### `--collector.process.whitelist`
 
-A WMI filter on which processes to include. Recommended to keep down number of returned metrics.
+Regexp of processes to include. Process name must both match whitelist and not
+match blacklist to be included. Recommended to keep down number of returned
+metrics.
 
-`%` is a wildcard, and can be used to match on substrings.
+### `--collector.process.blacklist`
 
-Example: `--collector.process.processes-where="Name LIKE 'firefox%'`
+Regexp of processes to exclude. Process name must both match whitelist and not
+match blacklist to be included. Recommended to keep down number of returned
+metrics.
+
+### Example
+To match all firefox processes: `--collector.process.whitelist="firefox.+"`.
+Note that multiple processes with the same name will be disambiguated by
+Windows by adding a number suffix, such as `firefox#2`. Your regexp must take
+these suffixes into consideration.
 
 ## Metrics
 
