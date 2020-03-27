@@ -10,8 +10,33 @@ import (
 	"github.com/prometheus/common/log"
 )
 
+const ConnectionBrokerFeatureID uint32 = 133
+
 func init() {
 	registerCollector("terminal_services", NewTerminalServicesCollector)
+}
+
+var (
+	connectionBrokerEnabled = isConnectionBrokerServer()
+)
+
+type Win32_ServerFeature struct {
+	ID uint32
+}
+
+func isConnectionBrokerServer() bool {
+	var dst []Win32_ServerFeature
+	q := queryAll(&dst)
+	if err := wmi.Query(q, &dst); err != nil {
+		return false
+	}
+	for _, d := range dst {
+		if d.ID == ConnectionBrokerFeatureID {
+			return true
+		}
+	}
+	log.Debug("host is not a connection broker skipping Connection Broker performance metrics.")
+	return false
 }
 
 // A TerminalServicesCollector is a Prometheus collector for WMI
@@ -19,32 +44,39 @@ func init() {
 // https://docs.microsoft.com/en-us/previous-versions/aa394344(v%3Dvs.85)
 // https://wutils.com/wmi/root/cimv2/win32_perfrawdata_localsessionmanager_terminalservices/
 type TerminalServicesCollector struct {
-	Local_session_count   *prometheus.Desc
-	HandleCount           *prometheus.Desc
-	PageFaultsPersec      *prometheus.Desc
-	PageFileBytes         *prometheus.Desc
-	PageFileBytesPeak     *prometheus.Desc
-	PercentPrivilegedTime *prometheus.Desc
-	PercentProcessorTime  *prometheus.Desc
-	PercentUserTime       *prometheus.Desc
-	PoolNonpagedBytes     *prometheus.Desc
-	PoolPagedBytes        *prometheus.Desc
-	PrivateBytes          *prometheus.Desc
-	ThreadCount           *prometheus.Desc
-	VirtualBytes          *prometheus.Desc
-	VirtualBytesPeak      *prometheus.Desc
-	WorkingSet            *prometheus.Desc
-	WorkingSetPeak        *prometheus.Desc
+	LocalSessionCount           *prometheus.Desc
+	ConnectionBrokerPerformance *prometheus.Desc
+	HandleCount                 *prometheus.Desc
+	PageFaultsPersec            *prometheus.Desc
+	PageFileBytes               *prometheus.Desc
+	PageFileBytesPeak           *prometheus.Desc
+	PercentPrivilegedTime       *prometheus.Desc
+	PercentProcessorTime        *prometheus.Desc
+	PercentUserTime             *prometheus.Desc
+	PoolNonpagedBytes           *prometheus.Desc
+	PoolPagedBytes              *prometheus.Desc
+	PrivateBytes                *prometheus.Desc
+	ThreadCount                 *prometheus.Desc
+	VirtualBytes                *prometheus.Desc
+	VirtualBytesPeak            *prometheus.Desc
+	WorkingSet                  *prometheus.Desc
+	WorkingSetPeak              *prometheus.Desc
 }
 
 // NewTerminalServicesCollector ...
 func NewTerminalServicesCollector() (Collector, error) {
 	const subsystem = "terminal_services"
 	return &TerminalServicesCollector{
-		Local_session_count: prometheus.NewDesc(
+		LocalSessionCount: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "local_session_count"),
 			"Number of Terminal Services sessions",
 			[]string{"session"},
+			nil,
+		),
+		ConnectionBrokerPerformance: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "connection_broker_performance_total"),
+			"The total number of connections handled by the Connection Brokers since the service started.",
+			[]string{"connection"},
 			nil,
 		),
 		HandleCount: prometheus.NewDesc(
@@ -151,6 +183,14 @@ func (c *TerminalServicesCollector) Collect(ctx *ScrapeContext, ch chan<- promet
 		log.Error("failed collecting terminal services session count metrics:", desc, err)
 		return err
 	}
+
+	// only collect CollectionBrokerPerformance if host is a Connection Broker
+	if connectionBrokerEnabled {
+		if desc, err := c.collectCollectionBrokerPerformanceCounter(ch); err != nil {
+			log.Error("failed collecting Connection Broker performance metrics:", desc, err)
+			return err
+		}
+	}
 	return nil
 }
 
@@ -171,21 +211,21 @@ func (c *TerminalServicesCollector) collectTSSessionCount(ch chan<- prometheus.M
 	}
 
 	ch <- prometheus.MustNewConstMetric(
-		c.Local_session_count,
+		c.LocalSessionCount,
 		prometheus.GaugeValue,
 		float64(dst[0].ActiveSessions),
 		"active",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.Local_session_count,
+		c.LocalSessionCount,
 		prometheus.GaugeValue,
 		float64(dst[0].InactiveSessions),
 		"inactive",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.Local_session_count,
+		c.LocalSessionCount,
 		prometheus.GaugeValue,
 		float64(dst[0].TotalSessions),
 		"total",
@@ -315,5 +355,46 @@ func (c *TerminalServicesCollector) collectTSSessionCounters(ch chan<- prometheu
 			d.Name,
 		)
 	}
+	return nil, nil
+}
+
+type Win32_PerfRawData_RemoteDesktopConnectionBrokerPerformanceCounterProvider_RemoteDesktopConnectionBrokerCounterset struct {
+	SuccessfulConnections uint64
+	PendingConnections    uint64
+	FailedConnections     uint64
+}
+
+func (c *TerminalServicesCollector) collectCollectionBrokerPerformanceCounter(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+
+	var dst []Win32_PerfRawData_RemoteDesktopConnectionBrokerPerformanceCounterProvider_RemoteDesktopConnectionBrokerCounterset
+	q := queryAll(&dst)
+	if err := wmi.Query(q, &dst); err != nil {
+		return nil, err
+	}
+	if len(dst) == 0 {
+		return nil, errors.New("WMI query returned empty result set")
+	}
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ConnectionBrokerPerformance,
+		prometheus.GaugeValue,
+		float64(dst[0].SuccessfulConnections),
+		"Successful",
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ConnectionBrokerPerformance,
+		prometheus.GaugeValue,
+		float64(dst[0].PendingConnections),
+		"Pending",
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.ConnectionBrokerPerformance,
+		prometheus.GaugeValue,
+		float64(dst[0].FailedConnections),
+		"Failed",
+	)
+
 	return nil, nil
 }
