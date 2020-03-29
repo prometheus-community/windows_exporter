@@ -28,5 +28,6 @@ This directory contains documentation of the collectors in the WMI exporter, wit
 - [`service`](collector.service.md)
 - [`system`](collector.system.md)
 - [`tcp`](collector.tcp.md)
+- [`terminal_services`](collector.terminal_services.md)
 - [`textfile`](collector.textfile.md)
 - [`vmware`](collector.vmware.md)
