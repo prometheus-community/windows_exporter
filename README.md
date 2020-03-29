@@ -33,6 +33,7 @@ Name     | Description | Enabled by default
 [net](docs/collector.net.md) | Network interface I/O | &#10003;
 [os](docs/collector.os.md) | OS metrics (memory, processes, users) | &#10003;
 [process](docs/collector.process.md) | Per-process metrics |
+[remote_fx](docs/collector.remote_fx.md) | RemoteFX protocol (RDP) metrics |
 [service](docs/collector.service.md) | Service state metrics | &#10003;
 [system](docs/collector.system.md) | System calls | &#10003;
 [tcp](docs/collector.tcp.md) | TCP connections |

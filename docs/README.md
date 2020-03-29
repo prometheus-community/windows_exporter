@@ -25,6 +25,7 @@ This directory contains documentation of the collectors in the WMI exporter, wit
 - [`net`](collector.net.md)
 - [`os`](collector.os.md)
 - [`process`](collector.process.md)
+- [`remote_fx`](collector.remote_fx.md)
 - [`service`](collector.service.md)
 - [`system`](collector.system.md)
 - [`tcp`](collector.tcp.md)
