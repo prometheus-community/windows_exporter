@@ -377,21 +377,21 @@ func (c *TerminalServicesCollector) collectCollectionBrokerPerformanceCounter(ch
 
 	ch <- prometheus.MustNewConstMetric(
 		c.ConnectionBrokerPerformance,
-		prometheus.GaugeValue,
+		prometheus.CounterValue,
 		float64(dst[0].SuccessfulConnections),
 		"Successful",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.ConnectionBrokerPerformance,
-		prometheus.GaugeValue,
+		prometheus.CounterValue,
 		float64(dst[0].PendingConnections),
 		"Pending",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.ConnectionBrokerPerformance,
-		prometheus.GaugeValue,
+		prometheus.CounterValue,
 		float64(dst[0].FailedConnections),
 		"Failed",
 	)
