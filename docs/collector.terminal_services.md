@@ -5,6 +5,7 @@ The terminal_services collector exposes terminal services (Remote Desktop Servic
 |||
 -|-
 Metric name prefix  | `terminal_services`
+Data source         | Perflib
 Classes             | [`Win32_PerfRawData_LocalSessionManager_TerminalServices`](https://wutils.com/wmi/root/cimv2/win32_perfrawdata_localsessionmanager_terminalservices/), [`Win32_PerfRawData_TermService_TerminalServicesSession`](https://docs.microsoft.com/en-us/previous-versions/aa394344(v%3Dvs.85)), [`Win32_PerfRawData_RemoteDesktopConnectionBrokerPerformanceCounterProvider_RemoteDesktopConnectionBrokerCounterset`](https://docs.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2012-r2-and-2012/mt729067(v%3Dws.11))
 Enabled by default? | No
 

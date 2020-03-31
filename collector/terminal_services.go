@@ -13,7 +13,7 @@ import (
 const ConnectionBrokerFeatureID uint32 = 133
 
 func init() {
-	registerCollector("terminal_services", NewTerminalServicesCollector)
+	registerCollector("terminal_services", NewTerminalServicesCollector, "Terminal Services", "Terminal Services Session", "Remote Desktop Connection Broker Counterset")
 }
 
 var (
@@ -175,18 +175,18 @@ func NewTerminalServicesCollector() (Collector, error) {
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *TerminalServicesCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
-	if desc, err := c.collectTSSessionCount(ch); err != nil {
+	if desc, err := c.collectTSSessionCount(ctx, ch); err != nil {
 		log.Error("failed collecting terminal services session count metrics:", desc, err)
 		return err
 	}
-	if desc, err := c.collectTSSessionCounters(ch); err != nil {
+	if desc, err := c.collectTSSessionCounters(ctx, ch); err != nil {
 		log.Error("failed collecting terminal services session count metrics:", desc, err)
 		return err
 	}
 
 	// only collect CollectionBrokerPerformance if host is a Connection Broker
 	if connectionBrokerEnabled {
-		if desc, err := c.collectCollectionBrokerPerformanceCounter(ch); err != nil {
+		if desc, err := c.collectCollectionBrokerPerformanceCounter(ctx, ch); err != nil {
 			log.Error("failed collecting Connection Broker performance metrics:", desc, err)
 			return err
 		}
@@ -194,16 +194,16 @@ func (c *TerminalServicesCollector) Collect(ctx *ScrapeContext, ch chan<- promet
 	return nil
 }
 
-type Win32_PerfRawData_LocalSessionManager_TerminalServices struct {
-	ActiveSessions   uint32
-	InactiveSessions uint32
-	TotalSessions    uint32
+type perflibTerminalServices struct {
+	ActiveSessions   float64 `perflib:"Active Sessions"`
+	InactiveSessions float64 `perflib:"Inactive Sessions"`
+	TotalSessions    float64 `perflib:"Total Sessions"`
 }
 
-func (c *TerminalServicesCollector) collectTSSessionCount(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
-	var dst []Win32_PerfRawData_LocalSessionManager_TerminalServices
-	q := queryAll(&dst)
-	if err := wmi.Query(q, &dst); err != nil {
+func (c *TerminalServicesCollector) collectTSSessionCount(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+	dst := make([]perflibTerminalServices, 0)
+	err := unmarshalObject(ctx.perfObjects["Terminal Services"], &dst)
+	if err != nil {
 		return nil, err
 	}
 	if len(dst) == 0 {
@@ -234,33 +234,30 @@ func (c *TerminalServicesCollector) collectTSSessionCount(ch chan<- prometheus.M
 	return nil, nil
 }
 
-type Win32_PerfRawData_TermService_TerminalServicesSession struct {
+type perflibTerminalServicesSession struct {
 	Name                  string
-	HandleCount           uint32
-	PageFaultsPersec      uint32
-	PageFileBytes         uint64
-	PageFileBytesPeak     uint64
-	PercentPrivilegedTime uint64
-	PercentProcessorTime  uint64
-	PercentUserTime       uint64
-	PoolNonpagedBytes     uint32
-	PoolPagedBytes        uint32
-	PrivateBytes          uint64
-	ThreadCount           uint32
-	VirtualBytes          uint64
-	VirtualBytesPeak      uint64
-	WorkingSet            uint64
-	WorkingSetPeak        uint64
+	HandleCount           float64 `perflib:"Handle Count"`
+	PageFaultsPersec      float64 `perflib:"Page Faults/sec"`
+	PageFileBytes         float64 `perflib:"Page File Bytes"`
+	PageFileBytesPeak     float64 `perflib:"Page File Bytes Peak"`
+	PercentPrivilegedTime float64 `perflib:"% Privileged Time"`
+	PercentProcessorTime  float64 `perflib:"% Processor Time"`
+	PercentUserTime       float64 `perflib:"% User Time"`
+	PoolNonpagedBytes     float64 `perflib:"Pool Nonpaged Bytes"`
+	PoolPagedBytes        float64 `perflib:"Pool Paged Bytes"`
+	PrivateBytes          float64 `perflib:"Private Bytes"`
+	ThreadCount           float64 `perflib:"Thread Count"`
+	VirtualBytes          float64 `perflib:"Virtual Bytes"`
+	VirtualBytesPeak      float64 `perflib:"Virtual Bytes Peak"`
+	WorkingSet            float64 `perflib:"Working Set"`
+	WorkingSetPeak        float64 `perflib:"Working Set Peak"`
 }
 
-func (c *TerminalServicesCollector) collectTSSessionCounters(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
-	var dst []Win32_PerfRawData_TermService_TerminalServicesSession
-	q := queryAll(&dst)
-	if err := wmi.Query(q, &dst); err != nil {
+func (c *TerminalServicesCollector) collectTSSessionCounters(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+	dst := make([]perflibTerminalServicesSession, 0)
+	err := unmarshalObject(ctx.perfObjects["Terminal Services Session"], &dst)
+	if err != nil {
 		return nil, err
-	}
-	if len(dst) == 0 {
-		return nil, errors.New("WMI query returned empty result set")
 	}
 
 	for _, d := range dst {
@@ -358,17 +355,17 @@ func (c *TerminalServicesCollector) collectTSSessionCounters(ch chan<- prometheu
 	return nil, nil
 }
 
-type Win32_PerfRawData_RemoteDesktopConnectionBrokerPerformanceCounterProvider_RemoteDesktopConnectionBrokerCounterset struct {
-	SuccessfulConnections uint64
-	PendingConnections    uint64
-	FailedConnections     uint64
+type perflibRemoteDesktopConnectionBrokerCounterset struct {
+	SuccessfulConnections float64 `perflib:"Successful Connections"`
+	PendingConnections    float64 `perflib:"Pending Connections"`
+	FailedConnections     float64 `perflib:"Failed Connections"`
 }
 
-func (c *TerminalServicesCollector) collectCollectionBrokerPerformanceCounter(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *TerminalServicesCollector) collectCollectionBrokerPerformanceCounter(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 
-	var dst []Win32_PerfRawData_RemoteDesktopConnectionBrokerPerformanceCounterProvider_RemoteDesktopConnectionBrokerCounterset
-	q := queryAll(&dst)
-	if err := wmi.Query(q, &dst); err != nil {
+	dst := make([]perflibRemoteDesktopConnectionBrokerCounterset, 0)
+	err := unmarshalObject(ctx.perfObjects["Remote Desktop Connection Broker Counterset"], &dst)
+	if err != nil {
 		return nil, err
 	}
 	if len(dst) == 0 {

@@ -4,10 +4,11 @@ package collector
 
 import (
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/common/log"
 )
 
 func init() {
-	registerCollector("remote_fx", NewRemoteFx)
+	registerCollector("remote_fx", NewRemoteFx, "RemoteFX Network", "RemoteFX Graphics")
 }
 
 // A RemoteFxNetworkCollector is a Prometheus collector for
@@ -24,15 +25,14 @@ type RemoteFxCollector struct {
 	CurrentUDPBandwidth      *prometheus.Desc
 	CurrentUDPRTT            *prometheus.Desc
 	FECRate                  *prometheus.Desc
-	FECRate_Base             *prometheus.Desc
 	LossRate                 *prometheus.Desc
-	LossRate_Base            *prometheus.Desc
 	RetransmissionRate       *prometheus.Desc
-	RetransmissionRate_Base  *prometheus.Desc
 	TCPReceivedRate          *prometheus.Desc
 	TCPSentRate              *prometheus.Desc
 	TotalReceivedRate        *prometheus.Desc
 	TotalSentRate            *prometheus.Desc
+	TotalReceivedBytes       *prometheus.Desc
+	TotalSentBytes           *prometheus.Desc
 	UDPPacketsReceivedPersec *prometheus.Desc
 	UDPPacketsSentPersec     *prometheus.Desc
 	UDPReceivedRate          *prometheus.Desc
@@ -97,33 +97,15 @@ func NewRemoteFx() (Collector, error) {
 			[]string{"session"},
 			nil,
 		),
-		FECRate_Base: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "net_fec_rate_base"),
-			"Forward Error Correction (FEC) percentage _Base value",
-			[]string{"session"},
-			nil,
-		),
 		LossRate: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "net_loss_rate"),
 			"Loss percentage",
 			[]string{"session"},
 			nil,
 		),
-		LossRate_Base: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "net_loss_rate_base"),
-			"Loss percentage _Base value.",
-			[]string{"session"},
-			nil,
-		),
 		RetransmissionRate: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "net_retransmission_rate"),
 			"Percentage of packets that have been retransmitted",
-			[]string{"session"},
-			nil,
-		),
-		RetransmissionRate_Base: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "net_retransmission_rate_Base"),
-			"Percentage of packets that have been retransmitted _base value",
 			[]string{"session"},
 			nil,
 		),
@@ -148,6 +130,18 @@ func NewRemoteFx() (Collector, error) {
 		TotalSentRate: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "net_total_sent_rate"),
 			"Rate in bits per second (bps) at which data is sent.",
+			[]string{"session"},
+			nil,
+		),
+		TotalReceivedBytes: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "net_total_received_bytes"),
+			"(TotalReceivedBytes)",
+			[]string{"session"},
+			nil,
+		),
+		TotalSentBytes: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "net_total_sent_bytes"),
+			"(TotalSentBytes)",
 			[]string{"session"},
 			nil,
 		),
@@ -237,49 +231,45 @@ func NewRemoteFx() (Collector, error) {
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *RemoteFxCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
-	if desc, err := c.collectRemoteFXNetworkCount(ch); err != nil {
+	if desc, err := c.collectRemoteFXNetworkCount(ctx, ch); err != nil {
 		log.Error("failed collecting terminal services session count metrics:", desc, err)
 		return err
 	}
-	if desc, err := c.collectRemoteFXGraphicsCounters(ch); err != nil {
+	if desc, err := c.collectRemoteFXGraphicsCounters(ctx, ch); err != nil {
 		log.Error("failed collecting terminal services session count metrics:", desc, err)
 		return err
 	}
 	return nil
 }
 
-type Win32_PerfRawData_Counters_RemoteFXNetwork struct {
+type perflibRemoteFxNetwork struct {
 	Name                     string
-	BaseTCPRTT               uint32
-	BaseUDPRTT               uint32
-	CurrentTCPBandwidth      uint32
-	CurrentTCPRTT            uint32
-	CurrentUDPBandwidth      uint32
-	CurrentUDPRTT            uint32
-	FECRate                  uint32
-	FECRate_Base             uint32
-	LossRate                 uint32
-	LossRate_Base            uint32
-	RetransmissionRate       uint32
-	RetransmissionRate_Base  uint32
-	TCPReceivedRate          uint32
-	TCPSentRate              uint32
-	TotalReceivedRate        uint32
-	TotalSentRate            uint32
-	UDPPacketsReceivedPersec uint32
-	UDPPacketsSentPersec     uint32
-	UDPReceivedRate          uint32
-	UDPSentRate              uint32
+	BaseTCPRTT               float64 `perflib:"Base TCP RTT"`
+	BaseUDPRTT               float64 `perflib:"Base UDP RTT"`
+	CurrentTCPBandwidth      float64 `perflib:"Current TCP Bandwidth"`
+	CurrentTCPRTT            float64 `perflib:"Current TCP RTT"`
+	CurrentUDPBandwidth      float64 `perflib:"Current UDP Bandwidth"`
+	CurrentUDPRTT            float64 `perflib:"Current UDP RTT"`
+	FECRate                  float64 `perflib:"FEC Rate"`
+	LossRate                 float64 `perflib:"Loss Rate"`
+	RetransmissionRate       float64 `perflib:"Retransmission Rate"`
+	TCPReceivedRate          float64 `perflib:"TCP Received Rate"`
+	TCPSentRate              float64 `perflib:"TCP Sent Rate"`
+	TotalReceivedRate        float64 `perflib:"Total Received Rate"`
+	TotalSentRate            float64 `perflib:"Total Sent Rate"`
+	TotalReceivedBytes       float64 `perflib:"Total Received Bytes"`
+	TotalSentBytes           float64 `perflib:"Total Sent Bytes"`
+	UDPPacketsReceivedPersec float64 `perflib:"UDP Packets Received/sec"`
+	UDPPacketsSentPersec     float64 `perflib:"UDP Packets Sent/sec"`
+	UDPReceivedRate          float64 `perflib:"UDP Received Rate"`
+	UDPSentRate              float64 `perflib:"UDP Sent Rate"`
 }
 
-func (c *RemoteFxCollector) collectRemoteFXNetworkCount(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
-	var dst []Win32_PerfRawData_Counters_RemoteFXNetwork
-	q := queryAll(&dst)
-	if err := wmi.Query(q, &dst); err != nil {
+func (c *RemoteFxCollector) collectRemoteFXNetworkCount(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+	dst := make([]perflibRemoteFxNetwork, 0)
+	err := unmarshalObject(ctx.perfObjects["RemoteFX Network"], &dst)
+	if err != nil {
 		return nil, err
-	}
-	if len(dst) == 0 {
-		return nil, errors.New("WMI query returned empty result set")
 	}
 
 	for _, d := range dst {
@@ -326,33 +316,15 @@ func (c *RemoteFxCollector) collectRemoteFXNetworkCount(ch chan<- prometheus.Met
 			d.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.FECRate_Base,
-			prometheus.GaugeValue,
-			float64(d.FECRate_Base),
-			d.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
 			c.LossRate,
 			prometheus.GaugeValue,
 			float64(d.LossRate),
 			d.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.LossRate_Base,
-			prometheus.GaugeValue,
-			float64(d.LossRate_Base),
-			d.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
 			c.RetransmissionRate,
 			prometheus.GaugeValue,
 			float64(d.RetransmissionRate),
-			d.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.RetransmissionRate_Base,
-			prometheus.GaugeValue,
-			float64(d.RetransmissionRate_Base),
 			d.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
@@ -377,6 +349,18 @@ func (c *RemoteFxCollector) collectRemoteFXNetworkCount(ch chan<- prometheus.Met
 			c.TotalSentRate,
 			prometheus.GaugeValue,
 			float64(d.TotalSentRate),
+			d.Name,
+		)
+		ch <- prometheus.MustNewConstMetric(
+			c.TotalReceivedBytes,
+			prometheus.GaugeValue,
+			float64(d.TotalReceivedBytes),
+			d.Name,
+		)
+		ch <- prometheus.MustNewConstMetric(
+			c.TotalSentBytes,
+			prometheus.GaugeValue,
+			float64(d.TotalSentBytes),
 			d.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
@@ -407,27 +391,24 @@ func (c *RemoteFxCollector) collectRemoteFXNetworkCount(ch chan<- prometheus.Met
 	return nil, nil
 }
 
-type Win32_PerfRawData_Counters_RemoteFXGraphics struct {
+type perflibRemoteFxGraphics struct {
 	Name                                               string
-	AverageEncodingTime                                uint32
-	FrameQuality                                       uint32
-	FramesSkippedPerSecondInsufficientClientResources  uint32
-	FramesSkippedPerSecondInsufficientNetworkResources uint32
-	FramesSkippedPerSecondInsufficientServerResources  uint32
-	GraphicsCompressionratio                           uint32
-	InputFramesPerSecond                               uint32
-	OutputFramesPerSecond                              uint32
-	SourceFramesPerSecond                              uint32
+	AverageEncodingTime                                float64 `perflib:"Average Encoding Time"`
+	FrameQuality                                       float64 `perflib:"Frame Quality"`
+	FramesSkippedPerSecondInsufficientClientResources  float64 `perflib:"Frames Skipped/Second - Insufficient Server Resources"`
+	FramesSkippedPerSecondInsufficientNetworkResources float64 `perflib:"Frames Skipped/Second - Insufficient Network Resources"`
+	FramesSkippedPerSecondInsufficientServerResources  float64 `perflib:"Frames Skipped/Second - Insufficient Client Resources"`
+	GraphicsCompressionratio                           float64 `perflib:"Graphics Compression ratio"`
+	InputFramesPerSecond                               float64 `perflib:"Input Frames/Second"`
+	OutputFramesPerSecond                              float64 `perflib:"Output Frames/Second"`
+	SourceFramesPerSecond                              float64 `perflib:"Source Frames/Second"`
 }
 
-func (c *RemoteFxCollector) collectRemoteFXGraphicsCounters(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
-	var dst []Win32_PerfRawData_Counters_RemoteFXGraphics
-	q := queryAll(&dst)
-	if err := wmi.Query(q, &dst); err != nil {
+func (c *RemoteFxCollector) collectRemoteFXGraphicsCounters(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+	dst := make([]perflibRemoteFxGraphics, 0)
+	err := unmarshalObject(ctx.perfObjects["RemoteFX Graphics"], &dst)
+	if err != nil {
 		return nil, err
-	}
-	if len(dst) == 0 {
-		return nil, errors.New("WMI query returned empty result set")
 	}
 
 	for _, d := range dst {

@@ -5,6 +5,7 @@ The remote_fx collector exposes Performance Counters regarding the RemoteFX prot
 |||
 -|-
 Metric name prefix  | `remote_fx`
+Data source         | Perflib
 Classes             | [`Win32_PerfRawData_Counters_RemoteFXNetwork`](https://wutils.com/wmi/root/cimv2/win32_perfrawdata_counters_remotefxnetwork/), [`Win32_PerfRawData_Counters_RemoteFXGraphics`](https://wutils.com/wmi/root/cimv2/win32_perfrawdata_counters_remotefxgraphics), [more info...](https://docs.microsoft.com/en-us/azure/virtual-desktop/remotefx-graphics-performance-counters)
 Enabled by default? | No
 
@@ -24,15 +25,14 @@ Name | Description | Type | Labels
 `wmi_remote_fx_net_current_udp_bandwidth` | UDP Bandwidth detected in thousands of bits per second (1000 bps). | gauge | `session`
 `wmi_remote_fx_net_current_udp_rtt` | Average UDP round-trip time (RTT) detected in milliseconds. | gauge | `session`
 `wmi_remote_fx_net_fec_rate` | Forward Error Correction (FEC) percentage | gauge | `session`
-`wmi_remote_fx_net_fec_rate_base` | Forward Error Correction (FEC) percentage _Base value | gauge | `session`
 `wmi_remote_fx_net_loss_rate` | Loss percentage | gauge | `session`
-`wmi_remote_fx_net_loss_rate_base` | Loss percentage _Base value. | gauge | `session`
 `wmi_remote_fx_net_retransmission_rate` | Percentage of packets that have been retransmitted | gauge | `session`
-`wmi_remote_fx_net_retransmission_rate_Base` | Percentage of packets that have been retransmitted _base value | gauge | `session`
 `wmi_remote_fx_net_tcp_received_rate` | Rate in bits per second (bps) at which data is received over TCP. | gauge | `session`
 `wmi_remote_fx_net_tcp_sent_rate` | Rate in bits per second (bps) at which data is sent over TCP. | gauge | `session`
 `wmi_remote_fx_net_total_received_rate` | Rate in bits per second (bps) at which data is received. | gauge | `session`
 `wmi_remote_fx_net_total_sent_rate` | Rate in bits per second (bps) at which data is sent. | gauge | `session`
+`wmi_remote_fx_net_total_received_bytes` | _Not yet documented_ | gauge | `session`
+`wmi_remote_fx_net_total_sent_bytes` | _Not yet documented_ | gauge | `session`
 `wmi_remote_fx_net_udp_packets_received_persec` | Rate in packets per second at which packets are received over UDP. | gauge | `session`
 `wmi_remote_fx_net_udp_packets_sent_persec` | Rate in packets per second at which packets are sent over UDP. | gauge | `session`
 `wmi_remote_fx_net_udp_received_rate` | Rate in bits per second (bps) at which data is received over UDP. | gauge | `session`
