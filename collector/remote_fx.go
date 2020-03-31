@@ -3,6 +3,8 @@
 package collector
 
 import (
+	"strings"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
 )
@@ -273,6 +275,11 @@ func (c *RemoteFxCollector) collectRemoteFXNetworkCount(ctx *ScrapeContext, ch c
 	}
 
 	for _, d := range dst {
+		// only connect metrics for remote named sessions
+		n := strings.ToLower(d.Name)
+		if n == "" || n == "services" || n == "console" {
+			continue
+		}
 		ch <- prometheus.MustNewConstMetric(
 			c.BaseTCPRTT,
 			prometheus.GaugeValue,
@@ -412,6 +419,11 @@ func (c *RemoteFxCollector) collectRemoteFXGraphicsCounters(ctx *ScrapeContext, 
 	}
 
 	for _, d := range dst {
+		// only connect metrics for remote named sessions
+		n := strings.ToLower(d.Name)
+		if n == "" || n == "services" || n == "console" {
+			continue
+		}
 		ch <- prometheus.MustNewConstMetric(
 			c.AverageEncodingTime,
 			prometheus.GaugeValue,

@@ -261,6 +261,11 @@ func (c *TerminalServicesCollector) collectTSSessionCounters(ctx *ScrapeContext,
 	}
 
 	for _, d := range dst {
+		// only connect metrics for remote named sessions
+		n := strings.ToLower(d.Name)
+		if n == "" || n == "services" || n == "console" {
+			continue
+		}
 		ch <- prometheus.MustNewConstMetric(
 			c.HandleCount,
 			prometheus.GaugeValue,
