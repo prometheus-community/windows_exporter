@@ -173,7 +173,7 @@ func NewRemoteFx() (Collector, error) {
 		//gfx
 		AverageEncodingTime: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "gfx_average_encoding_time"),
-			"Average frame encoding time.",
+			"Average frame encoding time in milliseconds",
 			[]string{"session"},
 			nil,
 		),
