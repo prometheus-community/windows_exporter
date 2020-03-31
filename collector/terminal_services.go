@@ -213,21 +213,21 @@ func (c *TerminalServicesCollector) collectTSSessionCount(ctx *ScrapeContext, ch
 	ch <- prometheus.MustNewConstMetric(
 		c.LocalSessionCount,
 		prometheus.GaugeValue,
-		float64(dst[0].ActiveSessions),
+		dst[0].ActiveSessions,
 		"active",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.LocalSessionCount,
 		prometheus.GaugeValue,
-		float64(dst[0].InactiveSessions),
+		dst[0].InactiveSessions,
 		"inactive",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.LocalSessionCount,
 		prometheus.GaugeValue,
-		float64(dst[0].TotalSessions),
+		dst[0].TotalSessions,
 		"total",
 	)
 
@@ -264,91 +264,91 @@ func (c *TerminalServicesCollector) collectTSSessionCounters(ctx *ScrapeContext,
 		ch <- prometheus.MustNewConstMetric(
 			c.HandleCount,
 			prometheus.GaugeValue,
-			float64(d.HandleCount),
+			d.HandleCount,
 			d.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.PageFaultsPersec,
 			prometheus.GaugeValue,
-			float64(d.PageFaultsPersec),
+			d.PageFaultsPersec,
 			d.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.PageFileBytes,
 			prometheus.GaugeValue,
-			float64(d.PageFileBytes),
+			d.PageFileBytes,
 			d.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.PageFileBytesPeak,
 			prometheus.GaugeValue,
-			float64(d.PageFileBytesPeak),
+			d.PageFileBytesPeak,
 			d.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.PercentPrivilegedTime,
 			prometheus.GaugeValue,
-			float64(d.PercentPrivilegedTime),
+			d.PercentPrivilegedTime,
 			d.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.PercentProcessorTime,
 			prometheus.GaugeValue,
-			float64(d.PercentProcessorTime),
+			d.PercentProcessorTime,
 			d.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.PercentUserTime,
 			prometheus.GaugeValue,
-			float64(d.PercentUserTime),
+			d.PercentUserTime,
 			d.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.PoolNonpagedBytes,
 			prometheus.GaugeValue,
-			float64(d.PoolNonpagedBytes),
+			d.PoolNonpagedBytes,
 			d.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.PoolPagedBytes,
 			prometheus.GaugeValue,
-			float64(d.PoolPagedBytes),
+			d.PoolPagedBytes,
 			d.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.PrivateBytes,
 			prometheus.GaugeValue,
-			float64(d.PrivateBytes),
+			d.PrivateBytes,
 			d.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.ThreadCount,
 			prometheus.GaugeValue,
-			float64(d.ThreadCount),
+			d.ThreadCount,
 			d.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.VirtualBytes,
 			prometheus.GaugeValue,
-			float64(d.VirtualBytes),
+			d.VirtualBytes,
 			d.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.VirtualBytesPeak,
 			prometheus.GaugeValue,
-			float64(d.VirtualBytesPeak),
+			d.VirtualBytesPeak,
 			d.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.WorkingSet,
 			prometheus.GaugeValue,
-			float64(d.WorkingSet),
+			d.WorkingSet,
 			d.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.WorkingSetPeak,
 			prometheus.GaugeValue,
-			float64(d.WorkingSetPeak),
+			d.WorkingSetPeak,
 			d.Name,
 		)
 	}
@@ -375,21 +375,21 @@ func (c *TerminalServicesCollector) collectCollectionBrokerPerformanceCounter(ct
 	ch <- prometheus.MustNewConstMetric(
 		c.ConnectionBrokerPerformance,
 		prometheus.CounterValue,
-		float64(dst[0].SuccessfulConnections),
+		dst[0].SuccessfulConnections,
 		"Successful",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.ConnectionBrokerPerformance,
 		prometheus.CounterValue,
-		float64(dst[0].PendingConnections),
+		dst[0].PendingConnections,
 		"Pending",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.ConnectionBrokerPerformance,
 		prometheus.CounterValue,
-		float64(dst[0].FailedConnections),
+		dst[0].FailedConnections,
 		"Failed",
 	)
 
