@@ -318,79 +318,79 @@ func (c *RemoteFxCollector) collectRemoteFXNetworkCount(ctx *ScrapeContext, ch c
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.FECRate,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			d.FECRate,
 			d.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.LossRate,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			d.LossRate,
 			d.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.RetransmissionRate,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			d.RetransmissionRate,
 			d.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.TCPReceivedRate,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			d.TCPReceivedRate,
 			d.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.TCPSentRate,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			d.TCPSentRate,
 			d.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalReceivedRate,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			d.TotalReceivedRate,
 			d.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalSentRate,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			d.TotalSentRate,
 			d.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalReceivedBytes,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			d.TotalReceivedBytes,
 			d.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalSentBytes,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			d.TotalSentBytes,
 			d.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.UDPPacketsReceivedPersec,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			d.UDPPacketsReceivedPersec,
 			d.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.UDPPacketsSentPersec,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			d.UDPPacketsSentPersec,
 			d.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.UDPReceivedRate,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			d.UDPReceivedRate,
 			d.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.UDPSentRate,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			d.UDPSentRate,
 			d.Name,
 		)
@@ -438,19 +438,19 @@ func (c *RemoteFxCollector) collectRemoteFXGraphicsCounters(ctx *ScrapeContext, 
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.FramesSkippedPerSecondInsufficientClientResources,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			d.FramesSkippedPerSecondInsufficientClientResources,
 			d.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.FramesSkippedPerSecondInsufficientNetworkResources,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			d.FramesSkippedPerSecondInsufficientNetworkResources,
 			d.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.FramesSkippedPerSecondInsufficientServerResources,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			d.FramesSkippedPerSecondInsufficientServerResources,
 			d.Name,
 		)
@@ -462,19 +462,19 @@ func (c *RemoteFxCollector) collectRemoteFXGraphicsCounters(ctx *ScrapeContext, 
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.InputFramesPerSecond,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			d.InputFramesPerSecond,
 			d.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.OutputFramesPerSecond,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			d.OutputFramesPerSecond,
 			d.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.SourceFramesPerSecond,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			d.SourceFramesPerSecond,
 			d.Name,
 		)

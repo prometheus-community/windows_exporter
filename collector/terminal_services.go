@@ -293,19 +293,19 @@ func (c *TerminalServicesCollector) collectTSSessionCounters(ctx *ScrapeContext,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.PercentPrivilegedTime,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			d.PercentPrivilegedTime,
 			d.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.PercentProcessorTime,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			d.PercentProcessorTime,
 			d.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.PercentUserTime,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			d.PercentUserTime,
 			d.Name,
 		)
