@@ -58,13 +58,13 @@ func NewRemoteFx() (Collector, error) {
 	return &RemoteFxCollector{
 		// net
 		BaseTCPRTT: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "net_base_tcp_rrt"),
+			prometheus.BuildFQName(Namespace, subsystem, "net_base_tcp_rtt"),
 			"Base TCP round-trip time (RTT) detected in milliseconds",
 			[]string{"session_name"},
 			nil,
 		),
 		BaseUDPRTT: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "net_base_udp_rrt"),
+			prometheus.BuildFQName(Namespace, subsystem, "net_base_udp_rtt"),
 			"Base UDP round-trip time (RTT) detected in milliseconds.",
 			[]string{"session_name"},
 			nil,
