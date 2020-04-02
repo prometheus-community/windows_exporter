@@ -33,8 +33,8 @@ Name | Description | Type | Labels
 `wmi_remote_fx_net_total_sent_rate` | Rate in bits per second (bps) at which data is sent. | counter | `session_name`
 `wmi_remote_fx_net_total_received_bytes` | _Not yet documented_ | counter | `session_name`
 `wmi_remote_fx_net_total_sent_bytes` | _Not yet documented_ | counter | `session_name`
-`wmi_remote_fx_net_udp_packets_received_persec` | Rate in packets per second at which packets are received over UDP. | counter | `session_name`
-`wmi_remote_fx_net_udp_packets_sent_persec` | Rate in packets per second at which packets are sent over UDP. | counter | `session_name`
+`wmi_remote_fx_net_udp_packets_received_total` | Rate in packets per second at which packets are received over UDP. | counter | `session_name`
+`wmi_remote_fx_net_udp_packets_sent_total` | Rate in packets per second at which packets are sent over UDP. | counter | `session_name`
 `wmi_remote_fx_net_udp_received_rate` | Rate in bits per second (bps) at which data is received over UDP. | counter | `session_name`
 `wmi_remote_fx_net_udp_sent_rate` | Rate in bits per second (bps) at which data is sent over UDP. | counter | `session_name`
 
@@ -44,13 +44,13 @@ Name | Description | Type | Labels
 -----|-------------|------|-------
 `wmi_remote_fx_gfx_average_encoding_time` | Average frame encoding time. | gauge | `session_name`
 `wmi_remote_fx_gfx_frame_quality` | Quality of the output frame expressed as a percentage of the quality of the source frame. | gauge | `session_name`
-`wmi_remote_fx_gfx_frames_skipped_persec_insufficient_clt_res` | Number of frames skipped per second due to insufficient client resources. | counter | `session_name`
-`wmi_remote_fx_gfx_frames_skipped_persec_insufficient_net_res` | Number of frames skipped per second due to insufficient network resources. | counter | `session_name`
-`wmi_remote_fx_gfx_frames_skipped_persec_insufficient_srv_res` | Number of frames skipped per second due to insufficient server resources. | counter | `session_name`
+`wmi_remote_fx_gfx_frames_skipped_insufficient_clt_res_total` | Number of frames skipped per second due to insufficient client resources. | counter | `session_name`
+`wmi_remote_fx_gfx_frames_skipped_insufficient_net_res_total` | Number of frames skipped per second due to insufficient network resources. | counter | `session_name`
+`wmi_remote_fx_gfx_frames_skipped_insufficient_srv_res_total` | Number of frames skipped per second due to insufficient server resources. | counter | `session_name`
 `wmi_remote_fx_gfx_graphics_compression_ratio` | Ratio of the number of bytes encoded to the number of bytes input. | gauge | `session_name`
-`wmi_remote_fx_gfx_input_frames_persec` | Number of sources frames provided as input to RemoteFX graphics per second. | counter | `session_name`
-`wmi_remote_fx_gfx_output_frames_persec` | Number of frames sent to the client per second. | counter | `session_name`
-`wmi_remote_fx_gfx_source_frames_persec` | Number of frames composed by the source (DWM) per second. | counter | `session_name`
+`wmi_remote_fx_gfx_input_frames_total` | Number of sources frames provided as input to RemoteFX graphics per second. | counter | `session_name`
+`wmi_remote_fx_gfx_output_frames_total` | Number of frames sent to the client per second. | counter | `session_name`
+`wmi_remote_fx_gfx_source_frames_total` | Number of frames composed by the source (DWM) per second. | counter | `session_name`
 
 ### Example metric
 _This collector does not yet have explained examples, we would appreciate your help adding them!_
