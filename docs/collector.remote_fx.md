@@ -18,12 +18,12 @@ None
 
 Name | Description | Type | Labels
 -----|-------------|------|-------
-`wmi_remote_fx_net_base_udp_rtt` | Base UDP round-trip time (RTT) detected in milliseconds. | gauge | `session_name`
-`wmi_remote_fx_net_base_tcp_rtt` | Base TCP round-trip time (RTT) detected in milliseconds. | gauge | `session_name`
+`wmi_remote_fx_net_base_udp_rtt` | Base UDP round-trip time (RTT) detected in seconds. | gauge | `session_name`
+`wmi_remote_fx_net_base_tcp_rtt` | Base TCP round-trip time (RTT) detected in seconds. | gauge | `session_name`
 `wmi_remote_fx_net_current_tcp_bandwidth` | TCP Bandwidth detected in thousands of bits per second (1000 bps). | gauge | `session_name`
-`wmi_remote_fx_net_current_tcp_rtt` | Average TCP round-trip time (RTT) detected in milliseconds. | gauge | `session_name`
+`wmi_remote_fx_net_current_tcp_rtt` | Average TCP round-trip time (RTT) detected in seconds. | gauge | `session_name`
 `wmi_remote_fx_net_current_udp_bandwidth` | UDP Bandwidth detected in thousands of bits per second (1000 bps). | gauge | `session_name`
-`wmi_remote_fx_net_current_udp_rtt` | Average UDP round-trip time (RTT) detected in milliseconds. | gauge | `session_name`
+`wmi_remote_fx_net_current_udp_rtt` | Average UDP round-trip time (RTT) detected in seconds. | gauge | `session_name`
 `wmi_remote_fx_net_fec_rate` | Forward Error Correction (FEC) percentage | counter | `session_name`
 `wmi_remote_fx_net_loss_rate` | Loss percentage | counter | `session_name`
 `wmi_remote_fx_net_retransmission_rate` | Percentage of packets that have been retransmitted | counter | `session_name`

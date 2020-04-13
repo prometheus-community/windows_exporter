@@ -59,13 +59,13 @@ func NewRemoteFx() (Collector, error) {
 		// net
 		BaseTCPRTT: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "net_base_tcp_rtt"),
-			"Base TCP round-trip time (RTT) detected in milliseconds",
+			"Base TCP round-trip time (RTT) detected in seconds",
 			[]string{"session_name"},
 			nil,
 		),
 		BaseUDPRTT: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "net_base_udp_rtt"),
-			"Base UDP round-trip time (RTT) detected in milliseconds.",
+			"Base UDP round-trip time (RTT) detected in seconds.",
 			[]string{"session_name"},
 			nil,
 		),
@@ -77,7 +77,7 @@ func NewRemoteFx() (Collector, error) {
 		),
 		CurrentTCPRTT: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "net_current_tcp_rtt"),
-			"Average TCP round-trip time (RTT) detected in milliseconds.",
+			"Average TCP round-trip time (RTT) detected in seconds.",
 			[]string{"session_name"},
 			nil,
 		),
@@ -89,7 +89,7 @@ func NewRemoteFx() (Collector, error) {
 		),
 		CurrentUDPRTT: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "net_current_udp_rtt"),
-			"Average UDP round-trip time (RTT) detected in milliseconds.",
+			"Average UDP round-trip time (RTT) detected in seconds.",
 			[]string{"session_name"},
 			nil,
 		),
@@ -175,7 +175,7 @@ func NewRemoteFx() (Collector, error) {
 		//gfx
 		AverageEncodingTime: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "gfx_average_encoding_time"),
-			"Average frame encoding time in milliseconds",
+			"Average frame encoding time in seconds",
 			[]string{"session_name"},
 			nil,
 		),
@@ -283,13 +283,13 @@ func (c *RemoteFxCollector) collectRemoteFXNetworkCount(ctx *ScrapeContext, ch c
 		ch <- prometheus.MustNewConstMetric(
 			c.BaseTCPRTT,
 			prometheus.GaugeValue,
-			d.BaseTCPRTT,
+			milliSecToSec(d.BaseTCPRTT),
 			d.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.BaseUDPRTT,
 			prometheus.GaugeValue,
-			d.BaseUDPRTT,
+			milliSecToSec(d.BaseUDPRTT),
 			d.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
@@ -301,7 +301,7 @@ func (c *RemoteFxCollector) collectRemoteFXNetworkCount(ctx *ScrapeContext, ch c
 		ch <- prometheus.MustNewConstMetric(
 			c.CurrentTCPRTT,
 			prometheus.GaugeValue,
-			d.CurrentTCPRTT,
+			milliSecToSec(d.CurrentTCPRTT),
 			d.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
@@ -313,7 +313,7 @@ func (c *RemoteFxCollector) collectRemoteFXNetworkCount(ctx *ScrapeContext, ch c
 		ch <- prometheus.MustNewConstMetric(
 			c.CurrentUDPRTT,
 			prometheus.GaugeValue,
-			d.CurrentUDPRTT,
+			milliSecToSec(d.CurrentUDPRTT),
 			d.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
@@ -427,7 +427,7 @@ func (c *RemoteFxCollector) collectRemoteFXGraphicsCounters(ctx *ScrapeContext, 
 		ch <- prometheus.MustNewConstMetric(
 			c.AverageEncodingTime,
 			prometheus.GaugeValue,
-			d.AverageEncodingTime,
+			milliSecToSec(d.AverageEncodingTime),
 			d.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
@@ -481,4 +481,8 @@ func (c *RemoteFxCollector) collectRemoteFXGraphicsCounters(ctx *ScrapeContext, 
 	}
 
 	return nil, nil
+}
+
+func milliSecToSec(t float64) float64 {
+	return t / 1000
 }
