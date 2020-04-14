@@ -26,19 +26,10 @@ type RemoteFxCollector struct {
 	CurrentTCPRTT            *prometheus.Desc
 	CurrentUDPBandwidth      *prometheus.Desc
 	CurrentUDPRTT            *prometheus.Desc
-	FECRate                  *prometheus.Desc
-	LossRate                 *prometheus.Desc
-	RetransmissionRate       *prometheus.Desc
-	TCPReceivedRate          *prometheus.Desc
-	TCPSentRate              *prometheus.Desc
-	TotalReceivedRate        *prometheus.Desc
-	TotalSentRate            *prometheus.Desc
 	TotalReceivedBytes       *prometheus.Desc
 	TotalSentBytes           *prometheus.Desc
 	UDPPacketsReceivedPersec *prometheus.Desc
 	UDPPacketsSentPersec     *prometheus.Desc
-	UDPReceivedRate          *prometheus.Desc
-	UDPSentRate              *prometheus.Desc
 
 	//gfx
 	AverageEncodingTime                                *prometheus.Desc
@@ -93,48 +84,6 @@ func NewRemoteFx() (Collector, error) {
 			[]string{"session_name"},
 			nil,
 		),
-		FECRate: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "net_fec_rate"),
-			"Forward Error Correction (FEC) percentage",
-			[]string{"session_name"},
-			nil,
-		),
-		LossRate: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "net_loss_rate"),
-			"Loss percentage",
-			[]string{"session_name"},
-			nil,
-		),
-		RetransmissionRate: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "net_retransmission_rate"),
-			"Percentage of packets that have been retransmitted",
-			[]string{"session_name"},
-			nil,
-		),
-		TCPReceivedRate: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "net_tcp_received_rate"),
-			"Rate in bits per second (bps) at which data is received over TCP.",
-			[]string{"session_name"},
-			nil,
-		),
-		TCPSentRate: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "net_tcp_sent_rate"),
-			"Rate in bits per second (bps) at which data is sent over TCP.",
-			[]string{"session_name"},
-			nil,
-		),
-		TotalReceivedRate: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "net_total_received_rate"),
-			"Rate in bits per second (bps) at which data is received.",
-			[]string{"session_name"},
-			nil,
-		),
-		TotalSentRate: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "net_total_sent_rate"),
-			"Rate in bits per second (bps) at which data is sent.",
-			[]string{"session_name"},
-			nil,
-		),
 		TotalReceivedBytes: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "net_total_received_bytes"),
 			"(TotalReceivedBytes)",
@@ -156,18 +105,6 @@ func NewRemoteFx() (Collector, error) {
 		UDPPacketsSentPersec: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "net_udp_packets_sent_total"),
 			"Rate in packets per second at which packets are sent over UDP.",
-			[]string{"session_name"},
-			nil,
-		),
-		UDPReceivedRate: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "net_udp_received_rate"),
-			"Rate in bits per second (bps) at which data is received over UDP.",
-			[]string{"session_name"},
-			nil,
-		),
-		UDPSentRate: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "net_udp_sent_rate"),
-			"Rate in bits per second (bps) at which data is sent over UDP.",
 			[]string{"session_name"},
 			nil,
 		),
@@ -252,19 +189,10 @@ type perflibRemoteFxNetwork struct {
 	CurrentTCPRTT            float64 `perflib:"Current TCP RTT"`
 	CurrentUDPBandwidth      float64 `perflib:"Current UDP Bandwidth"`
 	CurrentUDPRTT            float64 `perflib:"Current UDP RTT"`
-	FECRate                  float64 `perflib:"FEC Rate"`
-	LossRate                 float64 `perflib:"Loss Rate"`
-	RetransmissionRate       float64 `perflib:"Retransmission Rate"`
-	TCPReceivedRate          float64 `perflib:"TCP Received Rate"`
-	TCPSentRate              float64 `perflib:"TCP Sent Rate"`
-	TotalReceivedRate        float64 `perflib:"Total Received Rate"`
-	TotalSentRate            float64 `perflib:"Total Sent Rate"`
 	TotalReceivedBytes       float64 `perflib:"Total Received Bytes"`
 	TotalSentBytes           float64 `perflib:"Total Sent Bytes"`
 	UDPPacketsReceivedPersec float64 `perflib:"UDP Packets Received/sec"`
 	UDPPacketsSentPersec     float64 `perflib:"UDP Packets Sent/sec"`
-	UDPReceivedRate          float64 `perflib:"UDP Received Rate"`
-	UDPSentRate              float64 `perflib:"UDP Sent Rate"`
 }
 
 func (c *RemoteFxCollector) collectRemoteFXNetworkCount(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
@@ -317,48 +245,6 @@ func (c *RemoteFxCollector) collectRemoteFXNetworkCount(ctx *ScrapeContext, ch c
 			d.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.FECRate,
-			prometheus.CounterValue,
-			d.FECRate,
-			d.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.LossRate,
-			prometheus.CounterValue,
-			d.LossRate,
-			d.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.RetransmissionRate,
-			prometheus.CounterValue,
-			d.RetransmissionRate,
-			d.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.TCPReceivedRate,
-			prometheus.CounterValue,
-			d.TCPReceivedRate,
-			d.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.TCPSentRate,
-			prometheus.CounterValue,
-			d.TCPSentRate,
-			d.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.TotalReceivedRate,
-			prometheus.CounterValue,
-			d.TotalReceivedRate,
-			d.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.TotalSentRate,
-			prometheus.CounterValue,
-			d.TotalSentRate,
-			d.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
 			c.TotalReceivedBytes,
 			prometheus.CounterValue,
 			d.TotalReceivedBytes,
@@ -380,18 +266,6 @@ func (c *RemoteFxCollector) collectRemoteFXNetworkCount(ctx *ScrapeContext, ch c
 			c.UDPPacketsSentPersec,
 			prometheus.CounterValue,
 			d.UDPPacketsSentPersec,
-			d.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.UDPReceivedRate,
-			prometheus.CounterValue,
-			d.UDPReceivedRate,
-			d.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.UDPSentRate,
-			prometheus.CounterValue,
-			d.UDPSentRate,
 			d.Name,
 		)
 	}

@@ -24,19 +24,10 @@ Name | Description | Type | Labels
 `wmi_remote_fx_net_current_tcp_rtt` | Average TCP round-trip time (RTT) detected in seconds. | gauge | `session_name`
 `wmi_remote_fx_net_current_udp_bandwidth` | UDP Bandwidth detected in thousands of bits per second (1000 bps). | gauge | `session_name`
 `wmi_remote_fx_net_current_udp_rtt` | Average UDP round-trip time (RTT) detected in seconds. | gauge | `session_name`
-`wmi_remote_fx_net_fec_rate` | Forward Error Correction (FEC) percentage | counter | `session_name`
-`wmi_remote_fx_net_loss_rate` | Loss percentage | counter | `session_name`
-`wmi_remote_fx_net_retransmission_rate` | Percentage of packets that have been retransmitted | counter | `session_name`
-`wmi_remote_fx_net_tcp_received_rate` | Rate in bits per second (bps) at which data is received over TCP. | counter | `session_name`
-`wmi_remote_fx_net_tcp_sent_rate` | Rate in bits per second (bps) at which data is sent over TCP. | counter | `session_name`
-`wmi_remote_fx_net_total_received_rate` | Rate in bits per second (bps) at which data is received. | counter | `session_name`
-`wmi_remote_fx_net_total_sent_rate` | Rate in bits per second (bps) at which data is sent. | counter | `session_name`
 `wmi_remote_fx_net_total_received_bytes` | _Not yet documented_ | counter | `session_name`
 `wmi_remote_fx_net_total_sent_bytes` | _Not yet documented_ | counter | `session_name`
 `wmi_remote_fx_net_udp_packets_received_total` | Rate in packets per second at which packets are received over UDP. | counter | `session_name`
 `wmi_remote_fx_net_udp_packets_sent_total` | Rate in packets per second at which packets are sent over UDP. | counter | `session_name`
-`wmi_remote_fx_net_udp_received_rate` | Rate in bits per second (bps) at which data is received over UDP. | counter | `session_name`
-`wmi_remote_fx_net_udp_sent_rate` | Rate in bits per second (bps) at which data is sent over UDP. | counter | `session_name`
 
 ## Metrics (Graphics)
 
