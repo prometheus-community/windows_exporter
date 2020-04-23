@@ -33,10 +33,12 @@ Name     | Description | Enabled by default
 [net](docs/collector.net.md) | Network interface I/O | &#10003;
 [os](docs/collector.os.md) | OS metrics (memory, processes, users) | &#10003;
 [process](docs/collector.process.md) | Per-process metrics |
+[remote_fx](docs/collector.remote_fx.md) | RemoteFX protocol (RDP) metrics |
 [service](docs/collector.service.md) | Service state metrics | &#10003;
 [system](docs/collector.system.md) | System calls | &#10003;
 [tcp](docs/collector.tcp.md) | TCP connections |
 [thermalzone](docs/collector.thermalzone.md) | Thermal information
+[terminal_services](docs/collector.terminal_services.md) | Terminal services (RDS)
 [textfile](docs/collector.textfile.md) | Read prometheus metrics from a text file | &#10003;
 [vmware](docs/collector.vmware.md) | Performance counters installed by the Vmware Guest agent |
 
