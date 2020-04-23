@@ -32,15 +32,13 @@ type RemoteFxCollector struct {
 	UDPPacketsSentPersec     *prometheus.Desc
 
 	//gfx
-	AverageEncodingTime                                *prometheus.Desc
-	FrameQuality                                       *prometheus.Desc
-	FramesSkippedPerSecondInsufficientClientResources  *prometheus.Desc
-	FramesSkippedPerSecondInsufficientNetworkResources *prometheus.Desc
-	FramesSkippedPerSecondInsufficientServerResources  *prometheus.Desc
-	GraphicsCompressionratio                           *prometheus.Desc
-	InputFramesPerSecond                               *prometheus.Desc
-	OutputFramesPerSecond                              *prometheus.Desc
-	SourceFramesPerSecond                              *prometheus.Desc
+	AverageEncodingTime                         *prometheus.Desc
+	FrameQuality                                *prometheus.Desc
+	FramesSkippedPerSecondInsufficientResources *prometheus.Desc
+	GraphicsCompressionratio                    *prometheus.Desc
+	InputFramesPerSecond                        *prometheus.Desc
+	OutputFramesPerSecond                       *prometheus.Desc
+	SourceFramesPerSecond                       *prometheus.Desc
 }
 
 // NewRemoteFx ...
@@ -49,49 +47,49 @@ func NewRemoteFx() (Collector, error) {
 	return &RemoteFxCollector{
 		// net
 		BaseTCPRTT: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "net_base_tcp_rtt"),
+			prometheus.BuildFQName(Namespace, subsystem, "net_base_tcp_rtt_seconds"),
 			"Base TCP round-trip time (RTT) detected in seconds",
 			[]string{"session_name"},
 			nil,
 		),
 		BaseUDPRTT: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "net_base_udp_rtt"),
+			prometheus.BuildFQName(Namespace, subsystem, "net_base_udp_rtt_seconds"),
 			"Base UDP round-trip time (RTT) detected in seconds.",
 			[]string{"session_name"},
 			nil,
 		),
 		CurrentTCPBandwidth: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "net_current_tcp_bandwidth"),
-			"TCP Bandwidth detected in thousands of bits per second (1000 bps).",
+			"TCP Bandwidth detected in bytes per seccond.",
 			[]string{"session_name"},
 			nil,
 		),
 		CurrentTCPRTT: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "net_current_tcp_rtt"),
+			prometheus.BuildFQName(Namespace, subsystem, "net_current_tcp_rtt_seconds"),
 			"Average TCP round-trip time (RTT) detected in seconds.",
 			[]string{"session_name"},
 			nil,
 		),
 		CurrentUDPBandwidth: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "net_current_udp_bandwidth"),
-			"UDP Bandwidth detected in thousands of bits per second (1000 bps).",
+			"UDP Bandwidth detected in bytes per second.",
 			[]string{"session_name"},
 			nil,
 		),
 		CurrentUDPRTT: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "net_current_udp_rtt"),
+			prometheus.BuildFQName(Namespace, subsystem, "net_current_udp_rtt_seconds"),
 			"Average UDP round-trip time (RTT) detected in seconds.",
 			[]string{"session_name"},
 			nil,
 		),
 		TotalReceivedBytes: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "net_total_received_bytes"),
+			prometheus.BuildFQName(Namespace, subsystem, "net_received_bytes_total"),
 			"(TotalReceivedBytes)",
 			[]string{"session_name"},
 			nil,
 		),
 		TotalSentBytes: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "net_total_sent_bytes"),
+			prometheus.BuildFQName(Namespace, subsystem, "net_sent_bytes_total"),
 			"(TotalSentBytes)",
 			[]string{"session_name"},
 			nil,
@@ -111,7 +109,7 @@ func NewRemoteFx() (Collector, error) {
 
 		//gfx
 		AverageEncodingTime: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "gfx_average_encoding_time"),
+			prometheus.BuildFQName(Namespace, subsystem, "gfx_average_encoding_time_seconds"),
 			"Average frame encoding time in seconds",
 			[]string{"session_name"},
 			nil,
@@ -122,22 +120,10 @@ func NewRemoteFx() (Collector, error) {
 			[]string{"session_name"},
 			nil,
 		),
-		FramesSkippedPerSecondInsufficientClientResources: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "gfx_frames_skipped_insufficient_clt_res_total"),
+		FramesSkippedPerSecondInsufficientResources: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "gfx_frames_skipped_insufficient_resource_total"),
 			"Number of frames skipped per second due to insufficient client resources.",
-			[]string{"session_name"},
-			nil,
-		),
-		FramesSkippedPerSecondInsufficientNetworkResources: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "gfx_frames_skipped_insufficient_net_res_total"),
-			"Number of frames skipped per second due to insufficient network resources.",
-			[]string{"session_name"},
-			nil,
-		),
-		FramesSkippedPerSecondInsufficientServerResources: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "gfx_frames_skipped_insufficient_srv_res_total"),
-			"Number of frames skipped per second due to insufficient server resources.",
-			[]string{"session_name"},
+			[]string{"session_name", "resource"},
 			nil,
 		),
 		GraphicsCompressionratio: prometheus.NewDesc(
@@ -223,7 +209,7 @@ func (c *RemoteFxCollector) collectRemoteFXNetworkCount(ctx *ScrapeContext, ch c
 		ch <- prometheus.MustNewConstMetric(
 			c.CurrentTCPBandwidth,
 			prometheus.GaugeValue,
-			d.CurrentTCPBandwidth,
+			(d.CurrentTCPBandwidth*1000)/8,
 			d.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
@@ -235,7 +221,7 @@ func (c *RemoteFxCollector) collectRemoteFXNetworkCount(ctx *ScrapeContext, ch c
 		ch <- prometheus.MustNewConstMetric(
 			c.CurrentUDPBandwidth,
 			prometheus.GaugeValue,
-			d.CurrentUDPBandwidth,
+			(d.CurrentUDPBandwidth*1000)/8,
 			d.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
@@ -311,22 +297,25 @@ func (c *RemoteFxCollector) collectRemoteFXGraphicsCounters(ctx *ScrapeContext, 
 			d.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.FramesSkippedPerSecondInsufficientClientResources,
+			c.FramesSkippedPerSecondInsufficientResources,
 			prometheus.CounterValue,
 			d.FramesSkippedPerSecondInsufficientClientResources,
 			d.Name,
+			"client",
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.FramesSkippedPerSecondInsufficientNetworkResources,
+			c.FramesSkippedPerSecondInsufficientResources,
 			prometheus.CounterValue,
 			d.FramesSkippedPerSecondInsufficientNetworkResources,
 			d.Name,
+			"network",
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.FramesSkippedPerSecondInsufficientServerResources,
+			c.FramesSkippedPerSecondInsufficientResources,
 			prometheus.CounterValue,
 			d.FramesSkippedPerSecondInsufficientServerResources,
 			d.Name,
+			"server",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.GraphicsCompressionratio,

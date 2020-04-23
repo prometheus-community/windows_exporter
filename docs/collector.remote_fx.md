@@ -18,14 +18,14 @@ None
 
 Name | Description | Type | Labels
 -----|-------------|------|-------
-`wmi_remote_fx_net_base_udp_rtt` | Base UDP round-trip time (RTT) detected in seconds. | gauge | `session_name`
-`wmi_remote_fx_net_base_tcp_rtt` | Base TCP round-trip time (RTT) detected in seconds. | gauge | `session_name`
-`wmi_remote_fx_net_current_tcp_bandwidth` | TCP Bandwidth detected in thousands of bits per second (1000 bps). | gauge | `session_name`
-`wmi_remote_fx_net_current_tcp_rtt` | Average TCP round-trip time (RTT) detected in seconds. | gauge | `session_name`
-`wmi_remote_fx_net_current_udp_bandwidth` | UDP Bandwidth detected in thousands of bits per second (1000 bps). | gauge | `session_name`
-`wmi_remote_fx_net_current_udp_rtt` | Average UDP round-trip time (RTT) detected in seconds. | gauge | `session_name`
-`wmi_remote_fx_net_total_received_bytes` | _Not yet documented_ | counter | `session_name`
-`wmi_remote_fx_net_total_sent_bytes` | _Not yet documented_ | counter | `session_name`
+`wmi_remote_fx_net_base_udp_rtt_seconds` | Base UDP round-trip time (RTT) detected in seconds. | gauge | `session_name`
+`wmi_remote_fx_net_base_tcp_rtt_seconds` | Base TCP round-trip time (RTT) detected in seconds. | gauge | `session_name`
+`wmi_remote_fx_net_current_tcp_bandwidth` | TCP Bandwidth detected in bytes per second. | gauge | `session_name`
+`wmi_remote_fx_net_current_tcp_rtt_seconds` | Average TCP round-trip time (RTT) detected in seconds. | gauge | `session_name`
+`wmi_remote_fx_net_current_udp_bandwidth` | UDP Bandwidth detected in bytes per second. | gauge | `session_name`
+`wmi_remote_fx_net_current_udp_rtt_seconds` | Average UDP round-trip time (RTT) detected in seconds. | gauge | `session_name`
+`wmi_remote_fx_net_received_bytes_total` | _Not yet documented_ | counter | `session_name`
+`wmi_remote_fx_net_sent_bytes_total` | _Not yet documented_ | counter | `session_name`
 `wmi_remote_fx_net_udp_packets_received_total` | Rate in packets per second at which packets are received over UDP. | counter | `session_name`
 `wmi_remote_fx_net_udp_packets_sent_total` | Rate in packets per second at which packets are sent over UDP. | counter | `session_name`
 
@@ -33,11 +33,9 @@ Name | Description | Type | Labels
 
 Name | Description | Type | Labels
 -----|-------------|------|-------
-`wmi_remote_fx_gfx_average_encoding_time` | Average frame encoding time. | gauge | `session_name`
+`wmi_remote_fx_gfx_average_encoding_time_seconds` | Average frame encoding time. | gauge | `session_name`
 `wmi_remote_fx_gfx_frame_quality` | Quality of the output frame expressed as a percentage of the quality of the source frame. | gauge | `session_name`
-`wmi_remote_fx_gfx_frames_skipped_insufficient_clt_res_total` | Number of frames skipped per second due to insufficient client resources. | counter | `session_name`
-`wmi_remote_fx_gfx_frames_skipped_insufficient_net_res_total` | Number of frames skipped per second due to insufficient network resources. | counter | `session_name`
-`wmi_remote_fx_gfx_frames_skipped_insufficient_srv_res_total` | Number of frames skipped per second due to insufficient server resources. | counter | `session_name`
+`wmi_remote_fx_gfx_frames_skipped_insufficient_resource_total` | Number of frames skipped per second due to insufficient resources. resources are client, server or network. | counter | `session_name`, `resource`
 `wmi_remote_fx_gfx_graphics_compression_ratio` | Ratio of the number of bytes encoded to the number of bytes input. | gauge | `session_name`
 `wmi_remote_fx_gfx_input_frames_total` | Number of sources frames provided as input to RemoteFX graphics per second. | counter | `session_name`
 `wmi_remote_fx_gfx_output_frames_total` | Number of frames sent to the client per second. | counter | `session_name`

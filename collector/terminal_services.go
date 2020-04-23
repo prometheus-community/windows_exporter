@@ -87,7 +87,7 @@ func NewTerminalServicesCollector() (Collector, error) {
 			nil,
 		),
 		PageFaultsPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "page_fault_per_sec"),
+			prometheus.BuildFQName(Namespace, subsystem, "page_fault_total"),
 			"Rate at which page faults occur in the threads executing in this process. A page fault occurs when a thread refers to a virtual memory page that is not in its working set in main memory. The page may not be retrieved from disk if it is on the standby list and therefore already in main memory. The page also may not be retrieved if it is in use by another process which shares the page.",
 			[]string{"session_name"},
 			nil,
@@ -105,25 +105,25 @@ func NewTerminalServicesCollector() (Collector, error) {
 			nil,
 		),
 		PercentPrivilegedTime: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "privileged_time_total"),
+			prometheus.BuildFQName(Namespace, subsystem, "privileged_time_seconds_total"),
 			"Total elapsed time that the threads of the process have spent executing code in privileged mode.",
 			[]string{"session_name"},
 			nil,
 		),
 		PercentProcessorTime: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "processor_time_total"),
+			prometheus.BuildFQName(Namespace, subsystem, "processor_time_seconds_total"),
 			"Total elapsed time that all of the threads of this process used the processor to execute instructions.",
 			[]string{"session_name"},
 			nil,
 		),
 		PercentUserTime: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "user_time_total"),
+			prometheus.BuildFQName(Namespace, subsystem, "user_time_seconds_total"),
 			"Total elapsed time that this process's threads have spent executing code in user mode. Applications, environment subsystems, and integral subsystems execute in user mode.",
 			[]string{"session_name"},
 			nil,
 		),
 		PoolNonpagedBytes: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "pool_non_paged_Bytes"),
+			prometheus.BuildFQName(Namespace, subsystem, "pool_non_paged_bytes"),
 			"Number of bytes in the non-paged pool, an area of system memory (physical memory used by the operating system) for objects that cannot be written to disk, but must remain in physical memory as long as they are allocated. This property displays the last observed value only; it is not an average.",
 			[]string{"session_name"},
 			nil,
@@ -159,13 +159,13 @@ func NewTerminalServicesCollector() (Collector, error) {
 			nil,
 		),
 		WorkingSet: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "workingset"),
+			prometheus.BuildFQName(Namespace, subsystem, "working_set_bytes"),
 			"Current number of bytes in the working set of this process. The working set is the set of memory pages touched recently by the threads in the process. If free memory in the computer is above a threshold, pages are left in the working set of a process even if they are not in use. When free memory falls below a threshold, pages are trimmed from working sets. If they are needed, they are then soft-faulted back into the working set before they leave main memory.",
 			[]string{"session_name"},
 			nil,
 		),
 		WorkingSetPeak: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "workingset_peak"),
+			prometheus.BuildFQName(Namespace, subsystem, "working_set_bytes_peak"),
 			"Maximum number of bytes in the working set of this process at any point in time. The working set is the set of memory pages touched recently by the threads in the process. If free memory in the computer is above a threshold, pages are left in the working set of a process even if they are not in use. When free memory falls below a threshold, pages are trimmed from working sets. If they are needed, they are then soft-faulted back into the working set before they leave main memory.",
 			[]string{"session_name"},
 			nil,
@@ -275,7 +275,7 @@ func (c *TerminalServicesCollector) collectTSSessionCounters(ctx *ScrapeContext,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.PageFaultsPersec,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			d.PageFaultsPersec,
 			d.Name,
 		)
