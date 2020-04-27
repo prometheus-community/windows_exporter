@@ -215,12 +215,22 @@ func toLabelName(name string) string {
 	return strings.ReplaceAll(strings.Join(strings.Fields(strings.ToLower(name)), "_"), ".", "_")
 }
 
+// msToSec converts from ms to seconds
+func msToSec(t float64) float64 {
+	return t / 1000
+}
+
+// minToSec converts from minutes to seconds
+func minToSec(t float64) float64 {
+	return t * 60
+}
+
 // newExchangeCollector returns a new Collector
 func newExchangeCollector() (Collector, error) {
 	// https://docs.microsoft.com/en-us/exchange/exchange-2013-performance-counters-exchange-2013-help
 	c := exchangeCollector{
 		// MS Exchange RPC Client Access
-		RPCAveragedLatency:  desc("rpc_avg_latency", "The latency (ms), averaged for the past 1024 packets"),
+		RPCAveragedLatency:  desc("rpc_avg_latency_sec", "The latency (sec), averaged for the past 1024 packets"),
 		RPCRequests:         desc("rpc_requests", "Number of client requests currently being processed by  the RPC Client Access service"),
 		ActiveUserCount:     desc("rpc_active_user_count", "Number of unique users that have shown some kind of activity in the last 2 minutes"),
 		ConnectionCount:     desc("rpc_connection_count", "Total number of client connections maintained"),
@@ -228,10 +238,10 @@ func newExchangeCollector() (Collector, error) {
 		UserCount:           desc("rpc_user_count", "Number of users"),
 
 		// MS Exchange AD Access Processes
-		LDAPReadTime:                           desc("ldap_read_time", "Time (in ms) to send an LDAP read request and receive a response", "name"),
-		LDAPSearchTime:                         desc("ldap_search_time", "Time (in ms) to send an LDAP search request and receive a response", "name"),
+		LDAPReadTime:                           desc("ldap_read_time_sec", "Time (sec) to send an LDAP read request and receive a response", "name"),
+		LDAPSearchTime:                         desc("ldap_search_time_sec", "Time (sec) to send an LDAP search request and receive a response", "name"),
 		LDAPTimeoutErrorsPerSec:                desc("ldap_timeout_errors_per_sec", "LDAP timeout errors per second", "name"),
-		LongRunningLDAPOperationsPerMin:        desc("ldap_long_running_ops_per_min", "Long Running LDAP operations pr minute", "name"),
+		LongRunningLDAPOperationsPerMin:        desc("ldap_long_running_ops_per_sec", "Long Running LDAP operations pr minute", "name"),
 		LDAPSearchesTimeLimitExceededPerMinute: desc("ldap_searches_time_limit_exceeded_per_min", "LDAP searches time limit exceeded per minute", "name"),
 
 		// MS Exchange Transport Queues
@@ -245,32 +255,28 @@ func newExchangeCollector() (Collector, error) {
 		PoisonQueueLength:                       desc("transport_queues_poison", "Poison Queue length", "name"),
 
 		// MS Exchange Database Instances
-		IODatabaseReadsAverageLatency:          desc("iodb_reads_avg_latency", "Average time (in ms) per database read operation (<20ms)", "name"),
-		IODatabaseWritesAverageLatency:         desc("iodb_writes_avg_latency", "Average time (in ms) per database write opreation (<50ms)", "name"),
-		IOLogWritesAverageLatency:              desc("iodb_log_writes_avg_latency", "Average time (in ms) per Log write operation (<10ms)", "name"),
-		IODatabaseReadsRecoveryAverageLatency:  desc("iodb_reads_recovery_avg_latency", "Average time (in ms) per passive database read operation (<10ms)", "name"),
-		IODatabaseWritesRecoveryAverageLatency: desc("iodb_writes_recovery_avg_latency", "Average time (in ms) per passive database write operation (<200ms)", "name"),
+		IODatabaseReadsAverageLatency:          desc("iodb_reads_avg_latency_sec", "Average time (sec) per database read operation (<0.02s)", "name"),
+		IODatabaseWritesAverageLatency:         desc("iodb_writes_avg_latency_sec", "Average time (in ms) per database write opreation (<0.05s)", "name"),
+		IOLogWritesAverageLatency:              desc("iodb_log_writes_avg_latency_sec", "Average time (in ms) per Log write operation (<0.01s)", "name"),
+		IODatabaseReadsRecoveryAverageLatency:  desc("iodb_reads_recovery_avg_latency_sec", "Average time (in ms) per passive database read operation (<0.01s)", "name"),
+		IODatabaseWritesRecoveryAverageLatency: desc("iodb_writes_recovery_avg_latency_sec", "Average time (in ms) per passive database write operation (<0.2s)", "name"),
 
 		// MS Exchange HTTP Proxy
-		MailboxServerLocatorAverageLatency:         desc("http_proxy_mailbox_server_locator_avg_latency", "Average latency (ms) of MailboxServerLocator web service calls", "name"),
+		MailboxServerLocatorAverageLatency:         desc("http_proxy_mailbox_server_locator_avg_latency_sec", "Average latency (sec) of MailboxServerLocator web service calls", "name"),
 		AverageAuthenticationLatency:               desc("http_proxy_avg_auth_latency", "Average time spent authenticating CAS requests over the last 200 samples", "name"),
-		AverageClientAccessServerProcessingLatency: desc("http_proxy_avg_client_access_server_proccessing_latency", "Average latency (ms) of CAS processing time over the last 200 requests", "name"),
+		AverageClientAccessServerProcessingLatency: desc("http_proxy_avg_client_access_server_proccessing_latency_sec", "Average latency (sec) of CAS processing time over the last 200 requests", "name"),
 		MailboxServerProxyFailureRate:              desc("http_proxy_mailbox_server_proxy_failure_rate", "Percentage of connection failures between this CAS and MBX servers over the last 200 samples", "name"),
 		OutstandingProxyRequests:                   desc("http_proxy_outstanding_proxy_requests", "Number of concurrent outstanding proxy requests", "name"),
 		ProxyRequestsPerSec:                        desc("http_proxy_requests_per_sec", "Number of proxy requests processed each second", "name"),
-
 		// MS Exchange ActiveSync
 		ActiveSyncRequestsPerSec: desc("activesync_requests_per_sec", "Number of HTTP requests received from the client via ASP.NET per second. Used to determine current user load"),
 		PingCommandsPending:      desc("activesync_ping_cmds_pending", "Number of ping commands currently pending in the queue"),
-		SyncCommandsPerSec:       desc("activesync_sync_cmds_pending", "Number of sync commands processed per second. Clients use this command to synchronize items within a folder"),
-
+		SyncCommandsPerSec:       desc("activesync_sync_cmds_per_sec", "Number of sync commands processed per second. Clients use this command to synchronize items within a folder"),
 		// MS Exchange Availability Service
 		AvailabilityRequestsSec: desc("avail_service_requests_per_sec", "Number of requests serviced per second"),
-
 		// MS Exchange OWA (Outlook Web App)
 		CurrentUniqueUsers: desc("owa_current_unique_users", "Number of unique users currently logged on to Outlook Web App"),
 		OWARequestsPerSec:  desc("owa_requests_per_sec", "Number of requests handled by Outlook Web App per second"),
-
 		// MS Exchange Autodiscover
 		AutodiscoverRequestsPerSec: desc("autodiscover_requests_per_sec", "Number of autodiscover service requests processed each second"),
 
@@ -357,13 +363,13 @@ func (c *exchangeCollector) collectLDAP(ch chan<- prometheus.Metric) error {
 		ch <- prometheus.MustNewConstMetric(
 			c.LDAPReadTime,
 			prometheus.GaugeValue,
-			float64(proc.LDAPReadTime),
+			msToSec(float64(proc.LDAPReadTime)),
 			labelName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.LDAPSearchTime,
 			prometheus.GaugeValue,
-			float64(proc.LDAPSearchTime),
+			msToSec(float64(proc.LDAPSearchTime)),
 			labelName,
 		)
 		ch <- prometheus.MustNewConstMetric(
@@ -375,7 +381,7 @@ func (c *exchangeCollector) collectLDAP(ch chan<- prometheus.Metric) error {
 		ch <- prometheus.MustNewConstMetric(
 			c.LongRunningLDAPOperationsPerMin,
 			prometheus.GaugeValue,
-			float64(proc.LongRunningLDAPOperationsPerMin),
+			minToSec(float64(proc.LongRunningLDAPOperationsPerMin)),
 			labelName,
 		)
 		ch <- prometheus.MustNewConstMetric(
@@ -463,31 +469,31 @@ func (c *exchangeCollector) collectDatabaseInstances(ch chan<- prometheus.Metric
 		ch <- prometheus.MustNewConstMetric(
 			c.IODatabaseReadsAverageLatency,
 			prometheus.CounterValue,
-			float64(db.IODatabaseReadsAverageLatency),
+			msToSec(float64(db.IODatabaseReadsAverageLatency)),
 			labelName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.IODatabaseWritesAverageLatency,
 			prometheus.CounterValue,
-			float64(db.IODatabaseWritesAverageLatency),
+			msToSec(float64(db.IODatabaseWritesAverageLatency)),
 			labelName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.IOLogWritesAverageLatency,
 			prometheus.CounterValue,
-			float64(db.IOLogWritesAverageLatency),
+			msToSec(float64(db.IOLogWritesAverageLatency)),
 			labelName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.IODatabaseReadsRecoveryAverageLatency,
 			prometheus.CounterValue,
-			float64(db.IODatabaseReadsRecoveryAverageLatency),
+			msToSec(float64(db.IODatabaseReadsRecoveryAverageLatency)),
 			labelName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.IODatabaseWritesRecoveryAverageLatency,
 			prometheus.CounterValue,
-			float64(db.IODatabaseWritesRecoveryAverageLatency),
+			msToSec(float64(db.IODatabaseWritesRecoveryAverageLatency)),
 			labelName,
 		)
 	}
@@ -504,7 +510,7 @@ func (c *exchangeCollector) collectHTTPProxy(ch chan<- prometheus.Metric) error 
 		ch <- prometheus.MustNewConstMetric(
 			c.MailboxServerLocatorAverageLatency,
 			prometheus.CounterValue,
-			float64(proxy.MailboxServerLocatorAverageLatency),
+			msToSec(float64(proxy.MailboxServerLocatorAverageLatency)),
 			labelName,
 		)
 		ch <- prometheus.MustNewConstMetric(
@@ -516,7 +522,7 @@ func (c *exchangeCollector) collectHTTPProxy(ch chan<- prometheus.Metric) error 
 		ch <- prometheus.MustNewConstMetric(
 			c.AverageClientAccessServerProcessingLatency,
 			prometheus.GaugeValue,
-			float64(proxy.AverageClientAccessServerProcessingLatency),
+			msToSec(float64(proxy.AverageClientAccessServerProcessingLatency)),
 			labelName,
 		)
 		ch <- prometheus.MustNewConstMetric(
@@ -648,7 +654,7 @@ func (c *exchangeCollector) collectRPC(ch chan<- prometheus.Metric) error {
 		ch <- prometheus.MustNewConstMetric(
 			c.RPCAveragedLatency,
 			prometheus.GaugeValue,
-			float64(rpc.RPCAveragedLatency),
+			msToSec(float64(rpc.RPCAveragedLatency)),
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.RPCRequests,
