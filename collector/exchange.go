@@ -4,6 +4,7 @@ package collector
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/StackExchange/wmi"
@@ -325,6 +326,8 @@ func newExchangeCollector() (Collector, error) {
 
 			fmt.Printf("%-15s %-32s %-32s\n", state, name, exchangeCollectorFuncDesc[name])
 		}
+
+		os.Exit(0)
 	}
 
 	return &c, nil
