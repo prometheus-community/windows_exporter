@@ -34,16 +34,16 @@ If no classes are given, all classes will be queried.
 
 Name | Description | Type | Labels
 -----|-------------|------|-------
-`wmi_exchange_rpc_avg_latency` | The latency (ms), averaged for the past 1024 packets | gauge |
+`wmi_exchange_rpc_avg_latency_sec` | The latency (seconds), averaged for the past 1024 packets | gauge |
 `wmi_exchange_rpc_requests` | Number of client requests currently being processed by  the RPC Client Access service | gauge |
 `wmi_exchange_rpc_active_user_count` | Number of unique users that have shown some kind of activity in the last 2 minutes | gauge |
 `wmi_exchange_rpc_connection_count` | Total number of client connections maintained | gauge |
 `wmi_exchange_rpc_ops_per_sec` | The rate (ops/s) at wich RPC operations occur | counter | 
 `wmi_exchange_rpc_user_count` | Number of users | gauge |
-`wmi_exchange_ldap_read_time` | Time (in ms) to send an LDAP read request and receive a response | gauge | name
-`wmi_exchange_ldap_search_time` | Time (in ms) to send an LDAP search request and receive a response | gauge | name
+`wmi_exchange_ldap_read_time_sec` | Time (seconds) to send an LDAP read request and receive a response | gauge | name
+`wmi_exchange_ldap_search_time_se` | Time (seconds) to send an LDAP search request and receive a response | gauge | name
 `wmi_exchange_ldap_timeout_errors_per_sec` | LDAP timeout errors per second | gauge | name
-`wmi_exchange_ldap_long_running_ops_per_min` | Long Running LDAP operations pr minute | gauge | name
+`wmi_exchange_ldap_long_running_ops_per_sec` | Long Running LDAP operations per second | gauge | name
 `wmi_exchange_ldap_searches_time_limit_exceeded_per_min` | LDAP searches time limit exceeded per minute | gauge | name
 `wmi_exchange_transport_queues_external_active_remote_delivery` | External Active Remote Delivery Queue length | gauge | name
 `wmi_exchange_transport_queues_internal_active_remote_delivery` | Internal Active Remote Delivery Queue length | gauge | name
@@ -52,16 +52,16 @@ Name | Description | Type | Labels
 `wmi_exchange_transport_queues_unreachable` | Unreachable Queue length | gauge | name
 `wmi_exchange_transport_queues_external_largest_delivery` | External Largest Delivery Queue length | gauge | name
 `wmi_exchange_transport_queues_internal_largest_delivery` | Internal Largest Delivery Queue length | gauge | name
-`wmi_exchange_transport_queues_poison` | Poison Queue length | gauge | name
-`wmi_exchange_iodb_reads_avg_latency` | Average time (in ms) per database read operation | counter | name
-`wmi_exchange_iodb_writes_avg_latency` | Average time (in ms) per database write opreation | counter | name
-`wmi_exchange_iodb_log_writes_avg_latency` | Average time (in ms) per Log write operation | counter | name
-`wmi_exchange_iodb_reads_recovery_avg_latency` | Average time (in ms) per passive database read operation  | counter | name
-`wmi_exchange_iodb_writes_recovery_avg_latency` | Average time (in ms) per passive database write operation | counter | name
+`wmi_exchange_transport_queues_poison_sec` | Poison Queue length | gauge | name
+`wmi_exchange_iodb_reads_avg_latency_sec` | Average time (seconds) per database read operation | counter | name
+`wmi_exchange_iodb_writes_avg_latency_sec` | Average time (seconds) per database write opreation | counter | name
+`wmi_exchange_iodb_log_writes_avg_latency_sec` | Average time (seconds) per Log write operation | counter | name
+`wmi_exchange_iodb_reads_recovery_avg_latency_sec` | Average time (seconds) per passive database read operation  | counter | name
+`wmi_exchange_iodb_writes_recovery_avg_latency_sec` | Average time (seconds) per passive database write operation | counter | name
 
-`wmi_exchange_http_proxy_mailbox_server_locator_avg_latency` | Average latency (ms) of MailboxServerLocator web service calls | counter | name
+`wmi_exchange_http_proxy_mailbox_server_locator_avg_latency_sec` | Average latency (seconds) of MailboxServerLocator web service calls | counter | name
 `wmi_exchange_http_proxy_avg_auth_latency` | Average time spent authenticating CAS requests over the last 200 samples | gauge | name
-`wmi_exchange_http_proxy_avg_client_access_server_proccessing_latency` | Average latency (ms) of CAS processing time over the last 200 requests | gauge | name
+`wmi_exchange_http_proxy_avg_client_access_server_proccessing_latency_sec` | Average latency (seconds) of CAS processing time over the last 200 requests | gauge | name
 `wmi_exchange_http_proxy_mailbox_server_proxy_failure_rate` | Percentage of connection failures between this CAS and MBX servers over the last 200 samples | gauge | name
 `wmi_exchange_http_proxy_outstanding_proxy_requests` | Number of concurrent outstanding proxy requests | gauge | name
 `wmi_exchange_http_proxy_requests_per_sec` | Number of proxy requests processed each second | counter | name
