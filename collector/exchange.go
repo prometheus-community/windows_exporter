@@ -462,31 +462,31 @@ func (c *exchangeCollector) collectDatabaseInstances(ch chan<- prometheus.Metric
 		}
 		ch <- prometheus.MustNewConstMetric(
 			c.IODatabaseReadsAverageLatency,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			float64(db.IODatabaseReadsAverageLatency),
 			labelName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.IODatabaseWritesAverageLatency,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			float64(db.IODatabaseWritesAverageLatency),
 			labelName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.IOLogWritesAverageLatency,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			float64(db.IOLogWritesAverageLatency),
 			labelName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.IODatabaseReadsRecoveryAverageLatency,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			float64(db.IODatabaseReadsRecoveryAverageLatency),
 			labelName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.IODatabaseWritesRecoveryAverageLatency,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			float64(db.IODatabaseWritesRecoveryAverageLatency),
 			labelName,
 		)
@@ -503,7 +503,7 @@ func (c *exchangeCollector) collectHTTPProxy(ch chan<- prometheus.Metric) error 
 		labelName := toLabelName(proxy.Name)
 		ch <- prometheus.MustNewConstMetric(
 			c.MailboxServerLocatorAverageLatency,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			float64(proxy.MailboxServerLocatorAverageLatency),
 			labelName,
 		)
@@ -533,7 +533,7 @@ func (c *exchangeCollector) collectHTTPProxy(ch chan<- prometheus.Metric) error 
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.ProxyRequestsPerSec,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			float64(proxy.ProxyRequestsPerSec),
 			labelName,
 		)
@@ -549,17 +549,17 @@ func (c *exchangeCollector) collectActiveSync(ch chan<- prometheus.Metric) error
 	for _, acsync := range data {
 		ch <- prometheus.MustNewConstMetric(
 			c.ActiveSyncRequestsPerSec,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			float64(acsync.RequestsPerSec),
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.PingCommandsPending,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			float64(acsync.PingCommandsPending),
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.SyncCommandsPerSec,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			float64(acsync.SyncCommandsPerSec),
 		)
 	}
@@ -574,7 +574,7 @@ func (c *exchangeCollector) collectAvailabilityService(ch chan<- prometheus.Metr
 	for _, availservice := range data {
 		ch <- prometheus.MustNewConstMetric(
 			c.AvailabilityRequestsSec,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			float64(availservice.RequestsSec),
 		)
 	}
@@ -594,7 +594,7 @@ func (c *exchangeCollector) collectOWA(ch chan<- prometheus.Metric) error {
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.OWARequestsPerSec,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			float64(owa.RequestsPerSec),
 		)
 	}
@@ -609,7 +609,7 @@ func (c *exchangeCollector) collectAutoDiscover(ch chan<- prometheus.Metric) err
 	for _, autodisc := range data {
 		ch <- prometheus.MustNewConstMetric(
 			c.AutodiscoverRequestsPerSec,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			float64(autodisc.RequestsPerSec),
 		)
 	}
@@ -662,17 +662,17 @@ func (c *exchangeCollector) collectRPC(ch chan<- prometheus.Metric) error {
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.ConnectionCount,
-			prometheus.CounterValue,
+			prometheus.GaugeValue,
 			float64(rpc.ConnectionCount),
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.RPCOperationsPerSec,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			float64(rpc.RPCOperationsPerSec),
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.UserCount,
-			prometheus.CounterValue,
+			prometheus.GaugeValue,
 			float64(rpc.UserCount),
 		)
 	}
