@@ -345,7 +345,7 @@ func (c *exchangeCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Met
 
 func (c *exchangeCollector) collectLDAP(ch chan<- prometheus.Metric) error {
 	data := []win32_PerfRawData_MSExchangeADAccess_MSExchangeADAccessProcesses{}
-	if err := wmi.Query("SELECT * FROM "+className(data), &data); err != nil {
+	if err := wmi.Query(queryAll(&data), &data); err != nil {
 		return err
 	}
 	for _, proc := range data {
@@ -390,7 +390,7 @@ func (c *exchangeCollector) collectLDAP(ch chan<- prometheus.Metric) error {
 
 func (c *exchangeCollector) collectTransportQueues(ch chan<- prometheus.Metric) error {
 	data := []win32_PerfRawData_MSExchangeTransportQueues_MSExchangeTransportQueues{}
-	if err := wmi.Query("SELECT * FROM "+className(data), &data); err != nil {
+	if err := wmi.Query(queryAll(&data), &data); err != nil {
 		return err
 	}
 	for _, queue := range data {
@@ -452,7 +452,7 @@ func (c *exchangeCollector) collectTransportQueues(ch chan<- prometheus.Metric) 
 
 func (c *exchangeCollector) collectDatabaseInstances(ch chan<- prometheus.Metric) error {
 	data := []win32_PerfRawData_ESE_MSExchangeDatabaseInstances{}
-	if err := wmi.Query("SELECT * FROM "+className(data), &data); err != nil {
+	if err := wmi.Query(queryAll(&data), &data); err != nil {
 		return err
 	}
 	for _, db := range data {
@@ -496,7 +496,7 @@ func (c *exchangeCollector) collectDatabaseInstances(ch chan<- prometheus.Metric
 
 func (c *exchangeCollector) collectHTTPProxy(ch chan<- prometheus.Metric) error {
 	data := []win32_PerfRawData_MSExchangeHttpProxy_MSExchangeHttpProxy{}
-	if err := wmi.Query("SELECT * FROM "+className(data), &data); err != nil {
+	if err := wmi.Query(queryAll(&data), &data); err != nil {
 		return err
 	}
 	for _, proxy := range data {
@@ -543,7 +543,7 @@ func (c *exchangeCollector) collectHTTPProxy(ch chan<- prometheus.Metric) error 
 
 func (c *exchangeCollector) collectActiveSync(ch chan<- prometheus.Metric) error {
 	data := []win32_PerfRawData_MSExchangeActiveSync_MSExchangeActiveSync{}
-	if err := wmi.Query("SELECT * FROM "+className(data), &data); err != nil {
+	if err := wmi.Query(queryAll(&data), &data); err != nil {
 		return err
 	}
 	for _, acsync := range data {
@@ -568,7 +568,7 @@ func (c *exchangeCollector) collectActiveSync(ch chan<- prometheus.Metric) error
 
 func (c *exchangeCollector) collectAvailabilityService(ch chan<- prometheus.Metric) error {
 	data := []win32_PerfRawData_MSExchangeAvailabilityService_MSExchangeAvailabilityService{}
-	if err := wmi.Query("SELECT * FROM "+className(data), &data); err != nil {
+	if err := wmi.Query(queryAll(&data), &data); err != nil {
 		return err
 	}
 	for _, availservice := range data {
@@ -583,7 +583,7 @@ func (c *exchangeCollector) collectAvailabilityService(ch chan<- prometheus.Metr
 
 func (c *exchangeCollector) collectOWA(ch chan<- prometheus.Metric) error {
 	data := []win32_PerfRawData_MSExchangeOWA_MSExchangeOWA{}
-	if err := wmi.Query("SELECT * FROM "+className(data), &data); err != nil {
+	if err := wmi.Query(queryAll(&data), &data); err != nil {
 		return err
 	}
 	for _, owa := range data {
@@ -603,7 +603,7 @@ func (c *exchangeCollector) collectOWA(ch chan<- prometheus.Metric) error {
 
 func (c *exchangeCollector) collectAutoDiscover(ch chan<- prometheus.Metric) error {
 	data := []win32_PerfRawData_MSExchangeAutodiscover_MSExchangeAutodiscover{}
-	if err := wmi.Query("SELECT * FROM "+className(data), &data); err != nil {
+	if err := wmi.Query(queryAll(&data), &data); err != nil {
 		return err
 	}
 	for _, autodisc := range data {
@@ -618,7 +618,7 @@ func (c *exchangeCollector) collectAutoDiscover(ch chan<- prometheus.Metric) err
 
 func (c *exchangeCollector) collectManagementWorkloads(ch chan<- prometheus.Metric) error {
 	data := []win32_PerfRawData_MSExchangeWorkloadManagementWorkloads_MSExchangeWorkloadManagementWorkloads{}
-	if err := wmi.Query("SELECT * FROM "+className(data), &data); err != nil {
+	if err := wmi.Query(queryAll(&data), &data); err != nil {
 		return err
 	}
 	ch <- prometheus.MustNewConstMetric(
@@ -641,7 +641,7 @@ func (c *exchangeCollector) collectManagementWorkloads(ch chan<- prometheus.Metr
 
 func (c *exchangeCollector) collectRPC(ch chan<- prometheus.Metric) error {
 	data := []win32_PerfRawData_MSExchangeRpcClientAccess_MSExchangeRpcClientAccess{}
-	if err := wmi.Query("SELECT * FROM "+className(data), &data); err != nil {
+	if err := wmi.Query(queryAll(&data), &data); err != nil {
 		return err
 	}
 	for _, rpc := range data {
