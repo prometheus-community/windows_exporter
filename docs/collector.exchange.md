@@ -1,6 +1,6 @@
 # exchange collector
 
-The exchange collector exposes metrics about the MS Exchange server
+The exchange collector exposes metrics about the MS Exchange server. All metrics are picked based on this document : [https://docs.microsoft.com/en-us/exchange/exchange-2013-performance-counters-exchange-2013-help]|(https://docs.microsoft.com/en-us/exchange/exchange-2013-performance-counters-exchange-2013-help)
 
 |||
 -|-
