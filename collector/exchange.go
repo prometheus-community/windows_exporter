@@ -12,8 +12,6 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
-const subsystem string = "exchange"
-
 type exchangeCollector struct {
 	LDAPReadTime                               *prometheus.Desc
 	LDAPSearchTime                             *prometheus.Desc
@@ -194,7 +192,7 @@ func init() {
 // desc creates a new prometheus description
 func desc(metricName string, description string, labels ...string) *prometheus.Desc {
 	return prometheus.NewDesc(
-		prometheus.BuildFQName(Namespace, subsystem, metricName),
+		prometheus.BuildFQName(Namespace, "exchange", metricName),
 		description,
 		labels,
 		nil,
