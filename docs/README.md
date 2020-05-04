@@ -6,6 +6,7 @@ This directory contains documentation of the collectors in the WMI exporter, wit
 - [`adfs`](collector.adfs.md)
 - [`cpu`](collector.cpu.md)
 - [`cs`](collector.cs.md)
+- [`dhcp`](collector.dhcp.md)
 - [`dns`](collector.dns.md)
 - [`hyperv`](collector.hyperv.md)
 - [`iis`](collector.iis.md)
