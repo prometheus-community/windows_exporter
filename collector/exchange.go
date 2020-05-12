@@ -16,7 +16,17 @@ import (
 type collectorFunc func(ctx *ScrapeContext, ch chan<- prometheus.Metric) error
 
 func init() {
-	registerCollector("exchange", newExchangeCollector)
+	registerCollector("exchange", newExchangeCollector,
+		"MSExchange ADAccess Processes",
+		"MSExchangeTransport Queues",
+		"MSExchange HttpProxy",
+		"MSExchange ActiveSync",
+		"MSExchange Availability Service",
+		"MSExchange OWA",
+		"MSExchange Autodiscover",
+		"MSExchange WorkloadManagement Workloads",
+		"MSExchange RpcClientAccess",
+	)
 }
 
 type exchangeCollector struct {
