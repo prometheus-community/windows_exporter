@@ -195,17 +195,17 @@ func (c *exchangeCollector) collectADAccessProcesses(ctx *ScrapeContext, ch chan
 	}
 
 	labelUseCount := make(map[string]int)
-
 	for _, proc := range data {
 		labelName := toLabelName(proc.Name)
 		if strings.HasSuffix(labelName, "_total") {
 			continue
 		}
 
+		// since we're not including the PID suffix from the instance names in the label names,
+		// we get an occational duplicate. This seems to affect about 4 instances only on this object.
 		labelUseCount[labelName]++
 		if labelUseCount[labelName] > 1 {
-			log.Debugf("Instance with label %s has been seen %d times. Skipping", labelName, labelUseCount[labelName])
-			continue
+			labelName = fmt.Sprintf("%s_%d", labelName, labelUseCount[labelName])
 		}
 
 		ch <- prometheus.MustNewConstMetric(
