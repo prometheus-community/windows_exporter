@@ -194,10 +194,17 @@ func (c *exchangeCollector) collectADAccessProcesses(ctx *ScrapeContext, ch chan
 		return err
 	}
 
+	labelUseCount := make(map[string]int)
+
 	for _, proc := range data {
-		log.Debugln(proc.Name)
 		labelName := toLabelName(proc.Name)
 		if strings.HasSuffix(labelName, "_total") {
+			continue
+		}
+
+		labelUseCount[labelName]++
+		if labelUseCount[labelName] > 1 {
+			log.Debugf("Instance with label %s has been seen %d times. Skipping", labelName, labelUseCount[labelName])
 			continue
 		}
 
@@ -605,7 +612,9 @@ func contains(s []string, e string) bool {
 
 // toLabelName converts strings to lowercase and replaces all whitespace and dots with underscores
 func toLabelName(name string) string {
-	return strings.ReplaceAll(strings.Join(strings.Fields(strings.ToLower(name)), "_"), ".", "_")
+	s := strings.ReplaceAll(strings.Join(strings.Fields(strings.ToLower(name)), "_"), ".", "_")
+	s = strings.ReplaceAll(s, "__", "_")
+	return s
 }
 
 // msToSec converts from ms to seconds
