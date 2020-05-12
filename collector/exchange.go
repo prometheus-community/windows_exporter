@@ -23,7 +23,7 @@ func init() {
 		"MSExchange ActiveSync",
 		"MSExchange Availability Service",
 		"MSExchange OWA",
-		"MSExchange Autodiscover",
+		"MSExchangeAutodiscover",
 		"MSExchange WorkloadManagement Workloads",
 		"MSExchange RpcClientAccess",
 	)
@@ -195,6 +195,7 @@ func (c *exchangeCollector) collectADAccessProcesses(ctx *ScrapeContext, ch chan
 	}
 
 	for _, proc := range data {
+		log.Debugln(proc.Name)
 		labelName := toLabelName(proc.Name)
 		if strings.HasSuffix(labelName, "_total") {
 			continue
@@ -569,7 +570,7 @@ type perflibAutodiscover struct {
 
 func (c *exchangeCollector) collectAutoDiscover(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	var data []perflibAutodiscover
-	if err := unmarshalObject(ctx.perfObjects["MSExchange Autodiscover"], &data); err != nil {
+	if err := unmarshalObject(ctx.perfObjects["MSExchangeAutodiscover"], &data); err != nil {
 		return err
 	}
 	for _, autodisc := range data {
