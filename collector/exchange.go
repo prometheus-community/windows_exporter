@@ -561,7 +561,7 @@ func (c *exchangeCollector) collectWorkloadManagementWorkloads(ctx *ScrapeContex
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.IsActive,
-			prometheus.CounterValue,
+			prometheus.GaugeValue,
 			instance.IsActive,
 			labelName,
 		)
