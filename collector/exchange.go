@@ -600,16 +600,6 @@ func desc(metricName string, description string, labels ...string) *prometheus.D
 	)
 }
 
-// contains checks if element e exists in slice s
-func contains(s []string, e string) bool {
-	for _, a := range s {
-		if a == e {
-			return true
-		}
-	}
-	return false
-}
-
 // toLabelName converts strings to lowercase and replaces all whitespace and dots with underscores
 func toLabelName(name string) string {
 	s := strings.ReplaceAll(strings.Join(strings.Fields(strings.ToLower(name)), "_"), ".", "_")
