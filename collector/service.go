@@ -25,9 +25,10 @@ var (
 
 // A serviceCollector is a Prometheus collector for WMI Win32_Service metrics
 type serviceCollector struct {
-	State     *prometheus.Desc
-	StartMode *prometheus.Desc
-	Status    *prometheus.Desc
+	Information *prometheus.Desc
+	State       *prometheus.Desc
+	StartMode   *prometheus.Desc
+	Status      *prometheus.Desc
 
 	queryWhereClause string
 }
@@ -41,22 +42,28 @@ func NewserviceCollector() (Collector, error) {
 	}
 
 	return &serviceCollector{
+		Information: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "info"),
+			"A metric with a constant '1' value labeled with service information",
+			[]string{"name", "display_name", "process_id"},
+			nil,
+		),
 		State: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "state"),
 			"The state of the service (State)",
-			[]string{"name", "display_name", "process_id", "state"},
+			[]string{"name", "state"},
 			nil,
 		),
 		StartMode: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "start_mode"),
 			"The start mode of the service (StartMode)",
-			[]string{"name", "display_name", "process_id", "start_mode"},
+			[]string{"name", "start_mode"},
 			nil,
 		),
 		Status: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "status"),
 			"The status of the service (Status)",
-			[]string{"name", "display_name", "process_id", "status"},
+			[]string{"name", "status"},
 			nil,
 		),
 		queryWhereClause: *serviceWhereClause,
@@ -127,6 +134,14 @@ func (c *serviceCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Des
 
 	for _, service := range dst {
 		pid := strconv.FormatUint(uint64(service.ProcessId), 10)
+		ch <- prometheus.MustNewConstMetric(
+			c.Information,
+			prometheus.GaugeValue,
+			1.0,
+			strings.ToLower(service.Name),
+			service.DisplayName,
+			pid,
+		)
 
 		for _, state := range allStates {
 			isCurrentState := 0.0
@@ -138,8 +153,6 @@ func (c *serviceCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Des
 				prometheus.GaugeValue,
 				isCurrentState,
 				strings.ToLower(service.Name),
-				service.DisplayName,
-				pid,
 				state,
 			)
 		}
@@ -154,8 +167,6 @@ func (c *serviceCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Des
 				prometheus.GaugeValue,
 				isCurrentStartMode,
 				strings.ToLower(service.Name),
-				service.DisplayName,
-				pid,
 				startMode,
 			)
 		}
@@ -170,8 +181,6 @@ func (c *serviceCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Des
 				prometheus.GaugeValue,
 				isCurrentStatus,
 				strings.ToLower(service.Name),
-				service.DisplayName,
-				pid,
 				status,
 			)
 		}
