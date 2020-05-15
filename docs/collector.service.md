@@ -20,6 +20,7 @@ Example: `--collector.service.services-where="Name='wmi_exporter'"`
 
 Name | Description | Type | Labels
 -----|-------------|------|-------
+`wmi_service_info` | Contains service information in labels, constant 1 | gauge | name, display_name, process_id
 `wmi_service_state` | The state of the service, 1 if the current state, 0 otherwise | gauge | name, state
 `wmi_service_start_mode` | The start mode of the service, 1 if the current start mode, 0 otherwise | gauge | name, start_mode
 `wmi_service_status` | The status of the service, 1 if the current status, 0 otherwise | gauge | name, status
