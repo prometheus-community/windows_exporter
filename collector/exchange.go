@@ -106,12 +106,12 @@ func newExchangeCollector() (Collector, error) {
 		RPCRequests:                             desc("rpc_requests", "Number of client requests currently being processed by  the RPC Client Access service"),
 		ActiveUserCount:                         desc("rpc_active_user_count", "Number of unique users that have shown some kind of activity in the last 2 minutes"),
 		ConnectionCount:                         desc("rpc_connection_count", "Total number of client connections maintained"),
-		RPCOperationsPerSec:                     desc("rpc_ops_per_sec", "The rate (ops/s) at wich RPC operations occur"),
+		RPCOperationsPerSec:                     desc("rpc_operations_total", "The rate at which RPC operations occur"),
 		UserCount:                               desc("rpc_user_count", "Number of users"),
 		LDAPReadTime:                            desc("ldap_read_time_sec", "Time (sec) to send an LDAP read request and receive a response", "name"),
 		LDAPSearchTime:                          desc("ldap_search_time_sec", "Time (sec) to send an LDAP search request and receive a response", "name"),
 		LDAPWriteTime:                           desc("ldap_write_time_sec", "Time (sec) to send an LDAP Add/Modify/Delete request and receive a response", "name"),
-		LDAPTimeoutErrorsPerSec:                 desc("ldap_timeout_errors_per_sec", "LDAP timeout errors per second", "name"),
+		LDAPTimeoutErrorsPerSec:                 desc("ldap_timeout_errors_total", "Total number of LDAP timeout errors", "name"),
 		LongRunningLDAPOperationsPerMin:         desc("ldap_long_running_ops_per_sec", "Long Running LDAP operations per second", "name"),
 		ExternalActiveRemoteDeliveryQueueLength: desc("transport_queues_external_active_remote_delivery", "External Active Remote Delivery Queue length", "name"),
 		InternalActiveRemoteDeliveryQueueLength: desc("transport_queues_internal_active_remote_delivery", "Internal Active Remote Delivery Queue length", "name"),
@@ -124,21 +124,21 @@ func newExchangeCollector() (Collector, error) {
 		MailboxServerLocatorAverageLatency:      desc("http_proxy_mailbox_server_locator_avg_latency_sec", "Average latency (sec) of MailboxServerLocator web service calls", "name"),
 		AverageAuthenticationLatency:            desc("http_proxy_avg_auth_latency", "Average time spent authenticating CAS requests over the last 200 samples", "name"),
 		OutstandingProxyRequests:                desc("http_proxy_outstanding_proxy_requests", "Number of concurrent outstanding proxy requests", "name"),
-		ProxyRequestsPerSec:                     desc("http_proxy_requests_per_sec", "Number of proxy requests processed each second", "name"),
+		ProxyRequestsPerSec:                     desc("http_proxy_requests_total", "Number of proxy requests processed each second", "name"),
 		AvailabilityRequestsSec:                 desc("avail_service_requests_per_sec", "Number of requests serviced per second"),
 		CurrentUniqueUsers:                      desc("owa_current_unique_users", "Number of unique users currently logged on to Outlook Web App"),
-		OWARequestsPerSec:                       desc("owa_requests_per_sec", "Number of requests handled by Outlook Web App per second"),
-		AutodiscoverRequestsPerSec:              desc("autodiscover_requests_per_sec", "Number of autodiscover service requests processed each second"),
+		OWARequestsPerSec:                       desc("owa_requests_total", "Number of requests handled by Outlook Web App per second"),
+		AutodiscoverRequestsPerSec:              desc("autodiscover_requests_total", "Number of autodiscover service requests processed each second"),
 		ActiveTasks:                             desc("workload_active_tasks", "Number of active tasks currently running in the background for workload management", "name"),
 		CompletedTasks:                          desc("workload_completed_tasks", "Number of workload management tasks that have been completed", "name"),
 		QueuedTasks:                             desc("workload_queued_tasks", "Number of workload management tasks that are currently queued up waiting to be processed", "name"),
 		YieldedTasks:                            desc("workload_yielded_tasks", "The total number of tasks that have been yielded by a workload", "name"),
 		IsActive:                                desc("workload_is_active", "Active indicates whether the workload is in an active (1) or paused (0) state", "name"),
-		ActiveSyncRequestsPerSec:                desc("activesync_requests_per_sec", "Num HTTP requests received from the client via ASP.NET per sec. Shows Current user load"),
+		ActiveSyncRequestsPerSec:                desc("activesync_requests_total", "Num HTTP requests received from the client via ASP.NET per sec. Shows Current user load"),
 		AverageCASProcessingLatency:             desc("http_proxy_avg_cas_proccessing_latency_sec", "Average latency (sec) of CAS processing time over the last 200 reqs", "name"),
 		MailboxServerProxyFailureRate:           desc("http_proxy_mailbox_proxy_failure_rate", "% of failures between this CAS and MBX servers over the last 200 samples", "name"),
 		PingCommandsPending:                     desc("activesync_ping_cmds_pending", "Number of ping commands currently pending in the queue"),
-		SyncCommandsPerSec:                      desc("activesync_sync_cmds_per_sec", "Number of sync commands processed per second. Clients use this command to synchronize items within a folder"),
+		SyncCommandsPerSec:                      desc("activesync_sync_cmds_total", "Number of sync commands processed per second. Clients use this command to synchronize items within a folder"),
 	}
 
 	collectorDesc := map[string]string{
@@ -215,35 +215,33 @@ func (c *exchangeCollector) collectADAccessProcesses(ctx *ScrapeContext, ch chan
 		if labelUseCount[labelName] > 1 {
 			labelName = fmt.Sprintf("%s_%d", labelName, labelUseCount[labelName])
 		}
-
 		ch <- prometheus.MustNewConstMetric(
 			c.LDAPReadTime,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			c.msToSec(proc.LDAPReadTime),
 			labelName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.LDAPSearchTime,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			c.msToSec(proc.LDAPSearchTime),
 			labelName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.LDAPWriteTime,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			c.msToSec(proc.LDAPWriteTime),
 			labelName,
 		)
-
 		ch <- prometheus.MustNewConstMetric(
 			c.LDAPTimeoutErrorsPerSec,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			proc.LDAPTimeoutErrorsPerSec,
 			labelName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.LongRunningLDAPOperationsPerMin,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			proc.LongRunningLDAPOperationsPerMin*60,
 			labelName,
 		)
@@ -273,7 +271,7 @@ func (c *exchangeCollector) collectAvailabilityService(ctx *ScrapeContext, ch ch
 }
 
 // Perflib: [36934] MSExchange HttpProxy
-type perflibHttpProxy struct {
+type perflibHTTPProxy struct {
 	Name string
 
 	MailboxServerLocatorAverageLatency float64 `perflib:"MailboxServerLocator Average Latency (Moving Average)"`
@@ -285,7 +283,7 @@ type perflibHttpProxy struct {
 }
 
 func (c *exchangeCollector) collectHTTPProxy(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
-	var data []perflibHttpProxy
+	var data []perflibHTTPProxy
 	if err := unmarshalObject(ctx.perfObjects["MSExchange HttpProxy"], &data); err != nil {
 		return err
 	}
@@ -294,7 +292,7 @@ func (c *exchangeCollector) collectHTTPProxy(ctx *ScrapeContext, ch chan<- prome
 		labelName := c.toLabelName(instance.Name)
 		ch <- prometheus.MustNewConstMetric(
 			c.MailboxServerLocatorAverageLatency,
-			prometheus.CounterValue,
+			prometheus.GaugeValue,
 			c.msToSec(instance.MailboxServerLocatorAverageLatency),
 			labelName,
 		)
@@ -380,7 +378,7 @@ func (c *exchangeCollector) collectActiveSync(ctx *ScrapeContext, ch chan<- prom
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.PingCommandsPending,
-			prometheus.CounterValue,
+			prometheus.GaugeValue,
 			instance.PingCommandsPending,
 		)
 		ch <- prometheus.MustNewConstMetric(
@@ -393,7 +391,7 @@ func (c *exchangeCollector) collectActiveSync(ctx *ScrapeContext, ch chan<- prom
 }
 
 // Perflib: [29366] MSExchange RpcClientAccess
-type perflibRpcClientAccess struct {
+type perflibRPCClientAccess struct {
 	RPCAveragedLatency  float64 `perflib:"RPC Averaged Latency"`
 	RPCRequests         float64 `perflib:"RPC Requests"`
 	ActiveUserCount     float64 `perflib:"Active User Count"`
@@ -403,7 +401,7 @@ type perflibRpcClientAccess struct {
 }
 
 func (c *exchangeCollector) collectRPC(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
-	var data []perflibRpcClientAccess
+	var data []perflibRPCClientAccess
 	if err := unmarshalObject(ctx.perfObjects["MSExchange RpcClientAccess"], &data); err != nil {
 		return err
 	}
@@ -412,11 +410,11 @@ func (c *exchangeCollector) collectRPC(ctx *ScrapeContext, ch chan<- prometheus.
 		ch <- prometheus.MustNewConstMetric(
 			c.RPCAveragedLatency,
 			prometheus.GaugeValue,
-			c.c.msToSec(rpc.RPCAveragedLatency),
+			c.msToSec(rpc.RPCAveragedLatency),
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.RPCRequests,
-			prometheus.CounterValue,
+			prometheus.GaugeValue,
 			rpc.RPCRequests,
 		)
 		ch <- prometheus.MustNewConstMetric(
@@ -599,13 +597,13 @@ func (c *exchangeCollector) collectAutoDiscover(ctx *ScrapeContext, ch chan<- pr
 }
 
 // toLabelName converts strings to lowercase and replaces all whitespace and dots with underscores
-func (e *exchangeCollector) toLabelName(name string) string {
+func (c *exchangeCollector) toLabelName(name string) string {
 	s := strings.ReplaceAll(strings.Join(strings.Fields(strings.ToLower(name)), "_"), ".", "_")
 	s = strings.ReplaceAll(s, "__", "_")
 	return s
 }
 
 // msToSec converts from ms to seconds
-func (e *exchangeCollector) msToSec(t float64) float64 {
+func (c *exchangeCollector) msToSec(t float64) float64 {
 	return t / 1000
 }
