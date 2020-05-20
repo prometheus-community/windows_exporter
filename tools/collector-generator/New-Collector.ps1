@@ -11,10 +11,10 @@ Param(
 $ErrorActionPreference = "Stop"
 
 if($Credential -ne $null) {
-    $wmiObject = Get-WMIObject -ComputerName $ComputerName -Credential $Credential -Class $Class
+    $wmiObject = Get-CimInstance -ComputerName $ComputerName -Credential $Credential -Class $Class
 }
 else {
-    $wmiObject = Get-WMIObject -ComputerName $ComputerName -Class $Class
+    $wmiObject = Get-CimInstance -ComputerName $ComputerName -Class $Class
 }
 
 $members = $wmiObject `
