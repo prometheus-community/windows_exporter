@@ -20,12 +20,12 @@ Example: `--collector.service.services-where="Name='windows_exporter'"`
 
 Name | Description | Type | Labels
 -----|-------------|------|-------
-`windows_service_info` | Contains service information in labels, constant 1 | gauge | name, display_name, process_id
+`windows_service_info` | Contains service information in labels, constant 1 | gauge | name, display_name, process_id, run_as
 `windows_service_state` | The state of the service, 1 if the current state, 0 otherwise | gauge | name, state
 `windows_service_start_mode` | The start mode of the service, 1 if the current start mode, 0 otherwise | gauge | name, start_mode
 `windows_service_status` | The status of the service, 1 if the current status, 0 otherwise | gauge | name, status
 
-For the values of the `state`, `start_mode` and `status` labels, see below.
+For the values of the `state`, `start_mode`, `status` and `run_as` labels, see below.
 
 ### States
 
@@ -65,6 +65,13 @@ A service can have any of the following statuses:
 - `lost comm`
 
 Note that there is some overlap with service state.
+
+### Run As
+
+Account name under which a service runs. Depending on the service type, the account name may be in the form of "DomainName\Username" or UPN format ("Username@DomainName").
+
+It corresponds to the `StartName` attribute of the `Win32_Service` class.
+`StartName` attribute can be NULL and in such case the label is reported as an empty string. Notice that if the attribute is NULL the service is logged on as the `LocalSystem` account or, for kernel or system-level drive, it runs with a default object name created by the I/O system based on the service name, for example, DWDOM\Admin.
 
 ### Example metric
 Lists the services that have a 'disabled' start mode.
