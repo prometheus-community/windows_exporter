@@ -1,4 +1,4 @@
-module github.com/martinlindhe/wmi_exporter
+module github.com/prometheus-community/windows_exporter
 
 go 1.13
 
