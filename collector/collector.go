@@ -1,6 +1,7 @@
 package collector
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -72,7 +73,11 @@ func Available() []string {
 	return cs
 }
 func Build(collector string) (Collector, error) {
-	return builders[collector]()
+	builder, exists := builders[collector]
+	if !exists {
+		return nil, fmt.Errorf("Unknown collector %q", collector)
+	}
+	return builder()
 }
 func getPerfQuery(collectors []string) string {
 	parts := make([]string, 0, len(collectors))
