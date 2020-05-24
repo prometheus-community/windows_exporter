@@ -8,7 +8,7 @@ environment:
   GOPATH: c:\gopath
   GO111MODULE: on
 
-clone_folder: c:\gopath\src\github.com\martinlindhe\wmi_exporter
+clone_folder: c:\gopath\src\github.com\prometheus-community\windows_exporter
 
 install:
   - mkdir %GOPATH%\bin
@@ -42,7 +42,7 @@ build_script:
       make crossbuild
       # GH requires all files to have different names, so add version/arch to differentiate
       foreach($Arch in "amd64","386") {
-        Rename-Item output\$Arch\wmi_exporter.exe -NewName wmi_exporter-$Version-$Arch.exe
+        Rename-Item output\$Arch\windows_exporter.exe -NewName windows_exporter-$Version-$Arch.exe
       }
 
 after_build:
@@ -56,9 +56,9 @@ after_build:
       # The MSI version is not semver compliant, so just take the numerical parts
       $MSIVersion = $env:APPVEYOR_REPO_TAG_NAME -replace '^v?([0-9\.]+).*$','$1'
       foreach($Arch in "amd64","386") {
-        Write-Verbose "Building wmi_exporter $MSIVersion msi for $Arch"
-        .\installer\build.ps1 -PathToExecutable .\output\$Arch\wmi_exporter-$BuildVersion-$Arch.exe -Version $MSIVersion -Arch "$Arch"
-        Move-Item installer\Output\wmi_exporter-$MSIVersion-$Arch.msi output\$Arch\
+        Write-Verbose "Building windows_exporter $MSIVersion msi for $Arch"
+        .\installer\build.ps1 -PathToExecutable .\output\$Arch\windows_exporter-$BuildVersion-$Arch.exe -Version $MSIVersion -Arch "$Arch"
+        Move-Item installer\Output\windows_exporter-$MSIVersion-$Arch.msi output\$Arch\
       }
   - promu checksum output\
 
@@ -68,7 +68,7 @@ artifacts:
 
 deploy:
   - provider: GitHub
-    description: WMI Exporter version $(appveyor_build_version)
+    description: windows_exporter version $(appveyor_build_version)
     artifact: Artifacts
     auth_token:
       secure: 'CrXWeTf7qONUOEki5olFfGEUPMLDeHj61koDXV3OVEaLgtACmnVHsKUub9POflda'
