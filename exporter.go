@@ -23,8 +23,7 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
-// WmiCollector implements the prometheus.Collector interface.
-type WmiCollector struct {
+type windowsCollector struct {
 	maxScrapeDuration time.Duration
 	collectors        map[string]collector.Collector
 }
@@ -32,7 +31,7 @@ type WmiCollector struct {
 const (
 	defaultCollectors            = "cpu,cs,logical_disk,net,os,service,system,textfile"
 	defaultCollectorsPlaceholder = "[defaults]"
-	serviceName                  = "wmi_exporter"
+	serviceName                  = "windows_exporter"
 )
 
 var (
@@ -74,7 +73,7 @@ var (
 
 // Describe sends all the descriptors of the collectors included to
 // the provided channel.
-func (coll WmiCollector) Describe(ch chan<- *prometheus.Desc) {
+func (coll windowsCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- scrapeDurationDesc
 	ch <- scrapeSuccessDesc
 }
@@ -89,7 +88,7 @@ const (
 
 // Collect sends the collected metrics from each of the collectors to
 // prometheus.
-func (coll WmiCollector) Collect(ch chan<- prometheus.Metric) {
+func (coll windowsCollector) Collect(ch chan<- prometheus.Metric) {
 	ch <- prometheus.MustNewConstMetric(
 		startTimeDesc,
 		prometheus.CounterValue,
@@ -244,8 +243,8 @@ func loadCollectors(list string) (map[string]collector.Collector, error) {
 
 func initWbem() {
 	// This initialization prevents a memory leak on WMF 5+. See
-	// https://github.com/martinlindhe/wmi_exporter/issues/77 and linked issues
-	// for details.
+	// https://github.com/prometheus-community/windows_exporter/issues/77 and
+	// linked issues for details.
 	log.Debugf("Initializing SWbemServices")
 	s, err := wmi.InitializeSWbemServices(wmi.DefaultClient)
 	if err != nil {
@@ -259,7 +258,7 @@ func main() {
 	var (
 		listenAddress = kingpin.Flag(
 			"telemetry.addr",
-			"host:port for WMI exporter.",
+			"host:port for exporter.",
 		).Default(":9182").String()
 		metricsPath = kingpin.Flag(
 			"telemetry.path",
@@ -284,7 +283,7 @@ func main() {
 	)
 
 	log.AddFlags(kingpin.CommandLine)
-	kingpin.Version(version.Print("wmi_exporter"))
+	kingpin.Version(version.Print("windows_exporter"))
 	kingpin.HelpFlag.Short('h')
 	kingpin.Parse()
 
@@ -312,7 +311,7 @@ func main() {
 	stopCh := make(chan bool)
 	if !isInteractive {
 		go func() {
-			err = svc.Run(serviceName, &wmiExporterService{stopCh: stopCh})
+			err = svc.Run(serviceName, &windowsExporterService{stopCh: stopCh})
 			if err != nil {
 				log.Errorf("Failed to start service: %v", err)
 			}
@@ -328,8 +327,8 @@ func main() {
 
 	h := &metricsHandler{
 		timeoutMargin: *timeoutMargin,
-		collectorFactory: func(timeout time.Duration) *WmiCollector {
-			return &WmiCollector{
+		collectorFactory: func(timeout time.Duration) *windowsCollector {
+			return &windowsCollector{
 				collectors:        collectors,
 				maxScrapeDuration: timeout,
 			}
@@ -340,25 +339,26 @@ func main() {
 	http.HandleFunc("/health", healthCheck)
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte(`<html>
-<head><title>WMI Exporter</title></head>
+<head><title>windows_exporter</title></head>
 <body>
-<h1>WMI Exporter</h1>
+<h1>windows_exporter</h1>
 <p><a href="` + *metricsPath + `">Metrics</a></p>
+<p><i>` + version.Info() + `</i></p>
 </body>
 </html>`))
 	})
 
-	log.Infoln("Starting WMI exporter", version.Info())
+	log.Infoln("Starting windows_exporter", version.Info())
 	log.Infoln("Build context", version.BuildContext())
 
 	go func() {
 		log.Infoln("Starting server on", *listenAddress)
-		log.Fatalf("cannot start WMI exporter: %s", http.ListenAndServe(*listenAddress, nil))
+		log.Fatalf("cannot start windows_exporter: %s", http.ListenAndServe(*listenAddress, nil))
 	}()
 
 	for {
 		if <-stopCh {
-			log.Info("Shutting down WMI exporter")
+			log.Info("Shutting down windows_exporter")
 			break
 		}
 	}
@@ -399,11 +399,11 @@ func withConcurrencyLimit(n int, next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-type wmiExporterService struct {
+type windowsExporterService struct {
 	stopCh chan<- bool
 }
 
-func (s *wmiExporterService) Execute(args []string, r <-chan svc.ChangeRequest, changes chan<- svc.Status) (ssec bool, errno uint32) {
+func (s *windowsExporterService) Execute(args []string, r <-chan svc.ChangeRequest, changes chan<- svc.Status) (ssec bool, errno uint32) {
 	const cmdsAccepted = svc.AcceptStop | svc.AcceptShutdown
 	changes <- svc.Status{State: svc.StartPending}
 	changes <- svc.Status{State: svc.Running, Accepts: cmdsAccepted}
@@ -428,7 +428,7 @@ loop:
 
 type metricsHandler struct {
 	timeoutMargin    float64
-	collectorFactory func(timeout time.Duration) *WmiCollector
+	collectorFactory func(timeout time.Duration) *windowsCollector
 }
 
 func (mh *metricsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
