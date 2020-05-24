@@ -40,7 +40,7 @@ var (
 	).Default("C:\\Program Files\\wmi_exporter\\textfile_inputs").String()
 
 	mtimeDesc = prometheus.NewDesc(
-		"wmi_textfile_mtime_seconds",
+		prometheus.BuildFQName(Namespace, "textfile", "mtime_seconds"),
 		"Unixtime mtime of textfiles successfully read.",
 		[]string{"file"},
 		nil,
@@ -281,7 +281,7 @@ fileLoop:
 	// Export if there were errors.
 	ch <- prometheus.MustNewConstMetric(
 		prometheus.NewDesc(
-			"wmi_textfile_scrape_error",
+			prometheus.BuildFQName(Namespace, "textfile", "scrape_error"),
 			"1 if there was an error opening or reading a file, 0 otherwise",
 			nil, nil,
 		),

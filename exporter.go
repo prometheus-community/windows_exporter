@@ -38,19 +38,19 @@ const (
 var (
 	scrapeDurationDesc = prometheus.NewDesc(
 		prometheus.BuildFQName(collector.Namespace, "exporter", "collector_duration_seconds"),
-		"wmi_exporter: Duration of a collection.",
+		"windows_exporter: Duration of a collection.",
 		[]string{"collector"},
 		nil,
 	)
 	scrapeSuccessDesc = prometheus.NewDesc(
 		prometheus.BuildFQName(collector.Namespace, "exporter", "collector_success"),
-		"wmi_exporter: Whether the collector was successful.",
+		"windows_exporter: Whether the collector was successful.",
 		[]string{"collector"},
 		nil,
 	)
 	scrapeTimeoutDesc = prometheus.NewDesc(
 		prometheus.BuildFQName(collector.Namespace, "exporter", "collector_timeout"),
-		"wmi_exporter: Whether the collector timed out.",
+		"windows_exporter: Whether the collector timed out.",
 		[]string{"collector"},
 		nil,
 	)
@@ -452,7 +452,7 @@ func (mh *metricsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	reg.MustRegister(
 		prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}),
 		prometheus.NewGoCollector(),
-		version.NewCollector("wmi_exporter"),
+		version.NewCollector("windows_exporter"),
 	)
 
 	h := promhttp.HandlerFor(reg, promhttp.HandlerOpts{})

@@ -14,7 +14,7 @@ import (
 // ...
 const (
 	// TODO: Make package-local
-	Namespace = "wmi"
+	Namespace = "windows"
 
 	// Conversion factors
 	ticksToSecondsScaleFactor = 1 / 1e7

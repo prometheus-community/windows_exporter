@@ -396,13 +396,13 @@ func NewMSSQLCollector() (Collector, error) {
 		// meta
 		mssqlScrapeDurationDesc: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "collector_duration_seconds"),
-			"wmi_exporter: Duration of an mssql child collection.",
+			"windows_exporter: Duration of an mssql child collection.",
 			[]string{"collector", "instance"},
 			nil,
 		),
 		mssqlScrapeSuccessDesc: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "collector_success"),
-			"wmi_exporter: Whether a mssql child collector was successful.",
+			"windows_exporter: Whether a mssql child collector was successful.",
 			[]string{"collector", "instance"},
 			nil,
 		),
