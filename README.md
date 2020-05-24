@@ -1,8 +1,8 @@
-# WMI exporter
+# windows_exporter
 
-[![Build status](https://ci.appveyor.com/api/projects/status/ljwan71as6pf2joe/branch/master?svg=true)](https://ci.appveyor.com/project/martinlindhe/wmi-exporter)
+[![Build status](https://ci.appveyor.com/api/projects/status/ljwan71as6pf2joe/branch/master?svg=true)](https://ci.appveyor.com/project/prometheus-community/windows_exporter)
 
-Prometheus exporter for Windows machines, using the WMI (Windows Management Instrumentation).
+A Prometheus exporter for Windows machines.
 
 
 ## Collectors
@@ -46,9 +46,9 @@ Name     | Description | Enabled by default
 See the linked documentation on each collector for more information on reported metrics, configuration settings and usage examples.
 
 ## Installation
-The latest release can be downloaded from the [releases page](https://github.com/martinlindhe/wmi_exporter/releases).
+The latest release can be downloaded from the [releases page](https://github.com/prometheus-community/windows_exporter/releases).
 
-Each release provides a .msi installer. The installer will setup the WMI Exporter as a Windows service, as well as create an exception in the Windows Firewall.
+Each release provides a .msi installer. The installer will setup the windows_exporter as a Windows service, as well as create an exception in the Windows Firewall.
 
 If the installer is run without any parameters, the exporter will run with default settings for enabled collectors, ports, etc. The following parameters are available:
 
@@ -74,21 +74,21 @@ msiexec /i <path-to-msi-file> ENABLED_COLLECTORS=os,service --% EXTRA_FLAGS="--c
 
 On some older versions of Windows you may need to surround parameter values with double quotes to get the install command parsing properly:
 ```powershell
-msiexec /i C:\Users\Administrator\Downloads\wmi_exporter.msi ENABLED_COLLECTORS="ad,iis,logon,memory,process,tcp,thermalzone" TEXTFILE_DIR="C:\custom_metrics\"
+msiexec /i C:\Users\Administrator\Downloads\windows_exporter.msi ENABLED_COLLECTORS="ad,iis,logon,memory,process,tcp,thermalzone" TEXTFILE_DIR="C:\custom_metrics\"
 ```
 
 ## Roadmap
 
-See [open issues](https://github.com/martinlindhe/wmi_exporter/issues)
+See [open issues](https://github.com/prometheus-community/windows_exporter/issues)
 
 
 ## Usage
 
     go get -u github.com/prometheus/promu
-    go get -u github.com/martinlindhe/wmi_exporter
-    cd $env:GOPATH/src/github.com/martinlindhe/wmi_exporter
+    go get -u github.com/prometheus-community/windows_exporter
+    cd $env:GOPATH/src/github.com/prometheus-community/windows_exporter
     promu build -v .
-    .\wmi_exporter.exe
+    .\windows_exporter.exe
 
 The prometheus metrics will be exposed on [localhost:9182](http://localhost:9182)
 
@@ -96,11 +96,11 @@ The prometheus metrics will be exposed on [localhost:9182](http://localhost:9182
 
 ### Enable only service collector and specify a custom query
 
-    .\wmi_exporter.exe --collectors.enabled "service" --collector.service.services-where "Name='wmi_exporter'"
+    .\windows_exporter.exe --collectors.enabled "service" --collector.service.services-where "Name='windows_exporter'"
 
 ### Enable only process collector and specify a custom query
 
-    .\wmi_exporter.exe --collectors.enabled "process" --collector.process.whitelist="firefox.+"
+    .\windows_exporter.exe --collectors.enabled "process" --collector.process.whitelist="firefox.+"
 
 When there are multiple processes with the same name, WMI represents those after the first instance as `process-name#index`. So to get them all, rather than just the first one, the [regular expression](https://en.wikipedia.org/wiki/Regular_expression) must use `.+`. See [process](docs/collector.process.md) for more information.
 

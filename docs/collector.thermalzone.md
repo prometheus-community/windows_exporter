@@ -16,9 +16,9 @@ None
 
 Name | Description | Type | Labels
 -----|-------------|------|-------
-`wmi_thermalzone_percent_passive_limit` | % Passive Limit is the current limit this thermal zone is placing on the devices it controls. A limit of 100% indicates the devices are unconstrained. A limit of 0% indicates the devices are fully constrained. | gauge | None
-`wmi_thermalzone_temperature_celsius ` | Temperature of the thermal zone, in degrees Celsius. | gauge | None
-`wmi_thermalzone_throttle_reasons ` | Throttle Reasons indicate reasons why the thermal zone is limiting performance of the devices it controls. 0x0 – The zone is not throttled. 0x1 – The zone is throttled for thermal reasons. 0x2 – The zone is throttled to limit electrical current. | gauge | None
+`windows_thermalzone_percent_passive_limit` | % Passive Limit is the current limit this thermal zone is placing on the devices it controls. A limit of 100% indicates the devices are unconstrained. A limit of 0% indicates the devices are fully constrained. | gauge | None
+`windows_thermalzone_temperature_celsius ` | Temperature of the thermal zone, in degrees Celsius. | gauge | None
+`windows_thermalzone_throttle_reasons ` | Throttle Reasons indicate reasons why the thermal zone is limiting performance of the devices it controls. 0x0 - The zone is not throttled. 0x1 - The zone is throttled for thermal reasons. 0x2 - The zone is throttled to limit electrical current. | gauge | None
 
 [`Throttle reasons` source](https://docs.microsoft.com/en-us/windows-hardware/design/device-experiences/examples--requirements-and-diagnostics)
 

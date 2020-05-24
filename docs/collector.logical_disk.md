@@ -38,13 +38,13 @@ Name | Description | Type | Labels
 ### Example metric
 Query the rate of write operations to a disk
 ```
-rate(wmi_logical_disk_read_bytes_total{instance="localhost", volume=~"C:"}[2m])
+rate(windows_logical_disk_read_bytes_total{instance="localhost", volume=~"C:"}[2m])
 ```
 
 ## Useful queries
 Calculate rate of total IOPS for disk
 ```
-rate(wmi_logical_disk_reads_total{instance="localhost", volume="C:"}[2m]) + rate(wmi_logical_disk_writes_total{instance="localhost", volume="C:"}[2m])
+rate(windows_logical_disk_reads_total{instance="localhost", volume="C:"}[2m]) + rate(windows_logical_disk_writes_total{instance="localhost", volume="C:"}[2m])
 ```
 
 ## Alerting examples
@@ -56,7 +56,7 @@ groups:
 
   # Sends an alert when disk space usage is above 95%
   - alert: DiskSpaceUsage
-    expr: 100.0 - 100 * (wmi_logical_disk_free_bytes / wmi_logical_disk_size_bytes) > 95
+    expr: 100.0 - 100 * (windows_logical_disk_free_bytes / windows_logical_disk_size_bytes) > 95
     for: 10m
     labels:
       severity: high
@@ -66,7 +66,7 @@ groups:
 
   # Alerts on disks with over 85% space usage predicted to fill within the next four days
   - alert: DiskFilling
-    expr: 100 * (wmi_logical_disk_free_bytes / wmi_logical_disk_size_bytes) < 15 and predict_linear(wmi_logical_disk_free_bytes[6h], 4 * 24 * 3600) < 0
+    expr: 100 * (windows_logical_disk_free_bytes / windows_logical_disk_size_bytes) < 15 and predict_linear(windows_logical_disk_free_bytes[6h], 4 * 24 * 3600) < 0
     for: 10m
     labels:
       severity: warning
