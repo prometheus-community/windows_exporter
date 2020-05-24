@@ -14,7 +14,7 @@ Enabled by default? | Yes
 
 The directory containing the files to be ingested. Only files with the extension `.prom` are read. The `.prom` file must end with an empty line feed to work properly.
 
-Default value: `C:\Program Files\wmi_exporter\textfile_inputs`
+Default value: `C:\Program Files\windows_exporter\textfile_inputs`
 
 Required: No
 
@@ -25,8 +25,8 @@ are collected to give information about the reading of the metrics themselves.
 
 Name | Description | Type | Labels
 -----|-------------|------|-------
-`wmi_textfile_scrape_error` | 1 if there was an error opening or reading a file, 0 otherwise | gauge | None
-`wmi_textfile_mtime_seconds` | Unix epoch-formatted mtime (modified time) of textfiles successfully read | gauge | file
+`windows_textfile_scrape_error` | 1 if there was an error opening or reading a file, 0 otherwise | gauge | None
+`windows_textfile_mtime_seconds` | Unix epoch-formatted mtime (modified time) of textfiles successfully read | gauge | file
 
 ### Example metric
 _This collector does not yet have explained examples, we would appreciate your help adding them!_
@@ -38,7 +38,7 @@ _This collector does not yet have any useful queries added, we would appreciate 
 _This collector does not yet have alerting examples, we would appreciate your help adding them!_
 
 # Example use
-This Powershell script, when run in the `collector.textfile.directory` (default `C:\Program Files\wmi_exporter\textfile_inputs`), generates a valid `.prom` file that should successfully ingested by wmi_exporter.
+This Powershell script, when run in the `collector.textfile.directory` (default `C:\Program Files\windows_exporter\textfile_inputs`), generates a valid `.prom` file that should successfully ingested by windows_exporter.
 
 ```Powershell
 $alpha = 42

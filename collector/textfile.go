@@ -37,7 +37,7 @@ var (
 	textFileDirectory = kingpin.Flag(
 		"collector.textfile.directory",
 		"Directory to read text files with metrics from.",
-	).Default("C:\\Program Files\\wmi_exporter\\textfile_inputs").String()
+	).Default("C:\\Program Files\\windows_exporter\\textfile_inputs").String()
 
 	mtimeDesc = prometheus.NewDesc(
 		prometheus.BuildFQName(Namespace, "textfile", "mtime_seconds"),
