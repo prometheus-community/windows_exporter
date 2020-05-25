@@ -27,7 +27,7 @@ type FSRMQuotaCollector struct {
 }
 
 // NewSRMQuotaCollector ...
-func NewFSRMQuotaCollector() (Collector, error) {
+func newFSRMQuotaCollector() (Collector, error) {
 	const subsystem = "fsrmquota"
 	return &FSRMQuotaCollector{
 		QuotasCount: prometheus.NewDesc(
@@ -39,12 +39,6 @@ func NewFSRMQuotaCollector() (Collector, error) {
 		PeakUsage: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "peak_usage_bytes"),
 			"The highest amount of disk space usage charged to this quota. (PeakUsage)",
-			[]string{"path", "template"},
-			nil,
-		),
-		Path: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "path"),
-			"A string that represents a valid local path to a folder. (Path)",
 			[]string{"path", "template"},
 			nil,
 		),
@@ -108,7 +102,7 @@ func (c *FSRMQuotaCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Me
 type MSFT_FSRMQuota struct {
 	Name string
 
-	Path        string
+	//Path        string
 	PeakUsage   uint64
 	Size        uint64
 	Usage       uint64
