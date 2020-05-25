@@ -7,7 +7,7 @@ import (
 )
 
 func init() {
-	Factories["fsrmquota"] = NewFSRMQuotaCollector
+	Factories["fsrmquota"] = newFSRMQuotaCollector
 }
 
 // A MSFT_FSRMQuotaCollector is a Prometheus collector for WMI MSFT_FSRMQuota metrics
@@ -102,7 +102,7 @@ func (c *FSRMQuotaCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Me
 type MSFT_FSRMQuota struct {
 	Name string
 
-	//Path        string
+	Path        string
 	PeakUsage   uint64
 	Size        uint64
 	Usage       uint64
