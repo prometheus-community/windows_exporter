@@ -7,7 +7,7 @@ import (
 )
 
 func init() {
-	Factories["fsrmquota"] = newFSRMQuotaCollector
+	registerCollector("fsrmquota",newFSRMQuotaCollector)
 }
 
 // A MSFT_FSRMQuotaCollector is a Prometheus collector for WMI MSFT_FSRMQuota metrics
