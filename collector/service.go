@@ -45,7 +45,7 @@ func NewserviceCollector() (Collector, error) {
 		Information: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "info"),
 			"A metric with a constant '1' value labeled with service information",
-			[]string{"name", "display_name", "process_id", "start_name"},
+			[]string{"name", "display_name", "process_id", "run_as"},
 			nil,
 		),
 		State: prometheus.NewDesc(
@@ -135,9 +135,9 @@ func (c *serviceCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Des
 	for _, service := range dst {
 		pid := strconv.FormatUint(uint64(service.ProcessId), 10)
 
-		startName := ""
+		runAs := ""
 		if service.StartName != nil {
-			startName = *service.StartName
+			runAs = *service.StartName
 		}
 		ch <- prometheus.MustNewConstMetric(
 			c.Information,
@@ -146,7 +146,7 @@ func (c *serviceCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Des
 			strings.ToLower(service.Name),
 			service.DisplayName,
 			pid,
-			startName,
+			runAs,
 		)
 
 		for _, state := range allStates {
