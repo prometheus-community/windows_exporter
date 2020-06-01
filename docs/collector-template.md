@@ -20,13 +20,13 @@ Example: `--collector....`
 
 Name | Description | Type | Labels
 -----|-------------|------|-------
-`wmi_...` | ... | counter/gauge/histogram/summary | ...
+`windows_...` | ... | counter/gauge/histogram/summary | ...
 
 ### Example metric
 
 ...:
 
-`wmi_...{...} 1`
+`windows_...{...} 1`
 
 ## Useful queries
 ### Add queries...

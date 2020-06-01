@@ -8,12 +8,12 @@
     <?define PlatformProgramFiles = "ProgramFilesFolder" ?>
   <?endif ?>
 
-  <Product Id="*" UpgradeCode="66a6eb5b-1fc2-4b14-a362-5ceec6413308" 
-           Name="WMI Exporter" Version="$(var.Version)" Manufacturer="Martin Lindhe" 
+  <Product Id="*" UpgradeCode="66a6eb5b-1fc2-4b14-a362-5ceec6413308"
+           Name="windows_exporter" Version="$(var.Version)" Manufacturer="prometheus-community"
            Language="1033" Codepage="1252">
-    <Package Id="*" Manufacturer="Martin Lindhe" InstallScope="perMachine" 
-             Description="WMI Exporter $(var.Version) installer" Compressed="yes" />
-    <Media Id="1" Cabinet="wmi_exporter.cab" EmbedCab="yes"/>
+    <Package Id="*" Manufacturer="prometheus-community" InstallScope="perMachine"
+             Description="windows_exporter $(var.Version) installer" Compressed="yes" />
+    <Media Id="1" Cabinet="windows_exporter.cab" EmbedCab="yes"/>
     <MajorUpgrade Schedule="afterInstallExecute" DowngradeErrorMessage="A later version of [ProductName] is already installed. Setup will now exit." />
 
     <Property Id="ENABLED_COLLECTORS" Secure="yes"/>
@@ -31,7 +31,7 @@
 
     <Directory Id="TARGETDIR" Name="SourceDir">
       <Directory Id="$(var.PlatformProgramFiles)">
-        <Directory Id="APPLICATIONROOTDIRECTORY" Name="wmi_exporter">
+        <Directory Id="APPLICATIONROOTDIRECTORY" Name="windows_exporter">
           <Directory Id="textfile_inputs" Name="textfile_inputs" />
         </Directory>
       </Directory>
@@ -42,14 +42,14 @@
 
     <ComponentGroup Id="Files">
       <Component Directory="APPLICATIONROOTDIRECTORY">
-        <File Id="wmi_exporter.exe" Name="wmi_exporter.exe" Source="Work\wmi_exporter.exe" KeyPath="yes">
-          <fw:FirewallException Id="MetricsEndpoint" Name="WMI Exporter (HTTP [LISTEN_PORT])" Description="WMI Exporter HTTP endpoint" Port="[LISTEN_PORT]" Protocol="tcp" Scope="any" IgnoreFailure="yes" />
+        <File Id="windows_exporter.exe" Name="windows_exporter.exe" Source="Work\windows_exporter.exe" KeyPath="yes">
+          <fw:FirewallException Id="MetricsEndpoint" Name="windows_exporter (HTTP [LISTEN_PORT])" Description="windows_exporter HTTP endpoint" Port="[LISTEN_PORT]" Protocol="tcp" Scope="any" IgnoreFailure="yes" />
         </File>
-        <ServiceInstall Id="InstallExporterService" Name="wmi_exporter" DisplayName="WMI exporter" Description="Exports Prometheus metrics from WMI queries" ErrorControl="normal" Start="auto" Type="ownProcess" Arguments="--log.format logger:eventlog?name=wmi_exporter [CollectorsFlag] [ListenFlag] [MetricsPathFlag] [TextfileDirFlag] [ExtraFlags]">
+        <ServiceInstall Id="InstallExporterService" Name="windows_exporter" DisplayName="windows_exporter" Description="Exports Prometheus metrics from WMI queries" ErrorControl="normal" Start="auto" Type="ownProcess" Arguments="--log.format logger:eventlog?name=windows_exporter [CollectorsFlag] [ListenFlag] [MetricsPathFlag] [TextfileDirFlag] [ExtraFlags]">
           <util:ServiceConfig FirstFailureActionType="restart" SecondFailureActionType="restart" ThirdFailureActionType="restart" RestartServiceDelayInSeconds="5" />
         </ServiceInstall>
-        <ServiceControl Id="ServiceStateControl" Name="wmi_exporter" Remove="uninstall" Start="install" Stop="both" />
-        <util:EventSource Log="Application" Name="wmi_exporter" EventMessageFile="%SystemRoot%\System32\EventCreate.exe" />
+        <ServiceControl Id="ServiceStateControl" Name="windows_exporter" Remove="uninstall" Start="install" Stop="both" />
+        <util:EventSource Log="Application" Name="windows_exporter" EventMessageFile="%SystemRoot%\System32\EventCreate.exe" />
       </Component>
       <Component Id="CreateTextfileDirectory" Directory="textfile_inputs" Guid="d03ef58a-9cbf-4165-ad39-d143e9b27e14">
         <CreateFolder />
