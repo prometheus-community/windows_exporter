@@ -134,7 +134,7 @@ func NewDhcpCollector() (Collector, error) {
 			nil,
 		),
 		DeniedDueToNonMatch: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "denied_due_to_match_total"),
+			prometheus.BuildFQName(Namespace, subsystem, "denied_due_to_nonmatch_total"),
 			"Total number of DHCP requests denied, based on non-matches from the Allow list (DeniedDueToNonMatch)",
 			nil,
 			nil,
