@@ -1,6 +1,6 @@
 # windows_exporter
 
-[![Build status](https://ci.appveyor.com/api/projects/status/ljwan71as6pf2joe/branch/master?svg=true)](https://ci.appveyor.com/project/prometheus-community/windows_exporter)
+[![Build status](https://ci.appveyor.com/api/projects/status/tm36s13gba8wx4dp/branch/master?svg=true)](https://ci.appveyor.com/project/prometheus-community/windows-exporter)
 
 A Prometheus exporter for Windows machines.
 
