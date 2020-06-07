@@ -45,7 +45,7 @@ func NewserviceCollector() (Collector, error) {
 		Information: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "info"),
 			"A metric with a constant '1' value labeled with service information",
-			[]string{"name", "display_name", "process_id"},
+			[]string{"name", "display_name", "process_id", "run_as"},
 			nil,
 		),
 		State: prometheus.NewDesc(
@@ -89,6 +89,7 @@ type Win32_Service struct {
 	State       string
 	Status      string
 	StartMode   string
+	StartName   *string
 }
 
 var (
@@ -131,9 +132,13 @@ func (c *serviceCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Des
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
 	}
-
 	for _, service := range dst {
 		pid := strconv.FormatUint(uint64(service.ProcessId), 10)
+
+		runAs := ""
+		if service.StartName != nil {
+			runAs = *service.StartName
+		}
 		ch <- prometheus.MustNewConstMetric(
 			c.Information,
 			prometheus.GaugeValue,
@@ -141,6 +146,7 @@ func (c *serviceCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Des
 			strings.ToLower(service.Name),
 			service.DisplayName,
 			pid,
+			runAs,
 		)
 
 		for _, state := range allStates {
