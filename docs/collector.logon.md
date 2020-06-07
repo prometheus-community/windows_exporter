@@ -16,18 +16,18 @@ None
 
 Name | Description | Type | Labels
 -----|-------------|------|-------
-`wmi_logon_logon_type` | Number of active user logon sessions | gauge | status
+`windows_logon_logon_type` | Number of active user logon sessions | gauge | status
 
 ### Example metric
 Query the total number of interactive logon sessions
 ```
-wmi_logon_logon_type{status="interactive"}
+windows_logon_logon_type{status="interactive"}
 ```
 
 ## Useful queries
 Query the total number of local and remote (I.E. Terminal Services) interactive sessions.
 ```
-wmi_logon_logon_type{status=~"interactive|remoteinteractive"}
+windows_logon_logon_type{status=~"interactive|remoteinteractive"}
 ```
 
 ## Alerting examples

@@ -3,14 +3,21 @@ package collector
 import (
 	"fmt"
 	"reflect"
+	"strconv"
 
 	perflibCollector "github.com/leoluk/perflib_exporter/collector"
 	"github.com/leoluk/perflib_exporter/perflib"
 	"github.com/prometheus/common/log"
 )
 
-func getPerflibSnapshot() (map[string]*perflib.PerfObject, error) {
-	objects, err := perflib.QueryPerformanceData("Global")
+var nametable = perflib.QueryNameTable("Counter 009") // Reads the names in English TODO: validate that the English names are always present
+
+func MapCounterToIndex(name string) string {
+	return strconv.Itoa(int(nametable.LookupIndex(name)))
+}
+
+func getPerflibSnapshot(objNames string) (map[string]*perflib.PerfObject, error) {
+	objects, err := perflib.QueryPerformanceData(objNames)
 	if err != nil {
 		return nil, err
 	}

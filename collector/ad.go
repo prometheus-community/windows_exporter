@@ -11,7 +11,7 @@ import (
 )
 
 func init() {
-	Factories["ad"] = NewADCollector
+	registerCollector("ad", NewADCollector)
 }
 
 // A ADCollector is a Prometheus collector for WMI Win32_PerfRawData_DirectoryServices_DirectoryServices metrics

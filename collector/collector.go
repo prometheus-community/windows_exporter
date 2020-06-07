@@ -1,7 +1,9 @@
 package collector
 
 import (
+	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/leoluk/perflib_exporter/perflib"
 	"github.com/prometheus/client_golang/prometheus"
@@ -12,7 +14,7 @@ import (
 // ...
 const (
 	// TODO: Make package-local
-	Namespace = "wmi"
+	Namespace = "windows"
 
 	// Conversion factors
 	ticksToSecondsScaleFactor = 1 / 1e7
@@ -47,8 +49,45 @@ func getWindowsVersion() float64 {
 	return currentv_flt
 }
 
-// Factories ...
-var Factories = make(map[string]func() (Collector, error))
+type collectorBuilder func() (Collector, error)
+
+var (
+	builders                = make(map[string]collectorBuilder)
+	perfCounterDependencies = make(map[string]string)
+)
+
+func registerCollector(name string, builder collectorBuilder, perfCounterNames ...string) {
+	builders[name] = builder
+	perfIndicies := make([]string, 0, len(perfCounterNames))
+	for _, cn := range perfCounterNames {
+		perfIndicies = append(perfIndicies, MapCounterToIndex(cn))
+	}
+	perfCounterDependencies[name] = strings.Join(perfIndicies, " ")
+}
+
+func Available() []string {
+	cs := make([]string, 0, len(builders))
+	for c := range builders {
+		cs = append(cs, c)
+	}
+	return cs
+}
+func Build(collector string) (Collector, error) {
+	builder, exists := builders[collector]
+	if !exists {
+		return nil, fmt.Errorf("Unknown collector %q", collector)
+	}
+	return builder()
+}
+func getPerfQuery(collectors []string) string {
+	parts := make([]string, 0, len(collectors))
+	for _, c := range collectors {
+		if p := perfCounterDependencies[c]; p != "" {
+			parts = append(parts, p)
+		}
+	}
+	return strings.Join(parts, " ")
+}
 
 // Collector is the interface a collector has to implement.
 type Collector interface {
@@ -61,8 +100,9 @@ type ScrapeContext struct {
 }
 
 // PrepareScrapeContext creates a ScrapeContext to be used during a single scrape
-func PrepareScrapeContext() (*ScrapeContext, error) {
-	objs, err := getPerflibSnapshot()
+func PrepareScrapeContext(collectors []string) (*ScrapeContext, error) {
+	q := getPerfQuery(collectors) // TODO: Memoize
+	objs, err := getPerflibSnapshot(q)
 	if err != nil {
 		return nil, err
 	}

@@ -1,8 +1,8 @@
-# WMI exporter
+# windows_exporter
 
-[![Build status](https://ci.appveyor.com/api/projects/status/ljwan71as6pf2joe/branch/master?svg=true)](https://ci.appveyor.com/project/martinlindhe/wmi-exporter)
+[![Build status](https://ci.appveyor.com/api/projects/status/xoym3fftr7giasiw/branch/master?svg=true)](https://ci.appveyor.com/project/prometheus-community/windows-exporter)
 
-Prometheus exporter for Windows machines, using the WMI (Windows Management Instrumentation).
+A Prometheus exporter for Windows machines.
 
 
 ## Collectors
@@ -35,19 +35,21 @@ Name     | Description | Enabled by default
 [net](docs/collector.net.md) | Network interface I/O | &#10003;
 [os](docs/collector.os.md) | OS metrics (memory, processes, users) | &#10003;
 [process](docs/collector.process.md) | Per-process metrics |
+[remote_fx](docs/collector.remote_fx.md) | RemoteFX protocol (RDP) metrics |
 [service](docs/collector.service.md) | Service state metrics | &#10003;
 [system](docs/collector.system.md) | System calls | &#10003;
 [tcp](docs/collector.tcp.md) | TCP connections |
 [thermalzone](docs/collector.thermalzone.md) | Thermal information
+[terminal_services](docs/collector.terminal_services.md) | Terminal services (RDS)
 [textfile](docs/collector.textfile.md) | Read prometheus metrics from a text file | &#10003;
 [vmware](docs/collector.vmware.md) | Performance counters installed by the Vmware Guest agent |
 
 See the linked documentation on each collector for more information on reported metrics, configuration settings and usage examples.
 
 ## Installation
-The latest release can be downloaded from the [releases page](https://github.com/martinlindhe/wmi_exporter/releases).
+The latest release can be downloaded from the [releases page](https://github.com/prometheus-community/windows_exporter/releases).
 
-Each release provides a .msi installer. The installer will setup the WMI Exporter as a Windows service, as well as create an exception in the Windows Firewall.
+Each release provides a .msi installer. The installer will setup the windows_exporter as a Windows service, as well as create an exception in the Windows Firewall.
 
 If the installer is run without any parameters, the exporter will run with default settings for enabled collectors, ports, etc. The following parameters are available:
 
@@ -73,22 +75,21 @@ msiexec /i <path-to-msi-file> ENABLED_COLLECTORS=os,service --% EXTRA_FLAGS="--c
 
 On some older versions of Windows you may need to surround parameter values with double quotes to get the install command parsing properly:
 ```powershell
-msiexec /i C:\Users\Administrator\Downloads\wmi_exporter.msi ENABLED_COLLECTORS="ad,iis,logon,memory,process,tcp,thermalzone" TEXTFILE_DIR="C:\custom_metrics\"
+msiexec /i C:\Users\Administrator\Downloads\windows_exporter.msi ENABLED_COLLECTORS="ad,iis,logon,memory,process,tcp,thermalzone" TEXTFILE_DIR="C:\custom_metrics\"
 ```
 
 ## Roadmap
 
-See [open issues](https://github.com/martinlindhe/wmi_exporter/issues)
+See [open issues](https://github.com/prometheus-community/windows_exporter/issues)
 
 
 ## Usage
 
-    go get -u github.com/golang/dep
     go get -u github.com/prometheus/promu
-    go get -u github.com/martinlindhe/wmi_exporter
-    cd $env:GOPATH/src/github.com/martinlindhe/wmi_exporter
+    go get -u github.com/prometheus-community/windows_exporter
+    cd $env:GOPATH/src/github.com/prometheus-community/windows_exporter
     promu build -v .
-    .\wmi_exporter.exe
+    .\windows_exporter.exe
 
 The prometheus metrics will be exposed on [localhost:9182](http://localhost:9182)
 
@@ -96,15 +97,13 @@ The prometheus metrics will be exposed on [localhost:9182](http://localhost:9182
 
 ### Enable only service collector and specify a custom query
 
-    .\wmi_exporter.exe --collectors.enabled "service" --collector.service.services-where "Name='wmi_exporter'"
+    .\windows_exporter.exe --collectors.enabled "service" --collector.service.services-where "Name='windows_exporter'"
 
 ### Enable only process collector and specify a custom query
 
-    .\wmi_exporter.exe --collectors.enabled "process" --collector.process.processes-where "Name LIKE 'firefox%'"
+    .\windows_exporter.exe --collectors.enabled "process" --collector.process.whitelist="firefox.+"
 
-When there are multiple processes with the same name, WMI represents those after the first instance as `process-name#index`. So to get them all, rather than just the first one, the query needs to be a wildcard search using a `%` character.
-
-Please note that in Windows batch scripts (and when using the `cmd` command prompt), the `%` character is reserved, so it has to be escaped with another `%`. For example, the wildcard syntax for searching for all firefox processes is `firefox%%`.
+When there are multiple processes with the same name, WMI represents those after the first instance as `process-name#index`. So to get them all, rather than just the first one, the [regular expression](https://en.wikipedia.org/wiki/Regular_expression) must use `.+`. See [process](docs/collector.process.md) for more information.
 
 
 ## License

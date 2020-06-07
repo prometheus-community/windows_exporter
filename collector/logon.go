@@ -11,7 +11,7 @@ import (
 )
 
 func init() {
-	Factories["logon"] = NewLogonCollector
+	registerCollector("logon", NewLogonCollector)
 }
 
 // A LogonCollector is a Prometheus collector for WMI metrics

@@ -7,7 +7,7 @@ import (
 )
 
 func init() {
-	Factories["adfs"] = newADFSCollector
+	registerCollector("adfs", newADFSCollector, "AD FS")
 }
 
 type adfsCollector struct {
