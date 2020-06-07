@@ -15,6 +15,7 @@ Name     | Description | Enabled by default
 [cs](docs/collector.cs.md) | "Computer System" metrics (system properties, num cpus/total memory) | &#10003;
 [container](docs/collector.container.md) | Container metrics |
 [dns](docs/collector.dns.md) | DNS Server |
+[fsrmquota](docs/collector.fsrmquota.md) | Microsoft File Server Resource Manager (FSRM) Quotas collector |
 [hyperv](docs/collector.hyperv.md) | Hyper-V hosts |
 [iis](docs/collector.iis.md) | IIS sites and applications |
 [logical_disk](docs/collector.logical_disk.md) | Logical disks, disk I/O | &#10003;

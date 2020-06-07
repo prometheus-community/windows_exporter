@@ -10,22 +10,6 @@ func init() {
 	registerCollector("fsrmquota",newFSRMQuotaCollector)
 }
 
-// A MSFT_FSRMQuotaCollector is a Prometheus collector for WMI MSFT_FSRMQuota metrics
-type FSRMQuotaCollector struct {
-	QuotasCount *prometheus.Desc
-	Path        *prometheus.Desc
-	PeakUsage   *prometheus.Desc
-	Size        *prometheus.Desc
-	Usage       *prometheus.Desc
-
-	Description     *prometheus.Desc
-	Disabled        *prometheus.Desc
-	MatchesTemplate *prometheus.Desc
-	SoftLimit       *prometheus.Desc
-	Template        *prometheus.Desc
-	Threshold       *prometheus.Desc
-}
-
 // NewSRMQuotaCollector ...
 func newFSRMQuotaCollector() (Collector, error) {
 	const subsystem = "fsrmquota"
