@@ -109,3 +109,9 @@ func PrepareScrapeContext(collectors []string) (*ScrapeContext, error) {
 
 	return &ScrapeContext{objs}, nil
 }
+func boolToFloat(b bool) float64 {
+	if b {
+		return 1.0
+	}
+	return 0.0
+}
