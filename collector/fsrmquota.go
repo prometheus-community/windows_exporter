@@ -7,10 +7,23 @@ import (
 )
 
 func init() {
-	registerCollector("fsrmquota",newFSRMQuotaCollector)
+	registerCollector("fsrmquota", newFSRMQuotaCollector)
 }
 
-// NewSRMQuotaCollector ...
+type FSRMQuotaCollector struct {
+	QuotasCount *prometheus.Desc
+	Path        *prometheus.Desc
+	PeakUsage   *prometheus.Desc
+	Size        *prometheus.Desc
+	Usage       *prometheus.Desc
+
+	Description     *prometheus.Desc
+	Disabled        *prometheus.Desc
+	MatchesTemplate *prometheus.Desc
+	SoftLimit       *prometheus.Desc
+	Template        *prometheus.Desc
+}
+
 func newFSRMQuotaCollector() (Collector, error) {
 	const subsystem = "fsrmquota"
 	return &FSRMQuotaCollector{
