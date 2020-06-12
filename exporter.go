@@ -280,6 +280,10 @@ func main() {
 			"scrape.timeout-margin",
 			"Seconds to subtract from the timeout allowed by the client. Tune to allow for overhead or high loads.",
 		).Default("0.5").Float64()
+		skipRunAsService = kingpin.Flag(
+			"service.skip-run-as-service",
+			"If true, the exporter will not run as a service on non interactive sessions.",
+		).Bool()
 	)
 
 	log.AddFlags(kingpin.CommandLine)
@@ -309,7 +313,7 @@ func main() {
 	}
 
 	stopCh := make(chan bool)
-	if !isInteractive {
+	if !isInteractive && !*skipRunAsService {
 		go func() {
 			err = svc.Run(serviceName, &windowsExporterService{stopCh: stopCh})
 			if err != nil {
