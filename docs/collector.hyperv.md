@@ -93,7 +93,15 @@ Name | Description | Type | Labels
 `windows_hyperv_vm_interface_packets_sent` | _Not yet documented_ | counter | `vm_interface`
 
 ### Example metric
-_This collector does not yet have explained examples, we would appreciate your help adding them!_
+
+% consumption of the physical CPU ressources on Host `ServerName` by VMs (On a specific Host):
+`(sum by (vm) (rate(windows_hyperv_vm_cpu_total_run_time{instance="ServerName"}[60s]))) / ignoring(vm) group_left sum (windows_cs_logical_processors{instance="ServerName"}) / 100000`
+
+% consumption of the physical CPU ressources by the VMs (On all Hosts):
+`(sum by (instance)(rate(windows_hyperv_vm_cpu_total_run_time{}[1m]))) / max by (instance)(windows_cs_logical_processors{}) / 100000`
+
+% consumption of the physical CPU ressources by the Hosts himself (On all Hosts):
+`(sum by (instance)(rate(windows_hyperv_host_cpu_total_run_time{}[1m]))) / sum by (instance)(windows_cs_logical_processors{}) / 100000`
 
 ## Useful queries
 _This collector does not yet have any useful queries added, we would appreciate your help adding them!_
