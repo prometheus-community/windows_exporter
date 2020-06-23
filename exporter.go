@@ -3,6 +3,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	_ "net/http/pprof"
@@ -26,6 +27,17 @@ import (
 type windowsCollector struct {
 	maxScrapeDuration time.Duration
 	collectors        map[string]collector.Collector
+}
+
+// Same struct prometheus uses for their /version endpoint.
+// Separate copy to avoid pulling all of prometheus as a dependency
+type prometheusVersion struct {
+	Version   string `json:"version"`
+	Revision  string `json:"revision"`
+	Branch    string `json:"branch"`
+	BuildUser string `json:"buildUser"`
+	BuildDate string `json:"buildDate"`
+	GoVersion string `json:"goVersion"`
 }
 
 const (
@@ -337,6 +349,21 @@ func main() {
 
 	http.HandleFunc(*metricsPath, withConcurrencyLimit(*maxRequests, h.ServeHTTP))
 	http.HandleFunc("/health", healthCheck)
+	http.HandleFunc("/version", func(w http.ResponseWriter, r *http.Request) {
+		// we can't use "version" directly as it is a package, and not an object that
+		// can be serialized.
+		err := json.NewEncoder(w).Encode(prometheusVersion{
+			Version:   version.Version,
+			Revision:  version.Revision,
+			Branch:    version.Branch,
+			BuildUser: version.BuildUser,
+			BuildDate: version.BuildDate,
+			GoVersion: version.GoVersion,
+		})
+		if err != nil {
+			http.Error(w, fmt.Sprintf("error encoding JSON: %s", err), http.StatusInternalServerError)
+		}
+	})
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte(`<html>
 <head><title>windows_exporter</title></head>
