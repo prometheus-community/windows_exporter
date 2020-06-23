@@ -337,6 +337,9 @@ func main() {
 
 	http.HandleFunc(*metricsPath, withConcurrencyLimit(*maxRequests, h.ServeHTTP))
 	http.HandleFunc("/health", healthCheck)
+	http.HandleFunc("/version", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(version.Version))
+	})
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte(`<html>
 <head><title>windows_exporter</title></head>
