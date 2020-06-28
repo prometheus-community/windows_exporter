@@ -96,15 +96,15 @@ Name | Description | Type | Labels
 _This collector does not yet have explained examples, we would appreciate your help adding them!_
 
 ## Useful queries
-Percent of physical CPU ressources used per VM (on instance "localhost")
+Percent of physical CPU resources used per VM (on instance "localhost")
 ```
 (sum (rate(windows_hyperv_vm_cpu_hypervisor_run_time{instance="localhost"}[1m]))) / ignoring(vm) group_left max (windows_cs_logical_processors{instance="localhost"}) / 100000
 ```
-Percent of physical CPU ressources used by all VMs (on all monitored hosts)
+Percent of physical CPU resources used by all VMs (on all monitored hosts)
 ```
 (sum by (instance)(rate(windows_hyperv_vm_cpu_total_run_time{}[1m]))) / max by (instance)(windows_cs_logical_processors{}) / 100000
 ```
-Percent of physical CPU ressources by the Hosts himself (on all monitored hosts)
+Percent of physical CPU resources by the hosts themselves (on all monitored hosts)
 ```
 (sum by (instance)(rate(windows_hyperv_host_cpu_total_run_time{}[1m]))) / sum by (instance)(windows_cs_logical_processors{}) / 100000
 ```
