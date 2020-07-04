@@ -1,0 +1,7 @@
+{
+    "StringFileInfo": {
+        "CompanyName": "prometheus-community",
+        "LegalCopyright": "Copyright 2020 The Prometheus Authors",
+        "ProductName": "windows_exporter"
+    }
+}

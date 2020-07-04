@@ -22,6 +22,7 @@ install:
   - ps: |
       $env:GO111MODULE="off"
       go get -u github.com/prometheus/promu
+      go get -u github.com/josephspurrier/goversioninfo/cmd/goversioninfo
       $env:GO111MODULE="on"
 
 test_script:
@@ -37,8 +38,13 @@ build_script:
       # so we need to run it before setting the preference.
       go mod download
       $ErrorActionPreference = "Stop"
+
       gitversion /output json /showvariable FullSemVer | Set-Content VERSION -PassThru
       $Version = Get-Content VERSION
+      # Windows versioninfo resources need the file version by parts (but product version is free text)
+      $VersionParts = ($Version -replace '^v?([0-9\.]+).*$','$1').Split(".")
+      goversioninfo.exe -ver-major $VersionParts[0] -ver-minor $VersionParts[1] -ver-patch $VersionParts[2] -product-version $Version -platform-specific
+
       make crossbuild
       # GH requires all files to have different names, so add version/arch to differentiate
       foreach($Arch in "amd64","386") {
