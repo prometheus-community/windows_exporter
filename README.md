@@ -89,7 +89,7 @@ See [open issues](https://github.com/prometheus-community/windows_exporter/issue
     go get -u github.com/prometheus/promu
     go get -u github.com/prometheus-community/windows_exporter
     cd $env:GOPATH/src/github.com/prometheus-community/windows_exporter
-    promu build -v .
+    promu build -v
     .\windows_exporter.exe
 
 The prometheus metrics will be exposed on [localhost:9182](http://localhost:9182)
