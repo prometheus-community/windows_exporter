@@ -47,6 +47,19 @@ Name     | Description | Enabled by default
 
 See the linked documentation on each collector for more information on reported metrics, configuration settings and usage examples.
 
+## Flags
+
+windows_exporter accepts flags to configure certain behaviours. The ones configuring the global behaviour of the exporter are listed below, while collector-specific ones are documented in the respective collector documentation above.
+
+Flag     | Description | Default value
+---------|-------------|--------------------
+`--telemetry.addr` | host:port for exporter. | `:9182`
+`--telemetry.path` | URL path for surfacing collected metrics. | `/metrics`
+`--telemetry.max-requests` | Maximum number of concurrent requests. 0 to disable. | `5`
+`--collectors.enabled` | Comma-separated list of collectors to use. Use `[defaults]` as a placeholder for all the collectors enabled by default." | `[defaults]`
+`--collectors.print` | If true, print available collectors and exit. | 
+`--scrape.timeout-margin` | Seconds to subtract from the timeout allowed by the client. Tune to allow for overhead or high loads. | `0.5`
+
 ## Installation
 The latest release can be downloaded from the [releases page](https://github.com/prometheus-community/windows_exporter/releases).
 
