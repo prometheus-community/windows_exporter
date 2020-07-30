@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  labels:
+    app: win-node-exporter
+  name: win-node-exporter
+  namespace: monitoring
+spec:
+  selector:
+    matchLabels:
+      app: win-node-exporter
+  template:
+    metadata:
+      labels:
+        app: win-node-exporter
+    spec:
+      containers:
+      - args: 
+        - --collectors.enabled=os,iis,container
+        - --telemetry.addr=127.0.0.1:9100
+        name: win-node-exporter
+        image: chzbrgr71/windows_exporter:v1.1
+        ports:
+        - containerPort: 9100
+          hostPort: 9100
+          name: https            
+      nodeSelector:
+        kubernetes.io/os: windows            
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    k8s-app: win-node-exporter
+  name: win-node-exporter
+  namespace: monitoring
+spec:
+  type: NodePort
+  ports:
+  - name: https
+    port: 9100
+    targetPort: https
+  selector:
+    app: win-node-exporter
