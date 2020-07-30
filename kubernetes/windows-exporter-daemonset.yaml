@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  labels:
+    app: windows-exporter
+  name: windows-exporter
+  namespace: monitoring
+spec:
+  selector:
+    matchLabels:
+      app: windows-exporter
+  template:
+    metadata:
+      labels:
+        app: windows-exporter
+    spec:
+      securityContext:
+        windowsOptions:
+          hostProcess: true
+          runAsUserName: "NT AUTHORITY\\system"
+      hostNetwork: true
+      initContainers:
+        - name: configure-firewall
+          image: mcr.microsoft.com/windows/nanoserver:1809
+          command: ["powershell"]
+          args: ["New-NetFirewallRule", "-DisplayName", "'windows-exporter'", "-Direction", "inbound", "-Profile", "Any", "-Action", "Allow", "-LocalPort", "9182", "-Protocol", "TCP"]
+      containers:
+      - args: 
+        - --config.file=%CONTAINER_SANDBOX_MOUNT_POINT%/config.yml
+        name: windows-exporter
+        image: ghcr.io/prometheus-community/windows-exporter:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 9182
+          hostPort: 9182
+          name: http
+        volumeMounts:
+        - name:  windows-exporter-config
+          mountPath: /config.yml
+          subPath: config.yml
+      nodeSelector:
+        kubernetes.io/os: windows
+      volumes:
+      - name: windows-exporter-config
+        configMap:
+          name: windows-exporter-config
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: windows-exporter-config
+  namespace: monitoring
+  labels:
+    app: windows-exporter
+data:
+  config.yml: |
+    collectors:
+      enabled: '[defaults],container'
+    collector:
+      service:
+        services-where: "Name='containerd' or Name='kubelet'"
