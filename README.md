@@ -92,6 +92,10 @@ On some older versions of Windows you may need to surround parameter values with
 msiexec /i C:\Users\Administrator\Downloads\windows_exporter.msi ENABLED_COLLECTORS="ad,iis,logon,memory,process,tcp,thermalzone" TEXTFILE_DIR="C:\custom_metrics\"
 ```
 
+## Kubernetes Implementation
+
+See detailed steps to install on Windows Kubernetes [here](./kubernetes/kubernetes.md).
+
 ## Roadmap
 
 See [open issues](https://github.com/prometheus-community/windows_exporter/issues)
