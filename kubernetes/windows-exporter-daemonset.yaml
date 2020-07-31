@@ -25,20 +25,4 @@ spec:
           hostPort: 9100
           name: https            
       nodeSelector:
-        kubernetes.io/os: windows            
----
-apiVersion: v1
-kind: Service
-metadata:
-  labels:
-    k8s-app: win-node-exporter
-  name: win-node-exporter
-  namespace: monitoring
-spec:
-  type: NodePort
-  ports:
-  - name: https
-    port: 9100
-    targetPort: https
-  selector:
-    app: win-node-exporter
+        kubernetes.io/os: windows
