@@ -3778,19 +3778,19 @@ func (c *MSSQLCollector) collectSQLErrors(ctx *ScrapeContext, ch chan<- promethe
 }
 
 type win32PerfRawDataSqlServerTransactions struct {
-	FreeSpaceintempdbKB            float64
-	LongestTransactionRunningTime  float64
-	NonSnapshotVersionTransactions float64
-	SnapshotTransactions           float64
-	Transactions                   float64
-	Updateconflictratio            float64
-	UpdateSnapshotTransactions     float64
-	VersionCleanuprateKBPers       float64
-	VersionGenerationrateKBPers    float64
-	VersionStoreSizeKB             float64
-	VersionStoreunitcount          float64
-	VersionStoreunitcreation       float64
-	VersionStoreunittruncation     float64
+	FreeSpaceintempdbKB            float64 `perflib:"Free Space in tempdb (KB)"`
+	LongestTransactionRunningTime  float64 `perflib:"Longest Transaction Running Time"`
+	NonSnapshotVersionTransactions float64 `perflib:"NonSnapshot Version Transactions"`
+	SnapshotTransactions           float64 `perflib:"Snapshot Transactions"`
+	Transactions                   float64 `perflib:"Transactions"`
+	Updateconflictratio            float64 `perflib:"Update conflict ratio"`
+	UpdateSnapshotTransactions     float64 `perflib:"Update Snapshot Transactions"`
+	VersionCleanuprateKBPers       float64 `perflib:"Version Cleanup rate (KB/s)"`
+	VersionGenerationrateKBPers    float64 `perflib:"Version Generation rate (KB/s)"`
+	VersionStoreSizeKB             float64 `perflib:"Version Store Size (KB)"`
+	VersionStoreunitcount          float64 `perflib:"Version Store unit count"`
+	VersionStoreunitcreation       float64 `perflib:"Version Store unit creation"`
+	VersionStoreunittruncation     float64 `perflib:"Version Store unit truncation"`
 }
 
 // Win32_PerfRawData_MSSQLSERVER_Transactions docs:
