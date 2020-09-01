@@ -58,6 +58,10 @@ var (
 
 func registerCollector(name string, builder collectorBuilder, perfCounterNames ...string) {
 	builders[name] = builder
+	addPerfCounterDependencies(name, perfCounterNames)
+}
+
+func addPerfCounterDependencies(name string, perfCounterNames []string) {
 	perfIndicies := make([]string, 0, len(perfCounterNames))
 	for _, cn := range perfCounterNames {
 		perfIndicies = append(perfIndicies, MapCounterToIndex(cn))
