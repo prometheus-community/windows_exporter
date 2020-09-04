@@ -1875,10 +1875,9 @@ func (c *MSSQLCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric
 	return nil
 }
 
-// win32PerfRawDataSQLServerAccessMethods docs:
-// - Win32_PerfRawData_MSSQLSERVER_SQLServerAccessMethods
-//   https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-access-methods-object
-type win32PerfRawDataSQLServerAccessMethods struct {
+// Win32_PerfRawData_MSSQLSERVER_SQLServerAccessMethods docs:
+// - https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-access-methods-object
+type mssqlAccessMethods struct {
 	AUcleanupbatchesPersec        float64 `perflib:"AU cleanup batches/sec"`
 	AUcleanupsPersec              float64 `perflib:"AU cleanups/sec"`
 	ByreferenceLobCreateCount     float64 `perflib:"By-reference Lob Create Count"`
@@ -1926,7 +1925,7 @@ type win32PerfRawDataSQLServerAccessMethods struct {
 }
 
 func (c *MSSQLCollector) collectAccessMethods(ctx *ScrapeContext, ch chan<- prometheus.Metric, sqlInstance string) (*prometheus.Desc, error) {
-	var dst []win32PerfRawDataSQLServerAccessMethods
+	var dst []mssqlAccessMethods
 	log.Debugf("mssql_accessmethods collector iterating sql instance %s.", sqlInstance)
 
 	if err := unmarshalObject(ctx.perfObjects[mssqlGetPerfObjectName(sqlInstance, "accessmethods")], &dst); err != nil {
@@ -2246,8 +2245,8 @@ func (c *MSSQLCollector) collectAccessMethods(ctx *ScrapeContext, ch chan<- prom
 }
 
 // Win32_PerfRawData_MSSQLSERVER_SQLServerAvailabilityReplica docs:
-//   https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-availability-replica
-type win32PerfRawDataSQLServerAvailabilityReplica struct {
+// - https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-availability-replica
+type mssqlAvailabilityReplica struct {
 	Name                           string
 	BytesReceivedfromReplicaPersec float64 `perflib:"Bytes Received from Replica/sec"`
 	BytesSenttoReplicaPersec       float64 `perflib:"Bytes Sent to Replica/sec"`
@@ -2261,7 +2260,7 @@ type win32PerfRawDataSQLServerAvailabilityReplica struct {
 }
 
 func (c *MSSQLCollector) collectAvailabilityReplica(ctx *ScrapeContext, ch chan<- prometheus.Metric, sqlInstance string) (*prometheus.Desc, error) {
-	var dst []win32PerfRawDataSQLServerAvailabilityReplica
+	var dst []mssqlAvailabilityReplica
 	log.Debugf("mssql_availreplica collector iterating sql instance %s.", sqlInstance)
 
 	if err := unmarshalObject(ctx.perfObjects[mssqlGetPerfObjectName(sqlInstance, "availreplica")], &dst); err != nil {
@@ -2341,8 +2340,8 @@ func (c *MSSQLCollector) collectAvailabilityReplica(ctx *ScrapeContext, ch chan<
 }
 
 // Win32_PerfRawData_MSSQLSERVER_SQLServerBufferManager docs:
-//   https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-buffer-manager-object
-type win32PerfRawDataSQLServerBufferManager struct {
+// - https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-buffer-manager-object
+type mssqlBufferManager struct {
 	BackgroundwriterpagesPersec   float64 `perflib:"Background writer pages/sec"`
 	Buffercachehitratio           float64 `perflib:"Buffer cache hit ratio"`
 	Buffercachehitratio_Base      float64 `perflib:"Buffer cache hit ratio base_Base"`
@@ -2369,7 +2368,7 @@ type win32PerfRawDataSQLServerBufferManager struct {
 }
 
 func (c *MSSQLCollector) collectBufferManager(ctx *ScrapeContext, ch chan<- prometheus.Metric, sqlInstance string) (*prometheus.Desc, error) {
-	var dst []win32PerfRawDataSQLServerBufferManager
+	var dst []mssqlBufferManager
 	log.Debugf("mssql_bufman collector iterating sql instance %s.", sqlInstance)
 
 	if err := unmarshalObject(ctx.perfObjects[mssqlGetPerfObjectName(sqlInstance, "bufman")], &dst); err != nil {
@@ -2544,7 +2543,7 @@ func (c *MSSQLCollector) collectBufferManager(ctx *ScrapeContext, ch chan<- prom
 
 // Win32_PerfRawData_MSSQLSERVER_SQLServerDatabaseReplica docs:
 // - https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-database-replica
-type win32PerfRawDataSQLServerDatabaseReplica struct {
+type mssqlDatabaseReplica struct {
 	Name                            string
 	DatabaseFlowControlDelay        float64 `perflib:"Database Flow Control Delay"`
 	DatabaseFlowControlsPersec      float64 `perflib:"Database Flow Controls/sec"`
@@ -2573,7 +2572,7 @@ type win32PerfRawDataSQLServerDatabaseReplica struct {
 }
 
 func (c *MSSQLCollector) collectDatabaseReplica(ctx *ScrapeContext, ch chan<- prometheus.Metric, sqlInstance string) (*prometheus.Desc, error) {
-	var dst []win32PerfRawDataSQLServerDatabaseReplica
+	var dst []mssqlDatabaseReplica
 	log.Debugf("mssql_dbreplica collector iterating sql instance %s.", sqlInstance)
 
 	if err := unmarshalObject(ctx.perfObjects[mssqlGetPerfObjectName(sqlInstance, "dbreplica")], &dst); err != nil {
@@ -2759,7 +2758,7 @@ func (c *MSSQLCollector) collectDatabaseReplica(ctx *ScrapeContext, ch chan<- pr
 
 // Win32_PerfRawData_MSSQLSERVER_SQLServerDatabases docs:
 // - https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-databases-object?view=sql-server-2017
-type win32PerfRawDataSQLServerDatabases struct {
+type mssqlDatabases struct {
 	Name                             string
 	Activeparallelredothreads        float64 `perflib:"Active parallel redo threads"`
 	ActiveTransactions               float64 `perflib:"Active Transactions"`
@@ -2812,7 +2811,7 @@ type win32PerfRawDataSQLServerDatabases struct {
 }
 
 func (c *MSSQLCollector) collectDatabases(ctx *ScrapeContext, ch chan<- prometheus.Metric, sqlInstance string) (*prometheus.Desc, error) {
-	var dst []win32PerfRawDataSQLServerDatabases
+	var dst []mssqlDatabases
 	log.Debugf("mssql_databases collector iterating sql instance %s.", sqlInstance)
 
 	if err := unmarshalObject(ctx.perfObjects[mssqlGetPerfObjectName(sqlInstance, "databases")], &dst); err != nil {
@@ -3166,7 +3165,7 @@ func (c *MSSQLCollector) collectDatabases(ctx *ScrapeContext, ch chan<- promethe
 
 // Win32_PerfRawData_MSSQLSERVER_SQLServerGeneralStatistics docs:
 // - https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-general-statistics-object
-type win32PerfRawDataSQLServerGeneralStatistics struct {
+type mssqlGeneralStatistics struct {
 	ActiveTempTables              float64 `perflib:"Active Temp Tables"`
 	ConnectionResetPersec         float64 `perblib:"Connection Reset/sec"`
 	EventNotificationsDelayedDrop float64 `perflib:"Event Notifications Delayed Drop"`
@@ -3194,7 +3193,7 @@ type win32PerfRawDataSQLServerGeneralStatistics struct {
 }
 
 func (c *MSSQLCollector) collectGeneralStatistics(ctx *ScrapeContext, ch chan<- prometheus.Metric, sqlInstance string) (*prometheus.Desc, error) {
-	var dst []win32PerfRawDataSQLServerGeneralStatistics
+	var dst []mssqlGeneralStatistics
 	log.Debugf("mssql_genstats collector iterating sql instance %s.", sqlInstance)
 
 	if err := unmarshalObject(ctx.perfObjects[mssqlGetPerfObjectName(sqlInstance, "genstats")], &dst); err != nil {
@@ -3376,7 +3375,7 @@ func (c *MSSQLCollector) collectGeneralStatistics(ctx *ScrapeContext, ch chan<- 
 
 // Win32_PerfRawData_MSSQLSERVER_SQLServerLocks docs:
 // - https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-locks-object
-type win32PerfRawDataSQLServerLocks struct {
+type mssqlLocks struct {
 	Name                       string
 	AverageWaitTimems          float64 `perflib:"Average Wait Time (ms)"`
 	AverageWaitTimems_Base     float64 `perflib:"Average Wait Time Base_Base"`
@@ -3389,7 +3388,7 @@ type win32PerfRawDataSQLServerLocks struct {
 }
 
 func (c *MSSQLCollector) collectLocks(ctx *ScrapeContext, ch chan<- prometheus.Metric, sqlInstance string) (*prometheus.Desc, error) {
-	var dst []win32PerfRawDataSQLServerLocks
+	var dst []mssqlLocks
 	log.Debugf("mssql_locks collector iterating sql instance %s.", sqlInstance)
 
 	if err := unmarshalObject(ctx.perfObjects[mssqlGetPerfObjectName(sqlInstance, "locks")], &dst); err != nil {
@@ -3463,7 +3462,7 @@ func (c *MSSQLCollector) collectLocks(ctx *ScrapeContext, ch chan<- prometheus.M
 
 // Win32_PerfRawData_MSSQLSERVER_SQLServerMemoryManager docs:
 // - https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-memory-manager-object
-type win32PerfRawDataSQLServerMemoryManager struct {
+type mssqlMemoryManager struct {
 	ConnectionMemoryKB       float64 `perflib:"Connection Memory (KB)"`
 	DatabaseCacheMemoryKB    float64 `perflib:"Database Cache Memory (KB)"`
 	Externalbenefitofmemory  float64 `perflib:"External benefit of memory"`
@@ -3487,7 +3486,7 @@ type win32PerfRawDataSQLServerMemoryManager struct {
 }
 
 func (c *MSSQLCollector) collectMemoryManager(ctx *ScrapeContext, ch chan<- prometheus.Metric, sqlInstance string) (*prometheus.Desc, error) {
-	var dst []win32PerfRawDataSQLServerMemoryManager
+	var dst []mssqlMemoryManager
 	log.Debugf("mssql_memmgr collector iterating sql instance %s.", sqlInstance)
 
 	if err := unmarshalObject(ctx.perfObjects[mssqlGetPerfObjectName(sqlInstance, "memmgr")], &dst); err != nil {
@@ -3641,7 +3640,7 @@ func (c *MSSQLCollector) collectMemoryManager(ctx *ScrapeContext, ch chan<- prom
 
 // Win32_PerfRawData_MSSQLSERVER_SQLServerSQLStatistics docs:
 // - https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-sql-statistics-object
-type win32PerfRawDataSQLServerSQLStatistics struct {
+type mssqlSQLStatistics struct {
 	AutoParamAttemptsPersec       float64 `perflib:"Auto-Param Attempts/sec"`
 	BatchRequestsPersec           float64 `perflib:"Batch Requests/sec"`
 	FailedAutoParamsPersec        float64 `perflib:"Failed Auto-Params/sec"`
@@ -3656,7 +3655,7 @@ type win32PerfRawDataSQLServerSQLStatistics struct {
 }
 
 func (c *MSSQLCollector) collectSQLStats(ctx *ScrapeContext, ch chan<- prometheus.Metric, sqlInstance string) (*prometheus.Desc, error) {
-	var dst []win32PerfRawDataSQLServerSQLStatistics
+	var dst []mssqlSQLStatistics
 	log.Debugf("mssql_sqlstats collector iterating sql instance %s.", sqlInstance)
 
 	if err := unmarshalObject(ctx.perfObjects[mssqlGetPerfObjectName(sqlInstance, "sqlstats")], &dst); err != nil {
@@ -3745,7 +3744,7 @@ func (c *MSSQLCollector) collectSQLStats(ctx *ScrapeContext, ch chan<- prometheu
 	return nil, nil
 }
 
-type win32PerfRawDataSQLServerSQLErrors struct {
+type mssqlSQLErrors struct {
 	Name         string
 	ErrorsPersec float64 `perflib:"Errors/sec"`
 }
@@ -3753,7 +3752,7 @@ type win32PerfRawDataSQLServerSQLErrors struct {
 // Win32_PerfRawData_MSSQLSERVER_SQLServerErrors docs:
 // - https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-sql-errors-object
 func (c *MSSQLCollector) collectSQLErrors(ctx *ScrapeContext, ch chan<- prometheus.Metric, sqlInstance string) (*prometheus.Desc, error) {
-	var dst []win32PerfRawDataSQLServerSQLErrors
+	var dst []mssqlSQLErrors
 	log.Debugf("mssql_sqlerrors collector iterating sql instance %s.", sqlInstance)
 
 	if err := unmarshalObject(ctx.perfObjects[mssqlGetPerfObjectName(sqlInstance, "sqlerrors")], &dst); err != nil {
@@ -3777,7 +3776,7 @@ func (c *MSSQLCollector) collectSQLErrors(ctx *ScrapeContext, ch chan<- promethe
 	return nil, nil
 }
 
-type win32PerfRawDataSqlServerTransactions struct {
+type mssqlTransactions struct {
 	FreeSpaceintempdbKB            float64 `perflib:"Free Space in tempdb (KB)"`
 	LongestTransactionRunningTime  float64 `perflib:"Longest Transaction Running Time"`
 	NonSnapshotVersionTransactions float64 `perflib:"NonSnapshot Version Transactions"`
@@ -3796,7 +3795,7 @@ type win32PerfRawDataSqlServerTransactions struct {
 // Win32_PerfRawData_MSSQLSERVER_Transactions docs:
 // - https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-transactions-object
 func (c *MSSQLCollector) collectTransactions(ctx *ScrapeContext, ch chan<- prometheus.Metric, sqlInstance string) (*prometheus.Desc, error) {
-	var dst []win32PerfRawDataSqlServerTransactions
+	var dst []mssqlTransactions
 	log.Debugf("mssql_transactions collector iterating sql instance %s.", sqlInstance)
 
 	if err := unmarshalObject(ctx.perfObjects[mssqlGetPerfObjectName(sqlInstance, "transactions")], &dst); err != nil {
