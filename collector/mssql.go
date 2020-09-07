@@ -3167,7 +3167,7 @@ func (c *MSSQLCollector) collectDatabases(ctx *ScrapeContext, ch chan<- promethe
 // - https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-general-statistics-object
 type mssqlGeneralStatistics struct {
 	ActiveTempTables              float64 `perflib:"Active Temp Tables"`
-	ConnectionResetPersec         float64 `perblib:"Connection Reset/sec"`
+	ConnectionResetPersec         float64 `perflib:"Connection Reset/sec"`
 	EventNotificationsDelayedDrop float64 `perflib:"Event Notifications Delayed Drop"`
 	HTTPAuthenticatedRequests     float64 `perflib:"HTTP Authenticated Requests"`
 	LogicalConnections            float64 `perflib:"Logical Connections"`
