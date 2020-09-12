@@ -14,7 +14,7 @@
     <Package Id="*" Manufacturer="prometheus-community" InstallScope="perMachine"
              Description="windows_exporter $(var.Version) installer" Compressed="yes" />
     <Media Id="1" Cabinet="windows_exporter.cab" EmbedCab="yes"/>
-    <MajorUpgrade Schedule="afterInstallExecute" DowngradeErrorMessage="A later version of [ProductName] is already installed. Setup will now exit." />
+    <MajorUpgrade Schedule="afterInstallInitialize" DowngradeErrorMessage="A later version of [ProductName] is already installed. Setup will now exit." />
 
     <Property Id="ENABLED_COLLECTORS" Secure="yes"/>
     <SetProperty Id="CollectorsFlag" After="InstallFiles" Sequence="execute" Value="--collectors.enabled [ENABLED_COLLECTORS]">ENABLED_COLLECTORS</SetProperty>
