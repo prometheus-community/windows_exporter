@@ -28,6 +28,9 @@
 
     <Property Id="METRICS_PATH" Secure="yes"/>
     <SetProperty Id="MetricsPathFlag" After="InstallFiles" Sequence="execute" Value="--telemetry.path [METRICS_PATH]">METRICS_PATH</SetProperty>
+     
+    <Property Id="REMOTE_ADDR" Secure="yes" />
+    <SetProperty Id="RemoteAddressFlag" After="InstallFiles" Sequence="execute" Value="[REMOTE_ADDR]">REMOTE_ADDR</SetProperty> 
 
     <Directory Id="TARGETDIR" Name="SourceDir">
       <Directory Id="$(var.PlatformProgramFiles)">
@@ -43,7 +46,9 @@
     <ComponentGroup Id="Files">
       <Component Directory="APPLICATIONROOTDIRECTORY">
         <File Id="windows_exporter.exe" Name="windows_exporter.exe" Source="Work\windows_exporter.exe" KeyPath="yes">
-          <fw:FirewallException Id="MetricsEndpoint" Name="windows_exporter (HTTP [LISTEN_PORT])" Description="windows_exporter HTTP endpoint" Port="[LISTEN_PORT]" Protocol="tcp" Scope="any" IgnoreFailure="yes" />
+          <fw:FirewallException Id="MetricsEndpoint" Name="windows_exporter (HTTP [LISTEN_PORT])" Description="windows_exporter HTTP endpoint" Port="[LISTEN_PORT]" Protocol="tcp" IgnoreFailure="yes">
+            <fw:RemoteAddress>[REMOTE_ADDR]</fw:RemoteAddress>
+          </fw:FirewallException> 
         </File>
         <ServiceInstall Id="InstallExporterService" Name="windows_exporter" DisplayName="windows_exporter" Description="Exports Prometheus metrics from WMI queries" ErrorControl="normal" Start="auto" Type="ownProcess" Arguments="--log.format logger:eventlog?name=windows_exporter [CollectorsFlag] [ListenFlag] [MetricsPathFlag] [TextfileDirFlag] [ExtraFlags]">
           <util:ServiceConfig FirstFailureActionType="restart" SecondFailureActionType="restart" ThirdFailureActionType="restart" RestartServiceDelayInSeconds="5" />
