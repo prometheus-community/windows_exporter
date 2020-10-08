@@ -3,17 +3,15 @@
 package collector
 
 import (
-	"errors"
-
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
 )
 
 func init() {
-	registerCollector("tcp", NewTCPCollector, "TCPv4")
+	registerCollector("tcp", NewTCPCollector, "TCPv4", "TCPv6")
 }
 
-// A TCPCollector is a Prometheus collector for WMI Win32_PerfRawData_Tcpip_TCPv4 metrics
+// A TCPCollector is a Prometheus collector for WMI Win32_PerfRawData_Tcpip_TCPv{4,6} metrics
 type TCPCollector struct {
 	ConnectionFailures         *prometheus.Desc
 	ConnectionsActive          *prometheus.Desc
@@ -34,55 +32,55 @@ func NewTCPCollector() (Collector, error) {
 		ConnectionFailures: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "connection_failures"),
 			"(TCP.ConnectionFailures)",
-			nil,
+			[]string{"af"},
 			nil,
 		),
 		ConnectionsActive: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "connections_active"),
 			"(TCP.ConnectionsActive)",
-			nil,
+			[]string{"af"},
 			nil,
 		),
 		ConnectionsEstablished: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "connections_established"),
 			"(TCP.ConnectionsEstablished)",
-			nil,
+			[]string{"af"},
 			nil,
 		),
 		ConnectionsPassive: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "connections_passive"),
 			"(TCP.ConnectionsPassive)",
-			nil,
+			[]string{"af"},
 			nil,
 		),
 		ConnectionsReset: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "connections_reset"),
 			"(TCP.ConnectionsReset)",
-			nil,
+			[]string{"af"},
 			nil,
 		),
 		SegmentsTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "segments_total"),
 			"(TCP.SegmentsTotal)",
-			nil,
+			[]string{"af"},
 			nil,
 		),
 		SegmentsReceivedTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "segments_received_total"),
 			"(TCP.SegmentsReceivedTotal)",
-			nil,
+			[]string{"af"},
 			nil,
 		),
 		SegmentsRetransmittedTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "segments_retransmitted_total"),
 			"(TCP.SegmentsRetransmittedTotal)",
-			nil,
+			[]string{"af"},
 			nil,
 		),
 		SegmentsSentTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "segments_sent_total"),
 			"(TCP.SegmentsSentTotal)",
-			nil,
+			[]string{"af"},
 			nil,
 		),
 	}, nil
@@ -100,6 +98,7 @@ func (c *TCPCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) 
 
 // Win32_PerfRawData_Tcpip_TCPv4 docs
 // - https://msdn.microsoft.com/en-us/library/aa394341(v=vs.85).aspx
+// The TCPv6 performance object uses the same fields.
 type tcp struct {
 	ConnectionFailures          float64 `perflib:"Connection Failures"`
 	ConnectionsActive           float64 `perflib:"Connections Active"`
@@ -112,62 +111,81 @@ type tcp struct {
 	SegmentsSentPersec          float64 `perflib:"Segments Sent/sec"`
 }
 
-func (c *TCPCollector) collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
-	var dst []tcp
-
-	if err := unmarshalObject(ctx.perfObjects["TCPv4"], &dst); err != nil {
-		return nil, err
-	}
-	if len(dst) == 0 {
-		return nil, errors.New("TCPv4 performance object not available")
-	}
-
-	// Counters
+func writeTCPCounters(metrics tcp, labels []string, c *TCPCollector, ch chan<- prometheus.Metric) {
 	ch <- prometheus.MustNewConstMetric(
 		c.ConnectionFailures,
 		prometheus.CounterValue,
-		dst[0].ConnectionFailures,
+		metrics.ConnectionFailures,
+		labels...,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.ConnectionsActive,
 		prometheus.CounterValue,
-		dst[0].ConnectionsActive,
+		metrics.ConnectionsActive,
+		labels...,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.ConnectionsEstablished,
 		prometheus.GaugeValue,
-		dst[0].ConnectionsEstablished,
+		metrics.ConnectionsEstablished,
+		labels...,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.ConnectionsPassive,
 		prometheus.CounterValue,
-		dst[0].ConnectionsPassive,
+		metrics.ConnectionsPassive,
+		labels...,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.ConnectionsReset,
 		prometheus.CounterValue,
-		dst[0].ConnectionsReset,
+		metrics.ConnectionsReset,
+		labels...,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.SegmentsTotal,
 		prometheus.CounterValue,
-		dst[0].SegmentsPersec,
+		metrics.SegmentsPersec,
+		labels...,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.SegmentsReceivedTotal,
 		prometheus.CounterValue,
-		dst[0].SegmentsReceivedPersec,
+		metrics.SegmentsReceivedPersec,
+		labels...,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.SegmentsRetransmittedTotal,
 		prometheus.CounterValue,
-		dst[0].SegmentsRetransmittedPersec,
+		metrics.SegmentsRetransmittedPersec,
+		labels...,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.SegmentsSentTotal,
 		prometheus.CounterValue,
-		dst[0].SegmentsSentPersec,
+		metrics.SegmentsSentPersec,
+		labels...,
 	)
+}
+
+func (c *TCPCollector) collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+	var dst []tcp
+
+	// TCPv4 counters
+	if err := unmarshalObject(ctx.perfObjects["TCPv4"], &dst); err != nil {
+		return nil, err
+	}
+	if len(dst) != 0 {
+		writeTCPCounters(dst[0], []string{"ipv4"}, c, ch)
+	}
+
+	// TCPv6 counters
+	if err := unmarshalObject(ctx.perfObjects["TCPv6"], &dst); err != nil {
+		return nil, err
+	}
+	if len(dst) != 0 {
+		writeTCPCounters(dst[0], []string{"ipv6"}, c, ch)
+	}
 
 	return nil, nil
 }
