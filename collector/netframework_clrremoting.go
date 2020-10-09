@@ -4,6 +4,7 @@ package collector
 
 import (
 	"fmt"
+	"regexp"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
@@ -21,11 +22,15 @@ type NETFrameworkCLRRemotingCollector struct {
 	ContextProxies            *prometheus.Desc
 	Contexts                  *prometheus.Desc
 	TotalRemoteCalls          *prometheus.Desc
+
+	processWhitelistPattern *regexp.Regexp
+	processBlacklistPattern *regexp.Regexp
 }
 
 // NewNETFrameworkCLRRemotingCollector ...
 func NewNETFrameworkCLRRemotingCollector() (Collector, error) {
 	const subsystem = "netframework_clrremoting"
+	commonFlags := GetNETFrameworkFlags()
 	return &NETFrameworkCLRRemotingCollector{
 		Channels: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "channels_total"),
@@ -63,6 +68,8 @@ func NewNETFrameworkCLRRemotingCollector() (Collector, error) {
 			[]string{"process"},
 			nil,
 		),
+		processWhitelistPattern: commonFlags.whitelistRegexp,
+		processBlacklistPattern: commonFlags.blacklistRegexp,
 	}, nil
 }
 
@@ -110,6 +117,13 @@ func (c *NETFrameworkCLRRemotingCollector) collect(ctx *ScrapeContext, ch chan<-
 			names[name]++
 		} else {
 			names[name] = 1
+		}
+
+		// The pattern matching against the whitelist and blacklist has to occur
+		// after appending #N above to be consistent with other collectors.
+		if c.processBlacklistPattern.MatchString(name) ||
+			!c.processWhitelistPattern.MatchString(name) {
+			continue
 		}
 
 		ch <- prometheus.MustNewConstMetric(

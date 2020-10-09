@@ -4,6 +4,7 @@ package collector
 
 import (
 	"fmt"
+	"regexp"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
@@ -22,11 +23,15 @@ type NETFrameworkCLRLocksAndThreadsCollector struct {
 	Numberoftotalrecognizedthreads   *prometheus.Desc
 	QueueLengthPeak                  *prometheus.Desc
 	TotalNumberofContentions         *prometheus.Desc
+
+	processWhitelistPattern *regexp.Regexp
+	processBlacklistPattern *regexp.Regexp
 }
 
 // NewNETFramework_NETCLRLocksAndThreadsCollector ...
 func NewNETFramework_NETCLRLocksAndThreadsCollector() (Collector, error) {
 	const subsystem = "netframework_clrlocksandthreads"
+	commonFlags := GetNETFrameworkFlags()
 	return &NETFrameworkCLRLocksAndThreadsCollector{
 		CurrentQueueLength: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "current_queue_length"),
@@ -70,6 +75,8 @@ func NewNETFramework_NETCLRLocksAndThreadsCollector() (Collector, error) {
 			[]string{"process"},
 			nil,
 		),
+		processWhitelistPattern: commonFlags.whitelistRegexp,
+		processBlacklistPattern: commonFlags.blacklistRegexp,
 	}, nil
 }
 
@@ -120,6 +127,13 @@ func (c *NETFrameworkCLRLocksAndThreadsCollector) collect(ctx *ScrapeContext, ch
 			names[name]++
 		} else {
 			names[name] = 1
+		}
+
+		// The pattern matching against the whitelist and blacklist has to occur
+		// after appending #N above to be consistent with other collectors.
+		if c.processBlacklistPattern.MatchString(name) ||
+			!c.processWhitelistPattern.MatchString(name) {
+			continue
 		}
 
 		ch <- prometheus.MustNewConstMetric(

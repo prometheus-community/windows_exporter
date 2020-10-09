@@ -4,6 +4,7 @@ package collector
 
 import (
 	"fmt"
+	"regexp"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
@@ -18,11 +19,15 @@ type NETFrameworkCLRInteropCollector struct {
 	NumberofCCWs        *prometheus.Desc
 	Numberofmarshalling *prometheus.Desc
 	NumberofStubs       *prometheus.Desc
+
+	processWhitelistPattern *regexp.Regexp
+	processBlacklistPattern *regexp.Regexp
 }
 
 // NewNETFrameworkCLRInteropCollector ...
 func NewNETFrameworkCLRInteropCollector() (Collector, error) {
 	const subsystem = "netframework_clrinterop"
+	commonFlags := GetNETFrameworkFlags()
 	return &NETFrameworkCLRInteropCollector{
 		NumberofCCWs: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "com_callable_wrappers_total"),
@@ -42,6 +47,8 @@ func NewNETFrameworkCLRInteropCollector() (Collector, error) {
 			[]string{"process"},
 			nil,
 		),
+		processWhitelistPattern: commonFlags.whitelistRegexp,
+		processBlacklistPattern: commonFlags.blacklistRegexp,
 	}, nil
 }
 
@@ -87,6 +94,13 @@ func (c *NETFrameworkCLRInteropCollector) collect(ctx *ScrapeContext, ch chan<- 
 			names[name]++
 		} else {
 			names[name] = 1
+		}
+
+		// The pattern matching against the whitelist and blacklist has to occur
+		// after appending #N above to be consistent with other collectors.
+		if c.processBlacklistPattern.MatchString(name) ||
+			!c.processWhitelistPattern.MatchString(name) {
+			continue
 		}
 
 		ch <- prometheus.MustNewConstMetric(

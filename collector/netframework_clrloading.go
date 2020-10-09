@@ -4,6 +4,7 @@ package collector
 
 import (
 	"fmt"
+	"regexp"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
@@ -24,11 +25,15 @@ type NETFrameworkCLRLoadingCollector struct {
 	TotalAssemblies           *prometheus.Desc
 	TotalClassesLoaded        *prometheus.Desc
 	TotalNumberofLoadFailures *prometheus.Desc
+
+	processWhitelistPattern *regexp.Regexp
+	processBlacklistPattern *regexp.Regexp
 }
 
 // NewNETFrameworkCLRLoadingCollector ...
 func NewNETFrameworkCLRLoadingCollector() (Collector, error) {
 	const subsystem = "netframework_clrloading"
+	commonFlags := GetNETFrameworkFlags()
 	return &NETFrameworkCLRLoadingCollector{
 		BytesinLoaderHeap: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "loader_heap_size_bytes"),
@@ -84,6 +89,8 @@ func NewNETFrameworkCLRLoadingCollector() (Collector, error) {
 			[]string{"process"},
 			nil,
 		),
+		processWhitelistPattern: commonFlags.whitelistRegexp,
+		processBlacklistPattern: commonFlags.blacklistRegexp,
 	}, nil
 }
 
@@ -140,6 +147,13 @@ func (c *NETFrameworkCLRLoadingCollector) collect(ctx *ScrapeContext, ch chan<- 
 			names[name]++
 		} else {
 			names[name] = 1
+		}
+
+		// The pattern matching against the whitelist and blacklist has to occur
+		// after appending #N above to be consistent with other collectors.
+		if c.processBlacklistPattern.MatchString(name) ||
+			!c.processWhitelistPattern.MatchString(name) {
+			continue
 		}
 
 		ch <- prometheus.MustNewConstMetric(

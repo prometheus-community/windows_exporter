@@ -4,6 +4,7 @@ package collector
 
 import (
 	"fmt"
+	"regexp"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
@@ -19,11 +20,15 @@ type NETFrameworkCLRJitCollector struct {
 	TimeinJit                  *prometheus.Desc
 	StandardJitFailures        *prometheus.Desc
 	TotalNumberofILBytesJitted *prometheus.Desc
+
+	processWhitelistPattern *regexp.Regexp
+	processBlacklistPattern *regexp.Regexp
 }
 
 // NewNETFrameworkCLRJitCollector ...
 func NewNETFrameworkCLRJitCollector() (Collector, error) {
 	const subsystem = "netframework_clrjit"
+	commonFlags := GetNETFrameworkFlags()
 	return &NETFrameworkCLRJitCollector{
 		NumberofMethodsJitted: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "jit_methods_total"),
@@ -49,6 +54,8 @@ func NewNETFrameworkCLRJitCollector() (Collector, error) {
 			[]string{"process"},
 			nil,
 		),
+		processWhitelistPattern: commonFlags.whitelistRegexp,
+		processBlacklistPattern: commonFlags.blacklistRegexp,
 	}, nil
 }
 
@@ -96,6 +103,13 @@ func (c *NETFrameworkCLRJitCollector) collect(ctx *ScrapeContext, ch chan<- prom
 			names[name]++
 		} else {
 			names[name] = 1
+		}
+
+		// The pattern matching against the whitelist and blacklist has to occur
+		// after appending #N above to be consistent with other collectors.
+		if c.processBlacklistPattern.MatchString(name) ||
+			!c.processWhitelistPattern.MatchString(name) {
+			continue
 		}
 
 		ch <- prometheus.MustNewConstMetric(

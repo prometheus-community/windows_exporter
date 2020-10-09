@@ -4,6 +4,7 @@ package collector
 
 import (
 	"fmt"
+	"regexp"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
@@ -19,11 +20,15 @@ type NETFrameworkCLRExceptionsCollector struct {
 	NumberofFilters      *prometheus.Desc
 	NumberofFinallys     *prometheus.Desc
 	ThrowToCatchDepth    *prometheus.Desc
+
+	processWhitelistPattern *regexp.Regexp
+	processBlacklistPattern *regexp.Regexp
 }
 
 // NewNETFrameworkCLRExceptionsCollector ...
 func NewNETFrameworkCLRExceptionsCollector() (Collector, error) {
 	const subsystem = "netframework_clrexceptions"
+	commonFlags := GetNETFrameworkFlags()
 	return &NETFrameworkCLRExceptionsCollector{
 		NumberofExcepsThrown: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "exceptions_thrown_total"),
@@ -49,6 +54,8 @@ func NewNETFrameworkCLRExceptionsCollector() (Collector, error) {
 			[]string{"process"},
 			nil,
 		),
+		processWhitelistPattern: commonFlags.whitelistRegexp,
+		processBlacklistPattern: commonFlags.blacklistRegexp,
 	}, nil
 }
 
@@ -94,6 +101,13 @@ func (c *NETFrameworkCLRExceptionsCollector) collect(ctx *ScrapeContext, ch chan
 			names[name]++
 		} else {
 			names[name] = 1
+		}
+
+		// The pattern matching against the whitelist and blacklist has to occur
+		// after appending #N above to be consistent with other collectors.
+		if c.processBlacklistPattern.MatchString(name) ||
+			!c.processWhitelistPattern.MatchString(name) {
+			continue
 		}
 
 		ch <- prometheus.MustNewConstMetric(

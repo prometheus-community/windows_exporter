@@ -4,6 +4,7 @@ package collector
 
 import (
 	"fmt"
+	"regexp"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
@@ -30,11 +31,15 @@ type NETFrameworkCLRMemoryCollector struct {
 	PromotedFinalizationMemoryfromGen0 *prometheus.Desc
 	PromotedMemoryfromGen0             *prometheus.Desc
 	PromotedMemoryfromGen1             *prometheus.Desc
+
+	processWhitelistPattern *regexp.Regexp
+	processBlacklistPattern *regexp.Regexp
 }
 
 // NewNETFrameworkCLRMemoryCollector ...
 func NewNETFrameworkCLRMemoryCollector() (Collector, error) {
 	const subsystem = "netframework_clrmemory"
+	commonFlags := GetNETFrameworkFlags()
 	return &NETFrameworkCLRMemoryCollector{
 		AllocatedBytes: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "allocated_bytes_total"),
@@ -108,6 +113,8 @@ func NewNETFrameworkCLRMemoryCollector() (Collector, error) {
 			[]string{"process"},
 			nil,
 		),
+		processWhitelistPattern: commonFlags.whitelistRegexp,
+		processBlacklistPattern: commonFlags.blacklistRegexp,
 	}, nil
 }
 
@@ -172,6 +179,13 @@ func (c *NETFrameworkCLRMemoryCollector) collect(ctx *ScrapeContext, ch chan<- p
 			names[name]++
 		} else {
 			names[name] = 1
+		}
+
+		// The pattern matching against the whitelist and blacklist has to occur
+		// after appending #N above to be consistent with other collectors.
+		if c.processBlacklistPattern.MatchString(name) ||
+			!c.processWhitelistPattern.MatchString(name) {
+			continue
 		}
 
 		ch <- prometheus.MustNewConstMetric(

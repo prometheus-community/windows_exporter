@@ -4,6 +4,7 @@ package collector
 
 import (
 	"fmt"
+	"regexp"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
@@ -19,11 +20,15 @@ type NETFrameworkCLRSecurityCollector struct {
 	TimeinRTchecks       *prometheus.Desc
 	StackWalkDepth       *prometheus.Desc
 	TotalRuntimeChecks   *prometheus.Desc
+
+	processWhitelistPattern *regexp.Regexp
+	processBlacklistPattern *regexp.Regexp
 }
 
 // NewNETFrameworkCLRSecurityCollector ...
 func NewNETFrameworkCLRSecurityCollector() (Collector, error) {
 	const subsystem = "netframework_clrsecurity"
+	commonFlags := GetNETFrameworkFlags()
 	return &NETFrameworkCLRSecurityCollector{
 		NumberLinkTimeChecks: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "link_time_checks_total"),
@@ -49,6 +54,8 @@ func NewNETFrameworkCLRSecurityCollector() (Collector, error) {
 			[]string{"process"},
 			nil,
 		),
+		processWhitelistPattern: commonFlags.whitelistRegexp,
+		processBlacklistPattern: commonFlags.blacklistRegexp,
 	}, nil
 }
 
@@ -95,6 +102,13 @@ func (c *NETFrameworkCLRSecurityCollector) collect(ctx *ScrapeContext, ch chan<-
 			names[name]++
 		} else {
 			names[name] = 1
+		}
+
+		// The pattern matching against the whitelist and blacklist has to occur
+		// after appending #N above to be consistent with other collectors.
+		if c.processBlacklistPattern.MatchString(name) ||
+			!c.processWhitelistPattern.MatchString(name) {
+			continue
 		}
 
 		ch <- prometheus.MustNewConstMetric(
