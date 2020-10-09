@@ -3,27 +3,28 @@
 package collector
 
 import (
-	"github.com/StackExchange/wmi"
+	"fmt"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
 )
 
 func init() {
-	registerCollector("netframework_clrjit", NewNETFramework_NETCLRJitCollector)
+	registerCollector("netframework_clrjit", NewNETFrameworkCLRJitCollector, ".NET CLR Jit")
 }
 
-// A NETFramework_NETCLRJitCollector is a Prometheus collector for WMI Win32_PerfRawData_NETFramework_NETCLRJit metrics
-type NETFramework_NETCLRJitCollector struct {
+// A NETFrameworkCLRJitCollector is a Prometheus collector for Perflib .NET CLR Jit metrics
+type NETFrameworkCLRJitCollector struct {
 	NumberofMethodsJitted      *prometheus.Desc
 	TimeinJit                  *prometheus.Desc
 	StandardJitFailures        *prometheus.Desc
 	TotalNumberofILBytesJitted *prometheus.Desc
 }
 
-// NewNETFramework_NETCLRJitCollector ...
-func NewNETFramework_NETCLRJitCollector() (Collector, error) {
+// NewNETFrameworkCLRJitCollector ...
+func NewNETFrameworkCLRJitCollector() (Collector, error) {
 	const subsystem = "netframework_clrjit"
-	return &NETFramework_NETCLRJitCollector{
+	return &NETFrameworkCLRJitCollector{
 		NumberofMethodsJitted: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "jit_methods_total"),
 			"Displays the total number of methods JIT-compiled since the application started. This counter does not include pre-JIT-compiled methods.",
@@ -53,65 +54,80 @@ func NewNETFramework_NETCLRJitCollector() (Collector, error) {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *NETFramework_NETCLRJitCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
-	if desc, err := c.collect(ch); err != nil {
-		log.Error("failed collecting win32_perfrawdata_netframework_netclrjit metrics:", desc, err)
+func (c *NETFrameworkCLRJitCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
+	if desc, err := c.collect(ctx, ch); err != nil {
+		log.Error("failed collecting netframework_clrjit metrics:", desc, err)
 		return err
 	}
 	return nil
 }
 
-type Win32_PerfRawData_NETFramework_NETCLRJit struct {
+type netframeworkCLRJit struct {
 	Name string
 
-	Frequency_PerfTime         uint32
-	ILBytesJittedPersec        uint32
-	NumberofILBytesJitted      uint32
-	NumberofMethodsJitted      uint32
-	PercentTimeinJit           uint32
-	StandardJitFailures        uint32
-	TotalNumberofILBytesJitted uint32
+	Frequency_PerfTime         float64 `perflib:"Not Displayed_Base"`
+	ILBytesJittedPersec        float64 `perflib:"IL Bytes Jitted / sec"`
+	NumberofILBytesJitted      float64 `perflib:"# of IL Bytes Jitted"`
+	NumberofMethodsJitted      float64 `perflib:"# of Methods Jitted"`
+	PercentTimeinJit           float64 `perflib:"% Time in Jit"`
+	StandardJitFailures        float64 `perflib:"Standard Jit Failures"`
+	TotalNumberofILBytesJitted float64 `perflib:"Total # of IL Bytes Jitted"`
 }
 
-func (c *NETFramework_NETCLRJitCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
-	var dst []Win32_PerfRawData_NETFramework_NETCLRJit
-	q := queryAll(&dst)
-	if err := wmi.Query(q, &dst); err != nil {
+func (c *NETFrameworkCLRJitCollector) collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+	var dst []netframeworkCLRJit
+
+	if err := unmarshalObject(ctx.perfObjects[".NET CLR Jit"], &dst); err != nil {
 		return nil, err
 	}
 
+	var names = make(map[string]int, len(dst))
 	for _, process := range dst {
 
 		if process.Name == "_Global_" {
 			continue
 		}
 
+		// Append "#1", "#2", etc., to process names to disambiguate duplicates.
+		name := process.Name
+		procnum, exists := names[name]
+		if exists {
+			name = fmt.Sprintf("%s#%d", name, procnum)
+			names[name]++
+		} else {
+			names[name] = 1
+		}
+
 		ch <- prometheus.MustNewConstMetric(
 			c.NumberofMethodsJitted,
 			prometheus.CounterValue,
-			float64(process.NumberofMethodsJitted),
-			process.Name,
+			process.NumberofMethodsJitted,
+			name,
 		)
 
+		timeInJit := 0.0
+		if process.Frequency_PerfTime != 0 {
+			timeInJit = process.PercentTimeinJit / process.Frequency_PerfTime
+		}
 		ch <- prometheus.MustNewConstMetric(
 			c.TimeinJit,
 			prometheus.GaugeValue,
-			float64(process.PercentTimeinJit)/float64(process.Frequency_PerfTime),
-			process.Name,
+			timeInJit,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.StandardJitFailures,
 			prometheus.GaugeValue,
-			float64(process.StandardJitFailures),
-			process.Name,
+			process.StandardJitFailures,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalNumberofILBytesJitted,
 			prometheus.CounterValue,
-			float64(process.TotalNumberofILBytesJitted),
-			process.Name,
+			process.TotalNumberofILBytesJitted,
+			name,
 		)
 	}
 

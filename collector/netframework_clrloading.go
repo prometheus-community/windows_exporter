@@ -3,17 +3,18 @@
 package collector
 
 import (
-	"github.com/StackExchange/wmi"
+	"fmt"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
 )
 
 func init() {
-	registerCollector("netframework_clrloading", NewNETFramework_NETCLRLoadingCollector)
+	registerCollector("netframework_clrloading", NewNETFrameworkCLRLoadingCollector, ".NET CLR Loading")
 }
 
-// A NETFramework_NETCLRLoadingCollector is a Prometheus collector for WMI Win32_PerfRawData_NETFramework_NETCLRLoading metrics
-type NETFramework_NETCLRLoadingCollector struct {
+// A NETFrameworkCLRLoadingCollector is a Prometheus collector for Perflib .NET CLR Loading metrics
+type NETFrameworkCLRLoadingCollector struct {
 	BytesinLoaderHeap         *prometheus.Desc
 	Currentappdomains         *prometheus.Desc
 	CurrentAssemblies         *prometheus.Desc
@@ -25,10 +26,10 @@ type NETFramework_NETCLRLoadingCollector struct {
 	TotalNumberofLoadFailures *prometheus.Desc
 }
 
-// NewNETFramework_NETCLRLoadingCollector ...
-func NewNETFramework_NETCLRLoadingCollector() (Collector, error) {
+// NewNETFrameworkCLRLoadingCollector ...
+func NewNETFrameworkCLRLoadingCollector() (Collector, error) {
 	const subsystem = "netframework_clrloading"
-	return &NETFramework_NETCLRLoadingCollector{
+	return &NETFrameworkCLRLoadingCollector{
 		BytesinLoaderHeap: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "loader_heap_size_bytes"),
 			"Displays the current size, in bytes, of the memory committed by the class loader across all application domains. Committed memory is the physical space reserved in the disk paging file.",
@@ -88,109 +89,120 @@ func NewNETFramework_NETCLRLoadingCollector() (Collector, error) {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *NETFramework_NETCLRLoadingCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
-	if desc, err := c.collect(ch); err != nil {
-		log.Error("failed collecting win32_perfrawdata_netframework_netclrloading metrics:", desc, err)
+func (c *NETFrameworkCLRLoadingCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
+	if desc, err := c.collect(ctx, ch); err != nil {
+		log.Error("failed collecting netframework_clrloading metrics:", desc, err)
 		return err
 	}
 	return nil
 }
 
-type Win32_PerfRawData_NETFramework_NETCLRLoading struct {
+type netframeworkCLRLoading struct {
 	Name string
 
-	AssemblySearchLength      uint32
-	BytesinLoaderHeap         uint64
-	Currentappdomains         uint32
-	CurrentAssemblies         uint32
-	CurrentClassesLoaded      uint32
-	PercentTimeLoading        uint64
-	Rateofappdomains          uint32
-	Rateofappdomainsunloaded  uint32
-	RateofAssemblies          uint32
-	RateofClassesLoaded       uint32
-	RateofLoadFailures        uint32
-	TotalAppdomains           uint32
-	Totalappdomainsunloaded   uint32
-	TotalAssemblies           uint32
-	TotalClassesLoaded        uint32
-	TotalNumberofLoadFailures uint32
+	AssemblySearchLength      float64 `perflib:"Assembly Search Length"`
+	BytesinLoaderHeap         float64 `perflib:"Bytes in Loader Heap"`
+	Currentappdomains         float64 `perflib:"Current appdomains"`
+	CurrentAssemblies         float64 `perflib:"Current Assemblies"`
+	CurrentClassesLoaded      float64 `perflib:"Current Classes Loaded"`
+	PercentTimeLoading        float64 `perflib:"% Time Loading"`
+	Rateofappdomains          float64 `perflib:"Rate of appdomains"`
+	Rateofappdomainsunloaded  float64 `perflib:"Rate of appdomains unloaded"`
+	RateofAssemblies          float64 `perflib:"Rate of Assemblies"`
+	RateofClassesLoaded       float64 `perflib:"Rate of Classes Loaded"`
+	RateofLoadFailures        float64 `perflib:"Rate of Load Failures"`
+	TotalAppdomains           float64 `perflib:"Total Appdomains"`
+	Totalappdomainsunloaded   float64 `perflib:"Total appdomains unloaded"`
+	TotalAssemblies           float64 `perflib:"Total Assemblies"`
+	TotalClassesLoaded        float64 `perflib:"Total Classes Loaded"`
+	TotalNumberofLoadFailures float64 `perflib:"Total # of Load Failures"`
 }
 
-func (c *NETFramework_NETCLRLoadingCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
-	var dst []Win32_PerfRawData_NETFramework_NETCLRLoading
-	q := queryAll(&dst)
-	if err := wmi.Query(q, &dst); err != nil {
+func (c *NETFrameworkCLRLoadingCollector) collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+	var dst []netframeworkCLRLoading
+
+	if err := unmarshalObject(ctx.perfObjects[".NET CLR Loading"], &dst); err != nil {
 		return nil, err
 	}
 
+	var names = make(map[string]int, len(dst))
 	for _, process := range dst {
 
 		if process.Name == "_Global_" {
 			continue
 		}
 
+		// Append "#1", "#2", etc., to process names to disambiguate duplicates.
+		name := process.Name
+		procnum, exists := names[name]
+		if exists {
+			name = fmt.Sprintf("%s#%d", name, procnum)
+			names[name]++
+		} else {
+			names[name] = 1
+		}
+
 		ch <- prometheus.MustNewConstMetric(
 			c.BytesinLoaderHeap,
 			prometheus.GaugeValue,
-			float64(process.BytesinLoaderHeap),
-			process.Name,
+			process.BytesinLoaderHeap,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.Currentappdomains,
 			prometheus.GaugeValue,
-			float64(process.Currentappdomains),
-			process.Name,
+			process.Currentappdomains,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.CurrentAssemblies,
 			prometheus.GaugeValue,
-			float64(process.CurrentAssemblies),
-			process.Name,
+			process.CurrentAssemblies,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.CurrentClassesLoaded,
 			prometheus.GaugeValue,
-			float64(process.CurrentClassesLoaded),
-			process.Name,
+			process.CurrentClassesLoaded,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalAppdomains,
 			prometheus.CounterValue,
-			float64(process.TotalAppdomains),
-			process.Name,
+			process.TotalAppdomains,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.Totalappdomainsunloaded,
 			prometheus.CounterValue,
-			float64(process.Totalappdomainsunloaded),
-			process.Name,
+			process.Totalappdomainsunloaded,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalAssemblies,
 			prometheus.CounterValue,
-			float64(process.TotalAssemblies),
-			process.Name,
+			process.TotalAssemblies,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalClassesLoaded,
 			prometheus.CounterValue,
-			float64(process.TotalClassesLoaded),
-			process.Name,
+			process.TotalClassesLoaded,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalNumberofLoadFailures,
 			prometheus.CounterValue,
-			float64(process.TotalNumberofLoadFailures),
-			process.Name,
+			process.TotalNumberofLoadFailures,
+			name,
 		)
 	}
 

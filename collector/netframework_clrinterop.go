@@ -3,26 +3,27 @@
 package collector
 
 import (
-	"github.com/StackExchange/wmi"
+	"fmt"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
 )
 
 func init() {
-	registerCollector("netframework_clrinterop", NewNETFramework_NETCLRInteropCollector)
+	registerCollector("netframework_clrinterop", NewNETFrameworkCLRInteropCollector, ".NET CLR Interop")
 }
 
-// A NETFramework_NETCLRInteropCollector is a Prometheus collector for WMI Win32_PerfRawData_NETFramework_NETCLRInterop metrics
-type NETFramework_NETCLRInteropCollector struct {
+// A NETFrameworkCLRInteropCollector is a Prometheus collector for Perflib .NET CLR Interop metrics
+type NETFrameworkCLRInteropCollector struct {
 	NumberofCCWs        *prometheus.Desc
 	Numberofmarshalling *prometheus.Desc
 	NumberofStubs       *prometheus.Desc
 }
 
-// NewNETFramework_NETCLRInteropCollector ...
-func NewNETFramework_NETCLRInteropCollector() (Collector, error) {
+// NewNETFrameworkCLRInteropCollector ...
+func NewNETFrameworkCLRInteropCollector() (Collector, error) {
 	const subsystem = "netframework_clrinterop"
-	return &NETFramework_NETCLRInteropCollector{
+	return &NETFrameworkCLRInteropCollector{
 		NumberofCCWs: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "com_callable_wrappers_total"),
 			"Displays the current number of COM callable wrappers (CCWs). A CCW is a proxy for a managed object being referenced from an unmanaged COM client.",
@@ -46,56 +47,67 @@ func NewNETFramework_NETCLRInteropCollector() (Collector, error) {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *NETFramework_NETCLRInteropCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
-	if desc, err := c.collect(ch); err != nil {
-		log.Error("failed collecting win32_perfrawdata_netframework_netclrinterop metrics:", desc, err)
+func (c *NETFrameworkCLRInteropCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
+	if desc, err := c.collect(ctx, ch); err != nil {
+		log.Error("failed collecting netframework_clrinterop metrics:", desc, err)
 		return err
 	}
 	return nil
 }
 
-type Win32_PerfRawData_NETFramework_NETCLRInterop struct {
+type netframeworkCLRInterop struct {
 	Name string
 
-	NumberofCCWs             uint32
-	Numberofmarshalling      uint32
-	NumberofStubs            uint32
-	NumberofTLBexportsPersec uint32
-	NumberofTLBimportsPersec uint32
+	NumberofCCWs             float64 `perflib:"# of CCWs"`
+	Numberofmarshalling      float64 `perflib:"# of marshalling"`
+	NumberofStubs            float64 `perflib:"# of Stubs"`
+	NumberofTLBexportsPersec float64 `perflib:"# of TLB exports / sec"`
+	NumberofTLBimportsPersec float64 `perflib:"# of TLB imports / sec"`
 }
 
-func (c *NETFramework_NETCLRInteropCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
-	var dst []Win32_PerfRawData_NETFramework_NETCLRInterop
-	q := queryAll(&dst)
-	if err := wmi.Query(q, &dst); err != nil {
+func (c *NETFrameworkCLRInteropCollector) collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+	var dst []netframeworkCLRInterop
+
+	if err := unmarshalObject(ctx.perfObjects[".NET CLR Interop"], &dst); err != nil {
 		return nil, err
 	}
 
+	var names = make(map[string]int, len(dst))
 	for _, process := range dst {
 
 		if process.Name == "_Global_" {
 			continue
 		}
 
+		// Append "#1", "#2", etc., to process names to disambiguate duplicates.
+		name := process.Name
+		procnum, exists := names[name]
+		if exists {
+			name = fmt.Sprintf("%s#%d", name, procnum)
+			names[name]++
+		} else {
+			names[name] = 1
+		}
+
 		ch <- prometheus.MustNewConstMetric(
 			c.NumberofCCWs,
 			prometheus.CounterValue,
-			float64(process.NumberofCCWs),
-			process.Name,
+			process.NumberofCCWs,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.Numberofmarshalling,
 			prometheus.CounterValue,
-			float64(process.Numberofmarshalling),
-			process.Name,
+			process.Numberofmarshalling,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.NumberofStubs,
 			prometheus.CounterValue,
-			float64(process.NumberofStubs),
-			process.Name,
+			process.NumberofStubs,
+			name,
 		)
 	}
 

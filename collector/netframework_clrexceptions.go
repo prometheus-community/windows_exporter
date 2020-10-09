@@ -3,27 +3,28 @@
 package collector
 
 import (
-	"github.com/StackExchange/wmi"
+	"fmt"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
 )
 
 func init() {
-	registerCollector("netframework_clrexceptions", NewNETFramework_NETCLRExceptionsCollector)
+	registerCollector("netframework_clrexceptions", NewNETFrameworkCLRExceptionsCollector, ".NET CLR Exceptions")
 }
 
-// A NETFramework_NETCLRExceptionsCollector is a Prometheus collector for WMI Win32_PerfRawData_NETFramework_NETCLRExceptions metrics
-type NETFramework_NETCLRExceptionsCollector struct {
+// A NETFrameworkCLRExceptionsCollector is a Prometheus collector for Perflib .NET CLR Exceptions metrics
+type NETFrameworkCLRExceptionsCollector struct {
 	NumberofExcepsThrown *prometheus.Desc
 	NumberofFilters      *prometheus.Desc
 	NumberofFinallys     *prometheus.Desc
 	ThrowToCatchDepth    *prometheus.Desc
 }
 
-// NewNETFramework_NETCLRExceptionsCollector ...
-func NewNETFramework_NETCLRExceptionsCollector() (Collector, error) {
+// NewNETFrameworkCLRExceptionsCollector ...
+func NewNETFrameworkCLRExceptionsCollector() (Collector, error) {
 	const subsystem = "netframework_clrexceptions"
-	return &NETFramework_NETCLRExceptionsCollector{
+	return &NETFrameworkCLRExceptionsCollector{
 		NumberofExcepsThrown: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "exceptions_thrown_total"),
 			"Displays the total number of exceptions thrown since the application started. This includes both .NET exceptions and unmanaged exceptions that are converted into .NET exceptions.",
@@ -53,63 +54,74 @@ func NewNETFramework_NETCLRExceptionsCollector() (Collector, error) {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *NETFramework_NETCLRExceptionsCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
-	if desc, err := c.collect(ch); err != nil {
-		log.Error("failed collecting win32_perfrawdata_netframework_netclrexceptions metrics:", desc, err)
+func (c *NETFrameworkCLRExceptionsCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
+	if desc, err := c.collect(ctx, ch); err != nil {
+		log.Error("failed collecting netframework_clrexceptions metrics:", desc, err)
 		return err
 	}
 	return nil
 }
 
-type Win32_PerfRawData_NETFramework_NETCLRExceptions struct {
+type netframeworkCLRExceptions struct {
 	Name string
 
-	NumberofExcepsThrown       uint32
-	NumberofExcepsThrownPersec uint32
-	NumberofFiltersPersec      uint32
-	NumberofFinallysPersec     uint32
-	ThrowToCatchDepthPersec    uint32
+	NumberofExcepsThrown       float64 `perflib:"# of Exceps Thrown"`
+	NumberofExcepsThrownPersec float64 `perflib:"# of Exceps Thrown / sec"`
+	NumberofFiltersPersec      float64 `perflib:"# of Filters / sec"`
+	NumberofFinallysPersec     float64 `perflib:"# of Finallys / sec"`
+	ThrowToCatchDepthPersec    float64 `perflib:"Throw To Catch Depth / sec"`
 }
 
-func (c *NETFramework_NETCLRExceptionsCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
-	var dst []Win32_PerfRawData_NETFramework_NETCLRExceptions
-	q := queryAll(&dst)
-	if err := wmi.Query(q, &dst); err != nil {
+func (c *NETFrameworkCLRExceptionsCollector) collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+	var dst []netframeworkCLRExceptions
+
+	if err := unmarshalObject(ctx.perfObjects[".NET CLR Exceptions"], &dst); err != nil {
 		return nil, err
 	}
 
+	var names = make(map[string]int, len(dst))
 	for _, process := range dst {
 
 		if process.Name == "_Global_" {
 			continue
 		}
 
+		// Append "#1", "#2", etc., to process names to disambiguate duplicates.
+		name := process.Name
+		procnum, exists := names[name]
+		if exists {
+			name = fmt.Sprintf("%s#%d", name, procnum)
+			names[name]++
+		} else {
+			names[name] = 1
+		}
+
 		ch <- prometheus.MustNewConstMetric(
 			c.NumberofExcepsThrown,
 			prometheus.CounterValue,
-			float64(process.NumberofExcepsThrown),
-			process.Name,
+			process.NumberofExcepsThrown,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.NumberofFilters,
 			prometheus.CounterValue,
-			float64(process.NumberofFiltersPersec),
-			process.Name,
+			process.NumberofFiltersPersec,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.NumberofFinallys,
 			prometheus.CounterValue,
-			float64(process.NumberofFinallysPersec),
-			process.Name,
+			process.NumberofFinallysPersec,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.ThrowToCatchDepth,
 			prometheus.CounterValue,
-			float64(process.ThrowToCatchDepthPersec),
-			process.Name,
+			process.ThrowToCatchDepthPersec,
+			name,
 		)
 	}
 

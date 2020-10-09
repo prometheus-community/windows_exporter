@@ -3,27 +3,28 @@
 package collector
 
 import (
-	"github.com/StackExchange/wmi"
+	"fmt"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
 )
 
 func init() {
-	registerCollector("netframework_clrsecurity", NewNETFramework_NETCLRSecurityCollector)
+	registerCollector("netframework_clrsecurity", NewNETFrameworkCLRSecurityCollector, ".NET CLR Security")
 }
 
-// A NETFramework_NETCLRSecurityCollector is a Prometheus collector for WMI Win32_PerfRawData_NETFramework_NETCLRSecurity metrics
-type NETFramework_NETCLRSecurityCollector struct {
+// A NETFrameworkCLRSecurityCollector is a Prometheus collector for Perflib .NET CLR Security metrics
+type NETFrameworkCLRSecurityCollector struct {
 	NumberLinkTimeChecks *prometheus.Desc
 	TimeinRTchecks       *prometheus.Desc
 	StackWalkDepth       *prometheus.Desc
 	TotalRuntimeChecks   *prometheus.Desc
 }
 
-// NewNETFramework_NETCLRSecurityCollector ...
-func NewNETFramework_NETCLRSecurityCollector() (Collector, error) {
+// NewNETFrameworkCLRSecurityCollector ...
+func NewNETFrameworkCLRSecurityCollector() (Collector, error) {
 	const subsystem = "netframework_clrsecurity"
-	return &NETFramework_NETCLRSecurityCollector{
+	return &NETFrameworkCLRSecurityCollector{
 		NumberLinkTimeChecks: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "link_time_checks_total"),
 			"Displays the total number of link-time code access security checks since the application started.",
@@ -53,64 +54,79 @@ func NewNETFramework_NETCLRSecurityCollector() (Collector, error) {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *NETFramework_NETCLRSecurityCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
-	if desc, err := c.collect(ch); err != nil {
-		log.Error("failed collecting win32_perfrawdata_netframework_netclrsecurity metrics:", desc, err)
+func (c *NETFrameworkCLRSecurityCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
+	if desc, err := c.collect(ctx, ch); err != nil {
+		log.Error("failed collecting netframework_clrsecurity metrics:", desc, err)
 		return err
 	}
 	return nil
 }
 
-type Win32_PerfRawData_NETFramework_NETCLRSecurity struct {
+type netframeworkCLRSecurity struct {
 	Name string
 
-	Frequency_PerfTime           uint32
-	NumberLinkTimeChecks         uint32
-	PercentTimeinRTchecks        uint32
-	PercentTimeSigAuthenticating uint64
-	StackWalkDepth               uint32
-	TotalRuntimeChecks           uint32
+	Frequency_PerfTime           float64 `perflib:"Not Displayed_Base"`
+	NumberLinkTimeChecks         float64 `perflib:"# Link Time Checks"`
+	PercentTimeinRTchecks        float64 `perflib:"% Time in RT checks"`
+	PercentTimeSigAuthenticating float64 `perflib:"% Time Sig. Authenticating"`
+	StackWalkDepth               float64 `perflib:"Stack Walk Depth"`
+	TotalRuntimeChecks           float64 `perflib:"Total Runtime Checks"`
 }
 
-func (c *NETFramework_NETCLRSecurityCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
-	var dst []Win32_PerfRawData_NETFramework_NETCLRSecurity
-	q := queryAll(&dst)
-	if err := wmi.Query(q, &dst); err != nil {
+func (c *NETFrameworkCLRSecurityCollector) collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+	var dst []netframeworkCLRSecurity
+
+	if err := unmarshalObject(ctx.perfObjects[".NET CLR Security"], &dst); err != nil {
 		return nil, err
 	}
 
+	var names = make(map[string]int, len(dst))
 	for _, process := range dst {
 
 		if process.Name == "_Global_" {
 			continue
 		}
 
+		// Append "#1", "#2", etc., to process names to disambiguate duplicates.
+		name := process.Name
+		procnum, exists := names[name]
+		if exists {
+			name = fmt.Sprintf("%s#%d", name, procnum)
+			names[name]++
+		} else {
+			names[name] = 1
+		}
+
 		ch <- prometheus.MustNewConstMetric(
 			c.NumberLinkTimeChecks,
 			prometheus.CounterValue,
-			float64(process.NumberLinkTimeChecks),
-			process.Name,
+			process.NumberLinkTimeChecks,
+			name,
 		)
 
+		timeinRTchecks := 0.0
+		if process.Frequency_PerfTime != 0 {
+			timeinRTchecks = process.PercentTimeinRTchecks / process.Frequency_PerfTime
+		}
 		ch <- prometheus.MustNewConstMetric(
 			c.TimeinRTchecks,
 			prometheus.GaugeValue,
-			float64(process.PercentTimeinRTchecks)/float64(process.Frequency_PerfTime),
-			process.Name,
+			timeinRTchecks,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.StackWalkDepth,
 			prometheus.GaugeValue,
-			float64(process.StackWalkDepth),
-			process.Name,
+			process.StackWalkDepth,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalRuntimeChecks,
 			prometheus.CounterValue,
-			float64(process.TotalRuntimeChecks),
-			process.Name,
+			process.TotalRuntimeChecks,
+			name,
 		)
 	}
 

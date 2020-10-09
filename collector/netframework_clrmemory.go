@@ -3,17 +3,18 @@
 package collector
 
 import (
-	"github.com/StackExchange/wmi"
+	"fmt"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
 )
 
 func init() {
-	registerCollector("netframework_clrmemory", NewNETFramework_NETCLRMemoryCollector)
+	registerCollector("netframework_clrmemory", NewNETFrameworkCLRMemoryCollector, ".NET CLR Memory")
 }
 
-// A NETFramework_NETCLRMemoryCollector is a Prometheus collector for WMI Win32_PerfRawData_NETFramework_NETCLRMemory metrics
-type NETFramework_NETCLRMemoryCollector struct {
+// A NETFrameworkCLRMemoryCollector is a Prometheus collector for Perflib .NET CLR Memory metrics
+type NETFrameworkCLRMemoryCollector struct {
 	AllocatedBytes                     *prometheus.Desc
 	FinalizationSurvivors              *prometheus.Desc
 	HeapSize                           *prometheus.Desc
@@ -31,10 +32,10 @@ type NETFramework_NETCLRMemoryCollector struct {
 	PromotedMemoryfromGen1             *prometheus.Desc
 }
 
-// NewNETFramework_NETCLRMemoryCollector ...
-func NewNETFramework_NETCLRMemoryCollector() (Collector, error) {
+// NewNETFrameworkCLRMemoryCollector ...
+func NewNETFrameworkCLRMemoryCollector() (Collector, error) {
 	const subsystem = "netframework_clrmemory"
-	return &NETFramework_NETCLRMemoryCollector{
+	return &NETFrameworkCLRMemoryCollector{
 		AllocatedBytes: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "allocated_bytes_total"),
 			"Displays the total number of bytes allocated on the garbage collection heap.",
@@ -112,189 +113,204 @@ func NewNETFramework_NETCLRMemoryCollector() (Collector, error) {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *NETFramework_NETCLRMemoryCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
-	if desc, err := c.collect(ch); err != nil {
-		log.Error("failed collecting win32_perfrawdata_netframework_netclrmemory metrics:", desc, err)
+func (c *NETFrameworkCLRMemoryCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
+	if desc, err := c.collect(ctx, ch); err != nil {
+		log.Error("failed collecting netframework_clrmemory metrics:", desc, err)
 		return err
 	}
 	return nil
 }
 
-type Win32_PerfRawData_NETFramework_NETCLRMemory struct {
+type netframeworkCLRMemory struct {
 	Name string
 
-	AllocatedBytesPersec               uint64
-	FinalizationSurvivors              uint64
-	Frequency_PerfTime                 uint64
-	Gen0heapsize                       uint64
-	Gen0PromotedBytesPerSec            uint64
-	Gen1heapsize                       uint64
-	Gen1PromotedBytesPerSec            uint64
-	Gen2heapsize                       uint64
-	LargeObjectHeapsize                uint64
-	NumberBytesinallHeaps              uint64
-	NumberGCHandles                    uint64
-	NumberGen0Collections              uint64
-	NumberGen1Collections              uint64
-	NumberGen2Collections              uint64
-	NumberInducedGC                    uint64
-	NumberofPinnedObjects              uint64
-	NumberofSinkBlocksinuse            uint64
-	NumberTotalcommittedBytes          uint64
-	NumberTotalreservedBytes           uint64
-	PercentTimeinGC                    uint32
-	ProcessID                          uint64
-	PromotedFinalizationMemoryfromGen0 uint64
-	PromotedMemoryfromGen0             uint64
-	PromotedMemoryfromGen1             uint64
+	AllocatedBytesPersec               float64 `perflib:"Allocated Bytes/sec"`
+	FinalizationSurvivors              float64 `perflib:"Finalization Survivors"`
+	Frequency_PerfTime                 float64 `perflib:"Not Displayed_Base"`
+	Gen0heapsize                       float64 `perflib:"Gen 0 heap size"`
+	Gen0PromotedBytesPerSec            float64 `perflib:"Gen 0 Promoted Bytes/Sec"`
+	Gen1heapsize                       float64 `perflib:"Gen 1 heap size"`
+	Gen1PromotedBytesPerSec            float64 `perflib:"Gen 1 Promoted Bytes/Sec"`
+	Gen2heapsize                       float64 `perflib:"Gen 2 heap size"`
+	LargeObjectHeapsize                float64 `perflib:"Large Object Heap size"`
+	NumberBytesinallHeaps              float64 `perflib:"# Bytes in all Heaps"`
+	NumberGCHandles                    float64 `perflib:"# GC Handles"`
+	NumberGen0Collections              float64 `perflib:"# Gen 0 Collections"`
+	NumberGen1Collections              float64 `perflib:"# Gen 1 Collections"`
+	NumberGen2Collections              float64 `perflib:"# Gen 2 Collections"`
+	NumberInducedGC                    float64 `perflib:"# Induced GC"`
+	NumberofPinnedObjects              float64 `perflib:"# of Pinned Objects"`
+	NumberofSinkBlocksinuse            float64 `perflib:"# of Sink Blocks in use"`
+	NumberTotalcommittedBytes          float64 `perflib:"# Total committed Bytes"`
+	NumberTotalreservedBytes           float64 `perflib:"# Total reserved Bytes"`
+	PercentTimeinGC                    float64 `perflib:"% Time in GC"`
+	ProcessID                          float64 `perflib:"Process ID"`
+	PromotedFinalizationMemoryfromGen0 float64 `perflib:"Promoted Finalization-Memory from Gen 0"`
+	PromotedMemoryfromGen0             float64 `perflib:"Promoted Memory from Gen 0"`
+	PromotedMemoryfromGen1             float64 `perflib:"Promoted Memory from Gen 1"`
 }
 
-func (c *NETFramework_NETCLRMemoryCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
-	var dst []Win32_PerfRawData_NETFramework_NETCLRMemory
-	q := queryAll(&dst)
-	if err := wmi.Query(q, &dst); err != nil {
+func (c *NETFrameworkCLRMemoryCollector) collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+	var dst []netframeworkCLRMemory
+
+	if err := unmarshalObject(ctx.perfObjects[".NET CLR Memory"], &dst); err != nil {
 		return nil, err
 	}
 
+	var names = make(map[string]int, len(dst))
 	for _, process := range dst {
 
 		if process.Name == "_Global_" {
 			continue
 		}
 
+		// Append "#1", "#2", etc., to process names to disambiguate duplicates.
+		name := process.Name
+		procnum, exists := names[name]
+		if exists {
+			name = fmt.Sprintf("%s#%d", name, procnum)
+			names[name]++
+		} else {
+			names[name] = 1
+		}
+
 		ch <- prometheus.MustNewConstMetric(
 			c.AllocatedBytes,
 			prometheus.CounterValue,
-			float64(process.AllocatedBytesPersec),
-			process.Name,
+			process.AllocatedBytesPersec,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.FinalizationSurvivors,
 			prometheus.GaugeValue,
-			float64(process.FinalizationSurvivors),
-			process.Name,
+			process.FinalizationSurvivors,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.HeapSize,
 			prometheus.GaugeValue,
-			float64(process.Gen0heapsize),
-			process.Name,
+			process.Gen0heapsize,
+			name,
 			"Gen0",
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.PromotedBytes,
 			prometheus.GaugeValue,
-			float64(process.Gen0PromotedBytesPerSec),
-			process.Name,
+			process.Gen0PromotedBytesPerSec,
+			name,
 			"Gen0",
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.HeapSize,
 			prometheus.GaugeValue,
-			float64(process.Gen1heapsize),
-			process.Name,
+			process.Gen1heapsize,
+			name,
 			"Gen1",
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.PromotedBytes,
 			prometheus.GaugeValue,
-			float64(process.Gen1PromotedBytesPerSec),
-			process.Name,
+			process.Gen1PromotedBytesPerSec,
+			name,
 			"Gen1",
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.HeapSize,
 			prometheus.GaugeValue,
-			float64(process.Gen2heapsize),
-			process.Name,
+			process.Gen2heapsize,
+			name,
 			"Gen2",
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.HeapSize,
 			prometheus.GaugeValue,
-			float64(process.LargeObjectHeapsize),
-			process.Name,
+			process.LargeObjectHeapsize,
+			name,
 			"LOH",
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.NumberGCHandles,
 			prometheus.GaugeValue,
-			float64(process.NumberGCHandles),
-			process.Name,
+			process.NumberGCHandles,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.NumberCollections,
 			prometheus.CounterValue,
-			float64(process.NumberGen0Collections),
-			process.Name,
+			process.NumberGen0Collections,
+			name,
 			"Gen0",
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.NumberCollections,
 			prometheus.CounterValue,
-			float64(process.NumberGen1Collections),
-			process.Name,
+			process.NumberGen1Collections,
+			name,
 			"Gen1",
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.NumberCollections,
 			prometheus.CounterValue,
-			float64(process.NumberGen2Collections),
-			process.Name,
+			process.NumberGen2Collections,
+			name,
 			"Gen2",
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.NumberInducedGC,
 			prometheus.CounterValue,
-			float64(process.NumberInducedGC),
-			process.Name,
+			process.NumberInducedGC,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.NumberofPinnedObjects,
 			prometheus.GaugeValue,
-			float64(process.NumberofPinnedObjects),
-			process.Name,
+			process.NumberofPinnedObjects,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.NumberofSinkBlocksinuse,
 			prometheus.GaugeValue,
-			float64(process.NumberofSinkBlocksinuse),
-			process.Name,
+			process.NumberofSinkBlocksinuse,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.NumberTotalCommittedBytes,
 			prometheus.GaugeValue,
-			float64(process.NumberTotalcommittedBytes),
-			process.Name,
+			process.NumberTotalcommittedBytes,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.NumberTotalreservedBytes,
 			prometheus.GaugeValue,
-			float64(process.NumberTotalreservedBytes),
-			process.Name,
+			process.NumberTotalreservedBytes,
+			name,
 		)
 
+		timeinGC := 0.0
+		if process.Frequency_PerfTime != 0 {
+			timeinGC = process.PercentTimeinGC / process.Frequency_PerfTime
+		}
 		ch <- prometheus.MustNewConstMetric(
 			c.TimeinGC,
 			prometheus.GaugeValue,
-			float64(process.PercentTimeinGC)/float64(process.Frequency_PerfTime),
-			process.Name,
+			timeinGC,
+			name,
 		)
 	}
 

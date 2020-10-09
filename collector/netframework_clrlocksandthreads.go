@@ -3,17 +3,18 @@
 package collector
 
 import (
-	"github.com/StackExchange/wmi"
+	"fmt"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
 )
 
 func init() {
-	registerCollector("netframework_clrlocksandthreads", NewNETFramework_NETCLRLocksAndThreadsCollector)
+	registerCollector("netframework_clrlocksandthreads", NewNETFramework_NETCLRLocksAndThreadsCollector, ".NET CLR LocksAndThreads")
 }
 
-// A NETFramework_NETCLRLocksAndThreadsCollector is a Prometheus collector for WMI Win32_PerfRawData_NETFramework_NETCLRLocksAndThreads metrics
-type NETFramework_NETCLRLocksAndThreadsCollector struct {
+// A NETFrameworkCLRLocksAndThreadsCollector is a Prometheus collector for Perflib .NET CLR LocksAndThreads metrics
+type NETFrameworkCLRLocksAndThreadsCollector struct {
 	CurrentQueueLength               *prometheus.Desc
 	NumberofcurrentlogicalThreads    *prometheus.Desc
 	NumberofcurrentphysicalThreads   *prometheus.Desc
@@ -26,7 +27,7 @@ type NETFramework_NETCLRLocksAndThreadsCollector struct {
 // NewNETFramework_NETCLRLocksAndThreadsCollector ...
 func NewNETFramework_NETCLRLocksAndThreadsCollector() (Collector, error) {
 	const subsystem = "netframework_clrlocksandthreads"
-	return &NETFramework_NETCLRLocksAndThreadsCollector{
+	return &NETFrameworkCLRLocksAndThreadsCollector{
 		CurrentQueueLength: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "current_queue_length"),
 			"Displays the total number of threads that are currently waiting to acquire a managed lock in the application.",
@@ -74,89 +75,100 @@ func NewNETFramework_NETCLRLocksAndThreadsCollector() (Collector, error) {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *NETFramework_NETCLRLocksAndThreadsCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
-	if desc, err := c.collect(ch); err != nil {
-		log.Error("failed collecting win32_perfrawdata_netframework_netclrlocksandthreads metrics:", desc, err)
+func (c *NETFrameworkCLRLocksAndThreadsCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
+	if desc, err := c.collect(ctx, ch); err != nil {
+		log.Error("failed collecting netframework_clrlocksandthreads metrics:", desc, err)
 		return err
 	}
 	return nil
 }
 
-type Win32_PerfRawData_NETFramework_NETCLRLocksAndThreads struct {
+type netframeworkCLRLocksAndThreads struct {
 	Name string
 
-	ContentionRatePersec             uint32
-	CurrentQueueLength               uint32
-	NumberofcurrentlogicalThreads    uint32
-	NumberofcurrentphysicalThreads   uint32
-	Numberofcurrentrecognizedthreads uint32
-	Numberoftotalrecognizedthreads   uint32
-	QueueLengthPeak                  uint32
-	QueueLengthPersec                uint32
-	RateOfRecognizedThreadsPersec    uint32
-	TotalNumberofContentions         uint32
+	ContentionRatePersec             float64 `perflib:"Contention Rate / sec"`
+	CurrentQueueLength               float64 `perflib:"Current Queue Length"`
+	NumberofcurrentlogicalThreads    float64 `perflib:"# of current logical Threads"`
+	NumberofcurrentphysicalThreads   float64 `perflib:"# of current physical Threads"`
+	Numberofcurrentrecognizedthreads float64 `perflib:"# of current recognized threads"`
+	Numberoftotalrecognizedthreads   float64 `perflib:"# of total recognized threads"`
+	QueueLengthPeak                  float64 `perflib:"Queue Length Peak"`
+	QueueLengthPersec                float64 `perflib:"Queue Length / sec"`
+	RateOfRecognizedThreadsPersec    float64 `perflib:"rate of recognized threads / sec"`
+	TotalNumberofContentions         float64 `perflib:"Total # of Contentions"`
 }
 
-func (c *NETFramework_NETCLRLocksAndThreadsCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
-	var dst []Win32_PerfRawData_NETFramework_NETCLRLocksAndThreads
-	q := queryAll(&dst)
-	if err := wmi.Query(q, &dst); err != nil {
+func (c *NETFrameworkCLRLocksAndThreadsCollector) collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+	var dst []netframeworkCLRLocksAndThreads
+
+	if err := unmarshalObject(ctx.perfObjects[".NET CLR LocksAndThreads"], &dst); err != nil {
 		return nil, err
 	}
 
+	var names = make(map[string]int, len(dst))
 	for _, process := range dst {
 
 		if process.Name == "_Global_" {
 			continue
 		}
 
+		// Append "#1", "#2", etc., to process names to disambiguate duplicates.
+		name := process.Name
+		procnum, exists := names[name]
+		if exists {
+			name = fmt.Sprintf("%s#%d", name, procnum)
+			names[name]++
+		} else {
+			names[name] = 1
+		}
+
 		ch <- prometheus.MustNewConstMetric(
 			c.CurrentQueueLength,
 			prometheus.GaugeValue,
-			float64(process.CurrentQueueLength),
-			process.Name,
+			process.CurrentQueueLength,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.NumberofcurrentlogicalThreads,
 			prometheus.GaugeValue,
-			float64(process.NumberofcurrentlogicalThreads),
-			process.Name,
+			process.NumberofcurrentlogicalThreads,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.NumberofcurrentphysicalThreads,
 			prometheus.GaugeValue,
-			float64(process.NumberofcurrentphysicalThreads),
-			process.Name,
+			process.NumberofcurrentphysicalThreads,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.Numberofcurrentrecognizedthreads,
 			prometheus.GaugeValue,
-			float64(process.Numberofcurrentrecognizedthreads),
-			process.Name,
+			process.Numberofcurrentrecognizedthreads,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.Numberoftotalrecognizedthreads,
 			prometheus.CounterValue,
-			float64(process.Numberoftotalrecognizedthreads),
-			process.Name,
+			process.Numberoftotalrecognizedthreads,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.QueueLengthPeak,
 			prometheus.CounterValue,
-			float64(process.QueueLengthPeak),
-			process.Name,
+			process.QueueLengthPeak,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalNumberofContentions,
 			prometheus.CounterValue,
-			float64(process.TotalNumberofContentions),
-			process.Name,
+			process.TotalNumberofContentions,
+			name,
 		)
 	}
 

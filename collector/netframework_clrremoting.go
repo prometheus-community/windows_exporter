@@ -3,17 +3,18 @@
 package collector
 
 import (
-	"github.com/StackExchange/wmi"
+	"fmt"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
 )
 
 func init() {
-	registerCollector("netframework_clrremoting", NewNETFramework_NETCLRRemotingCollector)
+	registerCollector("netframework_clrremoting", NewNETFrameworkCLRRemotingCollector, ".NET CLR Remoting")
 }
 
-// A NETFramework_NETCLRRemotingCollector is a Prometheus collector for WMI Win32_PerfRawData_NETFramework_NETCLRRemoting metrics
-type NETFramework_NETCLRRemotingCollector struct {
+// A NETFrameworkCLRRemotingCollector is a Prometheus collector for Perflib .NET CLR Remoting metrics
+type NETFrameworkCLRRemotingCollector struct {
 	Channels                  *prometheus.Desc
 	ContextBoundClassesLoaded *prometheus.Desc
 	ContextBoundObjects       *prometheus.Desc
@@ -22,10 +23,10 @@ type NETFramework_NETCLRRemotingCollector struct {
 	TotalRemoteCalls          *prometheus.Desc
 }
 
-// NewNETFramework_NETCLRRemotingCollector ...
-func NewNETFramework_NETCLRRemotingCollector() (Collector, error) {
+// NewNETFrameworkCLRRemotingCollector ...
+func NewNETFrameworkCLRRemotingCollector() (Collector, error) {
 	const subsystem = "netframework_clrremoting"
-	return &NETFramework_NETCLRRemotingCollector{
+	return &NETFrameworkCLRRemotingCollector{
 		Channels: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "channels_total"),
 			"Displays the total number of remoting channels registered across all application domains since application started.",
@@ -67,79 +68,90 @@ func NewNETFramework_NETCLRRemotingCollector() (Collector, error) {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *NETFramework_NETCLRRemotingCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
-	if desc, err := c.collect(ch); err != nil {
-		log.Error("failed collecting win32_perfrawdata_netframework_netclrremoting metrics:", desc, err)
+func (c *NETFrameworkCLRRemotingCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
+	if desc, err := c.collect(ctx, ch); err != nil {
+		log.Error("failed collecting netframework_clrremoting metrics:", desc, err)
 		return err
 	}
 	return nil
 }
 
-type Win32_PerfRawData_NETFramework_NETCLRRemoting struct {
+type netframeworkCLRRemoting struct {
 	Name string
 
-	Channels                       uint32
-	ContextBoundClassesLoaded      uint32
-	ContextBoundObjectsAllocPersec uint32
-	ContextProxies                 uint32
-	Contexts                       uint32
-	RemoteCallsPersec              uint32
-	TotalRemoteCalls               uint32
+	Channels                       float64 `perflib:"Channels"`
+	ContextBoundClassesLoaded      float64 `perflib:"Context-Bound Classes Loaded"`
+	ContextBoundObjectsAllocPersec float64 `perflib:"Context-Bound Objects Alloc / sec"`
+	ContextProxies                 float64 `perflib:"Context Proxies"`
+	Contexts                       float64 `perflib:"Contexts"`
+	RemoteCallsPersec              float64 `perflib:"Remote Calls/sec"`
+	TotalRemoteCalls               float64 `perflib:"Total Remote Calls"`
 }
 
-func (c *NETFramework_NETCLRRemotingCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
-	var dst []Win32_PerfRawData_NETFramework_NETCLRRemoting
-	q := queryAll(&dst)
-	if err := wmi.Query(q, &dst); err != nil {
+func (c *NETFrameworkCLRRemotingCollector) collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+	var dst []netframeworkCLRRemoting
+
+	if err := unmarshalObject(ctx.perfObjects[".NET CLR Remoting"], &dst); err != nil {
 		return nil, err
 	}
 
+	var names = make(map[string]int, len(dst))
 	for _, process := range dst {
 
 		if process.Name == "_Global_" {
 			continue
 		}
 
+		// Append "#1", "#2", etc., to process names to disambiguate duplicates.
+		name := process.Name
+		procnum, exists := names[name]
+		if exists {
+			name = fmt.Sprintf("%s#%d", name, procnum)
+			names[name]++
+		} else {
+			names[name] = 1
+		}
+
 		ch <- prometheus.MustNewConstMetric(
 			c.Channels,
 			prometheus.CounterValue,
-			float64(process.Channels),
-			process.Name,
+			process.Channels,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.ContextBoundClassesLoaded,
 			prometheus.GaugeValue,
-			float64(process.ContextBoundClassesLoaded),
-			process.Name,
+			process.ContextBoundClassesLoaded,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.ContextBoundObjects,
 			prometheus.CounterValue,
-			float64(process.ContextBoundObjectsAllocPersec),
-			process.Name,
+			process.ContextBoundObjectsAllocPersec,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.ContextProxies,
 			prometheus.CounterValue,
-			float64(process.ContextProxies),
-			process.Name,
+			process.ContextProxies,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.Contexts,
 			prometheus.GaugeValue,
-			float64(process.Contexts),
-			process.Name,
+			process.Contexts,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalRemoteCalls,
 			prometheus.CounterValue,
-			float64(process.TotalRemoteCalls),
-			process.Name,
+			process.TotalRemoteCalls,
+			name,
 		)
 	}
 
