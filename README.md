@@ -74,6 +74,7 @@ Name | Description
 `LISTEN_PORT` | The port to bind to. Defaults to 9182.
 `METRICS_PATH` | The path at which to serve metrics. Defaults to `/metrics`
 `TEXTFILE_DIR` | As the `--collector.textfile.directory` flag, provide a directory to read text files with metrics from
+`REMOTE_ADDR` | Allows setting comma separated remote IP addresses for the Windows Firewall exception (whitelist). Defaults to an empty string (any remote address).
 `EXTRA_FLAGS` | Allows passing full CLI flags. Defaults to an empty string.
 
 Parameters are sent to the installer via `msiexec`. Example invocations:
