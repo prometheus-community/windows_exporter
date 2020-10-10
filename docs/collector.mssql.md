@@ -194,8 +194,8 @@ Name | Description | Type | Labels
 `windows_mssql_genstats_user_connections` | Counts the number of users currently connected to SQL Server | counter | `instance`
 `windows_mssql_locks_average_wait_seconds` | Average amount of wait time (in milliseconds) for each lock request that resulted in a wait | counter | `instance`, `resource`
 `windows_mssql_locks_lock_requests` | Number of new locks and lock conversions per second requested from the lock manager | counter | `instance`, `resource`
-`windows_mssql_locks_lock_timeouts` | Number of lock requests per second that timed out, but excluding requests for NOWAIT locks | counter | `instance`, `resource`
-`windows_mssql_locks_lock_timeouts_excluding_NOWAIT` | Number of lock requests per second that timed out, including requests for NOWAIT locks | counter | `instance`, `resource`
+`windows_mssql_locks_lock_timeouts` | Number of lock requests per second that timed out, including requests for NOWAIT locks | counter | `instance`, `resource`
+`windows_mssql_locks_lock_timeouts_excluding_NOWAIT` | Number of lock requests per second that timed out, but excluding requests for NOWAIT locks | counter | `instance`, `resource`
 `windows_mssql_locks_lock_waits` | Total wait time (in milliseconds) for locks in the last second | counter | `instance`, `resource`
 `windows_mssql_locks_lock_wait_seconds` | Number of lock requests per second that required the caller to wait | counter | `instance`, `resource`
 `windows_mssql_locks_deadlocks` | Number of lock requests per second that resulted in a deadlock | counter | `instance`, `resource`
