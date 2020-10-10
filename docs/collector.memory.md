@@ -17,8 +17,6 @@ None
 
 Name | Description | Type | Labels
 -----|-------------|------|-------
-`windows_cs_logical_processors` | Number of installed logical processors | gauge | None
-`windows_cs_physical_memory_bytes` | Total installed physical memory | gauge | None
 `windows_memory_available_bytes` | The amount of physical memory immediately available for allocation to a process or for system use. It is equal to the sum of memory assigned to the standby (cached), free and zero page lists | gauge | None
 `windows_memory_cache_bytes` | Number of bytes currently being used by the file system cache | gauge | None
 `windows_memory_cache_bytes_peak` | Maximum number of CacheBytes after the system was last restarted | gauge | None
