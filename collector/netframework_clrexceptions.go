@@ -97,8 +97,8 @@ func (c *NETFrameworkCLRExceptionsCollector) collect(ctx *ScrapeContext, ch chan
 		name := process.Name
 		procnum, exists := names[name]
 		if exists {
-			name = fmt.Sprintf("%s#%d", name, procnum)
 			names[name]++
+			name = fmt.Sprintf("%s#%d", name, procnum)
 		} else {
 			names[name] = 1
 		}
