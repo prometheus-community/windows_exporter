@@ -11,7 +11,7 @@
   <Product Id="*" UpgradeCode="66a6eb5b-1fc2-4b14-a362-5ceec6413308"
            Name="windows_exporter" Version="$(var.Version)" Manufacturer="prometheus-community"
            Language="1033" Codepage="1252">
-    <Package Id="*" Manufacturer="prometheus-community" InstallScope="perMachine"
+    <Package Id="*" Manufacturer="prometheus-community" InstallScope="perMachine" InstallerVersion="500"
              Description="windows_exporter $(var.Version) installer" Compressed="yes" />
     <Media Id="1" Cabinet="windows_exporter.cab" EmbedCab="yes"/>
     <MajorUpgrade Schedule="afterInstallInitialize" DowngradeErrorMessage="A later version of [ProductName] is already installed. Setup will now exit." />
