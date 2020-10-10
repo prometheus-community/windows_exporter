@@ -110,10 +110,9 @@ On some older versions of Windows you may need to surround parameter values with
 msiexec /i C:\Users\Administrator\Downloads\windows_exporter.msi ENABLED_COLLECTORS="ad,iis,logon,memory,process,tcp,thermalzone" TEXTFILE_DIR="C:\custom_metrics\"
 ```
 
-## Roadmap
+## Supported versions
 
-See [open issues](https://github.com/prometheus-community/windows_exporter/issues)
-
+windows_exporter supports Windows Server versions 2008R2 and later, and desktop Windows version 7 and later.
 
 ## Usage
 
