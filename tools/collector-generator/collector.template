@@ -5,7 +5,7 @@ import (
     "github.com/prometheus/common/log"
 )
 func init() {
-    Factories["{{ .CollectorName | toLower }}"] = New{{ .CollectorName }}Collector
+    registerCollector("{{ .CollectorName | toLower }}", new{{ .CollectorName }}Collector) // TODO: Add any perflib dependencies here
 }
 // A {{ .CollectorName }}Collector is a Prometheus collector for WMI {{ .Class }} metrics
 type {{ .CollectorName }}Collector struct {
@@ -13,8 +13,8 @@ type {{ .CollectorName }}Collector struct {
     {{ $m.Name }} *prometheus.Desc
 {{- end }}
 }
-// New{{ .CollectorName }}Collector ...
-func New{{ .CollectorName }}Collector() (Collector, error) {
+
+func new{{ .CollectorName }}Collector() (Collector, error) {
     const subsystem = "{{ .CollectorName | toLower }}"
     return &{{ .CollectorName }}Collector{
 {{- range $m := .Members }}
@@ -27,15 +27,7 @@ func New{{ .CollectorName }}Collector() (Collector, error) {
 {{- end }}
     }, nil
 }
-// Collect sends the metric values for each metric
-// to the provided prometheus Metric channel.
-func (c *{{ .CollectorName }}Collector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
-    if desc, err := c.collect(ch); err != nil {
-        log.Error("failed collecting {{ .CollectorName | toLower }} metrics:", desc, err)
-        return err
-    }
-    return nil
-}
+
 // {{ .Class }} docs:
 // - <add link to documentation here>
 type {{ .Class }} struct {
@@ -44,7 +36,10 @@ type {{ .Class }} struct {
     {{ $m.Name }} {{ $m.Type }}
 {{- end }}
 }
-func (c *{{ .CollectorName }}Collector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+
+// Collect sends the metric values for each metric
+// to the provided prometheus Metric channel.
+func (c *{{ .CollectorName }}Collector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
     var dst []{{ .Class }}
     q := queryAll(&dst)
     if err := wmi.Query(q, &dst); err != nil {

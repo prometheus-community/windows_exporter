@@ -1,11 +1,12 @@
 # Documentation
-This directory contains documentation of the collectors in the WMI exporter, with information such as what metrics are exported, any flags for additional configuration, and some example usage in alerts and queries.
+This directory contains documentation of the collectors in the windows_exporter, with information such as what metrics are exported, any flags for additional configuration, and some example usage in alerts and queries.
 
 # Collectors
 - [`ad`](collector.ad.md)
 - [`adfs`](collector.adfs.md)
 - [`cpu`](collector.cpu.md)
 - [`cs`](collector.cs.md)
+- [`dhcp`](collector.dhcp.md)
 - [`dns`](collector.dns.md)
 - [`hyperv`](collector.hyperv.md)
 - [`iis`](collector.iis.md)
@@ -25,8 +26,10 @@ This directory contains documentation of the collectors in the WMI exporter, wit
 - [`net`](collector.net.md)
 - [`os`](collector.os.md)
 - [`process`](collector.process.md)
+- [`remote_fx`](collector.remote_fx.md)
 - [`service`](collector.service.md)
 - [`system`](collector.system.md)
 - [`tcp`](collector.tcp.md)
+- [`terminal_services`](collector.terminal_services.md)
 - [`textfile`](collector.textfile.md)
 - [`vmware`](collector.vmware.md)

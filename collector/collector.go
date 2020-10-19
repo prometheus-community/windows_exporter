@@ -1,6 +1,7 @@
 package collector
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -13,7 +14,7 @@ import (
 // ...
 const (
 	// TODO: Make package-local
-	Namespace = "wmi"
+	Namespace = "windows"
 
 	// Conversion factors
 	ticksToSecondsScaleFactor = 1 / 1e7
@@ -57,6 +58,10 @@ var (
 
 func registerCollector(name string, builder collectorBuilder, perfCounterNames ...string) {
 	builders[name] = builder
+	addPerfCounterDependencies(name, perfCounterNames)
+}
+
+func addPerfCounterDependencies(name string, perfCounterNames []string) {
 	perfIndicies := make([]string, 0, len(perfCounterNames))
 	for _, cn := range perfCounterNames {
 		perfIndicies = append(perfIndicies, MapCounterToIndex(cn))
@@ -72,7 +77,11 @@ func Available() []string {
 	return cs
 }
 func Build(collector string) (Collector, error) {
-	return builders[collector]()
+	builder, exists := builders[collector]
+	if !exists {
+		return nil, fmt.Errorf("Unknown collector %q", collector)
+	}
+	return builder()
 }
 func getPerfQuery(collectors []string) string {
 	parts := make([]string, 0, len(collectors))
@@ -103,4 +112,10 @@ func PrepareScrapeContext(collectors []string) (*ScrapeContext, error) {
 	}
 
 	return &ScrapeContext{objs}, nil
+}
+func boolToFloat(b bool) float64 {
+	if b {
+		return 1.0
+	}
+	return 0.0
 }

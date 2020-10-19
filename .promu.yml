@@ -1,8 +1,8 @@
 repository:
-    path: github.com/martinlindhe/wmi_exporter
+    path: github.com/prometheus-community/windows_exporter
 build:
     binaries:
-        - name: wmi_exporter
+        - name: windows_exporter
     ldflags: |
         -X github.com/prometheus/common/version.Version={{.Version}}
         -X github.com/prometheus/common/version.Revision={{.Revision}}

@@ -8,7 +8,7 @@ environment:
   GOPATH: c:\gopath
   GO111MODULE: on
 
-clone_folder: c:\gopath\src\github.com\martinlindhe\wmi_exporter
+clone_folder: c:\gopath\src\github.com\prometheus-community\windows_exporter
 
 install:
   - mkdir %GOPATH%\bin
@@ -22,6 +22,7 @@ install:
   - ps: |
       $env:GO111MODULE="off"
       go get -u github.com/prometheus/promu
+      go get -u github.com/josephspurrier/goversioninfo/cmd/goversioninfo
       $env:GO111MODULE="on"
 
 test_script:
@@ -37,12 +38,17 @@ build_script:
       # so we need to run it before setting the preference.
       go mod download
       $ErrorActionPreference = "Stop"
+
       gitversion /output json /showvariable FullSemVer | Set-Content VERSION -PassThru
       $Version = Get-Content VERSION
+      # Windows versioninfo resources need the file version by parts (but product version is free text)
+      $VersionParts = ($Version -replace '^v?([0-9\.]+).*$','$1').Split(".")
+      goversioninfo.exe -ver-major $VersionParts[0] -ver-minor $VersionParts[1] -ver-patch $VersionParts[2] -product-version $Version -platform-specific
+
       make crossbuild
       # GH requires all files to have different names, so add version/arch to differentiate
       foreach($Arch in "amd64","386") {
-        Rename-Item output\$Arch\wmi_exporter.exe -NewName wmi_exporter-$Version-$Arch.exe
+        Rename-Item output\$Arch\windows_exporter.exe -NewName windows_exporter-$Version-$Arch.exe
       }
 
 after_build:
@@ -56,9 +62,9 @@ after_build:
       # The MSI version is not semver compliant, so just take the numerical parts
       $MSIVersion = $env:APPVEYOR_REPO_TAG_NAME -replace '^v?([0-9\.]+).*$','$1'
       foreach($Arch in "amd64","386") {
-        Write-Verbose "Building wmi_exporter $MSIVersion msi for $Arch"
-        .\installer\build.ps1 -PathToExecutable .\output\$Arch\wmi_exporter-$BuildVersion-$Arch.exe -Version $MSIVersion -Arch "$Arch"
-        Move-Item installer\Output\wmi_exporter-$MSIVersion-$Arch.msi output\$Arch\
+        Write-Verbose "Building windows_exporter $MSIVersion msi for $Arch"
+        .\installer\build.ps1 -PathToExecutable .\output\$Arch\windows_exporter-$BuildVersion-$Arch.exe -Version $MSIVersion -Arch "$Arch"
+        Move-Item installer\Output\windows_exporter-$MSIVersion-$Arch.msi output\$Arch\
       }
   - promu checksum output\
 
@@ -68,10 +74,10 @@ artifacts:
 
 deploy:
   - provider: GitHub
-    description: WMI Exporter version $(appveyor_build_version)
+    description: windows_exporter version $(appveyor_build_version)
     artifact: Artifacts
     auth_token:
-      secure: 'CrXWeTf7qONUOEki5olFfGEUPMLDeHj61koDXV3OVEaLgtACmnVHsKUub9POflda'
+      secure: 'hFR7Ymxt/Rb25p4BweFvMNhX03lHD9kXJXrRlC/KbThazHuLD5NTx2ibMI6LYRsr'
     draft: false
     prerelease: false
     on:

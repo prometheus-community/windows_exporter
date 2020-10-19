@@ -3,6 +3,7 @@
 package collector
 
 import (
+	"strconv"
 	"strings"
 
 	"github.com/StackExchange/wmi"
@@ -24,9 +25,10 @@ var (
 
 // A serviceCollector is a Prometheus collector for WMI Win32_Service metrics
 type serviceCollector struct {
-	State     *prometheus.Desc
-	StartMode *prometheus.Desc
-	Status    *prometheus.Desc
+	Information *prometheus.Desc
+	State       *prometheus.Desc
+	StartMode   *prometheus.Desc
+	Status      *prometheus.Desc
 
 	queryWhereClause string
 }
@@ -40,6 +42,12 @@ func NewserviceCollector() (Collector, error) {
 	}
 
 	return &serviceCollector{
+		Information: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "info"),
+			"A metric with a constant '1' value labeled with service information",
+			[]string{"name", "display_name", "process_id", "run_as"},
+			nil,
+		),
 		State: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "state"),
 			"The state of the service (State)",
@@ -75,10 +83,13 @@ func (c *serviceCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metr
 // Win32_Service docs:
 // - https://msdn.microsoft.com/en-us/library/aa394418(v=vs.85).aspx
 type Win32_Service struct {
-	Name      string
-	State     string
-	Status    string
-	StartMode string
+	DisplayName string
+	Name        string
+	ProcessId   uint32
+	State       string
+	Status      string
+	StartMode   string
+	StartName   *string
 }
 
 var (
@@ -121,8 +132,23 @@ func (c *serviceCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Des
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
 	}
-
 	for _, service := range dst {
+		pid := strconv.FormatUint(uint64(service.ProcessId), 10)
+
+		runAs := ""
+		if service.StartName != nil {
+			runAs = *service.StartName
+		}
+		ch <- prometheus.MustNewConstMetric(
+			c.Information,
+			prometheus.GaugeValue,
+			1.0,
+			strings.ToLower(service.Name),
+			service.DisplayName,
+			pid,
+			runAs,
+		)
+
 		for _, state := range allStates {
 			isCurrentState := 0.0
 			if state == strings.ToLower(service.State) {
