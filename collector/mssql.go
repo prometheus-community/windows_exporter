@@ -387,7 +387,7 @@ type MSSQLCollector struct {
 	TransactionsLongestTransactionRunningSeconds *prometheus.Desc
 	TransactionsNonSnapshotVersionActiveTotal    *prometheus.Desc
 	TransactionsSnapshotActiveTotal              *prometheus.Desc
-	TransactionsActiveTotal                      *prometheus.Desc
+	TransactionsActive                           *prometheus.Desc
 	TransactionsUpdateConflictsTotal             *prometheus.Desc
 	TransactionsUpdateSnapshotActiveTotal        *prometheus.Desc
 	TransactionsVersionCleanupRateBytes          *prometheus.Desc
@@ -1749,8 +1749,8 @@ func NewMSSQLCollector() (Collector, error) {
 			[]string{"instance"},
 			nil,
 		),
-		TransactionsActiveTotal: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "transactions_active_total"),
+		TransactionsActive: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "transactions_active"),
 			"(Transactions.Transactions)",
 			[]string{"instance"},
 			nil,
@@ -3832,8 +3832,8 @@ func (c *MSSQLCollector) collectTransactions(ctx *ScrapeContext, ch chan<- prome
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.TransactionsActiveTotal,
-			prometheus.CounterValue,
+			c.TransactionsActive,
+			prometheus.GaugeValue,
 			v.Transactions,
 			sqlInstance,
 		)

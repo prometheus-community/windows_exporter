@@ -235,7 +235,7 @@ Name | Description | Type | Labels
 `windows_mssql_transactions_longest_transaction_running_seconds` | The length of time (in seconds) since the start of the transaction that has been active longer than any other current transaction | gauge | `instance`
 `windows_mssql_transactions_nonsnapshot_version_active_total` | The number of currently active transactions that are not using snapshot isolation level and have made data modifications that have generated row versions in the tempdb version store | counter | `instance`
 `windows_mssql_transactions_snapshot_active_total` | The number of currently active transactions using the snapshot isolation level | counter | `instance`
-`windows_mssql_transactions_active_total` | The number of currently active transactions of all types | counter | `instance`
+`windows_mssql_transactions_active` | The number of currently active transactions of all types | gauge | `instance`
 `windows_mssql_transactions_update_conflicts_total` | The percentage of those transactions using the snapshot isolation level that have encountered update conflicts within the last second | counter | `instance`
 `windows_mssql_transactions_update_snapshot_active_total` | The number of currently active transactions using the snapshot isolation level and have modified data | counter | `instance`
 `windows_mssql_transactions_version_cleanup_rate_bytes` | The rate (in kilobytes per second) at which row versions are removed from the snapshot isolation version store in tempdb | gauge | `instance`
