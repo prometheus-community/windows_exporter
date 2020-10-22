@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	_ "net/http/pprof"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -268,36 +269,37 @@ func initWbem() {
 
 func main() {
 	var (
-		listenAddress = kingpin.Flag(
+		app           = kingpin.New("windows_exporter", "")
+		listenAddress = app.Flag(
 			"telemetry.addr",
 			"host:port for exporter.",
 		).Default(":9182").String()
-		metricsPath = kingpin.Flag(
+		metricsPath = app.Flag(
 			"telemetry.path",
 			"URL path for surfacing collected metrics.",
 		).Default("/metrics").String()
-		maxRequests = kingpin.Flag(
+		maxRequests = app.Flag(
 			"telemetry.max-requests",
 			"Maximum number of concurrent requests. 0 to disable.",
 		).Default("5").Int()
-		enabledCollectors = kingpin.Flag(
+		enabledCollectors = app.Flag(
 			"collectors.enabled",
 			"Comma-separated list of collectors to use. Use '[defaults]' as a placeholder for all the collectors enabled by default.").
 			Default(defaultCollectors).String()
-		printCollectors = kingpin.Flag(
+		printCollectors = app.Flag(
 			"collectors.print",
 			"If true, print available collectors and exit.",
 		).Bool()
-		timeoutMargin = kingpin.Flag(
+		timeoutMargin = app.Flag(
 			"scrape.timeout-margin",
 			"Seconds to subtract from the timeout allowed by the client. Tune to allow for overhead or high loads.",
 		).Default("0.5").Float64()
 	)
 
-	log.AddFlags(kingpin.CommandLine)
-	kingpin.Version(version.Print("windows_exporter"))
-	kingpin.HelpFlag.Short('h')
-	kingpin.Parse()
+	log.AddFlags(app)
+	app.Version(version.Print("windows_exporter"))
+	app.HelpFlag.Short('h')
+	app.Parse(os.Args[1:])
 
 	if *printCollectors {
 		collectors := collector.Available()
