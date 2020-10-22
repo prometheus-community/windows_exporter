@@ -14,4 +14,5 @@ require (
 	github.com/prometheus/common v0.2.0
 	golang.org/x/sys v0.0.0-20190507160741-ecd444e8653b
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
+	gopkg.in/yaml.v2 v2.2.1
 )
