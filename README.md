@@ -40,6 +40,7 @@ Name     | Description | Enabled by default
 [service](docs/collector.service.md) | Service state metrics | &#10003;
 [system](docs/collector.system.md) | System calls | &#10003;
 [tcp](docs/collector.tcp.md) | TCP connections |
+[time](docs/collector.time.md) | Windows Time Service |
 [thermalzone](docs/collector.thermalzone.md) | Thermal information
 [terminal_services](docs/collector.terminal_services.md) | Terminal services (RDS)
 [textfile](docs/collector.textfile.md) | Read prometheus metrics from a text file | &#10003;
