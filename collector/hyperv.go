@@ -1001,8 +1001,17 @@ func (c *HyperVCollector) collectVmCpuUsage(ch chan<- prometheus.Metric) (*prome
 		}
 		// The name format is <VM Name>:Hv VP <vcore id>
 		parts := strings.Split(obj.Name, ":")
+		if len(parts) != 2 {
+			log.Warnf("Unexpected format of Name in collectVmCpuUsage: %q, expected %q. Skipping.", obj.Name, "<VM Name>:Hv VP <vcore id>")
+			continue
+		}
+		coreParts := strings.Split(parts[1], " ")
+		if len(coreParts) != 3 {
+			log.Warnf("Unexpected format of core identifier in collectVmCpuUsage: %q, expected %q. Skipping.", parts[1], "Hv VP <vcore id>")
+			continue
+		}
 		vmName := parts[0]
-		coreId := strings.Split(parts[1], " ")[2]
+		coreId := coreParts[2]
 
 		ch <- prometheus.MustNewConstMetric(
 			c.VMGuestRunTime,
