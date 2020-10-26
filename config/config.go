@@ -43,12 +43,14 @@ func NewResolver(file string) (*Resolver, error) {
 		return nil, err
 	}
 
-	var m map[string]string
-	err = yaml.Unmarshal(b, &m)
+	var rawValues map[string]interface{}
+	err = yaml.Unmarshal(b, &rawValues)
 	if err != nil {
 		return nil, err
 	}
-	for k, v := range m {
+	// Flatten nested YAML values
+	flattenedValues := flatten(rawValues)
+	for k, v := range flattenedValues {
 		if _, ok := flags[k]; !ok {
 			flags[k] = v
 		}
