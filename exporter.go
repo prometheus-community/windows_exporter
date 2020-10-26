@@ -339,9 +339,21 @@ func main() {
 
 	h := &metricsHandler{
 		timeoutMargin: *timeoutMargin,
-		collectorFactory: func(timeout time.Duration) *windowsCollector {
-			return &windowsCollector{
-				collectors:        collectors,
+		collectorFactory: func(timeout time.Duration, requestedCollectors []string) (error, *windowsCollector) {
+			filteredCollectors := make(map[string]collector.Collector)
+			// scrape all enabled collectors if no collector is requested
+			if len(requestedCollectors) == 0 {
+				filteredCollectors = collectors
+			}
+			for _, name := range requestedCollectors {
+				col, exists := collectors[name]
+				if !exists {
+					return fmt.Errorf("unavailable collector: %s", name), nil
+				}
+				filteredCollectors[name] = col
+			}
+			return nil, &windowsCollector{
+				collectors:        filteredCollectors,
 				maxScrapeDuration: timeout,
 			}
 		},
@@ -455,7 +467,7 @@ loop:
 
 type metricsHandler struct {
 	timeoutMargin    float64
-	collectorFactory func(timeout time.Duration) *windowsCollector
+	collectorFactory func(timeout time.Duration, requestedCollectors []string) (error, *windowsCollector)
 }
 
 func (mh *metricsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -475,7 +487,14 @@ func (mh *metricsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	timeoutSeconds = timeoutSeconds - mh.timeoutMargin
 
 	reg := prometheus.NewRegistry()
-	reg.MustRegister(mh.collectorFactory(time.Duration(timeoutSeconds * float64(time.Second))))
+	err, wc := mh.collectorFactory(time.Duration(timeoutSeconds*float64(time.Second)), r.URL.Query()["collect[]"])
+	if err != nil {
+		log.Warnln("Couldn't create filtered metrics handler: ", err)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(fmt.Sprintf("Couldn't create filtered metrics handler: %s", err)))
+		return
+	}
+	reg.MustRegister(wc)
 	reg.MustRegister(
 		prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}),
 		prometheus.NewGoCollector(),
