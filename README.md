@@ -136,6 +136,36 @@ The prometheus metrics will be exposed on [localhost:9182](http://localhost:9182
 
 When there are multiple processes with the same name, WMI represents those after the first instance as `process-name#index`. So to get them all, rather than just the first one, the [regular expression](https://en.wikipedia.org/wiki/Regular_expression) must use `.+`. See [process](docs/collector.process.md) for more information.
 
+### Using a configuration file
+
+YAML configuration files can be specified with the `--config.file` flag. E.G. `.\windows_exporter.exe --config.file=config.yml`
+
+```yaml
+collectors:
+  enabled: cpu,cs,net,service
+collector:
+  service:
+    services-where: "Name='windows_exporter'"
+log:
+  level: warn
+```
+
+An example configuration file can be found [here](docs/example_config.yml).
+
+#### Configuration file notes
+
+If the `--config.file` flag is not specified, `windows_exporter` will look for a file located at `%programfiles\windows_exporter\config.yml` by default. If no file is found, CLI flags are processed as per normal.
+
+Configuration file values can be mixed with CLI flags. E.G.
+
+`.\windows_exporter.exe --collectors.enabled=cpu,logon`
+
+```yaml
+log:
+  level: debug
+```
+
+CLI flags enjoy a higher priority over values specified in the configuration file.
 
 ## License
 
