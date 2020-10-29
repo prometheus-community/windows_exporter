@@ -8,7 +8,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/StackExchange/wmi"
+	"github.com/Microsoft/go-winio"
+
+	"github.com/elastic/go-sysinfo"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -16,6 +18,7 @@ import (
 
 func init() {
 	registerCollector("process", newProcessCollector, "Process")
+	winio.EnableProcessPrivileges([]string{"SeDebugPrivilege"})
 }
 
 var (
@@ -172,22 +175,11 @@ type perflibProcess struct {
 	WorkingSet              float64 `perflib:"Working Set"`
 }
 
-type WorkerProcess struct {
-	AppPoolName string
-	ProcessId   uint64
-}
-
 func (c *processCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	data := make([]perflibProcess, 0)
 	err := unmarshalObject(ctx.perfObjects["Process"], &data)
 	if err != nil {
 		return err
-	}
-
-	var dst_wp []WorkerProcess
-	q_wp := queryAll(&dst_wp)
-	if err := wmi.QueryNamespace(q_wp, &dst_wp, "root\\WebAdministration"); err != nil {
-		log.Debugf("Could not query WebAdministration namespace for IIS worker processes: %v. Skipping", err)
 	}
 
 	for _, process := range data {
@@ -201,10 +193,24 @@ func (c *processCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metr
 		pid := strconv.FormatUint(uint64(process.IDProcess), 10)
 		cpid := strconv.FormatUint(uint64(process.CreatingProcessID), 10)
 
-		for _, wp := range dst_wp {
-			if wp.ProcessId == uint64(process.IDProcess) {
-				processName = strings.Join([]string{processName, wp.AppPoolName}, "_")
-				break
+		appPoolPid := -1
+
+		if processName == "dotnet" {
+			appPoolPid = int(process.CreatingProcessID)
+		} else if processName == "w3wp" {
+			appPoolPid = int(process.IDProcess)
+		}
+
+		if appPoolPid >= 0 {
+			if proc, err := sysinfo.Process(appPoolPid); err == nil {
+				if procInfo, err := proc.Info(); err == nil && len(procInfo.Args) > 0 && strings.HasSuffix(procInfo.Args[0], `\w3wp.exe`) {
+					for i := range procInfo.Args {
+						if procInfo.Args[i] == "-ap" && i < len(procInfo.Args)-1 {
+							processName = processName + "_" + procInfo.Args[i+1]
+							break
+						}
+					}
+				}
 			}
 		}
 
