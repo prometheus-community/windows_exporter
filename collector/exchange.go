@@ -174,7 +174,7 @@ func newExchangeCollector() (Collector, error) {
 		}
 	} else {
 		for _, collectorName := range strings.Split(*argExchangeCollectorsWhitelist, ",") {
-			if _, exists := find(exchangeAllCollectorNames, collectorName); exists {
+			if find(exchangeAllCollectorNames, collectorName) {
 				collectorWhitelist = append(collectorWhitelist, collectorName)
 			} else {
 				return nil, fmt.Errorf("Unknown exchange collector: %s", collectorName)
@@ -632,11 +632,11 @@ func (c *exchangeCollector) msToSec(t float64) float64 {
 	return t / 1000
 }
 
-func find(slice []string, val string) (int, bool) {
-	for i, item := range slice {
+func find(slice []string, val string) bool {
+	for _, item := range slice {
 		if item == val {
-			return i, true
+			return true
 		}
 	}
-	return -1, false
+	return false
 }
