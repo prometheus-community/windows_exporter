@@ -65,7 +65,7 @@ type exchangeCollector struct {
 	RPCOperationsPerSec                     *prometheus.Desc
 	UserCount                               *prometheus.Desc
 
-	collectorWhitelist []string
+	enabledCollectors []string
 }
 
 var (
@@ -87,8 +87,8 @@ var (
 		"List the collectors along with their perflib object name/ids",
 	).Bool()
 
-	argExchangeCollectorsWhitelist = kingpin.Flag(
-		"collectors.exchange.whitelist",
+	argExchangeCollectorsEnabled = kingpin.Flag(
+		"collectors.exchange.enabled",
 		"Comma-separated list of collectors to use. Defaults to all, if not specified.",
 	).Default("").String()
 )
@@ -145,7 +145,7 @@ func newExchangeCollector() (Collector, error) {
 		PingCommandsPending:                     desc("activesync_ping_cmds_pending", "Number of ping commands currently pending in the queue"),
 		SyncCommandsPerSec:                      desc("activesync_sync_cmds_total", "Number of sync commands processed per second. Clients use this command to synchronize items within a folder"),
 
-		collectorWhitelist: make([]string, 0, len(exchangeAllCollectorNames)),
+		enabledCollectors: make([]string, 0, len(exchangeAllCollectorNames)),
 	}
 
 	collectorDesc := map[string]string{
@@ -168,14 +168,14 @@ func newExchangeCollector() (Collector, error) {
 		os.Exit(0)
 	}
 
-	if *argExchangeCollectorsWhitelist == "" {
+	if *argExchangeCollectorsEnabled == "" {
 		for _, collectorName := range exchangeAllCollectorNames {
-			c.collectorWhitelist = append(c.collectorWhitelist, collectorName)
+			c.enabledCollectors = append(c.enabledCollectors, collectorName)
 		}
 	} else {
-		for _, collectorName := range strings.Split(*argExchangeCollectorsWhitelist, ",") {
+		for _, collectorName := range strings.Split(*argExchangeCollectorsEnabled, ",") {
 			if find(exchangeAllCollectorNames, collectorName) {
-				c.collectorWhitelist = append(c.collectorWhitelist, collectorName)
+				c.enabledCollectors = append(c.enabledCollectors, collectorName)
 			} else {
 				return nil, fmt.Errorf("Unknown exchange collector: %s", collectorName)
 			}
@@ -200,7 +200,7 @@ func (c *exchangeCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Met
 		"RpcClientAccess":     c.collectRPC,
 	}
 
-	for _, collectorName := range c.collectorWhitelist {
+	for _, collectorName := range c.enabledCollectors {
 		if err := collectorFuncs[collectorName](ctx, ch); err != nil {
 			log.Errorf("Error in %s: %s", collectorName, err)
 			return err
