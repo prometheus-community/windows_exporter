@@ -119,3 +119,12 @@ func boolToFloat(b bool) float64 {
 	}
 	return 0.0
 }
+
+func find(slice []string, val string) bool {
+	for _, item := range slice {
+		if item == val {
+			return true
+		}
+	}
+	return false
+}

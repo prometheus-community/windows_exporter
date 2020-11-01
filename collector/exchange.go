@@ -65,7 +65,7 @@ type exchangeCollector struct {
 	RPCOperationsPerSec                     *prometheus.Desc
 	UserCount                               *prometheus.Desc
 
-	ActiveCollFuncs []func(ctx *ScrapeContext, ch chan<- prometheus.Metric) error
+	collectorWhitelist []string
 }
 
 var (
@@ -81,8 +81,6 @@ var (
 		"WorkloadManagement",
 		"RpcClientAccess",
 	}
-
-	collectorWhitelist = make([]string, 0, len(exchangeAllCollectorNames))
 
 	argExchangeListAllCollectors = kingpin.Flag(
 		"collectors.exchange.list",
@@ -146,6 +144,8 @@ func newExchangeCollector() (Collector, error) {
 		MailboxServerProxyFailureRate:           desc("http_proxy_mailbox_proxy_failure_rate", "% of failures between this CAS and MBX servers over the last 200 samples", "name"),
 		PingCommandsPending:                     desc("activesync_ping_cmds_pending", "Number of ping commands currently pending in the queue"),
 		SyncCommandsPerSec:                      desc("activesync_sync_cmds_total", "Number of sync commands processed per second. Clients use this command to synchronize items within a folder"),
+
+		collectorWhitelist: make([]string, 0, len(exchangeAllCollectorNames)),
 	}
 
 	collectorDesc := map[string]string{
@@ -170,12 +170,12 @@ func newExchangeCollector() (Collector, error) {
 
 	if *argExchangeCollectorsWhitelist == "" {
 		for _, collectorName := range exchangeAllCollectorNames {
-			collectorWhitelist = append(collectorWhitelist, collectorName)
+			c.collectorWhitelist = append(c.collectorWhitelist, collectorName)
 		}
 	} else {
 		for _, collectorName := range strings.Split(*argExchangeCollectorsWhitelist, ",") {
 			if find(exchangeAllCollectorNames, collectorName) {
-				collectorWhitelist = append(collectorWhitelist, collectorName)
+				c.collectorWhitelist = append(c.collectorWhitelist, collectorName)
 			} else {
 				return nil, fmt.Errorf("Unknown exchange collector: %s", collectorName)
 			}
@@ -200,7 +200,7 @@ func (c *exchangeCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Met
 		"RpcClientAccess":     c.collectRPC,
 	}
 
-	for _, collectorName := range collectorWhitelist {
+	for _, collectorName := range c.collectorWhitelist {
 		if err := collectorFuncs[collectorName](ctx, ch); err != nil {
 			log.Errorf("Error in %s: %s", collectorName, err)
 			return err
@@ -630,13 +630,4 @@ func (c *exchangeCollector) toLabelName(name string) string {
 // msToSec converts from ms to seconds
 func (c *exchangeCollector) msToSec(t float64) float64 {
 	return t / 1000
-}
-
-func find(slice []string, val string) bool {
-	for _, item := range slice {
-		if item == val {
-			return true
-		}
-	}
-	return false
 }
