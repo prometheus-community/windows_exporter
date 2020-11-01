@@ -48,6 +48,21 @@ Name     | Description | Enabled by default
 
 See the linked documentation on each collector for more information on reported metrics, configuration settings and usage examples.
 
+### Filtering enabled collectors
+
+The `windows_exporter` will expose all metrics from enabled collectors by default.  This is the recommended way to collect metrics to avoid errors when comparing metrics of different families.
+
+For advanced use the `windows_exporter` can be passed an optional list of collectors to filter metrics. The `collect[]` parameter may be used multiple times. In Prometheus configuration you can use this syntax under the [scrape config](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#<scrape_config>).
+
+```
+  params:
+    collect[]:
+      - foo
+      - bar
+```
+
+This can be useful for having different Prometheus servers collect specific metrics from nodes.
+
 ## Flags
 
 windows_exporter accepts flags to configure certain behaviours. The ones configuring the global behaviour of the exporter are listed below, while collector-specific ones are documented in the respective collector documentation above.
