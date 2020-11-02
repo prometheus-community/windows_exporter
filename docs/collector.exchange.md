@@ -15,6 +15,9 @@ Enabled by default? | No
 ### `--collectors.exchange.list`
 Lists the Perflib Objects that are queried for data along with the perlfib object id
 
+### `--collectors.exchange.enabled`
+Comma-separated list of collectors to use, for example: `--collectors.exchange.enabled=AvailabilityService,OutlookWebAccess`. Matching is case-sensetive. Depending on the exchange installation not all performance counters are available. Use `--collectors.exchange.list` to obtain a list of supported collectors.
+
 ## Metrics
 Name          | Description
 --------------|---------------

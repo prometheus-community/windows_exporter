@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	_ "net/http/pprof"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -17,6 +18,7 @@ import (
 
 	"github.com/StackExchange/wmi"
 	"github.com/prometheus-community/windows_exporter/collector"
+	"github.com/prometheus-community/windows_exporter/config"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/log"
@@ -268,36 +270,60 @@ func initWbem() {
 
 func main() {
 	var (
-		listenAddress = kingpin.Flag(
+		app        = kingpin.New("windows_exporter", "")
+		configFile = app.Flag(
+			"config.file",
+			"YAML configuration file to use. Values set in this file will override flags.",
+		).Default(os.ExpandEnv("$ProgramFiles\\windows_exporter\\config.yml")).String()
+		listenAddress = app.Flag(
 			"telemetry.addr",
 			"host:port for exporter.",
 		).Default(":9182").String()
-		metricsPath = kingpin.Flag(
+		metricsPath = app.Flag(
 			"telemetry.path",
 			"URL path for surfacing collected metrics.",
 		).Default("/metrics").String()
-		maxRequests = kingpin.Flag(
+		maxRequests = app.Flag(
 			"telemetry.max-requests",
 			"Maximum number of concurrent requests. 0 to disable.",
 		).Default("5").Int()
-		enabledCollectors = kingpin.Flag(
+		enabledCollectors = app.Flag(
 			"collectors.enabled",
 			"Comma-separated list of collectors to use. Use '[defaults]' as a placeholder for all the collectors enabled by default.").
 			Default(defaultCollectors).String()
-		printCollectors = kingpin.Flag(
+		printCollectors = app.Flag(
 			"collectors.print",
 			"If true, print available collectors and exit.",
 		).Bool()
-		timeoutMargin = kingpin.Flag(
+		timeoutMargin = app.Flag(
 			"scrape.timeout-margin",
 			"Seconds to subtract from the timeout allowed by the client. Tune to allow for overhead or high loads.",
 		).Default("0.5").Float64()
 	)
 
-	log.AddFlags(kingpin.CommandLine)
-	kingpin.Version(version.Print("windows_exporter"))
-	kingpin.HelpFlag.Short('h')
-	kingpin.Parse()
+	log.AddFlags(app)
+	app.Version(version.Print("windows_exporter"))
+	app.HelpFlag.Short('h')
+
+	// Load values from configuration file(s). Executable flags must first be parsed, in order
+	// to load the specified file(s).
+	_, err := app.Parse(os.Args[1:])
+	if err != nil {
+		log.Fatalf("%v\n", err)
+	}
+	resolver, err := config.NewResolver(*configFile)
+	if err != nil {
+		log.Fatalf("could not load config file: %v\n", err)
+	}
+	err = resolver.Bind(app, os.Args[1:])
+	if err != nil {
+		log.Fatalf("%v\n", err)
+	}
+	// Parse flags once more to include those discovered in configuration file(s).
+	_, err = app.Parse(os.Args[1:])
+	if err != nil {
+		log.Fatalf("%v\n", err)
+	}
 
 	if *printCollectors {
 		collectors := collector.Available()
@@ -339,9 +365,21 @@ func main() {
 
 	h := &metricsHandler{
 		timeoutMargin: *timeoutMargin,
-		collectorFactory: func(timeout time.Duration) *windowsCollector {
-			return &windowsCollector{
-				collectors:        collectors,
+		collectorFactory: func(timeout time.Duration, requestedCollectors []string) (error, *windowsCollector) {
+			filteredCollectors := make(map[string]collector.Collector)
+			// scrape all enabled collectors if no collector is requested
+			if len(requestedCollectors) == 0 {
+				filteredCollectors = collectors
+			}
+			for _, name := range requestedCollectors {
+				col, exists := collectors[name]
+				if !exists {
+					return fmt.Errorf("unavailable collector: %s", name), nil
+				}
+				filteredCollectors[name] = col
+			}
+			return nil, &windowsCollector{
+				collectors:        filteredCollectors,
 				maxScrapeDuration: timeout,
 			}
 		},
@@ -455,7 +493,7 @@ loop:
 
 type metricsHandler struct {
 	timeoutMargin    float64
-	collectorFactory func(timeout time.Duration) *windowsCollector
+	collectorFactory func(timeout time.Duration, requestedCollectors []string) (error, *windowsCollector)
 }
 
 func (mh *metricsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -475,7 +513,14 @@ func (mh *metricsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	timeoutSeconds = timeoutSeconds - mh.timeoutMargin
 
 	reg := prometheus.NewRegistry()
-	reg.MustRegister(mh.collectorFactory(time.Duration(timeoutSeconds * float64(time.Second))))
+	err, wc := mh.collectorFactory(time.Duration(timeoutSeconds*float64(time.Second)), r.URL.Query()["collect[]"])
+	if err != nil {
+		log.Warnln("Couldn't create filtered metrics handler: ", err)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(fmt.Sprintf("Couldn't create filtered metrics handler: %s", err)))
+		return
+	}
+	reg.MustRegister(wc)
 	reg.MustRegister(
 		prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}),
 		prometheus.NewGoCollector(),

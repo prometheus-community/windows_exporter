@@ -48,6 +48,21 @@ Name     | Description | Enabled by default
 
 See the linked documentation on each collector for more information on reported metrics, configuration settings and usage examples.
 
+### Filtering enabled collectors
+
+The `windows_exporter` will expose all metrics from enabled collectors by default.  This is the recommended way to collect metrics to avoid errors when comparing metrics of different families.
+
+For advanced use the `windows_exporter` can be passed an optional list of collectors to filter metrics. The `collect[]` parameter may be used multiple times. In Prometheus configuration you can use this syntax under the [scrape config](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#<scrape_config>).
+
+```
+  params:
+    collect[]:
+      - foo
+      - bar
+```
+
+This can be useful for having different Prometheus servers collect specific metrics from nodes.
+
 ## Flags
 
 windows_exporter accepts flags to configure certain behaviours. The ones configuring the global behaviour of the exporter are listed below, while collector-specific ones are documented in the respective collector documentation above.
@@ -121,6 +136,36 @@ The prometheus metrics will be exposed on [localhost:9182](http://localhost:9182
 
 When there are multiple processes with the same name, WMI represents those after the first instance as `process-name#index`. So to get them all, rather than just the first one, the [regular expression](https://en.wikipedia.org/wiki/Regular_expression) must use `.+`. See [process](docs/collector.process.md) for more information.
 
+### Using a configuration file
+
+YAML configuration files can be specified with the `--config.file` flag. E.G. `.\windows_exporter.exe --config.file=config.yml`
+
+```yaml
+collectors:
+  enabled: cpu,cs,net,service
+collector:
+  service:
+    services-where: "Name='windows_exporter'"
+log:
+  level: warn
+```
+
+An example configuration file can be found [here](docs/example_config.yml).
+
+#### Configuration file notes
+
+If the `--config.file` flag is not specified, `windows_exporter` will look for a file located at `%programfiles\windows_exporter\config.yml` by default. If no file is found, CLI flags are processed as per normal.
+
+Configuration file values can be mixed with CLI flags. E.G.
+
+`.\windows_exporter.exe --collectors.enabled=cpu,logon`
+
+```yaml
+log:
+  level: debug
+```
+
+CLI flags enjoy a higher priority over values specified in the configuration file.
 
 ## License
 

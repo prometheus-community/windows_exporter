@@ -50,8 +50,9 @@
             <fw:RemoteAddress>[REMOTE_ADDR]</fw:RemoteAddress>
           </fw:FirewallException> 
         </File>
-        <ServiceInstall Id="InstallExporterService" Name="windows_exporter" DisplayName="windows_exporter" Description="Exports Prometheus metrics from WMI queries" ErrorControl="normal" Start="auto" Type="ownProcess" Arguments="--log.format logger:eventlog?name=windows_exporter [CollectorsFlag] [ListenFlag] [MetricsPathFlag] [TextfileDirFlag] [ExtraFlags]">
-          <util:ServiceConfig FirstFailureActionType="restart" SecondFailureActionType="restart" ThirdFailureActionType="restart" RestartServiceDelayInSeconds="5" />
+        <ServiceInstall Id="InstallExporterService" Name="windows_exporter" DisplayName="windows_exporter" Description="Exports Prometheus metrics about the system" ErrorControl="normal" Start="auto" Type="ownProcess" Arguments="--log.format logger:eventlog?name=windows_exporter [CollectorsFlag] [ListenFlag] [MetricsPathFlag] [TextfileDirFlag] [ExtraFlags]">
+          <util:ServiceConfig FirstFailureActionType="restart" SecondFailureActionType="restart" ThirdFailureActionType="restart" RestartServiceDelayInSeconds="60" />
+          <ServiceDependency Id="wmiApSrv" />
         </ServiceInstall>
         <ServiceControl Id="ServiceStateControl" Name="windows_exporter" Remove="uninstall" Start="install" Stop="both" />
         <util:EventSource Log="Application" Name="windows_exporter" EventMessageFile="%SystemRoot%\System32\EventCreate.exe" />

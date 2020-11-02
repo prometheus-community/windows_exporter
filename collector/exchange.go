@@ -65,7 +65,7 @@ type exchangeCollector struct {
 	RPCOperationsPerSec                     *prometheus.Desc
 	UserCount                               *prometheus.Desc
 
-	ActiveCollFuncs []func(ctx *ScrapeContext, ch chan<- prometheus.Metric) error
+	enabledCollectors []string
 }
 
 var (
@@ -86,6 +86,11 @@ var (
 		"collectors.exchange.list",
 		"List the collectors along with their perflib object name/ids",
 	).Bool()
+
+	argExchangeCollectorsEnabled = kingpin.Flag(
+		"collectors.exchange.enabled",
+		"Comma-separated list of collectors to use. Defaults to all, if not specified.",
+	).Default("").String()
 )
 
 // newExchangeCollector returns a new Collector
@@ -139,6 +144,8 @@ func newExchangeCollector() (Collector, error) {
 		MailboxServerProxyFailureRate:           desc("http_proxy_mailbox_proxy_failure_rate", "% of failures between this CAS and MBX servers over the last 200 samples", "name"),
 		PingCommandsPending:                     desc("activesync_ping_cmds_pending", "Number of ping commands currently pending in the queue"),
 		SyncCommandsPerSec:                      desc("activesync_sync_cmds_total", "Number of sync commands processed per second. Clients use this command to synchronize items within a folder"),
+
+		enabledCollectors: make([]string, 0, len(exchangeAllCollectorNames)),
 	}
 
 	collectorDesc := map[string]string{
@@ -161,12 +168,27 @@ func newExchangeCollector() (Collector, error) {
 		os.Exit(0)
 	}
 
+	if *argExchangeCollectorsEnabled == "" {
+		for _, collectorName := range exchangeAllCollectorNames {
+			c.enabledCollectors = append(c.enabledCollectors, collectorName)
+		}
+	} else {
+		for _, collectorName := range strings.Split(*argExchangeCollectorsEnabled, ",") {
+			if find(exchangeAllCollectorNames, collectorName) {
+				c.enabledCollectors = append(c.enabledCollectors, collectorName)
+			} else {
+				return nil, fmt.Errorf("Unknown exchange collector: %s", collectorName)
+			}
+		}
+	}
+
 	return &c, nil
 }
 
 // Collect collects exchange metrics and sends them to prometheus
 func (c *exchangeCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
-	for collectorName, collectorFunc := range map[string]func(ctx *ScrapeContext, ch chan<- prometheus.Metric) error{
+
+	collectorFuncs := map[string]func(ctx *ScrapeContext, ch chan<- prometheus.Metric) error{
 		"ADAccessProcesses":   c.collectADAccessProcesses,
 		"TransportQueues":     c.collectTransportQueues,
 		"HttpProxy":           c.collectHTTPProxy,
@@ -176,8 +198,10 @@ func (c *exchangeCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Met
 		"Autodiscover":        c.collectAutoDiscover,
 		"WorkloadManagement":  c.collectWorkloadManagementWorkloads,
 		"RpcClientAccess":     c.collectRPC,
-	} {
-		if err := collectorFunc(ctx, ch); err != nil {
+	}
+
+	for _, collectorName := range c.enabledCollectors {
+		if err := collectorFuncs[collectorName](ctx, ch); err != nil {
 			log.Errorf("Error in %s: %s", collectorName, err)
 			return err
 		}

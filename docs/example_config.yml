@@ -1,0 +1,15 @@
+---
+# Note this is not an exhaustive list of all configuration values
+collectors:
+  enabled: cpu,cs,logical_disk,net,os,service,system,textfile
+collector:
+  service:
+    services-where: Name='windows_exporter'
+log:
+  level: debug
+scrape:
+  timeout-margin: 0.5
+telemetry:
+  addr: ":9182"
+  path: /metrics
+  max-requests: 5
