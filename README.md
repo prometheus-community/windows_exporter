@@ -154,8 +154,6 @@ An example configuration file can be found [here](docs/example_config.yml).
 
 #### Configuration file notes
 
-If the `--config.file` flag is not specified, `windows_exporter` will look for a file located at `%programfiles\windows_exporter\config.yml` by default. If no file is found, CLI flags are processed as per normal.
-
 Configuration file values can be mixed with CLI flags. E.G.
 
 `.\windows_exporter.exe --collectors.enabled=cpu,logon`
