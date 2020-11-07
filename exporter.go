@@ -273,8 +273,8 @@ func main() {
 		app        = kingpin.New("windows_exporter", "")
 		configFile = app.Flag(
 			"config.file",
-			"YAML configuration file to use. Values set in this file will override flags.",
-		).Default(os.ExpandEnv("$ProgramFiles\\windows_exporter\\config.yml")).String()
+			"YAML configuration file to use. Values set in this file will be overriden by CLI flags.",
+		).String()
 		listenAddress = app.Flag(
 			"telemetry.addr",
 			"host:port for exporter.",
@@ -311,18 +311,20 @@ func main() {
 	if err != nil {
 		log.Fatalf("%v\n", err)
 	}
-	resolver, err := config.NewResolver(*configFile)
-	if err != nil {
-		log.Fatalf("could not load config file: %v\n", err)
-	}
-	err = resolver.Bind(app, os.Args[1:])
-	if err != nil {
-		log.Fatalf("%v\n", err)
-	}
-	// Parse flags once more to include those discovered in configuration file(s).
-	_, err = app.Parse(os.Args[1:])
-	if err != nil {
-		log.Fatalf("%v\n", err)
+	if *configFile != "" {
+		resolver, err := config.NewResolver(*configFile)
+		if err != nil {
+			log.Fatalf("could not load config file: %v\n", err)
+		}
+		err = resolver.Bind(app, os.Args[1:])
+		if err != nil {
+			log.Fatalf("%v\n", err)
+		}
+		// Parse flags once more to include those discovered in configuration file(s).
+		_, err = app.Parse(os.Args[1:])
+		if err != nil {
+			log.Fatalf("%v\n", err)
+		}
 	}
 
 	if *printCollectors {
