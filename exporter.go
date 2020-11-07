@@ -270,61 +270,55 @@ func initWbem() {
 
 func main() {
 	var (
-		app        = kingpin.New("windows_exporter", "")
-		configFile = app.Flag(
+		configFile = kingpin.Flag(
 			"config.file",
 			"YAML configuration file to use. Values set in this file will be overriden by CLI flags.",
 		).String()
-		listenAddress = app.Flag(
+		listenAddress = kingpin.Flag(
 			"telemetry.addr",
 			"host:port for exporter.",
 		).Default(":9182").String()
-		metricsPath = app.Flag(
+		metricsPath = kingpin.Flag(
 			"telemetry.path",
 			"URL path for surfacing collected metrics.",
 		).Default("/metrics").String()
-		maxRequests = app.Flag(
+		maxRequests = kingpin.Flag(
 			"telemetry.max-requests",
 			"Maximum number of concurrent requests. 0 to disable.",
 		).Default("5").Int()
-		enabledCollectors = app.Flag(
+		enabledCollectors = kingpin.Flag(
 			"collectors.enabled",
 			"Comma-separated list of collectors to use. Use '[defaults]' as a placeholder for all the collectors enabled by default.").
 			Default(defaultCollectors).String()
-		printCollectors = app.Flag(
+		printCollectors = kingpin.Flag(
 			"collectors.print",
 			"If true, print available collectors and exit.",
 		).Bool()
-		timeoutMargin = app.Flag(
+		timeoutMargin = kingpin.Flag(
 			"scrape.timeout-margin",
 			"Seconds to subtract from the timeout allowed by the client. Tune to allow for overhead or high loads.",
 		).Default("0.5").Float64()
 	)
 
-	log.AddFlags(app)
-	app.Version(version.Print("windows_exporter"))
-	app.HelpFlag.Short('h')
+	log.AddFlags(kingpin.CommandLine)
+	kingpin.Version(version.Print("windows_exporter"))
+	kingpin.HelpFlag.Short('h')
 
 	// Load values from configuration file(s). Executable flags must first be parsed, in order
 	// to load the specified file(s).
-	_, err := app.Parse(os.Args[1:])
-	if err != nil {
-		log.Fatalf("%v\n", err)
-	}
+	kingpin.Parse()
+
 	if *configFile != "" {
 		resolver, err := config.NewResolver(*configFile)
 		if err != nil {
 			log.Fatalf("could not load config file: %v\n", err)
 		}
-		err = resolver.Bind(app, os.Args[1:])
+		err = resolver.Bind(kingpin.CommandLine, os.Args[1:])
 		if err != nil {
 			log.Fatalf("%v\n", err)
 		}
 		// Parse flags once more to include those discovered in configuration file(s).
-		_, err = app.Parse(os.Args[1:])
-		if err != nil {
-			log.Fatalf("%v\n", err)
-		}
+		kingpin.Parse()
 	}
 
 	if *printCollectors {
