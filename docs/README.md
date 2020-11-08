@@ -33,4 +33,5 @@ This directory contains documentation of the collectors in the windows_exporter,
 - [`tcp`](collector.tcp.md)
 - [`terminal_services`](collector.terminal_services.md)
 - [`textfile`](collector.textfile.md)
+- [`time`](collector.time.md)
 - [`vmware`](collector.vmware.md)
