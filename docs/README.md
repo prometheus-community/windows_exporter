@@ -28,6 +28,7 @@ This directory contains documentation of the collectors in the windows_exporter,
 - [`process`](collector.process.md)
 - [`remote_fx`](collector.remote_fx.md)
 - [`service`](collector.service.md)
+- [`smtp`](collector.smtp.md)
 - [`system`](collector.system.md)
 - [`tcp`](collector.tcp.md)
 - [`terminal_services`](collector.terminal_services.md)
