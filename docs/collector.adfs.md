@@ -18,16 +18,16 @@ None
 
 Name | Description | Type | Labels
 -----|-------------|------|-------
-`windows_adfs_ad_login_connection_failures` | Total number of connection failures between the ADFS server and the Active Directory domain controller(s) | counter | None
-`windows_adfs_certificate_authentications` | Total number of [User Certificate](https://docs.microsoft.com/en-us/windows-server/identity/ad-fs/operations/configure-user-certificate-authentication) authentications. I.E. smart cards or mobile devices with provisioned client certificates | counter | None
-`windows_adfs_device_authentications` | Total number of [device authentications](https://docs.microsoft.com/en-us/windows-server/identity/ad-fs/operations/device-authentication-controls-in-ad-fs) (SignedToken, clientTLS, PkeyAuth). Device authentication is only available on ADFS 2016 or later | counter | None
-`windows_adfs_extranet_account_lockouts` | Total number of [extranet lockouts](https://docs.microsoft.com/en-us/windows-server/identity/ad-fs/operations/configure-ad-fs-extranet-smart-lockout-protection). Requires the Extranet Lockout feature to be enabled | counter | None
-`windows_adfs_federated_authentications` | Total number of authentications from federated sources. E.G. Office365 | counter | None
-`windows_adfs_passport_authentications` | Total number of authentications from [Microsoft Passport](https://en.wikipedia.org/wiki/Microsoft_account) (now named Microsoft Account) | counter | None
-`windows_adfs_password_change_failed` | Total number of failed password changes. The Password Change Portal must be enabled in the AD FS Management tool in order to allow user password changes | counter | None
-`windows_adfs_password_change_succeeded` | Total number of succeeded password changes. The Password Change Portal must be enabled in the AD FS Management tool in order to allow user password changes | counter | None
-`windows_adfs_token_requests` | Total number of requested access tokens | counter | None
-`windows_adfs_windows_integrated_authentications` | Total number of Windows integrated authentications using Kerberos or NTLM | counter | None
+`windows_adfs_ad_login_connection_failures_total` | Total number of connection failures between the ADFS server and the Active Directory domain controller(s) | counter | None
+`windows_adfs_certificate_authentications_total` | Total number of [User Certificate](https://docs.microsoft.com/en-us/windows-server/identity/ad-fs/operations/configure-user-certificate-authentication) authentications. I.E. smart cards or mobile devices with provisioned client certificates | counter | None
+`windows_adfs_device_authentications_total` | Total number of [device authentications](https://docs.microsoft.com/en-us/windows-server/identity/ad-fs/operations/device-authentication-controls-in-ad-fs) (SignedToken, clientTLS, PkeyAuth). Device authentication is only available on ADFS 2016 or later | counter | None
+`windows_adfs_extranet_account_lockouts_total` | Total number of [extranet lockouts](https://docs.microsoft.com/en-us/windows-server/identity/ad-fs/operations/configure-ad-fs-extranet-smart-lockout-protection). Requires the Extranet Lockout feature to be enabled | counter | None
+`windows_adfs_federated_authentications_total` | Total number of authentications from federated sources. E.G. Office365 | counter | None
+`windows_adfs_passport_authentications_total` | Total number of authentications from [Microsoft Passport](https://en.wikipedia.org/wiki/Microsoft_account) (now named Microsoft Account) | counter | None
+`windows_adfs_password_change_failed_total` | Total number of failed password changes. The Password Change Portal must be enabled in the AD FS Management tool in order to allow user password changes | counter | None
+`windows_adfs_password_change_succeeded_total` | Total number of succeeded password changes. The Password Change Portal must be enabled in the AD FS Management tool in order to allow user password changes | counter | None
+`windows_adfs_token_requests_total` | Total number of requested access tokens | counter | None
+`windows_adfs_windows_integrated_authentications_total` | Total number of Windows integrated authentications using Kerberos or NTLM | counter | None
 
 ### Example metric
 Show rate of device authentications in AD FS:
