@@ -70,25 +70,25 @@ func NewNetworkCollector() (Collector, error) {
 			nil,
 		),
 		PacketsOutboundDiscarded: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "packets_outbound_discarded"),
+			prometheus.BuildFQName(Namespace, subsystem, "packets_outbound_discarded_total"),
 			"(Network.PacketsOutboundDiscarded)",
 			[]string{"nic"},
 			nil,
 		),
 		PacketsOutboundErrors: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "packets_outbound_errors"),
+			prometheus.BuildFQName(Namespace, subsystem, "packets_outbound_errors_total"),
 			"(Network.PacketsOutboundErrors)",
 			[]string{"nic"},
 			nil,
 		),
 		PacketsReceivedDiscarded: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "packets_received_discarded"),
+			prometheus.BuildFQName(Namespace, subsystem, "packets_received_discarded_total"),
 			"(Network.PacketsReceivedDiscarded)",
 			[]string{"nic"},
 			nil,
 		),
 		PacketsReceivedErrors: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "packets_received_errors"),
+			prometheus.BuildFQName(Namespace, subsystem, "packets_received_errors_total"),
 			"(Network.PacketsReceivedErrors)",
 			[]string{"nic"},
 			nil,
@@ -100,7 +100,7 @@ func NewNetworkCollector() (Collector, error) {
 			nil,
 		),
 		PacketsReceivedUnknown: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "packets_received_unknown"),
+			prometheus.BuildFQName(Namespace, subsystem, "packets_received_unknown_total"),
 			"(Network.PacketsReceivedUnknown)",
 			[]string{"nic"},
 			nil,
