@@ -73,16 +73,6 @@ var (
 		nil,
 		nil,
 	)
-
-	// This can be removed when client_golang exposes this on Windows
-	// (See https://github.com/prometheus/client_golang/issues/376)
-	startTime     = float64(time.Now().Unix())
-	startTimeDesc = prometheus.NewDesc(
-		"process_start_time_seconds",
-		"Start time of the process since unix epoch in seconds.",
-		nil,
-		nil,
-	)
 )
 
 // Describe sends all the descriptors of the collectors included to
@@ -103,12 +93,6 @@ const (
 // Collect sends the collected metrics from each of the collectors to
 // prometheus.
 func (coll windowsCollector) Collect(ch chan<- prometheus.Metric) {
-	ch <- prometheus.MustNewConstMetric(
-		startTimeDesc,
-		prometheus.CounterValue,
-		startTime,
-	)
-
 	t := time.Now()
 	cs := make([]string, 0, len(coll.collectors))
 	for name := range coll.collectors {
