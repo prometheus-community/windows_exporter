@@ -14,6 +14,7 @@ Name     | Description | Enabled by default
 [cpu](docs/collector.cpu.md) | CPU usage | &#10003;
 [cs](docs/collector.cs.md) | "Computer System" metrics (system properties, num cpus/total memory) | &#10003;
 [container](docs/collector.container.md) | Container metrics |
+[dfsr](docs/collector.dfsr.md) | DFSR metrics |
 [dhcp](docs/collector.dhcp.md) | DHCP Server |
 [dns](docs/collector.dns.md) | DNS Server |
 [exchange](docs/collector.exchange.md) | Exchange metrics |
