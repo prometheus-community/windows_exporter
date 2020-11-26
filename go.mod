@@ -8,11 +8,13 @@ require (
 	github.com/StackExchange/wmi v0.0.0-20180725035823-b12b22c5341f
 	github.com/dimchansky/utfbom v1.1.0
 	github.com/go-ole/go-ole v1.2.1 // indirect
+	github.com/google/go-cmp v0.5.1 // indirect
 	github.com/leoluk/perflib_exporter v0.1.0
-	github.com/prometheus/client_golang v0.9.2
-	github.com/prometheus/client_model v0.0.0-20180712105110-5c3871d89910
-	github.com/prometheus/common v0.2.0
-	golang.org/x/sys v0.0.0-20190507160741-ecd444e8653b
+	github.com/prometheus/client_golang v1.8.0
+	github.com/prometheus/client_model v0.2.0
+	github.com/prometheus/common v0.14.0
+	golang.org/x/sys v0.0.0-20201015000850-e3ed0017c211
+	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
-	gopkg.in/yaml.v2 v2.2.1
+	gopkg.in/yaml.v2 v2.3.0
 )
