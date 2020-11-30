@@ -9,6 +9,10 @@ test:
 lint:
 	golangci-lint -c .golangci.yaml run
 
+.PHONY: e2e-test
+e2e-test: build
+	powershell -NonInteractive -ExecutionPolicy Bypass -File .\tools\end-to-end-test.ps1
+
 fmt:
 	gofmt -l -w -s .
 
