@@ -1,6 +1,8 @@
 export GOOS=windows
 
-build:
+.PHONY: build
+build: windows_exporter.exe
+windows_exporter.exe: **/*.go
 	promu build -v
 
 test:
@@ -10,7 +12,7 @@ lint:
 	golangci-lint -c .golangci.yaml run
 
 .PHONY: e2e-test
-e2e-test: build
+e2e-test: windows_exporter.exe
 	powershell -NonInteractive -ExecutionPolicy Bypass -File .\tools\end-to-end-test.ps1
 
 fmt:
