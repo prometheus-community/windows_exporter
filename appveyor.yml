@@ -29,6 +29,7 @@ test_script:
 
 after_test:
   - make lint
+  - make e2e-test
 
 build_script:
   - ps: |
