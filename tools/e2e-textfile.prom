@@ -1,0 +1,4 @@
+# HELP test_alpha_total Some random metric.
+# TYPE test_alpha_total counter
+test_alpha_total 42
+

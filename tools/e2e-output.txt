@@ -66,6 +66,9 @@
 # TYPE process_start_time_seconds gauge
 # HELP process_virtual_memory_bytes Virtual memory size in bytes.
 # TYPE process_virtual_memory_bytes gauge
+# HELP test_alpha_total Some random metric.
+# TYPE test_alpha_total counter
+test_alpha_total 42
 # HELP windows_cpu_clock_interrupts_total Total number of received and serviced clock tick interrupts
 # TYPE windows_cpu_clock_interrupts_total counter
 # HELP windows_cpu_core_frequency_mhz Core frequency in megahertz
@@ -214,6 +217,8 @@ windows_exporter_collector_timeout{collector="textfile"} 0
 # TYPE windows_system_system_up_time gauge
 # HELP windows_system_threads Current number of threads (WMI source: PerfOS_System.Threads)
 # TYPE windows_system_threads gauge
+# HELP windows_textfile_mtime_seconds Unixtime mtime of textfiles successfully read.
+# TYPE windows_textfile_mtime_seconds gauge
 # HELP windows_textfile_scrape_error 1 if there was an error opening or reading a file, 0 otherwise
 # TYPE windows_textfile_scrape_error gauge
 windows_textfile_scrape_error 0
