@@ -90,21 +90,6 @@ func (c *MSSQLCollector) getMSSQLCollectors() mssqlCollectorsMap {
 	return mssqlCollectors
 }
 
-func mssqlExpandEnabledCollectors(enabled string) []string {
-	separated := strings.Split(enabled, ",")
-	unique := map[string]bool{}
-	for _, s := range separated {
-		if s != "" {
-			unique[s] = true
-		}
-	}
-	result := make([]string, 0, len(unique))
-	for s := range unique {
-		result = append(result, s)
-	}
-	return result
-}
-
 // mssqlGetPerfObjectName - Returns the name of the Windows Performance
 // Counter object for the given SQL instance and collector.
 func mssqlGetPerfObjectName(sqlInstance string, collector string) string {
@@ -407,7 +392,7 @@ func NewMSSQLCollector() (Collector, error) {
 
 	const subsystem = "mssql"
 
-	enabled := mssqlExpandEnabledCollectors(*mssqlEnabledCollectors)
+	enabled := expandEnabledChildCollectors(*mssqlEnabledCollectors)
 	mssqlInstances := getMSSQLInstances()
 	perfCounters := make([]string, 0, len(mssqlInstances)*len(enabled))
 	for instance := range mssqlInstances {
@@ -1857,7 +1842,7 @@ func (c *MSSQLCollector) execute(ctx *ScrapeContext, name string, fn mssqlCollec
 func (c *MSSQLCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	wg := sync.WaitGroup{}
 
-	enabled := mssqlExpandEnabledCollectors(*mssqlEnabledCollectors)
+	enabled := expandEnabledChildCollectors(*mssqlEnabledCollectors)
 	for sqlInstance := range c.mssqlInstances {
 		for _, name := range enabled {
 			function := c.mssqlCollectors[name]

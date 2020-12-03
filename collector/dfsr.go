@@ -4,7 +4,6 @@ package collector
 
 import (
 	"errors"
-	"strings"
 	"sync"
 	"time"
 
@@ -88,22 +87,6 @@ type dfsrCollectorMap map[string]dfsrCollectorFunc
 
 type dfsrCollectorFunc func(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error)
 
-// Split provided perflib sources and deduplicate
-func dfsrExpandEnabledSources(enabled string) []string {
-	separated := strings.Split(enabled, ",")
-	unique := map[string]bool{}
-	for _, s := range separated {
-		if s != "" {
-			unique[s] = true
-		}
-	}
-	result := make([]string, 0, len(unique))
-	for s := range unique {
-		result = append(result, s)
-	}
-	return result
-}
-
 // Map Perflib sources to DFSR collector names
 // E.G. volume -> DFS Replication Service Volumes
 func dfsrGetPerfObjectName(collector string) string {
@@ -124,7 +107,7 @@ func dfsrGetPerfObjectName(collector string) string {
 func NewDFSRCollector() (Collector, error) {
 	const subsystem = "dfsr"
 
-	enabled := dfsrExpandEnabledSources(*dfsrEnabledCollectors)
+	enabled := expandEnabledChildCollectors(*dfsrEnabledCollectors)
 	perfCounters := make([]string, 0, len(enabled))
 	for _, c := range enabled {
 		perfCounters = append(perfCounters, dfsrGetPerfObjectName(c))
