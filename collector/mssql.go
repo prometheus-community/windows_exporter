@@ -1808,6 +1808,8 @@ func NewMSSQLCollector() (Collector, error) {
 type mssqlCollectorFunc func(ctx *ScrapeContext, ch chan<- prometheus.Metric, sqlInstance string) (*prometheus.Desc, error)
 
 func (c *MSSQLCollector) execute(ctx *ScrapeContext, name string, fn mssqlCollectorFunc, ch chan<- prometheus.Metric, sqlInstance string, wg *sync.WaitGroup) {
+	// Reset failure counter on each scrape
+	c.mssqlChildCollectorFailure = 0
 	defer wg.Done()
 
 	begin := time.Now()
