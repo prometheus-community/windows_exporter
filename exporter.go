@@ -19,6 +19,7 @@ import (
 	"github.com/StackExchange/wmi"
 	"github.com/prometheus-community/windows_exporter/collector"
 	"github.com/prometheus-community/windows_exporter/config"
+	"github.com/prometheus-community/windows_exporter/https"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/log"
@@ -282,6 +283,10 @@ func main() {
 			"scrape.timeout-margin",
 			"Seconds to subtract from the timeout allowed by the client. Tune to allow for overhead or high loads.",
 		).Default("0.5").Float64()
+		webConfigFile = kingpin.Flag(
+			"web.config",
+			"[EXPERIMENTAL] Path to config YAML file that can enable TLS and/or authentication.",
+		).Default("").String()
 	)
 
 	log.AddFlags(kingpin.CommandLine)
@@ -398,7 +403,8 @@ func main() {
 
 	go func() {
 		log.Infoln("Starting server on", *listenAddress)
-		log.Fatalf("cannot start windows_exporter: %s", http.ListenAndServe(*listenAddress, nil))
+		server := &http.Server{Addr: *listenAddress}
+		log.Fatalf("cannot start windows_exporter: %s", https.Listen(server, *webConfigFile))
 	}()
 
 	for {

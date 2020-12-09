@@ -124,6 +124,16 @@ windows_exporter supports Windows Server versions 2008R2 and later, and desktop 
 
 The prometheus metrics will be exposed on [localhost:9182](http://localhost:9182)
 
+## TLS endpoint
+
+** EXPERIMENTAL **
+
+The exporter supports TLS via a new web configuration file.
+
+```powershell
+.\windows_exporter --web.config=web-config.yml
+```
+
 ## Examples
 
 ### Enable only service collector and specify a custom query
