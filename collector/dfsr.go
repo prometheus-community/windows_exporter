@@ -3,12 +3,7 @@
 package collector
 
 import (
-	"errors"
-	"sync"
-	"time"
-
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/common/log"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -78,14 +73,10 @@ type DFSRCollector struct {
 	VolumeUSNJournalRecordsReadTotal     *prometheus.Desc
 
 	// Map of child collector functions used during collection
-	dfsrChildCollectors dfsrCollectorMap
-	// Internal counter for number of child collector failures during collection
-	dfsrChildCollectorFailure int
+	dfsrChildCollectors []dfsrCollectorFunc
 }
 
-type dfsrCollectorMap map[string]dfsrCollectorFunc
-
-type dfsrCollectorFunc func(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error)
+type dfsrCollectorFunc func(ctx *ScrapeContext, ch chan<- prometheus.Metric) error
 
 // Map Perflib sources to DFSR collector names
 // E.G. volume -> DFS Replication Service Volumes
@@ -420,18 +411,25 @@ func NewDFSRCollector() (Collector, error) {
 		),
 	}
 
-	dfsrCollector.dfsrChildCollectors = dfsrCollector.getDFSRChildCollectors()
+	dfsrCollector.dfsrChildCollectors = dfsrCollector.getDFSRChildCollectors(enabled)
 
 	return &dfsrCollector, nil
 }
 
-// Maps child collectors names to their relevant collection function,
+// Maps enabled child collectors names to their relevant collection function,
 // for use in DFSRCollector.Collect()
-func (c *DFSRCollector) getDFSRChildCollectors() dfsrCollectorMap {
-	dfsrCollectors := make(dfsrCollectorMap)
-	dfsrCollectors["connection"] = c.collectConnection
-	dfsrCollectors["folder"] = c.collectFolder
-	dfsrCollectors["volume"] = c.collectVolume
+func (c *DFSRCollector) getDFSRChildCollectors(enabledCollectors []string) []dfsrCollectorFunc {
+	var dfsrCollectors []dfsrCollectorFunc
+	for _, collector := range enabledCollectors {
+		switch collector {
+		case "connection":
+			dfsrCollectors = append(dfsrCollectors, c.collectConnection)
+		case "folder":
+			dfsrCollectors = append(dfsrCollectors, c.collectFolder)
+		case "volume":
+			dfsrCollectors = append(dfsrCollectors, c.collectVolume)
+		}
+	}
 
 	return dfsrCollectors
 }
@@ -439,53 +437,24 @@ func (c *DFSRCollector) getDFSRChildCollectors() dfsrCollectorMap {
 // Collect implements the Collector interface.
 // Sends metric values for each metric to the provided prometheus Metric channel.
 func (c *DFSRCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
-	wg := sync.WaitGroup{}
-
-	for name, function := range c.dfsrChildCollectors {
-		wg.Add(1)
-		go c.execute(ctx, name, function, ch, &wg)
-
-	}
-	wg.Wait()
-
-	if c.dfsrChildCollectorFailure > 0 {
-		return errors.New("at least one child collector failed")
+	for _, fn := range c.dfsrChildCollectors {
+		err := fn(ctx, ch)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
 // Child-specific functions are provided to this function and executed concurrently.
 // Child collector metrics & results are reported.
-func (c *DFSRCollector) execute(ctx *ScrapeContext, name string, fn dfsrCollectorFunc, ch chan<- prometheus.Metric, wg *sync.WaitGroup) {
-	defer wg.Done()
-
-	begin := time.Now()
+func (c *DFSRCollector) execute(ctx *ScrapeContext, name string, fn dfsrCollectorFunc, ch chan<- prometheus.Metric) error {
 	// Child collector function called here, sends metric data back through channel
-	_, err := fn(ctx, ch)
-	duration := time.Since(begin)
-	var success float64
-
+	err := fn(ctx, ch)
 	if err != nil {
-		log.Errorf("dfsr class collector %s failed after %fs: %s", name, duration.Seconds(), err)
-		success = 0
-		c.dfsrChildCollectorFailure++
-	} else {
-		log.Debugf("dfsr class collector %s succeeded after %fs.", name, duration.Seconds())
-		success = 1
+		return err
 	}
-
-	ch <- prometheus.MustNewConstMetric(
-		c.dfsrScrapeDurationDesc,
-		prometheus.GaugeValue,
-		duration.Seconds(),
-		name,
-	)
-	ch <- prometheus.MustNewConstMetric(
-		c.dfsrScrapeSuccessDesc,
-		prometheus.GaugeValue,
-		success,
-		name,
-	)
+	return err
 }
 
 // Perflib: "DFS Replication Service Connections"
@@ -503,10 +472,10 @@ type PerflibDFSRConnection struct {
 	SizeOfFilesReceivedTotal                 float64 `perflib:"Size of Files Received"`
 }
 
-func (c *DFSRCollector) collectConnection(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *DFSRCollector) collectConnection(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	var dst []PerflibDFSRConnection
 	if err := unmarshalObject(ctx.perfObjects["DFS Replication Connections"], &dst); err != nil {
-		return nil, err
+		return err
 	}
 
 	for _, connection := range dst {
@@ -574,8 +543,7 @@ func (c *DFSRCollector) collectConnection(ctx *ScrapeContext, ch chan<- promethe
 		)
 
 	}
-	return nil, nil
-
+	return nil
 }
 
 // Perflib: "DFS Replicated Folder"
@@ -611,10 +579,10 @@ type PerflibDFSRFolder struct {
 	UpdatesDroppedTotal                      float64 `perflib:"Updates Dropped"`
 }
 
-func (c *DFSRCollector) collectFolder(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *DFSRCollector) collectFolder(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	var dst []PerflibDFSRFolder
 	if err := unmarshalObject(ctx.perfObjects["DFS Replicated Folders"], &dst); err != nil {
-		return nil, err
+		return err
 	}
 
 	for _, folder := range dst {
@@ -807,7 +775,7 @@ func (c *DFSRCollector) collectFolder(ctx *ScrapeContext, ch chan<- prometheus.M
 			folder.Name,
 		)
 	}
-	return nil, nil
+	return nil
 }
 
 // Perflib: "DFS Replication Service Volumes"
@@ -821,10 +789,10 @@ type PerflibDFSRVolume struct {
 	USNJournalUnreadPercentage     float64 `perflib:"USN Journal Records Unread Percentage"`
 }
 
-func (c *DFSRCollector) collectVolume(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *DFSRCollector) collectVolume(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	var dst []PerflibDFSRVolume
 	if err := unmarshalObject(ctx.perfObjects["DFS Replication Service Volumes"], &dst); err != nil {
-		return nil, err
+		return err
 	}
 
 	for _, volume := range dst {
@@ -864,5 +832,5 @@ func (c *DFSRCollector) collectVolume(ctx *ScrapeContext, ch chan<- prometheus.M
 		)
 
 	}
-	return nil, nil
+	return nil
 }
