@@ -26,10 +26,10 @@ import (
 	"time"
 
 	"github.com/dimchansky/utfbom"
+	"github.com/go-kit/kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
-	"github.com/prometheus/common/log"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -81,7 +81,7 @@ func convertMetricFamily(metricFamily *dto.MetricFamily, ch chan<- prometheus.Me
 
 	for _, metric := range metricFamily.Metric {
 		if metric.TimestampMs != nil {
-			log.Warnf("Ignoring unsupported custom timestamp on textfile collector metric %v", metric)
+			level.Warn(logger).Log("msg", "Ignoring unsupported custom timestamp on textfile collector metric", "metric", metric)
 		}
 
 		labels := metric.GetLabel()
@@ -151,7 +151,7 @@ func convertMetricFamily(metricFamily *dto.MetricFamily, ch chan<- prometheus.Me
 				buckets, values...,
 			)
 		default:
-			log.Errorf("unknown metric type for file")
+			level.Error(logger).Log("msg", "Unknown metric type for file")
 			continue
 		}
 		if metricType == dto.MetricType_GAUGE || metricType == dto.MetricType_COUNTER || metricType == dto.MetricType_UNTYPED {
@@ -219,7 +219,7 @@ func (c *textFileCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Met
 	// Iterate over files and accumulate their metrics.
 	files, err := ioutil.ReadDir(c.path)
 	if err != nil && c.path != "" {
-		log.Errorf("Error reading textfile collector directory %q: %s", c.path, err)
+		level.Error(logger).Log("msg", "Error reading textfile collector directory", "dir", c.path, "err", err)
 		error = 1.0
 	}
 
@@ -229,34 +229,34 @@ fileLoop:
 			continue
 		}
 		path := filepath.Join(c.path, f.Name())
-		log.Debugf("Processing file %q", path)
+		level.Debug(logger).Log("msg", "Processing file", "file", path)
 		file, err := os.Open(path)
 		if err != nil {
-			log.Errorf("Error opening %q: %v", path, err)
+			level.Error(logger).Log("msg", "Error opening file", "file", path, "err", err)
 			error = 1.0
 			continue
 		}
 		var parser expfmt.TextParser
 		r, encoding := utfbom.Skip(carriageReturnFilteringReader{r: file})
 		if err = checkBOM(encoding); err != nil {
-			log.Errorf("Invalid file encoding detected in %s: %s - file must be UTF8", path, err.Error())
+			level.Error(logger).Log("msg", "Invalid file encoding detected. File must be UTF8", "file", path, "err", err.Error())
 			error = 1.0
 			continue
 		}
 		parsedFamilies, err := parser.TextToMetricFamilies(r)
 		closeErr := file.Close()
 		if closeErr != nil {
-			log.Warnf("Error closing file: %v", err)
+			level.Warn(logger).Log("msg", "Error closing file", "err", err)
 		}
 		if err != nil {
-			log.Errorf("Error parsing %q: %v", path, err)
+			level.Error(logger).Log("msg", "Error parsing file", "file", path, "err", err)
 			error = 1.0
 			continue
 		}
 		for _, mf := range parsedFamilies {
 			for _, m := range mf.Metric {
 				if m.TimestampMs != nil {
-					log.Errorf("Textfile %q contains unsupported client-side timestamps, skipping entire file", path)
+					level.Error(logger).Log("msg", "Textfile contains unsupported client-side timestamps, skipping entire file.", "file", path, "err")
 					error = 1.0
 					continue fileLoop
 				}

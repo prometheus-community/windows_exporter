@@ -9,14 +9,14 @@ import (
 )
 
 func init() {
-	var deps string
-	// See below for 6.05 magic value
-	if getWindowsVersion() > 6.05 {
-		deps = "Processor Information"
-	} else {
-		deps = "Processor"
-	}
-	registerCollector("cpu", newCPUCollector, deps)
+	// var deps string
+	// // See below for 6.05 magic value
+	// if getWindowsVersion() > 6.05 {
+	// 	deps = "Processor Information"
+	// } else {
+	// 	deps = "Processor"
+	// }
+	registerCollector("cpu", newCPUCollector, "Processor Information", "Processor")
 }
 
 type cpuCollectorBasic struct {

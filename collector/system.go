@@ -3,8 +3,8 @@
 package collector
 
 import (
+	"github.com/go-kit/kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/common/log"
 )
 
 func init() {
@@ -69,7 +69,7 @@ func NewSystemCollector() (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *SystemCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ctx, ch); err != nil {
-		log.Error("failed collecting system metrics:", desc, err)
+		level.Error(logger).Log("msg", "Failed collecting system metrics", "desc", desc, "err", err)
 		return err
 	}
 	return nil

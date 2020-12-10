@@ -4,8 +4,8 @@ package collector
 
 import (
 	"github.com/Microsoft/hcsshim"
+	"github.com/go-kit/kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/common/log"
 )
 
 func init() {
@@ -133,7 +133,7 @@ func NewContainerMetricsCollector() (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *ContainerMetricsCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ch); err != nil {
-		log.Error("failed collecting ContainerMetricsCollector metrics:", desc, err)
+		level.Error(logger).Log("msg", "Failed collecting container metrics", "description", desc, "err", err)
 		return err
 	}
 	return nil
@@ -143,7 +143,7 @@ func (c *ContainerMetricsCollector) Collect(ctx *ScrapeContext, ch chan<- promet
 func containerClose(c hcsshim.Container) {
 	err := c.Close()
 	if err != nil {
-		log.Error(err)
+		level.Error(logger).Log("msg", "Failed closing container resource", "err", err)
 	}
 }
 
@@ -152,7 +152,7 @@ func (c *ContainerMetricsCollector) collect(ch chan<- prometheus.Metric) (*prome
 	// Types Container is passed to get the containers compute systems only
 	containers, err := hcsshim.GetContainers(hcsshim.ComputeSystemQuery{Types: []string{"Container"}})
 	if err != nil {
-		log.Error("Err in Getting containers:", err)
+		level.Error(logger).Log("msg", "Error querying containers", "err", err)
 		return nil, err
 	}
 
@@ -175,13 +175,13 @@ func (c *ContainerMetricsCollector) collect(ch chan<- prometheus.Metric) (*prome
 			defer containerClose(container)
 		}
 		if err != nil {
-			log.Error("err in opening container: ", containerId, err)
+			level.Error(logger).Log("msg", "Error opening container", "container_id", containerId, "err", err)
 			continue
 		}
 
 		cstats, err := container.Statistics()
 		if err != nil {
-			log.Error("err in fetching container Statistics: ", containerId, err)
+			level.Error(logger).Log("msg", "Error fetching container statistics", "container_id", containerId, "err", err)
 			continue
 		}
 		// HCS V1 is for docker runtime. Add the docker:// prefix on container_id
@@ -231,7 +231,7 @@ func (c *ContainerMetricsCollector) collect(ch chan<- prometheus.Metric) (*prome
 		)
 
 		if len(cstats.Network) == 0 {
-			log.Info("No Network Stats for container: ", containerId)
+			level.Info(logger).Log("msg", "No network stats for container", "container_id", containerId)
 			continue
 		}
 

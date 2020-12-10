@@ -5,8 +5,8 @@ package collector
 import (
 	"strings"
 
+	"github.com/go-kit/kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/common/log"
 )
 
 func init() {
@@ -157,11 +157,11 @@ func NewRemoteFx() (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *RemoteFxCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	if desc, err := c.collectRemoteFXNetworkCount(ctx, ch); err != nil {
-		log.Error("failed collecting terminal services session count metrics:", desc, err)
+		level.Error(logger).Log("msg", "Failed collecting terminal services session count metrics", "desc", desc, "err", err)
 		return err
 	}
 	if desc, err := c.collectRemoteFXGraphicsCounters(ctx, ch); err != nil {
-		log.Error("failed collecting terminal services session count metrics:", desc, err)
+		level.Error(logger).Log("msg", "Failed collecting terminal services session count metrics", "desc", desc, "err", err)
 		return err
 	}
 	return nil

@@ -3,15 +3,14 @@
 package collector
 
 import (
+	"github.com/go-kit/kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/common/log"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 var dfsrEnabledCollectors = kingpin.Flag("collectors.dfsr.sources-enabled", "Comma-seperated list of DFSR Perflib sources to use.").Default("connection,folder,volume").String()
 
 func init() {
-	log.Info("dfsr collector is in an experimental state! Metrics for this collector have not been tested.")
 	// Perflib sources are dynamic, depending on the enabled child collectors
 	var perflibDependencies []string
 	for _, source := range expandEnabledChildCollectors(*dfsrEnabledCollectors) {
@@ -98,6 +97,7 @@ func dfsrGetPerfObjectName(collector string) string {
 
 // NewDFSRCollector is registered
 func NewDFSRCollector() (Collector, error) {
+	level.Info(logger).Log("msg", "dfsr collector is in an experimental state! Metrics for this collector have not been tested.")
 	const subsystem = "dfsr"
 
 	enabled := expandEnabledChildCollectors(*dfsrEnabledCollectors)

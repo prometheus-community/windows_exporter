@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/StackExchange/wmi"
+	"github.com/go-kit/kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/common/log"
 )
 
 func init() {
@@ -599,52 +599,52 @@ func NewHyperVCollector() (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *HyperVCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	if desc, err := c.collectVmHealth(ch); err != nil {
-		log.Error("failed collecting hyperV health status metrics:", desc, err)
+		level.Error(logger).Log("msg", "Failed collecting hyperV health status metrics", "desc", desc, "err", err)
 		return err
 	}
 
 	if desc, err := c.collectVmVid(ch); err != nil {
-		log.Error("failed collecting hyperV pages metrics:", desc, err)
+		level.Error(logger).Log("msg", "Failed collecting hyperV pages metrics", "desc", desc, "err", err)
 		return err
 	}
 
 	if desc, err := c.collectVmHv(ch); err != nil {
-		log.Error("failed collecting hyperV hv status metrics:", desc, err)
+		level.Error(logger).Log("msg", "Failed collecting hyperV hv status metrics", "desc", desc, "err", err)
 		return err
 	}
 
 	if desc, err := c.collectVmProcessor(ch); err != nil {
-		log.Error("failed collecting hyperV processor metrics:", desc, err)
+		level.Error(logger).Log("msg", "Failed collecting hyperV processor metrics", "desc", desc, "err", err)
 		return err
 	}
 
 	if desc, err := c.collectHostCpuUsage(ch); err != nil {
-		log.Error("failed collecting hyperV host CPU metrics:", desc, err)
+		level.Error(logger).Log("msg", "Failed collecting hyperV host CPU metrics", "desc", desc, "err", err)
 		return err
 	}
 
 	if desc, err := c.collectVmCpuUsage(ch); err != nil {
-		log.Error("failed collecting hyperV VM CPU metrics:", desc, err)
+		level.Error(logger).Log("msg", "Failed collecting hyperV VM CPU metrics", "desc", desc, "err", err)
 		return err
 	}
 
 	if desc, err := c.collectVmSwitch(ch); err != nil {
-		log.Error("failed collecting hyperV switch metrics:", desc, err)
+		level.Error(logger).Log("msg", "Failed collecting hyperV switch metrics", "desc", desc, "err", err)
 		return err
 	}
 
 	if desc, err := c.collectVmEthernet(ch); err != nil {
-		log.Error("failed collecting hyperV ethernet metrics:", desc, err)
+		level.Error(logger).Log("msg", "Failed collecting hyperV ethernet metrics", "desc", desc, "err", err)
 		return err
 	}
 
 	if desc, err := c.collectVmStorage(ch); err != nil {
-		log.Error("failed collecting hyperV virtual storage metrics:", desc, err)
+		level.Error(logger).Log("msg", "Failed collecting hyperV virtual storage metrics", "desc", desc, "err", err)
 		return err
 	}
 
 	if desc, err := c.collectVmNetwork(ch); err != nil {
-		log.Error("failed collecting hyperV virtual network metrics:", desc, err)
+		level.Error(logger).Log("msg", "Failed collecting hyperV virtual network metrics", "desc", desc, "err", err)
 		return err
 	}
 
@@ -941,7 +941,7 @@ func (c *HyperVCollector) collectHostCpuUsage(ch chan<- prometheus.Metric) (*pro
 		// The name format is Root VP <core id>
 		parts := strings.Split(obj.Name, " ")
 		if len(parts) != 3 {
-			log.Warnf("Unexpected format of Name in collectHostCpuUsage: %q", obj.Name)
+			level.Warn(logger).Log("msg", "Unexpected format of Name in collectHostCpuUsage", "name", obj.Name)
 			continue
 		}
 		coreId := parts[2]
@@ -1002,12 +1002,12 @@ func (c *HyperVCollector) collectVmCpuUsage(ch chan<- prometheus.Metric) (*prome
 		// The name format is <VM Name>:Hv VP <vcore id>
 		parts := strings.Split(obj.Name, ":")
 		if len(parts) != 2 {
-			log.Warnf("Unexpected format of Name in collectVmCpuUsage: %q, expected %q. Skipping.", obj.Name, "<VM Name>:Hv VP <vcore id>")
+			level.Warn(logger).Log("msg", "Unexpected format of Name in collectVmCpuUsage. Skipping.", "name", obj.Name, "expected", "<VM Name>:Hv VP <vcore id>")
 			continue
 		}
 		coreParts := strings.Split(parts[1], " ")
 		if len(coreParts) != 3 {
-			log.Warnf("Unexpected format of core identifier in collectVmCpuUsage: %q, expected %q. Skipping.", parts[1], "Hv VP <vcore id>")
+			level.Warn(logger).Log("msg", "Unexpected format of core identifier in collectVmCpuUsage. Skipping.", "name", parts[1], "expected", "Hv VP <vcore id>")
 			continue
 		}
 		vmName := parts[0]

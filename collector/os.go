@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/StackExchange/wmi"
+	"github.com/go-kit/kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/common/log"
 )
 
 func init() {
@@ -122,7 +122,7 @@ func NewOSCollector() (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *OSCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ch); err != nil {
-		log.Error("failed collecting os metrics:", desc, err)
+		level.Error(logger).Log("msg", "Failed collecting cpu metrics", "desc", desc, "err", err)
 		return err
 	}
 	return nil

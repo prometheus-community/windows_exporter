@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"reflect"
 
-	"github.com/prometheus/common/log"
+	"github.com/go-kit/kit/log/level"
 )
 
 func className(src interface{}) string {
@@ -21,7 +21,7 @@ func queryAll(src interface{}) string {
 	b.WriteString("SELECT * FROM ")
 	b.WriteString(className(src))
 
-	log.Debugf("Generated WMI query %s", b.String())
+	level.Debug(logger).Log("msg", "Generated WMI query", "query", b.String())
 	return b.String()
 }
 
@@ -30,7 +30,7 @@ func queryAllForClass(src interface{}, class string) string {
 	b.WriteString("SELECT * FROM ")
 	b.WriteString(class)
 
-	log.Debugf("Generated WMI query %s", b.String())
+	level.Debug(logger).Log("msg", "Generated WMI query", "query", b.String())
 	return b.String()
 }
 
@@ -44,7 +44,7 @@ func queryAllWhere(src interface{}, where string) string {
 		b.WriteString(where)
 	}
 
-	log.Debugf("Generated WMI query %s", b.String())
+	level.Debug(logger).Log("msg", "Generated WMI query", "query", b.String())
 	return b.String()
 }
 
@@ -58,6 +58,6 @@ func queryAllForClassWhere(src interface{}, class string, where string) string {
 		b.WriteString(where)
 	}
 
-	log.Debugf("Generated WMI query %s", b.String())
+	level.Debug(logger).Log("msg", "Generated WMI query", "query", b.String())
 	return b.String()
 }

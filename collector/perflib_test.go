@@ -6,6 +6,7 @@ import (
 
 	perflibCollector "github.com/leoluk/perflib_exporter/collector"
 	"github.com/leoluk/perflib_exporter/perflib"
+	"github.com/prometheus/common/promlog"
 )
 
 type simple struct {
@@ -106,6 +107,12 @@ func TestUnmarshalPerflib(t *testing.T) {
 			expectError:    false,
 		},
 	}
+
+	// Initialise logger object. Required by unmarshalObject() for debugging output
+	promlogConfig := &promlog.Config{}
+	logger := promlog.New(promlogConfig)
+	SetLogger(logger)
+
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			output := make([]simple, 0)

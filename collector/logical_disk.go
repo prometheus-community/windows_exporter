@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"regexp"
 
+	"github.com/go-kit/kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/common/log"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -159,7 +159,7 @@ func NewLogicalDiskCollector() (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *LogicalDiskCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ctx, ch); err != nil {
-		log.Error("failed collecting logical_disk metrics:", desc, err)
+		level.Error(logger).Log("msg", "Failed collecting logical_disk metrics", "desc", desc, "err", err)
 		return err
 	}
 	return nil

@@ -10,8 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-kit/kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/common/log"
 	"golang.org/x/sys/windows/registry"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
@@ -40,19 +40,19 @@ func getMSSQLInstances() mssqlInstancesType {
 	regkey := `Software\Microsoft\Microsoft SQL Server\Instance Names\SQL`
 	k, err := registry.OpenKey(registry.LOCAL_MACHINE, regkey, registry.QUERY_VALUE)
 	if err != nil {
-		log.Warn("Couldn't open registry to determine SQL instances:", err)
+		level.Warn(logger).Log("msg", "Couldn't open registry to determine SQL instances:", "err", err)
 		return sqlDefaultInstance
 	}
 	defer func() {
 		err = k.Close()
 		if err != nil {
-			log.Warnf("Failed to close registry key: %v", err)
+			level.Warn(logger).Log("msg", "Failed to close registry key", "err", err)
 		}
 	}()
 
 	instanceNames, err := k.ReadValueNames(0)
 	if err != nil {
-		log.Warnf("Can't ReadSubKeyNames %#v", err)
+		level.Warn(logger).Log("msg", "Can't ReadSubKeyNames", "err", err)
 		return sqlDefaultInstance
 	}
 
@@ -62,7 +62,7 @@ func getMSSQLInstances() mssqlInstancesType {
 		}
 	}
 
-	log.Debugf("Detected MSSQL Instances: %#v\n", sqlInstances)
+	level.Debug(logger).Log("msg", "Detected MSSQL Instances", "instances", sqlInstances)
 
 	return sqlInstances
 }
@@ -1818,11 +1818,11 @@ func (c *MSSQLCollector) execute(ctx *ScrapeContext, name string, fn mssqlCollec
 	var success float64
 
 	if err != nil {
-		log.Errorf("mssql class collector %s failed after %fs: %s", name, duration.Seconds(), err)
+		level.Error(logger).Log("msg", "mssql class collector failed", "name", name, "duration", duration.Seconds(), "err", err)
 		success = 0
 		c.mssqlChildCollectorFailure++
 	} else {
-		log.Debugf("mssql class collector %s succeeded after %fs.", name, duration.Seconds())
+		level.Debug(logger).Log("msg", "mssql class collector succeeded", "name", name, "duration", duration.Seconds())
 		success = 1
 	}
 	ch <- prometheus.MustNewConstMetric(
@@ -1913,7 +1913,7 @@ type mssqlAccessMethods struct {
 
 func (c *MSSQLCollector) collectAccessMethods(ctx *ScrapeContext, ch chan<- prometheus.Metric, sqlInstance string) (*prometheus.Desc, error) {
 	var dst []mssqlAccessMethods
-	log.Debugf("mssql_accessmethods collector iterating sql instance %s.", sqlInstance)
+	level.Debug(logger).Log("msg", "mssql_accessmethods collector iterating sql instance.", "instance", sqlInstance)
 
 	if err := unmarshalObject(ctx.perfObjects[mssqlGetPerfObjectName(sqlInstance, "accessmethods")], &dst); err != nil {
 		return nil, err
@@ -2248,7 +2248,7 @@ type mssqlAvailabilityReplica struct {
 
 func (c *MSSQLCollector) collectAvailabilityReplica(ctx *ScrapeContext, ch chan<- prometheus.Metric, sqlInstance string) (*prometheus.Desc, error) {
 	var dst []mssqlAvailabilityReplica
-	log.Debugf("mssql_availreplica collector iterating sql instance %s.", sqlInstance)
+	level.Debug(logger).Log("msg", "mssql_availreplica collector iterating sql instance.", "instance", sqlInstance)
 
 	if err := unmarshalObject(ctx.perfObjects[mssqlGetPerfObjectName(sqlInstance, "availreplica")], &dst); err != nil {
 		return nil, err
@@ -2356,7 +2356,7 @@ type mssqlBufferManager struct {
 
 func (c *MSSQLCollector) collectBufferManager(ctx *ScrapeContext, ch chan<- prometheus.Metric, sqlInstance string) (*prometheus.Desc, error) {
 	var dst []mssqlBufferManager
-	log.Debugf("mssql_bufman collector iterating sql instance %s.", sqlInstance)
+	level.Debug(logger).Log("msg", "mssql_bufman collector iterating sql instance.", "instance", sqlInstance)
 
 	if err := unmarshalObject(ctx.perfObjects[mssqlGetPerfObjectName(sqlInstance, "bufman")], &dst); err != nil {
 		return nil, err
@@ -2560,7 +2560,7 @@ type mssqlDatabaseReplica struct {
 
 func (c *MSSQLCollector) collectDatabaseReplica(ctx *ScrapeContext, ch chan<- prometheus.Metric, sqlInstance string) (*prometheus.Desc, error) {
 	var dst []mssqlDatabaseReplica
-	log.Debugf("mssql_dbreplica collector iterating sql instance %s.", sqlInstance)
+	level.Debug(logger).Log("msg", "mssql_dbreplica collector iterating sql instance.", "instance", sqlInstance)
 
 	if err := unmarshalObject(ctx.perfObjects[mssqlGetPerfObjectName(sqlInstance, "dbreplica")], &dst); err != nil {
 		return nil, err
@@ -2799,7 +2799,7 @@ type mssqlDatabases struct {
 
 func (c *MSSQLCollector) collectDatabases(ctx *ScrapeContext, ch chan<- prometheus.Metric, sqlInstance string) (*prometheus.Desc, error) {
 	var dst []mssqlDatabases
-	log.Debugf("mssql_databases collector iterating sql instance %s.", sqlInstance)
+	level.Debug(logger).Log("msg", "mssql_databases collector iterating sql instance.", "instance", sqlInstance)
 
 	if err := unmarshalObject(ctx.perfObjects[mssqlGetPerfObjectName(sqlInstance, "databases")], &dst); err != nil {
 		return nil, err
@@ -3181,7 +3181,7 @@ type mssqlGeneralStatistics struct {
 
 func (c *MSSQLCollector) collectGeneralStatistics(ctx *ScrapeContext, ch chan<- prometheus.Metric, sqlInstance string) (*prometheus.Desc, error) {
 	var dst []mssqlGeneralStatistics
-	log.Debugf("mssql_genstats collector iterating sql instance %s.", sqlInstance)
+	level.Debug(logger).Log("msg", "mssql_genstats collector iterating sql instance.", "instance", sqlInstance)
 
 	if err := unmarshalObject(ctx.perfObjects[mssqlGetPerfObjectName(sqlInstance, "genstats")], &dst); err != nil {
 		return nil, err
@@ -3376,7 +3376,7 @@ type mssqlLocks struct {
 
 func (c *MSSQLCollector) collectLocks(ctx *ScrapeContext, ch chan<- prometheus.Metric, sqlInstance string) (*prometheus.Desc, error) {
 	var dst []mssqlLocks
-	log.Debugf("mssql_locks collector iterating sql instance %s.", sqlInstance)
+	level.Debug(logger).Log("msg", "mssql_locks collector iterating sql instance.", "instance", sqlInstance)
 
 	if err := unmarshalObject(ctx.perfObjects[mssqlGetPerfObjectName(sqlInstance, "locks")], &dst); err != nil {
 		return nil, err
@@ -3474,7 +3474,7 @@ type mssqlMemoryManager struct {
 
 func (c *MSSQLCollector) collectMemoryManager(ctx *ScrapeContext, ch chan<- prometheus.Metric, sqlInstance string) (*prometheus.Desc, error) {
 	var dst []mssqlMemoryManager
-	log.Debugf("mssql_memmgr collector iterating sql instance %s.", sqlInstance)
+	level.Debug(logger).Log("msg", "mssql_memmgr collector iterating sql instance.", "instance", sqlInstance)
 
 	if err := unmarshalObject(ctx.perfObjects[mssqlGetPerfObjectName(sqlInstance, "memmgr")], &dst); err != nil {
 		return nil, err
@@ -3643,7 +3643,7 @@ type mssqlSQLStatistics struct {
 
 func (c *MSSQLCollector) collectSQLStats(ctx *ScrapeContext, ch chan<- prometheus.Metric, sqlInstance string) (*prometheus.Desc, error) {
 	var dst []mssqlSQLStatistics
-	log.Debugf("mssql_sqlstats collector iterating sql instance %s.", sqlInstance)
+	level.Debug(logger).Log("msg", "mssql_sqlstats collector iterating sql instance.", "instance", sqlInstance)
 
 	if err := unmarshalObject(ctx.perfObjects[mssqlGetPerfObjectName(sqlInstance, "sqlstats")], &dst); err != nil {
 		return nil, err
@@ -3740,7 +3740,7 @@ type mssqlSQLErrors struct {
 // - https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-sql-errors-object
 func (c *MSSQLCollector) collectSQLErrors(ctx *ScrapeContext, ch chan<- prometheus.Metric, sqlInstance string) (*prometheus.Desc, error) {
 	var dst []mssqlSQLErrors
-	log.Debugf("mssql_sqlerrors collector iterating sql instance %s.", sqlInstance)
+	level.Debug(logger).Log("msg", "mssql_sqlerrors collector iterating sql instance.", "instance", sqlInstance)
 
 	if err := unmarshalObject(ctx.perfObjects[mssqlGetPerfObjectName(sqlInstance, "sqlerrors")], &dst); err != nil {
 		return nil, err
@@ -3783,7 +3783,7 @@ type mssqlTransactions struct {
 // - https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-transactions-object
 func (c *MSSQLCollector) collectTransactions(ctx *ScrapeContext, ch chan<- prometheus.Metric, sqlInstance string) (*prometheus.Desc, error) {
 	var dst []mssqlTransactions
-	log.Debugf("mssql_transactions collector iterating sql instance %s.", sqlInstance)
+	level.Debug(logger).Log("msg", "mssql_transactions collector iterating sql instance.", "instance", sqlInstance)
 
 	if err := unmarshalObject(ctx.perfObjects[mssqlGetPerfObjectName(sqlInstance, "transactions")], &dst); err != nil {
 		return nil, err

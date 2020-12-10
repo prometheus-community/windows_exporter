@@ -6,9 +6,10 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 	"github.com/leoluk/perflib_exporter/perflib"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/common/log"
 	"golang.org/x/sys/windows/registry"
 )
 
@@ -22,30 +23,32 @@ const (
 	windowsEpoch              = 116444736000000000
 )
 
+var logger log.Logger
+
 // getWindowsVersion reads the version number of the OS from the Registry
 // See https://docs.microsoft.com/en-us/windows/desktop/sysinfo/operating-system-version
 func getWindowsVersion() float64 {
 	k, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\Microsoft\Windows NT\CurrentVersion`, registry.QUERY_VALUE)
 	if err != nil {
-		log.Warn("Couldn't open registry", err)
+		level.Warn(logger).Log("msg", "Couldn't open registry", "err", err)
 		return 0
 	}
 	defer func() {
 		err = k.Close()
 		if err != nil {
-			log.Warnf("Failed to close registry key: %v", err)
+			level.Warn(logger).Log("msg", "Failed to close registry key", "err", err)
 		}
 	}()
 
 	currentv, _, err := k.GetStringValue("CurrentVersion")
 	if err != nil {
-		log.Warn("Couldn't open registry to determine current Windows version:", err)
+		level.Warn(logger).Log("msg", "Couldn't open registry to determine current Windows version", "err", err)
 		return 0
 	}
 
 	currentv_flt, err := strconv.ParseFloat(currentv, 64)
 
-	log.Debugf("Detected Windows version %f\n", currentv_flt)
+	level.Debug(logger).Log("msg", "detected Windows version", "version", currentv_flt)
 
 	return currentv_flt
 }
@@ -114,6 +117,12 @@ func PrepareScrapeContext(collectors []string) (*ScrapeContext, error) {
 
 	return &ScrapeContext{objs}, nil
 }
+
+// SetLogger passes logger object from exporter main() function to collector package, for use in child collectors.
+func SetLogger(mainLogger log.Logger) {
+	logger = mainLogger
+}
+
 func boolToFloat(b bool) float64 {
 	if b {
 		return 1.0

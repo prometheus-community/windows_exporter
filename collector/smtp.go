@@ -4,14 +4,13 @@ package collector
 
 import (
 	"fmt"
+	"github.com/go-kit/kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/common/log"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"regexp"
 )
 
 func init() {
-	log.Info("smtp collector is in an experimental state! Metrics for this collector have not been tested.")
 	registerCollector("smtp", NewSMTPCollector, "SMTP Server")
 }
 
@@ -69,6 +68,7 @@ type SMTPCollector struct {
 }
 
 func NewSMTPCollector() (Collector, error) {
+	level.Info(logger).Log("msg", "smtp collector is in an experimental state! Metrics for this collector have not been tested.")
 	const subsystem = "smtp"
 
 	return &SMTPCollector{
@@ -334,7 +334,7 @@ func NewSMTPCollector() (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *SMTPCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ctx, ch); err != nil {
-		log.Error("failed collecting smtp metrics:", desc, err)
+		level.Error(logger).Log("msg", "Failed collecting smtp metrics", "desc", desc, "err", err)
 		return err
 	}
 	return nil

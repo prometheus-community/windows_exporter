@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/StackExchange/wmi"
+	"github.com/go-kit/kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/common/log"
 )
 
 const ConnectionBrokerFeatureID uint32 = 133
@@ -16,10 +16,6 @@ const ConnectionBrokerFeatureID uint32 = 133
 func init() {
 	registerCollector("terminal_services", NewTerminalServicesCollector, "Terminal Services", "Terminal Services Session", "Remote Desktop Connection Broker Counterset")
 }
-
-var (
-	connectionBrokerEnabled = isConnectionBrokerServer()
-)
 
 type Win32_ServerFeature struct {
 	ID uint32
@@ -36,7 +32,7 @@ func isConnectionBrokerServer() bool {
 			return true
 		}
 	}
-	log.Debug("host is not a connection broker skipping Connection Broker performance metrics.")
+	level.Debug(logger).Log("msg", "Host is not a connection broker. Skipping Connection Broker performance metrics.")
 	return false
 }
 
@@ -177,18 +173,18 @@ func NewTerminalServicesCollector() (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *TerminalServicesCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	if desc, err := c.collectTSSessionCount(ctx, ch); err != nil {
-		log.Error("failed collecting terminal services session count metrics:", desc, err)
+		level.Error(logger).Log("msg", "Failed collecting terminal services session count metrics", "desc", desc, "err", err)
 		return err
 	}
 	if desc, err := c.collectTSSessionCounters(ctx, ch); err != nil {
-		log.Error("failed collecting terminal services session count metrics:", desc, err)
+		level.Error(logger).Log("msg", "Failed collecting terminal services session count metrics", "desc", desc, "err", err)
 		return err
 	}
 
 	// only collect CollectionBrokerPerformance if host is a Connection Broker
-	if connectionBrokerEnabled {
+	if isConnectionBrokerServer() {
 		if desc, err := c.collectCollectionBrokerPerformanceCounter(ctx, ch); err != nil {
-			log.Error("failed collecting Connection Broker performance metrics:", desc, err)
+			level.Error(logger).Log("msg", "Failed collecting Connection Broker performance metrics", "desc", desc, "err", err)
 			return err
 		}
 	}

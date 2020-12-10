@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	"github.com/StackExchange/wmi"
+	"github.com/go-kit/kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/common/log"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -53,7 +53,7 @@ func newProcessCollector() (Collector, error) {
 	const subsystem = "process"
 
 	if *processWhitelist == ".*" && *processBlacklist == "" {
-		log.Warn("No filters specified for process collector. This will generate a very large number of metrics!")
+		level.Warn(logger).Log("msg", "No filters specified for process collector. This will generate a very large number of metrics!")
 	}
 
 	return &processCollector{
@@ -187,7 +187,7 @@ func (c *processCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metr
 	var dst_wp []WorkerProcess
 	q_wp := queryAll(&dst_wp)
 	if err := wmi.QueryNamespace(q_wp, &dst_wp, "root\\WebAdministration"); err != nil {
-		log.Debugf("Could not query WebAdministration namespace for IIS worker processes: %v. Skipping", err)
+		level.Debug(logger).Log("msg", "Could not query WebAdministration namespace for IIS worker processes. Skipping.", "err", err)
 	}
 
 	for _, process := range data {

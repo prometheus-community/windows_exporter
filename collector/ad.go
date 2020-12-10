@@ -6,8 +6,8 @@ import (
 	"errors"
 
 	"github.com/StackExchange/wmi"
+	"github.com/go-kit/kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/common/log"
 )
 
 func init() {
@@ -456,7 +456,7 @@ func NewADCollector() (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *ADCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ch); err != nil {
-		log.Error("failed collecting ad metrics:", desc, err)
+		level.Error(logger).Log("msg", "Failed collecting ad metrics", "description", desc, "err", err)
 		return err
 	}
 	return nil

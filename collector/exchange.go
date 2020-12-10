@@ -7,8 +7,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/go-kit/kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/common/log"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -202,7 +202,7 @@ func (c *exchangeCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Met
 
 	for _, collectorName := range c.enabledCollectors {
 		if err := collectorFuncs[collectorName](ctx, ch); err != nil {
-			log.Errorf("Error in %s: %s", collectorName, err)
+			level.Error(logger).Log("msg", "Error in ", "collector_name", collectorName, "err", err)
 			return err
 		}
 	}
