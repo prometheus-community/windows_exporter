@@ -3,10 +3,8 @@
 package collector
 
 import (
-	"errors"
-
-	"github.com/StackExchange/wmi"
 	"github.com/prometheus-community/windows_exporter/log"
+	"github.com/prometheus-community/windows_exporter/sysinfoapi"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -60,51 +58,45 @@ func (c *CSCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) e
 	return nil
 }
 
-// Win32_ComputerSystem docs:
-// - https://msdn.microsoft.com/en-us/library/aa394102
-type Win32_ComputerSystem struct {
-	NumberOfLogicalProcessors uint32
-	TotalPhysicalMemory       uint64
-	DNSHostname               string
-	Domain                    string
-	Workgroup                 *string
-}
-
 func (c *CSCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
-	var dst []Win32_ComputerSystem
-	q := queryAll(&dst)
-	if err := wmi.Query(q, &dst); err != nil {
+	cs := sysinfoapi.GetNumLogicalProcessors()
+
+	pm, err := sysinfoapi.GetPhysicalMemory()
+	if err != nil {
 		return nil, err
-	}
-	if len(dst) == 0 {
-		return nil, errors.New("WMI query returned empty result set")
 	}
 
 	ch <- prometheus.MustNewConstMetric(
 		c.LogicalProcessors,
 		prometheus.GaugeValue,
-		float64(dst[0].NumberOfLogicalProcessors),
+		float64(cs),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.PhysicalMemoryBytes,
 		prometheus.GaugeValue,
-		float64(dst[0].TotalPhysicalMemory),
+		float64(pm),
 	)
 
-	var fqdn string
-	if dst[0].Workgroup == nil || dst[0].Domain != *dst[0].Workgroup {
-		fqdn = dst[0].DNSHostname + "." + dst[0].Domain
-	} else {
-		fqdn = dst[0].DNSHostname
+	hostname, err := sysinfoapi.GetComputerName(sysinfoapi.ComputerNameDNSHostname)
+	if err != nil {
+		return nil, err
+	}
+	domain, err := sysinfoapi.GetComputerName(sysinfoapi.ComputerNameDNSDomain)
+	if err != nil {
+		return nil, err
+	}
+	fqdn, err := sysinfoapi.GetComputerName(sysinfoapi.ComputerNameDNSFullyQualified)
+	if err != nil {
+		return nil, err
 	}
 
 	ch <- prometheus.MustNewConstMetric(
 		c.Hostname,
 		prometheus.GaugeValue,
 		1.0,
-		dst[0].DNSHostname,
-		dst[0].Domain,
+		hostname,
+		domain,
 		fqdn,
 	)
 
