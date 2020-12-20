@@ -2,6 +2,8 @@
 
 The dfsr collector exposes metrics for [DFSR](https://docs.microsoft.com/en-us/windows-server/storage/dfs-replication/dfsr-overview).
 
+**Collector is currently in an experimental state and testing of metrics has not been undertaken.** Feedback on this collector is welcome.
+
 |||
 -|-
 Metric name prefix  | `dfsr`

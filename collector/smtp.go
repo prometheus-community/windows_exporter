@@ -11,6 +11,7 @@ import (
 )
 
 func init() {
+	log.Info("smtp collector is in an experimental state! Metrics for this collector have not been tested.")
 	registerCollector("smtp", NewSMTPCollector, "SMTP Server")
 }
 
