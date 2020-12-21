@@ -171,15 +171,15 @@ func (c *OSCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, er
 		float64(dst[0].FreePhysicalMemory*1024), // KiB -> bytes
 	)
 
-	time := dst[0].LocalDateTime
+	currentTime := time.Now()
 
 	ch <- prometheus.MustNewConstMetric(
 		c.Time,
 		prometheus.GaugeValue,
-		float64(time.Unix()),
+		float64(currentTime.Unix()),
 	)
 
-	timezoneName, _ := time.Zone()
+	timezoneName, _ := currentTime.Zone()
 
 	ch <- prometheus.MustNewConstMetric(
 		c.Timezone,
