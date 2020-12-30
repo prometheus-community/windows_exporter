@@ -3,6 +3,8 @@
 package collector
 
 import (
+	"errors"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
 )
@@ -22,6 +24,10 @@ type TimeCollector struct {
 }
 
 func newTimeCollector() (Collector, error) {
+	if getWindowsVersion() <= 6.1 {
+		return nil, errors.New("Windows version older than Server 2016 detected. The time collector will not run and should be disabled via CLI flags or configuration file")
+
+	}
 	const subsystem = "time"
 
 	return &TimeCollector{

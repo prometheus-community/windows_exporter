@@ -3,6 +3,8 @@
 The time collector exposes the Windows Time Service metrics. Note that the Windows Time Service must be running, else metric collection will fail.
 If the Windows Time Service is stopped after collection has started, collector metric values will reset to 0.
 
+Please note the Time Service perflib counters are only available on [Windows Server 2016 or newer](https://docs.microsoft.com/en-us/windows-server/networking/windows-time-service/windows-server-2016-improvements).
+
 |||
 -|-
 Metric name prefix  | `time`
