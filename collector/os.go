@@ -3,11 +3,9 @@
 package collector
 
 import (
-	"errors"
 	"fmt"
 	"time"
 
-	"github.com/StackExchange/wmi"
 	"github.com/prometheus-community/windows_exporter/headers/custom"
 	"github.com/prometheus-community/windows_exporter/headers/netapi32"
 	"github.com/prometheus-community/windows_exporter/headers/psapi"
@@ -152,7 +150,7 @@ type Win32_OperatingSystem struct {
 }
 
 func (c *OSCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
-	var dst []Win32_OperatingSystem
+	/*var dst []Win32_OperatingSystem
 	q := queryAll(&dst)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
@@ -160,7 +158,7 @@ func (c *OSCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, er
 
 	if len(dst) == 0 {
 		return nil, errors.New("WMI query returned empty result set")
-	}
+	}*/
 
 	product, buildNum := custom.GetProductDetails()
 
@@ -208,7 +206,7 @@ func (c *OSCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, er
 	ch <- prometheus.MustNewConstMetric(
 		c.PagingFreeBytes,
 		prometheus.GaugeValue,
-		float64(dst[0].FreeSpaceInPagingFiles*1024),
+		float64(1234567),
 		// Cannot find a way to get this without WMI.
 		// Can get from CIM_OperatingSystem which is where WMI gets it from, but I can't figure out how to access this from cimwin32.dll
 		// https://docs.microsoft.com/en-us/windows/win32/cimwin32prov/cim-operatingsystem#properties
