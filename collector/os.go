@@ -171,8 +171,8 @@ func (c *OSCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, er
 		c.OSInformation,
 		prometheus.GaugeValue,
 		1.0,
-		fmt.Sprintf("Microsoft %v", product), // Caption
-		fmt.Sprintf("%v.%v.%v", nwgi.Wki102_ver_major, nwgi.Wki102_ver_minor, buildNum), // Version
+		fmt.Sprintf("Microsoft %s", product), // Caption
+		fmt.Sprintf("%d.%d.%s", nwgi.Wki102_ver_major, nwgi.Wki102_ver_minor, buildNum), // Version
 	)
 
 	gmse, err := sysinfoapi.GlobalMemoryStatusEx()
