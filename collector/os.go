@@ -4,9 +4,14 @@ package collector
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/StackExchange/wmi"
+	"github.com/prometheus-community/windows_exporter/headers/custom"
+	"github.com/prometheus-community/windows_exporter/headers/netapi32"
+	"github.com/prometheus-community/windows_exporter/headers/psapi"
+	"github.com/prometheus-community/windows_exporter/headers/sysinfoapi"
 	"github.com/prometheus-community/windows_exporter/log"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -157,18 +162,30 @@ func (c *OSCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, er
 		return nil, errors.New("WMI query returned empty result set")
 	}
 
+	product, buildNum := custom.GetProductDetails()
+
+	nwgi, _, err := netapi32.NetWkstaGetInfo()
+	if err != nil {
+		return nil, err
+	}
+
 	ch <- prometheus.MustNewConstMetric(
 		c.OSInformation,
 		prometheus.GaugeValue,
 		1.0,
-		dst[0].Caption,
-		dst[0].Version,
+		fmt.Sprintf("Microsoft %v", product), // Caption
+		fmt.Sprintf("%v.%v.%v", nwgi.Wki102_ver_major, nwgi.Wki102_ver_minor, buildNum), // Version
 	)
+
+	gmse, err := sysinfoapi.GlobalMemoryStatusEx()
+	if err != nil {
+		return nil, err
+	}
 
 	ch <- prometheus.MustNewConstMetric(
 		c.PhysicalMemoryFreeBytes,
 		prometheus.GaugeValue,
-		float64(dst[0].FreePhysicalMemory*1024), // KiB -> bytes
+		float64(gmse.UllAvailPhys),
 	)
 
 	currentTime := time.Now()
@@ -191,55 +208,71 @@ func (c *OSCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, er
 	ch <- prometheus.MustNewConstMetric(
 		c.PagingFreeBytes,
 		prometheus.GaugeValue,
-		float64(dst[0].FreeSpaceInPagingFiles*1024), // KiB -> bytes
+		float64(dst[0].FreeSpaceInPagingFiles*1024),
+		// Cannot find a way to get this without WMI.
+		// Can get from CIM_OperatingSystem which is where WMI gets it from, but I can't figure out how to access this from cimwin32.dll
+		// https://docs.microsoft.com/en-us/windows/win32/cimwin32prov/cim-operatingsystem#properties
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.VirtualMemoryFreeBytes,
 		prometheus.GaugeValue,
-		float64(dst[0].FreeVirtualMemory*1024), // KiB -> bytes
+		float64(gmse.UllAvailPageFile),
 	)
 
+	// Windows has no defined limit, and is based off available resources. This currently isn't calculated by WMI and is set to default value.
+	// https://techcommunity.microsoft.com/t5/windows-blog-archive/pushing-the-limits-of-windows-processes-and-threads/ba-p/723824
+	// https://docs.microsoft.com/en-us/windows/win32/cimwin32prov/win32-operatingsystem
 	ch <- prometheus.MustNewConstMetric(
 		c.ProcessesLimit,
 		prometheus.GaugeValue,
-		float64(dst[0].MaxNumberOfProcesses),
+		float64(4294967295),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.ProcessMemoryLimitBytes,
 		prometheus.GaugeValue,
-		float64(dst[0].MaxProcessMemorySize*1024), // KiB -> bytes
+		float64(gmse.UllTotalVirtual),
 	)
+
+	gpi, err := psapi.GetLPPerformanceInfo()
+	if err != nil {
+		return nil, err
+	}
 
 	ch <- prometheus.MustNewConstMetric(
 		c.Processes,
 		prometheus.GaugeValue,
-		float64(dst[0].NumberOfProcesses),
+		float64(gpi.ProcessCount),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.Users,
 		prometheus.GaugeValue,
-		float64(dst[0].NumberOfUsers),
+		float64(nwgi.Wki102_logged_on_users),
 	)
+
+	fsipf, err := custom.GetSizeStoredInPagingFiles()
+	if err != nil {
+		return nil, err
+	}
 
 	ch <- prometheus.MustNewConstMetric(
 		c.PagingLimitBytes,
 		prometheus.GaugeValue,
-		float64(dst[0].SizeStoredInPagingFiles*1024), // KiB -> bytes
+		float64(fsipf),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.VirtualMemoryBytes,
 		prometheus.GaugeValue,
-		float64(dst[0].TotalVirtualMemorySize*1024), // KiB -> bytes
+		float64(gmse.UllTotalPageFile),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.VisibleMemoryBytes,
 		prometheus.GaugeValue,
-		float64(dst[0].TotalVisibleMemorySize*1024), // KiB -> bytes
+		float64(gmse.UllTotalPhys),
 	)
 
 	return nil, nil
