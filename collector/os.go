@@ -4,6 +4,7 @@ package collector
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/prometheus-community/windows_exporter/headers/custom"
@@ -15,7 +16,7 @@ import (
 )
 
 func init() {
-	registerCollector("os", NewOSCollector)
+	registerCollector("os", NewOSCollector, "Paging File")
 }
 
 // A OSCollector is a Prometheus collector for WMI metrics
@@ -33,6 +34,12 @@ type OSCollector struct {
 	VisibleMemoryBytes      *prometheus.Desc
 	Time                    *prometheus.Desc
 	Timezone                *prometheus.Desc
+}
+
+type pagingFileCounter struct {
+	Name      string
+	Usage     float64 `perflib:"% Usage"`
+	UsagePeak float64 `perflib:"% Usage Peak"`
 }
 
 // NewOSCollector ...
@@ -124,7 +131,7 @@ func NewOSCollector() (Collector, error) {
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *OSCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
-	if desc, err := c.collect(ch); err != nil {
+	if desc, err := c.collect(ctx, ch); err != nil {
 		log.Error("failed collecting os metrics:", desc, err)
 		return err
 	}
@@ -149,7 +156,7 @@ type Win32_OperatingSystem struct {
 	Version                 string
 }
 
-func (c *OSCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *OSCollector) collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	/*var dst []Win32_OperatingSystem
 	q := queryAll(&dst)
 	if err := wmi.Query(q, &dst); err != nil {
@@ -203,13 +210,31 @@ func (c *OSCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, er
 		timezoneName,
 	)
 
+	fsipf, err := custom.GetSizeStoredInPagingFiles()
+	if err != nil {
+		return nil, err
+	}
+
+	var pfc = make([]pagingFileCounter, 0)
+	if err := unmarshalObject(ctx.perfObjects["Paging File"], &pfc); err != nil {
+		return nil, err
+	}
+
+	var pfbPercent float64
+	for _, pageFile := range pfc {
+		if strings.Contains(strings.ToLower(pageFile.Name), "_total") {
+			pfbPercent = pageFile.Usage
+		} else {
+			continue
+		}
+	}
+
+	fpbNum := float64(fsipf) - (float64(fsipf) / float64(100) * pfbPercent)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.PagingFreeBytes,
 		prometheus.GaugeValue,
-		float64(1234567),
-		// Cannot find a way to get this without WMI.
-		// Can get from CIM_OperatingSystem which is where WMI gets it from, but I can't figure out how to access this from cimwin32.dll
-		// https://docs.microsoft.com/en-us/windows/win32/cimwin32prov/cim-operatingsystem#properties
+		float64(fpbNum),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
@@ -249,11 +274,6 @@ func (c *OSCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, er
 		prometheus.GaugeValue,
 		float64(nwgi.Wki102_logged_on_users),
 	)
-
-	fsipf, err := custom.GetSizeStoredInPagingFiles()
-	if err != nil {
-		return nil, err
-	}
 
 	ch <- prometheus.MustNewConstMetric(
 		c.PagingLimitBytes,
