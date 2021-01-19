@@ -17,7 +17,8 @@ func BenchmarkOsCollect(b *testing.B) {
 			<-metrics
 		}
 	}()
+	s, err := PrepareScrapeContext([]string{"os"})
 	for i := 0; i < b.N; i++ {
-		o.Collect(&ScrapeContext{}, metrics)
+		o.Collect(s, metrics)
 	}
 }
