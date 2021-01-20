@@ -3,8 +3,9 @@
 package collector
 
 import (
+	"github.com/prometheus-community/windows_exporter/headers/sysinfoapi"
 	"github.com/prometheus-community/windows_exporter/log"
-	"github.com/prometheus-community/windows_exporter/sysinfoapi"
+
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -59,9 +60,11 @@ func (c *CSCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) e
 }
 
 func (c *CSCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
-	cs := sysinfoapi.GetNumLogicalProcessors()
+	// Get systeminfo for number of processors
+	systemInfo := sysinfoapi.GetSystemInfo()
 
-	pm, err := sysinfoapi.GetPhysicalMemory()
+	// Get memory status for physical memory
+	mem, err := sysinfoapi.GlobalMemoryStatusEx()
 	if err != nil {
 		return nil, err
 	}
@@ -69,13 +72,13 @@ func (c *CSCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, er
 	ch <- prometheus.MustNewConstMetric(
 		c.LogicalProcessors,
 		prometheus.GaugeValue,
-		float64(cs),
+		float64(systemInfo.DwNumberOfProcessors),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.PhysicalMemoryBytes,
 		prometheus.GaugeValue,
-		float64(pm),
+		float64(mem.UllTotalPhys),
 	)
 
 	hostname, err := sysinfoapi.GetComputerName(sysinfoapi.ComputerNameDNSHostname)
