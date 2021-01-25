@@ -3,6 +3,8 @@ package collector
 import (
 	"reflect"
 	"testing"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 func TestExpandChildCollectors(t *testing.T) {
@@ -30,5 +32,29 @@ func TestExpandChildCollectors(t *testing.T) {
 				t.Errorf("Output mismatch, expected %+v, got %+v", c.expectedOutput, output)
 			}
 		})
+	}
+}
+
+func benchmarkCollector(b *testing.B, name string, collectFunc func() (Collector, error)) {
+	// Create perflib scrape context. Some perflib collectors required a correct context,
+	// or will fail during benchmark.
+	scrapeContext, err := PrepareScrapeContext([]string{name})
+	if err != nil {
+		b.Error(err)
+	}
+	c, err := collectFunc()
+	if err != nil {
+		b.Error(err)
+	}
+
+	metrics := make(chan prometheus.Metric)
+	go func() {
+		for {
+			<-metrics
+		}
+	}()
+
+	for i := 0; i < b.N; i++ {
+		c.Collect(scrapeContext, metrics)
 	}
 }

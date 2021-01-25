@@ -2,7 +2,9 @@
 
 package collector
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestNetworkToInstanceName(t *testing.T) {
 	data := map[string]string{
@@ -14,4 +16,11 @@ func TestNetworkToInstanceName(t *testing.T) {
 			t.Error("expected", out, "got", got)
 		}
 	}
+}
+
+func BenchmarkNetCollector(b *testing.B) {
+	// Whitelist is not set in testing context (kingpin flags not parsed), causing the collector to skip all interfaces.
+	localNicWhitelist := ".+"
+	nicWhitelist = &localNicWhitelist
+	benchmarkCollector(b, "net", NewNetworkCollector)
 }

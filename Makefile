@@ -8,6 +8,9 @@ windows_exporter.exe: **/*.go
 test:
 	go test -v ./...
 
+bench:
+	go test -v -bench='benchmark(cpu|logicaldisk|logon|memory|net|process|service|system|tcp|time)collector' ./...
+
 lint:
 	golangci-lint -c .golangci.yaml run
 
