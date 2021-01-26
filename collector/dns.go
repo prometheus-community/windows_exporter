@@ -81,8 +81,8 @@ func NewDNSCollector() (Collector, error) {
 			nil,
 		),
 		MemoryUsedBytes: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "memory_used_bytes_total"),
-			"Total memory used by DNS server",
+			prometheus.BuildFQName(Namespace, subsystem, "memory_used_bytes"),
+			"Current memory used by DNS server",
 			[]string{"area"},
 			nil,
 		),
