@@ -262,6 +262,18 @@ func main() {
 			"telemetry.addr",
 			"host:port for exporter.",
 		).Default(":9182").String()
+		enableHTTPS = kingpin.Flag(
+			"https.enabled",
+			"If true, the listen address uses HTTPS.",
+		).Bool()
+		httpsCertFile = kingpin.Flag(
+			"https.cert-file",
+			"Path to cert file used for HTTPS.",
+		).Default("").String()
+		httpsKeyFile = kingpin.Flag(
+			"https.key-file",
+			"Path to key file used for HTTPS.",
+		).Default("").String()
 		metricsPath = kingpin.Flag(
 			"telemetry.path",
 			"URL path for surfacing collected metrics.",
@@ -317,6 +329,15 @@ func main() {
 			fmt.Printf(" - %s\n", n)
 		}
 		return
+	}
+
+	if *enableHTTPS {
+		if len(*httpsCertFile) == 0 {
+			log.Fatal("For HTTPS a cert file must be defined.")
+		}
+		if len(*httpsKeyFile) == 0 {
+			log.Fatal("For HTTPS a key file must be defined.")
+		}
 	}
 
 	initWbem()
@@ -398,7 +419,16 @@ func main() {
 
 	go func() {
 		log.Infoln("Starting server on", *listenAddress)
-		log.Fatalf("cannot start windows_exporter: %s", http.ListenAndServe(*listenAddress, nil))
+
+		var err error
+		if *enableHTTPS {
+			err = http.ListenAndServeTLS(*listenAddress, *httpsCertFile, *httpsKeyFile, nil)
+		} else {
+			err = http.ListenAndServe(*listenAddress, nil)
+		}
+		if err != nil {
+			log.Fatalf("cannot start windows_exporter: %s", err)
+		}
 	}()
 
 	for {

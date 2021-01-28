@@ -77,6 +77,9 @@ Flag     | Description | Default value
 `--collectors.enabled` | Comma-separated list of collectors to use. Use `[defaults]` as a placeholder for all the collectors enabled by default." | `[defaults]`
 `--collectors.print` | If true, print available collectors and exit. | 
 `--scrape.timeout-margin` | Seconds to subtract from the timeout allowed by the client. Tune to allow for overhead or high loads. | `0.5`
+--https.enabled |If true, the listen address uses HTTPS. | false
+--https.cert.file | Path to cert file used for HTTPS. | ""
+--https.key.file | Path to key file used for HTTPS. | ""
 
 ## Installation
 The latest release can be downloaded from the [releases page](https://github.com/prometheus-community/windows_exporter/releases).
