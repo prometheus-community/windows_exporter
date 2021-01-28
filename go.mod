@@ -7,6 +7,7 @@ require (
 	github.com/Microsoft/hcsshim v0.8.6
 	github.com/StackExchange/wmi v0.0.0-20180725035823-b12b22c5341f
 	github.com/dimchansky/utfbom v1.1.0
+	github.com/go-kit/kit v0.10.0
 	github.com/go-ole/go-ole v1.2.1 // indirect
 	github.com/google/go-cmp v0.5.1 // indirect
 	github.com/leoluk/perflib_exporter v0.1.0

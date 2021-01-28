@@ -17,6 +17,7 @@ import (
 	"golang.org/x/sys/windows/svc"
 
 	"github.com/StackExchange/wmi"
+	gokitLog "github.com/go-kit/kit/log"
 	"github.com/prometheus-community/windows_exporter/collector"
 	"github.com/prometheus-community/windows_exporter/config"
 	"github.com/prometheus/client_golang/prometheus"
@@ -404,8 +405,8 @@ func main() {
 	go func() {
 		log.Infoln("Starting server on", *listenAddress)
 		server := &http.Server{Addr: *listenAddress}
-		if err := https.Listen(server, *httpsConfig, logger); err != nil {
-				log.Fatalf("cannot start windows_exporter: %s", err)
+		if err := https.Listen(server, *httpsConfig, gokitLog.NewLogfmtLogger(os.Stdout)); err != nil {
+			log.Fatalf("cannot start windows_exporter: %s", err)
 		}
 	}()
 
