@@ -4,11 +4,11 @@ package collector
 
 import (
 	"fmt"
+	"github.com/prometheus-community/windows_exporter/config"
 	"regexp"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
-	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 func init() {
@@ -16,14 +16,14 @@ func init() {
 }
 
 var (
-	volumeWhitelist = kingpin.Flag(
+	volumeWhitelist = config.String(
 		"collector.logical_disk.volume-whitelist",
 		"Regexp of volumes to whitelist. Volume name must both match whitelist and not match blacklist to be included.",
-	).Default(".+").String()
-	volumeBlacklist = kingpin.Flag(
+	".+")
+	volumeBlacklist = config.String(
 		"collector.logical_disk.volume-blacklist",
 		"Regexp of volumes to blacklist. Volume name must both match whitelist and not match blacklist to be included.",
-	).Default("").String()
+	"")
 )
 
 // A LogicalDiskCollector is a Prometheus collector for perflib logicalDisk metrics

@@ -4,11 +4,11 @@ package collector
 
 import (
 	"fmt"
+	"github.com/prometheus-community/windows_exporter/config"
 	"regexp"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
-	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 func init() {
@@ -16,14 +16,14 @@ func init() {
 }
 
 var (
-	nicWhitelist = kingpin.Flag(
+	nicWhitelist = config.String(
 		"collector.net.nic-whitelist",
 		"Regexp of NIC:s to whitelist. NIC name must both match whitelist and not match blacklist to be included.",
-	).Default(".+").String()
-	nicBlacklist = kingpin.Flag(
+	".+")
+	nicBlacklist = config.String(
 		"collector.net.nic-blacklist",
 		"Regexp of NIC:s to blacklist. NIC name must both match whitelist and not match blacklist to be included.",
-	).Default("").String()
+	"")
 	nicNameToUnderscore = regexp.MustCompile("[^a-zA-Z0-9]")
 )
 

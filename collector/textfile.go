@@ -17,6 +17,7 @@ package collector
 
 import (
 	"fmt"
+	"github.com/prometheus-community/windows_exporter/config"
 	"io"
 	"io/ioutil"
 	"os"
@@ -30,14 +31,13 @@ import (
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
 	"github.com/prometheus/common/log"
-	kingpin "gopkg.in/alecthomas/kingpin.v2"
 )
 
 var (
-	textFileDirectory = kingpin.Flag(
+	textFileDirectory = config.String(
 		"collector.textfile.directory",
 		"Directory to read text files with metrics from.",
-	).Default("C:\\Program Files\\windows_exporter\\textfile_inputs").String()
+	"C:\\Program Files\\windows_exporter\\textfile_inputs")
 
 	mtimeDesc = prometheus.NewDesc(
 		prometheus.BuildFQName(Namespace, "textfile", "mtime_seconds"),

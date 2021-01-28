@@ -2,12 +2,14 @@ module github.com/prometheus-community/windows_exporter
 
 go 1.13
 
+replace github.com/prometheus-community/windows_exporter => C:\Users\matt\Source\windows_exporter
+
 require (
-	github.com/Microsoft/go-winio v0.4.14 // indirect
+	github.com/Microsoft/go-winio v0.4.16 // indirect
 	github.com/Microsoft/hcsshim v0.8.6
 	github.com/StackExchange/wmi v0.0.0-20180725035823-b12b22c5341f
 	github.com/dimchansky/utfbom v1.1.0
-	github.com/go-ole/go-ole v1.2.1 // indirect
+	github.com/go-ole/go-ole v1.2.5 // indirect
 	github.com/google/go-cmp v0.5.1 // indirect
 	github.com/leoluk/perflib_exporter v0.1.0
 	github.com/prometheus/client_golang v1.8.0

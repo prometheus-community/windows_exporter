@@ -1,5 +1,5 @@
 repository:
-    path: github.com/prometheus-community/windows_exporter
+    path: github.com/mattdurham/windows_exporter
 build:
     binaries:
         - name: windows_exporter

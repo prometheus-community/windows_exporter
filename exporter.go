@@ -43,7 +43,7 @@ type prometheusVersion struct {
 }
 
 const (
-	defaultCollectors            = "cpu,cs,logical_disk,net,os,service,system,textfile"
+	defaultCollectors            = "cpu,cs,logical_disk,net,os,service,system,textfile,iis"
 	defaultCollectorsPlaceholder = "[defaults]"
 	serviceName                  = "windows_exporter"
 )
@@ -253,6 +253,101 @@ func initWbem() {
 }
 
 func main() {
+	StartExecutable()
+}
+
+func StartLibrary(configYaml string) {
+	listenAddress := config.String("telemetry.addr","host:port for exporter.",":9182")
+	metricsPath := config.String("telemetry.path","URL path for surfacing collected metrics.","/metrics")
+	maxRequests := config.Int("telemetry.max-requests","Maximum number of concurrent requests. 0 to disable.","5")
+	enabledCollectors := config.String(
+		"collectors.enabled",
+		"Comma-separated list of collectors to use. Use '[defaults]' as a placeholder for all the collectors enabled by default.",
+		defaultCollectors)
+
+	timeoutMargin := config.Float64(
+		"scrape.timeout-margin",
+		"Seconds to subtract from the timeout allowed by the client. Tune to allow for overhead or high loads.",
+	"0.5")
+
+	config.LoadConfig(configYaml)
+	initWbem()
+	collectors, err := loadCollectors(*enabledCollectors)
+	if err != nil {
+		log.Fatalf("Couldn't load collectors: %s", err)
+	}
+	stopCh := make(chan bool)
+	log.Infof("Enabled collectors: %v", strings.Join(keys(collectors), ", "))
+
+	h := &metricsHandler{
+		timeoutMargin: *timeoutMargin,
+		collectorFactory: func(timeout time.Duration, requestedCollectors []string) (error, *windowsCollector) {
+			filteredCollectors := make(map[string]collector.Collector)
+			// scrape all enabled collectors if no collector is requested
+			if len(requestedCollectors) == 0 {
+				filteredCollectors = collectors
+			}
+			for _, name := range requestedCollectors {
+				col, exists := collectors[name]
+				if !exists {
+					return fmt.Errorf("unavailable collector: %s", name), nil
+				}
+				filteredCollectors[name] = col
+			}
+			return nil, &windowsCollector{
+				collectors:        filteredCollectors,
+				maxScrapeDuration: timeout,
+			}
+		},
+	}
+
+	http.HandleFunc(*metricsPath, withConcurrencyLimit(*maxRequests, h.ServeHTTP))
+	http.HandleFunc("/health", healthCheck)
+	http.HandleFunc("/version", func(w http.ResponseWriter, r *http.Request) {
+		// we can't use "version" directly as it is a package, and not an object that
+		// can be serialized.
+		err := json.NewEncoder(w).Encode(prometheusVersion{
+			Version:   version.Version,
+			Revision:  version.Revision,
+			Branch:    version.Branch,
+			BuildUser: version.BuildUser,
+			BuildDate: version.BuildDate,
+			GoVersion: version.GoVersion,
+		})
+		if err != nil {
+			http.Error(w, fmt.Sprintf("error encoding JSON: %s", err), http.StatusInternalServerError)
+		}
+	})
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`<html>
+<head><title>windows_exporter</title></head>
+<body>
+<h1>windows_exporter</h1>
+<p><a href="` + *metricsPath + `">Metrics</a></p>
+<p><i>` + version.Info() + `</i></p>
+</body>
+</html>`))
+	})
+
+	log.Infoln("Starting windows_exporter", version.Info())
+	log.Infoln("Build context", version.BuildContext())
+
+	go func() {
+		log.Infoln("Starting server on", *listenAddress)
+		log.Fatalf("cannot start windows_exporter: %s", http.ListenAndServe(*listenAddress, nil))
+	}()
+
+	for {
+		if <-stopCh {
+			log.Info("Shutting down windows_exporter")
+			break
+		}
+	}
+
+
+}
+
+func StartExecutable() {
 	var (
 		configFile = kingpin.Flag(
 			"config.file",

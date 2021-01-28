@@ -4,6 +4,7 @@ package collector
 
 import (
 	"fmt"
+	"github.com/prometheus-community/windows_exporter/config"
 	"regexp"
 	"strconv"
 	"strings"
@@ -11,7 +12,6 @@ import (
 	"github.com/StackExchange/wmi"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
-	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 func init() {
@@ -19,14 +19,14 @@ func init() {
 }
 
 var (
-	processWhitelist = kingpin.Flag(
+	processWhitelist = config.String(
 		"collector.process.whitelist",
 		"Regexp of processes to include. Process name must both match whitelist and not match blacklist to be included.",
-	).Default(".*").String()
-	processBlacklist = kingpin.Flag(
+	".*")
+	processBlacklist = config.String(
 		"collector.process.blacklist",
 		"Regexp of processes to exclude. Process name must both match whitelist and not match blacklist to be included.",
-	).Default("").String()
+	"")
 )
 
 type processCollector struct {

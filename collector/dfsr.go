@@ -3,12 +3,12 @@
 package collector
 
 import (
+	"github.com/prometheus-community/windows_exporter/config"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
-	"gopkg.in/alecthomas/kingpin.v2"
 )
 
-var dfsrEnabledCollectors = kingpin.Flag("collectors.dfsr.sources-enabled", "Comma-seperated list of DFSR Perflib sources to use.").Default("connection,folder,volume").String()
+var dfsrEnabledCollectors = config.String("collectors.dfsr.sources-enabled", "Comma-seperated list of DFSR Perflib sources to use.","connection,folder,volume")
 
 func init() {
 	log.Info("dfsr collector is in an experimental state! Metrics for this collector have not been tested.")

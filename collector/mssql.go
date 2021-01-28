@@ -5,6 +5,7 @@ package collector
 import (
 	"errors"
 	"fmt"
+	"github.com/prometheus-community/windows_exporter/config"
 	"os"
 	"strings"
 	"sync"
@@ -13,19 +14,18 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
 	"golang.org/x/sys/windows/registry"
-	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 var (
-	mssqlEnabledCollectors = kingpin.Flag(
+	mssqlEnabledCollectors = config.String(
 		"collectors.mssql.classes-enabled",
-		"Comma-separated list of mssql WMI classes to use.").
-		Default(mssqlAvailableClassCollectors()).String()
+		"Comma-separated list of mssql WMI classes to use.",
+		mssqlAvailableClassCollectors())
 
-	mssqlPrintCollectors = kingpin.Flag(
+	mssqlPrintCollectors = config.Bool(
 		"collectors.mssql.class-print",
 		"If true, print available mssql WMI classes and exit.  Only displays if the mssql collector is enabled.",
-	).Bool()
+	)
 )
 
 type mssqlInstancesType map[string]string

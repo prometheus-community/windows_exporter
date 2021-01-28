@@ -4,12 +4,12 @@ package collector
 
 import (
 	"fmt"
+	"github.com/prometheus-community/windows_exporter/config"
 	"os"
 	"strings"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
-	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 func init() {
@@ -82,15 +82,15 @@ var (
 		"RpcClientAccess",
 	}
 
-	argExchangeListAllCollectors = kingpin.Flag(
+	argExchangeListAllCollectors = config.Bool(
 		"collectors.exchange.list",
 		"List the collectors along with their perflib object name/ids",
-	).Bool()
+	)
 
-	argExchangeCollectorsEnabled = kingpin.Flag(
+	argExchangeCollectorsEnabled = config.String(
 		"collectors.exchange.enabled",
 		"Comma-separated list of collectors to use. Defaults to all, if not specified.",
-	).Default("").String()
+		"")
 )
 
 // newExchangeCollector returns a new Collector
