@@ -256,7 +256,7 @@ func main() {
 	StartExecutable()
 }
 
-func StartLibrary(configYaml string) {
+func CreateLibrary(configYaml string) (*metricsHandler) {
 	listenAddress := config.String("telemetry.addr","host:port for exporter.",":9182")
 	metricsPath := config.String("telemetry.path","URL path for surfacing collected metrics.","/metrics")
 	maxRequests := config.Int("telemetry.max-requests","Maximum number of concurrent requests. 0 to disable.","5")
@@ -276,7 +276,6 @@ func StartLibrary(configYaml string) {
 	if err != nil {
 		log.Fatalf("Couldn't load collectors: %s", err)
 	}
-	stopCh := make(chan bool)
 	log.Infof("Enabled collectors: %v", strings.Join(keys(collectors), ", "))
 
 	h := &metricsHandler{
@@ -337,12 +336,7 @@ func StartLibrary(configYaml string) {
 		log.Fatalf("cannot start windows_exporter: %s", http.ListenAndServe(*listenAddress, nil))
 	}()
 
-	for {
-		if <-stopCh {
-			log.Info("Shutting down windows_exporter")
-			break
-		}
-	}
+	return h
 
 
 }
