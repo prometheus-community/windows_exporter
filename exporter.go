@@ -404,8 +404,8 @@ func main() {
 	go func() {
 		log.Infoln("Starting server on", *listenAddress)
 		server := &http.Server{Addr: *listenAddress}
-		if err := https.Listen(server, *httpsConfig, logger); err != nil {
-				log.Fatalf("cannot start windows_exporter: %s", err)
+		if err := https.Listen(server, *httpsConfig, log.NewToolkitAdapter()); err != nil {
+			log.Fatalf("cannot start windows_exporter: %s", err)
 		}
 	}()
 
