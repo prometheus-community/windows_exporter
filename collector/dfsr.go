@@ -23,10 +23,6 @@ func init() {
 
 // DFSRCollector contains the metric and state data of the DFSR collectors.
 type DFSRCollector struct {
-	// Meta
-	dfsrScrapeDurationDesc *prometheus.Desc
-	dfsrScrapeSuccessDesc  *prometheus.Desc
-
 	// Connection source
 	ConnectionBandwidthSavingsUsingDFSReplicationTotal *prometheus.Desc
 	ConnectionBytesReceivedTotal                       *prometheus.Desc
@@ -108,20 +104,6 @@ func NewDFSRCollector() (Collector, error) {
 	addPerfCounterDependencies(subsystem, perfCounters)
 
 	dfsrCollector := DFSRCollector{
-		// meta
-		dfsrScrapeDurationDesc: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "collector_duration_seconds"),
-			"windows_exporter: Duration of an dfsr child collection.",
-			[]string{"collector"},
-			nil,
-		),
-		dfsrScrapeSuccessDesc: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "collector_success"),
-			"windows_exporter: Whether a dfsr child collector was successful.",
-			[]string{"collector"},
-			nil,
-		),
-
 		// Connection
 		ConnectionBandwidthSavingsUsingDFSReplicationTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "bandwidth_savings_using_dfs_replication_bytes_total"),
@@ -446,17 +428,6 @@ func (c *DFSRCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric)
 		}
 	}
 	return nil
-}
-
-// Child-specific functions are provided to this function and executed concurrently.
-// Child collector metrics & results are reported.
-func (c *DFSRCollector) execute(ctx *ScrapeContext, name string, fn dfsrCollectorFunc, ch chan<- prometheus.Metric) error {
-	// Child collector function called here, sends metric data back through channel
-	err := fn(ctx, ch)
-	if err != nil {
-		return err
-	}
-	return err
 }
 
 // Perflib: "DFS Replication Service Connections"
