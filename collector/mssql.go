@@ -10,8 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/prometheus-community/windows_exporter/log"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/common/log"
 	"golang.org/x/sys/windows/registry"
 	"gopkg.in/alecthomas/kingpin.v2"
 )

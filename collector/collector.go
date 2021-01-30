@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/leoluk/perflib_exporter/perflib"
+	"github.com/prometheus-community/windows_exporter/log"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/common/log"
 	"golang.org/x/sys/windows/registry"
 )
 

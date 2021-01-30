@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"regexp"
 
+	"github.com/prometheus-community/windows_exporter/log"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/common/log"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 

@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"reflect"
 
-	"github.com/prometheus/common/log"
+	"github.com/prometheus-community/windows_exporter/log"
 )
 
 func className(src interface{}) string {

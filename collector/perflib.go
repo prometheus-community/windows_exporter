@@ -7,7 +7,7 @@ import (
 
 	perflibCollector "github.com/leoluk/perflib_exporter/collector"
 	"github.com/leoluk/perflib_exporter/perflib"
-	"github.com/prometheus/common/log"
+	"github.com/prometheus-community/windows_exporter/log"
 )
 
 var nametable = perflib.QueryNameTable("Counter 009") // Reads the names in English TODO: validate that the English names are always present
