@@ -8,7 +8,6 @@ import (
 	"os"
 	"regexp"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -16,11 +15,13 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
+const netclrAvailableCollectors string = "exceptions,interop,jit,loading,locksandthreads,memory,remoting,security"
+
 var (
 	netclrEnabledCollectors = kingpin.Flag(
 		"collector.netframework_clr.collectors-enabled",
 		"Comma-separated list of netframework_clr child collectors to use.").
-		Default(netclrAvailableCollectors()).String()
+		Default(netclrAvailableCollectors).String()
 	netclrPrintCollectors = kingpin.Flag(
 		"collector.netframework_clr.collectors-print",
 		"If true, print available netframework_clr child collectors and exit.  Only displays if the netframework_clr collector is enabled.",
@@ -53,10 +54,6 @@ func (c *netclrCollector) getNETCLRCollectors() netclrCollectorsMap {
 	return collectors
 }
 
-func netclrAvailableCollectors() string {
-	return "exceptions,interop,jit,loading,locksandthreads,memory,remoting,security"
-}
-
 func netclrExpandEnabledCollectors(enabled string) []string {
 	separated := strings.Split(enabled, ",")
 	unique := map[string]bool{}
@@ -72,26 +69,26 @@ func netclrExpandEnabledCollectors(enabled string) []string {
 	return result
 }
 
-func netclrGetPerfObjectName(collector string) string {
+func netclrGetPerfObjectName(collector string) (string, error) {
 	switch collector {
 	case "exceptions":
-		return ".NET CLR Exceptions"
+		return ".NET CLR Exceptions", nil
 	case "interop":
-		return ".NET CLR Interop"
+		return ".NET CLR Interop", nil
 	case "jit":
-		return ".NET CLR Jit"
+		return ".NET CLR Jit", nil
 	case "loading":
-		return ".NET CLR Loading"
+		return ".NET CLR Loading", nil
 	case "locksandthreads":
-		return ".NET CLR LocksAndThreads"
+		return ".NET CLR LocksAndThreads", nil
 	case "memory":
-		return ".NET CLR Memory"
+		return ".NET CLR Memory", nil
 	case "remoting":
-		return ".NET CLR Remoting"
+		return ".NET CLR Remoting", nil
 	case "security":
-		return ".NET CLR Security"
+		return ".NET CLR Security", nil
 	default:
-		return ""
+		return "", errors.New("provided collector has no match")
 	}
 }
 
@@ -173,17 +170,26 @@ type netclrCollector struct {
 	processWhitelistPattern *regexp.Regexp
 	processBlacklistPattern *regexp.Regexp
 
-	netclrCollectors            netclrCollectorsMap
-	netclrChildCollectorFailure int
+	netclrCollectors netclrCollectorsMap
 }
 
 func newNETCLRCollector() (Collector, error) {
+	if *netclrPrintCollectors {
+		fmt.Printf("Available .NET CLR sub-collectors:\n")
+		fmt.Println(netclrAvailableCollectors)
+		os.Exit(0)
+	}
+
 	const subsystem = "netframework_clr"
 
 	enabled := netclrExpandEnabledCollectors(*netclrEnabledCollectors)
 	perfCounters := make([]string, len(enabled))
 	for _, c := range enabled {
-		perfCounters = append(perfCounters, netclrGetPerfObjectName(c))
+		perfObjectName, err := netclrGetPerfObjectName(c)
+		if err != nil {
+			return nil, err
+		}
+		perfCounters = append(perfCounters, perfObjectName)
 	}
 	addPerfCounterDependencies(subsystem, perfCounters)
 
@@ -526,20 +532,10 @@ func newNETCLRCollector() (Collector, error) {
 	}
 
 	netclrCollector.netclrCollectors = netclrCollector.getNETCLRCollectors()
-	if *netclrPrintCollectors {
-		fmt.Printf("Available .NET CLR sub-collectors:\n")
-		for name := range netclrCollector.netclrCollectors {
-			fmt.Printf(" - %s\n", name)
-		}
-		os.Exit(0)
-	}
-
 	return netclrCollector, nil
 }
 
-func (c *netclrCollector) execute(ctx *ScrapeContext, name string, fn netclrCollectorFunc, ch chan<- prometheus.Metric, wg *sync.WaitGroup) {
-	defer wg.Done()
-
+func (c *netclrCollector) execute(ctx *ScrapeContext, name string, fn netclrCollectorFunc, ch chan<- prometheus.Metric) error {
 	begin := time.Now()
 	_, err := fn(ctx, ch)
 	duration := time.Since(begin)
@@ -548,9 +544,7 @@ func (c *netclrCollector) execute(ctx *ScrapeContext, name string, fn netclrColl
 	if err != nil {
 		log.Errorf("netframework_clr sub-collector %s failed after %fs: %s", name, duration.Seconds(), err)
 		success = 0
-		c.netclrChildCollectorFailure++
 	} else {
-		log.Debugf("netframework_clr sub-collector %s succeeded after %fs.", name, duration.Seconds())
 		success = 1
 	}
 	ch <- prometheus.MustNewConstMetric(
@@ -565,48 +559,19 @@ func (c *netclrCollector) execute(ctx *ScrapeContext, name string, fn netclrColl
 		success,
 		name,
 	)
+	return err
 }
 
 func (c *netclrCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
-	wg := sync.WaitGroup{}
-
-	c.netclrChildCollectorFailure = 0
-	enabled := netclrExpandEnabledCollectors(*netclrEnabledCollectors)
-	for _, name := range enabled {
+	for _, name := range netclrExpandEnabledCollectors(*netclrEnabledCollectors) {
 		function := c.netclrCollectors[name]
 
-		wg.Add(1)
-		go c.execute(ctx, name, function, ch, &wg)
-	}
-	wg.Wait()
-
-	// This should return an error if any collector encountered an error.
-	if c.netclrChildCollectorFailure > 0 {
-		return errors.New("at least one child collector failed")
+		err := c.execute(ctx, name, function, ch)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
-}
-
-func (c *netclrCollector) netclrMapProcessName(name string, nameCounts map[string]int) (string, bool) {
-	// Skip the _Global_ instance since it's just a sum of the other instances.
-	if name == "_Global_" {
-		return name, false
-	}
-
-	// Append a "#1", "#2", etc., suffix if a process name appears more than once.
-	// WMI does this automatically, but Perflib does not.
-	procnum, exists := nameCounts[name]
-	if exists {
-		nameCounts[name]++
-		name = fmt.Sprintf("%s#%d", name, procnum)
-	} else {
-		nameCounts[name] = 1
-	}
-
-	// The pattern matching against the whitelist and blacklist has to occur
-	// after appending #N above to be consistent with other collectors.
-	keep := !c.processBlacklistPattern.MatchString(name) && c.processWhitelistPattern.MatchString(name)
-	return name, keep
 }
 
 type netclrExceptions struct {
@@ -621,7 +586,11 @@ type netclrExceptions struct {
 func (c *netclrCollector) collectExceptions(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []netclrExceptions
 
-	perfObject := ctx.perfObjects[netclrGetPerfObjectName("exceptions")]
+	perfObjectName, err := netclrGetPerfObjectName("exceptions")
+	if err != nil {
+		return nil, err
+	}
+	perfObject := ctx.perfObjects[perfObjectName]
 	if err := unmarshalObject(perfObject, &dst); err != nil {
 		return nil, err
 	}
@@ -676,7 +645,11 @@ type netclrInterop struct {
 func (c *netclrCollector) collectInterop(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []netclrInterop
 
-	perfObject := ctx.perfObjects[netclrGetPerfObjectName("interop")]
+	perfObjectName, err := netclrGetPerfObjectName("interop")
+	if err != nil {
+		return nil, err
+	}
+	perfObject := ctx.perfObjects[perfObjectName]
 	if err := unmarshalObject(perfObject, &dst); err != nil {
 		return nil, err
 	}
@@ -726,7 +699,11 @@ type netclrJit struct {
 func (c *netclrCollector) collectJit(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []netclrJit
 
-	perfObject := ctx.perfObjects[netclrGetPerfObjectName("jit")]
+	perfObjectName, err := netclrGetPerfObjectName("jit")
+	if err != nil {
+		return nil, err
+	}
+	perfObject := ctx.perfObjects[perfObjectName]
 	if err := unmarshalObject(perfObject, &dst); err != nil {
 		return nil, err
 	}
@@ -791,7 +768,11 @@ type netclrLoading struct {
 func (c *netclrCollector) collectLoading(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []netclrLoading
 
-	perfObject := ctx.perfObjects[netclrGetPerfObjectName("loading")]
+	perfObjectName, err := netclrGetPerfObjectName("loading")
+	if err != nil {
+		return nil, err
+	}
+	perfObject := ctx.perfObjects[perfObjectName]
 	if err := unmarshalObject(perfObject, &dst); err != nil {
 		return nil, err
 	}
@@ -885,7 +866,11 @@ type netclrLocksAndThreads struct {
 func (c *netclrCollector) collectLocksAndThreads(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []netclrLocksAndThreads
 
-	perfObject := ctx.perfObjects[netclrGetPerfObjectName("locksandthreads")]
+	perfObjectName, err := netclrGetPerfObjectName("locksandthreads")
+	if err != nil {
+		return nil, err
+	}
+	perfObject := ctx.perfObjects[perfObjectName]
 	if err := unmarshalObject(perfObject, &dst); err != nil {
 		return nil, err
 	}
@@ -981,7 +966,11 @@ type netclrMemory struct {
 func (c *netclrCollector) collectMemory(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []netclrMemory
 
-	perfObject := ctx.perfObjects[netclrGetPerfObjectName("memory")]
+	perfObjectName, err := netclrGetPerfObjectName("memory")
+	if err != nil {
+		return nil, err
+	}
+	perfObject := ctx.perfObjects[perfObjectName]
 	if err := unmarshalObject(perfObject, &dst); err != nil {
 		return nil, err
 	}
@@ -1151,7 +1140,11 @@ type netclrRemoting struct {
 func (c *netclrCollector) collectRemoting(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []netclrRemoting
 
-	perfObject := ctx.perfObjects[netclrGetPerfObjectName("remoting")]
+	perfObjectName, err := netclrGetPerfObjectName("remoting")
+	if err != nil {
+		return nil, err
+	}
+	perfObject := ctx.perfObjects[perfObjectName]
 	if err := unmarshalObject(perfObject, &dst); err != nil {
 		return nil, err
 	}
@@ -1222,7 +1215,11 @@ type netclrSecurity struct {
 func (c *netclrCollector) collectSecurity(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []netclrSecurity
 
-	perfObject := ctx.perfObjects[netclrGetPerfObjectName("security")]
+	perfObjectName, err := netclrGetPerfObjectName("security")
+	if err != nil {
+		return nil, err
+	}
+	perfObject := ctx.perfObjects[perfObjectName]
 	if err := unmarshalObject(perfObject, &dst); err != nil {
 		return nil, err
 	}
