@@ -23,6 +23,8 @@ Enabled by default? | No
 Comma-separated list of child collectors to use. Supported values are `exceptions`, `interop`,
 `jit`, `loading`, `locksandthreads`, `memory`, `remoting`, and `security`.
 
+All child collectors are enabled by default.
+
 ### `--collector.netframework_clr.collectors-print`
 
 If true, print available netframework_clr child collectors and exit.  Only displays if the
