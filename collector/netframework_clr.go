@@ -220,25 +220,25 @@ func newNETCLRCollector() (Collector, error) {
 		NumberofExcepsThrown: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, exceptionsSubsystem, "exceptions_thrown_total"),
 			"Displays the total number of exceptions thrown since the application started. This includes both .NET exceptions and unmanaged exceptions that are converted into .NET exceptions.",
-			[]string{"process"},
+			[]string{"pid"},
 			nil,
 		),
 		NumberofFilters: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, exceptionsSubsystem, "exceptions_filters_total"),
 			"Displays the total number of .NET exception filters executed. An exception filter evaluates regardless of whether an exception is handled.",
-			[]string{"process"},
+			[]string{"pid"},
 			nil,
 		),
 		NumberofFinallys: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, exceptionsSubsystem, "exceptions_finallys_total"),
 			"Displays the total number of finally blocks executed. Only the finally blocks executed for an exception are counted; finally blocks on normal code paths are not counted by this counter.",
-			[]string{"process"},
+			[]string{"pid"},
 			nil,
 		),
 		ThrowToCatchDepth: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, exceptionsSubsystem, "throw_to_catch_depth_total"),
 			"Displays the total number of stack frames traversed, from the frame that threw the exception to the frame that handled the exception.",
-			[]string{"process"},
+			[]string{"pid"},
 			nil,
 		),
 
@@ -246,19 +246,19 @@ func newNETCLRCollector() (Collector, error) {
 		NumberofCCWs: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, interopSubsystem, "com_callable_wrappers_total"),
 			"Displays the current number of COM callable wrappers (CCWs). A CCW is a proxy for a managed object being referenced from an unmanaged COM client.",
-			[]string{"process"},
+			[]string{"pid"},
 			nil,
 		),
 		Numberofmarshalling: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, interopSubsystem, "interop_marshalling_total"),
 			"Displays the total number of times arguments and return values have been marshaled from managed to unmanaged code, and vice versa, since the application started.",
-			[]string{"process"},
+			[]string{"pid"},
 			nil,
 		),
 		NumberofStubs: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, interopSubsystem, "interop_stubs_created_total"),
 			"Displays the current number of stubs created by the common language runtime. Stubs are responsible for marshaling arguments and return values from managed to unmanaged code, and vice versa, during a COM interop call or a platform invoke call.",
-			[]string{"process"},
+			[]string{"pid"},
 			nil,
 		),
 
@@ -266,25 +266,25 @@ func newNETCLRCollector() (Collector, error) {
 		NumberofMethodsJitted: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, jitSubsystem, "jit_methods_total"),
 			"Displays the total number of methods JIT-compiled since the application started. This counter does not include pre-JIT-compiled methods.",
-			[]string{"process"},
+			[]string{"pid"},
 			nil,
 		),
 		TimeinJit: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, jitSubsystem, "jit_time_percent"),
 			"Displays the percentage of time spent in JIT compilation. This counter is updated at the end of every JIT compilation phase. A JIT compilation phase occurs when a method and its dependencies are compiled.",
-			[]string{"process"},
+			[]string{"pid"},
 			nil,
 		),
 		StandardJitFailures: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, jitSubsystem, "jit_standard_failures_total"),
 			"Displays the peak number of methods the JIT compiler has failed to compile since the application started. This failure can occur if the MSIL cannot be verified or if there is an internal error in the JIT compiler.",
-			[]string{"process"},
+			[]string{"pid"},
 			nil,
 		),
 		TotalNumberofILBytesJitted: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, jitSubsystem, "jit_il_bytes_total"),
 			"Displays the total number of Microsoft intermediate language (MSIL) bytes compiled by the just-in-time (JIT) compiler since the application started",
-			[]string{"process"},
+			[]string{"pid"},
 			nil,
 		),
 
@@ -292,55 +292,55 @@ func newNETCLRCollector() (Collector, error) {
 		BytesinLoaderHeap: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, loadingSubsystem, "loader_heap_size_bytes"),
 			"Displays the current size, in bytes, of the memory committed by the class loader across all application domains. Committed memory is the physical space reserved in the disk paging file.",
-			[]string{"process"},
+			[]string{"pid"},
 			nil,
 		),
 		Currentappdomains: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, loadingSubsystem, "appdomains_loaded_current"),
 			"Displays the current number of application domains loaded in this application.",
-			[]string{"process"},
+			[]string{"pid"},
 			nil,
 		),
 		CurrentAssemblies: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, loadingSubsystem, "assemblies_loaded_current"),
 			"Displays the current number of assemblies loaded across all application domains in the currently running application. If the assembly is loaded as domain-neutral from multiple application domains, this counter is incremented only once.",
-			[]string{"process"},
+			[]string{"pid"},
 			nil,
 		),
 		CurrentClassesLoaded: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, loadingSubsystem, "classes_loaded_current"),
 			"Displays the current number of classes loaded in all assemblies.",
-			[]string{"process"},
+			[]string{"pid"},
 			nil,
 		),
 		TotalAppdomains: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, loadingSubsystem, "appdomains_loaded_total"),
 			"Displays the peak number of application domains loaded since the application started.",
-			[]string{"process"},
+			[]string{"pid"},
 			nil,
 		),
 		Totalappdomainsunloaded: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, loadingSubsystem, "appdomains_unloaded_total"),
 			"Displays the total number of application domains unloaded since the application started. If an application domain is loaded and unloaded multiple times, this counter increments each time the application domain is unloaded.",
-			[]string{"process"},
+			[]string{"pid"},
 			nil,
 		),
 		TotalAssemblies: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, loadingSubsystem, "assemblies_loaded_total"),
 			"Displays the total number of assemblies loaded since the application started. If the assembly is loaded as domain-neutral from multiple application domains, this counter is incremented only once.",
-			[]string{"process"},
+			[]string{"pid"},
 			nil,
 		),
 		TotalClassesLoaded: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, loadingSubsystem, "classes_loaded_total"),
 			"Displays the cumulative number of classes loaded in all assemblies since the application started.",
-			[]string{"process"},
+			[]string{"pid"},
 			nil,
 		),
 		TotalNumberofLoadFailures: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, loadingSubsystem, "class_load_failures_total"),
 			"Displays the peak number of classes that have failed to load since the application started.",
-			[]string{"process"},
+			[]string{"pid"},
 			nil,
 		),
 
@@ -348,43 +348,43 @@ func newNETCLRCollector() (Collector, error) {
 		CurrentQueueLength: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, locksandthreadsSubsystem, "current_queue_length"),
 			"Displays the total number of threads that are currently waiting to acquire a managed lock in the application.",
-			[]string{"process"},
+			[]string{"pid"},
 			nil,
 		),
 		NumberofcurrentlogicalThreads: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, locksandthreadsSubsystem, "current_logical_threads"),
 			"Displays the number of current managed thread objects in the application. This counter maintains the count of both running and stopped threads. ",
-			[]string{"process"},
+			[]string{"pid"},
 			nil,
 		),
 		NumberofcurrentphysicalThreads: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, locksandthreadsSubsystem, "physical_threads_current"),
 			"Displays the number of native operating system threads created and owned by the common language runtime to act as underlying threads for managed thread objects. This counter's value does not include the threads used by the runtime in its internal operations; it is a subset of the threads in the operating system process.",
-			[]string{"process"},
+			[]string{"pid"},
 			nil,
 		),
 		Numberofcurrentrecognizedthreads: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, locksandthreadsSubsystem, "recognized_threads_current"),
 			"Displays the number of threads that are currently recognized by the runtime. These threads are associated with a corresponding managed thread object. The runtime does not create these threads, but they have run inside the runtime at least once.",
-			[]string{"process"},
+			[]string{"pid"},
 			nil,
 		),
 		Numberoftotalrecognizedthreads: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, locksandthreadsSubsystem, "recognized_threads_total"),
 			"Displays the total number of threads that have been recognized by the runtime since the application started. These threads are associated with a corresponding managed thread object. The runtime does not create these threads, but they have run inside the runtime at least once.",
-			[]string{"process"},
+			[]string{"pid"},
 			nil,
 		),
 		QueueLengthPeak: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, locksandthreadsSubsystem, "queue_length_total"),
 			"Displays the total number of threads that waited to acquire a managed lock since the application started.",
-			[]string{"process"},
+			[]string{"pid"},
 			nil,
 		),
 		TotalNumberofContentions: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, locksandthreadsSubsystem, "contentions_total"),
 			"Displays the total number of times that threads in the runtime have attempted to acquire a managed lock unsuccessfully.",
-			[]string{"process"},
+			[]string{"pid"},
 			nil,
 		),
 
@@ -392,13 +392,13 @@ func newNETCLRCollector() (Collector, error) {
 		AllocatedBytes: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, memorySubsystem, "allocated_bytes_total"),
 			"Displays the total number of bytes allocated on the garbage collection heap.",
-			[]string{"process"},
+			[]string{"pid"},
 			nil,
 		),
 		FinalizationSurvivors: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, memorySubsystem, "finalization_survivors"),
 			"Displays the number of garbage-collected objects that survive a collection because they are waiting to be finalized.",
-			[]string{"process"},
+			[]string{"pid"},
 			nil,
 		),
 		HeapSize: prometheus.NewDesc(
@@ -416,7 +416,7 @@ func newNETCLRCollector() (Collector, error) {
 		NumberGCHandles: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, memorySubsystem, "number_gc_handles"),
 			"Displays the current number of garbage collection handles in use. Garbage collection handles are handles to resources external to the common language runtime and the managed environment.",
-			[]string{"process"},
+			[]string{"pid"},
 			nil,
 		),
 		NumberCollections: prometheus.NewDesc(
@@ -428,37 +428,37 @@ func newNETCLRCollector() (Collector, error) {
 		NumberInducedGC: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, memorySubsystem, "induced_gc_total"),
 			"Displays the peak number of times garbage collection was performed because of an explicit call to GC.Collect.",
-			[]string{"process"},
+			[]string{"pid"},
 			nil,
 		),
 		NumberofPinnedObjects: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, memorySubsystem, "number_pinned_objects"),
 			"Displays the number of pinned objects encountered in the last garbage collection.",
-			[]string{"process"},
+			[]string{"pid"},
 			nil,
 		),
 		NumberofSinkBlocksinuse: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, memorySubsystem, "number_sink_blocksinuse"),
 			"Displays the current number of synchronization blocks in use. Synchronization blocks are per-object data structures allocated for storing synchronization information. They hold weak references to managed objects and must be scanned by the garbage collector.",
-			[]string{"process"},
+			[]string{"pid"},
 			nil,
 		),
 		NumberTotalCommittedBytes: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, memorySubsystem, "committed_bytes"),
 			"Displays the amount of virtual memory, in bytes, currently committed by the garbage collector. Committed memory is the physical memory for which space has been reserved in the disk paging file.",
-			[]string{"process"},
+			[]string{"pid"},
 			nil,
 		),
 		NumberTotalreservedBytes: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, memorySubsystem, "reserved_bytes"),
 			"Displays the amount of virtual memory, in bytes, currently reserved by the garbage collector. Reserved memory is the virtual memory space reserved for the application when no disk or main memory pages have been used.",
-			[]string{"process"},
+			[]string{"pid"},
 			nil,
 		),
 		TimeinGC: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, memorySubsystem, "gc_time_percent"),
 			"Displays the percentage of time that was spent performing a garbage collection in the last sample.",
-			[]string{"process"},
+			[]string{"pid"},
 			nil,
 		),
 
@@ -466,37 +466,37 @@ func newNETCLRCollector() (Collector, error) {
 		Channels: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, remotingSubsystem, "channels_total"),
 			"Displays the total number of remoting channels registered across all application domains since application started.",
-			[]string{"process"},
+			[]string{"pid"},
 			nil,
 		),
 		ContextBoundClassesLoaded: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, remotingSubsystem, "context_bound_classes_loaded"),
 			"Displays the current number of context-bound classes that are loaded.",
-			[]string{"process"},
+			[]string{"pid"},
 			nil,
 		),
 		ContextBoundObjects: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, remotingSubsystem, "context_bound_objects_total"),
 			"Displays the total number of context-bound objects allocated.",
-			[]string{"process"},
+			[]string{"pid"},
 			nil,
 		),
 		ContextProxies: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, remotingSubsystem, "context_proxies_total"),
 			"Displays the total number of remoting proxy objects in this process since it started.",
-			[]string{"process"},
+			[]string{"pid"},
 			nil,
 		),
 		Contexts: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, remotingSubsystem, "contexts"),
 			"Displays the current number of remoting contexts in the application.",
-			[]string{"process"},
+			[]string{"pid"},
 			nil,
 		),
 		TotalRemoteCalls: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, remotingSubsystem, "remote_calls_total"),
 			"Displays the total number of remote procedure calls invoked since the application started.",
-			[]string{"process"},
+			[]string{"pid"},
 			nil,
 		),
 
@@ -504,25 +504,25 @@ func newNETCLRCollector() (Collector, error) {
 		NumberLinkTimeChecks: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, securitySubsystem, "link_time_checks_total"),
 			"Displays the total number of link-time code access security checks since the application started.",
-			[]string{"process"},
+			[]string{"pid"},
 			nil,
 		),
 		TimeinRTchecks: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, securitySubsystem, "rt_checks_time_percent"),
 			"Displays the percentage of time spent performing runtime code access security checks in the last sample.",
-			[]string{"process"},
+			[]string{"pid"},
 			nil,
 		),
 		StackWalkDepth: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, securitySubsystem, "stack_walk_depth"),
 			"Displays the depth of the stack during that last runtime code access security check.",
-			[]string{"process"},
+			[]string{"pid"},
 			nil,
 		),
 		TotalRuntimeChecks: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, securitySubsystem, "runtime_checks_total"),
 			"Displays the total number of runtime code access security checks performed since the application started.",
-			[]string{"process"},
+			[]string{"pid"},
 			nil,
 		),
 
@@ -577,6 +577,7 @@ func (c *netclrCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metri
 type netclrExceptions struct {
 	Name string
 
+	PID                     string  `perflib:"Process ID"`
 	NumberofExcepsThrown    float64 `perflib:"# of Exceps Thrown"`
 	NumberofFiltersPersec   float64 `perflib:"# of Filters / sec"`
 	NumberofFinallysPersec  float64 `perflib:"# of Finallys / sec"`
@@ -595,39 +596,33 @@ func (c *netclrCollector) collectExceptions(ctx *ScrapeContext, ch chan<- promet
 		return nil, err
 	}
 
-	names := make(map[string]int, len(dst))
 	for _, process := range dst {
-		name, keep := c.netclrMapProcessName(process.Name, names)
-		if !keep {
-			continue
-		}
-
 		ch <- prometheus.MustNewConstMetric(
 			c.NumberofExcepsThrown,
 			prometheus.CounterValue,
 			process.NumberofExcepsThrown,
-			name,
+			process.PID,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.NumberofFilters,
 			prometheus.CounterValue,
 			process.NumberofFiltersPersec,
-			name,
+			process.PID,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.NumberofFinallys,
 			prometheus.CounterValue,
 			process.NumberofFinallysPersec,
-			name,
+			process.PID,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.ThrowToCatchDepth,
 			prometheus.CounterValue,
 			process.ThrowToCatchDepthPersec,
-			name,
+			process.PID,
 		)
 	}
 
@@ -637,6 +632,7 @@ func (c *netclrCollector) collectExceptions(ctx *ScrapeContext, ch chan<- promet
 type netclrInterop struct {
 	Name string
 
+	PID                 string  `perflib:"Process ID"`
 	NumberofCCWs        float64 `perflib:"# of CCWs"`
 	Numberofmarshalling float64 `perflib:"# of marshalling"`
 	NumberofStubs       float64 `perflib:"# of Stubs"`
@@ -654,32 +650,26 @@ func (c *netclrCollector) collectInterop(ctx *ScrapeContext, ch chan<- prometheu
 		return nil, err
 	}
 
-	names := make(map[string]int, len(dst))
 	for _, process := range dst {
-		name, keep := c.netclrMapProcessName(process.Name, names)
-		if !keep {
-			continue
-		}
-
 		ch <- prometheus.MustNewConstMetric(
 			c.NumberofCCWs,
 			prometheus.CounterValue,
 			process.NumberofCCWs,
-			name,
+			process.PID,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.Numberofmarshalling,
 			prometheus.CounterValue,
 			process.Numberofmarshalling,
-			name,
+			process.PID,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.NumberofStubs,
 			prometheus.CounterValue,
 			process.NumberofStubs,
-			name,
+			process.PID,
 		)
 	}
 
@@ -689,7 +679,8 @@ func (c *netclrCollector) collectInterop(ctx *ScrapeContext, ch chan<- prometheu
 type netclrJit struct {
 	Name string
 
-	Frequency_PerfTime         float64 `perflib:"Not Displayed_Base"`
+	PID                        string  `perflib:"Process ID"`
+	FrequencyPerfTime          float64 `perflib:"Not Displayed_Base"`
 	NumberofMethodsJitted      float64 `perflib:"# of Methods Jitted"`
 	PercentTimeinJit           float64 `perflib:"% Time in Jit"`
 	StandardJitFailures        float64 `perflib:"Standard Jit Failures"`
@@ -708,43 +699,37 @@ func (c *netclrCollector) collectJit(ctx *ScrapeContext, ch chan<- prometheus.Me
 		return nil, err
 	}
 
-	names := make(map[string]int, len(dst))
 	for _, process := range dst {
-		name, keep := c.netclrMapProcessName(process.Name, names)
-		if !keep {
-			continue
-		}
-
 		ch <- prometheus.MustNewConstMetric(
 			c.NumberofMethodsJitted,
 			prometheus.CounterValue,
 			process.NumberofMethodsJitted,
-			name,
+			process.PID,
 		)
 
 		timeInJit := 0.0
-		if process.Frequency_PerfTime != 0 {
-			timeInJit = process.PercentTimeinJit / process.Frequency_PerfTime
+		if process.FrequencyPerfTime != 0 {
+			timeInJit = process.PercentTimeinJit / process.FrequencyPerfTime
 		}
 		ch <- prometheus.MustNewConstMetric(
 			c.TimeinJit,
 			prometheus.GaugeValue,
 			timeInJit,
-			name,
+			process.PID,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.StandardJitFailures,
 			prometheus.GaugeValue,
 			process.StandardJitFailures,
-			name,
+			process.PID,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalNumberofILBytesJitted,
 			prometheus.CounterValue,
 			process.TotalNumberofILBytesJitted,
-			name,
+			process.PID,
 		)
 	}
 
@@ -754,6 +739,7 @@ func (c *netclrCollector) collectJit(ctx *ScrapeContext, ch chan<- prometheus.Me
 type netclrLoading struct {
 	Name string
 
+	PID                       string  `perflib:"Process ID"`
 	BytesinLoaderHeap         float64 `perflib:"Bytes in Loader Heap"`
 	Currentappdomains         float64 `perflib:"Current appdomains"`
 	CurrentAssemblies         float64 `perflib:"Current Assemblies"`
@@ -777,74 +763,69 @@ func (c *netclrCollector) collectLoading(ctx *ScrapeContext, ch chan<- prometheu
 		return nil, err
 	}
 
-	names := make(map[string]int, len(dst))
 	for _, process := range dst {
-		name, keep := c.netclrMapProcessName(process.Name, names)
-		if !keep {
-			continue
-		}
 
 		ch <- prometheus.MustNewConstMetric(
 			c.BytesinLoaderHeap,
 			prometheus.GaugeValue,
 			process.BytesinLoaderHeap,
-			name,
+			process.PID,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.Currentappdomains,
 			prometheus.GaugeValue,
 			process.Currentappdomains,
-			name,
+			process.PID,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.CurrentAssemblies,
 			prometheus.GaugeValue,
 			process.CurrentAssemblies,
-			name,
+			process.PID,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.CurrentClassesLoaded,
 			prometheus.GaugeValue,
 			process.CurrentClassesLoaded,
-			name,
+			process.PID,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalAppdomains,
 			prometheus.CounterValue,
 			process.TotalAppdomains,
-			name,
+			process.PID,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.Totalappdomainsunloaded,
 			prometheus.CounterValue,
 			process.Totalappdomainsunloaded,
-			name,
+			process.PID,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalAssemblies,
 			prometheus.CounterValue,
 			process.TotalAssemblies,
-			name,
+			process.PID,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalClassesLoaded,
 			prometheus.CounterValue,
 			process.TotalClassesLoaded,
-			name,
+			process.PID,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalNumberofLoadFailures,
 			prometheus.CounterValue,
 			process.TotalNumberofLoadFailures,
-			name,
+			process.PID,
 		)
 	}
 
@@ -854,6 +835,7 @@ func (c *netclrCollector) collectLoading(ctx *ScrapeContext, ch chan<- prometheu
 type netclrLocksAndThreads struct {
 	Name string
 
+	PID                              string  `perflib:"Process ID"`
 	CurrentQueueLength               float64 `perflib:"Current Queue Length"`
 	NumberofcurrentlogicalThreads    float64 `perflib:"# of current logical Threads"`
 	NumberofcurrentphysicalThreads   float64 `perflib:"# of current physical Threads"`
@@ -875,60 +857,54 @@ func (c *netclrCollector) collectLocksAndThreads(ctx *ScrapeContext, ch chan<- p
 		return nil, err
 	}
 
-	names := make(map[string]int, len(dst))
 	for _, process := range dst {
-		name, keep := c.netclrMapProcessName(process.Name, names)
-		if !keep {
-			continue
-		}
-
 		ch <- prometheus.MustNewConstMetric(
 			c.CurrentQueueLength,
 			prometheus.GaugeValue,
 			process.CurrentQueueLength,
-			name,
+			process.PID,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.NumberofcurrentlogicalThreads,
 			prometheus.GaugeValue,
 			process.NumberofcurrentlogicalThreads,
-			name,
+			process.PID,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.NumberofcurrentphysicalThreads,
 			prometheus.GaugeValue,
 			process.NumberofcurrentphysicalThreads,
-			name,
+			process.PID,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.Numberofcurrentrecognizedthreads,
 			prometheus.GaugeValue,
 			process.Numberofcurrentrecognizedthreads,
-			name,
+			process.PID,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.Numberoftotalrecognizedthreads,
 			prometheus.CounterValue,
 			process.Numberoftotalrecognizedthreads,
-			name,
+			process.PID,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.QueueLengthPeak,
 			prometheus.CounterValue,
 			process.QueueLengthPeak,
-			name,
+			process.PID,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalNumberofContentions,
 			prometheus.CounterValue,
 			process.TotalNumberofContentions,
-			name,
+			process.PID,
 		)
 	}
 
@@ -938,9 +914,10 @@ func (c *netclrCollector) collectLocksAndThreads(ctx *ScrapeContext, ch chan<- p
 type netclrMemory struct {
 	Name string
 
+	PID                                string  `perflib:"Process ID"`
 	AllocatedBytesPersec               float64 `perflib:"Allocated Bytes/sec"`
 	FinalizationSurvivors              float64 `perflib:"Finalization Survivors"`
-	Frequency_PerfTime                 float64 `perflib:"Not Displayed_Base"`
+	FrequencyPerfTime                  float64 `perflib:"Not Displayed_Base"`
 	Gen0heapsize                       float64 `perflib:"Gen 0 heap size"`
 	Gen0PromotedBytesPerSec            float64 `perflib:"Gen 0 Promoted Bytes/Sec"`
 	Gen1heapsize                       float64 `perflib:"Gen 1 heap size"`
@@ -975,32 +952,26 @@ func (c *netclrCollector) collectMemory(ctx *ScrapeContext, ch chan<- prometheus
 		return nil, err
 	}
 
-	names := make(map[string]int, len(dst))
 	for _, process := range dst {
-		name, keep := c.netclrMapProcessName(process.Name, names)
-		if !keep {
-			continue
-		}
-
 		ch <- prometheus.MustNewConstMetric(
 			c.AllocatedBytes,
 			prometheus.CounterValue,
 			process.AllocatedBytesPersec,
-			name,
+			process.PID,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.FinalizationSurvivors,
 			prometheus.GaugeValue,
 			process.FinalizationSurvivors,
-			name,
+			process.PID,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.HeapSize,
 			prometheus.GaugeValue,
 			process.Gen0heapsize,
-			name,
+			process.PID,
 			"Gen0",
 		)
 
@@ -1008,7 +979,7 @@ func (c *netclrCollector) collectMemory(ctx *ScrapeContext, ch chan<- prometheus
 			c.PromotedBytes,
 			prometheus.GaugeValue,
 			process.Gen0PromotedBytesPerSec,
-			name,
+			process.PID,
 			"Gen0",
 		)
 
@@ -1016,7 +987,7 @@ func (c *netclrCollector) collectMemory(ctx *ScrapeContext, ch chan<- prometheus
 			c.HeapSize,
 			prometheus.GaugeValue,
 			process.Gen1heapsize,
-			name,
+			process.PID,
 			"Gen1",
 		)
 
@@ -1024,7 +995,7 @@ func (c *netclrCollector) collectMemory(ctx *ScrapeContext, ch chan<- prometheus
 			c.PromotedBytes,
 			prometheus.GaugeValue,
 			process.Gen1PromotedBytesPerSec,
-			name,
+			process.PID,
 			"Gen1",
 		)
 
@@ -1032,7 +1003,7 @@ func (c *netclrCollector) collectMemory(ctx *ScrapeContext, ch chan<- prometheus
 			c.HeapSize,
 			prometheus.GaugeValue,
 			process.Gen2heapsize,
-			name,
+			process.PID,
 			"Gen2",
 		)
 
@@ -1040,7 +1011,7 @@ func (c *netclrCollector) collectMemory(ctx *ScrapeContext, ch chan<- prometheus
 			c.HeapSize,
 			prometheus.GaugeValue,
 			process.LargeObjectHeapsize,
-			name,
+			process.PID,
 			"LOH",
 		)
 
@@ -1048,14 +1019,14 @@ func (c *netclrCollector) collectMemory(ctx *ScrapeContext, ch chan<- prometheus
 			c.NumberGCHandles,
 			prometheus.GaugeValue,
 			process.NumberGCHandles,
-			name,
+			process.PID,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.NumberCollections,
 			prometheus.CounterValue,
 			process.NumberGen0Collections,
-			name,
+			process.PID,
 			"Gen0",
 		)
 
@@ -1063,7 +1034,7 @@ func (c *netclrCollector) collectMemory(ctx *ScrapeContext, ch chan<- prometheus
 			c.NumberCollections,
 			prometheus.CounterValue,
 			process.NumberGen1Collections,
-			name,
+			process.PID,
 			"Gen1",
 		)
 
@@ -1071,7 +1042,7 @@ func (c *netclrCollector) collectMemory(ctx *ScrapeContext, ch chan<- prometheus
 			c.NumberCollections,
 			prometheus.CounterValue,
 			process.NumberGen2Collections,
-			name,
+			process.PID,
 			"Gen2",
 		)
 
@@ -1079,46 +1050,46 @@ func (c *netclrCollector) collectMemory(ctx *ScrapeContext, ch chan<- prometheus
 			c.NumberInducedGC,
 			prometheus.CounterValue,
 			process.NumberInducedGC,
-			name,
+			process.PID,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.NumberofPinnedObjects,
 			prometheus.GaugeValue,
 			process.NumberofPinnedObjects,
-			name,
+			process.PID,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.NumberofSinkBlocksinuse,
 			prometheus.GaugeValue,
 			process.NumberofSinkBlocksinuse,
-			name,
+			process.PID,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.NumberTotalCommittedBytes,
 			prometheus.GaugeValue,
 			process.NumberTotalcommittedBytes,
-			name,
+			process.PID,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.NumberTotalreservedBytes,
 			prometheus.GaugeValue,
 			process.NumberTotalreservedBytes,
-			name,
+			process.PID,
 		)
 
 		timeinGC := 0.0
-		if process.Frequency_PerfTime != 0 {
-			timeinGC = process.PercentTimeinGC / process.Frequency_PerfTime
+		if process.FrequencyPerfTime != 0 {
+			timeinGC = process.PercentTimeinGC / process.FrequencyPerfTime
 		}
 		ch <- prometheus.MustNewConstMetric(
 			c.TimeinGC,
 			prometheus.GaugeValue,
 			timeinGC,
-			name,
+			process.PID,
 		)
 	}
 
@@ -1128,6 +1099,7 @@ func (c *netclrCollector) collectMemory(ctx *ScrapeContext, ch chan<- prometheus
 type netclrRemoting struct {
 	Name string
 
+	PID                            string  `perflib:"Process ID"`
 	Channels                       float64 `perflib:"Channels"`
 	ContextBoundClassesLoaded      float64 `perflib:"Context-Bound Classes Loaded"`
 	ContextBoundObjectsAllocPersec float64 `perflib:"Context-Bound Objects Alloc / sec"`
@@ -1149,53 +1121,47 @@ func (c *netclrCollector) collectRemoting(ctx *ScrapeContext, ch chan<- promethe
 		return nil, err
 	}
 
-	names := make(map[string]int, len(dst))
 	for _, process := range dst {
-		name, keep := c.netclrMapProcessName(process.Name, names)
-		if !keep {
-			continue
-		}
-
 		ch <- prometheus.MustNewConstMetric(
 			c.Channels,
 			prometheus.CounterValue,
 			process.Channels,
-			name,
+			process.PID,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.ContextBoundClassesLoaded,
 			prometheus.GaugeValue,
 			process.ContextBoundClassesLoaded,
-			name,
+			process.PID,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.ContextBoundObjects,
 			prometheus.CounterValue,
 			process.ContextBoundObjectsAllocPersec,
-			name,
+			process.PID,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.ContextProxies,
 			prometheus.CounterValue,
 			process.ContextProxies,
-			name,
+			process.PID,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.Contexts,
 			prometheus.GaugeValue,
 			process.Contexts,
-			name,
+			process.PID,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalRemoteCalls,
 			prometheus.CounterValue,
 			process.TotalRemoteCalls,
-			name,
+			process.PID,
 		)
 	}
 
@@ -1205,7 +1171,8 @@ func (c *netclrCollector) collectRemoting(ctx *ScrapeContext, ch chan<- promethe
 type netclrSecurity struct {
 	Name string
 
-	Frequency_PerfTime    float64 `perflib:"Not Displayed_Base"`
+	PID                   string  `perflib:"Process ID"`
+	FrequencyPerfTime     float64 `perflib:"Not Displayed_Base"`
 	NumberLinkTimeChecks  float64 `perflib:"# Link Time Checks"`
 	PercentTimeinRTchecks float64 `perflib:"% Time in RT checks"`
 	StackWalkDepth        float64 `perflib:"Stack Walk Depth"`
@@ -1224,43 +1191,37 @@ func (c *netclrCollector) collectSecurity(ctx *ScrapeContext, ch chan<- promethe
 		return nil, err
 	}
 
-	names := make(map[string]int, len(dst))
 	for _, process := range dst {
-		name, keep := c.netclrMapProcessName(process.Name, names)
-		if !keep {
-			continue
-		}
-
 		ch <- prometheus.MustNewConstMetric(
 			c.NumberLinkTimeChecks,
 			prometheus.CounterValue,
 			process.NumberLinkTimeChecks,
-			name,
+			process.PID,
 		)
 
 		timeinRTchecks := 0.0
-		if process.Frequency_PerfTime != 0 {
-			timeinRTchecks = process.PercentTimeinRTchecks / process.Frequency_PerfTime
+		if process.FrequencyPerfTime != 0 {
+			timeinRTchecks = process.PercentTimeinRTchecks / process.FrequencyPerfTime
 		}
 		ch <- prometheus.MustNewConstMetric(
 			c.TimeinRTchecks,
 			prometheus.GaugeValue,
 			timeinRTchecks,
-			name,
+			process.PID,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.StackWalkDepth,
 			prometheus.GaugeValue,
 			process.StackWalkDepth,
-			name,
+			process.PID,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalRuntimeChecks,
 			prometheus.CounterValue,
 			process.TotalRuntimeChecks,
-			name,
+			process.PID,
 		)
 	}
 
