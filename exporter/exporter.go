@@ -1,21 +1,8 @@
-// +build windows
-
-package main
+package exporter
 
 import (
 	"encoding/json"
 	"fmt"
-	"net/http"
-	_ "net/http/pprof"
-	"os"
-	"sort"
-	"strconv"
-	"strings"
-	"sync"
-	"time"
-
-	"golang.org/x/sys/windows/svc"
-
 	"github.com/StackExchange/wmi"
 	"github.com/prometheus-community/windows_exporter/collector"
 	"github.com/prometheus-community/windows_exporter/config"
@@ -23,12 +10,20 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/log"
 	"github.com/prometheus/common/version"
+	"golang.org/x/sys/windows/svc"
 	"gopkg.in/alecthomas/kingpin.v2"
+	"net/http"
+	"os"
+	"sort"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
 )
 
-type windowsCollector struct {
+type WindowsCollector struct {
 	maxScrapeDuration time.Duration
-	collectors        map[string]collector.Collector
+	Collectors        map[string]collector.Collector
 }
 
 // Same struct prometheus uses for their /version endpoint.
@@ -43,7 +38,7 @@ type prometheusVersion struct {
 }
 
 const (
-	defaultCollectors            = "cpu,cs,logical_disk,net,os,service,system,textfile,iis"
+	defaultCollectors            = "cpu,cs,logical_disk,net,os,service,system"
 	defaultCollectorsPlaceholder = "[defaults]"
 	serviceName                  = "windows_exporter"
 )
@@ -77,7 +72,7 @@ var (
 
 // Describe sends all the descriptors of the collectors included to
 // the provided channel.
-func (coll windowsCollector) Describe(ch chan<- *prometheus.Desc) {
+func (coll WindowsCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- scrapeDurationDesc
 	ch <- scrapeSuccessDesc
 }
@@ -92,10 +87,10 @@ const (
 
 // Collect sends the collected metrics from each of the collectors to
 // prometheus.
-func (coll windowsCollector) Collect(ch chan<- prometheus.Metric) {
+func (coll WindowsCollector) Collect(ch chan<- prometheus.Metric) {
 	t := time.Now()
-	cs := make([]string, 0, len(coll.collectors))
-	for name := range coll.collectors {
+	cs := make([]string, 0, len(coll.Collectors))
+	for name := range coll.Collectors {
 		cs = append(cs, name)
 	}
 	scrapeContext, err := collector.PrepareScrapeContext(cs)
@@ -110,9 +105,9 @@ func (coll windowsCollector) Collect(ch chan<- prometheus.Metric) {
 	}
 
 	wg := sync.WaitGroup{}
-	wg.Add(len(coll.collectors))
+	wg.Add(len(coll.Collectors))
 	collectorOutcomes := make(map[string]collectorOutcome)
-	for name := range coll.collectors {
+	for name := range coll.Collectors {
 		collectorOutcomes[name] = pending
 	}
 
@@ -129,7 +124,7 @@ func (coll windowsCollector) Collect(ch chan<- prometheus.Metric) {
 		}
 	}()
 
-	for name, c := range coll.collectors {
+	for name, c := range coll.Collectors {
 		go func(name string, c collector.Collector) {
 			defer wg.Done()
 			outcome := execute(name, c, scrapeContext, metricsBuffer)
@@ -252,24 +247,11 @@ func initWbem() {
 	wmi.DefaultClient.SWbemServicesClient = s
 }
 
-func main() {
-	StartExecutable()
-}
-
-func CreateLibrary(configYaml string) (*metricsHandler) {
-	listenAddress := config.String("telemetry.addr","host:port for exporter.",":9182")
-	metricsPath := config.String("telemetry.path","URL path for surfacing collected metrics.","/metrics")
-	maxRequests := config.Int("telemetry.max-requests","Maximum number of concurrent requests. 0 to disable.","5")
+func CreateLibrary(configYaml string) *WindowsCollector {
 	enabledCollectors := config.String(
 		"collectors.enabled",
 		"Comma-separated list of collectors to use. Use '[defaults]' as a placeholder for all the collectors enabled by default.",
 		defaultCollectors)
-
-	timeoutMargin := config.Float64(
-		"scrape.timeout-margin",
-		"Seconds to subtract from the timeout allowed by the client. Tune to allow for overhead or high loads.",
-	"0.5")
-
 	config.LoadConfig(configYaml)
 	initWbem()
 	collectors, err := loadCollectors(*enabledCollectors)
@@ -278,65 +260,25 @@ func CreateLibrary(configYaml string) (*metricsHandler) {
 	}
 	log.Infof("Enabled collectors: %v", strings.Join(keys(collectors), ", "))
 
-	h := &metricsHandler{
-		timeoutMargin: *timeoutMargin,
-		collectorFactory: func(timeout time.Duration, requestedCollectors []string) (error, *windowsCollector) {
-			filteredCollectors := make(map[string]collector.Collector)
-			// scrape all enabled collectors if no collector is requested
-			if len(requestedCollectors) == 0 {
-				filteredCollectors = collectors
-			}
-			for _, name := range requestedCollectors {
-				col, exists := collectors[name]
-				if !exists {
-					return fmt.Errorf("unavailable collector: %s", name), nil
-				}
-				filteredCollectors[name] = col
-			}
-			return nil, &windowsCollector{
-				collectors:        filteredCollectors,
-				maxScrapeDuration: timeout,
-			}
-		},
+
+	filteredCollectors := make(map[string]collector.Collector)
+	// scrape all enabled collectors if no collector is requested
+	if len(filteredCollectors) == 0 {
+		filteredCollectors = collectors
+	}
+	for name,_ := range filteredCollectors {
+		col, exists := collectors[name]
+		if !exists {
+			fmt.Errorf("unavailable collector: %s", name)
+			return nil
+		}
+		filteredCollectors[name] = col
+	}
+	return  &WindowsCollector{
+		Collectors:        filteredCollectors,
+		maxScrapeDuration: 10,
 	}
 
-	http.HandleFunc(*metricsPath, withConcurrencyLimit(*maxRequests, h.ServeHTTP))
-	http.HandleFunc("/health", healthCheck)
-	http.HandleFunc("/version", func(w http.ResponseWriter, r *http.Request) {
-		// we can't use "version" directly as it is a package, and not an object that
-		// can be serialized.
-		err := json.NewEncoder(w).Encode(prometheusVersion{
-			Version:   version.Version,
-			Revision:  version.Revision,
-			Branch:    version.Branch,
-			BuildUser: version.BuildUser,
-			BuildDate: version.BuildDate,
-			GoVersion: version.GoVersion,
-		})
-		if err != nil {
-			http.Error(w, fmt.Sprintf("error encoding JSON: %s", err), http.StatusInternalServerError)
-		}
-	})
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write([]byte(`<html>
-<head><title>windows_exporter</title></head>
-<body>
-<h1>windows_exporter</h1>
-<p><a href="` + *metricsPath + `">Metrics</a></p>
-<p><i>` + version.Info() + `</i></p>
-</body>
-</html>`))
-	})
-
-	log.Infoln("Starting windows_exporter", version.Info())
-	log.Infoln("Build context", version.BuildContext())
-
-	go func() {
-		log.Infoln("Starting server on", *listenAddress)
-		log.Fatalf("cannot start windows_exporter: %s", http.ListenAndServe(*listenAddress, nil))
-	}()
-
-	return h
 
 
 }
@@ -434,7 +376,7 @@ func StartExecutable() {
 
 	h := &metricsHandler{
 		timeoutMargin: *timeoutMargin,
-		collectorFactory: func(timeout time.Duration, requestedCollectors []string) (error, *windowsCollector) {
+		collectorFactory: func(timeout time.Duration, requestedCollectors []string) (error, *WindowsCollector) {
 			filteredCollectors := make(map[string]collector.Collector)
 			// scrape all enabled collectors if no collector is requested
 			if len(requestedCollectors) == 0 {
@@ -447,8 +389,8 @@ func StartExecutable() {
 				}
 				filteredCollectors[name] = col
 			}
-			return nil, &windowsCollector{
-				collectors:        filteredCollectors,
+			return nil, &WindowsCollector{
+				Collectors:        filteredCollectors,
 				maxScrapeDuration: timeout,
 			}
 		},
@@ -562,7 +504,7 @@ loop:
 
 type metricsHandler struct {
 	timeoutMargin    float64
-	collectorFactory func(timeout time.Duration, requestedCollectors []string) (error, *windowsCollector)
+	collectorFactory func(timeout time.Duration, requestedCollectors []string) (error, *WindowsCollector)
 }
 
 func (mh *metricsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -599,3 +541,4 @@ func (mh *metricsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h := promhttp.HandlerFor(reg, promhttp.HandlerOpts{})
 	h.ServeHTTP(w, r)
 }
+
