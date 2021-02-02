@@ -26,7 +26,7 @@ Name | Description | Type | Labels
 `windows_net_bytes_received_total` | Total bytes received by interface | counter | `nic`
 `windows_net_bytes_sent_total` | Total bytes transmitted by interface | counter | `nic`
 `windows_net_bytes_total` | Total bytes received and transmitted by interface | counter | `nic`
-`windows_net_packets_outbound_discarded` | Total outbound packets that were chosen to be discarded even though no errors had been detected to prevent transmission | counter | `nic`
+`windows_net_packets_outbound_discarded_total` | Total outbound packets that were chosen to be discarded even though no errors had been detected to prevent transmission | counter | `nic`
 `windows_net_packets_outbound_errors_total` | Total packets that could not be transmitted due to errors | counter | `nic`
 `windows_net_packets_received_discarded_total` | Total inbound packets that were chosen to be discarded even though no errors had been detected to prevent delivery | counter | `nic`
 `windows_net_packets_received_errors_total` | Total packets that could not be received due to errors  | counter | `nic`
