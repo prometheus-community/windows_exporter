@@ -168,70 +168,67 @@ func (c *ContainerMetricsCollector) collect(ch chan<- prometheus.Metric) (*prome
 	}
 
 	for _, containerDetails := range containers {
-		containerId := containerDetails.ID
-
-		container, err := hcsshim.OpenContainer(containerId)
+		container, err := hcsshim.OpenContainer(containerDetails.ID)
 		if container != nil {
 			defer containerClose(container)
 		}
 		if err != nil {
-			log.Error("err in opening container: ", containerId, err)
+			log.Error("err in opening container: ", containerDetails.ID, err)
 			continue
 		}
 
 		cstats, err := container.Statistics()
 		if err != nil {
-			log.Error("err in fetching container Statistics: ", containerId, err)
+			log.Error("err in fetching container Statistics: ", containerDetails.ID, err)
 			continue
 		}
-		// HCS V1 is for docker runtime. Add the docker:// prefix on container_id
-		containerId = "docker://" + containerId
+		containerIdWithPrefix := getContainerIdWithPrefix(containerDetails)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.ContainerAvailable,
 			prometheus.CounterValue,
 			1,
-			containerId,
+			containerIdWithPrefix,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.UsageCommitBytes,
 			prometheus.GaugeValue,
 			float64(cstats.Memory.UsageCommitBytes),
-			containerId,
+			containerIdWithPrefix,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.UsageCommitPeakBytes,
 			prometheus.GaugeValue,
 			float64(cstats.Memory.UsageCommitPeakBytes),
-			containerId,
+			containerIdWithPrefix,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.UsagePrivateWorkingSetBytes,
 			prometheus.GaugeValue,
 			float64(cstats.Memory.UsagePrivateWorkingSetBytes),
-			containerId,
+			containerIdWithPrefix,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.RuntimeTotal,
 			prometheus.CounterValue,
 			float64(cstats.Processor.TotalRuntime100ns)*ticksToSecondsScaleFactor,
-			containerId,
+			containerIdWithPrefix,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.RuntimeUser,
 			prometheus.CounterValue,
 			float64(cstats.Processor.RuntimeUser100ns)*ticksToSecondsScaleFactor,
-			containerId,
+			containerIdWithPrefix,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.RuntimeKernel,
 			prometheus.CounterValue,
 			float64(cstats.Processor.RuntimeKernel100ns)*ticksToSecondsScaleFactor,
-			containerId,
+			containerIdWithPrefix,
 		)
 
 		if len(cstats.Network) == 0 {
-			log.Info("No Network Stats for container: ", containerId)
+			log.Info("No Network Stats for container: ", containerDetails.ID)
 			continue
 		}
 
@@ -242,41 +239,51 @@ func (c *ContainerMetricsCollector) collect(ch chan<- prometheus.Metric) (*prome
 				c.BytesReceived,
 				prometheus.CounterValue,
 				float64(networkInterface.BytesReceived),
-				containerId, networkInterface.EndpointId,
+				containerIdWithPrefix, networkInterface.EndpointId,
 			)
 			ch <- prometheus.MustNewConstMetric(
 				c.BytesSent,
 				prometheus.CounterValue,
 				float64(networkInterface.BytesSent),
-				containerId, networkInterface.EndpointId,
+				containerIdWithPrefix, networkInterface.EndpointId,
 			)
 			ch <- prometheus.MustNewConstMetric(
 				c.PacketsReceived,
 				prometheus.CounterValue,
 				float64(networkInterface.PacketsReceived),
-				containerId, networkInterface.EndpointId,
+				containerIdWithPrefix, networkInterface.EndpointId,
 			)
 			ch <- prometheus.MustNewConstMetric(
 				c.PacketsSent,
 				prometheus.CounterValue,
 				float64(networkInterface.PacketsSent),
-				containerId, networkInterface.EndpointId,
+				containerIdWithPrefix, networkInterface.EndpointId,
 			)
 			ch <- prometheus.MustNewConstMetric(
 				c.DroppedPacketsIncoming,
 				prometheus.CounterValue,
 				float64(networkInterface.DroppedPacketsIncoming),
-				containerId, networkInterface.EndpointId,
+				containerIdWithPrefix, networkInterface.EndpointId,
 			)
 			ch <- prometheus.MustNewConstMetric(
 				c.DroppedPacketsOutgoing,
 				prometheus.CounterValue,
 				float64(networkInterface.DroppedPacketsOutgoing),
-				containerId, networkInterface.EndpointId,
+				containerIdWithPrefix, networkInterface.EndpointId,
 			)
 			break
 		}
 	}
 
 	return nil, nil
+}
+
+func getContainerIdWithPrefix(containerDetails hcsshim.ContainerProperties) string {
+	switch containerDetails.Owner {
+	case "containerd-shim-runhcs-v1.exe":
+		return "containerd://" + containerDetails.ID
+	default:
+		// default to docker or if owner is not set
+		return "docker://" + containerDetails.ID
+	}
 }
