@@ -42,9 +42,9 @@ Name     | Description | Enabled by default
 [smtp](docs/collector.smtp.md) | IIS SMTP Server |
 [system](docs/collector.system.md) | System calls | &#10003;
 [tcp](docs/collector.tcp.md) | TCP connections |
-[terminal_service_gateway](docs/collector.terminal_service_gateway.md) | Terminal Service Gateway |
 [time](docs/collector.time.md) | Windows Time Service |
 [thermalzone](docs/collector.thermalzone.md) | Thermal information
+[terminal_service_gateway](docs/collector.terminal_service_gateway.md) | Terminal Service Gateway |
 [terminal_services](docs/collector.terminal_services.md) | Terminal services (RDS)
 [textfile](docs/collector.textfile.md) | Read prometheus metrics from a text file | &#10003;
 [vmware](docs/collector.vmware.md) | Performance counters installed by the Vmware Guest agent |
