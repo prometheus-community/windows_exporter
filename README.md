@@ -42,6 +42,7 @@ Name     | Description | Enabled by default
 [smtp](docs/collector.smtp.md) | IIS SMTP Server |
 [system](docs/collector.system.md) | System calls | &#10003;
 [tcp](docs/collector.tcp.md) | TCP connections |
+[terminal_service_gateway](docs/collector.terminal_service_gateway.md) | Terminal Service Gateway |
 [time](docs/collector.time.md) | Windows Time Service |
 [thermalzone](docs/collector.thermalzone.md) | Thermal information
 [terminal_services](docs/collector.terminal_services.md) | Terminal services (RDS)
