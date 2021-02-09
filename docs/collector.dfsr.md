@@ -40,34 +40,30 @@ Name | Description | Type | Labels
 `windows_dfsr_folder_conflict_generated_files_total` | Number of files and folders moved to the Conflict and Deleted folder | counter | name
 `windows_dfsr_folder_conflict_folder_cleanups_total` | Number of deletions of conflict loser files and folders in the Conflict and Deleted | counter | name
 `windows_dfsr_folder_conflict_space_in_use` | Total size of the conflict loser files and folders currently in the Conflict and Deleted folder | gauge | name
-`windows_dfsr_folder_deleted_space_in_use` | | gauge | name
-`windows_dfsr_folder_deleted_bytes_cleaned_up_total` | | counter | name
-`windows_dfsr_folder_deleted_bytes_generated_total` | | counter | name
-`windows_dfsr_folder_deleted_files_cleaned_up_total` | | counter | name
-`windows_dfsr_folder_deleted_files_generated_total` | | counter | name
-`windows_dfsr_folder_file_installs_retried_total` | | counter | name
-`windows_dfsr_folder_file_installs_succeeded_total` | | counter | name
-`windows_dfsr_folder_files_received_total` | | counter | name
-`windows_dfsr_folder_rdc_bytes_received_total` | | counter | name
-`windows_dfsr_folder_rdc_compressed_size_of_files_received_total` | | counter | name
-`windows_dfsr_folder_rdc_number_of_files_received_total` | | counter | name
-`windows_dfsr_folder_rdc_size_of_files_received_total` | | counter | name
-`windows_dfsr_folder_size_of_files_received_total` | | counter | name
-`windows_dfsr_folder_staging_space_in_use` | | gauge | name
-`windows_dfsr_folder_staging_bytes_cleaned_up_total` | | counter | name
-`windows_dfsr_folder_staging_bytes_generated_total` | | counter | name
-`windows_dfsr_folder_staging_files_cleaned_up_total` | | counter | name
-`windows_dfsr_folder_staging_files_generated_total` | | counter | name
-`windows_dfsr_folder_updates_dropped_total` | | counter | name
-`windows_dfsr_volume_bandwidth_savings_using_dfs_replication_total` | | counter | name
-`windows_dfsr_volume_bytes_received_total` | | counter | name
-`windows_dfsr_volume_compressed_size_of_files_received_total` | | counter | name
-`windows_dfsr_volume_files_received_total` | | counter | name
-`windows_dfsr_volume_rdc_bytes_received_total` | | counter | name
-`windows_dfsr_volume_rdc_compressed_size_of_files_received_total` | | counter | name
-`windows_dfsr_volume_rdc_number_of_files_received_total` | | counter | name
-`windows_dfsr_volume_rdc_size_of_files_received_total` | | counter | name
-`windows_dfsr_volume_size_of_files_received_total` | | counter | name
+`windows_dfsr_folder_deleted_space_in_use` | Total size (in bytes) of the deleted files and folders currently in the Conflict and Deleted folder. | gauge | name
+`windows_dfsr_folder_deleted_bytes_cleaned_up_total` | Total size (in bytes) of replicating deleted files and folders that were cleaned up from the Conflict and Deleted folder. | gauge | name
+`windows_dfsr_folder_deleted_bytes_generated_total` | Total size (in bytes) of replicated deleted files and folders that were moved to the Conflict and Deleted folder after they were deleted from a replicated folder on a sending member. | counter | name
+`windows_dfsr_folder_deleted_files_cleaned_up_total` | Number of files and folders that were cleaned up from the Conflict and Deleted folder. | counter | name
+`windows_dfsr_folder_deleted_files_generated_total` | Number of deleted fils and folders that were moved to the Conflict and Deleted folder. | counter | name
+`windows_dfsr_folder_file_installs_retried_total` | Total number of file installs that are being retried due to sharing violations or other errors encountered when installing the files. The DFS Replication service replicates staged files into a staging folder, uncompresses them in the Installing folder, and renames them to the target location. The second and third steps of this process are known as installing the file. | counter | name
+`windows_dfsr_folder_file_installs_succeeded_total` | Total number of files that were successfully received from sending members and installed locally on this server. The DFS Replication service replicates staged files into a staging folder, uncompresses them in the Installing folder, and renames them to the target location. The second and third steps of this process are known as installing the file. | counter | name
+`windows_dfsr_folder_files_received_total` | Total number of files received. | counter | name
+`windows_dfsr_folder_rdc_bytes_received_total` | Total number of bytes received in replicating files using Remote Differential Compression. This is the actual bytes received over the network without the networking protocol overhead. | counter | name
+`windows_dfsr_folder_rdc_compressed_size_of_files_received_total` | Total compressed size (in bytes) of the files received with Remote Differential Compression. This is the number of bytes that would have been received had RDC not been used. This is not the actual bytes received over the network. | counter | name
+`windows_dfsr_folder_rdc_number_of_files_received_total` | Total number of files received with Remote Differential Compression. | counter | name
+`windows_dfsr_folder_rdc_size_of_files_received_total` | Total uncompressed size (in bytes) of the files received with Remote Differential Compression. This is the number of bytes that would have been received had neither compression nor RDC been used. This is not the actual bytes received over the network. | counter | name
+`windows_dfsr_folder_size_of_files_received_total` | Total uncompressed size (in bytes) of the files received. | counter | name
+`windows_dfsr_folder_staging_space_in_use` | Total size of files and folders currently in the staging folder. This metric will fluctuate as staging space is reclaimed. | gauge | name
+`windows_dfsr_folder_staging_bytes_cleaned_up_total` | Total size (in bytes) of the files and folders that have been cleaned up from the staging folder. | counter | name
+`windows_dfsr_folder_staging_bytes_generated_total` | Total size (in bytes) of replicated files and folders in the staging folder created by the DFS Replication service since last restart. | counter | name
+`windows_dfsr_folder_staging_files_cleaned_up_total` | Total number of files and folders that have been cleaned up from the staging folder. | counter | name
+`windows_dfsr_folder_staging_files_generated_total` | Total number of times replicated files and folders have been staged by the DFS Replication service. | counter | name
+`windows_dfsr_folder_updates_dropped_total` | Total number of redundant file replication update records that have been ignored by the DFS Replication service because they did not change the replicated file or folder. | counter | name
+`windows_dfsr_volume_database_commits_total` | Total number of DFSR Volume database commits. | counter | name
+`windows_dfsr_volume_database_lookups_total` | Total number of DFSR Volume database lookups. | counter | name
+`windows_dfsr_volume_usn_journal_unread_percentage` | Percentage of DFSR Volume USN journal records that are unread. | gauge | name
+`windows_dfsr_volume_usn_journal_accepted_records_total` | Total number of USN journal records accepted. | counter | name
+`windows_dfsr_volume_usn_journal_read_records_total` | Total number of DFSR Volume USN journal records read. | counter | name
 
 ### Example metric
 _This collector does not yet have explained examples, we would appreciate your help adding them!_
