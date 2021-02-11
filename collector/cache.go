@@ -1,103 +1,104 @@
+// +build windows
+
 package collector
 
 import (
-	"github.com/StackExchange/wmi"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
 )
 
 func init() {
-	Factories["cache"] = NewCacheCollector
+	registerCollector("cache", newCacheCollector, "Cache")
 }
 
-// A CacheCollector is a Prometheus collector for WMI Win32_PerfFormattedData_PerfOS_Cache  metrics
+// A CacheCollector is a Prometheus collector for Perflib Cache metrics
 type CacheCollector struct {
-	AsyncCopyReadsPersec         *prometheus.Desc
-	AsyncDataMapsPersec          *prometheus.Desc
-	AsyncFastReadsPersec         *prometheus.Desc
-	AsyncMDLReadsPersec          *prometheus.Desc
-	AsyncPinReadsPersec          *prometheus.Desc
-	CopyReadHitsPercent          *prometheus.Desc
-	CopyReadsPersec              *prometheus.Desc
-	DataFlushesPersec            *prometheus.Desc
-	DataFlushPagesPersec         *prometheus.Desc
-	DataMapHitsPercent           *prometheus.Desc
-	DataMapPinsPersec            *prometheus.Desc
-	DataMapsPersec               *prometheus.Desc
-	DirtyPages                   *prometheus.Desc
-	DirtyPageThreshold           *prometheus.Desc
-	FastReadNotPossiblesPersec   *prometheus.Desc
-	FastReadResourceMissesPersec *prometheus.Desc
-	FastReadsPersec              *prometheus.Desc
-	LazyWriteFlushesPersec       *prometheus.Desc
-	LazyWritePagesPersec         *prometheus.Desc
-	MDLReadHitsPercent           *prometheus.Desc
-	MDLReadsPersec               *prometheus.Desc
-	PinReadHitsPercent           *prometheus.Desc
-	PinReadsPersec               *prometheus.Desc
-	ReadAheadsPersec             *prometheus.Desc
-	SyncCopyReadsPersec          *prometheus.Desc
-	SyncDataMapsPersec           *prometheus.Desc
-	SyncFastReadsPersec          *prometheus.Desc
-	SyncMDLReadsPersec           *prometheus.Desc
-	SyncPinReadsPersec           *prometheus.Desc
+	AsyncCopyReadsTotal         *prometheus.Desc
+	AsyncDataMapsTotal          *prometheus.Desc
+	AsyncFastReadsTotal         *prometheus.Desc
+	AsyncMDLReadsTotal          *prometheus.Desc
+	AsyncPinReadsTotal          *prometheus.Desc
+	CopyReadHitsTotal           *prometheus.Desc
+	CopyReadsTotal              *prometheus.Desc
+	DataFlushesTotal            *prometheus.Desc
+	DataFlushPagesTotal         *prometheus.Desc
+	DataMapHitsPercent          *prometheus.Desc
+	DataMapPinsTotal            *prometheus.Desc
+	DataMapsTotal               *prometheus.Desc
+	DirtyPages                  *prometheus.Desc
+	DirtyPageThreshold          *prometheus.Desc
+	FastReadNotPossiblesTotal   *prometheus.Desc
+	FastReadResourceMissesTotal *prometheus.Desc
+	FastReadsTotal              *prometheus.Desc
+	LazyWriteFlushesTotal       *prometheus.Desc
+	LazyWritePagesTotal         *prometheus.Desc
+	MDLReadHitsTotal            *prometheus.Desc
+	MDLReadsTotal               *prometheus.Desc
+	PinReadHitsTotal            *prometheus.Desc
+	PinReadsTotal               *prometheus.Desc
+	ReadAheadsTotal             *prometheus.Desc
+	SyncCopyReadsTotal          *prometheus.Desc
+	SyncDataMapsTotal           *prometheus.Desc
+	SyncFastReadsTotal          *prometheus.Desc
+	SyncMDLReadsTotal           *prometheus.Desc
+	SyncPinReadsTotal           *prometheus.Desc
 }
 
 // NewCacheCollector ...
-func NewCacheCollector() (Collector, error) {
+func newCacheCollector() (Collector, error) {
 	const subsystem = "cache"
 	return &CacheCollector{
-		AsyncCopyReadsPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "async_copy_reads_persec"),
-			"(AsyncCopyReadsPersec)",
+		AsyncCopyReadsTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "async_copy_reads_total"),
+			"(AsyncCopyReadsTotal)",
 			nil,
 			nil,
 		),
-		AsyncDataMapsPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "async_data_maps_persec"),
-			"(AsyncDataMapsPersec)",
+		AsyncDataMapsTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "async_data_maps_total"),
+			"(AsyncDataMapsTotal)",
 			nil,
 			nil,
 		),
-		AsyncFastReadsPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "async_fast_reads_persec"),
-			"(AsyncFastReadsPersec)",
+		AsyncFastReadsTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "async_fast_reads_total"),
+			"(AsyncFastReadsTotal)",
 			nil,
 			nil,
 		),
-		AsyncMDLReadsPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "async_mdl_reads_persec"),
-			"(AsyncMDLReadsPersec)",
+		AsyncMDLReadsTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "async_mdl_reads_total"),
+			"(AsyncMDLReadsTotal)",
 			nil,
 			nil,
 		),
-		AsyncPinReadsPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "async_pin_reads_persec"),
-			"(AsyncPinReadsPersec)",
+		AsyncPinReadsTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "async_pin_reads_total"),
+			"(AsyncPinReadsTotal)",
 			nil,
 			nil,
 		),
-		CopyReadHitsPercent: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "copy_read_hits_percent"),
-			"(CopyReadHitsPercent)",
+		CopyReadHitsTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "copy_read_hits_total"),
+			"(CopyReadHitsTotal)",
 			nil,
 			nil,
 		),
-		CopyReadsPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "copy_reads_persec"),
-			"(CopyReadsPersec)",
+		CopyReadsTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "copy_reads_total"),
+			"(CopyReadsTotal)",
 			nil,
 			nil,
 		),
-		DataFlushesPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "data_flushes_persec"),
-			"(DataFlushesPersec)",
+		DataFlushesTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "data_flushes_total"),
+			"(DataFlushesTotal)",
 			nil,
 			nil,
 		),
-		DataFlushPagesPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "data_flush_pages_persec"),
-			"(DataFlushPagesPersec)",
+		DataFlushPagesTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "data_flush_pages_total"),
+			"(DataFlushPagesTotal)",
 			nil,
 			nil,
 		),
@@ -107,15 +108,15 @@ func NewCacheCollector() (Collector, error) {
 			nil,
 			nil,
 		),
-		DataMapPinsPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "data_map_pins_persec"),
-			"(DataMapPinsPersec)",
+		DataMapPinsTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "data_map_pins_total"),
+			"(DataMapPinsTotal)",
 			nil,
 			nil,
 		),
-		DataMapsPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "data_maps_persec"),
-			"(DataMapsPersec)",
+		DataMapsTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "data_maps_total"),
+			"(DataMapsTotal)",
 			nil,
 			nil,
 		),
@@ -131,322 +132,320 @@ func NewCacheCollector() (Collector, error) {
 			nil,
 			nil,
 		),
-		FastReadNotPossiblesPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "fast_read_not_possibles_persec"),
-			"(FastReadNotPossiblesPersec)",
+		FastReadNotPossiblesTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "fast_read_not_possibles_total"),
+			"(FastReadNotPossiblesTotal)",
 			nil,
 			nil,
 		),
-		FastReadResourceMissesPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "fast_read_resource_misses_persec"),
-			"(FastReadResourceMissesPersec)",
+		FastReadResourceMissesTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "fast_read_resource_misses_total"),
+			"(FastReadResourceMissesTotal)",
 			nil,
 			nil,
 		),
-		FastReadsPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "fast_reads_persec"),
-			"(FastReadsPersec)",
+		FastReadsTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "fast_reads_total"),
+			"(FastReadsTotal)",
 			nil,
 			nil,
 		),
-		LazyWriteFlushesPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "lazy_write_flushes_persec"),
-			"(LazyWriteFlushesPersec)",
+		LazyWriteFlushesTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "lazy_write_flushes_total"),
+			"(LazyWriteFlushesTotal)",
 			nil,
 			nil,
 		),
-		LazyWritePagesPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "lazy_write_pages_persec"),
-			"(LazyWritePagesPersec)",
+		LazyWritePagesTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "lazy_write_pages_total"),
+			"(LazyWritePagesTotal)",
 			nil,
 			nil,
 		),
-		MDLReadHitsPercent: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "mdl_read_hits_percent"),
-			"(MDLReadHitsPercent)",
+		MDLReadHitsTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "mdl_read_hits_total"),
+			"(MDLReadHitsTotal)",
 			nil,
 			nil,
 		),
-		MDLReadsPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "mdl_reads_persec"),
-			"(MDLReadsPersec)",
+		MDLReadsTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "mdl_reads_total"),
+			"(MDLReadsTotal)",
 			nil,
 			nil,
 		),
-		PinReadHitsPercent: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "pin_read_hits_percent"),
-			"(PinReadHitsPercent)",
+		PinReadHitsTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "pin_read_hits_total"),
+			"(PinReadHitsTotal)",
 			nil,
 			nil,
 		),
-		PinReadsPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "pin_reads_persec"),
-			"(PinReadsPersec)",
+		PinReadsTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "pin_reads_total"),
+			"(PinReadsTotal)",
 			nil,
 			nil,
 		),
-		ReadAheadsPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "read_aheads_persec"),
-			"(ReadAheadsPersec)",
+		ReadAheadsTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "read_aheads_total"),
+			"(ReadAheadsTotal)",
 			nil,
 			nil,
 		),
-		SyncCopyReadsPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "sync_copy_reads_persec"),
-			"(SyncCopyReadsPersec)",
+		SyncCopyReadsTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "sync_copy_reads_total"),
+			"(SyncCopyReadsTotal)",
 			nil,
 			nil,
 		),
-		SyncDataMapsPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "sync_data_maps_persec"),
-			"(SyncDataMapsPersec)",
+		SyncDataMapsTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "sync_data_maps_total"),
+			"(SyncDataMapsTotal)",
 			nil,
 			nil,
 		),
-		SyncFastReadsPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "sync_fast_reads_persec"),
-			"(SyncFastReadsPersec)",
+		SyncFastReadsTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "sync_fast_reads_total"),
+			"(SyncFastReadsTotal)",
 			nil,
 			nil,
 		),
-		SyncMDLReadsPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "sync_mdl_reads_persec"),
-			"(SyncMDLReadsPersec)",
+		SyncMDLReadsTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "sync_mdl_reads_total"),
+			"(SyncMDLReadsTotal)",
 			nil,
 			nil,
 		),
-		SyncPinReadsPersec: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "sync_pin_reads_persec"),
-			"(SyncPinReadsPersec)",
+		SyncPinReadsTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "sync_pin_reads_total"),
+			"(SyncPinReadsTotal)",
 			nil,
 			nil,
 		),
 	}, nil
 }
 
-// Collect sends the metric values for each metric
-// to the provided prometheus Metric channel.
+// Collect implements the Collector interface
 func (c *CacheCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
-	if desc, err := c.collect(ch); err != nil {
+	if desc, err := c.collect(ctx, ch); err != nil {
 		log.Error("failed collecting cache metrics:", desc, err)
 		return err
 	}
 	return nil
 }
 
-// Win32_PerfFormattedData_PerfOS_Cache  docs:
+// Perflib "Cache":
 // - https://docs.microsoft.com/en-us/previous-versions/aa394267(v=vs.85)
-type Win32_PerfFormattedData_PerfOS_Cache struct {
-	AsyncCopyReadsPersec         uint32
-	AsyncDataMapsPersec          uint32
-	AsyncFastReadsPersec         uint32
-	AsyncMDLReadsPersec          uint32
-	AsyncPinReadsPersec          uint32
-	CopyReadHitsPercent          uint32
-	CopyReadsPersec              uint32
-	DataFlushesPersec            uint32
-	DataFlushPagesPersec         uint32
-	DataMapHitsPercent           uint32
-	DataMapPinsPersec            uint32
-	DataMapsPersec               uint32
-	DirtyPages                   uint64
-	DirtyPageThreshold           uint64
-	FastReadNotPossiblesPersec   uint32
-	FastReadResourceMissesPersec uint32
-	FastReadsPersec              uint32
-	LazyWriteFlushesPersec       uint32
-	LazyWritePagesPersec         uint32
-	MDLReadHitsPercent           uint32
-	MDLReadsPersec               uint32
-	PinReadHitsPercent           uint32
-	PinReadsPersec               uint32
-	ReadAheadsPersec             uint32
-	SyncCopyReadsPersec          uint32
-	SyncDataMapsPersec           uint32
-	SyncFastReadsPersec          uint32
-	SyncMDLReadsPersec           uint32
-	SyncPinReadsPersec           uint32
+type perflibCache struct {
+	AsyncCopyReadsTotal         float64 `perflib:"Async Copy Reads/sec"`
+	AsyncDataMapsTotal          float64 `perflib:"Async Data Maps/sec"`
+	AsyncFastReadsTotal         float64 `perflib:"Async Fast Reads/sec"`
+	AsyncMDLReadsTotal          float64 `perflib:"Async MDL Reads/sec"`
+	AsyncPinReadsTotal          float64 `perflib:"Async Pin Reads/sec"`
+	CopyReadHitsTotal           float64 `perflib:"Copy Read Hits %"`
+	CopyReadsTotal              float64 `perflib:"Copy Reads/sec"`
+	DataFlushesTotal            float64 `perflib:"Data Flushes/sec"`
+	DataFlushPagesTotal         float64 `perflib:"Data Flush Pages/sec"`
+	DataMapHitsPercent          float64 `perflib:"Data Map Hits %"`
+	DataMapPinsTotal            float64 `perflib:"Data Map Pins/sec"`
+	DataMapsTotal               float64 `perflib:"Data Maps/sec"`
+	DirtyPages                  float64 `perflib:"Dirty Pages"`
+	DirtyPageThreshold          float64 `perflib:"Dirty Page Threshold"`
+	FastReadNotPossiblesTotal   float64 `perflib:"Fast Read Not Possibles/sec"`
+	FastReadResourceMissesTotal float64 `perflib:"Fast Read Resource Misses/sec"`
+	FastReadsTotal              float64 `perflib:"Fast Reads/sec"`
+	LazyWriteFlushesTotal       float64 `perflib:"Lazy Write Flushes/sec"`
+	LazyWritePagesTotal         float64 `perflib:"Lazy Write Pages/sec"`
+	MDLReadHitsTotal            float64 `perflib:"MDL Read Hits %"`
+	MDLReadsTotal               float64 `perflib:"MDL Reads/sec"`
+	PinReadHitsTotal            float64 `perflib:"Pin Read Hits %"`
+	PinReadsTotal               float64 `perflib:"Pin Reads/sec"`
+	ReadAheadsTotal             float64 `perflib:"Read Aheads/sec"`
+	SyncCopyReadsTotal          float64 `perflib:"Sync Copy Reads/sec"`
+	SyncDataMapsTotal           float64 `perflib:"Sync Data Maps/sec"`
+	SyncFastReadsTotal          float64 `perflib:"Sync Fast Reads/sec"`
+	SyncMDLReadsTotal           float64 `perflib:"Sync MDL Reads/sec"`
+	SyncPinReadsTotal           float64 `perflib:"Sync Pin Reads/sec"`
 }
 
-func (c *CacheCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
-	var dst []Win32_PerfFormattedData_PerfOS_Cache
-	q := queryAll(&dst)
-	if err := wmi.Query(q, &dst); err != nil {
+func (c *CacheCollector) collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+	var dst []perflibCache // Single-instance class, array is required but will have single entry.
+	if err := unmarshalObject(ctx.perfObjects["Cache"], &dst); err != nil {
 		return nil, err
 	}
 
 	ch <- prometheus.MustNewConstMetric(
-		c.AsyncCopyReadsPersec,
-		prometheus.GaugeValue,
-		float64(dst[0].AsyncCopyReadsPersec),
+		c.AsyncCopyReadsTotal,
+		prometheus.CounterValue,
+		dst[0].AsyncCopyReadsTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.AsyncDataMapsPersec,
-		prometheus.GaugeValue,
-		float64(dst[0].AsyncDataMapsPersec),
+		c.AsyncDataMapsTotal,
+		prometheus.CounterValue,
+		dst[0].AsyncDataMapsTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.AsyncFastReadsPersec,
-		prometheus.GaugeValue,
-		float64(dst[0].AsyncFastReadsPersec),
+		c.AsyncFastReadsTotal,
+		prometheus.CounterValue,
+		dst[0].AsyncFastReadsTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.AsyncMDLReadsPersec,
-		prometheus.GaugeValue,
-		float64(dst[0].AsyncMDLReadsPersec),
+		c.AsyncMDLReadsTotal,
+		prometheus.CounterValue,
+		dst[0].AsyncMDLReadsTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.AsyncPinReadsPersec,
-		prometheus.GaugeValue,
-		float64(dst[0].AsyncPinReadsPersec),
+		c.AsyncPinReadsTotal,
+		prometheus.CounterValue,
+		dst[0].AsyncPinReadsTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.CopyReadHitsPercent,
+		c.CopyReadHitsTotal,
 		prometheus.GaugeValue,
-		float64(dst[0].CopyReadHitsPercent),
+		dst[0].CopyReadHitsTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.CopyReadsPersec,
-		prometheus.GaugeValue,
-		float64(dst[0].CopyReadsPersec),
+		c.CopyReadsTotal,
+		prometheus.CounterValue,
+		dst[0].CopyReadsTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.DataFlushesPersec,
-		prometheus.GaugeValue,
-		float64(dst[0].DataFlushesPersec),
+		c.DataFlushesTotal,
+		prometheus.CounterValue,
+		dst[0].DataFlushesTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.DataFlushPagesPersec,
-		prometheus.GaugeValue,
-		float64(dst[0].DataFlushPagesPersec),
+		c.DataFlushPagesTotal,
+		prometheus.CounterValue,
+		dst[0].DataFlushPagesTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.DataMapHitsPercent,
 		prometheus.GaugeValue,
-		float64(dst[0].DataMapHitsPercent),
+		dst[0].DataMapHitsPercent,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.DataMapPinsPersec,
-		prometheus.GaugeValue,
-		float64(dst[0].DataMapPinsPersec),
+		c.DataMapPinsTotal,
+		prometheus.CounterValue,
+		dst[0].DataMapPinsTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.DataMapsPersec,
-		prometheus.GaugeValue,
-		float64(dst[0].DataMapsPersec),
+		c.DataMapsTotal,
+		prometheus.CounterValue,
+		dst[0].DataMapsTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.DirtyPages,
 		prometheus.GaugeValue,
-		float64(dst[0].DirtyPages),
+		dst[0].DirtyPages,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.DirtyPageThreshold,
 		prometheus.GaugeValue,
-		float64(dst[0].DirtyPageThreshold),
+		dst[0].DirtyPageThreshold,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.FastReadNotPossiblesPersec,
-		prometheus.GaugeValue,
-		float64(dst[0].FastReadNotPossiblesPersec),
+		c.FastReadNotPossiblesTotal,
+		prometheus.CounterValue,
+		dst[0].FastReadNotPossiblesTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.FastReadResourceMissesPersec,
-		prometheus.GaugeValue,
-		float64(dst[0].FastReadResourceMissesPersec),
+		c.FastReadResourceMissesTotal,
+		prometheus.CounterValue,
+		dst[0].FastReadResourceMissesTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.FastReadsPersec,
-		prometheus.GaugeValue,
-		float64(dst[0].FastReadsPersec),
+		c.FastReadsTotal,
+		prometheus.CounterValue,
+		dst[0].FastReadsTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.LazyWriteFlushesPersec,
-		prometheus.GaugeValue,
-		float64(dst[0].LazyWriteFlushesPersec),
+		c.LazyWriteFlushesTotal,
+		prometheus.CounterValue,
+		dst[0].LazyWriteFlushesTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.LazyWritePagesPersec,
-		prometheus.GaugeValue,
-		float64(dst[0].LazyWritePagesPersec),
+		c.LazyWritePagesTotal,
+		prometheus.CounterValue,
+		dst[0].LazyWritePagesTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.MDLReadHitsPercent,
-		prometheus.GaugeValue,
-		float64(dst[0].MDLReadHitsPercent),
+		c.MDLReadHitsTotal,
+		prometheus.CounterValue,
+		dst[0].MDLReadHitsTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.MDLReadsPersec,
-		prometheus.GaugeValue,
-		float64(dst[0].MDLReadsPersec),
+		c.MDLReadsTotal,
+		prometheus.CounterValue,
+		dst[0].MDLReadsTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.PinReadHitsPercent,
-		prometheus.GaugeValue,
-		float64(dst[0].PinReadHitsPercent),
+		c.PinReadHitsTotal,
+		prometheus.CounterValue,
+		dst[0].PinReadHitsTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.PinReadsPersec,
-		prometheus.GaugeValue,
-		float64(dst[0].PinReadsPersec),
+		c.PinReadsTotal,
+		prometheus.CounterValue,
+		dst[0].PinReadsTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.ReadAheadsPersec,
-		prometheus.GaugeValue,
-		float64(dst[0].ReadAheadsPersec),
+		c.ReadAheadsTotal,
+		prometheus.CounterValue,
+		dst[0].ReadAheadsTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.SyncCopyReadsPersec,
-		prometheus.GaugeValue,
-		float64(dst[0].SyncCopyReadsPersec),
+		c.SyncCopyReadsTotal,
+		prometheus.CounterValue,
+		dst[0].SyncCopyReadsTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.SyncDataMapsPersec,
-		prometheus.GaugeValue,
-		float64(dst[0].SyncDataMapsPersec),
+		c.SyncDataMapsTotal,
+		prometheus.CounterValue,
+		dst[0].SyncDataMapsTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.SyncFastReadsPersec,
-		prometheus.GaugeValue,
-		float64(dst[0].SyncFastReadsPersec),
+		c.SyncFastReadsTotal,
+		prometheus.CounterValue,
+		dst[0].SyncFastReadsTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.SyncMDLReadsPersec,
-		prometheus.GaugeValue,
-		float64(dst[0].SyncMDLReadsPersec),
+		c.SyncMDLReadsTotal,
+		prometheus.CounterValue,
+		dst[0].SyncMDLReadsTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.SyncPinReadsPersec,
-		prometheus.GaugeValue,
-		float64(dst[0].SyncPinReadsPersec),
+		c.SyncPinReadsTotal,
+		prometheus.CounterValue,
+		dst[0].SyncPinReadsTotal,
 	)
 
 	return nil, nil
