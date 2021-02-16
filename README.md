@@ -12,6 +12,7 @@ Name     | Description | Enabled by default
 [ad](docs/collector.ad.md) | Active Directory Domain Services |
 [adfs](docs/collector.adfs.md) | Active Directory Federation Services |
 [cpu](docs/collector.cpu.md) | CPU usage | &#10003;
+[cpu_info](docs/collector.cpu_info.md) | CPU Information |
 [cs](docs/collector.cs.md) | "Computer System" metrics (system properties, num cpus/total memory) | &#10003;
 [container](docs/collector.container.md) | Container metrics |
 [dfsr](docs/collector.dfsr.md) | DFSR metrics |
