@@ -14,6 +14,7 @@ nvmlReturn_t DECLDIR (*nvmlDeviceGetHandleByIndex_v2Ptr)(unsigned int index, nvm
 nvmlReturn_t DECLDIR (*nvmlDeviceGetNamePtr)(nvmlDevice_t device, char *name, unsigned int length);
 nvmlReturn_t DECLDIR (*nvmlDeviceGetGraphicsRunningProcesses_v2Ptr)(nvmlDevice_t device, unsigned int *infoCount, nvmlProcessInfo_t *infos);
 nvmlReturn_t DECLDIR (*nvmlSystemGetProcessNamePtr)(unsigned int pid, char *name, unsigned int length);
+nvmlReturn_t DECLDIR (*nvmlDeviceGetDriverModelPtr)(nvmlDevice_t device, nvmlDriverModel_t *current, nvmlDriverModel_t *pending);
 
 nvmlReturn_t invoke_nvmlInit_v2()
 {
@@ -48,6 +49,11 @@ nvmlReturn_t invoke_nvmlDeviceGetGraphicsRunningProcesses_v2(nvmlDevice_t device
 nvmlReturn_t invoke_nvmlSystemGetProcessName(unsigned int pid, char *name, unsigned int length)
 {
 	return (*nvmlSystemGetProcessNamePtr)(pid, name, length);
+}
+
+nvmlReturn_t invoke_nvmlDeviceGetDriverModel(nvmlDevice_t device, nvmlDriverModel_t *current, nvmlDriverModel_t *pending)
+{
+	return (*nvmlDeviceGetDriverModelPtr)(device, current, pending);
 }
 */
 import "C"
@@ -150,6 +156,11 @@ func newNvidiaCollector() (Collector, error) {
 		return nil, syscall.Errno(C.GetLastError())
 	}
 
+	C.nvmlDeviceGetDriverModelPtr = C.GetProcAddress(nvmlLibrary, C.CString("nvmlDeviceGetDriverModel"))
+	if C.nvmlDeviceGetDriverModelPtr == C.FARPROC(C.NULL) {
+		return nil, syscall.Errno(C.GetLastError())
+	}
+
 	err := C.invoke_nvmlInit_v2()
 	if err != C.NVML_SUCCESS {
 		return nil, err
@@ -173,14 +184,20 @@ func newNvidiaCollector() (Collector, error) {
 			var device C.nvmlDevice_t
 			err := C.invoke_nvmlDeviceGetHandleByIndex_v2(i, &device)
 			if err != C.NVML_SUCCESS {
-				return nil, err
+				continue
 			}
 			nameBuffer := make([]byte, C.NVML_DEVICE_NAME_BUFFER_SIZE)
 			err = C.invoke_nvmlDeviceGetName(device, (*C.char)(unsafe.Pointer(&nameBuffer[0])), C.NVML_DEVICE_NAME_BUFFER_SIZE)
 			if err != C.NVML_SUCCESS {
-				return nil, err
+				continue
 			}
 			name := string(nameBuffer[:clen(nameBuffer)])
+			var currentDriverModel, pendingDriverModel C.nvmlDriverModel_t
+			err = C.invoke_nvmlDeviceGetDriverModel(device, &currentDriverModel, &pendingDriverModel)
+			if err == C.NVML_DRIVER_WDDM {
+				log.Warnf("Skipping gpu %s because it is using WWDM driver that does not allow collecting memory usage\n", name)
+				continue
+			}
 			if nvidiaGpuWhitelistPatttern.MatchString(name) {
 				devices = append(devices, device)
 			}
@@ -230,8 +247,8 @@ func (c *nvidiaCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metri
 	}
 
 	for pid, memory := range pidMems {
-		var nameBuffer = make(byte[], C.MAX_PATH)
-		err := C.invoke_nvmlSystemGetProcessName(pid, (*C.char)(unsafe.Pointer(&nameBuffer[0])), C.MAX_PATH)
+		var nameBuffer = make([]byte, C.MAX_PATH)
+		err := C.invoke_nvmlSystemGetProcessName(C.uint(pid), (*C.char)(unsafe.Pointer(&nameBuffer[0])), C.MAX_PATH)
 		if err != C.NVML_SUCCESS {
 			return nil
 		}
