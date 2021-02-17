@@ -15,6 +15,7 @@ nvmlReturn_t DECLDIR (*nvmlDeviceGetNamePtr)(nvmlDevice_t device, char *name, un
 nvmlReturn_t DECLDIR (*nvmlDeviceGetGraphicsRunningProcesses_v2Ptr)(nvmlDevice_t device, unsigned int *infoCount, nvmlProcessInfo_t *infos);
 nvmlReturn_t DECLDIR (*nvmlSystemGetProcessNamePtr)(unsigned int pid, char *name, unsigned int length);
 nvmlReturn_t DECLDIR (*nvmlDeviceGetDriverModelPtr)(nvmlDevice_t device, nvmlDriverModel_t *current, nvmlDriverModel_t *pending);
+nvmlReturn_t DECLDIR (*nvmlDeviceGetMemoryInfoPtr)(nvmlDevice_t device, nvmlMemory_t *memory);
 
 nvmlReturn_t invoke_nvmlInit_v2()
 {
@@ -55,6 +56,11 @@ nvmlReturn_t invoke_nvmlDeviceGetDriverModel(nvmlDevice_t device, nvmlDriverMode
 {
 	return (*nvmlDeviceGetDriverModelPtr)(device, current, pending);
 }
+
+nvmlReturn_t invoke_nvmlDeviceGetMemoryInfo(nvmlDevice_t device, nvmlMemory_t *memory)
+{
+	return (*nvmlDeviceGetMemoryInfoPtr)(device, memory);
+}
 */
 import "C"
 import (
@@ -90,15 +96,22 @@ var (
 
 var nvmlValueNotAvailable = C.longlong(C.NVML_VALUE_NOT_AVAILABLE)
 
+type nvdiaGpuDevice struct {
+	device      C.nvmlDevice_t
+	driverModel C.nvmlDriverModel_t
+	name        string
+}
+
 type nvidiaCollector struct {
-	TotalGpuMemoryUsed *prometheus.Desc
+	TotalProcessGpuMemoryUsed *prometheus.Desc
+	TotalGpuMemoryUsed        *prometheus.Desc
 
 	gpuProcessWhitelistPattern *regexp.Regexp
 	gpuProcessBlacklistPattern *regexp.Regexp
 
 	nvmlLibrary C.HINSTANCE
 
-	devices []C.nvmlDevice_t
+	devices []nvdiaGpuDevice
 }
 
 func (error C.nvmlReturn_t) Error() string {
@@ -161,6 +174,11 @@ func newNvidiaCollector() (Collector, error) {
 		return nil, syscall.Errno(C.GetLastError())
 	}
 
+	C.nvmlDeviceGetMemoryInfoPtr = C.GetProcAddress(nvmlLibrary, C.CString("nvmlDeviceGetMemoryInfo"))
+	if C.nvmlDeviceGetMemoryInfoPtr == C.FARPROC(C.NULL) {
+		return nil, syscall.Errno(C.GetLastError())
+	}
+
 	err := C.invoke_nvmlInit_v2()
 	if err != C.NVML_SUCCESS {
 		return nil, err
@@ -172,7 +190,7 @@ func newNvidiaCollector() (Collector, error) {
 		log.Warn("No filters specified for nvidia collector. This will generate a very large number of metrics!")
 	}
 
-	var devices []C.nvmlDevice_t
+	var devices []nvdiaGpuDevice
 	if len(*nvidiaGpuWhitelist) > 0 {
 		var count C.uint = 0
 		err := C.invoke_nvmlDeviceGetCount_v2(&count)
@@ -198,20 +216,25 @@ func newNvidiaCollector() (Collector, error) {
 				continue
 			}
 			if currentDriverModel == C.NVML_DRIVER_WDDM {
-				log.Warnf("Skipping gpu %s because it is using WWDM driver that does not allow collecting memory usage\n", name)
-				continue
+				log.Warnf("Gpu %s is using WWDM driver that does not allow collecting per process memory usage\n", name)
 			}
 			if nvidiaGpuWhitelistPatttern.MatchString(name) {
-				devices = append(devices, device)
+				devices = append(devices, nvdiaGpuDevice{device: device, driverModel: currentDriverModel, name: name})
 			}
 		}
 	}
 
 	return &nvidiaCollector{
+		TotalProcessGpuMemoryUsed: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "total_process_gpu_memory_used"),
+			"Total gpu memory used per process aggregated over all gpus.",
+			[]string{"process", "process_id"},
+			nil,
+		),
 		TotalGpuMemoryUsed: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "total_gpu_memory_used"),
-			"Total gpu memory used by this process.",
-			[]string{"process", "process_id"},
+			"Total gpu memory used per gpu.",
+			[]string{"gpu"},
 			nil,
 		),
 		gpuProcessWhitelistPattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *gpuProcessWhitelist)),
@@ -225,12 +248,25 @@ func (c *nvidiaCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metri
 
 	var pidMems = make(map[uint]uint64)
 	for _, device := range c.devices {
+		var totalMemory C.nvmlMemory_t
+		err := C.invoke_nvmlDeviceGetMemoryInfo(device.device, &totalMemory)
+		if err == C.NVML_SUCCESS {
+			ch <- prometheus.MustNewConstMetric(
+				c.TotalGpuMemoryUsed,
+				prometheus.GaugeValue,
+				float64(totalMemory.used),
+				device.name,
+			)
+		}
+		if device.driverModel == C.NVML_DRIVER_WDDM {
+			continue
+		}
 		var infoCount C.uint = 0
 		var infos = make([]C.nvmlProcessInfo_t, infoCount)
-		err := C.invoke_nvmlDeviceGetGraphicsRunningProcesses_v2(device, &infoCount, (*C.nvmlProcessInfo_t)(C.NULL))
+		err = C.invoke_nvmlDeviceGetGraphicsRunningProcesses_v2(device.device, &infoCount, (*C.nvmlProcessInfo_t)(C.NULL))
 		if err == C.NVML_ERROR_INSUFFICIENT_SIZE {
 			infos = make([]C.nvmlProcessInfo_t, infoCount)
-			err = C.invoke_nvmlDeviceGetGraphicsRunningProcesses_v2(device, &infoCount, &infos[0])
+			err = C.invoke_nvmlDeviceGetGraphicsRunningProcesses_v2(device.device, &infoCount, &infos[0])
 		}
 		if err != C.NVML_SUCCESS {
 			return nil
