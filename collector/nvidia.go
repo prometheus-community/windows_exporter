@@ -194,7 +194,10 @@ func newNvidiaCollector() (Collector, error) {
 			name := string(nameBuffer[:clen(nameBuffer)])
 			var currentDriverModel, pendingDriverModel C.nvmlDriverModel_t
 			err = C.invoke_nvmlDeviceGetDriverModel(device, &currentDriverModel, &pendingDriverModel)
-			if err == C.NVML_DRIVER_WDDM {
+			if err != C.NVML_SUCCESS {
+				continue
+			}
+			if currentDriverModel == C.NVML_DRIVER_WDDM {
 				log.Warnf("Skipping gpu %s because it is using WWDM driver that does not allow collecting memory usage\n", name)
 				continue
 			}
@@ -220,7 +223,7 @@ func newNvidiaCollector() (Collector, error) {
 
 func (c *nvidiaCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 
-	var pidMems map[uint]uint64
+	var pidMems = make(map[uint]uint64)
 	for _, device := range c.devices {
 		var infoCount C.uint = 0
 		var infos = make([]C.nvmlProcessInfo_t, infoCount)
