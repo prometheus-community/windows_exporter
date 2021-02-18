@@ -3,9 +3,11 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	_ "net/http/pprof"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -15,7 +17,8 @@ import (
 	"golang.org/x/sys/windows/svc"
 
 	"github.com/StackExchange/wmi"
-	"github.com/martinlindhe/wmi_exporter/collector"
+	"github.com/prometheus-community/windows_exporter/collector"
+	"github.com/prometheus-community/windows_exporter/config"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/log"
@@ -23,34 +26,44 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
-// WmiCollector implements the prometheus.Collector interface.
-type WmiCollector struct {
+type windowsCollector struct {
 	maxScrapeDuration time.Duration
 	collectors        map[string]collector.Collector
+}
+
+// Same struct prometheus uses for their /version endpoint.
+// Separate copy to avoid pulling all of prometheus as a dependency
+type prometheusVersion struct {
+	Version   string `json:"version"`
+	Revision  string `json:"revision"`
+	Branch    string `json:"branch"`
+	BuildUser string `json:"buildUser"`
+	BuildDate string `json:"buildDate"`
+	GoVersion string `json:"goVersion"`
 }
 
 const (
 	defaultCollectors            = "cpu,cs,logical_disk,net,os,service,system,textfile"
 	defaultCollectorsPlaceholder = "[defaults]"
-	serviceName                  = "wmi_exporter"
+	serviceName                  = "windows_exporter"
 )
 
 var (
 	scrapeDurationDesc = prometheus.NewDesc(
 		prometheus.BuildFQName(collector.Namespace, "exporter", "collector_duration_seconds"),
-		"wmi_exporter: Duration of a collection.",
+		"windows_exporter: Duration of a collection.",
 		[]string{"collector"},
 		nil,
 	)
 	scrapeSuccessDesc = prometheus.NewDesc(
 		prometheus.BuildFQName(collector.Namespace, "exporter", "collector_success"),
-		"wmi_exporter: Whether the collector was successful.",
+		"windows_exporter: Whether the collector was successful.",
 		[]string{"collector"},
 		nil,
 	)
 	scrapeTimeoutDesc = prometheus.NewDesc(
 		prometheus.BuildFQName(collector.Namespace, "exporter", "collector_timeout"),
-		"wmi_exporter: Whether the collector timed out.",
+		"windows_exporter: Whether the collector timed out.",
 		[]string{"collector"},
 		nil,
 	)
@@ -60,21 +73,11 @@ var (
 		nil,
 		nil,
 	)
-
-	// This can be removed when client_golang exposes this on Windows
-	// (See https://github.com/prometheus/client_golang/issues/376)
-	startTime     = float64(time.Now().Unix())
-	startTimeDesc = prometheus.NewDesc(
-		"process_start_time_seconds",
-		"Start time of the process since unix epoch in seconds.",
-		nil,
-		nil,
-	)
 )
 
 // Describe sends all the descriptors of the collectors included to
 // the provided channel.
-func (coll WmiCollector) Describe(ch chan<- *prometheus.Desc) {
+func (coll windowsCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- scrapeDurationDesc
 	ch <- scrapeSuccessDesc
 }
@@ -89,13 +92,7 @@ const (
 
 // Collect sends the collected metrics from each of the collectors to
 // prometheus.
-func (coll WmiCollector) Collect(ch chan<- prometheus.Metric) {
-	ch <- prometheus.MustNewConstMetric(
-		startTimeDesc,
-		prometheus.CounterValue,
-		startTime,
-	)
-
+func (coll windowsCollector) Collect(ch chan<- prometheus.Metric) {
 	t := time.Now()
 	cs := make([]string, 0, len(coll.collectors))
 	for name := range coll.collectors {
@@ -244,8 +241,8 @@ func loadCollectors(list string) (map[string]collector.Collector, error) {
 
 func initWbem() {
 	// This initialization prevents a memory leak on WMF 5+. See
-	// https://github.com/martinlindhe/wmi_exporter/issues/77 and linked issues
-	// for details.
+	// https://github.com/prometheus-community/windows_exporter/issues/77 and
+	// linked issues for details.
 	log.Debugf("Initializing SWbemServices")
 	s, err := wmi.InitializeSWbemServices(wmi.DefaultClient)
 	if err != nil {
@@ -257,9 +254,13 @@ func initWbem() {
 
 func main() {
 	var (
+		configFile = kingpin.Flag(
+			"config.file",
+			"YAML configuration file to use. Values set in this file will be overriden by CLI flags.",
+		).String()
 		listenAddress = kingpin.Flag(
 			"telemetry.addr",
-			"host:port for WMI exporter.",
+			"host:port for exporter.",
 		).Default(":9182").String()
 		metricsPath = kingpin.Flag(
 			"telemetry.path",
@@ -284,9 +285,25 @@ func main() {
 	)
 
 	log.AddFlags(kingpin.CommandLine)
-	kingpin.Version(version.Print("wmi_exporter"))
+	kingpin.Version(version.Print("windows_exporter"))
 	kingpin.HelpFlag.Short('h')
+
+	// Load values from configuration file(s). Executable flags must first be parsed, in order
+	// to load the specified file(s).
 	kingpin.Parse()
+
+	if *configFile != "" {
+		resolver, err := config.NewResolver(*configFile)
+		if err != nil {
+			log.Fatalf("could not load config file: %v\n", err)
+		}
+		err = resolver.Bind(kingpin.CommandLine, os.Args[1:])
+		if err != nil {
+			log.Fatalf("%v\n", err)
+		}
+		// Parse flags once more to include those discovered in configuration file(s).
+		kingpin.Parse()
+	}
 
 	if *printCollectors {
 		collectors := collector.Available()
@@ -312,7 +329,7 @@ func main() {
 	stopCh := make(chan bool)
 	if !isInteractive {
 		go func() {
-			err = svc.Run(serviceName, &wmiExporterService{stopCh: stopCh})
+			err = svc.Run(serviceName, &windowsExporterService{stopCh: stopCh})
 			if err != nil {
 				log.Errorf("Failed to start service: %v", err)
 			}
@@ -328,9 +345,21 @@ func main() {
 
 	h := &metricsHandler{
 		timeoutMargin: *timeoutMargin,
-		collectorFactory: func(timeout time.Duration) *WmiCollector {
-			return &WmiCollector{
-				collectors:        collectors,
+		collectorFactory: func(timeout time.Duration, requestedCollectors []string) (error, *windowsCollector) {
+			filteredCollectors := make(map[string]collector.Collector)
+			// scrape all enabled collectors if no collector is requested
+			if len(requestedCollectors) == 0 {
+				filteredCollectors = collectors
+			}
+			for _, name := range requestedCollectors {
+				col, exists := collectors[name]
+				if !exists {
+					return fmt.Errorf("unavailable collector: %s", name), nil
+				}
+				filteredCollectors[name] = col
+			}
+			return nil, &windowsCollector{
+				collectors:        filteredCollectors,
 				maxScrapeDuration: timeout,
 			}
 		},
@@ -338,27 +367,43 @@ func main() {
 
 	http.HandleFunc(*metricsPath, withConcurrencyLimit(*maxRequests, h.ServeHTTP))
 	http.HandleFunc("/health", healthCheck)
+	http.HandleFunc("/version", func(w http.ResponseWriter, r *http.Request) {
+		// we can't use "version" directly as it is a package, and not an object that
+		// can be serialized.
+		err := json.NewEncoder(w).Encode(prometheusVersion{
+			Version:   version.Version,
+			Revision:  version.Revision,
+			Branch:    version.Branch,
+			BuildUser: version.BuildUser,
+			BuildDate: version.BuildDate,
+			GoVersion: version.GoVersion,
+		})
+		if err != nil {
+			http.Error(w, fmt.Sprintf("error encoding JSON: %s", err), http.StatusInternalServerError)
+		}
+	})
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte(`<html>
-<head><title>WMI Exporter</title></head>
+<head><title>windows_exporter</title></head>
 <body>
-<h1>WMI Exporter</h1>
+<h1>windows_exporter</h1>
 <p><a href="` + *metricsPath + `">Metrics</a></p>
+<p><i>` + version.Info() + `</i></p>
 </body>
 </html>`))
 	})
 
-	log.Infoln("Starting WMI exporter", version.Info())
+	log.Infoln("Starting windows_exporter", version.Info())
 	log.Infoln("Build context", version.BuildContext())
 
 	go func() {
 		log.Infoln("Starting server on", *listenAddress)
-		log.Fatalf("cannot start WMI exporter: %s", http.ListenAndServe(*listenAddress, nil))
+		log.Fatalf("cannot start windows_exporter: %s", http.ListenAndServe(*listenAddress, nil))
 	}()
 
 	for {
 		if <-stopCh {
-			log.Info("Shutting down WMI exporter")
+			log.Info("Shutting down windows_exporter")
 			break
 		}
 	}
@@ -399,11 +444,11 @@ func withConcurrencyLimit(n int, next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-type wmiExporterService struct {
+type windowsExporterService struct {
 	stopCh chan<- bool
 }
 
-func (s *wmiExporterService) Execute(args []string, r <-chan svc.ChangeRequest, changes chan<- svc.Status) (ssec bool, errno uint32) {
+func (s *windowsExporterService) Execute(args []string, r <-chan svc.ChangeRequest, changes chan<- svc.Status) (ssec bool, errno uint32) {
 	const cmdsAccepted = svc.AcceptStop | svc.AcceptShutdown
 	changes <- svc.Status{State: svc.StartPending}
 	changes <- svc.Status{State: svc.Running, Accepts: cmdsAccepted}
@@ -428,7 +473,7 @@ loop:
 
 type metricsHandler struct {
 	timeoutMargin    float64
-	collectorFactory func(timeout time.Duration) *WmiCollector
+	collectorFactory func(timeout time.Duration, requestedCollectors []string) (error, *windowsCollector)
 }
 
 func (mh *metricsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -448,11 +493,18 @@ func (mh *metricsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	timeoutSeconds = timeoutSeconds - mh.timeoutMargin
 
 	reg := prometheus.NewRegistry()
-	reg.MustRegister(mh.collectorFactory(time.Duration(timeoutSeconds * float64(time.Second))))
+	err, wc := mh.collectorFactory(time.Duration(timeoutSeconds*float64(time.Second)), r.URL.Query()["collect[]"])
+	if err != nil {
+		log.Warnln("Couldn't create filtered metrics handler: ", err)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(fmt.Sprintf("Couldn't create filtered metrics handler: %s", err)))
+		return
+	}
+	reg.MustRegister(wc)
 	reg.MustRegister(
 		prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}),
 		prometheus.NewGoCollector(),
-		version.NewCollector("wmi_exporter"),
+		version.NewCollector("windows_exporter"),
 	)
 
 	h := promhttp.HandlerFor(reg, promhttp.HandlerOpts{})

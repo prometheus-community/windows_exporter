@@ -5,3 +5,4 @@ VERSION
 output/
 .vscode
 .idea
+*.syso

@@ -16,28 +16,28 @@ None
 
 Name | Description | Type | Labels
 -----|-------------|------|-------
-`wmi_dns_zone_transfer_requests_received_total` | _Not yet documented_ | counter | `qtype`
-`wmi_dns_zone_transfer_requests_sent_total` | _Not yet documented_ | counter | `qtype`
-`wmi_dns_zone_transfer_response_received_total` | _Not yet documented_ | counter | `qtype`
-`wmi_dns_zone_transfer_success_received_total` | _Not yet documented_ | counter | `qtype`, `protocol`
-`wmi_dns_zone_transfer_success_sent_total` | _Not yet documented_ | counter | `qtype`
-`wmi_dns_zone_transfer_failures_total` | _Not yet documented_ | counter | None
-`wmi_dns_memory_used_bytes_total` | _Not yet documented_ | gauge | `area`
-`wmi_dns_dynamic_updates_queued` | _Not yet documented_ | gauge | None
-`wmi_dns_dynamic_updates_received_total` | _Not yet documented_ | counter | `operation`
-`wmi_dns_dynamic_updates_failures_total` | _Not yet documented_ | counter | `reason`
-`wmi_dns_notify_received_total` | _Not yet documented_ | counter | None
-`wmi_dns_notify_sent_total` | _Not yet documented_ | counter | None
-`wmi_dns_secure_update_failures_total` | _Not yet documented_ | counter | None
-`wmi_dns_secure_update_received_total` | _Not yet documented_ | counter | None
-`wmi_dns_queries_total` | _Not yet documented_ | counter | `protocol`
-`wmi_dns_responses_total` | _Not yet documented_ | counter | `protocol`
-`wmi_dns_recursive_queries_total` | _Not yet documented_ | counter | None
-`wmi_dns_recursive_query_failures_total` | _Not yet documented_ | counter | None
-`wmi_dns_recursive_query_send_timeouts_total` | _Not yet documented_ | counter | None
-`wmi_dns_wins_queries_total` | _Not yet documented_ | counter | `direction`
-`wmi_dns_wins_responses_total` | _Not yet documented_ | counter | `direction`
-`wmi_dns_unmatched_responses_total` | _Not yet documented_ | counter | None
+`windows_dns_zone_transfer_requests_received_total` | _Not yet documented_ | counter | `qtype`
+`windows_dns_zone_transfer_requests_sent_total` | _Not yet documented_ | counter | `qtype`
+`windows_dns_zone_transfer_response_received_total` | _Not yet documented_ | counter | `qtype`
+`windows_dns_zone_transfer_success_received_total` | _Not yet documented_ | counter | `qtype`, `protocol`
+`windows_dns_zone_transfer_success_sent_total` | _Not yet documented_ | counter | `qtype`
+`windows_dns_zone_transfer_failures_total` | _Not yet documented_ | counter | None
+`windows_dns_memory_used_bytes_total` | _Not yet documented_ | gauge | `area`
+`windows_dns_dynamic_updates_queued` | _Not yet documented_ | gauge | None
+`windows_dns_dynamic_updates_received_total` | _Not yet documented_ | counter | `operation`
+`windows_dns_dynamic_updates_failures_total` | _Not yet documented_ | counter | `reason`
+`windows_dns_notify_received_total` | _Not yet documented_ | counter | None
+`windows_dns_notify_sent_total` | _Not yet documented_ | counter | None
+`windows_dns_secure_update_failures_total` | _Not yet documented_ | counter | None
+`windows_dns_secure_update_received_total` | _Not yet documented_ | counter | None
+`windows_dns_queries_total` | _Not yet documented_ | counter | `protocol`
+`windows_dns_responses_total` | _Not yet documented_ | counter | `protocol`
+`windows_dns_recursive_queries_total` | _Not yet documented_ | counter | None
+`windows_dns_recursive_query_failures_total` | _Not yet documented_ | counter | None
+`windows_dns_recursive_query_send_timeouts_total` | _Not yet documented_ | counter | None
+`windows_dns_wins_queries_total` | _Not yet documented_ | counter | `direction`
+`windows_dns_wins_responses_total` | _Not yet documented_ | counter | `direction`
+`windows_dns_unmatched_responses_total` | _Not yet documented_ | counter | None
 
 ### Example metric
 _This collector does not yet have explained examples, we would appreciate your help adding them!_

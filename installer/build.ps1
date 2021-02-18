@@ -48,13 +48,13 @@ Get-FileIfNotExists "https://github.com/wixtoolset/wix3/releases/download/wix311
 mkdir -Force WiX | Out-Null
 Expand-Archive -Path "${sourceDir}\wix-binaries.zip" -DestinationPath WiX -Force
 
-Copy-Item -Force $PathToExecutable Work/wmi_exporter.exe
+Copy-Item -Force $PathToExecutable Work/windows_exporter.exe
 
-Write-Verbose "Creating wmi_exporter-${Version}-${Arch}.msi"
+Write-Verbose "Creating windows_exporter-${Version}-${Arch}.msi"
 $wixArch = @{"amd64" = "x64"; "386" = "x86"}[$Arch]
 $wixOpts = "-ext WixFirewallExtension -ext WixUtilExtension"
-Invoke-Expression "WiX\candle.exe -nologo -arch $wixArch $wixOpts -out Work\wmi_exporter.wixobj -dVersion=`"$Version`" wmi_exporter.wxs"
-Invoke-Expression "WiX\light.exe -nologo -spdb $wixOpts -out `"Output\wmi_exporter-${Version}-${Arch}.msi`" Work\wmi_exporter.wixobj"
+Invoke-Expression "WiX\candle.exe -nologo -arch $wixArch $wixOpts -out Work\windows_exporter.wixobj -dVersion=`"$Version`" windows_exporter.wxs"
+Invoke-Expression "WiX\light.exe -nologo -spdb $wixOpts -out `"Output\windows_exporter-${Version}-${Arch}.msi`" Work\windows_exporter.wixobj"
 
 Write-Verbose "Done!"
 Pop-Location
