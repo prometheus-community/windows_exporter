@@ -11,7 +11,6 @@ import (
 )
 
 func init() {
-	log.Info("smtp collector is in an experimental state! Metrics for this collector have not been tested.")
 	registerCollector("smtp", NewSMTPCollector, "SMTP Server")
 }
 
@@ -69,6 +68,7 @@ type SMTPCollector struct {
 }
 
 func NewSMTPCollector() (Collector, error) {
+	log.Info("smtp collector is in an experimental state! Metrics for this collector have not been tested.")
 	const subsystem = "smtp"
 
 	return &SMTPCollector{
