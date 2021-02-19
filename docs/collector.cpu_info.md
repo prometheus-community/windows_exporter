@@ -5,6 +5,7 @@ The cpu_info collector exposes metrics detailing a per-socket breakdown of the P
 |||
 -|-
 Metric name prefix  | `cpu_info`
+Data source         | wmi
 Classes             | [`Win32_Processor`](https://docs.microsoft.com/en-us/windows/win32/cimwin32prov/win32-processor)
 Enabled by default? | No
 
