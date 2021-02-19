@@ -11,6 +11,7 @@ Name     | Description | Enabled by default
 ---------|-------------|--------------------
 [ad](docs/collector.ad.md) | Active Directory Domain Services |
 [adfs](docs/collector.adfs.md) | Active Directory Federation Services |
+[cache](docs/collector.cache.md) | Cache metrics |
 [cpu](docs/collector.cpu.md) | CPU usage | &#10003;
 [cs](docs/collector.cs.md) | "Computer System" metrics (system properties, num cpus/total memory) | &#10003;
 [container](docs/collector.container.md) | Container metrics |
