@@ -23,7 +23,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/version"
-	"github.com/prometheus/exporter-toolkit/https"
+	"github.com/prometheus/exporter-toolkit/web"
+	webflag "github.com/prometheus/exporter-toolkit/web/kingpinflag"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -259,10 +260,7 @@ func main() {
 			"config.file",
 			"YAML configuration file to use. Values set in this file will be overriden by CLI flags.",
 		).String()
-		httpsConfig = kingpin.Flag(
-			"web.config",
-			"[EXPERIMENTAL] Path to config yaml file that can enable TLS or authentication.",
-		).Default("").String()
+		webConfig     = webflag.AddFlags(kingpin.CommandLine)
 		listenAddress = kingpin.Flag(
 			"telemetry.addr",
 			"host:port for exporter.",
@@ -404,7 +402,7 @@ func main() {
 	go func() {
 		log.Infoln("Starting server on", *listenAddress)
 		server := &http.Server{Addr: *listenAddress}
-		if err := https.Listen(server, *httpsConfig, log.NewToolkitAdapter()); err != nil {
+		if err := web.ListenAndServe(server, *webConfig, log.NewToolkitAdapter()); err != nil {
 			log.Fatalf("cannot start windows_exporter: %s", err)
 		}
 	}()

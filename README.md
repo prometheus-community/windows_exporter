@@ -79,7 +79,7 @@ Flag     | Description | Default value
 `--collectors.enabled` | Comma-separated list of collectors to use. Use `[defaults]` as a placeholder for all the collectors enabled by default." | `[defaults]`
 `--collectors.print` | If true, print available collectors and exit. | 
 `--scrape.timeout-margin` | Seconds to subtract from the timeout allowed by the client. Tune to allow for overhead or high loads. | `0.5`
-`--web.config` | A [web config][web_config] for setting up TLS and Auth | None
+`--web.config.file` | A [web config][web_config] for setting up TLS and Auth | None
 
 ## Installation
 The latest release can be downloaded from the [releases page](https://github.com/prometheus-community/windows_exporter/releases).
