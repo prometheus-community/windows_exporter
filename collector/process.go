@@ -3,11 +3,78 @@
 
 package collector
 
+/*
+#cgo LDFLAGS: -lDXGI
+#include <windows.h>
+#include <dxgi.h>
+
+#include <initguid.h>
+DEFINE_GUID(GUID_IDXGI_FACTORY, 0x7b7166ec, 0x21c7, 0x44ae, 0xb2, 0x1a, 0xc9, 0xae, 0x32, 0x1a, 0xe3, 0x69);
+
+struct DxgiAdapterDescription
+{
+	wchar_t description[128];
+	LUID 	luid;
+};
+
+UINT GetDxgiAdapterCount()
+{
+	UINT dxgi_adapter_count = 0;
+	IDXGIFactory *dxgi_factory = NULL;
+	if (CreateDXGIFactory(&GUID_IDXGI_FACTORY, (void**)&dxgi_factory) == S_OK && dxgi_factory != NULL)
+	{
+		IDXGIAdapter *dxgi_adapter = NULL;
+		while ((*dxgi_factory->lpVtbl->EnumAdapters)(dxgi_factory, dxgi_adapter_count, &dxgi_adapter) == S_OK)
+		{
+			dxgi_adapter_count++;
+			if (dxgi_adapter != NULL)
+			{
+				(*dxgi_adapter->lpVtbl->Release)(dxgi_adapter);
+			}
+		}
+		(*dxgi_factory->lpVtbl->Release)(dxgi_factory);
+	}
+	return dxgi_adapter_count;
+}
+
+UINT GetDxgiAdapterDescriptions(struct DxgiAdapterDescription *dxgi_adapter_descriptions, UINT dxgi_adapter_description_count)
+{
+	IDXGIFactory *dxgi_factory = NULL;
+	struct DxgiAdapterDescription *current_dxgi_adapter_description = dxgi_adapter_descriptions;
+	if (CreateDXGIFactory(&GUID_IDXGI_FACTORY, (void**)&dxgi_factory) == S_OK && dxgi_factory != NULL)
+	{
+		UINT dxgi_adapter_index = 0;
+		IDXGIAdapter *dxgi_adapter = NULL;
+		while (dxgi_adapter_description_count && (*dxgi_factory->lpVtbl->EnumAdapters)(dxgi_factory, dxgi_adapter_index, &dxgi_adapter) == S_OK)
+		{
+			dxgi_adapter_index++;
+			if (dxgi_adapter != NULL)
+			{
+				DXGI_ADAPTER_DESC dxgi_adapter_description;
+				if ((*dxgi_adapter->lpVtbl->GetDesc)(dxgi_adapter, &dxgi_adapter_description) == S_OK)
+				{
+					memcpy(current_dxgi_adapter_description->description, dxgi_adapter_description.Description, sizeof(current_dxgi_adapter_description->description));
+					current_dxgi_adapter_description->luid = dxgi_adapter_description.AdapterLuid;
+					++current_dxgi_adapter_description;
+					--dxgi_adapter_description_count;
+				}
+				(*dxgi_adapter->lpVtbl->Release)(dxgi_adapter);
+			}
+		}
+		(*dxgi_factory->lpVtbl->Release)(dxgi_factory);
+		return dxgi_adapter_index;
+	}
+	return current_dxgi_adapter_description - dxgi_adapter_descriptions;
+}
+*/
+import "C"
 import (
 	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
+	"syscall"
+	"unsafe"
 
 	"github.com/StackExchange/wmi"
 	"github.com/prometheus-community/windows_exporter/log"
@@ -16,7 +83,7 @@ import (
 )
 
 func init() {
-	registerCollector("process", newProcessCollector, "Process")
+	registerCollector("process", newProcessCollector, "Process", "GPU Process Memory", "GPU Engine")
 }
 
 var (
@@ -49,11 +116,33 @@ type processCollector struct {
 
 	processWhitelistPattern *regexp.Regexp
 	processBlacklistPattern *regexp.Regexp
+
+	dxgiAdapterLuidDescriptionMap map[string]string
+}
+
+// https://docs.microsoft.com/en-us/windows/win32/api/dxgi/ns-dxgi-dxgi_adapter_desc
+type dxgiAdapterDescription struct {
+	description  [128]C.wchar_t
+	luidLowPart  C.DWORD
+	luidHighPart C.LONG
 }
 
 // NewProcessCollector ...
 func newProcessCollector() (Collector, error) {
 	const subsystem = "process"
+
+	dxgiAdapterCount := C.GetDxgiAdapterCount()
+	var dxgiAdapterDescriptions []C.struct_DxgiAdapterDescription
+	dxgiAdapterLuidDescriptionMap := make(map[string]string)
+	if dxgiAdapterCount > 0 {
+		dxgiAdapterDescriptions = make([]C.struct_DxgiAdapterDescription, dxgiAdapterCount)
+		dxgiAdapterDescriptionCount := C.GetDxgiAdapterDescriptions(&dxgiAdapterDescriptions[0], dxgiAdapterCount)
+		for dxgiAdapterDescriptionIndex := C.UINT(0); dxgiAdapterDescriptionIndex < dxgiAdapterDescriptionCount; dxgiAdapterDescriptionIndex++ {
+			description := syscall.UTF16ToString((*[128]uint16)(unsafe.Pointer(&dxgiAdapterDescriptions[dxgiAdapterDescriptionIndex].description))[:])
+			luid := fmt.Sprintf("0x%08X_0x%08X", dxgiAdapterDescriptions[dxgiAdapterDescriptionIndex].luid.HighPart, dxgiAdapterDescriptions[dxgiAdapterDescriptionIndex].luid.LowPart)
+			dxgiAdapterLuidDescriptionMap[luid] = description
+		}
+	}
 
 	if *processWhitelist == ".*" && *processBlacklist == "" {
 		log.Warn("No filters specified for process collector. This will generate a very large number of metrics!")
@@ -152,6 +241,8 @@ func newProcessCollector() (Collector, error) {
 		),
 		processWhitelistPattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *processWhitelist)),
 		processBlacklistPattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *processBlacklist)),
+
+		dxgiAdapterLuidDescriptionMap: dxgiAdapterLuidDescriptionMap,
 	}, nil
 }
 
@@ -187,9 +278,33 @@ type perflibProcess struct {
 	WorkingSet              float64 `perflib:"Working Set"`
 }
 
+type perflibGpuProcessMemory struct {
+	Name           string
+	DedicatedUsage float64 `perflib:"Dedicated Usage"`
+	SharedUsage    float64 `perflib:"Shared Usage"`
+}
+
+type perflibGpuEngine struct {
+	Name                  string
+	UtilizationPercentage float64 `perflib:"Utilization Percentage"`
+}
+
+type ProcessGpuMetrics struct {
+	DedicatedUsage        map[string]float64
+	SharedUsage           map[string]float64
+	UtilizationPercentage map[string]float64
+}
+
 type WorkerProcess struct {
 	AppPoolName string
 	ProcessId   uint64
+}
+
+var pidLuidRegexp = regexp.MustCompile("pid_([0-9]+)_luid_(0x[0-9a-zA-Z]{8}_0x[0-9a-zA-Z]{8})")
+
+func extractPidAndLuid(name string) (string, string) {
+	match := pidLuidRegexp.FindStringSubmatch(name)
+	return match[1], match[2]
 }
 
 func (c *processCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
@@ -197,6 +312,41 @@ func (c *processCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metr
 	err := unmarshalObject(ctx.perfObjects["Process"], &data)
 	if err != nil {
 		return err
+	}
+
+	gpuProcessMemory := make([]perflibGpuProcessMemory, 0)
+	err = unmarshalObject(ctx.perfObjects["GPU Process Memory"], &gpuProcessMemory)
+	if err != nil {
+		return err
+	}
+
+	gpuEngine := make([]perflibGpuEngine, 0)
+	err = unmarshalObject(ctx.perfObjects["GPU Engine"], &gpuEngine)
+	processGpuMetrics := make(map[string]*ProcessGpuMetrics)
+	if err != nil {
+		return err
+	}
+
+	for _, gpuProcess := range gpuProcessMemory {
+		pid, luid := extractPidAndLuid(gpuProcess.Name)
+		_, dxgiAdapterPresent := c.dxgiAdapterLuidDescriptionMap[luid]
+		if dxgiAdapterPresent {
+			_, pidPresent := processGpuMetrics[pid]
+			if pidPresent == false {
+				processGpuMetrics[pid] = &ProcessGpuMetrics{}
+			}
+		}
+
+	}
+	for _, gpuProcess := range gpuEngine {
+		pid, luid := extractPidAndLuid(gpuProcess.Name)
+		_, dxgiAdapterPresent := c.dxgiAdapterLuidDescriptionMap[luid]
+		if dxgiAdapterPresent {
+			_, pidPresent := processGpuMetrics[pid]
+			if pidPresent == false {
+				processGpuMetrics[pid] = &ProcessGpuMetrics{}
+			}
+		}
 	}
 
 	var dst_wp []WorkerProcess
