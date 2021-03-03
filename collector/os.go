@@ -158,7 +158,7 @@ type Win32_OperatingSystem struct {
 }
 
 func (c *OSCollector) collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
-	nwgi, _, err := netapi32.NetWkstaGetInfo()
+	nwgi, err := netapi32.GetWorkstationInfo()
 	if err != nil {
 		return nil, err
 	}
@@ -241,13 +241,13 @@ func (c *OSCollector) collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) (
 		prometheus.GaugeValue,
 		1.0,
 		fmt.Sprintf("Microsoft %s", pn), // Caption
-		fmt.Sprintf("%d.%d.%s", nwgi.Wki102_ver_major, nwgi.Wki102_ver_minor, bn), // Version
+		fmt.Sprintf("%d.%d.%s", nwgi.VersionMajor, nwgi.VersionMinor, bn), // Version
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.PhysicalMemoryFreeBytes,
 		prometheus.GaugeValue,
-		float64(gmse.UllAvailPhys),
+		float64(gmse.AvailPhys),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
@@ -272,7 +272,7 @@ func (c *OSCollector) collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) (
 	ch <- prometheus.MustNewConstMetric(
 		c.VirtualMemoryFreeBytes,
 		prometheus.GaugeValue,
-		float64(gmse.UllAvailPageFile),
+		float64(gmse.AvailPageFile),
 	)
 
 	// Windows has no defined limit, and is based off available resources. This currently isn't calculated by WMI and is set to default value.
@@ -287,7 +287,7 @@ func (c *OSCollector) collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) (
 	ch <- prometheus.MustNewConstMetric(
 		c.ProcessMemoryLimitBytes,
 		prometheus.GaugeValue,
-		float64(gmse.UllTotalVirtual),
+		float64(gmse.TotalVirtual),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
@@ -299,7 +299,7 @@ func (c *OSCollector) collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) (
 	ch <- prometheus.MustNewConstMetric(
 		c.Users,
 		prometheus.GaugeValue,
-		float64(nwgi.Wki102_logged_on_users),
+		float64(nwgi.LoggedOnUsers),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
@@ -311,13 +311,13 @@ func (c *OSCollector) collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) (
 	ch <- prometheus.MustNewConstMetric(
 		c.VirtualMemoryBytes,
 		prometheus.GaugeValue,
-		float64(gmse.UllTotalPageFile),
+		float64(gmse.TotalPageFile),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.VisibleMemoryBytes,
 		prometheus.GaugeValue,
-		float64(gmse.UllTotalPhys),
+		float64(gmse.TotalPhys),
 	)
 
 	return nil, nil

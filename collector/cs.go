@@ -72,13 +72,13 @@ func (c *CSCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, er
 	ch <- prometheus.MustNewConstMetric(
 		c.LogicalProcessors,
 		prometheus.GaugeValue,
-		float64(systemInfo.DwNumberOfProcessors),
+		float64(systemInfo.NumberOfProcessors),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.PhysicalMemoryBytes,
 		prometheus.GaugeValue,
-		float64(mem.UllTotalPhys),
+		float64(mem.TotalPhys),
 	)
 
 	hostname, err := sysinfoapi.GetComputerName(sysinfoapi.ComputerNameDNSHostname)

@@ -9,14 +9,25 @@ import (
 
 // WKSTAInfo102 is a wrapper of WKSTA_Info_102
 //https://docs.microsoft.com/en-us/windows/win32/api/lmwksta/ns-lmwksta-wksta_info_102
-type WKSTAInfo102 struct {
-	Wki102_platform_id     uint32
+type wKSTAInfo102 struct {
+	wki102_platform_id     uint32
 	wki102_computername    *uint16
 	wki102_langroup        *uint16
-	Wki102_ver_major       uint32
-	Wki102_ver_minor       uint32
+	wki102_ver_major       uint32
+	wki102_ver_minor       uint32
 	wki102_lanroot         *uint16
-	Wki102_logged_on_users uint32
+	wki102_logged_on_users uint32
+}
+
+// WorkstationInfo is an idiomatic wrapper of WKSTAInfo102
+type WorkstationInfo struct {
+	PlatformId    uint32
+	ComputerName  string
+	LanGroup      string
+	VersionMajor  uint32
+	VersionMinor  uint32
+	LanRoot       string
+	LoggedOnUsers uint32
 }
 
 var (
@@ -57,33 +68,42 @@ var NetApiStatus = map[uint32]string{
 
 // NetApiBufferFree frees the memory other network management functions use internally to return information.
 // https://docs.microsoft.com/en-us/windows/win32/api/lmapibuf/nf-lmapibuf-netapibufferfree
-func NetApiBufferFree(buffer *WKSTAInfo102) {
+func netApiBufferFree(buffer *wKSTAInfo102) {
 	procNetApiBufferFree.Call(uintptr(unsafe.Pointer(buffer)))
 }
 
 // NetWkstaGetInfo returns information about the configuration of a workstation.
+// WARNING: The caller must call netApiBufferFree to free the memory allocated by this function.
 // https://docs.microsoft.com/en-us/windows/win32/api/lmwksta/nf-lmwksta-netwkstagetinfo
-func NetWkstaGetInfo() (WKSTAInfo102, uint32, error) {
-	// Struct
-	var lpwi *WKSTAInfo102
-	pLpwi := uintptr(unsafe.Pointer(&lpwi))
-
-	// Null value
-	var nullptr = uintptr(0)
-
-	// Level
+func netWkstaGetInfo() (*wKSTAInfo102, uint32, error) {
+	var lpwi *wKSTAInfo102
 	pLevel := uintptr(102)
 
-	// Func call
-	r1, _, _ := procNetWkstaGetInfo.Call(nullptr, pLevel, pLpwi)
+	r1, _, _ := procNetWkstaGetInfo.Call(0, pLevel, uintptr(unsafe.Pointer(&lpwi)))
 
 	if ret := *(*uint32)(unsafe.Pointer(&r1)); ret != 0 {
-		return WKSTAInfo102{}, ret, errors.New(NetApiStatus[ret])
+		return nil, ret, errors.New(NetApiStatus[ret])
 	}
 
-	// Derence the pointer and return the object so we can safely clear the buffer.
-	var deref WKSTAInfo102 = *lpwi
-	defer NetApiBufferFree(lpwi)
+	return lpwi, 0, nil
+}
 
-	return deref, 0, nil
+// GetWorkstationInfo is an idiomatic wrapper for netWkstaGetInfo
+func GetWorkstationInfo() (WorkstationInfo, error) {
+	info, _, err := netWkstaGetInfo()
+	if err != nil {
+		return WorkstationInfo{}, err
+	}
+	workstationInfo := WorkstationInfo{
+		PlatformId:    info.wki102_platform_id,
+		ComputerName:  windows.UTF16PtrToString(info.wki102_computername),
+		LanGroup:      windows.UTF16PtrToString(info.wki102_langroup),
+		VersionMajor:  info.wki102_ver_major,
+		VersionMinor:  info.wki102_ver_minor,
+		LanRoot:       windows.UTF16PtrToString(info.wki102_lanroot),
+		LoggedOnUsers: info.wki102_logged_on_users,
+	}
+	// Free the memory allocated by netapi
+	netApiBufferFree(info)
+	return workstationInfo, nil
 }
