@@ -98,21 +98,24 @@ var (
 )
 
 type processCollector struct {
-	StartTime         *prometheus.Desc
-	CPUTimeTotal      *prometheus.Desc
-	HandleCount       *prometheus.Desc
-	IOBytesTotal      *prometheus.Desc
-	IOOperationsTotal *prometheus.Desc
-	PageFaultsTotal   *prometheus.Desc
-	PageFileBytes     *prometheus.Desc
-	PoolBytes         *prometheus.Desc
-	PriorityBase      *prometheus.Desc
-	PrivateBytes      *prometheus.Desc
-	ThreadCount       *prometheus.Desc
+	StartTime          *prometheus.Desc
+	CPUTimeTotal       *prometheus.Desc
+	HandleCount        *prometheus.Desc
+	IOBytesTotal       *prometheus.Desc
+	IOOperationsTotal  *prometheus.Desc
+	PageFaultsTotal    *prometheus.Desc
+	PageFileBytes      *prometheus.Desc
+	PoolBytes          *prometheus.Desc
+	PriorityBase       *prometheus.Desc
+	PrivateBytes       *prometheus.Desc
+	ThreadCount        *prometheus.Desc
 	VirtualBytes      *prometheus.Desc
 	WorkingSetPrivate *prometheus.Desc
 	WorkingSetPeak    *prometheus.Desc
 	WorkingSet        *prometheus.Desc
+	GpuSharedMemory    *prometheus.Desc
+	GpuDedicatedMemory *prometheus.Desc
+	GpuUsage           *prometheus.Desc
 
 	processWhitelistPattern *regexp.Regexp
 	processBlacklistPattern *regexp.Regexp
@@ -239,6 +242,24 @@ func newProcessCollector() (Collector, error) {
 			[]string{"process", "process_id", "creating_process_id"},
 			nil,
 		),
+		GpuSharedMemory: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "gpu_shared_memory"),
+			"Number of bytes of system memory used as shared memory by the gpu.",
+			[]string{"process", "process_id", "creating_process_id", "gpu_title"},
+			nil,
+		),
+		GpuDedicatedMemory: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "gpu_dedicated_memory"),
+			"Number of bytes of dedicated gpu memory used on the gpu.",
+			[]string{"process", "process_id", "creating_process_id", "gpu_title"},
+			nil,
+		),
+		GpuUsage: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "gpu_usage"),
+			"Gpu usage percentage.",
+			[]string{"process", "process_id", "creating_process_id", "gpu_title"},
+			nil,
+		),
 		processWhitelistPattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *processWhitelist)),
 		processBlacklistPattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *processBlacklist)),
 
@@ -278,21 +299,77 @@ type perflibProcess struct {
 	WorkingSet              float64 `perflib:"Working Set"`
 }
 
-type perflibGpuProcessMemory struct {
+type perflibProcessGpuMemory struct {
 	Name           string
 	DedicatedUsage float64 `perflib:"Dedicated Usage"`
 	SharedUsage    float64 `perflib:"Shared Usage"`
 }
 
-type perflibGpuEngine struct {
+type perflibProcessGpuEngine struct {
 	Name                  string
 	UtilizationPercentage float64 `perflib:"Utilization Percentage"`
 }
 
-type ProcessGpuMetrics struct {
+type processGpuMetrics struct {
 	DedicatedUsage        map[string]float64
 	SharedUsage           map[string]float64
 	UtilizationPercentage map[string]float64
+}
+
+func createProcessGpuMetrics() *processGpuMetrics {
+	return &processGpuMetrics{
+		DedicatedUsage:        make(map[string]float64),
+		SharedUsage:           make(map[string]float64),
+		UtilizationPercentage: make(map[string]float64),
+	}
+}
+
+func (processGpuMetrics *processGpuMetrics) setProcessGpuMemory(processGpuMemory perflibProcessGpuMemory, gpuTitle string) {
+	processGpuMetrics.DedicatedUsage[gpuTitle] = processGpuMemory.DedicatedUsage
+	processGpuMetrics.SharedUsage[gpuTitle] = processGpuMemory.SharedUsage
+}
+
+func (processGpuMetrics *processGpuMetrics) setProcessGpuEngineUsage(processGpuEngine perflibProcessGpuEngine, gpuTitle string) {
+	processGpuMetrics.UtilizationPercentage[gpuTitle] = processGpuEngine.UtilizationPercentage
+}
+
+func (processGpuMetrics *processGpuMetrics) exposeMetrics(ch chan<- prometheus.Metric, c *processCollector, processName string, pid string, cpid string) {
+	for gpuTitle, sharedUsage := range processGpuMetrics.SharedUsage {
+		ch <- prometheus.MustNewConstMetric(
+			c.GpuSharedMemory,
+			prometheus.GaugeValue,
+			sharedUsage,
+			processName,
+			pid,
+			cpid,
+			gpuTitle,
+		)
+	}
+
+	for gpuTitle, dedicatedUsage := range processGpuMetrics.DedicatedUsage {
+		ch <- prometheus.MustNewConstMetric(
+			c.GpuDedicatedMemory,
+			prometheus.GaugeValue,
+			dedicatedUsage,
+			processName,
+			pid,
+			cpid,
+			gpuTitle,
+		)
+	}
+
+	for gpuTitle, utilizationPercentage := range processGpuMetrics.UtilizationPercentage {
+		ch <- prometheus.MustNewConstMetric(
+			c.GpuUsage,
+			prometheus.GaugeValue,
+			utilizationPercentage,
+			processName,
+			pid,
+			cpid,
+			gpuTitle,
+		)
+	}
+
 }
 
 type WorkerProcess struct {
@@ -314,38 +391,40 @@ func (c *processCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metr
 		return err
 	}
 
-	gpuProcessMemory := make([]perflibGpuProcessMemory, 0)
-	err = unmarshalObject(ctx.perfObjects["GPU Process Memory"], &gpuProcessMemory)
+	processGpuMemory := make([]perflibProcessGpuMemory, 0)
+	err = unmarshalObject(ctx.perfObjects["GPU Process Memory"], &processGpuMemory)
 	if err != nil {
 		return err
 	}
 
-	gpuEngine := make([]perflibGpuEngine, 0)
+	gpuEngine := make([]perflibProcessGpuEngine, 0)
 	err = unmarshalObject(ctx.perfObjects["GPU Engine"], &gpuEngine)
-	processGpuMetrics := make(map[string]*ProcessGpuMetrics)
+	processGpuMetrics := make(map[string]*processGpuMetrics)
 	if err != nil {
 		return err
 	}
 
-	for _, gpuProcess := range gpuProcessMemory {
-		pid, luid := extractPidAndLuid(gpuProcess.Name)
+	for _, processGpuMemoryEntry := range processGpuMemory {
+		pid, luid := extractPidAndLuid(processGpuMemoryEntry.Name)
 		_, dxgiAdapterPresent := c.dxgiAdapterLuidDescriptionMap[luid]
 		if dxgiAdapterPresent {
 			_, pidPresent := processGpuMetrics[pid]
 			if pidPresent == false {
-				processGpuMetrics[pid] = &ProcessGpuMetrics{}
+				processGpuMetrics[pid] = createProcessGpuMetrics()
 			}
+			processGpuMetrics[pid].setProcessGpuMemory(processGpuMemoryEntry, c.dxgiAdapterLuidDescriptionMap[luid])
 		}
 
 	}
-	for _, gpuProcess := range gpuEngine {
-		pid, luid := extractPidAndLuid(gpuProcess.Name)
+	for _, processGpuEngineEntry := range gpuEngine {
+		pid, luid := extractPidAndLuid(processGpuEngineEntry.Name)
 		_, dxgiAdapterPresent := c.dxgiAdapterLuidDescriptionMap[luid]
 		if dxgiAdapterPresent {
 			_, pidPresent := processGpuMetrics[pid]
 			if pidPresent == false {
-				processGpuMetrics[pid] = &ProcessGpuMetrics{}
+				processGpuMetrics[pid] = createProcessGpuMetrics()
 			}
+			processGpuMetrics[pid].setProcessGpuEngineUsage(processGpuEngineEntry, c.dxgiAdapterLuidDescriptionMap[luid])
 		}
 	}
 
@@ -571,6 +650,11 @@ func (c *processCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metr
 			pid,
 			cpid,
 		)
+
+		processGpuMetricsEntry, processGpuMetricsEntryPresent := processGpuMetrics[pid]
+		if processGpuMetricsEntryPresent {
+			processGpuMetricsEntry.exposeMetrics(ch, c, processName, pid, cpid)
+		}
 	}
 
 	return nil
