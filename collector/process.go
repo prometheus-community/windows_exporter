@@ -83,7 +83,7 @@ import (
 )
 
 func init() {
-	registerCollector("process", newProcessCollector, "Process", "GPU Process Memory", "GPU Engine")
+	registerCollector("process", newProcessCollector, "Process", "GPU Process Memory", "GPU Engine", "GPU Adapter Memory")
 }
 
 var (
@@ -115,7 +115,6 @@ type processCollector struct {
 	WorkingSet        *prometheus.Desc
 	GpuSharedMemory    *prometheus.Desc
 	GpuDedicatedMemory *prometheus.Desc
-	GpuUsage           *prometheus.Desc
 
 	processWhitelistPattern *regexp.Regexp
 	processBlacklistPattern *regexp.Regexp
@@ -254,12 +253,6 @@ func newProcessCollector() (Collector, error) {
 			[]string{"process", "process_id", "creating_process_id", "gpu_title"},
 			nil,
 		),
-		GpuUsage: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "gpu_usage"),
-			"Gpu usage percentage.",
-			[]string{"process", "process_id", "creating_process_id", "gpu_title"},
-			nil,
-		),
 		processWhitelistPattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *processWhitelist)),
 		processBlacklistPattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *processBlacklist)),
 
@@ -303,6 +296,7 @@ type perflibProcessGpuMemory struct {
 	Name           string
 	DedicatedUsage float64 `perflib:"Dedicated Usage"`
 	SharedUsage    float64 `perflib:"Shared Usage"`
+	TotalCommitted float64 `perflib:"Total Committed"`
 }
 
 type perflibProcessGpuEngine struct {
@@ -313,14 +307,14 @@ type perflibProcessGpuEngine struct {
 type processGpuMetrics struct {
 	DedicatedUsage        map[string]float64
 	SharedUsage           map[string]float64
-	UtilizationPercentage map[string]float64
+	UtilizationPercentage map[string]map[string]float64
 }
 
 func createProcessGpuMetrics() *processGpuMetrics {
 	return &processGpuMetrics{
 		DedicatedUsage:        make(map[string]float64),
 		SharedUsage:           make(map[string]float64),
-		UtilizationPercentage: make(map[string]float64),
+		UtilizationPercentage: make(map[string]map[string]float64),
 	}
 }
 
@@ -330,10 +324,27 @@ func (processGpuMetrics *processGpuMetrics) setProcessGpuMemory(processGpuMemory
 }
 
 func (processGpuMetrics *processGpuMetrics) setProcessGpuEngineUsage(processGpuEngine perflibProcessGpuEngine, gpuTitle string) {
-	processGpuMetrics.UtilizationPercentage[gpuTitle] = processGpuEngine.UtilizationPercentage
+	_, present := processGpuMetrics.UtilizationPercentage[gpuTitle]
+	if present == false {
+		processGpuMetrics.UtilizationPercentage[gpuTitle] = make(map[string]float64)
+	}
+	videoEngineType := extractVideoEngineType(processGpuEngine.Name)
+	if videoEngineType != nil {
+		processGpuMetrics.UtilizationPercentage[gpuTitle][*videoEngineType] = processGpuEngine.UtilizationPercentage
+	}
+}
+
+func printGpuEngineUsage(processGpuMetrics *processGpuMetrics) {
+	for gpuTitle, gpuEngineUsageEntry := range processGpuMetrics.UtilizationPercentage {
+		for gpuEngineTitle, gpuEngineUsage := range gpuEngineUsageEntry {
+			log.Debugf("Engine %s utilization on %s: %f\n", gpuEngineTitle, gpuTitle, gpuEngineUsage)
+		}
+	}
 }
 
 func (processGpuMetrics *processGpuMetrics) exposeMetrics(ch chan<- prometheus.Metric, c *processCollector, processName string, pid string, cpid string) {
+	// this may come in handy when someone wants to deal with the usage and different engine types
+	// printGpuEngineUsage(processGpuMetrics)
 	for gpuTitle, sharedUsage := range processGpuMetrics.SharedUsage {
 		ch <- prometheus.MustNewConstMetric(
 			c.GpuSharedMemory,
@@ -357,19 +368,6 @@ func (processGpuMetrics *processGpuMetrics) exposeMetrics(ch chan<- prometheus.M
 			gpuTitle,
 		)
 	}
-
-	for gpuTitle, utilizationPercentage := range processGpuMetrics.UtilizationPercentage {
-		ch <- prometheus.MustNewConstMetric(
-			c.GpuUsage,
-			prometheus.GaugeValue,
-			utilizationPercentage,
-			processName,
-			pid,
-			cpid,
-			gpuTitle,
-		)
-	}
-
 }
 
 type WorkerProcess struct {
@@ -382,6 +380,16 @@ var pidLuidRegexp = regexp.MustCompile("pid_([0-9]+)_luid_(0x[0-9a-zA-Z]{8}_0x[0
 func extractPidAndLuid(name string) (string, string) {
 	match := pidLuidRegexp.FindStringSubmatch(name)
 	return match[1], match[2]
+}
+
+var videoEngineTypeRegexp = regexp.MustCompile("engtype_(.+)")
+
+func extractVideoEngineType(name string) *string {
+	match := videoEngineTypeRegexp.FindStringSubmatch(name)
+	if match != nil {
+		return &match[1]
+	}
+	return nil
 }
 
 func (c *processCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
