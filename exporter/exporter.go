@@ -1,21 +1,8 @@
-// +build windows
-
-package main
+package exporter
 
 import (
 	"encoding/json"
 	"fmt"
-	"net/http"
-	_ "net/http/pprof"
-	"os"
-	"sort"
-	"strconv"
-	"strings"
-	"sync"
-	"time"
-
-	"golang.org/x/sys/windows/svc"
-
 	"github.com/StackExchange/wmi"
 	"github.com/prometheus-community/windows_exporter/collector"
 	"github.com/prometheus-community/windows_exporter/config"
@@ -23,12 +10,20 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/log"
 	"github.com/prometheus/common/version"
+	"golang.org/x/sys/windows/svc"
 	"gopkg.in/alecthomas/kingpin.v2"
+	"net/http"
+	"os"
+	"sort"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
 )
 
-type windowsCollector struct {
+type WindowsCollector struct {
 	maxScrapeDuration time.Duration
-	collectors        map[string]collector.Collector
+	Collectors        map[string]collector.Collector
 }
 
 // Same struct prometheus uses for their /version endpoint.
@@ -43,7 +38,7 @@ type prometheusVersion struct {
 }
 
 const (
-	defaultCollectors            = "cpu,cs,logical_disk,net,os,service,system,textfile"
+	defaultCollectors            = "cpu,cs,logical_disk,net,os,service,system"
 	defaultCollectorsPlaceholder = "[defaults]"
 	serviceName                  = "windows_exporter"
 )
@@ -77,7 +72,7 @@ var (
 
 // Describe sends all the descriptors of the collectors included to
 // the provided channel.
-func (coll windowsCollector) Describe(ch chan<- *prometheus.Desc) {
+func (coll WindowsCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- scrapeDurationDesc
 	ch <- scrapeSuccessDesc
 }
@@ -92,12 +87,15 @@ const (
 
 // Collect sends the collected metrics from each of the collectors to
 // prometheus.
-func (coll windowsCollector) Collect(ch chan<- prometheus.Metric) {
+func (coll WindowsCollector) Collect(ch chan<- prometheus.Metric) {
 	t := time.Now()
-	cs := make([]string, 0, len(coll.collectors))
-	for name := range coll.collectors {
+	collectors := make([]collector.Collector, 0, len(coll.Collectors))
+
+	cs := make([]string, 0, len(collectors))
+	for name := range coll.Collectors {
 		cs = append(cs, name)
 	}
+
 	scrapeContext, err := collector.PrepareScrapeContext(cs)
 	ch <- prometheus.MustNewConstMetric(
 		snapshotDuration,
@@ -110,9 +108,9 @@ func (coll windowsCollector) Collect(ch chan<- prometheus.Metric) {
 	}
 
 	wg := sync.WaitGroup{}
-	wg.Add(len(coll.collectors))
+	wg.Add(len(coll.Collectors))
 	collectorOutcomes := make(map[string]collectorOutcome)
-	for name := range coll.collectors {
+	for name := range coll.Collectors {
 		collectorOutcomes[name] = pending
 	}
 
@@ -129,7 +127,7 @@ func (coll windowsCollector) Collect(ch chan<- prometheus.Metric) {
 		}
 	}()
 
-	for name, c := range coll.collectors {
+	for name, c := range coll.Collectors {
 		go func(name string, c collector.Collector) {
 			defer wg.Done()
 			outcome := execute(name, c, scrapeContext, metricsBuffer)
@@ -224,18 +222,19 @@ func expandEnabledCollectors(enabled string) []string {
 	return result
 }
 
-func loadCollectors(list string) (map[string]collector.Collector, error) {
+func loadCollectors(list string, config map[string]*collector.ConfigInstance) (map[string]collector.Collector, error) {
 	collectors := map[string]collector.Collector{}
 	enabled := expandEnabledCollectors(list)
-
 	for _, name := range enabled {
-		c, err := collector.Build(name)
+		c, err := collector.Build(name, config)
 		if err != nil {
 			return nil, err
 		}
+		if v, ok := c.(collector.ConfigurableCollector) ; ok {
+			v.Setup()
+		}
 		collectors[name] = c
 	}
-
 	return collectors, nil
 }
 
@@ -252,45 +251,66 @@ func initWbem() {
 	wmi.DefaultClient.SWbemServicesClient = s
 }
 
-func main() {
+func NewWindowsCollector(config map[string]*collector.ConfigInstance) *WindowsCollector {
+	enabledCollectors, exist := config["collectors.enabled"]
+	if exist == false {
+		enabledCollectors.Value = defaultCollectors
+	}
+	initWbem()
+	collectors, err := loadCollectors(enabledCollectors.Value, config)
+	if err != nil {
+		log.Fatalf("Couldn't load collectors: %s", err)
+	}
+	log.Infof("Enabled collectors: %v", strings.Join(keys(collectors), ", "))
+	return &WindowsCollector{
+		Collectors:        collectors,
+		maxScrapeDuration: time.Duration(10 * float64(time.Second)),
+	}
+
+}
+
+
+func StartExecutable() {
+
+	kingpinApp := kingpin.New("windows_exporter", "")
 	var (
-		configFile = kingpin.Flag(
+		configFile = kingpinApp.Flag(
 			"config.file",
 			"YAML configuration file to use. Values set in this file will be overriden by CLI flags.",
 		).String()
-		listenAddress = kingpin.Flag(
+		listenAddress = kingpinApp.Flag(
 			"telemetry.addr",
 			"host:port for exporter.",
 		).Default(":9182").String()
-		metricsPath = kingpin.Flag(
+		metricsPath = kingpinApp.Flag(
 			"telemetry.path",
 			"URL path for surfacing collected metrics.",
 		).Default("/metrics").String()
-		maxRequests = kingpin.Flag(
+		maxRequests = kingpinApp.Flag(
 			"telemetry.max-requests",
 			"Maximum number of concurrent requests. 0 to disable.",
 		).Default("5").Int()
-		enabledCollectors = kingpin.Flag(
+		enabledCollectors = kingpinApp.Flag(
 			"collectors.enabled",
 			"Comma-separated list of collectors to use. Use '[defaults]' as a placeholder for all the collectors enabled by default.").
 			Default(defaultCollectors).String()
-		printCollectors = kingpin.Flag(
+		printCollectors = kingpinApp.Flag(
 			"collectors.print",
 			"If true, print available collectors and exit.",
 		).Bool()
-		timeoutMargin = kingpin.Flag(
+		timeoutMargin = kingpinApp.Flag(
 			"scrape.timeout-margin",
 			"Seconds to subtract from the timeout allowed by the client. Tune to allow for overhead or high loads.",
 		).Default("0.5").Float64()
 	)
-
+	configMap := collector.ApplyKingpinConfig(kingpinApp)
 	log.AddFlags(kingpin.CommandLine)
-	kingpin.Version(version.Print("windows_exporter"))
-	kingpin.HelpFlag.Short('h')
+	kingpinApp.Version(version.Print("windows_exporter"))
+	kingpinApp.HelpFlag.Short('h')
 
-	// Load values from configuration file(s). Executable flags must first be parsed, in order
+	// Load values from configuration file(s). Executable flags must first be parsed, in orderF
 	// to load the specified file(s).
-	kingpin.Parse()
+	kingpinApp.Parse(os.Args[1:])
 
 	if *configFile != "" {
 		resolver, err := config.NewResolver(*configFile)
@@ -302,9 +322,8 @@ func main() {
 			log.Fatalf("%v\n", err)
 		}
 		// Parse flags once more to include those discovered in configuration file(s).
-		kingpin.Parse()
+		kingpinApp.Parse(os.Args[1:])
 	}
-
 	if *printCollectors {
 		collectors := collector.Available()
 		collectorNames := make(sort.StringSlice, 0, len(collectors))
@@ -335,8 +354,7 @@ func main() {
 			}
 		}()
 	}
-
-	collectors, err := loadCollectors(*enabledCollectors)
+	collectors, err := loadCollectors(*enabledCollectors, configMap)
 	if err != nil {
 		log.Fatalf("Couldn't load collectors: %s", err)
 	}
@@ -345,7 +363,7 @@ func main() {
 
 	h := &metricsHandler{
 		timeoutMargin: *timeoutMargin,
-		collectorFactory: func(timeout time.Duration, requestedCollectors []string) (error, *windowsCollector) {
+		collectorFactory: func(timeout time.Duration, requestedCollectors []string) (error, *WindowsCollector) {
 			filteredCollectors := make(map[string]collector.Collector)
 			// scrape all enabled collectors if no collector is requested
 			if len(requestedCollectors) == 0 {
@@ -358,8 +376,8 @@ func main() {
 				}
 				filteredCollectors[name] = col
 			}
-			return nil, &windowsCollector{
-				collectors:        filteredCollectors,
+			return nil, &WindowsCollector{
+				Collectors:        filteredCollectors,
 				maxScrapeDuration: timeout,
 			}
 		},
@@ -473,7 +491,7 @@ loop:
 
 type metricsHandler struct {
 	timeoutMargin    float64
-	collectorFactory func(timeout time.Duration, requestedCollectors []string) (error, *windowsCollector)
+	collectorFactory func(timeout time.Duration, requestedCollectors []string) (error, *WindowsCollector)
 }
 
 func (mh *metricsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {

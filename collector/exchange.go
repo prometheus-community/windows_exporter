@@ -9,21 +9,34 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
-	"gopkg.in/alecthomas/kingpin.v2"
 )
 
+var exchangeList = Config{
+	Name:     "collectors.exchange.list",
+	HelpText: "List the collectors along with their perflib object name/ids",
+	Default:  "false",
+}
+var exchangeEnabled = Config{
+	Name:     "collectors.exchange.enabled",
+	HelpText: "Comma-separated list of collectors to use. Defaults to all, if not specified.",
+	Default:  "",
+}
+
+
 func init() {
-	registerCollector("exchange", newExchangeCollector,
-		"MSExchange ADAccess Processes",
-		"MSExchangeTransport Queues",
-		"MSExchange HttpProxy",
-		"MSExchange ActiveSync",
-		"MSExchange Availability Service",
-		"MSExchange OWA",
-		"MSExchangeAutodiscover",
-		"MSExchange WorkloadManagement Workloads",
-		"MSExchange RpcClientAccess",
-	)
+	registerCollectorWithConfig("exchange",newExchangeCollector, []Config{
+		exchangeList,
+		exchangeEnabled,
+	},
+"MSExchange ADAccess Processes",
+				"MSExchangeTransport Queues",
+				"MSExchange HttpProxy",
+				"MSExchange ActiveSync",
+				"MSExchange Availability Service",
+				"MSExchange OWA",
+				"MSExchangeAutodiscover",
+				"MSExchange WorkloadManagement Workloads",
+				"MSExchange RpcClientAccess")
 }
 
 type exchangeCollector struct {
@@ -66,7 +79,56 @@ type exchangeCollector struct {
 	UserCount                               *prometheus.Desc
 
 	enabledCollectors []string
+
+	ArgExchangeListAllCollectors bool
+	ArgExchangeCollectorsEnabled string
 }
+
+func (c *exchangeCollector) Setup() {
+	collectorDesc := map[string]string{
+		"ADAccessProcesses":   "[19108] MSExchange ADAccess Processes",
+		"TransportQueues":     "[20524] MSExchangeTransport Queues",
+		"HttpProxy":           "[36934] MSExchange HttpProxy",
+		"ActiveSync":          "[25138] MSExchange ActiveSync",
+		"AvailabilityService": "[24914] MSExchange Availability Service",
+		"OutlookWebAccess":    "[24618] MSExchange OWA",
+		"Autodiscover":        "[29240] MSExchange Autodiscover",
+		"WorkloadManagement":  "[19430] MSExchange WorkloadManagement Workloads",
+		"RpcClientAccess":     "[29336] MSExchange RpcClientAccess",
+	}
+
+	if c.ArgExchangeListAllCollectors {
+		fmt.Printf("%-32s %-32s\n", "Collector Name", "[PerfID] Perflib Object")
+		for _, cname := range exchangeAllCollectorNames {
+			fmt.Printf("%-32s %-32s\n", cname, collectorDesc[cname])
+		}
+		os.Exit(0)
+	}
+
+	if c.ArgExchangeCollectorsEnabled == "" {
+		for _, collectorName := range exchangeAllCollectorNames {
+			c.enabledCollectors = append(c.enabledCollectors, collectorName)
+		}
+	} else {
+		for _, collectorName := range strings.Split(c.ArgExchangeCollectorsEnabled, ",") {
+			if find(exchangeAllCollectorNames, collectorName) {
+				c.enabledCollectors = append(c.enabledCollectors, collectorName)
+			} else {
+				fmt.Errorf("Unknown exchange collector: %s", collectorName)
+			}
+		}
+	}
+}
+
+func (c *exchangeCollector) ApplyConfig(m map[string]*ConfigInstance) {
+	listAll, exists := m[exchangeList.Name]
+	if exists && listAll.Exists {
+		c.ArgExchangeListAllCollectors = exists
+	}
+
+	c.ArgExchangeCollectorsEnabled = getValueFromMap(m,exchangeEnabled.Name)
+}
+
 
 var (
 	// All available collector functions
@@ -81,20 +143,10 @@ var (
 		"WorkloadManagement",
 		"RpcClientAccess",
 	}
-
-	argExchangeListAllCollectors = kingpin.Flag(
-		"collectors.exchange.list",
-		"List the collectors along with their perflib object name/ids",
-	).Bool()
-
-	argExchangeCollectorsEnabled = kingpin.Flag(
-		"collectors.exchange.enabled",
-		"Comma-separated list of collectors to use. Defaults to all, if not specified.",
-	).Default("").String()
 )
 
 // newExchangeCollector returns a new Collector
-func newExchangeCollector() (Collector, error) {
+func newExchangeCollector() (ConfigurableCollector, error) {
 
 	// desc creates a new prometheus description
 	desc := func(metricName string, description string, labels ...string) *prometheus.Desc {
@@ -106,7 +158,7 @@ func newExchangeCollector() (Collector, error) {
 		)
 	}
 
-	c := exchangeCollector{
+	ec := exchangeCollector{
 		RPCAveragedLatency:                      desc("rpc_avg_latency_sec", "The latency (sec), averaged for the past 1024 packets"),
 		RPCRequests:                             desc("rpc_requests", "Number of client requests currently being processed by  the RPC Client Access service"),
 		ActiveUserCount:                         desc("rpc_active_user_count", "Number of unique users that have shown some kind of activity in the last 2 minutes"),
@@ -147,42 +199,7 @@ func newExchangeCollector() (Collector, error) {
 
 		enabledCollectors: make([]string, 0, len(exchangeAllCollectorNames)),
 	}
-
-	collectorDesc := map[string]string{
-		"ADAccessProcesses":   "[19108] MSExchange ADAccess Processes",
-		"TransportQueues":     "[20524] MSExchangeTransport Queues",
-		"HttpProxy":           "[36934] MSExchange HttpProxy",
-		"ActiveSync":          "[25138] MSExchange ActiveSync",
-		"AvailabilityService": "[24914] MSExchange Availability Service",
-		"OutlookWebAccess":    "[24618] MSExchange OWA",
-		"Autodiscover":        "[29240] MSExchange Autodiscover",
-		"WorkloadManagement":  "[19430] MSExchange WorkloadManagement Workloads",
-		"RpcClientAccess":     "[29336] MSExchange RpcClientAccess",
-	}
-
-	if *argExchangeListAllCollectors {
-		fmt.Printf("%-32s %-32s\n", "Collector Name", "[PerfID] Perflib Object")
-		for _, cname := range exchangeAllCollectorNames {
-			fmt.Printf("%-32s %-32s\n", cname, collectorDesc[cname])
-		}
-		os.Exit(0)
-	}
-
-	if *argExchangeCollectorsEnabled == "" {
-		for _, collectorName := range exchangeAllCollectorNames {
-			c.enabledCollectors = append(c.enabledCollectors, collectorName)
-		}
-	} else {
-		for _, collectorName := range strings.Split(*argExchangeCollectorsEnabled, ",") {
-			if find(exchangeAllCollectorNames, collectorName) {
-				c.enabledCollectors = append(c.enabledCollectors, collectorName)
-			} else {
-				return nil, fmt.Errorf("Unknown exchange collector: %s", collectorName)
-			}
-		}
-	}
-
-	return &c, nil
+	return &ec, nil
 }
 
 // Collect collects exchange metrics and sends them to prometheus
