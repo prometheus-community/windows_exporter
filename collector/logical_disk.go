@@ -1,4 +1,4 @@
-// +build windows
+// +build ignore
 
 package collector
 
