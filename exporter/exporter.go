@@ -230,9 +230,6 @@ func loadCollectors(list string, config map[string]*collector.ConfigInstance) (m
 		if err != nil {
 			return nil, err
 		}
-		if v, ok := c.(collector.ConfigurableCollector) ; ok {
-			v.Setup()
-		}
 		collectors[name] = c
 	}
 	return collectors, nil
@@ -251,6 +248,7 @@ func initWbem() {
 	wmi.DefaultClient.SWbemServicesClient = s
 }
 
+// Used to instantiate a new collector for use in a library
 func NewWindowsCollector(config map[string]*collector.ConfigInstance) *WindowsCollector {
 	enabledCollectors, exist := config["collectors.enabled"]
 	if exist == false {
@@ -303,7 +301,6 @@ func StartExecutable() {
 			"Seconds to subtract from the timeout allowed by the client. Tune to allow for overhead or high loads.",
 		).Default("0.5").Float64()
 	)
-	configMap := collector.ApplyKingpinConfig(kingpinApp)
 	log.AddFlags(kingpin.CommandLine)
 	kingpinApp.Version(version.Print("windows_exporter"))
 	kingpinApp.HelpFlag.Short('h')
@@ -354,6 +351,9 @@ func StartExecutable() {
 			}
 		}()
 	}
+
+	// Take our config/cmd line parameters and transform them into a map
+	configMap := collector.ApplyKingpinConfig(kingpinApp)
 	collectors, err := loadCollectors(*enabledCollectors, configMap)
 	if err != nil {
 		log.Fatalf("Couldn't load collectors: %s", err)

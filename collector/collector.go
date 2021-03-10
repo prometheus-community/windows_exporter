@@ -55,50 +55,24 @@ func getWindowsVersion() float64 {
 Builders contains the function necessary to build a new collector
 ConfigMap contains the collection of Configuration options used for the kingpin integration
 ConfigInstanceMap contains the actual values for the config, when used as a standalone the Instance is a singleton,
-	when used as a Library it is not used at all but instead of map is passed into the NewWindowsCollector to instantiate
-	from that specific configuration
+	when used as a Library it is not used at all but instead created from the config
 */
 var (
-	builders                = make(map[string]builderFactory)
+	builders                = make(map[string]func() (Collector, error))
 	configMap               = make(map[string]Config)
 	configInstanceMap       = make(map[string]*ConfigInstance)
 	perfCounterDependencies = make(map[string]string)
 
 )
 
-/*
-These whole build* interfaces and functions are to enforce compile time checks for the RegisterCollector classes.
-*/
-type builderFactory interface {
-	build() (Collector, error)
-}
-
-type buildInstance struct {
-	instanceBuilder func() (Collector, error)
-}
-
-func (b *buildInstance) build() (Collector, error) {
-	return b.instanceBuilder()
-}
-
-
-type buildConfigInstance struct {
-	instanceBuilder func() (ConfigurableCollector, error)
-}
-
-func (b *buildConfigInstance) build() (Collector, error) {
-	return b.instanceBuilder()
-}
 
 func registerCollector(name string, builder func() (Collector, error), perfCounterNames ...string) {
-	instance := buildInstance{instanceBuilder: builder}
-	builders[name] = &instance
+	builders[name] = builder
 	perfCounterDependencies[name] = addPerfCounterDependencies(perfCounterNames)
 }
 
-func registerCollectorWithConfig(name string, builder func() (ConfigurableCollector, error), config []Config, perfCounterNames ...string) {
-	instance := buildConfigInstance{instanceBuilder: builder}
-	builders[name] = &instance
+func registerCollectorWithConfig(name string, builder func() (Collector, error), config []Config, perfCounterNames ...string) {
+	builders[name] = builder
 	for _,v := range config {
 		ci := &ConfigInstance{
 			Value:  "",
@@ -111,6 +85,7 @@ func registerCollectorWithConfig(name string, builder func() (ConfigurableCollec
 }
 
 func ApplyKingpinConfig(app *kingpin.Application) map[string]*ConfigInstance {
+	// associate each kingpin var with a var in the instance map
 	for _,v := range configInstanceMap {
 		app.Flag(v.Name,v.HelpText).Default(v.Default).Action(setExists).StringVar(&v.Value)
 	}
@@ -132,14 +107,20 @@ func setExists(ctx *kingpin.ParseContext) error {
 		} else {
 			continue
 		}
-		configInstanceMap[name].Exists = true
+		// There are some high level configurations that dont apply to collectors that
+		// dont exist in the config instance map
+		value, exists := configInstanceMap[name]
+		if exists == false {
+			continue
+		}
+		value.Exists = true
 	}
 
 	return nil
 }
 
 /*
-Used to hole the metadata about a configuration option
+Used to hold the metadata about a configuration option
 */
 type Config struct {
 	Name string
@@ -169,10 +150,11 @@ func Build(collector string, settings map[string]*ConfigInstance) (Collector, er
 	if !exists {
 		return nil, fmt.Errorf("Unknown collector %q", collector)
 	}
-	c, err := builder.build()
+	c, err := builder()
 	if err != nil {
 		return nil, err
 	}
+	// If the collector is configurable then pass the instance of the config
 	if v, ok := c.(ConfigurableCollector) ; ok {
 		v.ApplyConfig(settings)
 	}
@@ -210,10 +192,7 @@ the same type which means we cannot use the global var based configuration.
 Setup is used for any checking that needs to happen before the collector starts
 */
 type ConfigurableCollector interface {
-	Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) (err error)
 	ApplyConfig(map[string]*ConfigInstance)
-	Setup()
-
 }
 
 

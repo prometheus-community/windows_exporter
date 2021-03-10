@@ -85,7 +85,14 @@ type exchangeCollector struct {
 	ArgExchangeCollectorsEnabled string
 }
 
-func (c *exchangeCollector) Setup() {
+
+func (c *exchangeCollector) ApplyConfig(m map[string]*ConfigInstance) {
+	listAll, exists := m[exchangeList.Name]
+	if exists && listAll.Exists {
+		c.ArgExchangeListAllCollectors = exists
+	}
+
+	c.ArgExchangeCollectorsEnabled = getValueFromMap(m,exchangeEnabled.Name)
 	collectorDesc := map[string]string{
 		"ADAccessProcesses":   "[19108] MSExchange ADAccess Processes",
 		"TransportQueues":     "[20524] MSExchangeTransport Queues",
@@ -121,15 +128,6 @@ func (c *exchangeCollector) Setup() {
 	}
 }
 
-func (c *exchangeCollector) ApplyConfig(m map[string]*ConfigInstance) {
-	listAll, exists := m[exchangeList.Name]
-	if exists && listAll.Exists {
-		c.ArgExchangeListAllCollectors = exists
-	}
-
-	c.ArgExchangeCollectorsEnabled = getValueFromMap(m,exchangeEnabled.Name)
-}
-
 
 var (
 	// All available collector functions
@@ -147,7 +145,7 @@ var (
 )
 
 // newExchangeCollector returns a new Collector
-func newExchangeCollector() (ConfigurableCollector, error) {
+func newExchangeCollector() (Collector, error) {
 
 	// desc creates a new prometheus description
 	desc := func(metricName string, description string, labels ...string) *prometheus.Desc {

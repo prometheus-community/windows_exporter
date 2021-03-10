@@ -15,7 +15,7 @@ import (
 )
 var (
 	siteWhiteList = Config{
-		Name:     "collector.iis.site-blacklist",
+		Name:     "collector.iis.site-whitelist",
 		HelpText: "Regexp of sites to whitelist. Site name must both match whitelist and not match blacklist to be included.",
 		Default:  ".+",
 	}
@@ -219,13 +219,13 @@ type IISCollector struct {
 
 
 func (c *IISCollector) ApplyConfig(m map[string]*ConfigInstance) {
+
+	//TODO MRD Simplify this down to one block statement
 	c.siteWhitelist = getValueFromMap(m,siteWhiteList.Name)
 	c.appWhitelist = getValueFromMap(m,appWhiteList.Name)
 	c.siteBlacklist = getValueFromMap(m, siteBlackList.Name)
 	c.appBlacklist = getValueFromMap(m,appBlackList.Name)
-}
 
-func (c *IISCollector) Setup() {
 	c.siteWhitelistPattern = regexp.MustCompile(fmt.Sprintf("^(?:%s)$", c.siteWhitelist))
 	c.siteBlacklistPattern = regexp.MustCompile(fmt.Sprintf("^(?:%s)$", c.siteBlacklist))
 
@@ -234,7 +234,7 @@ func (c *IISCollector) Setup() {
 }
 
 // NewIISCollector ...
-func NewIISCollector() (ConfigurableCollector, error) {
+func NewIISCollector() (Collector, error) {
 	const subsystem = "iis"
 
 	buildIIS := &IISCollector{
