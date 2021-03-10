@@ -28,15 +28,16 @@ func init() {
 		exchangeList,
 		exchangeEnabled,
 	},
-"MSExchange ADAccess Processes",
-				"MSExchangeTransport Queues",
-				"MSExchange HttpProxy",
-				"MSExchange ActiveSync",
-				"MSExchange Availability Service",
-				"MSExchange OWA",
-				"MSExchangeAutodiscover",
-				"MSExchange WorkloadManagement Workloads",
-				"MSExchange RpcClientAccess")
+	"MSExchange ADAccess Processes",
+	"MSExchangeTransport Queues",
+	"MSExchange HttpProxy",
+	"MSExchange ActiveSync",
+	"MSExchange Availability Service",
+	"MSExchange OWA",
+	"MSExchangeAutodiscover",
+	"MSExchange WorkloadManagement Workloads",
+	"MSExchange RpcClientAccess",
+	)
 }
 
 type exchangeCollector struct {
@@ -158,7 +159,7 @@ func newExchangeCollector() (ConfigurableCollector, error) {
 		)
 	}
 
-	ec := exchangeCollector{
+	c := exchangeCollector{
 		RPCAveragedLatency:                      desc("rpc_avg_latency_sec", "The latency (sec), averaged for the past 1024 packets"),
 		RPCRequests:                             desc("rpc_requests", "Number of client requests currently being processed by  the RPC Client Access service"),
 		ActiveUserCount:                         desc("rpc_active_user_count", "Number of unique users that have shown some kind of activity in the last 2 minutes"),
@@ -199,7 +200,7 @@ func newExchangeCollector() (ConfigurableCollector, error) {
 
 		enabledCollectors: make([]string, 0, len(exchangeAllCollectorNames)),
 	}
-	return &ec, nil
+	return &c, nil
 }
 
 // Collect collects exchange metrics and sends them to prometheus
