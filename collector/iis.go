@@ -13,6 +13,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
 )
+
 var (
 	siteWhiteList = Config{
 		Name:     "collector.iis.site-whitelist",
@@ -208,29 +209,15 @@ type IISCollector struct {
 	appBlacklistPattern *regexp.Regexp
 
 	iis_version simple_version
-
-	siteWhitelist string
-	siteBlacklist string
-	appWhitelist  string
-	appBlacklist  string
 }
-
-
-
 
 func (c *IISCollector) ApplyConfig(m map[string]*ConfigInstance) {
 
-	//TODO MRD Simplify this down to one block statement
-	c.siteWhitelist = getValueFromMap(m,siteWhiteList.Name)
-	c.appWhitelist = getValueFromMap(m,appWhiteList.Name)
-	c.siteBlacklist = getValueFromMap(m, siteBlackList.Name)
-	c.appBlacklist = getValueFromMap(m,appBlackList.Name)
+	c.siteWhitelistPattern = regexp.MustCompile(fmt.Sprintf("^(?:%s)$", getValueFromMap(m, siteWhiteList.Name)))
+	c.siteBlacklistPattern = regexp.MustCompile(fmt.Sprintf("^(?:%s)$", getValueFromMap(m, siteBlackList.Name)))
 
-	c.siteWhitelistPattern = regexp.MustCompile(fmt.Sprintf("^(?:%s)$", c.siteWhitelist))
-	c.siteBlacklistPattern = regexp.MustCompile(fmt.Sprintf("^(?:%s)$", c.siteBlacklist))
-
-	c.appWhitelistPattern = regexp.MustCompile(fmt.Sprintf("^(?:%s)$", c.appWhitelist))
-	c.appBlacklistPattern = regexp.MustCompile(fmt.Sprintf("^(?:%s)$", c.appBlacklist))
+	c.appWhitelistPattern = regexp.MustCompile(fmt.Sprintf("^(?:%s)$", getValueFromMap(m, appWhiteList.Name)))
+	c.appBlacklistPattern = regexp.MustCompile(fmt.Sprintf("^(?:%s)$", getValueFromMap(m, appBlackList.Name)))
 }
 
 // NewIISCollector ...
@@ -854,7 +841,7 @@ func NewIISCollector() (Collector, error) {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *IISCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *IISCollector) Collect(_ *ScrapeContext, ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ch); err != nil {
 		log.Error("failed collecting iis metrics:", desc, err)
 		return err
