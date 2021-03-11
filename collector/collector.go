@@ -63,12 +63,12 @@ var (
 	perfCounterDependencies = make(map[string]string)
 )
 
-func registerCollector(name string, builder func() (Collector, error), perfCounterNames ...string) {
+func registerCollector(name string, builder collectorBuilder, perfCounterNames ...string) {
 	builders[name] = builder
 	addPerfCounterDependencies(name, perfCounterNames)
 }
 
-func registerCollectorWithConfig(name string, builder func() (Collector, error), config []Config, perfCounterNames ...string) {
+func registerCollectorWithConfig(name string, builder collectorBuilder, config []Config, perfCounterNames ...string) {
 	builders[name] = builder
 	addConfig(config)
 	addPerfCounterDependencies(name, perfCounterNames)
