@@ -63,6 +63,14 @@ var (
 	perfCounterDependencies = make(map[string]string)
 )
 
+func addPerfCounterDependencies(name string, perfCounterNames []string) {
+	perfIndicies := make([]string, 0, len(perfCounterNames))
+	for _, cn := range perfCounterNames {
+		perfIndicies = append(perfIndicies, MapCounterToIndex(cn))
+	}
+	perfCounterDependencies[name] = strings.Join(perfIndicies, " ")
+}
+
 func registerCollector(name string, builder collectorBuilder, perfCounterNames ...string) {
 	builders[name] = builder
 	addPerfCounterDependencies(name, perfCounterNames)
@@ -96,14 +104,6 @@ func Build(collector string, settings map[string]*ConfigInstance) (Collector, er
 		v.ApplyConfig(settings)
 	}
 	return c, err
-}
-
-func addPerfCounterDependencies(name string, perfCounterNames []string) {
-	perfIndicies := make([]string, 0, len(perfCounterNames))
-	for _, cn := range perfCounterNames {
-		perfIndicies = append(perfIndicies, MapCounterToIndex(cn))
-	}
-	perfCounterDependencies[name] = strings.Join(perfIndicies, " ")
 }
 
 func getPerfQuery(collectors []string) string {
