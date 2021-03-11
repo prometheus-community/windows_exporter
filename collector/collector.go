@@ -50,6 +50,8 @@ func getWindowsVersion() float64 {
 	return currentv_flt
 }
 
+type collectorBuilder func() (Collector, error)
+
 /*
 Builders contains the function necessary to build a new collector
 ConfigMap contains the collection of Configuration options used for the kingpin integration
@@ -57,11 +59,9 @@ ConfigInstanceMap contains the actual values for the config, when used as a stan
 	when used as a Library it is not used at all but instead created from the config
 */
 var (
-	builders                = make(map[string]func() (Collector, error))
+	builders                = make(map[string]collectorBuilder)
 	perfCounterDependencies = make(map[string]string)
-
 )
-
 
 func registerCollector(name string, builder func() (Collector, error), perfCounterNames ...string) {
 	builders[name] = builder
@@ -73,8 +73,6 @@ func registerCollectorWithConfig(name string, builder func() (Collector, error),
 	addConfig(config)
 	addPerfCounterDependencies(name, perfCounterNames)
 }
-
-
 
 func Available() []string {
 	cs := make([]string, 0, len(builders))
@@ -94,7 +92,7 @@ func Build(collector string, settings map[string]*ConfigInstance) (Collector, er
 		return nil, err
 	}
 	// If the collector is configurable then pass the instance of the config
-	if v, ok := c.(ConfigurableCollector) ; ok {
+	if v, ok := c.(ConfigurableCollector); ok {
 		v.ApplyConfig(settings)
 	}
 	return c, err
@@ -107,7 +105,6 @@ func addPerfCounterDependencies(name string, perfCounterNames []string) {
 	}
 	perfCounterDependencies[name] = strings.Join(perfIndicies, " ")
 }
-
 
 func getPerfQuery(collectors []string) string {
 	parts := make([]string, 0, len(collectors))
@@ -123,7 +120,6 @@ type Collector interface {
 	// Get new metrics and expose them via prometheus registry.
 	Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) (err error)
 }
-
 
 type ScrapeContext struct {
 	perfObjects map[string]*perflib.PerfObject
