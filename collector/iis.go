@@ -213,11 +213,11 @@ type IISCollector struct {
 
 func (c *IISCollector) ApplyConfig(m map[string]*ConfigInstance) {
 
-	c.siteWhitelistPattern = regexp.MustCompile(fmt.Sprintf("^(?:%s)$", getValueFromMap(m, siteWhiteList.Name)))
-	c.siteBlacklistPattern = regexp.MustCompile(fmt.Sprintf("^(?:%s)$", getValueFromMap(m, siteBlackList.Name)))
+	c.siteWhitelistPattern = regexp.MustCompile(fmt.Sprintf("^(?:%s)$", getValueFromMap(m, siteWhiteList)))
+	c.siteBlacklistPattern = regexp.MustCompile(fmt.Sprintf("^(?:%s)$", getValueFromMap(m, siteBlackList)))
 
-	c.appWhitelistPattern = regexp.MustCompile(fmt.Sprintf("^(?:%s)$", getValueFromMap(m, appWhiteList.Name)))
-	c.appBlacklistPattern = regexp.MustCompile(fmt.Sprintf("^(?:%s)$", getValueFromMap(m, appBlackList.Name)))
+	c.appWhitelistPattern = regexp.MustCompile(fmt.Sprintf("^(?:%s)$", getValueFromMap(m, appWhiteList)))
+	c.appBlacklistPattern = regexp.MustCompile(fmt.Sprintf("^(?:%s)$", getValueFromMap(m, appBlackList)))
 }
 
 // NewIISCollector ...

@@ -88,11 +88,11 @@ type exchangeCollector struct {
 
 func (c *exchangeCollector) ApplyConfig(m map[string]*ConfigInstance) {
 	listAll, exists := m[exchangeList.Name]
-	if exists && listAll.Exists {
+	if exists && listAll.IsValueSet {
 		c.ArgExchangeListAllCollectors = exists
 	}
 
-	c.ArgExchangeCollectorsEnabled = getValueFromMap(m,exchangeEnabled.Name)
+	c.ArgExchangeCollectorsEnabled = getValueFromMap(m,exchangeEnabled)
 	collectorDesc := map[string]string{
 		"ADAccessProcesses":   "[19108] MSExchange ADAccess Processes",
 		"TransportQueues":     "[20524] MSExchangeTransport Queues",

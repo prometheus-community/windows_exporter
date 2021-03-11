@@ -2,7 +2,6 @@ package collector
 
 import (
 	"fmt"
-	"gopkg.in/alecthomas/kingpin.v2"
 	"sort"
 	"strconv"
 	"strings"
@@ -59,8 +58,6 @@ ConfigInstanceMap contains the actual values for the config, when used as a stan
 */
 var (
 	builders                = make(map[string]func() (Collector, error))
-	configMap               = make(map[string]Config)
-	configInstanceMap       = make(map[string]*ConfigInstance)
 	perfCounterDependencies = make(map[string]string)
 
 )
@@ -68,74 +65,16 @@ var (
 
 func registerCollector(name string, builder func() (Collector, error), perfCounterNames ...string) {
 	builders[name] = builder
-	perfCounterDependencies[name] = addPerfCounterDependencies(perfCounterNames)
+	addPerfCounterDependencies(name, perfCounterNames)
 }
 
 func registerCollectorWithConfig(name string, builder func() (Collector, error), config []Config, perfCounterNames ...string) {
 	builders[name] = builder
-	for _,v := range config {
-		ci := &ConfigInstance{
-			Value:  "",
-			Config: v,
-		}
-		configInstanceMap[v.Name] = ci
-		configMap[v.Name] = v
-	}
-	perfCounterDependencies[name] = addPerfCounterDependencies(perfCounterNames)
+	addConfig(config)
+	addPerfCounterDependencies(name, perfCounterNames)
 }
 
-func ApplyKingpinConfig(app *kingpin.Application) map[string]*ConfigInstance {
-	// associate each kingpin var with a var in the instance map
-	for _,v := range configInstanceMap {
-		app.Flag(v.Name,v.HelpText).Default(v.Default).Action(setExists).StringVar(&v.Value)
-	}
-	return configInstanceMap
-}
 
-/*
-This exists mostly to support the Bool parameter
-*/
-func setExists(ctx *kingpin.ParseContext) error {
-	for _,v := range ctx.Elements {
-		name := ""
-		if c, ok := v.Clause.(*kingpin.CmdClause); ok {
-			name = c.Model().Name
-		} else if c, ok := v.Clause.(*kingpin.FlagClause); ok {
-			name = c.Model().Name
-		} else if c, ok := v.Clause.(*kingpin.ArgClause); ok {
-			name = c.Model().Name
-		} else {
-			continue
-		}
-		// There are some high level configurations that dont apply to collectors that
-		// dont exist in the config instance map
-		value, exists := configInstanceMap[name]
-		if exists == false {
-			continue
-		}
-		value.Exists = true
-	}
-
-	return nil
-}
-
-/*
-Used to hold the metadata about a configuration option
-*/
-type Config struct {
-	Name string
-	HelpText string
-	Default string
-}
-
-/*
-Used to hold the actual values for a configuration option
-*/
-type ConfigInstance struct {
-	Value string
-	Exists bool
-	Config
-}
 
 func Available() []string {
 	cs := make([]string, 0, len(builders))
@@ -161,12 +100,12 @@ func Build(collector string, settings map[string]*ConfigInstance) (Collector, er
 	return c, err
 }
 
-func addPerfCounterDependencies(perfCounterNames []string) string {
+func addPerfCounterDependencies(name string, perfCounterNames []string) {
 	perfIndicies := make([]string, 0, len(perfCounterNames))
 	for _, cn := range perfCounterNames {
 		perfIndicies = append(perfIndicies, MapCounterToIndex(cn))
 	}
-	return strings.Join(perfIndicies, " ")
+	perfCounterDependencies[name] = strings.Join(perfIndicies, " ")
 }
 
 
@@ -183,16 +122,6 @@ func getPerfQuery(collectors []string) string {
 type Collector interface {
 	// Get new metrics and expose them via prometheus registry.
 	Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) (err error)
-}
-
-/*
-This interface is used when a Collector needs to have configuration. This code should support multiple collectors of
-the same type which means we cannot use the global var based configuration.
-
-Setup is used for any checking that needs to happen before the collector starts
-*/
-type ConfigurableCollector interface {
-	ApplyConfig(map[string]*ConfigInstance)
 }
 
 
@@ -244,14 +173,4 @@ func expandEnabledChildCollectors(enabled string) []string {
 	// Ensure result is ordered, to prevent test failure
 	sort.Strings(result)
 	return result
-}
-
-func getValueFromMap(m map[string]*ConfigInstance, key string) string {
-	if v, exists := m[key]; exists {
-		if v.Exists {
-			return v.Value
-		}
-		return v.Default
-	}
-	return ""
 }
