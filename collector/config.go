@@ -5,15 +5,15 @@ import (
 )
 
 var (
-	configMap               = make(map[string]Config)
-	configInstanceMap       = make(map[string]*ConfigInstance)
+	configMap         = make(map[string]Config)
+	configInstanceMap = make(map[string]*ConfigInstance)
 )
 
 // Used to hold the metadata about a configuration option
 type Config struct {
-	Name string
+	Name     string
 	HelpText string
-	Default string
+	Default  string
 }
 
 // Used to hold the actual values for a configuration option
@@ -29,9 +29,8 @@ type ConfigurableCollector interface {
 	ApplyConfig(map[string]*ConfigInstance)
 }
 
-
 func addConfig(config []Config) {
-	for _,v := range config {
+	for _, v := range config {
 		ci := &ConfigInstance{
 			Value:  "",
 			Config: v,
@@ -41,20 +40,20 @@ func addConfig(config []Config) {
 	}
 }
 
-
 func ApplyKingpinConfig(app *kingpin.Application) map[string]*ConfigInstance {
 	// associate each kingpin var with a var in the instance map
-	for _,v := range configInstanceMap {
-		app.Flag(v.Name,v.HelpText).Default(v.Default).Action(setExists).StringVar(&v.Value)
+	for _, v := range configInstanceMap {
+		app.Flag(v.Name, v.HelpText).Default(v.Default).Action(setExists).StringVar(&v.Value)
 	}
 	return configInstanceMap
 }
 
 // This exists mostly to support the Bool parameter
-// Its incredibly hard to determine --boolValue with default false, since kingpin returns ""
+// Its incredibly hard to determine --boolValue with default false, since kingpin returns "" and since I am treating
+// everything has a string instead of using the BoolVar
 // In this case when the parameter is parsed we set the exists flag
 func setExists(ctx *kingpin.ParseContext) error {
-	for _,v := range ctx.Elements {
+	for _, v := range ctx.Elements {
 		name := ""
 		if c, ok := v.Clause.(*kingpin.CmdClause); ok {
 			name = c.Model().Name
@@ -78,7 +77,7 @@ func setExists(ctx *kingpin.ParseContext) error {
 }
 
 // Function used by collectors to get the value, returns the default if config has not been set
-func getValueFromMap(m map[string]*ConfigInstance, key Config) string  {
+func getValueFromMap(m map[string]*ConfigInstance, key Config) string {
 	if v, configExists := m[key.Name]; configExists {
 		if v.IsValueSet {
 			return v.Value
