@@ -75,17 +75,19 @@ func netApiBufferFree(buffer *wKSTAInfo102) {
 // NetWkstaGetInfo returns information about the configuration of a workstation.
 // WARNING: The caller must call netApiBufferFree to free the memory allocated by this function.
 // https://docs.microsoft.com/en-us/windows/win32/api/lmwksta/nf-lmwksta-netwkstagetinfo
-func netWkstaGetInfo() (*wKSTAInfo102, uint32, error) {
+func netWkstaGetInfo() (wKSTAInfo102, uint32, error) {
 	var lpwi *wKSTAInfo102
 	pLevel := uintptr(102)
 
 	r1, _, _ := procNetWkstaGetInfo.Call(0, pLevel, uintptr(unsafe.Pointer(&lpwi)))
+	defer netApiBufferFree(lpwi)
 
 	if ret := *(*uint32)(unsafe.Pointer(&r1)); ret != 0 {
-		return nil, ret, errors.New(NetApiStatus[ret])
+		return wKSTAInfo102{}, ret, errors.New(NetApiStatus[ret])
 	}
 
-	return lpwi, 0, nil
+	deref := *lpwi
+	return deref, 0, nil
 }
 
 // GetWorkstationInfo is an idiomatic wrapper for netWkstaGetInfo
@@ -103,7 +105,5 @@ func GetWorkstationInfo() (WorkstationInfo, error) {
 		LanRoot:       windows.UTF16PtrToString(info.wki102_lanroot),
 		LoggedOnUsers: info.wki102_logged_on_users,
 	}
-	// Free the memory allocated by netapi
-	netApiBufferFree(info)
 	return workstationInfo, nil
 }
