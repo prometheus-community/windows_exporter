@@ -1,7 +1,6 @@
 package sysinfoapi
 
 import (
-	"fmt"
 	"unicode/utf16"
 	"unsafe"
 
@@ -129,12 +128,11 @@ func GlobalMemoryStatusEx() (MemoryStatus, error) {
 	}, nil
 }
 
-// GetSystemInfo wraps the GetSystemInfo function from sysinfoapi
+// GetSystemInfo is an idiomatic wrapper for the GetSystemInfo function from sysinfoapi
 // https://docs.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getsysteminfo
 func GetSystemInfo() SystemInfo {
 	var info lpSystemInfo
 	procGetSystemInfo.Call(uintptr(unsafe.Pointer(&info)))
-	fmt.Printf("%+v", info)
 	return SystemInfo{
 		Arch:                      ProcessorArchitecture(info.Arch.WProcessorArchitecture),
 		PageSize:                  info.DwPageSize,
