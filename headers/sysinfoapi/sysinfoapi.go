@@ -111,8 +111,7 @@ var (
 func GlobalMemoryStatusEx() (MemoryStatus, error) {
 	var mse memoryStatusEx
 	mse.dwLength = (uint32)(unsafe.Sizeof(mse))
-	pMse := uintptr(unsafe.Pointer(&mse))
-	r1, _, err := procGlobalMemoryStatusEx.Call(pMse)
+	r1, _, err := procGlobalMemoryStatusEx.Call(uintptr(unsafe.Pointer(&mse)))
 
 	if ret := *(*bool)(unsafe.Pointer(&r1)); ret == false {
 		return MemoryStatus{}, err
@@ -134,8 +133,7 @@ func GlobalMemoryStatusEx() (MemoryStatus, error) {
 // https://docs.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getsysteminfo
 func GetSystemInfo() SystemInfo {
 	var info lpSystemInfo
-	pInfo := uintptr(unsafe.Pointer(&info))
-	procGetSystemInfo.Call(pInfo)
+	procGetSystemInfo.Call(uintptr(unsafe.Pointer(&info)))
 	fmt.Printf("%+v", info)
 	return SystemInfo{
 		Arch:                      ProcessorArchitecture(info.Arch.WProcessorArchitecture),

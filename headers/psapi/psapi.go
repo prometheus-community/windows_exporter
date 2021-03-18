@@ -54,11 +54,9 @@ func GetLPPerformanceInfo() (LPPerformanceInformation, error) {
 	var pi LPPerformanceInformation
 	size := (uint32)(unsafe.Sizeof(pi))
 	pi.cb = size
-	pPi := uintptr(unsafe.Pointer(&pi))
-	r1, _, err := procGetPerformanceInfo.Call(pPi, uintptr(size))
+	r1, _, err := procGetPerformanceInfo.Call(uintptr(unsafe.Pointer(&pi)), uintptr(size))
 
-	if ret := *(*bool)(unsafe.Pointer(&r1)); ret == false {
-		// returned false
+	if ret := *(*bool)(unsafe.Pointer(&r1)); !ret {
 		return LPPerformanceInformation{}, err
 	}
 
@@ -70,26 +68,24 @@ func GetPerformanceInfo() (PerformanceInformation, error) {
 	var lppi LPPerformanceInformation
 	size := (uint32)(unsafe.Sizeof(lppi))
 	lppi.cb = size
-	pLppi := uintptr(unsafe.Pointer(&lppi))
-	r1, _, err := procGetPerformanceInfo.Call(pLppi, uintptr(size))
+	r1, _, err := procGetPerformanceInfo.Call(uintptr(unsafe.Pointer(&lppi)), uintptr(size))
 
-	if ret := *(*bool)(unsafe.Pointer(&r1)); ret == false {
-		// returned false
+	if ret := *(*bool)(unsafe.Pointer(&r1)); !ret {
 		return PerformanceInformation{}, err
 	}
 
 	var pi PerformanceInformation
 	pi.cb = lppi.cb
-	pi.CommitTotal = *(*uint32)(unsafe.Pointer(&lppi.CommitTotal))
-	pi.CommitLimit = *(*uint32)(unsafe.Pointer(&lppi.CommitLimit))
-	pi.CommitPeak = *(*uint32)(unsafe.Pointer(&lppi.CommitPeak))
-	pi.PhysicalTotal = *(*uint32)(unsafe.Pointer(&lppi.PhysicalTotal))
-	pi.PhysicalAvailable = *(*uint32)(unsafe.Pointer(&lppi.PhysicalAvailable))
-	pi.SystemCache = *(*uint32)(unsafe.Pointer(&lppi.SystemCache))
-	pi.KernelTotal = *(*uint32)(unsafe.Pointer(&lppi.KernelTotal))
-	pi.KernelPaged = *(*uint32)(unsafe.Pointer(&lppi.KernelPaged))
-	pi.KernelNonpaged = *(*uint32)(unsafe.Pointer(&lppi.KernelNonpaged))
-	pi.PageSize = *(*uint32)(unsafe.Pointer(&lppi.PageSize))
+	pi.CommitTotal = *(lppi.CommitTotal)
+	pi.CommitLimit = *(lppi.CommitLimit)
+	pi.CommitPeak = *(lppi.CommitPeak)
+	pi.PhysicalTotal = *(lppi.PhysicalTotal)
+	pi.PhysicalAvailable = *(lppi.PhysicalAvailable)
+	pi.SystemCache = *(lppi.SystemCache)
+	pi.KernelTotal = *(lppi.KernelTotal)
+	pi.KernelPaged = *(lppi.KernelPaged)
+	pi.KernelNonpaged = *(lppi.KernelNonpaged)
+	pi.PageSize = *(lppi.PageSize)
 	pi.HandleCount = lppi.HandleCount
 	pi.ProcessCount = lppi.ProcessCount
 	pi.ThreadCount = lppi.ThreadCount
