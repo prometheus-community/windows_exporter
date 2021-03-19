@@ -27,7 +27,7 @@ windows_logon_logon_type{status="interactive"}
 ## Useful queries
 Query the total number of local and remote (I.E. Terminal Services) interactive sessions.
 ```
-windows_logon_logon_type{status=~"interactive|remoteinteractive"}
+windows_logon_logon_type{status=~"interactive|remote_interactive"}
 ```
 
 ## Alerting examples
