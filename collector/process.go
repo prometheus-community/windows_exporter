@@ -216,7 +216,6 @@ func (c *processCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metr
 			}
 		}
 
-		//svcDisplayName := nil
 		for _, svc := range dst_svc {
 			if svc.ProcessId == uint32(process.IDProcess) {
 				svcDisplayName = svc.DisplayName
