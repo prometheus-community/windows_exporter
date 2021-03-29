@@ -73,7 +73,6 @@ func netApiBufferFree(buffer *wKSTAInfo102) {
 }
 
 // NetWkstaGetInfo returns information about the configuration of a workstation.
-// WARNING: The caller must call netApiBufferFree to free the memory allocated by this function.
 // https://docs.microsoft.com/en-us/windows/win32/api/lmwksta/nf-lmwksta-netwkstagetinfo
 func netWkstaGetInfo() (*wKSTAInfo102, uint32, error) {
 	var lpwi *wKSTAInfo102
