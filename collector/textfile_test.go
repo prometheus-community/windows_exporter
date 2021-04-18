@@ -5,6 +5,8 @@ import (
 	"io/ioutil"
 	"strings"
 	"testing"
+
+	dto "github.com/prometheus/client_model/go"
 )
 
 func TestCRFilter(t *testing.T) {
@@ -43,5 +45,107 @@ func TestCheckBOM(t *testing.T) {
 		if err != nil && !strings.Contains(err.Error(), d.err) {
 			t.Error(err)
 		}
+	}
+}
+
+func TestDuplicateMetricEntry(t *testing.T) {
+	metric_name := "windows_sometest"
+	metric_help := "This is a Test."
+	metric_type := dto.MetricType_GAUGE
+
+	gauge_value := 1.0
+
+	gauge := dto.Gauge{
+		Value: &gauge_value,
+	}
+
+	label1_name := "display_name"
+	label1_value := "foobar"
+
+	label1 := dto.LabelPair{
+		Name:  &label1_name,
+		Value: &label1_value,
+	}
+
+	label2_name := "display_version"
+	label2_value := "13.4.0"
+
+	label2 := dto.LabelPair{
+		Name:  &label2_name,
+		Value: &label2_value,
+	}
+
+	metric1 := dto.Metric{
+		Label: []*dto.LabelPair{&label1, &label2},
+		Gauge: &gauge,
+	}
+
+	metric2 := dto.Metric{
+		Label: []*dto.LabelPair{&label1, &label2},
+		Gauge: &gauge,
+	}
+
+	duplicate := dto.MetricFamily{
+		Name:   &metric_name,
+		Help:   &metric_help,
+		Type:   &metric_type,
+		Metric: []*dto.Metric{&metric1, &metric2},
+	}
+
+	duplicateFamily := make(map[string]*dto.MetricFamily)
+	duplicateFamily["test"] = &duplicate
+
+	// Ensure detection for duplicate metrics
+	if !duplicateMetricEntry(duplicateFamily) {
+		t.Errorf("Duplicate not found in duplicateFamily")
+	}
+
+	label3_name := "test"
+	label3_value := "1.0"
+
+	label3 := dto.LabelPair{
+		Name:  &label3_name,
+		Value: &label3_value,
+	}
+	metric3 := dto.Metric{
+		Label: []*dto.LabelPair{&label1, &label2, &label3},
+		Gauge: &gauge,
+	}
+
+	differentLabels := dto.MetricFamily{
+		Name:   &metric_name,
+		Help:   &metric_help,
+		Type:   &metric_type,
+		Metric: []*dto.Metric{&metric1, &metric3},
+	}
+	duplicateFamily["test"] = &differentLabels
+
+	// Additional label on second metric should not be cause for duplicate detection
+	if duplicateMetricEntry(duplicateFamily) {
+		t.Errorf("Unexpected duplicate found in differentLabels")
+	}
+
+	label4_value := "2.0"
+
+	label4 := dto.LabelPair{
+		Name:  &label3_name,
+		Value: &label4_value,
+	}
+	metric4 := dto.Metric{
+		Label: []*dto.LabelPair{&label1, &label2, &label4},
+		Gauge: &gauge,
+	}
+
+	differentValues := dto.MetricFamily{
+		Name:   &metric_name,
+		Help:   &metric_help,
+		Type:   &metric_type,
+		Metric: []*dto.Metric{&metric3, &metric4},
+	}
+	duplicateFamily["test"] = &differentValues
+
+	// Additional label with different values metric should not be cause for duplicate detection
+	if duplicateMetricEntry(duplicateFamily) {
+		t.Errorf("Unexpected duplicate found in differentValues")
 	}
 }

@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"reflect"
 	"sort"
 	"strings"
 	"time"
@@ -63,6 +64,31 @@ func NewTextFileCollector() (Collector, error) {
 	return &textFileCollector{
 		path: *textFileDirectory,
 	}, nil
+}
+
+// Given a metric family, determine if any two entries are duplicates.
+// Duplicates will be detected where the metric name, labels and label values are identical.
+func duplicateMetricEntry(metricFamilies map[string]*dto.MetricFamily) bool {
+	uniqueMetrics := make(map[string]map[string]string)
+	for _, metricFamily := range metricFamilies {
+		metric_name := *metricFamily.Name
+		for _, metric := range metricFamily.Metric {
+			metric_labels := metric.GetLabel()
+			labels := make(map[string]string)
+			for _, label := range metric_labels {
+				labels[label.GetName()] = label.GetValue()
+			}
+			// Check if key is present before appending
+			_, mapContainsKey := uniqueMetrics[metric_name]
+
+			// Duplicate metric found with identical labels & label values
+			if mapContainsKey == true && reflect.DeepEqual(uniqueMetrics[metric_name], labels) {
+				return true
+			}
+			uniqueMetrics[metric_name] = labels
+		}
+	}
+	return false
 }
 
 func convertMetricFamily(metricFamily *dto.MetricFamily, ch chan<- prometheus.Metric) {
@@ -270,6 +296,12 @@ fileLoop:
 		// Only set this once it has been parsed and validated, so that
 		// a failure does not appear fresh.
 		mtimes[f.Name()] = f.ModTime()
+
+		if duplicateMetricEntry(parsedFamilies) {
+			log.Errorf("Duplicate metrics detected in file: %q", path)
+			error = 1.0
+			continue
+		}
 
 		for _, mf := range parsedFamilies {
 			convertMetricFamily(mf, ch)
