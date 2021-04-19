@@ -158,7 +158,6 @@ type networkInterface struct {
 	BytesSentPerSec          float64 `perflib:"Bytes Sent/sec"`
 	BytesTotalPerSec         float64 `perflib:"Bytes Total/sec"`
 	Name                     string
-	NetConnectionID          string
 	PacketsOutboundDiscarded float64 `perflib:"Packets Outbound Discarded"`
 	PacketsOutboundErrors    float64 `perflib:"Packets Outbound Errors"`
 	PacketsPerSec            float64 `perflib:"Packets/sec"`
