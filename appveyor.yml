@@ -45,7 +45,7 @@ build_script:
       make crossbuild
       # GH requires all files to have different names, so add version/arch to differentiate
       foreach($Arch in "amd64","386") {
-        Rename-Item output\$Arch\windows_exporter.exe -NewName windows_exporter-$Version-$Arch.exe
+        Move-Item output\$Arch\windows_exporter.exe output\windows_exporter-$Version-$Arch.exe
       }
 
 after_build:
@@ -60,14 +60,14 @@ after_build:
       $MSIVersion = $env:APPVEYOR_REPO_TAG_NAME -replace '^v?([0-9\.]+).*$','$1'
       foreach($Arch in "amd64","386") {
         Write-Verbose "Building windows_exporter $MSIVersion msi for $Arch"
-        .\installer\build.ps1 -PathToExecutable .\output\$Arch\windows_exporter-$BuildVersion-$Arch.exe -Version $MSIVersion -Arch "$Arch"
-        Move-Item installer\Output\windows_exporter-$MSIVersion-$Arch.msi output\$Arch\
+        .\installer\build.ps1 -PathToExecutable .\output\windows_exporter-$BuildVersion-$Arch.exe -Version $MSIVersion -Arch "$Arch"
+        Move-Item installer\Output\windows_exporter-$MSIVersion-$Arch.msi output\
       }
   - promu checksum output\
 
 artifacts:
   - name: Artifacts
-    path: output\**\*
+    path: output\*
 
 deploy:
   - provider: GitHub
