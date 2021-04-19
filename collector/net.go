@@ -3,17 +3,23 @@
 package collector
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 
 	"github.com/prometheus-community/windows_exporter/log"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/StackExchange/wmi"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 func init() {
 	registerCollector("net", NewNetworkCollector, "Network Interface")
 }
+
+const (
+	win32NetworkQuery = "SELECT Name, NetConnectionID FROM Win32_NetworkAdapter"
+)
 
 var (
 	nicWhitelist = kingpin.Flag(
@@ -54,73 +60,73 @@ func NewNetworkCollector() (Collector, error) {
 		BytesReceivedTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "bytes_received_total"),
 			"(Network.BytesReceivedPerSec)",
-			[]string{"nic"},
+			[]string{"nic", "netConnectionId"},
 			nil,
 		),
 		BytesSentTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "bytes_sent_total"),
 			"(Network.BytesSentPerSec)",
-			[]string{"nic"},
+			[]string{"nic", "netConnectionId"},
 			nil,
 		),
 		BytesTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "bytes_total"),
 			"(Network.BytesTotalPerSec)",
-			[]string{"nic"},
+			[]string{"nic", "netConnectionId"},
 			nil,
 		),
 		PacketsOutboundDiscarded: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "packets_outbound_discarded_total"),
 			"(Network.PacketsOutboundDiscarded)",
-			[]string{"nic"},
+			[]string{"nic", "netConnectionId"},
 			nil,
 		),
 		PacketsOutboundErrors: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "packets_outbound_errors_total"),
 			"(Network.PacketsOutboundErrors)",
-			[]string{"nic"},
+			[]string{"nic", "netConnectionId"},
 			nil,
 		),
 		PacketsReceivedDiscarded: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "packets_received_discarded_total"),
 			"(Network.PacketsReceivedDiscarded)",
-			[]string{"nic"},
+			[]string{"nic", "netConnectionId"},
 			nil,
 		),
 		PacketsReceivedErrors: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "packets_received_errors_total"),
 			"(Network.PacketsReceivedErrors)",
-			[]string{"nic"},
+			[]string{"nic", "netConnectionId"},
 			nil,
 		),
 		PacketsReceivedTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "packets_received_total"),
 			"(Network.PacketsReceivedPerSec)",
-			[]string{"nic"},
+			[]string{"nic", "netConnectionId"},
 			nil,
 		),
 		PacketsReceivedUnknown: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "packets_received_unknown_total"),
 			"(Network.PacketsReceivedUnknown)",
-			[]string{"nic"},
+			[]string{"nic", "netConnectionId"},
 			nil,
 		),
 		PacketsTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "packets_total"),
 			"(Network.PacketsPerSec)",
-			[]string{"nic"},
+			[]string{"nic", "netConnectionId"},
 			nil,
 		),
 		PacketsSentTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "packets_sent_total"),
 			"(Network.PacketsSentPerSec)",
-			[]string{"nic"},
+			[]string{"nic", "netConnectionId"},
 			nil,
 		),
 		CurrentBandwidth: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "current_bandwidth"),
 			"(Network.CurrentBandwidth)",
-			[]string{"nic"},
+			[]string{"nic", "netConnectionId"},
 			nil,
 		),
 
@@ -152,6 +158,7 @@ type networkInterface struct {
 	BytesSentPerSec          float64 `perflib:"Bytes Sent/sec"`
 	BytesTotalPerSec         float64 `perflib:"Bytes Total/sec"`
 	Name                     string
+	NetConnectionID          string
 	PacketsOutboundDiscarded float64 `perflib:"Packets Outbound Discarded"`
 	PacketsOutboundErrors    float64 `perflib:"Packets Outbound Errors"`
 	PacketsPerSec            float64 `perflib:"Packets/sec"`
@@ -163,8 +170,34 @@ type networkInterface struct {
 	CurrentBandwidth         float64 `perflib:"Current Bandwidth"`
 }
 
+// Win32_NetworkAdapter docs:
+// - https://docs.microsoft.com/en-us/windows/win32/cimwin32prov/win32-networkadapter
+type win32_NetworkAdapter struct {
+	Name              string
+	NetConnectionID   string
+}
+
 func (c *NetworkCollector) collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []networkInterface
+	var networkDst []win32_NetworkAdapter
+
+	// Make the netConnectionID map
+	var netConnMap map[string]string
+	netConnMap = make(map[string]string)
+
+	if err := wmi.Query(win32NetworkQuery, &networkDst); err != nil {
+		log.Error("Error running WMI query", err)
+		return nil, err
+	}
+
+	if len(networkDst) == 0 {
+		return nil, errors.New("WMI query for NetConnectionID returned empty result set")
+	}
+
+	// Map the NIC name to the NetConnectionID, mangled so it works fine
+	for _, nic := range networkDst {
+		netConnMap[mangleNetworkName(nic.Name)] = nic.NetConnectionID
+	}
 
 	if err := unmarshalObject(ctx.perfObjects["Network Interface"], &dst); err != nil {
 		return nil, err
@@ -181,78 +214,92 @@ func (c *NetworkCollector) collect(ctx *ScrapeContext, ch chan<- prometheus.Metr
 			continue
 		}
 
+		netConnectionId := mangleNetworkName(netConnMap[name])
+
 		// Counters
 		ch <- prometheus.MustNewConstMetric(
 			c.BytesReceivedTotal,
 			prometheus.CounterValue,
 			nic.BytesReceivedPerSec,
 			name,
+			netConnectionId,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.BytesSentTotal,
 			prometheus.CounterValue,
 			nic.BytesSentPerSec,
 			name,
+			netConnectionId,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.BytesTotal,
 			prometheus.CounterValue,
 			nic.BytesTotalPerSec,
 			name,
+			netConnectionId,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.PacketsOutboundDiscarded,
 			prometheus.CounterValue,
 			nic.PacketsOutboundDiscarded,
 			name,
+			netConnectionId,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.PacketsOutboundErrors,
 			prometheus.CounterValue,
 			nic.PacketsOutboundErrors,
 			name,
+			netConnectionId,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.PacketsTotal,
 			prometheus.CounterValue,
 			nic.PacketsPerSec,
 			name,
+			netConnectionId,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.PacketsReceivedDiscarded,
 			prometheus.CounterValue,
 			nic.PacketsReceivedDiscarded,
 			name,
+			netConnectionId,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.PacketsReceivedErrors,
 			prometheus.CounterValue,
 			nic.PacketsReceivedErrors,
 			name,
+			netConnectionId,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.PacketsReceivedTotal,
 			prometheus.CounterValue,
 			nic.PacketsReceivedPerSec,
 			name,
+			netConnectionId,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.PacketsReceivedUnknown,
 			prometheus.CounterValue,
 			nic.PacketsReceivedUnknown,
 			name,
+			netConnectionId,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.PacketsSentTotal,
 			prometheus.CounterValue,
 			nic.PacketsSentPerSec,
 			name,
+			netConnectionId,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.CurrentBandwidth,
 			prometheus.GaugeValue,
 			nic.CurrentBandwidth,
 			name,
+			netConnectionId,
 		)
 	}
 	return nil, nil
