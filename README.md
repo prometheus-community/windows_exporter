@@ -76,7 +76,7 @@ Flag     | Description | Default value
 `--telemetry.addr` | host:port for exporter. | `:9182`
 `--telemetry.path` | URL path for surfacing collected metrics. | `/metrics`
 `--telemetry.max-requests` | Maximum number of concurrent requests. 0 to disable. | `5`
-`--collectors.enabled` | Comma-separated list of collectors to use. Use `[defaults]` as a placeholder for all the collectors enabled by default." | `[defaults]`
+`--collectors.enabled` | Comma-separated list of collectors to use. Use `[defaults]` as a placeholder which gets expanded containing all the collectors enabled by default." | `[defaults]`
 `--collectors.print` | If true, print available collectors and exit. | 
 `--scrape.timeout-margin` | Seconds to subtract from the timeout allowed by the client. Tune to allow for overhead or high loads. | `0.5`
 `--web.config.file` | A [web config][web_config] for setting up TLS and Auth | None
@@ -139,6 +139,14 @@ The prometheus metrics will be exposed on [localhost:9182](http://localhost:9182
     .\windows_exporter.exe --collectors.enabled "process" --collector.process.whitelist="firefox.+"
 
 When there are multiple processes with the same name, WMI represents those after the first instance as `process-name#index`. So to get them all, rather than just the first one, the [regular expression](https://en.wikipedia.org/wiki/Regular_expression) must use `.+`. See [process](docs/collector.process.md) for more information.
+
+### Using [defaults] with `--collectors.enabled` argument
+
+Using `[defaults]`  with `--collectors.enabled` argument which gets expanded with all default collectors.
+
+    .\windows_exporter.exe --collectors.enabled "[defaults],process,container"
+    
+This enables the additional process and container collectors on top of the defaults.
 
 ### Using a configuration file
 
