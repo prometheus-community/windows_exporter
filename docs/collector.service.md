@@ -16,6 +16,8 @@ A WMI filter on which services to include. Recommended to keep down number of re
 
 Example: `--collector.service.services-where="Name='windows_exporter'"`
 
+Example config win_exporter.yml for multiple services: `services-where: Name='SQLServer' OR Name='Couchbase' OR Name='Spooler' OR Name='ActiveMQ'`
+
 ## Metrics
 
 Name | Description | Type | Labels
