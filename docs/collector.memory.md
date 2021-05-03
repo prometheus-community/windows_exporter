@@ -7,7 +7,7 @@ The memory collector exposes metrics about system memory usage
 Metric name prefix  | `memory`
 Data source         | Perflib
 Classes             | `Win32_PerfRawData_PerfOS_Memory`
-Enabled by default? | Yes
+Enabled by default? | No
 
 ## Flags
 
