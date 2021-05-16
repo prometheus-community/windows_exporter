@@ -92,8 +92,8 @@ func TestDuplicateMetricEntry(t *testing.T) {
 		Metric: []*dto.Metric{&metric1, &metric2},
 	}
 
-	duplicateFamily := make(map[string]*dto.MetricFamily)
-	duplicateFamily["test"] = &duplicate
+	duplicateFamily := []*dto.MetricFamily{}
+	duplicateFamily = append(duplicateFamily, &duplicate)
 
 	// Ensure detection for duplicate metrics
 	if !duplicateMetricEntry(duplicateFamily) {
@@ -118,7 +118,9 @@ func TestDuplicateMetricEntry(t *testing.T) {
 		Type:   &metric_type,
 		Metric: []*dto.Metric{&metric1, &metric3},
 	}
-	duplicateFamily["test"] = &differentLabels
+
+	duplicateFamily = []*dto.MetricFamily{}
+	duplicateFamily = append(duplicateFamily, &differentLabels)
 
 	// Additional label on second metric should not be cause for duplicate detection
 	if duplicateMetricEntry(duplicateFamily) {
@@ -142,7 +144,8 @@ func TestDuplicateMetricEntry(t *testing.T) {
 		Type:   &metric_type,
 		Metric: []*dto.Metric{&metric3, &metric4},
 	}
-	duplicateFamily["test"] = &differentValues
+	duplicateFamily = []*dto.MetricFamily{}
+	duplicateFamily = append(duplicateFamily, &differentValues)
 
 	// Additional label with different values metric should not be cause for duplicate detection
 	if duplicateMetricEntry(duplicateFamily) {
