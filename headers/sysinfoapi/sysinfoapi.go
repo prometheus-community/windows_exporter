@@ -36,8 +36,8 @@ type MemoryStatus struct {
 // wProcessorArchitecture is a wrapper for the union found in LP_SYSTEM_INFO
 // https://docs.microsoft.com/en-us/windows/win32/api/sysinfoapi/ns-sysinfoapi-system_info
 type wProcessorArchitecture struct {
-	WReserved              uint16
 	WProcessorArchitecture uint16
+	WReserved              uint16
 }
 
 // ProcessorArchitecture is an idiomatic wrapper for wProcessorArchitecture
@@ -60,7 +60,7 @@ type lpSystemInfo struct {
 	DwPageSize                  uint32
 	LpMinimumApplicationAddress uintptr
 	LpMaximumApplicationAddress uintptr
-	DwActiveProcessorMask       uint32
+	DwActiveProcessorMask       uint
 	DwNumberOfProcessors        uint32
 	DwProcessorType             uint32
 	DwAllocationGranularity     uint32
@@ -74,7 +74,7 @@ type SystemInfo struct {
 	PageSize                  uint32
 	MinimumApplicationAddress uintptr
 	MaximumApplicationAddress uintptr
-	ActiveProcessorMask       uint32
+	ActiveProcessorMask       uint
 	NumberOfProcessors        uint32
 	ProcessorType             uint32
 	AllocationGranularity     uint32
