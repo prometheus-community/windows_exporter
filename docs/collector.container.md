@@ -1,10 +1,11 @@
 # container collector
 
-The container collector exposes metrics about containers running on system
+The container collector exposes metrics about containers running on a Hyper-V system
 
 |||
 -|-
 Metric name prefix  | `container`
+Data source         | [hcsshim](https://github.com/Microsoft/hcsshim)
 Enabled by default? | No
 
 ## Flags
