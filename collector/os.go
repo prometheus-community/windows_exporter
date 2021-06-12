@@ -11,8 +11,8 @@ import (
 	"github.com/prometheus-community/windows_exporter/headers/netapi32"
 	"github.com/prometheus-community/windows_exporter/headers/psapi"
 	"github.com/prometheus-community/windows_exporter/headers/sysinfoapi"
+	"github.com/prometheus-community/windows_exporter/log"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/common/log"
 	"golang.org/x/sys/windows/registry"
 )
 
