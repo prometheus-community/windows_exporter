@@ -244,18 +244,18 @@ Name | Description | Type | Labels
 `windows_mssql_transactions_version_store_units` | The number of active allocation units in the snapshot isolation version store in tempdb | counter | `mssql_instance`
 `windows_mssql_transactions_version_store_creation_units` | The number of allocation units that have been created in the snapshot isolation store since the instance of the Database Engine was started | counter | `mssql_instance`
 `windows_mssql_transactions_version_store_truncation_units` | The number of allocation units that have been removed from the snapshot isolation store since the instance of the Database Engine was started | counter | `mssql_instance`
-`windows_mssql_waitstats_lock_waits` | Statistics for processes waiting on a lock | counter | `mssql_instance`, `item`
-`windows_mssql_waitstats_memory_grant_queue_waits` | Statistics for processes waiting for memory grant to become available | counter | `mssql_instance`, `item`
-`windows_mssql_waitstats_thread_safe_memory_objects_waits` | Statistics for processes waiting on thread-safe memory allocators | counter | `mssql_instance`, `item`
-`windows_mssql_waitstats_log_write_waits` | Statistics for processes waiting for log buffer to be written | counter | `mssql_instance`, `item`
-`windows_mssql_waitstats_log_buffer_waits` | Statistics for processes waiting for log buffer to be available | counter | `mssql_instance`, `item`
-`windows_mssql_waitstats_network_io_waits` | Statistics relevant to wait on network I/O | counter | `mssql_instance`, `item`
-`windows_mssql_waitstats_page_io_latch_waits` | Statistics relevant to page I/O latches | counter | `mssql_instance`, `item`
-`windows_mssql_waitstats_page_latch_waits` | Statistics relevant to page latches, not including I/O latches | counter | `mssql_instance`, `item`
-`windows_mssql_waitstats_nonpage_latch_waits` | Statistics relevant to non-page latches | counter | `mssql_instance`, `item`
-`windows_mssql_waitstats_wait_for_the_worker_waits` | Statistics relevant to processes waiting for worker to become available | counter | `mssql_instance`, `item`
-`windows_mssql_waitstats_workspace_synchronization_waits` | Statistics relevant to processes synchronizing access to workspace | counter | `mssql_instance`, `item`
-`windows_mssql_waitstats_transaction_ownership_waits` | Statistics relevant to processes synchronizing access to transaction | counter | `mssql_instance`, `item`
+`windows_mssql_waitstats_lock_waits` | Statistics for processes waiting on a lock | gauge | `mssql_instance`, `item`
+`windows_mssql_waitstats_memory_grant_queue_waits` | Statistics for processes waiting for memory grant to become available | gauge | `mssql_instance`, `item`
+`windows_mssql_waitstats_thread_safe_memory_objects_waits` | Statistics for processes waiting on thread-safe memory allocators | gauge | `mssql_instance`, `item`
+`windows_mssql_waitstats_log_write_waits` | Statistics for processes waiting for log buffer to be written | gauge | `mssql_instance`, `item`
+`windows_mssql_waitstats_log_buffer_waits` | Statistics for processes waiting for log buffer to be available | gauge | `mssql_instance`, `item`
+`windows_mssql_waitstats_network_io_waits` | Statistics relevant to wait on network I/O | gauge | `mssql_instance`, `item`
+`windows_mssql_waitstats_page_io_latch_waits` | Statistics relevant to page I/O latches | gauge | `mssql_instance`, `item`
+`windows_mssql_waitstats_page_latch_waits` | Statistics relevant to page latches, not including I/O latches | gauge | `mssql_instance`, `item`
+`windows_mssql_waitstats_nonpage_latch_waits` | Statistics relevant to non-page latches | gauge | `mssql_instance`, `item`
+`windows_mssql_waitstats_wait_for_the_worker_waits` | Statistics relevant to processes waiting for worker to become available | gauge | `mssql_instance`, `item`
+`windows_mssql_waitstats_workspace_synchronization_waits` | Statistics relevant to processes synchronizing access to workspace | gauge | `mssql_instance`, `item`
+`windows_mssql_waitstats_transaction_ownership_waits` | Statistics relevant to processes synchronizing access to transaction | gauge | `mssql_instance`, `item`
 
 ### Example metric
 _This collector does not yet have explained examples, we would appreciate your help adding them!_
