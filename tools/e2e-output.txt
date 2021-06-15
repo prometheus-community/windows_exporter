@@ -179,8 +179,8 @@ windows_exporter_collector_timeout{collector="textfile"} 0
 # TYPE windows_os_paging_limit_bytes gauge
 # HELP windows_os_physical_memory_free_bytes OperatingSystem.FreePhysicalMemory
 # TYPE windows_os_physical_memory_free_bytes gauge
-# HELP windows_os_process_memory_limix_bytes OperatingSystem.MaxProcessMemorySize
-# TYPE windows_os_process_memory_limix_bytes gauge
+# HELP windows_os_process_memory_limit_bytes OperatingSystem.MaxProcessMemorySize
+# TYPE windows_os_process_memory_limit_bytes gauge
 # HELP windows_os_processes OperatingSystem.NumberOfProcesses
 # TYPE windows_os_processes gauge
 # HELP windows_os_processes_limit OperatingSystem.MaxNumberOfProcesses
