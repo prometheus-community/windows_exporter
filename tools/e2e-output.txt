@@ -153,8 +153,8 @@ windows_exporter_collector_timeout{collector="textfile"} 0
 # TYPE windows_net_bytes_sent_total counter
 # HELP windows_net_bytes_total (Network.BytesTotalPerSec)
 # TYPE windows_net_bytes_total counter
-# HELP windows_net_current_bandwidth (Network.CurrentBandwidth)
-# TYPE windows_net_current_bandwidth gauge
+# HELP windows_net_current_bandwidth_bytes (Network.CurrentBandwidth)
+# TYPE windows_net_current_bandwidth_bytes gauge
 # HELP windows_net_packets_outbound_discarded_total (Network.PacketsOutboundDiscarded)
 # TYPE windows_net_packets_outbound_discarded_total counter
 # HELP windows_net_packets_outbound_errors_total (Network.PacketsOutboundErrors)
