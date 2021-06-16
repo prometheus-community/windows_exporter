@@ -27,11 +27,11 @@ These metrics are only exposed on Windows Server 2008R2 and later:
 
 Name | Description | Type | Labels
 -----|-------------|------|-------
-`windows_cpu_clock_interrupts_total` | Total number of received and serviced clock tick interrupts | `core`
-`windows_cpu_idle_break_events_total` | Total number of time processor was woken from idle | `core`
-`windows_cpu_parking_status` | Parking Status represents whether a processor is parked or not | `gauge`
-`windows_cpu_core_frequency_mhz` | Core frequency in megahertz | `gauge`
-`windows_cpu_processor_performance` | Processor Performance is the average performance of the processor while it is executing instructions, as a percentage of the nominal performance of the processor. On some processors, Processor Performance may exceed 100% | `gauge`
+`windows_cpu_clock_interrupts_total` | Total number of received and serviced clock tick interrupts | counter | `core`
+`windows_cpu_idle_break_events_total` | Total number of time processor was woken from idle | counter | `core`
+`windows_cpu_parking_status` | Parking Status represents whether a processor is parked or not | gauge | `core`
+`windows_cpu_core_frequency_mhz` | Core frequency in megahertz | gauge | `core`
+`windows_cpu_processor_performance` | Processor Performance is the average performance of the processor while it is executing instructions, as a percentage of the nominal performance of the processor. On some processors, Processor Performance may exceed 100% | gauge | `core`
 
 ### Example metric
 Show frequency of host CPU cores
