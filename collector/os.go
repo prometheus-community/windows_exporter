@@ -97,7 +97,7 @@ func NewOSCollector() (Collector, error) {
 			nil,
 		),
 		ProcessMemoryLimitBytes: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "process_memory_limix_bytes"),
+			prometheus.BuildFQName(Namespace, subsystem, "process_memory_limit_bytes"),
 			"OperatingSystem.MaxProcessMemorySize",
 			nil,
 			nil,
