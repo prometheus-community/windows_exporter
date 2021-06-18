@@ -144,7 +144,7 @@ func newProcessCollector() (Collector, error) {
 			nil,
 		),
 		WorkingSet: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "working_set"),
+			prometheus.BuildFQName(Namespace, subsystem, "working_set_bytes"),
 			"Maximum number of bytes in the working set of this process at any point in time. The working set is the set of memory pages touched recently by the threads in the process.",
 			[]string{"process", "process_id", "creating_process_id"},
 			nil,
