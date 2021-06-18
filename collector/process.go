@@ -42,6 +42,8 @@ type processCollector struct {
 	PrivateBytes      *prometheus.Desc
 	ThreadCount       *prometheus.Desc
 	VirtualBytes      *prometheus.Desc
+	WorkingSetPrivate *prometheus.Desc
+	WorkingSetPeak    *prometheus.Desc
 	WorkingSet        *prometheus.Desc
 
 	processWhitelistPattern *regexp.Regexp
@@ -126,6 +128,18 @@ func newProcessCollector() (Collector, error) {
 		VirtualBytes: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "virtual_bytes"),
 			"Current size, in bytes, of the virtual address space that the process is using. Use of virtual address space does not necessarily imply corresponding use of either disk or main memory pages. Virtual space is finite and, by using too much, the process can limit its ability to load libraries.",
+			[]string{"process", "process_id", "creating_process_id"},
+			nil,
+		),
+		WorkingSetPrivate: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "working_set_private_bytes"),
+			"Size of the working set, in bytes, that is use for this process only and not shared nor sharable by other processes.",
+			[]string{"process", "process_id", "creating_process_id"},
+			nil,
+		),
+		WorkingSetPeak: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "working_set_peak_bytes"),
+			"Maximum size, in bytes, of the Working Set of this process at any point in time. The Working Set is the set of memory pages touched recently by the threads in the process. If free memory in the computer is above a threshold, pages are left in the Working Set of a process even if they are not in use. When free memory falls below a threshold, pages are trimmed from Working Sets. If they are needed they will then be soft-faulted back into the Working Set before they leave main memory.",
 			[]string{"process", "process_id", "creating_process_id"},
 			nil,
 		),
@@ -375,6 +389,24 @@ func (c *processCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metr
 			c.VirtualBytes,
 			prometheus.GaugeValue,
 			process.VirtualBytes,
+			processName,
+			pid,
+			cpid,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.WorkingSetPrivate,
+			prometheus.GaugeValue,
+			process.WorkingSetPrivate,
+			processName,
+			pid,
+			cpid,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.WorkingSetPeak,
+			prometheus.GaugeValue,
+			process.WorkingSetPeak,
 			processName,
 			pid,
 			cpid,

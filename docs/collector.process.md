@@ -53,6 +53,8 @@ Name | Description | Type | Labels
 `windows_process_private_bytes` | _Not yet documented_ | gauge | `process`, `process_id`, `creating_process_id`
 `windows_process_thread_count` | _Not yet documented_ | gauge | `process`, `process_id`, `creating_process_id`
 `windows_process_virtual_bytes` | _Not yet documented_ | gauge | `process`, `process_id`, `creating_process_id`
+`windows_process_working_set_private_bytes` | _Not yet documented_ | gauge | `process`, `process_id`, `creating_process_id`
+`windows_process_working_set_peak_bytes` | _Not yet documented_ | gauge | `process`, `process_id`, `creating_process_id`
 `windows_process_working_set` | _Not yet documented_ | gauge | `process`, `process_id`, `creating_process_id`
 
 ### Example metric
