@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"reflect"
 	"sort"
 	"strings"
 	"time"
@@ -63,6 +64,31 @@ func NewTextFileCollector() (Collector, error) {
 	return &textFileCollector{
 		path: *textFileDirectory,
 	}, nil
+}
+
+// Given a slice of metric families, determine if any two entries are duplicates.
+// Duplicates will be detected where the metric name, labels and label values are identical.
+func duplicateMetricEntry(metricFamilies []*dto.MetricFamily) bool {
+	uniqueMetrics := make(map[string]map[string]string)
+	for _, metricFamily := range metricFamilies {
+		metric_name := *metricFamily.Name
+		for _, metric := range metricFamily.Metric {
+			metric_labels := metric.GetLabel()
+			labels := make(map[string]string)
+			for _, label := range metric_labels {
+				labels[label.GetName()] = label.GetValue()
+			}
+			// Check if key is present before appending
+			_, mapContainsKey := uniqueMetrics[metric_name]
+
+			// Duplicate metric found with identical labels & label values
+			if mapContainsKey == true && reflect.DeepEqual(uniqueMetrics[metric_name], labels) {
+				return true
+			}
+			uniqueMetrics[metric_name] = labels
+		}
+	}
+	return false
 }
 
 func convertMetricFamily(metricFamily *dto.MetricFamily, ch chan<- prometheus.Metric) {
@@ -223,6 +249,10 @@ func (c *textFileCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Met
 		error = 1.0
 	}
 
+	// Create empty metricFamily slice here and append parsedFamilies to it inside the loop.
+	// Once loop is complete, raise error if any duplicates are present.
+	// This will ensure that duplicate metrics are correctly detected between multiple .prom files.
+	var metricFamilies = []*dto.MetricFamily{}
 fileLoop:
 	for _, f := range files {
 		if !strings.HasSuffix(f.Name(), ".prom") {
@@ -271,12 +301,20 @@ fileLoop:
 		// a failure does not appear fresh.
 		mtimes[f.Name()] = f.ModTime()
 
-		for _, mf := range parsedFamilies {
-			convertMetricFamily(mf, ch)
+		for _, metricFamily := range parsedFamilies {
+			metricFamilies = append(metricFamilies, metricFamily)
 		}
 	}
 
-	c.exportMTimes(mtimes, ch)
+	if duplicateMetricEntry(metricFamilies) {
+		log.Errorf("Duplicate metrics detected in files")
+		error = 1.0
+	} else {
+		for _, mf := range metricFamilies {
+			convertMetricFamily(mf, ch)
+			c.exportMTimes(mtimes, ch)
+		}
+	}
 
 	// Export if there were errors.
 	ch <- prometheus.MustNewConstMetric(
