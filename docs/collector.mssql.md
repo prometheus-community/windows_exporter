@@ -127,7 +127,7 @@ Name | Description | Type | Labels
 `windows_mssql_databases_bulk_copy_rows` | Number of rows bulk copied per second | counter | `mssql_instance`, `database`
 `windows_mssql_databases_bulk_copy_bytes` | Amount of data bulk copied (in kilobytes) per second | counter | `mssql_instance`, `database`
 `windows_mssql_databases_commit_table_entries` | he size (row count) of the in-memory portion of the commit table for the database | counter | `mssql_instance`, `database`
-`windows_mssql_databases_data_files_size_bytes` | Cumulative size (in kilobytes) of all the data files in the database including any automatic growth. Monitoring this counter is useful, for example, for determining the correct size of tempdb | counter | `mssql_instance`, `database`
+`windows_mssql_databases_data_files_size_bytes` | Cumulative size (in kilobytes) of all the data files in the database including any automatic growth. Monitoring this counter is useful, for example, for determining the correct size of tempdb | gauge | `mssql_instance`, `database`
 `windows_mssql_databases_dbcc_logical_scan_bytes` | Number of logical read scan bytes per second for database console commands (DBCC) | counter | `mssql_instance`, `database`
 `windows_mssql_databases_group_commit_stall_seconds` | Group stall time (microseconds) per second | counter | `mssql_instance`, `database`
 `windows_mssql_databases_log_flushed_bytes` | Total number of log bytes flushed | counter | `mssql_instance`, `database`
