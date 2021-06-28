@@ -3864,84 +3864,84 @@ func (c *MSSQLCollector) collectWaitStats(ctx *ScrapeContext, ch chan<- promethe
 
 		ch <- prometheus.MustNewConstMetric(
 			c.WaitStatsLockWaits,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			v.WaitStatsLockWaits,
 			sqlInstance, item,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.WaitStatsMemoryGrantQueueWaits,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			v.WaitStatsMemoryGrantQueueWaits,
 			sqlInstance, item,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.WaitStatsThreadSafeMemoryObjectsWaits,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			v.WaitStatsThreadSafeMemoryObjectsWaits,
 			sqlInstance, item,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.WaitStatsLogWriteWaits,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			v.WaitStatsLogWriteWaits,
 			sqlInstance, item,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.WaitStatsLogBufferWaits,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			v.WaitStatsLogBufferWaits,
 			sqlInstance, item,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.WaitStatsNetworkIOWaits,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			v.WaitStatsNetworkIOWaits,
 			sqlInstance, item,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.WaitStatsPageIOLatchWaits,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			v.WaitStatsPageIOLatchWaits,
 			sqlInstance, item,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.WaitStatsPageLatchWaits,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			v.WaitStatsPageLatchWaits,
 			sqlInstance, item,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.WaitStatsNonpageLatchWaits,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			v.WaitStatsNonpageLatchWaits,
 			sqlInstance, item,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.WaitStatsWaitForTheWorkerWaits,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			v.WaitStatsWaitForTheWorkerWaits,
 			sqlInstance, item,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.WaitStatsWorkspaceSynchronizationWaits,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			v.WaitStatsWorkspaceSynchronizationWaits,
 			sqlInstance, item,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.WaitStatsTransactionOwnershipWaits,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			v.WaitStatsTransactionOwnershipWaits,
 			sqlInstance, item,
 		)
