@@ -5,14 +5,14 @@ The mssql collector exposes metrics about the MSSQL server
 |||
 -|-
 Metric name prefix  | `mssql`
-Classes             | [`Win32_PerfRawData_MSSQLSERVER_SQLServerAccessMethods`](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-access-methods-object)<br/>[`Win32_PerfRawData_MSSQLSERVER_SQLServerAvailabilityReplica`](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-availability-replica)<br/>[`Win32_PerfRawData_MSSQLSERVER_SQLServerBufferManager`](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-buffer-manager-object)<br/>[`Win32_PerfRawData_MSSQLSERVER_SQLServerDatabaseReplica`](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-database-replica)<br/>[`Win32_PerfRawData_MSSQLSERVER_SQLServerDatabases`](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-databases-object?view=sql-server-2017)<br/>[`Win32_PerfRawData_MSSQLSERVER_SQLServerGeneralStatistics`](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-general-statistics-object)<br/>[`Win32_PerfRawData_MSSQLSERVER_SQLServerLocks`](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-locks-object)<br/>[`Win32_PerfRawData_MSSQLSERVER_SQLServerMemoryManager`](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-memory-manager-object)<br/>[`Win32_PerfRawData_MSSQLSERVER_SQLServerSQLStatistics`](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-sql-statistics-object)<br/>[`Win32_PerfRawData_MSSQLSERVER_SQLServerSQLErrors`](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-sql-errors-object)<br/>[`Win32_PerfRawData_MSSQLSERVER_SQLServerTransactions`](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-transactions-object)
+Classes             | [`Win32_PerfRawData_MSSQLSERVER_SQLServerAccessMethods`](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-access-methods-object)<br/>[`Win32_PerfRawData_MSSQLSERVER_SQLServerAvailabilityReplica`](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-availability-replica)<br/>[`Win32_PerfRawData_MSSQLSERVER_SQLServerBufferManager`](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-buffer-manager-object)<br/>[`Win32_PerfRawData_MSSQLSERVER_SQLServerDatabaseReplica`](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-database-replica)<br/>[`Win32_PerfRawData_MSSQLSERVER_SQLServerDatabases`](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-databases-object?view=sql-server-2017)<br/>[`Win32_PerfRawData_MSSQLSERVER_SQLServerGeneralStatistics`](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-general-statistics-object)<br/>[`Win32_PerfRawData_MSSQLSERVER_SQLServerLocks`](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-locks-object)<br/>[`Win32_PerfRawData_MSSQLSERVER_SQLServerMemoryManager`](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-memory-manager-object)<br/>[`Win32_PerfRawData_MSSQLSERVER_SQLServerSQLStatistics`](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-sql-statistics-object)<br/>[`Win32_PerfRawData_MSSQLSERVER_SQLServerSQLErrors`](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-sql-errors-object)<br/>[`Win32_PerfRawData_MSSQLSERVER_SQLServerTransactions`](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-transactions-object)<br/>[`Win32_PerfRawData_MSSQLSERVER_SQLServerWaitStatistics`](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-wait-statistics-object)
 Enabled by default? | No
 
 ## Flags
 
 ### `--collectors.mssql.classes-enabled`
 
-Comma-separated list of MSSQL WMI classes to use. Supported values are `accessmethods`, `availreplica`, `bufman`, `databases`, `dbreplica`, `genstats`, `locks`, `memmgr`, `sqlstats`, `sqlerrors` and `transactions`.
+Comma-separated list of MSSQL WMI classes to use. Supported values are `accessmethods`, `availreplica`, `bufman`, `databases`, `dbreplica`, `genstats`, `locks`, `memmgr`, `sqlstats`, `sqlerrors`, `transactions`, and `waitstats`.
 
 ### `--collectors.mssql.class-print`
 
@@ -127,7 +127,7 @@ Name | Description | Type | Labels
 `windows_mssql_databases_bulk_copy_rows` | Number of rows bulk copied per second | counter | `mssql_instance`, `database`
 `windows_mssql_databases_bulk_copy_bytes` | Amount of data bulk copied (in kilobytes) per second | counter | `mssql_instance`, `database`
 `windows_mssql_databases_commit_table_entries` | he size (row count) of the in-memory portion of the commit table for the database | counter | `mssql_instance`, `database`
-`windows_mssql_databases_data_files_size_bytes` | Cumulative size (in kilobytes) of all the data files in the database including any automatic growth. Monitoring this counter is useful, for example, for determining the correct size of tempdb | counter | `mssql_instance`, `database`
+`windows_mssql_databases_data_files_size_bytes` | Cumulative size (in kilobytes) of all the data files in the database including any automatic growth. Monitoring this counter is useful, for example, for determining the correct size of tempdb | gauge | `mssql_instance`, `database`
 `windows_mssql_databases_dbcc_logical_scan_bytes` | Number of logical read scan bytes per second for database console commands (DBCC) | counter | `mssql_instance`, `database`
 `windows_mssql_databases_group_commit_stall_seconds` | Group stall time (microseconds) per second | counter | `mssql_instance`, `database`
 `windows_mssql_databases_log_flushed_bytes` | Total number of log bytes flushed | counter | `mssql_instance`, `database`
@@ -244,6 +244,18 @@ Name | Description | Type | Labels
 `windows_mssql_transactions_version_store_units` | The number of active allocation units in the snapshot isolation version store in tempdb | counter | `mssql_instance`
 `windows_mssql_transactions_version_store_creation_units` | The number of allocation units that have been created in the snapshot isolation store since the instance of the Database Engine was started | counter | `mssql_instance`
 `windows_mssql_transactions_version_store_truncation_units` | The number of allocation units that have been removed from the snapshot isolation store since the instance of the Database Engine was started | counter | `mssql_instance`
+`windows_mssql_waitstats_lock_waits` | Statistics for processes waiting on a lock | gauge | `mssql_instance`, `item`
+`windows_mssql_waitstats_memory_grant_queue_waits` | Statistics for processes waiting for memory grant to become available | gauge | `mssql_instance`, `item`
+`windows_mssql_waitstats_thread_safe_memory_objects_waits` | Statistics for processes waiting on thread-safe memory allocators | gauge | `mssql_instance`, `item`
+`windows_mssql_waitstats_log_write_waits` | Statistics for processes waiting for log buffer to be written | gauge | `mssql_instance`, `item`
+`windows_mssql_waitstats_log_buffer_waits` | Statistics for processes waiting for log buffer to be available | gauge | `mssql_instance`, `item`
+`windows_mssql_waitstats_network_io_waits` | Statistics relevant to wait on network I/O | gauge | `mssql_instance`, `item`
+`windows_mssql_waitstats_page_io_latch_waits` | Statistics relevant to page I/O latches | gauge | `mssql_instance`, `item`
+`windows_mssql_waitstats_page_latch_waits` | Statistics relevant to page latches, not including I/O latches | gauge | `mssql_instance`, `item`
+`windows_mssql_waitstats_nonpage_latch_waits` | Statistics relevant to non-page latches | gauge | `mssql_instance`, `item`
+`windows_mssql_waitstats_wait_for_the_worker_waits` | Statistics relevant to processes waiting for worker to become available | gauge | `mssql_instance`, `item`
+`windows_mssql_waitstats_workspace_synchronization_waits` | Statistics relevant to processes synchronizing access to workspace | gauge | `mssql_instance`, `item`
+`windows_mssql_waitstats_transaction_ownership_waits` | Statistics relevant to processes synchronizing access to transaction | gauge | `mssql_instance`, `item`
 
 ### Example metric
 _This collector does not yet have explained examples, we would appreciate your help adding them!_
