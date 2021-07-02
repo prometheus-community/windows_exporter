@@ -54,3 +54,22 @@ foreach ($k in $beta.Keys) {
   Add-Content -Path test1.prom -Encoding Ascii -NoNewline -Value "test_beta_bytes{spin=""${k}""} $( $beta[$k] )`n"
 }
 ```
+# Example use 2
+
+$path='c:\\program files\windows_exporter\textfile_inputs\ExchConnector.prom'
+Remove-item -Path $path
+$server=Get-ExchangeServer
+$allconnector=$server | Get-ReceiveConnector
+foreach ($connector in $allconnector) {
+$server=$connector.server
+$id=$connector.id -replace ' ', '_' -replace '\\', '_'
+$maxhopcount=$connector.MaxHopCount
+$MaxLocalHopCount=$connector.MaxLocalHopCount
+$MaxRecipientsPerMessage=$connector.MaxRecipientsPerMessage
+add-content -path "$path" -encoding ascii -nonewline -value "#help exchange_connector_maxhopcount`n"
+add-content -path "$path" -encoding ascii -nonewline -value "exchange_connector_maxhopcount{server=""$server"",connect=""$id""} $maxhopcount`n" 
+add-content -path "$path" -encoding ascii -nonewline -value "#help exchange_connector_MaxLocalHopCount`n"
+add-content -path "$path" -encoding ascii -nonewline -value "exchange_connector_MaxLocalHopCount{server=""$server"",connector=""$id""} $MaxLocalHopCount`n"
+add-content -path "$path" -encoding ascii -nonewline -value "#help exchange_connector_MaxRecipientsPerMessage`n"
+add-content -path "$path" -encoding ascii -nonewline -value "exchange_connector_MaxRecipientsPerMessage{server=""$server"",connector=""$id""} $MaxRecipientsPerMessage`n"
+}
