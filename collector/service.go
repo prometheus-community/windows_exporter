@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/StackExchange/wmi"
 	"github.com/prometheus-community/windows_exporter/log"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows"
