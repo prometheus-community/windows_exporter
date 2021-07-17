@@ -7,7 +7,7 @@ require (
 	github.com/StackExchange/wmi v0.0.0-20180725035823-b12b22c5341f
 	github.com/dimchansky/utfbom v1.1.1
 	github.com/go-kit/log v0.2.0
-	github.com/go-ole/go-ole v1.2.1 // indirect
+	github.com/go-ole/go-ole v1.2.5
 	github.com/leoluk/perflib_exporter v0.1.1-0.20211204221052-9e3696429c20
 	github.com/prometheus/client_golang v1.12.1
 	github.com/prometheus/client_model v0.2.0
