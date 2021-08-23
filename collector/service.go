@@ -3,12 +3,13 @@
 package collector
 
 import (
-	"strconv"
+	"fmt"
 	"strings"
 
-	"github.com/StackExchange/wmi"
-	"github.com/prometheus-community/windows_exporter/log"
+	"github.com/newrelic-forks/windows_exporter/log"
 	"github.com/prometheus/client_golang/prometheus"
+	"golang.org/x/sys/windows"
+	"golang.org/x/sys/windows/svc/mgr"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -21,6 +22,10 @@ var (
 		"collector.service.services-where",
 		"WQL 'where' clause to use in WMI metrics query. Limits the response to the services you specify and reduces the size of the response.",
 	).Default("").String()
+	useAPI = kingpin.Flag(
+		"collector.service.use-api",
+		"Use API calls to collect service data instead of WMI. Flag 'collector.service.services-where' won't be effective.",
+	).Default("false").Bool()
 )
 
 // A serviceCollector is a Prometheus collector for WMI Win32_Service metrics
@@ -39,6 +44,9 @@ func NewserviceCollector() (Collector, error) {
 
 	if *serviceWhereClause == "" {
 		log.Warn("No where-clause specified for service collector. This will generate a very large number of metrics!")
+	}
+	if *useAPI {
+		log.Warn("API collection is enabled.")
 	}
 
 	return &serviceCollector{
@@ -73,9 +81,16 @@ func NewserviceCollector() (Collector, error) {
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *serviceCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
-	if desc, err := c.collect(ch); err != nil {
-		log.Error("failed collecting service metrics:", desc, err)
-		return err
+	if *useAPI {
+		if err := c.collectAPI(ch); err != nil {
+			log.Error("failed collecting API service metrics:", err)
+			return err
+		}
+	} else {
+		if err := c.collectWMI(ch); err != nil {
+			log.Error("failed collecting WMI service metrics:", err)
+			return err
+		}
 	}
 	return nil
 }
@@ -103,12 +118,28 @@ var (
 		"paused",
 		"unknown",
 	}
+	apiStateValues = map[uint]string{
+		windows.SERVICE_CONTINUE_PENDING: "continue pending",
+		windows.SERVICE_PAUSE_PENDING:    "pause pending",
+		windows.SERVICE_PAUSED:           "paused",
+		windows.SERVICE_RUNNING:          "running",
+		windows.SERVICE_START_PENDING:    "start pending",
+		windows.SERVICE_STOP_PENDING:     "stop pending",
+		windows.SERVICE_STOPPED:          "stopped",
+	}
 	allStartModes = []string{
 		"boot",
 		"system",
 		"auto",
 		"manual",
 		"disabled",
+	}
+	apiStartModeValues = map[uint32]string{
+		windows.SERVICE_AUTO_START:   "auto",
+		windows.SERVICE_BOOT_START:   "boot",
+		windows.SERVICE_DEMAND_START: "manual",
+		windows.SERVICE_DISABLED:     "disabled",
+		windows.SERVICE_SYSTEM_START: "system",
 	}
 	allStatuses = []string{
 		"ok",
@@ -126,14 +157,14 @@ var (
 	}
 )
 
-func (c *serviceCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *serviceCollector) collectWMI(ch chan<- prometheus.Metric) error {
 	var dst []Win32_Service
 	q := queryAllWhere(&dst, c.queryWhereClause)
 	if err := wmi.Query(q, &dst); err != nil {
-		return nil, err
+		return err
 	}
 	for _, service := range dst {
-		pid := strconv.FormatUint(uint64(service.ProcessId), 10)
+		pid := fmt.Sprintf("%d", uint64(service.ProcessId))
 
 		runAs := ""
 		if service.StartName != nil {
@@ -191,5 +222,83 @@ func (c *serviceCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Des
 			)
 		}
 	}
-	return nil, nil
+	return nil
+}
+
+func (c *serviceCollector) collectAPI(ch chan<- prometheus.Metric) error {
+	svcmgrConnection, err := mgr.Connect()
+	if err != nil {
+		return err
+	}
+	defer svcmgrConnection.Disconnect()
+
+	// List All Services from the Services Manager
+	serviceList, err := svcmgrConnection.ListServices()
+	if err != nil {
+		return err
+	}
+
+	// Iterate through the Services List
+	for _, service := range serviceList {
+		// Retrieve handle for each service
+		serviceHandle, err := svcmgrConnection.OpenService(service)
+		if err != nil {
+			continue
+		}
+
+		// Get Service Configuration
+		serviceConfig, err := serviceHandle.Config()
+		if err != nil {
+			_ = serviceHandle.Close()
+			continue
+		}
+
+		// Get Service Current Status
+		serviceStatus, err := serviceHandle.Query()
+		if err != nil {
+			_ = serviceHandle.Close()
+			continue
+		}
+
+		pid := fmt.Sprintf("%d", uint64(serviceStatus.ProcessId))
+
+		ch <- prometheus.MustNewConstMetric(
+			c.Information,
+			prometheus.GaugeValue,
+			1.0,
+			strings.ToLower(service),
+			serviceConfig.DisplayName,
+			pid,
+			serviceConfig.ServiceStartName,
+		)
+
+		for _, state := range apiStateValues {
+			isCurrentState := 0.0
+			if state == apiStateValues[uint(serviceStatus.State)] {
+				isCurrentState = 1.0
+			}
+			ch <- prometheus.MustNewConstMetric(
+				c.State,
+				prometheus.GaugeValue,
+				isCurrentState,
+				strings.ToLower(service),
+				state,
+			)
+		}
+
+		for _, startMode := range apiStartModeValues {
+			isCurrentStartMode := 0.0
+			if startMode == apiStartModeValues[serviceConfig.StartType] {
+				isCurrentStartMode = 1.0
+			}
+			ch <- prometheus.MustNewConstMetric(
+				c.StartMode,
+				prometheus.GaugeValue,
+				isCurrentStartMode,
+				strings.ToLower(service),
+				startMode,
+			)
+		}
+	}
+	return nil
 }
