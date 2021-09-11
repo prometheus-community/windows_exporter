@@ -13,7 +13,7 @@ import (
 )
 
 func init() {
-	registerCollector("iis", NewIISCollectorPerflib, "Web Service", "APP_POOL_WAS", "Web Service Cache", "W3SVC_W3WP")
+	registerCollector("iis", NewIISCollector, "Web Service", "APP_POOL_WAS", "Web Service Cache", "W3SVC_W3WP")
 }
 
 var (
@@ -60,7 +60,7 @@ func getIISVersion() simple_version {
 	}
 }
 
-type IISCollectorPerflib struct {
+type IISCollector struct {
 	// Web Service
 	CurrentAnonymousUsers               *prometheus.Desc
 	CurrentBlockedAsyncIORequests       *prometheus.Desc
@@ -193,10 +193,10 @@ type IISCollectorPerflib struct {
 	iis_version simple_version
 }
 
-func NewIISCollectorPerflib() (Collector, error) {
+func NewIISCollector() (Collector, error) {
 	const subsystem = "iis"
 
-	return &IISCollectorPerflib{
+	return &IISCollector{
 		iis_version: getIISVersion(),
 
 		siteWhitelistPattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *siteWhitelist)),
@@ -780,7 +780,7 @@ func NewIISCollectorPerflib() (Collector, error) {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *IISCollectorPerflib) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *IISCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	if desc, err := c.collectWebService(ctx, ch); err != nil {
 		log.Error("failed collecting iis metrics:", desc, err)
 		return err
@@ -846,7 +846,7 @@ type perflibWebService struct {
 	TotalUnlockRequests                 float64 `perflib:"Total Unlock Requests"`
 }
 
-func (c *IISCollectorPerflib) collectWebService(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *IISCollector) collectWebService(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var WebService []perflibWebService
 	if err := unmarshalObject(ctx.perfObjects["Web Service"], &WebService); err != nil {
 		return nil, err
@@ -1120,7 +1120,7 @@ var applicationStates = map[uint32]string{
 	7: "Delete Pending",
 }
 
-func (c *IISCollectorPerflib) collectAPP_POOL_WAS(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *IISCollector) collectAPP_POOL_WAS(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var APP_POOL_WAS []perflibAPP_POOL_WAS
 	if err := unmarshalObject(ctx.perfObjects["APP_POOL_WAS"], &APP_POOL_WAS); err != nil {
 		return nil, err
@@ -1288,7 +1288,7 @@ type perflibW3SVC_W3WP_IIS8 struct {
 	WebSocketConnectionsRejected float64 `perflib:"WebSocket Connections Rejected / Sec"`
 }
 
-func (c *IISCollectorPerflib) collectW3SVC_W3WP(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *IISCollector) collectW3SVC_W3WP(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var W3SVC_W3WP []perflibW3SVC_W3WP
 	if err := unmarshalObject(ctx.perfObjects["W3SVC_W3WP"], &W3SVC_W3WP); err != nil {
 		return nil, err
@@ -1676,7 +1676,7 @@ type perflibWebServiceCache struct {
 	ServiceCache_OutputCacheQueriesTotal       float64
 }
 
-func (c *IISCollectorPerflib) collectWebServiceCache(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *IISCollector) collectWebServiceCache(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var WebServiceCache []perflibWebServiceCache
 	if err := unmarshalObject(ctx.perfObjects["Web Service Cache"], &WebServiceCache); err != nil {
 		return nil, err
