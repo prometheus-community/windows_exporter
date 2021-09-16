@@ -399,18 +399,12 @@ func (c *processCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metr
 		return err
 	}
 
+	// dont check for error when unmarshalling "GPU Process Memory" and "GPU Engine" counters since they may not be present if there are no WDM compatible GPUs
 	processGpuMemory := make([]perflibProcessGpuMemory, 0)
-	err = unmarshalObject(ctx.perfObjects["GPU Process Memory"], &processGpuMemory)
-	if err != nil {
-		return err
-	}
+	unmarshalObject(ctx.perfObjects["GPU Process Memory"], &processGpuMemory)
 
 	gpuEngine := make([]perflibProcessGpuEngine, 0)
-	err = unmarshalObject(ctx.perfObjects["GPU Engine"], &gpuEngine)
-	processGpuMetrics := make(map[string]*processGpuMetrics)
-	if err != nil {
-		return err
-	}
+	unmarshalObject(ctx.perfObjects["GPU Engine"], &gpuEngine)
 
 	for _, processGpuMemoryEntry := range processGpuMemory {
 		pid, luid := extractPidAndLuid(processGpuMemoryEntry.Name)
