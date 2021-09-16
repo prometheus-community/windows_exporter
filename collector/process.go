@@ -406,6 +406,8 @@ func (c *processCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metr
 	gpuEngine := make([]perflibProcessGpuEngine, 0)
 	unmarshalObject(ctx.perfObjects["GPU Engine"], &gpuEngine)
 
+	processGpuMetrics := make(map[string]*processGpuMetrics)
+
 	for _, processGpuMemoryEntry := range processGpuMemory {
 		pid, luid := extractPidAndLuid(processGpuMemoryEntry.Name)
 		_, dxgiAdapterPresent := c.dxgiAdapterLuidDescriptionMap[luid]
