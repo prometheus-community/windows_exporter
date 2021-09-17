@@ -16,3 +16,5 @@ crossbuild:
     platforms:
         - windows/amd64
         - windows/386
+go:
+    cgo: true
