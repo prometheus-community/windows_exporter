@@ -246,18 +246,17 @@ func (c *serviceCollector) collectAPI(ch chan<- prometheus.Metric) error {
 		if err != nil {
 			continue
 		}
+		defer serviceHandle.Close()
 
 		// Get Service Configuration
 		serviceConfig, err := serviceHandle.Config()
 		if err != nil {
-			_ = serviceHandle.Close()
 			continue
 		}
 
 		// Get Service Current Status
 		serviceStatus, err := serviceHandle.Query()
 		if err != nil {
-			_ = serviceHandle.Close()
 			continue
 		}
 
