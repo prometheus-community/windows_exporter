@@ -119,7 +119,7 @@ windows_exporter_collector_timeout{collector="system"} 0
 windows_exporter_collector_timeout{collector="textfile"} 0
 # HELP windows_exporter_perflib_snapshot_duration_seconds Duration of perflib snapshot capture
 # TYPE windows_exporter_perflib_snapshot_duration_seconds gauge
-# HELP windows_logical_disk_free_bytes Free space in bytes (LogicalDisk.PercentFreeSpace)
+# HELP windows_logical_disk_free_bytes Free space in bytes, updates every 10-15 min (LogicalDisk.PercentFreeSpace)
 # TYPE windows_logical_disk_free_bytes gauge
 # HELP windows_logical_disk_idle_seconds_total Seconds that the disk was idle (LogicalDisk.PercentIdleTime)
 # TYPE windows_logical_disk_idle_seconds_total counter
@@ -135,7 +135,7 @@ windows_exporter_collector_timeout{collector="textfile"} 0
 # TYPE windows_logical_disk_reads_total counter
 # HELP windows_logical_disk_requests_queued The number of requests queued to the disk (LogicalDisk.CurrentDiskQueueLength)
 # TYPE windows_logical_disk_requests_queued gauge
-# HELP windows_logical_disk_size_bytes Total space in bytes (LogicalDisk.PercentFreeSpace_Base)
+# HELP windows_logical_disk_size_bytes Total space in bytes, updates every 10-15 min (LogicalDisk.PercentFreeSpace_Base)
 # TYPE windows_logical_disk_size_bytes gauge
 # HELP windows_logical_disk_split_ios_total The number of I/Os to the disk were split into multiple I/Os (LogicalDisk.SplitIOPerSec)
 # TYPE windows_logical_disk_split_ios_total counter

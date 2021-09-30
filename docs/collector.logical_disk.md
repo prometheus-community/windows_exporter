@@ -30,10 +30,14 @@ Name | Description | Type | Labels
 `writes_total` | Rate of write operations on the disk  | counter | `volume`
 `read_seconds_total` | Seconds the disk was busy servicing read requests | counter | `volume`
 `write_seconds_total` | Seconds the disk was busy servicing write requests | counter | `volume`
-`free_bytes` | Unused space of the disk in bytes | gauge | `volume`
-`size_bytes` | Total size of the disk in bytes | gauge | `volume`
+`free_bytes` | Unused space of the disk in bytes (not real time, updates every 10-15 min) | gauge | `volume`
+`size_bytes` | Total size of the disk in bytes (not real time, updates every 10-15 min) | gauge | `volume`
 `idle_seconds_total` | Seconds the disk was idle (not servicing read/write requests) | counter | `volume`
 `split_ios_total` | Number of I/Os to the disk split into multiple I/Os | counter | `volume`
+
+### Warning about size metrics
+The `free_bytes` and `size_bytes` metrics are not updated in real time and might have a delay of 10-15min.
+This is the same behavior as the windows performance counters.
 
 ### Example metric
 Query the rate of write operations to a disk
