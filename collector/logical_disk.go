@@ -103,14 +103,14 @@ func NewLogicalDiskCollector() (Collector, error) {
 
 		FreeSpace: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "free_bytes"),
-			"Free space in bytes (LogicalDisk.PercentFreeSpace)",
+			"Free space in bytes, updates every 10-15 min (LogicalDisk.PercentFreeSpace)",
 			[]string{"volume"},
 			nil,
 		),
 
 		TotalSpace: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "size_bytes"),
-			"Total space in bytes (LogicalDisk.PercentFreeSpace_Base)",
+			"Total space in bytes, updates every 10-15 min (LogicalDisk.PercentFreeSpace_Base)",
 			[]string{"volume"},
 			nil,
 		),
