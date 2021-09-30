@@ -1,6 +1,8 @@
 package collector
 
 import (
+	"errors"
+
 	"github.com/StackExchange/wmi"
 	"github.com/prometheus-community/windows_exporter/log"
 	"github.com/prometheus/client_golang/prometheus"
@@ -73,6 +75,11 @@ func (c *thermalZoneCollector) collect(ch chan<- prometheus.Metric) (*prometheus
 	q := queryAll(&dst)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
+	}
+
+	// ThermalZone collector has been known to 'successfully' return an empty result.
+	if len(dst) == 0 {
+		return nil, errors.New("Empty results set for collector")
 	}
 
 	for _, info := range dst {
