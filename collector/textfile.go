@@ -38,7 +38,7 @@ var (
 	textFileDirectory = kingpin.Flag(
 		"collector.textfile.directory",
 		"Directory to read text files with metrics from.",
-	).Default("C:\\Program Files\\windows_exporter\\textfile_inputs").String()
+	).Default(getDefaultPath()).String()
 
 	mtimeDesc = prometheus.NewDesc(
 		prometheus.BuildFQName(Namespace, "textfile", "mtime_seconds"),
@@ -334,4 +334,9 @@ func checkBOM(encoding utfbom.Encoding) error {
 	}
 
 	return fmt.Errorf(encoding.String())
+}
+
+func getDefaultPath() string {
+	execPath, _ := os.Executable()
+	return filepath.Join(execPath, "textfile_inputs")
 }
