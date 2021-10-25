@@ -59,6 +59,8 @@ type ScheduledTask struct {
 	LastTaskResult  TaskResult
 }
 
+type ScheduledTasks []ScheduledTask
+
 func init() {
 	registerCollector("scheduled_task", NewScheduledTask)
 }
@@ -161,10 +163,7 @@ const SCHEDULED_TASK_PROGRAM_ID = "Schedule.Service.1"
 // S_FALSE is returned by CoInitialize if it was already called on this thread.
 const S_FALSE = 0x00000001
 
-func getScheduledTasks() ([]ScheduledTask, error) {
-	var err error
-	scheduledTasks := []ScheduledTask{}
-
+func getScheduledTasks() (scheduledTasks ScheduledTasks, err error) {
 	err = ole.CoInitialize(0)
 	if err != nil {
 		code := err.(*ole.OleError).Code()
@@ -176,13 +175,11 @@ func getScheduledTasks() ([]ScheduledTask, error) {
 
 	schedClassID, err := ole.ClassIDFrom(SCHEDULED_TASK_PROGRAM_ID)
 	if err != nil {
-		ole.CoUninitialize()
 		return scheduledTasks, err
 	}
 
 	taskSchedulerObj, err := ole.CreateInstance(schedClassID, nil)
 	if err != nil || taskSchedulerObj == nil {
-		ole.CoUninitialize()
 		return scheduledTasks, err
 	}
 	defer taskSchedulerObj.Release()
@@ -202,54 +199,51 @@ func getScheduledTasks() ([]ScheduledTask, error) {
 	rootFolderObj := res.ToIDispatch()
 	defer rootFolderObj.Release()
 
-	var fetchTasksInFolder func(*ole.IDispatch) error
-	var fetchTasksRecursively func(*ole.IDispatch) error
-
-	fetchTasksInFolder = func(folder *ole.IDispatch) error {
-		res, err := oleutil.CallMethod(folder, "GetTasks", 1)
-		if err != nil {
-			return err
-		}
-
-		tasks := res.ToIDispatch()
-		defer tasks.Release()
-
-		err = oleutil.ForEach(tasks, func(v *ole.VARIANT) error {
-			task := v.ToIDispatch()
-
-			parsedTask := parseTask(task)
-			scheduledTasks = append(scheduledTasks, parsedTask)
-
-			return nil
-		})
-
-		return err
-	}
-
-	fetchTasksRecursively = func(folder *ole.IDispatch) error {
-		if err := fetchTasksInFolder(folder); err != nil {
-			return err
-		}
-
-		res, err := oleutil.CallMethod(folder, "GetFolders", 1)
-		if err != nil {
-			return err
-		}
-
-		subFolders := res.ToIDispatch()
-		defer subFolders.Release()
-
-		err = oleutil.ForEach(subFolders, func(v *ole.VARIANT) error {
-			subFolder := v.ToIDispatch()
-			return fetchTasksRecursively(subFolder)
-		})
-
-		return err
-	}
-
-	fetchTasksRecursively(rootFolderObj)
+	fetchTasksRecursively(rootFolderObj, &scheduledTasks)
 
 	return scheduledTasks, nil
+}
+
+func fetchTasksInFolder(folder *ole.IDispatch, scheduledTasks *ScheduledTasks) error {
+	res, err := oleutil.CallMethod(folder, "GetTasks", 1)
+	if err != nil {
+		return err
+	}
+
+	tasks := res.ToIDispatch()
+	defer tasks.Release()
+
+	err = oleutil.ForEach(tasks, func(v *ole.VARIANT) error {
+		task := v.ToIDispatch()
+
+		parsedTask := parseTask(task)
+		*scheduledTasks = append(*scheduledTasks, parsedTask)
+
+		return nil
+	})
+
+	return err
+}
+
+func fetchTasksRecursively(folder *ole.IDispatch, scheduledTasks *ScheduledTasks) error {
+	if err := fetchTasksInFolder(folder, scheduledTasks); err != nil {
+		return err
+	}
+
+	res, err := oleutil.CallMethod(folder, "GetFolders", 1)
+	if err != nil {
+		return err
+	}
+
+	subFolders := res.ToIDispatch()
+	defer subFolders.Release()
+
+	err = oleutil.ForEach(subFolders, func(v *ole.VARIANT) error {
+		subFolder := v.ToIDispatch()
+		return fetchTasksRecursively(subFolder, scheduledTasks)
+	})
+
+	return err
 }
 
 func parseTask(task *ole.IDispatch) ScheduledTask {
