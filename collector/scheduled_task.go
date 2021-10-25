@@ -70,6 +70,18 @@ func init() {
 func NewScheduledTask() (Collector, error) {
 	const subsystem = "scheduled_task"
 
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+
+	err := ole.CoInitializeEx(0, ole.COINIT_MULTITHREADED)
+	if err != nil {
+		code := err.(*ole.OleError).Code()
+		if code != ole.S_OK && code != S_FALSE {
+			return nil, err
+		}
+	}
+	defer ole.CoUninitialize()
+
 	return &ScheduledTaskCollector{
 		LastResult: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "last_result"),
@@ -165,18 +177,6 @@ const SCHEDULED_TASK_PROGRAM_ID = "Schedule.Service.1"
 const S_FALSE = 0x00000001
 
 func getScheduledTasks() (scheduledTasks ScheduledTasks, err error) {
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
-	err := ole.CoInitializeEx(0, ole.COINIT_MULTITHREADED)
-	if err != nil {
-		code := err.(*ole.OleError).Code()
-		if code != ole.S_OK && code != S_FALSE {
-			return scheduledTasks, err
-		}
-	}
-	defer ole.CoUninitialize()
-
 	schedClassID, err := ole.ClassIDFrom(SCHEDULED_TASK_PROGRAM_ID)
 	if err != nil {
 		return scheduledTasks, err
