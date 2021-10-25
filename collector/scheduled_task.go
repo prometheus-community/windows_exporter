@@ -5,6 +5,7 @@ package collector
 import (
 	"fmt"
 	"regexp"
+	"runtime"
 	"strings"
 
 	ole "github.com/go-ole/go-ole"
@@ -164,7 +165,10 @@ const SCHEDULED_TASK_PROGRAM_ID = "Schedule.Service.1"
 const S_FALSE = 0x00000001
 
 func getScheduledTasks() (scheduledTasks ScheduledTasks, err error) {
-	err = ole.CoInitialize(0)
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+
+	err := ole.CoInitializeEx(0, ole.COINIT_MULTITHREADED)
 	if err != nil {
 		code := err.(*ole.OleError).Code()
 		if code != ole.S_OK && code != S_FALSE {
