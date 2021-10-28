@@ -1,7 +1,7 @@
 package log
 
 import (
-	"github.com/go-kit/kit/log/level"
+	"github.com/go-kit/log/level"
 )
 
 // Returns an adapter implementing the go-kit/kit/log.Logger interface on our
