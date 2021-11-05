@@ -1,3 +1,4 @@
+//go:build windows
 // +build windows
 
 package main
@@ -324,13 +325,13 @@ func main() {
 
 	initWbem()
 
-	isInteractive, err := svc.IsAnInteractiveSession()
+	isService, err := svc.IsWindowsService()
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	stopCh := make(chan bool)
-	if !isInteractive {
+	if isService {
 		go func() {
 			err = svc.Run(serviceName, &windowsExporterService{stopCh: stopCh})
 			if err != nil {
