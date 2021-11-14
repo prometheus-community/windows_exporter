@@ -15,7 +15,7 @@ require (
 	github.com/prometheus/common v0.32.0
 	github.com/prometheus/exporter-toolkit v0.7.0
 	github.com/sirupsen/logrus v1.6.0
-	github.com/stretchr/testify v1.4.0
+	github.com/stretchr/testify v1.7.0 // indirect
 	golang.org/x/sys v0.0.0-20210615035016-665e8c7367d1
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	gopkg.in/yaml.v2 v2.4.0
