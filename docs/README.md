@@ -10,6 +10,7 @@ This directory contains documentation of the collectors in the windows_exporter,
 - [`dhcp`](collector.dhcp.md)
 - [`dns`](collector.dns.md)
 - [`hyperv`](collector.hyperv.md)
+- [`idle`](collector.idle.md)
 - [`iis`](collector.iis.md)
 - [`logical_disk`](collector.logical_disk.md)
 - [`logon`](collector.logon.md)
