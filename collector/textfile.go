@@ -338,5 +338,5 @@ func checkBOM(encoding utfbom.Encoding) error {
 
 func getDefaultPath() string {
 	execPath, _ := os.Executable()
-	return filepath.Join(execPath, "textfile_inputs")
+	return filepath.Join(filepath.Dir(execPath), "textfile_inputs")
 }
