@@ -23,8 +23,10 @@
     <SetProperty Id="ExtraFlags" After="InstallFiles" Sequence="execute" Value="[EXTRA_FLAGS]">EXTRA_FLAGS</SetProperty>
 
     <Property Id="LISTEN_ADDR" Secure="yes" />
-    <Property Id="LISTEN_PORT" Secure="yes" Value="9182" />
-    <SetProperty Id="ListenFlag" After="InstallFiles" Sequence="execute" Value="--telemetry.addr [LISTEN_ADDR]:[LISTEN_PORT]">LISTEN_ADDR OR LISTEN_PORT</SetProperty>
+    <Property Id="LISTEN_PORT" Secure="yes" />
+    <SetProperty Id="ListenFlagBoth" After="InstallFiles" Sequence="execute" Value="--telemetry.addr [LISTEN_ADDR]:[LISTEN_PORT]">LISTEN_ADDR AND LISTEN_PORT</SetProperty>
+    <SetProperty Id="ListenFlagAddr" After="InstallFiles" Sequence="execute" Value="--telemetry.addr [LISTEN_ADDR]:">LISTEN_ADDR AND (NOT LISTEN_PORT)</SetProperty>
+    <SetProperty Id="ListenFlagPort" After="InstallFiles" Sequence="execute" Value="--telemetry.addr 0.0.0.0:[LISTEN_PORT]">LISTEN_PORT AND (NOT LISTEN_ADDR)</SetProperty>
 
     <Property Id="METRICS_PATH" Secure="yes"/>
     <SetProperty Id="MetricsPathFlag" After="InstallFiles" Sequence="execute" Value="--telemetry.path [METRICS_PATH]">METRICS_PATH</SetProperty>
@@ -50,7 +52,7 @@
             <fw:RemoteAddress>[REMOTE_ADDR]</fw:RemoteAddress>
           </fw:FirewallException> 
         </File>
-        <ServiceInstall Id="InstallExporterService" Name="windows_exporter" DisplayName="windows_exporter" Description="Exports Prometheus metrics about the system" ErrorControl="normal" Start="auto" Type="ownProcess" Arguments="--log.format logger:eventlog?name=windows_exporter [CollectorsFlag] [ListenFlag] [MetricsPathFlag] [TextfileDirFlag] [ExtraFlags]">
+        <ServiceInstall Id="InstallExporterService" Name="windows_exporter" DisplayName="windows_exporter" Description="Exports Prometheus metrics about the system" ErrorControl="normal" Start="auto" Type="ownProcess" Arguments="--log.format logger:eventlog?name=windows_exporter [CollectorsFlag] [ListenFlagBoth] [ListenFlagAddr] [ListenFlagPort] [MetricsPathFlag] [TextfileDirFlag] [ExtraFlags]">
           <util:ServiceConfig FirstFailureActionType="restart" SecondFailureActionType="restart" ThirdFailureActionType="restart" RestartServiceDelayInSeconds="60" />
           <ServiceDependency Id="wmiApSrv" />
         </ServiceInstall>
