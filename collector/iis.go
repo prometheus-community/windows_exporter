@@ -4,11 +4,12 @@ package collector
 
 import (
 	"fmt"
+	"regexp"
+
 	"github.com/prometheus-community/windows_exporter/log"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows/registry"
 	"gopkg.in/alecthomas/kingpin.v2"
-	"regexp"
 )
 
 func init() {
@@ -411,7 +412,7 @@ func NewIISCollector() (Collector, error) {
 			nil,
 		),
 
-		// W3WP_W3SVC
+		// W3SVC_W3WP
 		Threads: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "worker_threads"),
 			"",
@@ -600,6 +601,37 @@ func NewIISCollector() (Collector, error) {
 		),
 		OutputCacheFlushesTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "worker_output_cache_flushes_total"),
+			"",
+			[]string{"app", "pid"},
+			nil,
+		),
+		// W3SVC_W3WP_IIS8
+		RequestErrorsTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "worker_request_errors_total"),
+			"",
+			[]string{"app", "pid", "status_code"},
+			nil,
+		),
+		WebSocketRequestsActive: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "worker_current_websocket_requests"),
+			"",
+			[]string{"app", "pid"},
+			nil,
+		),
+		WebSocketConnectionAttempts: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "worker_websocket_connection_attempts_total"),
+			"",
+			[]string{"app", "pid"},
+			nil,
+		),
+		WebSocketConnectionsAccepted: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "worker_websocket_connection_accepted_total"),
+			"",
+			[]string{"app", "pid"},
+			nil,
+		),
+		WebSocketConnectionsRejected: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "worker_websocket_connection_rejected_total"),
 			"",
 			[]string{"app", "pid"},
 			nil,
@@ -1543,7 +1575,7 @@ func (c *IISCollector) collectW3SVC_W3WP(ctx *ScrapeContext, ch chan<- prometheu
 
 		if c.iis_version.major >= 8 {
 			var W3SVC_W3WP_IIS8 []perflibW3SVC_W3WP_IIS8
-			if err := unmarshalObject(ctx.perfObjects["W3SVC_W3WP"], &W3SVC_W3WP); err != nil {
+			if err := unmarshalObject(ctx.perfObjects["W3SVC_W3WP"], &W3SVC_W3WP_IIS8); err != nil {
 				return nil, err
 			}
 
