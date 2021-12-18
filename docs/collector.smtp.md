@@ -24,7 +24,7 @@ If given, a virtual SMTP server needs to *not* match the blacklist regexp in ord
 
 Name | Description | Type | Labels
 -----|-------------|------|-------
-`windows_smtp_badmailed_messages_bad_pickup_file_total` | Total number of mailformed pickup messages sent to badmail | counter | `server`
+`windows_smtp_badmailed_messages_bad_pickup_file_total` | Total number of malformed pickup messages sent to badmail | counter | `server`
 `windows_smtp_badmailed_messages_general_failure_total` | Total number of messages sent to badmail for reasons not associated with a specific counter | counter | `server`
 `windows_smtp_badmailed_messages_hop_count_exceeded_total` | Total number of messages sent to badmail because they had exceeded the maximum hop count | counter | `server`
 `windows_smtp_badmailed_messages_ndr_of_dns_total` | Total number of Delivery Status Notifications sent to badmail because they could not be delivered | counter | `server`

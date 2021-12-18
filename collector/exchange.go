@@ -235,7 +235,7 @@ func (c *exchangeCollector) collectADAccessProcesses(ctx *ScrapeContext, ch chan
 		}
 
 		// since we're not including the PID suffix from the instance names in the label names,
-		// we get an occational duplicate. This seems to affect about 4 instances only on this object.
+		// we get an occasional duplicate. This seems to affect about 4 instances only on this object.
 		labelUseCount[labelName]++
 		if labelUseCount[labelName] > 1 {
 			labelName = fmt.Sprintf("%s_%d", labelName, labelUseCount[labelName])

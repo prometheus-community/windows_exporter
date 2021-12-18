@@ -134,7 +134,7 @@ func newProcessCollector() (Collector, error) {
 		),
 		WorkingSetPrivate: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "working_set_private_bytes"),
-			"Size of the working set, in bytes, that is use for this process only and not shared nor sharable by other processes.",
+			"Size of the working set, in bytes, that is use for this process only and not shared nor shareable by other processes.",
 			[]string{"process", "process_id", "creating_process_id"},
 			nil,
 		),
