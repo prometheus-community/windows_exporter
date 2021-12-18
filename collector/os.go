@@ -303,7 +303,7 @@ func (c *OSCollector) collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) (
 	ch <- prometheus.MustNewConstMetric(
 		c.PagingLimitBytes,
 		prometheus.GaugeValue,
-		float64(fsipf),
+		fsipf,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
