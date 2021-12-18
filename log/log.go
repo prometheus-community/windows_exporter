@@ -13,7 +13,6 @@
 
 // Package log implements logging via logrus.
 // Implementation forked from github.com/prometheus/common
-
 package log
 
 import (
