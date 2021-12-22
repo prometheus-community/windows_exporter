@@ -559,7 +559,8 @@ func newMSCluster_ClusterCollector() (Collector, error) {
 }
 
 // MSCluster_Cluster docs:
-// - <add link to documentation here>
+// - https://docs.microsoft.com/en-us/previous-versions/windows/desktop/cluswmi/mscluster-cluster
+//
 type MSCluster_Cluster struct {
 	Name string
 

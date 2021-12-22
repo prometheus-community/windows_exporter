@@ -55,7 +55,8 @@ func newMSCluster_NetworkCollector() (Collector, error) {
 }
 
 // MSCluster_Network docs:
-// - <add link to documentation here>
+// - https://docs.microsoft.com/en-us/previous-versions/windows/desktop/cluswmi/mscluster-network
+//
 type MSCluster_Network struct {
 	Name string
 

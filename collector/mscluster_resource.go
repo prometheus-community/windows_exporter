@@ -133,7 +133,8 @@ func newMSCluster_ResourceCollector() (Collector, error) {
 }
 
 // MSCluster_Resource docs:
-// - <add link to documentation here>
+// - https://docs.microsoft.com/en-us/previous-versions/windows/desktop/cluswmi/mscluster-resource
+//
 type MSCluster_Resource struct {
 	Name       string
 	Type       string
