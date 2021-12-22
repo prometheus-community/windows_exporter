@@ -6,7 +6,7 @@ import (
 )
 
 func init() {
-	registerCollector("mscluster_resource", newMSCluster_ResourceCollector) // TODO: Add any perflib dependencies here
+	registerCollector("mscluster_resource", newMSCluster_ResourceCollector)
 }
 
 // A MSCluster_ResourceCollector is a Prometheus collector for WMI MSCluster_Resource metrics

@@ -6,7 +6,7 @@ import (
 )
 
 func init() {
-	registerCollector("mscluster_network", newMSCluster_NetworkCollector) // TODO: Add any perflib dependencies here
+	registerCollector("mscluster_network", newMSCluster_NetworkCollector)
 }
 
 // A MSCluster_NetworkCollector is a Prometheus collector for WMI MSCluster_Network metrics
