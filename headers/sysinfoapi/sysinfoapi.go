@@ -132,7 +132,7 @@ func GlobalMemoryStatusEx() (MemoryStatus, error) {
 // https://docs.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getsysteminfo
 func GetSystemInfo() SystemInfo {
 	var info lpSystemInfo
-	procGetSystemInfo.Call(uintptr(unsafe.Pointer(&info)))
+	procGetSystemInfo.Call(uintptr(unsafe.Pointer(&info))) //nolint:errcheck
 	return SystemInfo{
 		Arch:                      ProcessorArchitecture(info.Arch.WProcessorArchitecture),
 		PageSize:                  info.DwPageSize,

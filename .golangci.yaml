@@ -3,11 +3,10 @@ linters:
   enable:
   - deadcode
   - errcheck
-  - golint
+  - revive
   - govet
   - gofmt
   - ineffassign
-  - interfacer
   - structcheck
   - unconvert
   - varcheck
@@ -20,4 +19,7 @@ issues:
   - # Golint has many capitalisation complaints on WMI class names
     text: "`?\\w+`? should be `?\\w+`?"
     linters:
-    - golint
+    - revive
+  - text: "don't use ALL_CAPS in Go names; use CamelCase"
+    linters:
+    - revive

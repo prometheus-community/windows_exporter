@@ -55,6 +55,6 @@ func benchmarkCollector(b *testing.B, name string, collectFunc func() (Collector
 	}()
 
 	for i := 0; i < b.N; i++ {
-		c.Collect(scrapeContext, metrics)
+		c.Collect(scrapeContext, metrics) //nolint:errcheck
 	}
 }

@@ -15,9 +15,9 @@ install:
   - set PATH=%PATH%;C:\msys64\mingw64\bin
   - choco install gitversion.portable make -y
   - ps: |
-      appveyor DownloadFile https://github.com/golangci/golangci-lint/releases/download/v1.21.0/golangci-lint-1.21.0-windows-amd64.zip
-      Expand-Archive golangci-lint-1.21.0-windows-amd64.zip
-      Move-Item golangci-lint-1.21.0-windows-amd64\golangci-lint-1.21.0-windows-amd64\golangci-lint.exe $env:GOPATH\bin\golangci-lint.exe
+      appveyor DownloadFile https://github.com/golangci/golangci-lint/releases/download/v1.43.0/golangci-lint-1.43.0-windows-amd64.zip
+      Expand-Archive golangci-lint-1.43.0-windows-amd64.zip
+      Move-Item golangci-lint-1.43.0-windows-amd64\golangci-lint-1.43.0-windows-amd64\golangci-lint.exe $env:GOPATH\bin\golangci-lint.exe
   - go install github.com/prometheus/promu@v0.11.1
   - go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.2.0
 
