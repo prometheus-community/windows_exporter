@@ -1,3 +1,4 @@
+//go:build windows
 // +build windows
 
 package collector
@@ -136,7 +137,7 @@ func NewDNSCollector() (Collector, error) {
 		),
 		Responses: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "responses_total"),
-			"Number of reponses sent by DNS server",
+			"Number of responses sent by DNS server",
 			[]string{"protocol"},
 			nil,
 		),

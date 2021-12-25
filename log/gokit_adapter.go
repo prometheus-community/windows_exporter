@@ -6,13 +6,13 @@ import (
 
 // Returns an adapter implementing the go-kit/kit/log.Logger interface on our
 // logrus logger
-func NewToolkitAdapter() *logAdapter {
-	return &logAdapter{}
+func NewToolkitAdapter() *Adapter {
+	return &Adapter{}
 }
 
-type logAdapter struct{}
+type Adapter struct{}
 
-func (*logAdapter) Log(keyvals ...interface{}) error {
+func (*Adapter) Log(keyvals ...interface{}) error {
 	var lvl level.Value
 	var msg string
 	for i := 0; i < len(keyvals); i += 2 {

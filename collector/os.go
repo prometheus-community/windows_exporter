@@ -1,3 +1,4 @@
+//go:build windows
 // +build windows
 
 package collector
@@ -201,7 +202,7 @@ func (c *OSCollector) collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) (
 		return nil, err
 	}
 
-	var fsipf float64 = 0
+	var fsipf float64
 	for _, pagingFile := range pagingFiles {
 		fileString := strings.ReplaceAll(pagingFile, `\??\`, "")
 		file, err := os.Stat(fileString)
@@ -222,7 +223,7 @@ func (c *OSCollector) collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) (
 	}
 
 	// Get current page file usage.
-	var pfbRaw float64 = 0
+	var pfbRaw float64
 	for _, pageFile := range pfc {
 		if strings.Contains(strings.ToLower(pageFile.Name), "_total") {
 			continue
@@ -302,7 +303,7 @@ func (c *OSCollector) collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) (
 	ch <- prometheus.MustNewConstMetric(
 		c.PagingLimitBytes,
 		prometheus.GaugeValue,
-		float64(fsipf),
+		fsipf,
 	)
 
 	ch <- prometheus.MustNewConstMetric(

@@ -1,3 +1,4 @@
+//go:build windows
 // +build windows
 
 package collector
@@ -128,7 +129,7 @@ func NewDFSRCollector() (Collector, error) {
 
 		ConnectionFilesReceivedTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "connection_received_files_total"),
-			"Total number of files receieved for connection",
+			"Total number of files received for connection",
 			[]string{"name"},
 			nil,
 		),

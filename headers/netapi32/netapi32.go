@@ -69,7 +69,7 @@ var NetApiStatus = map[uint32]string{
 // NetApiBufferFree frees the memory other network management functions use internally to return information.
 // https://docs.microsoft.com/en-us/windows/win32/api/lmapibuf/nf-lmapibuf-netapibufferfree
 func netApiBufferFree(buffer *wKSTAInfo102) {
-	procNetApiBufferFree.Call(uintptr(unsafe.Pointer(buffer)))
+	procNetApiBufferFree.Call(uintptr(unsafe.Pointer(buffer))) //nolint:errcheck
 }
 
 // NetWkstaGetInfo returns information about the configuration of a workstation.

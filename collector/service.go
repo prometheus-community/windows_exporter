@@ -1,3 +1,4 @@
+//go:build windows
 // +build windows
 
 package collector
@@ -231,7 +232,7 @@ func (c *serviceCollector) collectAPI(ch chan<- prometheus.Metric) error {
 	if err != nil {
 		return err
 	}
-	defer svcmgrConnection.Disconnect()
+	defer svcmgrConnection.Disconnect() //nolint:errcheck
 
 	// List All Services from the Services Manager
 	serviceList, err := svcmgrConnection.ListServices()

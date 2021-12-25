@@ -36,7 +36,7 @@ Name          | Description
 `windows_exchange_transport_queues_internal_active_remote_delivery` | Internal Active Remote Delivery Queue length
 `windows_exchange_transport_queues_active_mailbox_delivery` | Active Mailbox Delivery Queue length
 `windows_exchange_transport_queues_retry_mailbox_delivery` | Retry Mailbox Delivery Queue length
-`windows_exchange_transport_queues_unreachable` | Unreachable Queue lengt
+`windows_exchange_transport_queues_unreachable` | Unreachable Queue length
 `windows_exchange_transport_queues_external_largest_delivery` | External Largest Delivery Queue length
 `windows_exchange_transport_queues_internal_largest_delivery` | Internal Largest Delivery Queue length 
 `windows_exchange_transport_queues_poison` | Poison Queue length

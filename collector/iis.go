@@ -1,3 +1,4 @@
+//go:build windows
 // +build windows
 
 package collector
@@ -1274,13 +1275,13 @@ type perflibW3SVC_W3WP struct {
 
 	URICacheFlushesTotal       float64 `perflib:"Total Flushed URIs"`
 	URICacheFlushesTotalKernel float64 `perflib:"Total Flushed URIs"`
-	URIsFlushedTotalKernel     float64 `perflib:"Kernel\: Total Flushed URIs"`
+	URIsFlushedTotalKernel     float64 `perflib:"Kernel\: Total Flushed URIs"` //nolint:govet
 	URICacheHitsTotal          float64 `perflib:"URI Cache Hits"`
-	URICacheHitsTotalKernel    float64 `perflib:"Kernel\: URI Cache Hits"`
+	URICacheHitsTotalKernel    float64 `perflib:"Kernel\: URI Cache Hits"` //nolint:govet
 	URICacheMissesTotal        float64 `perflib:"URI Cache Misses"`
-	URICacheMissesTotalKernel  float64 `perflib:"Kernel\: URI Cache Misses"`
+	URICacheMissesTotalKernel  float64 `perflib:"Kernel\: URI Cache Misses"` //nolint:govet
 	URIsCached                 float64 `perflib:"Current URIs Cached"`
-	URIsCachedKernel           float64 `perflib:"Kernel\: Current URIs Cached"`
+	URIsCachedKernel           float64 `perflib:"Kernel\: Current URIs Cached"` //nolint:govet
 	URIsCachedTotal            float64 `perflib:"Total URIs Cached"`
 	URIsCachedTotalKernel      float64 `perflib:"Total URIs Cached"`
 	URIsFlushedTotal           float64 `perflib:"Total Flushed URIs"`

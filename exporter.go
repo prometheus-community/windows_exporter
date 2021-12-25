@@ -259,7 +259,7 @@ func main() {
 	var (
 		configFile = kingpin.Flag(
 			"config.file",
-			"YAML configuration file to use. Values set in this file will be overriden by CLI flags.",
+			"YAML configuration file to use. Values set in this file will be overridden by CLI flags.",
 		).String()
 		webConfig     = webflag.AddFlags(kingpin.CommandLine)
 		listenAddress = kingpin.Flag(
@@ -504,7 +504,7 @@ func (mh *metricsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Warnln("Couldn't create filtered metrics handler: ", err)
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(fmt.Sprintf("Couldn't create filtered metrics handler: %s", err)))
+		w.Write([]byte(fmt.Sprintf("Couldn't create filtered metrics handler: %s", err))) //nolint:errcheck
 		return
 	}
 	reg.MustRegister(wc)

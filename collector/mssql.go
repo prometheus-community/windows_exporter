@@ -1,3 +1,4 @@
+//go:build windows
 // +build windows
 
 package collector
@@ -1957,7 +1958,7 @@ func (c *MSSQLCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric
 	}
 	wg.Wait()
 
-	// this shoud return an error if any? some? children errord.
+	// this should return an error if any? some? children errord.
 	if c.mssqlChildCollectorFailure > 0 {
 		return errors.New("at least one child collector failed")
 	}

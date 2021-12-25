@@ -1,6 +1,6 @@
 # Microsoft File Server Resource Manager (FSRM) Quotas collector
 
-The fsrmquota collector exposes metrics about File Server Ressource Manager Quotas. Note that this collector has only been tested against Windows server 2012R2.
+The fsrmquota collector exposes metrics about File Server Resource Manager Quotas. Note that this collector has only been tested against Windows server 2012R2.
 Other FSRM versions may work but are not tested.
 
 |||
@@ -48,5 +48,5 @@ rate(windows_fsrmquota_usage_bytes)[1d]
       severity: "high"
     annotations:
       summary: "High Quotas Usage"
-      description: "High use of File Ressource.\n Quotas: {{ $labels.path }}\n Current use : {{ $value }}"
+      description: "High use of File Resource.\n Quotas: {{ $labels.path }}\n Current use : {{ $value }}"
 ```

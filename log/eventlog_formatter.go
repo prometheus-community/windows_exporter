@@ -13,6 +13,7 @@
 //
 // Implementation forked from github.com/prometheus/common
 //
+//go:build windows
 // +build windows
 
 package log
