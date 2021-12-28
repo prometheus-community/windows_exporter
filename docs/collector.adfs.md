@@ -1,6 +1,6 @@
 # adfs collector
 
-The adfs collector exposes metrics about Active Directory Federation Services. Note that this collector has only been tested against ADFS 4.0 (2016).
+The ADFS collector exposes metrics about Active Directory Federation Services. Note that this collector has only been tested against ADFS 4.0/ [Farm Behavior (FLB) 3](https://docs.microsoft.com/en-us/windows-server/identity/ad-fs/deployment/upgrading-to-ad-fs-in-windows-server#ad-fs-farm-behavior-levels-fbl) (Server 2016).
 Other ADFS versions may work but are not tested.
 
 |||
@@ -79,6 +79,12 @@ rate(windows_adfs_device_authentications)[2m]
 ```
 
 ## Useful queries
+
+|Query|Description|
+|---|----|
+|`rate(windows_adfs_oauth_password_grant_requests_failure_total[5m])`| Rate of OAuth requests failing due to bad client/resource values|
+|`rate(windows_adfs_userpassword_authentications_failures_total[5m])`| Rate of `/adfs/oauth2/token/` requests failing due to bad username/password values (possible credential spraying)|
+|
 
 ## Alerting examples
 **prometheus.rules**
