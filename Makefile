@@ -16,7 +16,7 @@ lint:
 
 .PHONY: e2e-test
 e2e-test: windows_exporter.exe
-	powershell -NonInteractive -ExecutionPolicy Bypass -File .\tools\end-to-end-test.ps1
+	pwsh -NonInteractive -ExecutionPolicy Bypass -File .\tools\end-to-end-test.ps1
 
 fmt:
 	gofmt -l -w -s .
