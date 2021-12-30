@@ -45,7 +45,7 @@ func newTimeCollector() (Collector, error) {
 			nil,
 		),
 		NTPClientTimeSourceCount: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "ntp_client_time_source_count"),
+			prometheus.BuildFQName(Namespace, subsystem, "ntp_client_time_sources"),
 			"Active number of NTP Time sources being used by the client",
 			nil,
 			nil,
