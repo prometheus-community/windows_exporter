@@ -313,9 +313,10 @@ fileLoop:
 	} else {
 		for _, mf := range metricFamilies {
 			convertMetricFamily(mf, ch)
-			c.exportMTimes(mtimes, ch)
 		}
 	}
+
+	c.exportMTimes(mtimes, ch)
 
 	// Export if there were errors.
 	ch <- prometheus.MustNewConstMetric(
