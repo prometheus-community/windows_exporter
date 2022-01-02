@@ -148,3 +148,7 @@ func expandEnabledChildCollectors(enabled string) []string {
 	sort.Strings(result)
 	return result
 }
+
+func milliSecToSec(t float64) float64 {
+	return t / 1000
+}
