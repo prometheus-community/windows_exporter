@@ -31,13 +31,13 @@ func NewTCPCollector() (Collector, error) {
 
 	return &TCPCollector{
 		ConnectionFailures: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "connection_failures"),
+			prometheus.BuildFQName(Namespace, subsystem, "connection_failures_total"),
 			"(TCP.ConnectionFailures)",
 			[]string{"af"},
 			nil,
 		),
 		ConnectionsActive: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "connections_active"),
+			prometheus.BuildFQName(Namespace, subsystem, "connections_active_total"),
 			"(TCP.ConnectionsActive)",
 			[]string{"af"},
 			nil,
@@ -49,13 +49,13 @@ func NewTCPCollector() (Collector, error) {
 			nil,
 		),
 		ConnectionsPassive: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "connections_passive"),
+			prometheus.BuildFQName(Namespace, subsystem, "connections_passive_total"),
 			"(TCP.ConnectionsPassive)",
 			[]string{"af"},
 			nil,
 		),
 		ConnectionsReset: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "connections_reset"),
+			prometheus.BuildFQName(Namespace, subsystem, "connections_reset_total"),
 			"(TCP.ConnectionsReset)",
 			[]string{"af"},
 			nil,
