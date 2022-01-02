@@ -346,7 +346,3 @@ func (c *RemoteFxCollector) collectRemoteFXGraphicsCounters(ctx *ScrapeContext, 
 
 	return nil, nil
 }
-
-func milliSecToSec(t float64) float64 {
-	return t / 1000
-}
