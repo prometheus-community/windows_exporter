@@ -10,6 +10,7 @@ A Prometheus exporter for Windows machines.
 Name     | Description | Enabled by default
 ---------|-------------|--------------------
 [ad](docs/collector.ad.md) | Active Directory Domain Services |
+[adcs](docs/collector.adcs.md) | Active Directory Certificate Services |
 [adfs](docs/collector.adfs.md) | Active Directory Federation Services |
 [cache](docs/collector.cache.md) | Cache metrics |
 [cpu](docs/collector.cpu.md) | CPU usage | &#10003;
