@@ -82,7 +82,7 @@ func NewTerminalServicesCollector() (Collector, error) {
 			nil,
 		),
 		HandleCount: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "handle_count"),
+			prometheus.BuildFQName(Namespace, subsystem, "handles"),
 			"Total number of handles currently opened by this process. This number is the sum of the handles currently opened by each thread in this process.",
 			[]string{"session_name"},
 			nil,
@@ -142,7 +142,7 @@ func NewTerminalServicesCollector() (Collector, error) {
 			nil,
 		),
 		ThreadCount: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "thread_count"),
+			prometheus.BuildFQName(Namespace, subsystem, "threads"),
 			"Number of threads currently active in this process. An instruction is the basic unit of execution in a processor, and a thread is the object that executes instructions. Every running process has at least one thread.",
 			[]string{"session_name"},
 			nil,

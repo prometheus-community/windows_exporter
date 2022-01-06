@@ -73,7 +73,7 @@ func newProcessCollector() (Collector, error) {
 			nil,
 		),
 		HandleCount: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "handle_count"),
+			prometheus.BuildFQName(Namespace, subsystem, "handles"),
 			"Total number of handles the process has open. This number is the sum of the handles currently open by each thread in the process.",
 			[]string{"process", "process_id", "creating_process_id"},
 			nil,
@@ -121,7 +121,7 @@ func newProcessCollector() (Collector, error) {
 			nil,
 		),
 		ThreadCount: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "thread_count"),
+			prometheus.BuildFQName(Namespace, subsystem, "threads"),
 			"Number of threads currently active in this process.",
 			[]string{"process", "process_id", "creating_process_id"},
 			nil,
