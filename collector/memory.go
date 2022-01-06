@@ -77,7 +77,8 @@ func NewMemoryCollector() (Collector, error) {
 		),
 		CacheFaultsTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "cache_faults_total"),
-			"(CacheFaultsPersec)",
+			"Number of faults which occur when a page sought in the file system cache is not found there and must be retrieved from elsewhere in memory (soft fault) "+
+				"or from disk (hard fault) (Cache Faults/sec)",
 			nil,
 			nil,
 		),
@@ -96,13 +97,14 @@ func NewMemoryCollector() (Collector, error) {
 		DemandZeroFaultsTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "demand_zero_faults_total"),
 			"The number of zeroed pages required to satisfy faults. Zeroed pages, pages emptied of previously stored data and filled with zeros, are a security"+
-				" feature of Windows that prevent processes from seeing data stored by earlier processes that used the memory space (DemandZeroFaults)",
+				" feature of Windows that prevent processes from seeing data stored by earlier processes that used the memory space (Demand Zero Faults/sec)",
 			nil,
 			nil,
 		),
 		FreeAndZeroPageListBytes: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "free_and_zero_page_list_bytes"),
-			"(FreeAndZeroPageListBytes)",
+			"The amount of physical memory, in bytes, that is assigned to the free and zero page lists. This memory does not contain cached data. It is immediately"+
+				" available for allocation to a process or for system use (FreeAndZeroPageListBytes)",
 			nil,
 			nil,
 		),
@@ -114,13 +116,14 @@ func NewMemoryCollector() (Collector, error) {
 		),
 		ModifiedPageListBytes: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "modified_page_list_bytes"),
-			"(ModifiedPageListBytes)",
+			"The amount of physical memory, in bytes, that is assigned to the modified page list. This memory contains cached data and code that is not actively in "+
+				"use by processes, the system and the system cache (ModifiedPageListBytes)",
 			nil,
 			nil,
 		),
 		PageFaultsTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "page_faults_total"),
-			"(PageFaultsPersec)",
+			"Overall rate at which faulted pages are handled by the processor (Page Faults/sec)",
 			nil,
 			nil,
 		),
@@ -162,14 +165,15 @@ func NewMemoryCollector() (Collector, error) {
 			nil,
 		),
 		PoolNonpagedBytes: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "pool_nonpaged_bytes_total"),
-			"(PoolNonpagedBytes)",
+			prometheus.BuildFQName(Namespace, subsystem, "pool_nonpaged_bytes"),
+			"Number of bytes in the non-paged pool, an area of the system virtual memory that is used for objects that cannot be written to disk, but must "+
+				"remain in physical memory as long as they are allocated (PoolNonpagedBytes)",
 			nil,
 			nil,
 		),
 		PoolPagedAllocsTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "pool_paged_allocs_total"),
-			"(PoolPagedAllocs)",
+			"Number of calls to allocate space in the paged pool, regardless of the amount of space allocated in each call (PoolPagedAllocs)",
 			nil,
 			nil,
 		),
@@ -181,67 +185,72 @@ func NewMemoryCollector() (Collector, error) {
 		),
 		PoolPagedResidentBytes: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "pool_paged_resident_bytes"),
-			"(PoolPagedResidentBytes)",
+			"The size, in bytes, of the portion of the paged pool that is currently resident and active in physical memory. The paged pool is an area of the "+
+				"system virtual memory that is used for objects that can be written to disk when they are not being used (PoolPagedResidentBytes)",
 			nil,
 			nil,
 		),
 		StandbyCacheCoreBytes: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "standby_cache_core_bytes"),
-			"(StandbyCacheCoreBytes)",
+			"The amount of physical memory, in bytes, that is assigned to the core standby cache page lists. This memory contains cached data and code that is "+
+				"not actively in use by processes, the system and the system cache (StandbyCacheCoreBytes)",
 			nil,
 			nil,
 		),
 		StandbyCacheNormalPriorityBytes: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "standby_cache_normal_priority_bytes"),
-			"(StandbyCacheNormalPriorityBytes)",
+			"The amount of physical memory, in bytes, that is assigned to the normal priority standby cache page lists. This memory contains cached data and "+
+				"code that is not actively in use by processes, the system and the system cache (StandbyCacheNormalPriorityBytes)",
 			nil,
 			nil,
 		),
 		StandbyCacheReserveBytes: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "standby_cache_reserve_bytes"),
-			"(StandbyCacheReserveBytes)",
+			"The amount of physical memory, in bytes, that is assigned to the reserve standby cache page lists. This memory contains cached data and code "+
+				"that is not actively in use by processes, the system and the system cache (StandbyCacheReserveBytes)",
 			nil,
 			nil,
 		),
 		SystemCacheResidentBytes: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "system_cache_resident_bytes"),
-			"(SystemCacheResidentBytes)",
+			"The size, in bytes, of the portion of the system file cache which is currently resident and active in physical memory (SystemCacheResidentBytes)",
 			nil,
 			nil,
 		),
 		SystemCodeResidentBytes: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "system_code_resident_bytes"),
-			"(SystemCodeResidentBytes)",
+			"The size, in bytes, of the pageable operating system code that is currently resident and active in physical memory (SystemCodeResidentBytes)",
 			nil,
 			nil,
 		),
 		SystemCodeTotalBytes: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "system_code_total_bytes"),
-			"(SystemCodeTotalBytes)",
+			"The size, in bytes, of the pageable operating system code currently mapped into the system virtual address space (SystemCodeTotalBytes)",
 			nil,
 			nil,
 		),
 		SystemDriverResidentBytes: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "system_driver_resident_bytes"),
-			"(SystemDriverResidentBytes)",
+			"The size, in bytes, of the pageable physical memory being used by device drivers. It is the working set (physical memory area) of the drivers (SystemDriverResidentBytes)",
 			nil,
 			nil,
 		),
 		SystemDriverTotalBytes: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "system_driver_total_bytes"),
-			"(SystemDriverTotalBytes)",
+			"The size, in bytes, of the pageable virtual memory currently being used by device drivers. Pageable memory can be written to disk when it is not being used (SystemDriverTotalBytes)",
 			nil,
 			nil,
 		),
 		TransitionFaultsTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "transition_faults_total"),
-			"(TransitionFaultsPersec)",
+			"Number of faults rate at which page faults are resolved by recovering pages that were being used by another process sharing the page, or were on the "+
+				"modified page list or the standby list, or were being written to disk at the time of the page fault (TransitionFaultsPersec)",
 			nil,
 			nil,
 		),
 		TransitionPagesRepurposedTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "transition_pages_repurposed_total"),
-			"(TransitionPagesRePurposedPersec)",
+			"Transition Pages RePurposed is the rate at which the number of transition cache pages were reused for a different purpose (TransitionPagesRePurposedPersec)",
 			nil,
 			nil,
 		),
@@ -327,7 +336,7 @@ func (c *MemoryCollector) collect(ctx *ScrapeContext, ch chan<- prometheus.Metri
 
 	ch <- prometheus.MustNewConstMetric(
 		c.CacheFaultsTotal,
-		prometheus.GaugeValue,
+		prometheus.CounterValue,
 		dst[0].CacheFaultsPersec,
 	)
 
@@ -345,7 +354,7 @@ func (c *MemoryCollector) collect(ctx *ScrapeContext, ch chan<- prometheus.Metri
 
 	ch <- prometheus.MustNewConstMetric(
 		c.DemandZeroFaultsTotal,
-		prometheus.GaugeValue,
+		prometheus.CounterValue,
 		dst[0].DemandZeroFaultsPersec,
 	)
 
@@ -369,37 +378,37 @@ func (c *MemoryCollector) collect(ctx *ScrapeContext, ch chan<- prometheus.Metri
 
 	ch <- prometheus.MustNewConstMetric(
 		c.PageFaultsTotal,
-		prometheus.GaugeValue,
+		prometheus.CounterValue,
 		dst[0].PageFaultsPersec,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.SwapPageReadsTotal,
-		prometheus.GaugeValue,
+		prometheus.CounterValue,
 		dst[0].PageReadsPersec,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.SwapPagesReadTotal,
-		prometheus.GaugeValue,
+		prometheus.CounterValue,
 		dst[0].PagesInputPersec,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.SwapPagesWrittenTotal,
-		prometheus.GaugeValue,
+		prometheus.CounterValue,
 		dst[0].PagesOutputPersec,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.SwapPageOperationsTotal,
-		prometheus.GaugeValue,
+		prometheus.CounterValue,
 		dst[0].PagesPersec,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.SwapPageWritesTotal,
-		prometheus.GaugeValue,
+		prometheus.CounterValue,
 		dst[0].PageWritesPersec,
 	)
 
@@ -417,7 +426,7 @@ func (c *MemoryCollector) collect(ctx *ScrapeContext, ch chan<- prometheus.Metri
 
 	ch <- prometheus.MustNewConstMetric(
 		c.PoolPagedAllocsTotal,
-		prometheus.GaugeValue,
+		prometheus.CounterValue,
 		dst[0].PoolPagedAllocs,
 	)
 
@@ -483,19 +492,19 @@ func (c *MemoryCollector) collect(ctx *ScrapeContext, ch chan<- prometheus.Metri
 
 	ch <- prometheus.MustNewConstMetric(
 		c.TransitionFaultsTotal,
-		prometheus.GaugeValue,
+		prometheus.CounterValue,
 		dst[0].TransitionFaultsPersec,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.TransitionPagesRepurposedTotal,
-		prometheus.GaugeValue,
+		prometheus.CounterValue,
 		dst[0].TransitionPagesRePurposedPersec,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.WriteCopiesTotal,
-		prometheus.GaugeValue,
+		prometheus.CounterValue,
 		dst[0].WriteCopiesPersec,
 	)
 
