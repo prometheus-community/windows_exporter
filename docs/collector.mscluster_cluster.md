@@ -1,6 +1,6 @@
 # mscluster_cluster collector
 
-The The MSCluster_Cluster class is a dynamic WMI class that represents a cluster.
+The MSCluster_Cluster class is a dynamic WMI class that represents a cluster.
 
 |||
 -|-
