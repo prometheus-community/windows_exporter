@@ -23,31 +23,31 @@ func newMSCluster_NetworkCollector() (Collector, error) {
 	return &MSCluster_NetworkCollector{
 		Characteristics: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "characteristics"),
-			"(Characteristics)",
+			"Provides the characteristics of the network.",
 			[]string{"name"},
 			nil,
 		),
 		Flags: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "flags"),
-			"(Flags)",
+			"Provides access to the flags set for the node. ",
 			[]string{"name"},
 			nil,
 		),
 		Metric: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "metric"),
-			"(Metric)",
+			"The metric of a cluster network (networks with lower values are used first). If this value is set, then the AutoMetric property is set to false.",
 			[]string{"name"},
 			nil,
 		),
 		Role: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "role"),
-			"(Role)",
+			"Provides access to the network's Role property. The Role property describes the role of the network in the cluster. 0: None; 1: Cluster; 2: Client; 3: Both ",
 			[]string{"name"},
 			nil,
 		),
 		State: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "state"),
-			"(State)",
+			"Provides the current state of the network. 1-1: Unknown; 0: Unavailable; 1: Down; 2: Partitioned; 3: Up",
 			[]string{"name"},
 			nil,
 		),
