@@ -11,23 +11,22 @@ func init() {
 
 // A MSCluster_ResourceCollector is a Prometheus collector for WMI MSCluster_Resource metrics
 type MSCluster_ResourceCollector struct {
-	Characteristics           *prometheus.Desc
-	DeadlockTimeout           *prometheus.Desc
-	EmbeddedFailureAction     *prometheus.Desc
-	Flags                     *prometheus.Desc
-	IsAlivePollInterval       *prometheus.Desc
-	LooksAlivePollInterval    *prometheus.Desc
-	MonitorProcessId          *prometheus.Desc
-	PendingTimeout            *prometheus.Desc
-	RequiredDependencyClasses *prometheus.Desc
-	ResourceClass             *prometheus.Desc
-	RestartAction             *prometheus.Desc
-	RestartDelay              *prometheus.Desc
-	RestartPeriod             *prometheus.Desc
-	RestartThreshold          *prometheus.Desc
-	RetryPeriodOnFailure      *prometheus.Desc
-	State                     *prometheus.Desc
-	Subclass                  *prometheus.Desc
+	Characteristics        *prometheus.Desc
+	DeadlockTimeout        *prometheus.Desc
+	EmbeddedFailureAction  *prometheus.Desc
+	Flags                  *prometheus.Desc
+	IsAlivePollInterval    *prometheus.Desc
+	LooksAlivePollInterval *prometheus.Desc
+	MonitorProcessId       *prometheus.Desc
+	PendingTimeout         *prometheus.Desc
+	ResourceClass          *prometheus.Desc
+	RestartAction          *prometheus.Desc
+	RestartDelay           *prometheus.Desc
+	RestartPeriod          *prometheus.Desc
+	RestartThreshold       *prometheus.Desc
+	RetryPeriodOnFailure   *prometheus.Desc
+	State                  *prometheus.Desc
+	Subclass               *prometheus.Desc
 }
 
 func newMSCluster_ResourceCollector() (Collector, error) {
@@ -35,97 +34,97 @@ func newMSCluster_ResourceCollector() (Collector, error) {
 	return &MSCluster_ResourceCollector{
 		Characteristics: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "characteristics"),
-			"(Characteristics)",
+			"Provides the characteristics of the object.",
 			[]string{"type", "owner_group", "name"},
 			nil,
 		),
 		DeadlockTimeout: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "deadlock_timeout"),
-			"(DeadlockTimeout)",
+			"Indicates the length of time to wait, in milliseconds, before declaring a deadlock in any call into a resource.",
 			[]string{"type", "owner_group", "name"},
 			nil,
 		),
 		EmbeddedFailureAction: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "embedded_failure_action"),
-			"(EmbeddedFailureAction)",
+			"The time, in milliseconds, that a resource should remain in a failed state before the Cluster service attempts to restart it.",
 			[]string{"type", "owner_group", "name"},
 			nil,
 		),
 		Flags: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "flags"),
-			"(Flags)",
+			"Provides access to the flags set for the object.",
 			[]string{"type", "owner_group", "name"},
 			nil,
 		),
 		IsAlivePollInterval: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "is_alive_poll_interval"),
-			"(IsAlivePollInterval)",
+			"Provides access to the resource's IsAlivePollInterval property, which is the recommended interval in milliseconds at which the Cluster Service should poll the resource to determine whether it is operational. If the property is set to 0xFFFFFFFF, the Cluster Service uses the IsAlivePollInterval property for the resource type associated with the resource.",
 			[]string{"type", "owner_group", "name"},
 			nil,
 		),
 		LooksAlivePollInterval: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "looks_alive_poll_interval"),
-			"(LooksAlivePollInterval)",
+			"Provides access to the resource's LooksAlivePollInterval property, which is the recommended interval in milliseconds at which the Cluster Service should poll the resource to determine whether it appears operational. If the property is set to 0xFFFFFFFF, the Cluster Service uses the LooksAlivePollInterval property for the resource type associated with the resource.",
 			[]string{"type", "owner_group", "name"},
 			nil,
 		),
 		MonitorProcessId: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "monitor_process_id"),
-			"(MonitorProcessId)",
+			"Provides the process ID of the resource host service that is currently hosting the resource.",
 			[]string{"type", "owner_group", "name"},
 			nil,
 		),
 		PendingTimeout: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "pending_timeout"),
-			"(PendingTimeout)",
+			"Provides access to the resource's PendingTimeout property. If a resource cannot be brought online or taken offline in the number of milliseconds specified by the PendingTimeout property, the resource is forcibly terminated.",
 			[]string{"type", "owner_group", "name"},
 			nil,
 		),
 		ResourceClass: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "resource_class"),
-			"(ResourceClass)",
+			"Gets or sets the resource class of a resource. 0: Unknown; 1: Storage; 2: Network; 32768: Unknown ",
 			[]string{"type", "owner_group", "name"},
 			nil,
 		),
 		RestartAction: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "restart_action"),
-			"(RestartAction)",
+			"Provides access to the resource's RestartAction property, which is the action to be taken by the Cluster Service if the resource fails.",
 			[]string{"type", "owner_group", "name"},
 			nil,
 		),
 		RestartDelay: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "restart_delay"),
-			"(RestartDelay)",
+			"Indicates the time delay before a failed resource is restarted.",
 			[]string{"type", "owner_group", "name"},
 			nil,
 		),
 		RestartPeriod: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "restart_period"),
-			"(RestartPeriod)",
+			"Provides access to the resource's RestartPeriod property, which is interval of time, in milliseconds, during which a specified number of restart attempts can be made on a nonresponsive resource.",
 			[]string{"type", "owner_group", "name"},
 			nil,
 		),
 		RestartThreshold: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "restart_threshold"),
-			"(RestartThreshold)",
+			"Provides access to the resource's RestartThreshold property which is the maximum number of restart attempts that can be made on a resource within an interval defined by the RestartPeriod property before the Cluster Service initiates the action specified by the RestartAction property.",
 			[]string{"type", "owner_group", "name"},
 			nil,
 		),
 		RetryPeriodOnFailure: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "retry_period_on_failure"),
-			"(RetryPeriodOnFailure)",
+			"Provides access to the resource's RetryPeriodOnFailure property, which is the interval of time (in milliseconds) that a resource should remain in a failed state before the Cluster service attempts to restart it.",
 			[]string{"type", "owner_group", "name"},
 			nil,
 		),
 		State: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "state"),
-			"(State)",
+			"The current state of the resource. -1: Unknown; 0: Inherited; 1: Initializing; 2: Online; 3: Offline; 4: Failed; 128: Pending; 129: Online Pending; 130: Offline Pending ",
 			[]string{"type", "owner_group", "name"},
 			nil,
 		),
 		Subclass: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "subclass"),
-			"(Subclass)",
+			"Provides the list of references to nodes that can be the owner of this resource.",
 			[]string{"type", "owner_group", "name"},
 			nil,
 		),
