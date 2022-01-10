@@ -34,97 +34,79 @@ func newMSCluster_ResourceGroupCollector() (Collector, error) {
 	return &MSCluster_ResourceGroupCollector{
 		AutoFailbackType: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "auto_failback_type"),
-			"(AutoFailbackType)",
+			"Provides access to the group's AutoFailbackType property.",
 			[]string{"name"},
 			nil,
 		),
 		Characteristics: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "characteristics"),
-			"(Characteristics)",
+			"Provides the characteristics of the group.",
 			[]string{"name"},
 			nil,
 		),
 		ColdStartSetting: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "cold_start_setting"),
-			"(ColdStartSetting)",
+			"Indicates whether a group can start after a cluster cold start.",
 			[]string{"name"},
 			nil,
 		),
 		DefaultOwner: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "default_owner"),
-			"(DefaultOwner)",
+			"Number of the last node the resource group was activated on or explicitly moved to.",
 			[]string{"name"},
 			nil,
 		),
 		FailbackWindowEnd: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "failback_window_end"),
-			"(FailbackWindowEnd)",
+			"The FailbackWindowEnd property provides the latest time that the group can be moved back to the node identified as its preferred node.",
 			[]string{"name"},
 			nil,
 		),
 		FailbackWindowStart: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "failback_window_start"),
-			"(FailbackWindowStart)",
+			"The FailbackWindowStart property provides the earliest time (that is, local time as kept by the cluster) that the group can be moved back to the node identified as its preferred node.",
 			[]string{"name"},
 			nil,
 		),
 		FailoverPeriod: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "failover_period"),
-			"(FailoverPeriod)",
+			"The FailoverPeriod property specifies a number of hours during which a maximum number of failover attempts, specified by the FailoverThreshold property, can occur.",
 			[]string{"name"},
 			nil,
 		),
 		FailoverThreshold: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "failover_threshold"),
-			"(FailoverThreshold)",
-			[]string{"name"},
-			nil,
-		),
-		FaultDomain: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "fault_domain"),
-			"(FaultDomain)",
+			"The FailoverThreshold property specifies the maximum number of failover attempts.",
 			[]string{"name"},
 			nil,
 		),
 		Flags: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "flags"),
-			"(Flags)",
+			"Provides access to the flags set for the group. ",
 			[]string{"name"},
 			nil,
 		),
 		GroupType: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "group_type"),
-			"(GroupType)",
-			[]string{"name"},
-			nil,
-		),
-		PlacementOptions: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "placement_options"),
-			"(PlacementOptions)",
+			"The Type of the resource group.",
 			[]string{"name"},
 			nil,
 		),
 		Priority: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "priority"),
-			"(Priority)",
+			"Priority value of the resource group",
 			[]string{"name"},
 			nil,
 		),
 		ResiliencyPeriod: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "resiliency_period"),
-			"(ResiliencyPeriod)",
+			"The resiliency period for this group, in seconds.",
 			[]string{"name"},
 			nil,
 		),
 		State: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "state"),
-			"(State)",
-			[]string{"name"},
-			nil,
-		),
-		UpdateDomain: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "update_domain"),
-			"(UpdateDomain)",
+			"The current state of the resource group. -1: Unknown; 0: Online; 1: Offline; 2: Failed; 3: Partial Online; 4: Pending",
 			[]string{"name"},
 			nil,
 		),
@@ -145,10 +127,8 @@ type MSCluster_ResourceGroup struct {
 	FailbackWindowStart int
 	FailoverPeriod      uint
 	FailoverThreshold   uint
-	FaultDomain         uint
 	Flags               uint
 	GroupType           uint
-	PlacementOptions    uint
 	Priority            uint
 	ResiliencyPeriod    uint
 	State               uint
@@ -223,13 +203,6 @@ func (c *MSCluster_ResourceGroupCollector) Collect(ctx *ScrapeContext, ch chan<-
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.FaultDomain,
-			prometheus.GaugeValue,
-			float64(v.FaultDomain),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
 			c.Flags,
 			prometheus.GaugeValue,
 			float64(v.Flags),
@@ -240,13 +213,6 @@ func (c *MSCluster_ResourceGroupCollector) Collect(ctx *ScrapeContext, ch chan<-
 			c.GroupType,
 			prometheus.GaugeValue,
 			float64(v.GroupType),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.PlacementOptions,
-			prometheus.GaugeValue,
-			float64(v.PlacementOptions),
 			v.Name,
 		)
 
