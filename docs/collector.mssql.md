@@ -240,10 +240,10 @@ Name | Description | Type | Labels
 `windows_mssql_transactions_update_snapshot_active_total` | The number of currently active transactions using the snapshot isolation level and have modified data | counter | `mssql_instance`
 `windows_mssql_transactions_version_cleanup_rate_bytes` | The rate (in kilobytes per second) at which row versions are removed from the snapshot isolation version store in tempdb | gauge | `mssql_instance`
 `windows_mssql_transactions_version_generation_rate_bytes` | The rate (in kilobytes per second) at which new row versions are added to the snapshot isolation version store in tempdb | gauge | `mssql_instance`
-`windows_mssql_transactions_version_store_size_bytes` | he amount of space (in kilobytes) in tempdb being used to store snapshot isolation level row versions | gauge | `mssql_instance`
-`windows_mssql_transactions_version_store_units` | The number of active allocation units in the snapshot isolation version store in tempdb | counter | `mssql_instance`
-`windows_mssql_transactions_version_store_creation_units` | The number of allocation units that have been created in the snapshot isolation store since the instance of the Database Engine was started | counter | `mssql_instance`
-`windows_mssql_transactions_version_store_truncation_units` | The number of allocation units that have been removed from the snapshot isolation store since the instance of the Database Engine was started | counter | `mssql_instance`
+`windows_mssql_transactions_version_store_size_bytes` | The amount of space (in kilobytes) in tempdb being used to store snapshot isolation level row versions | gauge | `mssql_instance`
+`windows_mssql_transactions_version_store_units` | The number of active allocation units in the snapshot isolation version store in tempdb | gauge | `mssql_instance`
+`windows_mssql_transactions_version_store_creation_units_total` | The number of allocation units that have been created in the snapshot isolation store since the instance of the Database Engine was started | counter | `mssql_instance`
+`windows_mssql_transactions_version_store_truncation_units_total` | The number of allocation units that have been removed from the snapshot isolation store since the instance of the Database Engine was started | counter | `mssql_instance`
 `windows_mssql_waitstats_lock_waits` | Statistics for processes waiting on a lock | gauge | `mssql_instance`, `item`
 `windows_mssql_waitstats_memory_grant_queue_waits` | Statistics for processes waiting for memory grant to become available | gauge | `mssql_instance`, `item`
 `windows_mssql_waitstats_thread_safe_memory_objects_waits` | Statistics for processes waiting on thread-safe memory allocators | gauge | `mssql_instance`, `item`

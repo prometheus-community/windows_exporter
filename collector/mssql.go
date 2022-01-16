@@ -1795,13 +1795,13 @@ func NewMSSQLCollector() (Collector, error) {
 			nil,
 		),
 		TransactionsVersionStoreCreationUnits: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "transactions_version_store_creation_units"),
+			prometheus.BuildFQName(Namespace, subsystem, "transactions_version_store_creation_units_total"),
 			"(Transactions.VersionStoreUnitCreation)",
 			[]string{"mssql_instance"},
 			nil,
 		),
 		TransactionsVersionStoreTruncationUnits: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "transactions_version_store_truncation_units"),
+			prometheus.BuildFQName(Namespace, subsystem, "transactions_version_store_truncation_units_total"),
 			"(Transactions.VersionStoreUnitTruncation)",
 			[]string{"mssql_instance"},
 			nil,
@@ -4082,7 +4082,7 @@ func (c *MSSQLCollector) collectTransactions(ctx *ScrapeContext, ch chan<- prome
 
 		ch <- prometheus.MustNewConstMetric(
 			c.TransactionsVersionStoreUnits,
-			prometheus.CounterValue,
+			prometheus.GaugeValue,
 			v.VersionStoreunitcount,
 			sqlInstance,
 		)
