@@ -759,7 +759,7 @@ func NewMSSQLCollector() (Collector, error) {
 
 		// Win32_PerfRawData_{instance}_SQLServerBufferManager
 		BufManBackgroundwriterpages: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "bufman_background_writer_pages"),
+			prometheus.BuildFQName(Namespace, subsystem, "bufman_background_writer_pages_total"),
 			"(BufferManager.Backgroundwriterpages)",
 			[]string{"mssql_instance"},
 			nil,
@@ -777,7 +777,7 @@ func NewMSSQLCollector() (Collector, error) {
 			nil,
 		),
 		BufManCheckpointpages: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "bufman_checkpoint_pages"),
+			prometheus.BuildFQName(Namespace, subsystem, "bufman_checkpoint_pages_total"),
 			"(BufferManager.Checkpointpages)",
 			[]string{"mssql_instance"},
 			nil,
@@ -849,7 +849,7 @@ func NewMSSQLCollector() (Collector, error) {
 			nil,
 		),
 		BufManLazywrites: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "bufman_lazywrites"),
+			prometheus.BuildFQName(Namespace, subsystem, "bufman_lazywrites_total"),
 			"(BufferManager.Lazywrites)",
 			[]string{"mssql_instance"},
 			nil,
@@ -861,31 +861,31 @@ func NewMSSQLCollector() (Collector, error) {
 			nil,
 		),
 		BufManPagelookups: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "bufman_page_lookups"),
+			prometheus.BuildFQName(Namespace, subsystem, "bufman_page_lookups_total"),
 			"(BufferManager.Pagelookups)",
 			[]string{"mssql_instance"},
 			nil,
 		),
 		BufManPagereads: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "bufman_page_reads"),
+			prometheus.BuildFQName(Namespace, subsystem, "bufman_page_reads_total"),
 			"(BufferManager.Pagereads)",
 			[]string{"mssql_instance"},
 			nil,
 		),
 		BufManPagewrites: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "bufman_page_writes"),
+			prometheus.BuildFQName(Namespace, subsystem, "bufman_page_writes_total"),
 			"(BufferManager.Pagewrites)",
 			[]string{"mssql_instance"},
 			nil,
 		),
 		BufManReadaheadpages: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "bufman_read_ahead_pages"),
+			prometheus.BuildFQName(Namespace, subsystem, "bufman_read_ahead_pages_total"),
 			"(BufferManager.Readaheadpages)",
 			[]string{"mssql_instance"},
 			nil,
 		),
 		BufManReadaheadtime: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "bufman_read_ahead_issuing_seconds"),
+			prometheus.BuildFQName(Namespace, subsystem, "bufman_read_ahead_issuing_seconds_total"),
 			"(BufferManager.Readaheadtime)",
 			[]string{"mssql_instance"},
 			nil,

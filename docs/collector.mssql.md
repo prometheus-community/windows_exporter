@@ -76,9 +76,9 @@ Name | Description | Type | Labels
 `windows_mssql_availreplica_resent_messages` | Number of Always On messages resent in the last second | counter | `mssql_instance`, `replica`
 `windows_mssql_availreplica_sends_to_replica` | Number of Always On messages sent to this availability replica per second | counter | `mssql_instance`, `replica`
 `windows_mssql_availreplica_sends_to_transport` | Actual number of Always On messages sent per second over the network to the remote availability replica | counter | `mssql_instance`, `replica`
-`windows_mssql_bufman_background_writer_pages` | Number of pages flushed to enforce the recovery interval settings | counter | `mssql_instance`
+`windows_mssql_bufman_background_writer_pages_total` | Number of pages flushed to enforce the recovery interval settings | counter | `mssql_instance`
 `windows_mssql_bufman_buffer_cache_hit_ratio` | Indicates the percentage of pages found in the buffer cache without having to read from disk. The ratio is the total number of cache hits divided by the total number of cache lookups over the last few thousand page accesses | counter | `mssql_instance`
-`windows_mssql_bufman_checkpoint_pages` | Indicates the number of pages flushed to disk per second by a checkpoint or other operation that require all dirty pages to be flushed | counter | `mssql_instance`
+`windows_mssql_bufman_checkpoint_pages_total` | Indicates the number of pages flushed to disk per second by a checkpoint or other operation that require all dirty pages to be flushed | counter | `mssql_instance`
 `windows_mssql_bufman_database_pages` | Indicates the number of pages in the buffer pool with database content | counter | `mssql_instance`
 `windows_mssql_bufman_extension_allocated_pages` | Total number of non-free cache pages in the buffer pool extension file | counter | `mssql_instance`
 `windows_mssql_bufman_extension_free_pages` | Total number of free cache pages in the buffer pool extension file | counter | `mssql_instance`
@@ -90,13 +90,13 @@ Name | Description | Type | Labels
 `windows_mssql_bufman_extension_page_writes` | Number of pages written to the buffer pool extension file per second | counter | `mssql_instance`
 `windows_mssql_bufman_free_list_stalls` | Indicates the number of requests per second that had to wait for a free page | counter | `mssql_instance`
 `windows_mssql_bufman_integral_controller_slope` | The slope that integral controller for the buffer pool last used, times -10 billion | counter | `mssql_instance`
-`windows_mssql_bufman_lazywrites` | Indicates the number of buffers written per second by the buffer manager's lazy writer | counter | `mssql_instance`
+`windows_mssql_bufman_lazywrites_total` | Indicates the number of buffers written per second by the buffer manager's lazy writer | counter | `mssql_instance`
 `windows_mssql_bufman_page_life_expectancy_seconds` | Indicates the number of seconds a page will stay in the buffer pool without references | counter | `mssql_instance`
-`windows_mssql_bufman_page_lookups` | Indicates the number of requests per second to find a page in the buffer pool | counter | `mssql_instance`
-`windows_mssql_bufman_page_reads` | Indicates the number of physical database page reads that are issued per second | counter | `mssql_instance`
-`windows_mssql_bufman_page_writes` | Indicates the number of physical database page writes that are issued per second | counter | `mssql_instance`
-`windows_mssql_bufman_read_ahead_pages` | Indicates the number of pages read per second in anticipation of use | counter | `mssql_instance`
-`windows_mssql_bufman_read_ahead_issuing_seconds` | Time (microseconds) spent issuing readahead | counter | `mssql_instance`
+`windows_mssql_bufman_page_lookups_total` | Indicates the number of requests per second to find a page in the buffer pool | counter | `mssql_instance`
+`windows_mssql_bufman_page_reads_total` | Indicates the number of physical database page reads that are issued per second | counter | `mssql_instance`
+`windows_mssql_bufman_page_writes_total` | Indicates the number of physical database page writes that are issued per second | counter | `mssql_instance`
+`windows_mssql_bufman_read_ahead_pages_total` | Indicates the number of pages read per second in anticipation of use | counter | `mssql_instance`
+`windows_mssql_bufman_read_ahead_issuing_seconds_total` | Time (microseconds) spent issuing readahead | counter | `mssql_instance`
 `windows_mssql_bufman_target_pages` | Ideal number of pages in the buffer pool | counter | `mssql_instance`
 `windows_mssql_dbreplica_database_flow_control_wait_seconds` | _Not yet documented_ | counter | `mssql_instance`, `replica`
 `windows_mssql_dbreplica_database_initiated_flow_controls` | _Not yet documented_ | counter | `mssql_instance`, `replica`
