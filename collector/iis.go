@@ -1574,87 +1574,88 @@ func (c *IISCollector) collectW3SVC_W3WP(ctx *ScrapeContext, ch chan<- prometheu
 			pid,
 		)
 
-		if c.iis_version.major >= 8 {
-			var W3SVC_W3WP_IIS8 []perflibW3SVC_W3WP_IIS8
-			if err := unmarshalObject(ctx.perfObjects["W3SVC_W3WP"], &W3SVC_W3WP_IIS8); err != nil {
-				return nil, err
+	}
+
+	if c.iis_version.major >= 8 {
+		var W3SVC_W3WP_IIS8 []perflibW3SVC_W3WP_IIS8
+		if err := unmarshalObject(ctx.perfObjects["W3SVC_W3WP"], &W3SVC_W3WP_IIS8); err != nil {
+			return nil, err
+		}
+
+		for _, app := range W3SVC_W3WP_IIS8 {
+			// Extract the apppool name from the format <PID>_<NAME>
+			pid := workerProcessNameExtractor.ReplaceAllString(app.Name, "$1")
+			name := workerProcessNameExtractor.ReplaceAllString(app.Name, "$2")
+			if name == "" {
+				log.Error("no instances found in W3SVC_W3WP_IIS8 - skipping collection")
+				break
+			}
+			if name == "_Total" ||
+				c.appBlacklistPattern.MatchString(name) ||
+				!c.appWhitelistPattern.MatchString(name) {
+				continue
 			}
 
-			for _, app := range W3SVC_W3WP_IIS8 {
-				// Extract the apppool name from the format <PID>_<NAME>
-				pid := workerProcessNameExtractor.ReplaceAllString(app.Name, "$1")
-				name := workerProcessNameExtractor.ReplaceAllString(app.Name, "$2")
-				if name == "" {
-					log.Error("no instances found in W3SVC_W3WP_IIS8 - skipping collection")
-					break
-				}
-				if name == "_Total" ||
-					c.appBlacklistPattern.MatchString(name) ||
-					!c.appWhitelistPattern.MatchString(name) {
-					continue
-				}
-
-				ch <- prometheus.MustNewConstMetric(
-					c.RequestErrorsTotal,
-					prometheus.CounterValue,
-					app.RequestErrors401,
-					name,
-					pid,
-					"401",
-				)
-				ch <- prometheus.MustNewConstMetric(
-					c.RequestErrorsTotal,
-					prometheus.CounterValue,
-					app.RequestErrors403,
-					name,
-					pid,
-					"403",
-				)
-				ch <- prometheus.MustNewConstMetric(
-					c.RequestErrorsTotal,
-					prometheus.CounterValue,
-					app.RequestErrors404,
-					name,
-					pid,
-					"404",
-				)
-				ch <- prometheus.MustNewConstMetric(
-					c.RequestErrorsTotal,
-					prometheus.CounterValue,
-					app.RequestErrors500,
-					name,
-					pid,
-					"500",
-				)
-				ch <- prometheus.MustNewConstMetric(
-					c.WebSocketRequestsActive,
-					prometheus.CounterValue,
-					app.WebSocketRequestsActive,
-					name,
-					pid,
-				)
-				ch <- prometheus.MustNewConstMetric(
-					c.WebSocketConnectionAttempts,
-					prometheus.CounterValue,
-					app.WebSocketConnectionAttempts,
-					name,
-					pid,
-				)
-				ch <- prometheus.MustNewConstMetric(
-					c.WebSocketConnectionsAccepted,
-					prometheus.CounterValue,
-					app.WebSocketConnectionsAccepted,
-					name,
-					pid,
-				)
-				ch <- prometheus.MustNewConstMetric(
-					c.WebSocketConnectionsRejected,
-					prometheus.CounterValue,
-					app.WebSocketConnectionsRejected,
-					name,
-					pid,
-				)
-			}
+			ch <- prometheus.MustNewConstMetric(
+				c.RequestErrorsTotal,
+				prometheus.CounterValue,
+				app.RequestErrors401,
+				name,
+				pid,
+				"401",
+			)
+			ch <- prometheus.MustNewConstMetric(
+				c.RequestErrorsTotal,
+				prometheus.CounterValue,
+				app.RequestErrors403,
+				name,
+				pid,
+				"403",
+			)
+			ch <- prometheus.MustNewConstMetric(
+				c.RequestErrorsTotal,
+				prometheus.CounterValue,
+				app.RequestErrors404,
+				name,
+				pid,
+				"404",
+			)
+			ch <- prometheus.MustNewConstMetric(
+				c.RequestErrorsTotal,
+				prometheus.CounterValue,
+				app.RequestErrors500,
+				name,
+				pid,
+				"500",
+			)
+			ch <- prometheus.MustNewConstMetric(
+				c.WebSocketRequestsActive,
+				prometheus.CounterValue,
+				app.WebSocketRequestsActive,
+				name,
+				pid,
+			)
+			ch <- prometheus.MustNewConstMetric(
+				c.WebSocketConnectionAttempts,
+				prometheus.CounterValue,
+				app.WebSocketConnectionAttempts,
+				name,
+				pid,
+			)
+			ch <- prometheus.MustNewConstMetric(
+				c.WebSocketConnectionsAccepted,
+				prometheus.CounterValue,
+				app.WebSocketConnectionsAccepted,
+				name,
+				pid,
+			)
+			ch <- prometheus.MustNewConstMetric(
+				c.WebSocketConnectionsRejected,
+				prometheus.CounterValue,
+				app.WebSocketConnectionsRejected,
+				name,
+				pid,
+			)
 		}
 	}
 
