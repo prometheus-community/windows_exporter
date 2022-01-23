@@ -60,7 +60,7 @@ func newCPUCollector() (Collector, error) {
 			),
 			TimeTotal: prometheus.NewDesc(
 				prometheus.BuildFQName(Namespace, subsystem, "time_total"),
-				"Time that processor spent in different modes (idle, user, system, ...)",
+				"Time that processor spent in different modes (dpc, idle, interrupt, privileged, user)",
 				[]string{"core", "mode"},
 				nil,
 			),
@@ -88,7 +88,7 @@ func newCPUCollector() (Collector, error) {
 		),
 		TimeTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "time_total"),
-			"Time that processor spent in different modes (idle, user, system, ...)",
+			"Time that processor spent in different modes (dpc, idle, interrupt, privileged, user)",
 			[]string{"core", "mode"},
 			nil,
 		),
