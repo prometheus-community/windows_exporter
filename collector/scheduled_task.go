@@ -203,9 +203,9 @@ func getScheduledTasks() (scheduledTasks ScheduledTasks, err error) {
 	rootFolderObj := res.ToIDispatch()
 	defer rootFolderObj.Release()
 
-	fetchTasksRecursively(rootFolderObj, &scheduledTasks)
+	err = fetchTasksRecursively(rootFolderObj, &scheduledTasks)
 
-	return scheduledTasks, nil
+	return scheduledTasks, err
 }
 
 func fetchTasksInFolder(folder *ole.IDispatch, scheduledTasks *ScheduledTasks) error {
@@ -220,7 +220,11 @@ func fetchTasksInFolder(folder *ole.IDispatch, scheduledTasks *ScheduledTasks) e
 	err = oleutil.ForEach(tasks, func(v *ole.VARIANT) error {
 		task := v.ToIDispatch()
 
-		parsedTask := parseTask(task)
+		parsedTask, err := parseTask(task)
+		if err != nil {
+			return err
+		}
+
 		*scheduledTasks = append(*scheduledTasks, parsedTask)
 
 		return nil
@@ -250,17 +254,45 @@ func fetchTasksRecursively(folder *ole.IDispatch, scheduledTasks *ScheduledTasks
 	return err
 }
 
-func parseTask(task *ole.IDispatch) ScheduledTask {
-	scheduledTask := ScheduledTask{}
+func parseTask(task *ole.IDispatch) (scheduledTask ScheduledTask, err error) {
+	taskNameVar, err := oleutil.GetProperty(task, "Name")
+	if err != nil {
+		return scheduledTask, err
+	}
 
-	scheduledTask.Name = oleutil.MustGetProperty(task, "Name").ToString()
-	scheduledTask.Path = strings.ReplaceAll(oleutil.MustGetProperty(task, "Path").ToString(), "\\", "/")
-	scheduledTask.Enabled = oleutil.MustGetProperty(task, "Enabled").Value().(bool)
-	scheduledTask.State = TaskState(oleutil.MustGetProperty(task, "State").Val)
-	scheduledTask.MissedRunsCount = float64(oleutil.MustGetProperty(task, "NumberOfMissedRuns").Val)
-	scheduledTask.LastTaskResult = TaskResult(oleutil.MustGetProperty(task, "LastTaskResult").Val)
+	taskPathVar, err := oleutil.GetProperty(task, "Path")
+	if err != nil {
+		return scheduledTask, err
+	}
 
-	return scheduledTask
+	taskEnabledVar, err := oleutil.GetProperty(task, "Enabled")
+	if err != nil {
+		return scheduledTask, err
+	}
+
+	taskStateVar, err := oleutil.GetProperty(task, "State")
+	if err != nil {
+		return scheduledTask, err
+	}
+
+	taskNumberOfMissedRunsVar, err := oleutil.GetProperty(task, "NumberOfMissedRuns")
+	if err != nil {
+		return scheduledTask, err
+	}
+
+	taskLastTaskResultVar, err := oleutil.GetProperty(task, "LastTaskResult")
+	if err != nil {
+		return scheduledTask, err
+	}
+
+	scheduledTask.Name = taskNameVar.ToString()
+	scheduledTask.Path = strings.ReplaceAll(taskPathVar.ToString(), "\\", "/")
+	scheduledTask.Enabled = taskEnabledVar.Value().(bool)
+	scheduledTask.State = TaskState(taskStateVar.Val)
+	scheduledTask.MissedRunsCount = float64(taskNumberOfMissedRunsVar.Val)
+	scheduledTask.LastTaskResult = TaskResult(taskLastTaskResultVar.Val)
+
+	return scheduledTask, err
 }
 
 func (t TaskState) String() string {
