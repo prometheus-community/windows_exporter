@@ -1,3 +1,4 @@
+//go:build windows
 // +build windows
 
 package collector
@@ -152,7 +153,7 @@ func (c *ScheduledTaskCollector) collect(ch chan<- prometheus.Metric) (*promethe
 		)
 
 		for _, state := range TASK_STATES {
-			var stateValue float64 = 0.0
+			var stateValue float64
 
 			if strings.ToLower(task.State.String()) == state {
 				stateValue = 1.0
