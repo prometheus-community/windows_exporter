@@ -3,7 +3,7 @@ module github.com/prometheus-community/windows_exporter
 go 1.13
 
 require (
-	github.com/Microsoft/hcsshim v0.9.1
+	github.com/Microsoft/hcsshim v0.9.2
 	github.com/StackExchange/wmi v0.0.0-20180725035823-b12b22c5341f
 	github.com/dimchansky/utfbom v1.1.1
 	github.com/go-kit/log v0.2.0
@@ -14,7 +14,7 @@ require (
 	github.com/prometheus/common v0.32.1
 	github.com/prometheus/exporter-toolkit v0.7.1
 	github.com/sirupsen/logrus v1.8.1
-	golang.org/x/sys v0.0.0-20210615035016-665e8c7367d1
+	golang.org/x/sys v0.0.0-20211216021012-1d35b9e2eb4e
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	gopkg.in/yaml.v2 v2.4.0
 )
