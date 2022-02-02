@@ -885,6 +885,10 @@ func (c *IISCollector) collectWebService(ctx *ScrapeContext, ch chan<- prometheu
 	}
 
 	for _, app := range WebService {
+		if app.Name == "_Total" || c.siteBlacklistPattern.MatchString(app.Name) || !c.siteWhitelistPattern.MatchString(app.Name) {
+			continue
+		}
+
 		ch <- prometheus.MustNewConstMetric(
 			c.CurrentAnonymousUsers,
 			prometheus.GaugeValue,
@@ -1159,6 +1163,12 @@ func (c *IISCollector) collectAPP_POOL_WAS(ctx *ScrapeContext, ch chan<- prometh
 	}
 
 	for _, app := range APP_POOL_WAS {
+		if app.Name == "_Total" ||
+			c.appBlacklistPattern.MatchString(app.Name) ||
+			!c.appWhitelistPattern.MatchString(app.Name) {
+			continue
+		}
+
 		for key, label := range applicationStates {
 			isCurrentState := 0.0
 			if key == uint32(app.CurrentApplicationPoolState) {
