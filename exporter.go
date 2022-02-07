@@ -9,6 +9,7 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	"os/user"
 	"sort"
 	"strconv"
 	"strings"
@@ -343,6 +344,16 @@ func main() {
 	collectors, err := loadCollectors(*enabledCollectors)
 	if err != nil {
 		log.Fatalf("Couldn't load collectors: %s", err)
+	}
+
+	u, err := user.Current()
+	if err != nil {
+		log.Fatalf(err.Error())
+	}
+
+	log.Infof("Running as %v", u.Username)
+	if strings.Contains(u.Username, "ContainerAdministrator") || strings.Contains(u.Username, "ContainerUser") {
+		log.Warnf("Running as a preconfigured Windows Container user. This may mean you do not have Windows HostProcess containers configured correctly and some functionality will not work as expected.")
 	}
 
 	log.Infof("Enabled collectors: %v", strings.Join(keys(collectors), ", "))
