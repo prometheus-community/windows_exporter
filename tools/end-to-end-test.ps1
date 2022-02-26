@@ -24,19 +24,19 @@ $skip_re = "^(go_|windows_exporter_build_info|windows_exporter_collector_duratio
 # Use default collectors, port and address: http://localhost:9182/metrics
 $exporter_proc = Start-Process `
     -PassThru `
-    -FilePath .\windows_exporter.exe `
+    -FilePath ..\windows_exporter.exe `
     -ArgumentList "--log.level=debug --collector.textfile.directory=$($textfile_dir)" `
     -WindowStyle Hidden `
     -RedirectStandardOutput "$($temp_dir)/windows_exporter.log" `
     -RedirectStandardError "$($temp_dir)/windows_exporter_error.log"
 
 # Give exporter some time to start
-Start-Sleep 3
+Start-Sleep 15
 
 $response = Invoke-WebRequest -UseBasicParsing -URI http://127.0.0.1:9182/metrics
 # Response output must be split and saved as UTF-8.
 $response.content -split "[`r`n]"| Select-String -NotMatch $skip_re | Set-Content -Encoding utf8 "$($temp_dir)/e2e-output.txt"
-Stop-Process $exporter_proc
+Stop-Process -Id $exporter_proc.Id
 $output_diff = Compare-Object (Get-Content 'e2e-output.txt') (Get-Content "$($temp_dir)/e2e-output.txt")
 
 # Fail if differences in output are detected

@@ -88,23 +88,24 @@ Push-Location $working_dir
 $temp_dir = Join-Path $env:TEMP $(New-Guid) | ForEach-Object { mkdir $_ }
 
 # Start process in background, awaiting HTTP requests.
-# Use default collectors, port and address: http://localhost:9182/metrics
+# Listen on 9183/TCP, preventing conflicts with 9182/TCP used by end-to-end-test.ps1
+# Not an issue when run individually, but will cause failures when run concurrently in CI.
 $exporter_proc = Start-Process `
     -PassThru `
-    -FilePath .\windows_exporter.exe `
-    -ArgumentList "--log.level=debug" `
+    -FilePath ..\windows_exporter.exe `
+    -ArgumentList '--telemetry.addr="127.0.0.1:9183" --log.level=debug' `
     -WindowStyle Hidden `
     -RedirectStandardOutput "$($temp_dir)/windows_exporter.log" `
     -RedirectStandardError "$($temp_dir)/windows_exporter_error.log"
 
 # Give exporter some time to start
-Start-Sleep 3
+Start-Sleep 15
 
 # Omit metrics from client_golang library; we're not responsible for these
 $skip_re = "^[#]?\s*(HELP|TYPE)?\s*go_"
 
 # Need to remove carriage returns, as promtool expects LF line endings
-$output = ((Invoke-WebRequest -UseBasicParsing -URI http://127.0.0.1:9182/metrics).Content) -Split "`r?`n" | Select-String -NotMatch $skip_re | Join-String -Separator "`n"
+$output = ((Invoke-WebRequest -UseBasicParsing -URI http://127.0.0.1:9183/metrics).Content) -Split "`r?`n" | Select-String -NotMatch $skip_re | Join-String -Separator "`n"
 # Join the split lines back to a single String (with LF line endings!)
 $output = $output -Join "`n"
 Stop-Process -Id $exporter_proc.Id
