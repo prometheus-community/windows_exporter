@@ -98,8 +98,16 @@ $exporter_proc = Start-Process `
     -RedirectStandardOutput "$($temp_dir)/windows_exporter.log" `
     -RedirectStandardError "$($temp_dir)/windows_exporter_error.log"
 
-# Give exporter some time to start
-Start-Sleep 15
+# Exporter can take some time to start
+for ($i=1; $i -le 5; $i++) {
+    Start-Sleep 10
+
+    $netstat_output = netstat -anp tcp | Select-String 'listening'
+    if ($netstat_output -like '*:9183*') {
+            break
+    }
+    Write-Host "Waiting for exporter to start"
+}
 
 # Omit metrics from client_golang library; we're not responsible for these
 $skip_re = "^[#]?\s*(HELP|TYPE)?\s*go_"
