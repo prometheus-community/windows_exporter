@@ -30,10 +30,10 @@ Name | Description | Type | Labels
 `windows_container_network_transmit_bytes_total` | Bytes Sent on Interface | counter | `container_id`, `interface`
 `windows_container_network_transmit_packets_total` | Packets Sent on Interface | counter | `container_id`, `interface`
 `windows_container_network_transmit_packets_dropped_total` | Dropped Outgoing Packets on Interface | counter | `container_id`, `interface`
-`windows_container_storage_read_count_normalized_total"` | Read Count Normalized | counter | `container_id`
-`windows_container_storage_read_size_bytes_total"` | Read Size Bytes | counter | `container_id`
-`windows_container_storage_write_count_normalized_total"` | Write Count Normalized | counter | `container_id`
-`windows_container_storage_write_size_bytes_total"` | Write Size Bytes | counter | `container_id`
+`windows_container_storage_read_count_normalized_total` | Read Count Normalized | counter | `container_id`
+`windows_container_storage_read_size_bytes_total` | Read Size Bytes | counter | `container_id`
+`windows_container_storage_write_count_normalized_total` | Write Count Normalized | counter | `container_id`
+`windows_container_storage_write_size_bytes_total` | Write Size Bytes | counter | `container_id`
 
 ### Example metric
 _windows_container_network_receive_bytes_total{container_id="docker://1bd30e8b8ac28cbd76a9b697b4d7bb9d760267b0733d1bc55c60024e98d1e43e",interface="822179E7-002C-4280-ABBA-28BCFE401826"} 9.3305343e+07_
