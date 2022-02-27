@@ -144,6 +144,8 @@ jobs:
           goversioninfo.exe -ver-major $VersionParts[0] -ver-minor $VersionParts[1] -ver-patch $VersionParts[2] -product-version $Version -platform-specific
 
           make crossbuild
+          # '+' symbols are invalid characters in image tags
+          (Get-Content -Path VERSION) -replace '\+', '_' | Set-Content -Path VERSION
           make build-all
           # GH requires all files to have different names, so add version/arch to differentiate
           foreach($Arch in "amd64","386") {
@@ -185,7 +187,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          VERSION=latest make push-all
+          $Env:VERSION = 'latest'
+          make push-all
 
       - name: Release
         if: startsWith(github.ref, 'refs/tags/')
