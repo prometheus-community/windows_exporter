@@ -37,6 +37,12 @@ type ContainerMetricsCollector struct {
 	PacketsSent            *prometheus.Desc
 	DroppedPacketsIncoming *prometheus.Desc
 	DroppedPacketsOutgoing *prometheus.Desc
+
+	// Storage
+	ReadCountNormalized  *prometheus.Desc
+	ReadSizeBytes        *prometheus.Desc
+	WriteCountNormalized *prometheus.Desc
+	WriteSizeBytes       *prometheus.Desc
 }
 
 // NewContainerMetricsCollector constructs a new ContainerMetricsCollector
@@ -125,6 +131,30 @@ func NewContainerMetricsCollector() (Collector, error) {
 			prometheus.BuildFQName(Namespace, subsystem, "network_transmit_packets_dropped_total"),
 			"Dropped Outgoing Packets on Interface",
 			[]string{"container_id", "interface"},
+			nil,
+		),
+		ReadCountNormalized: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "storage_read_count_normalized_total"),
+			"Read Count Normalized",
+			[]string{"container_id"},
+			nil,
+		),
+		ReadSizeBytes: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "storage_read_size_bytes_total"),
+			"Read Size Bytes",
+			[]string{"container_id"},
+			nil,
+		),
+		WriteCountNormalized: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "storage_write_count_normalized_total"),
+			"Write Count Normalized",
+			[]string{"container_id"},
+			nil,
+		),
+		WriteSizeBytes: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "storage_write_size_bytes_total"),
+			"Write Size Bytes",
+			[]string{"container_id"},
 			nil,
 		),
 	}, nil
@@ -274,6 +304,31 @@ func (c *ContainerMetricsCollector) collect(ch chan<- prometheus.Metric) (*prome
 			)
 			break
 		}
+
+		ch <- prometheus.MustNewConstMetric(
+			c.ReadCountNormalized,
+			prometheus.CounterValue,
+			float64(cstats.Storage.ReadCountNormalized),
+			containerIdWithPrefix,
+		)
+		ch <- prometheus.MustNewConstMetric(
+			c.ReadSizeBytes,
+			prometheus.CounterValue,
+			float64(cstats.Storage.ReadSizeBytes),
+			containerIdWithPrefix,
+		)
+		ch <- prometheus.MustNewConstMetric(
+			c.WriteCountNormalized,
+			prometheus.CounterValue,
+			float64(cstats.Storage.WriteCountNormalized),
+			containerIdWithPrefix,
+		)
+		ch <- prometheus.MustNewConstMetric(
+			c.WriteSizeBytes,
+			prometheus.CounterValue,
+			float64(cstats.Storage.WriteSizeBytes),
+			containerIdWithPrefix,
+		)
 	}
 
 	return nil, nil
