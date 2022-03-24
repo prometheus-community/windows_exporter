@@ -14,7 +14,7 @@ import (
 )
 
 func init() {
-	registerCollector("iis", NewIISCollector, "Web Service", "APP_POOL_WAS", "Web Service Cache", "W3SVC_W3WP")
+	registerCollector("iis", NewIISCollector, "Web Service", "APP_POOL_WAS", "Web Service Cache", "W3SVC_W3WP", "HTTP Service Request Queues")
 }
 
 var (
@@ -187,6 +187,9 @@ type IISCollector struct {
 	ServiceCache_OutputCacheHitsTotal          *prometheus.Desc
 	ServiceCache_OutputCacheFlushedItemsTotal  *prometheus.Desc
 	ServiceCache_OutputCacheFlushesTotal       *prometheus.Desc
+
+	//HTTP Service Request Queues
+	RequestQueues_CurrentQueueSize *prometheus.Desc
 
 	appWhitelistPattern *regexp.Regexp
 	appBlacklistPattern *regexp.Regexp
@@ -807,6 +810,12 @@ func NewIISCollector() (Collector, error) {
 			nil,
 			nil,
 		),
+		RequestQueues_CurrentQueueSize: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "http_requests_current_queue"),
+			"",
+			[]string{"app"},
+			nil,
+		),
 	}, nil
 }
 
@@ -829,6 +838,11 @@ func (c *IISCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) 
 	}
 
 	if desc, err := c.collectWebServiceCache(ctx, ch); err != nil {
+		log.Error("failed collecting iis metrics:", desc, err)
+		return err
+	}
+
+	if desc, err := c.collectHTTPServiceRequestQueuesP(ctx, ch); err != nil {
 		log.Error("failed collecting iis metrics:", desc, err)
 		return err
 	}
@@ -1907,6 +1921,38 @@ func (c *IISCollector) collectWebServiceCache(ctx *ScrapeContext, ch chan<- prom
 			c.ServiceCache_OutputCacheFlushesTotal,
 			prometheus.CounterValue,
 			app.ServiceCache_OutputCacheFlushesTotal,
+		)
+	}
+
+	return nil, nil
+}
+
+type perflibHTTPServiceRequestQueues struct {
+	Name string
+
+	CurrentQueueSize float64 `perflib:"CurrentQueueSize"`
+}
+
+func (c *IISCollector) collectHTTPServiceRequestQueuesP(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+	var HTTPServiceRequestQueues []perflibHTTPServiceRequestQueues
+
+	if err := unmarshalObject(ctx.perfObjects["HTTP Service Request Queues"], &HTTPServiceRequestQueues); err != nil {
+		return nil, err
+	}
+
+	for _, app := range HTTPServiceRequestQueues {
+
+		// name := workerProcessNameExtractor.ReplaceAllString(app.Name, "$2")
+		// if name == "" {
+		// 	log.Error("no instances found in HTTP Service Request Queues - skipping collection")
+		// 	break
+		// }
+
+		ch <- prometheus.MustNewConstMetric(
+			c.RequestQueues_CurrentQueueSize,
+			prometheus.GaugeValue,
+			app.CurrentQueueSize,
+			app.Name,
 		)
 	}
 
