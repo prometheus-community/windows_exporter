@@ -190,6 +190,7 @@ type IISCollector struct {
 
 	//HTTP Service Request Queues
 	RequestQueues_CurrentQueueSize *prometheus.Desc
+	RequestQueues_RejectedRequest  *prometheus.Desc
 
 	appWhitelistPattern *regexp.Regexp
 	appBlacklistPattern *regexp.Regexp
@@ -812,6 +813,12 @@ func NewIISCollector() (Collector, error) {
 		),
 		RequestQueues_CurrentQueueSize: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "http_requests_current_queue"),
+			"",
+			[]string{"app"},
+			nil,
+		),
+		RequestQueues_RejectedRequest: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "http_requests_rejected"),
 			"",
 			[]string{"app"},
 			nil,
@@ -1931,6 +1938,7 @@ type perflibHTTPServiceRequestQueues struct {
 	Name string
 
 	CurrentQueueSize float64 `perflib:"CurrentQueueSize"`
+	RejectedRequests float64 `perflib:"RejectedRequests"`
 }
 
 func (c *IISCollector) collectHTTPServiceRequestQueuesP(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
@@ -1942,16 +1950,17 @@ func (c *IISCollector) collectHTTPServiceRequestQueuesP(ctx *ScrapeContext, ch c
 
 	for _, app := range HTTPServiceRequestQueues {
 
-		// name := workerProcessNameExtractor.ReplaceAllString(app.Name, "$2")
-		// if name == "" {
-		// 	log.Error("no instances found in HTTP Service Request Queues - skipping collection")
-		// 	break
-		// }
-
 		ch <- prometheus.MustNewConstMetric(
 			c.RequestQueues_CurrentQueueSize,
 			prometheus.GaugeValue,
 			app.CurrentQueueSize,
+			app.Name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.RequestQueues_RejectedRequest,
+			prometheus.GaugeValue,
+			app.RejectedRequests,
 			app.Name,
 		)
 	}
