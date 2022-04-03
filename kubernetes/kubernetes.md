@@ -23,6 +23,7 @@ If you don't have a version of `make` on your Windows machine, You can use WSL t
 On Windows:
 ```
 Item -ItemType SymbolicLink -Path "c:\docker" -Target "C:\Program Files\Docker\Docker\resources\bin\docker.exe"
+```
 
 In WSL:
 ```
