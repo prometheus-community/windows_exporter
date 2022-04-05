@@ -41,6 +41,11 @@ var (
 		"Directory to read text files with metrics from.",
 	).Default(getDefaultPath()).String()
 
+	textFileRemove = kingpin.Flag(
+		"collector.textfile.remove",
+		"Rename .prom files to .prom.stale before reading, and remove them in the next collect cycle.",
+	).Default("false").Bool()
+
 	mtimeDesc = prometheus.NewDesc(
 		prometheus.BuildFQName(Namespace, "textfile", "mtime_seconds"),
 		"Unixtime mtime of textfiles successfully read.",
@@ -254,12 +259,41 @@ func (c *textFileCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Met
 	// Once loop is complete, raise error if any duplicates are present.
 	// This will ensure that duplicate metrics are correctly detected between multiple .prom files.
 	var metricFamilies = []*dto.MetricFamily{}
+
+	if *textFileRemove {
+		// Remove any .prom.stale files (renamed .prom files)
+		for _, f := range files {
+			if !strings.HasSuffix(f.Name(), ".prom.stale") {
+				continue
+			}
+			var stalePath = filepath.Join(c.path, f.Name())
+			err := os.Remove(stalePath)
+			if err != nil {
+				log.Warnf("Failed removing stale file %q: %v", stalePath, err)
+			}
+		}
+	}
+
 fileLoop:
 	for _, f := range files {
 		if !strings.HasSuffix(f.Name(), ".prom") {
 			continue
 		}
 		path := filepath.Join(c.path, f.Name())
+
+		if *textFileRemove {
+			// Rename .prom files to .prom.stale before reading,
+			// thus marking them for removal in the next collect cycle.
+			var stalePath = path + ".stale"
+			err := os.Rename(path, stalePath)
+			if err != nil {
+				log.Errorf("Failed renaming %q to %q: %v", path, stalePath, err)
+				error = 1.0
+				continue
+			}
+			path = stalePath
+		}
+
 		log.Debugf("Processing file %q", path)
 		file, err := os.Open(path)
 		if err != nil {
