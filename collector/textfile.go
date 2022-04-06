@@ -284,7 +284,12 @@ fileLoop:
 			error = 1.0
 			continue
 		}
+
+		// Use temporary array to check for duplicates
+		var families_array []*dto.MetricFamily
+
 		for _, mf := range parsedFamilies {
+			families_array = append(families_array, mf)
 			for _, m := range mf.Metric {
 				if m.TimestampMs != nil {
 					log.Errorf("Textfile %q contains unsupported client-side timestamps, skipping entire file", path)
@@ -298,6 +303,13 @@ fileLoop:
 			}
 		}
 
+		// If duplicate metrics are detected in a *single* file, skip processing of file metrics
+		if duplicateMetricEntry(families_array) {
+			log.Errorf("Duplicate metrics detected in file %s. Skipping file processing.", f.Name())
+			error = 1.0
+			continue
+		}
+
 		// Only set this once it has been parsed and validated, so that
 		// a failure does not appear fresh.
 		mtimes[f.Name()] = f.ModTime()
@@ -307,8 +319,9 @@ fileLoop:
 		}
 	}
 
+	// If duplicates are detected across *multiple* files, return error.
 	if duplicateMetricEntry(metricFamilies) {
-		log.Errorf("Duplicate metrics detected in files")
+		log.Errorf("Duplicate metrics detected across multiple files")
 		error = 1.0
 	} else {
 		for _, mf := range metricFamilies {
