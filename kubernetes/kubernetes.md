@@ -57,7 +57,7 @@ spec:
     spec:
       initContainers:
         - name: configure-firewall
-          image: mcr.microsoft.com/windows/nanoserver:1809
+          image: mcr.microsoft.com/windows/powershell:lts-nanoserver-1809
           command: ["powershell"]
           args: ["New-NetFirewallRule", "-DisplayName", "'windows-exporter'", "-Direction", "inbound", "-Profile", "Any", "-Action", "Allow", "-LocalPort", "9182", "-Protocol", "TCP"]
 ```
