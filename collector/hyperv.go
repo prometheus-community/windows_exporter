@@ -1548,28 +1548,28 @@ func (c *HyperVCollector) collectVmMemory(ch chan<- prometheus.Metric) (*prometh
 
 		ch <- prometheus.MustNewConstMetric(
 			c.VMMemoryAveragePressure,
-			prometheus.CounterValue,
+			prometheus.GaugeValue,
 			float64(obj.AveragePressure),
 			obj.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.VMMemoryCurrentPressure,
-			prometheus.CounterValue,
+			prometheus.GaugeValue,
 			float64(obj.CurrentPressure),
 			obj.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.VMMemoryGuestVisiblePhysicalMemory,
-			prometheus.CounterValue,
+			prometheus.GaugeValue,
 			float64(obj.GuestVisiblePhysicalMemory),
 			obj.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.VMMemoryMaximumPressure,
-			prometheus.CounterValue,
+			prometheus.GaugeValue,
 			float64(obj.MaximumPressure),
 			obj.Name,
 		)
@@ -1590,14 +1590,14 @@ func (c *HyperVCollector) collectVmMemory(ch chan<- prometheus.Metric) (*prometh
 
 		ch <- prometheus.MustNewConstMetric(
 			c.VMMemoryMinimumPressure,
-			prometheus.CounterValue,
+			prometheus.GaugeValue,
 			float64(obj.MinimumPressure),
 			obj.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.VMMemoryPhysicalMemory,
-			prometheus.CounterValue,
+			prometheus.GaugeValue,
 			float64(obj.PhysicalMemory),
 			obj.Name,
 		)
