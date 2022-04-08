@@ -111,6 +111,18 @@ type HyperVCollector struct {
 	VMNetworkDroppedPacketsOutgoing *prometheus.Desc
 	VMNetworkPacketsReceived        *prometheus.Desc
 	VMNetworkPacketsSent            *prometheus.Desc
+
+	// Win32_PerfRawData_BalancerStats_HyperVDynamicMemoryVM
+	VMMemoryAddedMemory                *prometheus.Desc
+	VMMemoryAveragePressure            *prometheus.Desc
+	VMMemoryCurrentPressure            *prometheus.Desc
+	VMMemoryGuestVisiblePhysicalMemory *prometheus.Desc
+	VMMemoryMaximumPressure            *prometheus.Desc
+	VMMemoryMemoryAddOperations        *prometheus.Desc
+	VMMemoryMemoryRemoveOperations     *prometheus.Desc
+	VMMemoryMinimumPressure            *prometheus.Desc
+	VMMemoryPhysicalMemory             *prometheus.Desc
+	VMMemoryRemovedMemory              *prometheus.Desc
 }
 
 // NewHyperVCollector ...
@@ -593,6 +605,69 @@ func NewHyperVCollector() (Collector, error) {
 			[]string{"vm_interface"},
 			nil,
 		),
+
+		//
+
+		VMMemoryAddedMemory: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_memory"), "added"),
+			"",
+			[]string{"vm"},
+			nil,
+		),
+		VMMemoryAveragePressure: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_memory"), "pressure_average"),
+			"This counter represents the average pressure in the VM.",
+			[]string{"vm"},
+			nil,
+		),
+		VMMemoryCurrentPressure: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_memory"), "pressure_current"),
+			"This counter represents the current pressure in the VM.",
+			[]string{"vm"},
+			nil,
+		),
+		VMMemoryGuestVisiblePhysicalMemory: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_memory"), "physical_guest_visible"),
+			"'This counter represents the amount of memory visible in the VM.'",
+			[]string{"vm"},
+			nil,
+		),
+		VMMemoryMaximumPressure: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_memory"), "pressure_maximum"),
+			"This counter represents the maximum pressure band in the VM.",
+			[]string{"vm"},
+			nil,
+		),
+		VMMemoryMemoryAddOperations: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_memory"), "add_operations"),
+			"",
+			[]string{"vm"},
+			nil,
+		),
+		VMMemoryMemoryRemoveOperations: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_memory"), "remove_operations"),
+			"",
+			[]string{"vm"},
+			nil,
+		),
+		VMMemoryMinimumPressure: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_memory"), "pressure_minimum"),
+			"This counter represents the minmum pressure band in the VM.",
+			[]string{"vm"},
+			nil,
+		),
+		VMMemoryPhysicalMemory: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_memory"), "physical_memory"),
+			"This counter represents the current amount of memory in the VM.",
+			[]string{"vm"},
+			nil,
+		),
+		VMMemoryRemovedMemory: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_memory"), "removed"),
+			"",
+			[]string{"vm"},
+			nil,
+		),
 	}, nil
 }
 
@@ -646,6 +721,11 @@ func (c *HyperVCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metri
 
 	if desc, err := c.collectVmNetwork(ch); err != nil {
 		log.Error("failed collecting hyperV virtual network metrics:", desc, err)
+		return err
+	}
+
+	if desc, err := c.collectVmMemory(ch); err != nil {
+		log.Error("failed collecting hyperV virtual memory metrics:", desc, err)
 		return err
 	}
 
@@ -1425,6 +1505,107 @@ func (c *HyperVCollector) collectVmNetwork(ch chan<- prometheus.Metric) (*promet
 			c.VMNetworkPacketsSent,
 			prometheus.CounterValue,
 			float64(obj.PacketsSentPersec),
+			obj.Name,
+		)
+	}
+
+	return nil, nil
+}
+
+// Win32_PerfRawData_BalancerStats_HyperVDynamicMemoryVM ...
+type Win32_PerfRawData_BalancerStats_HyperVDynamicMemoryVM struct {
+	Name                       string
+	AddedMemory                uint64
+	AveragePressure            uint64
+	CurrentPressure            uint64
+	GuestVisiblePhysicalMemory uint64
+	MaximumPressure            uint64
+	MemoryAddOperations        uint64
+	MemoryRemoveOperations     uint64
+	MinimumPressure            uint64
+	PhysicalMemory             uint64
+	RemovedMemory              uint64
+}
+
+func (c *HyperVCollector) collectVmMemory(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+	var dst []Win32_PerfRawData_BalancerStats_HyperVDynamicMemoryVM
+	q := queryAll(&dst)
+	if err := wmi.Query(q, &dst); err != nil {
+		return nil, err
+	}
+
+	for _, obj := range dst {
+		if strings.Contains(obj.Name, "_Total") {
+			continue
+		}
+
+		ch <- prometheus.MustNewConstMetric(
+			c.VMMemoryAddedMemory,
+			prometheus.CounterValue,
+			float64(obj.AddedMemory),
+			obj.Name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.VMMemoryAveragePressure,
+			prometheus.CounterValue,
+			float64(obj.AveragePressure),
+			obj.Name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.VMMemoryCurrentPressure,
+			prometheus.CounterValue,
+			float64(obj.CurrentPressure),
+			obj.Name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.VMMemoryGuestVisiblePhysicalMemory,
+			prometheus.CounterValue,
+			float64(obj.GuestVisiblePhysicalMemory),
+			obj.Name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.VMMemoryMaximumPressure,
+			prometheus.CounterValue,
+			float64(obj.MaximumPressure),
+			obj.Name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.VMMemoryMemoryAddOperations,
+			prometheus.CounterValue,
+			float64(obj.MemoryAddOperations),
+			obj.Name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.VMMemoryMemoryRemoveOperations,
+			prometheus.CounterValue,
+			float64(obj.MemoryRemoveOperations),
+			obj.Name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.VMMemoryMinimumPressure,
+			prometheus.CounterValue,
+			float64(obj.MinimumPressure),
+			obj.Name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.VMMemoryPhysicalMemory,
+			prometheus.CounterValue,
+			float64(obj.PhysicalMemory),
+			obj.Name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.VMMemoryRemovedMemory,
+			prometheus.CounterValue,
+			float64(obj.RemovedMemory),
 			obj.Name,
 		)
 	}
