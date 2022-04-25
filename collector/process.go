@@ -28,6 +28,11 @@ var (
 		"collector.process.blacklist",
 		"Regexp of processes to exclude. Process name must both match whitelist and not match blacklist to be included.",
 	).Default("").String()
+	// Add parameter to optionally translate process names to service names ***
+	translateProcess = kingpin.Flag(
+		"collector.process.translate",
+		"If true, translate process names to service names where applicable.",
+	).Bool()
 )
 
 type processCollector struct {
@@ -215,6 +220,19 @@ func (c *processCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metr
 		processName := strings.Split(process.Name, "#")[0]
 		pid := strconv.FormatUint(uint64(process.IDProcess), 10)
 		cpid := strconv.FormatUint(uint64(process.CreatingProcessID), 10)
+
+		// Get Service Name from Process ID
+		if *translateProcess {
+			var dst []Win32_Service
+			q := queryAllForClassWhere(&dst, "Name", fmt.Sprintf("ProcessID = '%g'", process.IDProcess))
+			err := wmi.Query(q, &dst)
+			if err == nil {
+				if len(dst) > 0 {
+					log.Debugf("Successfully resolved service name: %s => [%s]", fmt.Sprintf("%g", process.IDProcess), dst[0].Name)
+					processName = dst[0].Name
+				}
+			}
+		}
 
 		for _, wp := range dst_wp {
 			if wp.ProcessId == uint64(process.IDProcess) {
