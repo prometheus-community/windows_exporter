@@ -11,7 +11,7 @@ require (
 	github.com/leoluk/perflib_exporter v0.1.1-0.20211204221052-9e3696429c20
 	github.com/prometheus/client_golang v1.12.1
 	github.com/prometheus/client_model v0.2.0
-	github.com/prometheus/common v0.33.0
+	github.com/prometheus/common v0.34.0
 	github.com/prometheus/exporter-toolkit v0.7.1
 	github.com/sirupsen/logrus v1.8.1
 	golang.org/x/sys v0.0.0-20220114195835-da31bd327af9
