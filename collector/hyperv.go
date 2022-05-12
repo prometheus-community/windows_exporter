@@ -652,7 +652,7 @@ func NewHyperVCollector() (Collector, error) {
 		),
 		VMMemoryMinimumPressure: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_memory"), "pressure_minimum"),
-			"This gauge represents the minmum pressure band in the VM.",
+			"This gauge represents the minimum pressure band in the VM.",
 			[]string{"vm"},
 			nil,
 		),
