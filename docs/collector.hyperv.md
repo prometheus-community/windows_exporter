@@ -51,6 +51,16 @@ Name | Description | Type | Labels
 `windows_hyperv_vm_cpu_guest_run_time` | _Not yet documented_ | counter | `vm`, `core`
 `windows_hyperv_vm_cpu_hypervisor_run_time` | _Not yet documented_ | counter | `vm`, `core`
 `windows_hyperv_vm_cpu_remote_run_time` | _Not yet documented_ | counter | `vm`, `core`
+`windows_hyperv_vm_memory_added_total` | _Not yet documented_ | counter | `vm`
+`windows_hyperv_vm_memory_pressure_average` | _Not yet documented_ | gauge | `vm`
+`windows_hyperv_vm_memory_pressure_current` | _Not yet documented_ | counter | `vm`
+`windows_hyperv_vm_memory_physical_guest_visible` | _Not yet documented_ | gauge | `vm`
+`windows_hyperv_vm_memory_pressure_maximum` | _Not yet documented_ | gauge | `vm`
+`windows_hyperv_vm_memory_add_operations_total` | _Not yet documented_ | counter | `vm`
+`windows_hyperv_vm_memory_remove_operations_total` | _Not yet documented_ | counter | `vm`
+`windows_hyperv_vm_memory_pressure_minumim` | _Not yet documented_ | gauge | `vm`
+`windows_hyperv_vm_memory_physical` | _Not yet documented_ | gauge | `vm`
+`windows_hyperv_vm_memory_removed_total` | _Not yet documented_ | counter | `vm`
 `windows_hyperv_vm_cpu_total_run_time` | _Not yet documented_ | counter | `vm`, `core`
 `windows_hyperv_vswitch_broadcast_packets_received_total` | _Not yet documented_ | counter | `vswitch`
 `windows_hyperv_vswitch_broadcast_packets_sent_total` | _Not yet documented_ | counter | `vswitch`
