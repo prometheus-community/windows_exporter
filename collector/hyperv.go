@@ -609,7 +609,7 @@ func NewHyperVCollector() (Collector, error) {
 		//
 
 		VMMemoryAddedMemory: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_memory"), "added"),
+			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_memory"), "added_total"),
 			"This counter represents memory in MB added to the VM",
 			[]string{"vm"},
 			nil,
@@ -639,13 +639,13 @@ func NewHyperVCollector() (Collector, error) {
 			nil,
 		),
 		VMMemoryMemoryAddOperations: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_memory"), "add_operations"),
+			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_memory"), "add_operations_total"),
 			"This counter represents the number of operations adding memory to the VM.",
 			[]string{"vm"},
 			nil,
 		),
 		VMMemoryMemoryRemoveOperations: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_memory"), "remove_operations"),
+			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_memory"), "remove_operations_total"),
 			"This counter represents the number of operations removing memory from the VM.",
 			[]string{"vm"},
 			nil,
@@ -663,7 +663,7 @@ func NewHyperVCollector() (Collector, error) {
 			nil,
 		),
 		VMMemoryRemovedMemory: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_memory"), "removed"),
+			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_memory"), "removed_total"),
 			"This counter represents memory in MB removed from the VM",
 			[]string{"vm"},
 			nil,
