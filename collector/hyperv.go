@@ -657,7 +657,7 @@ func NewHyperVCollector() (Collector, error) {
 			nil,
 		),
 		VMMemoryPhysicalMemory: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_memory"), "physical_memory"),
+			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_memory"), "physical"),
 			"This gauge represents the current amount of memory in MB assigned to the VM.",
 			[]string{"vm"},
 			nil,
