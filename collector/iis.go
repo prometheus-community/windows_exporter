@@ -1340,11 +1340,7 @@ func (c *IISCollector) collectW3SVC_W3WP(ctx *ScrapeContext, ch chan<- prometheu
 		// Extract the apppool name from the format <PID>_<NAME>
 		pid := workerProcessNameExtractor.ReplaceAllString(app.Name, "$1")
 		name := workerProcessNameExtractor.ReplaceAllString(app.Name, "$2")
-		if name == "" {
-			log.Error("no instances found in W3SVC_W3WP - skipping collection")
-			break
-		}
-		if name == "_Total" ||
+		if name == "" || name == "_Total" ||
 			c.appBlacklistPattern.MatchString(name) ||
 			!c.appWhitelistPattern.MatchString(name) {
 			continue
@@ -1596,11 +1592,7 @@ func (c *IISCollector) collectW3SVC_W3WP(ctx *ScrapeContext, ch chan<- prometheu
 			// Extract the apppool name from the format <PID>_<NAME>
 			pid := workerProcessNameExtractor.ReplaceAllString(app.Name, "$1")
 			name := workerProcessNameExtractor.ReplaceAllString(app.Name, "$2")
-			if name == "" {
-				log.Error("no instances found in W3SVC_W3WP_IIS8 - skipping collection")
-				break
-			}
-			if name == "_Total" ||
+			if name == "" || name == "_Total" ||
 				c.appBlacklistPattern.MatchString(name) ||
 				!c.appWhitelistPattern.MatchString(name) {
 				continue
