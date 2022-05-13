@@ -1341,7 +1341,7 @@ func (c *IISCollector) collectW3SVC_W3WP(ctx *ScrapeContext, ch chan<- prometheu
 		pid := workerProcessNameExtractor.ReplaceAllString(app.Name, "$1")
 		name := workerProcessNameExtractor.ReplaceAllString(app.Name, "$2")
 		if name == "" {
-			log.Error("no instances found in W3SVC_W3WP - skipping collection")
+			log.Debug("no instances found in W3SVC_W3WP - skipping collection")
 			break
 		}
 		if name == "_Total" ||
@@ -1597,7 +1597,7 @@ func (c *IISCollector) collectW3SVC_W3WP(ctx *ScrapeContext, ch chan<- prometheu
 			pid := workerProcessNameExtractor.ReplaceAllString(app.Name, "$1")
 			name := workerProcessNameExtractor.ReplaceAllString(app.Name, "$2")
 			if name == "" {
-				log.Error("no instances found in W3SVC_W3WP_IIS8 - skipping collection")
+				log.Debug("no instances found in W3SVC_W3WP_IIS8 - skipping collection")
 				break
 			}
 			if name == "_Total" ||
