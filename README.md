@@ -41,6 +41,7 @@ Name     | Description | Enabled by default
 [os](docs/collector.os.md) | OS metrics (memory, processes, users) | &#10003;
 [process](docs/collector.process.md) | Per-process metrics |
 [remote_fx](docs/collector.remote_fx.md) | RemoteFX protocol (RDP) metrics |
+[scheduled_task](docs/collector.scheduled_task.md) | Scheduled Tasks metrics |
 [service](docs/collector.service.md) | Service state metrics | &#10003;
 [smtp](docs/collector.smtp.md) | IIS SMTP Server |
 [system](docs/collector.system.md) | System calls | &#10003;
@@ -78,7 +79,7 @@ Flag     | Description | Default value
 `--telemetry.path` | URL path for surfacing collected metrics. | `/metrics`
 `--telemetry.max-requests` | Maximum number of concurrent requests. 0 to disable. | `5`
 `--collectors.enabled` | Comma-separated list of collectors to use. Use `[defaults]` as a placeholder which gets expanded containing all the collectors enabled by default." | `[defaults]`
-`--collectors.print` | If true, print available collectors and exit. | 
+`--collectors.print` | If true, print available collectors and exit. |
 `--scrape.timeout-margin` | Seconds to subtract from the timeout allowed by the client. Tune to allow for overhead or high loads. | `0.5`
 `--web.config.file` | A [web config][web_config] for setting up TLS and Auth | None
 
@@ -151,7 +152,7 @@ When there are multiple processes with the same name, WMI represents those after
 Using `[defaults]`  with `--collectors.enabled` argument which gets expanded with all default collectors.
 
     .\windows_exporter.exe --collectors.enabled "[defaults],process,container"
-    
+
 This enables the additional process and container collectors on top of the defaults.
 
 ### Using a configuration file

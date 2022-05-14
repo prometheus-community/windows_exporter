@@ -28,6 +28,7 @@ This directory contains documentation of the collectors in the windows_exporter,
 - [`os`](collector.os.md)
 - [`process`](collector.process.md)
 - [`remote_fx`](collector.remote_fx.md)
+- [`scheduled_task`](collector.scheduled_task.md)
 - [`service`](collector.service.md)
 - [`smtp`](collector.smtp.md)
 - [`system`](collector.system.md)
