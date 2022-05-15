@@ -62,7 +62,7 @@ func AddFlags(a *kingpin.Application) {
 		Default(origLogger.Level.String()).
 		StringVar(&s.level)
 	defaultFormat := url.URL{Scheme: "logger", Opaque: "stderr"}
-	a.Flag("log.format", `Set the log target and format. Example: "logger:syslog?appname=bob&local=7" or "logger:stdout?json=true"`).
+	a.Flag("log.format", `Set the log target and format. Example: "logger:syslog?appname=bob&local=7", "logger:stdout?json=true", or "logger:localfile?path=C:\\windows_exporter.log"`).
 		Default(defaultFormat.String()).
 		StringVar(&s.format)
 	a.Action(s.apply)
@@ -221,6 +221,13 @@ func (l logger) SetFormat(format string) error {
 			debugAsInfo = parsedDebugAsInfo
 		}
 		return setEventlogFormatter(l, name, debugAsInfo)
+	case "localfile":
+		path := u.Query().Get("path")
+		f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0640)
+		if err != nil {
+			return err
+		}
+		l.entry.Logger.Out = f
 	case "stdout":
 		l.entry.Logger.Out = os.Stdout
 	case "stderr":
