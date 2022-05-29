@@ -19,7 +19,7 @@ import (
 
 	"github.com/prometheus-community/windows_exporter/log"
 	"gopkg.in/alecthomas/kingpin.v2"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 type getFlagger interface {
