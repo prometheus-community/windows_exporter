@@ -28,6 +28,10 @@ var (
 		"collector.process.blacklist",
 		"Regexp of processes to exclude. Process name must both match whitelist and not match blacklist to be included.",
 	).Default("").String()
+	enableWorkerProcess = kingpin.Flag(
+		"collector.process.iis",
+		"Enable IIS worker process name queries. May cause the collector to leak memory.",
+	).Default("false").Bool()
 )
 
 type processCollector struct {
@@ -200,9 +204,11 @@ func (c *processCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metr
 	}
 
 	var dst_wp []WorkerProcess
-	q_wp := queryAll(&dst_wp)
-	if err := wmi.QueryNamespace(q_wp, &dst_wp, "root\\WebAdministration"); err != nil {
-		log.Debugf("Could not query WebAdministration namespace for IIS worker processes: %v. Skipping", err)
+	if *enableWorkerProcess {
+		q_wp := queryAll(&dst_wp)
+		if err := wmi.QueryNamespace(q_wp, &dst_wp, "root\\WebAdministration"); err != nil {
+			log.Debugf("Could not query WebAdministration namespace for IIS worker processes: %v. Skipping", err)
+		}
 	}
 
 	for _, process := range data {
@@ -216,10 +222,12 @@ func (c *processCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metr
 		pid := strconv.FormatUint(uint64(process.IDProcess), 10)
 		cpid := strconv.FormatUint(uint64(process.CreatingProcessID), 10)
 
-		for _, wp := range dst_wp {
-			if wp.ProcessId == uint64(process.IDProcess) {
-				processName = strings.Join([]string{processName, wp.AppPoolName}, "_")
-				break
+		if *enableWorkerProcess {
+			for _, wp := range dst_wp {
+				if wp.ProcessId == uint64(process.IDProcess) {
+					processName = strings.Join([]string{processName, wp.AppPoolName}, "_")
+					break
+				}
 			}
 		}
 
