@@ -144,6 +144,7 @@ type Win32_PerfRawData_NETFramework_NETCLRMemory struct {
 	NumberTotalcommittedBytes          uint64
 	NumberTotalreservedBytes           uint64
 	PercentTimeinGC                    uint32
+	PercentTimeinGC_base               uint32
 	ProcessID                          uint64
 	PromotedFinalizationMemoryfromGen0 uint64
 	PromotedMemoryfromGen0             uint64
@@ -294,7 +295,7 @@ func (c *NETFramework_NETCLRMemoryCollector) collect(ch chan<- prometheus.Metric
 		ch <- prometheus.MustNewConstMetric(
 			c.TimeinGC,
 			prometheus.GaugeValue,
-			float64(process.PercentTimeinGC)/float64(process.Frequency_PerfTime),
+			float64(100*process.PercentTimeinGC)/float64(process.PercentTimeinGC_base),
 			process.Name,
 		)
 	}
