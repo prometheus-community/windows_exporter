@@ -11,6 +11,14 @@ Enabled by default? | No
 
 ## Flags
 
+### `--collector.process.iis`
+
+Enables IIS process name queries. IIS process names are combined with their app pool name to form the `process` label.
+
+Disabled by default, and can be enabled with `--collector.process.iis=true`.
+
+
+
 ### `--collector.process.whitelist`
 
 Regexp of processes to include. Process name must both match whitelist and not
