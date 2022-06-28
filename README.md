@@ -55,6 +55,7 @@ Name     | Description | Enabled by default
 [thermalzone](docs/collector.thermalzone.md) | Thermal information
 [terminal_services](docs/collector.terminal_services.md) | Terminal services (RDS)
 [textfile](docs/collector.textfile.md) | Read prometheus metrics from a text file | &#10003;
+[user_input_delay](docs/collector.user_input_delay.md) | Determine user input delays for session and processes | &#10003;
 [vmware](docs/collector.vmware.md) | Performance counters installed by the Vmware Guest agent |
 
 See the linked documentation on each collector for more information on reported metrics, configuration settings and usage examples.
