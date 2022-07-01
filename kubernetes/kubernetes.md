@@ -20,9 +20,9 @@ DOCKER_REPO=<your repo> make push-all
 
 If you don't have a version of `make` on your Windows machine, You can use WSL to build the image with Windows Containers by creating a symbolic link to the docker cli and then override the docker command in the `Makefile`: 
 
-On Windows:
+On Windows Powershell prompt:
 ```
-Item -ItemType SymbolicLink -Path "c:\docker" -Target "C:\Program Files\Docker\Docker\resources\bin\docker.exe"
+New-Item -ItemType SymbolicLink -Path "c:\docker" -Target "C:\Program Files\Docker\Docker\resources\bin\docker.exe"
 ```
 
 In WSL:
