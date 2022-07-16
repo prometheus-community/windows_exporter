@@ -18,7 +18,6 @@ None
 
 Name | Description | Type | Labels
 -----|-------------|------|-------
-
 `windows_fsrmquota_count` | Number of Quotas | counter |None
 `windows_fsrmquota_description` | A string up to 1KB in size. Optional. The default value is an empty string. (Description) | counter |`path`, `template`,`description`
 `windows_fsrmquota_disabled` | If 1, the quota is disabled. The default value is 0. (Disabled) | counter |`path`, `template`
