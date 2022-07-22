@@ -26,7 +26,6 @@ type MSCluster_ResourceGroupCollector struct {
 	Priority            *prometheus.Desc
 	ResiliencyPeriod    *prometheus.Desc
 	State               *prometheus.Desc
-	UpdateDomain        *prometheus.Desc
 }
 
 func newMSCluster_ResourceGroupCollector() (Collector, error) {
@@ -132,7 +131,6 @@ type MSCluster_ResourceGroup struct {
 	Priority            uint
 	ResiliencyPeriod    uint
 	State               uint
-	UpdateDomain        uint
 }
 
 // Collect sends the metric values for each metric
@@ -234,13 +232,6 @@ func (c *MSCluster_ResourceGroupCollector) Collect(ctx *ScrapeContext, ch chan<-
 			c.State,
 			prometheus.GaugeValue,
 			float64(v.State),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.UpdateDomain,
-			prometheus.GaugeValue,
-			float64(v.UpdateDomain),
 			v.Name,
 		)
 
