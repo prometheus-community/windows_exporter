@@ -121,6 +121,10 @@ Percent of physical CPU resources by the hosts themselves (on all monitored host
 ```
 (sum by (instance)(rate(windows_hyperv_host_cpu_total_run_time{}[1m]))) / sum by (instance)(windows_cs_logical_processors{}) / 100000
 ```
+Percent of physical CPU resources by the hypervisor (on all monitored hosts)
+```
+(sum by (instance)(rate(windows_hyperv_host_lp_total_run_time{}[1m]))) / sum by (instance)(windows_hyperv_hypervisor_logical_processors{}) / 100000
+```
 
 ## Alerting examples
 _This collector does not yet have alerting examples, we would appreciate your help adding them!_
