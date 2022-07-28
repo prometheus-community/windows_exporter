@@ -5,7 +5,7 @@ The hyperv collector exposes metrics about the Hyper-V hypervisor
 |||
 -|-
 Metric name prefix  | `hyperv`
-Classes             | `Win32_PerfRawData_VmmsVirtualMachineStats_HyperVVirtualMachineHealthSummary`<br/>`Win32_PerfRawData_VidPerfProvider_HyperVVMVidPartition`<br/>`Win32_PerfRawData_HvStats_HyperVHypervisorRootPartition`<br/>`Win32_PerfRawData_HvStats_HyperVHypervisor`<br/>`Win32_PerfRawData_HvStats_HyperVHypervisorRootVirtualProcessor`<br/>`Win32_PerfRawData_HvStats_HyperVHypervisorVirtualProcessor`<br/>`Win32_PerfRawData_NvspSwitchStats_HyperVVirtualSwitch`<br/>`Win32_PerfRawData_EthernetPerfProvider_HyperVLegacyNetworkAdapter`<br/>`Win32_PerfRawData_Counters_HyperVVirtualStorageDevice`<br/>`Win32_PerfRawData_NvspNicStats_HyperVVirtualNetworkAdapter`
+Classes             | `Win32_PerfRawData_VmmsVirtualMachineStats_HyperVVirtualMachineHealthSummary`<br/>`Win32_PerfRawData_VidPerfProvider_HyperVVMVidPartition`<br/>`Win32_PerfRawData_HvStats_HyperVHypervisorRootPartition`<br/>`Win32_PerfRawData_HvStats_HyperVHypervisor`<br/>`Win32_PerfRawData_HvStats_HyperVHypervisorLogicalProcessor`<br/>`Win32_PerfRawData_HvStats_HyperVHypervisorRootVirtualProcessor`<br/>`Win32_PerfRawData_HvStats_HyperVHypervisorVirtualProcessor`<br/>`Win32_PerfRawData_NvspSwitchStats_HyperVVirtualSwitch`<br/>`Win32_PerfRawData_EthernetPerfProvider_HyperVLegacyNetworkAdapter`<br/>`Win32_PerfRawData_Counters_HyperVVirtualStorageDevice`<br/>`Win32_PerfRawData_NvspNicStats_HyperVVirtualNetworkAdapter`
 Enabled by default? | No
 
 ## Flags
@@ -44,6 +44,9 @@ Name | Description | Type | Labels
 `windows_hyperv_root_partition_virtual_tlb_pages` | _Not yet documented_ | counter | None
 `windows_hyperv_hypervisor_virtual_processors` | _Not yet documented_ | counter | None
 `windows_hyperv_hypervisor_logical_processors` | _Not yet documented_ | counter | None
+`windows_hyperv_host_lp_guest_run_time` | _Not yet documented_ | counter | `core`
+`windows_hyperv_host_lp_hypervisor_run_time` | _Not yet documented_ | counter | `core`
+`windows_hyperv_host_lp_total_run_time` | _Not yet documented_ | counter | `core`
 `windows_hyperv_host_cpu_guest_run_time` | _Not yet documented_ | counter | `core`
 `windows_hyperv_host_cpu_hypervisor_run_time` | _Not yet documented_ | counter | `core`
 `windows_hyperv_host_cpu_remote_run_time` | _Not yet documented_ | counter | `core`

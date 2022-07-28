@@ -53,6 +53,11 @@ type HyperVCollector struct {
 	LogicalProcessors *prometheus.Desc
 	VirtualProcessors *prometheus.Desc
 
+	// Win32_PerfRawData_HvStats_HyperVHypervisorLogicalProcessor
+	HostLPGuestRunTime      *prometheus.Desc
+	HostLPHypervisorRunTime *prometheus.Desc
+	HostLPTotalRunTime      *prometheus.Desc
+
 	// Win32_PerfRawData_HvStats_HyperVHypervisorRootVirtualProcessor
 	HostGuestRunTime      *prometheus.Desc
 	HostHypervisorRunTime *prometheus.Desc
@@ -304,6 +309,27 @@ func NewHyperVCollector() (Collector, error) {
 			prometheus.BuildFQName(Namespace, buildSubsystemName("hypervisor"), "logical_processors"),
 			"The number of logical processors present in the system",
 			nil,
+			nil,
+		),
+
+		//
+
+		HostLPGuestRunTime: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, buildSubsystemName("host_lp"), "guest_run_time"),
+			"The percentage of time spent by the processor in guest code",
+			[]string{"core"},
+			nil,
+		),
+		HostLPHypervisorRunTime: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, buildSubsystemName("host_lp"), "hypervisor_run_time"),
+			"The percentage of time spent by the processor in hypervisor code",
+			[]string{"core"},
+			nil,
+		),
+		HostLPTotalRunTime: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, buildSubsystemName("host_lp"), "total_run_time"),
+			"The percentage of time spent by the processor in guest and hypervisor code",
+			[]string{"core"},
 			nil,
 		),
 
@@ -694,6 +720,11 @@ func (c *HyperVCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metri
 		return err
 	}
 
+	if desc, err := c.collectHostLPUsage(ch); err != nil {
+		log.Error("failed collecting hyperV host logical processors metrics:", desc, err)
+		return err
+	}
+
 	if desc, err := c.collectHostCpuUsage(ch); err != nil {
 		log.Error("failed collecting hyperV host CPU metrics:", desc, err)
 		return err
@@ -992,6 +1023,59 @@ func (c *HyperVCollector) collectVmProcessor(ch chan<- prometheus.Metric) (*prom
 			c.VirtualProcessors,
 			prometheus.GaugeValue,
 			float64(obj.VirtualProcessors),
+		)
+
+	}
+
+	return nil, nil
+}
+
+// Win32_PerfRawData_HvStats_HyperVHypervisorLogicalProcessor ...
+type Win32_PerfRawData_HvStats_HyperVHypervisorLogicalProcessor struct {
+	Name                     string
+	PercentGuestRunTime      uint64
+	PercentHypervisorRunTime uint64
+	PercentTotalRunTime      uint
+}
+
+func (c *HyperVCollector) collectHostLPUsage(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+	var dst []Win32_PerfRawData_HvStats_HyperVHypervisorLogicalProcessor
+	q := queryAll(&dst)
+	if err := wmi.Query(q, &dst); err != nil {
+		return nil, err
+	}
+
+	for _, obj := range dst {
+		if strings.Contains(obj.Name, "_Total") {
+			continue
+		}
+		// The name format is Hv LP <core id>
+		parts := strings.Split(obj.Name, " ")
+		if len(parts) != 3 {
+			log.Warnf("Unexpected format of Name in collectHostLPUsage: %q", obj.Name)
+			continue
+		}
+		coreId := parts[2]
+
+		ch <- prometheus.MustNewConstMetric(
+			c.HostLPGuestRunTime,
+			prometheus.GaugeValue,
+			float64(obj.PercentGuestRunTime),
+			coreId,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.HostLPHypervisorRunTime,
+			prometheus.GaugeValue,
+			float64(obj.PercentHypervisorRunTime),
+			coreId,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.HostLPTotalRunTime,
+			prometheus.GaugeValue,
+			float64(obj.PercentTotalRunTime),
+			coreId,
 		)
 
 	}
