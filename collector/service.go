@@ -6,6 +6,7 @@ package collector
 import (
 	"fmt"
 	"strings"
+	"syscall"
 
 	"github.com/StackExchange/wmi"
 	"github.com/prometheus-community/windows_exporter/log"
@@ -234,30 +235,43 @@ func (c *serviceCollector) collectAPI(ch chan<- prometheus.Metric) error {
 	}
 	defer svcmgrConnection.Disconnect() //nolint:errcheck
 
-	// List All Services from the Services Manager
+	// List All Services from the Services Manager.
 	serviceList, err := svcmgrConnection.ListServices()
 	if err != nil {
 		return err
 	}
 
-	// Iterate through the Services List
+	// Iterate through the Services List.
 	for _, service := range serviceList {
-		// Retrieve handle for each service
-		serviceHandle, err := svcmgrConnection.OpenService(service)
+		// Get UTF16 service name.
+		serviceName, err := syscall.UTF16PtrFromString(service)
 		if err != nil {
-			continue
-		}
-		defer serviceHandle.Close()
-
-		// Get Service Configuration
-		serviceConfig, err := serviceHandle.Config()
-		if err != nil {
+			log.Warnf("Service %s get name error:  %#v", service, err)
 			continue
 		}
 
-		// Get Service Current Status
-		serviceStatus, err := serviceHandle.Query()
+		// Open connection for service handler.
+		serviceHandle, err := windows.OpenService(svcmgrConnection.Handle, serviceName, windows.GENERIC_READ)
 		if err != nil {
+			log.Warnf("Open service %s error:  %#v", service, err)
+			continue
+		}
+
+		// Create handle for each service.
+		serviceManager := &mgr.Service{Name: service, Handle: serviceHandle}
+		defer serviceManager.Close()
+
+		// Get Service Configuration.
+		serviceConfig, err := serviceManager.Config()
+		if err != nil {
+			log.Warnf("Get ervice %s config error:  %#v", service, err)
+			continue
+		}
+
+		// Get Service Current Status.
+		serviceStatus, err := serviceManager.Query()
+		if err != nil {
+			log.Warnf("Get service %s status error:  %#v", service, err)
 			continue
 		}
 
