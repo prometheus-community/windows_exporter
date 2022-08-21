@@ -54,9 +54,9 @@ type HyperVCollector struct {
 	VirtualProcessors *prometheus.Desc
 
 	// Win32_PerfRawData_HvStats_HyperVHypervisorLogicalProcessor
-	HostLPGuestRunTime      *prometheus.Desc
-	HostLPHypervisorRunTime *prometheus.Desc
-	HostLPTotalRunTime      *prometheus.Desc
+	HostLPGuestRunTimePercent      *prometheus.Desc
+	HostLPHypervisorRunTimePercent *prometheus.Desc
+	HostLPTotalRunTimePercent      *prometheus.Desc
 
 	// Win32_PerfRawData_HvStats_HyperVHypervisorRootVirtualProcessor
 	HostGuestRunTime      *prometheus.Desc
@@ -314,20 +314,20 @@ func NewHyperVCollector() (Collector, error) {
 
 		//
 
-		HostLPGuestRunTime: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, buildSubsystemName("host_lp"), "guest_run_time"),
+		HostLPGuestRunTimePercent: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, buildSubsystemName("host_lp"), "guest_run_time_percent"),
 			"The percentage of time spent by the processor in guest code",
 			[]string{"core"},
 			nil,
 		),
-		HostLPHypervisorRunTime: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, buildSubsystemName("host_lp"), "hypervisor_run_time"),
+		HostLPHypervisorRunTimePercent: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, buildSubsystemName("host_lp"), "hypervisor_run_time_percent"),
 			"The percentage of time spent by the processor in hypervisor code",
 			[]string{"core"},
 			nil,
 		),
-		HostLPTotalRunTime: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, buildSubsystemName("host_lp"), "total_run_time"),
+		HostLPTotalRunTimePercent: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, buildSubsystemName("host_lp"), "total_run_time_percent"),
 			"The percentage of time spent by the processor in guest and hypervisor code",
 			[]string{"core"},
 			nil,
@@ -1058,21 +1058,21 @@ func (c *HyperVCollector) collectHostLPUsage(ch chan<- prometheus.Metric) (*prom
 		coreId := parts[2]
 
 		ch <- prometheus.MustNewConstMetric(
-			c.HostLPGuestRunTime,
+			c.HostLPGuestRunTimePercent,
 			prometheus.GaugeValue,
 			float64(obj.PercentGuestRunTime),
 			coreId,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.HostLPHypervisorRunTime,
+			c.HostLPHypervisorRunTimePercent,
 			prometheus.GaugeValue,
 			float64(obj.PercentHypervisorRunTime),
 			coreId,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.HostLPTotalRunTime,
+			c.HostLPTotalRunTimePercent,
 			prometheus.GaugeValue,
 			float64(obj.PercentTotalRunTime),
 			coreId,

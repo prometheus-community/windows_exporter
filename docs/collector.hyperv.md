@@ -44,9 +44,9 @@ Name | Description | Type | Labels
 `windows_hyperv_root_partition_virtual_tlb_pages` | _Not yet documented_ | counter | None
 `windows_hyperv_hypervisor_virtual_processors` | _Not yet documented_ | counter | None
 `windows_hyperv_hypervisor_logical_processors` | _Not yet documented_ | counter | None
-`windows_hyperv_host_lp_guest_run_time` | _Not yet documented_ | counter | `core`
-`windows_hyperv_host_lp_hypervisor_run_time` | _Not yet documented_ | counter | `core`
-`windows_hyperv_host_lp_total_run_time` | _Not yet documented_ | counter | `core`
+`windows_hyperv_host_lp_guest_run_time_percent` | _Not yet documented_ | counter | `core`
+`windows_hyperv_host_lp_hypervisor_run_time_percent` | _Not yet documented_ | counter | `core`
+`windows_hyperv_host_lp_total_run_time_percent` | _Not yet documented_ | counter | `core`
 `windows_hyperv_host_cpu_guest_run_time` | _Not yet documented_ | counter | `core`
 `windows_hyperv_host_cpu_hypervisor_run_time` | _Not yet documented_ | counter | `core`
 `windows_hyperv_host_cpu_remote_run_time` | _Not yet documented_ | counter | `core`
@@ -123,7 +123,7 @@ Percent of physical CPU resources by the hosts themselves (on all monitored host
 ```
 Percent of physical CPU resources by the hypervisor (on all monitored hosts)
 ```
-(sum by (instance)(rate(windows_hyperv_host_lp_total_run_time{}[1m]))) / sum by (instance)(windows_hyperv_hypervisor_logical_processors{}) / 100000
+(sum by (instance)(rate(windows_hyperv_host_lp_total_run_time_percent{}[1m]))) / sum by (instance)(windows_hyperv_hypervisor_logical_processors{}) / 100000
 ```
 
 ## Alerting examples
