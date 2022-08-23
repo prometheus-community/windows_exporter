@@ -291,14 +291,14 @@ func main() {
 			"Seconds to subtract from the timeout allowed by the client. Tune to allow for overhead or high loads.",
 		).Default("0.5").Float64()
 	)
-
+	log.AddFlags(kingpin.CommandLine)
 	kingpin.Version(version.Print("windows_exporter"))
 	kingpin.HelpFlag.Short('h')
 
 	// Load values from configuration file(s). Executable flags must first be parsed, in order
 	// to load the specified file(s).
 	kingpin.Parse()
-
+	log.Debug("Logging has Started")
 	if *configFile != "" {
 		resolver, err := config.NewResolver(*configFile)
 		if err != nil {

@@ -4,9 +4,7 @@ import (
 	"fmt"
 
 	"github.com/prometheus-community/windows_exporter/log"
-	"github.com/prometheus/common/version"
 	"golang.org/x/sys/windows/svc"
-	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 const (
@@ -44,13 +42,6 @@ loop:
 var StopCh chan bool
 
 func init() {
-	log.AddFlags(kingpin.CommandLine)
-	kingpin.Version(version.Print("windows_exporter"))
-	kingpin.HelpFlag.Short('h')
-	// Load values from configuration file(s). Executable flags must first be parsed, in order
-	// to load the specified file(s).
-	kingpin.Parse()
-	log.Debug("Logging has Started")
 	log.Debug("Checking if We are a service")
 	isService, err := svc.IsWindowsService()
 	if err != nil {
