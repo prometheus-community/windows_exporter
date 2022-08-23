@@ -39,7 +39,7 @@ loop:
 	return
 }
 
-var StopCh chan bool
+var StopCh = make(chan bool)
 
 func init() {
 	log.Debug("Checking if We are a service")
@@ -47,7 +47,6 @@ func init() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	StopCh := make(chan bool)
 	log.Debug("Attempting to start exporter service")
 	if isService {
 		go func() {
