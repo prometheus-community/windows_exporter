@@ -4,6 +4,10 @@
 package main
 
 import (
+	//We keep this at the top to ensure it happens first
+	"github.com/prometheus-community/windows_exporter/initiate"
+	"github.com/prometheus-community/windows_exporter/log"
+
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -16,12 +20,10 @@ import (
 	"sync"
 	"time"
 
-	"golang.org/x/sys/windows/svc"
-
 	"github.com/StackExchange/wmi"
 	"github.com/prometheus-community/windows_exporter/collector"
 	"github.com/prometheus-community/windows_exporter/config"
-	"github.com/prometheus-community/windows_exporter/log"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -290,7 +292,6 @@ func main() {
 		).Default("0.5").Float64()
 	)
 
-	log.AddFlags(kingpin.CommandLine)
 	kingpin.Version(version.Print("windows_exporter"))
 	kingpin.HelpFlag.Short('h')
 
@@ -326,21 +327,6 @@ func main() {
 	}
 
 	initWbem()
-
-	isService, err := svc.IsWindowsService()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	stopCh := make(chan bool)
-	if isService {
-		go func() {
-			err = svc.Run(serviceName, &windowsExporterService{stopCh: stopCh})
-			if err != nil {
-				log.Errorf("Failed to start service: %v", err)
-			}
-		}()
-	}
 
 	collectors, err := loadCollectors(*enabledCollectors)
 	if err != nil {
@@ -421,7 +407,7 @@ func main() {
 	}()
 
 	for {
-		if <-stopCh {
+		if <-initiate.StopCh {
 			log.Info("Shutting down windows_exporter")
 			break
 		}
@@ -461,33 +447,6 @@ func withConcurrencyLimit(n int, next http.HandlerFunc) http.HandlerFunc {
 		}
 		next(w, r)
 	}
-}
-
-type windowsExporterService struct {
-	stopCh chan<- bool
-}
-
-func (s *windowsExporterService) Execute(args []string, r <-chan svc.ChangeRequest, changes chan<- svc.Status) (ssec bool, errno uint32) {
-	const cmdsAccepted = svc.AcceptStop | svc.AcceptShutdown
-	changes <- svc.Status{State: svc.StartPending}
-	changes <- svc.Status{State: svc.Running, Accepts: cmdsAccepted}
-loop:
-	for {
-		select {
-		case c := <-r:
-			switch c.Cmd {
-			case svc.Interrogate:
-				changes <- c.CurrentStatus
-			case svc.Stop, svc.Shutdown:
-				s.stopCh <- true
-				break loop
-			default:
-				log.Error(fmt.Sprintf("unexpected control request #%d", c))
-			}
-		}
-	}
-	changes <- svc.Status{State: svc.StopPending}
-	return
 }
 
 type metricsHandler struct {
