@@ -52,7 +52,6 @@ type prometheusVersion struct {
 const (
 	defaultCollectors            = "cpu,cs,logical_disk,net,os,service,system,textfile"
 	defaultCollectorsPlaceholder = "[defaults]"
-	serviceName                  = "windows_exporter"
 )
 
 var (
