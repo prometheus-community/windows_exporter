@@ -4,7 +4,7 @@
 package main
 
 import (
-	//We keep this at the top to ensure it happens first
+	//Its important that we do these first so that we can register with the windows service control ASAP to avoid timeouts
 	"github.com/prometheus-community/windows_exporter/initiate"
 	"github.com/prometheus-community/windows_exporter/log"
 
