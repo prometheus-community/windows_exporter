@@ -16,7 +16,7 @@ None
 
 Name | Description | Type | Labels
 -----|-------------|------|-------
-`windows_os_info` | Contains full product name & version in labels | gauge | `product`, `version`
+`windows_os_info` | Contains full product name & version in labels. Note that the `major_version` for Windows 11 is "10"; a build number greater than 22000 represents Windows 11. | gauge | `product`, `version`, `major_version`, `minor_version`, `build_number`
 `windows_os_paging_limit_bytes` | Total number of bytes that can be stored in the operating system paging files. 0 (zero) indicates that there are no paging files | gauge | None
 `windows_os_paging_free_bytes` | Number of bytes that can be mapped into the operating system paging files without causing any other pages to be swapped out | gauge | None
 `windows_os_physical_memory_free_bytes` | Bytes of physical memory currently unused and available | gauge | None
