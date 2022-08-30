@@ -52,7 +52,7 @@ func NewOSCollector() (Collector, error) {
 		OSInformation: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "info"),
 			"OperatingSystem.Caption, OperatingSystem.Version",
-			[]string{"product", "version"},
+			[]string{"product", "version", "major_version", "minor_version", "build_number"},
 			nil,
 		),
 		PagingLimitBytes: prometheus.NewDesc(
@@ -236,6 +236,9 @@ func (c *OSCollector) collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) (
 		1.0,
 		fmt.Sprintf("Microsoft %s", pn), // Caption
 		fmt.Sprintf("%d.%d.%s", nwgi.VersionMajor, nwgi.VersionMinor, bn), // Version
+		fmt.Sprintf("%d", nwgi.VersionMajor),                              // Major Version
+		fmt.Sprintf("%d", nwgi.VersionMinor),                              // Minor Version
+		bn,                                                                // Build number
 	)
 
 	ch <- prometheus.MustNewConstMetric(
