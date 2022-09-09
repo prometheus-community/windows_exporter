@@ -124,29 +124,29 @@ func (c *NETFramework_NETCLRMemoryCollector) Collect(ctx *ScrapeContext, ch chan
 type Win32_PerfRawData_NETFramework_NETCLRMemory struct {
 	Name string
 
-	AllocatedBytesPersec               uint64
-	FinalizationSurvivors              uint64
-	Frequency_PerfTime                 uint64
-	Gen0heapsize                       uint64
-	Gen0PromotedBytesPerSec            uint64
-	Gen1heapsize                       uint64
-	Gen1PromotedBytesPerSec            uint64
-	Gen2heapsize                       uint64
-	LargeObjectHeapsize                uint64
-	NumberBytesinallHeaps              uint64
-	NumberGCHandles                    uint64
-	NumberGen0Collections              uint64
-	NumberGen1Collections              uint64
-	NumberGen2Collections              uint64
-	NumberInducedGC                    uint64
-	NumberofPinnedObjects              uint64
-	NumberofSinkBlocksinuse            uint64
-	NumberTotalcommittedBytes          uint64
-	NumberTotalreservedBytes           uint64
+	AllocatedBytesPersec      uint64
+	FinalizationSurvivors     uint64
+	Frequency_PerfTime        uint64
+	Gen0heapsize              uint64
+	Gen0PromotedBytesPerSec   uint64
+	Gen1heapsize              uint64
+	Gen1PromotedBytesPerSec   uint64
+	Gen2heapsize              uint64
+	LargeObjectHeapsize       uint64
+	NumberBytesinallHeaps     uint64
+	NumberGCHandles           uint64
+	NumberGen0Collections     uint64
+	NumberGen1Collections     uint64
+	NumberGen2Collections     uint64
+	NumberInducedGC           uint64
+	NumberofPinnedObjects     uint64
+	NumberofSinkBlocksinuse   uint64
+	NumberTotalcommittedBytes uint64
+	NumberTotalreservedBytes  uint64
 	// PercentTimeinGC has countertype=PERF_RAW_FRACTION.
 	// Formula: (100 * CounterValue) / BaseValue
 	// By docs https://docs.microsoft.com/en-us/previous-versions/windows/internet-explorer/ie-developer/scripting-articles/ms974615(v=msdn.10)#perf_raw_fraction
-	PercentTimeinGC                    uint32
+	PercentTimeinGC uint32
 	// BaseValue is just a "magic" number used to make the calculation come out right.
 	PercentTimeinGC_base               uint32
 	ProcessID                          uint64
