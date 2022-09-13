@@ -36,7 +36,7 @@ Name | Description | Type | Labels
 `windows_iis_current_connections` |  The number of active connections to the web service | counter | `site`
 `windows_iis_current_isapi_extension_requests` | The number of [ISAPI extension](https://docs.microsoft.com/en-us/previous-versions/iis/6.0-sdk/ms525172(v=vs.90)) requests that are being processed simultaneously by the web service | counter | `site`
 `windows_iis_current_non_anonymous_users` | The number of users who currently have a nonanonymous request pending with the web service | counter | `site`
-`windows_iis_service_uptime` | The uptime for the web service or a Web site (seconds) | counter | `site`
+`windows_iis_service_uptime` | The uptime for the web service or a Web site (seconds) | gauge | `site`
 `windows_iis_received_bytes_total` | The total bytes of data that have been received by the web service since the service started | counter | `site`
 `windows_iis_sent_bytes_total` | The number of data bytes that have been sent by the web service since the service started | counter | `site`
 `windows_iis_anonymous_users_total` | The number of users who have established an anonymous request since the web service started | counter | `site`
