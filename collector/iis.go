@@ -69,6 +69,7 @@ type IISCollector struct {
 	CurrentConnections                  *prometheus.Desc
 	CurrentISAPIExtensionRequests       *prometheus.Desc
 	CurrentNonAnonymousUsers            *prometheus.Desc
+	ServiceUptime                       *prometheus.Desc
 	TotalBytesReceived                  *prometheus.Desc
 	TotalBytesSent                      *prometheus.Desc
 	TotalAnonymousUsers                 *prometheus.Desc
@@ -239,6 +240,12 @@ func NewIISCollector() (Collector, error) {
 		CurrentNonAnonymousUsers: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "current_non_anonymous_users"),
 			"Number of users who currently have a non-anonymous connection using the Web service (WebService.CurrentNonAnonymousUsers)",
+			[]string{"site"},
+			nil,
+		),
+		ServiceUptime: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "service_uptime"),
+			"Number of seconds the WebService is up (WebService.ServiceUptime)",
 			[]string{"site"},
 			nil,
 		),
@@ -845,6 +852,7 @@ type perflibWebService struct {
 	CurrentConnections            float64 `perflib:"Current Connections"`
 	CurrentISAPIExtensionRequests float64 `perflib:"Current ISAPI Extension Requests"`
 	CurrentNonAnonymousUsers      float64 `perflib:"Current NonAnonymous Users"`
+	ServiceUptime                 float64 `perflib:"Service Uptime"`
 
 	TotalBytesReceived                  float64 `perflib:"Total Bytes Received"`
 	TotalBytesSent                      float64 `perflib:"Total Bytes Sent"`
@@ -923,6 +931,12 @@ func (c *IISCollector) collectWebService(ctx *ScrapeContext, ch chan<- prometheu
 			c.CurrentNonAnonymousUsers,
 			prometheus.GaugeValue,
 			app.CurrentNonAnonymousUsers,
+			app.Name,
+		)
+		ch <- prometheus.MustNewConstMetric(
+			c.ServiceUptime,
+			prometheus.GaugeValue,
+			app.ServiceUptime,
 			app.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
