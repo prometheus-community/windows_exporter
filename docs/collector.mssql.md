@@ -268,8 +268,8 @@ When you read the counter in perfmon you will get the the percentage pages found
 This collector retrieves the two internal values separately. In order to calculate the Buffer Cache Hit Ratio in PromQL.
 
 ```
-windows_mssql_bufman_buffer_cache_hits{instance="host:9182", exported_instance="MSSQLSERVER"} /
-windows_mssql_bufman_buffer_cache_lookups{instance="host:9182", exported_instance="MSSQLSERVER"}
+windows_mssql_bufman_buffer_cache_hits{instance="host:9182", mssql_instance="MSSQLSERVER"} /
+windows_mssql_bufman_buffer_cache_lookups{instance="host:9182", mssql_instance="MSSQLSERVER"}
 ```
 
 This principal can be used for following metrics too:
