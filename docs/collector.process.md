@@ -24,16 +24,16 @@ match blacklist to be included. Recommended to keep down number of returned
 metrics.
 
 ### Example
-To match all firefox processes: `--collector.process.whitelist="firefox.+"`.
+To match all firefox processes: `--collector.process.whitelist="firefox.*"`.
 Note that multiple processes with the same name will be disambiguated by
 Windows by adding a number suffix, such as `firefox#2`. Your [regexp](https://en.wikipedia.org/wiki/Regular_expression) must take
 these suffixes into consideration.
 
-:warning: The regexp is case-sensitive, so `--collector.process.whitelist="FIREFOX.+"` will **NOT** match a process named `firefox` . 
+:warning: The regexp is case-sensitive, so `--collector.process.whitelist="FIREFOX.*"` will **NOT** match a process named `firefox` . 
 
 To specify multiple names, use the pipe `|` character:
 ```
---collector.process.whitelist="firefox.+|FIREFOX.+|chrome.+"
+--collector.process.whitelist="(firefox|FIREFOX|chrome).*"
 ```
 This will match all processes named `firefox`, `FIREFOX` or `chrome` .
 
