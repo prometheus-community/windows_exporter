@@ -220,6 +220,7 @@ func fetchTasksInFolder(folder *ole.IDispatch, scheduledTasks *ScheduledTasks) e
 
 	err = oleutil.ForEach(tasks, func(v *ole.VARIANT) error {
 		task := v.ToIDispatch()
+		defer task.Release()
 
 		parsedTask, err := parseTask(task)
 		if err != nil {
@@ -249,6 +250,7 @@ func fetchTasksRecursively(folder *ole.IDispatch, scheduledTasks *ScheduledTasks
 
 	err = oleutil.ForEach(subFolders, func(v *ole.VARIANT) error {
 		subFolder := v.ToIDispatch()
+		defer subFolder.Release()
 		return fetchTasksRecursively(subFolder, scheduledTasks)
 	})
 
@@ -260,31 +262,61 @@ func parseTask(task *ole.IDispatch) (scheduledTask ScheduledTask, err error) {
 	if err != nil {
 		return scheduledTask, err
 	}
+	defer func() {
+		if tempErr := taskNameVar.Clear(); tempErr != nil {
+			err = tempErr
+		}
+	}()
 
 	taskPathVar, err := oleutil.GetProperty(task, "Path")
 	if err != nil {
 		return scheduledTask, err
 	}
+	defer func() {
+		if tempErr := taskPathVar.Clear(); tempErr != nil {
+			err = tempErr
+		}
+	}()
 
 	taskEnabledVar, err := oleutil.GetProperty(task, "Enabled")
 	if err != nil {
 		return scheduledTask, err
 	}
+	defer func() {
+		if tempErr := taskEnabledVar.Clear(); tempErr != nil {
+			err = tempErr
+		}
+	}()
 
 	taskStateVar, err := oleutil.GetProperty(task, "State")
 	if err != nil {
 		return scheduledTask, err
 	}
+	defer func() {
+		if tempErr := taskStateVar.Clear(); tempErr != nil {
+			err = tempErr
+		}
+	}()
 
 	taskNumberOfMissedRunsVar, err := oleutil.GetProperty(task, "NumberOfMissedRuns")
 	if err != nil {
 		return scheduledTask, err
 	}
+	defer func() {
+		if tempErr := taskNumberOfMissedRunsVar.Clear(); tempErr != nil {
+			err = tempErr
+		}
+	}()
 
 	taskLastTaskResultVar, err := oleutil.GetProperty(task, "LastTaskResult")
 	if err != nil {
 		return scheduledTask, err
 	}
+	defer func() {
+		if tempErr := taskLastTaskResultVar.Clear(); tempErr != nil {
+			err = tempErr
+		}
+	}()
 
 	scheduledTask.Name = taskNameVar.ToString()
 	scheduledTask.Path = strings.ReplaceAll(taskPathVar.ToString(), "\\", "/")
