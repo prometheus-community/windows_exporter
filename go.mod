@@ -10,7 +10,7 @@ require (
 	github.com/go-ole/go-ole v1.2.6
 	github.com/leoluk/perflib_exporter v0.1.1-0.20211204221052-9e3696429c20
 	github.com/prometheus/client_golang v1.13.0
-	github.com/prometheus/client_model v0.2.0
+	github.com/prometheus/client_model v0.3.0
 	github.com/prometheus/common v0.37.0
 	github.com/prometheus/exporter-toolkit v0.7.1
 	github.com/sirupsen/logrus v1.9.0
