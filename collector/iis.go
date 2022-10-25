@@ -1334,6 +1334,7 @@ type perflibW3SVC_W3WP_IIS8 struct {
 
 	RequestErrorsTotal float64
 	RequestErrors500   float64 `perflib:"% 500 HTTP Response Sent"`
+	RequestErrors503   float64 `perflib:"% 503 HTTP Response Sent"`
 	RequestErrors404   float64 `perflib:"% 404 HTTP Response Sent"`
 	RequestErrors403   float64 `perflib:"% 403 HTTP Response Sent"`
 	RequestErrors401   float64 `perflib:"% 401 HTTP Response Sent"`
@@ -1643,6 +1644,14 @@ func (c *IISCollector) collectW3SVC_W3WP(ctx *ScrapeContext, ch chan<- prometheu
 				name,
 				pid,
 				"500",
+			)
+			ch <- prometheus.MustNewConstMetric(
+				c.RequestErrorsTotal,
+				prometheus.CounterValue,
+				app.RequestErrors503,
+				name,
+				pid,
+				"503",
 			)
 			ch <- prometheus.MustNewConstMetric(
 				c.WebSocketRequestsActive,
