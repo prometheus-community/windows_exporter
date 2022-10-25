@@ -264,11 +264,7 @@ func main() {
 			"config.file",
 			"YAML configuration file to use. Values set in this file will be overridden by CLI flags.",
 		).String()
-		webConfig     = webflag.AddFlags(kingpin.CommandLine)
-		listenAddress = kingpin.Flag(
-			"telemetry.addr",
-			"host:port for exporter.",
-		).Default(":9182").String()
+		webConfig   = webflag.AddFlags(kingpin.CommandLine, ":9182")
 		metricsPath = kingpin.Flag(
 			"telemetry.path",
 			"URL path for surfacing collected metrics.",
@@ -398,9 +394,8 @@ func main() {
 	log.Infoln("Build context", version.BuildContext())
 
 	go func() {
-		log.Infoln("Starting server on", *listenAddress)
-		server := &http.Server{Addr: *listenAddress}
-		if err := web.ListenAndServe(server, *webConfig, log.NewToolkitAdapter()); err != nil {
+		server := &http.Server{}
+		if err := web.ListenAndServe(server, webConfig, log.NewToolkitAdapter()); err != nil {
 			log.Fatalf("cannot start windows_exporter: %s", err)
 		}
 	}()
