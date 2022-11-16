@@ -17,7 +17,7 @@ func init() {
 }
 
 const (
-	win32DiskQuery = "SELECT DeviceID, Model, Caption, Partitions, Size, Status, Availability FROM WIN32_DiskDrive"
+	win32DiskQuery = "SELECT DeviceID, Model, Caption, Name, Partitions, Size, Status, Availability FROM WIN32_DiskDrive"
 )
 
 // A DiskDriveInfoCollector is a Prometheus collector for a few WMI metrics in Win32_DiskDrive
@@ -40,6 +40,7 @@ func newDiskDriveInfoCollector() (Collector, error) {
 				"device_id",
 				"model",
 				"caption",
+				"name",
 			},
 			nil,
 		),
@@ -80,6 +81,7 @@ type Win32_DiskDrive struct {
 	DeviceID     string
 	Model        string
 	Size         uint64
+	Name         string
 	Caption      string
 	Partitions   uint32
 	Status       string
@@ -152,9 +154,10 @@ func (c *DiskDriveInfoCollector) collect(ch chan<- prometheus.Metric) (*promethe
 			c.DiskInfo,
 			prometheus.GaugeValue,
 			1.0,
-			strings.TrimRight(processor.DeviceID, " "),
+			strings.Trim(processor.DeviceID, "\\.\\"),
 			strings.TrimRight(processor.Model, " "),
 			strings.TrimRight(processor.Caption, " "),
+			strings.TrimRight(processor.Name, "\\.\\"),
 		)
 
 		for _, status := range allDiskStatus {
@@ -167,7 +170,7 @@ func (c *DiskDriveInfoCollector) collect(ch chan<- prometheus.Metric) (*promethe
 				c.Status,
 				prometheus.GaugeValue,
 				isCurrentState,
-				strings.TrimRight(processor.Model, " "),
+				strings.Trim(processor.Name, "\\.\\"),
 				status,
 			)
 		}
@@ -193,7 +196,7 @@ func (c *DiskDriveInfoCollector) collect(ch chan<- prometheus.Metric) (*promethe
 				c.Availability,
 				prometheus.GaugeValue,
 				isCurrentState,
-				strings.TrimRight(processor.Model, " "),
+				strings.Trim(processor.Name, "\\.\\"),
 				val,
 			)
 		}
