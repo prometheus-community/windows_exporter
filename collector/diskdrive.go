@@ -56,14 +56,14 @@ func newDiskDriveInfoCollector() (Collector, error) {
 		Size: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "size"),
 			"Size of the disk drive. It is calculated by multiplying the total number of cylinders, tracks in each cylinder, sectors in each track, and bytes in each sector.",
-			nil,
+			[]string{"name"},
 			nil,
 		),
 
 		Partitions: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "partitions"),
 			"Number of partitions",
-			nil,
+			[]string{"name"},
 			nil,
 		),
 
@@ -178,13 +178,15 @@ func (c *DiskDriveInfoCollector) collect(ch chan<- prometheus.Metric) (*promethe
 		ch <- prometheus.MustNewConstMetric(
 			c.Size,
 			prometheus.CounterValue,
-			float64(dst[0].Size),
+			float64(processor.Size),
+			strings.Trim(processor.Name, "\\.\\"),
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.Partitions,
 			prometheus.CounterValue,
-			float64(dst[0].Partitions),
+			float64(processor.Partitions),
+			strings.Trim(processor.Name, "\\.\\"),
 		)
 
 		for availNum, val := range availMap {
