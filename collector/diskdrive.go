@@ -149,20 +149,20 @@ func (c *DiskDriveInfoCollector) collect(ch chan<- prometheus.Metric) (*promethe
 		return nil, errors.New("WMI query returned empty result set")
 	}
 
-	for _, processor := range dst {
+	for _, disk := range dst {
 		ch <- prometheus.MustNewConstMetric(
 			c.DiskInfo,
 			prometheus.GaugeValue,
 			1.0,
-			strings.Trim(processor.DeviceID, "\\.\\"),
-			strings.TrimRight(processor.Model, " "),
-			strings.TrimRight(processor.Caption, " "),
-			strings.TrimRight(processor.Name, "\\.\\"),
+			strings.Trim(disk.DeviceID, "\\.\\"),
+			strings.TrimRight(disk.Model, " "),
+			strings.TrimRight(disk.Caption, " "),
+			strings.TrimRight(disk.Name, "\\.\\"),
 		)
 
 		for _, status := range allDiskStatus {
 			isCurrentState := 0.0
-			if status == processor.Status {
+			if status == disk.Status {
 				isCurrentState = 1.0
 			}
 
@@ -170,35 +170,35 @@ func (c *DiskDriveInfoCollector) collect(ch chan<- prometheus.Metric) (*promethe
 				c.Status,
 				prometheus.GaugeValue,
 				isCurrentState,
-				strings.Trim(processor.Name, "\\.\\"),
+				strings.Trim(disk.Name, "\\.\\"),
 				status,
 			)
 		}
 
 		ch <- prometheus.MustNewConstMetric(
 			c.Size,
-			prometheus.CounterValue,
-			float64(processor.Size),
-			strings.Trim(processor.Name, "\\.\\"),
+			prometheus.GaugeValue,
+			float64(disk.Size),
+			strings.Trim(disk.Name, "\\.\\"),
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.Partitions,
-			prometheus.CounterValue,
-			float64(processor.Partitions),
-			strings.Trim(processor.Name, "\\.\\"),
+			prometheus.GaugeValue,
+			float64(disk.Partitions),
+			strings.Trim(disk.Name, "\\.\\"),
 		)
 
 		for availNum, val := range availMap {
 			isCurrentState := 0.0
-			if availNum == int(processor.Availability) {
+			if availNum == int(disk.Availability) {
 				isCurrentState = 1.0
 			}
 			ch <- prometheus.MustNewConstMetric(
 				c.Availability,
 				prometheus.GaugeValue,
 				isCurrentState,
-				strings.Trim(processor.Name, "\\.\\"),
+				strings.Trim(disk.Name, "\\.\\"),
 				val,
 			)
 		}
