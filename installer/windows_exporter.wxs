@@ -24,9 +24,9 @@
 
     <Property Id="LISTEN_ADDR" Secure="yes" />
     <Property Id="LISTEN_PORT" Secure="yes" />
-    <SetProperty Id="ListenFlagBoth" After="InstallFiles" Sequence="execute" Value="--telemetry.addr [LISTEN_ADDR]:[LISTEN_PORT]">LISTEN_ADDR AND LISTEN_PORT</SetProperty>
-    <SetProperty Id="ListenFlagAddr" After="InstallFiles" Sequence="execute" Value="--telemetry.addr [LISTEN_ADDR]:9182">LISTEN_ADDR AND (NOT LISTEN_PORT)</SetProperty>
-    <SetProperty Id="ListenFlagPort" After="InstallFiles" Sequence="execute" Value="--telemetry.addr 0.0.0.0:[LISTEN_PORT]">LISTEN_PORT AND (NOT LISTEN_ADDR)</SetProperty>
+    <SetProperty Id="ListenFlagBoth" After="InstallFiles" Sequence="execute" Value="--web.listen-address [LISTEN_ADDR]:[LISTEN_PORT]">LISTEN_ADDR AND LISTEN_PORT</SetProperty>
+    <SetProperty Id="ListenFlagAddr" After="InstallFiles" Sequence="execute" Value="--web.listen-address [LISTEN_ADDR]:9182">LISTEN_ADDR AND (NOT LISTEN_PORT)</SetProperty>
+    <SetProperty Id="ListenFlagPort" After="InstallFiles" Sequence="execute" Value="--web.listen-address 0.0.0.0:[LISTEN_PORT]">LISTEN_PORT AND (NOT LISTEN_ADDR)</SetProperty>
 
     <Property Id="METRICS_PATH" Secure="yes"/>
     <SetProperty Id="MetricsPathFlag" After="InstallFiles" Sequence="execute" Value="--telemetry.path [METRICS_PATH]">METRICS_PATH</SetProperty>
