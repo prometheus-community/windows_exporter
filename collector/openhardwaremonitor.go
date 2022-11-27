@@ -1,8 +1,6 @@
 package collector
 
 import (
-	"errors"
-
 	"github.com/StackExchange/wmi"
 	"github.com/prometheus-community/windows_exporter/log"
 	"github.com/prometheus/client_golang/prometheus"
@@ -66,13 +64,7 @@ func (c *SensorCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc
 		return nil, err
 	}
 
-	// openHardwareMonitor collector has been known to 'successfully' return an empty result.
-	if len(dst) == 0 {
-		return nil, errors.New("Empty results set for collector")
-	}
-
 	for _, info := range dst {
-		//Divide by 10 and subtract 273.15 to convert decikelvin to celsius
 		ch <- prometheus.MustNewConstMetric(
 			c.Value,
 			prometheus.GaugeValue,
