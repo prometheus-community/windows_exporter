@@ -1,6 +1,8 @@
 package collector
 
 import (
+	"strconv"
+
 	"github.com/StackExchange/wmi"
 	"github.com/prometheus-community/windows_exporter/log"
 	"github.com/prometheus/client_golang/prometheus"
@@ -27,9 +29,9 @@ func NewOpenHardwareMonitorCollector() (Collector, error) {
 	const subsystem = "openHardwareMonitor"
 	return &SensorCollector{
 		Value: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "value"),
-			"(Value)",
-			[]string{"identifier", "name", "sensor_type"},
+			prometheus.BuildFQName(Namespace, subsystem, "sensor_value"),
+			"Provides the value from an OpenHardwareMonitor sensor.",
+			[]string{"parent", "index", "name", "sensor_type"},
 			nil,
 		),
 	}, nil
@@ -51,16 +53,16 @@ type Sensor struct {
 	Identifier string
 	Parent     string
 	Name       string
-	Value      float64
-	Max        float64
-	Min        float64
+	Value      float32
+	Max        float32
+	Min        float32
 	Index      uint32
 }
 
 func (c *SensorCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Sensor
 	q := queryAll(&dst)
-	if err := wmi.Query(q, &dst); err != nil {
+	if err := wmi.QueryNamespace(q, &dst, "root/OpenHardwareMonitor"); err != nil {
 		return nil, err
 	}
 
@@ -69,7 +71,8 @@ func (c *SensorCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc
 			c.Value,
 			prometheus.GaugeValue,
 			float64(info.Value),
-			info.Identifier,
+			info.Parent,
+			strconv.Itoa(int(info.Index)),
 			info.Name,
 			info.SensorType,
 		)
