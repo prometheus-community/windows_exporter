@@ -303,6 +303,12 @@ func main() {
 		if err != nil {
 			log.Fatalf("%v\n", err)
 		}
+
+		// NOTE: This is temporary fix for issue #1092, calling kingpin.Parse
+		// twice makes slices flags duplicate its value, this clean up
+		// the first parse before the second call.
+		*webConfig.WebListenAddresses = (*webConfig.WebListenAddresses)[1:]
+
 		// Parse flags once more to include those discovered in configuration file(s).
 		kingpin.Parse()
 	}
