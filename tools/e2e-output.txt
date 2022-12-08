@@ -81,10 +81,18 @@ test_alpha_total 42
 # TYPE windows_cpu_interrupts_total counter
 # HELP windows_cpu_parking_status Parking Status represents whether a processor is parked or not
 # TYPE windows_cpu_parking_status gauge
-# HELP windows_cpu_processor_performance Processor Performance is the average performance of the processor while it is executing instructions, as a percentage of the nominal performance of the processor. On some processors, Processor Performance may exceed 100%
-# TYPE windows_cpu_processor_performance gauge
+# HELP windows_cpu_processor_performance_total Processor Performance is the average performance of the processor while it is executing instructions, as a percentage of the nominal performance of the processor. On some processors, Processor Performance may exceed 100%
+# TYPE windows_cpu_processor_performance_total counter
 # HELP windows_cpu_time_total Time that processor spent in different modes (dpc, idle, interrupt, privileged, user)
 # TYPE windows_cpu_time_total counter
+# HELP windows_cpu_processor_mperf_total Processor MPerf is the number of TSC ticks incremented while executing instructions
+# TYPE windows_cpu_processor_mperf_total counter
+# HELP windows_cpu_processor_privileged_utility_total Processor Privilieged Utility represents is the amount of time the core has spent executing instructions inside the kernel
+# TYPE windows_cpu_processor_privileged_utility_total counter
+# HELP windows_cpu_processor_rtc_total Processor RTC represents the number of RTC ticks made since the system booted. It should consistently be 64e6, and can be used to properly derive Processor Utility Rate
+# TYPE windows_cpu_processor_rtc_total counter
+# HELP windows_cpu_processor_utility_total Processor Utility represents is the amount of time the core spends executing instructions
+# TYPE windows_cpu_processor_utility_total counter
 # HELP windows_cs_hostname Labeled system hostname information as provided by ComputerSystem.DNSHostName and ComputerSystem.Domain
 # TYPE windows_cs_hostname gauge
 # HELP windows_cs_logical_processors ComputerSystem.NumberOfLogicalProcessors
