@@ -202,10 +202,12 @@ func (c *OSCollector) collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) (
 	for _, pagingFile := range pagingFiles {
 		fileString := strings.ReplaceAll(pagingFile, `\??\`, "")
 		file, err := os.Stat(fileString)
+		// For unknown reasons, Windows doesn't always create a page file. Continue collection rather than aborting.
 		if err != nil {
-			return nil, err
+			log.Debugf("Failed to read page file (reason: %s): %s\n", err, fileString)
+		} else {
+			fsipf += float64(file.Size())
 		}
-		fsipf += float64(file.Size())
 	}
 
 	gpi, err := psapi.GetPerformanceInfo()
