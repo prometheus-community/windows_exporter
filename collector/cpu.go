@@ -37,6 +37,10 @@ type cpuCollectorFull struct {
 	ProcessorFrequencyMHz    *prometheus.Desc
 	ProcessorMaxFrequencyMHz *prometheus.Desc
 	ProcessorPerformance     *prometheus.Desc
+	ProcessorMPerf           *prometheus.Desc
+	ProcessorRTC             *prometheus.Desc
+	ProcessorUtility         *prometheus.Desc
+	ProcessorPrivUtility     *prometheus.Desc
 }
 
 // newCPUCollector constructs a new cpuCollector, appropriate for the running OS
@@ -129,8 +133,32 @@ func newCPUCollector() (Collector, error) {
 			nil,
 		),
 		ProcessorPerformance: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "processor_performance"),
+			prometheus.BuildFQName(Namespace, subsystem, "processor_performance_total"),
 			"Processor Performance is the average performance of the processor while it is executing instructions, as a percentage of the nominal performance of the processor. On some processors, Processor Performance may exceed 100%",
+			[]string{"core"},
+			nil,
+		),
+		ProcessorMPerf: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "processor_mperf_total"),
+			"Processor MPerf is the number of TSC ticks incremented while executing instructions",
+			[]string{"core"},
+			nil,
+		),
+		ProcessorRTC: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "processor_rtc_total"),
+			"Processor RTC represents the number of RTC ticks made since the system booted. It should consistently be 64e6, and can be used to properly derive Processor Utility Rate",
+			[]string{"core"},
+			nil,
+		),
+		ProcessorUtility: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "processor_utility_total"),
+			"Processor Utility represents is the amount of time the core spends executing instructions",
+			[]string{"core"},
+			nil,
+		),
+		ProcessorPrivUtility: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "processor_privileged_utility_total"),
+			"Processor Privilieged Utility represents is the amount of time the core has spent executing instructions inside the kernel",
 			[]string{"core"},
 			nil,
 		),
@@ -258,8 +286,10 @@ type perflibProcessorInformation struct {
 	PrivilegedUtilitySeconds float64 `perflib:"% Privileged Utility"`
 	ProcessorFrequencyMHz    float64 `perflib:"Processor Frequency"`
 	ProcessorPerformance     float64 `perflib:"% Processor Performance"`
+	ProcessorMPerf           float64 `perflib:"% Processor Performance,secondvalue"`
 	ProcessorTimeSeconds     float64 `perflib:"% Processor Time"`
 	ProcessorUtilityRate     float64 `perflib:"% Processor Utility"`
+	ProcessorRTC             float64 `perflib:"% Processor Utility,secondvalue"`
 	UserTimeSeconds          float64 `perflib:"% User Time"`
 }
 
@@ -366,8 +396,32 @@ func (c *cpuCollectorFull) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metr
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.ProcessorPerformance,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			cpu.ProcessorPerformance,
+			core,
+		)
+		ch <- prometheus.MustNewConstMetric(
+			c.ProcessorMPerf,
+			prometheus.CounterValue,
+			cpu.ProcessorMPerf,
+			core,
+		)
+		ch <- prometheus.MustNewConstMetric(
+			c.ProcessorRTC,
+			prometheus.CounterValue,
+			cpu.ProcessorRTC,
+			core,
+		)
+		ch <- prometheus.MustNewConstMetric(
+			c.ProcessorUtility,
+			prometheus.CounterValue,
+			cpu.ProcessorUtilityRate,
+			core,
+		)
+		ch <- prometheus.MustNewConstMetric(
+			c.ProcessorPrivUtility,
+			prometheus.CounterValue,
+			cpu.PrivilegedUtilitySeconds,
 			core,
 		)
 	}

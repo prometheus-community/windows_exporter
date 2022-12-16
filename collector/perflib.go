@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"strings"
 
 	perflibCollector "github.com/leoluk/perflib_exporter/collector"
 	"github.com/leoluk/perflib_exporter/perflib"
@@ -67,6 +68,16 @@ func unmarshalObject(obj *perflib.PerfObject, vs interface{}) error {
 			if tag == "" {
 				continue
 			}
+			secondValue := false
+
+			st := strings.Split(tag, ",")
+			tag = st[0]
+
+			for _, t := range st {
+				if t == "secondvalue" {
+					secondValue = true
+				}
+			}
 
 			ctr, found := counters[tag]
 			if !found {
@@ -78,6 +89,14 @@ func unmarshalObject(obj *perflib.PerfObject, vs interface{}) error {
 			}
 			if fieldType := target.Field(i).Type(); fieldType != reflect.TypeOf((*float64)(nil)).Elem() {
 				return fmt.Errorf("tagged field %v has wrong type %v, must be float64", f.Name, fieldType)
+			}
+
+			if secondValue {
+				if !ctr.Def.HasSecondValue {
+					return fmt.Errorf("tagged field %v expected a SecondValue, which was not present", f.Name)
+				}
+				target.Field(i).SetFloat(float64(ctr.SecondValue))
+				continue
 			}
 
 			switch ctr.Def.CounterType {

@@ -11,6 +11,7 @@ import (
 type simple struct {
 	ValA float64 `perflib:"Something"`
 	ValB float64 `perflib:"Something Else"`
+	ValC float64 `perflib:"Something Else,secondvalue"`
 }
 
 func TestUnmarshalPerflib(t *testing.T) {
@@ -62,16 +63,18 @@ func TestUnmarshalPerflib(t *testing.T) {
 							},
 							{
 								Def: &perflib.PerfCounterDef{
-									Name:        "Something Else",
-									CounterType: perflibCollector.PERF_COUNTER_COUNTER,
+									Name:           "Something Else",
+									CounterType:    perflibCollector.PERF_COUNTER_COUNTER,
+									HasSecondValue: true,
 								},
-								Value: 256,
+								Value:       256,
+								SecondValue: 222,
 							},
 						},
 					},
 				},
 			},
-			expectedOutput: []simple{{ValA: 123, ValB: 256}},
+			expectedOutput: []simple{{ValA: 123, ValB: 256, ValC: 222}},
 			expectError:    false,
 		},
 		{
