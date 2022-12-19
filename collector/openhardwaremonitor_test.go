@@ -5,5 +5,5 @@ import (
 )
 
 func BenchmarkOpenHardwareMonitorCollector(b *testing.B) {
-	benchmarkCollector(b, "openHardwareMonitor", NewOpenHardwareMonitorCollector)
+	benchmarkCollector(b, "open_hardware_monitor", NewOpenHardwareMonitorCollector)
 }

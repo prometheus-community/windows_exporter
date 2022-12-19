@@ -9,7 +9,7 @@ import (
 )
 
 func init() {
-	registerCollector("openhardwaremonitor", NewOpenHardwareMonitorCollector)
+	registerCollector("open_hardware_monitor", NewOpenHardwareMonitorCollector)
 }
 
 // A openHardwareMonitorCollector is a Prometheus collector for WMI Sensor metrics
@@ -26,7 +26,7 @@ type SensorCollector struct {
 
 // NewOpenHardwareMonitorCollector ...
 func NewOpenHardwareMonitorCollector() (Collector, error) {
-	const subsystem = "openHardwareMonitor"
+	const subsystem = "open_hardware_monitor"
 	return &SensorCollector{
 		Value: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "sensor_value"),
