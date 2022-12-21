@@ -6,6 +6,7 @@ package collector
 import (
 	"fmt"
 	"regexp"
+	"strings"
 
 	"github.com/prometheus-community/windows_exporter/log"
 	"github.com/prometheus/client_golang/prometheus"
@@ -54,84 +55,84 @@ func NewPhysicalDiskCollector() (Collector, error) {
 		RequestsQueued: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "requests_queued"),
 			"The number of requests queued to the disk (PhysicalDisk.CurrentDiskQueueLength)",
-			[]string{"disk"},
+			[]string{"number"},
 			nil,
 		),
 
 		ReadBytesTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "read_bytes_total"),
 			"The number of bytes transferred from the disk during read operations (PhysicalDisk.DiskReadBytesPerSec)",
-			[]string{"disk"},
+			[]string{"number"},
 			nil,
 		),
 
 		ReadsTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "reads_total"),
 			"The number of read operations on the disk (PhysicalDisk.DiskReadsPerSec)",
-			[]string{"disk"},
+			[]string{"number"},
 			nil,
 		),
 
 		WriteBytesTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "write_bytes_total"),
 			"The number of bytes transferred to the disk during write operations (PhysicalDisk.DiskWriteBytesPerSec)",
-			[]string{"disk"},
+			[]string{"number"},
 			nil,
 		),
 
 		WritesTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "writes_total"),
 			"The number of write operations on the disk (PhysicalDisk.DiskWritesPerSec)",
-			[]string{"disk"},
+			[]string{"number"},
 			nil,
 		),
 
 		ReadTime: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "read_seconds_total"),
 			"Seconds that the disk was busy servicing read requests (PhysicalDisk.PercentDiskReadTime)",
-			[]string{"disk"},
+			[]string{"number"},
 			nil,
 		),
 
 		WriteTime: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "write_seconds_total"),
 			"Seconds that the disk was busy servicing write requests (PhysicalDisk.PercentDiskWriteTime)",
-			[]string{"disk"},
+			[]string{"number"},
 			nil,
 		),
 
 		IdleTime: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "idle_seconds_total"),
 			"Seconds that the disk was idle (PhysicalDisk.PercentIdleTime)",
-			[]string{"disk"},
+			[]string{"number"},
 			nil,
 		),
 
 		SplitIOs: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "split_ios_total"),
 			"The number of I/Os to the disk were split into multiple I/Os (PhysicalDisk.SplitIOPerSec)",
-			[]string{"disk"},
+			[]string{"number"},
 			nil,
 		),
 
 		ReadLatency: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "read_latency_seconds_total"),
 			"Shows the average time, in seconds, of a read operation from the disk (PhysicalDisk.AvgDiskSecPerRead)",
-			[]string{"disk"},
+			[]string{"number"},
 			nil,
 		),
 
 		WriteLatency: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "write_latency_seconds_total"),
 			"Shows the average time, in seconds, of a write operation to the disk (PhysicalDisk.AvgDiskSecPerWrite)",
-			[]string{"disk"},
+			[]string{"number"},
 			nil,
 		),
 
 		ReadWriteLatency: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "read_write_latency_seconds_total"),
 			"Shows the time, in seconds, of the average disk transfer (PhysicalDisk.AvgDiskSecPerTransfer)",
-			[]string{"disk"},
+			[]string{"number"},
 			nil,
 		),
 
@@ -181,88 +182,92 @@ func (c *PhysicalDiskCollector) collect(ctx *ScrapeContext, ch chan<- prometheus
 			continue
 		}
 
+		// Parse physical disk number from disk.Name. Mountpoint information is
+		// sometimes included, e.g. "1 C:".
+		disk_number, _, _ := strings.Cut(disk.Name, " ")
+
 		ch <- prometheus.MustNewConstMetric(
 			c.RequestsQueued,
 			prometheus.GaugeValue,
 			disk.CurrentDiskQueueLength,
-			disk.Name,
+			disk_number,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.ReadBytesTotal,
 			prometheus.CounterValue,
 			disk.DiskReadBytesPerSec,
-			disk.Name,
+			disk_number,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.ReadsTotal,
 			prometheus.CounterValue,
 			disk.DiskReadsPerSec,
-			disk.Name,
+			disk_number,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.WriteBytesTotal,
 			prometheus.CounterValue,
 			disk.DiskWriteBytesPerSec,
-			disk.Name,
+			disk_number,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.WritesTotal,
 			prometheus.CounterValue,
 			disk.DiskWritesPerSec,
-			disk.Name,
+			disk_number,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.ReadTime,
 			prometheus.CounterValue,
 			disk.PercentDiskReadTime,
-			disk.Name,
+			disk_number,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.WriteTime,
 			prometheus.CounterValue,
 			disk.PercentDiskWriteTime,
-			disk.Name,
+			disk_number,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.IdleTime,
 			prometheus.CounterValue,
 			disk.PercentIdleTime,
-			disk.Name,
+			disk_number,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.SplitIOs,
 			prometheus.CounterValue,
 			disk.SplitIOPerSec,
-			disk.Name,
+			disk_number,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.ReadLatency,
 			prometheus.CounterValue,
 			disk.AvgDiskSecPerRead*ticksToSecondsScaleFactor,
-			disk.Name,
+			disk_number,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.WriteLatency,
 			prometheus.CounterValue,
 			disk.AvgDiskSecPerWrite*ticksToSecondsScaleFactor,
-			disk.Name,
+			disk_number,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.ReadWriteLatency,
 			prometheus.CounterValue,
 			disk.AvgDiskSecPerTransfer*ticksToSecondsScaleFactor,
-			disk.Name,
+			disk_number,
 		)
 	}
 
