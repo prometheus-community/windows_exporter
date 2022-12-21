@@ -12,10 +12,6 @@ import (
 	"github.com/yusufpapurcu/wmi"
 )
 
-func init() {
-	registerCollector("msmq", NewMSMQCollector)
-}
-
 var (
 	msmqWhereClause = kingpin.Flag("collector.msmq.msmq-where", "WQL 'where' clause to use in WMI metrics query. Limits the response to the msmqs you specify and reduces the size of the response.").String()
 )

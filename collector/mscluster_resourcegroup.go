@@ -5,10 +5,6 @@ import (
 	"github.com/yusufpapurcu/wmi"
 )
 
-func init() {
-	registerCollector("mscluster_resourcegroup", newMSCluster_ResourceGroupCollector)
-}
-
 // A MSCluster_ResourceGroupCollector is a Prometheus collector for WMI MSCluster_ResourceGroup metrics
 type MSCluster_ResourceGroupCollector struct {
 	AutoFailbackType    *prometheus.Desc

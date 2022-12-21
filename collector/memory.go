@@ -11,10 +11,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-func init() {
-	registerCollector("memory", NewMemoryCollector, "Memory")
-}
-
 // A MemoryCollector is a Prometheus collector for perflib Memory metrics
 type MemoryCollector struct {
 	AvailableBytes                  *prometheus.Desc

@@ -55,10 +55,6 @@ type textFileCollector struct {
 	mtime *float64
 }
 
-func init() {
-	registerCollector("textfile", NewTextFileCollector)
-}
-
 // NewTextFileCollector returns a new Collector exposing metrics read from files
 // in the given textfile directory.
 func NewTextFileCollector() (Collector, error) {

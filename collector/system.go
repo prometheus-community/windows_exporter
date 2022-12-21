@@ -8,10 +8,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-func init() {
-	registerCollector("system", NewSystemCollector, "System")
-}
-
 // A SystemCollector is a Prometheus collector for WMI metrics
 type SystemCollector struct {
 	ContextSwitchesTotal     *prometheus.Desc

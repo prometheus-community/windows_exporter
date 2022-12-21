@@ -8,10 +8,6 @@ import (
 	"math"
 )
 
-func init() {
-	registerCollector("adfs", newADFSCollector, "AD FS")
-}
-
 type adfsCollector struct {
 	adLoginConnectionFailures                          *prometheus.Desc
 	certificateAuthentications                         *prometheus.Desc

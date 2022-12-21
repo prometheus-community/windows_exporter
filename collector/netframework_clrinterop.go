@@ -9,10 +9,6 @@ import (
 	"github.com/yusufpapurcu/wmi"
 )
 
-func init() {
-	registerCollector("netframework_clrinterop", NewNETFramework_NETCLRInteropCollector)
-}
-
 // A NETFramework_NETCLRInteropCollector is a Prometheus collector for WMI Win32_PerfRawData_NETFramework_NETCLRInterop metrics
 type NETFramework_NETCLRInteropCollector struct {
 	NumberofCCWs        *prometheus.Desc

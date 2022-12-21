@@ -11,10 +11,6 @@ import (
 	"github.com/yusufpapurcu/wmi"
 )
 
-func init() {
-	registerCollector("logon", NewLogonCollector)
-}
-
 // A LogonCollector is a Prometheus collector for WMI metrics
 type LogonCollector struct {
 	LogonType *prometheus.Desc

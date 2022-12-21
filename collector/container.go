@@ -9,10 +9,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-func init() {
-	registerCollector("container", NewContainerMetricsCollector)
-}
-
 // A ContainerMetricsCollector is a Prometheus collector for containers metrics
 type ContainerMetricsCollector struct {
 	// Presence

@@ -17,10 +17,6 @@ import (
 	"golang.org/x/sys/windows/registry"
 )
 
-func init() {
-	registerCollector("os", NewOSCollector, "Paging File")
-}
-
 // A OSCollector is a Prometheus collector for WMI metrics
 type OSCollector struct {
 	OSInformation           *prometheus.Desc

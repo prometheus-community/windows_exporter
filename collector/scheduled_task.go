@@ -63,10 +63,6 @@ type ScheduledTask struct {
 
 type ScheduledTasks []ScheduledTask
 
-func init() {
-	registerCollector("scheduled_task", NewScheduledTask)
-}
-
 // NewScheduledTask ...
 func NewScheduledTask() (Collector, error) {
 	const subsystem = "scheduled_task"

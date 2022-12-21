@@ -7,10 +7,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-func init() {
-	registerCollector("dhcp", NewDhcpCollector, "DHCP Server")
-}
-
 // A DhcpCollector is a Prometheus collector perflib DHCP metrics
 type DhcpCollector struct {
 	PacketsReceivedTotal                             *prometheus.Desc

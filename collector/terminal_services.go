@@ -14,10 +14,6 @@ import (
 
 const ConnectionBrokerFeatureID uint32 = 133
 
-func init() {
-	registerCollector("terminal_services", NewTerminalServicesCollector, "Terminal Services", "Terminal Services Session", "Remote Desktop Connection Broker Counterset")
-}
-
 var (
 	connectionBrokerEnabled = isConnectionBrokerServer()
 )

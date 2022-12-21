@@ -11,10 +11,6 @@ import (
 	"github.com/yusufpapurcu/wmi"
 )
 
-func init() {
-	registerCollector("hyperv", NewHyperVCollector)
-}
-
 // HyperVCollector is a Prometheus collector for hyper-v
 type HyperVCollector struct {
 	// Win32_PerfRawData_VmmsVirtualMachineStats_HyperVVirtualMachineHealthSummary

@@ -11,16 +11,6 @@ import (
 
 var dfsrEnabledCollectors = kingpin.Flag("collectors.dfsr.sources-enabled", "Comma-seperated list of DFSR Perflib sources to use.").Default("connection,folder,volume").String()
 
-func init() {
-	// Perflib sources are dynamic, depending on the enabled child collectors
-	var perflibDependencies []string
-	for _, source := range expandEnabledChildCollectors(*dfsrEnabledCollectors) {
-		perflibDependencies = append(perflibDependencies, dfsrGetPerfObjectName(source))
-	}
-
-	registerCollector("dfsr", NewDFSRCollector, perflibDependencies...)
-}
-
 // DFSRCollector contains the metric and state data of the DFSR collectors.
 type DFSRCollector struct {
 	// Connection source

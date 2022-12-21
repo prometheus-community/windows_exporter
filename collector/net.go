@@ -12,10 +12,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-func init() {
-	registerCollector("net", NewNetworkCollector, "Network Interface")
-}
-
 var (
 	nicWhitelist = kingpin.Flag(
 		"collector.net.nic-whitelist",

@@ -16,10 +16,6 @@ import (
 	"golang.org/x/sys/windows/svc/mgr"
 )
 
-func init() {
-	registerCollector("service", NewserviceCollector)
-}
-
 var (
 	serviceWhereClause = kingpin.Flag(
 		"collector.service.services-where",

@@ -11,10 +11,6 @@ import (
 	"github.com/yusufpapurcu/wmi"
 )
 
-func init() {
-	registerCollector("ad", NewADCollector)
-}
-
 // A ADCollector is a Prometheus collector for WMI Win32_PerfRawData_DirectoryServices_DirectoryServices metrics
 type ADCollector struct {
 	AddressBookOperationsTotal                          *prometheus.Desc

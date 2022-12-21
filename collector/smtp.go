@@ -11,10 +11,6 @@ import (
 	"regexp"
 )
 
-func init() {
-	registerCollector("smtp", NewSMTPCollector, "SMTP Server")
-}
-
 var (
 	serverWhitelist = kingpin.Flag("collector.smtp.server-whitelist", "Regexp of virtual servers to whitelist. Server name must both match whitelist and not match blacklist to be included.").Default(".+").String()
 	serverBlacklist = kingpin.Flag("collector.smtp.server-blacklist", "Regexp of virtual servers to blacklist. Server name must both match whitelist and not match blacklist to be included.").String()

@@ -9,10 +9,6 @@ import (
 	"github.com/yusufpapurcu/wmi"
 )
 
-func init() {
-	registerCollector("netframework_clrexceptions", NewNETFramework_NETCLRExceptionsCollector)
-}
-
 // A NETFramework_NETCLRExceptionsCollector is a Prometheus collector for WMI Win32_PerfRawData_NETFramework_NETCLRExceptions metrics
 type NETFramework_NETCLRExceptionsCollector struct {
 	NumberofExcepsThrown *prometheus.Desc
