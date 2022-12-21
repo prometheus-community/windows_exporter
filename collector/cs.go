@@ -17,8 +17,8 @@ type CSCollector struct {
 	Hostname            *prometheus.Desc
 }
 
-// NewCSCollector ...
-func NewCSCollector() (Collector, error) {
+// newCSCollector ...
+func newCSCollector() (Collector, error) {
 	const subsystem = "cs"
 
 	return &CSCollector{

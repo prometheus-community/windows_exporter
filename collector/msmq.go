@@ -27,7 +27,7 @@ type Win32_PerfRawData_MSMQ_MSMQQueueCollector struct {
 }
 
 // NewWin32_PerfRawData_MSMQ_MSMQQueueCollector ...
-func NewMSMQCollector() (Collector, error) {
+func newMSMQCollector() (Collector, error) {
 	const subsystem = "msmq"
 
 	if *msmqWhereClause == "" {

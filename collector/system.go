@@ -18,8 +18,8 @@ type SystemCollector struct {
 	Threads                  *prometheus.Desc
 }
 
-// NewSystemCollector ...
-func NewSystemCollector() (Collector, error) {
+// newSystemCollector ...
+func newSystemCollector() (Collector, error) {
 	const subsystem = "system"
 
 	return &SystemCollector{

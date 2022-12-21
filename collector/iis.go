@@ -191,7 +191,7 @@ type IISCollector struct {
 	iis_version simple_version
 }
 
-func NewIISCollector() (Collector, error) {
+func newIISCollector() (Collector, error) {
 	const subsystem = "iis"
 
 	return &IISCollector{

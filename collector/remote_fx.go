@@ -38,8 +38,8 @@ type RemoteFxCollector struct {
 	SourceFramesPerSecond                       *prometheus.Desc
 }
 
-// NewRemoteFx ...
-func NewRemoteFx() (Collector, error) {
+// newRemoteFx ...
+func newRemoteFx() (Collector, error) {
 	const subsystem = "remote_fx"
 	return &RemoteFxCollector{
 		// net

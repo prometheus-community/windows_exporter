@@ -401,8 +401,8 @@ type MSSQLCollector struct {
 	mssqlChildCollectorFailure int
 }
 
-// NewMSSQLCollector ...
-func NewMSSQLCollector() (Collector, error) {
+// newMSSQLCollector ...
+func newMSSQLCollector() (Collector, error) {
 
 	const subsystem = "mssql"
 

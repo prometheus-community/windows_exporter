@@ -35,8 +35,8 @@ type VmwareCollector struct {
 	HostProcessorSpeedMHz *prometheus.Desc
 }
 
-// NewVmwareCollector constructs a new VmwareCollector
-func NewVmwareCollector() (Collector, error) {
+// newVmwareCollector constructs a new VmwareCollector
+func newVmwareCollector() (Collector, error) {
 	const subsystem = "vmware"
 	return &VmwareCollector{
 		MemActive: prometheus.NewDesc(

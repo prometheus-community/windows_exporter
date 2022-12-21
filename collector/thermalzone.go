@@ -15,8 +15,8 @@ type thermalZoneCollector struct {
 	ThrottleReasons     *prometheus.Desc
 }
 
-// NewThermalZoneCollector ...
-func NewThermalZoneCollector() (Collector, error) {
+// newThermalZoneCollector ...
+func newThermalZoneCollector() (Collector, error) {
 	const subsystem = "thermalzone"
 	return &thermalZoneCollector{
 		Temperature: prometheus.NewDesc(

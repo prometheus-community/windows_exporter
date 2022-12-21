@@ -40,8 +40,8 @@ type pagingFileCounter struct {
 	UsagePeak float64 `perflib:"% Usage Peak"`
 }
 
-// NewOSCollector ...
-func NewOSCollector() (Collector, error) {
+// newOSCollector ...
+func newOSCollector() (Collector, error) {
 	const subsystem = "os"
 
 	return &OSCollector{

@@ -44,8 +44,8 @@ type NetworkCollector struct {
 	nicBlacklistPattern *regexp.Regexp
 }
 
-// NewNetworkCollector ...
-func NewNetworkCollector() (Collector, error) {
+// newNetworkCollector ...
+func newNetworkCollector() (Collector, error) {
 	const subsystem = "net"
 
 	return &NetworkCollector{

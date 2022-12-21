@@ -126,8 +126,8 @@ type HyperVCollector struct {
 	VMMemoryRemovedMemory              *prometheus.Desc
 }
 
-// NewHyperVCollector ...
-func NewHyperVCollector() (Collector, error) {
+// newHyperVCollector ...
+func newHyperVCollector() (Collector, error) {
 	buildSubsystemName := func(component string) string { return "hyperv_" + component }
 	return &HyperVCollector{
 		HealthCritical: prometheus.NewDesc(

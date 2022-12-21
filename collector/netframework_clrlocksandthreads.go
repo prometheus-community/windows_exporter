@@ -20,8 +20,8 @@ type NETFramework_NETCLRLocksAndThreadsCollector struct {
 	TotalNumberofContentions         *prometheus.Desc
 }
 
-// NewNETFramework_NETCLRLocksAndThreadsCollector ...
-func NewNETFramework_NETCLRLocksAndThreadsCollector() (Collector, error) {
+// newNETFramework_NETCLRLocksAndThreadsCollector ...
+func newNETFramework_NETCLRLocksAndThreadsCollector() (Collector, error) {
 	const subsystem = "netframework_clrlocksandthreads"
 	return &NETFramework_NETCLRLocksAndThreadsCollector{
 		CurrentQueueLength: prometheus.NewDesc(

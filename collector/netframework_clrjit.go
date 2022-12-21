@@ -17,8 +17,8 @@ type NETFramework_NETCLRJitCollector struct {
 	TotalNumberofILBytesJitted *prometheus.Desc
 }
 
-// NewNETFramework_NETCLRJitCollector ...
-func NewNETFramework_NETCLRJitCollector() (Collector, error) {
+// newNETFramework_NETCLRJitCollector ...
+func newNETFramework_NETCLRJitCollector() (Collector, error) {
 	const subsystem = "netframework_clrjit"
 	return &NETFramework_NETCLRJitCollector{
 		NumberofMethodsJitted: prometheus.NewDesc(

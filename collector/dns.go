@@ -37,8 +37,8 @@ type DNSCollector struct {
 	UnmatchedResponsesReceived    *prometheus.Desc
 }
 
-// NewDNSCollector ...
-func NewDNSCollector() (Collector, error) {
+// newDNSCollector ...
+func newDNSCollector() (Collector, error) {
 	const subsystem = "dns"
 	return &DNSCollector{
 		ZoneTransferRequestsReceived: prometheus.NewDesc(

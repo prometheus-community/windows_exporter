@@ -16,8 +16,8 @@ type LogonCollector struct {
 	LogonType *prometheus.Desc
 }
 
-// NewLogonCollector ...
-func NewLogonCollector() (Collector, error) {
+// newLogonCollector ...
+func newLogonCollector() (Collector, error) {
 	const subsystem = "logon"
 
 	return &LogonCollector{

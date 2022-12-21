@@ -55,9 +55,9 @@ type textFileCollector struct {
 	mtime *float64
 }
 
-// NewTextFileCollector returns a new Collector exposing metrics read from files
+// newTextFileCollector returns a new Collector exposing metrics read from files
 // in the given textfile directory.
-func NewTextFileCollector() (Collector, error) {
+func newTextFileCollector() (Collector, error) {
 	return &textFileCollector{
 		path: *textFileDirectory,
 	}, nil

@@ -22,8 +22,8 @@ type NETFramework_NETCLRLoadingCollector struct {
 	TotalNumberofLoadFailures *prometheus.Desc
 }
 
-// NewNETFramework_NETCLRLoadingCollector ...
-func NewNETFramework_NETCLRLoadingCollector() (Collector, error) {
+// newNETFramework_NETCLRLoadingCollector ...
+func newNETFramework_NETCLRLoadingCollector() (Collector, error) {
 	const subsystem = "netframework_clrloading"
 	return &NETFramework_NETCLRLoadingCollector{
 		BytesinLoaderHeap: prometheus.NewDesc(

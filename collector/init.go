@@ -33,7 +33,7 @@ func getDFSRCollectorDeps() []string {
 var collectors = []collectorInit{
 	{
 		name:             "ad",
-		builder:          NewADCollector,
+		builder:          newADCollector,
 		perfCounterNames: nil,
 	},
 	{
@@ -53,7 +53,7 @@ var collectors = []collectorInit{
 	},
 	{
 		name:             "container",
-		builder:          NewContainerMetricsCollector,
+		builder:          newContainerMetricsCollector,
 		perfCounterNames: nil,
 	},
 	{
@@ -68,17 +68,17 @@ var collectors = []collectorInit{
 	},
 	{
 		name:             "cs",
-		builder:          NewCSCollector,
+		builder:          newCSCollector,
 		perfCounterNames: nil,
 	},
 	{
 		name:             "dfsr",
-		builder:          NewDFSRCollector,
+		builder:          newDFSRCollector,
 		perfCounterNames: getDFSRCollectorDeps(),
 	},
 	{
 		name:             "dhcp",
-		builder:          NewDhcpCollector,
+		builder:          newDhcpCollector,
 		perfCounterNames: nil,
 	},
 	{
@@ -88,7 +88,7 @@ var collectors = []collectorInit{
 	},
 	{
 		name:             "dns",
-		builder:          NewDNSCollector,
+		builder:          newDNSCollector,
 		perfCounterNames: nil,
 	},
 	{
@@ -113,12 +113,12 @@ var collectors = []collectorInit{
 	},
 	{
 		name:             "hyperv",
-		builder:          NewHyperVCollector,
+		builder:          newHyperVCollector,
 		perfCounterNames: nil,
 	},
 	{
 		name:    "iis",
-		builder: NewIISCollector,
+		builder: newIISCollector,
 		perfCounterNames: []string{"Web Service",
 			"APP_POOL_WAS",
 			"Web Service Cache",
@@ -127,17 +127,17 @@ var collectors = []collectorInit{
 	},
 	{
 		name:             "logical_disk",
-		builder:          NewLogicalDiskCollector,
+		builder:          newLogicalDiskCollector,
 		perfCounterNames: []string{"LogicalDisk"},
 	},
 	{
 		name:             "logon",
-		builder:          NewLogonCollector,
+		builder:          newLogonCollector,
 		perfCounterNames: nil,
 	},
 	{
 		name:             "memory",
-		builder:          NewMemoryCollector,
+		builder:          newMemoryCollector,
 		perfCounterNames: []string{"Memory"},
 	},
 	{
@@ -167,62 +167,62 @@ var collectors = []collectorInit{
 	},
 	{
 		name:             "msmq",
-		builder:          NewMSMQCollector,
+		builder:          newMSMQCollector,
 		perfCounterNames: nil,
 	},
 	{
 		name:             "mssql",
-		builder:          NewMSSQLCollector,
+		builder:          newMSSQLCollector,
 		perfCounterNames: nil,
 	},
 	{
 		name:             "net",
-		builder:          NewNetworkCollector,
+		builder:          newNetworkCollector,
 		perfCounterNames: []string{"Network Interface"},
 	},
 	{
 		name:             "netframework_clrexceptions",
-		builder:          NewNETFramework_NETCLRExceptionsCollector,
+		builder:          newNETFramework_NETCLRExceptionsCollector,
 		perfCounterNames: nil,
 	},
 	{
 		name:             "netframework_clrinterop",
-		builder:          NewNETFramework_NETCLRInteropCollector,
+		builder:          newNETFramework_NETCLRInteropCollector,
 		perfCounterNames: nil,
 	},
 	{
 		name:             "netframework_clrjit",
-		builder:          NewNETFramework_NETCLRJitCollector,
+		builder:          newNETFramework_NETCLRJitCollector,
 		perfCounterNames: nil,
 	},
 	{
 		name:             "netframework_clrloading",
-		builder:          NewNETFramework_NETCLRLoadingCollector,
+		builder:          newNETFramework_NETCLRLoadingCollector,
 		perfCounterNames: nil,
 	},
 	{
 		name:             "netframework_clrlocksandthreads",
-		builder:          NewNETFramework_NETCLRLocksAndThreadsCollector,
+		builder:          newNETFramework_NETCLRLocksAndThreadsCollector,
 		perfCounterNames: nil,
 	},
 	{
 		name:             "netframework_clrmemory",
-		builder:          NewNETFramework_NETCLRMemoryCollector,
+		builder:          newNETFramework_NETCLRMemoryCollector,
 		perfCounterNames: nil,
 	},
 	{
 		name:             "netframework_clrremoting",
-		builder:          NewNETFramework_NETCLRRemotingCollector,
+		builder:          newNETFramework_NETCLRRemotingCollector,
 		perfCounterNames: nil,
 	},
 	{
 		name:             "netframework_clrsecurity",
-		builder:          NewNETFramework_NETCLRSecurityCollector,
+		builder:          newNETFramework_NETCLRSecurityCollector,
 		perfCounterNames: nil,
 	},
 	{
 		name:             "os",
-		builder:          NewOSCollector,
+		builder:          newOSCollector,
 		perfCounterNames: []string{"Paging File"},
 	},
 	{
@@ -232,27 +232,27 @@ var collectors = []collectorInit{
 	},
 	{
 		name:             "remote_fx",
-		builder:          NewRemoteFx,
+		builder:          newRemoteFx,
 		perfCounterNames: []string{"RemoteFX Network"},
 	},
 	{
 		name:             "scheduled_task",
-		builder:          NewScheduledTask,
+		builder:          newScheduledTask,
 		perfCounterNames: nil,
 	},
 	{
 		name:             "service",
-		builder:          NewserviceCollector,
+		builder:          newserviceCollector,
 		perfCounterNames: nil,
 	},
 	{
 		name:             "smtp",
-		builder:          NewSMTPCollector,
+		builder:          newSMTPCollector,
 		perfCounterNames: []string{"SMTP Server"},
 	},
 	{
 		name:             "system",
-		builder:          NewSystemCollector,
+		builder:          newSystemCollector,
 		perfCounterNames: []string{"System"},
 	},
 	{
@@ -262,12 +262,12 @@ var collectors = []collectorInit{
 	},
 	{
 		name:             "tcp",
-		builder:          NewTCPCollector,
+		builder:          newTCPCollector,
 		perfCounterNames: []string{"TCPv4"},
 	},
 	{
 		name:    "terminal_services",
-		builder: NewTerminalServicesCollector,
+		builder: newTerminalServicesCollector,
 		perfCounterNames: []string{
 			"Terminal Services",
 			"Terminal Services Session",
@@ -276,12 +276,12 @@ var collectors = []collectorInit{
 	},
 	{
 		name:             "textfile",
-		builder:          NewTextFileCollector,
+		builder:          newTextFileCollector,
 		perfCounterNames: nil,
 	},
 	{
 		name:             "thermalzone",
-		builder:          NewThermalZoneCollector,
+		builder:          newThermalZoneCollector,
 		perfCounterNames: nil,
 	},
 	{
@@ -291,7 +291,7 @@ var collectors = []collectorInit{
 	},
 	{
 		name:             "vmware",
-		builder:          NewVmwareCollector,
+		builder:          newVmwareCollector,
 		perfCounterNames: nil,
 	},
 	{

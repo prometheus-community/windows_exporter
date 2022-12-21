@@ -64,7 +64,7 @@ type SMTPCollector struct {
 	serverBlacklistPattern *regexp.Regexp
 }
 
-func NewSMTPCollector() (Collector, error) {
+func newSMTPCollector() (Collector, error) {
 	log.Info("smtp collector is in an experimental state! Metrics for this collector have not been tested.")
 	const subsystem = "smtp"
 

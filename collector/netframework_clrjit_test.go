@@ -6,5 +6,5 @@ import (
 
 func BenchmarkNETFrameworkNETCLRJitCollector(b *testing.B) {
 	// No context name required as collector source is WMI
-	benchmarkCollector(b, "", NewNETFramework_NETCLRJitCollector)
+	benchmarkCollector(b, "", newNETFramework_NETCLRJitCollector)
 }

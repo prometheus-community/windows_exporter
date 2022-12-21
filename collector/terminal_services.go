@@ -61,8 +61,8 @@ type TerminalServicesCollector struct {
 	WorkingSetPeak              *prometheus.Desc
 }
 
-// NewTerminalServicesCollector ...
-func NewTerminalServicesCollector() (Collector, error) {
+// newTerminalServicesCollector ...
+func newTerminalServicesCollector() (Collector, error) {
 	const subsystem = "terminal_services"
 	return &TerminalServicesCollector{
 		LocalSessionCount: prometheus.NewDesc(

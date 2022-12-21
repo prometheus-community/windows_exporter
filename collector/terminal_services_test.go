@@ -5,5 +5,5 @@ import (
 )
 
 func BenchmarkTerminalServicesCollector(b *testing.B) {
-	benchmarkCollector(b, "terminal_services", NewTerminalServicesCollector)
+	benchmarkCollector(b, "terminal_services", newTerminalServicesCollector)
 }

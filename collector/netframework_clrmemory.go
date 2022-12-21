@@ -28,8 +28,8 @@ type NETFramework_NETCLRMemoryCollector struct {
 	PromotedMemoryfromGen1             *prometheus.Desc
 }
 
-// NewNETFramework_NETCLRMemoryCollector ...
-func NewNETFramework_NETCLRMemoryCollector() (Collector, error) {
+// newNETFramework_NETCLRMemoryCollector ...
+func newNETFramework_NETCLRMemoryCollector() (Collector, error) {
 	const subsystem = "netframework_clrmemory"
 	return &NETFramework_NETCLRMemoryCollector{
 		AllocatedBytes: prometheus.NewDesc(

@@ -47,8 +47,8 @@ type MemoryCollector struct {
 	WriteCopiesTotal                *prometheus.Desc
 }
 
-// NewMemoryCollector ...
-func NewMemoryCollector() (Collector, error) {
+// newMemoryCollector ...
+func newMemoryCollector() (Collector, error) {
 	const subsystem = "memory"
 
 	return &MemoryCollector{

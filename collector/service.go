@@ -37,8 +37,8 @@ type serviceCollector struct {
 	queryWhereClause string
 }
 
-// NewserviceCollector ...
-func NewserviceCollector() (Collector, error) {
+// newserviceCollector ...
+func newserviceCollector() (Collector, error) {
 	const subsystem = "service"
 
 	if *serviceWhereClause == "" {

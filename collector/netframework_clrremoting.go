@@ -19,8 +19,8 @@ type NETFramework_NETCLRRemotingCollector struct {
 	TotalRemoteCalls          *prometheus.Desc
 }
 
-// NewNETFramework_NETCLRRemotingCollector ...
-func NewNETFramework_NETCLRRemotingCollector() (Collector, error) {
+// newNETFramework_NETCLRRemotingCollector ...
+func newNETFramework_NETCLRRemotingCollector() (Collector, error) {
 	const subsystem = "netframework_clrremoting"
 	return &NETFramework_NETCLRRemotingCollector{
 		Channels: prometheus.NewDesc(

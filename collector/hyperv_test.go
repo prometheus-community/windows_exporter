@@ -5,5 +5,5 @@ import (
 )
 
 func BenchmarkHypervCollector(b *testing.B) {
-	benchmarkCollector(b, "hyperv", NewHyperVCollector)
+	benchmarkCollector(b, "hyperv", newHyperVCollector)
 }

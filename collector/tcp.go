@@ -21,8 +21,8 @@ type TCPCollector struct {
 	SegmentsSentTotal          *prometheus.Desc
 }
 
-// NewTCPCollector ...
-func NewTCPCollector() (Collector, error) {
+// newTCPCollector ...
+func newTCPCollector() (Collector, error) {
 	const subsystem = "tcp"
 
 	return &TCPCollector{

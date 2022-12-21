@@ -82,8 +82,8 @@ func dfsrGetPerfObjectName(collector string) string {
 	return (prefix + suffix)
 }
 
-// NewDFSRCollector is registered
-func NewDFSRCollector() (Collector, error) {
+// newDFSRCollector is registered
+func newDFSRCollector() (Collector, error) {
 	log.Info("dfsr collector is in an experimental state! Metrics for this collector have not been tested.")
 	const subsystem = "dfsr"
 

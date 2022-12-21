@@ -76,8 +76,8 @@ type ADCollector struct {
 	TombstonedObjectsVisitedTotal                       *prometheus.Desc
 }
 
-// NewADCollector ...
-func NewADCollector() (Collector, error) {
+// newADCollector ...
+func newADCollector() (Collector, error) {
 	const subsystem = "ad"
 	return &ADCollector{
 		AddressBookOperationsTotal: prometheus.NewDesc(

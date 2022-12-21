@@ -16,8 +16,8 @@ type NETFramework_NETCLRInteropCollector struct {
 	NumberofStubs       *prometheus.Desc
 }
 
-// NewNETFramework_NETCLRInteropCollector ...
-func NewNETFramework_NETCLRInteropCollector() (Collector, error) {
+// newNETFramework_NETCLRInteropCollector ...
+func newNETFramework_NETCLRInteropCollector() (Collector, error) {
 	const subsystem = "netframework_clrinterop"
 	return &NETFramework_NETCLRInteropCollector{
 		NumberofCCWs: prometheus.NewDesc(

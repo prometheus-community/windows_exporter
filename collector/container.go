@@ -41,8 +41,8 @@ type ContainerMetricsCollector struct {
 	WriteSizeBytes       *prometheus.Desc
 }
 
-// NewContainerMetricsCollector constructs a new ContainerMetricsCollector
-func NewContainerMetricsCollector() (Collector, error) {
+// newContainerMetricsCollector constructs a new ContainerMetricsCollector
+func newContainerMetricsCollector() (Collector, error) {
 	const subsystem = "container"
 	return &ContainerMetricsCollector{
 		ContainerAvailable: prometheus.NewDesc(
