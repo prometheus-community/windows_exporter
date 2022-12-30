@@ -30,6 +30,8 @@ var (
 // A LogicalDiskCollector is a Prometheus collector for perflib logicalDisk metrics
 type LogicalDiskCollector struct {
 	RequestsQueued   *prometheus.Desc
+	AvgReadQueue     *prometheus.Desc
+	AvgWriteQueue    *prometheus.Desc
 	ReadBytesTotal   *prometheus.Desc
 	ReadsTotal       *prometheus.Desc
 	WriteBytesTotal  *prometheus.Desc
@@ -56,6 +58,20 @@ func NewLogicalDiskCollector() (Collector, error) {
 		RequestsQueued: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "requests_queued"),
 			"The number of requests queued to the disk (LogicalDisk.CurrentDiskQueueLength)",
+			[]string{"volume"},
+			nil,
+		),
+
+		AvgReadQueue: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "avg_read_requests_queued"),
+			"Average number of read requests that were queued for the selected disk during the sample interval (LogicalDisk.AvgDiskReadQueueLength)",
+			[]string{"volume"},
+			nil,
+		),
+
+		AvgWriteQueue: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "avg_write_requests_queued"),
+			"Average number of write requests that were queued for the selected disk during the sample interval (LogicalDisk.AvgDiskWriteQueueLength)",
 			[]string{"volume"},
 			nil,
 		),
@@ -170,21 +186,23 @@ func (c *LogicalDiskCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.
 // - https://msdn.microsoft.com/en-us/windows/hardware/aa394307(v=vs.71) - Win32_PerfRawData_PerfDisk_LogicalDisk class
 // - https://msdn.microsoft.com/en-us/library/ms803973.aspx - LogicalDisk object reference
 type logicalDisk struct {
-	Name                   string
-	CurrentDiskQueueLength float64 `perflib:"Current Disk Queue Length"`
-	DiskReadBytesPerSec    float64 `perflib:"Disk Read Bytes/sec"`
-	DiskReadsPerSec        float64 `perflib:"Disk Reads/sec"`
-	DiskWriteBytesPerSec   float64 `perflib:"Disk Write Bytes/sec"`
-	DiskWritesPerSec       float64 `perflib:"Disk Writes/sec"`
-	PercentDiskReadTime    float64 `perflib:"% Disk Read Time"`
-	PercentDiskWriteTime   float64 `perflib:"% Disk Write Time"`
-	PercentFreeSpace       float64 `perflib:"% Free Space_Base"`
-	PercentFreeSpace_Base  float64 `perflib:"Free Megabytes"`
-	PercentIdleTime        float64 `perflib:"% Idle Time"`
-	SplitIOPerSec          float64 `perflib:"Split IO/Sec"`
-	AvgDiskSecPerRead      float64 `perflib:"Avg. Disk sec/Read"`
-	AvgDiskSecPerWrite     float64 `perflib:"Avg. Disk sec/Write"`
-	AvgDiskSecPerTransfer  float64 `perflib:"Avg. Disk sec/Transfer"`
+	Name                    string
+	CurrentDiskQueueLength  float64 `perflib:"Current Disk Queue Length"`
+	AvgDiskReadQueueLength  float64 `perflib:"Avg. Disk Read Queue Length"`
+	AvgDiskWriteQueueLength float64 `perflib:"Avg. Disk Write Queue Length"`
+	DiskReadBytesPerSec     float64 `perflib:"Disk Read Bytes/sec"`
+	DiskReadsPerSec         float64 `perflib:"Disk Reads/sec"`
+	DiskWriteBytesPerSec    float64 `perflib:"Disk Write Bytes/sec"`
+	DiskWritesPerSec        float64 `perflib:"Disk Writes/sec"`
+	PercentDiskReadTime     float64 `perflib:"% Disk Read Time"`
+	PercentDiskWriteTime    float64 `perflib:"% Disk Write Time"`
+	PercentFreeSpace        float64 `perflib:"% Free Space_Base"`
+	PercentFreeSpace_Base   float64 `perflib:"Free Megabytes"`
+	PercentIdleTime         float64 `perflib:"% Idle Time"`
+	SplitIOPerSec           float64 `perflib:"Split IO/Sec"`
+	AvgDiskSecPerRead       float64 `perflib:"Avg. Disk sec/Read"`
+	AvgDiskSecPerWrite      float64 `perflib:"Avg. Disk sec/Write"`
+	AvgDiskSecPerTransfer   float64 `perflib:"Avg. Disk sec/Transfer"`
 }
 
 func (c *LogicalDiskCollector) collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
@@ -204,6 +222,20 @@ func (c *LogicalDiskCollector) collect(ctx *ScrapeContext, ch chan<- prometheus.
 			c.RequestsQueued,
 			prometheus.GaugeValue,
 			volume.CurrentDiskQueueLength,
+			volume.Name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.AvgReadQueue,
+			prometheus.CounterValue,
+			volume.AvgDiskReadQueueLength*ticksToSecondsScaleFactor,
+			volume.Name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.AvgWriteQueue,
+			prometheus.CounterValue,
+			volume.AvgDiskWriteQueueLength*ticksToSecondsScaleFactor,
 			volume.Name,
 		)
 
