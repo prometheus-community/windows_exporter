@@ -14,9 +14,13 @@ Enabled by default? | No
 
 If given, the path of the task needs to match the whitelist regexp in order for the corresponding metrics to be reported.
 
+E.G. `--collector.scheduled_task.whitelist="Firefox.*"`
+
 ### `--collector.scheduled_task.blacklist`
 
 If given, the path of the task needs to *not* match the blacklist regexp in order for the corresponding metrics to be reported.
+
+E.G. `--collector.scheduled_task.blacklist="/Microsoft/.+"`
 
 ## Metrics
 
