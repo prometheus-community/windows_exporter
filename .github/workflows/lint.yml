@@ -1,0 +1,102 @@
+name: Linting
+
+# Trigger on pull requests and pushes to master branch where Go-related files
+# have been changed.
+on:
+  push:
+    paths:
+    - "go.mod"
+    - "go.sum"
+    - "**.go"
+    - ".github/workflows/lint.yml"
+    - "tools/e2e-output.txt"
+    branches:
+      - master
+  pull_request:
+    paths:
+    - "go.mod"
+    - "go.sum"
+    - "**.go"
+    - ".github/workflows/lint.yml"
+    - "tools/e2e-output.txt"
+    branches:
+      - master
+
+env:
+  PROMU_VER: 'v0.13.0'
+
+jobs:
+  test:
+    runs-on: windows-2019
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '^1.17.5'
+
+      - name: Test
+        run: make test
+
+      - name: Install e2e deps
+        run: |
+          go install "github.com/prometheus/promu@$($Env:PROMU_VER)"
+          go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.2.0
+          # GOPATH\bin dir must be appended to PATH else the `promu` command won't be found
+          echo "$(go env GOPATH)\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: e2e Test
+        run: make e2e-test
+
+  promtool:
+    runs-on: windows-2019
+    env:
+      PROMTOOL_VER: '2.32.1'
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '^1.17.5'
+
+      - name: Install promtool
+        run: |
+          # promtool brings in a lot of dependencies, slowing down compilation via `go get` and `go install`, so
+          # download the binary directly and extract.
+          # go get github.com/prometheus/prometheus/cmd/promtool@main
+          Invoke-WebRequest -Uri https://github.com/prometheus/prometheus/releases/download/v$($Env:PROMTOOL_VER)/prometheus-$($Env:PROMTOOL_VER).windows-amd64.zip -OutFile prometheus-$($Env:PROMTOOL_VER).windows-amd64.zip
+          Expand-Archive -Path prometheus-$($Env:PROMTOOL_VER).windows-amd64.zip -DestinationPath .
+          Copy-Item -Path prometheus-$($Env:PROMTOOL_VER).windows-amd64\promtool.exe -Destination "$(go env GOPATH)\bin"
+
+          go install "github.com/prometheus/promu@$($Env:PROMU_VER)"
+          go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.2.0
+          # GOPATH\bin dir must be appended to PATH else the `promu` command won't be found
+          echo "$(go env GOPATH)\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Promtool
+        run: make promtool
+
+  lint:
+    runs-on: windows-2022
+    steps:
+      # `gofmt` linter run by golangci-lint fails on CRLF line endings (the default for Windows)
+      - name: Set git to use LF
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '^1.17.5'
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.45.2
+          args: "--timeout=5m"
+
+      # golangci-lint action doesn't always provide helpful output, so re-run without the action for
+      # better output of the problem.
+      # The cache from the golangci-lint step is re-used here, so this step should finish quickly.
+      - name: errors
+        if: ${{ failure() }}
+        run: golangci-lint run --timeout=5m -c .golangci.yaml
