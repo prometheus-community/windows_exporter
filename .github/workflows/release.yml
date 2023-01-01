@@ -12,7 +12,7 @@ permissions:
   packages: write
 
 env:
-  PROMU_VER: 'v0.13.0'
+  PROMU_VER: '0.13.0'
 
 jobs:
   build:
@@ -30,7 +30,11 @@ jobs:
       - name: Install Build deps
         run: |
           dotnet tool install --global GitVersion.Tool --version 5.*
-          go install "github.com/prometheus/promu@$($Env:PROMU_VER)"
+          Invoke-WebRequest -Uri https://github.com/prometheus/promu/releases/download/$($Env:PROMU_VER)/promu-v$($Env:PROMU_VER).windows-amd64.zip -OutFile promu-$($Env:PROMU_VER).windows-amd64.zip
+          Expand-Archive -Path promu-$($Env:PROMU_VER).windows-amd64.zip -DestinationPath .
+          Copy-Item -Path promu-$($Env:PROMU_VER).windows-amd64\promu.exe -Destination "$(go env GOPATH)\bin"
+
+          # No binaries available so build from source
           go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.4.0
           # GOPATH\bin dir must be added to PATH else the `promu` and `goversioninfo` commands won't be found
           echo "$(go env GOPATH)\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append

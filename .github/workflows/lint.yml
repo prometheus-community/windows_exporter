@@ -23,7 +23,8 @@ on:
       - master
 
 env:
-  PROMU_VER: 'v0.13.0'
+  PROMU_VER: '0.13.0'
+  PROMTOOL_VER: '2.32.1'
 
 jobs:
   test:
@@ -39,7 +40,10 @@ jobs:
 
       - name: Install e2e deps
         run: |
-          go install "github.com/prometheus/promu@$($Env:PROMU_VER)"
+          Invoke-WebRequest -Uri https://github.com/prometheus/promu/releases/download/v$($Env:PROMU_VER)/promu-$($Env:PROMU_VER).windows-amd64.zip -OutFile promu-$($Env:PROMU_VER).windows-amd64.zip
+          Expand-Archive -Path promu-$($Env:PROMU_VER).windows-amd64.zip -DestinationPath .
+          Copy-Item -Path promu-$($Env:PROMU_VER).windows-amd64\promu.exe -Destination "$(go env GOPATH)\bin"
+
           go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.2.0
           # GOPATH\bin dir must be appended to PATH else the `promu` command won't be found
           echo "$(go env GOPATH)\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
@@ -49,8 +53,6 @@ jobs:
 
   promtool:
     runs-on: windows-2019
-    env:
-      PROMTOOL_VER: '2.32.1'
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
@@ -59,14 +61,15 @@ jobs:
 
       - name: Install promtool
         run: |
-          # promtool brings in a lot of dependencies, slowing down compilation via `go get` and `go install`, so
-          # download the binary directly and extract.
-          # go get github.com/prometheus/prometheus/cmd/promtool@main
           Invoke-WebRequest -Uri https://github.com/prometheus/prometheus/releases/download/v$($Env:PROMTOOL_VER)/prometheus-$($Env:PROMTOOL_VER).windows-amd64.zip -OutFile prometheus-$($Env:PROMTOOL_VER).windows-amd64.zip
           Expand-Archive -Path prometheus-$($Env:PROMTOOL_VER).windows-amd64.zip -DestinationPath .
           Copy-Item -Path prometheus-$($Env:PROMTOOL_VER).windows-amd64\promtool.exe -Destination "$(go env GOPATH)\bin"
 
-          go install "github.com/prometheus/promu@$($Env:PROMU_VER)"
+          Invoke-WebRequest -Uri https://github.com/prometheus/promu/releases/download/v$($Env:PROMU_VER)/promu-$($Env:PROMU_VER).windows-amd64.zip -OutFile promu-$($Env:PROMU_VER).windows-amd64.zip
+          Expand-Archive -Path promu-$($Env:PROMU_VER).windows-amd64.zip -DestinationPath .
+          Copy-Item -Path promu-$($Env:PROMU_VER).windows-amd64\promu.exe -Destination "$(go env GOPATH)\bin"
+
+          # No binaries available so build from source
           go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.2.0
           # GOPATH\bin dir must be appended to PATH else the `promu` command won't be found
           echo "$(go env GOPATH)\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
