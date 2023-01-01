@@ -1,4 +1,4 @@
-﻿# HELP go_gc_duration_seconds A summary of the pause duration of garbage collection cycles.
+# HELP go_gc_duration_seconds A summary of the pause duration of garbage collection cycles.
 # TYPE go_gc_duration_seconds summary
 # HELP go_goroutines Number of goroutines that currently exist.
 # TYPE go_goroutines gauge
@@ -99,7 +99,7 @@ test_alpha_total 42
 # TYPE windows_cs_logical_processors gauge
 # HELP windows_cs_physical_memory_bytes ComputerSystem.TotalPhysicalMemory
 # TYPE windows_cs_physical_memory_bytes gauge
-# HELP windows_exporter_build_info A metric with a constant '1' value labeled by version, revision, branch, and goversion from which windows_exporter was built.
+# HELP windows_exporter_build_info A metric with a constant '1' value labeled by version, revision, branch, goversion from which windows_exporter was built, and the goos and goarch for the build.
 # TYPE windows_exporter_build_info gauge
 # HELP windows_exporter_collector_duration_seconds windows_exporter: Duration of a collection.
 # TYPE windows_exporter_collector_duration_seconds gauge
