@@ -141,6 +141,10 @@ windows_exporter_collector_timeout{collector="textfile"} 0
 # TYPE windows_logical_disk_reads_total counter
 # HELP windows_logical_disk_requests_queued The number of requests queued to the disk (LogicalDisk.CurrentDiskQueueLength)
 # TYPE windows_logical_disk_requests_queued gauge
+# HELP windows_logical_disk_avg_read_requests_queued Average number of read requests that were queued for the selected disk during the sample interval (LogicalDisk.AvgDiskReadQueueLength)
+# TYPE windows_logical_disk_avg_read_requests_queued gauge
+# HELP windows_logical_disk_avg_write_requests_queued Average number of write requests that were queued for the selected disk during the sample interval (LogicalDisk.AvgDiskWriteQueueLength)
+# TYPE windows_logical_disk_avg_write_requests_queued gauge
 # HELP windows_logical_disk_size_bytes Total space in bytes, updates every 10-15 min (LogicalDisk.PercentFreeSpace_Base)
 # TYPE windows_logical_disk_size_bytes gauge
 # HELP windows_logical_disk_split_ios_total The number of I/Os to the disk were split into multiple I/Os (LogicalDisk.SplitIOPerSec)
