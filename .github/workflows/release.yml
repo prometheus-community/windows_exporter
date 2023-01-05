@@ -30,7 +30,7 @@ jobs:
       - name: Install Build deps
         run: |
           dotnet tool install --global GitVersion.Tool --version 5.*
-          Invoke-WebRequest -Uri https://github.com/prometheus/promu/releases/download/$($Env:PROMU_VER)/promu-v$($Env:PROMU_VER).windows-amd64.zip -OutFile promu-$($Env:PROMU_VER).windows-amd64.zip
+          Invoke-WebRequest -Uri https://github.com/prometheus/promu/releases/download/v$($Env:PROMU_VER)/promu-$($Env:PROMU_VER).windows-amd64.zip -OutFile promu-$($Env:PROMU_VER).windows-amd64.zip
           Expand-Archive -Path promu-$($Env:PROMU_VER).windows-amd64.zip -DestinationPath .
           Copy-Item -Path promu-$($Env:PROMU_VER).windows-amd64\promu.exe -Destination "$(go env GOPATH)\bin"
 
