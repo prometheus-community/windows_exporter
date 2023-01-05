@@ -30,7 +30,7 @@ jobs:
       - name: Install Build deps
         run: |
           dotnet tool install --global GitVersion.Tool --version 5.*
-          Invoke-WebRequest -Uri https://github.com/prometheus/promu/releases/download/$($Env:PROMU_VER)/promu-v$($Env:PROMU_VER).windows-amd64.zip -OutFile promu-$($Env:PROMU_VER).windows-amd64.zip
+          Invoke-WebRequest -Uri https://github.com/prometheus/promu/releases/download/v$($Env:PROMU_VER)/promu-$($Env:PROMU_VER).windows-amd64.zip -OutFile promu-$($Env:PROMU_VER).windows-amd64.zip
           Expand-Archive -Path promu-$($Env:PROMU_VER).windows-amd64.zip -DestinationPath .
           Copy-Item -Path promu-$($Env:PROMU_VER).windows-amd64\promu.exe -Destination "$(go env GOPATH)\bin"
 
@@ -72,7 +72,7 @@ jobs:
           $TagName = $env:GITHUB_REF -replace 'refs/tags/', ''
           # The MSI version is not semver compliant, so just take the numerical parts
           $MSIVersion = $TagName -replace '^v?([0-9\.]+).*$','$1'
-          foreach($Arch in "amd64", "arm64","386") {
+          foreach($Arch in "amd64", "386") {
             Write-Verbose "Building windows_exporter $MSIVersion msi for $Arch"
             .\installer\build.ps1 -PathToExecutable .\output\windows_exporter-$BuildVersion-$Arch.exe -Version $MSIVersion -Arch "$Arch"
             Move-Item installer\Output\windows_exporter-$MSIVersion-$Arch.msi output\
