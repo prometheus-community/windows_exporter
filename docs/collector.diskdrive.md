@@ -17,8 +17,8 @@ None
 | Name                      | Description                                                                                                                                                      | Type    | Labels |
 | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | ------ |
 | `disk_drive_info`         | General identifiable information about the disk drive                                                                                                            | gauge   | None   |
-| `disk_drive_availability` | Power-related                                                                                                                                                    | counter | None   |
-| `disk_drive_partitions`   | Number of paritions on the drive                                                                                                                                 | gauge   | None   |
+| `disk_drive_availability` | The disk drive's current availability                                                                                                                            | counter | None   |
+| `disk_drive_partitions`   | Number of partitions on the drive                                                                                                                                | gauge   | None   |
 | `disk_drive_size`         | Size of the disk drive. It is calculated by multiplying the total number of cylinders, tracks in each cylinder, sectors in each track, and bytes in each sector. | gauge   | None   |
 | `disk_drive_status`       | Operational status of the drive                                                                                                                                  | counter | None   |
 
