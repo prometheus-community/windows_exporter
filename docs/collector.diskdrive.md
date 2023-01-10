@@ -1,6 +1,6 @@
 # diskdrive collector
 
-The diskdrive collector exposes metrics about logical disks (in contrast to physical disks)
+The diskdrive collector exposes metrics about physical disks
 
 |                     |                                                                                                                                                              |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
