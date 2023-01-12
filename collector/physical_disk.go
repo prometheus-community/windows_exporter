@@ -55,84 +55,84 @@ func NewPhysicalDiskCollector() (Collector, error) {
 		RequestsQueued: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "requests_queued"),
 			"The number of requests queued to the disk (PhysicalDisk.CurrentDiskQueueLength)",
-			[]string{"number"},
+			[]string{"disk"},
 			nil,
 		),
 
 		ReadBytesTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "read_bytes_total"),
 			"The number of bytes transferred from the disk during read operations (PhysicalDisk.DiskReadBytesPerSec)",
-			[]string{"number"},
+			[]string{"disk"},
 			nil,
 		),
 
 		ReadsTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "reads_total"),
 			"The number of read operations on the disk (PhysicalDisk.DiskReadsPerSec)",
-			[]string{"number"},
+			[]string{"disk"},
 			nil,
 		),
 
 		WriteBytesTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "write_bytes_total"),
 			"The number of bytes transferred to the disk during write operations (PhysicalDisk.DiskWriteBytesPerSec)",
-			[]string{"number"},
+			[]string{"disk"},
 			nil,
 		),
 
 		WritesTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "writes_total"),
 			"The number of write operations on the disk (PhysicalDisk.DiskWritesPerSec)",
-			[]string{"number"},
+			[]string{"disk"},
 			nil,
 		),
 
 		ReadTime: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "read_seconds_total"),
 			"Seconds that the disk was busy servicing read requests (PhysicalDisk.PercentDiskReadTime)",
-			[]string{"number"},
+			[]string{"disk"},
 			nil,
 		),
 
 		WriteTime: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "write_seconds_total"),
 			"Seconds that the disk was busy servicing write requests (PhysicalDisk.PercentDiskWriteTime)",
-			[]string{"number"},
+			[]string{"disk"},
 			nil,
 		),
 
 		IdleTime: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "idle_seconds_total"),
 			"Seconds that the disk was idle (PhysicalDisk.PercentIdleTime)",
-			[]string{"number"},
+			[]string{"disk"},
 			nil,
 		),
 
 		SplitIOs: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "split_ios_total"),
 			"The number of I/Os to the disk were split into multiple I/Os (PhysicalDisk.SplitIOPerSec)",
-			[]string{"number"},
+			[]string{"disk"},
 			nil,
 		),
 
 		ReadLatency: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "read_latency_seconds_total"),
 			"Shows the average time, in seconds, of a read operation from the disk (PhysicalDisk.AvgDiskSecPerRead)",
-			[]string{"number"},
+			[]string{"disk"},
 			nil,
 		),
 
 		WriteLatency: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "write_latency_seconds_total"),
 			"Shows the average time, in seconds, of a write operation to the disk (PhysicalDisk.AvgDiskSecPerWrite)",
-			[]string{"number"},
+			[]string{"disk"},
 			nil,
 		),
 
 		ReadWriteLatency: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "read_write_latency_seconds_total"),
 			"Shows the time, in seconds, of the average disk transfer (PhysicalDisk.AvgDiskSecPerTransfer)",
-			[]string{"number"},
+			[]string{"disk"},
 			nil,
 		),
 
