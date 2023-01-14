@@ -6,6 +6,7 @@ This directory contains documentation of the collectors in the windows_exporter,
 - [`adfs`](collector.adfs.md)
 - [`cpu`](collector.cpu.md)
 - [`cs`](collector.cs.md)
+- [`diskdrive`](collector.diskdrive.md)]
 - [`dfsr`](collector.dfsr.md)
 - [`dhcp`](collector.dhcp.md)
 - [`dns`](collector.dns.md)
