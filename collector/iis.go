@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"sort"
+	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/log"
@@ -977,14 +979,63 @@ type perflibWebService struct {
 	TotalUnlockRequests                 float64 `perflib:"Total Unlock Requests"`
 }
 
+// Fulfill the hasGetIISName interface
+func (p perflibWebService) getIISName() string {
+	return p.Name
+}
+
+// Fulfill the hasGetIISName interface
+func (p perflibAPP_POOL_WAS) getIISName() string {
+	return p.Name
+}
+
+// Fulfill the hasGetIISName interface
+func (p perflibW3SVC_W3WP) getIISName() string {
+	return p.Name
+}
+
+// Fulfill the hasGetIISName interface
+func (p perflibW3SVC_W3WP_IIS8) getIISName() string {
+	return p.Name
+}
+
+// Required as Golang doesn't allow access to struct fields in generic functions. That restriction may be removed in a future release.
+type hasGetIISName interface {
+	getIISName() string
+}
+
+// Deduplicate IIS site names from various IIS perflib objects.
+//
+// E.G. Given the following list of site names, "Site_B" would be
+// discarded, and "Site_B#2" would be kept and presented as "Site_B" in the
+// collector metrics.
+// [ "Site_A", "Site_B", "Site_C", "Site_B#2" ]
+func dedupIISNames[V hasGetIISName](services []V) map[string]V {
+	// Ensure IIS entry with the highest suffix occurs last
+	sort.SliceStable(services, func(i, j int) bool {
+		return services[i].getIISName() < services[j].getIISName()
+	})
+
+	var webServiceDeDuplicated = make(map[string]V)
+
+	// Use map to deduplicate IIS entries
+	for _, entry := range services {
+		name := strings.Split(entry.getIISName(), "#")[0]
+		webServiceDeDuplicated[name] = entry
+	}
+	return webServiceDeDuplicated
+}
+
 func (c *IISCollector) collectWebService(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
-	var WebService []perflibWebService
-	if err := unmarshalObject(ctx.perfObjects["Web Service"], &WebService); err != nil {
+	var webService []perflibWebService
+	if err := unmarshalObject(ctx.perfObjects["Web Service"], &webService); err != nil {
 		return nil, err
 	}
 
-	for _, app := range WebService {
-		if app.Name == "_Total" || c.siteExcludePattern.MatchString(app.Name) || !c.siteIncludePattern.MatchString(app.Name) {
+	webServiceDeDuplicated := dedupIISNames(webService)
+
+	for name, app := range webServiceDeDuplicated {
+		if name == "_Total" || c.siteExcludePattern.MatchString(name) || !c.siteIncludePattern.MatchString(name) {
 			continue
 		}
 
@@ -992,238 +1043,238 @@ func (c *IISCollector) collectWebService(ctx *ScrapeContext, ch chan<- prometheu
 			c.CurrentAnonymousUsers,
 			prometheus.GaugeValue,
 			app.CurrentAnonymousUsers,
-			app.Name,
+			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.CurrentBlockedAsyncIORequests,
 			prometheus.GaugeValue,
 			app.CurrentBlockedAsyncIORequests,
-			app.Name,
+			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.CurrentCGIRequests,
 			prometheus.GaugeValue,
 			app.CurrentCGIRequests,
-			app.Name,
+			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.CurrentConnections,
 			prometheus.GaugeValue,
 			app.CurrentConnections,
-			app.Name,
+			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.CurrentISAPIExtensionRequests,
 			prometheus.GaugeValue,
 			app.CurrentISAPIExtensionRequests,
-			app.Name,
+			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.CurrentNonAnonymousUsers,
 			prometheus.GaugeValue,
 			app.CurrentNonAnonymousUsers,
-			app.Name,
+			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.ServiceUptime,
 			prometheus.GaugeValue,
 			app.ServiceUptime,
-			app.Name,
+			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalBytesReceived,
 			prometheus.CounterValue,
 			app.TotalBytesReceived,
-			app.Name,
+			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalBytesSent,
 			prometheus.CounterValue,
 			app.TotalBytesSent,
-			app.Name,
+			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalAnonymousUsers,
 			prometheus.CounterValue,
 			app.TotalAnonymousUsers,
-			app.Name,
+			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalBlockedAsyncIORequests,
 			prometheus.CounterValue,
 			app.TotalBlockedAsyncIORequests,
-			app.Name,
+			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalCGIRequests,
 			prometheus.CounterValue,
 			app.TotalCGIRequests,
-			app.Name,
+			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalConnectionAttemptsAllInstances,
 			prometheus.CounterValue,
 			app.TotalConnectionAttemptsAllInstances,
-			app.Name,
+			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalFilesReceived,
 			prometheus.CounterValue,
 			app.TotalFilesReceived,
-			app.Name,
+			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalFilesSent,
 			prometheus.CounterValue,
 			app.TotalFilesSent,
-			app.Name,
+			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalISAPIExtensionRequests,
 			prometheus.CounterValue,
 			app.TotalISAPIExtensionRequests,
-			app.Name,
+			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalLockedErrors,
 			prometheus.CounterValue,
 			app.TotalLockedErrors,
-			app.Name,
+			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalLogonAttempts,
 			prometheus.CounterValue,
 			app.TotalLogonAttempts,
-			app.Name,
+			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalNonAnonymousUsers,
 			prometheus.CounterValue,
 			app.TotalNonAnonymousUsers,
-			app.Name,
+			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalNotFoundErrors,
 			prometheus.CounterValue,
 			app.TotalNotFoundErrors,
-			app.Name,
+			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalRejectedAsyncIORequests,
 			prometheus.CounterValue,
 			app.TotalRejectedAsyncIORequests,
-			app.Name,
+			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalRequests,
 			prometheus.CounterValue,
 			app.TotalOtherRequests,
-			app.Name,
+			name,
 			"other",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalRequests,
 			prometheus.CounterValue,
 			app.TotalCopyRequests,
-			app.Name,
+			name,
 			"COPY",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalRequests,
 			prometheus.CounterValue,
 			app.TotalDeleteRequests,
-			app.Name,
+			name,
 			"DELETE",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalRequests,
 			prometheus.CounterValue,
 			app.TotalGetRequests,
-			app.Name,
+			name,
 			"GET",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalRequests,
 			prometheus.CounterValue,
 			app.TotalHeadRequests,
-			app.Name,
+			name,
 			"HEAD",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalRequests,
 			prometheus.CounterValue,
 			app.TotalLockRequests,
-			app.Name,
+			name,
 			"LOCK",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalRequests,
 			prometheus.CounterValue,
 			app.TotalMkcolRequests,
-			app.Name,
+			name,
 			"MKCOL",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalRequests,
 			prometheus.CounterValue,
 			app.TotalMoveRequests,
-			app.Name,
+			name,
 			"MOVE",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalRequests,
 			prometheus.CounterValue,
 			app.TotalOptionsRequests,
-			app.Name,
+			name,
 			"OPTIONS",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalRequests,
 			prometheus.CounterValue,
 			app.TotalPostRequests,
-			app.Name,
+			name,
 			"POST",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalRequests,
 			prometheus.CounterValue,
 			app.TotalPropfindRequests,
-			app.Name,
+			name,
 			"PROPFIND",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalRequests,
 			prometheus.CounterValue,
 			app.TotalProppatchRequests,
-			app.Name,
+			name,
 			"PROPPATCH",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalRequests,
 			prometheus.CounterValue,
 			app.TotalPutRequests,
-			app.Name,
+			name,
 			"PUT",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalRequests,
 			prometheus.CounterValue,
 			app.TotalSearchRequests,
-			app.Name,
+			name,
 			"SEARCH",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalRequests,
 			prometheus.CounterValue,
 			app.TotalTraceRequests,
-			app.Name,
+			name,
 			"TRACE",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalRequests,
 			prometheus.CounterValue,
 			app.TotalUnlockRequests,
-			app.Name,
+			name,
 			"UNLOCK",
 		)
 	}
@@ -1267,10 +1318,12 @@ func (c *IISCollector) collectAPP_POOL_WAS(ctx *ScrapeContext, ch chan<- prometh
 		return nil, err
 	}
 
-	for _, app := range APP_POOL_WAS {
-		if app.Name == "_Total" ||
-			c.appExcludePattern.MatchString(app.Name) ||
-			!c.appIncludePattern.MatchString(app.Name) {
+	appPoolDeDuplicated := dedupIISNames(APP_POOL_WAS)
+
+	for name, app := range appPoolDeDuplicated {
+		if name == "_Total" ||
+			c.appExcludePattern.MatchString(name) ||
+			!c.appIncludePattern.MatchString(name) {
 			continue
 		}
 
@@ -1283,7 +1336,7 @@ func (c *IISCollector) collectAPP_POOL_WAS(ctx *ScrapeContext, ch chan<- prometh
 				c.CurrentApplicationPoolState,
 				prometheus.GaugeValue,
 				isCurrentState,
-				app.Name,
+				name,
 				label,
 			)
 		}
@@ -1292,73 +1345,73 @@ func (c *IISCollector) collectAPP_POOL_WAS(ctx *ScrapeContext, ch chan<- prometh
 			c.CurrentApplicationPoolUptime,
 			prometheus.GaugeValue,
 			app.CurrentApplicationPoolUptime,
-			app.Name,
+			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.CurrentWorkerProcesses,
 			prometheus.GaugeValue,
 			app.CurrentWorkerProcesses,
-			app.Name,
+			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.MaximumWorkerProcesses,
 			prometheus.GaugeValue,
 			app.MaximumWorkerProcesses,
-			app.Name,
+			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.RecentWorkerProcessFailures,
 			prometheus.GaugeValue,
 			app.RecentWorkerProcessFailures,
-			app.Name,
+			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.TimeSinceLastWorkerProcessFailure,
 			prometheus.GaugeValue,
 			app.TimeSinceLastWorkerProcessFailure,
-			app.Name,
+			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalApplicationPoolRecycles,
 			prometheus.CounterValue,
 			app.TotalApplicationPoolRecycles,
-			app.Name,
+			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalApplicationPoolUptime,
 			prometheus.CounterValue,
 			app.TotalApplicationPoolUptime,
-			app.Name,
+			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalWorkerProcessesCreated,
 			prometheus.CounterValue,
 			app.TotalWorkerProcessesCreated,
-			app.Name,
+			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalWorkerProcessFailures,
 			prometheus.CounterValue,
 			app.TotalWorkerProcessFailures,
-			app.Name,
+			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalWorkerProcessPingFailures,
 			prometheus.CounterValue,
 			app.TotalWorkerProcessPingFailures,
-			app.Name,
+			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalWorkerProcessShutdownFailures,
 			prometheus.CounterValue,
 			app.TotalWorkerProcessShutdownFailures,
-			app.Name,
+			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.TotalWorkerProcessStartupFailures,
 			prometheus.CounterValue,
 			app.TotalWorkerProcessStartupFailures,
-			app.Name,
+			name,
 		)
 	}
 
@@ -1442,13 +1495,20 @@ func (c *IISCollector) collectW3SVC_W3WP(ctx *ScrapeContext, ch chan<- prometheu
 		return nil, err
 	}
 
-	for _, app := range W3SVC_W3WP {
+	w3svcW3WPDeduplicated := dedupIISNames(W3SVC_W3WP)
+
+	for w3Name, app := range w3svcW3WPDeduplicated {
 		// Extract the apppool name from the format <PID>_<NAME>
-		pid := workerProcessNameExtractor.ReplaceAllString(app.Name, "$1")
-		name := workerProcessNameExtractor.ReplaceAllString(app.Name, "$2")
+		pid := workerProcessNameExtractor.ReplaceAllString(w3Name, "$1")
+		name := workerProcessNameExtractor.ReplaceAllString(w3Name, "$2")
 		if name == "" || name == "_Total" ||
 			c.appExcludePattern.MatchString(name) ||
 			!c.appIncludePattern.MatchString(name) {
+			continue
+		}
+
+		// Duplicate instances are suffixed # with an index number. These should be ignored
+		if strings.Contains(app.Name, "#") {
 			continue
 		}
 
@@ -1694,10 +1754,12 @@ func (c *IISCollector) collectW3SVC_W3WP(ctx *ScrapeContext, ch chan<- prometheu
 			return nil, err
 		}
 
-		for _, app := range W3SVC_W3WP_IIS8 {
+		w3svcW3WPIIS8Deduplicated := dedupIISNames(W3SVC_W3WP_IIS8)
+
+		for w3Name, app := range w3svcW3WPIIS8Deduplicated {
 			// Extract the apppool name from the format <PID>_<NAME>
-			pid := workerProcessNameExtractor.ReplaceAllString(app.Name, "$1")
-			name := workerProcessNameExtractor.ReplaceAllString(app.Name, "$2")
+			pid := workerProcessNameExtractor.ReplaceAllString(w3Name, "$1")
+			name := workerProcessNameExtractor.ReplaceAllString(w3Name, "$2")
 			if name == "" || name == "_Total" ||
 				c.appExcludePattern.MatchString(name) ||
 				!c.appIncludePattern.MatchString(name) {
