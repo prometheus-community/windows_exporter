@@ -4,6 +4,6 @@ import (
 	"testing"
 )
 
-func benchmarkTeradiciPcoipCollector(b *testing.B) {
+func BenchmarkTeradiciPcoipCollector(b *testing.B) {
 	benchmarkCollector(b, "teradici_pcoip", newTeradiciPcoipCollector)
 }
