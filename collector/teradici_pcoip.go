@@ -12,17 +12,17 @@ import (
 )
 
 func init() {
-	registerCollector("teradici_pcoip", NewTeradiciPcoipCollector)
+	registerCollector("teradici_pcoip", newTeradiciPcoipCollector)
 }
 
-// A TeradiciPcoipCollector is a Prometheus collector for WMI metrics:
-// Win32_PerfRawData_TeradiciPerf_PCoIPSessionAudioStatistics
-// Win32_PerfRawData_TeradiciPerf_PCoIPSessionGeneralStatistics
-// Win32_PerfRawData_TeradiciPerf_PCoIPSessionImagingStatistics
-// Win32_PerfRawData_TeradiciPerf_PCoIPSessionNetworkStatistics
-// Win32_PerfRawData_TeradiciPerf_PCoIPSessionUsbStatistics
+// A teradiciPcoipCollector is a Prometheus collector for WMI metrics:
+// win32_PerfRawData_TeradiciPerf_PCoIPSessionAudioStatistics
+// win32_PerfRawData_TeradiciPerf_PCoIPSessionGeneralStatistics
+// win32_PerfRawData_TeradiciPerf_PCoIPSessionImagingStatistics
+// win32_PerfRawData_TeradiciPerf_PCoIPSessionNetworkStatistics
+// win32_PerfRawData_TeradiciPerf_PCoIPSessionUsbStatistics
 
-type TeradiciPcoipCollector struct {
+type teradiciPcoipCollector struct {
 	AudioBytesReceived       *prometheus.Desc
 	AudioBytesSent           *prometheus.Desc
 	AudioRXBWkbitPersec      *prometheus.Desc
@@ -66,18 +66,18 @@ type TeradiciPcoipCollector struct {
 	USBTXBWkbitPersec *prometheus.Desc
 }
 
-// NewTeradiciPcoipCollector constructs a new TeradiciPcoipCollector
-func NewTeradiciPcoipCollector() (Collector, error) {
+// newTeradiciPcoipCollector constructs a new teradiciPcoipCollector
+func newTeradiciPcoipCollector() (Collector, error) {
 	const subsystem = "teradici_pcoip"
-	return &TeradiciPcoipCollector{
+	return &teradiciPcoipCollector{
 		AudioBytesReceived: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "audio_bytes_received"),
+			prometheus.BuildFQName(Namespace, subsystem, "audio_bytes_received_total"),
 			"(AudioBytesReceived)",
 			nil,
 			nil,
 		),
 		AudioBytesSent: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "audio_bytes_sent"),
+			prometheus.BuildFQName(Namespace, subsystem, "audio_bytes_sent_total"),
 			"(AudioBytesSent)",
 			nil,
 			nil,
@@ -102,43 +102,43 @@ func NewTeradiciPcoipCollector() (Collector, error) {
 		),
 
 		BytesReceived: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "bytes_received"),
+			prometheus.BuildFQName(Namespace, subsystem, "bytes_received_total"),
 			"(BytesReceived)",
 			nil,
 			nil,
 		),
 		BytesSent: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "bytes_sent"),
+			prometheus.BuildFQName(Namespace, subsystem, "bytes_sent_total"),
 			"(BytesSent)",
 			nil,
 			nil,
 		),
 		PacketsReceived: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "packets_received"),
+			prometheus.BuildFQName(Namespace, subsystem, "packets_received_total"),
 			"(PacketsReceived)",
 			nil,
 			nil,
 		),
 		PacketsSent: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "packets_sent"),
+			prometheus.BuildFQName(Namespace, subsystem, "packets_sent_total"),
 			"(PacketsSent)",
 			nil,
 			nil,
 		),
 		RXPacketsLost: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "rx_packets_lost"),
+			prometheus.BuildFQName(Namespace, subsystem, "rx_packets_lost_total"),
 			"(RXPacketsLost)",
 			nil,
 			nil,
 		),
 		SessionDurationSeconds: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "session_duration_seconds"),
+			prometheus.BuildFQName(Namespace, subsystem, "session_duration_seconds_total"),
 			"(SessionDurationSeconds)",
 			nil,
 			nil,
 		),
 		TXPacketsLost: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "tx_packets_lost"),
+			prometheus.BuildFQName(Namespace, subsystem, "tx_packets_lost_total"),
 			"(TXPacketsLost)",
 			nil,
 			nil,
@@ -157,13 +157,13 @@ func NewTeradiciPcoipCollector() (Collector, error) {
 			nil,
 		),
 		ImagingBytesReceived: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "imaging_bytes_received"),
+			prometheus.BuildFQName(Namespace, subsystem, "imaging_bytes_received_total"),
 			"(ImagingBytesReceived)",
 			nil,
 			nil,
 		),
 		ImagingBytesSent: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "imaging_bytes_sent"),
+			prometheus.BuildFQName(Namespace, subsystem, "imaging_bytes_sent_total"),
 			"(ImagingBytesSent)",
 			nil,
 			nil,
@@ -187,7 +187,7 @@ func NewTeradiciPcoipCollector() (Collector, error) {
 			nil,
 		),
 		ImagingNegativeAcknowledgements: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "imaging_negative_acks"),
+			prometheus.BuildFQName(Namespace, subsystem, "imaging_negative_acks_total"),
 			"(ImagingNegativeAcknowledgements)",
 			nil,
 			nil,
@@ -273,13 +273,13 @@ func NewTeradiciPcoipCollector() (Collector, error) {
 		),
 
 		USBBytesReceived: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "usb_bytes_received"),
+			prometheus.BuildFQName(Namespace, subsystem, "usb_bytes_received_total"),
 			"(USBBytesReceived)",
 			nil,
 			nil,
 		),
 		USBBytesSent: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "usb_bytes_sent"),
+			prometheus.BuildFQName(Namespace, subsystem, "usb_bytes_sent_total"),
 			"(USBBytesSent)",
 			nil,
 			nil,
@@ -301,7 +301,7 @@ func NewTeradiciPcoipCollector() (Collector, error) {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *TeradiciPcoipCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *teradiciPcoipCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	if desc, err := c.collectAudio(ch); err != nil {
 		log.Error("failed collecting teradici session audio metrics:", desc, err)
 		return err
@@ -325,7 +325,7 @@ func (c *TeradiciPcoipCollector) Collect(ctx *ScrapeContext, ch chan<- prometheu
 	return nil
 }
 
-type Win32_PerfRawData_TeradiciPerf_PCoIPSessionAudioStatistics struct {
+type win32_PerfRawData_TeradiciPerf_PCoIPSessionAudioStatistics struct {
 	AudioBytesReceived       uint64
 	AudioBytesSent           uint64
 	AudioRXBWkbitPersec      uint64
@@ -333,7 +333,7 @@ type Win32_PerfRawData_TeradiciPerf_PCoIPSessionAudioStatistics struct {
 	AudioTXBWLimitkbitPersec uint64
 }
 
-type Win32_PerfRawData_TeradiciPerf_PCoIPSessionGeneralStatistics struct {
+type win32_PerfRawData_TeradiciPerf_PCoIPSessionGeneralStatistics struct {
 	BytesReceived          uint64
 	BytesSent              uint64
 	PacketsReceived        uint64
@@ -343,7 +343,7 @@ type Win32_PerfRawData_TeradiciPerf_PCoIPSessionGeneralStatistics struct {
 	TXPacketsLost          uint64
 }
 
-type Win32_PerfRawData_TeradiciPerf_PCoIPSessionImagingStatistics struct {
+type win32_PerfRawData_TeradiciPerf_PCoIPSessionImagingStatistics struct {
 	ImagingActiveMinimumQuality        uint32
 	ImagingApex2800Offload             uint32
 	ImagingBytesReceived               uint64
@@ -357,7 +357,7 @@ type Win32_PerfRawData_TeradiciPerf_PCoIPSessionImagingStatistics struct {
 	ImagingTXBWkbitPersec              uint64
 }
 
-type Win32_PerfRawData_TeradiciPerf_PCoIPSessionNetworkStatistics struct {
+type win32_PerfRawData_TeradiciPerf_PCoIPSessionNetworkStatistics struct {
 	RoundTripLatencyms        uint32
 	RXBWkbitPersec            uint64
 	RXBWPeakkbitPersec        uint32
@@ -370,15 +370,15 @@ type Win32_PerfRawData_TeradiciPerf_PCoIPSessionNetworkStatistics struct {
 	TXPacketLossPercent_Base  uint32
 }
 
-type Win32_PerfRawData_TeradiciPerf_PCoIPSessionUsbStatistics struct {
+type win32_PerfRawData_TeradiciPerf_PCoIPSessionUsbStatistics struct {
 	USBBytesReceived  uint64
 	USBBytesSent      uint64
 	USBRXBWkbitPersec uint64
 	USBTXBWkbitPersec uint64
 }
 
-func (c *TeradiciPcoipCollector) collectAudio(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
-	var dst []Win32_PerfRawData_TeradiciPerf_PCoIPSessionAudioStatistics
+func (c *teradiciPcoipCollector) collectAudio(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+	var dst []win32_PerfRawData_TeradiciPerf_PCoIPSessionAudioStatistics
 	q := queryAll(&dst)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
@@ -420,8 +420,8 @@ func (c *TeradiciPcoipCollector) collectAudio(ch chan<- prometheus.Metric) (*pro
 	return nil, nil
 }
 
-func (c *TeradiciPcoipCollector) collectGeneral(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
-	var dst []Win32_PerfRawData_TeradiciPerf_PCoIPSessionGeneralStatistics
+func (c *teradiciPcoipCollector) collectGeneral(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+	var dst []win32_PerfRawData_TeradiciPerf_PCoIPSessionGeneralStatistics
 	q := queryAll(&dst)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
@@ -475,8 +475,8 @@ func (c *TeradiciPcoipCollector) collectGeneral(ch chan<- prometheus.Metric) (*p
 	return nil, nil
 }
 
-func (c *TeradiciPcoipCollector) collectImaging(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
-	var dst []Win32_PerfRawData_TeradiciPerf_PCoIPSessionImagingStatistics
+func (c *teradiciPcoipCollector) collectImaging(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+	var dst []win32_PerfRawData_TeradiciPerf_PCoIPSessionImagingStatistics
 	q := queryAll(&dst)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
@@ -554,8 +554,8 @@ func (c *TeradiciPcoipCollector) collectImaging(ch chan<- prometheus.Metric) (*p
 	return nil, nil
 }
 
-func (c *TeradiciPcoipCollector) collectNetwork(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
-	var dst []Win32_PerfRawData_TeradiciPerf_PCoIPSessionNetworkStatistics
+func (c *teradiciPcoipCollector) collectNetwork(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+	var dst []win32_PerfRawData_TeradiciPerf_PCoIPSessionNetworkStatistics
 	q := queryAll(&dst)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
@@ -627,8 +627,8 @@ func (c *TeradiciPcoipCollector) collectNetwork(ch chan<- prometheus.Metric) (*p
 	return nil, nil
 }
 
-func (c *TeradiciPcoipCollector) collectUsb(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
-	var dst []Win32_PerfRawData_TeradiciPerf_PCoIPSessionUsbStatistics
+func (c *teradiciPcoipCollector) collectUsb(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+	var dst []win32_PerfRawData_TeradiciPerf_PCoIPSessionUsbStatistics
 	q := queryAll(&dst)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err

@@ -10,24 +10,24 @@ import (
 )
 
 func init() {
-	registerCollector("vmware_blast", NewVmwareBlastCollector)
+	registerCollector("vmware_blast", newVmwareBlastCollector)
 }
 
-// A VmwareBlastCollector is a Prometheus collector for WMI metrics:
-// Win32_PerfRawData_Counters_VMwareBlastAudioCounters
-// Win32_PerfRawData_Counters_VMwareBlastCDRCounters
-// Win32_PerfRawData_Counters_VMwareBlastClipboardCounters
-// Win32_PerfRawData_Counters_VMwareBlastHTML5MMRCounters
-// Win32_PerfRawData_Counters_VMwareBlastImagingCounters
-// Win32_PerfRawData_Counters_VMwareBlastRTAVCounters
-// Win32_PerfRawData_Counters_VMwareBlastSerialPortandScannerCounters
-// Win32_PerfRawData_Counters_VMwareBlastSessionCounters
-// Win32_PerfRawData_Counters_VMwareBlastSkypeforBusinessControlCounters
-// Win32_PerfRawData_Counters_VMwareBlastThinPrintCounters
-// Win32_PerfRawData_Counters_VMwareBlastUSBCounters
-// Win32_PerfRawData_Counters_VMwareBlastWindowsMediaMMRCounters
+// A vmwareBlastCollector is a Prometheus collector for WMI metrics:
+// win32_PerfRawData_Counters_VMwareBlastAudioCounters
+// win32_PerfRawData_Counters_VMwareBlastCDRCounters
+// win32_PerfRawData_Counters_VMwareBlastClipboardCounters
+// win32_PerfRawData_Counters_VMwareBlastHTML5MMRCounters
+// win32_PerfRawData_Counters_VMwareBlastImagingCounters
+// win32_PerfRawData_Counters_VMwareBlastRTAVCounters
+// win32_PerfRawData_Counters_VMwareBlastSerialPortandScannerCounters
+// win32_PerfRawData_Counters_VMwareBlastSessionCounters
+// win32_PerfRawData_Counters_VMwareBlastSkypeforBusinessControlCounters
+// win32_PerfRawData_Counters_VMwareBlastThinPrintCounters
+// win32_PerfRawData_Counters_VMwareBlastUSBCounters
+// win32_PerfRawData_Counters_VMwareBlastWindowsMediaMMRCounters
 
-type VmwareBlastCollector struct {
+type vmwareBlastCollector struct {
 	AudioReceivedBytes      *prometheus.Desc
 	AudioReceivedPackets    *prometheus.Desc
 	AudioTransmittedBytes   *prometheus.Desc
@@ -110,105 +110,105 @@ type VmwareBlastCollector struct {
 	WindowsMediaMMRTransmittedPackets *prometheus.Desc
 }
 
-// NewVmwareBlastCollector constructs a new VmwareBlastCollector
-func NewVmwareBlastCollector() (Collector, error) {
+// newVmwareBlastCollector constructs a new vmwareBlastCollector
+func newVmwareBlastCollector() (Collector, error) {
 	const subsystem = "vmware_blast"
-	return &VmwareBlastCollector{
+	return &vmwareBlastCollector{
 		AudioReceivedBytes: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "audio_received_bytes"),
+			prometheus.BuildFQName(Namespace, subsystem, "audio_received_bytes_total"),
 			"(AudioReceivedBytes)",
 			nil,
 			nil,
 		),
 		AudioReceivedPackets: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "audio_received_packets"),
+			prometheus.BuildFQName(Namespace, subsystem, "audio_received_packets_total"),
 			"(AudioReceivedPackets)",
 			nil,
 			nil,
 		),
 		AudioTransmittedBytes: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "audio_transmitted_bytes"),
+			prometheus.BuildFQName(Namespace, subsystem, "audio_transmitted_bytes_total"),
 			"(AudioTransmittedBytes)",
 			nil,
 			nil,
 		),
 		AudioTransmittedPackets: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "audio_transmitted_packets"),
+			prometheus.BuildFQName(Namespace, subsystem, "audio_transmitted_packets_total"),
 			"(AudioTransmittedPackets)",
 			nil,
 			nil,
 		),
 
 		CDRReceivedBytes: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "cdr_received_bytes"),
+			prometheus.BuildFQName(Namespace, subsystem, "cdr_received_bytes_total"),
 			"(CDRReceivedBytes)",
 			nil,
 			nil,
 		),
 		CDRReceivedPackets: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "cdr_received_packets"),
+			prometheus.BuildFQName(Namespace, subsystem, "cdr_received_packets_total"),
 			"(CDRReceivedPackets)",
 			nil,
 			nil,
 		),
 		CDRTransmittedBytes: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "cdr_transmitted_bytes"),
+			prometheus.BuildFQName(Namespace, subsystem, "cdr_transmitted_bytes_total"),
 			"(CDRTransmittedBytes)",
 			nil,
 			nil,
 		),
 		CDRTransmittedPackets: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "cdr_transmitted_packets"),
+			prometheus.BuildFQName(Namespace, subsystem, "cdr_transmitted_packets_total"),
 			"(CDRTransmittedPackets)",
 			nil,
 			nil,
 		),
 
 		ClipboardReceivedBytes: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "clipboard_received_bytes"),
+			prometheus.BuildFQName(Namespace, subsystem, "clipboard_received_bytes_total"),
 			"(ClipboardReceivedBytes)",
 			nil,
 			nil,
 		),
 		ClipboardReceivedPackets: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "clipboard_received_packets"),
+			prometheus.BuildFQName(Namespace, subsystem, "clipboard_received_packets_total"),
 			"(ClipboardReceivedPackets)",
 			nil,
 			nil,
 		),
 		ClipboardTransmittedBytes: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "clipboard_transmitted_bytes"),
+			prometheus.BuildFQName(Namespace, subsystem, "clipboard_transmitted_bytes_total"),
 			"(ClipboardTransmittedBytes)",
 			nil,
 			nil,
 		),
 		ClipboardTransmittedPackets: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "clipboard_transmitted_packets"),
+			prometheus.BuildFQName(Namespace, subsystem, "clipboard_transmitted_packets_total"),
 			"(ClipboardTransmittedPackets)",
 			nil,
 			nil,
 		),
 
 		HTML5MMRReceivedBytes: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "html5_mmr_received_bytes"),
+			prometheus.BuildFQName(Namespace, subsystem, "html5_mmr_received_bytes_total"),
 			"(HTML5MMRReceivedBytes)",
 			nil,
 			nil,
 		),
 		HTML5MMRReceivedPackets: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "html5_mmr_received_packets"),
+			prometheus.BuildFQName(Namespace, subsystem, "html5_mmr_received_packets_total"),
 			"(HTML5MMRReceivedPackets)",
 			nil,
 			nil,
 		),
 		HTML5MMRTransmittedBytes: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "html5_mmr_transmitted_bytes"),
+			prometheus.BuildFQName(Namespace, subsystem, "html5_mmr_transmitted_bytes_total"),
 			"(HTML5MMRTransmittedBytes)",
 			nil,
 			nil,
 		),
 		HTML5MMRTransmittedPackets: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "html5_mmr_transmitted_packets"),
+			prometheus.BuildFQName(Namespace, subsystem, "html5_mmr_transmitted_packets_total"),
 			"(HTML5MMRTransmittedPackets)",
 			nil,
 			nil,
@@ -239,130 +239,130 @@ func NewVmwareBlastCollector() (Collector, error) {
 			nil,
 		),
 		ImagingReceivedBytes: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "imaging_received_bytes"),
+			prometheus.BuildFQName(Namespace, subsystem, "imaging_received_bytes_total"),
 			"(ImagingReceivedBytes)",
 			nil,
 			nil,
 		),
 		ImagingReceivedPackets: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "imaging_received_packets"),
+			prometheus.BuildFQName(Namespace, subsystem, "imaging_received_packets_total"),
 			"(ImagingReceivedPackets)",
 			nil,
 			nil,
 		),
 		ImagingTotalDirtyFrames: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "imaging_total_dirty_frames"),
+			prometheus.BuildFQName(Namespace, subsystem, "imaging_total_dirty_frames_total"),
 			"(ImagingTotalDirtyFrames)",
 			nil,
 			nil,
 		),
 		ImagingTotalFBC: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "imaging_total_fbc"),
+			prometheus.BuildFQName(Namespace, subsystem, "imaging_fbc_total"),
 			"(ImagingTotalFBC)",
 			nil,
 			nil,
 		),
 		ImagingTotalFrames: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "imaging_total_frames"),
+			prometheus.BuildFQName(Namespace, subsystem, "imaging_frames_total"),
 			"(ImagingTotalFrames)",
 			nil,
 			nil,
 		),
 		ImagingTotalPoll: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "imaging_total_poll"),
+			prometheus.BuildFQName(Namespace, subsystem, "imaging_poll_total"),
 			"(ImagingTotalPoll)",
 			nil,
 			nil,
 		),
 		ImagingTransmittedBytes: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "imaging_transmitted_bytes"),
+			prometheus.BuildFQName(Namespace, subsystem, "imaging_transmitted_bytes_total"),
 			"(ImagingTransmittedBytes)",
 			nil,
 			nil,
 		),
 		ImagingTransmittedPackets: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "imaging_transmitted_packets"),
+			prometheus.BuildFQName(Namespace, subsystem, "imaging_transmitted_packets_total"),
 			"(ImagingTransmittedPackets)",
 			nil,
 			nil,
 		),
 
 		RTAVReceivedBytes: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "rtav_received_bytes"),
+			prometheus.BuildFQName(Namespace, subsystem, "rtav_received_bytes_total"),
 			"(RTAVReceivedBytes)",
 			nil,
 			nil,
 		),
 		RTAVReceivedPackets: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "rtav_received_packets"),
+			prometheus.BuildFQName(Namespace, subsystem, "rtav_received_packets_total"),
 			"(RTAVReceivedPackets)",
 			nil,
 			nil,
 		),
 		RTAVTransmittedBytes: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "rtav_transmitted_bytes"),
+			prometheus.BuildFQName(Namespace, subsystem, "rtav_transmitted_bytes_total"),
 			"(RTAVTransmittedBytes)",
 			nil,
 			nil,
 		),
 		RTAVTransmittedPackets: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "rtav_transmitted_packets"),
+			prometheus.BuildFQName(Namespace, subsystem, "rtav_transmitted_packets_total"),
 			"(RTAVTransmittedPackets)",
 			nil,
 			nil,
 		),
 
 		SerialPortandScannerReceivedBytes: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "serial_port_and_scanner_received_bytes"),
+			prometheus.BuildFQName(Namespace, subsystem, "serial_port_and_scanner_received_bytes_total"),
 			"(SerialPortandScannerReceivedBytes)",
 			nil,
 			nil,
 		),
 		SerialPortandScannerReceivedPackets: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "serial_port_and_scanner_received_packets"),
+			prometheus.BuildFQName(Namespace, subsystem, "serial_port_and_scanner_received_packets_total"),
 			"(SerialPortandScannerReceivedPackets)",
 			nil,
 			nil,
 		),
 		SerialPortandScannerTransmittedBytes: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "serial_port_and_scanner_transmitted_bytes"),
+			prometheus.BuildFQName(Namespace, subsystem, "serial_port_and_scanner_transmitted_bytes_total"),
 			"(SerialPortandScannerTransmittedBytes)",
 			nil,
 			nil,
 		),
 		SerialPortandScannerTransmittedPackets: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "serial_port_and_scanner_transmitted_packets"),
+			prometheus.BuildFQName(Namespace, subsystem, "serial_port_and_scanner_transmitted_packets_total"),
 			"(SerialPortandScannerTransmittedPackets)",
 			nil,
 			nil,
 		),
 
 		SessionAutomaticReconnectCount: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "session_automatic_reconnect_count"),
+			prometheus.BuildFQName(Namespace, subsystem, "session_automatic_reconnect_count_total"),
 			"(SessionAutomaticReconnectCount)",
 			nil,
 			nil,
 		),
 		SessionCumulativeReceivedBytesOverTCP: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "session_cumlative_received_bytes_over_tcp"),
+			prometheus.BuildFQName(Namespace, subsystem, "session_cumlative_received_bytes_over_tcp_total"),
 			"(SessionCumulativeReceivedBytesOverTCP)",
 			nil,
 			nil,
 		),
 		SessionCumulativeReceivedBytesOverUDP: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "session_cumlative_received_bytes_over_udp"),
+			prometheus.BuildFQName(Namespace, subsystem, "session_cumlative_received_bytes_over_udp_total"),
 			"(SessionCumulativeReceivedBytesOverUDP)",
 			nil,
 			nil,
 		),
 		SessionCumulativeTransmittedBytesOverTCP: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "session_cumlative_transmitted_bytes_over_tcp"),
+			prometheus.BuildFQName(Namespace, subsystem, "session_cumlative_transmitted_bytes_over_tcp_total"),
 			"(SessionCumulativeTransmittedBytesOverTCP)",
 			nil,
 			nil,
 		),
 		SessionCumulativeTransmittedBytesOverUDP: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "session_cumlative_transmitted_bytes_over_udp"),
+			prometheus.BuildFQName(Namespace, subsystem, "session_cumlative_transmitted_bytes_over_udp_total"),
 			"(SessionCumulativeTransmittedBytesOverUDP)",
 			nil,
 			nil,
@@ -374,25 +374,25 @@ func NewVmwareBlastCollector() (Collector, error) {
 			nil,
 		),
 		SessionInstantaneousReceivedBytesOverTCP: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "session_instantaneous_received_bytes_over_tcp"),
+			prometheus.BuildFQName(Namespace, subsystem, "session_instantaneous_received_bytes_over_tcp_total"),
 			"(SessionInstantaneousReceivedBytesOverTCP)",
 			nil,
 			nil,
 		),
 		SessionInstantaneousReceivedBytesOverUDP: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "session_instantaneous_received_bytes_over_udp"),
+			prometheus.BuildFQName(Namespace, subsystem, "session_instantaneous_received_bytes_over_udp_total"),
 			"(SessionInstantaneousReceivedBytesOverUDP)",
 			nil,
 			nil,
 		),
 		SessionInstantaneousTransmittedBytesOverTCP: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "session_instantaneous_transmitted_bytes_over_tcp"),
+			prometheus.BuildFQName(Namespace, subsystem, "session_instantaneous_transmitted_bytes_over_tcp_total"),
 			"(SessionInstantaneousTransmittedBytesOverTCP)",
 			nil,
 			nil,
 		),
 		SessionInstantaneousTransmittedBytesOverUDP: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "session_instantaneous_transmitted_bytes_over_udp"),
+			prometheus.BuildFQName(Namespace, subsystem, "session_instantaneous_transmitted_bytes_over_udp_total"),
 			"(SessionInstantaneousTransmittedBytesOverUDP)",
 			nil,
 			nil,
@@ -410,13 +410,13 @@ func NewVmwareBlastCollector() (Collector, error) {
 			nil,
 		),
 		SessionReceivedBytes: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "session_received_bytes"),
+			prometheus.BuildFQName(Namespace, subsystem, "session_received_bytes_total"),
 			"(SessionReceivedBytes)",
 			nil,
 			nil,
 		),
 		SessionReceivedPackets: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "session_received_packets"),
+			prometheus.BuildFQName(Namespace, subsystem, "session_received_packets_total"),
 			"(SessionReceivedPackets)",
 			nil,
 			nil,
@@ -428,113 +428,113 @@ func NewVmwareBlastCollector() (Collector, error) {
 			nil,
 		),
 		SessionTransmittedBytes: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "session_transmitted_bytes"),
+			prometheus.BuildFQName(Namespace, subsystem, "session_transmitted_bytes_total"),
 			"(SessionTransmittedBytes)",
 			nil,
 			nil,
 		),
 		SessionTransmittedPackets: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "session_transmitted_packets"),
+			prometheus.BuildFQName(Namespace, subsystem, "session_transmitted_packets_total"),
 			"(SessionTransmittedPackets)",
 			nil,
 			nil,
 		),
 
 		SkypeforBusinessControlReceivedBytes: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "skype_for_business_control_received_bytes"),
+			prometheus.BuildFQName(Namespace, subsystem, "skype_for_business_control_received_bytes_total"),
 			"(SkypeforBusinessControlReceivedBytes)",
 			nil,
 			nil,
 		),
 		SkypeforBusinessControlReceivedPackets: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "skype_for_business_control_received_packets"),
+			prometheus.BuildFQName(Namespace, subsystem, "skype_for_business_control_received_packets_total"),
 			"(SkypeforBusinessControlReceivedPackets)",
 			nil,
 			nil,
 		),
 		SkypeforBusinessControlTransmittedBytes: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "skype_for_business_control_transmitted_bytes"),
+			prometheus.BuildFQName(Namespace, subsystem, "skype_for_business_control_transmitted_bytes_total"),
 			"(SkypeforBusinessControlTransmittedBytes)",
 			nil,
 			nil,
 		),
 		SkypeforBusinessControlTransmittedPackets: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "skype_for_business_control_transmitted_packets"),
+			prometheus.BuildFQName(Namespace, subsystem, "skype_for_business_control_transmitted_packets_total"),
 			"(SkypeforBusinessControlTransmittedPackets)",
 			nil,
 			nil,
 		),
 
 		ThinPrintReceivedBytes: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "thinprint_received_bytes"),
+			prometheus.BuildFQName(Namespace, subsystem, "thinprint_received_bytes_total"),
 			"(ThinPrintReceivedBytes)",
 			nil,
 			nil,
 		),
 		ThinPrintReceivedPackets: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "thinprint_received_packets"),
+			prometheus.BuildFQName(Namespace, subsystem, "thinprint_received_packets_total"),
 			"(ThinPrintReceivedPackets)",
 			nil,
 			nil,
 		),
 		ThinPrintTransmittedBytes: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "thinprint_transmitted_bytes"),
+			prometheus.BuildFQName(Namespace, subsystem, "thinprint_transmitted_bytes_total"),
 			"(ThinPrintTransmittedBytes)",
 			nil,
 			nil,
 		),
 		ThinPrintTransmittedPackets: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "thinprint_transmitted_packets"),
+			prometheus.BuildFQName(Namespace, subsystem, "thinprint_transmitted_packets_total"),
 			"(ThinPrintTransmittedPackets)",
 			nil,
 			nil,
 		),
 
 		USBReceivedBytes: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "usb_received_bytes"),
+			prometheus.BuildFQName(Namespace, subsystem, "usb_received_bytes_total"),
 			"(USBReceivedBytes)",
 			nil,
 			nil,
 		),
 		USBReceivedPackets: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "usb_received_packets"),
+			prometheus.BuildFQName(Namespace, subsystem, "usb_received_packets_total"),
 			"(USBReceivedPackets)",
 			nil,
 			nil,
 		),
 		USBTransmittedBytes: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "usb_transmitted_bytes"),
+			prometheus.BuildFQName(Namespace, subsystem, "usb_transmitted_bytes_total"),
 			"(USBTransmittedBytes)",
 			nil,
 			nil,
 		),
 		USBTransmittedPackets: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "usb_transmitted_packets"),
+			prometheus.BuildFQName(Namespace, subsystem, "usb_transmitted_packets_total"),
 			"(USBTransmittedPackets)",
 			nil,
 			nil,
 		),
 
 		WindowsMediaMMRReceivedBytes: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "windows_media_mmr_received_bytes"),
+			prometheus.BuildFQName(Namespace, subsystem, "windows_media_mmr_received_bytes_total"),
 			"(WindowsMediaMMRReceivedBytes)",
 			nil,
 			nil,
 		),
 		WindowsMediaMMRReceivedPackets: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "windows_media_mmr_received_packets"),
+			prometheus.BuildFQName(Namespace, subsystem, "windows_media_mmr_received_packets_total"),
 			"(WindowsMediaMMRReceivedPackets)",
 			nil,
 			nil,
 		),
 		WindowsMediaMMRTransmittedBytes: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "windows_media_mmr_transmitted_bytes"),
+			prometheus.BuildFQName(Namespace, subsystem, "windows_media_mmr_transmitted_bytes_total"),
 			"(WindowsMediaMMRTransmittedBytes)",
 			nil,
 			nil,
 		),
 		WindowsMediaMMRTransmittedPackets: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "windows_media_mmr_transmitted_packets"),
+			prometheus.BuildFQName(Namespace, subsystem, "windows_media_mmr_transmitted_packets_total"),
 			"(WindowsMediaMMRTransmittedPackets)",
 			nil,
 			nil,
@@ -544,7 +544,7 @@ func NewVmwareBlastCollector() (Collector, error) {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *VmwareBlastCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *vmwareBlastCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	if desc, err := c.collectAudio(ch); err != nil {
 		log.Error("failed collecting vmware blast audio metrics:", desc, err)
 		return err
@@ -596,35 +596,35 @@ func (c *VmwareBlastCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.
 	return nil
 }
 
-type Win32_PerfRawData_Counters_VMwareBlastAudioCounters struct {
+type win32_PerfRawData_Counters_VMwareBlastAudioCounters struct {
 	ReceivedBytes      uint32
 	ReceivedPackets    uint32
 	TransmittedBytes   uint32
 	TransmittedPackets uint32
 }
 
-type Win32_PerfRawData_Counters_VMwareBlastCDRCounters struct {
+type win32_PerfRawData_Counters_VMwareBlastCDRCounters struct {
 	ReceivedBytes      uint32
 	ReceivedPackets    uint32
 	TransmittedBytes   uint32
 	TransmittedPackets uint32
 }
 
-type Win32_PerfRawData_Counters_VMwareBlastClipboardCounters struct {
+type win32_PerfRawData_Counters_VMwareBlastClipboardCounters struct {
 	ReceivedBytes      uint32
 	ReceivedPackets    uint32
 	TransmittedBytes   uint32
 	TransmittedPackets uint32
 }
 
-type Win32_PerfRawData_Counters_VMwareBlastHTML5MMRcounters struct {
+type win32_PerfRawData_Counters_VMwareBlastHTML5MMRcounters struct {
 	ReceivedBytes      uint32
 	ReceivedPackets    uint32
 	TransmittedBytes   uint32
 	TransmittedPackets uint32
 }
 
-type Win32_PerfRawData_Counters_VMwareBlastImagingCounters struct {
+type win32_PerfRawData_Counters_VMwareBlastImagingCounters struct {
 	Dirtyframespersecond uint32
 	FBCRate              uint32
 	Framespersecond      uint32
@@ -639,21 +639,21 @@ type Win32_PerfRawData_Counters_VMwareBlastImagingCounters struct {
 	TransmittedPackets   uint32
 }
 
-type Win32_PerfRawData_Counters_VMwareBlastRTAVCounters struct {
+type win32_PerfRawData_Counters_VMwareBlastRTAVCounters struct {
 	ReceivedBytes      uint32
 	ReceivedPackets    uint32
 	TransmittedBytes   uint32
 	TransmittedPackets uint32
 }
 
-type Win32_PerfRawData_Counters_VMwareBlastSerialPortandScannerCounters struct {
+type win32_PerfRawData_Counters_VMwareBlastSerialPortandScannerCounters struct {
 	ReceivedBytes      uint32
 	ReceivedPackets    uint32
 	TransmittedBytes   uint32
 	TransmittedPackets uint32
 }
 
-type Win32_PerfRawData_Counters_VMwareBlastSessionCounters struct {
+type win32_PerfRawData_Counters_VMwareBlastSessionCounters struct {
 	AutomaticReconnectCount              uint32
 	CumulativeReceivedBytesoverTCP       uint32
 	CumulativeReceivedBytesoverUDP       uint32
@@ -673,36 +673,36 @@ type Win32_PerfRawData_Counters_VMwareBlastSessionCounters struct {
 	TransmittedPackets                   uint32
 }
 
-type Win32_PerfRawData_Counters_VMwareBlastSkypeforBusinessControlCounters struct {
+type win32_PerfRawData_Counters_VMwareBlastSkypeforBusinessControlCounters struct {
 	ReceivedBytes      uint32
 	ReceivedPackets    uint32
 	TransmittedBytes   uint32
 	TransmittedPackets uint32
 }
 
-type Win32_PerfRawData_Counters_VMwareBlastThinPrintCounters struct {
+type win32_PerfRawData_Counters_VMwareBlastThinPrintCounters struct {
 	ReceivedBytes      uint32
 	ReceivedPackets    uint32
 	TransmittedBytes   uint32
 	TransmittedPackets uint32
 }
 
-type Win32_PerfRawData_Counters_VMwareBlastUSBCounters struct {
+type win32_PerfRawData_Counters_VMwareBlastUSBCounters struct {
 	ReceivedBytes      uint32
 	ReceivedPackets    uint32
 	TransmittedBytes   uint32
 	TransmittedPackets uint32
 }
 
-type Win32_PerfRawData_Counters_VMwareBlastWindowsMediaMMRCounters struct {
+type win32_PerfRawData_Counters_VMwareBlastWindowsMediaMMRCounters struct {
 	ReceivedBytes      uint32
 	ReceivedPackets    uint32
 	TransmittedBytes   uint32
 	TransmittedPackets uint32
 }
 
-func (c *VmwareBlastCollector) collectAudio(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
-	var dst []Win32_PerfRawData_Counters_VMwareBlastAudioCounters
+func (c *vmwareBlastCollector) collectAudio(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+	var dst []win32_PerfRawData_Counters_VMwareBlastAudioCounters
 	q := queryAll(&dst)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
@@ -740,8 +740,8 @@ func (c *VmwareBlastCollector) collectAudio(ch chan<- prometheus.Metric) (*prome
 	return nil, nil
 }
 
-func (c *VmwareBlastCollector) collectCdr(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
-	var dst []Win32_PerfRawData_Counters_VMwareBlastCDRCounters
+func (c *vmwareBlastCollector) collectCdr(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+	var dst []win32_PerfRawData_Counters_VMwareBlastCDRCounters
 	q := queryAll(&dst)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
@@ -779,8 +779,8 @@ func (c *VmwareBlastCollector) collectCdr(ch chan<- prometheus.Metric) (*prometh
 	return nil, nil
 }
 
-func (c *VmwareBlastCollector) collectClipboard(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
-	var dst []Win32_PerfRawData_Counters_VMwareBlastClipboardCounters
+func (c *vmwareBlastCollector) collectClipboard(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+	var dst []win32_PerfRawData_Counters_VMwareBlastClipboardCounters
 	q := queryAll(&dst)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
@@ -818,8 +818,8 @@ func (c *VmwareBlastCollector) collectClipboard(ch chan<- prometheus.Metric) (*p
 	return nil, nil
 }
 
-func (c *VmwareBlastCollector) collectHtml5Mmr(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
-	var dst []Win32_PerfRawData_Counters_VMwareBlastHTML5MMRcounters
+func (c *vmwareBlastCollector) collectHtml5Mmr(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+	var dst []win32_PerfRawData_Counters_VMwareBlastHTML5MMRcounters
 	q := queryAll(&dst)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
@@ -857,8 +857,8 @@ func (c *VmwareBlastCollector) collectHtml5Mmr(ch chan<- prometheus.Metric) (*pr
 	return nil, nil
 }
 
-func (c *VmwareBlastCollector) collectImaging(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
-	var dst []Win32_PerfRawData_Counters_VMwareBlastImagingCounters
+func (c *vmwareBlastCollector) collectImaging(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+	var dst []win32_PerfRawData_Counters_VMwareBlastImagingCounters
 	q := queryAll(&dst)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
@@ -944,8 +944,8 @@ func (c *VmwareBlastCollector) collectImaging(ch chan<- prometheus.Metric) (*pro
 	return nil, nil
 }
 
-func (c *VmwareBlastCollector) collectRtav(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
-	var dst []Win32_PerfRawData_Counters_VMwareBlastRTAVCounters
+func (c *vmwareBlastCollector) collectRtav(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+	var dst []win32_PerfRawData_Counters_VMwareBlastRTAVCounters
 	q := queryAll(&dst)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
@@ -983,8 +983,8 @@ func (c *VmwareBlastCollector) collectRtav(ch chan<- prometheus.Metric) (*promet
 	return nil, nil
 }
 
-func (c *VmwareBlastCollector) collectSerialPortandScanner(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
-	var dst []Win32_PerfRawData_Counters_VMwareBlastSerialPortandScannerCounters
+func (c *vmwareBlastCollector) collectSerialPortandScanner(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+	var dst []win32_PerfRawData_Counters_VMwareBlastSerialPortandScannerCounters
 	q := queryAll(&dst)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
@@ -1022,8 +1022,8 @@ func (c *VmwareBlastCollector) collectSerialPortandScanner(ch chan<- prometheus.
 	return nil, nil
 }
 
-func (c *VmwareBlastCollector) collectSession(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
-	var dst []Win32_PerfRawData_Counters_VMwareBlastSessionCounters
+func (c *vmwareBlastCollector) collectSession(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+	var dst []win32_PerfRawData_Counters_VMwareBlastSessionCounters
 	q := queryAll(&dst)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
@@ -1139,8 +1139,8 @@ func (c *VmwareBlastCollector) collectSession(ch chan<- prometheus.Metric) (*pro
 	return nil, nil
 }
 
-func (c *VmwareBlastCollector) collectSkypeforBusinessControl(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
-	var dst []Win32_PerfRawData_Counters_VMwareBlastSkypeforBusinessControlCounters
+func (c *vmwareBlastCollector) collectSkypeforBusinessControl(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+	var dst []win32_PerfRawData_Counters_VMwareBlastSkypeforBusinessControlCounters
 	q := queryAll(&dst)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
@@ -1178,8 +1178,8 @@ func (c *VmwareBlastCollector) collectSkypeforBusinessControl(ch chan<- promethe
 	return nil, nil
 }
 
-func (c *VmwareBlastCollector) collectThinPrint(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
-	var dst []Win32_PerfRawData_Counters_VMwareBlastThinPrintCounters
+func (c *vmwareBlastCollector) collectThinPrint(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+	var dst []win32_PerfRawData_Counters_VMwareBlastThinPrintCounters
 	q := queryAll(&dst)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
@@ -1217,8 +1217,8 @@ func (c *VmwareBlastCollector) collectThinPrint(ch chan<- prometheus.Metric) (*p
 	return nil, nil
 }
 
-func (c *VmwareBlastCollector) collectUsb(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
-	var dst []Win32_PerfRawData_Counters_VMwareBlastUSBCounters
+func (c *vmwareBlastCollector) collectUsb(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+	var dst []win32_PerfRawData_Counters_VMwareBlastUSBCounters
 	q := queryAll(&dst)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
@@ -1256,8 +1256,8 @@ func (c *VmwareBlastCollector) collectUsb(ch chan<- prometheus.Metric) (*prometh
 	return nil, nil
 }
 
-func (c *VmwareBlastCollector) collectWindowsMediaMmr(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
-	var dst []Win32_PerfRawData_Counters_VMwareBlastWindowsMediaMMRCounters
+func (c *vmwareBlastCollector) collectWindowsMediaMmr(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+	var dst []win32_PerfRawData_Counters_VMwareBlastWindowsMediaMMRCounters
 	q := queryAll(&dst)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
