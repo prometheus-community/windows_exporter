@@ -29,7 +29,6 @@ groups:
 - name: Windows Disk Alerts
   rules:
 
-  # Sends an alert when disk space usage is above 95%
   - alert: Drive_Status
     expr: windows_disk_drive_status{status="OK"} != 1
     for: 10m
