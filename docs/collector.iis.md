@@ -40,7 +40,7 @@ Name | Description | Type | Labels
 `windows_iis_received_bytes_total` | The total bytes of data that have been received by the web service since the service started | counter | `site`
 `windows_iis_sent_bytes_total` | The number of data bytes that have been sent by the web service since the service started | counter | `site`
 `windows_iis_anonymous_users_total` | The number of users who have established an anonymous request since the web service started | counter | `site`
-`windows_iis_blocked_async_io_requests_total` | _Not yet documented_ | counter | `site`
+`windows_iis_blocked_async_io_requests_total` | The total number of blocked asynchronous I/O requests since the start of the IIS service | counter | `site`
 `windows_iis_cgi_requests_total` | The number of all CGI requests that have been made since the web service started | counter | `site`
 `windows_iis_connection_attempts_all_instances_total` | The number of connections to the web service that have been attempted since the service started | counter | `site`
 `windows_iis_requests_total` | The number of requests that have been made since the web service was started | counter | `site`, `method`
@@ -51,7 +51,7 @@ Name | Description | Type | Labels
 `windows_iis_logon_attempts_total` | The number of attempts to log on to the web service that have occurred since the service started | counter | `site`
 `windows_iis_non_anonymous_users_total` | The number of users who have made nonanonymous requests to the web service since the service started | counter | `site`
 `windows_iis_not_found_errors_total` | The number of requests that have been made since the service started that were not satisfied by the server because the requested document was not found. Usually reported as HTTP error 404 | counter | `site`
-`windows_iis_rejected_async_io_requests_total` | _Not yet documented_ | counter | `site`
+`windows_iis_rejected_async_io_requests_total` |The total number of rejected asynchronous I/O requests since the start of the IIS service. | counter | `site`
 `windows_iis_current_application_pool_state` | The current status of the application pool (1 - Uninitialized, 2 - Initialized, 3 - Running, 4 - Disabling, 5 - Disabled, 6 - Shutdown Pending, 7 - Delete Pending) | counter | `app`, `state`
 `windows_iis_current_application_pool_start_time` | The unix timestamp for the application pool start time | counter | `app`
 `windows_iis_current_worker_processes` | The current number of worker processes that are running in the application pool | counter | `app`
@@ -86,7 +86,7 @@ Name | Description | Type | Labels
 `windows_iis_worker_metadata_cache_hits_total` | Total number of successful lookups in the user-mode metadata cache (since service startup) | counter | `app`, `pid`
 `windows_iis_worker_metadata_cache_items_cached_total` | Total number of metadata information blocks added to the user-mode cache (since service startup) | counter | `app`, `pid`
 `windows_iis_worker_metadata_cache_items_flushed_total` | Total number of metadata information blocks removed from the user-mode cache (since service startup) | counter | `app`, `pid`
-`windows_iis_worker_output_cache_active_flushed_items` | _Not yet documented_ | counter | `app`, `pid`
+`windows_iis_worker_output_cache_active_flushed_items` |The total number of active and flushed items in the output cache of the IIS worker process. Active items are those that are currently being used to serve client requests, while flushed items are those that have been removed from the cache but are still waiting to be flushed to disk. | counter | `app`, `pid`
 `windows_iis_worker_output_cache_items` | Number of items current present in output cache | counter | `app`, `pid`
 `windows_iis_worker_output_cache_memory_bytes` | Current number of bytes used by output cache | counter | `app`, `pid`
 `windows_iis_worker_output_queries_total` | Total number of output cache queries (hits + misses) | counter | `app`, `pid`
@@ -98,10 +98,10 @@ Name | Description | Type | Labels
 `windows_iis_worker_requests_total` | Total number of HTTP requests served by the worker process | counter | `app`, `pid`
 `windows_iis_worker_current_requests` | Current number of requests being processed by the worker process | counter | `app`, `pid`
 `windows_iis_worker_request_errors_total` | Total number of requests that returned an error | counter | `app`, `pid`, `status_code`
-`windows_iis_worker_current_websocket_requests` | _Not yet documented_ | counter | `app`, `pid`
-`windows_iis_worker_websocket_connection_attempts_total` | _Not yet documented_ | counter | `app`, `pid`
-`windows_iis_worker_websocket_connection_accepted_total` | _Not yet documented_ | counter | `app`, `pid`
-`windows_iis_worker_websocket_connection_rejected_total` | _Not yet documented_ | counter | `app`, `pid`
+`windows_iis_worker_current_websocket_requests` | the current number of WebSocket connections being processed by the IIS worker process. | counter | `app`, `pid`
+`windows_iis_worker_websocket_connection_attempts_total` | the total number of attempted WebSocket connections since the start of the IIS worker process | counter | `app`, `pid`
+`windows_iis_worker_websocket_connection_accepted_total` | the total number of WebSocket connections that have been successfully established since the start of the IIS worker process | counter | `app`, `pid`
+`windows_iis_worker_websocket_connection_rejected_total` | the total number of WebSocket connections that have been rejected by the server since the start of the IIS worker process. Connections can be rejected for various reasons, such as capacity limitations, authentication failures, or configuration issues | counter | `app`, `pid`
 `windows_iis_server_cache_active_flushed_entries` | Number of file handles cached that will be closed when all current transfers complete | counter | None
 `windows_iis_server_file_cache_memory_bytes` | Current number of bytes used by file cache | counter | None
 `windows_iis_server_file_cache_max_memory_bytes` | Maximum number of bytes used by file cache | counter | None
@@ -123,7 +123,7 @@ Name | Description | Type | Labels
 `windows_iis_server_metadata_cache_hits_total` | Total number of successful lookups in the metadata cache (since service startup) | counter | None
 `windows_iis_server_metadata_cache_items_cached_total` | Total number of metadata information blocks added to the cache (since service startup) | counter | None
 `windows_iis_server_metadata_cache_items_flushed_total` | Total number of metadata information blocks removed from the cache (since service startup) | counter | None
-`windows_iis_server_output_cache_active_flushed_items` | _Not yet documented_ | counter | None
+`windows_iis_server_output_cache_active_flushed_items` | The total number of active and flushed items in the output cache of the IIS server | counter | None
 `windows_iis_server_output_cache_items` | Number of items current present in output cache | counter | None
 `windows_iis_server_output_cache_memory_bytes` | Current number of bytes used by output cache | counter | None
 `windows_iis_server_output_cache_queries_total` | Total output cache queries (hits + misses) | counter | None
