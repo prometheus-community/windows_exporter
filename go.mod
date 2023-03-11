@@ -4,7 +4,7 @@ go 1.13
 
 require (
 	github.com/Microsoft/hcsshim v0.9.7
-	github.com/StackExchange/wmi v0.0.0-20180725035823-b12b22c5341f
+	github.com/StackExchange/wmi v1.2.1
 	github.com/dimchansky/utfbom v1.1.1
 	github.com/go-kit/log v0.2.1
 	github.com/go-ole/go-ole v1.2.6
