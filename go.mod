@@ -10,7 +10,7 @@ require (
 	github.com/leoluk/perflib_exporter v0.2.0
 	github.com/prometheus/client_golang v1.14.0
 	github.com/prometheus/client_model v0.3.0
-	github.com/prometheus/common v0.39.0
+	github.com/prometheus/common v0.42.0
 	github.com/prometheus/exporter-toolkit v0.8.2
 	github.com/sirupsen/logrus v1.9.0
 	github.com/yusufpapurcu/wmi v1.2.2
