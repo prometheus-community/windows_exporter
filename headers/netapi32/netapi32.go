@@ -8,7 +8,7 @@ import (
 )
 
 // WKSTAInfo102 is a wrapper of WKSTA_Info_102
-//https://docs.microsoft.com/en-us/windows/win32/api/lmwksta/ns-lmwksta-wksta_info_102
+// https://docs.microsoft.com/en-us/windows/win32/api/lmwksta/ns-lmwksta-wksta_info_102
 type wKSTAInfo102 struct {
 	wki102_platform_id     uint32
 	wki102_computername    *uint16
