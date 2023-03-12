@@ -1,8 +1,8 @@
 package collector
 
 import (
-	"github.com/StackExchange/wmi"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/yusufpapurcu/wmi"
 )
 
 func init() {
@@ -114,7 +114,6 @@ func newMSCluster_ResourceGroupCollector() (Collector, error) {
 
 // MSCluster_ResourceGroup docs:
 // - https://docs.microsoft.com/en-us/previous-versions/windows/desktop/cluswmi/mscluster-resourcegroup
-//
 type MSCluster_ResourceGroup struct {
 	Name string
 

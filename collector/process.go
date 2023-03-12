@@ -9,9 +9,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/StackExchange/wmi"
 	"github.com/prometheus-community/windows_exporter/log"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/yusufpapurcu/wmi"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 

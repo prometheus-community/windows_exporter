@@ -20,9 +20,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/StackExchange/wmi"
 	"github.com/prometheus-community/windows_exporter/collector"
 	"github.com/prometheus-community/windows_exporter/config"
+	"github.com/yusufpapurcu/wmi"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"

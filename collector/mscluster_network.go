@@ -1,8 +1,8 @@
 package collector
 
 import (
-	"github.com/StackExchange/wmi"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/yusufpapurcu/wmi"
 )
 
 func init() {
@@ -56,7 +56,6 @@ func newMSCluster_NetworkCollector() (Collector, error) {
 
 // MSCluster_Network docs:
 // - https://docs.microsoft.com/en-us/previous-versions/windows/desktop/cluswmi/mscluster-network
-//
 type MSCluster_Network struct {
 	Name string
 
