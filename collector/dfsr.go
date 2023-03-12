@@ -4,9 +4,9 @@
 package collector
 
 import (
+	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/log"
 	"github.com/prometheus/client_golang/prometheus"
-	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 var dfsrEnabledCollectors = kingpin.Flag("collectors.dfsr.sources-enabled", "Comma-seperated list of DFSR Perflib sources to use.").Default("connection,folder,volume").String()

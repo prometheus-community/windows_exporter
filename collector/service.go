@@ -8,12 +8,12 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/log"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
 	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/svc/mgr"
-	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 func init() {

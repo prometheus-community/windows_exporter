@@ -5,9 +5,9 @@ package collector
 
 import (
 	"fmt"
+	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/log"
 	"github.com/prometheus/client_golang/prometheus"
-	"gopkg.in/alecthomas/kingpin.v2"
 	"regexp"
 )
 

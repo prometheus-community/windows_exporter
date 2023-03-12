@@ -26,8 +26,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/alecthomas/kingpin/v2"
 	"github.com/sirupsen/logrus"
-	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 // setSyslogFormatter is nil if the target architecture does not support syslog.
