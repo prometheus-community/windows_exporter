@@ -17,8 +17,8 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/log"
-	"gopkg.in/alecthomas/kingpin.v2"
 	"gopkg.in/yaml.v3"
 )
 

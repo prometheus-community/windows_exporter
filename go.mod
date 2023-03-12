@@ -4,6 +4,7 @@ go 1.13
 
 require (
 	github.com/Microsoft/hcsshim v0.9.7
+	github.com/alecthomas/kingpin/v2 v2.3.2
 	github.com/dimchansky/utfbom v1.1.1
 	github.com/go-kit/log v0.2.1
 	github.com/go-ole/go-ole v1.2.6
@@ -15,6 +16,5 @@ require (
 	github.com/sirupsen/logrus v1.9.0
 	github.com/yusufpapurcu/wmi v1.2.2
 	golang.org/x/sys v0.6.0
-	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	gopkg.in/yaml.v3 v3.0.1
 )

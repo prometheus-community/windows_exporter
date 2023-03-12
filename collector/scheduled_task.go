@@ -9,11 +9,11 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/alecthomas/kingpin/v2"
 	ole "github.com/go-ole/go-ole"
 	"github.com/go-ole/go-ole/oleutil"
 	"github.com/prometheus-community/windows_exporter/log"
 	"github.com/prometheus/client_golang/prometheus"
-	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 var (
