@@ -82,7 +82,7 @@ windows_exporter accepts flags to configure certain behaviours. The ones configu
 
 Flag     | Description | Default value
 ---------|-------------|--------------------
-`--telemetry.addr` | host:port for exporter. | `:9182`
+`--web.listen-address` | host:port for exporter. | `:9182`
 `--telemetry.path` | URL path for surfacing collected metrics. | `/metrics`
 `--telemetry.max-requests` | Maximum number of concurrent requests. 0 to disable. | `5`
 `--collectors.enabled` | Comma-separated list of collectors to use. Use `[defaults]` as a placeholder which gets expanded containing all the collectors enabled by default." | `[defaults]`
