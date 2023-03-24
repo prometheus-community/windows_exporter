@@ -269,6 +269,10 @@ func main() {
 			"telemetry.path",
 			"URL path for surfacing collected metrics.",
 		).Default("/metrics").String()
+		disableExporterMetrics = kingpin.Flag(
+			"web.disable-exporter-metrics",
+			"Exclude metrics about the exporter itself (promhttp_*, process_*, go_*).",
+		).Bool()
 		maxRequests = kingpin.Flag(
 			"telemetry.max-requests",
 			"Maximum number of concurrent requests. 0 to disable.",
@@ -347,7 +351,8 @@ func main() {
 	log.Infof("Enabled collectors: %v", strings.Join(keys(collectors), ", "))
 
 	h := &metricsHandler{
-		timeoutMargin: *timeoutMargin,
+		timeoutMargin:          *timeoutMargin,
+		includeExporterMetrics: *disableExporterMetrics,
 		collectorFactory: func(timeout time.Duration, requestedCollectors []string) (error, *windowsCollector) {
 			filteredCollectors := make(map[string]collector.Collector)
 			// scrape all enabled collectors if no collector is requested
@@ -450,8 +455,9 @@ func withConcurrencyLimit(n int, next http.HandlerFunc) http.HandlerFunc {
 }
 
 type metricsHandler struct {
-	timeoutMargin    float64
-	collectorFactory func(timeout time.Duration, requestedCollectors []string) (error, *windowsCollector)
+	timeoutMargin          float64
+	includeExporterMetrics bool
+	collectorFactory       func(timeout time.Duration, requestedCollectors []string) (error, *windowsCollector)
 }
 
 func (mh *metricsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -479,11 +485,13 @@ func (mh *metricsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	reg.MustRegister(wc)
-	reg.MustRegister(
-		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
-		collectors.NewGoCollector(),
-		version.NewCollector("windows_exporter"),
-	)
+	if !mh.includeExporterMetrics {
+		reg.MustRegister(
+			collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
+			collectors.NewGoCollector(),
+			version.NewCollector("windows_exporter"),
+		)
+	}
 
 	h := promhttp.HandlerFor(reg, promhttp.HandlerOpts{})
 	h.ServeHTTP(w, r)
