@@ -33,6 +33,7 @@ type NetworkCollector struct {
 	BytesReceivedTotal       *prometheus.Desc
 	BytesSentTotal           *prometheus.Desc
 	BytesTotal               *prometheus.Desc
+	OutputQueueLength        *prometheus.Desc
 	PacketsOutboundDiscarded *prometheus.Desc
 	PacketsOutboundErrors    *prometheus.Desc
 	PacketsTotal             *prometheus.Desc
@@ -67,6 +68,12 @@ func NewNetworkCollector() (Collector, error) {
 		BytesTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "bytes_total"),
 			"(Network.BytesTotalPerSec)",
+			[]string{"nic"},
+			nil,
+		),
+		OutputQueueLength: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "output_queue_length_packets"),
+			"(Network.OutputQueueLength)",
 			[]string{"nic"},
 			nil,
 		),
@@ -153,6 +160,7 @@ type networkInterface struct {
 	BytesSentPerSec          float64 `perflib:"Bytes Sent/sec"`
 	BytesTotalPerSec         float64 `perflib:"Bytes Total/sec"`
 	Name                     string
+	OutputQueueLength        float64 `perflib:"Output Queue Length"`
 	PacketsOutboundDiscarded float64 `perflib:"Packets Outbound Discarded"`
 	PacketsOutboundErrors    float64 `perflib:"Packets Outbound Errors"`
 	PacketsPerSec            float64 `perflib:"Packets/sec"`
@@ -199,6 +207,12 @@ func (c *NetworkCollector) collect(ctx *ScrapeContext, ch chan<- prometheus.Metr
 			c.BytesTotal,
 			prometheus.CounterValue,
 			nic.BytesTotalPerSec,
+			name,
+		)
+		ch <- prometheus.MustNewConstMetric(
+			c.OutputQueueLength,
+			prometheus.GaugeValue,
+			nic.OutputQueueLength,
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
