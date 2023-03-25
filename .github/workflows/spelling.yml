@@ -10,7 +10,7 @@ on:
       - master
 
 env:
-  PROMU_VER: 'v0.13.0'
+  PROMU_VER: 'v0.14.0'
 
 jobs:
   codespell:
