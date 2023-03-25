@@ -390,16 +390,32 @@ func main() {
 			http.Error(w, fmt.Sprintf("error encoding JSON: %s", err), http.StatusInternalServerError)
 		}
 	})
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write([]byte(`<html>
-<head><title>windows_exporter</title></head>
-<body>
-<h1>windows_exporter</h1>
-<p><a href="` + *metricsPath + `">Metrics</a></p>
-<p><i>` + version.Info() + `</i></p>
-</body>
-</html>`))
-	})
+	if *metricsPath != "/" && *metricsPath != "" {
+		landingConfig := web.LandingConfig{
+			Name:        "Windows Exporter",
+			Description: "Prometheus Exporter for Windows servers",
+			Version:     version.Info(),
+			Links: []web.LandingLinks{
+				{
+					Address: *metricsPath,
+					Text:    "Metrics",
+				},
+				{
+					Address: "/health",
+					Text:    "Health Check",
+				},
+				{
+					Address: "/version",
+					Text:    "Version Info",
+				},
+			},
+		}
+		landingPage, err := web.NewLandingPage(landingConfig)
+		if err != nil {
+			log.Fatalf("failed to generate landing page: %v", err)
+		}
+		http.Handle("/", landingPage)
+	}
 
 	log.Infoln("Starting windows_exporter", version.Info())
 	log.Infoln("Build context", version.BuildContext())
