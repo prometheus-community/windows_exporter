@@ -59,7 +59,7 @@ jobs:
           }
 
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: windows_exporter_binaries
           path: output\windows_exporter-*.exe
@@ -82,7 +82,7 @@ jobs:
 
       - name: Login to GitHub container registry
         if: ${{ github.event_name != 'pull_request' }}
-        uses: docker/login-action@v1
+        uses: docker/login-action@v2
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
