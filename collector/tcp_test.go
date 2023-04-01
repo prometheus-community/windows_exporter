@@ -5,5 +5,5 @@ import (
 )
 
 func BenchmarkTCPCollector(b *testing.B) {
-	benchmarkCollector(b, "tcp", NewTCPCollector)
+	benchmarkCollector(b, "tcp", newTCPCollector)
 }

@@ -10,10 +10,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-func init() {
-	registerCollector("cs", NewCSCollector)
-}
-
 // A CSCollector is a Prometheus collector for WMI metrics
 type CSCollector struct {
 	PhysicalMemoryBytes *prometheus.Desc
@@ -21,8 +17,8 @@ type CSCollector struct {
 	Hostname            *prometheus.Desc
 }
 
-// NewCSCollector ...
-func NewCSCollector() (Collector, error) {
+// newCSCollector ...
+func newCSCollector() (Collector, error) {
 	const subsystem = "cs"
 
 	return &CSCollector{

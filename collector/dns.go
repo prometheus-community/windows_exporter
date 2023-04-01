@@ -11,10 +11,6 @@ import (
 	"github.com/yusufpapurcu/wmi"
 )
 
-func init() {
-	registerCollector("dns", NewDNSCollector)
-}
-
 // A DNSCollector is a Prometheus collector for WMI Win32_PerfRawData_DNS_DNS metrics
 type DNSCollector struct {
 	ZoneTransferRequestsReceived  *prometheus.Desc
@@ -41,8 +37,8 @@ type DNSCollector struct {
 	UnmatchedResponsesReceived    *prometheus.Desc
 }
 
-// NewDNSCollector ...
-func NewDNSCollector() (Collector, error) {
+// newDNSCollector ...
+func newDNSCollector() (Collector, error) {
 	const subsystem = "dns"
 	return &DNSCollector{
 		ZoneTransferRequestsReceived: prometheus.NewDesc(

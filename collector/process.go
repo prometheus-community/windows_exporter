@@ -15,10 +15,6 @@ import (
 	"github.com/yusufpapurcu/wmi"
 )
 
-func init() {
-	registerCollector("process", newProcessCollector, "Process")
-}
-
 var (
 	processWhitelist = kingpin.Flag(
 		"collector.process.whitelist",

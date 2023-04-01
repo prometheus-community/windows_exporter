@@ -5,5 +5,5 @@ import (
 )
 
 func BenchmarkDFSRCollector(b *testing.B) {
-	benchmarkCollector(b, "dfsr", NewDFSRCollector)
+	benchmarkCollector(b, "dfsr", newDFSRCollector)
 }

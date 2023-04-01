@@ -5,5 +5,5 @@ import (
 )
 
 func BenchmarkIISCollector(b *testing.B) {
-	benchmarkCollector(b, "iis", NewIISCollector)
+	benchmarkCollector(b, "iis", newIISCollector)
 }

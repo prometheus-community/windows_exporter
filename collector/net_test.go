@@ -23,5 +23,5 @@ func BenchmarkNetCollector(b *testing.B) {
 	// Whitelist is not set in testing context (kingpin flags not parsed), causing the collector to skip all interfaces.
 	localNicWhitelist := ".+"
 	nicWhitelist = &localNicWhitelist
-	benchmarkCollector(b, "net", NewNetworkCollector)
+	benchmarkCollector(b, "net", newNetworkCollector)
 }

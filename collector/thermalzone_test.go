@@ -5,5 +5,5 @@ import (
 )
 
 func BenchmarkThermalZoneCollector(b *testing.B) {
-	benchmarkCollector(b, "thermalzone", NewThermalZoneCollector)
+	benchmarkCollector(b, "thermalzone", newThermalZoneCollector)
 }

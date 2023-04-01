@@ -5,10 +5,6 @@ import (
 	"github.com/yusufpapurcu/wmi"
 )
 
-func init() {
-	registerCollector("mscluster_cluster", newMSCluster_ClusterCollector)
-}
-
 // A MSCluster_ClusterCollector is a Prometheus collector for WMI MSCluster_Cluster metrics
 type MSCluster_ClusterCollector struct {
 	AddEvictDelay                           *prometheus.Desc

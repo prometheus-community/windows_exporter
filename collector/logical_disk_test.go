@@ -9,5 +9,5 @@ func BenchmarkLogicalDiskCollector(b *testing.B) {
 	localVolumeWhitelist := ".+"
 	volumeWhitelist = &localVolumeWhitelist
 
-	benchmarkCollector(b, "logical_disk", NewLogicalDiskCollector)
+	benchmarkCollector(b, "logical_disk", newLogicalDiskCollector)
 }

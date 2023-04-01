@@ -13,20 +13,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-func init() {
-	registerCollector("exchange", newExchangeCollector,
-		"MSExchange ADAccess Processes",
-		"MSExchangeTransport Queues",
-		"MSExchange HttpProxy",
-		"MSExchange ActiveSync",
-		"MSExchange Availability Service",
-		"MSExchange OWA",
-		"MSExchangeAutodiscover",
-		"MSExchange WorkloadManagement Workloads",
-		"MSExchange RpcClientAccess",
-	)
-}
-
 type exchangeCollector struct {
 	LDAPReadTime                            *prometheus.Desc
 	LDAPSearchTime                          *prometheus.Desc

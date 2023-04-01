@@ -9,10 +9,6 @@ import (
 	"github.com/yusufpapurcu/wmi"
 )
 
-func init() {
-	registerCollector("netframework_clrmemory", NewNETFramework_NETCLRMemoryCollector)
-}
-
 // A NETFramework_NETCLRMemoryCollector is a Prometheus collector for WMI Win32_PerfRawData_NETFramework_NETCLRMemory metrics
 type NETFramework_NETCLRMemoryCollector struct {
 	AllocatedBytes                     *prometheus.Desc
@@ -32,8 +28,8 @@ type NETFramework_NETCLRMemoryCollector struct {
 	PromotedMemoryfromGen1             *prometheus.Desc
 }
 
-// NewNETFramework_NETCLRMemoryCollector ...
-func NewNETFramework_NETCLRMemoryCollector() (Collector, error) {
+// newNETFramework_NETCLRMemoryCollector ...
+func newNETFramework_NETCLRMemoryCollector() (Collector, error) {
 	const subsystem = "netframework_clrmemory"
 	return &NETFramework_NETCLRMemoryCollector{
 		AllocatedBytes: prometheus.NewDesc(

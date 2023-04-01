@@ -5,5 +5,5 @@ import (
 )
 
 func BenchmarkSmtpCollector(b *testing.B) {
-	benchmarkCollector(b, "smtp", NewSMTPCollector)
+	benchmarkCollector(b, "smtp", newSMTPCollector)
 }

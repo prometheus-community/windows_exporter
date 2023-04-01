@@ -6,10 +6,6 @@ import (
 	"github.com/yusufpapurcu/wmi"
 )
 
-func init() {
-	registerCollector("fsrmquota", newFSRMQuotaCollector)
-}
-
 type FSRMQuotaCollector struct {
 	QuotasCount *prometheus.Desc
 	Path        *prometheus.Desc

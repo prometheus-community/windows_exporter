@@ -5,5 +5,5 @@ import (
 )
 
 func BenchmarkOSCollector(b *testing.B) {
-	benchmarkCollector(b, "os", NewOSCollector)
+	benchmarkCollector(b, "os", newOSCollector)
 }

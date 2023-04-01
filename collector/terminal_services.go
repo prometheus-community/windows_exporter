@@ -14,10 +14,6 @@ import (
 
 const ConnectionBrokerFeatureID uint32 = 133
 
-func init() {
-	registerCollector("terminal_services", NewTerminalServicesCollector, "Terminal Services", "Terminal Services Session", "Remote Desktop Connection Broker Counterset")
-}
-
 var (
 	connectionBrokerEnabled = isConnectionBrokerServer()
 )
@@ -65,8 +61,8 @@ type TerminalServicesCollector struct {
 	WorkingSetPeak              *prometheus.Desc
 }
 
-// NewTerminalServicesCollector ...
-func NewTerminalServicesCollector() (Collector, error) {
+// newTerminalServicesCollector ...
+func newTerminalServicesCollector() (Collector, error) {
 	const subsystem = "terminal_services"
 	return &TerminalServicesCollector{
 		LocalSessionCount: prometheus.NewDesc(

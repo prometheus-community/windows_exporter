@@ -5,10 +5,6 @@ import (
 	"github.com/yusufpapurcu/wmi"
 )
 
-func init() {
-	registerCollector("mscluster_node", newMSCluster_NodeCollector)
-}
-
 // A MSCluster_NodeCollector is a Prometheus collector for WMI MSCluster_Node metrics
 type MSCluster_NodeCollector struct {
 	BuildNumber           *prometheus.Desc

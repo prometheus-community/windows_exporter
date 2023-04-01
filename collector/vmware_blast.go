@@ -9,10 +9,6 @@ import (
 	"github.com/yusufpapurcu/wmi"
 )
 
-func init() {
-	registerCollector("vmware_blast", newVmwareBlastCollector)
-}
-
 // A vmwareBlastCollector is a Prometheus collector for WMI metrics:
 // win32_PerfRawData_Counters_VMwareBlastAudioCounters
 // win32_PerfRawData_Counters_VMwareBlastCDRCounters
