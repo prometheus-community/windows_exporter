@@ -4,6 +4,7 @@
 package collector
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -16,13 +17,22 @@ import (
 )
 
 const (
-	FlagProcessBlacklist = "collector.process.blacklist"
-	FlagProcessWhitelist = "collector.process.whitelist"
+	FlagProcessOldExclude = "collector.process.blacklist"
+	FlagProcessOldInclude = "collector.process.whitelist"
+
+	FlagProcessExclude = "collector.process.exclude"
+	FlagProcessInclude = "collector.process.include"
 )
 
 var (
-	processWhitelist *string
-	processBlacklist *string
+	processOldInclude *string
+	processOldExclude *string
+
+	processInclude *string
+	processExclude *string
+
+	processIncludeSet bool
+	processExcludeSet bool
 )
 
 type processCollector struct {
@@ -42,27 +52,60 @@ type processCollector struct {
 	WorkingSetPeak    *prometheus.Desc
 	WorkingSet        *prometheus.Desc
 
-	processWhitelistPattern *regexp.Regexp
-	processBlacklistPattern *regexp.Regexp
+	processIncludePattern *regexp.Regexp
+	processExcludePattern *regexp.Regexp
 }
 
 // newProcessCollectorFlags ...
 func newProcessCollectorFlags(app *kingpin.Application) {
-	processWhitelist = app.Flag(
-		FlagProcessWhitelist,
-		"Regexp of processes to include. Process name must both match whitelist and not match blacklist to be included.",
-	).Default(".*").String()
-	processBlacklist = app.Flag(
-		FlagProcessBlacklist,
-		"Regexp of processes to exclude. Process name must both match whitelist and not match blacklist to be included.",
-	).Default("").String()
+	processInclude = app.Flag(
+		FlagProcessInclude,
+		"Regexp of processes to include. Process name must both match include and not match exclude to be included.",
+	).Default(".*").PreAction(func(c *kingpin.ParseContext) error {
+		processIncludeSet = true
+		return nil
+	}).String()
+
+	processExclude = app.Flag(
+		FlagProcessExclude,
+		"Regexp of processes to exclude. Process name must both match include and not match exclude to be included.",
+	).Default("").PreAction(func(c *kingpin.ParseContext) error {
+		processExcludeSet = true
+		return nil
+	}).String()
+
+	processOldInclude = app.Flag(
+		FlagProcessOldInclude,
+		"DEPRECATED: Use --collector.process.include",
+	).Hidden().String()
+	processOldExclude = app.Flag(
+		FlagProcessOldExclude,
+		"DEPRECATED: Use --collector.process.exclude",
+	).Hidden().String()
 }
 
 // NewProcessCollector ...
 func newProcessCollector() (Collector, error) {
 	const subsystem = "process"
 
-	if *processWhitelist == ".*" && *processBlacklist == "" {
+	if *processOldExclude != "" {
+		if !processExcludeSet {
+			log.Warnln("msg", "--collector.process.blacklist is DEPRECATED and will be removed in a future release, use --collector.process.exclude")
+			*processExclude = *processOldExclude
+		} else {
+			return nil, errors.New("--collector.process.blacklist and --collector.process.exclude are mutually exclusive")
+		}
+	}
+	if *processOldInclude != "" {
+		if !processIncludeSet {
+			log.Warnln("msg", "--collector.process.whitelist is DEPRECATED and will be removed in a future release, use --collector.process.include")
+			*processInclude = *processOldInclude
+		} else {
+			return nil, errors.New("--collector.process.whitelist and --collector.process.include are mutually exclusive")
+		}
+	}
+
+	if *processInclude == ".*" && *processExclude == "" {
 		log.Warn("No filters specified for process collector. This will generate a very large number of metrics!")
 	}
 
@@ -157,8 +200,8 @@ func newProcessCollector() (Collector, error) {
 			[]string{"process", "process_id", "creating_process_id"},
 			nil,
 		),
-		processWhitelistPattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *processWhitelist)),
-		processBlacklistPattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *processBlacklist)),
+		processIncludePattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *processInclude)),
+		processExcludePattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *processExclude)),
 	}, nil
 }
 
@@ -214,8 +257,8 @@ func (c *processCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metr
 
 	for _, process := range data {
 		if process.Name == "_Total" ||
-			c.processBlacklistPattern.MatchString(process.Name) ||
-			!c.processWhitelistPattern.MatchString(process.Name) {
+			c.processExcludePattern.MatchString(process.Name) ||
+			!c.processIncludePattern.MatchString(process.Name) {
 			continue
 		}
 		// Duplicate processes are suffixed # and an index number. Remove those.

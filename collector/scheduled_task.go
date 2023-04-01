@@ -4,6 +4,7 @@
 package collector
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"runtime"
@@ -17,13 +18,22 @@ import (
 )
 
 const (
-	FlagScheduledTaskBlacklist = "collector.scheduled_task.blacklist"
-	FlagScheduledTaskWhitelist = "collector.scheduled_task.whitelist"
+	FlagScheduledTaskOldExclude = "collector.scheduled_task.blacklist"
+	FlagScheduledTaskOldInclude = "collector.scheduled_task.whitelist"
+
+	FlagScheduledTaskExclude = "collector.scheduled_task.exclude"
+	FlagScheduledTaskInclude = "collector.scheduled_task.include"
 )
 
 var (
-	taskWhitelist *string
-	taskBlacklist *string
+	taskOldExclude *string
+	taskOldInclude *string
+
+	taskExclude *string
+	taskInclude *string
+
+	taskIncludeSet bool
+	taskExcludeSet bool
 )
 
 type ScheduledTaskCollector struct {
@@ -31,8 +41,8 @@ type ScheduledTaskCollector struct {
 	MissedRuns *prometheus.Desc
 	State      *prometheus.Desc
 
-	taskWhitelistPattern *regexp.Regexp
-	taskBlacklistPattern *regexp.Regexp
+	taskIncludePattern *regexp.Regexp
+	taskExcludePattern *regexp.Regexp
 }
 
 // TaskState ...
@@ -64,18 +74,51 @@ type ScheduledTasks []ScheduledTask
 
 // newScheduledTask ...
 func newScheduledTaskFlags(app *kingpin.Application) {
-	taskWhitelist = app.Flag(
-		FlagScheduledTaskWhitelist,
-		"Regexp of tasks to whitelist. Task path must both match whitelist and not match blacklist to be included.",
-	).Default(".+").String()
-	taskBlacklist = app.Flag(
-		FlagScheduledTaskBlacklist,
-		"Regexp of tasks to blacklist. Task path must both match whitelist and not match blacklist to be included.",
-	).String()
+	taskInclude = app.Flag(
+		FlagScheduledTaskInclude,
+		"Regexp of tasks to include. Task path must both match include and not match exclude to be included.",
+	).Default(".+").PreAction(func(c *kingpin.ParseContext) error {
+		taskIncludeSet = true
+		return nil
+	}).String()
+
+	taskExclude = app.Flag(
+		FlagScheduledTaskExclude,
+		"Regexp of tasks to exclude. Task path must both match include and not match exclude to be included.",
+	).Default("").PreAction(func(c *kingpin.ParseContext) error {
+		taskExcludeSet = true
+		return nil
+	}).String()
+
+	taskOldInclude = app.Flag(
+		FlagScheduledTaskOldInclude,
+		"DEPRECATED: Use --collector.scheduled_task.include",
+	).Hidden().String()
+	taskOldExclude = app.Flag(
+		FlagScheduledTaskOldExclude,
+		"DEPRECATED: Use --collector.scheduled_task.exclude",
+	).Hidden().String()
 }
 
 // newScheduledTask ...
 func newScheduledTask() (Collector, error) {
+	if *taskOldExclude != "" {
+		if !taskExcludeSet {
+			log.Warnln("msg", "--collector.scheduled_task.blacklist is DEPRECATED and will be removed in a future release, use --collector.scheduled_task.exclude")
+			*taskExclude = *taskOldExclude
+		} else {
+			return nil, errors.New("--collector.scheduled_task.blacklist and --collector.scheduled_task.exclude are mutually exclusive")
+		}
+	}
+	if *taskOldInclude != "" {
+		if !taskIncludeSet {
+			log.Warnln("msg", "--collector.scheduled_task.whitelist is DEPRECATED and will be removed in a future release, use --collector.scheduled_task.include")
+			*taskInclude = *taskOldInclude
+		} else {
+			return nil, errors.New("--collector.scheduled_task.whitelist and --collector.scheduled_task.include are mutually exclusive")
+		}
+	}
+
 	const subsystem = "scheduled_task"
 
 	runtime.LockOSThread()
@@ -112,8 +155,8 @@ func newScheduledTask() (Collector, error) {
 			nil,
 		),
 
-		taskWhitelistPattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *taskWhitelist)),
-		taskBlacklistPattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *taskBlacklist)),
+		taskIncludePattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *taskInclude)),
+		taskExcludePattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *taskExclude)),
 	}, nil
 }
 
@@ -135,8 +178,8 @@ func (c *ScheduledTaskCollector) collect(ch chan<- prometheus.Metric) (*promethe
 	}
 
 	for _, task := range scheduledTasks {
-		if c.taskBlacklistPattern.MatchString(task.Path) ||
-			!c.taskWhitelistPattern.MatchString(task.Path) {
+		if c.taskExcludePattern.MatchString(task.Path) ||
+			!c.taskIncludePattern.MatchString(task.Path) {
 			continue
 		}
 
