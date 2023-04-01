@@ -12,13 +12,13 @@ Enabled by default? | No
 
 ## Flags
 
-### `--collector.smtp.server-whitelist`
+### `--collector.smtp.server-include`
 
-If given, a virtual SMTP server needs to match the whitelist regexp in order for the corresponding metrics to be reported.
+If given, a virtual SMTP server needs to match the include regexp in order for the corresponding metrics to be reported.
 
-### `--collector.smtp.server-blacklist`
+### `--collector.smtp.server-exclude`
 
-If given, a virtual SMTP server needs to *not* match the blacklist regexp in order for the corresponding metrics to be reported.
+If given, a virtual SMTP server needs to *not* match the exclude regexp in order for the corresponding metrics to be reported.
 
 ## Metrics
 
