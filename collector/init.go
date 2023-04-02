@@ -82,7 +82,7 @@ var collectors = []collectorInit{
 		perfCounterNames: nil,
 	},
 	{
-		name:             "disk_drive",
+		name:             "diskdrive",
 		builder:          newDiskDriveInfoCollector,
 		perfCounterNames: nil,
 	},
