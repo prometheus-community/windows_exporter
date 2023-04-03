@@ -26,7 +26,7 @@ type DiskDriveInfoCollector struct {
 }
 
 func newDiskDriveInfoCollector() (Collector, error) {
-	const subsystem = "disk_drive"
+	const subsystem = "diskdrive"
 
 	return &DiskDriveInfoCollector{
 		DiskInfo: prometheus.NewDesc(
