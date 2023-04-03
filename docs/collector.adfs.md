@@ -44,7 +44,7 @@ Name | Description | Type | Labels
 `oauth_client_authentication_failure_total` | Total number of failed OAuth client Authentications | counter | None
 `oauth_client_credentials_failure_total` | Total number of failed OAuth Client Credentials Requests | counter | None
 `oauth_client_credentials_success_total` | Total number of successful RP tokens issued for OAuth Client Credentials Requests | counter | None
-`oauth_client_privkey_jtw_authentication_failure_total` | Total number of failed OAuth Client Private Key Jwt Authentications | counter | None
+`oauth_client_privkey_jwt_authentication_failure_total` | Total number of failed OAuth Client Private Key Jwt Authentications | counter | None
 `oauth_client_privkey_jwt_authentications_success_total` | Total number of successful OAuth Client Private Key Jwt Authentications | counter | None
 `oauth_client_secret_basic_authentications_failure_total` | Total number of failed OAuth Client Secret Basic Authentications | counter | None
 `oauth_client_secret_basic_authentications_success_total` | Total number of successful OAuth Client Secret Basic Authentications | counter | None
