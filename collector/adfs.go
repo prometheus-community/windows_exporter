@@ -156,7 +156,7 @@ func newADFSCollector() (Collector, error) {
 			nil,
 		),
 		oAuthClientPrivateKeyJwtAuthenticationFailures: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, subsystem, "oauth_client_privkey_jtw_authentication_failure_total"),
+			prometheus.BuildFQName(Namespace, subsystem, "oauth_client_privkey_jwt_authentication_failure_total"),
 			"Total number of failed OAuth Client Private Key Jwt Authentications",
 			nil,
 			nil,
