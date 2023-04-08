@@ -346,7 +346,6 @@ func (c *serviceCollector) collectWMI(ch chan<- prometheus.Metric) error {
 				for idx := range services_labels {
 					custom_labels[idx] = ""
 				}
-
 			}
 		}
 
@@ -477,43 +476,82 @@ func (c *serviceCollector) collectAPI(ch chan<- prometheus.Metric) error {
 			continue
 		}
 
-		pid := fmt.Sprintf("%d", uint64(serviceStatus.ProcessId))
+		// build the custom labels with their values for the service
+		var custom_labels []string
+		service_name := strings.ToLower(service)
+		if len(services_labels) > 0 {
+			custom_labels = make([]string, len(services_labels))
+			if svc, ok := services[service_name]; ok {
+				// we find the service name in service definition list
+				for idx, label := range services_labels {
+					if val, tst := svc.CustomLabels[label]; tst {
+						custom_labels[idx] = val
+					}
+				}
+			} else {
+				// we don't find the service name !?!? not possible but...
+				for idx := range services_labels {
+					custom_labels[idx] = ""
+				}
+			}
+		}
 
+		// Information metric
+		labels := make([]string, 4)
+		// service name
+		labels[0] = service_name
+		// service display name
+		labels[1] = serviceConfig.DisplayName
+		// service pid
+		labels[2] = fmt.Sprintf("%d", uint64(serviceStatus.ProcessId))
+		// service runAs
+		labels[3] = serviceConfig.ServiceStartName
+
+		if len(custom_labels) > 0 {
+			labels = append(labels, custom_labels...)
+		}
 		ch <- prometheus.MustNewConstMetric(
 			c.Information,
 			prometheus.GaugeValue,
 			1.0,
-			strings.ToLower(service),
-			serviceConfig.DisplayName,
-			pid,
-			serviceConfig.ServiceStartName,
+			labels...,
 		)
+
+		// State metric
+		labels = make([]string, 2)
+		// service name
+		labels[0] = service_name
+		labels[1] = ""
+		if len(custom_labels) > 0 {
+			labels = append(labels, custom_labels...)
+		}
 
 		for _, state := range apiStateValues {
 			isCurrentState := 0.0
 			if state == apiStateValues[uint(serviceStatus.State)] {
 				isCurrentState = 1.0
 			}
+			labels[1] = state
 			ch <- prometheus.MustNewConstMetric(
 				c.State,
 				prometheus.GaugeValue,
 				isCurrentState,
-				strings.ToLower(service),
-				state,
+				labels...,
 			)
 		}
 
+		// StartMode metric
 		for _, startMode := range apiStartModeValues {
 			isCurrentStartMode := 0.0
 			if startMode == apiStartModeValues[serviceConfig.StartType] {
 				isCurrentStartMode = 1.0
 			}
+			labels[1] = startMode
 			ch <- prometheus.MustNewConstMetric(
 				c.StartMode,
 				prometheus.GaugeValue,
 				isCurrentStartMode,
-				strings.ToLower(service),
-				startMode,
+				labels...,
 			)
 		}
 	}
