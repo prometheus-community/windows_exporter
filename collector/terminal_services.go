@@ -5,6 +5,7 @@ package collector
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/prometheus-community/windows_exporter/log"
@@ -262,101 +263,102 @@ func (c *TerminalServicesCollector) collectTSSessionCounters(ctx *ScrapeContext,
 		return nil, err
 	}
 
-	for _, d := range dst {
+	for idx, d := range dst {
 		// only connect metrics for remote named sessions
 		n := strings.ToLower(d.Name)
 		if n == "" || n == "services" || n == "console" {
 			continue
 		}
+		name := fmt.Sprintf("%s-%d", d.Name, idx)
 		ch <- prometheus.MustNewConstMetric(
 			c.HandleCount,
 			prometheus.GaugeValue,
 			d.HandleCount,
-			d.Name,
+			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.PageFaultsPersec,
 			prometheus.CounterValue,
 			d.PageFaultsPersec,
-			d.Name,
+			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.PageFileBytes,
 			prometheus.GaugeValue,
 			d.PageFileBytes,
-			d.Name,
+			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.PageFileBytesPeak,
 			prometheus.GaugeValue,
 			d.PageFileBytesPeak,
-			d.Name,
+			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.PercentPrivilegedTime,
 			prometheus.CounterValue,
 			d.PercentPrivilegedTime,
-			d.Name,
+			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.PercentProcessorTime,
 			prometheus.CounterValue,
 			d.PercentProcessorTime,
-			d.Name,
+			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.PercentUserTime,
 			prometheus.CounterValue,
 			d.PercentUserTime,
-			d.Name,
+			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.PoolNonpagedBytes,
 			prometheus.GaugeValue,
 			d.PoolNonpagedBytes,
-			d.Name,
+			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.PoolPagedBytes,
 			prometheus.GaugeValue,
 			d.PoolPagedBytes,
-			d.Name,
+			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.PrivateBytes,
 			prometheus.GaugeValue,
 			d.PrivateBytes,
-			d.Name,
+			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.ThreadCount,
 			prometheus.GaugeValue,
 			d.ThreadCount,
-			d.Name,
+			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.VirtualBytes,
 			prometheus.GaugeValue,
 			d.VirtualBytes,
-			d.Name,
+			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.VirtualBytesPeak,
 			prometheus.GaugeValue,
 			d.VirtualBytesPeak,
-			d.Name,
+			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.WorkingSet,
 			prometheus.GaugeValue,
 			d.WorkingSet,
-			d.Name,
+			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.WorkingSetPeak,
 			prometheus.GaugeValue,
 			d.WorkingSetPeak,
-			d.Name,
+			name,
 		)
 	}
 	return nil, nil
