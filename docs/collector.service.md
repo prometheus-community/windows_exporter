@@ -159,6 +159,7 @@ groups:
 In this example, `instance` is the target label of the host. So each alert will be processed per host, which is then used in the alert description.
 
 ### example with custom labels
+
 If you use custom labels for services defined on each host you may have:
 
 config file:
