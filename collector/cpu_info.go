@@ -13,10 +13,6 @@ import (
 	"github.com/yusufpapurcu/wmi"
 )
 
-func init() {
-	registerCollector("cpu_info", newCpuInfoCollector)
-}
-
 // If you are adding additional labels to the metric, make sure that they get added in here as well. See below for explanation.
 const (
 	win32ProcessorQuery = "SELECT Architecture, DeviceId, Description, Family, L2CacheSize, L3CacheSize, Name FROM Win32_Processor"

@@ -12,10 +12,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-func init() {
-	registerCollector("logical_disk", NewLogicalDiskCollector, "LogicalDisk")
-}
-
 var (
 	volumeWhitelist = kingpin.Flag(
 		"collector.logical_disk.volume-whitelist",
@@ -50,8 +46,8 @@ type LogicalDiskCollector struct {
 	volumeBlacklistPattern *regexp.Regexp
 }
 
-// NewLogicalDiskCollector ...
-func NewLogicalDiskCollector() (Collector, error) {
+// newLogicalDiskCollector ...
+func newLogicalDiskCollector() (Collector, error) {
 	const subsystem = "logical_disk"
 
 	return &LogicalDiskCollector{

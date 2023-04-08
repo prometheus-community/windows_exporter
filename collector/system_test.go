@@ -5,5 +5,5 @@ import (
 )
 
 func BenchmarkSystemCollector(b *testing.B) {
-	benchmarkCollector(b, "system", NewSystemCollector)
+	benchmarkCollector(b, "system", newSystemCollector)
 }

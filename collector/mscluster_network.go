@@ -5,10 +5,6 @@ import (
 	"github.com/yusufpapurcu/wmi"
 )
 
-func init() {
-	registerCollector("mscluster_network", newMSCluster_NetworkCollector)
-}
-
 // A MSCluster_NetworkCollector is a Prometheus collector for WMI MSCluster_Network metrics
 type MSCluster_NetworkCollector struct {
 	Characteristics *prometheus.Desc

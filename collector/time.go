@@ -10,10 +10,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-func init() {
-	registerCollector("time", newTimeCollector, "Windows Time Service")
-}
-
 // TimeCollector is a Prometheus collector for Perflib counter metrics
 type TimeCollector struct {
 	ClockFrequencyAdjustmentPPBTotal *prometheus.Desc

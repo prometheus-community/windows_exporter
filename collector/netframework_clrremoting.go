@@ -9,10 +9,6 @@ import (
 	"github.com/yusufpapurcu/wmi"
 )
 
-func init() {
-	registerCollector("netframework_clrremoting", NewNETFramework_NETCLRRemotingCollector)
-}
-
 // A NETFramework_NETCLRRemotingCollector is a Prometheus collector for WMI Win32_PerfRawData_NETFramework_NETCLRRemoting metrics
 type NETFramework_NETCLRRemotingCollector struct {
 	Channels                  *prometheus.Desc
@@ -23,8 +19,8 @@ type NETFramework_NETCLRRemotingCollector struct {
 	TotalRemoteCalls          *prometheus.Desc
 }
 
-// NewNETFramework_NETCLRRemotingCollector ...
-func NewNETFramework_NETCLRRemotingCollector() (Collector, error) {
+// newNETFramework_NETCLRRemotingCollector ...
+func newNETFramework_NETCLRRemotingCollector() (Collector, error) {
 	const subsystem = "netframework_clrremoting"
 	return &NETFramework_NETCLRRemotingCollector{
 		Channels: prometheus.NewDesc(

@@ -9,17 +9,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-func init() {
-	var deps string
-	// See below for 6.05 magic value
-	if getWindowsVersion() > 6.05 {
-		deps = "Processor Information"
-	} else {
-		deps = "Processor"
-	}
-	registerCollector("cpu", newCPUCollector, deps)
-}
-
 type cpuCollectorBasic struct {
 	CStateSecondsTotal *prometheus.Desc
 	TimeTotal          *prometheus.Desc

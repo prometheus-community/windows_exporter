@@ -10,10 +10,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-func init() {
-	registerCollector("remote_fx", NewRemoteFx, "RemoteFX Network", "RemoteFX Graphics")
-}
-
 // A RemoteFxNetworkCollector is a Prometheus collector for
 // WMI Win32_PerfRawData_Counters_RemoteFXNetwork & Win32_PerfRawData_Counters_RemoteFXGraphics metrics
 // https://wutils.com/wmi/root/cimv2/win32_perfrawdata_counters_remotefxnetwork/
@@ -42,8 +38,8 @@ type RemoteFxCollector struct {
 	SourceFramesPerSecond                       *prometheus.Desc
 }
 
-// NewRemoteFx ...
-func NewRemoteFx() (Collector, error) {
+// newRemoteFx ...
+func newRemoteFx() (Collector, error) {
 	const subsystem = "remote_fx"
 	return &RemoteFxCollector{
 		// net

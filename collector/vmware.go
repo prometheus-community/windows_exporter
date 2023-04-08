@@ -11,10 +11,6 @@ import (
 	"github.com/yusufpapurcu/wmi"
 )
 
-func init() {
-	registerCollector("vmware", NewVmwareCollector)
-}
-
 // A VmwareCollector is a Prometheus collector for WMI Win32_PerfRawData_vmGuestLib_VMem/Win32_PerfRawData_vmGuestLib_VCPU metrics
 type VmwareCollector struct {
 	MemActive      *prometheus.Desc
@@ -39,8 +35,8 @@ type VmwareCollector struct {
 	HostProcessorSpeedMHz *prometheus.Desc
 }
 
-// NewVmwareCollector constructs a new VmwareCollector
-func NewVmwareCollector() (Collector, error) {
+// newVmwareCollector constructs a new VmwareCollector
+func newVmwareCollector() (Collector, error) {
 	const subsystem = "vmware"
 	return &VmwareCollector{
 		MemActive: prometheus.NewDesc(

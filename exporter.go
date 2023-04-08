@@ -333,6 +333,9 @@ func main() {
 
 	initWbem()
 
+	// Initialize collectors before loading
+	collector.RegisterCollectors()
+
 	collectors, err := loadCollectors(*enabledCollectors)
 	if err != nil {
 		log.Fatalf("Couldn't load collectors: %s", err)

@@ -5,5 +5,5 @@ import (
 )
 
 func BenchmarkMSSQLCollector(b *testing.B) {
-	benchmarkCollector(b, "mssql", NewMSSQLCollector)
+	benchmarkCollector(b, "mssql", newMSSQLCollector)
 }

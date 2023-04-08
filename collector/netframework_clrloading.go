@@ -9,10 +9,6 @@ import (
 	"github.com/yusufpapurcu/wmi"
 )
 
-func init() {
-	registerCollector("netframework_clrloading", NewNETFramework_NETCLRLoadingCollector)
-}
-
 // A NETFramework_NETCLRLoadingCollector is a Prometheus collector for WMI Win32_PerfRawData_NETFramework_NETCLRLoading metrics
 type NETFramework_NETCLRLoadingCollector struct {
 	BytesinLoaderHeap         *prometheus.Desc
@@ -26,8 +22,8 @@ type NETFramework_NETCLRLoadingCollector struct {
 	TotalNumberofLoadFailures *prometheus.Desc
 }
 
-// NewNETFramework_NETCLRLoadingCollector ...
-func NewNETFramework_NETCLRLoadingCollector() (Collector, error) {
+// newNETFramework_NETCLRLoadingCollector ...
+func newNETFramework_NETCLRLoadingCollector() (Collector, error) {
 	const subsystem = "netframework_clrloading"
 	return &NETFramework_NETCLRLoadingCollector{
 		BytesinLoaderHeap: prometheus.NewDesc(

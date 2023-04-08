@@ -5,5 +5,5 @@ import (
 )
 
 func BenchmarkVmwareCollector(b *testing.B) {
-	benchmarkCollector(b, "vmware", NewVmwareCollector)
+	benchmarkCollector(b, "vmware", newVmwareCollector)
 }

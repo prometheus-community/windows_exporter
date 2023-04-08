@@ -6,5 +6,5 @@ import (
 
 func BenchmarkLogonCollector(b *testing.B) {
 	// No context name required as collector source is WMI
-	benchmarkCollector(b, "", NewLogonCollector)
+	benchmarkCollector(b, "", newLogonCollector)
 }

@@ -10,10 +10,6 @@ import (
 	"strings"
 )
 
-func init() {
-	registerCollector("adcs", adcsCollectorMethod, "Certification Authority")
-}
-
 type adcsCollector struct {
 	RequestsPerSecond                            *prometheus.Desc
 	RequestProcessingTime                        *prometheus.Desc
