@@ -5,5 +5,5 @@ import (
 )
 
 func BenchmarkScheduledTaskCollector(b *testing.B) {
-	benchmarkCollector(b, "scheduled_task", NewScheduledTask)
+	benchmarkCollector(b, "scheduled_task", newScheduledTask)
 }

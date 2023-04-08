@@ -9,10 +9,6 @@ import (
 	"github.com/yusufpapurcu/wmi"
 )
 
-func init() {
-	registerCollector("netframework_clrlocksandthreads", NewNETFramework_NETCLRLocksAndThreadsCollector)
-}
-
 // A NETFramework_NETCLRLocksAndThreadsCollector is a Prometheus collector for WMI Win32_PerfRawData_NETFramework_NETCLRLocksAndThreads metrics
 type NETFramework_NETCLRLocksAndThreadsCollector struct {
 	CurrentQueueLength               *prometheus.Desc
@@ -24,8 +20,8 @@ type NETFramework_NETCLRLocksAndThreadsCollector struct {
 	TotalNumberofContentions         *prometheus.Desc
 }
 
-// NewNETFramework_NETCLRLocksAndThreadsCollector ...
-func NewNETFramework_NETCLRLocksAndThreadsCollector() (Collector, error) {
+// newNETFramework_NETCLRLocksAndThreadsCollector ...
+func newNETFramework_NETCLRLocksAndThreadsCollector() (Collector, error) {
 	const subsystem = "netframework_clrlocksandthreads"
 	return &NETFramework_NETCLRLocksAndThreadsCollector{
 		CurrentQueueLength: prometheus.NewDesc(

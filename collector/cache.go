@@ -8,10 +8,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-func init() {
-	registerCollector("cache", newCacheCollector, "Cache")
-}
-
 // A CacheCollector is a Prometheus collector for Perflib Cache metrics
 type CacheCollector struct {
 	AsyncCopyReadsTotal         *prometheus.Desc

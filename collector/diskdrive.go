@@ -12,10 +12,6 @@ import (
 	"github.com/yusufpapurcu/wmi"
 )
 
-func init() {
-	registerCollector("disk_drive", newDiskDriveInfoCollector)
-}
-
 const (
 	win32DiskQuery = "SELECT DeviceID, Model, Caption, Name, Partitions, Size, Status, Availability FROM WIN32_DiskDrive"
 )
@@ -30,7 +26,7 @@ type DiskDriveInfoCollector struct {
 }
 
 func newDiskDriveInfoCollector() (Collector, error) {
-	const subsystem = "disk_drive"
+	const subsystem = "diskdrive"
 
 	return &DiskDriveInfoCollector{
 		DiskInfo: prometheus.NewDesc(

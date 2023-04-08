@@ -11,10 +11,6 @@ import (
 	"github.com/yusufpapurcu/wmi"
 )
 
-func init() {
-	registerCollector("teradici_pcoip", newTeradiciPcoipCollector)
-}
-
 // A teradiciPcoipCollector is a Prometheus collector for WMI metrics:
 // win32_PerfRawData_TeradiciPerf_PCoIPSessionAudioStatistics
 // win32_PerfRawData_TeradiciPerf_PCoIPSessionGeneralStatistics

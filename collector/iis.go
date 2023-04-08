@@ -13,10 +13,6 @@ import (
 	"golang.org/x/sys/windows/registry"
 )
 
-func init() {
-	registerCollector("iis", NewIISCollector, "Web Service", "APP_POOL_WAS", "Web Service Cache", "W3SVC_W3WP")
-}
-
 var (
 	siteWhitelist = kingpin.Flag("collector.iis.site-whitelist", "Regexp of sites to whitelist. Site name must both match whitelist and not match blacklist to be included.").Default(".+").String()
 	siteBlacklist = kingpin.Flag("collector.iis.site-blacklist", "Regexp of sites to blacklist. Site name must both match whitelist and not match blacklist to be included.").String()
@@ -195,7 +191,7 @@ type IISCollector struct {
 	iis_version simple_version
 }
 
-func NewIISCollector() (Collector, error) {
+func newIISCollector() (Collector, error) {
 	const subsystem = "iis"
 
 	return &IISCollector{

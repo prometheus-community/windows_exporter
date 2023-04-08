@@ -63,12 +63,8 @@ type ScheduledTask struct {
 
 type ScheduledTasks []ScheduledTask
 
-func init() {
-	registerCollector("scheduled_task", NewScheduledTask)
-}
-
-// NewScheduledTask ...
-func NewScheduledTask() (Collector, error) {
+// newScheduledTask ...
+func newScheduledTask() (Collector, error) {
 	const subsystem = "scheduled_task"
 
 	runtime.LockOSThread()

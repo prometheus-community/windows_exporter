@@ -16,10 +16,6 @@ import (
 	"golang.org/x/sys/windows/svc/mgr"
 )
 
-func init() {
-	registerCollector("service", NewserviceCollector)
-}
-
 var (
 	serviceWhereClause = kingpin.Flag(
 		"collector.service.services-where",
@@ -41,8 +37,8 @@ type serviceCollector struct {
 	queryWhereClause string
 }
 
-// NewserviceCollector ...
-func NewserviceCollector() (Collector, error) {
+// newserviceCollector ...
+func newserviceCollector() (Collector, error) {
 	const subsystem = "service"
 
 	if *serviceWhereClause == "" {

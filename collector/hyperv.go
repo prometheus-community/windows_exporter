@@ -11,10 +11,6 @@ import (
 	"github.com/yusufpapurcu/wmi"
 )
 
-func init() {
-	registerCollector("hyperv", NewHyperVCollector)
-}
-
 // HyperVCollector is a Prometheus collector for hyper-v
 type HyperVCollector struct {
 	// Win32_PerfRawData_VmmsVirtualMachineStats_HyperVVirtualMachineHealthSummary
@@ -130,8 +126,8 @@ type HyperVCollector struct {
 	VMMemoryRemovedMemory              *prometheus.Desc
 }
 
-// NewHyperVCollector ...
-func NewHyperVCollector() (Collector, error) {
+// newHyperVCollector ...
+func newHyperVCollector() (Collector, error) {
 	buildSubsystemName := func(component string) string { return "hyperv_" + component }
 	return &HyperVCollector{
 		HealthCritical: prometheus.NewDesc(

@@ -9,10 +9,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-func init() {
-	registerCollector("container", NewContainerMetricsCollector)
-}
-
 // A ContainerMetricsCollector is a Prometheus collector for containers metrics
 type ContainerMetricsCollector struct {
 	// Presence
@@ -45,8 +41,8 @@ type ContainerMetricsCollector struct {
 	WriteSizeBytes       *prometheus.Desc
 }
 
-// NewContainerMetricsCollector constructs a new ContainerMetricsCollector
-func NewContainerMetricsCollector() (Collector, error) {
+// newContainerMetricsCollector constructs a new ContainerMetricsCollector
+func newContainerMetricsCollector() (Collector, error) {
 	const subsystem = "container"
 	return &ContainerMetricsCollector{
 		ContainerAvailable: prometheus.NewDesc(

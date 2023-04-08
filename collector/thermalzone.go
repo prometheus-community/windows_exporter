@@ -8,10 +8,6 @@ import (
 	"github.com/yusufpapurcu/wmi"
 )
 
-func init() {
-	registerCollector("thermalzone", NewThermalZoneCollector)
-}
-
 // A thermalZoneCollector is a Prometheus collector for WMI Win32_PerfRawData_Counters_ThermalZoneInformation metrics
 type thermalZoneCollector struct {
 	PercentPassiveLimit *prometheus.Desc
@@ -19,8 +15,8 @@ type thermalZoneCollector struct {
 	ThrottleReasons     *prometheus.Desc
 }
 
-// NewThermalZoneCollector ...
-func NewThermalZoneCollector() (Collector, error) {
+// newThermalZoneCollector ...
+func newThermalZoneCollector() (Collector, error) {
 	const subsystem = "thermalzone"
 	return &thermalZoneCollector{
 		Temperature: prometheus.NewDesc(
