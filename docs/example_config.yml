@@ -12,6 +12,7 @@ log:
 scrape:
   timeout-margin: 0.5
 telemetry:
-  addr: ":9182"
   path: /metrics
   max-requests: 5
+web:
+  listen-address: ":9182"
