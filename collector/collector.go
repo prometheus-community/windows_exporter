@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/leoluk/perflib_exporter/perflib"
+	"github.com/prometheus-community/windows_exporter/config"
 	"github.com/prometheus-community/windows_exporter/log"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows/registry"
@@ -55,11 +56,15 @@ type collectorBuilder func() (Collector, error)
 var (
 	builders                = make(map[string]collectorBuilder)
 	perfCounterDependencies = make(map[string]string)
+	config_hooks            = make(map[string]config.ConfigHook)
 )
 
-func registerCollector(name string, builder collectorBuilder, perfCounterNames ...string) {
+func registerCollector(name string, builder collectorBuilder, hooks map[string]config.ConfigHook, perfCounterNames ...string) {
 	builders[name] = builder
 	addPerfCounterDependencies(name, perfCounterNames)
+	for k, v := range hooks {
+		config_hooks[k] = v
+	}
 }
 
 func addPerfCounterDependencies(name string, perfCounterNames []string) {
@@ -77,10 +82,13 @@ func Available() []string {
 	}
 	return cs
 }
+func ConfigHooks() map[string]config.ConfigHook {
+	return config_hooks
+}
 func Build(collector string) (Collector, error) {
 	builder, exists := builders[collector]
 	if !exists {
-		return nil, fmt.Errorf("Unknown collector %q", collector)
+		return nil, fmt.Errorf("unknown collector %q", collector)
 	}
 	return builder()
 }

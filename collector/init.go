@@ -1,5 +1,9 @@
 package collector
 
+import (
+	"github.com/prometheus-community/windows_exporter/config"
+)
+
 // collectorInit represents the required initialisation config for a collector.
 type collectorInit struct {
 	// Name of collector to be initialised
@@ -9,6 +13,8 @@ type collectorInit struct {
 	// Perflib counter names for the collector.
 	// These will be included in the Perflib scrape scope by the exporter.
 	perfCounterNames []string
+	// builder fonction to intercept parameters for a collector
+	config_hooks map[string]config.ConfigHook
 }
 
 func getCPUCollectorDeps() string {
@@ -244,6 +250,7 @@ var collectors = []collectorInit{
 		name:             "service",
 		builder:          newserviceCollector,
 		perfCounterNames: nil,
+		config_hooks:     ServiceBuildHook(),
 	},
 	{
 		name:             "smtp",
@@ -304,6 +311,6 @@ var collectors = []collectorInit{
 // To be called by the exporter for collector initialisation
 func RegisterCollectors() {
 	for _, v := range collectors {
-		registerCollector(v.name, v.builder, v.perfCounterNames...)
+		registerCollector(v.name, v.builder, v.config_hooks, v.perfCounterNames...)
 	}
 }
