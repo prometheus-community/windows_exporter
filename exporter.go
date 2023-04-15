@@ -298,8 +298,14 @@ func main() {
 	// to load the specified file(s).
 	kingpin.Parse()
 	log.Debug("Logging has Started")
+
+	initWbem()
+
+	// Initialize collectors before loading
+	collector.RegisterCollectors()
+
 	if *configFile != "" {
-		resolver, err := config.NewResolver(*configFile)
+		resolver, err := config.NewResolver(*configFile, collector.ConfigHooks())
 		if err != nil {
 			log.Fatalf("could not load config file: %v\n", err)
 		}
@@ -330,11 +336,6 @@ func main() {
 		}
 		return
 	}
-
-	initWbem()
-
-	// Initialize collectors before loading
-	collector.RegisterCollectors()
 
 	collectors, err := loadCollectors(*enabledCollectors)
 	if err != nil {

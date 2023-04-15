@@ -14,7 +14,6 @@
 package config
 
 import (
-	"io/ioutil"
 	"os"
 
 	"github.com/alecthomas/kingpin/v2"
@@ -31,14 +30,72 @@ type Resolver struct {
 	flags map[string]string
 }
 
+type HookFunc func(interface{}) map[string]string
+
+type ConfigHook struct {
+	ConfigAttrs []string
+	Hook        HookFunc
+}
+
+type ConfigHooks map[string]ConfigHook
+
+func (c *ConfigHook) match(key string, val interface{}, level int) (bool, interface{}) {
+	var ok bool = false
+	var res interface{}
+	if level < len(c.ConfigAttrs) {
+		if c.ConfigAttrs[level] == key {
+			level++
+			if level < len(c.ConfigAttrs) {
+
+				switch typed := val.(type) {
+				case map[interface{}]interface{}:
+					for fk, fv := range convertMap(typed) {
+						ok, res = c.match(fk, fv, level)
+						if ok {
+							break
+						}
+					}
+				case map[string]interface{}:
+					for fk, fv := range typed {
+						ok, res = c.match(fk, fv, level)
+						if ok {
+							break
+						}
+					}
+				default:
+				}
+			} else {
+				ok = true
+				res = val
+			}
+
+		}
+	}
+	return ok, res
+}
+
+func (c *ConfigHooks) Match(key string, val interface{}) (map[string]interface{}, bool) {
+	var ok bool = false
+	var value interface{}
+	params := make(map[string]interface{})
+
+	for varname, hook := range *c {
+		ok, value = hook.match(key, val, 0)
+		if ok {
+			params[varname] = hook.Hook(value)
+		}
+	}
+	return params, ok
+}
+
 // NewResolver returns a Resolver structure.
-func NewResolver(file string) (*Resolver, error) {
+func NewResolver(file string, hooks ConfigHooks) (*Resolver, error) {
 	flags := map[string]string{}
 	log.Infof("Loading configuration file: %v", file)
 	if _, err := os.Stat(file); err != nil {
 		return nil, err
 	}
-	b, err := ioutil.ReadFile(file)
+	b, err := os.ReadFile(file)
 	if err != nil {
 		return nil, err
 	}
@@ -48,6 +105,13 @@ func NewResolver(file string) (*Resolver, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	if hooks != nil {
+		for k, v := range rawValues {
+			hooks.Match(k, v)
+		}
+	}
+
 	// Flatten nested YAML values
 	flattenedValues := flatten(rawValues)
 	for k, v := range flattenedValues {
