@@ -18,9 +18,37 @@ Example: `--collector.service.services-where="Name='windows_exporter'"`
 
 Example config win_exporter.yml for multiple services: `services-where: Name='SQLServer' OR Name='Couchbase' OR Name='Spooler' OR Name='ActiveMQ'`
 
+### `--collector.service.services-list`
+
+A comma separated list of services names to monitor. It builds a "services-where" WMI filter on list on service name.
+
+Example: `--collector.service.services-list="SQLServer, Couchbase, Spooler,ActiveMQ"` is equivalent to the previous example.
+
 ### `--collector.service.use-api`
 
 Uses API calls instead of WMI for performance optimization. **Note** the previous flag (`--collector.service.services-where`) won't have any effect on this mode.
+
+### service list with custom labels (config file only)
+
+Define a dictionnary of services to monitor, and for each of them a specific value of labels.
+
+```yml
+collector:
+  service:
+    services:
+      windows_exporter:
+        application: prometheus
+        custom1: val1
+      pushprox_client:
+        application: prometheus
+        custom1: val1
+      winRM:
+        application: windows
+        custom1: val2
+      Dhcp:
+        application: windows
+        custom1: val3
+```
 
 ## Metrics
 
@@ -36,6 +64,7 @@ For the values of the `state`, `start_mode`, `status` and `run_as` labels, see b
 ### States
 
 A service can be in the following states:
+
 - `stopped`
 - `start pending`
 - `stop pending`
@@ -48,6 +77,7 @@ A service can be in the following states:
 ### Start modes
 
 A service can have the following start modes:
+
 - `boot`
 - `system`
 - `auto`
@@ -57,6 +87,7 @@ A service can have the following start modes:
 ### Status (not available in API mode)
 
 A service can have any of the following statuses:
+
 - `ok`
 - `error`
 - `degraded`
@@ -80,19 +111,25 @@ It corresponds to the `StartName` attribute of the `Win32_Service` class.
 `StartName` attribute can be NULL and in such case the label is reported as an empty string. Notice that if the attribute is NULL the service is logged on as the `LocalSystem` account or, for kernel or system-level drive, it runs with a default object name created by the I/O system based on the service name, for example, DWDOM\Admin.
 
 ### Example metric
+
 Lists the services that have a 'disabled' start mode.
-```
+
+```prometheus
 windows_service_start_mode{exported_name=~"(mssqlserver|sqlserveragent)",start_mode="disabled"}
 ```
 
 ## Useful queries
+
 Counts the number of Microsoft SQL Server/Agent Processes
-```
+
+```prometheus
 count(windows_service_state{exported_name=~"(sqlserveragent|mssqlserver)",state="running"})
 ```
 
 ## Alerting examples
+
 **prometheus.rules**
+
 ```yaml
 groups:
 - name: Microsoft SQL Server Alerts
@@ -118,4 +155,43 @@ groups:
       summary: "Service {{ $labels.exported_name }} down"
       description: "Service {{ $labels.exported_name }} on instance {{ $labels.instance }} has been down for more than 3 minutes."
 ```
+
 In this example, `instance` is the target label of the host. So each alert will be processed per host, which is then used in the alert description.
+
+### example with custom labels
+
+If you use custom labels for services defined on each host you may have:
+
+config file:
+
+```yml
+collector:
+  service:
+    services:
+      windows_exporter:
+        application: prometheus
+      pushprox_client:
+        application: prometheus
+      winRM:
+        application: windows
+      Dhcp:
+        application: windows
+```
+
+Then generic alert services:
+
+```yml
+groups:
+- name: Window Server Alerts
+  rules:
+
+  # Sends an alert when the 'sqlserveragent' service is not in the running state for 3 minutes.
+  - alert: WindowServiceNotRunning
+    expr: windows_service_state{state="running"} == 0
+    for: 3m
+    labels:
+      severity: high
+    annotations:
+      summary: "Service {{ $labels.name }} for {{ $labels.application }} down for 3 min."
+      description: "Service {{ $labels.name }} for Application {{ $labels.application }} on instance {{ $labels.instance }} has been down for more than 3 minutes."
+```
