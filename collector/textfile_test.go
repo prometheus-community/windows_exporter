@@ -1,10 +1,11 @@
 package collector
 
 import (
-	"github.com/dimchansky/utfbom"
-	"io/ioutil"
+	"io"
 	"strings"
 	"testing"
+
+	"github.com/dimchansky/utfbom"
 
 	dto "github.com/prometheus/client_model/go"
 )
@@ -12,7 +13,7 @@ import (
 func TestCRFilter(t *testing.T) {
 	sr := strings.NewReader("line 1\r\nline 2")
 	cr := carriageReturnFilteringReader{r: sr}
-	b, err := ioutil.ReadAll(cr)
+	b, err := io.ReadAll(cr)
 	if err != nil {
 		t.Error(err)
 	}

@@ -19,7 +19,6 @@ package collector
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -79,7 +78,7 @@ func duplicateMetricEntry(metricFamilies []*dto.MetricFamily) bool {
 			_, mapContainsKey := uniqueMetrics[metric_name]
 
 			// Duplicate metric found with identical labels & label values
-			if mapContainsKey == true && reflect.DeepEqual(uniqueMetrics[metric_name], labels) {
+			if mapContainsKey && reflect.DeepEqual(uniqueMetrics[metric_name], labels) {
 				return true
 			}
 			uniqueMetrics[metric_name] = labels
@@ -123,7 +122,7 @@ func convertMetricFamily(metricFamily *dto.MetricFamily, ch chan<- prometheus.Me
 					break
 				}
 			}
-			if present == false {
+			if !present {
 				names = append(names, k)
 				values = append(values, "")
 			}
@@ -240,7 +239,7 @@ func (c *textFileCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Met
 	mtimes := map[string]time.Time{}
 
 	// Iterate over files and accumulate their metrics.
-	files, err := ioutil.ReadDir(c.path)
+	files, err := os.ReadDir(c.path)
 	if err != nil && c.path != "" {
 		log.Errorf("Error reading textfile collector directory %q: %s", c.path, err)
 		error = 1.0
@@ -308,7 +307,12 @@ fileLoop:
 
 		// Only set this once it has been parsed and validated, so that
 		// a failure does not appear fresh.
-		mtimes[f.Name()] = f.ModTime()
+		info, err := f.Info()
+		if err != nil {
+			error = 1.0
+			continue
+		}
+		mtimes[f.Name()] = info.ModTime()
 
 		for _, metricFamily := range parsedFamilies {
 			metricFamilies = append(metricFamilies, metricFamily)
