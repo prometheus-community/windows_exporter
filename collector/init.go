@@ -1,23 +1,18 @@
 package collector
 
+import "github.com/alecthomas/kingpin/v2"
+
 // collectorInit represents the required initialisation config for a collector.
 type collectorInit struct {
 	// Name of collector to be initialised
 	name string
 	// Builder function for the collector
+	flags flagsBuilder
+	// Builder function for the collector
 	builder collectorBuilder
 	// Perflib counter names for the collector.
 	// These will be included in the Perflib scrape scope by the exporter.
-	perfCounterNames []string
-}
-
-func getCPUCollectorDeps() string {
-	// See below for 6.05 magic value
-	if getWindowsVersion() > 6.05 {
-		return "Processor Information"
-	}
-	return "Processor"
-
+	perfCounterFunc perfCounterNamesBuilder
 }
 
 func getDFSRCollectorDeps() []string {
@@ -32,278 +27,381 @@ func getDFSRCollectorDeps() []string {
 
 var collectors = []collectorInit{
 	{
-		name:             "ad",
-		builder:          newADCollector,
-		perfCounterNames: nil,
+		name:            "ad",
+		flags:           nil,
+		builder:         newADCollector,
+		perfCounterFunc: nil,
 	},
 	{
-		name:             "adcs",
-		builder:          adcsCollectorMethod,
-		perfCounterNames: []string{"Certification Authority"},
+		name:    "adcs",
+		flags:   nil,
+		builder: adcsCollectorMethod,
+		perfCounterFunc: func() []string {
+			return []string{"Certification Authority"}
+		},
 	},
 	{
-		name:             "adfs",
-		builder:          newADFSCollector,
-		perfCounterNames: []string{"AD FS"},
+		name:    "adfs",
+		flags:   nil,
+		builder: newADFSCollector,
+		perfCounterFunc: func() []string {
+			return []string{"AD FS"}
+		},
 	},
 	{
-		name:             "cache",
-		builder:          newCacheCollector,
-		perfCounterNames: []string{"Cache"},
+		name:    "cache",
+		flags:   nil,
+		builder: newCacheCollector,
+		perfCounterFunc: func() []string {
+			return []string{"Cache"}
+		},
 	},
 	{
-		name:             "container",
-		builder:          newContainerMetricsCollector,
-		perfCounterNames: nil,
+		name:            "container",
+		flags:           nil,
+		builder:         newContainerMetricsCollector,
+		perfCounterFunc: nil,
 	},
 	{
-		name:             "cpu",
-		builder:          newCPUCollector,
-		perfCounterNames: []string{getCPUCollectorDeps()},
+		name:    "cpu",
+		flags:   nil,
+		builder: newCPUCollector,
+		perfCounterFunc: func() []string {
+			if getWindowsVersion() > 6.05 {
+				return []string{"Processor Information"}
+			}
+			return []string{"Processor"}
+		},
 	},
 	{
-		name:             "cpu_info",
-		builder:          newCpuInfoCollector,
-		perfCounterNames: nil,
+		name:            "cpu_info",
+		flags:           nil,
+		builder:         newCpuInfoCollector,
+		perfCounterFunc: nil,
 	},
 	{
-		name:             "cs",
-		builder:          newCSCollector,
-		perfCounterNames: nil,
+		name:            "cs",
+		flags:           nil,
+		builder:         newCSCollector,
+		perfCounterFunc: nil,
 	},
 	{
-		name:             "dfsr",
-		builder:          newDFSRCollector,
-		perfCounterNames: getDFSRCollectorDeps(),
+		name:            "dfsr",
+		flags:           newDFSRCollectorFlags,
+		builder:         newDFSRCollector,
+		perfCounterFunc: getDFSRCollectorDeps,
 	},
 	{
-		name:             "dhcp",
-		builder:          newDhcpCollector,
-		perfCounterNames: nil,
+		name:            "dhcp",
+		flags:           nil,
+		builder:         newDhcpCollector,
+		perfCounterFunc: nil,
 	},
 	{
-		name:             "diskdrive",
-		builder:          newDiskDriveInfoCollector,
-		perfCounterNames: nil,
+		name:            "diskdrive",
+		flags:           nil,
+		builder:         newDiskDriveInfoCollector,
+		perfCounterFunc: nil,
 	},
 	{
-		name:             "dns",
-		builder:          newDNSCollector,
-		perfCounterNames: nil,
+		name:            "dns",
+		flags:           nil,
+		builder:         newDNSCollector,
+		perfCounterFunc: nil,
 	},
 	{
 		name:    "exchange",
+		flags:   newExchangeCollectorFlags,
 		builder: newExchangeCollector,
-		perfCounterNames: []string{
-			"MSExchange ADAccess Processes",
-			"MSExchangeTransport Queues",
-			"MSExchange HttpProxy",
-			"MSExchange ActiveSync",
-			"MSExchange Availability Service",
-			"MSExchange OWA",
-			"MSExchangeAutodiscover",
-			"MSExchange WorkloadManagement Workloads",
-			"MSExchange RpcClientAccess",
+		perfCounterFunc: func() []string {
+			return []string{
+				"MSExchange ADAccess Processes",
+				"MSExchangeTransport Queues",
+				"MSExchange HttpProxy",
+				"MSExchange ActiveSync",
+				"MSExchange Availability Service",
+				"MSExchange OWA",
+				"MSExchangeAutodiscover",
+				"MSExchange WorkloadManagement Workloads",
+				"MSExchange RpcClientAccess",
+			}
 		},
 	},
 	{
-		name:             "fsrmquota",
-		builder:          newFSRMQuotaCollector,
-		perfCounterNames: nil,
+		name:            "fsrmquota",
+		flags:           nil,
+		builder:         newFSRMQuotaCollector,
+		perfCounterFunc: nil,
 	},
 	{
-		name:             "hyperv",
-		builder:          newHyperVCollector,
-		perfCounterNames: nil,
+		name:            "hyperv",
+		flags:           nil,
+		builder:         newHyperVCollector,
+		perfCounterFunc: nil,
 	},
 	{
 		name:    "iis",
+		flags:   newIISCollectorFlags,
 		builder: newIISCollector,
-		perfCounterNames: []string{"Web Service",
-			"APP_POOL_WAS",
-			"Web Service Cache",
-			"W3SVC_W3WP",
+		perfCounterFunc: func() []string {
+			return []string{
+				"Web Service",
+				"APP_POOL_WAS",
+				"Web Service Cache",
+				"W3SVC_W3WP",
+			}
 		},
 	},
 	{
-		name:             "logical_disk",
-		builder:          newLogicalDiskCollector,
-		perfCounterNames: []string{"LogicalDisk"},
+		name:    "logical_disk",
+		flags:   newLogicalDiskCollectorFlags,
+		builder: newLogicalDiskCollector,
+		perfCounterFunc: func() []string {
+			return []string{"LogicalDisk"}
+		},
 	},
 	{
-		name:             "logon",
-		builder:          newLogonCollector,
-		perfCounterNames: nil,
+		name:            "logon",
+		flags:           nil,
+		builder:         newLogonCollector,
+		perfCounterFunc: nil,
 	},
 	{
-		name:             "memory",
-		builder:          newMemoryCollector,
-		perfCounterNames: []string{"Memory"},
+		name:    "memory",
+		flags:   nil,
+		builder: newMemoryCollector,
+		perfCounterFunc: func() []string {
+			return []string{"Memory"}
+		},
 	},
 	{
-		name:             "mscluster_cluster",
-		builder:          newMSCluster_ClusterCollector,
-		perfCounterNames: nil,
+		name:            "mscluster_cluster",
+		flags:           nil,
+		builder:         newMSCluster_ClusterCollector,
+		perfCounterFunc: nil,
 	},
 	{
-		name:             "mscluster_network",
-		builder:          newMSCluster_NetworkCollector,
-		perfCounterNames: nil,
+		name:            "mscluster_network",
+		flags:           nil,
+		builder:         newMSCluster_NetworkCollector,
+		perfCounterFunc: nil,
 	},
 	{
-		name:             "mscluster_node",
-		builder:          newMSCluster_NodeCollector,
-		perfCounterNames: nil,
+		name:            "mscluster_node",
+		flags:           nil,
+		builder:         newMSCluster_NodeCollector,
+		perfCounterFunc: nil,
 	},
 	{
-		name:             "mscluster_resource",
-		builder:          newMSCluster_ResourceCollector,
-		perfCounterNames: nil,
+		name:            "mscluster_resource",
+		flags:           nil,
+		builder:         newMSCluster_ResourceCollector,
+		perfCounterFunc: nil,
 	},
 	{
-		name:             "mscluster_resourcegroup",
-		builder:          newMSCluster_ResourceGroupCollector,
-		perfCounterNames: nil,
+		name:            "mscluster_resourcegroup",
+		flags:           nil,
+		builder:         newMSCluster_ResourceGroupCollector,
+		perfCounterFunc: nil,
 	},
 	{
-		name:             "msmq",
-		builder:          newMSMQCollector,
-		perfCounterNames: nil,
+		name:            "msmq",
+		flags:           newMSMQCollectorFlags,
+		builder:         newMSMQCollector,
+		perfCounterFunc: nil,
 	},
 	{
-		name:             "mssql",
-		builder:          newMSSQLCollector,
-		perfCounterNames: nil,
+		name:            "mssql",
+		flags:           newMSSQLCollectorFlags,
+		builder:         newMSSQLCollector,
+		perfCounterFunc: nil,
 	},
 	{
-		name:             "net",
-		builder:          newNetworkCollector,
-		perfCounterNames: []string{"Network Interface"},
+		name:    "net",
+		flags:   newNetworkCollectorFlags,
+		builder: newNetworkCollector,
+		perfCounterFunc: func() []string {
+			return []string{"Network Interface"}
+		},
 	},
 	{
-		name:             "netframework_clrexceptions",
-		builder:          newNETFramework_NETCLRExceptionsCollector,
-		perfCounterNames: nil,
+		name:            "netframework_clrexceptions",
+		flags:           nil,
+		builder:         newNETFramework_NETCLRExceptionsCollector,
+		perfCounterFunc: nil,
 	},
 	{
-		name:             "netframework_clrinterop",
-		builder:          newNETFramework_NETCLRInteropCollector,
-		perfCounterNames: nil,
+		name:            "netframework_clrinterop",
+		flags:           nil,
+		builder:         newNETFramework_NETCLRInteropCollector,
+		perfCounterFunc: nil,
 	},
 	{
-		name:             "netframework_clrjit",
-		builder:          newNETFramework_NETCLRJitCollector,
-		perfCounterNames: nil,
+		name:            "netframework_clrjit",
+		flags:           nil,
+		builder:         newNETFramework_NETCLRJitCollector,
+		perfCounterFunc: nil,
 	},
 	{
-		name:             "netframework_clrloading",
-		builder:          newNETFramework_NETCLRLoadingCollector,
-		perfCounterNames: nil,
+		name:            "netframework_clrloading",
+		flags:           nil,
+		builder:         newNETFramework_NETCLRLoadingCollector,
+		perfCounterFunc: nil,
 	},
 	{
-		name:             "netframework_clrlocksandthreads",
-		builder:          newNETFramework_NETCLRLocksAndThreadsCollector,
-		perfCounterNames: nil,
+		name:            "netframework_clrlocksandthreads",
+		flags:           nil,
+		builder:         newNETFramework_NETCLRLocksAndThreadsCollector,
+		perfCounterFunc: nil,
 	},
 	{
-		name:             "netframework_clrmemory",
-		builder:          newNETFramework_NETCLRMemoryCollector,
-		perfCounterNames: nil,
+		name:            "netframework_clrmemory",
+		flags:           nil,
+		builder:         newNETFramework_NETCLRMemoryCollector,
+		perfCounterFunc: nil,
 	},
 	{
-		name:             "netframework_clrremoting",
-		builder:          newNETFramework_NETCLRRemotingCollector,
-		perfCounterNames: nil,
+		name:            "netframework_clrremoting",
+		flags:           nil,
+		builder:         newNETFramework_NETCLRRemotingCollector,
+		perfCounterFunc: nil,
 	},
 	{
-		name:             "netframework_clrsecurity",
-		builder:          newNETFramework_NETCLRSecurityCollector,
-		perfCounterNames: nil,
+		name:            "netframework_clrsecurity",
+		flags:           nil,
+		builder:         newNETFramework_NETCLRSecurityCollector,
+		perfCounterFunc: nil,
 	},
 	{
-		name:             "os",
-		builder:          newOSCollector,
-		perfCounterNames: []string{"Paging File"},
+		name:    "os",
+		flags:   nil,
+		builder: newOSCollector,
+		perfCounterFunc: func() []string {
+			return []string{"Paging File"}
+		},
 	},
 	{
-		name:             "process",
-		builder:          newProcessCollector,
-		perfCounterNames: []string{"Process"},
+		name:    "process",
+		flags:   newProcessCollectorFlags,
+		builder: newProcessCollector,
+		perfCounterFunc: func() []string {
+			return []string{"Process"}
+		},
 	},
 	{
-		name:             "remote_fx",
-		builder:          newRemoteFx,
-		perfCounterNames: []string{"RemoteFX Network"},
+		name:    "remote_fx",
+		flags:   nil,
+		builder: newRemoteFx,
+		perfCounterFunc: func() []string {
+			return []string{"RemoteFX Network"}
+		},
 	},
 	{
-		name:             "scheduled_task",
-		builder:          newScheduledTask,
-		perfCounterNames: nil,
+		name:            "scheduled_task",
+		flags:           newScheduledTaskFlags,
+		builder:         newScheduledTask,
+		perfCounterFunc: nil,
 	},
 	{
-		name:             "service",
-		builder:          newserviceCollector,
-		perfCounterNames: nil,
+		name:            "service",
+		flags:           newServiceCollectorFlags,
+		builder:         newserviceCollector,
+		perfCounterFunc: nil,
 	},
 	{
-		name:             "smtp",
-		builder:          newSMTPCollector,
-		perfCounterNames: []string{"SMTP Server"},
+		name:    "smtp",
+		flags:   newSMTPCollectorFlags,
+		builder: newSMTPCollector,
+		perfCounterFunc: func() []string {
+			return []string{"SMTP Server"}
+		},
 	},
 	{
-		name:             "system",
-		builder:          newSystemCollector,
-		perfCounterNames: []string{"System"},
+		name:    "system",
+		flags:   nil,
+		builder: newSystemCollector,
+		perfCounterFunc: func() []string {
+			return []string{"System"}
+		},
 	},
 	{
-		name:             "teradici_pcoip",
-		builder:          newTeradiciPcoipCollector,
-		perfCounterNames: nil,
+		name:            "teradici_pcoip",
+		flags:           nil,
+		builder:         newTeradiciPcoipCollector,
+		perfCounterFunc: nil,
 	},
 	{
-		name:             "tcp",
-		builder:          newTCPCollector,
-		perfCounterNames: []string{"TCPv4"},
+		name:    "tcp",
+		flags:   nil,
+		builder: newTCPCollector,
+		perfCounterFunc: func() []string {
+			return []string{"TCPv4"}
+		},
 	},
 	{
 		name:    "terminal_services",
+		flags:   nil,
 		builder: newTerminalServicesCollector,
-		perfCounterNames: []string{
-			"Terminal Services",
-			"Terminal Services Session",
-			"Remote Desktop Connection Broker Counterset",
+		perfCounterFunc: func() []string {
+			return []string{
+				"Terminal Services",
+				"Terminal Services Session",
+				"Remote Desktop Connection Broker Counterset",
+			}
 		},
 	},
 	{
-		name:             "textfile",
-		builder:          newTextFileCollector,
-		perfCounterNames: nil,
+		name:            "textfile",
+		flags:           newTextFileCollectorFlags,
+		builder:         newTextFileCollector,
+		perfCounterFunc: nil,
 	},
 	{
-		name:             "thermalzone",
-		builder:          newThermalZoneCollector,
-		perfCounterNames: nil,
+		name:            "thermalzone",
+		flags:           nil,
+		builder:         newThermalZoneCollector,
+		perfCounterFunc: nil,
 	},
 	{
-		name:             "time",
-		builder:          newTimeCollector,
-		perfCounterNames: []string{"Windows Time Service"},
+		name:    "time",
+		flags:   nil,
+		builder: newTimeCollector,
+		perfCounterFunc: func() []string {
+			return []string{"Windows Time Service"}
+		},
 	},
 	{
-		name:             "vmware",
-		builder:          newVmwareCollector,
-		perfCounterNames: nil,
+		name:            "vmware",
+		flags:           nil,
+		builder:         newVmwareCollector,
+		perfCounterFunc: nil,
 	},
 	{
-		name:             "vmware_blast",
-		builder:          newVmwareBlastCollector,
-		perfCounterNames: nil,
+		name:            "vmware_blast",
+		flags:           nil,
+		builder:         newVmwareBlastCollector,
+		perfCounterFunc: nil,
 	},
 }
 
-// To be called by the exporter for collector initialisation
+// RegisterCollectorsFlags To be called by the exporter for collector initialisation before running app.Parse
+func RegisterCollectorsFlags(app *kingpin.Application) {
+	for _, v := range collectors {
+		if v.flags != nil {
+			v.flags(app)
+		}
+	}
+}
+
+// RegisterCollectors To be called by the exporter for collector initialisation
 func RegisterCollectors() {
 	for _, v := range collectors {
-		registerCollector(v.name, v.builder, v.perfCounterNames...)
+		var perfCounterNames []string
+
+		if v.perfCounterFunc != nil {
+			perfCounterNames = v.perfCounterFunc()
+		}
+
+		registerCollector(v.name, v.builder, perfCounterNames...)
 	}
 }

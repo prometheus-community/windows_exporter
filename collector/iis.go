@@ -13,11 +13,18 @@ import (
 	"golang.org/x/sys/windows/registry"
 )
 
+const (
+	FlagISSSiteBlacklist = "collector.iis.site-blacklist"
+	FlagISSSiteWhitelist = "collector.iis.site-whitelist"
+	FlagISSAppBlacklist  = "collector.iis.app-blacklist"
+	FlagISSAppWhitelist  = "collector.iis.app-whitelist"
+)
+
 var (
-	siteWhitelist = kingpin.Flag("collector.iis.site-whitelist", "Regexp of sites to whitelist. Site name must both match whitelist and not match blacklist to be included.").Default(".+").String()
-	siteBlacklist = kingpin.Flag("collector.iis.site-blacklist", "Regexp of sites to blacklist. Site name must both match whitelist and not match blacklist to be included.").String()
-	appWhitelist  = kingpin.Flag("collector.iis.app-whitelist", "Regexp of apps to whitelist. App name must both match whitelist and not match blacklist to be included.").Default(".+").String()
-	appBlacklist  = kingpin.Flag("collector.iis.app-blacklist", "Regexp of apps to blacklist. App name must both match whitelist and not match blacklist to be included.").String()
+	siteWhitelist *string
+	siteBlacklist *string
+	appWhitelist  *string
+	appBlacklist  *string
 )
 
 type simple_version struct {
@@ -189,6 +196,13 @@ type IISCollector struct {
 	appBlacklistPattern *regexp.Regexp
 
 	iis_version simple_version
+}
+
+func newIISCollectorFlags(app *kingpin.Application) {
+	siteWhitelist = kingpin.Flag(FlagISSSiteWhitelist, "Regexp of sites to whitelist. Site name must both match whitelist and not match blacklist to be included.").Default(".+").String()
+	siteBlacklist = kingpin.Flag(FlagISSSiteBlacklist, "Regexp of sites to blacklist. Site name must both match whitelist and not match blacklist to be included.").String()
+	appWhitelist = kingpin.Flag(FlagISSAppWhitelist, "Regexp of apps to whitelist. App name must both match whitelist and not match blacklist to be included.").Default(".+").String()
+	appBlacklist = kingpin.Flag(FlagISSAppBlacklist, "Regexp of apps to blacklist. App name must both match whitelist and not match blacklist to be included.").String()
 }
 
 func newIISCollector() (Collector, error) {

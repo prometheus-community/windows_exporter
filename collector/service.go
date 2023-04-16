@@ -16,15 +16,14 @@ import (
 	"golang.org/x/sys/windows/svc/mgr"
 )
 
+const (
+	FlagServiceWhereClause = "collector.service.services-where"
+	FlagServiceUseAPI      = "collector.service.use-api"
+)
+
 var (
-	serviceWhereClause = kingpin.Flag(
-		"collector.service.services-where",
-		"WQL 'where' clause to use in WMI metrics query. Limits the response to the services you specify and reduces the size of the response.",
-	).Default("").String()
-	useAPI = kingpin.Flag(
-		"collector.service.use-api",
-		"Use API calls to collect service data instead of WMI. Flag 'collector.service.services-where' won't be effective.",
-	).Default("false").Bool()
+	serviceWhereClause *string
+	useAPI             *bool
 )
 
 // A serviceCollector is a Prometheus collector for WMI Win32_Service metrics
@@ -35,6 +34,18 @@ type serviceCollector struct {
 	Status      *prometheus.Desc
 
 	queryWhereClause string
+}
+
+// newServiceCollectorFlags ...
+func newServiceCollectorFlags(app *kingpin.Application) {
+	serviceWhereClause = app.Flag(
+		FlagServiceWhereClause,
+		"WQL 'where' clause to use in WMI metrics query. Limits the response to the services you specify and reduces the size of the response.",
+	).Default("").String()
+	useAPI = app.Flag(
+		FlagServiceUseAPI,
+		"Use API calls to collect service data instead of WMI. Flag 'collector.service.services-where' won't be effective.",
+	).Default("false").Bool()
 }
 
 // newserviceCollector ...
