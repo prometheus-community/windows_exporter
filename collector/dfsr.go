@@ -9,7 +9,11 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-var dfsrEnabledCollectors = kingpin.Flag("collectors.dfsr.sources-enabled", "Comma-seperated list of DFSR Perflib sources to use.").Default("connection,folder,volume").String()
+const (
+	FlagDfsrEnabledCollectors = "collectors.dfsr.sources-enabled"
+)
+
+var dfsrEnabledCollectors *string
 
 // DFSRCollector contains the metric and state data of the DFSR collectors.
 type DFSRCollector struct {
@@ -80,6 +84,11 @@ func dfsrGetPerfObjectName(collector string) string {
 		suffix = "Replication Service Volumes"
 	}
 	return (prefix + suffix)
+}
+
+// newDFSRCollectorFlags is registered
+func newDFSRCollectorFlags(app *kingpin.Application) {
+	dfsrEnabledCollectors = app.Flag(FlagDfsrEnabledCollectors, "Comma-seperated list of DFSR Perflib sources to use.").Default("connection,folder,volume").String()
 }
 
 // newDFSRCollector is registered

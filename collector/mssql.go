@@ -17,16 +17,15 @@ import (
 	"golang.org/x/sys/windows/registry"
 )
 
-var (
-	mssqlEnabledCollectors = kingpin.Flag(
-		"collectors.mssql.classes-enabled",
-		"Comma-separated list of mssql WMI classes to use.").
-		Default(mssqlAvailableClassCollectors()).String()
+const (
+	FlagMssqlEnabledCollectors = "collectors.mssql.classes-enabled"
+	FlagMssqlPrintCollectors   = "collectors.mssql.class-print"
+)
 
-	mssqlPrintCollectors = kingpin.Flag(
-		"collectors.mssql.class-print",
-		"If true, print available mssql WMI classes and exit.  Only displays if the mssql collector is enabled.",
-	).Bool()
+var (
+	mssqlEnabledCollectors *string
+
+	mssqlPrintCollectors *bool
 )
 
 type mssqlInstancesType map[string]string
@@ -399,6 +398,19 @@ type MSSQLCollector struct {
 	mssqlInstances             mssqlInstancesType
 	mssqlCollectors            mssqlCollectorsMap
 	mssqlChildCollectorFailure int
+}
+
+// newMSSQLCollectorFlags ...
+func newMSSQLCollectorFlags(app *kingpin.Application) {
+	mssqlEnabledCollectors = app.Flag(
+		FlagMssqlEnabledCollectors,
+		"Comma-separated list of mssql WMI classes to use.").
+		Default(mssqlAvailableClassCollectors()).String()
+
+	mssqlPrintCollectors = app.Flag(
+		FlagMssqlPrintCollectors,
+		"If true, print available mssql WMI classes and exit.  Only displays if the mssql collector is enabled.",
+	).Bool()
 }
 
 // newMSSQLCollector ...

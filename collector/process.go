@@ -15,15 +15,14 @@ import (
 	"github.com/yusufpapurcu/wmi"
 )
 
+const (
+	FlagProcessBlacklist = "collector.process.blacklist"
+	FlagProcessWhitelist = "collector.process.whitelist"
+)
+
 var (
-	processWhitelist = kingpin.Flag(
-		"collector.process.whitelist",
-		"Regexp of processes to include. Process name must both match whitelist and not match blacklist to be included.",
-	).Default(".*").String()
-	processBlacklist = kingpin.Flag(
-		"collector.process.blacklist",
-		"Regexp of processes to exclude. Process name must both match whitelist and not match blacklist to be included.",
-	).Default("").String()
+	processWhitelist *string
+	processBlacklist *string
 )
 
 type processCollector struct {
@@ -45,6 +44,18 @@ type processCollector struct {
 
 	processWhitelistPattern *regexp.Regexp
 	processBlacklistPattern *regexp.Regexp
+}
+
+// newProcessCollectorFlags ...
+func newProcessCollectorFlags(app *kingpin.Application) {
+	processWhitelist = app.Flag(
+		FlagProcessWhitelist,
+		"Regexp of processes to include. Process name must both match whitelist and not match blacklist to be included.",
+	).Default(".*").String()
+	processBlacklist = app.Flag(
+		FlagProcessBlacklist,
+		"Regexp of processes to exclude. Process name must both match whitelist and not match blacklist to be included.",
+	).Default("").String()
 }
 
 // NewProcessCollector ...

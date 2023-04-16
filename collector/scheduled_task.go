@@ -16,15 +16,14 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+const (
+	FlagScheduledTaskBlacklist = "collector.scheduled_task.blacklist"
+	FlagScheduledTaskWhitelist = "collector.scheduled_task.whitelist"
+)
+
 var (
-	taskWhitelist = kingpin.Flag(
-		"collector.scheduled_task.whitelist",
-		"Regexp of tasks to whitelist. Task path must both match whitelist and not match blacklist to be included.",
-	).Default(".+").String()
-	taskBlacklist = kingpin.Flag(
-		"collector.scheduled_task.blacklist",
-		"Regexp of tasks to blacklist. Task path must both match whitelist and not match blacklist to be included.",
-	).String()
+	taskWhitelist *string
+	taskBlacklist *string
 )
 
 type ScheduledTaskCollector struct {
@@ -62,6 +61,18 @@ type ScheduledTask struct {
 }
 
 type ScheduledTasks []ScheduledTask
+
+// newScheduledTask ...
+func newScheduledTaskFlags(app *kingpin.Application) {
+	taskWhitelist = app.Flag(
+		FlagScheduledTaskWhitelist,
+		"Regexp of tasks to whitelist. Task path must both match whitelist and not match blacklist to be included.",
+	).Default(".+").String()
+	taskBlacklist = app.Flag(
+		FlagScheduledTaskBlacklist,
+		"Regexp of tasks to blacklist. Task path must both match whitelist and not match blacklist to be included.",
+	).String()
+}
 
 // newScheduledTask ...
 func newScheduledTask() (Collector, error) {
