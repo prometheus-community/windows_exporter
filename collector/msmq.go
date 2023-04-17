@@ -12,8 +12,12 @@ import (
 	"github.com/yusufpapurcu/wmi"
 )
 
+const (
+	FlagMsmqWhereClause = "collector.msmq.msmq-where"
+)
+
 var (
-	msmqWhereClause = kingpin.Flag("collector.msmq.msmq-where", "WQL 'where' clause to use in WMI metrics query. Limits the response to the msmqs you specify and reduces the size of the response.").String()
+	msmqWhereClause *string
 )
 
 // A Win32_PerfRawData_MSMQ_MSMQQueueCollector is a Prometheus collector for WMI Win32_PerfRawData_MSMQ_MSMQQueue metrics
@@ -24,6 +28,11 @@ type Win32_PerfRawData_MSMQ_MSMQQueueCollector struct {
 	MessagesinQueue        *prometheus.Desc
 
 	queryWhereClause string
+}
+
+// newMSMQCollectorFlags ..
+func newMSMQCollectorFlags(app *kingpin.Application) {
+	msmqWhereClause = app.Flag(FlagMsmqWhereClause, "WQL 'where' clause to use in WMI metrics query. Limits the response to the msmqs you specify and reduces the size of the response.").String()
 }
 
 // NewWin32_PerfRawData_MSMQ_MSMQQueueCollector ...

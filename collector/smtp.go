@@ -11,9 +11,14 @@ import (
 	"regexp"
 )
 
+const (
+	FlagSmtpServerBlacklist = "collector.smtp.server-blacklist"
+	FlagSmtpServerWhitelist = "collector.smtp.server-whitelist"
+)
+
 var (
-	serverWhitelist = kingpin.Flag("collector.smtp.server-whitelist", "Regexp of virtual servers to whitelist. Server name must both match whitelist and not match blacklist to be included.").Default(".+").String()
-	serverBlacklist = kingpin.Flag("collector.smtp.server-blacklist", "Regexp of virtual servers to blacklist. Server name must both match whitelist and not match blacklist to be included.").String()
+	serverWhitelist *string
+	serverBlacklist *string
 )
 
 type SMTPCollector struct {
@@ -62,6 +67,11 @@ type SMTPCollector struct {
 
 	serverWhitelistPattern *regexp.Regexp
 	serverBlacklistPattern *regexp.Regexp
+}
+
+func newSMTPCollectorFlags(app *kingpin.Application) {
+	serverWhitelist = app.Flag(FlagSmtpServerWhitelist, "Regexp of virtual servers to whitelist. Server name must both match whitelist and not match blacklist to be included.").Default(".+").String()
+	serverBlacklist = app.Flag(FlagSmtpServerBlacklist, "Regexp of virtual servers to blacklist. Server name must both match whitelist and not match blacklist to be included.").String()
 }
 
 func newSMTPCollector() (Collector, error) {

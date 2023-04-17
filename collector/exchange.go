@@ -13,6 +13,11 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+const (
+	FlagExchangeListAllCollectors = "collectors.exchange.list"
+	FlagExchangeCollectorsEnabled = "collectors.exchange.enabled"
+)
+
 type exchangeCollector struct {
 	LDAPReadTime                            *prometheus.Desc
 	LDAPSearchTime                          *prometheus.Desc
@@ -69,16 +74,23 @@ var (
 		"RpcClientAccess",
 	}
 
-	argExchangeListAllCollectors = kingpin.Flag(
-		"collectors.exchange.list",
+	argExchangeListAllCollectors *bool
+
+	argExchangeCollectorsEnabled *string
+)
+
+// newExchangeCollectorFlags ...
+func newExchangeCollectorFlags(app *kingpin.Application) {
+	argExchangeListAllCollectors = app.Flag(
+		FlagExchangeListAllCollectors,
 		"List the collectors along with their perflib object name/ids",
 	).Bool()
 
-	argExchangeCollectorsEnabled = kingpin.Flag(
-		"collectors.exchange.enabled",
+	argExchangeCollectorsEnabled = app.Flag(
+		FlagExchangeCollectorsEnabled,
 		"Comma-separated list of collectors to use. Defaults to all, if not specified.",
 	).Default("").String()
-)
+}
 
 // newExchangeCollector returns a new Collector
 func newExchangeCollector() (Collector, error) {

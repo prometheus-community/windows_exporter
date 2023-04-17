@@ -259,51 +259,55 @@ func initWbem() {
 }
 
 func main() {
+	app := kingpin.New("windows_exporter", "A metrics collector for Windows.")
 	var (
-		configFile = kingpin.Flag(
+		configFile = app.Flag(
 			"config.file",
 			"YAML configuration file to use. Values set in this file will be overridden by CLI flags.",
 		).String()
-		webConfig   = webflag.AddFlags(kingpin.CommandLine, ":9182")
-		metricsPath = kingpin.Flag(
+		webConfig   = webflag.AddFlags(app, ":9182")
+		metricsPath = app.Flag(
 			"telemetry.path",
 			"URL path for surfacing collected metrics.",
 		).Default("/metrics").String()
-		disableExporterMetrics = kingpin.Flag(
+		disableExporterMetrics = app.Flag(
 			"web.disable-exporter-metrics",
 			"Exclude metrics about the exporter itself (promhttp_*, process_*, go_*).",
 		).Bool()
-		maxRequests = kingpin.Flag(
+		maxRequests = app.Flag(
 			"telemetry.max-requests",
 			"Maximum number of concurrent requests. 0 to disable.",
 		).Default("5").Int()
-		enabledCollectors = kingpin.Flag(
+		enabledCollectors = app.Flag(
 			"collectors.enabled",
 			"Comma-separated list of collectors to use. Use '[defaults]' as a placeholder for all the collectors enabled by default.").
 			Default(defaultCollectors).String()
-		printCollectors = kingpin.Flag(
+		printCollectors = app.Flag(
 			"collectors.print",
 			"If true, print available collectors and exit.",
 		).Bool()
-		timeoutMargin = kingpin.Flag(
+		timeoutMargin = app.Flag(
 			"scrape.timeout-margin",
 			"Seconds to subtract from the timeout allowed by the client. Tune to allow for overhead or high loads.",
 		).Default("0.5").Float64()
 	)
-	log.AddFlags(kingpin.CommandLine)
-	kingpin.Version(version.Print("windows_exporter"))
-	kingpin.HelpFlag.Short('h')
+	log.AddFlags(app)
+	app.Version(version.Print("windows_exporter"))
+	app.HelpFlag.Short('h')
+
+	// Initialize collectors before loading and parsing CLI arguments
+	collector.RegisterCollectorsFlags(app)
 
 	// Load values from configuration file(s). Executable flags must first be parsed, in order
 	// to load the specified file(s).
-	kingpin.Parse()
+	kingpin.MustParse(app.Parse(os.Args[1:]))
 	log.Debug("Logging has Started")
 	if *configFile != "" {
 		resolver, err := config.NewResolver(*configFile)
 		if err != nil {
 			log.Fatalf("could not load config file: %v\n", err)
 		}
-		err = resolver.Bind(kingpin.CommandLine, os.Args[1:])
+		err = resolver.Bind(app, os.Args[1:])
 		if err != nil {
 			log.Fatalf("%v\n", err)
 		}
@@ -314,7 +318,7 @@ func main() {
 		*webConfig.WebListenAddresses = (*webConfig.WebListenAddresses)[1:]
 
 		// Parse flags once more to include those discovered in configuration file(s).
-		kingpin.Parse()
+		kingpin.MustParse(app.Parse(os.Args[1:]))
 	}
 
 	if *printCollectors {

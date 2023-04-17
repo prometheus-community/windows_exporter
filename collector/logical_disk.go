@@ -12,15 +12,14 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+const (
+	FlagLogicalDiskVolumeBlacklist = "collector.logical_disk.volume-blacklist"
+	FlagLogicalDiskVolumeWhitelist = "collector.logical_disk.volume-whitelist"
+)
+
 var (
-	volumeWhitelist = kingpin.Flag(
-		"collector.logical_disk.volume-whitelist",
-		"Regexp of volumes to whitelist. Volume name must both match whitelist and not match blacklist to be included.",
-	).Default(".+").String()
-	volumeBlacklist = kingpin.Flag(
-		"collector.logical_disk.volume-blacklist",
-		"Regexp of volumes to blacklist. Volume name must both match whitelist and not match blacklist to be included.",
-	).Default("").String()
+	volumeWhitelist *string
+	volumeBlacklist *string
 )
 
 // A LogicalDiskCollector is a Prometheus collector for perflib logicalDisk metrics
@@ -44,6 +43,18 @@ type LogicalDiskCollector struct {
 
 	volumeWhitelistPattern *regexp.Regexp
 	volumeBlacklistPattern *regexp.Regexp
+}
+
+// newLogicalDiskCollectorFlags ...
+func newLogicalDiskCollectorFlags(app *kingpin.Application) {
+	volumeWhitelist = app.Flag(
+		FlagLogicalDiskVolumeWhitelist,
+		"Regexp of volumes to whitelist. Volume name must both match whitelist and not match blacklist to be included.",
+	).Default(".+").String()
+	volumeBlacklist = app.Flag(
+		FlagLogicalDiskVolumeBlacklist,
+		"Regexp of volumes to blacklist. Volume name must both match whitelist and not match blacklist to be included.",
+	).Default("").String()
 }
 
 // newLogicalDiskCollector ...

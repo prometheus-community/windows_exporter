@@ -12,15 +12,14 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+const (
+	FlagNicBlacklist = "collector.net.nic-blacklist"
+	FlagNicWhitelist = "collector.net.nic-whitelist"
+)
+
 var (
-	nicWhitelist = kingpin.Flag(
-		"collector.net.nic-whitelist",
-		"Regexp of NIC:s to whitelist. NIC name must both match whitelist and not match blacklist to be included.",
-	).Default(".+").String()
-	nicBlacklist = kingpin.Flag(
-		"collector.net.nic-blacklist",
-		"Regexp of NIC:s to blacklist. NIC name must both match whitelist and not match blacklist to be included.",
-	).Default("").String()
+	nicWhitelist        *string
+	nicBlacklist        *string
 	nicNameToUnderscore = regexp.MustCompile("[^a-zA-Z0-9]")
 )
 
@@ -42,6 +41,18 @@ type NetworkCollector struct {
 
 	nicWhitelistPattern *regexp.Regexp
 	nicBlacklistPattern *regexp.Regexp
+}
+
+// newNetworkCollectorFlags ...
+func newNetworkCollectorFlags(app *kingpin.Application) {
+	nicWhitelist = app.Flag(
+		FlagNicWhitelist,
+		"Regexp of NIC:s to whitelist. NIC name must both match whitelist and not match blacklist to be included.",
+	).Default(".+").String()
+	nicBlacklist = app.Flag(
+		FlagNicBlacklist,
+		"Regexp of NIC:s to blacklist. NIC name must both match whitelist and not match blacklist to be included.",
+	).Default("").String()
 }
 
 // newNetworkCollector ...
