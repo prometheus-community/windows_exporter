@@ -26,6 +26,7 @@ This directory contains documentation of the collectors in the windows_exporter,
 - [`netframework_clrremoting`](collector.netframework_clrremoting.md)
 - [`netframework_clrsecurity`](collector.netframework_clrsecurity.md)
 - [`net`](collector.net.md)
+- [`nps`](collector.nps.md)
 - [`os`](collector.os.md)
 - [`process`](collector.process.md)
 - [`remote_fx`](collector.remote_fx.md)
