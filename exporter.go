@@ -17,7 +17,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/prometheus-community/windows_exporter/collector"
@@ -32,11 +31,6 @@ import (
 	"github.com/prometheus/exporter-toolkit/web"
 	webflag "github.com/prometheus/exporter-toolkit/web/kingpinflag"
 )
-
-type windowsCollector struct {
-	maxScrapeDuration time.Duration
-	collectors        map[string]collector.Collector
-}
 
 // Same struct prometheus uses for their /version endpoint.
 // Separate copy to avoid pulling all of prometheus as a dependency
@@ -53,166 +47,6 @@ const (
 	defaultCollectors            = "cpu,cs,logical_disk,net,os,service,system,textfile"
 	defaultCollectorsPlaceholder = "[defaults]"
 )
-
-var (
-	scrapeDurationDesc = prometheus.NewDesc(
-		prometheus.BuildFQName(collector.Namespace, "exporter", "collector_duration_seconds"),
-		"windows_exporter: Duration of a collection.",
-		[]string{"collector"},
-		nil,
-	)
-	scrapeSuccessDesc = prometheus.NewDesc(
-		prometheus.BuildFQName(collector.Namespace, "exporter", "collector_success"),
-		"windows_exporter: Whether the collector was successful.",
-		[]string{"collector"},
-		nil,
-	)
-	scrapeTimeoutDesc = prometheus.NewDesc(
-		prometheus.BuildFQName(collector.Namespace, "exporter", "collector_timeout"),
-		"windows_exporter: Whether the collector timed out.",
-		[]string{"collector"},
-		nil,
-	)
-	snapshotDuration = prometheus.NewDesc(
-		prometheus.BuildFQName(collector.Namespace, "exporter", "perflib_snapshot_duration_seconds"),
-		"Duration of perflib snapshot capture",
-		nil,
-		nil,
-	)
-)
-
-// Describe sends all the descriptors of the collectors included to
-// the provided channel.
-func (coll windowsCollector) Describe(ch chan<- *prometheus.Desc) {
-	ch <- scrapeDurationDesc
-	ch <- scrapeSuccessDesc
-}
-
-type collectorOutcome int
-
-const (
-	pending collectorOutcome = iota
-	success
-	failed
-)
-
-// Collect sends the collected metrics from each of the collectors to
-// prometheus.
-func (coll windowsCollector) Collect(ch chan<- prometheus.Metric) {
-	t := time.Now()
-	cs := make([]string, 0, len(coll.collectors))
-	for name := range coll.collectors {
-		cs = append(cs, name)
-	}
-	scrapeContext, err := collector.PrepareScrapeContext(cs)
-	ch <- prometheus.MustNewConstMetric(
-		snapshotDuration,
-		prometheus.GaugeValue,
-		time.Since(t).Seconds(),
-	)
-	if err != nil {
-		ch <- prometheus.NewInvalidMetric(scrapeSuccessDesc, fmt.Errorf("failed to prepare scrape: %v", err))
-		return
-	}
-
-	wg := sync.WaitGroup{}
-	wg.Add(len(coll.collectors))
-	collectorOutcomes := make(map[string]collectorOutcome)
-	for name := range coll.collectors {
-		collectorOutcomes[name] = pending
-	}
-
-	metricsBuffer := make(chan prometheus.Metric)
-	l := sync.Mutex{}
-	finished := false
-	go func() {
-		for m := range metricsBuffer {
-			l.Lock()
-			if !finished {
-				ch <- m
-			}
-			l.Unlock()
-		}
-	}()
-
-	for name, c := range coll.collectors {
-		go func(name string, c collector.Collector) {
-			defer wg.Done()
-			outcome := execute(name, c, scrapeContext, metricsBuffer)
-			l.Lock()
-			if !finished {
-				collectorOutcomes[name] = outcome
-			}
-			l.Unlock()
-		}(name, c)
-	}
-
-	allDone := make(chan struct{})
-	go func() {
-		wg.Wait()
-		close(allDone)
-		close(metricsBuffer)
-	}()
-
-	// Wait until either all collectors finish, or timeout expires
-	select {
-	case <-allDone:
-	case <-time.After(coll.maxScrapeDuration):
-	}
-
-	l.Lock()
-	finished = true
-
-	remainingCollectorNames := make([]string, 0)
-	for name, outcome := range collectorOutcomes {
-		var successValue, timeoutValue float64
-		if outcome == pending {
-			timeoutValue = 1.0
-			remainingCollectorNames = append(remainingCollectorNames, name)
-		}
-		if outcome == success {
-			successValue = 1.0
-		}
-
-		ch <- prometheus.MustNewConstMetric(
-			scrapeSuccessDesc,
-			prometheus.GaugeValue,
-			successValue,
-			name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			scrapeTimeoutDesc,
-			prometheus.GaugeValue,
-			timeoutValue,
-			name,
-		)
-	}
-
-	if len(remainingCollectorNames) > 0 {
-		log.Warn("Collection timed out, still waiting for ", remainingCollectorNames)
-	}
-
-	l.Unlock()
-}
-
-func execute(name string, c collector.Collector, ctx *collector.ScrapeContext, ch chan<- prometheus.Metric) collectorOutcome {
-	t := time.Now()
-	err := c.Collect(ctx, ch)
-	duration := time.Since(t).Seconds()
-	ch <- prometheus.MustNewConstMetric(
-		scrapeDurationDesc,
-		prometheus.GaugeValue,
-		duration,
-		name,
-	)
-
-	if err != nil {
-		log.Errorf("collector %s failed after %fs: %s", name, duration, err)
-		return failed
-	}
-	log.Debugf("collector %s succeeded after %fs.", name, duration)
-	return success
-}
 
 func expandEnabledCollectors(enabled string) []string {
 	expanded := strings.Replace(enabled, defaultCollectorsPlaceholder, defaultCollectors, -1)
@@ -360,7 +194,7 @@ func main() {
 	h := &metricsHandler{
 		timeoutMargin:          *timeoutMargin,
 		includeExporterMetrics: *disableExporterMetrics,
-		collectorFactory: func(timeout time.Duration, requestedCollectors []string) (error, *windowsCollector) {
+		collectorFactory: func(timeout time.Duration, requestedCollectors []string) (error, *collector.Prometheus) {
 			filteredCollectors := make(map[string]collector.Collector)
 			// scrape all enabled collectors if no collector is requested
 			if len(requestedCollectors) == 0 {
@@ -373,10 +207,7 @@ func main() {
 				}
 				filteredCollectors[name] = col
 			}
-			return nil, &windowsCollector{
-				collectors:        filteredCollectors,
-				maxScrapeDuration: timeout,
-			}
+			return nil, collector.NewPrometheus(timeout, filteredCollectors)
 		},
 	}
 
@@ -480,7 +311,7 @@ func withConcurrencyLimit(n int, next http.HandlerFunc) http.HandlerFunc {
 type metricsHandler struct {
 	timeoutMargin          float64
 	includeExporterMetrics bool
-	collectorFactory       func(timeout time.Duration, requestedCollectors []string) (error, *windowsCollector)
+	collectorFactory       func(timeout time.Duration, requestedCollectors []string) (error, *collector.Prometheus)
 }
 
 func (mh *metricsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
