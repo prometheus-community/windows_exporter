@@ -4,6 +4,7 @@
 package collector
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 
@@ -14,17 +15,32 @@ import (
 )
 
 const (
-	FlagISSSiteBlacklist = "collector.iis.site-blacklist"
-	FlagISSSiteWhitelist = "collector.iis.site-whitelist"
-	FlagISSAppBlacklist  = "collector.iis.app-blacklist"
-	FlagISSAppWhitelist  = "collector.iis.app-whitelist"
+	FlagIISSiteOldExclude = "collector.iis.site-blacklist"
+	FlagIISSiteOldInclude = "collector.iis.site-whitelist"
+	FlagIISAppOldExclude  = "collector.iis.app-blacklist"
+	FlagIISAppOldInclude  = "collector.iis.app-whitelist"
+
+	FlagIISSiteExclude = "collector.iis.site-exclude"
+	FlagIISSiteInclude = "collector.iis.site-include"
+	FlagIISAppExclude  = "collector.iis.app-exclude"
+	FlagIISAppInclude  = "collector.iis.app-include"
 )
 
 var (
-	siteWhitelist *string
-	siteBlacklist *string
-	appWhitelist  *string
-	appBlacklist  *string
+	oldSiteInclude *string
+	oldSiteExclude *string
+	oldAppInclude  *string
+	oldAppExclude  *string
+
+	siteInclude *string
+	siteExclude *string
+	appInclude  *string
+	appExclude  *string
+
+	siteIncludeSet bool
+	siteExcludeSet bool
+	appIncludeSet  bool
+	appExcludeSet  bool
 )
 
 type simple_version struct {
@@ -89,8 +105,8 @@ type IISCollector struct {
 	TotalNotFoundErrors                 *prometheus.Desc
 	TotalRejectedAsyncIORequests        *prometheus.Desc
 
-	siteWhitelistPattern *regexp.Regexp
-	siteBlacklistPattern *regexp.Regexp
+	siteIncludePattern *regexp.Regexp
+	siteExcludePattern *regexp.Regexp
 
 	// APP_POOL_WAS
 	CurrentApplicationPoolState        *prometheus.Desc
@@ -192,29 +208,94 @@ type IISCollector struct {
 	ServiceCache_OutputCacheFlushedItemsTotal  *prometheus.Desc
 	ServiceCache_OutputCacheFlushesTotal       *prometheus.Desc
 
-	appWhitelistPattern *regexp.Regexp
-	appBlacklistPattern *regexp.Regexp
+	appIncludePattern *regexp.Regexp
+	appExcludePattern *regexp.Regexp
 
 	iis_version simple_version
 }
 
 func newIISCollectorFlags(app *kingpin.Application) {
-	siteWhitelist = kingpin.Flag(FlagISSSiteWhitelist, "Regexp of sites to whitelist. Site name must both match whitelist and not match blacklist to be included.").Default(".+").String()
-	siteBlacklist = kingpin.Flag(FlagISSSiteBlacklist, "Regexp of sites to blacklist. Site name must both match whitelist and not match blacklist to be included.").String()
-	appWhitelist = kingpin.Flag(FlagISSAppWhitelist, "Regexp of apps to whitelist. App name must both match whitelist and not match blacklist to be included.").Default(".+").String()
-	appBlacklist = kingpin.Flag(FlagISSAppBlacklist, "Regexp of apps to blacklist. App name must both match whitelist and not match blacklist to be included.").String()
+	oldSiteInclude = app.Flag(FlagIISSiteOldInclude, "DEPRECATED: Use --collector.iis.site-include").Default(".+").Hidden().String()
+	oldSiteExclude = app.Flag(FlagIISSiteOldExclude, "DEPRECATED: Use --collector.iis.site-exclude").Hidden().String()
+	oldAppInclude = app.Flag(FlagIISAppOldInclude, "DEPRECATED: Use --collector.iis.app-include").Hidden().String()
+	oldAppExclude = app.Flag(FlagIISAppOldExclude, "DEPRECATED: Use --collector.iis.app-exclude").Hidden().String()
+
+	siteInclude = app.Flag(
+		FlagIISSiteInclude,
+		"Regexp of sites to include. Site name must both match include and not match exclude to be included.",
+	).Default(".+").PreAction(func(c *kingpin.ParseContext) error {
+		siteIncludeSet = true
+		return nil
+	}).String()
+
+	siteExclude = app.Flag(
+		FlagIISSiteExclude,
+		"Regexp of sites to exclude. Site name must both match include and not match exclude to be included.",
+	).Default("").PreAction(func(c *kingpin.ParseContext) error {
+		siteExcludeSet = true
+		return nil
+	}).String()
+
+	appInclude = app.Flag(
+		FlagIISAppInclude,
+		"Regexp of apps to include. App name must both match include and not match exclude to be included.",
+	).Default(".+").PreAction(func(c *kingpin.ParseContext) error {
+		appIncludeSet = true
+		return nil
+	}).String()
+
+	appExclude = app.Flag(
+		FlagIISAppExclude,
+		"Regexp of apps to include. App name must both match include and not match exclude to be included.",
+	).Default("").PreAction(func(c *kingpin.ParseContext) error {
+		siteExcludeSet = true
+		return nil
+	}).String()
 }
 
 func newIISCollector() (Collector, error) {
-	const subsystem = "iis"
+	if *oldSiteExclude != "" {
+		if !siteExcludeSet {
+			log.Warnln("msg", "--collector.iis.site-blacklist is DEPRECATED and will be removed in a future release, use --collector.iis.site-exclude")
+			*siteExclude = *oldSiteExclude
+		} else {
+			return nil, errors.New("--collector.iis.site-blacklist and --collector.iis.site-exclude are mutually exclusive")
+		}
+	}
+	if *oldSiteInclude != "" {
+		if !siteIncludeSet {
+			log.Warnln("msg", "--collector.iis.site-whitelist is DEPRECATED and will be removed in a future release, use --collector.iis.site-include")
+			*siteInclude = *oldSiteInclude
+		} else {
+			return nil, errors.New("--collector.iis.site-whitelist and --collector.iis.site-include are mutually exclusive")
+		}
+	}
 
+	if *oldAppExclude != "" {
+		if !appExcludeSet {
+			log.Warnln("msg", "--collector.iis.app-blacklist is DEPRECATED and will be removed in a future release, use --collector.iis.app-exclude")
+			*appExclude = *oldAppExclude
+		} else {
+			return nil, errors.New("--collector.iis.app-blacklist and --collector.iis.app-exclude are mutually exclusive")
+		}
+	}
+	if *oldAppInclude != "" {
+		if !appIncludeSet {
+			log.Warnln("msg", "--collector.iis.app-whitelist is DEPRECATED and will be removed in a future release, use --collector.iis.app-include")
+			*appInclude = *oldAppInclude
+		} else {
+			return nil, errors.New("--collector.iis.app-whitelist and --collector.iis.app-include are mutually exclusive")
+		}
+	}
+
+	const subsystem = "iis"
 	return &IISCollector{
 		iis_version: getIISVersion(),
 
-		siteWhitelistPattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *siteWhitelist)),
-		siteBlacklistPattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *siteBlacklist)),
-		appWhitelistPattern:  regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *appWhitelist)),
-		appBlacklistPattern:  regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *appBlacklist)),
+		siteIncludePattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *siteInclude)),
+		siteExcludePattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *siteExclude)),
+		appIncludePattern:  regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *appInclude)),
+		appExcludePattern:  regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *appExclude)),
 
 		// Web Service
 		CurrentAnonymousUsers: prometheus.NewDesc(
@@ -903,7 +984,7 @@ func (c *IISCollector) collectWebService(ctx *ScrapeContext, ch chan<- prometheu
 	}
 
 	for _, app := range WebService {
-		if app.Name == "_Total" || c.siteBlacklistPattern.MatchString(app.Name) || !c.siteWhitelistPattern.MatchString(app.Name) {
+		if app.Name == "_Total" || c.siteExcludePattern.MatchString(app.Name) || !c.siteIncludePattern.MatchString(app.Name) {
 			continue
 		}
 
@@ -1188,8 +1269,8 @@ func (c *IISCollector) collectAPP_POOL_WAS(ctx *ScrapeContext, ch chan<- prometh
 
 	for _, app := range APP_POOL_WAS {
 		if app.Name == "_Total" ||
-			c.appBlacklistPattern.MatchString(app.Name) ||
-			!c.appWhitelistPattern.MatchString(app.Name) {
+			c.appExcludePattern.MatchString(app.Name) ||
+			!c.appIncludePattern.MatchString(app.Name) {
 			continue
 		}
 
@@ -1366,8 +1447,8 @@ func (c *IISCollector) collectW3SVC_W3WP(ctx *ScrapeContext, ch chan<- prometheu
 		pid := workerProcessNameExtractor.ReplaceAllString(app.Name, "$1")
 		name := workerProcessNameExtractor.ReplaceAllString(app.Name, "$2")
 		if name == "" || name == "_Total" ||
-			c.appBlacklistPattern.MatchString(name) ||
-			!c.appWhitelistPattern.MatchString(name) {
+			c.appExcludePattern.MatchString(name) ||
+			!c.appIncludePattern.MatchString(name) {
 			continue
 		}
 
@@ -1618,8 +1699,8 @@ func (c *IISCollector) collectW3SVC_W3WP(ctx *ScrapeContext, ch chan<- prometheu
 			pid := workerProcessNameExtractor.ReplaceAllString(app.Name, "$1")
 			name := workerProcessNameExtractor.ReplaceAllString(app.Name, "$2")
 			if name == "" || name == "_Total" ||
-				c.appBlacklistPattern.MatchString(name) ||
-				!c.appWhitelistPattern.MatchString(name) {
+				c.appExcludePattern.MatchString(name) ||
+				!c.appIncludePattern.MatchString(name) {
 				continue
 			}
 

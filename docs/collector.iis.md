@@ -10,21 +10,21 @@ Enabled by default? | No
 
 ## Flags
 
-### `--collector.iis.site-whitelist`
+### `--collector.iis.site-include`
 
-If given, a site needs to match the whitelist regexp in order for the corresponding metrics to be reported.
+If given, a site needs to match the include regexp in order for the corresponding metrics to be reported.
 
-### `--collector.iis.site-blacklist`
+### `--collector.iis.site-exclude`
 
-If given, a site needs to *not* match the blacklist regexp in order for the corresponding metrics to be reported.
+If given, a site needs to *not* match the exclude regexp in order for the corresponding metrics to be reported.
 
-### `--collector.iis.app-whitelist`
+### `--collector.iis.app-include`
 
-If given, an application needs to match the whitelist regexp in order for the corresponding metrics to be reported.
+If given, an application needs to match the include regexp in order for the corresponding metrics to be reported.
 
-### `--collector.iis.app-blacklist`
+### `--collector.iis.app-exclude`
 
-If given, an application needs to *not* match the blacklist regexp in order for the corresponding metrics to be reported.
+If given, an application needs to *not* match the exclude regexp in order for the corresponding metrics to be reported.
 
 ## Metrics
 

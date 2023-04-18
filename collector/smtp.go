@@ -4,6 +4,7 @@
 package collector
 
 import (
+	"errors"
 	"fmt"
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/log"
@@ -12,13 +13,22 @@ import (
 )
 
 const (
-	FlagSmtpServerBlacklist = "collector.smtp.server-blacklist"
-	FlagSmtpServerWhitelist = "collector.smtp.server-whitelist"
+	FlagSmtpServerOldExclude = "collector.smtp.server-blacklist"
+	FlagSmtpServerOldInclude = "collector.smtp.server-whitelist"
+
+	FlagSmtpServerExclude = "collector.smtp.server-exclude"
+	FlagSmtpServerInclude = "collector.smtp.server-include"
 )
 
 var (
-	serverWhitelist *string
-	serverBlacklist *string
+	serverOldInclude *string
+	serverOldExclude *string
+
+	serverInclude *string
+	serverExclude *string
+
+	serverIncludeSet bool
+	serverExcludeSet bool
 )
 
 type SMTPCollector struct {
@@ -65,19 +75,58 @@ type SMTPCollector struct {
 	RemoteRetryQueueLength                  *prometheus.Desc
 	RoutingTableLookupsTotal                *prometheus.Desc
 
-	serverWhitelistPattern *regexp.Regexp
-	serverBlacklistPattern *regexp.Regexp
+	serverIncludePattern *regexp.Regexp
+	serverExcludePattern *regexp.Regexp
 }
 
 func newSMTPCollectorFlags(app *kingpin.Application) {
-	serverWhitelist = app.Flag(FlagSmtpServerWhitelist, "Regexp of virtual servers to whitelist. Server name must both match whitelist and not match blacklist to be included.").Default(".+").String()
-	serverBlacklist = app.Flag(FlagSmtpServerBlacklist, "Regexp of virtual servers to blacklist. Server name must both match whitelist and not match blacklist to be included.").String()
+	serverInclude = app.Flag(
+		FlagSmtpServerInclude,
+		"Regexp of virtual servers to include. Server name must both match include and not match exclude to be included.",
+	).Default(".+").PreAction(func(c *kingpin.ParseContext) error {
+		serverIncludeSet = true
+		return nil
+	}).String()
+
+	serverExclude = app.Flag(
+		FlagSmtpServerExclude,
+		"Regexp of virtual servers to exclude. Server name must both match include and not match exclude to be included.",
+	).Default("").PreAction(func(c *kingpin.ParseContext) error {
+		serverExcludeSet = true
+		return nil
+	}).String()
+
+	serverOldInclude = app.Flag(
+		FlagSmtpServerOldInclude,
+		"DEPRECATED: Use --collector.smtp.server-include",
+	).Hidden().String()
+	serverOldExclude = app.Flag(
+		FlagSmtpServerOldExclude,
+		"DEPRECATED: Use --collector.smtp.server-exclude",
+	).Hidden().String()
 }
 
 func newSMTPCollector() (Collector, error) {
 	log.Info("smtp collector is in an experimental state! Metrics for this collector have not been tested.")
-	const subsystem = "smtp"
 
+	if *serverOldExclude != "" {
+		if !serverExcludeSet {
+			log.Warnln("msg", "--collector.smtp.server-blacklist is DEPRECATED and will be removed in a future release, use --collector.smtp.server-exclude")
+			*serverExclude = *serverOldExclude
+		} else {
+			return nil, errors.New("--collector.smtp.server-blacklist and --collector.smtp.server-exclude are mutually exclusive")
+		}
+	}
+	if *serverOldInclude != "" {
+		if !serverIncludeSet {
+			log.Warnln("msg", "--collector.smtp.server-whitelist is DEPRECATED and will be removed in a future release, use --collector.smtp.server-include")
+			*serverInclude = *serverOldInclude
+		} else {
+			return nil, errors.New("--collector.smtp.server-whitelist and --collector.smtp.server-include are mutually exclusive")
+		}
+	}
+
+	const subsystem = "smtp"
 	return &SMTPCollector{
 		BadmailedMessagesBadPickupFileTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "badmailed_messages_bad_pickup_file_total"),
@@ -332,8 +381,8 @@ func newSMTPCollector() (Collector, error) {
 			nil,
 		),
 
-		serverWhitelistPattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *serverWhitelist)),
-		serverBlacklistPattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *serverBlacklist)),
+		serverIncludePattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *serverInclude)),
+		serverExcludePattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *serverExclude)),
 	}, nil
 }
 
@@ -403,8 +452,8 @@ func (c *SMTPCollector) collect(ctx *ScrapeContext, ch chan<- prometheus.Metric)
 
 	for _, server := range dst {
 		if server.Name == "_Total" ||
-			c.serverBlacklistPattern.MatchString(server.Name) ||
-			!c.serverWhitelistPattern.MatchString(server.Name) {
+			c.serverExcludePattern.MatchString(server.Name) ||
+			!c.serverIncludePattern.MatchString(server.Name) {
 			continue
 		}
 

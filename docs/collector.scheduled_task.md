@@ -10,17 +10,17 @@ Enabled by default? | No
 
 ## Flags
 
-### `--collector.scheduled_task.whitelist`
+### `--collector.scheduled_task.include`
 
-If given, the path of the task needs to match the whitelist regexp in order for the corresponding metrics to be reported.
+If given, the path of the task needs to match the include regexp in order for the corresponding metrics to be reported.
 
-E.G. `--collector.scheduled_task.whitelist="Firefox.*"`
+E.G. `--collector.scheduled_task.include="Firefox.*"`
 
-### `--collector.scheduled_task.blacklist`
+### `--collector.scheduled_task.exclude`
 
-If given, the path of the task needs to *not* match the blacklist regexp in order for the corresponding metrics to be reported.
+If given, the path of the task needs to *not* match the exclude regexp in order for the corresponding metrics to be reported.
 
-E.G. `--collector.scheduled_task.blacklist="/Microsoft/.+"`
+E.G. `--collector.scheduled_task.exclude="/Microsoft/.+"`
 
 ## Metrics
 
