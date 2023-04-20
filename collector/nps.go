@@ -6,10 +6,6 @@ import (
 	"github.com/yusufpapurcu/wmi"
 )
 
-func init() {
-	registerCollector("nps", newnpsCollector) // TODO: Add any perflib dependencies here
-}
-
 // A npsCollector is a Prometheus collector for WMI Win32_PerfRawData_IAS_NPSAuthenticationServer and Win32_PerfRawData_IAS_NPSAccountingServer metrics
 
 type npsCollector struct {
@@ -41,7 +37,7 @@ type npsCollector struct {
 	AccountingUnknownType       *prometheus.Desc
 }
 
-func newnpsCollector() (Collector, error) {
+func newNPSCollector() (Collector, error) {
 	const subsystem = "nps"
 	return &npsCollector{
 		AccessAccepts: prometheus.NewDesc(
@@ -213,7 +209,7 @@ func (c *npsCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) 
 }
 
 // Win32_PerfRawData_IAS_NPSAuthenticationServer docs:
-// - <add link to documentation here>
+// at the moment there is no Microsoft documentation
 type Win32_PerfRawData_IAS_NPSAuthenticationServer struct {
 	Name string
 
