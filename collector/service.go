@@ -20,6 +20,7 @@ import (
 
 const (
 	FlagServiceWhereClause = "collector.service.services-where"
+	FlagServiceList        = "collector.service.services-list"
 	FlagServiceUseAPI      = "collector.service.use-api"
 )
 
@@ -30,13 +31,10 @@ type ServiceDef struct {
 
 var (
 	serviceWhereClause *string
-	serviceList        = kingpin.Flag(
-		"collector.service.services-list",
-		"comma separated list of service name used to build WQL 'where' clause to use in WMI metrics query. Limits the response to the services you specify and reduces the size of the response.",
-	).Default("").String()
-	useAPI          *bool
-	services        = make(map[string]*ServiceDef)
-	services_labels = make([]string, 0)
+	serviceList        *string
+	useAPI             *bool
+	services           = make(map[string]*ServiceDef)
+	services_labels    = make([]string, 0)
 )
 
 // A serviceCollector is a Prometheus collector for WMI Win32_Service metrics
@@ -59,6 +57,10 @@ func newServiceCollectorFlags(app *kingpin.Application) {
 		FlagServiceUseAPI,
 		"Use API calls to collect service data instead of WMI. Flag 'collector.service.services-where' won't be effective.",
 	).Default("false").Bool()
+	serviceList = app.Flag(
+		FlagServiceList,
+		"comma separated list of service name used to build WQL 'where' clause to use in WMI metrics query. Limits the response to the services you specify and reduces the size of the response.",
+	).Default("").String()
 }
 
 // Build service list for name
