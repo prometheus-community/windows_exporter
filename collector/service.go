@@ -18,24 +18,23 @@ import (
 	"golang.org/x/sys/windows/svc/mgr"
 )
 
+const (
+	FlagServiceWhereClause = "collector.service.services-where"
+	FlagServiceUseAPI      = "collector.service.use-api"
+)
+
 type ServiceDef struct {
 	Name         string
 	CustomLabels map[string]string
 }
 
 var (
-	serviceWhereClause = kingpin.Flag(
-		"collector.service.services-where",
-		"WQL 'where' clause to use in WMI metrics query. Limits the response to the services you specify and reduces the size of the response.",
-	).Default("").String()
-	serviceList = kingpin.Flag(
+	serviceWhereClause *string
+	serviceList        = kingpin.Flag(
 		"collector.service.services-list",
 		"comma separated list of service name used to build WQL 'where' clause to use in WMI metrics query. Limits the response to the services you specify and reduces the size of the response.",
 	).Default("").String()
-	useAPI = kingpin.Flag(
-		"collector.service.use-api",
-		"Use API calls to collect service data instead of WMI. Flag 'collector.service.services-where' won't be effective.",
-	).Default("false").Bool()
+	useAPI          *bool
 	services        = make(map[string]*ServiceDef)
 	services_labels = make([]string, 0)
 )
@@ -48,6 +47,18 @@ type serviceCollector struct {
 	Status      *prometheus.Desc
 
 	queryWhereClause string
+}
+
+// newServiceCollectorFlags ...
+func newServiceCollectorFlags(app *kingpin.Application) {
+	serviceWhereClause = app.Flag(
+		FlagServiceWhereClause,
+		"WQL 'where' clause to use in WMI metrics query. Limits the response to the services you specify and reduces the size of the response.",
+	).Default("").String()
+	useAPI = app.Flag(
+		FlagServiceUseAPI,
+		"Use API calls to collect service data instead of WMI. Flag 'collector.service.services-where' won't be effective.",
+	).Default("false").Bool()
 }
 
 // Build service list for name

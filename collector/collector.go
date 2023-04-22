@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/alecthomas/kingpin/v2"
 	"github.com/leoluk/perflib_exporter/perflib"
 	"github.com/prometheus-community/windows_exporter/config"
 	"github.com/prometheus-community/windows_exporter/log"
@@ -52,6 +53,8 @@ func getWindowsVersion() float64 {
 }
 
 type collectorBuilder func() (Collector, error)
+type flagsBuilder func(*kingpin.Application)
+type perfCounterNamesBuilder func() []string
 
 var (
 	builders                = make(map[string]collectorBuilder)

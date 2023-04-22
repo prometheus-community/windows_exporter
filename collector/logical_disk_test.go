@@ -6,8 +6,8 @@ import (
 
 func BenchmarkLogicalDiskCollector(b *testing.B) {
 	// Whitelist is not set in testing context (kingpin flags not parsed), causing the collector to skip all disks.
-	localVolumeWhitelist := ".+"
-	volumeWhitelist = &localVolumeWhitelist
+	localVolumeInclude := ".+"
+	volumeInclude = &localVolumeInclude
 
 	benchmarkCollector(b, "logical_disk", newLogicalDiskCollector)
 }

@@ -11,13 +11,13 @@ Enabled by default? | Yes
 
 ## Flags
 
-### `--collector.logical_disk.volume-whitelist`
+### `--collector.logical_disk.volume-include`
 
-If given, a disk needs to match the whitelist regexp in order for the corresponding disk metrics to be reported
+If given, a disk needs to match the include regexp in order for the corresponding disk metrics to be reported
 
-### `--collector.logical_disk.volume-blacklist`
+### `--collector.logical_disk.volume-exclude`
 
-If given, a disk needs to *not* match the blacklist regexp in order for the corresponding disk metrics to be reported
+If given, a disk needs to *not* match the exclude regexp in order for the corresponding disk metrics to be reported
 
 ## Metrics
 

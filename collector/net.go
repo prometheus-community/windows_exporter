@@ -4,6 +4,7 @@
 package collector
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 
@@ -12,15 +13,24 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+const (
+	FlagNicOldExclude = "collector.net.nic-blacklist"
+	FlagNicOldInclude = "collector.net.nic-whitelist"
+
+	FlagNicExclude = "collector.net.nic-exclude"
+	FlagNicInclude = "collector.net.nic-include"
+)
+
 var (
-	nicWhitelist = kingpin.Flag(
-		"collector.net.nic-whitelist",
-		"Regexp of NIC:s to whitelist. NIC name must both match whitelist and not match blacklist to be included.",
-	).Default(".+").String()
-	nicBlacklist = kingpin.Flag(
-		"collector.net.nic-blacklist",
-		"Regexp of NIC:s to blacklist. NIC name must both match whitelist and not match blacklist to be included.",
-	).Default("").String()
+	nicOldInclude *string
+	nicOldExclude *string
+
+	nicInclude *string
+	nicExclude *string
+
+	nicIncludeSet bool
+	nicExcludeSet bool
+
 	nicNameToUnderscore = regexp.MustCompile("[^a-zA-Z0-9]")
 )
 
@@ -40,12 +50,58 @@ type NetworkCollector struct {
 	PacketsSentTotal         *prometheus.Desc
 	CurrentBandwidth         *prometheus.Desc
 
-	nicWhitelistPattern *regexp.Regexp
-	nicBlacklistPattern *regexp.Regexp
+	nicIncludePattern *regexp.Regexp
+	nicExcludePattern *regexp.Regexp
+}
+
+// newNetworkCollectorFlags ...
+func newNetworkCollectorFlags(app *kingpin.Application) {
+	nicInclude = app.Flag(
+		FlagNicInclude,
+		"Regexp of NIC:s to include. NIC name must both match include and not match exclude to be included.",
+	).Default(".+").PreAction(func(c *kingpin.ParseContext) error {
+		nicIncludeSet = true
+		return nil
+	}).String()
+
+	nicExclude = app.Flag(
+		FlagNicExclude,
+		"Regexp of NIC:s to exclude. NIC name must both match include and not match exclude to be included.",
+	).Default("").PreAction(func(c *kingpin.ParseContext) error {
+		nicExcludeSet = true
+		return nil
+	}).String()
+
+	nicOldInclude = app.Flag(
+		FlagNicOldInclude,
+		"DEPRECATED: Use --collector.net.nic-include",
+	).Hidden().String()
+	nicOldExclude = app.Flag(
+		FlagNicOldExclude,
+		"DEPRECATED: Use --collector.net.nic-exclude",
+	).Hidden().String()
+
 }
 
 // newNetworkCollector ...
 func newNetworkCollector() (Collector, error) {
+	if *nicOldExclude != "" {
+		if !nicExcludeSet {
+			log.Warnln("msg", "--collector.net.nic-blacklist is DEPRECATED and will be removed in a future release, use --collector.net.nic-exclude")
+			*nicExclude = *nicOldExclude
+		} else {
+			return nil, errors.New("--collector.net.nic-blacklist and --collector.net.nic-exclude are mutually exclusive")
+		}
+	}
+	if *nicOldInclude != "" {
+		if !nicIncludeSet {
+			log.Warnln("msg", "--collector.net.nic-whitelist is DEPRECATED and will be removed in a future release, use --collector.net.nic-include")
+			*nicInclude = *nicOldInclude
+		} else {
+			return nil, errors.New("--collector.net.nic-whitelist and --collector.net.nic-include are mutually exclusive")
+		}
+	}
+
 	const subsystem = "net"
 
 	return &NetworkCollector{
@@ -128,8 +184,8 @@ func newNetworkCollector() (Collector, error) {
 			nil,
 		),
 
-		nicWhitelistPattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *nicWhitelist)),
-		nicBlacklistPattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *nicBlacklist)),
+		nicIncludePattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *nicInclude)),
+		nicExcludePattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *nicExclude)),
 	}, nil
 }
 
@@ -176,8 +232,8 @@ func (c *NetworkCollector) collect(ctx *ScrapeContext, ch chan<- prometheus.Metr
 	}
 
 	for _, nic := range dst {
-		if c.nicBlacklistPattern.MatchString(nic.Name) ||
-			!c.nicWhitelistPattern.MatchString(nic.Name) {
+		if c.nicExcludePattern.MatchString(nic.Name) ||
+			!c.nicIncludePattern.MatchString(nic.Name) {
 			continue
 		}
 

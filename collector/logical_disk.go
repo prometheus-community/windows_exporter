@@ -4,6 +4,7 @@
 package collector
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 
@@ -12,15 +13,23 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+const (
+	FlagLogicalDiskVolumeOldExclude = "collector.logical_disk.volume-blacklist"
+	FlagLogicalDiskVolumeOldInclude = "collector.logical_disk.volume-whitelist"
+
+	FlagLogicalDiskVolumeExclude = "collector.logical_disk.volume-exclude"
+	FlagLogicalDiskVolumeInclude = "collector.logical_disk.volume-include"
+)
+
 var (
-	volumeWhitelist = kingpin.Flag(
-		"collector.logical_disk.volume-whitelist",
-		"Regexp of volumes to whitelist. Volume name must both match whitelist and not match blacklist to be included.",
-	).Default(".+").String()
-	volumeBlacklist = kingpin.Flag(
-		"collector.logical_disk.volume-blacklist",
-		"Regexp of volumes to blacklist. Volume name must both match whitelist and not match blacklist to be included.",
-	).Default("").String()
+	volumeOldInclude *string
+	volumeOldExclude *string
+
+	volumeInclude *string
+	volumeExclude *string
+
+	volumeIncludeSet bool
+	volumeExcludeSet bool
 )
 
 // A LogicalDiskCollector is a Prometheus collector for perflib logicalDisk metrics
@@ -42,12 +51,57 @@ type LogicalDiskCollector struct {
 	WriteLatency     *prometheus.Desc
 	ReadWriteLatency *prometheus.Desc
 
-	volumeWhitelistPattern *regexp.Regexp
-	volumeBlacklistPattern *regexp.Regexp
+	volumeIncludePattern *regexp.Regexp
+	volumeExcludePattern *regexp.Regexp
+}
+
+// newLogicalDiskCollectorFlags ...
+func newLogicalDiskCollectorFlags(app *kingpin.Application) {
+	volumeInclude = app.Flag(
+		FlagLogicalDiskVolumeInclude,
+		"Regexp of volumes to include. Volume name must both match include and not match exclude to be included.",
+	).Default(".+").PreAction(func(c *kingpin.ParseContext) error {
+		volumeIncludeSet = true
+		return nil
+	}).String()
+
+	volumeExclude = app.Flag(
+		FlagLogicalDiskVolumeExclude,
+		"Regexp of volumes to exclude. Volume name must both match include and not match exclude to be included.",
+	).Default("").PreAction(func(c *kingpin.ParseContext) error {
+		volumeExcludeSet = true
+		return nil
+	}).String()
+
+	volumeOldInclude = app.Flag(
+		FlagLogicalDiskVolumeOldInclude,
+		"DEPRECATED: Use --collector.logical_disk.volume-include",
+	).Hidden().String()
+	volumeOldExclude = app.Flag(
+		FlagLogicalDiskVolumeOldExclude,
+		"DEPRECATED: Use --collector.logical_disk.volume-exclude",
+	).Hidden().String()
 }
 
 // newLogicalDiskCollector ...
 func newLogicalDiskCollector() (Collector, error) {
+	if *volumeOldExclude != "" {
+		if !volumeExcludeSet {
+			log.Warnln("msg", "--collector.logical_disk.volume-blacklist is DEPRECATED and will be removed in a future release, use --collector.logical_disk.volume-exclude")
+			*volumeExclude = *volumeOldExclude
+		} else {
+			return nil, errors.New("--collector.logical_disk.volume-blacklist and --collector.logical_disk.volume-exclude are mutually exclusive")
+		}
+	}
+	if *volumeOldInclude != "" {
+		if !volumeIncludeSet {
+			log.Warnln("msg", "--collector.logical_disk.volume-whitelist is DEPRECATED and will be removed in a future release, use --collector.logical_disk.volume-include")
+			*volumeInclude = *volumeOldInclude
+		} else {
+			return nil, errors.New("--collector.logical_disk.volume-whitelist and --collector.logical_disk.volume-include are mutually exclusive")
+		}
+	}
+
 	const subsystem = "logical_disk"
 
 	return &LogicalDiskCollector{
@@ -163,8 +217,8 @@ func newLogicalDiskCollector() (Collector, error) {
 			nil,
 		),
 
-		volumeWhitelistPattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *volumeWhitelist)),
-		volumeBlacklistPattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *volumeBlacklist)),
+		volumeIncludePattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *volumeInclude)),
+		volumeExcludePattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *volumeExclude)),
 	}, nil
 }
 
@@ -209,8 +263,8 @@ func (c *LogicalDiskCollector) collect(ctx *ScrapeContext, ch chan<- prometheus.
 
 	for _, volume := range dst {
 		if volume.Name == "_Total" ||
-			c.volumeBlacklistPattern.MatchString(volume.Name) ||
-			!c.volumeWhitelistPattern.MatchString(volume.Name) {
+			c.volumeExcludePattern.MatchString(volume.Name) ||
+			!c.volumeIncludePattern.MatchString(volume.Name) {
 			continue
 		}
 

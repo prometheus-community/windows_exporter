@@ -34,11 +34,12 @@ import (
 	"github.com/prometheus/common/expfmt"
 )
 
+const (
+	FlagTextFileDirectory = "collector.textfile.directory"
+)
+
 var (
-	textFileDirectory = kingpin.Flag(
-		"collector.textfile.directory",
-		"Directory to read text files with metrics from.",
-	).Default(getDefaultPath()).String()
+	textFileDirectory *string
 
 	mtimeDesc = prometheus.NewDesc(
 		prometheus.BuildFQName(Namespace, "textfile", "mtime_seconds"),
@@ -52,6 +53,14 @@ type textFileCollector struct {
 	path string
 	// Only set for testing to get predictable output.
 	mtime *float64
+}
+
+// newTextFileCollectorFlags ...
+func newTextFileCollectorFlags(app *kingpin.Application) {
+	textFileDirectory = app.Flag(
+		FlagTextFileDirectory,
+		"Directory to read text files with metrics from.",
+	).Default(getDefaultPath()).String()
 }
 
 // newTextFileCollector returns a new Collector exposing metrics read from files
