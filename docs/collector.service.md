@@ -30,7 +30,7 @@ Uses API calls instead of WMI for performance optimization. **Note** the previou
 
 ### service list with custom labels (config file only)
 
-Define a dictionnary of services to monitor, and for each of them a specific value of labels.
+Define a dictionary of services to monitor, and for each of them a specific value of labels.
 
 ```yml
 collector:
