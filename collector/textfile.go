@@ -309,6 +309,7 @@ fileLoop:
 		// a failure does not appear fresh.
 		info, err := f.Info()
 		if err != nil {
+			log.Errorf("File Info error in file %s: %s. Skipping file processing.", f.Name(), err)
 			error = 1.0
 			continue
 		}
