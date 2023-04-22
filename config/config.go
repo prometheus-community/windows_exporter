@@ -32,16 +32,16 @@ type Resolver struct {
 
 type HookFunc func(interface{}) map[string]string
 
-type ConfigHook struct {
+type CfgHook struct {
 	ConfigAttrs []string
 	Hook        HookFunc
 }
 
-type ConfigHooks map[string]ConfigHook
+type CfgHooks map[string]CfgHook
 
-func (c *ConfigHook) match(key string, val interface{}, level int) (bool, interface{}) {
-	var ok bool = false
+func (c *CfgHook) match(key string, val interface{}, level int) (bool, interface{}) {
 	var res interface{}
+	ok := false
 	if level < len(c.ConfigAttrs) {
 		if c.ConfigAttrs[level] == key {
 			level++
@@ -74,9 +74,9 @@ func (c *ConfigHook) match(key string, val interface{}, level int) (bool, interf
 	return ok, res
 }
 
-func (c *ConfigHooks) Match(key string, val interface{}) (map[string]interface{}, bool) {
-	var ok bool = false
+func (c *CfgHooks) Match(key string, val interface{}) (map[string]interface{}, bool) {
 	var value interface{}
+	ok := false
 	params := make(map[string]interface{})
 
 	for varname, hook := range *c {
@@ -89,7 +89,7 @@ func (c *ConfigHooks) Match(key string, val interface{}) (map[string]interface{}
 }
 
 // NewResolver returns a Resolver structure.
-func NewResolver(file string, hooks ConfigHooks) (*Resolver, error) {
+func NewResolver(file string, hooks CfgHooks) (*Resolver, error) {
 	flags := map[string]string{}
 	log.Infof("Loading configuration file: %v", file)
 	if _, err := os.Stat(file); err != nil {

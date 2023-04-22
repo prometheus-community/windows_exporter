@@ -13,8 +13,8 @@ type collectorInit struct {
 	// Perflib counter names for the collector.
 	// These will be included in the Perflib scrape scope by the exporter.
 	perfCounterNames []string
-	// builder fonction to intercept parameters for a collector
-	config_hooks map[string]config.ConfigHook
+	// builder function to intercept parameters for a collector
+	config_hooks map[string]config.CfgHook
 }
 
 func getCPUCollectorDeps() string {

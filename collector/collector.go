@@ -56,10 +56,10 @@ type collectorBuilder func() (Collector, error)
 var (
 	builders                = make(map[string]collectorBuilder)
 	perfCounterDependencies = make(map[string]string)
-	config_hooks            = make(map[string]config.ConfigHook)
+	config_hooks            = make(map[string]config.CfgHook)
 )
 
-func registerCollector(name string, builder collectorBuilder, hooks map[string]config.ConfigHook, perfCounterNames ...string) {
+func registerCollector(name string, builder collectorBuilder, hooks map[string]config.CfgHook, perfCounterNames ...string) {
 	builders[name] = builder
 	addPerfCounterDependencies(name, perfCounterNames)
 	for k, v := range hooks {
@@ -82,7 +82,7 @@ func Available() []string {
 	}
 	return cs
 }
-func ConfigHooks() map[string]config.ConfigHook {
+func CfgHooks() map[string]config.CfgHook {
 	return config_hooks
 }
 func Build(collector string) (Collector, error) {

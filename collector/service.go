@@ -77,12 +77,12 @@ func expandServiceWhere(services string) string {
 	return b.String()
 }
 
-func ServiceBuildHook() map[string]config.ConfigHook {
-	config_hooks := &config.ConfigHook{
+func ServiceBuildHook() map[string]config.CfgHook {
+	config_hooks := &config.CfgHook{
 		ConfigAttrs: []string{"collector", "service", "services"},
 		Hook:        ServiceBuildMap,
 	}
-	entry := make(map[string]config.ConfigHook)
+	entry := make(map[string]config.CfgHook)
 	entry["services-list"] = *config_hooks
 	return entry
 }
