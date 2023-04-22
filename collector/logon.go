@@ -6,21 +6,25 @@ package collector
 import (
 	"errors"
 
-	"github.com/prometheus-community/windows_exporter/log"
+	"github.com/go-kit/log"
+	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
 )
 
 // A LogonCollector is a Prometheus collector for WMI metrics
 type LogonCollector struct {
+	logger    log.Logger
 	LogonType *prometheus.Desc
 }
 
 // newLogonCollector ...
-func newLogonCollector() (Collector, error) {
+func newLogonCollector(logger log.Logger) (Collector, error) {
 	const subsystem = "logon"
 
 	return &LogonCollector{
+		logger: log.With(logger, "collector", subsystem),
+
 		LogonType: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "logon_type"),
 			"Number of active logon sessions (LogonSession.LogonType)",
@@ -34,7 +38,7 @@ func newLogonCollector() (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *LogonCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ch); err != nil {
-		log.Error("failed collecting user metrics:", desc, err)
+		level.Error(c.logger).Log("failed collecting user metrics", "desc", desc, "err", err)
 		return err
 	}
 	return nil
@@ -48,7 +52,7 @@ type Win32_LogonSession struct {
 
 func (c *LogonCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_LogonSession
-	q := queryAll(&dst)
+	q := queryAll(&dst, c.logger)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
 	}

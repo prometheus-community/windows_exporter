@@ -7,7 +7,8 @@ import (
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/prometheus-community/windows_exporter/log"
+	"github.com/go-kit/log"
+	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
 )
@@ -22,6 +23,8 @@ var (
 
 // A Win32_PerfRawData_MSMQ_MSMQQueueCollector is a Prometheus collector for WMI Win32_PerfRawData_MSMQ_MSMQQueue metrics
 type Win32_PerfRawData_MSMQ_MSMQQueueCollector struct {
+	logger log.Logger
+
 	BytesinJournalQueue    *prometheus.Desc
 	BytesinQueue           *prometheus.Desc
 	MessagesinJournalQueue *prometheus.Desc
@@ -36,14 +39,17 @@ func newMSMQCollectorFlags(app *kingpin.Application) {
 }
 
 // NewWin32_PerfRawData_MSMQ_MSMQQueueCollector ...
-func newMSMQCollector() (Collector, error) {
+func newMSMQCollector(logger log.Logger) (Collector, error) {
 	const subsystem = "msmq"
+	logger = log.With(logger, "collector", subsystem)
 
 	if *msmqWhereClause == "" {
-		log.Warn("No where-clause specified for msmq collector. This will generate a very large number of metrics!")
+		level.Warn(logger).Log("msg", "No where-clause specified for msmq collector. This will generate a very large number of metrics!")
 	}
 
 	return &Win32_PerfRawData_MSMQ_MSMQQueueCollector{
+		logger: logger,
+
 		BytesinJournalQueue: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "bytes_in_journal_queue"),
 			"Size of queue journal in bytes",
@@ -76,7 +82,7 @@ func newMSMQCollector() (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *Win32_PerfRawData_MSMQ_MSMQQueueCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ch); err != nil {
-		log.Error("failed collecting msmq metrics:", desc, err)
+		level.Error(c.logger).Log("failed collecting msmq metrics", "desc", desc, "err", err)
 		return err
 	}
 	return nil
@@ -93,7 +99,7 @@ type Win32_PerfRawData_MSMQ_MSMQQueue struct {
 
 func (c *Win32_PerfRawData_MSMQ_MSMQQueueCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_PerfRawData_MSMQ_MSMQQueue
-	q := queryAllWhere(&dst, c.queryWhereClause)
+	q := queryAllWhere(&dst, c.queryWhereClause, c.logger)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
 	}

@@ -4,12 +4,15 @@
 package collector
 
 import (
-	"github.com/prometheus-community/windows_exporter/log"
+	"github.com/go-kit/log"
+	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 // A CacheCollector is a Prometheus collector for Perflib Cache metrics
 type CacheCollector struct {
+	logger log.Logger
+
 	AsyncCopyReadsTotal         *prometheus.Desc
 	AsyncDataMapsTotal          *prometheus.Desc
 	AsyncFastReadsTotal         *prometheus.Desc
@@ -42,9 +45,11 @@ type CacheCollector struct {
 }
 
 // NewCacheCollector ...
-func newCacheCollector() (Collector, error) {
+func newCacheCollector(logger log.Logger) (Collector, error) {
 	const subsystem = "cache"
 	return &CacheCollector{
+		logger: log.With(logger, "collector", subsystem),
+
 		AsyncCopyReadsTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "async_copy_reads_total"),
 			"(AsyncCopyReadsTotal)",
@@ -225,7 +230,7 @@ func newCacheCollector() (Collector, error) {
 // Collect implements the Collector interface
 func (c *CacheCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ctx, ch); err != nil {
-		log.Error("failed collecting cache metrics:", desc, err)
+		level.Error(c.logger).Log("msg", "failed collecting cache metrics", "desc", desc, "err", err)
 		return err
 	}
 	return nil
@@ -267,7 +272,7 @@ type perflibCache struct {
 
 func (c *CacheCollector) collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []perflibCache // Single-instance class, array is required but will have single entry.
-	if err := unmarshalObject(ctx.perfObjects["Cache"], &dst); err != nil {
+	if err := unmarshalObject(ctx.perfObjects["Cache"], &dst, c.logger); err != nil {
 		return nil, err
 	}
 

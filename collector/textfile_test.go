@@ -1,10 +1,11 @@
 package collector
 
 import (
-	"github.com/dimchansky/utfbom"
 	"io/ioutil"
 	"strings"
 	"testing"
+
+	"github.com/dimchansky/utfbom"
 
 	dto "github.com/prometheus/client_model/go"
 )

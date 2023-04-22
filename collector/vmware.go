@@ -6,13 +6,16 @@ package collector
 import (
 	"errors"
 
-	"github.com/prometheus-community/windows_exporter/log"
+	"github.com/go-kit/log"
+	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
 )
 
 // A VmwareCollector is a Prometheus collector for WMI Win32_PerfRawData_vmGuestLib_VMem/Win32_PerfRawData_vmGuestLib_VCPU metrics
 type VmwareCollector struct {
+	logger log.Logger
+
 	MemActive      *prometheus.Desc
 	MemBallooned   *prometheus.Desc
 	MemLimit       *prometheus.Desc
@@ -36,9 +39,10 @@ type VmwareCollector struct {
 }
 
 // newVmwareCollector constructs a new VmwareCollector
-func newVmwareCollector() (Collector, error) {
+func newVmwareCollector(logger log.Logger) (Collector, error) {
 	const subsystem = "vmware"
 	return &VmwareCollector{
+		logger: log.With(logger, "collector", subsystem),
 		MemActive: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "mem_active_bytes"),
 			"(MemActiveMB)",
@@ -161,11 +165,11 @@ func newVmwareCollector() (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *VmwareCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	if desc, err := c.collectMem(ch); err != nil {
-		log.Error("failed collecting vmware memory metrics:", desc, err)
+		level.Error(c.logger).Log("failed collecting vmware memory metrics", "desc", desc, "err", err)
 		return err
 	}
 	if desc, err := c.collectCpu(ch); err != nil {
-		log.Error("failed collecting vmware cpu metrics:", desc, err)
+		level.Error(c.logger).Log("failed collecting vmware cpu metrics", "desc", desc, "err", err)
 		return err
 	}
 	return nil
@@ -198,7 +202,7 @@ type Win32_PerfRawData_vmGuestLib_VCPU struct {
 
 func (c *VmwareCollector) collectMem(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_PerfRawData_vmGuestLib_VMem
-	q := queryAll(&dst)
+	q := queryAll(&dst, c.logger)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
 	}
@@ -287,7 +291,7 @@ func mbToBytes(mb uint64) float64 {
 
 func (c *VmwareCollector) collectCpu(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_PerfRawData_vmGuestLib_VCPU
-	q := queryAll(&dst)
+	q := queryAll(&dst, c.logger)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
 	}

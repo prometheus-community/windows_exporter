@@ -4,13 +4,16 @@
 package collector
 
 import (
-	"github.com/prometheus-community/windows_exporter/log"
+	"github.com/go-kit/log"
+	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
 )
 
 // A NETFramework_NETCLRRemotingCollector is a Prometheus collector for WMI Win32_PerfRawData_NETFramework_NETCLRRemoting metrics
 type NETFramework_NETCLRRemotingCollector struct {
+	logger log.Logger
+
 	Channels                  *prometheus.Desc
 	ContextBoundClassesLoaded *prometheus.Desc
 	ContextBoundObjects       *prometheus.Desc
@@ -20,9 +23,10 @@ type NETFramework_NETCLRRemotingCollector struct {
 }
 
 // newNETFramework_NETCLRRemotingCollector ...
-func newNETFramework_NETCLRRemotingCollector() (Collector, error) {
+func newNETFramework_NETCLRRemotingCollector(logger log.Logger) (Collector, error) {
 	const subsystem = "netframework_clrremoting"
 	return &NETFramework_NETCLRRemotingCollector{
+		logger: log.With(logger, "collector", subsystem),
 		Channels: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "channels_total"),
 			"Displays the total number of remoting channels registered across all application domains since application started.",
@@ -66,7 +70,7 @@ func newNETFramework_NETCLRRemotingCollector() (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *NETFramework_NETCLRRemotingCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ch); err != nil {
-		log.Error("failed collecting win32_perfrawdata_netframework_netclrremoting metrics:", desc, err)
+		level.Error(c.logger).Log("failed collecting win32_perfrawdata_netframework_netclrremoting metrics", "desc", desc, "err", err)
 		return err
 	}
 	return nil
@@ -86,7 +90,7 @@ type Win32_PerfRawData_NETFramework_NETCLRRemoting struct {
 
 func (c *NETFramework_NETCLRRemotingCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_PerfRawData_NETFramework_NETCLRRemoting
-	q := queryAll(&dst)
+	q := queryAll(&dst, c.logger)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
 	}

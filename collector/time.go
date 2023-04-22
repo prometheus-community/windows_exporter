@@ -6,12 +6,15 @@ package collector
 import (
 	"errors"
 
-	"github.com/prometheus-community/windows_exporter/log"
+	"github.com/go-kit/log"
+	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 // TimeCollector is a Prometheus collector for Perflib counter metrics
 type TimeCollector struct {
+	logger log.Logger
+
 	ClockFrequencyAdjustmentPPBTotal *prometheus.Desc
 	ComputedTimeOffset               *prometheus.Desc
 	NTPClientTimeSourceCount         *prometheus.Desc
@@ -20,14 +23,16 @@ type TimeCollector struct {
 	NTPServerOutgoingResponsesTotal  *prometheus.Desc
 }
 
-func newTimeCollector() (Collector, error) {
-	if getWindowsVersion() <= 6.1 {
-		return nil, errors.New("Windows version older than Server 2016 detected. The time collector will not run and should be disabled via CLI flags or configuration file")
-
-	}
+func newTimeCollector(logger log.Logger) (Collector, error) {
 	const subsystem = "time"
+	logger = log.With(logger, "collector", subsystem)
+
+	if getWindowsVersion(logger) < 100 {
+		return nil, errors.New("Windows version older than Server 2016 detected. The time collector will not run and should be disabled via CLI flags or configuration file")
+	}
 
 	return &TimeCollector{
+		logger: logger,
 		ClockFrequencyAdjustmentPPBTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "clock_frequency_adjustment_ppb_total"),
 			"Total adjustment made to the local system clock frequency by W32Time in Parts Per Billion (PPB) units.",
@@ -71,7 +76,7 @@ func newTimeCollector() (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *TimeCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ctx, ch); err != nil {
-		log.Error("failed collecting time metrics:", desc, err)
+		level.Error(c.logger).Log("failed collecting time metrics", "desc", desc, "err", err)
 		return err
 	}
 	return nil
@@ -89,7 +94,7 @@ type windowsTime struct {
 
 func (c *TimeCollector) collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []windowsTime // Single-instance class, array is required but will have single entry.
-	if err := unmarshalObject(ctx.perfObjects["Windows Time Service"], &dst); err != nil {
+	if err := unmarshalObject(ctx.perfObjects["Windows Time Service"], &dst, c.logger); err != nil {
 		return nil, err
 	}
 

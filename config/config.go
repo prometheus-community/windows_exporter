@@ -14,11 +14,12 @@
 package config
 
 import (
-	"io/ioutil"
+	"fmt"
 	"os"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/prometheus-community/windows_exporter/log"
+	"github.com/go-kit/log"
+	"github.com/go-kit/log/level"
 	"gopkg.in/yaml.v3"
 )
 
@@ -32,13 +33,13 @@ type Resolver struct {
 }
 
 // NewResolver returns a Resolver structure.
-func NewResolver(file string) (*Resolver, error) {
+func NewResolver(file string, logger log.Logger) (*Resolver, error) {
 	flags := map[string]string{}
-	log.Infof("Loading configuration file: %v", file)
+	level.Info(logger).Log("msg", fmt.Sprintf("Loading configuration file: %v", file))
 	if _, err := os.Stat(file); err != nil {
 		return nil, err
 	}
-	b, err := ioutil.ReadFile(file)
+	b, err := os.ReadFile(file)
 	if err != nil {
 		return nil, err
 	}

@@ -4,6 +4,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/go-kit/log"
+
 	perflibCollector "github.com/leoluk/perflib_exporter/collector"
 	"github.com/leoluk/perflib_exporter/perflib"
 )
@@ -112,7 +114,7 @@ func TestUnmarshalPerflib(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			output := make([]simple, 0)
-			err := unmarshalObject(c.obj, &output)
+			err := unmarshalObject(c.obj, &output, log.NewNopLogger())
 			if err != nil && !c.expectError {
 				t.Errorf("Did not expect error, got %q", err)
 			}

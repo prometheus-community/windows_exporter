@@ -1,6 +1,9 @@
 package collector
 
-import "github.com/alecthomas/kingpin/v2"
+import (
+	"github.com/alecthomas/kingpin/v2"
+	"github.com/go-kit/log"
+)
 
 // collectorInit represents the required initialisation config for a collector.
 type collectorInit struct {
@@ -15,7 +18,7 @@ type collectorInit struct {
 	perfCounterFunc perfCounterNamesBuilder
 }
 
-func getDFSRCollectorDeps() []string {
+func getDFSRCollectorDeps(_ log.Logger) []string {
 	// Perflib sources are dynamic, depending on the enabled child collectors
 	var perflibDependencies []string
 	for _, source := range expandEnabledChildCollectors(*dfsrEnabledCollectors) {
@@ -36,7 +39,7 @@ var collectors = []collectorInit{
 		name:    "adcs",
 		flags:   nil,
 		builder: adcsCollectorMethod,
-		perfCounterFunc: func() []string {
+		perfCounterFunc: func(_ log.Logger) []string {
 			return []string{"Certification Authority"}
 		},
 	},
@@ -44,7 +47,7 @@ var collectors = []collectorInit{
 		name:    "adfs",
 		flags:   nil,
 		builder: newADFSCollector,
-		perfCounterFunc: func() []string {
+		perfCounterFunc: func(_ log.Logger) []string {
 			return []string{"AD FS"}
 		},
 	},
@@ -52,7 +55,7 @@ var collectors = []collectorInit{
 		name:    "cache",
 		flags:   nil,
 		builder: newCacheCollector,
-		perfCounterFunc: func() []string {
+		perfCounterFunc: func(_ log.Logger) []string {
 			return []string{"Cache"}
 		},
 	},
@@ -66,8 +69,8 @@ var collectors = []collectorInit{
 		name:    "cpu",
 		flags:   nil,
 		builder: newCPUCollector,
-		perfCounterFunc: func() []string {
-			if getWindowsVersion() > 6.05 {
+		perfCounterFunc: func(logger log.Logger) []string {
+			if getWindowsVersion(logger) > 6.05 {
 				return []string{"Processor Information"}
 			}
 			return []string{"Processor"}
@@ -113,7 +116,7 @@ var collectors = []collectorInit{
 		name:    "exchange",
 		flags:   newExchangeCollectorFlags,
 		builder: newExchangeCollector,
-		perfCounterFunc: func() []string {
+		perfCounterFunc: func(_ log.Logger) []string {
 			return []string{
 				"MSExchange ADAccess Processes",
 				"MSExchangeTransport Queues",
@@ -143,7 +146,7 @@ var collectors = []collectorInit{
 		name:    "iis",
 		flags:   newIISCollectorFlags,
 		builder: newIISCollector,
-		perfCounterFunc: func() []string {
+		perfCounterFunc: func(_ log.Logger) []string {
 			return []string{
 				"Web Service",
 				"APP_POOL_WAS",
@@ -156,7 +159,7 @@ var collectors = []collectorInit{
 		name:    "logical_disk",
 		flags:   newLogicalDiskCollectorFlags,
 		builder: newLogicalDiskCollector,
-		perfCounterFunc: func() []string {
+		perfCounterFunc: func(_ log.Logger) []string {
 			return []string{"LogicalDisk"}
 		},
 	},
@@ -170,7 +173,7 @@ var collectors = []collectorInit{
 		name:    "memory",
 		flags:   nil,
 		builder: newMemoryCollector,
-		perfCounterFunc: func() []string {
+		perfCounterFunc: func(_ log.Logger) []string {
 			return []string{"Memory"}
 		},
 	},
@@ -220,7 +223,7 @@ var collectors = []collectorInit{
 		name:    "net",
 		flags:   newNetworkCollectorFlags,
 		builder: newNetworkCollector,
-		perfCounterFunc: func() []string {
+		perfCounterFunc: func(_ log.Logger) []string {
 			return []string{"Network Interface"}
 		},
 	},
@@ -276,7 +279,7 @@ var collectors = []collectorInit{
 		name:    "os",
 		flags:   nil,
 		builder: newOSCollector,
-		perfCounterFunc: func() []string {
+		perfCounterFunc: func(_ log.Logger) []string {
 			return []string{"Paging File"}
 		},
 	},
@@ -284,7 +287,7 @@ var collectors = []collectorInit{
 		name:    "process",
 		flags:   newProcessCollectorFlags,
 		builder: newProcessCollector,
-		perfCounterFunc: func() []string {
+		perfCounterFunc: func(_ log.Logger) []string {
 			return []string{"Process"}
 		},
 	},
@@ -292,7 +295,7 @@ var collectors = []collectorInit{
 		name:    "remote_fx",
 		flags:   nil,
 		builder: newRemoteFx,
-		perfCounterFunc: func() []string {
+		perfCounterFunc: func(_ log.Logger) []string {
 			return []string{"RemoteFX Network"}
 		},
 	},
@@ -312,7 +315,7 @@ var collectors = []collectorInit{
 		name:    "smtp",
 		flags:   newSMTPCollectorFlags,
 		builder: newSMTPCollector,
-		perfCounterFunc: func() []string {
+		perfCounterFunc: func(_ log.Logger) []string {
 			return []string{"SMTP Server"}
 		},
 	},
@@ -320,7 +323,7 @@ var collectors = []collectorInit{
 		name:    "system",
 		flags:   nil,
 		builder: newSystemCollector,
-		perfCounterFunc: func() []string {
+		perfCounterFunc: func(_ log.Logger) []string {
 			return []string{"System"}
 		},
 	},
@@ -334,7 +337,7 @@ var collectors = []collectorInit{
 		name:    "tcp",
 		flags:   nil,
 		builder: newTCPCollector,
-		perfCounterFunc: func() []string {
+		perfCounterFunc: func(_ log.Logger) []string {
 			return []string{"TCPv4"}
 		},
 	},
@@ -342,7 +345,7 @@ var collectors = []collectorInit{
 		name:    "terminal_services",
 		flags:   nil,
 		builder: newTerminalServicesCollector,
-		perfCounterFunc: func() []string {
+		perfCounterFunc: func(_ log.Logger) []string {
 			return []string{
 				"Terminal Services",
 				"Terminal Services Session",
@@ -366,7 +369,7 @@ var collectors = []collectorInit{
 		name:    "time",
 		flags:   nil,
 		builder: newTimeCollector,
-		perfCounterFunc: func() []string {
+		perfCounterFunc: func(_ log.Logger) []string {
 			return []string{"Windows Time Service"}
 		},
 	},
@@ -394,12 +397,12 @@ func RegisterCollectorsFlags(app *kingpin.Application) {
 }
 
 // RegisterCollectors To be called by the exporter for collector initialisation
-func RegisterCollectors() {
+func RegisterCollectors(logger log.Logger) {
 	for _, v := range collectors {
 		var perfCounterNames []string
 
 		if v.perfCounterFunc != nil {
-			perfCounterNames = v.perfCounterFunc()
+			perfCounterNames = v.perfCounterFunc(logger)
 		}
 
 		registerCollector(v.name, v.builder, perfCounterNames...)

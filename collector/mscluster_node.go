@@ -1,12 +1,15 @@
 package collector
 
 import (
+	"github.com/go-kit/log"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
 )
 
 // A MSCluster_NodeCollector is a Prometheus collector for WMI MSCluster_Node metrics
 type MSCluster_NodeCollector struct {
+	logger log.Logger
+
 	BuildNumber           *prometheus.Desc
 	Characteristics       *prometheus.Desc
 	DetectedCloudPlatform *prometheus.Desc
@@ -23,9 +26,10 @@ type MSCluster_NodeCollector struct {
 	StatusInformation     *prometheus.Desc
 }
 
-func newMSCluster_NodeCollector() (Collector, error) {
+func newMSCluster_NodeCollector(logger log.Logger) (Collector, error) {
 	const subsystem = "mscluster_node"
 	return &MSCluster_NodeCollector{
+		logger: log.With(logger, "collector", subsystem),
 		BuildNumber: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "build_number"),
 			"Provides access to the node's BuildNumber property.",
@@ -138,7 +142,7 @@ type MSCluster_Node struct {
 // to the provided prometheus Metric channel.
 func (c *MSCluster_NodeCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	var dst []MSCluster_Node
-	q := queryAll(&dst)
+	q := queryAll(&dst, c.logger)
 	if err := wmi.QueryNamespace(q, &dst, "root/MSCluster"); err != nil {
 		return err
 	}

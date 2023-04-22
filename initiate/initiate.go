@@ -3,9 +3,10 @@ package initiate
 
 import (
 	"fmt"
+	"os"
 
-	"github.com/prometheus-community/windows_exporter/log"
 	"golang.org/x/sys/windows/svc"
+	"golang.org/x/sys/windows/svc/eventlog"
 )
 
 const (
@@ -15,6 +16,8 @@ const (
 type windowsExporterService struct {
 	stopCh chan<- bool
 }
+
+var logger *eventlog.Log
 
 func (s *windowsExporterService) Execute(args []string, r <-chan svc.ChangeRequest, changes chan<- svc.Status) (ssec bool, errno uint32) {
 	const cmdsAccepted = svc.AcceptStop | svc.AcceptShutdown
@@ -28,11 +31,11 @@ loop:
 			case svc.Interrogate:
 				changes <- c.CurrentStatus
 			case svc.Stop, svc.Shutdown:
-				log.Debug("Service Stop Received")
+				_ = logger.Info(100, "Service Stop Received")
 				s.stopCh <- true
 				break loop
 			default:
-				log.Error(fmt.Sprintf("unexpected control request #%d", c))
+				_ = logger.Error(102, fmt.Sprintf("unexpected control request #%d", c))
 			}
 		}
 	}
@@ -43,17 +46,26 @@ loop:
 var StopCh = make(chan bool)
 
 func init() {
-	log.Debug("Checking if We are a service")
 	isService, err := svc.IsWindowsService()
 	if err != nil {
-		log.Fatal(err)
+		logger, err := eventlog.Open("windows_exporter")
+		if err != nil {
+			os.Exit(2)
+		}
+		_ = logger.Error(102, fmt.Sprintf("Failed to detect service: %v", err))
+		os.Exit(1)
 	}
-	log.Debug("Attempting to start exporter service")
+
 	if isService {
+		logger, err := eventlog.Open("windows_exporter")
+		if err != nil {
+			os.Exit(2)
+		}
+		_ = logger.Info(100, "Attempting to start exporter service")
 		go func() {
 			err = svc.Run(serviceName, &windowsExporterService{stopCh: StopCh})
 			if err != nil {
-				log.Errorf("Failed to start service: %v", err)
+				_ = logger.Error(102, fmt.Sprintf("Failed to start service: %v", err))
 			}
 		}()
 	}

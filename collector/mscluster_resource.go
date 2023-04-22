@@ -1,12 +1,15 @@
 package collector
 
 import (
+	"github.com/go-kit/log"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
 )
 
 // A MSCluster_ResourceCollector is a Prometheus collector for WMI MSCluster_Resource metrics
 type MSCluster_ResourceCollector struct {
+	logger log.Logger
+
 	Characteristics        *prometheus.Desc
 	DeadlockTimeout        *prometheus.Desc
 	EmbeddedFailureAction  *prometheus.Desc
@@ -25,9 +28,10 @@ type MSCluster_ResourceCollector struct {
 	Subclass               *prometheus.Desc
 }
 
-func newMSCluster_ResourceCollector() (Collector, error) {
+func newMSCluster_ResourceCollector(logger log.Logger) (Collector, error) {
 	const subsystem = "mscluster_resource"
 	return &MSCluster_ResourceCollector{
+		logger: log.With(logger, "collector", subsystem),
 		Characteristics: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "characteristics"),
 			"Provides the characteristics of the object.",
@@ -156,7 +160,7 @@ type MSCluster_Resource struct {
 // to the provided prometheus Metric channel.
 func (c *MSCluster_ResourceCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	var dst []MSCluster_Resource
-	q := queryAll(&dst)
+	q := queryAll(&dst, c.logger)
 	if err := wmi.QueryNamespace(q, &dst, "root/MSCluster"); err != nil {
 		return err
 	}

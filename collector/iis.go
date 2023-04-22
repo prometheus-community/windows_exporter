@@ -11,7 +11,8 @@ import (
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/prometheus-community/windows_exporter/log"
+	"github.com/go-kit/log"
+	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows/registry"
 )
@@ -50,31 +51,31 @@ type simple_version struct {
 	minor uint64
 }
 
-func getIISVersion() simple_version {
+func getIISVersion(logger log.Logger) simple_version {
 	k, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\Microsoft\InetStp\`, registry.QUERY_VALUE)
 	if err != nil {
-		log.Warn("Couldn't open registry to determine IIS version:", err)
+		level.Warn(logger).Log("msg", "Couldn't open registry to determine IIS version", "err", err)
 		return simple_version{}
 	}
 	defer func() {
 		err = k.Close()
 		if err != nil {
-			log.Warnf("Failed to close registry key: %v", err)
+			level.Warn(logger).Log("msg", fmt.Sprintf("Failed to close registry key"), "err", err)
 		}
 	}()
 
 	major, _, err := k.GetIntegerValue("MajorVersion")
 	if err != nil {
-		log.Warn("Couldn't open registry to determine IIS version:", err)
+		level.Warn(logger).Log("msg", "Couldn't open registry to determine IIS version", "err", err)
 		return simple_version{}
 	}
 	minor, _, err := k.GetIntegerValue("MinorVersion")
 	if err != nil {
-		log.Warn("Couldn't open registry to determine IIS version:", err)
+		level.Warn(logger).Log("msg", "Couldn't open registry to determine IIS version", "err", err)
 		return simple_version{}
 	}
 
-	log.Debugf("Detected IIS %d.%d\n", major, minor)
+	level.Debug(logger).Log("msg", fmt.Sprintf("Detected IIS %d.%d\n", major, minor))
 
 	return simple_version{
 		major: major,
@@ -83,6 +84,8 @@ func getIISVersion() simple_version {
 }
 
 type IISCollector struct {
+	logger log.Logger
+
 	// Web Service
 	CurrentAnonymousUsers               *prometheus.Desc
 	CurrentBlockedAsyncIORequests       *prometheus.Desc
@@ -255,10 +258,13 @@ func newIISCollectorFlags(app *kingpin.Application) {
 	}).String()
 }
 
-func newIISCollector() (Collector, error) {
+func newIISCollector(logger log.Logger) (Collector, error) {
+	const subsystem = "iis"
+	logger = log.With(logger, "collector", subsystem)
+
 	if *oldSiteExclude != "" {
 		if !siteExcludeSet {
-			log.Warnln("msg", "--collector.iis.site-blacklist is DEPRECATED and will be removed in a future release, use --collector.iis.site-exclude")
+			level.Warn(logger).Log("msg", "--collector.iis.site-blacklist is DEPRECATED and will be removed in a future release, use --collector.iis.site-exclude")
 			*siteExclude = *oldSiteExclude
 		} else {
 			return nil, errors.New("--collector.iis.site-blacklist and --collector.iis.site-exclude are mutually exclusive")
@@ -266,7 +272,7 @@ func newIISCollector() (Collector, error) {
 	}
 	if *oldSiteInclude != "" {
 		if !siteIncludeSet {
-			log.Warnln("msg", "--collector.iis.site-whitelist is DEPRECATED and will be removed in a future release, use --collector.iis.site-include")
+			level.Warn(logger).Log("msg", "--collector.iis.site-whitelist is DEPRECATED and will be removed in a future release, use --collector.iis.site-include")
 			*siteInclude = *oldSiteInclude
 		} else {
 			return nil, errors.New("--collector.iis.site-whitelist and --collector.iis.site-include are mutually exclusive")
@@ -275,7 +281,7 @@ func newIISCollector() (Collector, error) {
 
 	if *oldAppExclude != "" {
 		if !appExcludeSet {
-			log.Warnln("msg", "--collector.iis.app-blacklist is DEPRECATED and will be removed in a future release, use --collector.iis.app-exclude")
+			level.Warn(logger).Log("msg", "--collector.iis.app-blacklist is DEPRECATED and will be removed in a future release, use --collector.iis.app-exclude")
 			*appExclude = *oldAppExclude
 		} else {
 			return nil, errors.New("--collector.iis.app-blacklist and --collector.iis.app-exclude are mutually exclusive")
@@ -283,16 +289,16 @@ func newIISCollector() (Collector, error) {
 	}
 	if *oldAppInclude != "" {
 		if !appIncludeSet {
-			log.Warnln("msg", "--collector.iis.app-whitelist is DEPRECATED and will be removed in a future release, use --collector.iis.app-include")
+			level.Warn(logger).Log("msg", "--collector.iis.app-whitelist is DEPRECATED and will be removed in a future release, use --collector.iis.app-include")
 			*appInclude = *oldAppInclude
 		} else {
 			return nil, errors.New("--collector.iis.app-whitelist and --collector.iis.app-include are mutually exclusive")
 		}
 	}
 
-	const subsystem = "iis"
 	return &IISCollector{
-		iis_version: getIISVersion(),
+		logger:      logger,
+		iis_version: getIISVersion(logger),
 
 		siteIncludePattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *siteInclude)),
 		siteExcludePattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *siteExclude)),
@@ -914,22 +920,22 @@ func newIISCollector() (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *IISCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	if desc, err := c.collectWebService(ctx, ch); err != nil {
-		log.Error("failed collecting iis metrics:", desc, err)
+		level.Error(c.logger).Log("msg", "failed collecting iis metrics", "desc", desc, "err", err)
 		return err
 	}
 
 	if desc, err := c.collectAPP_POOL_WAS(ctx, ch); err != nil {
-		log.Error("failed collecting iis metrics:", desc, err)
+		level.Error(c.logger).Log("msg", "failed collecting iis metrics", "desc", desc, "err", err)
 		return err
 	}
 
 	if desc, err := c.collectW3SVC_W3WP(ctx, ch); err != nil {
-		log.Error("failed collecting iis metrics:", desc, err)
+		level.Error(c.logger).Log("msg", "failed collecting iis metrics", "desc", desc, "err", err)
 		return err
 	}
 
 	if desc, err := c.collectWebServiceCache(ctx, ch); err != nil {
-		log.Error("failed collecting iis metrics:", desc, err)
+		level.Error(c.logger).Log("msg", "failed collecting iis metrics", "desc", desc, "err", err)
 		return err
 	}
 
@@ -1028,7 +1034,7 @@ func dedupIISNames[V hasGetIISName](services []V) map[string]V {
 
 func (c *IISCollector) collectWebService(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var webService []perflibWebService
-	if err := unmarshalObject(ctx.perfObjects["Web Service"], &webService); err != nil {
+	if err := unmarshalObject(ctx.perfObjects["Web Service"], &webService, c.logger); err != nil {
 		return nil, err
 	}
 
@@ -1314,7 +1320,7 @@ var applicationStates = map[uint32]string{
 
 func (c *IISCollector) collectAPP_POOL_WAS(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var APP_POOL_WAS []perflibAPP_POOL_WAS
-	if err := unmarshalObject(ctx.perfObjects["APP_POOL_WAS"], &APP_POOL_WAS); err != nil {
+	if err := unmarshalObject(ctx.perfObjects["APP_POOL_WAS"], &APP_POOL_WAS, c.logger); err != nil {
 		return nil, err
 	}
 
@@ -1491,7 +1497,7 @@ type perflibW3SVC_W3WP_IIS8 struct {
 
 func (c *IISCollector) collectW3SVC_W3WP(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var W3SVC_W3WP []perflibW3SVC_W3WP
-	if err := unmarshalObject(ctx.perfObjects["W3SVC_W3WP"], &W3SVC_W3WP); err != nil {
+	if err := unmarshalObject(ctx.perfObjects["W3SVC_W3WP"], &W3SVC_W3WP, c.logger); err != nil {
 		return nil, err
 	}
 
@@ -1750,7 +1756,7 @@ func (c *IISCollector) collectW3SVC_W3WP(ctx *ScrapeContext, ch chan<- prometheu
 
 	if c.iis_version.major >= 8 {
 		var W3SVC_W3WP_IIS8 []perflibW3SVC_W3WP_IIS8
-		if err := unmarshalObject(ctx.perfObjects["W3SVC_W3WP"], &W3SVC_W3WP_IIS8); err != nil {
+		if err := unmarshalObject(ctx.perfObjects["W3SVC_W3WP"], &W3SVC_W3WP_IIS8, c.logger); err != nil {
 			return nil, err
 		}
 
@@ -1889,7 +1895,7 @@ type perflibWebServiceCache struct {
 
 func (c *IISCollector) collectWebServiceCache(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var WebServiceCache []perflibWebServiceCache
-	if err := unmarshalObject(ctx.perfObjects["Web Service Cache"], &WebServiceCache); err != nil {
+	if err := unmarshalObject(ctx.perfObjects["Web Service Cache"], &WebServiceCache, c.logger); err != nil {
 		return nil, err
 	}
 

@@ -1,9 +1,10 @@
 package config
 
 import (
-	"gopkg.in/yaml.v3"
 	"reflect"
 	"testing"
+
+	"gopkg.in/yaml.v3"
 )
 
 // Unmarshal good configuration file and confirm data is flattened correctly
