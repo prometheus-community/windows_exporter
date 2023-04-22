@@ -305,7 +305,7 @@ func main() {
 	collector.RegisterCollectors()
 
 	if *configFile != "" {
-		resolver, err := config.NewResolver(*configFile, collector.ConfigHooks())
+		resolver, err := config.NewResolver(*configFile, collector.CfgHooks())
 		if err != nil {
 			log.Fatalf("could not load config file: %v\n", err)
 		}
@@ -357,7 +357,7 @@ func main() {
 	h := &metricsHandler{
 		timeoutMargin:          *timeoutMargin,
 		includeExporterMetrics: *disableExporterMetrics,
-		collectorFactory: func(timeout time.Duration, requestedCollectors []string) (error, *windowsCollector) {
+		collectorFactory: func(timeout time.Duration, requestedCollectors []string) (*windowsCollector, error) {
 			filteredCollectors := make(map[string]collector.Collector)
 			// scrape all enabled collectors if no collector is requested
 			if len(requestedCollectors) == 0 {
@@ -366,14 +366,14 @@ func main() {
 			for _, name := range requestedCollectors {
 				col, exists := collectors[name]
 				if !exists {
-					return fmt.Errorf("unavailable collector: %s", name), nil
+					return nil, fmt.Errorf("unavailable collector: %s", name)
 				}
 				filteredCollectors[name] = col
 			}
-			return nil, &windowsCollector{
+			return &windowsCollector{
 				collectors:        filteredCollectors,
 				maxScrapeDuration: timeout,
-			}
+			}, nil
 		},
 	}
 
@@ -477,7 +477,7 @@ func withConcurrencyLimit(n int, next http.HandlerFunc) http.HandlerFunc {
 type metricsHandler struct {
 	timeoutMargin          float64
 	includeExporterMetrics bool
-	collectorFactory       func(timeout time.Duration, requestedCollectors []string) (error, *windowsCollector)
+	collectorFactory       func(timeout time.Duration, requestedCollectors []string) (*windowsCollector, error)
 }
 
 func (mh *metricsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -497,7 +497,7 @@ func (mh *metricsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	timeoutSeconds = timeoutSeconds - mh.timeoutMargin
 
 	reg := prometheus.NewRegistry()
-	err, wc := mh.collectorFactory(time.Duration(timeoutSeconds*float64(time.Second)), r.URL.Query()["collect[]"])
+	wc, err := mh.collectorFactory(time.Duration(timeoutSeconds*float64(time.Second)), r.URL.Query()["collect[]"])
 	if err != nil {
 		log.Warnln("Couldn't create filtered metrics handler: ", err)
 		w.WriteHeader(http.StatusBadRequest)
