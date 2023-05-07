@@ -1374,6 +1374,12 @@ func (c *HyperVCollector) collectVmSwitch(ch chan<- prometheus.Metric) (*prometh
 			obj.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
+			c.PacketsSent,
+			prometheus.CounterValue,
+			float64(obj.PacketsSentPersec),
+			obj.Name,
+		)
+		ch <- prometheus.MustNewConstMetric(
 			c.PurgedMacAddresses,
 			prometheus.CounterValue,
 			float64(obj.PurgedMacAddresses),
