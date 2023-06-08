@@ -74,7 +74,7 @@ type ScheduledTasks []ScheduledTask
 
 // newScheduledTask ...
 func newScheduledTaskFlags(app *kingpin.Application) interface{} {
-	s := TaskSettings{}
+	s := &TaskSettings{}
 	s.TaskInclude = app.Flag(
 		FlagScheduledTaskInclude,
 		"Regexp of tasks to include. Task path must both match include and not match exclude to be included.",

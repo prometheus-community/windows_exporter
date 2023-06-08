@@ -401,9 +401,6 @@ func RegisterCollectorsFlags(collectors map[string]*CollectorInit, app *kingpin.
 	for _, v := range collectors {
 		if v.flags != nil {
 			v.Settings = v.flags(app)
-			if v.Settings == nil {
-				panic("settings should be nil")
-			}
 		}
 	}
 }
