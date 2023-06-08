@@ -49,15 +49,15 @@ const (
 	TASK_RESULT_SUCCESS TaskResult = 0x0
 )
 
-type taskSettings struct {
-	taskOldExclude *string
-	taskOldInclude *string
+type TaskSettings struct {
+	TaskOldExclude *string
+	TaskOldInclude *string
 
-	taskExclude *string
-	taskInclude *string
+	TaskExclude *string
+	TaskInclude *string
 
-	taskIncludeSet bool
-	taskExcludeSet bool
+	TaskIncludeSet bool
+	TaskExcludeSet bool
 }
 
 // RegisteredTask ...
@@ -74,28 +74,28 @@ type ScheduledTasks []ScheduledTask
 
 // newScheduledTask ...
 func newScheduledTaskFlags(app *kingpin.Application) interface{} {
-	s := taskSettings{}
-	s.taskInclude = app.Flag(
+	s := TaskSettings{}
+	s.TaskInclude = app.Flag(
 		FlagScheduledTaskInclude,
 		"Regexp of tasks to include. Task path must both match include and not match exclude to be included.",
 	).Default(".+").PreAction(func(c *kingpin.ParseContext) error {
-		s.taskIncludeSet = true
+		s.TaskIncludeSet = true
 		return nil
 	}).String()
 
-	s.taskExclude = app.Flag(
+	s.TaskExclude = app.Flag(
 		FlagScheduledTaskExclude,
 		"Regexp of tasks to exclude. Task path must both match include and not match exclude to be included.",
 	).Default("").PreAction(func(c *kingpin.ParseContext) error {
-		s.taskExcludeSet = true
+		s.TaskExcludeSet = true
 		return nil
 	}).String()
 
-	s.taskOldInclude = app.Flag(
+	s.TaskOldInclude = app.Flag(
 		FlagScheduledTaskOldInclude,
 		"DEPRECATED: Use --collector.scheduled_task.include",
 	).Hidden().String()
-	s.taskOldExclude = app.Flag(
+	s.TaskOldExclude = app.Flag(
 		FlagScheduledTaskOldExclude,
 		"DEPRECATED: Use --collector.scheduled_task.exclude",
 	).Hidden().String()
@@ -104,19 +104,19 @@ func newScheduledTaskFlags(app *kingpin.Application) interface{} {
 
 // newScheduledTask ...
 func newScheduledTask(settings interface{}) (Collector, error) {
-	s := settings.(*taskSettings)
-	if *s.taskOldExclude != "" {
-		if !s.taskExcludeSet {
+	s := settings.(*TaskSettings)
+	if *s.TaskOldExclude != "" {
+		if !s.TaskExcludeSet {
 			log.Warnln("msg", "--collector.scheduled_task.blacklist is DEPRECATED and will be removed in a future release, use --collector.scheduled_task.exclude")
-			*s.taskExclude = *s.taskOldExclude
+			*s.TaskExclude = *s.TaskOldExclude
 		} else {
 			return nil, errors.New("--collector.scheduled_task.blacklist and --collector.scheduled_task.exclude are mutually exclusive")
 		}
 	}
-	if *s.taskOldInclude != "" {
-		if !s.taskIncludeSet {
+	if *s.TaskOldInclude != "" {
+		if !s.TaskIncludeSet {
 			log.Warnln("msg", "--collector.scheduled_task.whitelist is DEPRECATED and will be removed in a future release, use --collector.scheduled_task.include")
-			*s.taskInclude = *s.taskOldInclude
+			*s.TaskInclude = *s.TaskOldInclude
 		} else {
 			return nil, errors.New("--collector.scheduled_task.whitelist and --collector.scheduled_task.include are mutually exclusive")
 		}
@@ -158,8 +158,8 @@ func newScheduledTask(settings interface{}) (Collector, error) {
 			nil,
 		),
 
-		taskIncludePattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *s.taskInclude)),
-		taskExcludePattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *s.taskExclude)),
+		taskIncludePattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *s.TaskInclude)),
+		taskExcludePattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *s.TaskExclude)),
 	}, nil
 }
 

@@ -25,15 +25,15 @@ var (
 	nicNameToUnderscore = regexp.MustCompile("[^a-zA-Z0-9]")
 )
 
-type netSettings struct {
-	nicOldInclude *string
-	nicOldExclude *string
+type NetSettings struct {
+	NicOldInclude *string
+	NicOldExclude *string
 
-	nicInclude *string
-	nicExclude *string
+	NicInclude *string
+	NicExclude *string
 
-	nicIncludeSet bool
-	nicExcludeSet bool
+	NicIncludeSet bool
+	NicExcludeSet bool
 }
 
 // A NetworkCollector is a Prometheus collector for Perflib Network Interface metrics
@@ -58,28 +58,28 @@ type NetworkCollector struct {
 
 // newNetworkCollectorFlags ...
 func newNetworkCollectorFlags(app *kingpin.Application) interface{} {
-	s := &netSettings{}
-	s.nicInclude = app.Flag(
+	s := &NetSettings{}
+	s.NicInclude = app.Flag(
 		FlagNicInclude,
 		"Regexp of NIC:s to include. NIC name must both match include and not match exclude to be included.",
 	).Default(".+").PreAction(func(c *kingpin.ParseContext) error {
-		s.nicIncludeSet = true
+		s.NicIncludeSet = true
 		return nil
 	}).String()
 
-	s.nicExclude = app.Flag(
+	s.NicExclude = app.Flag(
 		FlagNicExclude,
 		"Regexp of NIC:s to exclude. NIC name must both match include and not match exclude to be included.",
 	).Default("").PreAction(func(c *kingpin.ParseContext) error {
-		s.nicExcludeSet = true
+		s.NicExcludeSet = true
 		return nil
 	}).String()
 
-	s.nicOldInclude = app.Flag(
+	s.NicOldInclude = app.Flag(
 		FlagNicOldInclude,
 		"DEPRECATED: Use --collector.net.nic-include",
 	).Hidden().String()
-	s.nicOldExclude = app.Flag(
+	s.NicOldExclude = app.Flag(
 		FlagNicOldExclude,
 		"DEPRECATED: Use --collector.net.nic-exclude",
 	).Hidden().String()
@@ -88,19 +88,19 @@ func newNetworkCollectorFlags(app *kingpin.Application) interface{} {
 
 // newNetworkCollector ...
 func newNetworkCollector(settings interface{}) (Collector, error) {
-	s := settings.(*netSettings)
-	if *s.nicOldExclude != "" {
-		if !s.nicExcludeSet {
+	s := settings.(*NetSettings)
+	if *s.NicOldExclude != "" {
+		if !s.NicExcludeSet {
 			log.Warnln("msg", "--collector.net.nic-blacklist is DEPRECATED and will be removed in a future release, use --collector.net.nic-exclude")
-			*s.nicExclude = *s.nicOldExclude
+			*s.NicExclude = *s.NicOldExclude
 		} else {
 			return nil, errors.New("--collector.net.nic-blacklist and --collector.net.nic-exclude are mutually exclusive")
 		}
 	}
-	if *s.nicOldInclude != "" {
-		if !s.nicIncludeSet {
+	if *s.NicOldInclude != "" {
+		if !s.NicIncludeSet {
 			log.Warnln("msg", "--collector.net.nic-whitelist is DEPRECATED and will be removed in a future release, use --collector.net.nic-include")
-			*s.nicInclude = *s.nicOldInclude
+			*s.NicInclude = *s.NicOldInclude
 		} else {
 			return nil, errors.New("--collector.net.nic-whitelist and --collector.net.nic-include are mutually exclusive")
 		}
@@ -188,8 +188,8 @@ func newNetworkCollector(settings interface{}) (Collector, error) {
 			nil,
 		),
 
-		nicIncludePattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *s.nicInclude)),
-		nicExcludePattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *s.nicExclude)),
+		nicIncludePattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *s.NicInclude)),
+		nicExcludePattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *s.NicExclude)),
 	}, nil
 }
 

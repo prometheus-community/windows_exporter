@@ -68,40 +68,40 @@ type SMTPCollector struct {
 	serverExcludePattern *regexp.Regexp
 }
 
-type smtpSettings struct {
-	serverOldInclude *string
-	serverOldExclude *string
+type SMTPSettings struct {
+	ServerOldInclude *string
+	ServerOldExclude *string
 
-	serverInclude *string
-	serverExclude *string
+	ServerInclude *string
+	ServerExclude *string
 
-	serverIncludeSet bool
-	serverExcludeSet bool
+	ServerIncludeSet bool
+	ServerExcludeSet bool
 }
 
 func newSMTPCollectorFlags(app *kingpin.Application) interface{} {
-	s := &smtpSettings{}
-	s.serverInclude = app.Flag(
+	s := &SMTPSettings{}
+	s.ServerInclude = app.Flag(
 		FlagSmtpServerInclude,
 		"Regexp of virtual servers to include. Server name must both match include and not match exclude to be included.",
 	).Default(".+").PreAction(func(c *kingpin.ParseContext) error {
-		s.serverIncludeSet = true
+		s.ServerIncludeSet = true
 		return nil
 	}).String()
 
-	s.serverExclude = app.Flag(
+	s.ServerExclude = app.Flag(
 		FlagSmtpServerExclude,
 		"Regexp of virtual servers to exclude. Server name must both match include and not match exclude to be included.",
 	).Default("").PreAction(func(c *kingpin.ParseContext) error {
-		s.serverExcludeSet = true
+		s.ServerExcludeSet = true
 		return nil
 	}).String()
 
-	s.serverOldInclude = app.Flag(
+	s.ServerOldInclude = app.Flag(
 		FlagSmtpServerOldInclude,
 		"DEPRECATED: Use --collector.smtp.server-include",
 	).Hidden().String()
-	s.serverOldExclude = app.Flag(
+	s.ServerOldExclude = app.Flag(
 		FlagSmtpServerOldExclude,
 		"DEPRECATED: Use --collector.smtp.server-exclude",
 	).Hidden().String()
@@ -109,21 +109,21 @@ func newSMTPCollectorFlags(app *kingpin.Application) interface{} {
 }
 
 func newSMTPCollector(settings interface{}) (Collector, error) {
-	s := settings.(smtpSettings)
+	s := settings.(SMTPSettings)
 	log.Info("smtp collector is in an experimental state! Metrics for this collector have not been tested.")
 
-	if *s.serverOldExclude != "" {
-		if !s.serverExcludeSet {
+	if *s.ServerOldExclude != "" {
+		if !s.ServerExcludeSet {
 			log.Warnln("msg", "--collector.smtp.server-blacklist is DEPRECATED and will be removed in a future release, use --collector.smtp.server-exclude")
-			*s.serverExclude = *s.serverOldExclude
+			*s.ServerExclude = *s.ServerOldExclude
 		} else {
 			return nil, errors.New("--collector.smtp.server-blacklist and --collector.smtp.server-exclude are mutually exclusive")
 		}
 	}
-	if *s.serverOldInclude != "" {
-		if !s.serverIncludeSet {
+	if *s.ServerOldInclude != "" {
+		if !s.ServerIncludeSet {
 			log.Warnln("msg", "--collector.smtp.server-whitelist is DEPRECATED and will be removed in a future release, use --collector.smtp.server-include")
-			*s.serverInclude = *s.serverOldInclude
+			*s.ServerInclude = *s.ServerOldInclude
 		} else {
 			return nil, errors.New("--collector.smtp.server-whitelist and --collector.smtp.server-include are mutually exclusive")
 		}
@@ -384,8 +384,8 @@ func newSMTPCollector(settings interface{}) (Collector, error) {
 			nil,
 		),
 
-		serverIncludePattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *s.serverInclude)),
-		serverExcludePattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *s.serverExclude)),
+		serverIncludePattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *s.ServerInclude)),
+		serverExcludePattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *s.ServerExclude)),
 	}, nil
 }
 

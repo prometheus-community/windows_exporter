@@ -48,8 +48,8 @@ var (
 	)
 )
 
-type textSettings struct {
-	textFileDirectory *string
+type TextSettings struct {
+	TextFileDirectory *string
 }
 
 type textFileCollector struct {
@@ -60,8 +60,8 @@ type textFileCollector struct {
 
 // newTextFileCollectorFlags ...
 func newTextFileCollectorFlags(app *kingpin.Application) interface{} {
-	s := &textSettings{}
-	s.textFileDirectory = app.Flag(
+	s := &TextSettings{}
+	s.TextFileDirectory = app.Flag(
 		FlagTextFileDirectory,
 		"Directory to read text files with metrics from.",
 	).Default(getDefaultPath()).String()
@@ -71,9 +71,9 @@ func newTextFileCollectorFlags(app *kingpin.Application) interface{} {
 // newTextFileCollector returns a new Collector exposing metrics read from files
 // in the given textfile directory.
 func newTextFileCollector(settings interface{}) (Collector, error) {
-	s := settings.(*textSettings)
+	s := settings.(*TextSettings)
 	return &textFileCollector{
-		path: *s.textFileDirectory,
+		path: *s.TextFileDirectory,
 	}, nil
 }
 

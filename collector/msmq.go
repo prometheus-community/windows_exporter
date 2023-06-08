@@ -26,23 +26,23 @@ type Win32_PerfRawData_MSMQ_MSMQQueueCollector struct {
 	queryWhereClause string
 }
 
-type msmqSettings struct {
-	msmqWhereClause *string
+type MSMQSettings struct {
+	MSMQWhereClause *string
 }
 
 // newMSMQCollectorFlags ..
 func newMSMQCollectorFlags(app *kingpin.Application) interface{} {
-	s := &msmqSettings{}
-	s.msmqWhereClause = app.Flag(FlagMsmqWhereClause, "WQL 'where' clause to use in WMI metrics query. Limits the response to the msmqs you specify and reduces the size of the response.").String()
+	s := &MSMQSettings{}
+	s.MSMQWhereClause = app.Flag(FlagMsmqWhereClause, "WQL 'where' clause to use in WMI metrics query. Limits the response to the msmqs you specify and reduces the size of the response.").String()
 	return s
 }
 
 // NewWin32_PerfRawData_MSMQ_MSMQQueueCollector ...
 func newMSMQCollector(settings interface{}) (Collector, error) {
-	s := settings.(*msmqSettings)
+	s := settings.(*MSMQSettings)
 	const subsystem = "msmq"
 
-	if *s.msmqWhereClause == "" {
+	if *s.MSMQWhereClause == "" {
 		log.Warn("No where-clause specified for msmq collector. This will generate a very large number of metrics!")
 	}
 
@@ -71,7 +71,7 @@ func newMSMQCollector(settings interface{}) (Collector, error) {
 			[]string{"name"},
 			nil,
 		),
-		queryWhereClause: *s.msmqWhereClause,
+		queryWhereClause: *s.MSMQWhereClause,
 	}, nil
 }
 

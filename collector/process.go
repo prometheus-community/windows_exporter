@@ -24,15 +24,15 @@ const (
 	FlagProcessInclude = "collector.process.include"
 )
 
-type processSettings struct {
-	processOldInclude *string
-	processOldExclude *string
+type ProcessSettings struct {
+	ProcessOldInclude *string
+	ProcessOldExclude *string
 
-	processInclude *string
-	processExclude *string
+	ProcessInclude *string
+	ProcessExclude *string
 
-	processIncludeSet bool
-	processExcludeSet bool
+	ProcessIncludeSet bool
+	ProcessExcludeSet bool
 }
 
 type processCollector struct {
@@ -58,28 +58,28 @@ type processCollector struct {
 
 // newProcessCollectorFlags ...
 func newProcessCollectorFlags(app *kingpin.Application) interface{} {
-	s := processSettings{}
-	s.processInclude = app.Flag(
+	s := ProcessSettings{}
+	s.ProcessInclude = app.Flag(
 		FlagProcessInclude,
 		"Regexp of processes to include. Process name must both match include and not match exclude to be included.",
 	).Default(".*").PreAction(func(c *kingpin.ParseContext) error {
-		s.processIncludeSet = true
+		s.ProcessIncludeSet = true
 		return nil
 	}).String()
 
-	s.processExclude = app.Flag(
+	s.ProcessExclude = app.Flag(
 		FlagProcessExclude,
 		"Regexp of processes to exclude. Process name must both match include and not match exclude to be included.",
 	).Default("").PreAction(func(c *kingpin.ParseContext) error {
-		s.processExcludeSet = true
+		s.ProcessExcludeSet = true
 		return nil
 	}).String()
 
-	s.processOldInclude = app.Flag(
+	s.ProcessOldInclude = app.Flag(
 		FlagProcessOldInclude,
 		"DEPRECATED: Use --collector.process.include",
 	).Hidden().String()
-	s.processOldExclude = app.Flag(
+	s.ProcessOldExclude = app.Flag(
 		FlagProcessOldExclude,
 		"DEPRECATED: Use --collector.process.exclude",
 	).Hidden().String()
@@ -88,27 +88,27 @@ func newProcessCollectorFlags(app *kingpin.Application) interface{} {
 
 // NewProcessCollector ...
 func newProcessCollector(settings interface{}) (Collector, error) {
-	s := settings.(*processSettings)
+	s := settings.(*ProcessSettings)
 	const subsystem = "process"
 
-	if *s.processOldExclude != "" {
-		if !s.processExcludeSet {
+	if *s.ProcessOldExclude != "" {
+		if !s.ProcessExcludeSet {
 			log.Warnln("msg", "--collector.process.blacklist is DEPRECATED and will be removed in a future release, use --collector.process.exclude")
-			*s.processExclude = *s.processOldExclude
+			*s.ProcessExclude = *s.ProcessOldExclude
 		} else {
 			return nil, errors.New("--collector.process.blacklist and --collector.process.exclude are mutually exclusive")
 		}
 	}
-	if *s.processOldInclude != "" {
-		if !s.processIncludeSet {
+	if *s.ProcessOldInclude != "" {
+		if !s.ProcessIncludeSet {
 			log.Warnln("msg", "--collector.process.whitelist is DEPRECATED and will be removed in a future release, use --collector.process.include")
-			*s.processInclude = *s.processOldInclude
+			*s.ProcessInclude = *s.ProcessOldInclude
 		} else {
 			return nil, errors.New("--collector.process.whitelist and --collector.process.include are mutually exclusive")
 		}
 	}
 
-	if *s.processInclude == ".*" && *s.processExclude == "" {
+	if *s.ProcessInclude == ".*" && *s.ProcessExclude == "" {
 		log.Warn("No filters specified for process collector. This will generate a very large number of metrics!")
 	}
 
@@ -203,8 +203,8 @@ func newProcessCollector(settings interface{}) (Collector, error) {
 			[]string{"process", "process_id", "creating_process_id"},
 			nil,
 		),
-		processIncludePattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *s.processInclude)),
-		processExcludePattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *s.processExclude)),
+		processIncludePattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *s.ProcessInclude)),
+		processExcludePattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *s.ProcessExclude)),
 	}, nil
 }
 

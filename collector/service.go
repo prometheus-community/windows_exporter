@@ -32,19 +32,19 @@ type serviceCollector struct {
 	useApi           bool
 }
 
-type serviceSettings struct {
-	serviceWhereClause *string
-	useAPI             *bool
+type ServiceSettings struct {
+	ServiceWhereClause *string
+	UseAPI             *bool
 }
 
 // newServiceCollectorFlags ...
 func newServiceCollectorFlags(app *kingpin.Application) interface{} {
-	s := &serviceSettings{}
-	s.serviceWhereClause = app.Flag(
+	s := &ServiceSettings{}
+	s.ServiceWhereClause = app.Flag(
 		FlagServiceWhereClause,
 		"WQL 'where' clause to use in WMI metrics query. Limits the response to the services you specify and reduces the size of the response.",
 	).Default("").String()
-	s.useAPI = app.Flag(
+	s.UseAPI = app.Flag(
 		FlagServiceUseAPI,
 		"Use API calls to collect service data instead of WMI. Flag 'collector.service.services-where' won't be effective.",
 	).Default("false").Bool()
@@ -53,13 +53,13 @@ func newServiceCollectorFlags(app *kingpin.Application) interface{} {
 
 // newserviceCollector ...
 func newserviceCollector(settings interface{}) (Collector, error) {
-	s := settings.(*serviceSettings)
+	s := settings.(*ServiceSettings)
 	const subsystem = "service"
 
-	if *s.serviceWhereClause == "" {
+	if *s.ServiceWhereClause == "" {
 		log.Warn("No where-clause specified for service collector. This will generate a very large number of metrics!")
 	}
-	if *s.useAPI {
+	if *s.UseAPI {
 		log.Warn("API collection is enabled.")
 	}
 
@@ -88,8 +88,8 @@ func newserviceCollector(settings interface{}) (Collector, error) {
 			[]string{"name", "status"},
 			nil,
 		),
-		queryWhereClause: *s.serviceWhereClause,
-		useApi:           *s.useAPI,
+		queryWhereClause: *s.ServiceWhereClause,
+		useApi:           *s.UseAPI,
 	}, nil
 }
 

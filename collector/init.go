@@ -23,10 +23,10 @@ func (c *CollectorInit) Name() string {
 }
 
 func getDFSRCollectorDeps(settings interface{}) []string {
-	s := settings.(*dfsrSettings)
+	s := settings.(*DFRSSettings)
 	// Perflib sources are dynamic, depending on the enabled child collectors
 	var perflibDependencies []string
-	for _, source := range expandEnabledChildCollectors(*s.dfsrEnabledCollectors) {
+	for _, source := range expandEnabledChildCollectors(*s.DFRSEnabledCollectors) {
 		perflibDependencies = append(perflibDependencies, dfsrGetPerfObjectName(source))
 	}
 

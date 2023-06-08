@@ -6,12 +6,12 @@ package collector
 import (
 	"errors"
 	"fmt"
+	"github.com/alecthomas/kingpin/v2"
 	"os"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/log"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows/registry"
@@ -397,20 +397,20 @@ type MSSQLCollector struct {
 	mssqlChildCollectorFailure int
 }
 
-type mssqlSettings struct {
-	msmqWhereClause      *string
-	mssqlPrintCollectors *bool
+type MSSqlSettings struct {
+	ClassesEnabled       *string
+	MSSQLPrintCollectors *bool
 }
 
 // newMSSQLCollectorFlags ...
 func newMSSQLCollectorFlags(app *kingpin.Application) interface{} {
-	s := &mssqlSettings{}
-	s.msmqWhereClause = app.Flag(
+	s := &MSSqlSettings{}
+	s.ClassesEnabled = app.Flag(
 		FlagMssqlEnabledCollectors,
 		"Comma-separated list of mssql WMI classes to use.").
 		Default(mssqlAvailableClassCollectors()).String()
 
-	s.mssqlPrintCollectors = app.Flag(
+	s.MSSQLPrintCollectors = app.Flag(
 		FlagMssqlPrintCollectors,
 		"If true, print available mssql WMI classes and exit.  Only displays if the mssql collector is enabled.",
 	).Bool()
@@ -419,11 +419,11 @@ func newMSSQLCollectorFlags(app *kingpin.Application) interface{} {
 
 // newMSSQLCollector ...
 func newMSSQLCollector(settings interface{}) (Collector, error) {
-	s := settings.(*mssqlSettings)
+	s := settings.(*MSSqlSettings)
 
 	const subsystem = "mssql"
 
-	enabled := expandEnabledChildCollectors(*s.msmqWhereClause)
+	enabled := expandEnabledChildCollectors(*s.ClassesEnabled)
 	mssqlInstances := getMSSQLInstances()
 	perfCounters := make([]string, 0, len(mssqlInstances)*len(enabled))
 	for instance := range mssqlInstances {
@@ -435,7 +435,7 @@ func newMSSQLCollector(settings interface{}) (Collector, error) {
 
 	mssqlCollector := MSSQLCollector{
 		mssqlEnabledCollectors: enabled,
-		printCollectors:        *s.mssqlPrintCollectors,
+		printCollectors:        *s.MSSQLPrintCollectors,
 		// meta
 		mssqlScrapeDurationDesc: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "collector_duration_seconds"),
