@@ -83,7 +83,7 @@ func Build(builders map[string]*CollectorInit, collector string) (Collector, err
 	if !exists {
 		return nil, fmt.Errorf("Unknown collector %q", collector)
 	}
-	return builder.builder(builder.settings)
+	return builder.builder(builder.Settings)
 }
 func getPerfQuery(collectors []string) string {
 	parts := make([]string, 0, len(collectors))

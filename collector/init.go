@@ -14,12 +14,8 @@ type CollectorInit struct {
 	// These will be included in the Perflib scrape scope by the exporter.
 	perfCounterFunc perfCounterNamesBuilder
 
-	// settings contains settings from the flagsBuild
-	settings interface{}
-}
-
-func (c *CollectorInit) Name() string {
-	return c.name
+	// Settings contains settings from the flagsBuild
+	Settings interface{}
 }
 
 func getDFSRCollectorDeps(settings interface{}) []string {
@@ -404,8 +400,8 @@ func CreateCollectors() map[string]*CollectorInit {
 func RegisterCollectorsFlags(collectors map[string]*CollectorInit, app *kingpin.Application) {
 	for _, v := range collectors {
 		if v.flags != nil {
-			v.settings = v.flags(app)
-			if v.settings == nil {
+			v.Settings = v.flags(app)
+			if v.Settings == nil {
 				panic("settings should be nil")
 			}
 		}
@@ -418,7 +414,7 @@ func RegisterCollectors(builders map[string]*CollectorInit) {
 		var perfCounterNames []string
 
 		if v.perfCounterFunc != nil {
-			perfCounterNames = v.perfCounterFunc(v.settings)
+			perfCounterNames = v.perfCounterFunc(v.Settings)
 		}
 
 		registerCollector(v, perfCounterNames...)
