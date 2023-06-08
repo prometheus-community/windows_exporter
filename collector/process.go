@@ -94,7 +94,7 @@ func newProcessCollector(logger log.Logger) (Collector, error) {
 
 	if *processOldExclude != "" {
 		if !processExcludeSet {
-			level.Warn(logger).Log("msg", "--collector.process.blacklist is DEPRECATED and will be removed in a future release, use --collector.process.exclude")
+			_ = level.Warn(logger).Log("msg", "--collector.process.blacklist is DEPRECATED and will be removed in a future release, use --collector.process.exclude")
 			*processExclude = *processOldExclude
 		} else {
 			return nil, errors.New("--collector.process.blacklist and --collector.process.exclude are mutually exclusive")
@@ -102,7 +102,7 @@ func newProcessCollector(logger log.Logger) (Collector, error) {
 	}
 	if *processOldInclude != "" {
 		if !processIncludeSet {
-			level.Warn(logger).Log("msg", "--collector.process.whitelist is DEPRECATED and will be removed in a future release, use --collector.process.include")
+			_ = level.Warn(logger).Log("msg", "--collector.process.whitelist is DEPRECATED and will be removed in a future release, use --collector.process.include")
 			*processInclude = *processOldInclude
 		} else {
 			return nil, errors.New("--collector.process.whitelist and --collector.process.include are mutually exclusive")
@@ -110,7 +110,7 @@ func newProcessCollector(logger log.Logger) (Collector, error) {
 	}
 
 	if *processInclude == ".*" && *processExclude == "" {
-		level.Warn(logger).Log("msg", "No filters specified for process collector. This will generate a very large number of metrics!")
+		_ = level.Warn(logger).Log("msg", "No filters specified for process collector. This will generate a very large number of metrics!")
 	}
 
 	return &processCollector{
@@ -257,7 +257,7 @@ func (c *processCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metr
 	var dst_wp []WorkerProcess
 	q_wp := queryAll(&dst_wp, c.logger)
 	if err := wmi.QueryNamespace(q_wp, &dst_wp, "root\\WebAdministration"); err != nil {
-		level.Debug(c.logger).Log("msg", fmt.Sprintf("Could not query WebAdministration namespace for IIS worker processes: %v. Skipping", err))
+		_ = level.Debug(c.logger).Log("msg", fmt.Sprintf("Could not query WebAdministration namespace for IIS worker processes: %v. Skipping", err))
 	}
 
 	for _, process := range data {

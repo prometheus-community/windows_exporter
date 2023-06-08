@@ -93,7 +93,7 @@ func newLogicalDiskCollector(logger log.Logger) (Collector, error) {
 
 	if *volumeOldExclude != "" {
 		if !volumeExcludeSet {
-			level.Warn(logger).Log("msg", "--collector.logical_disk.volume-blacklist is DEPRECATED and will be removed in a future release, use --collector.logical_disk.volume-exclude")
+			_ = level.Warn(logger).Log("msg", "--collector.logical_disk.volume-blacklist is DEPRECATED and will be removed in a future release, use --collector.logical_disk.volume-exclude")
 			*volumeExclude = *volumeOldExclude
 		} else {
 			return nil, errors.New("--collector.logical_disk.volume-blacklist and --collector.logical_disk.volume-exclude are mutually exclusive")
@@ -101,7 +101,7 @@ func newLogicalDiskCollector(logger log.Logger) (Collector, error) {
 	}
 	if *volumeOldInclude != "" {
 		if !volumeIncludeSet {
-			level.Warn(logger).Log("msg", "--collector.logical_disk.volume-whitelist is DEPRECATED and will be removed in a future release, use --collector.logical_disk.volume-include")
+			_ = level.Warn(logger).Log("msg", "--collector.logical_disk.volume-whitelist is DEPRECATED and will be removed in a future release, use --collector.logical_disk.volume-include")
 			*volumeInclude = *volumeOldInclude
 		} else {
 			return nil, errors.New("--collector.logical_disk.volume-whitelist and --collector.logical_disk.volume-include are mutually exclusive")
@@ -232,7 +232,7 @@ func newLogicalDiskCollector(logger log.Logger) (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *LogicalDiskCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ctx, ch); err != nil {
-		level.Error(c.logger).Log("failed collecting logical_disk metrics", "desc", desc, "err", err)
+		_ = level.Error(c.logger).Log("failed collecting logical_disk metrics", "desc", desc, "err", err)
 		return err
 	}
 	return nil

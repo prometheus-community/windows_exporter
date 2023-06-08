@@ -165,11 +165,11 @@ func newVmwareCollector(logger log.Logger) (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *VmwareCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	if desc, err := c.collectMem(ch); err != nil {
-		level.Error(c.logger).Log("failed collecting vmware memory metrics", "desc", desc, "err", err)
+		_ = level.Error(c.logger).Log("failed collecting vmware memory metrics", "desc", desc, "err", err)
 		return err
 	}
 	if desc, err := c.collectCpu(ch); err != nil {
-		level.Error(c.logger).Log("failed collecting vmware cpu metrics", "desc", desc, "err", err)
+		_ = level.Error(c.logger).Log("failed collecting vmware cpu metrics", "desc", desc, "err", err)
 		return err
 	}
 	return nil

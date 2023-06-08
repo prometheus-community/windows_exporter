@@ -61,7 +61,7 @@ type win32_Processor struct {
 // to the provided prometheus Metric channel.
 func (c *CpuInfoCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ch); err != nil {
-		level.Error(c.logger).Log("msg", "failed collecting cpu_info metrics", "desc", desc, "err", err)
+		_ = level.Error(c.logger).Log("msg", "failed collecting cpu_info metrics", "desc", desc, "err", err)
 		return err
 	}
 	return nil

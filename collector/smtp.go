@@ -114,11 +114,11 @@ func newSMTPCollector(logger log.Logger) (Collector, error) {
 	const subsystem = "smtp"
 	logger = log.With(logger, "collector", subsystem)
 
-	level.Info(logger).Log("msg", "smtp collector is in an experimental state! Metrics for this collector have not been tested.")
+	_ = level.Info(logger).Log("msg", "smtp collector is in an experimental state! Metrics for this collector have not been tested.")
 
 	if *serverOldExclude != "" {
 		if !serverExcludeSet {
-			level.Warn(logger).Log("msg", "--collector.smtp.server-blacklist is DEPRECATED and will be removed in a future release, use --collector.smtp.server-exclude")
+			_ = level.Warn(logger).Log("msg", "--collector.smtp.server-blacklist is DEPRECATED and will be removed in a future release, use --collector.smtp.server-exclude")
 			*serverExclude = *serverOldExclude
 		} else {
 			return nil, errors.New("--collector.smtp.server-blacklist and --collector.smtp.server-exclude are mutually exclusive")
@@ -126,7 +126,7 @@ func newSMTPCollector(logger log.Logger) (Collector, error) {
 	}
 	if *serverOldInclude != "" {
 		if !serverIncludeSet {
-			level.Warn(logger).Log("msg", "--collector.smtp.server-whitelist is DEPRECATED and will be removed in a future release, use --collector.smtp.server-include")
+			_ = level.Warn(logger).Log("msg", "--collector.smtp.server-whitelist is DEPRECATED and will be removed in a future release, use --collector.smtp.server-include")
 			*serverInclude = *serverOldInclude
 		} else {
 			return nil, errors.New("--collector.smtp.server-whitelist and --collector.smtp.server-include are mutually exclusive")
@@ -397,7 +397,7 @@ func newSMTPCollector(logger log.Logger) (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *SMTPCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ctx, ch); err != nil {
-		level.Error(c.logger).Log("failed collecting smtp metrics", "desc", desc, "err", err)
+		_ = level.Error(c.logger).Log("failed collecting smtp metrics", "desc", desc, "err", err)
 		return err
 	}
 	return nil

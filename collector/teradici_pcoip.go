@@ -303,23 +303,23 @@ func newTeradiciPcoipCollector(logger log.Logger) (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *teradiciPcoipCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	if desc, err := c.collectAudio(ch); err != nil {
-		level.Error(c.logger).Log("failed collecting teradici session audio metrics", "desc", desc, "err", err)
+		_ = level.Error(c.logger).Log("failed collecting teradici session audio metrics", "desc", desc, "err", err)
 		return err
 	}
 	if desc, err := c.collectGeneral(ch); err != nil {
-		level.Error(c.logger).Log("failed collecting teradici session general metrics", "desc", desc, "err", err)
+		_ = level.Error(c.logger).Log("failed collecting teradici session general metrics", "desc", desc, "err", err)
 		return err
 	}
 	if desc, err := c.collectImaging(ch); err != nil {
-		level.Error(c.logger).Log("failed collecting teradici session imaging metrics", "desc", desc, "err", err)
+		_ = level.Error(c.logger).Log("failed collecting teradici session imaging metrics", "desc", desc, "err", err)
 		return err
 	}
 	if desc, err := c.collectNetwork(ch); err != nil {
-		level.Error(c.logger).Log("failed collecting teradici session network metrics", "desc", desc, "err", err)
+		_ = level.Error(c.logger).Log("failed collecting teradici session network metrics", "desc", desc, "err", err)
 		return err
 	}
 	if desc, err := c.collectUsb(ch); err != nil {
-		level.Error(c.logger).Log("failed collecting teradici session USB metrics", "desc", desc, "err", err)
+		_ = level.Error(c.logger).Log("failed collecting teradici session USB metrics", "desc", desc, "err", err)
 		return err
 	}
 	return nil

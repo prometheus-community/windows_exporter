@@ -167,7 +167,7 @@ func (coll *Prometheus) Collect(ch chan<- prometheus.Metric) {
 	}
 
 	if len(remainingCollectorNames) > 0 {
-		level.Warn(coll.logger).Log("msg", fmt.Sprintf("Collection timed out, still waiting for %v", remainingCollectorNames))
+		_ = level.Warn(coll.logger).Log("msg", fmt.Sprintf("Collection timed out, still waiting for %v", remainingCollectorNames))
 	}
 
 	l.Unlock()
@@ -185,9 +185,9 @@ func execute(name string, c Collector, ctx *ScrapeContext, ch chan<- prometheus.
 	)
 
 	if err != nil {
-		level.Error(logger).Log("msg", fmt.Sprintf("collector %s failed after %fs", name, duration), "err", err)
+		_ = level.Error(logger).Log("msg", fmt.Sprintf("collector %s failed after %fs", name, duration), "err", err)
 		return failed
 	}
-	level.Debug(logger).Log("msg", fmt.Sprintf("collector %s succeeded after %fs.", name, duration))
+	_ = level.Debug(logger).Log("msg", fmt.Sprintf("collector %s succeeded after %fs.", name, duration))
 	return success
 }

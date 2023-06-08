@@ -546,51 +546,51 @@ func newVmwareBlastCollector(logger log.Logger) (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *vmwareBlastCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	if desc, err := c.collectAudio(ch); err != nil {
-		level.Error(c.logger).Log("failed collecting vmware blast audio metrics", "desc", desc, "err", err)
+		_ = level.Error(c.logger).Log("failed collecting vmware blast audio metrics", "desc", desc, "err", err)
 		return err
 	}
 	if desc, err := c.collectCdr(ch); err != nil {
-		level.Error(c.logger).Log("failed collecting vmware blast CDR metrics", "desc", desc, "err", err)
+		_ = level.Error(c.logger).Log("failed collecting vmware blast CDR metrics", "desc", desc, "err", err)
 		return err
 	}
 	if desc, err := c.collectClipboard(ch); err != nil {
-		level.Error(c.logger).Log("failed collecting vmware blast clipboard metrics", "desc", desc, "err", err)
+		_ = level.Error(c.logger).Log("failed collecting vmware blast clipboard metrics", "desc", desc, "err", err)
 		return err
 	}
 	if desc, err := c.collectHtml5Mmr(ch); err != nil {
-		level.Error(c.logger).Log("failed collecting vmware blast HTML5 MMR metrics", "desc", desc, "err", err)
+		_ = level.Error(c.logger).Log("failed collecting vmware blast HTML5 MMR metrics", "desc", desc, "err", err)
 		return err
 	}
 	if desc, err := c.collectImaging(ch); err != nil {
-		level.Error(c.logger).Log("failed collecting vmware blast imaging metrics", "desc", desc, "err", err)
+		_ = level.Error(c.logger).Log("failed collecting vmware blast imaging metrics", "desc", desc, "err", err)
 		return err
 	}
 	if desc, err := c.collectRtav(ch); err != nil {
-		level.Error(c.logger).Log("failed collecting vmware blast RTAV metrics", "desc", desc, "err", err)
+		_ = level.Error(c.logger).Log("failed collecting vmware blast RTAV metrics", "desc", desc, "err", err)
 		return err
 	}
 	if desc, err := c.collectSerialPortandScanner(ch); err != nil {
-		level.Error(c.logger).Log("failed collecting vmware blast serial port and scanner metrics", "desc", desc, "err", err)
+		_ = level.Error(c.logger).Log("failed collecting vmware blast serial port and scanner metrics", "desc", desc, "err", err)
 		return err
 	}
 	if desc, err := c.collectSession(ch); err != nil {
-		level.Error(c.logger).Log("failed collecting vmware blast metrics", "desc", desc, "err", err)
+		_ = level.Error(c.logger).Log("failed collecting vmware blast metrics", "desc", desc, "err", err)
 		return err
 	}
 	if desc, err := c.collectSkypeforBusinessControl(ch); err != nil {
-		level.Error(c.logger).Log("failed collecting vmware blast skype for business control metrics", "desc", desc, "err", err)
+		_ = level.Error(c.logger).Log("failed collecting vmware blast skype for business control metrics", "desc", desc, "err", err)
 		return err
 	}
 	if desc, err := c.collectThinPrint(ch); err != nil {
-		level.Error(c.logger).Log("failed collecting vmware blast thin print metrics", "desc", desc, "err", err)
+		_ = level.Error(c.logger).Log("failed collecting vmware blast thin print metrics", "desc", desc, "err", err)
 		return err
 	}
 	if desc, err := c.collectUsb(ch); err != nil {
-		level.Error(c.logger).Log("failed collecting vmware blast USB metrics", "desc", desc, "err", err)
+		_ = level.Error(c.logger).Log("failed collecting vmware blast USB metrics", "desc", desc, "err", err)
 		return err
 	}
 	if desc, err := c.collectWindowsMediaMmr(ch); err != nil {
-		level.Error(c.logger).Log("failed collecting vmware blast windows media MMR metrics", "desc", desc, "err", err)
+		_ = level.Error(c.logger).Log("failed collecting vmware blast windows media MMR metrics", "desc", desc, "err", err)
 		return err
 	}
 	return nil

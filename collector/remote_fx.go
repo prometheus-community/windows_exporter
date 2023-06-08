@@ -159,11 +159,11 @@ func newRemoteFx(logger log.Logger) (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *RemoteFxCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	if desc, err := c.collectRemoteFXNetworkCount(ctx, ch); err != nil {
-		level.Error(c.logger).Log("failed collecting terminal services session count metrics", "desc", desc, "err", err)
+		_ = level.Error(c.logger).Log("failed collecting terminal services session count metrics", "desc", desc, "err", err)
 		return err
 	}
 	if desc, err := c.collectRemoteFXGraphicsCounters(ctx, ch); err != nil {
-		level.Error(c.logger).Log("failed collecting terminal services session count metrics", "desc", desc, "err", err)
+		_ = level.Error(c.logger).Log("failed collecting terminal services session count metrics", "desc", desc, "err", err)
 		return err
 	}
 	return nil

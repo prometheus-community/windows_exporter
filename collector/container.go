@@ -165,7 +165,7 @@ func newContainerMetricsCollector(logger log.Logger) (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *ContainerMetricsCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ch); err != nil {
-		level.Error(c.logger).Log("msg", "failed collecting ContainerMetricsCollector metrics", "desc", desc, "err", err)
+		_ = level.Error(c.logger).Log("msg", "failed collecting ContainerMetricsCollector metrics", "desc", desc, "err", err)
 		return err
 	}
 	return nil
@@ -175,7 +175,7 @@ func (c *ContainerMetricsCollector) Collect(ctx *ScrapeContext, ch chan<- promet
 func (c *ContainerMetricsCollector) containerClose(container hcsshim.Container) {
 	err := container.Close()
 	if err != nil {
-		level.Error(c.logger).Log("err", err)
+		_ = level.Error(c.logger).Log("err", err)
 	}
 }
 
@@ -184,7 +184,7 @@ func (c *ContainerMetricsCollector) collect(ch chan<- prometheus.Metric) (*prome
 	// Types Container is passed to get the containers compute systems only
 	containers, err := hcsshim.GetContainers(hcsshim.ComputeSystemQuery{Types: []string{"Container"}})
 	if err != nil {
-		level.Error(c.logger).Log("msg", "Err in Getting containers", "err", err)
+		_ = level.Error(c.logger).Log("msg", "Err in Getting containers", "err", err)
 		return nil, err
 	}
 
@@ -205,13 +205,13 @@ func (c *ContainerMetricsCollector) collect(ch chan<- prometheus.Metric) (*prome
 			defer c.containerClose(container)
 		}
 		if err != nil {
-			level.Error(c.logger).Log("msg", "err in opening container", "containerId", containerDetails.ID, "err", err)
+			_ = level.Error(c.logger).Log("msg", "err in opening container", "containerId", containerDetails.ID, "err", err)
 			continue
 		}
 
 		cstats, err := container.Statistics()
 		if err != nil {
-			level.Error(c.logger).Log("msg", "err in fetching container Statistics", "containerId", containerDetails.ID, "err", err)
+			_ = level.Error(c.logger).Log("msg", "err in fetching container Statistics", "containerId", containerDetails.ID, "err", err)
 			continue
 		}
 		containerIdWithPrefix := getContainerIdWithPrefix(containerDetails)
@@ -260,7 +260,7 @@ func (c *ContainerMetricsCollector) collect(ch chan<- prometheus.Metric) (*prome
 		)
 
 		if len(cstats.Network) == 0 {
-			level.Info(c.logger).Log("msg", "No Network Stats for container", "containetId", containerDetails.ID)
+			_ = level.Info(c.logger).Log("msg", "No Network Stats for container", "containetId", containerDetails.ID)
 			continue
 		}
 

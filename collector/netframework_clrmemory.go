@@ -115,7 +115,7 @@ func newNETFramework_NETCLRMemoryCollector(logger log.Logger) (Collector, error)
 // to the provided prometheus Metric channel.
 func (c *NETFramework_NETCLRMemoryCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ch); err != nil {
-		level.Error(c.logger).Log("failed collecting win32_perfrawdata_netframework_netclrmemory metrics", "desc", desc, "err", err)
+		_ = level.Error(c.logger).Log("failed collecting win32_perfrawdata_netframework_netclrmemory metrics", "desc", desc, "err", err)
 		return err
 	}
 	return nil

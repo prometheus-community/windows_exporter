@@ -57,10 +57,10 @@ func newserviceCollector(logger log.Logger) (Collector, error) {
 	logger = log.With(logger, "collector", subsystem)
 
 	if *serviceWhereClause == "" {
-		level.Warn(logger).Log("msg", "No where-clause specified for service collector. This will generate a very large number of metrics!")
+		_ = level.Warn(logger).Log("msg", "No where-clause specified for service collector. This will generate a very large number of metrics!")
 	}
 	if *useAPI {
-		level.Warn(logger).Log("msg", "API collection is enabled.")
+		_ = level.Warn(logger).Log("msg", "API collection is enabled.")
 	}
 
 	return &serviceCollector{
@@ -99,12 +99,12 @@ func newserviceCollector(logger log.Logger) (Collector, error) {
 func (c *serviceCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	if *useAPI {
 		if err := c.collectAPI(ch); err != nil {
-			level.Error(c.logger).Log("msg", "failed collecting API service metrics:", "err", err)
+			_ = level.Error(c.logger).Log("msg", "failed collecting API service metrics:", "err", err)
 			return err
 		}
 	} else {
 		if err := c.collectWMI(ch); err != nil {
-			level.Error(c.logger).Log("msg", "failed collecting WMI service metrics:", "err", err)
+			_ = level.Error(c.logger).Log("msg", "failed collecting WMI service metrics:", "err", err)
 			return err
 		}
 	}
@@ -259,14 +259,14 @@ func (c *serviceCollector) collectAPI(ch chan<- prometheus.Metric) error {
 		// Get UTF16 service name.
 		serviceName, err := syscall.UTF16PtrFromString(service)
 		if err != nil {
-			level.Warn(c.logger).Log("msg", fmt.Sprintf("Service %s get name error:  %#v", service, err))
+			_ = level.Warn(c.logger).Log("msg", fmt.Sprintf("Service %s get name error:  %#v", service, err))
 			continue
 		}
 
 		// Open connection for service handler.
 		serviceHandle, err := windows.OpenService(svcmgrConnection.Handle, serviceName, windows.GENERIC_READ)
 		if err != nil {
-			level.Warn(c.logger).Log("msg", fmt.Sprintf("Open service %s error:  %#v", service, err))
+			_ = level.Warn(c.logger).Log("msg", fmt.Sprintf("Open service %s error:  %#v", service, err))
 			continue
 		}
 
@@ -277,14 +277,14 @@ func (c *serviceCollector) collectAPI(ch chan<- prometheus.Metric) error {
 		// Get Service Configuration.
 		serviceConfig, err := serviceManager.Config()
 		if err != nil {
-			level.Warn(c.logger).Log("msg", fmt.Sprintf("Get ervice %s config error:  %#v", service, err))
+			_ = level.Warn(c.logger).Log("msg", fmt.Sprintf("Get ervice %s config error:  %#v", service, err))
 			continue
 		}
 
 		// Get Service Current Status.
 		serviceStatus, err := serviceManager.Query()
 		if err != nil {
-			level.Warn(c.logger).Log("msg", fmt.Sprintf("Get service %s status error:  %#v", service, err))
+			_ = level.Warn(c.logger).Log("msg", fmt.Sprintf("Get service %s status error:  %#v", service, err))
 			continue
 		}
 

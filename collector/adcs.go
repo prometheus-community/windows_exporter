@@ -119,7 +119,7 @@ func adcsCollectorMethod(logger log.Logger) (Collector, error) {
 
 func (c *adcsCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	if desc, err := c.collectADCSCounters(ctx, ch); err != nil {
-		level.Error(c.logger).Log("msg", "failed collecting ADCS metrics", "desc", desc, "err", err)
+		_ = level.Error(c.logger).Log("msg", "failed collecting ADCS metrics", "desc", desc, "err", err)
 		return err
 	}
 	return nil

@@ -30,7 +30,7 @@ func isConnectionBrokerServer(logger log.Logger) bool {
 			return true
 		}
 	}
-	level.Debug(logger).Log("msg", "host is not a connection broker skipping Connection Broker performance metrics.")
+	_ = level.Debug(logger).Log("msg", "host is not a connection broker skipping Connection Broker performance metrics.")
 	return false
 }
 
@@ -178,18 +178,18 @@ func newTerminalServicesCollector(logger log.Logger) (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *TerminalServicesCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	if desc, err := c.collectTSSessionCount(ctx, ch); err != nil {
-		level.Error(c.logger).Log("failed collecting terminal services session count metrics", "desc", desc, "err", err)
+		_ = level.Error(c.logger).Log("failed collecting terminal services session count metrics", "desc", desc, "err", err)
 		return err
 	}
 	if desc, err := c.collectTSSessionCounters(ctx, ch); err != nil {
-		level.Error(c.logger).Log("failed collecting terminal services session count metrics", "desc", desc, "err", err)
+		_ = level.Error(c.logger).Log("failed collecting terminal services session count metrics", "desc", desc, "err", err)
 		return err
 	}
 
 	// only collect CollectionBrokerPerformance if host is a Connection Broker
 	if c.connectionBrokerEnabled {
 		if desc, err := c.collectCollectionBrokerPerformanceCounter(ctx, ch); err != nil {
-			level.Error(c.logger).Log("failed collecting Connection Broker performance metrics", "desc", desc, "err", err)
+			_ = level.Error(c.logger).Log("failed collecting Connection Broker performance metrics", "desc", desc, "err", err)
 			return err
 		}
 	}

@@ -118,7 +118,7 @@ func (c *textFileCollector) convertMetricFamily(metricFamily *dto.MetricFamily, 
 
 	for _, metric := range metricFamily.Metric {
 		if metric.TimestampMs != nil {
-			level.Warn(c.logger).Log("msg", fmt.Sprintf("Ignoring unsupported custom timestamp on textfile collector metric %v", metric))
+			_ = level.Warn(c.logger).Log("msg", fmt.Sprintf("Ignoring unsupported custom timestamp on textfile collector metric %v", metric))
 		}
 
 		labels := metric.GetLabel()
@@ -188,7 +188,7 @@ func (c *textFileCollector) convertMetricFamily(metricFamily *dto.MetricFamily, 
 				buckets, values...,
 			)
 		default:
-			level.Error(c.logger).Log("msg", "unknown metric type for file")
+			_ = level.Error(c.logger).Log("msg", "unknown metric type for file")
 			continue
 		}
 		if metricType == dto.MetricType_GAUGE || metricType == dto.MetricType_COUNTER || metricType == dto.MetricType_UNTYPED {
@@ -256,7 +256,7 @@ func (c *textFileCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Met
 	// Iterate over files and accumulate their metrics.
 	files, err := ioutil.ReadDir(c.path)
 	if err != nil && c.path != "" {
-		level.Error(c.logger).Log("msg", fmt.Sprintf("Error reading textfile collector directory %q", c.path), "err", err)
+		_ = level.Error(c.logger).Log("msg", fmt.Sprintf("Error reading textfile collector directory %q", c.path), "err", err)
 		error = 1.0
 	}
 
@@ -270,27 +270,27 @@ fileLoop:
 			continue
 		}
 		path := filepath.Join(c.path, f.Name())
-		level.Debug(c.logger).Log("msg", fmt.Sprintf("Processing file %q", path))
+		_ = level.Debug(c.logger).Log("msg", fmt.Sprintf("Processing file %q", path))
 		file, err := os.Open(path)
 		if err != nil {
-			level.Error(c.logger).Log("msg", fmt.Sprintf("Error opening %q: %v", path, err))
+			_ = level.Error(c.logger).Log("msg", fmt.Sprintf("Error opening %q: %v", path, err))
 			error = 1.0
 			continue
 		}
 		var parser expfmt.TextParser
 		r, encoding := utfbom.Skip(carriageReturnFilteringReader{r: file})
 		if err = checkBOM(encoding); err != nil {
-			level.Error(c.logger).Log("msg", fmt.Sprintf("Invalid file encoding detected in %s: %s - file must be UTF8", path, err.Error()))
+			_ = level.Error(c.logger).Log("msg", fmt.Sprintf("Invalid file encoding detected in %s: %s - file must be UTF8", path, err.Error()))
 			error = 1.0
 			continue
 		}
 		parsedFamilies, err := parser.TextToMetricFamilies(r)
 		closeErr := file.Close()
 		if closeErr != nil {
-			level.Warn(c.logger).Log("msg", fmt.Sprintf("Error closing file"), "err", err)
+			_ = level.Warn(c.logger).Log("msg", fmt.Sprintf("Error closing file"), "err", err)
 		}
 		if err != nil {
-			level.Error(c.logger).Log("msg", fmt.Sprintf("Error parsing %q: %v", path, err))
+			_ = level.Error(c.logger).Log("msg", fmt.Sprintf("Error parsing %q: %v", path, err))
 			error = 1.0
 			continue
 		}
@@ -302,7 +302,7 @@ fileLoop:
 			families_array = append(families_array, mf)
 			for _, m := range mf.Metric {
 				if m.TimestampMs != nil {
-					level.Error(c.logger).Log("msg", fmt.Sprintf("Textfile %q contains unsupported client-side timestamps, skipping entire file", path))
+					_ = level.Error(c.logger).Log("msg", fmt.Sprintf("Textfile %q contains unsupported client-side timestamps, skipping entire file", path))
 					error = 1.0
 					continue fileLoop
 				}
@@ -315,7 +315,7 @@ fileLoop:
 
 		// If duplicate metrics are detected in a *single* file, skip processing of file metrics
 		if duplicateMetricEntry(families_array) {
-			level.Error(c.logger).Log("msg", fmt.Sprintf("Duplicate metrics detected in file %s. Skipping file processing.", f.Name()))
+			_ = level.Error(c.logger).Log("msg", fmt.Sprintf("Duplicate metrics detected in file %s. Skipping file processing.", f.Name()))
 			error = 1.0
 			continue
 		}
@@ -331,7 +331,7 @@ fileLoop:
 
 	// If duplicates are detected across *multiple* files, return error.
 	if duplicateMetricEntry(metricFamilies) {
-		level.Error(c.logger).Log("msg", "Duplicate metrics detected across multiple files")
+		_ = level.Error(c.logger).Log("msg", "Duplicate metrics detected across multiple files")
 		error = 1.0
 	} else {
 		for _, mf := range metricFamilies {

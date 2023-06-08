@@ -29,25 +29,25 @@ const (
 func getWindowsVersion(logger log.Logger) float64 {
 	k, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\Microsoft\Windows NT\CurrentVersion`, registry.QUERY_VALUE)
 	if err != nil {
-		level.Warn(logger).Log("msg", "Couldn't open registry", "err", err)
+		_ = level.Warn(logger).Log("msg", "Couldn't open registry", "err", err)
 		return 0
 	}
 	defer func() {
 		err = k.Close()
 		if err != nil {
-			level.Warn(logger).Log("msg", "Failed to close registry key", "err", err)
+			_ = level.Warn(logger).Log("msg", "Failed to close registry key", "err", err)
 		}
 	}()
 
 	currentv, _, err := k.GetStringValue("CurrentVersion")
 	if err != nil {
-		level.Warn(logger).Log("msg", "Couldn't open registry to determine current Windows version", "err", err)
+		_ = level.Warn(logger).Log("msg", "Couldn't open registry to determine current Windows version", "err", err)
 		return 0
 	}
 
 	currentv_flt, err := strconv.ParseFloat(currentv, 64)
 
-	level.Debug(logger).Log("msg", fmt.Sprintf("Detected Windows version %f\n", currentv_flt))
+	_ = level.Debug(logger).Log("msg", fmt.Sprintf("Detected Windows version %f\n", currentv_flt))
 
 	return currentv_flt
 }

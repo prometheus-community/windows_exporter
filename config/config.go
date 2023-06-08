@@ -35,7 +35,7 @@ type Resolver struct {
 // NewResolver returns a Resolver structure.
 func NewResolver(file string, logger log.Logger) (*Resolver, error) {
 	flags := map[string]string{}
-	level.Info(logger).Log("msg", fmt.Sprintf("Loading configuration file: %v", file))
+	_ = level.Info(logger).Log("msg", fmt.Sprintf("Loading configuration file: %v", file))
 	if _, err := os.Stat(file); err != nil {
 		return nil, err
 	}

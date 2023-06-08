@@ -110,7 +110,7 @@ func newScheduledTask(logger log.Logger) (Collector, error) {
 
 	if *taskOldExclude != "" {
 		if !taskExcludeSet {
-			level.Warn(logger).Log("msg", "--collector.scheduled_task.blacklist is DEPRECATED and will be removed in a future release, use --collector.scheduled_task.exclude")
+			_ = level.Warn(logger).Log("msg", "--collector.scheduled_task.blacklist is DEPRECATED and will be removed in a future release, use --collector.scheduled_task.exclude")
 			*taskExclude = *taskOldExclude
 		} else {
 			return nil, errors.New("--collector.scheduled_task.blacklist and --collector.scheduled_task.exclude are mutually exclusive")
@@ -118,7 +118,7 @@ func newScheduledTask(logger log.Logger) (Collector, error) {
 	}
 	if *taskOldInclude != "" {
 		if !taskIncludeSet {
-			level.Warn(logger).Log("msg", "--collector.scheduled_task.whitelist is DEPRECATED and will be removed in a future release, use --collector.scheduled_task.include")
+			_ = level.Warn(logger).Log("msg", "--collector.scheduled_task.whitelist is DEPRECATED and will be removed in a future release, use --collector.scheduled_task.include")
 			*taskInclude = *taskOldInclude
 		} else {
 			return nil, errors.New("--collector.scheduled_task.whitelist and --collector.scheduled_task.include are mutually exclusive")
@@ -167,7 +167,7 @@ func newScheduledTask(logger log.Logger) (Collector, error) {
 
 func (c *ScheduledTaskCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ch); err != nil {
-		level.Error(c.logger).Log("failed collecting user metrics", "desc", desc, "err", err)
+		_ = level.Error(c.logger).Log("failed collecting user metrics", "desc", desc, "err", err)
 		return err
 	}
 

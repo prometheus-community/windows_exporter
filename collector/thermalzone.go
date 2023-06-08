@@ -54,7 +54,7 @@ func newThermalZoneCollector(logger log.Logger) (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *thermalZoneCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ch); err != nil {
-		level.Error(c.logger).Log("failed collecting thermalzone metrics", "desc", desc, "err", err)
+		_ = level.Error(c.logger).Log("failed collecting thermalzone metrics", "desc", desc, "err", err)
 		return err
 	}
 	return nil

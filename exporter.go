@@ -88,10 +88,10 @@ func initWbem(logger log.Logger) {
 	// This initialization prevents a memory leak on WMF 5+. See
 	// https://github.com/prometheus-community/windows_exporter/issues/77 and
 	// linked issues for details.
-	level.Debug(logger).Log("msg", "Initializing SWbemServices")
+	_ = level.Debug(logger).Log("msg", "Initializing SWbemServices")
 	s, err := wmi.InitializeSWbemServices(wmi.DefaultClient)
 	if err != nil {
-		level.Error(logger).Log("err", err)
+		_ = level.Error(logger).Log("err", err)
 		os.Exit(1)
 	}
 	wmi.DefaultClient.AllowMissingFields = true
@@ -146,20 +146,20 @@ func main() {
 	kingpin.MustParse(app.Parse(os.Args[1:]))
 	logger, err := winlog.New(winlogConfig)
 	if err != nil {
-		level.Error(logger).Log("err", err)
+		_ = level.Error(logger).Log("err", err)
 		os.Exit(1)
 	}
 
-	level.Debug(logger).Log("msg", "Logging has Started")
+	_ = level.Debug(logger).Log("msg", "Logging has Started")
 	if *configFile != "" {
 		resolver, err := config.NewResolver(*configFile, logger)
 		if err != nil {
-			level.Error(logger).Log("msg", "could not load config file", "err", err)
+			_ = level.Error(logger).Log("msg", "could not load config file", "err", err)
 			os.Exit(1)
 		}
 		err = resolver.Bind(app, os.Args[1:])
 		if err != nil {
-			level.Error(logger).Log("err", err)
+			_ = level.Error(logger).Log("err", err)
 			os.Exit(1)
 		}
 
@@ -173,7 +173,7 @@ func main() {
 
 		logger, err = winlog.New(winlogConfig)
 		if err != nil {
-			level.Error(logger).Log("err", err)
+			_ = level.Error(logger).Log("err", err)
 			os.Exit(1)
 		}
 	}
@@ -199,22 +199,22 @@ func main() {
 
 	collectors, err := loadCollectors(*enabledCollectors, logger)
 	if err != nil {
-		level.Error(logger).Log("msg", "Couldn't load collectors", "err", err)
+		_ = level.Error(logger).Log("msg", "Couldn't load collectors", "err", err)
 		os.Exit(1)
 	}
 
 	u, err := user.Current()
 	if err != nil {
-		level.Error(logger).Log("err", err)
+		_ = level.Error(logger).Log("err", err)
 		os.Exit(1)
 	}
 
-	level.Info(logger).Log("msg", fmt.Sprintf("Running as %v", u.Username))
+	_ = level.Info(logger).Log("msg", fmt.Sprintf("Running as %v", u.Username))
 	if strings.Contains(u.Username, "ContainerAdministrator") || strings.Contains(u.Username, "ContainerUser") {
-		level.Warn(logger).Log("msg", "Running as a preconfigured Windows Container user. This may mean you do not have Windows HostProcess containers configured correctly and some functionality will not work as expected.")
+		_ = level.Warn(logger).Log("msg", "Running as a preconfigured Windows Container user. This may mean you do not have Windows HostProcess containers configured correctly and some functionality will not work as expected.")
 	}
 
-	level.Info(logger).Log("msg", fmt.Sprintf("Enabled collectors: %v", strings.Join(keys(collectors), ", ")))
+	_ = level.Info(logger).Log("msg", fmt.Sprintf("Enabled collectors: %v", strings.Join(keys(collectors), ", ")))
 
 	h := &metricsHandler{
 		timeoutMargin:          *timeoutMargin,
@@ -242,7 +242,7 @@ func main() {
 		w.Header().Set("Content-Type", "application/json")
 		_, err := fmt.Fprintln(w, `{"status":"ok"}`)
 		if err != nil {
-			level.Debug(logger).Log("Failed to write to stream", "err", err)
+			_ = level.Debug(logger).Log("Failed to write to stream", "err", err)
 		}
 	})
 	http.HandleFunc("/version", func(w http.ResponseWriter, r *http.Request) {
@@ -282,27 +282,27 @@ func main() {
 		}
 		landingPage, err := web.NewLandingPage(landingConfig)
 		if err != nil {
-			level.Error(logger).Log("msg", "failed to generate landing page", "err", err)
+			_ = level.Error(logger).Log("msg", "failed to generate landing page", "err", err)
 			os.Exit(1)
 		}
 		http.Handle("/", landingPage)
 	}
 
-	level.Info(logger).Log("msg", "Starting windows_exporter", "version", version.Info())
-	level.Info(logger).Log("msg", "Build context", "build_context", version.BuildContext())
-	level.Debug(logger).Log("msg", "Go MAXPROCS", "procs", runtime.GOMAXPROCS(0))
+	_ = level.Info(logger).Log("msg", "Starting windows_exporter", "version", version.Info())
+	_ = level.Info(logger).Log("msg", "Build context", "build_context", version.BuildContext())
+	_ = level.Debug(logger).Log("msg", "Go MAXPROCS", "procs", runtime.GOMAXPROCS(0))
 
 	go func() {
 		server := &http.Server{}
 		if err := web.ListenAndServe(server, webConfig, logger); err != nil {
-			level.Error(logger).Log("msg", "cannot start windows_exporter", "err", err)
+			_ = level.Error(logger).Log("msg", "cannot start windows_exporter", "err", err)
 			os.Exit(1)
 		}
 	}()
 
 	for {
 		if <-initiate.StopCh {
-			level.Info(logger).Log("msg", "Shutting down windows_exporter")
+			_ = level.Info(logger).Log("msg", "Shutting down windows_exporter")
 			break
 		}
 	}
@@ -350,7 +350,7 @@ func (mh *metricsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		var err error
 		timeoutSeconds, err = strconv.ParseFloat(v, 64)
 		if err != nil {
-			level.Warn(mh.logger).Log("msg", fmt.Sprintf("Couldn't parse X-Prometheus-Scrape-Timeout-Seconds: %q. Defaulting timeout to %f", v, defaultTimeout))
+			_ = level.Warn(mh.logger).Log("msg", fmt.Sprintf("Couldn't parse X-Prometheus-Scrape-Timeout-Seconds: %q. Defaulting timeout to %f", v, defaultTimeout))
 		}
 	}
 	if timeoutSeconds == 0 {
@@ -361,7 +361,7 @@ func (mh *metricsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	reg := prometheus.NewRegistry()
 	err, wc := mh.collectorFactory(time.Duration(timeoutSeconds*float64(time.Second)), r.URL.Query()["collect[]"])
 	if err != nil {
-		level.Warn(mh.logger).Log("msg", "Couldn't create filtered metrics handler", "err", err)
+		_ = level.Warn(mh.logger).Log("msg", "Couldn't create filtered metrics handler", "err", err)
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(fmt.Sprintf("Couldn't create filtered metrics handler: %s", err))) //nolint:errcheck
 		return

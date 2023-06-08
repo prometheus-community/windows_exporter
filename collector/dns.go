@@ -185,7 +185,7 @@ func newDNSCollector(logger log.Logger) (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *DNSCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ch); err != nil {
-		level.Error(c.logger).Log("msg", "failed collecting dns metrics", "desc", desc, "err", err)
+		_ = level.Error(c.logger).Log("msg", "failed collecting dns metrics", "desc", desc, "err", err)
 		return err
 	}
 	return nil

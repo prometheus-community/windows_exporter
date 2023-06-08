@@ -23,7 +23,7 @@ func queryAll(src interface{}, logger log.Logger) string {
 	b.WriteString("SELECT * FROM ")
 	b.WriteString(className(src))
 
-	level.Debug(logger).Log("msg", fmt.Sprintf("Generated WMI query %s", b.String()))
+	_ = level.Debug(logger).Log("msg", fmt.Sprintf("Generated WMI query %s", b.String()))
 	return b.String()
 }
 
@@ -32,7 +32,7 @@ func queryAllForClass(src interface{}, class string, logger log.Logger) string {
 	b.WriteString("SELECT * FROM ")
 	b.WriteString(class)
 
-	level.Debug(logger).Log("msg", fmt.Sprintf("Generated WMI query %s", b.String()))
+	_ = level.Debug(logger).Log("msg", fmt.Sprintf("Generated WMI query %s", b.String()))
 	return b.String()
 }
 
@@ -46,7 +46,7 @@ func queryAllWhere(src interface{}, where string, logger log.Logger) string {
 		b.WriteString(where)
 	}
 
-	level.Debug(logger).Log("msg", fmt.Sprintf("Generated WMI query %s", b.String()))
+	_ = level.Debug(logger).Log("msg", fmt.Sprintf("Generated WMI query %s", b.String()))
 	return b.String()
 }
 
@@ -60,6 +60,6 @@ func queryAllForClassWhere(src interface{}, class string, where string, logger l
 		b.WriteString(where)
 	}
 
-	level.Debug(logger).Log("msg", fmt.Sprintf("Generated WMI query %s", b.String()))
+	_ = level.Debug(logger).Log("msg", fmt.Sprintf("Generated WMI query %s", b.String()))
 	return b.String()
 }

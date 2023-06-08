@@ -93,7 +93,7 @@ func newNetworkCollector(logger log.Logger) (Collector, error) {
 
 	if *nicOldExclude != "" {
 		if !nicExcludeSet {
-			level.Warn(logger).Log("msg", "--collector.net.nic-blacklist is DEPRECATED and will be removed in a future release, use --collector.net.nic-exclude")
+			_ = level.Warn(logger).Log("msg", "--collector.net.nic-blacklist is DEPRECATED and will be removed in a future release, use --collector.net.nic-exclude")
 			*nicExclude = *nicOldExclude
 		} else {
 			return nil, errors.New("--collector.net.nic-blacklist and --collector.net.nic-exclude are mutually exclusive")
@@ -101,7 +101,7 @@ func newNetworkCollector(logger log.Logger) (Collector, error) {
 	}
 	if *nicOldInclude != "" {
 		if !nicIncludeSet {
-			level.Warn(logger).Log("msg", "--collector.net.nic-whitelist is DEPRECATED and will be removed in a future release, use --collector.net.nic-include")
+			_ = level.Warn(logger).Log("msg", "--collector.net.nic-whitelist is DEPRECATED and will be removed in a future release, use --collector.net.nic-include")
 			*nicInclude = *nicOldInclude
 		} else {
 			return nil, errors.New("--collector.net.nic-whitelist and --collector.net.nic-include are mutually exclusive")
@@ -198,7 +198,7 @@ func newNetworkCollector(logger log.Logger) (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *NetworkCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ctx, ch); err != nil {
-		level.Error(c.logger).Log("failed collecting net metrics", "desc", desc, "err", err)
+		_ = level.Error(c.logger).Log("failed collecting net metrics", "desc", desc, "err", err)
 		return err
 	}
 	return nil

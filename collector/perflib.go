@@ -82,7 +82,7 @@ func unmarshalObject(obj *perflib.PerfObject, vs interface{}, logger log.Logger)
 
 			ctr, found := counters[tag]
 			if !found {
-				level.Debug(logger).Log("msg", fmt.Sprintf("missing counter %q, have %v", tag, counterMapKeys(counters)))
+				_ = level.Debug(logger).Log("msg", fmt.Sprintf("missing counter %q, have %v", tag, counterMapKeys(counters)))
 				continue
 			}
 			if !target.Field(i).CanSet() {

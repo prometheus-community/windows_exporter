@@ -207,7 +207,7 @@ func (c *exchangeCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Met
 
 	for _, collectorName := range c.enabledCollectors {
 		if err := collectorFuncs[collectorName](ctx, ch); err != nil {
-			level.Error(c.logger).Log("msg", "Error in "+collectorName, "err", err)
+			_ = level.Error(c.logger).Log("msg", "Error in "+collectorName, "err", err)
 			return err
 		}
 	}

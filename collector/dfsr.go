@@ -98,7 +98,7 @@ func newDFSRCollectorFlags(app *kingpin.Application) {
 func newDFSRCollector(logger log.Logger) (Collector, error) {
 	const subsystem = "dfsr"
 	logger = log.With(logger, "collector", subsystem)
-	level.Info(logger).Log("msg", "dfsr collector is in an experimental state! Metrics for this collector have not been tested.")
+	_ = level.Info(logger).Log("msg", "dfsr collector is in an experimental state! Metrics for this collector have not been tested.")
 
 	enabled := expandEnabledChildCollectors(*dfsrEnabledCollectors)
 	perfCounters := make([]string, 0, len(enabled))

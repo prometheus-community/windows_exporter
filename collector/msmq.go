@@ -44,7 +44,7 @@ func newMSMQCollector(logger log.Logger) (Collector, error) {
 	logger = log.With(logger, "collector", subsystem)
 
 	if *msmqWhereClause == "" {
-		level.Warn(logger).Log("msg", "No where-clause specified for msmq collector. This will generate a very large number of metrics!")
+		_ = level.Warn(logger).Log("msg", "No where-clause specified for msmq collector. This will generate a very large number of metrics!")
 	}
 
 	return &Win32_PerfRawData_MSMQ_MSMQQueueCollector{
@@ -82,7 +82,7 @@ func newMSMQCollector(logger log.Logger) (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *Win32_PerfRawData_MSMQ_MSMQQueueCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ch); err != nil {
-		level.Error(c.logger).Log("failed collecting msmq metrics", "desc", desc, "err", err)
+		_ = level.Error(c.logger).Log("failed collecting msmq metrics", "desc", desc, "err", err)
 		return err
 	}
 	return nil
