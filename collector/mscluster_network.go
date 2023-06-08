@@ -14,7 +14,7 @@ type MSCluster_NetworkCollector struct {
 	State           *prometheus.Desc
 }
 
-func newMSCluster_NetworkCollector() (Collector, error) {
+func newMSCluster_NetworkCollector(_ interface{}) (Collector, error) {
 	const subsystem = "mscluster_network"
 	return &MSCluster_NetworkCollector{
 		Characteristics: prometheus.NewDesc(

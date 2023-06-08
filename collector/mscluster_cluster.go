@@ -86,7 +86,7 @@ type MSCluster_ClusterCollector struct {
 	WitnessRestartInterval                  *prometheus.Desc
 }
 
-func newMSCluster_ClusterCollector() (Collector, error) {
+func newMSCluster_ClusterCollector(_ interface{}) (Collector, error) {
 	const subsystem = "mscluster_cluster"
 	return &MSCluster_ClusterCollector{
 		AddEvictDelay: prometheus.NewDesc(

@@ -41,7 +41,7 @@ type pagingFileCounter struct {
 }
 
 // newOSCollector ...
-func newOSCollector() (Collector, error) {
+func newOSCollector(_ interface{}) (Collector, error) {
 	const subsystem = "os"
 
 	return &OSCollector{

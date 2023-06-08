@@ -42,7 +42,7 @@ type ContainerMetricsCollector struct {
 }
 
 // newContainerMetricsCollector constructs a new ContainerMetricsCollector
-func newContainerMetricsCollector() (Collector, error) {
+func newContainerMetricsCollector(_ interface{}) (Collector, error) {
 	const subsystem = "container"
 	return &ContainerMetricsCollector{
 		ContainerAvailable: prometheus.NewDesc(

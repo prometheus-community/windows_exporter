@@ -22,12 +22,6 @@ const (
 	FlagMssqlPrintCollectors   = "collectors.mssql.class-print"
 )
 
-var (
-	mssqlEnabledCollectors *string
-
-	mssqlPrintCollectors *bool
-)
-
 type mssqlInstancesType map[string]string
 
 func getMSSQLInstances() mssqlInstancesType {
@@ -130,6 +124,9 @@ func mssqlGetPerfObjectName(sqlInstance string, collector string) string {
 
 // A MSSQLCollector is a Prometheus collector for various WMI Win32_PerfRawData_MSSQLSERVER_* metrics
 type MSSQLCollector struct {
+	printCollectors        bool
+	mssqlEnabledCollectors []string
+
 	// meta
 	mssqlScrapeDurationDesc *prometheus.Desc
 	mssqlScrapeSuccessDesc  *prometheus.Desc
@@ -400,25 +397,33 @@ type MSSQLCollector struct {
 	mssqlChildCollectorFailure int
 }
 
+type mssqlSettings struct {
+	msmqWhereClause      *string
+	mssqlPrintCollectors *bool
+}
+
 // newMSSQLCollectorFlags ...
-func newMSSQLCollectorFlags(app *kingpin.Application) {
-	mssqlEnabledCollectors = app.Flag(
+func newMSSQLCollectorFlags(app *kingpin.Application) interface{} {
+	s := &mssqlSettings{}
+	s.msmqWhereClause = app.Flag(
 		FlagMssqlEnabledCollectors,
 		"Comma-separated list of mssql WMI classes to use.").
 		Default(mssqlAvailableClassCollectors()).String()
 
-	mssqlPrintCollectors = app.Flag(
+	s.mssqlPrintCollectors = app.Flag(
 		FlagMssqlPrintCollectors,
 		"If true, print available mssql WMI classes and exit.  Only displays if the mssql collector is enabled.",
 	).Bool()
+	return s
 }
 
 // newMSSQLCollector ...
-func newMSSQLCollector() (Collector, error) {
+func newMSSQLCollector(settings interface{}) (Collector, error) {
+	s := settings.(*mssqlSettings)
 
 	const subsystem = "mssql"
 
-	enabled := expandEnabledChildCollectors(*mssqlEnabledCollectors)
+	enabled := expandEnabledChildCollectors(*s.msmqWhereClause)
 	mssqlInstances := getMSSQLInstances()
 	perfCounters := make([]string, 0, len(mssqlInstances)*len(enabled))
 	for instance := range mssqlInstances {
@@ -429,6 +434,8 @@ func newMSSQLCollector() (Collector, error) {
 	addPerfCounterDependencies(subsystem, perfCounters)
 
 	mssqlCollector := MSSQLCollector{
+		mssqlEnabledCollectors: enabled,
+		printCollectors:        *s.mssqlPrintCollectors,
 		// meta
 		mssqlScrapeDurationDesc: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "collector_duration_seconds"),
@@ -1905,7 +1912,7 @@ func newMSSQLCollector() (Collector, error) {
 
 	mssqlCollector.mssqlCollectors = mssqlCollector.getMSSQLCollectors()
 
-	if *mssqlPrintCollectors {
+	if mssqlCollector.printCollectors {
 		fmt.Printf("Available SQLServer Classes:\n")
 		for name := range mssqlCollector.mssqlCollectors {
 			fmt.Printf(" - %s\n", name)
@@ -1955,9 +1962,8 @@ func (c *MSSQLCollector) execute(ctx *ScrapeContext, name string, fn mssqlCollec
 func (c *MSSQLCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	wg := sync.WaitGroup{}
 
-	enabled := expandEnabledChildCollectors(*mssqlEnabledCollectors)
 	for sqlInstance := range c.mssqlInstances {
-		for _, name := range enabled {
+		for _, name := range c.mssqlEnabledCollectors {
 			function := c.mssqlCollectors[name]
 
 			wg.Add(1)

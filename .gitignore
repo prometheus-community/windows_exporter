@@ -6,3 +6,4 @@ output/
 .vscode
 .idea
 *.syso
+/vendor

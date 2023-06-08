@@ -5,7 +5,6 @@ package collector
 
 import (
 	"errors"
-
 	"github.com/prometheus-community/windows_exporter/log"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
@@ -77,7 +76,7 @@ type ADCollector struct {
 }
 
 // newADCollector ...
-func newADCollector() (Collector, error) {
+func newADCollector(_ interface{}) (Collector, error) {
 	const subsystem = "ad"
 	return &ADCollector{
 		AddressBookOperationsTotal: prometheus.NewDesc(

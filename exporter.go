@@ -64,12 +64,12 @@ func expandEnabledCollectors(enabled string) []string {
 	return result
 }
 
-func loadCollectors(list string) (map[string]collector.Collector, error) {
+func loadCollectors(builders map[string]*collector.CollectorInit, list string) (map[string]collector.Collector, error) {
 	collectors := map[string]collector.Collector{}
 	enabled := expandEnabledCollectors(list)
 
 	for _, name := range enabled {
-		c, err := collector.Build(name)
+		c, err := collector.Build(builders, name)
 		if err != nil {
 			return nil, err
 		}
@@ -129,9 +129,8 @@ func main() {
 	app.Version(version.Print("windows_exporter"))
 	app.HelpFlag.Short('h')
 
-	// Initialize collectors before loading and parsing CLI arguments
-	collector.RegisterCollectorsFlags(app)
-
+	collectors := collector.CreateCollectors()
+	collector.RegisterCollectorsFlags(collectors, app)
 	// Load values from configuration file(s). Executable flags must first be parsed, in order
 	// to load the specified file(s).
 	kingpin.MustParse(app.Parse(os.Args[1:]))
@@ -156,10 +155,10 @@ func main() {
 	}
 
 	if *printCollectors {
-		collectors := collector.Available()
-		collectorNames := make(sort.StringSlice, 0, len(collectors))
+		availableCollectors := collector.Available(collectors)
+		collectorNames := make(sort.StringSlice, 0, len(availableCollectors))
 		for _, n := range collectors {
-			collectorNames = append(collectorNames, n)
+			collectorNames = append(collectorNames, n.Name())
 		}
 		collectorNames.Sort()
 		fmt.Printf("Available collectors:\n")
@@ -170,11 +169,10 @@ func main() {
 	}
 
 	initWbem()
-
+	collector.RegisterCollectors(collectors)
+	loadedCollectors, err := loadCollectors(collectors, *enabledCollectors)
 	// Initialize collectors before loading
-	collector.RegisterCollectors()
 
-	collectors, err := loadCollectors(*enabledCollectors)
 	if err != nil {
 		log.Fatalf("Couldn't load collectors: %s", err)
 	}
@@ -189,7 +187,7 @@ func main() {
 		log.Warnf("Running as a preconfigured Windows Container user. This may mean you do not have Windows HostProcess containers configured correctly and some functionality will not work as expected.")
 	}
 
-	log.Infof("Enabled collectors: %v", strings.Join(keys(collectors), ", "))
+	log.Infof("Enabled collectors: %v", strings.Join(keys(loadedCollectors), ", "))
 
 	h := &metricsHandler{
 		timeoutMargin:          *timeoutMargin,
@@ -198,10 +196,10 @@ func main() {
 			filteredCollectors := make(map[string]collector.Collector)
 			// scrape all enabled collectors if no collector is requested
 			if len(requestedCollectors) == 0 {
-				filteredCollectors = collectors
+				filteredCollectors = loadedCollectors
 			}
 			for _, name := range requestedCollectors {
-				col, exists := collectors[name]
+				col, exists := loadedCollectors[name]
 				if !exists {
 					return fmt.Errorf("unavailable collector: %s", name), nil
 				}

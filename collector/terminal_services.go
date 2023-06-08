@@ -62,7 +62,7 @@ type TerminalServicesCollector struct {
 }
 
 // newTerminalServicesCollector ...
-func newTerminalServicesCollector() (Collector, error) {
+func newTerminalServicesCollector(_ interface{}) (Collector, error) {
 	const subsystem = "terminal_services"
 	return &TerminalServicesCollector{
 		LocalSessionCount: prometheus.NewDesc(

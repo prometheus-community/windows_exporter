@@ -5,7 +5,6 @@ package collector
 
 import (
 	"errors"
-
 	"github.com/prometheus-community/windows_exporter/log"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
@@ -38,7 +37,7 @@ type DNSCollector struct {
 }
 
 // newDNSCollector ...
-func newDNSCollector() (Collector, error) {
+func newDNSCollector(_ interface{}) (Collector, error) {
 	const subsystem = "dns"
 	return &DNSCollector{
 		ZoneTransferRequestsReceived: prometheus.NewDesc(

@@ -73,27 +73,32 @@ var (
 		"WorkloadManagement",
 		"RpcClientAccess",
 	}
+)
 
+type exchangeSettings struct {
 	argExchangeListAllCollectors *bool
 
 	argExchangeCollectorsEnabled *string
-)
+}
 
 // newExchangeCollectorFlags ...
-func newExchangeCollectorFlags(app *kingpin.Application) {
-	argExchangeListAllCollectors = app.Flag(
+func newExchangeCollectorFlags(app *kingpin.Application) interface{} {
+	s := &exchangeSettings{}
+	s.argExchangeListAllCollectors = app.Flag(
 		FlagExchangeListAllCollectors,
 		"List the collectors along with their perflib object name/ids",
 	).Bool()
 
-	argExchangeCollectorsEnabled = app.Flag(
+	s.argExchangeCollectorsEnabled = app.Flag(
 		FlagExchangeCollectorsEnabled,
 		"Comma-separated list of collectors to use. Defaults to all, if not specified.",
 	).Default("").String()
+	return s
 }
 
 // newExchangeCollector returns a new Collector
-func newExchangeCollector() (Collector, error) {
+func newExchangeCollector(set interface{}) (Collector, error) {
+	s := set.(*exchangeSettings)
 
 	// desc creates a new prometheus description
 	desc := func(metricName string, description string, labels ...string) *prometheus.Desc {
@@ -159,7 +164,7 @@ func newExchangeCollector() (Collector, error) {
 		"RpcClientAccess":     "[29336] MSExchange RpcClientAccess",
 	}
 
-	if *argExchangeListAllCollectors {
+	if *s.argExchangeListAllCollectors {
 		fmt.Printf("%-32s %-32s\n", "Collector Name", "[PerfID] Perflib Object")
 		for _, cname := range exchangeAllCollectorNames {
 			fmt.Printf("%-32s %-32s\n", cname, collectorDesc[cname])
@@ -167,12 +172,12 @@ func newExchangeCollector() (Collector, error) {
 		os.Exit(0)
 	}
 
-	if *argExchangeCollectorsEnabled == "" {
+	if *s.argExchangeCollectorsEnabled == "" {
 		for _, collectorName := range exchangeAllCollectorNames {
 			c.enabledCollectors = append(c.enabledCollectors, collectorName)
 		}
 	} else {
-		for _, collectorName := range strings.Split(*argExchangeCollectorsEnabled, ",") {
+		for _, collectorName := range strings.Split(*s.argExchangeCollectorsEnabled, ",") {
 			if find(exchangeAllCollectorNames, collectorName) {
 				c.enabledCollectors = append(c.enabledCollectors, collectorName)
 			} else {

@@ -5,7 +5,6 @@ package collector
 
 import (
 	"errors"
-
 	"github.com/prometheus-community/windows_exporter/log"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
@@ -63,7 +62,7 @@ type teradiciPcoipCollector struct {
 }
 
 // newTeradiciPcoipCollector constructs a new teradiciPcoipCollector
-func newTeradiciPcoipCollector() (Collector, error) {
+func newTeradiciPcoipCollector(_ interface{}) (Collector, error) {
 	const subsystem = "teradici_pcoip"
 	return &teradiciPcoipCollector{
 		AudioBytesReceived: prometheus.NewDesc(

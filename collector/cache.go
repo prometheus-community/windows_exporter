@@ -42,7 +42,7 @@ type CacheCollector struct {
 }
 
 // NewCacheCollector ...
-func newCacheCollector() (Collector, error) {
+func newCacheCollector(_ interface{}) (Collector, error) {
 	const subsystem = "cache"
 	return &CacheCollector{
 		AsyncCopyReadsTotal: prometheus.NewDesc(

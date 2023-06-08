@@ -36,7 +36,7 @@ type DhcpCollector struct {
 	FailoverBndupdDropped                            *prometheus.Desc
 }
 
-func newDhcpCollector() (Collector, error) {
+func newDhcpCollector(_ interface{}) (Collector, error) {
 	const subsystem = "dhcp"
 
 	return &DhcpCollector{

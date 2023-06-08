@@ -23,7 +23,7 @@ type MSCluster_NodeCollector struct {
 	StatusInformation     *prometheus.Desc
 }
 
-func newMSCluster_NodeCollector() (Collector, error) {
+func newMSCluster_NodeCollector(_ interface{}) (Collector, error) {
 	const subsystem = "mscluster_node"
 	return &MSCluster_NodeCollector{
 		BuildNumber: prometheus.NewDesc(

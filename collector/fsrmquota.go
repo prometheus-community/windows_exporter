@@ -20,7 +20,7 @@ type FSRMQuotaCollector struct {
 	Template        *prometheus.Desc
 }
 
-func newFSRMQuotaCollector() (Collector, error) {
+func newFSRMQuotaCollector(_ interface{}) (Collector, error) {
 	const subsystem = "fsrmquota"
 	return &FSRMQuotaCollector{
 		QuotasCount: prometheus.NewDesc(

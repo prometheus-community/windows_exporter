@@ -28,23 +28,6 @@ const (
 	FlagIISAppInclude  = "collector.iis.app-include"
 )
 
-var (
-	oldSiteInclude *string
-	oldSiteExclude *string
-	oldAppInclude  *string
-	oldAppExclude  *string
-
-	siteInclude *string
-	siteExclude *string
-	appInclude  *string
-	appExclude  *string
-
-	siteIncludeSet bool
-	siteExcludeSet bool
-	appIncludeSet  bool
-	appExcludeSet  bool
-)
-
 type simple_version struct {
 	major uint64
 	minor uint64
@@ -80,6 +63,23 @@ func getIISVersion() simple_version {
 		major: major,
 		minor: minor,
 	}
+}
+
+type iisSettings struct {
+	oldSiteInclude *string
+	oldSiteExclude *string
+	oldAppInclude  *string
+	oldAppExclude  *string
+
+	siteInclude *string
+	siteExclude *string
+	appInclude  *string
+	appExclude  *string
+
+	siteIncludeSet bool
+	siteExcludeSet bool
+	appIncludeSet  bool
+	appExcludeSet  bool
 }
 
 type IISCollector struct {
@@ -216,75 +216,78 @@ type IISCollector struct {
 	iis_version simple_version
 }
 
-func newIISCollectorFlags(app *kingpin.Application) {
-	oldSiteInclude = app.Flag(FlagIISSiteOldInclude, "DEPRECATED: Use --collector.iis.site-include").Default(".+").Hidden().String()
-	oldSiteExclude = app.Flag(FlagIISSiteOldExclude, "DEPRECATED: Use --collector.iis.site-exclude").Hidden().String()
-	oldAppInclude = app.Flag(FlagIISAppOldInclude, "DEPRECATED: Use --collector.iis.app-include").Hidden().String()
-	oldAppExclude = app.Flag(FlagIISAppOldExclude, "DEPRECATED: Use --collector.iis.app-exclude").Hidden().String()
+func newIISCollectorFlags(app *kingpin.Application) interface{} {
+	s := &iisSettings{}
+	s.oldSiteInclude = app.Flag(FlagIISSiteOldInclude, "DEPRECATED: Use --collector.iis.site-include").Default(".+").Hidden().String()
+	s.oldSiteExclude = app.Flag(FlagIISSiteOldExclude, "DEPRECATED: Use --collector.iis.site-exclude").Hidden().String()
+	s.oldAppInclude = app.Flag(FlagIISAppOldInclude, "DEPRECATED: Use --collector.iis.app-include").Hidden().String()
+	s.oldAppExclude = app.Flag(FlagIISAppOldExclude, "DEPRECATED: Use --collector.iis.app-exclude").Hidden().String()
 
-	siteInclude = app.Flag(
+	s.siteInclude = app.Flag(
 		FlagIISSiteInclude,
 		"Regexp of sites to include. Site name must both match include and not match exclude to be included.",
 	).Default(".+").PreAction(func(c *kingpin.ParseContext) error {
-		siteIncludeSet = true
+		s.siteIncludeSet = true
 		return nil
 	}).String()
 
-	siteExclude = app.Flag(
+	s.siteExclude = app.Flag(
 		FlagIISSiteExclude,
 		"Regexp of sites to exclude. Site name must both match include and not match exclude to be included.",
 	).Default("").PreAction(func(c *kingpin.ParseContext) error {
-		siteExcludeSet = true
+		s.siteExcludeSet = true
 		return nil
 	}).String()
 
-	appInclude = app.Flag(
+	s.appInclude = app.Flag(
 		FlagIISAppInclude,
 		"Regexp of apps to include. App name must both match include and not match exclude to be included.",
 	).Default(".+").PreAction(func(c *kingpin.ParseContext) error {
-		appIncludeSet = true
+		s.appIncludeSet = true
 		return nil
 	}).String()
 
-	appExclude = app.Flag(
+	s.appExclude = app.Flag(
 		FlagIISAppExclude,
 		"Regexp of apps to include. App name must both match include and not match exclude to be included.",
 	).Default("").PreAction(func(c *kingpin.ParseContext) error {
-		siteExcludeSet = true
+		s.siteExcludeSet = true
 		return nil
 	}).String()
+	return s
 }
 
-func newIISCollector() (Collector, error) {
-	if *oldSiteExclude != "" {
-		if !siteExcludeSet {
+func newIISCollector(settings interface{}) (Collector, error) {
+	s := settings.(*iisSettings)
+	if *s.oldSiteExclude != "" {
+		if !s.siteExcludeSet {
 			log.Warnln("msg", "--collector.iis.site-blacklist is DEPRECATED and will be removed in a future release, use --collector.iis.site-exclude")
-			*siteExclude = *oldSiteExclude
+			*s.siteExclude = *s.oldSiteExclude
 		} else {
 			return nil, errors.New("--collector.iis.site-blacklist and --collector.iis.site-exclude are mutually exclusive")
 		}
 	}
-	if *oldSiteInclude != "" {
-		if !siteIncludeSet {
+	if *s.oldSiteInclude != "" {
+		if !s.siteIncludeSet {
 			log.Warnln("msg", "--collector.iis.site-whitelist is DEPRECATED and will be removed in a future release, use --collector.iis.site-include")
-			*siteInclude = *oldSiteInclude
+			*s.siteInclude = *s.oldSiteInclude
 		} else {
 			return nil, errors.New("--collector.iis.site-whitelist and --collector.iis.site-include are mutually exclusive")
 		}
 	}
 
-	if *oldAppExclude != "" {
-		if !appExcludeSet {
+	if *s.oldAppExclude != "" {
+		if !s.appExcludeSet {
 			log.Warnln("msg", "--collector.iis.app-blacklist is DEPRECATED and will be removed in a future release, use --collector.iis.app-exclude")
-			*appExclude = *oldAppExclude
+			*s.appExclude = *s.oldAppExclude
 		} else {
 			return nil, errors.New("--collector.iis.app-blacklist and --collector.iis.app-exclude are mutually exclusive")
 		}
 	}
-	if *oldAppInclude != "" {
-		if !appIncludeSet {
+	if *s.oldAppInclude != "" {
+		if !s.appIncludeSet {
 			log.Warnln("msg", "--collector.iis.app-whitelist is DEPRECATED and will be removed in a future release, use --collector.iis.app-include")
-			*appInclude = *oldAppInclude
+			*s.appInclude = *s.oldAppInclude
 		} else {
 			return nil, errors.New("--collector.iis.app-whitelist and --collector.iis.app-include are mutually exclusive")
 		}
@@ -294,10 +297,10 @@ func newIISCollector() (Collector, error) {
 	return &IISCollector{
 		iis_version: getIISVersion(),
 
-		siteIncludePattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *siteInclude)),
-		siteExcludePattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *siteExclude)),
-		appIncludePattern:  regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *appInclude)),
-		appExcludePattern:  regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *appExclude)),
+		siteIncludePattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *s.siteInclude)),
+		siteExcludePattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *s.siteExclude)),
+		appIncludePattern:  regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *s.appInclude)),
+		appExcludePattern:  regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *s.appExclude)),
 
 		// Web Service
 		CurrentAnonymousUsers: prometheus.NewDesc(

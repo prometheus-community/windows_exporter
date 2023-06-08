@@ -25,7 +25,7 @@ type DiskDriveInfoCollector struct {
 	Availability *prometheus.Desc
 }
 
-func newDiskDriveInfoCollector() (Collector, error) {
+func newDiskDriveInfoCollector(_ interface{}) (Collector, error) {
 	const subsystem = "diskdrive"
 
 	return &DiskDriveInfoCollector{

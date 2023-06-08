@@ -21,7 +21,7 @@ type NETFramework_NETCLRLocksAndThreadsCollector struct {
 }
 
 // newNETFramework_NETCLRLocksAndThreadsCollector ...
-func newNETFramework_NETCLRLocksAndThreadsCollector() (Collector, error) {
+func newNETFramework_NETCLRLocksAndThreadsCollector(_ interface{}) (Collector, error) {
 	const subsystem = "netframework_clrlocksandthreads"
 	return &NETFramework_NETCLRLocksAndThreadsCollector{
 		CurrentQueueLength: prometheus.NewDesc(

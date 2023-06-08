@@ -127,7 +127,7 @@ type HyperVCollector struct {
 }
 
 // newHyperVCollector ...
-func newHyperVCollector() (Collector, error) {
+func newHyperVCollector(_ interface{}) (Collector, error) {
 	buildSubsystemName := func(component string) string { return "hyperv_" + component }
 	return &HyperVCollector{
 		HealthCritical: prometheus.NewDesc(

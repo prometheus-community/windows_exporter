@@ -21,17 +21,6 @@ const (
 	FlagLogicalDiskVolumeInclude = "collector.logical_disk.volume-include"
 )
 
-var (
-	volumeOldInclude *string
-	volumeOldExclude *string
-
-	volumeInclude *string
-	volumeExclude *string
-
-	volumeIncludeSet bool
-	volumeExcludeSet bool
-)
-
 // A LogicalDiskCollector is a Prometheus collector for perflib logicalDisk metrics
 type LogicalDiskCollector struct {
 	RequestsQueued   *prometheus.Desc
@@ -55,48 +44,62 @@ type LogicalDiskCollector struct {
 	volumeExcludePattern *regexp.Regexp
 }
 
+type Settings struct {
+	volumeOldInclude *string
+	volumeOldExclude *string
+
+	volumeInclude *string
+	volumeExclude *string
+
+	volumeIncludeSet bool
+	volumeExcludeSet bool
+}
+
 // newLogicalDiskCollectorFlags ...
-func newLogicalDiskCollectorFlags(app *kingpin.Application) {
-	volumeInclude = app.Flag(
+func newLogicalDiskCollectorFlags(app *kingpin.Application) interface{} {
+	s := &Settings{}
+	s.volumeInclude = app.Flag(
 		FlagLogicalDiskVolumeInclude,
 		"Regexp of volumes to include. Volume name must both match include and not match exclude to be included.",
 	).Default(".+").PreAction(func(c *kingpin.ParseContext) error {
-		volumeIncludeSet = true
+		s.volumeIncludeSet = true
 		return nil
 	}).String()
 
-	volumeExclude = app.Flag(
+	s.volumeExclude = app.Flag(
 		FlagLogicalDiskVolumeExclude,
 		"Regexp of volumes to exclude. Volume name must both match include and not match exclude to be included.",
 	).Default("").PreAction(func(c *kingpin.ParseContext) error {
-		volumeExcludeSet = true
+		s.volumeExcludeSet = true
 		return nil
 	}).String()
 
-	volumeOldInclude = app.Flag(
+	s.volumeOldInclude = app.Flag(
 		FlagLogicalDiskVolumeOldInclude,
 		"DEPRECATED: Use --collector.logical_disk.volume-include",
 	).Hidden().String()
-	volumeOldExclude = app.Flag(
+	s.volumeOldExclude = app.Flag(
 		FlagLogicalDiskVolumeOldExclude,
 		"DEPRECATED: Use --collector.logical_disk.volume-exclude",
 	).Hidden().String()
+	return s
 }
 
 // newLogicalDiskCollector ...
-func newLogicalDiskCollector() (Collector, error) {
-	if *volumeOldExclude != "" {
-		if !volumeExcludeSet {
+func newLogicalDiskCollector(settings interface{}) (Collector, error) {
+	s := settings.(*Settings)
+	if *s.volumeOldExclude != "" {
+		if !s.volumeExcludeSet {
 			log.Warnln("msg", "--collector.logical_disk.volume-blacklist is DEPRECATED and will be removed in a future release, use --collector.logical_disk.volume-exclude")
-			*volumeExclude = *volumeOldExclude
+			*s.volumeExclude = *s.volumeOldExclude
 		} else {
 			return nil, errors.New("--collector.logical_disk.volume-blacklist and --collector.logical_disk.volume-exclude are mutually exclusive")
 		}
 	}
-	if *volumeOldInclude != "" {
-		if !volumeIncludeSet {
+	if *s.volumeOldInclude != "" {
+		if !s.volumeIncludeSet {
 			log.Warnln("msg", "--collector.logical_disk.volume-whitelist is DEPRECATED and will be removed in a future release, use --collector.logical_disk.volume-include")
-			*volumeInclude = *volumeOldInclude
+			*s.volumeInclude = *s.volumeOldInclude
 		} else {
 			return nil, errors.New("--collector.logical_disk.volume-whitelist and --collector.logical_disk.volume-include are mutually exclusive")
 		}
@@ -217,8 +220,8 @@ func newLogicalDiskCollector() (Collector, error) {
 			nil,
 		),
 
-		volumeIncludePattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *volumeInclude)),
-		volumeExcludePattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *volumeExclude)),
+		volumeIncludePattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *s.volumeInclude)),
+		volumeExcludePattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *s.volumeExclude)),
 	}, nil
 }
 

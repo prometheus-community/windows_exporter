@@ -22,7 +22,7 @@ type TCPCollector struct {
 }
 
 // newTCPCollector ...
-func newTCPCollector() (Collector, error) {
+func newTCPCollector(_ interface{}) (Collector, error) {
 	const subsystem = "tcp"
 
 	return &TCPCollector{

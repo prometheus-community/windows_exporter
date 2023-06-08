@@ -18,7 +18,7 @@ type NETFramework_NETCLRExceptionsCollector struct {
 }
 
 // newNETFramework_NETCLRExceptionsCollector ...
-func newNETFramework_NETCLRExceptionsCollector() (Collector, error) {
+func newNETFramework_NETCLRExceptionsCollector(_ interface{}) (Collector, error) {
 	const subsystem = "netframework_clrexceptions"
 	return &NETFramework_NETCLRExceptionsCollector{
 		NumberofExcepsThrown: prometheus.NewDesc(

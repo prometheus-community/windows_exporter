@@ -13,7 +13,9 @@ const (
 	FlagDfsrEnabledCollectors = "collectors.dfsr.sources-enabled"
 )
 
-var dfsrEnabledCollectors *string
+type dfsrSettings struct {
+	dfsrEnabledCollectors *string
+}
 
 // DFSRCollector contains the metric and state data of the DFSR collectors.
 type DFSRCollector struct {
@@ -87,16 +89,19 @@ func dfsrGetPerfObjectName(collector string) string {
 }
 
 // newDFSRCollectorFlags is registered
-func newDFSRCollectorFlags(app *kingpin.Application) {
-	dfsrEnabledCollectors = app.Flag(FlagDfsrEnabledCollectors, "Comma-seperated list of DFSR Perflib sources to use.").Default("connection,folder,volume").String()
+func newDFSRCollectorFlags(app *kingpin.Application) interface{} {
+	s := &dfsrSettings{}
+	s.dfsrEnabledCollectors = app.Flag(FlagDfsrEnabledCollectors, "Comma-seperated list of DFSR Perflib sources to use.").Default("connection,folder,volume").String()
+	return s
 }
 
 // newDFSRCollector is registered
-func newDFSRCollector() (Collector, error) {
+func newDFSRCollector(set interface{}) (Collector, error) {
+	s := set.(*dfsrSettings)
 	log.Info("dfsr collector is in an experimental state! Metrics for this collector have not been tested.")
 	const subsystem = "dfsr"
 
-	enabled := expandEnabledChildCollectors(*dfsrEnabledCollectors)
+	enabled := expandEnabledChildCollectors(*s.dfsrEnabledCollectors)
 	perfCounters := make([]string, 0, len(enabled))
 	for _, c := range enabled {
 		perfCounters = append(perfCounters, dfsrGetPerfObjectName(c))

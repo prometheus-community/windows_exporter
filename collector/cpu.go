@@ -33,7 +33,7 @@ type cpuCollectorFull struct {
 }
 
 // newCPUCollector constructs a new cpuCollector, appropriate for the running OS
-func newCPUCollector() (Collector, error) {
+func newCPUCollector(_ interface{}) (Collector, error) {
 	const subsystem = "cpu"
 
 	version := getWindowsVersion()

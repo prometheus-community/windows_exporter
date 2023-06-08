@@ -5,7 +5,6 @@ package collector
 
 import (
 	"errors"
-
 	"github.com/prometheus-community/windows_exporter/log"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
@@ -36,7 +35,7 @@ type VmwareCollector struct {
 }
 
 // newVmwareCollector constructs a new VmwareCollector
-func newVmwareCollector() (Collector, error) {
+func newVmwareCollector(_ interface{}) (Collector, error) {
 	const subsystem = "vmware"
 	return &VmwareCollector{
 		MemActive: prometheus.NewDesc(

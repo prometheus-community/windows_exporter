@@ -19,7 +19,7 @@ type SystemCollector struct {
 }
 
 // newSystemCollector ...
-func newSystemCollector() (Collector, error) {
+func newSystemCollector(_ interface{}) (Collector, error) {
 	const subsystem = "system"
 
 	return &SystemCollector{

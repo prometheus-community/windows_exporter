@@ -40,8 +40,6 @@ const (
 )
 
 var (
-	textFileDirectory *string
-
 	mtimeDesc = prometheus.NewDesc(
 		prometheus.BuildFQName(Namespace, "textfile", "mtime_seconds"),
 		"Unixtime mtime of textfiles successfully read.",
@@ -50,6 +48,10 @@ var (
 	)
 )
 
+type textSettings struct {
+	textFileDirectory *string
+}
+
 type textFileCollector struct {
 	path string
 	// Only set for testing to get predictable output.
@@ -57,18 +59,21 @@ type textFileCollector struct {
 }
 
 // newTextFileCollectorFlags ...
-func newTextFileCollectorFlags(app *kingpin.Application) {
-	textFileDirectory = app.Flag(
+func newTextFileCollectorFlags(app *kingpin.Application) interface{} {
+	s := &textSettings{}
+	s.textFileDirectory = app.Flag(
 		FlagTextFileDirectory,
 		"Directory to read text files with metrics from.",
 	).Default(getDefaultPath()).String()
+	return s
 }
 
 // newTextFileCollector returns a new Collector exposing metrics read from files
 // in the given textfile directory.
-func newTextFileCollector() (Collector, error) {
+func newTextFileCollector(settings interface{}) (Collector, error) {
+	s := settings.(*textSettings)
 	return &textFileCollector{
-		path: *textFileDirectory,
+		path: *s.textFileDirectory,
 	}, nil
 }
 

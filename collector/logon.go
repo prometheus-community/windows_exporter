@@ -5,7 +5,6 @@ package collector
 
 import (
 	"errors"
-
 	"github.com/prometheus-community/windows_exporter/log"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
@@ -17,7 +16,7 @@ type LogonCollector struct {
 }
 
 // newLogonCollector ...
-func newLogonCollector() (Collector, error) {
+func newLogonCollector(_ interface{}) (Collector, error) {
 	const subsystem = "logon"
 
 	return &LogonCollector{

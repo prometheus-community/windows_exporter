@@ -107,7 +107,7 @@ type vmwareBlastCollector struct {
 }
 
 // newVmwareBlastCollector constructs a new vmwareBlastCollector
-func newVmwareBlastCollector() (Collector, error) {
+func newVmwareBlastCollector(_ interface{}) (Collector, error) {
 	const subsystem = "vmware_blast"
 	return &vmwareBlastCollector{
 		AudioReceivedBytes: prometheus.NewDesc(

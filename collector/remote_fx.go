@@ -39,7 +39,7 @@ type RemoteFxCollector struct {
 }
 
 // newRemoteFx ...
-func newRemoteFx() (Collector, error) {
+func newRemoteFx(_ interface{}) (Collector, error) {
 	const subsystem = "remote_fx"
 	return &RemoteFxCollector{
 		// net

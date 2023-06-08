@@ -2,7 +2,6 @@ package collector
 
 import (
 	"errors"
-
 	"github.com/prometheus-community/windows_exporter/log"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
@@ -16,7 +15,7 @@ type thermalZoneCollector struct {
 }
 
 // newThermalZoneCollector ...
-func newThermalZoneCollector() (Collector, error) {
+func newThermalZoneCollector(_ interface{}) (Collector, error) {
 	const subsystem = "thermalzone"
 	return &thermalZoneCollector{
 		Temperature: prometheus.NewDesc(

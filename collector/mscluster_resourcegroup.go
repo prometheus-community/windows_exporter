@@ -24,7 +24,7 @@ type MSCluster_ResourceGroupCollector struct {
 	State               *prometheus.Desc
 }
 
-func newMSCluster_ResourceGroupCollector() (Collector, error) {
+func newMSCluster_ResourceGroupCollector(_ interface{}) (Collector, error) {
 	const subsystem = "mscluster_resourcegroup"
 	return &MSCluster_ResourceGroupCollector{
 		AutoFailbackType: prometheus.NewDesc(

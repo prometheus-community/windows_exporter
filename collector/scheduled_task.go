@@ -25,17 +25,6 @@ const (
 	FlagScheduledTaskInclude = "collector.scheduled_task.include"
 )
 
-var (
-	taskOldExclude *string
-	taskOldInclude *string
-
-	taskExclude *string
-	taskInclude *string
-
-	taskIncludeSet bool
-	taskExcludeSet bool
-)
-
 type ScheduledTaskCollector struct {
 	LastResult *prometheus.Desc
 	MissedRuns *prometheus.Desc
@@ -60,6 +49,17 @@ const (
 	TASK_RESULT_SUCCESS TaskResult = 0x0
 )
 
+type taskSettings struct {
+	taskOldExclude *string
+	taskOldInclude *string
+
+	taskExclude *string
+	taskInclude *string
+
+	taskIncludeSet bool
+	taskExcludeSet bool
+}
+
 // RegisteredTask ...
 type ScheduledTask struct {
 	Name            string
@@ -73,47 +73,50 @@ type ScheduledTask struct {
 type ScheduledTasks []ScheduledTask
 
 // newScheduledTask ...
-func newScheduledTaskFlags(app *kingpin.Application) {
-	taskInclude = app.Flag(
+func newScheduledTaskFlags(app *kingpin.Application) interface{} {
+	s := taskSettings{}
+	s.taskInclude = app.Flag(
 		FlagScheduledTaskInclude,
 		"Regexp of tasks to include. Task path must both match include and not match exclude to be included.",
 	).Default(".+").PreAction(func(c *kingpin.ParseContext) error {
-		taskIncludeSet = true
+		s.taskIncludeSet = true
 		return nil
 	}).String()
 
-	taskExclude = app.Flag(
+	s.taskExclude = app.Flag(
 		FlagScheduledTaskExclude,
 		"Regexp of tasks to exclude. Task path must both match include and not match exclude to be included.",
 	).Default("").PreAction(func(c *kingpin.ParseContext) error {
-		taskExcludeSet = true
+		s.taskExcludeSet = true
 		return nil
 	}).String()
 
-	taskOldInclude = app.Flag(
+	s.taskOldInclude = app.Flag(
 		FlagScheduledTaskOldInclude,
 		"DEPRECATED: Use --collector.scheduled_task.include",
 	).Hidden().String()
-	taskOldExclude = app.Flag(
+	s.taskOldExclude = app.Flag(
 		FlagScheduledTaskOldExclude,
 		"DEPRECATED: Use --collector.scheduled_task.exclude",
 	).Hidden().String()
+	return s
 }
 
 // newScheduledTask ...
-func newScheduledTask() (Collector, error) {
-	if *taskOldExclude != "" {
-		if !taskExcludeSet {
+func newScheduledTask(settings interface{}) (Collector, error) {
+	s := settings.(*taskSettings)
+	if *s.taskOldExclude != "" {
+		if !s.taskExcludeSet {
 			log.Warnln("msg", "--collector.scheduled_task.blacklist is DEPRECATED and will be removed in a future release, use --collector.scheduled_task.exclude")
-			*taskExclude = *taskOldExclude
+			*s.taskExclude = *s.taskOldExclude
 		} else {
 			return nil, errors.New("--collector.scheduled_task.blacklist and --collector.scheduled_task.exclude are mutually exclusive")
 		}
 	}
-	if *taskOldInclude != "" {
-		if !taskIncludeSet {
+	if *s.taskOldInclude != "" {
+		if !s.taskIncludeSet {
 			log.Warnln("msg", "--collector.scheduled_task.whitelist is DEPRECATED and will be removed in a future release, use --collector.scheduled_task.include")
-			*taskInclude = *taskOldInclude
+			*s.taskInclude = *s.taskOldInclude
 		} else {
 			return nil, errors.New("--collector.scheduled_task.whitelist and --collector.scheduled_task.include are mutually exclusive")
 		}
@@ -155,8 +158,8 @@ func newScheduledTask() (Collector, error) {
 			nil,
 		),
 
-		taskIncludePattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *taskInclude)),
-		taskExcludePattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *taskExclude)),
+		taskIncludePattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *s.taskInclude)),
+		taskExcludePattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *s.taskExclude)),
 	}, nil
 }
 

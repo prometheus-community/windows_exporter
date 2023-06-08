@@ -27,7 +27,7 @@ type adcsCollector struct {
 }
 
 // ADCSCollectorMethod ...
-func adcsCollectorMethod() (Collector, error) {
+func adcsCollectorMethod(_ interface{}) (Collector, error) {
 	const subsystem = "adcs"
 	return &adcsCollector{
 		RequestsPerSecond: prometheus.NewDesc(

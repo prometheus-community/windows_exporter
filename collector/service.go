@@ -21,11 +21,6 @@ const (
 	FlagServiceUseAPI      = "collector.service.use-api"
 )
 
-var (
-	serviceWhereClause *string
-	useAPI             *bool
-)
-
 // A serviceCollector is a Prometheus collector for WMI Win32_Service metrics
 type serviceCollector struct {
 	Information *prometheus.Desc
@@ -34,28 +29,37 @@ type serviceCollector struct {
 	Status      *prometheus.Desc
 
 	queryWhereClause string
+	useApi           bool
+}
+
+type serviceSettings struct {
+	serviceWhereClause *string
+	useAPI             *bool
 }
 
 // newServiceCollectorFlags ...
-func newServiceCollectorFlags(app *kingpin.Application) {
-	serviceWhereClause = app.Flag(
+func newServiceCollectorFlags(app *kingpin.Application) interface{} {
+	s := &serviceSettings{}
+	s.serviceWhereClause = app.Flag(
 		FlagServiceWhereClause,
 		"WQL 'where' clause to use in WMI metrics query. Limits the response to the services you specify and reduces the size of the response.",
 	).Default("").String()
-	useAPI = app.Flag(
+	s.useAPI = app.Flag(
 		FlagServiceUseAPI,
 		"Use API calls to collect service data instead of WMI. Flag 'collector.service.services-where' won't be effective.",
 	).Default("false").Bool()
+	return s
 }
 
 // newserviceCollector ...
-func newserviceCollector() (Collector, error) {
+func newserviceCollector(settings interface{}) (Collector, error) {
+	s := settings.(*serviceSettings)
 	const subsystem = "service"
 
-	if *serviceWhereClause == "" {
+	if *s.serviceWhereClause == "" {
 		log.Warn("No where-clause specified for service collector. This will generate a very large number of metrics!")
 	}
-	if *useAPI {
+	if *s.useAPI {
 		log.Warn("API collection is enabled.")
 	}
 
@@ -84,14 +88,15 @@ func newserviceCollector() (Collector, error) {
 			[]string{"name", "status"},
 			nil,
 		),
-		queryWhereClause: *serviceWhereClause,
+		queryWhereClause: *s.serviceWhereClause,
+		useApi:           *s.useAPI,
 	}, nil
 }
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *serviceCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
-	if *useAPI {
+	if c.useApi {
 		if err := c.collectAPI(ch); err != nil {
 			log.Error("failed collecting API service metrics:", err)
 			return err

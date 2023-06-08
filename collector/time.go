@@ -5,7 +5,6 @@ package collector
 
 import (
 	"errors"
-
 	"github.com/prometheus-community/windows_exporter/log"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -20,7 +19,7 @@ type TimeCollector struct {
 	NTPServerOutgoingResponsesTotal  *prometheus.Desc
 }
 
-func newTimeCollector() (Collector, error) {
+func newTimeCollector(_ interface{}) (Collector, error) {
 	if getWindowsVersion() <= 6.1 {
 		return nil, errors.New("Windows version older than Server 2016 detected. The time collector will not run and should be disabled via CLI flags or configuration file")
 

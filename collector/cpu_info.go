@@ -23,7 +23,7 @@ type CpuInfoCollector struct {
 	CpuInfo *prometheus.Desc
 }
 
-func newCpuInfoCollector() (Collector, error) {
+func newCpuInfoCollector(_ interface{}) (Collector, error) {
 	return &CpuInfoCollector{
 		CpuInfo: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, "", "cpu_info"),

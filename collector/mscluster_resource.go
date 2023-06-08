@@ -25,7 +25,7 @@ type MSCluster_ResourceCollector struct {
 	Subclass               *prometheus.Desc
 }
 
-func newMSCluster_ResourceCollector() (Collector, error) {
+func newMSCluster_ResourceCollector(_ interface{}) (Collector, error) {
 	const subsystem = "mscluster_resource"
 	return &MSCluster_ResourceCollector{
 		Characteristics: prometheus.NewDesc(

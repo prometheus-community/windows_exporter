@@ -47,3 +47,7 @@ require (
 	google.golang.org/protobuf v1.30.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
+
+// TODO(mattdurham): this is so you can debug on windows, when PR is merged into perflib, can you use that
+// and eventually remove if windows_exporter shifts to it. https://github.com/leoluk/perflib_exporter/pull/43
+replace github.com/leoluk/perflib_exporter => github.com/grafana/perflib_exporter v0.1.1-0.20230511173423-6166026bd090
