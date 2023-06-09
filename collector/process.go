@@ -58,7 +58,7 @@ type processCollector struct {
 
 // newProcessCollectorFlags ...
 func newProcessCollectorFlags(app *kingpin.Application) interface{} {
-	s := ProcessSettings{}
+	s := &ProcessSettings{}
 	s.ProcessInclude = app.Flag(
 		FlagProcessInclude,
 		"Regexp of processes to include. Process name must both match include and not match exclude to be included.",
