@@ -93,8 +93,8 @@ func main() {
 	app.Version(version.Print("windows_exporter"))
 	app.HelpFlag.Short('h')
 
-	collectors := collector.CreateCollectorInitializers()
-	collector.RegisterCollectorsFlags(collectors, app)
+	collectorInits := collector.CreateInitializers()
+	collector.RegisterCollectorsFlags(collectorInits, app)
 	// Load values from configuration file(s). Executable flags must first be parsed, in order
 	// to load the specified file(s).
 	kingpin.MustParse(app.Parse(os.Args[1:]))
@@ -119,9 +119,9 @@ func main() {
 	}
 
 	if *printCollectors {
-		availableCollectors := collector.Available(collectors)
+		availableCollectors := collector.Available(collectorInits)
 		collectorNames := make(sort.StringSlice, 0, len(availableCollectors))
-		for _, n := range collectors {
+		for _, n := range collectorInits {
 			collectorNames = append(collectorNames, n.Name)
 		}
 		collectorNames.Sort()
@@ -133,8 +133,8 @@ func main() {
 	}
 
 	initWbem()
-	collector.RegisterCollectors(collectors)
-	loadedCollectors, err := collector.LoadCollectors(collectors, *enabledCollectors)
+	collector.RegisterCollectors(collectorInits)
+	loadedCollectors, err := collector.LoadCollectors(collectorInits, *enabledCollectors)
 	// Initialize collectors before loading
 
 	if err != nil {

@@ -2,8 +2,8 @@ package collector
 
 import "github.com/alecthomas/kingpin/v2"
 
-// Initializers represents the required initialisation config for a collector.
-type Initializers struct {
+// Initializer represents the required initialisation config for a collector.
+type Initializer struct {
 	// Name of collector to be initialised
 	Name string
 	// Builder function for the collector
@@ -29,8 +29,8 @@ func getDFSRCollectorDeps(settings interface{}) []string {
 	return perflibDependencies
 }
 
-func CreateCollectorInitializers() map[string]*Initializers {
-	collectors := []*Initializers{
+func CreateInitializers() map[string]*Initializer {
+	collectors := []*Initializer{
 		{
 			Name:            "ad",
 			flags:           nil,
@@ -388,7 +388,7 @@ func CreateCollectorInitializers() map[string]*Initializers {
 			perfCounterFunc: nil,
 		},
 	}
-	builders := make(map[string]*Initializers)
+	builders := make(map[string]*Initializer)
 	for _, x := range collectors {
 		builders[x.Name] = x
 	}
@@ -397,7 +397,7 @@ func CreateCollectorInitializers() map[string]*Initializers {
 }
 
 // RegisterCollectorsFlags To be called by the exporter for collector initialisation before running app.Parse
-func RegisterCollectorsFlags(collectors map[string]*Initializers, app *kingpin.Application) {
+func RegisterCollectorsFlags(collectors map[string]*Initializer, app *kingpin.Application) {
 	for _, v := range collectors {
 		if v.flags != nil {
 			v.Settings = v.flags(app)
@@ -406,7 +406,7 @@ func RegisterCollectorsFlags(collectors map[string]*Initializers, app *kingpin.A
 }
 
 // RegisterCollectors To be called by the exporter for collector initialisation
-func RegisterCollectors(builders map[string]*Initializers) {
+func RegisterCollectors(builders map[string]*Initializer) {
 	for _, v := range builders {
 		var perfCounterNames []string
 
