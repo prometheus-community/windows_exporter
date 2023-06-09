@@ -6,7 +6,7 @@ import (
 )
 
 func BenchmarkIISCollector(b *testing.B) {
-	benchmarkCollector(b, "iis", newIISCollector)
+	benchmarkCollector(b, "iis", newIISCollector, &IISSettings{})
 }
 
 func TestIISDeduplication(t *testing.T) {

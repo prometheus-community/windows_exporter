@@ -5,5 +5,5 @@ import (
 )
 
 func BenchmarkExchangeCollector(b *testing.B) {
-	benchmarkCollector(b, "exchange", newExchangeCollector)
+	benchmarkCollector(b, "exchange", newExchangeCollector, &ExchangeSettings{})
 }

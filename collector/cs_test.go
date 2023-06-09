@@ -5,5 +5,5 @@ import (
 )
 
 func BenchmarkCsCollector(b *testing.B) {
-	benchmarkCollector(b, "cs", newCSCollector)
+	benchmarkCollector(b, "cs", newCSCollector, nil)
 }

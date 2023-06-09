@@ -5,5 +5,5 @@ import (
 )
 
 func BenchmarkADCSCollector(b *testing.B) {
-	benchmarkCollector(b, "adcs", adcsCollectorMethod)
+	benchmarkCollector(b, "adcs", adcsCollectorMethod, nil)
 }

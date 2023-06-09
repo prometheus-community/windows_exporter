@@ -5,5 +5,5 @@ import (
 )
 
 func BenchmarkServiceCollector(b *testing.B) {
-	benchmarkCollector(b, "service", newserviceCollector)
+	benchmarkCollector(b, "service", newserviceCollector, &ServiceSettings{})
 }

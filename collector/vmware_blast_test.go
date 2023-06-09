@@ -5,5 +5,5 @@ import (
 )
 
 func BenchmarkVmwareBlastCollector(b *testing.B) {
-	benchmarkCollector(b, "vmware_blast", newVmwareBlastCollector)
+	benchmarkCollector(b, "vmware_blast", newVmwareBlastCollector, nil)
 }

@@ -5,5 +5,5 @@ import (
 )
 
 func BenchmarkDiskDriveCollector(b *testing.B) {
-	benchmarkCollector(b, "disk_drive", newDiskDriveInfoCollector)
+	benchmarkCollector(b, "disk_drive", newDiskDriveInfoCollector, nil)
 }

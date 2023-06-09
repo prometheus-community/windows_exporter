@@ -5,5 +5,5 @@ import (
 )
 
 func BenchmarkTimeCollector(b *testing.B) {
-	benchmarkCollector(b, "time", newTimeCollector)
+	benchmarkCollector(b, "time", newTimeCollector, nil)
 }

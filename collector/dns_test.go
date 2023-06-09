@@ -5,5 +5,5 @@ import (
 )
 
 func BenchmarkDNSCollector(b *testing.B) {
-	benchmarkCollector(b, "dns", newDNSCollector)
+	benchmarkCollector(b, "dns", newDNSCollector, nil)
 }

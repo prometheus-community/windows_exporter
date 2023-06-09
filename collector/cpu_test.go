@@ -5,5 +5,5 @@ import (
 )
 
 func BenchmarkCPUCollector(b *testing.B) {
-	benchmarkCollector(b, "cpu", newCPUCollector)
+	benchmarkCollector(b, "cpu", newCPUCollector, nil)
 }

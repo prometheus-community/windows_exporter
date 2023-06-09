@@ -5,5 +5,5 @@ import (
 )
 
 func BenchmarkTeradiciPcoipCollector(b *testing.B) {
-	benchmarkCollector(b, "teradici_pcoip", newTeradiciPcoipCollector)
+	benchmarkCollector(b, "teradici_pcoip", newTeradiciPcoipCollector, nil)
 }

@@ -5,5 +5,5 @@ import (
 )
 
 func BenchmarkContainerCollector(b *testing.B) {
-	benchmarkCollector(b, "container", newContainerMetricsCollector)
+	benchmarkCollector(b, "container", newContainerMetricsCollector, nil)
 }

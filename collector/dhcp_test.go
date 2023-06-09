@@ -5,5 +5,5 @@ import (
 )
 
 func BenchmarkDHCPCollector(b *testing.B) {
-	benchmarkCollector(b, "dhcp", newDhcpCollector)
+	benchmarkCollector(b, "dhcp", newDhcpCollector, nil)
 }

@@ -5,5 +5,5 @@ import (
 )
 
 func BenchmarkFsrmQuotaCollector(b *testing.B) {
-	benchmarkCollector(b, "fsrmquota", newFSRMQuotaCollector)
+	benchmarkCollector(b, "fsrmquota", newFSRMQuotaCollector, nil)
 }

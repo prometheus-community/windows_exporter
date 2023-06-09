@@ -6,5 +6,5 @@ import (
 
 func BenchmarkMsmqCollector(b *testing.B) {
 	// No context name required as collector source is WMI
-	benchmarkCollector(b, "", newMSMQCollector)
+	benchmarkCollector(b, "", newMSMQCollector, nil)
 }

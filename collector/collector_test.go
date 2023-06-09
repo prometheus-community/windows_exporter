@@ -35,14 +35,14 @@ func TestExpandChildCollectors(t *testing.T) {
 	}
 }
 
-func benchmarkCollector(b *testing.B, name string, collectFunc func() (Collector, error)) {
+func benchmarkCollector(b *testing.B, name string, collectFunc func(interface{}) (Collector, error), settings interface{}) {
 	// Create perflib scrape context. Some perflib collectors required a correct context,
 	// or will fail during benchmark.
 	scrapeContext, err := PrepareScrapeContext([]string{name})
 	if err != nil {
 		b.Error(err)
 	}
-	c, err := collectFunc()
+	c, err := collectFunc(settings)
 	if err != nil {
 		b.Error(err)
 	}

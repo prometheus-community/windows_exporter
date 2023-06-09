@@ -7,8 +7,8 @@ import (
 func BenchmarkProcessCollector(b *testing.B) {
 	// Include is not set in testing context (kingpin flags not parsed), causing the collector to skip all processes.
 	localProcessInclude := ".+"
-	processInclude = &localProcessInclude
+	processInclude := &localProcessInclude
 
 	// No context name required as collector source is WMI
-	benchmarkCollector(b, "", newProcessCollector)
+	benchmarkCollector(b, "", newProcessCollector, &ProcessSettings{ProcessInclude: processInclude})
 }

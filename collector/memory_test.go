@@ -5,5 +5,5 @@ import (
 )
 
 func BenchmarkMemoryCollector(b *testing.B) {
-	benchmarkCollector(b, "memory", newMemoryCollector)
+	benchmarkCollector(b, "memory", newMemoryCollector, nil)
 }

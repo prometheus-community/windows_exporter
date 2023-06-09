@@ -5,5 +5,5 @@ import (
 )
 
 func BenchmarkRemoteFXCollector(b *testing.B) {
-	benchmarkCollector(b, "remote_fx", newRemoteFx)
+	benchmarkCollector(b, "remote_fx", newRemoteFx, nil)
 }
