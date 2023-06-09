@@ -60,7 +60,7 @@ var (
 )
 
 func registerCollector(collector *CollectorInit, perfCounterNames ...string) {
-	addPerfCounterDependencies(collector.name, perfCounterNames)
+	addPerfCounterDependencies(collector.Name, perfCounterNames)
 }
 
 func addPerfCounterDependencies(name string, perfCounterNames []string) {
@@ -85,6 +85,43 @@ func Build(builders map[string]*CollectorInit, collector string) (Collector, err
 	}
 	return builder.builder(builder.Settings)
 }
+
+func LoadCollectors(builders map[string]*CollectorInit, list string) (map[string]Collector, error) {
+	collectors := map[string]Collector{}
+	enabled := ExpandEnabledCollectors(list)
+
+	for _, name := range enabled {
+		c, err := Build(builders, name)
+		if err != nil {
+			return nil, err
+		}
+		collectors[name] = c
+	}
+
+	return collectors, nil
+}
+
+const (
+	DefaultCollectors            = "cpu,cs,logical_disk,net,os,service,system,textfile"
+	DefaultCollectorsPlaceholder = "[defaults]"
+)
+
+func ExpandEnabledCollectors(enabled string) []string {
+	expanded := strings.Replace(enabled, DefaultCollectorsPlaceholder, DefaultCollectors, -1)
+	separated := strings.Split(expanded, ",")
+	unique := map[string]bool{}
+	for _, s := range separated {
+		if s != "" {
+			unique[s] = true
+		}
+	}
+	result := make([]string, 0, len(unique))
+	for s := range unique {
+		result = append(result, s)
+	}
+	return result
+}
+
 func getPerfQuery(collectors []string) string {
 	parts := make([]string, 0, len(collectors))
 	for _, c := range collectors {

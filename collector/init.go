@@ -5,7 +5,7 @@ import "github.com/alecthomas/kingpin/v2"
 // CollectorInit represents the required initialisation config for a collector.
 type CollectorInit struct {
 	// Name of collector to be initialised
-	name string
+	Name string
 	// Builder function for the collector
 	flags flagsBuilder
 	// Builder function for the collector
@@ -29,16 +29,16 @@ func getDFSRCollectorDeps(settings interface{}) []string {
 	return perflibDependencies
 }
 
-func CreateCollectors() map[string]*CollectorInit {
+func CreateCollectorInitializers() map[string]*CollectorInit {
 	collectors := []*CollectorInit{
 		{
-			name:            "ad",
+			Name:            "ad",
 			flags:           nil,
 			builder:         newADCollector,
 			perfCounterFunc: nil,
 		},
 		{
-			name:    "adcs",
+			Name:    "adcs",
 			flags:   nil,
 			builder: adcsCollectorMethod,
 			perfCounterFunc: func(_ interface{}) []string {
@@ -46,7 +46,7 @@ func CreateCollectors() map[string]*CollectorInit {
 			},
 		},
 		{
-			name:    "adfs",
+			Name:    "adfs",
 			flags:   nil,
 			builder: newADFSCollector,
 			perfCounterFunc: func(_ interface{}) []string {
@@ -54,7 +54,7 @@ func CreateCollectors() map[string]*CollectorInit {
 			},
 		},
 		{
-			name:    "cache",
+			Name:    "cache",
 			flags:   nil,
 			builder: newCacheCollector,
 			perfCounterFunc: func(_ interface{}) []string {
@@ -62,13 +62,13 @@ func CreateCollectors() map[string]*CollectorInit {
 			},
 		},
 		{
-			name:            "container",
+			Name:            "container",
 			flags:           nil,
 			builder:         newContainerMetricsCollector,
 			perfCounterFunc: nil,
 		},
 		{
-			name:    "cpu",
+			Name:    "cpu",
 			flags:   nil,
 			builder: newCPUCollector,
 			perfCounterFunc: func(_ interface{}) []string {
@@ -79,43 +79,43 @@ func CreateCollectors() map[string]*CollectorInit {
 			},
 		},
 		{
-			name:            "cpu_info",
+			Name:            "cpu_info",
 			flags:           nil,
 			builder:         newCpuInfoCollector,
 			perfCounterFunc: nil,
 		},
 		{
-			name:            "cs",
+			Name:            "cs",
 			flags:           nil,
 			builder:         newCSCollector,
 			perfCounterFunc: nil,
 		},
 		{
-			name:            "dfsr",
+			Name:            "dfsr",
 			flags:           newDFSRCollectorFlags,
 			builder:         newDFSRCollector,
 			perfCounterFunc: getDFSRCollectorDeps,
 		},
 		{
-			name:            "dhcp",
+			Name:            "dhcp",
 			flags:           nil,
 			builder:         newDhcpCollector,
 			perfCounterFunc: nil,
 		},
 		{
-			name:            "diskdrive",
+			Name:            "diskdrive",
 			flags:           nil,
 			builder:         newDiskDriveInfoCollector,
 			perfCounterFunc: nil,
 		},
 		{
-			name:            "dns",
+			Name:            "dns",
 			flags:           nil,
 			builder:         newDNSCollector,
 			perfCounterFunc: nil,
 		},
 		{
-			name:    "exchange",
+			Name:    "exchange",
 			flags:   newExchangeCollectorFlags,
 			builder: newExchangeCollector,
 			perfCounterFunc: func(_ interface{}) []string {
@@ -133,19 +133,19 @@ func CreateCollectors() map[string]*CollectorInit {
 			},
 		},
 		{
-			name:            "fsrmquota",
+			Name:            "fsrmquota",
 			flags:           nil,
 			builder:         newFSRMQuotaCollector,
 			perfCounterFunc: nil,
 		},
 		{
-			name:            "hyperv",
+			Name:            "hyperv",
 			flags:           nil,
 			builder:         newHyperVCollector,
 			perfCounterFunc: nil,
 		},
 		{
-			name:    "iis",
+			Name:    "iis",
 			flags:   newIISCollectorFlags,
 			builder: newIISCollector,
 			perfCounterFunc: func(_ interface{}) []string {
@@ -158,7 +158,7 @@ func CreateCollectors() map[string]*CollectorInit {
 			},
 		},
 		{
-			name:    "logical_disk",
+			Name:    "logical_disk",
 			flags:   newLogicalDiskCollectorFlags,
 			builder: newLogicalDiskCollector,
 			perfCounterFunc: func(_ interface{}) []string {
@@ -166,13 +166,13 @@ func CreateCollectors() map[string]*CollectorInit {
 			},
 		},
 		{
-			name:            "logon",
+			Name:            "logon",
 			flags:           nil,
 			builder:         newLogonCollector,
 			perfCounterFunc: nil,
 		},
 		{
-			name:    "memory",
+			Name:    "memory",
 			flags:   nil,
 			builder: newMemoryCollector,
 			perfCounterFunc: func(_ interface{}) []string {
@@ -180,49 +180,49 @@ func CreateCollectors() map[string]*CollectorInit {
 			},
 		},
 		{
-			name:            "mscluster_cluster",
+			Name:            "mscluster_cluster",
 			flags:           nil,
 			builder:         newMSCluster_ClusterCollector,
 			perfCounterFunc: nil,
 		},
 		{
-			name:            "mscluster_network",
+			Name:            "mscluster_network",
 			flags:           nil,
 			builder:         newMSCluster_NetworkCollector,
 			perfCounterFunc: nil,
 		},
 		{
-			name:            "mscluster_node",
+			Name:            "mscluster_node",
 			flags:           nil,
 			builder:         newMSCluster_NodeCollector,
 			perfCounterFunc: nil,
 		},
 		{
-			name:            "mscluster_resource",
+			Name:            "mscluster_resource",
 			flags:           nil,
 			builder:         newMSCluster_ResourceCollector,
 			perfCounterFunc: nil,
 		},
 		{
-			name:            "mscluster_resourcegroup",
+			Name:            "mscluster_resourcegroup",
 			flags:           nil,
 			builder:         newMSCluster_ResourceGroupCollector,
 			perfCounterFunc: nil,
 		},
 		{
-			name:            "msmq",
+			Name:            "msmq",
 			flags:           newMSMQCollectorFlags,
 			builder:         newMSMQCollector,
 			perfCounterFunc: nil,
 		},
 		{
-			name:            "mssql",
+			Name:            "mssql",
 			flags:           newMSSQLCollectorFlags,
 			builder:         newMSSQLCollector,
 			perfCounterFunc: nil,
 		},
 		{
-			name:    "net",
+			Name:    "net",
 			flags:   newNetworkCollectorFlags,
 			builder: newNetworkCollector,
 			perfCounterFunc: func(_ interface{}) []string {
@@ -230,55 +230,55 @@ func CreateCollectors() map[string]*CollectorInit {
 			},
 		},
 		{
-			name:            "netframework_clrexceptions",
+			Name:            "netframework_clrexceptions",
 			flags:           nil,
 			builder:         newNETFramework_NETCLRExceptionsCollector,
 			perfCounterFunc: nil,
 		},
 		{
-			name:            "netframework_clrinterop",
+			Name:            "netframework_clrinterop",
 			flags:           nil,
 			builder:         newNETFramework_NETCLRInteropCollector,
 			perfCounterFunc: nil,
 		},
 		{
-			name:            "netframework_clrjit",
+			Name:            "netframework_clrjit",
 			flags:           nil,
 			builder:         newNETFramework_NETCLRJitCollector,
 			perfCounterFunc: nil,
 		},
 		{
-			name:            "netframework_clrloading",
+			Name:            "netframework_clrloading",
 			flags:           nil,
 			builder:         newNETFramework_NETCLRLoadingCollector,
 			perfCounterFunc: nil,
 		},
 		{
-			name:            "netframework_clrlocksandthreads",
+			Name:            "netframework_clrlocksandthreads",
 			flags:           nil,
 			builder:         newNETFramework_NETCLRLocksAndThreadsCollector,
 			perfCounterFunc: nil,
 		},
 		{
-			name:            "netframework_clrmemory",
+			Name:            "netframework_clrmemory",
 			flags:           nil,
 			builder:         newNETFramework_NETCLRMemoryCollector,
 			perfCounterFunc: nil,
 		},
 		{
-			name:            "netframework_clrremoting",
+			Name:            "netframework_clrremoting",
 			flags:           nil,
 			builder:         newNETFramework_NETCLRRemotingCollector,
 			perfCounterFunc: nil,
 		},
 		{
-			name:            "netframework_clrsecurity",
+			Name:            "netframework_clrsecurity",
 			flags:           nil,
 			builder:         newNETFramework_NETCLRSecurityCollector,
 			perfCounterFunc: nil,
 		},
 		{
-			name:    "os",
+			Name:    "os",
 			flags:   nil,
 			builder: newOSCollector,
 			perfCounterFunc: func(_ interface{}) []string {
@@ -286,7 +286,7 @@ func CreateCollectors() map[string]*CollectorInit {
 			},
 		},
 		{
-			name:    "process",
+			Name:    "process",
 			flags:   newProcessCollectorFlags,
 			builder: newProcessCollector,
 			perfCounterFunc: func(_ interface{}) []string {
@@ -294,7 +294,7 @@ func CreateCollectors() map[string]*CollectorInit {
 			},
 		},
 		{
-			name:    "remote_fx",
+			Name:    "remote_fx",
 			flags:   nil,
 			builder: newRemoteFx,
 			perfCounterFunc: func(_ interface{}) []string {
@@ -302,19 +302,19 @@ func CreateCollectors() map[string]*CollectorInit {
 			},
 		},
 		{
-			name:            "scheduled_task",
+			Name:            "scheduled_task",
 			flags:           newScheduledTaskFlags,
 			builder:         newScheduledTask,
 			perfCounterFunc: nil,
 		},
 		{
-			name:            "service",
+			Name:            "service",
 			flags:           newServiceCollectorFlags,
 			builder:         newserviceCollector,
 			perfCounterFunc: nil,
 		},
 		{
-			name:    "smtp",
+			Name:    "smtp",
 			flags:   newSMTPCollectorFlags,
 			builder: newSMTPCollector,
 			perfCounterFunc: func(_ interface{}) []string {
@@ -322,7 +322,7 @@ func CreateCollectors() map[string]*CollectorInit {
 			},
 		},
 		{
-			name:    "system",
+			Name:    "system",
 			flags:   nil,
 			builder: newSystemCollector,
 			perfCounterFunc: func(_ interface{}) []string {
@@ -330,13 +330,13 @@ func CreateCollectors() map[string]*CollectorInit {
 			},
 		},
 		{
-			name:            "teradici_pcoip",
+			Name:            "teradici_pcoip",
 			flags:           nil,
 			builder:         newTeradiciPcoipCollector,
 			perfCounterFunc: nil,
 		},
 		{
-			name:    "tcp",
+			Name:    "tcp",
 			flags:   nil,
 			builder: newTCPCollector,
 			perfCounterFunc: func(_ interface{}) []string {
@@ -344,7 +344,7 @@ func CreateCollectors() map[string]*CollectorInit {
 			},
 		},
 		{
-			name:    "terminal_services",
+			Name:    "terminal_services",
 			flags:   nil,
 			builder: newTerminalServicesCollector,
 			perfCounterFunc: func(_ interface{}) []string {
@@ -356,19 +356,19 @@ func CreateCollectors() map[string]*CollectorInit {
 			},
 		},
 		{
-			name:            "textfile",
+			Name:            "textfile",
 			flags:           newTextFileCollectorFlags,
 			builder:         newTextFileCollector,
 			perfCounterFunc: nil,
 		},
 		{
-			name:            "thermalzone",
+			Name:            "thermalzone",
 			flags:           nil,
 			builder:         newThermalZoneCollector,
 			perfCounterFunc: nil,
 		},
 		{
-			name:    "time",
+			Name:    "time",
 			flags:   nil,
 			builder: newTimeCollector,
 			perfCounterFunc: func(_ interface{}) []string {
@@ -376,13 +376,13 @@ func CreateCollectors() map[string]*CollectorInit {
 			},
 		},
 		{
-			name:            "vmware",
+			Name:            "vmware",
 			flags:           nil,
 			builder:         newVmwareCollector,
 			perfCounterFunc: nil,
 		},
 		{
-			name:            "vmware_blast",
+			Name:            "vmware_blast",
 			flags:           nil,
 			builder:         newVmwareBlastCollector,
 			perfCounterFunc: nil,
@@ -390,7 +390,7 @@ func CreateCollectors() map[string]*CollectorInit {
 	}
 	builders := make(map[string]*CollectorInit)
 	for _, x := range collectors {
-		builders[x.name] = x
+		builders[x.Name] = x
 	}
 	return builders
 

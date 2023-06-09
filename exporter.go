@@ -43,42 +43,6 @@ type prometheusVersion struct {
 	GoVersion string `json:"goVersion"`
 }
 
-const (
-	defaultCollectors            = "cpu,cs,logical_disk,net,os,service,system,textfile"
-	defaultCollectorsPlaceholder = "[defaults]"
-)
-
-func expandEnabledCollectors(enabled string) []string {
-	expanded := strings.Replace(enabled, defaultCollectorsPlaceholder, defaultCollectors, -1)
-	separated := strings.Split(expanded, ",")
-	unique := map[string]bool{}
-	for _, s := range separated {
-		if s != "" {
-			unique[s] = true
-		}
-	}
-	result := make([]string, 0, len(unique))
-	for s := range unique {
-		result = append(result, s)
-	}
-	return result
-}
-
-func loadCollectors(builders map[string]*collector.CollectorInit, list string) (map[string]collector.Collector, error) {
-	collectors := map[string]collector.Collector{}
-	enabled := expandEnabledCollectors(list)
-
-	for _, name := range enabled {
-		c, err := collector.Build(builders, name)
-		if err != nil {
-			return nil, err
-		}
-		collectors[name] = c
-	}
-
-	return collectors, nil
-}
-
 func initWbem() {
 	// This initialization prevents a memory leak on WMF 5+. See
 	// https://github.com/prometheus-community/windows_exporter/issues/77 and
@@ -115,7 +79,7 @@ func main() {
 		enabledCollectors = app.Flag(
 			"collectors.enabled",
 			"Comma-separated list of collectors to use. Use '[defaults]' as a placeholder for all the collectors enabled by default.").
-			Default(defaultCollectors).String()
+			Default(collector.DefaultCollectors).String()
 		printCollectors = app.Flag(
 			"collectors.print",
 			"If true, print available collectors and exit.",
@@ -129,7 +93,7 @@ func main() {
 	app.Version(version.Print("windows_exporter"))
 	app.HelpFlag.Short('h')
 
-	collectors := collector.CreateCollectors()
+	collectors := collector.CreateCollectorInitializers()
 	collector.RegisterCollectorsFlags(collectors, app)
 	// Load values from configuration file(s). Executable flags must first be parsed, in order
 	// to load the specified file(s).
@@ -158,7 +122,7 @@ func main() {
 		availableCollectors := collector.Available(collectors)
 		collectorNames := make(sort.StringSlice, 0, len(availableCollectors))
 		for _, n := range collectors {
-			collectorNames = append(collectorNames, n.Name())
+			collectorNames = append(collectorNames, n.Name)
 		}
 		collectorNames.Sort()
 		fmt.Printf("Available collectors:\n")
@@ -170,7 +134,7 @@ func main() {
 
 	initWbem()
 	collector.RegisterCollectors(collectors)
-	loadedCollectors, err := loadCollectors(collectors, *enabledCollectors)
+	loadedCollectors, err := collector.LoadCollectors(collectors, *enabledCollectors)
 	// Initialize collectors before loading
 
 	if err != nil {

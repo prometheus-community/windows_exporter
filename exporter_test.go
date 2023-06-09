@@ -4,6 +4,7 @@
 package main
 
 import (
+	"github.com/prometheus-community/windows_exporter/collector"
 	"sort"
 	"strings"
 	"testing"
@@ -20,17 +21,17 @@ func TestExpandEnabled(t *testing.T) {
 		// Default case
 		{"cs,os", []string{"cs", "os"}},
 		// Placeholder expansion
-		{defaultCollectorsPlaceholder, strings.Split(defaultCollectors, ",")},
+		{collector.DefaultCollectorsPlaceholder, strings.Split(collector.DefaultCollectors, ",")},
 		// De-duplication
 		{"cs,cs", []string{"cs"}},
 		// De-duplicate placeholder
-		{defaultCollectorsPlaceholder + "," + defaultCollectorsPlaceholder, strings.Split(defaultCollectors, ",")},
+		{collector.DefaultCollectorsPlaceholder + "," + collector.DefaultCollectorsPlaceholder, strings.Split(collector.DefaultCollectors, ",")},
 		// Composite case
-		{"foo," + defaultCollectorsPlaceholder + ",bar", append(strings.Split(defaultCollectors, ","), "foo", "bar")},
+		{"foo," + collector.DefaultCollectorsPlaceholder + ",bar", append(strings.Split(collector.DefaultCollectors, ","), "foo", "bar")},
 	}
 
 	for _, testCase := range expansionTests {
-		output := expandEnabledCollectors(testCase.input)
+		output := collector.ExpandEnabledCollectors(testCase.input)
 		sort.Strings(output)
 
 		success := true
