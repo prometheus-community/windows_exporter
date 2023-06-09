@@ -59,7 +59,7 @@ var (
 	perfCounterDependencies = make(map[string]string)
 )
 
-func registerCollector(collector *CollectorInit, perfCounterNames ...string) {
+func registerCollector(collector *Initializers, perfCounterNames ...string) {
 	addPerfCounterDependencies(collector.Name, perfCounterNames)
 }
 
@@ -71,14 +71,14 @@ func addPerfCounterDependencies(name string, perfCounterNames []string) {
 	perfCounterDependencies[name] = strings.Join(perfIndicies, " ")
 }
 
-func Available(builders map[string]*CollectorInit) []string {
+func Available(builders map[string]*Initializers) []string {
 	cs := make([]string, 0, len(builders))
 	for c := range builders {
 		cs = append(cs, c)
 	}
 	return cs
 }
-func Build(builders map[string]*CollectorInit, collector string) (Collector, error) {
+func Build(builders map[string]*Initializers, collector string) (Collector, error) {
 	builder, exists := builders[collector]
 	if !exists {
 		return nil, fmt.Errorf("Unknown collector %q", collector)
@@ -86,7 +86,7 @@ func Build(builders map[string]*CollectorInit, collector string) (Collector, err
 	return builder.builder(builder.Settings)
 }
 
-func LoadCollectors(builders map[string]*CollectorInit, list string) (map[string]Collector, error) {
+func LoadCollectors(builders map[string]*Initializers, list string) (map[string]Collector, error) {
 	collectors := map[string]Collector{}
 	enabled := ExpandEnabledCollectors(list)
 
