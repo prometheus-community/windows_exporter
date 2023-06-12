@@ -14,7 +14,7 @@ require (
 	github.com/prometheus/common v0.44.0
 	github.com/prometheus/exporter-toolkit v0.10.0
 	github.com/sirupsen/logrus v1.9.3
-	github.com/yusufpapurcu/wmi v1.2.2
+	github.com/yusufpapurcu/wmi v1.2.3
 	go.opencensus.io v0.23.0 // indirect
 	golang.org/x/sys v0.8.0
 	gopkg.in/yaml.v3 v3.0.1
