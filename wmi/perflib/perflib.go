@@ -123,9 +123,6 @@ import (
 // TODO: There's a LittleEndian field in the PERF header - we ought to check it
 var bo = binary.LittleEndian
 
-var CounterNameTable NameTable
-var HelpNameTable NameTable
-
 const averageCount64Type = 1073874176
 
 // Top-level performance object (like "Process").
@@ -261,16 +258,6 @@ func queryRawData(query string) ([]byte, error) {
 
 		return buffer, nil
 	}
-}
-
-func init() {
-	// Initialize global name tables
-	// TODO: profiling, add option to disable name tables if necessary
-	// Not sure if we should resolve the names at all or just have the caller do it on demand
-	// (for many use cases the index is sufficient)
-
-	CounterNameTable = *QueryNameTable("Counter 009")
-	HelpNameTable = *QueryNameTable("Help 009")
 }
 
 /*
