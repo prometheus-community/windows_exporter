@@ -260,7 +260,7 @@ func (c *ContainerMetricsCollector) collect(ch chan<- prometheus.Metric) (*prome
 		)
 
 		if len(cstats.Network) == 0 {
-			_ = level.Info(c.logger).Log("msg", "No Network Stats for container", "containetId", containerDetails.ID)
+			_ = level.Info(c.logger).Log("msg", "No Network Stats for container", "containerId", containerDetails.ID)
 			continue
 		}
 
