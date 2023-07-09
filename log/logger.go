@@ -32,7 +32,7 @@ func (f *AllowedFile) Set(s string) error {
 	case "eventlog":
 		f.w = nil
 	default:
-		file, err := os.OpenFile(s, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0640)
+		file, err := os.OpenFile(s, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0200)
 		if err != nil {
 			return err
 		}
