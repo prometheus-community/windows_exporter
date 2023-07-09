@@ -24,12 +24,12 @@ type TimeCollector struct {
 }
 
 func newTimeCollector(logger log.Logger) (Collector, error) {
-	const subsystem = "time"
-	logger = log.With(logger, "collector", subsystem)
-
-	if getWindowsVersion(logger) < 100 {
+	if getWindowsVersion(logger) <= 6.1 {
 		return nil, errors.New("Windows version older than Server 2016 detected. The time collector will not run and should be disabled via CLI flags or configuration file")
 	}
+
+	const subsystem = "time"
+	logger = log.With(logger, "collector", subsystem)
 
 	return &TimeCollector{
 		logger: logger,
