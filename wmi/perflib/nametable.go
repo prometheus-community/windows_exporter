@@ -6,11 +6,6 @@ import (
 	"strconv"
 )
 
-type nameTableLookuper interface {
-	LookupName() string
-	LookupHelp() string
-}
-
 func (p *perfObjectType) LookupName() string {
 	return CounterNameTable.LookupString(p.ObjectNameTitleIndex)
 }
