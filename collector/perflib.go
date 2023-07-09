@@ -6,13 +6,13 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/prometheus-community/windows_exporter/wmi/perflib"
+
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
-	perflibCollector "github.com/leoluk/perflib_exporter/collector"
-	"github.com/leoluk/perflib_exporter/perflib"
 )
 
-var nametable = perflib.QueryNameTable("Counter 009") // Reads the names in English TODO: validate that the English names are always present
+var nametable = perflib.CounterNameTable
 
 func MapCounterToIndex(name string) string {
 	return strconv.Itoa(int(nametable.LookupIndex(name)))
@@ -101,9 +101,9 @@ func unmarshalObject(obj *perflib.PerfObject, vs interface{}, logger log.Logger)
 			}
 
 			switch ctr.Def.CounterType {
-			case perflibCollector.PERF_ELAPSED_TIME:
+			case perflib.PERF_ELAPSED_TIME:
 				target.Field(i).SetFloat(float64(ctr.Value-windowsEpoch) / float64(obj.Frequency))
-			case perflibCollector.PERF_100NSEC_TIMER, perflibCollector.PERF_PRECISION_100NS_TIMER:
+			case perflib.PERF_100NSEC_TIMER, perflib.PERF_PRECISION_100NS_TIMER:
 				target.Field(i).SetFloat(float64(ctr.Value) * ticksToSecondsScaleFactor)
 			default:
 				target.Field(i).SetFloat(float64(ctr.Value))
