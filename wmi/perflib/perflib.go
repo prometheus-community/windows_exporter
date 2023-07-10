@@ -115,7 +115,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
-	"sort"
 	"strings"
 	"syscall"
 	"unsafe"
@@ -449,13 +448,4 @@ func convertCounterValue(counterDef *perfCounterDefinition, buffer []byte, value
 	}
 
 	return
-}
-
-// Sort slice of objects by index. This is useful for displaying
-// a human-readable list or dump, but unnecessary otherwise.
-func SortObjects(p []*PerfObject) {
-	sort.Slice(p, func(i, j int) bool {
-		return p[i].NameIndex < p[j].NameIndex
-	})
-
 }
