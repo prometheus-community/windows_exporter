@@ -173,6 +173,8 @@ This enables the additional process and container collectors on top of the defau
 
 YAML configuration files can be specified with the `--config.file` flag. e.g. `.\windows_exporter.exe --config.file=config.yml`. If you are using the absolute path, make sure to quote the path, e.g. `.\windows_exporter.exe --config.file="C:\Program Files\windows_exporter\config.yml"`
 
+It is also possible to load the configuration from a URL. e.g. `.\windows_exporter.exe --config.file="https://example.com/config.yml"`
+
 ```yaml
 collectors:
   enabled: cpu,cs,net,service
