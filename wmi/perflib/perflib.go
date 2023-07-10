@@ -305,10 +305,16 @@ func QueryPerformanceData(query string) ([]*PerfObject, error) {
 	objOffset := int64(header.HeaderLength)
 
 	for i := 0; i < numObjects; i++ {
-		r.Seek(objOffset, io.SeekStart)
+		_, err := r.Seek(objOffset, io.SeekStart)
+		if err != nil {
+			return nil, err
+		}
 
 		obj := new(perfObjectType)
-		obj.BinaryReadFrom(r)
+		err = obj.BinaryReadFrom(r)
+		if err != nil {
+			return nil, err
+		}
 
 		numCounterDefs := int(obj.NumCounters)
 		numInstances := int(obj.NumInstances)
@@ -336,7 +342,10 @@ func QueryPerformanceData(query string) ([]*PerfObject, error) {
 
 		for i := 0; i < numCounterDefs; i++ {
 			def := new(perfCounterDefinition)
-			def.BinaryReadFrom(r)
+			err := def.BinaryReadFrom(r)
+			if err != nil {
+				return nil, err
+			}
 
 			counterDefs[i] = &PerfCounterDef{
 				Name:          def.LookupName(),
@@ -356,9 +365,15 @@ func QueryPerformanceData(query string) ([]*PerfObject, error) {
 
 		if obj.NumInstances <= 0 {
 			blockOffset := objOffset + int64(obj.DefinitionLength)
-			r.Seek(blockOffset, io.SeekStart)
+			_, err := r.Seek(blockOffset, io.SeekStart)
+			if err != nil {
+				return nil, err
+			}
 
-			_, counters := parseCounterBlock(buffer, r, blockOffset, counterDefs)
+			_, counters, err := parseCounterBlock(buffer, r, blockOffset, counterDefs)
+			if err != nil {
+				return nil, err
+			}
 
 			instances[0] = &PerfInstance{
 				Name:            "",
@@ -370,14 +385,23 @@ func QueryPerformanceData(query string) ([]*PerfObject, error) {
 			instOffset := objOffset + int64(obj.DefinitionLength)
 
 			for i := 0; i < numInstances; i++ {
-				r.Seek(instOffset, io.SeekStart)
+				_, err := r.Seek(instOffset, io.SeekStart)
+				if err != nil {
+					return nil, err
+				}
 
 				inst := new(perfInstanceDefinition)
-				inst.BinaryReadFrom(r)
+				err = inst.BinaryReadFrom(r)
+				if err != nil {
+					return nil, err
+				}
 
 				name, _ := readUTF16StringAtPos(r, instOffset+int64(inst.NameOffset), inst.NameLength)
 				pos := instOffset + int64(inst.ByteLength)
-				offset, counters := parseCounterBlock(buffer, r, pos, counterDefs)
+				offset, counters, err := parseCounterBlock(buffer, r, pos, counterDefs)
+				if err != nil {
+					return nil, err
+				}
 
 				instances[i] = &PerfInstance{
 					Name:     name,
@@ -396,10 +420,16 @@ func QueryPerformanceData(query string) ([]*PerfObject, error) {
 	return objects, nil
 }
 
-func parseCounterBlock(b []byte, r io.ReadSeeker, pos int64, defs []*PerfCounterDef) (int64, []*PerfCounter) {
-	r.Seek(pos, io.SeekStart)
+func parseCounterBlock(b []byte, r io.ReadSeeker, pos int64, defs []*PerfCounterDef) (int64, []*PerfCounter, error) {
+	_, err := r.Seek(pos, io.SeekStart)
+	if err != nil {
+		return 0, nil, err
+	}
 	block := new(perfCounterBlock)
-	block.BinaryReadFrom(r)
+	err = block.BinaryReadFrom(r)
+	if err != nil {
+		return 0, nil, err
+	}
 
 	counters := make([]*PerfCounter, len(defs))
 
@@ -419,7 +449,7 @@ func parseCounterBlock(b []byte, r io.ReadSeeker, pos int64, defs []*PerfCounter
 		}
 	}
 
-	return int64(block.ByteLength), counters
+	return int64(block.ByteLength), counters, nil
 }
 
 func convertCounterValue(counterDef *perfCounterDefinition, buffer []byte, valueOffset int64) (value int64) {
