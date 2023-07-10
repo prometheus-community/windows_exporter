@@ -48,13 +48,11 @@ func QueryNameTable(tableName string) *NameTable {
 	r := bytes.NewReader(buffer)
 	for {
 		index, err := readUTF16String(r)
-
 		if err != nil {
 			break
 		}
 
 		desc, err := readUTF16String(r)
-
 		if err != nil {
 			break
 		}

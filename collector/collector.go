@@ -6,10 +6,11 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/prometheus-community/windows_exporter/perflib"
+
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
-	"github.com/prometheus-community/windows_exporter/wmi/perflib"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows/registry"
 )

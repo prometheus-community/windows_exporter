@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/prometheus-community/windows_exporter/wmi/perflib"
+	"github.com/prometheus-community/windows_exporter/perflib"
 
 	"github.com/go-kit/log"
 )
