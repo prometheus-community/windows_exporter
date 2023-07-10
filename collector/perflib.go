@@ -12,10 +12,8 @@ import (
 	"github.com/go-kit/log/level"
 )
 
-var nametable = perflib.CounterNameTable
-
 func MapCounterToIndex(name string) string {
-	return strconv.Itoa(int(nametable.LookupIndex(name)))
+	return strconv.Itoa(int(perflib.CounterNameTable.LookupIndex(name)))
 }
 
 func getPerflibSnapshot(objNames string) (map[string]*perflib.PerfObject, error) {

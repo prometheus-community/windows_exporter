@@ -175,9 +175,6 @@ type PerfCounter struct {
 	SecondValue int64
 }
 
-// Error value returned by RegQueryValueEx if the buffer isn't sufficiently large
-const errorMoreData = syscall.Errno(syscall.ERROR_MORE_DATA)
-
 var (
 	bufLenGlobal = uint32(400000)
 	bufLenCostly = uint32(2000000)
@@ -223,7 +220,7 @@ func queryRawData(query string) ([]byte, error) {
 			(*byte)(unsafe.Pointer(&buffer[0])),
 			&bufLen)
 
-		if err == errorMoreData {
+		if err == error(syscall.ERROR_MORE_DATA) {
 			newBuffer := make([]byte, len(buffer)+16384)
 			copy(newBuffer, buffer)
 			buffer = newBuffer
