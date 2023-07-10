@@ -261,6 +261,7 @@ func (c *TerminalServicesCollector) collectTSSessionCounters(ctx *ScrapeContext,
 	if err != nil {
 		return nil, err
 	}
+	names := make(map[string]bool)
 
 	for _, d := range dst {
 		// only connect metrics for remote named sessions
@@ -268,6 +269,12 @@ func (c *TerminalServicesCollector) collectTSSessionCounters(ctx *ScrapeContext,
 		if n == "" || n == "services" || n == "console" {
 			continue
 		}
+		// don't add name already present in labels list
+		if _, ok := names[n]; ok {
+			continue
+		}
+		names[n] = true
+
 		ch <- prometheus.MustNewConstMetric(
 			c.HandleCount,
 			prometheus.GaugeValue,
