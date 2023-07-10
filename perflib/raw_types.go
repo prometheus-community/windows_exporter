@@ -6,10 +6,6 @@ import (
 	"syscall"
 )
 
-type binaryReaderFrom interface {
-	BinaryReadFrom(r io.Reader) error
-}
-
 /*
 perfDataBlock
 See: https://msdn.microsoft.com/de-de/library/windows/desktop/aa373157(v=vs.85).aspx

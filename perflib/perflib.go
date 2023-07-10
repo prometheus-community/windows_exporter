@@ -173,7 +173,7 @@ type PerfCounter struct {
 }
 
 // Error value returned by RegQueryValueEx if the buffer isn't sufficiently large
-const errorMoreData = syscall.Errno(234)
+const errorMoreData = syscall.Errno(syscall.ERROR_MORE_DATA)
 
 var (
 	bufLenGlobal = uint32(400000)
@@ -209,8 +209,6 @@ func queryRawData(query string) ([]byte, error) {
 		return nil, fmt.Errorf("failed to encode query string: %v", err)
 	}
 
-	defer syscall.RegCloseKey(syscall.HKEY_PERFORMANCE_DATA)
-
 	for {
 		bufLen := uint32(len(buffer))
 
@@ -226,7 +224,6 @@ func queryRawData(query string) ([]byte, error) {
 			newBuffer := make([]byte, len(buffer)+16384)
 			copy(newBuffer, buffer)
 			buffer = newBuffer
-			syscall.RegCloseKey(syscall.HKEY_PERFORMANCE_DATA)
 			continue
 		} else if err != nil {
 			if errno, ok := err.(syscall.Errno); ok {
