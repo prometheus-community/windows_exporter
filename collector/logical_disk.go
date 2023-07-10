@@ -9,7 +9,8 @@ import (
 	"regexp"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/prometheus-community/windows_exporter/log"
+	"github.com/go-kit/log"
+	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -34,6 +35,8 @@ var (
 
 // A LogicalDiskCollector is a Prometheus collector for perflib logicalDisk metrics
 type LogicalDiskCollector struct {
+	logger log.Logger
+
 	RequestsQueued   *prometheus.Desc
 	AvgReadQueue     *prometheus.Desc
 	AvgWriteQueue    *prometheus.Desc
@@ -84,10 +87,13 @@ func newLogicalDiskCollectorFlags(app *kingpin.Application) {
 }
 
 // newLogicalDiskCollector ...
-func newLogicalDiskCollector() (Collector, error) {
+func newLogicalDiskCollector(logger log.Logger) (Collector, error) {
+	const subsystem = "logical_disk"
+	logger = log.With(logger, "collector", subsystem)
+
 	if *volumeOldExclude != "" {
 		if !volumeExcludeSet {
-			log.Warnln("msg", "--collector.logical_disk.volume-blacklist is DEPRECATED and will be removed in a future release, use --collector.logical_disk.volume-exclude")
+			_ = level.Warn(logger).Log("msg", "--collector.logical_disk.volume-blacklist is DEPRECATED and will be removed in a future release, use --collector.logical_disk.volume-exclude")
 			*volumeExclude = *volumeOldExclude
 		} else {
 			return nil, errors.New("--collector.logical_disk.volume-blacklist and --collector.logical_disk.volume-exclude are mutually exclusive")
@@ -95,16 +101,16 @@ func newLogicalDiskCollector() (Collector, error) {
 	}
 	if *volumeOldInclude != "" {
 		if !volumeIncludeSet {
-			log.Warnln("msg", "--collector.logical_disk.volume-whitelist is DEPRECATED and will be removed in a future release, use --collector.logical_disk.volume-include")
+			_ = level.Warn(logger).Log("msg", "--collector.logical_disk.volume-whitelist is DEPRECATED and will be removed in a future release, use --collector.logical_disk.volume-include")
 			*volumeInclude = *volumeOldInclude
 		} else {
 			return nil, errors.New("--collector.logical_disk.volume-whitelist and --collector.logical_disk.volume-include are mutually exclusive")
 		}
 	}
 
-	const subsystem = "logical_disk"
-
 	return &LogicalDiskCollector{
+		logger: logger,
+
 		RequestsQueued: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "requests_queued"),
 			"The number of requests queued to the disk (LogicalDisk.CurrentDiskQueueLength)",
@@ -226,7 +232,7 @@ func newLogicalDiskCollector() (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *LogicalDiskCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ctx, ch); err != nil {
-		log.Error("failed collecting logical_disk metrics:", desc, err)
+		_ = level.Error(c.logger).Log("failed collecting logical_disk metrics", "desc", desc, "err", err)
 		return err
 	}
 	return nil
@@ -257,7 +263,7 @@ type logicalDisk struct {
 
 func (c *LogicalDiskCollector) collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []logicalDisk
-	if err := unmarshalObject(ctx.perfObjects["LogicalDisk"], &dst); err != nil {
+	if err := unmarshalObject(ctx.perfObjects["LogicalDisk"], &dst, c.logger); err != nil {
 		return nil, err
 	}
 

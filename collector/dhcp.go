@@ -4,11 +4,14 @@
 package collector
 
 import (
+	"github.com/go-kit/log"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 // A DhcpCollector is a Prometheus collector perflib DHCP metrics
 type DhcpCollector struct {
+	logger log.Logger
+
 	PacketsReceivedTotal                             *prometheus.Desc
 	DuplicatesDroppedTotal                           *prometheus.Desc
 	PacketsExpiredTotal                              *prometheus.Desc
@@ -36,10 +39,12 @@ type DhcpCollector struct {
 	FailoverBndupdDropped                            *prometheus.Desc
 }
 
-func newDhcpCollector() (Collector, error) {
+func newDhcpCollector(logger log.Logger) (Collector, error) {
 	const subsystem = "dhcp"
 
 	return &DhcpCollector{
+		logger: log.With(logger, "collector", subsystem),
+
 		PacketsReceivedTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "packets_received_total"),
 			"Total number of packets received by the DHCP server (PacketsReceivedTotal)",
@@ -226,7 +231,7 @@ type dhcpPerf struct {
 
 func (c *DhcpCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	var perflib []dhcpPerf
-	if err := unmarshalObject(ctx.perfObjects["DHCP Server"], &perflib); err != nil {
+	if err := unmarshalObject(ctx.perfObjects["DHCP Server"], &perflib, c.logger); err != nil {
 		return err
 	}
 

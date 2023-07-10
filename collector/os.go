@@ -9,16 +9,19 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-kit/log"
+	"github.com/go-kit/log/level"
 	"github.com/prometheus-community/windows_exporter/headers/netapi32"
 	"github.com/prometheus-community/windows_exporter/headers/psapi"
 	"github.com/prometheus-community/windows_exporter/headers/sysinfoapi"
-	"github.com/prometheus-community/windows_exporter/log"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows/registry"
 )
 
 // A OSCollector is a Prometheus collector for WMI metrics
 type OSCollector struct {
+	logger log.Logger
+
 	OSInformation           *prometheus.Desc
 	PhysicalMemoryFreeBytes *prometheus.Desc
 	PagingFreeBytes         *prometheus.Desc
@@ -41,10 +44,12 @@ type pagingFileCounter struct {
 }
 
 // newOSCollector ...
-func newOSCollector() (Collector, error) {
+func newOSCollector(logger log.Logger) (Collector, error) {
 	const subsystem = "os"
 
 	return &OSCollector{
+		logger: log.With(logger, "collector", subsystem),
+
 		OSInformation: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "info"),
 			"OperatingSystem.Caption, OperatingSystem.Version",
@@ -130,7 +135,7 @@ func newOSCollector() (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *OSCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ctx, ch); err != nil {
-		log.Error("failed collecting os metrics:", desc, err)
+		_ = level.Error(c.logger).Log("failed collecting os metrics", "desc", desc, "err", err)
 		return err
 	}
 	return nil
@@ -200,7 +205,7 @@ func (c *OSCollector) collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) (
 		file, err := os.Stat(fileString)
 		// For unknown reasons, Windows doesn't always create a page file. Continue collection rather than aborting.
 		if err != nil {
-			log.Debugf("Failed to read page file (reason: %s): %s\n", err, fileString)
+			_ = level.Debug(c.logger).Log("msg", fmt.Sprintf("Failed to read page file (reason: %s): %s\n", err, fileString))
 		} else {
 			fsipf += float64(file.Size())
 		}
@@ -212,7 +217,7 @@ func (c *OSCollector) collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) (
 	}
 
 	var pfc = make([]pagingFileCounter, 0)
-	if err := unmarshalObject(ctx.perfObjects["Paging File"], &pfc); err != nil {
+	if err := unmarshalObject(ctx.perfObjects["Paging File"], &pfc, c.logger); err != nil {
 		return nil, err
 	}
 
@@ -271,7 +276,7 @@ func (c *OSCollector) collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) (
 			fsipf,
 		)
 	} else {
-		log.Debugln("Could not find HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management key. windows_os_paging_free_bytes and windows_os_paging_limit_bytes will be omitted.")
+		_ = level.Debug(c.logger).Log("Could not find HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management key. windows_os_paging_free_bytes and windows_os_paging_limit_bytes will be omitted.")
 	}
 	ch <- prometheus.MustNewConstMetric(
 		c.VirtualMemoryFreeBytes,

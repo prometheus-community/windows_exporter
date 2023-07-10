@@ -4,22 +4,26 @@
 package collector
 
 import (
-	"github.com/prometheus-community/windows_exporter/log"
+	"github.com/go-kit/log"
+	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
 )
 
 // A NETFramework_NETCLRInteropCollector is a Prometheus collector for WMI Win32_PerfRawData_NETFramework_NETCLRInterop metrics
 type NETFramework_NETCLRInteropCollector struct {
+	logger log.Logger
+
 	NumberofCCWs        *prometheus.Desc
 	Numberofmarshalling *prometheus.Desc
 	NumberofStubs       *prometheus.Desc
 }
 
 // newNETFramework_NETCLRInteropCollector ...
-func newNETFramework_NETCLRInteropCollector() (Collector, error) {
+func newNETFramework_NETCLRInteropCollector(logger log.Logger) (Collector, error) {
 	const subsystem = "netframework_clrinterop"
 	return &NETFramework_NETCLRInteropCollector{
+		logger: log.With(logger, "collector", subsystem),
 		NumberofCCWs: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "com_callable_wrappers_total"),
 			"Displays the current number of COM callable wrappers (CCWs). A CCW is a proxy for a managed object being referenced from an unmanaged COM client.",
@@ -45,7 +49,7 @@ func newNETFramework_NETCLRInteropCollector() (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *NETFramework_NETCLRInteropCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ch); err != nil {
-		log.Error("failed collecting win32_perfrawdata_netframework_netclrinterop metrics:", desc, err)
+		_ = level.Error(c.logger).Log("failed collecting win32_perfrawdata_netframework_netclrinterop metrics", "desc", desc, "err", err)
 		return err
 	}
 	return nil
@@ -63,7 +67,7 @@ type Win32_PerfRawData_NETFramework_NETCLRInterop struct {
 
 func (c *NETFramework_NETCLRInteropCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_PerfRawData_NETFramework_NETCLRInterop
-	q := queryAll(&dst)
+	q := queryAll(&dst, c.logger)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
 	}

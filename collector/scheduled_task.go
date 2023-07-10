@@ -11,9 +11,10 @@ import (
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
+	"github.com/go-kit/log"
+	"github.com/go-kit/log/level"
 	ole "github.com/go-ole/go-ole"
 	"github.com/go-ole/go-ole/oleutil"
-	"github.com/prometheus-community/windows_exporter/log"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -37,6 +38,8 @@ var (
 )
 
 type ScheduledTaskCollector struct {
+	logger log.Logger
+
 	LastResult *prometheus.Desc
 	MissedRuns *prometheus.Desc
 	State      *prometheus.Desc
@@ -101,10 +104,13 @@ func newScheduledTaskFlags(app *kingpin.Application) {
 }
 
 // newScheduledTask ...
-func newScheduledTask() (Collector, error) {
+func newScheduledTask(logger log.Logger) (Collector, error) {
+	const subsystem = "scheduled_task"
+	logger = log.With(logger, "collector", subsystem)
+
 	if *taskOldExclude != "" {
 		if !taskExcludeSet {
-			log.Warnln("msg", "--collector.scheduled_task.blacklist is DEPRECATED and will be removed in a future release, use --collector.scheduled_task.exclude")
+			_ = level.Warn(logger).Log("msg", "--collector.scheduled_task.blacklist is DEPRECATED and will be removed in a future release, use --collector.scheduled_task.exclude")
 			*taskExclude = *taskOldExclude
 		} else {
 			return nil, errors.New("--collector.scheduled_task.blacklist and --collector.scheduled_task.exclude are mutually exclusive")
@@ -112,14 +118,12 @@ func newScheduledTask() (Collector, error) {
 	}
 	if *taskOldInclude != "" {
 		if !taskIncludeSet {
-			log.Warnln("msg", "--collector.scheduled_task.whitelist is DEPRECATED and will be removed in a future release, use --collector.scheduled_task.include")
+			_ = level.Warn(logger).Log("msg", "--collector.scheduled_task.whitelist is DEPRECATED and will be removed in a future release, use --collector.scheduled_task.include")
 			*taskInclude = *taskOldInclude
 		} else {
 			return nil, errors.New("--collector.scheduled_task.whitelist and --collector.scheduled_task.include are mutually exclusive")
 		}
 	}
-
-	const subsystem = "scheduled_task"
 
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
@@ -134,6 +138,7 @@ func newScheduledTask() (Collector, error) {
 	defer ole.CoUninitialize()
 
 	return &ScheduledTaskCollector{
+		logger: logger,
 		LastResult: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "last_result"),
 			"The result that was returned the last time the registered task was run",
@@ -162,7 +167,7 @@ func newScheduledTask() (Collector, error) {
 
 func (c *ScheduledTaskCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ch); err != nil {
-		log.Error("failed collecting user metrics:", desc, err)
+		_ = level.Error(c.logger).Log("failed collecting user metrics", "desc", desc, "err", err)
 		return err
 	}
 

@@ -7,24 +7,21 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/prometheus-community/windows_exporter/log"
+	"github.com/go-kit/log"
+	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
 )
 
 const ConnectionBrokerFeatureID uint32 = 133
 
-var (
-	connectionBrokerEnabled = isConnectionBrokerServer()
-)
-
 type Win32_ServerFeature struct {
 	ID uint32
 }
 
-func isConnectionBrokerServer() bool {
+func isConnectionBrokerServer(logger log.Logger) bool {
 	var dst []Win32_ServerFeature
-	q := queryAll(&dst)
+	q := queryAll(&dst, logger)
 	if err := wmi.Query(q, &dst); err != nil {
 		return false
 	}
@@ -33,7 +30,7 @@ func isConnectionBrokerServer() bool {
 			return true
 		}
 	}
-	log.Debug("host is not a connection broker skipping Connection Broker performance metrics.")
+	_ = level.Debug(logger).Log("msg", "host is not a connection broker skipping Connection Broker performance metrics.")
 	return false
 }
 
@@ -42,6 +39,9 @@ func isConnectionBrokerServer() bool {
 // https://docs.microsoft.com/en-us/previous-versions/aa394344(v%3Dvs.85)
 // https://wutils.com/wmi/root/cimv2/win32_perfrawdata_localsessionmanager_terminalservices/
 type TerminalServicesCollector struct {
+	logger                  log.Logger
+	connectionBrokerEnabled bool
+
 	LocalSessionCount           *prometheus.Desc
 	ConnectionBrokerPerformance *prometheus.Desc
 	HandleCount                 *prometheus.Desc
@@ -62,9 +62,13 @@ type TerminalServicesCollector struct {
 }
 
 // newTerminalServicesCollector ...
-func newTerminalServicesCollector() (Collector, error) {
+func newTerminalServicesCollector(logger log.Logger) (Collector, error) {
 	const subsystem = "terminal_services"
+	logger = log.With(logger, "collector", subsystem)
 	return &TerminalServicesCollector{
+		logger:                  logger,
+		connectionBrokerEnabled: isConnectionBrokerServer(logger),
+
 		LocalSessionCount: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "local_session_count"),
 			"Number of Terminal Services sessions",
@@ -174,18 +178,18 @@ func newTerminalServicesCollector() (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *TerminalServicesCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	if desc, err := c.collectTSSessionCount(ctx, ch); err != nil {
-		log.Error("failed collecting terminal services session count metrics:", desc, err)
+		_ = level.Error(c.logger).Log("failed collecting terminal services session count metrics", "desc", desc, "err", err)
 		return err
 	}
 	if desc, err := c.collectTSSessionCounters(ctx, ch); err != nil {
-		log.Error("failed collecting terminal services session count metrics:", desc, err)
+		_ = level.Error(c.logger).Log("failed collecting terminal services session count metrics", "desc", desc, "err", err)
 		return err
 	}
 
 	// only collect CollectionBrokerPerformance if host is a Connection Broker
-	if connectionBrokerEnabled {
+	if c.connectionBrokerEnabled {
 		if desc, err := c.collectCollectionBrokerPerformanceCounter(ctx, ch); err != nil {
-			log.Error("failed collecting Connection Broker performance metrics:", desc, err)
+			_ = level.Error(c.logger).Log("failed collecting Connection Broker performance metrics", "desc", desc, "err", err)
 			return err
 		}
 	}
@@ -200,7 +204,7 @@ type perflibTerminalServices struct {
 
 func (c *TerminalServicesCollector) collectTSSessionCount(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	dst := make([]perflibTerminalServices, 0)
-	err := unmarshalObject(ctx.perfObjects["Terminal Services"], &dst)
+	err := unmarshalObject(ctx.perfObjects["Terminal Services"], &dst, c.logger)
 	if err != nil {
 		return nil, err
 	}
@@ -253,7 +257,7 @@ type perflibTerminalServicesSession struct {
 
 func (c *TerminalServicesCollector) collectTSSessionCounters(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	dst := make([]perflibTerminalServicesSession, 0)
-	err := unmarshalObject(ctx.perfObjects["Terminal Services Session"], &dst)
+	err := unmarshalObject(ctx.perfObjects["Terminal Services Session"], &dst, c.logger)
 	if err != nil {
 		return nil, err
 	}
@@ -367,7 +371,7 @@ type perflibRemoteDesktopConnectionBrokerCounterset struct {
 func (c *TerminalServicesCollector) collectCollectionBrokerPerformanceCounter(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 
 	dst := make([]perflibRemoteDesktopConnectionBrokerCounterset, 0)
-	err := unmarshalObject(ctx.perfObjects["Remote Desktop Connection Broker Counterset"], &dst)
+	err := unmarshalObject(ctx.perfObjects["Remote Desktop Connection Broker Counterset"], &dst, c.logger)
 	if err != nil {
 		return nil, err
 	}

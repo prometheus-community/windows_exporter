@@ -6,10 +6,12 @@ package collector
 import (
 	"errors"
 	"fmt"
-	"github.com/alecthomas/kingpin/v2"
-	"github.com/prometheus-community/windows_exporter/log"
-	"github.com/prometheus/client_golang/prometheus"
 	"regexp"
+
+	"github.com/alecthomas/kingpin/v2"
+	"github.com/go-kit/log"
+	"github.com/go-kit/log/level"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 const (
@@ -32,6 +34,8 @@ var (
 )
 
 type SMTPCollector struct {
+	logger log.Logger
+
 	BadmailedMessagesBadPickupFileTotal     *prometheus.Desc
 	BadmailedMessagesGeneralFailureTotal    *prometheus.Desc
 	BadmailedMessagesHopCountExceededTotal  *prometheus.Desc
@@ -106,12 +110,15 @@ func newSMTPCollectorFlags(app *kingpin.Application) {
 	).Hidden().String()
 }
 
-func newSMTPCollector() (Collector, error) {
-	log.Info("smtp collector is in an experimental state! Metrics for this collector have not been tested.")
+func newSMTPCollector(logger log.Logger) (Collector, error) {
+	const subsystem = "smtp"
+	logger = log.With(logger, "collector", subsystem)
+
+	_ = level.Info(logger).Log("msg", "smtp collector is in an experimental state! Metrics for this collector have not been tested.")
 
 	if *serverOldExclude != "" {
 		if !serverExcludeSet {
-			log.Warnln("msg", "--collector.smtp.server-blacklist is DEPRECATED and will be removed in a future release, use --collector.smtp.server-exclude")
+			_ = level.Warn(logger).Log("msg", "--collector.smtp.server-blacklist is DEPRECATED and will be removed in a future release, use --collector.smtp.server-exclude")
 			*serverExclude = *serverOldExclude
 		} else {
 			return nil, errors.New("--collector.smtp.server-blacklist and --collector.smtp.server-exclude are mutually exclusive")
@@ -119,15 +126,15 @@ func newSMTPCollector() (Collector, error) {
 	}
 	if *serverOldInclude != "" {
 		if !serverIncludeSet {
-			log.Warnln("msg", "--collector.smtp.server-whitelist is DEPRECATED and will be removed in a future release, use --collector.smtp.server-include")
+			_ = level.Warn(logger).Log("msg", "--collector.smtp.server-whitelist is DEPRECATED and will be removed in a future release, use --collector.smtp.server-include")
 			*serverInclude = *serverOldInclude
 		} else {
 			return nil, errors.New("--collector.smtp.server-whitelist and --collector.smtp.server-include are mutually exclusive")
 		}
 	}
 
-	const subsystem = "smtp"
 	return &SMTPCollector{
+		logger: logger,
 		BadmailedMessagesBadPickupFileTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "badmailed_messages_bad_pickup_file_total"),
 			"Total number of malformed pickup messages sent to badmail",
@@ -390,7 +397,7 @@ func newSMTPCollector() (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *SMTPCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ctx, ch); err != nil {
-		log.Error("failed collecting smtp metrics:", desc, err)
+		_ = level.Error(c.logger).Log("failed collecting smtp metrics", "desc", desc, "err", err)
 		return err
 	}
 	return nil
@@ -446,7 +453,7 @@ type PerflibSMTPServer struct {
 
 func (c *SMTPCollector) collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []PerflibSMTPServer
-	if err := unmarshalObject(ctx.perfObjects["SMTP Server"], &dst); err != nil {
+	if err := unmarshalObject(ctx.perfObjects["SMTP Server"], &dst, c.logger); err != nil {
 		return nil, err
 	}
 

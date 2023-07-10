@@ -11,7 +11,8 @@ import (
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/prometheus-community/windows_exporter/log"
+	"github.com/go-kit/log"
+	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
 )
@@ -36,6 +37,8 @@ var (
 )
 
 type processCollector struct {
+	logger log.Logger
+
 	StartTime         *prometheus.Desc
 	CPUTimeTotal      *prometheus.Desc
 	HandleCount       *prometheus.Desc
@@ -85,12 +88,13 @@ func newProcessCollectorFlags(app *kingpin.Application) {
 }
 
 // NewProcessCollector ...
-func newProcessCollector() (Collector, error) {
+func newProcessCollector(logger log.Logger) (Collector, error) {
 	const subsystem = "process"
+	logger = log.With(logger, "collector", subsystem)
 
 	if *processOldExclude != "" {
 		if !processExcludeSet {
-			log.Warnln("msg", "--collector.process.blacklist is DEPRECATED and will be removed in a future release, use --collector.process.exclude")
+			_ = level.Warn(logger).Log("msg", "--collector.process.blacklist is DEPRECATED and will be removed in a future release, use --collector.process.exclude")
 			*processExclude = *processOldExclude
 		} else {
 			return nil, errors.New("--collector.process.blacklist and --collector.process.exclude are mutually exclusive")
@@ -98,7 +102,7 @@ func newProcessCollector() (Collector, error) {
 	}
 	if *processOldInclude != "" {
 		if !processIncludeSet {
-			log.Warnln("msg", "--collector.process.whitelist is DEPRECATED and will be removed in a future release, use --collector.process.include")
+			_ = level.Warn(logger).Log("msg", "--collector.process.whitelist is DEPRECATED and will be removed in a future release, use --collector.process.include")
 			*processInclude = *processOldInclude
 		} else {
 			return nil, errors.New("--collector.process.whitelist and --collector.process.include are mutually exclusive")
@@ -106,10 +110,11 @@ func newProcessCollector() (Collector, error) {
 	}
 
 	if *processInclude == ".*" && *processExclude == "" {
-		log.Warn("No filters specified for process collector. This will generate a very large number of metrics!")
+		_ = level.Warn(logger).Log("msg", "No filters specified for process collector. This will generate a very large number of metrics!")
 	}
 
 	return &processCollector{
+		logger: logger,
 		StartTime: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "start_time"),
 			"Time of process start.",
@@ -244,15 +249,15 @@ type WorkerProcess struct {
 
 func (c *processCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	data := make([]perflibProcess, 0)
-	err := unmarshalObject(ctx.perfObjects["Process"], &data)
+	err := unmarshalObject(ctx.perfObjects["Process"], &data, c.logger)
 	if err != nil {
 		return err
 	}
 
 	var dst_wp []WorkerProcess
-	q_wp := queryAll(&dst_wp)
+	q_wp := queryAll(&dst_wp, c.logger)
 	if err := wmi.QueryNamespace(q_wp, &dst_wp, "root\\WebAdministration"); err != nil {
-		log.Debugf("Could not query WebAdministration namespace for IIS worker processes: %v. Skipping", err)
+		_ = level.Debug(c.logger).Log("msg", fmt.Sprintf("Could not query WebAdministration namespace for IIS worker processes: %v. Skipping", err))
 	}
 
 	for _, process := range data {

@@ -6,9 +6,10 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/go-kit/log"
+	"github.com/go-kit/log/level"
 	perflibCollector "github.com/leoluk/perflib_exporter/collector"
 	"github.com/leoluk/perflib_exporter/perflib"
-	"github.com/prometheus-community/windows_exporter/log"
 )
 
 var nametable = perflib.QueryNameTable("Counter 009") // Reads the names in English TODO: validate that the English names are always present
@@ -30,7 +31,7 @@ func getPerflibSnapshot(objNames string) (map[string]*perflib.PerfObject, error)
 	return indexed, nil
 }
 
-func unmarshalObject(obj *perflib.PerfObject, vs interface{}) error {
+func unmarshalObject(obj *perflib.PerfObject, vs interface{}, logger log.Logger) error {
 	if obj == nil {
 		return fmt.Errorf("counter not found")
 	}
@@ -81,7 +82,7 @@ func unmarshalObject(obj *perflib.PerfObject, vs interface{}) error {
 
 			ctr, found := counters[tag]
 			if !found {
-				log.Debugf("missing counter %q, have %v", tag, counterMapKeys(counters))
+				_ = level.Debug(logger).Log("msg", fmt.Sprintf("missing counter %q, have %v", tag, counterMapKeys(counters)))
 				continue
 			}
 			if !target.Field(i).CanSet() {

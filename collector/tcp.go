@@ -4,12 +4,15 @@
 package collector
 
 import (
-	"github.com/prometheus-community/windows_exporter/log"
+	"github.com/go-kit/log"
+	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 // A TCPCollector is a Prometheus collector for WMI Win32_PerfRawData_Tcpip_TCPv{4,6} metrics
 type TCPCollector struct {
+	logger log.Logger
+
 	ConnectionFailures         *prometheus.Desc
 	ConnectionsActive          *prometheus.Desc
 	ConnectionsEstablished     *prometheus.Desc
@@ -22,10 +25,11 @@ type TCPCollector struct {
 }
 
 // newTCPCollector ...
-func newTCPCollector() (Collector, error) {
+func newTCPCollector(logger log.Logger) (Collector, error) {
 	const subsystem = "tcp"
 
 	return &TCPCollector{
+		logger: log.With(logger, "collector", subsystem),
 		ConnectionFailures: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "connection_failures_total"),
 			"(TCP.ConnectionFailures)",
@@ -87,7 +91,7 @@ func newTCPCollector() (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *TCPCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ctx, ch); err != nil {
-		log.Error("failed collecting tcp metrics:", desc, err)
+		_ = level.Error(c.logger).Log("failed collecting tcp metrics", "desc", desc, "err", err)
 		return err
 	}
 	return nil
@@ -169,7 +173,7 @@ func (c *TCPCollector) collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) 
 	var dst []tcp
 
 	// TCPv4 counters
-	if err := unmarshalObject(ctx.perfObjects["TCPv4"], &dst); err != nil {
+	if err := unmarshalObject(ctx.perfObjects["TCPv4"], &dst, c.logger); err != nil {
 		return nil, err
 	}
 	if len(dst) != 0 {
@@ -177,7 +181,7 @@ func (c *TCPCollector) collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) 
 	}
 
 	// TCPv6 counters
-	if err := unmarshalObject(ctx.perfObjects["TCPv6"], &dst); err != nil {
+	if err := unmarshalObject(ctx.perfObjects["TCPv6"], &dst, c.logger); err != nil {
 		return nil, err
 	}
 	if len(dst) != 0 {

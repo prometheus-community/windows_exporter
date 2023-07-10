@@ -6,14 +6,16 @@ package main
 import (
 	//Its important that we do these first so that we can register with the windows service control ASAP to avoid timeouts
 	"github.com/prometheus-community/windows_exporter/initiate"
-	"github.com/prometheus-community/windows_exporter/log"
+	winlog "github.com/prometheus-community/windows_exporter/log"
 
 	"encoding/json"
 	"fmt"
+	stdlog "log"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"os/user"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -21,9 +23,12 @@ import (
 
 	"github.com/prometheus-community/windows_exporter/collector"
 	"github.com/prometheus-community/windows_exporter/config"
+	"github.com/prometheus-community/windows_exporter/log/flag"
 	"github.com/yusufpapurcu/wmi"
 
 	"github.com/alecthomas/kingpin/v2"
+	"github.com/go-kit/log"
+	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -64,12 +69,12 @@ func expandEnabledCollectors(enabled string) []string {
 	return result
 }
 
-func loadCollectors(list string) (map[string]collector.Collector, error) {
+func loadCollectors(list string, logger log.Logger) (map[string]collector.Collector, error) {
 	collectors := map[string]collector.Collector{}
 	enabled := expandEnabledCollectors(list)
 
 	for _, name := range enabled {
-		c, err := collector.Build(name)
+		c, err := collector.Build(name, logger)
 		if err != nil {
 			return nil, err
 		}
@@ -79,14 +84,15 @@ func loadCollectors(list string) (map[string]collector.Collector, error) {
 	return collectors, nil
 }
 
-func initWbem() {
+func initWbem(logger log.Logger) {
 	// This initialization prevents a memory leak on WMF 5+. See
 	// https://github.com/prometheus-community/windows_exporter/issues/77 and
 	// linked issues for details.
-	log.Debugf("Initializing SWbemServices")
+	_ = level.Debug(logger).Log("msg", "Initializing SWbemServices")
 	s, err := wmi.InitializeSWbemServices(wmi.DefaultClient)
 	if err != nil {
-		log.Fatal(err)
+		_ = level.Error(logger).Log("err", err)
+		os.Exit(1)
 	}
 	wmi.DefaultClient.AllowMissingFields = true
 	wmi.DefaultClient.SWbemServicesClient = s
@@ -125,7 +131,10 @@ func main() {
 			"Seconds to subtract from the timeout allowed by the client. Tune to allow for overhead or high loads.",
 		).Default("0.5").Float64()
 	)
-	log.AddFlags(app)
+
+	winlogConfig := &winlog.Config{}
+	flag.AddFlags(app, winlogConfig)
+
 	app.Version(version.Print("windows_exporter"))
 	app.HelpFlag.Short('h')
 
@@ -135,15 +144,23 @@ func main() {
 	// Load values from configuration file(s). Executable flags must first be parsed, in order
 	// to load the specified file(s).
 	kingpin.MustParse(app.Parse(os.Args[1:]))
-	log.Debug("Logging has Started")
+	logger, err := winlog.New(winlogConfig)
+	if err != nil {
+		_ = level.Error(logger).Log("err", err)
+		os.Exit(1)
+	}
+
+	_ = level.Debug(logger).Log("msg", "Logging has Started")
 	if *configFile != "" {
-		resolver, err := config.NewResolver(*configFile)
+		resolver, err := config.NewResolver(*configFile, logger)
 		if err != nil {
-			log.Fatalf("could not load config file: %v\n", err)
+			_ = level.Error(logger).Log("msg", "could not load config file", "err", err)
+			os.Exit(1)
 		}
 		err = resolver.Bind(app, os.Args[1:])
 		if err != nil {
-			log.Fatalf("%v\n", err)
+			_ = level.Error(logger).Log("err", err)
+			os.Exit(1)
 		}
 
 		// NOTE: This is temporary fix for issue #1092, calling kingpin.Parse
@@ -153,6 +170,12 @@ func main() {
 
 		// Parse flags once more to include those discovered in configuration file(s).
 		kingpin.MustParse(app.Parse(os.Args[1:]))
+
+		logger, err = winlog.New(winlogConfig)
+		if err != nil {
+			_ = level.Error(logger).Log("err", err)
+			os.Exit(1)
+		}
 	}
 
 	if *printCollectors {
@@ -169,27 +192,29 @@ func main() {
 		return
 	}
 
-	initWbem()
+	initWbem(logger)
 
 	// Initialize collectors before loading
-	collector.RegisterCollectors()
+	collector.RegisterCollectors(logger)
 
-	collectors, err := loadCollectors(*enabledCollectors)
+	collectors, err := loadCollectors(*enabledCollectors, logger)
 	if err != nil {
-		log.Fatalf("Couldn't load collectors: %s", err)
+		_ = level.Error(logger).Log("msg", "Couldn't load collectors", "err", err)
+		os.Exit(1)
 	}
 
 	u, err := user.Current()
 	if err != nil {
-		log.Fatalf(err.Error())
+		_ = level.Error(logger).Log("err", err)
+		os.Exit(1)
 	}
 
-	log.Infof("Running as %v", u.Username)
+	_ = level.Info(logger).Log("msg", fmt.Sprintf("Running as %v", u.Username))
 	if strings.Contains(u.Username, "ContainerAdministrator") || strings.Contains(u.Username, "ContainerUser") {
-		log.Warnf("Running as a preconfigured Windows Container user. This may mean you do not have Windows HostProcess containers configured correctly and some functionality will not work as expected.")
+		_ = level.Warn(logger).Log("msg", "Running as a preconfigured Windows Container user. This may mean you do not have Windows HostProcess containers configured correctly and some functionality will not work as expected.")
 	}
 
-	log.Infof("Enabled collectors: %v", strings.Join(keys(collectors), ", "))
+	_ = level.Info(logger).Log("msg", fmt.Sprintf("Enabled collectors: %v", strings.Join(keys(collectors), ", ")))
 
 	h := &metricsHandler{
 		timeoutMargin:          *timeoutMargin,
@@ -207,12 +232,19 @@ func main() {
 				}
 				filteredCollectors[name] = col
 			}
-			return nil, collector.NewPrometheus(timeout, filteredCollectors)
+			return nil, collector.NewPrometheus(timeout, filteredCollectors, logger)
 		},
+		logger: logger,
 	}
 
 	http.HandleFunc(*metricsPath, withConcurrencyLimit(*maxRequests, h.ServeHTTP))
-	http.HandleFunc("/health", healthCheck)
+	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, err := fmt.Fprintln(w, `{"status":"ok"}`)
+		if err != nil {
+			_ = level.Debug(logger).Log("Failed to write to stream", "err", err)
+		}
+	})
 	http.HandleFunc("/version", func(w http.ResponseWriter, r *http.Request) {
 		// we can't use "version" directly as it is a package, and not an object that
 		// can be serialized.
@@ -250,34 +282,29 @@ func main() {
 		}
 		landingPage, err := web.NewLandingPage(landingConfig)
 		if err != nil {
-			log.Fatalf("failed to generate landing page: %v", err)
+			_ = level.Error(logger).Log("msg", "failed to generate landing page", "err", err)
+			os.Exit(1)
 		}
 		http.Handle("/", landingPage)
 	}
 
-	log.Infoln("Starting windows_exporter", version.Info())
-	log.Infoln("Build context", version.BuildContext())
+	_ = level.Info(logger).Log("msg", "Starting windows_exporter", "version", version.Info())
+	_ = level.Info(logger).Log("msg", "Build context", "build_context", version.BuildContext())
+	_ = level.Debug(logger).Log("msg", "Go MAXPROCS", "procs", runtime.GOMAXPROCS(0))
 
 	go func() {
 		server := &http.Server{}
-		if err := web.ListenAndServe(server, webConfig, log.NewToolkitAdapter()); err != nil {
-			log.Fatalf("cannot start windows_exporter: %s", err)
+		if err := web.ListenAndServe(server, webConfig, logger); err != nil {
+			_ = level.Error(logger).Log("msg", "cannot start windows_exporter", "err", err)
+			os.Exit(1)
 		}
 	}()
 
 	for {
 		if <-initiate.StopCh {
-			log.Info("Shutting down windows_exporter")
+			_ = level.Info(logger).Log("msg", "Shutting down windows_exporter")
 			break
 		}
-	}
-}
-
-func healthCheck(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	_, err := fmt.Fprintln(w, `{"status":"ok"}`)
-	if err != nil {
-		log.Debugf("Failed to write to stream: %v", err)
 	}
 }
 
@@ -312,6 +339,7 @@ type metricsHandler struct {
 	timeoutMargin          float64
 	includeExporterMetrics bool
 	collectorFactory       func(timeout time.Duration, requestedCollectors []string) (error, *collector.Prometheus)
+	logger                 log.Logger
 }
 
 func (mh *metricsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -322,7 +350,7 @@ func (mh *metricsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		var err error
 		timeoutSeconds, err = strconv.ParseFloat(v, 64)
 		if err != nil {
-			log.Warnf("Couldn't parse X-Prometheus-Scrape-Timeout-Seconds: %q. Defaulting timeout to %f", v, defaultTimeout)
+			_ = level.Warn(mh.logger).Log("msg", fmt.Sprintf("Couldn't parse X-Prometheus-Scrape-Timeout-Seconds: %q. Defaulting timeout to %f", v, defaultTimeout))
 		}
 	}
 	if timeoutSeconds == 0 {
@@ -333,7 +361,7 @@ func (mh *metricsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	reg := prometheus.NewRegistry()
 	err, wc := mh.collectorFactory(time.Duration(timeoutSeconds*float64(time.Second)), r.URL.Query()["collect[]"])
 	if err != nil {
-		log.Warnln("Couldn't create filtered metrics handler: ", err)
+		_ = level.Warn(mh.logger).Log("msg", "Couldn't create filtered metrics handler", "err", err)
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(fmt.Sprintf("Couldn't create filtered metrics handler: %s", err))) //nolint:errcheck
 		return
@@ -347,6 +375,8 @@ func (mh *metricsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		)
 	}
 
-	h := promhttp.HandlerFor(reg, promhttp.HandlerOpts{})
+	h := promhttp.HandlerFor(reg, promhttp.HandlerOpts{
+		ErrorLog: stdlog.New(log.NewStdlibAdapter(level.Error(mh.logger)), "", stdlog.Lshortfile),
+	})
 	h.ServeHTTP(w, r)
 }

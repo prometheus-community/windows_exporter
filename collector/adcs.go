@@ -5,12 +5,16 @@ package collector
 
 import (
 	"errors"
-	"github.com/prometheus-community/windows_exporter/log"
-	"github.com/prometheus/client_golang/prometheus"
 	"strings"
+
+	"github.com/go-kit/log"
+	"github.com/go-kit/log/level"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 type adcsCollector struct {
+	logger log.Logger
+
 	RequestsPerSecond                            *prometheus.Desc
 	RequestProcessingTime                        *prometheus.Desc
 	RetrievalsPerSecond                          *prometheus.Desc
@@ -27,9 +31,11 @@ type adcsCollector struct {
 }
 
 // ADCSCollectorMethod ...
-func adcsCollectorMethod() (Collector, error) {
+func adcsCollectorMethod(logger log.Logger) (Collector, error) {
 	const subsystem = "adcs"
 	return &adcsCollector{
+		logger: log.With(logger, "collector", subsystem),
+
 		RequestsPerSecond: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "requests_total"),
 			"Total certificate requests processed",
@@ -113,7 +119,7 @@ func adcsCollectorMethod() (Collector, error) {
 
 func (c *adcsCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	if desc, err := c.collectADCSCounters(ctx, ch); err != nil {
-		log.Error("Failed collecting ADCS Metrics:", desc, err)
+		_ = level.Error(c.logger).Log("msg", "failed collecting ADCS metrics", "desc", desc, "err", err)
 		return err
 	}
 	return nil
@@ -141,7 +147,7 @@ func (c *adcsCollector) collectADCSCounters(ctx *ScrapeContext, ch chan<- promet
 	if _, ok := ctx.perfObjects["Certification Authority"]; !ok {
 		return nil, errors.New("Perflib did not contain an entry for Certification Authority")
 	}
-	err := unmarshalObject(ctx.perfObjects["Certification Authority"], &dst)
+	err := unmarshalObject(ctx.perfObjects["Certification Authority"], &dst, c.logger)
 	if err != nil {
 		return nil, err
 	}

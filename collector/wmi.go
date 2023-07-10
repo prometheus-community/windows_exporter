@@ -2,9 +2,11 @@ package collector
 
 import (
 	"bytes"
+	"fmt"
 	"reflect"
 
-	"github.com/prometheus-community/windows_exporter/log"
+	"github.com/go-kit/log"
+	"github.com/go-kit/log/level"
 )
 
 func className(src interface{}) string {
@@ -16,25 +18,25 @@ func className(src interface{}) string {
 	return t.Name()
 }
 
-func queryAll(src interface{}) string {
+func queryAll(src interface{}, logger log.Logger) string {
 	var b bytes.Buffer
 	b.WriteString("SELECT * FROM ")
 	b.WriteString(className(src))
 
-	log.Debugf("Generated WMI query %s", b.String())
+	_ = level.Debug(logger).Log("msg", fmt.Sprintf("Generated WMI query %s", b.String()))
 	return b.String()
 }
 
-func queryAllForClass(src interface{}, class string) string {
+func queryAllForClass(src interface{}, class string, logger log.Logger) string {
 	var b bytes.Buffer
 	b.WriteString("SELECT * FROM ")
 	b.WriteString(class)
 
-	log.Debugf("Generated WMI query %s", b.String())
+	_ = level.Debug(logger).Log("msg", fmt.Sprintf("Generated WMI query %s", b.String()))
 	return b.String()
 }
 
-func queryAllWhere(src interface{}, where string) string {
+func queryAllWhere(src interface{}, where string, logger log.Logger) string {
 	var b bytes.Buffer
 	b.WriteString("SELECT * FROM ")
 	b.WriteString(className(src))
@@ -44,11 +46,11 @@ func queryAllWhere(src interface{}, where string) string {
 		b.WriteString(where)
 	}
 
-	log.Debugf("Generated WMI query %s", b.String())
+	_ = level.Debug(logger).Log("msg", fmt.Sprintf("Generated WMI query %s", b.String()))
 	return b.String()
 }
 
-func queryAllForClassWhere(src interface{}, class string, where string) string {
+func queryAllForClassWhere(src interface{}, class string, where string, logger log.Logger) string {
 	var b bytes.Buffer
 	b.WriteString("SELECT * FROM ")
 	b.WriteString(class)
@@ -58,6 +60,6 @@ func queryAllForClassWhere(src interface{}, class string, where string) string {
 		b.WriteString(where)
 	}
 
-	log.Debugf("Generated WMI query %s", b.String())
+	_ = level.Debug(logger).Log("msg", fmt.Sprintf("Generated WMI query %s", b.String()))
 	return b.String()
 }

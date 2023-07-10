@@ -1,12 +1,15 @@
 package collector
 
 import (
+	"github.com/go-kit/log"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
 )
 
 // A MSCluster_ResourceGroupCollector is a Prometheus collector for WMI MSCluster_ResourceGroup metrics
 type MSCluster_ResourceGroupCollector struct {
+	logger log.Logger
+
 	AutoFailbackType    *prometheus.Desc
 	Characteristics     *prometheus.Desc
 	ColdStartSetting    *prometheus.Desc
@@ -24,9 +27,10 @@ type MSCluster_ResourceGroupCollector struct {
 	State               *prometheus.Desc
 }
 
-func newMSCluster_ResourceGroupCollector() (Collector, error) {
+func newMSCluster_ResourceGroupCollector(logger log.Logger) (Collector, error) {
 	const subsystem = "mscluster_resourcegroup"
 	return &MSCluster_ResourceGroupCollector{
+		logger: log.With(logger, "collector", subsystem),
 		AutoFailbackType: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "auto_failback_type"),
 			"Provides access to the group's AutoFailbackType property.",
@@ -132,7 +136,7 @@ type MSCluster_ResourceGroup struct {
 // to the provided prometheus Metric channel.
 func (c *MSCluster_ResourceGroupCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	var dst []MSCluster_ResourceGroup
-	q := queryAll(&dst)
+	q := queryAll(&dst, c.logger)
 	if err := wmi.QueryNamespace(q, &dst, "root/MSCluster"); err != nil {
 		return err
 	}

@@ -7,8 +7,9 @@ import (
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
+	"github.com/go-kit/log"
+	"github.com/go-kit/log/level"
 	"github.com/leoluk/perflib_exporter/perflib"
-	"github.com/prometheus-community/windows_exporter/log"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows/registry"
 )
@@ -25,35 +26,35 @@ const (
 
 // getWindowsVersion reads the version number of the OS from the Registry
 // See https://docs.microsoft.com/en-us/windows/desktop/sysinfo/operating-system-version
-func getWindowsVersion() float64 {
+func getWindowsVersion(logger log.Logger) float64 {
 	k, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\Microsoft\Windows NT\CurrentVersion`, registry.QUERY_VALUE)
 	if err != nil {
-		log.Warn("Couldn't open registry", err)
+		_ = level.Warn(logger).Log("msg", "Couldn't open registry", "err", err)
 		return 0
 	}
 	defer func() {
 		err = k.Close()
 		if err != nil {
-			log.Warnf("Failed to close registry key: %v", err)
+			_ = level.Warn(logger).Log("msg", "Failed to close registry key", "err", err)
 		}
 	}()
 
 	currentv, _, err := k.GetStringValue("CurrentVersion")
 	if err != nil {
-		log.Warn("Couldn't open registry to determine current Windows version:", err)
+		_ = level.Warn(logger).Log("msg", "Couldn't open registry to determine current Windows version", "err", err)
 		return 0
 	}
 
 	currentv_flt, err := strconv.ParseFloat(currentv, 64)
 
-	log.Debugf("Detected Windows version %f\n", currentv_flt)
+	_ = level.Debug(logger).Log("msg", fmt.Sprintf("Detected Windows version %f\n", currentv_flt))
 
 	return currentv_flt
 }
 
-type collectorBuilder func() (Collector, error)
+type collectorBuilder func(log.Logger) (Collector, error)
 type flagsBuilder func(*kingpin.Application)
-type perfCounterNamesBuilder func() []string
+type perfCounterNamesBuilder func(log.Logger) []string
 
 var (
 	builders                = make(map[string]collectorBuilder)
@@ -80,12 +81,12 @@ func Available() []string {
 	}
 	return cs
 }
-func Build(collector string) (Collector, error) {
+func Build(collector string, logger log.Logger) (Collector, error) {
 	builder, exists := builders[collector]
 	if !exists {
 		return nil, fmt.Errorf("Unknown collector %q", collector)
 	}
-	return builder()
+	return builder(logger)
 }
 func getPerfQuery(collectors []string) string {
 	parts := make([]string, 0, len(collectors))

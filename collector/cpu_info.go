@@ -8,7 +8,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/prometheus-community/windows_exporter/log"
+	"github.com/go-kit/log"
+	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
 )
@@ -20,13 +21,18 @@ const (
 
 // A CpuInfoCollector is a Prometheus collector for a few WMI metrics in Win32_Processor
 type CpuInfoCollector struct {
+	logger  log.Logger
 	CpuInfo *prometheus.Desc
 }
 
-func newCpuInfoCollector() (Collector, error) {
+func newCpuInfoCollector(logger log.Logger) (Collector, error) {
+	const subsystem = "cpu_info"
+
 	return &CpuInfoCollector{
+		logger: log.With(logger, "collector", subsystem),
+
 		CpuInfo: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, "", "cpu_info"),
+			prometheus.BuildFQName(Namespace, "", subsystem),
 			"Labeled CPU information as provided provided by Win32_Processor",
 			[]string{
 				"architecture",
@@ -55,7 +61,7 @@ type win32_Processor struct {
 // to the provided prometheus Metric channel.
 func (c *CpuInfoCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ch); err != nil {
-		log.Error("failed collecting cpu_info metrics:", desc, err)
+		_ = level.Error(c.logger).Log("msg", "failed collecting cpu_info metrics", "desc", desc, "err", err)
 		return err
 	}
 	return nil

@@ -6,13 +6,16 @@ package collector
 import (
 	"errors"
 
-	"github.com/prometheus-community/windows_exporter/log"
+	"github.com/go-kit/log"
+	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
 )
 
 // A DNSCollector is a Prometheus collector for WMI Win32_PerfRawData_DNS_DNS metrics
 type DNSCollector struct {
+	logger log.Logger
+
 	ZoneTransferRequestsReceived  *prometheus.Desc
 	ZoneTransferRequestsSent      *prometheus.Desc
 	ZoneTransferResponsesReceived *prometheus.Desc
@@ -38,9 +41,11 @@ type DNSCollector struct {
 }
 
 // newDNSCollector ...
-func newDNSCollector() (Collector, error) {
+func newDNSCollector(logger log.Logger) (Collector, error) {
 	const subsystem = "dns"
 	return &DNSCollector{
+		logger: log.With(logger, "collector", subsystem),
+
 		ZoneTransferRequestsReceived: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "zone_transfer_requests_received_total"),
 			"Number of zone transfer requests (AXFR/IXFR) received by the master DNS server",
@@ -180,7 +185,7 @@ func newDNSCollector() (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *DNSCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ch); err != nil {
-		log.Error("failed collecting dns metrics:", desc, err)
+		_ = level.Error(c.logger).Log("msg", "failed collecting dns metrics", "desc", desc, "err", err)
 		return err
 	}
 	return nil
@@ -234,7 +239,7 @@ type Win32_PerfRawData_DNS_DNS struct {
 
 func (c *DNSCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_PerfRawData_DNS_DNS
-	q := queryAll(&dst)
+	q := queryAll(&dst, c.logger)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
 	}

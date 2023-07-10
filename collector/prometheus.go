@@ -8,7 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/prometheus-community/windows_exporter/log"
+	"github.com/go-kit/log"
+	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -45,14 +46,16 @@ var (
 type Prometheus struct {
 	maxScrapeDuration time.Duration
 	collectors        map[string]Collector
+	logger            log.Logger
 }
 
 // NewPrometheus returns a new Prometheus where the set of collectors must
 // return metrics within the given timeout.
-func NewPrometheus(timeout time.Duration, cs map[string]Collector) *Prometheus {
+func NewPrometheus(timeout time.Duration, cs map[string]Collector, logger log.Logger) *Prometheus {
 	return &Prometheus{
 		maxScrapeDuration: timeout,
 		collectors:        cs,
+		logger:            logger,
 	}
 }
 
@@ -113,7 +116,7 @@ func (coll *Prometheus) Collect(ch chan<- prometheus.Metric) {
 	for name, c := range coll.collectors {
 		go func(name string, c Collector) {
 			defer wg.Done()
-			outcome := execute(name, c, scrapeContext, metricsBuffer)
+			outcome := execute(name, c, scrapeContext, metricsBuffer, coll.logger)
 			l.Lock()
 			if !finished {
 				collectorOutcomes[name] = outcome
@@ -164,13 +167,13 @@ func (coll *Prometheus) Collect(ch chan<- prometheus.Metric) {
 	}
 
 	if len(remainingCollectorNames) > 0 {
-		log.Warn("Collection timed out, still waiting for ", remainingCollectorNames)
+		_ = level.Warn(coll.logger).Log("msg", fmt.Sprintf("Collection timed out, still waiting for %v", remainingCollectorNames))
 	}
 
 	l.Unlock()
 }
 
-func execute(name string, c Collector, ctx *ScrapeContext, ch chan<- prometheus.Metric) collectorOutcome {
+func execute(name string, c Collector, ctx *ScrapeContext, ch chan<- prometheus.Metric, logger log.Logger) collectorOutcome {
 	t := time.Now()
 	err := c.Collect(ctx, ch)
 	duration := time.Since(t).Seconds()
@@ -182,9 +185,9 @@ func execute(name string, c Collector, ctx *ScrapeContext, ch chan<- prometheus.
 	)
 
 	if err != nil {
-		log.Errorf("collector %s failed after %fs: %s", name, duration, err)
+		_ = level.Error(logger).Log("msg", fmt.Sprintf("collector %s failed after %fs", name, duration), "err", err)
 		return failed
 	}
-	log.Debugf("collector %s succeeded after %fs.", name, duration)
+	_ = level.Debug(logger).Log("msg", fmt.Sprintf("collector %s succeeded after %fs.", name, duration))
 	return success
 }

@@ -9,7 +9,8 @@ import (
 	"syscall"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/prometheus-community/windows_exporter/log"
+	"github.com/go-kit/log"
+	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
 	"golang.org/x/sys/windows"
@@ -28,6 +29,8 @@ var (
 
 // A serviceCollector is a Prometheus collector for WMI Win32_Service metrics
 type serviceCollector struct {
+	logger log.Logger
+
 	Information *prometheus.Desc
 	State       *prometheus.Desc
 	StartMode   *prometheus.Desc
@@ -49,17 +52,20 @@ func newServiceCollectorFlags(app *kingpin.Application) {
 }
 
 // newserviceCollector ...
-func newserviceCollector() (Collector, error) {
+func newserviceCollector(logger log.Logger) (Collector, error) {
 	const subsystem = "service"
+	logger = log.With(logger, "collector", subsystem)
 
 	if *serviceWhereClause == "" {
-		log.Warn("No where-clause specified for service collector. This will generate a very large number of metrics!")
+		_ = level.Warn(logger).Log("msg", "No where-clause specified for service collector. This will generate a very large number of metrics!")
 	}
 	if *useAPI {
-		log.Warn("API collection is enabled.")
+		_ = level.Warn(logger).Log("msg", "API collection is enabled.")
 	}
 
 	return &serviceCollector{
+		logger: logger,
+
 		Information: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "info"),
 			"A metric with a constant '1' value labeled with service information",
@@ -93,12 +99,12 @@ func newserviceCollector() (Collector, error) {
 func (c *serviceCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	if *useAPI {
 		if err := c.collectAPI(ch); err != nil {
-			log.Error("failed collecting API service metrics:", err)
+			_ = level.Error(c.logger).Log("msg", "failed collecting API service metrics:", "err", err)
 			return err
 		}
 	} else {
 		if err := c.collectWMI(ch); err != nil {
-			log.Error("failed collecting WMI service metrics:", err)
+			_ = level.Error(c.logger).Log("msg", "failed collecting WMI service metrics:", "err", err)
 			return err
 		}
 	}
@@ -169,7 +175,7 @@ var (
 
 func (c *serviceCollector) collectWMI(ch chan<- prometheus.Metric) error {
 	var dst []Win32_Service
-	q := queryAllWhere(&dst, c.queryWhereClause)
+	q := queryAllWhere(&dst, c.queryWhereClause, c.logger)
 	if err := wmi.Query(q, &dst); err != nil {
 		return err
 	}
@@ -253,14 +259,14 @@ func (c *serviceCollector) collectAPI(ch chan<- prometheus.Metric) error {
 		// Get UTF16 service name.
 		serviceName, err := syscall.UTF16PtrFromString(service)
 		if err != nil {
-			log.Warnf("Service %s get name error:  %#v", service, err)
+			_ = level.Warn(c.logger).Log("msg", fmt.Sprintf("Service %s get name error:  %#v", service, err))
 			continue
 		}
 
 		// Open connection for service handler.
 		serviceHandle, err := windows.OpenService(svcmgrConnection.Handle, serviceName, windows.GENERIC_READ)
 		if err != nil {
-			log.Warnf("Open service %s error:  %#v", service, err)
+			_ = level.Warn(c.logger).Log("msg", fmt.Sprintf("Open service %s error:  %#v", service, err))
 			continue
 		}
 
@@ -271,14 +277,14 @@ func (c *serviceCollector) collectAPI(ch chan<- prometheus.Metric) error {
 		// Get Service Configuration.
 		serviceConfig, err := serviceManager.Config()
 		if err != nil {
-			log.Warnf("Get ervice %s config error:  %#v", service, err)
+			_ = level.Warn(c.logger).Log("msg", fmt.Sprintf("Get ervice %s config error:  %#v", service, err))
 			continue
 		}
 
 		// Get Service Current Status.
 		serviceStatus, err := serviceManager.Query()
 		if err != nil {
-			log.Warnf("Get service %s status error:  %#v", service, err)
+			_ = level.Warn(c.logger).Log("msg", fmt.Sprintf("Get service %s status error:  %#v", service, err))
 			continue
 		}
 

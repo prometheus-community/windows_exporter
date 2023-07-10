@@ -5,12 +5,15 @@ package collector
 
 import (
 	"github.com/Microsoft/hcsshim"
-	"github.com/prometheus-community/windows_exporter/log"
+	"github.com/go-kit/log"
+	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 // A ContainerMetricsCollector is a Prometheus collector for containers metrics
 type ContainerMetricsCollector struct {
+	logger log.Logger
+
 	// Presence
 	ContainerAvailable *prometheus.Desc
 
@@ -42,9 +45,11 @@ type ContainerMetricsCollector struct {
 }
 
 // newContainerMetricsCollector constructs a new ContainerMetricsCollector
-func newContainerMetricsCollector() (Collector, error) {
+func newContainerMetricsCollector(logger log.Logger) (Collector, error) {
 	const subsystem = "container"
 	return &ContainerMetricsCollector{
+		logger: log.With(logger, "collector", subsystem),
+
 		ContainerAvailable: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "available"),
 			"Available",
@@ -160,17 +165,17 @@ func newContainerMetricsCollector() (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *ContainerMetricsCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ch); err != nil {
-		log.Error("failed collecting ContainerMetricsCollector metrics:", desc, err)
+		_ = level.Error(c.logger).Log("msg", "failed collecting ContainerMetricsCollector metrics", "desc", desc, "err", err)
 		return err
 	}
 	return nil
 }
 
 // containerClose closes the container resource
-func containerClose(c hcsshim.Container) {
-	err := c.Close()
+func (c *ContainerMetricsCollector) containerClose(container hcsshim.Container) {
+	err := container.Close()
 	if err != nil {
-		log.Error(err)
+		_ = level.Error(c.logger).Log("err", err)
 	}
 }
 
@@ -179,7 +184,7 @@ func (c *ContainerMetricsCollector) collect(ch chan<- prometheus.Metric) (*prome
 	// Types Container is passed to get the containers compute systems only
 	containers, err := hcsshim.GetContainers(hcsshim.ComputeSystemQuery{Types: []string{"Container"}})
 	if err != nil {
-		log.Error("Err in Getting containers:", err)
+		_ = level.Error(c.logger).Log("msg", "Err in Getting containers", "err", err)
 		return nil, err
 	}
 
@@ -197,16 +202,16 @@ func (c *ContainerMetricsCollector) collect(ch chan<- prometheus.Metric) (*prome
 	for _, containerDetails := range containers {
 		container, err := hcsshim.OpenContainer(containerDetails.ID)
 		if container != nil {
-			defer containerClose(container)
+			defer c.containerClose(container)
 		}
 		if err != nil {
-			log.Error("err in opening container: ", containerDetails.ID, err)
+			_ = level.Error(c.logger).Log("msg", "err in opening container", "containerId", containerDetails.ID, "err", err)
 			continue
 		}
 
 		cstats, err := container.Statistics()
 		if err != nil {
-			log.Error("err in fetching container Statistics: ", containerDetails.ID, err)
+			_ = level.Error(c.logger).Log("msg", "err in fetching container Statistics", "containerId", containerDetails.ID, "err", err)
 			continue
 		}
 		containerIdWithPrefix := getContainerIdWithPrefix(containerDetails)
@@ -255,7 +260,7 @@ func (c *ContainerMetricsCollector) collect(ch chan<- prometheus.Metric) (*prome
 		)
 
 		if len(cstats.Network) == 0 {
-			log.Info("No Network Stats for container: ", containerDetails.ID)
+			_ = level.Info(c.logger).Log("msg", "No Network Stats for container", "containerId", containerDetails.ID)
 			continue
 		}
 

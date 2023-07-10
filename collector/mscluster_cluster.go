@@ -1,12 +1,15 @@
 package collector
 
 import (
+	"github.com/go-kit/log"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
 )
 
 // A MSCluster_ClusterCollector is a Prometheus collector for WMI MSCluster_Cluster metrics
 type MSCluster_ClusterCollector struct {
+	logger log.Logger
+
 	AddEvictDelay                           *prometheus.Desc
 	AdminAccessPoint                        *prometheus.Desc
 	AutoAssignNodeSite                      *prometheus.Desc
@@ -86,9 +89,11 @@ type MSCluster_ClusterCollector struct {
 	WitnessRestartInterval                  *prometheus.Desc
 }
 
-func newMSCluster_ClusterCollector() (Collector, error) {
+func newMSCluster_ClusterCollector(logger log.Logger) (Collector, error) {
 	const subsystem = "mscluster_cluster"
 	return &MSCluster_ClusterCollector{
+		logger: log.With(logger, "collector", subsystem),
+
 		AddEvictDelay: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "add_evict_delay"),
 			"Provides access to the cluster's AddEvictDelay property, which is the number a seconds that a new node is delayed after an eviction of another node.",
@@ -642,7 +647,7 @@ type MSCluster_Cluster struct {
 // to the provided prometheus Metric channel.
 func (c *MSCluster_ClusterCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	var dst []MSCluster_Cluster
-	q := queryAll(&dst)
+	q := queryAll(&dst, c.logger)
 	if err := wmi.QueryNamespace(q, &dst, "root/MSCluster"); err != nil {
 		return err
 	}
