@@ -12,14 +12,9 @@ import (
 // (for many use cases the index is sufficient)
 
 var CounterNameTable = *QueryNameTable("Counter 009")
-var HelpNameTable = *QueryNameTable("Help 009")
 
 func (p *perfObjectType) LookupName() string {
 	return CounterNameTable.LookupString(p.ObjectNameTitleIndex)
-}
-
-func (p *perfObjectType) LookupHelp() string {
-	return HelpNameTable.LookupString(p.ObjectHelpTitleIndex)
 }
 
 type NameTable struct {

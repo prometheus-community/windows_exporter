@@ -133,10 +133,6 @@ func (p *perfCounterDefinition) LookupName() string {
 	return CounterNameTable.LookupString(p.CounterNameTitleIndex)
 }
 
-func (p *perfCounterDefinition) LookupHelp() string {
-	return HelpNameTable.LookupString(p.CounterHelpTitleIndex)
-}
-
 /*
 perfCounterBlock
 See: https://msdn.microsoft.com/en-us/library/windows/desktop/aa373147(v=vs.85).aspx

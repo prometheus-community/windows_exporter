@@ -127,13 +127,9 @@ const averageCount64Type = 1073874176
 
 // PerfObject Top-level performance object (like "Process").
 type PerfObject struct {
-	Name string
-	// Same index you pass to QueryPerformanceData
-	NameIndex     uint
-	HelpText      string
-	HelpTextIndex uint
-	Instances     []*PerfInstance
-	CounterDefs   []*PerfCounterDef
+	Name        string
+	Instances   []*PerfInstance
+	CounterDefs []*PerfCounterDef
 
 	Frequency int64
 
@@ -152,10 +148,7 @@ type PerfInstance struct {
 }
 
 type PerfCounterDef struct {
-	Name          string
-	NameIndex     uint
-	HelpText      string
-	HelpTextIndex uint
+	Name string
 
 	// For debugging - subject to removal. CounterType is a perflib
 	// implementation detail (see perflib.h) and should not be used outside
@@ -330,14 +323,11 @@ func QueryPerformanceData(query string) ([]*PerfObject, error) {
 		counterDefs := make([]*PerfCounterDef, numCounterDefs)
 
 		objects[i] = &PerfObject{
-			Name:          obj.LookupName(),
-			NameIndex:     uint(obj.ObjectNameTitleIndex),
-			HelpText:      obj.LookupHelp(),
-			HelpTextIndex: uint(obj.ObjectHelpTitleIndex),
-			Instances:     instances,
-			CounterDefs:   counterDefs,
-			Frequency:     obj.PerfFreq,
-			rawData:       obj,
+			Name:        obj.LookupName(),
+			Instances:   instances,
+			CounterDefs: counterDefs,
+			Frequency:   obj.PerfFreq,
+			rawData:     obj,
 		}
 
 		for i := 0; i < numCounterDefs; i++ {
@@ -348,11 +338,8 @@ func QueryPerformanceData(query string) ([]*PerfObject, error) {
 			}
 
 			counterDefs[i] = &PerfCounterDef{
-				Name:          def.LookupName(),
-				NameIndex:     uint(def.CounterNameTitleIndex),
-				HelpText:      def.LookupHelp(),
-				HelpTextIndex: uint(def.CounterHelpTitleIndex),
-				rawData:       def,
+				Name:    def.LookupName(),
+				rawData: def,
 
 				CounterType: def.CounterType,
 
