@@ -1,3 +1,5 @@
+package perflib
+
 /*
 Go bindings for the HKEY_PERFORMANCE_DATA perflib / Performance Counters interface.
 
@@ -107,7 +109,6 @@ Data for some of the objects is also available through WMI:
 	TotalRequestsPerSecond         : 59
 	UserQuotaViolationsPerSecond   : 0
 */
-package perflib
 
 import (
 	"bytes"
@@ -125,7 +126,7 @@ var bo = binary.LittleEndian
 
 const averageCount64Type = 1073874176
 
-// Top-level performance object (like "Process").
+// PerfObject Top-level performance object (like "Process").
 type PerfObject struct {
 	Name string
 	// Same index you pass to QueryPerformanceData
@@ -140,7 +141,7 @@ type PerfObject struct {
 	rawData *perfObjectType
 }
 
-// Each object can have multiple instances. For example,
+// PerfInstance Each object can have multiple instances. For example,
 // In case the object has no instances, we return one single PerfInstance with an empty name.
 type PerfInstance struct {
 	// *not* resolved using a name table
@@ -187,7 +188,7 @@ var (
 	bufLenCostly = uint32(2000000)
 )
 
-// Queries the performance counter buffer using RegQueryValueEx, returning raw bytes. See:
+// queryRawData Queries the performance counter buffer using RegQueryValueEx, returning raw bytes. See:
 // https://msdn.microsoft.com/de-de/library/windows/desktop/aa373219(v=vs.85).aspx
 func queryRawData(query string) ([]byte, error) {
 	var (
@@ -261,7 +262,7 @@ func queryRawData(query string) ([]byte, error) {
 }
 
 /*
-Query all performance counters that match a given query.
+QueryPerformanceData Query all performance counters that match a given query.
 
 The query can be any of the following:
 

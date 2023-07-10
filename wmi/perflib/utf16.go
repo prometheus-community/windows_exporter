@@ -6,7 +6,7 @@ import (
 	"syscall"
 )
 
-// Read an unterminated UTF16 string at a given position, specifying its length
+// readUTF16StringAtPos Read an unterminated UTF16 string at a given position, specifying its length
 func readUTF16StringAtPos(r io.ReadSeeker, absPos int64, length uint32) (string, error) {
 	value := make([]uint16, length/2)
 	_, err := r.Seek(absPos, io.SeekStart)
@@ -24,7 +24,7 @@ func readUTF16StringAtPos(r io.ReadSeeker, absPos int64, length uint32) (string,
 	return syscall.UTF16ToString(value), nil
 }
 
-// Reads a null-terminated UTF16 string at the current offset
+// readUTF16String Reads a null-terminated UTF16 string at the current offset
 func readUTF16String(r io.Reader) (string, error) {
 	var err error
 

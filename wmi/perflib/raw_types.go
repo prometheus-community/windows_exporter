@@ -11,26 +11,26 @@ type binaryReaderFrom interface {
 }
 
 /*
-https://msdn.microsoft.com/de-de/library/windows/desktop/aa373157(v=vs.85).aspx
+perfDataBlock
+See: https://msdn.microsoft.com/de-de/library/windows/desktop/aa373157(v=vs.85).aspx
 
-typedef struct _PERF_DATA_BLOCK {
-  WCHAR         Signature[4];
-  DWORD         LittleEndian;
-  DWORD         Version;
-  DWORD         Revision;
-  DWORD         TotalByteLength;
-  DWORD         HeaderLength;
-  DWORD         NumObjectTypes;
-  DWORD         DefaultObject;
-  SYSTEMTIME    SystemTime;
-  LARGE_INTEGER PerfTime;
-  LARGE_INTEGER PerfFreq;
-  LARGE_INTEGER PerfTime100nSec;
-  DWORD         SystemNameLength;
-  DWORD         SystemNameOffset;
-} PERF_DATA_BLOCK;
+	typedef struct _PERF_DATA_BLOCK {
+	  WCHAR         Signature[4];
+	  DWORD         LittleEndian;
+	  DWORD         Version;
+	  DWORD         Revision;
+	  DWORD         TotalByteLength;
+	  DWORD         HeaderLength;
+	  DWORD         NumObjectTypes;
+	  DWORD         DefaultObject;
+	  SYSTEMTIME    SystemTime;
+	  LARGE_INTEGER PerfTime;
+	  LARGE_INTEGER PerfFreq;
+	  LARGE_INTEGER PerfTime100nSec;
+	  DWORD         SystemNameLength;
+	  DWORD         SystemNameOffset;
+	} PERF_DATA_BLOCK;
 */
-
 type perfDataBlock struct {
 	Signature        [4]uint16
 	LittleEndian     uint32
@@ -54,26 +54,26 @@ func (p *perfDataBlock) BinaryReadFrom(r io.Reader) error {
 }
 
 /*
-https://msdn.microsoft.com/en-us/library/windows/desktop/aa373160(v=vs.85).aspx
+perfObjectType
+See: https://msdn.microsoft.com/en-us/library/windows/desktop/aa373160(v=vs.85).aspx
 
-typedef struct _PERF_OBJECT_TYPE {
-  DWORD         TotalByteLength;
-  DWORD         DefinitionLength;
-  DWORD         HeaderLength;
-  DWORD         ObjectNameTitleIndex;
-  LPWSTR        ObjectNameTitle;
-  DWORD         ObjectHelpTitleIndex;
-  LPWSTR        ObjectHelpTitle;
-  DWORD         DetailLevel;
-  DWORD         NumCounters;
-  DWORD         DefaultCounter;
-  DWORD         NumInstances;
-  DWORD         CodePage;
-  LARGE_INTEGER PerfTime;
-  LARGE_INTEGER PerfFreq;
-} PERF_OBJECT_TYPE;
+	typedef struct _PERF_OBJECT_TYPE {
+	  DWORD         TotalByteLength;
+	  DWORD         DefinitionLength;
+	  DWORD         HeaderLength;
+	  DWORD         ObjectNameTitleIndex;
+	  LPWSTR        ObjectNameTitle;
+	  DWORD         ObjectHelpTitleIndex;
+	  LPWSTR        ObjectHelpTitle;
+	  DWORD         DetailLevel;
+	  DWORD         NumCounters;
+	  DWORD         DefaultCounter;
+	  DWORD         NumInstances;
+	  DWORD         CodePage;
+	  LARGE_INTEGER PerfTime;
+	  LARGE_INTEGER PerfFreq;
+	} PERF_OBJECT_TYPE;
 */
-
 type perfObjectType struct {
 	TotalByteLength      uint32
 	DefinitionLength     uint32
@@ -96,22 +96,22 @@ func (p *perfObjectType) BinaryReadFrom(r io.Reader) error {
 }
 
 /*
-https://msdn.microsoft.com/en-us/library/windows/desktop/aa373150(v=vs.85).aspx
+perfCounterDefinition
+See: https://msdn.microsoft.com/en-us/library/windows/desktop/aa373150(v=vs.85).aspx
 
-typedef struct _PERF_COUNTER_DEFINITION {
-  DWORD  ByteLength;
-  DWORD  CounterNameTitleIndex;
-  LPWSTR CounterNameTitle;
-  DWORD  CounterHelpTitleIndex;
-  LPWSTR CounterHelpTitle;
-  LONG   DefaultScale;
-  DWORD  DetailLevel;
-  DWORD  CounterType;
-  DWORD  CounterSize;
-  DWORD  CounterOffset;
-} PERF_COUNTER_DEFINITION;
+	typedef struct _PERF_COUNTER_DEFINITION {
+	  DWORD  ByteLength;
+	  DWORD  CounterNameTitleIndex;
+	  LPWSTR CounterNameTitle;
+	  DWORD  CounterHelpTitleIndex;
+	  LPWSTR CounterHelpTitle;
+	  LONG   DefaultScale;
+	  DWORD  DetailLevel;
+	  DWORD  CounterType;
+	  DWORD  CounterSize;
+	  DWORD  CounterOffset;
+	} PERF_COUNTER_DEFINITION;
 */
-
 type perfCounterDefinition struct {
 	ByteLength            uint32
 	CounterNameTitleIndex uint32
@@ -138,13 +138,13 @@ func (p *perfCounterDefinition) LookupHelp() string {
 }
 
 /*
-https://msdn.microsoft.com/en-us/library/windows/desktop/aa373147(v=vs.85).aspx
+perfCounterBlock
+See: https://msdn.microsoft.com/en-us/library/windows/desktop/aa373147(v=vs.85).aspx
 
-typedef struct _PERF_COUNTER_BLOCK {
-  DWORD ByteLength;
-} PERF_COUNTER_BLOCK;
+	typedef struct _PERF_COUNTER_BLOCK {
+	  DWORD ByteLength;
+	} PERF_COUNTER_BLOCK;
 */
-
 type perfCounterBlock struct {
 	ByteLength uint32
 }
@@ -154,18 +154,18 @@ func (p *perfCounterBlock) BinaryReadFrom(r io.Reader) error {
 }
 
 /*
-https://msdn.microsoft.com/en-us/library/windows/desktop/aa373159(v=vs.85).aspx
+perfInstanceDefinition
+See: https://msdn.microsoft.com/en-us/library/windows/desktop/aa373159(v=vs.85).aspx
 
-typedef struct _PERF_INSTANCE_DEFINITION {
-  DWORD ByteLength;
-  DWORD ParentObjectTitleIndex;
-  DWORD ParentObjectInstance;
-  DWORD UniqueID;
-  DWORD NameOffset;
-  DWORD NameLength;
-} PERF_INSTANCE_DEFINITION;
+	typedef struct _PERF_INSTANCE_DEFINITION {
+	  DWORD ByteLength;
+	  DWORD ParentObjectTitleIndex;
+	  DWORD ParentObjectInstance;
+	  DWORD UniqueID;
+	  DWORD NameOffset;
+	  DWORD NameLength;
+	} PERF_INSTANCE_DEFINITION;
 */
-
 type perfInstanceDefinition struct {
 	ByteLength             uint32
 	ParentObjectTitleIndex uint32
