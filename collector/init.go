@@ -276,9 +276,9 @@ var collectors = []collectorInit{
 		perfCounterFunc: nil,
 	},
 	{
-		name:             "nps",
-		builder:          newNPSCollector,
-		perfCounterNames: nil,
+		name:            "nps",
+		builder:         newNPSCollector,
+		perfCounterFunc: nil,
 	},
 	{
 		name:    "os",

@@ -1,7 +1,10 @@
 package collector
 
 import (
-	"github.com/prometheus-community/windows_exporter/log"
+	"fmt"
+
+	"github.com/go-kit/log"
+	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
 )
@@ -9,6 +12,8 @@ import (
 // A npsCollector is a Prometheus collector for WMI Win32_PerfRawData_IAS_NPSAuthenticationServer and Win32_PerfRawData_IAS_NPSAccountingServer metrics
 
 type npsCollector struct {
+	logger log.Logger
+
 	AccessAccepts           *prometheus.Desc
 	AccessChallenges        *prometheus.Desc
 	AccessRejects           *prometheus.Desc
@@ -37,9 +42,11 @@ type npsCollector struct {
 	AccountingUnknownType       *prometheus.Desc
 }
 
-func newNPSCollector() (Collector, error) {
+func newNPSCollector(logger log.Logger) (Collector, error) {
 	const subsystem = "nps"
+	logger = log.With(logger, "collector", subsystem)
 	return &npsCollector{
+		logger: logger,
 		AccessAccepts: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "access_accepts"),
 			"(AccessAccepts)",
@@ -198,11 +205,11 @@ func newNPSCollector() (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *npsCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	if desc, err := c.CollectAccept(ch); err != nil {
-		log.Error("failed collecting NPS accept data:", desc, err)
+		_ = level.Error(c.logger).Log("msg", fmt.Sprintf("failed collecting NPS accept data: %s %v", desc, err))
 		return err
 	}
 	if desc, err := c.CollectAccounting(ch); err != nil {
-		log.Error("failed collecting NPS accounting data:", desc, err)
+		_ = level.Error(c.logger).Log("msg", fmt.Sprintf("failed collecting NPS accounting data: %s %v", desc, err))
 		return err
 	}
 	return nil
@@ -249,7 +256,7 @@ type Win32_PerfRawData_IAS_NPSAccountingServer struct {
 // to the provided prometheus Metric channel.
 func (c *npsCollector) CollectAccept(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_PerfRawData_IAS_NPSAuthenticationServer
-	q := queryAll(&dst)
+	q := queryAll(&dst, c.logger)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
 	}
@@ -337,7 +344,7 @@ func (c *npsCollector) CollectAccept(ch chan<- prometheus.Metric) (*prometheus.D
 
 func (c *npsCollector) CollectAccounting(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []Win32_PerfRawData_IAS_NPSAccountingServer
-	q := queryAll(&dst)
+	q := queryAll(&dst, c.logger)
 	if err := wmi.Query(q, &dst); err != nil {
 		return nil, err
 	}
