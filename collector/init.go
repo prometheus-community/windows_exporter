@@ -276,6 +276,11 @@ var collectors = []collectorInit{
 		perfCounterFunc: nil,
 	},
 	{
+		name:            "nps",
+		builder:         newNPSCollector,
+		perfCounterFunc: nil,
+	},
+	{
 		name:    "os",
 		flags:   nil,
 		builder: newOSCollector,
