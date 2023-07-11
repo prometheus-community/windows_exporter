@@ -175,6 +175,8 @@ YAML configuration files can be specified with the `--config.file` flag. e.g. `.
 
 It is also possible to load the configuration from a URL. e.g. `.\windows_exporter.exe --config.file="https://example.com/config.yml"`
 
+If you need to skip TLS verification, you can use the `--config.file.insecure-skip-verify` flag. e.g. `.\windows_exporter.exe --config.file="https://example.com/config.yml" --config.file.insecure-skip-verify`
+
 ```yaml
 collectors:
   enabled: cpu,cs,net,service
