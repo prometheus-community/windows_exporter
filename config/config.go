@@ -14,6 +14,7 @@
 package config
 
 import (
+	"crypto/tls"
 	"fmt"
 	"io"
 	"net/http"
@@ -36,7 +37,7 @@ type Resolver struct {
 }
 
 // NewResolver returns a Resolver structure.
-func NewResolver(file string, logger log.Logger) (*Resolver, error) {
+func NewResolver(file string, logger log.Logger, insecure_skip_verify bool) (*Resolver, error) {
 	flags := map[string]string{}
 	var fileBytes []byte
 	url, err := url.ParseRequestURI(file)
@@ -45,7 +46,14 @@ func NewResolver(file string, logger log.Logger) (*Resolver, error) {
 	}
 	if url.Scheme == "http" || url.Scheme == "https" {
 		_ = level.Info(logger).Log("msg", fmt.Sprintf("Loading configuration file from URL: %v", file))
-		resp, err := http.Get(file)
+		tr := &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: insecure_skip_verify},
+		}
+		if insecure_skip_verify {
+			_ = level.Warn(logger).Log("msg", "Loading configuration file with TLS verification disabled")
+		}
+		client := &http.Client{Transport: tr}
+		resp, err := client.Get(file)
 		if err != nil {
 			return nil, err
 		}
