@@ -89,6 +89,8 @@ Flag     | Description | Default value
 `--collectors.print` | If true, print available collectors and exit. |
 `--scrape.timeout-margin` | Seconds to subtract from the timeout allowed by the client. Tune to allow for overhead or high loads. | `0.5`
 `--web.config.file` | A [web config][web_config] for setting up TLS and Auth | None
+`--config.file` | [Using a config file](#using-a-configuration-file) from path or URL | None
+`--config.file.insecure-skip-verify` | Skip TLS when loading config file from URL | false
 
 ## Installation
 The latest release can be downloaded from the [releases page](https://github.com/prometheus-community/windows_exporter/releases).
