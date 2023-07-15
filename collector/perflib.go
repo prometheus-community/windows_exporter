@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/prometheus-community/windows_exporter/wmi/perflib"
+	"github.com/prometheus-community/windows_exporter/perflib"
 
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
