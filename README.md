@@ -89,6 +89,8 @@ Flag     | Description | Default value
 `--collectors.print` | If true, print available collectors and exit. |
 `--scrape.timeout-margin` | Seconds to subtract from the timeout allowed by the client. Tune to allow for overhead or high loads. | `0.5`
 `--web.config.file` | A [web config][web_config] for setting up TLS and Auth | None
+`--config.file` | [Using a config file](#using-a-configuration-file) from path or URL | None
+`--config.file.insecure-skip-verify` | Skip TLS when loading config file from URL | false
 
 ## Installation
 The latest release can be downloaded from the [releases page](https://github.com/prometheus-community/windows_exporter/releases).
@@ -172,6 +174,10 @@ This enables the additional process and container collectors on top of the defau
 ### Using a configuration file
 
 YAML configuration files can be specified with the `--config.file` flag. e.g. `.\windows_exporter.exe --config.file=config.yml`. If you are using the absolute path, make sure to quote the path, e.g. `.\windows_exporter.exe --config.file="C:\Program Files\windows_exporter\config.yml"`
+
+It is also possible to load the configuration from a URL. e.g. `.\windows_exporter.exe --config.file="https://example.com/config.yml"`
+
+If you need to skip TLS verification, you can use the `--config.file.insecure-skip-verify` flag. e.g. `.\windows_exporter.exe --config.file="https://example.com/config.yml" --config.file.insecure-skip-verify`
 
 ```yaml
 collectors:

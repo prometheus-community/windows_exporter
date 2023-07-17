@@ -14,7 +14,11 @@
 package config
 
 import (
+	"crypto/tls"
 	"fmt"
+	"io"
+	"net/http"
+	"net/url"
 	"os"
 
 	"github.com/alecthomas/kingpin/v2"
@@ -33,19 +37,44 @@ type Resolver struct {
 }
 
 // NewResolver returns a Resolver structure.
-func NewResolver(file string, logger log.Logger) (*Resolver, error) {
+func NewResolver(file string, logger log.Logger, insecure_skip_verify bool) (*Resolver, error) {
 	flags := map[string]string{}
-	_ = level.Info(logger).Log("msg", fmt.Sprintf("Loading configuration file: %v", file))
-	if _, err := os.Stat(file); err != nil {
-		return nil, err
-	}
-	b, err := os.ReadFile(file)
+	var fileBytes []byte
+	url, err := url.ParseRequestURI(file)
 	if err != nil {
 		return nil, err
 	}
+	if url.Scheme == "http" || url.Scheme == "https" {
+		_ = level.Info(logger).Log("msg", fmt.Sprintf("Loading configuration file from URL: %v", file))
+		tr := &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: insecure_skip_verify},
+		}
+		if insecure_skip_verify {
+			_ = level.Warn(logger).Log("msg", "Loading configuration file with TLS verification disabled")
+		}
+		client := &http.Client{Transport: tr}
+		resp, err := client.Get(file)
+		if err != nil {
+			return nil, err
+		}
+		defer resp.Body.Close()
+		fileBytes, err = io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		_ = level.Info(logger).Log("msg", fmt.Sprintf("Loading configuration file: %v", file))
+		if _, err := os.Stat(file); err != nil {
+			return nil, err
+		}
+		fileBytes, err = os.ReadFile(file)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	var rawValues map[string]interface{}
-	err = yaml.Unmarshal(b, &rawValues)
+	err = yaml.Unmarshal(fileBytes, &rawValues)
 	if err != nil {
 		return nil, err
 	}
