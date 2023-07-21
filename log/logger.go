@@ -24,6 +24,7 @@ func (f *AllowedFile) String() string {
 
 // Set updates the value of the allowed format.
 func (f *AllowedFile) Set(s string) error {
+	f.s = s
 	switch s {
 	case "stdout":
 		f.w = os.Stdout
@@ -77,6 +78,8 @@ func New(config *Config) (log.Logger, error) {
 			return nil, err
 		}
 		l = eventlog.NewEventLogLogger(w, loggerFunc)
+	} else if config.File.w == nil {
+		panic("logger: file writer is nil")
 	} else {
 		l = loggerFunc(log.NewSyncWriter(config.File.w))
 	}
