@@ -1,19 +1,25 @@
 package collector
 
 import (
-	"io/ioutil"
+	"fmt"
+	"io"
+	"os"
 	"strings"
 	"testing"
 
 	"github.com/dimchansky/utfbom"
+	"github.com/go-kit/log"
 
+	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
 )
+
+var baseDir = "../tools/textfile-test"
 
 func TestCRFilter(t *testing.T) {
 	sr := strings.NewReader("line 1\r\nline 2")
 	cr := carriageReturnFilteringReader{r: sr}
-	b, err := ioutil.ReadAll(cr)
+	b, err := io.ReadAll(cr)
 	if err != nil {
 		t.Error(err)
 	}
@@ -151,5 +157,69 @@ func TestDuplicateMetricEntry(t *testing.T) {
 	// Additional label with different values metric should not be cause for duplicate detection
 	if duplicateMetricEntry(duplicateFamily) {
 		t.Errorf("Unexpected duplicate found in differentValues")
+	}
+}
+
+func TestMultipleDirectories(t *testing.T) {
+	testDir := baseDir + "/multiple-dirs"
+	testDirs := fmt.Sprintf("%[1]s/dir1,%[1]s/dir2,%[1]s/dir3", testDir)
+	collector := &textFileCollector{
+		logger:      log.NewLogfmtLogger(os.Stdout),
+		directories: testDirs,
+	}
+	scrapeContext, err := PrepareScrapeContext([]string{"textfile_test"})
+	if err != nil {
+		t.Errorf("Unexpected error %s", err)
+	}
+	metrics := make(chan prometheus.Metric)
+	got := ""
+	go func() {
+		for {
+			var metric dto.Metric
+			val := <-metrics
+			val.Write(&metric)
+			got += metric.String()
+		}
+	}()
+	err = collector.Collect(scrapeContext, metrics)
+	if err != nil {
+		t.Errorf("Unexpected error %s", err)
+	}
+	for _, f := range []string{"dir1", "dir2", "dir3", "dir3sub"} {
+		if !strings.Contains(got, f) {
+			t.Errorf("Unexpected output %s: %q", f, got)
+		}
+	}
+}
+
+func TestDuplicateFileName(t *testing.T) {
+	testDir := baseDir + "/duplicate-filename"
+	collector := &textFileCollector{
+		logger:      log.NewLogfmtLogger(os.Stdout),
+		directories: testDir,
+	}
+	scrapeContext, err := PrepareScrapeContext([]string{"textfile_test"})
+	if err != nil {
+		t.Errorf("Unexpected error %s", err)
+	}
+	metrics := make(chan prometheus.Metric)
+	got := ""
+	go func() {
+		for {
+			var metric dto.Metric
+			val := <-metrics
+			val.Write(&metric)
+			got += metric.String()
+		}
+	}()
+	err = collector.Collect(scrapeContext, metrics)
+	if err != nil {
+		t.Errorf("Unexpected error %s", err)
+	}
+	if !strings.Contains(got, "file") {
+		t.Errorf("Unexpected output  %q", got)
+	}
+	if strings.Contains(got, "sub_file") {
+		t.Errorf("Unexpected output  %q", got)
 	}
 }
