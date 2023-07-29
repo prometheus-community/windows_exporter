@@ -177,7 +177,10 @@ func TestMultipleDirectories(t *testing.T) {
 		for {
 			var metric dto.Metric
 			val := <-metrics
-			val.Write(&metric)
+			err := val.Write(&metric)
+			if err != nil {
+				t.Errorf("Unexpected error %s", err)
+			}
 			got += metric.String()
 		}
 	}()
@@ -208,7 +211,10 @@ func TestDuplicateFileName(t *testing.T) {
 		for {
 			var metric dto.Metric
 			val := <-metrics
-			val.Write(&metric)
+			err := val.Write(&metric)
+			if err != nil {
+				t.Errorf("Unexpected error %s", err)
+			}
 			got += metric.String()
 		}
 	}()

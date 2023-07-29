@@ -294,10 +294,9 @@ func (c *textFileCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Met
 					_ = level.Error(c.logger).Log("msg", fmt.Sprintf("Duplicate filename detected: %q. Skip File.", path))
 					errorMetric = 1.0
 					return nil
-				} else {
-					mtimes[fileInfo.Name()] = fileInfo.ModTime()
-					metricFamilies = append(metricFamilies, families_array...)
 				}
+				mtimes[fileInfo.Name()] = fileInfo.ModTime()
+				metricFamilies = append(metricFamilies, families_array...)
 			}
 			return nil
 		})
