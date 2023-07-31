@@ -18,8 +18,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"os"
+	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/go-kit/log"
@@ -40,11 +40,8 @@ type Resolver struct {
 func NewResolver(file string, logger log.Logger, insecure_skip_verify bool) (*Resolver, error) {
 	flags := map[string]string{}
 	var fileBytes []byte
-	url, err := url.ParseRequestURI(file)
-	if err != nil {
-		return nil, err
-	}
-	if url.Scheme == "http" || url.Scheme == "https" {
+	var err error
+	if strings.HasPrefix(file, "http") || strings.HasPrefix(file, "https") {
 		_ = level.Info(logger).Log("msg", fmt.Sprintf("Loading configuration file from URL: %v", file))
 		tr := &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: insecure_skip_verify},
