@@ -41,7 +41,7 @@ func NewResolver(file string, logger log.Logger, insecure_skip_verify bool) (*Re
 	flags := map[string]string{}
 	var fileBytes []byte
 	var err error
-	if strings.HasPrefix(file, "http") || strings.HasPrefix(file, "https") {
+	if strings.HasPrefix(file, "http://") || strings.HasPrefix(file, "https://") {
 		_ = level.Info(logger).Log("msg", fmt.Sprintf("Loading configuration file from URL: %v", file))
 		tr := &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: insecure_skip_verify},
