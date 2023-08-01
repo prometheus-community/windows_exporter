@@ -1,3 +1,10 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring
+  labels:
+    name: monitoring
+---
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
