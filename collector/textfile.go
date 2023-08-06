@@ -280,7 +280,7 @@ func (c *textFileCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Met
 				_ = level.Debug(c.logger).Log("msg", fmt.Sprintf("Processing file: %s", path))
 				families_array, err := scrapeFile(path, c.logger)
 				if err != nil {
-					_ = level.Error(c.logger).Log("msg", fmt.Sprintf("Error screaping file: %q. Skip File.", path), "err", err)
+					_ = level.Error(c.logger).Log("msg", fmt.Sprintf("Error scraping file: %q. Skip File.", path), "err", err)
 					errorMetric = 1.0
 					return nil
 				}
