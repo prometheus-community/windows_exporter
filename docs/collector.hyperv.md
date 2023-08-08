@@ -51,9 +51,11 @@ Name | Description | Type | Labels
 `windows_hyperv_host_cpu_hypervisor_run_time` | _Not yet documented_ | counter | `core`
 `windows_hyperv_host_cpu_remote_run_time` | _Not yet documented_ | counter | `core`
 `windows_hyperv_host_cpu_total_run_time` | _Not yet documented_ | counter | `core`
+`windows_hyperv_host_cpu_wait_time_per_dispatch_total` | _Not yet documented_ | counter | `core`
 `windows_hyperv_vm_cpu_guest_run_time` | _Not yet documented_ | counter | `vm`, `core`
 `windows_hyperv_vm_cpu_hypervisor_run_time` | _Not yet documented_ | counter | `vm`, `core`
 `windows_hyperv_vm_cpu_remote_run_time` | _Not yet documented_ | counter | `vm`, `core`
+`windows_hyperv_vm_cpu_wait_time_per_dispatch_total` | _Not yet documented_ | counter | `vm`, `core`
 `windows_hyperv_vm_memory_added_total` | _Not yet documented_ | counter | `vm`
 `windows_hyperv_vm_memory_pressure_average` | _Not yet documented_ | gauge | `vm`
 `windows_hyperv_vm_memory_pressure_current` | _Not yet documented_ | counter | `vm`

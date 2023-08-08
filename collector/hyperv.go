@@ -59,16 +59,18 @@ type HyperVCollector struct {
 	HostLPTotalRunTimePercent      *prometheus.Desc
 
 	// Win32_PerfRawData_HvStats_HyperVHypervisorRootVirtualProcessor
-	HostGuestRunTime      *prometheus.Desc
-	HostHypervisorRunTime *prometheus.Desc
-	HostRemoteRunTime     *prometheus.Desc
-	HostTotalRunTime      *prometheus.Desc
+	HostGuestRunTime           *prometheus.Desc
+	HostHypervisorRunTime      *prometheus.Desc
+	HostRemoteRunTime          *prometheus.Desc
+	HostTotalRunTime           *prometheus.Desc
+	HostCPUWaitTimePerDispatch *prometheus.Desc
 
 	// Win32_PerfRawData_HvStats_HyperVHypervisorVirtualProcessor
-	VMGuestRunTime      *prometheus.Desc
-	VMHypervisorRunTime *prometheus.Desc
-	VMRemoteRunTime     *prometheus.Desc
-	VMTotalRunTime      *prometheus.Desc
+	VMGuestRunTime           *prometheus.Desc
+	VMHypervisorRunTime      *prometheus.Desc
+	VMRemoteRunTime          *prometheus.Desc
+	VMTotalRunTime           *prometheus.Desc
+	VMCPUWaitTimePerDispatch *prometheus.Desc
 
 	// Win32_PerfRawData_NvspSwitchStats_HyperVVirtualSwitch
 	BroadcastPacketsReceived         *prometheus.Desc
@@ -362,6 +364,12 @@ func newHyperVCollector(logger log.Logger) (Collector, error) {
 			[]string{"core"},
 			nil,
 		),
+		HostCPUWaitTimePerDispatch: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, buildSubsystemName("host_cpu"), "wait_time_per_dispatch_total"),
+			"Time in nanoseconds waiting for a virtual processor to be dispatched onto a logical processor",
+			[]string{"core"},
+			nil,
+		),
 
 		//
 
@@ -386,6 +394,12 @@ func newHyperVCollector(logger log.Logger) (Collector, error) {
 		VMTotalRunTime: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_cpu"), "total_run_time"),
 			"The time spent by the virtual processor in guest and hypervisor code",
+			[]string{"vm", "core"},
+			nil,
+		),
+		VMCPUWaitTimePerDispatch: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_cpu"), "wait_time_per_dispatch_total"),
+			"Time in nanoseconds waiting for a virtual processor to be dispatched onto a logical processor",
 			[]string{"vm", "core"},
 			nil,
 		),
@@ -1093,6 +1107,7 @@ type Win32_PerfRawData_HvStats_HyperVHypervisorRootVirtualProcessor struct {
 	PercentHypervisorRunTime uint64
 	PercentRemoteRunTime     uint64
 	PercentTotalRunTime      uint64
+	CPUWaitTimePerDispatch   uint64
 }
 
 func (c *HyperVCollector) collectHostCpuUsage(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
@@ -1142,6 +1157,12 @@ func (c *HyperVCollector) collectHostCpuUsage(ch chan<- prometheus.Metric) (*pro
 			coreId,
 		)
 
+		ch <- prometheus.MustNewConstMetric(
+			c.HostCPUWaitTimePerDispatch,
+			prometheus.CounterValue,
+			float64(obj.CPUWaitTimePerDispatch),
+			coreId,
+		)
 	}
 
 	return nil, nil
@@ -1154,6 +1175,7 @@ type Win32_PerfRawData_HvStats_HyperVHypervisorVirtualProcessor struct {
 	PercentHypervisorRunTime uint64
 	PercentRemoteRunTime     uint64
 	PercentTotalRunTime      uint64
+	CPUWaitTimePerDispatch   uint64
 }
 
 func (c *HyperVCollector) collectVmCpuUsage(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
@@ -1206,6 +1228,13 @@ func (c *HyperVCollector) collectVmCpuUsage(ch chan<- prometheus.Metric) (*prome
 			c.VMTotalRunTime,
 			prometheus.GaugeValue,
 			float64(obj.PercentTotalRunTime),
+			vmName, coreId,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.VMCPUWaitTimePerDispatch,
+			prometheus.CounterValue,
+			float64(obj.CPUWaitTimePerDispatch),
 			vmName, coreId,
 		)
 
