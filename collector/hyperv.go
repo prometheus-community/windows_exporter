@@ -365,7 +365,7 @@ func newHyperVCollector(logger log.Logger) (Collector, error) {
 			nil,
 		),
 		HostCPUWaitTimePerDispatch: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, buildSubsystemName("host_cpu"), "wait_time_per_dispatch"),
+			prometheus.BuildFQName(Namespace, buildSubsystemName("host_cpu"), "wait_time_per_dispatch_total"),
 			"Time in nanoseconds waiting for a virtual processor to be dispatched onto a logical processor",
 			[]string{"core"},
 			nil,
@@ -398,7 +398,7 @@ func newHyperVCollector(logger log.Logger) (Collector, error) {
 			nil,
 		),
 		VMCPUWaitTimePerDispatch: prometheus.NewDesc(
-			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_cpu"), "wait_time_per_dispatch"),
+			prometheus.BuildFQName(Namespace, buildSubsystemName("vm_cpu"), "wait_time_per_dispatch_total"),
 			"Time in nanoseconds waiting for a virtual processor to be dispatched onto a logical processor",
 			[]string{"vm", "core"},
 			nil,
