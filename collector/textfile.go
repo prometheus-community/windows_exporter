@@ -64,7 +64,7 @@ type textFileCollector struct {
 func newTextFileCollectorFlags(app *kingpin.Application) {
 	textFileDirectory = app.Flag(
 		FlagTextFileDirectory,
-		"Directory or Directories to read text files with metrics from.",
+		"DEPRECATED: Use --collector.textfile.directories",
 	).Default("").String()
 	textFileDirectories = app.Flag(
 		FlagTextFileDirectories,
