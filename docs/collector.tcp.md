@@ -21,7 +21,7 @@ Name | Description | Type | Labels
 `windows_tcp_connections_active_total` |  Number of times TCP connections have made a direct transition from the CLOSED state to the SYN-SENT state.| counter | af
 `windows_tcp_connections_established` | Number of TCP connections for which the current state is either ESTABLISHED or CLOSE-WAIT. | gauge | af
 `windows_tcp_connections_passive_total` | Number of times TCP connections have made a direct transition from the LISTEN state to the SYN-RCVD state. | counter | af
-`windows_tcp_connections_reset_total` | Number of times TCP connections have made a direct transition from the LISTEN state to the SYN-RCVD state. | counter | af
+`windows_tcp_connections_reset_total` | Connections Reset is the number of times TCP connections have made a direct transition to the CLOSED state from either the ESTABLISHED state or the CLOSE-WAIT state. | counter | af
 `windows_tcp_segments_total` | Total segments sent or received using the TCP protocol | counter | af
 `windows_tcp_segments_received_total` | Total segments received, including those received in error. This count includes segments received on currently established connections | counter | af
 `windows_tcp_segments_retransmitted_total` | Total segments retransmitted. That is, segments transmitted that contain one or more previously transmitted bytes | counter | af
