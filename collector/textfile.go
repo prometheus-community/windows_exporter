@@ -65,7 +65,7 @@ func newTextFileCollectorFlags(app *kingpin.Application) {
 	textFileDirectory = app.Flag(
 		FlagTextFileDirectory,
 		"DEPRECATED: Use --collector.textfile.directories",
-	).Default("").String()
+	).Default("").Hidden().String()
 	textFileDirectories = app.Flag(
 		FlagTextFileDirectories,
 		"Directory or Directories to read text files with metrics from.",
