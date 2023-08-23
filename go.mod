@@ -7,7 +7,7 @@ require (
 	github.com/alecthomas/kingpin/v2 v2.3.2
 	github.com/dimchansky/utfbom v1.1.1
 	github.com/go-kit/log v0.2.1
-	github.com/go-ole/go-ole v1.2.6
+	github.com/go-ole/go-ole v1.3.0
 	github.com/prometheus/client_golang v1.16.0
 	github.com/prometheus/client_model v0.4.0
 	github.com/prometheus/common v0.44.0
