@@ -48,7 +48,7 @@ var StopCh = make(chan bool)
 func init() {
 	isService, err := svc.IsWindowsService()
 	if err != nil {
-		logger, err := eventlog.Open("windows_exporter")
+		logger, err = eventlog.Open("windows_exporter")
 		if err != nil {
 			os.Exit(2)
 		}
