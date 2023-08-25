@@ -32,14 +32,14 @@ loop:
 				changes <- c.CurrentStatus
 			case svc.Stop, svc.Shutdown:
 				_ = logger.Info(100, "Service Stop Received")
-				s.stopCh <- true
+				changes <- svc.Status{State: svc.StopPending}
 				break loop
 			default:
 				_ = logger.Error(102, fmt.Sprintf("unexpected control request #%d", c))
 			}
 		}
 	}
-	changes <- svc.Status{State: svc.StopPending}
+	s.stopCh <- true
 	return
 }
 
@@ -48,7 +48,7 @@ var StopCh = make(chan bool)
 func init() {
 	isService, err := svc.IsWindowsService()
 	if err != nil {
-		logger, err := eventlog.Open("windows_exporter")
+		logger, err = eventlog.Open("windows_exporter")
 		if err != nil {
 			os.Exit(2)
 		}
@@ -57,7 +57,7 @@ func init() {
 	}
 
 	if isService {
-		logger, err := eventlog.Open("windows_exporter")
+		logger, err = eventlog.Open("windows_exporter")
 		if err != nil {
 			os.Exit(2)
 		}
