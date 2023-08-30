@@ -59,6 +59,7 @@ type ADCollector struct {
 	LdapSearchesTotal                                   *prometheus.Desc
 	LdapUdpOperationsTotal                              *prometheus.Desc
 	LdapWritesTotal                                     *prometheus.Desc
+	LdapClientSessions                                  *Prometheus.Desc
 	LinkValuesCleanedTotal                              *prometheus.Desc
 	PhantomObjectsCleanedTotal                          *prometheus.Desc
 	PhantomObjectsVisitedTotal                          *prometheus.Desc
@@ -339,6 +340,12 @@ func newADCollector(logger log.Logger) (Collector, error) {
 		),
 		LdapWritesTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "ldap_writes_total"),
+			"",
+			nil,
+			nil,
+		),
+		LdapClientSessions: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "client_sessions"),
 			"",
 			nil,
 			nil,
@@ -1189,6 +1196,11 @@ func (c *ADCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, er
 		c.LdapWritesTotal,
 		prometheus.CounterValue,
 		float64(dst[0].LDAPWritesPersec),
+	)
+	ch <- prometheus.MustNewConstMetric(
+		c.LdapClientSessions,
+		prometheus.CounterValue,
+		float64(dst[0].LDAPClientSessions),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
