@@ -1199,7 +1199,7 @@ func (c *ADCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, er
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.LdapClientSessions,
-		prometheus.CounterValue,
+		prometheus.GaugeValue,
 		float64(dst[0].LDAPClientSessions),
 	)
 

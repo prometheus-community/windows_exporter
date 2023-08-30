@@ -59,6 +59,7 @@ Name | Description | Type | Labels
 `windows_ad_ldap_searches_total` | _Not yet documented_ | counter | None
 `windows_ad_ldap_udp_operations_total` | _Not yet documented_ | counter | None
 `windows_ad_ldap_writes_total` | _Not yet documented_ | counter | None
+`windows_ad_ldap_client_sessions` | | _Not yet documented_ | gauge | None
 `windows_ad_link_values_cleaned_total` | _Not yet documented_ | counter | None
 `windows_ad_phantom_objects_cleaned_total` | _Not yet documented_ | counter | None
 `windows_ad_phantom_objects_visited_total` | _Not yet documented_ | counter | None
