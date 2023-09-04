@@ -59,6 +59,7 @@ type ADCollector struct {
 	LdapSearchesTotal                                   *prometheus.Desc
 	LdapUdpOperationsTotal                              *prometheus.Desc
 	LdapWritesTotal                                     *prometheus.Desc
+	LdapClientSessions                                  *prometheus.Desc
 	LinkValuesCleanedTotal                              *prometheus.Desc
 	PhantomObjectsCleanedTotal                          *prometheus.Desc
 	PhantomObjectsVisitedTotal                          *prometheus.Desc
@@ -340,6 +341,12 @@ func newADCollector(logger log.Logger) (Collector, error) {
 		LdapWritesTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "ldap_writes_total"),
 			"",
+			nil,
+			nil,
+		),
+		LdapClientSessions: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "ldap_client_sessions"),
+			"This is the number of sessions opened by LDAP clients at the time the data is taken. This is helpful in determining LDAP client activity and if the DC is able to handle the load. Of course, spikes during normal periods of authentication — such as first thing in the morning — are not necessarily a problem, but long sustained periods of high values indicate an overworked DC.",
 			nil,
 			nil,
 		),
@@ -1189,6 +1196,11 @@ func (c *ADCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, er
 		c.LdapWritesTotal,
 		prometheus.CounterValue,
 		float64(dst[0].LDAPWritesPersec),
+	)
+	ch <- prometheus.MustNewConstMetric(
+		c.LdapClientSessions,
+		prometheus.GaugeValue,
+		float64(dst[0].LDAPClientSessions),
 	)
 
 	ch <- prometheus.MustNewConstMetric(

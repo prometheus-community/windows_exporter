@@ -59,6 +59,7 @@ Name | Description | Type | Labels
 `windows_ad_ldap_searches_total` | _Not yet documented_ | counter | None
 `windows_ad_ldap_udp_operations_total` | _Not yet documented_ | counter | None
 `windows_ad_ldap_writes_total` | _Not yet documented_ | counter | None
+`windows_ad_ldap_client_sessions` | This is the number of sessions opened by LDAP clients at the time the data is taken. This is helpful in determining LDAP client activity and if the DC is able to handle the load. Of course, spikes during normal periods of authentication — such as first thing in the morning — are not necessarily a problem, but long sustained periods of high values indicate an overworked DC | gauge | None
 `windows_ad_link_values_cleaned_total` | _Not yet documented_ | counter | None
 `windows_ad_phantom_objects_cleaned_total` | _Not yet documented_ | counter | None
 `windows_ad_phantom_objects_visited_total` | _Not yet documented_ | counter | None
