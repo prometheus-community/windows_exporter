@@ -14,19 +14,17 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-func init() {
-	registerCollector("physical_disk", NewPhysicalDiskCollector, "PhysicalDisk")
-}
+const (
+  FlagPhysicalDiskExclude = "collector.physical_disk.disk-exclude"
+  FlagPhysicalDiskInclude = "collector.physical_disk.disk-include"
+)
 
 var (
-	diskWhitelist = kingpin.Flag(
-		"collector.physical_disk.disk-whitelist",
-		"Regexp of disks to whitelist. Disk name must both match whitelist and not match blacklist to be included.",
-	).Default(".+").String()
-	diskBlacklist = kingpin.Flag(
-		"collector.physical_disk.disk-blacklist",
-		"Regexp of disks to blacklist. Disk name must both match whitelist and not match blacklist to be included.",
-	).Default("").String()
+	diskInclude *string
+	diskExclude *string
+
+	diskIncludeSet bool
+	diskExcludeSet bool
 )
 
 // A PhysicalDiskCollector is a Prometheus collector for perflib PhysicalDisk metrics
@@ -46,8 +44,28 @@ type PhysicalDiskCollector struct {
 	WriteLatency     *prometheus.Desc
 	ReadWriteLatency *prometheus.Desc
 
-	diskWhitelistPattern *regexp.Regexp
-	diskBlacklistPattern *regexp.Regexp
+	diskIncludePattern *regexp.Regexp
+	diskExcludePattern *regexp.Regexp
+}
+
+
+// newPhysicalDiskCollectorFlags ...
+func newPhysicalDiskCollectorFlags(app *kingpin.Application) {
+  diskInclude = app.Flag(
+    FlagPhysicalDiskInclude,
+    "Regexp of disks to include. Disk number must both match include and not match exclude to be included.",
+    ).Default(".+").PreAction(func(c *kingpin.ParseContext) error {
+      diskIncludeSet = true
+      return nil
+    }).String()
+
+  diskExclude = app.Flag(
+    FlagPhysicalDiskExclude,
+    "Regexp of disks to exclude. Disk number must both match include and not match exclude to be included.",
+    ).Default("").PreAction(func(c *kingpin.ParseContext) error {
+      diskExcludeSet = true
+      return nil
+    }).String()
 }
 
 // NewPhysicalDiskCollector ...
@@ -142,8 +160,8 @@ func NewPhysicalDiskCollector(logger log.Logger) (Collector, error) {
 			nil,
 		),
 
-		diskWhitelistPattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *diskWhitelist)),
-		diskBlacklistPattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *diskBlacklist)),
+		diskIncludePattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *diskInclude)),
+		diskExcludePattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *diskExclude)),
 	}, nil
 }
 
@@ -183,8 +201,8 @@ func (c *PhysicalDiskCollector) collect(ctx *ScrapeContext, ch chan<- prometheus
 
 	for _, disk := range dst {
 		if disk.Name == "_Total" ||
-			c.diskBlacklistPattern.MatchString(disk.Name) ||
-			!c.diskWhitelistPattern.MatchString(disk.Name) {
+			c.diskExcludePattern.MatchString(disk.Name) ||
+			!c.diskIncludePattern.MatchString(disk.Name) {
 			continue
 		}
 
