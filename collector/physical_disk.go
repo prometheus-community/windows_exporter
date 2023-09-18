@@ -8,9 +8,10 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/prometheus-community/windows_exporter/log"
+	"github.com/alecthomas/kingpin/v2"
+	"github.com/go-kit/log"
+	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
-	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 func init() {
@@ -30,6 +31,8 @@ var (
 
 // A PhysicalDiskCollector is a Prometheus collector for perflib PhysicalDisk metrics
 type PhysicalDiskCollector struct {
+	logger log.Logger
+
 	RequestsQueued   *prometheus.Desc
 	ReadBytesTotal   *prometheus.Desc
 	ReadsTotal       *prometheus.Desc
@@ -48,10 +51,13 @@ type PhysicalDiskCollector struct {
 }
 
 // NewPhysicalDiskCollector ...
-func NewPhysicalDiskCollector() (Collector, error) {
+func NewPhysicalDiskCollector(logger log.Logger) (Collector, error) {
 	const subsystem = "physical_disk"
+	logger = log.With(logger, "collector", subsystem)
 
 	return &PhysicalDiskCollector{
+		logger: logger,
+
 		RequestsQueued: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "requests_queued"),
 			"The number of requests queued to the disk (PhysicalDisk.CurrentDiskQueueLength)",
@@ -145,7 +151,7 @@ func NewPhysicalDiskCollector() (Collector, error) {
 // to the provided prometheus Metric channel.
 func (c *PhysicalDiskCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) error {
 	if desc, err := c.collect(ctx, ch); err != nil {
-		log.Error("failed collecting physical_disk metrics:", desc, err)
+		_ = level.Error(c.logger).Log("failed collecting physical_disk metrics", "desc", desc, "err", err)
 		return err
 	}
 	return nil
@@ -171,7 +177,7 @@ type PhysicalDisk struct {
 
 func (c *PhysicalDiskCollector) collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	var dst []PhysicalDisk
-	if err := unmarshalObject(ctx.perfObjects["PhysicalDisk"], &dst); err != nil {
+	if err := unmarshalObject(ctx.perfObjects["PhysicalDisk"], &dst, c.logger); err != nil {
 		return nil, err
 	}
 
