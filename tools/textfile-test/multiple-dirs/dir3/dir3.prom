@@ -1,0 +1,3 @@
+# HELP windows_test Some Test
+# TYPE windows_test gauge
+windows_test{flag="dir3"} 3
