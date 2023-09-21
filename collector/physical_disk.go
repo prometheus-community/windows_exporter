@@ -15,8 +15,8 @@ import (
 )
 
 const (
-  FlagPhysicalDiskExclude = "collector.physical_disk.disk-exclude"
-  FlagPhysicalDiskInclude = "collector.physical_disk.disk-include"
+	FlagPhysicalDiskExclude = "collector.physical_disk.disk-exclude"
+	FlagPhysicalDiskInclude = "collector.physical_disk.disk-include"
 )
 
 var (
@@ -48,24 +48,23 @@ type PhysicalDiskCollector struct {
 	diskExcludePattern *regexp.Regexp
 }
 
-
 // newPhysicalDiskCollectorFlags ...
 func newPhysicalDiskCollectorFlags(app *kingpin.Application) {
-  diskInclude = app.Flag(
-    FlagPhysicalDiskInclude,
-    "Regexp of disks to include. Disk number must both match include and not match exclude to be included.",
-    ).Default(".+").PreAction(func(c *kingpin.ParseContext) error {
-      diskIncludeSet = true
-      return nil
-    }).String()
+	diskInclude = app.Flag(
+		FlagPhysicalDiskInclude,
+		"Regexp of disks to include. Disk number must both match include and not match exclude to be included.",
+	).Default(".+").PreAction(func(c *kingpin.ParseContext) error {
+		diskIncludeSet = true
+		return nil
+	}).String()
 
-  diskExclude = app.Flag(
-    FlagPhysicalDiskExclude,
-    "Regexp of disks to exclude. Disk number must both match include and not match exclude to be included.",
-    ).Default("").PreAction(func(c *kingpin.ParseContext) error {
-      diskExcludeSet = true
-      return nil
-    }).String()
+	diskExclude = app.Flag(
+		FlagPhysicalDiskExclude,
+		"Regexp of disks to exclude. Disk number must both match include and not match exclude to be included.",
+	).Default("").PreAction(func(c *kingpin.ParseContext) error {
+		diskExcludeSet = true
+		return nil
+	}).String()
 }
 
 // NewPhysicalDiskCollector ...
