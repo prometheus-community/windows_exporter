@@ -289,6 +289,14 @@ var collectors = []collectorInit{
 		},
 	},
 	{
+		name:    "physical_disk",
+		flags:   newPhysicalDiskCollectorFlags,
+		builder: NewPhysicalDiskCollector,
+		perfCounterFunc: func(_ log.Logger) []string {
+			return []string{"PhysicalDisk"}
+		},
+	},
+	{
 		name:    "process",
 		flags:   newProcessCollectorFlags,
 		builder: newProcessCollector,
