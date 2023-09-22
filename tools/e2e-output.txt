@@ -40,6 +40,7 @@ test_alpha_total 42
 windows_exporter_collector_success{collector="cpu"} 1
 windows_exporter_collector_success{collector="cs"} 1
 windows_exporter_collector_success{collector="logical_disk"} 1
+windows_exporter_collector_success{collector="physical_disk"} 1
 windows_exporter_collector_success{collector="net"} 1
 windows_exporter_collector_success{collector="os"} 1
 windows_exporter_collector_success{collector="service"} 1
@@ -50,6 +51,7 @@ windows_exporter_collector_success{collector="textfile"} 1
 windows_exporter_collector_timeout{collector="cpu"} 0
 windows_exporter_collector_timeout{collector="cs"} 0
 windows_exporter_collector_timeout{collector="logical_disk"} 0
+windows_exporter_collector_timeout{collector="physical_disk"} 0
 windows_exporter_collector_timeout{collector="net"} 0
 windows_exporter_collector_timeout{collector="os"} 0
 windows_exporter_collector_timeout{collector="service"} 0
@@ -89,6 +91,30 @@ windows_exporter_collector_timeout{collector="textfile"} 0
 # TYPE windows_logical_disk_write_seconds_total counter
 # HELP windows_logical_disk_writes_total The number of write operations on the disk (LogicalDisk.DiskWritesPerSec)
 # TYPE windows_logical_disk_writes_total counter
+# HELP windows_physical_disk_idle_seconds_total Seconds that the disk was idle (PhysicalDisk.PercentIdleTime)
+# TYPE windows_physical_disk_idle_seconds_total counter
+# HELP windows_physical_disk_read_bytes_total The number of bytes transferred from the disk during read operations (PhysicalDisk.DiskReadBytesPerSec)
+# TYPE windows_physical_disk_read_bytes_total counter
+# HELP windows_physical_disk_read_latency_seconds_total Shows the average time, in seconds, of a read operation from the disk (PhysicalDisk.AvgDiskSecPerRead)
+# TYPE windows_physical_disk_read_latency_seconds_total counter
+# HELP windows_physical_disk_read_seconds_total Seconds that the disk was busy servicing read requests (PhysicalDisk.PercentDiskReadTime)
+# TYPE windows_physical_disk_read_seconds_total counter
+# HELP windows_physical_disk_read_write_latency_seconds_total Shows the time, in seconds, of the average disk transfer (PhysicalDisk.AvgDiskSecPerTransfer)
+# TYPE windows_physical_disk_read_write_latency_seconds_total counter
+# HELP windows_physical_disk_reads_total The number of read operations on the disk (PhysicalDisk.DiskReadsPerSec)
+# TYPE windows_physical_disk_reads_total counter
+# HELP windows_physical_disk_requests_queued The number of requests queued to the disk (PhysicalDisk.CurrentDiskQueueLength)
+# TYPE windows_physical_disk_requests_queued gauge
+# HELP windows_physical_disk_split_ios_total The number of I/Os to the disk were split into multiple I/Os (PhysicalDisk.SplitIOPerSec)
+# TYPE windows_physical_disk_split_ios_total counter
+# HELP windows_physical_disk_write_bytes_total The number of bytes transferred to the disk during write operations (PhysicalDisk.DiskWriteBytesPerSec)
+# TYPE windows_physical_disk_write_bytes_total counter
+# HELP windows_physical_disk_write_latency_seconds_total Shows the average time, in seconds, of a write operation to the disk (PhysicalDisk.AvgDiskSecPerWrite)
+# TYPE windows_physical_disk_write_latency_seconds_total counter
+# HELP windows_physical_disk_write_seconds_total Seconds that the disk was busy servicing write requests (PhysicalDisk.PercentDiskWriteTime)
+# TYPE windows_physical_disk_write_seconds_total counter
+# HELP windows_physical_disk_writes_total The number of write operations on the disk (PhysicalDisk.DiskWritesPerSec)
+# TYPE windows_physical_disk_writes_total counter
 # HELP windows_net_bytes_received_total (Network.BytesReceivedPerSec)
 # TYPE windows_net_bytes_received_total counter
 # HELP windows_net_bytes_sent_total (Network.BytesSentPerSec)
