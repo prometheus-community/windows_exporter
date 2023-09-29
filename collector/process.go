@@ -34,6 +34,8 @@ var (
 
 	processIncludeSet bool
 	processExcludeSet bool
+
+	enableWorkerProcess *bool
 )
 
 type processCollector struct {
@@ -76,6 +78,11 @@ func newProcessCollectorFlags(app *kingpin.Application) {
 		processExcludeSet = true
 		return nil
 	}).String()
+
+	enableWorkerProcess = kingpin.Flag(
+		"collector.process.iis",
+		"Enable IIS worker process name queries. May cause the collector to leak memory.",
+	).Default("false").Bool()
 
 	processOldInclude = app.Flag(
 		FlagProcessOldInclude,
@@ -255,9 +262,11 @@ func (c *processCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metr
 	}
 
 	var dst_wp []WorkerProcess
-	q_wp := queryAll(&dst_wp, c.logger)
-	if err := wmi.QueryNamespace(q_wp, &dst_wp, "root\\WebAdministration"); err != nil {
-		_ = level.Debug(c.logger).Log("msg", fmt.Sprintf("Could not query WebAdministration namespace for IIS worker processes: %v. Skipping", err))
+	if *enableWorkerProcess {
+		q_wp := queryAll(&dst_wp, c.logger)
+		if err := wmi.QueryNamespace(q_wp, &dst_wp, "root\\WebAdministration"); err != nil {
+			_ = level.Debug(c.logger).Log(fmt.Sprintf("Could not query WebAdministration namespace for IIS worker processes: %v. Skipping\n", err))
+		}
 	}
 
 	for _, process := range data {
@@ -271,10 +280,12 @@ func (c *processCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metr
 		pid := strconv.FormatUint(uint64(process.IDProcess), 10)
 		cpid := strconv.FormatUint(uint64(process.CreatingProcessID), 10)
 
-		for _, wp := range dst_wp {
-			if wp.ProcessId == uint64(process.IDProcess) {
-				processName = strings.Join([]string{processName, wp.AppPoolName}, "_")
-				break
+		if *enableWorkerProcess {
+			for _, wp := range dst_wp {
+				if wp.ProcessId == uint64(process.IDProcess) {
+					processName = strings.Join([]string{processName, wp.AppPoolName}, "_")
+					break
+				}
 			}
 		}
 
