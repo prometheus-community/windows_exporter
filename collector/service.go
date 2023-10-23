@@ -81,7 +81,7 @@ func expandServiceWhere(services string) string {
 
 	i := 0
 	for s := range unique {
-		i += 1
+		i++
 		b.WriteString("Name='")
 		b.WriteString(s)
 		b.WriteString("'")
@@ -484,7 +484,7 @@ func (c *serviceCollector) collectAPI(ch chan<- prometheus.Metric) error {
 		// Get Service Configuration.
 		serviceConfig, err := serviceManager.Config()
 		if err != nil {
-			_ = level.Warn(c.logger).Log("msg", fmt.Sprintf("Get ervice %s config error:  %#v", service, err))
+			_ = level.Warn(c.logger).Log("msg", fmt.Sprintf("Get service %s config error:  %#v", service, err))
 			continue
 		}
 

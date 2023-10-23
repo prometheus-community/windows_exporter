@@ -181,7 +181,7 @@ func ProcessBuildMap(logger log.Logger, data interface{}) map[string]string {
 // check if process name is matching one of include or exclude pattern of processDef
 func (c *processCollector) Match(proc_name string) (bool, *ProcessDef) {
 	var (
-		ok   bool = false
+		ok   = false
 		proc *ProcessDef
 	)
 	for _, p := range c.Processes {
