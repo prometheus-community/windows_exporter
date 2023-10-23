@@ -87,7 +87,7 @@ func (c *CfgHook) match(key string, val interface{}, level int) (bool, interface
 	return ok, res
 }
 
-// try to find if a key from config file has a matching entry point sequence that correponds to a Hook function.
+// try to find if a key from config file has a matching entry point sequence that corresponds to a Hook function.
 // loop on key,val from config map(level 0) to lookup up for a hook
 //
 // e.g.: map[collector][service][services] => "collector", "service", "services"
