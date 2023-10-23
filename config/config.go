@@ -36,8 +36,79 @@ type Resolver struct {
 	flags map[string]string
 }
 
+type HookFunc func(log.Logger, interface{}) map[string]string
+
+// config hook type: alternative way to handle one configuration parameter from file.
+//
+// ConfigAttrs: list of strings to intercept in configuration file
+// e.g.: "collector", "service", "services" to intercept "collector: { 'service': {'services': ...}}"
+//
+// Hook: Function to apply for building metrics according to config.
+type CfgHook struct {
+	ConfigAttrs []string
+	Hook        HookFunc
+}
+
+// global ConfigHook variables
+type CfgHooks map[string]CfgHook
+
+func (c *CfgHook) match(key string, val interface{}, level int) (bool, interface{}) {
+	var res interface{}
+	ok := false
+	if level < len(c.ConfigAttrs) {
+		if c.ConfigAttrs[level] == key {
+			level++
+			if level < len(c.ConfigAttrs) {
+
+				switch typed := val.(type) {
+				case map[interface{}]interface{}:
+					for fk, fv := range convertMap(typed) {
+						ok, res = c.match(fk, fv, level)
+						if ok {
+							break
+						}
+					}
+				case map[string]interface{}:
+					for fk, fv := range typed {
+						ok, res = c.match(fk, fv, level)
+						if ok {
+							break
+						}
+					}
+				default:
+				}
+			} else {
+				ok = true
+				res = val
+			}
+
+		}
+	}
+	return ok, res
+}
+
+// try to find if a key from config file has a matching entry point sequence that correponds to a Hook function.
+// loop on key,val from config map(level 0) to lookup up for a hook
+//
+// e.g.: map[collector][service][services] => "collector", "service", "services"
+//
+//	Hook => ServiceBuildMap
+func (c *CfgHooks) Match(logger log.Logger, key string, val interface{}) (map[string]interface{}, bool) {
+	var value interface{}
+	ok := false
+	params := make(map[string]interface{})
+
+	for varname, hook := range *c {
+		ok, value = hook.match(key, val, 0)
+		if ok {
+			params[varname] = hook.Hook(logger, value)
+		}
+	}
+	return params, ok
+}
+
 // NewResolver returns a Resolver structure.
-func NewResolver(file string, logger log.Logger, insecure_skip_verify bool) (*Resolver, error) {
+func NewResolver(file string, logger log.Logger, insecure_skip_verify bool, hooks CfgHooks) (*Resolver, error) {
 	flags := map[string]string{}
 	var fileBytes []byte
 	var err error
@@ -75,6 +146,13 @@ func NewResolver(file string, logger log.Logger, insecure_skip_verify bool) (*Re
 	if err != nil {
 		return nil, err
 	}
+
+	if hooks != nil {
+		for k, v := range rawValues {
+			hooks.Match(logger, k, v)
+		}
+	}
+
 	// Flatten nested YAML values
 	flattenedValues := flatten(rawValues)
 	for k, v := range flattenedValues {

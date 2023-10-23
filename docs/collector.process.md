@@ -11,18 +11,17 @@ Enabled by default? | No
 
 ## Flags
 
-<<<<<<< HEAD
 ### `--collector.process.include`
 
 Regexp of processes to include. Process name must both match `include` and not
 match `exclude` to be included. Recommended to keep down number of returned
-metrics.
+metrics. The pattern will be anchored, meaning it will be prefixed by "^" and suffixed by "$".
 
 ### `--collector.process.exclude`
 
 Regexp of processes to exclude. Process name must both match `include` and not
 match `exclude` to be included. Recommended to keep down number of returned
-metrics.
+metrics. The pattern will be anchored.
 
 ### `--collector.process.iis`
 
@@ -31,18 +30,72 @@ Enables IIS process name queries. IIS process names are combined with their app 
 Disabled by default, and can be enabled with `--collector.process.iis=true`.
 
 ### Example
+
 To match all firefox processes: `--collector.process.include="firefox.*"`.
 Note that multiple processes with the same name will be disambiguated by
 Windows by adding a number suffix, such as `firefox#2`. Your [regexp](https://en.wikipedia.org/wiki/Regular_expression) must take
 these suffixes into consideration.
 
-:warning: The regexp is case-sensitive, so `--collector.process.include="FIREFOX.*"` will **NOT** match a process named `firefox` . 
+:warning: The regexp is case-sensitive, so `--collector.process.include="FIREFOX.*"` will **NOT** match a process named `firefox` .
 
 To specify multiple names, use the pipe `|` character:
-```
+
+```cmd
 --collector.process.include="(firefox|FIREFOX|chrome).*"
 ```
+
 This will match all processes named `firefox`, `FIREFOX` or `chrome` .
+
+### `Custom Configuration` (config file only)
+
+#### process list with custom labels
+
+Define a dictionary of process to monitor, and for each of them a specific set of labels.
+
+:warning: This option is overriden if command line flags "collector.process.include" or "collector.process.exclude" are set.
+
+- syntax is:
+
+  ```yaml
+  group_name:
+    include: "regexp pattern to match process names"
+    exclude: "option regexp pattern to exclude process names"
+    optional_labels_keys: optional_labels_values
+    "...": "..."
+  ```
+
+- examples:
+
+    ```yml
+    collector:
+      process:
+        processes:
+          windows_exporter:
+            include: windows_exporter.*
+            application: prometheus
+            custom1: val1
+          pushprox_client:
+            include: pushprox_client.*
+            application: prometheus
+            custom1: val1
+          winRM:
+            include: winRM.*
+            application: windows
+            custom1: val2
+          Dhcp:
+            include: (?i)dhcp.*
+            application: windows
+            custom1: val3
+          browsers:
+            include: "(?i)(firefox|chrome).*"
+            exclude: "(?i)safari"
+            application: browsers
+            custom1: val4
+          Visual Studio Code:
+            include: "(?i)code.*"
+            application: "vscode"
+            custom1: val5
+    ```
 
 ## IIS Worker processes
 
@@ -50,11 +103,11 @@ The process collector also queries the `root\\WebAdministration` WMI namespace t
 
 Note that this specific feature **only works** if the [IIS Management Scripts and Tools](https://learn.microsoft.com/en-us/iis/manage/scripting/managing-sites-with-the-iis-wmi-provider) are installed. If they are not installed then all worker processes return as just `w3wp`.
 
-### Example
+### Example IIS worker
 
 Given an IIS server with two websites called "Prometheus.io" and "Example.com" running under the application pools "Public website" and "Test", the process names returned will look as follows:
 
-```
+```cmd
 w3wp_Public website
 w3wp_Test
 ```
@@ -78,12 +131,58 @@ Name | Description | Type | Labels
 `windows_process_working_set_private_bytes` | Size of the working set, in bytes, that is use for this process only and not shared nor shareable by other processes. | gauge | `process`, `process_id`, `creating_process_id`
 `windows_process_working_set_peak_bytes` | Maximum size, in bytes, of the Working Set of this process at any point in time. The Working Set is the set of memory pages touched recently by the threads in the process. If free memory in the computer is above a threshold, pages are left in the Working Set of a process even if they are not in use. When free memory falls below a threshold, pages are trimmed from Working Sets. If they are needed they will then be soft-faulted back into the Working Set before they leave main memory. | gauge | `process`, `process_id`, `creating_process_id`
 `windows_process_working_set_bytes` | Maximum number of bytes in the working set of this process at any point in time. The working set is the set of memory pages touched recently by the threads in the process. If free memory in the computer is above a threshold, pages are left in the working set of a process even if they are not in use. When free memory falls below a threshold, pages are trimmed from working sets. If they are needed, they are then soft-faulted back into the working set before they leave main memory. | gauge | `process`, `process_id`, `creating_process_id`
+`windows_process_group_count` | Number of process matching the patterns (include, exclude).If no process matchs the value will be set to 0. This metric wan be used to monitor the presence of process | gauge | `process group name` or `default` when using default config  option `--collector.process.include` `--collector.process.exclude`
 
 ### Example metric
-_This collector does not yet have explained examples, we would appreciate your help adding them!_
+
+*This collector does not yet have explained examples, we would appreciate your help adding them!*
 
 ## Useful queries
-_This collector does not yet have any useful queries added, we would appreciate your help adding them!_
+
+*This collector does not yet have any useful queries added, we would appreciate your help adding them!*
 
 ## Alerting examples
-_This collector does not yet have alerting examples, we would appreciate your help adding them!_
+
+### example with custom labels
+
+To detect too many opened "Visual studio Code" processes on a host:
+
+- Add config file:
+
+    ```yml
+    collector:
+      process:
+        processes:
+          Visual Studio Code:
+            include: "(?i)code.*"
+            application: "vscode"
+          apache:
+            include: "(?i)apache.*"
+            application: "apache"
+    ```
+
+- **prometheus.rules**: by example more than 10 processes for 15 minutes
+
+    ```yml
+    groups:
+    - name: Window Process Alerts
+    rules:
+
+    # Sends an alert when the 'Visual Studio Code' process group has more than 10 processes for 15 minutes.
+    - alert: WindowTooManyProcess
+        expr: windows_process_group_count{group="Visual Studio Code"} > 10
+        for: 15m
+        labels:
+        severity: high
+        annotations:
+        Summary: "Process {{ $labels.group }} has {{ $value }} instances."
+        description: "Too many processes '{{ $labels.group }}' for {{ $labels.application }} {{ $value }} > 10 for 15 min."
+    - alert: WindowProcessNotFound
+        expr: windows_process_group_count == 0
+        for: 15m
+        labels:
+        severity: high
+        annotations:
+        Summary: "Process {{ $labels.group }} has not found."
+        description: "The process '{{ $labels.group }}' for {{ $labels.application }} is not present for the last 15 min."
+    ```
