@@ -1,0 +1,22 @@
+# Build this Docker Image on any platform with
+# docker buildx build -t a --platform=windows/amd64 .
+
+ARG BASE=mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v1.0.0
+
+FROM --platform=$BUILDPLATFORM golang:1.21 as builder
+ARG TARGETARCH
+ARG TARGETOS
+
+# Get dependencies
+WORKDIR /w
+COPY go.mod go.sum ./
+RUN go mod download
+RUN go install github.com/prometheus/promu@latest
+
+# Build windows_exporter
+COPY . ./
+RUN GOOS=$TARGETOS GOARCH=$TARGETARCH make windows_exporter.exe
+
+FROM $BASE
+COPY --from=builder /w/windows_exporter.exe /windows_exporter.exe
+ENTRYPOINT ["windows_exporter.exe"]
