@@ -53,6 +53,10 @@ type NetworkCollector struct {
 	PacketsSentTotal         *prometheus.Desc
 	CurrentBandwidth         *prometheus.Desc
 
+	// The total packets received/sent for the instance/node across all interfaces
+	NodePacketsReceivedTotal *prometheus.Desc
+	NodePacketsSentTotal     *prometheus.Desc
+
 	nicIncludePattern *regexp.Regexp
 	nicExcludePattern *regexp.Regexp
 }
@@ -188,6 +192,18 @@ func newNetworkCollector(logger log.Logger) (Collector, error) {
 			[]string{"nic"},
 			nil,
 		),
+		NodePacketsReceivedTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "node_packets_received_total"),
+			"Total (Network.PacketsReceivedPerSec)",
+			nil,
+			nil,
+		),
+		NodePacketsSentTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(Namespace, subsystem, "node_packets_sent_total"),
+			"Total (Network.PacketsSentPerSec)",
+			nil,
+			nil,
+		),
 
 		nicIncludePattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *nicInclude)),
 		nicExcludePattern: regexp.MustCompile(fmt.Sprintf("^(?:%s)$", *nicExclude)),
@@ -236,6 +252,9 @@ func (c *NetworkCollector) collect(ctx *ScrapeContext, ch chan<- prometheus.Metr
 		return nil, err
 	}
 
+	var nodePacketsReceivedTotal float64
+	var nodePacketsSentTotal float64
+
 	for _, nic := range dst {
 		if c.nicExcludePattern.MatchString(nic.Name) ||
 			!c.nicIncludePattern.MatchString(nic.Name) {
@@ -246,6 +265,10 @@ func (c *NetworkCollector) collect(ctx *ScrapeContext, ch chan<- prometheus.Metr
 		if name == "" {
 			continue
 		}
+
+		// aggregate interface counters for packets received/sent
+		nodePacketsReceivedTotal += nic.PacketsReceivedPerSec
+		nodePacketsSentTotal += nic.PacketsSentPerSec
 
 		// Counters
 		ch <- prometheus.MustNewConstMetric(
@@ -327,5 +350,18 @@ func (c *NetworkCollector) collect(ctx *ScrapeContext, ch chan<- prometheus.Metr
 			name,
 		)
 	}
+
+	// Aggregate Counters
+	ch <- prometheus.MustNewConstMetric(
+		c.NodePacketsReceivedTotal,
+		prometheus.CounterValue,
+		nodePacketsReceivedTotal,
+	)
+	ch <- prometheus.MustNewConstMetric(
+		c.NodePacketsSentTotal,
+		prometheus.CounterValue,
+		nodePacketsSentTotal,
+	)
+
 	return nil, nil
 }
