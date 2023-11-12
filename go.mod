@@ -1,6 +1,6 @@
 module github.com/prometheus-community/windows_exporter
 
-go 1.19
+go 1.21
 
 require (
 	github.com/Microsoft/hcsshim v0.11.4
