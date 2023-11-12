@@ -203,6 +203,17 @@ func (c *processCollector) Match(proc_name string) (bool, *ProcessDef) {
 	}
 	return ok, proc
 }
+func (pdef *ProcessDef) Debug(logger log.Logger) {
+	inc_pat := "_"
+	exc_pat := "_"
+	if pdef.Include != nil {
+		inc_pat = pdef.Include.String()
+	}
+	if pdef.Exclude != nil {
+		exc_pat = pdef.Exclude.String()
+	}
+	_ = level.Debug(logger).Log("msg", fmt.Sprintf("process Matcher '%s' include: '%s' exclude: '%s'", pdef.Name, inc_pat, exc_pat))
+}
 
 // NewProcessCollector ...
 func newProcessCollector(logger log.Logger) (Collector, error) {
@@ -242,18 +253,12 @@ func newProcessCollector(logger log.Logger) (Collector, error) {
 				Exclude:      exclude,
 				CustomLabels: nil,
 			}
+			pdef := processes["default"]
+			pdef.Debug(logger)
 		} else {
 			if len(processes) > 0 {
 				for _, pdef := range processes {
-					inc_pat := "_"
-					exc_pat := "_"
-					if pdef.Include != nil {
-						inc_pat = pdef.Include.String()
-					}
-					if pdef.Exclude != nil {
-						exc_pat = pdef.Exclude.String()
-					}
-					_ = level.Debug(logger).Log("msg", fmt.Sprintf("process Matcher '%s' include: '%s' exclude: '%s'", pdef.Name, inc_pat, exc_pat))
+					pdef.Debug(logger)
 				}
 			}
 		}
