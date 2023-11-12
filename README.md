@@ -155,7 +155,15 @@ The prometheus metrics will be exposed on [localhost:9182](http://localhost:9182
 
 ### Enable only service collector and specify a custom query
 
-    .\windows_exporter.exe --collectors.enabled "service" --collector.service.services-where "Name='windows_exporter'"
+```shell
+.\windows_exporter.exe --collectors.enabled "service" --collector.service.services-where "Name='windows_exporter'"
+```
+
+or
+
+```shell
+.\windows_exporter.exe --collectors.enabled "service" --collector.service.services-list "windows_exporter"
+```
 
 ### Enable only process collector and specify a custom query
 

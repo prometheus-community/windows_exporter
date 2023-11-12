@@ -155,8 +155,14 @@ func main() {
 	}
 
 	_ = level.Debug(logger).Log("msg", "Logging has Started")
+
+	initWbem(logger)
+
+	// Initialize collectors before loading
+	collector.RegisterCollectors(logger)
+
 	if *configFile != "" {
-		resolver, err := config.NewResolver(*configFile, logger, *insecure_skip_verify)
+		resolver, err := config.NewResolver(*configFile, logger, *insecure_skip_verify, collector.CfgHooks())
 		if err != nil {
 			_ = level.Error(logger).Log("msg", "could not load config file", "err", err)
 			os.Exit(1)
@@ -195,11 +201,6 @@ func main() {
 		}
 		return
 	}
-
-	initWbem(logger)
-
-	// Initialize collectors before loading
-	collector.RegisterCollectors(logger)
 
 	collectors, err := loadCollectors(*enabledCollectors, logger)
 	if err != nil {

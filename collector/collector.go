@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/prometheus-community/windows_exporter/config"
 	"github.com/prometheus-community/windows_exporter/perflib"
 
 	"github.com/alecthomas/kingpin/v2"
@@ -60,11 +61,15 @@ type perfCounterNamesBuilder func(log.Logger) []string
 var (
 	builders                = make(map[string]collectorBuilder)
 	perfCounterDependencies = make(map[string]string)
+	config_hooks            = make(map[string]config.CfgHook)
 )
 
-func registerCollector(name string, builder collectorBuilder, perfCounterNames ...string) {
+func registerCollector(name string, builder collectorBuilder, hooks map[string]config.CfgHook, perfCounterNames ...string) {
 	builders[name] = builder
 	addPerfCounterDependencies(name, perfCounterNames)
+	for k, v := range hooks {
+		config_hooks[k] = v
+	}
 }
 
 func addPerfCounterDependencies(name string, perfCounterNames []string) {
@@ -82,10 +87,14 @@ func Available() []string {
 	}
 	return cs
 }
+func CfgHooks() map[string]config.CfgHook {
+	return config_hooks
+}
+
 func Build(collector string, logger log.Logger) (Collector, error) {
 	builder, exists := builders[collector]
 	if !exists {
-		return nil, fmt.Errorf("Unknown collector %q", collector)
+		return nil, fmt.Errorf("unknown collector %q", collector)
 	}
 	return builder(logger)
 }

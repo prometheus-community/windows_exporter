@@ -1,6 +1,8 @@
 package collector
 
 import (
+	"github.com/prometheus-community/windows_exporter/config"
+
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/go-kit/log"
 )
@@ -16,6 +18,8 @@ type collectorInit struct {
 	// Perflib counter names for the collector.
 	// These will be included in the Perflib scrape scope by the exporter.
 	perfCounterFunc perfCounterNamesBuilder
+	// builder function to intercept parameters for a collector
+	config_hooks map[string]config.CfgHook
 }
 
 func getDFSRCollectorDeps(_ log.Logger) []string {
@@ -303,6 +307,7 @@ var collectors = []collectorInit{
 		perfCounterFunc: func(_ log.Logger) []string {
 			return []string{"Process"}
 		},
+		config_hooks: ProcessBuildHook(),
 	},
 	{
 		name:    "remote_fx",
@@ -323,6 +328,7 @@ var collectors = []collectorInit{
 		flags:           newServiceCollectorFlags,
 		builder:         newserviceCollector,
 		perfCounterFunc: nil,
+		config_hooks:    ServiceBuildHook(),
 	},
 	{
 		name:    "smtp",
@@ -418,6 +424,6 @@ func RegisterCollectors(logger log.Logger) {
 			perfCounterNames = v.perfCounterFunc(logger)
 		}
 
-		registerCollector(v.name, v.builder, perfCounterNames...)
+		registerCollector(v.name, v.builder, v.config_hooks, perfCounterNames...)
 	}
 }
