@@ -66,7 +66,7 @@ func (c *collector) SetLogger(logger log.Logger) {
 }
 
 func (c *collector) GetPerfCounter() ([]string, error) {
-	return []string{}, nil
+	return []string{"DHCP Server"}, nil
 }
 
 func (c *collector) Build() error {
