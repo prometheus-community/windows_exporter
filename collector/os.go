@@ -53,7 +53,7 @@ func newOSCollector(logger log.Logger) (Collector, error) {
 		OSInformation: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, subsystem, "info"),
 			"OperatingSystem.Caption, OperatingSystem.Version",
-			[]string{"product", "version", "major_version", "minor_version", "build_number"},
+			[]string{"product", "version", "major_version", "minor_version", "build_number", "revision"},
 			nil,
 		),
 		PagingLimitBytes: prometheus.NewDesc(
@@ -199,6 +199,11 @@ func (c *OSCollector) collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) (
 		return nil, err
 	}
 
+	revision, _, err := ntKey.GetIntegerValue("UBR")
+	if err != nil {
+		return nil, err
+	}
+
 	var fsipf float64
 	for _, pagingFile := range pagingFiles {
 		fileString := strings.ReplaceAll(pagingFile, `\??\`, "")
@@ -242,6 +247,7 @@ func (c *OSCollector) collect(ctx *ScrapeContext, ch chan<- prometheus.Metric) (
 		fmt.Sprintf("%d", nwgi.VersionMajor),                              // Major Version
 		fmt.Sprintf("%d", nwgi.VersionMinor),                              // Minor Version
 		bn,                                                                // Build number
+		fmt.Sprintf("%d", revision),                                       // Revision
 	)
 
 	ch <- prometheus.MustNewConstMetric(
