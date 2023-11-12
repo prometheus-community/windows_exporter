@@ -109,6 +109,7 @@ type Config struct {
 	VmwareBlast                    vmware_blast.Config                    `yaml:"vmware_blast"`
 }
 
+// ConfigDefaults Is an interface to be used by the external libraries. It holds all ConfigDefaults form all collectors
 var ConfigDefaults = Config{
 	Ad:                             ad.ConfigDefaults,
 	Adcs:                           adcs.ConfigDefaults,
