@@ -428,6 +428,7 @@ func (c *processCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metr
 		dst_wp        []WorkerProcess
 		pdef          *ProcessDef
 		custom_labels []string
+		labels        []string
 	)
 	if *enableWorkerProcess {
 		q_wp := queryAll(&dst_wp, c.logger)
@@ -479,7 +480,7 @@ func (c *processCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metr
 		labels_value[0] = processName
 		labels_value[1] = pid
 		labels_value[2] = cpid
-		if pdef != nil && len(c.ProcessesLabels) > 0 {
+		if len(c.ProcessesLabels) > 0 {
 			custom_labels = make([]string, len(c.ProcessesLabels))
 			// we find the service name in service definition list
 			for idx, label := range c.ProcessesLabels {
@@ -488,14 +489,13 @@ func (c *processCollector) Collect(ctx *ScrapeContext, ch chan<- prometheus.Metr
 				}
 			}
 
-		} else {
-			// we don't find the service name !?!? not possible but...
-			for idx := range services_labels {
-				custom_labels[idx] = ""
-			}
 		}
 
-		labels := append(labels_value, custom_labels...)
+		if len(custom_labels) > 0 {
+			labels = append(labels_value, custom_labels...)
+		} else {
+			labels = labels_value
+		}
 
 		// metrics with var_labels[0] format
 		ch <- prometheus.MustNewConstMetric(
