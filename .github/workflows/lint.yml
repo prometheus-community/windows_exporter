@@ -23,7 +23,6 @@ on:
       - master
 
 env:
-  GO_VER: '^1.21.1'
   PROMU_VER: '0.14.0'
   PROMTOOL_VER: '2.43.0'
 
@@ -32,9 +31,9 @@ jobs:
     runs-on: windows-2019
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-go@v3
+      - uses: actions/setup-go@v4
         with:
-          go-version: ${{ env.GO_VER }}
+          go-version-file: 'go.mod'
 
       - name: Test
         run: make test
@@ -56,9 +55,9 @@ jobs:
     runs-on: windows-2019
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-go@v3
+      - uses: actions/setup-go@v4
         with:
-          go-version: ${{ env.GO_VER }}
+          go-version-file: 'go.mod'
 
       - name: Install promtool
         run: |
@@ -88,14 +87,14 @@ jobs:
           git config --global core.eol lf
 
       - uses: actions/checkout@v3
-      - uses: actions/setup-go@v3
+      - uses: actions/setup-go@v4
         with:
-          go-version: ${{ env.GO_VER }}
+          go-version-file: 'go.mod'
 
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v3
         with:
-          version: v1.51.2
+          version: v1.55.2
           args: "--timeout=5m"
 
       # golangci-lint action doesn't always provide helpful output, so re-run without the action for

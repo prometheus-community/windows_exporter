@@ -7,13 +7,13 @@ linters:
   - govet
   - gofmt
   - ineffassign
-  - structcheck
   - unconvert
   - varcheck
 
 issues:
   exclude:
   - don't use underscores in Go names
+  - don't use an underscore in package name
   - exported type .+ should have comment or be unexported
   exclude-rules:
   - # Golint has many capitalisation complaints on WMI class names

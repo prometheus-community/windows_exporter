@@ -1,37 +1,30 @@
 //go:build windows
-// +build windows
 
 package main
 
 import (
-	//Its important that we do these first so that we can register with the windows service control ASAP to avoid timeouts
-	"github.com/prometheus-community/windows_exporter/initiate"
-	winlog "github.com/prometheus-community/windows_exporter/log"
-
 	"encoding/json"
 	"fmt"
-	stdlog "log"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"os/user"
 	"runtime"
 	"sort"
-	"strconv"
 	"strings"
-	"time"
 
-	"github.com/prometheus-community/windows_exporter/collector"
-	"github.com/prometheus-community/windows_exporter/config"
-	"github.com/prometheus-community/windows_exporter/log/flag"
-	"github.com/yusufpapurcu/wmi"
+	// Its important that we do these first so that we can register with the windows service control ASAP to avoid timeouts
+	"github.com/prometheus-community/windows_exporter/pkg/initiate"
+	winlog "github.com/prometheus-community/windows_exporter/pkg/log"
+	"github.com/prometheus-community/windows_exporter/pkg/types"
+	"github.com/prometheus-community/windows_exporter/pkg/utils"
+	"github.com/prometheus-community/windows_exporter/pkg/wmi"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/collectors"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/prometheus-community/windows_exporter/pkg/collector"
+	"github.com/prometheus-community/windows_exporter/pkg/config"
+	"github.com/prometheus-community/windows_exporter/pkg/log/flag"
 	"github.com/prometheus/common/version"
 	"github.com/prometheus/exporter-toolkit/web"
 	webflag "github.com/prometheus/exporter-toolkit/web/kingpinflag"
@@ -46,56 +39,6 @@ type prometheusVersion struct {
 	BuildUser string `json:"buildUser"`
 	BuildDate string `json:"buildDate"`
 	GoVersion string `json:"goVersion"`
-}
-
-const (
-	defaultCollectors            = "cpu,cs,logical_disk,physical_disk,net,os,service,system,textfile"
-	defaultCollectorsPlaceholder = "[defaults]"
-)
-
-func expandEnabledCollectors(enabled string) []string {
-	expanded := strings.Replace(enabled, defaultCollectorsPlaceholder, defaultCollectors, -1)
-	separated := strings.Split(expanded, ",")
-	unique := map[string]bool{}
-	for _, s := range separated {
-		if s != "" {
-			unique[s] = true
-		}
-	}
-	result := make([]string, 0, len(unique))
-	for s := range unique {
-		result = append(result, s)
-	}
-	return result
-}
-
-func loadCollectors(list string, logger log.Logger) (map[string]collector.Collector, error) {
-	collectors := map[string]collector.Collector{}
-	enabled := expandEnabledCollectors(list)
-
-	for _, name := range enabled {
-		c, err := collector.Build(name, logger)
-		if err != nil {
-			return nil, err
-		}
-		collectors[name] = c
-	}
-
-	return collectors, nil
-}
-
-func initWbem(logger log.Logger) {
-	// This initialization prevents a memory leak on WMF 5+. See
-	// https://github.com/prometheus-community/windows_exporter/issues/77 and
-	// linked issues for details.
-	_ = level.Debug(logger).Log("msg", "Initializing SWbemServices")
-	s, err := wmi.InitializeSWbemServices(wmi.DefaultClient)
-	if err != nil {
-		_ = level.Error(logger).Log("err", err)
-		os.Exit(1)
-	}
-	wmi.DefaultClient.AllowMissingFields = true
-	wmi.DefaultClient.SWbemServicesClient = s
 }
 
 func main() {
@@ -125,7 +68,7 @@ func main() {
 		enabledCollectors = app.Flag(
 			"collectors.enabled",
 			"Comma-separated list of collectors to use. Use '[defaults]' as a placeholder for all the collectors enabled by default.").
-			Default(defaultCollectors).String()
+			Default(types.DefaultCollectors).String()
 		printCollectors = app.Flag(
 			"collectors.print",
 			"If true, print available collectors and exit.",
@@ -143,7 +86,7 @@ func main() {
 	app.HelpFlag.Short('h')
 
 	// Initialize collectors before loading and parsing CLI arguments
-	collector.RegisterCollectorsFlags(app)
+	collectors := collector.NewWithFlags(app)
 
 	// Load values from configuration file(s). Executable flags must first be parsed, in order
 	// to load the specified file(s).
@@ -155,6 +98,7 @@ func main() {
 	}
 
 	_ = level.Debug(logger).Log("msg", "Logging has Started")
+
 	if *configFile != "" {
 		resolver, err := config.NewResolver(*configFile, logger, *insecure_skip_verify)
 		if err != nil {
@@ -183,25 +127,28 @@ func main() {
 	}
 
 	if *printCollectors {
-		collectors := collector.Available()
-		collectorNames := make(sort.StringSlice, 0, len(collectors))
-		for _, n := range collectors {
-			collectorNames = append(collectorNames, n)
-		}
-		collectorNames.Sort()
+		collectorNames := collector.Available()
+		sort.Strings(collectorNames)
+
 		fmt.Printf("Available collectors:\n")
 		for _, n := range collectorNames {
 			fmt.Printf(" - %s\n", n)
 		}
+
 		return
 	}
 
-	initWbem(logger)
+	if err = wmi.InitWbem(logger); err != nil {
+		_ = level.Error(logger).Log("err", err)
+		os.Exit(1)
+	}
+
+	enabledCollectorList := utils.ExpandEnabledCollectors(*enabledCollectors)
+	collectors.Enable(enabledCollectorList)
+	collectors.SetLogger(logger)
 
 	// Initialize collectors before loading
-	collector.RegisterCollectors(logger)
-
-	collectors, err := loadCollectors(*enabledCollectors, logger)
+	err = collectors.Build()
 	if err != nil {
 		_ = level.Error(logger).Log("msg", "Couldn't load collectors", "err", err)
 		os.Exit(1)
@@ -214,34 +161,14 @@ func main() {
 	}
 
 	_ = level.Info(logger).Log("msg", fmt.Sprintf("Running as %v", u.Username))
+
 	if strings.Contains(u.Username, "ContainerAdministrator") || strings.Contains(u.Username, "ContainerUser") {
 		_ = level.Warn(logger).Log("msg", "Running as a preconfigured Windows Container user. This may mean you do not have Windows HostProcess containers configured correctly and some functionality will not work as expected.")
 	}
 
-	_ = level.Info(logger).Log("msg", fmt.Sprintf("Enabled collectors: %v", strings.Join(keys(collectors), ", ")))
+	_ = level.Info(logger).Log("msg", fmt.Sprintf("Enabled collectors: %v", strings.Join(enabledCollectorList, ", ")))
 
-	h := &metricsHandler{
-		timeoutMargin:          *timeoutMargin,
-		includeExporterMetrics: *disableExporterMetrics,
-		collectorFactory: func(timeout time.Duration, requestedCollectors []string) (error, *collector.Prometheus) {
-			filteredCollectors := make(map[string]collector.Collector)
-			// scrape all enabled collectors if no collector is requested
-			if len(requestedCollectors) == 0 {
-				filteredCollectors = collectors
-			}
-			for _, name := range requestedCollectors {
-				col, exists := collectors[name]
-				if !exists {
-					return fmt.Errorf("unavailable collector: %s", name), nil
-				}
-				filteredCollectors[name] = col
-			}
-			return nil, collector.NewPrometheus(timeout, filteredCollectors, logger)
-		},
-		logger: logger,
-	}
-
-	http.HandleFunc(*metricsPath, withConcurrencyLimit(*maxRequests, h.ServeHTTP))
+	http.HandleFunc(*metricsPath, withConcurrencyLimit(*maxRequests, collectors.BuildServeHTTP(*disableExporterMetrics, *timeoutMargin)))
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, err := fmt.Fprintln(w, `{"status":"ok"}`)
@@ -312,14 +239,6 @@ func main() {
 	}
 }
 
-func keys(m map[string]collector.Collector) []string {
-	ret := make([]string, 0, len(m))
-	for key := range m {
-		ret = append(ret, key)
-	}
-	return ret
-}
-
 func withConcurrencyLimit(n int, next http.HandlerFunc) http.HandlerFunc {
 	if n <= 0 {
 		return next
@@ -337,50 +256,4 @@ func withConcurrencyLimit(n int, next http.HandlerFunc) http.HandlerFunc {
 		}
 		next(w, r)
 	}
-}
-
-type metricsHandler struct {
-	timeoutMargin          float64
-	includeExporterMetrics bool
-	collectorFactory       func(timeout time.Duration, requestedCollectors []string) (error, *collector.Prometheus)
-	logger                 log.Logger
-}
-
-func (mh *metricsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	const defaultTimeout = 10.0
-
-	var timeoutSeconds float64
-	if v := r.Header.Get("X-Prometheus-Scrape-Timeout-Seconds"); v != "" {
-		var err error
-		timeoutSeconds, err = strconv.ParseFloat(v, 64)
-		if err != nil {
-			_ = level.Warn(mh.logger).Log("msg", fmt.Sprintf("Couldn't parse X-Prometheus-Scrape-Timeout-Seconds: %q. Defaulting timeout to %f", v, defaultTimeout))
-		}
-	}
-	if timeoutSeconds == 0 {
-		timeoutSeconds = defaultTimeout
-	}
-	timeoutSeconds = timeoutSeconds - mh.timeoutMargin
-
-	reg := prometheus.NewRegistry()
-	err, wc := mh.collectorFactory(time.Duration(timeoutSeconds*float64(time.Second)), r.URL.Query()["collect[]"])
-	if err != nil {
-		_ = level.Warn(mh.logger).Log("msg", "Couldn't create filtered metrics handler", "err", err)
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(fmt.Sprintf("Couldn't create filtered metrics handler: %s", err))) //nolint:errcheck
-		return
-	}
-	reg.MustRegister(wc)
-	if !mh.includeExporterMetrics {
-		reg.MustRegister(
-			collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
-			collectors.NewGoCollector(),
-			version.NewCollector("windows_exporter"),
-		)
-	}
-
-	h := promhttp.HandlerFor(reg, promhttp.HandlerOpts{
-		ErrorLog: stdlog.New(log.NewStdlibAdapter(level.Error(mh.logger)), "", stdlog.Lshortfile),
-	})
-	h.ServeHTTP(w, r)
 }
