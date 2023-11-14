@@ -5,12 +5,12 @@ package msmq
 import (
 	"strings"
 
-	"github.com/prometheus-community/windows_exporter/pkg/types"
-	"github.com/prometheus-community/windows_exporter/pkg/wmi"
-
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
+	"github.com/prometheus-community/windows_exporter/pkg/types"
+	"github.com/prometheus-community/windows_exporter/pkg/utils"
+	"github.com/prometheus-community/windows_exporter/pkg/wmi"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -72,7 +72,7 @@ func (c *collector) GetPerfCounter() ([]string, error) {
 }
 
 func (c *collector) Build() error {
-	if *c.queryWhereClause == "" {
+	if utils.IsEmpty(c.queryWhereClause) {
 		_ = level.Warn(c.logger).Log("msg", "No where-clause specified for msmq collector. This will generate a very large number of metrics!")
 	}
 

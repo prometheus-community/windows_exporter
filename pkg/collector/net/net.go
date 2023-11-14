@@ -12,6 +12,7 @@ import (
 	"github.com/go-kit/log/level"
 	"github.com/prometheus-community/windows_exporter/pkg/perflib"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
+	"github.com/prometheus-community/windows_exporter/pkg/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -125,7 +126,7 @@ func (c *collector) GetPerfCounter() ([]string, error) {
 }
 
 func (c *collector) Build() error {
-	if *c.nicOldExclude != "" {
+	if utils.HasValue(c.nicOldExclude) {
 		if !c.nicExcludeSet {
 			_ = level.Warn(c.logger).Log("msg", "--collector.net.nic-blacklist is DEPRECATED and will be removed in a future release, use --collector.net.nic-exclude")
 			*c.nicExclude = *c.nicOldExclude
@@ -133,7 +134,7 @@ func (c *collector) Build() error {
 			return errors.New("--collector.net.nic-blacklist and --collector.net.nic-exclude are mutually exclusive")
 		}
 	}
-	if *c.nicOldInclude != "" {
+	if utils.HasValue(c.nicOldInclude) {
 		if !c.nicIncludeSet {
 			_ = level.Warn(c.logger).Log("msg", "--collector.net.nic-whitelist is DEPRECATED and will be removed in a future release, use --collector.net.nic-include")
 			*c.nicInclude = *c.nicOldInclude

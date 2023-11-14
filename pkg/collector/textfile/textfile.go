@@ -30,6 +30,7 @@ import (
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
+	"github.com/prometheus-community/windows_exporter/pkg/utils"
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
@@ -103,7 +104,7 @@ func (c *collector) GetPerfCounter() ([]string, error) {
 
 func (c *collector) Build() error {
 	c.directories = ""
-	if *c.textFileDirectory != "" || *c.textFileDirectories != "" {
+	if utils.HasValue(c.textFileDirectory) || utils.HasValue(c.textFileDirectories) {
 		c.directories = *c.textFileDirectory + "," + *c.textFileDirectories
 		c.directories = strings.Trim(c.directories, ",")
 	}

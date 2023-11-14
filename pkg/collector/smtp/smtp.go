@@ -12,6 +12,7 @@ import (
 	"github.com/go-kit/log/level"
 	"github.com/prometheus-community/windows_exporter/pkg/perflib"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
+	"github.com/prometheus-community/windows_exporter/pkg/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -152,7 +153,7 @@ func (c *collector) GetPerfCounter() ([]string, error) {
 func (c *collector) Build() error {
 	_ = level.Info(c.logger).Log("msg", "smtp collector is in an experimental state! Metrics for this collector have not been tested.")
 
-	if *c.serverOldExclude != "" {
+	if utils.HasValue(c.serverOldExclude) {
 		if !c.serverExcludeSet {
 			_ = level.Warn(c.logger).Log("msg", "--collector.smtp.server-blacklist is DEPRECATED and will be removed in a future release, use --collector.smtp.server-exclude")
 			*c.serverExclude = *c.serverOldExclude
@@ -160,7 +161,7 @@ func (c *collector) Build() error {
 			return errors.New("--collector.smtp.server-blacklist and --collector.smtp.server-exclude are mutually exclusive")
 		}
 	}
-	if *c.serverOldInclude != "" {
+	if utils.HasValue(c.serverOldInclude) {
 		if !c.serverIncludeSet {
 			_ = level.Warn(c.logger).Log("msg", "--collector.smtp.server-whitelist is DEPRECATED and will be removed in a future release, use --collector.smtp.server-include")
 			*c.serverInclude = *c.serverOldInclude
