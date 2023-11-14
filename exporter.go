@@ -154,16 +154,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	u, err := user.Current()
-	if err != nil {
-		_ = level.Error(logger).Log("err", err)
-		os.Exit(1)
-	}
+	if u, err := user.Current(); err != nil {
+		_ = level.Warn(logger).Log("msg", "Unable to determine which user is running this exporter. More info: https://github.com/golang/go/issues/37348")
+	} else {
+		_ = level.Info(logger).Log("msg", fmt.Sprintf("Running as %v", u.Username))
 
-	_ = level.Info(logger).Log("msg", fmt.Sprintf("Running as %v", u.Username))
-
-	if strings.Contains(u.Username, "ContainerAdministrator") || strings.Contains(u.Username, "ContainerUser") {
-		_ = level.Warn(logger).Log("msg", "Running as a preconfigured Windows Container user. This may mean you do not have Windows HostProcess containers configured correctly and some functionality will not work as expected.")
+		if strings.Contains(u.Username, "ContainerAdministrator") || strings.Contains(u.Username, "ContainerUser") {
+			_ = level.Warn(logger).Log("msg", "Running as a preconfigured Windows Container user. This may mean you do not have Windows HostProcess containers configured correctly and some functionality will not work as expected.")
+		}
 	}
 
 	_ = level.Info(logger).Log("msg", fmt.Sprintf("Enabled collectors: %v", strings.Join(enabledCollectorList, ", ")))
