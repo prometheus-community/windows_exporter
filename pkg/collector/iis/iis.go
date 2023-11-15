@@ -3,7 +3,6 @@
 package iis
 
 import (
-	"errors"
 	"fmt"
 	"regexp"
 	"sort"
@@ -14,17 +13,12 @@ import (
 	"github.com/go-kit/log/level"
 	"github.com/prometheus-community/windows_exporter/pkg/perflib"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
-	"github.com/prometheus-community/windows_exporter/pkg/utils"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows/registry"
 )
 
 const (
-	Name                  = "iis"
-	FlagIISSiteOldExclude = "collector.iis.site-blacklist"
-	FlagIISSiteOldInclude = "collector.iis.site-whitelist"
-	FlagIISAppOldExclude  = "collector.iis.app-blacklist"
-	FlagIISAppOldInclude  = "collector.iis.app-whitelist"
+	Name = "iis"
 
 	FlagIISSiteExclude = "collector.iis.site-exclude"
 	FlagIISSiteInclude = "collector.iis.site-include"
@@ -86,20 +80,10 @@ func getIISVersion(logger log.Logger) simple_version {
 type collector struct {
 	logger log.Logger
 
-	oldSiteInclude *string
-	oldSiteExclude *string
-	oldAppInclude  *string
-	oldAppExclude  *string
-
 	siteInclude *string
 	siteExclude *string
 	appInclude  *string
 	appExclude  *string
-
-	siteIncludeSet bool
-	siteExcludeSet bool
-	appIncludeSet  bool
-	appExcludeSet  bool
 
 	// Web Service
 	CurrentAnonymousUsers               *prometheus.Desc
@@ -249,43 +233,26 @@ func New(logger log.Logger, config *Config) types.Collector {
 
 func NewWithFlags(app *kingpin.Application) types.Collector {
 	c := &collector{
-		oldSiteInclude: app.Flag(FlagIISSiteOldInclude, "DEPRECATED: Use --collector.iis.site-include").Hidden().String(),
-		oldSiteExclude: app.Flag(FlagIISSiteOldExclude, "DEPRECATED: Use --collector.iis.site-exclude").Hidden().String(),
-		oldAppInclude:  app.Flag(FlagIISAppOldInclude, "DEPRECATED: Use --collector.iis.app-include").Hidden().String(),
-		oldAppExclude:  app.Flag(FlagIISAppOldExclude, "DEPRECATED: Use --collector.iis.app-exclude").Hidden().String(),
+		siteInclude: app.Flag(
+			FlagIISSiteInclude,
+			"Regexp of sites to include. Site name must both match include and not match exclude to be included.",
+		).Default(ConfigDefaults.SiteInclude).String(),
+
+		siteExclude: app.Flag(
+			FlagIISSiteExclude,
+			"Regexp of sites to exclude. Site name must both match include and not match exclude to be included.",
+		).Default(ConfigDefaults.SiteExclude).String(),
+
+		appInclude: app.Flag(
+			FlagIISAppInclude,
+			"Regexp of apps to include. App name must both match include and not match exclude to be included.",
+		).Default(ConfigDefaults.AppInclude).String(),
+
+		appExclude: app.Flag(
+			FlagIISAppExclude,
+			"Regexp of apps to exclude. App name must both match include and not match exclude to be included.",
+		).Default(ConfigDefaults.AppExclude).String(),
 	}
-
-	c.siteInclude = app.Flag(
-		FlagIISSiteInclude,
-		"Regexp of sites to include. Site name must both match include and not match exclude to be included.",
-	).Default(".+").PreAction(func(_ *kingpin.ParseContext) error {
-		c.siteIncludeSet = true
-		return nil
-	}).String()
-
-	c.siteExclude = app.Flag(
-		FlagIISSiteExclude,
-		"Regexp of sites to exclude. Site name must both match include and not match exclude to be included.",
-	).Default("").PreAction(func(_ *kingpin.ParseContext) error {
-		c.siteExcludeSet = true
-		return nil
-	}).String()
-
-	c.appInclude = app.Flag(
-		FlagIISAppInclude,
-		"Regexp of apps to include. App name must both match include and not match exclude to be included.",
-	).Default(".+").PreAction(func(_ *kingpin.ParseContext) error {
-		c.appIncludeSet = true
-		return nil
-	}).String()
-
-	c.appExclude = app.Flag(
-		FlagIISAppExclude,
-		"Regexp of apps to include. App name must both match include and not match exclude to be included.",
-	).Default("").PreAction(func(_ *kingpin.ParseContext) error {
-		c.siteExcludeSet = true
-		return nil
-	}).String()
 
 	return c
 }
@@ -308,40 +275,6 @@ func (c *collector) GetPerfCounter() ([]string, error) {
 }
 
 func (c *collector) Build() error {
-	if utils.HasValue(c.oldSiteExclude) {
-		if !c.siteExcludeSet {
-			_ = level.Warn(c.logger).Log("msg", "--collector.iis.site-blacklist is DEPRECATED and will be removed in a future release, use --collector.iis.site-exclude")
-			*c.siteExclude = *c.oldSiteExclude
-		} else {
-			return errors.New("--collector.iis.site-blacklist and --collector.iis.site-exclude are mutually exclusive")
-		}
-	}
-	if utils.HasValue(c.oldSiteInclude) {
-		if !c.siteIncludeSet {
-			_ = level.Warn(c.logger).Log("msg", "--collector.iis.site-whitelist is DEPRECATED and will be removed in a future release, use --collector.iis.site-include")
-			*c.siteInclude = *c.oldSiteInclude
-		} else {
-			return errors.New("--collector.iis.site-whitelist and --collector.iis.site-include are mutually exclusive")
-		}
-	}
-
-	if utils.HasValue(c.oldAppExclude) {
-		if !c.appExcludeSet {
-			_ = level.Warn(c.logger).Log("msg", "--collector.iis.app-blacklist is DEPRECATED and will be removed in a future release, use --collector.iis.app-exclude")
-			*c.appExclude = *c.oldAppExclude
-		} else {
-			return errors.New("--collector.iis.app-blacklist and --collector.iis.app-exclude are mutually exclusive")
-		}
-	}
-	if utils.HasValue(c.oldAppInclude) {
-		if !c.appIncludeSet {
-			_ = level.Warn(c.logger).Log("msg", "--collector.iis.app-whitelist is DEPRECATED and will be removed in a future release, use --collector.iis.app-include")
-			*c.appInclude = *c.oldAppInclude
-		} else {
-			return errors.New("--collector.iis.app-whitelist and --collector.iis.app-include are mutually exclusive")
-		}
-	}
-
 	c.iis_version = getIISVersion(c.logger)
 
 	var err error

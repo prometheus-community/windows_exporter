@@ -3,7 +3,6 @@
 package logical_disk
 
 import (
-	"errors"
 	"fmt"
 	"regexp"
 
@@ -12,14 +11,11 @@ import (
 	"github.com/go-kit/log/level"
 	"github.com/prometheus-community/windows_exporter/pkg/perflib"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
-	"github.com/prometheus-community/windows_exporter/pkg/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 const (
-	Name                            = "logical_disk"
-	FlagLogicalDiskVolumeOldExclude = "collector.logical_disk.volume-blacklist"
-	FlagLogicalDiskVolumeOldInclude = "collector.logical_disk.volume-whitelist"
+	Name = "logical_disk"
 
 	FlagLogicalDiskVolumeExclude = "collector.logical_disk.volume-exclude"
 	FlagLogicalDiskVolumeInclude = "collector.logical_disk.volume-include"
@@ -39,14 +35,8 @@ var ConfigDefaults = Config{
 type collector struct {
 	logger log.Logger
 
-	volumeOldInclude *string
-	volumeOldExclude *string
-
 	volumeInclude *string
 	volumeExclude *string
-
-	volumeIncludeSet bool
-	volumeExcludeSet bool
 
 	RequestsQueued   *prometheus.Desc
 	AvgReadQueue     *prometheus.Desc
@@ -83,32 +73,16 @@ func New(logger log.Logger, config *Config) types.Collector {
 }
 
 func NewWithFlags(app *kingpin.Application) types.Collector {
-	c := &collector{}
-
-	c.volumeInclude = app.Flag(
-		FlagLogicalDiskVolumeInclude,
-		"Regexp of volumes to include. Volume name must both match include and not match exclude to be included.",
-	).Default(ConfigDefaults.VolumeInclude).PreAction(func(_ *kingpin.ParseContext) error {
-		c.volumeIncludeSet = true
-		return nil
-	}).String()
-
-	c.volumeExclude = app.Flag(
-		FlagLogicalDiskVolumeExclude,
-		"Regexp of volumes to exclude. Volume name must both match include and not match exclude to be included.",
-	).Default(ConfigDefaults.VolumeExclude).PreAction(func(_ *kingpin.ParseContext) error {
-		c.volumeExcludeSet = true
-		return nil
-	}).String()
-
-	c.volumeOldInclude = app.Flag(
-		FlagLogicalDiskVolumeOldInclude,
-		"DEPRECATED: Use --collector.logical_disk.volume-include",
-	).Hidden().String()
-	c.volumeOldExclude = app.Flag(
-		FlagLogicalDiskVolumeOldExclude,
-		"DEPRECATED: Use --collector.logical_disk.volume-exclude",
-	).Hidden().String()
+	c := &collector{
+		volumeInclude: app.Flag(
+			FlagLogicalDiskVolumeInclude,
+			"Regexp of volumes to include. Volume name must both match include and not match exclude to be included.",
+		).Default(ConfigDefaults.VolumeInclude).String(),
+		volumeExclude: app.Flag(
+			FlagLogicalDiskVolumeExclude,
+			"Regexp of volumes to exclude. Volume name must both match include and not match exclude to be included.",
+		).Default(ConfigDefaults.VolumeExclude).String(),
+	}
 
 	return c
 }
@@ -126,23 +100,6 @@ func (c *collector) GetPerfCounter() ([]string, error) {
 }
 
 func (c *collector) Build() error {
-	if utils.HasValue(c.volumeOldExclude) {
-		if !c.volumeExcludeSet {
-			_ = level.Warn(c.logger).Log("msg", "--collector.logical_disk.volume-blacklist is DEPRECATED and will be removed in a future release, use --collector.logical_disk.volume-exclude")
-			*c.volumeExclude = *c.volumeOldExclude
-		} else {
-			return errors.New("--collector.logical_disk.volume-blacklist and --collector.logical_disk.volume-exclude are mutually exclusive")
-		}
-	}
-	if utils.HasValue(c.volumeOldInclude) {
-		if !c.volumeIncludeSet {
-			_ = level.Warn(c.logger).Log("msg", "--collector.logical_disk.volume-whitelist is DEPRECATED and will be removed in a future release, use --collector.logical_disk.volume-include")
-			*c.volumeInclude = *c.volumeOldInclude
-		} else {
-			return errors.New("--collector.logical_disk.volume-whitelist and --collector.logical_disk.volume-include are mutually exclusive")
-		}
-	}
-
 	c.RequestsQueued = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "requests_queued"),
 		"The number of requests queued to the disk (LogicalDisk.CurrentDiskQueueLength)",
