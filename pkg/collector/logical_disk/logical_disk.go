@@ -12,6 +12,7 @@ import (
 	"github.com/go-kit/log/level"
 	"github.com/prometheus-community/windows_exporter/pkg/perflib"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
+	"github.com/prometheus-community/windows_exporter/pkg/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -125,7 +126,7 @@ func (c *collector) GetPerfCounter() ([]string, error) {
 }
 
 func (c *collector) Build() error {
-	if *c.volumeOldExclude != "" {
+	if utils.HasValue(c.volumeOldExclude) {
 		if !c.volumeExcludeSet {
 			_ = level.Warn(c.logger).Log("msg", "--collector.logical_disk.volume-blacklist is DEPRECATED and will be removed in a future release, use --collector.logical_disk.volume-exclude")
 			*c.volumeExclude = *c.volumeOldExclude
@@ -133,7 +134,7 @@ func (c *collector) Build() error {
 			return errors.New("--collector.logical_disk.volume-blacklist and --collector.logical_disk.volume-exclude are mutually exclusive")
 		}
 	}
-	if *c.volumeOldInclude != "" {
+	if utils.HasValue(c.volumeOldInclude) {
 		if !c.volumeIncludeSet {
 			_ = level.Warn(c.logger).Log("msg", "--collector.logical_disk.volume-whitelist is DEPRECATED and will be removed in a future release, use --collector.logical_disk.volume-include")
 			*c.volumeInclude = *c.volumeOldInclude

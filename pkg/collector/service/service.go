@@ -12,6 +12,7 @@ import (
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
+	"github.com/prometheus-community/windows_exporter/pkg/utils"
 	"github.com/prometheus-community/windows_exporter/pkg/wmi"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows"
@@ -88,7 +89,7 @@ func (c *collector) GetPerfCounter() ([]string, error) {
 }
 
 func (c *collector) Build() error {
-	if *c.serviceWhereClause == "" {
+	if utils.IsEmpty(c.serviceWhereClause) {
 		_ = level.Warn(c.logger).Log("msg", "No where-clause specified for service collector. This will generate a very large number of metrics!")
 	}
 	if *c.useAPI {

@@ -15,6 +15,7 @@ import (
 	"github.com/go-ole/go-ole"
 	"github.com/go-ole/go-ole/oleutil"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
+	"github.com/prometheus-community/windows_exporter/pkg/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -141,7 +142,7 @@ func (c *collector) GetPerfCounter() ([]string, error) {
 }
 
 func (c *collector) Build() error {
-	if *c.taskOldExclude != "" {
+	if utils.HasValue(c.taskOldExclude) {
 		if !c.taskExcludeSet {
 			_ = level.Warn(c.logger).Log("msg", "--collector.scheduled_task.blacklist is DEPRECATED and will be removed in a future release, use --collector.scheduled_task.exclude")
 			*c.taskExclude = *c.taskOldExclude
@@ -149,7 +150,7 @@ func (c *collector) Build() error {
 			return errors.New("--collector.scheduled_task.blacklist and --collector.scheduled_task.exclude are mutually exclusive")
 		}
 	}
-	if *c.taskOldInclude != "" {
+	if utils.HasValue(c.taskOldInclude) {
 		if !c.taskIncludeSet {
 			_ = level.Warn(c.logger).Log("msg", "--collector.scheduled_task.whitelist is DEPRECATED and will be removed in a future release, use --collector.scheduled_task.include")
 			*c.taskInclude = *c.taskOldInclude

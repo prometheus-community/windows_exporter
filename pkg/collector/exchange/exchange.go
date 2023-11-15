@@ -13,6 +13,7 @@ import (
 	"github.com/go-kit/log/level"
 	"github.com/prometheus-community/windows_exporter/pkg/perflib"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
+	"github.com/prometheus-community/windows_exporter/pkg/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -211,7 +212,7 @@ func (c *collector) Build() error {
 		os.Exit(0)
 	}
 
-	if *c.exchangeCollectorsEnabled == "" {
+	if utils.IsEmpty(c.exchangeCollectorsEnabled) {
 		for _, collectorName := range exchangeAllCollectorNames {
 			c.enabledCollectors = append(c.enabledCollectors, collectorName)
 		}

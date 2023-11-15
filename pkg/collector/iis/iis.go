@@ -9,12 +9,12 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/prometheus-community/windows_exporter/pkg/perflib"
-	"github.com/prometheus-community/windows_exporter/pkg/types"
-
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
+	"github.com/prometheus-community/windows_exporter/pkg/perflib"
+	"github.com/prometheus-community/windows_exporter/pkg/types"
+	"github.com/prometheus-community/windows_exporter/pkg/utils"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows/registry"
 )
@@ -308,7 +308,7 @@ func (c *collector) GetPerfCounter() ([]string, error) {
 }
 
 func (c *collector) Build() error {
-	if *c.oldSiteExclude != "" {
+	if utils.HasValue(c.oldSiteExclude) {
 		if !c.siteExcludeSet {
 			_ = level.Warn(c.logger).Log("msg", "--collector.iis.site-blacklist is DEPRECATED and will be removed in a future release, use --collector.iis.site-exclude")
 			*c.siteExclude = *c.oldSiteExclude
@@ -316,7 +316,7 @@ func (c *collector) Build() error {
 			return errors.New("--collector.iis.site-blacklist and --collector.iis.site-exclude are mutually exclusive")
 		}
 	}
-	if *c.oldSiteInclude != "" {
+	if utils.HasValue(c.oldSiteInclude) {
 		if !c.siteIncludeSet {
 			_ = level.Warn(c.logger).Log("msg", "--collector.iis.site-whitelist is DEPRECATED and will be removed in a future release, use --collector.iis.site-include")
 			*c.siteInclude = *c.oldSiteInclude
@@ -325,7 +325,7 @@ func (c *collector) Build() error {
 		}
 	}
 
-	if *c.oldAppExclude != "" {
+	if utils.HasValue(c.oldAppExclude) {
 		if !c.appExcludeSet {
 			_ = level.Warn(c.logger).Log("msg", "--collector.iis.app-blacklist is DEPRECATED and will be removed in a future release, use --collector.iis.app-exclude")
 			*c.appExclude = *c.oldAppExclude
@@ -333,7 +333,7 @@ func (c *collector) Build() error {
 			return errors.New("--collector.iis.app-blacklist and --collector.iis.app-exclude are mutually exclusive")
 		}
 	}
-	if *c.oldAppInclude != "" {
+	if utils.HasValue(c.oldAppInclude) {
 		if !c.appIncludeSet {
 			_ = level.Warn(c.logger).Log("msg", "--collector.iis.app-whitelist is DEPRECATED and will be removed in a future release, use --collector.iis.app-include")
 			*c.appInclude = *c.oldAppInclude

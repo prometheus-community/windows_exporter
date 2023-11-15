@@ -14,6 +14,7 @@ import (
 	"github.com/go-kit/log/level"
 	"github.com/prometheus-community/windows_exporter/pkg/perflib"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
+	"github.com/prometheus-community/windows_exporter/pkg/utils"
 	"github.com/prometheus-community/windows_exporter/pkg/wmi"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -133,7 +134,7 @@ func (c *collector) GetPerfCounter() ([]string, error) {
 }
 
 func (c *collector) Build() error {
-	if *c.processOldExclude != "" {
+	if utils.HasValue(c.processOldExclude) {
 		if !c.processExcludeSet {
 			_ = level.Warn(c.logger).Log("msg", "--collector.process.blacklist is DEPRECATED and will be removed in a future release, use --collector.process.exclude")
 			*c.processExclude = *c.processOldExclude
@@ -141,7 +142,7 @@ func (c *collector) Build() error {
 			return errors.New("--collector.process.blacklist and --collector.process.exclude are mutually exclusive")
 		}
 	}
-	if *c.processOldInclude != "" {
+	if utils.HasValue(c.processOldInclude) {
 		if !c.processIncludeSet {
 			_ = level.Warn(c.logger).Log("msg", "--collector.process.whitelist is DEPRECATED and will be removed in a future release, use --collector.process.include")
 			*c.processInclude = *c.processOldInclude
@@ -150,7 +151,7 @@ func (c *collector) Build() error {
 		}
 	}
 
-	if *c.processInclude == ".*" && *c.processExclude == "" {
+	if c.processInclude != nil && *c.processInclude == ".*" && utils.IsEmpty(c.processExclude) {
 		_ = level.Warn(c.logger).Log("msg", "No filters specified for process collector. This will generate a very large number of metrics!")
 	}
 
