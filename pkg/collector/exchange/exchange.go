@@ -668,7 +668,7 @@ func (c *collector) collectAutoDiscover(ctx *types.ScrapeContext, ch chan<- prom
 	return nil
 }
 
-// perflib MSExchange MapiHttp Emsmdb
+// perflib [26463] MSExchange MapiHttp Emsmdb
 type perflibMapiHttpEmsmdb struct {
 	ActiveUserCount float64 `perflib:"Active User Count"`
 }
