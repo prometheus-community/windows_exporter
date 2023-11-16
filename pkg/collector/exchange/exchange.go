@@ -191,7 +191,7 @@ func (c *collector) Build() error {
 	c.MailboxServerProxyFailureRate = desc("http_proxy_mailbox_proxy_failure_rate", "% of failures between this CAS and MBX servers over the last 200 samples", "name")
 	c.PingCommandsPending = desc("activesync_ping_cmds_pending", "Number of ping commands currently pending in the queue")
 	c.SyncCommandsPerSec = desc("activesync_sync_cmds_total", "Number of sync commands processed per second. Clients use this command to synchronize items within a folder")
-	c.ActiveUserCountMapiHttpEmsmdb = desc("mapihttp_emsmdb_active_user_count", "Number of unique users that have shown some kind of activity in the last 2 minutes")
+	c.ActiveUserCountMapiHttpEmsmdb = desc("mapihttp_emsmdb_active_user_count", "Number of unique outlook users that have shown some kind of activity in the last 2 minutes")
 
 	c.enabledCollectors = make([]string, 0, len(exchangeAllCollectorNames))
 
