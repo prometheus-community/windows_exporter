@@ -43,6 +43,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/collector/remote_fx"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/scheduled_task"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/service"
+	"github.com/prometheus-community/windows_exporter/pkg/collector/smb"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/smtp"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/system"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/tcp"
@@ -111,6 +112,7 @@ var Map = map[string]types.CollectorBuilderWithFlags{
 	time.Name:                            time.NewWithFlags,
 	vmware.Name:                          vmware.NewWithFlags,
 	vmware_blast.Name:                    vmware_blast.NewWithFlags,
+	smb.Name:                             smb.NewWithFlags,
 }
 
 func Available() []string {
