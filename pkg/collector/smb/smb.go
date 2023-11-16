@@ -208,8 +208,3 @@ func (c *collector) toLabelName(name string) string {
 	s = strings.ReplaceAll(s, "__", "_")
 	return s
 }
-
-// msToSec converts from ms to seconds
-func (c *collector) msToSec(t float64) float64 {
-	return t / 1000
-}
