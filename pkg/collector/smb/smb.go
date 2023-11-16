@@ -102,8 +102,8 @@ func (c *collector) Build() error {
 		)
 	}
 
-	c.CurrentOpenFileCount = desc("smb_server_shares_current_open_file_count", "Current count open files")
-	c.TreeConnectCount = desc("smb_server_session_tree_connect_count", "Current tree connect count")
+	c.CurrentOpenFileCount = desc("server_shares_current_open_file_count", "Current total count open files")
+	c.TreeConnectCount = desc("server_session_tree_connect_count", "Current tree connect count")
 
 	c.enabledCollectors = make([]string, 0, len(smbAllCollectorNames))
 
@@ -167,14 +167,14 @@ func (c *collector) collectServerShares(ctx *types.ScrapeContext, ch chan<- prom
 	}
 	for _, instance := range data {
 		labelName := c.toLabelName(instance.Name)
-		if strings.HasSuffix(labelName, "_total") {
+		if !strings.HasSuffix(labelName, "_total") {
 			continue
 		}
+
 		ch <- prometheus.MustNewConstMetric(
 			c.CurrentOpenFileCount,
 			prometheus.CounterValue,
 			instance.CurrentOpenFileCount,
-			labelName,
 		)
 
 	}
@@ -193,6 +193,7 @@ func (c *collector) collectServerSessions(ctx *types.ScrapeContext, ch chan<- pr
 	}
 
 	for _, instance := range data {
+
 		ch <- prometheus.MustNewConstMetric(
 			c.TreeConnectCount,
 			prometheus.CounterValue,
