@@ -240,8 +240,10 @@ func New(logger log.Logger, config *Config) types.Collector {
 	}
 
 	c := &collector{
-		appInclude: &config.AppInclude,
-		appExclude: &config.AppExclude,
+		appInclude:  &config.AppInclude,
+		appExclude:  &config.AppExclude,
+		siteInclude: &config.SiteInclude,
+		siteExclude: &config.SiteExclude,
 	}
 	c.SetLogger(logger)
 	return c
