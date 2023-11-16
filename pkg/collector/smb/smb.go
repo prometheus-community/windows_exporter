@@ -165,23 +165,15 @@ func (c *collector) collectServerShares(ctx *types.ScrapeContext, ch chan<- prom
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["SMB Server Shares"], &data, c.logger); err != nil {
 		return err
 	}
-	labelUseCount := make(map[string]int)
-	for _, proc := range data {
-		labelName := c.toLabelName(proc.Name)
+	for _, instance := range data {
+		labelName := c.toLabelName(instance.Name)
 		if strings.HasSuffix(labelName, "_total") {
 			continue
-		}
-
-		// Since we're not including the PID suffix from the instance names in the label names, we get an occasional duplicate.
-		// This seems to affect about 4 instances only of this object.
-		labelUseCount[labelName]++
-		if labelUseCount[labelName] > 1 {
-			labelName = fmt.Sprintf("%s_%d", labelName, labelUseCount[labelName])
 		}
 		ch <- prometheus.MustNewConstMetric(
 			c.CurrentOpenFileCount,
 			prometheus.CounterValue,
-			c.msToSec(proc.CurrentOpenFileCount),
+			instance.CurrentOpenFileCount,
 			labelName,
 		)
 
