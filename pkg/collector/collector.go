@@ -49,6 +49,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/collector/remote_fx"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/scheduled_task"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/service"
+	"github.com/prometheus-community/windows_exporter/pkg/collector/smb"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/smtp"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/system"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/tcp"
@@ -136,6 +137,7 @@ func NewWithConfig(logger log.Logger, config Config) Collectors {
 	collectors[time.Name] = time.New(logger, &config.Time)
 	collectors[vmware.Name] = vmware.New(logger, &config.Vmware)
 	collectors[vmware_blast.Name] = vmware_blast.New(logger, &config.VmwareBlast)
+	collectors[smb.Name] = smb.New(logger, &config.Smb)
 
 	return New(collectors)
 }
