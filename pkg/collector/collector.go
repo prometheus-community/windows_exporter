@@ -127,6 +127,7 @@ func NewWithConfig(logger log.Logger, config Config) Collectors {
 	collectors[remote_fx.Name] = remote_fx.New(logger, &config.RemoteFx)
 	collectors[scheduled_task.Name] = scheduled_task.New(logger, &config.ScheduledTask)
 	collectors[service.Name] = service.New(logger, &config.Service)
+	collectors[smb.Name] = smb.New(logger, &config.Smb)
 	collectors[smtp.Name] = smtp.New(logger, &config.Smtp)
 	collectors[system.Name] = system.New(logger, &config.System)
 	collectors[teradici_pcoip.Name] = teradici_pcoip.New(logger, &config.TeradiciPcoip)
@@ -137,7 +138,6 @@ func NewWithConfig(logger log.Logger, config Config) Collectors {
 	collectors[time.Name] = time.New(logger, &config.Time)
 	collectors[vmware.Name] = vmware.New(logger, &config.Vmware)
 	collectors[vmware_blast.Name] = vmware_blast.New(logger, &config.VmwareBlast)
-	collectors[smb.Name] = smb.New(logger, &config.Smb)
 
 	return New(collectors)
 }

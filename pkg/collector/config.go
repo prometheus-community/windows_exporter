@@ -98,6 +98,7 @@ type Config struct {
 	RemoteFx                       remote_fx.Config                       `yaml:"remote_fx"`
 	ScheduledTask                  scheduled_task.Config                  `yaml:"scheduled_task"`
 	Service                        service.Config                         `yaml:"service"`
+	Smb                            smb.Config                             `yaml:"smb"`
 	Smtp                           smtp.Config                            `yaml:"smtp"`
 	System                         system.Config                          `yaml:"system"`
 	TeradiciPcoip                  teradici_pcoip.Config                  `yaml:"teradici_pcoip"`
@@ -108,7 +109,6 @@ type Config struct {
 	Time                           time.Config                            `yaml:"time"`
 	Vmware                         vmware.Config                          `yaml:"vmware"`
 	VmwareBlast                    vmware_blast.Config                    `yaml:"vmware_blast"`
-	Smb                            smb.Config                             `yaml:"smb"`
 }
 
 // ConfigDefaults Is an interface to be used by the external libraries. It holds all ConfigDefaults form all collectors
@@ -155,6 +155,7 @@ var ConfigDefaults = Config{
 	RemoteFx:                       remote_fx.ConfigDefaults,
 	ScheduledTask:                  scheduled_task.ConfigDefaults,
 	Service:                        service.ConfigDefaults,
+	Smb:                            smb.ConfigDefaults,
 	Smtp:                           smtp.ConfigDefaults,
 	System:                         system.ConfigDefaults,
 	TeradiciPcoip:                  teradici_pcoip.ConfigDefaults,
@@ -165,5 +166,4 @@ var ConfigDefaults = Config{
 	Time:                           time.ConfigDefaults,
 	Vmware:                         vmware.ConfigDefaults,
 	VmwareBlast:                    vmware_blast.ConfigDefaults,
-	Smb:                            smb.ConfigDefaults,
 }
