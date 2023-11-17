@@ -102,18 +102,18 @@ func (c *collector) Build() error {
 		)
 	}
 
-	c.CurrentOpenFileCount = desc("server_shares_current_open_file_count", "Current total count open files")
-	c.TreeConnectCount = desc("server_session_tree_connect_count", "Current tree connect count")
+	c.CurrentOpenFileCount = desc("server_shares_current_open_file_count", "Current total count open files on the SMB Server")
+	c.TreeConnectCount = desc("server_session_tree_connect_count", "Tree connect count to SMB Server")
 
 	c.enabledCollectors = make([]string, 0, len(smbAllCollectorNames))
 
 	collectorDesc := map[string]string{
-		"ServerShares":   "[] SMB Server Shares",
-		"ServerSessions": "[] SMB Server Sessions",
+		"ServerShares":   "SMB Server Shares",
+		"ServerSessions": "SMB Server Sessions",
 	}
 
 	if *c.smbListAllCollectors {
-		fmt.Printf("%-32s %-32s\n", "Collector Name", "[PerfID] Perflib Object")
+		fmt.Printf("%-32s %-32s\n", "Collector Name", "Perflib Object")
 		for _, cname := range smbAllCollectorNames {
 			fmt.Printf("%-32s %-32s\n", cname, collectorDesc[cname])
 		}
@@ -153,7 +153,7 @@ func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 	return nil
 }
 
-// Perflib: [] SMB Server Shares
+// Perflib: SMB Server Shares
 type perflibServerShares struct {
 	Name string
 
@@ -181,7 +181,7 @@ func (c *collector) collectServerShares(ctx *types.ScrapeContext, ch chan<- prom
 	return nil
 }
 
-// Perflib: [] SMB Server Sessions
+// Perflib: SMB Server Sessions
 type perflibServerSession struct {
 	TreeConnectCount float64 `perflib:"Tree Connect Count"`
 }
