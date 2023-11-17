@@ -3,7 +3,6 @@
 package process
 
 import (
-	"errors"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -20,10 +19,7 @@ import (
 )
 
 const (
-	Name                  = "process"
-	FlagProcessOldExclude = "collector.process.blacklist"
-	FlagProcessOldInclude = "collector.process.whitelist"
-
+	Name               = "process"
 	FlagProcessExclude = "collector.process.exclude"
 	FlagProcessInclude = "collector.process.include"
 )
@@ -41,14 +37,8 @@ var ConfigDefaults = Config{
 type collector struct {
 	logger log.Logger
 
-	processOldInclude *string
-	processOldExclude *string
-
 	processInclude *string
 	processExclude *string
-
-	processIncludeSet bool
-	processExcludeSet bool
 
 	enableWorkerProcess *bool
 
@@ -86,38 +76,22 @@ func New(logger log.Logger, config *Config) types.Collector {
 }
 
 func NewWithFlags(app *kingpin.Application) types.Collector {
-	c := &collector{}
+	c := &collector{
+		processInclude: app.Flag(
+			FlagProcessInclude,
+			"Regexp of processes to include. Process name must both match include and not match exclude to be included.",
+		).Default(ConfigDefaults.ProcessInclude).String(),
 
-	c.processInclude = app.Flag(
-		FlagProcessInclude,
-		"Regexp of processes to include. Process name must both match include and not match exclude to be included.",
-	).Default(".*").PreAction(func(_ *kingpin.ParseContext) error {
-		c.processIncludeSet = true
-		return nil
-	}).String()
+		processExclude: app.Flag(
+			FlagProcessExclude,
+			"Regexp of processes to exclude. Process name must both match include and not match exclude to be included.",
+		).Default(ConfigDefaults.ProcessExclude).String(),
 
-	c.processExclude = app.Flag(
-		FlagProcessExclude,
-		"Regexp of processes to exclude. Process name must both match include and not match exclude to be included.",
-	).Default("").PreAction(func(_ *kingpin.ParseContext) error {
-		c.processExcludeSet = true
-		return nil
-	}).String()
-
-	c.enableWorkerProcess = kingpin.Flag(
-		"collector.process.iis",
-		"Enable IIS worker process name queries. May cause the collector to leak memory.",
-	).Default("false").Bool()
-
-	c.processOldInclude = app.Flag(
-		FlagProcessOldInclude,
-		"DEPRECATED: Use --collector.process.include",
-	).Hidden().String()
-	c.processOldExclude = app.Flag(
-		FlagProcessOldExclude,
-		"DEPRECATED: Use --collector.process.exclude",
-	).Hidden().String()
-
+		enableWorkerProcess: kingpin.Flag(
+			"collector.process.iis",
+			"Enable IIS worker process name queries. May cause the collector to leak memory.",
+		).Default("false").Bool(),
+	}
 	return c
 }
 
@@ -134,23 +108,6 @@ func (c *collector) GetPerfCounter() ([]string, error) {
 }
 
 func (c *collector) Build() error {
-	if utils.HasValue(c.processOldExclude) {
-		if !c.processExcludeSet {
-			_ = level.Warn(c.logger).Log("msg", "--collector.process.blacklist is DEPRECATED and will be removed in a future release, use --collector.process.exclude")
-			*c.processExclude = *c.processOldExclude
-		} else {
-			return errors.New("--collector.process.blacklist and --collector.process.exclude are mutually exclusive")
-		}
-	}
-	if utils.HasValue(c.processOldInclude) {
-		if !c.processIncludeSet {
-			_ = level.Warn(c.logger).Log("msg", "--collector.process.whitelist is DEPRECATED and will be removed in a future release, use --collector.process.include")
-			*c.processInclude = *c.processOldInclude
-		} else {
-			return errors.New("--collector.process.whitelist and --collector.process.include are mutually exclusive")
-		}
-	}
-
 	if c.processInclude != nil && *c.processInclude == ".*" && utils.IsEmpty(c.processExclude) {
 		_ = level.Warn(c.logger).Log("msg", "No filters specified for process collector. This will generate a very large number of metrics!")
 	}
