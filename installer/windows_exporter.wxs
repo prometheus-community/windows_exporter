@@ -1,55 +1,42 @@
-<?xml version="1.0" encoding="utf-8"?>
-<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"
-     xmlns:fw="http://schemas.microsoft.com/wix/FirewallExtension"
-     xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs" xmlns:fw="http://wixtoolset.org/schemas/v4/wxs/firewall" xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
   <?if $(sys.BUILDARCH)=x64 ?>
     <?define PlatformProgramFiles = "ProgramFiles64Folder" ?>
-  <?else ?>
+  <?else?>
     <?define PlatformProgramFiles = "ProgramFilesFolder" ?>
-  <?endif ?>
+  <?endif?>
 
-  <Product Id="*" UpgradeCode="66a6eb5b-1fc2-4b14-a362-5ceec6413308"
-           Name="windows_exporter" Version="$(var.Version)" Manufacturer="prometheus-community"
-           Language="1033" Codepage="1252">
-    <Package Id="*" Manufacturer="prometheus-community" InstallScope="perMachine" InstallerVersion="500"
-             Description="windows_exporter $(var.Version) installer" Compressed="yes" />
-    <Media Id="1" Cabinet="windows_exporter.cab" EmbedCab="yes"/>
+  <Package UpgradeCode="66a6eb5b-1fc2-4b14-a362-5ceec6413308" Name="windows_exporter" Version="$(var.Version)" Manufacturer="prometheus-community" Language="1033" Codepage="1252"><SummaryInformation Manufacturer="prometheus-community" Description="windows_exporter $(var.Version) installer" />
+    <Media Id="1" Cabinet="windows_exporter.cab" EmbedCab="yes" />
     <MajorUpgrade Schedule="afterInstallInitialize" DowngradeErrorMessage="A later version of [ProductName] is already installed. Setup will now exit." />
 
-    <Property Id="ENABLED_COLLECTORS" Secure="yes"/>
-    <SetProperty Id="CollectorsFlag" After="InstallFiles" Sequence="execute" Value="--collectors.enabled [ENABLED_COLLECTORS]">ENABLED_COLLECTORS</SetProperty>
+    <Property Id="ENABLED_COLLECTORS" Secure="yes" />
+    <SetProperty Id="CollectorsFlag" After="InstallFiles" Sequence="execute" Value="--collectors.enabled [ENABLED_COLLECTORS]" Condition="ENABLED_COLLECTORS" />
 
-    <Property Id="EXTRA_FLAGS" Secure="yes"/>
-    <SetProperty Id="ExtraFlags" After="InstallFiles" Sequence="execute" Value="[EXTRA_FLAGS]">EXTRA_FLAGS</SetProperty>
+    <Property Id="EXTRA_FLAGS" Secure="yes" />
+    <SetProperty Id="ExtraFlags" After="InstallFiles" Sequence="execute" Value="[EXTRA_FLAGS]" Condition="EXTRA_FLAGS" />
 
     <Property Id="LISTEN_ADDR" Secure="yes" />
     <Property Id="LISTEN_PORT" Secure="yes" />
-    <SetProperty Id="ListenFlagBoth" After="InstallFiles" Sequence="execute" Value="--web.listen-address [LISTEN_ADDR]:[LISTEN_PORT]">LISTEN_ADDR AND LISTEN_PORT</SetProperty>
-    <SetProperty Id="ListenFlagAddr" After="InstallFiles" Sequence="execute" Value="--web.listen-address [LISTEN_ADDR]:9182">LISTEN_ADDR AND (NOT LISTEN_PORT)</SetProperty>
-    <SetProperty Id="ListenFlagPort" After="InstallFiles" Sequence="execute" Value="--web.listen-address 0.0.0.0:[LISTEN_PORT]">LISTEN_PORT AND (NOT LISTEN_ADDR)</SetProperty>
+    <SetProperty Id="ListenFlagBoth" After="InstallFiles" Sequence="execute" Value="--web.listen-address [LISTEN_ADDR]:[LISTEN_PORT]" Condition="LISTEN_ADDR AND LISTEN_PORT" />
+    <SetProperty Id="ListenFlagAddr" After="InstallFiles" Sequence="execute" Value="--web.listen-address [LISTEN_ADDR]:9182" Condition="LISTEN_ADDR AND (NOT LISTEN_PORT)" />
+    <SetProperty Id="ListenFlagPort" After="InstallFiles" Sequence="execute" Value="--web.listen-address 0.0.0.0:[LISTEN_PORT]" Condition="LISTEN_PORT AND (NOT LISTEN_ADDR)" />
 
-    <Property Id="METRICS_PATH" Secure="yes"/>
-    <SetProperty Id="MetricsPathFlag" After="InstallFiles" Sequence="execute" Value="--telemetry.path [METRICS_PATH]">METRICS_PATH</SetProperty>
+    <Property Id="METRICS_PATH" Secure="yes" />
+    <SetProperty Id="MetricsPathFlag" After="InstallFiles" Sequence="execute" Value="--telemetry.path [METRICS_PATH]" Condition="METRICS_PATH" />
 
     <Property Id="REMOTE_ADDR" Secure="yes" />
-    <SetProperty Id="RemoteAddressFlag" After="InstallFiles" Sequence="execute" Value="[REMOTE_ADDR]">REMOTE_ADDR</SetProperty>
+    <SetProperty Id="RemoteAddressFlag" After="InstallFiles" Sequence="execute" Value="[REMOTE_ADDR]" Condition="REMOTE_ADDR" />
 
-    <Directory Id="TARGETDIR" Name="SourceDir">
-      <Directory Id="$(var.PlatformProgramFiles)">
-        <Directory Id="APPLICATIONROOTDIRECTORY" Name="windows_exporter">
-          <Directory Id="textfile_inputs" Name="textfile_inputs" />
-        </Directory>
-      </Directory>
-    </Directory>
+    
 
-    <Property Id="TEXTFILE_DIR" Secure="yes"/>
-    <SetProperty Id="TextfileDirFlag" After="InstallFiles" Sequence="execute" Value="--collector.textfile.directory [TEXTFILE_DIR]">TEXTFILE_DIR</SetProperty>
+    <Property Id="TEXTFILE_DIR" Secure="yes" />
+    <SetProperty Id="TextfileDirFlag" After="InstallFiles" Sequence="execute" Value="--collector.textfile.directory [TEXTFILE_DIR]" Condition="TEXTFILE_DIR" />
 
     <ComponentGroup Id="Files">
       <Component Directory="APPLICATIONROOTDIRECTORY">
         <File Id="windows_exporter.exe" Name="windows_exporter.exe" Source="Work\windows_exporter.exe" KeyPath="yes">
           <fw:FirewallException Id="MetricsEndpoint" Name="windows_exporter (HTTP [LISTEN_PORT])" Description="windows_exporter HTTP endpoint" Port="[LISTEN_PORT]" Protocol="tcp" IgnoreFailure="yes">
-            <fw:RemoteAddress>[REMOTE_ADDR]</fw:RemoteAddress>
+            <fw:RemoteAddress Value="[REMOTE_ADDR]" />
           </fw:FirewallException>
         </File>
         <ServiceInstall Id="InstallExporterService" Name="windows_exporter" DisplayName="windows_exporter" Description="Exports Prometheus metrics about the system" ErrorControl="normal" Start="auto" Type="ownProcess" Arguments="--log.file eventlog [CollectorsFlag] [ListenFlagBoth] [ListenFlagAddr] [ListenFlagPort] [MetricsPathFlag] [TextfileDirFlag] [ExtraFlags]">
@@ -67,5 +54,11 @@
     <Feature Id="DefaultFeature" Level="1">
       <ComponentGroupRef Id="Files" />
     </Feature>
-  </Product>
+  
+      <Directory Id="$(var.PlatformProgramFiles)">
+        <Directory Id="APPLICATIONROOTDIRECTORY" Name="windows_exporter">
+          <Directory Id="textfile_inputs" Name="textfile_inputs" />
+        </Directory>
+      </Directory>
+    </Package>
 </Wix>

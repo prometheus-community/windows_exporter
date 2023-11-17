@@ -27,6 +27,14 @@ jobs:
         with:
           go-version-file: 'go.mod'
 
+      - name: Install WiX
+        run: dotnet tool install --global wix
+
+      - name: Install WiX extensions
+        run: |
+          wix extension add -g WixToolset.Util.wixext
+          wix extension add -g WixToolset.Firewall.wixext
+
       - name: Install Build deps
         run: |
           dotnet tool install --global GitVersion.Tool --version 5.*
@@ -72,10 +80,10 @@ jobs:
           $TagName = $env:GITHUB_REF -replace 'refs/tags/', ''
           # The MSI version is not semver compliant, so just take the numerical parts
           $MSIVersion = $TagName -replace '^v?([0-9\.]+).*$','$1'
-          foreach($Arch in "amd64", "386") {
+          foreach($Arch in "amd64", "arm64", "386") {
             Write-Verbose "Building windows_exporter $MSIVersion msi for $Arch"
             .\installer\build.ps1 -PathToExecutable .\output\windows_exporter-$BuildVersion-$Arch.exe -Version $MSIVersion -Arch "$Arch"
-            Move-Item installer\Output\windows_exporter-$MSIVersion-$Arch.msi output\
+            Move-Item installer\windows_exporter-$MSIVersion-$Arch.msi output\
           }
 
           promu checksum output\
