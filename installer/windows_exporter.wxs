@@ -15,11 +15,8 @@
     <Property Id="EXTRA_FLAGS" Secure="yes" />
     <SetProperty Id="ExtraFlags" After="InstallFiles" Sequence="execute" Value="[EXTRA_FLAGS]" Condition="EXTRA_FLAGS" />
 
-    <Property Id="LISTEN_ADDR" Secure="yes" />
-    <Property Id="LISTEN_PORT" Secure="yes" />
-    <SetProperty Id="ListenFlagBoth" After="InstallFiles" Sequence="execute" Value="--web.listen-address [LISTEN_ADDR]:[LISTEN_PORT]" Condition="LISTEN_ADDR AND LISTEN_PORT" />
-    <SetProperty Id="ListenFlagAddr" After="InstallFiles" Sequence="execute" Value="--web.listen-address [LISTEN_ADDR]:9182" Condition="LISTEN_ADDR AND (NOT LISTEN_PORT)" />
-    <SetProperty Id="ListenFlagPort" After="InstallFiles" Sequence="execute" Value="--web.listen-address 0.0.0.0:[LISTEN_PORT]" Condition="LISTEN_PORT AND (NOT LISTEN_ADDR)" />
+    <Property Id="LISTEN_ADDR" Secure="yes" Value="0.0.0.0" />
+    <Property Id="LISTEN_PORT" Secure="yes" Value="9182" />
 
     <Property Id="METRICS_PATH" Secure="yes" />
     <SetProperty Id="MetricsPathFlag" After="InstallFiles" Sequence="execute" Value="--telemetry.path [METRICS_PATH]" Condition="METRICS_PATH" />
@@ -39,7 +36,7 @@
             <fw:RemoteAddress Value="[REMOTE_ADDR]" />
           </fw:FirewallException>
         </File>
-        <ServiceInstall Id="InstallExporterService" Name="windows_exporter" DisplayName="windows_exporter" Description="Exports Prometheus metrics about the system" ErrorControl="normal" Start="auto" Type="ownProcess" Arguments="--log.file eventlog [CollectorsFlag] [ListenFlagBoth] [ListenFlagAddr] [ListenFlagPort] [MetricsPathFlag] [TextfileDirFlag] [ExtraFlags]">
+        <ServiceInstall Id="InstallExporterService" Name="windows_exporter" DisplayName="windows_exporter" Description="Exports Prometheus metrics about the system" ErrorControl="normal" Start="auto" Type="ownProcess" Arguments="--log.file eventlog [CollectorsFlag] --web.listen-address [LISTEN_ADDR]:[LISTEN_PORT] [MetricsPathFlag] [TextfileDirFlag] [ExtraFlags]">
           <util:ServiceConfig FirstFailureActionType="restart" SecondFailureActionType="restart" ThirdFailureActionType="restart" RestartServiceDelayInSeconds="60" />
           <ServiceDependency Id="wmiApSrv" />
         </ServiceInstall>
