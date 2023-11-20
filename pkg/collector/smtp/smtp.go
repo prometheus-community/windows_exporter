@@ -3,7 +3,6 @@
 package smtp
 
 import (
-	"errors"
 	"fmt"
 	"regexp"
 
@@ -12,14 +11,11 @@ import (
 	"github.com/go-kit/log/level"
 	"github.com/prometheus-community/windows_exporter/pkg/perflib"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
-	"github.com/prometheus-community/windows_exporter/pkg/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 const (
-	Name                     = "smtp"
-	FlagSmtpServerOldExclude = "collector.smtp.server-blacklist"
-	FlagSmtpServerOldInclude = "collector.smtp.server-whitelist"
+	Name = "smtp"
 
 	FlagSmtpServerExclude = "collector.smtp.server-exclude"
 	FlagSmtpServerInclude = "collector.smtp.server-include"
@@ -38,14 +34,8 @@ var ConfigDefaults = Config{
 type collector struct {
 	logger log.Logger
 
-	serverOldInclude *string
-	serverOldExclude *string
-
 	serverInclude *string
 	serverExclude *string
-
-	serverIncludeSet bool
-	serverExcludeSet bool
 
 	BadmailedMessagesBadPickupFileTotal     *prometheus.Desc
 	BadmailedMessagesGeneralFailureTotal    *prometheus.Desc
@@ -108,32 +98,17 @@ func New(logger log.Logger, config *Config) types.Collector {
 }
 
 func NewWithFlags(app *kingpin.Application) types.Collector {
-	c := &collector{}
+	c := &collector{
+		serverInclude: app.Flag(
+			FlagSmtpServerInclude,
+			"Regexp of virtual servers to include. Server name must both match include and not match exclude to be included.",
+		).Default(ConfigDefaults.ServerInclude).String(),
 
-	c.serverInclude = app.Flag(
-		FlagSmtpServerInclude,
-		"Regexp of virtual servers to include. Server name must both match include and not match exclude to be included.",
-	).Default(ConfigDefaults.ServerInclude).PreAction(func(_ *kingpin.ParseContext) error {
-		c.serverIncludeSet = true
-		return nil
-	}).String()
-
-	c.serverExclude = app.Flag(
-		FlagSmtpServerExclude,
-		"Regexp of virtual servers to exclude. Server name must both match include and not match exclude to be included.",
-	).Default(ConfigDefaults.ServerExclude).PreAction(func(_ *kingpin.ParseContext) error {
-		c.serverExcludeSet = true
-		return nil
-	}).String()
-
-	c.serverOldInclude = app.Flag(
-		FlagSmtpServerOldInclude,
-		"DEPRECATED: Use --collector.smtp.server-include",
-	).Hidden().String()
-	c.serverOldExclude = app.Flag(
-		FlagSmtpServerOldExclude,
-		"DEPRECATED: Use --collector.smtp.server-exclude",
-	).Hidden().String()
+		serverExclude: app.Flag(
+			FlagSmtpServerExclude,
+			"Regexp of virtual servers to exclude. Server name must both match include and not match exclude to be included.",
+		).Default(ConfigDefaults.ServerExclude).String(),
+	}
 
 	return c
 }
@@ -152,23 +127,6 @@ func (c *collector) GetPerfCounter() ([]string, error) {
 
 func (c *collector) Build() error {
 	_ = level.Info(c.logger).Log("msg", "smtp collector is in an experimental state! Metrics for this collector have not been tested.")
-
-	if utils.HasValue(c.serverOldExclude) {
-		if !c.serverExcludeSet {
-			_ = level.Warn(c.logger).Log("msg", "--collector.smtp.server-blacklist is DEPRECATED and will be removed in a future release, use --collector.smtp.server-exclude")
-			*c.serverExclude = *c.serverOldExclude
-		} else {
-			return errors.New("--collector.smtp.server-blacklist and --collector.smtp.server-exclude are mutually exclusive")
-		}
-	}
-	if utils.HasValue(c.serverOldInclude) {
-		if !c.serverIncludeSet {
-			_ = level.Warn(c.logger).Log("msg", "--collector.smtp.server-whitelist is DEPRECATED and will be removed in a future release, use --collector.smtp.server-include")
-			*c.serverInclude = *c.serverOldInclude
-		} else {
-			return errors.New("--collector.smtp.server-whitelist and --collector.smtp.server-include are mutually exclusive")
-		}
-	}
 
 	c.BadmailedMessagesBadPickupFileTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "badmailed_messages_bad_pickup_file_total"),

@@ -3,7 +3,6 @@
 package net
 
 import (
-	"errors"
 	"fmt"
 	"regexp"
 
@@ -12,15 +11,11 @@ import (
 	"github.com/go-kit/log/level"
 	"github.com/prometheus-community/windows_exporter/pkg/perflib"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
-	"github.com/prometheus-community/windows_exporter/pkg/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 const (
 	Name = "net"
-
-	FlagNicOldExclude = "collector.net.nic-blacklist"
-	FlagNicOldInclude = "collector.net.nic-whitelist"
 
 	FlagNicExclude = "collector.net.nic-exclude"
 	FlagNicInclude = "collector.net.nic-include"
@@ -42,14 +37,8 @@ var nicNameToUnderscore = regexp.MustCompile("[^a-zA-Z0-9]")
 type collector struct {
 	logger log.Logger
 
-	nicOldInclude *string
-	nicOldExclude *string
-
 	nicInclude *string
 	nicExclude *string
-
-	nicIncludeSet bool
-	nicExcludeSet bool
 
 	BytesReceivedTotal       *prometheus.Desc
 	BytesSentTotal           *prometheus.Desc
@@ -83,32 +72,17 @@ func New(logger log.Logger, config *Config) types.Collector {
 }
 
 func NewWithFlags(app *kingpin.Application) types.Collector {
-	c := &collector{}
+	c := &collector{
+		nicInclude: app.Flag(
+			FlagNicInclude,
+			"Regexp of NIC:s to include. NIC name must both match include and not match exclude to be included.",
+		).Default(ConfigDefaults.NicInclude).String(),
 
-	c.nicInclude = app.Flag(
-		FlagNicInclude,
-		"Regexp of NIC:s to include. NIC name must both match include and not match exclude to be included.",
-	).Default(ConfigDefaults.NicInclude).PreAction(func(_ *kingpin.ParseContext) error {
-		c.nicIncludeSet = true
-		return nil
-	}).String()
-
-	c.nicExclude = app.Flag(
-		FlagNicExclude,
-		"Regexp of NIC:s to exclude. NIC name must both match include and not match exclude to be included.",
-	).Default(ConfigDefaults.NicExclude).PreAction(func(_ *kingpin.ParseContext) error {
-		c.nicExcludeSet = true
-		return nil
-	}).String()
-
-	c.nicOldInclude = app.Flag(
-		FlagNicOldInclude,
-		"DEPRECATED: Use --collector.net.nic-include",
-	).Hidden().String()
-	c.nicOldExclude = app.Flag(
-		FlagNicOldExclude,
-		"DEPRECATED: Use --collector.net.nic-exclude",
-	).Hidden().String()
+		nicExclude: app.Flag(
+			FlagNicExclude,
+			"Regexp of NIC:s to exclude. NIC name must both match include and not match exclude to be included.",
+		).Default(ConfigDefaults.NicExclude).String(),
+	}
 
 	return c
 }
@@ -126,22 +100,6 @@ func (c *collector) GetPerfCounter() ([]string, error) {
 }
 
 func (c *collector) Build() error {
-	if utils.HasValue(c.nicOldExclude) {
-		if !c.nicExcludeSet {
-			_ = level.Warn(c.logger).Log("msg", "--collector.net.nic-blacklist is DEPRECATED and will be removed in a future release, use --collector.net.nic-exclude")
-			*c.nicExclude = *c.nicOldExclude
-		} else {
-			return errors.New("--collector.net.nic-blacklist and --collector.net.nic-exclude are mutually exclusive")
-		}
-	}
-	if utils.HasValue(c.nicOldInclude) {
-		if !c.nicIncludeSet {
-			_ = level.Warn(c.logger).Log("msg", "--collector.net.nic-whitelist is DEPRECATED and will be removed in a future release, use --collector.net.nic-include")
-			*c.nicInclude = *c.nicOldInclude
-		} else {
-			return errors.New("--collector.net.nic-whitelist and --collector.net.nic-include are mutually exclusive")
-		}
-	}
 	c.BytesReceivedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "bytes_received_total"),
 		"(Network.BytesReceivedPerSec)",

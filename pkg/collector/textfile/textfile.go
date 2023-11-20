@@ -38,7 +38,6 @@ import (
 
 const (
 	Name                    = "textfile"
-	FlagTextFileDirectory   = "collector.textfile.directory"
 	FlagTextFileDirectories = "collector.textfile.directories"
 )
 
@@ -53,7 +52,6 @@ var ConfigDefaults = Config{
 type collector struct {
 	logger log.Logger
 
-	textFileDirectory   *string
 	textFileDirectories *string
 
 	directories string
@@ -68,10 +66,8 @@ func New(logger log.Logger, config *Config) types.Collector {
 		config = &ConfigDefaults
 	}
 
-	textFileDirectory := ""
 	c := &collector{
 		textFileDirectories: &config.TextFileDirectories,
-		textFileDirectory:   &textFileDirectory,
 	}
 	c.SetLogger(logger)
 	return c
@@ -79,10 +75,6 @@ func New(logger log.Logger, config *Config) types.Collector {
 
 func NewWithFlags(app *kingpin.Application) types.Collector {
 	return &collector{
-		textFileDirectory: app.Flag(
-			FlagTextFileDirectory,
-			"DEPRECATED: Use --collector.textfile.directories",
-		).Default("").Hidden().String(),
 		textFileDirectories: app.Flag(
 			FlagTextFileDirectories,
 			"Directory or Directories to read text files with metrics from.",
@@ -104,10 +96,10 @@ func (c *collector) GetPerfCounter() ([]string, error) {
 
 func (c *collector) Build() error {
 	c.directories = ""
-	if utils.HasValue(c.textFileDirectory) || utils.HasValue(c.textFileDirectories) {
-		c.directories = *c.textFileDirectory + "," + *c.textFileDirectories
-		c.directories = strings.Trim(c.directories, ",")
+	if utils.HasValue(c.textFileDirectories) {
+		c.directories = strings.Trim(*c.textFileDirectories, ",")
 	}
+
 	_ = level.Info(c.logger).Log("msg", fmt.Sprintf("textfile collector directories: %s", c.directories))
 
 	c.MtimeDesc = prometheus.NewDesc(

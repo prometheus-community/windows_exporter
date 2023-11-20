@@ -3,7 +3,6 @@
 package scheduled_task
 
 import (
-	"errors"
 	"fmt"
 	"regexp"
 	"runtime"
@@ -15,14 +14,11 @@ import (
 	"github.com/go-ole/go-ole"
 	"github.com/go-ole/go-ole/oleutil"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
-	"github.com/prometheus-community/windows_exporter/pkg/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 const (
-	Name                        = "scheduled_task"
-	FlagScheduledTaskOldExclude = "collector.scheduled_task.blacklist"
-	FlagScheduledTaskOldInclude = "collector.scheduled_task.whitelist"
+	Name = "scheduled_task"
 
 	FlagScheduledTaskExclude = "collector.scheduled_task.exclude"
 	FlagScheduledTaskInclude = "collector.scheduled_task.include"
@@ -41,14 +37,8 @@ var ConfigDefaults = Config{
 type collector struct {
 	logger log.Logger
 
-	taskOldExclude *string
-	taskOldInclude *string
-
 	taskExclude *string
 	taskInclude *string
-
-	taskIncludeSet bool
-	taskExcludeSet bool
 
 	LastResult *prometheus.Desc
 	MissedRuns *prometheus.Desc
@@ -99,32 +89,17 @@ func New(logger log.Logger, config *Config) types.Collector {
 }
 
 func NewWithFlags(app *kingpin.Application) types.Collector {
-	c := &collector{}
+	c := &collector{
+		taskInclude: app.Flag(
+			FlagScheduledTaskInclude,
+			"Regexp of tasks to include. Task path must both match include and not match exclude to be included.",
+		).Default(ConfigDefaults.TaskInclude).String(),
 
-	c.taskInclude = app.Flag(
-		FlagScheduledTaskInclude,
-		"Regexp of tasks to include. Task path must both match include and not match exclude to be included.",
-	).Default(ConfigDefaults.TaskInclude).PreAction(func(_ *kingpin.ParseContext) error {
-		c.taskIncludeSet = true
-		return nil
-	}).String()
-
-	c.taskExclude = app.Flag(
-		FlagScheduledTaskExclude,
-		"Regexp of tasks to exclude. Task path must both match include and not match exclude to be included.",
-	).Default(ConfigDefaults.TaskExclude).PreAction(func(_ *kingpin.ParseContext) error {
-		c.taskExcludeSet = true
-		return nil
-	}).String()
-
-	c.taskOldInclude = app.Flag(
-		FlagScheduledTaskOldInclude,
-		"DEPRECATED: Use --collector.scheduled_task.include",
-	).Hidden().String()
-	c.taskOldExclude = app.Flag(
-		FlagScheduledTaskOldExclude,
-		"DEPRECATED: Use --collector.scheduled_task.exclude",
-	).Hidden().String()
+		taskExclude: app.Flag(
+			FlagScheduledTaskExclude,
+			"Regexp of tasks to exclude. Task path must both match include and not match exclude to be included.",
+		).Default(ConfigDefaults.TaskExclude).String(),
+	}
 
 	return c
 }
@@ -142,23 +117,6 @@ func (c *collector) GetPerfCounter() ([]string, error) {
 }
 
 func (c *collector) Build() error {
-	if utils.HasValue(c.taskOldExclude) {
-		if !c.taskExcludeSet {
-			_ = level.Warn(c.logger).Log("msg", "--collector.scheduled_task.blacklist is DEPRECATED and will be removed in a future release, use --collector.scheduled_task.exclude")
-			*c.taskExclude = *c.taskOldExclude
-		} else {
-			return errors.New("--collector.scheduled_task.blacklist and --collector.scheduled_task.exclude are mutually exclusive")
-		}
-	}
-	if utils.HasValue(c.taskOldInclude) {
-		if !c.taskIncludeSet {
-			_ = level.Warn(c.logger).Log("msg", "--collector.scheduled_task.whitelist is DEPRECATED and will be removed in a future release, use --collector.scheduled_task.include")
-			*c.taskInclude = *c.taskOldInclude
-		} else {
-			return errors.New("--collector.scheduled_task.whitelist and --collector.scheduled_task.include are mutually exclusive")
-		}
-	}
-
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 
