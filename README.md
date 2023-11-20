@@ -122,7 +122,7 @@ msiexec /i <path-to-msi-file> ENABLED_COLLECTORS=os,service --% EXTRA_FLAGS="--c
 
 On some older versions of Windows you may need to surround parameter values with double quotes to get the install command parsing properly:
 ```powershell
-msiexec /i C:\Users\Administrator\Downloads\windows_exporter.msi ENABLED_COLLECTORS="ad,iis,logon,memory,process,tcp,thermalzone" TEXTFILE_DIR="C:\custom_metrics\"
+msiexec /i C:\Users\Administrator\Downloads\windows_exporter.msi ENABLED_COLLECTORS="ad,iis,logon,memory,process,tcp,textfile,thermalzone" TEXTFILE_DIR="C:\custom_metrics\"
 ```
 
 Powershell versions 7.3 and above require [PSNativeCommandArgumentPassing](https://learn.microsoft.com/en-us/powershell/scripting/learn/experimental-features?view=powershell-7.3) to be set to `Legacy` when using `--% EXTRA_FLAGS`:
