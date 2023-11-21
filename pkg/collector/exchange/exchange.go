@@ -74,6 +74,7 @@ type collector struct {
 	ConnectionCount                         *prometheus.Desc
 	RPCOperationsPerSec                     *prometheus.Desc
 	UserCount                               *prometheus.Desc
+	ActiveUserCountMapiHttpEmsmdb           *prometheus.Desc
 
 	enabledCollectors []string
 }
@@ -89,6 +90,7 @@ var exchangeAllCollectorNames = []string{
 	"Autodiscover",
 	"WorkloadManagement",
 	"RpcClientAccess",
+	"MapiHttpEmsmdb",
 }
 
 func New(logger log.Logger, config *Config) types.Collector {
@@ -138,6 +140,7 @@ func (c *collector) GetPerfCounter() ([]string, error) {
 		"MSExchangeAutodiscover",
 		"MSExchange WorkloadManagement Workloads",
 		"MSExchange RpcClientAccess",
+		"MSExchange MapiHttp Emsmdb",
 	}, nil
 }
 
@@ -189,6 +192,7 @@ func (c *collector) Build() error {
 	c.MailboxServerProxyFailureRate = desc("http_proxy_mailbox_proxy_failure_rate", "% of failures between this CAS and MBX servers over the last 200 samples", "name")
 	c.PingCommandsPending = desc("activesync_ping_cmds_pending", "Number of ping commands currently pending in the queue")
 	c.SyncCommandsPerSec = desc("activesync_sync_cmds_total", "Number of sync commands processed per second. Clients use this command to synchronize items within a folder")
+	c.ActiveUserCountMapiHttpEmsmdb = desc("mapihttp_emsmdb_active_user_count", "Number of unique outlook users that have shown some kind of activity in the last 2 minutes")
 
 	c.enabledCollectors = make([]string, 0, len(exchangeAllCollectorNames))
 
@@ -202,6 +206,7 @@ func (c *collector) Build() error {
 		"Autodiscover":        "[29240] MSExchange Autodiscover",
 		"WorkloadManagement":  "[19430] MSExchange WorkloadManagement Workloads",
 		"RpcClientAccess":     "[29336] MSExchange RpcClientAccess",
+		"MapiHttpEmsmdb":      "[26463] MSExchange MapiHttp Emsmdb",
 	}
 
 	if *c.exchangeListAllCollectors {
@@ -241,6 +246,7 @@ func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 		"Autodiscover":        c.collectAutoDiscover,
 		"WorkloadManagement":  c.collectWorkloadManagementWorkloads,
 		"RpcClientAccess":     c.collectRPC,
+		"MapiHttpEmsmdb":      c.collectMapiHttpEmsmdb,
 	}
 
 	for _, collectorName := range c.enabledCollectors {
@@ -660,6 +666,28 @@ func (c *collector) collectAutoDiscover(ctx *types.ScrapeContext, ch chan<- prom
 			autodisc.RequestsPerSec,
 		)
 	}
+	return nil
+}
+
+// perflib [26463] MSExchange MapiHttp Emsmdb
+type perflibMapiHttpEmsmdb struct {
+	ActiveUserCount float64 `perflib:"Active User Count"`
+}
+
+func (c *collector) collectMapiHttpEmsmdb(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
+	var data []perflibMapiHttpEmsmdb
+	if err := perflib.UnmarshalObject(ctx.PerfObjects["MSExchange MapiHttp Emsmdb"], &data, c.logger); err != nil {
+		return err
+	}
+
+	for _, mapihttp := range data {
+		ch <- prometheus.MustNewConstMetric(
+			c.ActiveUserCountMapiHttpEmsmdb,
+			prometheus.GaugeValue,
+			mapihttp.ActiveUserCount,
+		)
+	}
+
 	return nil
 }
 
