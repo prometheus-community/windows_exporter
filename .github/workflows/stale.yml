@@ -17,5 +17,5 @@ jobs:
           exempt-issue-labels: 'lifecycle/frozen'
           days-before-stale: 90
           days-before-close: 30
-          enable-statistics: true
-          operations-per-run: 100
+          enable-statistics: false
+          operations-per-run: 500
