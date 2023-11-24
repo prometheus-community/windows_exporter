@@ -183,6 +183,7 @@ func (c *collector) collectServerShares(ctx *types.ScrapeContext, ch chan<- prom
 
 // Perflib: SMB Server Sessions
 type perflibServerSession struct {
+	Name             string
 	TreeConnectCount float64 `perflib:"Tree Connect Count"`
 }
 
@@ -193,6 +194,10 @@ func (c *collector) collectServerSessions(ctx *types.ScrapeContext, ch chan<- pr
 	}
 
 	for _, instance := range data {
+		labelName := c.toLabelName(instance.Name)
+		if !strings.HasSuffix(labelName, "_total") {
+			continue
+		}
 
 		ch <- prometheus.MustNewConstMetric(
 			c.TreeConnectCount,
