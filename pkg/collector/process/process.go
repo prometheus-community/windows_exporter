@@ -25,13 +25,15 @@ const (
 )
 
 type Config struct {
-	ProcessInclude string `yaml:"process_include"`
-	ProcessExclude string `yaml:"process_exclude"`
+	ProcessInclude      string `yaml:"process_include"`
+	ProcessExclude      string `yaml:"process_exclude"`
+	EnableWorkerProcess bool   `yaml:"enable_iis_worker_process"`
 }
 
 var ConfigDefaults = Config{
-	ProcessInclude: ".+",
-	ProcessExclude: "",
+	ProcessInclude:      ".+",
+	ProcessExclude:      "",
+	EnableWorkerProcess: false,
 }
 
 type collector struct {
@@ -68,8 +70,9 @@ func New(logger log.Logger, config *Config) types.Collector {
 	}
 
 	c := &collector{
-		processExclude: &config.ProcessExclude,
-		processInclude: &config.ProcessInclude,
+		processExclude:      &config.ProcessExclude,
+		processInclude:      &config.ProcessInclude,
+		enableWorkerProcess: &config.EnableWorkerProcess,
 	}
 	c.SetLogger(logger)
 	return c
