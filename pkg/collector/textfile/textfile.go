@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 	"sort"
@@ -39,6 +40,7 @@ import (
 const (
 	Name                    = "textfile"
 	FlagTextFileDirectories = "collector.textfile.directories"
+	FlagTextFileScriptPath  = "collector.textfile.trigger_ps_script"
 )
 
 type Config struct {
@@ -59,6 +61,8 @@ type collector struct {
 	mtime *float64
 
 	MtimeDesc *prometheus.Desc
+
+	scriptPath *string
 }
 
 func New(logger log.Logger, config *Config) types.Collector {
@@ -79,6 +83,10 @@ func NewWithFlags(app *kingpin.Application) types.Collector {
 			FlagTextFileDirectories,
 			"Directory or Directories to read text files with metrics from.",
 		).Default(ConfigDefaults.TextFileDirectories).String(),
+		scriptPath: app.Flag(
+			FlagTextFileScriptPath,
+			"Use --collector.textfile.trigger_ps_script",
+		).Default("").String(),
 	}
 }
 
@@ -101,6 +109,13 @@ func (c *collector) Build() error {
 	}
 
 	_ = level.Info(c.logger).Log("msg", fmt.Sprintf("textfile collector directories: %s", c.directories))
+
+	if utils.HasValue(c.scriptPath) {
+		if _, err := os.Stat(*c.scriptPath); os.IsNotExist(err) {
+			return fmt.Errorf("textfile trigger script does not exist: %s", *c.scriptPath)
+		}
+		_ = level.Info(c.logger).Log("msg", fmt.Sprintf("textfile collector triggers script: %s", *c.scriptPath))
+	}
 
 	c.MtimeDesc = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, "textfile", "mtime_seconds"),
@@ -292,6 +307,15 @@ func (c *collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric)
 	// This will ensure that duplicate metrics are correctly detected between multiple .prom files.
 	metricFamilies := []*dto.MetricFamily{}
 
+	if *c.scriptPath != "" {
+		_ = level.Debug(c.logger).Log("msg", fmt.Sprintf("Running script: %s", *c.scriptPath))
+		err := runScript(*c.scriptPath)
+		if err != nil {
+			_ = level.Error(c.logger).Log("msg", fmt.Sprintf("Error running script: %s", err))
+			errorMetric = 1.0
+		}
+	}
+
 	// Iterate over files and accumulate their metrics.
 	for _, directory := range strings.Split(c.directories, ",") {
 		err := filepath.WalkDir(directory, func(path string, dirEntry os.DirEntry, err error) error {
@@ -406,4 +430,17 @@ func checkBOM(encoding utfbom.Encoding) error {
 func getDefaultPath() string {
 	execPath, _ := os.Executable()
 	return filepath.Join(filepath.Dir(execPath), "textfile_inputs")
+}
+
+func runScript(scriptPath string) error {
+	content, err := os.ReadFile(scriptPath)
+	if err != nil {
+		return fmt.Errorf("error reading script file: %s", err)
+	}
+	cmd := exec.Command("powershell", "-Command", string(content))
+	_, err = cmd.CombinedOutput()
+	if err != nil || cmd.ProcessState.ExitCode() != 0 {
+		return fmt.Errorf("error running script: %s", err)
+	}
+	return nil
 }
