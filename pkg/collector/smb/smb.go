@@ -45,7 +45,6 @@ type collector struct {
 // All available collector functions
 var smbAllCollectorNames = []string{
 	"ServerShares",
-	"ServerSessions",
 }
 
 func New(logger log.Logger, config *Config) types.Collector {
@@ -86,7 +85,6 @@ func (c *collector) SetLogger(logger log.Logger) {
 
 func (c *collector) GetPerfCounter() ([]string, error) {
 	return []string{
-		"SMB Server Sessions",
 		"SMB Server Shares",
 	}, nil
 }
@@ -103,13 +101,12 @@ func (c *collector) Build() error {
 	}
 
 	c.CurrentOpenFileCount = desc("server_shares_current_open_file_count", "Current total count open files on the SMB Server")
-	c.TreeConnectCount = desc("server_session_tree_connect_count", "Tree connect count to SMB Server")
+	c.TreeConnectCount = desc("server_shares_tree_connect_count", "Tree connect count to SMB Server")
 
 	c.enabledCollectors = make([]string, 0, len(smbAllCollectorNames))
 
 	collectorDesc := map[string]string{
-		"ServerShares":   "SMB Server Shares",
-		"ServerSessions": "SMB Server Sessions",
+		"ServerShares": "SMB Server Shares",
 	}
 
 	if *c.smbListAllCollectors {
@@ -140,8 +137,7 @@ func (c *collector) Build() error {
 // Collect collects smb metrics and sends them to prometheus
 func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	collectorFuncs := map[string]func(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error{
-		"ServerShares":   c.collectServerShares,
-		"ServerSessions": c.collectServerSessions,
+		"ServerShares": c.collectServerShares,
 	}
 
 	for _, collectorName := range c.enabledCollectors {
@@ -158,6 +154,7 @@ type perflibServerShares struct {
 	Name string
 
 	CurrentOpenFileCount float64 `perflib:"Current Open File Count"`
+	TreeConnectCount     float64 `perflib:"Tree Connect Count"`
 }
 
 func (c *collector) collectServerShares(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
@@ -177,33 +174,12 @@ func (c *collector) collectServerShares(ctx *types.ScrapeContext, ch chan<- prom
 			instance.CurrentOpenFileCount,
 		)
 
-	}
-	return nil
-}
-
-// Perflib: SMB Server Sessions
-type perflibServerSession struct {
-	Name             string
-	TreeConnectCount float64 `perflib:"Tree Connect Count"`
-}
-
-func (c *collector) collectServerSessions(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
-	var data []perflibServerSession
-	if err := perflib.UnmarshalObject(ctx.PerfObjects["SMB Server Sessions"], &data, c.logger); err != nil {
-		return err
-	}
-
-	for _, instance := range data {
-		labelName := c.toLabelName(instance.Name)
-		if !strings.HasSuffix(labelName, "_total") {
-			continue
-		}
-
 		ch <- prometheus.MustNewConstMetric(
 			c.TreeConnectCount,
 			prometheus.CounterValue,
 			instance.TreeConnectCount,
 		)
+
 	}
 	return nil
 }
