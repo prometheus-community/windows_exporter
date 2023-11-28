@@ -101,7 +101,7 @@ func (c *collector) Build() error {
 	}
 
 	c.CurrentOpenFileCount = desc("server_shares_current_open_file_count", "Current total count open files on the SMB Server")
-	c.TreeConnectCount = desc("server_shares_tree_connect_count", "Tree connect count to SMB Server")
+	c.TreeConnectCount = desc("server_shares_tree_connect_count", "Count of user connections to the SMB Server")
 
 	c.enabledCollectors = make([]string, 0, len(smbAllCollectorNames))
 
