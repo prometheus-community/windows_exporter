@@ -28,7 +28,16 @@ Required: No
 > - If there are duplicated filenames among the directories, only the first one found will be read. For any other files with the same name, the `windows_textfile_scrape_error` metric will be set to 1 and a error message will be logged.
 > - Only files with the extension `.prom` are read. The `.prom` file must end with an empty line feed to work properly.
 
+<br>
 
+### `--collector.textfile.trigger_ps_script`
+Trigger a script to run before scraping the textfile directories. This can be used to generate the textfiles on demand. The script must be a Powershell script and  will be run with the same user as the windows_exporter service is running. It must return 0 otherwise the `windows_textfile_scrape_error` metric will be set to 1 and a error message will be logged.
+
+E.G. `--collector.textfile.trigger_ps_script="C:\scripts\generate_textfiles.ps1"`
+
+Default value: None
+
+Required: No
 
 Metrics will primarily come from the files on disk. The below listed metrics
 are collected to give information about the reading of the metrics themselves.

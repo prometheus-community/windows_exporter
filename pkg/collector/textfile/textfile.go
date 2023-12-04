@@ -439,8 +439,11 @@ func runScript(scriptPath string) error {
 	}
 	cmd := exec.Command("powershell", "-Command", string(content))
 	_, err = cmd.CombinedOutput()
-	if err != nil || cmd.ProcessState.ExitCode() != 0 {
+	if err != nil {
 		return fmt.Errorf("error running script: %s", err)
+	}
+	if cmd.ProcessState.ExitCode() != 0 {
+		return fmt.Errorf("error running script: %s", cmd.ProcessState.String())
 	}
 	return nil
 }
