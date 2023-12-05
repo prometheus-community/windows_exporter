@@ -29,7 +29,7 @@
     <SetProperty
             Id="WixQuietExecCmdLine"
             Value="&quot;[%ComSpec]&quot; /c reg delete HKLM\SYSTEM\CurrentControlSet\Services\EventLog\Application\windows_exporter /f"
-            Before="ConvolutedCoreCountCustomAction"
+            Before="RemoveEventSource"
             Sequence="execute"
     />
     <CustomAction
