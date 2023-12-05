@@ -59,7 +59,6 @@
           <ServiceDependency Id="wmiApSrv" />
         </ServiceInstall>
         <ServiceControl Id="ServiceStateControl" Name="windows_exporter" Remove="uninstall" Start="install" Stop="both" />
-        <util:EventSource Log="Application" Name="windows_exporter" EventMessageFile="%SystemRoot%\System32\EventCreate.exe" />
       </Component>
       <Component Id="CreateTextfileDirectory" Directory="textfile_inputs" Guid="d03ef58a-9cbf-4165-ad39-d143e9b27e14">
         <CreateFolder />
