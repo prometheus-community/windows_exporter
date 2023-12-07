@@ -24,7 +24,25 @@
     <Property Id="REMOTE_ADDR" Secure="yes" />
     <SetProperty Id="RemoteAddressFlag" After="InstallFiles" Sequence="execute" Value="[REMOTE_ADDR]" Condition="REMOTE_ADDR" />
 
-    
+    <!-- https://github.com/prometheus-community/windows_exporter/issues/1318 -->
+    <!-- https://wixtoolset.org/docs/tools/wixext/quietexec/ -->
+    <SetProperty
+            Id="WixQuietExecCmdLine"
+            Value="&quot;[%ComSpec]&quot; /c reg delete HKLM\SYSTEM\CurrentControlSet\Services\EventLog\Application\windows_exporter /f"
+            Before="RemoveEventSource"
+            Sequence="execute"
+    />
+    <CustomAction
+            Id="RemoveEventSource"
+            BinaryRef="Wix4UtilCA_$(sys.BUILDARCHSHORT)"
+            DllEntry="WixSilentExec"
+            Execute="deferred"
+            Impersonate="no"
+            Return="ignore"
+    />
+    <InstallExecuteSequence>
+      <Custom Action="RemoveEventSource" After="InstallInitialize" />
+    </InstallExecuteSequence>
 
     <Property Id="TEXTFILE_DIR" Secure="yes" />
     <SetProperty Id="TextfileDirFlag" After="InstallFiles" Sequence="execute" Value="--collector.textfile.directory [TEXTFILE_DIR]" Condition="TEXTFILE_DIR" />
@@ -41,7 +59,6 @@
           <ServiceDependency Id="wmiApSrv" />
         </ServiceInstall>
         <ServiceControl Id="ServiceStateControl" Name="windows_exporter" Remove="uninstall" Start="install" Stop="both" />
-        <util:EventSource Log="Application" Name="windows_exporter" EventMessageFile="%SystemRoot%\System32\EventCreate.exe" />
       </Component>
       <Component Id="CreateTextfileDirectory" Directory="textfile_inputs" Guid="d03ef58a-9cbf-4165-ad39-d143e9b27e14">
         <CreateFolder />
@@ -51,11 +68,11 @@
     <Feature Id="DefaultFeature" Level="1">
       <ComponentGroupRef Id="Files" />
     </Feature>
-  
-      <Directory Id="$(var.PlatformProgramFiles)">
-        <Directory Id="APPLICATIONROOTDIRECTORY" Name="windows_exporter">
-          <Directory Id="textfile_inputs" Name="textfile_inputs" />
-        </Directory>
+
+    <Directory Id="$(var.PlatformProgramFiles)">
+      <Directory Id="APPLICATIONROOTDIRECTORY" Name="windows_exporter">
+        <Directory Id="textfile_inputs" Name="textfile_inputs" />
       </Directory>
-    </Package>
+    </Directory>
+  </Package>
 </Wix>
