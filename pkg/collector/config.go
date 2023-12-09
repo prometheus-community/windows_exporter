@@ -42,6 +42,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/collector/remote_fx"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/scheduled_task"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/service"
+	"github.com/prometheus-community/windows_exporter/pkg/collector/smb"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/smtp"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/system"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/tcp"
@@ -97,6 +98,7 @@ type Config struct {
 	RemoteFx                       remote_fx.Config                       `yaml:"remote_fx"`
 	ScheduledTask                  scheduled_task.Config                  `yaml:"scheduled_task"`
 	Service                        service.Config                         `yaml:"service"`
+	Smb                            smb.Config                             `yaml:"smb"`
 	Smtp                           smtp.Config                            `yaml:"smtp"`
 	System                         system.Config                          `yaml:"system"`
 	TeradiciPcoip                  teradici_pcoip.Config                  `yaml:"teradici_pcoip"`
@@ -153,6 +155,7 @@ var ConfigDefaults = Config{
 	RemoteFx:                       remote_fx.ConfigDefaults,
 	ScheduledTask:                  scheduled_task.ConfigDefaults,
 	Service:                        service.ConfigDefaults,
+	Smb:                            smb.ConfigDefaults,
 	Smtp:                           smtp.ConfigDefaults,
 	System:                         system.ConfigDefaults,
 	TeradiciPcoip:                  teradici_pcoip.ConfigDefaults,

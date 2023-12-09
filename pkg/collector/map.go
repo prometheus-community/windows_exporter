@@ -43,6 +43,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/collector/remote_fx"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/scheduled_task"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/service"
+	"github.com/prometheus-community/windows_exporter/pkg/collector/smb"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/smtp"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/system"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/tcp"
@@ -101,6 +102,7 @@ var Map = map[string]types.CollectorBuilderWithFlags{
 	remote_fx.Name:                       remote_fx.NewWithFlags,
 	scheduled_task.Name:                  scheduled_task.NewWithFlags,
 	service.Name:                         service.NewWithFlags,
+	smb.Name:                             smb.NewWithFlags,
 	smtp.Name:                            smtp.NewWithFlags,
 	system.Name:                          system.NewWithFlags,
 	teradici_pcoip.Name:                  teradici_pcoip.NewWithFlags,
