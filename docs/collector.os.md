@@ -42,6 +42,11 @@ Find all devices not set to UTC timezone
 windows_os_timezone{timezone != "UTC"}
 ```
 
+Show memory usage for instance (%)
+```
+100 - 100 * windows_os_physical_memory_free_bytes{instance="localhost"} / windows_cs_physical_memory_bytes{instance="localhost"}
+```
+
 ## Alerting examples
 **prometheus.rules**
 ```yaml
