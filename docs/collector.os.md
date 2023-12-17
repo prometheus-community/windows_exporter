@@ -36,6 +36,11 @@ Show current number of processes
 windows_os_processes{instance="localhost"}
 ```
 
+Show memory usage for instance (%)
+```
+(windows_os_physical_memory_free_bytes{instance="localhost"} / windows_cs_physical_memory_bytes{instance="localhost"})*100
+```
+
 ## Useful queries
 Find all devices not set to UTC timezone
 ```
