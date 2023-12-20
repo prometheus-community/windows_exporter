@@ -23,19 +23,19 @@ If given, a disk needs to *not* match the exclude regexp in order for the corres
 
 Name | Description | Type | Labels
 -----|-------------|------|-------
-`requests_queued` | Number of requests outstanding on the disk at the time the performance data is collected | gauge | `volume`
-`avg_read_requests_queued` | Average number of read requests that were queued for the selected disk during the sample interval | gauge | `volume`
-`avg_write_requests_queued` | Average number of write requests that were queued for the selected disk during the sample interval | gauge | `volume`
-`read_bytes_total` | Rate at which bytes are transferred from the disk during read operations | counter | `volume`
-`reads_total` | Rate of read operations on the disk | counter | `volume`
-`write_bytes_total` | Rate at which bytes are transferred to the disk during write operations  | counter | `volume`
-`writes_total` | Rate of write operations on the disk  | counter | `volume`
-`read_seconds_total` | Seconds the disk was busy servicing read requests | counter | `volume`
-`write_seconds_total` | Seconds the disk was busy servicing write requests | counter | `volume`
-`free_bytes` | Unused space of the disk in bytes (not real time, updates every 10-15 min) | gauge | `volume`
-`size_bytes` | Total size of the disk in bytes (not real time, updates every 10-15 min) | gauge | `volume`
-`idle_seconds_total` | Seconds the disk was idle (not servicing read/write requests) | counter | `volume`
-`split_ios_total` | Number of I/Os to the disk split into multiple I/Os | counter | `volume`
+`windows_logical_disk_requests_queued` | Number of requests outstanding on the disk at the time the performance data is collected | gauge | `volume`
+`windows_logical_disk_avg_read_requests_queued` | Average number of read requests that were queued for the selected disk during the sample interval | gauge | `volume`
+`windows_logical_disk_avg_write_requests_queued` | Average number of write requests that were queued for the selected disk during the sample interval | gauge | `volume`
+`windows_logical_disk_read_bytes_total` | Rate at which bytes are transferred from the disk during read operations | counter | `volume`
+`windows_logical_disk_reads_total` | Rate of read operations on the disk | counter | `volume`
+`windows_logical_disk_write_bytes_total` | Rate at which bytes are transferred to the disk during write operations  | counter | `volume`
+`windows_logical_disk_writes_total` | Rate of write operations on the disk  | counter | `volume`
+`windows_logical_disk_read_seconds_total` | Seconds the disk was busy servicing read requests | counter | `volume`
+`windows_logical_disk_write_seconds_total` | Seconds the disk was busy servicing write requests | counter | `volume`
+`windows_logical_disk_free_bytes` | Unused space of the disk in bytes (not real time, updates every 10-15 min) | gauge | `volume`
+`windows_logical_disk_size_bytes` | Total size of the disk in bytes (not real time, updates every 10-15 min) | gauge | `volume`
+`windows_logical_disk_idle_seconds_total` | Seconds the disk was idle (not servicing read/write requests) | counter | `volume`
+`windows_logical_disk_split_ios_total` | Number of I/Os to the disk split into multiple I/Os | counter | `volume`
 
 ### Warning about size metrics
 The `free_bytes` and `size_bytes` metrics are not updated in real time and might have a delay of 10-15min.
@@ -51,6 +51,11 @@ rate(windows_logical_disk_read_bytes_total{instance="localhost", volume=~"C:"}[2
 Calculate rate of total IOPS for disk
 ```
 rate(windows_logical_disk_reads_total{instance="localhost", volume="C:"}[2m]) + rate(windows_logical_disk_writes_total{instance="localhost", volume="C:"}[2m])
+```
+
+Show volume usage (%)
+```
+100.0 - 100 * (windows_logical_disk_free_bytes{instance="localhost", volume="C:"} / windows_logical_disk_size_bytes{instance="localhost", volume="C:"})
 ```
 
 ## Alerting examples
