@@ -13,9 +13,7 @@ const (
 	serviceName = "windows_exporter"
 )
 
-type windowsExporterService struct {
-	stopCh chan<- bool
-}
+type windowsExporterService struct{}
 
 var logger *eventlog.Log
 
@@ -39,7 +37,6 @@ loop:
 			}
 		}
 	}
-	s.stopCh <- true
 	return
 }
 
@@ -63,10 +60,13 @@ func init() {
 		}
 		_ = logger.Info(100, "Attempting to start exporter service")
 		go func() {
-			err = svc.Run(serviceName, &windowsExporterService{stopCh: StopCh})
+			err = svc.Run(serviceName, &windowsExporterService{})
 			if err != nil {
 				_ = logger.Error(102, fmt.Sprintf("Failed to start service: %v", err))
 			}
+			defer func() {
+				StopCh <- true
+			}()
 		}()
 	}
 }
