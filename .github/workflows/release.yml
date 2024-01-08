@@ -62,7 +62,7 @@ jobs:
           (Get-Content -Path VERSION) -replace '\+', '_' | Set-Content -Path VERSION
           make build-all
           # GH requires all files to have different names, so add version/arch to differentiate
-          foreach($Arch in "amd64", "arm64","386") {
+          foreach($Arch in "amd64", "arm64") {
             Move-Item output\$Arch\windows_exporter.exe output\windows_exporter-$Version-$Arch.exe
           }
 
@@ -80,7 +80,7 @@ jobs:
           $TagName = $env:GITHUB_REF -replace 'refs/tags/', ''
           # The MSI version is not semver compliant, so just take the numerical parts
           $MSIVersion = $TagName -replace '^v?([0-9\.]+).*$','$1'
-          foreach($Arch in "amd64", "arm64", "386") {
+          foreach($Arch in "amd64", "arm64") {
             Write-Verbose "Building windows_exporter $MSIVersion msi for $Arch"
             .\installer\build.ps1 -PathToExecutable .\output\windows_exporter-$BuildVersion-$Arch.exe -Version $MSIVersion -Arch "$Arch"
             Move-Item installer\windows_exporter-$MSIVersion-$Arch.msi output\
