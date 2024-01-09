@@ -64,9 +64,7 @@ func init() {
 			if err != nil {
 				_ = logger.Error(102, fmt.Sprintf("Failed to start service: %v", err))
 			}
-			defer func() {
-				StopCh <- true
-			}()
+			StopCh <- true
 		}()
 	}
 }
