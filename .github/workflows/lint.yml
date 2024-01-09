@@ -77,6 +77,15 @@ jobs:
       - name: Promtool
         run: make promtool
 
+      - name: Upload windows_exporter.exe
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows_exporter.amd64.exe
+          path: 'windows_exporter.exe'
+          retention-days: 7
+          if-no-files-found: error
+
   lint:
     runs-on: windows-2022
     steps:
