@@ -153,6 +153,11 @@ func main() {
 		_ = level.Error(logger).Log("msg", "Couldn't load collectors", "err", err)
 		os.Exit(1)
 	}
+	err = collectors.SetPerfCounterQuery()
+	if err != nil {
+		_ = level.Error(logger).Log("msg", "Couldn't set performance counter query", "err", err)
+		os.Exit(1)
+	}
 
 	if u, err := user.Current(); err != nil {
 		_ = level.Warn(logger).Log("msg", "Unable to determine which user is running this exporter. More info: https://github.com/golang/go/issues/37348")
