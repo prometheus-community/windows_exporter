@@ -51,7 +51,7 @@ This directory contains documentation of the collectors in the windows_exporter,
 - [`teradici_pcoip`](collector.teradici_pcoip.md)
 - [`terminal_services`](collector.terminal_services.md)
 - [`textfile`](collector.textfile.md)
-- [`termalzone`](collector.termalzone.md)
+- [`thermalzone`](collector.thermalzone.md)
 - [`time`](collector.time.md)
 - [`vmware`](collector.vmware.md)
 - [`vmware_blast`](collector.vmware_blast.md)
