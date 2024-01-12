@@ -44,8 +44,8 @@
       <Custom Action="RemoveEventSource" After="InstallInitialize" />
     </InstallExecuteSequence>
 
-    <Property Id="TEXTFILE_DIR" Secure="yes" />
-    <SetProperty Id="TextfileDirFlag" After="InstallFiles" Sequence="execute" Value="--collector.textfile.directory [TEXTFILE_DIR]" Condition="TEXTFILE_DIR" />
+    <Property Id="TEXTFILE_DIRS" Secure="yes" />
+    <SetProperty Id="TextfileDirsFlag" After="InstallFiles" Sequence="execute" Value="--collector.textfile.directories [TEXTFILE_DIRS]" Condition="TEXTFILE_DIRS" />
 
     <ComponentGroup Id="Files">
       <Component Directory="APPLICATIONROOTDIRECTORY">
