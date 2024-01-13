@@ -44,8 +44,8 @@
       <Custom Action="RemoveEventSource" After="InstallInitialize" />
     </InstallExecuteSequence>
 
-    <Property Id="TEXTFILE_DIR" Secure="yes" />
-    <SetProperty Id="TextfileDirFlag" After="InstallFiles" Sequence="execute" Value="--collector.textfile.directory [TEXTFILE_DIR]" Condition="TEXTFILE_DIR" />
+    <Property Id="TEXTFILE_DIRS" Secure="yes" />
+    <SetProperty Id="TextfileDirsFlag" After="InstallFiles" Sequence="execute" Value="--collector.textfile.directories [TEXTFILE_DIRS]" Condition="TEXTFILE_DIRS" />
 
     <ComponentGroup Id="Files">
       <Component Directory="APPLICATIONROOTDIRECTORY">
@@ -54,7 +54,7 @@
             <fw:RemoteAddress Value="[REMOTE_ADDR]" />
           </fw:FirewallException>
         </File>
-        <ServiceInstall Id="InstallExporterService" Name="windows_exporter" DisplayName="windows_exporter" Description="Exports Prometheus metrics about the system" ErrorControl="normal" Start="auto" Type="ownProcess" Arguments="--log.file eventlog [CollectorsFlag] --web.listen-address [LISTEN_ADDR]:[LISTEN_PORT] [MetricsPathFlag] [TextfileDirFlag] [ExtraFlags]">
+        <ServiceInstall Id="InstallExporterService" Name="windows_exporter" DisplayName="windows_exporter" Description="Exports Prometheus metrics about the system" ErrorControl="normal" Start="auto" Type="ownProcess" Arguments="--log.file eventlog [CollectorsFlag] --web.listen-address [LISTEN_ADDR]:[LISTEN_PORT] [MetricsPathFlag] [TextfileDirsFlag] [ExtraFlags]">
           <util:ServiceConfig FirstFailureActionType="restart" SecondFailureActionType="restart" ThirdFailureActionType="restart" RestartServiceDelayInSeconds="60" />
           <ServiceDependency Id="wmiApSrv" />
         </ServiceInstall>
