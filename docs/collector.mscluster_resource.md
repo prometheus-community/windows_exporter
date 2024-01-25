@@ -34,10 +34,16 @@ Name | Description | Type | Labels
 `Subclass` | Provides the list of references to nodes that can be the owner of this resource. | gauge | `type`, `owner_group`, `owner_node`, `name`
 
 ### Example metric
-_This collector does not yet have explained examples, we would appreciate your help adding them!_
+Query the state of all cluster resource owned by node1
+```
+windows_mscluster_resource_state{owner_node="node1"}
+```
 
 ## Useful queries
-_This collector does not yet have any useful queries added, we would appreciate your help adding them!_
+Counts the number of Network Name cluster resource
+```
+count(windows_mscluster_resource_state{type="Network Name"})
+```
 
 ## Alerting examples
 _This collector does not yet have alerting examples, we would appreciate your help adding them!_

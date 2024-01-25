@@ -32,10 +32,16 @@ Name | Description | Type | Labels
 `UpdateDomain` | | gauge | `owner_node`, `name`
 
 ### Example metric
-_This collector does not yet have explained examples, we would appreciate your help adding them!_
+Query the state of all cluster group owned by node1
+```
+windows_mscluster_resourcegroup_state{owner_node="node1"}
+```
 
 ## Useful queries
-_This collector does not yet have any useful queries added, we would appreciate your help adding them!_
+Counts the number of cluster group by type
+```
+count_values("count", windows_mscluster_resourcegroup_group_type)
+```
 
 ## Alerting examples
 _This collector does not yet have alerting examples, we would appreciate your help adding them!_
