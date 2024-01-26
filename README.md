@@ -140,7 +140,7 @@ See detailed steps to install on Windows Kubernetes [here](./kubernetes/kubernet
 
 ## Supported versions
 
-windows_exporter supports Windows Server versions 2008R2 and later, and desktop Windows version 7 and later.
+`windows_exporter` supports Windows Server versions 2016 and later, and desktop Windows version 10 and 11 (21H2 or later).
 
 ## Usage
 
