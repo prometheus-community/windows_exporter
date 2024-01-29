@@ -90,7 +90,7 @@ func NewWithFlags(app *kingpin.Application) types.Collector {
 			"Regexp of processes to exclude. Process name must both match include and not match exclude to be included.",
 		).Default(ConfigDefaults.ProcessExclude).String(),
 
-		enableWorkerProcess: kingpin.Flag(
+		enableWorkerProcess: app.Flag(
 			"collector.process.iis",
 			"Enable IIS worker process name queries. May cause the collector to leak memory.",
 		).Default("false").Bool(),
