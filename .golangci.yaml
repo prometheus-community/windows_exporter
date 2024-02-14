@@ -8,7 +8,7 @@ linters:
   - gofmt
   - ineffassign
   - unconvert
-  - varcheck
+  - unused
 
 issues:
   exclude:
