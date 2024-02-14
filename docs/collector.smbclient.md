@@ -25,10 +25,12 @@ Name          | Description
 `windows_smbclient_client_shares_avg_sec_per_write` | The average latency between the time a write request is sent and when its response is received.
 
 ### Example metric
-_This collector does not yet have explained examples, we would appreciate your help adding them!_
+windows_smbclient_read_bytes_total - The bytes read on this share.
+windows_smbclient_write_bytes_total - The bytes written on this share.
 
 ## Useful queries
-_This collector does not yet have any useful queries added, we would appreciate your help adding them!_
+Total amount of metadata requests on this share.
+rate(windows_smbclient_metadata_requests_total{instance="localhost"}[1m])
 
 ## Alerting examples
 _This collector does not yet have alerting examples, we would appreciate your help adding them!_
