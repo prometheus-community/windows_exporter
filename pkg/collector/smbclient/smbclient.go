@@ -36,12 +36,6 @@ type collector struct {
 	smbclientListAllCollectors *bool
 	smbclientCollectorsEnabled *string
 
-	// These appear to be equivalent to bytes read/write total so
-	// redundant and confusing to include.
-	//
-	// AvgBytesPerRead                            *prometheus.Desc
-	// AvgBytesPerWrite                           *prometheus.Desc
-	// AvgDataBytesPerRequest                     *prometheus.Desc
 	ReadRequestsQueued                         *prometheus.Desc
 	ReadBytesTotal                             *prometheus.Desc
 	ReadsTotal                                 *prometheus.Desc
@@ -127,20 +121,6 @@ func (c *collector) Build() error {
 		)
 	}
 
-	// These appear to be equivalent to bytes read/write total so
-	// redundant and confusing to include.
-	//
-	// c.AvgBytesPerRead = desc(
-	// 	"bytes_per_read",
-	// 	"The average number of bytes per read request.",
-	//   []string{"server", "share"},
-	// 	)
-	// c.AvgBytesPerWrite = desc("bytes_per_write",
-	// 	"The average number of bytes per write request.",
-	//   []string{"server", "share"},)
-	// c.AvgDataBytesPerRequest = desc("data_bytes_per_request",
-	// 	"The average number of bytes per read or write request.",
-	//   []string{"server", "share"},)
 	c.RequestsQueued = desc("requests_queued_total",
 		"The number of requests queued on this share.",
 	  []string{"server", "share"},
@@ -276,12 +256,6 @@ func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 type perflibClientShares struct {
 	Name string
 
-	// These appear to be equivalent to bytes read/write total so
-	// redundant and confusing to include.
-	//
-	// AvgBytesPerRead                            float64 `perflib:"Avg. Bytes/Read"`
-	// AvgBytesPerWrite                           float64 `perflib:"Avg. Bytes/Write"`
-	// AvgDataBytesPerRequest                     float64 `perflib:"Avg. Data Bytes/Request"`
 	AvgDataQueueLength                         float64 `perflib:"Avg. Data Queue Length"`
 	AvgReadQueueLength                         float64 `perflib:"Avg. Read Queue Length"`
 	AvgSecPerRead                              float64 `perflib:"Avg. sec/Read"`
@@ -319,30 +293,6 @@ func (c *collector) collectClientShares(ctx *types.ScrapeContext, ch chan<- prom
 		parsed := strings.FieldsFunc(instance.Name, func(r rune) bool { return r == '\\' })
 		serverValue := parsed[0]
 		shareValue := parsed[1]
-		// These appear to be equivalent to bytes read/write total so
-		// redundant and confusing to include.
-		//
-		// ch <- prometheus.MustNewConstMetric(
-		//	c.AvgBytesPerRead,
-		//	prometheus.CounterValue,
-		//	instance.AvgBytesPerRead,
-		//	 serverValue, shareValue,
-		//	 )
-
-		// ch <- prometheus.MustNewConstMetric(
-		//	c.AvgBytesPerWrite,
-		//	prometheus.CounterValue,
-		//	instance.AvgBytesPerWrite,
-		//	 serverValue, shareValue,
-		//	 )
-
-		// ch <- prometheus.MustNewConstMetric(
-		//	c.AvgDataBytesPerRequest,
-		//	prometheus.CounterValue,
-		//	instance.AvgDataBytesPerRequest,
-		//	 serverValue, shareValue,
-		//	 )
-
 		ch <- prometheus.MustNewConstMetric(
 			c.RequestsQueued,
 			prometheus.CounterValue,
