@@ -221,7 +221,7 @@ func (c *collector) Build() error {
 		"Seconds waiting for read requests on this share.",
 	  []string{"server", "share"},
 	)
-	c.WriteSecsTotal = desc("sec_per_write",
+	c.WriteSecsTotal = desc("write_seconds_total",
 		"Seconds waiting for write requests on this share.",
 	  []string{"server", "share"},
 	)
@@ -360,21 +360,21 @@ func (c *collector) collectClientShares(ctx *types.ScrapeContext, ch chan<- prom
 		ch <- prometheus.MustNewConstMetric(
 			c.ReadSecsTotal,
 			prometheus.CounterValue,
-			instance.AvgSecPerRead,
+			instance.AvgSecPerRead * perflib.TicksToSecondScaleFactor,
 		  serverValue, shareValue,
       )
 
 		ch <- prometheus.MustNewConstMetric(
 			c.WriteSecsTotal,
 			prometheus.CounterValue,
-			instance.AvgSecPerWrite,
+			instance.AvgSecPerWrite * perflib.TicksToSecondScaleFactor,
 		  serverValue, shareValue,
       )
 
 		ch <- prometheus.MustNewConstMetric(
 			c.RequestSecs,
 			prometheus.CounterValue,
-			instance.AvgSecPerDataRequest,
+			instance.AvgSecPerDataRequest * perflib.TicksToSecondScaleFactor,
 		  serverValue, shareValue,
       )
 
