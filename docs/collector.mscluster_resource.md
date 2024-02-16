@@ -36,7 +36,7 @@ Name | Description | Type | Labels
 ### Example metric
 Query the state of all cluster resource owned by node1
 ```
-windows_mscluster_resource_state{owner_node="node1"}
+windows_mscluster_resource_owner_node{node_name="node1"}
 ```
 
 ## Useful queries

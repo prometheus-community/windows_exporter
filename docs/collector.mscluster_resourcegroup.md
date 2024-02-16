@@ -34,7 +34,7 @@ Name | Description | Type | Labels
 ### Example metric
 Query the state of all cluster group owned by node1
 ```
-windows_mscluster_resourcegroup_state{owner_node="node1"}
+windows_mscluster_resourcegroup_owner_node{node_name="node1"}
 ```
 
 ## Useful queries

@@ -1,6 +1,7 @@
 package mscluster_resourcegroup
 
 import (
+	"github.com/prometheus-community/windows_exporter/pkg/collector/mscluster_node"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus-community/windows_exporter/pkg/wmi"
 
@@ -31,6 +32,7 @@ type collector struct {
 	Flags               *prometheus.Desc
 	GroupType           *prometheus.Desc
 	PlacementOptions    *prometheus.Desc
+	OwnerNode           *prometheus.Desc
 	Priority            *prometheus.Desc
 	ResiliencyPeriod    *prometheus.Desc
 	State               *prometheus.Desc
@@ -62,79 +64,85 @@ func (c *collector) Build() error {
 	c.AutoFailbackType = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "auto_failback_type"),
 		"Provides access to the group's AutoFailbackType property.",
-		[]string{"owner_node", "name"},
+		[]string{"name"},
 		nil,
 	)
 	c.Characteristics = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "characteristics"),
 		"Provides the characteristics of the group.",
-		[]string{"owner_node", "name"},
+		[]string{"name"},
 		nil,
 	)
 	c.ColdStartSetting = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "cold_start_setting"),
 		"Indicates whether a group can start after a cluster cold start.",
-		[]string{"owner_node", "name"},
+		[]string{"name"},
 		nil,
 	)
 	c.DefaultOwner = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "default_owner"),
 		"Number of the last node the resource group was activated on or explicitly moved to.",
-		[]string{"owner_node", "name"},
+		[]string{"name"},
 		nil,
 	)
 	c.FailbackWindowEnd = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "failback_window_end"),
 		"The FailbackWindowEnd property provides the latest time that the group can be moved back to the node identified as its preferred node.",
-		[]string{"owner_node", "name"},
+		[]string{"name"},
 		nil,
 	)
 	c.FailbackWindowStart = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "failback_window_start"),
 		"The FailbackWindowStart property provides the earliest time (that is, local time as kept by the cluster) that the group can be moved back to the node identified as its preferred node.",
-		[]string{"owner_node", "name"},
+		[]string{"name"},
 		nil,
 	)
 	c.FailoverPeriod = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "failover_period"),
 		"The FailoverPeriod property specifies a number of hours during which a maximum number of failover attempts, specified by the FailoverThreshold property, can occur.",
-		[]string{"owner_node", "name"},
+		[]string{"name"},
 		nil,
 	)
 	c.FailoverThreshold = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "failover_threshold"),
 		"The FailoverThreshold property specifies the maximum number of failover attempts.",
-		[]string{"owner_node", "name"},
+		[]string{"name"},
 		nil,
 	)
 	c.Flags = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "flags"),
 		"Provides access to the flags set for the group. ",
-		[]string{"owner_node", "name"},
+		[]string{"name"},
 		nil,
 	)
 	c.GroupType = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "group_type"),
 		"The Type of the resource group.",
-		[]string{"owner_node", "name"},
+		[]string{"name"},
+		nil,
+	)
+	c.OwnerNode = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "owner_node"),
+		"The node hosting the resource group. 0: Not hosted; 1: Hosted",
+		[]string{"node_name", "name"},
 		nil,
 	)
 	c.Priority = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "priority"),
 		"Priority value of the resource group",
-		[]string{"owner_node", "name"},
+		[]string{"name"},
 		nil,
 	)
 	c.ResiliencyPeriod = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "resiliency_period"),
 		"The resiliency period for this group, in seconds.",
-		[]string{"owner_node", "name"},
+		[]string{"name"},
 		nil,
 	)
 	c.State = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "state"),
 		"The current state of the resource group. -1: Unknown; 0: Online; 1: Offline; 2: Failed; 3: Partial Online; 4: Pending",
-		[]string{"owner_node", "name"},
+		[]string{"name"},
 		nil,
 	)
 	return nil
@@ -143,8 +151,7 @@ func (c *collector) Build() error {
 // MSCluster_ResourceGroup docs:
 // - https://docs.microsoft.com/en-us/previous-versions/windows/desktop/cluswmi/mscluster-resourcegroup
 type MSCluster_ResourceGroup struct {
-	Name      string
-	OwnerNode string
+	Name string
 
 	AutoFailbackType    uint
 	Characteristics     uint
@@ -156,6 +163,7 @@ type MSCluster_ResourceGroup struct {
 	FailoverThreshold   uint
 	Flags               uint
 	GroupType           uint
+	OwnerNode           string
 	Priority            uint
 	ResiliencyPeriod    uint
 	State               uint
@@ -176,91 +184,106 @@ func (c *collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric)
 			c.AutoFailbackType,
 			prometheus.GaugeValue,
 			float64(v.AutoFailbackType),
-			v.OwnerNode, v.Name,
+			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.Characteristics,
 			prometheus.GaugeValue,
 			float64(v.Characteristics),
-			v.OwnerNode, v.Name,
+			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.ColdStartSetting,
 			prometheus.GaugeValue,
 			float64(v.ColdStartSetting),
-			v.OwnerNode, v.Name,
+			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.DefaultOwner,
 			prometheus.GaugeValue,
 			float64(v.DefaultOwner),
-			v.OwnerNode, v.Name,
+			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.FailbackWindowEnd,
 			prometheus.GaugeValue,
 			float64(v.FailbackWindowEnd),
-			v.OwnerNode, v.Name,
+			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.FailbackWindowStart,
 			prometheus.GaugeValue,
 			float64(v.FailbackWindowStart),
-			v.OwnerNode, v.Name,
+			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.FailoverPeriod,
 			prometheus.GaugeValue,
 			float64(v.FailoverPeriod),
-			v.OwnerNode, v.Name,
+			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.FailoverThreshold,
 			prometheus.GaugeValue,
 			float64(v.FailoverThreshold),
-			v.OwnerNode, v.Name,
+			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.Flags,
 			prometheus.GaugeValue,
 			float64(v.Flags),
-			v.OwnerNode, v.Name,
+			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.GroupType,
 			prometheus.GaugeValue,
 			float64(v.GroupType),
-			v.OwnerNode, v.Name,
+			v.Name,
 		)
+
+		if mscluster_node.NodeName != nil {
+			for _, node_name := range mscluster_node.NodeName {
+				isCurrentState := 0.0
+				if v.OwnerNode == node_name {
+					isCurrentState = 1.0
+				}
+				ch <- prometheus.MustNewConstMetric(
+					c.OwnerNode,
+					prometheus.GaugeValue,
+					isCurrentState,
+					node_name, v.Name,
+				)
+			}
+		}
 
 		ch <- prometheus.MustNewConstMetric(
 			c.Priority,
 			prometheus.GaugeValue,
 			float64(v.Priority),
-			v.OwnerNode, v.Name,
+			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.ResiliencyPeriod,
 			prometheus.GaugeValue,
 			float64(v.ResiliencyPeriod),
-			v.OwnerNode, v.Name,
+			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.State,
 			prometheus.GaugeValue,
 			float64(v.State),
-			v.OwnerNode, v.Name,
+			v.Name,
 		)
 
 	}
