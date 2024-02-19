@@ -344,7 +344,7 @@ func (c *collector) collectClientShares(ctx *types.ScrapeContext, ch chan<- prom
 
 		ch <- prometheus.MustNewConstMetric(
 			c.CurrentDataQueued,
-			prometheus.CounterValue,
+			prometheus.GaugeValue,
 			instance.CurrentDataQueueLength,
 		  serverValue, shareValue,
       )
