@@ -1,12 +1,8 @@
-# smb collector
-
+# smbclient collector
 The smbclient collector collects metrics from MS SmbClient hosts through perflib
-=======
-
-
 |||
 -|-
-Metric name prefix  | `smbclient`
+Metric name prefix  | `windows_smbclient`
 Classes 			| [Win32_PerfRawData_SMB](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-smb/)<br/> 
 Enabled by default? | No
 
@@ -19,19 +15,41 @@ Lists the Perflib Objects that are queried for data along with the perlfib objec
 Comma-separated list of collectors to use, for example: `--collectors.smbclient.enabled=ServerShares`. Matching is case-sensitive. Depending on the smb protocol version not all performance counters may be available. Use `--collectors.smbclient.list` to obtain a list of supported collectors.
 
 ## Metrics
-Name          | Description
---------------|---------------
-`windows_smbclient_client_shares_avg_sec_per_read` | The average latency between the time a read request is sent and when its response is received.
-`windows_smbclient_client_shares_avg_sec_per_write` | The average latency between the time a write request is sent and when its response is received.
-
+Name | Description | Type | Labels
+-----|-------------|------|-------
+`windows_smbclient_requests_total` | The requests on this share | counter | `server`, `share` |
+`windows_smbclient_read_requests_total` | The read requests on this share | counter | `server`, `share` |
+`windows_smbclient_write_requests_total` | The write requests on this share | counter | `server`, `share` |
+`windows_smbclient_metadata_requests_total` | The metadata requests on this share | counter | `server`, `share` |
+`windows_smbclient_request_seconds_total` | Seconds waiting for requests on this share | counter | `server`, `share` |
+`windows_smbclient_read_seconds_total` | Seconds waiting for read requests on this share | counter | `server`, `share` |
+`windows_smbclient_write_seconds_total` | Seconds waiting for write requests on this share | counter | `server`, `share` |
+`windows_smbclient_data_bytes_total` | The bytes read or written on this share | counter | `server`, `share` |
+`windows_smbclient_read_bytes_total` | The bytes read on this share | counter | `server`, `share` |
+`windows_smbclient_write_bytes_total` | The bytes written on this share | counter | `server`, `share` |
+`windows_smbclient_data_queue_seconds_total` | Seconds requests waited on queue on this share | counter | `server`, `share` |
+`windows_smbclient_read_queue_seconds_total` | Seconds read requests waited on queue on this share | counter | `server`, `share` |
+`windows_smbclient_write_queue_seconds_total` | Seconds write requests waited on queue on this share | counter | `server`, `share` |
+`windows_smbclient_requests_queued` | The point in time number of requests on queue on this share | gauge | `server`, `share` |
+`windows_smbclient_stalls_total` | The number of requests delayed based on insufficient credits on this share | TBD | `server`, `share` |
+`windows_smbclient_read_requests_via_smbdirect_total` | The read requests on this share via RDMA direct placement | TBD | `server`, `share` |
+`windows_smbclient_write_requests_via_smbdirect_total` | The write requests to this share via RDMA direct placement | TBD | `server`, `share` |
+`windows_smbclient_read_bytes_via_smbdirect_total` | The bytes read from this share via RDMA direct placement | TBD | `server`, `share` |
+`windows_smbclient_write_bytes_via_smbdirect_total` | The written bytes to this share via RDMA direct placement | TBD | `server`, `share` |
+`windows_smbclient_turbo_io_reads_total` | The read requests that go through Turbo I/O | TBD | `server`, `share` |
+`windows_smbclient_turbo_io_writes_total` | The write requests that go through Turbo I/O | TBD | `server`, `share` |
 ### Example metric
-windows_smbclient_read_bytes_total - The bytes read on this share.
-windows_smbclient_write_bytes_total - The bytes written on this share.
-
+```
+windows_smbclient_read_bytes_total - The bytes read on this share
+windows_smbclient_write_bytes_total - The bytes written on this share
+```
 ## Useful queries
-Total amount of metadata requests on this share.
-rate(windows_smbclient_metadata_requests_total{instance="localhost"}[1m])
-
+```
+# Request queue length (includes read and write).
+irate(windows_smbclient_data_queue_seconds_total) * irate(windows_smbclient_requests_total)
+# Request latency milliseconds (includes read and write).
+irate(windows_smbclient_request_seconds_total) / irate(windows_smbclient_requests_total) * 1000
+```
 ## Alerting examples
 _This collector does not yet have alerting examples, we would appreciate your help adding them!_
 
