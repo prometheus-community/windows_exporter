@@ -19,9 +19,10 @@ import (
 )
 
 const (
-	Name               = "process"
-	FlagProcessExclude = "collector.process.exclude"
-	FlagProcessInclude = "collector.process.include"
+	Name                    = "process"
+	FlagProcessExclude      = "collector.process.exclude"
+	FlagProcessInclude      = "collector.process.include"
+	FlagEnableWorkerProcess = "collector.process.iis"
 )
 
 type Config struct {
@@ -91,7 +92,7 @@ func NewWithFlags(app *kingpin.Application) types.Collector {
 		).Default(ConfigDefaults.ProcessExclude).String(),
 
 		enableWorkerProcess: app.Flag(
-			"collector.process.iis",
+			FlagEnableWorkerProcess,
 			"Enable IIS worker process name queries. May cause the collector to leak memory.",
 		).Default("false").Bool(),
 	}
