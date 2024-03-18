@@ -50,6 +50,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/collector/scheduled_task"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/service"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/smb"
+	"github.com/prometheus-community/windows_exporter/pkg/collector/smbclient"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/smtp"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/system"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/tcp"
@@ -128,6 +129,7 @@ func NewWithConfig(logger log.Logger, config Config) Collectors {
 	collectors[scheduled_task.Name] = scheduled_task.New(logger, &config.ScheduledTask)
 	collectors[service.Name] = service.New(logger, &config.Service)
 	collectors[smb.Name] = smb.New(logger, &config.Smb)
+	collectors[smbclient.Name] = smbclient.New(logger, &config.SmbClient)
 	collectors[smtp.Name] = smtp.New(logger, &config.Smtp)
 	collectors[system.Name] = system.New(logger, &config.System)
 	collectors[teradici_pcoip.Name] = teradici_pcoip.New(logger, &config.TeradiciPcoip)
