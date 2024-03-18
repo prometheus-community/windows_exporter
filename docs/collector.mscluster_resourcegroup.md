@@ -26,16 +26,23 @@ Name | Description | Type | Labels
 `FailoverThreshold` | The FailoverThreshold property specifies the maximum number of failover attempts. | gauge | `name`
 `Flags` | Provides access to the flags set for the group. The cluster defines flags only for resources. For a description of these flags, see [CLUSCTL_RESOURCE_GET_FLAGS](https://docs.microsoft.com/en-us/previous-versions/windows/desktop/mscs/clusctl-resource-get-flags). | gauge | `name`
 `GroupType` | The Type of the resource group. | gauge | `name`
+`OwnerNode` | The node hosting the resource group. | gauge | `node_name`, `name`
 `Priority` | Priority value of the resource group | gauge | `name`
 `ResiliencyPeriod` | The resiliency period for this group, in seconds. | gauge | `name`
 `State` | The current state of the resource group. -1: Unknown; 0: Online; 1: Offline; 2: Failed; 3: Partial Online; 4: Pending | gauge | `name`
 `UpdateDomain` | | gauge | `name`
 
 ### Example metric
-_This collector does not yet have explained examples, we would appreciate your help adding them!_
+Query the state of all cluster group owned by node1
+```
+windows_mscluster_resourcegroup_owner_node{node_name="node1"}
+```
 
 ## Useful queries
-_This collector does not yet have any useful queries added, we would appreciate your help adding them!_
+Counts the number of cluster group by type
+```
+count_values("count", windows_mscluster_resourcegroup_group_type)
+```
 
 ## Alerting examples
 _This collector does not yet have alerting examples, we would appreciate your help adding them!_

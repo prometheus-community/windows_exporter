@@ -15,6 +15,9 @@ type Config struct{}
 
 var ConfigDefaults = Config{}
 
+// Variable used by mscluster_resource and mscluster_resourcegroup
+var NodeName []string
+
 // A collector is a Prometheus collector for WMI MSCluster_Node metrics
 type collector struct {
 	logger log.Logger
@@ -175,6 +178,8 @@ func (c *collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric)
 		return err
 	}
 
+	NodeName = []string{}
+
 	for _, v := range dst {
 
 		ch <- prometheus.MustNewConstMetric(
@@ -274,6 +279,8 @@ func (c *collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric)
 			float64(v.StatusInformation),
 			v.Name,
 		)
+
+		NodeName = append(NodeName, v.Name)
 	}
 
 	return nil
