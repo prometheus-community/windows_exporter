@@ -27,7 +27,7 @@ test_alpha_total 42
 # TYPE windows_cpu_processor_rtc_total counter
 # HELP windows_cpu_processor_utility_total Processor Utility represents is the amount of time the core spends executing instructions
 # TYPE windows_cpu_processor_utility_total counter
-# HELP windows_cs_hostname Labeled system hostname information as provided by ComputerSystem.DNSHostName and ComputerSystem.Domain
+# HELP windows_cs_hostname Labelled system hostname information as provided by ComputerSystem.DNSHostName and ComputerSystem.Domain
 # TYPE windows_cs_hostname gauge
 # HELP windows_cs_logical_processors ComputerSystem.NumberOfLogicalProcessors
 # TYPE windows_cs_logical_processors gauge

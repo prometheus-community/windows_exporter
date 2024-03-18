@@ -17,7 +17,7 @@ None
 
 Name | Description | Type | Labels
 -----|-------------|------|-------
-`windows_cpu_info` | Labeled CPU information | gauge | `architecture`, `device_id`, `description`, `family`, `l2_cache_size` `l3_cache_size`, `name`
+`windows_cpu_info` | Labelled CPU information | gauge | `architecture`, `device_id`, `description`, `family`, `l2_cache_size` `l3_cache_size`, `name`
 
 ### Example metric
 ```
