@@ -174,7 +174,7 @@ func (c *collector) Build() error {
 	)
 	c.ProcessorPrivUtility = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "processor_privileged_utility_total"),
-		"Processor Privilieged Utility represents is the amount of time the core has spent executing instructions inside the kernel",
+		"Processor Privileged Utility represents is the amount of time the core has spent executing instructions inside the kernel",
 		[]string{"core"},
 		nil,
 	)
