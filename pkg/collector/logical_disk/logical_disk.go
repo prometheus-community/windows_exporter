@@ -112,112 +112,112 @@ func (c *collector) Build() error {
 	c.RequestsQueued = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "requests_queued"),
 		"The number of requests queued to the disk (LogicalDisk.CurrentDiskQueueLength)",
-		[]string{"volume", "volumeName"},
+		[]string{"volume", "volume_name"},
 		nil,
 	)
 
 	c.AvgReadQueue = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "avg_read_requests_queued"),
 		"Average number of read requests that were queued for the selected disk during the sample interval (LogicalDisk.AvgDiskReadQueueLength)",
-		[]string{"volume", "volumeName"},
+		[]string{"volume", "volume_name"},
 		nil,
 	)
 
 	c.AvgWriteQueue = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "avg_write_requests_queued"),
 		"Average number of write requests that were queued for the selected disk during the sample interval (LogicalDisk.AvgDiskWriteQueueLength)",
-		[]string{"volume", "volumeName"},
+		[]string{"volume", "volume_name"},
 		nil,
 	)
 
 	c.ReadBytesTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "read_bytes_total"),
 		"The number of bytes transferred from the disk during read operations (LogicalDisk.DiskReadBytesPerSec)",
-		[]string{"volume", "volumeName"},
+		[]string{"volume", "volume_name"},
 		nil,
 	)
 
 	c.ReadsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "reads_total"),
 		"The number of read operations on the disk (LogicalDisk.DiskReadsPerSec)",
-		[]string{"volume", "volumeName"},
+		[]string{"volume", "volume_name"},
 		nil,
 	)
 
 	c.WriteBytesTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "write_bytes_total"),
 		"The number of bytes transferred to the disk during write operations (LogicalDisk.DiskWriteBytesPerSec)",
-		[]string{"volume", "volumeName"},
+		[]string{"volume", "volume_name"},
 		nil,
 	)
 
 	c.WritesTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "writes_total"),
 		"The number of write operations on the disk (LogicalDisk.DiskWritesPerSec)",
-		[]string{"volume", "volumeName"},
+		[]string{"volume", "volume_name"},
 		nil,
 	)
 
 	c.ReadTime = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "read_seconds_total"),
 		"Seconds that the disk was busy servicing read requests (LogicalDisk.PercentDiskReadTime)",
-		[]string{"volume", "volumeName"},
+		[]string{"volume", "volume_name"},
 		nil,
 	)
 
 	c.WriteTime = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "write_seconds_total"),
 		"Seconds that the disk was busy servicing write requests (LogicalDisk.PercentDiskWriteTime)",
-		[]string{"volume", "volumeName"},
+		[]string{"volume", "volume_name"},
 		nil,
 	)
 
 	c.FreeSpace = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "free_bytes"),
 		"Free space in bytes, updates every 10-15 min (LogicalDisk.PercentFreeSpace)",
-		[]string{"volume", "volumeName"},
+		[]string{"volume", "volume_name"},
 		nil,
 	)
 
 	c.TotalSpace = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "size_bytes"),
 		"Total space in bytes, updates every 10-15 min (LogicalDisk.PercentFreeSpace_Base)",
-		[]string{"volume", "volumeName"},
+		[]string{"volume", "volume_name"},
 		nil,
 	)
 
 	c.IdleTime = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "idle_seconds_total"),
 		"Seconds that the disk was idle (LogicalDisk.PercentIdleTime)",
-		[]string{"volume", "volumeName"},
+		[]string{"volume", "volume_name"},
 		nil,
 	)
 
 	c.SplitIOs = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "split_ios_total"),
 		"The number of I/Os to the disk were split into multiple I/Os (LogicalDisk.SplitIOPerSec)",
-		[]string{"volume", "volumeName"},
+		[]string{"volume", "volume_name"},
 		nil,
 	)
 
 	c.ReadLatency = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "read_latency_seconds_total"),
 		"Shows the average time, in seconds, of a read operation from the disk (LogicalDisk.AvgDiskSecPerRead)",
-		[]string{"volume", "volumeName"},
+		[]string{"volume", "volume_name"},
 		nil,
 	)
 
 	c.WriteLatency = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "write_latency_seconds_total"),
 		"Shows the average time, in seconds, of a write operation to the disk (LogicalDisk.AvgDiskSecPerWrite)",
-		[]string{"volume", "volumeName"},
+		[]string{"volume", "volume_name"},
 		nil,
 	)
 
 	c.ReadWriteLatency = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "read_write_latency_seconds_total"),
 		"Shows the time, in seconds, of the average disk transfer (LogicalDisk.AvgDiskSecPerTransfer)",
-		[]string{"volume", "volumeName"},
+		[]string{"volume", "volume_name"},
 		nil,
 	)
 
