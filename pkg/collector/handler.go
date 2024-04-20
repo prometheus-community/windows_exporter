@@ -32,7 +32,14 @@ func (c *Collectors) BuildServeHTTP(disableExporterMetrics bool, timeoutMargin f
 			}
 			filteredCollectors[name] = col
 		}
-		return nil, NewPrometheus(timeout, c, c.logger)
+
+		filtered := Collectors{
+			logger:           c.logger,
+			collectors:       filteredCollectors,
+			perfCounterQuery: c.perfCounterQuery,
+		}
+
+		return nil, NewPrometheus(timeout, &filtered, c.logger)
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
