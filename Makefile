@@ -12,9 +12,14 @@ ALL_OS:= 1809 ltsc2022
 BASE_IMAGE=mcr.microsoft.com/windows/nanoserver
 
 .PHONY: build
-build: windows_exporter.exe
+build: generate windows_exporter.exe
+
 windows_exporter.exe: pkg/**/*.go
 	promu build -v
+
+.PHONY: generate
+generate:
+	go generate ./...
 
 test:
 	go test -v ./...
@@ -36,7 +41,7 @@ promtool: windows_exporter.exe
 fmt:
 	gofmt -l -w -s .
 
-crossbuild:
+crossbuild: generate
 	# The prometheus/golang-builder image for promu crossbuild doesn't exist
 	# on Windows, so for now, we'll just build twice
 	GOARCH=amd64 promu build --prefix=output/amd64
