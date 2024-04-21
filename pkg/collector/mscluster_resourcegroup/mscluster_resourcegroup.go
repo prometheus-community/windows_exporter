@@ -1,6 +1,7 @@
 package mscluster_resourcegroup
 
 import (
+	"github.com/prometheus-community/windows_exporter/pkg/collector/mscluster_node"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus-community/windows_exporter/pkg/wmi"
 
@@ -31,6 +32,7 @@ type collector struct {
 	Flags               *prometheus.Desc
 	GroupType           *prometheus.Desc
 	PlacementOptions    *prometheus.Desc
+	OwnerNode           *prometheus.Desc
 	Priority            *prometheus.Desc
 	ResiliencyPeriod    *prometheus.Desc
 	State               *prometheus.Desc
@@ -119,6 +121,18 @@ func (c *collector) Build() error {
 		[]string{"name"},
 		nil,
 	)
+	c.OwnerNode = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "owner_node"),
+		"The node hosting the resource group. 0: Not hosted; 1: Hosted",
+		[]string{"node_name", "name"},
+		nil,
+	)
+	c.OwnerNode = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "owner_node"),
+		"The node hosting the resource group. 0: Not hosted; 1: Hosted",
+		[]string{"node_name", "name"},
+		nil,
+	)
 	c.Priority = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "priority"),
 		"Priority value of the resource group",
@@ -155,6 +169,7 @@ type MSCluster_ResourceGroup struct {
 	FailoverThreshold   uint
 	Flags               uint
 	GroupType           uint
+	OwnerNode           string
 	Priority            uint
 	ResiliencyPeriod    uint
 	State               uint
@@ -240,6 +255,21 @@ func (c *collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric)
 			float64(v.GroupType),
 			v.Name,
 		)
+
+		if mscluster_node.NodeName != nil {
+			for _, node_name := range mscluster_node.NodeName {
+				isCurrentState := 0.0
+				if v.OwnerNode == node_name {
+					isCurrentState = 1.0
+				}
+				ch <- prometheus.MustNewConstMetric(
+					c.OwnerNode,
+					prometheus.GaugeValue,
+					isCurrentState,
+					node_name, v.Name,
+				)
+			}
+		}
 
 		ch <- prometheus.MustNewConstMetric(
 			c.Priority,
