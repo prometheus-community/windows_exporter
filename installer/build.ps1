@@ -24,7 +24,7 @@ Copy-Item -Force $PathToExecutable Work/windows_exporter.exe
 
 Write-Verbose "Creating windows_exporter-${Version}-${Arch}.msi"
 $wixArch = @{"amd64" = "x64"; "arm64" = "arm64"}[$Arch]
-$wixOpts = "-ext WixFirewallExtension -ext WixUtilExtension"
+
 Invoke-Expression "wix build -arch $wixArch -o .\windows_exporter-$($Version)-$($Arch).msi .\windows_exporter.wxs -d Version=$($Version) -ext WixToolset.Firewall.wixext -ext WixToolset.Util.wixext"
 
 Write-Verbose "Done!"
