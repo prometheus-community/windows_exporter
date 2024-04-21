@@ -121,10 +121,18 @@ Example service collector with a custom query.
 msiexec /i <path-to-msi-file> ENABLED_COLLECTORS=os,service --% EXTRA_FLAGS="--collector.service.services-where ""Name LIKE 'sql%'"""
 ```
 
-On some older versions of Windows you may need to surround parameter values with double quotes to get the install command parsing properly:
+On some older versions of Windows,
+you may need to surround parameter values with double quotes to get the installation command parsing properly:
 ```powershell
 msiexec /i C:\Users\Administrator\Downloads\windows_exporter.msi ENABLED_COLLECTORS="ad,iis,logon,memory,process,tcp,textfile,thermalzone" TEXTFILE_DIRS="C:\custom_metrics\"
 ```
+
+To install the exporter with creating a firewall exception, use the following command:
+
+```powershell
+msiexec /i <path-to-msi-file> ADD_FIREWALL_EXCEPTION=yes
+```
+
 
 Powershell versions 7.3 and above require [PSNativeCommandArgumentPassing](https://learn.microsoft.com/en-us/powershell/scripting/learn/experimental-features?view=powershell-7.3) to be set to `Legacy` when using `--% EXTRA_FLAGS`:
 
@@ -132,7 +140,6 @@ Powershell versions 7.3 and above require [PSNativeCommandArgumentPassing](https
 $PSNativeCommandArgumentPassing = 'Legacy'
 msiexec /i <path-to-msi-file> ENABLED_COLLECTORS=os,service --% EXTRA_FLAGS="--collector.service.services-where ""Name LIKE 'sql%'"""
 ```
-
 
 ## Kubernetes Implementation
 

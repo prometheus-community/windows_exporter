@@ -63,7 +63,7 @@ func (c *collector) Build() error {
 	)
 	c.Hostname = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "hostname"),
-		"Labeled system hostname information as provided by ComputerSystem.DNSHostName and ComputerSystem.Domain",
+		"Labelled system hostname information as provided by ComputerSystem.DNSHostName and ComputerSystem.Domain",
 		[]string{
 			"hostname",
 			"domain",

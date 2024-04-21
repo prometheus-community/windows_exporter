@@ -3,6 +3,7 @@
 package os
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -224,7 +225,9 @@ func (c *collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 	}
 
 	revision, _, err := ntKey.GetIntegerValue("UBR")
-	if err != nil {
+	if errors.Is(err, registry.ErrNotExist) {
+		revision = 0
+	} else if err != nil {
 		return nil, err
 	}
 
