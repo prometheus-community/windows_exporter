@@ -258,9 +258,22 @@ Name | Description | Type | Labels
 `windows_mssql_waitstats_transaction_ownership_waits` | Statistics relevant to processes synchronizing access to transaction | gauge | `mssql_instance`, `item`
 
 ### Example metric
-_This collector does not yet have explained examples, we would appreciate your help adding them!_
 
+Query Full table scans
+
+```
+rate(windows_mssql_accessmethods_full_scans{instance='host:9182'}[$__rate_interval])
+
+```
 ## Useful queries
+
+### Database file size
+This collector retrieves the two values (data file and log file) and sums the total in PromQL to give the Database file size.
+
+```
+windows_mssql_databases_data_files_size_bytes{database='DatabaseName',instance='host:9182'} + windows_mssql_databases_log_files_size_bytes{database='DatabaseName',instance='host:9182'}
+
+```
 
 ### Buffer Cache Hit Ratio
 
@@ -284,4 +297,18 @@ This principal can be used for following metrics too:
   - locks_count
 
 ## Alerting examples
-_This collector does not yet have alerting examples, we would appreciate your help adding them!_
+
+```
+groups:
+- name: database_alerts
+  rules:
+  - alert: DatabaseSizeExceeded
+    expr: windows_mssql_databases_data_files_size_bytes{database='DatabaseName',instance='host:9182'} + windows_mssql_databases_log_files_size_bytes{database='DatabaseName',instance='host:9182'} > 1e10  # 10 GB in bytes
+    for: 5m  # Trigger the alert if the condition persists for 5 mins
+    labels:
+      severity: critical
+    annotations:
+      summary: "SQl EXpress Database size exceeded 10GB"
+      description: "The database size has grown larger than 10GB. Instance: {{ $labels.instance }}"
+
+```

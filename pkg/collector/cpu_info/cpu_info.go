@@ -57,7 +57,7 @@ func (c *collector) GetPerfCounter() ([]string, error) {
 func (c *collector) Build() error {
 	c.CpuInfo = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, "", Name),
-		"Labeled CPU information as provided provided by Win32_Processor",
+		"Labelled CPU information as provided provided by Win32_Processor",
 		[]string{
 			"architecture",
 			"device_id",

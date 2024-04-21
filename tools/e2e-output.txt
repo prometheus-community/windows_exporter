@@ -21,13 +21,13 @@ test_alpha_total 42
 # TYPE windows_cpu_time_total counter
 # HELP windows_cpu_processor_mperf_total Processor MPerf is the number of TSC ticks incremented while executing instructions
 # TYPE windows_cpu_processor_mperf_total counter
-# HELP windows_cpu_processor_privileged_utility_total Processor Privilieged Utility represents is the amount of time the core has spent executing instructions inside the kernel
+# HELP windows_cpu_processor_privileged_utility_total Processor Privileged Utility represents is the amount of time the core has spent executing instructions inside the kernel
 # TYPE windows_cpu_processor_privileged_utility_total counter
 # HELP windows_cpu_processor_rtc_total Processor RTC represents the number of RTC ticks made since the system booted. It should consistently be 64e6, and can be used to properly derive Processor Utility Rate
 # TYPE windows_cpu_processor_rtc_total counter
 # HELP windows_cpu_processor_utility_total Processor Utility represents is the amount of time the core spends executing instructions
 # TYPE windows_cpu_processor_utility_total counter
-# HELP windows_cs_hostname Labeled system hostname information as provided by ComputerSystem.DNSHostName and ComputerSystem.Domain
+# HELP windows_cs_hostname Labelled system hostname information as provided by ComputerSystem.DNSHostName and ComputerSystem.Domain
 # TYPE windows_cs_hostname gauge
 # HELP windows_cs_logical_processors ComputerSystem.NumberOfLogicalProcessors
 # TYPE windows_cs_logical_processors gauge

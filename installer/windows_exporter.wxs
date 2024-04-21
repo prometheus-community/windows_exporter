@@ -15,6 +15,9 @@
     <Property Id="EXTRA_FLAGS" Secure="yes" />
     <SetProperty Id="ExtraFlags" After="InstallFiles" Sequence="execute" Value="[EXTRA_FLAGS]" Condition="EXTRA_FLAGS" />
 
+    <Property Id="ADD_FIREWALL_EXCEPTION" Secure="yes" />
+    <SetProperty Id="FirewallException" After="InstallFiles" Sequence="execute" Value="[ADD_FIREWALL_EXCEPTION]" Condition="ADD_FIREWALL_EXCEPTION" />
+
     <Property Id="LISTEN_ADDR" Secure="yes" Value="0.0.0.0" />
     <Property Id="LISTEN_PORT" Secure="yes" Value="9182" />
 
@@ -49,11 +52,7 @@
 
     <ComponentGroup Id="Files">
       <Component Directory="APPLICATIONROOTDIRECTORY">
-        <File Id="windows_exporter.exe" Name="windows_exporter.exe" Source="Work\windows_exporter.exe" KeyPath="yes">
-          <fw:FirewallException Id="MetricsEndpoint" Name="windows_exporter (HTTP [LISTEN_PORT])" Description="windows_exporter HTTP endpoint" Port="[LISTEN_PORT]" Protocol="tcp" IgnoreFailure="yes">
-            <fw:RemoteAddress Value="[REMOTE_ADDR]" />
-          </fw:FirewallException>
-        </File>
+        <File Id="windows_exporter.exe" Name="windows_exporter.exe" Source="Work\windows_exporter.exe" KeyPath="yes" />
         <ServiceInstall Id="InstallExporterService" Name="windows_exporter" DisplayName="windows_exporter" Description="Exports Prometheus metrics about the system" ErrorControl="normal" Start="auto" Type="ownProcess" Arguments="--log.file eventlog [CollectorsFlag] --web.listen-address [LISTEN_ADDR]:[LISTEN_PORT] [MetricsPathFlag] [TextfileDirsFlag] [ExtraFlags]">
           <util:ServiceConfig FirstFailureActionType="restart" SecondFailureActionType="restart" ThirdFailureActionType="restart" RestartServiceDelayInSeconds="60" />
           <ServiceDependency Id="wmiApSrv" />
@@ -64,15 +63,26 @@
         <CreateFolder />
       </Component>
     </ComponentGroup>
+    <ComponentGroup Id="CG_FirewallException">
+      <Component Condition="ADD_FIREWALL_EXCEPTION=&quot;yes&quot;" Directory="APPLICATIONROOTDIRECTORY" Id="C_FirewallException" Guid="9f522655-ac0e-42d2-a512-a7b19ebec7f7">
+        <fw:FirewallException Id="MetricsEndpoint" Name="windows_exporter (HTTP [LISTEN_PORT])" Description="windows_exporter HTTP endpoint" Port="[LISTEN_PORT]" Protocol="tcp" IgnoreFailure="yes">
+          <fw:RemoteAddress Value="[REMOTE_ADDR]" />
+        </fw:FirewallException>
+      </Component>
+    </ComponentGroup>
 
     <Feature Id="DefaultFeature" Level="1">
       <ComponentGroupRef Id="Files" />
     </Feature>
 
-    <Directory Id="$(var.PlatformProgramFiles)">
+    <Feature Id="FirewallException" Level="1">
+      <ComponentGroupRef Id="CG_FirewallException" />
+    </Feature>
+
+    <StandardDirectory Id="ProgramFiles64Folder">
       <Directory Id="APPLICATIONROOTDIRECTORY" Name="windows_exporter">
         <Directory Id="textfile_inputs" Name="textfile_inputs" />
       </Directory>
-    </Directory>
+    </StandardDirectory>
   </Package>
 </Wix>

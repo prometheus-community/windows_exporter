@@ -14,8 +14,8 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
+	"github.com/prometheus/client_golang/prometheus/collectors/version"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/prometheus/common/version"
 )
 
 func (c *Collectors) BuildServeHTTP(disableExporterMetrics bool, timeoutMargin float64) http.HandlerFunc {
@@ -32,7 +32,14 @@ func (c *Collectors) BuildServeHTTP(disableExporterMetrics bool, timeoutMargin f
 			}
 			filteredCollectors[name] = col
 		}
-		return nil, NewPrometheus(timeout, c, c.logger)
+
+		filtered := Collectors{
+			logger:           c.logger,
+			collectors:       filteredCollectors,
+			perfCounterQuery: c.perfCounterQuery,
+		}
+
+		return nil, NewPrometheus(timeout, &filtered, c.logger)
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
