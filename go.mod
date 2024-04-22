@@ -3,7 +3,7 @@ module github.com/prometheus-community/windows_exporter
 go 1.21
 
 require (
-	github.com/Microsoft/hcsshim v0.12.2
+	github.com/Microsoft/hcsshim v0.12.3
 	github.com/alecthomas/kingpin/v2 v2.4.0
 	github.com/dimchansky/utfbom v1.1.1
 	github.com/go-kit/log v0.2.1
@@ -22,7 +22,7 @@ require (
 )
 
 require (
-	github.com/Microsoft/go-winio v0.6.1 // indirect
+	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/alecthomas/units v0.0.0-20211218093645-b94a6e3cc137 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
@@ -40,12 +40,10 @@ require (
 	github.com/prometheus/procfs v0.12.0 // indirect
 	github.com/xhit/go-str2duration/v2 v2.1.0 // indirect
 	golang.org/x/crypto v0.21.0 // indirect
-	golang.org/x/mod v0.14.0 // indirect
 	golang.org/x/net v0.23.0 // indirect
 	golang.org/x/oauth2 v0.18.0 // indirect
 	golang.org/x/sync v0.6.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
-	golang.org/x/tools v0.15.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240123012728-ef4313101c80 // indirect
 	google.golang.org/grpc v1.62.0 // indirect
