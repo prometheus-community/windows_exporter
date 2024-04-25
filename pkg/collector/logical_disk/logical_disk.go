@@ -423,8 +423,8 @@ func (c *collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 					logicalDisk.VolumeName,
 				)
 
-			} else {
-				continue
+				break
+
 			}
 		}
 
