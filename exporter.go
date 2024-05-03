@@ -1,8 +1,13 @@
 //go:build windows
 
+//go:generate go run github.com/tc-hib/go-winres@v0.3.3 make --product-version=git-tag --file-version=git-tag --arch=amd64,arm64
+
 package main
 
 import (
+	// Its important that we do these first so that we can register with the Windows service control ASAP to avoid timeouts
+	"github.com/prometheus-community/windows_exporter/pkg/initiate"
+
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -13,8 +18,6 @@ import (
 	"sort"
 	"strings"
 
-	// Its important that we do these first so that we can register with the windows service control ASAP to avoid timeouts
-	"github.com/prometheus-community/windows_exporter/pkg/initiate"
 	winlog "github.com/prometheus-community/windows_exporter/pkg/log"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus-community/windows_exporter/pkg/utils"
