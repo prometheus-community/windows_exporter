@@ -1532,15 +1532,6 @@ func (c *collector) collectW3SVC_W3WP(ctx *types.ScrapeContext, ch chan<- promet
 		}
 
 		ch <- prometheus.MustNewConstMetric(
-			c.Info,
-			prometheus.GaugeValue,
-			app.Threads,
-			name,
-			pid,
-			"busy",
-		)
-
-		ch <- prometheus.MustNewConstMetric(
 			c.Threads,
 			prometheus.GaugeValue,
 			app.Threads,
