@@ -85,6 +85,8 @@ type collector struct {
 	appInclude  *string
 	appExclude  *string
 
+	Info *prometheus.Desc
+
 	// Web Service
 	CurrentAnonymousUsers               *prometheus.Desc
 	CurrentBlockedAsyncIORequests       *prometheus.Desc
@@ -299,6 +301,15 @@ func (c *collector) Build() error {
 	if err != nil {
 		return err
 	}
+
+	c.Info = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "info"),
+		"ISS information",
+		[]string{},
+		prometheus.Labels{
+			"version": fmt.Sprintf("%d.%d", c.iis_version.major, c.iis_version.minor),
+		},
+	)
 
 	// Web Service
 	c.CurrentAnonymousUsers = prometheus.NewDesc(
@@ -1033,6 +1044,12 @@ func (c *collector) collectWebService(ctx *types.ScrapeContext, ch chan<- promet
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["Web Service"], &webService, c.logger); err != nil {
 		return nil, err
 	}
+
+	ch <- prometheus.MustNewConstMetric(
+		c.Info,
+		prometheus.GaugeValue,
+		1,
+	)
 
 	webServiceDeDuplicated := dedupIISNames(webService)
 
