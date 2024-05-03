@@ -1,20 +1,23 @@
 //go:build windows
 
+//go:generate go run github.com/tc-hib/go-winres@v0.3.3 make --product-version=git-tag --file-version=git-tag --arch=amd64,arm64
+
 package main
 
 import (
+	// Its important that we do these first so that we can register with the Windows service control ASAP to avoid timeouts
+	"github.com/prometheus-community/windows_exporter/pkg/initiate"
+
 	"encoding/json"
 	"fmt"
 	"net/http"
-	_ "net/http/pprof"
+	"net/http/pprof"
 	"os"
 	"os/user"
 	"runtime"
 	"sort"
 	"strings"
 
-	// Its important that we do these first so that we can register with the windows service control ASAP to avoid timeouts
-	"github.com/prometheus-community/windows_exporter/pkg/initiate"
 	winlog "github.com/prometheus-community/windows_exporter/pkg/log"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus-community/windows_exporter/pkg/utils"
@@ -77,6 +80,10 @@ func main() {
 			"scrape.timeout-margin",
 			"Seconds to subtract from the timeout allowed by the client. Tune to allow for overhead or high loads.",
 		).Default("0.5").Float64()
+		debugEnabled = app.Flag(
+			"debug.enabled",
+			"If true, windows_exporter will expose debug endpoints under /debug/pprof.",
+		).Default("false").Bool()
 	)
 
 	winlogConfig := &winlog.Config{}
@@ -171,15 +178,16 @@ func main() {
 
 	_ = level.Info(logger).Log("msg", fmt.Sprintf("Enabled collectors: %v", strings.Join(enabledCollectorList, ", ")))
 
-	http.HandleFunc(*metricsPath, withConcurrencyLimit(*maxRequests, collectors.BuildServeHTTP(*disableExporterMetrics, *timeoutMargin)))
-	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+	mux := http.NewServeMux()
+	mux.HandleFunc(*metricsPath, withConcurrencyLimit(*maxRequests, collectors.BuildServeHTTP(*disableExporterMetrics, *timeoutMargin)))
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, err := fmt.Fprintln(w, `{"status":"ok"}`)
 		if err != nil {
 			_ = level.Debug(logger).Log("Failed to write to stream", "err", err)
 		}
 	})
-	http.HandleFunc("/version", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/version", func(w http.ResponseWriter, r *http.Request) {
 		// we can't use "version" directly as it is a package, and not an object that
 		// can be serialized.
 		err := json.NewEncoder(w).Encode(prometheusVersion{
@@ -194,6 +202,15 @@ func main() {
 			http.Error(w, fmt.Sprintf("error encoding JSON: %s", err), http.StatusInternalServerError)
 		}
 	})
+
+	if *debugEnabled {
+		mux.HandleFunc("/debug/pprof/", pprof.Index)
+		mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+		mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
+		mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+		mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
+	}
+
 	if *metricsPath != "/" && *metricsPath != "" {
 		landingConfig := web.LandingConfig{
 			Name:        "Windows Exporter",
@@ -219,7 +236,7 @@ func main() {
 			_ = level.Error(logger).Log("msg", "failed to generate landing page", "err", err)
 			os.Exit(1)
 		}
-		http.Handle("/", landingPage)
+		mux.Handle("/", landingPage)
 	}
 
 	_ = level.Info(logger).Log("msg", "Starting windows_exporter", "version", version.Info())
@@ -227,7 +244,7 @@ func main() {
 	_ = level.Debug(logger).Log("msg", "Go MAXPROCS", "procs", runtime.GOMAXPROCS(0))
 
 	go func() {
-		server := &http.Server{}
+		server := &http.Server{Handler: mux}
 		if err := web.ListenAndServe(server, webConfig, logger); err != nil {
 			_ = level.Error(logger).Log("msg", "cannot start windows_exporter", "err", err)
 			os.Exit(1)
