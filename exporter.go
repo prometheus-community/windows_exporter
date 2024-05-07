@@ -211,34 +211,6 @@ func main() {
 		mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
 	}
 
-	if *metricsPath != "/" && *metricsPath != "" {
-		landingConfig := web.LandingConfig{
-			Name:        "Windows Exporter",
-			Description: "Prometheus Exporter for Windows servers",
-			Version:     version.Info(),
-			Links: []web.LandingLinks{
-				{
-					Address: *metricsPath,
-					Text:    "Metrics",
-				},
-				{
-					Address: "/health",
-					Text:    "Health Check",
-				},
-				{
-					Address: "/version",
-					Text:    "Version Info",
-				},
-			},
-		}
-		landingPage, err := web.NewLandingPage(landingConfig)
-		if err != nil {
-			_ = level.Error(logger).Log("msg", "failed to generate landing page", "err", err)
-			os.Exit(1)
-		}
-		mux.Handle("/", landingPage)
-	}
-
 	_ = level.Info(logger).Log("msg", "Starting windows_exporter", "version", version.Info())
 	_ = level.Info(logger).Log("msg", "Build context", "build_context", version.BuildContext())
 	_ = level.Debug(logger).Log("msg", "Go MAXPROCS", "procs", runtime.GOMAXPROCS(0))
