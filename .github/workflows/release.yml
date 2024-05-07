@@ -42,9 +42,7 @@ jobs:
           Expand-Archive -Path promu-$($Env:PROMU_VER).windows-amd64.zip -DestinationPath .
           Copy-Item -Path promu-$($Env:PROMU_VER).windows-amd64\promu.exe -Destination "$(go env GOPATH)\bin"
 
-          # No binaries available so build from source
-          go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.4.0
-          # GOPATH\bin dir must be added to PATH else the `promu` and `goversioninfo` commands won't be found
+          # GOPATH\bin dir must be added to PATH else the `promu` commands won't be found
           echo "$(go env GOPATH)\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: Build
@@ -52,11 +50,7 @@ jobs:
           $ErrorActionPreference = "Stop"
 
           dotnet-gitversion /output json /showvariable FullSemVer | Set-Content VERSION -PassThru
-          $Version = Get-Content VERSION
-          # Windows versioninfo resources need the file version by parts (but product version is free text)
-          $VersionParts = ($Version -replace '^v?([0-9\.]+).*$','$1').Split(".")
-          goversioninfo.exe -ver-major $VersionParts[0] -ver-minor $VersionParts[1] -ver-patch $VersionParts[2] -product-version $Version -platform-specific
-
+          
           make crossbuild
           # '+' symbols are invalid characters in image tags
           (Get-Content -Path VERSION) -replace '\+', '_' | Set-Content -Path VERSION
