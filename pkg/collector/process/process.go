@@ -19,10 +19,12 @@ import (
 )
 
 const (
-	Name                    = "process"
-	FlagProcessExclude      = "collector.process.exclude"
-	FlagProcessInclude      = "collector.process.include"
-	FlagEnableWorkerProcess = "collector.process.iis"
+	Name                     = "process"
+	FlagProcessExclude       = "collector.process.exclude"
+	FlagProcessInclude       = "collector.process.include"
+	FlagEnableWorkerProcess  = "collector.process.iis"
+	win32LoggedOnUserQuery   = "SELECT Antecedent, Dependent FROM Win32_LoggedOnUser"
+	win32SessionProcessQuery = "SELECT Antecedent, Dependent FROM Win32_SessionProcess"
 )
 
 type Config struct {
@@ -35,6 +37,16 @@ var ConfigDefaults = Config{
 	ProcessInclude:      ".+",
 	ProcessExclude:      "",
 	EnableWorkerProcess: false,
+}
+
+type Win32_LoggedOnUser struct {
+	Antecedent string
+	Dependent  string
+}
+
+type Win32_SessionProcess struct {
+	Antecedent string
+	Dependent  string
 }
 
 type collector struct {
@@ -119,91 +131,91 @@ func (c *collector) Build() error {
 	c.StartTime = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "start_time"),
 		"Time of process start.",
-		[]string{"process", "process_id", "creating_process_id"},
+		[]string{"process", "process_id", "creating_process_id", "user"},
 		nil,
 	)
 	c.CPUTimeTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "cpu_time_total"),
 		"Returns elapsed time that all of the threads of this process used the processor to execute instructions by mode (privileged, user).",
-		[]string{"process", "process_id", "creating_process_id", "mode"},
+		[]string{"process", "process_id", "creating_process_id", "mode", "user"},
 		nil,
 	)
 	c.HandleCount = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "handles"),
 		"Total number of handles the process has open. This number is the sum of the handles currently open by each thread in the process.",
-		[]string{"process", "process_id", "creating_process_id"},
+		[]string{"process", "process_id", "creating_process_id", "user"},
 		nil,
 	)
 	c.IOBytesTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "io_bytes_total"),
 		"Bytes issued to I/O operations in different modes (read, write, other).",
-		[]string{"process", "process_id", "creating_process_id", "mode"},
+		[]string{"process", "process_id", "creating_process_id", "mode", "user"},
 		nil,
 	)
 	c.IOOperationsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "io_operations_total"),
 		"I/O operations issued in different modes (read, write, other).",
-		[]string{"process", "process_id", "creating_process_id", "mode"},
+		[]string{"process", "process_id", "creating_process_id", "mode", "user"},
 		nil,
 	)
 	c.PageFaultsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "page_faults_total"),
 		"Page faults by the threads executing in this process.",
-		[]string{"process", "process_id", "creating_process_id"},
+		[]string{"process", "process_id", "creating_process_id", "user"},
 		nil,
 	)
 	c.PageFileBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "page_file_bytes"),
 		"Current number of bytes this process has used in the paging file(s).",
-		[]string{"process", "process_id", "creating_process_id"},
+		[]string{"process", "process_id", "creating_process_id", "user"},
 		nil,
 	)
 	c.PoolBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "pool_bytes"),
 		"Pool Bytes is the last observed number of bytes in the paged or nonpaged pool.",
-		[]string{"process", "process_id", "creating_process_id", "pool"},
+		[]string{"process", "process_id", "creating_process_id", "pool", "user"},
 		nil,
 	)
 	c.PriorityBase = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "priority_base"),
 		"Current base priority of this process. Threads within a process can raise and lower their own base priority relative to the process base priority of the process.",
-		[]string{"process", "process_id", "creating_process_id"},
+		[]string{"process", "process_id", "creating_process_id", "user"},
 		nil,
 	)
 	c.PrivateBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "private_bytes"),
 		"Current number of bytes this process has allocated that cannot be shared with other processes.",
-		[]string{"process", "process_id", "creating_process_id"},
+		[]string{"process", "process_id", "creating_process_id", "user"},
 		nil,
 	)
 	c.ThreadCount = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "threads"),
 		"Number of threads currently active in this process.",
-		[]string{"process", "process_id", "creating_process_id"},
+		[]string{"process", "process_id", "creating_process_id", "user"},
 		nil,
 	)
 	c.VirtualBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "virtual_bytes"),
 		"Current size, in bytes, of the virtual address space that the process is using.",
-		[]string{"process", "process_id", "creating_process_id"},
+		[]string{"process", "process_id", "creating_process_id", "user"},
 		nil,
 	)
 	c.WorkingSetPrivate = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "working_set_private_bytes"),
 		"Size of the working set, in bytes, that is use for this process only and not shared nor shareable by other processes.",
-		[]string{"process", "process_id", "creating_process_id"},
+		[]string{"process", "process_id", "creating_process_id", "user"},
 		nil,
 	)
 	c.WorkingSetPeak = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "working_set_peak_bytes"),
 		"Maximum size, in bytes, of the Working Set of this process at any point in time. The Working Set is the set of memory pages touched recently by the threads in the process.",
-		[]string{"process", "process_id", "creating_process_id"},
+		[]string{"process", "process_id", "creating_process_id", "user"},
 		nil,
 	)
 	c.WorkingSet = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "working_set_bytes"),
 		"Maximum number of bytes in the working set of this process at any point in time. The working set is the set of memory pages touched recently by the threads in the process.",
-		[]string{"process", "process_id", "creating_process_id"},
+		[]string{"process", "process_id", "creating_process_id", "user"},
 		nil,
 	)
 
@@ -261,6 +273,7 @@ type WorkerProcess struct {
 
 func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	data := make([]perflibProcess, 0)
+	processMap := getUserProcess()
 	err := perflib.UnmarshalObject(ctx.PerfObjects["Process"], &data, c.logger)
 	if err != nil {
 		return err
@@ -301,6 +314,7 @@ func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 			processName,
 			pid,
 			cpid,
+			processMap[pid],
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -310,6 +324,7 @@ func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 			processName,
 			pid,
 			cpid,
+			processMap[pid],
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -320,6 +335,7 @@ func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 			pid,
 			cpid,
 			"privileged",
+			processMap[pid],
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -330,6 +346,7 @@ func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 			pid,
 			cpid,
 			"user",
+			processMap[pid],
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -340,6 +357,7 @@ func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 			pid,
 			cpid,
 			"other",
+			processMap[pid],
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -350,6 +368,7 @@ func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 			pid,
 			cpid,
 			"other",
+			processMap[pid],
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -360,6 +379,7 @@ func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 			pid,
 			cpid,
 			"read",
+			processMap[pid],
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -370,6 +390,7 @@ func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 			pid,
 			cpid,
 			"read",
+			processMap[pid],
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -380,6 +401,7 @@ func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 			pid,
 			cpid,
 			"write",
+			processMap[pid],
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -390,6 +412,7 @@ func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 			pid,
 			cpid,
 			"write",
+			processMap[pid],
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -399,6 +422,7 @@ func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 			processName,
 			pid,
 			cpid,
+			processMap[pid],
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -408,6 +432,7 @@ func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 			processName,
 			pid,
 			cpid,
+			processMap[pid],
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -418,6 +443,7 @@ func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 			pid,
 			cpid,
 			"nonpaged",
+			processMap[pid],
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -428,6 +454,7 @@ func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 			pid,
 			cpid,
 			"paged",
+			processMap[pid],
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -437,6 +464,7 @@ func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 			processName,
 			pid,
 			cpid,
+			processMap[pid],
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -446,6 +474,7 @@ func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 			processName,
 			pid,
 			cpid,
+			processMap[pid],
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -455,6 +484,7 @@ func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 			processName,
 			pid,
 			cpid,
+			processMap[pid],
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -464,6 +494,7 @@ func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 			processName,
 			pid,
 			cpid,
+			processMap[pid],
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -473,6 +504,7 @@ func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 			processName,
 			pid,
 			cpid,
+			processMap[pid],
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -482,6 +514,7 @@ func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 			processName,
 			pid,
 			cpid,
+			processMap[pid],
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -491,8 +524,48 @@ func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 			processName,
 			pid,
 			cpid,
+			processMap[pid],
 		)
 	}
 
 	return nil
+}
+
+func getUserProcess() map[string]string {
+	processMap := make(map[string]string)
+
+	var users []Win32_LoggedOnUser
+	var sessionProcesses []Win32_SessionProcess
+
+	err := wmi.Query(win32LoggedOnUserQuery, &users)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	err = wmi.Query(win32SessionProcessQuery, &sessionProcesses)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	for _, sesessionProcess := range sessionProcesses {
+		for _, user := range users {
+			if user.Dependent == sesessionProcess.Antecedent {
+				re := regexp.MustCompile(`Domain="(.+?)",Name="(.+?)"`)
+				match := re.FindStringSubmatch(user.Antecedent)
+
+				domain := match[1]
+				name := match[2]
+				fullname := fmt.Sprintf("%s\\%s", domain, name)
+
+				reps := regexp.MustCompile(`Handle="(\d+)"`)
+				matchps := reps.FindStringSubmatch(sesessionProcess.Dependent)
+
+				number := matchps[1]
+
+				processMap[number] = fullname
+			}
+		}
+	}
+
+	return processMap
 }
