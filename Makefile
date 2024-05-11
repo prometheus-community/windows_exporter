@@ -1,15 +1,16 @@
 export GOOS=windows
 export DOCKER_IMAGE_NAME ?= windows-exporter
-export DOCKER_REPO ?= ghcr.io/prometheus-community
+DOCKER_REPO:= ghcr.io/prometheus-community docker.io/prometheuscommunity quay.io/prometheuscommunity
 
 VERSION?=$(shell cat VERSION)
 DOCKER?=docker
 
 # Image Variables for Hostprocess Container
 # Windows image build is heavily influenced by https://github.com/kubernetes/kubernetes/blob/master/cluster/images/etcd/Makefile
-OS=1809
-ALL_OS:= 1809 ltsc2022
+OS=ltsc2019
+ALL_OS:= ltsc2019 ltsc2022
 BASE_IMAGE=mcr.microsoft.com/windows/nanoserver
+BASE_HOST_PROCESS_IMAGE=mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v1.0.0
 
 .PHONY: build
 build: generate windows_exporter.exe
@@ -48,21 +49,30 @@ crossbuild: generate
 	GOARCH=arm64 promu build --prefix=output/arm64
 
 build-image: crossbuild
-	$(DOCKER) build --build-arg=BASE=$(BASE_IMAGE):$(OS) -f Dockerfile -t $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION)-$(OS) .
+	$(DOCKER) build --build-arg=BASE=$(BASE_IMAGE):$(OS) -f Dockerfile -t local/$(DOCKER_IMAGE_NAME):$(VERSION)-$(OS) .
+
+build-hostprocess-image: crossbuild
+	$(DOCKER) build --build-arg=BASE=$(BASE_HOST_PROCESS_IMAGE) -f Dockerfile -t local/$(DOCKER_IMAGE_NAME):$(VERSION)-hostprocess .
 
 sub-build-%:
 	$(MAKE) OS=$* build-image
 
-build-all: $(addprefix sub-build-,$(ALL_OS))
+build-all: $(addprefix sub-build-,$(ALL_OS)) build-hostprocess-image
 
 push:
 	set -x; \
-	for osversion in ${ALL_OS}; do \
-		$(DOCKER) push $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION)-$${osversion}; \
-		$(DOCKER) manifest create --amend $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION) $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION)-$${osversion}; \
-		full_version=`$(DOCKER) manifest inspect $(BASE_IMAGE):$${osversion} | grep "os.version" | head -n 1 | awk -F\" '{print $$4}'` || true; \
-		$(DOCKER) manifest annotate --os windows --arch amd64 --os-version $${full_version} $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION)  $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION)-$${osversion}; \
+	for repo in ${DOCKER_REPO}; do \
+		for osversion in ${ALL_OS}; do \
+			$(DOCKER) tag local/$(DOCKER_IMAGE_NAME):$(VERSION)-$${osversion} $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION)-$${osversion}; \
+			$(DOCKER) push $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION)-$${osversion}; \
+			$(DOCKER) manifest create --amend $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION) $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION)-$${osversion}; \
+			full_version=`$(DOCKER) manifest inspect $(BASE_IMAGE):$${osversion} | grep "os.version" | head -n 1 | awk -F\" '{print $$4}'` || true; \
+			$(DOCKER) manifest annotate --os windows --arch amd64 --os-version $${full_version} $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION)  $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION)-$${osversion}; \
+		done
+		$(DOCKER) manifest push --purge $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION); \
+
+		$(DOCKER) tag local/$(DOCKER_IMAGE_NAME):$(VERSION)-hostprocess $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION)-hostprocess; \
+		$(DOCKER) push $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION)-hostprocess; \
 	done
-	$(DOCKER) manifest push --purge $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION)
 
 push-all: build-all push
