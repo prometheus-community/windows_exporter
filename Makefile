@@ -59,7 +59,7 @@ build-image: crossbuild
 # Hostprocess images requires buildkit to build
 # https://github.com/microsoft/windows-host-process-containers-base-image#build-with-buildkit
 build-hostprocess-image: crossbuild
-	$(DOCKER) buildx build --load --build-arg=BASE=$(BASE_HOST_PROCESS_IMAGE) -f Dockerfile -t local/$(DOCKER_IMAGE_NAME):$(VERSION)-hostprocess .
+	$(DOCKER) buildx build --build-arg=BASE=$(BASE_HOST_PROCESS_IMAGE) -f Dockerfile -t local/$(DOCKER_IMAGE_NAME):$(VERSION)-hostprocess .
 
 sub-build-%:
 	$(MAKE) OS=$* build-image
