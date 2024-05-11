@@ -193,8 +193,8 @@ func (c *collector) Build() error {
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric) error {
-	if desc, err := c.collect(ch); err != nil {
-		_ = level.Error(c.logger).Log("msg", "failed collecting collector metrics", "desc", desc, "err", err)
+	if err := c.collect(ch); err != nil {
+		_ = level.Error(c.logger).Log("msg", "failed collecting collector metrics", "err", err)
 		return err
 	}
 	return nil
@@ -208,12 +208,12 @@ func (c *collector) containerClose(container hcsshim.Container) {
 	}
 }
 
-func (c *collector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *collector) collect(ch chan<- prometheus.Metric) error {
 	// Types Container is passed to get the containers compute systems only
 	containers, err := hcsshim.GetContainers(hcsshim.ComputeSystemQuery{Types: []string{"Container"}})
 	if err != nil {
 		_ = level.Error(c.logger).Log("msg", "Err in Getting containers", "err", err)
-		return nil, err
+		return err
 	}
 
 	count := len(containers)
@@ -224,7 +224,7 @@ func (c *collector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, erro
 		float64(count),
 	)
 	if count == 0 {
-		return nil, nil
+		return nil
 	}
 
 	containerPrefixes := make(map[string]string)
@@ -322,12 +322,12 @@ func (c *collector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, erro
 	hnsEndpoints, err := hcsshim.HNSListEndpointRequest()
 	if err != nil {
 		_ = level.Warn(c.logger).Log("msg", "Failed to collect network stats for containers")
-		return nil, nil
+		return err
 	}
 
 	if len(hnsEndpoints) == 0 {
 		_ = level.Info(c.logger).Log("msg", fmt.Sprintf("No network stats for containers to collect"))
-		return nil, nil
+		return nil
 	}
 
 	for _, endpoint := range hnsEndpoints {
@@ -386,7 +386,7 @@ func (c *collector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, erro
 		}
 	}
 
-	return nil, nil
+	return nil
 }
 
 func getContainerIdWithPrefix(containerDetails hcsshim.ContainerProperties) string {

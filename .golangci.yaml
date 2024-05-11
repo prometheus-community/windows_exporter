@@ -1,14 +1,16 @@
 linters:
   disable-all: true
   enable:
-  - deadcode
   - errcheck
   - revive
   - govet
   - gofmt
   - ineffassign
   - unconvert
-  - varcheck
+  - nilnil
+  - nilerr
+  - unparam
+  - loggercheck
 
 issues:
   exclude:
