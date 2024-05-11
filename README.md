@@ -49,6 +49,7 @@ Name     | Description | Enabled by default
 [scheduled_task](docs/collector.scheduled_task.md) | Scheduled Tasks metrics |
 [service](docs/collector.service.md) | Service state metrics | &#10003;
 [smb](docs/collector.smb.md) | SMB Server |
+[smbclient](docs/collector.smbclient.md) | SMB Client |
 [smtp](docs/collector.smtp.md) | IIS SMTP Server |
 [system](docs/collector.system.md) | System calls | &#10003;
 [tcp](docs/collector.tcp.md) | TCP connections |
