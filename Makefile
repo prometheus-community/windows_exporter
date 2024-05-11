@@ -1,6 +1,11 @@
 export GOOS=windows
 export DOCKER_IMAGE_NAME ?= windows-exporter
-DOCKER_REPO:= ghcr.io/prometheus-community docker.io/prometheuscommunity quay.io/prometheuscommunity
+
+# DOCKER_REPO is the official image repository name at docker.io, quay.io.
+DOCKER_REPO:= prometheuscommunity
+
+# DOCKER_PUSH_REPOS is the list of repositories to push the image to. ghcr.io requires that org name be the same as the image repo name.
+DOCKER_PUSH_REPOS:=docker.io/$(DOCKER_REPO) quay.io/$(DOCKER_REPO) ghcr.io/prometheus-community
 
 VERSION?=$(shell cat VERSION)
 DOCKER?=docker
@@ -76,3 +81,8 @@ push:
 	done
 
 push-all: build-all push
+
+# Mandatory target for container description sync action
+.PHONY: docker-repo-name
+docker-repo-name:
+	@echo "$(DOCKER_REPO)/$(DOCKER_IMAGE_NAME)"
