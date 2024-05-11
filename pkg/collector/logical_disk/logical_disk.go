@@ -238,8 +238,8 @@ func (c *collector) Build() error {
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
-	if desc, err := c.collect(ctx, ch); err != nil {
-		_ = level.Error(c.logger).Log("failed collecting logical_disk metrics", "desc", desc, "err", err)
+	if err := c.collect(ctx, ch); err != nil {
+		_ = level.Error(c.logger).Log("msg", "failed collecting logical_disk metrics", "err", err)
 		return err
 	}
 	return nil
@@ -269,19 +269,19 @@ type logicalDisk struct {
 	AvgDiskSecPerTransfer   float64 `perflib:"Avg. Disk sec/Transfer"`
 }
 
-func (c *collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	var dst_Win32_LogicalDisk []Win32_LogicalDisk
 
 	if err := wmi.Query(win32DiskQuery, &dst_Win32_LogicalDisk); err != nil {
-		return nil, err
+		return err
 	}
 	if len(dst_Win32_LogicalDisk) == 0 {
-		return nil, errors.New("WMI query returned empty result set")
+		return errors.New("WMI query returned empty result set")
 	}
 
 	var dst []logicalDisk
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["LogicalDisk"], &dst, c.logger); err != nil {
-		return nil, err
+		return err
 	}
 
 	for _, volume := range dst {
@@ -430,5 +430,5 @@ func (c *collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 
 	}
 
-	return nil, nil
+	return nil
 }

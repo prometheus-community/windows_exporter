@@ -139,8 +139,8 @@ func (c *collector) Build() error {
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric) error {
-	if desc, err := c.collect(ch); err != nil {
-		_ = level.Error(c.logger).Log("failed collecting win32_perfrawdata_netframework_netclrmemory metrics", "desc", desc, "err", err)
+	if err := c.collect(ch); err != nil {
+		_ = level.Error(c.logger).Log("msg", "failed collecting win32_perfrawdata_netframework_netclrmemory metrics", "err", err)
 		return err
 	}
 	return nil
@@ -180,11 +180,11 @@ type Win32_PerfRawData_NETFramework_NETCLRMemory struct {
 	PromotedMemoryfromGen1             uint64
 }
 
-func (c *collector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *collector) collect(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_NETFramework_NETCLRMemory
 	q := wmi.QueryAll(&dst, c.logger)
 	if err := wmi.Query(q, &dst); err != nil {
-		return nil, err
+		return err
 	}
 
 	for _, process := range dst {
@@ -329,5 +329,5 @@ func (c *collector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, erro
 		)
 	}
 
-	return nil, nil
+	return nil
 }

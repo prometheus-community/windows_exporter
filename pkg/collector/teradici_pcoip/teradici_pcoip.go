@@ -326,24 +326,24 @@ func (c *collector) Build() error {
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric) error {
-	if desc, err := c.collectAudio(ch); err != nil {
-		_ = level.Error(c.logger).Log("failed collecting teradici session audio metrics", "desc", desc, "err", err)
+	if err := c.collectAudio(ch); err != nil {
+		_ = level.Error(c.logger).Log("msg", "failed collecting teradici session audio metrics", "err", err)
 		return err
 	}
-	if desc, err := c.collectGeneral(ch); err != nil {
-		_ = level.Error(c.logger).Log("failed collecting teradici session general metrics", "desc", desc, "err", err)
+	if err := c.collectGeneral(ch); err != nil {
+		_ = level.Error(c.logger).Log("msg", "failed collecting teradici session general metrics", "err", err)
 		return err
 	}
-	if desc, err := c.collectImaging(ch); err != nil {
-		_ = level.Error(c.logger).Log("failed collecting teradici session imaging metrics", "desc", desc, "err", err)
+	if err := c.collectImaging(ch); err != nil {
+		_ = level.Error(c.logger).Log("msg", "failed collecting teradici session imaging metrics", "err", err)
 		return err
 	}
-	if desc, err := c.collectNetwork(ch); err != nil {
-		_ = level.Error(c.logger).Log("failed collecting teradici session network metrics", "desc", desc, "err", err)
+	if err := c.collectNetwork(ch); err != nil {
+		_ = level.Error(c.logger).Log("msg", "failed collecting teradici session network metrics", "err", err)
 		return err
 	}
-	if desc, err := c.collectUsb(ch); err != nil {
-		_ = level.Error(c.logger).Log("failed collecting teradici session USB metrics", "desc", desc, "err", err)
+	if err := c.collectUsb(ch); err != nil {
+		_ = level.Error(c.logger).Log("msg", "failed collecting teradici session USB metrics", "err", err)
 		return err
 	}
 	return nil
@@ -401,14 +401,14 @@ type win32_PerfRawData_TeradiciPerf_PCoIPSessionUsbStatistics struct {
 	USBTXBWkbitPersec uint64
 }
 
-func (c *collector) collectAudio(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *collector) collectAudio(ch chan<- prometheus.Metric) error {
 	var dst []win32_PerfRawData_TeradiciPerf_PCoIPSessionAudioStatistics
 	q := wmi.QueryAll(&dst, c.logger)
 	if err := wmi.Query(q, &dst); err != nil {
-		return nil, err
+		return err
 	}
 	if len(dst) == 0 {
-		return nil, errors.New("WMI query returned empty result set")
+		return errors.New("WMI query returned empty result set")
 	}
 
 	ch <- prometheus.MustNewConstMetric(
@@ -441,17 +441,17 @@ func (c *collector) collectAudio(ch chan<- prometheus.Metric) (*prometheus.Desc,
 		float64(dst[0].AudioTXBWLimitkbitPersec),
 	)
 
-	return nil, nil
+	return nil
 }
 
-func (c *collector) collectGeneral(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *collector) collectGeneral(ch chan<- prometheus.Metric) error {
 	var dst []win32_PerfRawData_TeradiciPerf_PCoIPSessionGeneralStatistics
 	q := wmi.QueryAll(&dst, c.logger)
 	if err := wmi.Query(q, &dst); err != nil {
-		return nil, err
+		return err
 	}
 	if len(dst) == 0 {
-		return nil, errors.New("WMI query returned empty result set")
+		return errors.New("WMI query returned empty result set")
 	}
 
 	ch <- prometheus.MustNewConstMetric(
@@ -496,17 +496,17 @@ func (c *collector) collectGeneral(ch chan<- prometheus.Metric) (*prometheus.Des
 		float64(dst[0].TXPacketsLost),
 	)
 
-	return nil, nil
+	return nil
 }
 
-func (c *collector) collectImaging(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *collector) collectImaging(ch chan<- prometheus.Metric) error {
 	var dst []win32_PerfRawData_TeradiciPerf_PCoIPSessionImagingStatistics
 	q := wmi.QueryAll(&dst, c.logger)
 	if err := wmi.Query(q, &dst); err != nil {
-		return nil, err
+		return err
 	}
 	if len(dst) == 0 {
-		return nil, errors.New("WMI query returned empty result set")
+		return errors.New("WMI query returned empty result set")
 	}
 
 	ch <- prometheus.MustNewConstMetric(
@@ -575,17 +575,17 @@ func (c *collector) collectImaging(ch chan<- prometheus.Metric) (*prometheus.Des
 		float64(dst[0].ImagingTXBWkbitPersec),
 	)
 
-	return nil, nil
+	return nil
 }
 
-func (c *collector) collectNetwork(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *collector) collectNetwork(ch chan<- prometheus.Metric) error {
 	var dst []win32_PerfRawData_TeradiciPerf_PCoIPSessionNetworkStatistics
 	q := wmi.QueryAll(&dst, c.logger)
 	if err := wmi.Query(q, &dst); err != nil {
-		return nil, err
+		return err
 	}
 	if len(dst) == 0 {
-		return nil, errors.New("WMI query returned empty result set")
+		return errors.New("WMI query returned empty result set")
 	}
 
 	ch <- prometheus.MustNewConstMetric(
@@ -648,17 +648,17 @@ func (c *collector) collectNetwork(ch chan<- prometheus.Metric) (*prometheus.Des
 		float64(dst[0].TXPacketLossPercent_Base),
 	)
 
-	return nil, nil
+	return nil
 }
 
-func (c *collector) collectUsb(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *collector) collectUsb(ch chan<- prometheus.Metric) error {
 	var dst []win32_PerfRawData_TeradiciPerf_PCoIPSessionUsbStatistics
 	q := wmi.QueryAll(&dst, c.logger)
 	if err := wmi.Query(q, &dst); err != nil {
-		return nil, err
+		return err
 	}
 	if len(dst) == 0 {
-		return nil, errors.New("WMI query returned empty result set")
+		return errors.New("WMI query returned empty result set")
 	}
 
 	ch <- prometheus.MustNewConstMetric(
@@ -685,5 +685,5 @@ func (c *collector) collectUsb(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 		float64(dst[0].USBTXBWkbitPersec),
 	)
 
-	return nil, nil
+	return nil
 }

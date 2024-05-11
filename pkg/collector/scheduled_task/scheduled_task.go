@@ -164,8 +164,8 @@ func (c *collector) Build() error {
 }
 
 func (c *collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric) error {
-	if desc, err := c.collect(ch); err != nil {
-		_ = level.Error(c.logger).Log("failed collecting user metrics", "desc", desc, "err", err)
+	if err := c.collect(ch); err != nil {
+		_ = level.Error(c.logger).Log("msg", "failed collecting user metrics", "err", err)
 		return err
 	}
 
@@ -174,10 +174,10 @@ func (c *collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric)
 
 var TASK_STATES = []string{"disabled", "queued", "ready", "running", "unknown"}
 
-func (c *collector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *collector) collect(ch chan<- prometheus.Metric) error {
 	scheduledTasks, err := getScheduledTasks()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	for _, task := range scheduledTasks {
@@ -222,7 +222,7 @@ func (c *collector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, erro
 		}
 	}
 
-	return nil, nil
+	return nil
 }
 
 const SCHEDULED_TASK_PROGRAM_ID = "Schedule.Service.1"

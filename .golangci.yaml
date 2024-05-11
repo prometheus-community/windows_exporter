@@ -9,6 +9,10 @@ linters:
   - ineffassign
   - unconvert
   - varcheck
+  - nilnil
+  - nilerr
+  - unparam
+  - loggercheck
 
 issues:
   exclude:
