@@ -101,8 +101,8 @@ func (c *collector) Build() error {
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
-	if desc, err := c.collect(ctx, ch); err != nil {
-		_ = level.Error(c.logger).Log("failed collecting time metrics", "desc", desc, "err", err)
+	if err := c.collect(ctx, ch); err != nil {
+		_ = level.Error(c.logger).Log("msg", "failed collecting time metrics", "err", err)
 		return err
 	}
 	return nil
@@ -118,10 +118,10 @@ type windowsTime struct {
 	NTPServerOutgoingResponsesTotal  float64 `perflib:"NTP Server Outgoing Responses"`
 }
 
-func (c *collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	var dst []windowsTime // Single-instance class, array is required but will have single entry.
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["Windows Time Service"], &dst, c.logger); err != nil {
-		return nil, err
+		return err
 	}
 
 	ch <- prometheus.MustNewConstMetric(
@@ -154,5 +154,5 @@ func (c *collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 		prometheus.CounterValue,
 		dst[0].NTPServerOutgoingResponsesTotal,
 	)
-	return nil, nil
+	return nil
 }

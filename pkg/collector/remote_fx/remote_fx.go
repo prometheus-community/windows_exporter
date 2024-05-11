@@ -184,12 +184,12 @@ func (c *collector) Build() error {
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
-	if desc, err := c.collectRemoteFXNetworkCount(ctx, ch); err != nil {
-		_ = level.Error(c.logger).Log("failed collecting terminal services session count metrics", "desc", desc, "err", err)
+	if err := c.collectRemoteFXNetworkCount(ctx, ch); err != nil {
+		_ = level.Error(c.logger).Log("msg", "failed collecting terminal services session count metrics", "err", err)
 		return err
 	}
-	if desc, err := c.collectRemoteFXGraphicsCounters(ctx, ch); err != nil {
-		_ = level.Error(c.logger).Log("failed collecting terminal services session count metrics", "desc", desc, "err", err)
+	if err := c.collectRemoteFXGraphicsCounters(ctx, ch); err != nil {
+		_ = level.Error(c.logger).Log("msg", "failed collecting terminal services session count metrics", "err", err)
 		return err
 	}
 	return nil
@@ -209,11 +209,11 @@ type perflibRemoteFxNetwork struct {
 	UDPPacketsSentPersec     float64 `perflib:"UDP Packets Sent/sec"`
 }
 
-func (c *collector) collectRemoteFXNetworkCount(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *collector) collectRemoteFXNetworkCount(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	dst := make([]perflibRemoteFxNetwork, 0)
 	err := perflib.UnmarshalObject(ctx.PerfObjects["RemoteFX Network"], &dst, c.logger)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	for _, d := range dst {
@@ -283,7 +283,7 @@ func (c *collector) collectRemoteFXNetworkCount(ctx *types.ScrapeContext, ch cha
 			d.Name,
 		)
 	}
-	return nil, nil
+	return nil
 }
 
 type perflibRemoteFxGraphics struct {
@@ -299,11 +299,11 @@ type perflibRemoteFxGraphics struct {
 	SourceFramesPerSecond                              float64 `perflib:"Source Frames/Second"`
 }
 
-func (c *collector) collectRemoteFXGraphicsCounters(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *collector) collectRemoteFXGraphicsCounters(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	dst := make([]perflibRemoteFxGraphics, 0)
 	err := perflib.UnmarshalObject(ctx.PerfObjects["RemoteFX Graphics"], &dst, c.logger)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	for _, d := range dst {
@@ -371,5 +371,5 @@ func (c *collector) collectRemoteFXGraphicsCounters(ctx *types.ScrapeContext, ch
 		)
 	}
 
-	return nil, nil
+	return nil
 }
