@@ -5,7 +5,9 @@
     <?define PlatformProgramFiles = "ProgramFilesFolder" ?>
   <?endif?>
 
-  <Package UpgradeCode="66a6eb5b-1fc2-4b14-a362-5ceec6413308" Name="windows_exporter" Version="$(var.Version)" Manufacturer="prometheus-community" Language="1033" Codepage="1252"><SummaryInformation Manufacturer="prometheus-community" Description="windows_exporter $(var.Version) installer" />
+  <Package UpgradeCode="66a6eb5b-1fc2-4b14-a362-5ceec6413308" Name="windows_exporter" Version="$(var.Version)" Manufacturer="prometheus-community" Language="1033" Codepage="1252">
+    <SummaryInformation Manufacturer="prometheus-community" Description="windows_exporter $(var.Version) installer" />
+
     <Media Id="1" Cabinet="windows_exporter.cab" EmbedCab="yes" />
     <MajorUpgrade Schedule="afterInstallInitialize" DowngradeErrorMessage="A later version of [ProductName] is already installed. Setup will now exit." />
 
@@ -17,6 +19,9 @@
 
     <Property Id="ADD_FIREWALL_EXCEPTION" Secure="yes" />
     <SetProperty Id="FirewallException" After="InstallFiles" Sequence="execute" Value="[ADD_FIREWALL_EXCEPTION]" Condition="ADD_FIREWALL_EXCEPTION" />
+
+    <Property Id="ENABLE_V1_PERFORMANCE_COUNTERS" Secure="yes" />
+    <SetProperty Id="EnableV1PerformanceCounters" After="InstallFiles" Sequence="execute" Value="[ADD_FIREWALL_EXCEPTION]" Condition="ENABLE_V1_PERFORMANCE_COUNTERS" />
 
     <Property Id="LISTEN_PORT" Secure="yes" Value="9182" />
     <SetProperty Id="ListenFlag" After="InstallFiles" Sequence="execute" Value="--web.listen-address [LISTEN_ADDR]:[LISTEN_PORT]" Condition="LISTEN_ADDR&lt;&gt;&quot;&quot; OR LISTEN_PORT&lt;&gt;9182" />
@@ -71,12 +76,38 @@
       </Component>
     </ComponentGroup>
 
+    <SetProperty
+      Id="WixQuietExecCmdLine"
+      Value="&quot;[%ComSpec]&quot; /c lodctr.exe /E:Lsa &amp; lodctr.exe /E:PerfProc &amp; lodctr.exe /R"
+      Before="EnableV1PerformanceCounters"
+      Sequence="execute"
+    />
+    <CustomAction
+      Id="EnableV1PerformanceCounters"
+      BinaryRef="Wix4UtilCA_$(sys.BUILDARCHSHORT)"
+      DllEntry="WixSilentExec"
+      Execute="deferred"
+      Impersonate="no"
+      Return="ignore"
+    />
+    <ComponentGroup Id="CG_EnableV1PerformanceCounters">
+      <Component Condition="ENABLE_V1_PERFORMANCE_COUNTERS=&quot;yes&quot;" Directory="APPLICATIONROOTDIRECTORY" Id="CG_EnableV1PerformanceCollectors" Guid="9f522655-ac0e-42d2-a512-a7b19ebec7f8">
+        <InstallExecuteSequence>
+          <Custom Action="EnableV1PerformanceCounters" After="InstallInitialize" />
+        </InstallExecuteSequence>
+      </Component>
+    </ComponentGroup>
+
     <Feature Id="DefaultFeature" Level="1">
       <ComponentGroupRef Id="Files" />
     </Feature>
 
     <Feature Id="FirewallException" Level="1">
       <ComponentGroupRef Id="CG_FirewallException" />
+    </Feature>
+
+    <Feature Id="EnableV1PerformanceCounters" Level="1">
+      <ComponentGroupRef Id="CG_EnableV1PerformanceCounters" />
     </Feature>
 
     <StandardDirectory Id="ProgramFiles64Folder">
