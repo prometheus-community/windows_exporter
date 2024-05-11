@@ -10,6 +10,9 @@ Param (
 )
 $ErrorActionPreference = "Stop"
 
+# The MSI version is not semver compliant, so just take the numerical parts
+$Version = $Version -replace '^v?([0-9\.]+).*$','$1'
+
 # Get absolute path to executable before switching directories
 $PathToExecutable = Resolve-Path $PathToExecutable
 # Set working dir to this directory, reset previous on exit
