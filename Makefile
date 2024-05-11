@@ -66,7 +66,7 @@ build-all: $(addprefix sub-build-,$(ALL_OS)) build-hostprocess-image
 
 push:
 	set -x; \
-	for repo in ${DOCKER_REPO}; do \
+	for repo in ${DOCKER_PUSH_REPOS}; do \
 		for osversion in ${ALL_OS}; do \
 			$(DOCKER) tag local/$(DOCKER_IMAGE_NAME):$(VERSION)-$${osversion} $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION)-$${osversion}; \
 			$(DOCKER) push $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION)-$${osversion}; \
