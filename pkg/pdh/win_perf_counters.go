@@ -1,5 +1,13 @@
 //go:build windows
 
+// Package pdh provides a way to collect performance data from Windows Performance Counters.
+// It is a wrapper around the Windows PDH API.
+//
+// A large part of this code is based on the Telegraf Win_Perf_Counters input plugin.
+// The Win_Perf_Counters input plugin support collecting performance data from multiple computers which is not supported
+// by windows_exporter yet. Currently, only localhost is support as source. Keep this in mind, if you read comments like
+// "iterate over computers" or "computer name used as key".
+// This is a feature that could be added in the future.
 package pdh
 
 import (
