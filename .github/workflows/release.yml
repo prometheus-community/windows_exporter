@@ -45,17 +45,9 @@ jobs:
           Invoke-WebRequest -Uri https://github.com/prometheus/promu/releases/download/v$($Env:PROMU_VER)/promu-$($Env:PROMU_VER).windows-amd64.zip -OutFile promu-$($Env:PROMU_VER).windows-amd64.zip
           Expand-Archive -Path promu-$($Env:PROMU_VER).windows-amd64.zip -DestinationPath .
           Copy-Item -Path promu-$($Env:PROMU_VER).windows-amd64\promu.exe -Destination "$(go env GOPATH)\bin"
-          
-          Invoke-WebRequest -Uri https://github.com/moby/buildkit/releases/download/v0.13.2/buildkit-v0.13.2.windows-amd64.tar.gz -OutFile buildkit.tar.gz
-          tar xvf buildkit.tar.gz
-          Copy-Item -Path bin\buildctl.exe -Destination "$(go env GOPATH)\bin"
 
           # GOPATH\bin dir must be added to PATH else the `promu` commands won't be found
           echo "$(go env GOPATH)\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-
-      - name: Start buildkit
-        run: |
-          bin\buildkitd.exe
 
       - name: Build
         run: |

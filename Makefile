@@ -56,16 +56,10 @@ crossbuild: generate
 build-image: crossbuild
 	$(DOCKER) build --build-arg=BASE=$(BASE_IMAGE):$(OS) -f Dockerfile -t local/$(DOCKER_IMAGE_NAME):$(VERSION)-$(OS) .
 
-# Hostprocess images requires buildkit to build
-# https://github.com/microsoft/windows-host-process-containers-base-image#build-with-buildkit
-# docker buildx is not supported on Windows
-build-hostprocess-image: crossbuild
-	buildctl.exe build --frontend=dockerfile.v0 --local context=. --local dockerfile=. --output type=docker,name=local/$(DOCKER_IMAGE_NAME):$(VERSION)-hostprocess
-
 sub-build-%:
 	$(MAKE) OS=$* build-image
 
-build-all: $(addprefix sub-build-,$(ALL_OS)) build-hostprocess-image
+build-all: $(addprefix sub-build-,$(ALL_OS))
 
 push:
 	set -x; \
@@ -76,10 +70,7 @@ push:
 		full_version=`$(DOCKER) manifest inspect $(BASE_IMAGE):$${osversion} | grep "os.version" | head -n 1 | awk -F\" '{print $$4}'` || true; \
 		$(DOCKER) manifest annotate --os windows --arch amd64 --os-version $${full_version} $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION)  $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION)-$${osversion}; \
 	done
-	$(DOCKER) manifest push --purge $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION); \
-
-	$(DOCKER) tag local/$(DOCKER_IMAGE_NAME):$(VERSION)-hostprocess $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION)-hostprocess; \
-	$(DOCKER) push $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION)-hostprocess;
+	$(DOCKER) manifest push --purge $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION);
 
 sub-push-%:
 	$(MAKE) DOCKER_REPO=$* push
