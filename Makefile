@@ -4,8 +4,8 @@ export DOCKER_IMAGE_NAME ?= windows-exporter
 # DOCKER_REPO is the official image repository name at docker.io, quay.io.
 DOCKER_REPO:= prometheuscommunity
 
-# DOCKER_PUSH_REPOS is the list of repositories to push the image to. ghcr.io requires that org name be the same as the image repo name.
-DOCKER_PUSH_REPOS:=docker.io/$(DOCKER_REPO) quay.io/$(DOCKER_REPO) ghcr.io/prometheus-community
+# ALL_DOCKER_REPOS is the list of repositories to push the image to. ghcr.io requires that org name be the same as the image repo name.
+ALL_DOCKER_REPOS:=docker.io/$(DOCKER_REPO) quay.io/$(DOCKER_REPO) ghcr.io/prometheus-community
 
 VERSION?=$(shell cat VERSION)
 DOCKER?=docker
@@ -66,21 +66,22 @@ build-all: $(addprefix sub-build-,$(ALL_OS)) build-hostprocess-image
 
 push:
 	set -x; \
-	for repo in ${DOCKER_PUSH_REPOS}; do \
-		for osversion in ${ALL_OS}; do \
-			$(DOCKER) tag local/$(DOCKER_IMAGE_NAME):$(VERSION)-$${osversion} $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION)-$${osversion}; \
-			$(DOCKER) push $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION)-$${osversion}; \
-			$(DOCKER) manifest create --amend $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION) $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION)-$${osversion}; \
-			full_version=`$(DOCKER) manifest inspect $(BASE_IMAGE):$${osversion} | grep "os.version" | head -n 1 | awk -F\" '{print $$4}'` || true; \
-			$(DOCKER) manifest annotate --os windows --arch amd64 --os-version $${full_version} $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION)  $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION)-$${osversion}; \
-		done
-		$(DOCKER) manifest push --purge $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION); \
-
-		$(DOCKER) tag local/$(DOCKER_IMAGE_NAME):$(VERSION)-hostprocess $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION)-hostprocess; \
-		$(DOCKER) push $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION)-hostprocess; \
+	for osversion in ${ALL_OS}; do \
+		$(DOCKER) tag local/$(DOCKER_IMAGE_NAME):$(VERSION)-$${osversion} $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION)-$${osversion}; \
+		$(DOCKER) push $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION)-$${osversion}; \
+		$(DOCKER) manifest create --amend $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION) $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION)-$${osversion}; \
+		full_version=`$(DOCKER) manifest inspect $(BASE_IMAGE):$${osversion} | grep "os.version" | head -n 1 | awk -F\" '{print $$4}'` || true; \
+		$(DOCKER) manifest annotate --os windows --arch amd64 --os-version $${full_version} $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION)  $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION)-$${osversion}; \
 	done
+	$(DOCKER) manifest push --purge $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION); \
 
-push-all: build-all push
+	$(DOCKER) tag local/$(DOCKER_IMAGE_NAME):$(VERSION)-hostprocess $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION)-hostprocess; \
+	$(DOCKER) push $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION)-hostprocess;
+
+sub-push-%:
+	$(MAKE) DOCKER_REPO=$* push
+
+push-all: build-all $(addprefix sub-push-,$(ALL_DOCKER_REPOS))
 
 # Mandatory target for container description sync action
 .PHONY: docker-repo-name
