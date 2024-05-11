@@ -52,6 +52,10 @@
       <Custom Action="RemoveEventSource" After="InstallInitialize" />
     </InstallExecuteSequence>
 
+    <InstallExecuteSequence>
+      <Custom Action="EnableV1PerformanceCounters" After="InstallInitialize">ENABLE_V1_PERFORMANCE_COUNTERS="yes"</Custom>
+    </InstallExecuteSequence>
+
     <Property Id="TEXTFILE_DIRS" Secure="yes" />
     <SetProperty Id="TextfileDirsFlag" After="InstallFiles" Sequence="execute" Value="--collector.textfile.directories [TEXTFILE_DIRS]" Condition="TEXTFILE_DIRS" />
 
@@ -90,13 +94,6 @@
       Impersonate="no"
       Return="ignore"
     />
-    <ComponentGroup Id="CG_EnableV1PerformanceCounters">
-      <Component Condition="ENABLE_V1_PERFORMANCE_COUNTERS=&quot;yes&quot;" Directory="APPLICATIONROOTDIRECTORY" Id="CG_EnableV1PerformanceCollectors" Guid="9f522655-ac0e-42d2-a512-a7b19ebec7f8">
-        <InstallExecuteSequence>
-          <Custom Action="EnableV1PerformanceCounters" After="InstallInitialize" />
-        </InstallExecuteSequence>
-      </Component>
-    </ComponentGroup>
 
     <Feature Id="DefaultFeature" Level="1">
       <ComponentGroupRef Id="Files" />
@@ -104,10 +101,6 @@
 
     <Feature Id="FirewallException" Level="1">
       <ComponentGroupRef Id="CG_FirewallException" />
-    </Feature>
-
-    <Feature Id="EnableV1PerformanceCounters" Level="1">
-      <ComponentGroupRef Id="CG_EnableV1PerformanceCounters" />
     </Feature>
 
     <StandardDirectory Id="ProgramFiles64Folder">
