@@ -1,13 +1,14 @@
 linters:
   disable-all: true
   enable:
+  - deadcode
   - errcheck
   - revive
   - govet
   - gofmt
   - ineffassign
   - unconvert
-  - unused
+  - varcheck
 
 issues:
   exclude:
