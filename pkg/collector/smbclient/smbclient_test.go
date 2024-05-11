@@ -3,7 +3,7 @@ package smbclient_test
 import (
 	"testing"
 
-	smbclient "github.com/prometheus-community/windows_exporter/pkg/collector/smbclient"
+	"github.com/prometheus-community/windows_exporter/pkg/collector/smbclient"
 	"github.com/prometheus-community/windows_exporter/pkg/testutils"
 )
 
