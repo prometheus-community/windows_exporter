@@ -44,7 +44,6 @@ jobs:
           Expand-Archive -Path promu-$($Env:PROMU_VER).windows-amd64.zip -DestinationPath .
           Copy-Item -Path promu-$($Env:PROMU_VER).windows-amd64\promu.exe -Destination "$(go env GOPATH)\bin"
 
-          go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.2.0
           # GOPATH\bin dir must be appended to PATH else the `promu` command won't be found
           echo "$(go env GOPATH)\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
@@ -69,8 +68,6 @@ jobs:
           Expand-Archive -Path promu-$($Env:PROMU_VER).windows-amd64.zip -DestinationPath .
           Copy-Item -Path promu-$($Env:PROMU_VER).windows-amd64\promu.exe -Destination "$(go env GOPATH)\bin"
 
-          # No binaries available so build from source
-          go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.2.0
           # GOPATH\bin dir must be appended to PATH else the `promu` command won't be found
           echo "$(go env GOPATH)\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 

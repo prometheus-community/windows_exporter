@@ -1,15 +1,21 @@
 export GOOS=windows
 export DOCKER_IMAGE_NAME ?= windows-exporter
-export DOCKER_REPO ?= ghcr.io/prometheus-community
+
+# DOCKER_REPO is the official image repository name at docker.io, quay.io.
+DOCKER_REPO:= prometheuscommunity
+
+# ALL_DOCKER_REPOS is the list of repositories to push the image to. ghcr.io requires that org name be the same as the image repo name.
+ALL_DOCKER_REPOS:=docker.io/$(DOCKER_REPO) quay.io/$(DOCKER_REPO) ghcr.io/prometheus-community
 
 VERSION?=$(shell cat VERSION)
 DOCKER?=docker
 
 # Image Variables for Hostprocess Container
 # Windows image build is heavily influenced by https://github.com/kubernetes/kubernetes/blob/master/cluster/images/etcd/Makefile
-OS=1809
-ALL_OS:= 1809 ltsc2022
+OS=ltsc2019
+ALL_OS:= ltsc2019 ltsc2022
 BASE_IMAGE=mcr.microsoft.com/windows/nanoserver
+BASE_HOST_PROCESS_IMAGE=mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v1.0.0
 
 .PHONY: build
 build: generate windows_exporter.exe
@@ -48,7 +54,7 @@ crossbuild: generate
 	GOARCH=arm64 promu build --prefix=output/arm64
 
 build-image: crossbuild
-	$(DOCKER) build --build-arg=BASE=$(BASE_IMAGE):$(OS) -f Dockerfile -t $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION)-$(OS) .
+	$(DOCKER) build --build-arg=BASE=$(BASE_IMAGE):$(OS) -f Dockerfile -t local/$(DOCKER_IMAGE_NAME):$(VERSION)-$(OS) .
 
 sub-build-%:
 	$(MAKE) OS=$* build-image
@@ -58,11 +64,20 @@ build-all: $(addprefix sub-build-,$(ALL_OS))
 push:
 	set -x; \
 	for osversion in ${ALL_OS}; do \
+		$(DOCKER) tag local/$(DOCKER_IMAGE_NAME):$(VERSION)-$${osversion} $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION)-$${osversion}; \
 		$(DOCKER) push $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION)-$${osversion}; \
 		$(DOCKER) manifest create --amend $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION) $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION)-$${osversion}; \
 		full_version=`$(DOCKER) manifest inspect $(BASE_IMAGE):$${osversion} | grep "os.version" | head -n 1 | awk -F\" '{print $$4}'` || true; \
 		$(DOCKER) manifest annotate --os windows --arch amd64 --os-version $${full_version} $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION)  $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION)-$${osversion}; \
 	done
-	$(DOCKER) manifest push --purge $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION)
+	$(DOCKER) manifest push --purge $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION);
 
-push-all: build-all push
+sub-push-%:
+	$(MAKE) DOCKER_REPO=$* push
+
+push-all: build-all $(addprefix sub-push-,$(ALL_DOCKER_REPOS))
+
+# Mandatory target for container description sync action
+.PHONY: docker-repo-name
+docker-repo-name:
+	@echo "$(DOCKER_REPO)/$(DOCKER_IMAGE_NAME)"

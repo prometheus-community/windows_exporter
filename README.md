@@ -4,7 +4,6 @@
 
 A Prometheus exporter for Windows machines.
 
-
 ## Collectors
 
 Name     | Description | Enabled by default
@@ -82,17 +81,17 @@ This can be useful for having different Prometheus servers collect specific metr
 
 windows_exporter accepts flags to configure certain behaviours. The ones configuring the global behaviour of the exporter are listed below, while collector-specific ones are documented in the respective collector documentation above.
 
-Flag     | Description | Default value
----------|-------------|--------------------
-`--web.listen-address` | host:port for exporter. | `:9182`
-`--telemetry.path` | URL path for surfacing collected metrics. | `/metrics`
-`--telemetry.max-requests` | Maximum number of concurrent requests. 0 to disable. | `5`
-`--collectors.enabled` | Comma-separated list of collectors to use. Use `[defaults]` as a placeholder which gets expanded containing all the collectors enabled by default." | `[defaults]`
-`--collectors.print` | If true, print available collectors and exit. |
-`--scrape.timeout-margin` | Seconds to subtract from the timeout allowed by the client. Tune to allow for overhead or high loads. | `0.5`
-`--web.config.file` | A [web config][web_config] for setting up TLS and Auth | None
-`--config.file` | [Using a config file](#using-a-configuration-file) from path or URL | None
-`--config.file.insecure-skip-verify` | Skip TLS when loading config file from URL | false
+| Flag                                 | Description                                                                                                                                         | Default value |
+|--------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------|---------------|
+| `--web.listen-address`               | host:port for exporter.                                                                                                                             | `:9182`       |
+| `--telemetry.path`                   | URL path for surfacing collected metrics.                                                                                                           | `/metrics`    |
+| `--telemetry.max-requests`           | Maximum number of concurrent requests. 0 to disable.                                                                                                | `5`           |
+| `--collectors.enabled`               | Comma-separated list of collectors to use. Use `[defaults]` as a placeholder which gets expanded containing all the collectors enabled by default." | `[defaults]`  |
+| `--collectors.print`                 | If true, print available collectors and exit.                                                                                                       |               |
+| `--scrape.timeout-margin`            | Seconds to subtract from the timeout allowed by the client. Tune to allow for overhead or high loads.                                               | `0.5`         |
+| `--web.config.file`                  | A [web config][web_config] for setting up TLS and Auth                                                                                              | None          |
+| `--config.file`                      | [Using a config file](#using-a-configuration-file) from path or URL                                                                                 | None          |
+| `--config.file.insecure-skip-verify` | Skip TLS when loading config file from URL                                                                                                          | false         |
 
 ## Installation
 The latest release can be downloaded from the [releases page](https://github.com/prometheus-community/windows_exporter/releases).
@@ -101,15 +100,15 @@ Each release provides a .msi installer. The installer will setup the windows_exp
 
 If the installer is run without any parameters, the exporter will run with default settings for enabled collectors, ports, etc. The following parameters are available:
 
-Name | Description
------|------------
-`ENABLED_COLLECTORS` | As the `--collectors.enabled` flag, provide a comma-separated list of enabled collectors
-`LISTEN_ADDR` | The IP address to bind to. Defaults to 0.0.0.0
-`LISTEN_PORT` | The port to bind to. Defaults to 9182.
-`METRICS_PATH` | The path at which to serve metrics. Defaults to `/metrics`
-`TEXTFILE_DIRS` | As the `--collector.textfile.directories` flag, provide a directory to read text files with metrics from
-`REMOTE_ADDR` | Allows setting comma separated remote IP addresses for the Windows Firewall exception (allow list). Defaults to an empty string (any remote address).
-`EXTRA_FLAGS` | Allows passing full CLI flags. Defaults to an empty string.
+| Name                 | Description                                                                                                                                           |
+|----------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `ENABLED_COLLECTORS` | As the `--collectors.enabled` flag, provide a comma-separated list of enabled collectors                                                              |
+| `LISTEN_ADDR`        | The IP address to bind to. Defaults to 0.0.0.0                                                                                                        |
+| `LISTEN_PORT`        | The port to bind to. Defaults to 9182.                                                                                                                |
+| `METRICS_PATH`       | The path at which to serve metrics. Defaults to `/metrics`                                                                                            |
+| `TEXTFILE_DIRS`      | As the `--collector.textfile.directories` flag, provide a directory to read text files with metrics from                                              |
+| `REMOTE_ADDR`        | Allows setting comma separated remote IP addresses for the Windows Firewall exception (allow list). Defaults to an empty string (any remote address). |
+| `EXTRA_FLAGS`        | Allows passing full CLI flags. Defaults to an empty string.                                                                                           |
 
 Parameters are sent to the installer via `msiexec`. Example invocations:
 
@@ -141,6 +140,15 @@ Powershell versions 7.3 and above require [PSNativeCommandArgumentPassing](https
 $PSNativeCommandArgumentPassing = 'Legacy'
 msiexec /i <path-to-msi-file> ENABLED_COLLECTORS=os,service --% EXTRA_FLAGS="--collector.service.services-where ""Name LIKE 'sql%'"""
 ```
+
+## Docker Implementation
+
+The windows_exporter can be run as a Docker container. The Docker image is available on 
+
+* [Docker Hub](https://hub.docker.com/r/prometheuscommunity/windows-exporter): `ghcr.io/prometheus-community/windows-exporter`
+* [GitHub Container Registry](https://github.com/prometheus-community/windows_exporter/pkgs/container/windows-exporter): `docker.io/prometheuscommunity/windows-exporter`
+* [quay.io Registry](https://quay.io/repository/prometheuscommunity/windows-exporter): `quay.io/prometheuscommunity/windows-exporter`
+
 
 ## Kubernetes Implementation
 
