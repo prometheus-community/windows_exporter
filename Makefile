@@ -53,6 +53,10 @@ crossbuild: generate
 	GOARCH=amd64 promu build --prefix=output/amd64
 	GOARCH=arm64 promu build --prefix=output/arm64
 
+.PHONY: package
+package: crossbuild
+	powershell -NonInteractive -ExecutionPolicy Bypass -File .\installer\build.ps1 -PathToExecutable .\output\amd64\windows_exporter.exe -Version $(shell git describe --tags --abbrev=0)
+
 build-image: crossbuild
 	$(DOCKER) build --build-arg=BASE=$(BASE_IMAGE):$(OS) -f Dockerfile -t local/$(DOCKER_IMAGE_NAME):$(VERSION)-$(OS) .
 
