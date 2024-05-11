@@ -88,9 +88,15 @@ jobs:
           promu checksum output\
 
       - name: Build Docker Artifacts
-        run: |
-          $Env:VERSION = '${{ startsWith(github.ref, 'refs/tags/') && 'latest' || github.ref_name }}'
-          make build-all
+        run: make build-all
+        env:
+          VERSION: >-
+            ${{
+              startsWith(github.ref, 'refs/tags/') && 'latest' || 
+              (
+                github.event_name == 'pull_request' && format('pr-{0}', github.event.number) || github.ref_name
+              )
+            }}
 
       - name: Login to Docker Hub
         if: ${{ github.event_name != 'pull_request' }}
@@ -118,8 +124,8 @@ jobs:
         if: ${{ github.event_name != 'pull_request' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ startsWith(github.ref, 'refs/tags/') && 'latest' || github.ref_name }}
         run: |
-          $Env:VERSION = '${{ startsWith(github.ref, 'refs/tags/') && 'latest' || github.ref_name }}'
           make push-all
 
       - name: Release
