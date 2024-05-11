@@ -73,18 +73,6 @@ var supportedCounterTypes = map[uint32]prometheus.ValueType{
 	PERF_LARGE_RAW_BASE:              prometheus.GaugeValue,
 }
 
-func IsCounter(counterType uint32) bool {
-	return supportedCounterTypes[counterType] == prometheus.CounterValue
-}
-
-func IsBaseValue(counterType uint32) bool {
-	return counterType == PERF_SAMPLE_BASE || counterType == PERF_RAW_BASE || counterType == PERF_LARGE_RAW_BASE
-}
-
-func IsElapsedTime(counterType uint32) bool {
-	return counterType == PERF_ELAPSED_TIME
-}
-
 func GetPrometheusValueType(counterType uint32) (prometheus.ValueType, error) {
 	val, ok := supportedCounterTypes[counterType]
 	if !ok {
