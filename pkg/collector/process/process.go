@@ -19,9 +19,10 @@ import (
 )
 
 const (
-	Name               = "process"
-	FlagProcessExclude = "collector.process.exclude"
-	FlagProcessInclude = "collector.process.include"
+	Name                    = "process"
+	FlagProcessExclude      = "collector.process.exclude"
+	FlagProcessInclude      = "collector.process.include"
+	FlagEnableWorkerProcess = "collector.process.iis"
 )
 
 type Config struct {
@@ -90,8 +91,8 @@ func NewWithFlags(app *kingpin.Application) types.Collector {
 			"Regexp of processes to exclude. Process name must both match include and not match exclude to be included.",
 		).Default(ConfigDefaults.ProcessExclude).String(),
 
-		enableWorkerProcess: kingpin.Flag(
-			"collector.process.iis",
+		enableWorkerProcess: app.Flag(
+			FlagEnableWorkerProcess,
 			"Enable IIS worker process name queries. May cause the collector to leak memory.",
 		).Default("false").Bool(),
 	}
@@ -269,7 +270,7 @@ func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 	if *c.enableWorkerProcess {
 		q_wp := wmi.QueryAll(&dst_wp, c.logger)
 		if err := wmi.QueryNamespace(q_wp, &dst_wp, "root\\WebAdministration"); err != nil {
-			_ = level.Debug(c.logger).Log(fmt.Sprintf("Could not query WebAdministration namespace for IIS worker processes: %v. Skipping\n", err))
+			_ = level.Debug(c.logger).Log("msg", "Could not query WebAdministration namespace for IIS worker processes", "err", err)
 		}
 	}
 

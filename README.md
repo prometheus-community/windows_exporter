@@ -107,7 +107,7 @@ Name | Description
 `LISTEN_ADDR` | The IP address to bind to. Defaults to 0.0.0.0
 `LISTEN_PORT` | The port to bind to. Defaults to 9182.
 `METRICS_PATH` | The path at which to serve metrics. Defaults to `/metrics`
-`TEXTFILE_DIR` | As the `--collector.textfile.directory` flag, provide a directory to read text files with metrics from
+`TEXTFILE_DIRS` | As the `--collector.textfile.directories` flag, provide a directory to read text files with metrics from
 `REMOTE_ADDR` | Allows setting comma separated remote IP addresses for the Windows Firewall exception (allow list). Defaults to an empty string (any remote address).
 `EXTRA_FLAGS` | Allows passing full CLI flags. Defaults to an empty string.
 
@@ -122,10 +122,18 @@ Example service collector with a custom query.
 msiexec /i <path-to-msi-file> ENABLED_COLLECTORS=os,service --% EXTRA_FLAGS="--collector.service.services-where ""Name LIKE 'sql%'"""
 ```
 
-On some older versions of Windows you may need to surround parameter values with double quotes to get the install command parsing properly:
+On some older versions of Windows,
+you may need to surround parameter values with double quotes to get the installation command parsing properly:
 ```powershell
-msiexec /i C:\Users\Administrator\Downloads\windows_exporter.msi ENABLED_COLLECTORS="ad,iis,logon,memory,process,tcp,textfile,thermalzone" TEXTFILE_DIR="C:\custom_metrics\"
+msiexec /i C:\Users\Administrator\Downloads\windows_exporter.msi ENABLED_COLLECTORS="ad,iis,logon,memory,process,tcp,textfile,thermalzone" TEXTFILE_DIRS="C:\custom_metrics\"
 ```
+
+To install the exporter with creating a firewall exception, use the following command:
+
+```powershell
+msiexec /i <path-to-msi-file> ADD_FIREWALL_EXCEPTION=yes
+```
+
 
 Powershell versions 7.3 and above require [PSNativeCommandArgumentPassing](https://learn.microsoft.com/en-us/powershell/scripting/learn/experimental-features?view=powershell-7.3) to be set to `Legacy` when using `--% EXTRA_FLAGS`:
 
@@ -134,14 +142,15 @@ $PSNativeCommandArgumentPassing = 'Legacy'
 msiexec /i <path-to-msi-file> ENABLED_COLLECTORS=os,service --% EXTRA_FLAGS="--collector.service.services-where ""Name LIKE 'sql%'"""
 ```
 
-
 ## Kubernetes Implementation
 
 See detailed steps to install on Windows Kubernetes [here](./kubernetes/kubernetes.md).
 
 ## Supported versions
 
-windows_exporter supports Windows Server versions 2008R2 and later, and desktop Windows version 7 and later.
+`windows_exporter` supports Windows Server versions 2016 and later, and desktop Windows version 10 and 11 (21H2 or later).
+
+Windows Server 2012 and 2012R2 are supported as best-effort only, but not guaranteed to work.
 
 ## Usage
 

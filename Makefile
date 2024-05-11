@@ -12,9 +12,14 @@ ALL_OS:= 1809 ltsc2022
 BASE_IMAGE=mcr.microsoft.com/windows/nanoserver
 
 .PHONY: build
-build: windows_exporter.exe
+build: generate windows_exporter.exe
+
 windows_exporter.exe: pkg/**/*.go
 	promu build -v
+
+.PHONY: generate
+generate:
+	go generate ./...
 
 test:
 	go test -v ./...
@@ -36,12 +41,11 @@ promtool: windows_exporter.exe
 fmt:
 	gofmt -l -w -s .
 
-crossbuild:
+crossbuild: generate
 	# The prometheus/golang-builder image for promu crossbuild doesn't exist
 	# on Windows, so for now, we'll just build twice
 	GOARCH=amd64 promu build --prefix=output/amd64
 	GOARCH=arm64 promu build --prefix=output/arm64
-	GOARCH=386   promu build --prefix=output/386
 
 build-image: crossbuild
 	$(DOCKER) build --build-arg=BASE=$(BASE_IMAGE):$(OS) -f Dockerfile -t $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION)-$(OS) .

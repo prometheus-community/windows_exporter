@@ -1,6 +1,7 @@
 package mscluster_resource
 
 import (
+	"github.com/prometheus-community/windows_exporter/pkg/collector/mscluster_node"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus-community/windows_exporter/pkg/wmi"
 
@@ -26,6 +27,7 @@ type collector struct {
 	IsAlivePollInterval    *prometheus.Desc
 	LooksAlivePollInterval *prometheus.Desc
 	MonitorProcessId       *prometheus.Desc
+	OwnerNode              *prometheus.Desc
 	PendingTimeout         *prometheus.Desc
 	ResourceClass          *prometheus.Desc
 	RestartAction          *prometheus.Desc
@@ -102,6 +104,18 @@ func (c *collector) Build() error {
 		[]string{"type", "owner_group", "name"},
 		nil,
 	)
+	c.OwnerNode = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "owner_node"),
+		"The node hosting the resource. 0: Not hosted; 1: Hosted",
+		[]string{"type", "owner_group", "node_name", "name"},
+		nil,
+	)
+	c.OwnerNode = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "owner_node"),
+		"The node hosting the resource. 0: Not hosted; 1: Hosted",
+		[]string{"type", "owner_group", "node_name", "name"},
+		nil,
+	)
 	c.PendingTimeout = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "pending_timeout"),
 		"Provides access to the resource's PendingTimeout property. If a resource cannot be brought online or taken offline in the number of milliseconds specified by the PendingTimeout property, the resource is forcibly terminated.",
@@ -165,6 +179,7 @@ type MSCluster_Resource struct {
 	Name       string
 	Type       string
 	OwnerGroup string
+	OwnerNode  string
 
 	Characteristics        uint
 	DeadlockTimeout        uint
@@ -243,6 +258,21 @@ func (c *collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric)
 			float64(v.MonitorProcessId),
 			v.Type, v.OwnerGroup, v.Name,
 		)
+
+		if mscluster_node.NodeName != nil {
+			for _, node_name := range mscluster_node.NodeName {
+				isCurrentState := 0.0
+				if v.OwnerNode == node_name {
+					isCurrentState = 1.0
+				}
+				ch <- prometheus.MustNewConstMetric(
+					c.OwnerNode,
+					prometheus.GaugeValue,
+					isCurrentState,
+					v.Type, v.OwnerGroup, node_name, v.Name,
+				)
+			}
+		}
 
 		ch <- prometheus.MustNewConstMetric(
 			c.PendingTimeout,
