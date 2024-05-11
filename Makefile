@@ -66,3 +66,8 @@ push:
 	$(DOCKER) manifest push --purge $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION)
 
 push-all: build-all push
+
+.PHONY: docker-repo-name
+docker-repo-name:
+	@echo "$(DOCKER_REPO)/$(DOCKER_IMAGE_NAME)"
+
