@@ -1,6 +1,6 @@
 export GOOS=windows
 export DOCKER_IMAGE_NAME ?= windows-exporter
-export DOCKER_REPO ?= docker.io/prometheuscommunity ghcr.io/prometheus-community ghcr.io/prometheus-community
+export DOCKER_REPO ?= ghcr.io/prometheus-community
 
 VERSION?=$(shell cat VERSION)
 DOCKER?=docker
