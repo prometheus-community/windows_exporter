@@ -58,8 +58,9 @@ build-image: crossbuild
 
 # Hostprocess images requires buildkit to build
 # https://github.com/microsoft/windows-host-process-containers-base-image#build-with-buildkit
+# docker buildx is not supported on Windows
 build-hostprocess-image: crossbuild
-	$(DOCKER) buildx build --build-arg=BASE=$(BASE_HOST_PROCESS_IMAGE) -f Dockerfile -t local/$(DOCKER_IMAGE_NAME):$(VERSION)-hostprocess .
+	buildctl.exe build --frontend=dockerfile.v0 --local context=. --local dockerfile=. --output type=docker,name=local/$(DOCKER_IMAGE_NAME):$(VERSION)-hostprocess
 
 sub-build-%:
 	$(MAKE) OS=$* build-image
