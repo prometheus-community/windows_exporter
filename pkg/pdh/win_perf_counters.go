@@ -19,7 +19,68 @@ import (
 
 var defaultMaxBufferSize = 100 * 1024 * 1024
 
+// Accumulator is a nested map structure used for storing metric data.
+// The outermost map's keys are the object names, the middle map's keys are the counter names,
+// and the innermost map's keys are the instance names. The float64 values represent the metric values.
+//
+// Example:
+//
+//	acc := Accumulator{
+//	    "object1": {
+//	        "counter1": {
+//	            "instance1": 1.23,
+//	            "instance2": 4.56,
+//	        },
+//	        "counter2": {
+//	            "instance1": 7.89,
+//	            "instance2": 0.12,
+//	        },
+//	    },
+//	    "object2": {
+//	        "counter1": {
+//	            "instance1": 3.45,
+//	            "instance2": 6.78,
+//	        },
+//	    },
+//	}
 type Accumulator map[string]map[string]map[string]float64
+
+// CounterInfos is a nested map structure used for storing CounterInfo data.
+// The outer map's keys are the object names, and the inner map's keys are the counter names.
+// The CounterInfo values represent the detailed information about each counter.
+//
+// Example:
+//
+//	info := CounterInfos{
+//	    "object1": {
+//	        "counter1": CounterInfo{
+//	            CounterType:  0x00010000,
+//	            ObjectName:   "object1",
+//	            InstanceName: "instance1",
+//	            CounterName:  "counter1",
+//	            FullPath:     "\\object1\\counter1",
+//	            ExplainText:  "This is a sample counter",
+//	        },
+//	        "counter2": CounterInfo{
+//	            CounterType:  0x00010100,
+//	            ObjectName:   "object1",
+//	            InstanceName: "instance2",
+//	            CounterName:  "counter2",
+//	            FullPath:     "\\object1\\counter2",
+//	            ExplainText:  "This is another sample counter",
+//	        },
+//	    },
+//	    "object2": {
+//	        "counter1": CounterInfo{
+//	            CounterType:  0x00012000,
+//	            ObjectName:   "object2",
+//	            InstanceName: "instance1",
+//	            CounterName:  "counter1",
+//	            FullPath:     "\\object2\\counter1",
+//	            ExplainText:  "This is a sample counter for object2",
+//	        },
+//	    },
+//	}
 type CounterInfos map[string]map[string]CounterInfo
 
 type WinPerfCounters struct {
