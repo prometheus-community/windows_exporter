@@ -52,13 +52,16 @@ jobs:
       - name: Build
         run: |
           $ErrorActionPreference = "Stop"
-
+          
           dotnet-gitversion /output json /showvariable FullSemVer | Set-Content VERSION -PassThru
+
+          # '+' symbols are invalid characters in image tags
+          (Get-Content -Path VERSION) -replace '\+', '_' | Set-Content -Path VERSION
+          
           $Version = Get-Content VERSION
           
           make crossbuild
-          # '+' symbols are invalid characters in image tags
-          (Get-Content -Path VERSION) -replace '\+', '_' | Set-Content -Path VERSION
+          
           make build-all
           # GH requires all files to have different names, so add version/arch to differentiate
           foreach($Arch in "amd64", "arm64") {
