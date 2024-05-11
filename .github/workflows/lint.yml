@@ -98,9 +98,9 @@ jobs:
           go-version-file: 'go.mod'
 
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3
+        uses: golangci/golangci-lint-action@v6
         with:
-          version: v1.55.2
+          version: v1.58
           args: "--timeout=5m"
 
       # golangci-lint action doesn't always provide helpful output, so re-run without the action for
