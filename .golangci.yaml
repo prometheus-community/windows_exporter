@@ -2,15 +2,15 @@ linters:
   disable-all: true
   enable:
   - errcheck
-  - revive
   - govet
   - gofmt
   - ineffassign
-  - unconvert
+  - loggercheck
   - nilnil
   - nilerr
+  - revive
+  - unconvert
   - unparam
-  - loggercheck
 
 issues:
   exclude:
