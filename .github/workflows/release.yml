@@ -53,6 +53,10 @@ jobs:
           # GOPATH\bin dir must be added to PATH else the `promu` commands won't be found
           echo "$(go env GOPATH)\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
+      - name: Start buildkit
+        run: |
+          bin\buildkitd.exe
+
       - name: Build
         run: |
           $ErrorActionPreference = "Stop"
