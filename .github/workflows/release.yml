@@ -41,7 +41,6 @@ jobs:
 
       - name: Install Build deps
         run: |
-          dotnet tool install --global GitVersion.Tool --version 5.*
           Invoke-WebRequest -Uri https://github.com/prometheus/promu/releases/download/v$($Env:PROMU_VER)/promu-$($Env:PROMU_VER).windows-amd64.zip -OutFile promu-$($Env:PROMU_VER).windows-amd64.zip
           Expand-Archive -Path promu-$($Env:PROMU_VER).windows-amd64.zip -DestinationPath .
           Copy-Item -Path promu-$($Env:PROMU_VER).windows-amd64\promu.exe -Destination "$(go env GOPATH)\bin"
@@ -53,16 +52,14 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           
-          dotnet-gitversion /output json /showvariable FullSemVer | Set-Content VERSION -PassThru
-
+          $Version = git describe --tag
+          $Version = $Version -replace 'v', ''
           # '+' symbols are invalid characters in image tags
-          (Get-Content -Path VERSION) -replace '\+', '_' | Set-Content -Path VERSION
-          
-          $Version = Get-Content VERSION
-          
-          make crossbuild
+          $Version = $Version -replace '\+', '_'
+          $Version | Set-Content VERSION -PassThru
           
           make build-all
+          
           # GH requires all files to have different names, so add version/arch to differentiate
           foreach($Arch in "amd64", "arm64") {
             Move-Item output\$Arch\windows_exporter.exe output\windows_exporter-$Version-$Arch.exe
@@ -79,11 +76,11 @@ jobs:
       - name: Build Release Artifacts
         run: |
           $ErrorActionPreference = "Stop"
-          $BuildVersion = Get-Content VERSION
+          $Version = Get-Content VERSION
           
           foreach($Arch in "amd64", "arm64") {
-            Write-Host "Building windows_exporter $BuildVersion msi for $Arch"
-            .\installer\build.ps1 -PathToExecutable .\output\windows_exporter-$BuildVersion-$Arch.exe -Version $BuildVersion -Arch "$Arch"
+            Write-Host "Building windows_exporter $Version msi for $Arch"
+            .\installer\build.ps1 -PathToExecutable .\output\windows_exporter-$Version-$Arch.exe -Version $Version -Arch "$Arch"
           }
           
           Move-Item installer\*.msi output\
@@ -114,7 +111,7 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: quay.io
-          username: '$token'
+          username: 'robot'
           password: ${{ secrets.QUAY_IO_API_TOKEN }}
 
       - name: Login to GitHub container registry

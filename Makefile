@@ -1,21 +1,19 @@
-export GOOS=windows
-export DOCKER_IMAGE_NAME ?= windows-exporter
+GOOS    ?= windows
+VERSION ?= $(shell cat VERSION)
+DOCKER  ?= docker
 
 # DOCKER_REPO is the official image repository name at docker.io, quay.io.
-DOCKER_REPO:= prometheuscommunity
+DOCKER_REPO       ?= prometheuscommunity
+DOCKER_IMAGE_NAME ?= windows-exporter
 
 # ALL_DOCKER_REPOS is the list of repositories to push the image to. ghcr.io requires that org name be the same as the image repo name.
-ALL_DOCKER_REPOS:=docker.io/$(DOCKER_REPO) quay.io/$(DOCKER_REPO) ghcr.io/prometheus-community
+ALL_DOCKER_REPOS  ?= docker.io/$(DOCKER_REPO) quay.io/$(DOCKER_REPO) ghcr.io/prometheus-community
 
-VERSION?=$(shell cat VERSION)
-DOCKER?=docker
-
-# Image Variables for Hostprocess Container
+# Image Variables for host process Container
 # Windows image build is heavily influenced by https://github.com/kubernetes/kubernetes/blob/master/cluster/images/etcd/Makefile
-OS=ltsc2019
-ALL_OS:= ltsc2019 ltsc2022
-BASE_IMAGE=mcr.microsoft.com/windows/nanoserver
-BASE_HOST_PROCESS_IMAGE=mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v1.0.0
+OS                ?= ltsc2019
+ALL_OS            ?= ltsc2019 ltsc2022
+BASE_IMAGE        ?= mcr.microsoft.com/windows/nanoserver
 
 .PHONY: build
 build: generate windows_exporter.exe
@@ -79,6 +77,7 @@ push:
 sub-push-%:
 	$(MAKE) DOCKER_REPO=$* push
 
+.PHONY: push-all
 push-all: build-all $(addprefix sub-push-,$(ALL_DOCKER_REPOS))
 
 # Mandatory target for container description sync action
