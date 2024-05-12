@@ -75,18 +75,13 @@ jobs:
           path: output\windows_exporter-*.exe
 
       - name: Build Release Artifacts
-        if: ${{ github.event_name != 'pull_request' }}
         run: |
           $ErrorActionPreference = "Stop"
           $BuildVersion = Get-Content VERSION
-          $TagName = $env:GITHUB_REF -replace 'refs/tags/', ''
-          
-          # The MSI version is not semver compliant, so just take the numerical parts
-          $MSIVersion = $TagName -replace '^v?([0-9\.]+).*$','$1'
           
           foreach($Arch in "amd64", "arm64") {
-            Write-Verbose "Building windows_exporter $MSIVersion msi for $Arch"
-            .\installer\build.ps1 -PathToExecutable .\output\windows_exporter-$BuildVersion-$Arch.exe -Version $MSIVersion -Arch "$Arch"
+            Write-Host "Building windows_exporter $MSIVersion msi for $Arch"
+            .\installer\build.ps1 -PathToExecutable .\output\windows_exporter-$BuildVersion-$Arch.exe -Version $BuildVersion -Arch "$Arch"
             Move-Item installer\windows_exporter-$MSIVersion-$Arch.msi output\
           }
 
