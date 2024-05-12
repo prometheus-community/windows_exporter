@@ -113,6 +113,7 @@ jobs:
         if: ${{ github.event_name != 'pull_request' }}
         uses: docker/login-action@v3
         with:
+          registry: quay.io
           username: '$token'
           password: ${{ secrets.QUAY_IO_API_TOKEN }}
 
