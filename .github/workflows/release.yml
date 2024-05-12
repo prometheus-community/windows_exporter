@@ -80,9 +80,9 @@ jobs:
           $BuildVersion = Get-Content VERSION
           
           foreach($Arch in "amd64", "arm64") {
-            Write-Host "Building windows_exporter $MSIVersion msi for $Arch"
+            Write-Host "Building windows_exporter $BuildVersion msi for $Arch"
             .\installer\build.ps1 -PathToExecutable .\output\windows_exporter-$BuildVersion-$Arch.exe -Version $BuildVersion -Arch "$Arch"
-            Move-Item installer\windows_exporter-$MSIVersion-$Arch.msi output\
+            Move-Item installer\windows_exporter-$BuildVersion-$Arch.msi output\
           }
 
           promu checksum output\
