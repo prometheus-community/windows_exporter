@@ -8,6 +8,7 @@ linters:
   - loggercheck
   - nilnil
   - nilerr
+  - perfsprint
   - prealloc
   - revive
   - unconvert

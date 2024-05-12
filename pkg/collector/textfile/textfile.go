@@ -16,6 +16,7 @@
 package textfile
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -100,7 +101,7 @@ func (c *collector) Build() error {
 		c.directories = strings.Trim(*c.textFileDirectories, ",")
 	}
 
-	_ = level.Info(c.logger).Log("msg", fmt.Sprintf("textfile collector directories: %s", c.directories))
+	_ = level.Info(c.logger).Log("msg", "textfile collector directories: "+c.directories)
 
 	c.MtimeDesc = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, "textfile", "mtime_seconds"),
@@ -296,12 +297,12 @@ func (c *collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric)
 	for _, directory := range strings.Split(c.directories, ",") {
 		err := filepath.WalkDir(directory, func(path string, dirEntry os.DirEntry, err error) error {
 			if err != nil {
-				_ = level.Error(c.logger).Log("msg", fmt.Sprintf("Error reading directory: %s", path), "err", err)
+				_ = level.Error(c.logger).Log("msg", "Error reading directory: "+path, "err", err)
 				errorMetric = 1.0
 				return nil
 			}
 			if !dirEntry.IsDir() && strings.HasSuffix(dirEntry.Name(), ".prom") {
-				_ = level.Debug(c.logger).Log("msg", fmt.Sprintf("Processing file: %s", path))
+				_ = level.Debug(c.logger).Log("msg", "Processing file: "+path)
 				families_array, err := scrapeFile(path, c.logger)
 				if err != nil {
 					_ = level.Error(c.logger).Log("msg", fmt.Sprintf("Error scraping file: %q. Skip File.", path), "err", err)
@@ -325,7 +326,7 @@ func (c *collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric)
 			return nil
 		})
 		if err != nil && directory != "" {
-			_ = level.Error(c.logger).Log("msg", fmt.Sprintf("Error reading textfile collector directory: %s", c.directories), "err", err)
+			_ = level.Error(c.logger).Log("msg", "Error reading textfile collector directory: "+c.directories, "err", err)
 			errorMetric = 1.0
 		}
 	}
@@ -379,18 +380,18 @@ func scrapeFile(path string, log log.Logger) ([]*dto.MetricFamily, error) {
 		families_array = append(families_array, mf)
 		for _, m := range mf.Metric {
 			if m.TimestampMs != nil {
-				return nil, fmt.Errorf("textfile contains unsupported client-side timestamps")
+				return nil, errors.New("textfile contains unsupported client-side timestamps")
 			}
 		}
 		if mf.Help == nil {
-			help := fmt.Sprintf("Metric read from %s", path)
+			help := "Metric read from " + path
 			mf.Help = &help
 		}
 	}
 
 	// If duplicate metrics are detected in a *single* file, skip processing of file metrics
 	if duplicateMetricEntry(families_array) {
-		return nil, fmt.Errorf("duplicate metrics detected")
+		return nil, errors.New("duplicate metrics detected")
 	}
 	return families_array, nil
 }
@@ -400,7 +401,7 @@ func checkBOM(encoding utfbom.Encoding) error {
 		return nil
 	}
 
-	return fmt.Errorf(encoding.String())
+	return errors.New(encoding.String())
 }
 
 func getDefaultPath() string {
