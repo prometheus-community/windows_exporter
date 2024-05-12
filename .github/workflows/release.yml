@@ -67,6 +67,8 @@ jobs:
           foreach($Arch in "amd64", "arm64") {
             Move-Item output\$Arch\windows_exporter.exe output\windows_exporter-$Version-$Arch.exe
           }
+          
+          Get-ChildItem -Path output
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
@@ -82,8 +84,10 @@ jobs:
           foreach($Arch in "amd64", "arm64") {
             Write-Host "Building windows_exporter $BuildVersion msi for $Arch"
             .\installer\build.ps1 -PathToExecutable .\output\windows_exporter-$BuildVersion-$Arch.exe -Version $BuildVersion -Arch "$Arch"
-            Move-Item installer\windows_exporter-$BuildVersion-$Arch.msi output\
           }
+          
+          Move-Item installer\*.msi output\
+          Get-ChildItem -Path output\
 
           promu checksum output\
 
