@@ -373,7 +373,7 @@ func scrapeFile(path string, log log.Logger) ([]*dto.MetricFamily, error) {
 	}
 
 	// Use temporary array to check for duplicates
-	var families_array []*dto.MetricFamily
+	families_array := make([]*dto.MetricFamily, 0, len(parsedFamilies))
 
 	for _, mf := range parsedFamilies {
 		families_array = append(families_array, mf)

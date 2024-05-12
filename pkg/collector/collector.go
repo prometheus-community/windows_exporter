@@ -163,10 +163,11 @@ func (c *Collectors) SetPerfCounterQuery() error {
 	var (
 		err error
 
-		perfCounterDependencies []string
-		perfCounterNames        []string
-		perfIndicies            []string
+		perfCounterNames []string
+		perfIndicies     []string
 	)
+
+	perfCounterDependencies := make([]string, 0, len(c.collectors))
 
 	for _, collector := range c.collectors {
 		perfCounterNames, err = collector.GetPerfCounter()
