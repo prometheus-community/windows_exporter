@@ -67,6 +67,8 @@ jobs:
           foreach($Arch in "amd64", "arm64") {
             Move-Item output\$Arch\windows_exporter.exe output\windows_exporter-$Version-$Arch.exe
           }
+          
+          Get-ChildItem -Path output
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
@@ -75,20 +77,17 @@ jobs:
           path: output\windows_exporter-*.exe
 
       - name: Build Release Artifacts
-        if: ${{ github.event_name != 'pull_request' }}
         run: |
           $ErrorActionPreference = "Stop"
           $BuildVersion = Get-Content VERSION
-          $TagName = $env:GITHUB_REF -replace 'refs/tags/', ''
-          
-          # The MSI version is not semver compliant, so just take the numerical parts
-          $MSIVersion = $TagName -replace '^v?([0-9\.]+).*$','$1'
           
           foreach($Arch in "amd64", "arm64") {
-            Write-Verbose "Building windows_exporter $MSIVersion msi for $Arch"
-            .\installer\build.ps1 -PathToExecutable .\output\windows_exporter-$BuildVersion-$Arch.exe -Version $MSIVersion -Arch "$Arch"
-            Move-Item installer\windows_exporter-$MSIVersion-$Arch.msi output\
+            Write-Host "Building windows_exporter $BuildVersion msi for $Arch"
+            .\installer\build.ps1 -PathToExecutable .\output\windows_exporter-$BuildVersion-$Arch.exe -Version $BuildVersion -Arch "$Arch"
           }
+          
+          Move-Item installer\*.msi output\
+          Get-ChildItem -Path output\
 
           promu checksum output\
 
