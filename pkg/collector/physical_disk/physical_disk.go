@@ -206,8 +206,8 @@ func (c *collector) Build() error {
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
-	if desc, err := c.collect(ctx, ch); err != nil {
-		_ = level.Error(c.logger).Log("failed collecting physical_disk metrics", "desc", desc, "err", err)
+	if err := c.collect(ctx, ch); err != nil {
+		_ = level.Error(c.logger).Log("msg", "failed collecting physical_disk metrics", "err", err)
 		return err
 	}
 	return nil
@@ -232,10 +232,10 @@ type PhysicalDisk struct {
 	AvgDiskSecPerTransfer  float64 `perflib:"Avg. Disk sec/Transfer"`
 }
 
-func (c *collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	var dst []PhysicalDisk
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["PhysicalDisk"], &dst, c.logger); err != nil {
-		return nil, err
+		return err
 	}
 
 	for _, disk := range dst {
@@ -334,5 +334,5 @@ func (c *collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 		)
 	}
 
-	return nil, nil
+	return nil
 }

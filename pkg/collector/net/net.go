@@ -196,8 +196,8 @@ func (c *collector) Build() error {
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
-	if desc, err := c.collect(ctx, ch); err != nil {
-		_ = level.Error(c.logger).Log("failed collecting net metrics", "desc", desc, "err", err)
+	if err := c.collect(ctx, ch); err != nil {
+		_ = level.Error(c.logger).Log("msg", "failed collecting net metrics", "err", err)
 		return err
 	}
 	return nil
@@ -228,11 +228,11 @@ type networkInterface struct {
 	CurrentBandwidth         float64 `perflib:"Current Bandwidth"`
 }
 
-func (c *collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	var dst []networkInterface
 
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["Network Interface"], &dst, c.logger); err != nil {
-		return nil, err
+		return err
 	}
 
 	for _, nic := range dst {
@@ -326,5 +326,5 @@ func (c *collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 			name,
 		)
 	}
-	return nil, nil
+	return nil
 }
