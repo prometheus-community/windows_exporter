@@ -38,6 +38,7 @@ type collector struct {
 
 	printerStatus    *prometheus.Desc
 	printerJobStatus *prometheus.Desc
+	printerJobCount  *prometheus.Desc
 
 	printerIncludePattern *regexp.Regexp
 	printerExcludePattern *regexp.Regexp
@@ -84,6 +85,12 @@ func (c *collector) Build() error {
 		prometheus.BuildFQName(types.Namespace, Name, "status"),
 		"Printer status",
 		[]string{"printer", "status"},
+		nil,
+	)
+	c.printerJobCount = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "job_count"),
+		"Number of jobs processed by the printer since the last reset",
+		[]string{"printer"},
 		nil,
 	)
 
@@ -142,6 +149,12 @@ func (c *collector) collectPrinterStatus(ch chan<- prometheus.Metric) (*promethe
 			1,
 			printer.Name,
 			printer.Status,
+		)
+		ch <- prometheus.MustNewConstMetric(
+			c.printerJobCount,
+			prometheus.GaugeValue,
+			float64(printer.JobCountSinceLastReset),
+			printer.Name,
 		)
 	}
 
