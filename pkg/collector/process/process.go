@@ -39,6 +39,11 @@ var ConfigDefaults = Config{
 	EnableWorkerProcess: false,
 }
 
+var (
+	re   = regexp.MustCompile(`Domain="(.+?)",Name="(.+?)"`)
+	reps = regexp.MustCompile(`Handle="(\d+)"`)
+)
+
 type Win32_LoggedOnUser struct {
 	Antecedent string
 	Dependent  string
@@ -550,16 +555,13 @@ func getUserProcess() map[string]string {
 	for _, sesessionProcess := range sessionProcesses {
 		for _, user := range users {
 			if user.Dependent == sesessionProcess.Antecedent {
-				re := regexp.MustCompile(`Domain="(.+?)",Name="(.+?)"`)
-				match := re.FindStringSubmatch(user.Antecedent)
 
+				match := re.FindStringSubmatch(user.Antecedent)
 				domain := match[1]
 				name := match[2]
 				fullname := fmt.Sprintf("%s\\%s", domain, name)
 
-				reps := regexp.MustCompile(`Handle="(\d+)"`)
 				matchps := reps.FindStringSubmatch(sesessionProcess.Dependent)
-
 				number := matchps[1]
 
 				processMap[number] = fullname
