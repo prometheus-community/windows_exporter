@@ -5,7 +5,9 @@
     <?define PlatformProgramFiles = "ProgramFilesFolder" ?>
   <?endif?>
 
-  <Package UpgradeCode="66a6eb5b-1fc2-4b14-a362-5ceec6413308" Name="windows_exporter" Version="$(var.Version)" Manufacturer="prometheus-community" Language="1033" Codepage="1252"><SummaryInformation Manufacturer="prometheus-community" Description="windows_exporter $(var.Version) installer" />
+  <Package UpgradeCode="66a6eb5b-1fc2-4b14-a362-5ceec6413308" Name="windows_exporter" Version="$(var.Version)" Manufacturer="prometheus-community" Language="1033" Codepage="1252">
+    <SummaryInformation Manufacturer="prometheus-community" Description="windows_exporter $(var.Version) installer" />
+
     <Media Id="1" Cabinet="windows_exporter.cab" EmbedCab="yes" />
     <MajorUpgrade Schedule="afterInstallInitialize" DowngradeErrorMessage="A later version of [ProductName] is already installed. Setup will now exit." />
 
@@ -16,7 +18,8 @@
     <SetProperty Id="ExtraFlags" After="InstallFiles" Sequence="execute" Value="[EXTRA_FLAGS]" Condition="EXTRA_FLAGS" />
 
     <Property Id="ADD_FIREWALL_EXCEPTION" Secure="yes" />
-    <SetProperty Id="FirewallException" After="InstallFiles" Sequence="execute" Value="[ADD_FIREWALL_EXCEPTION]" Condition="ADD_FIREWALL_EXCEPTION" />
+
+    <Property Id="ENABLE_V1_PERFORMANCE_COUNTERS" Secure="yes" Value="yes"/>
 
     <Property Id="LISTEN_PORT" Secure="yes" Value="9182" />
     <SetProperty Id="ListenFlag" After="InstallFiles" Sequence="execute" Value="--web.listen-address [LISTEN_ADDR]:[LISTEN_PORT]" Condition="LISTEN_ADDR&lt;&gt;&quot;&quot; OR LISTEN_PORT&lt;&gt;9182" />
@@ -45,6 +48,25 @@
     />
     <InstallExecuteSequence>
       <Custom Action="RemoveEventSource" After="InstallInitialize" />
+    </InstallExecuteSequence>
+
+    <SetProperty
+            Id="EnableV1PerformanceCounters"
+            Value="&quot;[%ComSpec]&quot; /c lodctr.exe /E:Lsa &amp; lodctr.exe /E:PerfProc &amp; lodctr.exe /R"
+            Before="EnableV1PerformanceCounters"
+            Sequence="execute"
+    />
+    <CustomAction
+            Id="EnableV1PerformanceCounters"
+            BinaryRef="Wix4UtilCA_$(sys.BUILDARCHSHORT)"
+            DllEntry="WixSilentExec"
+            Execute="deferred"
+            Impersonate="no"
+            Return="check"
+    />
+
+    <InstallExecuteSequence>
+      <Custom Action="EnableV1PerformanceCounters" Before="InstallFinalize" Condition="ENABLE_V1_PERFORMANCE_COUNTERS=&quot;yes&quot;"/>
     </InstallExecuteSequence>
 
     <Property Id="TEXTFILE_DIRS" Secure="yes" />

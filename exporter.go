@@ -184,7 +184,7 @@ func main() {
 		w.Header().Set("Content-Type", "application/json")
 		_, err := fmt.Fprintln(w, `{"status":"ok"}`)
 		if err != nil {
-			_ = level.Debug(logger).Log("Failed to write to stream", "err", err)
+			_ = level.Debug(logger).Log("msg", "Failed to write to stream", "err", err)
 		}
 	})
 	mux.HandleFunc("/version", func(w http.ResponseWriter, r *http.Request) {
@@ -209,34 +209,6 @@ func main() {
 		mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
 		mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
 		mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
-	}
-
-	if *metricsPath != "/" && *metricsPath != "" {
-		landingConfig := web.LandingConfig{
-			Name:        "Windows Exporter",
-			Description: "Prometheus Exporter for Windows servers",
-			Version:     version.Info(),
-			Links: []web.LandingLinks{
-				{
-					Address: *metricsPath,
-					Text:    "Metrics",
-				},
-				{
-					Address: "/health",
-					Text:    "Health Check",
-				},
-				{
-					Address: "/version",
-					Text:    "Version Info",
-				},
-			},
-		}
-		landingPage, err := web.NewLandingPage(landingConfig)
-		if err != nil {
-			_ = level.Error(logger).Log("msg", "failed to generate landing page", "err", err)
-			os.Exit(1)
-		}
-		mux.Handle("/", landingPage)
 	}
 
 	_ = level.Info(logger).Log("msg", "Starting windows_exporter", "version", version.Info())

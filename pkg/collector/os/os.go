@@ -159,8 +159,8 @@ func (c *collector) Build() error {
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
-	if desc, err := c.collect(ctx, ch); err != nil {
-		_ = level.Error(c.logger).Log("failed collecting os metrics", "desc", desc, "err", err)
+	if err := c.collect(ctx, ch); err != nil {
+		_ = level.Error(c.logger).Log("msg", "failed collecting os metrics", "err", err)
 		return err
 	}
 	return nil
@@ -184,15 +184,15 @@ type Win32_OperatingSystem struct {
 	Version                 string
 }
 
-func (c *collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	nwgi, err := netapi32.GetWorkstationInfo()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	gmse, err := sysinfoapi.GlobalMemoryStatusEx()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	currentTime := time.Now()
@@ -203,7 +203,7 @@ func (c *collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 	defer memManKey.Close()
 
 	if err != nil {
-		return nil, err
+		return err
 	}
 	pagingFiles, _, pagingErr := memManKey.GetStringsValue("ExistingPageFiles")
 	// Get build number and product name from registry
@@ -211,24 +211,24 @@ func (c *collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 	defer ntKey.Close()
 
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	pn, _, err := ntKey.GetStringValue("ProductName")
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	bn, _, err := ntKey.GetStringValue("CurrentBuildNumber")
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	revision, _, err := ntKey.GetIntegerValue("UBR")
 	if errors.Is(err, registry.ErrNotExist) {
 		revision = 0
 	} else if err != nil {
-		return nil, err
+		return err
 	}
 
 	var fsipf float64
@@ -245,12 +245,12 @@ func (c *collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 
 	gpi, err := psapi.GetPerformanceInfo()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	pfc := make([]pagingFileCounter, 0)
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["Paging File"], &pfc, c.logger); err != nil {
-		return nil, err
+		return err
 	}
 
 	// Get current page file usage.
@@ -309,7 +309,7 @@ func (c *collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 			fsipf,
 		)
 	} else {
-		_ = level.Debug(c.logger).Log("Could not find HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management key. windows_os_paging_free_bytes and windows_os_paging_limit_bytes will be omitted.")
+		_ = level.Debug(c.logger).Log("msg", "Could not find HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management key. windows_os_paging_free_bytes and windows_os_paging_limit_bytes will be omitted.")
 	}
 	ch <- prometheus.MustNewConstMetric(
 		c.VirtualMemoryFreeBytes,
@@ -356,5 +356,5 @@ func (c *collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 		float64(gmse.TotalPhys),
 	)
 
-	return nil, nil
+	return nil
 }

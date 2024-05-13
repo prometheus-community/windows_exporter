@@ -86,23 +86,23 @@ type win32_Processor struct {
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric) error {
-	if desc, err := c.collect(ch); err != nil {
-		_ = level.Error(c.logger).Log("msg", "failed collecting cpu_info metrics", "desc", desc, "err", err)
+	if err := c.collect(ch); err != nil {
+		_ = level.Error(c.logger).Log("msg", "failed collecting cpu_info metrics", "err", err)
 		return err
 	}
 	return nil
 }
 
-func (c *collector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *collector) collect(ch chan<- prometheus.Metric) error {
 	var dst []win32_Processor
 	// We use a static query here because the provided methods in wmi.go all issue a SELECT *;
 	// This results in the time-consuming LoadPercentage field being read which seems to measure each CPU
 	// serially over a 1 second interval, so the scrape time is at least 1s * num_sockets
 	if err := wmi.Query(win32ProcessorQuery, &dst); err != nil {
-		return nil, err
+		return err
 	}
 	if len(dst) == 0 {
-		return nil, errors.New("WMI query returned empty result set")
+		return errors.New("WMI query returned empty result set")
 	}
 
 	// Some CPUs end up exposing trailing spaces for certain strings, so clean them up
@@ -121,5 +121,5 @@ func (c *collector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, erro
 		)
 	}
 
-	return nil, nil
+	return nil
 }

@@ -190,12 +190,12 @@ func (c *collector) Build() error {
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric) error {
-	if desc, err := c.collectMem(ch); err != nil {
-		_ = level.Error(c.logger).Log("failed collecting vmware memory metrics", "desc", desc, "err", err)
+	if err := c.collectMem(ch); err != nil {
+		_ = level.Error(c.logger).Log("msg", "failed collecting vmware memory metrics", "err", err)
 		return err
 	}
-	if desc, err := c.collectCpu(ch); err != nil {
-		_ = level.Error(c.logger).Log("failed collecting vmware cpu metrics", "desc", desc, "err", err)
+	if err := c.collectCpu(ch); err != nil {
+		_ = level.Error(c.logger).Log("msg", "failed collecting vmware cpu metrics", "err", err)
 		return err
 	}
 	return nil
@@ -226,14 +226,14 @@ type Win32_PerfRawData_vmGuestLib_VCPU struct {
 	HostProcessorSpeedMHz uint64
 }
 
-func (c *collector) collectMem(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *collector) collectMem(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_vmGuestLib_VMem
 	q := wmi.QueryAll(&dst, c.logger)
 	if err := wmi.Query(q, &dst); err != nil {
-		return nil, err
+		return err
 	}
 	if len(dst) == 0 {
-		return nil, errors.New("WMI query returned empty result set")
+		return errors.New("WMI query returned empty result set")
 	}
 
 	ch <- prometheus.MustNewConstMetric(
@@ -308,21 +308,21 @@ func (c *collector) collectMem(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 		mbToBytes(dst[0].MemUsedMB),
 	)
 
-	return nil, nil
+	return nil
 }
 
 func mbToBytes(mb uint64) float64 {
 	return float64(mb * 1024 * 1024)
 }
 
-func (c *collector) collectCpu(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *collector) collectCpu(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_vmGuestLib_VCPU
 	q := wmi.QueryAll(&dst, c.logger)
 	if err := wmi.Query(q, &dst); err != nil {
-		return nil, err
+		return err
 	}
 	if len(dst) == 0 {
-		return nil, errors.New("WMI query returned empty result set")
+		return errors.New("WMI query returned empty result set")
 	}
 
 	ch <- prometheus.MustNewConstMetric(
@@ -367,5 +367,5 @@ func (c *collector) collectCpu(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 		float64(dst[0].HostProcessorSpeedMHz),
 	)
 
-	return nil, nil
+	return nil
 }
