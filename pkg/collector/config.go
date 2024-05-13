@@ -38,6 +38,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/collector/nps"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/os"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/physical_disk"
+	"github.com/prometheus-community/windows_exporter/pkg/collector/printer"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/process"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/remote_fx"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/scheduled_task"
@@ -111,6 +112,7 @@ type Config struct {
 	Time                           time.Config                            `yaml:"time"`
 	Vmware                         vmware.Config                          `yaml:"vmware"`
 	VmwareBlast                    vmware_blast.Config                    `yaml:"vmware_blast"`
+	Printer                        printer.Config                         `yaml:"printer"`
 }
 
 // ConfigDefaults Is an interface to be used by the external libraries. It holds all ConfigDefaults form all collectors
@@ -169,4 +171,5 @@ var ConfigDefaults = Config{
 	Time:                           time.ConfigDefaults,
 	Vmware:                         vmware.ConfigDefaults,
 	VmwareBlast:                    vmware_blast.ConfigDefaults,
+	Printer:                        printer.ConfigDefaults,
 }

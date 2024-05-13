@@ -39,6 +39,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/collector/nps"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/os"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/physical_disk"
+	"github.com/prometheus-community/windows_exporter/pkg/collector/printer"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/process"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/remote_fx"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/scheduled_task"
@@ -115,6 +116,7 @@ var Map = map[string]types.CollectorBuilderWithFlags{
 	time.Name:                            time.NewWithFlags,
 	vmware.Name:                          vmware.NewWithFlags,
 	vmware_blast.Name:                    vmware_blast.NewWithFlags,
+	printer.Name:                         printer.NewWithFlags,
 }
 
 func Available() []string {
