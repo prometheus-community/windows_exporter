@@ -125,6 +125,7 @@ func NewWithConfig(logger log.Logger, config Config) Collectors {
 	collectors[nps.Name] = nps.New(logger, &config.Nps)
 	collectors[os.Name] = os.New(logger, &config.Os)
 	collectors[physical_disk.Name] = physical_disk.New(logger, &config.PhysicalDisk)
+	collectors[printer.Name] = printer.New(logger, &config.Printer)
 	collectors[process.Name] = process.New(logger, &config.Process)
 	collectors[remote_fx.Name] = remote_fx.New(logger, &config.RemoteFx)
 	collectors[scheduled_task.Name] = scheduled_task.New(logger, &config.ScheduledTask)
@@ -141,7 +142,6 @@ func NewWithConfig(logger log.Logger, config Config) Collectors {
 	collectors[time.Name] = time.New(logger, &config.Time)
 	collectors[vmware.Name] = vmware.New(logger, &config.Vmware)
 	collectors[vmware_blast.Name] = vmware_blast.New(logger, &config.VmwareBlast)
-	collectors[printer.Name] = printer.New(logger, &config.Printer)
 	return New(collectors)
 }
 

@@ -96,6 +96,7 @@ type Config struct {
 	Nps                            nps.Config                             `yaml:"nps"`
 	Os                             os.Config                              `yaml:"os"`
 	PhysicalDisk                   physical_disk.Config                   `yaml:"physical_disk"`
+	Printer                        printer.Config                         `yaml:"printer"`
 	Process                        process.Config                         `yaml:"process"`
 	RemoteFx                       remote_fx.Config                       `yaml:"remote_fx"`
 	ScheduledTask                  scheduled_task.Config                  `yaml:"scheduled_task"`
@@ -112,7 +113,6 @@ type Config struct {
 	Time                           time.Config                            `yaml:"time"`
 	Vmware                         vmware.Config                          `yaml:"vmware"`
 	VmwareBlast                    vmware_blast.Config                    `yaml:"vmware_blast"`
-	Printer                        printer.Config                         `yaml:"printer"`
 }
 
 // ConfigDefaults Is an interface to be used by the external libraries. It holds all ConfigDefaults form all collectors
@@ -155,6 +155,7 @@ var ConfigDefaults = Config{
 	Nps:                            nps.ConfigDefaults,
 	Os:                             os.ConfigDefaults,
 	PhysicalDisk:                   physical_disk.ConfigDefaults,
+	Printer:                        printer.ConfigDefaults,
 	Process:                        process.ConfigDefaults,
 	RemoteFx:                       remote_fx.ConfigDefaults,
 	ScheduledTask:                  scheduled_task.ConfigDefaults,
@@ -171,5 +172,4 @@ var ConfigDefaults = Config{
 	Time:                           time.ConfigDefaults,
 	Vmware:                         vmware.ConfigDefaults,
 	VmwareBlast:                    vmware_blast.ConfigDefaults,
-	Printer:                        printer.ConfigDefaults,
 }
