@@ -115,7 +115,7 @@ func (c *collector) Build() error {
 
 func (c *collector) GetName() string { return Name }
 
-func (c *collector) GetPerfCounter() ([]string, error) { return []string{}, nil }
+func (c *collector) GetPerfCounter() ([]string, error) { return []string{"Printer"}, nil }
 
 type win32_Printer struct {
 	Name                   string
@@ -129,23 +129,23 @@ type win32_PrintJob struct {
 	Status string
 }
 
-func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
-	if desc, err := c.collectPrinterStatus(ch); err != nil {
-		_ = level.Error(c.logger).Log("msg", "failed to collect printer status metrics", "desc", desc, "err", err)
+func (c *collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric) error {
+	if err := c.collectPrinterStatus(ch); err != nil {
+		_ = level.Error(c.logger).Log("msg", "failed to collect printer status metrics", "err", err)
 		return err
 	}
-	if desc, err := c.collectPrinterJobStatus(ch); err != nil {
-		_ = level.Error(c.logger).Log("msg", "failed to collect printer job status metrics", "desc", desc, "err", err)
+	if err := c.collectPrinterJobStatus(ch); err != nil {
+		_ = level.Error(c.logger).Log("msg", "failed to collect printer job status metrics", "err", err)
 		return err
 	}
 	return nil
 }
 
-func (c *collector) collectPrinterStatus(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *collector) collectPrinterStatus(ch chan<- prometheus.Metric) error {
 	var printers []win32_Printer
 	q := wmi.QueryAll(&printers, c.logger)
 	if err := wmi.Query(q, &printers); err != nil {
-		return nil, err
+		return err
 	}
 
 	for _, printer := range printers {
@@ -173,14 +173,14 @@ func (c *collector) collectPrinterStatus(ch chan<- prometheus.Metric) (*promethe
 		)
 	}
 
-	return nil, nil
+	return nil
 }
 
-func (c *collector) collectPrinterJobStatus(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *collector) collectPrinterJobStatus(ch chan<- prometheus.Metric) error {
 	var printJobs []win32_PrintJob
 	q := wmi.QueryAll(&printJobs, c.logger)
 	if err := wmi.Query(q, &printJobs); err != nil {
-		return nil, err
+		return err
 	}
 
 	groupedPrintJobs := c.groupPrintJobs(printJobs)
@@ -193,7 +193,7 @@ func (c *collector) collectPrinterJobStatus(ch chan<- prometheus.Metric) (*prome
 			group.status,
 		)
 	}
-	return nil, nil
+	return nil
 }
 
 type PrintJobStatusGroup struct {
