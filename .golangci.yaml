@@ -70,7 +70,6 @@ linters:
     - nosprintfhostport
     - paralleltest
     - predeclared
-    - promlinter
     - protogetter
     - reassign
     - rowserrcheck
