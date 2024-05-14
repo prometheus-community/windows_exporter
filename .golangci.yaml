@@ -87,7 +87,6 @@ linters:
     - testpackage
     - thelper
     - tparallel
-    - unused
     - usestdlibvars
     - varnamelen
     - wastedassign
