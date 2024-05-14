@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -269,12 +270,12 @@ func (c *collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 		c.OSInformation,
 		prometheus.GaugeValue,
 		1.0,
-		fmt.Sprintf("Microsoft %s", pn), // Caption
+		"Microsoft "+pn, // Caption
 		fmt.Sprintf("%d.%d.%s", nwgi.VersionMajor, nwgi.VersionMinor, bn), // Version
-		fmt.Sprintf("%d", nwgi.VersionMajor),                              // Major Version
-		fmt.Sprintf("%d", nwgi.VersionMinor),                              // Minor Version
-		bn,                                                                // Build number
-		fmt.Sprintf("%d", revision),                                       // Revision
+		strconv.FormatUint(uint64(nwgi.VersionMajor), 10),                 // Major Version
+		strconv.FormatUint(uint64(nwgi.VersionMinor), 10),                 // Minor Version
+		bn,                               // Build number
+		strconv.FormatUint(revision, 10), // Revision
 	)
 
 	ch <- prometheus.MustNewConstMetric(

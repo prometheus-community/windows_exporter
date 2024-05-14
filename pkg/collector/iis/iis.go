@@ -54,7 +54,7 @@ func getIISVersion(logger log.Logger) simple_version {
 	defer func() {
 		err = k.Close()
 		if err != nil {
-			_ = level.Warn(logger).Log("msg", fmt.Sprintf("Failed to close registry key"), "err", err)
+			_ = level.Warn(logger).Log("msg", "Failed to close registry key", "err", err)
 		}
 	}()
 

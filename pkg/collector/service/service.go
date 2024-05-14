@@ -210,7 +210,7 @@ func (c *collector) collectWMI(ch chan<- prometheus.Metric) error {
 		return err
 	}
 	for _, service := range dst {
-		pid := fmt.Sprintf("%d", uint64(service.ProcessId))
+		pid := strconv.FormatUint(uint64(service.ProcessId), 10)
 
 		runAs := ""
 		if service.StartName != nil {
@@ -319,7 +319,7 @@ func (c *collector) collectAPI(ch chan<- prometheus.Metric) error {
 				return
 			}
 
-			pid := fmt.Sprintf("%d", uint64(serviceStatus.ProcessId))
+			pid := strconv.FormatUint(uint64(serviceStatus.ProcessId), 10)
 
 			ch <- prometheus.MustNewConstMetric(
 				c.Information,

@@ -180,14 +180,14 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc(*metricsPath, withConcurrencyLimit(*maxRequests, collectors.BuildServeHTTP(*disableExporterMetrics, *timeoutMargin)))
-	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/health", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, err := fmt.Fprintln(w, `{"status":"ok"}`)
 		if err != nil {
 			_ = level.Debug(logger).Log("msg", "Failed to write to stream", "err", err)
 		}
 	})
-	mux.HandleFunc("/version", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/version", func(w http.ResponseWriter, _ *http.Request) {
 		// we can't use "version" directly as it is a package, and not an object that
 		// can be serialized.
 		err := json.NewEncoder(w).Encode(prometheusVersion{
