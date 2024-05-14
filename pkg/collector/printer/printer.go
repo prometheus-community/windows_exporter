@@ -21,8 +21,8 @@ const (
 	FlagPrinterExclude = "collector.printer.exclude"
 )
 
-// PrinterStatusMap source: https://learn.microsoft.com/en-us/windows/win32/cimwin32prov/win32-printer#:~:text=Power%20Save-,PrinterStatus,Offline%20(7),-PrintJobDataType
-var PrinterStatusMap = map[uint16]string{
+// printerStatusMap source: https://learn.microsoft.com/en-us/windows/win32/cimwin32prov/win32-printer#:~:text=Power%20Save-,PrinterStatus,Offline%20(7),-PrintJobDataType
+var printerStatusMap = map[uint16]string{
 	1: "Other",
 	2: "Unknown",
 	3: "Idle",
@@ -156,7 +156,7 @@ func (c *collector) collectPrinterStatus(ch chan<- prometheus.Metric) error {
 			continue
 		}
 
-		printerStatus, ok := PrinterStatusMap[printer.PrinterStatus]
+		printerStatus, ok := printerStatusMap[printer.PrinterStatus]
 		if !ok {
 			printerStatus = "Unknown"
 		}
