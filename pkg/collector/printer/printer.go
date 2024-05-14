@@ -14,7 +14,6 @@ import (
 
 const (
 	Name = "printer"
-	// If you are adding additional labels to the metric, make sure that they get added in here as well. See below for explanation
 
 	FlagPrinterInclude = "collector.printer.include"
 	FlagPrinterExclude = "collector.printer.exclude"
@@ -169,18 +168,25 @@ func (c *collector) collectPrinterJobStatus(ch chan<- prometheus.Metric) (*prome
 	}
 
 	groupedPrintJobs := c.groupPrintJobs(printJobs)
-	for _, printJob := range groupedPrintJobs {
+	for group, count := range groupedPrintJobs {
 		ch <- prometheus.MustNewConstMetric(
 			c.printerJobStatus,
 			prometheus.GaugeValue,
-			float64(printJob),
+			float64(count),
+			group.printerName,
+			group.status,
 		)
 	}
 	return nil, nil
 }
 
-func (c *collector) groupPrintJobs(printJobs []win32_PrintJob) map[string]int {
-	groupedPrintJobs := make(map[string]int)
+type PrintJobStatusGroup struct {
+	printerName string
+	status      string
+}
+
+func (c *collector) groupPrintJobs(printJobs []win32_PrintJob) map[PrintJobStatusGroup]int {
+	groupedPrintJobs := make(map[PrintJobStatusGroup]int)
 	for _, printJob := range printJobs {
 		printerName := strings.Split(printJob.Name, ",")[0]
 
@@ -188,9 +194,10 @@ func (c *collector) groupPrintJobs(printJobs []win32_PrintJob) map[string]int {
 			!c.printerIncludePattern.MatchString(printerName) {
 			continue
 		}
-
-		key := fmt.Sprintf("%s-%s", printerName, printJob.Status)
-		groupedPrintJobs[key]++
+		groupedPrintJobs[PrintJobStatusGroup{
+			printerName: printerName,
+			status:      printJob.Status,
+		}]++
 	}
 	return groupedPrintJobs
 }
