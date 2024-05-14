@@ -74,7 +74,7 @@ func NewWithFlags(app *kingpin.Application) types.Collector {
 	c := &collector{
 		printerInclude: app.Flag(
 			FlagPrinterInclude,
-			"Regular expression to match printers to collectPrinterStatus",
+			"Regular expression to match printers to collect metrics for",
 		).Default(ConfigDefaults.printerInclude).String(),
 		printerExclude: app.Flag(
 			FlagPrinterExclude,
