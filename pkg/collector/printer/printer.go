@@ -19,6 +19,17 @@ const (
 	FlagPrinterExclude = "collector.printer.exclude"
 )
 
+// PrinterStatusMap source: https://learn.microsoft.com/en-us/windows/win32/cimwin32prov/win32-printer#:~:text=Power%20Save-,PrinterStatus,Offline%20(7),-PrintJobDataType
+var PrinterStatusMap = map[uint16]string{
+	1: "Other",
+	2: "Unknown",
+	3: "Idle",
+	4: "Printing",
+	5: "Warmup",
+	6: "Stopped Printing",
+	7: "Offline",
+}
+
 type Config struct {
 	printerInclude string `yaml:"printer_include"`
 	printerExclude string `yaml:"printer_exclude"`
@@ -109,7 +120,7 @@ func (c *collector) GetPerfCounter() ([]string, error) { return []string{}, nil 
 type win32_Printer struct {
 	Name                   string
 	Default                bool
-	Status                 string
+	PrinterStatus          uint16
 	JobCountSinceLastReset uint32
 }
 
@@ -142,12 +153,17 @@ func (c *collector) collectPrinterStatus(ch chan<- prometheus.Metric) (*promethe
 			!c.printerIncludePattern.MatchString(printer.Name) {
 			continue
 		}
+
+		printerStatus, ok := PrinterStatusMap[printer.PrinterStatus]
+		if !ok {
+			printerStatus = "Unknown"
+		}
 		ch <- prometheus.MustNewConstMetric(
 			c.printerStatus,
 			prometheus.GaugeValue,
 			1,
 			printer.Name,
-			printer.Status,
+			printerStatus,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.printerJobCount,
