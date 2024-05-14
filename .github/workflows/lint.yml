@@ -101,7 +101,7 @@ jobs:
         uses: golangci/golangci-lint-action@v6
         with:
           version: v1.58
-          args: "--timeout=5m"
+          args: "--timeout=5m --out-format github-actions,colored-line-number"
 
       # golangci-lint action doesn't always provide helpful output, so re-run without the action for
       # better output of the problem.
