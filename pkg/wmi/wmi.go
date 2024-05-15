@@ -2,7 +2,7 @@ package wmi
 
 import (
 	"bytes"
-	"fmt"
+
 	"reflect"
 
 	"github.com/go-kit/log"
@@ -47,7 +47,7 @@ func QueryAll(src interface{}, logger log.Logger) string {
 	b.WriteString("SELECT * FROM ")
 	b.WriteString(className(src))
 
-	_ = level.Debug(logger).Log("msg", fmt.Sprintf("Generated WMI query %s", b.String()))
+	_ = level.Debug(logger).Log("msg", "Generated WMI query "+b.String())
 	return b.String()
 }
 
@@ -56,7 +56,7 @@ func QueryAllForClass(_ interface{}, class string, logger log.Logger) string {
 	b.WriteString("SELECT * FROM ")
 	b.WriteString(class)
 
-	_ = level.Debug(logger).Log("msg", fmt.Sprintf("Generated WMI query %s", b.String()))
+	_ = level.Debug(logger).Log("msg", "Generated WMI query "+b.String())
 	return b.String()
 }
 
@@ -70,7 +70,7 @@ func QueryAllWhere(src interface{}, where string, logger log.Logger) string {
 		b.WriteString(where)
 	}
 
-	_ = level.Debug(logger).Log("msg", fmt.Sprintf("Generated WMI query %s", b.String()))
+	_ = level.Debug(logger).Log("msg", "Generated WMI query "+b.String())
 	return b.String()
 }
 
@@ -84,6 +84,6 @@ func QueryAllForClassWhere(_ interface{}, class string, where string, logger log
 		b.WriteString(where)
 	}
 
-	_ = level.Debug(logger).Log("msg", fmt.Sprintf("Generated WMI query %s", b.String()))
+	_ = level.Debug(logger).Log("msg", "Generated WMI query "+b.String())
 	return b.String()
 }

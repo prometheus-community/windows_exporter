@@ -3,7 +3,6 @@
 package container
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/Microsoft/hcsshim"
@@ -326,14 +325,14 @@ func (c *collector) collect(ch chan<- prometheus.Metric) error {
 	}
 
 	if len(hnsEndpoints) == 0 {
-		_ = level.Info(c.logger).Log("msg", fmt.Sprintf("No network stats for containers to collect"))
+		_ = level.Info(c.logger).Log("msg", "No network stats for containers to collect")
 		return nil
 	}
 
 	for _, endpoint := range hnsEndpoints {
 		endpointStats, err := hcsshim.GetHNSEndpointStats(endpoint.Id)
 		if err != nil {
-			_ = level.Warn(c.logger).Log("msg", fmt.Sprintf("Failed to collect network stats for interface %s", endpoint.Id), "err", err)
+			_ = level.Warn(c.logger).Log("msg", "Failed to collect network stats for interface "+endpoint.Id, "err", err)
 			continue
 		}
 
@@ -342,7 +341,7 @@ func (c *collector) collect(ch chan<- prometheus.Metric) error {
 			endpointId := strings.ToUpper(endpoint.Id)
 
 			if !ok {
-				_ = level.Warn(c.logger).Log("msg", fmt.Sprintf("Failed to collect network stats for container %s", containerId))
+				_ = level.Warn(c.logger).Log("msg", "Failed to collect network stats for container "+containerId)
 				continue
 			}
 

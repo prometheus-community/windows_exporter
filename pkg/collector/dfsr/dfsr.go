@@ -130,8 +130,9 @@ func (c *collector) SetLogger(logger log.Logger) {
 
 func (c *collector) GetPerfCounter() ([]string, error) {
 	// Perflib sources are dynamic, depending on the enabled child collectors
-	var perflibDependencies []string
-	for _, source := range utils.ExpandEnabledChildCollectors(*c.dfsrEnabledCollectors) {
+	expandedChildCollectors := utils.ExpandEnabledChildCollectors(*c.dfsrEnabledCollectors)
+	perflibDependencies := make([]string, 0, len(expandedChildCollectors))
+	for _, source := range expandedChildCollectors {
 		perflibDependencies = append(perflibDependencies, dfsrGetPerfObjectName(source))
 	}
 
