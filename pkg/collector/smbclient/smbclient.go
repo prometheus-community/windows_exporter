@@ -285,7 +285,6 @@ func (c *collector) collectClientShares(ctx *types.ScrapeContext, ch chan<- prom
 		return err
 	}
 	for _, instance := range data {
-		// labelName := c.toLabelName(instance.Name)
 		if instance.Name == "_Total" {
 			continue
 		}
@@ -445,11 +444,4 @@ func (c *collector) collectClientShares(ctx *types.ScrapeContext, ch chan<- prom
 
 	}
 	return nil
-}
-
-// toLabelName converts strings to lowercase and replaces all whitespaces and dots with underscores
-func (c *collector) toLabelName(name string) string {
-	s := strings.ReplaceAll(strings.Join(strings.Fields(strings.ToLower(name)), "_"), ".", "_")
-	s = strings.ReplaceAll(s, "__", "_")
-	return s
 }

@@ -7,7 +7,7 @@ DOCKER_REPO       ?= prometheuscommunity
 DOCKER_IMAGE_NAME ?= windows-exporter
 
 # ALL_DOCKER_REPOS is the list of repositories to push the image to. ghcr.io requires that org name be the same as the image repo name.
-ALL_DOCKER_REPOS  ?= docker.io/$(DOCKER_REPO) quay.io/$(DOCKER_REPO) ghcr.io/prometheus-community
+ALL_DOCKER_REPOS  ?= docker.io/$(DOCKER_REPO) ghcr.io/prometheus-community # quay.io/$(DOCKER_REPO) 
 
 # Image Variables for host process Container
 # Windows image build is heavily influenced by https://github.com/kubernetes/kubernetes/blob/master/cluster/images/etcd/Makefile
