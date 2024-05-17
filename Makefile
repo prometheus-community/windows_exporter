@@ -29,7 +29,7 @@ test:
 	go test -v ./...
 
 bench:
-	go test -v -bench='benchmarkcollector' ./pkg/collector/{cpu,logical_disk,physical_disk,logon,memory,net,process,service,system,tcp,time}
+	go test -v -bench='benchmarkcollector' ./pkg/collector/{cpu,logical_disk,physical_disk,logon,memory,net,printer,process,service,system,tcp,time}
 
 lint:
 	golangci-lint -c .golangci.yaml run

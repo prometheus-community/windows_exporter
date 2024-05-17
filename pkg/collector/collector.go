@@ -45,6 +45,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/collector/nps"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/os"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/physical_disk"
+	"github.com/prometheus-community/windows_exporter/pkg/collector/printer"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/process"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/remote_fx"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/scheduled_task"
@@ -124,6 +125,7 @@ func NewWithConfig(logger log.Logger, config Config) Collectors {
 	collectors[nps.Name] = nps.New(logger, &config.Nps)
 	collectors[os.Name] = os.New(logger, &config.Os)
 	collectors[physical_disk.Name] = physical_disk.New(logger, &config.PhysicalDisk)
+	collectors[printer.Name] = printer.New(logger, &config.Printer)
 	collectors[process.Name] = process.New(logger, &config.Process)
 	collectors[remote_fx.Name] = remote_fx.New(logger, &config.RemoteFx)
 	collectors[scheduled_task.Name] = scheduled_task.New(logger, &config.ScheduledTask)
@@ -140,7 +142,6 @@ func NewWithConfig(logger log.Logger, config Config) Collectors {
 	collectors[time.Name] = time.New(logger, &config.Time)
 	collectors[vmware.Name] = vmware.New(logger, &config.Vmware)
 	collectors[vmware_blast.Name] = vmware_blast.New(logger, &config.VmwareBlast)
-
 	return New(collectors)
 }
 
