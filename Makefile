@@ -65,20 +65,20 @@ build-all: $(addprefix sub-build-,$(ALL_OS))
 
 push:
 	set -x; \
-	for osversion in ${ALL_OS}; do \
-		$(DOCKER) tag local/$(DOCKER_IMAGE_NAME):$(VERSION)-$${osversion} $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION)-$${osversion}; \
-		$(DOCKER) push $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION)-$${osversion}; \
-		$(DOCKER) manifest create --amend $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION) $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION)-$${osversion}; \
-		full_version=`$(DOCKER) manifest inspect $(BASE_IMAGE):$${osversion} | grep "os.version" | head -n 1 | awk -F\" '{print $$4}'` || true; \
-		$(DOCKER) manifest annotate --os windows --arch amd64 --os-version $${full_version} $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION)  $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION)-$${osversion}; \
+	for docker_repo in ${DOCKER_REPO}; do \
+		for osversion in ${ALL_OS}; do \
+			$(DOCKER) tag local/$(DOCKER_IMAGE_NAME):$(VERSION)-$${osversion} $${docker_repo}/$(DOCKER_IMAGE_NAME):$(VERSION)-$${osversion}; \
+			$(DOCKER) push $${docker_repo}/$(DOCKER_IMAGE_NAME):$(VERSION)-$${osversion}; \
+			$(DOCKER) manifest create --amend $${docker_repo}/$(DOCKER_IMAGE_NAME):$(VERSION) $${docker_repo}/$(DOCKER_IMAGE_NAME):$(VERSION)-$${osversion}; \
+			full_version=`$(DOCKER) manifest inspect $(BASE_IMAGE):$${osversion} | grep "os.version" | head -n 1 | awk -F\" '{print $$4}'` || true; \
+			$(DOCKER) manifest annotate --os windows --arch amd64 --os-version $${full_version} $${docker_repo}/$(DOCKER_IMAGE_NAME):$(VERSION) $${docker_repo}/$(DOCKER_IMAGE_NAME):$(VERSION)-$${osversion}; \
+		done; \
+		$(DOCKER) manifest push --purge $${docker_repo}/$(DOCKER_IMAGE_NAME):$(VERSION); \
 	done
-	$(DOCKER) manifest push --purge $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION);
-
-sub-push-%:
-	$(MAKE) DOCKER_REPO=$* push
 
 .PHONY: push-all
-push-all: build-all $(addprefix sub-push-,$(ALL_DOCKER_REPOS))
+push-all: build-all
+	$(MAKE) DOCKER_REPO="$(ALL_DOCKER_REPOS)" push
 
 # Mandatory target for container description sync action
 .PHONY: docker-repo-name
