@@ -171,7 +171,7 @@ func (c *collector) collectPrinterStatus(ch chan<- prometheus.Metric) error {
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.printerJobCount,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			float64(printer.JobCountSinceLastReset),
 			printer.Name,
 		)

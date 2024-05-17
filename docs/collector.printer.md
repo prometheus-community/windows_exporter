@@ -21,8 +21,8 @@ If given, a printer needs to *not* match the exclude regexp in order for the cor
 
 ## Metrics
 
-Name | Description | Type | Labels
------|-------------|------|-------
-`windows_printer_status` | Status of the printer at the time the performance data is collected | gauge | `printer`, `status`
-`windows_printer_job_count` | Number of jobs processed by the printer since the last reset | gauge | `printer`
-`windows_printer_job_status` | A counter of printer jobs by status | gauge | `printer`, `status`
+Name | Description | Type    | Labels
+-----|-------------|---------|-------
+`windows_printer_status` | Status of the printer at the time the performance data is collected | counter | `printer`, `status`
+`windows_printer_job_count` | Number of jobs processed by the printer since the last reset | gauge   | `printer`
+`windows_printer_job_status` | A counter of printer jobs by status | gauge   | `printer`, `status`
