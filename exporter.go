@@ -31,7 +31,11 @@ import (
 	"github.com/prometheus/common/version"
 	"github.com/prometheus/exporter-toolkit/web"
 	webflag "github.com/prometheus/exporter-toolkit/web/kingpinflag"
+	"golang.org/x/sys/windows"
 )
+
+// https://learn.microsoft.com/en-us/windows/win32/procthread/process-security-and-access-rights
+const PROCESS_ALL_ACCESS = windows.STANDARD_RIGHTS_REQUIRED | windows.SYNCHRONIZE | windows.SPECIFIC_RIGHTS_ALL
 
 // Same struct prometheus uses for their /version endpoint.
 // Separate copy to avoid pulling all of prometheus as a dependency
@@ -42,6 +46,32 @@ type prometheusVersion struct {
 	BuildUser string `json:"buildUser"`
 	BuildDate string `json:"buildDate"`
 	GoVersion string `json:"goVersion"`
+}
+
+// Mapping of priority names to uin32 values required by windows.SetPriorityClass
+var priorityStringToInt = map[string]uint32{
+	"realtime":    windows.REALTIME_PRIORITY_CLASS,
+	"high":        windows.HIGH_PRIORITY_CLASS,
+	"abovenormal": windows.ABOVE_NORMAL_PRIORITY_CLASS,
+	"normal":      windows.NORMAL_PRIORITY_CLASS,
+	"belownormal": windows.BELOW_NORMAL_PRIORITY_CLASS,
+	"low":         windows.IDLE_PRIORITY_CLASS,
+}
+
+func setPriorityWindows(pid int, priority uint32) error {
+	handle, err := windows.OpenProcess(PROCESS_ALL_ACCESS, false, uint32(pid))
+	if err != nil {
+		return err
+	}
+	//nolint:errcheck
+	defer windows.CloseHandle(handle) // Technically this can fail, but we ignore it
+
+	err = windows.SetPriorityClass(handle, priority)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func main() {
@@ -84,6 +114,10 @@ func main() {
 			"debug.enabled",
 			"If true, windows_exporter will expose debug endpoints under /debug/pprof.",
 		).Default("false").Bool()
+		processPriority = app.Flag(
+			"process.priority",
+			"Priority of the exporter process. Higher priorities may improve exporter responsiveness during periods of system load. Can be one of [\"realtime\", \"high\", \"abovenormal\", \"normal\", \"belownormal\", \"low\"]",
+		).Default("normal").String()
 	)
 
 	winlogConfig := &winlog.Config{}
@@ -143,6 +177,16 @@ func main() {
 		}
 
 		return
+	}
+
+	// Only set process priority if a non-default and valid value has been set
+	if *processPriority != "normal" && priorityStringToInt[*processPriority] != 0 {
+		_ = level.Debug(logger).Log("msg", "setting process priority to "+*processPriority)
+		err = setPriorityWindows(os.Getpid(), priorityStringToInt[*processPriority])
+		if err != nil {
+			_ = level.Error(logger).Log("msg", "failed to set process priority", "err", err)
+			os.Exit(1)
+		}
 	}
 
 	if err = wmi.InitWbem(logger); err != nil {
