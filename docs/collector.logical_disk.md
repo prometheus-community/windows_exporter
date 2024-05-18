@@ -23,7 +23,7 @@ If given, a disk needs to *not* match the exclude regexp in order for the corres
 
 Name | Description | Type | Labels
 -----|-------------|------|-------
-`windows_logical_disk_info` | A metric with a constant '1' value labeled with logical disk information | gauge | `filesystem`,`serial_number`,`volume`,`volume_name`
+`windows_logical_disk_info` | A metric with a constant '1' value labeled with logical disk information | gauge | `disk`,`partition`,`filesystem`,`serial_number`,`volume`,`volume_name`
 `windows_logical_disk_requests_queued` | Number of requests outstanding on the disk at the time the performance data is collected | gauge | `volume`
 `windows_logical_disk_avg_read_requests_queued` | Average number of read requests that were queued for the selected disk during the sample interval | gauge | `volume`
 `windows_logical_disk_avg_write_requests_queued` | Average number of write requests that were queued for the selected disk during the sample interval | gauge | `volume`

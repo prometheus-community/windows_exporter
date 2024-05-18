@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/go-kit/log"
@@ -22,7 +23,12 @@ const (
 	FlagLogicalDiskVolumeExclude = "collector.logical_disk.volume-exclude"
 	FlagLogicalDiskVolumeInclude = "collector.logical_disk.volume-include"
 
-	win32DiskQuery = "SELECT VolumeName,DeviceID,FileSystem,VolumeSerialNumber FROM WIN32_LogicalDisk"
+	win32LogicalDiskQuery            = "SELECT VolumeName,DeviceID,FileSystem,VolumeSerialNumber FROM WIN32_LogicalDisk"
+	win32LogicalDiskToPartitionQuery = "SELECT Antecedent, Dependent FROM Win32_LogicalDiskToPartition"
+)
+
+var (
+	reDiskID = regexp.MustCompile(`Disk #([0-9]+), Partition #([0-9]+)`)
 )
 
 type Win32_LogicalDisk struct {
@@ -30,6 +36,11 @@ type Win32_LogicalDisk struct {
 	VolumeSerialNumber string
 	DeviceID           string
 	FileSystem         string
+}
+
+type Win32_LogicalDiskToPartition struct {
+	Antecedent string
+	Dependent  string
 }
 
 type Config struct {
@@ -115,7 +126,7 @@ func (c *collector) Build() error {
 	c.Information = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "info"),
 		"A metric with a constant '1' value labeled with logical disk information",
-		[]string{"volume", "volume_name", "filesystem", "serial_number"},
+		[]string{"disk", "partition", "volume", "volume_name", "filesystem", "serial_number"},
 		nil,
 	)
 	c.RequestsQueued = prometheus.NewDesc(
@@ -260,6 +271,8 @@ func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 type logicalDisk struct {
 	Name                    string
 	VolumeName              string
+	DiskID                  string
+	PartID                  string
 	CurrentDiskQueueLength  float64 `perflib:"Current Disk Queue Length"`
 	AvgDiskReadQueueLength  float64 `perflib:"Avg. Disk Read Queue Length"`
 	AvgDiskWriteQueueLength float64 `perflib:"Avg. Disk Write Queue Length"`
@@ -280,11 +293,18 @@ type logicalDisk struct {
 
 func (c *collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	var dst_Win32_LogicalDisk []Win32_LogicalDisk
+	var dst_Win32_LogicalDiskToPartition []Win32_LogicalDiskToPartition
 
-	if err := wmi.Query(win32DiskQuery, &dst_Win32_LogicalDisk); err != nil {
+	if err := wmi.Query(win32LogicalDiskQuery, &dst_Win32_LogicalDisk); err != nil {
 		return err
 	}
 	if len(dst_Win32_LogicalDisk) == 0 {
+		return errors.New("WMI query returned empty result set")
+	}
+	if err := wmi.Query(win32LogicalDiskToPartitionQuery, &dst_Win32_LogicalDiskToPartition); err != nil {
+		return err
+	}
+	if len(dst_Win32_LogicalDiskToPartition) == 0 {
 		return errors.New("WMI query returned empty result set")
 	}
 
@@ -292,6 +312,8 @@ func (c *collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 		filesystem   string
 		serialNumber string
 		volumeName   string
+		diskID       string
+		partID       string
 		dst          []logicalDisk
 	)
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["LogicalDisk"], &dst, c.logger); err != nil {
@@ -308,6 +330,8 @@ func (c *collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 		filesystem = ""
 		serialNumber = ""
 		volumeName = ""
+		diskID = "-1"
+		partID = "-1"
 
 		for _, logicalDisk := range dst_Win32_LogicalDisk {
 			if logicalDisk.DeviceID == volume.Name {
@@ -319,10 +343,26 @@ func (c *collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 			}
 		}
 
+		for _, logicalDisk := range dst_Win32_LogicalDiskToPartition {
+			if strings.HasSuffix(logicalDisk.Dependent, volume.Name+`"`) {
+				ret := reDiskID.FindStringSubmatch(logicalDisk.Antecedent)
+				if len(ret) == 3 {
+					diskID = ret[1]
+					partID = ret[2]
+				} else {
+					_ = level.Warn(c.logger).Log("msg", "failed to parse disk ID", "antecedent", logicalDisk.Antecedent)
+				}
+
+				break
+			}
+		}
+
 		ch <- prometheus.MustNewConstMetric(
 			c.Information,
 			prometheus.GaugeValue,
 			1,
+			diskID,
+			partID,
 			volume.Name,
 			volumeName,
 			filesystem,
