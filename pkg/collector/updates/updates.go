@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"runtime"
+	"sync"
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
@@ -35,8 +36,11 @@ var ConfigDefaults = Config{
 type collector struct {
 	logger log.Logger
 
+	mu            sync.Mutex
 	cacheDuration *time.Duration
 	lastScrape    time.Time
+
+	updates availableUpdateCount
 
 	update *prometheus.Desc
 }
@@ -89,11 +93,17 @@ func (c *collector) GetName() string { return Name }
 func (c *collector) GetPerfCounter() ([]string, error) { return []string{}, nil }
 
 func (c *collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric) error {
-	updates, err := c.getUpdates()
+	var err error
 
-	if err != nil {
-		_ = level.Error(c.logger).Log("msg", "failed to collect printer status metrics", "err", err)
-		return err
+	if time.Since(c.lastScrape) > *c.cacheDuration {
+		c.updates, err = c.getUpdates()
+
+		if err != nil {
+			_ = level.Error(c.logger).Log("msg", "failed to collect printer status metrics", "err", err)
+			return err
+		}
+
+		c.lastScrape = time.Now()
 	}
 
 	/*
@@ -108,9 +118,6 @@ func (c *collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric)
 		}
 
 	*/
-
-	_ = updates
-
 	return nil
 }
 
