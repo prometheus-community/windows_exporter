@@ -95,6 +95,9 @@ func (c *collector) GetPerfCounter() ([]string, error) { return []string{}, nil 
 func (c *collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	var err error
 
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	if time.Since(c.lastScrape) > *c.cacheDuration {
 		c.updates, err = c.getUpdates()
 
