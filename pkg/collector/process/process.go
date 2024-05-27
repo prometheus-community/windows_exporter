@@ -278,10 +278,14 @@ type WorkerProcess struct {
 
 func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	data := make([]perflibProcess, 0)
-	processMap := getUserProcess()
 	err := perflib.UnmarshalObject(ctx.PerfObjects["Process"], &data, c.logger)
 	if err != nil {
 		return err
+	}
+
+	processMap, err := getUserProcess()
+	if err != nil {
+		_ = level.Warn(c.logger).Log("msg", "Could not query users for processes", "err", err)
 	}
 
 	var dst_wp []WorkerProcess
@@ -312,6 +316,11 @@ func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 			}
 		}
 
+		user, exists := processMap[pid]
+		if !exists {
+			user = "unknown"
+		}
+
 		ch <- prometheus.MustNewConstMetric(
 			c.StartTime,
 			prometheus.GaugeValue,
@@ -319,7 +328,7 @@ func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 			processName,
 			pid,
 			cpid,
-			processMap[pid],
+			user,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -329,7 +338,7 @@ func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 			processName,
 			pid,
 			cpid,
-			processMap[pid],
+			user,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -340,7 +349,7 @@ func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 			pid,
 			cpid,
 			"privileged",
-			processMap[pid],
+			user,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -351,7 +360,7 @@ func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 			pid,
 			cpid,
 			"user",
-			processMap[pid],
+			user,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -362,7 +371,7 @@ func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 			pid,
 			cpid,
 			"other",
-			processMap[pid],
+			user,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -373,7 +382,7 @@ func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 			pid,
 			cpid,
 			"other",
-			processMap[pid],
+			user,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -384,7 +393,7 @@ func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 			pid,
 			cpid,
 			"read",
-			processMap[pid],
+			user,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -395,7 +404,7 @@ func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 			pid,
 			cpid,
 			"read",
-			processMap[pid],
+			user,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -406,7 +415,7 @@ func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 			pid,
 			cpid,
 			"write",
-			processMap[pid],
+			user,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -417,7 +426,7 @@ func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 			pid,
 			cpid,
 			"write",
-			processMap[pid],
+			user,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -427,7 +436,7 @@ func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 			processName,
 			pid,
 			cpid,
-			processMap[pid],
+			user,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -437,7 +446,7 @@ func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 			processName,
 			pid,
 			cpid,
-			processMap[pid],
+			user,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -448,7 +457,7 @@ func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 			pid,
 			cpid,
 			"nonpaged",
-			processMap[pid],
+			user,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -459,7 +468,7 @@ func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 			pid,
 			cpid,
 			"paged",
-			processMap[pid],
+			user,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -469,7 +478,7 @@ func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 			processName,
 			pid,
 			cpid,
-			processMap[pid],
+			user,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -479,7 +488,7 @@ func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 			processName,
 			pid,
 			cpid,
-			processMap[pid],
+			user,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -489,7 +498,7 @@ func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 			processName,
 			pid,
 			cpid,
-			processMap[pid],
+			user,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -499,7 +508,7 @@ func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 			processName,
 			pid,
 			cpid,
-			processMap[pid],
+			user,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -509,7 +518,7 @@ func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 			processName,
 			pid,
 			cpid,
-			processMap[pid],
+			user,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -519,7 +528,7 @@ func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 			processName,
 			pid,
 			cpid,
-			processMap[pid],
+			user,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -529,14 +538,14 @@ func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 			processName,
 			pid,
 			cpid,
-			processMap[pid],
+			user,
 		)
 	}
 
 	return nil
 }
 
-func getUserProcess() map[string]string {
+func getUserProcess() (map[string]string, error) {
 	processMap := make(map[string]string)
 
 	var users []Win32_LoggedOnUser
@@ -544,12 +553,12 @@ func getUserProcess() map[string]string {
 
 	err := wmi.Query(win32LoggedOnUserQuery, &users)
 	if err != nil {
-		fmt.Println(err)
+		return nil, fmt.Errorf("failed to query Win32_LoggedOnUser: %w", err)
 	}
 
 	err = wmi.Query(win32SessionProcessQuery, &sessionProcesses)
 	if err != nil {
-		fmt.Println(err)
+		return nil, fmt.Errorf("failed to query Win32_SessionProcess: %w", err)
 	}
 
 	for _, sesessionProcess := range sessionProcesses {
@@ -557,17 +566,24 @@ func getUserProcess() map[string]string {
 			if user.Dependent == sesessionProcess.Antecedent {
 
 				match := re.FindStringSubmatch(user.Antecedent)
+				if len(match) < 3 {
+					continue
+				}
 				domain := match[1]
 				name := match[2]
 				fullname := fmt.Sprintf("%s\\%s", domain, name)
 
 				matchps := reps.FindStringSubmatch(sesessionProcess.Dependent)
+				if len(matchps) < 2 {
+					continue
+				}
 				number := matchps[1]
 
 				processMap[number] = fullname
+				break
 			}
 		}
 	}
 
-	return processMap
+	return processMap, nil
 }
