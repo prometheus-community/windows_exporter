@@ -39,6 +39,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/collector/nps"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/os"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/physical_disk"
+	"github.com/prometheus-community/windows_exporter/pkg/collector/printer"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/process"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/remote_fx"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/scheduled_task"
@@ -99,6 +100,7 @@ var Map = map[string]types.CollectorBuilderWithFlags{
 	nps.Name:                             nps.NewWithFlags,
 	os.Name:                              os.NewWithFlags,
 	physical_disk.Name:                   physical_disk.NewWithFlags,
+	printer.Name:                         printer.NewWithFlags,
 	process.Name:                         process.NewWithFlags,
 	remote_fx.Name:                       remote_fx.NewWithFlags,
 	scheduled_task.Name:                  scheduled_task.NewWithFlags,

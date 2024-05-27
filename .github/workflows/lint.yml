@@ -30,8 +30,8 @@ jobs:
   test:
     runs-on: windows-2019
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-go@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
           go-version-file: 'go.mod'
 
@@ -53,8 +53,8 @@ jobs:
   promtool:
     runs-on: windows-2019
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-go@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
           go-version-file: 'go.mod'
 
@@ -92,8 +92,8 @@ jobs:
           git config --global core.autocrlf false
           git config --global core.eol lf
 
-      - uses: actions/checkout@v3
-      - uses: actions/setup-go@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
           go-version-file: 'go.mod'
 
@@ -102,10 +102,3 @@ jobs:
         with:
           version: v1.58
           args: "--timeout=5m --out-format github-actions,colored-line-number"
-
-      # golangci-lint action doesn't always provide helpful output, so re-run without the action for
-      # better output of the problem.
-      # The cache from the golangci-lint step is re-used here, so this step should finish quickly.
-      - name: errors
-        if: ${{ failure() }}
-        run: golangci-lint run --timeout=5m -c .golangci.yaml
