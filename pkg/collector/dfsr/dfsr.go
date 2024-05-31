@@ -22,7 +22,7 @@ type Config struct {
 }
 
 var ConfigDefaults = Config{
-	DfsrEnabledCollectors: "",
+	DfsrEnabledCollectors: "connection,folder,volume",
 }
 
 // collector contains the metric and state data of the DFSR collectors.
