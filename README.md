@@ -154,10 +154,16 @@ msiexec /i <path-to-msi-file> ENABLED_COLLECTORS=os,service --% EXTRA_FLAGS="--c
 
 The windows_exporter can be run as a Docker container. The Docker image is available on 
 
-* [Docker Hub](https://hub.docker.com/r/prometheuscommunity/windows-exporter): `ghcr.io/prometheus-community/windows-exporter`
-* [GitHub Container Registry](https://github.com/prometheus-community/windows_exporter/pkgs/container/windows-exporter): `docker.io/prometheuscommunity/windows-exporter`
+* [Docker Hub](https://hub.docker.com/r/prometheuscommunity/windows-exporter): `docker.io/prometheuscommunity/windows-exporter`
+* [GitHub Container Registry](https://github.com/prometheus-community/windows_exporter/pkgs/container/windows-exporter): `ghcr.io/prometheus-community/windows-exporter`
 <!-- * [quay.io Registry](https://quay.io/repository/prometheuscommunity/windows-exporter): `quay.io/prometheuscommunity/windows-exporter` -->
 
+### Tags
+
+The Docker image is tagged with the version of the exporter. The `latest` tag is also available and points to the latest release.
+
+Additionally, a flavor `hostprocess` with `-hostprocess` as suffix is based on the https://github.com/microsoft/windows-host-process-containers-base-image
+which is designed to run as a Windows host process container. The size of that images is smaller than the default one.
 
 ## Kubernetes Implementation
 
