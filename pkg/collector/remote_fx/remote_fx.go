@@ -72,7 +72,7 @@ func (c *collector) SetLogger(logger log.Logger) {
 }
 
 func (c *collector) GetPerfCounter() ([]string, error) {
-	return []string{"RemoteFX Network"}, nil
+	return []string{"RemoteFX Network", "RemoteFX Graphics"}, nil
 }
 
 func (c *collector) Build() error {
