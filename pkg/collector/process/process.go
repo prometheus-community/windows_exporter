@@ -3,10 +3,13 @@
 package process
 
 import (
+	"errors"
 	"fmt"
+	"golang.org/x/sys/windows"
 	"regexp"
 	"strconv"
 	"strings"
+	"syscall"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/go-kit/log"
@@ -19,39 +22,25 @@ import (
 )
 
 const (
-	Name                     = "process"
-	FlagProcessExclude       = "collector.process.exclude"
-	FlagProcessInclude       = "collector.process.include"
-	FlagEnableWorkerProcess  = "collector.process.iis"
-	win32LoggedOnUserQuery   = "SELECT Antecedent, Dependent FROM Win32_LoggedOnUser"
-	win32SessionProcessQuery = "SELECT Antecedent, Dependent FROM Win32_SessionProcess"
+	Name                    = "process"
+	FlagProcessExclude      = "collector.process.exclude"
+	FlagProcessInclude      = "collector.process.include"
+	FlagEnableWorkerProcess = "collector.process.iis"
+	FlagEnableReportOwner   = "collector.process.report-owner"
 )
 
 type Config struct {
 	ProcessInclude      string `yaml:"process_include"`
 	ProcessExclude      string `yaml:"process_exclude"`
 	EnableWorkerProcess bool   `yaml:"enable_iis_worker_process"`
+	EnableReportOwner   bool   `yaml:"enable_report_owner"`
 }
 
 var ConfigDefaults = Config{
 	ProcessInclude:      ".+",
 	ProcessExclude:      "",
 	EnableWorkerProcess: false,
-}
-
-var (
-	re   = regexp.MustCompile(`Domain="(.+?)",Name="(.+?)"`)
-	reps = regexp.MustCompile(`Handle="(\d+)"`)
-)
-
-type Win32_LoggedOnUser struct {
-	Antecedent string
-	Dependent  string
-}
-
-type Win32_SessionProcess struct {
-	Antecedent string
-	Dependent  string
+	EnableReportOwner:   false,
 }
 
 type collector struct {
@@ -61,6 +50,7 @@ type collector struct {
 	processExclude *string
 
 	enableWorkerProcess *bool
+	enableReportOwner   *bool
 
 	StartTime         *prometheus.Desc
 	CPUTimeTotal      *prometheus.Desc
@@ -80,6 +70,8 @@ type collector struct {
 
 	processIncludePattern *regexp.Regexp
 	processExcludePattern *regexp.Regexp
+
+	lookupCache map[string]string
 }
 
 func New(logger log.Logger, config *Config) types.Collector {
@@ -112,6 +104,11 @@ func NewWithFlags(app *kingpin.Application) types.Collector {
 			FlagEnableWorkerProcess,
 			"Enable IIS worker process name queries. May cause the collector to leak memory.",
 		).Default("false").Bool(),
+
+		enableReportOwner: app.Flag(
+			FlagEnableReportOwner,
+			"Enable reporting of process owner.",
+		).Default("false").Bool(),
 	}
 	return c
 }
@@ -133,96 +130,103 @@ func (c *collector) Build() error {
 		_ = level.Warn(c.logger).Log("msg", "No filters specified for process collector. This will generate a very large number of metrics!")
 	}
 
+	commonLabels := make([]string, 0)
+	if *c.enableReportOwner {
+		commonLabels = []string{"owner"}
+	}
+
 	c.StartTime = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "start_time"),
 		"Time of process start.",
-		[]string{"process", "process_id", "creating_process_id", "user"},
+		append(commonLabels, "process", "process_id", "creating_process_id"),
 		nil,
 	)
 	c.CPUTimeTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "cpu_time_total"),
 		"Returns elapsed time that all of the threads of this process used the processor to execute instructions by mode (privileged, user).",
-		[]string{"process", "process_id", "creating_process_id", "mode", "user"},
+		append(commonLabels, "process", "process_id", "creating_process_id", "mode"),
 		nil,
 	)
 	c.HandleCount = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "handles"),
 		"Total number of handles the process has open. This number is the sum of the handles currently open by each thread in the process.",
-		[]string{"process", "process_id", "creating_process_id", "user"},
+		append(commonLabels, "process", "process_id", "creating_process_id"),
 		nil,
 	)
 	c.IOBytesTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "io_bytes_total"),
 		"Bytes issued to I/O operations in different modes (read, write, other).",
-		[]string{"process", "process_id", "creating_process_id", "mode", "user"},
+		append(commonLabels, "process", "process_id", "creating_process_id", "mode"),
 		nil,
 	)
 	c.IOOperationsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "io_operations_total"),
 		"I/O operations issued in different modes (read, write, other).",
-		[]string{"process", "process_id", "creating_process_id", "mode", "user"},
+		append(commonLabels, "process", "process_id", "creating_process_id", "mode"),
 		nil,
 	)
 	c.PageFaultsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "page_faults_total"),
 		"Page faults by the threads executing in this process.",
-		[]string{"process", "process_id", "creating_process_id", "user"},
+		append(commonLabels, "process", "process_id", "creating_process_id"),
 		nil,
 	)
 	c.PageFileBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "page_file_bytes"),
 		"Current number of bytes this process has used in the paging file(s).",
-		[]string{"process", "process_id", "creating_process_id", "user"},
+		append(commonLabels, "process", "process_id", "creating_process_id"),
 		nil,
 	)
 	c.PoolBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "pool_bytes"),
 		"Pool Bytes is the last observed number of bytes in the paged or nonpaged pool.",
-		[]string{"process", "process_id", "creating_process_id", "pool", "user"},
+		append(commonLabels, "process", "process_id", "creating_process_id", "pool"),
 		nil,
 	)
 	c.PriorityBase = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "priority_base"),
 		"Current base priority of this process. Threads within a process can raise and lower their own base priority relative to the process base priority of the process.",
-		[]string{"process", "process_id", "creating_process_id", "user"},
+		append(commonLabels, "process", "process_id", "creating_process_id"),
 		nil,
 	)
 	c.PrivateBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "private_bytes"),
 		"Current number of bytes this process has allocated that cannot be shared with other processes.",
-		[]string{"process", "process_id", "creating_process_id", "user"},
+		append(commonLabels, "process", "process_id", "creating_process_id"),
 		nil,
 	)
 	c.ThreadCount = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "threads"),
 		"Number of threads currently active in this process.",
-		[]string{"process", "process_id", "creating_process_id", "user"},
+		append(commonLabels, "process", "process_id", "creating_process_id"),
 		nil,
 	)
 	c.VirtualBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "virtual_bytes"),
 		"Current size, in bytes, of the virtual address space that the process is using.",
-		[]string{"process", "process_id", "creating_process_id", "user"},
+		append(commonLabels, "process", "process_id", "creating_process_id"),
 		nil,
 	)
 	c.WorkingSetPrivate = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "working_set_private_bytes"),
 		"Size of the working set, in bytes, that is use for this process only and not shared nor shareable by other processes.",
-		[]string{"process", "process_id", "creating_process_id", "user"},
+		append(commonLabels, "process", "process_id", "creating_process_id"),
 		nil,
 	)
 	c.WorkingSetPeak = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "working_set_peak_bytes"),
 		"Maximum size, in bytes, of the Working Set of this process at any point in time. The Working Set is the set of memory pages touched recently by the threads in the process.",
-		[]string{"process", "process_id", "creating_process_id", "user"},
+		append(commonLabels, "process", "process_id", "creating_process_id"),
 		nil,
 	)
 	c.WorkingSet = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "working_set_bytes"),
 		"Maximum number of bytes in the working set of this process at any point in time. The working set is the set of memory pages touched recently by the threads in the process.",
-		[]string{"process", "process_id", "creating_process_id", "user"},
+		append(commonLabels, "process", "process_id", "creating_process_id"),
 		nil,
 	)
+
+	c.lookupCache = make(map[string]string)
 
 	var err error
 
@@ -283,11 +287,6 @@ func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 		return err
 	}
 
-	processMap, err := getUserProcess()
-	if err != nil {
-		_ = level.Warn(c.logger).Log("msg", "Could not query users for processes", "err", err)
-	}
-
 	var dst_wp []WorkerProcess
 	if *c.enableWorkerProcess {
 		q_wp := wmi.QueryAll(&dst_wp, c.logger)
@@ -295,6 +294,8 @@ func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 			_ = level.Debug(c.logger).Log("msg", "Could not query WebAdministration namespace for IIS worker processes", "err", err)
 		}
 	}
+
+	var owner string
 
 	for _, process := range data {
 		if process.Name == "_Total" ||
@@ -316,274 +317,204 @@ func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 			}
 		}
 
-		user, exists := processMap[pid]
-		if !exists {
-			user = "unknown"
+		labels := make([]string, 0, 4)
+
+		if *c.enableReportOwner {
+			owner, err = c.getProcessOwner(int(process.IDProcess))
+			if err != nil {
+				owner = "unknown"
+			}
+
+			labels = []string{owner}
 		}
+
+		labels = append(labels, processName, pid, cpid)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.StartTime,
 			prometheus.GaugeValue,
 			process.ElapsedTime,
-			processName,
-			pid,
-			cpid,
-			user,
+			labels...,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.HandleCount,
 			prometheus.GaugeValue,
 			process.HandleCount,
-			processName,
-			pid,
-			cpid,
-			user,
+			labels...,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.CPUTimeTotal,
 			prometheus.CounterValue,
 			process.PercentPrivilegedTime,
-			processName,
-			pid,
-			cpid,
-			"privileged",
-			user,
+			append(labels, "privileged")...,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.CPUTimeTotal,
 			prometheus.CounterValue,
 			process.PercentUserTime,
-			processName,
-			pid,
-			cpid,
-			"user",
-			user,
+			append(labels, "user")...,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.IOBytesTotal,
 			prometheus.CounterValue,
 			process.IOOtherBytesPerSec,
-			processName,
-			pid,
-			cpid,
-			"other",
-			user,
+			append(labels, "other")...,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.IOOperationsTotal,
 			prometheus.CounterValue,
 			process.IOOtherOperationsPerSec,
-			processName,
-			pid,
-			cpid,
-			"other",
-			user,
+			append(labels, "other")...,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.IOBytesTotal,
 			prometheus.CounterValue,
 			process.IOReadBytesPerSec,
-			processName,
-			pid,
-			cpid,
-			"read",
-			user,
+			append(labels, "read")...,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.IOOperationsTotal,
 			prometheus.CounterValue,
 			process.IOReadOperationsPerSec,
-			processName,
-			pid,
-			cpid,
-			"read",
-			user,
+			append(labels, "read")...,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.IOBytesTotal,
 			prometheus.CounterValue,
 			process.IOWriteBytesPerSec,
-			processName,
-			pid,
-			cpid,
-			"write",
-			user,
+			append(labels, "write")...,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.IOOperationsTotal,
 			prometheus.CounterValue,
 			process.IOWriteOperationsPerSec,
-			processName,
-			pid,
-			cpid,
-			"write",
-			user,
+			append(labels, "write")...,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.PageFaultsTotal,
 			prometheus.CounterValue,
 			process.PageFaultsPerSec,
-			processName,
-			pid,
-			cpid,
-			user,
+			labels...,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.PageFileBytes,
 			prometheus.GaugeValue,
 			process.PageFileBytes,
-			processName,
-			pid,
-			cpid,
-			user,
+			labels...,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.PoolBytes,
 			prometheus.GaugeValue,
 			process.PoolNonpagedBytes,
-			processName,
-			pid,
-			cpid,
-			"nonpaged",
-			user,
+			append(labels, "nonpaged")...,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.PoolBytes,
 			prometheus.GaugeValue,
 			process.PoolPagedBytes,
-			processName,
-			pid,
-			cpid,
-			"paged",
-			user,
+			append(labels, "paged")...,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.PriorityBase,
 			prometheus.GaugeValue,
 			process.PriorityBase,
-			processName,
-			pid,
-			cpid,
-			user,
+			labels...,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.PrivateBytes,
 			prometheus.GaugeValue,
 			process.PrivateBytes,
-			processName,
-			pid,
-			cpid,
-			user,
+			labels...,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.ThreadCount,
 			prometheus.GaugeValue,
 			process.ThreadCount,
-			processName,
-			pid,
-			cpid,
-			user,
+			labels...,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.VirtualBytes,
 			prometheus.GaugeValue,
 			process.VirtualBytes,
-			processName,
-			pid,
-			cpid,
-			user,
+			labels...,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.WorkingSetPrivate,
 			prometheus.GaugeValue,
 			process.WorkingSetPrivate,
-			processName,
-			pid,
-			cpid,
-			user,
+			labels...,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.WorkingSetPeak,
 			prometheus.GaugeValue,
 			process.WorkingSetPeak,
-			processName,
-			pid,
-			cpid,
-			user,
+			labels...,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.WorkingSet,
 			prometheus.GaugeValue,
 			process.WorkingSet,
-			processName,
-			pid,
-			cpid,
-			user,
+			labels...,
 		)
 	}
 
 	return nil
 }
 
-func getUserProcess() (map[string]string, error) {
-	processMap := make(map[string]string)
+// ref: https://github.com/microsoft/hcsshim/blob/8beabacfc2d21767a07c20f8dd5f9f3932dbf305/internal/uvm/stats.go#L25
+func (c *collector) getProcessOwner(pid int) (string, error) {
+	p, err := windows.OpenProcess(windows.PROCESS_QUERY_LIMITED_INFORMATION, false, uint32(pid))
+	if errors.Is(err, syscall.Errno(0x57)) { // invalid parameter, for PIDs that don't exist
+		return "", errors.New("process not found")
+	}
 
-	var users []Win32_LoggedOnUser
-	var sessionProcesses []Win32_SessionProcess
-
-	err := wmi.Query(win32LoggedOnUserQuery, &users)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query Win32_LoggedOnUser: %w", err)
+		return "", fmt.Errorf("OpenProcess: %T %w", err, err)
 	}
 
-	err = wmi.Query(win32SessionProcessQuery, &sessionProcesses)
+	defer windows.Close(p)
+
+	var tok windows.Token
+	if err = windows.OpenProcessToken(p, windows.TOKEN_QUERY, &tok); err != nil {
+		return "", fmt.Errorf("OpenProcessToken: %w", err)
+	}
+
+	tokenUser, err := tok.GetTokenUser()
 	if err != nil {
-		return nil, fmt.Errorf("failed to query Win32_SessionProcess: %w", err)
+		return "", fmt.Errorf("GetTokenUser: %w", err)
 	}
 
-	for _, sesessionProcess := range sessionProcesses {
-		for _, user := range users {
-			if user.Dependent == sesessionProcess.Antecedent {
-
-				match := re.FindStringSubmatch(user.Antecedent)
-				if len(match) < 3 {
-					continue
-				}
-				domain := match[1]
-				name := match[2]
-				fullname := fmt.Sprintf("%s\\%s", domain, name)
-
-				matchps := reps.FindStringSubmatch(sesessionProcess.Dependent)
-				if len(matchps) < 2 {
-					continue
-				}
-				number := matchps[1]
-
-				processMap[number] = fullname
-				break
-			}
-		}
+	sid := tokenUser.User.Sid.String()
+	if owner, ok := c.lookupCache[sid]; ok {
+		return owner, nil
 	}
 
-	return processMap, nil
+	account, domain, _, err := tokenUser.User.Sid.LookupAccount("")
+	if err != nil {
+		c.lookupCache[sid] = sid
+	} else {
+		c.lookupCache[sid] = fmt.Sprintf(`%s\%s`, account, domain)
+	}
+
+	return c.lookupCache[sid], nil
 }
