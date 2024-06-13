@@ -17,6 +17,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/collector/fsrmquota"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/hyperv"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/iis"
+	"github.com/prometheus-community/windows_exporter/pkg/collector/license"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/logical_disk"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/logon"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/memory"
@@ -78,6 +79,7 @@ var Map = map[string]types.CollectorBuilderWithFlags{
 	fsrmquota.Name:                       fsrmquota.NewWithFlags,
 	hyperv.Name:                          hyperv.NewWithFlags,
 	iis.Name:                             iis.NewWithFlags,
+	license.Name:                         license.NewWithFlags,
 	logical_disk.Name:                    logical_disk.NewWithFlags,
 	logon.Name:                           logon.NewWithFlags,
 	memory.Name:                          memory.NewWithFlags,
