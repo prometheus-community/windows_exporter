@@ -16,6 +16,7 @@ Name     | Description | Enabled by default
 [cpu_info](docs/collector.cpu_info.md) | CPU Information |
 [cs](docs/collector.cs.md) | "Computer System" metrics (system properties, num cpus/total memory) | &#10003;
 [container](docs/collector.container.md) | Container metrics |
+[diskdrive](docs/collector.diskdrive.md) | Diskdrive metrics |
 [dfsr](docs/collector.dfsr.md) | DFSR metrics |
 [dhcp](docs/collector.dhcp.md) | DHCP Server |
 [dns](docs/collector.dns.md) | DNS Server |
