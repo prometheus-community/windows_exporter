@@ -2,11 +2,9 @@
 
 The service collector exposes metrics about Windows Services
 
-|||
--|-
-Metric name prefix  | `service`
-Classes             | [`Win32_Service`](https://msdn.microsoft.com/en-us/library/aa394418(v=vs.85).aspx)
-Enabled by default? | Yes
+The collector exists in 2 different version. Version 1 is using WMI to query all services and is able to provide additional
+information. Version 2 is a more efficient solution by directly connecting to the service manager, but is not able to
+provide additional information like `run_as` or start configuration
 
 ## Flags
 
@@ -21,6 +19,19 @@ Example config win_exporter.yml for multiple services: `services-where: Name='SQ
 ### `--collector.service.use-api`
 
 Uses API calls instead of WMI for performance optimization. **Note** the previous flag (`--collector.service.services-where`) won't have any effect on this mode.
+
+### `--collector.service.v2`
+
+Version 2 of the service collector. Is using API calls for performance optimization. **Note** the previous flag (`--collector.service.services-where`) won't have any effect on this mode.
+For additional performance reasons, it doesn't provide any additional information like `run_as` or start configuration.
+
+# collector V1
+
+|||
+-|-
+Metric name prefix  | `service`
+Classes             | [`Win32_Service`](https://msdn.microsoft.com/en-us/library/aa394418(v=vs.85).aspx)
+Enabled by default? | Yes
 
 ## Metrics
 
@@ -91,6 +102,53 @@ Counts the number of Microsoft SQL Server/Agent Processes
 count(windows_service_state{exported_name=~"(sqlserveragent|mssqlserver)",state="running"})
 ```
 
+# collector V2
+
+
+|||
+-|-
+Metric name prefix  | `service`
+Classes             | none
+Enabled by default? | No
+
+
+## Metrics
+
+Name | Description | Type | Labels
+-----|-------------|------|-------
+`windows_service_state` | The state of the service, 1 if the current state, 0 otherwise | gauge | name, display_name, state
+
+### States
+
+A service can be in the following states:
+- `stopped`
+- `start pending`
+- `stop pending`
+- `running`
+- `continue pending`
+- `pause pending`
+- `paused`
+- `unknown`
+
+### Example metric
+
+```
+windows_service_state{display_name="Declared Configuration(DC) service",name="dcsvc",status="continue pending"} 0
+windows_service_state{display_name="Declared Configuration(DC) service",name="dcsvc",status="pause pending"} 0
+windows_service_state{display_name="Declared Configuration(DC) service",name="dcsvc",status="paused"} 0
+windows_service_state{display_name="Declared Configuration(DC) service",name="dcsvc",status="running"} 0
+windows_service_state{display_name="Declared Configuration(DC) service",name="dcsvc",status="start pending"} 0
+windows_service_state{display_name="Declared Configuration(DC) service",name="dcsvc",status="stop pending"} 0
+windows_service_state{display_name="Declared Configuration(DC) service",name="dcsvc",status="stopped"} 1
+```
+
+## Useful queries
+Counts the number of Microsoft SQL Server/Agent Processes
+
+```
+count(windows_service_state{name=~"(sqlserveragent|mssqlserver)",state="running"})
+```
+
 ## Alerting examples
 **prometheus.rules**
 ```yaml
@@ -100,7 +158,7 @@ groups:
 
   # Sends an alert when the 'sqlserveragent' service is not in the running state for 3 minutes.
   - alert: SQL Server Agent DOWN
-    expr: windows_service_state{instance="SQL",exported_name="sqlserveragent",state="running"} == 0
+    expr: windows_service_state{instance="SQL",name="sqlserveragent",state="running"} == 0
     for: 3m
     labels:
       severity: high
@@ -110,7 +168,7 @@ groups:
 
   # Sends an alert when the 'mssqlserver' service is not in the running state for 3 minutes.
   - alert: SQL Server DOWN
-    expr: windows_service_state{instance="SQL",exported_name="mssqlserver",state="running"} == 0
+    expr: windows_service_state{instance="SQL",name="mssqlserver",state="running"} == 0
     for: 3m
     labels:
       severity: high
