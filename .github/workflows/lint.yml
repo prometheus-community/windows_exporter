@@ -30,8 +30,8 @@ jobs:
   test:
     runs-on: windows-2019
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-go@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
           go-version-file: 'go.mod'
 
@@ -44,7 +44,6 @@ jobs:
           Expand-Archive -Path promu-$($Env:PROMU_VER).windows-amd64.zip -DestinationPath .
           Copy-Item -Path promu-$($Env:PROMU_VER).windows-amd64\promu.exe -Destination "$(go env GOPATH)\bin"
 
-          go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.2.0
           # GOPATH\bin dir must be appended to PATH else the `promu` command won't be found
           echo "$(go env GOPATH)\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
@@ -54,8 +53,8 @@ jobs:
   promtool:
     runs-on: windows-2019
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-go@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
           go-version-file: 'go.mod'
 
@@ -69,8 +68,6 @@ jobs:
           Expand-Archive -Path promu-$($Env:PROMU_VER).windows-amd64.zip -DestinationPath .
           Copy-Item -Path promu-$($Env:PROMU_VER).windows-amd64\promu.exe -Destination "$(go env GOPATH)\bin"
 
-          # No binaries available so build from source
-          go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.2.0
           # GOPATH\bin dir must be appended to PATH else the `promu` command won't be found
           echo "$(go env GOPATH)\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
@@ -95,20 +92,13 @@ jobs:
           git config --global core.autocrlf false
           git config --global core.eol lf
 
-      - uses: actions/checkout@v3
-      - uses: actions/setup-go@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
           go-version-file: 'go.mod'
 
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3
+        uses: golangci/golangci-lint-action@v6
         with:
-          version: v1.55.2
-          args: "--timeout=5m"
-
-      # golangci-lint action doesn't always provide helpful output, so re-run without the action for
-      # better output of the problem.
-      # The cache from the golangci-lint step is re-used here, so this step should finish quickly.
-      - name: errors
-        if: ${{ failure() }}
-        run: golangci-lint run --timeout=5m -c .golangci.yaml
+          version: v1.58
+          args: "--timeout=5m --out-format github-actions,colored-line-number"

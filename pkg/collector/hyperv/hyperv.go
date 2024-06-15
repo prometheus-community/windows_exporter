@@ -743,63 +743,63 @@ func (c *collector) Build() error {
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric) error {
-	if desc, err := c.collectVmHealth(ch); err != nil {
-		_ = level.Error(c.logger).Log("msg", "failed collecting hyperV health status metrics", "desc", desc, "err", err)
+	if err := c.collectVmHealth(ch); err != nil {
+		_ = level.Error(c.logger).Log("msg", "failed collecting hyperV health status metrics", "err", err)
 		return err
 	}
 
-	if desc, err := c.collectVmVid(ch); err != nil {
-		_ = level.Error(c.logger).Log("msg", "failed collecting hyperV pages metrics", "desc", desc, "err", err)
+	if err := c.collectVmVid(ch); err != nil {
+		_ = level.Error(c.logger).Log("msg", "failed collecting hyperV pages metrics", "err", err)
 		return err
 	}
 
-	if desc, err := c.collectVmHv(ch); err != nil {
-		_ = level.Error(c.logger).Log("msg", "failed collecting hyperV hv status metrics", "desc", desc, "err", err)
+	if err := c.collectVmHv(ch); err != nil {
+		_ = level.Error(c.logger).Log("msg", "failed collecting hyperV hv status metrics", "err", err)
 		return err
 	}
 
-	if desc, err := c.collectVmProcessor(ch); err != nil {
-		_ = level.Error(c.logger).Log("msg", "failed collecting hyperV processor metrics", "desc", desc, "err", err)
+	if err := c.collectVmProcessor(ch); err != nil {
+		_ = level.Error(c.logger).Log("msg", "failed collecting hyperV processor metrics", "err", err)
 		return err
 	}
 
-	if desc, err := c.collectHostLPUsage(ch); err != nil {
-		_ = level.Error(c.logger).Log("msg", "failed collecting hyperV host logical processors metrics", "desc", desc, "err", err)
+	if err := c.collectHostLPUsage(ch); err != nil {
+		_ = level.Error(c.logger).Log("msg", "failed collecting hyperV host logical processors metrics", "err", err)
 		return err
 	}
 
-	if desc, err := c.collectHostCpuUsage(ch); err != nil {
-		_ = level.Error(c.logger).Log("msg", "failed collecting hyperV host CPU metrics", "desc", desc, "err", err)
+	if err := c.collectHostCpuUsage(ch); err != nil {
+		_ = level.Error(c.logger).Log("msg", "failed collecting hyperV host CPU metrics", "err", err)
 		return err
 	}
 
-	if desc, err := c.collectVmCpuUsage(ch); err != nil {
-		_ = level.Error(c.logger).Log("msg", "failed collecting hyperV VM CPU metrics", "desc", desc, "err", err)
+	if err := c.collectVmCpuUsage(ch); err != nil {
+		_ = level.Error(c.logger).Log("msg", "failed collecting hyperV VM CPU metrics", "err", err)
 		return err
 	}
 
-	if desc, err := c.collectVmSwitch(ch); err != nil {
-		_ = level.Error(c.logger).Log("msg", "failed collecting hyperV switch metrics", "desc", desc, "err", err)
+	if err := c.collectVmSwitch(ch); err != nil {
+		_ = level.Error(c.logger).Log("msg", "failed collecting hyperV switch metrics", "err", err)
 		return err
 	}
 
-	if desc, err := c.collectVmEthernet(ch); err != nil {
-		_ = level.Error(c.logger).Log("msg", "failed collecting hyperV ethernet metrics", "desc", desc, "err", err)
+	if err := c.collectVmEthernet(ch); err != nil {
+		_ = level.Error(c.logger).Log("msg", "failed collecting hyperV ethernet metrics", "err", err)
 		return err
 	}
 
-	if desc, err := c.collectVmStorage(ch); err != nil {
-		_ = level.Error(c.logger).Log("msg", "failed collecting hyperV virtual storage metrics", "desc", desc, "err", err)
+	if err := c.collectVmStorage(ch); err != nil {
+		_ = level.Error(c.logger).Log("msg", "failed collecting hyperV virtual storage metrics", "err", err)
 		return err
 	}
 
-	if desc, err := c.collectVmNetwork(ch); err != nil {
-		_ = level.Error(c.logger).Log("msg", "failed collecting hyperV virtual network metrics", "desc", desc, "err", err)
+	if err := c.collectVmNetwork(ch); err != nil {
+		_ = level.Error(c.logger).Log("msg", "failed collecting hyperV virtual network metrics", "err", err)
 		return err
 	}
 
-	if desc, err := c.collectVmMemory(ch); err != nil {
-		_ = level.Error(c.logger).Log("msg", "failed collecting hyperV virtual memory metrics", "desc", desc, "err", err)
+	if err := c.collectVmMemory(ch); err != nil {
+		_ = level.Error(c.logger).Log("msg", "failed collecting hyperV virtual memory metrics", "err", err)
 		return err
 	}
 
@@ -812,11 +812,11 @@ type Win32_PerfRawData_VmmsVirtualMachineStats_HyperVVirtualMachineHealthSummary
 	HealthOk       uint32
 }
 
-func (c *collector) collectVmHealth(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *collector) collectVmHealth(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_VmmsVirtualMachineStats_HyperVVirtualMachineHealthSummary
 	q := wmi.QueryAll(&dst, c.logger)
 	if err := wmi.Query(q, &dst); err != nil {
-		return nil, err
+		return err
 	}
 
 	for _, health := range dst {
@@ -834,7 +834,7 @@ func (c *collector) collectVmHealth(ch chan<- prometheus.Metric) (*prometheus.De
 
 	}
 
-	return nil, nil
+	return nil
 }
 
 // Win32_PerfRawData_VidPerfProvider_HyperVVMVidPartition ..,
@@ -845,11 +845,11 @@ type Win32_PerfRawData_VidPerfProvider_HyperVVMVidPartition struct {
 	RemotePhysicalPages    uint64
 }
 
-func (c *collector) collectVmVid(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *collector) collectVmVid(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_VidPerfProvider_HyperVVMVidPartition
 	q := wmi.QueryAll(&dst, c.logger)
 	if err := wmi.Query(q, &dst); err != nil {
-		return nil, err
+		return err
 	}
 
 	for _, page := range dst {
@@ -880,7 +880,7 @@ func (c *collector) collectVmVid(ch chan<- prometheus.Metric) (*prometheus.Desc,
 
 	}
 
-	return nil, nil
+	return nil
 }
 
 // Win32_PerfRawData_HvStats_HyperVHypervisorRootPartition ...
@@ -909,11 +909,11 @@ type Win32_PerfRawData_HvStats_HyperVHypervisorRootPartition struct {
 	VirtualTLBPages               uint64
 }
 
-func (c *collector) collectVmHv(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *collector) collectVmHv(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_HvStats_HyperVHypervisorRootPartition
 	q := wmi.QueryAll(&dst, c.logger)
 	if err := wmi.Query(q, &dst); err != nil {
-		return nil, err
+		return err
 	}
 
 	for _, obj := range dst {
@@ -1038,7 +1038,7 @@ func (c *collector) collectVmHv(ch chan<- prometheus.Metric) (*prometheus.Desc, 
 
 	}
 
-	return nil, nil
+	return nil
 }
 
 // Win32_PerfRawData_HvStats_HyperVHypervisor ...
@@ -1047,11 +1047,11 @@ type Win32_PerfRawData_HvStats_HyperVHypervisor struct {
 	VirtualProcessors uint64
 }
 
-func (c *collector) collectVmProcessor(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *collector) collectVmProcessor(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_HvStats_HyperVHypervisor
 	q := wmi.QueryAll(&dst, c.logger)
 	if err := wmi.Query(q, &dst); err != nil {
-		return nil, err
+		return err
 	}
 
 	for _, obj := range dst {
@@ -1070,7 +1070,7 @@ func (c *collector) collectVmProcessor(ch chan<- prometheus.Metric) (*prometheus
 
 	}
 
-	return nil, nil
+	return nil
 }
 
 // Win32_PerfRawData_HvStats_HyperVHypervisorLogicalProcessor ...
@@ -1081,11 +1081,11 @@ type Win32_PerfRawData_HvStats_HyperVHypervisorLogicalProcessor struct {
 	PercentTotalRunTime      uint
 }
 
-func (c *collector) collectHostLPUsage(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *collector) collectHostLPUsage(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_HvStats_HyperVHypervisorLogicalProcessor
 	q := wmi.QueryAll(&dst, c.logger)
 	if err := wmi.Query(q, &dst); err != nil {
-		return nil, err
+		return err
 	}
 
 	for _, obj := range dst {
@@ -1123,7 +1123,7 @@ func (c *collector) collectHostLPUsage(ch chan<- prometheus.Metric) (*prometheus
 
 	}
 
-	return nil, nil
+	return nil
 }
 
 // Win32_PerfRawData_HvStats_HyperVHypervisorRootVirtualProcessor ...
@@ -1136,11 +1136,11 @@ type Win32_PerfRawData_HvStats_HyperVHypervisorRootVirtualProcessor struct {
 	CPUWaitTimePerDispatch   uint64
 }
 
-func (c *collector) collectHostCpuUsage(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *collector) collectHostCpuUsage(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_HvStats_HyperVHypervisorRootVirtualProcessor
 	q := wmi.QueryAll(&dst, c.logger)
 	if err := wmi.Query(q, &dst); err != nil {
-		return nil, err
+		return err
 	}
 
 	for _, obj := range dst {
@@ -1191,7 +1191,7 @@ func (c *collector) collectHostCpuUsage(ch chan<- prometheus.Metric) (*prometheu
 		)
 	}
 
-	return nil, nil
+	return nil
 }
 
 // Win32_PerfRawData_HvStats_HyperVHypervisorVirtualProcessor ...
@@ -1204,11 +1204,11 @@ type Win32_PerfRawData_HvStats_HyperVHypervisorVirtualProcessor struct {
 	CPUWaitTimePerDispatch   uint64
 }
 
-func (c *collector) collectVmCpuUsage(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *collector) collectVmCpuUsage(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_HvStats_HyperVHypervisorVirtualProcessor
 	q := wmi.QueryAll(&dst, c.logger)
 	if err := wmi.Query(q, &dst); err != nil {
-		return nil, err
+		return err
 	}
 
 	for _, obj := range dst {
@@ -1266,7 +1266,7 @@ func (c *collector) collectVmCpuUsage(ch chan<- prometheus.Metric) (*prometheus.
 
 	}
 
-	return nil, nil
+	return nil
 }
 
 // Win32_PerfRawData_NvspSwitchStats_HyperVVirtualSwitch ...
@@ -1298,11 +1298,11 @@ type Win32_PerfRawData_NvspSwitchStats_HyperVVirtualSwitch struct {
 	PurgedMacAddressesPersec               uint64
 }
 
-func (c *collector) collectVmSwitch(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *collector) collectVmSwitch(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_NvspSwitchStats_HyperVVirtualSwitch
 	q := wmi.QueryAll(&dst, c.logger)
 	if err := wmi.Query(q, &dst); err != nil {
-		return nil, err
+		return err
 	}
 
 	for _, obj := range dst {
@@ -1449,7 +1449,7 @@ func (c *collector) collectVmSwitch(ch chan<- prometheus.Metric) (*prometheus.De
 		)
 	}
 
-	return nil, nil
+	return nil
 }
 
 // Win32_PerfRawData_EthernetPerfProvider_HyperVLegacyNetworkAdapter ...
@@ -1463,11 +1463,11 @@ type Win32_PerfRawData_EthernetPerfProvider_HyperVLegacyNetworkAdapter struct {
 	FramesSentPersec     uint64
 }
 
-func (c *collector) collectVmEthernet(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *collector) collectVmEthernet(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_EthernetPerfProvider_HyperVLegacyNetworkAdapter
 	q := wmi.QueryAll(&dst, c.logger)
 	if err := wmi.Query(q, &dst); err != nil {
-		return nil, err
+		return err
 	}
 
 	for _, obj := range dst {
@@ -1519,7 +1519,7 @@ func (c *collector) collectVmEthernet(ch chan<- prometheus.Metric) (*prometheus.
 
 	}
 
-	return nil, nil
+	return nil
 }
 
 // Win32_PerfRawData_Counters_HyperVVirtualStorageDevice ...
@@ -1533,11 +1533,11 @@ type Win32_PerfRawData_Counters_HyperVVirtualStorageDevice struct {
 	WriteOperationsPerSec uint64
 }
 
-func (c *collector) collectVmStorage(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *collector) collectVmStorage(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_Counters_HyperVVirtualStorageDevice
 	q := wmi.QueryAll(&dst, c.logger)
 	if err := wmi.Query(q, &dst); err != nil {
-		return nil, err
+		return err
 	}
 
 	for _, obj := range dst {
@@ -1588,7 +1588,7 @@ func (c *collector) collectVmStorage(ch chan<- prometheus.Metric) (*prometheus.D
 		)
 	}
 
-	return nil, nil
+	return nil
 }
 
 // Win32_PerfRawData_NvspNicStats_HyperVVirtualNetworkAdapter ...
@@ -1602,11 +1602,11 @@ type Win32_PerfRawData_NvspNicStats_HyperVVirtualNetworkAdapter struct {
 	PacketsSentPersec            uint64
 }
 
-func (c *collector) collectVmNetwork(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *collector) collectVmNetwork(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_NvspNicStats_HyperVVirtualNetworkAdapter
 	q := wmi.QueryAll(&dst, c.logger)
 	if err := wmi.Query(q, &dst); err != nil {
-		return nil, err
+		return err
 	}
 
 	for _, obj := range dst {
@@ -1657,7 +1657,7 @@ func (c *collector) collectVmNetwork(ch chan<- prometheus.Metric) (*prometheus.D
 		)
 	}
 
-	return nil, nil
+	return nil
 }
 
 // Win32_PerfRawData_BalancerStats_HyperVDynamicMemoryVM ...
@@ -1675,11 +1675,11 @@ type Win32_PerfRawData_BalancerStats_HyperVDynamicMemoryVM struct {
 	RemovedMemory              uint64
 }
 
-func (c *collector) collectVmMemory(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *collector) collectVmMemory(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_BalancerStats_HyperVDynamicMemoryVM
 	q := wmi.QueryAll(&dst, c.logger)
 	if err := wmi.Query(q, &dst); err != nil {
-		return nil, err
+		return err
 	}
 
 	for _, obj := range dst {
@@ -1758,5 +1758,5 @@ func (c *collector) collectVmMemory(ch chan<- prometheus.Metric) (*prometheus.De
 		)
 	}
 
-	return nil, nil
+	return nil
 }

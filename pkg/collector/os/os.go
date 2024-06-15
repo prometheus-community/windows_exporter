@@ -6,17 +6,21 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
-	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
+	"github.com/prometheus-community/windows_exporter/pkg/headers/kernel32"
 	"github.com/prometheus-community/windows_exporter/pkg/headers/netapi32"
 	"github.com/prometheus-community/windows_exporter/pkg/headers/psapi"
 	"github.com/prometheus-community/windows_exporter/pkg/headers/sysinfoapi"
 	"github.com/prometheus-community/windows_exporter/pkg/perflib"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
+
+	"github.com/alecthomas/kingpin/v2"
+	"github.com/go-kit/log"
+	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows/registry"
 )
@@ -159,8 +163,8 @@ func (c *collector) Build() error {
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
-	if desc, err := c.collect(ctx, ch); err != nil {
-		_ = level.Error(c.logger).Log("failed collecting os metrics", "desc", desc, "err", err)
+	if err := c.collect(ctx, ch); err != nil {
+		_ = level.Error(c.logger).Log("msg", "failed collecting os metrics", "err", err)
 		return err
 	}
 	return nil
@@ -184,52 +188,35 @@ type Win32_OperatingSystem struct {
 	Version                 string
 }
 
-func (c *collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	nwgi, err := netapi32.GetWorkstationInfo()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	gmse, err := sysinfoapi.GlobalMemoryStatusEx()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	currentTime := time.Now()
-	timezoneName, _ := currentTime.Zone()
+
+	timeZoneInfo, err := kernel32.GetDynamicTimeZoneInformation()
+	if err != nil {
+		return err
+	}
+
+	// timeZoneKeyName contains the english name of the timezone.
+	timezoneName := syscall.UTF16ToString(timeZoneInfo.TimeZoneKeyName[:])
 
 	// Get total allocation of paging files across all disks.
 	memManKey, err := registry.OpenKey(registry.LOCAL_MACHINE, `SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management`, registry.QUERY_VALUE)
 	defer memManKey.Close()
-
 	if err != nil {
-		return nil, err
+		return err
 	}
+
 	pagingFiles, _, pagingErr := memManKey.GetStringsValue("ExistingPageFiles")
-	// Get build number and product name from registry
-	ntKey, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\Microsoft\Windows NT\CurrentVersion`, registry.QUERY_VALUE)
-	defer ntKey.Close()
-
-	if err != nil {
-		return nil, err
-	}
-
-	pn, _, err := ntKey.GetStringValue("ProductName")
-	if err != nil {
-		return nil, err
-	}
-
-	bn, _, err := ntKey.GetStringValue("CurrentBuildNumber")
-	if err != nil {
-		return nil, err
-	}
-
-	revision, _, err := ntKey.GetIntegerValue("UBR")
-	if errors.Is(err, registry.ErrNotExist) {
-		revision = 0
-	} else if err != nil {
-		return nil, err
-	}
 
 	var fsipf float64
 	for _, pagingFile := range pagingFiles {
@@ -243,14 +230,39 @@ func (c *collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 		}
 	}
 
+	// Get build number and product name from registry
+	ntKey, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\Microsoft\Windows NT\CurrentVersion`, registry.QUERY_VALUE)
+	defer ntKey.Close()
+
+	if err != nil {
+		return err
+	}
+
+	pn, _, err := ntKey.GetStringValue("ProductName")
+	if err != nil {
+		return err
+	}
+
+	bn, _, err := ntKey.GetStringValue("CurrentBuildNumber")
+	if err != nil {
+		return err
+	}
+
+	revision, _, err := ntKey.GetIntegerValue("UBR")
+	if errors.Is(err, registry.ErrNotExist) {
+		revision = 0
+	} else if err != nil {
+		return err
+	}
+
 	gpi, err := psapi.GetPerformanceInfo()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	pfc := make([]pagingFileCounter, 0)
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["Paging File"], &pfc, c.logger); err != nil {
-		return nil, err
+		return err
 	}
 
 	// Get current page file usage.
@@ -269,12 +281,12 @@ func (c *collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 		c.OSInformation,
 		prometheus.GaugeValue,
 		1.0,
-		fmt.Sprintf("Microsoft %s", pn), // Caption
+		"Microsoft "+pn, // Caption
 		fmt.Sprintf("%d.%d.%s", nwgi.VersionMajor, nwgi.VersionMinor, bn), // Version
-		fmt.Sprintf("%d", nwgi.VersionMajor),                              // Major Version
-		fmt.Sprintf("%d", nwgi.VersionMinor),                              // Minor Version
-		bn,                                                                // Build number
-		fmt.Sprintf("%d", revision),                                       // Revision
+		strconv.FormatUint(uint64(nwgi.VersionMajor), 10),                 // Major Version
+		strconv.FormatUint(uint64(nwgi.VersionMinor), 10),                 // Minor Version
+		bn,                               // Build number
+		strconv.FormatUint(revision, 10), // Revision
 	)
 
 	ch <- prometheus.MustNewConstMetric(
@@ -309,7 +321,7 @@ func (c *collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 			fsipf,
 		)
 	} else {
-		_ = level.Debug(c.logger).Log("Could not find HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management key. windows_os_paging_free_bytes and windows_os_paging_limit_bytes will be omitted.")
+		_ = level.Debug(c.logger).Log("msg", "Could not find HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management key. windows_os_paging_free_bytes and windows_os_paging_limit_bytes will be omitted.")
 	}
 	ch <- prometheus.MustNewConstMetric(
 		c.VirtualMemoryFreeBytes,
@@ -356,5 +368,5 @@ func (c *collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 		float64(gmse.TotalPhys),
 	)
 
-	return nil, nil
+	return nil
 }

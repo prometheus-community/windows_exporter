@@ -570,52 +570,52 @@ func (c *collector) Build() error {
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric) error {
-	if desc, err := c.collectAudio(ch); err != nil {
-		_ = level.Error(c.logger).Log("failed collecting vmware blast audio metrics", "desc", desc, "err", err)
+	if err := c.collectAudio(ch); err != nil {
+		_ = level.Error(c.logger).Log("msg", "failed collecting vmware blast audio metrics", "err", err)
 		return err
 	}
-	if desc, err := c.collectCdr(ch); err != nil {
-		_ = level.Error(c.logger).Log("failed collecting vmware blast CDR metrics", "desc", desc, "err", err)
+	if err := c.collectCdr(ch); err != nil {
+		_ = level.Error(c.logger).Log("msg", "failed collecting vmware blast CDR metrics", "err", err)
 		return err
 	}
-	if desc, err := c.collectClipboard(ch); err != nil {
-		_ = level.Error(c.logger).Log("failed collecting vmware blast clipboard metrics", "desc", desc, "err", err)
+	if err := c.collectClipboard(ch); err != nil {
+		_ = level.Error(c.logger).Log("msg", "failed collecting vmware blast clipboard metrics", "err", err)
 		return err
 	}
-	if desc, err := c.collectHtml5Mmr(ch); err != nil {
-		_ = level.Error(c.logger).Log("failed collecting vmware blast HTML5 MMR metrics", "desc", desc, "err", err)
+	if err := c.collectHtml5Mmr(ch); err != nil {
+		_ = level.Error(c.logger).Log("msg", "failed collecting vmware blast HTML5 MMR metrics", "err", err)
 		return err
 	}
-	if desc, err := c.collectImaging(ch); err != nil {
-		_ = level.Error(c.logger).Log("failed collecting vmware blast imaging metrics", "desc", desc, "err", err)
+	if err := c.collectImaging(ch); err != nil {
+		_ = level.Error(c.logger).Log("msg", "failed collecting vmware blast imaging metrics", "err", err)
 		return err
 	}
-	if desc, err := c.collectRtav(ch); err != nil {
-		_ = level.Error(c.logger).Log("failed collecting vmware blast RTAV metrics", "desc", desc, "err", err)
+	if err := c.collectRtav(ch); err != nil {
+		_ = level.Error(c.logger).Log("msg", "failed collecting vmware blast RTAV metrics", "err", err)
 		return err
 	}
-	if desc, err := c.collectSerialPortandScanner(ch); err != nil {
-		_ = level.Error(c.logger).Log("failed collecting vmware blast serial port and scanner metrics", "desc", desc, "err", err)
+	if err := c.collectSerialPortandScanner(ch); err != nil {
+		_ = level.Error(c.logger).Log("msg", "failed collecting vmware blast serial port and scanner metrics", "err", err)
 		return err
 	}
-	if desc, err := c.collectSession(ch); err != nil {
-		_ = level.Error(c.logger).Log("failed collecting vmware blast metrics", "desc", desc, "err", err)
+	if err := c.collectSession(ch); err != nil {
+		_ = level.Error(c.logger).Log("msg", "failed collecting vmware blast metrics", "err", err)
 		return err
 	}
-	if desc, err := c.collectSkypeforBusinessControl(ch); err != nil {
-		_ = level.Error(c.logger).Log("failed collecting vmware blast skype for business control metrics", "desc", desc, "err", err)
+	if err := c.collectSkypeforBusinessControl(ch); err != nil {
+		_ = level.Error(c.logger).Log("msg", "failed collecting vmware blast skype for business control metrics", "err", err)
 		return err
 	}
-	if desc, err := c.collectThinPrint(ch); err != nil {
-		_ = level.Error(c.logger).Log("failed collecting vmware blast thin print metrics", "desc", desc, "err", err)
+	if err := c.collectThinPrint(ch); err != nil {
+		_ = level.Error(c.logger).Log("msg", "failed collecting vmware blast thin print metrics", "err", err)
 		return err
 	}
-	if desc, err := c.collectUsb(ch); err != nil {
-		_ = level.Error(c.logger).Log("failed collecting vmware blast USB metrics", "desc", desc, "err", err)
+	if err := c.collectUsb(ch); err != nil {
+		_ = level.Error(c.logger).Log("msg", "failed collecting vmware blast USB metrics", "err", err)
 		return err
 	}
-	if desc, err := c.collectWindowsMediaMmr(ch); err != nil {
-		_ = level.Error(c.logger).Log("failed collecting vmware blast windows media MMR metrics", "desc", desc, "err", err)
+	if err := c.collectWindowsMediaMmr(ch); err != nil {
+		_ = level.Error(c.logger).Log("msg", "failed collecting vmware blast windows media MMR metrics", "err", err)
 		return err
 	}
 	return nil
@@ -726,16 +726,16 @@ type win32_PerfRawData_Counters_VMwareBlastWindowsMediaMMRCounters struct {
 	TransmittedPackets uint32
 }
 
-func (c *collector) collectAudio(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *collector) collectAudio(ch chan<- prometheus.Metric) error {
 	var dst []win32_PerfRawData_Counters_VMwareBlastAudioCounters
 	q := wmi.QueryAll(&dst, c.logger)
 	if err := wmi.Query(q, &dst); err != nil {
-		return nil, err
+		return err
 	}
 
 	if len(dst) == 0 {
 		// It's possible for these classes to legitimately return null when queried
-		return nil, nil
+		return nil
 	}
 
 	ch <- prometheus.MustNewConstMetric(
@@ -762,19 +762,19 @@ func (c *collector) collectAudio(ch chan<- prometheus.Metric) (*prometheus.Desc,
 		float64(dst[0].TransmittedPackets),
 	)
 
-	return nil, nil
+	return nil
 }
 
-func (c *collector) collectCdr(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *collector) collectCdr(ch chan<- prometheus.Metric) error {
 	var dst []win32_PerfRawData_Counters_VMwareBlastCDRCounters
 	q := wmi.QueryAll(&dst, c.logger)
 	if err := wmi.Query(q, &dst); err != nil {
-		return nil, err
+		return err
 	}
 
 	if len(dst) == 0 {
 		// It's possible for these classes to legitimately return null when queried
-		return nil, nil
+		return nil
 	}
 
 	ch <- prometheus.MustNewConstMetric(
@@ -801,19 +801,19 @@ func (c *collector) collectCdr(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 		float64(dst[0].TransmittedPackets),
 	)
 
-	return nil, nil
+	return nil
 }
 
-func (c *collector) collectClipboard(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *collector) collectClipboard(ch chan<- prometheus.Metric) error {
 	var dst []win32_PerfRawData_Counters_VMwareBlastClipboardCounters
 	q := wmi.QueryAll(&dst, c.logger)
 	if err := wmi.Query(q, &dst); err != nil {
-		return nil, err
+		return err
 	}
 
 	if len(dst) == 0 {
 		// It's possible for these classes to legitimately return null when queried
-		return nil, nil
+		return nil
 	}
 
 	ch <- prometheus.MustNewConstMetric(
@@ -840,19 +840,19 @@ func (c *collector) collectClipboard(ch chan<- prometheus.Metric) (*prometheus.D
 		float64(dst[0].TransmittedPackets),
 	)
 
-	return nil, nil
+	return nil
 }
 
-func (c *collector) collectHtml5Mmr(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *collector) collectHtml5Mmr(ch chan<- prometheus.Metric) error {
 	var dst []win32_PerfRawData_Counters_VMwareBlastHTML5MMRcounters
 	q := wmi.QueryAll(&dst, c.logger)
 	if err := wmi.Query(q, &dst); err != nil {
-		return nil, err
+		return err
 	}
 
 	if len(dst) == 0 {
 		// It's possible for these classes to legitimately return null when queried
-		return nil, nil
+		return nil
 	}
 
 	ch <- prometheus.MustNewConstMetric(
@@ -879,19 +879,19 @@ func (c *collector) collectHtml5Mmr(ch chan<- prometheus.Metric) (*prometheus.De
 		float64(dst[0].TransmittedPackets),
 	)
 
-	return nil, nil
+	return nil
 }
 
-func (c *collector) collectImaging(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *collector) collectImaging(ch chan<- prometheus.Metric) error {
 	var dst []win32_PerfRawData_Counters_VMwareBlastImagingCounters
 	q := wmi.QueryAll(&dst, c.logger)
 	if err := wmi.Query(q, &dst); err != nil {
-		return nil, err
+		return err
 	}
 
 	if len(dst) == 0 {
 		// It's possible for these classes to legitimately return null when queried
-		return nil, nil
+		return nil
 	}
 
 	ch <- prometheus.MustNewConstMetric(
@@ -966,19 +966,19 @@ func (c *collector) collectImaging(ch chan<- prometheus.Metric) (*prometheus.Des
 		float64(dst[0].TransmittedPackets),
 	)
 
-	return nil, nil
+	return nil
 }
 
-func (c *collector) collectRtav(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *collector) collectRtav(ch chan<- prometheus.Metric) error {
 	var dst []win32_PerfRawData_Counters_VMwareBlastRTAVCounters
 	q := wmi.QueryAll(&dst, c.logger)
 	if err := wmi.Query(q, &dst); err != nil {
-		return nil, err
+		return err
 	}
 
 	if len(dst) == 0 {
 		// It's possible for these classes to legitimately return null when queried
-		return nil, nil
+		return nil
 	}
 
 	ch <- prometheus.MustNewConstMetric(
@@ -1005,19 +1005,19 @@ func (c *collector) collectRtav(ch chan<- prometheus.Metric) (*prometheus.Desc, 
 		float64(dst[0].TransmittedPackets),
 	)
 
-	return nil, nil
+	return nil
 }
 
-func (c *collector) collectSerialPortandScanner(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *collector) collectSerialPortandScanner(ch chan<- prometheus.Metric) error {
 	var dst []win32_PerfRawData_Counters_VMwareBlastSerialPortandScannerCounters
 	q := wmi.QueryAll(&dst, c.logger)
 	if err := wmi.Query(q, &dst); err != nil {
-		return nil, err
+		return err
 	}
 
 	if len(dst) == 0 {
 		// It's possible for these classes to legitimately return null when queried
-		return nil, nil
+		return nil
 	}
 
 	ch <- prometheus.MustNewConstMetric(
@@ -1044,19 +1044,19 @@ func (c *collector) collectSerialPortandScanner(ch chan<- prometheus.Metric) (*p
 		float64(dst[0].TransmittedPackets),
 	)
 
-	return nil, nil
+	return nil
 }
 
-func (c *collector) collectSession(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *collector) collectSession(ch chan<- prometheus.Metric) error {
 	var dst []win32_PerfRawData_Counters_VMwareBlastSessionCounters
 	q := wmi.QueryAll(&dst, c.logger)
 	if err := wmi.Query(q, &dst); err != nil {
-		return nil, err
+		return err
 	}
 
 	if len(dst) == 0 {
 		// It's possible for these classes to legitimately return null when queried
-		return nil, nil
+		return nil
 	}
 
 	ch <- prometheus.MustNewConstMetric(
@@ -1161,19 +1161,19 @@ func (c *collector) collectSession(ch chan<- prometheus.Metric) (*prometheus.Des
 		float64(dst[0].TransmittedPackets),
 	)
 
-	return nil, nil
+	return nil
 }
 
-func (c *collector) collectSkypeforBusinessControl(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *collector) collectSkypeforBusinessControl(ch chan<- prometheus.Metric) error {
 	var dst []win32_PerfRawData_Counters_VMwareBlastSkypeforBusinessControlCounters
 	q := wmi.QueryAll(&dst, c.logger)
 	if err := wmi.Query(q, &dst); err != nil {
-		return nil, err
+		return err
 	}
 
 	if len(dst) == 0 {
 		// It's possible for these classes to legitimately return null when queried
-		return nil, nil
+		return nil
 	}
 
 	ch <- prometheus.MustNewConstMetric(
@@ -1200,19 +1200,19 @@ func (c *collector) collectSkypeforBusinessControl(ch chan<- prometheus.Metric) 
 		float64(dst[0].TransmittedPackets),
 	)
 
-	return nil, nil
+	return nil
 }
 
-func (c *collector) collectThinPrint(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *collector) collectThinPrint(ch chan<- prometheus.Metric) error {
 	var dst []win32_PerfRawData_Counters_VMwareBlastThinPrintCounters
 	q := wmi.QueryAll(&dst, c.logger)
 	if err := wmi.Query(q, &dst); err != nil {
-		return nil, err
+		return err
 	}
 
 	if len(dst) == 0 {
 		// It's possible for these classes to legitimately return null when queried
-		return nil, nil
+		return nil
 	}
 
 	ch <- prometheus.MustNewConstMetric(
@@ -1239,19 +1239,19 @@ func (c *collector) collectThinPrint(ch chan<- prometheus.Metric) (*prometheus.D
 		float64(dst[0].TransmittedPackets),
 	)
 
-	return nil, nil
+	return nil
 }
 
-func (c *collector) collectUsb(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *collector) collectUsb(ch chan<- prometheus.Metric) error {
 	var dst []win32_PerfRawData_Counters_VMwareBlastUSBCounters
 	q := wmi.QueryAll(&dst, c.logger)
 	if err := wmi.Query(q, &dst); err != nil {
-		return nil, err
+		return err
 	}
 
 	if len(dst) == 0 {
 		// It's possible for these classes to legitimately return null when queried
-		return nil, nil
+		return nil
 	}
 
 	ch <- prometheus.MustNewConstMetric(
@@ -1278,19 +1278,19 @@ func (c *collector) collectUsb(ch chan<- prometheus.Metric) (*prometheus.Desc, e
 		float64(dst[0].TransmittedPackets),
 	)
 
-	return nil, nil
+	return nil
 }
 
-func (c *collector) collectWindowsMediaMmr(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *collector) collectWindowsMediaMmr(ch chan<- prometheus.Metric) error {
 	var dst []win32_PerfRawData_Counters_VMwareBlastWindowsMediaMMRCounters
 	q := wmi.QueryAll(&dst, c.logger)
 	if err := wmi.Query(q, &dst); err != nil {
-		return nil, err
+		return err
 	}
 
 	if len(dst) == 0 {
 		// It's possible for these classes to legitimately return null when queried
-		return nil, nil
+		return nil
 	}
 
 	ch <- prometheus.MustNewConstMetric(
@@ -1317,5 +1317,5 @@ func (c *collector) collectWindowsMediaMmr(ch chan<- prometheus.Metric) (*promet
 		float64(dst[0].TransmittedPackets),
 	)
 
-	return nil, nil
+	return nil
 }

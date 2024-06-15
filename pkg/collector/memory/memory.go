@@ -291,8 +291,8 @@ func (c *collector) Build() error {
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
-	if desc, err := c.collect(ctx, ch); err != nil {
-		_ = level.Error(c.logger).Log("failed collecting memory metrics", "desc", desc, "err", err)
+	if err := c.collect(ctx, ch); err != nil {
+		_ = level.Error(c.logger).Log("msg", "failed collecting memory metrics", "err", err)
 		return err
 	}
 	return nil
@@ -335,10 +335,10 @@ type memory struct {
 	WriteCopiesPersec               float64 `perflib:"Write Copies/sec"`
 }
 
-func (c *collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	var dst []memory
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["Memory"], &dst, c.logger); err != nil {
-		return nil, err
+		return err
 	}
 
 	ch <- prometheus.MustNewConstMetric(
@@ -533,5 +533,5 @@ func (c *collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 		dst[0].WriteCopiesPersec,
 	)
 
-	return nil, nil
+	return nil
 }

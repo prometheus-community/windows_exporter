@@ -118,8 +118,8 @@ func (c *collector) Build() error {
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric) error {
-	if desc, err := c.collect(ch); err != nil {
-		_ = level.Error(c.logger).Log("msg", "failed collecting fsrmquota metrics", "desc", desc, "err", err)
+	if err := c.collect(ch); err != nil {
+		_ = level.Error(c.logger).Log("msg", "failed collecting fsrmquota metrics", "err", err)
 		return err
 	}
 	return nil
@@ -142,14 +142,14 @@ type MSFT_FSRMQuota struct {
 	SoftLimit       bool
 }
 
-func (c *collector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *collector) collect(ch chan<- prometheus.Metric) error {
 	var dst []MSFT_FSRMQuota
 	q := wmi.QueryAll(&dst, c.logger)
 
 	var count int
 
 	if err := wmi.QueryNamespace(q, &dst, "root/microsoft/windows/fsrm"); err != nil {
-		return nil, err
+		return err
 	}
 
 	for _, quota := range dst {
@@ -214,5 +214,5 @@ func (c *collector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, erro
 		prometheus.GaugeValue,
 		float64(count),
 	)
-	return nil, nil
+	return nil
 }

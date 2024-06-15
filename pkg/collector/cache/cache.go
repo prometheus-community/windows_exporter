@@ -254,8 +254,8 @@ func (c *collector) Build() error {
 
 // Collect implements the Collector interface
 func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
-	if desc, err := c.collect(ctx, ch); err != nil {
-		_ = level.Error(c.logger).Log("msg", "failed collecting cache metrics", "desc", desc, "err", err)
+	if err := c.collect(ctx, ch); err != nil {
+		_ = level.Error(c.logger).Log("msg", "failed collecting cache metrics", "err", err)
 		return err
 	}
 	return nil
@@ -295,10 +295,10 @@ type perflibCache struct {
 	SyncPinReadsTotal           float64 `perflib:"Sync Pin Reads/sec"`
 }
 
-func (c *collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	var dst []perflibCache // Single-instance class, array is required but will have single entry.
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["Cache"], &dst, c.logger); err != nil {
-		return nil, err
+		return err
 	}
 
 	ch <- prometheus.MustNewConstMetric(
@@ -475,5 +475,5 @@ func (c *collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 		dst[0].SyncPinReadsTotal,
 	)
 
-	return nil, nil
+	return nil
 }

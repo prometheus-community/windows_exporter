@@ -35,7 +35,7 @@ Name | Description | Type | Labels
 `windows_cpu_processor_mperf_total` | Processor MPerf Total is proportioanl to the number of TSC ticks each core has accumulated while executing instructions. Due to the manner in which it is presented, it should be scaled by 1e2 to properly line up with Processor Performance Total. As above, it is believed to be closely related to the MPERF MSR. | counter | `core`
 `windows_cpu_processor_rtc_total` | RTC total is assumed to represent the 64Hz tick rate in Windows. It is not by itself useful, but can be used with `windows_cpu_processor_utility_total` to more accurately measure CPU utilisation than with `windows_cpu_time_total` | counter | `core`
 `windows_cpu_processor_utility_total` | Processor Utility Total is a newer, more accurate measure of CPU utilization, in particular handling modern CPUs with variant CPU frequencies. The rate of this counter divided by the rate of `windows_cpu_processor_rtc_total` should provide an accurate view of CPU utilisation on modern systems, as observed in Task Manager. | counter | `core`
-`windows_cpu_processor_privileged_utility_total` | Processor Privilged Utility Total, when used in a similar fashion to `windows_cpu_processor_utility_total` will show the portion of CPU utilization which is happening in privileged mode. | counter | `core`
+`windows_cpu_processor_privileged_utility_total` | Processor Privileged Utility Total, when used in a similar fashion to `windows_cpu_processor_utility_total` will show the portion of CPU utilization which is happening in privileged mode. | counter | `core`
 
 ### Example metric
 Show frequency of host CPU cores

@@ -3,6 +3,7 @@
 package scheduled_task
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"runtime"
@@ -63,7 +64,6 @@ const (
 	TASK_RESULT_SUCCESS TaskResult = 0x0
 )
 
-// RegisteredTask ...
 type ScheduledTask struct {
 	Name            string
 	Path            string
@@ -117,18 +117,6 @@ func (c *collector) GetPerfCounter() ([]string, error) {
 }
 
 func (c *collector) Build() error {
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
-	err := ole.CoInitializeEx(0, ole.COINIT_MULTITHREADED)
-	if err != nil {
-		code := err.(*ole.OleError).Code()
-		if code != ole.S_OK && code != S_FALSE {
-			return err
-		}
-	}
-	defer ole.CoUninitialize()
-
 	c.LastResult = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "last_result"),
 		"The result that was returned the last time the registered task was run",
@@ -150,6 +138,8 @@ func (c *collector) Build() error {
 		nil,
 	)
 
+	var err error
+
 	c.taskIncludePattern, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", *c.taskInclude))
 	if err != nil {
 		return err
@@ -164,8 +154,8 @@ func (c *collector) Build() error {
 }
 
 func (c *collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric) error {
-	if desc, err := c.collect(ch); err != nil {
-		_ = level.Error(c.logger).Log("failed collecting user metrics", "desc", desc, "err", err)
+	if err := c.collect(ch); err != nil {
+		_ = level.Error(c.logger).Log("msg", "failed collecting user metrics", "err", err)
 		return err
 	}
 
@@ -174,10 +164,10 @@ func (c *collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric)
 
 var TASK_STATES = []string{"disabled", "queued", "ready", "running", "unknown"}
 
-func (c *collector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *collector) collect(ch chan<- prometheus.Metric) error {
 	scheduledTasks, err := getScheduledTasks()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	for _, task := range scheduledTasks {
@@ -222,7 +212,7 @@ func (c *collector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, erro
 		}
 	}
 
-	return nil, nil
+	return nil
 }
 
 const SCHEDULED_TASK_PROGRAM_ID = "Schedule.Service.1"
@@ -231,6 +221,21 @@ const SCHEDULED_TASK_PROGRAM_ID = "Schedule.Service.1"
 const S_FALSE = 0x00000001
 
 func getScheduledTasks() (scheduledTasks ScheduledTasks, err error) {
+	// The only way to run WMI queries in parallel while being thread-safe is to
+	// ensure the CoInitialize[Ex]() call is bound to its current OS thread.
+	// Otherwise, attempting to initialize and run parallel queries across
+	// goroutines will result in protected memory errors.
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+
+	if err := ole.CoInitializeEx(0, ole.COINIT_MULTITHREADED); err != nil {
+		var oleCode *ole.OleError
+		if errors.As(err, &oleCode) && oleCode.Code() != ole.S_OK && oleCode.Code() != S_FALSE {
+			return nil, err
+		}
+	}
+	defer ole.CoUninitialize()
+
 	schedClassID, err := ole.ClassIDFrom(SCHEDULED_TASK_PROGRAM_ID)
 	if err != nil {
 		return scheduledTasks, err

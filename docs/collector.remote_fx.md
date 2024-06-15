@@ -24,10 +24,15 @@ Name | Description | Type | Labels
 `windows_remote_fx_net_current_tcp_rtt_seconds` | Average TCP round-trip time (RTT) detected in seconds. | gauge | `session_name`
 `windows_remote_fx_net_current_udp_bandwidth` | UDP Bandwidth detected in bytes per second. | gauge | `session_name`
 `windows_remote_fx_net_current_udp_rtt_seconds` | Average UDP round-trip time (RTT) detected in seconds. | gauge | `session_name`
-`windows_remote_fx_net_received_bytes_total` | _Not yet documented_ | counter | `session_name`
-`windows_remote_fx_net_sent_bytes_total` | _Not yet documented_ | counter | `session_name`
+`windows_remote_fx_net_received_bytes_total` | Total bytes received over the network session. | counter | `session_name`
+`windows_remote_fx_net_sent_bytes_total` | Total bytes sent over the network session. | counter | `session_name`
 `windows_remote_fx_net_udp_packets_received_total` | Rate in packets per second at which packets are received over UDP. | counter | `session_name`
 `windows_remote_fx_net_udp_packets_sent_total` | Rate in packets per second at which packets are sent over UDP. | counter | `session_name`
+`windows_remote_fx_net_loss_rate` | Network packet loss rate detected over the RemoteFX session, expressed as a percentage. | counter | `session_name`
+`windows_remote_fx_net_fec_rate` | Forward Error Correction (FEC) rate applied to packets sent over the RemoteFX session, expressed as a percentage. | counter | `session_name`
+`windows_remote_fx_net_retransmission_rate` Rate of packets retransmitted over the RemoteFX session, expressed as a percentage. | counter | `session_name`
+
+
 
 ## Metrics (Graphics)
 

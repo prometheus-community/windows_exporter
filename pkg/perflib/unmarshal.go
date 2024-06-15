@@ -1,6 +1,7 @@
 package perflib
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -17,7 +18,7 @@ const (
 
 func UnmarshalObject(obj *PerfObject, vs interface{}, logger log.Logger) error {
 	if obj == nil {
-		return fmt.Errorf("counter not found")
+		return errors.New("counter not found")
 	}
 	rv := reflect.ValueOf(vs)
 	if rv.Kind() != reflect.Ptr || rv.IsNil() {

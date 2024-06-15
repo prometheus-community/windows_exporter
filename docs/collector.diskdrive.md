@@ -5,7 +5,7 @@ The diskdrive collector exposes metrics about physical disks
 |                     |                                                                                                                                                              |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Metric name prefix  | `diskdrive`                                                                                                                                                  |
-| Classes             | [`Win32_PerfRawData_DNS_DNS`](https://learn.microsoft.com/en-us/windows/win32/cimwin32prov/win32-diskdrive)                                                  |
+| Classes             | [`Win32_DiskDrive`](https://learn.microsoft.com/en-us/windows/win32/cimwin32prov/win32-diskdrive)                                                            |
 | Enabled by default? | No                                                                                                                                                           |
 
 ## Flags

@@ -39,11 +39,13 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/collector/os"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/perfdata"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/physical_disk"
+	"github.com/prometheus-community/windows_exporter/pkg/collector/printer"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/process"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/remote_fx"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/scheduled_task"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/service"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/smb"
+	"github.com/prometheus-community/windows_exporter/pkg/collector/smbclient"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/smtp"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/system"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/tcp"
@@ -96,11 +98,13 @@ type Config struct {
 	Os                             os.Config                              `yaml:"os"`
 	PerfData                       perfdata.Config                        `yaml:"perfdata"`
 	PhysicalDisk                   physical_disk.Config                   `yaml:"physical_disk"`
+	Printer                        printer.Config                         `yaml:"printer"`
 	Process                        process.Config                         `yaml:"process"`
 	RemoteFx                       remote_fx.Config                       `yaml:"remote_fx"`
 	ScheduledTask                  scheduled_task.Config                  `yaml:"scheduled_task"`
 	Service                        service.Config                         `yaml:"service"`
 	Smb                            smb.Config                             `yaml:"smb"`
+	SmbClient                      smbclient.Config                       `yaml:"smbclient"`
 	Smtp                           smtp.Config                            `yaml:"smtp"`
 	System                         system.Config                          `yaml:"system"`
 	TeradiciPcoip                  teradici_pcoip.Config                  `yaml:"teradici_pcoip"`
@@ -153,11 +157,13 @@ var ConfigDefaults = Config{
 	Nps:                            nps.ConfigDefaults,
 	Os:                             os.ConfigDefaults,
 	PhysicalDisk:                   physical_disk.ConfigDefaults,
+	Printer:                        printer.ConfigDefaults,
 	Process:                        process.ConfigDefaults,
 	RemoteFx:                       remote_fx.ConfigDefaults,
 	ScheduledTask:                  scheduled_task.ConfigDefaults,
 	Service:                        service.ConfigDefaults,
 	Smb:                            smb.ConfigDefaults,
+	SmbClient:                      smbclient.ConfigDefaults,
 	Smtp:                           smtp.ConfigDefaults,
 	System:                         system.ConfigDefaults,
 	TeradiciPcoip:                  teradici_pcoip.ConfigDefaults,

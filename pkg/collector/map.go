@@ -40,11 +40,13 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/collector/os"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/perfdata"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/physical_disk"
+	"github.com/prometheus-community/windows_exporter/pkg/collector/printer"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/process"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/remote_fx"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/scheduled_task"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/service"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/smb"
+	"github.com/prometheus-community/windows_exporter/pkg/collector/smbclient"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/smtp"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/system"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/tcp"
@@ -100,11 +102,13 @@ var Map = map[string]types.CollectorBuilderWithFlags{
 	os.Name:                              os.NewWithFlags,
 	perfdata.Name:                        perfdata.NewWithFlags,
 	physical_disk.Name:                   physical_disk.NewWithFlags,
+	printer.Name:                         printer.NewWithFlags,
 	process.Name:                         process.NewWithFlags,
 	remote_fx.Name:                       remote_fx.NewWithFlags,
 	scheduled_task.Name:                  scheduled_task.NewWithFlags,
 	service.Name:                         service.NewWithFlags,
 	smb.Name:                             smb.NewWithFlags,
+	smbclient.Name:                       smbclient.NewWithFlags,
 	smtp.Name:                            smtp.NewWithFlags,
 	system.Name:                          system.NewWithFlags,
 	teradici_pcoip.Name:                  teradici_pcoip.NewWithFlags,

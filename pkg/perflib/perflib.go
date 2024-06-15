@@ -279,7 +279,7 @@ func QueryPerformanceData(query string) ([]*PerfObject, error) {
 	err = header.BinaryReadFrom(r)
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to read performance data block for %q with: %w", query, err)
 	}
 
 	// Check for "PERF" signature

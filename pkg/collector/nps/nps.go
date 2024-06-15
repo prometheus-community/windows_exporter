@@ -229,12 +229,12 @@ func (c *collector) Build() error {
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric) error {
-	if desc, err := c.CollectAccept(ch); err != nil {
-		_ = level.Error(c.logger).Log("msg", fmt.Sprintf("failed collecting NPS accept data: %s %v", desc, err))
+	if err := c.CollectAccept(ch); err != nil {
+		_ = level.Error(c.logger).Log("msg", fmt.Sprintf("failed collecting NPS accept data: %s", err))
 		return err
 	}
-	if desc, err := c.CollectAccounting(ch); err != nil {
-		_ = level.Error(c.logger).Log("msg", fmt.Sprintf("failed collecting NPS accounting data: %s %v", desc, err))
+	if err := c.CollectAccounting(ch); err != nil {
+		_ = level.Error(c.logger).Log("msg", fmt.Sprintf("failed collecting NPS accounting data: %s", err))
 		return err
 	}
 	return nil
@@ -279,11 +279,11 @@ type Win32_PerfRawData_IAS_NPSAccountingServer struct {
 
 // CollectAccept sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *collector) CollectAccept(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *collector) CollectAccept(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_IAS_NPSAuthenticationServer
 	q := wmi.QueryAll(&dst, c.logger)
 	if err := wmi.Query(q, &dst); err != nil {
-		return nil, err
+		return err
 	}
 
 	ch <- prometheus.MustNewConstMetric(
@@ -364,14 +364,14 @@ func (c *collector) CollectAccept(ch chan<- prometheus.Metric) (*prometheus.Desc
 		float64(dst[0].AccessUnknownType),
 	)
 
-	return nil, nil
+	return nil
 }
 
-func (c *collector) CollectAccounting(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *collector) CollectAccounting(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_IAS_NPSAccountingServer
 	q := wmi.QueryAll(&dst, c.logger)
 	if err := wmi.Query(q, &dst); err != nil {
-		return nil, err
+		return err
 	}
 
 	ch <- prometheus.MustNewConstMetric(
@@ -446,5 +446,5 @@ func (c *collector) CollectAccounting(ch chan<- prometheus.Metric) (*prometheus.
 		float64(dst[0].AccountingUnknownType),
 	)
 
-	return nil, nil
+	return nil
 }

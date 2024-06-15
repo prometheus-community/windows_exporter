@@ -12,13 +12,13 @@ type fakeWmiClass struct {
 }
 
 var (
-	mapQueryAll = func(src interface{}, class string, where string) string {
+	mapQueryAll = func(src interface{}, _ string, _ string) string {
 		return QueryAll(src, log.NewNopLogger())
 	}
-	mapQueryAllWhere = func(src interface{}, class string, where string) string {
+	mapQueryAllWhere = func(src interface{}, _ string, where string) string {
 		return QueryAllWhere(src, where, log.NewNopLogger())
 	}
-	mapQueryAllForClass = func(src interface{}, class string, where string) string {
+	mapQueryAllForClass = func(src interface{}, class string, _ string) string {
 		return QueryAllForClass(src, class, log.NewNopLogger())
 	}
 	mapQueryAllForClassWhere = func(src interface{}, class string, where string) string {

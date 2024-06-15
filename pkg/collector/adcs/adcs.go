@@ -145,8 +145,8 @@ func (c *collector) Build() error {
 }
 
 func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
-	if desc, err := c.collectADCSCounters(ctx, ch); err != nil {
-		_ = level.Error(c.logger).Log("msg", "failed collecting ADCS metrics", "desc", desc, "err", err)
+	if err := c.collectADCSCounters(ctx, ch); err != nil {
+		_ = level.Error(c.logger).Log("msg", "failed collecting ADCS metrics", "err", err)
 		return err
 	}
 	return nil
@@ -169,17 +169,17 @@ type perflibADCS struct {
 	SignedCertificateTimestampListProcessingTime float64 `perflib:"Signed Certificate Timestamp List processing time (ms)"`
 }
 
-func (c *collector) collectADCSCounters(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *collector) collectADCSCounters(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	dst := make([]perflibADCS, 0)
 	if _, ok := ctx.PerfObjects["Certification Authority"]; !ok {
-		return nil, errors.New("perflib did not contain an entry for Certification Authority")
+		return errors.New("perflib did not contain an entry for Certification Authority")
 	}
 	err := perflib.UnmarshalObject(ctx.PerfObjects["Certification Authority"], &dst, c.logger)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if len(dst) == 0 {
-		return nil, errors.New("perflib query for Certification Authority (ADCS) returned empty result set")
+		return errors.New("perflib query for Certification Authority (ADCS) returned empty result set")
 	}
 
 	for _, d := range dst {
@@ -267,5 +267,5 @@ func (c *collector) collectADCSCounters(ctx *types.ScrapeContext, ch chan<- prom
 		)
 	}
 
-	return nil, nil
+	return nil
 }

@@ -208,19 +208,19 @@ func (c *collector) Build() error {
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
-	if desc, err := c.collectTSSessionCount(ctx, ch); err != nil {
-		_ = level.Error(c.logger).Log("failed collecting terminal services session count metrics", "desc", desc, "err", err)
+	if err := c.collectTSSessionCount(ctx, ch); err != nil {
+		_ = level.Error(c.logger).Log("msg", "failed collecting terminal services session count metrics", "err", err)
 		return err
 	}
-	if desc, err := c.collectTSSessionCounters(ctx, ch); err != nil {
-		_ = level.Error(c.logger).Log("failed collecting terminal services session count metrics", "desc", desc, "err", err)
+	if err := c.collectTSSessionCounters(ctx, ch); err != nil {
+		_ = level.Error(c.logger).Log("msg", "failed collecting terminal services session count metrics", "err", err)
 		return err
 	}
 
 	// only collect CollectionBrokerPerformance if host is a Connection Broker
 	if c.connectionBrokerEnabled {
-		if desc, err := c.collectCollectionBrokerPerformanceCounter(ctx, ch); err != nil {
-			_ = level.Error(c.logger).Log("failed collecting Connection Broker performance metrics", "desc", desc, "err", err)
+		if err := c.collectCollectionBrokerPerformanceCounter(ctx, ch); err != nil {
+			_ = level.Error(c.logger).Log("msg", "failed collecting Connection Broker performance metrics", "err", err)
 			return err
 		}
 	}
@@ -233,14 +233,14 @@ type perflibTerminalServices struct {
 	TotalSessions    float64 `perflib:"Total Sessions"`
 }
 
-func (c *collector) collectTSSessionCount(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *collector) collectTSSessionCount(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	dst := make([]perflibTerminalServices, 0)
 	err := perflib.UnmarshalObject(ctx.PerfObjects["Terminal Services"], &dst, c.logger)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if len(dst) == 0 {
-		return nil, errors.New("WMI query returned empty result set")
+		return errors.New("WMI query returned empty result set")
 	}
 
 	ch <- prometheus.MustNewConstMetric(
@@ -264,7 +264,7 @@ func (c *collector) collectTSSessionCount(ctx *types.ScrapeContext, ch chan<- pr
 		"total",
 	)
 
-	return nil, nil
+	return nil
 }
 
 type perflibTerminalServicesSession struct {
@@ -286,11 +286,11 @@ type perflibTerminalServicesSession struct {
 	WorkingSetPeak        float64 `perflib:"Working Set Peak"`
 }
 
-func (c *collector) collectTSSessionCounters(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *collector) collectTSSessionCounters(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	dst := make([]perflibTerminalServicesSession, 0)
 	err := perflib.UnmarshalObject(ctx.PerfObjects["Terminal Services Session"], &dst, c.logger)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	names := make(map[string]bool)
 
@@ -397,7 +397,7 @@ func (c *collector) collectTSSessionCounters(ctx *types.ScrapeContext, ch chan<-
 			d.Name,
 		)
 	}
-	return nil, nil
+	return nil
 }
 
 type perflibRemoteDesktopConnectionBrokerCounterset struct {
@@ -406,14 +406,14 @@ type perflibRemoteDesktopConnectionBrokerCounterset struct {
 	FailedConnections     float64 `perflib:"Failed Connections"`
 }
 
-func (c *collector) collectCollectionBrokerPerformanceCounter(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *collector) collectCollectionBrokerPerformanceCounter(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	dst := make([]perflibRemoteDesktopConnectionBrokerCounterset, 0)
 	err := perflib.UnmarshalObject(ctx.PerfObjects["Remote Desktop Connection Broker Counterset"], &dst, c.logger)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if len(dst) == 0 {
-		return nil, errors.New("WMI query returned empty result set")
+		return errors.New("WMI query returned empty result set")
 	}
 
 	ch <- prometheus.MustNewConstMetric(
@@ -437,5 +437,5 @@ func (c *collector) collectCollectionBrokerPerformanceCounter(ctx *types.ScrapeC
 		"Failed",
 	)
 
-	return nil, nil
+	return nil
 }

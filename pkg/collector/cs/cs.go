@@ -77,21 +77,21 @@ func (c *collector) Build() error {
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric) error {
-	if desc, err := c.collect(ch); err != nil {
-		_ = level.Error(c.logger).Log("msg", "failed collecting cs metrics", "desc", desc, "err", err)
+	if err := c.collect(ch); err != nil {
+		_ = level.Error(c.logger).Log("msg", "failed collecting cs metrics", "err", err)
 		return err
 	}
 	return nil
 }
 
-func (c *collector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *collector) collect(ch chan<- prometheus.Metric) error {
 	// Get systeminfo for number of processors
 	systemInfo := sysinfoapi.GetSystemInfo()
 
 	// Get memory status for physical memory
 	mem, err := sysinfoapi.GlobalMemoryStatusEx()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	ch <- prometheus.MustNewConstMetric(
@@ -108,15 +108,15 @@ func (c *collector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, erro
 
 	hostname, err := sysinfoapi.GetComputerName(sysinfoapi.ComputerNameDNSHostname)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	domain, err := sysinfoapi.GetComputerName(sysinfoapi.ComputerNameDNSDomain)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	fqdn, err := sysinfoapi.GetComputerName(sysinfoapi.ComputerNameDNSFullyQualified)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	ch <- prometheus.MustNewConstMetric(
@@ -128,5 +128,5 @@ func (c *collector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, erro
 		fqdn,
 	)
 
-	return nil, nil
+	return nil
 }

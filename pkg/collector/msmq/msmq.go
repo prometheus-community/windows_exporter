@@ -106,8 +106,8 @@ func (c *collector) Build() error {
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric) error {
-	if desc, err := c.collect(ch); err != nil {
-		_ = level.Error(c.logger).Log("failed collecting msmq metrics", "desc", desc, "err", err)
+	if err := c.collect(ch); err != nil {
+		_ = level.Error(c.logger).Log("msg", "failed collecting msmq metrics", "err", err)
 		return err
 	}
 	return nil
@@ -122,11 +122,11 @@ type Win32_PerfRawData_MSMQ_MSMQQueue struct {
 	MessagesinQueue        uint64
 }
 
-func (c *collector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+func (c *collector) collect(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_MSMQ_MSMQQueue
 	q := wmi.QueryAllWhere(&dst, *c.queryWhereClause, c.logger)
 	if err := wmi.Query(q, &dst); err != nil {
-		return nil, err
+		return err
 	}
 
 	for _, msmq := range dst {
@@ -158,5 +158,5 @@ func (c *collector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, erro
 			strings.ToLower(msmq.Name),
 		)
 	}
-	return nil, nil
+	return nil
 }

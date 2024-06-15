@@ -1,6 +1,9 @@
 package config
 
-import "fmt"
+import (
+	"fmt"
+	"strconv"
+)
 
 // flatten flattens the nested struct.
 //
@@ -46,7 +49,7 @@ func flattenSlice(data []interface{}) map[string]string {
 				ret[fmt.Sprintf("%d,%s", idx, fk)] = fv
 			}
 		default:
-			ret[fmt.Sprint(idx)] = fmt.Sprint(typed)
+			ret[strconv.Itoa(idx)] = fmt.Sprint(typed)
 		}
 	}
 	return ret
