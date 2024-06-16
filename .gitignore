@@ -8,3 +8,4 @@ output/
 *.syso
 installer/*.msi
 installer/*.wixpdb
+local/
