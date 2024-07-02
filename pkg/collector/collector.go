@@ -85,6 +85,8 @@ func NewWithFlags(app *kingpin.Application) Collectors {
 }
 
 // NewWithConfig To be called by the external libraries for collector initialization without running kingpin.Parse
+//
+//goland:noinspection GoUnusedExportedFunction
 func NewWithConfig(logger log.Logger, config Config) Collectors {
 	collectors := map[string]types.Collector{}
 	collectors[ad.Name] = ad.New(logger, &config.Ad)
@@ -142,6 +144,7 @@ func NewWithConfig(logger log.Logger, config Config) Collectors {
 	collectors[time.Name] = time.New(logger, &config.Time)
 	collectors[vmware.Name] = vmware.New(logger, &config.Vmware)
 	collectors[vmware_blast.Name] = vmware_blast.New(logger, &config.VmwareBlast)
+
 	return New(collectors)
 }
 
