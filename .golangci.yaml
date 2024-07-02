@@ -101,6 +101,8 @@ issues:
   - don't use underscores in Go names
   - don't use an underscore in package name
   - exported type .+ should have comment or be unexported
+  - (func|type) name will be used as pdh.Pdh.+
+  - returns unexported type pdh.pdhCounterHandle
   exclude-rules:
   - # Golint has many capitalisation complaints on WMI class names
     text: "`?\\w+`? should be `?\\w+`?"
