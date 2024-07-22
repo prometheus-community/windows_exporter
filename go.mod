@@ -3,7 +3,7 @@ module github.com/prometheus-community/windows_exporter
 go 1.22
 
 require (
-	github.com/Microsoft/hcsshim v0.12.4
+	github.com/Microsoft/hcsshim v0.12.5
 	github.com/alecthomas/kingpin/v2 v2.4.0
 	github.com/dimchansky/utfbom v1.1.1
 	github.com/go-kit/log v0.2.1
@@ -32,7 +32,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/go-logfmt/logfmt v0.5.1 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
-	github.com/golang/protobuf v1.5.3 // indirect
+	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/jpillora/backoff v1.0.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/mwitkow/go-conntrack v0.0.0-20190716064945-2f068394615f // indirect
