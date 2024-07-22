@@ -156,8 +156,8 @@ msiexec /i <path-to-msi-file> ENABLED_COLLECTORS=os,service --% EXTRA_FLAGS="--c
 
 The windows_exporter can be run as a Docker container. The Docker image is available on 
 
-* [Docker Hub](https://hub.docker.com/r/prometheuscommunity/windows-exporter): `ghcr.io/prometheus-community/windows-exporter`
-* [GitHub Container Registry](https://github.com/prometheus-community/windows_exporter/pkgs/container/windows-exporter): `docker.io/prometheuscommunity/windows-exporter`
+* [Docker Hub](https://hub.docker.com/r/prometheuscommunity/windows-exporter): `docker.io/prometheuscommunity/windows-exporter`
+* [GitHub Container Registry](https://github.com/prometheus-community/windows_exporter/pkgs/container/windows-exporter): `ghcr.io/prometheus-community/windows-exporter`
 <!-- * [quay.io Registry](https://quay.io/repository/prometheuscommunity/windows-exporter): `quay.io/prometheuscommunity/windows-exporter` -->
 
 
