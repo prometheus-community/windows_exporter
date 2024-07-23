@@ -16,6 +16,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/collector/exchange"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/hyperv"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/iis"
+	"github.com/prometheus-community/windows_exporter/pkg/collector/license"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/logical_disk"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/logon"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/memory"
@@ -74,6 +75,7 @@ type Config struct {
 	Fsrmquota                      exchange.Config                        `yaml:"fsrmquota"`
 	Hyperv                         hyperv.Config                          `yaml:"hyperv"`
 	Iis                            iis.Config                             `yaml:"iis"`
+	License                        license.Config                         `yaml:"license"`
 	LogicalDisk                    logical_disk.Config                    `yaml:"logical_disk"`
 	Logon                          logon.Config                           `yaml:"logon"`
 	Memory                         memory.Config                          `yaml:"memory"`
@@ -133,6 +135,7 @@ var ConfigDefaults = Config{
 	Fsrmquota:                      exchange.ConfigDefaults,
 	Hyperv:                         hyperv.ConfigDefaults,
 	Iis:                            iis.ConfigDefaults,
+	License:                        license.ConfigDefaults,
 	LogicalDisk:                    logical_disk.ConfigDefaults,
 	Logon:                          logon.ConfigDefaults,
 	Memory:                         memory.ConfigDefaults,
