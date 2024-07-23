@@ -63,6 +63,8 @@ windows_exporter_collector_timeout{collector="textfile"} 0
 # TYPE windows_logical_disk_free_bytes gauge
 # HELP windows_logical_disk_idle_seconds_total Seconds that the disk was idle (LogicalDisk.PercentIdleTime)
 # TYPE windows_logical_disk_idle_seconds_total counter
+# HELP windows_logical_disk_info A metric with a constant '1' value labeled with logical disk information
+# TYPE windows_logical_disk_info gauge
 # HELP windows_logical_disk_read_bytes_total The number of bytes transferred from the disk during read operations (LogicalDisk.DiskReadBytesPerSec)
 # TYPE windows_logical_disk_read_bytes_total counter
 # HELP windows_logical_disk_read_latency_seconds_total Shows the average time, in seconds, of a read operation from the disk (LogicalDisk.AvgDiskSecPerRead)
