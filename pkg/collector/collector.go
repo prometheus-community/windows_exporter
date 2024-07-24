@@ -9,6 +9,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/go-kit/log"
+
 	"github.com/prometheus-community/windows_exporter/pkg/collector/ad"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/adcs"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/adfs"
@@ -24,6 +25,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/collector/exchange"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/hyperv"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/iis"
+	"github.com/prometheus-community/windows_exporter/pkg/collector/license"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/logical_disk"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/logon"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/memory"
@@ -106,6 +108,7 @@ func NewWithConfig(logger log.Logger, config Config) Collectors {
 	collectors[exchange.Name] = exchange.New(logger, &config.Fsrmquota)
 	collectors[hyperv.Name] = hyperv.New(logger, &config.Hyperv)
 	collectors[iis.Name] = iis.New(logger, &config.Iis)
+	collectors[license.Name] = license.New(logger, &config.License)
 	collectors[logical_disk.Name] = logical_disk.New(logger, &config.LogicalDisk)
 	collectors[logon.Name] = logon.New(logger, &config.Logon)
 	collectors[memory.Name] = memory.New(logger, &config.Memory)
@@ -146,6 +149,7 @@ func NewWithConfig(logger log.Logger, config Config) Collectors {
 	collectors[time.Name] = time.New(logger, &config.Time)
 	collectors[vmware.Name] = vmware.New(logger, &config.Vmware)
 	collectors[vmware_blast.Name] = vmware_blast.New(logger, &config.VmwareBlast)
+
 	return New(collectors)
 }
 

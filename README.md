@@ -24,6 +24,7 @@ Name     | Description | Enabled by default
 [fsrmquota](docs/collector.fsrmquota.md) | Microsoft File Server Resource Manager (FSRM) Quotas collector |
 [hyperv](docs/collector.hyperv.md) | Hyper-V hosts |
 [iis](docs/collector.iis.md) | IIS sites and applications |
+[license](docs/collector.license.md) | Windows license status | 
 [logical_disk](docs/collector.logical_disk.md) | Logical disks, disk I/O | &#10003;
 [logon](docs/collector.logon.md) | User logon sessions |
 [memory](docs/collector.memory.md) | Memory usage metrics |
@@ -44,6 +45,7 @@ Name     | Description | Enabled by default
 [netframework_clrsecurity](docs/collector.netframework_clrsecurity.md) | .NET Framework Security Check metrics |
 [net](docs/collector.net.md) | Network interface I/O | &#10003;
 [os](docs/collector.os.md) | OS metrics (memory, processes, users) | &#10003;
+[physical_disk](docs/collector.physical_disk.md) | physical disk metrics | &#10003;
 [printer](docs/collector.printer.md) | Printer metrics | 
 [process](docs/collector.process.md) | Per-process metrics |
 [remote_fx](docs/collector.remote_fx.md) | RemoteFX protocol (RDP) metrics |
@@ -155,10 +157,16 @@ msiexec /i <path-to-msi-file> ENABLED_COLLECTORS=os,service --% EXTRA_FLAGS="--c
 
 The windows_exporter can be run as a Docker container. The Docker image is available on 
 
-* [Docker Hub](https://hub.docker.com/r/prometheuscommunity/windows-exporter): `ghcr.io/prometheus-community/windows-exporter`
-* [GitHub Container Registry](https://github.com/prometheus-community/windows_exporter/pkgs/container/windows-exporter): `docker.io/prometheuscommunity/windows-exporter`
+* [Docker Hub](https://hub.docker.com/r/prometheuscommunity/windows-exporter): `docker.io/prometheuscommunity/windows-exporter`
+* [GitHub Container Registry](https://github.com/prometheus-community/windows_exporter/pkgs/container/windows-exporter): `ghcr.io/prometheus-community/windows-exporter`
 <!-- * [quay.io Registry](https://quay.io/repository/prometheuscommunity/windows-exporter): `quay.io/prometheuscommunity/windows-exporter` -->
 
+### Tags
+
+The Docker image is tagged with the version of the exporter. The `latest` tag is also available and points to the latest release.
+
+Additionally, a flavor `hostprocess` with `-hostprocess` as suffix is based on the https://github.com/microsoft/windows-host-process-containers-base-image
+which is designed to run as a Windows host process container. The size of that images is smaller than the default one.
 
 ## Kubernetes Implementation
 

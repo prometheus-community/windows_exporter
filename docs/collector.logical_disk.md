@@ -23,6 +23,7 @@ If given, a disk needs to *not* match the exclude regexp in order for the corres
 
 Name | Description | Type | Labels
 -----|-------------|------|-------
+`windows_logical_disk_info` | A metric with a constant '1' value labeled with logical disk information | gauge | `disk`,`filesystem`,`serial_number`,`volume`,`volume_name`,`type`
 `windows_logical_disk_requests_queued` | Number of requests outstanding on the disk at the time the performance data is collected | gauge | `volume`
 `windows_logical_disk_avg_read_requests_queued` | Average number of read requests that were queued for the selected disk during the sample interval | gauge | `volume`
 `windows_logical_disk_avg_write_requests_queued` | Average number of write requests that were queued for the selected disk during the sample interval | gauge | `volume`
@@ -36,6 +37,7 @@ Name | Description | Type | Labels
 `windows_logical_disk_size_bytes` | Total size of the disk in bytes (not real time, updates every 10-15 min) | gauge | `volume`
 `windows_logical_disk_idle_seconds_total` | Seconds the disk was idle (not servicing read/write requests) | counter | `volume`
 `windows_logical_disk_split_ios_total` | Number of I/Os to the disk split into multiple I/Os | counter | `volume`
+`windows_logical_disk_readonly` | Whether the logical disk is read-only | gauge | `volume`
 
 ### Warning about size metrics
 The `free_bytes` and `size_bytes` metrics are not updated in real time and might have a delay of 10-15min.
@@ -45,6 +47,15 @@ This is the same behavior as the windows performance counters.
 Query the rate of write operations to a disk
 ```
 rate(windows_logical_disk_read_bytes_total{instance="localhost", volume=~"C:"}[2m])
+```
+
+Logical Volume information
+```
+windows_logical_disk_info{disk_id="0",filesystem="",serial_number="",type="",volume="HarddiskVolume2",volume_name=""} 1
+windows_logical_disk_info{disk_id="0",filesystem="",serial_number="",type="",volume="HarddiskVolume3",volume_name=""} 1
+windows_logical_disk_info{disk_id="0",filesystem="NTFS",serial_number="668EEC37",type="fixed",volume="C:",volume_name="Windows"} 1
+windows_logical_disk_info{disk_id="1",filesystem="NTFS",serial_number="50AE953B",type="fixed",volume="D:",volume_name="Temporary Storage"} 1
+windows_logical_disk_info{disk_id="1",filesystem="ReFS",serial_number="C69B59AD",type="fixed",volume="G:",volume_name="Volume"} 1
 ```
 
 ## Useful queries

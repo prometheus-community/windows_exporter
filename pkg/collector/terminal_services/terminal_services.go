@@ -4,11 +4,14 @@ package terminal_services
 
 import (
 	"errors"
+	"fmt"
 	"strings"
+	"syscall"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
+	"github.com/prometheus-community/windows_exporter/pkg/headers/wtsapi32"
 	"github.com/prometheus-community/windows_exporter/pkg/perflib"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus-community/windows_exporter/pkg/wmi"
@@ -52,15 +55,16 @@ type collector struct {
 
 	connectionBrokerEnabled bool
 
+	hServer syscall.Handle
+
+	SessionInfo                 *prometheus.Desc
 	LocalSessionCount           *prometheus.Desc
 	ConnectionBrokerPerformance *prometheus.Desc
 	HandleCount                 *prometheus.Desc
 	PageFaultsPersec            *prometheus.Desc
 	PageFileBytes               *prometheus.Desc
 	PageFileBytesPeak           *prometheus.Desc
-	PercentPrivilegedTime       *prometheus.Desc
-	PercentProcessorTime        *prometheus.Desc
-	PercentUserTime             *prometheus.Desc
+	PercentCPUTime              *prometheus.Desc
 	PoolNonpagedBytes           *prometheus.Desc
 	PoolPagedBytes              *prometheus.Desc
 	PrivateBytes                *prometheus.Desc
@@ -91,7 +95,6 @@ func (c *collector) SetLogger(logger log.Logger) {
 
 func (c *collector) GetPerfCounter() ([]string, error) {
 	return []string{
-		"Terminal Services",
 		"Terminal Services Session",
 		"Remote Desktop Connection Broker Counterset",
 	}, nil
@@ -100,10 +103,10 @@ func (c *collector) GetPerfCounter() ([]string, error) {
 func (c *collector) Build() error {
 	c.connectionBrokerEnabled = isConnectionBrokerServer(c.logger)
 
-	c.LocalSessionCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "local_session_count"),
-		"Number of Terminal Services sessions",
-		[]string{"session"},
+	c.SessionInfo = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "session_info"),
+		"Terminal Services sessions info",
+		[]string{"session_name", "user", "host", "state"},
 		nil,
 	)
 	c.ConnectionBrokerPerformance = prometheus.NewDesc(
@@ -136,22 +139,10 @@ func (c *collector) Build() error {
 		[]string{"session_name"},
 		nil,
 	)
-	c.PercentPrivilegedTime = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "privileged_time_seconds_total"),
-		"Total elapsed time that the threads of the process have spent executing code in privileged mode.",
-		[]string{"session_name"},
-		nil,
-	)
-	c.PercentProcessorTime = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "processor_time_seconds_total"),
-		"Total elapsed time that all of the threads of this process used the processor to execute instructions.",
-		[]string{"session_name"},
-		nil,
-	)
-	c.PercentUserTime = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "user_time_seconds_total"),
-		"Total elapsed time that this process's threads have spent executing code in user mode. Applications, environment Names, and integral Names execute in user mode.",
-		[]string{"session_name"},
+	c.PercentCPUTime = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "cpu_time_seconds_total"),
+		"Total elapsed time that this process's threads have spent executing code.",
+		[]string{"mode", "session_name"},
 		nil,
 	)
 	c.PoolNonpagedBytes = prometheus.NewDesc(
@@ -202,14 +193,22 @@ func (c *collector) Build() error {
 		[]string{"session_name"},
 		nil,
 	)
+
+	var err error
+
+	c.hServer, err = wtsapi32.WTSOpenServer("")
+	if err != nil {
+		return fmt.Errorf("failed to open WTS server: %w", err)
+	}
+
 	return nil
 }
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
-	if err := c.collectTSSessionCount(ctx, ch); err != nil {
-		_ = level.Error(c.logger).Log("msg", "failed collecting terminal services session count metrics", "err", err)
+	if err := c.collectWTSSessions(ch); err != nil {
+		_ = level.Error(c.logger).Log("msg", "failed collecting terminal services session infos", "err", err)
 		return err
 	}
 	if err := c.collectTSSessionCounters(ctx, ch); err != nil {
@@ -224,46 +223,6 @@ func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 			return err
 		}
 	}
-	return nil
-}
-
-type perflibTerminalServices struct {
-	ActiveSessions   float64 `perflib:"Active Sessions"`
-	InactiveSessions float64 `perflib:"Inactive Sessions"`
-	TotalSessions    float64 `perflib:"Total Sessions"`
-}
-
-func (c *collector) collectTSSessionCount(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
-	dst := make([]perflibTerminalServices, 0)
-	err := perflib.UnmarshalObject(ctx.PerfObjects["Terminal Services"], &dst, c.logger)
-	if err != nil {
-		return err
-	}
-	if len(dst) == 0 {
-		return errors.New("WMI query returned empty result set")
-	}
-
-	ch <- prometheus.MustNewConstMetric(
-		c.LocalSessionCount,
-		prometheus.GaugeValue,
-		dst[0].ActiveSessions,
-		"active",
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.LocalSessionCount,
-		prometheus.GaugeValue,
-		dst[0].InactiveSessions,
-		"inactive",
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.LocalSessionCount,
-		prometheus.GaugeValue,
-		dst[0].TotalSessions,
-		"total",
-	)
-
 	return nil
 }
 
@@ -331,22 +290,25 @@ func (c *collector) collectTSSessionCounters(ctx *types.ScrapeContext, ch chan<-
 			d.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.PercentPrivilegedTime,
+			c.PercentCPUTime,
 			prometheus.CounterValue,
 			d.PercentPrivilegedTime,
 			d.Name,
+			"privileged",
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.PercentProcessorTime,
+			c.PercentCPUTime,
 			prometheus.CounterValue,
 			d.PercentProcessorTime,
 			d.Name,
+			"processor",
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.PercentUserTime,
+			c.PercentCPUTime,
 			prometheus.CounterValue,
 			d.PercentUserTime,
 			d.Name,
+			"user",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.PoolNonpagedBytes,
@@ -436,6 +398,39 @@ func (c *collector) collectCollectionBrokerPerformanceCounter(ctx *types.ScrapeC
 		dst[0].FailedConnections,
 		"Failed",
 	)
+
+	return nil
+}
+
+func (c *collector) collectWTSSessions(ch chan<- prometheus.Metric) error {
+	sessions, err := wtsapi32.WTSEnumerateSessionsEx(c.hServer, c.logger)
+	if err != nil {
+		return fmt.Errorf("failed to enumerate WTS sessions: %w", err)
+	}
+
+	for _, session := range sessions {
+		userName := session.UserName
+		if session.DomainName != "" {
+			userName = fmt.Sprintf("%s\\%s", session.DomainName, session.UserName)
+		}
+
+		for stateID, stateName := range wtsapi32.WTSSessionStates {
+			isState := 0.0
+			if session.State == stateID {
+				isState = 1.0
+			}
+
+			ch <- prometheus.MustNewConstMetric(
+				c.SessionInfo,
+				prometheus.GaugeValue,
+				isState,
+				strings.Replace(session.SessionName, "#", " ", -1),
+				userName,
+				session.HostName,
+				stateName,
+			)
+		}
+	}
 
 	return nil
 }

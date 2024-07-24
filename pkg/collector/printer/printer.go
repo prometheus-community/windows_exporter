@@ -158,17 +158,21 @@ func (c *collector) collectPrinterStatus(ch chan<- prometheus.Metric) error {
 			continue
 		}
 
-		printerStatus, ok := printerStatusMap[printer.PrinterStatus]
-		if !ok {
-			printerStatus = "Unknown"
+		for printerStatus, printerStatusName := range printerStatusMap {
+			isCurrentStatus := 0.0
+			if printerStatus == printer.PrinterStatus {
+				isCurrentStatus = 1.0
+			}
+
+			ch <- prometheus.MustNewConstMetric(
+				c.printerStatus,
+				prometheus.GaugeValue,
+				isCurrentStatus,
+				printer.Name,
+				printerStatusName,
+			)
 		}
-		ch <- prometheus.MustNewConstMetric(
-			c.printerStatus,
-			prometheus.GaugeValue,
-			1,
-			printer.Name,
-			printerStatus,
-		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.printerJobCount,
 			prometheus.CounterValue,

@@ -58,10 +58,13 @@ package: crossbuild
 build-image: crossbuild
 	$(DOCKER) build --build-arg=BASE=$(BASE_IMAGE):$(OS) -f Dockerfile -t local/$(DOCKER_IMAGE_NAME):$(VERSION)-$(OS) .
 
+build-hostprocess:
+	$(DOCKER) buildx build --build-arg=BASE=mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v1.0.0 -f Dockerfile -t local/$(DOCKER_IMAGE_NAME):$(VERSION)-hostprocess .
+
 sub-build-%:
 	$(MAKE) OS=$* build-image
 
-build-all: $(addprefix sub-build-,$(ALL_OS))
+build-all: $(addprefix sub-build-,$(ALL_OS)) build-hostprocess
 
 push:
 	set -x; \
@@ -76,9 +79,16 @@ push:
 		$(DOCKER) manifest push --purge $${docker_repo}/$(DOCKER_IMAGE_NAME):$(VERSION); \
 	done
 
+# We can't load the image into the local docker store, so we have to build and push it in one go
+push-hostprocess:
+	set -x; \
+	for docker_repo in ${DOCKER_REPO}; do \
+		$(DOCKER) buildx build --push --build-arg=BASE=mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v1.0.0 -f Dockerfile -t $${docker_repo}/$(DOCKER_IMAGE_NAME):$(VERSION)-hostprocess  .
+	done
+
 .PHONY: push-all
 push-all: build-all
-	$(MAKE) DOCKER_REPO="$(ALL_DOCKER_REPOS)" push
+	$(MAKE) DOCKER_REPO="$(ALL_DOCKER_REPOS)" push push-hostprocess
 
 # Mandatory target for container description sync action
 .PHONY: docker-repo-name
