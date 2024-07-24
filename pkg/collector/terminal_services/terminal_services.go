@@ -403,7 +403,7 @@ func (c *collector) collectCollectionBrokerPerformanceCounter(ctx *types.ScrapeC
 }
 
 func (c *collector) collectWTSSessions(ch chan<- prometheus.Metric) error {
-	sessions, err := wtsapi32.WTSEnumerateSessionsEx(c.hServer)
+	sessions, err := wtsapi32.WTSEnumerateSessionsEx(c.hServer, c.logger)
 	if err != nil {
 		return fmt.Errorf("failed to enumerate WTS sessions: %w", err)
 	}

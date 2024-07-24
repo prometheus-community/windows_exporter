@@ -5,6 +5,8 @@ import (
 	"syscall"
 	"unsafe"
 
+	"github.com/go-kit/log"
+	"github.com/go-kit/log/level"
 	"golang.org/x/sys/windows"
 )
 
@@ -145,14 +147,14 @@ func WTSFreeMemoryEx(class WTSTypeClass, pMemory uintptr, NumberOfEntries uint32
 	return err
 }
 
-func WTSEnumerateSessionsEx(server syscall.Handle) ([]WTSSession, error) {
+func WTSEnumerateSessionsEx(server syscall.Handle, logger log.Logger) ([]WTSSession, error) {
 	var sessionInfoPointer uintptr
 	var count uint32
 
-	level := uint32(1)
+	pLevel := uint32(1)
 	r1, _, err := procWTSEnumerateSessionsEx.Call(
 		uintptr(server),
-		uintptr(unsafe.Pointer(&level)),
+		uintptr(unsafe.Pointer(&pLevel)),
 		uintptr(0),
 		uintptr(unsafe.Pointer(&sessionInfoPointer)),
 		uintptr(unsafe.Pointer(&count)),
@@ -163,7 +165,12 @@ func WTSEnumerateSessionsEx(server syscall.Handle) ([]WTSSession, error) {
 	}
 
 	if sessionInfoPointer != 0 {
-		defer WTSFreeMemoryEx(WTSTypeSessionInfoLevel1, sessionInfoPointer, count)
+		defer func(class WTSTypeClass, pMemory uintptr, NumberOfEntries uint32) {
+			err := WTSFreeMemoryEx(class, pMemory, NumberOfEntries)
+			if err != nil {
+				_ = level.Error(logger).Log("msg", "failed to free memory", "err", err)
+			}
+		}(WTSTypeSessionInfoLevel1, sessionInfoPointer, count)
 	}
 
 	var sizeTest wtsSessionInfo1
