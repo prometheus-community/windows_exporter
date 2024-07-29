@@ -83,12 +83,12 @@ push:
 push-hostprocess:
 	set -x; \
 	for docker_repo in ${DOCKER_REPO}; do \
-		$(DOCKER) buildx build --push --build-arg=BASE=mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v1.0.0 -f Dockerfile -t $${docker_repo}/$(DOCKER_IMAGE_NAME):$(VERSION)-hostprocess  .
+		$(DOCKER) buildx build --push --build-arg=BASE=mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v1.0.0 -f Dockerfile -t $${docker_repo}/$(DOCKER_IMAGE_NAME):$(VERSION)-hostprocess .; \
 	done
 
 .PHONY: push-all
 push-all: build-all
-	$(MAKE) DOCKER_REPO="$(ALL_DOCKER_REPOS)" push push-hostprocess
+	$(MAKE) DOCKER_REPO="$(ALL_DOCKER_REPOS)" push # push-hostprocess - disabled until it works on Windows
 
 # Mandatory target for container description sync action
 .PHONY: docker-repo-name
