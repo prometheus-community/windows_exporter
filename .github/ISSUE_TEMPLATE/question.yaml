@@ -1,0 +1,27 @@
+name: ❓ Question
+description: Something is not clear.
+labels: [ ❓ question ]
+body:
+  - type: textarea
+    attributes:
+      label: Problem Statement
+      description: Without specifying a solution, describe what the project is missing today.
+      placeholder: |
+        The rotating project logo has a fixed size and color.
+        There is no way to make it larger and more shiny.
+    validations:
+      required: false
+
+  - type: textarea
+    attributes:
+      label: Environment
+      description: |
+        examples:
+        - **windows_exporter Version**: 0.26
+        - **Windows Server Version**: 2019
+      value: |
+        - windows_exporter Version:
+        - Windows Server Version:
+    validations:
+      required: true
+

@@ -1,0 +1,41 @@
+name: ✨ Enhancement / Feature / Task
+description: Some feature is missing or incomplete.
+labels: [ ✨ enhancement ]
+body:
+  - type: textarea
+    attributes:
+      label: Problem Statement
+      description: Without specifying a solution, describe what the project is missing today.
+      placeholder: |
+        The rotating project logo has a fixed size and color.
+        There is no way to make it larger and more shiny.
+    validations:
+      required: false
+  - type: textarea
+    attributes:
+      label: Proposed Solution
+      description: Describe the proposed solution to the problem above.
+      placeholder: |
+        - Implement 2 new flags CLI: ```--logo-color=FFD700``` and ```--logo-size=100```
+        - Let these flags control the size of the rotating project logo.
+    validations:
+      required: false
+  - type: textarea
+    attributes:
+      label: Additional information
+      placeholder: |
+        We considered adjusting the logo size to the phase of the moon, but there was no
+        reliable data source in air-gapped environments.
+    validations:
+      required: false
+  - type: textarea
+    attributes:
+      label: Acceptance Criteria
+      placeholder: |
+        - [ ] As a user, I can control the size of the rotating logo using a CLI flag.
+        - [ ] As a user, I can control the color of the rotating logo using a CLI flag.
+        - [ ] Defaults are reasonably set.
+        - [ ] New settings are appropriately documented.
+        - [ ] No breaking change for current users of the rotating logo feature.
+    validations:
+      required: false
