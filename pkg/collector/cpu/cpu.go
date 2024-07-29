@@ -198,9 +198,9 @@ type perflibProcessor struct {
 	DPCRate               float64 `perflib:"DPC Rate"`
 	DPCsQueued            float64 `perflib:"DPCs Queued/sec"`
 	Interrupts            float64 `perflib:"Interrupts/sec"`
-	PercentC2Time         float64 `perflib:"% C1 Time"`
-	PercentC3Time         float64 `perflib:"% C2 Time"`
-	PercentC1Time         float64 `perflib:"% C3 Time"`
+	PercentC1Time         float64 `perflib:"% C1 Time"`
+	PercentC2Time         float64 `perflib:"% C2 Time"`
+	PercentC3Time         float64 `perflib:"% C3 Time"`
 	PercentDPCTime        float64 `perflib:"% DPC Time"`
 	PercentIdleTime       float64 `perflib:"% Idle Time"`
 	PercentInterruptTime  float64 `perflib:"% Interrupt Time"`
