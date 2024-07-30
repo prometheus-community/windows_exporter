@@ -35,10 +35,10 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: check
-        run: >-
+        run: |
           PR_TITLE_PREFIX=$(echo "$PR_TITLE" | cut -d':' -f1)
           if [[ ! -d "pkg/collector/$PR_TITLE_PREFIX" ]] || [[ "$PR_TITLE_PREFIX" == "chore" ]] || [[ "$PR_TITLE_PREFIX" == "*" ]]; then
-            echo "PR title must start with an name of an colletor package"
+            echo "PR title must start with an name of an collector package"
             echo "Example: 'logical_disk: description'"
             exit 1
           fi
