@@ -35,13 +35,13 @@ var printerStatusMap = map[uint16]string{
 }
 
 type Config struct {
-	printerInclude string `yaml:"printer_include"`
-	printerExclude string `yaml:"printer_exclude"`
+	Include string `yaml:"printer_include"`
+	Exclude string `yaml:"printer_exclude"`
 }
 
 var ConfigDefaults = Config{
-	printerInclude: ".+",
-	printerExclude: "",
+	Include: ".+",
+	Exclude: "",
 }
 
 type collector struct {
@@ -63,8 +63,8 @@ func New(logger log.Logger, config *Config) types.Collector {
 		config = &ConfigDefaults
 	}
 	c := &collector{
-		printerInclude: &config.printerInclude,
-		printerExclude: &config.printerExclude,
+		printerInclude: &config.Include,
+		printerExclude: &config.Exclude,
 	}
 	c.SetLogger(logger)
 	return c
@@ -75,11 +75,11 @@ func NewWithFlags(app *kingpin.Application) types.Collector {
 		printerInclude: app.Flag(
 			FlagPrinterInclude,
 			"Regular expression to match printers to collect metrics for",
-		).Default(ConfigDefaults.printerInclude).String(),
+		).Default(ConfigDefaults.Include).String(),
 		printerExclude: app.Flag(
 			FlagPrinterExclude,
 			"Regular expression to match printers to exclude",
-		).Default(ConfigDefaults.printerExclude).String(),
+		).Default(ConfigDefaults.Exclude).String(),
 	}
 	return c
 }
