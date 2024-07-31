@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -505,6 +506,9 @@ func getDiskIDByVolume(rootDrive string) (string, error) {
 	for i := range numDiskIDs {
 		diskIDs[i] = strconv.FormatUint(uint64(binary.LittleEndian.Uint32(volumeDiskExtents[8+i*diskExtentSize:])), 10)
 	}
+
+	slices.Sort(diskIDs)
+	diskIDs = slices.Compact(diskIDs)
 
 	return strings.Join(diskIDs, ";"), nil
 }
