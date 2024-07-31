@@ -5,10 +5,12 @@ package logical_disk
 import (
 	"encoding/binary"
 	"fmt"
-	"golang.org/x/sys/windows"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
+
+	"golang.org/x/sys/windows"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/go-kit/log"
@@ -463,6 +465,9 @@ func getDriveType(driveType uint32) string {
 	}
 }
 
+// diskExtentSize Size of the DiskExtent structure in bytes.
+const diskExtentSize = 24
+
 // getDiskIDByVolume returns the disk ID for a given volume.
 func getDiskIDByVolume(rootDrive string) (string, error) {
 	// Open a volume handle to the Disk Root.
@@ -488,16 +493,24 @@ func getDiskIDByVolume(rootDrive string) (string, error) {
 	var bytesReturned uint32
 	err = windows.DeviceIoControl(f, controlCode, nil, 0, &volumeDiskExtents[0], uint32(len(volumeDiskExtents)), &bytesReturned, nil)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("could not identify physical drive for %s: %w", rootDrive, err)
 	}
 
-	if uint(binary.LittleEndian.Uint32(volumeDiskExtents)) != 1 {
-		return "", fmt.Errorf("could not identify physical drive for %s", rootDrive)
+	numDiskIDs := uint(binary.LittleEndian.Uint32(volumeDiskExtents))
+	if numDiskIDs < 1 {
+		return "", fmt.Errorf("could not identify physical drive for %s: no disk IDs returned", rootDrive)
 	}
 
-	diskId := strconv.FormatUint(uint64(binary.LittleEndian.Uint32(volumeDiskExtents[8:])), 10)
+	diskIDs := make([]string, numDiskIDs)
 
-	return diskId, nil
+	for i := range numDiskIDs {
+		diskIDs[i] = strconv.FormatUint(uint64(binary.LittleEndian.Uint32(volumeDiskExtents[8+i*diskExtentSize:])), 10)
+	}
+
+	slices.Sort(diskIDs)
+	diskIDs = slices.Compact(diskIDs)
+
+	return strings.Join(diskIDs, ";"), nil
 }
 
 func getVolumeInfo(rootDrive string) (volumeInfo, error) {
