@@ -92,7 +92,7 @@ func main() {
 		).Default("/metrics").String()
 		disableExporterMetrics = app.Flag(
 			"web.disable-exporter-metrics",
-			"Exclude metrics about the exporter itself (promhttp_*, process_*, go_*).",
+			"PrinterExclude metrics about the exporter itself (promhttp_*, process_*, go_*).",
 		).Bool()
 		maxRequests = app.Flag(
 			"telemetry.max-requests",

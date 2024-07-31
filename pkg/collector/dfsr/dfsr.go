@@ -12,21 +12,18 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-const (
-	Name                      = "dfsr"
-	FlagDfsrEnabledCollectors = "collectors.dfsr.sources-enabled"
-)
+const Name = "dfsr"
 
 type Config struct {
-	DfsrEnabledCollectors string `yaml:"enabled_collectors"`
+	EnabledCollectors string `yaml:"enabled_collectors"`
 }
 
 var ConfigDefaults = Config{
-	DfsrEnabledCollectors: "connection,folder,volume",
+	EnabledCollectors: "connection,folder,volume",
 }
 
-// collector contains the metric and state data of the DFSR collectors.
-type collector struct {
+// Collector contains the metric and state data of the DFSR collectors.
+type Collector struct {
 	logger log.Logger
 
 	dfsrEnabledCollectors *string
@@ -78,13 +75,13 @@ type collector struct {
 	VolumeUSNJournalRecordsAcceptedTotal *prometheus.Desc
 	VolumeUSNJournalRecordsReadTotal     *prometheus.Desc
 
-	// Map of child collector functions used during collection
+	// Map of child Collector functions used during collection
 	dfsrChildCollectors []dfsrCollectorFunc
 }
 
 type dfsrCollectorFunc func(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error
 
-// Map Perflib sources to DFSR collector names
+// Map Perflib sources to DFSR Collector names
 // e.g, volume -> DFS Replication Service Volumes
 func dfsrGetPerfObjectName(collector string) string {
 	prefix := "DFS "
@@ -100,35 +97,37 @@ func dfsrGetPerfObjectName(collector string) string {
 	return prefix + suffix
 }
 
-func New(logger log.Logger, config *Config) types.Collector {
+func New(logger log.Logger, config *Config) *Collector {
 	if config == nil {
 		config = &ConfigDefaults
 	}
 
-	c := &collector{
-		dfsrEnabledCollectors: &config.DfsrEnabledCollectors,
+	c := &Collector{
+		dfsrEnabledCollectors: &config.EnabledCollectors,
 	}
 	c.SetLogger(logger)
+
 	return c
 }
 
-func NewWithFlags(app *kingpin.Application) types.Collector {
-	return &collector{
+func NewWithFlags(app *kingpin.Application) *Collector {
+	return &Collector{
 		dfsrEnabledCollectors: app.
-			Flag(FlagDfsrEnabledCollectors, "Comma-seperated list of DFSR Perflib sources to use.").Default("connection,folder,volume").
-			Default(ConfigDefaults.DfsrEnabledCollectors).String(),
+			Flag("collectors.dfsr.sources-enabled", "Comma-seperated list of DFSR Perflib sources to use.").
+			Default(ConfigDefaults.EnabledCollectors).
+			String(),
 	}
 }
 
-func (c *collector) GetName() string {
+func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *collector) SetLogger(logger log.Logger) {
+func (c *Collector) SetLogger(logger log.Logger) {
 	c.logger = log.With(logger, "collector", Name)
 }
 
-func (c *collector) GetPerfCounter() ([]string, error) {
+func (c *Collector) GetPerfCounter() ([]string, error) {
 	// Perflib sources are dynamic, depending on the enabled child collectors
 	expandedChildCollectors := utils.ExpandEnabledChildCollectors(*c.dfsrEnabledCollectors)
 	perflibDependencies := make([]string, 0, len(expandedChildCollectors))
@@ -139,7 +138,7 @@ func (c *collector) GetPerfCounter() ([]string, error) {
 	return perflibDependencies, nil
 }
 
-func (c *collector) Build() error {
+func (c *Collector) Build() error {
 	_ = level.Info(c.logger).Log("msg", "dfsr collector is in an experimental state! Metrics for this collector have not been tested.")
 
 	// Connection
@@ -438,8 +437,8 @@ func (c *collector) Build() error {
 }
 
 // Maps enabled child collectors names to their relevant collection function,
-// for use in collector.Collect()
-func (c *collector) getDFSRChildCollectors(enabledCollectors []string) []dfsrCollectorFunc {
+// for use in Collector.Collect()
+func (c *Collector) getDFSRChildCollectors(enabledCollectors []string) []dfsrCollectorFunc {
 	var dfsrCollectors []dfsrCollectorFunc
 	for _, collector := range enabledCollectors {
 		switch collector {
@@ -457,7 +456,7 @@ func (c *collector) getDFSRChildCollectors(enabledCollectors []string) []dfsrCol
 
 // Collect implements the Collector interface.
 // Sends metric values for each metric to the provided prometheus Metric channel.
-func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	for _, fn := range c.dfsrChildCollectors {
 		err := fn(ctx, ch)
 		if err != nil {
@@ -482,7 +481,7 @@ type PerflibDFSRConnection struct {
 	SizeOfFilesReceivedTotal                 float64 `perflib:"Size of Files Received"`
 }
 
-func (c *collector) collectConnection(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *Collector) collectConnection(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	var dst []PerflibDFSRConnection
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["DFS Replication Connections"], &dst, c.logger); err != nil {
 		return err
@@ -589,7 +588,7 @@ type PerflibDFSRFolder struct {
 	UpdatesDroppedTotal                      float64 `perflib:"Updates Dropped"`
 }
 
-func (c *collector) collectFolder(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *Collector) collectFolder(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	var dst []PerflibDFSRFolder
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["DFS Replicated Folders"], &dst, c.logger); err != nil {
 		return err
@@ -799,7 +798,7 @@ type PerflibDFSRVolume struct {
 	USNJournalUnreadPercentage     float64 `perflib:"USN Journal Records Unread Percentage"`
 }
 
-func (c *collector) collectVolume(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *Collector) collectVolume(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	var dst []PerflibDFSRVolume
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["DFS Replication Service Volumes"], &dst, c.logger); err != nil {
 		return err

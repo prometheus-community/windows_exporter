@@ -14,6 +14,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/collector/diskdrive"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/dns"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/exchange"
+	"github.com/prometheus-community/windows_exporter/pkg/collector/fsrmquota"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/hyperv"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/iis"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/license"
@@ -59,22 +60,22 @@ import (
 )
 
 type Config struct {
-	Ad                             ad.Config                              `yaml:"ad"`
-	Adcs                           adcs.Config                            `yaml:"adcs"`
-	Adfs                           adfs.Config                            `yaml:"adfs"`
+	AD                             ad.Config                              `yaml:"ad"`
+	ADCS                           adcs.Config                            `yaml:"adcs"`
+	ADFS                           adfs.Config                            `yaml:"adfs"`
 	Cache                          cache.Config                           `yaml:"cache"`
 	Container                      container.Config                       `yaml:"container"`
-	Cpu                            cpu.Config                             `yaml:"cpu"`
-	CpuInfo                        cpu_info.Config                        `yaml:"cpu_info"`
+	CPU                            cpu.Config                             `yaml:"cpu"`
+	CPUInfo                        cpu_info.Config                        `yaml:"cpu_info"`
 	Cs                             cs.Config                              `yaml:"cs"`
-	Dfsr                           dfsr.Config                            `yaml:"dfsr"`
+	DFSR                           dfsr.Config                            `yaml:"dfsr"`
 	Dhcp                           dhcp.Config                            `yaml:"dhcp"`
-	Diskdrive                      diskdrive.Config                       `yaml:"diskdrive"`
-	Dns                            dns.Config                             `yaml:"dns"`
+	DiskDrive                      diskdrive.Config                       `yaml:"diskdrive"`
+	DNS                            dns.Config                             `yaml:"dns"`
 	Exchange                       exchange.Config                        `yaml:"exchange"`
-	Fsrmquota                      exchange.Config                        `yaml:"fsrmquota"`
+	Fsrmquota                      fsrmquota.Config                       `yaml:"fsrmquota"`
 	Hyperv                         hyperv.Config                          `yaml:"hyperv"`
-	Iis                            iis.Config                             `yaml:"iis"`
+	IIS                            iis.Config                             `yaml:"iis"`
 	License                        license.Config                         `yaml:"license"`
 	LogicalDisk                    logical_disk.Config                    `yaml:"logical_disk"`
 	Logon                          logon.Config                           `yaml:"logon"`
@@ -103,12 +104,12 @@ type Config struct {
 	RemoteFx                       remote_fx.Config                       `yaml:"remote_fx"`
 	ScheduledTask                  scheduled_task.Config                  `yaml:"scheduled_task"`
 	Service                        service.Config                         `yaml:"service"`
-	Smb                            smb.Config                             `yaml:"smb"`
-	SmbClient                      smbclient.Config                       `yaml:"smbclient"`
-	Smtp                           smtp.Config                            `yaml:"smtp"`
+	SMB                            smb.Config                             `yaml:"smb"`
+	SMBClient                      smbclient.Config                       `yaml:"smbclient"`
+	SMTP                           smtp.Config                            `yaml:"smtp"`
 	System                         system.Config                          `yaml:"system"`
 	TeradiciPcoip                  teradici_pcoip.Config                  `yaml:"teradici_pcoip"`
-	Tcp                            tcp.Config                             `yaml:"tcp"`
+	TCP                            tcp.Config                             `yaml:"tcp"`
 	TerminalServices               terminal_services.Config               `yaml:"terminal_services"`
 	Textfile                       textfile.Config                        `yaml:"textfile"`
 	Thermalzone                    thermalzone.Config                     `yaml:"thermalzone"`
@@ -121,22 +122,22 @@ type Config struct {
 //
 //goland:noinspection GoUnusedGlobalVariable
 var ConfigDefaults = Config{
-	Ad:                             ad.ConfigDefaults,
-	Adcs:                           adcs.ConfigDefaults,
-	Adfs:                           adfs.ConfigDefaults,
+	AD:                             ad.ConfigDefaults,
+	ADCS:                           adcs.ConfigDefaults,
+	ADFS:                           adfs.ConfigDefaults,
 	Cache:                          cache.ConfigDefaults,
 	Container:                      container.ConfigDefaults,
-	Cpu:                            cpu.ConfigDefaults,
-	CpuInfo:                        cpu_info.ConfigDefaults,
+	CPU:                            cpu.ConfigDefaults,
+	CPUInfo:                        cpu_info.ConfigDefaults,
 	Cs:                             cs.ConfigDefaults,
-	Dfsr:                           dfsr.ConfigDefaults,
+	DFSR:                           dfsr.ConfigDefaults,
 	Dhcp:                           dhcp.ConfigDefaults,
-	Diskdrive:                      diskdrive.ConfigDefaults,
-	Dns:                            dns.ConfigDefaults,
+	DiskDrive:                      diskdrive.ConfigDefaults,
+	DNS:                            dns.ConfigDefaults,
 	Exchange:                       exchange.ConfigDefaults,
-	Fsrmquota:                      exchange.ConfigDefaults,
+	Fsrmquota:                      fsrmquota.ConfigDefaults,
 	Hyperv:                         hyperv.ConfigDefaults,
-	Iis:                            iis.ConfigDefaults,
+	IIS:                            iis.ConfigDefaults,
 	License:                        license.ConfigDefaults,
 	LogicalDisk:                    logical_disk.ConfigDefaults,
 	Logon:                          logon.ConfigDefaults,
@@ -165,12 +166,12 @@ var ConfigDefaults = Config{
 	RemoteFx:                       remote_fx.ConfigDefaults,
 	ScheduledTask:                  scheduled_task.ConfigDefaults,
 	Service:                        service.ConfigDefaults,
-	Smb:                            smb.ConfigDefaults,
-	SmbClient:                      smbclient.ConfigDefaults,
-	Smtp:                           smtp.ConfigDefaults,
+	SMB:                            smb.ConfigDefaults,
+	SMBClient:                      smbclient.ConfigDefaults,
+	SMTP:                           smtp.ConfigDefaults,
 	System:                         system.ConfigDefaults,
 	TeradiciPcoip:                  teradici_pcoip.ConfigDefaults,
-	Tcp:                            tcp.ConfigDefaults,
+	TCP:                            tcp.ConfigDefaults,
 	TerminalServices:               terminal_services.ConfigDefaults,
 	Textfile:                       textfile.ConfigDefaults,
 	Thermalzone:                    thermalzone.ConfigDefaults,

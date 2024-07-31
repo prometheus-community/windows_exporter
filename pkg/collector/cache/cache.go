@@ -17,8 +17,8 @@ type Config struct{}
 
 var ConfigDefaults = Config{}
 
-// A collector is a Prometheus collector for Perflib Cache metrics
-type collector struct {
+// A Collector is a Prometheus Collector for Perflib Cache metrics
+type Collector struct {
 	logger log.Logger
 
 	AsyncCopyReadsTotal         *prometheus.Desc
@@ -52,29 +52,30 @@ type collector struct {
 	SyncPinReadsTotal           *prometheus.Desc
 }
 
-func New(logger log.Logger, _ *Config) types.Collector {
-	c := &collector{}
+func New(logger log.Logger, _ *Config) *Collector {
+	c := &Collector{}
 	c.SetLogger(logger)
+
 	return c
 }
 
-func NewWithFlags(_ *kingpin.Application) types.Collector {
-	return &collector{}
+func NewWithFlags(_ *kingpin.Application) *Collector {
+	return &Collector{}
 }
 
-func (c *collector) GetName() string {
+func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *collector) SetLogger(logger log.Logger) {
+func (c *Collector) SetLogger(logger log.Logger) {
 	c.logger = log.With(logger, "collector", Name)
 }
 
-func (c *collector) GetPerfCounter() ([]string, error) {
+func (c *Collector) GetPerfCounter() ([]string, error) {
 	return []string{"Cache"}, nil
 }
 
-func (c *collector) Build() error {
+func (c *Collector) Build() error {
 	c.AsyncCopyReadsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "async_copy_reads_total"),
 		"(AsyncCopyReadsTotal)",
@@ -253,7 +254,7 @@ func (c *collector) Build() error {
 }
 
 // Collect implements the Collector interface
-func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	if err := c.collect(ctx, ch); err != nil {
 		_ = level.Error(c.logger).Log("msg", "failed collecting cache metrics", "err", err)
 		return err
@@ -295,7 +296,7 @@ type perflibCache struct {
 	SyncPinReadsTotal           float64 `perflib:"Sync Pin Reads/sec"`
 }
 
-func (c *collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *Collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	var dst []perflibCache // Single-instance class, array is required but will have single entry.
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["Cache"], &dst, c.logger); err != nil {
 		return err

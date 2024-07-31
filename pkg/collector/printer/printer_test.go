@@ -12,6 +12,6 @@ import (
 func BenchmarkCollector(b *testing.B) {
 	// Whitelist is not set in testing context (kingpin flags not parsed), causing the collector to skip all printers.
 	printersInclude := ".+"
-	kingpin.CommandLine.GetArg(printer.FlagPrinterInclude).StringVar(&printersInclude)
+	kingpin.CommandLine.GetArg("collector.printer.include").StringVar(&printersInclude)
 	testutils.FuncBenchmarkCollector(b, "printer", printer.NewWithFlags)
 }

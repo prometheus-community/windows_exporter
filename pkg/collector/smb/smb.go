@@ -16,11 +16,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-const (
-	Name                     = "smb"
-	FlagSmbListAllCollectors = "collectors.smb.list"
-	FlagSmbCollectorsEnabled = "collectors.smb.enabled"
-)
+const Name = "smb"
 
 type Config struct {
 	CollectorsEnabled string `yaml:"collectors_enabled"`
@@ -30,7 +26,7 @@ var ConfigDefaults = Config{
 	CollectorsEnabled: "",
 }
 
-type collector struct {
+type Collector struct {
 	logger log.Logger
 
 	smbListAllCollectors *bool
@@ -42,54 +38,56 @@ type collector struct {
 	enabledCollectors []string
 }
 
-// All available collector functions
+// All available Collector functions
 var smbAllCollectorNames = []string{
 	"ServerShares",
 }
 
-func New(logger log.Logger, config *Config) types.Collector {
+func New(logger log.Logger, config *Config) *Collector {
 	if config == nil {
 		config = &ConfigDefaults
 	}
 
 	smbListAllCollectors := false
-	c := &collector{
+	c := &Collector{
 		smbCollectorsEnabled: &config.CollectorsEnabled,
 		smbListAllCollectors: &smbListAllCollectors,
 	}
+
 	c.SetLogger(logger)
+
 	return c
 }
 
-func NewWithFlags(app *kingpin.Application) types.Collector {
-	return &collector{
+func NewWithFlags(app *kingpin.Application) *Collector {
+	return &Collector{
 		smbListAllCollectors: app.Flag(
-			FlagSmbListAllCollectors,
+			"collectors.smb.list",
 			"List the collectors along with their perflib object name/ids",
 		).Bool(),
 
 		smbCollectorsEnabled: app.Flag(
-			FlagSmbCollectorsEnabled,
+			"collectors.smb.enabled",
 			"Comma-separated list of collectors to use. Defaults to all, if not specified.",
 		).Default(ConfigDefaults.CollectorsEnabled).String(),
 	}
 }
 
-func (c *collector) GetName() string {
+func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *collector) SetLogger(logger log.Logger) {
+func (c *Collector) SetLogger(logger log.Logger) {
 	c.logger = log.With(logger, "collector", Name)
 }
 
-func (c *collector) GetPerfCounter() ([]string, error) {
+func (c *Collector) GetPerfCounter() ([]string, error) {
 	return []string{
 		"SMB Server Shares",
 	}, nil
 }
 
-func (c *collector) Build() error {
+func (c *Collector) Build() error {
 	// desc creates a new prometheus description
 	desc := func(metricName string, description string, labels ...string) *prometheus.Desc {
 		return prometheus.NewDesc(
@@ -135,7 +133,7 @@ func (c *collector) Build() error {
 }
 
 // Collect collects smb metrics and sends them to prometheus
-func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	collectorFuncs := map[string]func(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error{
 		"ServerShares": c.collectServerShares,
 	}
@@ -157,7 +155,7 @@ type perflibServerShares struct {
 	TreeConnectCount     float64 `perflib:"Tree Connect Count"`
 }
 
-func (c *collector) collectServerShares(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *Collector) collectServerShares(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	var data []perflibServerShares
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["SMB Server Shares"], &data, c.logger); err != nil {
 		return err
@@ -185,7 +183,7 @@ func (c *collector) collectServerShares(ctx *types.ScrapeContext, ch chan<- prom
 }
 
 // toLabelName converts strings to lowercase and replaces all whitespaces and dots with underscores
-func (c *collector) toLabelName(name string) string {
+func (c *Collector) toLabelName(name string) string {
 	s := strings.ReplaceAll(strings.Join(strings.Fields(strings.ToLower(name)), "_"), ".", "_")
 	s = strings.ReplaceAll(s, "__", "_")
 	return s
