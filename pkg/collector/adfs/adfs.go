@@ -22,16 +22,17 @@ type Collector struct {
 	logger log.Logger
 
 	adLoginConnectionFailures                          *prometheus.Desc
+	artifactDBFailures                                 *prometheus.Desc
+	avgArtifactDBQueryTime                             *prometheus.Desc
+	avgConfigDBQueryTime                               *prometheus.Desc
 	certificateAuthentications                         *prometheus.Desc
+	configDBFailures                                   *prometheus.Desc
 	deviceAuthentications                              *prometheus.Desc
+	externalAuthenticationFailures                     *prometheus.Desc
+	externalAuthentications                            *prometheus.Desc
 	extranetAccountLockouts                            *prometheus.Desc
 	federatedAuthentications                           *prometheus.Desc
-	passportAuthentications                            *prometheus.Desc
-	passiveRequests                                    *prometheus.Desc
-	passwordChangeFailed                               *prometheus.Desc
-	passwordChangeSucceeded                            *prometheus.Desc
-	tokenRequests                                      *prometheus.Desc
-	windowsIntegratedAuthentications                   *prometheus.Desc
+	federationMetadataRequests                         *prometheus.Desc
 	oAuthAuthZRequests                                 *prometheus.Desc
 	oAuthClientAuthentications                         *prometheus.Desc
 	oAuthClientAuthenticationsFailures                 *prometheus.Desc
@@ -50,20 +51,19 @@ type Collector struct {
 	oAuthPasswordGrantRequestFailures                  *prometheus.Desc
 	oAuthPasswordGrantRequests                         *prometheus.Desc
 	oAuthTokenRequests                                 *prometheus.Desc
+	passiveRequests                                    *prometheus.Desc
+	passportAuthentications                            *prometheus.Desc
+	passwordChangeFailed                               *prometheus.Desc
+	passwordChangeSucceeded                            *prometheus.Desc
 	samlPTokenRequests                                 *prometheus.Desc
 	ssoAuthenticationFailures                          *prometheus.Desc
 	ssoAuthentications                                 *prometheus.Desc
-	wsfedTokenRequests                                 *prometheus.Desc
-	wstrustTokenRequests                               *prometheus.Desc
+	tokenRequests                                      *prometheus.Desc
 	upAuthenticationFailures                           *prometheus.Desc
 	upAuthentications                                  *prometheus.Desc
-	externalAuthenticationFailures                     *prometheus.Desc
-	externalAuthentications                            *prometheus.Desc
-	artifactDBFailures                                 *prometheus.Desc
-	avgArtifactDBQueryTime                             *prometheus.Desc
-	configDBFailures                                   *prometheus.Desc
-	avgConfigDBQueryTime                               *prometheus.Desc
-	federationMetadataRequests                         *prometheus.Desc
+	windowsIntegratedAuthentications                   *prometheus.Desc
+	wsfedTokenRequests                                 *prometheus.Desc
+	wstrustTokenRequests                               *prometheus.Desc
 }
 
 func New(logger log.Logger, _ *Config) *Collector {
