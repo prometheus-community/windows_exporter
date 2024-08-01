@@ -29,7 +29,7 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	logger log.Logger
 
-	CpuInfo *prometheus.Desc
+	cpuInfo *prometheus.Desc
 }
 
 func New(logger log.Logger, _ *Config) *Collector {
@@ -56,7 +56,7 @@ func (c *Collector) GetPerfCounter() ([]string, error) {
 }
 
 func (c *Collector) Build() error {
-	c.CpuInfo = prometheus.NewDesc(
+	c.cpuInfo = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, "", Name),
 		"Labelled CPU information as provided provided by Win32_Processor",
 		[]string{
@@ -109,7 +109,7 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	// Some CPUs end up exposing trailing spaces for certain strings, so clean them up
 	for _, processor := range dst {
 		ch <- prometheus.MustNewConstMetric(
-			c.CpuInfo,
+			c.cpuInfo,
 			prometheus.GaugeValue,
 			1.0,
 			strconv.Itoa(int(processor.Architecture)),

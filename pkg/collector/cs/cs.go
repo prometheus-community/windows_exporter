@@ -23,7 +23,8 @@ type Collector struct {
 
 	PhysicalMemoryBytes *prometheus.Desc
 	LogicalProcessors   *prometheus.Desc
-	Hostname            *prometheus.Desc
+	h
+	ostname *prometheus.Desc
 }
 
 func New(logger log.Logger, _ *Config) *Collector {
@@ -62,7 +63,7 @@ func (c *Collector) Build() error {
 		nil,
 		nil,
 	)
-	c.Hostname = prometheus.NewDesc(
+	c.hostname = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "hostname"),
 		"Labelled system hostname information as provided by ComputerSystem.DNSHostName and ComputerSystem.Domain",
 		[]string{
@@ -121,7 +122,7 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	}
 
 	ch <- prometheus.MustNewConstMetric(
-		c.Hostname,
+		c.hostname,
 		prometheus.GaugeValue,
 		1.0,
 		hostname,
