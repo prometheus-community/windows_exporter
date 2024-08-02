@@ -23,8 +23,7 @@ type Collector struct {
 
 	PhysicalMemoryBytes *prometheus.Desc
 	LogicalProcessors   *prometheus.Desc
-	h
-	ostname *prometheus.Desc
+	hostname            *prometheus.Desc
 }
 
 func New(logger log.Logger, _ *Config) *Collector {
