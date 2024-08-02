@@ -32,8 +32,8 @@ type Collector struct {
 	smbListAllCollectors *bool
 	smbCollectorsEnabled *string
 
-	TreeConnectCount     *prometheus.Desc
-	CurrentOpenFileCount *prometheus.Desc
+	treeConnectCount     *prometheus.Desc
+	currentOpenFileCount *prometheus.Desc
 
 	enabledCollectors []string
 }
@@ -102,8 +102,8 @@ func (c *Collector) Build() error {
 		)
 	}
 
-	c.CurrentOpenFileCount = desc("server_shares_current_open_file_count", "Current total count open files on the SMB Server")
-	c.TreeConnectCount = desc("server_shares_tree_connect_count", "Count of user connections to the SMB Server")
+	c.currentOpenFileCount = desc("server_shares_current_open_file_count", "Current total count open files on the SMB Server")
+	c.treeConnectCount = desc("server_shares_tree_connect_count", "Count of user connections to the SMB Server")
 
 	c.enabledCollectors = make([]string, 0, len(smbAllCollectorNames))
 
@@ -112,10 +112,11 @@ func (c *Collector) Build() error {
 	}
 
 	if *c.smbListAllCollectors {
-		fmt.Printf("%-32s %-32s\n", "Collector Name", "Perflib Object")
+		fmt.Printf("%-32s %-32s\n", "Collector Name", "Perflib Object") //nolint:forbidigo
 		for _, cname := range smbAllCollectorNames {
-			fmt.Printf("%-32s %-32s\n", cname, collectorDesc[cname])
+			fmt.Printf("%-32s %-32s\n", cname, collectorDesc[cname]) //nolint:forbidigo
 		}
+
 		os.Exit(0)
 	}
 
@@ -171,13 +172,13 @@ func (c *Collector) collectServerShares(ctx *types.ScrapeContext, ch chan<- prom
 		}
 
 		ch <- prometheus.MustNewConstMetric(
-			c.CurrentOpenFileCount,
+			c.currentOpenFileCount,
 			prometheus.CounterValue,
 			instance.CurrentOpenFileCount,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.TreeConnectCount,
+			c.treeConnectCount,
 			prometheus.CounterValue,
 			instance.TreeConnectCount,
 		)

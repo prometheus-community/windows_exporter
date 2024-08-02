@@ -6,6 +6,7 @@ package eventlog
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"sync"
@@ -84,7 +85,7 @@ type loggerBuf struct {
 func (l *eventlogLogger) getLoggerBuf() (*loggerBuf, error) {
 	lb, ok := l.bufPool.Get().(*loggerBuf)
 	if !ok {
-		return nil, fmt.Errorf("failed to get loggerBuf from pool")
+		return nil, errors.New("failed to get loggerBuf from pool")
 	}
 
 	if lb.buf == nil {
