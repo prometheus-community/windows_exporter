@@ -70,6 +70,10 @@ func (c *Collector) GetPerfCounter() ([]string, error) {
 	return []string{}, nil
 }
 
+func (c *Collector) Close() error {
+	return nil
+}
+
 func (c *Collector) Build() error {
 	c.ZoneTransferRequestsReceived = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "zone_transfer_requests_received_total"),

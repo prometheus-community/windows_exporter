@@ -55,6 +55,10 @@ func (c *Collector) GetPerfCounter() ([]string, error) {
 	return []string{"Windows Time Service"}, nil
 }
 
+func (c *Collector) Close() error {
+	return nil
+}
+
 func (c *Collector) Build() error {
 	if winversion.WindowsVersionFloat <= 6.1 {
 		return errors.New("Windows version older than Server 2016 detected. The time collector will not run and should be disabled via CLI flags or configuration file")

@@ -69,6 +69,10 @@ func (c *Collector) GetPerfCounter() ([]string, error) {
 	return []string{}, nil
 }
 
+func (c *Collector) Close() error {
+	return nil
+}
+
 func (c *Collector) Build() error {
 	c.MemActive = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "mem_active_bytes"),

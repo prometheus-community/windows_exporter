@@ -76,6 +76,10 @@ func (c *Collector) GetPerfCounter() ([]string, error) {
 	return []string{"Cache"}, nil
 }
 
+func (c *Collector) Close() error {
+	return nil
+}
+
 func (c *Collector) Build() error {
 	c.asyncCopyReadsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "async_copy_reads_total"),

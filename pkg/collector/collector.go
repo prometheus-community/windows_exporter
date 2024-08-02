@@ -3,6 +3,7 @@
 package collector
 
 import (
+	"errors"
 	"slices"
 	"strings"
 
@@ -225,4 +226,17 @@ func (c *Collectors) PrepareScrapeContext() (*types.ScrapeContext, error) {
 	}
 
 	return &types.ScrapeContext{PerfObjects: objs}, nil
+}
+
+// Close To be called by the exporter for collector cleanup
+func (c *Collectors) Close() error {
+	errs := make([]error, 0, len(c.collectors))
+
+	for _, collector := range c.collectors {
+		if err := collector.Build(); err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	return errors.Join(errs...)
 }

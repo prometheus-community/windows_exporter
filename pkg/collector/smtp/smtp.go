@@ -121,6 +121,10 @@ func (c *Collector) GetPerfCounter() ([]string, error) {
 	return []string{"SMTP Server"}, nil
 }
 
+func (c *Collector) Close() error {
+	return nil
+}
+
 func (c *Collector) Build() error {
 	_ = level.Info(c.logger).Log("msg", "smtp collector is in an experimental state! Metrics for this collector have not been tested.")
 

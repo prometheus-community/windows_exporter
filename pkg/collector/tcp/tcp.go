@@ -55,6 +55,10 @@ func (c *Collector) GetPerfCounter() ([]string, error) {
 	return []string{"TCPv4"}, nil
 }
 
+func (c *Collector) Close() error {
+	return nil
+}
+
 func (c *Collector) Build() error {
 	c.ConnectionFailures = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "connection_failures_total"),

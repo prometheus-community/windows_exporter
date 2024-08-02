@@ -454,6 +454,10 @@ func (c *Collector) GetPerfCounter() ([]string, error) {
 	return perfCounters, nil
 }
 
+func (c *Collector) Close() error {
+	return nil
+}
+
 func (c *Collector) Build() error {
 	// meta
 	c.mssqlScrapeDurationDesc = prometheus.NewDesc(

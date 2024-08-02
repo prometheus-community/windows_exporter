@@ -121,6 +121,10 @@ func (c *Collector) GetPerfCounter() ([]string, error) {
 	return []string{"Memory"}, nil
 }
 
+func (c *Collector) Close() error {
+	return nil
+}
+
 func (c *Collector) Build() error {
 	c.AddEvictDelay = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "add_evict_delay"),

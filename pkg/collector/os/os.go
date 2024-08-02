@@ -79,6 +79,10 @@ func (c *Collector) GetPerfCounter() ([]string, error) {
 	return []string{"Paging File"}, nil
 }
 
+func (c *Collector) Close() error {
+	return nil
+}
+
 func (c *Collector) Build() error {
 	c.OSInformation = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "info"),

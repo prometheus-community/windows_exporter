@@ -121,6 +121,10 @@ func (c *Collector) GetPerfCounter() ([]string, error) {
 	return []string{"Process"}, nil
 }
 
+func (c *Collector) Close() error {
+	return nil
+}
+
 func (c *Collector) Build() error {
 	if c.processInclude != nil && *c.processInclude == ".*" && utils.IsEmpty(c.processExclude) {
 		_ = level.Warn(c.logger).Log("msg", "No filters specified for process collector. This will generate a very large number of metrics!")

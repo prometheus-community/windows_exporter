@@ -58,6 +58,10 @@ func (c *Collector) GetPerfCounter() ([]string, error) {
 	return []string{}, nil
 }
 
+func (c *Collector) Close() error {
+	return nil
+}
+
 func (c *Collector) Build() error {
 	c.QuotasCount = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "count"),

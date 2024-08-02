@@ -61,6 +61,10 @@ func (c *Collector) GetPerfCounter() ([]string, error) {
 	return []string{"Memory"}, nil
 }
 
+func (c *Collector) Close() error {
+	return nil
+}
+
 func (c *Collector) Build() error {
 	c.AutoFailbackType = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "auto_failback_type"),

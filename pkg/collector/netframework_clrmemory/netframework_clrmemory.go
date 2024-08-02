@@ -61,6 +61,10 @@ func (c *Collector) GetPerfCounter() ([]string, error) {
 	return []string{}, nil
 }
 
+func (c *Collector) Close() error {
+	return nil
+}
+
 func (c *Collector) Build() error {
 	c.AllocatedBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "allocated_bytes_total"),

@@ -52,6 +52,10 @@ func (c *Collector) GetPerfCounter() ([]string, error) {
 	return []string{}, nil
 }
 
+func (c *Collector) Close() error {
+	return nil
+}
+
 func (c *Collector) Build() error {
 	c.Channels = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "channels_total"),

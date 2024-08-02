@@ -111,6 +111,10 @@ func (c *Collector) GetPerfCounter() ([]string, error) {
 	return []string{"LogicalDisk"}, nil
 }
 
+func (c *Collector) Close() error {
+	return nil
+}
+
 func (c *Collector) Build() error {
 	c.Information = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "info"),

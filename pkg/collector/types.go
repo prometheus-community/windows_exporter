@@ -22,6 +22,8 @@ type BuilderWithFlags[C Collector] func(*kingpin.Application) C
 // Collector interface that a collector has to implement.
 type Collector interface {
 	Build() error
+	// Close closes the collector
+	Close() error
 	// GetName get the name of the collector
 	GetName() string
 	// GetPerfCounter returns the perf counter required by the collector

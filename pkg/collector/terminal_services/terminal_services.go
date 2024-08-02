@@ -101,6 +101,16 @@ func (c *Collector) GetPerfCounter() ([]string, error) {
 	}, nil
 }
 
+func (c *Collector) Close() error {
+	err := wtsapi32.WTSCloseServer(c.hServer)
+
+	if err != nil {
+		return fmt.Errorf("failed to close WTS server: %w", err)
+	}
+
+	return nil
+}
+
 func (c *Collector) Build() error {
 	c.connectionBrokerEnabled = isConnectionBrokerServer(c.logger)
 

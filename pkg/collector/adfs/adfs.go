@@ -89,6 +89,10 @@ func (c *Collector) GetPerfCounter() ([]string, error) {
 	return []string{"AD FS"}, nil
 }
 
+func (c *Collector) Close() error {
+	return nil
+}
+
 func (c *Collector) Build() error {
 	c.adLoginConnectionFailures = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "ad_login_connection_failures_total"),

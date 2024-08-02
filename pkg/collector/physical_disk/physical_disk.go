@@ -102,6 +102,10 @@ func (c *Collector) GetPerfCounter() ([]string, error) {
 	return []string{"PhysicalDisk"}, nil
 }
 
+func (c *Collector) Close() error {
+	return nil
+}
+
 func (c *Collector) Build() error {
 	c.RequestsQueued = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "requests_queued"),

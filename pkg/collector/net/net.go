@@ -95,6 +95,10 @@ func (c *Collector) GetPerfCounter() ([]string, error) {
 	return []string{"Network Interface"}, nil
 }
 
+func (c *Collector) Close() error {
+	return nil
+}
+
 func (c *Collector) Build() error {
 	c.BytesReceivedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "bytes_received_total"),

@@ -30,7 +30,6 @@ type Collector struct {
 	idleBreakEventsTotal       *prometheus.Desc
 	parkingStatus              *prometheus.Desc
 	processorFrequencyMHz      *prometheus.Desc
-	processorMaxFrequencyMHz   *prometheus.Desc
 	processorPerformance       *prometheus.Desc
 	processorMPerf             *prometheus.Desc
 	processorRTC               *prometheus.Desc
@@ -62,6 +61,10 @@ func (c *Collector) GetPerfCounter() ([]string, error) {
 		return []string{"Processor Information"}, nil
 	}
 	return []string{"Processor"}, nil
+}
+
+func (c *Collector) Close() error {
+	return nil
 }
 
 func (c *Collector) Build() error {

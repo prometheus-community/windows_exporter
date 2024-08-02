@@ -62,6 +62,10 @@ func (c *Collector) GetPerfCounter() ([]string, error) {
 	return []string{"Certification Authority"}, nil
 }
 
+func (c *Collector) Close() error {
+	return nil
+}
+
 func (c *Collector) Build() error {
 	c.requestsPerSecond = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "requests_total"),

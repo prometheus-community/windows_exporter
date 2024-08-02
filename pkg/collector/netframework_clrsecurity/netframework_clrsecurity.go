@@ -50,6 +50,10 @@ func (c *Collector) GetPerfCounter() ([]string, error) {
 	return []string{}, nil
 }
 
+func (c *Collector) Close() error {
+	return nil
+}
+
 func (c *Collector) Build() error {
 	c.NumberLinkTimeChecks = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "link_time_checks_total"),

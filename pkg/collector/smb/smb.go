@@ -87,6 +87,10 @@ func (c *Collector) GetPerfCounter() ([]string, error) {
 	}, nil
 }
 
+func (c *Collector) Close() error {
+	return nil
+}
+
 func (c *Collector) Build() error {
 	// desc creates a new prometheus description
 	desc := func(metricName string, description string, labels ...string) *prometheus.Desc {

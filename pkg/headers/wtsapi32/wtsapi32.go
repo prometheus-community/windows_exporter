@@ -129,12 +129,13 @@ func WTSOpenServer(server string) (syscall.Handle, error) {
 }
 
 func WTSCloseServer(server syscall.Handle) error {
-	_, _, err := procWTSCloseServer.Call(uintptr(server))
-	if err != nil {
+	r1, _, err := procWTSCloseServer.Call(uintptr(server))
+
+	if r1 != 1 {
 		return fmt.Errorf("failed to close server: %w", err)
 	}
 
-	return err
+	return nil
 }
 
 func WTSFreeMemoryEx(class WTSTypeClass, pMemory uintptr, NumberOfEntries uint32) error {

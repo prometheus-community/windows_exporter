@@ -272,6 +272,10 @@ func (c *Collector) GetPerfCounter() ([]string, error) {
 	}, nil
 }
 
+func (c *Collector) Close() error {
+	return nil
+}
+
 func (c *Collector) Build() error {
 	c.iis_version = getIISVersion(c.logger)
 

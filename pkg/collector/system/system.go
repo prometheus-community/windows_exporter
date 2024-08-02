@@ -52,6 +52,10 @@ func (c *Collector) GetPerfCounter() ([]string, error) {
 	return []string{"System"}, nil
 }
 
+func (c *Collector) Close() error {
+	return nil
+}
+
 func (c *Collector) Build() error {
 	c.ContextSwitchesTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "context_switches_total"),

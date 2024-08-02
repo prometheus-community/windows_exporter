@@ -50,6 +50,10 @@ func (c *Collector) GetPerfCounter() ([]string, error) {
 	return []string{}, nil
 }
 
+func (c *Collector) Close() error {
+	return nil
+}
+
 func (c *Collector) Build() error {
 	c.NumberofCCWs = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "com_callable_wrappers_total"),

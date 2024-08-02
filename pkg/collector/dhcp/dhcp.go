@@ -70,6 +70,10 @@ func (c *Collector) GetPerfCounter() ([]string, error) {
 	return []string{"DHCP Server"}, nil
 }
 
+func (c *Collector) Close() error {
+	return nil
+}
+
 func (c *Collector) Build() error {
 	c.PacketsReceivedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "packets_received_total"),

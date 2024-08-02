@@ -76,6 +76,10 @@ func (c *Collector) GetPerfCounter() ([]string, error) {
 	return []string{"RemoteFX Network", "RemoteFX Graphics"}, nil
 }
 
+func (c *Collector) Close() error {
+	return nil
+}
+
 func (c *Collector) Build() error {
 	// net
 	c.BaseTCPRTT = prometheus.NewDesc(
