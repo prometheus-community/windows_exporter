@@ -172,9 +172,9 @@ func main() {
 		collectorNames := collector.Available()
 		sort.Strings(collectorNames)
 
-		fmt.Printf("Available collectors:\n")
+		fmt.Printf("Available collectors:\n") //nolint:forbidigo
 		for _, n := range collectorNames {
-			fmt.Printf(" - %s\n", n)
+			fmt.Printf(" - %s\n", n) //nolint:forbidigo
 		}
 
 		return

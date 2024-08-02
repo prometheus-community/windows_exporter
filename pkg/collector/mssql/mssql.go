@@ -1923,10 +1923,11 @@ func (c *Collector) Build() error {
 	c.mssqlCollectors = c.getMSSQLCollectors()
 
 	if *c.mssqlPrintCollectors {
-		fmt.Printf("Available SQLServer Classes:\n")
+		fmt.Printf("Available SQLServer Classes:\n") //nolint:forbidigo
 		for name := range c.mssqlCollectors {
-			fmt.Printf(" - %s\n", name)
+			fmt.Printf(" - %s\n", name) //nolint:forbidigo
 		}
+
 		os.Exit(0)
 	}
 
