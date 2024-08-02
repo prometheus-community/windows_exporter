@@ -75,7 +75,7 @@ func New(logger log.Logger, config *Config) *Collector {
 func NewWithFlags(app *kingpin.Application) *Collector {
 	return &Collector{
 		textFileDirectories: app.Flag(
-			"Collector.textfile.directories",
+			"collector.textfile.directories",
 			"Directory or Directories to read text files with metrics from.",
 		).Default(ConfigDefaults.TextFileDirectories).String(),
 	}
