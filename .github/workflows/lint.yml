@@ -50,12 +50,6 @@ jobs:
       - name: e2e Test
         run: make e2e-test
 
-      - name: Show logs
-        if: always()
-        run: |-
-          cat windows_exporter.log
-          cat windows_exporter_error.log
-
   promtool:
     runs-on: windows-2019
     steps:

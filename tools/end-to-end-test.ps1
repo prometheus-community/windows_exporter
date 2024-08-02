@@ -41,7 +41,16 @@ for ($i=1; $i -le 5; $i++) {
     Write-Host "Waiting for exporter to start"
 }
 
-$response = Invoke-WebRequest -UseBasicParsing -URI http://127.0.0.1:9182/metrics
+try {
+    $response = Invoke-WebRequest -UseBasicParsing -URI http://127.0.0.1:9182/metrics
+} catch {
+    Write-Host "STDOUT"
+    Get-Content "$($temp_dir)/windows_exporter.log"
+    Write-Host "STDERR"
+    Get-Content "$($temp_dir)/windows_exporter_error.log"
+
+    throw $_
+}
 # Response output must be split and saved as UTF-8.
 $response.content -split "[`r`n]"| Select-String -NotMatch $skip_re | Set-Content -Encoding utf8 "$($temp_dir)/e2e-output.txt"
 Stop-Process -Id $exporter_proc.Id
