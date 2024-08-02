@@ -138,13 +138,17 @@ func WTSCloseServer(server syscall.Handle) error {
 }
 
 func WTSFreeMemoryEx(class WTSTypeClass, pMemory uintptr, NumberOfEntries uint32) error {
-	_, _, err := procWTSFreeMemoryEx.Call(
+	r1, _, err := procWTSFreeMemoryEx.Call(
 		uintptr(class),
 		pMemory,
 		uintptr(NumberOfEntries),
 	)
 
-	return err
+	if r1 != 1 {
+		return fmt.Errorf("failed to free memory: %w", err)
+	}
+
+	return nil
 }
 
 func WTSEnumerateSessionsEx(server syscall.Handle, logger log.Logger) ([]WTSSession, error) {
@@ -168,7 +172,7 @@ func WTSEnumerateSessionsEx(server syscall.Handle, logger log.Logger) ([]WTSSess
 		defer func(class WTSTypeClass, pMemory uintptr, NumberOfEntries uint32) {
 			err := WTSFreeMemoryEx(class, pMemory, NumberOfEntries)
 			if err != nil {
-				_ = level.Error(logger).Log("msg", "failed to free memory", "err", err)
+				_ = level.Error(logger).Log("msg", "failed to free memory", "err", fmt.Errorf("WTSEnumerateSessionsEx: %w", err))
 			}
 		}(WTSTypeSessionInfoLevel1, sessionInfoPointer, count)
 	}
