@@ -136,7 +136,6 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	}
 
 	for _, process := range dst {
-
 		if process.Name == "_Global_" {
 			continue
 		}

@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/alecthomas/kingpin/v2"
-
 	"github.com/prometheus-community/windows_exporter/pkg/collector/printer"
 	"github.com/prometheus-community/windows_exporter/pkg/testutils"
 )

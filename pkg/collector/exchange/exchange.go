@@ -211,10 +211,11 @@ func (c *Collector) Build() error {
 	}
 
 	if *c.exchangeListAllCollectors {
-		fmt.Printf("%-32s %-32s\n", "Collector Name", "[PerfID] Perflib Object")
+		fmt.Printf("%-32s %-32s\n", "Collector Name", "[PerfID] Perflib Object") //nolint:forbidigo
 		for _, cname := range exchangeAllCollectorNames {
-			fmt.Printf("%-32s %-32s\n", cname, collectorDesc[cname])
+			fmt.Printf("%-32s %-32s\n", cname, collectorDesc[cname]) //nolint:forbidigo
 		}
+
 		os.Exit(0)
 	}
 

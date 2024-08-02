@@ -2,7 +2,6 @@ package wmi
 
 import (
 	"bytes"
-
 	"reflect"
 
 	"github.com/go-kit/log"

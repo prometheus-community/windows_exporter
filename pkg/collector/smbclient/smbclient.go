@@ -216,10 +216,11 @@ func (c *Collector) Build() error {
 	}
 
 	if *c.smbclientListAllCollectors {
-		fmt.Printf("%-32s %-32s\n", "Collector Name", "Perflib Object")
+		fmt.Printf("%-32s %-32s\n", "Collector Name", "Perflib Object") //nolint:forbidigo
 		for _, cname := range smbclientAllCollectorNames {
-			fmt.Printf("%-32s %-32s\n", cname, collectorDesc[cname])
+			fmt.Printf("%-32s %-32s\n", cname, collectorDesc[cname]) //nolint:forbidigo
 		}
+
 		os.Exit(0)
 	}
 
@@ -444,7 +445,6 @@ func (c *Collector) collectClientShares(ctx *types.ScrapeContext, ch chan<- prom
 			instance.WriteRequestsPerSec,
 			serverValue, shareValue,
 		)
-
 	}
 	return nil
 }

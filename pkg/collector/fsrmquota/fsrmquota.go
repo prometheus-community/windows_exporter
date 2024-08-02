@@ -3,13 +3,12 @@
 package fsrmquota
 
 import (
-	"github.com/prometheus-community/windows_exporter/pkg/types"
-	"github.com/prometheus-community/windows_exporter/pkg/utils"
-	"github.com/prometheus-community/windows_exporter/pkg/wmi"
-
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
+	"github.com/prometheus-community/windows_exporter/pkg/types"
+	"github.com/prometheus-community/windows_exporter/pkg/utils"
+	"github.com/prometheus-community/windows_exporter/pkg/wmi"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -158,7 +157,6 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	}
 
 	for _, quota := range dst {
-
 		count++
 		path := quota.Path
 		template := quota.Template

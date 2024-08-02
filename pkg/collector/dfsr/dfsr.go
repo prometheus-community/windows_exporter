@@ -554,7 +554,6 @@ func (c *Collector) collectConnection(ctx *types.ScrapeContext, ch chan<- promet
 			connection.SizeOfFilesReceivedTotal,
 			connection.Name,
 		)
-
 	}
 	return nil
 }
@@ -843,7 +842,6 @@ func (c *Collector) collectVolume(ctx *types.ScrapeContext, ch chan<- prometheus
 			volume.USNJournalUnreadPercentage,
 			volume.Name,
 		)
-
 	}
 	return nil
 }

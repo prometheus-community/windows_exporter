@@ -1762,7 +1762,6 @@ func (c *Collector) collectW3SVC_W3WP(ctx *types.ScrapeContext, ch chan<- promet
 			name,
 			pid,
 		)
-
 	}
 
 	if c.iis_version.major >= 8 {

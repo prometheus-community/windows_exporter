@@ -181,7 +181,6 @@ func (c *Collector) collectServerShares(ctx *types.ScrapeContext, ch chan<- prom
 			prometheus.CounterValue,
 			instance.TreeConnectCount,
 		)
-
 	}
 	return nil
 }

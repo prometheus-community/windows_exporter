@@ -6,12 +6,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/prometheus-community/windows_exporter/pkg/types"
-	"github.com/prometheus-community/windows_exporter/pkg/wmi"
-
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
+	"github.com/prometheus-community/windows_exporter/pkg/types"
+	"github.com/prometheus-community/windows_exporter/pkg/wmi"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -836,7 +835,6 @@ func (c *Collector) collectVmHealth(ch chan<- prometheus.Metric) error {
 			prometheus.GaugeValue,
 			float64(health.HealthOk),
 		)
-
 	}
 
 	return nil
@@ -882,7 +880,6 @@ func (c *Collector) collectVmVid(ch chan<- prometheus.Metric) error {
 			float64(page.RemotePhysicalPages),
 			page.Name,
 		)
-
 	}
 
 	return nil
@@ -1040,7 +1037,6 @@ func (c *Collector) collectVmHv(ch chan<- prometheus.Metric) error {
 			prometheus.GaugeValue,
 			float64(obj.VirtualTLBPages),
 		)
-
 	}
 
 	return nil
@@ -1060,7 +1056,6 @@ func (c *Collector) collectVmProcessor(ch chan<- prometheus.Metric) error {
 	}
 
 	for _, obj := range dst {
-
 		ch <- prometheus.MustNewConstMetric(
 			c.LogicalProcessors,
 			prometheus.GaugeValue,
@@ -1072,7 +1067,6 @@ func (c *Collector) collectVmProcessor(ch chan<- prometheus.Metric) error {
 			prometheus.GaugeValue,
 			float64(obj.VirtualProcessors),
 		)
-
 	}
 
 	return nil
@@ -1125,7 +1119,6 @@ func (c *Collector) collectHostLPUsage(ch chan<- prometheus.Metric) error {
 			float64(obj.PercentTotalRunTime),
 			coreId,
 		)
-
 	}
 
 	return nil
@@ -1268,7 +1261,6 @@ func (c *Collector) collectVmCpuUsage(ch chan<- prometheus.Metric) error {
 			float64(obj.CPUWaitTimePerDispatch),
 			vmName, coreId,
 		)
-
 	}
 
 	return nil
@@ -1521,7 +1513,6 @@ func (c *Collector) collectVmEthernet(ch chan<- prometheus.Metric) error {
 			float64(obj.FramesSentPersec),
 			obj.Name,
 		)
-
 	}
 
 	return nil

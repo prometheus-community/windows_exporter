@@ -1,12 +1,11 @@
 package mscluster_resource
 
 import (
+	"github.com/alecthomas/kingpin/v2"
+	"github.com/go-kit/log"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/mscluster_node"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus-community/windows_exporter/pkg/wmi"
-
-	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -214,7 +213,6 @@ func (c *Collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric)
 	}
 
 	for _, v := range dst {
-
 		ch <- prometheus.MustNewConstMetric(
 			c.Characteristics,
 			prometheus.GaugeValue,

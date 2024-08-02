@@ -9,13 +9,12 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/prometheus-community/windows_exporter/pkg/types"
-
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
 	"github.com/go-ole/go-ole"
 	"github.com/go-ole/go-ole/oleutil"
+	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -384,7 +383,9 @@ func parseTask(task *ole.IDispatch) (scheduledTask ScheduledTask, err error) {
 
 	scheduledTask.Name = taskNameVar.ToString()
 	scheduledTask.Path = strings.ReplaceAll(taskPathVar.ToString(), "\\", "/")
-	scheduledTask.Enabled = taskEnabledVar.Value().(bool)
+	if val, ok := taskEnabledVar.Value().(bool); ok {
+		scheduledTask.Enabled = val
+	}
 	scheduledTask.State = TaskState(taskStateVar.Val)
 	scheduledTask.MissedRunsCount = float64(taskNumberOfMissedRunsVar.Val)
 	scheduledTask.LastTaskResult = TaskResult(taskLastTaskResultVar.Val)

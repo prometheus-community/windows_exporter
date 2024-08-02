@@ -753,7 +753,6 @@ func (c *Collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 			server.RoutingTableLookupsTotal,
 			server.Name,
 		)
-
 	}
 	return nil
 }
