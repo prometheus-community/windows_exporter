@@ -21,8 +21,8 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	logger log.Logger
 
-	PhysicalMemoryBytes *prometheus.Desc
-	LogicalProcessors   *prometheus.Desc
+	physicalMemoryBytes *prometheus.Desc
+	logicalProcessors   *prometheus.Desc
 	hostname            *prometheus.Desc
 }
 
@@ -54,13 +54,13 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build() error {
-	c.LogicalProcessors = prometheus.NewDesc(
+	c.logicalProcessors = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "logical_processors"),
 		"ComputerSystem.NumberOfLogicalProcessors",
 		nil,
 		nil,
 	)
-	c.PhysicalMemoryBytes = prometheus.NewDesc(
+	c.physicalMemoryBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "physical_memory_bytes"),
 		"ComputerSystem.TotalPhysicalMemory",
 		nil,
@@ -100,13 +100,13 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	}
 
 	ch <- prometheus.MustNewConstMetric(
-		c.LogicalProcessors,
+		c.logicalProcessors,
 		prometheus.GaugeValue,
 		float64(systemInfo.NumberOfProcessors),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.PhysicalMemoryBytes,
+		c.physicalMemoryBytes,
 		prometheus.GaugeValue,
 		float64(mem.TotalPhys),
 	)

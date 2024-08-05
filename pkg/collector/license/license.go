@@ -29,7 +29,7 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	logger log.Logger
 
-	LicenseStatus *prometheus.Desc
+	licenseStatus *prometheus.Desc
 }
 
 func New(logger log.Logger, _ *Config) *Collector {
@@ -60,7 +60,7 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build() error {
-	c.LicenseStatus = prometheus.NewDesc(
+	c.licenseStatus = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "status"),
 		"Status of windows license",
 		[]string{"state"},
@@ -92,7 +92,7 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 			val = 1.0
 		}
 
-		ch <- prometheus.MustNewConstMetric(c.LicenseStatus, prometheus.GaugeValue, val, v)
+		ch <- prometheus.MustNewConstMetric(c.licenseStatus, prometheus.GaugeValue, val, v)
 	}
 
 	return nil

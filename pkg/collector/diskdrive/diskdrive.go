@@ -27,11 +27,11 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	logger log.Logger
 
-	DiskInfo     *prometheus.Desc
-	Status       *prometheus.Desc
-	Size         *prometheus.Desc
-	Partitions   *prometheus.Desc
-	Availability *prometheus.Desc
+	availability *prometheus.Desc
+	diskInfo     *prometheus.Desc
+	partitions   *prometheus.Desc
+	size         *prometheus.Desc
+	status       *prometheus.Desc
 }
 
 func New(logger log.Logger, _ *Config) *Collector {
@@ -62,7 +62,7 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build() error {
-	c.DiskInfo = prometheus.NewDesc(
+	c.diskInfo = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "info"),
 		"General drive information",
 		[]string{
@@ -73,25 +73,25 @@ func (c *Collector) Build() error {
 		},
 		nil,
 	)
-	c.Status = prometheus.NewDesc(
+	c.status = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "status"),
 		"Status of the drive",
 		[]string{"name", "status"},
 		nil,
 	)
-	c.Size = prometheus.NewDesc(
+	c.size = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "size"),
 		"Size of the disk drive. It is calculated by multiplying the total number of cylinders, tracks in each cylinder, sectors in each track, and bytes in each sector.",
 		[]string{"name"},
 		nil,
 	)
-	c.Partitions = prometheus.NewDesc(
+	c.partitions = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "partitions"),
 		"Number of partitions",
 		[]string{"name"},
 		nil,
 	)
-	c.Availability = prometheus.NewDesc(
+	c.availability = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "availability"),
 		"Availability Status",
 		[]string{"name", "availability"},
@@ -101,7 +101,7 @@ func (c *Collector) Build() error {
 	return nil
 }
 
-type Win32_DiskDrive struct {
+type win32_DiskDrive struct {
 	DeviceID     string
 	Model        string
 	Size         uint64
@@ -163,7 +163,7 @@ func (c *Collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric)
 }
 
 func (c *Collector) collect(ch chan<- prometheus.Metric) error {
-	var dst []Win32_DiskDrive
+	var dst []win32_DiskDrive
 
 	if err := wmi.Query(win32DiskQuery, &dst); err != nil {
 		return err
@@ -174,7 +174,7 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 
 	for _, disk := range dst {
 		ch <- prometheus.MustNewConstMetric(
-			c.DiskInfo,
+			c.diskInfo,
 			prometheus.GaugeValue,
 			1.0,
 			strings.Trim(disk.DeviceID, "\\.\\"),
@@ -190,7 +190,7 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 			}
 
 			ch <- prometheus.MustNewConstMetric(
-				c.Status,
+				c.status,
 				prometheus.GaugeValue,
 				isCurrentState,
 				strings.Trim(disk.Name, "\\.\\"),
@@ -199,14 +199,14 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 		}
 
 		ch <- prometheus.MustNewConstMetric(
-			c.Size,
+			c.size,
 			prometheus.GaugeValue,
 			float64(disk.Size),
 			strings.Trim(disk.Name, "\\.\\"),
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.Partitions,
+			c.partitions,
 			prometheus.GaugeValue,
 			float64(disk.Partitions),
 			strings.Trim(disk.Name, "\\.\\"),
@@ -218,7 +218,7 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 				isCurrentState = 1.0
 			}
 			ch <- prometheus.MustNewConstMetric(
-				c.Availability,
+				c.availability,
 				prometheus.GaugeValue,
 				isCurrentState,
 				strings.Trim(disk.Name, "\\.\\"),

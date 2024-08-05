@@ -21,20 +21,20 @@ var NodeName []string
 type Collector struct {
 	logger log.Logger
 
-	BuildNumber           *prometheus.Desc
-	Characteristics       *prometheus.Desc
-	DetectedCloudPlatform *prometheus.Desc
-	DynamicWeight         *prometheus.Desc
-	Flags                 *prometheus.Desc
-	MajorVersion          *prometheus.Desc
-	MinorVersion          *prometheus.Desc
-	NeedsPreventQuorum    *prometheus.Desc
-	NodeDrainStatus       *prometheus.Desc
-	NodeHighestVersion    *prometheus.Desc
-	NodeLowestVersion     *prometheus.Desc
-	NodeWeight            *prometheus.Desc
-	State                 *prometheus.Desc
-	StatusInformation     *prometheus.Desc
+	buildNumber           *prometheus.Desc
+	characteristics       *prometheus.Desc
+	detectedCloudPlatform *prometheus.Desc
+	dynamicWeight         *prometheus.Desc
+	flags                 *prometheus.Desc
+	majorVersion          *prometheus.Desc
+	minorVersion          *prometheus.Desc
+	needsPreventQuorum    *prometheus.Desc
+	nodeDrainStatus       *prometheus.Desc
+	nodeHighestVersion    *prometheus.Desc
+	nodeLowestVersion     *prometheus.Desc
+	nodeWeight            *prometheus.Desc
+	state                 *prometheus.Desc
+	statusInformation     *prometheus.Desc
 }
 
 func New(logger log.Logger, _ *Config) *Collector {
@@ -65,85 +65,85 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build() error {
-	c.BuildNumber = prometheus.NewDesc(
+	c.buildNumber = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "build_number"),
 		"Provides access to the node's BuildNumber property.",
 		[]string{"name"},
 		nil,
 	)
-	c.Characteristics = prometheus.NewDesc(
+	c.characteristics = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "characteristics"),
 		"Provides access to the characteristics set for the node.",
 		[]string{"name"},
 		nil,
 	)
-	c.DetectedCloudPlatform = prometheus.NewDesc(
+	c.detectedCloudPlatform = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "detected_cloud_platform"),
 		"(DetectedCloudPlatform)",
 		[]string{"name"},
 		nil,
 	)
-	c.DynamicWeight = prometheus.NewDesc(
+	c.dynamicWeight = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "dynamic_weight"),
 		"The dynamic vote weight of the node adjusted by dynamic quorum feature.",
 		[]string{"name"},
 		nil,
 	)
-	c.Flags = prometheus.NewDesc(
+	c.flags = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "flags"),
 		"Provides access to the flags set for the node.",
 		[]string{"name"},
 		nil,
 	)
-	c.MajorVersion = prometheus.NewDesc(
+	c.majorVersion = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "major_version"),
 		"Provides access to the node's MajorVersion property, which specifies the major portion of the Windows version installed.",
 		[]string{"name"},
 		nil,
 	)
-	c.MinorVersion = prometheus.NewDesc(
+	c.minorVersion = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "minor_version"),
 		"Provides access to the node's MinorVersion property, which specifies the minor portion of the Windows version installed.",
 		[]string{"name"},
 		nil,
 	)
-	c.NeedsPreventQuorum = prometheus.NewDesc(
+	c.needsPreventQuorum = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "needs_prevent_quorum"),
 		"Whether the cluster service on that node should be started with prevent quorum flag.",
 		[]string{"name"},
 		nil,
 	)
-	c.NodeDrainStatus = prometheus.NewDesc(
+	c.nodeDrainStatus = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "node_drain_status"),
 		"The current node drain status of a node. 0: Not Initiated; 1: In Progress; 2: Completed; 3: Failed",
 		[]string{"name"},
 		nil,
 	)
-	c.NodeHighestVersion = prometheus.NewDesc(
+	c.nodeHighestVersion = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "node_highest_version"),
 		"Provides access to the node's NodeHighestVersion property, which specifies the highest possible version of the cluster service with which the node can join or communicate.",
 		[]string{"name"},
 		nil,
 	)
-	c.NodeLowestVersion = prometheus.NewDesc(
+	c.nodeLowestVersion = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "node_lowest_version"),
 		"Provides access to the node's NodeLowestVersion property, which specifies the lowest possible version of the cluster service with which the node can join or communicate.",
 		[]string{"name"},
 		nil,
 	)
-	c.NodeWeight = prometheus.NewDesc(
+	c.nodeWeight = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "node_weight"),
 		"The vote weight of the node.",
 		[]string{"name"},
 		nil,
 	)
-	c.State = prometheus.NewDesc(
+	c.state = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "state"),
 		"Returns the current state of a node. -1: Unknown; 0: Up; 1: Down; 2: Paused; 3: Joining",
 		[]string{"name"},
 		nil,
 	)
-	c.StatusInformation = prometheus.NewDesc(
+	c.statusInformation = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "status_information"),
 		"The isolation or quarantine status of the node.",
 		[]string{"name"},
@@ -186,98 +186,98 @@ func (c *Collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric)
 
 	for _, v := range dst {
 		ch <- prometheus.MustNewConstMetric(
-			c.BuildNumber,
+			c.buildNumber,
 			prometheus.GaugeValue,
 			float64(v.BuildNumber),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.Characteristics,
+			c.characteristics,
 			prometheus.GaugeValue,
 			float64(v.Characteristics),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.DetectedCloudPlatform,
+			c.detectedCloudPlatform,
 			prometheus.GaugeValue,
 			float64(v.DetectedCloudPlatform),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.DynamicWeight,
+			c.dynamicWeight,
 			prometheus.GaugeValue,
 			float64(v.DynamicWeight),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.Flags,
+			c.flags,
 			prometheus.GaugeValue,
 			float64(v.Flags),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.MajorVersion,
+			c.majorVersion,
 			prometheus.GaugeValue,
 			float64(v.MajorVersion),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.MinorVersion,
+			c.minorVersion,
 			prometheus.GaugeValue,
 			float64(v.MinorVersion),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.NeedsPreventQuorum,
+			c.needsPreventQuorum,
 			prometheus.GaugeValue,
 			float64(v.NeedsPreventQuorum),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.NodeDrainStatus,
+			c.nodeDrainStatus,
 			prometheus.GaugeValue,
 			float64(v.NodeDrainStatus),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.NodeHighestVersion,
+			c.nodeHighestVersion,
 			prometheus.GaugeValue,
 			float64(v.NodeHighestVersion),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.NodeLowestVersion,
+			c.nodeLowestVersion,
 			prometheus.GaugeValue,
 			float64(v.NodeLowestVersion),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.NodeWeight,
+			c.nodeWeight,
 			prometheus.GaugeValue,
 			float64(v.NodeWeight),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.State,
+			c.state,
 			prometheus.GaugeValue,
 			float64(v.State),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.StatusInformation,
+			c.statusInformation,
 			prometheus.GaugeValue,
 			float64(v.StatusInformation),
 			v.Name,

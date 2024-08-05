@@ -30,10 +30,10 @@ type Collector struct {
 
 	queryWhereClause *string
 
-	BytesinJournalQueue    *prometheus.Desc
-	BytesinQueue           *prometheus.Desc
-	MessagesinJournalQueue *prometheus.Desc
-	MessagesinQueue        *prometheus.Desc
+	bytesInJournalQueue    *prometheus.Desc
+	bytesInQueue           *prometheus.Desc
+	messagesInJournalQueue *prometheus.Desc
+	messagesInQueue        *prometheus.Desc
 }
 
 func New(logger log.Logger, config *Config) *Collector {
@@ -78,25 +78,25 @@ func (c *Collector) Build() error {
 		_ = level.Warn(c.logger).Log("msg", "No where-clause specified for msmq collector. This will generate a very large number of metrics!")
 	}
 
-	c.BytesinJournalQueue = prometheus.NewDesc(
+	c.bytesInJournalQueue = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "bytes_in_journal_queue"),
 		"Size of queue journal in bytes",
 		[]string{"name"},
 		nil,
 	)
-	c.BytesinQueue = prometheus.NewDesc(
+	c.bytesInQueue = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "bytes_in_queue"),
 		"Size of queue in bytes",
 		[]string{"name"},
 		nil,
 	)
-	c.MessagesinJournalQueue = prometheus.NewDesc(
+	c.messagesInJournalQueue = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "messages_in_journal_queue"),
 		"Count messages in queue journal",
 		[]string{"name"},
 		nil,
 	)
-	c.MessagesinQueue = prometheus.NewDesc(
+	c.messagesInQueue = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "messages_in_queue"),
 		"Count messages in queue",
 		[]string{"name"},
@@ -133,28 +133,28 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 
 	for _, msmq := range dst {
 		ch <- prometheus.MustNewConstMetric(
-			c.BytesinJournalQueue,
+			c.bytesInJournalQueue,
 			prometheus.GaugeValue,
 			float64(msmq.BytesinJournalQueue),
 			strings.ToLower(msmq.Name),
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.BytesinQueue,
+			c.bytesInQueue,
 			prometheus.GaugeValue,
 			float64(msmq.BytesinQueue),
 			strings.ToLower(msmq.Name),
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.MessagesinJournalQueue,
+			c.messagesInJournalQueue,
 			prometheus.GaugeValue,
 			float64(msmq.MessagesinJournalQueue),
 			strings.ToLower(msmq.Name),
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.MessagesinQueue,
+			c.messagesInQueue,
 			prometheus.GaugeValue,
 			float64(msmq.MessagesinQueue),
 			strings.ToLower(msmq.Name),

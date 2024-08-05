@@ -18,11 +18,11 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	logger log.Logger
 
-	Characteristics *prometheus.Desc
-	Flags           *prometheus.Desc
-	Metric          *prometheus.Desc
-	Role            *prometheus.Desc
-	State           *prometheus.Desc
+	characteristics *prometheus.Desc
+	flags           *prometheus.Desc
+	metric          *prometheus.Desc
+	role            *prometheus.Desc
+	state           *prometheus.Desc
 }
 
 func New(logger log.Logger, _ *Config) *Collector {
@@ -53,31 +53,31 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build() error {
-	c.Characteristics = prometheus.NewDesc(
+	c.characteristics = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "characteristics"),
 		"Provides the characteristics of the network.",
 		[]string{"name"},
 		nil,
 	)
-	c.Flags = prometheus.NewDesc(
+	c.flags = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "flags"),
 		"Provides access to the flags set for the node. ",
 		[]string{"name"},
 		nil,
 	)
-	c.Metric = prometheus.NewDesc(
+	c.metric = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "metric"),
 		"The metric of a cluster network (networks with lower values are used first). If this value is set, then the AutoMetric property is set to false.",
 		[]string{"name"},
 		nil,
 	)
-	c.Role = prometheus.NewDesc(
+	c.role = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "role"),
 		"Provides access to the network's Role property. The Role property describes the role of the network in the cluster. 0: None; 1: Cluster; 2: Client; 3: Both ",
 		[]string{"name"},
 		nil,
 	)
-	c.State = prometheus.NewDesc(
+	c.state = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "state"),
 		"Provides the current state of the network. 1-1: Unknown; 0: Unavailable; 1: Down; 2: Partitioned; 3: Up",
 		[]string{"name"},
@@ -99,7 +99,7 @@ type MSCluster_Network struct {
 }
 
 // Collect sends the metric values for each metric
-// to the provided prometheus Metric channel.
+// to the provided prometheus metric channel.
 func (c *Collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	var dst []MSCluster_Network
 	q := wmi.QueryAll(&dst, c.logger)
@@ -109,35 +109,35 @@ func (c *Collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric)
 
 	for _, v := range dst {
 		ch <- prometheus.MustNewConstMetric(
-			c.Characteristics,
+			c.characteristics,
 			prometheus.GaugeValue,
 			float64(v.Characteristics),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.Flags,
+			c.flags,
 			prometheus.GaugeValue,
 			float64(v.Flags),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.Metric,
+			c.metric,
 			prometheus.GaugeValue,
 			float64(v.Metric),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.Role,
+			c.role,
 			prometheus.GaugeValue,
 			float64(v.Role),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.State,
+			c.state,
 			prometheus.GaugeValue,
 			float64(v.State),
 			v.Name,

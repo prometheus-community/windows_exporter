@@ -21,17 +21,16 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	logger log.Logger
 
-	QuotasCount *prometheus.Desc
-	Path        *prometheus.Desc
-	PeakUsage   *prometheus.Desc
-	Size        *prometheus.Desc
-	Usage       *prometheus.Desc
+	quotasCount *prometheus.Desc
+	peakUsage   *prometheus.Desc
+	size        *prometheus.Desc
+	usage       *prometheus.Desc
 
-	Description     *prometheus.Desc
-	Disabled        *prometheus.Desc
-	MatchesTemplate *prometheus.Desc
-	SoftLimit       *prometheus.Desc
-	Template        *prometheus.Desc
+	description     *prometheus.Desc
+	disabled        *prometheus.Desc
+	matchesTemplate *prometheus.Desc
+	softLimit       *prometheus.Desc
+	template        *prometheus.Desc
 }
 
 func New(logger log.Logger, _ *Config) *Collector {
@@ -62,55 +61,55 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build() error {
-	c.QuotasCount = prometheus.NewDesc(
+	c.quotasCount = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "count"),
 		"Number of Quotas",
 		nil,
 		nil,
 	)
-	c.PeakUsage = prometheus.NewDesc(
+	c.peakUsage = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "peak_usage_bytes"),
 		"The highest amount of disk space usage charged to this quota. (PeakUsage)",
 		[]string{"path", "template"},
 		nil,
 	)
-	c.Size = prometheus.NewDesc(
+	c.size = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "size_bytes"),
 		"The size of the quota. (Size)",
 		[]string{"path", "template"},
 		nil,
 	)
-	c.Usage = prometheus.NewDesc(
+	c.usage = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "usage_bytes"),
 		"The current amount of disk space usage charged to this quota. (Usage)",
 		[]string{"path", "template"},
 		nil,
 	)
-	c.Description = prometheus.NewDesc(
+	c.description = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "description"),
 		"Description of the quota (Description)",
 		[]string{"path", "template", "description"},
 		nil,
 	)
-	c.Disabled = prometheus.NewDesc(
+	c.disabled = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "disabled"),
 		"If 1, the quota is disabled. The default value is 0. (Disabled)",
 		[]string{"path", "template"},
 		nil,
 	)
-	c.SoftLimit = prometheus.NewDesc(
+	c.softLimit = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "softlimit"),
 		"If 1, the quota is a soft limit. If 0, the quota is a hard limit. The default value is 0. Optional (SoftLimit)",
 		[]string{"path", "template"},
 		nil,
 	)
-	c.Template = prometheus.NewDesc(
+	c.template = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "template"),
 		"Quota template name. (Template)",
 		[]string{"path", "template"},
 		nil,
 	)
-	c.MatchesTemplate = prometheus.NewDesc(
+	c.matchesTemplate = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "matchestemplate"),
 		"If 1, the property values of this quota match those values of the template from which it was derived. (MatchesTemplate)",
 		[]string{"path", "template"},
@@ -163,48 +162,48 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 		Description := quota.Description
 
 		ch <- prometheus.MustNewConstMetric(
-			c.PeakUsage,
+			c.peakUsage,
 			prometheus.GaugeValue,
 			float64(quota.PeakUsage),
 			path,
 			template,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.Size,
+			c.size,
 			prometheus.GaugeValue,
 			float64(quota.Size),
 			path,
 			template,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.Usage,
+			c.usage,
 			prometheus.GaugeValue,
 			float64(quota.Usage),
 			path,
 			template,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.Description,
+			c.description,
 			prometheus.GaugeValue,
 			1.0,
 			path, template, Description,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.Disabled,
+			c.disabled,
 			prometheus.GaugeValue,
 			utils.BoolToFloat(quota.Disabled),
 			path,
 			template,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.MatchesTemplate,
+			c.matchesTemplate,
 			prometheus.GaugeValue,
 			utils.BoolToFloat(quota.MatchesTemplate),
 			path,
 			template,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.SoftLimit,
+			c.softLimit,
 			prometheus.GaugeValue,
 			utils.BoolToFloat(quota.SoftLimit),
 			path,
@@ -213,7 +212,7 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	}
 
 	ch <- prometheus.MustNewConstMetric(
-		c.QuotasCount,
+		c.quotasCount,
 		prometheus.GaugeValue,
 		float64(count),
 	)
