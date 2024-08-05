@@ -27,11 +27,9 @@ type Collector struct {
 	failbackWindowStart *prometheus.Desc
 	failOverPeriod      *prometheus.Desc
 	failOverThreshold   *prometheus.Desc
-	faultDomain         *prometheus.Desc
 	flags               *prometheus.Desc
 	groupType           *prometheus.Desc
 	ownerNode           *prometheus.Desc
-	placementOptions    *prometheus.Desc
 	priority            *prometheus.Desc
 	resiliencyPeriod    *prometheus.Desc
 	state               *prometheus.Desc

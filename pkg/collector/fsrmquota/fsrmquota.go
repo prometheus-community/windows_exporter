@@ -22,7 +22,6 @@ type Collector struct {
 	logger log.Logger
 
 	quotasCount *prometheus.Desc
-	path        *prometheus.Desc
 	peakUsage   *prometheus.Desc
 	size        *prometheus.Desc
 	usage       *prometheus.Desc
