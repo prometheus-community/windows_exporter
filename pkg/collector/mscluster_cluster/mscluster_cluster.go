@@ -18,83 +18,83 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	logger log.Logger
 
-	AddEvictDelay                           *prometheus.Desc
-	AdminAccessPoint                        *prometheus.Desc
-	AutoAssignNodeSite                      *prometheus.Desc
-	AutoBalancerLevel                       *prometheus.Desc
-	AutoBalancerMode                        *prometheus.Desc
-	BackupInProgress                        *prometheus.Desc
-	BlockCacheSize                          *prometheus.Desc
-	ClusSvcHangTimeout                      *prometheus.Desc
-	ClusSvcRegroupOpeningTimeout            *prometheus.Desc
-	ClusSvcRegroupPruningTimeout            *prometheus.Desc
-	ClusSvcRegroupStageTimeout              *prometheus.Desc
-	ClusSvcRegroupTickInMilliseconds        *prometheus.Desc
-	ClusterEnforcedAntiAffinity             *prometheus.Desc
-	ClusterFunctionalLevel                  *prometheus.Desc
-	ClusterGroupWaitDelay                   *prometheus.Desc
-	ClusterLogLevel                         *prometheus.Desc
-	ClusterLogSize                          *prometheus.Desc
-	ClusterUpgradeVersion                   *prometheus.Desc
-	CrossSiteDelay                          *prometheus.Desc
-	CrossSiteThreshold                      *prometheus.Desc
-	CrossSubnetDelay                        *prometheus.Desc
-	CrossSubnetThreshold                    *prometheus.Desc
-	CsvBalancer                             *prometheus.Desc
-	DatabaseReadWriteMode                   *prometheus.Desc
-	DefaultNetworkRole                      *prometheus.Desc
-	DetectedCloudPlatform                   *prometheus.Desc
-	DetectManagedEvents                     *prometheus.Desc
-	DetectManagedEventsThreshold            *prometheus.Desc
-	DisableGroupPreferredOwnerRandomization *prometheus.Desc
-	DrainOnShutdown                         *prometheus.Desc
-	DynamicQuorumEnabled                    *prometheus.Desc
-	EnableSharedVolumes                     *prometheus.Desc
-	FixQuorum                               *prometheus.Desc
-	GracePeriodEnabled                      *prometheus.Desc
-	GracePeriodTimeout                      *prometheus.Desc
-	GroupDependencyTimeout                  *prometheus.Desc
-	HangRecoveryAction                      *prometheus.Desc
-	IgnorePersistentStateOnStartup          *prometheus.Desc
-	LogResourceControls                     *prometheus.Desc
-	LowerQuorumPriorityNodeId               *prometheus.Desc
-	MaxNumberOfNodes                        *prometheus.Desc
-	MessageBufferLength                     *prometheus.Desc
-	MinimumNeverPreemptPriority             *prometheus.Desc
-	MinimumPreemptorPriority                *prometheus.Desc
-	NetftIPSecEnabled                       *prometheus.Desc
-	PlacementOptions                        *prometheus.Desc
-	PlumbAllCrossSubnetRoutes               *prometheus.Desc
-	PreventQuorum                           *prometheus.Desc
-	QuarantineDuration                      *prometheus.Desc
-	QuarantineThreshold                     *prometheus.Desc
-	QuorumArbitrationTimeMax                *prometheus.Desc
-	QuorumArbitrationTimeMin                *prometheus.Desc
-	QuorumLogFileSize                       *prometheus.Desc
-	QuorumTypeValue                         *prometheus.Desc
-	RequestReplyTimeout                     *prometheus.Desc
-	ResiliencyDefaultPeriod                 *prometheus.Desc
-	ResiliencyLevel                         *prometheus.Desc
-	ResourceDllDeadlockPeriod               *prometheus.Desc
-	RootMemoryReserved                      *prometheus.Desc
-	RouteHistoryLength                      *prometheus.Desc
-	S2DBusTypes                             *prometheus.Desc
-	S2DCacheDesiredState                    *prometheus.Desc
-	S2DCacheFlashReservePercent             *prometheus.Desc
-	S2DCachePageSizeKBytes                  *prometheus.Desc
-	S2DEnabled                              *prometheus.Desc
-	S2DIOLatencyThreshold                   *prometheus.Desc
-	S2DOptimizations                        *prometheus.Desc
-	SameSubnetDelay                         *prometheus.Desc
-	SameSubnetThreshold                     *prometheus.Desc
-	SecurityLevel                           *prometheus.Desc
-	SecurityLevelForStorage                 *prometheus.Desc
-	SharedVolumeVssWriterOperationTimeout   *prometheus.Desc
-	ShutdownTimeoutInMinutes                *prometheus.Desc
-	UseClientAccessNetworksForSharedVolumes *prometheus.Desc
-	WitnessDatabaseWriteTimeout             *prometheus.Desc
-	WitnessDynamicWeight                    *prometheus.Desc
-	WitnessRestartInterval                  *prometheus.Desc
+	addEvictDelay                           *prometheus.Desc
+	adminAccessPoint                        *prometheus.Desc
+	autoAssignNodeSite                      *prometheus.Desc
+	autoBalancerLevel                       *prometheus.Desc
+	autoBalancerMode                        *prometheus.Desc
+	backupInProgress                        *prometheus.Desc
+	blockCacheSize                          *prometheus.Desc
+	clusSvcHangTimeout                      *prometheus.Desc
+	clusSvcRegroupOpeningTimeout            *prometheus.Desc
+	clusSvcRegroupPruningTimeout            *prometheus.Desc
+	clusSvcRegroupStageTimeout              *prometheus.Desc
+	clusSvcRegroupTickInMilliseconds        *prometheus.Desc
+	clusterEnforcedAntiAffinity             *prometheus.Desc
+	clusterFunctionalLevel                  *prometheus.Desc
+	clusterGroupWaitDelay                   *prometheus.Desc
+	clusterLogLevel                         *prometheus.Desc
+	clusterLogSize                          *prometheus.Desc
+	clusterUpgradeVersion                   *prometheus.Desc
+	crossSiteDelay                          *prometheus.Desc
+	crossSiteThreshold                      *prometheus.Desc
+	crossSubnetDelay                        *prometheus.Desc
+	crossSubnetThreshold                    *prometheus.Desc
+	csvBalancer                             *prometheus.Desc
+	databaseReadWriteMode                   *prometheus.Desc
+	defaultNetworkRole                      *prometheus.Desc
+	detectedCloudPlatform                   *prometheus.Desc
+	detectManagedEvents                     *prometheus.Desc
+	detectManagedEventsThreshold            *prometheus.Desc
+	disableGroupPreferredOwnerRandomization *prometheus.Desc
+	drainOnShutdown                         *prometheus.Desc
+	dynamicQuorumEnabled                    *prometheus.Desc
+	enableSharedVolumes                     *prometheus.Desc
+	fixQuorum                               *prometheus.Desc
+	gracePeriodEnabled                      *prometheus.Desc
+	gracePeriodTimeout                      *prometheus.Desc
+	groupDependencyTimeout                  *prometheus.Desc
+	hangRecoveryAction                      *prometheus.Desc
+	ignorePersistentStateOnStartup          *prometheus.Desc
+	logResourceControls                     *prometheus.Desc
+	lowerQuorumPriorityNodeId               *prometheus.Desc
+	maxNumberOfNodes                        *prometheus.Desc
+	messageBufferLength                     *prometheus.Desc
+	minimumNeverPreemptPriority             *prometheus.Desc
+	minimumPreemptorPriority                *prometheus.Desc
+	netftIPSecEnabled                       *prometheus.Desc
+	placementOptions                        *prometheus.Desc
+	plumbAllCrossSubnetRoutes               *prometheus.Desc
+	preventQuorum                           *prometheus.Desc
+	quarantineDuration                      *prometheus.Desc
+	quarantineThreshold                     *prometheus.Desc
+	quorumArbitrationTimeMax                *prometheus.Desc
+	quorumArbitrationTimeMin                *prometheus.Desc
+	quorumLogFileSize                       *prometheus.Desc
+	quorumTypeValue                         *prometheus.Desc
+	requestReplyTimeout                     *prometheus.Desc
+	resiliencyDefaultPeriod                 *prometheus.Desc
+	resiliencyLevel                         *prometheus.Desc
+	resourceDllDeadlockPeriod               *prometheus.Desc
+	rootMemoryReserved                      *prometheus.Desc
+	routeHistoryLength                      *prometheus.Desc
+	s2DBusTypes                             *prometheus.Desc
+	s2DCacheDesiredState                    *prometheus.Desc
+	s2DCacheFlashReservePercent             *prometheus.Desc
+	s2DCachePageSizeKBytes                  *prometheus.Desc
+	s2DEnabled                              *prometheus.Desc
+	s2DIOLatencyThreshold                   *prometheus.Desc
+	s2DOptimizations                        *prometheus.Desc
+	sameSubnetDelay                         *prometheus.Desc
+	sameSubnetThreshold                     *prometheus.Desc
+	securityLevel                           *prometheus.Desc
+	securityLevelForStorage                 *prometheus.Desc
+	sharedVolumeVssWriterOperationTimeout   *prometheus.Desc
+	shutdownTimeoutInMinutes                *prometheus.Desc
+	useClientAccessNetworksForSharedVolumes *prometheus.Desc
+	witnessDatabaseWriteTimeout             *prometheus.Desc
+	witnessDynamicWeight                    *prometheus.Desc
+	witnessRestartInterval                  *prometheus.Desc
 }
 
 func New(logger log.Logger, _ *Config) *Collector {
@@ -125,463 +125,463 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build() error {
-	c.AddEvictDelay = prometheus.NewDesc(
+	c.addEvictDelay = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "add_evict_delay"),
 		"Provides access to the cluster's AddEvictDelay property, which is the number a seconds that a new node is delayed after an eviction of another node.",
 		[]string{"name"},
 		nil,
 	)
-	c.AdminAccessPoint = prometheus.NewDesc(
+	c.adminAccessPoint = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "admin_access_point"),
 		"The type of the cluster administrative access point.",
 		[]string{"name"},
 		nil,
 	)
-	c.AutoAssignNodeSite = prometheus.NewDesc(
+	c.autoAssignNodeSite = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "auto_assign_node_site"),
 		"Determines whether or not the cluster will attempt to automatically assign nodes to sites based on networks and Active Directory Site information.",
 		[]string{"name"},
 		nil,
 	)
-	c.AutoBalancerLevel = prometheus.NewDesc(
+	c.autoBalancerLevel = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "auto_balancer_level"),
 		"Determines the level of aggressiveness of AutoBalancer.",
 		[]string{"name"},
 		nil,
 	)
-	c.AutoBalancerMode = prometheus.NewDesc(
+	c.autoBalancerMode = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "auto_balancer_mode"),
 		"Determines whether or not the auto balancer is enabled.",
 		[]string{"name"},
 		nil,
 	)
-	c.BackupInProgress = prometheus.NewDesc(
+	c.backupInProgress = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "backup_in_progress"),
 		"Indicates whether a backup is in progress.",
 		[]string{"name"},
 		nil,
 	)
-	c.BlockCacheSize = prometheus.NewDesc(
+	c.blockCacheSize = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "block_cache_size"),
 		"CSV BlockCache Size in MB.",
 		[]string{"name"},
 		nil,
 	)
-	c.ClusSvcHangTimeout = prometheus.NewDesc(
+	c.clusSvcHangTimeout = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "clus_svc_hang_timeout"),
 		"Controls how long the cluster network driver waits between Failover Cluster Service heartbeats before it determines that the Failover Cluster Service has stopped responding.",
 		[]string{"name"},
 		nil,
 	)
-	c.ClusSvcRegroupOpeningTimeout = prometheus.NewDesc(
+	c.clusSvcRegroupOpeningTimeout = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "clus_svc_regroup_opening_timeout"),
 		"Controls how long a node will wait on other nodes in the opening stage before deciding that they failed.",
 		[]string{"name"},
 		nil,
 	)
-	c.ClusSvcRegroupPruningTimeout = prometheus.NewDesc(
+	c.clusSvcRegroupPruningTimeout = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "clus_svc_regroup_pruning_timeout"),
 		"Controls how long the membership leader will wait to reach full connectivity between cluster nodes.",
 		[]string{"name"},
 		nil,
 	)
-	c.ClusSvcRegroupStageTimeout = prometheus.NewDesc(
+	c.clusSvcRegroupStageTimeout = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "clus_svc_regroup_stage_timeout"),
 		"Controls how long a node will wait on other nodes in a membership stage before deciding that they failed.",
 		[]string{"name"},
 		nil,
 	)
-	c.ClusSvcRegroupTickInMilliseconds = prometheus.NewDesc(
+	c.clusSvcRegroupTickInMilliseconds = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "clus_svc_regroup_tick_in_milliseconds"),
 		"Controls how frequently the membership algorithm is sending periodic membership messages.",
 		[]string{"name"},
 		nil,
 	)
-	c.ClusterEnforcedAntiAffinity = prometheus.NewDesc(
+	c.clusterEnforcedAntiAffinity = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "cluster_enforced_anti_affinity"),
 		"Enables or disables hard enforcement of group anti-affinity classes.",
 		[]string{"name"},
 		nil,
 	)
-	c.ClusterFunctionalLevel = prometheus.NewDesc(
+	c.clusterFunctionalLevel = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "cluster_functional_level"),
 		"The functional level the cluster is currently running in.",
 		[]string{"name"},
 		nil,
 	)
-	c.ClusterGroupWaitDelay = prometheus.NewDesc(
+	c.clusterGroupWaitDelay = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "cluster_group_wait_delay"),
 		"Maximum time in seconds that a group waits for its preferred node to come online during cluster startup before coming online on a different node.",
 		[]string{"name"},
 		nil,
 	)
-	c.ClusterLogLevel = prometheus.NewDesc(
+	c.clusterLogLevel = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "cluster_log_level"),
 		"Controls the level of cluster logging.",
 		[]string{"name"},
 		nil,
 	)
-	c.ClusterLogSize = prometheus.NewDesc(
+	c.clusterLogSize = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "cluster_log_size"),
 		"Controls the maximum size of the cluster log files on each of the nodes.",
 		[]string{"name"},
 		nil,
 	)
-	c.ClusterUpgradeVersion = prometheus.NewDesc(
+	c.clusterUpgradeVersion = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "cluster_upgrade_version"),
 		"Specifies the upgrade version the cluster is currently running in.",
 		[]string{"name"},
 		nil,
 	)
-	c.CrossSiteDelay = prometheus.NewDesc(
+	c.crossSiteDelay = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "cross_site_delay"),
 		"Controls how long the cluster network driver waits in milliseconds between sending Cluster Service heartbeats across sites.",
 		[]string{"name"},
 		nil,
 	)
-	c.CrossSiteThreshold = prometheus.NewDesc(
+	c.crossSiteThreshold = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "cross_site_threshold"),
 		"Controls how many Cluster Service heartbeats can be missed across sites before it determines that Cluster Service has stopped responding.",
 		[]string{"name"},
 		nil,
 	)
-	c.CrossSubnetDelay = prometheus.NewDesc(
+	c.crossSubnetDelay = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "cross_subnet_delay"),
 		"Controls how long the cluster network driver waits in milliseconds between sending Cluster Service heartbeats across subnets.",
 		[]string{"name"},
 		nil,
 	)
-	c.CrossSubnetThreshold = prometheus.NewDesc(
+	c.crossSubnetThreshold = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "cross_subnet_threshold"),
 		"Controls how many Cluster Service heartbeats can be missed across subnets before it determines that Cluster Service has stopped responding.",
 		[]string{"name"},
 		nil,
 	)
-	c.CsvBalancer = prometheus.NewDesc(
+	c.csvBalancer = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "csv_balancer"),
 		"Whether automatic balancing for CSV is enabled.",
 		[]string{"name"},
 		nil,
 	)
-	c.DatabaseReadWriteMode = prometheus.NewDesc(
+	c.databaseReadWriteMode = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "database_read_write_mode"),
 		"Sets the database read and write mode.",
 		[]string{"name"},
 		nil,
 	)
-	c.DefaultNetworkRole = prometheus.NewDesc(
+	c.defaultNetworkRole = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "default_network_role"),
 		"Provides access to the cluster's DefaultNetworkRole property.",
 		[]string{"name"},
 		nil,
 	)
-	c.DetectedCloudPlatform = prometheus.NewDesc(
+	c.detectedCloudPlatform = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "detected_cloud_platform"),
 		"(DetectedCloudPlatform)",
 		[]string{"name"},
 		nil,
 	)
-	c.DetectManagedEvents = prometheus.NewDesc(
+	c.detectManagedEvents = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "detect_managed_events"),
 		"(DetectManagedEvents)",
 		[]string{"name"},
 		nil,
 	)
-	c.DetectManagedEventsThreshold = prometheus.NewDesc(
+	c.detectManagedEventsThreshold = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "detect_managed_events_threshold"),
 		"(DetectManagedEventsThreshold)",
 		[]string{"name"},
 		nil,
 	)
-	c.DisableGroupPreferredOwnerRandomization = prometheus.NewDesc(
+	c.disableGroupPreferredOwnerRandomization = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "disable_group_preferred_owner_randomization"),
 		"(DisableGroupPreferredOwnerRandomization)",
 		[]string{"name"},
 		nil,
 	)
-	c.DrainOnShutdown = prometheus.NewDesc(
+	c.drainOnShutdown = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "drain_on_shutdown"),
 		"Whether to drain the node when cluster service is being stopped.",
 		[]string{"name"},
 		nil,
 	)
-	c.DynamicQuorumEnabled = prometheus.NewDesc(
+	c.dynamicQuorumEnabled = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "dynamic_quorum_enabled"),
 		"Allows cluster service to adjust node weights as needed to increase availability.",
 		[]string{"name"},
 		nil,
 	)
-	c.EnableSharedVolumes = prometheus.NewDesc(
+	c.enableSharedVolumes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "enable_shared_volumes"),
 		"Enables or disables cluster shared volumes on this cluster.",
 		[]string{"name"},
 		nil,
 	)
-	c.FixQuorum = prometheus.NewDesc(
+	c.fixQuorum = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "fix_quorum"),
 		"Provides access to the cluster's FixQuorum property, which specifies if the cluster is in a fix quorum state.",
 		[]string{"name"},
 		nil,
 	)
-	c.GracePeriodEnabled = prometheus.NewDesc(
+	c.gracePeriodEnabled = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "grace_period_enabled"),
 		"Whether the node grace period feature of this cluster is enabled.",
 		[]string{"name"},
 		nil,
 	)
-	c.GracePeriodTimeout = prometheus.NewDesc(
+	c.gracePeriodTimeout = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "grace_period_timeout"),
 		"The grace period timeout in milliseconds.",
 		[]string{"name"},
 		nil,
 	)
-	c.GroupDependencyTimeout = prometheus.NewDesc(
+	c.groupDependencyTimeout = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "group_dependency_timeout"),
 		"The timeout after which a group will be brought online despite unsatisfied dependencies",
 		[]string{"name"},
 		nil,
 	)
-	c.HangRecoveryAction = prometheus.NewDesc(
+	c.hangRecoveryAction = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "hang_recovery_action"),
 		"Controls the action to take if the user-mode processes have stopped responding.",
 		[]string{"name"},
 		nil,
 	)
-	c.IgnorePersistentStateOnStartup = prometheus.NewDesc(
+	c.ignorePersistentStateOnStartup = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "ignore_persistent_state_on_startup"),
 		"Provides access to the cluster's IgnorePersistentStateOnStartup property, which specifies whether the cluster will bring online groups that were online when the cluster was shut down.",
 		[]string{"name"},
 		nil,
 	)
-	c.LogResourceControls = prometheus.NewDesc(
+	c.logResourceControls = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "log_resource_controls"),
 		"Controls the logging of resource controls.",
 		[]string{"name"},
 		nil,
 	)
-	c.LowerQuorumPriorityNodeId = prometheus.NewDesc(
+	c.lowerQuorumPriorityNodeId = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "lower_quorum_priority_node_id"),
 		"Specifies the Node ID that has a lower priority when voting for quorum is performed. If the quorum vote is split 50/50%, the specified node's vote would be ignored to break the tie. If this is not set then the cluster will pick a node at random to break the tie.",
 		[]string{"name"},
 		nil,
 	)
-	c.MaxNumberOfNodes = prometheus.NewDesc(
+	c.maxNumberOfNodes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "max_number_of_nodes"),
 		"Indicates the maximum number of nodes that may participate in the Cluster.",
 		[]string{"name"},
 		nil,
 	)
-	c.MessageBufferLength = prometheus.NewDesc(
+	c.messageBufferLength = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "message_buffer_length"),
 		"The maximum unacknowledged message count for GEM.",
 		[]string{"name"},
 		nil,
 	)
-	c.MinimumNeverPreemptPriority = prometheus.NewDesc(
+	c.minimumNeverPreemptPriority = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "minimum_never_preempt_priority"),
 		"Groups with this priority or higher cannot be preempted.",
 		[]string{"name"},
 		nil,
 	)
-	c.MinimumPreemptorPriority = prometheus.NewDesc(
+	c.minimumPreemptorPriority = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "minimum_preemptor_priority"),
 		"Minimum priority a cluster group must have to be able to preempt another group.",
 		[]string{"name"},
 		nil,
 	)
-	c.NetftIPSecEnabled = prometheus.NewDesc(
+	c.netftIPSecEnabled = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "netft_ip_sec_enabled"),
 		"Whether IPSec is enabled for cluster internal traffic.",
 		[]string{"name"},
 		nil,
 	)
-	c.PlacementOptions = prometheus.NewDesc(
+	c.placementOptions = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "placement_options"),
 		"Various option flags to modify default placement behavior.",
 		[]string{"name"},
 		nil,
 	)
-	c.PlumbAllCrossSubnetRoutes = prometheus.NewDesc(
+	c.plumbAllCrossSubnetRoutes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "plumb_all_cross_subnet_routes"),
 		"Plumbs all possible cross subnet routes to all nodes.",
 		[]string{"name"},
 		nil,
 	)
-	c.PreventQuorum = prometheus.NewDesc(
+	c.preventQuorum = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "prevent_quorum"),
 		"Whether the cluster will ignore group persistent state on startup.",
 		[]string{"name"},
 		nil,
 	)
-	c.QuarantineDuration = prometheus.NewDesc(
+	c.quarantineDuration = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "quarantine_duration"),
 		"The quarantine period timeout in milliseconds.",
 		[]string{"name"},
 		nil,
 	)
-	c.QuarantineThreshold = prometheus.NewDesc(
+	c.quarantineThreshold = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "quarantine_threshold"),
 		"Number of node failures before it will be quarantined.",
 		[]string{"name"},
 		nil,
 	)
-	c.QuorumArbitrationTimeMax = prometheus.NewDesc(
+	c.quorumArbitrationTimeMax = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "quorum_arbitration_time_max"),
 		"Controls the maximum time necessary to decide the Quorum owner node.",
 		[]string{"name"},
 		nil,
 	)
-	c.QuorumArbitrationTimeMin = prometheus.NewDesc(
+	c.quorumArbitrationTimeMin = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "quorum_arbitration_time_min"),
 		"Controls the minimum time necessary to decide the Quorum owner node.",
 		[]string{"name"},
 		nil,
 	)
-	c.QuorumLogFileSize = prometheus.NewDesc(
+	c.quorumLogFileSize = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "quorum_log_file_size"),
 		"This property is obsolete.",
 		[]string{"name"},
 		nil,
 	)
-	c.QuorumTypeValue = prometheus.NewDesc(
+	c.quorumTypeValue = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "quorum_type_value"),
 		"Get the current quorum type value. -1: Unknown; 1: Node; 2: FileShareWitness; 3: Storage; 4: None",
 		[]string{"name"},
 		nil,
 	)
-	c.RequestReplyTimeout = prometheus.NewDesc(
+	c.requestReplyTimeout = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "request_reply_timeout"),
 		"Controls the request reply time-out period.",
 		[]string{"name"},
 		nil,
 	)
-	c.ResiliencyDefaultPeriod = prometheus.NewDesc(
+	c.resiliencyDefaultPeriod = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "resiliency_default_period"),
 		"The default resiliency period, in seconds, for the cluster.",
 		[]string{"name"},
 		nil,
 	)
-	c.ResiliencyLevel = prometheus.NewDesc(
+	c.resiliencyLevel = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "resiliency_level"),
 		"The resiliency level for the cluster.",
 		[]string{"name"},
 		nil,
 	)
-	c.ResourceDllDeadlockPeriod = prometheus.NewDesc(
+	c.resourceDllDeadlockPeriod = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "resource_dll_deadlock_period"),
 		"This property is obsolete.",
 		[]string{"name"},
 		nil,
 	)
-	c.RootMemoryReserved = prometheus.NewDesc(
+	c.rootMemoryReserved = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "root_memory_reserved"),
 		"Controls the amount of memory reserved for the parent partition on all cluster nodes.",
 		[]string{"name"},
 		nil,
 	)
-	c.RouteHistoryLength = prometheus.NewDesc(
+	c.routeHistoryLength = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "route_history_length"),
 		"The history length for routes to help finding network issues.",
 		[]string{"name"},
 		nil,
 	)
-	c.S2DBusTypes = prometheus.NewDesc(
+	c.s2DBusTypes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "s2d_bus_types"),
 		"Bus types for storage spaces direct.",
 		[]string{"name"},
 		nil,
 	)
-	c.S2DCacheDesiredState = prometheus.NewDesc(
+	c.s2DCacheDesiredState = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "s2d_cache_desired_state"),
 		"Desired state of the storage spaces direct cache.",
 		[]string{"name"},
 		nil,
 	)
-	c.S2DCacheFlashReservePercent = prometheus.NewDesc(
+	c.s2DCacheFlashReservePercent = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "s2d_cache_flash_reserve_percent"),
 		"Percentage of allocated flash space to utilize when caching.",
 		[]string{"name"},
 		nil,
 	)
-	c.S2DCachePageSizeKBytes = prometheus.NewDesc(
+	c.s2DCachePageSizeKBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "s2d_cache_page_size_k_bytes"),
 		"Page size in KB used by S2D cache.",
 		[]string{"name"},
 		nil,
 	)
-	c.S2DEnabled = prometheus.NewDesc(
+	c.s2DEnabled = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "s2d_enabled"),
 		"Whether direct attached storage (DAS) is enabled.",
 		[]string{"name"},
 		nil,
 	)
-	c.S2DIOLatencyThreshold = prometheus.NewDesc(
+	c.s2DIOLatencyThreshold = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "s2dio_latency_threshold"),
 		"The I/O latency threshold for storage spaces direct.",
 		[]string{"name"},
 		nil,
 	)
-	c.S2DOptimizations = prometheus.NewDesc(
+	c.s2DOptimizations = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "s2d_optimizations"),
 		"Optimization flags for storage spaces direct.",
 		[]string{"name"},
 		nil,
 	)
-	c.SameSubnetDelay = prometheus.NewDesc(
+	c.sameSubnetDelay = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "same_subnet_delay"),
 		"Controls how long the cluster network driver waits in milliseconds between sending Cluster Service heartbeats on the same subnet.",
 		[]string{"name"},
 		nil,
 	)
-	c.SameSubnetThreshold = prometheus.NewDesc(
+	c.sameSubnetThreshold = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "same_subnet_threshold"),
 		"Controls how many Cluster Service heartbeats can be missed on the same subnet before it determines that Cluster Service has stopped responding.",
 		[]string{"name"},
 		nil,
 	)
-	c.SecurityLevel = prometheus.NewDesc(
+	c.securityLevel = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "security_level"),
 		"Controls the level of security that should apply to intracluster messages. 0: Clear Text; 1: Sign; 2: Encrypt ",
 		[]string{"name"},
 		nil,
 	)
-	c.SecurityLevelForStorage = prometheus.NewDesc(
+	c.securityLevelForStorage = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "security_level_for_storage"),
 		"(SecurityLevelForStorage)",
 		[]string{"name"},
 		nil,
 	)
-	c.SharedVolumeVssWriterOperationTimeout = prometheus.NewDesc(
+	c.sharedVolumeVssWriterOperationTimeout = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "shared_volume_vss_writer_operation_timeout"),
 		"CSV VSS Writer operation timeout in seconds.",
 		[]string{"name"},
 		nil,
 	)
-	c.ShutdownTimeoutInMinutes = prometheus.NewDesc(
+	c.shutdownTimeoutInMinutes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "shutdown_timeout_in_minutes"),
 		"The maximum time in minutes allowed for cluster resources to come offline during cluster service shutdown.",
 		[]string{"name"},
 		nil,
 	)
-	c.UseClientAccessNetworksForSharedVolumes = prometheus.NewDesc(
+	c.useClientAccessNetworksForSharedVolumes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "use_client_access_networks_for_shared_volumes"),
 		"Whether the use of client access networks for cluster shared volumes feature of this cluster is enabled. 0: Disabled; 1: Enabled; 2: Auto",
 		[]string{"name"},
 		nil,
 	)
-	c.WitnessDatabaseWriteTimeout = prometheus.NewDesc(
+	c.witnessDatabaseWriteTimeout = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "witness_database_write_timeout"),
 		"Controls the maximum time in seconds that a cluster database write to a witness can take before the write is abandoned.",
 		[]string{"name"},
 		nil,
 	)
-	c.WitnessDynamicWeight = prometheus.NewDesc(
+	c.witnessDynamicWeight = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "witness_dynamic_weight"),
 		"The weight of the configured witness.",
 		[]string{"name"},
 		nil,
 	)
-	c.WitnessRestartInterval = prometheus.NewDesc(
+	c.witnessRestartInterval = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "witness_restart_interval"),
 		"Controls the witness restart interval.",
 		[]string{"name"},
@@ -685,539 +685,539 @@ func (c *Collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric)
 
 	for _, v := range dst {
 		ch <- prometheus.MustNewConstMetric(
-			c.AddEvictDelay,
+			c.addEvictDelay,
 			prometheus.GaugeValue,
 			float64(v.AddEvictDelay),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.AdminAccessPoint,
+			c.adminAccessPoint,
 			prometheus.GaugeValue,
 			float64(v.AdminAccessPoint),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.AutoAssignNodeSite,
+			c.autoAssignNodeSite,
 			prometheus.GaugeValue,
 			float64(v.AutoAssignNodeSite),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.AutoBalancerLevel,
+			c.autoBalancerLevel,
 			prometheus.GaugeValue,
 			float64(v.AutoBalancerLevel),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.AutoBalancerMode,
+			c.autoBalancerMode,
 			prometheus.GaugeValue,
 			float64(v.AutoBalancerMode),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.BackupInProgress,
+			c.backupInProgress,
 			prometheus.GaugeValue,
 			float64(v.BackupInProgress),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.BlockCacheSize,
+			c.blockCacheSize,
 			prometheus.GaugeValue,
 			float64(v.BlockCacheSize),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.ClusSvcHangTimeout,
+			c.clusSvcHangTimeout,
 			prometheus.GaugeValue,
 			float64(v.ClusSvcHangTimeout),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.ClusSvcRegroupOpeningTimeout,
+			c.clusSvcRegroupOpeningTimeout,
 			prometheus.GaugeValue,
 			float64(v.ClusSvcRegroupOpeningTimeout),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.ClusSvcRegroupPruningTimeout,
+			c.clusSvcRegroupPruningTimeout,
 			prometheus.GaugeValue,
 			float64(v.ClusSvcRegroupPruningTimeout),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.ClusSvcRegroupStageTimeout,
+			c.clusSvcRegroupStageTimeout,
 			prometheus.GaugeValue,
 			float64(v.ClusSvcRegroupStageTimeout),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.ClusSvcRegroupTickInMilliseconds,
+			c.clusSvcRegroupTickInMilliseconds,
 			prometheus.GaugeValue,
 			float64(v.ClusSvcRegroupTickInMilliseconds),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.ClusterEnforcedAntiAffinity,
+			c.clusterEnforcedAntiAffinity,
 			prometheus.GaugeValue,
 			float64(v.ClusterEnforcedAntiAffinity),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.ClusterFunctionalLevel,
+			c.clusterFunctionalLevel,
 			prometheus.GaugeValue,
 			float64(v.ClusterFunctionalLevel),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.ClusterGroupWaitDelay,
+			c.clusterGroupWaitDelay,
 			prometheus.GaugeValue,
 			float64(v.ClusterGroupWaitDelay),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.ClusterLogLevel,
+			c.clusterLogLevel,
 			prometheus.GaugeValue,
 			float64(v.ClusterLogLevel),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.ClusterLogSize,
+			c.clusterLogSize,
 			prometheus.GaugeValue,
 			float64(v.ClusterLogSize),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.ClusterUpgradeVersion,
+			c.clusterUpgradeVersion,
 			prometheus.GaugeValue,
 			float64(v.ClusterUpgradeVersion),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.CrossSiteDelay,
+			c.crossSiteDelay,
 			prometheus.GaugeValue,
 			float64(v.CrossSiteDelay),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.CrossSiteThreshold,
+			c.crossSiteThreshold,
 			prometheus.GaugeValue,
 			float64(v.CrossSiteThreshold),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.CrossSubnetDelay,
+			c.crossSubnetDelay,
 			prometheus.GaugeValue,
 			float64(v.CrossSubnetDelay),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.CrossSubnetThreshold,
+			c.crossSubnetThreshold,
 			prometheus.GaugeValue,
 			float64(v.CrossSubnetThreshold),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.CsvBalancer,
+			c.csvBalancer,
 			prometheus.GaugeValue,
 			float64(v.CsvBalancer),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.DatabaseReadWriteMode,
+			c.databaseReadWriteMode,
 			prometheus.GaugeValue,
 			float64(v.DatabaseReadWriteMode),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.DefaultNetworkRole,
+			c.defaultNetworkRole,
 			prometheus.GaugeValue,
 			float64(v.DefaultNetworkRole),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.DetectedCloudPlatform,
+			c.detectedCloudPlatform,
 			prometheus.GaugeValue,
 			float64(v.DetectedCloudPlatform),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.DetectManagedEvents,
+			c.detectManagedEvents,
 			prometheus.GaugeValue,
 			float64(v.DetectManagedEvents),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.DetectManagedEventsThreshold,
+			c.detectManagedEventsThreshold,
 			prometheus.GaugeValue,
 			float64(v.DetectManagedEventsThreshold),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.DisableGroupPreferredOwnerRandomization,
+			c.disableGroupPreferredOwnerRandomization,
 			prometheus.GaugeValue,
 			float64(v.DisableGroupPreferredOwnerRandomization),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.DrainOnShutdown,
+			c.drainOnShutdown,
 			prometheus.GaugeValue,
 			float64(v.DrainOnShutdown),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.DynamicQuorumEnabled,
+			c.dynamicQuorumEnabled,
 			prometheus.GaugeValue,
 			float64(v.DynamicQuorumEnabled),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.EnableSharedVolumes,
+			c.enableSharedVolumes,
 			prometheus.GaugeValue,
 			float64(v.EnableSharedVolumes),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.FixQuorum,
+			c.fixQuorum,
 			prometheus.GaugeValue,
 			float64(v.FixQuorum),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.GracePeriodEnabled,
+			c.gracePeriodEnabled,
 			prometheus.GaugeValue,
 			float64(v.GracePeriodEnabled),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.GracePeriodTimeout,
+			c.gracePeriodTimeout,
 			prometheus.GaugeValue,
 			float64(v.GracePeriodTimeout),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.GroupDependencyTimeout,
+			c.groupDependencyTimeout,
 			prometheus.GaugeValue,
 			float64(v.GroupDependencyTimeout),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.HangRecoveryAction,
+			c.hangRecoveryAction,
 			prometheus.GaugeValue,
 			float64(v.HangRecoveryAction),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.IgnorePersistentStateOnStartup,
+			c.ignorePersistentStateOnStartup,
 			prometheus.GaugeValue,
 			float64(v.IgnorePersistentStateOnStartup),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LogResourceControls,
+			c.logResourceControls,
 			prometheus.GaugeValue,
 			float64(v.LogResourceControls),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LowerQuorumPriorityNodeId,
+			c.lowerQuorumPriorityNodeId,
 			prometheus.GaugeValue,
 			float64(v.LowerQuorumPriorityNodeId),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.MaxNumberOfNodes,
+			c.maxNumberOfNodes,
 			prometheus.GaugeValue,
 			float64(v.MaxNumberOfNodes),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.MessageBufferLength,
+			c.messageBufferLength,
 			prometheus.GaugeValue,
 			float64(v.MessageBufferLength),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.MinimumNeverPreemptPriority,
+			c.minimumNeverPreemptPriority,
 			prometheus.GaugeValue,
 			float64(v.MinimumNeverPreemptPriority),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.MinimumPreemptorPriority,
+			c.minimumPreemptorPriority,
 			prometheus.GaugeValue,
 			float64(v.MinimumPreemptorPriority),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.NetftIPSecEnabled,
+			c.netftIPSecEnabled,
 			prometheus.GaugeValue,
 			float64(v.NetftIPSecEnabled),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.PlacementOptions,
+			c.placementOptions,
 			prometheus.GaugeValue,
 			float64(v.PlacementOptions),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.PlumbAllCrossSubnetRoutes,
+			c.plumbAllCrossSubnetRoutes,
 			prometheus.GaugeValue,
 			float64(v.PlumbAllCrossSubnetRoutes),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.PreventQuorum,
+			c.preventQuorum,
 			prometheus.GaugeValue,
 			float64(v.PreventQuorum),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.QuarantineDuration,
+			c.quarantineDuration,
 			prometheus.GaugeValue,
 			float64(v.QuarantineDuration),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.QuarantineThreshold,
+			c.quarantineThreshold,
 			prometheus.GaugeValue,
 			float64(v.QuarantineThreshold),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.QuorumArbitrationTimeMax,
+			c.quorumArbitrationTimeMax,
 			prometheus.GaugeValue,
 			float64(v.QuorumArbitrationTimeMax),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.QuorumArbitrationTimeMin,
+			c.quorumArbitrationTimeMin,
 			prometheus.GaugeValue,
 			float64(v.QuorumArbitrationTimeMin),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.QuorumLogFileSize,
+			c.quorumLogFileSize,
 			prometheus.GaugeValue,
 			float64(v.QuorumLogFileSize),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.QuorumTypeValue,
+			c.quorumTypeValue,
 			prometheus.GaugeValue,
 			float64(v.QuorumTypeValue),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.RequestReplyTimeout,
+			c.requestReplyTimeout,
 			prometheus.GaugeValue,
 			float64(v.RequestReplyTimeout),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.ResiliencyDefaultPeriod,
+			c.resiliencyDefaultPeriod,
 			prometheus.GaugeValue,
 			float64(v.ResiliencyDefaultPeriod),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.ResiliencyLevel,
+			c.resiliencyLevel,
 			prometheus.GaugeValue,
 			float64(v.ResiliencyLevel),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.ResourceDllDeadlockPeriod,
+			c.resourceDllDeadlockPeriod,
 			prometheus.GaugeValue,
 			float64(v.ResourceDllDeadlockPeriod),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.RootMemoryReserved,
+			c.rootMemoryReserved,
 			prometheus.GaugeValue,
 			float64(v.RootMemoryReserved),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.RouteHistoryLength,
+			c.routeHistoryLength,
 			prometheus.GaugeValue,
 			float64(v.RouteHistoryLength),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.S2DBusTypes,
+			c.s2DBusTypes,
 			prometheus.GaugeValue,
 			float64(v.S2DBusTypes),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.S2DCacheDesiredState,
+			c.s2DCacheDesiredState,
 			prometheus.GaugeValue,
 			float64(v.S2DCacheDesiredState),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.S2DCacheFlashReservePercent,
+			c.s2DCacheFlashReservePercent,
 			prometheus.GaugeValue,
 			float64(v.S2DCacheFlashReservePercent),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.S2DCachePageSizeKBytes,
+			c.s2DCachePageSizeKBytes,
 			prometheus.GaugeValue,
 			float64(v.S2DCachePageSizeKBytes),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.S2DEnabled,
+			c.s2DEnabled,
 			prometheus.GaugeValue,
 			float64(v.S2DEnabled),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.S2DIOLatencyThreshold,
+			c.s2DIOLatencyThreshold,
 			prometheus.GaugeValue,
 			float64(v.S2DIOLatencyThreshold),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.S2DOptimizations,
+			c.s2DOptimizations,
 			prometheus.GaugeValue,
 			float64(v.S2DOptimizations),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.SameSubnetDelay,
+			c.sameSubnetDelay,
 			prometheus.GaugeValue,
 			float64(v.SameSubnetDelay),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.SameSubnetThreshold,
+			c.sameSubnetThreshold,
 			prometheus.GaugeValue,
 			float64(v.SameSubnetThreshold),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.SecurityLevel,
+			c.securityLevel,
 			prometheus.GaugeValue,
 			float64(v.SecurityLevel),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.SecurityLevelForStorage,
+			c.securityLevelForStorage,
 			prometheus.GaugeValue,
 			float64(v.SecurityLevelForStorage),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.SharedVolumeVssWriterOperationTimeout,
+			c.sharedVolumeVssWriterOperationTimeout,
 			prometheus.GaugeValue,
 			float64(v.SharedVolumeVssWriterOperationTimeout),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.ShutdownTimeoutInMinutes,
+			c.shutdownTimeoutInMinutes,
 			prometheus.GaugeValue,
 			float64(v.ShutdownTimeoutInMinutes),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.UseClientAccessNetworksForSharedVolumes,
+			c.useClientAccessNetworksForSharedVolumes,
 			prometheus.GaugeValue,
 			float64(v.UseClientAccessNetworksForSharedVolumes),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.WitnessDatabaseWriteTimeout,
+			c.witnessDatabaseWriteTimeout,
 			prometheus.GaugeValue,
 			float64(v.WitnessDatabaseWriteTimeout),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.WitnessDynamicWeight,
+			c.witnessDynamicWeight,
 			prometheus.GaugeValue,
 			float64(v.WitnessDynamicWeight),
 			v.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.WitnessRestartInterval,
+			c.witnessRestartInterval,
 			prometheus.GaugeValue,
 			float64(v.WitnessRestartInterval),
 			v.Name,
