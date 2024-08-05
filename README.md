@@ -51,6 +51,7 @@ Name     | Description | Enabled by default
 [remote_fx](docs/collector.remote_fx.md) | RemoteFX protocol (RDP) metrics |
 [scheduled_task](docs/collector.scheduled_task.md) | Scheduled Tasks metrics |
 [service](docs/collector.service.md) | Service state metrics | &#10003;
+[service_info](docs/collector.service_info.md) | Service info metrics | &#10003;
 [smb](docs/collector.smb.md) | SMB Server |
 [smbclient](docs/collector.smbclient.md) | SMB Client |
 [smtp](docs/collector.smtp.md) | IIS SMTP Server |
