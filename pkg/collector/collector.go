@@ -53,6 +53,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/collector/remote_fx"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/scheduled_task"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/service"
+	"github.com/prometheus-community/windows_exporter/pkg/collector/service_info"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/smb"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/smbclient"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/smtp"
@@ -135,6 +136,7 @@ func NewWithConfig(config Config) Collectors {
 	collectors[remote_fx.Name] = remote_fx.New(&config.RemoteFx)
 	collectors[scheduled_task.Name] = scheduled_task.New(&config.ScheduledTask)
 	collectors[service.Name] = service.New(&config.Service)
+	collectors[service_info.Name] = service_info.New(logger, &config.ServiceInfo)
 	collectors[smb.Name] = smb.New(&config.SMB)
 	collectors[smbclient.Name] = smbclient.New(&config.SMBClient)
 	collectors[smtp.Name] = smtp.New(&config.SMTP)
