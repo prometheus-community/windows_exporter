@@ -3,6 +3,7 @@
 package collector
 
 import (
+	"github.com/prometheus-community/windows_exporter/pkg/collector/perfdata"
 	"slices"
 	"strings"
 
@@ -129,6 +130,7 @@ func NewWithConfig(logger log.Logger, config Config) Collectors {
 	collectors[netframework_clrsecurity.Name] = netframework_clrsecurity.New(logger, &config.NetframeworkClrsecurity)
 	collectors[nps.Name] = nps.New(logger, &config.Nps)
 	collectors[os.Name] = os.New(logger, &config.Os)
+	collectors[perfdata.Name] = perfdata.New(logger, &config.PerfData)
 	collectors[physical_disk.Name] = physical_disk.New(logger, &config.PhysicalDisk)
 	collectors[printer.Name] = printer.New(logger, &config.Printer)
 	collectors[process.Name] = process.New(logger, &config.Process)

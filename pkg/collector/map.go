@@ -39,6 +39,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/collector/netframework_clrsecurity"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/nps"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/os"
+	"github.com/prometheus-community/windows_exporter/pkg/collector/perfdata"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/physical_disk"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/printer"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/process"
@@ -101,6 +102,7 @@ var Map = map[string]types.CollectorBuilderWithFlags{
 	netframework_clrsecurity.Name:        netframework_clrsecurity.NewWithFlags,
 	nps.Name:                             nps.NewWithFlags,
 	os.Name:                              os.NewWithFlags,
+	perfdata.Name:                        perfdata.NewWithFlags,
 	physical_disk.Name:                   physical_disk.NewWithFlags,
 	printer.Name:                         printer.NewWithFlags,
 	process.Name:                         process.NewWithFlags,
