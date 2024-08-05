@@ -33,7 +33,7 @@ jobs:
     name: check title prefix
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: check
         run: |
           PR_TITLE_PREFIX=$(echo "$PR_TITLE" | cut -d':' -f1)
