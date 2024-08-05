@@ -20,31 +20,31 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	logger log.Logger
 
-	PacketsReceivedTotal                             *prometheus.Desc
-	DuplicatesDroppedTotal                           *prometheus.Desc
-	PacketsExpiredTotal                              *prometheus.Desc
-	ActiveQueueLength                                *prometheus.Desc
-	ConflictCheckQueueLength                         *prometheus.Desc
-	DiscoversTotal                                   *prometheus.Desc
-	OffersTotal                                      *prometheus.Desc
-	RequestsTotal                                    *prometheus.Desc
-	InformsTotal                                     *prometheus.Desc
-	AcksTotal                                        *prometheus.Desc
-	NacksTotal                                       *prometheus.Desc
-	DeclinesTotal                                    *prometheus.Desc
-	ReleasesTotal                                    *prometheus.Desc
-	OfferQueueLength                                 *prometheus.Desc
-	DeniedDueToMatch                                 *prometheus.Desc
-	DeniedDueToNonMatch                              *prometheus.Desc
-	FailoverBndupdSentTotal                          *prometheus.Desc
-	FailoverBndupdReceivedTotal                      *prometheus.Desc
-	FailoverBndackSentTotal                          *prometheus.Desc
-	FailoverBndackReceivedTotal                      *prometheus.Desc
-	FailoverBndupdPendingOutboundQueue               *prometheus.Desc
-	FailoverTransitionsCommunicationinterruptedState *prometheus.Desc
-	FailoverTransitionsPartnerdownState              *prometheus.Desc
-	FailoverTransitionsRecoverState                  *prometheus.Desc
-	FailoverBndupdDropped                            *prometheus.Desc
+	acksTotal                                        *prometheus.Desc
+	activeQueueLength                                *prometheus.Desc
+	conflictCheckQueueLength                         *prometheus.Desc
+	declinesTotal                                    *prometheus.Desc
+	deniedDueToMatch                                 *prometheus.Desc
+	deniedDueToNonMatch                              *prometheus.Desc
+	discoversTotal                                   *prometheus.Desc
+	duplicatesDroppedTotal                           *prometheus.Desc
+	failoverBndackReceivedTotal                      *prometheus.Desc
+	failoverBndackSentTotal                          *prometheus.Desc
+	failoverBndupdDropped                            *prometheus.Desc
+	failoverBndupdPendingOutboundQueue               *prometheus.Desc
+	failoverBndupdReceivedTotal                      *prometheus.Desc
+	failoverBndupdSentTotal                          *prometheus.Desc
+	failoverTransitionsCommunicationInterruptedState *prometheus.Desc
+	failoverTransitionsPartnerDownState              *prometheus.Desc
+	failoverTransitionsRecoverState                  *prometheus.Desc
+	informsTotal                                     *prometheus.Desc
+	nACKsTotal                                       *prometheus.Desc
+	offerQueueLength                                 *prometheus.Desc
+	offersTotal                                      *prometheus.Desc
+	packetsExpiredTotal                              *prometheus.Desc
+	packetsReceivedTotal                             *prometheus.Desc
+	releasesTotal                                    *prometheus.Desc
+	requestsTotal                                    *prometheus.Desc
 }
 
 func New(logger log.Logger, _ *Config) *Collector {
@@ -75,151 +75,151 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build() error {
-	c.PacketsReceivedTotal = prometheus.NewDesc(
+	c.packetsReceivedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "packets_received_total"),
 		"Total number of packets received by the DHCP server (PacketsReceivedTotal)",
 		nil,
 		nil,
 	)
-	c.DuplicatesDroppedTotal = prometheus.NewDesc(
+	c.duplicatesDroppedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "duplicates_dropped_total"),
 		"Total number of duplicate packets received by the DHCP server (DuplicatesDroppedTotal)",
 		nil,
 		nil,
 	)
-	c.PacketsExpiredTotal = prometheus.NewDesc(
+	c.packetsExpiredTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "packets_expired_total"),
 		"Total number of packets expired in the DHCP server message queue (PacketsExpiredTotal)",
 		nil,
 		nil,
 	)
-	c.ActiveQueueLength = prometheus.NewDesc(
+	c.activeQueueLength = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "active_queue_length"),
 		"Number of packets in the processing queue of the DHCP server (ActiveQueueLength)",
 		nil,
 		nil,
 	)
-	c.ConflictCheckQueueLength = prometheus.NewDesc(
+	c.conflictCheckQueueLength = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "conflict_check_queue_length"),
 		"Number of packets in the DHCP server queue waiting on conflict detection (ping). (ConflictCheckQueueLength)",
 		nil,
 		nil,
 	)
-	c.DiscoversTotal = prometheus.NewDesc(
+	c.discoversTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "discovers_total"),
 		"Total DHCP Discovers received by the DHCP server (DiscoversTotal)",
 		nil,
 		nil,
 	)
-	c.OffersTotal = prometheus.NewDesc(
+	c.offersTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "offers_total"),
 		"Total DHCP Offers sent by the DHCP server (OffersTotal)",
 		nil,
 		nil,
 	)
-	c.RequestsTotal = prometheus.NewDesc(
+	c.requestsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "requests_total"),
 		"Total DHCP Requests received by the DHCP server (RequestsTotal)",
 		nil,
 		nil,
 	)
-	c.InformsTotal = prometheus.NewDesc(
+	c.informsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "informs_total"),
 		"Total DHCP Informs received by the DHCP server (InformsTotal)",
 		nil,
 		nil,
 	)
-	c.AcksTotal = prometheus.NewDesc(
+	c.acksTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "acks_total"),
 		"Total DHCP Acks sent by the DHCP server (AcksTotal)",
 		nil,
 		nil,
 	)
-	c.NacksTotal = prometheus.NewDesc(
+	c.nACKsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "nacks_total"),
 		"Total DHCP Nacks sent by the DHCP server (NacksTotal)",
 		nil,
 		nil,
 	)
-	c.DeclinesTotal = prometheus.NewDesc(
+	c.declinesTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "declines_total"),
 		"Total DHCP Declines received by the DHCP server (DeclinesTotal)",
 		nil,
 		nil,
 	)
-	c.ReleasesTotal = prometheus.NewDesc(
+	c.releasesTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "releases_total"),
 		"Total DHCP Releases received by the DHCP server (ReleasesTotal)",
 		nil,
 		nil,
 	)
-	c.OfferQueueLength = prometheus.NewDesc(
+	c.offerQueueLength = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "offer_queue_length"),
 		"Number of packets in the offer queue of the DHCP server (OfferQueueLength)",
 		nil,
 		nil,
 	)
-	c.DeniedDueToMatch = prometheus.NewDesc(
+	c.deniedDueToMatch = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "denied_due_to_match_total"),
 		"Total number of DHCP requests denied, based on matches from the Deny list (DeniedDueToMatch)",
 		nil,
 		nil,
 	)
-	c.DeniedDueToNonMatch = prometheus.NewDesc(
+	c.deniedDueToNonMatch = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "denied_due_to_nonmatch_total"),
 		"Total number of DHCP requests denied, based on non-matches from the Allow list (DeniedDueToNonMatch)",
 		nil,
 		nil,
 	)
-	c.FailoverBndupdSentTotal = prometheus.NewDesc(
+	c.failoverBndupdSentTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "failover_bndupd_sent_total"),
 		"Number of DHCP fail over Binding Update messages sent (FailoverBndupdSentTotal)",
 		nil,
 		nil,
 	)
-	c.FailoverBndupdReceivedTotal = prometheus.NewDesc(
+	c.failoverBndupdReceivedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "failover_bndupd_received_total"),
 		"Number of DHCP fail over Binding Update messages received (FailoverBndupdReceivedTotal)",
 		nil,
 		nil,
 	)
-	c.FailoverBndackSentTotal = prometheus.NewDesc(
+	c.failoverBndackSentTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "failover_bndack_sent_total"),
 		"Number of DHCP fail over Binding Ack messages sent (FailoverBndackSentTotal)",
 		nil,
 		nil,
 	)
-	c.FailoverBndackReceivedTotal = prometheus.NewDesc(
+	c.failoverBndackReceivedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "failover_bndack_received_total"),
 		"Number of DHCP fail over Binding Ack messages received (FailoverBndackReceivedTotal)",
 		nil,
 		nil,
 	)
-	c.FailoverBndupdPendingOutboundQueue = prometheus.NewDesc(
+	c.failoverBndupdPendingOutboundQueue = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "failover_bndupd_pending_in_outbound_queue"),
 		"Number of pending outbound DHCP fail over Binding Update messages (FailoverBndupdPendingOutboundQueue)",
 		nil,
 		nil,
 	)
-	c.FailoverTransitionsCommunicationinterruptedState = prometheus.NewDesc(
+	c.failoverTransitionsCommunicationInterruptedState = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "failover_transitions_communicationinterrupted_state_total"),
 		"Total number of transitions into COMMUNICATION INTERRUPTED state (FailoverTransitionsCommunicationinterruptedState)",
 		nil,
 		nil,
 	)
-	c.FailoverTransitionsPartnerdownState = prometheus.NewDesc(
+	c.failoverTransitionsPartnerDownState = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "failover_transitions_partnerdown_state_total"),
 		"Total number of transitions into PARTNER DOWN state (FailoverTransitionsPartnerdownState)",
 		nil,
 		nil,
 	)
-	c.FailoverTransitionsRecoverState = prometheus.NewDesc(
+	c.failoverTransitionsRecoverState = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "failover_transitions_recover_total"),
 		"Total number of transitions into RECOVER state (FailoverTransitionsRecoverState)",
 		nil,
 		nil,
 	)
-	c.FailoverBndupdDropped = prometheus.NewDesc(
+	c.failoverBndupdDropped = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "failover_bndupd_dropped_total"),
 		"Total number of DHCP fail over Binding Updates dropped (FailoverBndupdDropped)",
 		nil,
@@ -266,151 +266,151 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 	}
 
 	ch <- prometheus.MustNewConstMetric(
-		c.PacketsReceivedTotal,
+		c.packetsReceivedTotal,
 		prometheus.CounterValue,
 		dhcpPerfs[0].PacketsReceivedTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.DuplicatesDroppedTotal,
+		c.duplicatesDroppedTotal,
 		prometheus.CounterValue,
 		dhcpPerfs[0].DuplicatesDroppedTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.PacketsExpiredTotal,
+		c.packetsExpiredTotal,
 		prometheus.CounterValue,
 		dhcpPerfs[0].PacketsExpiredTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.ActiveQueueLength,
+		c.activeQueueLength,
 		prometheus.GaugeValue,
 		dhcpPerfs[0].ActiveQueueLength,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.ConflictCheckQueueLength,
+		c.conflictCheckQueueLength,
 		prometheus.GaugeValue,
 		dhcpPerfs[0].ConflictCheckQueueLength,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.DiscoversTotal,
+		c.discoversTotal,
 		prometheus.CounterValue,
 		dhcpPerfs[0].DiscoversTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.OffersTotal,
+		c.offersTotal,
 		prometheus.CounterValue,
 		dhcpPerfs[0].OffersTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.RequestsTotal,
+		c.requestsTotal,
 		prometheus.CounterValue,
 		dhcpPerfs[0].RequestsTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.InformsTotal,
+		c.informsTotal,
 		prometheus.CounterValue,
 		dhcpPerfs[0].InformsTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.AcksTotal,
+		c.acksTotal,
 		prometheus.CounterValue,
 		dhcpPerfs[0].AcksTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.NacksTotal,
+		c.nACKsTotal,
 		prometheus.CounterValue,
 		dhcpPerfs[0].NacksTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.DeclinesTotal,
+		c.declinesTotal,
 		prometheus.CounterValue,
 		dhcpPerfs[0].DeclinesTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.ReleasesTotal,
+		c.releasesTotal,
 		prometheus.CounterValue,
 		dhcpPerfs[0].ReleasesTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.OfferQueueLength,
+		c.offerQueueLength,
 		prometheus.GaugeValue,
 		dhcpPerfs[0].OfferQueueLength,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.DeniedDueToMatch,
+		c.deniedDueToMatch,
 		prometheus.CounterValue,
 		dhcpPerfs[0].DeniedDueToMatch,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.DeniedDueToNonMatch,
+		c.deniedDueToNonMatch,
 		prometheus.CounterValue,
 		dhcpPerfs[0].DeniedDueToNonMatch,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.FailoverBndupdSentTotal,
+		c.failoverBndupdSentTotal,
 		prometheus.CounterValue,
 		dhcpPerfs[0].FailoverBndupdSentTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.FailoverBndupdReceivedTotal,
+		c.failoverBndupdReceivedTotal,
 		prometheus.CounterValue,
 		dhcpPerfs[0].FailoverBndupdReceivedTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.FailoverBndackSentTotal,
+		c.failoverBndackSentTotal,
 		prometheus.CounterValue,
 		dhcpPerfs[0].FailoverBndackSentTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.FailoverBndackReceivedTotal,
+		c.failoverBndackReceivedTotal,
 		prometheus.CounterValue,
 		dhcpPerfs[0].FailoverBndackReceivedTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.FailoverBndupdPendingOutboundQueue,
+		c.failoverBndupdPendingOutboundQueue,
 		prometheus.GaugeValue,
 		dhcpPerfs[0].FailoverBndupdPendingOutboundQueue,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.FailoverTransitionsCommunicationinterruptedState,
+		c.failoverTransitionsCommunicationInterruptedState,
 		prometheus.CounterValue,
 		dhcpPerfs[0].FailoverTransitionsCommunicationinterruptedState,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.FailoverTransitionsPartnerdownState,
+		c.failoverTransitionsPartnerDownState,
 		prometheus.CounterValue,
 		dhcpPerfs[0].FailoverTransitionsPartnerdownState,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.FailoverTransitionsRecoverState,
+		c.failoverTransitionsRecoverState,
 		prometheus.CounterValue,
 		dhcpPerfs[0].FailoverTransitionsRecoverState,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.FailoverBndupdDropped,
+		c.failoverBndupdDropped,
 		prometheus.CounterValue,
 		dhcpPerfs[0].FailoverBndupdDropped,
 	)

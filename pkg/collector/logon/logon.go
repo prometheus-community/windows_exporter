@@ -23,7 +23,7 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	logger log.Logger
 
-	LogonType *prometheus.Desc
+	logonType *prometheus.Desc
 }
 
 func New(logger log.Logger, _ *Config) *Collector {
@@ -54,7 +54,7 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build() error {
-	c.LogonType = prometheus.NewDesc(
+	c.logonType = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "logon_type"),
 		"Number of active logon sessions (LogonSession.LogonType)",
 		[]string{"status"},
@@ -136,91 +136,91 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	}
 
 	ch <- prometheus.MustNewConstMetric(
-		c.LogonType,
+		c.logonType,
 		prometheus.GaugeValue,
 		float64(system),
 		"system",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.LogonType,
+		c.logonType,
 		prometheus.GaugeValue,
 		float64(interactive),
 		"interactive",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.LogonType,
+		c.logonType,
 		prometheus.GaugeValue,
 		float64(network),
 		"network",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.LogonType,
+		c.logonType,
 		prometheus.GaugeValue,
 		float64(batch),
 		"batch",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.LogonType,
+		c.logonType,
 		prometheus.GaugeValue,
 		float64(service),
 		"service",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.LogonType,
+		c.logonType,
 		prometheus.GaugeValue,
 		float64(proxy),
 		"proxy",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.LogonType,
+		c.logonType,
 		prometheus.GaugeValue,
 		float64(unlock),
 		"unlock",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.LogonType,
+		c.logonType,
 		prometheus.GaugeValue,
 		float64(networkcleartext),
 		"network_clear_text",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.LogonType,
+		c.logonType,
 		prometheus.GaugeValue,
 		float64(newcredentials),
 		"new_credentials",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.LogonType,
+		c.logonType,
 		prometheus.GaugeValue,
 		float64(remoteinteractive),
 		"remote_interactive",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.LogonType,
+		c.logonType,
 		prometheus.GaugeValue,
 		float64(cachedinteractive),
 		"cached_interactive",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.LogonType,
+		c.logonType,
 		prometheus.GaugeValue,
 		float64(remoteinteractive),
 		"cached_remote_interactive",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.LogonType,
+		c.logonType,
 		prometheus.GaugeValue,
 		float64(cachedunlock),
 		"cached_unlock",

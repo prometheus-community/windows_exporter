@@ -23,28 +23,28 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	logger log.Logger
 
-	ZoneTransferRequestsReceived  *prometheus.Desc
-	ZoneTransferRequestsSent      *prometheus.Desc
-	ZoneTransferResponsesReceived *prometheus.Desc
-	ZoneTransferSuccessReceived   *prometheus.Desc
-	ZoneTransferSuccessSent       *prometheus.Desc
-	ZoneTransferFailures          *prometheus.Desc
-	MemoryUsedBytes               *prometheus.Desc
-	DynamicUpdatesQueued          *prometheus.Desc
-	DynamicUpdatesReceived        *prometheus.Desc
-	DynamicUpdatesFailures        *prometheus.Desc
-	NotifyReceived                *prometheus.Desc
-	NotifySent                    *prometheus.Desc
-	SecureUpdateFailures          *prometheus.Desc
-	SecureUpdateReceived          *prometheus.Desc
-	Queries                       *prometheus.Desc
-	Responses                     *prometheus.Desc
-	RecursiveQueries              *prometheus.Desc
-	RecursiveQueryFailures        *prometheus.Desc
-	RecursiveQuerySendTimeouts    *prometheus.Desc
-	WinsQueries                   *prometheus.Desc
-	WinsResponses                 *prometheus.Desc
-	UnmatchedResponsesReceived    *prometheus.Desc
+	dynamicUpdatesFailures        *prometheus.Desc
+	dynamicUpdatesQueued          *prometheus.Desc
+	dynamicUpdatesReceived        *prometheus.Desc
+	memoryUsedBytes               *prometheus.Desc
+	notifyReceived                *prometheus.Desc
+	notifySent                    *prometheus.Desc
+	queries                       *prometheus.Desc
+	recursiveQueries              *prometheus.Desc
+	recursiveQueryFailures        *prometheus.Desc
+	recursiveQuerySendTimeouts    *prometheus.Desc
+	responses                     *prometheus.Desc
+	secureUpdateFailures          *prometheus.Desc
+	secureUpdateReceived          *prometheus.Desc
+	unmatchedResponsesReceived    *prometheus.Desc
+	winsQueries                   *prometheus.Desc
+	winsResponses                 *prometheus.Desc
+	zoneTransferFailures          *prometheus.Desc
+	zoneTransferRequestsReceived  *prometheus.Desc
+	zoneTransferRequestsSent      *prometheus.Desc
+	zoneTransferResponsesReceived *prometheus.Desc
+	zoneTransferSuccessReceived   *prometheus.Desc
+	zoneTransferSuccessSent       *prometheus.Desc
 }
 
 func New(logger log.Logger, _ *Config) *Collector {
@@ -75,133 +75,133 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build() error {
-	c.ZoneTransferRequestsReceived = prometheus.NewDesc(
+	c.zoneTransferRequestsReceived = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "zone_transfer_requests_received_total"),
 		"Number of zone transfer requests (AXFR/IXFR) received by the master DNS server",
 		[]string{"qtype"},
 		nil,
 	)
-	c.ZoneTransferRequestsSent = prometheus.NewDesc(
+	c.zoneTransferRequestsSent = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "zone_transfer_requests_sent_total"),
 		"Number of zone transfer requests (AXFR/IXFR) sent by the secondary DNS server",
 		[]string{"qtype"},
 		nil,
 	)
-	c.ZoneTransferResponsesReceived = prometheus.NewDesc(
+	c.zoneTransferResponsesReceived = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "zone_transfer_response_received_total"),
 		"Number of zone transfer responses (AXFR/IXFR) received by the secondary DNS server",
 		[]string{"qtype"},
 		nil,
 	)
-	c.ZoneTransferSuccessReceived = prometheus.NewDesc(
+	c.zoneTransferSuccessReceived = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "zone_transfer_success_received_total"),
 		"Number of successful zone transfers (AXFR/IXFR) received by the secondary DNS server",
 		[]string{"qtype", "protocol"},
 		nil,
 	)
-	c.ZoneTransferSuccessSent = prometheus.NewDesc(
+	c.zoneTransferSuccessSent = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "zone_transfer_success_sent_total"),
 		"Number of successful zone transfers (AXFR/IXFR) of the master DNS server",
 		[]string{"qtype"},
 		nil,
 	)
-	c.ZoneTransferFailures = prometheus.NewDesc(
+	c.zoneTransferFailures = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "zone_transfer_failures_total"),
 		"Number of failed zone transfers of the master DNS server",
 		nil,
 		nil,
 	)
-	c.MemoryUsedBytes = prometheus.NewDesc(
+	c.memoryUsedBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "memory_used_bytes"),
 		"Current memory used by DNS server",
 		[]string{"area"},
 		nil,
 	)
-	c.DynamicUpdatesQueued = prometheus.NewDesc(
+	c.dynamicUpdatesQueued = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "dynamic_updates_queued"),
 		"Number of dynamic updates queued by the DNS server",
 		nil,
 		nil,
 	)
-	c.DynamicUpdatesReceived = prometheus.NewDesc(
+	c.dynamicUpdatesReceived = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "dynamic_updates_received_total"),
 		"Number of secure update requests received by the DNS server",
 		[]string{"operation"},
 		nil,
 	)
-	c.DynamicUpdatesFailures = prometheus.NewDesc(
+	c.dynamicUpdatesFailures = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "dynamic_updates_failures_total"),
 		"Number of dynamic updates which timed out or were rejected by the DNS server",
 		[]string{"reason"},
 		nil,
 	)
-	c.NotifyReceived = prometheus.NewDesc(
+	c.notifyReceived = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "notify_received_total"),
 		"Number of notifies received by the secondary DNS server",
 		nil,
 		nil,
 	)
-	c.NotifySent = prometheus.NewDesc(
+	c.notifySent = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "notify_sent_total"),
 		"Number of notifies sent by the master DNS server",
 		nil,
 		nil,
 	)
-	c.SecureUpdateFailures = prometheus.NewDesc(
+	c.secureUpdateFailures = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "secure_update_failures_total"),
 		"Number of secure updates that failed on the DNS server",
 		nil,
 		nil,
 	)
-	c.SecureUpdateReceived = prometheus.NewDesc(
+	c.secureUpdateReceived = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "secure_update_received_total"),
 		"Number of secure update requests received by the DNS server",
 		nil,
 		nil,
 	)
-	c.Queries = prometheus.NewDesc(
+	c.queries = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "queries_total"),
 		"Number of queries received by DNS server",
 		[]string{"protocol"},
 		nil,
 	)
-	c.Responses = prometheus.NewDesc(
+	c.responses = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "responses_total"),
 		"Number of responses sent by DNS server",
 		[]string{"protocol"},
 		nil,
 	)
-	c.RecursiveQueries = prometheus.NewDesc(
+	c.recursiveQueries = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "recursive_queries_total"),
 		"Number of recursive queries received by DNS server",
 		nil,
 		nil,
 	)
-	c.RecursiveQueryFailures = prometheus.NewDesc(
+	c.recursiveQueryFailures = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "recursive_query_failures_total"),
 		"Number of recursive query failures",
 		nil,
 		nil,
 	)
-	c.RecursiveQuerySendTimeouts = prometheus.NewDesc(
+	c.recursiveQuerySendTimeouts = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "recursive_query_send_timeouts_total"),
 		"Number of recursive query sending timeouts",
 		nil,
 		nil,
 	)
-	c.WinsQueries = prometheus.NewDesc(
+	c.winsQueries = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "wins_queries_total"),
 		"Number of WINS lookup requests received by the server",
 		[]string{"direction"},
 		nil,
 	)
-	c.WinsResponses = prometheus.NewDesc(
+	c.winsResponses = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "wins_responses_total"),
 		"Number of WINS lookup responses sent by the server",
 		[]string{"direction"},
 		nil,
 	)
-	c.UnmatchedResponsesReceived = prometheus.NewDesc(
+	c.unmatchedResponsesReceived = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "unmatched_responses_total"),
 		"Number of response packets received by the DNS server that do not match any outstanding remote query",
 		nil,
@@ -277,66 +277,66 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	}
 
 	ch <- prometheus.MustNewConstMetric(
-		c.ZoneTransferRequestsReceived,
+		c.zoneTransferRequestsReceived,
 		prometheus.CounterValue,
 		float64(dst[0].AXFRRequestReceived),
 		"full",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.ZoneTransferRequestsReceived,
+		c.zoneTransferRequestsReceived,
 		prometheus.CounterValue,
 		float64(dst[0].IXFRRequestReceived),
 		"incremental",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.ZoneTransferRequestsSent,
+		c.zoneTransferRequestsSent,
 		prometheus.CounterValue,
 		float64(dst[0].AXFRRequestSent),
 		"full",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.ZoneTransferRequestsSent,
+		c.zoneTransferRequestsSent,
 		prometheus.CounterValue,
 		float64(dst[0].IXFRRequestSent),
 		"incremental",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.ZoneTransferRequestsSent,
+		c.zoneTransferRequestsSent,
 		prometheus.CounterValue,
 		float64(dst[0].ZoneTransferSOARequestSent),
 		"soa",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.ZoneTransferResponsesReceived,
+		c.zoneTransferResponsesReceived,
 		prometheus.CounterValue,
 		float64(dst[0].AXFRResponseReceived),
 		"full",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.ZoneTransferResponsesReceived,
+		c.zoneTransferResponsesReceived,
 		prometheus.CounterValue,
 		float64(dst[0].IXFRResponseReceived),
 		"incremental",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.ZoneTransferSuccessReceived,
+		c.zoneTransferSuccessReceived,
 		prometheus.CounterValue,
 		float64(dst[0].AXFRSuccessReceived),
 		"full",
 		"tcp",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.ZoneTransferSuccessReceived,
+		c.zoneTransferSuccessReceived,
 		prometheus.CounterValue,
 		float64(dst[0].IXFRTCPSuccessReceived),
 		"incremental",
 		"tcp",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.ZoneTransferSuccessReceived,
+		c.zoneTransferSuccessReceived,
 		prometheus.CounterValue,
 		float64(dst[0].IXFRTCPSuccessReceived),
 		"incremental",
@@ -344,183 +344,183 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.ZoneTransferSuccessSent,
+		c.zoneTransferSuccessSent,
 		prometheus.CounterValue,
 		float64(dst[0].AXFRSuccessSent),
 		"full",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.ZoneTransferSuccessSent,
+		c.zoneTransferSuccessSent,
 		prometheus.CounterValue,
 		float64(dst[0].IXFRSuccessSent),
 		"incremental",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.ZoneTransferFailures,
+		c.zoneTransferFailures,
 		prometheus.CounterValue,
 		float64(dst[0].ZoneTransferFailure),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.MemoryUsedBytes,
+		c.memoryUsedBytes,
 		prometheus.GaugeValue,
 		float64(dst[0].CachingMemory),
 		"caching",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.MemoryUsedBytes,
+		c.memoryUsedBytes,
 		prometheus.GaugeValue,
 		float64(dst[0].DatabaseNodeMemory),
 		"database_node",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.MemoryUsedBytes,
+		c.memoryUsedBytes,
 		prometheus.GaugeValue,
 		float64(dst[0].NbstatMemory),
 		"nbstat",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.MemoryUsedBytes,
+		c.memoryUsedBytes,
 		prometheus.GaugeValue,
 		float64(dst[0].RecordFlowMemory),
 		"record_flow",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.MemoryUsedBytes,
+		c.memoryUsedBytes,
 		prometheus.GaugeValue,
 		float64(dst[0].TCPMessageMemory),
 		"tcp_message",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.MemoryUsedBytes,
+		c.memoryUsedBytes,
 		prometheus.GaugeValue,
 		float64(dst[0].UDPMessageMemory),
 		"udp_message",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.DynamicUpdatesReceived,
+		c.dynamicUpdatesReceived,
 		prometheus.CounterValue,
 		float64(dst[0].DynamicUpdateNoOperation),
 		"noop",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.DynamicUpdatesReceived,
+		c.dynamicUpdatesReceived,
 		prometheus.CounterValue,
 		float64(dst[0].DynamicUpdateWrittentoDatabase),
 		"written",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.DynamicUpdatesQueued,
+		c.dynamicUpdatesQueued,
 		prometheus.GaugeValue,
 		float64(dst[0].DynamicUpdateQueued),
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.DynamicUpdatesFailures,
+		c.dynamicUpdatesFailures,
 		prometheus.CounterValue,
 		float64(dst[0].DynamicUpdateRejected),
 		"rejected",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.DynamicUpdatesFailures,
+		c.dynamicUpdatesFailures,
 		prometheus.CounterValue,
 		float64(dst[0].DynamicUpdateTimeOuts),
 		"timeout",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.NotifyReceived,
+		c.notifyReceived,
 		prometheus.CounterValue,
 		float64(dst[0].NotifyReceived),
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.NotifySent,
+		c.notifySent,
 		prometheus.CounterValue,
 		float64(dst[0].NotifySent),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.RecursiveQueries,
+		c.recursiveQueries,
 		prometheus.CounterValue,
 		float64(dst[0].RecursiveQueries),
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.RecursiveQueryFailures,
+		c.recursiveQueryFailures,
 		prometheus.CounterValue,
 		float64(dst[0].RecursiveQueryFailure),
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.RecursiveQuerySendTimeouts,
+		c.recursiveQuerySendTimeouts,
 		prometheus.CounterValue,
 		float64(dst[0].RecursiveSendTimeOuts),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.Queries,
+		c.queries,
 		prometheus.CounterValue,
 		float64(dst[0].TCPQueryReceived),
 		"tcp",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.Queries,
+		c.queries,
 		prometheus.CounterValue,
 		float64(dst[0].UDPQueryReceived),
 		"udp",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.Responses,
+		c.responses,
 		prometheus.CounterValue,
 		float64(dst[0].TCPResponseSent),
 		"tcp",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.Responses,
+		c.responses,
 		prometheus.CounterValue,
 		float64(dst[0].UDPResponseSent),
 		"udp",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.UnmatchedResponsesReceived,
+		c.unmatchedResponsesReceived,
 		prometheus.CounterValue,
 		float64(dst[0].UnmatchedResponsesReceived),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.WinsQueries,
+		c.winsQueries,
 		prometheus.CounterValue,
 		float64(dst[0].WINSLookupReceived),
 		"forward",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.WinsQueries,
+		c.winsQueries,
 		prometheus.CounterValue,
 		float64(dst[0].WINSReverseLookupReceived),
 		"reverse",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.WinsResponses,
+		c.winsResponses,
 		prometheus.CounterValue,
 		float64(dst[0].WINSResponseSent),
 		"forward",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.WinsResponses,
+		c.winsResponses,
 		prometheus.CounterValue,
 		float64(dst[0].WINSReverseResponseSent),
 		"reverse",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.SecureUpdateFailures,
+		c.secureUpdateFailures,
 		prometheus.CounterValue,
 		float64(dst[0].SecureUpdateFailure),
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.SecureUpdateReceived,
+		c.secureUpdateReceived,
 		prometheus.CounterValue,
 		float64(dst[0].SecureUpdateReceived),
 	)
