@@ -11,9 +11,9 @@ import (
 )
 
 func BenchmarkCollector(b *testing.B) {
-	// Include is not set in testing context (kingpin flags not parsed), causing the collector to skip all interfaces.
+	// PrinterInclude is not set in testing context (kingpin flags not parsed), causing the collector to skip all interfaces.
 	localNicInclude := ".+"
 
-	kingpin.CommandLine.GetArg(net.FlagNicInclude).StringVar(&localNicInclude)
+	kingpin.CommandLine.GetArg("collector.net.nic-include").StringVar(&localNicInclude)
 	testutils.FuncBenchmarkCollector(b, net.Name, net.NewWithFlags)
 }

@@ -14,12 +14,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-const (
-	Name = "smtp"
-
-	FlagSmtpServerExclude = "collector.smtp.server-exclude"
-	FlagSmtpServerInclude = "collector.smtp.server-include"
-)
+const Name = "smtp"
 
 type Config struct {
 	ServerInclude string `yaml:"server_include"`
@@ -31,7 +26,7 @@ var ConfigDefaults = Config{
 	ServerExclude: "",
 }
 
-type collector struct {
+type Collector struct {
 	logger log.Logger
 
 	serverInclude *string
@@ -84,28 +79,29 @@ type collector struct {
 	serverExcludePattern *regexp.Regexp
 }
 
-func New(logger log.Logger, config *Config) types.Collector {
+func New(logger log.Logger, config *Config) *Collector {
 	if config == nil {
 		config = &ConfigDefaults
 	}
 
-	c := &collector{
+	c := &Collector{
 		serverExclude: &config.ServerExclude,
 		serverInclude: &config.ServerInclude,
 	}
 	c.SetLogger(logger)
+
 	return c
 }
 
-func NewWithFlags(app *kingpin.Application) types.Collector {
-	c := &collector{
+func NewWithFlags(app *kingpin.Application) *Collector {
+	c := &Collector{
 		serverInclude: app.Flag(
-			FlagSmtpServerInclude,
+			"collector.smtp.server-include",
 			"Regexp of virtual servers to include. Server name must both match include and not match exclude to be included.",
 		).Default(ConfigDefaults.ServerInclude).String(),
 
 		serverExclude: app.Flag(
-			FlagSmtpServerExclude,
+			"collector.smtp.server-exclude",
 			"Regexp of virtual servers to exclude. Server name must both match include and not match exclude to be included.",
 		).Default(ConfigDefaults.ServerExclude).String(),
 	}
@@ -113,19 +109,23 @@ func NewWithFlags(app *kingpin.Application) types.Collector {
 	return c
 }
 
-func (c *collector) GetName() string {
+func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *collector) SetLogger(logger log.Logger) {
+func (c *Collector) SetLogger(logger log.Logger) {
 	c.logger = log.With(logger, "collector", Name)
 }
 
-func (c *collector) GetPerfCounter() ([]string, error) {
+func (c *Collector) GetPerfCounter() ([]string, error) {
 	return []string{"SMTP Server"}, nil
 }
 
-func (c *collector) Build() error {
+func (c *Collector) Close() error {
+	return nil
+}
+
+func (c *Collector) Build() error {
 	_ = level.Info(c.logger).Log("msg", "smtp collector is in an experimental state! Metrics for this collector have not been tested.")
 
 	c.BadmailedMessagesBadPickupFileTotal = prometheus.NewDesc(
@@ -398,7 +398,7 @@ func (c *collector) Build() error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	if err := c.collect(ctx, ch); err != nil {
 		_ = level.Error(c.logger).Log("msg", "failed collecting smtp metrics", "err", err)
 		return err
@@ -454,7 +454,7 @@ type PerflibSMTPServer struct {
 	RoutingTableLookupsTotal                float64 `perflib:"Routing Table Lookups Total"`
 }
 
-func (c *collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *Collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	var dst []PerflibSMTPServer
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["SMTP Server"], &dst, c.logger); err != nil {
 		return err
@@ -753,7 +753,6 @@ func (c *collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 			server.RoutingTableLookupsTotal,
 			server.Name,
 		)
-
 	}
 	return nil
 }

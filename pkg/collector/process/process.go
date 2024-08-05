@@ -5,7 +5,6 @@ package process
 import (
 	"errors"
 	"fmt"
-	"golang.org/x/sys/windows"
 	"regexp"
 	"strconv"
 	"strings"
@@ -19,15 +18,10 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/utils"
 	"github.com/prometheus-community/windows_exporter/pkg/wmi"
 	"github.com/prometheus/client_golang/prometheus"
+	"golang.org/x/sys/windows"
 )
 
-const (
-	Name                    = "process"
-	FlagProcessExclude      = "collector.process.exclude"
-	FlagProcessInclude      = "collector.process.include"
-	FlagEnableWorkerProcess = "collector.process.iis"
-	FlagEnableReportOwner   = "collector.process.report-owner"
-)
+const Name = "process"
 
 type Config struct {
 	ProcessInclude      string `yaml:"process_include"`
@@ -43,7 +37,7 @@ var ConfigDefaults = Config{
 	EnableReportOwner:   false,
 }
 
-type collector struct {
+type Collector struct {
 	logger log.Logger
 
 	processInclude *string
@@ -74,58 +68,63 @@ type collector struct {
 	lookupCache map[string]string
 }
 
-func New(logger log.Logger, config *Config) types.Collector {
+func New(logger log.Logger, config *Config) *Collector {
 	if config == nil {
 		config = &ConfigDefaults
 	}
 
-	c := &collector{
+	c := &Collector{
 		processExclude:      &config.ProcessExclude,
 		processInclude:      &config.ProcessInclude,
 		enableWorkerProcess: &config.EnableWorkerProcess,
 	}
 	c.SetLogger(logger)
+
 	return c
 }
 
-func NewWithFlags(app *kingpin.Application) types.Collector {
-	c := &collector{
+func NewWithFlags(app *kingpin.Application) *Collector {
+	c := &Collector{
 		processInclude: app.Flag(
-			FlagProcessInclude,
+			"collector.process.include",
 			"Regexp of processes to include. Process name must both match include and not match exclude to be included.",
 		).Default(ConfigDefaults.ProcessInclude).String(),
 
 		processExclude: app.Flag(
-			FlagProcessExclude,
+			"collector.process.exclude",
 			"Regexp of processes to exclude. Process name must both match include and not match exclude to be included.",
 		).Default(ConfigDefaults.ProcessExclude).String(),
 
 		enableWorkerProcess: app.Flag(
-			FlagEnableWorkerProcess,
+			"collector.process.iis",
 			"Enable IIS worker process name queries. May cause the collector to leak memory.",
 		).Default("false").Bool(),
 
 		enableReportOwner: app.Flag(
-			FlagEnableReportOwner,
+			"collector.process.report-owner",
 			"Enable reporting of process owner.",
 		).Default("false").Bool(),
 	}
 	return c
 }
 
-func (c *collector) GetName() string {
+func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *collector) SetLogger(logger log.Logger) {
+func (c *Collector) SetLogger(logger log.Logger) {
 	c.logger = log.With(logger, "collector", Name)
 }
 
-func (c *collector) GetPerfCounter() ([]string, error) {
+func (c *Collector) GetPerfCounter() ([]string, error) {
 	return []string{"Process"}, nil
 }
 
-func (c *collector) Build() error {
+func (c *Collector) Close() error {
+	return nil
+}
+
+func (c *Collector) Build() error {
 	if c.processInclude != nil && *c.processInclude == ".*" && utils.IsEmpty(c.processExclude) {
 		_ = level.Warn(c.logger).Log("msg", "No filters specified for process collector. This will generate a very large number of metrics!")
 	}
@@ -280,7 +279,7 @@ type WorkerProcess struct {
 	ProcessId   uint64
 }
 
-func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	data := make([]perflibProcess, 0)
 	err := perflib.UnmarshalObject(ctx.PerfObjects["Process"], &data, c.logger)
 	if err != nil {
@@ -482,7 +481,7 @@ func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 }
 
 // ref: https://github.com/microsoft/hcsshim/blob/8beabacfc2d21767a07c20f8dd5f9f3932dbf305/internal/uvm/stats.go#L25
-func (c *collector) getProcessOwner(pid int) (string, error) {
+func (c *Collector) getProcessOwner(pid int) (string, error) {
 	p, err := windows.OpenProcess(windows.PROCESS_QUERY_LIMITED_INFORMATION, false, uint32(pid))
 	if errors.Is(err, syscall.Errno(0x57)) { // invalid parameter, for PIDs that don't exist
 		return "", errors.New("process not found")

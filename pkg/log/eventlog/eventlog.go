@@ -6,6 +6,7 @@ package eventlog
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"sync"
@@ -54,7 +55,11 @@ type eventlogLogger struct {
 func (l *eventlogLogger) Log(keyvals ...interface{}) error {
 	priority := l.prioritySelector(keyvals...)
 
-	lb := l.getLoggerBuf()
+	lb, err := l.getLoggerBuf()
+	if err != nil {
+		return err
+	}
+
 	defer l.putLoggerBuf(lb)
 	if err := lb.logger.Log(keyvals...); err != nil {
 		return err
@@ -77,15 +82,19 @@ type loggerBuf struct {
 	logger log.Logger
 }
 
-func (l *eventlogLogger) getLoggerBuf() *loggerBuf {
-	lb := l.bufPool.Get().(*loggerBuf)
+func (l *eventlogLogger) getLoggerBuf() (*loggerBuf, error) {
+	lb, ok := l.bufPool.Get().(*loggerBuf)
+	if !ok {
+		return nil, errors.New("failed to get loggerBuf from pool")
+	}
+
 	if lb.buf == nil {
 		lb.buf = &bytes.Buffer{}
 		lb.logger = l.newLogger(lb.buf)
 	} else {
 		lb.buf.Reset()
 	}
-	return lb
+	return lb, nil
 }
 
 func (l *eventlogLogger) putLoggerBuf(lb *loggerBuf) {

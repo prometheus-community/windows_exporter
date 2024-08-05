@@ -14,12 +14,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-const (
-	Name = "net"
-
-	FlagNicExclude = "collector.net.nic-exclude"
-	FlagNicInclude = "collector.net.nic-include"
-)
+const Name = "net"
 
 type Config struct {
 	NicInclude string `yaml:"nic_include"`
@@ -33,8 +28,8 @@ var ConfigDefaults = Config{
 
 var nicNameToUnderscore = regexp.MustCompile("[^a-zA-Z0-9]")
 
-// A collector is a Prometheus collector for Perflib Network Interface metrics
-type collector struct {
+// A Collector is a Prometheus Collector for Perflib Network Interface metrics
+type Collector struct {
 	logger log.Logger
 
 	nicInclude *string
@@ -58,28 +53,29 @@ type collector struct {
 	nicExcludePattern *regexp.Regexp
 }
 
-func New(logger log.Logger, config *Config) types.Collector {
+func New(logger log.Logger, config *Config) *Collector {
 	if config == nil {
 		config = &ConfigDefaults
 	}
 
-	c := &collector{
+	c := &Collector{
 		nicExclude: &config.NicExclude,
 		nicInclude: &config.NicInclude,
 	}
 	c.SetLogger(logger)
+
 	return c
 }
 
-func NewWithFlags(app *kingpin.Application) types.Collector {
-	c := &collector{
+func NewWithFlags(app *kingpin.Application) *Collector {
+	c := &Collector{
 		nicInclude: app.Flag(
-			FlagNicInclude,
+			"collector.net.nic-include",
 			"Regexp of NIC:s to include. NIC name must both match include and not match exclude to be included.",
 		).Default(ConfigDefaults.NicInclude).String(),
 
 		nicExclude: app.Flag(
-			FlagNicExclude,
+			"collector.net.nic-exclude",
 			"Regexp of NIC:s to exclude. NIC name must both match include and not match exclude to be included.",
 		).Default(ConfigDefaults.NicExclude).String(),
 	}
@@ -87,19 +83,23 @@ func NewWithFlags(app *kingpin.Application) types.Collector {
 	return c
 }
 
-func (c *collector) GetName() string {
+func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *collector) SetLogger(logger log.Logger) {
+func (c *Collector) SetLogger(logger log.Logger) {
 	c.logger = log.With(logger, "collector", Name)
 }
 
-func (c *collector) GetPerfCounter() ([]string, error) {
+func (c *Collector) GetPerfCounter() ([]string, error) {
 	return []string{"Network Interface"}, nil
 }
 
-func (c *collector) Build() error {
+func (c *Collector) Close() error {
+	return nil
+}
+
+func (c *Collector) Build() error {
 	c.BytesReceivedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "bytes_received_total"),
 		"(Network.BytesReceivedPerSec)",
@@ -195,7 +195,7 @@ func (c *collector) Build() error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	if err := c.collect(ctx, ch); err != nil {
 		_ = level.Error(c.logger).Log("msg", "failed collecting net metrics", "err", err)
 		return err
@@ -228,7 +228,7 @@ type networkInterface struct {
 	CurrentBandwidth         float64 `perflib:"Current Bandwidth"`
 }
 
-func (c *collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *Collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	var dst []networkInterface
 
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["Network Interface"], &dst, c.logger); err != nil {

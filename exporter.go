@@ -5,29 +5,30 @@
 package main
 
 import (
-	// Its important that we do these first so that we can register with the Windows service control ASAP to avoid timeouts
-	"github.com/prometheus-community/windows_exporter/pkg/initiate"
-
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/pprof"
 	"os"
+	"os/signal"
 	"os/user"
 	"runtime"
 	"sort"
 	"strings"
-
-	winlog "github.com/prometheus-community/windows_exporter/pkg/log"
-	"github.com/prometheus-community/windows_exporter/pkg/types"
-	"github.com/prometheus-community/windows_exporter/pkg/utils"
-	"github.com/prometheus-community/windows_exporter/pkg/wmi"
+	"time"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/go-kit/log/level"
 	"github.com/prometheus-community/windows_exporter/pkg/collector"
 	"github.com/prometheus-community/windows_exporter/pkg/config"
+	// Its important that we do these first so that we can register with the Windows service control ASAP to avoid timeouts
+	"github.com/prometheus-community/windows_exporter/pkg/initiate"
+	winlog "github.com/prometheus-community/windows_exporter/pkg/log"
 	"github.com/prometheus-community/windows_exporter/pkg/log/flag"
+	"github.com/prometheus-community/windows_exporter/pkg/types"
+	"github.com/prometheus-community/windows_exporter/pkg/utils"
+	"github.com/prometheus-community/windows_exporter/pkg/wmi"
 	"github.com/prometheus/common/version"
 	"github.com/prometheus/exporter-toolkit/web"
 	webflag "github.com/prometheus/exporter-toolkit/web/kingpinflag"
@@ -171,9 +172,9 @@ func main() {
 		collectorNames := collector.Available()
 		sort.Strings(collectorNames)
 
-		fmt.Printf("Available collectors:\n")
+		fmt.Printf("Available collectors:\n") //nolint:forbidigo
 		for _, n := range collectorNames {
-			fmt.Printf(" - %s\n", n)
+			fmt.Printf(" - %s\n", n) //nolint:forbidigo
 		}
 
 		return
@@ -259,20 +260,37 @@ func main() {
 	_ = level.Info(logger).Log("msg", "Build context", "build_context", version.BuildContext())
 	_ = level.Debug(logger).Log("msg", "Go MAXPROCS", "procs", runtime.GOMAXPROCS(0))
 
+	server := &http.Server{
+		ReadHeaderTimeout: 5 * time.Second,
+		IdleTimeout:       60 * time.Second,
+		ReadTimeout:       5 * time.Second,
+		WriteTimeout:      10 * time.Minute,
+		Handler:           mux,
+	}
+
 	go func() {
-		server := &http.Server{Handler: mux}
 		if err := web.ListenAndServe(server, webConfig, logger); err != nil {
 			_ = level.Error(logger).Log("msg", "cannot start windows_exporter", "err", err)
 			os.Exit(1)
 		}
 	}()
 
-	for {
-		if <-initiate.StopCh {
-			_ = level.Info(logger).Log("msg", "Shutting down windows_exporter")
-			break
-		}
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
+	defer stop()
+
+	select {
+	case <-ctx.Done():
+		_ = level.Info(logger).Log("msg", "Shutting down windows_exporter via kill signal")
+	case <-initiate.StopCh:
+		_ = level.Info(logger).Log("msg", "Shutting down windows_exporter via service control")
 	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	_ = server.Shutdown(ctx)
+
+	_ = level.Info(logger).Log("msg", "windows_exporter has shut down")
 }
 
 func withConcurrencyLimit(n int, next http.HandlerFunc) http.HandlerFunc {

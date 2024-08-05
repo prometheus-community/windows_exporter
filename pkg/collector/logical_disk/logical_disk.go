@@ -10,22 +10,16 @@ import (
 	"strconv"
 	"strings"
 
-	"golang.org/x/sys/windows"
-
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
 	"github.com/prometheus-community/windows_exporter/pkg/perflib"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
+	"golang.org/x/sys/windows"
 )
 
-const (
-	Name = "logical_disk"
-
-	FlagLogicalDiskVolumeExclude = "collector.logical_disk.volume-exclude"
-	FlagLogicalDiskVolumeInclude = "collector.logical_disk.volume-include"
-)
+const Name = "logical_disk"
 
 type Config struct {
 	VolumeInclude string `yaml:"volume_include"`
@@ -37,8 +31,8 @@ var ConfigDefaults = Config{
 	VolumeExclude: "",
 }
 
-// A collector is a Prometheus collector for perflib logicalDisk metrics
-type collector struct {
+// A Collector is a Prometheus Collector for perflib logicalDisk metrics
+type Collector struct {
 	logger log.Logger
 
 	volumeInclude *string
@@ -75,27 +69,28 @@ type volumeInfo struct {
 	readonly     float64
 }
 
-func New(logger log.Logger, config *Config) types.Collector {
+func New(logger log.Logger, config *Config) *Collector {
 	if config == nil {
 		config = &ConfigDefaults
 	}
 
-	c := &collector{
+	c := &Collector{
 		volumeExclude: &config.VolumeExclude,
 		volumeInclude: &config.VolumeInclude,
 	}
 	c.SetLogger(logger)
+
 	return c
 }
 
-func NewWithFlags(app *kingpin.Application) types.Collector {
-	c := &collector{
+func NewWithFlags(app *kingpin.Application) *Collector {
+	c := &Collector{
 		volumeInclude: app.Flag(
-			FlagLogicalDiskVolumeInclude,
+			"collector.logical_disk.volume-include",
 			"Regexp of volumes to include. Volume name must both match include and not match exclude to be included.",
 		).Default(ConfigDefaults.VolumeInclude).String(),
 		volumeExclude: app.Flag(
-			FlagLogicalDiskVolumeExclude,
+			"collector.logical_disk.volume-exclude",
 			"Regexp of volumes to exclude. Volume name must both match include and not match exclude to be included.",
 		).Default(ConfigDefaults.VolumeExclude).String(),
 	}
@@ -103,19 +98,23 @@ func NewWithFlags(app *kingpin.Application) types.Collector {
 	return c
 }
 
-func (c *collector) GetName() string {
+func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *collector) SetLogger(logger log.Logger) {
+func (c *Collector) SetLogger(logger log.Logger) {
 	c.logger = log.With(logger, "collector", Name)
 }
 
-func (c *collector) GetPerfCounter() ([]string, error) {
+func (c *Collector) GetPerfCounter() ([]string, error) {
 	return []string{"LogicalDisk"}, nil
 }
 
-func (c *collector) Build() error {
+func (c *Collector) Close() error {
+	return nil
+}
+
+func (c *Collector) Build() error {
 	c.Information = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "info"),
 		"A metric with a constant '1' value labeled with logical disk information",
@@ -256,7 +255,7 @@ func (c *collector) Build() error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	if err := c.collect(ctx, ch); err != nil {
 		_ = level.Error(c.logger).Log("msg", "failed collecting logical_disk metrics", "err", err)
 		return err
@@ -287,7 +286,7 @@ type logicalDisk struct {
 	AvgDiskSecPerTransfer   float64 `perflib:"Avg. Disk sec/Transfer"`
 }
 
-func (c *collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *Collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	var (
 		err    error
 		diskID string

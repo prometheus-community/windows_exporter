@@ -8,6 +8,6 @@ import (
 )
 
 func BenchmarkCollector(b *testing.B) {
-	// No context name required as collector source is WMI
+	// No context name required as Collector source is WMI
 	testutils.FuncBenchmarkCollector(b, netframework_clrexceptions.Name, netframework_clrexceptions.NewWithFlags)
 }

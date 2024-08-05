@@ -1,12 +1,11 @@
 package mscluster_resourcegroup
 
 import (
+	"github.com/alecthomas/kingpin/v2"
+	"github.com/go-kit/log"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/mscluster_node"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus-community/windows_exporter/pkg/wmi"
-
-	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -16,8 +15,8 @@ type Config struct{}
 
 var ConfigDefaults = Config{}
 
-// A collector is a Prometheus collector for WMI MSCluster_ResourceGroup metrics
-type collector struct {
+// A Collector is a Prometheus Collector for WMI MSCluster_ResourceGroup metrics
+type Collector struct {
 	logger log.Logger
 
 	AutoFailbackType    *prometheus.Desc
@@ -38,29 +37,34 @@ type collector struct {
 	State               *prometheus.Desc
 }
 
-func New(logger log.Logger, _ *Config) types.Collector {
-	c := &collector{}
+func New(logger log.Logger, _ *Config) *Collector {
+	c := &Collector{}
 	c.SetLogger(logger)
+
 	return c
 }
 
-func NewWithFlags(_ *kingpin.Application) types.Collector {
-	return &collector{}
+func NewWithFlags(_ *kingpin.Application) *Collector {
+	return &Collector{}
 }
 
-func (c *collector) GetName() string {
+func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *collector) SetLogger(logger log.Logger) {
+func (c *Collector) SetLogger(logger log.Logger) {
 	c.logger = log.With(logger, "collector", Name)
 }
 
-func (c *collector) GetPerfCounter() ([]string, error) {
+func (c *Collector) GetPerfCounter() ([]string, error) {
 	return []string{"Memory"}, nil
 }
 
-func (c *collector) Build() error {
+func (c *Collector) Close() error {
+	return nil
+}
+
+func (c *Collector) Build() error {
 	c.AutoFailbackType = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "auto_failback_type"),
 		"Provides access to the group's AutoFailbackType property.",
@@ -177,7 +181,7 @@ type MSCluster_ResourceGroup struct {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	var dst []MSCluster_ResourceGroup
 	q := wmi.QueryAll(&dst, c.logger)
 	if err := wmi.QueryNamespace(q, &dst, "root/MSCluster"); err != nil {
@@ -185,7 +189,6 @@ func (c *collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric)
 	}
 
 	for _, v := range dst {
-
 		ch <- prometheus.MustNewConstMetric(
 			c.AutoFailbackType,
 			prometheus.GaugeValue,
@@ -291,7 +294,6 @@ func (c *collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric)
 			float64(v.State),
 			v.Name,
 		)
-
 	}
 
 	return nil

@@ -19,465 +19,470 @@ type Config struct{}
 
 var ConfigDefaults = Config{}
 
-// A collector is a Prometheus collector for WMI Win32_PerfRawData_DirectoryServices_DirectoryServices metrics
-type collector struct {
+// A Collector is a Prometheus Collector for WMI Win32_PerfRawData_DirectoryServices_DirectoryServices metrics
+type Collector struct {
 	logger log.Logger
 
-	AddressBookOperationsTotal                          *prometheus.Desc
-	AddressBookClientSessions                           *prometheus.Desc
-	ApproximateHighestDistinguishedNameTag              *prometheus.Desc
-	AtqEstimatedDelaySeconds                            *prometheus.Desc
-	AtqOutstandingRequests                              *prometheus.Desc
-	AtqAverageRequestLatency                            *prometheus.Desc
-	AtqCurrentThreads                                   *prometheus.Desc
-	SearchesTotal                                       *prometheus.Desc
-	DatabaseOperationsTotal                             *prometheus.Desc
-	BindsTotal                                          *prometheus.Desc
-	ReplicationHighestUsn                               *prometheus.Desc
-	IntersiteReplicationDataBytesTotal                  *prometheus.Desc
-	IntrasiteReplicationDataBytesTotal                  *prometheus.Desc
-	ReplicationInboundSyncObjectsRemaining              *prometheus.Desc
-	ReplicationInboundLinkValueUpdatesRemaining         *prometheus.Desc
-	ReplicationInboundObjectsUpdatedTotal               *prometheus.Desc
-	ReplicationInboundObjectsFilteredTotal              *prometheus.Desc
-	ReplicationInboundPropertiesUpdatedTotal            *prometheus.Desc
-	ReplicationInboundPropertiesFilteredTotal           *prometheus.Desc
-	ReplicationPendingOperations                        *prometheus.Desc
-	ReplicationPendingSynchronizations                  *prometheus.Desc
-	ReplicationSyncRequestsTotal                        *prometheus.Desc
-	ReplicationSyncRequestsSuccessTotal                 *prometheus.Desc
-	ReplicationSyncRequestsSchemaMismatchFailureTotal   *prometheus.Desc
-	DirectoryOperationsTotal                            *prometheus.Desc
-	NameTranslationsTotal                               *prometheus.Desc
-	ChangeMonitorsRegistered                            *prometheus.Desc
-	ChangeMonitorUpdatesPending                         *prometheus.Desc
-	NameCacheHitsTotal                                  *prometheus.Desc
-	NameCacheLookupsTotal                               *prometheus.Desc
-	DirectorySearchSuboperationsTotal                   *prometheus.Desc
-	SecurityDescriptorPropagationEventsTotal            *prometheus.Desc
-	SecurityDescriptorPropagationEventsQueued           *prometheus.Desc
-	SecurityDescriptorPropagationAccessWaitTotalSeconds *prometheus.Desc
-	SecurityDescriptorPropagationItemsQueuedTotal       *prometheus.Desc
-	DirectoryServiceThreads                             *prometheus.Desc
-	LdapClosedConnectionsTotal                          *prometheus.Desc
-	LdapOpenedConnectionsTotal                          *prometheus.Desc
-	LdapActiveThreads                                   *prometheus.Desc
-	LdapLastBindTimeSeconds                             *prometheus.Desc
-	LdapSearchesTotal                                   *prometheus.Desc
-	LdapUdpOperationsTotal                              *prometheus.Desc
-	LdapWritesTotal                                     *prometheus.Desc
-	LdapClientSessions                                  *prometheus.Desc
-	LinkValuesCleanedTotal                              *prometheus.Desc
-	PhantomObjectsCleanedTotal                          *prometheus.Desc
-	PhantomObjectsVisitedTotal                          *prometheus.Desc
-	SamGroupMembershipEvaluationsTotal                  *prometheus.Desc
-	SamGroupMembershipGlobalCatalogEvaluationsTotal     *prometheus.Desc
-	SamGroupMembershipEvaluationsNontransitiveTotal     *prometheus.Desc
-	SamGroupMembershipEvaluationsTransitiveTotal        *prometheus.Desc
-	SamGroupEvaluationLatency                           *prometheus.Desc
-	SamComputerCreationRequestsTotal                    *prometheus.Desc
-	SamComputerCreationSuccessfulRequestsTotal          *prometheus.Desc
-	SamUserCreationRequestsTotal                        *prometheus.Desc
-	SamUserCreationSuccessfulRequestsTotal              *prometheus.Desc
-	SamQueryDisplayRequestsTotal                        *prometheus.Desc
-	SamEnumerationsTotal                                *prometheus.Desc
-	SamMembershipChangesTotal                           *prometheus.Desc
-	SamPasswordChangesTotal                             *prometheus.Desc
-	TombstonedObjectsCollectedTotal                     *prometheus.Desc
-	TombstonedObjectsVisitedTotal                       *prometheus.Desc
+	addressBookClientSessions                           *prometheus.Desc
+	addressBookOperationsTotal                          *prometheus.Desc
+	approximateHighestDistinguishedNameTag              *prometheus.Desc
+	atqAverageRequestLatency                            *prometheus.Desc
+	atqCurrentThreads                                   *prometheus.Desc
+	atqEstimatedDelaySeconds                            *prometheus.Desc
+	atqOutstandingRequests                              *prometheus.Desc
+	bindsTotal                                          *prometheus.Desc
+	changeMonitorUpdatesPending                         *prometheus.Desc
+	changeMonitorsRegistered                            *prometheus.Desc
+	databaseOperationsTotal                             *prometheus.Desc
+	directoryOperationsTotal                            *prometheus.Desc
+	directorySearchSubOperationsTotal                   *prometheus.Desc
+	directoryServiceThreads                             *prometheus.Desc
+	interSiteReplicationDataBytesTotal                  *prometheus.Desc
+	intraSiteReplicationDataBytesTotal                  *prometheus.Desc
+	ldapActiveThreads                                   *prometheus.Desc
+	ldapClientSessions                                  *prometheus.Desc
+	ldapClosedConnectionsTotal                          *prometheus.Desc
+	ldapLastBindTimeSeconds                             *prometheus.Desc
+	ldapOpenedConnectionsTotal                          *prometheus.Desc
+	ldapSearchesTotal                                   *prometheus.Desc
+	ldapUdpOperationsTotal                              *prometheus.Desc
+	ldapWritesTotal                                     *prometheus.Desc
+	linkValuesCleanedTotal                              *prometheus.Desc
+	nameCacheHitsTotal                                  *prometheus.Desc
+	nameCacheLookupsTotal                               *prometheus.Desc
+	nameTranslationsTotal                               *prometheus.Desc
+	phantomObjectsCleanedTotal                          *prometheus.Desc
+	phantomObjectsVisitedTotal                          *prometheus.Desc
+	replicationHighestUsn                               *prometheus.Desc
+	replicationInboundLinkValueUpdatesRemaining         *prometheus.Desc
+	replicationInboundObjectsFilteredTotal              *prometheus.Desc
+	replicationInboundObjectsUpdatedTotal               *prometheus.Desc
+	replicationInboundPropertiesFilteredTotal           *prometheus.Desc
+	replicationInboundPropertiesUpdatedTotal            *prometheus.Desc
+	replicationInboundSyncObjectsRemaining              *prometheus.Desc
+	replicationPendingOperations                        *prometheus.Desc
+	replicationPendingSynchronizations                  *prometheus.Desc
+	replicationSyncRequestsSchemaMismatchFailureTotal   *prometheus.Desc
+	replicationSyncRequestsSuccessTotal                 *prometheus.Desc
+	replicationSyncRequestsTotal                        *prometheus.Desc
+	samComputerCreationRequestsTotal                    *prometheus.Desc
+	samComputerCreationSuccessfulRequestsTotal          *prometheus.Desc
+	samEnumerationsTotal                                *prometheus.Desc
+	samGroupEvaluationLatency                           *prometheus.Desc
+	samGroupMembershipEvaluationsNonTransitiveTotal     *prometheus.Desc
+	samGroupMembershipEvaluationsTotal                  *prometheus.Desc
+	samGroupMembershipEvaluationsTransitiveTotal        *prometheus.Desc
+	samGroupMembershipGlobalCatalogEvaluationsTotal     *prometheus.Desc
+	samMembershipChangesTotal                           *prometheus.Desc
+	samPasswordChangesTotal                             *prometheus.Desc
+	samQueryDisplayRequestsTotal                        *prometheus.Desc
+	samUserCreationRequestsTotal                        *prometheus.Desc
+	samUserCreationSuccessfulRequestsTotal              *prometheus.Desc
+	searchesTotal                                       *prometheus.Desc
+	securityDescriptorPropagationAccessWaitTotalSeconds *prometheus.Desc
+	securityDescriptorPropagationEventsQueued           *prometheus.Desc
+	securityDescriptorPropagationEventsTotal            *prometheus.Desc
+	securityDescriptorPropagationItemsQueuedTotal       *prometheus.Desc
+	tombstonesObjectsCollectedTotal                     *prometheus.Desc
+	tombstonesObjectsVisitedTotal                       *prometheus.Desc
 }
 
-func New(logger log.Logger, _ *Config) types.Collector {
-	c := &collector{}
+func New(logger log.Logger, _ *Config) *Collector {
+	c := &Collector{}
 	c.SetLogger(logger)
+
 	return c
 }
 
-func NewWithFlags(_ *kingpin.Application) types.Collector {
-	return &collector{}
+func NewWithFlags(_ *kingpin.Application) *Collector {
+	return &Collector{}
 }
 
-func (c *collector) GetName() string {
+func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *collector) SetLogger(logger log.Logger) {
+func (c *Collector) SetLogger(logger log.Logger) {
 	c.logger = log.With(logger, "collector", Name)
 }
 
-func (c *collector) GetPerfCounter() ([]string, error) {
+func (c *Collector) GetPerfCounter() ([]string, error) {
 	return []string{}, nil
 }
 
-func (c *collector) Build() error {
-	c.AddressBookOperationsTotal = prometheus.NewDesc(
+func (c *Collector) Close() error {
+	return nil
+}
+
+func (c *Collector) Build() error {
+	c.addressBookOperationsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "address_book_operations_total"),
 		"",
 		[]string{"operation"},
 		nil,
 	)
-	c.AddressBookClientSessions = prometheus.NewDesc(
+	c.addressBookClientSessions = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "address_book_client_sessions"),
 		"",
 		nil,
 		nil,
 	)
-	c.ApproximateHighestDistinguishedNameTag = prometheus.NewDesc(
+	c.approximateHighestDistinguishedNameTag = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "approximate_highest_distinguished_name_tag"),
 		"",
 		nil,
 		nil,
 	)
-	c.AtqEstimatedDelaySeconds = prometheus.NewDesc(
+	c.atqEstimatedDelaySeconds = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "atq_estimated_delay_seconds"),
 		"",
 		nil,
 		nil,
 	)
-	c.AtqOutstandingRequests = prometheus.NewDesc(
+	c.atqOutstandingRequests = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "atq_outstanding_requests"),
 		"",
 		nil,
 		nil,
 	)
-	c.AtqAverageRequestLatency = prometheus.NewDesc(
+	c.atqAverageRequestLatency = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "atq_average_request_latency"),
 		"",
 		nil,
 		nil,
 	)
-	c.AtqCurrentThreads = prometheus.NewDesc(
+	c.atqCurrentThreads = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "atq_current_threads"),
 		"",
 		[]string{"service"},
 		nil,
 	)
-	c.SearchesTotal = prometheus.NewDesc(
+	c.searchesTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "searches_total"),
 		"",
 		[]string{"scope"},
 		nil,
 	)
-	c.DatabaseOperationsTotal = prometheus.NewDesc(
+	c.databaseOperationsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "database_operations_total"),
 		"",
 		[]string{"operation"},
 		nil,
 	)
-	c.BindsTotal = prometheus.NewDesc(
+	c.bindsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "binds_total"),
 		"",
 		[]string{"bind_method"},
 		nil,
 	)
-	c.ReplicationHighestUsn = prometheus.NewDesc(
+	c.replicationHighestUsn = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "replication_highest_usn"),
 		"",
 		[]string{"state"},
 		nil,
 	)
-	c.IntrasiteReplicationDataBytesTotal = prometheus.NewDesc(
+	c.intraSiteReplicationDataBytesTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "replication_data_intrasite_bytes_total"),
 		"",
 		[]string{"direction"},
 		nil,
 	)
-	c.IntersiteReplicationDataBytesTotal = prometheus.NewDesc(
+	c.interSiteReplicationDataBytesTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "replication_data_intersite_bytes_total"),
 		"",
 		[]string{"direction"},
 		nil,
 	)
-	c.ReplicationInboundSyncObjectsRemaining = prometheus.NewDesc(
+	c.replicationInboundSyncObjectsRemaining = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "replication_inbound_sync_objects_remaining"),
 		"",
 		nil,
 		nil,
 	)
-	c.ReplicationInboundLinkValueUpdatesRemaining = prometheus.NewDesc(
+	c.replicationInboundLinkValueUpdatesRemaining = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "replication_inbound_link_value_updates_remaining"),
 		"",
 		nil,
 		nil,
 	)
-	c.ReplicationInboundObjectsUpdatedTotal = prometheus.NewDesc(
+	c.replicationInboundObjectsUpdatedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "replication_inbound_objects_updated_total"),
 		"",
 		nil,
 		nil,
 	)
-	c.ReplicationInboundObjectsFilteredTotal = prometheus.NewDesc(
+	c.replicationInboundObjectsFilteredTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "replication_inbound_objects_filtered_total"),
 		"",
 		nil,
 		nil,
 	)
-	c.ReplicationInboundPropertiesUpdatedTotal = prometheus.NewDesc(
+	c.replicationInboundPropertiesUpdatedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "replication_inbound_properties_updated_total"),
 		"",
 		nil,
 		nil,
 	)
-	c.ReplicationInboundPropertiesFilteredTotal = prometheus.NewDesc(
+	c.replicationInboundPropertiesFilteredTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "replication_inbound_properties_filtered_total"),
 		"",
 		nil,
 		nil,
 	)
-	c.ReplicationPendingOperations = prometheus.NewDesc(
+	c.replicationPendingOperations = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "replication_pending_operations"),
 		"",
 		nil,
 		nil,
 	)
-	c.ReplicationPendingSynchronizations = prometheus.NewDesc(
+	c.replicationPendingSynchronizations = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "replication_pending_synchronizations"),
 		"",
 		nil,
 		nil,
 	)
-	c.ReplicationSyncRequestsTotal = prometheus.NewDesc(
+	c.replicationSyncRequestsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "replication_sync_requests_total"),
 		"",
 		nil,
 		nil,
 	)
-	c.ReplicationSyncRequestsSuccessTotal = prometheus.NewDesc(
+	c.replicationSyncRequestsSuccessTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "replication_sync_requests_success_total"),
 		"",
 		nil,
 		nil,
 	)
-	c.ReplicationSyncRequestsSchemaMismatchFailureTotal = prometheus.NewDesc(
+	c.replicationSyncRequestsSchemaMismatchFailureTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "replication_sync_requests_schema_mismatch_failure_total"),
 		"",
 		nil,
 		nil,
 	)
-	c.NameTranslationsTotal = prometheus.NewDesc(
+	c.nameTranslationsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "name_translations_total"),
 		"",
 		[]string{"target_name"},
 		nil,
 	)
-	c.ChangeMonitorsRegistered = prometheus.NewDesc(
+	c.changeMonitorsRegistered = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "change_monitors_registered"),
 		"",
 		nil,
 		nil,
 	)
-	c.ChangeMonitorUpdatesPending = prometheus.NewDesc(
+	c.changeMonitorUpdatesPending = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "change_monitor_updates_pending"),
 		"",
 		nil,
 		nil,
 	)
-	c.NameCacheHitsTotal = prometheus.NewDesc(
+	c.nameCacheHitsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "name_cache_hits_total"),
 		"",
 		nil,
 		nil,
 	)
-	c.NameCacheLookupsTotal = prometheus.NewDesc(
+	c.nameCacheLookupsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "name_cache_lookups_total"),
 		"",
 		nil,
 		nil,
 	)
-	c.DirectoryOperationsTotal = prometheus.NewDesc(
+	c.directoryOperationsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "directory_operations_total"),
 		"",
 		[]string{"operation", "origin"},
 		nil,
 	)
-	c.DirectorySearchSuboperationsTotal = prometheus.NewDesc(
+	c.directorySearchSubOperationsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "directory_search_suboperations_total"),
 		"",
 		nil,
 		nil,
 	)
-	c.SecurityDescriptorPropagationEventsTotal = prometheus.NewDesc(
+	c.securityDescriptorPropagationEventsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "security_descriptor_propagation_events_total"),
 		"",
 		nil,
 		nil,
 	)
-	c.SecurityDescriptorPropagationEventsQueued = prometheus.NewDesc(
+	c.securityDescriptorPropagationEventsQueued = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "security_descriptor_propagation_events_queued"),
 		"",
 		nil,
 		nil,
 	)
-	c.SecurityDescriptorPropagationAccessWaitTotalSeconds = prometheus.NewDesc(
+	c.securityDescriptorPropagationAccessWaitTotalSeconds = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "security_descriptor_propagation_access_wait_total_seconds"),
 		"",
 		nil,
 		nil,
 	)
-	c.SecurityDescriptorPropagationItemsQueuedTotal = prometheus.NewDesc(
+	c.securityDescriptorPropagationItemsQueuedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "security_descriptor_propagation_items_queued_total"),
 		"",
 		nil,
 		nil,
 	)
-	c.DirectoryServiceThreads = prometheus.NewDesc(
+	c.directoryServiceThreads = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "directory_service_threads"),
 		"",
 		nil,
 		nil,
 	)
-	c.LdapClosedConnectionsTotal = prometheus.NewDesc(
+	c.ldapClosedConnectionsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "ldap_closed_connections_total"),
 		"",
 		nil,
 		nil,
 	)
-	c.LdapOpenedConnectionsTotal = prometheus.NewDesc(
+	c.ldapOpenedConnectionsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "ldap_opened_connections_total"),
 		"",
 		[]string{"type"},
 		nil,
 	)
-	c.LdapActiveThreads = prometheus.NewDesc(
+	c.ldapActiveThreads = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "ldap_active_threads"),
 		"",
 		nil,
 		nil,
 	)
-	c.LdapLastBindTimeSeconds = prometheus.NewDesc(
+	c.ldapLastBindTimeSeconds = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "ldap_last_bind_time_seconds"),
 		"",
 		nil,
 		nil,
 	)
-	c.LdapSearchesTotal = prometheus.NewDesc(
+	c.ldapSearchesTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "ldap_searches_total"),
 		"",
 		nil,
 		nil,
 	)
-	c.LdapUdpOperationsTotal = prometheus.NewDesc(
+	c.ldapUdpOperationsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "ldap_udp_operations_total"),
 		"",
 		nil,
 		nil,
 	)
-	c.LdapWritesTotal = prometheus.NewDesc(
+	c.ldapWritesTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "ldap_writes_total"),
 		"",
 		nil,
 		nil,
 	)
-	c.LdapClientSessions = prometheus.NewDesc(
+	c.ldapClientSessions = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "ldap_client_sessions"),
 		"This is the number of sessions opened by LDAP clients at the time the data is taken. This is helpful in determining LDAP client activity and if the DC is able to handle the load. Of course, spikes during normal periods of authentication — such as first thing in the morning — are not necessarily a problem, but long sustained periods of high values indicate an overworked DC.",
 		nil,
 		nil,
 	)
-	c.LinkValuesCleanedTotal = prometheus.NewDesc(
+	c.linkValuesCleanedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "link_values_cleaned_total"),
 		"",
 		nil,
 		nil,
 	)
-	c.PhantomObjectsCleanedTotal = prometheus.NewDesc(
+	c.phantomObjectsCleanedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "phantom_objects_cleaned_total"),
 		"",
 		nil,
 		nil,
 	)
-	c.PhantomObjectsVisitedTotal = prometheus.NewDesc(
+	c.phantomObjectsVisitedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "phantom_objects_visited_total"),
 		"",
 		nil,
 		nil,
 	)
-	c.SamGroupMembershipEvaluationsTotal = prometheus.NewDesc(
+	c.samGroupMembershipEvaluationsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "sam_group_membership_evaluations_total"),
 		"",
 		[]string{"group_type"},
 		nil,
 	)
-	c.SamGroupMembershipGlobalCatalogEvaluationsTotal = prometheus.NewDesc(
+	c.samGroupMembershipGlobalCatalogEvaluationsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "sam_group_membership_global_catalog_evaluations_total"),
 		"",
 		nil,
 		nil,
 	)
-	c.SamGroupMembershipEvaluationsNontransitiveTotal = prometheus.NewDesc(
+	c.samGroupMembershipEvaluationsNonTransitiveTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "sam_group_membership_evaluations_nontransitive_total"),
 		"",
 		nil,
 		nil,
 	)
-	c.SamGroupMembershipEvaluationsTransitiveTotal = prometheus.NewDesc(
+	c.samGroupMembershipEvaluationsTransitiveTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "sam_group_membership_evaluations_transitive_total"),
 		"",
 		nil,
 		nil,
 	)
-	c.SamGroupEvaluationLatency = prometheus.NewDesc(
+	c.samGroupEvaluationLatency = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "sam_group_evaluation_latency"),
 		"The mean latency of the last 100 group evaluations performed for authentication",
 		[]string{"evaluation_type"},
 		nil,
 	)
-	c.SamComputerCreationRequestsTotal = prometheus.NewDesc(
+	c.samComputerCreationRequestsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "sam_computer_creation_requests_total"),
 		"",
 		nil,
 		nil,
 	)
-	c.SamComputerCreationSuccessfulRequestsTotal = prometheus.NewDesc(
+	c.samComputerCreationSuccessfulRequestsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "sam_computer_creation_successful_requests_total"),
 		"",
 		nil,
 		nil,
 	)
-	c.SamUserCreationRequestsTotal = prometheus.NewDesc(
+	c.samUserCreationRequestsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "sam_user_creation_requests_total"),
 		"",
 		nil,
 		nil,
 	)
-	c.SamUserCreationSuccessfulRequestsTotal = prometheus.NewDesc(
+	c.samUserCreationSuccessfulRequestsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "sam_user_creation_successful_requests_total"),
 		"",
 		nil,
 		nil,
 	)
-	c.SamQueryDisplayRequestsTotal = prometheus.NewDesc(
+	c.samQueryDisplayRequestsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "sam_query_display_requests_total"),
 		"",
 		nil,
 		nil,
 	)
-	c.SamEnumerationsTotal = prometheus.NewDesc(
+	c.samEnumerationsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "sam_enumerations_total"),
 		"",
 		nil,
 		nil,
 	)
-	c.SamMembershipChangesTotal = prometheus.NewDesc(
+	c.samMembershipChangesTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "sam_membership_changes_total"),
 		"",
 		nil,
 		nil,
 	)
-	c.SamPasswordChangesTotal = prometheus.NewDesc(
+	c.samPasswordChangesTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "sam_password_changes_total"),
 		"",
 		nil,
 		nil,
 	)
 
-	c.TombstonedObjectsCollectedTotal = prometheus.NewDesc(
+	c.tombstonesObjectsCollectedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "tombstoned_objects_collected_total"),
 		"",
 		nil,
 		nil,
 	)
-	c.TombstonedObjectsVisitedTotal = prometheus.NewDesc(
+	c.tombstonesObjectsVisitedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "tombstoned_objects_visited_total"),
 		"",
 		nil,
@@ -489,7 +494,7 @@ func (c *collector) Build() error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	if err := c.collect(ch); err != nil {
 		_ = level.Error(c.logger).Log("msg", "failed collecting ad metrics", "err", err)
 		return err
@@ -649,7 +654,7 @@ type Win32_PerfRawData_DirectoryServices_DirectoryServices struct {
 	TransitivesuboperationsPersec                                    uint32
 }
 
-func (c *collector) collect(ch chan<- prometheus.Metric) error {
+func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_DirectoryServices_DirectoryServices
 	q := wmi.QueryAll(&dst, c.logger)
 	if err := wmi.Query(q, &dst); err != nil {
@@ -660,484 +665,484 @@ func (c *collector) collect(ch chan<- prometheus.Metric) error {
 	}
 
 	ch <- prometheus.MustNewConstMetric(
-		c.AddressBookOperationsTotal,
+		c.addressBookOperationsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].ABANRPersec),
 		"ambiguous_name_resolution",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.AddressBookOperationsTotal,
+		c.addressBookOperationsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].ABBrowsesPersec),
 		"browse",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.AddressBookOperationsTotal,
+		c.addressBookOperationsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].ABMatchesPersec),
 		"find",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.AddressBookOperationsTotal,
+		c.addressBookOperationsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].ABPropertyReadsPersec),
 		"property_read",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.AddressBookOperationsTotal,
+		c.addressBookOperationsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].ABSearchesPersec),
 		"search",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.AddressBookOperationsTotal,
+		c.addressBookOperationsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].ABProxyLookupsPersec),
 		"proxy_search",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.AddressBookClientSessions,
+		c.addressBookClientSessions,
 		prometheus.GaugeValue,
 		float64(dst[0].ABClientSessions),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.ApproximateHighestDistinguishedNameTag,
+		c.approximateHighestDistinguishedNameTag,
 		prometheus.GaugeValue,
 		float64(dst[0].ApproximatehighestDNT),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.AtqEstimatedDelaySeconds,
+		c.atqEstimatedDelaySeconds,
 		prometheus.GaugeValue,
 		float64(dst[0].ATQEstimatedQueueDelay)/1000,
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.AtqOutstandingRequests,
+		c.atqOutstandingRequests,
 		prometheus.GaugeValue,
 		float64(dst[0].ATQOutstandingQueuedRequests),
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.AtqAverageRequestLatency,
+		c.atqAverageRequestLatency,
 		prometheus.GaugeValue,
 		float64(dst[0].ATQRequestLatency),
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.AtqCurrentThreads,
+		c.atqCurrentThreads,
 		prometheus.GaugeValue,
 		float64(dst[0].ATQThreadsLDAP),
 		"ldap",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.AtqCurrentThreads,
+		c.atqCurrentThreads,
 		prometheus.GaugeValue,
 		float64(dst[0].ATQThreadsOther),
 		"other",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.SearchesTotal,
+		c.searchesTotal,
 		prometheus.CounterValue,
 		float64(dst[0].BasesearchesPersec),
 		"base",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.SearchesTotal,
+		c.searchesTotal,
 		prometheus.CounterValue,
 		float64(dst[0].SubtreesearchesPersec),
 		"subtree",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.SearchesTotal,
+		c.searchesTotal,
 		prometheus.CounterValue,
 		float64(dst[0].OnelevelsearchesPersec),
 		"one_level",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.DatabaseOperationsTotal,
+		c.databaseOperationsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].DatabaseaddsPersec),
 		"add",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.DatabaseOperationsTotal,
+		c.databaseOperationsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].DatabasedeletesPersec),
 		"delete",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.DatabaseOperationsTotal,
+		c.databaseOperationsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].DatabasemodifysPersec),
 		"modify",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.DatabaseOperationsTotal,
+		c.databaseOperationsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].DatabaserecyclesPersec),
 		"recycle",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.BindsTotal,
+		c.bindsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].DigestBindsPersec),
 		"digest",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.BindsTotal,
+		c.bindsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].DSClientBindsPersec),
 		"ds_client",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.BindsTotal,
+		c.bindsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].DSServerBindsPersec),
 		"ds_server",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.BindsTotal,
+		c.bindsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].ExternalBindsPersec),
 		"external",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.BindsTotal,
+		c.bindsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].FastBindsPersec),
 		"fast",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.BindsTotal,
+		c.bindsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].NegotiatedBindsPersec),
 		"negotiate",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.BindsTotal,
+		c.bindsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].NTLMBindsPersec),
 		"ntlm",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.BindsTotal,
+		c.bindsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].SimpleBindsPersec),
 		"simple",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.BindsTotal,
+		c.bindsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].LDAPSuccessfulBindsPersec),
 		"ldap",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.ReplicationHighestUsn,
+		c.replicationHighestUsn,
 		prometheus.CounterValue,
 		float64(dst[0].DRAHighestUSNCommittedHighpart<<32)+float64(dst[0].DRAHighestUSNCommittedLowpart),
 		"committed",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.ReplicationHighestUsn,
+		c.replicationHighestUsn,
 		prometheus.CounterValue,
 		float64(dst[0].DRAHighestUSNIssuedHighpart<<32)+float64(dst[0].DRAHighestUSNIssuedLowpart),
 		"issued",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.IntersiteReplicationDataBytesTotal,
+		c.interSiteReplicationDataBytesTotal,
 		prometheus.CounterValue,
 		float64(dst[0].DRAInboundBytesCompressedBetweenSitesAfterCompressionPersec),
 		"inbound",
 	)
 	// The pre-compression data size seems to have little value? Skipping for now
 	// ch <- prometheus.MustNewConstMetric(
-	// 	c.IntersiteReplicationDataBytesTotal,
+	// 	c.interSiteReplicationDataBytesTotal,
 	// 	prometheus.CounterValue,
 	// 	float64(dst[0].DRAInboundBytesCompressedBetweenSitesBeforeCompressionPersec),
 	// 	"inbound",
 	// )
 	ch <- prometheus.MustNewConstMetric(
-		c.IntersiteReplicationDataBytesTotal,
+		c.interSiteReplicationDataBytesTotal,
 		prometheus.CounterValue,
 		float64(dst[0].DRAOutboundBytesCompressedBetweenSitesAfterCompressionPersec),
 		"outbound",
 	)
 	// ch <- prometheus.MustNewConstMetric(
-	// 	c.IntersiteReplicationDataBytesTotal,
+	// 	c.interSiteReplicationDataBytesTotal,
 	// 	prometheus.CounterValue,
 	// 	float64(dst[0].DRAOutboundBytesCompressedBetweenSitesBeforeCompressionPersec),
 	// 	"outbound",
 	// )
 	ch <- prometheus.MustNewConstMetric(
-		c.IntrasiteReplicationDataBytesTotal,
+		c.intraSiteReplicationDataBytesTotal,
 		prometheus.CounterValue,
 		float64(dst[0].DRAInboundBytesNotCompressedWithinSitePersec),
 		"inbound",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.IntrasiteReplicationDataBytesTotal,
+		c.intraSiteReplicationDataBytesTotal,
 		prometheus.CounterValue,
 		float64(dst[0].DRAOutboundBytesNotCompressedWithinSitePersec),
 		"outbound",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.ReplicationInboundSyncObjectsRemaining,
+		c.replicationInboundSyncObjectsRemaining,
 		prometheus.GaugeValue,
 		float64(dst[0].DRAInboundFullSyncObjectsRemaining),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.ReplicationInboundLinkValueUpdatesRemaining,
+		c.replicationInboundLinkValueUpdatesRemaining,
 		prometheus.GaugeValue,
 		float64(dst[0].DRAInboundLinkValueUpdatesRemaininginPacket),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.ReplicationInboundObjectsUpdatedTotal,
+		c.replicationInboundObjectsUpdatedTotal,
 		prometheus.CounterValue,
 		float64(dst[0].DRAInboundObjectsAppliedPersec),
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.ReplicationInboundObjectsFilteredTotal,
+		c.replicationInboundObjectsFilteredTotal,
 		prometheus.CounterValue,
 		float64(dst[0].DRAInboundObjectsFilteredPersec),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.ReplicationInboundPropertiesUpdatedTotal,
+		c.replicationInboundPropertiesUpdatedTotal,
 		prometheus.CounterValue,
 		float64(dst[0].DRAInboundPropertiesAppliedPersec),
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.ReplicationInboundPropertiesFilteredTotal,
+		c.replicationInboundPropertiesFilteredTotal,
 		prometheus.CounterValue,
 		float64(dst[0].DRAInboundPropertiesFilteredPersec),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.ReplicationPendingOperations,
+		c.replicationPendingOperations,
 		prometheus.GaugeValue,
 		float64(dst[0].DRAPendingReplicationOperations),
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.ReplicationPendingSynchronizations,
+		c.replicationPendingSynchronizations,
 		prometheus.GaugeValue,
 		float64(dst[0].DRAPendingReplicationSynchronizations),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.ReplicationSyncRequestsTotal,
+		c.replicationSyncRequestsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].DRASyncRequestsMade),
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.ReplicationSyncRequestsSuccessTotal,
+		c.replicationSyncRequestsSuccessTotal,
 		prometheus.CounterValue,
 		float64(dst[0].DRASyncRequestsSuccessful),
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.ReplicationSyncRequestsSchemaMismatchFailureTotal,
+		c.replicationSyncRequestsSchemaMismatchFailureTotal,
 		prometheus.CounterValue,
 		float64(dst[0].DRASyncFailuresonSchemaMismatch),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.NameTranslationsTotal,
+		c.nameTranslationsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].DSClientNameTranslationsPersec),
 		"client",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.NameTranslationsTotal,
+		c.nameTranslationsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].DSServerNameTranslationsPersec),
 		"server",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.ChangeMonitorsRegistered,
+		c.changeMonitorsRegistered,
 		prometheus.GaugeValue,
 		float64(dst[0].DSMonitorListSize),
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.ChangeMonitorUpdatesPending,
+		c.changeMonitorUpdatesPending,
 		prometheus.GaugeValue,
 		float64(dst[0].DSNotifyQueueSize),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.NameCacheHitsTotal,
+		c.nameCacheHitsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].DSNameCachehitrate),
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.NameCacheLookupsTotal,
+		c.nameCacheLookupsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].DSNameCachehitrate_Base),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.DirectoryOperationsTotal,
+		c.directoryOperationsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].DSPercentReadsfromDRA),
 		"read",
 		"replication_agent",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.DirectoryOperationsTotal,
+		c.directoryOperationsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].DSPercentReadsfromKCC),
 		"read",
 		"knowledge_consistency_checker",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.DirectoryOperationsTotal,
+		c.directoryOperationsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].DSPercentReadsfromLSA),
 		"read",
 		"local_security_authority",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.DirectoryOperationsTotal,
+		c.directoryOperationsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].DSPercentReadsfromNSPI),
 		"read",
 		"name_service_provider_interface",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.DirectoryOperationsTotal,
+		c.directoryOperationsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].DSPercentReadsfromNTDSAPI),
 		"read",
 		"directory_service_api",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.DirectoryOperationsTotal,
+		c.directoryOperationsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].DSPercentReadsfromSAM),
 		"read",
 		"security_account_manager",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.DirectoryOperationsTotal,
+		c.directoryOperationsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].DSPercentReadsOther),
 		"read",
 		"other",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.DirectoryOperationsTotal,
+		c.directoryOperationsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].DSPercentSearchesfromDRA),
 		"search",
 		"replication_agent",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.DirectoryOperationsTotal,
+		c.directoryOperationsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].DSPercentSearchesfromKCC),
 		"search",
 		"knowledge_consistency_checker",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.DirectoryOperationsTotal,
+		c.directoryOperationsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].DSPercentSearchesfromLDAP),
 		"search",
 		"ldap",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.DirectoryOperationsTotal,
+		c.directoryOperationsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].DSPercentSearchesfromLSA),
 		"search",
 		"local_security_authority",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.DirectoryOperationsTotal,
+		c.directoryOperationsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].DSPercentSearchesfromNSPI),
 		"search",
 		"name_service_provider_interface",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.DirectoryOperationsTotal,
+		c.directoryOperationsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].DSPercentSearchesfromNTDSAPI),
 		"search",
 		"directory_service_api",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.DirectoryOperationsTotal,
+		c.directoryOperationsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].DSPercentSearchesfromSAM),
 		"search",
 		"security_account_manager",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.DirectoryOperationsTotal,
+		c.directoryOperationsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].DSPercentSearchesOther),
 		"search",
 		"other",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.DirectoryOperationsTotal,
+		c.directoryOperationsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].DSPercentWritesfromDRA),
 		"write",
 		"replication_agent",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.DirectoryOperationsTotal,
+		c.directoryOperationsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].DSPercentWritesfromKCC),
 		"write",
 		"knowledge_consistency_checker",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.DirectoryOperationsTotal,
+		c.directoryOperationsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].DSPercentWritesfromLDAP),
 		"write",
 		"ldap",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.DirectoryOperationsTotal,
+		c.directoryOperationsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].DSPercentWritesfromLSA),
 		"write",
 		"local_security_authority",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.DirectoryOperationsTotal,
+		c.directoryOperationsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].DSPercentWritesfromNSPI),
 		"write",
 		"name_service_provider_interface",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.DirectoryOperationsTotal,
+		c.directoryOperationsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].DSPercentWritesfromNTDSAPI),
 		"write",
 		"directory_service_api",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.DirectoryOperationsTotal,
+		c.directoryOperationsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].DSPercentWritesfromSAM),
 		"write",
 		"security_account_manager",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.DirectoryOperationsTotal,
+		c.directoryOperationsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].DSPercentWritesOther),
 		"write",
@@ -1145,207 +1150,207 @@ func (c *collector) collect(ch chan<- prometheus.Metric) error {
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.DirectorySearchSuboperationsTotal,
+		c.directorySearchSubOperationsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].DSSearchsuboperationsPersec),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.SecurityDescriptorPropagationEventsTotal,
+		c.securityDescriptorPropagationEventsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].DSSecurityDescriptorsuboperationsPersec),
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.SecurityDescriptorPropagationEventsQueued,
+		c.securityDescriptorPropagationEventsQueued,
 		prometheus.GaugeValue,
 		float64(dst[0].DSSecurityDescriptorPropagationsEvents),
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.SecurityDescriptorPropagationAccessWaitTotalSeconds,
+		c.securityDescriptorPropagationAccessWaitTotalSeconds,
 		prometheus.GaugeValue,
 		float64(dst[0].DSSecurityDescriptorPropagatorAverageExclusionTime),
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.SecurityDescriptorPropagationItemsQueuedTotal,
+		c.securityDescriptorPropagationItemsQueuedTotal,
 		prometheus.CounterValue,
 		float64(dst[0].DSSecurityDescriptorPropagatorRuntimeQueue),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.DirectoryServiceThreads,
+		c.directoryServiceThreads,
 		prometheus.GaugeValue,
 		float64(dst[0].DSThreadsinUse),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.LdapClosedConnectionsTotal,
+		c.ldapClosedConnectionsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].LDAPClosedConnectionsPersec),
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.LdapOpenedConnectionsTotal,
+		c.ldapOpenedConnectionsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].LDAPNewConnectionsPersec),
 		"ldap",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.LdapOpenedConnectionsTotal,
+		c.ldapOpenedConnectionsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].LDAPNewSSLConnectionsPersec),
 		"ldaps",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.LdapActiveThreads,
+		c.ldapActiveThreads,
 		prometheus.GaugeValue,
 		float64(dst[0].LDAPActiveThreads),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.LdapLastBindTimeSeconds,
+		c.ldapLastBindTimeSeconds,
 		prometheus.GaugeValue,
 		float64(dst[0].LDAPBindTime)/1000,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.LdapSearchesTotal,
+		c.ldapSearchesTotal,
 		prometheus.CounterValue,
 		float64(dst[0].LDAPSearchesPersec),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.LdapUdpOperationsTotal,
+		c.ldapUdpOperationsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].LDAPUDPoperationsPersec),
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.LdapWritesTotal,
+		c.ldapWritesTotal,
 		prometheus.CounterValue,
 		float64(dst[0].LDAPWritesPersec),
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.LdapClientSessions,
+		c.ldapClientSessions,
 		prometheus.GaugeValue,
 		float64(dst[0].LDAPClientSessions),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.LinkValuesCleanedTotal,
+		c.linkValuesCleanedTotal,
 		prometheus.CounterValue,
 		float64(dst[0].LinkValuesCleanedPersec),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.PhantomObjectsCleanedTotal,
+		c.phantomObjectsCleanedTotal,
 		prometheus.CounterValue,
 		float64(dst[0].PhantomsCleanedPersec),
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.PhantomObjectsVisitedTotal,
+		c.phantomObjectsVisitedTotal,
 		prometheus.CounterValue,
 		float64(dst[0].PhantomsVisitedPersec),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.SamGroupMembershipEvaluationsTotal,
+		c.samGroupMembershipEvaluationsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].SAMGlobalGroupMembershipEvaluationsPersec),
 		"global",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.SamGroupMembershipEvaluationsTotal,
+		c.samGroupMembershipEvaluationsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].SAMDomainLocalGroupMembershipEvaluationsPersec),
 		"domain_local",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.SamGroupMembershipEvaluationsTotal,
+		c.samGroupMembershipEvaluationsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].SAMUniversalGroupMembershipEvaluationsPersec),
 		"universal",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.SamGroupMembershipGlobalCatalogEvaluationsTotal,
+		c.samGroupMembershipGlobalCatalogEvaluationsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].SAMGCEvaluationsPersec),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.SamGroupMembershipEvaluationsNontransitiveTotal,
+		c.samGroupMembershipEvaluationsNonTransitiveTotal,
 		prometheus.CounterValue,
 		float64(dst[0].SAMNonTransitiveMembershipEvaluationsPersec),
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.SamGroupMembershipEvaluationsTransitiveTotal,
+		c.samGroupMembershipEvaluationsTransitiveTotal,
 		prometheus.CounterValue,
 		float64(dst[0].SAMTransitiveMembershipEvaluationsPersec),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.SamGroupEvaluationLatency,
+		c.samGroupEvaluationLatency,
 		prometheus.GaugeValue,
 		float64(dst[0].SAMAccountGroupEvaluationLatency),
 		"account_group",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.SamGroupEvaluationLatency,
+		c.samGroupEvaluationLatency,
 		prometheus.GaugeValue,
 		float64(dst[0].SAMResourceGroupEvaluationLatency),
 		"resource_group",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.SamComputerCreationRequestsTotal,
+		c.samComputerCreationRequestsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].SAMSuccessfulComputerCreationsPersecIncludesallrequests),
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.SamComputerCreationSuccessfulRequestsTotal,
+		c.samComputerCreationSuccessfulRequestsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].SAMMachineCreationAttemptsPersec),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.SamUserCreationRequestsTotal,
+		c.samUserCreationRequestsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].SAMUserCreationAttemptsPersec),
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.SamUserCreationSuccessfulRequestsTotal,
+		c.samUserCreationSuccessfulRequestsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].SAMSuccessfulUserCreationsPersec),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.SamQueryDisplayRequestsTotal,
+		c.samQueryDisplayRequestsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].SAMDisplayInformationQueriesPersec),
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.SamEnumerationsTotal,
+		c.samEnumerationsTotal,
 		prometheus.CounterValue,
 		float64(dst[0].SAMEnumerationsPersec),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.SamMembershipChangesTotal,
+		c.samMembershipChangesTotal,
 		prometheus.CounterValue,
 		float64(dst[0].SAMMembershipChangesPersec),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.SamPasswordChangesTotal,
+		c.samPasswordChangesTotal,
 		prometheus.CounterValue,
 		float64(dst[0].SAMPasswordChangesPersec),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.TombstonedObjectsCollectedTotal,
+		c.tombstonesObjectsCollectedTotal,
 		prometheus.CounterValue,
 		float64(dst[0].TombstonesGarbageCollectedPersec),
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.TombstonedObjectsVisitedTotal,
+		c.tombstonesObjectsVisitedTotal,
 		prometheus.CounterValue,
 		float64(dst[0].TombstonesVisitedPersec),
 	)

@@ -19,13 +19,13 @@ type Config struct{}
 
 var ConfigDefaults = Config{}
 
-// collector is a Prometheus collector for WMI metrics:
+// Collector is a Prometheus Collector for WMI metrics:
 // win32_PerfRawData_TeradiciPerf_PCoIPSessionAudioStatistics
 // win32_PerfRawData_TeradiciPerf_PCoIPSessionGeneralStatistics
 // win32_PerfRawData_TeradiciPerf_PCoIPSessionImagingStatistics
 // win32_PerfRawData_TeradiciPerf_PCoIPSessionNetworkStatistics
 // win32_PerfRawData_TeradiciPerf_PCoIPSessionUsbStatistics
-type collector struct {
+type Collector struct {
 	logger log.Logger
 
 	AudioBytesReceived       *prometheus.Desc
@@ -71,29 +71,34 @@ type collector struct {
 	USBTXBWkbitPersec *prometheus.Desc
 }
 
-func New(logger log.Logger, _ *Config) types.Collector {
-	c := &collector{}
+func New(logger log.Logger, _ *Config) *Collector {
+	c := &Collector{}
 	c.SetLogger(logger)
+
 	return c
 }
 
-func NewWithFlags(_ *kingpin.Application) types.Collector {
-	return &collector{}
+func NewWithFlags(_ *kingpin.Application) *Collector {
+	return &Collector{}
 }
 
-func (c *collector) GetName() string {
+func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *collector) SetLogger(logger log.Logger) {
+func (c *Collector) SetLogger(logger log.Logger) {
 	c.logger = log.With(logger, "collector", Name)
 }
 
-func (c *collector) GetPerfCounter() ([]string, error) {
+func (c *Collector) GetPerfCounter() ([]string, error) {
 	return []string{}, nil
 }
 
-func (c *collector) Build() error {
+func (c *Collector) Close() error {
+	return nil
+}
+
+func (c *Collector) Build() error {
 	c.AudioBytesReceived = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "audio_bytes_received_total"),
 		"(AudioBytesReceived)",
@@ -325,7 +330,7 @@ func (c *collector) Build() error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	if err := c.collectAudio(ch); err != nil {
 		_ = level.Error(c.logger).Log("msg", "failed collecting teradici session audio metrics", "err", err)
 		return err
@@ -401,7 +406,7 @@ type win32_PerfRawData_TeradiciPerf_PCoIPSessionUsbStatistics struct {
 	USBTXBWkbitPersec uint64
 }
 
-func (c *collector) collectAudio(ch chan<- prometheus.Metric) error {
+func (c *Collector) collectAudio(ch chan<- prometheus.Metric) error {
 	var dst []win32_PerfRawData_TeradiciPerf_PCoIPSessionAudioStatistics
 	q := wmi.QueryAll(&dst, c.logger)
 	if err := wmi.Query(q, &dst); err != nil {
@@ -444,7 +449,7 @@ func (c *collector) collectAudio(ch chan<- prometheus.Metric) error {
 	return nil
 }
 
-func (c *collector) collectGeneral(ch chan<- prometheus.Metric) error {
+func (c *Collector) collectGeneral(ch chan<- prometheus.Metric) error {
 	var dst []win32_PerfRawData_TeradiciPerf_PCoIPSessionGeneralStatistics
 	q := wmi.QueryAll(&dst, c.logger)
 	if err := wmi.Query(q, &dst); err != nil {
@@ -499,7 +504,7 @@ func (c *collector) collectGeneral(ch chan<- prometheus.Metric) error {
 	return nil
 }
 
-func (c *collector) collectImaging(ch chan<- prometheus.Metric) error {
+func (c *Collector) collectImaging(ch chan<- prometheus.Metric) error {
 	var dst []win32_PerfRawData_TeradiciPerf_PCoIPSessionImagingStatistics
 	q := wmi.QueryAll(&dst, c.logger)
 	if err := wmi.Query(q, &dst); err != nil {
@@ -578,7 +583,7 @@ func (c *collector) collectImaging(ch chan<- prometheus.Metric) error {
 	return nil
 }
 
-func (c *collector) collectNetwork(ch chan<- prometheus.Metric) error {
+func (c *Collector) collectNetwork(ch chan<- prometheus.Metric) error {
 	var dst []win32_PerfRawData_TeradiciPerf_PCoIPSessionNetworkStatistics
 	q := wmi.QueryAll(&dst, c.logger)
 	if err := wmi.Query(q, &dst); err != nil {
@@ -651,7 +656,7 @@ func (c *collector) collectNetwork(ch chan<- prometheus.Metric) error {
 	return nil
 }
 
-func (c *collector) collectUsb(ch chan<- prometheus.Metric) error {
+func (c *Collector) collectUsb(ch chan<- prometheus.Metric) error {
 	var dst []win32_PerfRawData_TeradiciPerf_PCoIPSessionUsbStatistics
 	q := wmi.QueryAll(&dst, c.logger)
 	if err := wmi.Query(q, &dst); err != nil {

@@ -15,11 +15,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-const (
-	Name                    = "physical_disk"
-	FlagPhysicalDiskExclude = "collector.physical_disk.disk-exclude"
-	FlagPhysicalDiskInclude = "collector.physical_disk.disk-include"
-)
+const Name = "physical_disk"
 
 type Config struct {
 	DiskInclude string `yaml:"disk_include"`
@@ -31,8 +27,8 @@ var ConfigDefaults = Config{
 	DiskExclude: "",
 }
 
-// A collector is a Prometheus collector for perflib PhysicalDisk metrics
-type collector struct {
+// A Collector is a Prometheus Collector for perflib PhysicalDisk metrics
+type Collector struct {
 	logger log.Logger
 
 	diskInclude *string
@@ -58,24 +54,25 @@ type collector struct {
 	diskExcludePattern *regexp.Regexp
 }
 
-func New(logger log.Logger, config *Config) types.Collector {
+func New(logger log.Logger, config *Config) *Collector {
 	if config == nil {
 		config = &ConfigDefaults
 	}
 
-	c := &collector{
+	c := &Collector{
 		diskExclude: &config.DiskExclude,
 		diskInclude: &config.DiskInclude,
 	}
 	c.SetLogger(logger)
+
 	return c
 }
 
-func NewWithFlags(app *kingpin.Application) types.Collector {
-	c := &collector{}
+func NewWithFlags(app *kingpin.Application) *Collector {
+	c := &Collector{}
 
 	c.diskInclude = app.Flag(
-		FlagPhysicalDiskInclude,
+		"collector.physical_disk.disk-include",
 		"Regexp of disks to include. Disk number must both match include and not match exclude to be included.",
 	).Default(ConfigDefaults.DiskInclude).PreAction(func(_ *kingpin.ParseContext) error {
 		c.diskIncludeSet = true
@@ -83,28 +80,33 @@ func NewWithFlags(app *kingpin.Application) types.Collector {
 	}).String()
 
 	c.diskExclude = app.Flag(
-		FlagPhysicalDiskExclude,
+		"collector.physical_disk.disk-exclude",
 		"Regexp of disks to exclude. Disk number must both match include and not match exclude to be included.",
 	).Default(ConfigDefaults.DiskExclude).PreAction(func(_ *kingpin.ParseContext) error {
 		c.diskExcludeSet = true
 		return nil
 	}).String()
+
 	return c
 }
 
-func (c *collector) GetName() string {
+func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *collector) SetLogger(logger log.Logger) {
+func (c *Collector) SetLogger(logger log.Logger) {
 	c.logger = log.With(logger, "collector", Name)
 }
 
-func (c *collector) GetPerfCounter() ([]string, error) {
+func (c *Collector) GetPerfCounter() ([]string, error) {
 	return []string{"PhysicalDisk"}, nil
 }
 
-func (c *collector) Build() error {
+func (c *Collector) Close() error {
+	return nil
+}
+
+func (c *Collector) Build() error {
 	c.RequestsQueued = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "requests_queued"),
 		"The number of requests queued to the disk (PhysicalDisk.CurrentDiskQueueLength)",
@@ -205,7 +207,7 @@ func (c *collector) Build() error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	if err := c.collect(ctx, ch); err != nil {
 		_ = level.Error(c.logger).Log("msg", "failed collecting physical_disk metrics", "err", err)
 		return err
@@ -232,7 +234,7 @@ type PhysicalDisk struct {
 	AvgDiskSecPerTransfer  float64 `perflib:"Avg. Disk sec/Transfer"`
 }
 
-func (c *collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *Collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	var dst []PhysicalDisk
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["PhysicalDisk"], &dst, c.logger); err != nil {
 		return err

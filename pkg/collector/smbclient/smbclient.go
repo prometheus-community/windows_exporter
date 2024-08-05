@@ -17,9 +17,7 @@ import (
 )
 
 const (
-	Name                           = "smbclient"
-	FlagSmbClientListAllCollectors = "collectors.smbclient.list"
-	FlagSmbClientCollectorsEnabled = "collectors.smbclient.enabled"
+	Name = "smbclient"
 )
 
 type Config struct {
@@ -30,7 +28,7 @@ var ConfigDefaults = Config{
 	CollectorsEnabled: "",
 }
 
-type collector struct {
+type Collector struct {
 	logger log.Logger
 
 	smbclientListAllCollectors *bool
@@ -68,49 +66,54 @@ var smbclientAllCollectorNames = []string{
 	"ClientShares",
 }
 
-func New(logger log.Logger, config *Config) types.Collector {
+func New(logger log.Logger, config *Config) *Collector {
 	if config == nil {
 		config = &ConfigDefaults
 	}
 
 	smbclientListAllCollectors := false
-	c := &collector{
+	c := &Collector{
 		smbclientCollectorsEnabled: &config.CollectorsEnabled,
 		smbclientListAllCollectors: &smbclientListAllCollectors,
 	}
 	c.SetLogger(logger)
+
 	return c
 }
 
-func NewWithFlags(app *kingpin.Application) types.Collector {
-	return &collector{
+func NewWithFlags(app *kingpin.Application) *Collector {
+	return &Collector{
 		smbclientListAllCollectors: app.Flag(
-			FlagSmbClientListAllCollectors,
+			"collectors.smbclient.list",
 			"List the collectors along with their perflib object name/ids",
 		).Bool(),
 
 		smbclientCollectorsEnabled: app.Flag(
-			FlagSmbClientCollectorsEnabled,
+			"collectors.smbclient.enabled",
 			"Comma-separated list of collectors to use. Defaults to all, if not specified.",
 		).Default(ConfigDefaults.CollectorsEnabled).String(),
 	}
 }
 
-func (c *collector) GetName() string {
+func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *collector) SetLogger(logger log.Logger) {
+func (c *Collector) SetLogger(logger log.Logger) {
 	c.logger = log.With(logger, "collector", Name)
 }
 
-func (c *collector) GetPerfCounter() ([]string, error) {
+func (c *Collector) GetPerfCounter() ([]string, error) {
 	return []string{
 		"SMB Client Shares",
 	}, nil
 }
 
-func (c *collector) Build() error {
+func (c *Collector) Close() error {
+	return nil
+}
+
+func (c *Collector) Build() error {
 	// desc creates a new prometheus description
 	desc := func(metricName string, description string, labels []string) *prometheus.Desc {
 		return prometheus.NewDesc(
@@ -213,10 +216,11 @@ func (c *collector) Build() error {
 	}
 
 	if *c.smbclientListAllCollectors {
-		fmt.Printf("%-32s %-32s\n", "Collector Name", "Perflib Object")
+		fmt.Printf("%-32s %-32s\n", "Collector Name", "Perflib Object") //nolint:forbidigo
 		for _, cname := range smbclientAllCollectorNames {
-			fmt.Printf("%-32s %-32s\n", cname, collectorDesc[cname])
+			fmt.Printf("%-32s %-32s\n", cname, collectorDesc[cname]) //nolint:forbidigo
 		}
+
 		os.Exit(0)
 	}
 
@@ -229,7 +233,7 @@ func (c *collector) Build() error {
 			if slices.Contains(smbclientAllCollectorNames, collectorName) {
 				c.enabledCollectors = append(c.enabledCollectors, collectorName)
 			} else {
-				return fmt.Errorf("unknown smbclient collector: %s", collectorName)
+				return fmt.Errorf("unknown smbclient Collector: %s", collectorName)
 			}
 		}
 	}
@@ -238,7 +242,7 @@ func (c *collector) Build() error {
 }
 
 // Collect collects smb client metrics and sends them to prometheus
-func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	collectorFuncs := map[string]func(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error{
 		"ClientShares": c.collectClientShares,
 	}
@@ -279,7 +283,7 @@ type perflibClientShares struct {
 	WriteRequestsPerSec                        float64 `perflib:"Write Requests/sec"`
 }
 
-func (c *collector) collectClientShares(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *Collector) collectClientShares(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	var data []perflibClientShares
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["SMB Client Shares"], &data, c.logger); err != nil {
 		return err
@@ -441,7 +445,6 @@ func (c *collector) collectClientShares(ctx *types.ScrapeContext, ch chan<- prom
 			instance.WriteRequestsPerSec,
 			serverValue, shareValue,
 		)
-
 	}
 	return nil
 }

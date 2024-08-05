@@ -20,8 +20,8 @@ type Config struct{}
 
 var ConfigDefaults = Config{}
 
-// collector is a Prometheus collector for Perflib counter metrics
-type collector struct {
+// Collector is a Prometheus Collector for Perflib counter metrics
+type Collector struct {
 	logger log.Logger
 
 	ClockFrequencyAdjustmentPPBTotal *prometheus.Desc
@@ -32,29 +32,34 @@ type collector struct {
 	NTPServerOutgoingResponsesTotal  *prometheus.Desc
 }
 
-func New(logger log.Logger, _ *Config) types.Collector {
-	c := &collector{}
+func New(logger log.Logger, _ *Config) *Collector {
+	c := &Collector{}
 	c.SetLogger(logger)
+
 	return c
 }
 
-func NewWithFlags(_ *kingpin.Application) types.Collector {
-	return &collector{}
+func NewWithFlags(_ *kingpin.Application) *Collector {
+	return &Collector{}
 }
 
-func (c *collector) GetName() string {
+func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *collector) SetLogger(logger log.Logger) {
+func (c *Collector) SetLogger(logger log.Logger) {
 	c.logger = log.With(logger, "collector", Name)
 }
 
-func (c *collector) GetPerfCounter() ([]string, error) {
+func (c *Collector) GetPerfCounter() ([]string, error) {
 	return []string{"Windows Time Service"}, nil
 }
 
-func (c *collector) Build() error {
+func (c *Collector) Close() error {
+	return nil
+}
+
+func (c *Collector) Build() error {
 	if winversion.WindowsVersionFloat <= 6.1 {
 		return errors.New("Windows version older than Server 2016 detected. The time collector will not run and should be disabled via CLI flags or configuration file")
 	}
@@ -100,7 +105,7 @@ func (c *collector) Build() error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	if err := c.collect(ctx, ch); err != nil {
 		_ = level.Error(c.logger).Log("msg", "failed collecting time metrics", "err", err)
 		return err
@@ -118,7 +123,7 @@ type windowsTime struct {
 	NTPServerOutgoingResponsesTotal  float64 `perflib:"NTP Server Outgoing Responses"`
 }
 
-func (c *collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *Collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	var dst []windowsTime // Single-instance class, array is required but will have single entry.
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["Windows Time Service"], &dst, c.logger); err != nil {
 		return err

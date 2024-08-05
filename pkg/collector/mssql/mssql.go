@@ -20,11 +20,7 @@ import (
 	"golang.org/x/sys/windows/registry"
 )
 
-const (
-	Name                       = "mssql"
-	FlagMssqlEnabledCollectors = "collectors.mssql.classes-enabled"
-	FlagMssqlPrintCollectors   = "collectors.mssql.class-print"
-)
+const Name = "mssql"
 
 type Config struct {
 	EnabledCollectors string `yaml:"collectors_enabled"`
@@ -75,7 +71,7 @@ func getMSSQLInstances(logger log.Logger) mssqlInstancesType {
 
 type mssqlCollectorsMap map[string]mssqlCollectorFunc
 
-func (c *collector) getMSSQLCollectors() mssqlCollectorsMap {
+func (c *Collector) getMSSQLCollectors() mssqlCollectorsMap {
 	mssqlCollectors := make(mssqlCollectorsMap)
 	mssqlCollectors["accessmethods"] = c.collectAccessMethods
 	mssqlCollectors["availreplica"] = c.collectAvailabilityReplica
@@ -94,7 +90,7 @@ func (c *collector) getMSSQLCollectors() mssqlCollectorsMap {
 }
 
 // mssqlGetPerfObjectName - Returns the name of the Windows Performance
-// Counter object for the given SQL instance and collector.
+// Counter object for the given SQL instance and Collector.
 func mssqlGetPerfObjectName(sqlInstance string, collector string) string {
 	prefix := "SQLServer:"
 	if sqlInstance != "MSSQLSERVER" {
@@ -130,8 +126,8 @@ func mssqlGetPerfObjectName(sqlInstance string, collector string) string {
 	return prefix + suffix
 }
 
-// A collector is a Prometheus collector for various WMI Win32_PerfRawData_MSSQLSERVER_* metrics
-type collector struct {
+// A Collector is a Prometheus Collector for various WMI Win32_PerfRawData_MSSQLSERVER_* metrics
+type Collector struct {
 	logger log.Logger
 
 	mssqlEnabledCollectors *string
@@ -407,44 +403,45 @@ type collector struct {
 	mssqlChildCollectorFailure int
 }
 
-func New(logger log.Logger, config *Config) types.Collector {
+func New(logger log.Logger, config *Config) *Collector {
 	if config == nil {
 		config = &ConfigDefaults
 	}
 
 	printCollectors := false
 
-	c := &collector{
+	c := &Collector{
 		mssqlEnabledCollectors: &config.EnabledCollectors,
 		mssqlPrintCollectors:   &printCollectors,
 	}
 	c.SetLogger(logger)
+
 	return c
 }
 
-func NewWithFlags(app *kingpin.Application) types.Collector {
-	return &collector{
+func NewWithFlags(app *kingpin.Application) *Collector {
+	return &Collector{
 		mssqlEnabledCollectors: app.Flag(
-			FlagMssqlEnabledCollectors,
+			"collectors.mssql.classes-enabled",
 			"Comma-separated list of mssql WMI classes to use.").
 			Default(ConfigDefaults.EnabledCollectors).String(),
 
 		mssqlPrintCollectors: app.Flag(
-			FlagMssqlPrintCollectors,
+			"collectors.mssql.class-print",
 			"If true, print available mssql WMI classes and exit.  Only displays if the mssql collector is enabled.",
 		).Bool(),
 	}
 }
 
-func (c *collector) GetName() string {
+func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *collector) SetLogger(logger log.Logger) {
+func (c *Collector) SetLogger(logger log.Logger) {
 	c.logger = log.With(logger, "collector", Name)
 }
 
-func (c *collector) GetPerfCounter() ([]string, error) {
+func (c *Collector) GetPerfCounter() ([]string, error) {
 	enabled := utils.ExpandEnabledChildCollectors(*c.mssqlEnabledCollectors)
 	c.mssqlInstances = getMSSQLInstances(c.logger)
 	perfCounters := make([]string, 0, len(c.mssqlInstances)*len(enabled))
@@ -457,7 +454,11 @@ func (c *collector) GetPerfCounter() ([]string, error) {
 	return perfCounters, nil
 }
 
-func (c *collector) Build() error {
+func (c *Collector) Close() error {
+	return nil
+}
+
+func (c *Collector) Build() error {
 	// meta
 	c.mssqlScrapeDurationDesc = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "collector_duration_seconds"),
@@ -1922,10 +1923,11 @@ func (c *collector) Build() error {
 	c.mssqlCollectors = c.getMSSQLCollectors()
 
 	if *c.mssqlPrintCollectors {
-		fmt.Printf("Available SQLServer Classes:\n")
+		fmt.Printf("Available SQLServer Classes:\n") //nolint:forbidigo
 		for name := range c.mssqlCollectors {
-			fmt.Printf(" - %s\n", name)
+			fmt.Printf(" - %s\n", name) //nolint:forbidigo
 		}
+
 		os.Exit(0)
 	}
 
@@ -1934,7 +1936,7 @@ func (c *collector) Build() error {
 
 type mssqlCollectorFunc func(ctx *types.ScrapeContext, ch chan<- prometheus.Metric, sqlInstance string) error
 
-func (c *collector) execute(ctx *types.ScrapeContext, name string, fn mssqlCollectorFunc, ch chan<- prometheus.Metric, sqlInstance string, wg *sync.WaitGroup) {
+func (c *Collector) execute(ctx *types.ScrapeContext, name string, fn mssqlCollectorFunc, ch chan<- prometheus.Metric, sqlInstance string, wg *sync.WaitGroup) {
 	// Reset failure counter on each scrape
 	c.mssqlChildCollectorFailure = 0
 	defer wg.Done()
@@ -1968,7 +1970,7 @@ func (c *collector) execute(ctx *types.ScrapeContext, name string, fn mssqlColle
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	wg := sync.WaitGroup{}
 
 	enabled := utils.ExpandEnabledChildCollectors(*c.mssqlEnabledCollectors)
@@ -2038,7 +2040,7 @@ type mssqlAccessMethods struct {
 	WorktablesFromCacheRatio_Base float64 `perflib:"Worktables From Cache Base_Base"`
 }
 
-func (c *collector) collectAccessMethods(ctx *types.ScrapeContext, ch chan<- prometheus.Metric, sqlInstance string) error {
+func (c *Collector) collectAccessMethods(ctx *types.ScrapeContext, ch chan<- prometheus.Metric, sqlInstance string) error {
 	var dst []mssqlAccessMethods
 	_ = level.Debug(c.logger).Log("msg", fmt.Sprintf("mssql_accessmethods collector iterating sql instance %s.", sqlInstance))
 
@@ -2373,7 +2375,7 @@ type mssqlAvailabilityReplica struct {
 	SendstoTransportPersec         float64 `perflib:"Sends to Transport/sec"`
 }
 
-func (c *collector) collectAvailabilityReplica(ctx *types.ScrapeContext, ch chan<- prometheus.Metric, sqlInstance string) error {
+func (c *Collector) collectAvailabilityReplica(ctx *types.ScrapeContext, ch chan<- prometheus.Metric, sqlInstance string) error {
 	var dst []mssqlAvailabilityReplica
 	_ = level.Debug(c.logger).Log("msg", fmt.Sprintf("mssql_availreplica collector iterating sql instance %s.", sqlInstance))
 
@@ -2481,7 +2483,7 @@ type mssqlBufferManager struct {
 	Targetpages                   float64 `perflib:"Target pages"`
 }
 
-func (c *collector) collectBufferManager(ctx *types.ScrapeContext, ch chan<- prometheus.Metric, sqlInstance string) error {
+func (c *Collector) collectBufferManager(ctx *types.ScrapeContext, ch chan<- prometheus.Metric, sqlInstance string) error {
 	var dst []mssqlBufferManager
 	_ = level.Debug(c.logger).Log("msg", fmt.Sprintf("mssql_bufman collector iterating sql instance %s.", sqlInstance))
 
@@ -2685,7 +2687,7 @@ type mssqlDatabaseReplica struct {
 	TransactionDelay                float64 `perflib:"Transaction Delay"`
 }
 
-func (c *collector) collectDatabaseReplica(ctx *types.ScrapeContext, ch chan<- prometheus.Metric, sqlInstance string) error {
+func (c *Collector) collectDatabaseReplica(ctx *types.ScrapeContext, ch chan<- prometheus.Metric, sqlInstance string) error {
 	var dst []mssqlDatabaseReplica
 	_ = level.Debug(c.logger).Log("msg", fmt.Sprintf("mssql_dbreplica collector iterating sql instance %s.", sqlInstance))
 
@@ -2924,7 +2926,7 @@ type mssqlDatabases struct {
 	XTPMemoryUsedKB                  float64 `perflib:"XTP Memory Used (KB)"`
 }
 
-func (c *collector) collectDatabases(ctx *types.ScrapeContext, ch chan<- prometheus.Metric, sqlInstance string) error {
+func (c *Collector) collectDatabases(ctx *types.ScrapeContext, ch chan<- prometheus.Metric, sqlInstance string) error {
 	var dst []mssqlDatabases
 	_ = level.Debug(c.logger).Log("msg", fmt.Sprintf("mssql_databases collector iterating sql instance %s.", sqlInstance))
 
@@ -3306,7 +3308,7 @@ type mssqlGeneralStatistics struct {
 	UserConnections               float64 `perflib:"User Connections"`
 }
 
-func (c *collector) collectGeneralStatistics(ctx *types.ScrapeContext, ch chan<- prometheus.Metric, sqlInstance string) error {
+func (c *Collector) collectGeneralStatistics(ctx *types.ScrapeContext, ch chan<- prometheus.Metric, sqlInstance string) error {
 	var dst []mssqlGeneralStatistics
 	_ = level.Debug(c.logger).Log("msg", fmt.Sprintf("mssql_genstats collector iterating sql instance %s.", sqlInstance))
 
@@ -3501,7 +3503,7 @@ type mssqlLocks struct {
 	NumberofDeadlocksPersec    float64 `perflib:"Number of Deadlocks/sec"`
 }
 
-func (c *collector) collectLocks(ctx *types.ScrapeContext, ch chan<- prometheus.Metric, sqlInstance string) error {
+func (c *Collector) collectLocks(ctx *types.ScrapeContext, ch chan<- prometheus.Metric, sqlInstance string) error {
 	var dst []mssqlLocks
 	_ = level.Debug(c.logger).Log("msg", fmt.Sprintf("mssql_locks collector iterating sql instance %s.", sqlInstance))
 
@@ -3599,7 +3601,7 @@ type mssqlMemoryManager struct {
 	TotalServerMemoryKB      float64 `perflib:"Total Server Memory (KB)"`
 }
 
-func (c *collector) collectMemoryManager(ctx *types.ScrapeContext, ch chan<- prometheus.Metric, sqlInstance string) error {
+func (c *Collector) collectMemoryManager(ctx *types.ScrapeContext, ch chan<- prometheus.Metric, sqlInstance string) error {
 	var dst []mssqlMemoryManager
 	_ = level.Debug(c.logger).Log("msg", fmt.Sprintf("mssql_memmgr collector iterating sql instance %s.", sqlInstance))
 
@@ -3768,7 +3770,7 @@ type mssqlSQLStatistics struct {
 	UnsafeAutoParamsPersec        float64 `perflib:"Unsafe Auto-Params/sec"`
 }
 
-func (c *collector) collectSQLStats(ctx *types.ScrapeContext, ch chan<- prometheus.Metric, sqlInstance string) error {
+func (c *Collector) collectSQLStats(ctx *types.ScrapeContext, ch chan<- prometheus.Metric, sqlInstance string) error {
 	var dst []mssqlSQLStatistics
 	_ = level.Debug(c.logger).Log("msg", fmt.Sprintf("mssql_sqlstats collector iterating sql instance %s.", sqlInstance))
 
@@ -3876,7 +3878,7 @@ type mssqlWaitStatistics struct {
 	WaitStatsTransactionOwnershipWaits     float64 `perflib:"Transaction ownership waits"`
 }
 
-func (c *collector) collectWaitStats(ctx *types.ScrapeContext, ch chan<- prometheus.Metric, sqlInstance string) error {
+func (c *Collector) collectWaitStats(ctx *types.ScrapeContext, ch chan<- prometheus.Metric, sqlInstance string) error {
 	var dst []mssqlWaitStatistics
 	_ = level.Debug(c.logger).Log("msg", fmt.Sprintf("mssql_waitstats collector iterating sql instance %s.", sqlInstance))
 
@@ -3982,7 +3984,7 @@ type mssqlSQLErrors struct {
 
 // Win32_PerfRawData_MSSQLSERVER_SQLServerErrors docs:
 // - https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-sql-errors-object
-func (c *collector) collectSQLErrors(ctx *types.ScrapeContext, ch chan<- prometheus.Metric, sqlInstance string) error {
+func (c *Collector) collectSQLErrors(ctx *types.ScrapeContext, ch chan<- prometheus.Metric, sqlInstance string) error {
 	var dst []mssqlSQLErrors
 	_ = level.Debug(c.logger).Log("msg", fmt.Sprintf("mssql_sqlerrors collector iterating sql instance %s.", sqlInstance))
 
@@ -4025,7 +4027,7 @@ type mssqlTransactions struct {
 
 // Win32_PerfRawData_MSSQLSERVER_Transactions docs:
 // - https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-transactions-object
-func (c *collector) collectTransactions(ctx *types.ScrapeContext, ch chan<- prometheus.Metric, sqlInstance string) error {
+func (c *Collector) collectTransactions(ctx *types.ScrapeContext, ch chan<- prometheus.Metric, sqlInstance string) error {
 	var dst []mssqlTransactions
 	_ = level.Debug(c.logger).Log("msg", fmt.Sprintf("mssql_transactions collector iterating sql instance %s.", sqlInstance))
 

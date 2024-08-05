@@ -17,8 +17,8 @@ type Config struct{}
 
 var ConfigDefaults = Config{}
 
-// A collector is a Prometheus collector for WMI Win32_PerfRawData_NETFramework_NETCLRLoading metrics
-type collector struct {
+// A Collector is a Prometheus Collector for WMI Win32_PerfRawData_NETFramework_NETCLRLoading metrics
+type Collector struct {
 	logger log.Logger
 
 	BytesinLoaderHeap         *prometheus.Desc
@@ -32,29 +32,34 @@ type collector struct {
 	TotalNumberofLoadFailures *prometheus.Desc
 }
 
-func New(logger log.Logger, _ *Config) types.Collector {
-	c := &collector{}
+func New(logger log.Logger, _ *Config) *Collector {
+	c := &Collector{}
 	c.SetLogger(logger)
+
 	return c
 }
 
-func NewWithFlags(_ *kingpin.Application) types.Collector {
-	return &collector{}
+func NewWithFlags(_ *kingpin.Application) *Collector {
+	return &Collector{}
 }
 
-func (c *collector) GetName() string {
+func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *collector) SetLogger(logger log.Logger) {
+func (c *Collector) SetLogger(logger log.Logger) {
 	c.logger = log.With(logger, "collector", Name)
 }
 
-func (c *collector) GetPerfCounter() ([]string, error) {
+func (c *Collector) GetPerfCounter() ([]string, error) {
 	return []string{}, nil
 }
 
-func (c *collector) Build() error {
+func (c *Collector) Close() error {
+	return nil
+}
+
+func (c *Collector) Build() error {
 	c.BytesinLoaderHeap = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "loader_heap_size_bytes"),
 		"Displays the current size, in bytes, of the memory committed by the class loader across all application domains. Committed memory is the physical space reserved in the disk paging file.",
@@ -114,7 +119,7 @@ func (c *collector) Build() error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	if err := c.collect(ch); err != nil {
 		_ = level.Error(c.logger).Log("msg", "failed collecting win32_perfrawdata_netframework_netclrloading metrics", "err", err)
 		return err
@@ -143,7 +148,7 @@ type Win32_PerfRawData_NETFramework_NETCLRLoading struct {
 	TotalNumberofLoadFailures uint32
 }
 
-func (c *collector) collect(ch chan<- prometheus.Metric) error {
+func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_NETFramework_NETCLRLoading
 	q := wmi.QueryAll(&dst, c.logger)
 	if err := wmi.Query(q, &dst); err != nil {
@@ -151,7 +156,6 @@ func (c *collector) collect(ch chan<- prometheus.Metric) error {
 	}
 
 	for _, process := range dst {
-
 		if process.Name == "_Global_" {
 			continue
 		}

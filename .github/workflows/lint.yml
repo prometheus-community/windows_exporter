@@ -100,5 +100,5 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
-          version: v1.58
-          args: "--timeout=5m --out-format github-actions,colored-line-number"
+          version: v1.59
+          args: "--timeout=5m"

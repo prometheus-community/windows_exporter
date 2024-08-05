@@ -17,14 +17,7 @@ import (
 	"golang.org/x/sys/windows/registry"
 )
 
-const (
-	Name = "iis"
-
-	FlagIISSiteExclude = "collector.iis.site-exclude"
-	FlagIISSiteInclude = "collector.iis.site-include"
-	FlagIISAppExclude  = "collector.iis.app-exclude"
-	FlagIISAppInclude  = "collector.iis.app-include"
-)
+const Name = "iis"
 
 type Config struct {
 	SiteInclude string `yaml:"site_include"`
@@ -77,7 +70,7 @@ func getIISVersion(logger log.Logger) simple_version {
 	}
 }
 
-type collector struct {
+type Collector struct {
 	logger log.Logger
 
 	siteInclude *string
@@ -220,40 +213,41 @@ type collector struct {
 	iis_version simple_version
 }
 
-func New(logger log.Logger, config *Config) types.Collector {
+func New(logger log.Logger, config *Config) *Collector {
 	if config == nil {
 		config = &ConfigDefaults
 	}
 
-	c := &collector{
+	c := &Collector{
 		appInclude:  &config.AppInclude,
 		appExclude:  &config.AppExclude,
 		siteInclude: &config.SiteInclude,
 		siteExclude: &config.SiteExclude,
 	}
 	c.SetLogger(logger)
+
 	return c
 }
 
-func NewWithFlags(app *kingpin.Application) types.Collector {
-	c := &collector{
+func NewWithFlags(app *kingpin.Application) *Collector {
+	c := &Collector{
 		siteInclude: app.Flag(
-			FlagIISSiteInclude,
+			"collector.iis.site-include",
 			"Regexp of sites to include. Site name must both match include and not match exclude to be included.",
 		).Default(ConfigDefaults.SiteInclude).String(),
 
 		siteExclude: app.Flag(
-			FlagIISSiteExclude,
+			"collector.iis.site-exclude",
 			"Regexp of sites to exclude. Site name must both match include and not match exclude to be included.",
 		).Default(ConfigDefaults.SiteExclude).String(),
 
 		appInclude: app.Flag(
-			FlagIISAppInclude,
+			"collector.iis.app-include",
 			"Regexp of apps to include. App name must both match include and not match exclude to be included.",
 		).Default(ConfigDefaults.AppInclude).String(),
 
 		appExclude: app.Flag(
-			FlagIISAppExclude,
+			"collector.iis.app-exclude",
 			"Regexp of apps to exclude. App name must both match include and not match exclude to be included.",
 		).Default(ConfigDefaults.AppExclude).String(),
 	}
@@ -261,15 +255,15 @@ func NewWithFlags(app *kingpin.Application) types.Collector {
 	return c
 }
 
-func (c *collector) GetName() string {
+func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *collector) SetLogger(logger log.Logger) {
+func (c *Collector) SetLogger(logger log.Logger) {
 	c.logger = log.With(logger, "collector", Name)
 }
 
-func (c *collector) GetPerfCounter() ([]string, error) {
+func (c *Collector) GetPerfCounter() ([]string, error) {
 	return []string{
 		"Web Service",
 		"APP_POOL_WAS",
@@ -278,7 +272,11 @@ func (c *collector) GetPerfCounter() ([]string, error) {
 	}, nil
 }
 
-func (c *collector) Build() error {
+func (c *Collector) Close() error {
+	return nil
+}
+
+func (c *Collector) Build() error {
 	c.iis_version = getIISVersion(c.logger)
 
 	var err error
@@ -925,7 +923,7 @@ func (c *collector) Build() error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	if err := c.collectWebService(ctx, ch); err != nil {
 		_ = level.Error(c.logger).Log("msg", "failed collecting iis metrics", "err", err)
 		return err
@@ -1021,7 +1019,7 @@ type hasGetIISName interface {
 //
 // E.G. Given the following list of site names, "Site_B" would be
 // discarded, and "Site_B#2" would be kept and presented as "Site_B" in the
-// collector metrics.
+// Collector metrics.
 // [ "Site_A", "Site_B", "Site_C", "Site_B#2" ]
 func dedupIISNames[V hasGetIISName](services []V) map[string]V {
 	// Ensure IIS entry with the highest suffix occurs last
@@ -1039,7 +1037,7 @@ func dedupIISNames[V hasGetIISName](services []V) map[string]V {
 	return webServiceDeDuplicated
 }
 
-func (c *collector) collectWebService(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *Collector) collectWebService(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	var webService []perflibWebService
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["Web Service"], &webService, c.logger); err != nil {
 		return err
@@ -1331,7 +1329,7 @@ var applicationStates = map[uint32]string{
 	7: "Delete Pending",
 }
 
-func (c *collector) collectAPP_POOL_WAS(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *Collector) collectAPP_POOL_WAS(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	var APP_POOL_WAS []perflibAPP_POOL_WAS
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["APP_POOL_WAS"], &APP_POOL_WAS, c.logger); err != nil {
 		return err
@@ -1508,7 +1506,7 @@ type perflibW3SVC_W3WP_IIS8 struct {
 	WebSocketConnectionsRejected float64 `perflib:"WebSocket Connections Rejected / Sec"`
 }
 
-func (c *collector) collectW3SVC_W3WP(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *Collector) collectW3SVC_W3WP(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	var W3SVC_W3WP []perflibW3SVC_W3WP
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["W3SVC_W3WP"], &W3SVC_W3WP, c.logger); err != nil {
 		return err
@@ -1764,7 +1762,6 @@ func (c *collector) collectW3SVC_W3WP(ctx *types.ScrapeContext, ch chan<- promet
 			name,
 			pid,
 		)
-
 	}
 
 	if c.iis_version.major >= 8 {
@@ -1906,7 +1903,7 @@ type perflibWebServiceCache struct {
 	ServiceCache_OutputCacheQueriesTotal       float64
 }
 
-func (c *collector) collectWebServiceCache(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *Collector) collectWebServiceCache(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	var WebServiceCache []perflibWebServiceCache
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["Web Service Cache"], &WebServiceCache, c.logger); err != nil {
 		return err

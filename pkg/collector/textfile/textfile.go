@@ -37,10 +37,7 @@ import (
 	"github.com/prometheus/common/expfmt"
 )
 
-const (
-	Name                    = "textfile"
-	FlagTextFileDirectories = "collector.textfile.directories"
-)
+const Name = "textfile"
 
 type Config struct {
 	TextFileDirectories string `yaml:"text_file_directories"`
@@ -50,7 +47,7 @@ var ConfigDefaults = Config{
 	TextFileDirectories: getDefaultPath(),
 }
 
-type collector struct {
+type Collector struct {
 	logger log.Logger
 
 	textFileDirectories *string
@@ -59,51 +56,56 @@ type collector struct {
 	// Only set for testing to get predictable output.
 	mtime *float64
 
-	MtimeDesc *prometheus.Desc
+	mtimeDesc *prometheus.Desc
 }
 
-func New(logger log.Logger, config *Config) types.Collector {
+func New(logger log.Logger, config *Config) *Collector {
 	if config == nil {
 		config = &ConfigDefaults
 	}
 
-	c := &collector{
+	c := &Collector{
 		textFileDirectories: &config.TextFileDirectories,
 	}
 	c.SetLogger(logger)
+
 	return c
 }
 
-func NewWithFlags(app *kingpin.Application) types.Collector {
-	return &collector{
+func NewWithFlags(app *kingpin.Application) *Collector {
+	return &Collector{
 		textFileDirectories: app.Flag(
-			FlagTextFileDirectories,
+			"collector.textfile.directories",
 			"Directory or Directories to read text files with metrics from.",
 		).Default(ConfigDefaults.TextFileDirectories).String(),
 	}
 }
 
-func (c *collector) GetName() string {
+func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *collector) SetLogger(logger log.Logger) {
+func (c *Collector) SetLogger(logger log.Logger) {
 	c.logger = log.With(logger, "collector", Name)
 }
 
-func (c *collector) GetPerfCounter() ([]string, error) {
+func (c *Collector) GetPerfCounter() ([]string, error) {
 	return []string{}, nil
 }
 
-func (c *collector) Build() error {
+func (c *Collector) Close() error {
+	return nil
+}
+
+func (c *Collector) Build() error {
 	c.directories = ""
 	if utils.HasValue(c.textFileDirectories) {
 		c.directories = strings.Trim(*c.textFileDirectories, ",")
 	}
 
-	_ = level.Info(c.logger).Log("msg", "textfile collector directories: "+c.directories)
+	_ = level.Info(c.logger).Log("msg", "textfile Collector directories: "+c.directories)
 
-	c.MtimeDesc = prometheus.NewDesc(
+	c.mtimeDesc = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, "textfile", "mtime_seconds"),
 		"Unixtime mtime of textfiles successfully read.",
 		[]string{"file"},
@@ -138,7 +140,7 @@ func duplicateMetricEntry(metricFamilies []*dto.MetricFamily) bool {
 	return false
 }
 
-func (c *collector) convertMetricFamily(metricFamily *dto.MetricFamily, ch chan<- prometheus.Metric) {
+func (c *Collector) convertMetricFamily(metricFamily *dto.MetricFamily, ch chan<- prometheus.Metric) {
 	var valType prometheus.ValueType
 	var val float64
 
@@ -154,7 +156,7 @@ func (c *collector) convertMetricFamily(metricFamily *dto.MetricFamily, ch chan<
 
 	for _, metric := range metricFamily.Metric {
 		if metric.TimestampMs != nil {
-			_ = level.Warn(c.logger).Log("msg", fmt.Sprintf("Ignoring unsupported custom timestamp on textfile collector metric %v", metric))
+			_ = level.Warn(c.logger).Log("msg", fmt.Sprintf("Ignoring unsupported custom timestamp on textfile Collector metric %v", metric))
 		}
 
 		labels := metric.GetLabel()
@@ -240,7 +242,7 @@ func (c *collector) convertMetricFamily(metricFamily *dto.MetricFamily, ch chan<
 	}
 }
 
-func (c *collector) exportMTimes(mtimes map[string]time.Time, ch chan<- prometheus.Metric) {
+func (c *Collector) exportMTimes(mtimes map[string]time.Time, ch chan<- prometheus.Metric) {
 	// Export the mtimes of the successful files.
 	if len(mtimes) > 0 {
 		// Sorting is needed for predictable output comparison in tests.
@@ -255,7 +257,7 @@ func (c *collector) exportMTimes(mtimes map[string]time.Time, ch chan<- promethe
 			if c.mtime != nil {
 				mtime = *c.mtime
 			}
-			ch <- prometheus.MustNewConstMetric(c.MtimeDesc, prometheus.GaugeValue, mtime, filename)
+			ch <- prometheus.MustNewConstMetric(c.mtimeDesc, prometheus.GaugeValue, mtime, filename)
 		}
 	}
 }
@@ -285,7 +287,7 @@ func (cr carriageReturnFilteringReader) Read(p []byte) (int, error) {
 }
 
 // Collect implements the Collector interface.
-func (c *collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	errorMetric := 0.0
 	mtimes := map[string]time.Time{}
 	// Create empty metricFamily slice here and append parsedFamilies to it inside the loop.
@@ -326,7 +328,7 @@ func (c *collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric)
 			return nil
 		})
 		if err != nil && directory != "" {
-			_ = level.Error(c.logger).Log("msg", "Error reading textfile collector directory: "+c.directories, "err", err)
+			_ = level.Error(c.logger).Log("msg", "Error reading textfile Collector directory: "+c.directories, "err", err)
 			errorMetric = 1.0
 		}
 	}

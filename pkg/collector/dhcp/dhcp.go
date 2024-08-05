@@ -16,8 +16,8 @@ type Config struct{}
 
 var ConfigDefaults = Config{}
 
-// A collector is a Prometheus collector perflib DHCP metrics
-type collector struct {
+// A Collector is a Prometheus Collector perflib DHCP metrics
+type Collector struct {
 	logger log.Logger
 
 	PacketsReceivedTotal                             *prometheus.Desc
@@ -47,29 +47,34 @@ type collector struct {
 	FailoverBndupdDropped                            *prometheus.Desc
 }
 
-func New(logger log.Logger, _ *Config) types.Collector {
-	c := &collector{}
+func New(logger log.Logger, _ *Config) *Collector {
+	c := &Collector{}
 	c.SetLogger(logger)
+
 	return c
 }
 
-func NewWithFlags(_ *kingpin.Application) types.Collector {
-	return &collector{}
+func NewWithFlags(_ *kingpin.Application) *Collector {
+	return &Collector{}
 }
 
-func (c *collector) GetName() string {
+func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *collector) SetLogger(logger log.Logger) {
+func (c *Collector) SetLogger(logger log.Logger) {
 	c.logger = log.With(logger, "collector", Name)
 }
 
-func (c *collector) GetPerfCounter() ([]string, error) {
+func (c *Collector) GetPerfCounter() ([]string, error) {
 	return []string{"DHCP Server"}, nil
 }
 
-func (c *collector) Build() error {
+func (c *Collector) Close() error {
+	return nil
+}
+
+func (c *Collector) Build() error {
 	c.PacketsReceivedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "packets_received_total"),
 		"Total number of packets received by the DHCP server (PacketsReceivedTotal)",
@@ -254,7 +259,7 @@ type dhcpPerf struct {
 	FailoverBndupdDropped                            float64 `perflib:"Failover: BndUpd Dropped."`
 }
 
-func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	var dhcpPerfs []dhcpPerf
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["DHCP Server"], &dhcpPerfs, c.logger); err != nil {
 		return err

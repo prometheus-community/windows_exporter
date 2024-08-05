@@ -37,16 +37,16 @@ type Resolver struct {
 }
 
 // NewResolver returns a Resolver structure.
-func NewResolver(file string, logger log.Logger, insecure_skip_verify bool) (*Resolver, error) {
+func NewResolver(file string, logger log.Logger, insecureSkipVerify bool) (*Resolver, error) {
 	flags := map[string]string{}
 	var fileBytes []byte
 	var err error
 	if strings.HasPrefix(file, "http://") || strings.HasPrefix(file, "https://") {
 		_ = level.Info(logger).Log("msg", fmt.Sprintf("Loading configuration file from URL: %v", file))
 		tr := &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: insecure_skip_verify},
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: insecureSkipVerify}, //nolint:gosec
 		}
-		if insecure_skip_verify {
+		if insecureSkipVerify {
 			_ = level.Warn(logger).Log("msg", "Loading configuration file with TLS verification disabled")
 		}
 		client := &http.Client{Transport: tr}

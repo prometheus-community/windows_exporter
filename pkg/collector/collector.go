@@ -3,12 +3,12 @@
 package collector
 
 import (
+	"errors"
 	"slices"
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/go-kit/log"
-
 	"github.com/prometheus-community/windows_exporter/pkg/collector/ad"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/adcs"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/adfs"
@@ -22,6 +22,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/collector/diskdrive"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/dns"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/exchange"
+	"github.com/prometheus-community/windows_exporter/pkg/collector/fsrmquota"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/hyperv"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/iis"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/license"
@@ -68,45 +69,44 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/types"
 )
 
-type Collectors struct {
-	logger log.Logger
-
-	collectors       map[string]types.Collector
-	perfCounterQuery string
-}
-
 // NewWithFlags To be called by the exporter for collector initialization before running kingpin.Parse
 func NewWithFlags(app *kingpin.Application) Collectors {
-	collectors := map[string]types.Collector{}
+	collectors := map[string]Collector{}
 
-	for name, builder := range Map {
+	for name, builder := range BuildersWithFlags {
 		collectors[name] = builder(app)
 	}
 
 	return New(collectors)
 }
 
+func NewBuilderWithFlags[C Collector](fn BuilderWithFlags[C]) BuilderWithFlags[Collector] {
+	return func(app *kingpin.Application) Collector {
+		return fn(app)
+	}
+}
+
 // NewWithConfig To be called by the external libraries for collector initialization without running kingpin.Parse
 //
 //goland:noinspection GoUnusedExportedFunction
 func NewWithConfig(logger log.Logger, config Config) Collectors {
-	collectors := map[string]types.Collector{}
-	collectors[ad.Name] = ad.New(logger, &config.Ad)
-	collectors[adcs.Name] = adcs.New(logger, &config.Adcs)
-	collectors[adfs.Name] = adfs.New(logger, &config.Adfs)
+	collectors := map[string]Collector{}
+	collectors[ad.Name] = ad.New(logger, &config.AD)
+	collectors[adcs.Name] = adcs.New(logger, &config.ADCS)
+	collectors[adfs.Name] = adfs.New(logger, &config.ADFS)
 	collectors[cache.Name] = cache.New(logger, &config.Cache)
 	collectors[container.Name] = container.New(logger, &config.Container)
-	collectors[cpu.Name] = cpu.New(logger, &config.Cpu)
-	collectors[cpu_info.Name] = cpu_info.New(logger, &config.CpuInfo)
+	collectors[cpu.Name] = cpu.New(logger, &config.CPU)
+	collectors[cpu_info.Name] = cpu_info.New(logger, &config.CPUInfo)
 	collectors[cs.Name] = cs.New(logger, &config.Cs)
-	collectors[dfsr.Name] = dfsr.New(logger, &config.Dfsr)
+	collectors[dfsr.Name] = dfsr.New(logger, &config.DFSR)
 	collectors[dhcp.Name] = dhcp.New(logger, &config.Dhcp)
-	collectors[diskdrive.Name] = diskdrive.New(logger, &config.Diskdrive)
-	collectors[dns.Name] = dns.New(logger, &config.Dns)
+	collectors[diskdrive.Name] = diskdrive.New(logger, &config.DiskDrive)
+	collectors[dns.Name] = dns.New(logger, &config.DNS)
 	collectors[exchange.Name] = exchange.New(logger, &config.Exchange)
-	collectors[exchange.Name] = exchange.New(logger, &config.Fsrmquota)
+	collectors[fsrmquota.Name] = fsrmquota.New(logger, &config.Fsrmquota)
 	collectors[hyperv.Name] = hyperv.New(logger, &config.Hyperv)
-	collectors[iis.Name] = iis.New(logger, &config.Iis)
+	collectors[iis.Name] = iis.New(logger, &config.IIS)
 	collectors[license.Name] = license.New(logger, &config.License)
 	collectors[logical_disk.Name] = logical_disk.New(logger, &config.LogicalDisk)
 	collectors[logon.Name] = logon.New(logger, &config.Logon)
@@ -135,12 +135,12 @@ func NewWithConfig(logger log.Logger, config Config) Collectors {
 	collectors[remote_fx.Name] = remote_fx.New(logger, &config.RemoteFx)
 	collectors[scheduled_task.Name] = scheduled_task.New(logger, &config.ScheduledTask)
 	collectors[service.Name] = service.New(logger, &config.Service)
-	collectors[smb.Name] = smb.New(logger, &config.Smb)
-	collectors[smbclient.Name] = smbclient.New(logger, &config.SmbClient)
-	collectors[smtp.Name] = smtp.New(logger, &config.Smtp)
+	collectors[smb.Name] = smb.New(logger, &config.SMB)
+	collectors[smbclient.Name] = smbclient.New(logger, &config.SMBClient)
+	collectors[smtp.Name] = smtp.New(logger, &config.SMTP)
 	collectors[system.Name] = system.New(logger, &config.System)
 	collectors[teradici_pcoip.Name] = teradici_pcoip.New(logger, &config.TeradiciPcoip)
-	collectors[tcp.Name] = tcp.New(logger, &config.Tcp)
+	collectors[tcp.Name] = tcp.New(logger, &config.TCP)
 	collectors[terminal_services.Name] = terminal_services.New(logger, &config.TerminalServices)
 	collectors[textfile.Name] = textfile.New(logger, &config.Textfile)
 	collectors[thermalzone.Name] = thermalzone.New(logger, &config.Thermalzone)
@@ -151,8 +151,8 @@ func NewWithConfig(logger log.Logger, config Config) Collectors {
 	return New(collectors)
 }
 
-// New To be called by the external libraries for collector initialization
-func New(collectors map[string]types.Collector) Collectors {
+// New To be called by the external libraries for collector initialization.
+func New(collectors Map) Collectors {
 	return Collectors{
 		collectors: collectors,
 	}
@@ -207,6 +207,7 @@ func (c *Collectors) Enable(enabledCollectors []string) {
 // Build To be called by the exporter for collector initialization
 func (c *Collectors) Build() error {
 	var err error
+
 	for _, collector := range c.collectors {
 		if err = collector.Build(); err != nil {
 			return err
@@ -224,4 +225,17 @@ func (c *Collectors) PrepareScrapeContext() (*types.ScrapeContext, error) {
 	}
 
 	return &types.ScrapeContext{PerfObjects: objs}, nil
+}
+
+// Close To be called by the exporter for collector cleanup
+func (c *Collectors) Close() error {
+	errs := make([]error, 0, len(c.collectors))
+
+	for _, collector := range c.collectors {
+		if err := collector.Build(); err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	return errors.Join(errs...)
 }

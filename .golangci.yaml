@@ -1,14 +1,8 @@
 linters:
   enable-all: true
   disable:
-    - asasalint
-    - asciicheck
-    - bidichk
-    - bodyclose
-    - canonicalheader
     - containedctx
     - contextcheck
-    - copyloopvar
     - cyclop
     - decorder
     - depguard
@@ -24,10 +18,7 @@ linters:
     - exhaustruct
     - exportloopref
     - fatcontext
-    - forbidigo
-    - forcetypeassert
     - funlen
-    - gci
     - ginkgolinter
     - gocheckcompilerdirectives
     - gochecknoglobals
@@ -40,12 +31,9 @@ linters:
     - godot
     - godox
     - gofumpt
-    - goheader
     - goimports
     - gomoddirectives
     - gomodguard
-    - goprintffuncname
-    - gosec
     - gosimple
     - gosmopolitan
     - grouper
@@ -56,7 +44,6 @@ linters:
     - ireturn
     - lll
     - maintidx
-    - makezero
     - mirror
     - misspell
     - mnd
@@ -65,7 +52,6 @@ linters:
     - nestif
     - nlreturn
     - noctx
-    - nolintlint
     - nonamedreturns
     - nosprintfhostport
     - paralleltest
@@ -86,13 +72,9 @@ linters:
     - testpackage
     - thelper
     - tparallel
-    - usestdlibvars
     - varnamelen
-    - wastedassign
-    - whitespace
     - wrapcheck
     - wsl
-    - zerologlint
     - execinquery
     - gomnd
 

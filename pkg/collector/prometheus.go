@@ -112,7 +112,7 @@ func (coll *Prometheus) Collect(ch chan<- prometheus.Metric) {
 	}()
 
 	for name, c := range coll.collectors.collectors {
-		go func(name string, c types.Collector) {
+		go func(name string, c Collector) {
 			defer wg.Done()
 			outcome := coll.execute(name, c, scrapeContext, metricsBuffer)
 			l.Lock()
@@ -171,7 +171,7 @@ func (coll *Prometheus) Collect(ch chan<- prometheus.Metric) {
 	l.Unlock()
 }
 
-func (coll *Prometheus) execute(name string, c types.Collector, ctx *types.ScrapeContext, ch chan<- prometheus.Metric) collectorOutcome {
+func (coll *Prometheus) execute(name string, c Collector, ctx *types.ScrapeContext, ch chan<- prometheus.Metric) collectorOutcome {
 	t := time.Now()
 	err := c.Collect(ctx, ch)
 	duration := time.Since(t).Seconds()

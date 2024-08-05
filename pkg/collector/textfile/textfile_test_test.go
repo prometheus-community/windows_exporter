@@ -6,15 +6,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
+	"github.com/go-kit/log"
 	"github.com/prometheus-community/windows_exporter/pkg/collector"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/textfile"
-	"github.com/prometheus-community/windows_exporter/pkg/types"
-
-	"github.com/go-kit/log"
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
+	"github.com/stretchr/testify/require"
 )
 
 var baseDir = "../../../tools/textfile-test"
@@ -27,7 +24,7 @@ func TestMultipleDirectories(t *testing.T) {
 		TextFileDirectories: testDirs,
 	})
 
-	collectors := collector.New(map[string]types.Collector{textfile.Name: textfileCollector})
+	collectors := collector.New(map[string]collector.Collector{textfile.Name: textfileCollector})
 	require.NoError(t, collectors.Build())
 
 	scrapeContext, err := collectors.PrepareScrapeContext()
@@ -66,7 +63,7 @@ func TestDuplicateFileName(t *testing.T) {
 		TextFileDirectories: testDir,
 	})
 
-	collectors := collector.New(map[string]types.Collector{textfile.Name: textfileCollector})
+	collectors := collector.New(map[string]collector.Collector{textfile.Name: textfileCollector})
 	require.NoError(t, collectors.Build())
 
 	scrapeContext, err := collectors.PrepareScrapeContext()

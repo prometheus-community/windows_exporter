@@ -14,10 +14,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-const (
-	Name                = "msmq"
-	FlagMsmqWhereClause = "collector.msmq.msmq-where"
-)
+const Name = "msmq"
 
 type Config struct {
 	QueryWhereClause string `yaml:"query_where_clause"`
@@ -27,8 +24,8 @@ var ConfigDefaults = Config{
 	QueryWhereClause: "",
 }
 
-// A collector is a Prometheus collector for WMI Win32_PerfRawData_MSMQ_MSMQQueue metrics
-type collector struct {
+// A Collector is a Prometheus Collector for WMI Win32_PerfRawData_MSMQ_MSMQQueue metrics
+type Collector struct {
 	logger log.Logger
 
 	queryWhereClause *string
@@ -39,39 +36,44 @@ type collector struct {
 	MessagesinQueue        *prometheus.Desc
 }
 
-func New(logger log.Logger, config *Config) types.Collector {
+func New(logger log.Logger, config *Config) *Collector {
 	if config == nil {
 		config = &ConfigDefaults
 	}
 
-	c := &collector{
+	c := &Collector{
 		queryWhereClause: &config.QueryWhereClause,
 	}
 	c.SetLogger(logger)
+
 	return c
 }
 
-func NewWithFlags(app *kingpin.Application) types.Collector {
-	return &collector{
+func NewWithFlags(app *kingpin.Application) *Collector {
+	return &Collector{
 		queryWhereClause: app.
-			Flag(FlagMsmqWhereClause, "WQL 'where' clause to use in WMI metrics query. Limits the response to the msmqs you specify and reduces the size of the response.").
+			Flag("collector.msmq.msmq-where", "WQL 'where' clause to use in WMI metrics query. Limits the response to the msmqs you specify and reduces the size of the response.").
 			Default(ConfigDefaults.QueryWhereClause).String(),
 	}
 }
 
-func (c *collector) GetName() string {
+func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *collector) SetLogger(logger log.Logger) {
+func (c *Collector) SetLogger(logger log.Logger) {
 	c.logger = log.With(logger, "collector", Name)
 }
 
-func (c *collector) GetPerfCounter() ([]string, error) {
+func (c *Collector) GetPerfCounter() ([]string, error) {
 	return []string{}, nil
 }
 
-func (c *collector) Build() error {
+func (c *Collector) Close() error {
+	return nil
+}
+
+func (c *Collector) Build() error {
 	if utils.IsEmpty(c.queryWhereClause) {
 		_ = level.Warn(c.logger).Log("msg", "No where-clause specified for msmq collector. This will generate a very large number of metrics!")
 	}
@@ -105,7 +107,7 @@ func (c *collector) Build() error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	if err := c.collect(ch); err != nil {
 		_ = level.Error(c.logger).Log("msg", "failed collecting msmq metrics", "err", err)
 		return err
@@ -122,7 +124,7 @@ type Win32_PerfRawData_MSMQ_MSMQQueue struct {
 	MessagesinQueue        uint64
 }
 
-func (c *collector) collect(ch chan<- prometheus.Metric) error {
+func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_MSMQ_MSMQQueue
 	q := wmi.QueryAllWhere(&dst, *c.queryWhereClause, c.logger)
 	if err := wmi.Query(q, &dst); err != nil {

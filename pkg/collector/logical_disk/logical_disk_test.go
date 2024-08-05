@@ -9,8 +9,8 @@ import (
 )
 
 func BenchmarkCollector(b *testing.B) {
-	// Whitelist is not set in testing context (kingpin flags not parsed), causing the collector to skip all disks.
+	// Whitelist is not set in testing context (kingpin flags not parsed), causing the Collector to skip all disks.
 	localVolumeInclude := ".+"
-	kingpin.CommandLine.GetArg(logical_disk.FlagLogicalDiskVolumeInclude).StringVar(&localVolumeInclude)
+	kingpin.CommandLine.GetArg("collector.logical_disk.volume-include").StringVar(&localVolumeInclude)
 	testutils.FuncBenchmarkCollector(b, "logical_disk", logical_disk.NewWithFlags)
 }

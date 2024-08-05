@@ -11,16 +11,15 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/alecthomas/kingpin/v2"
+	"github.com/go-kit/log"
+	"github.com/go-kit/log/level"
 	"github.com/prometheus-community/windows_exporter/pkg/headers/kernel32"
 	"github.com/prometheus-community/windows_exporter/pkg/headers/netapi32"
 	"github.com/prometheus-community/windows_exporter/pkg/headers/psapi"
 	"github.com/prometheus-community/windows_exporter/pkg/headers/sysinfoapi"
 	"github.com/prometheus-community/windows_exporter/pkg/perflib"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
-
-	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows/registry"
 )
@@ -31,8 +30,8 @@ type Config struct{}
 
 var ConfigDefaults = Config{}
 
-// A collector is a Prometheus collector for WMI metrics
-type collector struct {
+// A Collector is a Prometheus Collector for WMI metrics
+type Collector struct {
 	logger log.Logger
 
 	OSInformation           *prometheus.Desc
@@ -56,29 +55,34 @@ type pagingFileCounter struct {
 	UsagePeak float64 `perflib:"% Usage Peak"`
 }
 
-func New(logger log.Logger, _ *Config) types.Collector {
-	c := &collector{}
+func New(logger log.Logger, _ *Config) *Collector {
+	c := &Collector{}
 	c.SetLogger(logger)
+
 	return c
 }
 
-func NewWithFlags(_ *kingpin.Application) types.Collector {
-	return &collector{}
+func NewWithFlags(_ *kingpin.Application) *Collector {
+	return &Collector{}
 }
 
-func (c *collector) GetName() string {
+func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *collector) SetLogger(logger log.Logger) {
+func (c *Collector) SetLogger(logger log.Logger) {
 	c.logger = log.With(logger, "collector", Name)
 }
 
-func (c *collector) GetPerfCounter() ([]string, error) {
+func (c *Collector) GetPerfCounter() ([]string, error) {
 	return []string{"Paging File"}, nil
 }
 
-func (c *collector) Build() error {
+func (c *Collector) Close() error {
+	return nil
+}
+
+func (c *Collector) Build() error {
 	c.OSInformation = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "info"),
 		"OperatingSystem.Caption, OperatingSystem.Version",
@@ -162,7 +166,7 @@ func (c *collector) Build() error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	if err := c.collect(ctx, ch); err != nil {
 		_ = level.Error(c.logger).Log("msg", "failed collecting os metrics", "err", err)
 		return err
@@ -188,7 +192,7 @@ type Win32_OperatingSystem struct {
 	Version                 string
 }
 
-func (c *collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *Collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	nwgi, err := netapi32.GetWorkstationInfo()
 	if err != nil {
 		return err

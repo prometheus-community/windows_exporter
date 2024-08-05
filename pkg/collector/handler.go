@@ -11,7 +11,6 @@ import (
 
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
-	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/collectors/version"
@@ -20,7 +19,7 @@ import (
 
 func (c *Collectors) BuildServeHTTP(disableExporterMetrics bool, timeoutMargin float64) http.HandlerFunc {
 	collectorFactory := func(timeout time.Duration, requestedCollectors []string) (error, *Prometheus) {
-		filteredCollectors := make(map[string]types.Collector)
+		filteredCollectors := make(map[string]Collector)
 		// scrape all enabled collectors if no collector is requested
 		if len(requestedCollectors) == 0 {
 			filteredCollectors = c.collectors

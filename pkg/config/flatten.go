@@ -58,7 +58,9 @@ func flattenSlice(data []interface{}) map[string]string {
 func convertMap(originalMap map[interface{}]interface{}) map[string]interface{} {
 	convertedMap := map[string]interface{}{}
 	for key, value := range originalMap {
-		convertedMap[key.(string)] = value
+		if keyString, ok := key.(string); ok {
+			convertedMap[keyString] = value
+		}
 	}
 	return convertedMap
 }
