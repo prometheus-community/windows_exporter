@@ -4,6 +4,11 @@
 
 package main
 
+// Its important that we do these first so that we can register with the Windows service control ASAP to avoid timeouts.
+//goland:noinspection GoUnsortedImport
+import "github.com/prometheus-community/windows_exporter/pkg/initiate"
+
+//goland:noinspection GoUnsortedImport
 import (
 	"context"
 	"encoding/json"
@@ -22,8 +27,6 @@ import (
 	"github.com/go-kit/log/level"
 	"github.com/prometheus-community/windows_exporter/pkg/collector"
 	"github.com/prometheus-community/windows_exporter/pkg/config"
-	// Its important that we do these first so that we can register with the Windows service control ASAP to avoid timeouts.
-	"github.com/prometheus-community/windows_exporter/pkg/initiate"
 	winlog "github.com/prometheus-community/windows_exporter/pkg/log"
 	"github.com/prometheus-community/windows_exporter/pkg/log/flag"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
