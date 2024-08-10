@@ -22,7 +22,7 @@ func ExpandEnabledChildCollectors(enabled string) []string {
 }
 
 func ExpandEnabledCollectors(enabled string) []string {
-	expanded := strings.Replace(enabled, types.DefaultCollectorsPlaceholder, types.DefaultCollectors, 1)
+	expanded := strings.ReplaceAll(enabled, types.DefaultCollectorsPlaceholder, types.DefaultCollectors)
 	separated := strings.Split(expanded, ",")
 	unique := map[string]bool{}
 	for _, s := range separated {
