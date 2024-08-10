@@ -54,9 +54,9 @@ type Collector struct {
 
 	directories string
 	// Only set for testing to get predictable output.
-	mtime *float64
+	mTime *float64
 
-	mtimeDesc *prometheus.Desc
+	mTimeDesc *prometheus.Desc
 }
 
 func New(logger log.Logger, config *Config) *Collector {
@@ -105,7 +105,7 @@ func (c *Collector) Build() error {
 
 	_ = level.Info(c.logger).Log("msg", "textfile Collector directories: "+c.directories)
 
-	c.mtimeDesc = prometheus.NewDesc(
+	c.mTimeDesc = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, "textfile", "mtime_seconds"),
 		"Unixtime mtime of textfiles successfully read.",
 		[]string{"file"},
@@ -254,10 +254,10 @@ func (c *Collector) exportMTimes(mtimes map[string]time.Time, ch chan<- promethe
 
 		for _, filename := range filenames {
 			mtime := float64(mtimes[filename].UnixNano() / 1e9)
-			if c.mtime != nil {
-				mtime = *c.mtime
+			if c.mTime != nil {
+				mtime = *c.mTime
 			}
-			ch <- prometheus.MustNewConstMetric(c.mtimeDesc, prometheus.GaugeValue, mtime, filename)
+			ch <- prometheus.MustNewConstMetric(c.mTimeDesc, prometheus.GaugeValue, mtime, filename)
 		}
 	}
 }

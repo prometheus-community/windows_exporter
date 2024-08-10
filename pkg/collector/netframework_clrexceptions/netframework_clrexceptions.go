@@ -21,10 +21,10 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	logger log.Logger
 
-	NumberOfExceptionsThrown *prometheus.Desc
-	NumberOfFilters          *prometheus.Desc
-	NumberOfFinally          *prometheus.Desc
-	ThrowToCatchDepth        *prometheus.Desc
+	numberOfExceptionsThrown *prometheus.Desc
+	numberOfFilters          *prometheus.Desc
+	numberOfFinally          *prometheus.Desc
+	throwToCatchDepth        *prometheus.Desc
 }
 
 func New(logger log.Logger, _ *Config) *Collector {
@@ -55,25 +55,25 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build() error {
-	c.NumberOfExceptionsThrown = prometheus.NewDesc(
+	c.numberOfExceptionsThrown = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "exceptions_thrown_total"),
 		"Displays the total number of exceptions thrown since the application started. This includes both .NET exceptions and unmanaged exceptions that are converted into .NET exceptions.",
 		[]string{"process"},
 		nil,
 	)
-	c.NumberOfFilters = prometheus.NewDesc(
+	c.numberOfFilters = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "exceptions_filters_total"),
 		"Displays the total number of .NET exception filters executed. An exception filter evaluates regardless of whether an exception is handled.",
 		[]string{"process"},
 		nil,
 	)
-	c.NumberOfFinally = prometheus.NewDesc(
+	c.numberOfFinally = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "exceptions_finallys_total"),
 		"Displays the total number of finally blocks executed. Only the finally blocks executed for an exception are counted; finally blocks on normal code paths are not counted by this counter.",
 		[]string{"process"},
 		nil,
 	)
-	c.ThrowToCatchDepth = prometheus.NewDesc(
+	c.throwToCatchDepth = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "throw_to_catch_depth_total"),
 		"Displays the total number of stack frames traversed, from the frame that threw the exception to the frame that handled the exception.",
 		[]string{"process"},
@@ -115,28 +115,28 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 		}
 
 		ch <- prometheus.MustNewConstMetric(
-			c.NumberOfExceptionsThrown,
+			c.numberOfExceptionsThrown,
 			prometheus.CounterValue,
 			float64(process.NumberofExcepsThrown),
 			process.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.NumberOfFilters,
+			c.numberOfFilters,
 			prometheus.CounterValue,
 			float64(process.NumberofFiltersPersec),
 			process.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.NumberOfFinally,
+			c.numberOfFinally,
 			prometheus.CounterValue,
 			float64(process.NumberofFinallysPersec),
 			process.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.ThrowToCatchDepth,
+			c.throwToCatchDepth,
 			prometheus.CounterValue,
 			float64(process.ThrowToCatchDepthPersec),
 			process.Name,

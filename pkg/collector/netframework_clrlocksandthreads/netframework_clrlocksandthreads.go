@@ -21,13 +21,13 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	logger log.Logger
 
-	CurrentQueueLength               *prometheus.Desc
-	NumberofcurrentlogicalThreads    *prometheus.Desc
-	NumberofcurrentphysicalThreads   *prometheus.Desc
-	Numberofcurrentrecognizedthreads *prometheus.Desc
-	Numberoftotalrecognizedthreads   *prometheus.Desc
-	QueueLengthPeak                  *prometheus.Desc
-	TotalNumberofContentions         *prometheus.Desc
+	currentQueueLength               *prometheus.Desc
+	numberOfCurrentLogicalThreads    *prometheus.Desc
+	numberOfCurrentPhysicalThreads   *prometheus.Desc
+	numberOfCurrentRecognizedThreads *prometheus.Desc
+	numberOfTotalRecognizedThreads   *prometheus.Desc
+	queueLengthPeak                  *prometheus.Desc
+	totalNumberOfContentions         *prometheus.Desc
 }
 
 func New(logger log.Logger, _ *Config) *Collector {
@@ -58,43 +58,43 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build() error {
-	c.CurrentQueueLength = prometheus.NewDesc(
+	c.currentQueueLength = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "current_queue_length"),
 		"Displays the total number of threads that are currently waiting to acquire a managed lock in the application.",
 		[]string{"process"},
 		nil,
 	)
-	c.NumberofcurrentlogicalThreads = prometheus.NewDesc(
+	c.numberOfCurrentLogicalThreads = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "current_logical_threads"),
 		"Displays the number of current managed thread objects in the application. This counter maintains the count of both running and stopped threads. ",
 		[]string{"process"},
 		nil,
 	)
-	c.NumberofcurrentphysicalThreads = prometheus.NewDesc(
+	c.numberOfCurrentPhysicalThreads = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "physical_threads_current"),
 		"Displays the number of native operating system threads created and owned by the common language runtime to act as underlying threads for managed thread objects. This counter's value does not include the threads used by the runtime in its internal operations; it is a subset of the threads in the operating system process.",
 		[]string{"process"},
 		nil,
 	)
-	c.Numberofcurrentrecognizedthreads = prometheus.NewDesc(
+	c.numberOfCurrentRecognizedThreads = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "recognized_threads_current"),
 		"Displays the number of threads that are currently recognized by the runtime. These threads are associated with a corresponding managed thread object. The runtime does not create these threads, but they have run inside the runtime at least once.",
 		[]string{"process"},
 		nil,
 	)
-	c.Numberoftotalrecognizedthreads = prometheus.NewDesc(
+	c.numberOfTotalRecognizedThreads = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "recognized_threads_total"),
 		"Displays the total number of threads that have been recognized by the runtime since the application started. These threads are associated with a corresponding managed thread object. The runtime does not create these threads, but they have run inside the runtime at least once.",
 		[]string{"process"},
 		nil,
 	)
-	c.QueueLengthPeak = prometheus.NewDesc(
+	c.queueLengthPeak = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "queue_length_total"),
 		"Displays the total number of threads that waited to acquire a managed lock since the application started.",
 		[]string{"process"},
 		nil,
 	)
-	c.TotalNumberofContentions = prometheus.NewDesc(
+	c.totalNumberOfContentions = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "contentions_total"),
 		"Displays the total number of times that threads in the runtime have attempted to acquire a managed lock unsuccessfully.",
 		[]string{"process"},
@@ -141,49 +141,49 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 		}
 
 		ch <- prometheus.MustNewConstMetric(
-			c.CurrentQueueLength,
+			c.currentQueueLength,
 			prometheus.GaugeValue,
 			float64(process.CurrentQueueLength),
 			process.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.NumberofcurrentlogicalThreads,
+			c.numberOfCurrentLogicalThreads,
 			prometheus.GaugeValue,
 			float64(process.NumberofcurrentlogicalThreads),
 			process.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.NumberofcurrentphysicalThreads,
+			c.numberOfCurrentPhysicalThreads,
 			prometheus.GaugeValue,
 			float64(process.NumberofcurrentphysicalThreads),
 			process.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.Numberofcurrentrecognizedthreads,
+			c.numberOfCurrentRecognizedThreads,
 			prometheus.GaugeValue,
 			float64(process.Numberofcurrentrecognizedthreads),
 			process.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.Numberoftotalrecognizedthreads,
+			c.numberOfTotalRecognizedThreads,
 			prometheus.CounterValue,
 			float64(process.Numberoftotalrecognizedthreads),
 			process.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.QueueLengthPeak,
+			c.queueLengthPeak,
 			prometheus.CounterValue,
 			float64(process.QueueLengthPeak),
 			process.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.TotalNumberofContentions,
+			c.totalNumberOfContentions,
 			prometheus.CounterValue,
 			float64(process.TotalNumberofContentions),
 			process.Name,

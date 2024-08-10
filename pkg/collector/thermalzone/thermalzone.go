@@ -23,9 +23,9 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	logger log.Logger
 
-	PercentPassiveLimit *prometheus.Desc
-	Temperature         *prometheus.Desc
-	ThrottleReasons     *prometheus.Desc
+	percentPassiveLimit *prometheus.Desc
+	temperature         *prometheus.Desc
+	throttleReasons     *prometheus.Desc
 }
 
 func New(logger log.Logger, _ *Config) *Collector {
@@ -56,7 +56,7 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build() error {
-	c.Temperature = prometheus.NewDesc(
+	c.temperature = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "temperature_celsius"),
 		"(Temperature)",
 		[]string{
@@ -64,7 +64,7 @@ func (c *Collector) Build() error {
 		},
 		nil,
 	)
-	c.PercentPassiveLimit = prometheus.NewDesc(
+	c.percentPassiveLimit = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "percent_passive_limit"),
 		"(PercentPassiveLimit)",
 		[]string{
@@ -72,7 +72,7 @@ func (c *Collector) Build() error {
 		},
 		nil,
 	)
-	c.ThrottleReasons = prometheus.NewDesc(
+	c.throttleReasons = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "throttle_reasons"),
 		"(ThrottleReasons)",
 		[]string{
@@ -118,21 +118,21 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	for _, info := range dst {
 		// Divide by 10 and subtract 273.15 to convert decikelvin to celsius
 		ch <- prometheus.MustNewConstMetric(
-			c.Temperature,
+			c.temperature,
 			prometheus.GaugeValue,
 			(float64(info.HighPrecisionTemperature)/10.0)-273.15,
 			info.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.PercentPassiveLimit,
+			c.percentPassiveLimit,
 			prometheus.GaugeValue,
 			float64(info.PercentPassiveLimit),
 			info.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.ThrottleReasons,
+			c.throttleReasons,
 			prometheus.GaugeValue,
 			float64(info.ThrottleReasons),
 			info.Name,

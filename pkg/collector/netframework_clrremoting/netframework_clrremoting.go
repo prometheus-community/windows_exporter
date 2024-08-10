@@ -21,12 +21,12 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	logger log.Logger
 
-	Channels                  *prometheus.Desc
-	ContextBoundClassesLoaded *prometheus.Desc
-	ContextBoundObjects       *prometheus.Desc
-	ContextProxies            *prometheus.Desc
-	Contexts                  *prometheus.Desc
-	TotalRemoteCalls          *prometheus.Desc
+	channels                  *prometheus.Desc
+	contextBoundClassesLoaded *prometheus.Desc
+	contextBoundObjects       *prometheus.Desc
+	contextProxies            *prometheus.Desc
+	contexts                  *prometheus.Desc
+	totalRemoteCalls          *prometheus.Desc
 }
 
 func New(logger log.Logger, _ *Config) *Collector {
@@ -57,37 +57,37 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build() error {
-	c.Channels = prometheus.NewDesc(
+	c.channels = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "channels_total"),
 		"Displays the total number of remoting channels registered across all application domains since application started.",
 		[]string{"process"},
 		nil,
 	)
-	c.ContextBoundClassesLoaded = prometheus.NewDesc(
+	c.contextBoundClassesLoaded = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "context_bound_classes_loaded"),
 		"Displays the current number of context-bound classes that are loaded.",
 		[]string{"process"},
 		nil,
 	)
-	c.ContextBoundObjects = prometheus.NewDesc(
+	c.contextBoundObjects = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "context_bound_objects_total"),
 		"Displays the total number of context-bound objects allocated.",
 		[]string{"process"},
 		nil,
 	)
-	c.ContextProxies = prometheus.NewDesc(
+	c.contextProxies = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "context_proxies_total"),
 		"Displays the total number of remoting proxy objects in this process since it started.",
 		[]string{"process"},
 		nil,
 	)
-	c.Contexts = prometheus.NewDesc(
+	c.contexts = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "contexts"),
 		"Displays the current number of remoting contexts in the application.",
 		[]string{"process"},
 		nil,
 	)
-	c.TotalRemoteCalls = prometheus.NewDesc(
+	c.totalRemoteCalls = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "remote_calls_total"),
 		"Displays the total number of remote procedure calls invoked since the application started.",
 		[]string{"process"},
@@ -131,42 +131,42 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 		}
 
 		ch <- prometheus.MustNewConstMetric(
-			c.Channels,
+			c.channels,
 			prometheus.CounterValue,
 			float64(process.Channels),
 			process.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.ContextBoundClassesLoaded,
+			c.contextBoundClassesLoaded,
 			prometheus.GaugeValue,
 			float64(process.ContextBoundClassesLoaded),
 			process.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.ContextBoundObjects,
+			c.contextBoundObjects,
 			prometheus.CounterValue,
 			float64(process.ContextBoundObjectsAllocPersec),
 			process.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.ContextProxies,
+			c.contextProxies,
 			prometheus.CounterValue,
 			float64(process.ContextProxies),
 			process.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.Contexts,
+			c.contexts,
 			prometheus.GaugeValue,
 			float64(process.Contexts),
 			process.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.TotalRemoteCalls,
+			c.totalRemoteCalls,
 			prometheus.CounterValue,
 			float64(process.TotalRemoteCalls),
 			process.Name,

@@ -34,86 +34,86 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	logger log.Logger
 
-	AudioReceivedBytes      *prometheus.Desc
-	AudioReceivedPackets    *prometheus.Desc
-	AudioTransmittedBytes   *prometheus.Desc
-	AudioTransmittedPackets *prometheus.Desc
+	audioReceivedBytes      *prometheus.Desc
+	audioReceivedPackets    *prometheus.Desc
+	audioTransmittedBytes   *prometheus.Desc
+	audioTransmittedPackets *prometheus.Desc
 
-	CDRReceivedBytes      *prometheus.Desc
-	CDRReceivedPackets    *prometheus.Desc
-	CDRTransmittedBytes   *prometheus.Desc
-	CDRTransmittedPackets *prometheus.Desc
+	cdrReceivedBytes      *prometheus.Desc
+	cdrReceivedPackets    *prometheus.Desc
+	cdrTransmittedBytes   *prometheus.Desc
+	cdrTransmittedPackets *prometheus.Desc
 
-	ClipboardReceivedBytes      *prometheus.Desc
-	ClipboardReceivedPackets    *prometheus.Desc
-	ClipboardTransmittedBytes   *prometheus.Desc
-	ClipboardTransmittedPackets *prometheus.Desc
+	clipboardReceivedBytes      *prometheus.Desc
+	clipboardReceivedPackets    *prometheus.Desc
+	clipboardTransmittedBytes   *prometheus.Desc
+	clipboardTransmittedPackets *prometheus.Desc
 
-	HTML5MMRReceivedBytes      *prometheus.Desc
-	HTML5MMRReceivedPackets    *prometheus.Desc
-	HTML5MMRTransmittedBytes   *prometheus.Desc
-	HTML5MMRTransmittedPackets *prometheus.Desc
+	html5MMRReceivedBytes      *prometheus.Desc
+	html5MMRReceivedPackets    *prometheus.Desc
+	html5MMRTransmittedBytes   *prometheus.Desc
+	html5MMRTransmittedPackets *prometheus.Desc
 
-	ImagingDirtyFramesPerSecond *prometheus.Desc
-	ImagingFBCRate              *prometheus.Desc
-	ImagingFramesPerSecond      *prometheus.Desc
-	ImagingPollRate             *prometheus.Desc
-	ImagingReceivedBytes        *prometheus.Desc
-	ImagingReceivedPackets      *prometheus.Desc
-	ImagingTotalDirtyFrames     *prometheus.Desc
-	ImagingTotalFBC             *prometheus.Desc
-	ImagingTotalFrames          *prometheus.Desc
-	ImagingTotalPoll            *prometheus.Desc
-	ImagingTransmittedBytes     *prometheus.Desc
-	ImagingTransmittedPackets   *prometheus.Desc
+	imagingDirtyFramesPerSecond *prometheus.Desc
+	imagingFBCRate              *prometheus.Desc
+	imagingFramesPerSecond      *prometheus.Desc
+	imagingPollRate             *prometheus.Desc
+	imagingReceivedBytes        *prometheus.Desc
+	imagingReceivedPackets      *prometheus.Desc
+	imagingTotalDirtyFrames     *prometheus.Desc
+	imagingTotalFBC             *prometheus.Desc
+	imagingTotalFrames          *prometheus.Desc
+	imagingTotalPoll            *prometheus.Desc
+	imagingTransmittedBytes     *prometheus.Desc
+	imagingTransmittedPackets   *prometheus.Desc
 
-	RTAVReceivedBytes      *prometheus.Desc
-	RTAVReceivedPackets    *prometheus.Desc
-	RTAVTransmittedBytes   *prometheus.Desc
-	RTAVTransmittedPackets *prometheus.Desc
+	rtAVReceivedBytes      *prometheus.Desc
+	rtAVReceivedPackets    *prometheus.Desc
+	rtAVTransmittedBytes   *prometheus.Desc
+	rtAVTransmittedPackets *prometheus.Desc
 
-	SerialPortandScannerReceivedBytes      *prometheus.Desc
-	SerialPortandScannerReceivedPackets    *prometheus.Desc
-	SerialPortandScannerTransmittedBytes   *prometheus.Desc
-	SerialPortandScannerTransmittedPackets *prometheus.Desc
+	serialPortAndScannerReceivedBytes      *prometheus.Desc
+	serialPortAndScannerReceivedPackets    *prometheus.Desc
+	serialPortAndScannerTransmittedBytes   *prometheus.Desc
+	serialPortAndScannerTransmittedPackets *prometheus.Desc
 
-	SessionAutomaticReconnectCount              *prometheus.Desc
-	SessionCumulativeReceivedBytesOverTCP       *prometheus.Desc
-	SessionCumulativeReceivedBytesOverUDP       *prometheus.Desc
-	SessionCumulativeTransmittedBytesOverTCP    *prometheus.Desc
-	SessionCumulativeTransmittedBytesOverUDP    *prometheus.Desc
-	SessionEstimatedBandwidthUplink             *prometheus.Desc
-	SessionInstantaneousReceivedBytesOverTCP    *prometheus.Desc
-	SessionInstantaneousReceivedBytesOverUDP    *prometheus.Desc
-	SessionInstantaneousTransmittedBytesOverTCP *prometheus.Desc
-	SessionInstantaneousTransmittedBytesOverUDP *prometheus.Desc
-	SessionJitterUplink                         *prometheus.Desc
-	SessionPacketLossUplink                     *prometheus.Desc
-	SessionReceivedBytes                        *prometheus.Desc
-	SessionReceivedPackets                      *prometheus.Desc
-	SessionRTT                                  *prometheus.Desc
-	SessionTransmittedBytes                     *prometheus.Desc
-	SessionTransmittedPackets                   *prometheus.Desc
+	sessionAutomaticReconnectCount              *prometheus.Desc
+	sessionCumulativeReceivedBytesOverTCP       *prometheus.Desc
+	sessionCumulativeReceivedBytesOverUDP       *prometheus.Desc
+	sessionCumulativeTransmittedBytesOverTCP    *prometheus.Desc
+	sessionCumulativeTransmittedBytesOverUDP    *prometheus.Desc
+	sessionEstimatedBandwidthUplink             *prometheus.Desc
+	sessionInstantaneousReceivedBytesOverTCP    *prometheus.Desc
+	sessionInstantaneousReceivedBytesOverUDP    *prometheus.Desc
+	sessionInstantaneousTransmittedBytesOverTCP *prometheus.Desc
+	sessionInstantaneousTransmittedBytesOverUDP *prometheus.Desc
+	sessionJitterUplink                         *prometheus.Desc
+	sessionPacketLossUplink                     *prometheus.Desc
+	sessionReceivedBytes                        *prometheus.Desc
+	sessionReceivedPackets                      *prometheus.Desc
+	sessionRTT                                  *prometheus.Desc
+	sessionTransmittedBytes                     *prometheus.Desc
+	sessionTransmittedPackets                   *prometheus.Desc
 
-	SkypeforBusinessControlReceivedBytes      *prometheus.Desc
-	SkypeforBusinessControlReceivedPackets    *prometheus.Desc
-	SkypeforBusinessControlTransmittedBytes   *prometheus.Desc
-	SkypeforBusinessControlTransmittedPackets *prometheus.Desc
+	skypeForBusinessControlReceivedBytes      *prometheus.Desc
+	skypeForBusinessControlReceivedPackets    *prometheus.Desc
+	skypeForBusinessControlTransmittedBytes   *prometheus.Desc
+	skypeForBusinessControlTransmittedPackets *prometheus.Desc
 
-	ThinPrintReceivedBytes      *prometheus.Desc
-	ThinPrintReceivedPackets    *prometheus.Desc
-	ThinPrintTransmittedBytes   *prometheus.Desc
-	ThinPrintTransmittedPackets *prometheus.Desc
+	thinPrintReceivedBytes      *prometheus.Desc
+	thinPrintReceivedPackets    *prometheus.Desc
+	thinPrintTransmittedBytes   *prometheus.Desc
+	thinPrintTransmittedPackets *prometheus.Desc
 
-	USBReceivedBytes      *prometheus.Desc
-	USBReceivedPackets    *prometheus.Desc
-	USBTransmittedBytes   *prometheus.Desc
-	USBTransmittedPackets *prometheus.Desc
+	usbReceivedBytes      *prometheus.Desc
+	usbReceivedPackets    *prometheus.Desc
+	usbTransmittedBytes   *prometheus.Desc
+	usbTransmittedPackets *prometheus.Desc
 
-	WindowsMediaMMRReceivedBytes      *prometheus.Desc
-	WindowsMediaMMRReceivedPackets    *prometheus.Desc
-	WindowsMediaMMRTransmittedBytes   *prometheus.Desc
-	WindowsMediaMMRTransmittedPackets *prometheus.Desc
+	windowsMediaMMRReceivedBytes      *prometheus.Desc
+	windowsMediaMMRReceivedPackets    *prometheus.Desc
+	windowsMediaMMRTransmittedBytes   *prometheus.Desc
+	windowsMediaMMRTransmittedPackets *prometheus.Desc
 }
 
 func New(logger log.Logger, _ *Config) *Collector {
@@ -144,426 +144,428 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build() error {
-	c.AudioReceivedBytes = prometheus.NewDesc(
+	// _ = level.Warn(c.logger).Log("msg", "vmware_blast collector is deprecated and will be removed in the future.")
+
+	c.audioReceivedBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "audio_received_bytes_total"),
 		"(AudioReceivedBytes)",
 		nil,
 		nil,
 	)
-	c.AudioReceivedPackets = prometheus.NewDesc(
+	c.audioReceivedPackets = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "audio_received_packets_total"),
 		"(AudioReceivedPackets)",
 		nil,
 		nil,
 	)
-	c.AudioTransmittedBytes = prometheus.NewDesc(
+	c.audioTransmittedBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "audio_transmitted_bytes_total"),
 		"(AudioTransmittedBytes)",
 		nil,
 		nil,
 	)
-	c.AudioTransmittedPackets = prometheus.NewDesc(
+	c.audioTransmittedPackets = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "audio_transmitted_packets_total"),
 		"(AudioTransmittedPackets)",
 		nil,
 		nil,
 	)
 
-	c.CDRReceivedBytes = prometheus.NewDesc(
+	c.cdrReceivedBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "cdr_received_bytes_total"),
 		"(CDRReceivedBytes)",
 		nil,
 		nil,
 	)
-	c.CDRReceivedPackets = prometheus.NewDesc(
+	c.cdrReceivedPackets = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "cdr_received_packets_total"),
 		"(CDRReceivedPackets)",
 		nil,
 		nil,
 	)
-	c.CDRTransmittedBytes = prometheus.NewDesc(
+	c.cdrTransmittedBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "cdr_transmitted_bytes_total"),
 		"(CDRTransmittedBytes)",
 		nil,
 		nil,
 	)
-	c.CDRTransmittedPackets = prometheus.NewDesc(
+	c.cdrTransmittedPackets = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "cdr_transmitted_packets_total"),
 		"(CDRTransmittedPackets)",
 		nil,
 		nil,
 	)
 
-	c.ClipboardReceivedBytes = prometheus.NewDesc(
+	c.clipboardReceivedBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "clipboard_received_bytes_total"),
 		"(ClipboardReceivedBytes)",
 		nil,
 		nil,
 	)
-	c.ClipboardReceivedPackets = prometheus.NewDesc(
+	c.clipboardReceivedPackets = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "clipboard_received_packets_total"),
 		"(ClipboardReceivedPackets)",
 		nil,
 		nil,
 	)
-	c.ClipboardTransmittedBytes = prometheus.NewDesc(
+	c.clipboardTransmittedBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "clipboard_transmitted_bytes_total"),
 		"(ClipboardTransmittedBytes)",
 		nil,
 		nil,
 	)
-	c.ClipboardTransmittedPackets = prometheus.NewDesc(
+	c.clipboardTransmittedPackets = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "clipboard_transmitted_packets_total"),
 		"(ClipboardTransmittedPackets)",
 		nil,
 		nil,
 	)
 
-	c.HTML5MMRReceivedBytes = prometheus.NewDesc(
+	c.html5MMRReceivedBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "html5_mmr_received_bytes_total"),
 		"(HTML5MMRReceivedBytes)",
 		nil,
 		nil,
 	)
-	c.HTML5MMRReceivedPackets = prometheus.NewDesc(
+	c.html5MMRReceivedPackets = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "html5_mmr_received_packets_total"),
 		"(HTML5MMRReceivedPackets)",
 		nil,
 		nil,
 	)
-	c.HTML5MMRTransmittedBytes = prometheus.NewDesc(
+	c.html5MMRTransmittedBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "html5_mmr_transmitted_bytes_total"),
 		"(HTML5MMRTransmittedBytes)",
 		nil,
 		nil,
 	)
-	c.HTML5MMRTransmittedPackets = prometheus.NewDesc(
+	c.html5MMRTransmittedPackets = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "html5_mmr_transmitted_packets_total"),
 		"(HTML5MMRTransmittedPackets)",
 		nil,
 		nil,
 	)
 
-	c.ImagingDirtyFramesPerSecond = prometheus.NewDesc(
+	c.imagingDirtyFramesPerSecond = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "imaging_dirty_frames_per_second"),
 		"(ImagingDirtyFramesPerSecond)",
 		nil,
 		nil,
 	)
-	c.ImagingFBCRate = prometheus.NewDesc(
+	c.imagingFBCRate = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "imaging_fbc_rate"),
 		"(ImagingFBCRate)",
 		nil,
 		nil,
 	)
-	c.ImagingFramesPerSecond = prometheus.NewDesc(
+	c.imagingFramesPerSecond = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "imaging_frames_per_second"),
 		"(ImagingFramesPerSecond)",
 		nil,
 		nil,
 	)
-	c.ImagingPollRate = prometheus.NewDesc(
+	c.imagingPollRate = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "imaging_poll_rate"),
 		"(ImagingPollRate)",
 		nil,
 		nil,
 	)
-	c.ImagingReceivedBytes = prometheus.NewDesc(
+	c.imagingReceivedBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "imaging_received_bytes_total"),
 		"(ImagingReceivedBytes)",
 		nil,
 		nil,
 	)
-	c.ImagingReceivedPackets = prometheus.NewDesc(
+	c.imagingReceivedPackets = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "imaging_received_packets_total"),
 		"(ImagingReceivedPackets)",
 		nil,
 		nil,
 	)
-	c.ImagingTotalDirtyFrames = prometheus.NewDesc(
+	c.imagingTotalDirtyFrames = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "imaging_total_dirty_frames_total"),
 		"(ImagingTotalDirtyFrames)",
 		nil,
 		nil,
 	)
-	c.ImagingTotalFBC = prometheus.NewDesc(
+	c.imagingTotalFBC = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "imaging_fbc_total"),
 		"(ImagingTotalFBC)",
 		nil,
 		nil,
 	)
-	c.ImagingTotalFrames = prometheus.NewDesc(
+	c.imagingTotalFrames = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "imaging_frames_total"),
 		"(ImagingTotalFrames)",
 		nil,
 		nil,
 	)
-	c.ImagingTotalPoll = prometheus.NewDesc(
+	c.imagingTotalPoll = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "imaging_poll_total"),
 		"(ImagingTotalPoll)",
 		nil,
 		nil,
 	)
-	c.ImagingTransmittedBytes = prometheus.NewDesc(
+	c.imagingTransmittedBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "imaging_transmitted_bytes_total"),
 		"(ImagingTransmittedBytes)",
 		nil,
 		nil,
 	)
-	c.ImagingTransmittedPackets = prometheus.NewDesc(
+	c.imagingTransmittedPackets = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "imaging_transmitted_packets_total"),
 		"(ImagingTransmittedPackets)",
 		nil,
 		nil,
 	)
 
-	c.RTAVReceivedBytes = prometheus.NewDesc(
+	c.rtAVReceivedBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "rtav_received_bytes_total"),
 		"(RTAVReceivedBytes)",
 		nil,
 		nil,
 	)
-	c.RTAVReceivedPackets = prometheus.NewDesc(
+	c.rtAVReceivedPackets = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "rtav_received_packets_total"),
 		"(RTAVReceivedPackets)",
 		nil,
 		nil,
 	)
-	c.RTAVTransmittedBytes = prometheus.NewDesc(
+	c.rtAVTransmittedBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "rtav_transmitted_bytes_total"),
 		"(RTAVTransmittedBytes)",
 		nil,
 		nil,
 	)
-	c.RTAVTransmittedPackets = prometheus.NewDesc(
+	c.rtAVTransmittedPackets = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "rtav_transmitted_packets_total"),
 		"(RTAVTransmittedPackets)",
 		nil,
 		nil,
 	)
 
-	c.SerialPortandScannerReceivedBytes = prometheus.NewDesc(
+	c.serialPortAndScannerReceivedBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "serial_port_and_scanner_received_bytes_total"),
 		"(SerialPortandScannerReceivedBytes)",
 		nil,
 		nil,
 	)
-	c.SerialPortandScannerReceivedPackets = prometheus.NewDesc(
+	c.serialPortAndScannerReceivedPackets = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "serial_port_and_scanner_received_packets_total"),
 		"(SerialPortandScannerReceivedPackets)",
 		nil,
 		nil,
 	)
-	c.SerialPortandScannerTransmittedBytes = prometheus.NewDesc(
+	c.serialPortAndScannerTransmittedBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "serial_port_and_scanner_transmitted_bytes_total"),
 		"(SerialPortandScannerTransmittedBytes)",
 		nil,
 		nil,
 	)
-	c.SerialPortandScannerTransmittedPackets = prometheus.NewDesc(
+	c.serialPortAndScannerTransmittedPackets = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "serial_port_and_scanner_transmitted_packets_total"),
 		"(SerialPortandScannerTransmittedPackets)",
 		nil,
 		nil,
 	)
 
-	c.SessionAutomaticReconnectCount = prometheus.NewDesc(
+	c.sessionAutomaticReconnectCount = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "session_automatic_reconnect_count_total"),
 		"(SessionAutomaticReconnectCount)",
 		nil,
 		nil,
 	)
-	c.SessionCumulativeReceivedBytesOverTCP = prometheus.NewDesc(
+	c.sessionCumulativeReceivedBytesOverTCP = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "session_cumlative_received_bytes_over_tcp_total"),
 		"(SessionCumulativeReceivedBytesOverTCP)",
 		nil,
 		nil,
 	)
-	c.SessionCumulativeReceivedBytesOverUDP = prometheus.NewDesc(
+	c.sessionCumulativeReceivedBytesOverUDP = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "session_cumlative_received_bytes_over_udp_total"),
 		"(SessionCumulativeReceivedBytesOverUDP)",
 		nil,
 		nil,
 	)
-	c.SessionCumulativeTransmittedBytesOverTCP = prometheus.NewDesc(
+	c.sessionCumulativeTransmittedBytesOverTCP = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "session_cumlative_transmitted_bytes_over_tcp_total"),
 		"(SessionCumulativeTransmittedBytesOverTCP)",
 		nil,
 		nil,
 	)
-	c.SessionCumulativeTransmittedBytesOverUDP = prometheus.NewDesc(
+	c.sessionCumulativeTransmittedBytesOverUDP = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "session_cumlative_transmitted_bytes_over_udp_total"),
 		"(SessionCumulativeTransmittedBytesOverUDP)",
 		nil,
 		nil,
 	)
-	c.SessionEstimatedBandwidthUplink = prometheus.NewDesc(
+	c.sessionEstimatedBandwidthUplink = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "session_estimated_bandwidth_uplink"),
 		"(SessionEstimatedBandwidthUplink)",
 		nil,
 		nil,
 	)
-	c.SessionInstantaneousReceivedBytesOverTCP = prometheus.NewDesc(
+	c.sessionInstantaneousReceivedBytesOverTCP = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "session_instantaneous_received_bytes_over_tcp_total"),
 		"(SessionInstantaneousReceivedBytesOverTCP)",
 		nil,
 		nil,
 	)
-	c.SessionInstantaneousReceivedBytesOverUDP = prometheus.NewDesc(
+	c.sessionInstantaneousReceivedBytesOverUDP = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "session_instantaneous_received_bytes_over_udp_total"),
 		"(SessionInstantaneousReceivedBytesOverUDP)",
 		nil,
 		nil,
 	)
-	c.SessionInstantaneousTransmittedBytesOverTCP = prometheus.NewDesc(
+	c.sessionInstantaneousTransmittedBytesOverTCP = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "session_instantaneous_transmitted_bytes_over_tcp_total"),
 		"(SessionInstantaneousTransmittedBytesOverTCP)",
 		nil,
 		nil,
 	)
-	c.SessionInstantaneousTransmittedBytesOverUDP = prometheus.NewDesc(
+	c.sessionInstantaneousTransmittedBytesOverUDP = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "session_instantaneous_transmitted_bytes_over_udp_total"),
 		"(SessionInstantaneousTransmittedBytesOverUDP)",
 		nil,
 		nil,
 	)
-	c.SessionJitterUplink = prometheus.NewDesc(
+	c.sessionJitterUplink = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "session_jitter_uplink"),
 		"(SessionJitterUplink)",
 		nil,
 		nil,
 	)
-	c.SessionPacketLossUplink = prometheus.NewDesc(
+	c.sessionPacketLossUplink = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "session_packet_loss_uplink"),
 		"(SessionPacketLossUplink)",
 		nil,
 		nil,
 	)
-	c.SessionReceivedBytes = prometheus.NewDesc(
+	c.sessionReceivedBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "session_received_bytes_total"),
 		"(SessionReceivedBytes)",
 		nil,
 		nil,
 	)
-	c.SessionReceivedPackets = prometheus.NewDesc(
+	c.sessionReceivedPackets = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "session_received_packets_total"),
 		"(SessionReceivedPackets)",
 		nil,
 		nil,
 	)
-	c.SessionRTT = prometheus.NewDesc(
+	c.sessionRTT = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "session_rtt"),
 		"(SessionRTT)",
 		nil,
 		nil,
 	)
-	c.SessionTransmittedBytes = prometheus.NewDesc(
+	c.sessionTransmittedBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "session_transmitted_bytes_total"),
 		"(SessionTransmittedBytes)",
 		nil,
 		nil,
 	)
-	c.SessionTransmittedPackets = prometheus.NewDesc(
+	c.sessionTransmittedPackets = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "session_transmitted_packets_total"),
 		"(SessionTransmittedPackets)",
 		nil,
 		nil,
 	)
 
-	c.SkypeforBusinessControlReceivedBytes = prometheus.NewDesc(
+	c.skypeForBusinessControlReceivedBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "skype_for_business_control_received_bytes_total"),
 		"(SkypeforBusinessControlReceivedBytes)",
 		nil,
 		nil,
 	)
-	c.SkypeforBusinessControlReceivedPackets = prometheus.NewDesc(
+	c.skypeForBusinessControlReceivedPackets = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "skype_for_business_control_received_packets_total"),
 		"(SkypeforBusinessControlReceivedPackets)",
 		nil,
 		nil,
 	)
-	c.SkypeforBusinessControlTransmittedBytes = prometheus.NewDesc(
+	c.skypeForBusinessControlTransmittedBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "skype_for_business_control_transmitted_bytes_total"),
 		"(SkypeforBusinessControlTransmittedBytes)",
 		nil,
 		nil,
 	)
-	c.SkypeforBusinessControlTransmittedPackets = prometheus.NewDesc(
+	c.skypeForBusinessControlTransmittedPackets = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "skype_for_business_control_transmitted_packets_total"),
 		"(SkypeforBusinessControlTransmittedPackets)",
 		nil,
 		nil,
 	)
 
-	c.ThinPrintReceivedBytes = prometheus.NewDesc(
+	c.thinPrintReceivedBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "thinprint_received_bytes_total"),
 		"(ThinPrintReceivedBytes)",
 		nil,
 		nil,
 	)
-	c.ThinPrintReceivedPackets = prometheus.NewDesc(
+	c.thinPrintReceivedPackets = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "thinprint_received_packets_total"),
 		"(ThinPrintReceivedPackets)",
 		nil,
 		nil,
 	)
-	c.ThinPrintTransmittedBytes = prometheus.NewDesc(
+	c.thinPrintTransmittedBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "thinprint_transmitted_bytes_total"),
 		"(ThinPrintTransmittedBytes)",
 		nil,
 		nil,
 	)
-	c.ThinPrintTransmittedPackets = prometheus.NewDesc(
+	c.thinPrintTransmittedPackets = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "thinprint_transmitted_packets_total"),
 		"(ThinPrintTransmittedPackets)",
 		nil,
 		nil,
 	)
 
-	c.USBReceivedBytes = prometheus.NewDesc(
+	c.usbReceivedBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "usb_received_bytes_total"),
 		"(USBReceivedBytes)",
 		nil,
 		nil,
 	)
-	c.USBReceivedPackets = prometheus.NewDesc(
+	c.usbReceivedPackets = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "usb_received_packets_total"),
 		"(USBReceivedPackets)",
 		nil,
 		nil,
 	)
-	c.USBTransmittedBytes = prometheus.NewDesc(
+	c.usbTransmittedBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "usb_transmitted_bytes_total"),
 		"(USBTransmittedBytes)",
 		nil,
 		nil,
 	)
-	c.USBTransmittedPackets = prometheus.NewDesc(
+	c.usbTransmittedPackets = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "usb_transmitted_packets_total"),
 		"(USBTransmittedPackets)",
 		nil,
 		nil,
 	)
 
-	c.WindowsMediaMMRReceivedBytes = prometheus.NewDesc(
+	c.windowsMediaMMRReceivedBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "windows_media_mmr_received_bytes_total"),
 		"(WindowsMediaMMRReceivedBytes)",
 		nil,
 		nil,
 	)
-	c.WindowsMediaMMRReceivedPackets = prometheus.NewDesc(
+	c.windowsMediaMMRReceivedPackets = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "windows_media_mmr_received_packets_total"),
 		"(WindowsMediaMMRReceivedPackets)",
 		nil,
 		nil,
 	)
-	c.WindowsMediaMMRTransmittedBytes = prometheus.NewDesc(
+	c.windowsMediaMMRTransmittedBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "windows_media_mmr_transmitted_bytes_total"),
 		"(WindowsMediaMMRTransmittedBytes)",
 		nil,
 		nil,
 	)
-	c.WindowsMediaMMRTransmittedPackets = prometheus.NewDesc(
+	c.windowsMediaMMRTransmittedPackets = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "windows_media_mmr_transmitted_packets_total"),
 		"(WindowsMediaMMRTransmittedPackets)",
 		nil,
@@ -744,25 +746,25 @@ func (c *Collector) collectAudio(ch chan<- prometheus.Metric) error {
 	}
 
 	ch <- prometheus.MustNewConstMetric(
-		c.AudioReceivedBytes,
+		c.audioReceivedBytes,
 		prometheus.CounterValue,
 		float64(dst[0].ReceivedBytes),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.AudioReceivedPackets,
+		c.audioReceivedPackets,
 		prometheus.CounterValue,
 		float64(dst[0].ReceivedPackets),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.AudioTransmittedBytes,
+		c.audioTransmittedBytes,
 		prometheus.CounterValue,
 		float64(dst[0].TransmittedBytes),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.AudioTransmittedPackets,
+		c.audioTransmittedPackets,
 		prometheus.CounterValue,
 		float64(dst[0].TransmittedPackets),
 	)
@@ -783,25 +785,25 @@ func (c *Collector) collectCdr(ch chan<- prometheus.Metric) error {
 	}
 
 	ch <- prometheus.MustNewConstMetric(
-		c.CDRReceivedBytes,
+		c.cdrReceivedBytes,
 		prometheus.CounterValue,
 		float64(dst[0].ReceivedBytes),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.CDRReceivedPackets,
+		c.cdrReceivedPackets,
 		prometheus.CounterValue,
 		float64(dst[0].ReceivedPackets),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.CDRTransmittedBytes,
+		c.cdrTransmittedBytes,
 		prometheus.CounterValue,
 		float64(dst[0].TransmittedBytes),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.CDRTransmittedPackets,
+		c.cdrTransmittedPackets,
 		prometheus.CounterValue,
 		float64(dst[0].TransmittedPackets),
 	)
@@ -822,25 +824,25 @@ func (c *Collector) collectClipboard(ch chan<- prometheus.Metric) error {
 	}
 
 	ch <- prometheus.MustNewConstMetric(
-		c.ClipboardReceivedBytes,
+		c.clipboardReceivedBytes,
 		prometheus.CounterValue,
 		float64(dst[0].ReceivedBytes),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.ClipboardReceivedPackets,
+		c.clipboardReceivedPackets,
 		prometheus.CounterValue,
 		float64(dst[0].ReceivedPackets),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.ClipboardTransmittedBytes,
+		c.clipboardTransmittedBytes,
 		prometheus.CounterValue,
 		float64(dst[0].TransmittedBytes),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.ClipboardTransmittedPackets,
+		c.clipboardTransmittedPackets,
 		prometheus.CounterValue,
 		float64(dst[0].TransmittedPackets),
 	)
@@ -861,25 +863,25 @@ func (c *Collector) collectHtml5Mmr(ch chan<- prometheus.Metric) error {
 	}
 
 	ch <- prometheus.MustNewConstMetric(
-		c.HTML5MMRReceivedBytes,
+		c.html5MMRReceivedBytes,
 		prometheus.CounterValue,
 		float64(dst[0].ReceivedBytes),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.HTML5MMRReceivedPackets,
+		c.html5MMRReceivedPackets,
 		prometheus.CounterValue,
 		float64(dst[0].ReceivedPackets),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.HTML5MMRTransmittedBytes,
+		c.html5MMRTransmittedBytes,
 		prometheus.CounterValue,
 		float64(dst[0].TransmittedBytes),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.HTML5MMRTransmittedPackets,
+		c.html5MMRTransmittedPackets,
 		prometheus.CounterValue,
 		float64(dst[0].TransmittedPackets),
 	)
@@ -900,73 +902,73 @@ func (c *Collector) collectImaging(ch chan<- prometheus.Metric) error {
 	}
 
 	ch <- prometheus.MustNewConstMetric(
-		c.ImagingDirtyFramesPerSecond,
+		c.imagingDirtyFramesPerSecond,
 		prometheus.GaugeValue,
 		float64(dst[0].Dirtyframespersecond),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.ImagingFBCRate,
+		c.imagingFBCRate,
 		prometheus.GaugeValue,
 		float64(dst[0].FBCRate),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.ImagingFramesPerSecond,
+		c.imagingFramesPerSecond,
 		prometheus.GaugeValue,
 		float64(dst[0].Framespersecond),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.ImagingPollRate,
+		c.imagingPollRate,
 		prometheus.GaugeValue,
 		float64(dst[0].PollRate),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.ImagingReceivedBytes,
+		c.imagingReceivedBytes,
 		prometheus.CounterValue,
 		float64(dst[0].ReceivedBytes),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.ImagingReceivedPackets,
+		c.imagingReceivedPackets,
 		prometheus.CounterValue,
 		float64(dst[0].ReceivedPackets),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.ImagingTotalDirtyFrames,
+		c.imagingTotalDirtyFrames,
 		prometheus.CounterValue,
 		float64(dst[0].Totaldirtyframes),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.ImagingTotalFBC,
+		c.imagingTotalFBC,
 		prometheus.CounterValue,
 		float64(dst[0].TotalFBC),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.ImagingTotalFrames,
+		c.imagingTotalFrames,
 		prometheus.CounterValue,
 		float64(dst[0].Totalframes),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.ImagingTotalPoll,
+		c.imagingTotalPoll,
 		prometheus.CounterValue,
 		float64(dst[0].Totalpoll),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.ImagingTransmittedBytes,
+		c.imagingTransmittedBytes,
 		prometheus.CounterValue,
 		float64(dst[0].TransmittedBytes),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.ImagingTransmittedPackets,
+		c.imagingTransmittedPackets,
 		prometheus.CounterValue,
 		float64(dst[0].TransmittedPackets),
 	)
@@ -987,25 +989,25 @@ func (c *Collector) collectRtav(ch chan<- prometheus.Metric) error {
 	}
 
 	ch <- prometheus.MustNewConstMetric(
-		c.RTAVReceivedBytes,
+		c.rtAVReceivedBytes,
 		prometheus.CounterValue,
 		float64(dst[0].ReceivedBytes),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.RTAVReceivedPackets,
+		c.rtAVReceivedPackets,
 		prometheus.CounterValue,
 		float64(dst[0].ReceivedPackets),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.RTAVTransmittedBytes,
+		c.rtAVTransmittedBytes,
 		prometheus.CounterValue,
 		float64(dst[0].TransmittedBytes),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.RTAVTransmittedPackets,
+		c.rtAVTransmittedPackets,
 		prometheus.CounterValue,
 		float64(dst[0].TransmittedPackets),
 	)
@@ -1026,25 +1028,25 @@ func (c *Collector) collectSerialPortandScanner(ch chan<- prometheus.Metric) err
 	}
 
 	ch <- prometheus.MustNewConstMetric(
-		c.SerialPortandScannerReceivedBytes,
+		c.serialPortAndScannerReceivedBytes,
 		prometheus.CounterValue,
 		float64(dst[0].ReceivedBytes),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.SerialPortandScannerReceivedPackets,
+		c.serialPortAndScannerReceivedPackets,
 		prometheus.CounterValue,
 		float64(dst[0].ReceivedPackets),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.SerialPortandScannerTransmittedBytes,
+		c.serialPortAndScannerTransmittedBytes,
 		prometheus.CounterValue,
 		float64(dst[0].TransmittedBytes),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.SerialPortandScannerTransmittedPackets,
+		c.serialPortAndScannerTransmittedPackets,
 		prometheus.CounterValue,
 		float64(dst[0].TransmittedPackets),
 	)
@@ -1065,103 +1067,103 @@ func (c *Collector) collectSession(ch chan<- prometheus.Metric) error {
 	}
 
 	ch <- prometheus.MustNewConstMetric(
-		c.SessionAutomaticReconnectCount,
+		c.sessionAutomaticReconnectCount,
 		prometheus.CounterValue,
 		float64(dst[0].AutomaticReconnectCount),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.SessionCumulativeReceivedBytesOverTCP,
+		c.sessionCumulativeReceivedBytesOverTCP,
 		prometheus.CounterValue,
 		float64(dst[0].CumulativeReceivedBytesoverTCP),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.SessionCumulativeReceivedBytesOverUDP,
+		c.sessionCumulativeReceivedBytesOverUDP,
 		prometheus.CounterValue,
 		float64(dst[0].CumulativeReceivedBytesoverUDP),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.SessionCumulativeTransmittedBytesOverTCP,
+		c.sessionCumulativeTransmittedBytesOverTCP,
 		prometheus.CounterValue,
 		float64(dst[0].CumulativeTransmittedBytesoverTCP),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.SessionCumulativeTransmittedBytesOverUDP,
+		c.sessionCumulativeTransmittedBytesOverUDP,
 		prometheus.CounterValue,
 		float64(dst[0].CumulativeTransmittedBytesoverUDP),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.SessionEstimatedBandwidthUplink,
+		c.sessionEstimatedBandwidthUplink,
 		prometheus.GaugeValue,
 		float64(dst[0].EstimatedBandwidthUplink),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.SessionInstantaneousReceivedBytesOverTCP,
+		c.sessionInstantaneousReceivedBytesOverTCP,
 		prometheus.CounterValue,
 		float64(dst[0].InstantaneousReceivedBytesoverTCP),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.SessionInstantaneousReceivedBytesOverUDP,
+		c.sessionInstantaneousReceivedBytesOverUDP,
 		prometheus.CounterValue,
 		float64(dst[0].InstantaneousReceivedBytesoverUDP),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.SessionInstantaneousTransmittedBytesOverTCP,
+		c.sessionInstantaneousTransmittedBytesOverTCP,
 		prometheus.CounterValue,
 		float64(dst[0].InstantaneousTransmittedBytesoverTCP),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.SessionInstantaneousTransmittedBytesOverUDP,
+		c.sessionInstantaneousTransmittedBytesOverUDP,
 		prometheus.CounterValue,
 		float64(dst[0].InstantaneousTransmittedBytesoverUDP),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.SessionJitterUplink,
+		c.sessionJitterUplink,
 		prometheus.GaugeValue,
 		float64(dst[0].JitterUplink),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.SessionPacketLossUplink,
+		c.sessionPacketLossUplink,
 		prometheus.GaugeValue,
 		float64(dst[0].PacketLossUplink),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.SessionReceivedBytes,
+		c.sessionReceivedBytes,
 		prometheus.CounterValue,
 		float64(dst[0].ReceivedBytes),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.SessionReceivedPackets,
+		c.sessionReceivedPackets,
 		prometheus.CounterValue,
 		float64(dst[0].ReceivedPackets),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.SessionRTT,
+		c.sessionRTT,
 		prometheus.GaugeValue,
 		float64(dst[0].RTT),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.SessionTransmittedBytes,
+		c.sessionTransmittedBytes,
 		prometheus.CounterValue,
 		float64(dst[0].TransmittedBytes),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.SessionTransmittedPackets,
+		c.sessionTransmittedPackets,
 		prometheus.CounterValue,
 		float64(dst[0].TransmittedPackets),
 	)
@@ -1182,25 +1184,25 @@ func (c *Collector) collectSkypeforBusinessControl(ch chan<- prometheus.Metric) 
 	}
 
 	ch <- prometheus.MustNewConstMetric(
-		c.SkypeforBusinessControlReceivedBytes,
+		c.skypeForBusinessControlReceivedBytes,
 		prometheus.CounterValue,
 		float64(dst[0].ReceivedBytes),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.SkypeforBusinessControlReceivedPackets,
+		c.skypeForBusinessControlReceivedPackets,
 		prometheus.CounterValue,
 		float64(dst[0].ReceivedPackets),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.SkypeforBusinessControlTransmittedBytes,
+		c.skypeForBusinessControlTransmittedBytes,
 		prometheus.CounterValue,
 		float64(dst[0].TransmittedBytes),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.SkypeforBusinessControlTransmittedPackets,
+		c.skypeForBusinessControlTransmittedPackets,
 		prometheus.CounterValue,
 		float64(dst[0].TransmittedPackets),
 	)
@@ -1221,25 +1223,25 @@ func (c *Collector) collectThinPrint(ch chan<- prometheus.Metric) error {
 	}
 
 	ch <- prometheus.MustNewConstMetric(
-		c.ThinPrintReceivedBytes,
+		c.thinPrintReceivedBytes,
 		prometheus.CounterValue,
 		float64(dst[0].ReceivedBytes),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.ThinPrintReceivedPackets,
+		c.thinPrintReceivedPackets,
 		prometheus.CounterValue,
 		float64(dst[0].ReceivedPackets),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.ThinPrintTransmittedBytes,
+		c.thinPrintTransmittedBytes,
 		prometheus.CounterValue,
 		float64(dst[0].TransmittedBytes),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.ThinPrintTransmittedPackets,
+		c.thinPrintTransmittedPackets,
 		prometheus.CounterValue,
 		float64(dst[0].TransmittedPackets),
 	)
@@ -1260,25 +1262,25 @@ func (c *Collector) collectUsb(ch chan<- prometheus.Metric) error {
 	}
 
 	ch <- prometheus.MustNewConstMetric(
-		c.USBReceivedBytes,
+		c.usbReceivedBytes,
 		prometheus.CounterValue,
 		float64(dst[0].ReceivedBytes),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.USBReceivedPackets,
+		c.usbReceivedPackets,
 		prometheus.CounterValue,
 		float64(dst[0].ReceivedPackets),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.USBTransmittedBytes,
+		c.usbTransmittedBytes,
 		prometheus.CounterValue,
 		float64(dst[0].TransmittedBytes),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.USBTransmittedPackets,
+		c.usbTransmittedPackets,
 		prometheus.CounterValue,
 		float64(dst[0].TransmittedPackets),
 	)
@@ -1299,25 +1301,25 @@ func (c *Collector) collectWindowsMediaMmr(ch chan<- prometheus.Metric) error {
 	}
 
 	ch <- prometheus.MustNewConstMetric(
-		c.WindowsMediaMMRReceivedBytes,
+		c.windowsMediaMMRReceivedBytes,
 		prometheus.CounterValue,
 		float64(dst[0].ReceivedBytes),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.WindowsMediaMMRReceivedPackets,
+		c.windowsMediaMMRReceivedPackets,
 		prometheus.CounterValue,
 		float64(dst[0].ReceivedPackets),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.WindowsMediaMMRTransmittedBytes,
+		c.windowsMediaMMRTransmittedBytes,
 		prometheus.CounterValue,
 		float64(dst[0].TransmittedBytes),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.WindowsMediaMMRTransmittedPackets,
+		c.windowsMediaMMRTransmittedPackets,
 		prometheus.CounterValue,
 		float64(dst[0].TransmittedPackets),
 	)

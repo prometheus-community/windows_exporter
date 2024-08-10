@@ -41,9 +41,9 @@ type Collector struct {
 	taskExclude *string
 	taskInclude *string
 
-	LastResult *prometheus.Desc
-	MissedRuns *prometheus.Desc
-	State      *prometheus.Desc
+	lastResult *prometheus.Desc
+	missedRuns *prometheus.Desc
+	state      *prometheus.Desc
 
 	taskIncludePattern *regexp.Regexp
 	taskExcludePattern *regexp.Regexp
@@ -122,21 +122,21 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build() error {
-	c.LastResult = prometheus.NewDesc(
+	c.lastResult = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "last_result"),
 		"The result that was returned the last time the registered task was run",
 		[]string{"task"},
 		nil,
 	)
 
-	c.MissedRuns = prometheus.NewDesc(
+	c.missedRuns = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "missed_runs"),
 		"The number of times the registered task missed a scheduled run",
 		[]string{"task"},
 		nil,
 	)
 
-	c.State = prometheus.NewDesc(
+	c.state = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "state"),
 		"The current state of a scheduled task",
 		[]string{"task", "state"},
@@ -187,14 +187,14 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 		}
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LastResult,
+			c.lastResult,
 			prometheus.GaugeValue,
 			lastResult,
 			task.Path,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.MissedRuns,
+			c.missedRuns,
 			prometheus.GaugeValue,
 			task.MissedRunsCount,
 			task.Path,
@@ -208,7 +208,7 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 			}
 
 			ch <- prometheus.MustNewConstMetric(
-				c.State,
+				c.state,
 				prometheus.GaugeValue,
 				stateValue,
 				task.Path,

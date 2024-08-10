@@ -24,12 +24,12 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	logger log.Logger
 
-	ClockFrequencyAdjustmentPPBTotal *prometheus.Desc
-	ComputedTimeOffset               *prometheus.Desc
-	NTPClientTimeSourceCount         *prometheus.Desc
-	NTPRoundtripDelay                *prometheus.Desc
-	NTPServerIncomingRequestsTotal   *prometheus.Desc
-	NTPServerOutgoingResponsesTotal  *prometheus.Desc
+	clockFrequencyAdjustmentPPBTotal *prometheus.Desc
+	computedTimeOffset               *prometheus.Desc
+	ntpClientTimeSourceCount         *prometheus.Desc
+	ntpRoundTripDelay                *prometheus.Desc
+	ntpServerIncomingRequestsTotal   *prometheus.Desc
+	ntpServerOutgoingResponsesTotal  *prometheus.Desc
 }
 
 func New(logger log.Logger, _ *Config) *Collector {
@@ -64,37 +64,37 @@ func (c *Collector) Build() error {
 		return errors.New("Windows version older than Server 2016 detected. The time collector will not run and should be disabled via CLI flags or configuration file")
 	}
 
-	c.ClockFrequencyAdjustmentPPBTotal = prometheus.NewDesc(
+	c.clockFrequencyAdjustmentPPBTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "clock_frequency_adjustment_ppb_total"),
 		"Total adjustment made to the local system clock frequency by W32Time in Parts Per Billion (PPB) units.",
 		nil,
 		nil,
 	)
-	c.ComputedTimeOffset = prometheus.NewDesc(
+	c.computedTimeOffset = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "computed_time_offset_seconds"),
 		"Absolute time offset between the system clock and the chosen time source, in seconds",
 		nil,
 		nil,
 	)
-	c.NTPClientTimeSourceCount = prometheus.NewDesc(
+	c.ntpClientTimeSourceCount = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "ntp_client_time_sources"),
 		"Active number of NTP Time sources being used by the client",
 		nil,
 		nil,
 	)
-	c.NTPRoundtripDelay = prometheus.NewDesc(
+	c.ntpRoundTripDelay = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "ntp_round_trip_delay_seconds"),
 		"Roundtrip delay experienced by the NTP client in receiving a response from the server for the most recent request, in seconds",
 		nil,
 		nil,
 	)
-	c.NTPServerOutgoingResponsesTotal = prometheus.NewDesc(
+	c.ntpServerOutgoingResponsesTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "ntp_server_outgoing_responses_total"),
 		"Total number of requests responded to by NTP server",
 		nil,
 		nil,
 	)
-	c.NTPServerIncomingRequestsTotal = prometheus.NewDesc(
+	c.ntpServerIncomingRequestsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "ntp_server_incoming_requests_total"),
 		"Total number of requests received by NTP server",
 		nil,
@@ -130,32 +130,32 @@ func (c *Collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 	}
 
 	ch <- prometheus.MustNewConstMetric(
-		c.ClockFrequencyAdjustmentPPBTotal,
+		c.clockFrequencyAdjustmentPPBTotal,
 		prometheus.CounterValue,
 		dst[0].ClockFrequencyAdjustmentPPBTotal,
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.ComputedTimeOffset,
+		c.computedTimeOffset,
 		prometheus.GaugeValue,
 		dst[0].ComputedTimeOffset/1000000, // microseconds -> seconds
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.NTPClientTimeSourceCount,
+		c.ntpClientTimeSourceCount,
 		prometheus.GaugeValue,
 		dst[0].NTPClientTimeSourceCount,
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.NTPRoundtripDelay,
+		c.ntpRoundTripDelay,
 		prometheus.GaugeValue,
 		dst[0].NTPRoundtripDelay/1000000, // microseconds -> seconds
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.NTPServerIncomingRequestsTotal,
+		c.ntpServerIncomingRequestsTotal,
 		prometheus.CounterValue,
 		dst[0].NTPServerIncomingRequestsTotal,
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.NTPServerOutgoingResponsesTotal,
+		c.ntpServerOutgoingResponsesTotal,
 		prometheus.CounterValue,
 		dst[0].NTPServerOutgoingResponsesTotal,
 	)

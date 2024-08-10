@@ -21,15 +21,15 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	logger log.Logger
 
-	ConnectionFailures         *prometheus.Desc
-	ConnectionsActive          *prometheus.Desc
-	ConnectionsEstablished     *prometheus.Desc
-	ConnectionsPassive         *prometheus.Desc
-	ConnectionsReset           *prometheus.Desc
-	SegmentsTotal              *prometheus.Desc
-	SegmentsReceivedTotal      *prometheus.Desc
-	SegmentsRetransmittedTotal *prometheus.Desc
-	SegmentsSentTotal          *prometheus.Desc
+	connectionFailures         *prometheus.Desc
+	connectionsActive          *prometheus.Desc
+	connectionsEstablished     *prometheus.Desc
+	connectionsPassive         *prometheus.Desc
+	connectionsReset           *prometheus.Desc
+	segmentsTotal              *prometheus.Desc
+	segmentsReceivedTotal      *prometheus.Desc
+	segmentsRetransmittedTotal *prometheus.Desc
+	segmentsSentTotal          *prometheus.Desc
 }
 
 func New(logger log.Logger, _ *Config) *Collector {
@@ -60,55 +60,55 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build() error {
-	c.ConnectionFailures = prometheus.NewDesc(
+	c.connectionFailures = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "connection_failures_total"),
 		"(TCP.ConnectionFailures)",
 		[]string{"af"},
 		nil,
 	)
-	c.ConnectionsActive = prometheus.NewDesc(
+	c.connectionsActive = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "connections_active_total"),
 		"(TCP.ConnectionsActive)",
 		[]string{"af"},
 		nil,
 	)
-	c.ConnectionsEstablished = prometheus.NewDesc(
+	c.connectionsEstablished = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "connections_established"),
 		"(TCP.ConnectionsEstablished)",
 		[]string{"af"},
 		nil,
 	)
-	c.ConnectionsPassive = prometheus.NewDesc(
+	c.connectionsPassive = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "connections_passive_total"),
 		"(TCP.ConnectionsPassive)",
 		[]string{"af"},
 		nil,
 	)
-	c.ConnectionsReset = prometheus.NewDesc(
+	c.connectionsReset = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "connections_reset_total"),
 		"(TCP.ConnectionsReset)",
 		[]string{"af"},
 		nil,
 	)
-	c.SegmentsTotal = prometheus.NewDesc(
+	c.segmentsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "segments_total"),
 		"(TCP.SegmentsTotal)",
 		[]string{"af"},
 		nil,
 	)
-	c.SegmentsReceivedTotal = prometheus.NewDesc(
+	c.segmentsReceivedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "segments_received_total"),
 		"(TCP.SegmentsReceivedTotal)",
 		[]string{"af"},
 		nil,
 	)
-	c.SegmentsRetransmittedTotal = prometheus.NewDesc(
+	c.segmentsRetransmittedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "segments_retransmitted_total"),
 		"(TCP.SegmentsRetransmittedTotal)",
 		[]string{"af"},
 		nil,
 	)
-	c.SegmentsSentTotal = prometheus.NewDesc(
+	c.segmentsSentTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "segments_sent_total"),
 		"(TCP.SegmentsSentTotal)",
 		[]string{"af"},
@@ -144,55 +144,55 @@ type tcp struct {
 
 func writeTCPCounters(metrics tcp, labels []string, c *Collector, ch chan<- prometheus.Metric) {
 	ch <- prometheus.MustNewConstMetric(
-		c.ConnectionFailures,
+		c.connectionFailures,
 		prometheus.CounterValue,
 		metrics.ConnectionFailures,
 		labels...,
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.ConnectionsActive,
+		c.connectionsActive,
 		prometheus.CounterValue,
 		metrics.ConnectionsActive,
 		labels...,
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.ConnectionsEstablished,
+		c.connectionsEstablished,
 		prometheus.GaugeValue,
 		metrics.ConnectionsEstablished,
 		labels...,
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.ConnectionsPassive,
+		c.connectionsPassive,
 		prometheus.CounterValue,
 		metrics.ConnectionsPassive,
 		labels...,
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.ConnectionsReset,
+		c.connectionsReset,
 		prometheus.CounterValue,
 		metrics.ConnectionsReset,
 		labels...,
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.SegmentsTotal,
+		c.segmentsTotal,
 		prometheus.CounterValue,
 		metrics.SegmentsPersec,
 		labels...,
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.SegmentsReceivedTotal,
+		c.segmentsReceivedTotal,
 		prometheus.CounterValue,
 		metrics.SegmentsReceivedPersec,
 		labels...,
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.SegmentsRetransmittedTotal,
+		c.segmentsRetransmittedTotal,
 		prometheus.CounterValue,
 		metrics.SegmentsRetransmittedPersec,
 		labels...,
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.SegmentsSentTotal,
+		c.segmentsSentTotal,
 		prometheus.CounterValue,
 		metrics.SegmentsSentPersec,
 		labels...,

@@ -21,15 +21,15 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	logger log.Logger
 
-	BytesinLoaderHeap         *prometheus.Desc
-	Currentappdomains         *prometheus.Desc
-	CurrentAssemblies         *prometheus.Desc
-	CurrentClassesLoaded      *prometheus.Desc
-	TotalAppdomains           *prometheus.Desc
-	Totalappdomainsunloaded   *prometheus.Desc
-	TotalAssemblies           *prometheus.Desc
-	TotalClassesLoaded        *prometheus.Desc
-	TotalNumberofLoadFailures *prometheus.Desc
+	bytesInLoaderHeap         *prometheus.Desc
+	currentAppDomains         *prometheus.Desc
+	currentAssemblies         *prometheus.Desc
+	currentClassesLoaded      *prometheus.Desc
+	totalAppDomains           *prometheus.Desc
+	totalAppDomainsUnloaded   *prometheus.Desc
+	totalAssemblies           *prometheus.Desc
+	totalClassesLoaded        *prometheus.Desc
+	totalNumberOfLoadFailures *prometheus.Desc
 }
 
 func New(logger log.Logger, _ *Config) *Collector {
@@ -60,55 +60,55 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build() error {
-	c.BytesinLoaderHeap = prometheus.NewDesc(
+	c.bytesInLoaderHeap = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "loader_heap_size_bytes"),
 		"Displays the current size, in bytes, of the memory committed by the class loader across all application domains. Committed memory is the physical space reserved in the disk paging file.",
 		[]string{"process"},
 		nil,
 	)
-	c.Currentappdomains = prometheus.NewDesc(
+	c.currentAppDomains = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "appdomains_loaded_current"),
 		"Displays the current number of application domains loaded in this application.",
 		[]string{"process"},
 		nil,
 	)
-	c.CurrentAssemblies = prometheus.NewDesc(
+	c.currentAssemblies = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "assemblies_loaded_current"),
 		"Displays the current number of assemblies loaded across all application domains in the currently running application. If the assembly is loaded as domain-neutral from multiple application domains, this counter is incremented only once.",
 		[]string{"process"},
 		nil,
 	)
-	c.CurrentClassesLoaded = prometheus.NewDesc(
+	c.currentClassesLoaded = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "classes_loaded_current"),
 		"Displays the current number of classes loaded in all assemblies.",
 		[]string{"process"},
 		nil,
 	)
-	c.TotalAppdomains = prometheus.NewDesc(
+	c.totalAppDomains = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "appdomains_loaded_total"),
 		"Displays the peak number of application domains loaded since the application started.",
 		[]string{"process"},
 		nil,
 	)
-	c.Totalappdomainsunloaded = prometheus.NewDesc(
+	c.totalAppDomainsUnloaded = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "appdomains_unloaded_total"),
 		"Displays the total number of application domains unloaded since the application started. If an application domain is loaded and unloaded multiple times, this counter increments each time the application domain is unloaded.",
 		[]string{"process"},
 		nil,
 	)
-	c.TotalAssemblies = prometheus.NewDesc(
+	c.totalAssemblies = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "assemblies_loaded_total"),
 		"Displays the total number of assemblies loaded since the application started. If the assembly is loaded as domain-neutral from multiple application domains, this counter is incremented only once.",
 		[]string{"process"},
 		nil,
 	)
-	c.TotalClassesLoaded = prometheus.NewDesc(
+	c.totalClassesLoaded = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "classes_loaded_total"),
 		"Displays the cumulative number of classes loaded in all assemblies since the application started.",
 		[]string{"process"},
 		nil,
 	)
-	c.TotalNumberofLoadFailures = prometheus.NewDesc(
+	c.totalNumberOfLoadFailures = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "class_load_failures_total"),
 		"Displays the peak number of classes that have failed to load since the application started.",
 		[]string{"process"},
@@ -161,63 +161,63 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 		}
 
 		ch <- prometheus.MustNewConstMetric(
-			c.BytesinLoaderHeap,
+			c.bytesInLoaderHeap,
 			prometheus.GaugeValue,
 			float64(process.BytesinLoaderHeap),
 			process.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.Currentappdomains,
+			c.currentAppDomains,
 			prometheus.GaugeValue,
 			float64(process.Currentappdomains),
 			process.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.CurrentAssemblies,
+			c.currentAssemblies,
 			prometheus.GaugeValue,
 			float64(process.CurrentAssemblies),
 			process.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.CurrentClassesLoaded,
+			c.currentClassesLoaded,
 			prometheus.GaugeValue,
 			float64(process.CurrentClassesLoaded),
 			process.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.TotalAppdomains,
+			c.totalAppDomains,
 			prometheus.CounterValue,
 			float64(process.TotalAppdomains),
 			process.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.Totalappdomainsunloaded,
+			c.totalAppDomainsUnloaded,
 			prometheus.CounterValue,
 			float64(process.Totalappdomainsunloaded),
 			process.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.TotalAssemblies,
+			c.totalAssemblies,
 			prometheus.CounterValue,
 			float64(process.TotalAssemblies),
 			process.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.TotalClassesLoaded,
+			c.totalClassesLoaded,
 			prometheus.CounterValue,
 			float64(process.TotalClassesLoaded),
 			process.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.TotalNumberofLoadFailures,
+			c.totalNumberOfLoadFailures,
 			prometheus.CounterValue,
 			float64(process.TotalNumberofLoadFailures),
 			process.Name,

@@ -28,47 +28,47 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	logger log.Logger
 
-	AudioBytesReceived       *prometheus.Desc
-	AudioBytesSent           *prometheus.Desc
-	AudioRXBWkbitPersec      *prometheus.Desc
-	AudioTXBWkbitPersec      *prometheus.Desc
-	AudioTXBWLimitkbitPersec *prometheus.Desc
+	audioBytesReceived       *prometheus.Desc
+	audioBytesSent           *prometheus.Desc
+	audioRXBWKBitPerSec      *prometheus.Desc
+	audioTXBWKBitPerSec      *prometheus.Desc
+	audioTXBWLimitKBitPerSec *prometheus.Desc
 
-	BytesReceived          *prometheus.Desc
-	BytesSent              *prometheus.Desc
-	PacketsReceived        *prometheus.Desc
-	PacketsSent            *prometheus.Desc
-	RXPacketsLost          *prometheus.Desc
-	SessionDurationSeconds *prometheus.Desc
-	TXPacketsLost          *prometheus.Desc
+	bytesReceived          *prometheus.Desc
+	bytesSent              *prometheus.Desc
+	packetsReceived        *prometheus.Desc
+	packetsSent            *prometheus.Desc
+	rxPacketsLost          *prometheus.Desc
+	sessionDurationSeconds *prometheus.Desc
+	txPacketsLost          *prometheus.Desc
 
-	ImagingActiveMinimumQuality        *prometheus.Desc
-	ImagingApex2800Offload             *prometheus.Desc
-	ImagingBytesReceived               *prometheus.Desc
-	ImagingBytesSent                   *prometheus.Desc
-	ImagingDecoderCapabilitykbitPersec *prometheus.Desc
-	ImagingEncodedFramesPersec         *prometheus.Desc
-	ImagingMegapixelPersec             *prometheus.Desc
-	ImagingNegativeAcknowledgements    *prometheus.Desc
-	ImagingRXBWkbitPersec              *prometheus.Desc
-	ImagingSVGAdevTapframesPersec      *prometheus.Desc
-	ImagingTXBWkbitPersec              *prometheus.Desc
+	imagingActiveMinimumQuality        *prometheus.Desc
+	imagingApex2800Offload             *prometheus.Desc
+	imagingBytesReceived               *prometheus.Desc
+	imagingBytesSent                   *prometheus.Desc
+	imagingDecoderCapabilityKBitPerSec *prometheus.Desc
+	imagingEncodedFramesPerSec         *prometheus.Desc
+	imagingMegapixelPerSec             *prometheus.Desc
+	imagingNegativeAcknowledgements    *prometheus.Desc
+	imagingRXBWKBitPerSec              *prometheus.Desc
+	imagingSVGAdevTapframesPerSec      *prometheus.Desc
+	imagingTXBWKBitPerSec              *prometheus.Desc
 
 	RoundTripLatencyms        *prometheus.Desc
-	RXBWkbitPersec            *prometheus.Desc
-	RXBWPeakkbitPersec        *prometheus.Desc
-	RXPacketLossPercent       *prometheus.Desc
-	RXPacketLossPercent_Base  *prometheus.Desc
-	TXBWActiveLimitkbitPersec *prometheus.Desc
-	TXBWkbitPersec            *prometheus.Desc
-	TXBWLimitkbitPersec       *prometheus.Desc
-	TXPacketLossPercent       *prometheus.Desc
-	TXPacketLossPercent_Base  *prometheus.Desc
+	rxBWKBitPerSec            *prometheus.Desc
+	rxBWPeakKBitPerSec        *prometheus.Desc
+	rxPacketLossPercent       *prometheus.Desc
+	rxPacketLossPercentBase   *prometheus.Desc
+	txBWActiveLimitKBitPerSec *prometheus.Desc
+	txBWKBitPerSec            *prometheus.Desc
+	txBWLimitKBitPerSec       *prometheus.Desc
+	txPacketLossPercent       *prometheus.Desc
+	txPacketLossPercentBase   *prometheus.Desc
 
-	USBBytesReceived  *prometheus.Desc
-	USBBytesSent      *prometheus.Desc
-	USBRXBWkbitPersec *prometheus.Desc
-	USBTXBWkbitPersec *prometheus.Desc
+	usbBytesReceived  *prometheus.Desc
+	usbBytesSent      *prometheus.Desc
+	usbRXBWKBitPerSec *prometheus.Desc
+	usbTXBWKBitPerSec *prometheus.Desc
 }
 
 func New(logger log.Logger, _ *Config) *Collector {
@@ -99,143 +99,145 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build() error {
-	c.AudioBytesReceived = prometheus.NewDesc(
+	// _ = level.Warn(c.logger).Log("msg", "teradici_pcoip collector is deprecated and will be removed in the future.")
+
+	c.audioBytesReceived = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "audio_bytes_received_total"),
 		"(AudioBytesReceived)",
 		nil,
 		nil,
 	)
-	c.AudioBytesSent = prometheus.NewDesc(
+	c.audioBytesSent = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "audio_bytes_sent_total"),
 		"(AudioBytesSent)",
 		nil,
 		nil,
 	)
-	c.AudioRXBWkbitPersec = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "audio_rx_bw_kbit_persec"),
-		"(AudioRXBWkbitPersec)",
+	c.audioRXBWKBitPerSec = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "audio_rx_bw_KBit_persec"),
+		"(AudioRXBWKBitPerSec)",
 		nil,
 		nil,
 	)
-	c.AudioTXBWkbitPersec = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "audio_tx_bw_kbit_persec"),
-		"(AudioTXBWkbitPersec)",
+	c.audioTXBWKBitPerSec = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "audio_tx_bw_KBit_persec"),
+		"(AudioTXBWKBitPerSec)",
 		nil,
 		nil,
 	)
-	c.AudioTXBWLimitkbitPersec = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "audio_tx_bw_limit_kbit_persec"),
-		"(AudioTXBWLimitkbitPersec)",
+	c.audioTXBWLimitKBitPerSec = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "audio_tx_bw_limit_KBit_persec"),
+		"(AudioTXBWLimitKBitPerSec)",
 		nil,
 		nil,
 	)
 
-	c.BytesReceived = prometheus.NewDesc(
+	c.bytesReceived = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "bytes_received_total"),
 		"(BytesReceived)",
 		nil,
 		nil,
 	)
-	c.BytesSent = prometheus.NewDesc(
+	c.bytesSent = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "bytes_sent_total"),
 		"(BytesSent)",
 		nil,
 		nil,
 	)
-	c.PacketsReceived = prometheus.NewDesc(
+	c.packetsReceived = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "packets_received_total"),
 		"(PacketsReceived)",
 		nil,
 		nil,
 	)
-	c.PacketsSent = prometheus.NewDesc(
+	c.packetsSent = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "packets_sent_total"),
 		"(PacketsSent)",
 		nil,
 		nil,
 	)
-	c.RXPacketsLost = prometheus.NewDesc(
+	c.rxPacketsLost = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "rx_packets_lost_total"),
 		"(RXPacketsLost)",
 		nil,
 		nil,
 	)
-	c.SessionDurationSeconds = prometheus.NewDesc(
+	c.sessionDurationSeconds = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "session_duration_seconds_total"),
 		"(SessionDurationSeconds)",
 		nil,
 		nil,
 	)
-	c.TXPacketsLost = prometheus.NewDesc(
+	c.txPacketsLost = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "tx_packets_lost_total"),
 		"(TXPacketsLost)",
 		nil,
 		nil,
 	)
 
-	c.ImagingActiveMinimumQuality = prometheus.NewDesc(
+	c.imagingActiveMinimumQuality = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "imaging_active_min_quality"),
 		"(ImagingActiveMinimumQuality)",
 		nil,
 		nil,
 	)
-	c.ImagingApex2800Offload = prometheus.NewDesc(
+	c.imagingApex2800Offload = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "imaging_apex2800_offload"),
 		"(ImagingApex2800Offload)",
 		nil,
 		nil,
 	)
-	c.ImagingBytesReceived = prometheus.NewDesc(
+	c.imagingBytesReceived = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "imaging_bytes_received_total"),
 		"(ImagingBytesReceived)",
 		nil,
 		nil,
 	)
-	c.ImagingBytesSent = prometheus.NewDesc(
+	c.imagingBytesSent = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "imaging_bytes_sent_total"),
 		"(ImagingBytesSent)",
 		nil,
 		nil,
 	)
-	c.ImagingDecoderCapabilitykbitPersec = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "imaging_decoder_capability_kbit_persec"),
-		"(ImagingDecoderCapabilitykbitPersec)",
+	c.imagingDecoderCapabilityKBitPerSec = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "imaging_decoder_capability_KBit_persec"),
+		"(ImagingDecoderCapabilityKBitPerSec)",
 		nil,
 		nil,
 	)
-	c.ImagingEncodedFramesPersec = prometheus.NewDesc(
+	c.imagingEncodedFramesPerSec = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "imaging_encoded_frames_persec"),
-		"(ImagingEncodedFramesPersec)",
+		"(ImagingEncodedFramesPerSec)",
 		nil,
 		nil,
 	)
-	c.ImagingMegapixelPersec = prometheus.NewDesc(
+	c.imagingMegapixelPerSec = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "imaging_megapixel_persec"),
-		"(ImagingMegapixelPersec)",
+		"(ImagingMegapixelPerSec)",
 		nil,
 		nil,
 	)
-	c.ImagingNegativeAcknowledgements = prometheus.NewDesc(
+	c.imagingNegativeAcknowledgements = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "imaging_negative_acks_total"),
 		"(ImagingNegativeAcknowledgements)",
 		nil,
 		nil,
 	)
-	c.ImagingRXBWkbitPersec = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "imaging_rx_bw_kbit_persec"),
-		"(ImagingRXBWkbitPersec)",
+	c.imagingRXBWKBitPerSec = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "imaging_rx_bw_KBit_persec"),
+		"(ImagingRXBWKBitPerSec)",
 		nil,
 		nil,
 	)
-	c.ImagingSVGAdevTapframesPersec = prometheus.NewDesc(
+	c.imagingSVGAdevTapframesPerSec = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "imaging_svga_devtap_frames_persec"),
-		"(ImagingSVGAdevTapframesPersec)",
+		"(ImagingSVGAdevTapframesPerSec)",
 		nil,
 		nil,
 	)
-	c.ImagingTXBWkbitPersec = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "imaging_tx_bw_kbit_persec"),
-		"(ImagingTXBWkbitPersec)",
+	c.imagingTXBWKBitPerSec = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "imaging_tx_bw_KBit_persec"),
+		"(ImagingTXBWKBitPerSec)",
 		nil,
 		nil,
 	)
@@ -246,82 +248,82 @@ func (c *Collector) Build() error {
 		nil,
 		nil,
 	)
-	c.RXBWkbitPersec = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "rx_bw_kbit_persec"),
-		"(RXBWkbitPersec)",
+	c.rxBWKBitPerSec = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "rx_bw_KBit_persec"),
+		"(RXBWKBitPerSec)",
 		nil,
 		nil,
 	)
-	c.RXBWPeakkbitPersec = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "rx_bw_peak_kbit_persec"),
-		"(RXBWPeakkbitPersec)",
+	c.rxBWPeakKBitPerSec = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "rx_bw_peak_KBit_persec"),
+		"(RXBWPeakKBitPerSec)",
 		nil,
 		nil,
 	)
-	c.RXPacketLossPercent = prometheus.NewDesc(
+	c.rxPacketLossPercent = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "rx_packet_loss_percent"),
 		"(RXPacketLossPercent)",
 		nil,
 		nil,
 	)
-	c.RXPacketLossPercent_Base = prometheus.NewDesc(
+	c.rxPacketLossPercentBase = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "rx_packet_loss_percent_base"),
 		"(RXPacketLossPercent_Base)",
 		nil,
 		nil,
 	)
-	c.TXBWActiveLimitkbitPersec = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "tx_bw_active_limit_kbit_persec"),
-		"(TXBWActiveLimitkbitPersec)",
+	c.txBWActiveLimitKBitPerSec = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "tx_bw_active_limit_KBit_persec"),
+		"(TXBWActiveLimitKBitPerSec)",
 		nil,
 		nil,
 	)
-	c.TXBWkbitPersec = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "tx_bw_kbit_persec"),
-		"(TXBWkbitPersec)",
+	c.txBWKBitPerSec = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "tx_bw_KBit_persec"),
+		"(TXBWKBitPerSec)",
 		nil,
 		nil,
 	)
-	c.TXBWLimitkbitPersec = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "tx_bw_limit_kbit_persec"),
-		"(TXBWLimitkbitPersec)",
+	c.txBWLimitKBitPerSec = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "tx_bw_limit_KBit_persec"),
+		"(TXBWLimitKBitPerSec)",
 		nil,
 		nil,
 	)
-	c.TXPacketLossPercent = prometheus.NewDesc(
+	c.txPacketLossPercent = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "tx_packet_loss_percent"),
 		"(TXPacketLossPercent)",
 		nil,
 		nil,
 	)
-	c.TXPacketLossPercent_Base = prometheus.NewDesc(
+	c.txPacketLossPercentBase = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "tx_packet_loss_percent_base"),
 		"(TXPacketLossPercent_Base)",
 		nil,
 		nil,
 	)
 
-	c.USBBytesReceived = prometheus.NewDesc(
+	c.usbBytesReceived = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "usb_bytes_received_total"),
 		"(USBBytesReceived)",
 		nil,
 		nil,
 	)
-	c.USBBytesSent = prometheus.NewDesc(
+	c.usbBytesSent = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "usb_bytes_sent_total"),
 		"(USBBytesSent)",
 		nil,
 		nil,
 	)
-	c.USBRXBWkbitPersec = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "usb_rx_bw_kbit_persec"),
-		"(USBRXBWkbitPersec)",
+	c.usbRXBWKBitPerSec = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "usb_rx_bw_KBit_persec"),
+		"(USBRXBWKBitPerSec)",
 		nil,
 		nil,
 	)
-	c.USBTXBWkbitPersec = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "usb_tx_bw_kbit_persec"),
-		"(USBTXBWkbitPersec)",
+	c.usbTXBWKBitPerSec = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "usb_tx_bw_KBit_persec"),
+		"(USBTXBWKBitPerSec)",
 		nil,
 		nil,
 	)
@@ -357,9 +359,9 @@ func (c *Collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric)
 type win32_PerfRawData_TeradiciPerf_PCoIPSessionAudioStatistics struct {
 	AudioBytesReceived       uint64
 	AudioBytesSent           uint64
-	AudioRXBWkbitPersec      uint64
-	AudioTXBWkbitPersec      uint64
-	AudioTXBWLimitkbitPersec uint64
+	AudioRXBWKBitPerSec      uint64
+	AudioTXBWKBitPerSec      uint64
+	AudioTXBWLimitKBitPerSec uint64
 }
 
 type win32_PerfRawData_TeradiciPerf_PCoIPSessionGeneralStatistics struct {
@@ -377,33 +379,33 @@ type win32_PerfRawData_TeradiciPerf_PCoIPSessionImagingStatistics struct {
 	ImagingApex2800Offload             uint32
 	ImagingBytesReceived               uint64
 	ImagingBytesSent                   uint64
-	ImagingDecoderCapabilitykbitPersec uint32
-	ImagingEncodedFramesPersec         uint32
-	ImagingMegapixelPersec             uint32
+	ImagingDecoderCapabilityKBitPerSec uint32
+	ImagingEncodedFramesPerSec         uint32
+	ImagingMegapixelPerSec             uint32
 	ImagingNegativeAcknowledgements    uint32
-	ImagingRXBWkbitPersec              uint64
-	ImagingSVGAdevTapframesPersec      uint32
-	ImagingTXBWkbitPersec              uint64
+	ImagingRXBWKBitPerSec              uint64
+	ImagingSVGAdevTapframesPerSec      uint32
+	ImagingTXBWKBitPerSec              uint64
 }
 
 type win32_PerfRawData_TeradiciPerf_PCoIPSessionNetworkStatistics struct {
 	RoundTripLatencyms        uint32
-	RXBWkbitPersec            uint64
-	RXBWPeakkbitPersec        uint32
+	RXBWKBitPerSec            uint64
+	RXBWPeakKBitPerSec        uint32
 	RXPacketLossPercent       uint32
-	RXPacketLossPercent_Base  uint32
-	TXBWActiveLimitkbitPersec uint32
-	TXBWkbitPersec            uint64
-	TXBWLimitkbitPersec       uint32
+	RXPacketLossPercentBase   uint32
+	TXBWActiveLimitKBitPerSec uint32
+	TXBWKBitPerSec            uint64
+	TXBWLimitKBitPerSec       uint32
 	TXPacketLossPercent       uint32
-	TXPacketLossPercent_Base  uint32
+	TXPacketLossPercentBase   uint32
 }
 
 type win32_PerfRawData_TeradiciPerf_PCoIPSessionUsbStatistics struct {
 	USBBytesReceived  uint64
 	USBBytesSent      uint64
-	USBRXBWkbitPersec uint64
-	USBTXBWkbitPersec uint64
+	USBRXBWKBitPerSec uint64
+	USBTXBWKBitPerSec uint64
 }
 
 func (c *Collector) collectAudio(ch chan<- prometheus.Metric) error {
@@ -417,33 +419,33 @@ func (c *Collector) collectAudio(ch chan<- prometheus.Metric) error {
 	}
 
 	ch <- prometheus.MustNewConstMetric(
-		c.AudioBytesReceived,
+		c.audioBytesReceived,
 		prometheus.CounterValue,
 		float64(dst[0].AudioBytesReceived),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.AudioBytesSent,
+		c.audioBytesSent,
 		prometheus.CounterValue,
 		float64(dst[0].AudioBytesSent),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.AudioRXBWkbitPersec,
+		c.audioRXBWKBitPerSec,
 		prometheus.GaugeValue,
-		float64(dst[0].AudioRXBWkbitPersec),
+		float64(dst[0].AudioRXBWKBitPerSec),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.AudioTXBWkbitPersec,
+		c.audioTXBWKBitPerSec,
 		prometheus.GaugeValue,
-		float64(dst[0].AudioTXBWkbitPersec),
+		float64(dst[0].AudioTXBWKBitPerSec),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.AudioTXBWLimitkbitPersec,
+		c.audioTXBWLimitKBitPerSec,
 		prometheus.GaugeValue,
-		float64(dst[0].AudioTXBWLimitkbitPersec),
+		float64(dst[0].AudioTXBWLimitKBitPerSec),
 	)
 
 	return nil
@@ -460,43 +462,43 @@ func (c *Collector) collectGeneral(ch chan<- prometheus.Metric) error {
 	}
 
 	ch <- prometheus.MustNewConstMetric(
-		c.BytesReceived,
+		c.bytesReceived,
 		prometheus.CounterValue,
 		float64(dst[0].BytesReceived),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.BytesSent,
+		c.bytesSent,
 		prometheus.CounterValue,
 		float64(dst[0].BytesSent),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.PacketsReceived,
+		c.packetsReceived,
 		prometheus.CounterValue,
 		float64(dst[0].PacketsReceived),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.PacketsSent,
+		c.packetsSent,
 		prometheus.CounterValue,
 		float64(dst[0].PacketsSent),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.RXPacketsLost,
+		c.rxPacketsLost,
 		prometheus.CounterValue,
 		float64(dst[0].RXPacketsLost),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.SessionDurationSeconds,
+		c.sessionDurationSeconds,
 		prometheus.CounterValue,
 		float64(dst[0].SessionDurationSeconds),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.TXPacketsLost,
+		c.txPacketsLost,
 		prometheus.CounterValue,
 		float64(dst[0].TXPacketsLost),
 	)
@@ -515,69 +517,69 @@ func (c *Collector) collectImaging(ch chan<- prometheus.Metric) error {
 	}
 
 	ch <- prometheus.MustNewConstMetric(
-		c.ImagingActiveMinimumQuality,
+		c.imagingActiveMinimumQuality,
 		prometheus.GaugeValue,
 		float64(dst[0].ImagingActiveMinimumQuality),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.ImagingApex2800Offload,
+		c.imagingApex2800Offload,
 		prometheus.GaugeValue,
 		float64(dst[0].ImagingApex2800Offload),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.ImagingBytesReceived,
+		c.imagingBytesReceived,
 		prometheus.CounterValue,
 		float64(dst[0].ImagingBytesReceived),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.ImagingBytesSent,
+		c.imagingBytesSent,
 		prometheus.CounterValue,
 		float64(dst[0].ImagingBytesSent),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.ImagingDecoderCapabilitykbitPersec,
+		c.imagingDecoderCapabilityKBitPerSec,
 		prometheus.GaugeValue,
-		float64(dst[0].ImagingDecoderCapabilitykbitPersec),
+		float64(dst[0].ImagingDecoderCapabilityKBitPerSec),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.ImagingEncodedFramesPersec,
+		c.imagingEncodedFramesPerSec,
 		prometheus.GaugeValue,
-		float64(dst[0].ImagingEncodedFramesPersec),
+		float64(dst[0].ImagingEncodedFramesPerSec),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.ImagingMegapixelPersec,
+		c.imagingMegapixelPerSec,
 		prometheus.GaugeValue,
-		float64(dst[0].ImagingMegapixelPersec),
+		float64(dst[0].ImagingMegapixelPerSec),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.ImagingNegativeAcknowledgements,
+		c.imagingNegativeAcknowledgements,
 		prometheus.CounterValue,
 		float64(dst[0].ImagingNegativeAcknowledgements),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.ImagingRXBWkbitPersec,
+		c.imagingRXBWKBitPerSec,
 		prometheus.GaugeValue,
-		float64(dst[0].ImagingRXBWkbitPersec),
+		float64(dst[0].ImagingRXBWKBitPerSec),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.ImagingSVGAdevTapframesPersec,
+		c.imagingSVGAdevTapframesPerSec,
 		prometheus.GaugeValue,
-		float64(dst[0].ImagingSVGAdevTapframesPersec),
+		float64(dst[0].ImagingSVGAdevTapframesPerSec),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.ImagingTXBWkbitPersec,
+		c.imagingTXBWKBitPerSec,
 		prometheus.GaugeValue,
-		float64(dst[0].ImagingTXBWkbitPersec),
+		float64(dst[0].ImagingTXBWKBitPerSec),
 	)
 
 	return nil
@@ -600,57 +602,57 @@ func (c *Collector) collectNetwork(ch chan<- prometheus.Metric) error {
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.RXBWkbitPersec,
+		c.rxBWKBitPerSec,
 		prometheus.GaugeValue,
-		float64(dst[0].RXBWkbitPersec),
+		float64(dst[0].RXBWKBitPerSec),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.RXBWPeakkbitPersec,
+		c.rxBWPeakKBitPerSec,
 		prometheus.GaugeValue,
-		float64(dst[0].RXBWPeakkbitPersec),
+		float64(dst[0].RXBWPeakKBitPerSec),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.RXPacketLossPercent,
+		c.rxPacketLossPercent,
 		prometheus.GaugeValue,
 		float64(dst[0].RXPacketLossPercent),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.RXPacketLossPercent_Base,
+		c.rxPacketLossPercentBase,
 		prometheus.GaugeValue,
-		float64(dst[0].RXPacketLossPercent_Base),
+		float64(dst[0].RXPacketLossPercentBase),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.TXBWActiveLimitkbitPersec,
+		c.txBWActiveLimitKBitPerSec,
 		prometheus.GaugeValue,
-		float64(dst[0].TXBWActiveLimitkbitPersec),
+		float64(dst[0].TXBWActiveLimitKBitPerSec),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.TXBWkbitPersec,
+		c.txBWKBitPerSec,
 		prometheus.GaugeValue,
-		float64(dst[0].TXBWkbitPersec),
+		float64(dst[0].TXBWKBitPerSec),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.TXBWLimitkbitPersec,
+		c.txBWLimitKBitPerSec,
 		prometheus.GaugeValue,
-		float64(dst[0].TXBWLimitkbitPersec),
+		float64(dst[0].TXBWLimitKBitPerSec),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.TXPacketLossPercent,
+		c.txPacketLossPercent,
 		prometheus.GaugeValue,
 		float64(dst[0].TXPacketLossPercent),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.TXPacketLossPercent_Base,
+		c.txPacketLossPercentBase,
 		prometheus.GaugeValue,
-		float64(dst[0].TXPacketLossPercent_Base),
+		float64(dst[0].TXPacketLossPercentBase),
 	)
 
 	return nil
@@ -667,27 +669,27 @@ func (c *Collector) collectUsb(ch chan<- prometheus.Metric) error {
 	}
 
 	ch <- prometheus.MustNewConstMetric(
-		c.USBBytesReceived,
+		c.usbBytesReceived,
 		prometheus.CounterValue,
 		float64(dst[0].USBBytesReceived),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.USBBytesSent,
+		c.usbBytesSent,
 		prometheus.CounterValue,
 		float64(dst[0].USBBytesSent),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.USBRXBWkbitPersec,
+		c.usbRXBWKBitPerSec,
 		prometheus.GaugeValue,
-		float64(dst[0].USBRXBWkbitPersec),
+		float64(dst[0].USBRXBWKBitPerSec),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.USBTXBWkbitPersec,
+		c.usbTXBWKBitPerSec,
 		prometheus.GaugeValue,
-		float64(dst[0].USBTXBWkbitPersec),
+		float64(dst[0].USBTXBWKBitPerSec),
 	)
 
 	return nil

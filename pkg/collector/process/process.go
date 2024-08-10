@@ -40,32 +40,32 @@ var ConfigDefaults = Config{
 type Collector struct {
 	logger log.Logger
 
-	processInclude *string
-	processExclude *string
-
 	enableWorkerProcess *bool
 	enableReportOwner   *bool
 
-	StartTime         *prometheus.Desc
-	CPUTimeTotal      *prometheus.Desc
-	HandleCount       *prometheus.Desc
-	IOBytesTotal      *prometheus.Desc
-	IOOperationsTotal *prometheus.Desc
-	PageFaultsTotal   *prometheus.Desc
-	PageFileBytes     *prometheus.Desc
-	PoolBytes         *prometheus.Desc
-	PriorityBase      *prometheus.Desc
-	PrivateBytes      *prometheus.Desc
-	ThreadCount       *prometheus.Desc
-	VirtualBytes      *prometheus.Desc
-	WorkingSetPrivate *prometheus.Desc
-	WorkingSetPeak    *prometheus.Desc
-	WorkingSet        *prometheus.Desc
+	processInclude *string
+	processExclude *string
 
 	processIncludePattern *regexp.Regexp
 	processExcludePattern *regexp.Regexp
 
 	lookupCache map[string]string
+
+	cpuTimeTotal      *prometheus.Desc
+	handleCount       *prometheus.Desc
+	ioBytesTotal      *prometheus.Desc
+	ioOperationsTotal *prometheus.Desc
+	pageFaultsTotal   *prometheus.Desc
+	pageFileBytes     *prometheus.Desc
+	poolBytes         *prometheus.Desc
+	priorityBase      *prometheus.Desc
+	privateBytes      *prometheus.Desc
+	startTime         *prometheus.Desc
+	threadCount       *prometheus.Desc
+	virtualBytes      *prometheus.Desc
+	workingSet        *prometheus.Desc
+	workingSetPeak    *prometheus.Desc
+	workingSetPrivate *prometheus.Desc
 }
 
 func New(logger log.Logger, config *Config) *Collector {
@@ -134,91 +134,91 @@ func (c *Collector) Build() error {
 		commonLabels = []string{"owner"}
 	}
 
-	c.StartTime = prometheus.NewDesc(
+	c.startTime = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "start_time"),
 		"Time of process start.",
 		append(commonLabels, "process", "process_id", "creating_process_id"),
 		nil,
 	)
-	c.CPUTimeTotal = prometheus.NewDesc(
+	c.cpuTimeTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "cpu_time_total"),
 		"Returns elapsed time that all of the threads of this process used the processor to execute instructions by mode (privileged, user).",
 		append(commonLabels, "process", "process_id", "creating_process_id", "mode"),
 		nil,
 	)
-	c.HandleCount = prometheus.NewDesc(
+	c.handleCount = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "handles"),
 		"Total number of handles the process has open. This number is the sum of the handles currently open by each thread in the process.",
 		append(commonLabels, "process", "process_id", "creating_process_id"),
 		nil,
 	)
-	c.IOBytesTotal = prometheus.NewDesc(
+	c.ioBytesTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "io_bytes_total"),
 		"Bytes issued to I/O operations in different modes (read, write, other).",
 		append(commonLabels, "process", "process_id", "creating_process_id", "mode"),
 		nil,
 	)
-	c.IOOperationsTotal = prometheus.NewDesc(
+	c.ioOperationsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "io_operations_total"),
 		"I/O operations issued in different modes (read, write, other).",
 		append(commonLabels, "process", "process_id", "creating_process_id", "mode"),
 		nil,
 	)
-	c.PageFaultsTotal = prometheus.NewDesc(
+	c.pageFaultsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "page_faults_total"),
 		"Page faults by the threads executing in this process.",
 		append(commonLabels, "process", "process_id", "creating_process_id"),
 		nil,
 	)
-	c.PageFileBytes = prometheus.NewDesc(
+	c.pageFileBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "page_file_bytes"),
 		"Current number of bytes this process has used in the paging file(s).",
 		append(commonLabels, "process", "process_id", "creating_process_id"),
 		nil,
 	)
-	c.PoolBytes = prometheus.NewDesc(
+	c.poolBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "pool_bytes"),
 		"Pool Bytes is the last observed number of bytes in the paged or nonpaged pool.",
 		append(commonLabels, "process", "process_id", "creating_process_id", "pool"),
 		nil,
 	)
-	c.PriorityBase = prometheus.NewDesc(
+	c.priorityBase = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "priority_base"),
 		"Current base priority of this process. Threads within a process can raise and lower their own base priority relative to the process base priority of the process.",
 		append(commonLabels, "process", "process_id", "creating_process_id"),
 		nil,
 	)
-	c.PrivateBytes = prometheus.NewDesc(
+	c.privateBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "private_bytes"),
 		"Current number of bytes this process has allocated that cannot be shared with other processes.",
 		append(commonLabels, "process", "process_id", "creating_process_id"),
 		nil,
 	)
-	c.ThreadCount = prometheus.NewDesc(
+	c.threadCount = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "threads"),
 		"Number of threads currently active in this process.",
 		append(commonLabels, "process", "process_id", "creating_process_id"),
 		nil,
 	)
-	c.VirtualBytes = prometheus.NewDesc(
+	c.virtualBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "virtual_bytes"),
 		"Current size, in bytes, of the virtual address space that the process is using.",
 		append(commonLabels, "process", "process_id", "creating_process_id"),
 		nil,
 	)
-	c.WorkingSetPrivate = prometheus.NewDesc(
+	c.workingSetPrivate = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "working_set_private_bytes"),
 		"Size of the working set, in bytes, that is use for this process only and not shared nor shareable by other processes.",
 		append(commonLabels, "process", "process_id", "creating_process_id"),
 		nil,
 	)
-	c.WorkingSetPeak = prometheus.NewDesc(
+	c.workingSetPeak = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "working_set_peak_bytes"),
 		"Maximum size, in bytes, of the Working Set of this process at any point in time. The Working Set is the set of memory pages touched recently by the threads in the process.",
 		append(commonLabels, "process", "process_id", "creating_process_id"),
 		nil,
 	)
-	c.WorkingSet = prometheus.NewDesc(
+	c.workingSet = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "working_set_bytes"),
 		"Maximum number of bytes in the working set of this process at any point in time. The working set is the set of memory pages touched recently by the threads in the process.",
 		append(commonLabels, "process", "process_id", "creating_process_id"),
@@ -330,147 +330,147 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 		labels = append(labels, processName, pid, cpid)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.StartTime,
+			c.startTime,
 			prometheus.GaugeValue,
 			process.ElapsedTime,
 			labels...,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.HandleCount,
+			c.handleCount,
 			prometheus.GaugeValue,
 			process.HandleCount,
 			labels...,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.CPUTimeTotal,
+			c.cpuTimeTotal,
 			prometheus.CounterValue,
 			process.PercentPrivilegedTime,
 			append(labels, "privileged")...,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.CPUTimeTotal,
+			c.cpuTimeTotal,
 			prometheus.CounterValue,
 			process.PercentUserTime,
 			append(labels, "user")...,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.IOBytesTotal,
+			c.ioBytesTotal,
 			prometheus.CounterValue,
 			process.IOOtherBytesPerSec,
 			append(labels, "other")...,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.IOOperationsTotal,
+			c.ioOperationsTotal,
 			prometheus.CounterValue,
 			process.IOOtherOperationsPerSec,
 			append(labels, "other")...,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.IOBytesTotal,
+			c.ioBytesTotal,
 			prometheus.CounterValue,
 			process.IOReadBytesPerSec,
 			append(labels, "read")...,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.IOOperationsTotal,
+			c.ioOperationsTotal,
 			prometheus.CounterValue,
 			process.IOReadOperationsPerSec,
 			append(labels, "read")...,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.IOBytesTotal,
+			c.ioBytesTotal,
 			prometheus.CounterValue,
 			process.IOWriteBytesPerSec,
 			append(labels, "write")...,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.IOOperationsTotal,
+			c.ioOperationsTotal,
 			prometheus.CounterValue,
 			process.IOWriteOperationsPerSec,
 			append(labels, "write")...,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.PageFaultsTotal,
+			c.pageFaultsTotal,
 			prometheus.CounterValue,
 			process.PageFaultsPerSec,
 			labels...,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.PageFileBytes,
+			c.pageFileBytes,
 			prometheus.GaugeValue,
 			process.PageFileBytes,
 			labels...,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.PoolBytes,
+			c.poolBytes,
 			prometheus.GaugeValue,
 			process.PoolNonpagedBytes,
 			append(labels, "nonpaged")...,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.PoolBytes,
+			c.poolBytes,
 			prometheus.GaugeValue,
 			process.PoolPagedBytes,
 			append(labels, "paged")...,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.PriorityBase,
+			c.priorityBase,
 			prometheus.GaugeValue,
 			process.PriorityBase,
 			labels...,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.PrivateBytes,
+			c.privateBytes,
 			prometheus.GaugeValue,
 			process.PrivateBytes,
 			labels...,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.ThreadCount,
+			c.threadCount,
 			prometheus.GaugeValue,
 			process.ThreadCount,
 			labels...,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.VirtualBytes,
+			c.virtualBytes,
 			prometheus.GaugeValue,
 			process.VirtualBytes,
 			labels...,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.WorkingSetPrivate,
+			c.workingSetPrivate,
 			prometheus.GaugeValue,
 			process.WorkingSetPrivate,
 			labels...,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.WorkingSetPeak,
+			c.workingSetPeak,
 			prometheus.GaugeValue,
 			process.WorkingSetPeak,
 			labels...,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.WorkingSet,
+			c.workingSet,
 			prometheus.GaugeValue,
 			process.WorkingSet,
 			labels...,

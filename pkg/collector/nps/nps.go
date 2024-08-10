@@ -21,32 +21,32 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	logger log.Logger
 
-	AccessAccepts           *prometheus.Desc
-	AccessChallenges        *prometheus.Desc
-	AccessRejects           *prometheus.Desc
-	AccessRequests          *prometheus.Desc
-	AccessBadAuthenticators *prometheus.Desc
-	AccessDroppedPackets    *prometheus.Desc
-	AccessInvalidRequests   *prometheus.Desc
-	AccessMalformedPackets  *prometheus.Desc
-	AccessPacketsReceived   *prometheus.Desc
-	AccessPacketsSent       *prometheus.Desc
-	AccessServerResetTime   *prometheus.Desc
-	AccessServerUpTime      *prometheus.Desc
-	AccessUnknownType       *prometheus.Desc
+	accessAccepts           *prometheus.Desc
+	accessChallenges        *prometheus.Desc
+	accessRejects           *prometheus.Desc
+	accessRequests          *prometheus.Desc
+	accessBadAuthenticators *prometheus.Desc
+	accessDroppedPackets    *prometheus.Desc
+	accessInvalidRequests   *prometheus.Desc
+	accessMalformedPackets  *prometheus.Desc
+	accessPacketsReceived   *prometheus.Desc
+	accessPacketsSent       *prometheus.Desc
+	accessServerResetTime   *prometheus.Desc
+	accessServerUpTime      *prometheus.Desc
+	accessUnknownType       *prometheus.Desc
 
-	AccountingRequests          *prometheus.Desc
-	AccountingResponses         *prometheus.Desc
-	AccountingBadAuthenticators *prometheus.Desc
-	AccountingDroppedPackets    *prometheus.Desc
-	AccountingInvalidRequests   *prometheus.Desc
-	AccountingMalformedPackets  *prometheus.Desc
-	AccountingNoRecord          *prometheus.Desc
-	AccountingPacketsReceived   *prometheus.Desc
-	AccountingPacketsSent       *prometheus.Desc
-	AccountingServerResetTime   *prometheus.Desc
-	AccountingServerUpTime      *prometheus.Desc
-	AccountingUnknownType       *prometheus.Desc
+	accountingRequests          *prometheus.Desc
+	accountingResponses         *prometheus.Desc
+	accountingBadAuthenticators *prometheus.Desc
+	accountingDroppedPackets    *prometheus.Desc
+	accountingInvalidRequests   *prometheus.Desc
+	accountingMalformedPackets  *prometheus.Desc
+	accountingNoRecord          *prometheus.Desc
+	accountingPacketsReceived   *prometheus.Desc
+	accountingPacketsSent       *prometheus.Desc
+	accountingServerResetTime   *prometheus.Desc
+	accountingServerUpTime      *prometheus.Desc
+	accountingUnknownType       *prometheus.Desc
 }
 
 func New(logger log.Logger, _ *Config) *Collector {
@@ -77,152 +77,152 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build() error {
-	c.AccessAccepts = prometheus.NewDesc(
+	c.accessAccepts = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "access_accepts"),
 		"(AccessAccepts)",
 		nil,
 		nil,
 	)
-	c.AccessChallenges = prometheus.NewDesc(
+	c.accessChallenges = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "access_challenges"),
 		"(AccessChallenges)",
 		nil,
 		nil,
 	)
-	c.AccessRejects = prometheus.NewDesc(
+	c.accessRejects = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "access_rejects"),
 		"(AccessRejects)",
 		nil,
 		nil,
 	)
-	c.AccessRequests = prometheus.NewDesc(
+	c.accessRequests = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "access_requests"),
 		"(AccessRequests)",
 		nil,
 		nil,
 	)
-	c.AccessBadAuthenticators = prometheus.NewDesc(
+	c.accessBadAuthenticators = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "access_bad_authenticators"),
 		"(BadAuthenticators)",
 		nil,
 		nil,
 	)
-	c.AccessDroppedPackets = prometheus.NewDesc(
+	c.accessDroppedPackets = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "access_dropped_packets"),
 		"(DroppedPackets)",
 		nil,
 		nil,
 	)
-	c.AccessInvalidRequests = prometheus.NewDesc(
+	c.accessInvalidRequests = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "access_invalid_requests"),
 		"(InvalidRequests)",
 		nil,
 		nil,
 	)
-	c.AccessMalformedPackets = prometheus.NewDesc(
+	c.accessMalformedPackets = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "access_malformed_packets"),
 		"(MalformedPackets)",
 		nil,
 		nil,
 	)
-	c.AccessPacketsReceived = prometheus.NewDesc(
+	c.accessPacketsReceived = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "access_packets_received"),
 		"(PacketsReceived)",
 		nil,
 		nil,
 	)
-	c.AccessPacketsSent = prometheus.NewDesc(
+	c.accessPacketsSent = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "access_packets_sent"),
 		"(PacketsSent)",
 		nil,
 		nil,
 	)
-	c.AccessServerResetTime = prometheus.NewDesc(
+	c.accessServerResetTime = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "access_server_reset_time"),
 		"(ServerResetTime)",
 		nil,
 		nil,
 	)
-	c.AccessServerUpTime = prometheus.NewDesc(
+	c.accessServerUpTime = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "access_server_up_time"),
 		"(ServerUpTime)",
 		nil,
 		nil,
 	)
-	c.AccessUnknownType = prometheus.NewDesc(
+	c.accessUnknownType = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "access_unknown_type"),
 		"(UnknownType)",
 		nil,
 		nil,
 	)
 
-	c.AccountingRequests = prometheus.NewDesc(
+	c.accountingRequests = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "accounting_requests"),
 		"(AccountingRequests)",
 		nil,
 		nil,
 	)
-	c.AccountingResponses = prometheus.NewDesc(
+	c.accountingResponses = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "accounting_responses"),
 		"(AccountingResponses)",
 		nil,
 		nil,
 	)
-	c.AccountingBadAuthenticators = prometheus.NewDesc(
+	c.accountingBadAuthenticators = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "accounting_bad_authenticators"),
 		"(BadAuthenticators)",
 		nil,
 		nil,
 	)
-	c.AccountingDroppedPackets = prometheus.NewDesc(
+	c.accountingDroppedPackets = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "accounting_dropped_packets"),
 		"(DroppedPackets)",
 		nil,
 		nil,
 	)
-	c.AccountingInvalidRequests = prometheus.NewDesc(
+	c.accountingInvalidRequests = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "accounting_invalid_requests"),
 		"(InvalidRequests)",
 		nil,
 		nil,
 	)
-	c.AccountingMalformedPackets = prometheus.NewDesc(
+	c.accountingMalformedPackets = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "accounting_malformed_packets"),
 		"(MalformedPackets)",
 		nil,
 		nil,
 	)
-	c.AccountingNoRecord = prometheus.NewDesc(
+	c.accountingNoRecord = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "accounting_no_record"),
 		"(NoRecord)",
 		nil,
 		nil,
 	)
-	c.AccountingPacketsReceived = prometheus.NewDesc(
+	c.accountingPacketsReceived = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "accounting_packets_received"),
 		"(PacketsReceived)",
 		nil,
 		nil,
 	)
-	c.AccountingPacketsSent = prometheus.NewDesc(
+	c.accountingPacketsSent = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "accounting_packets_sent"),
 		"(PacketsSent)",
 		nil,
 		nil,
 	)
-	c.AccountingServerResetTime = prometheus.NewDesc(
+	c.accountingServerResetTime = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "accounting_server_reset_time"),
 		"(ServerResetTime)",
 		nil,
 		nil,
 	)
-	c.AccountingServerUpTime = prometheus.NewDesc(
+	c.accountingServerUpTime = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "accounting_server_up_time"),
 		"(ServerUpTime)",
 		nil,
 		nil,
 	)
-	c.AccountingUnknownType = prometheus.NewDesc(
+	c.accountingUnknownType = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "accounting_unknown_type"),
 		"(UnknownType)",
 		nil,
@@ -292,79 +292,79 @@ func (c *Collector) CollectAccept(ch chan<- prometheus.Metric) error {
 	}
 
 	ch <- prometheus.MustNewConstMetric(
-		c.AccessAccepts,
+		c.accessAccepts,
 		prometheus.CounterValue,
 		float64(dst[0].AccessAccepts),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.AccessChallenges,
+		c.accessChallenges,
 		prometheus.CounterValue,
 		float64(dst[0].AccessChallenges),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.AccessRejects,
+		c.accessRejects,
 		prometheus.CounterValue,
 		float64(dst[0].AccessRejects),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.AccessRequests,
+		c.accessRequests,
 		prometheus.CounterValue,
 		float64(dst[0].AccessRequests),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.AccessBadAuthenticators,
+		c.accessBadAuthenticators,
 		prometheus.CounterValue,
 		float64(dst[0].AccessBadAuthenticators),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.AccessDroppedPackets,
+		c.accessDroppedPackets,
 		prometheus.CounterValue,
 		float64(dst[0].AccessDroppedPackets),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.AccessInvalidRequests,
+		c.accessInvalidRequests,
 		prometheus.CounterValue,
 		float64(dst[0].AccessInvalidRequests),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.AccessMalformedPackets,
+		c.accessMalformedPackets,
 		prometheus.CounterValue,
 		float64(dst[0].AccessMalformedPackets),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.AccessPacketsReceived,
+		c.accessPacketsReceived,
 		prometheus.CounterValue,
 		float64(dst[0].AccessPacketsReceived),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.AccessPacketsSent,
+		c.accessPacketsSent,
 		prometheus.CounterValue,
 		float64(dst[0].AccessPacketsSent),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.AccessServerResetTime,
+		c.accessServerResetTime,
 		prometheus.CounterValue,
 		float64(dst[0].AccessServerResetTime),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.AccessServerUpTime,
+		c.accessServerUpTime,
 		prometheus.CounterValue,
 		float64(dst[0].AccessServerUpTime),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.AccessUnknownType,
+		c.accessUnknownType,
 		prometheus.CounterValue,
 		float64(dst[0].AccessUnknownType),
 	)
@@ -380,73 +380,73 @@ func (c *Collector) CollectAccounting(ch chan<- prometheus.Metric) error {
 	}
 
 	ch <- prometheus.MustNewConstMetric(
-		c.AccountingRequests,
+		c.accountingRequests,
 		prometheus.CounterValue,
 		float64(dst[0].AccountingRequests),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.AccountingResponses,
+		c.accountingResponses,
 		prometheus.CounterValue,
 		float64(dst[0].AccountingResponses),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.AccountingBadAuthenticators,
+		c.accountingBadAuthenticators,
 		prometheus.CounterValue,
 		float64(dst[0].AccountingBadAuthenticators),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.AccountingDroppedPackets,
+		c.accountingDroppedPackets,
 		prometheus.CounterValue,
 		float64(dst[0].AccountingDroppedPackets),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.AccountingInvalidRequests,
+		c.accountingInvalidRequests,
 		prometheus.CounterValue,
 		float64(dst[0].AccountingInvalidRequests),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.AccountingMalformedPackets,
+		c.accountingMalformedPackets,
 		prometheus.CounterValue,
 		float64(dst[0].AccountingMalformedPackets),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.AccountingNoRecord,
+		c.accountingNoRecord,
 		prometheus.CounterValue,
 		float64(dst[0].AccountingNoRecord),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.AccountingPacketsReceived,
+		c.accountingPacketsReceived,
 		prometheus.CounterValue,
 		float64(dst[0].AccountingPacketsReceived),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.AccountingPacketsSent,
+		c.accountingPacketsSent,
 		prometheus.CounterValue,
 		float64(dst[0].AccountingPacketsSent),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.AccountingServerResetTime,
+		c.accountingServerResetTime,
 		prometheus.CounterValue,
 		float64(dst[0].AccountingServerResetTime),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.AccountingServerUpTime,
+		c.accountingServerUpTime,
 		prometheus.CounterValue,
 		float64(dst[0].AccountingServerUpTime),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.AccountingUnknownType,
+		c.accountingUnknownType,
 		prometheus.CounterValue,
 		float64(dst[0].AccountingUnknownType),
 	)

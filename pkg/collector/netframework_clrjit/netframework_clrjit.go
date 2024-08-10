@@ -21,10 +21,10 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	logger log.Logger
 
-	NumberofMethodsJitted      *prometheus.Desc
-	TimeinJit                  *prometheus.Desc
-	StandardJitFailures        *prometheus.Desc
-	TotalNumberofILBytesJitted *prometheus.Desc
+	numberOfMethodsJitted      *prometheus.Desc
+	timeInJit                  *prometheus.Desc
+	standardJitFailures        *prometheus.Desc
+	totalNumberOfILBytesJitted *prometheus.Desc
 }
 
 func New(logger log.Logger, _ *Config) *Collector {
@@ -55,25 +55,25 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build() error {
-	c.NumberofMethodsJitted = prometheus.NewDesc(
+	c.numberOfMethodsJitted = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "jit_methods_total"),
 		"Displays the total number of methods JIT-compiled since the application started. This counter does not include pre-JIT-compiled methods.",
 		[]string{"process"},
 		nil,
 	)
-	c.TimeinJit = prometheus.NewDesc(
+	c.timeInJit = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "jit_time_percent"),
 		"Displays the percentage of time spent in JIT compilation. This counter is updated at the end of every JIT compilation phase. A JIT compilation phase occurs when a method and its dependencies are compiled.",
 		[]string{"process"},
 		nil,
 	)
-	c.StandardJitFailures = prometheus.NewDesc(
+	c.standardJitFailures = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "jit_standard_failures_total"),
 		"Displays the peak number of methods the JIT compiler has failed to compile since the application started. This failure can occur if the MSIL cannot be verified or if there is an internal error in the JIT compiler.",
 		[]string{"process"},
 		nil,
 	)
-	c.TotalNumberofILBytesJitted = prometheus.NewDesc(
+	c.totalNumberOfILBytesJitted = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "jit_il_bytes_total"),
 		"Displays the total number of Microsoft intermediate language (MSIL) bytes compiled by the just-in-time (JIT) compiler since the application started",
 		[]string{"process"},
@@ -117,28 +117,28 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 		}
 
 		ch <- prometheus.MustNewConstMetric(
-			c.NumberofMethodsJitted,
+			c.numberOfMethodsJitted,
 			prometheus.CounterValue,
 			float64(process.NumberofMethodsJitted),
 			process.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.TimeinJit,
+			c.timeInJit,
 			prometheus.GaugeValue,
 			float64(process.PercentTimeinJit)/float64(process.Frequency_PerfTime),
 			process.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.StandardJitFailures,
+			c.standardJitFailures,
 			prometheus.GaugeValue,
 			float64(process.StandardJitFailures),
 			process.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.TotalNumberofILBytesJitted,
+			c.totalNumberOfILBytesJitted,
 			prometheus.CounterValue,
 			float64(process.TotalNumberofILBytesJitted),
 			process.Name,
