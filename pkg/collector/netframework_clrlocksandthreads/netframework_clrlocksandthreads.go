@@ -26,8 +26,8 @@ type Collector struct {
 	numberOfCurrentPhysicalThreads   *prometheus.Desc
 	numberOfCurrentRecognizedThreads *prometheus.Desc
 	numberOfTotalRecognizedThreads   *prometheus.Desc
-	QueueLengthPeak                  *prometheus.Desc
-	TotalNumberOfContentions         *prometheus.Desc
+	queueLengthPeak                  *prometheus.Desc
+	totalNumberOfContentions         *prometheus.Desc
 }
 
 func New(logger log.Logger, _ *Config) *Collector {
@@ -88,13 +88,13 @@ func (c *Collector) Build() error {
 		[]string{"process"},
 		nil,
 	)
-	c.QueueLengthPeak = prometheus.NewDesc(
+	c.queueLengthPeak = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "queue_length_total"),
 		"Displays the total number of threads that waited to acquire a managed lock since the application started.",
 		[]string{"process"},
 		nil,
 	)
-	c.TotalNumberOfContentions = prometheus.NewDesc(
+	c.totalNumberOfContentions = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "contentions_total"),
 		"Displays the total number of times that threads in the runtime have attempted to acquire a managed lock unsuccessfully.",
 		[]string{"process"},
@@ -176,14 +176,14 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.QueueLengthPeak,
+			c.queueLengthPeak,
 			prometheus.CounterValue,
 			float64(process.QueueLengthPeak),
 			process.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.TotalNumberOfContentions,
+			c.totalNumberOfContentions,
 			prometheus.CounterValue,
 			float64(process.TotalNumberofContentions),
 			process.Name,
