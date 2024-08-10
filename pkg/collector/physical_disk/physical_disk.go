@@ -27,7 +27,7 @@ var ConfigDefaults = Config{
 	DiskExclude: "",
 }
 
-// A Collector is a Prometheus Collector for perflib PhysicalDisk metrics
+// A Collector is a Prometheus Collector for perflib PhysicalDisk metrics.
 type Collector struct {
 	logger log.Logger
 
@@ -217,7 +217,7 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 
 // PhysicalDisk
 // Win32_PerfRawData_PerfDisk_PhysicalDisk docs:
-// - https://docs.microsoft.com/en-us/previous-versions/aa394308(v=vs.85) - Win32_PerfRawData_PerfDisk_PhysicalDisk class
+// - https://docs.microsoft.com/en-us/previous-versions/aa394308(v=vs.85) - Win32_PerfRawData_PerfDisk_PhysicalDisk class.
 type PhysicalDisk struct {
 	Name                   string
 	CurrentDiskQueueLength float64 `perflib:"Current Disk Queue Length"`

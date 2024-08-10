@@ -12,7 +12,7 @@ import (
 
 type WTSTypeClass int
 
-// The valid values for the WTSTypeClass enumeration
+// The valid values for the WTSTypeClass enumeration.
 const (
 	WTSTypeProcessInfoLevel0 WTSTypeClass = iota
 	WTSTypeProcessInfoLevel1

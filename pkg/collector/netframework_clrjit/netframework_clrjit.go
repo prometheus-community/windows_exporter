@@ -17,7 +17,7 @@ type Config struct{}
 
 var ConfigDefaults = Config{}
 
-// A Collector is a Prometheus Collector for WMI Win32_PerfRawData_NETFramework_NETCLRJit metrics
+// A Collector is a Prometheus Collector for WMI Win32_PerfRawData_NETFramework_NETCLRJit metrics.
 type Collector struct {
 	logger log.Logger
 

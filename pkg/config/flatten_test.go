@@ -7,7 +7,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Unmarshal good configuration file and confirm data is flattened correctly
+// Unmarshal good configuration file and confirm data is flattened correctly.
 func TestConfigFlattening(t *testing.T) {
 	t.Parallel()
 

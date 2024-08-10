@@ -104,7 +104,7 @@ func (l *eventlogLogger) putLoggerBuf(lb *loggerBuf) {
 // PrioritySelector inspects the list of keyvals and selects an eventlog priority.
 type PrioritySelector func(keyvals ...interface{}) Priority
 
-// defaultPrioritySelector convert a kit/log level into a Windows Eventlog level
+// defaultPrioritySelector convert a kit/log level into a Windows Eventlog level.
 func defaultPrioritySelector(keyvals ...interface{}) Priority {
 	l := len(keyvals)
 

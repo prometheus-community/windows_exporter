@@ -102,7 +102,6 @@ func (c *Collector) GetPerfCounter() ([]string, error) {
 
 func (c *Collector) Close() error {
 	err := wtsapi32.WTSCloseServer(c.hServer)
-
 	if err != nil {
 		return fmt.Errorf("failed to close WTS server: %w", err)
 	}

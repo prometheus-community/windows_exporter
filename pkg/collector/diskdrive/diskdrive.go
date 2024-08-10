@@ -23,7 +23,7 @@ type Config struct{}
 
 var ConfigDefaults = Config{}
 
-// A Collector is a Prometheus Collector for a few WMI metrics in Win32_DiskDrive
+// A Collector is a Prometheus Collector for a few WMI metrics in Win32_DiskDrive.
 type Collector struct {
 	logger log.Logger
 

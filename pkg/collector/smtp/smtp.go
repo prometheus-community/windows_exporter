@@ -405,7 +405,7 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 	return nil
 }
 
-// PerflibSMTPServer Perflib: "SMTP Server"
+// PerflibSMTPServer Perflib: "SMTP Server".
 type PerflibSMTPServer struct {
 	Name string
 

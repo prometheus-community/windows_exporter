@@ -21,7 +21,7 @@ type memoryStatusEx struct {
 	UllAvailExtendedVirtual uint64
 }
 
-// MemoryStatus is an idiomatic wrapper for MemoryStatusEx
+// MemoryStatus is an idiomatic wrapper for MemoryStatusEx.
 type MemoryStatus struct {
 	MemoryLoad           uint32
 	TotalPhys            uint64
@@ -40,10 +40,10 @@ type wProcessorArchitecture struct {
 	WReserved              uint16
 }
 
-// ProcessorArchitecture is an idiomatic wrapper for wProcessorArchitecture
+// ProcessorArchitecture is an idiomatic wrapper for wProcessorArchitecture.
 type ProcessorArchitecture uint16
 
-// Idiomatic values for wProcessorArchitecture
+// Idiomatic values for wProcessorArchitecture.
 const (
 	AMD64   ProcessorArchitecture = 9
 	ARM                           = 5
@@ -68,7 +68,7 @@ type lpSystemInfo struct {
 	WProcessorRevision          uint16
 }
 
-// SystemInfo is an idiomatic wrapper for LpSystemInfo
+// SystemInfo is an idiomatic wrapper for LpSystemInfo.
 type SystemInfo struct {
 	Arch                      ProcessorArchitecture
 	PageSize                  uint32
@@ -82,10 +82,10 @@ type SystemInfo struct {
 	ProcessorRevision         uint16
 }
 
-// WinComputerNameFormat is a wrapper for COMPUTER_NAME_FORMAT
+// WinComputerNameFormat is a wrapper for COMPUTER_NAME_FORMAT.
 type WinComputerNameFormat int
 
-// Definitions for WinComputerNameFormat constants
+// Definitions for WinComputerNameFormat constants.
 const (
 	ComputerNameNetBIOS WinComputerNameFormat = iota
 	ComputerNameDNSHostname

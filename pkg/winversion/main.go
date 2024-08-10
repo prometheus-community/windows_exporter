@@ -9,8 +9,10 @@ import (
 	"golang.org/x/sys/windows/registry"
 )
 
-var WindowsVersion string
-var WindowsVersionFloat float64
+var (
+	WindowsVersion      string
+	WindowsVersionFloat float64
+)
 
 func init() {
 	var err error

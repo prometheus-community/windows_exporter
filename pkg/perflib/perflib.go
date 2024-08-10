@@ -120,7 +120,7 @@ import (
 	"unsafe"
 )
 
-// TODO: There's a LittleEndian field in the PERF header - we ought to check it
+// TODO: There's a LittleEndian field in the PERF header - we ought to check it.
 var bo = binary.LittleEndian
 
 const averageCount64Type = 1073874176
@@ -204,7 +204,6 @@ func queryRawData(query string) ([]byte, error) {
 	buffer = make([]byte, bufLen)
 
 	name, err := syscall.UTF16PtrFromString(query)
-
 	if err != nil {
 		return nil, fmt.Errorf("failed to encode query string: %v", err)
 	}
@@ -266,7 +265,6 @@ more than you asked for.
 */
 func QueryPerformanceData(query string) ([]*PerfObject, error) {
 	buffer, err := queryRawData(query)
-
 	if err != nil {
 		return nil, err
 	}
@@ -277,7 +275,6 @@ func QueryPerformanceData(query string) ([]*PerfObject, error) {
 
 	header := new(perfDataBlock)
 	err = header.BinaryReadFrom(r)
-
 	if err != nil {
 		return nil, fmt.Errorf("failed to read performance data block for %q with: %w", query, err)
 	}

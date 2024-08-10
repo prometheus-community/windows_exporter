@@ -33,7 +33,7 @@ func (f *AllowedFile) Set(s string) error {
 	case "eventlog":
 		f.w = nil
 	default:
-		file, err := os.OpenFile(s, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0200)
+		file, err := os.OpenFile(s, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0o200)
 		if err != nil {
 			return err
 		}
@@ -42,7 +42,7 @@ func (f *AllowedFile) Set(s string) error {
 	return nil
 }
 
-// Config is a struct containing configurable settings for the logger
+// Config is a struct containing configurable settings for the logger.
 type Config struct {
 	promlog.Config
 

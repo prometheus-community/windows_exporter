@@ -60,7 +60,7 @@ type Collector struct {
 	requestSecs           *prometheus.Desc
 }
 
-// All available collector functions
+// All available collector functions.
 var smbclientAllCollectorNames = []string{
 	"ClientShares",
 }
@@ -240,7 +240,7 @@ func (c *Collector) Build() error {
 	return nil
 }
 
-// Collect collects smb client metrics and sends them to prometheus
+// Collect collects smb client metrics and sends them to prometheus.
 func (c *Collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	collectorFuncs := map[string]func(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error{
 		"ClientShares": c.collectClientShares,
@@ -255,7 +255,7 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 	return nil
 }
 
-// Perflib: SMB Client Shares
+// Perflib: SMB Client Shares.
 type perflibClientShares struct {
 	Name string
 

@@ -19,7 +19,7 @@ type Config struct{}
 
 var ConfigDefaults = Config{}
 
-// A Collector is a Prometheus Collector for WMI metrics
+// A Collector is a Prometheus Collector for WMI metrics.
 type Collector struct {
 	logger log.Logger
 

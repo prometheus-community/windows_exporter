@@ -30,7 +30,7 @@ type Config struct{}
 
 var ConfigDefaults = Config{}
 
-// A Collector is a Prometheus Collector for WMI metrics
+// A Collector is a Prometheus Collector for WMI metrics.
 type Collector struct {
 	logger log.Logger
 
@@ -175,7 +175,7 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 }
 
 // Win32_OperatingSystem docs:
-// - https://msdn.microsoft.com/en-us/library/aa394239 - Win32_OperatingSystem class
+// - https://msdn.microsoft.com/en-us/library/aa394239 - Win32_OperatingSystem class.
 type Win32_OperatingSystem struct {
 	Caption                 string
 	FreePhysicalMemory      uint64

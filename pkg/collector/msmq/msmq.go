@@ -24,7 +24,7 @@ var ConfigDefaults = Config{
 	QueryWhereClause: "",
 }
 
-// A Collector is a Prometheus Collector for WMI Win32_PerfRawData_MSMQ_MSMQQueue metrics
+// A Collector is a Prometheus Collector for WMI Win32_PerfRawData_MSMQ_MSMQQueue metrics.
 type Collector struct {
 	logger log.Logger
 

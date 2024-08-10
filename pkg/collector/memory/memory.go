@@ -20,7 +20,7 @@ type Config struct{}
 
 var ConfigDefaults = Config{}
 
-// A Collector is a Prometheus Collector for perflib Memory metrics
+// A Collector is a Prometheus Collector for perflib Memory metrics.
 type Collector struct {
 	logger log.Logger
 

@@ -69,7 +69,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/types"
 )
 
-// NewWithFlags To be called by the exporter for collector initialization before running kingpin.Parse
+// NewWithFlags To be called by the exporter for collector initialization before running kingpin.Parse.
 func NewWithFlags(app *kingpin.Application) Collectors {
 	collectors := map[string]Collector{}
 
@@ -195,7 +195,7 @@ func (c *Collectors) SetPerfCounterQuery() error {
 	return nil
 }
 
-// Enable removes all collectors that not enabledCollectors
+// Enable removes all collectors that not enabledCollectors.
 func (c *Collectors) Enable(enabledCollectors []string) {
 	for name := range c.collectors {
 		if !slices.Contains(enabledCollectors, name) {
@@ -204,7 +204,7 @@ func (c *Collectors) Enable(enabledCollectors []string) {
 	}
 }
 
-// Build To be called by the exporter for collector initialization
+// Build To be called by the exporter for collector initialization.
 func (c *Collectors) Build() error {
 	var err error
 
@@ -217,7 +217,7 @@ func (c *Collectors) Build() error {
 	return nil
 }
 
-// PrepareScrapeContext creates a ScrapeContext to be used during a single scrape
+// PrepareScrapeContext creates a ScrapeContext to be used during a single scrape.
 func (c *Collectors) PrepareScrapeContext() (*types.ScrapeContext, error) {
 	objs, err := perflib.GetPerflibSnapshot(c.perfCounterQuery)
 	if err != nil {
@@ -227,7 +227,7 @@ func (c *Collectors) PrepareScrapeContext() (*types.ScrapeContext, error) {
 	return &types.ScrapeContext{PerfObjects: objs}, nil
 }
 
-// Close To be called by the exporter for collector cleanup
+// Close To be called by the exporter for collector cleanup.
 func (c *Collectors) Close() error {
 	errs := make([]error, 0, len(c.collectors))
 

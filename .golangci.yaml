@@ -37,7 +37,7 @@ linters-settings:
       rules:
         # Any struct tag type can be used.
         # Support string case: `camel`, `pascal`, `kebab`, `snake`, `upperSnake`, `goCamel`, `goPascal`, `goKebab`, `goSnake`, `upper`, `lower`, `header`
-        json: snake
+        json: camel
         yaml: snake
 
 issues:

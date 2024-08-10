@@ -24,7 +24,7 @@ const (
 	SL_GEN_STATE_LAST
 )
 
-// SLIsWindowsGenuineLocal function wrapper
+// SLIsWindowsGenuineLocal function wrapper.
 func SLIsWindowsGenuineLocal() (SL_GENUINE_STATE, error) {
 	var genuineState SL_GENUINE_STATE
 

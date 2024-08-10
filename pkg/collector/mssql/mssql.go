@@ -126,7 +126,7 @@ func mssqlGetPerfObjectName(sqlInstance string, collector string) string {
 	return prefix + suffix
 }
 
-// A Collector is a Prometheus Collector for various WMI Win32_PerfRawData_MSSQLSERVER_* metrics
+// A Collector is a Prometheus Collector for various WMI Win32_PerfRawData_MSSQLSERVER_* metrics.
 type Collector struct {
 	logger log.Logger
 

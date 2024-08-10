@@ -31,7 +31,7 @@ var ConfigDefaults = Config{
 	VolumeExclude: "",
 }
 
-// A Collector is a Prometheus Collector for perflib logicalDisk metrics
+// A Collector is a Prometheus Collector for perflib logicalDisk metrics.
 type Collector struct {
 	logger log.Logger
 
@@ -264,7 +264,7 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 
 // Win32_PerfRawData_PerfDisk_LogicalDisk docs:
 // - https://msdn.microsoft.com/en-us/windows/hardware/aa394307(v=vs.71) - Win32_PerfRawData_PerfDisk_LogicalDisk class
-// - https://msdn.microsoft.com/en-us/library/ms803973.aspx - LogicalDisk object reference
+// - https://msdn.microsoft.com/en-us/library/ms803973.aspx - LogicalDisk object reference.
 type logicalDisk struct {
 	Name                    string
 	CurrentDiskQueueLength  float64 `perflib:"Current Disk Queue Length"`
@@ -478,7 +478,6 @@ func getDiskIDByVolume(rootDrive string) (string, error) {
 	f, err = windows.CreateFile(
 		windows.StringToUTF16Ptr(`\\.\`+rootDrive),
 		0, mode, nil, windows.OPEN_EXISTING, uint32(windows.FILE_ATTRIBUTE_READONLY), 0)
-
 	if err != nil {
 		return "", err
 	}
@@ -527,7 +526,6 @@ func getVolumeInfo(rootDrive string) (volumeInfo, error) {
 
 	err := windows.GetVolumeInformation(volPath, &volBufLabel[0], uint32(len(volBufLabel)),
 		&volSerialNum, nil, &fsFlags, &volBufType[0], uint32(len(volBufType)))
-
 	if err != nil {
 		if driveType != windows.DRIVE_CDROM && driveType != windows.DRIVE_REMOVABLE {
 			return volumeInfo{}, err
