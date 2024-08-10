@@ -1457,13 +1457,13 @@ type perflibW3SVC_W3WP struct {
 
 	URICacheFlushesTotal       float64 `perflib:"Total Flushed URIs"`
 	URICacheFlushesTotalKernel float64 `perflib:"Total Flushed URIs"`
-	URIsFlushedTotalKernel     float64 `perflib:"Kernel\: Total Flushed URIs"` //nolint:govet
+	URIsFlushedTotalKernel     float64 `perflib:"Kernel\: Total Flushed URIs"` //nolint:govet,tagalign
 	URICacheHitsTotal          float64 `perflib:"URI Cache Hits"`
-	URICacheHitsTotalKernel    float64 `perflib:"Kernel\: URI Cache Hits"` //nolint:govet
+	URICacheHitsTotalKernel    float64 `perflib:"Kernel\: URI Cache Hits"` //nolint:govet,tagalign
 	URICacheMissesTotal        float64 `perflib:"URI Cache Misses"`
-	URICacheMissesTotalKernel  float64 `perflib:"Kernel\: URI Cache Misses"` //nolint:govet
+	URICacheMissesTotalKernel  float64 `perflib:"Kernel\: URI Cache Misses"` //nolint:govet,tagalign
 	URIsCached                 float64 `perflib:"Current URIs Cached"`
-	URIsCachedKernel           float64 `perflib:"Kernel\: Current URIs Cached"` //nolint:govet
+	URIsCachedKernel           float64 `perflib:"Kernel\: Current URIs Cached"` //nolint:govet,tagalign
 	URIsCachedTotal            float64 `perflib:"Total URIs Cached"`
 	URIsCachedTotalKernel      float64 `perflib:"Total URIs Cached"`
 	URIsFlushedTotal           float64 `perflib:"Total Flushed URIs"`

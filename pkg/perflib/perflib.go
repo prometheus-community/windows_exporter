@@ -438,6 +438,7 @@ func parseCounterBlock(b []byte, r io.ReadSeeker, pos int64, defs []*PerfCounter
 	return int64(block.ByteLength), counters, nil
 }
 
+//nolint:nonamedreturns
 func convertCounterValue(counterDef *perfCounterDefinition, buffer []byte, valueOffset int64) (value int64) {
 	/*
 		We can safely ignore the type since we're not interested in anything except the raw value.

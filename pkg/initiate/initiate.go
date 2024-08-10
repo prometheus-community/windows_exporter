@@ -17,6 +17,7 @@ type windowsExporterService struct{}
 
 var logger *eventlog.Log
 
+//nolint:nonamedreturns
 func (s *windowsExporterService) Execute(_ []string, r <-chan svc.ChangeRequest, changes chan<- svc.Status) (ssec bool, errno uint32) {
 	const cmdsAccepted = svc.AcceptStop | svc.AcceptShutdown
 	changes <- svc.Status{State: svc.StartPending}
