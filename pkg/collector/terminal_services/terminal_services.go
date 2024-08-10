@@ -58,7 +58,6 @@ type Collector struct {
 	hServer syscall.Handle
 
 	sessionInfo                 *prometheus.Desc
-	localSessionCount           *prometheus.Desc
 	connectionBrokerPerformance *prometheus.Desc
 	handleCount                 *prometheus.Desc
 	pageFaultsPerSec            *prometheus.Desc

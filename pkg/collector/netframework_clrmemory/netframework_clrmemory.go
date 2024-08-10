@@ -21,21 +21,18 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	logger log.Logger
 
-	allocatedBytes                     *prometheus.Desc
-	finalizationSurvivors              *prometheus.Desc
-	heapSize                           *prometheus.Desc
-	promotedBytes                      *prometheus.Desc
-	numberGCHandles                    *prometheus.Desc
-	numberCollections                  *prometheus.Desc
-	numberInducedGC                    *prometheus.Desc
-	numberOfPinnedObjects              *prometheus.Desc
-	numberOfSinkBlocksInUse            *prometheus.Desc
-	numberTotalCommittedBytes          *prometheus.Desc
-	numberTotalReservedBytes           *prometheus.Desc
-	timeInGC                           *prometheus.Desc
-	promotedFinalizationMemoryFromGen0 *prometheus.Desc
-	promotedMemoryFromGen0             *prometheus.Desc
-	promotedMemoryFromGen1             *prometheus.Desc
+	allocatedBytes            *prometheus.Desc
+	finalizationSurvivors     *prometheus.Desc
+	heapSize                  *prometheus.Desc
+	promotedBytes             *prometheus.Desc
+	numberGCHandles           *prometheus.Desc
+	numberCollections         *prometheus.Desc
+	numberInducedGC           *prometheus.Desc
+	numberOfPinnedObjects     *prometheus.Desc
+	numberOfSinkBlocksInUse   *prometheus.Desc
+	numberTotalCommittedBytes *prometheus.Desc
+	numberTotalReservedBytes  *prometheus.Desc
+	timeInGC                  *prometheus.Desc
 }
 
 func New(logger log.Logger, _ *Config) *Collector {

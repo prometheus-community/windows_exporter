@@ -135,7 +135,6 @@ type Collector struct {
 	maximumFileCacheMemoryUsage *prometheus.Desc
 	fileCacheFlushesTotal       *prometheus.Desc
 	fileCacheQueriesTotal       *prometheus.Desc
-	filesCachedMissesTotal      *prometheus.Desc
 	fileCacheHitsTotal          *prometheus.Desc
 	filesCached                 *prometheus.Desc
 	filesCachedTotal            *prometheus.Desc
@@ -144,7 +143,6 @@ type Collector struct {
 	uriCacheFlushesTotal *prometheus.Desc
 	uriCacheQueriesTotal *prometheus.Desc
 	uriCacheHitsTotal    *prometheus.Desc
-	uriCacheMissesTotal  *prometheus.Desc
 	urisCached           *prometheus.Desc
 	urisCachedTotal      *prometheus.Desc
 	urisFlushedTotal     *prometheus.Desc
@@ -153,7 +151,6 @@ type Collector struct {
 	metadataCacheFlushes      *prometheus.Desc
 	metadataCacheQueriesTotal *prometheus.Desc
 	metadataCacheHitsTotal    *prometheus.Desc
-	metadataCacheMissesTotal  *prometheus.Desc
 	metadataCachedTotal       *prometheus.Desc
 	metadataFlushedTotal      *prometheus.Desc
 
@@ -162,7 +159,6 @@ type Collector struct {
 	outputCacheMemoryUsage        *prometheus.Desc
 	outputCacheQueriesTotal       *prometheus.Desc
 	outputCacheHitsTotal          *prometheus.Desc
-	outputCacheMissesTotal        *prometheus.Desc
 	outputCacheFlushedItemsTotal  *prometheus.Desc
 	outputCacheFlushesTotal       *prometheus.Desc
 
