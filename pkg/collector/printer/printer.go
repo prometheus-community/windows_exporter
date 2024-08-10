@@ -52,6 +52,14 @@ func New(logger log.Logger, config *Config) *Collector {
 		config = &ConfigDefaults
 	}
 
+	if config.PrinterExclude == nil {
+		config.PrinterExclude = ConfigDefaults.PrinterExclude
+	}
+
+	if config.PrinterInclude == nil {
+		config.PrinterInclude = ConfigDefaults.PrinterInclude
+	}
+
 	c := &Collector{
 		config: *config,
 	}

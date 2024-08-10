@@ -64,6 +64,14 @@ func New(logger log.Logger, config *Config) *Collector {
 		config = &ConfigDefaults
 	}
 
+	if config.ProcessExclude == nil {
+		config.ProcessExclude = ConfigDefaults.ProcessExclude
+	}
+
+	if config.ProcessInclude == nil {
+		config.ProcessInclude = ConfigDefaults.ProcessInclude
+	}
+
 	c := &Collector{
 		config: *config,
 	}
