@@ -21,12 +21,12 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	logger log.Logger
 
-	ContextSwitchesTotal     *prometheus.Desc
-	ExceptionDispatchesTotal *prometheus.Desc
-	ProcessorQueueLength     *prometheus.Desc
-	SystemCallsTotal         *prometheus.Desc
-	SystemUpTime             *prometheus.Desc
-	Threads                  *prometheus.Desc
+	contextSwitchesTotal     *prometheus.Desc
+	exceptionDispatchesTotal *prometheus.Desc
+	processorQueueLength     *prometheus.Desc
+	systemCallsTotal         *prometheus.Desc
+	systemUpTime             *prometheus.Desc
+	threads                  *prometheus.Desc
 }
 
 func New(logger log.Logger, _ *Config) *Collector {
@@ -57,37 +57,37 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build() error {
-	c.ContextSwitchesTotal = prometheus.NewDesc(
+	c.contextSwitchesTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "context_switches_total"),
 		"Total number of context switches (WMI source: PerfOS_System.ContextSwitchesPersec)",
 		nil,
 		nil,
 	)
-	c.ExceptionDispatchesTotal = prometheus.NewDesc(
+	c.exceptionDispatchesTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "exception_dispatches_total"),
 		"Total number of exceptions dispatched (WMI source: PerfOS_System.ExceptionDispatchesPersec)",
 		nil,
 		nil,
 	)
-	c.ProcessorQueueLength = prometheus.NewDesc(
+	c.processorQueueLength = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "processor_queue_length"),
 		"Length of processor queue (WMI source: PerfOS_System.ProcessorQueueLength)",
 		nil,
 		nil,
 	)
-	c.SystemCallsTotal = prometheus.NewDesc(
+	c.systemCallsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "system_calls_total"),
 		"Total number of system calls (WMI source: PerfOS_System.SystemCallsPersec)",
 		nil,
 		nil,
 	)
-	c.SystemUpTime = prometheus.NewDesc(
+	c.systemUpTime = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "system_up_time"),
 		"System boot time (WMI source: PerfOS_System.SystemUpTime)",
 		nil,
 		nil,
 	)
-	c.Threads = prometheus.NewDesc(
+	c.threads = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "threads"),
 		"Current number of threads (WMI source: PerfOS_System.Threads)",
 		nil,
@@ -124,32 +124,32 @@ func (c *Collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 	}
 
 	ch <- prometheus.MustNewConstMetric(
-		c.ContextSwitchesTotal,
+		c.contextSwitchesTotal,
 		prometheus.CounterValue,
 		dst[0].ContextSwitchesPersec,
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.ExceptionDispatchesTotal,
+		c.exceptionDispatchesTotal,
 		prometheus.CounterValue,
 		dst[0].ExceptionDispatchesPersec,
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.ProcessorQueueLength,
+		c.processorQueueLength,
 		prometheus.GaugeValue,
 		dst[0].ProcessorQueueLength,
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.SystemCallsTotal,
+		c.systemCallsTotal,
 		prometheus.CounterValue,
 		dst[0].SystemCallsPersec,
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.SystemUpTime,
+		c.systemUpTime,
 		prometheus.GaugeValue,
 		dst[0].SystemUpTime,
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.Threads,
+		c.threads,
 		prometheus.GaugeValue,
 		dst[0].Threads,
 	)

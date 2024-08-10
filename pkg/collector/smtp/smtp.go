@@ -29,54 +29,53 @@ var ConfigDefaults = Config{
 type Collector struct {
 	logger log.Logger
 
-	serverInclude *string
-	serverExclude *string
-
-	BadmailedMessagesBadPickupFileTotal     *prometheus.Desc
-	BadmailedMessagesGeneralFailureTotal    *prometheus.Desc
-	BadmailedMessagesHopCountExceededTotal  *prometheus.Desc
-	BadmailedMessagesNDROfDSNTotal          *prometheus.Desc
-	BadmailedMessagesNoRecipientsTotal      *prometheus.Desc
-	BadmailedMessagesTriggeredViaEventTotal *prometheus.Desc
-	BytesSentTotal                          *prometheus.Desc
-	BytesReceivedTotal                      *prometheus.Desc
-	CategorizerQueueLength                  *prometheus.Desc
-	ConnectionErrorsTotal                   *prometheus.Desc
-	CurrentMessagesInLocalDelivery          *prometheus.Desc
-	DirectoryDropsTotal                     *prometheus.Desc
-	DNSQueriesTotal                         *prometheus.Desc
-	DSNFailuresTotal                        *prometheus.Desc
-	ETRNMessagesTotal                       *prometheus.Desc
-	InboundConnectionsCurrent               *prometheus.Desc
-	InboundConnectionsTotal                 *prometheus.Desc
-	LocalQueueLength                        *prometheus.Desc
-	LocalRetryQueueLength                   *prometheus.Desc
-	MailFilesOpen                           *prometheus.Desc
-	MessageBytesReceivedTotal               *prometheus.Desc
-	MessageBytesSentTotal                   *prometheus.Desc
-	MessageDeliveryRetriesTotal             *prometheus.Desc
-	MessageSendRetriesTotal                 *prometheus.Desc
-	MessagesCurrentlyUndeliverable          *prometheus.Desc
-	MessagesDeliveredTotal                  *prometheus.Desc
-	MessagesPendingRouting                  *prometheus.Desc
-	MessagesReceivedTotal                   *prometheus.Desc
-	MessagesRefusedForAddressObjectsTotal   *prometheus.Desc
-	MessagesRefusedForMailObjectsTotal      *prometheus.Desc
-	MessagesRefusedForSizeTotal             *prometheus.Desc
-	MessagesSentTotal                       *prometheus.Desc
-	MessagesSubmittedTotal                  *prometheus.Desc
-	NDRsGeneratedTotal                      *prometheus.Desc
-	OutboundConnectionsCurrent              *prometheus.Desc
-	OutboundConnectionsRefusedTotal         *prometheus.Desc
-	OutboundConnectionsTotal                *prometheus.Desc
-	QueueFilesOpen                          *prometheus.Desc
-	PickupDirectoryMessagesRetrievedTotal   *prometheus.Desc
-	RemoteQueueLength                       *prometheus.Desc
-	RemoteRetryQueueLength                  *prometheus.Desc
-	RoutingTableLookupsTotal                *prometheus.Desc
-
+	serverInclude        *string
+	serverExclude        *string
 	serverIncludePattern *regexp.Regexp
 	serverExcludePattern *regexp.Regexp
+
+	badMailedMessagesBadPickupFileTotal     *prometheus.Desc
+	badMailedMessagesGeneralFailureTotal    *prometheus.Desc
+	badMailedMessagesHopCountExceededTotal  *prometheus.Desc
+	badMailedMessagesNDROfDSNTotal          *prometheus.Desc
+	badMailedMessagesNoRecipientsTotal      *prometheus.Desc
+	badMailedMessagesTriggeredViaEventTotal *prometheus.Desc
+	bytesReceivedTotal                      *prometheus.Desc
+	bytesSentTotal                          *prometheus.Desc
+	categorizerQueueLength                  *prometheus.Desc
+	connectionErrorsTotal                   *prometheus.Desc
+	currentMessagesInLocalDelivery          *prometheus.Desc
+	dnsQueriesTotal                         *prometheus.Desc
+	dsnFailuresTotal                        *prometheus.Desc
+	directoryDropsTotal                     *prometheus.Desc
+	etrnMessagesTotal                       *prometheus.Desc
+	inboundConnectionsCurrent               *prometheus.Desc
+	inboundConnectionsTotal                 *prometheus.Desc
+	localQueueLength                        *prometheus.Desc
+	localRetryQueueLength                   *prometheus.Desc
+	mailFilesOpen                           *prometheus.Desc
+	messageBytesReceivedTotal               *prometheus.Desc
+	messageBytesSentTotal                   *prometheus.Desc
+	messageDeliveryRetriesTotal             *prometheus.Desc
+	messageSendRetriesTotal                 *prometheus.Desc
+	messagesCurrentlyUndeliverable          *prometheus.Desc
+	messagesDeliveredTotal                  *prometheus.Desc
+	messagesPendingRouting                  *prometheus.Desc
+	messagesReceivedTotal                   *prometheus.Desc
+	messagesRefusedForAddressObjectsTotal   *prometheus.Desc
+	messagesRefusedForMailObjectsTotal      *prometheus.Desc
+	messagesRefusedForSizeTotal             *prometheus.Desc
+	messagesSentTotal                       *prometheus.Desc
+	messagesSubmittedTotal                  *prometheus.Desc
+	ndrsGeneratedTotal                      *prometheus.Desc
+	outboundConnectionsCurrent              *prometheus.Desc
+	outboundConnectionsRefusedTotal         *prometheus.Desc
+	outboundConnectionsTotal                *prometheus.Desc
+	pickupDirectoryMessagesRetrievedTotal   *prometheus.Desc
+	queueFilesOpen                          *prometheus.Desc
+	remoteQueueLength                       *prometheus.Desc
+	remoteRetryQueueLength                  *prometheus.Desc
+	routingTableLookupsTotal                *prometheus.Desc
 }
 
 func New(logger log.Logger, config *Config) *Collector {
@@ -128,253 +127,253 @@ func (c *Collector) Close() error {
 func (c *Collector) Build() error {
 	_ = level.Info(c.logger).Log("msg", "smtp collector is in an experimental state! Metrics for this collector have not been tested.")
 
-	c.BadmailedMessagesBadPickupFileTotal = prometheus.NewDesc(
+	c.badMailedMessagesBadPickupFileTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "badmailed_messages_bad_pickup_file_total"),
 		"Total number of malformed pickup messages sent to badmail",
 		[]string{"site"},
 		nil,
 	)
-	c.BadmailedMessagesGeneralFailureTotal = prometheus.NewDesc(
+	c.badMailedMessagesGeneralFailureTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "badmailed_messages_general_failure_total"),
 		"Total number of messages sent to badmail for reasons not associated with a specific counter",
 		[]string{"site"},
 		nil,
 	)
-	c.BadmailedMessagesHopCountExceededTotal = prometheus.NewDesc(
+	c.badMailedMessagesHopCountExceededTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "badmailed_messages_hop_count_exceeded_total"),
 		"Total number of messages sent to badmail because they had exceeded the maximum hop count",
 		[]string{"site"},
 		nil,
 	)
-	c.BadmailedMessagesNDROfDSNTotal = prometheus.NewDesc(
+	c.badMailedMessagesNDROfDSNTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "badmailed_messages_ndr_of_dns_total"),
 		"Total number of Delivery Status Notifications sent to badmail because they could not be delivered",
 		[]string{"site"},
 		nil,
 	)
-	c.BadmailedMessagesNoRecipientsTotal = prometheus.NewDesc(
+	c.badMailedMessagesNoRecipientsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "badmailed_messages_no_recipients_total"),
 		"Total number of messages sent to badmail because they had no recipients",
 		[]string{"site"},
 		nil,
 	)
-	c.BadmailedMessagesTriggeredViaEventTotal = prometheus.NewDesc(
+	c.badMailedMessagesTriggeredViaEventTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "badmailed_messages_triggered_via_event_total"),
 		"Total number of messages sent to badmail at the request of a server event sink",
 		[]string{"site"},
 		nil,
 	)
-	c.BytesSentTotal = prometheus.NewDesc(
+	c.bytesSentTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "bytes_sent_total"),
 		"Total number of bytes sent",
 		[]string{"site"},
 		nil,
 	)
-	c.BytesReceivedTotal = prometheus.NewDesc(
+	c.bytesReceivedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "bytes_received_total"),
 		"Total number of bytes received",
 		[]string{"site"},
 		nil,
 	)
-	c.CategorizerQueueLength = prometheus.NewDesc(
+	c.categorizerQueueLength = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "categorizer_queue_length"),
 		"Number of messages in the categorizer queue",
 		[]string{"site"},
 		nil,
 	)
-	c.ConnectionErrorsTotal = prometheus.NewDesc(
+	c.connectionErrorsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "connection_errors_total"),
 		"Total number of connection errors",
 		[]string{"site"},
 		nil,
 	)
-	c.CurrentMessagesInLocalDelivery = prometheus.NewDesc(
+	c.currentMessagesInLocalDelivery = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "current_messages_in_local_delivery"),
 		"Number of messages that are currently being processed by a server event sink for local delivery",
 		[]string{"site"},
 		nil,
 	)
-	c.DirectoryDropsTotal = prometheus.NewDesc(
+	c.directoryDropsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "directory_drops_total"),
 		"Total number of messages placed in a drop directory",
 		[]string{"site"},
 		nil,
 	)
-	c.DSNFailuresTotal = prometheus.NewDesc(
+	c.dsnFailuresTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "dsn_failures_total"),
 		"Total number of failed DSN generation attempts",
 		[]string{"site"},
 		nil,
 	)
-	c.DNSQueriesTotal = prometheus.NewDesc(
+	c.dnsQueriesTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "dns_queries_total"),
 		"Total number of DNS lookups",
 		[]string{"site"},
 		nil,
 	)
-	c.ETRNMessagesTotal = prometheus.NewDesc(
+	c.etrnMessagesTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "etrn_messages_total"),
 		"Total number of ETRN messages received by the server",
 		[]string{"site"},
 		nil,
 	)
-	c.InboundConnectionsCurrent = prometheus.NewDesc(
+	c.inboundConnectionsCurrent = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "inbound_connections_current"),
 		"Total number of connections currently inbound",
 		[]string{"site"},
 		nil,
 	)
-	c.InboundConnectionsTotal = prometheus.NewDesc(
+	c.inboundConnectionsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "inbound_connections_total"),
 		"Total number of inbound connections received",
 		[]string{"site"},
 		nil,
 	)
-	c.LocalQueueLength = prometheus.NewDesc(
+	c.localQueueLength = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "local_queue_length"),
 		"Number of messages in the local queue",
 		[]string{"site"},
 		nil,
 	)
-	c.LocalRetryQueueLength = prometheus.NewDesc(
+	c.localRetryQueueLength = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "local_retry_queue_length"),
 		"Number of messages in the local retry queue",
 		[]string{"site"},
 		nil,
 	)
-	c.MailFilesOpen = prometheus.NewDesc(
+	c.mailFilesOpen = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "mail_files_open"),
 		"Number of handles to open mail files",
 		[]string{"site"},
 		nil,
 	)
-	c.MessageBytesReceivedTotal = prometheus.NewDesc(
+	c.messageBytesReceivedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "message_bytes_received_total"),
 		"Total number of bytes received in messages",
 		[]string{"site"},
 		nil,
 	)
-	c.MessageBytesSentTotal = prometheus.NewDesc(
+	c.messageBytesSentTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "message_bytes_sent_total"),
 		"Total number of bytes sent in messages",
 		[]string{"site"},
 		nil,
 	)
-	c.MessageDeliveryRetriesTotal = prometheus.NewDesc(
+	c.messageDeliveryRetriesTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "message_delivery_retries_total"),
 		"Total number of local deliveries that were retried",
 		[]string{"site"},
 		nil,
 	)
-	c.MessageSendRetriesTotal = prometheus.NewDesc(
+	c.messageSendRetriesTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "message_send_retries_total"),
 		"Total number of outbound message sends that were retried",
 		[]string{"site"},
 		nil,
 	)
-	c.MessagesCurrentlyUndeliverable = prometheus.NewDesc(
+	c.messagesCurrentlyUndeliverable = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "messages_currently_undeliverable"),
 		"Number of messages that have been reported as currently undeliverable by routing",
 		[]string{"site"},
 		nil,
 	)
-	c.MessagesDeliveredTotal = prometheus.NewDesc(
+	c.messagesDeliveredTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "messages_delivered_total"),
 		"Total number of messages delivered to local mailboxes",
 		[]string{"site"},
 		nil,
 	)
-	c.MessagesPendingRouting = prometheus.NewDesc(
+	c.messagesPendingRouting = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "messages_pending_routing"),
 		"Number of messages that have been categorized but not routed",
 		[]string{"site"},
 		nil,
 	)
-	c.MessagesReceivedTotal = prometheus.NewDesc(
+	c.messagesReceivedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "messages_received_total"),
 		"Total number of inbound messages accepted",
 		[]string{"site"},
 		nil,
 	)
-	c.MessagesRefusedForAddressObjectsTotal = prometheus.NewDesc(
+	c.messagesRefusedForAddressObjectsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "messages_refused_for_address_objects_total"),
 		"Total number of messages refused due to no address objects",
 		[]string{"site"},
 		nil,
 	)
-	c.MessagesRefusedForMailObjectsTotal = prometheus.NewDesc(
+	c.messagesRefusedForMailObjectsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "messages_refused_for_mail_objects_total"),
 		"Total number of messages refused due to no mail objects",
 		[]string{"site"},
 		nil,
 	)
-	c.MessagesRefusedForSizeTotal = prometheus.NewDesc(
+	c.messagesRefusedForSizeTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "messages_refused_for_size_total"),
 		"Total number of messages rejected because they were too big",
 		[]string{"site"},
 		nil,
 	)
-	c.MessagesSentTotal = prometheus.NewDesc(
+	c.messagesSentTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "messages_sent_total"),
 		"Total number of outbound messages sent",
 		[]string{"site"},
 		nil,
 	)
-	c.MessagesSubmittedTotal = prometheus.NewDesc(
+	c.messagesSubmittedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "messages_submitted_total"),
 		"Total number of messages submitted to queuing for delivery",
 		[]string{"site"},
 		nil,
 	)
-	c.NDRsGeneratedTotal = prometheus.NewDesc(
+	c.ndrsGeneratedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "ndrs_generated_total"),
 		"Total number of non-delivery reports that have been generated",
 		[]string{"site"},
 		nil,
 	)
-	c.OutboundConnectionsCurrent = prometheus.NewDesc(
+	c.outboundConnectionsCurrent = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "outbound_connections_current"),
 		"Number of connections currently outbound",
 		[]string{"site"},
 		nil,
 	)
-	c.OutboundConnectionsRefusedTotal = prometheus.NewDesc(
+	c.outboundConnectionsRefusedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "outbound_connections_refused_total"),
 		"Total number of connection attempts refused by remote sites",
 		[]string{"site"},
 		nil,
 	)
-	c.OutboundConnectionsTotal = prometheus.NewDesc(
+	c.outboundConnectionsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "outbound_connections_total"),
 		"Total number of outbound connections attempted",
 		[]string{"site"},
 		nil,
 	)
-	c.PickupDirectoryMessagesRetrievedTotal = prometheus.NewDesc(
+	c.pickupDirectoryMessagesRetrievedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "pickup_directory_messages_retrieved_total"),
 		"Total number of messages retrieved from the mail pick-up directory",
 		[]string{"site"},
 		nil,
 	)
-	c.QueueFilesOpen = prometheus.NewDesc(
+	c.queueFilesOpen = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "queue_files_open"),
 		"Number of handles to open queue files",
 		[]string{"site"},
 		nil,
 	)
-	c.RemoteQueueLength = prometheus.NewDesc(
+	c.remoteQueueLength = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "remote_queue_length"),
 		"Number of messages in the remote queue",
 		[]string{"site"},
 		nil,
 	)
-	c.RemoteRetryQueueLength = prometheus.NewDesc(
+	c.remoteRetryQueueLength = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "remote_retry_queue_length"),
 		"Number of messages in the retry queue for remote delivery",
 		[]string{"site"},
 		nil,
 	)
-	c.RoutingTableLookupsTotal = prometheus.NewDesc(
+	c.routingTableLookupsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "routing_table_lookups_total"),
 		"Total number of routing table lookups",
 		[]string{"site"},
@@ -468,287 +467,287 @@ func (c *Collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 		}
 
 		ch <- prometheus.MustNewConstMetric(
-			c.BadmailedMessagesBadPickupFileTotal,
+			c.badMailedMessagesBadPickupFileTotal,
 			prometheus.CounterValue,
 			server.BadmailedMessagesBadPickupFileTotal,
 			server.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.BadmailedMessagesHopCountExceededTotal,
+			c.badMailedMessagesHopCountExceededTotal,
 			prometheus.CounterValue,
 			server.BadmailedMessagesHopCountExceededTotal,
 			server.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.BadmailedMessagesNDROfDSNTotal,
+			c.badMailedMessagesNDROfDSNTotal,
 			prometheus.CounterValue,
 			server.BadmailedMessagesNDROfDSNTotal,
 			server.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.BadmailedMessagesNoRecipientsTotal,
+			c.badMailedMessagesNoRecipientsTotal,
 			prometheus.CounterValue,
 			server.BadmailedMessagesNoRecipientsTotal,
 			server.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.BadmailedMessagesTriggeredViaEventTotal,
+			c.badMailedMessagesTriggeredViaEventTotal,
 			prometheus.CounterValue,
 			server.BadmailedMessagesTriggeredViaEventTotal,
 			server.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.BytesSentTotal,
+			c.bytesSentTotal,
 			prometheus.CounterValue,
 			server.BytesSentTotal,
 			server.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.BytesReceivedTotal,
+			c.bytesReceivedTotal,
 			prometheus.CounterValue,
 			server.BytesReceivedTotal,
 			server.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.CategorizerQueueLength,
+			c.categorizerQueueLength,
 			prometheus.GaugeValue,
 			server.CategorizerQueueLength,
 			server.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.ConnectionErrorsTotal,
+			c.connectionErrorsTotal,
 			prometheus.CounterValue,
 			server.ConnectionErrorsTotal,
 			server.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.CurrentMessagesInLocalDelivery,
+			c.currentMessagesInLocalDelivery,
 			prometheus.GaugeValue,
 			server.CurrentMessagesInLocalDelivery,
 			server.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.DirectoryDropsTotal,
+			c.directoryDropsTotal,
 			prometheus.CounterValue,
 			server.DirectoryDropsTotal,
 			server.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.DSNFailuresTotal,
+			c.dsnFailuresTotal,
 			prometheus.CounterValue,
 			server.DSNFailuresTotal,
 			server.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.DNSQueriesTotal,
+			c.dnsQueriesTotal,
 			prometheus.CounterValue,
 			server.DNSQueriesTotal,
 			server.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.ETRNMessagesTotal,
+			c.etrnMessagesTotal,
 			prometheus.CounterValue,
 			server.ETRNMessagesTotal,
 			server.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.InboundConnectionsTotal,
+			c.inboundConnectionsTotal,
 			prometheus.CounterValue,
 			server.InboundConnectionsTotal,
 			server.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.InboundConnectionsCurrent,
+			c.inboundConnectionsCurrent,
 			prometheus.GaugeValue,
 			server.InboundConnectionsCurrent,
 			server.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LocalQueueLength,
+			c.localQueueLength,
 			prometheus.GaugeValue,
 			server.LocalQueueLength,
 			server.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.LocalRetryQueueLength,
+			c.localRetryQueueLength,
 			prometheus.GaugeValue,
 			server.LocalRetryQueueLength,
 			server.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.MailFilesOpen,
+			c.mailFilesOpen,
 			prometheus.GaugeValue,
 			server.MailFilesOpen,
 			server.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.MessageBytesReceivedTotal,
+			c.messageBytesReceivedTotal,
 			prometheus.CounterValue,
 			server.MessageBytesReceivedTotal,
 			server.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.MessageBytesSentTotal,
+			c.messageBytesSentTotal,
 			prometheus.CounterValue,
 			server.MessageBytesSentTotal,
 			server.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.MessageDeliveryRetriesTotal,
+			c.messageDeliveryRetriesTotal,
 			prometheus.CounterValue,
 			server.MessageDeliveryRetriesTotal,
 			server.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.MessageSendRetriesTotal,
+			c.messageSendRetriesTotal,
 			prometheus.CounterValue,
 			server.MessageSendRetriesTotal,
 			server.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.MessagesCurrentlyUndeliverable,
+			c.messagesCurrentlyUndeliverable,
 			prometheus.GaugeValue,
 			server.MessagesCurrentlyUndeliverable,
 			server.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.MessagesDeliveredTotal,
+			c.messagesDeliveredTotal,
 			prometheus.CounterValue,
 			server.MessagesDeliveredTotal,
 			server.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.MessagesPendingRouting,
+			c.messagesPendingRouting,
 			prometheus.GaugeValue,
 			server.MessagesPendingRouting,
 			server.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.MessagesReceivedTotal,
+			c.messagesReceivedTotal,
 			prometheus.CounterValue,
 			server.MessagesReceivedTotal,
 			server.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.MessagesRefusedForAddressObjectsTotal,
+			c.messagesRefusedForAddressObjectsTotal,
 			prometheus.CounterValue,
 			server.MessagesRefusedForAddressObjectsTotal,
 			server.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.MessagesRefusedForMailObjectsTotal,
+			c.messagesRefusedForMailObjectsTotal,
 			prometheus.CounterValue,
 			server.MessagesRefusedForMailObjectsTotal,
 			server.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.MessagesRefusedForSizeTotal,
+			c.messagesRefusedForSizeTotal,
 			prometheus.CounterValue,
 			server.MessagesRefusedForSizeTotal,
 			server.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.MessagesSentTotal,
+			c.messagesSentTotal,
 			prometheus.CounterValue,
 			server.MessagesSentTotal,
 			server.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.MessagesSubmittedTotal,
+			c.messagesSubmittedTotal,
 			prometheus.CounterValue,
 			server.MessagesSubmittedTotal,
 			server.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.NDRsGeneratedTotal,
+			c.ndrsGeneratedTotal,
 			prometheus.CounterValue,
 			server.NDRsGeneratedTotal,
 			server.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.OutboundConnectionsCurrent,
+			c.outboundConnectionsCurrent,
 			prometheus.GaugeValue,
 			server.OutboundConnectionsCurrent,
 			server.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.OutboundConnectionsRefusedTotal,
+			c.outboundConnectionsRefusedTotal,
 			prometheus.CounterValue,
 			server.OutboundConnectionsRefusedTotal,
 			server.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.OutboundConnectionsTotal,
+			c.outboundConnectionsTotal,
 			prometheus.CounterValue,
 			server.OutboundConnectionsTotal,
 			server.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.QueueFilesOpen,
+			c.queueFilesOpen,
 			prometheus.GaugeValue,
 			server.QueueFilesOpen,
 			server.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.PickupDirectoryMessagesRetrievedTotal,
+			c.pickupDirectoryMessagesRetrievedTotal,
 			prometheus.CounterValue,
 			server.PickupDirectoryMessagesRetrievedTotal,
 			server.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.RemoteQueueLength,
+			c.remoteQueueLength,
 			prometheus.GaugeValue,
 			server.RemoteQueueLength,
 			server.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.RemoteRetryQueueLength,
+			c.remoteRetryQueueLength,
 			prometheus.GaugeValue,
 			server.RemoteRetryQueueLength,
 			server.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.RoutingTableLookupsTotal,
+			c.routingTableLookupsTotal,
 			prometheus.CounterValue,
 			server.RoutingTableLookupsTotal,
 			server.Name,

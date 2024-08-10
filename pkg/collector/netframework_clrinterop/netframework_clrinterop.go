@@ -21,9 +21,9 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	logger log.Logger
 
-	NumberofCCWs        *prometheus.Desc
-	Numberofmarshalling *prometheus.Desc
-	NumberofStubs       *prometheus.Desc
+	numberOfCCWs        *prometheus.Desc
+	numberOfMarshalling *prometheus.Desc
+	numberOfStubs       *prometheus.Desc
 }
 
 func New(logger log.Logger, _ *Config) *Collector {
@@ -54,19 +54,19 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build() error {
-	c.NumberofCCWs = prometheus.NewDesc(
+	c.numberOfCCWs = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "com_callable_wrappers_total"),
 		"Displays the current number of COM callable wrappers (CCWs). A CCW is a proxy for a managed object being referenced from an unmanaged COM client.",
 		[]string{"process"},
 		nil,
 	)
-	c.Numberofmarshalling = prometheus.NewDesc(
+	c.numberOfMarshalling = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "interop_marshalling_total"),
 		"Displays the total number of times arguments and return values have been marshaled from managed to unmanaged code, and vice versa, since the application started.",
 		[]string{"process"},
 		nil,
 	)
-	c.NumberofStubs = prometheus.NewDesc(
+	c.numberOfStubs = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "interop_stubs_created_total"),
 		"Displays the current number of stubs created by the common language runtime. Stubs are responsible for marshaling arguments and return values from managed to unmanaged code, and vice versa, during a COM interop call or a platform invoke call.",
 		[]string{"process"},
@@ -108,21 +108,21 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 		}
 
 		ch <- prometheus.MustNewConstMetric(
-			c.NumberofCCWs,
+			c.numberOfCCWs,
 			prometheus.CounterValue,
 			float64(process.NumberofCCWs),
 			process.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.Numberofmarshalling,
+			c.numberOfMarshalling,
 			prometheus.CounterValue,
 			float64(process.Numberofmarshalling),
 			process.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.NumberofStubs,
+			c.numberOfStubs,
 			prometheus.CounterValue,
 			float64(process.NumberofStubs),
 			process.Name,

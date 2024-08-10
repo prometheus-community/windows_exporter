@@ -21,10 +21,10 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	logger log.Logger
 
-	NumberLinkTimeChecks *prometheus.Desc
-	TimeinRTchecks       *prometheus.Desc
-	StackWalkDepth       *prometheus.Desc
-	TotalRuntimeChecks   *prometheus.Desc
+	numberLinkTimeChecks *prometheus.Desc
+	timeInRTChecks       *prometheus.Desc
+	stackWalkDepth       *prometheus.Desc
+	totalRuntimeChecks   *prometheus.Desc
 }
 
 func New(logger log.Logger, _ *Config) *Collector {
@@ -55,25 +55,25 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build() error {
-	c.NumberLinkTimeChecks = prometheus.NewDesc(
+	c.numberLinkTimeChecks = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "link_time_checks_total"),
 		"Displays the total number of link-time code access security checks since the application started.",
 		[]string{"process"},
 		nil,
 	)
-	c.TimeinRTchecks = prometheus.NewDesc(
+	c.timeInRTChecks = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "rt_checks_time_percent"),
 		"Displays the percentage of time spent performing runtime code access security checks in the last sample.",
 		[]string{"process"},
 		nil,
 	)
-	c.StackWalkDepth = prometheus.NewDesc(
+	c.stackWalkDepth = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "stack_walk_depth"),
 		"Displays the depth of the stack during that last runtime code access security check.",
 		[]string{"process"},
 		nil,
 	)
-	c.TotalRuntimeChecks = prometheus.NewDesc(
+	c.totalRuntimeChecks = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "runtime_checks_total"),
 		"Displays the total number of runtime code access security checks performed since the application started.",
 		[]string{"process"},
@@ -116,28 +116,28 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 		}
 
 		ch <- prometheus.MustNewConstMetric(
-			c.NumberLinkTimeChecks,
+			c.numberLinkTimeChecks,
 			prometheus.CounterValue,
 			float64(process.NumberLinkTimeChecks),
 			process.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.TimeinRTchecks,
+			c.timeInRTChecks,
 			prometheus.GaugeValue,
 			float64(process.PercentTimeinRTchecks)/float64(process.Frequency_PerfTime),
 			process.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.StackWalkDepth,
+			c.stackWalkDepth,
 			prometheus.GaugeValue,
 			float64(process.StackWalkDepth),
 			process.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.TotalRuntimeChecks,
+			c.totalRuntimeChecks,
 			prometheus.CounterValue,
 			float64(process.TotalRuntimeChecks),
 			process.Name,

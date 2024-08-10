@@ -24,26 +24,26 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	logger log.Logger
 
-	MemActive      *prometheus.Desc
-	MemBallooned   *prometheus.Desc
-	MemLimit       *prometheus.Desc
-	MemMapped      *prometheus.Desc
-	MemOverhead    *prometheus.Desc
-	MemReservation *prometheus.Desc
-	MemShared      *prometheus.Desc
-	MemSharedSaved *prometheus.Desc
-	MemShares      *prometheus.Desc
-	MemSwapped     *prometheus.Desc
-	MemTargetSize  *prometheus.Desc
-	MemUsed        *prometheus.Desc
+	memActive      *prometheus.Desc
+	memBallooned   *prometheus.Desc
+	memLimit       *prometheus.Desc
+	memMapped      *prometheus.Desc
+	memOverhead    *prometheus.Desc
+	memReservation *prometheus.Desc
+	memShared      *prometheus.Desc
+	memSharedSaved *prometheus.Desc
+	memShares      *prometheus.Desc
+	memSwapped     *prometheus.Desc
+	memTargetSize  *prometheus.Desc
+	memUsed        *prometheus.Desc
 
-	CpuLimitMHz           *prometheus.Desc
-	CpuReservationMHz     *prometheus.Desc
-	CpuShares             *prometheus.Desc
-	CpuStolenTotal        *prometheus.Desc
-	CpuTimeTotal          *prometheus.Desc
-	EffectiveVMSpeedMHz   *prometheus.Desc
-	HostProcessorSpeedMHz *prometheus.Desc
+	cpuLimitMHz           *prometheus.Desc
+	cpuReservationMHz     *prometheus.Desc
+	cpuShares             *prometheus.Desc
+	cpuStolenTotal        *prometheus.Desc
+	cpuTimeTotal          *prometheus.Desc
+	effectiveVMSpeedMHz   *prometheus.Desc
+	hostProcessorSpeedMHz *prometheus.Desc
 }
 
 func New(logger log.Logger, _ *Config) *Collector {
@@ -74,116 +74,116 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build() error {
-	c.MemActive = prometheus.NewDesc(
+	c.memActive = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "mem_active_bytes"),
 		"(MemActiveMB)",
 		nil,
 		nil,
 	)
-	c.MemBallooned = prometheus.NewDesc(
+	c.memBallooned = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "mem_ballooned_bytes"),
 		"(MemBalloonedMB)",
 		nil,
 		nil,
 	)
-	c.MemLimit = prometheus.NewDesc(
+	c.memLimit = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "mem_limit_bytes"),
 		"(MemLimitMB)",
 		nil,
 		nil,
 	)
-	c.MemMapped = prometheus.NewDesc(
+	c.memMapped = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "mem_mapped_bytes"),
 		"(MemMappedMB)",
 		nil,
 		nil,
 	)
-	c.MemOverhead = prometheus.NewDesc(
+	c.memOverhead = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "mem_overhead_bytes"),
 		"(MemOverheadMB)",
 		nil,
 		nil,
 	)
-	c.MemReservation = prometheus.NewDesc(
+	c.memReservation = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "mem_reservation_bytes"),
 		"(MemReservationMB)",
 		nil,
 		nil,
 	)
-	c.MemShared = prometheus.NewDesc(
+	c.memShared = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "mem_shared_bytes"),
 		"(MemSharedMB)",
 		nil,
 		nil,
 	)
-	c.MemSharedSaved = prometheus.NewDesc(
+	c.memSharedSaved = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "mem_shared_saved_bytes"),
 		"(MemSharedSavedMB)",
 		nil,
 		nil,
 	)
-	c.MemShares = prometheus.NewDesc(
+	c.memShares = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "mem_shares"),
 		"(MemShares)",
 		nil,
 		nil,
 	)
-	c.MemSwapped = prometheus.NewDesc(
+	c.memSwapped = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "mem_swapped_bytes"),
 		"(MemSwappedMB)",
 		nil,
 		nil,
 	)
-	c.MemTargetSize = prometheus.NewDesc(
+	c.memTargetSize = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "mem_target_size_bytes"),
 		"(MemTargetSizeMB)",
 		nil,
 		nil,
 	)
-	c.MemUsed = prometheus.NewDesc(
+	c.memUsed = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "mem_used_bytes"),
 		"(MemUsedMB)",
 		nil,
 		nil,
 	)
 
-	c.CpuLimitMHz = prometheus.NewDesc(
+	c.cpuLimitMHz = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "cpu_limit_mhz"),
 		"(CpuLimitMHz)",
 		nil,
 		nil,
 	)
-	c.CpuReservationMHz = prometheus.NewDesc(
+	c.cpuReservationMHz = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "cpu_reservation_mhz"),
 		"(CpuReservationMHz)",
 		nil,
 		nil,
 	)
-	c.CpuShares = prometheus.NewDesc(
+	c.cpuShares = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "cpu_shares"),
 		"(CpuShares)",
 		nil,
 		nil,
 	)
-	c.CpuStolenTotal = prometheus.NewDesc(
+	c.cpuStolenTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "cpu_stolen_seconds_total"),
 		"(CpuStolenMs)",
 		nil,
 		nil,
 	)
-	c.CpuTimeTotal = prometheus.NewDesc(
+	c.cpuTimeTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "cpu_time_seconds_total"),
 		"(CpuTimePercents)",
 		nil,
 		nil,
 	)
-	c.EffectiveVMSpeedMHz = prometheus.NewDesc(
+	c.effectiveVMSpeedMHz = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "effective_vm_speed_mhz"),
 		"(EffectiveVMSpeedMHz)",
 		nil,
 		nil,
 	)
-	c.HostProcessorSpeedMHz = prometheus.NewDesc(
+	c.hostProcessorSpeedMHz = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "host_processor_speed_mhz"),
 		"(HostProcessorSpeedMHz)",
 		nil,
@@ -242,73 +242,73 @@ func (c *Collector) collectMem(ch chan<- prometheus.Metric) error {
 	}
 
 	ch <- prometheus.MustNewConstMetric(
-		c.MemActive,
+		c.memActive,
 		prometheus.GaugeValue,
 		mbToBytes(dst[0].MemActiveMB),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.MemBallooned,
+		c.memBallooned,
 		prometheus.GaugeValue,
 		mbToBytes(dst[0].MemBalloonedMB),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.MemLimit,
+		c.memLimit,
 		prometheus.GaugeValue,
 		mbToBytes(dst[0].MemLimitMB),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.MemMapped,
+		c.memMapped,
 		prometheus.GaugeValue,
 		mbToBytes(dst[0].MemMappedMB),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.MemOverhead,
+		c.memOverhead,
 		prometheus.GaugeValue,
 		mbToBytes(dst[0].MemOverheadMB),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.MemReservation,
+		c.memReservation,
 		prometheus.GaugeValue,
 		mbToBytes(dst[0].MemReservationMB),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.MemShared,
+		c.memShared,
 		prometheus.GaugeValue,
 		mbToBytes(dst[0].MemSharedMB),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.MemSharedSaved,
+		c.memSharedSaved,
 		prometheus.GaugeValue,
 		mbToBytes(dst[0].MemSharedSavedMB),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.MemShares,
+		c.memShares,
 		prometheus.GaugeValue,
 		float64(dst[0].MemShares),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.MemSwapped,
+		c.memSwapped,
 		prometheus.GaugeValue,
 		mbToBytes(dst[0].MemSwappedMB),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.MemTargetSize,
+		c.memTargetSize,
 		prometheus.GaugeValue,
 		mbToBytes(dst[0].MemTargetSizeMB),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.MemUsed,
+		c.memUsed,
 		prometheus.GaugeValue,
 		mbToBytes(dst[0].MemUsedMB),
 	)
@@ -331,43 +331,43 @@ func (c *Collector) collectCpu(ch chan<- prometheus.Metric) error {
 	}
 
 	ch <- prometheus.MustNewConstMetric(
-		c.CpuLimitMHz,
+		c.cpuLimitMHz,
 		prometheus.GaugeValue,
 		float64(dst[0].CpuLimitMHz),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.CpuReservationMHz,
+		c.cpuReservationMHz,
 		prometheus.GaugeValue,
 		float64(dst[0].CpuReservationMHz),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.CpuShares,
+		c.cpuShares,
 		prometheus.GaugeValue,
 		float64(dst[0].CpuShares),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.CpuStolenTotal,
+		c.cpuStolenTotal,
 		prometheus.CounterValue,
 		float64(dst[0].CpuStolenMs)*perflib.TicksToSecondScaleFactor,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.CpuTimeTotal,
+		c.cpuTimeTotal,
 		prometheus.CounterValue,
 		float64(dst[0].CpuTimePercents)*perflib.TicksToSecondScaleFactor,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.EffectiveVMSpeedMHz,
+		c.effectiveVMSpeedMHz,
 		prometheus.GaugeValue,
 		float64(dst[0].EffectiveVMSpeedMHz),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.HostProcessorSpeedMHz,
+		c.hostProcessorSpeedMHz,
 		prometheus.GaugeValue,
 		float64(dst[0].HostProcessorSpeedMHz),
 	)
