@@ -9,6 +9,8 @@ import (
 
 // Unmarshal good configuration file and confirm data is flattened correctly
 func TestConfigFlattening(t *testing.T) {
+	t.Parallel()
+
 	goodYamlConfig := []byte(`---
 
     collectors:

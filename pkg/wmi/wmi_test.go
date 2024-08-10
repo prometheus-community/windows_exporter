@@ -29,6 +29,8 @@ var (
 type queryFunc func(src interface{}, class string, where string) string
 
 func TestCreateQuery(t *testing.T) {
+	t.Parallel()
+
 	cases := []struct {
 		desc      string
 		dst       interface{}
@@ -109,6 +111,8 @@ func TestCreateQuery(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.desc, func(t *testing.T) {
+			t.Parallel()
+
 			if q := c.queryFunc(c.dst, c.class, c.where); q != c.expected {
 				t.Errorf("Case %q failed: Expected %q, got %q", c.desc, c.expected, q)
 			}

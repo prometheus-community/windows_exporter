@@ -11,6 +11,8 @@ import (
 )
 
 func TestExpandChildCollectors(t *testing.T) {
+	t.Parallel()
+
 	cases := []struct {
 		name           string
 		input          string
@@ -30,6 +32,8 @@ func TestExpandChildCollectors(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+
 			output := utils.ExpandEnabledChildCollectors(c.input)
 			if !reflect.DeepEqual(output, c.expectedOutput) {
 				t.Errorf("Output mismatch, expected %+v, got %+v", c.expectedOutput, output)
@@ -39,6 +43,8 @@ func TestExpandChildCollectors(t *testing.T) {
 }
 
 func TestExpandEnabled(t *testing.T) {
+	t.Parallel()
+
 	expansionTests := []struct {
 		input          string
 		expectedOutput []string
