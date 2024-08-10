@@ -19,7 +19,7 @@
 
     <Property Id="ADD_FIREWALL_EXCEPTION" Secure="yes" />
 
-    <Property Id="ENABLE_V1_PERFORMANCE_COUNTERS" Secure="yes" Value="yes"/>
+    <Property Id="ENABLE_V1_PERFORMANCE_COUNTERS" Secure="yes" />
 
     <Property Id="LISTEN_PORT" Secure="yes" Value="9182" />
     <SetProperty Id="ListenFlag" After="InstallFiles" Sequence="execute" Value="--web.listen-address [LISTEN_ADDR]:[LISTEN_PORT]" Condition="LISTEN_ADDR&lt;&gt;&quot;&quot; OR LISTEN_PORT&lt;&gt;9182" />
