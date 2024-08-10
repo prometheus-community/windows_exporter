@@ -23,7 +23,7 @@ import (
 const Name = "mssql"
 
 type Config struct {
-	EnabledCollectors string `yaml:"collectors_enabled"`
+	EnabledCollectors string `yaml:"collectors_enabled"` //nolint:tagliatelle
 }
 
 var ConfigDefaults = Config{
@@ -126,7 +126,7 @@ func mssqlGetPerfObjectName(sqlInstance string, collector string) string {
 	return prefix + suffix
 }
 
-// A Collector is a Prometheus Collector for various WMI Win32_PerfRawData_MSSQLSERVER_* metrics
+// A Collector is a Prometheus Collector for various WMI Win32_PerfRawData_MSSQLSERVER_* metrics.
 type Collector struct {
 	logger log.Logger
 

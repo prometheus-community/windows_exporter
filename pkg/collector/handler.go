@@ -55,7 +55,7 @@ func (c *Collectors) BuildServeHTTP(disableExporterMetrics bool, timeoutMargin f
 		if timeoutSeconds == 0 {
 			timeoutSeconds = defaultTimeout
 		}
-		timeoutSeconds = timeoutSeconds - timeoutMargin
+		timeoutSeconds -= timeoutMargin
 
 		reg := prometheus.NewRegistry()
 		err, wc := collectorFactory(time.Duration(timeoutSeconds*float64(time.Second)), r.URL.Query()["collect[]"])

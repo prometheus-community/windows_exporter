@@ -25,7 +25,7 @@ type Config struct{}
 
 var ConfigDefaults = Config{}
 
-// A Collector is a Prometheus Collector for a few WMI metrics in Win32_Processor
+// A Collector is a Prometheus Collector for a few WMI metrics in Win32_Processor.
 type Collector struct {
 	logger log.Logger
 
@@ -62,7 +62,7 @@ func (c *Collector) Close() error {
 func (c *Collector) Build() error {
 	c.cpuInfo = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, "", Name),
-		"Labelled CPU information as provided provided by Win32_Processor",
+		"Labelled CPU information as provided by Win32_Processor",
 		[]string{
 			"architecture",
 			"device_id",

@@ -17,31 +17,32 @@ type windowsExporterService struct{}
 
 var logger *eventlog.Log
 
+//nolint:nonamedreturns
 func (s *windowsExporterService) Execute(_ []string, r <-chan svc.ChangeRequest, changes chan<- svc.Status) (ssec bool, errno uint32) {
 	const cmdsAccepted = svc.AcceptStop | svc.AcceptShutdown
 	changes <- svc.Status{State: svc.StartPending}
 	changes <- svc.Status{State: svc.Running, Accepts: cmdsAccepted}
-loop:
-	for {
-		select {
-		case c := <-r:
-			switch c.Cmd {
-			case svc.Interrogate:
-				changes <- c.CurrentStatus
-			case svc.Stop, svc.Shutdown:
-				_ = logger.Info(100, "Service Stop Received")
-				changes <- svc.Status{State: svc.StopPending}
-				break loop
-			default:
-				_ = logger.Error(102, fmt.Sprintf("unexpected control request #%d", c))
-			}
+
+	for c := range r {
+		switch c.Cmd {
+		case svc.Interrogate:
+			changes <- c.CurrentStatus
+		case svc.Stop, svc.Shutdown:
+			_ = logger.Info(100, "Service Stop Received")
+			changes <- svc.Status{State: svc.StopPending}
+
+			return
+		default:
+			_ = logger.Error(102, fmt.Sprintf("unexpected control request #%d", c))
 		}
 	}
+
 	return
 }
 
 var StopCh = make(chan bool)
 
+//nolint:gochecknoinits
 func init() {
 	isService, err := svc.IsWindowsService()
 	if err != nil {

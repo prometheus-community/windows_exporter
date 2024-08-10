@@ -75,7 +75,7 @@ type Collector struct {
 	enabledCollectors []string
 }
 
-// All available Collector functions
+// All available Collector functions.
 var exchangeAllCollectorNames = []string{
 	"ADAccessProcesses",
 	"TransportQueues",
@@ -189,7 +189,7 @@ func (c *Collector) Build() error {
 	c.yieldedTasks = desc("workload_yielded_tasks", "The total number of tasks that have been yielded by a workload", "name")
 	c.isActive = desc("workload_is_active", "Active indicates whether the workload is in an active (1) or paused (0) state", "name")
 	c.activeSyncRequestsPerSec = desc("activesync_requests_total", "Num HTTP requests received from the client via ASP.NET per sec. Shows Current user load")
-	c.averageCASProcessingLatency = desc("http_proxy_avg_cas_proccessing_latency_sec", "Average latency (sec) of CAS processing time over the last 200 reqs", "name")
+	c.averageCASProcessingLatency = desc("http_proxy_avg_cas_processing_latency_sec", "Average latency (sec) of CAS processing time over the last 200 reqs", "name")
 	c.mailboxServerProxyFailureRate = desc("http_proxy_mailbox_proxy_failure_rate", "% of failures between this CAS and MBX servers over the last 200 samples", "name")
 	c.pingCommandsPending = desc("activesync_ping_cmds_pending", "Number of ping commands currently pending in the queue")
 	c.syncCommandsPerSec = desc("activesync_sync_cmds_total", "Number of sync commands processed per second. Clients use this command to synchronize items within a folder")
@@ -220,9 +220,7 @@ func (c *Collector) Build() error {
 	}
 
 	if utils.IsEmpty(c.exchangeCollectorsEnabled) {
-		for _, collectorName := range exchangeAllCollectorNames {
-			c.enabledCollectors = append(c.enabledCollectors, collectorName)
-		}
+		c.enabledCollectors = append(c.enabledCollectors, exchangeAllCollectorNames...)
 	} else {
 		for _, collectorName := range strings.Split(*c.exchangeCollectorsEnabled, ",") {
 			if slices.Contains(exchangeAllCollectorNames, collectorName) {
@@ -236,7 +234,7 @@ func (c *Collector) Build() error {
 	return nil
 }
 
-// Collect collects exchange metrics and sends them to prometheus
+// Collect collects exchange metrics and sends them to prometheus.
 func (c *Collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	collectorFuncs := map[string]func(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error{
 		"ADAccessProcesses":   c.collectADAccessProcesses,
@@ -260,7 +258,7 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 	return nil
 }
 
-// Perflib: [19108] MSExchange ADAccess Processes
+// Perflib: [19108] MSExchange ADAccess Processes.
 type perflibADAccessProcesses struct {
 	Name string
 
@@ -324,7 +322,7 @@ func (c *Collector) collectADAccessProcesses(ctx *types.ScrapeContext, ch chan<-
 	return nil
 }
 
-// Perflib: [24914] MSExchange Availability Service
+// Perflib: [24914] MSExchange Availability Service.
 type perflibAvailabilityService struct {
 	RequestsSec float64 `perflib:"Availability Requests (sec)"`
 }
@@ -345,7 +343,7 @@ func (c *Collector) collectAvailabilityService(ctx *types.ScrapeContext, ch chan
 	return nil
 }
 
-// Perflib: [36934] MSExchange HttpProxy
+// Perflib: [36934] MSExchange HttpProxy.
 type perflibHTTPProxy struct {
 	Name string
 
@@ -405,7 +403,7 @@ func (c *Collector) collectHTTPProxy(ctx *types.ScrapeContext, ch chan<- prometh
 	return nil
 }
 
-// Perflib: [24618] MSExchange OWA
+// Perflib: [24618] MSExchange OWA.
 type perflibOWA struct {
 	CurrentUniqueUsers float64 `perflib:"Current Unique Users"`
 	RequestsPerSec     float64 `perflib:"Requests/sec"`
@@ -432,7 +430,7 @@ func (c *Collector) collectOWA(ctx *types.ScrapeContext, ch chan<- prometheus.Me
 	return nil
 }
 
-// Perflib: [25138] MSExchange ActiveSync
+// Perflib: [25138] MSExchange ActiveSync.
 type perflibActiveSync struct {
 	RequestsPerSec      float64 `perflib:"Requests/sec"`
 	PingCommandsPending float64 `perflib:"Ping Commands Pending"`
@@ -465,7 +463,7 @@ func (c *Collector) collectActiveSync(ctx *types.ScrapeContext, ch chan<- promet
 	return nil
 }
 
-// Perflib: [29366] MSExchange RpcClientAccess
+// Perflib: [29366] MSExchange RpcClientAccess.
 type perflibRPCClientAccess struct {
 	RPCAveragedLatency  float64 `perflib:"RPC Averaged Latency"`
 	RPCRequests         float64 `perflib:"RPC Requests"`
@@ -517,7 +515,7 @@ func (c *Collector) collectRPC(ctx *types.ScrapeContext, ch chan<- prometheus.Me
 	return nil
 }
 
-// Perflib: [20524] MSExchangeTransport Queues
+// Perflib: [20524] MSExchangeTransport Queues.
 type perflibTransportQueues struct {
 	Name string
 
@@ -594,7 +592,7 @@ func (c *Collector) collectTransportQueues(ctx *types.ScrapeContext, ch chan<- p
 	return nil
 }
 
-// Perflib: [19430] MSExchange WorkloadManagement Workloads
+// Perflib: [19430] MSExchange WorkloadManagement Workloads.
 type perflibWorkloadManagementWorkloads struct {
 	Name string
 
@@ -651,7 +649,7 @@ func (c *Collector) collectWorkloadManagementWorkloads(ctx *types.ScrapeContext,
 	return nil
 }
 
-// [29240] MSExchangeAutodiscover
+// [29240] MSExchangeAutodiscover.
 type perflibAutodiscover struct {
 	RequestsPerSec float64 `perflib:"Requests/sec"`
 }
@@ -671,7 +669,7 @@ func (c *Collector) collectAutoDiscover(ctx *types.ScrapeContext, ch chan<- prom
 	return nil
 }
 
-// perflib [26463] MSExchange MapiHttp Emsmdb
+// perflib [26463] MSExchange MapiHttp Emsmdb.
 type perflibMapiHttpEmsmdb struct {
 	ActiveUserCount float64 `perflib:"Active User Count"`
 }
@@ -693,14 +691,14 @@ func (c *Collector) collectMapiHttpEmsmdb(ctx *types.ScrapeContext, ch chan<- pr
 	return nil
 }
 
-// toLabelName converts strings to lowercase and replaces all whitespaces and dots with underscores
+// toLabelName converts strings to lowercase and replaces all whitespaces and dots with underscores.
 func (c *Collector) toLabelName(name string) string {
 	s := strings.ReplaceAll(strings.Join(strings.Fields(strings.ToLower(name)), "_"), ".", "_")
 	s = strings.ReplaceAll(s, "__", "_")
 	return s
 }
 
-// msToSec converts from ms to seconds
+// msToSec converts from ms to seconds.
 func (c *Collector) msToSec(t float64) float64 {
 	return t / 1000
 }

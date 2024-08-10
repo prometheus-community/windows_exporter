@@ -9,9 +9,12 @@ import (
 	"golang.org/x/sys/windows/registry"
 )
 
-var WindowsVersion string
-var WindowsVersionFloat float64
+var (
+	WindowsVersion      string
+	WindowsVersionFloat float64
+)
 
+//nolint:gochecknoinits
 func init() {
 	var err error
 	WindowsVersion, WindowsVersionFloat, err = GetWindowsVersion()

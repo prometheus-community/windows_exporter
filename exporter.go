@@ -4,7 +4,12 @@
 
 package main
 
+//goland:noinspection GoUnsortedImport
+//nolint:gofumpt
 import (
+	// Its important that we do these first so that we can register with the Windows service control ASAP to avoid timeouts.
+	"github.com/prometheus-community/windows_exporter/pkg/initiate"
+
 	"context"
 	"encoding/json"
 	"fmt"
@@ -22,8 +27,6 @@ import (
 	"github.com/go-kit/log/level"
 	"github.com/prometheus-community/windows_exporter/pkg/collector"
 	"github.com/prometheus-community/windows_exporter/pkg/config"
-	// Its important that we do these first so that we can register with the Windows service control ASAP to avoid timeouts
-	"github.com/prometheus-community/windows_exporter/pkg/initiate"
 	winlog "github.com/prometheus-community/windows_exporter/pkg/log"
 	"github.com/prometheus-community/windows_exporter/pkg/log/flag"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
@@ -39,7 +42,7 @@ import (
 const PROCESS_ALL_ACCESS = windows.STANDARD_RIGHTS_REQUIRED | windows.SYNCHRONIZE | windows.SPECIFIC_RIGHTS_ALL
 
 // Same struct prometheus uses for their /version endpoint.
-// Separate copy to avoid pulling all of prometheus as a dependency
+// Separate copy to avoid pulling all of prometheus as a dependency.
 type prometheusVersion struct {
 	Version   string `json:"version"`
 	Revision  string `json:"revision"`
@@ -49,7 +52,7 @@ type prometheusVersion struct {
 	GoVersion string `json:"goVersion"`
 }
 
-// Mapping of priority names to uin32 values required by windows.SetPriorityClass
+// Mapping of priority names to uin32 values required by windows.SetPriorityClass.
 var priorityStringToInt = map[string]uint32{
 	"realtime":    windows.REALTIME_PRIORITY_CLASS,
 	"high":        windows.HIGH_PRIORITY_CLASS,

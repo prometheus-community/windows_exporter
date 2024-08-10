@@ -113,6 +113,7 @@ Data for some of the objects is also available through WMI:
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -120,7 +121,7 @@ import (
 	"unsafe"
 )
 
-// TODO: There's a LittleEndian field in the PERF header - we ought to check it
+// TODO: There's a LittleEndian field in the PERF header - we ought to check it.
 var bo = binary.LittleEndian
 
 const averageCount64Type = 1073874176
@@ -204,9 +205,8 @@ func queryRawData(query string) ([]byte, error) {
 	buffer = make([]byte, bufLen)
 
 	name, err := syscall.UTF16PtrFromString(query)
-
 	if err != nil {
-		return nil, fmt.Errorf("failed to encode query string: %v", err)
+		return nil, fmt.Errorf("failed to encode query string: %w", err)
 	}
 
 	for {
@@ -220,14 +220,15 @@ func queryRawData(query string) ([]byte, error) {
 			(*byte)(unsafe.Pointer(&buffer[0])),
 			&bufLen)
 
-		if err == error(syscall.ERROR_MORE_DATA) {
+		if errors.Is(err, error(syscall.ERROR_MORE_DATA)) {
 			newBuffer := make([]byte, len(buffer)+16384)
 			copy(newBuffer, buffer)
 			buffer = newBuffer
 			continue
 		} else if err != nil {
-			if errno, ok := err.(syscall.Errno); ok {
-				return nil, fmt.Errorf("ReqQueryValueEx failed: %v errno %d", err, uint(errno))
+			var errNo syscall.Errno
+			if errors.As(err, &errNo) {
+				return nil, fmt.Errorf("ReqQueryValueEx failed: %w errno %d", err, uint(errNo))
 			}
 
 			return nil, err
@@ -266,7 +267,6 @@ more than you asked for.
 */
 func QueryPerformanceData(query string) ([]*PerfObject, error) {
 	buffer, err := queryRawData(query)
-
 	if err != nil {
 		return nil, err
 	}
@@ -277,7 +277,6 @@ func QueryPerformanceData(query string) ([]*PerfObject, error) {
 
 	header := new(perfDataBlock)
 	err = header.BinaryReadFrom(r)
-
 	if err != nil {
 		return nil, fmt.Errorf("failed to read performance data block for %q with: %w", query, err)
 	}
@@ -294,7 +293,7 @@ func QueryPerformanceData(query string) ([]*PerfObject, error) {
 
 	objOffset := int64(header.HeaderLength)
 
-	for i := 0; i < numObjects; i++ {
+	for i := range numObjects {
 		_, err := r.Seek(objOffset, io.SeekStart)
 		if err != nil {
 			return nil, err
@@ -328,7 +327,7 @@ func QueryPerformanceData(query string) ([]*PerfObject, error) {
 			rawData:     obj,
 		}
 
-		for i := 0; i < numCounterDefs; i++ {
+		for i := range numCounterDefs {
 			def := new(perfCounterDefinition)
 			err := def.BinaryReadFrom(r)
 			if err != nil {
@@ -349,10 +348,10 @@ func QueryPerformanceData(query string) ([]*PerfObject, error) {
 			}
 		}
 
-		if obj.NumInstances <= 0 {
+		if obj.NumInstances <= 0 { //nolint:nestif
 			blockOffset := objOffset + int64(obj.DefinitionLength)
-			_, err := r.Seek(blockOffset, io.SeekStart)
-			if err != nil {
+
+			if _, err := r.Seek(blockOffset, io.SeekStart); err != nil {
 				return nil, err
 			}
 
@@ -370,20 +369,20 @@ func QueryPerformanceData(query string) ([]*PerfObject, error) {
 		} else {
 			instOffset := objOffset + int64(obj.DefinitionLength)
 
-			for i := 0; i < numInstances; i++ {
-				_, err := r.Seek(instOffset, io.SeekStart)
-				if err != nil {
+			for i := range numInstances {
+				if _, err := r.Seek(instOffset, io.SeekStart); err != nil {
 					return nil, err
 				}
 
 				inst := new(perfInstanceDefinition)
-				err = inst.BinaryReadFrom(r)
-				if err != nil {
+
+				if err = inst.BinaryReadFrom(r); err != nil {
 					return nil, err
 				}
 
 				name, _ := readUTF16StringAtPos(r, instOffset+int64(inst.NameOffset), inst.NameLength)
 				pos := instOffset + int64(inst.ByteLength)
+
 				offset, counters, err := parseCounterBlock(buffer, r, pos, counterDefs)
 				if err != nil {
 					return nil, err
@@ -438,6 +437,7 @@ func parseCounterBlock(b []byte, r io.ReadSeeker, pos int64, defs []*PerfCounter
 	return int64(block.ByteLength), counters, nil
 }
 
+//nolint:nonamedreturns
 func convertCounterValue(counterDef *perfCounterDefinition, buffer []byte, valueOffset int64) (value int64) {
 	/*
 		We can safely ignore the type since we're not interested in anything except the raw value.

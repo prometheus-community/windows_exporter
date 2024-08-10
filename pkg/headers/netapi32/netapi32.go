@@ -19,7 +19,7 @@ type wKSTAInfo102 struct {
 	wki102_logged_on_users uint32
 }
 
-// WorkstationInfo is an idiomatic wrapper of WKSTAInfo102
+// WorkstationInfo is an idiomatic wrapper of WKSTAInfo102.
 type WorkstationInfo struct {
 	PlatformId    uint32
 	ComputerName  string
@@ -89,7 +89,7 @@ func netWkstaGetInfo() (wKSTAInfo102, uint32, error) {
 	return deref, 0, nil
 }
 
-// GetWorkstationInfo is an idiomatic wrapper for netWkstaGetInfo
+// GetWorkstationInfo is an idiomatic wrapper for netWkstaGetInfo.
 func GetWorkstationInfo() (WorkstationInfo, error) {
 	info, _, err := netWkstaGetInfo()
 	if err != nil {

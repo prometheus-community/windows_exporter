@@ -20,7 +20,7 @@ type Config struct{}
 
 var ConfigDefaults = Config{}
 
-// Collector is a Prometheus Collector for Perflib counter metrics
+// Collector is a Prometheus Collector for Perflib counter metrics.
 type Collector struct {
 	logger log.Logger
 
@@ -113,7 +113,7 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 	return nil
 }
 
-// Perflib "Windows Time Service"
+// Perflib "Windows Time Service".
 type windowsTime struct {
 	ClockFrequencyAdjustmentPPBTotal float64 `perflib:"Clock Frequency Adjustment (ppb)"`
 	ComputedTimeOffset               float64 `perflib:"Computed Time Offset"`

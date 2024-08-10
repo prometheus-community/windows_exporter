@@ -21,7 +21,7 @@ type memoryStatusEx struct {
 	UllAvailExtendedVirtual uint64
 }
 
-// MemoryStatus is an idiomatic wrapper for MemoryStatusEx
+// MemoryStatus is an idiomatic wrapper for MemoryStatusEx.
 type MemoryStatus struct {
 	MemoryLoad           uint32
 	TotalPhys            uint64
@@ -40,17 +40,17 @@ type wProcessorArchitecture struct {
 	WReserved              uint16
 }
 
-// ProcessorArchitecture is an idiomatic wrapper for wProcessorArchitecture
+// ProcessorArchitecture is an idiomatic wrapper for wProcessorArchitecture.
 type ProcessorArchitecture uint16
 
-// Idiomatic values for wProcessorArchitecture
+// Idiomatic values for wProcessorArchitecture.
 const (
 	AMD64   ProcessorArchitecture = 9
-	ARM                           = 5
-	ARM64                         = 12
-	IA64                          = 6
-	INTEL                         = 0
-	UNKNOWN                       = 0xffff
+	ARM     ProcessorArchitecture = 5
+	ARM64   ProcessorArchitecture = 12
+	IA64    ProcessorArchitecture = 6
+	INTEL   ProcessorArchitecture = 0
+	UNKNOWN ProcessorArchitecture = 0xffff
 )
 
 // LpSystemInfo is a wrapper for LPSYSTEM_INFO
@@ -68,7 +68,7 @@ type lpSystemInfo struct {
 	WProcessorRevision          uint16
 }
 
-// SystemInfo is an idiomatic wrapper for LpSystemInfo
+// SystemInfo is an idiomatic wrapper for LpSystemInfo.
 type SystemInfo struct {
 	Arch                      ProcessorArchitecture
 	PageSize                  uint32
@@ -82,10 +82,10 @@ type SystemInfo struct {
 	ProcessorRevision         uint16
 }
 
-// WinComputerNameFormat is a wrapper for COMPUTER_NAME_FORMAT
+// WinComputerNameFormat is a wrapper for COMPUTER_NAME_FORMAT.
 type WinComputerNameFormat int
 
-// Definitions for WinComputerNameFormat constants
+// Definitions for WinComputerNameFormat constants.
 const (
 	ComputerNameNetBIOS WinComputerNameFormat = iota
 	ComputerNameDNSHostname
@@ -112,7 +112,7 @@ func GlobalMemoryStatusEx() (MemoryStatus, error) {
 	mse.dwLength = (uint32)(unsafe.Sizeof(mse))
 	r1, _, err := procGlobalMemoryStatusEx.Call(uintptr(unsafe.Pointer(&mse)))
 
-	if ret := *(*bool)(unsafe.Pointer(&r1)); ret == false {
+	if ret := *(*bool)(unsafe.Pointer(&r1)); !ret {
 		return MemoryStatus{}, err
 	}
 

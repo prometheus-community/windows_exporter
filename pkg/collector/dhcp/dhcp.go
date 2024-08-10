@@ -16,7 +16,7 @@ type Config struct{}
 
 var ConfigDefaults = Config{}
 
-// A Collector is a Prometheus Collector perflib DHCP metrics
+// A Collector is a Prometheus Collector perflib DHCP metrics.
 type Collector struct {
 	logger log.Logger
 

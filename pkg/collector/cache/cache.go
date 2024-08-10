@@ -18,7 +18,7 @@ type Config struct{}
 
 var ConfigDefaults = Config{}
 
-// A Collector is a Prometheus Collector for Perflib Cache metrics
+// A Collector is a Prometheus Collector for Perflib Cache metrics.
 type Collector struct {
 	logger log.Logger
 
@@ -258,7 +258,7 @@ func (c *Collector) Build() error {
 	return nil
 }
 
-// Collect implements the Collector interface
+// Collect implements the Collector interface.
 func (c *Collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	if err := c.collect(ctx, ch); err != nil {
 		_ = level.Error(c.logger).Log("msg", "failed collecting cache metrics", "err", err)

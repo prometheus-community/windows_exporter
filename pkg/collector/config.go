@@ -70,7 +70,7 @@ type Config struct {
 	Cs                             cs.Config                              `yaml:"cs"`
 	DFSR                           dfsr.Config                            `yaml:"dfsr"`
 	Dhcp                           dhcp.Config                            `yaml:"dhcp"`
-	DiskDrive                      diskdrive.Config                       `yaml:"diskdrive"`
+	DiskDrive                      diskdrive.Config                       `yaml:"diskdrive"` //nolint:tagliatelle
 	DNS                            dns.Config                             `yaml:"dns"`
 	Exchange                       exchange.Config                        `yaml:"exchange"`
 	Fsrmquota                      fsrmquota.Config                       `yaml:"fsrmquota"`
@@ -84,7 +84,7 @@ type Config struct {
 	MsclusterNetwork               mscluster_network.Config               `yaml:"mscluster_network"`
 	MsclusterNode                  mscluster_node.Config                  `yaml:"mscluster_node"`
 	MsclusterResource              mscluster_resource.Config              `yaml:"mscluster_resource"`
-	MsclusterResourceGroup         mscluster_resourcegroup.Config         `yaml:"mscluster_resourcegroup"`
+	MsclusterResourceGroup         mscluster_resourcegroup.Config         `yaml:"mscluster_resourcegroup"` //nolint:tagliatelle
 	Msmq                           msmq.Config                            `yaml:"msmq"`
 	Mssql                          mssql.Config                           `yaml:"mssql"`
 	Net                            net.Config                             `yaml:"net"`
@@ -105,7 +105,7 @@ type Config struct {
 	ScheduledTask                  scheduled_task.Config                  `yaml:"scheduled_task"`
 	Service                        service.Config                         `yaml:"service"`
 	SMB                            smb.Config                             `yaml:"smb"`
-	SMBClient                      smbclient.Config                       `yaml:"smbclient"`
+	SMBClient                      smbclient.Config                       `yaml:"smbclient"` //nolint:tagliatelle
 	SMTP                           smtp.Config                            `yaml:"smtp"`
 	System                         system.Config                          `yaml:"system"`
 	TeradiciPcoip                  teradici_pcoip.Config                  `yaml:"teradici_pcoip"`

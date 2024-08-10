@@ -24,7 +24,7 @@ var ConfigDefaults = Config{}
 // win32_PerfRawData_TeradiciPerf_PCoIPSessionGeneralStatistics
 // win32_PerfRawData_TeradiciPerf_PCoIPSessionImagingStatistics
 // win32_PerfRawData_TeradiciPerf_PCoIPSessionNetworkStatistics
-// win32_PerfRawData_TeradiciPerf_PCoIPSessionUsbStatistics
+// win32_PerfRawData_TeradiciPerf_PCoIPSessionUsbStatistics.
 type Collector struct {
 	logger log.Logger
 

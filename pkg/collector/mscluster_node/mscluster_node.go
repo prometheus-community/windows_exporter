@@ -14,10 +14,10 @@ type Config struct{}
 
 var ConfigDefaults = Config{}
 
-// Variable used by mscluster_resource and mscluster_resourcegroup
+// Variable used by mscluster_resource and mscluster_resourcegroup.
 var NodeName []string
 
-// A Collector is a Prometheus Collector for WMI MSCluster_Node metrics
+// A Collector is a Prometheus Collector for WMI MSCluster_Node metrics.
 type Collector struct {
 	logger log.Logger
 

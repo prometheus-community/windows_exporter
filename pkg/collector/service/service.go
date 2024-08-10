@@ -35,7 +35,7 @@ var ConfigDefaults = Config{
 	V2:                 false,
 }
 
-// A Collector is a Prometheus Collector for WMI Win32_Service metrics
+// A Collector is a Prometheus Collector for WMI Win32_Service metrics.
 type Collector struct {
 	logger log.Logger
 

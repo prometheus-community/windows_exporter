@@ -30,7 +30,7 @@ type Config struct{}
 
 var ConfigDefaults = Config{}
 
-// A Collector is a Prometheus Collector for WMI metrics
+// A Collector is a Prometheus Collector for WMI metrics.
 type Collector struct {
 	logger log.Logger
 
@@ -175,7 +175,7 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 }
 
 // Win32_OperatingSystem docs:
-// - https://msdn.microsoft.com/en-us/library/aa394239 - Win32_OperatingSystem class
+// - https://msdn.microsoft.com/en-us/library/aa394239 - Win32_OperatingSystem class.
 type Win32_OperatingSystem struct {
 	Caption                 string
 	FreePhysicalMemory      uint64
@@ -215,10 +215,11 @@ func (c *Collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 
 	// Get total allocation of paging files across all disks.
 	memManKey, err := registry.OpenKey(registry.LOCAL_MACHINE, `SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management`, registry.QUERY_VALUE)
-	defer memManKey.Close()
 	if err != nil {
 		return err
 	}
+
+	defer memManKey.Close()
 
 	pagingFiles, _, pagingErr := memManKey.GetStringsValue("ExistingPageFiles")
 
@@ -236,11 +237,11 @@ func (c *Collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 
 	// Get build number and product name from registry
 	ntKey, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\Microsoft\Windows NT\CurrentVersion`, registry.QUERY_VALUE)
-	defer ntKey.Close()
-
 	if err != nil {
 		return err
 	}
+
+	defer ntKey.Close()
 
 	pn, _, err := ntKey.GetStringValue("ProductName")
 	if err != nil {

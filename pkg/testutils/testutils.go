@@ -13,6 +13,8 @@ import (
 )
 
 func FuncBenchmarkCollector[C collector.Collector](b *testing.B, name string, collectFunc collector.BuilderWithFlags[C]) {
+	b.Helper()
+
 	c := collectFunc(kingpin.CommandLine)
 	collectors := collector.New(map[string]collector.Collector{name: c})
 	require.NoError(b, collectors.Build())

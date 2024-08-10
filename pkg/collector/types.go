@@ -16,8 +16,10 @@ type Collectors struct {
 
 type Map map[string]Collector
 
-type Builder func(logger log.Logger) Collector
-type BuilderWithFlags[C Collector] func(*kingpin.Application) C
+type (
+	Builder                       func(logger log.Logger) Collector
+	BuilderWithFlags[C Collector] func(*kingpin.Application) C
+)
 
 // Collector interface that a collector has to implement.
 type Collector interface {

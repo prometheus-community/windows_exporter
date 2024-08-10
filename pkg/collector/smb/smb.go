@@ -38,7 +38,7 @@ type Collector struct {
 	enabledCollectors []string
 }
 
-// All available Collector functions
+// All available Collector functions.
 var smbAllCollectorNames = []string{
 	"ServerShares",
 }
@@ -121,9 +121,7 @@ func (c *Collector) Build() error {
 	}
 
 	if *c.smbCollectorsEnabled == "" {
-		for _, collectorName := range smbAllCollectorNames {
-			c.enabledCollectors = append(c.enabledCollectors, collectorName)
-		}
+		c.enabledCollectors = append(c.enabledCollectors, smbAllCollectorNames...)
 	} else {
 		for _, collectorName := range strings.Split(*c.smbCollectorsEnabled, ",") {
 			if slices.Contains(smbAllCollectorNames, collectorName) {
@@ -137,7 +135,7 @@ func (c *Collector) Build() error {
 	return nil
 }
 
-// Collect collects smb metrics and sends them to prometheus
+// Collect collects smb metrics and sends them to prometheus.
 func (c *Collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	collectorFuncs := map[string]func(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error{
 		"ServerShares": c.collectServerShares,
@@ -152,7 +150,7 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 	return nil
 }
 
-// Perflib: SMB Server Shares
+// Perflib: SMB Server Shares.
 type perflibServerShares struct {
 	Name string
 
@@ -186,7 +184,7 @@ func (c *Collector) collectServerShares(ctx *types.ScrapeContext, ch chan<- prom
 	return nil
 }
 
-// toLabelName converts strings to lowercase and replaces all whitespaces and dots with underscores
+// toLabelName converts strings to lowercase and replaces all whitespaces and dots with underscores.
 func (c *Collector) toLabelName(name string) string {
 	s := strings.ReplaceAll(strings.Join(strings.Fields(strings.ToLower(name)), "_"), ".", "_")
 	s = strings.ReplaceAll(s, "__", "_")

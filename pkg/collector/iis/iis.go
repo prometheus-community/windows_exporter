@@ -987,22 +987,22 @@ type perflibWebService struct {
 	TotalUnlockRequests                 float64 `perflib:"Total Unlock Requests"`
 }
 
-// Fulfill the hasGetIISName interface
+// Fulfill the hasGetIISName interface.
 func (p perflibWebService) getIISName() string {
 	return p.Name
 }
 
-// Fulfill the hasGetIISName interface
+// Fulfill the hasGetIISName interface.
 func (p perflibAPP_POOL_WAS) getIISName() string {
 	return p.Name
 }
 
-// Fulfill the hasGetIISName interface
+// Fulfill the hasGetIISName interface.
 func (p perflibW3SVC_W3WP) getIISName() string {
 	return p.Name
 }
 
-// Fulfill the hasGetIISName interface
+// Fulfill the hasGetIISName interface.
 func (p perflibW3SVC_W3WP_IIS8) getIISName() string {
 	return p.Name
 }
@@ -1017,7 +1017,7 @@ type hasGetIISName interface {
 // E.G. Given the following list of site names, "Site_B" would be
 // discarded, and "Site_B#2" would be kept and presented as "Site_B" in the
 // Collector metrics.
-// [ "Site_A", "Site_B", "Site_C", "Site_B#2" ]
+// [ "Site_A", "Site_B", "Site_C", "Site_B#2" ].
 func dedupIISNames[V hasGetIISName](services []V) map[string]V {
 	// Ensure IIS entry with the highest suffix occurs last
 	sort.SliceStable(services, func(i, j int) bool {
@@ -1457,13 +1457,13 @@ type perflibW3SVC_W3WP struct {
 
 	URICacheFlushesTotal       float64 `perflib:"Total Flushed URIs"`
 	URICacheFlushesTotalKernel float64 `perflib:"Total Flushed URIs"`
-	URIsFlushedTotalKernel     float64 `perflib:"Kernel\: Total Flushed URIs"` //nolint:govet
+	URIsFlushedTotalKernel     float64 `perflib:"Kernel\: Total Flushed URIs"` //nolint:govet,tagalign,staticcheck
 	URICacheHitsTotal          float64 `perflib:"URI Cache Hits"`
-	URICacheHitsTotalKernel    float64 `perflib:"Kernel\: URI Cache Hits"` //nolint:govet
+	URICacheHitsTotalKernel    float64 `perflib:"Kernel\: URI Cache Hits"` //nolint:govet,tagalign,staticcheck
 	URICacheMissesTotal        float64 `perflib:"URI Cache Misses"`
-	URICacheMissesTotalKernel  float64 `perflib:"Kernel\: URI Cache Misses"` //nolint:govet
+	URICacheMissesTotalKernel  float64 `perflib:"Kernel\: URI Cache Misses"` //nolint:govet,tagalign,staticcheck
 	URIsCached                 float64 `perflib:"Current URIs Cached"`
-	URIsCachedKernel           float64 `perflib:"Kernel\: Current URIs Cached"` //nolint:govet
+	URIsCachedKernel           float64 `perflib:"Kernel\: Current URIs Cached"` //nolint:govet,tagalign,staticcheck
 	URIsCachedTotal            float64 `perflib:"Total URIs Cached"`
 	URIsCachedTotalKernel      float64 `perflib:"Total URIs Cached"`
 	URIsFlushedTotal           float64 `perflib:"Total Flushed URIs"`

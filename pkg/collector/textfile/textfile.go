@@ -120,21 +120,21 @@ func (c *Collector) Build() error {
 func duplicateMetricEntry(metricFamilies []*dto.MetricFamily) bool {
 	uniqueMetrics := make(map[string]map[string]string)
 	for _, metricFamily := range metricFamilies {
-		metric_name := *metricFamily.Name
-		for _, metric := range metricFamily.Metric {
-			metric_labels := metric.GetLabel()
+		metricName := metricFamily.GetName()
+		for _, metric := range metricFamily.GetMetric() {
+			metricLabels := metric.GetLabel()
 			labels := make(map[string]string)
-			for _, label := range metric_labels {
+			for _, label := range metricLabels {
 				labels[label.GetName()] = label.GetValue()
 			}
 			// Check if key is present before appending
-			_, mapContainsKey := uniqueMetrics[metric_name]
+			_, mapContainsKey := uniqueMetrics[metricName]
 
 			// Duplicate metric found with identical labels & label values
-			if mapContainsKey == true && reflect.DeepEqual(uniqueMetrics[metric_name], labels) {
+			if mapContainsKey && reflect.DeepEqual(uniqueMetrics[metricName], labels) {
 				return true
 			}
-			uniqueMetrics[metric_name] = labels
+			uniqueMetrics[metricName] = labels
 		}
 	}
 	return false
@@ -145,7 +145,7 @@ func (c *Collector) convertMetricFamily(metricFamily *dto.MetricFamily, ch chan<
 	var val float64
 
 	allLabelNames := map[string]struct{}{}
-	for _, metric := range metricFamily.Metric {
+	for _, metric := range metricFamily.GetMetric() {
 		labels := metric.GetLabel()
 		for _, label := range labels {
 			if _, ok := allLabelNames[label.GetName()]; !ok {
@@ -154,7 +154,7 @@ func (c *Collector) convertMetricFamily(metricFamily *dto.MetricFamily, ch chan<
 		}
 	}
 
-	for _, metric := range metricFamily.Metric {
+	for _, metric := range metricFamily.GetMetric() {
 		if metric.TimestampMs != nil {
 			_ = level.Warn(c.logger).Log("msg", fmt.Sprintf("Ignoring unsupported custom timestamp on textfile Collector metric %v", metric))
 		}
@@ -175,7 +175,7 @@ func (c *Collector) convertMetricFamily(metricFamily *dto.MetricFamily, ch chan<
 					break
 				}
 			}
-			if present == false {
+			if !present {
 				names = append(names, k)
 				values = append(values, "")
 			}
@@ -185,44 +185,44 @@ func (c *Collector) convertMetricFamily(metricFamily *dto.MetricFamily, ch chan<
 		switch metricType {
 		case dto.MetricType_COUNTER:
 			valType = prometheus.CounterValue
-			val = metric.Counter.GetValue()
+			val = metric.GetCounter().GetValue()
 
 		case dto.MetricType_GAUGE:
 			valType = prometheus.GaugeValue
-			val = metric.Gauge.GetValue()
+			val = metric.GetGauge().GetValue()
 
 		case dto.MetricType_UNTYPED:
 			valType = prometheus.UntypedValue
-			val = metric.Untyped.GetValue()
+			val = metric.GetUntyped().GetValue()
 
 		case dto.MetricType_SUMMARY:
 			quantiles := map[float64]float64{}
-			for _, q := range metric.Summary.Quantile {
+			for _, q := range metric.GetSummary().GetQuantile() {
 				quantiles[q.GetQuantile()] = q.GetValue()
 			}
 			ch <- prometheus.MustNewConstSummary(
 				prometheus.NewDesc(
-					*metricFamily.Name,
+					metricFamily.GetName(),
 					metricFamily.GetHelp(),
 					names, nil,
 				),
-				metric.Summary.GetSampleCount(),
-				metric.Summary.GetSampleSum(),
+				metric.GetSummary().GetSampleCount(),
+				metric.GetSummary().GetSampleSum(),
 				quantiles, values...,
 			)
 		case dto.MetricType_HISTOGRAM:
 			buckets := map[float64]uint64{}
-			for _, b := range metric.Histogram.Bucket {
+			for _, b := range metric.GetHistogram().GetBucket() {
 				buckets[b.GetUpperBound()] = b.GetCumulativeCount()
 			}
 			ch <- prometheus.MustNewConstHistogram(
 				prometheus.NewDesc(
-					*metricFamily.Name,
+					metricFamily.GetName(),
 					metricFamily.GetHelp(),
 					names, nil,
 				),
-				metric.Histogram.GetSampleCount(),
-				metric.Histogram.GetSampleSum(),
+				metric.GetHistogram().GetSampleCount(),
+				metric.GetHistogram().GetSampleSum(),
 				buckets, values...,
 			)
 		default:
@@ -232,7 +232,7 @@ func (c *Collector) convertMetricFamily(metricFamily *dto.MetricFamily, ch chan<
 		if metricType == dto.MetricType_GAUGE || metricType == dto.MetricType_COUNTER || metricType == dto.MetricType_UNTYPED {
 			ch <- prometheus.MustNewConstMetric(
 				prometheus.NewDesc(
-					*metricFamily.Name,
+					metricFamily.GetName(),
 					metricFamily.GetHelp(),
 					names, nil,
 				),
@@ -266,7 +266,7 @@ type carriageReturnFilteringReader struct {
 	r io.Reader
 }
 
-// Read returns data from the underlying io.Reader, but with \r filtered out
+// Read returns data from the underlying io.Reader, but with \r filtered out.
 func (cr carriageReturnFilteringReader) Read(p []byte) (int, error) {
 	buf := make([]byte, len(p))
 	n, err := cr.r.Read(buf)
@@ -276,7 +276,7 @@ func (cr carriageReturnFilteringReader) Read(p []byte) (int, error) {
 	}
 
 	pi := 0
-	for i := 0; i < n; i++ {
+	for i := range n {
 		if buf[i] != '\r' {
 			p[pi] = buf[i]
 			pi++
@@ -380,7 +380,7 @@ func scrapeFile(path string, log log.Logger) ([]*dto.MetricFamily, error) {
 
 	for _, mf := range parsedFamilies {
 		families_array = append(families_array, mf)
-		for _, m := range mf.Metric {
+		for _, m := range mf.GetMetric() {
 			if m.TimestampMs != nil {
 				return nil, errors.New("textfile contains unsupported client-side timestamps")
 			}

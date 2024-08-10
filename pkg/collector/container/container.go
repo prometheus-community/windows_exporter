@@ -20,7 +20,7 @@ type Config struct{}
 
 var ConfigDefaults = Config{}
 
-// A Collector is a Prometheus Collector for containers metrics
+// A Collector is a Prometheus Collector for containers metrics.
 type Collector struct {
 	logger log.Logger
 
@@ -55,7 +55,7 @@ type Collector struct {
 	writeSizeBytes       *prometheus.Desc
 }
 
-// New constructs a new Collector
+// New constructs a new Collector.
 func New(logger log.Logger, _ *Config) *Collector {
 	c := &Collector{}
 	c.SetLogger(logger)
@@ -205,7 +205,7 @@ func (c *Collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric)
 	return nil
 }
 
-// containerClose closes the container resource
+// containerClose closes the container resource.
 func (c *Collector) containerClose(container hcsshim.Container) {
 	err := container.Close()
 	if err != nil {

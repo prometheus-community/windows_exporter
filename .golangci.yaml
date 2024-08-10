@@ -4,79 +4,49 @@ linters:
     - containedctx
     - contextcheck
     - cyclop
-    - decorder
     - depguard
     - dogsled
     - dupl
-    - dupword
-    - durationcheck
     - err113
-    - errchkjson
-    - errname
-    - errorlint
     - exhaustive
     - exhaustruct
-    - exportloopref
     - fatcontext
     - funlen
-    - ginkgolinter
-    - gocheckcompilerdirectives
     - gochecknoglobals
-    - gochecknoinits
-    - gochecksumtype
     - gocognit
     - goconst
-    - gocritic
     - gocyclo
-    - godot
     - godox
-    - gofumpt
-    - goimports
-    - gomoddirectives
-    - gomodguard
-    - gosimple
-    - gosmopolitan
-    - grouper
-    - importas
     - inamedparam
-    - interfacebloat
-    - intrange
     - ireturn
     - lll
-    - maintidx
-    - mirror
-    - misspell
     - mnd
-    - musttag
-    - nakedret
-    - nestif
     - nlreturn
     - noctx
-    - nonamedreturns
-    - nosprintfhostport
-    - paralleltest
-    - predeclared
-    - protogetter
-    - reassign
-    - rowserrcheck
-    - sloglint
-    - spancheck
-    - sqlclosecheck
-    - staticcheck
-    - stylecheck
-    - tagalign
-    - tagliatelle
-    - tenv
-    - testableexamples
-    - testifylint
     - testpackage
-    - thelper
-    - tparallel
     - varnamelen
     - wrapcheck
     - wsl
     - execinquery
     - gomnd
+    - stylecheck
+    - maintidx
+
+linters-settings:
+  gci:
+    sections:
+      - prefix(github.com/prometheus-community/windows_exporter/pkg/initiate)
+      - standard # Standard section: captures all standard packages.
+      - default # Default section: contains all imports that could not be matched to another section type.
+    custom-order: true
+  tagliatelle:
+    case:
+      use-field-name: true
+      rules:
+        # Any struct tag type can be used.
+        # Support string case: `camel`, `pascal`, `kebab`, `snake`, `upperSnake`, `goCamel`, `goPascal`, `goKebab`, `goSnake`, `upper`, `lower`, `header`
+        json: camel
+        yaml: snake
 
 issues:
   exclude:

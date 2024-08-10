@@ -102,7 +102,6 @@ func (c *Collector) GetPerfCounter() ([]string, error) {
 
 func (c *Collector) Close() error {
 	err := wtsapi32.WTSCloseServer(c.hServer)
-
 	if err != nil {
 		return fmt.Errorf("failed to close WTS server: %w", err)
 	}
@@ -434,7 +433,7 @@ func (c *Collector) collectWTSSessions(ch chan<- prometheus.Metric) error {
 				c.sessionInfo,
 				prometheus.GaugeValue,
 				isState,
-				strings.Replace(session.SessionName, "#", " ", -1),
+				strings.ReplaceAll(session.SessionName, "#", " "),
 				userName,
 				session.HostName,
 				stateName,

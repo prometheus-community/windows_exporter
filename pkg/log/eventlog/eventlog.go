@@ -70,7 +70,7 @@ func (l *eventlogLogger) Log(keyvals ...interface{}) error {
 
 	msg, err := syscall.UTF16PtrFromString(lb.buf.String())
 	if err != nil {
-		return fmt.Errorf("error convert string to UTF-16: %v", err)
+		return fmt.Errorf("error convert string to UTF-16: %w", err)
 	}
 
 	ss := []*uint16{msg, nil, nil, nil, nil, nil, nil, nil, nil}
@@ -104,7 +104,7 @@ func (l *eventlogLogger) putLoggerBuf(lb *loggerBuf) {
 // PrioritySelector inspects the list of keyvals and selects an eventlog priority.
 type PrioritySelector func(keyvals ...interface{}) Priority
 
-// defaultPrioritySelector convert a kit/log level into a Windows Eventlog level
+// defaultPrioritySelector convert a kit/log level into a Windows Eventlog level.
 func defaultPrioritySelector(keyvals ...interface{}) Priority {
 	l := len(keyvals)
 

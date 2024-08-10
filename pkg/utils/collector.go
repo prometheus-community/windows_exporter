@@ -14,13 +14,15 @@ import (
 // Splits provided child Collectors and deduplicate.
 func ExpandEnabledChildCollectors(enabled string) []string {
 	result := slices.Compact(strings.Split(enabled, ","))
-	// Ensure result is ordered, to prevent test failure
+
+	// Result must order, to prevent test failures.
 	sort.Strings(result)
+
 	return result
 }
 
 func ExpandEnabledCollectors(enabled string) []string {
-	expanded := strings.Replace(enabled, types.DefaultCollectorsPlaceholder, types.DefaultCollectors, -1)
+	expanded := strings.ReplaceAll(enabled, types.DefaultCollectorsPlaceholder, types.DefaultCollectors)
 	separated := strings.Split(expanded, ",")
 	unique := map[string]bool{}
 	for _, s := range separated {

@@ -6,6 +6,8 @@ import (
 )
 
 func TestIISDeduplication(t *testing.T) {
+	t.Parallel()
+
 	start := []perflibAPP_POOL_WAS{
 		{
 			Name:             "foo",

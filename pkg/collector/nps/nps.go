@@ -17,7 +17,7 @@ type Config struct{}
 
 var ConfigDefaults = Config{}
 
-// Collector is a Prometheus Collector for WMI Win32_PerfRawData_IAS_NPSAuthenticationServer and Win32_PerfRawData_IAS_NPSAccountingServer metrics
+// Collector is a Prometheus Collector for WMI Win32_PerfRawData_IAS_NPSAuthenticationServer and Win32_PerfRawData_IAS_NPSAccountingServer metrics.
 type Collector struct {
 	logger log.Logger
 
@@ -246,7 +246,7 @@ func (c *Collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric)
 }
 
 // Win32_PerfRawData_IAS_NPSAuthenticationServer docs:
-// at the moment there is no Microsoft documentation
+// at the moment there is no Microsoft documentation.
 type Win32_PerfRawData_IAS_NPSAuthenticationServer struct {
 	Name string
 

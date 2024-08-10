@@ -423,7 +423,7 @@ func (c *Collector) collectRemoteFXGraphicsCounters(ctx *types.ScrapeContext, ch
 	return nil
 }
 
-// normalizeSessionName ensure that the session is the same between WTS API and performance counters
+// normalizeSessionName ensure that the session is the same between WTS API and performance counters.
 func normalizeSessionName(sessionName string) string {
 	return strings.Replace(sessionName, "RDP-tcp", "RDP-Tcp", 1)
 }

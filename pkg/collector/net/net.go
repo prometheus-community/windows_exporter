@@ -28,7 +28,7 @@ var ConfigDefaults = Config{
 
 var nicNameToUnderscore = regexp.MustCompile("[^a-zA-Z0-9]")
 
-// A Collector is a Prometheus Collector for Perflib Network Interface metrics
+// A Collector is a Prometheus Collector for Perflib Network Interface metrics.
 type Collector struct {
 	logger log.Logger
 

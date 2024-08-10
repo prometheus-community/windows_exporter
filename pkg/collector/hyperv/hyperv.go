@@ -20,7 +20,7 @@ type Config struct{}
 
 var ConfigDefaults = Config{}
 
-// Collector is a Prometheus Collector for hyper-v
+// Collector is a Prometheus Collector for hyper-v.
 type Collector struct {
 	logger log.Logger
 
@@ -810,7 +810,7 @@ func (c *Collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric)
 	return nil
 }
 
-// Win32_PerfRawData_VmmsVirtualMachineStats_HyperVVirtualMachineHealthSummary vm health status
+// Win32_PerfRawData_VmmsVirtualMachineStats_HyperVVirtualMachineHealthSummary vm health status.
 type Win32_PerfRawData_VmmsVirtualMachineStats_HyperVVirtualMachineHealthSummary struct {
 	HealthCritical uint32
 	HealthOk       uint32
@@ -840,7 +840,7 @@ func (c *Collector) collectVmHealth(ch chan<- prometheus.Metric) error {
 	return nil
 }
 
-// Win32_PerfRawData_VidPerfProvider_HyperVVMVidPartition ..,
+// Win32_PerfRawData_VidPerfProvider_HyperVVMVidPartition ..,.
 type Win32_PerfRawData_VidPerfProvider_HyperVVMVidPartition struct {
 	Name                   string
 	PhysicalPagesAllocated uint64

@@ -14,6 +14,8 @@ type simple struct {
 }
 
 func TestUnmarshalPerflib(t *testing.T) {
+	t.Parallel()
+
 	cases := []struct {
 		name string
 		obj  *PerfObject
@@ -110,6 +112,8 @@ func TestUnmarshalPerflib(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+
 			output := make([]simple, 0)
 			err := UnmarshalObject(c.obj, &output, log.NewNopLogger())
 			if err != nil && !c.expectError {

@@ -41,6 +41,9 @@ func QueryNamespace(query string, dst interface{}, namespace string) error {
 	return wmi.QueryNamespace(query, dst, namespace)
 }
 
+// QueryAll returns a query string that selects all fields from the given
+// struct type.
+// Deprecated: Use QueryAllForClass instead.
 func QueryAll(src interface{}, logger log.Logger) string {
 	var b bytes.Buffer
 	b.WriteString("SELECT * FROM ")

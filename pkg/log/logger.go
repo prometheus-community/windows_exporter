@@ -33,7 +33,7 @@ func (f *AllowedFile) Set(s string) error {
 	case "eventlog":
 		f.w = nil
 	default:
-		file, err := os.OpenFile(s, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0200)
+		file, err := os.OpenFile(s, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0o200)
 		if err != nil {
 			return err
 		}
@@ -42,7 +42,7 @@ func (f *AllowedFile) Set(s string) error {
 	return nil
 }
 
-// Config is a struct containing configurable settings for the logger
+// Config is a struct containing configurable settings for the logger.
 type Config struct {
 	promlog.Config
 
@@ -72,15 +72,17 @@ func New(config *Config) (log.Logger, error) {
 		return nil, fmt.Errorf("unsupported log.format %q", config.Format.String())
 	}
 
-	if config.File.s == "eventlog" {
+	switch {
+	case config.File.s == "eventlog":
+
 		w, err := goeventlog.Open("windows_exporter")
 		if err != nil {
 			return nil, err
 		}
 		l = eventlog.NewEventLogLogger(w, loggerFunc)
-	} else if config.File.w == nil {
+	case config.File.w == nil:
 		panic("logger: file writer is nil")
-	} else {
+	default:
 		l = loggerFunc(log.NewSyncWriter(config.File.w))
 	}
 

@@ -82,7 +82,7 @@ type Collector struct {
 type dfsrCollectorFunc func(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error
 
 // Map Perflib sources to DFSR Collector names
-// e.g, volume -> DFS Replication Service Volumes
+// e.g, volume -> DFS Replication Service Volumes.
 func dfsrGetPerfObjectName(collector string) string {
 	prefix := "DFS "
 	suffix := ""
@@ -113,7 +113,7 @@ func New(logger log.Logger, config *Config) *Collector {
 func NewWithFlags(app *kingpin.Application) *Collector {
 	return &Collector{
 		dfsrEnabledCollectors: app.
-			Flag("collectors.dfsr.sources-enabled", "Comma-seperated list of DFSR Perflib sources to use.").
+			Flag("collectors.dfsr.sources-enabled", "Comma-separated list of DFSR Perflib sources to use.").
 			Default(ConfigDefaults.EnabledCollectors).
 			String(),
 	}
@@ -441,7 +441,7 @@ func (c *Collector) Build() error {
 }
 
 // Maps enabled child collectors names to their relevant collection function,
-// for use in Collector.Collect()
+// for use in Collector.Collect().
 func (c *Collector) getDFSRChildCollectors(enabledCollectors []string) []dfsrCollectorFunc {
 	var dfsrCollectors []dfsrCollectorFunc
 	for _, collector := range enabledCollectors {
@@ -470,7 +470,7 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 	return nil
 }
 
-// PerflibDFSRConnection Perflib: "DFS Replication Service Connections"
+// PerflibDFSRConnection Perflib: "DFS Replication Service Connections".
 type PerflibDFSRConnection struct {
 	Name string
 
@@ -558,7 +558,7 @@ func (c *Collector) collectConnection(ctx *types.ScrapeContext, ch chan<- promet
 	return nil
 }
 
-// perflibDFSRFolder Perflib: "DFS Replicated Folder"
+// perflibDFSRFolder Perflib: "DFS Replicated Folder".
 type perflibDFSRFolder struct {
 	Name string
 
@@ -790,7 +790,7 @@ func (c *Collector) collectFolder(ctx *types.ScrapeContext, ch chan<- prometheus
 	return nil
 }
 
-// perflibDFSRVolume Perflib: "DFS Replication Service Volumes"
+// perflibDFSRVolume Perflib: "DFS Replication Service Volumes".
 type perflibDFSRVolume struct {
 	Name string
 

@@ -10,7 +10,7 @@ import (
 	"github.com/go-kit/log/level"
 )
 
-// Conversion factors
+// Conversion factors.
 const (
 	TicksToSecondScaleFactor = 1 / 1e7
 	WindowsEpoch             = 116444736000000000
@@ -48,7 +48,7 @@ func UnmarshalObject(obj *PerfObject, vs interface{}, logger log.Logger) error {
 			}
 		}
 
-		for i := 0; i < target.NumField(); i++ {
+		for i := range target.NumField() {
 			f := rt.Field(i)
 			tag := f.Tag.Get("perflib")
 			if tag == "" {

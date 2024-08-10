@@ -42,39 +42,24 @@ func NewResolver(file string, logger log.Logger, insecureSkipVerify bool) (*Reso
 	var fileBytes []byte
 	var err error
 	if strings.HasPrefix(file, "http://") || strings.HasPrefix(file, "https://") {
-		_ = level.Info(logger).Log("msg", fmt.Sprintf("Loading configuration file from URL: %v", file))
-		tr := &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: insecureSkipVerify}, //nolint:gosec
-		}
-		if insecureSkipVerify {
-			_ = level.Warn(logger).Log("msg", "Loading configuration file with TLS verification disabled")
-		}
-		client := &http.Client{Transport: tr}
-		resp, err := client.Get(file)
-		if err != nil {
-			return nil, err
-		}
-		defer resp.Body.Close()
-		fileBytes, err = io.ReadAll(resp.Body)
+		fileBytes, err = readFromURL(file, logger, insecureSkipVerify)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		_ = level.Info(logger).Log("msg", fmt.Sprintf("Loading configuration file: %v", file))
-		if _, err := os.Stat(file); err != nil {
-			return nil, err
-		}
-		fileBytes, err = os.ReadFile(file)
+		fileBytes, err = readFromFile(file, logger)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	var rawValues map[string]interface{}
+
 	err = yaml.Unmarshal(fileBytes, &rawValues)
 	if err != nil {
 		return nil, err
 	}
+
 	// Flatten nested YAML values
 	flattenedValues := flatten(rawValues)
 	for k, v := range flattenedValues {
@@ -82,7 +67,49 @@ func NewResolver(file string, logger log.Logger, insecureSkipVerify bool) (*Reso
 			flags[k] = v
 		}
 	}
+
 	return &Resolver{flags: flags}, nil
+}
+
+func readFromFile(file string, logger log.Logger) ([]byte, error) {
+	_ = level.Info(logger).Log("msg", fmt.Sprintf("Loading configuration file: %v", file))
+	if _, err := os.Stat(file); err != nil {
+		return nil, err
+	}
+
+	fileBytes, err := os.ReadFile(file)
+	if err != nil {
+		return nil, err
+	}
+
+	return fileBytes, err
+}
+
+func readFromURL(file string, logger log.Logger, insecureSkipVerify bool) ([]byte, error) {
+	_ = level.Info(logger).Log("msg", fmt.Sprintf("Loading configuration file from URL: %v", file))
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: insecureSkipVerify}, //nolint:gosec
+	}
+
+	if insecureSkipVerify {
+		_ = level.Warn(logger).Log("msg", "Loading configuration file with TLS verification disabled")
+	}
+
+	client := &http.Client{Transport: tr}
+
+	resp, err := client.Get(file)
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	fileBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	return fileBytes, nil
 }
 
 func (c *Resolver) setDefault(v getFlagger) {

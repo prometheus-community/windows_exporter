@@ -23,7 +23,7 @@ type Config struct{}
 
 var ConfigDefaults = Config{}
 
-// A Collector is a Prometheus Collector for a few WMI metrics in Win32_DiskDrive
+// A Collector is a Prometheus Collector for a few WMI metrics in Win32_DiskDrive.
 type Collector struct {
 	logger log.Logger
 
@@ -177,10 +177,10 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 			c.diskInfo,
 			prometheus.GaugeValue,
 			1.0,
-			strings.Trim(disk.DeviceID, "\\.\\"),
+			strings.Trim(disk.DeviceID, "\\.\\"), //nolint:staticcheck
 			strings.TrimRight(disk.Model, " "),
 			strings.TrimRight(disk.Caption, " "),
-			strings.TrimRight(disk.Name, "\\.\\"),
+			strings.TrimRight(disk.Name, "\\.\\"), //nolint:staticcheck
 		)
 
 		for _, status := range allDiskStatus {
@@ -193,7 +193,7 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 				c.status,
 				prometheus.GaugeValue,
 				isCurrentState,
-				strings.Trim(disk.Name, "\\.\\"),
+				strings.Trim(disk.Name, "\\.\\"), //nolint:staticcheck
 				status,
 			)
 		}
@@ -202,14 +202,14 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 			c.size,
 			prometheus.GaugeValue,
 			float64(disk.Size),
-			strings.Trim(disk.Name, "\\.\\"),
+			strings.Trim(disk.Name, "\\.\\"), //nolint:staticcheck
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.partitions,
 			prometheus.GaugeValue,
 			float64(disk.Partitions),
-			strings.Trim(disk.Name, "\\.\\"),
+			strings.Trim(disk.Name, "\\.\\"), //nolint:staticcheck
 		)
 
 		for availNum, val := range availMap {
@@ -221,7 +221,7 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 				c.availability,
 				prometheus.GaugeValue,
 				isCurrentState,
-				strings.Trim(disk.Name, "\\.\\"),
+				strings.Trim(disk.Name, "\\.\\"), //nolint:staticcheck
 				val,
 			)
 		}

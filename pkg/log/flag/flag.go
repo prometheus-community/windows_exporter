@@ -20,14 +20,14 @@ import (
 	promlogflag "github.com/prometheus/common/promlog/flag"
 )
 
-// FileFlagName is the canonical flag name to configure the log file
+// FileFlagName is the canonical flag name to configure the log file.
 const FileFlagName = "log.file"
 
 // FileFlagHelp is the help description for the log.file flag.
 const FileFlagHelp = "Output file of log messages. One of [stdout, stderr, eventlog, <path to log file>]"
 
 // AddFlags adds the flags used by this package to the Kingpin application.
-// To use the default Kingpin application, call AddFlags(kingpin.CommandLine)
+// To use the default Kingpin application, call AddFlags(kingpin.CommandLine).
 func AddFlags(a *kingpin.Application, config *log.Config) {
 	config.Level = &promlog.AllowedLevel{}
 	a.Flag(promlogflag.LevelFlagName, promlogflag.LevelFlagHelp).

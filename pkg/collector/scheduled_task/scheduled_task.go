@@ -225,7 +225,9 @@ const SCHEDULED_TASK_PROGRAM_ID = "Schedule.Service.1"
 // S_FALSE is returned by CoInitialize if it was already called on this thread.
 const S_FALSE = 0x00000001
 
-func getScheduledTasks() (scheduledTasks ScheduledTasks, err error) {
+func getScheduledTasks() (ScheduledTasks, error) {
+	var scheduledTasks ScheduledTasks
+
 	// The only way to run WMI queries in parallel while being thread-safe is to
 	// ensure the CoInitialize[Ex]() call is bound to its current OS thread.
 	// Otherwise, attempting to initialize and run parallel queries across
@@ -320,7 +322,9 @@ func fetchTasksRecursively(folder *ole.IDispatch, scheduledTasks *ScheduledTasks
 	return err
 }
 
-func parseTask(task *ole.IDispatch) (scheduledTask ScheduledTask, err error) {
+func parseTask(task *ole.IDispatch) (ScheduledTask, error) {
+	var scheduledTask ScheduledTask
+
 	taskNameVar, err := oleutil.GetProperty(task, "Name")
 	if err != nil {
 		return scheduledTask, err

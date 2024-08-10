@@ -87,7 +87,7 @@ func (coll *Prometheus) Collect(ch chan<- prometheus.Metric) {
 		time.Since(t).Seconds(),
 	)
 	if err != nil {
-		ch <- prometheus.NewInvalidMetric(coll.scrapeSuccessDesc, fmt.Errorf("failed to prepare scrape: %v", err))
+		ch <- prometheus.NewInvalidMetric(coll.scrapeSuccessDesc, fmt.Errorf("failed to prepare scrape: %w", err))
 		return
 	}
 
