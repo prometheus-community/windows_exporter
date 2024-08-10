@@ -4,12 +4,11 @@
 
 package main
 
-// Its important that we do these first so that we can register with the Windows service control ASAP to avoid timeouts.
-//goland:noinspection GoUnsortedImport
-import "github.com/prometheus-community/windows_exporter/pkg/initiate"
-
 //goland:noinspection GoUnsortedImport
 import (
+	// Its important that we do these first so that we can register with the Windows service control ASAP to avoid timeouts.
+	"github.com/prometheus-community/windows_exporter/pkg/initiate"
+
 	"context"
 	"encoding/json"
 	"fmt"
