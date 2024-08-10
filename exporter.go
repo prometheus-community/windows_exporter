@@ -5,6 +5,7 @@
 package main
 
 //goland:noinspection GoUnsortedImport
+//nolint:gofumpt
 import (
 	// Its important that we do these first so that we can register with the Windows service control ASAP to avoid timeouts.
 	"github.com/prometheus-community/windows_exporter/pkg/initiate"
