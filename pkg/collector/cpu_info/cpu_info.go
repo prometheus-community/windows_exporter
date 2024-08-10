@@ -62,7 +62,7 @@ func (c *Collector) Close() error {
 func (c *Collector) Build() error {
 	c.cpuInfo = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, "", Name),
-		"Labelled CPU information as provided provided by Win32_Processor",
+		"Labelled CPU information as provided by Win32_Processor",
 		[]string{
 			"architecture",
 			"device_id",

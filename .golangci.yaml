@@ -14,7 +14,9 @@ linters:
     - funlen
     - gochecknoglobals
     - gocognit
+    - goconst
     - gocyclo
+    - godox
     - inamedparam
     - ireturn
     - lll

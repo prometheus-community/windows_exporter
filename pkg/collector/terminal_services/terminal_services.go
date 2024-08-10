@@ -433,7 +433,7 @@ func (c *Collector) collectWTSSessions(ch chan<- prometheus.Metric) error {
 				c.sessionInfo,
 				prometheus.GaugeValue,
 				isState,
-				strings.Replace(session.SessionName, "#", " ", -1),
+				strings.ReplaceAll(session.SessionName, "#", " "),
 				userName,
 				session.HostName,
 				stateName,

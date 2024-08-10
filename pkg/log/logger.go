@@ -72,15 +72,17 @@ func New(config *Config) (log.Logger, error) {
 		return nil, fmt.Errorf("unsupported log.format %q", config.Format.String())
 	}
 
-	if config.File.s == "eventlog" {
+	switch {
+	case config.File.s == "eventlog":
+
 		w, err := goeventlog.Open("windows_exporter")
 		if err != nil {
 			return nil, err
 		}
 		l = eventlog.NewEventLogLogger(w, loggerFunc)
-	} else if config.File.w == nil {
+	case config.File.w == nil:
 		panic("logger: file writer is nil")
-	} else {
+	default:
 		l = loggerFunc(log.NewSyncWriter(config.File.w))
 	}
 

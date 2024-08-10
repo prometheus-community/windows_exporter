@@ -46,11 +46,11 @@ type ProcessorArchitecture uint16
 // Idiomatic values for wProcessorArchitecture.
 const (
 	AMD64   ProcessorArchitecture = 9
-	ARM                           = 5
-	ARM64                         = 12
-	IA64                          = 6
-	INTEL                         = 0
-	UNKNOWN                       = 0xffff
+	ARM     ProcessorArchitecture = 5
+	ARM64   ProcessorArchitecture = 12
+	IA64    ProcessorArchitecture = 6
+	INTEL   ProcessorArchitecture = 0
+	UNKNOWN ProcessorArchitecture = 0xffff
 )
 
 // LpSystemInfo is a wrapper for LPSYSTEM_INFO
@@ -112,7 +112,7 @@ func GlobalMemoryStatusEx() (MemoryStatus, error) {
 	mse.dwLength = (uint32)(unsafe.Sizeof(mse))
 	r1, _, err := procGlobalMemoryStatusEx.Call(uintptr(unsafe.Pointer(&mse)))
 
-	if ret := *(*bool)(unsafe.Pointer(&r1)); ret == false {
+	if ret := *(*bool)(unsafe.Pointer(&r1)); !ret {
 		return MemoryStatus{}, err
 	}
 

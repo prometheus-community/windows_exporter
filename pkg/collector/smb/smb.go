@@ -121,9 +121,7 @@ func (c *Collector) Build() error {
 	}
 
 	if *c.smbCollectorsEnabled == "" {
-		for _, collectorName := range smbAllCollectorNames {
-			c.enabledCollectors = append(c.enabledCollectors, collectorName)
-		}
+		c.enabledCollectors = append(c.enabledCollectors, smbAllCollectorNames...)
 	} else {
 		for _, collectorName := range strings.Split(*c.smbCollectorsEnabled, ",") {
 			if slices.Contains(smbAllCollectorNames, collectorName) {

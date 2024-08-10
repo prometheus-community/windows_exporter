@@ -26,7 +26,7 @@ const Name = "process"
 type Config struct {
 	ProcessInclude      string `yaml:"process_include"`
 	ProcessExclude      string `yaml:"process_exclude"`
-	EnableWorkerProcess bool   `yaml:"enable_iis_worker_process"`
+	EnableWorkerProcess bool   `yaml:"enable_iis_worker_process"` //nolint:tagliatelle
 	EnableReportOwner   bool   `yaml:"enable_report_owner"`
 }
 
@@ -488,7 +488,7 @@ func (c *Collector) getProcessOwner(pid int) (string, error) {
 	}
 
 	if err != nil {
-		return "", fmt.Errorf("OpenProcess: %T %w", err, err)
+		return "", fmt.Errorf("OpenProcess: %w", err)
 	}
 
 	defer windows.Close(p)

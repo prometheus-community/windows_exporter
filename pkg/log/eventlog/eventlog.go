@@ -70,7 +70,7 @@ func (l *eventlogLogger) Log(keyvals ...interface{}) error {
 
 	msg, err := syscall.UTF16PtrFromString(lb.buf.String())
 	if err != nil {
-		return fmt.Errorf("error convert string to UTF-16: %v", err)
+		return fmt.Errorf("error convert string to UTF-16: %w", err)
 	}
 
 	ss := []*uint16{msg, nil, nil, nil, nil, nil, nil, nil, nil}

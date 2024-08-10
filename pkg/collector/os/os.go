@@ -215,10 +215,11 @@ func (c *Collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 
 	// Get total allocation of paging files across all disks.
 	memManKey, err := registry.OpenKey(registry.LOCAL_MACHINE, `SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management`, registry.QUERY_VALUE)
-	defer memManKey.Close()
 	if err != nil {
 		return err
 	}
+
+	defer memManKey.Close()
 
 	pagingFiles, _, pagingErr := memManKey.GetStringsValue("ExistingPageFiles")
 
@@ -236,11 +237,11 @@ func (c *Collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 
 	// Get build number and product name from registry
 	ntKey, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\Microsoft\Windows NT\CurrentVersion`, registry.QUERY_VALUE)
-	defer ntKey.Close()
-
 	if err != nil {
 		return err
 	}
+
+	defer ntKey.Close()
 
 	pn, _, err := ntKey.GetStringValue("ProductName")
 	if err != nil {

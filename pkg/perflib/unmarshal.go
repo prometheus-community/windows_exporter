@@ -48,7 +48,7 @@ func UnmarshalObject(obj *PerfObject, vs interface{}, logger log.Logger) error {
 			}
 		}
 
-		for i := 0; i < target.NumField(); i++ {
+		for i := range target.NumField() {
 			f := rt.Field(i)
 			tag := f.Tag.Get("perflib")
 			if tag == "" {

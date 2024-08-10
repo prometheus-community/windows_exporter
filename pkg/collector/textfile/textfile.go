@@ -120,21 +120,21 @@ func (c *Collector) Build() error {
 func duplicateMetricEntry(metricFamilies []*dto.MetricFamily) bool {
 	uniqueMetrics := make(map[string]map[string]string)
 	for _, metricFamily := range metricFamilies {
-		metric_name := metricFamily.GetName()
+		metricName := metricFamily.GetName()
 		for _, metric := range metricFamily.GetMetric() {
-			metric_labels := metric.GetLabel()
+			metricLabels := metric.GetLabel()
 			labels := make(map[string]string)
-			for _, label := range metric_labels {
+			for _, label := range metricLabels {
 				labels[label.GetName()] = label.GetValue()
 			}
 			// Check if key is present before appending
-			_, mapContainsKey := uniqueMetrics[metric_name]
+			_, mapContainsKey := uniqueMetrics[metricName]
 
 			// Duplicate metric found with identical labels & label values
-			if mapContainsKey == true && reflect.DeepEqual(uniqueMetrics[metric_name], labels) {
+			if mapContainsKey && reflect.DeepEqual(uniqueMetrics[metricName], labels) {
 				return true
 			}
-			uniqueMetrics[metric_name] = labels
+			uniqueMetrics[metricName] = labels
 		}
 	}
 	return false
@@ -175,7 +175,7 @@ func (c *Collector) convertMetricFamily(metricFamily *dto.MetricFamily, ch chan<
 					break
 				}
 			}
-			if present == false {
+			if !present {
 				names = append(names, k)
 				values = append(values, "")
 			}
@@ -276,7 +276,7 @@ func (cr carriageReturnFilteringReader) Read(p []byte) (int, error) {
 	}
 
 	pi := 0
-	for i := 0; i < n; i++ {
+	for i := range n {
 		if buf[i] != '\r' {
 			p[pi] = buf[i]
 			pi++

@@ -224,9 +224,7 @@ func (c *Collector) Build() error {
 	}
 
 	if *c.smbClientCollectorsEnabled == "" {
-		for _, collectorName := range smbclientAllCollectorNames {
-			c.enabledCollectors = append(c.enabledCollectors, collectorName)
-		}
+		c.enabledCollectors = append(c.enabledCollectors, smbclientAllCollectorNames...)
 	} else {
 		for _, collectorName := range strings.Split(*c.smbClientCollectorsEnabled, ",") {
 			if slices.Contains(smbclientAllCollectorNames, collectorName) {

@@ -14,6 +14,7 @@ var (
 	WindowsVersionFloat float64
 )
 
+//nolint:gochecknoinits
 func init() {
 	var err error
 	WindowsVersion, WindowsVersionFloat, err = GetWindowsVersion()

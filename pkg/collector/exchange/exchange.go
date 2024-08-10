@@ -220,9 +220,7 @@ func (c *Collector) Build() error {
 	}
 
 	if utils.IsEmpty(c.exchangeCollectorsEnabled) {
-		for _, collectorName := range exchangeAllCollectorNames {
-			c.enabledCollectors = append(c.enabledCollectors, collectorName)
-		}
+		c.enabledCollectors = append(c.enabledCollectors, exchangeAllCollectorNames...)
 	} else {
 		for _, collectorName := range strings.Split(*c.exchangeCollectorsEnabled, ",") {
 			if slices.Contains(exchangeAllCollectorNames, collectorName) {
