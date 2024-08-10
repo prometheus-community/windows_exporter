@@ -33,6 +33,12 @@ linters:
     - maintidx
 
 linters-settings:
+  gci:
+    sections:
+      - prefix(github.com/prometheus-community/windows_exporter/pkg/initiate)
+      - standard # Standard section: captures all standard packages.
+      - default # Default section: contains all imports that could not be matched to another section type.
+    custom-order: true
   tagliatelle:
     case:
       use-field-name: true
