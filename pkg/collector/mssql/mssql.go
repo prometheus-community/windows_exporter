@@ -434,7 +434,9 @@ func New(logger log.Logger, config *Config) *Collector {
 }
 
 func NewWithFlags(app *kingpin.Application) *Collector {
-	c := &Collector{}
+	c := &Collector{
+		config: ConfigDefaults,
+	}
 
 	var listAllCollectors bool
 

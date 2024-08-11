@@ -69,19 +69,21 @@ func New(logger log.Logger, config *Config) *Collector {
 }
 
 func NewWithFlags(app *kingpin.Application) *Collector {
-	c := &Collector{}
+	c := &Collector{
+		config: ConfigDefaults,
+	}
 
 	var diskExclude, diskInclude string
 
 	app.Flag(
 		"collector.physical_disk.disk-exclude",
 		"Regexp of disks to exclude. Disk number must both match include and not match exclude to be included.",
-	).Default(ConfigDefaults.DiskExclude.String()).StringVar(&diskExclude)
+	).Default(c.config.DiskExclude.String()).StringVar(&diskExclude)
 
 	app.Flag(
 		"collector.physical_disk.disk-include",
 		"Regexp of disks to include. Disk number must both match include and not match exclude to be included.",
-	).Default(ConfigDefaults.DiskInclude.String()).StringVar(&diskInclude)
+	).Default(c.config.DiskInclude.String()).StringVar(&diskInclude)
 
 	app.Action(func(*kingpin.ParseContext) error {
 		var err error

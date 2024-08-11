@@ -82,19 +82,21 @@ func New(logger log.Logger, config *Config) *Collector {
 }
 
 func NewWithFlags(app *kingpin.Application) *Collector {
-	c := &Collector{}
+	c := &Collector{
+		config: ConfigDefaults,
+	}
 
 	var processExclude, processInclude string
 
 	app.Flag(
 		"collector.process.exclude",
 		"Regexp of processes to exclude. Process name must both match include and not match exclude to be included.",
-	).Default(ConfigDefaults.ProcessExclude.String()).StringVar(&processExclude)
+	).Default(c.config.ProcessExclude.String()).StringVar(&processExclude)
 
 	app.Flag(
 		"collector.process.include",
 		"Regexp of processes to include. Process name must both match include and not match exclude to be included.",
-	).Default(ConfigDefaults.ProcessInclude.String()).StringVar(&processInclude)
+	).Default(c.config.ProcessInclude.String()).StringVar(&processInclude)
 
 	app.Flag(
 		"collector.process.iis",

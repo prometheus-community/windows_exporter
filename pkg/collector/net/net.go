@@ -71,19 +71,21 @@ func New(logger log.Logger, config *Config) *Collector {
 }
 
 func NewWithFlags(app *kingpin.Application) *Collector {
-	c := &Collector{}
+	c := &Collector{
+		config: ConfigDefaults,
+	}
 
 	var nicExclude, nicInclude string
 
 	app.Flag(
 		"collector.net.nic-exclude",
 		"Regexp of NIC:s to exclude. NIC name must both match include and not match exclude to be included.",
-	).Default(ConfigDefaults.NicExclude.String()).StringVar(&nicExclude)
+	).Default(c.config.NicExclude.String()).StringVar(&nicExclude)
 
 	app.Flag(
 		"collector.net.nic-include",
 		"Regexp of NIC:s to include. NIC name must both match include and not match exclude to be included.",
-	).Default(ConfigDefaults.NicInclude.String()).StringVar(&nicInclude)
+	).Default(c.config.NicInclude.String()).StringVar(&nicInclude)
 
 	app.Action(func(*kingpin.ParseContext) error {
 		var err error

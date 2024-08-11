@@ -117,7 +117,9 @@ func New(logger log.Logger, config *Config) *Collector {
 }
 
 func NewWithFlags(app *kingpin.Application) *Collector {
-	c := &Collector{}
+	c := &Collector{
+		config: ConfigDefaults,
+	}
 
 	app.Flag("collectors.dfsr.sources-enabled", "Comma-separated list of DFSR Perflib sources to use.").
 		Default(strings.Join(ConfigDefaults.EnabledCollectors, ",")).

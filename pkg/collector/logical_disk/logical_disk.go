@@ -87,19 +87,21 @@ func New(logger log.Logger, config *Config) *Collector {
 }
 
 func NewWithFlags(app *kingpin.Application) *Collector {
-	c := &Collector{}
+	c := &Collector{
+		config: ConfigDefaults,
+	}
 
 	var volumeExclude, volumeInclude string
 
 	app.Flag(
 		"collector.logical_disk.volume-exclude",
 		"Regexp of volumes to exclude. Volume name must both match include and not match exclude to be included.",
-	).Default(ConfigDefaults.VolumeExclude.String()).StringVar(&volumeExclude)
+	).Default(c.config.VolumeExclude.String()).StringVar(&volumeExclude)
 
 	app.Flag(
 		"collector.logical_disk.volume-include",
 		"Regexp of volumes to include. Volume name must both match include and not match exclude to be included.",
-	).Default(ConfigDefaults.VolumeInclude.String()).StringVar(&volumeInclude)
+	).Default(c.config.VolumeInclude.String()).StringVar(&volumeInclude)
 
 	app.Action(func(*kingpin.ParseContext) error {
 		var err error

@@ -193,29 +193,31 @@ func New(logger log.Logger, config *Config) *Collector {
 }
 
 func NewWithFlags(app *kingpin.Application) *Collector {
-	c := &Collector{}
+	c := &Collector{
+		config: ConfigDefaults,
+	}
 
 	var appExclude, appInclude, siteExclude, siteInclude string
 
 	app.Flag(
 		"collector.iis.app-exclude",
 		"Regexp of apps to exclude. App name must both match include and not match exclude to be included.",
-	).Default(ConfigDefaults.AppExclude.String()).StringVar(&appExclude)
+	).Default(c.config.AppExclude.String()).StringVar(&appExclude)
 
 	app.Flag(
 		"collector.iis.app-include",
 		"Regexp of apps to include. App name must both match include and not match exclude to be included.",
-	).Default(ConfigDefaults.AppInclude.String()).StringVar(&appInclude)
+	).Default(c.config.AppInclude.String()).StringVar(&appInclude)
 
 	app.Flag(
 		"collector.iis.site-exclude",
 		"Regexp of sites to exclude. Site name must both match include and not match exclude to be included.",
-	).Default(ConfigDefaults.SiteExclude.String()).StringVar(&siteExclude)
+	).Default(c.config.SiteExclude.String()).StringVar(&siteExclude)
 
 	app.Flag(
 		"collector.iis.site-include",
 		"Regexp of sites to include. Site name must both match include and not match exclude to be included.",
-	).Default(ConfigDefaults.SiteInclude.String()).StringVar(&siteInclude)
+	).Default(c.config.SiteInclude.String()).StringVar(&siteInclude)
 
 	app.Action(func(*kingpin.ParseContext) error {
 		var err error

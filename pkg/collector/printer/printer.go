@@ -70,19 +70,21 @@ func New(logger log.Logger, config *Config) *Collector {
 }
 
 func NewWithFlags(app *kingpin.Application) *Collector {
-	c := &Collector{}
+	c := &Collector{
+		config: ConfigDefaults,
+	}
 
 	var printerInclude, printerExclude string
 
 	app.Flag(
 		"collector.printer.include",
 		"Regular expression to match printers to collect metrics for",
-	).Default(ConfigDefaults.PrinterInclude.String()).StringVar(&printerInclude)
+	).Default(c.config.PrinterInclude.String()).StringVar(&printerInclude)
 
 	app.Flag(
 		"collector.printer.exclude",
 		"Regular expression to match printers to exclude",
-	).Default(ConfigDefaults.PrinterExclude.String()).StringVar(&printerExclude)
+	).Default(c.config.PrinterExclude.String()).StringVar(&printerExclude)
 
 	app.Action(func(*kingpin.ParseContext) error {
 		var err error
