@@ -38,6 +38,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/collector/netframework_clrremoting"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/netframework_clrsecurity"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/nps"
+	"github.com/prometheus-community/windows_exporter/pkg/collector/ohwm"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/os"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/physical_disk"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/printer"
@@ -97,6 +98,7 @@ type Config struct {
 	NetframeworkClrremoting        netframework_clrremoting.Config        `yaml:"netframework_clrremoting"`
 	NetframeworkClrsecurity        netframework_clrsecurity.Config        `yaml:"netframework_clrsecurity"`
 	Nps                            nps.Config                             `yaml:"nps"`
+	OHWM                           ohwm.Config                            `yaml:"ohwm"`
 	Os                             os.Config                              `yaml:"os"`
 	PhysicalDisk                   physical_disk.Config                   `yaml:"physical_disk"`
 	Printer                        printer.Config                         `yaml:"printer"`
@@ -159,6 +161,7 @@ var ConfigDefaults = Config{
 	NetframeworkClrremoting:        netframework_clrremoting.ConfigDefaults,
 	NetframeworkClrsecurity:        netframework_clrsecurity.ConfigDefaults,
 	Nps:                            nps.ConfigDefaults,
+	OHWM:                           ohwm.ConfigDefaults,
 	Os:                             os.ConfigDefaults,
 	PhysicalDisk:                   physical_disk.ConfigDefaults,
 	Printer:                        printer.ConfigDefaults,
