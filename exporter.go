@@ -61,16 +61,20 @@ var priorityStringToInt = map[string]uint32{
 
 func setPriorityWindows(pid int, priority uint32) error {
 	// https://learn.microsoft.com/en-us/windows/win32/procthread/process-security-and-access-rights
-	handle, err := windows.OpenProcess(windows.STANDARD_RIGHTS_REQUIRED|windows.SYNCHRONIZE|windows.SPECIFIC_RIGHTS_ALL, false, uint32(pid))
+	handle, err := windows.OpenProcess(
+		windows.STANDARD_RIGHTS_REQUIRED|windows.SYNCHRONIZE|windows.SPECIFIC_RIGHTS_ALL,
+		false, uint32(pid),
+	)
 	if err != nil {
 		return err
 	}
-	//nolint:errcheck
-	defer windows.CloseHandle(handle) // Technically this can fail, but we ignore it
 
-	err = windows.SetPriorityClass(handle, priority)
-	if err != nil {
+	if err = windows.SetPriorityClass(handle, priority); err != nil {
 		return err
+	}
+
+	if err = windows.CloseHandle(handle); err != nil {
+		return fmt.Errorf("failed to close handle: %w", err)
 	}
 
 	return nil
