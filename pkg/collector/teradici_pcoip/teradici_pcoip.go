@@ -99,7 +99,7 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build() error {
-	// _ = level.Warn(c.logger).Log("msg", "teradici_pcoip collector is deprecated and will be removed in the future.")
+	_ = level.Warn(c.logger).Log("msg", "teradici_pcoip collector is deprecated and will be removed in the future.")
 
 	c.audioBytesReceived = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "audio_bytes_received_total"),

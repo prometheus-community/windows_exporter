@@ -144,7 +144,7 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build() error {
-	// _ = level.Warn(c.logger).Log("msg", "vmware_blast collector is deprecated and will be removed in the future.")
+	_ = level.Warn(c.logger).Log("msg", "vmware_blast collector is deprecated and will be removed in the future.")
 
 	c.audioReceivedBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "audio_received_bytes_total"),
