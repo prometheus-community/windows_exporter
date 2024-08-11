@@ -38,9 +38,6 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-// https://learn.microsoft.com/en-us/windows/win32/procthread/process-security-and-access-rights
-const PROCESS_ALL_ACCESS = windows.STANDARD_RIGHTS_REQUIRED | windows.SYNCHRONIZE | windows.SPECIFIC_RIGHTS_ALL
-
 // Same struct prometheus uses for their /version endpoint.
 // Separate copy to avoid pulling all of prometheus as a dependency.
 type prometheusVersion struct {
@@ -63,7 +60,8 @@ var priorityStringToInt = map[string]uint32{
 }
 
 func setPriorityWindows(pid int, priority uint32) error {
-	handle, err := windows.OpenProcess(PROCESS_ALL_ACCESS, false, uint32(pid))
+	// https://learn.microsoft.com/en-us/windows/win32/procthread/process-security-and-access-rights
+	handle, err := windows.OpenProcess(windows.STANDARD_RIGHTS_REQUIRED|windows.SYNCHRONIZE|windows.SPECIFIC_RIGHTS_ALL, false, uint32(pid))
 	if err != nil {
 		return err
 	}
