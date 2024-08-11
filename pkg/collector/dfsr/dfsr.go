@@ -17,11 +17,11 @@ import (
 const Name = "dfsr"
 
 type Config struct {
-	EnabledCollectors []string `yaml:"enabled_collectors"`
+	CollectorsEnabled []string `yaml:"enabled_collectors"`
 }
 
 var ConfigDefaults = Config{
-	EnabledCollectors: []string{"connection", "folder", "volume"},
+	CollectorsEnabled: []string{"connection", "folder", "volume"},
 }
 
 // Collector contains the metric and state data of the DFSR collectors.
@@ -103,8 +103,8 @@ func New(logger log.Logger, config *Config) *Collector {
 		config = &ConfigDefaults
 	}
 
-	if config.EnabledCollectors == nil {
-		config.EnabledCollectors = ConfigDefaults.EnabledCollectors
+	if config.CollectorsEnabled == nil {
+		config.CollectorsEnabled = ConfigDefaults.CollectorsEnabled
 	}
 
 	c := &Collector{
@@ -120,10 +120,10 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 	c := &Collector{
 		config: ConfigDefaults,
 	}
+	c.config.CollectorsEnabled = make([]string, 0)
 
 	app.Flag("collectors.dfsr.sources-enabled", "Comma-separated list of DFSR Perflib sources to use.").
-		Default(strings.Join(ConfigDefaults.EnabledCollectors, ",")).
-		StringsVar(&c.config.EnabledCollectors)
+		Default(strings.Join(ConfigDefaults.CollectorsEnabled, ",")).StringsVar(&c.config.CollectorsEnabled)
 
 	return c
 }
@@ -138,7 +138,7 @@ func (c *Collector) SetLogger(logger log.Logger) {
 
 func (c *Collector) GetPerfCounter() ([]string, error) {
 	// Perflib sources are dynamic, depending on the enabled child collectors
-	expandedChildCollectors := slices.Compact(c.config.EnabledCollectors)
+	expandedChildCollectors := slices.Compact(c.config.CollectorsEnabled)
 	perflibDependencies := make([]string, 0, len(expandedChildCollectors))
 
 	for _, source := range expandedChildCollectors {
@@ -446,7 +446,7 @@ func (c *Collector) Build() error {
 	)
 
 	// Perflib sources are dynamic, depending on the enabled child collectors
-	expandedChildCollectors := slices.Compact(c.config.EnabledCollectors)
+	expandedChildCollectors := slices.Compact(c.config.CollectorsEnabled)
 	c.dfsrChildCollectors = c.getDFSRChildCollectors(expandedChildCollectors)
 
 	return nil

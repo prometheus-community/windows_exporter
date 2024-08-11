@@ -24,11 +24,11 @@ import (
 const Name = "mssql"
 
 type Config struct {
-	EnabledCollectors []string `yaml:"collectors_enabled"` //nolint:tagliatelle
+	CollectorsEnabled []string `yaml:"collectors_enabled"` //nolint:tagliatelle
 }
 
 var ConfigDefaults = Config{
-	EnabledCollectors: []string{
+	CollectorsEnabled: []string{
 		"accessmethods",
 		"availreplica",
 		"bufman",
@@ -420,8 +420,8 @@ func New(logger log.Logger, config *Config) *Collector {
 		config = &ConfigDefaults
 	}
 
-	if config.EnabledCollectors == nil {
-		config.EnabledCollectors = ConfigDefaults.EnabledCollectors
+	if config.CollectorsEnabled == nil {
+		config.CollectorsEnabled = ConfigDefaults.CollectorsEnabled
 	}
 
 	c := &Collector{
@@ -437,6 +437,7 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 	c := &Collector{
 		config: ConfigDefaults,
 	}
+	c.config.CollectorsEnabled = make([]string, 0)
 
 	var listAllCollectors bool
 
@@ -448,7 +449,7 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 	app.Flag(
 		"collectors.mssql.classes-enabled",
 		"Comma-separated list of mssql WMI classes to use.",
-	).Default(strings.Join(ConfigDefaults.EnabledCollectors, ",")).StringsVar(&c.config.EnabledCollectors)
+	).Default(strings.Join(ConfigDefaults.CollectorsEnabled, ",")).StringsVar(&c.config.CollectorsEnabled)
 
 	app.PreAction(func(*kingpin.ParseContext) error {
 		if listAllCollectors {
@@ -479,7 +480,7 @@ func (c *Collector) SetLogger(logger log.Logger) {
 }
 
 func (c *Collector) GetPerfCounter() ([]string, error) {
-	enabled := slices.Compact(c.config.EnabledCollectors)
+	enabled := slices.Compact(c.config.CollectorsEnabled)
 
 	// Result must order, to prevent test failures.
 	sort.Strings(enabled)
@@ -2006,7 +2007,7 @@ func (c *Collector) execute(ctx *types.ScrapeContext, name string, fn mssqlColle
 func (c *Collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	wg := sync.WaitGroup{}
 
-	enabled := slices.Compact(c.config.EnabledCollectors)
+	enabled := slices.Compact(c.config.CollectorsEnabled)
 
 	// Result must order, to prevent test failures.
 	sort.Strings(enabled)

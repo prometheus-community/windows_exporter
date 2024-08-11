@@ -78,6 +78,7 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 	c := &Collector{
 		config: ConfigDefaults,
 	}
+	c.config.TextFileDirectories = make([]string, 0)
 
 	app.Flag(
 		"collector.textfile.directories",

@@ -108,6 +108,7 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 	c := &Collector{
 		config: ConfigDefaults,
 	}
+	c.config.CollectorsEnabled = make([]string, 0)
 
 	var listAllCollectors bool
 
