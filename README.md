@@ -44,6 +44,7 @@ Name     | Description | Enabled by default
 [netframework_clrremoting](docs/collector.netframework_clrremoting.md) | .NET Framework Remoting metrics |
 [netframework_clrsecurity](docs/collector.netframework_clrsecurity.md) | .NET Framework Security Check metrics |
 [net](docs/collector.net.md) | Network interface I/O | &#10003;
+[ohwm](docs/collector.ohwm.md) | Open Hardware Monitor | 
 [os](docs/collector.os.md) | OS metrics (memory, processes, users) | &#10003;
 [physical_disk](docs/collector.physical_disk.md) | physical disk metrics | &#10003;
 [printer](docs/collector.printer.md) | Printer metrics | 
