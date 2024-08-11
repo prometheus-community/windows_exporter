@@ -83,7 +83,7 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 		"Regexp of disks to include. Disk number must both match include and not match exclude to be included.",
 	).Default(ConfigDefaults.DiskInclude.String()).StringVar(&diskInclude)
 
-	app.Action(func(ctx *kingpin.ParseContext) error {
+	app.Action(func(*kingpin.ParseContext) error {
 		var err error
 
 		c.config.DiskExclude, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", diskExclude))

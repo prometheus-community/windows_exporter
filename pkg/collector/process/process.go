@@ -106,7 +106,7 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 		"Enable reporting of process owner.",
 	).Default(strconv.FormatBool(c.config.EnableReportOwner)).BoolVar(&c.config.EnableReportOwner)
 
-	app.Action(func(ctx *kingpin.ParseContext) error {
+	app.Action(func(*kingpin.ParseContext) error {
 		var err error
 
 		c.config.ProcessExclude, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", processExclude))

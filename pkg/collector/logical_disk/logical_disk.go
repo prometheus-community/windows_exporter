@@ -101,7 +101,7 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 		"Regexp of volumes to include. Volume name must both match include and not match exclude to be included.",
 	).Default(ConfigDefaults.VolumeInclude.String()).StringVar(&volumeInclude)
 
-	app.Action(func(ctx *kingpin.ParseContext) error {
+	app.Action(func(*kingpin.ParseContext) error {
 		var err error
 
 		c.config.VolumeExclude, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", volumeExclude))

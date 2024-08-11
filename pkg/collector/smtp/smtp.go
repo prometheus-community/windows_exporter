@@ -111,7 +111,7 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 		"Regexp of virtual servers to include. Server name must both match include and not match exclude to be included.",
 	).Default(ConfigDefaults.ServerInclude.String()).StringVar(&serverInclude)
 
-	app.Action(func(ctx *kingpin.ParseContext) error {
+	app.Action(func(*kingpin.ParseContext) error {
 		var err error
 
 		c.config.ServerExclude, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", serverExclude))
