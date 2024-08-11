@@ -51,7 +51,11 @@ const (
 	TASK_STATE_QUEUED
 	TASK_STATE_READY
 	TASK_STATE_RUNNING
-	TASK_RESULT_SUCCESS TaskResult = 0x0
+)
+
+const (
+	SCHED_S_SUCCESS          TaskResult = 0x0
+	SCHED_S_TASK_HAS_NOT_RUN TaskResult = 0x00041303
 )
 
 type ScheduledTask struct {
@@ -102,19 +106,19 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 	app.Flag(
 		"collector.scheduled_task.include",
 		"Regexp of tasks to include. Task path must both match include and not match exclude to be included.",
-	).Default(c.config.TaskExclude.String()).StringVar(&taskInclude)
+	).Default(c.config.TaskInclude.String()).StringVar(&taskInclude)
 
 	app.Action(func(*kingpin.ParseContext) error {
 		var err error
 
 		c.config.TaskExclude, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", taskExclude))
 		if err != nil {
-			return fmt.Errorf("collector.physical_disk.disk-exclude: %w", err)
+			return fmt.Errorf("collector.scheduled_task.exclude: %w", err)
 		}
 
 		c.config.TaskInclude, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", taskInclude))
 		if err != nil {
-			return fmt.Errorf("collector.physical_disk.disk-include: %w", err)
+			return fmt.Errorf("collector.scheduled_task.include: %w", err)
 		}
 
 		return nil
@@ -187,8 +191,28 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 			continue
 		}
 
+		for _, state := range TASK_STATES {
+			var stateValue float64
+
+			if strings.ToLower(task.State.String()) == state {
+				stateValue = 1.0
+			}
+
+			ch <- prometheus.MustNewConstMetric(
+				c.state,
+				prometheus.GaugeValue,
+				stateValue,
+				task.Path,
+				state,
+			)
+		}
+
+		if task.LastTaskResult == SCHED_S_TASK_HAS_NOT_RUN {
+			continue
+		}
+
 		lastResult := 0.0
-		if task.LastTaskResult == TASK_RESULT_SUCCESS {
+		if task.LastTaskResult == SCHED_S_SUCCESS {
 			lastResult = 1.0
 		}
 
@@ -205,22 +229,6 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 			task.MissedRunsCount,
 			task.Path,
 		)
-
-		for _, state := range TASK_STATES {
-			var stateValue float64
-
-			if strings.ToLower(task.State.String()) == state {
-				stateValue = 1.0
-			}
-
-			ch <- prometheus.MustNewConstMetric(
-				c.state,
-				prometheus.GaugeValue,
-				stateValue,
-				task.Path,
-				state,
-			)
-		}
 	}
 
 	return nil

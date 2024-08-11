@@ -43,6 +43,7 @@ windows_exporter_collector_success{collector="logical_disk"} 1
 windows_exporter_collector_success{collector="physical_disk"} 1
 windows_exporter_collector_success{collector="net"} 1
 windows_exporter_collector_success{collector="os"} 1
+windows_exporter_collector_success{collector="scheduled_task"} 1
 windows_exporter_collector_success{collector="service"} 1
 windows_exporter_collector_success{collector="system"} 1
 windows_exporter_collector_success{collector="textfile"} 1
@@ -54,6 +55,7 @@ windows_exporter_collector_timeout{collector="logical_disk"} 0
 windows_exporter_collector_timeout{collector="physical_disk"} 0
 windows_exporter_collector_timeout{collector="net"} 0
 windows_exporter_collector_timeout{collector="os"} 0
+windows_exporter_collector_timeout{collector="scheduled_task"} 0
 windows_exporter_collector_timeout{collector="service"} 0
 windows_exporter_collector_timeout{collector="system"} 0
 windows_exporter_collector_timeout{collector="textfile"} 0
@@ -169,6 +171,13 @@ windows_exporter_collector_timeout{collector="textfile"} 0
 # TYPE windows_os_virtual_memory_free_bytes gauge
 # HELP windows_os_visible_memory_bytes OperatingSystem.TotalVisibleMemorySize
 # TYPE windows_os_visible_memory_bytes gauge
+# HELP windows_scheduled_task_state The current state of a scheduled task
+# TYPE windows_scheduled_task_state gauge
+windows_scheduled_task_state{state="disabled",task="/Microsoft/Windows/Maintenance/WinSAT"} 1
+windows_scheduled_task_state{state="queued",task="/Microsoft/Windows/Maintenance/WinSAT"} 0
+windows_scheduled_task_state{state="ready",task="/Microsoft/Windows/Maintenance/WinSAT"} 0
+windows_scheduled_task_state{state="running",task="/Microsoft/Windows/Maintenance/WinSAT"} 0
+windows_scheduled_task_state{state="unknown",task="/Microsoft/Windows/Maintenance/WinSAT"} 0
 # HELP windows_service_info A metric with a constant '1' value labeled with service information
 # TYPE windows_service_info gauge
 # HELP windows_service_start_mode The start mode of the service (StartMode)
