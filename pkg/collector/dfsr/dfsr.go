@@ -17,7 +17,7 @@ import (
 const Name = "dfsr"
 
 type Config struct {
-	CollectorsEnabled []string `yaml:"enabled_collectors"`
+	CollectorsEnabled []string `yaml:"collectors_enabled"`
 }
 
 var ConfigDefaults = Config{

@@ -24,7 +24,7 @@ import (
 const Name = "mssql"
 
 type Config struct {
-	CollectorsEnabled []string `yaml:"collectors_enabled"` //nolint:tagliatelle
+	CollectorsEnabled []string `yaml:"collectors_enabled"`
 }
 
 var ConfigDefaults = Config{
