@@ -217,7 +217,7 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 		"Regexp of sites to include. Site name must both match include and not match exclude to be included.",
 	).Default(ConfigDefaults.SiteInclude.String()).StringVar(&siteInclude)
 
-	app.Action(func(ctx *kingpin.ParseContext) error {
+	app.Action(func(*kingpin.ParseContext) error {
 		var err error
 
 		c.config.AppExclude, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", appExclude))

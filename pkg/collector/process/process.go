@@ -142,7 +142,7 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build() error {
-	if c.config.ProcessInclude.String() == ".*" && c.config.ProcessInclude.String() == "" {
+	if c.config.ProcessInclude.String() == "^(?:.*)$" && c.config.ProcessExclude.String() == "^(?:)$" {
 		_ = level.Warn(c.logger).Log("msg", "No filters specified for process collector. This will generate a very large number of metrics!")
 	}
 

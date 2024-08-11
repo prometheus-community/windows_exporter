@@ -3,9 +3,6 @@
 package smb
 
 import (
-	"fmt"
-	"os"
-	"slices"
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
@@ -18,29 +15,16 @@ import (
 
 const Name = "smb"
 
-type Config struct {
-	CollectorsEnabled string `yaml:"collectors_enabled"`
-}
+type Config struct{}
 
-var ConfigDefaults = Config{
-	CollectorsEnabled: "",
-}
+var ConfigDefaults = Config{}
 
 type Collector struct {
+	config Config
 	logger log.Logger
-
-	smbListAllCollectors *bool
-	smbCollectorsEnabled *string
 
 	treeConnectCount     *prometheus.Desc
 	currentOpenFileCount *prometheus.Desc
-
-	enabledCollectors []string
-}
-
-// All available Collector functions.
-var smbAllCollectorNames = []string{
-	"ServerShares",
 }
 
 func New(logger log.Logger, config *Config) *Collector {
@@ -48,10 +32,8 @@ func New(logger log.Logger, config *Config) *Collector {
 		config = &ConfigDefaults
 	}
 
-	smbListAllCollectors := false
 	c := &Collector{
-		smbCollectorsEnabled: &config.CollectorsEnabled,
-		smbListAllCollectors: &smbListAllCollectors,
+		config: *config,
 	}
 
 	c.SetLogger(logger)
@@ -59,18 +41,8 @@ func New(logger log.Logger, config *Config) *Collector {
 	return c
 }
 
-func NewWithFlags(app *kingpin.Application) *Collector {
-	return &Collector{
-		smbListAllCollectors: app.Flag(
-			"collectors.smb.list",
-			"List the collectors along with their perflib object name/ids",
-		).Bool(),
-
-		smbCollectorsEnabled: app.Flag(
-			"collectors.smb.enabled",
-			"Comma-separated list of collectors to use. Defaults to all, if not specified.",
-		).Default(ConfigDefaults.CollectorsEnabled).String(),
-	}
+func NewWithFlags(_ *kingpin.Application) *Collector {
+	return &Collector{}
 }
 
 func (c *Collector) GetName() string {
@@ -105,48 +77,17 @@ func (c *Collector) Build() error {
 	c.currentOpenFileCount = desc("server_shares_current_open_file_count", "Current total count open files on the SMB Server")
 	c.treeConnectCount = desc("server_shares_tree_connect_count", "Count of user connections to the SMB Server")
 
-	c.enabledCollectors = make([]string, 0, len(smbAllCollectorNames))
-
-	collectorDesc := map[string]string{
-		"ServerShares": "SMB Server Shares",
-	}
-
-	if *c.smbListAllCollectors {
-		fmt.Printf("%-32s %-32s\n", "Collector Name", "Perflib Object") //nolint:forbidigo
-		for _, cname := range smbAllCollectorNames {
-			fmt.Printf("%-32s %-32s\n", cname, collectorDesc[cname]) //nolint:forbidigo
-		}
-
-		os.Exit(0)
-	}
-
-	if *c.smbCollectorsEnabled == "" {
-		c.enabledCollectors = append(c.enabledCollectors, smbAllCollectorNames...)
-	} else {
-		for _, collectorName := range strings.Split(*c.smbCollectorsEnabled, ",") {
-			if slices.Contains(smbAllCollectorNames, collectorName) {
-				c.enabledCollectors = append(c.enabledCollectors, collectorName)
-			} else {
-				return fmt.Errorf("unknown smb collector: %s", collectorName)
-			}
-		}
-	}
-
 	return nil
 }
 
 // Collect collects smb metrics and sends them to prometheus.
 func (c *Collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
-	collectorFuncs := map[string]func(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error{
-		"ServerShares": c.collectServerShares,
+	if err := c.collectServerShares(ctx, ch); err != nil {
+		_ = level.Error(c.logger).Log("msg", "failed to collect server share metrics", "err", err)
+
+		return err
 	}
 
-	for _, collectorName := range c.enabledCollectors {
-		if err := collectorFuncs[collectorName](ctx, ch); err != nil {
-			_ = level.Error(c.logger).Log("msg", "Error in "+collectorName, "err", err)
-			return err
-		}
-	}
 	return nil
 }
 

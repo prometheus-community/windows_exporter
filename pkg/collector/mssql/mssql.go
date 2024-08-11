@@ -420,6 +420,10 @@ func New(logger log.Logger, config *Config) *Collector {
 		config = &ConfigDefaults
 	}
 
+	if config.EnabledCollectors == nil {
+		config.EnabledCollectors = ConfigDefaults.EnabledCollectors
+	}
+
 	c := &Collector{
 		config: *config,
 	}

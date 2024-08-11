@@ -84,7 +84,7 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 		"Regular expression to match printers to exclude",
 	).Default(ConfigDefaults.PrinterExclude.String()).StringVar(&printerExclude)
 
-	app.Action(func(ctx *kingpin.ParseContext) error {
+	app.Action(func(*kingpin.ParseContext) error {
 		var err error
 
 		c.config.PrinterInclude, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", printerInclude))

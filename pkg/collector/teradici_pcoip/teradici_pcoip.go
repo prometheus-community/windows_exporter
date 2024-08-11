@@ -26,6 +26,7 @@ var ConfigDefaults = Config{}
 // win32_PerfRawData_TeradiciPerf_PCoIPSessionNetworkStatistics
 // win32_PerfRawData_TeradiciPerf_PCoIPSessionUsbStatistics.
 type Collector struct {
+	config Config
 	logger log.Logger
 
 	audioBytesReceived       *prometheus.Desc
@@ -71,8 +72,15 @@ type Collector struct {
 	usbTXBWKBitPerSec *prometheus.Desc
 }
 
-func New(logger log.Logger, _ *Config) *Collector {
-	c := &Collector{}
+func New(logger log.Logger, config *Config) *Collector {
+	if config == nil {
+		config = &ConfigDefaults
+	}
+
+	c := &Collector{
+		config: *config,
+	}
+
 	c.SetLogger(logger)
 
 	return c

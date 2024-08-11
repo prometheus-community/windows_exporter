@@ -18,27 +18,19 @@ import (
 const Name = "physical_disk"
 
 type Config struct {
-	DiskInclude string `yaml:"disk_include"`
-	DiskExclude string `yaml:"disk_exclude"`
+	DiskInclude *regexp.Regexp `yaml:"disk_include"`
+	DiskExclude *regexp.Regexp `yaml:"disk_exclude"`
 }
 
 var ConfigDefaults = Config{
-	DiskInclude: ".+",
-	DiskExclude: "",
+	DiskInclude: types.RegExpAny,
+	DiskExclude: types.RegExpEmpty,
 }
 
 // A Collector is a Prometheus Collector for perflib PhysicalDisk metrics.
 type Collector struct {
+	config Config
 	logger log.Logger
-
-	diskInclude *string
-	diskExclude *string
-
-	diskIncludeSet bool
-	diskExcludeSet bool
-
-	diskIncludePattern *regexp.Regexp
-	diskExcludePattern *regexp.Regexp
 
 	idleTime         *prometheus.Desc
 	readBytesTotal   *prometheus.Desc
@@ -59,10 +51,18 @@ func New(logger log.Logger, config *Config) *Collector {
 		config = &ConfigDefaults
 	}
 
-	c := &Collector{
-		diskExclude: &config.DiskExclude,
-		diskInclude: &config.DiskInclude,
+	if config.DiskExclude == nil {
+		config.DiskExclude = ConfigDefaults.DiskExclude
 	}
+
+	if config.DiskInclude == nil {
+		config.DiskInclude = ConfigDefaults.DiskInclude
+	}
+
+	c := &Collector{
+		config: *config,
+	}
+
 	c.SetLogger(logger)
 
 	return c
@@ -71,21 +71,33 @@ func New(logger log.Logger, config *Config) *Collector {
 func NewWithFlags(app *kingpin.Application) *Collector {
 	c := &Collector{}
 
-	c.diskInclude = app.Flag(
-		"collector.physical_disk.disk-include",
-		"Regexp of disks to include. Disk number must both match include and not match exclude to be included.",
-	).Default(ConfigDefaults.DiskInclude).PreAction(func(_ *kingpin.ParseContext) error {
-		c.diskIncludeSet = true
-		return nil
-	}).String()
+	var diskExclude, diskInclude string
 
-	c.diskExclude = app.Flag(
+	app.Flag(
 		"collector.physical_disk.disk-exclude",
 		"Regexp of disks to exclude. Disk number must both match include and not match exclude to be included.",
-	).Default(ConfigDefaults.DiskExclude).PreAction(func(_ *kingpin.ParseContext) error {
-		c.diskExcludeSet = true
+	).Default(ConfigDefaults.DiskExclude.String()).StringVar(&diskExclude)
+
+	app.Flag(
+		"collector.physical_disk.disk-include",
+		"Regexp of disks to include. Disk number must both match include and not match exclude to be included.",
+	).Default(ConfigDefaults.DiskInclude.String()).StringVar(&diskInclude)
+
+	app.Action(func(ctx *kingpin.ParseContext) error {
+		var err error
+
+		c.config.DiskExclude, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", diskExclude))
+		if err != nil {
+			return fmt.Errorf("collector.physical_disk.disk-exclude: %w", err)
+		}
+
+		c.config.DiskInclude, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", diskInclude))
+		if err != nil {
+			return fmt.Errorf("collector.physical_disk.disk-include: %w", err)
+		}
+
 		return nil
-	}).String()
+	})
 
 	return c
 }
@@ -191,17 +203,6 @@ func (c *Collector) Build() error {
 		nil,
 	)
 
-	var err error
-	c.diskIncludePattern, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", *c.diskInclude))
-	if err != nil {
-		return err
-	}
-
-	c.diskExcludePattern, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", *c.diskExclude))
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -242,8 +243,8 @@ func (c *Collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 
 	for _, disk := range dst {
 		if disk.Name == "_Total" ||
-			c.diskExcludePattern.MatchString(disk.Name) ||
-			!c.diskIncludePattern.MatchString(disk.Name) {
+			c.config.DiskExclude.MatchString(disk.Name) ||
+			!c.config.DiskInclude.MatchString(disk.Name) {
 			continue
 		}
 

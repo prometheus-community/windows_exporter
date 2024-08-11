@@ -3,30 +3,31 @@
 package dfsr
 
 import (
+	"slices"
+	"strings"
+
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
 	"github.com/prometheus-community/windows_exporter/pkg/perflib"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
-	"github.com/prometheus-community/windows_exporter/pkg/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 const Name = "dfsr"
 
 type Config struct {
-	EnabledCollectors string `yaml:"enabled_collectors"`
+	EnabledCollectors []string `yaml:"enabled_collectors"`
 }
 
 var ConfigDefaults = Config{
-	EnabledCollectors: "connection,folder,volume",
+	EnabledCollectors: []string{"connection", "folder", "volume"},
 }
 
 // Collector contains the metric and state data of the DFSR collectors.
 type Collector struct {
+	config Config
 	logger log.Logger
-
-	dfsrEnabledCollectors *string
 
 	// connection source
 	connectionBandwidthSavingsUsingDFSReplicationTotal *prometheus.Desc
@@ -102,21 +103,27 @@ func New(logger log.Logger, config *Config) *Collector {
 		config = &ConfigDefaults
 	}
 
-	c := &Collector{
-		dfsrEnabledCollectors: &config.EnabledCollectors,
+	if config.EnabledCollectors == nil {
+		config.EnabledCollectors = ConfigDefaults.EnabledCollectors
 	}
+
+	c := &Collector{
+		config: *config,
+	}
+
 	c.SetLogger(logger)
 
 	return c
 }
 
 func NewWithFlags(app *kingpin.Application) *Collector {
-	return &Collector{
-		dfsrEnabledCollectors: app.
-			Flag("collectors.dfsr.sources-enabled", "Comma-separated list of DFSR Perflib sources to use.").
-			Default(ConfigDefaults.EnabledCollectors).
-			String(),
-	}
+	c := &Collector{}
+
+	app.Flag("collectors.dfsr.sources-enabled", "Comma-separated list of DFSR Perflib sources to use.").
+		Default(strings.Join(ConfigDefaults.EnabledCollectors, ",")).
+		StringsVar(&c.config.EnabledCollectors)
+
+	return c
 }
 
 func (c *Collector) GetName() string {
@@ -129,8 +136,9 @@ func (c *Collector) SetLogger(logger log.Logger) {
 
 func (c *Collector) GetPerfCounter() ([]string, error) {
 	// Perflib sources are dynamic, depending on the enabled child collectors
-	expandedChildCollectors := utils.ExpandEnabledChildCollectors(*c.dfsrEnabledCollectors)
+	expandedChildCollectors := slices.Compact(c.config.EnabledCollectors)
 	perflibDependencies := make([]string, 0, len(expandedChildCollectors))
+
 	for _, source := range expandedChildCollectors {
 		perflibDependencies = append(perflibDependencies, dfsrGetPerfObjectName(source))
 	}
@@ -209,8 +217,8 @@ func (c *Collector) Build() error {
 		nil,
 	)
 
-	c. // folder
-		folderBandwidthSavingsUsingDFSReplicationTotal = prometheus.NewDesc(
+	// folder
+	c.folderBandwidthSavingsUsingDFSReplicationTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "folder_bandwidth_savings_using_dfs_replication_bytes_total"),
 		"Total bytes of bandwidth saved using DFS Replication for this folder",
 		[]string{"name"},
@@ -435,7 +443,9 @@ func (c *Collector) Build() error {
 		nil,
 	)
 
-	c.dfsrChildCollectors = c.getDFSRChildCollectors(utils.ExpandEnabledChildCollectors(*c.dfsrEnabledCollectors))
+	// Perflib sources are dynamic, depending on the enabled child collectors
+	expandedChildCollectors := slices.Compact(c.config.EnabledCollectors)
+	c.dfsrChildCollectors = c.getDFSRChildCollectors(expandedChildCollectors)
 
 	return nil
 }

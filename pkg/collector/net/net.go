@@ -85,17 +85,17 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 		"Regexp of NIC:s to include. NIC name must both match include and not match exclude to be included.",
 	).Default(ConfigDefaults.NicInclude.String()).StringVar(&nicInclude)
 
-	app.Action(func(ctx *kingpin.ParseContext) error {
+	app.Action(func(*kingpin.ParseContext) error {
 		var err error
 
 		c.config.NicExclude, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", nicExclude))
 		if err != nil {
-			return fmt.Errorf("collector.logical_disk.volume-exclude: %w", err)
+			return fmt.Errorf("collector.net.nic-exclude: %w", err)
 		}
 
 		c.config.NicInclude, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", nicInclude))
 		if err != nil {
-			return fmt.Errorf("collector.logical_disk.volume-include: %w", err)
+			return fmt.Errorf("collector.net.nic-include: %w", err)
 		}
 
 		return nil

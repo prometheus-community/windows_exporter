@@ -226,7 +226,7 @@ var (
 
 func (c *Collector) collectWMI(ch chan<- prometheus.Metric) error {
 	var dst []Win32_Service
-	q := wmi.QueryAllWhere(&dst, *c.serviceWhereClause, c.logger)
+	q := wmi.QueryAllWhere(&dst, *c.serviceWhereClause, c.logger) //nolint:staticcheck
 	if err := wmi.Query(q, &dst); err != nil {
 		return err
 	}

@@ -51,6 +51,7 @@ func isConnectionBrokerServer(logger log.Logger) bool {
 // https://docs.microsoft.com/en-us/previous-versions/aa394344(v%3Dvs.85)
 // https://wutils.com/wmi/root/cimv2/win32_perfrawdata_localsessionmanager_terminalservices/
 type Collector struct {
+	config Config
 	logger log.Logger
 
 	connectionBrokerEnabled bool
@@ -74,8 +75,15 @@ type Collector struct {
 	workingSetPeak              *prometheus.Desc
 }
 
-func New(logger log.Logger, _ *Config) *Collector {
-	c := &Collector{}
+func New(logger log.Logger, config *Config) *Collector {
+	if config == nil {
+		config = &ConfigDefaults
+	}
+
+	c := &Collector{
+		config: *config,
+	}
+
 	c.SetLogger(logger)
 
 	return c
