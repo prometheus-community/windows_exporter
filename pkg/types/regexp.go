@@ -2,5 +2,7 @@ package types
 
 import "regexp"
 
-var RegExpEmpty = regexp.MustCompile("^$")
-var RegExpAny = regexp.MustCompile(".+")
+var (
+	RegExpAny   = regexp.MustCompile(".+")
+	RegExpEmpty = regexp.MustCompile("^$")
+)
