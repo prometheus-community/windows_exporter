@@ -38,6 +38,7 @@ This directory contains documentation of the collectors in the windows_exporter,
 - [`netframework_clrremoting`](collector.netframework_clrremoting.md)
 - [`netframework_clrsecurity`](collector.netframework_clrsecurity.md)
 - [`nps`](collector.nps.md)
+- [`ohwm`](collector.ohwm.md)
 - [`os`](collector.os.md)
 - [`physical_disk`](collector.physical_disk.md)
 - [`process`](collector.process.md)
