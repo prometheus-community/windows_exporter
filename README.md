@@ -60,7 +60,7 @@ Name     | Description | Enabled by default
 [time](docs/collector.time.md) | Windows Time Service |
 [thermalzone](docs/collector.thermalzone.md) | Thermal information
 [terminal_services](docs/collector.terminal_services.md) | Terminal services (RDS)
-[textfile](docs/collector.textfile.md) | Read prometheus metrics from a text file | &#10003;
+[textfile](docs/collector.textfile.md) | Read prometheus metrics from a text file |
 [vmware_blast](docs/collector.vmware_blast.md) | VMware Blast session metrics |
 [vmware](docs/collector.vmware.md) | Performance counters installed by the Vmware Guest agent |
 
