@@ -26,6 +26,7 @@ var ConfigDefaults = Config{}
 // https://wutils.com/wmi/root/cimv2/win32_perfrawdata_counters_remotefxnetwork/
 // https://wutils.com/wmi/root/cimv2/win32_perfrawdata_counters_remotefxgraphics/
 type Collector struct {
+	config Config
 	logger log.Logger
 
 	// net
@@ -53,8 +54,15 @@ type Collector struct {
 	sourceFramesPerSecond                       *prometheus.Desc
 }
 
-func New(logger log.Logger, _ *Config) *Collector {
-	c := &Collector{}
+func New(logger log.Logger, config *Config) *Collector {
+	if config == nil {
+		config = &ConfigDefaults
+	}
+
+	c := &Collector{
+		config: *config,
+	}
+
 	c.SetLogger(logger)
 
 	return c

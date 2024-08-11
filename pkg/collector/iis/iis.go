@@ -20,63 +20,22 @@ import (
 const Name = "iis"
 
 type Config struct {
-	SiteInclude string `yaml:"site_include"`
-	SiteExclude string `yaml:"site_exclude"`
-	AppInclude  string `yaml:"app_include"`
-	AppExclude  string `yaml:"app_exclude"`
+	SiteInclude *regexp.Regexp `yaml:"site_include"`
+	SiteExclude *regexp.Regexp `yaml:"site_exclude"`
+	AppInclude  *regexp.Regexp `yaml:"app_include"`
+	AppExclude  *regexp.Regexp `yaml:"app_exclude"`
 }
 
 var ConfigDefaults = Config{
-	SiteInclude: ".+",
-	SiteExclude: "",
-	AppInclude:  ".+",
-	AppExclude:  "",
-}
-
-type simple_version struct {
-	major uint64
-	minor uint64
-}
-
-func getIISVersion(logger log.Logger) simple_version {
-	k, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\Microsoft\InetStp\`, registry.QUERY_VALUE)
-	if err != nil {
-		_ = level.Warn(logger).Log("msg", "Couldn't open registry to determine IIS version", "err", err)
-		return simple_version{}
-	}
-	defer func() {
-		err = k.Close()
-		if err != nil {
-			_ = level.Warn(logger).Log("msg", "Failed to close registry key", "err", err)
-		}
-	}()
-
-	major, _, err := k.GetIntegerValue("MajorVersion")
-	if err != nil {
-		_ = level.Warn(logger).Log("msg", "Couldn't open registry to determine IIS version", "err", err)
-		return simple_version{}
-	}
-	minor, _, err := k.GetIntegerValue("MinorVersion")
-	if err != nil {
-		_ = level.Warn(logger).Log("msg", "Couldn't open registry to determine IIS version", "err", err)
-		return simple_version{}
-	}
-
-	_ = level.Debug(logger).Log("msg", fmt.Sprintf("Detected IIS %d.%d\n", major, minor))
-
-	return simple_version{
-		major: major,
-		minor: minor,
-	}
+	SiteInclude: types.RegExpAny,
+	SiteExclude: types.RegExpEmpty,
+	AppInclude:  types.RegExpAny,
+	AppExclude:  types.RegExpEmpty,
 }
 
 type Collector struct {
+	config Config
 	logger log.Logger
-
-	siteInclude *string
-	siteExclude *string
-	appInclude  *string
-	appExclude  *string
 
 	info *prometheus.Desc
 
@@ -103,9 +62,6 @@ type Collector struct {
 	totalNonAnonymousUsers              *prometheus.Desc
 	totalNotFoundErrors                 *prometheus.Desc
 	totalRejectedAsyncIORequests        *prometheus.Desc
-
-	siteIncludePattern *regexp.Regexp
-	siteExcludePattern *regexp.Regexp
 
 	// APP_POOL_WAS
 	currentApplicationPoolState        *prometheus.Desc
@@ -203,10 +159,7 @@ type Collector struct {
 	serviceCacheOutputCacheFlushedItemsTotal  *prometheus.Desc
 	serviceCacheOutputCacheFlushesTotal       *prometheus.Desc
 
-	appIncludePattern *regexp.Regexp
-	appExcludePattern *regexp.Regexp
-
-	iisVersion simple_version
+	iisVersion simpleVersion
 }
 
 func New(logger log.Logger, config *Config) *Collector {
@@ -214,11 +167,24 @@ func New(logger log.Logger, config *Config) *Collector {
 		config = &ConfigDefaults
 	}
 
+	if config.AppExclude == nil {
+		config.AppExclude = ConfigDefaults.AppExclude
+	}
+
+	if config.AppInclude == nil {
+		config.AppInclude = ConfigDefaults.AppInclude
+	}
+
+	if config.SiteExclude == nil {
+		config.SiteExclude = ConfigDefaults.SiteExclude
+	}
+
+	if config.SiteInclude == nil {
+		config.SiteInclude = ConfigDefaults.SiteInclude
+	}
+
 	c := &Collector{
-		appInclude:  &config.AppInclude,
-		appExclude:  &config.AppExclude,
-		siteInclude: &config.SiteInclude,
-		siteExclude: &config.SiteExclude,
+		config: *config,
 	}
 
 	c.SetLogger(logger)
@@ -228,26 +194,56 @@ func New(logger log.Logger, config *Config) *Collector {
 
 func NewWithFlags(app *kingpin.Application) *Collector {
 	c := &Collector{
-		siteInclude: app.Flag(
-			"collector.iis.site-include",
-			"Regexp of sites to include. Site name must both match include and not match exclude to be included.",
-		).Default(ConfigDefaults.SiteInclude).String(),
-
-		siteExclude: app.Flag(
-			"collector.iis.site-exclude",
-			"Regexp of sites to exclude. Site name must both match include and not match exclude to be included.",
-		).Default(ConfigDefaults.SiteExclude).String(),
-
-		appInclude: app.Flag(
-			"collector.iis.app-include",
-			"Regexp of apps to include. App name must both match include and not match exclude to be included.",
-		).Default(ConfigDefaults.AppInclude).String(),
-
-		appExclude: app.Flag(
-			"collector.iis.app-exclude",
-			"Regexp of apps to exclude. App name must both match include and not match exclude to be included.",
-		).Default(ConfigDefaults.AppExclude).String(),
+		config: ConfigDefaults,
 	}
+
+	var appExclude, appInclude, siteExclude, siteInclude string
+
+	app.Flag(
+		"collector.iis.app-exclude",
+		"Regexp of apps to exclude. App name must both match include and not match exclude to be included.",
+	).Default(c.config.AppExclude.String()).StringVar(&appExclude)
+
+	app.Flag(
+		"collector.iis.app-include",
+		"Regexp of apps to include. App name must both match include and not match exclude to be included.",
+	).Default(c.config.AppInclude.String()).StringVar(&appInclude)
+
+	app.Flag(
+		"collector.iis.site-exclude",
+		"Regexp of sites to exclude. Site name must both match include and not match exclude to be included.",
+	).Default(c.config.SiteExclude.String()).StringVar(&siteExclude)
+
+	app.Flag(
+		"collector.iis.site-include",
+		"Regexp of sites to include. Site name must both match include and not match exclude to be included.",
+	).Default(c.config.SiteInclude.String()).StringVar(&siteInclude)
+
+	app.Action(func(*kingpin.ParseContext) error {
+		var err error
+
+		c.config.AppExclude, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", appExclude))
+		if err != nil {
+			return fmt.Errorf("collector.iis.app-exclude: %w", err)
+		}
+
+		c.config.AppInclude, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", appInclude))
+		if err != nil {
+			return fmt.Errorf("collector.iis.app-include: %w", err)
+		}
+
+		c.config.SiteExclude, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", siteExclude))
+		if err != nil {
+			return fmt.Errorf("collector.iis.site-exclude: %w", err)
+		}
+
+		c.config.SiteInclude, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", siteInclude))
+		if err != nil {
+			return fmt.Errorf("collector.iis.site-include: %w", err)
+		}
+
+		return nil
+	})
 
 	return c
 }
@@ -275,27 +271,6 @@ func (c *Collector) Close() error {
 
 func (c *Collector) Build() error {
 	c.iisVersion = getIISVersion(c.logger)
-
-	var err error
-	c.siteIncludePattern, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", *c.siteInclude))
-	if err != nil {
-		return err
-	}
-
-	c.siteExcludePattern, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", *c.siteExclude))
-	if err != nil {
-		return err
-	}
-
-	c.appIncludePattern, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", *c.appInclude))
-	if err != nil {
-		return err
-	}
-
-	c.appExcludePattern, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", *c.appExclude))
-	if err != nil {
-		return err
-	}
 
 	c.info = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "info"),
@@ -918,6 +893,43 @@ func (c *Collector) Build() error {
 	return nil
 }
 
+type simpleVersion struct {
+	major uint64
+	minor uint64
+}
+
+func getIISVersion(logger log.Logger) simpleVersion {
+	k, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\Microsoft\InetStp\`, registry.QUERY_VALUE)
+	if err != nil {
+		_ = level.Warn(logger).Log("msg", "Couldn't open registry to determine IIS version", "err", err)
+		return simpleVersion{}
+	}
+	defer func() {
+		err = k.Close()
+		if err != nil {
+			_ = level.Warn(logger).Log("msg", "Failed to close registry key", "err", err)
+		}
+	}()
+
+	major, _, err := k.GetIntegerValue("MajorVersion")
+	if err != nil {
+		_ = level.Warn(logger).Log("msg", "Couldn't open registry to determine IIS version", "err", err)
+		return simpleVersion{}
+	}
+	minor, _, err := k.GetIntegerValue("MinorVersion")
+	if err != nil {
+		_ = level.Warn(logger).Log("msg", "Couldn't open registry to determine IIS version", "err", err)
+		return simpleVersion{}
+	}
+
+	_ = level.Debug(logger).Log("msg", fmt.Sprintf("Detected IIS %d.%d\n", major, minor))
+
+	return simpleVersion{
+		major: major,
+		minor: minor,
+	}
+}
+
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *Collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
@@ -1049,7 +1061,7 @@ func (c *Collector) collectWebService(ctx *types.ScrapeContext, ch chan<- promet
 	webServiceDeDuplicated := dedupIISNames(webService)
 
 	for name, app := range webServiceDeDuplicated {
-		if name == "_Total" || c.siteExcludePattern.MatchString(name) || !c.siteIncludePattern.MatchString(name) {
+		if name == "_Total" || c.config.SiteExclude.MatchString(name) || !c.config.SiteInclude.MatchString(name) {
 			continue
 		}
 
@@ -1336,8 +1348,8 @@ func (c *Collector) collectAPP_POOL_WAS(ctx *types.ScrapeContext, ch chan<- prom
 
 	for name, app := range appPoolDeDuplicated {
 		if name == "_Total" ||
-			c.appExcludePattern.MatchString(name) ||
-			!c.appIncludePattern.MatchString(name) {
+			c.config.AppExclude.MatchString(name) ||
+			!c.config.AppInclude.MatchString(name) {
 			continue
 		}
 
@@ -1516,8 +1528,8 @@ func (c *Collector) collectW3SVC_W3WP(ctx *types.ScrapeContext, ch chan<- promet
 		pid := workerProcessNameExtractor.ReplaceAllString(w3Name, "$1")
 		name := workerProcessNameExtractor.ReplaceAllString(w3Name, "$2")
 		if name == "" || name == "_Total" ||
-			c.appExcludePattern.MatchString(name) ||
-			!c.appIncludePattern.MatchString(name) {
+			c.config.AppExclude.MatchString(name) ||
+			!c.config.AppInclude.MatchString(name) {
 			continue
 		}
 
@@ -1774,8 +1786,8 @@ func (c *Collector) collectW3SVC_W3WP(ctx *types.ScrapeContext, ch chan<- promet
 			pid := workerProcessNameExtractor.ReplaceAllString(w3Name, "$1")
 			name := workerProcessNameExtractor.ReplaceAllString(w3Name, "$2")
 			if name == "" || name == "_Total" ||
-				c.appExcludePattern.MatchString(name) ||
-				!c.appIncludePattern.MatchString(name) {
+				c.config.AppExclude.MatchString(name) ||
+				!c.config.AppInclude.MatchString(name) {
 				continue
 			}
 

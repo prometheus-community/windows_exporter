@@ -16,6 +16,7 @@ var ConfigDefaults = Config{}
 
 // A Collector is a Prometheus Collector for WMI MSCluster_Cluster metrics.
 type Collector struct {
+	config Config
 	logger log.Logger
 
 	addEvictDelay                           *prometheus.Desc
@@ -97,8 +98,15 @@ type Collector struct {
 	witnessRestartInterval                  *prometheus.Desc
 }
 
-func New(logger log.Logger, _ *Config) *Collector {
-	c := &Collector{}
+func New(logger log.Logger, config *Config) *Collector {
+	if config == nil {
+		config = &ConfigDefaults
+	}
+
+	c := &Collector{
+		config: *config,
+	}
+
 	c.SetLogger(logger)
 
 	return c

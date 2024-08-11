@@ -20,3 +20,7 @@ func HasValue(v *string) bool {
 func IsEmpty(v *string) bool {
 	return v == nil || *v == ""
 }
+
+func ToPTR[t any](v t) *t {
+	return &v
+}

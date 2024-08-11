@@ -13,25 +13,22 @@ import (
 	"github.com/go-kit/log/level"
 	"github.com/prometheus-community/windows_exporter/pkg/perflib"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
-	"github.com/prometheus-community/windows_exporter/pkg/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 const Name = "exchange"
 
 type Config struct {
-	CollectorsEnabled string `yaml:"collectors_enabled"`
+	CollectorsEnabled []string `yaml:"collectors_enabled"`
 }
 
 var ConfigDefaults = Config{
-	CollectorsEnabled: "",
+	CollectorsEnabled: []string{},
 }
 
 type Collector struct {
+	config Config
 	logger log.Logger
-
-	exchangeListAllCollectors *bool
-	exchangeCollectorsEnabled *string
 
 	activeMailboxDeliveryQueueLength        *prometheus.Desc
 	activeSyncRequestsPerSec                *prometheus.Desc
@@ -94,28 +91,68 @@ func New(logger log.Logger, config *Config) *Collector {
 		config = &ConfigDefaults
 	}
 
-	exchangeListAllCollectors := false
-	c := &Collector{
-		exchangeCollectorsEnabled: &config.CollectorsEnabled,
-		exchangeListAllCollectors: &exchangeListAllCollectors,
+	if config.CollectorsEnabled == nil {
+		config.CollectorsEnabled = ConfigDefaults.CollectorsEnabled
 	}
+
+	c := &Collector{
+		config: *config,
+	}
+
 	c.SetLogger(logger)
 
 	return c
 }
 
 func NewWithFlags(app *kingpin.Application) *Collector {
-	return &Collector{
-		exchangeListAllCollectors: app.Flag(
-			"collectors.exchange.list",
-			"List the collectors along with their perflib object name/ids",
-		).Bool(),
-
-		exchangeCollectorsEnabled: app.Flag(
-			"collectors.exchange.enabled",
-			"Comma-separated list of collectors to use. Defaults to all, if not specified.",
-		).Default(ConfigDefaults.CollectorsEnabled).String(),
+	c := &Collector{
+		config: ConfigDefaults,
 	}
+	c.config.CollectorsEnabled = make([]string, 0)
+
+	var listAllCollectors bool
+
+	app.Flag(
+		"collectors.exchange.list",
+		"List the collectors along with their perflib object name/ids",
+	).BoolVar(&listAllCollectors)
+
+	app.Flag(
+		"collectors.exchange.enabled",
+		"Comma-separated list of collectors to use. Defaults to all, if not specified.",
+	).Default(strings.Join(ConfigDefaults.CollectorsEnabled, ",")).StringsVar(&c.config.CollectorsEnabled)
+
+	app.PreAction(func(*kingpin.ParseContext) error {
+		if listAllCollectors {
+			collectorDesc := map[string]string{
+				"ADAccessProcesses":   "[19108] MSExchange ADAccess Processes",
+				"TransportQueues":     "[20524] MSExchangeTransport Queues",
+				"HttpProxy":           "[36934] MSExchange HttpProxy",
+				"ActiveSync":          "[25138] MSExchange ActiveSync",
+				"AvailabilityService": "[24914] MSExchange Availability Service",
+				"OutlookWebAccess":    "[24618] MSExchange OWA",
+				"Autodiscover":        "[29240] MSExchange Autodiscover",
+				"WorkloadManagement":  "[19430] MSExchange WorkloadManagement Workloads",
+				"RpcClientAccess":     "[29336] MSExchange RpcClientAccess",
+				"MapiHttpEmsmdb":      "[26463] MSExchange MapiHttp Emsmdb",
+			}
+
+			sb := strings.Builder{}
+			sb.WriteString(fmt.Sprintf("%-32s %-32s\n", "Collector Name", "[PerfID] Perflib Object"))
+
+			for _, cname := range exchangeAllCollectorNames {
+				sb.WriteString(fmt.Sprintf("%-32s %-32s\n", cname, collectorDesc[cname]))
+			}
+
+			app.UsageTemplate(sb.String()).Usage(nil)
+
+			os.Exit(0)
+		}
+
+		return nil
+	})
+
+	return c
 }
 
 func (c *Collector) GetName() string {
@@ -195,40 +232,20 @@ func (c *Collector) Build() error {
 	c.syncCommandsPerSec = desc("activesync_sync_cmds_total", "Number of sync commands processed per second. Clients use this command to synchronize items within a folder")
 	c.activeUserCountMapiHttpEmsMDB = desc("mapihttp_emsmdb_active_user_count", "Number of unique outlook users that have shown some kind of activity in the last 2 minutes")
 
-	c.enabledCollectors = make([]string, 0, len(exchangeAllCollectorNames))
-
-	collectorDesc := map[string]string{
-		"ADAccessProcesses":   "[19108] MSExchange ADAccess Processes",
-		"TransportQueues":     "[20524] MSExchangeTransport Queues",
-		"HttpProxy":           "[36934] MSExchange HttpProxy",
-		"ActiveSync":          "[25138] MSExchange ActiveSync",
-		"AvailabilityService": "[24914] MSExchange Availability Service",
-		"OutlookWebAccess":    "[24618] MSExchange OWA",
-		"Autodiscover":        "[29240] MSExchange Autodiscover",
-		"WorkloadManagement":  "[19430] MSExchange WorkloadManagement Workloads",
-		"RpcClientAccess":     "[29336] MSExchange RpcClientAccess",
-		"MapiHttpEmsmdb":      "[26463] MSExchange MapiHttp Emsmdb",
-	}
-
-	if *c.exchangeListAllCollectors {
-		fmt.Printf("%-32s %-32s\n", "Collector Name", "[PerfID] Perflib Object") //nolint:forbidigo
-		for _, cname := range exchangeAllCollectorNames {
-			fmt.Printf("%-32s %-32s\n", cname, collectorDesc[cname]) //nolint:forbidigo
-		}
-
-		os.Exit(0)
-	}
-
-	if utils.IsEmpty(c.exchangeCollectorsEnabled) {
-		c.enabledCollectors = append(c.enabledCollectors, exchangeAllCollectorNames...)
+	if len(c.config.CollectorsEnabled) == 0 {
+		c.enabledCollectors = exchangeAllCollectorNames
 	} else {
-		for _, collectorName := range strings.Split(*c.exchangeCollectorsEnabled, ",") {
-			if slices.Contains(exchangeAllCollectorNames, collectorName) {
-				c.enabledCollectors = append(c.enabledCollectors, collectorName)
-			} else {
+		c.enabledCollectors = make([]string, 0, len(exchangeAllCollectorNames))
+
+		for _, collectorName := range c.config.CollectorsEnabled {
+			if !slices.Contains(exchangeAllCollectorNames, collectorName) {
 				return fmt.Errorf("unknown exchange collector: %s", collectorName)
 			}
+
+			c.enabledCollectors = append(c.enabledCollectors, collectorName)
 		}
+
+		c.enabledCollectors = slices.Clip(c.enabledCollectors)
 	}
 
 	return nil

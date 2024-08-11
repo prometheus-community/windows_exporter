@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -15,7 +17,6 @@ import (
 	"github.com/go-kit/log/level"
 	"github.com/prometheus-community/windows_exporter/pkg/perflib"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
-	"github.com/prometheus-community/windows_exporter/pkg/utils"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows/registry"
 )
@@ -23,11 +24,24 @@ import (
 const Name = "mssql"
 
 type Config struct {
-	EnabledCollectors string `yaml:"collectors_enabled"` //nolint:tagliatelle
+	CollectorsEnabled []string `yaml:"collectors_enabled"`
 }
 
 var ConfigDefaults = Config{
-	EnabledCollectors: "accessmethods,availreplica,bufman,databases,dbreplica,genstats,locks,memmgr,sqlstats,sqlerrors,transactions,waitstats",
+	CollectorsEnabled: []string{
+		"accessmethods",
+		"availreplica",
+		"bufman",
+		"databases",
+		"dbreplica",
+		"genstats",
+		"locks",
+		"memmgr",
+		"sqlstats",
+		"sqlerrors",
+		"transactions",
+		"waitstats",
+	},
 }
 
 type mssqlInstancesType map[string]string
@@ -39,8 +53,8 @@ func getMSSQLInstances(logger log.Logger) mssqlInstancesType {
 	sqlDefaultInstance := make(mssqlInstancesType)
 	sqlDefaultInstance["MSSQLSERVER"] = ""
 
-	regkey := `Software\Microsoft\Microsoft SQL Server\Instance Names\SQL`
-	k, err := registry.OpenKey(registry.LOCAL_MACHINE, regkey, registry.QUERY_VALUE)
+	regKey := `Software\Microsoft\Microsoft SQL Server\Instance Names\SQL`
+	k, err := registry.OpenKey(registry.LOCAL_MACHINE, regKey, registry.QUERY_VALUE)
 	if err != nil {
 		_ = level.Warn(logger).Log("msg", "Couldn't open registry to determine SQL instances", "err", err)
 		return sqlDefaultInstance
@@ -128,10 +142,8 @@ func mssqlGetPerfObjectName(sqlInstance string, collector string) string {
 
 // A Collector is a Prometheus Collector for various WMI Win32_PerfRawData_MSSQLSERVER_* metrics.
 type Collector struct {
+	config Config
 	logger log.Logger
-
-	mssqlEnabledCollectors *string
-	mssqlPrintCollectors   *bool
 
 	// meta
 	mssqlScrapeDurationDesc *prometheus.Desc
@@ -408,29 +420,55 @@ func New(logger log.Logger, config *Config) *Collector {
 		config = &ConfigDefaults
 	}
 
-	printCollectors := false
+	if config.CollectorsEnabled == nil {
+		config.CollectorsEnabled = ConfigDefaults.CollectorsEnabled
+	}
 
 	c := &Collector{
-		mssqlEnabledCollectors: &config.EnabledCollectors,
-		mssqlPrintCollectors:   &printCollectors,
+		config: *config,
 	}
+
 	c.SetLogger(logger)
 
 	return c
 }
 
 func NewWithFlags(app *kingpin.Application) *Collector {
-	return &Collector{
-		mssqlEnabledCollectors: app.Flag(
-			"collectors.mssql.classes-enabled",
-			"Comma-separated list of mssql WMI classes to use.").
-			Default(ConfigDefaults.EnabledCollectors).String(),
-
-		mssqlPrintCollectors: app.Flag(
-			"collectors.mssql.class-print",
-			"If true, print available mssql WMI classes and exit.  Only displays if the mssql collector is enabled.",
-		).Bool(),
+	c := &Collector{
+		config: ConfigDefaults,
 	}
+	c.config.CollectorsEnabled = make([]string, 0)
+
+	var listAllCollectors bool
+
+	app.Flag(
+		"collectors.mssql.class-print",
+		"If true, print available mssql WMI classes and exit.  Only displays if the mssql collector is enabled.",
+	).BoolVar(&listAllCollectors)
+
+	app.Flag(
+		"collectors.mssql.classes-enabled",
+		"Comma-separated list of mssql WMI classes to use.",
+	).Default(strings.Join(ConfigDefaults.CollectorsEnabled, ",")).StringsVar(&c.config.CollectorsEnabled)
+
+	app.PreAction(func(*kingpin.ParseContext) error {
+		if listAllCollectors {
+			sb := strings.Builder{}
+			sb.WriteString("Available SQLServer Classes:\n - ")
+
+			for name := range c.mssqlCollectors {
+				sb.WriteString(fmt.Sprintf(" - %s\n", name))
+			}
+
+			app.UsageTemplate(sb.String()).Usage(nil)
+
+			os.Exit(0)
+		}
+
+		return nil
+	})
+
+	return c
 }
 
 func (c *Collector) GetName() string {
@@ -442,9 +480,14 @@ func (c *Collector) SetLogger(logger log.Logger) {
 }
 
 func (c *Collector) GetPerfCounter() ([]string, error) {
-	enabled := utils.ExpandEnabledChildCollectors(*c.mssqlEnabledCollectors)
+	enabled := slices.Compact(c.config.CollectorsEnabled)
+
+	// Result must order, to prevent test failures.
+	sort.Strings(enabled)
+
 	c.mssqlInstances = getMSSQLInstances(c.logger)
 	perfCounters := make([]string, 0, len(c.mssqlInstances)*len(enabled))
+
 	for instance := range c.mssqlInstances {
 		for _, c := range enabled {
 			perfCounters = append(perfCounters, mssqlGetPerfObjectName(instance, c))
@@ -1922,15 +1965,6 @@ func (c *Collector) Build() error {
 
 	c.mssqlCollectors = c.getMSSQLCollectors()
 
-	if *c.mssqlPrintCollectors {
-		fmt.Printf("Available SQLServer Classes:\n") //nolint:forbidigo
-		for name := range c.mssqlCollectors {
-			fmt.Printf(" - %s\n", name) //nolint:forbidigo
-		}
-
-		os.Exit(0)
-	}
-
 	return nil
 }
 
@@ -1973,7 +2007,11 @@ func (c *Collector) execute(ctx *types.ScrapeContext, name string, fn mssqlColle
 func (c *Collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	wg := sync.WaitGroup{}
 
-	enabled := utils.ExpandEnabledChildCollectors(*c.mssqlEnabledCollectors)
+	enabled := slices.Compact(c.config.CollectorsEnabled)
+
+	// Result must order, to prevent test failures.
+	sort.Strings(enabled)
+
 	for sqlInstance := range c.mssqlInstances {
 		for _, name := range enabled {
 			function := c.mssqlCollectors[name]
@@ -1982,12 +2020,14 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 			go c.execute(ctx, name, function, ch, sqlInstance, &wg)
 		}
 	}
+
 	wg.Wait()
 
-	// this should return an error if any? some? children errord.
+	// this should return an error if any? some? children errored.
 	if c.mssqlChildCollectorFailure > 0 {
 		return errors.New("at least one child collector failed")
 	}
+
 	return nil
 }
 

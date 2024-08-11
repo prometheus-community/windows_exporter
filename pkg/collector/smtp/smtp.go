@@ -17,22 +17,18 @@ import (
 const Name = "smtp"
 
 type Config struct {
-	ServerInclude string `yaml:"server_include"`
-	ServerExclude string `yaml:"server_exclude"`
+	ServerInclude *regexp.Regexp `yaml:"server_include"`
+	ServerExclude *regexp.Regexp `yaml:"server_exclude"`
 }
 
 var ConfigDefaults = Config{
-	ServerInclude: ".+",
-	ServerExclude: "",
+	ServerInclude: types.RegExpAny,
+	ServerExclude: types.RegExpEmpty,
 }
 
 type Collector struct {
+	config Config
 	logger log.Logger
-
-	serverInclude        *string
-	serverExclude        *string
-	serverIncludePattern *regexp.Regexp
-	serverExcludePattern *regexp.Regexp
 
 	badMailedMessagesBadPickupFileTotal     *prometheus.Desc
 	badMailedMessagesGeneralFailureTotal    *prometheus.Desc
@@ -83,10 +79,18 @@ func New(logger log.Logger, config *Config) *Collector {
 		config = &ConfigDefaults
 	}
 
-	c := &Collector{
-		serverExclude: &config.ServerExclude,
-		serverInclude: &config.ServerInclude,
+	if config.ServerExclude == nil {
+		config.ServerExclude = ConfigDefaults.ServerExclude
 	}
+
+	if config.ServerInclude == nil {
+		config.ServerInclude = ConfigDefaults.ServerInclude
+	}
+
+	c := &Collector{
+		config: *config,
+	}
+
 	c.SetLogger(logger)
 
 	return c
@@ -94,16 +98,36 @@ func New(logger log.Logger, config *Config) *Collector {
 
 func NewWithFlags(app *kingpin.Application) *Collector {
 	c := &Collector{
-		serverInclude: app.Flag(
-			"collector.smtp.server-include",
-			"Regexp of virtual servers to include. Server name must both match include and not match exclude to be included.",
-		).Default(ConfigDefaults.ServerInclude).String(),
-
-		serverExclude: app.Flag(
-			"collector.smtp.server-exclude",
-			"Regexp of virtual servers to exclude. Server name must both match include and not match exclude to be included.",
-		).Default(ConfigDefaults.ServerExclude).String(),
+		config: ConfigDefaults,
 	}
+
+	var serverExclude, serverInclude string
+
+	app.Flag(
+		"collector.smtp.server-exclude",
+		"Regexp of virtual servers to exclude. Server name must both match include and not match exclude to be included.",
+	).Default(c.config.ServerExclude.String()).StringVar(&serverExclude)
+
+	app.Flag(
+		"collector.smtp.server-include",
+		"Regexp of virtual servers to include. Server name must both match include and not match exclude to be included.",
+	).Default(c.config.ServerInclude.String()).StringVar(&serverInclude)
+
+	app.Action(func(*kingpin.ParseContext) error {
+		var err error
+
+		c.config.ServerExclude, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", serverExclude))
+		if err != nil {
+			return fmt.Errorf("collector.smtp.server-exclude: %w", err)
+		}
+
+		c.config.ServerInclude, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", serverInclude))
+		if err != nil {
+			return fmt.Errorf("collector.smtp.server-include: %w", err)
+		}
+
+		return nil
+	})
 
 	return c
 }
@@ -380,18 +404,6 @@ func (c *Collector) Build() error {
 		nil,
 	)
 
-	var err error
-
-	c.serverIncludePattern, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", *c.serverInclude))
-	if err != nil {
-		return err
-	}
-
-	c.serverExcludePattern, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", *c.serverExclude))
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -461,8 +473,8 @@ func (c *Collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 
 	for _, server := range dst {
 		if server.Name == "_Total" ||
-			c.serverExcludePattern.MatchString(server.Name) ||
-			!c.serverIncludePattern.MatchString(server.Name) {
+			c.config.ServerExclude.MatchString(server.Name) ||
+			!c.config.ServerInclude.MatchString(server.Name) {
 			continue
 		}
 

@@ -15,7 +15,6 @@ import (
 	"github.com/go-kit/log/level"
 	"github.com/prometheus-community/windows_exporter/pkg/perflib"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
-	"github.com/prometheus-community/windows_exporter/pkg/utils"
 	"github.com/prometheus-community/windows_exporter/pkg/wmi"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows"
@@ -24,30 +23,22 @@ import (
 const Name = "process"
 
 type Config struct {
-	ProcessInclude      string `yaml:"process_include"`
-	ProcessExclude      string `yaml:"process_exclude"`
-	EnableWorkerProcess bool   `yaml:"enable_iis_worker_process"` //nolint:tagliatelle
-	EnableReportOwner   bool   `yaml:"enable_report_owner"`
+	ProcessInclude      *regexp.Regexp `yaml:"process_include"`
+	ProcessExclude      *regexp.Regexp `yaml:"process_exclude"`
+	EnableWorkerProcess bool           `yaml:"enable_iis_worker_process"` //nolint:tagliatelle
+	EnableReportOwner   bool           `yaml:"enable_report_owner"`
 }
 
 var ConfigDefaults = Config{
-	ProcessInclude:      ".+",
-	ProcessExclude:      "",
+	ProcessInclude:      types.RegExpAny,
+	ProcessExclude:      types.RegExpEmpty,
 	EnableWorkerProcess: false,
 	EnableReportOwner:   false,
 }
 
 type Collector struct {
+	config Config
 	logger log.Logger
-
-	enableWorkerProcess *bool
-	enableReportOwner   *bool
-
-	processInclude *string
-	processExclude *string
-
-	processIncludePattern *regexp.Regexp
-	processExcludePattern *regexp.Regexp
 
 	lookupCache map[string]string
 
@@ -73,11 +64,18 @@ func New(logger log.Logger, config *Config) *Collector {
 		config = &ConfigDefaults
 	}
 
-	c := &Collector{
-		processExclude:      &config.ProcessExclude,
-		processInclude:      &config.ProcessInclude,
-		enableWorkerProcess: &config.EnableWorkerProcess,
+	if config.ProcessExclude == nil {
+		config.ProcessExclude = ConfigDefaults.ProcessExclude
 	}
+
+	if config.ProcessInclude == nil {
+		config.ProcessInclude = ConfigDefaults.ProcessInclude
+	}
+
+	c := &Collector{
+		config: *config,
+	}
+
 	c.SetLogger(logger)
 
 	return c
@@ -85,26 +83,47 @@ func New(logger log.Logger, config *Config) *Collector {
 
 func NewWithFlags(app *kingpin.Application) *Collector {
 	c := &Collector{
-		processInclude: app.Flag(
-			"collector.process.include",
-			"Regexp of processes to include. Process name must both match include and not match exclude to be included.",
-		).Default(ConfigDefaults.ProcessInclude).String(),
-
-		processExclude: app.Flag(
-			"collector.process.exclude",
-			"Regexp of processes to exclude. Process name must both match include and not match exclude to be included.",
-		).Default(ConfigDefaults.ProcessExclude).String(),
-
-		enableWorkerProcess: app.Flag(
-			"collector.process.iis",
-			"Enable IIS worker process name queries. May cause the collector to leak memory.",
-		).Default("false").Bool(),
-
-		enableReportOwner: app.Flag(
-			"collector.process.report-owner",
-			"Enable reporting of process owner.",
-		).Default("false").Bool(),
+		config: ConfigDefaults,
 	}
+
+	var processExclude, processInclude string
+
+	app.Flag(
+		"collector.process.exclude",
+		"Regexp of processes to exclude. Process name must both match include and not match exclude to be included.",
+	).Default(c.config.ProcessExclude.String()).StringVar(&processExclude)
+
+	app.Flag(
+		"collector.process.include",
+		"Regexp of processes to include. Process name must both match include and not match exclude to be included.",
+	).Default(c.config.ProcessInclude.String()).StringVar(&processInclude)
+
+	app.Flag(
+		"collector.process.iis",
+		"Enable IIS worker process name queries. May cause the collector to leak memory.",
+	).Default(strconv.FormatBool(c.config.EnableWorkerProcess)).BoolVar(&c.config.EnableWorkerProcess)
+
+	app.Flag(
+		"collector.process.report-owner",
+		"Enable reporting of process owner.",
+	).Default(strconv.FormatBool(c.config.EnableReportOwner)).BoolVar(&c.config.EnableReportOwner)
+
+	app.Action(func(*kingpin.ParseContext) error {
+		var err error
+
+		c.config.ProcessExclude, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", processExclude))
+		if err != nil {
+			return fmt.Errorf("collector.process.exclude: %w", err)
+		}
+
+		c.config.ProcessInclude, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", processInclude))
+		if err != nil {
+			return fmt.Errorf("collector.process.include: %w", err)
+		}
+
+		return nil
+	})
+
 	return c
 }
 
@@ -125,12 +144,12 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build() error {
-	if c.processInclude != nil && *c.processInclude == ".*" && utils.IsEmpty(c.processExclude) {
+	if c.config.ProcessInclude.String() == "^(?:.*)$" && c.config.ProcessExclude.String() == "^(?:)$" {
 		_ = level.Warn(c.logger).Log("msg", "No filters specified for process collector. This will generate a very large number of metrics!")
 	}
 
 	commonLabels := make([]string, 0)
-	if *c.enableReportOwner {
+	if c.config.EnableReportOwner {
 		commonLabels = []string{"owner"}
 	}
 
@@ -227,18 +246,6 @@ func (c *Collector) Build() error {
 
 	c.lookupCache = make(map[string]string)
 
-	var err error
-
-	c.processIncludePattern, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", *c.processInclude))
-	if err != nil {
-		return err
-	}
-
-	c.processExcludePattern, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", *c.processExclude))
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -262,7 +269,7 @@ type perflibProcess struct {
 	PageFaultsPerSec        float64 `perflib:"Page Faults/sec"`
 	PageFileBytesPeak       float64 `perflib:"Page File Bytes Peak"`
 	PageFileBytes           float64 `perflib:"Page File Bytes"`
-	PoolNonpagedBytes       float64 `perflib:"Pool Nonpaged Bytes"`
+	PoolNonPagedBytes       float64 `perflib:"Pool Nonpaged Bytes"`
 	PoolPagedBytes          float64 `perflib:"Pool Paged Bytes"`
 	PriorityBase            float64 `perflib:"Priority Base"`
 	PrivateBytes            float64 `perflib:"Private Bytes"`
@@ -286,10 +293,10 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 		return err
 	}
 
-	var dst_wp []WorkerProcess
-	if *c.enableWorkerProcess {
-		q_wp := wmi.QueryAll(&dst_wp, c.logger)
-		if err := wmi.QueryNamespace(q_wp, &dst_wp, "root\\WebAdministration"); err != nil {
+	var workerProcesses []WorkerProcess
+	if c.config.EnableWorkerProcess {
+		queryWorkerProcess := wmi.QueryAllForClass(&workerProcesses, "WorkerProcess", c.logger)
+		if err := wmi.QueryNamespace(queryWorkerProcess, &workerProcesses, "root\\WebAdministration"); err != nil {
 			_ = level.Debug(c.logger).Log("msg", "Could not query WebAdministration namespace for IIS worker processes", "err", err)
 		}
 	}
@@ -298,17 +305,18 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 
 	for _, process := range data {
 		if process.Name == "_Total" ||
-			c.processExcludePattern.MatchString(process.Name) ||
-			!c.processIncludePattern.MatchString(process.Name) {
+			c.config.ProcessExclude.MatchString(process.Name) ||
+			!c.config.ProcessInclude.MatchString(process.Name) {
 			continue
 		}
-		// Duplicate processes are suffixed # and an index number. Remove those.
-		processName := strings.Split(process.Name, "#")[0]
-		pid := strconv.FormatUint(uint64(process.IDProcess), 10)
-		cpid := strconv.FormatUint(uint64(process.CreatingProcessID), 10)
 
-		if *c.enableWorkerProcess {
-			for _, wp := range dst_wp {
+		// Duplicate processes are suffixed #, and an index number. Remove those.
+		processName, _, _ := strings.Cut(process.Name, "#")
+		pid := strconv.FormatUint(uint64(process.IDProcess), 10)
+		parentPID := strconv.FormatUint(uint64(process.CreatingProcessID), 10)
+
+		if c.config.EnableWorkerProcess {
+			for _, wp := range workerProcesses {
 				if wp.ProcessId == uint64(process.IDProcess) {
 					processName = strings.Join([]string{processName, wp.AppPoolName}, "_")
 					break
@@ -318,7 +326,7 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 
 		labels := make([]string, 0, 4)
 
-		if *c.enableReportOwner {
+		if c.config.EnableReportOwner {
 			owner, err = c.getProcessOwner(int(process.IDProcess))
 			if err != nil {
 				owner = "unknown"
@@ -327,7 +335,7 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 			labels = []string{owner}
 		}
 
-		labels = append(labels, processName, pid, cpid)
+		labels = append(labels, processName, pid, parentPID)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.startTime,
@@ -416,7 +424,7 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 		ch <- prometheus.MustNewConstMetric(
 			c.poolBytes,
 			prometheus.GaugeValue,
-			process.PoolNonpagedBytes,
+			process.PoolNonPagedBytes,
 			append(labels, "nonpaged")...,
 		)
 

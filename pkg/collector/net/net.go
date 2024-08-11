@@ -17,23 +17,21 @@ import (
 const Name = "net"
 
 type Config struct {
-	NicInclude string `yaml:"nic_include"`
-	NicExclude string `yaml:"nic_exclude"`
+	NicExclude *regexp.Regexp `yaml:"nic_exclude"`
+	NicInclude *regexp.Regexp `yaml:"nic_include"`
 }
 
 var ConfigDefaults = Config{
-	NicInclude: ".+",
-	NicExclude: "",
+	NicExclude: types.RegExpEmpty,
+	NicInclude: types.RegExpAny,
 }
 
 var nicNameToUnderscore = regexp.MustCompile("[^a-zA-Z0-9]")
 
 // A Collector is a Prometheus Collector for Perflib Network Interface metrics.
 type Collector struct {
+	config Config
 	logger log.Logger
-
-	nicInclude *string
-	nicExclude *string
 
 	bytesReceivedTotal       *prometheus.Desc
 	bytesSentTotal           *prometheus.Desc
@@ -48,9 +46,6 @@ type Collector struct {
 	packetsReceivedUnknown   *prometheus.Desc
 	packetsSentTotal         *prometheus.Desc
 	currentBandwidth         *prometheus.Desc
-
-	nicIncludePattern *regexp.Regexp
-	nicExcludePattern *regexp.Regexp
 }
 
 func New(logger log.Logger, config *Config) *Collector {
@@ -58,10 +53,18 @@ func New(logger log.Logger, config *Config) *Collector {
 		config = &ConfigDefaults
 	}
 
-	c := &Collector{
-		nicExclude: &config.NicExclude,
-		nicInclude: &config.NicInclude,
+	if config.NicExclude == nil {
+		config.NicExclude = ConfigDefaults.NicExclude
 	}
+
+	if config.NicInclude == nil {
+		config.NicInclude = ConfigDefaults.NicInclude
+	}
+
+	c := &Collector{
+		config: *config,
+	}
+
 	c.SetLogger(logger)
 
 	return c
@@ -69,16 +72,36 @@ func New(logger log.Logger, config *Config) *Collector {
 
 func NewWithFlags(app *kingpin.Application) *Collector {
 	c := &Collector{
-		nicInclude: app.Flag(
-			"collector.net.nic-include",
-			"Regexp of NIC:s to include. NIC name must both match include and not match exclude to be included.",
-		).Default(ConfigDefaults.NicInclude).String(),
-
-		nicExclude: app.Flag(
-			"collector.net.nic-exclude",
-			"Regexp of NIC:s to exclude. NIC name must both match include and not match exclude to be included.",
-		).Default(ConfigDefaults.NicExclude).String(),
+		config: ConfigDefaults,
 	}
+
+	var nicExclude, nicInclude string
+
+	app.Flag(
+		"collector.net.nic-exclude",
+		"Regexp of NIC:s to exclude. NIC name must both match include and not match exclude to be included.",
+	).Default(c.config.NicExclude.String()).StringVar(&nicExclude)
+
+	app.Flag(
+		"collector.net.nic-include",
+		"Regexp of NIC:s to include. NIC name must both match include and not match exclude to be included.",
+	).Default(c.config.NicInclude.String()).StringVar(&nicInclude)
+
+	app.Action(func(*kingpin.ParseContext) error {
+		var err error
+
+		c.config.NicExclude, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", nicExclude))
+		if err != nil {
+			return fmt.Errorf("collector.net.nic-exclude: %w", err)
+		}
+
+		c.config.NicInclude, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", nicInclude))
+		if err != nil {
+			return fmt.Errorf("collector.net.nic-include: %w", err)
+		}
+
+		return nil
+	})
 
 	return c
 }
@@ -179,17 +202,6 @@ func (c *Collector) Build() error {
 		nil,
 	)
 
-	var err error
-	c.nicIncludePattern, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", *c.nicInclude))
-	if err != nil {
-		return err
-	}
-
-	c.nicExcludePattern, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", *c.nicExclude))
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -236,8 +248,8 @@ func (c *Collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 	}
 
 	for _, nic := range dst {
-		if c.nicExcludePattern.MatchString(nic.Name) ||
-			!c.nicIncludePattern.MatchString(nic.Name) {
+		if c.config.NicExclude.MatchString(nic.Name) ||
+			!c.config.NicInclude.MatchString(nic.Name) {
 			continue
 		}
 

@@ -22,11 +22,11 @@ func TestMultipleDirectories(t *testing.T) {
 	testDir := baseDir + "/multiple-dirs"
 	testDirs := fmt.Sprintf("%[1]s/dir1,%[1]s/dir2,%[1]s/dir3", testDir)
 
-	textfileCollector := textfile.New(log.NewLogfmtLogger(os.Stdout), &textfile.Config{
-		TextFileDirectories: testDirs,
+	textFileCollector := textfile.New(log.NewLogfmtLogger(os.Stdout), &textfile.Config{
+		TextFileDirectories: strings.Split(testDirs, ","),
 	})
 
-	collectors := collector.New(map[string]collector.Collector{textfile.Name: textfileCollector})
+	collectors := collector.New(map[string]collector.Collector{textfile.Name: textFileCollector})
 	require.NoError(t, collectors.Build())
 
 	scrapeContext, err := collectors.PrepareScrapeContext()
@@ -47,7 +47,7 @@ func TestMultipleDirectories(t *testing.T) {
 		}
 	}()
 
-	err = textfileCollector.Collect(scrapeContext, metrics)
+	err = textFileCollector.Collect(scrapeContext, metrics)
 	if err != nil {
 		t.Errorf("Unexpected error %s", err)
 	}
@@ -63,11 +63,11 @@ func TestDuplicateFileName(t *testing.T) {
 	t.Parallel()
 
 	testDir := baseDir + "/duplicate-filename"
-	textfileCollector := textfile.New(log.NewLogfmtLogger(os.Stdout), &textfile.Config{
-		TextFileDirectories: testDir,
+	textFileCollector := textfile.New(log.NewLogfmtLogger(os.Stdout), &textfile.Config{
+		TextFileDirectories: []string{testDir},
 	})
 
-	collectors := collector.New(map[string]collector.Collector{textfile.Name: textfileCollector})
+	collectors := collector.New(map[string]collector.Collector{textfile.Name: textFileCollector})
 	require.NoError(t, collectors.Build())
 
 	scrapeContext, err := collectors.PrepareScrapeContext()
@@ -87,13 +87,15 @@ func TestDuplicateFileName(t *testing.T) {
 			got += metric.String()
 		}
 	}()
-	err = textfileCollector.Collect(scrapeContext, metrics)
+	err = textFileCollector.Collect(scrapeContext, metrics)
 	if err != nil {
 		t.Errorf("Unexpected error %s", err)
 	}
+
 	if !strings.Contains(got, "file") {
 		t.Errorf("Unexpected output  %q", got)
 	}
+
 	if strings.Contains(got, "sub_file") {
 		t.Errorf("Unexpected output  %q", got)
 	}

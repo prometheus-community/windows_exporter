@@ -19,6 +19,7 @@ var ConfigDefaults = Config{}
 
 // Collector is a Prometheus Collector for WMI Win32_PerfRawData_IAS_NPSAuthenticationServer and Win32_PerfRawData_IAS_NPSAccountingServer metrics.
 type Collector struct {
+	config Config
 	logger log.Logger
 
 	accessAccepts           *prometheus.Desc
@@ -49,8 +50,15 @@ type Collector struct {
 	accountingUnknownType       *prometheus.Desc
 }
 
-func New(logger log.Logger, _ *Config) *Collector {
-	c := &Collector{}
+func New(logger log.Logger, config *Config) *Collector {
+	if config == nil {
+		config = &ConfigDefaults
+	}
+
+	c := &Collector{
+		config: *config,
+	}
+
 	c.SetLogger(logger)
 
 	return c

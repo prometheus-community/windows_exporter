@@ -21,13 +21,21 @@ var ConfigDefaults = Config{}
 
 // A Collector is a Prometheus Collector for WMI metrics.
 type Collector struct {
+	config Config
 	logger log.Logger
 
 	logonType *prometheus.Desc
 }
 
-func New(logger log.Logger, _ *Config) *Collector {
-	c := &Collector{}
+func New(logger log.Logger, config *Config) *Collector {
+	if config == nil {
+		config = &ConfigDefaults
+	}
+
+	c := &Collector{
+		config: *config,
+	}
+
 	c.SetLogger(logger)
 
 	return c

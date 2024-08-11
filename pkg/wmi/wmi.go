@@ -62,6 +62,7 @@ func QueryAllForClass(_ interface{}, class string, logger log.Logger) string {
 	return b.String()
 }
 
+// Deprecated: Use QueryAllForClassWhere instead.
 func QueryAllWhere(src interface{}, where string, logger log.Logger) string {
 	var b bytes.Buffer
 	b.WriteString("SELECT * FROM ")

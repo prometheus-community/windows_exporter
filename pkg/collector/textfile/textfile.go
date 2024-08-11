@@ -31,7 +31,6 @@ import (
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
-	"github.com/prometheus-community/windows_exporter/pkg/utils"
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
@@ -40,19 +39,17 @@ import (
 const Name = "textfile"
 
 type Config struct {
-	TextFileDirectories string `yaml:"text_file_directories"`
+	TextFileDirectories []string `yaml:"text_file_directories"`
 }
 
 var ConfigDefaults = Config{
-	TextFileDirectories: getDefaultPath(),
+	TextFileDirectories: []string{getDefaultPath()},
 }
 
 type Collector struct {
+	config Config
 	logger log.Logger
 
-	textFileDirectories *string
-
-	directories string
 	// Only set for testing to get predictable output.
 	mTime *float64
 
@@ -64,21 +61,31 @@ func New(logger log.Logger, config *Config) *Collector {
 		config = &ConfigDefaults
 	}
 
-	c := &Collector{
-		textFileDirectories: &config.TextFileDirectories,
+	if config.TextFileDirectories == nil {
+		config.TextFileDirectories = ConfigDefaults.TextFileDirectories
 	}
+
+	c := &Collector{
+		config: *config,
+	}
+
 	c.SetLogger(logger)
 
 	return c
 }
 
 func NewWithFlags(app *kingpin.Application) *Collector {
-	return &Collector{
-		textFileDirectories: app.Flag(
-			"collector.textfile.directories",
-			"Directory or Directories to read text files with metrics from.",
-		).Default(ConfigDefaults.TextFileDirectories).String(),
+	c := &Collector{
+		config: ConfigDefaults,
 	}
+	c.config.TextFileDirectories = make([]string, 0)
+
+	app.Flag(
+		"collector.textfile.directories",
+		"Directory or Directories to read text files with metrics from.",
+	).Default(strings.Join(ConfigDefaults.TextFileDirectories, ",")).StringsVar(&c.config.TextFileDirectories)
+
+	return c
 }
 
 func (c *Collector) GetName() string {
@@ -98,12 +105,8 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build() error {
-	c.directories = ""
-	if utils.HasValue(c.textFileDirectories) {
-		c.directories = strings.Trim(*c.textFileDirectories, ",")
-	}
-
-	_ = level.Info(c.logger).Log("msg", "textfile Collector directories: "+c.directories)
+	_ = level.Info(c.logger).
+		Log("msg", "textfile Collector directories: "+strings.Join(c.config.TextFileDirectories, ","))
 
 	c.mTimeDesc = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, "textfile", "mtime_seconds"),
@@ -242,18 +245,18 @@ func (c *Collector) convertMetricFamily(metricFamily *dto.MetricFamily, ch chan<
 	}
 }
 
-func (c *Collector) exportMTimes(mtimes map[string]time.Time, ch chan<- prometheus.Metric) {
+func (c *Collector) exportMTimes(mTimes map[string]time.Time, ch chan<- prometheus.Metric) {
 	// Export the mtimes of the successful files.
-	if len(mtimes) > 0 {
+	if len(mTimes) > 0 {
 		// Sorting is needed for predictable output comparison in tests.
-		filenames := make([]string, 0, len(mtimes))
-		for filename := range mtimes {
+		filenames := make([]string, 0, len(mTimes))
+		for filename := range mTimes {
 			filenames = append(filenames, filename)
 		}
 		sort.Strings(filenames)
 
 		for _, filename := range filenames {
-			mtime := float64(mtimes[filename].UnixNano() / 1e9)
+			mtime := float64(mTimes[filename].UnixNano() / 1e9)
 			if c.mTime != nil {
 				mtime = *c.mTime
 			}
@@ -289,14 +292,15 @@ func (cr carriageReturnFilteringReader) Read(p []byte) (int, error) {
 // Collect implements the Collector interface.
 func (c *Collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	errorMetric := 0.0
-	mtimes := map[string]time.Time{}
+	mTimes := map[string]time.Time{}
+
 	// Create empty metricFamily slice here and append parsedFamilies to it inside the loop.
 	// Once loop is complete, raise error if any duplicates are present.
 	// This will ensure that duplicate metrics are correctly detected between multiple .prom files.
-	metricFamilies := []*dto.MetricFamily{}
+	var metricFamilies []*dto.MetricFamily
 
 	// Iterate over files and accumulate their metrics.
-	for _, directory := range strings.Split(c.directories, ",") {
+	for _, directory := range c.config.TextFileDirectories {
 		err := filepath.WalkDir(directory, func(path string, dirEntry os.DirEntry, err error) error {
 			if err != nil {
 				_ = level.Error(c.logger).Log("msg", "Error reading directory: "+path, "err", err)
@@ -317,18 +321,18 @@ func (c *Collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric)
 					errorMetric = 1.0
 					return nil
 				}
-				if _, hasName := mtimes[fileInfo.Name()]; hasName {
+				if _, hasName := mTimes[fileInfo.Name()]; hasName {
 					_ = level.Error(c.logger).Log("msg", fmt.Sprintf("Duplicate filename detected: %q. Skip File.", path))
 					errorMetric = 1.0
 					return nil
 				}
-				mtimes[fileInfo.Name()] = fileInfo.ModTime()
+				mTimes[fileInfo.Name()] = fileInfo.ModTime()
 				metricFamilies = append(metricFamilies, families_array...)
 			}
 			return nil
 		})
 		if err != nil && directory != "" {
-			_ = level.Error(c.logger).Log("msg", "Error reading textfile Collector directory: "+c.directories, "err", err)
+			_ = level.Error(c.logger).Log("msg", "Error reading textfile Collector directory: "+directory, "err", err)
 			errorMetric = 1.0
 		}
 	}
@@ -343,7 +347,7 @@ func (c *Collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric)
 		}
 	}
 
-	c.exportMTimes(mtimes, ch)
+	c.exportMTimes(mTimes, ch)
 	// Export if there were errors.
 	ch <- prometheus.MustNewConstMetric(
 		prometheus.NewDesc(

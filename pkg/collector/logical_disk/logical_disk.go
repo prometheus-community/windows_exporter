@@ -22,23 +22,19 @@ import (
 const Name = "logical_disk"
 
 type Config struct {
-	VolumeInclude string `yaml:"volume_include"`
-	VolumeExclude string `yaml:"volume_exclude"`
+	VolumeInclude *regexp.Regexp `yaml:"volume_include"`
+	VolumeExclude *regexp.Regexp `yaml:"volume_exclude"`
 }
 
 var ConfigDefaults = Config{
-	VolumeInclude: ".+",
-	VolumeExclude: "",
+	VolumeInclude: types.RegExpAny,
+	VolumeExclude: types.RegExpEmpty,
 }
 
 // A Collector is a Prometheus Collector for perflib logicalDisk metrics.
 type Collector struct {
+	config Config
 	logger log.Logger
-
-	volumeInclude        *string
-	volumeExclude        *string
-	volumeIncludePattern *regexp.Regexp
-	volumeExcludePattern *regexp.Regexp
 
 	avgReadQueue     *prometheus.Desc
 	avgWriteQueue    *prometheus.Desc
@@ -73,10 +69,18 @@ func New(logger log.Logger, config *Config) *Collector {
 		config = &ConfigDefaults
 	}
 
-	c := &Collector{
-		volumeExclude: &config.VolumeExclude,
-		volumeInclude: &config.VolumeInclude,
+	if config.VolumeExclude == nil {
+		config.VolumeExclude = ConfigDefaults.VolumeExclude
 	}
+
+	if config.VolumeInclude == nil {
+		config.VolumeInclude = ConfigDefaults.VolumeInclude
+	}
+
+	c := &Collector{
+		config: *config,
+	}
+
 	c.SetLogger(logger)
 
 	return c
@@ -84,15 +88,36 @@ func New(logger log.Logger, config *Config) *Collector {
 
 func NewWithFlags(app *kingpin.Application) *Collector {
 	c := &Collector{
-		volumeInclude: app.Flag(
-			"collector.logical_disk.volume-include",
-			"Regexp of volumes to include. Volume name must both match include and not match exclude to be included.",
-		).Default(ConfigDefaults.VolumeInclude).String(),
-		volumeExclude: app.Flag(
-			"collector.logical_disk.volume-exclude",
-			"Regexp of volumes to exclude. Volume name must both match include and not match exclude to be included.",
-		).Default(ConfigDefaults.VolumeExclude).String(),
+		config: ConfigDefaults,
 	}
+
+	var volumeExclude, volumeInclude string
+
+	app.Flag(
+		"collector.logical_disk.volume-exclude",
+		"Regexp of volumes to exclude. Volume name must both match include and not match exclude to be included.",
+	).Default(c.config.VolumeExclude.String()).StringVar(&volumeExclude)
+
+	app.Flag(
+		"collector.logical_disk.volume-include",
+		"Regexp of volumes to include. Volume name must both match include and not match exclude to be included.",
+	).Default(c.config.VolumeInclude.String()).StringVar(&volumeInclude)
+
+	app.Action(func(*kingpin.ParseContext) error {
+		var err error
+
+		c.config.VolumeExclude, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", volumeExclude))
+		if err != nil {
+			return fmt.Errorf("collector.logical_disk.volume-exclude: %w", err)
+		}
+
+		c.config.VolumeInclude, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", volumeInclude))
+		if err != nil {
+			return fmt.Errorf("collector.logical_disk.volume-include: %w", err)
+		}
+
+		return nil
+	})
 
 	return c
 }
@@ -238,17 +263,6 @@ func (c *Collector) Build() error {
 		nil,
 	)
 
-	var err error
-	c.volumeIncludePattern, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", *c.volumeInclude))
-	if err != nil {
-		return err
-	}
-
-	c.volumeExcludePattern, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", *c.volumeExclude))
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -299,8 +313,8 @@ func (c *Collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 
 	for _, volume := range dst {
 		if volume.Name == "_Total" ||
-			c.volumeExcludePattern.MatchString(volume.Name) ||
-			!c.volumeIncludePattern.MatchString(volume.Name) {
+			c.config.VolumeExclude.MatchString(volume.Name) ||
+			!c.config.VolumeInclude.MatchString(volume.Name) {
 			continue
 		}
 

@@ -18,35 +18,25 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-const (
-	Name = "scheduled_task"
-
-	FlagScheduledTaskExclude = "collector.scheduled_task.exclude"
-	FlagScheduledTaskInclude = "collector.scheduled_task.include"
-)
+const Name = "scheduled_task"
 
 type Config struct {
-	TaskExclude string `yaml:"task_exclude"`
-	TaskInclude string `yaml:"task_include"`
+	TaskExclude *regexp.Regexp `yaml:"task_exclude"`
+	TaskInclude *regexp.Regexp `yaml:"task_include"`
 }
 
 var ConfigDefaults = Config{
-	TaskExclude: "",
-	TaskInclude: ".+",
+	TaskExclude: types.RegExpEmpty,
+	TaskInclude: types.RegExpAny,
 }
 
 type Collector struct {
+	config Config
 	logger log.Logger
-
-	taskExclude *string
-	taskInclude *string
 
 	lastResult *prometheus.Desc
 	missedRuns *prometheus.Desc
 	state      *prometheus.Desc
-
-	taskIncludePattern *regexp.Regexp
-	taskExcludePattern *regexp.Regexp
 }
 
 // TaskState ...
@@ -80,10 +70,18 @@ func New(logger log.Logger, config *Config) *Collector {
 		config = &ConfigDefaults
 	}
 
-	c := &Collector{
-		taskExclude: &config.TaskExclude,
-		taskInclude: &config.TaskInclude,
+	if config.TaskExclude == nil {
+		config.TaskExclude = ConfigDefaults.TaskExclude
 	}
+
+	if config.TaskInclude == nil {
+		config.TaskInclude = ConfigDefaults.TaskInclude
+	}
+
+	c := &Collector{
+		config: *config,
+	}
+
 	c.SetLogger(logger)
 
 	return c
@@ -91,16 +89,36 @@ func New(logger log.Logger, config *Config) *Collector {
 
 func NewWithFlags(app *kingpin.Application) *Collector {
 	c := &Collector{
-		taskInclude: app.Flag(
-			FlagScheduledTaskInclude,
-			"Regexp of tasks to include. Task path must both match include and not match exclude to be included.",
-		).Default(ConfigDefaults.TaskInclude).String(),
-
-		taskExclude: app.Flag(
-			FlagScheduledTaskExclude,
-			"Regexp of tasks to exclude. Task path must both match include and not match exclude to be included.",
-		).Default(ConfigDefaults.TaskExclude).String(),
+		config: ConfigDefaults,
 	}
+
+	var taskExclude, taskInclude string
+
+	app.Flag(
+		"collector.scheduled_task.exclude",
+		"Regexp of tasks to exclude. Task path must both match include and not match exclude to be included.",
+	).Default(c.config.TaskExclude.String()).StringVar(&taskExclude)
+
+	app.Flag(
+		"collector.scheduled_task.include",
+		"Regexp of tasks to include. Task path must both match include and not match exclude to be included.",
+	).Default(c.config.TaskExclude.String()).StringVar(&taskInclude)
+
+	app.Action(func(*kingpin.ParseContext) error {
+		var err error
+
+		c.config.TaskExclude, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", taskExclude))
+		if err != nil {
+			return fmt.Errorf("collector.physical_disk.disk-exclude: %w", err)
+		}
+
+		c.config.TaskInclude, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", taskInclude))
+		if err != nil {
+			return fmt.Errorf("collector.physical_disk.disk-include: %w", err)
+		}
+
+		return nil
+	})
 
 	return c
 }
@@ -143,18 +161,6 @@ func (c *Collector) Build() error {
 		nil,
 	)
 
-	var err error
-
-	c.taskIncludePattern, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", *c.taskInclude))
-	if err != nil {
-		return err
-	}
-
-	c.taskExcludePattern, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", *c.taskExclude))
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -176,8 +182,8 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	}
 
 	for _, task := range scheduledTasks {
-		if c.taskExcludePattern.MatchString(task.Path) ||
-			!c.taskIncludePattern.MatchString(task.Path) {
+		if c.config.TaskExclude.MatchString(task.Path) ||
+			!c.config.TaskInclude.MatchString(task.Path) {
 			continue
 		}
 

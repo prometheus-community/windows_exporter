@@ -22,6 +22,7 @@ var ConfigDefaults = Config{}
 
 // Collector is a Prometheus Collector for Perflib counter metrics.
 type Collector struct {
+	config Config
 	logger log.Logger
 
 	clockFrequencyAdjustmentPPBTotal *prometheus.Desc
@@ -32,8 +33,15 @@ type Collector struct {
 	ntpServerOutgoingResponsesTotal  *prometheus.Desc
 }
 
-func New(logger log.Logger, _ *Config) *Collector {
-	c := &Collector{}
+func New(logger log.Logger, config *Config) *Collector {
+	if config == nil {
+		config = &ConfigDefaults
+	}
+
+	c := &Collector{
+		config: *config,
+	}
+
 	c.SetLogger(logger)
 
 	return c
