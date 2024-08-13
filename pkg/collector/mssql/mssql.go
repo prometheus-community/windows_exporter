@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -437,9 +436,9 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 	c := &Collector{
 		config: ConfigDefaults,
 	}
-	c.config.CollectorsEnabled = make([]string, 0)
 
 	var listAllCollectors bool
+	var collectorsEnabled string
 
 	app.Flag(
 		"collectors.mssql.class-print",
@@ -449,7 +448,7 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 	app.Flag(
 		"collectors.mssql.classes-enabled",
 		"Comma-separated list of mssql WMI classes to use.",
-	).Default(strings.Join(ConfigDefaults.CollectorsEnabled, ",")).StringsVar(&c.config.CollectorsEnabled)
+	).Default(strings.Join(c.config.CollectorsEnabled, ",")).StringVar(&collectorsEnabled)
 
 	app.PreAction(func(*kingpin.ParseContext) error {
 		if listAllCollectors {
@@ -468,6 +467,12 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 		return nil
 	})
 
+	app.Action(func(*kingpin.ParseContext) error {
+		c.config.CollectorsEnabled = strings.Split(collectorsEnabled, ",")
+
+		return nil
+	})
+
 	return c
 }
 
@@ -480,16 +485,11 @@ func (c *Collector) SetLogger(logger log.Logger) {
 }
 
 func (c *Collector) GetPerfCounter() ([]string, error) {
-	enabled := slices.Compact(c.config.CollectorsEnabled)
-
-	// Result must order, to prevent test failures.
-	sort.Strings(enabled)
-
 	c.mssqlInstances = getMSSQLInstances(c.logger)
-	perfCounters := make([]string, 0, len(c.mssqlInstances)*len(enabled))
+	perfCounters := make([]string, 0, len(c.mssqlInstances)*len(c.config.CollectorsEnabled))
 
 	for instance := range c.mssqlInstances {
-		for _, c := range enabled {
+		for _, c := range c.config.CollectorsEnabled {
 			perfCounters = append(perfCounters, mssqlGetPerfObjectName(instance, c))
 		}
 	}
@@ -502,6 +502,9 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build() error {
+	// Result must order, to prevent test failures.
+	sort.Strings(c.config.CollectorsEnabled)
+
 	// meta
 	c.mssqlScrapeDurationDesc = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "collector_duration_seconds"),
@@ -1965,6 +1968,12 @@ func (c *Collector) Build() error {
 
 	c.mssqlCollectors = c.getMSSQLCollectors()
 
+	for _, name := range c.config.CollectorsEnabled {
+		if _, ok := c.mssqlCollectors[name]; !ok {
+			return errors.New("unknown mssql collector: " + name)
+		}
+	}
+
 	return nil
 }
 
@@ -2007,13 +2016,8 @@ func (c *Collector) execute(ctx *types.ScrapeContext, name string, fn mssqlColle
 func (c *Collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
 	wg := sync.WaitGroup{}
 
-	enabled := slices.Compact(c.config.CollectorsEnabled)
-
-	// Result must order, to prevent test failures.
-	sort.Strings(enabled)
-
 	for sqlInstance := range c.mssqlInstances {
-		for _, name := range enabled {
+		for _, name := range c.config.CollectorsEnabled {
 			function := c.mssqlCollectors[name]
 
 			wg.Add(1)
