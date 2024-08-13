@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"runtime"
 	"sync"
-	"syscall"
 	"unsafe"
 
 	"github.com/alecthomas/kingpin/v2"
@@ -37,7 +36,7 @@ var apiStartModeValues = map[uint32]string{
 type Collector struct {
 	logger log.Logger
 
-	runAs     *prometheus.Desc
+	info      *prometheus.Desc
 	startMode *prometheus.Desc
 
 	serviceManagerHandle *mgr.Mgr
@@ -71,10 +70,10 @@ func (c *Collector) GetPerfCounter() ([]string, error) {
 }
 
 func (c *Collector) Build() error {
-	c.runAs = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "run_as"),
-		"The start mode of the service (StartMode)",
-		[]string{"name", "run_as"},
+	c.info = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "info"),
+		"Information about the service",
+		[]string{"name", "run_as", "path_name"},
 		nil,
 	)
 	c.startMode = prometheus.NewDesc(
@@ -179,11 +178,12 @@ func (c *Collector) collectServiceInfo(ch chan<- prometheus.Metric, serviceName 
 	}
 
 	ch <- prometheus.MustNewConstMetric(
-		c.runAs,
+		c.info,
 		prometheus.GaugeValue,
 		1.0,
 		serviceNameString,
 		serviceConfig.ServiceStartName,
+		serviceConfig.BinaryPathName,
 	)
 
 	for _, startMode := range apiStartModeValues {
@@ -206,27 +206,41 @@ func (c *Collector) collectServiceInfo(ch chan<- prometheus.Metric, serviceName 
 // queryAllServices returns all service states of the current Windows system
 // This is realized by ask Service Manager directly.
 func (c *Collector) queryAllServices() ([]windows.ENUM_SERVICE_STATUS_PROCESS, error) {
-	var bytesNeeded, servicesReturned uint32
-	var buf []byte
-	var err error
-	for {
-		var p *byte
-		if len(buf) > 0 {
-			p = &buf[0]
-		}
-		err = windows.EnumServicesStatusEx(c.serviceManagerHandle.Handle, windows.SC_ENUM_PROCESS_INFO,
-			windows.SERVICE_WIN32, windows.SERVICE_STATE_ALL,
-			p, uint32(len(buf)), &bytesNeeded, &servicesReturned, nil, nil)
-		if err == nil {
-			break
-		}
-		if !errors.Is(err, syscall.ERROR_MORE_DATA) {
-			return nil, err
-		}
-		if bytesNeeded <= uint32(len(buf)) {
-			return nil, err
-		}
-		buf = make([]byte, bytesNeeded)
+	var (
+		bytesNeeded      uint32
+		servicesReturned uint32
+		resumeHandle     uint32
+	)
+
+	if err := windows.EnumServicesStatusEx(
+		c.serviceManagerHandle.Handle,
+		windows.SC_STATUS_PROCESS_INFO,
+		windows.SERVICE_WIN32,
+		windows.SERVICE_STATE_ALL,
+		nil,
+		0,
+		&bytesNeeded,
+		&servicesReturned,
+		&resumeHandle,
+		nil,
+	); !errors.Is(err, windows.ERROR_MORE_DATA) {
+		return nil, fmt.Errorf("could not fetch buffer size for EnumServicesStatusEx: %w", err)
+	}
+
+	buf := make([]byte, bytesNeeded)
+	if err := windows.EnumServicesStatusEx(
+		c.serviceManagerHandle.Handle,
+		windows.SC_STATUS_PROCESS_INFO,
+		windows.SERVICE_WIN32,
+		windows.SERVICE_STATE_ALL,
+		&buf[0],
+		bytesNeeded,
+		&bytesNeeded,
+		&servicesReturned,
+		&resumeHandle,
+		nil,
+	); err != nil {
+		return nil, fmt.Errorf("could not query windows service list: %w", err)
 	}
 
 	if servicesReturned == 0 {
