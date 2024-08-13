@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
-	"syscall"
 	"unsafe"
 
 	"github.com/alecthomas/kingpin/v2"
@@ -163,27 +162,41 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 // queryAllServices returns all service states of the current Windows system
 // This is realized by ask Service Manager directly.
 func (c *Collector) queryAllServices() ([]windows.ENUM_SERVICE_STATUS_PROCESS, error) {
-	var bytesNeeded, servicesReturned uint32
-	var buf []byte
-	var err error
-	for {
-		var p *byte
-		if len(buf) > 0 {
-			p = &buf[0]
-		}
-		err = windows.EnumServicesStatusEx(c.serviceManagerHandle.Handle, windows.SC_ENUM_PROCESS_INFO,
-			windows.SERVICE_WIN32, windows.SERVICE_STATE_ALL,
-			p, uint32(len(buf)), &bytesNeeded, &servicesReturned, nil, nil)
-		if err == nil {
-			break
-		}
-		if !errors.Is(err, syscall.ERROR_MORE_DATA) {
-			return nil, err
-		}
-		if bytesNeeded <= uint32(len(buf)) {
-			return nil, err
-		}
-		buf = make([]byte, bytesNeeded)
+	var (
+		bytesNeeded      uint32
+		servicesReturned uint32
+		resumeHandle     uint32
+	)
+
+	if err := windows.EnumServicesStatusEx(
+		c.serviceManagerHandle.Handle,
+		windows.SC_STATUS_PROCESS_INFO,
+		windows.SERVICE_WIN32,
+		windows.SERVICE_STATE_ALL,
+		nil,
+		0,
+		&bytesNeeded,
+		&servicesReturned,
+		&resumeHandle,
+		nil,
+	); !errors.Is(err, windows.ERROR_MORE_DATA) {
+		return nil, fmt.Errorf("could not fetch buffer size for EnumServicesStatusEx: %w", err)
+	}
+
+	buf := make([]byte, bytesNeeded)
+	if err := windows.EnumServicesStatusEx(
+		c.serviceManagerHandle.Handle,
+		windows.SC_STATUS_PROCESS_INFO,
+		windows.SERVICE_WIN32,
+		windows.SERVICE_STATE_ALL,
+		&buf[0],
+		bytesNeeded,
+		&bytesNeeded,
+		&servicesReturned,
+		&resumeHandle,
+		nil,
+	); err != nil {
+		return nil, fmt.Errorf("could not query windows service list: %w", err)
 	}
 
 	if servicesReturned == 0 {
