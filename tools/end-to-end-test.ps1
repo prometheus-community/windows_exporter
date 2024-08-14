@@ -25,7 +25,7 @@ $skip_re = "^(go_|windows_exporter_build_info|windows_exporter_collector_duratio
 $exporter_proc = Start-Process `
     -PassThru `
     -FilePath ..\windows_exporter.exe `
-    -ArgumentList "--log.level=debug --web.disable-exporter-metrics --collectors.enabled=[defaults],textfile,scheduled_task --collector.scheduled_task.include=.*WinSAT --collector.textfile.directories=$($textfile_dir)" `
+    -ArgumentList "--log.level=debug --web.disable-exporter-metrics --collectors.enabled=[defaults],textfile,service_info,scheduled_task --collector.scheduled_task.include=.*WinSAT --collector.textfile.directories=$($textfile_dir)" `
     -WindowStyle Hidden `
     -RedirectStandardOutput "$($temp_dir)/windows_exporter.log" `
     -RedirectStandardError "$($temp_dir)/windows_exporter_error.log"
