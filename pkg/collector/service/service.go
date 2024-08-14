@@ -19,8 +19,7 @@ import (
 
 const Name = "service"
 
-type Config struct {
-}
+type Config struct{}
 
 var ConfigDefaults = Config{}
 
@@ -34,7 +33,7 @@ var apiStateValues = map[uint32]string{
 	windows.SERVICE_STOPPED:          "stopped",
 }
 
-// A Collector is a Prometheus Collector for WMI Win32_Service metrics.
+// A Collector is a Prometheus Collector for service metrics.
 type Collector struct {
 	config Config
 	logger log.Logger

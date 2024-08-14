@@ -32,7 +32,7 @@ var apiStartModeValues = map[uint32]string{
 	windows.SERVICE_SYSTEM_START: "system",
 }
 
-// A Collector is a Prometheus Collector for WMI Win32_Service metrics
+// A Collector is a Prometheus Collector for service info metrics.
 type Collector struct {
 	config Config
 	logger log.Logger
