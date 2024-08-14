@@ -180,8 +180,8 @@ windows_scheduled_task_state{state="running",task="/Microsoft/Windows/Maintenanc
 windows_scheduled_task_state{state="unknown",task="/Microsoft/Windows/Maintenance/WinSAT"} 0
 # HELP windows_service_info A metric with a constant '1' value labeled with service information
 # TYPE windows_service_info gauge
-# HELP windows_service_start_mode The start mode of the service (StartMode)
-# TYPE windows_service_start_mode gauge
+# HELP windows_service_info_start_mode The start mode of the service (StartMode)
+# TYPE windows_service_info_start_mode gauge
 # HELP windows_service_state The state of the service (State)
 # TYPE windows_service_state gauge
 # HELP windows_service_status The status of the service (Status)
