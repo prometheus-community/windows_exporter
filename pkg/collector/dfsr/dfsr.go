@@ -120,10 +120,17 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 	c := &Collector{
 		config: ConfigDefaults,
 	}
-	c.config.CollectorsEnabled = make([]string, 0)
+
+	var collectorsEnabled string
 
 	app.Flag("collectors.dfsr.sources-enabled", "Comma-separated list of DFSR Perflib sources to use.").
-		Default(strings.Join(ConfigDefaults.CollectorsEnabled, ",")).StringsVar(&c.config.CollectorsEnabled)
+		Default(strings.Join(ConfigDefaults.CollectorsEnabled, ",")).StringVar(&collectorsEnabled)
+
+	app.Action(func(*kingpin.ParseContext) error {
+		c.config.CollectorsEnabled = strings.Split(collectorsEnabled, ",")
+
+		return nil
+	})
 
 	return c
 }

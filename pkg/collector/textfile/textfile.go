@@ -78,12 +78,19 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 	c := &Collector{
 		config: ConfigDefaults,
 	}
-	c.config.TextFileDirectories = make([]string, 0)
+
+	var textFileDirectories string
 
 	app.Flag(
 		"collector.textfile.directories",
 		"Directory or Directories to read text files with metrics from.",
-	).Default(strings.Join(ConfigDefaults.TextFileDirectories, ",")).StringsVar(&c.config.TextFileDirectories)
+	).Default(strings.Join(ConfigDefaults.TextFileDirectories, ",")).StringVar(&textFileDirectories)
+
+	app.Action(func(*kingpin.ParseContext) error {
+		c.config.TextFileDirectories = strings.Split(textFileDirectories, ",")
+
+		return nil
+	})
 
 	return c
 }
