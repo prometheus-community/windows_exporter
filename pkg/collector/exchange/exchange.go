@@ -111,6 +111,7 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 	c.config.CollectorsEnabled = make([]string, 0)
 
 	var listAllCollectors bool
+	var collectorsEnabled string
 
 	app.Flag(
 		"collectors.exchange.list",
@@ -120,7 +121,7 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 	app.Flag(
 		"collectors.exchange.enabled",
 		"Comma-separated list of collectors to use. Defaults to all, if not specified.",
-	).Default(strings.Join(ConfigDefaults.CollectorsEnabled, ",")).StringsVar(&c.config.CollectorsEnabled)
+	).Default(strings.Join(ConfigDefaults.CollectorsEnabled, ",")).StringVar(&collectorsEnabled)
 
 	app.PreAction(func(*kingpin.ParseContext) error {
 		if listAllCollectors {
@@ -148,6 +149,12 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 
 			os.Exit(0)
 		}
+
+		return nil
+	})
+
+	app.Action(func(*kingpin.ParseContext) error {
+		c.config.CollectorsEnabled = strings.Split(collectorsEnabled, ",")
 
 		return nil
 	})
