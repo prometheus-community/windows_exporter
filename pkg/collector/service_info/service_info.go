@@ -75,7 +75,7 @@ func (c *Collector) GetPerfCounter() ([]string, error) {
 
 func (c *Collector) Build() error {
 	c.info = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "info"),
+		prometheus.BuildFQName(types.Namespace, "", Name),
 		"Information about the service",
 		[]string{"name", "run_as", "path_name"},
 		nil,
