@@ -36,6 +36,7 @@ var apiStateValues = map[uint32]string{
 
 // A Collector is a Prometheus Collector for WMI Win32_Service metrics.
 type Collector struct {
+	config Config
 	logger log.Logger
 
 	state     *prometheus.Desc
@@ -49,7 +50,10 @@ func New(logger log.Logger, config *Config) *Collector {
 		config = &ConfigDefaults
 	}
 
-	c := &Collector{}
+	c := &Collector{
+		config: *config,
+	}
+
 	c.SetLogger(logger)
 
 	return c

@@ -437,7 +437,6 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 	c := &Collector{
 		config: ConfigDefaults,
 	}
-	c.config.CollectorsEnabled = make([]string, 0)
 
 	var listAllCollectors bool
 
@@ -449,7 +448,7 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 	app.Flag(
 		"collectors.mssql.classes-enabled",
 		"Comma-separated list of mssql WMI classes to use.",
-	).Default(strings.Join(ConfigDefaults.CollectorsEnabled, ",")).StringsVar(&c.config.CollectorsEnabled)
+	).Default(c.config.CollectorsEnabled...).StringsVar(&c.config.CollectorsEnabled)
 
 	app.PreAction(func(*kingpin.ParseContext) error {
 		if listAllCollectors {
