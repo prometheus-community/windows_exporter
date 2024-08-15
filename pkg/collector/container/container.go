@@ -233,7 +233,7 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	}
 
 	containerPrefixes := make(map[string]string)
-	hasErrors := false
+	collectErrors := make([]error, 0, len(containers))
 
 	for _, containerDetails := range containers {
 		containerIdWithPrefix := getContainerIdWithPrefix(containerDetails)
@@ -243,7 +243,7 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 				_ = level.Debug(c.logger).Log("msg", "err in fetching container statistics", "containerId", containerDetails.ID, "err", err)
 			} else {
 				_ = level.Error(c.logger).Log("msg", "err in fetching container statistics", "containerId", containerDetails.ID, "err", err)
-				hasErrors = true
+				collectErrors = append(collectErrors, err)
 			}
 
 			continue
@@ -256,8 +256,8 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 		return fmt.Errorf("error in fetching container network statistics: %w", err)
 	}
 
-	if hasErrors {
-		return errors.New("errors while fetching container statistics")
+	if len(collectErrors) > 0 {
+		return fmt.Errorf("errors while fetching container statistics: %w", errors.Join(collectErrors...))
 	}
 
 	return nil
