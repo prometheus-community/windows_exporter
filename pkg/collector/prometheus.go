@@ -184,8 +184,11 @@ func (coll *Prometheus) execute(name string, c Collector, ctx *types.ScrapeConte
 
 	if err != nil {
 		_ = level.Error(coll.logger).Log("msg", fmt.Sprintf("collector %s failed after %fs", name, duration), "err", err)
+
 		return failed
 	}
+
 	_ = level.Debug(coll.logger).Log("msg", fmt.Sprintf("collector %s succeeded after %fs.", name, duration))
+
 	return success
 }
