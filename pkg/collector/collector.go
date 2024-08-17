@@ -46,6 +46,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/collector/netframework_clrremoting"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/netframework_clrsecurity"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/nps"
+	"github.com/prometheus-community/windows_exporter/pkg/collector/ohwm"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/os"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/physical_disk"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/printer"
@@ -87,8 +88,6 @@ func NewBuilderWithFlags[C Collector](fn BuilderWithFlags[C]) BuilderWithFlags[C
 }
 
 // NewWithConfig To be called by the external libraries for collector initialization without running kingpin.Parse
-//
-//goland:noinspection GoUnusedExportedFunction
 func NewWithConfig(logger log.Logger, config Config) Collectors {
 	collectors := map[string]Collector{}
 	collectors[ad.Name] = ad.New(logger, &config.AD)
@@ -128,6 +127,7 @@ func NewWithConfig(logger log.Logger, config Config) Collectors {
 	collectors[netframework_clrremoting.Name] = netframework_clrremoting.New(logger, &config.NetframeworkClrremoting)
 	collectors[netframework_clrsecurity.Name] = netframework_clrsecurity.New(logger, &config.NetframeworkClrsecurity)
 	collectors[nps.Name] = nps.New(logger, &config.Nps)
+	collectors[ohwm.Name] = ohwm.New(logger, &config.OHWM)
 	collectors[os.Name] = os.New(logger, &config.Os)
 	collectors[physical_disk.Name] = physical_disk.New(logger, &config.PhysicalDisk)
 	collectors[printer.Name] = printer.New(logger, &config.Printer)
