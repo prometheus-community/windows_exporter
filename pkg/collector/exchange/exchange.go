@@ -23,7 +23,18 @@ type Config struct {
 }
 
 var ConfigDefaults = Config{
-	CollectorsEnabled: []string{},
+	CollectorsEnabled: []string{
+		"ADAccessProcesses",
+		"TransportQueues",
+		"HttpProxy",
+		"ActiveSync",
+		"AvailabilityService",
+		"OutlookWebAccess",
+		"Autodiscover",
+		"WorkloadManagement",
+		"RpcClientAccess",
+		"MapiHttpEmsmdb",
+	},
 }
 
 type Collector struct {
@@ -70,20 +81,6 @@ type Collector struct {
 	yieldedTasks                            *prometheus.Desc
 
 	enabledCollectors []string
-}
-
-// All available Collector functions.
-var exchangeAllCollectorNames = []string{
-	"ADAccessProcesses",
-	"TransportQueues",
-	"HttpProxy",
-	"ActiveSync",
-	"AvailabilityService",
-	"OutlookWebAccess",
-	"Autodiscover",
-	"WorkloadManagement",
-	"RpcClientAccess",
-	"MapiHttpEmsmdb",
 }
 
 func New(logger log.Logger, config *Config) *Collector {
@@ -141,7 +138,7 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 			sb := strings.Builder{}
 			sb.WriteString(fmt.Sprintf("%-32s %-32s\n", "Collector Name", "[PerfID] Perflib Object"))
 
-			for _, cname := range exchangeAllCollectorNames {
+			for _, cname := range ConfigDefaults.CollectorsEnabled {
 				sb.WriteString(fmt.Sprintf("%-32s %-32s\n", cname, collectorDesc[cname]))
 			}
 
@@ -239,21 +236,17 @@ func (c *Collector) Build() error {
 	c.syncCommandsPerSec = desc("activesync_sync_cmds_total", "Number of sync commands processed per second. Clients use this command to synchronize items within a folder")
 	c.activeUserCountMapiHttpEmsMDB = desc("mapihttp_emsmdb_active_user_count", "Number of unique outlook users that have shown some kind of activity in the last 2 minutes")
 
-	if len(c.config.CollectorsEnabled) == 0 {
-		c.enabledCollectors = exchangeAllCollectorNames
-	} else {
-		c.enabledCollectors = make([]string, 0, len(exchangeAllCollectorNames))
+	c.enabledCollectors = make([]string, 0, len(ConfigDefaults.CollectorsEnabled))
 
-		for _, collectorName := range c.config.CollectorsEnabled {
-			if !slices.Contains(exchangeAllCollectorNames, collectorName) {
-				return fmt.Errorf("unknown exchange collector: %s", collectorName)
-			}
-
-			c.enabledCollectors = append(c.enabledCollectors, collectorName)
+	for _, collectorName := range c.config.CollectorsEnabled {
+		if !slices.Contains(ConfigDefaults.CollectorsEnabled, collectorName) {
+			return fmt.Errorf("unknown exchange collector: %s", collectorName)
 		}
 
-		c.enabledCollectors = slices.Clip(c.enabledCollectors)
+		c.enabledCollectors = append(c.enabledCollectors, collectorName)
 	}
+
+	c.enabledCollectors = slices.Clip(c.enabledCollectors)
 
 	return nil
 }
