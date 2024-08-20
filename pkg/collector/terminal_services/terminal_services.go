@@ -5,6 +5,7 @@ package terminal_services
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"syscall"
 
@@ -123,7 +124,7 @@ func (c *Collector) Build() error {
 	c.sessionInfo = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "session_info"),
 		"Terminal Services sessions info",
-		[]string{"session_name", "user", "host", "state"},
+		[]string{"session_name", "user", "host", "state", "id"},
 		nil,
 	)
 	c.connectionBrokerPerformance = prometheus.NewDesc(
@@ -445,6 +446,7 @@ func (c *Collector) collectWTSSessions(ch chan<- prometheus.Metric) error {
 				userName,
 				session.HostName,
 				stateName,
+				strconv.Itoa(int(session.SessionID)),
 			)
 		}
 	}
