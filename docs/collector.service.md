@@ -6,7 +6,7 @@ The service collector exposes metrics about Windows Services
 -|-
 Metric name prefix  | `service`
 Classes             | none
-Enabled by default? | No
+Enabled by default? | Yes
 
 ## Flags
 
