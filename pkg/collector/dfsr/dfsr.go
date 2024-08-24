@@ -27,7 +27,6 @@ var ConfigDefaults = Config{
 // Collector contains the metric and state data of the DFSR collectors.
 type Collector struct {
 	config Config
-	logger log.Logger
 
 	// connection source
 	connectionBandwidthSavingsUsingDFSReplicationTotal *prometheus.Desc
@@ -80,7 +79,7 @@ type Collector struct {
 	dfsrChildCollectors []dfsrCollectorFunc
 }
 
-type dfsrCollectorFunc func(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error
+type dfsrCollectorFunc func(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error
 
 // Map Perflib sources to DFSR Collector names
 // e.g, volume -> DFS Replication Service Volumes.
@@ -98,7 +97,7 @@ func dfsrGetPerfObjectName(collector string) string {
 	return prefix + suffix
 }
 
-func New(logger log.Logger, config *Config) *Collector {
+func New(config *Config) *Collector {
 	if config == nil {
 		config = &ConfigDefaults
 	}
@@ -110,8 +109,6 @@ func New(logger log.Logger, config *Config) *Collector {
 	c := &Collector{
 		config: *config,
 	}
-
-	c.SetLogger(logger)
 
 	return c
 }
@@ -139,11 +136,7 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) SetLogger(logger log.Logger) {
-	c.logger = log.With(logger, "collector", Name)
-}
-
-func (c *Collector) GetPerfCounter() ([]string, error) {
+func (c *Collector) GetPerfCounter(_ log.Logger) ([]string, error) {
 	// Perflib sources are dynamic, depending on the enabled child collectors
 	expandedChildCollectors := slices.Compact(c.config.CollectorsEnabled)
 	perflibDependencies := make([]string, 0, len(expandedChildCollectors))
@@ -159,8 +152,10 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build() error {
-	_ = level.Info(c.logger).Log("msg", "dfsr collector is in an experimental state! Metrics for this collector have not been tested.")
+func (c *Collector) Build(logger log.Logger) error {
+	logger = log.With(logger, "collector", Name)
+
+	_ = level.Info(logger).Log("msg", "dfsr collector is in an experimental state! Metrics for this collector have not been tested.")
 
 	// connection
 	c.connectionBandwidthSavingsUsingDFSReplicationTotal = prometheus.NewDesc(
@@ -479,9 +474,10 @@ func (c *Collector) getDFSRChildCollectors(enabledCollectors []string) []dfsrCol
 
 // Collect implements the Collector interface.
 // Sends metric values for each metric to the provided prometheus Metric channel.
-func (c *Collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
+	logger = log.With(logger, "collector", Name)
 	for _, fn := range c.dfsrChildCollectors {
-		err := fn(ctx, ch)
+		err := fn(ctx, logger, ch)
 		if err != nil {
 			return err
 		}
@@ -504,9 +500,10 @@ type PerflibDFSRConnection struct {
 	SizeOfFilesReceivedTotal                 float64 `perflib:"Size of Files Received"`
 }
 
-func (c *Collector) collectConnection(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *Collector) collectConnection(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
+	logger = log.With(logger, "collector", Name)
 	var dst []PerflibDFSRConnection
-	if err := perflib.UnmarshalObject(ctx.PerfObjects["DFS Replication Connections"], &dst, c.logger); err != nil {
+	if err := perflib.UnmarshalObject(ctx.PerfObjects["DFS Replication Connections"], &dst, logger); err != nil {
 		return err
 	}
 
@@ -610,9 +607,10 @@ type perflibDFSRFolder struct {
 	UpdatesDroppedTotal                      float64 `perflib:"Updates Dropped"`
 }
 
-func (c *Collector) collectFolder(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *Collector) collectFolder(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
+	logger = log.With(logger, "collector", Name)
 	var dst []perflibDFSRFolder
-	if err := perflib.UnmarshalObject(ctx.PerfObjects["DFS Replicated Folders"], &dst, c.logger); err != nil {
+	if err := perflib.UnmarshalObject(ctx.PerfObjects["DFS Replicated Folders"], &dst, logger); err != nil {
 		return err
 	}
 
@@ -820,9 +818,10 @@ type perflibDFSRVolume struct {
 	USNJournalUnreadPercentage     float64 `perflib:"USN Journal Records Unread Percentage"`
 }
 
-func (c *Collector) collectVolume(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *Collector) collectVolume(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
+	logger = log.With(logger, "collector", Name)
 	var dst []perflibDFSRVolume
-	if err := perflib.UnmarshalObject(ctx.PerfObjects["DFS Replication Service volumes"], &dst, c.logger); err != nil {
+	if err := perflib.UnmarshalObject(ctx.PerfObjects["DFS Replication Service volumes"], &dst, logger); err != nil {
 		return err
 	}
 

@@ -12,6 +12,7 @@ import (
 
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/pprof"
@@ -202,15 +203,14 @@ func main() {
 
 	enabledCollectorList := utils.ExpandEnabledCollectors(*enabledCollectors)
 	collectors.Enable(enabledCollectorList)
-	collectors.SetLogger(logger)
 
 	// Initialize collectors before loading
-	err = collectors.Build()
+	err = collectors.Build(logger)
 	if err != nil {
 		_ = level.Error(logger).Log("msg", "Couldn't load collectors", "err", err)
 		os.Exit(1)
 	}
-	err = collectors.SetPerfCounterQuery()
+	err = collectors.SetPerfCounterQuery(logger)
 	if err != nil {
 		_ = level.Error(logger).Log("msg", "Couldn't set performance counter query", "err", err)
 		os.Exit(1)
@@ -229,7 +229,7 @@ func main() {
 	_ = level.Info(logger).Log("msg", fmt.Sprintf("Enabled collectors: %v", strings.Join(enabledCollectorList, ", ")))
 
 	mux := http.NewServeMux()
-	mux.HandleFunc(*metricsPath, withConcurrencyLimit(*maxRequests, collectors.BuildServeHTTP(*disableExporterMetrics, *timeoutMargin)))
+	mux.HandleFunc(*metricsPath, withConcurrencyLimit(*maxRequests, collectors.BuildServeHTTP(logger, *disableExporterMetrics, *timeoutMargin)))
 	mux.HandleFunc("/health", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, err := fmt.Fprintln(w, `{"status":"ok"}`)
@@ -274,7 +274,7 @@ func main() {
 	}
 
 	go func() {
-		if err := web.ListenAndServe(server, webConfig, logger); err != nil {
+		if err := web.ListenAndServe(server, webConfig, logger); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			_ = level.Error(logger).Log("msg", "cannot start windows_exporter", "err", err)
 			os.Exit(1)
 		}

@@ -19,7 +19,6 @@ var ConfigDefaults = Config{}
 // A Collector is a Prometheus Collector perflib DHCP metrics.
 type Collector struct {
 	config Config
-	logger log.Logger
 
 	acksTotal                                        *prometheus.Desc
 	activeQueueLength                                *prometheus.Desc
@@ -48,7 +47,7 @@ type Collector struct {
 	requestsTotal                                    *prometheus.Desc
 }
 
-func New(logger log.Logger, config *Config) *Collector {
+func New(config *Config) *Collector {
 	if config == nil {
 		config = &ConfigDefaults
 	}
@@ -56,8 +55,6 @@ func New(logger log.Logger, config *Config) *Collector {
 	c := &Collector{
 		config: *config,
 	}
-
-	c.SetLogger(logger)
 
 	return c
 }
@@ -70,11 +67,7 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) SetLogger(logger log.Logger) {
-	c.logger = log.With(logger, "collector", Name)
-}
-
-func (c *Collector) GetPerfCounter() ([]string, error) {
+func (c *Collector) GetPerfCounter(_ log.Logger) ([]string, error) {
 	return []string{"DHCP Server"}, nil
 }
 
@@ -82,7 +75,7 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build() error {
+func (c *Collector) Build(_ log.Logger) error {
 	c.packetsReceivedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "packets_received_total"),
 		"Total number of packets received by the DHCP server (PacketsReceivedTotal)",
@@ -267,9 +260,10 @@ type dhcpPerf struct {
 	FailoverBndupdDropped                            float64 `perflib:"Failover: BndUpd Dropped."`
 }
 
-func (c *Collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
+	logger = log.With(logger, "collector", Name)
 	var dhcpPerfs []dhcpPerf
-	if err := perflib.UnmarshalObject(ctx.PerfObjects["DHCP Server"], &dhcpPerfs, c.logger); err != nil {
+	if err := perflib.UnmarshalObject(ctx.PerfObjects["DHCP Server"], &dhcpPerfs, logger); err != nil {
 		return err
 	}
 

@@ -20,7 +20,6 @@ var ConfigDefaults = Config{}
 
 type Collector struct {
 	config Config
-	logger log.Logger
 
 	adLoginConnectionFailures                          *prometheus.Desc
 	artifactDBFailures                                 *prometheus.Desc
@@ -67,7 +66,7 @@ type Collector struct {
 	wstrustTokenRequests                               *prometheus.Desc
 }
 
-func New(logger log.Logger, config *Config) *Collector {
+func New(config *Config) *Collector {
 	if config == nil {
 		config = &ConfigDefaults
 	}
@@ -75,8 +74,6 @@ func New(logger log.Logger, config *Config) *Collector {
 	c := &Collector{
 		config: *config,
 	}
-
-	c.SetLogger(logger)
 
 	return c
 }
@@ -89,11 +86,7 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) SetLogger(logger log.Logger) {
-	c.logger = log.With(logger, "collector", Name)
-}
-
-func (c *Collector) GetPerfCounter() ([]string, error) {
+func (c *Collector) GetPerfCounter(_ log.Logger) ([]string, error) {
 	return []string{"AD FS"}, nil
 }
 
@@ -101,7 +94,7 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build() error {
+func (c *Collector) Build(_ log.Logger) error {
 	c.adLoginConnectionFailures = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "ad_login_connection_failures_total"),
 		"Total number of connection failures to an Active Directory domain controller",
@@ -410,9 +403,10 @@ type perflibADFS struct {
 	FederationMetadataRequests           float64 `perflib:"Federation Metadata Requests"`
 }
 
-func (c *Collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
+	logger = log.With(logger, "collector", Name)
 	var adfsData []perflibADFS
-	err := perflib.UnmarshalObject(ctx.PerfObjects["AD FS"], &adfsData, c.logger)
+	err := perflib.UnmarshalObject(ctx.PerfObjects["AD FS"], &adfsData, logger)
 	if err != nil {
 		return err
 	}

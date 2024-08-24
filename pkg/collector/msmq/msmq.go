@@ -27,7 +27,6 @@ var ConfigDefaults = Config{
 // A Collector is a Prometheus Collector for WMI Win32_PerfRawData_MSMQ_MSMQQueue metrics.
 type Collector struct {
 	config Config
-	logger log.Logger
 
 	bytesInJournalQueue    *prometheus.Desc
 	bytesInQueue           *prometheus.Desc
@@ -35,7 +34,7 @@ type Collector struct {
 	messagesInQueue        *prometheus.Desc
 }
 
-func New(logger log.Logger, config *Config) *Collector {
+func New(config *Config) *Collector {
 	if config == nil {
 		config = &ConfigDefaults
 	}
@@ -47,8 +46,6 @@ func New(logger log.Logger, config *Config) *Collector {
 	c := &Collector{
 		config: *config,
 	}
-
-	c.SetLogger(logger)
 
 	return c
 }
@@ -69,11 +66,7 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) SetLogger(logger log.Logger) {
-	c.logger = log.With(logger, "collector", Name)
-}
-
-func (c *Collector) GetPerfCounter() ([]string, error) {
+func (c *Collector) GetPerfCounter(_ log.Logger) ([]string, error) {
 	return []string{}, nil
 }
 
@@ -81,9 +74,11 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build() error {
+func (c *Collector) Build(logger log.Logger) error {
+	logger = log.With(logger, "collector", Name)
+
 	if *c.config.QueryWhereClause == "" {
-		_ = level.Warn(c.logger).Log("msg", "No where-clause specified for msmq collector. This will generate a very large number of metrics!")
+		_ = level.Warn(logger).Log("msg", "No where-clause specified for msmq collector. This will generate a very large number of metrics!")
 	}
 
 	c.bytesInJournalQueue = prometheus.NewDesc(
@@ -115,9 +110,10 @@ func (c *Collector) Build() error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric) error {
-	if err := c.collect(ch); err != nil {
-		_ = level.Error(c.logger).Log("msg", "failed collecting msmq metrics", "err", err)
+func (c *Collector) Collect(_ *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
+	logger = log.With(logger, "collector", Name)
+	if err := c.collect(logger, ch); err != nil {
+		_ = level.Error(logger).Log("msg", "failed collecting msmq metrics", "err", err)
 		return err
 	}
 	return nil
@@ -132,10 +128,10 @@ type msmqQueue struct {
 	MessagesInQueue        uint64
 }
 
-func (c *Collector) collect(ch chan<- prometheus.Metric) error {
+func (c *Collector) collect(logger log.Logger, ch chan<- prometheus.Metric) error {
 	var dst []msmqQueue
 
-	q := wmi.QueryAllForClassWhere(&dst, "Win32_PerfRawData_MSMQ_MSMQQueue", *c.config.QueryWhereClause, c.logger)
+	q := wmi.QueryAllForClassWhere(&dst, "Win32_PerfRawData_MSMQ_MSMQQueue", *c.config.QueryWhereClause, logger)
 	if err := wmi.Query(q, &dst); err != nil {
 		return err
 	}

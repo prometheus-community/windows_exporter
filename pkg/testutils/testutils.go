@@ -15,10 +15,11 @@ import (
 func FuncBenchmarkCollector[C collector.Collector](b *testing.B, name string, collectFunc collector.BuilderWithFlags[C]) {
 	b.Helper()
 
+	logger := log.NewNopLogger()
+
 	c := collectFunc(kingpin.CommandLine)
 	collectors := collector.New(map[string]collector.Collector{name: c})
-	require.NoError(b, collectors.Build())
-	collectors.SetLogger(log.NewNopLogger())
+	require.NoError(b, collectors.Build(logger))
 
 	// Create perflib scrape context.
 	// Some perflib collectors required a correct context,
@@ -34,6 +35,6 @@ func FuncBenchmarkCollector[C collector.Collector](b *testing.B, name string, co
 	}()
 
 	for i := 0; i < b.N; i++ {
-		require.NoError(b, c.Collect(scrapeContext, metrics))
+		require.NoError(b, c.Collect(scrapeContext, logger, metrics))
 	}
 }

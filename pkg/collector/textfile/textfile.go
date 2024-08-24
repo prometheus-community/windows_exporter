@@ -48,7 +48,6 @@ var ConfigDefaults = Config{
 
 type Collector struct {
 	config Config
-	logger log.Logger
 
 	// Only set for testing to get predictable output.
 	mTime *float64
@@ -56,7 +55,7 @@ type Collector struct {
 	mTimeDesc *prometheus.Desc
 }
 
-func New(logger log.Logger, config *Config) *Collector {
+func New(config *Config) *Collector {
 	if config == nil {
 		config = &ConfigDefaults
 	}
@@ -68,8 +67,6 @@ func New(logger log.Logger, config *Config) *Collector {
 	c := &Collector{
 		config: *config,
 	}
-
-	c.SetLogger(logger)
 
 	return c
 }
@@ -99,11 +96,7 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) SetLogger(logger log.Logger) {
-	c.logger = log.With(logger, "collector", Name)
-}
-
-func (c *Collector) GetPerfCounter() ([]string, error) {
+func (c *Collector) GetPerfCounter(_ log.Logger) ([]string, error) {
 	return []string{}, nil
 }
 
@@ -111,9 +104,9 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build() error {
-	_ = level.Info(c.logger).
-		Log("msg", "textfile Collector directories: "+strings.Join(c.config.TextFileDirectories, ","))
+func (c *Collector) Build(logger log.Logger) error {
+	_ = level.Info(logger).
+		Log("msg", "textfile Collector directories: "+strings.Join(c.config.TextFileDirectories, ","), "collector", Name)
 
 	c.mTimeDesc = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, "textfile", "mtime_seconds"),
@@ -150,7 +143,7 @@ func duplicateMetricEntry(metricFamilies []*dto.MetricFamily) bool {
 	return false
 }
 
-func (c *Collector) convertMetricFamily(metricFamily *dto.MetricFamily, ch chan<- prometheus.Metric) {
+func (c *Collector) convertMetricFamily(logger log.Logger, metricFamily *dto.MetricFamily, ch chan<- prometheus.Metric) {
 	var valType prometheus.ValueType
 	var val float64
 
@@ -166,7 +159,7 @@ func (c *Collector) convertMetricFamily(metricFamily *dto.MetricFamily, ch chan<
 
 	for _, metric := range metricFamily.GetMetric() {
 		if metric.TimestampMs != nil {
-			_ = level.Warn(c.logger).Log("msg", fmt.Sprintf("Ignoring unsupported custom timestamp on textfile Collector metric %v", metric))
+			_ = level.Warn(logger).Log("msg", fmt.Sprintf("Ignoring unsupported custom timestamp on textfile Collector metric %v", metric))
 		}
 
 		labels := metric.GetLabel()
@@ -236,7 +229,7 @@ func (c *Collector) convertMetricFamily(metricFamily *dto.MetricFamily, ch chan<
 				buckets, values...,
 			)
 		default:
-			_ = level.Error(c.logger).Log("msg", "unknown metric type for file")
+			_ = level.Error(logger).Log("msg", "unknown metric type for file")
 			continue
 		}
 		if metricType == dto.MetricType_GAUGE || metricType == dto.MetricType_COUNTER || metricType == dto.MetricType_UNTYPED {
@@ -297,7 +290,8 @@ func (cr carriageReturnFilteringReader) Read(p []byte) (int, error) {
 }
 
 // Collect implements the Collector interface.
-func (c *Collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(_ *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
+	logger = log.With(logger, "collector", Name)
 	errorMetric := 0.0
 	mTimes := map[string]time.Time{}
 
@@ -310,26 +304,26 @@ func (c *Collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric)
 	for _, directory := range c.config.TextFileDirectories {
 		err := filepath.WalkDir(directory, func(path string, dirEntry os.DirEntry, err error) error {
 			if err != nil {
-				_ = level.Error(c.logger).Log("msg", "Error reading directory: "+path, "err", err)
+				_ = level.Error(logger).Log("msg", "Error reading directory: "+path, "err", err)
 				errorMetric = 1.0
 				return nil
 			}
 			if !dirEntry.IsDir() && strings.HasSuffix(dirEntry.Name(), ".prom") {
-				_ = level.Debug(c.logger).Log("msg", "Processing file: "+path)
-				families_array, err := scrapeFile(path, c.logger)
+				_ = level.Debug(logger).Log("msg", "Processing file: "+path)
+				families_array, err := scrapeFile(path, logger)
 				if err != nil {
-					_ = level.Error(c.logger).Log("msg", fmt.Sprintf("Error scraping file: %q. Skip File.", path), "err", err)
+					_ = level.Error(logger).Log("msg", fmt.Sprintf("Error scraping file: %q. Skip File.", path), "err", err)
 					errorMetric = 1.0
 					return nil
 				}
 				fileInfo, err := os.Stat(path)
 				if err != nil {
-					_ = level.Error(c.logger).Log("msg", fmt.Sprintf("Error reading file info: %q. Skip File.", path), "err", err)
+					_ = level.Error(logger).Log("msg", fmt.Sprintf("Error reading file info: %q. Skip File.", path), "err", err)
 					errorMetric = 1.0
 					return nil
 				}
 				if _, hasName := mTimes[fileInfo.Name()]; hasName {
-					_ = level.Error(c.logger).Log("msg", fmt.Sprintf("Duplicate filename detected: %q. Skip File.", path))
+					_ = level.Error(logger).Log("msg", fmt.Sprintf("Duplicate filename detected: %q. Skip File.", path))
 					errorMetric = 1.0
 					return nil
 				}
@@ -339,18 +333,18 @@ func (c *Collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric)
 			return nil
 		})
 		if err != nil && directory != "" {
-			_ = level.Error(c.logger).Log("msg", "Error reading textfile Collector directory: "+directory, "err", err)
+			_ = level.Error(logger).Log("msg", "Error reading textfile Collector directory: "+directory, "err", err)
 			errorMetric = 1.0
 		}
 	}
 
 	// If duplicates are detected across *multiple* files, return error.
 	if duplicateMetricEntry(metricFamilies) {
-		_ = level.Error(c.logger).Log("msg", "Duplicate metrics detected across multiple files")
+		_ = level.Error(logger).Log("msg", "Duplicate metrics detected across multiple files")
 		errorMetric = 1.0
 	} else {
 		for _, mf := range metricFamilies {
-			c.convertMetricFamily(mf, ch)
+			c.convertMetricFamily(logger, mf, ch)
 		}
 	}
 

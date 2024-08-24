@@ -38,7 +38,6 @@ var ConfigDefaults = Config{
 
 type Collector struct {
 	config Config
-	logger log.Logger
 
 	lookupCache map[string]string
 
@@ -59,7 +58,7 @@ type Collector struct {
 	workingSetPrivate *prometheus.Desc
 }
 
-func New(logger log.Logger, config *Config) *Collector {
+func New(config *Config) *Collector {
 	if config == nil {
 		config = &ConfigDefaults
 	}
@@ -75,8 +74,6 @@ func New(logger log.Logger, config *Config) *Collector {
 	c := &Collector{
 		config: *config,
 	}
-
-	c.SetLogger(logger)
 
 	return c
 }
@@ -131,11 +128,7 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) SetLogger(logger log.Logger) {
-	c.logger = log.With(logger, "collector", Name)
-}
-
-func (c *Collector) GetPerfCounter() ([]string, error) {
+func (c *Collector) GetPerfCounter(_ log.Logger) ([]string, error) {
 	return []string{"Process"}, nil
 }
 
@@ -143,9 +136,11 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build() error {
+func (c *Collector) Build(logger log.Logger) error {
+	logger = log.With(logger, "collector", Name)
+
 	if c.config.ProcessInclude.String() == "^(?:.*)$" && c.config.ProcessExclude.String() == "^(?:)$" {
-		_ = level.Warn(c.logger).Log("msg", "No filters specified for process collector. This will generate a very large number of metrics!")
+		_ = level.Warn(logger).Log("msg", "No filters specified for process collector. This will generate a very large number of metrics!")
 	}
 
 	commonLabels := make([]string, 0)
@@ -286,18 +281,19 @@ type WorkerProcess struct {
 	ProcessId   uint64
 }
 
-func (c *Collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
+	logger = log.With(logger, "collector", Name)
 	data := make([]perflibProcess, 0)
-	err := perflib.UnmarshalObject(ctx.PerfObjects["Process"], &data, c.logger)
+	err := perflib.UnmarshalObject(ctx.PerfObjects["Process"], &data, logger)
 	if err != nil {
 		return err
 	}
 
 	var workerProcesses []WorkerProcess
 	if c.config.EnableWorkerProcess {
-		queryWorkerProcess := wmi.QueryAllForClass(&workerProcesses, "WorkerProcess", c.logger)
+		queryWorkerProcess := wmi.QueryAllForClass(&workerProcesses, "WorkerProcess", logger)
 		if err := wmi.QueryNamespace(queryWorkerProcess, &workerProcesses, "root\\WebAdministration"); err != nil {
-			_ = level.Debug(c.logger).Log("msg", "Could not query WebAdministration namespace for IIS worker processes", "err", err)
+			_ = level.Debug(logger).Log("msg", "Could not query WebAdministration namespace for IIS worker processes", "err", err)
 		}
 	}
 

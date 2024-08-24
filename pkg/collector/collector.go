@@ -89,64 +89,64 @@ func NewBuilderWithFlags[C Collector](fn BuilderWithFlags[C]) BuilderWithFlags[C
 // NewWithConfig To be called by the external libraries for collector initialization without running kingpin.Parse
 //
 //goland:noinspection GoUnusedExportedFunction
-func NewWithConfig(logger log.Logger, config Config) Collectors {
+func NewWithConfig(config Config) Collectors {
 	collectors := map[string]Collector{}
-	collectors[ad.Name] = ad.New(logger, &config.AD)
-	collectors[adcs.Name] = adcs.New(logger, &config.ADCS)
-	collectors[adfs.Name] = adfs.New(logger, &config.ADFS)
-	collectors[cache.Name] = cache.New(logger, &config.Cache)
-	collectors[container.Name] = container.New(logger, &config.Container)
-	collectors[cpu.Name] = cpu.New(logger, &config.CPU)
-	collectors[cpu_info.Name] = cpu_info.New(logger, &config.CPUInfo)
-	collectors[cs.Name] = cs.New(logger, &config.Cs)
-	collectors[dfsr.Name] = dfsr.New(logger, &config.DFSR)
-	collectors[dhcp.Name] = dhcp.New(logger, &config.Dhcp)
-	collectors[diskdrive.Name] = diskdrive.New(logger, &config.DiskDrive)
-	collectors[dns.Name] = dns.New(logger, &config.DNS)
-	collectors[exchange.Name] = exchange.New(logger, &config.Exchange)
-	collectors[fsrmquota.Name] = fsrmquota.New(logger, &config.Fsrmquota)
-	collectors[hyperv.Name] = hyperv.New(logger, &config.Hyperv)
-	collectors[iis.Name] = iis.New(logger, &config.IIS)
-	collectors[license.Name] = license.New(logger, &config.License)
-	collectors[logical_disk.Name] = logical_disk.New(logger, &config.LogicalDisk)
-	collectors[logon.Name] = logon.New(logger, &config.Logon)
-	collectors[memory.Name] = memory.New(logger, &config.Memory)
-	collectors[mscluster_cluster.Name] = mscluster_cluster.New(logger, &config.MsclusterCluster)
-	collectors[mscluster_network.Name] = mscluster_network.New(logger, &config.MsclusterNetwork)
-	collectors[mscluster_node.Name] = mscluster_node.New(logger, &config.MsclusterNode)
-	collectors[mscluster_resource.Name] = mscluster_resource.New(logger, &config.MsclusterResource)
-	collectors[mscluster_resourcegroup.Name] = mscluster_resourcegroup.New(logger, &config.MsclusterResourceGroup)
-	collectors[msmq.Name] = msmq.New(logger, &config.Msmq)
-	collectors[mssql.Name] = mssql.New(logger, &config.Mssql)
-	collectors[net.Name] = net.New(logger, &config.Net)
-	collectors[netframework_clrexceptions.Name] = netframework_clrexceptions.New(logger, &config.NetframeworkClrexceptions)
-	collectors[netframework_clrinterop.Name] = netframework_clrinterop.New(logger, &config.NetframeworkClrinterop)
-	collectors[netframework_clrjit.Name] = netframework_clrjit.New(logger, &config.NetframeworkClrjit)
-	collectors[netframework_clrloading.Name] = netframework_clrloading.New(logger, &config.NetframeworkClrloading)
-	collectors[netframework_clrlocksandthreads.Name] = netframework_clrlocksandthreads.New(logger, &config.NetframeworkClrlocksandthreads)
-	collectors[netframework_clrmemory.Name] = netframework_clrmemory.New(logger, &config.NetframeworkClrmemory)
-	collectors[netframework_clrremoting.Name] = netframework_clrremoting.New(logger, &config.NetframeworkClrremoting)
-	collectors[netframework_clrsecurity.Name] = netframework_clrsecurity.New(logger, &config.NetframeworkClrsecurity)
-	collectors[nps.Name] = nps.New(logger, &config.Nps)
-	collectors[os.Name] = os.New(logger, &config.Os)
-	collectors[physical_disk.Name] = physical_disk.New(logger, &config.PhysicalDisk)
-	collectors[printer.Name] = printer.New(logger, &config.Printer)
-	collectors[process.Name] = process.New(logger, &config.Process)
-	collectors[remote_fx.Name] = remote_fx.New(logger, &config.RemoteFx)
-	collectors[scheduled_task.Name] = scheduled_task.New(logger, &config.ScheduledTask)
-	collectors[service.Name] = service.New(logger, &config.Service)
-	collectors[smb.Name] = smb.New(logger, &config.SMB)
-	collectors[smbclient.Name] = smbclient.New(logger, &config.SMBClient)
-	collectors[smtp.Name] = smtp.New(logger, &config.SMTP)
-	collectors[system.Name] = system.New(logger, &config.System)
-	collectors[teradici_pcoip.Name] = teradici_pcoip.New(logger, &config.TeradiciPcoip)
-	collectors[tcp.Name] = tcp.New(logger, &config.TCP)
-	collectors[terminal_services.Name] = terminal_services.New(logger, &config.TerminalServices)
-	collectors[textfile.Name] = textfile.New(logger, &config.Textfile)
-	collectors[thermalzone.Name] = thermalzone.New(logger, &config.Thermalzone)
-	collectors[time.Name] = time.New(logger, &config.Time)
-	collectors[vmware.Name] = vmware.New(logger, &config.Vmware)
-	collectors[vmware_blast.Name] = vmware_blast.New(logger, &config.VmwareBlast)
+	collectors[ad.Name] = ad.New(&config.AD)
+	collectors[adcs.Name] = adcs.New(&config.ADCS)
+	collectors[adfs.Name] = adfs.New(&config.ADFS)
+	collectors[cache.Name] = cache.New(&config.Cache)
+	collectors[container.Name] = container.New(&config.Container)
+	collectors[cpu.Name] = cpu.New(&config.CPU)
+	collectors[cpu_info.Name] = cpu_info.New(&config.CPUInfo)
+	collectors[cs.Name] = cs.New(&config.Cs)
+	collectors[dfsr.Name] = dfsr.New(&config.DFSR)
+	collectors[dhcp.Name] = dhcp.New(&config.Dhcp)
+	collectors[diskdrive.Name] = diskdrive.New(&config.DiskDrive)
+	collectors[dns.Name] = dns.New(&config.DNS)
+	collectors[exchange.Name] = exchange.New(&config.Exchange)
+	collectors[fsrmquota.Name] = fsrmquota.New(&config.Fsrmquota)
+	collectors[hyperv.Name] = hyperv.New(&config.Hyperv)
+	collectors[iis.Name] = iis.New(&config.IIS)
+	collectors[license.Name] = license.New(&config.License)
+	collectors[logical_disk.Name] = logical_disk.New(&config.LogicalDisk)
+	collectors[logon.Name] = logon.New(&config.Logon)
+	collectors[memory.Name] = memory.New(&config.Memory)
+	collectors[mscluster_cluster.Name] = mscluster_cluster.New(&config.MsclusterCluster)
+	collectors[mscluster_network.Name] = mscluster_network.New(&config.MsclusterNetwork)
+	collectors[mscluster_node.Name] = mscluster_node.New(&config.MsclusterNode)
+	collectors[mscluster_resource.Name] = mscluster_resource.New(&config.MsclusterResource)
+	collectors[mscluster_resourcegroup.Name] = mscluster_resourcegroup.New(&config.MsclusterResourceGroup)
+	collectors[msmq.Name] = msmq.New(&config.Msmq)
+	collectors[mssql.Name] = mssql.New(&config.Mssql)
+	collectors[net.Name] = net.New(&config.Net)
+	collectors[netframework_clrexceptions.Name] = netframework_clrexceptions.New(&config.NetframeworkClrexceptions)
+	collectors[netframework_clrinterop.Name] = netframework_clrinterop.New(&config.NetframeworkClrinterop)
+	collectors[netframework_clrjit.Name] = netframework_clrjit.New(&config.NetframeworkClrjit)
+	collectors[netframework_clrloading.Name] = netframework_clrloading.New(&config.NetframeworkClrloading)
+	collectors[netframework_clrlocksandthreads.Name] = netframework_clrlocksandthreads.New(&config.NetframeworkClrlocksandthreads)
+	collectors[netframework_clrmemory.Name] = netframework_clrmemory.New(&config.NetframeworkClrmemory)
+	collectors[netframework_clrremoting.Name] = netframework_clrremoting.New(&config.NetframeworkClrremoting)
+	collectors[netframework_clrsecurity.Name] = netframework_clrsecurity.New(&config.NetframeworkClrsecurity)
+	collectors[nps.Name] = nps.New(&config.Nps)
+	collectors[os.Name] = os.New(&config.Os)
+	collectors[physical_disk.Name] = physical_disk.New(&config.PhysicalDisk)
+	collectors[printer.Name] = printer.New(&config.Printer)
+	collectors[process.Name] = process.New(&config.Process)
+	collectors[remote_fx.Name] = remote_fx.New(&config.RemoteFx)
+	collectors[scheduled_task.Name] = scheduled_task.New(&config.ScheduledTask)
+	collectors[service.Name] = service.New(&config.Service)
+	collectors[smb.Name] = smb.New(&config.SMB)
+	collectors[smbclient.Name] = smbclient.New(&config.SMBClient)
+	collectors[smtp.Name] = smtp.New(&config.SMTP)
+	collectors[system.Name] = system.New(&config.System)
+	collectors[teradici_pcoip.Name] = teradici_pcoip.New(&config.TeradiciPcoip)
+	collectors[tcp.Name] = tcp.New(&config.TCP)
+	collectors[terminal_services.Name] = terminal_services.New(&config.TerminalServices)
+	collectors[textfile.Name] = textfile.New(&config.Textfile)
+	collectors[thermalzone.Name] = thermalzone.New(&config.Thermalzone)
+	collectors[time.Name] = time.New(&config.Time)
+	collectors[vmware.Name] = vmware.New(&config.Vmware)
+	collectors[vmware_blast.Name] = vmware_blast.New(&config.VmwareBlast)
 
 	return New(collectors)
 }
@@ -158,15 +158,7 @@ func New(collectors Map) Collectors {
 	}
 }
 
-func (c *Collectors) SetLogger(logger log.Logger) {
-	c.logger = logger
-
-	for _, collector := range c.collectors {
-		collector.SetLogger(logger)
-	}
-}
-
-func (c *Collectors) SetPerfCounterQuery() error {
+func (c *Collectors) SetPerfCounterQuery(logger log.Logger) error {
 	var (
 		err error
 
@@ -177,7 +169,7 @@ func (c *Collectors) SetPerfCounterQuery() error {
 	perfCounterDependencies := make([]string, 0, len(c.collectors))
 
 	for _, collector := range c.collectors {
-		perfCounterNames, err = collector.GetPerfCounter()
+		perfCounterNames, err = collector.GetPerfCounter(logger)
 		if err != nil {
 			return err
 		}
@@ -205,11 +197,11 @@ func (c *Collectors) Enable(enabledCollectors []string) {
 }
 
 // Build To be called by the exporter for collector initialization.
-func (c *Collectors) Build() error {
+func (c *Collectors) Build(logger log.Logger) error {
 	var err error
 
 	for _, collector := range c.collectors {
-		if err = collector.Build(); err != nil {
+		if err = collector.Build(logger); err != nil {
 			return err
 		}
 	}
@@ -232,7 +224,7 @@ func (c *Collectors) Close() error {
 	errs := make([]error, 0, len(c.collectors))
 
 	for _, collector := range c.collectors {
-		if err := collector.Build(); err != nil {
+		if err := collector.Close(); err != nil {
 			errs = append(errs, err)
 		}
 	}

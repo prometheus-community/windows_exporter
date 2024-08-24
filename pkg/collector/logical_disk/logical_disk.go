@@ -34,7 +34,6 @@ var ConfigDefaults = Config{
 // A Collector is a Prometheus Collector for perflib logicalDisk metrics.
 type Collector struct {
 	config Config
-	logger log.Logger
 
 	avgReadQueue     *prometheus.Desc
 	avgWriteQueue    *prometheus.Desc
@@ -64,7 +63,7 @@ type volumeInfo struct {
 	readonly     float64
 }
 
-func New(logger log.Logger, config *Config) *Collector {
+func New(config *Config) *Collector {
 	if config == nil {
 		config = &ConfigDefaults
 	}
@@ -80,8 +79,6 @@ func New(logger log.Logger, config *Config) *Collector {
 	c := &Collector{
 		config: *config,
 	}
-
-	c.SetLogger(logger)
 
 	return c
 }
@@ -126,11 +123,7 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) SetLogger(logger log.Logger) {
-	c.logger = log.With(logger, "collector", Name)
-}
-
-func (c *Collector) GetPerfCounter() ([]string, error) {
+func (c *Collector) GetPerfCounter(_ log.Logger) ([]string, error) {
 	return []string{"LogicalDisk"}, nil
 }
 
@@ -138,7 +131,7 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build() error {
+func (c *Collector) Build(_ log.Logger) error {
 	c.information = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "info"),
 		"A metric with a constant '1' value labeled with logical disk information",
@@ -268,9 +261,10 @@ func (c *Collector) Build() error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
-	if err := c.collect(ctx, ch); err != nil {
-		_ = level.Error(c.logger).Log("msg", "failed collecting logical_disk metrics", "err", err)
+func (c *Collector) Collect(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
+	logger = log.With(logger, "collector", Name)
+	if err := c.collect(ctx, logger, ch); err != nil {
+		_ = level.Error(logger).Log("msg", "failed collecting logical_disk metrics", "err", err)
 		return err
 	}
 	return nil
@@ -299,7 +293,8 @@ type logicalDisk struct {
 	AvgDiskSecPerTransfer   float64 `perflib:"Avg. Disk sec/Transfer"`
 }
 
-func (c *Collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *Collector) collect(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
+	logger = log.With(logger, "collector", Name)
 	var (
 		err    error
 		diskID string
@@ -307,7 +302,7 @@ func (c *Collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 		dst    []logicalDisk
 	)
 
-	if err = perflib.UnmarshalObject(ctx.PerfObjects["LogicalDisk"], &dst, c.logger); err != nil {
+	if err = perflib.UnmarshalObject(ctx.PerfObjects["LogicalDisk"], &dst, logger); err != nil {
 		return err
 	}
 
@@ -320,12 +315,12 @@ func (c *Collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 
 		diskID, err = getDiskIDByVolume(volume.Name)
 		if err != nil {
-			_ = level.Warn(c.logger).Log("msg", "failed to get disk ID for "+volume.Name, "err", err)
+			_ = level.Warn(logger).Log("msg", "failed to get disk ID for "+volume.Name, "err", err)
 		}
 
 		info, err = getVolumeInfo(volume.Name)
 		if err != nil {
-			_ = level.Warn(c.logger).Log("msg", "failed to get volume information for %s"+volume.Name, "err", err)
+			_ = level.Warn(logger).Log("msg", "failed to get volume information for %s"+volume.Name, "err", err)
 		}
 
 		ch <- prometheus.MustNewConstMetric(
