@@ -17,7 +17,6 @@ var ConfigDefaults = Config{}
 // A Collector is a Prometheus Collector for WMI MSCluster_Network metrics.
 type Collector struct {
 	config Config
-	logger log.Logger
 
 	characteristics *prometheus.Desc
 	flags           *prometheus.Desc
@@ -26,7 +25,7 @@ type Collector struct {
 	state           *prometheus.Desc
 }
 
-func New(logger log.Logger, config *Config) *Collector {
+func New(config *Config) *Collector {
 	if config == nil {
 		config = &ConfigDefaults
 	}
@@ -34,8 +33,6 @@ func New(logger log.Logger, config *Config) *Collector {
 	c := &Collector{
 		config: *config,
 	}
-
-	c.SetLogger(logger)
 
 	return c
 }
@@ -48,11 +45,7 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) SetLogger(logger log.Logger) {
-	c.logger = log.With(logger, "collector", Name)
-}
-
-func (c *Collector) GetPerfCounter() ([]string, error) {
+func (c *Collector) GetPerfCounter(_ log.Logger) ([]string, error) {
 	return []string{"Memory"}, nil
 }
 
@@ -60,7 +53,7 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build() error {
+func (c *Collector) Build(_ log.Logger) error {
 	c.characteristics = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "characteristics"),
 		"Provides the characteristics of the network.",
@@ -108,9 +101,10 @@ type MSCluster_Network struct {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus metric channel.
-func (c *Collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(_ *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
+	logger = log.With(logger, "collector", Name)
 	var dst []MSCluster_Network
-	q := wmi.QueryAll(&dst, c.logger)
+	q := wmi.QueryAll(&dst, logger)
 	if err := wmi.QueryNamespace(q, &dst, "root/MSCluster"); err != nil {
 		return err
 	}

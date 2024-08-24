@@ -40,14 +40,13 @@ var ConfigDefaults = Config{
 
 type Collector struct {
 	config Config
-	logger log.Logger
 
 	printerStatus    *prometheus.Desc
 	printerJobStatus *prometheus.Desc
 	printerJobCount  *prometheus.Desc
 }
 
-func New(logger log.Logger, config *Config) *Collector {
+func New(config *Config) *Collector {
 	if config == nil {
 		config = &ConfigDefaults
 	}
@@ -63,8 +62,6 @@ func New(logger log.Logger, config *Config) *Collector {
 	c := &Collector{
 		config: *config,
 	}
-
-	c.SetLogger(logger)
 
 	return c
 }
@@ -105,15 +102,11 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 	return c
 }
 
-func (c *Collector) SetLogger(logger log.Logger) {
-	c.logger = log.With(logger, "collector", Name)
-}
-
 func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build() error {
+func (c *Collector) Build(_ log.Logger) error {
 	c.printerJobStatus = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "job_status"),
 		"A counter of printer jobs by status",
@@ -138,7 +131,7 @@ func (c *Collector) Build() error {
 
 func (c *Collector) GetName() string { return Name }
 
-func (c *Collector) GetPerfCounter() ([]string, error) { return []string{"Printer"}, nil }
+func (c *Collector) GetPerfCounter(_ log.Logger) ([]string, error) { return []string{"Printer"}, nil }
 
 type wmiPrinter struct {
 	Name                   string
@@ -152,24 +145,25 @@ type wmiPrintJob struct {
 	Status string
 }
 
-func (c *Collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric) error {
-	if err := c.collectPrinterStatus(ch); err != nil {
-		_ = level.Error(c.logger).Log("msg", "failed to collect printer status metrics", "err", err)
+func (c *Collector) Collect(_ *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
+	logger = log.With(logger, "collector", Name)
+	if err := c.collectPrinterStatus(logger, ch); err != nil {
+		_ = level.Error(logger).Log("msg", "failed to collect printer status metrics", "err", err)
 		return err
 	}
 
-	if err := c.collectPrinterJobStatus(ch); err != nil {
-		_ = level.Error(c.logger).Log("msg", "failed to collect printer job status metrics", "err", err)
+	if err := c.collectPrinterJobStatus(logger, ch); err != nil {
+		_ = level.Error(logger).Log("msg", "failed to collect printer job status metrics", "err", err)
 		return err
 	}
 
 	return nil
 }
 
-func (c *Collector) collectPrinterStatus(ch chan<- prometheus.Metric) error {
+func (c *Collector) collectPrinterStatus(logger log.Logger, ch chan<- prometheus.Metric) error {
 	var printers []wmiPrinter
 
-	q := wmi.QueryAllForClass(&printers, "win32_Printer", c.logger)
+	q := wmi.QueryAllForClass(&printers, "win32_Printer", logger)
 	if err := wmi.Query(q, &printers); err != nil {
 		return err
 	}
@@ -206,10 +200,10 @@ func (c *Collector) collectPrinterStatus(ch chan<- prometheus.Metric) error {
 	return nil
 }
 
-func (c *Collector) collectPrinterJobStatus(ch chan<- prometheus.Metric) error {
+func (c *Collector) collectPrinterJobStatus(logger log.Logger, ch chan<- prometheus.Metric) error {
 	var printJobs []wmiPrintJob
 
-	q := wmi.QueryAllForClass(&printJobs, "win32_PrintJob", c.logger)
+	q := wmi.QueryAllForClass(&printJobs, "win32_PrintJob", logger)
 	if err := wmi.Query(q, &printJobs); err != nil {
 		return err
 	}

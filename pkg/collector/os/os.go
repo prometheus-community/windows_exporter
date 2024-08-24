@@ -33,7 +33,6 @@ var ConfigDefaults = Config{}
 // A Collector is a Prometheus Collector for WMI metrics.
 type Collector struct {
 	config Config
-	logger log.Logger
 
 	osInformation           *prometheus.Desc
 	pagingFreeBytes         *prometheus.Desc
@@ -56,7 +55,7 @@ type pagingFileCounter struct {
 	UsagePeak float64 `perflib:"% Usage Peak"`
 }
 
-func New(logger log.Logger, config *Config) *Collector {
+func New(config *Config) *Collector {
 	if config == nil {
 		config = &ConfigDefaults
 	}
@@ -64,8 +63,6 @@ func New(logger log.Logger, config *Config) *Collector {
 	c := &Collector{
 		config: *config,
 	}
-
-	c.SetLogger(logger)
 
 	return c
 }
@@ -78,11 +75,7 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) SetLogger(logger log.Logger) {
-	c.logger = log.With(logger, "collector", Name)
-}
-
-func (c *Collector) GetPerfCounter() ([]string, error) {
+func (c *Collector) GetPerfCounter(_ log.Logger) ([]string, error) {
 	return []string{"Paging File"}, nil
 }
 
@@ -90,7 +83,7 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build() error {
+func (c *Collector) Build(_ log.Logger) error {
 	c.osInformation = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "info"),
 		"OperatingSystem.Caption, OperatingSystem.Version",
@@ -174,9 +167,10 @@ func (c *Collector) Build() error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
-	if err := c.collect(ctx, ch); err != nil {
-		_ = level.Error(c.logger).Log("msg", "failed collecting os metrics", "err", err)
+func (c *Collector) Collect(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
+	logger = log.With(logger, "collector", Name)
+	if err := c.collect(ctx, logger, ch); err != nil {
+		_ = level.Error(logger).Log("msg", "failed collecting os metrics", "err", err)
 		return err
 	}
 	return nil
@@ -200,7 +194,8 @@ type Win32_OperatingSystem struct {
 	Version                 string
 }
 
-func (c *Collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *Collector) collect(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
+	logger = log.With(logger, "collector", Name)
 	nwgi, err := netapi32.GetWorkstationInfo()
 	if err != nil {
 		return err
@@ -237,7 +232,7 @@ func (c *Collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 		file, err := os.Stat(fileString)
 		// For unknown reasons, Windows doesn't always create a page file. Continue collection rather than aborting.
 		if err != nil {
-			_ = level.Debug(c.logger).Log("msg", fmt.Sprintf("Failed to read page file (reason: %s): %s\n", err, fileString))
+			_ = level.Debug(logger).Log("msg", fmt.Sprintf("Failed to read page file (reason: %s): %s\n", err, fileString))
 		} else {
 			fsipf += float64(file.Size())
 		}
@@ -274,7 +269,7 @@ func (c *Collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 	}
 
 	pfc := make([]pagingFileCounter, 0)
-	if err := perflib.UnmarshalObject(ctx.PerfObjects["Paging File"], &pfc, c.logger); err != nil {
+	if err := perflib.UnmarshalObject(ctx.PerfObjects["Paging File"], &pfc, logger); err != nil {
 		return err
 	}
 
@@ -334,7 +329,7 @@ func (c *Collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metri
 			fsipf,
 		)
 	} else {
-		_ = level.Debug(c.logger).Log("msg", "Could not find HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management key. windows_os_paging_free_bytes and windows_os_paging_limit_bytes will be omitted.")
+		_ = level.Debug(logger).Log("msg", "Could not find HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management key. windows_os_paging_free_bytes and windows_os_paging_limit_bytes will be omitted.")
 	}
 	ch <- prometheus.MustNewConstMetric(
 		c.virtualMemoryFreeBytes,

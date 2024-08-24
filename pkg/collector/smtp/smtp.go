@@ -28,7 +28,6 @@ var ConfigDefaults = Config{
 
 type Collector struct {
 	config Config
-	logger log.Logger
 
 	badMailedMessagesBadPickupFileTotal     *prometheus.Desc
 	badMailedMessagesGeneralFailureTotal    *prometheus.Desc
@@ -74,7 +73,7 @@ type Collector struct {
 	routingTableLookupsTotal                *prometheus.Desc
 }
 
-func New(logger log.Logger, config *Config) *Collector {
+func New(config *Config) *Collector {
 	if config == nil {
 		config = &ConfigDefaults
 	}
@@ -90,8 +89,6 @@ func New(logger log.Logger, config *Config) *Collector {
 	c := &Collector{
 		config: *config,
 	}
-
-	c.SetLogger(logger)
 
 	return c
 }
@@ -136,11 +133,7 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) SetLogger(logger log.Logger) {
-	c.logger = log.With(logger, "collector", Name)
-}
-
-func (c *Collector) GetPerfCounter() ([]string, error) {
+func (c *Collector) GetPerfCounter(_ log.Logger) ([]string, error) {
 	return []string{"SMTP Server"}, nil
 }
 
@@ -148,8 +141,10 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build() error {
-	_ = level.Info(c.logger).Log("msg", "smtp collector is in an experimental state! Metrics for this collector have not been tested.")
+func (c *Collector) Build(logger log.Logger) error {
+	logger = log.With(logger, "collector", Name)
+
+	_ = level.Info(logger).Log("msg", "smtp collector is in an experimental state! Metrics for this collector have not been tested.")
 
 	c.badMailedMessagesBadPickupFileTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "badmailed_messages_bad_pickup_file_total"),
@@ -409,9 +404,10 @@ func (c *Collector) Build() error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
-	if err := c.collect(ctx, ch); err != nil {
-		_ = level.Error(c.logger).Log("msg", "failed collecting smtp metrics", "err", err)
+func (c *Collector) Collect(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
+	logger = log.With(logger, "collector", Name)
+	if err := c.collect(ctx, logger, ch); err != nil {
+		_ = level.Error(logger).Log("msg", "failed collecting smtp metrics", "err", err)
 		return err
 	}
 	return nil
@@ -465,9 +461,10 @@ type PerflibSMTPServer struct {
 	RoutingTableLookupsTotal                float64 `perflib:"Routing Table Lookups Total"`
 }
 
-func (c *Collector) collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *Collector) collect(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
+	logger = log.With(logger, "collector", Name)
 	var dst []PerflibSMTPServer
-	if err := perflib.UnmarshalObject(ctx.PerfObjects["SMTP Server"], &dst, c.logger); err != nil {
+	if err := perflib.UnmarshalObject(ctx.PerfObjects["SMTP Server"], &dst, logger); err != nil {
 		return err
 	}
 

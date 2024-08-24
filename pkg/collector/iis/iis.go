@@ -35,7 +35,6 @@ var ConfigDefaults = Config{
 
 type Collector struct {
 	config Config
-	logger log.Logger
 
 	info *prometheus.Desc
 
@@ -162,7 +161,7 @@ type Collector struct {
 	iisVersion simpleVersion
 }
 
-func New(logger log.Logger, config *Config) *Collector {
+func New(config *Config) *Collector {
 	if config == nil {
 		config = &ConfigDefaults
 	}
@@ -186,8 +185,6 @@ func New(logger log.Logger, config *Config) *Collector {
 	c := &Collector{
 		config: *config,
 	}
-
-	c.SetLogger(logger)
 
 	return c
 }
@@ -252,11 +249,7 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) SetLogger(logger log.Logger) {
-	c.logger = log.With(logger, "collector", Name)
-}
-
-func (c *Collector) GetPerfCounter() ([]string, error) {
+func (c *Collector) GetPerfCounter(_ log.Logger) ([]string, error) {
 	return []string{
 		"Web Service",
 		"APP_POOL_WAS",
@@ -269,8 +262,10 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build() error {
-	c.iisVersion = getIISVersion(c.logger)
+func (c *Collector) Build(logger log.Logger) error {
+	logger = log.With(logger, "collector", Name)
+
+	c.iisVersion = getIISVersion(logger)
 
 	c.info = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "info"),
@@ -932,24 +927,25 @@ func getIISVersion(logger log.Logger) simpleVersion {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
-	if err := c.collectWebService(ctx, ch); err != nil {
-		_ = level.Error(c.logger).Log("msg", "failed collecting iis metrics", "err", err)
+func (c *Collector) Collect(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
+	logger = log.With(logger, "collector", Name)
+	if err := c.collectWebService(ctx, logger, ch); err != nil {
+		_ = level.Error(logger).Log("msg", "failed collecting iis metrics", "err", err)
 		return err
 	}
 
-	if err := c.collectAPP_POOL_WAS(ctx, ch); err != nil {
-		_ = level.Error(c.logger).Log("msg", "failed collecting iis metrics", "err", err)
+	if err := c.collectAPP_POOL_WAS(ctx, logger, ch); err != nil {
+		_ = level.Error(logger).Log("msg", "failed collecting iis metrics", "err", err)
 		return err
 	}
 
-	if err := c.collectW3SVC_W3WP(ctx, ch); err != nil {
-		_ = level.Error(c.logger).Log("msg", "failed collecting iis metrics", "err", err)
+	if err := c.collectW3SVC_W3WP(ctx, logger, ch); err != nil {
+		_ = level.Error(logger).Log("msg", "failed collecting iis metrics", "err", err)
 		return err
 	}
 
-	if err := c.collectWebServiceCache(ctx, ch); err != nil {
-		_ = level.Error(c.logger).Log("msg", "failed collecting iis metrics", "err", err)
+	if err := c.collectWebServiceCache(ctx, logger, ch); err != nil {
+		_ = level.Error(logger).Log("msg", "failed collecting iis metrics", "err", err)
 		return err
 	}
 
@@ -1046,9 +1042,10 @@ func dedupIISNames[V hasGetIISName](services []V) map[string]V {
 	return webServiceDeDuplicated
 }
 
-func (c *Collector) collectWebService(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *Collector) collectWebService(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
+	logger = log.With(logger, "collector", Name)
 	var webService []perflibWebService
-	if err := perflib.UnmarshalObject(ctx.PerfObjects["Web Service"], &webService, c.logger); err != nil {
+	if err := perflib.UnmarshalObject(ctx.PerfObjects["Web Service"], &webService, logger); err != nil {
 		return err
 	}
 
@@ -1338,9 +1335,10 @@ var applicationStates = map[uint32]string{
 	7: "Delete Pending",
 }
 
-func (c *Collector) collectAPP_POOL_WAS(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *Collector) collectAPP_POOL_WAS(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
+	logger = log.With(logger, "collector", Name)
 	var APP_POOL_WAS []perflibAPP_POOL_WAS
-	if err := perflib.UnmarshalObject(ctx.PerfObjects["APP_POOL_WAS"], &APP_POOL_WAS, c.logger); err != nil {
+	if err := perflib.UnmarshalObject(ctx.PerfObjects["APP_POOL_WAS"], &APP_POOL_WAS, logger); err != nil {
 		return err
 	}
 
@@ -1515,9 +1513,10 @@ type perflibW3SVC_W3WP_IIS8 struct {
 	WebSocketConnectionsRejected float64 `perflib:"WebSocket Connections Rejected / Sec"`
 }
 
-func (c *Collector) collectW3SVC_W3WP(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *Collector) collectW3SVC_W3WP(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
+	logger = log.With(logger, "collector", Name)
 	var W3SVC_W3WP []perflibW3SVC_W3WP
-	if err := perflib.UnmarshalObject(ctx.PerfObjects["W3SVC_W3WP"], &W3SVC_W3WP, c.logger); err != nil {
+	if err := perflib.UnmarshalObject(ctx.PerfObjects["W3SVC_W3WP"], &W3SVC_W3WP, logger); err != nil {
 		return err
 	}
 
@@ -1775,7 +1774,7 @@ func (c *Collector) collectW3SVC_W3WP(ctx *types.ScrapeContext, ch chan<- promet
 
 	if c.iisVersion.major >= 8 {
 		var W3SVC_W3WP_IIS8 []perflibW3SVC_W3WP_IIS8
-		if err := perflib.UnmarshalObject(ctx.PerfObjects["W3SVC_W3WP"], &W3SVC_W3WP_IIS8, c.logger); err != nil {
+		if err := perflib.UnmarshalObject(ctx.PerfObjects["W3SVC_W3WP"], &W3SVC_W3WP_IIS8, logger); err != nil {
 			return err
 		}
 
@@ -1912,9 +1911,10 @@ type perflibWebServiceCache struct {
 	ServiceCache_OutputCacheQueriesTotal       float64
 }
 
-func (c *Collector) collectWebServiceCache(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *Collector) collectWebServiceCache(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
+	logger = log.With(logger, "collector", Name)
 	var WebServiceCache []perflibWebServiceCache
-	if err := perflib.UnmarshalObject(ctx.PerfObjects["Web Service Cache"], &WebServiceCache, c.logger); err != nil {
+	if err := perflib.UnmarshalObject(ctx.PerfObjects["Web Service Cache"], &WebServiceCache, logger); err != nil {
 		return err
 	}
 

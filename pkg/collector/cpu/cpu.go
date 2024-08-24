@@ -21,7 +21,6 @@ var ConfigDefaults = Config{}
 
 type Collector struct {
 	config Config
-	logger log.Logger
 
 	cStateSecondsTotal         *prometheus.Desc
 	timeTotal                  *prometheus.Desc
@@ -38,7 +37,7 @@ type Collector struct {
 	processorPrivilegedUtility *prometheus.Desc
 }
 
-func New(logger log.Logger, config *Config) *Collector {
+func New(config *Config) *Collector {
 	if config == nil {
 		config = &ConfigDefaults
 	}
@@ -46,8 +45,6 @@ func New(logger log.Logger, config *Config) *Collector {
 	c := &Collector{
 		config: *config,
 	}
-
-	c.SetLogger(logger)
 
 	return c
 }
@@ -60,11 +57,7 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) SetLogger(logger log.Logger) {
-	c.logger = log.With(logger, "collector", Name)
-}
-
-func (c *Collector) GetPerfCounter() ([]string, error) {
+func (c *Collector) GetPerfCounter(_ log.Logger) ([]string, error) {
 	if winversion.WindowsVersionFloat > 6.05 {
 		return []string{"Processor Information"}, nil
 	}
@@ -75,7 +68,7 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build() error {
+func (c *Collector) Build(_ log.Logger) error {
 	c.cStateSecondsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "cstate_seconds_total"),
 		"Time spent in low-power idle state",
@@ -193,12 +186,13 @@ func (c *Collector) Build() error {
 	return nil
 }
 
-func (c *Collector) Collect(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
+	logger = log.With(logger, "collector", Name)
 	if winversion.WindowsVersionFloat > 6.05 {
-		return c.CollectFull(ctx, ch)
+		return c.CollectFull(ctx, logger, ch)
 	}
 
-	return c.CollectBasic(ctx, ch)
+	return c.CollectBasic(ctx, logger, ch)
 }
 
 type perflibProcessor struct {
@@ -220,9 +214,10 @@ type perflibProcessor struct {
 	PercentUserTime       float64 `perflib:"% User Time"`
 }
 
-func (c *Collector) CollectBasic(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *Collector) CollectBasic(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
+	logger = log.With(logger, "collector", Name)
 	data := make([]perflibProcessor, 0)
-	err := perflib.UnmarshalObject(ctx.PerfObjects["Processor"], &data, c.logger)
+	err := perflib.UnmarshalObject(ctx.PerfObjects["Processor"], &data, logger)
 	if err != nil {
 		return err
 	}
@@ -329,9 +324,10 @@ type perflibProcessorInformation struct {
 	UserTimeSeconds          float64 `perflib:"% User Time"`
 }
 
-func (c *Collector) CollectFull(ctx *types.ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *Collector) CollectFull(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
+	logger = log.With(logger, "collector", Name)
 	data := make([]perflibProcessorInformation, 0)
-	err := perflib.UnmarshalObject(ctx.PerfObjects["Processor Information"], &data, c.logger)
+	err := perflib.UnmarshalObject(ctx.PerfObjects["Processor Information"], &data, logger)
 	if err != nil {
 		return err
 	}

@@ -21,7 +21,10 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 )
 
-require github.com/pkg/errors v0.9.1
+require (
+	github.com/google/uuid v1.6.0
+	github.com/pkg/errors v0.9.1
+)
 
 require (
 	github.com/Microsoft/go-winio v0.6.2 // indirect

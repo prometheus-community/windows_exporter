@@ -20,14 +20,13 @@ var ConfigDefaults = Config{}
 // A Collector is a Prometheus Collector for WMI Win32_PerfRawData_NETFramework_NETCLRInterop metrics.
 type Collector struct {
 	config Config
-	logger log.Logger
 
 	numberOfCCWs        *prometheus.Desc
 	numberOfMarshalling *prometheus.Desc
 	numberOfStubs       *prometheus.Desc
 }
 
-func New(logger log.Logger, config *Config) *Collector {
+func New(config *Config) *Collector {
 	if config == nil {
 		config = &ConfigDefaults
 	}
@@ -35,8 +34,6 @@ func New(logger log.Logger, config *Config) *Collector {
 	c := &Collector{
 		config: *config,
 	}
-
-	c.SetLogger(logger)
 
 	return c
 }
@@ -49,11 +46,7 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) SetLogger(logger log.Logger) {
-	c.logger = log.With(logger, "collector", Name)
-}
-
-func (c *Collector) GetPerfCounter() ([]string, error) {
+func (c *Collector) GetPerfCounter(_ log.Logger) ([]string, error) {
 	return []string{}, nil
 }
 
@@ -61,7 +54,7 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build() error {
+func (c *Collector) Build(_ log.Logger) error {
 	c.numberOfCCWs = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "com_callable_wrappers_total"),
 		"Displays the current number of COM callable wrappers (CCWs). A CCW is a proxy for a managed object being referenced from an unmanaged COM client.",
@@ -85,9 +78,10 @@ func (c *Collector) Build() error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric) error {
-	if err := c.collect(ch); err != nil {
-		_ = level.Error(c.logger).Log("msg", "failed collecting win32_perfrawdata_netframework_netclrinterop metrics", "err", err)
+func (c *Collector) Collect(_ *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
+	logger = log.With(logger, "collector", Name)
+	if err := c.collect(logger, ch); err != nil {
+		_ = level.Error(logger).Log("msg", "failed collecting win32_perfrawdata_netframework_netclrinterop metrics", "err", err)
 		return err
 	}
 	return nil
@@ -103,9 +97,9 @@ type Win32_PerfRawData_NETFramework_NETCLRInterop struct {
 	NumberofTLBimportsPersec uint32
 }
 
-func (c *Collector) collect(ch chan<- prometheus.Metric) error {
+func (c *Collector) collect(logger log.Logger, ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_NETFramework_NETCLRInterop
-	q := wmi.QueryAll(&dst, c.logger)
+	q := wmi.QueryAll(&dst, logger)
 	if err := wmi.Query(q, &dst); err != nil {
 		return err
 	}

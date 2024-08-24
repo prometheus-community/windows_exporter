@@ -23,7 +23,6 @@ var ConfigDefaults = Config{}
 // A Collector is a Prometheus Collector for containers metrics.
 type Collector struct {
 	config Config
-	logger log.Logger
 
 	// Presence
 	containerAvailable *prometheus.Desc
@@ -57,7 +56,7 @@ type Collector struct {
 }
 
 // New constructs a new Collector.
-func New(logger log.Logger, config *Config) *Collector {
+func New(config *Config) *Collector {
 	if config == nil {
 		config = &ConfigDefaults
 	}
@@ -65,8 +64,6 @@ func New(logger log.Logger, config *Config) *Collector {
 	c := &Collector{
 		config: *config,
 	}
-
-	c.SetLogger(logger)
 
 	return c
 }
@@ -79,11 +76,7 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) SetLogger(logger log.Logger) {
-	c.logger = log.With(logger, "collector", Name)
-}
-
-func (c *Collector) GetPerfCounter() ([]string, error) {
+func (c *Collector) GetPerfCounter(_ log.Logger) ([]string, error) {
 	return []string{}, nil
 }
 
@@ -91,7 +84,7 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build() error {
+func (c *Collector) Build(_ log.Logger) error {
 	c.containerAvailable = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "available"),
 		"Available",
@@ -205,27 +198,28 @@ func (c *Collector) Build() error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric) error {
-	if err := c.collect(ch); err != nil {
-		_ = level.Error(c.logger).Log("msg", "failed collecting collector metrics", "err", err)
+func (c *Collector) Collect(_ *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
+	logger = log.With(logger, "collector", Name)
+	if err := c.collect(logger, ch); err != nil {
+		_ = level.Error(logger).Log("msg", "failed collecting collector metrics", "err", err)
 		return err
 	}
 	return nil
 }
 
 // containerClose closes the container resource.
-func (c *Collector) containerClose(container hcsshim.Container) {
+func (c *Collector) containerClose(logger log.Logger, container hcsshim.Container) {
 	err := container.Close()
 	if err != nil {
-		_ = level.Error(c.logger).Log("err", err)
+		_ = level.Error(logger).Log("err", err)
 	}
 }
 
-func (c *Collector) collect(ch chan<- prometheus.Metric) error {
+func (c *Collector) collect(logger log.Logger, ch chan<- prometheus.Metric) error {
 	// Types Container is passed to get the containers compute systems only
 	containers, err := hcsshim.GetContainers(hcsshim.ComputeSystemQuery{Types: []string{"Container"}})
 	if err != nil {
-		_ = level.Error(c.logger).Log("msg", "Err in Getting containers", "err", err)
+		_ = level.Error(logger).Log("msg", "Err in Getting containers", "err", err)
 		return err
 	}
 
@@ -247,16 +241,16 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 		func() {
 			container, err := hcsshim.OpenContainer(containerDetails.ID)
 			if container != nil {
-				defer c.containerClose(container)
+				defer c.containerClose(logger, container)
 			}
 			if err != nil {
-				_ = level.Error(c.logger).Log("msg", "err in opening container", "containerId", containerDetails.ID, "err", err)
+				_ = level.Error(logger).Log("msg", "err in opening container", "containerId", containerDetails.ID, "err", err)
 				return
 			}
 
 			cstats, err := container.Statistics()
 			if err != nil {
-				_ = level.Error(c.logger).Log("msg", "err in fetching container Statistics", "containerId", containerDetails.ID, "err", err)
+				_ = level.Error(logger).Log("msg", "err in fetching container Statistics", "containerId", containerDetails.ID, "err", err)
 				return
 			}
 
@@ -334,19 +328,19 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 
 	hnsEndpoints, err := hcsshim.HNSListEndpointRequest()
 	if err != nil {
-		_ = level.Warn(c.logger).Log("msg", "Failed to collect network stats for containers")
+		_ = level.Warn(logger).Log("msg", "Failed to collect network stats for containers")
 		return err
 	}
 
 	if len(hnsEndpoints) == 0 {
-		_ = level.Info(c.logger).Log("msg", "No network stats for containers to collect")
+		_ = level.Info(logger).Log("msg", "No network stats for containers to collect")
 		return nil
 	}
 
 	for _, endpoint := range hnsEndpoints {
 		endpointStats, err := hcsshim.GetHNSEndpointStats(endpoint.Id)
 		if err != nil {
-			_ = level.Warn(c.logger).Log("msg", "Failed to collect network stats for interface "+endpoint.Id, "err", err)
+			_ = level.Warn(logger).Log("msg", "Failed to collect network stats for interface "+endpoint.Id, "err", err)
 			continue
 		}
 
@@ -355,7 +349,7 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 			endpointId := strings.ToUpper(endpoint.Id)
 
 			if !ok {
-				_ = level.Warn(c.logger).Log("msg", "Failed to collect network stats for container "+containerId)
+				_ = level.Warn(logger).Log("msg", "Failed to collect network stats for container "+containerId)
 				continue
 			}
 
