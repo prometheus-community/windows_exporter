@@ -6,6 +6,9 @@ package main
 
 //goland:noinspection GoUnsortedImport
 import (
+	// Its important that we do these first so that we can register with the Windows service control ASAP to avoid timeouts.
+	"github.com/prometheus-community/windows_exporter/pkg/initiate"
+
 	"context"
 	"encoding/json"
 	"errors"
@@ -19,9 +22,6 @@ import (
 	"sort"
 	"strings"
 	"time"
-
-	// Its important that we do these first so that we can register with the Windows service control ASAP to avoid timeouts.
-	"github.com/prometheus-community/windows_exporter/pkg/initiate"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/go-kit/log/level"
