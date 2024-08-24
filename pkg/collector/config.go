@@ -45,7 +45,6 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/collector/remote_fx"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/scheduled_task"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/service"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/service_info"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/smb"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/smbclient"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/smtp"
@@ -105,7 +104,6 @@ type Config struct {
 	RemoteFx                       remote_fx.Config                       `yaml:"remote_fx"`
 	ScheduledTask                  scheduled_task.Config                  `yaml:"scheduled_task"`
 	Service                        service.Config                         `yaml:"service"`
-	ServiceInfo                    service_info.Config                    `yaml:"service_info"`
 	SMB                            smb.Config                             `yaml:"smb"`
 	SMBClient                      smbclient.Config                       `yaml:"smbclient"` //nolint:tagliatelle
 	SMTP                           smtp.Config                            `yaml:"smtp"`
@@ -168,7 +166,6 @@ var ConfigDefaults = Config{
 	RemoteFx:                       remote_fx.ConfigDefaults,
 	ScheduledTask:                  scheduled_task.ConfigDefaults,
 	Service:                        service.ConfigDefaults,
-	ServiceInfo:                    service_info.ConfigDefaults,
 	SMB:                            smb.ConfigDefaults,
 	SMBClient:                      smbclient.ConfigDefaults,
 	SMTP:                           smtp.ConfigDefaults,

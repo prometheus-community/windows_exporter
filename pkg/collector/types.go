@@ -21,7 +21,7 @@ type (
 type Collector interface {
 	Build(logger log.Logger) error
 	// Close closes the collector
-	Close() error
+	Close(logger log.Logger) error
 	// GetName get the name of the collector
 	GetName() string
 	// GetPerfCounter returns the perf counter required by the collector

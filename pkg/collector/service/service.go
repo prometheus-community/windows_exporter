@@ -5,6 +5,7 @@ package service
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"strconv"
 	"unsafe"
 
@@ -19,71 +20,120 @@ import (
 
 const Name = "service"
 
-type Config struct{}
+type Config struct {
+	ServiceInclude *regexp.Regexp `yaml:"service_include"`
+	ServiceExclude *regexp.Regexp `yaml:"service_exclude"`
+}
 
-var ConfigDefaults = Config{}
-
-var apiStateValues = map[uint32]string{
-	windows.SERVICE_CONTINUE_PENDING: "continue pending",
-	windows.SERVICE_PAUSE_PENDING:    "pause pending",
-	windows.SERVICE_PAUSED:           "paused",
-	windows.SERVICE_RUNNING:          "running",
-	windows.SERVICE_START_PENDING:    "start pending",
-	windows.SERVICE_STOP_PENDING:     "stop pending",
-	windows.SERVICE_STOPPED:          "stopped",
+var ConfigDefaults = Config{
+	ServiceInclude: types.RegExpAny,
+	ServiceExclude: types.RegExpEmpty,
 }
 
 // A Collector is a Prometheus Collector for service metrics.
 type Collector struct {
 	config Config
-	logger log.Logger
 
 	state     *prometheus.Desc
 	processID *prometheus.Desc
+	info      *prometheus.Desc
+	startMode *prometheus.Desc
 
 	serviceManagerHandle *mgr.Mgr
 }
 
-func New(logger log.Logger, config *Config) *Collector {
+func New(config *Config) *Collector {
 	if config == nil {
 		config = &ConfigDefaults
+	}
+
+	if config.ServiceExclude == nil {
+		config.ServiceExclude = ConfigDefaults.ServiceExclude
+	}
+
+	if config.ServiceInclude == nil {
+		config.ServiceInclude = ConfigDefaults.ServiceInclude
 	}
 
 	c := &Collector{
 		config: *config,
 	}
 
-	c.SetLogger(logger)
-
 	return c
 }
 
-func NewWithFlags(_ *kingpin.Application) *Collector {
-	return &Collector{}
+func NewWithFlags(app *kingpin.Application) *Collector {
+	c := &Collector{
+		config: ConfigDefaults,
+	}
+
+	var serviceExclude, serviceInclude string
+
+	app.Flag(
+		"collector.service.exclude",
+		"Regexp of service to exclude. Service name (not the display name!) must both match include and not match exclude to be included.",
+	).Default(c.config.ServiceExclude.String()).StringVar(&serviceExclude)
+
+	app.Flag(
+		"collector.service.include",
+		"Regexp of service to include. Process name (not the display name!) must both match include and not match exclude to be included.",
+	).Default(c.config.ServiceInclude.String()).StringVar(&serviceInclude)
+
+	app.Action(func(*kingpin.ParseContext) error {
+		var err error
+
+		c.config.ServiceExclude, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", serviceExclude))
+		if err != nil {
+			return fmt.Errorf("collector.process.exclude: %w", err)
+		}
+
+		c.config.ServiceInclude, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", serviceInclude))
+		if err != nil {
+			return fmt.Errorf("collector.process.include: %w", err)
+		}
+
+		return nil
+	})
+
+	return c
 }
 
 func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) SetLogger(logger log.Logger) {
-	c.logger = log.With(logger, "collector", Name)
-}
-
-func (c *Collector) GetPerfCounter() ([]string, error) {
+func (c *Collector) GetPerfCounter(_ log.Logger) ([]string, error) {
 	return []string{}, nil
 }
 
-func (c *Collector) Build() error {
+func (c *Collector) Build(logger log.Logger) error {
+	logger = log.With(logger, "collector", Name)
+
+	if c.config.ServiceInclude.String() == "^(?:.*)$" && c.config.ServiceExclude.String() == "^(?:)$" {
+		_ = level.Warn(logger).Log("msg", "No filters specified for service collector. This will generate a very large number of metrics!")
+	}
+
+	c.info = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "info"),
+		"A metric with a constant '1' value labeled with service information",
+		[]string{"name", "display_name", "run_as", "path_name"},
+		nil,
+	)
 	c.state = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "state"),
 		"The state of the service (State)",
-		[]string{"name", "display_name", "status"},
+		[]string{"name", "status"},
+		nil,
+	)
+	c.startMode = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "start_mode"),
+		"The start mode of the service (StartMode)",
+		[]string{"name", "start_mode"},
 		nil,
 	)
 	c.processID = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "process_id"),
-		"Process ID of started service",
+		prometheus.BuildFQName(types.Namespace, Name, "process"),
+		"Process of started service. The value is the creation time of the process as a unix timestamp.",
 		[]string{"name", "process_id"},
 		nil,
 	)
@@ -99,9 +149,9 @@ func (c *Collector) Build() error {
 	return nil
 }
 
-func (c *Collector) Close() error {
+func (c *Collector) Close(logger log.Logger) error {
 	if err := c.serviceManagerHandle.Disconnect(); err != nil {
-		_ = level.Warn(c.logger).Log("msg", "Failed to disconnect from scm", "err", err)
+		_ = level.Warn(logger).Log("msg", "Failed to disconnect from scm", "err", err)
 	}
 
 	return nil
@@ -109,54 +159,149 @@ func (c *Collector) Close() error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric) error {
-	var err error
+func (c *Collector) Collect(_ *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
+	logger = log.With(logger, "collector", Name)
 
-	if err = c.collect(ch); err != nil {
-		_ = level.Error(c.logger).Log("msg", "failed collecting API service metrics:", "err", err)
+	if err := c.collect(logger, ch); err != nil {
+		_ = level.Error(logger).Log("msg", "failed collecting API service metrics:", "err", err)
+
+		return fmt.Errorf("failed collecting API service metrics: %w", err)
 	}
 
-	return err
+	return nil
 }
 
-func (c *Collector) collect(ch chan<- prometheus.Metric) error {
+func (c *Collector) collect(logger log.Logger, ch chan<- prometheus.Metric) error {
 	services, err := c.queryAllServices()
 	if err != nil {
-		_ = level.Warn(c.logger).Log("msg", "Failed to query services", "err", err)
+		_ = level.Warn(logger).Log("msg", "Failed to query services", "err", err)
 		return err
 	}
 
 	if services == nil {
-		_ = level.Warn(c.logger).Log("msg", "No services queried")
+		_ = level.Warn(logger).Log("msg", "No services queried")
 		return nil
 	}
 
-	var isCurrentState float64
+	// Iterate through the Services List.
+	for _, service := range services {
+		serviceName := windows.UTF16PtrToString(service.ServiceName)
+		if c.config.ServiceExclude.MatchString(serviceName) ||
+			!c.config.ServiceInclude.MatchString(serviceName) {
+			continue
+		}
 
-	for _, svc := range services {
-		for state, stateValue := range apiStateValues {
-			isCurrentState = 0.0
-			if state == svc.ServiceStatusProcess.CurrentState {
-				isCurrentState = 1.0
-			}
+		if err := c.collectService(ch, logger, service); err != nil {
+			_ = level.Warn(logger).Log("msg", "failed collecting service info", "err", err, "service", windows.UTF16PtrToString(service.ServiceName))
+		}
+	}
 
-			ch <- prometheus.MustNewConstMetric(
-				c.state,
-				prometheus.GaugeValue,
-				isCurrentState,
-				windows.UTF16PtrToString(svc.ServiceName),
-				windows.UTF16PtrToString(svc.DisplayName),
-				stateValue,
-			)
+	return nil
+}
+
+var apiStateValues = map[uint32]string{
+	windows.SERVICE_CONTINUE_PENDING: "continue pending",
+	windows.SERVICE_PAUSE_PENDING:    "pause pending",
+	windows.SERVICE_PAUSED:           "paused",
+	windows.SERVICE_RUNNING:          "running",
+	windows.SERVICE_START_PENDING:    "start pending",
+	windows.SERVICE_STOP_PENDING:     "stop pending",
+	windows.SERVICE_STOPPED:          "stopped",
+}
+
+var apiStartModeValues = map[uint32]string{
+	windows.SERVICE_AUTO_START:   "auto",
+	windows.SERVICE_BOOT_START:   "boot",
+	windows.SERVICE_DEMAND_START: "manual",
+	windows.SERVICE_DISABLED:     "disabled",
+	windows.SERVICE_SYSTEM_START: "system",
+}
+
+func (c *Collector) collectService(ch chan<- prometheus.Metric, logger log.Logger, service windows.ENUM_SERVICE_STATUS_PROCESS) error {
+	// Open connection for service handler.
+	serviceHandle, err := windows.OpenService(c.serviceManagerHandle.Handle, service.ServiceName, windows.SERVICE_QUERY_CONFIG)
+	if err != nil {
+		return fmt.Errorf("failed to open service: %w", err)
+	}
+
+	serviceNameString := windows.UTF16PtrToString(service.ServiceName)
+
+	// Create handle for each service.
+	serviceManager := &mgr.Service{Name: serviceNameString, Handle: serviceHandle}
+	defer func(serviceManager *mgr.Service) {
+		if err := serviceManager.Close(); err != nil {
+			_ = level.Warn(logger).Log("msg", "failed to close service handle", "err", err, "service", serviceNameString)
+		}
+	}(serviceManager)
+
+	// Get Service Configuration.
+	serviceConfig, err := serviceManager.Config()
+	if err != nil {
+		if !errors.Is(err, windows.ERROR_FILE_NOT_FOUND) && !errors.Is(err, windows.ERROR_MUI_FILE_NOT_FOUND) {
+			return fmt.Errorf("failed to get service configuration: %w", err)
+		}
+
+		_ = level.Debug(logger).Log("msg", "failed collecting service", "err", err, "service", serviceNameString)
+	}
+
+	ch <- prometheus.MustNewConstMetric(
+		c.info,
+		prometheus.GaugeValue,
+		1.0,
+		serviceNameString,
+		serviceConfig.DisplayName,
+		serviceConfig.ServiceStartName,
+		serviceConfig.BinaryPathName,
+	)
+
+	var (
+		isCurrentStartMode float64
+		isCurrentState     float64
+	)
+
+	for _, startMode := range apiStartModeValues {
+		isCurrentStartMode = 0.0
+		if startMode == apiStartModeValues[serviceConfig.StartType] {
+			isCurrentStartMode = 1.0
+		}
+		ch <- prometheus.MustNewConstMetric(
+			c.startMode,
+			prometheus.GaugeValue,
+			isCurrentStartMode,
+			serviceNameString,
+			startMode,
+		)
+	}
+
+	for state, stateValue := range apiStateValues {
+		isCurrentState = 0.0
+		if state == service.ServiceStatusProcess.CurrentState {
+			isCurrentState = 1.0
 		}
 
 		ch <- prometheus.MustNewConstMetric(
-			c.processID,
+			c.state,
 			prometheus.GaugeValue,
-			1.0,
-			windows.UTF16PtrToString(svc.ServiceName),
-			strconv.FormatUint(uint64(svc.ServiceStatusProcess.ProcessId), 10),
+			isCurrentState,
+			serviceNameString,
+			stateValue,
 		)
+	}
+
+	processID := strconv.FormatUint(uint64(service.ServiceStatusProcess.ProcessId), 10)
+	if processID != "0" {
+		processStartTime, err := getProcessStartTime(logger, service.ServiceStatusProcess.ProcessId)
+		if err != nil && !errors.Is(err, windows.ERROR_ACCESS_DENIED) {
+			_ = level.Warn(logger).Log("msg", "failed to get process start time", "err", err, "service", serviceNameString)
+		} else {
+			ch <- prometheus.MustNewConstMetric(
+				c.processID,
+				prometheus.GaugeValue,
+				float64(processStartTime/1_000_000_000),
+				serviceNameString,
+				processID,
+			)
+		}
 	}
 
 	return nil
@@ -205,7 +350,34 @@ func (c *Collector) queryAllServices() ([]windows.ENUM_SERVICE_STATUS_PROCESS, e
 	if servicesReturned == 0 {
 		return nil, nil
 	}
+
 	services := unsafe.Slice((*windows.ENUM_SERVICE_STATUS_PROCESS)(unsafe.Pointer(&buf[0])), int(servicesReturned))
 
 	return services, nil
+}
+
+func getProcessStartTime(logger log.Logger, pid uint32) (uint64, error) {
+	handle, err := windows.OpenProcess(windows.PROCESS_QUERY_LIMITED_INFORMATION, false, pid)
+	if err != nil {
+		return 0, fmt.Errorf("failed to open process %w", err)
+	}
+
+	defer func(handle windows.Handle) {
+		err := windows.CloseHandle(handle)
+		if err != nil {
+			_ = level.Warn(logger).Log("msg", "failed to close process handle", "err", err)
+		}
+	}(handle)
+
+	var creation windows.Filetime
+	var exit windows.Filetime
+	var krn windows.Filetime
+	var user windows.Filetime
+
+	err = windows.GetProcessTimes(handle, &creation, &exit, &krn, &user)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get process times %w", err)
+	}
+
+	return uint64(creation.Nanoseconds()), nil
 }
