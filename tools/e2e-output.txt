@@ -182,12 +182,25 @@ windows_scheduled_task_state{state="running",task="/Microsoft/Windows/Maintenanc
 windows_scheduled_task_state{state="unknown",task="/Microsoft/Windows/Maintenance/WinSAT"} 0
 # HELP windows_service_info A metric with a constant '1' value labeled with service information
 # TYPE windows_service_info gauge
-# HELP windows_service_start_mode The start mode of the service (StartMode)
-# TYPE windows_service_start_mode gauge
+windows_service_info{display_name="Themes",name="Themes",path_name="C:\\WINDOWS\\System32\\svchost.exe -k netsvcs -p",run_as="LocalSystem"} 1
 # HELP windows_service_process Process of started service. The value is the creation time of the process as a unix timestamp.
 # TYPE windows_service_process gauge
+# HELP windows_service_start_mode The start mode of the service (StartMode)
+# TYPE windows_service_start_mode gauge
+windows_service_start_mode{name="Themes",start_mode="auto"} 1
+windows_service_start_mode{name="Themes",start_mode="boot"} 0
+windows_service_start_mode{name="Themes",start_mode="disabled"} 0
+windows_service_start_mode{name="Themes",start_mode="manual"} 0
+windows_service_start_mode{name="Themes",start_mode="system"} 0
 # HELP windows_service_state The state of the service (State)
 # TYPE windows_service_state gauge
+windows_service_state{name="Themes",status="continue pending"} 0
+windows_service_state{name="Themes",status="pause pending"} 0
+windows_service_state{name="Themes",status="paused"} 0
+windows_service_state{name="Themes",status="running"} 1
+windows_service_state{name="Themes",status="start pending"} 0
+windows_service_state{name="Themes",status="stop pending"} 0
+windows_service_state{name="Themes",status="stopped"} 0
 # HELP windows_system_context_switches_total Total number of context switches (WMI source: PerfOS_System.ContextSwitchesPersec)
 # TYPE windows_system_context_switches_total counter
 # HELP windows_system_exception_dispatches_total Total number of exceptions dispatched (WMI source: PerfOS_System.ExceptionDispatchesPersec)
