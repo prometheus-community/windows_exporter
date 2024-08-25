@@ -186,6 +186,7 @@ func (coll *Prometheus) execute(logger log.Logger, name string, c Collector, ctx
 		_ = level.Error(coll.logger).Log("msg", fmt.Sprintf("collector %s failed after %fs", name, duration), "err", err)
 		return failed
 	}
+
 	_ = level.Debug(coll.logger).Log("msg", fmt.Sprintf("collector %s succeeded after %fs.", name, duration))
 	return success
 }
