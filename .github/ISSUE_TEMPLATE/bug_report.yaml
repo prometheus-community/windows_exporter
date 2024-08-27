@@ -6,6 +6,27 @@ body:
     attributes:
       value: Thanks for taking the time to fill out this bug report!
   
+  - type: markdown
+    attributes:
+      value: |-
+        > [!NOTE]
+        > If you encounter "Counter not found" issues, try to re-build 
+        > the performance counter first.
+
+        ```
+        PS C:\WINDOWS\system32> cd c:\windows\system32
+        PS C:\windows\system32> lodctr /R
+        
+        Error: Unable to rebuild performance counter setting from system backup store, error code is 2
+        PS C:\windows\system32> cd ..
+        PS C:\windows> cd syswow64
+        PS C:\windows\syswow64> lodctr /R
+        
+        Info: Successfully rebuilt performance counter setting from system backup store
+        PS C:\windows\syswow64> winmgmt.exe /RESYNCPERF
+        ```
+        
+  
   - type: textarea
     attributes:
       label: Current Behavior
