@@ -10,8 +10,7 @@ body:
     attributes:
       value: |-
         > [!NOTE]
-        > If you encounter "Counter not found" issues, try to re-build 
-        > the performance counter first.
+        > If you encounter "Counter not found" issues, try to re-build  the performance counter first.
 
         ```
         PS C:\WINDOWS\system32> cd c:\windows\system32
@@ -26,6 +25,7 @@ body:
         PS C:\windows\syswow64> winmgmt.exe /RESYNCPERF
         ```
         
+        ----
   
   - type: textarea
     attributes:
