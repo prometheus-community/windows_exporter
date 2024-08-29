@@ -29,11 +29,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/collector/logical_disk"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/logon"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/memory"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/mscluster_cluster"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/mscluster_network"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/mscluster_node"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/mscluster_resource"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/mscluster_resourcegroup"
+	"github.com/prometheus-community/windows_exporter/pkg/collector/mscluster"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/msmq"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/mssql"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/net"
@@ -111,11 +107,7 @@ func NewWithConfig(config Config) Collectors {
 	collectors[logical_disk.Name] = logical_disk.New(&config.LogicalDisk)
 	collectors[logon.Name] = logon.New(&config.Logon)
 	collectors[memory.Name] = memory.New(&config.Memory)
-	collectors[mscluster_cluster.Name] = mscluster_cluster.New(&config.MsclusterCluster)
-	collectors[mscluster_network.Name] = mscluster_network.New(&config.MsclusterNetwork)
-	collectors[mscluster_node.Name] = mscluster_node.New(&config.MsclusterNode)
-	collectors[mscluster_resource.Name] = mscluster_resource.New(&config.MsclusterResource)
-	collectors[mscluster_resourcegroup.Name] = mscluster_resourcegroup.New(&config.MsclusterResourceGroup)
+	collectors[mscluster.Name] = mscluster.New(&config.Mscluster)
 	collectors[msmq.Name] = msmq.New(&config.Msmq)
 	collectors[mssql.Name] = mssql.New(&config.Mssql)
 	collectors[net.Name] = net.New(&config.Net)
