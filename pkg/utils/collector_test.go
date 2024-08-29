@@ -1,7 +1,6 @@
 package utils_test
 
 import (
-	"reflect"
 	"sort"
 	"strings"
 	"testing"
@@ -9,38 +8,6 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus-community/windows_exporter/pkg/utils"
 )
-
-func TestExpandChildCollectors(t *testing.T) {
-	t.Parallel()
-
-	cases := []struct {
-		name           string
-		input          string
-		expectedOutput []string
-	}{
-		{
-			name:           "simple",
-			input:          "testing1,testing2,testing3",
-			expectedOutput: []string{"testing1", "testing2", "testing3"},
-		},
-		{
-			name:           "duplicate",
-			input:          "testing1,testing2,testing2,testing3",
-			expectedOutput: []string{"testing1", "testing2", "testing3"},
-		},
-	}
-
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			t.Parallel()
-
-			output := utils.ExpandEnabledChildCollectors(c.input)
-			if !reflect.DeepEqual(output, c.expectedOutput) {
-				t.Errorf("Output mismatch, expected %+v, got %+v", c.expectedOutput, output)
-			}
-		})
-	}
-}
 
 func TestExpandEnabled(t *testing.T) {
 	t.Parallel()

@@ -13,10 +13,6 @@ func BoolToFloat(b bool) float64 {
 	return 0.0
 }
 
-func HasValue(v *string) bool {
-	return !IsEmpty(v)
-}
-
 func IsEmpty(v *string) bool {
 	return v == nil || *v == ""
 }
