@@ -105,7 +105,7 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(logger log.Logger, wmiClient *wmi.Client) error {
+func (c *Collector) Build(logger log.Logger, _ *wmi.Client) error {
 	_ = level.Info(logger).
 		Log("msg", "textfile Collector directories: "+strings.Join(c.config.TextFileDirectories, ","), "collector", Name)
 

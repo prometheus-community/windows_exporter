@@ -629,7 +629,7 @@ func (c *Collector) Collect(_ *types.ScrapeContext, logger log.Logger, ch chan<-
 		_ = level.Error(logger).Log("msg", "failed collecting vmware blast thin print metrics", "err", err)
 		return err
 	}
-	if err := c.collectUsb(logger, ch); err != nil {
+	if err := c.collectUsb(ch); err != nil {
 		_ = level.Error(logger).Log("msg", "failed collecting vmware blast USB metrics", "err", err)
 		return err
 	}
@@ -1251,7 +1251,7 @@ func (c *Collector) collectThinPrint(ch chan<- prometheus.Metric) error {
 	return nil
 }
 
-func (c *Collector) collectUsb(logger log.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) collectUsb(ch chan<- prometheus.Metric) error {
 	var dst []win32_PerfRawData_Counters_VMwareBlastUSBCounters
 	if err := c.wmiClient.Query("SELECT * FROM win32_PerfRawData_Counters_VMwareBlastUSBCounters", &dst); err != nil {
 		return err

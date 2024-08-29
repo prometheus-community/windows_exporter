@@ -58,7 +58,7 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(logger log.Logger, wmiClient *wmi.Client) error {
+func (c *Collector) Build(_ log.Logger, _ *wmi.Client) error {
 	c.contextSwitchesTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "context_switches_total"),
 		"Total number of context switches (WMI source: PerfOS_System.ContextSwitchesPersec)",

@@ -61,7 +61,7 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(logger log.Logger, wmiClient *wmi.Client) error {
+func (c *Collector) Build(_ log.Logger, _ *wmi.Client) error {
 	if winversion.WindowsVersionFloat() <= 6.1 {
 		return errors.New("Windows version older than Server 2016 detected. The time collector will not run and should be disabled via CLI flags or configuration file")
 	}
