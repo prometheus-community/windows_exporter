@@ -44,7 +44,7 @@ func GetDynamicTimeZoneInformation() (DynamicTimezoneInformation, error) {
 	var tzi DynamicTimezoneInformation
 
 	r0, _, err := syscall.SyscallN(procGetDynamicTimeZoneInformationSys.Addr(), uintptr(unsafe.Pointer(&tzi)))
-	if uint32(r0) == 0xffffffff {
+	if uint32(r0) == 0xffffffff { //nolint:gosec
 		return tzi, err
 	}
 
