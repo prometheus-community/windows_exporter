@@ -74,8 +74,8 @@ func (t *NameTable) initialize() {
 
 			indexInt, _ := strconv.Atoi(index)
 
-			t.table.index[uint32(indexInt)] = desc  //nolint:gosec
-			t.table.string[desc] = uint32(indexInt) //nolint:gosec
+			t.table.index[uint32(indexInt)] = desc
+			t.table.string[desc] = uint32(indexInt)
 		}
 	})
 }

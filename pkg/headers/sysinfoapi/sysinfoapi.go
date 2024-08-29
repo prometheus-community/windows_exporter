@@ -112,7 +112,7 @@ func GlobalMemoryStatusEx() (MemoryStatus, error) {
 	mse.dwLength = (uint32)(unsafe.Sizeof(mse))
 	r1, _, err := procGlobalMemoryStatusEx.Call(uintptr(unsafe.Pointer(&mse)))
 
-	if ret := *(*bool)(unsafe.Pointer(&r1)); !ret { //nolint:gosec
+	if ret := *(*bool)(unsafe.Pointer(&r1)); !ret {
 		return MemoryStatus{}, err
 	}
 

@@ -37,7 +37,7 @@ func GetPerformanceInfo() (PerformanceInformation, error) {
 	lppi.cb = size
 	r1, _, err := procGetPerformanceInfo.Call(uintptr(unsafe.Pointer(&lppi)), uintptr(size))
 
-	if ret := *(*bool)(unsafe.Pointer(&r1)); !ret { //nolint:gosec
+	if ret := *(*bool)(unsafe.Pointer(&r1)); !ret {
 		return PerformanceInformation{}, err
 	}
 

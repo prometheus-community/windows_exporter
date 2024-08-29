@@ -81,7 +81,7 @@ func netWkstaGetInfo() (wKSTAInfo102, uint32, error) {
 	r1, _, _ := procNetWkstaGetInfo.Call(0, pLevel, uintptr(unsafe.Pointer(&lpwi)))
 	defer netApiBufferFree(lpwi)
 
-	if ret := *(*uint32)(unsafe.Pointer(&r1)); ret != 0 { //nolint:gosec
+	if ret := *(*uint32)(unsafe.Pointer(&r1)); ret != 0 {
 		return wKSTAInfo102{}, ret, errors.New(NetApiStatus[ret])
 	}
 

@@ -210,7 +210,7 @@ func queryRawData(query string) ([]byte, error) {
 	}
 
 	for {
-		bufLen := uint32(len(buffer)) //nolint:gosec
+		bufLen := uint32(len(buffer))
 
 		err := syscall.RegQueryValueEx(
 			syscall.HKEY_PERFORMANCE_DATA,

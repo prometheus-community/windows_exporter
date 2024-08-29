@@ -161,7 +161,7 @@ func WTSEnumerateSessionsEx(server syscall.Handle, logger log.Logger) ([]WTSSess
 		uintptr(server),
 		uintptr(unsafe.Pointer(&pLevel)),
 		uintptr(0),
-		uintptr(unsafe.Pointer(&sessionInfoPointer)), //nolint:gosec
+		uintptr(unsafe.Pointer(&sessionInfoPointer)),
 		uintptr(unsafe.Pointer(&count)),
 	)
 
@@ -183,7 +183,7 @@ func WTSEnumerateSessionsEx(server syscall.Handle, logger log.Logger) ([]WTSSess
 
 	sessions := make([]WTSSession, 0, count)
 	for i := range count {
-		curPtr := unsafe.Pointer(sessionInfoPointer + (uintptr(i) * sessionSize)) //nolint:gosec
+		curPtr := unsafe.Pointer(sessionInfoPointer + (uintptr(i) * sessionSize))
 		data := (*wtsSessionInfo1)(curPtr)
 
 		sessionInfo := WTSSession{
