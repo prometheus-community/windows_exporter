@@ -28,11 +28,7 @@ Name     | Description | Enabled by default
 [logical_disk](docs/collector.logical_disk.md) | Logical disks, disk I/O | &#10003;
 [logon](docs/collector.logon.md) | User logon sessions |
 [memory](docs/collector.memory.md) | Memory usage metrics |
-[mscluster_cluster](docs/collector.mscluster_cluster.md) | MSCluster cluster metrics |
-[mscluster_network](docs/collector.mscluster_network.md) | MSCluster network metrics |
-[mscluster_node](docs/collector.mscluster_node.md) | MSCluster Node metrics |
-[mscluster_resource](docs/collector.mscluster_resource.md) | MSCluster Resource metrics |
-[mscluster_resourcegroup](docs/collector.mscluster_resourcegroup.md) | MSCluster ResourceGroup metrics |
+[mscluster](docs/collector.mscluster.md) | MSCluster metrics |
 [msmq](docs/collector.msmq.md) | MSMQ queues |
 [mssql](docs/collector.mssql.md) | [SQL Server Performance Objects](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/use-sql-server-objects#SQLServerPOs) metrics  |
 [netframework_clrexceptions](docs/collector.netframework_clrexceptions.md) | .NET Framework CLR Exceptions |

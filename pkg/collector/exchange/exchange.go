@@ -5,7 +5,6 @@ package exchange
 import (
 	"fmt"
 	"os"
-	"slices"
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
@@ -14,6 +13,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/perflib"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/yusufpapurcu/wmi"
 )
 
 const Name = "exchange"
@@ -78,8 +78,6 @@ type Collector struct {
 	unreachableQueueLength                  *prometheus.Desc
 	userCount                               *prometheus.Desc
 	yieldedTasks                            *prometheus.Desc
-
-	enabledCollectors []string
 }
 
 func New(config *Config) *Collector {
@@ -179,7 +177,7 @@ func (c *Collector) Close(_ log.Logger) error {
 	return nil
 }
 
-func (c *Collector) Build(_ log.Logger) error {
+func (c *Collector) Build(_ log.Logger, _ *wmi.Client) error {
 	// desc creates a new prometheus description
 	desc := func(metricName string, description string, labels ...string) *prometheus.Desc {
 		return prometheus.NewDesc(
@@ -229,18 +227,6 @@ func (c *Collector) Build(_ log.Logger) error {
 	c.syncCommandsPerSec = desc("activesync_sync_cmds_total", "Number of sync commands processed per second. Clients use this command to synchronize items within a folder")
 	c.activeUserCountMapiHttpEmsMDB = desc("mapihttp_emsmdb_active_user_count", "Number of unique outlook users that have shown some kind of activity in the last 2 minutes")
 
-	c.enabledCollectors = make([]string, 0, len(ConfigDefaults.CollectorsEnabled))
-
-	for _, collectorName := range c.config.CollectorsEnabled {
-		if !slices.Contains(ConfigDefaults.CollectorsEnabled, collectorName) {
-			return fmt.Errorf("unknown exchange collector: %s", collectorName)
-		}
-
-		c.enabledCollectors = append(c.enabledCollectors, collectorName)
-	}
-
-	c.enabledCollectors = slices.Clip(c.enabledCollectors)
-
 	return nil
 }
 
@@ -260,7 +246,7 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, logger log.Logger, ch chan
 		"MapiHttpEmsmdb":      c.collectMapiHttpEmsmdb,
 	}
 
-	for _, collectorName := range c.enabledCollectors {
+	for _, collectorName := range c.config.CollectorsEnabled {
 		if err := collectorFuncs[collectorName](ctx, logger, ch); err != nil {
 			_ = level.Error(logger).Log("msg", "Error in "+collectorName, "err", err)
 			return err

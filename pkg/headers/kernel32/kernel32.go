@@ -43,7 +43,7 @@ type DynamicTimezoneInformation struct {
 func GetDynamicTimeZoneInformation() (DynamicTimezoneInformation, error) {
 	var tzi DynamicTimezoneInformation
 
-	r0, _, err := syscall.SyscallN(procGetDynamicTimeZoneInformationSys.Addr(), uintptr(unsafe.Pointer(&tzi)))
+	r0, _, err := procGetDynamicTimeZoneInformationSys.Call(uintptr(unsafe.Pointer(&tzi)))
 	if uint32(r0) == 0xffffffff {
 		return tzi, err
 	}

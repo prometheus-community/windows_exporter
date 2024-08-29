@@ -12,7 +12,8 @@ var (
 	procSLIsWindowsGenuineLocal = slc.NewProc("SLIsWindowsGenuineLocal")
 )
 
-// Define SL_GENUINE_STATE enumeration
+// SL_GENUINE_STATE enumeration
+//
 // https://learn.microsoft.com/en-us/windows/win32/api/slpublic/ne-slpublic-sl_genuine_state
 type SL_GENUINE_STATE uint32
 

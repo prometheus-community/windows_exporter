@@ -21,11 +21,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/collector/logical_disk"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/logon"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/memory"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/mscluster_cluster"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/mscluster_network"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/mscluster_node"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/mscluster_resource"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/mscluster_resourcegroup"
+	"github.com/prometheus-community/windows_exporter/pkg/collector/mscluster"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/msmq"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/mssql"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/net"
@@ -80,11 +76,7 @@ type Config struct {
 	LogicalDisk                    logical_disk.Config                    `yaml:"logical_disk"`
 	Logon                          logon.Config                           `yaml:"logon"`
 	Memory                         memory.Config                          `yaml:"memory"`
-	MsclusterCluster               mscluster_cluster.Config               `yaml:"mscluster_cluster"`
-	MsclusterNetwork               mscluster_network.Config               `yaml:"mscluster_network"`
-	MsclusterNode                  mscluster_node.Config                  `yaml:"mscluster_node"`
-	MsclusterResource              mscluster_resource.Config              `yaml:"mscluster_resource"`
-	MsclusterResourceGroup         mscluster_resourcegroup.Config         `yaml:"mscluster_resourcegroup"` //nolint:tagliatelle
+	Mscluster                      mscluster.Config                       `yaml:"mscluster"`
 	Msmq                           msmq.Config                            `yaml:"msmq"`
 	Mssql                          mssql.Config                           `yaml:"mssql"`
 	Net                            net.Config                             `yaml:"net"`
@@ -142,11 +134,7 @@ var ConfigDefaults = Config{
 	LogicalDisk:                    logical_disk.ConfigDefaults,
 	Logon:                          logon.ConfigDefaults,
 	Memory:                         memory.ConfigDefaults,
-	MsclusterCluster:               mscluster_cluster.ConfigDefaults,
-	MsclusterNetwork:               mscluster_network.ConfigDefaults,
-	MsclusterNode:                  mscluster_node.ConfigDefaults,
-	MsclusterResource:              mscluster_resource.ConfigDefaults,
-	MsclusterResourceGroup:         mscluster_resourcegroup.ConfigDefaults,
+	Mscluster:                      mscluster.ConfigDefaults,
 	Msmq:                           msmq.ConfigDefaults,
 	Mssql:                          mssql.ConfigDefaults,
 	Net:                            net.ConfigDefaults,

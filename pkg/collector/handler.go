@@ -64,7 +64,7 @@ func (c *Collectors) BuildServeHTTP(logger log.Logger, disableExporterMetrics bo
 		if err != nil {
 			_ = level.Warn(logger).Log("msg", "Couldn't create filtered metrics handler", "err", err)
 			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte(fmt.Sprintf("Couldn't create filtered metrics handler: %s", err))) //nolint:errcheck
+			_, _ = w.Write([]byte(fmt.Sprintf("Couldn't create filtered metrics handler: %s", err)))
 			return
 		}
 

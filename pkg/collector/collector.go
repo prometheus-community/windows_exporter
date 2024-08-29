@@ -4,6 +4,7 @@ package collector
 
 import (
 	"errors"
+	"fmt"
 	"slices"
 	"strings"
 
@@ -29,11 +30,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/collector/logical_disk"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/logon"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/memory"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/mscluster_cluster"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/mscluster_network"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/mscluster_node"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/mscluster_resource"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/mscluster_resourcegroup"
+	"github.com/prometheus-community/windows_exporter/pkg/collector/mscluster"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/msmq"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/mssql"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/net"
@@ -67,10 +64,11 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/collector/vmware_blast"
 	"github.com/prometheus-community/windows_exporter/pkg/perflib"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
+	"github.com/yusufpapurcu/wmi"
 )
 
 // NewWithFlags To be called by the exporter for collector initialization before running kingpin.Parse.
-func NewWithFlags(app *kingpin.Application) Collectors {
+func NewWithFlags(app *kingpin.Application) *Collectors {
 	collectors := map[string]Collector{}
 
 	for name, builder := range BuildersWithFlags {
@@ -80,16 +78,10 @@ func NewWithFlags(app *kingpin.Application) Collectors {
 	return New(collectors)
 }
 
-func NewBuilderWithFlags[C Collector](fn BuilderWithFlags[C]) BuilderWithFlags[Collector] {
-	return func(app *kingpin.Application) Collector {
-		return fn(app)
-	}
-}
-
 // NewWithConfig To be called by the external libraries for collector initialization without running kingpin.Parse
 //
 //goland:noinspection GoUnusedExportedFunction
-func NewWithConfig(config Config) Collectors {
+func NewWithConfig(config Config) *Collectors {
 	collectors := map[string]Collector{}
 	collectors[ad.Name] = ad.New(&config.AD)
 	collectors[adcs.Name] = adcs.New(&config.ADCS)
@@ -111,11 +103,7 @@ func NewWithConfig(config Config) Collectors {
 	collectors[logical_disk.Name] = logical_disk.New(&config.LogicalDisk)
 	collectors[logon.Name] = logon.New(&config.Logon)
 	collectors[memory.Name] = memory.New(&config.Memory)
-	collectors[mscluster_cluster.Name] = mscluster_cluster.New(&config.MsclusterCluster)
-	collectors[mscluster_network.Name] = mscluster_network.New(&config.MsclusterNetwork)
-	collectors[mscluster_node.Name] = mscluster_node.New(&config.MsclusterNode)
-	collectors[mscluster_resource.Name] = mscluster_resource.New(&config.MsclusterResource)
-	collectors[mscluster_resourcegroup.Name] = mscluster_resourcegroup.New(&config.MsclusterResourceGroup)
+	collectors[mscluster.Name] = mscluster.New(&config.Mscluster)
 	collectors[msmq.Name] = msmq.New(&config.Msmq)
 	collectors[mssql.Name] = mssql.New(&config.Mssql)
 	collectors[net.Name] = net.New(&config.Net)
@@ -152,9 +140,12 @@ func NewWithConfig(config Config) Collectors {
 }
 
 // New To be called by the external libraries for collector initialization.
-func New(collectors Map) Collectors {
-	return Collectors{
+func New(collectors Map) *Collectors {
+	return &Collectors{
 		collectors: collectors,
+		wmiClient: &wmi.Client{
+			AllowMissingFields: true,
+		},
 	}
 }
 
@@ -200,9 +191,14 @@ func (c *Collectors) Enable(enabledCollectors []string) {
 func (c *Collectors) Build(logger log.Logger) error {
 	var err error
 
+	c.wmiClient.SWbemServicesClient, err = wmi.InitializeSWbemServices(c.wmiClient)
+	if err != nil {
+		return fmt.Errorf("initialize SWbemServices: %w", err)
+	}
+
 	for _, collector := range c.collectors {
-		if err = collector.Build(logger); err != nil {
-			return err
+		if err = collector.Build(logger, c.wmiClient); err != nil {
+			return fmt.Errorf("error build collector %s: %w", collector.GetName(), err)
 		}
 	}
 
@@ -225,6 +221,12 @@ func (c *Collectors) Close() error {
 
 	for _, collector := range c.collectors {
 		if err := collector.Close(nil); err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	if c.wmiClient != nil && c.wmiClient.SWbemServicesClient != nil {
+		if err := c.wmiClient.SWbemServicesClient.Close(); err != nil {
 			errs = append(errs, err)
 		}
 	}

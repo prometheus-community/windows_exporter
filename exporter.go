@@ -32,7 +32,6 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/log/flag"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus-community/windows_exporter/pkg/utils"
-	"github.com/prometheus-community/windows_exporter/pkg/wmi"
 	"github.com/prometheus/common/version"
 	"github.com/prometheus/exporter-toolkit/web"
 	webflag "github.com/prometheus/exporter-toolkit/web/kingpinflag"
@@ -88,7 +87,7 @@ func main() {
 			"config.file",
 			"YAML configuration file to use. Values set in this file will be overridden by CLI flags.",
 		).String()
-		insecure_skip_verify = app.Flag(
+		insecureSkipVerify = app.Flag(
 			"config.file.insecure-skip-verify",
 			"Skip TLS verification in loading YAML configuration.",
 		).Default("false").Bool()
@@ -148,7 +147,7 @@ func main() {
 	_ = level.Debug(logger).Log("msg", "Logging has Started")
 
 	if *configFile != "" {
-		resolver, err := config.NewResolver(*configFile, logger, *insecure_skip_verify)
+		resolver, err := config.NewResolver(*configFile, logger, *insecureSkipVerify)
 		if err != nil {
 			_ = level.Error(logger).Log("msg", "could not load config file", "err", err)
 			os.Exit(1)
@@ -194,11 +193,6 @@ func main() {
 			_ = level.Error(logger).Log("msg", "failed to set process priority", "err", err)
 			os.Exit(1)
 		}
-	}
-
-	if err = wmi.InitWbem(logger); err != nil {
-		_ = level.Error(logger).Log("err", err)
-		os.Exit(1)
 	}
 
 	enabledCollectorList := utils.ExpandEnabledCollectors(*enabledCollectors)

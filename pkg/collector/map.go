@@ -1,6 +1,7 @@
 package collector
 
 import (
+	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/ad"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/adcs"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/adfs"
@@ -21,11 +22,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/collector/logical_disk"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/logon"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/memory"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/mscluster_cluster"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/mscluster_network"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/mscluster_node"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/mscluster_resource"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/mscluster_resourcegroup"
+	"github.com/prometheus-community/windows_exporter/pkg/collector/mscluster"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/msmq"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/mssql"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/net"
@@ -60,6 +57,12 @@ import (
 	"golang.org/x/exp/maps"
 )
 
+func NewBuilderWithFlags[C Collector](fn BuilderWithFlags[C]) BuilderWithFlags[Collector] {
+	return func(app *kingpin.Application) Collector {
+		return fn(app)
+	}
+}
+
 var BuildersWithFlags = map[string]BuilderWithFlags[Collector]{
 	ad.Name:                              NewBuilderWithFlags(ad.NewWithFlags),
 	adcs.Name:                            NewBuilderWithFlags(adcs.NewWithFlags),
@@ -81,11 +84,7 @@ var BuildersWithFlags = map[string]BuilderWithFlags[Collector]{
 	logical_disk.Name:                    NewBuilderWithFlags(logical_disk.NewWithFlags),
 	logon.Name:                           NewBuilderWithFlags(logon.NewWithFlags),
 	memory.Name:                          NewBuilderWithFlags(memory.NewWithFlags),
-	mscluster_cluster.Name:               NewBuilderWithFlags(mscluster_cluster.NewWithFlags),
-	mscluster_network.Name:               NewBuilderWithFlags(mscluster_network.NewWithFlags),
-	mscluster_node.Name:                  NewBuilderWithFlags(mscluster_node.NewWithFlags),
-	mscluster_resource.Name:              NewBuilderWithFlags(mscluster_resource.NewWithFlags),
-	mscluster_resourcegroup.Name:         NewBuilderWithFlags(mscluster_resourcegroup.NewWithFlags),
+	mscluster.Name:                       NewBuilderWithFlags(mscluster.NewWithFlags),
 	msmq.Name:                            NewBuilderWithFlags(msmq.NewWithFlags),
 	mssql.Name:                           NewBuilderWithFlags(mssql.NewWithFlags),
 	net.Name:                             NewBuilderWithFlags(net.NewWithFlags),
