@@ -63,7 +63,7 @@ func (c *Collector) Close() error {
 
 func (c *Collector) Build(_ log.Logger, _ *wmi.Client) error {
 	if winversion.WindowsVersionFloat() <= 6.1 {
-		return errors.New("Windows version older than Server 2016 detected. The time collector will not run and should be disabled via CLI flags or configuration file")
+		return errors.New("windows version older than Server 2016 detected. The time collector will not run and should be disabled via CLI flags or configuration file")
 	}
 
 	c.clockFrequencyAdjustmentPPBTotal = prometheus.NewDesc(

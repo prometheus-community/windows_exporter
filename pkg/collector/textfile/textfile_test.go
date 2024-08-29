@@ -98,7 +98,7 @@ func TestDuplicateMetricEntry(t *testing.T) {
 		Metric: []*dto.Metric{&metric1, &metric2},
 	}
 
-	duplicateFamily := []*dto.MetricFamily{}
+	var duplicateFamily []*dto.MetricFamily
 	duplicateFamily = append(duplicateFamily, &duplicate)
 
 	// Ensure detection for duplicate metrics
