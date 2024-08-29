@@ -27,14 +27,12 @@ type Config struct {
 	ProcessInclude      *regexp.Regexp `yaml:"process_include"`
 	ProcessExclude      *regexp.Regexp `yaml:"process_exclude"`
 	EnableWorkerProcess bool           `yaml:"enable_iis_worker_process"` //nolint:tagliatelle
-	EnableReportOwner   bool           `yaml:"enable_report_owner"`
 }
 
 var ConfigDefaults = Config{
 	ProcessInclude:      types.RegExpAny,
 	ProcessExclude:      types.RegExpEmpty,
 	EnableWorkerProcess: false,
-	EnableReportOwner:   false,
 }
 
 type Collector struct {
