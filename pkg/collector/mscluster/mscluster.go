@@ -257,8 +257,7 @@ func (c *Collector) Build(_ log.Logger, wmiClient *wmi.Client) error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(_ *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
-	logger = log.With(logger, "collector", Name)
+func (c *Collector) Collect(_ *types.ScrapeContext, _ log.Logger, ch chan<- prometheus.Metric) error {
 	if len(c.config.CollectorsEnabled) == 0 {
 		return nil
 	}

@@ -263,7 +263,7 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(logger log.Logger, wmiClient *wmi.Client) error {
+func (c *Collector) Build(logger log.Logger, _ *wmi.Client) error {
 	logger = log.With(logger, "collector", Name)
 
 	c.iisVersion = getIISVersion(logger)
