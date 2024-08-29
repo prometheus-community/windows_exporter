@@ -1,6 +1,7 @@
 package collector
 
 import (
+	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/ad"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/adcs"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/adfs"
@@ -55,6 +56,12 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/collector/vmware_blast"
 	"golang.org/x/exp/maps"
 )
+
+func NewBuilderWithFlags[C Collector](fn BuilderWithFlags[C]) BuilderWithFlags[Collector] {
+	return func(app *kingpin.Application) Collector {
+		return fn(app)
+	}
+}
 
 var BuildersWithFlags = map[string]BuilderWithFlags[Collector]{
 	ad.Name:                              NewBuilderWithFlags(ad.NewWithFlags),

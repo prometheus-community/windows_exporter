@@ -15,8 +15,8 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/headers/wtsapi32"
 	"github.com/prometheus-community/windows_exporter/pkg/perflib"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
-	"github.com/prometheus-community/windows_exporter/pkg/wmi"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/yusufpapurcu/wmi"
 )
 
 const (
@@ -32,10 +32,9 @@ type Win32_ServerFeature struct {
 	ID uint32
 }
 
-func isConnectionBrokerServer(logger log.Logger) bool {
+func isConnectionBrokerServer(logger log.Logger, wmiClient *wmi.Client) bool {
 	var dst []Win32_ServerFeature
-	q := wmi.QueryAll(&dst, logger)
-	if err := wmi.Query(q, &dst); err != nil {
+	if err := wmiClient.Query("SELECT * FROM Win32_ServerFeature", &dst); err != nil {
 		return false
 	}
 	for _, d := range dst {
@@ -111,10 +110,10 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(logger log.Logger) error {
+func (c *Collector) Build(logger log.Logger, wmiClient *wmi.Client) error {
 	logger = log.With(logger, "collector", Name)
 
-	c.connectionBrokerEnabled = isConnectionBrokerServer(logger)
+	c.connectionBrokerEnabled = isConnectionBrokerServer(logger, wmiClient)
 
 	c.sessionInfo = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "session_info"),

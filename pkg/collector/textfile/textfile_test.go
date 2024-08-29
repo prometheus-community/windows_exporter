@@ -1,7 +1,7 @@
 package textfile
 
 import (
-	"io"
+	"errors"
 	"strings"
 	"testing"
 

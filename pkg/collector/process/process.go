@@ -15,8 +15,8 @@ import (
 	"github.com/go-kit/log/level"
 	"github.com/prometheus-community/windows_exporter/pkg/perflib"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
-	"github.com/prometheus-community/windows_exporter/pkg/wmi"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/yusufpapurcu/wmi"
 	"golang.org/x/sys/windows"
 )
 
@@ -37,7 +37,8 @@ var ConfigDefaults = Config{
 }
 
 type Collector struct {
-	config Config
+	config    Config
+	wmiClient *wmi.Client
 
 	lookupCache map[string]string
 
@@ -136,8 +137,14 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(logger log.Logger) error {
+func (c *Collector) Build(logger log.Logger, wmiClient *wmi.Client) error {
 	logger = log.With(logger, "collector", Name)
+
+	if wmiClient == nil || wmiClient.SWbemServicesClient == nil {
+		return errors.New("wmiClient or SWbemServicesClient is nil")
+	}
+
+	c.wmiClient = wmiClient
 
 	if c.config.ProcessInclude.String() == "^(?:.*)$" && c.config.ProcessExclude.String() == "^(?:)$" {
 		_ = level.Warn(logger).Log("msg", "No filters specified for process collector. This will generate a very large number of metrics!")
@@ -291,8 +298,7 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, logger log.Logger, ch chan
 
 	var workerProcesses []WorkerProcess
 	if c.config.EnableWorkerProcess {
-		queryWorkerProcess := wmi.QueryAllForClass(&workerProcesses, "WorkerProcess", logger)
-		if err := wmi.QueryNamespace(queryWorkerProcess, &workerProcesses, "root\\WebAdministration"); err != nil {
+		if err := c.wmiClient.Query("SELECT * FROM WorkerProcess", &workerProcesses, nil, "root\\WebAdministration"); err != nil {
 			_ = level.Debug(logger).Log("msg", "Could not query WebAdministration namespace for IIS worker processes", "err", err)
 		}
 	}

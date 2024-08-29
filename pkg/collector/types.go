@@ -5,10 +5,12 @@ import (
 	"github.com/go-kit/log"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/yusufpapurcu/wmi"
 )
 
 type Collectors struct {
 	collectors       Map
+	wmiClient        *wmi.Client
 	perfCounterQuery string
 }
 
@@ -19,7 +21,7 @@ type (
 
 // Collector interface that a collector has to implement.
 type Collector interface {
-	Build(logger log.Logger) error
+	Build(logger log.Logger, wmiClient *wmi.Client) error
 	// Close closes the collector
 	Close() error
 	// GetName get the name of the collector

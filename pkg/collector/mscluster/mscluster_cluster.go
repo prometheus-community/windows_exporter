@@ -1,9 +1,7 @@
 package mscluster
 
 import (
-	"github.com/go-kit/log"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
-	"github.com/prometheus-community/windows_exporter/pkg/wmi"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -558,10 +556,9 @@ func (c *Collector) buildCluster() {
 	)
 }
 
-func (c *Collector) collectCluster(logger log.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) collectCluster(ch chan<- prometheus.Metric) error {
 	var dst []msClusterCluster
-	q := wmi.QueryAllForClass(&dst, "MSCluster_Cluster", logger)
-	if err := wmi.QueryNamespace(q, &dst, "root/MSCluster"); err != nil {
+	if err := c.wmiClient.Query("SELECT * FROM MSCluster_Cluster", &dst, nil, "root/MSCluster"); err != nil {
 		return err
 	}
 
