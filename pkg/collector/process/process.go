@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"unsafe"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/go-kit/log"
@@ -42,6 +43,7 @@ type Collector struct {
 
 	lookupCache map[string]string
 
+	info              *prometheus.Desc
 	cpuTimeTotal      *prometheus.Desc
 	handleCount       *prometheus.Desc
 	ioBytesTotal      *prometheus.Desc
@@ -101,11 +103,6 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 		"Enable IIS worker process name queries. May cause the collector to leak memory.",
 	).Default(strconv.FormatBool(c.config.EnableWorkerProcess)).BoolVar(&c.config.EnableWorkerProcess)
 
-	app.Flag(
-		"collector.process.report-owner",
-		"Enable reporting of process owner.",
-	).Default(strconv.FormatBool(c.config.EnableReportOwner)).BoolVar(&c.config.EnableReportOwner)
-
 	app.Action(func(*kingpin.ParseContext) error {
 		var err error
 
@@ -150,99 +147,101 @@ func (c *Collector) Build(logger log.Logger, wmiClient *wmi.Client) error {
 		_ = level.Warn(logger).Log("msg", "No filters specified for process collector. This will generate a very large number of metrics!")
 	}
 
-	commonLabels := make([]string, 0)
-	if c.config.EnableReportOwner {
-		commonLabels = []string{"owner"}
-	}
+	c.info = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "info"),
+		"Process information.",
+		[]string{"process", "process_id", "creating_process_id", "owner", "cmdline"},
+		nil,
+	)
 
 	c.startTime = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "start_time"),
 		"Time of process start.",
-		append(commonLabels, "process", "process_id", "creating_process_id"),
+		[]string{"process", "process_id"},
 		nil,
 	)
 	c.cpuTimeTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "cpu_time_total"),
 		"Returns elapsed time that all of the threads of this process used the processor to execute instructions by mode (privileged, user).",
-		append(commonLabels, "process", "process_id", "creating_process_id", "mode"),
+		[]string{"process", "process_id", "mode"},
 		nil,
 	)
 	c.handleCount = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "handles"),
 		"Total number of handles the process has open. This number is the sum of the handles currently open by each thread in the process.",
-		append(commonLabels, "process", "process_id", "creating_process_id"),
+		[]string{"process", "process_id"},
 		nil,
 	)
 	c.ioBytesTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "io_bytes_total"),
 		"Bytes issued to I/O operations in different modes (read, write, other).",
-		append(commonLabels, "process", "process_id", "creating_process_id", "mode"),
+		[]string{"process", "process_id", "mode"},
 		nil,
 	)
 	c.ioOperationsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "io_operations_total"),
 		"I/O operations issued in different modes (read, write, other).",
-		append(commonLabels, "process", "process_id", "creating_process_id", "mode"),
+		[]string{"process", "process_id", "mode"},
 		nil,
 	)
 	c.pageFaultsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "page_faults_total"),
 		"Page faults by the threads executing in this process.",
-		append(commonLabels, "process", "process_id", "creating_process_id"),
+		[]string{"process", "process_id"},
 		nil,
 	)
 	c.pageFileBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "page_file_bytes"),
 		"Current number of bytes this process has used in the paging file(s).",
-		append(commonLabels, "process", "process_id", "creating_process_id"),
+		[]string{"process", "process_id"},
 		nil,
 	)
 	c.poolBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "pool_bytes"),
 		"Pool Bytes is the last observed number of bytes in the paged or nonpaged pool.",
-		append(commonLabels, "process", "process_id", "creating_process_id", "pool"),
+		[]string{"process", "process_id", "pool"},
 		nil,
 	)
 	c.priorityBase = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "priority_base"),
 		"Current base priority of this process. Threads within a process can raise and lower their own base priority relative to the process base priority of the process.",
-		append(commonLabels, "process", "process_id", "creating_process_id"),
+		[]string{"process", "process_id"},
 		nil,
 	)
 	c.privateBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "private_bytes"),
 		"Current number of bytes this process has allocated that cannot be shared with other processes.",
-		append(commonLabels, "process", "process_id", "creating_process_id"),
+		[]string{"process", "process_id"},
 		nil,
 	)
 	c.threadCount = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "threads"),
 		"Number of threads currently active in this process.",
-		append(commonLabels, "process", "process_id", "creating_process_id"),
+		[]string{"process", "process_id"},
 		nil,
 	)
 	c.virtualBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "virtual_bytes"),
 		"Current size, in bytes, of the virtual address space that the process is using.",
-		append(commonLabels, "process", "process_id", "creating_process_id"),
+		[]string{"process", "process_id"},
 		nil,
 	)
 	c.workingSetPrivate = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "working_set_private_bytes"),
 		"Size of the working set, in bytes, that is use for this process only and not shared nor shareable by other processes.",
-		append(commonLabels, "process", "process_id", "creating_process_id"),
+		[]string{"process", "process_id"},
 		nil,
 	)
 	c.workingSetPeak = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "working_set_peak_bytes"),
 		"Maximum size, in bytes, of the Working Set of this process at any point in time. The Working Set is the set of memory pages touched recently by the threads in the process.",
-		append(commonLabels, "process", "process_id", "creating_process_id"),
+		[]string{"process", "process_id"},
 		nil,
 	)
 	c.workingSet = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "working_set_bytes"),
 		"Maximum number of bytes in the working set of this process at any point in time. The working set is the set of memory pages touched recently by the threads in the process.",
-		append(commonLabels, "process", "process_id", "creating_process_id"),
+		[]string{"process", "process_id"},
 		nil,
 	)
 
@@ -303,8 +302,6 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, logger log.Logger, ch chan
 		}
 	}
 
-	var owner string
-
 	for _, process := range data {
 		if process.Name == "_Total" ||
 			c.config.ProcessExclude.MatchString(process.Name) ||
@@ -326,164 +323,170 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, logger log.Logger, ch chan
 			}
 		}
 
-		labels := make([]string, 0, 4)
-
-		if c.config.EnableReportOwner {
-			owner, err = c.getProcessOwner(int(process.IDProcess))
-			if err != nil {
-				owner = "unknown"
-			}
-
-			labels = []string{owner}
+		owner, err := c.getProcessOwner(logger, uint32(process.IDProcess))
+		if err != nil {
+			_ = level.Debug(logger).Log("msg", "Failed to get process owner", "pid", pid, "err", err)
+			owner = "unknown"
 		}
 
-		labels = append(labels, processName, pid, parentPID)
+		cmdLine, err := c.getCmdLine(logger, uint32(process.IDProcess))
+		if err != nil {
+			_ = level.Debug(logger).Log("msg", "Failed to get cmdline", "pid", pid, "err", err)
+			cmdLine = ""
+		}
+
+		ch <- prometheus.MustNewConstMetric(
+			c.info,
+			prometheus.GaugeValue,
+			1.0,
+			processName, pid, parentPID, owner, cmdLine,
+		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.startTime,
 			prometheus.GaugeValue,
 			process.ElapsedTime,
-			labels...,
+			processName, pid,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.handleCount,
 			prometheus.GaugeValue,
 			process.HandleCount,
-			labels...,
+			processName, pid,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.cpuTimeTotal,
 			prometheus.CounterValue,
 			process.PercentPrivilegedTime,
-			append(labels, "privileged")...,
+			processName, pid, "privileged",
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.cpuTimeTotal,
 			prometheus.CounterValue,
 			process.PercentUserTime,
-			append(labels, "user")...,
+			processName, pid, "user",
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.ioBytesTotal,
 			prometheus.CounterValue,
 			process.IOOtherBytesPerSec,
-			append(labels, "other")...,
+			processName, pid, "other",
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.ioOperationsTotal,
 			prometheus.CounterValue,
 			process.IOOtherOperationsPerSec,
-			append(labels, "other")...,
+			processName, pid, "other",
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.ioBytesTotal,
 			prometheus.CounterValue,
 			process.IOReadBytesPerSec,
-			append(labels, "read")...,
+			processName, pid, "read",
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.ioOperationsTotal,
 			prometheus.CounterValue,
 			process.IOReadOperationsPerSec,
-			append(labels, "read")...,
+			processName, pid, "read",
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.ioBytesTotal,
 			prometheus.CounterValue,
 			process.IOWriteBytesPerSec,
-			append(labels, "write")...,
+			processName, pid, "write",
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.ioOperationsTotal,
 			prometheus.CounterValue,
 			process.IOWriteOperationsPerSec,
-			append(labels, "write")...,
+			processName, pid, "write",
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.pageFaultsTotal,
 			prometheus.CounterValue,
 			process.PageFaultsPerSec,
-			labels...,
+			processName, pid,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.pageFileBytes,
 			prometheus.GaugeValue,
 			process.PageFileBytes,
-			labels...,
+			processName, pid,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.poolBytes,
 			prometheus.GaugeValue,
 			process.PoolNonPagedBytes,
-			append(labels, "nonpaged")...,
+			processName, pid, "nonpaged",
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.poolBytes,
 			prometheus.GaugeValue,
 			process.PoolPagedBytes,
-			append(labels, "paged")...,
+			processName, pid, "paged",
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.priorityBase,
 			prometheus.GaugeValue,
 			process.PriorityBase,
-			labels...,
+			processName, pid,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.privateBytes,
 			prometheus.GaugeValue,
 			process.PrivateBytes,
-			labels...,
+			processName, pid,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.threadCount,
 			prometheus.GaugeValue,
 			process.ThreadCount,
-			labels...,
+			processName, pid,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualBytes,
 			prometheus.GaugeValue,
 			process.VirtualBytes,
-			labels...,
+			processName, pid,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.workingSetPrivate,
 			prometheus.GaugeValue,
 			process.WorkingSetPrivate,
-			labels...,
+			processName, pid,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.workingSetPeak,
 			prometheus.GaugeValue,
 			process.WorkingSetPeak,
-			labels...,
+			processName, pid,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.workingSet,
 			prometheus.GaugeValue,
 			process.WorkingSet,
-			labels...,
+			processName, pid,
 		)
 	}
 
@@ -491,8 +494,8 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, logger log.Logger, ch chan
 }
 
 // ref: https://github.com/microsoft/hcsshim/blob/8beabacfc2d21767a07c20f8dd5f9f3932dbf305/internal/uvm/stats.go#L25
-func (c *Collector) getProcessOwner(pid int) (string, error) {
-	p, err := windows.OpenProcess(windows.PROCESS_QUERY_LIMITED_INFORMATION, false, uint32(pid))
+func (c *Collector) getProcessOwner(logger log.Logger, pid uint32) (string, error) {
+	p, err := windows.OpenProcess(windows.PROCESS_QUERY_LIMITED_INFORMATION, false, pid)
 	if errors.Is(err, syscall.Errno(0x57)) { // invalid parameter, for PIDs that don't exist
 		return "", errors.New("process not found")
 	}
@@ -501,7 +504,11 @@ func (c *Collector) getProcessOwner(pid int) (string, error) {
 		return "", fmt.Errorf("OpenProcess: %w", err)
 	}
 
-	defer windows.Close(p)
+	defer func(handle windows.Handle) {
+		if err := windows.Close(handle); err != nil {
+			_ = level.Warn(logger).Log("msg", "CloseHandle failed", "err", err)
+		}
+	}(p)
 
 	var tok windows.Token
 	if err = windows.OpenProcessToken(p, windows.TOKEN_QUERY, &tok); err != nil {
@@ -526,4 +533,60 @@ func (c *Collector) getProcessOwner(pid int) (string, error) {
 	}
 
 	return c.lookupCache[sid], nil
+}
+
+func (c *Collector) getCmdLine(logger log.Logger, pid uint32) (string, error) {
+	// Open the process with QUERY_INFORMATION and VM_READ permissions
+	hProcess, err := windows.OpenProcess(windows.PROCESS_QUERY_INFORMATION|windows.PROCESS_VM_READ, false, pid)
+	if err != nil {
+		return "", err
+	}
+
+	defer func(hProcess windows.Handle) {
+		if err := windows.CloseHandle(hProcess); err != nil {
+			_ = level.Warn(logger).Log("msg", "CloseHandle failed", "err", err)
+		}
+	}(hProcess)
+
+	// Get the process environment block (PEB) address
+	var pbi windows.PROCESS_BASIC_INFORMATION
+	retLen := uint32(unsafe.Sizeof(pbi))
+	if err := windows.NtQueryInformationProcess(hProcess, windows.ProcessBasicInformation, unsafe.Pointer(&pbi), retLen, &retLen); err != nil {
+		return "", err
+	}
+
+	peb := windows.PEB{}
+	err = windows.ReadProcessMemory(hProcess,
+		uintptr(unsafe.Pointer(pbi.PebBaseAddress)),
+		(*byte)(unsafe.Pointer(&peb)),
+		uintptr(unsafe.Sizeof(peb)),
+		nil,
+	)
+	if err != nil {
+		return "", err
+	}
+
+	processParameters := windows.RTL_USER_PROCESS_PARAMETERS{}
+	err = windows.ReadProcessMemory(hProcess,
+		uintptr(unsafe.Pointer(peb.ProcessParameters)),
+		(*byte)(unsafe.Pointer(&processParameters)),
+		uintptr(unsafe.Sizeof(processParameters)),
+		nil,
+	)
+	if err != nil {
+		return "", err
+	}
+
+	var cmdLine = make([]uint16, processParameters.CommandLine.Length)
+	err = windows.ReadProcessMemory(hProcess,
+		uintptr(unsafe.Pointer(processParameters.CommandLine.Buffer)),
+		(*byte)(unsafe.Pointer(&cmdLine[0])),
+		uintptr(processParameters.CommandLine.Length),
+		nil,
+	)
+	if err != nil {
+		return "", err
+	}
+
+	return strings.TrimSpace(windows.UTF16ToString(cmdLine)), err
 }
