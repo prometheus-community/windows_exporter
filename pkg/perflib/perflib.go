@@ -217,7 +217,7 @@ func queryRawData(query string) ([]byte, error) {
 			name,
 			nil,
 			&valType,
-			(*byte)(unsafe.Pointer(&buffer[0])), //nolint:gosec
+			(*byte)(unsafe.Pointer(&buffer[0])),
 			&bufLen)
 
 		if errors.Is(err, error(syscall.ERROR_MORE_DATA)) {
