@@ -3,6 +3,7 @@
 package msmq
 
 import (
+	"errors"
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
@@ -10,8 +11,8 @@ import (
 	"github.com/go-kit/log/level"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus-community/windows_exporter/pkg/utils"
-	"github.com/prometheus-community/windows_exporter/pkg/wmi"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/yusufpapurcu/wmi"
 )
 
 const Name = "msmq"
@@ -26,7 +27,8 @@ var ConfigDefaults = Config{
 
 // A Collector is a Prometheus Collector for WMI Win32_PerfRawData_MSMQ_MSMQQueue metrics.
 type Collector struct {
-	config Config
+	config    Config
+	wmiClient *wmi.Client
 
 	bytesInJournalQueue    *prometheus.Desc
 	bytesInQueue           *prometheus.Desc
@@ -74,8 +76,14 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(logger log.Logger) error {
+func (c *Collector) Build(logger log.Logger, wmiClient *wmi.Client) error {
 	logger = log.With(logger, "collector", Name)
+
+	if wmiClient == nil || wmiClient.SWbemServicesClient == nil {
+		return errors.New("wmiClient or SWbemServicesClient is nil")
+	}
+
+	c.wmiClient = wmiClient
 
 	if *c.config.QueryWhereClause == "" {
 		_ = level.Warn(logger).Log("msg", "No where-clause specified for msmq collector. This will generate a very large number of metrics!")
@@ -112,7 +120,7 @@ func (c *Collector) Build(logger log.Logger) error {
 // to the provided prometheus Metric channel.
 func (c *Collector) Collect(_ *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
 	logger = log.With(logger, "collector", Name)
-	if err := c.collect(logger, ch); err != nil {
+	if err := c.collect(ch); err != nil {
 		_ = level.Error(logger).Log("msg", "failed collecting msmq metrics", "err", err)
 		return err
 	}
@@ -128,11 +136,15 @@ type msmqQueue struct {
 	MessagesInQueue        uint64
 }
 
-func (c *Collector) collect(logger log.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	var dst []msmqQueue
 
-	q := wmi.QueryAllForClassWhere(&dst, "Win32_PerfRawData_MSMQ_MSMQQueue", *c.config.QueryWhereClause, logger)
-	if err := wmi.Query(q, &dst); err != nil {
+	query := "SELECT * FROM Win32_PerfRawData_MSMQ_MSMQQueue"
+	if *c.config.QueryWhereClause != "" {
+		query += " WHERE " + *c.config.QueryWhereClause
+	}
+
+	if err := c.wmiClient.Query(query, &dst); err != nil {
 		return err
 	}
 

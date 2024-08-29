@@ -12,6 +12,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus-community/windows_exporter/pkg/winversion"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/yusufpapurcu/wmi"
 )
 
 const Name = "time"
@@ -60,9 +61,9 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(_ log.Logger) error {
-	if winversion.WindowsVersionFloat <= 6.1 {
-		return errors.New("Windows version older than Server 2016 detected. The time collector will not run and should be disabled via CLI flags or configuration file")
+func (c *Collector) Build(_ log.Logger, _ *wmi.Client) error {
+	if winversion.WindowsVersionFloat() <= 6.1 {
+		return errors.New("windows version older than Server 2016 detected. The time collector will not run and should be disabled via CLI flags or configuration file")
 	}
 
 	c.clockFrequencyAdjustmentPPBTotal = prometheus.NewDesc(

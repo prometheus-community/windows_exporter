@@ -11,8 +11,8 @@ import (
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
-	"github.com/prometheus-community/windows_exporter/pkg/wmi"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/yusufpapurcu/wmi"
 )
 
 const (
@@ -29,7 +29,8 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	config Config
 
-	cpuInfo *prometheus.Desc
+	wmiClient *wmi.Client
+	cpuInfo   *prometheus.Desc
 }
 
 func New(config *Config) *Collector {
@@ -60,7 +61,12 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(_ log.Logger) error {
+func (c *Collector) Build(_ log.Logger, wmiClient *wmi.Client) error {
+	if wmiClient == nil || wmiClient.SWbemServicesClient == nil {
+		return errors.New("wmiClient or SWbemServicesClient is nil")
+	}
+
+	c.wmiClient = wmiClient
 	c.cpuInfo = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, "", Name),
 		"Labelled CPU information as provided by Win32_Processor",
@@ -105,7 +111,7 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	// We use a static query here because the provided methods in wmi.go all issue a SELECT *;
 	// This results in the time-consuming LoadPercentage field being read which seems to measure each CPU
 	// serially over a 1 second interval, so the scrape time is at least 1s * num_sockets
-	if err := wmi.Query(win32ProcessorQuery, &dst); err != nil {
+	if err := c.wmiClient.Query(win32ProcessorQuery, &dst); err != nil {
 		return err
 	}
 	if len(dst) == 0 {

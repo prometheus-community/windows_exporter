@@ -9,6 +9,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/perflib"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/yusufpapurcu/wmi"
 )
 
 const Name = "tcp"
@@ -60,7 +61,7 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(_ log.Logger) error {
+func (c *Collector) Build(_ log.Logger, _ *wmi.Client) error {
 	c.connectionFailures = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "connection_failures_total"),
 		"(TCP.ConnectionFailures)",

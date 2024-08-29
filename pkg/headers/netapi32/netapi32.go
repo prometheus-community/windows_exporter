@@ -45,16 +45,16 @@ var NetApiStatus = map[uint32]string{
 	2351: "NERR_InvalidComputer",
 	// This operation is only allowed on the primary domain controller of the domain.
 	2226: "NERR_NotPrimary",
-	/// This operation is not allowed on this special group.
+	// This operation is not allowed on this special group.
 	2234: "NERR_SpeGroupOp",
-	/// This operation is not allowed on the last administrative account.
+	// This operation is not allowed on the last administrative account.
 	2452: "NERR_LastAdmin",
-	/// The password parameter is invalid.
+	// The password parameter is invalid.
 	2203: "NERR_BadPassword",
-	/// The password does not meet the password policy requirements.
-	/// Check the minimum password length, password complexity and password history requirements.
+	// The password does not meet the password policy requirements.
+	// Check the minimum password length, password complexity and password history requirements.
 	2245: "NERR_PasswordTooShort",
-	/// The user name could not be found.
+	// The user name could not be found.
 	2221: "NERR_UserNotFound",
 	// Errors
 	5:    "ERROR_ACCESS_DENIED",

@@ -1,9 +1,7 @@
 package mscluster
 
 import (
-	"github.com/go-kit/log"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
-	"github.com/prometheus-community/windows_exporter/pkg/wmi"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -56,11 +54,10 @@ func (c *Collector) buildNetwork() {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus metric channel.
-func (c *Collector) collectNetwork(logger log.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) collectNetwork(ch chan<- prometheus.Metric) error {
 	var dst []msClusterNetwork
 
-	q := wmi.QueryAllForClass(&dst, "MSCluster_Network", logger)
-	if err := wmi.QueryNamespace(q, &dst, "root/MSCluster"); err != nil {
+	if err := c.wmiClient.Query("SELECT * FROM MSCluster_Network", &dst, nil, "root/MSCluster"); err != nil {
 		return err
 	}
 

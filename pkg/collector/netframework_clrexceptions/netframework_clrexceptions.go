@@ -3,12 +3,14 @@
 package netframework_clrexceptions
 
 import (
+	"errors"
+
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
-	"github.com/prometheus-community/windows_exporter/pkg/wmi"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/yusufpapurcu/wmi"
 )
 
 const Name = "netframework_clrexceptions"
@@ -19,7 +21,8 @@ var ConfigDefaults = Config{}
 
 // A Collector is a Prometheus Collector for WMI Win32_PerfRawData_NETFramework_NETCLRExceptions metrics.
 type Collector struct {
-	config Config
+	config    Config
+	wmiClient *wmi.Client
 
 	numberOfExceptionsThrown *prometheus.Desc
 	numberOfFilters          *prometheus.Desc
@@ -55,7 +58,12 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(_ log.Logger) error {
+func (c *Collector) Build(_ log.Logger, wmiClient *wmi.Client) error {
+	if wmiClient == nil || wmiClient.SWbemServicesClient == nil {
+		return errors.New("wmiClient or SWbemServicesClient is nil")
+	}
+
+	c.wmiClient = wmiClient
 	c.numberOfExceptionsThrown = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "exceptions_thrown_total"),
 		"Displays the total number of exceptions thrown since the application started. This includes both .NET exceptions and unmanaged exceptions that are converted into .NET exceptions.",
@@ -87,7 +95,7 @@ func (c *Collector) Build(_ log.Logger) error {
 // to the provided prometheus Metric channel.
 func (c *Collector) Collect(_ *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
 	logger = log.With(logger, "collector", Name)
-	if err := c.collect(logger, ch); err != nil {
+	if err := c.collect(ch); err != nil {
 		_ = level.Error(logger).Log("msg", "failed collecting win32_perfrawdata_netframework_netclrexceptions metrics", "err", err)
 		return err
 	}
@@ -104,10 +112,9 @@ type Win32_PerfRawData_NETFramework_NETCLRExceptions struct {
 	ThrowToCatchDepthPersec    uint32
 }
 
-func (c *Collector) collect(logger log.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_NETFramework_NETCLRExceptions
-	q := wmi.QueryAll(&dst, logger)
-	if err := wmi.Query(q, &dst); err != nil {
+	if err := c.wmiClient.Query("SELECT * FROM Win32_PerfRawData_NETFramework_NETCLRExceptions", &dst); err != nil {
 		return err
 	}
 

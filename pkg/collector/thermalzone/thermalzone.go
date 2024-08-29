@@ -9,8 +9,8 @@ import (
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
-	"github.com/prometheus-community/windows_exporter/pkg/wmi"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/yusufpapurcu/wmi"
 )
 
 const Name = "thermalzone"
@@ -21,7 +21,8 @@ var ConfigDefaults = Config{}
 
 // A Collector is a Prometheus Collector for WMI Win32_PerfRawData_Counters_ThermalZoneInformation metrics.
 type Collector struct {
-	config Config
+	config    Config
+	wmiClient *wmi.Client
 
 	percentPassiveLimit *prometheus.Desc
 	temperature         *prometheus.Desc
@@ -56,7 +57,12 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(_ log.Logger) error {
+func (c *Collector) Build(_ log.Logger, wmiClient *wmi.Client) error {
+	if wmiClient == nil || wmiClient.SWbemServicesClient == nil {
+		return errors.New("wmiClient or SWbemServicesClient is nil")
+	}
+
+	c.wmiClient = wmiClient
 	c.temperature = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "temperature_celsius"),
 		"(Temperature)",
@@ -88,7 +94,7 @@ func (c *Collector) Build(_ log.Logger) error {
 // to the provided prometheus Metric channel.
 func (c *Collector) Collect(_ *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
 	logger = log.With(logger, "collector", Name)
-	if err := c.collect(logger, ch); err != nil {
+	if err := c.collect(ch); err != nil {
 		_ = level.Error(logger).Log("msg", "failed collecting thermalzone metrics", "err", err)
 		return err
 	}
@@ -105,16 +111,15 @@ type Win32_PerfRawData_Counters_ThermalZoneInformation struct {
 	ThrottleReasons          uint32
 }
 
-func (c *Collector) collect(logger log.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_Counters_ThermalZoneInformation
-	q := wmi.QueryAll(&dst, logger)
-	if err := wmi.Query(q, &dst); err != nil {
+	if err := c.wmiClient.Query("SELECT * FROM Win32_PerfRawData_Counters_ThermalZoneInformation", &dst); err != nil {
 		return err
 	}
 
 	// ThermalZone collector has been known to 'successfully' return an empty result.
 	if len(dst) == 0 {
-		return errors.New("Empty results set for collector")
+		return errors.New("empty results set for collector")
 	}
 
 	for _, info := range dst {

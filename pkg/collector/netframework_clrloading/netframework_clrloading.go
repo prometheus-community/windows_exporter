@@ -3,12 +3,14 @@
 package netframework_clrloading
 
 import (
+	"errors"
+
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
-	"github.com/prometheus-community/windows_exporter/pkg/wmi"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/yusufpapurcu/wmi"
 )
 
 const Name = "netframework_clrloading"
@@ -19,7 +21,8 @@ var ConfigDefaults = Config{}
 
 // A Collector is a Prometheus Collector for WMI Win32_PerfRawData_NETFramework_NETCLRLoading metrics.
 type Collector struct {
-	config Config
+	config    Config
+	wmiClient *wmi.Client
 
 	bytesInLoaderHeap         *prometheus.Desc
 	currentAppDomains         *prometheus.Desc
@@ -60,7 +63,13 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(_ log.Logger) error {
+func (c *Collector) Build(_ log.Logger, wmiClient *wmi.Client) error {
+	if wmiClient == nil || wmiClient.SWbemServicesClient == nil {
+		return errors.New("wmiClient or SWbemServicesClient is nil")
+	}
+
+	c.wmiClient = wmiClient
+
 	c.bytesInLoaderHeap = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "loader_heap_size_bytes"),
 		"Displays the current size, in bytes, of the memory committed by the class loader across all application domains. Committed memory is the physical space reserved in the disk paging file.",
@@ -122,7 +131,7 @@ func (c *Collector) Build(_ log.Logger) error {
 // to the provided prometheus Metric channel.
 func (c *Collector) Collect(_ *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
 	logger = log.With(logger, "collector", Name)
-	if err := c.collect(logger, ch); err != nil {
+	if err := c.collect(ch); err != nil {
 		_ = level.Error(logger).Log("msg", "failed collecting win32_perfrawdata_netframework_netclrloading metrics", "err", err)
 		return err
 	}
@@ -150,10 +159,9 @@ type Win32_PerfRawData_NETFramework_NETCLRLoading struct {
 	TotalNumberofLoadFailures uint32
 }
 
-func (c *Collector) collect(logger log.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_NETFramework_NETCLRLoading
-	q := wmi.QueryAll(&dst, logger)
-	if err := wmi.Query(q, &dst); err != nil {
+	if err := c.wmiClient.Query("SELECT * FROM Win32_PerfRawData_NETFramework_NETCLRLoading", &dst); err != nil {
 		return err
 	}
 

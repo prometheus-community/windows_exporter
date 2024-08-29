@@ -17,6 +17,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/perflib"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/yusufpapurcu/wmi"
 	"golang.org/x/sys/windows/registry"
 )
 
@@ -494,7 +495,7 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(_ log.Logger) error {
+func (c *Collector) Build(_ log.Logger, _ *wmi.Client) error {
 	// Result must order, to prevent test failures.
 	sort.Strings(c.config.CollectorsEnabled)
 

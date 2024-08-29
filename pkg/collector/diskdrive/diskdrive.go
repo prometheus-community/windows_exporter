@@ -10,8 +10,8 @@ import (
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
-	"github.com/prometheus-community/windows_exporter/pkg/wmi"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/yusufpapurcu/wmi"
 )
 
 const (
@@ -25,7 +25,8 @@ var ConfigDefaults = Config{}
 
 // A Collector is a Prometheus Collector for a few WMI metrics in Win32_DiskDrive.
 type Collector struct {
-	config Config
+	config    Config
+	wmiClient *wmi.Client
 
 	availability *prometheus.Desc
 	diskInfo     *prometheus.Desc
@@ -62,7 +63,12 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(_ log.Logger) error {
+func (c *Collector) Build(_ log.Logger, wmiClient *wmi.Client) error {
+	if wmiClient == nil || wmiClient.SWbemServicesClient == nil {
+		return errors.New("wmiClient or SWbemServicesClient is nil")
+	}
+
+	c.wmiClient = wmiClient
 	c.diskInfo = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "info"),
 		"General drive information",
@@ -167,7 +173,7 @@ func (c *Collector) Collect(_ *types.ScrapeContext, logger log.Logger, ch chan<-
 func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	var dst []win32_DiskDrive
 
-	if err := wmi.Query(win32DiskQuery, &dst); err != nil {
+	if err := c.wmiClient.Query(win32DiskQuery, &dst); err != nil {
 		return err
 	}
 	if len(dst) == 0 {

@@ -15,8 +15,8 @@ import (
 	"github.com/go-kit/log/level"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus-community/windows_exporter/pkg/utils"
-	"github.com/prometheus-community/windows_exporter/pkg/wmi"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/yusufpapurcu/wmi"
 	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/svc/mgr"
 )
@@ -40,6 +40,8 @@ type Collector struct {
 	serviceWhereClause *string
 	useAPI             *bool
 	v2                 *bool
+
+	wmiClient *wmi.Client
 
 	Information *prometheus.Desc
 	State       *prometheus.Desc
@@ -90,7 +92,13 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(logger log.Logger) error {
+func (c *Collector) Build(logger log.Logger, wmiClient *wmi.Client) error {
+	if wmiClient == nil || wmiClient.SWbemServicesClient == nil {
+		return errors.New("wmiClient or SWbemServicesClient is nil")
+	}
+
+	c.wmiClient = wmiClient
+
 	logger = log.With(logger, "collector", Name)
 
 	if utils.IsEmpty(c.serviceWhereClause) {
@@ -150,7 +158,7 @@ func (c *Collector) Collect(_ *types.ScrapeContext, logger log.Logger, ch chan<-
 			_ = level.Error(logger).Log("msg", "failed collecting API service metrics:", "err", err)
 		}
 	default:
-		if err = c.collectWMI(logger, ch); err != nil {
+		if err = c.collectWMI(ch); err != nil {
 			_ = level.Error(logger).Log("msg", "failed collecting WMI service metrics:", "err", err)
 		}
 	}
@@ -220,10 +228,15 @@ var (
 	}
 )
 
-func (c *Collector) collectWMI(logger log.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) collectWMI(ch chan<- prometheus.Metric) error {
 	var dst []Win32_Service
-	q := wmi.QueryAllWhere(&dst, *c.serviceWhereClause, logger) //nolint:staticcheck
-	if err := wmi.Query(q, &dst); err != nil {
+	query := "SELECT * FROM Win32_Service"
+
+	if *c.serviceWhereClause != "" {
+		query += " WHERE " + *c.serviceWhereClause
+	}
+
+	if err := c.wmiClient.Query(query, &dst); err != nil {
 		return err
 	}
 	for _, service := range dst {

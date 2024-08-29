@@ -100,5 +100,5 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
-          version: v1.59
-          args: "--timeout=5m"
+          version: v1.60
+          args: "--timeout=5m --max-same-issues=0"

@@ -3,6 +3,7 @@
 package printer
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -11,8 +12,8 @@ import (
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
-	"github.com/prometheus-community/windows_exporter/pkg/wmi"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/yusufpapurcu/wmi"
 )
 
 const Name = "printer"
@@ -39,7 +40,8 @@ var ConfigDefaults = Config{
 }
 
 type Collector struct {
-	config Config
+	config    Config
+	wmiClient *wmi.Client
 
 	printerStatus    *prometheus.Desc
 	printerJobStatus *prometheus.Desc
@@ -106,7 +108,13 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(_ log.Logger) error {
+func (c *Collector) Build(_ log.Logger, wmiClient *wmi.Client) error {
+	if wmiClient == nil || wmiClient.SWbemServicesClient == nil {
+		return errors.New("wmiClient or SWbemServicesClient is nil")
+	}
+
+	c.wmiClient = wmiClient
+
 	c.printerJobStatus = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "job_status"),
 		"A counter of printer jobs by status",
@@ -147,12 +155,12 @@ type wmiPrintJob struct {
 
 func (c *Collector) Collect(_ *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
 	logger = log.With(logger, "collector", Name)
-	if err := c.collectPrinterStatus(logger, ch); err != nil {
+	if err := c.collectPrinterStatus(ch); err != nil {
 		_ = level.Error(logger).Log("msg", "failed to collect printer status metrics", "err", err)
 		return err
 	}
 
-	if err := c.collectPrinterJobStatus(logger, ch); err != nil {
+	if err := c.collectPrinterJobStatus(ch); err != nil {
 		_ = level.Error(logger).Log("msg", "failed to collect printer job status metrics", "err", err)
 		return err
 	}
@@ -160,11 +168,9 @@ func (c *Collector) Collect(_ *types.ScrapeContext, logger log.Logger, ch chan<-
 	return nil
 }
 
-func (c *Collector) collectPrinterStatus(logger log.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) collectPrinterStatus(ch chan<- prometheus.Metric) error {
 	var printers []wmiPrinter
-
-	q := wmi.QueryAllForClass(&printers, "win32_Printer", logger)
-	if err := wmi.Query(q, &printers); err != nil {
+	if err := c.wmiClient.Query("SELECT * FROM win32_Printer", &printers); err != nil {
 		return err
 	}
 
@@ -200,11 +206,9 @@ func (c *Collector) collectPrinterStatus(logger log.Logger, ch chan<- prometheus
 	return nil
 }
 
-func (c *Collector) collectPrinterJobStatus(logger log.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) collectPrinterJobStatus(ch chan<- prometheus.Metric) error {
 	var printJobs []wmiPrintJob
-
-	q := wmi.QueryAllForClass(&printJobs, "win32_PrintJob", logger)
-	if err := wmi.Query(q, &printJobs); err != nil {
+	if err := c.wmiClient.Query("SELECT * FROM win32_PrintJob", &printJobs); err != nil {
 		return err
 	}
 

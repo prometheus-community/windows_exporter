@@ -3,13 +3,15 @@
 package fsrmquota
 
 import (
+	"errors"
+
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus-community/windows_exporter/pkg/utils"
-	"github.com/prometheus-community/windows_exporter/pkg/wmi"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/yusufpapurcu/wmi"
 )
 
 const Name = "fsrmquota"
@@ -19,7 +21,8 @@ type Config struct{}
 var ConfigDefaults = Config{}
 
 type Collector struct {
-	config Config
+	config    Config
+	wmiClient *wmi.Client
 
 	quotasCount *prometheus.Desc
 	peakUsage   *prometheus.Desc
@@ -61,7 +64,13 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(_ log.Logger) error {
+func (c *Collector) Build(_ log.Logger, wmiClient *wmi.Client) error {
+	if wmiClient == nil || wmiClient.SWbemServicesClient == nil {
+		return errors.New("wmiClient or SWbemServicesClient is nil")
+	}
+
+	c.wmiClient = wmiClient
+
 	c.quotasCount = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "count"),
 		"Number of Quotas",
@@ -123,7 +132,7 @@ func (c *Collector) Build(_ log.Logger) error {
 // to the provided prometheus Metric channel.
 func (c *Collector) Collect(_ *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
 	logger = log.With(logger, "collector", Name)
-	if err := c.collect(logger, ch); err != nil {
+	if err := c.collect(ch); err != nil {
 		_ = level.Error(logger).Log("msg", "failed collecting fsrmquota metrics", "err", err)
 		return err
 	}
@@ -147,13 +156,11 @@ type MSFT_FSRMQuota struct {
 	SoftLimit       bool
 }
 
-func (c *Collector) collect(logger log.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	var dst []MSFT_FSRMQuota
-	q := wmi.QueryAll(&dst, logger)
-
 	var count int
 
-	if err := wmi.QueryNamespace(q, &dst, "root/microsoft/windows/fsrm"); err != nil {
+	if err := c.wmiClient.Query("SELECT * FROM MSFT_FSRMQuota", &dst, nil, "root/microsoft/windows/fsrm"); err != nil {
 		return err
 	}
 

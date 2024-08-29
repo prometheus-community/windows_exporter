@@ -34,6 +34,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
+	"github.com/yusufpapurcu/wmi"
 )
 
 const Name = "textfile"
@@ -104,7 +105,7 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(logger log.Logger) error {
+func (c *Collector) Build(logger log.Logger, _ *wmi.Client) error {
 	_ = level.Info(logger).
 		Log("msg", "textfile Collector directories: "+strings.Join(c.config.TextFileDirectories, ","), "collector", Name)
 

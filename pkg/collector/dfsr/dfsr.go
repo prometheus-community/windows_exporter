@@ -12,6 +12,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/perflib"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/yusufpapurcu/wmi"
 )
 
 const Name = "dfsr"
@@ -152,7 +153,7 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(logger log.Logger) error {
+func (c *Collector) Build(logger log.Logger, _ *wmi.Client) error {
 	logger = log.With(logger, "collector", Name)
 
 	_ = level.Info(logger).Log("msg", "dfsr collector is in an experimental state! Metrics for this collector have not been tested.")

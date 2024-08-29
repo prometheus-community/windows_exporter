@@ -10,6 +10,7 @@ linters:
     - err113
     - exhaustive
     - exhaustruct
+    - exportloopref
     - fatcontext
     - funlen
     - gochecknoglobals
@@ -33,6 +34,10 @@ linters:
     - maintidx
 
 linters-settings:
+  gosec:
+    excludes:
+      - G115 # integer overflow conversion
+
   gci:
     sections:
       - prefix(github.com/prometheus-community/windows_exporter/pkg/initiate)

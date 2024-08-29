@@ -3,12 +3,14 @@
 package vmware_blast
 
 import (
+	"errors"
+
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
-	"github.com/prometheus-community/windows_exporter/pkg/wmi"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/yusufpapurcu/wmi"
 )
 
 const Name = "vmware_blast"
@@ -32,7 +34,8 @@ var ConfigDefaults = Config{}
 // win32_PerfRawData_Counters_VMwareBlastWindowsMediaMMRCounters
 
 type Collector struct {
-	config Config
+	config    Config
+	wmiClient *wmi.Client
 
 	audioReceivedBytes      *prometheus.Desc
 	audioReceivedPackets    *prometheus.Desc
@@ -144,9 +147,15 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(logger log.Logger) error {
+func (c *Collector) Build(logger log.Logger, wmiClient *wmi.Client) error {
 	_ = level.Warn(logger).
 		Log("msg", "vmware_blast collector is deprecated and will be removed in the future.", "collector", Name)
+
+	if wmiClient == nil || wmiClient.SWbemServicesClient == nil {
+		return errors.New("wmiClient or SWbemServicesClient is nil")
+	}
+
+	c.wmiClient = wmiClient
 
 	c.audioReceivedBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "audio_received_bytes_total"),
@@ -580,51 +589,51 @@ func (c *Collector) Build(logger log.Logger) error {
 // to the provided prometheus Metric channel.
 func (c *Collector) Collect(_ *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
 	logger = log.With(logger, "collector", Name)
-	if err := c.collectAudio(logger, ch); err != nil {
+	if err := c.collectAudio(ch); err != nil {
 		_ = level.Error(logger).Log("msg", "failed collecting vmware blast audio metrics", "err", err)
 		return err
 	}
-	if err := c.collectCdr(logger, ch); err != nil {
+	if err := c.collectCdr(ch); err != nil {
 		_ = level.Error(logger).Log("msg", "failed collecting vmware blast CDR metrics", "err", err)
 		return err
 	}
-	if err := c.collectClipboard(logger, ch); err != nil {
+	if err := c.collectClipboard(ch); err != nil {
 		_ = level.Error(logger).Log("msg", "failed collecting vmware blast clipboard metrics", "err", err)
 		return err
 	}
-	if err := c.collectHtml5Mmr(logger, ch); err != nil {
+	if err := c.collectHtml5Mmr(ch); err != nil {
 		_ = level.Error(logger).Log("msg", "failed collecting vmware blast HTML5 MMR metrics", "err", err)
 		return err
 	}
-	if err := c.collectImaging(logger, ch); err != nil {
+	if err := c.collectImaging(ch); err != nil {
 		_ = level.Error(logger).Log("msg", "failed collecting vmware blast imaging metrics", "err", err)
 		return err
 	}
-	if err := c.collectRtav(logger, ch); err != nil {
+	if err := c.collectRtav(ch); err != nil {
 		_ = level.Error(logger).Log("msg", "failed collecting vmware blast RTAV metrics", "err", err)
 		return err
 	}
-	if err := c.collectSerialPortandScanner(logger, ch); err != nil {
+	if err := c.collectSerialPortandScanner(ch); err != nil {
 		_ = level.Error(logger).Log("msg", "failed collecting vmware blast serial port and scanner metrics", "err", err)
 		return err
 	}
-	if err := c.collectSession(logger, ch); err != nil {
+	if err := c.collectSession(ch); err != nil {
 		_ = level.Error(logger).Log("msg", "failed collecting vmware blast metrics", "err", err)
 		return err
 	}
-	if err := c.collectSkypeforBusinessControl(logger, ch); err != nil {
+	if err := c.collectSkypeforBusinessControl(ch); err != nil {
 		_ = level.Error(logger).Log("msg", "failed collecting vmware blast skype for business control metrics", "err", err)
 		return err
 	}
-	if err := c.collectThinPrint(logger, ch); err != nil {
+	if err := c.collectThinPrint(ch); err != nil {
 		_ = level.Error(logger).Log("msg", "failed collecting vmware blast thin print metrics", "err", err)
 		return err
 	}
-	if err := c.collectUsb(logger, ch); err != nil {
+	if err := c.collectUsb(ch); err != nil {
 		_ = level.Error(logger).Log("msg", "failed collecting vmware blast USB metrics", "err", err)
 		return err
 	}
-	if err := c.collectWindowsMediaMmr(logger, ch); err != nil {
+	if err := c.collectWindowsMediaMmr(ch); err != nil {
 		_ = level.Error(logger).Log("msg", "failed collecting vmware blast windows media MMR metrics", "err", err)
 		return err
 	}
@@ -736,10 +745,9 @@ type win32_PerfRawData_Counters_VMwareBlastWindowsMediaMMRCounters struct {
 	TransmittedPackets uint32
 }
 
-func (c *Collector) collectAudio(logger log.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) collectAudio(ch chan<- prometheus.Metric) error {
 	var dst []win32_PerfRawData_Counters_VMwareBlastAudioCounters
-	q := wmi.QueryAll(&dst, logger)
-	if err := wmi.Query(q, &dst); err != nil {
+	if err := c.wmiClient.Query("SELECT * FROM win32_PerfRawData_Counters_VMwareBlastAudioCounters", &dst); err != nil {
 		return err
 	}
 
@@ -775,10 +783,9 @@ func (c *Collector) collectAudio(logger log.Logger, ch chan<- prometheus.Metric)
 	return nil
 }
 
-func (c *Collector) collectCdr(logger log.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) collectCdr(ch chan<- prometheus.Metric) error {
 	var dst []win32_PerfRawData_Counters_VMwareBlastCDRCounters
-	q := wmi.QueryAll(&dst, logger)
-	if err := wmi.Query(q, &dst); err != nil {
+	if err := c.wmiClient.Query("SELECT * FROM win32_PerfRawData_Counters_VMwareBlastCDRCounters", &dst); err != nil {
 		return err
 	}
 
@@ -814,10 +821,9 @@ func (c *Collector) collectCdr(logger log.Logger, ch chan<- prometheus.Metric) e
 	return nil
 }
 
-func (c *Collector) collectClipboard(logger log.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) collectClipboard(ch chan<- prometheus.Metric) error {
 	var dst []win32_PerfRawData_Counters_VMwareBlastClipboardCounters
-	q := wmi.QueryAll(&dst, logger)
-	if err := wmi.Query(q, &dst); err != nil {
+	if err := c.wmiClient.Query("SELECT * FROM win32_PerfRawData_Counters_VMwareBlastClipboardCounters", &dst); err != nil {
 		return err
 	}
 
@@ -853,10 +859,9 @@ func (c *Collector) collectClipboard(logger log.Logger, ch chan<- prometheus.Met
 	return nil
 }
 
-func (c *Collector) collectHtml5Mmr(logger log.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) collectHtml5Mmr(ch chan<- prometheus.Metric) error {
 	var dst []win32_PerfRawData_Counters_VMwareBlastHTML5MMRcounters
-	q := wmi.QueryAll(&dst, logger)
-	if err := wmi.Query(q, &dst); err != nil {
+	if err := c.wmiClient.Query("SELECT * FROM win32_PerfRawData_Counters_VMwareBlastHTML5MMRcounters", &dst); err != nil {
 		return err
 	}
 
@@ -892,10 +897,9 @@ func (c *Collector) collectHtml5Mmr(logger log.Logger, ch chan<- prometheus.Metr
 	return nil
 }
 
-func (c *Collector) collectImaging(logger log.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) collectImaging(ch chan<- prometheus.Metric) error {
 	var dst []win32_PerfRawData_Counters_VMwareBlastImagingCounters
-	q := wmi.QueryAll(&dst, logger)
-	if err := wmi.Query(q, &dst); err != nil {
+	if err := c.wmiClient.Query("SELECT * FROM win32_PerfRawData_Counters_VMwareBlastImagingCounters", &dst); err != nil {
 		return err
 	}
 
@@ -979,10 +983,9 @@ func (c *Collector) collectImaging(logger log.Logger, ch chan<- prometheus.Metri
 	return nil
 }
 
-func (c *Collector) collectRtav(logger log.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) collectRtav(ch chan<- prometheus.Metric) error {
 	var dst []win32_PerfRawData_Counters_VMwareBlastRTAVCounters
-	q := wmi.QueryAll(&dst, logger)
-	if err := wmi.Query(q, &dst); err != nil {
+	if err := c.wmiClient.Query("SELECT * FROM win32_PerfRawData_Counters_VMwareBlastRTAVCounters", &dst); err != nil {
 		return err
 	}
 
@@ -1018,10 +1021,9 @@ func (c *Collector) collectRtav(logger log.Logger, ch chan<- prometheus.Metric) 
 	return nil
 }
 
-func (c *Collector) collectSerialPortandScanner(logger log.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) collectSerialPortandScanner(ch chan<- prometheus.Metric) error {
 	var dst []win32_PerfRawData_Counters_VMwareBlastSerialPortandScannerCounters
-	q := wmi.QueryAll(&dst, logger)
-	if err := wmi.Query(q, &dst); err != nil {
+	if err := c.wmiClient.Query("SELECT * FROM win32_PerfRawData_Counters_VMwareBlastSerialPortandScannerCounters", &dst); err != nil {
 		return err
 	}
 
@@ -1057,10 +1059,9 @@ func (c *Collector) collectSerialPortandScanner(logger log.Logger, ch chan<- pro
 	return nil
 }
 
-func (c *Collector) collectSession(logger log.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) collectSession(ch chan<- prometheus.Metric) error {
 	var dst []win32_PerfRawData_Counters_VMwareBlastSessionCounters
-	q := wmi.QueryAll(&dst, logger)
-	if err := wmi.Query(q, &dst); err != nil {
+	if err := c.wmiClient.Query("SELECT * FROM win32_PerfRawData_Counters_VMwareBlastSessionCounters", &dst); err != nil {
 		return err
 	}
 
@@ -1174,10 +1175,9 @@ func (c *Collector) collectSession(logger log.Logger, ch chan<- prometheus.Metri
 	return nil
 }
 
-func (c *Collector) collectSkypeforBusinessControl(logger log.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) collectSkypeforBusinessControl(ch chan<- prometheus.Metric) error {
 	var dst []win32_PerfRawData_Counters_VMwareBlastSkypeforBusinessControlCounters
-	q := wmi.QueryAll(&dst, logger)
-	if err := wmi.Query(q, &dst); err != nil {
+	if err := c.wmiClient.Query("SELECT * FROM win32_PerfRawData_Counters_VMwareBlastSkypeforBusinessControlCounters", &dst); err != nil {
 		return err
 	}
 
@@ -1213,10 +1213,9 @@ func (c *Collector) collectSkypeforBusinessControl(logger log.Logger, ch chan<- 
 	return nil
 }
 
-func (c *Collector) collectThinPrint(logger log.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) collectThinPrint(ch chan<- prometheus.Metric) error {
 	var dst []win32_PerfRawData_Counters_VMwareBlastThinPrintCounters
-	q := wmi.QueryAll(&dst, logger)
-	if err := wmi.Query(q, &dst); err != nil {
+	if err := c.wmiClient.Query("SELECT * FROM win32_PerfRawData_Counters_VMwareBlastThinPrintCounters", &dst); err != nil {
 		return err
 	}
 
@@ -1252,10 +1251,9 @@ func (c *Collector) collectThinPrint(logger log.Logger, ch chan<- prometheus.Met
 	return nil
 }
 
-func (c *Collector) collectUsb(logger log.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) collectUsb(ch chan<- prometheus.Metric) error {
 	var dst []win32_PerfRawData_Counters_VMwareBlastUSBCounters
-	q := wmi.QueryAll(&dst, logger)
-	if err := wmi.Query(q, &dst); err != nil {
+	if err := c.wmiClient.Query("SELECT * FROM win32_PerfRawData_Counters_VMwareBlastUSBCounters", &dst); err != nil {
 		return err
 	}
 
@@ -1291,10 +1289,9 @@ func (c *Collector) collectUsb(logger log.Logger, ch chan<- prometheus.Metric) e
 	return nil
 }
 
-func (c *Collector) collectWindowsMediaMmr(logger log.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) collectWindowsMediaMmr(ch chan<- prometheus.Metric) error {
 	var dst []win32_PerfRawData_Counters_VMwareBlastWindowsMediaMMRCounters
-	q := wmi.QueryAll(&dst, logger)
-	if err := wmi.Query(q, &dst); err != nil {
+	if err := c.wmiClient.Query("SELECT * FROM win32_PerfRawData_Counters_VMwareBlastWindowsMediaMMRCounters", &dst); err != nil {
 		return err
 	}
 

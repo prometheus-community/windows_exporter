@@ -11,6 +11,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus-community/windows_exporter/pkg/winversion"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/yusufpapurcu/wmi"
 )
 
 const Name = "cpu"
@@ -58,7 +59,7 @@ func (c *Collector) GetName() string {
 }
 
 func (c *Collector) GetPerfCounter(_ log.Logger) ([]string, error) {
-	if winversion.WindowsVersionFloat > 6.05 {
+	if winversion.WindowsVersionFloat() > 6.05 {
 		return []string{"Processor Information"}, nil
 	}
 	return []string{"Processor"}, nil
@@ -68,7 +69,7 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(_ log.Logger) error {
+func (c *Collector) Build(_ log.Logger, _ *wmi.Client) error {
 	c.cStateSecondsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "cstate_seconds_total"),
 		"Time spent in low-power idle state",
@@ -100,7 +101,7 @@ func (c *Collector) Build(_ log.Logger) error {
 	// are added in later versions, so we aren't guaranteed to get all of
 	// them).
 	// Value 6.05 was selected to split between Windows versions.
-	if winversion.WindowsVersionFloat < 6.05 {
+	if winversion.WindowsVersionFloat() < 6.05 {
 		return nil
 	}
 
@@ -188,7 +189,7 @@ func (c *Collector) Build(_ log.Logger) error {
 
 func (c *Collector) Collect(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
 	logger = log.With(logger, "collector", Name)
-	if winversion.WindowsVersionFloat > 6.05 {
+	if winversion.WindowsVersionFloat() > 6.05 {
 		return c.CollectFull(ctx, logger, ch)
 	}
 

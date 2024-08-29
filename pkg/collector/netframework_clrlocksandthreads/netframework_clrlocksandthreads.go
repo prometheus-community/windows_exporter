@@ -3,12 +3,14 @@
 package netframework_clrlocksandthreads
 
 import (
+	"errors"
+
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
-	"github.com/prometheus-community/windows_exporter/pkg/wmi"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/yusufpapurcu/wmi"
 )
 
 const Name = "netframework_clrlocksandthreads"
@@ -19,7 +21,8 @@ var ConfigDefaults = Config{}
 
 // A Collector is a Prometheus Collector for WMI Win32_PerfRawData_NETFramework_NETCLRLocksAndThreads metrics.
 type Collector struct {
-	config Config
+	config    Config
+	wmiClient *wmi.Client
 
 	currentQueueLength               *prometheus.Desc
 	numberOfCurrentLogicalThreads    *prometheus.Desc
@@ -58,7 +61,13 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(_ log.Logger) error {
+func (c *Collector) Build(_ log.Logger, wmiClient *wmi.Client) error {
+	if wmiClient == nil || wmiClient.SWbemServicesClient == nil {
+		return errors.New("wmiClient or SWbemServicesClient is nil")
+	}
+
+	c.wmiClient = wmiClient
+
 	c.currentQueueLength = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "current_queue_length"),
 		"Displays the total number of threads that are currently waiting to acquire a managed lock in the application.",
@@ -108,7 +117,7 @@ func (c *Collector) Build(_ log.Logger) error {
 // to the provided prometheus Metric channel.
 func (c *Collector) Collect(_ *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
 	logger = log.With(logger, "collector", Name)
-	if err := c.collect(logger, ch); err != nil {
+	if err := c.collect(ch); err != nil {
 		_ = level.Error(logger).Log("msg", "failed collecting win32_perfrawdata_netframework_netclrlocksandthreads metrics", "err", err)
 		return err
 	}
@@ -130,10 +139,9 @@ type Win32_PerfRawData_NETFramework_NETCLRLocksAndThreads struct {
 	TotalNumberofContentions         uint32
 }
 
-func (c *Collector) collect(logger log.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_NETFramework_NETCLRLocksAndThreads
-	q := wmi.QueryAll(&dst, logger)
-	if err := wmi.Query(q, &dst); err != nil {
+	if err := c.wmiClient.Query("SELECT * FROM Win32_PerfRawData_NETFramework_NETCLRLocksAndThreads", &dst); err != nil {
 		return err
 	}
 

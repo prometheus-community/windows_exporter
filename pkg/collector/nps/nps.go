@@ -1,14 +1,15 @@
 package nps
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
-	"github.com/prometheus-community/windows_exporter/pkg/wmi"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/yusufpapurcu/wmi"
 )
 
 const Name = "nps"
@@ -19,7 +20,8 @@ var ConfigDefaults = Config{}
 
 // Collector is a Prometheus Collector for WMI Win32_PerfRawData_IAS_NPSAuthenticationServer and Win32_PerfRawData_IAS_NPSAccountingServer metrics.
 type Collector struct {
-	config Config
+	config    Config
+	wmiClient *wmi.Client
 
 	accessAccepts           *prometheus.Desc
 	accessChallenges        *prometheus.Desc
@@ -77,7 +79,12 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(_ log.Logger) error {
+func (c *Collector) Build(_ log.Logger, wmiClient *wmi.Client) error {
+	if wmiClient == nil || wmiClient.SWbemServicesClient == nil {
+		return errors.New("wmiClient or SWbemServicesClient is nil")
+	}
+
+	c.wmiClient = wmiClient
 	c.accessAccepts = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "access_accepts"),
 		"(AccessAccepts)",
@@ -236,11 +243,11 @@ func (c *Collector) Build(_ log.Logger) error {
 // to the provided prometheus Metric channel.
 func (c *Collector) Collect(_ *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
 	logger = log.With(logger, "collector", Name)
-	if err := c.CollectAccept(logger, ch); err != nil {
+	if err := c.CollectAccept(ch); err != nil {
 		_ = level.Error(logger).Log("msg", fmt.Sprintf("failed collecting NPS accept data: %s", err))
 		return err
 	}
-	if err := c.CollectAccounting(logger, ch); err != nil {
+	if err := c.CollectAccounting(ch); err != nil {
 		_ = level.Error(logger).Log("msg", fmt.Sprintf("failed collecting NPS accounting data: %s", err))
 		return err
 	}
@@ -286,10 +293,9 @@ type Win32_PerfRawData_IAS_NPSAccountingServer struct {
 
 // CollectAccept sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) CollectAccept(logger log.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) CollectAccept(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_IAS_NPSAuthenticationServer
-	q := wmi.QueryAll(&dst, logger)
-	if err := wmi.Query(q, &dst); err != nil {
+	if err := c.wmiClient.Query("SELECT * FROM Win32_PerfRawData_IAS_NPSAuthenticationServer", &dst); err != nil {
 		return err
 	}
 
@@ -374,10 +380,9 @@ func (c *Collector) CollectAccept(logger log.Logger, ch chan<- prometheus.Metric
 	return nil
 }
 
-func (c *Collector) CollectAccounting(logger log.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) CollectAccounting(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_IAS_NPSAccountingServer
-	q := wmi.QueryAll(&dst, logger)
-	if err := wmi.Query(q, &dst); err != nil {
+	if err := c.wmiClient.Query("SELECT * FROM Win32_PerfRawData_IAS_NPSAccountingServer", &dst); err != nil {
 		return err
 	}
 

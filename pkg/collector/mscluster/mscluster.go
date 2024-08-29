@@ -10,6 +10,7 @@ import (
 	"github.com/go-kit/log"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/yusufpapurcu/wmi"
 )
 
 const Name = "mscluster"
@@ -30,7 +31,8 @@ var ConfigDefaults = Config{
 
 // A Collector is a Prometheus Collector for WMI MSCluster_Cluster metrics.
 type Collector struct {
-	config Config
+	config    Config
+	wmiClient *wmi.Client
 
 	// cluster
 	clusterAddEvictDelay                           *prometheus.Desc
@@ -219,10 +221,16 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(_ log.Logger) error {
+func (c *Collector) Build(_ log.Logger, wmiClient *wmi.Client) error {
 	if len(c.config.CollectorsEnabled) == 0 {
 		return nil
 	}
+
+	if wmiClient == nil || wmiClient.SWbemServicesClient == nil {
+		return errors.New("wmiClient or SWbemServicesClient is nil")
+	}
+
+	c.wmiClient = wmiClient
 
 	if slices.Contains(c.config.CollectorsEnabled, "cluster") {
 		c.buildCluster()
@@ -249,8 +257,7 @@ func (c *Collector) Build(_ log.Logger) error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(_ *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
-	logger = log.With(logger, "collector", Name)
+func (c *Collector) Collect(_ *types.ScrapeContext, _ log.Logger, ch chan<- prometheus.Metric) error {
 	if len(c.config.CollectorsEnabled) == 0 {
 		return nil
 	}
@@ -262,31 +269,31 @@ func (c *Collector) Collect(_ *types.ScrapeContext, logger log.Logger, ch chan<-
 	)
 
 	if slices.Contains(c.config.CollectorsEnabled, "cluster") {
-		if err = c.collectCluster(logger, ch); err != nil {
+		if err = c.collectCluster(ch); err != nil {
 			errs = append(errs, fmt.Errorf("failed to collect cluster metrics: %w", err))
 		}
 	}
 
 	if slices.Contains(c.config.CollectorsEnabled, "network") {
-		if err = c.collectNetwork(logger, ch); err != nil {
+		if err = c.collectNetwork(ch); err != nil {
 			errs = append(errs, fmt.Errorf("failed to collect network metrics: %w", err))
 		}
 	}
 
 	if slices.Contains(c.config.CollectorsEnabled, "node") {
-		if nodeNames, err = c.collectNode(logger, ch); err != nil {
+		if nodeNames, err = c.collectNode(ch); err != nil {
 			errs = append(errs, fmt.Errorf("failed to collect node metrics: %w", err))
 		}
 	}
 
 	if slices.Contains(c.config.CollectorsEnabled, "resource") {
-		if err = c.collectResource(logger, ch, nodeNames); err != nil {
+		if err = c.collectResource(ch, nodeNames); err != nil {
 			errs = append(errs, fmt.Errorf("failed to collect resource metrics: %w", err))
 		}
 	}
 
 	if slices.Contains(c.config.CollectorsEnabled, "resourcegroup") {
-		if err = c.collectResourceGroup(logger, ch, nodeNames); err != nil {
+		if err = c.collectResourceGroup(ch, nodeNames); err != nil {
 			errs = append(errs, fmt.Errorf("failed to collect resource group metrics: %w", err))
 		}
 	}

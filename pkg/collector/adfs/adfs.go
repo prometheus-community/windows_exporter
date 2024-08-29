@@ -10,6 +10,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/perflib"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/yusufpapurcu/wmi"
 )
 
 const Name = "adfs"
@@ -94,7 +95,7 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(_ log.Logger) error {
+func (c *Collector) Build(_ log.Logger, _ *wmi.Client) error {
 	c.adLoginConnectionFailures = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "ad_login_connection_failures_total"),
 		"Total number of connection failures to an Active Directory domain controller",

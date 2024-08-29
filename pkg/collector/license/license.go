@@ -9,6 +9,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/headers/slc"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/yusufpapurcu/wmi"
 )
 
 const Name = "license"
@@ -60,7 +61,7 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(_ log.Logger) error {
+func (c *Collector) Build(_ log.Logger, _ *wmi.Client) error {
 	c.licenseStatus = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "status"),
 		"Status of windows license",
