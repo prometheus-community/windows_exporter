@@ -132,7 +132,7 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(logger log.Logger, wmiClient *wmi.Client) error {
+func (c *Collector) Build(_ log.Logger, _ *wmi.Client) error {
 	c.information = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "info"),
 		"A metric with a constant '1' value labeled with logical disk information",

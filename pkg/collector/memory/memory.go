@@ -87,7 +87,7 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(logger log.Logger, wmiClient *wmi.Client) error {
+func (c *Collector) Build(_ log.Logger, _ *wmi.Client) error {
 	c.availableBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "available_bytes"),
 		"The amount of physical memory immediately available for allocation to a process or for system use. It is equal to the sum of memory assigned to"+

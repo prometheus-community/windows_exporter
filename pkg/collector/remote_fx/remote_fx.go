@@ -82,7 +82,7 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(logger log.Logger, wmiClient *wmi.Client) error {
+func (c *Collector) Build(log.Logger, *wmi.Client) error {
 	// net
 	c.baseTCPRTT = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "net_base_tcp_rtt_seconds"),

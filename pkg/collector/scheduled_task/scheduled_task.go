@@ -137,7 +137,7 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(logger log.Logger, wmiClient *wmi.Client) error {
+func (c *Collector) Build(_ log.Logger, _ *wmi.Client) error {
 	c.lastResult = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "last_result"),
 		"The result that was returned the last time the registered task was run",

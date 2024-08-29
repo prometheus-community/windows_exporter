@@ -56,7 +56,7 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(logger log.Logger, wmiClient *wmi.Client) error {
+func (c *Collector) Build(_ log.Logger, _ *wmi.Client) error {
 	c.numberOfMethodsJitted = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "jit_methods_total"),
 		"Displays the total number of methods JIT-compiled since the application started. This counter does not include pre-JIT-compiled methods.",

@@ -55,7 +55,7 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(logger log.Logger, wmiClient *wmi.Client) error {
+func (c *Collector) Build(_ log.Logger, wmiClient *wmi.Client) error {
 	if wmiClient == nil || wmiClient.SWbemServicesClient == nil {
 		return errors.New("wmiClient or SWbemServicesClient is nil")
 	}
@@ -74,7 +74,7 @@ func (c *Collector) Build(logger log.Logger, wmiClient *wmi.Client) error {
 // to the provided prometheus Metric channel.
 func (c *Collector) Collect(_ *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
 	logger = log.With(logger, "collector", Name)
-	if err := c.collect(logger, ch); err != nil {
+	if err := c.collect(ch); err != nil {
 		_ = level.Error(logger).Log("msg", "failed collecting user metrics", "err", err)
 		return err
 	}
@@ -87,7 +87,7 @@ type Win32_LogonSession struct {
 	LogonType uint32
 }
 
-func (c *Collector) collect(logger log.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	var dst []Win32_LogonSession
 	if err := c.wmiClient.Query("SELECT * FROM Win32_LogonSession", &dst); err != nil {
 		return err
