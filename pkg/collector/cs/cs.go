@@ -55,7 +55,13 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(_ log.Logger, _ *wmi.Client) error {
+func (c *Collector) Build(logger log.Logger, _ *wmi.Client) error {
+	_ = level.Warn(logger).
+		Log("msg", "The cs collector is deprecated and will be removed in a future release. "+
+			"Logical processors has been moved to cpu_info collector. "+
+			"Physical memory has been moved to memory collector. "+
+			"Hostname has been moved to os collector.")
+
 	c.logicalProcessors = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "logical_processors"),
 		"ComputerSystem.NumberOfLogicalProcessors",

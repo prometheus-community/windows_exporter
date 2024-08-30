@@ -35,6 +35,7 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	config Config
 
+	hostname                *prometheus.Desc
 	osInformation           *prometheus.Desc
 	pagingFreeBytes         *prometheus.Desc
 	pagingLimitBytes        *prometheus.Desc
@@ -85,6 +86,16 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build(_ log.Logger, _ *wmi.Client) error {
+	c.hostname = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "hostname"),
+		"Labelled system hostname information as provided by ComputerSystem.DNSHostName and ComputerSystem.Domain",
+		[]string{
+			"hostname",
+			"domain",
+			"fqdn",
+		},
+		nil,
+	)
 	c.osInformation = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "info"),
 		"OperatingSystem.Caption, OperatingSystem.Version",
@@ -375,6 +386,28 @@ func (c *Collector) collect(ctx *types.ScrapeContext, logger log.Logger, ch chan
 		c.visibleMemoryBytes,
 		prometheus.GaugeValue,
 		float64(gmse.TotalPhys),
+	)
+
+	hostname, err := sysinfoapi.GetComputerName(sysinfoapi.ComputerNameDNSHostname)
+	if err != nil {
+		return err
+	}
+	domain, err := sysinfoapi.GetComputerName(sysinfoapi.ComputerNameDNSDomain)
+	if err != nil {
+		return err
+	}
+	fqdn, err := sysinfoapi.GetComputerName(sysinfoapi.ComputerNameDNSFullyQualified)
+	if err != nil {
+		return err
+	}
+
+	ch <- prometheus.MustNewConstMetric(
+		c.hostname,
+		prometheus.GaugeValue,
+		1.0,
+		hostname,
+		domain,
+		fqdn,
 	)
 
 	return nil

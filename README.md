@@ -214,7 +214,7 @@ If you need to skip TLS verification, you can use the `--config.file.insecure-sk
 
 ```yaml
 collectors:
-  enabled: cpu,cs,net,service
+  enabled: cpu,net,service
 collector:
   service:
     services-where: "Name='windows_exporter'"
