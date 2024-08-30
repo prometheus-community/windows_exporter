@@ -148,7 +148,7 @@ func (c *Collector) Build(logger log.Logger, wmiClient *wmi.Client) error {
 	c.info = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "info"),
 		"Process information.",
-		[]string{"process", "process_id", "creating_process_id", "owner", "cmdline"},
+		[]string{"process", "process_id", "creating_process_id", "process_group_id", "owner", "cmdline"},
 		nil,
 	)
 
@@ -327,7 +327,7 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, logger log.Logger, ch chan
 			owner = "unknown"
 		}
 
-		cmdLine, err := c.getCmdLine(logger, uint32(process.IDProcess))
+		cmdLine, processGroupID, err := c.getProcessInformation(logger, uint32(process.IDProcess))
 		if err != nil {
 			_ = level.Debug(logger).Log("msg", "Failed to get cmdline", "pid", pid, "err", err)
 			cmdLine = ""
@@ -337,7 +337,7 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, logger log.Logger, ch chan
 			c.info,
 			prometheus.GaugeValue,
 			1.0,
-			processName, pid, parentPID, owner, cmdLine,
+			processName, pid, parentPID, strconv.Itoa(int(processGroupID)), owner, cmdLine,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -533,11 +533,11 @@ func (c *Collector) getProcessOwner(logger log.Logger, pid uint32) (string, erro
 	return c.lookupCache[sid], nil
 }
 
-func (c *Collector) getCmdLine(logger log.Logger, pid uint32) (string, error) {
+func (c *Collector) getProcessInformation(logger log.Logger, pid uint32) (string, uint32, error) {
 	// Open the process with QUERY_INFORMATION and VM_READ permissions
 	hProcess, err := windows.OpenProcess(windows.PROCESS_QUERY_INFORMATION|windows.PROCESS_VM_READ, false, pid)
 	if err != nil {
-		return "", err
+		return "", 0, err
 	}
 
 	defer func(hProcess windows.Handle) {
@@ -550,7 +550,7 @@ func (c *Collector) getCmdLine(logger log.Logger, pid uint32) (string, error) {
 	var pbi windows.PROCESS_BASIC_INFORMATION
 	retLen := uint32(unsafe.Sizeof(pbi))
 	if err := windows.NtQueryInformationProcess(hProcess, windows.ProcessBasicInformation, unsafe.Pointer(&pbi), retLen, &retLen); err != nil {
-		return "", err
+		return "", 0, err
 	}
 
 	peb := windows.PEB{}
@@ -561,7 +561,7 @@ func (c *Collector) getCmdLine(logger log.Logger, pid uint32) (string, error) {
 		nil,
 	)
 	if err != nil {
-		return "", err
+		return "", 0, err
 	}
 
 	processParameters := windows.RTL_USER_PROCESS_PARAMETERS{}
@@ -572,7 +572,7 @@ func (c *Collector) getCmdLine(logger log.Logger, pid uint32) (string, error) {
 		nil,
 	)
 	if err != nil {
-		return "", err
+		return "", 0, err
 	}
 
 	var cmdLine = make([]uint16, processParameters.CommandLine.Length)
@@ -584,8 +584,8 @@ func (c *Collector) getCmdLine(logger log.Logger, pid uint32) (string, error) {
 		nil,
 	)
 	if err != nil {
-		return "", err
+		return "", 0, err
 	}
 
-	return strings.TrimSpace(windows.UTF16ToString(cmdLine)), err
+	return strings.TrimSpace(windows.UTF16ToString(cmdLine)), processParameters.ProcessGroupId, err
 }
