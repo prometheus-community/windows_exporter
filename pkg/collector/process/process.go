@@ -576,6 +576,7 @@ func (c *Collector) getCmdLine(logger log.Logger, pid uint32) (string, error) {
 	}
 
 	var cmdLine = make([]uint16, processParameters.CommandLine.Length)
+
 	err = windows.ReadProcessMemory(hProcess,
 		uintptr(unsafe.Pointer(processParameters.CommandLine.Buffer)),
 		(*byte)(unsafe.Pointer(&cmdLine[0])),
