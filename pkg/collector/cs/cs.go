@@ -64,19 +64,19 @@ func (c *Collector) Build(logger log.Logger, _ *wmi.Client) error {
 
 	c.logicalProcessors = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "logical_processors"),
-		"ComputerSystem.NumberOfLogicalProcessors",
+		"DEPRECATED: ComputerSystem.NumberOfLogicalProcessors",
 		nil,
 		nil,
 	)
 	c.physicalMemoryBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "physical_memory_bytes"),
-		"ComputerSystem.TotalPhysicalMemory",
+		"DEPRECATED: ComputerSystem.TotalPhysicalMemory",
 		nil,
 		nil,
 	)
 	c.hostname = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "hostname"),
-		"Labelled system hostname information as provided by ComputerSystem.DNSHostName and ComputerSystem.Domain",
+		"DEPRECATED: Labelled system hostname information as provided by ComputerSystem.DNSHostName and ComputerSystem.Domain",
 		[]string{
 			"hostname",
 			"domain",

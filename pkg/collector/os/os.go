@@ -178,7 +178,7 @@ func (c *Collector) Build(_ log.Logger, _ *wmi.Client) error {
 	)
 	c.visibleMemoryBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "visible_memory_bytes"),
-		"DEPRECATED: Use physical_memory_total_bytes instead.",
+		"DEPRECATED: Use windows_os_physical_memory_total_bytes instead.",
 		nil,
 		nil,
 	)
