@@ -85,7 +85,7 @@ func (c *Collector) Build(_ log.Logger, wmiClient *wmi.Client) error {
 		nil,
 	)
 	c.cpuThreadCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "thread_count"),
+		prometheus.BuildFQName(types.Namespace, Name, "thread_total"),
 		"Number of threads per CPU",
 		[]string{
 			"device_id",
@@ -93,7 +93,7 @@ func (c *Collector) Build(_ log.Logger, wmiClient *wmi.Client) error {
 		nil,
 	)
 	c.cpuCoreCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "core_count"),
+		prometheus.BuildFQName(types.Namespace, Name, "core_total"),
 		"Number of cores per CPU",
 		[]string{
 			"device_id",
@@ -101,7 +101,7 @@ func (c *Collector) Build(_ log.Logger, wmiClient *wmi.Client) error {
 		nil,
 	)
 	c.cpuEnabledCoreCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "enabled_core_count"),
+		prometheus.BuildFQName(types.Namespace, Name, "enabled_core_total"),
 		"Number of enabled cores per CPU",
 		[]string{
 			"device_id",
@@ -109,7 +109,7 @@ func (c *Collector) Build(_ log.Logger, wmiClient *wmi.Client) error {
 		nil,
 	)
 	c.cpuLogicalProcessorsCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "logical_processor_count"),
+		prometheus.BuildFQName(types.Namespace, Name, "logical_processor_total"),
 		"Number of logical processors per CPU",
 		[]string{
 			"device_id",
