@@ -13,6 +13,8 @@ test_alpha_total 42
 # TYPE windows_cpu_idle_break_events_total counter
 # HELP windows_cpu_interrupts_total Total number of received and serviced hardware interrupts
 # TYPE windows_cpu_interrupts_total counter
+# HELP windows_cpu_logical_processor_count Total number of logical processors
+# TYPE windows_cpu_logical_processor_count gauge
 # HELP windows_cpu_parking_status Parking Status represents whether a processor is parked or not
 # TYPE windows_cpu_parking_status gauge
 # HELP windows_cpu_processor_performance_total Processor Performance is the average performance of the processor while it is executing instructions, as a percentage of the nominal performance of the processor. On some processors, Processor Performance may exceed 100%
@@ -27,18 +29,11 @@ test_alpha_total 42
 # TYPE windows_cpu_processor_rtc_total counter
 # HELP windows_cpu_processor_utility_total Processor Utility represents is the amount of time the core spends executing instructions
 # TYPE windows_cpu_processor_utility_total counter
-# HELP windows_cs_hostname Labelled system hostname information as provided by ComputerSystem.DNSHostName and ComputerSystem.Domain
-# TYPE windows_cs_hostname gauge
-# HELP windows_cs_logical_processors ComputerSystem.NumberOfLogicalProcessors
-# TYPE windows_cs_logical_processors gauge
-# HELP windows_cs_physical_memory_bytes ComputerSystem.TotalPhysicalMemory
-# TYPE windows_cs_physical_memory_bytes gauge
 # HELP windows_exporter_collector_duration_seconds windows_exporter: Duration of a collection.
 # TYPE windows_exporter_collector_duration_seconds gauge
 # HELP windows_exporter_collector_success windows_exporter: Whether the collector was successful.
 # TYPE windows_exporter_collector_success gauge
 windows_exporter_collector_success{collector="cpu"} 1
-windows_exporter_collector_success{collector="cs"} 1
 windows_exporter_collector_success{collector="logical_disk"} 1
 windows_exporter_collector_success{collector="physical_disk"} 1
 windows_exporter_collector_success{collector="net"} 1
@@ -51,7 +46,6 @@ windows_exporter_collector_success{collector="textfile"} 1
 # HELP windows_exporter_collector_timeout windows_exporter: Whether the collector timed out.
 # TYPE windows_exporter_collector_timeout gauge
 windows_exporter_collector_timeout{collector="cpu"} 0
-windows_exporter_collector_timeout{collector="cs"} 0
 windows_exporter_collector_timeout{collector="logical_disk"} 0
 windows_exporter_collector_timeout{collector="physical_disk"} 0
 windows_exporter_collector_timeout{collector="net"} 0
@@ -169,10 +163,10 @@ windows_exporter_collector_timeout{collector="textfile"} 0
 # TYPE windows_os_users gauge
 # HELP windows_os_virtual_memory_bytes OperatingSystem.TotalVirtualMemorySize
 # TYPE windows_os_virtual_memory_bytes gauge
-# HELP windows_os_virtual_memory_free_bytes OperatingSystem.FreeVirtualMemory
-# TYPE windows_os_virtual_memory_free_bytes gauge
-# HELP windows_os_visible_memory_bytes OperatingSystem.TotalVisibleMemorySize
-# TYPE windows_os_visible_memory_bytes gauge
+# HELP windows_os_virtual_memory_bytes DEPRECATED: Use windows_os_virtual_memory_total_bytes instead.
+# HELP windows_os_virtual_memory_total_bytes OperatingSystem.TotalVirtualMemorySize
+# TYPE windows_os_virtual_memory_total_bytes gauge
+# HELP windows_os_visible_memory_bytes DEPRECATED: Use windows_os_physical_memory_total_bytes instead.
 # HELP windows_scheduled_task_state The current state of a scheduled task
 # TYPE windows_scheduled_task_state gauge
 windows_scheduled_task_state{state="disabled",task="/Microsoft/Windows/Maintenance/WinSAT"} 1
