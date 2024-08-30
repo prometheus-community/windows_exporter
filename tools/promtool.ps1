@@ -93,7 +93,7 @@ $temp_dir = Join-Path $env:TEMP $(New-Guid) | ForEach-Object { mkdir $_ }
 $exporter_proc = Start-Process `
     -PassThru `
     -FilePath ..\windows_exporter.exe `
-    -ArgumentList '--web.listen-address="127.0.0.1:9183" --log.level=debug' `
+    -ArgumentList '--web.listen-address="127.0.0.1:9183" --log.level=debug --collectors.enabled=[defaults],cpu_info,textfile,process,scheduled_task'`
     -WindowStyle Hidden `
     -RedirectStandardOutput "$($temp_dir)/windows_exporter.log" `
     -RedirectStandardError "$($temp_dir)/windows_exporter_error.log"
