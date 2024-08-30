@@ -35,20 +35,22 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	config Config
 
-	hostname                *prometheus.Desc
-	osInformation           *prometheus.Desc
-	pagingFreeBytes         *prometheus.Desc
-	pagingLimitBytes        *prometheus.Desc
-	physicalMemoryFreeBytes *prometheus.Desc
-	processMemoryLimitBytes *prometheus.Desc
-	processes               *prometheus.Desc
-	processesLimit          *prometheus.Desc
-	time                    *prometheus.Desc
-	timezone                *prometheus.Desc
-	users                   *prometheus.Desc
-	virtualMemoryBytes      *prometheus.Desc
-	virtualMemoryFreeBytes  *prometheus.Desc
-	visibleMemoryBytes      *prometheus.Desc
+	hostname                 *prometheus.Desc
+	osInformation            *prometheus.Desc
+	pagingFreeBytes          *prometheus.Desc
+	pagingLimitBytes         *prometheus.Desc
+	physicalMemoryTotalBytes *prometheus.Desc
+	physicalMemoryFreeBytes  *prometheus.Desc
+	processMemoryLimitBytes  *prometheus.Desc
+	processes                *prometheus.Desc
+	processesLimit           *prometheus.Desc
+	time                     *prometheus.Desc
+	timezone                 *prometheus.Desc
+	users                    *prometheus.Desc
+	virtualMemoryBytes       *prometheus.Desc
+	virtualMemoryTotalBytes  *prometheus.Desc
+	virtualMemoryFreeBytes   *prometheus.Desc
+	visibleMemoryBytes       *prometheus.Desc
 }
 
 type pagingFileCounter struct {
@@ -114,6 +116,12 @@ func (c *Collector) Build(_ log.Logger, _ *wmi.Client) error {
 		nil,
 		nil,
 	)
+	c.physicalMemoryTotalBytes = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "physical_memory_total_bytes"),
+		"ComputerSystem.TotalPhysicalMemory",
+		nil,
+		nil,
+	)
 	c.physicalMemoryFreeBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "physical_memory_free_bytes"),
 		"OperatingSystem.FreePhysicalMemory",
@@ -158,13 +166,19 @@ func (c *Collector) Build(_ log.Logger, _ *wmi.Client) error {
 	)
 	c.virtualMemoryBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "virtual_memory_bytes"),
+		"DEPRECATED: Use windows_os_virtual_memory_total_bytes instead.",
+		nil,
+		nil,
+	)
+	c.virtualMemoryTotalBytes = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "virtual_memory_total_bytes"),
 		"OperatingSystem.TotalVirtualMemorySize",
 		nil,
 		nil,
 	)
 	c.visibleMemoryBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "visible_memory_bytes"),
-		"OperatingSystem.TotalVisibleMemorySize",
+		"DEPRECATED: Use physical_memory_total_bytes instead.",
 		nil,
 		nil,
 	)
@@ -312,6 +326,12 @@ func (c *Collector) collect(ctx *types.ScrapeContext, logger log.Logger, ch chan
 	ch <- prometheus.MustNewConstMetric(
 		c.physicalMemoryFreeBytes,
 		prometheus.GaugeValue,
+		float64(gmse.TotalPhys),
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.physicalMemoryFreeBytes,
+		prometheus.GaugeValue,
 		float64(gmse.AvailPhys),
 	)
 
@@ -378,6 +398,12 @@ func (c *Collector) collect(ctx *types.ScrapeContext, logger log.Logger, ch chan
 
 	ch <- prometheus.MustNewConstMetric(
 		c.virtualMemoryBytes,
+		prometheus.GaugeValue,
+		float64(gmse.TotalPageFile),
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.virtualMemoryTotalBytes,
 		prometheus.GaugeValue,
 		float64(gmse.TotalPageFile),
 	)
