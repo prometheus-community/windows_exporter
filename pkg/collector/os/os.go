@@ -330,7 +330,7 @@ func (c *Collector) collect(ctx *types.ScrapeContext, logger log.Logger, ch chan
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.physicalMemoryFreeBytes,
+		c.physicalMemoryTotalBytes,
 		prometheus.GaugeValue,
 		float64(gmse.AvailPhys),
 	)
