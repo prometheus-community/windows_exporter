@@ -13,8 +13,8 @@ test_alpha_total 42
 # TYPE windows_cpu_idle_break_events_total counter
 # HELP windows_cpu_interrupts_total Total number of received and serviced hardware interrupts
 # TYPE windows_cpu_interrupts_total counter
-# HELP windows_cpu_logical_processor_count Total number of logical processors
-# TYPE windows_cpu_logical_processor_count gauge
+# HELP windows_cpu_logical_processor Total number of logical processors
+# TYPE windows_cpu_logical_processor gauge
 # HELP windows_cpu_parking_status Parking Status represents whether a processor is parked or not
 # TYPE windows_cpu_parking_status gauge
 # HELP windows_cpu_processor_performance_total Processor Performance is the average performance of the processor while it is executing instructions, as a percentage of the nominal performance of the processor. On some processors, Processor Performance may exceed 100%
@@ -141,6 +141,8 @@ windows_exporter_collector_timeout{collector="textfile"} 0
 # TYPE windows_net_packets_sent_total counter
 # HELP windows_net_packets_total (Network.PacketsPerSec)
 # TYPE windows_net_packets_total counter
+# HELP windows_os_hostname Labelled system hostname information as provided by ComputerSystem.DNSHostName and Computer…
+# TYPE windows_os_hostname gauge
 # HELP windows_os_info OperatingSystem.Caption, OperatingSystem.Version
 # TYPE windows_os_info gauge
 # HELP windows_os_paging_free_bytes OperatingSystem.FreeSpaceInPagingFiles
@@ -149,6 +151,8 @@ windows_exporter_collector_timeout{collector="textfile"} 0
 # TYPE windows_os_paging_limit_bytes gauge
 # HELP windows_os_physical_memory_free_bytes OperatingSystem.FreePhysicalMemory
 # TYPE windows_os_physical_memory_free_bytes gauge
+# HELP windows_os_physical_memory_total_bytes ComputerSystem.TotalPhysicalMemory
+# TYPE windows_os_physical_memory_total_bytes gauge
 # HELP windows_os_process_memory_limit_bytes OperatingSystem.MaxProcessMemorySize
 # TYPE windows_os_process_memory_limit_bytes gauge
 # HELP windows_os_processes OperatingSystem.NumberOfProcesses
@@ -163,10 +167,12 @@ windows_exporter_collector_timeout{collector="textfile"} 0
 # TYPE windows_os_users gauge
 # HELP windows_os_virtual_memory_bytes OperatingSystem.TotalVirtualMemorySize
 # TYPE windows_os_virtual_memory_bytes gauge
-# HELP windows_os_virtual_memory_bytes DEPRECATED: Use windows_os_virtual_memory_total_bytes instead.
+# HELP windows_os_virtual_memory_free_bytes OperatingSystem.FreeVirtualMemory
+# TYPE windows_os_virtual_memory_free_bytes gauge
 # HELP windows_os_virtual_memory_total_bytes OperatingSystem.TotalVirtualMemorySize
 # TYPE windows_os_virtual_memory_total_bytes gauge
 # HELP windows_os_visible_memory_bytes DEPRECATED: Use windows_os_physical_memory_total_bytes instead.
+# HELP windows_os_visible_memory_bytes gauge
 # HELP windows_scheduled_task_state The current state of a scheduled task
 # TYPE windows_scheduled_task_state gauge
 windows_scheduled_task_state{state="disabled",task="/Microsoft/Windows/Maintenance/WinSAT"} 1
