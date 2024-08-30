@@ -822,7 +822,7 @@ type perflibDFSRVolume struct {
 func (c *Collector) collectVolume(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
 	logger = log.With(logger, "collector", Name)
 	var dst []perflibDFSRVolume
-	if err := perflib.UnmarshalObject(ctx.PerfObjects["DFS Replication Service volumes"], &dst, logger); err != nil {
+	if err := perflib.UnmarshalObject(ctx.PerfObjects["DFS Replication Service Volumes"], &dst, logger); err != nil {
 		return err
 	}
 
