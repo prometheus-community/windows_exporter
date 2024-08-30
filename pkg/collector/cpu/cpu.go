@@ -68,7 +68,7 @@ func (c *Collector) Close() error {
 
 func (c *Collector) Build(_ log.Logger, _ *wmi.Client) error {
 	c.logicalProcessors = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "logical_processor_count"),
+		prometheus.BuildFQName(types.Namespace, Name, "logical_processor_total"),
 		"Total number of logical processors",
 		nil,
 		nil,
