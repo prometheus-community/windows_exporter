@@ -557,7 +557,7 @@ func (c *Collector) getCmdLine(logger log.Logger, pid uint32) (string, error) {
 	err = windows.ReadProcessMemory(hProcess,
 		uintptr(unsafe.Pointer(pbi.PebBaseAddress)),
 		(*byte)(unsafe.Pointer(&peb)),
-		uintptr(unsafe.Sizeof(peb)),
+		unsafe.Sizeof(peb),
 		nil,
 	)
 	if err != nil {
@@ -568,7 +568,7 @@ func (c *Collector) getCmdLine(logger log.Logger, pid uint32) (string, error) {
 	err = windows.ReadProcessMemory(hProcess,
 		uintptr(unsafe.Pointer(peb.ProcessParameters)),
 		(*byte)(unsafe.Pointer(&processParameters)),
-		uintptr(unsafe.Sizeof(processParameters)),
+		unsafe.Sizeof(processParameters),
 		nil,
 	)
 	if err != nil {
