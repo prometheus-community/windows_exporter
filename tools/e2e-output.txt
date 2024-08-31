@@ -265,17 +265,11 @@ windows_exporter_collector_timeout{collector="textfile"} 0
 # TYPE windows_physical_disk_write_seconds_total counter
 # HELP windows_physical_disk_writes_total The number of write operations on the disk (PhysicalDisk.DiskWritesPerSec)
 # TYPE windows_physical_disk_writes_total counter
-# HELP windows_scheduled_task_last_result The result that was returned the last time the registered task was run
-# TYPE windows_scheduled_task_last_result gauge
-windows_scheduled_task_last_result{task="/Microsoft/Windows/Maintenance/WinSAT"} 1
-# HELP windows_scheduled_task_missed_runs The number of times the registered task missed a scheduled run
-# TYPE windows_scheduled_task_missed_runs gauge
-windows_scheduled_task_missed_runs{task="/Microsoft/Windows/Maintenance/WinSAT"} 0
 # HELP windows_scheduled_task_state The current state of a scheduled task
 # TYPE windows_scheduled_task_state gauge
-windows_scheduled_task_state{state="disabled",task="/Microsoft/Windows/Maintenance/WinSAT"} 0
+windows_scheduled_task_state{state="disabled",task="/Microsoft/Windows/Maintenance/WinSAT"} 1
 windows_scheduled_task_state{state="queued",task="/Microsoft/Windows/Maintenance/WinSAT"} 0
-windows_scheduled_task_state{state="ready",task="/Microsoft/Windows/Maintenance/WinSAT"} 1
+windows_scheduled_task_state{state="ready",task="/Microsoft/Windows/Maintenance/WinSAT"} 0
 windows_scheduled_task_state{state="running",task="/Microsoft/Windows/Maintenance/WinSAT"} 0
 windows_scheduled_task_state{state="unknown",task="/Microsoft/Windows/Maintenance/WinSAT"} 0
 # HELP windows_service_info A metric with a constant '1' value labeled with service information
