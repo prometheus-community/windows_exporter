@@ -22,9 +22,15 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	config Config
 
+	// physicalMemoryBytes
+	// DEPRECATED: Use windows_cpu_logical_processor instead
 	physicalMemoryBytes *prometheus.Desc
-	logicalProcessors   *prometheus.Desc
-	hostname            *prometheus.Desc
+	// logicalProcessors
+	// DEPRECATED: Use windows_os_physical_memory_total_bytes instead
+	logicalProcessors *prometheus.Desc
+	// hostname
+	// DEPRECATED: Use windows_os_hostname instead
+	hostname *prometheus.Desc
 }
 
 func New(config *Config) *Collector {
