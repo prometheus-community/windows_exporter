@@ -23,13 +23,13 @@ type Collector struct {
 	config Config
 
 	// physicalMemoryBytes
-	// DEPRECATED: Use windows_cpu_logical_processor instead
+	// Deprecated: Use windows_cpu_logical_processor instead
 	physicalMemoryBytes *prometheus.Desc
 	// logicalProcessors
-	// DEPRECATED: Use windows_os_physical_memory_total_bytes instead
+	// Deprecated: Use windows_os_physical_memory_total_bytes instead
 	logicalProcessors *prometheus.Desc
 	// hostname
-	// DEPRECATED: Use windows_os_hostname instead
+	// Deprecated: Use windows_os_hostname instead
 	hostname *prometheus.Desc
 }
 
@@ -70,19 +70,19 @@ func (c *Collector) Build(logger log.Logger, _ *wmi.Client) error {
 
 	c.logicalProcessors = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "logical_processors"),
-		"DEPRECATED: Use windows_cpu_logical_processor instead",
+		"Deprecated: Use windows_cpu_logical_processor instead",
 		nil,
 		nil,
 	)
 	c.physicalMemoryBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "physical_memory_bytes"),
-		"DEPRECATED: Use windows_os_physical_memory_total_bytes instead",
+		"Deprecated: Use windows_os_physical_memory_total_bytes instead",
 		nil,
 		nil,
 	)
 	c.hostname = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "hostname"),
-		"DEPRECATED: Use windows_os_hostname instead",
+		"Deprecated: Use windows_os_hostname instead",
 		[]string{
 			"hostname",
 			"domain",

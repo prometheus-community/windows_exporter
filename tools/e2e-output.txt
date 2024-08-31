@@ -183,13 +183,13 @@ windows_exporter_collector_timeout{collector="textfile"} 0
 # TYPE windows_os_timezone gauge
 # HELP windows_os_users OperatingSystem.NumberOfUsers
 # TYPE windows_os_users gauge
-# HELP windows_os_virtual_memory_bytes DEPRECATED: Use windows_os_virtual_memory_total_bytes instead.
+# HELP windows_os_virtual_memory_bytes Deprecated: Use windows_os_virtual_memory_total_bytes instead.
 # TYPE windows_os_virtual_memory_bytes gauge
 # HELP windows_os_virtual_memory_free_bytes OperatingSystem.FreeVirtualMemory
 # TYPE windows_os_virtual_memory_free_bytes gauge
 # HELP windows_os_virtual_memory_total_bytes OperatingSystem.TotalVirtualMemorySize
 # TYPE windows_os_virtual_memory_total_bytes gauge
-# HELP windows_os_visible_memory_bytes DEPRECATED: Use windows_os_physical_memory_total_bytes instead.
+# HELP windows_os_visible_memory_bytes Deprecated: Use windows_os_physical_memory_total_bytes instead.
 # TYPE windows_os_visible_memory_bytes gauge
 # HELP windows_scheduled_task_state The current state of a scheduled task
 # TYPE windows_scheduled_task_state gauge

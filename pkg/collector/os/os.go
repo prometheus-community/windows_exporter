@@ -41,38 +41,38 @@ type Collector struct {
 	pagingLimitBytes *prometheus.Desc
 
 	// users
-	// DEPRECATED: Use windows_system_processes instead.
+	// Deprecated: Use windows_system_processes instead.
 	processes *prometheus.Desc
 	// users
-	// DEPRECATED: Use windows_system_process_limit instead.
+	// Deprecated: Use windows_system_process_limit instead.
 	processesLimit *prometheus.Desc
 
 	// users
-	// DEPRECATED: Use count(windows_logon_logon_type) instead.
+	// Deprecated: Use count(windows_logon_logon_type) instead.
 	users *prometheus.Desc
 
 	// physicalMemoryFreeBytes
-	// DEPRECATED: Use windows_memory_physical_free_bytes instead.
+	// Deprecated: Use windows_memory_physical_free_bytes instead.
 	physicalMemoryFreeBytes *prometheus.Desc
 
 	// processMemoryLimitBytes
-	// DEPRECATED: Use windows_memory_process_memory_limit_bytes instead.
+	// Deprecated: Use windows_memory_process_memory_limit_bytes instead.
 	processMemoryLimitBytes *prometheus.Desc
 
 	// time
-	// DEPRECATED: Use windows_time_current_timestamp_seconds instead.
+	// Deprecated: Use windows_time_current_timestamp_seconds instead.
 	time *prometheus.Desc
 	// timezone
-	// DEPRECATED: Use windows_time_timezone instead.
+	// Deprecated: Use windows_time_timezone instead.
 	timezone *prometheus.Desc
 	// virtualMemoryBytes
-	// DEPRECATED: Use windows_memory_commit_limit instead.
+	// Deprecated: Use windows_memory_commit_limit instead.
 	virtualMemoryBytes *prometheus.Desc
 	// virtualMemoryFreeBytes
-	// DEPRECATED: Use windows_memory_commit_limit instead.
+	// Deprecated: Use windows_memory_commit_limit instead.
 	virtualMemoryFreeBytes *prometheus.Desc
 	// visibleMemoryBytes
-	// DEPRECATED: Use windows_memory_physical_total_bytes instead.
+	// Deprecated: Use windows_memory_physical_total_bytes instead.
 	visibleMemoryBytes *prometheus.Desc
 }
 
@@ -111,8 +111,9 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build(logger log.Logger, _ *wmi.Client) error {
-	level.Warn(logger).
-		Log("msg", "The os collect holds a number of deprecated metrics and will be removed mid 2025. See https://github.com/prometheus-community/windows_exporter/pull/1596 for more information.")
+	_ = level.Warn(logger).
+		Log("msg", "The os collect holds a number of deprecated metrics and will be removed mid 2025. "+
+			"See https://github.com/prometheus-community/windows_exporter/pull/1596 for more information.")
 
 	workstationInfo, err := netapi32.GetWorkstationInfo()
 	if err != nil {
@@ -162,61 +163,61 @@ func (c *Collector) Build(logger log.Logger, _ *wmi.Client) error {
 	)
 	c.physicalMemoryFreeBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "physical_memory_free_bytes"),
-		"DEPRECATED: Use `windows_memory_physical_free_bytes` instead.",
+		"Deprecated: Use `windows_memory_physical_free_bytes` instead.",
 		nil,
 		nil,
 	)
 	c.time = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "time"),
-		"DEPRECATED: Use windows_time_current_timestamp_seconds instead.",
+		"Deprecated: Use windows_time_current_timestamp_seconds instead.",
 		nil,
 		nil,
 	)
 	c.timezone = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "timezone"),
-		"DEPRECATED: Use windows_time_timezone instead.",
+		"Deprecated: Use windows_time_timezone instead.",
 		[]string{"timezone"},
 		nil,
 	)
 	c.processes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "processes"),
-		"DEPRECATED: Use `windows_system_processes` instead.",
+		"Deprecated: Use `windows_system_processes` instead.",
 		nil,
 		nil,
 	)
 	c.processesLimit = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "processes_limit"),
-		"DEPRECATED: Use `windows_system_process_limit` instead.",
+		"Deprecated: Use `windows_system_process_limit` instead.",
 		nil,
 		nil,
 	)
 	c.processMemoryLimitBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "process_memory_limit_bytes"),
-		"DEPRECATED: Use `windows_memory_process_memory_limit_bytes` instead.",
+		"Deprecated: Use `windows_memory_process_memory_limit_bytes` instead.",
 		nil,
 		nil,
 	)
 	c.users = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "users"),
-		"DEPRECATED: Use `count(windows_logon_logon_type)` instead.",
+		"Deprecated: Use `count(windows_logon_logon_type)` instead.",
 		nil,
 		nil,
 	)
 	c.virtualMemoryBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "virtual_memory_bytes"),
-		"DEPRECATED: Use `windows_memory_commit_limit` instead.",
+		"Deprecated: Use `windows_memory_commit_limit` instead.",
 		nil,
 		nil,
 	)
 	c.visibleMemoryBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "visible_memory_bytes"),
-		"DEPRECATED: Use `windows_memory_physical_total_bytes` instead.",
+		"Deprecated: Use `windows_memory_physical_total_bytes` instead.",
 		nil,
 		nil,
 	)
 	c.virtualMemoryFreeBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "virtual_memory_free_bytes"),
-		"DEPRECATED: Use `windows_memory_commit_limit - windows_memory_committed_bytes` instead.",
+		"Deprecated: Use `windows_memory_commit_limit - windows_memory_committed_bytes` instead.",
 		nil,
 		nil,
 	)
@@ -228,12 +229,9 @@ func (c *Collector) Build(logger log.Logger, _ *wmi.Client) error {
 func (c *Collector) Collect(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
 	logger = log.With(logger, "collector", Name)
 
-	errs := make([]error, 0, 6)
+	errs := make([]error, 0, 5)
 
-	if err := c.collect(ch); err != nil {
-		_ = level.Error(logger).Log("msg", "failed collecting os metrics", "err", err)
-		errs = append(errs, err)
-	}
+	c.collect(ch)
 
 	if err := c.collectHostname(ch); err != nil {
 		_ = level.Error(logger).Log("msg", "failed collecting os metrics", "err", err)
@@ -438,7 +436,7 @@ func (c *Collector) collectPaging(ctx *types.ScrapeContext, logger log.Logger, c
 	return nil
 }
 
-func (c *Collector) collect(ch chan<- prometheus.Metric) error {
+func (c *Collector) collect(ch chan<- prometheus.Metric) {
 	ch <- prometheus.MustNewConstMetric(
 		c.osInformation,
 		prometheus.GaugeValue,
@@ -453,8 +451,6 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 		prometheus.GaugeValue,
 		float64(4294967295),
 	)
-
-	return nil
 }
 
 func (c *Collector) getWindowsVersion() (string, string, string, error) {

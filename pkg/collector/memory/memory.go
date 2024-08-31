@@ -336,7 +336,7 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, logger log.Logger, ch chan
 		errs = append(errs, err)
 	}
 
-	if err := c.collectGlobalMemoryStatus(ctx, logger, ch); err != nil {
+	if err := c.collectGlobalMemoryStatus(ch); err != nil {
 		_ = level.Error(logger).Log("msg", "failed collecting memory metrics", "err", err)
 		errs = append(errs, err)
 	}
@@ -344,7 +344,7 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, logger log.Logger, ch chan
 	return errors.Join(errs...)
 }
 
-func (c *Collector) collectGlobalMemoryStatus(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) collectGlobalMemoryStatus(ch chan<- prometheus.Metric) error {
 	memoryStatusEx, err := sysinfoapi.GlobalMemoryStatusEx()
 	if err != nil {
 		return fmt.Errorf("failed to get memory status: %w", err)

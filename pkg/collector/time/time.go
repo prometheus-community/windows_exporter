@@ -129,7 +129,7 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, logger log.Logger, ch chan
 
 	errs := make([]error, 0, 2)
 
-	if err := c.collectTime(logger, ch); err != nil {
+	if err := c.collectTime(ch); err != nil {
 		_ = level.Error(logger).Log("msg", "failed collecting time metrics", "err", err)
 		errs = append(errs, err)
 	}
@@ -152,7 +152,7 @@ type windowsTime struct {
 	NTPServerOutgoingResponsesTotal  float64 `perflib:"NTP Server Outgoing Responses"`
 }
 
-func (c *Collector) collectTime(logger log.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) collectTime(ch chan<- prometheus.Metric) error {
 	ch <- prometheus.MustNewConstMetric(
 		c.currentTime,
 		prometheus.GaugeValue,
@@ -176,6 +176,7 @@ func (c *Collector) collectTime(logger log.Logger, ch chan<- prometheus.Metric) 
 
 	return nil
 }
+
 func (c *Collector) collectNTP(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
 	logger = log.With(logger, "collector", Name)
 	var dst []windowsTime // Single-instance class, array is required but will have single entry.
