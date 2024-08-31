@@ -280,20 +280,23 @@ type perflibCache struct {
 	AsyncFastReadsTotal         float64 `perflib:"Async Fast Reads/sec"`
 	AsyncMDLReadsTotal          float64 `perflib:"Async MDL Reads/sec"`
 	AsyncPinReadsTotal          float64 `perflib:"Async Pin Reads/sec"`
-	CopyReadHitsTotal           float64 `perflib:"Copy Read Hits/sec"`
+	CopyReadHitsTotal           float64 `perflib:"Copy Read Hits %"`
 	CopyReadsTotal              float64 `perflib:"Copy Reads/sec"`
 	DataFlushesTotal            float64 `perflib:"Data Flushes/sec"`
 	DataFlushPagesTotal         float64 `perflib:"Data Flush Pages/sec"`
+	DataMapHitsPercent          float64 `perflib:"Data Map Hits %"`
 	DataMapPinsTotal            float64 `perflib:"Data Map Pins/sec"`
 	DataMapsTotal               float64 `perflib:"Data Maps/sec"`
+	DirtyPages                  float64 `perflib:"Dirty Pages"`
+	DirtyPageThreshold          float64 `perflib:"Dirty Page Threshold"`
 	FastReadNotPossiblesTotal   float64 `perflib:"Fast Read Not Possibles/sec"`
 	FastReadResourceMissesTotal float64 `perflib:"Fast Read Resource Misses/sec"`
 	FastReadsTotal              float64 `perflib:"Fast Reads/sec"`
 	LazyWriteFlushesTotal       float64 `perflib:"Lazy Write Flushes/sec"`
 	LazyWritePagesTotal         float64 `perflib:"Lazy Write Pages/sec"`
-	MDLReadHitsTotal            float64 `perflib:"MDL Read Hits/sec"`
+	MDLReadHitsTotal            float64 `perflib:"MDL Read Hits %"`
 	MDLReadsTotal               float64 `perflib:"MDL Reads/sec"`
-	PinReadHitsTotal            float64 `perflib:"Pin Read Hits/sec"`
+	PinReadHitsTotal            float64 `perflib:"Pin Read Hits %"`
 	PinReadsTotal               float64 `perflib:"Pin Reads/sec"`
 	ReadAheadsTotal             float64 `perflib:"Read Aheads/sec"`
 	SyncCopyReadsTotal          float64 `perflib:"Sync Copy Reads/sec"`
@@ -301,9 +304,6 @@ type perflibCache struct {
 	SyncFastReadsTotal          float64 `perflib:"Sync Fast Reads/sec"`
 	SyncMDLReadsTotal           float64 `perflib:"Sync MDL Reads/sec"`
 	SyncPinReadsTotal           float64 `perflib:"Sync Pin Reads/sec"`
-	DirtyPages                  float64 `perflib:"Dirty Pages"`
-	DirtyPageThreshold          float64 `perflib:"Dirty Page Threshold"`
-	DataMapHitsPercent          float64 `perflib:"Data Map Hits %"`
 }
 
 func (c *Collector) collect(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
@@ -322,145 +322,173 @@ func (c *Collector) collect(ctx *types.ScrapeContext, logger log.Logger, ch chan
 		prometheus.CounterValue,
 		dst[0].AsyncCopyReadsTotal,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.asyncDataMapsTotal,
 		prometheus.CounterValue,
 		dst[0].AsyncDataMapsTotal,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.asyncFastReadsTotal,
 		prometheus.CounterValue,
 		dst[0].AsyncFastReadsTotal,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.asyncMDLReadsTotal,
 		prometheus.CounterValue,
 		dst[0].AsyncMDLReadsTotal,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.asyncPinReadsTotal,
 		prometheus.CounterValue,
 		dst[0].AsyncPinReadsTotal,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.copyReadHitsTotal,
-		prometheus.CounterValue,
+		prometheus.GaugeValue,
 		dst[0].CopyReadHitsTotal,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.copyReadsTotal,
 		prometheus.CounterValue,
 		dst[0].CopyReadsTotal,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.dataFlushesTotal,
 		prometheus.CounterValue,
 		dst[0].DataFlushesTotal,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.dataFlushPagesTotal,
 		prometheus.CounterValue,
 		dst[0].DataFlushPagesTotal,
 	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.dataMapHitsPercent,
+		prometheus.GaugeValue,
+		dst[0].DataMapHitsPercent,
+	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.dataMapPinsTotal,
 		prometheus.CounterValue,
 		dst[0].DataMapPinsTotal,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.dataMapsTotal,
 		prometheus.CounterValue,
 		dst[0].DataMapsTotal,
 	)
-	ch <- prometheus.MustNewConstMetric(
-		c.fastReadNotPossiblesTotal,
-		prometheus.CounterValue,
-		dst[0].FastReadNotPossiblesTotal,
-	)
-	ch <- prometheus.MustNewConstMetric(
-		c.fastReadResourceMissesTotal,
-		prometheus.CounterValue,
-		dst[0].FastReadResourceMissesTotal,
-	)
-	ch <- prometheus.MustNewConstMetric(
-		c.fastReadsTotal,
-		prometheus.CounterValue,
-		dst[0].FastReadsTotal,
-	)
-	ch <- prometheus.MustNewConstMetric(
-		c.lazyWriteFlushesTotal,
-		prometheus.CounterValue,
-		dst[0].LazyWriteFlushesTotal,
-	)
-	ch <- prometheus.MustNewConstMetric(
-		c.lazyWritePagesTotal,
-		prometheus.CounterValue,
-		dst[0].LazyWritePagesTotal,
-	)
-	ch <- prometheus.MustNewConstMetric(
-		c.mdlReadHitsTotal,
-		prometheus.CounterValue,
-		dst[0].MDLReadHitsTotal,
-	)
-	ch <- prometheus.MustNewConstMetric(
-		c.mdlReadsTotal,
-		prometheus.CounterValue,
-		dst[0].MDLReadsTotal,
-	)
-	ch <- prometheus.MustNewConstMetric(
-		c.pinReadHitsTotal,
-		prometheus.CounterValue,
-		dst[0].PinReadHitsTotal,
-	)
-	ch <- prometheus.MustNewConstMetric(
-		c.pinReadsTotal,
-		prometheus.CounterValue,
-		dst[0].PinReadsTotal,
-	)
-	ch <- prometheus.MustNewConstMetric(
-		c.readAheadsTotal,
-		prometheus.CounterValue,
-		dst[0].ReadAheadsTotal,
-	)
-	ch <- prometheus.MustNewConstMetric(
-		c.syncCopyReadsTotal,
-		prometheus.CounterValue,
-		dst[0].SyncCopyReadsTotal,
-	)
-	ch <- prometheus.MustNewConstMetric(
-		c.syncDataMapsTotal,
-		prometheus.CounterValue,
-		dst[0].SyncDataMapsTotal,
-	)
-	ch <- prometheus.MustNewConstMetric(
-		c.syncFastReadsTotal,
-		prometheus.CounterValue,
-		dst[0].SyncFastReadsTotal,
-	)
-	ch <- prometheus.MustNewConstMetric(
-		c.syncMDLReadsTotal,
-		prometheus.CounterValue,
-		dst[0].SyncMDLReadsTotal,
-	)
-	ch <- prometheus.MustNewConstMetric(
-		c.syncPinReadsTotal,
-		prometheus.CounterValue,
-		dst[0].SyncPinReadsTotal,
-	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.dirtyPages,
 		prometheus.GaugeValue,
 		dst[0].DirtyPages,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.dirtyPageThreshold,
 		prometheus.GaugeValue,
 		dst[0].DirtyPageThreshold,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
-		c.dataMapHitsPercent,
-		prometheus.GaugeValue,
-		dst[0].DataMapHitsPercent,
+		c.fastReadNotPossiblesTotal,
+		prometheus.CounterValue,
+		dst[0].FastReadNotPossiblesTotal,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.fastReadResourceMissesTotal,
+		prometheus.CounterValue,
+		dst[0].FastReadResourceMissesTotal,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.fastReadsTotal,
+		prometheus.CounterValue,
+		dst[0].FastReadsTotal,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.lazyWriteFlushesTotal,
+		prometheus.CounterValue,
+		dst[0].LazyWriteFlushesTotal,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.lazyWritePagesTotal,
+		prometheus.CounterValue,
+		dst[0].LazyWritePagesTotal,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.mdlReadHitsTotal,
+		prometheus.CounterValue,
+		dst[0].MDLReadHitsTotal,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.mdlReadsTotal,
+		prometheus.CounterValue,
+		dst[0].MDLReadsTotal,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.pinReadHitsTotal,
+		prometheus.CounterValue,
+		dst[0].PinReadHitsTotal,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.pinReadsTotal,
+		prometheus.CounterValue,
+		dst[0].PinReadsTotal,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.readAheadsTotal,
+		prometheus.CounterValue,
+		dst[0].ReadAheadsTotal,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.syncCopyReadsTotal,
+		prometheus.CounterValue,
+		dst[0].SyncCopyReadsTotal,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.syncDataMapsTotal,
+		prometheus.CounterValue,
+		dst[0].SyncDataMapsTotal,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.syncFastReadsTotal,
+		prometheus.CounterValue,
+		dst[0].SyncFastReadsTotal,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.syncMDLReadsTotal,
+		prometheus.CounterValue,
+		dst[0].SyncMDLReadsTotal,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.syncPinReadsTotal,
+		prometheus.CounterValue,
+		dst[0].SyncPinReadsTotal,
 	)
 
 	return nil
