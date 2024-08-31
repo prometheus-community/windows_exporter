@@ -104,7 +104,7 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 	return c
 }
 
-func (c *Collector) Close() error {
+func (c *Collector) Close(_ log.Logger) error {
 	return nil
 }
 

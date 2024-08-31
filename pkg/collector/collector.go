@@ -220,7 +220,7 @@ func (c *Collectors) Close() error {
 	errs := make([]error, 0, len(c.collectors))
 
 	for _, collector := range c.collectors {
-		if err := collector.Close(); err != nil {
+		if err := collector.Close(nil); err != nil {
 			errs = append(errs, err)
 		}
 	}
