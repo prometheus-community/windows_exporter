@@ -223,7 +223,7 @@ func main() {
 	_ = level.Info(logger).Log("msg", fmt.Sprintf("Enabled collectors: %v", strings.Join(enabledCollectorList, ", ")))
 
 	mux := http.NewServeMux()
-	mux.HandleFunc(*metricsPath, withConcurrencyLimit(*maxRequests, collectors.BuildServeHTTP(logger, *disableExporterMetrics, *timeoutMargin)))
+	mux.HandleFunc("GET "+*metricsPath, withConcurrencyLimit(*maxRequests, collectors.BuildServeHTTP(logger, *disableExporterMetrics, *timeoutMargin)))
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, err := fmt.Fprintln(w, `{"status":"ok"}`)
