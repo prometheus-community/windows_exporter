@@ -11,6 +11,20 @@ test_alpha_total 42
 # TYPE windows_cpu_dpcs_total counter
 # HELP windows_cpu_idle_break_events_total Total number of time processor was woken from idle
 # TYPE windows_cpu_idle_break_events_total counter
+# HELP windows_cpu_info Labelled CPU information as provided by Win32_Processor
+# TYPE windows_cpu_info gauge
+# HELP windows_cpu_info_core Number of cores per CPU
+# TYPE windows_cpu_info_core gauge
+# HELP windows_cpu_info_enabled_core Number of enabled cores per CPU
+# TYPE windows_cpu_info_enabled_core gauge
+# HELP windows_cpu_info_l2_cache_size Size of L2 cache per CPU
+# TYPE windows_cpu_info_l2_cache_size gauge
+# HELP windows_cpu_info_l3_cache_size Size of L3 cache per CPU
+# TYPE windows_cpu_info_l3_cache_size gauge
+# HELP windows_cpu_info_logical_processor Number of logical processors per CPU
+# TYPE windows_cpu_info_logical_processor gauge
+# HELP windows_cpu_info_thread Number of threads per CPU
+# TYPE windows_cpu_info_thread gauge
 # HELP windows_cpu_interrupts_total Total number of received and serviced hardware interrupts
 # TYPE windows_cpu_interrupts_total counter
 # HELP windows_cpu_parking_status Parking Status represents whether a processor is parked or not
@@ -38,6 +52,7 @@ test_alpha_total 42
 # HELP windows_exporter_collector_success windows_exporter: Whether the collector was successful.
 # TYPE windows_exporter_collector_success gauge
 windows_exporter_collector_success{collector="cpu"} 1
+windows_exporter_collector_success{collector="cpu_info"} 1
 windows_exporter_collector_success{collector="cs"} 1
 windows_exporter_collector_success{collector="logical_disk"} 1
 windows_exporter_collector_success{collector="physical_disk"} 1
@@ -51,6 +66,7 @@ windows_exporter_collector_success{collector="textfile"} 1
 # HELP windows_exporter_collector_timeout windows_exporter: Whether the collector timed out.
 # TYPE windows_exporter_collector_timeout gauge
 windows_exporter_collector_timeout{collector="cpu"} 0
+windows_exporter_collector_timeout{collector="cpu_info"} 0
 windows_exporter_collector_timeout{collector="cs"} 0
 windows_exporter_collector_timeout{collector="logical_disk"} 0
 windows_exporter_collector_timeout{collector="physical_disk"} 0
