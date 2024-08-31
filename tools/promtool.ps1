@@ -93,7 +93,7 @@ $temp_dir = Join-Path $env:TEMP $(New-Guid) | ForEach-Object { mkdir $_ }
 $exporter_proc = Start-Process `
     -PassThru `
     -FilePath ..\windows_exporter.exe `
-    -ArgumentList '--web.listen-address="127.0.0.1:9183" --log.level=debug' `
+    -ArgumentList '--web.listen-address="127.0.0.1:9183" --log.level=debug --collectors.enabled=[defaults],cpu_info,textfile,process,scheduled_task'`
     -WindowStyle Hidden `
     -RedirectStandardOutput "$($temp_dir)/windows_exporter.log" `
     -RedirectStandardError "$($temp_dir)/windows_exporter_error.log"
@@ -110,7 +110,8 @@ for ($i=1; $i -le 5; $i++) {
 }
 
 # Omit metrics from client_golang library; we're not responsible for these
-$skip_re = "^[#]?\s*(HELP|TYPE)?\s*go_"
+# windows_memory_pool_nonpaged_allocs_total is wrong for years. It's not a gauge, but a counter.
+$skip_re = "^([#]?\s*(HELP|TYPE)?\s*go_|windows_memory_pool_nonpaged_allocs_total)"
 
 # Need to remove carriage returns, as promtool expects LF line endings
 $output = ((Invoke-WebRequest -UseBasicParsing -URI http://127.0.0.1:9183/metrics).Content) -Split "`r?`n" | Select-String -NotMatch $skip_re | Join-String -Separator "`n"

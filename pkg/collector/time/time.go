@@ -4,10 +4,13 @@ package time
 
 import (
 	"errors"
+	"syscall"
+	"time"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
+	"github.com/prometheus-community/windows_exporter/pkg/headers/kernel32"
 	"github.com/prometheus-community/windows_exporter/pkg/perflib"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus-community/windows_exporter/pkg/winversion"
@@ -25,6 +28,8 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	config Config
 
+	currentTime                      *prometheus.Desc
+	timezone                         *prometheus.Desc
 	clockFrequencyAdjustmentPPBTotal *prometheus.Desc
 	computedTimeOffset               *prometheus.Desc
 	ntpClientTimeSourceCount         *prometheus.Desc
@@ -66,6 +71,18 @@ func (c *Collector) Build(_ log.Logger, _ *wmi.Client) error {
 		return errors.New("windows version older than Server 2016 detected. The time collector will not run and should be disabled via CLI flags or configuration file")
 	}
 
+	c.currentTime = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "current_timestamp_seconds"),
+		"OperatingSystem.LocalDateTime",
+		nil,
+		nil,
+	)
+	c.timezone = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "timezone"),
+		"OperatingSystem.LocalDateTime",
+		[]string{"timezone"},
+		nil,
+	)
 	c.clockFrequencyAdjustmentPPBTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "clock_frequency_adjustment_ppb_total"),
 		"Total adjustment made to the local system clock frequency by W32Time in Parts Per Billion (PPB) units.",
@@ -109,11 +126,20 @@ func (c *Collector) Build(_ log.Logger, _ *wmi.Client) error {
 // to the provided prometheus Metric channel.
 func (c *Collector) Collect(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
 	logger = log.With(logger, "collector", Name)
-	if err := c.collect(ctx, logger, ch); err != nil {
+
+	errs := make([]error, 0, 2)
+
+	if err := c.collectTime(ch); err != nil {
 		_ = level.Error(logger).Log("msg", "failed collecting time metrics", "err", err)
-		return err
+		errs = append(errs, err)
 	}
-	return nil
+
+	if err := c.collectNTP(ctx, logger, ch); err != nil {
+		_ = level.Error(logger).Log("msg", "failed collecting time ntp metrics", "err", err)
+		errs = append(errs, err)
+	}
+
+	return errors.Join(errs...)
 }
 
 // Perflib "Windows Time Service".
@@ -121,16 +147,45 @@ type windowsTime struct {
 	ClockFrequencyAdjustmentPPBTotal float64 `perflib:"Clock Frequency Adjustment (ppb)"`
 	ComputedTimeOffset               float64 `perflib:"Computed Time Offset"`
 	NTPClientTimeSourceCount         float64 `perflib:"NTP Client Time Source Count"`
-	NTPRoundtripDelay                float64 `perflib:"NTP Roundtrip Delay"`
+	NTPRoundTripDelay                float64 `perflib:"NTP Roundtrip Delay"`
 	NTPServerIncomingRequestsTotal   float64 `perflib:"NTP Server Incoming Requests"`
 	NTPServerOutgoingResponsesTotal  float64 `perflib:"NTP Server Outgoing Responses"`
 }
 
-func (c *Collector) collect(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) collectTime(ch chan<- prometheus.Metric) error {
+	ch <- prometheus.MustNewConstMetric(
+		c.currentTime,
+		prometheus.GaugeValue,
+		float64(time.Now().Unix()),
+	)
+
+	timeZoneInfo, err := kernel32.GetDynamicTimeZoneInformation()
+	if err != nil {
+		return err
+	}
+
+	// timeZoneKeyName contains the english name of the timezone.
+	timezoneName := syscall.UTF16ToString(timeZoneInfo.TimeZoneKeyName[:])
+
+	ch <- prometheus.MustNewConstMetric(
+		c.timezone,
+		prometheus.GaugeValue,
+		1.0,
+		timezoneName,
+	)
+
+	return nil
+}
+
+func (c *Collector) collectNTP(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
 	logger = log.With(logger, "collector", Name)
 	var dst []windowsTime // Single-instance class, array is required but will have single entry.
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["Windows Time Service"], &dst, logger); err != nil {
 		return err
+	}
+
+	if len(dst) == 0 {
+		return errors.New("no data returned for Windows Time Service")
 	}
 
 	ch <- prometheus.MustNewConstMetric(
@@ -151,7 +206,7 @@ func (c *Collector) collect(ctx *types.ScrapeContext, logger log.Logger, ch chan
 	ch <- prometheus.MustNewConstMetric(
 		c.ntpRoundTripDelay,
 		prometheus.GaugeValue,
-		dst[0].NTPRoundtripDelay/1000000, // microseconds -> seconds
+		dst[0].NTPRoundTripDelay/1000000, // microseconds -> seconds
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.ntpServerIncomingRequestsTotal,
@@ -163,5 +218,6 @@ func (c *Collector) collect(ctx *types.ScrapeContext, logger log.Logger, ch chan
 		prometheus.CounterValue,
 		dst[0].NTPServerOutgoingResponsesTotal,
 	)
+
 	return nil
 }

@@ -223,15 +223,15 @@ func main() {
 	_ = level.Info(logger).Log("msg", fmt.Sprintf("Enabled collectors: %v", strings.Join(enabledCollectorList, ", ")))
 
 	mux := http.NewServeMux()
-	mux.HandleFunc(*metricsPath, withConcurrencyLimit(*maxRequests, collectors.BuildServeHTTP(logger, *disableExporterMetrics, *timeoutMargin)))
-	mux.HandleFunc("/health", func(w http.ResponseWriter, _ *http.Request) {
+	mux.HandleFunc("GET "+*metricsPath, withConcurrencyLimit(*maxRequests, collectors.BuildServeHTTP(logger, *disableExporterMetrics, *timeoutMargin)))
+	mux.HandleFunc("GET /health", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, err := fmt.Fprintln(w, `{"status":"ok"}`)
 		if err != nil {
 			_ = level.Debug(logger).Log("msg", "Failed to write to stream", "err", err)
 		}
 	})
-	mux.HandleFunc("/version", func(w http.ResponseWriter, _ *http.Request) {
+	mux.HandleFunc("GET /version", func(w http.ResponseWriter, _ *http.Request) {
 		// we can't use "version" directly as it is a package, and not an object that
 		// can be serialized.
 		err := json.NewEncoder(w).Encode(prometheusVersion{
@@ -248,11 +248,11 @@ func main() {
 	})
 
 	if *debugEnabled {
-		mux.HandleFunc("/debug/pprof/", pprof.Index)
-		mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
-		mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
-		mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
-		mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
+		mux.HandleFunc("GET /debug/pprof/", pprof.Index)
+		mux.HandleFunc("GET /debug/pprof/cmdline", pprof.Cmdline)
+		mux.HandleFunc("GET /debug/pprof/profile", pprof.Profile)
+		mux.HandleFunc("GET /debug/pprof/symbol", pprof.Symbol)
+		mux.HandleFunc("GET /debug/pprof/trace", pprof.Trace)
 	}
 
 	_ = level.Info(logger).Log("msg", "Starting windows_exporter", "version", version.Info())

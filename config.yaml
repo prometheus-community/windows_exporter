@@ -1,5 +1,5 @@
 collectors:
-  enabled: cpu,cpu_info,cs,exchange,iis,logical_disk,logon,memory,net,os,process,remote_fx,service,system,tcp,time,terminal_services,textfile
+  enabled: cpu,cpu_info,exchange,iis,logical_disk,logon,memory,net,os,process,remote_fx,service,system,tcp,time,terminal_services,textfile
 collector:
   service:
     services-where: "Name='windows_exporter'"
