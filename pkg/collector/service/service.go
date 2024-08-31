@@ -107,12 +107,7 @@ func (c *Collector) GetPerfCounter(_ log.Logger) ([]string, error) {
 	return []string{}, nil
 }
 
-func (c *Collector) Build(logger log.Logger, wmiClient *wmi.Client) error {
-	if wmiClient == nil || wmiClient.SWbemServicesClient == nil {
-		return errors.New("wmiClient or SWbemServicesClient is nil")
-	}
-
-	c.wmiClient = wmiClient
+func (c *Collector) Build(logger log.Logger, _ *wmi.Client) error {
 	logger = log.With(logger, "collector", Name)
 
 	if c.config.ServiceInclude.String() == "^(?:.*)$" && c.config.ServiceExclude.String() == "^(?:)$" {
