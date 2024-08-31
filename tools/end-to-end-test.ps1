@@ -1,14 +1,14 @@
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version 3
 
-if (-not (Test-Path -Path '.\windows_exporter.exe')) {
-    Write-Output ".\windows_exporter.exe not found. Consider running \`go build\` first"
-}
-
 # cd to location of script
 $script_path = $MyInvocation.MyCommand.Path
 $working_dir = Split-Path $script_path
 Push-Location $working_dir
+
+if (-not (Test-Path -Path '..\windows_exporter.exe')) {
+    Write-Output "..\windows_exporter.exe not found. Consider running \`go build\` first"
+}
 
 $temp_dir = Join-Path $env:TEMP $(New-Guid) | ForEach-Object { mkdir $_ }
 
@@ -53,7 +53,17 @@ try {
 }
 # Response output must be split and saved as UTF-8.
 $response.content -split "[`r`n]"| Select-String -NotMatch $skip_re | Set-Content -Encoding utf8 "$($temp_dir)/e2e-output.txt"
-Stop-Process -Id $exporter_proc.Id
+try {
+    Stop-Process -Id $exporter_proc.Id
+} catch {
+    Write-Host "STDOUT"
+    Get-Content "$($temp_dir)/windows_exporter.log"
+    Write-Host "STDERR"
+    Get-Content "$($temp_dir)/windows_exporter_error.log"
+
+    throw $_
+}
+
 $output_diff = Compare-Object (Get-Content 'e2e-output.txt') (Get-Content "$($temp_dir)/e2e-output.txt")
 
 # Fail if differences in output are detected
@@ -64,6 +74,8 @@ if (-not ($null -eq $output_diff)) {
     Get-Content "$($temp_dir)/windows_exporter.log"
     Write-Host "STDERR"
     Get-Content "$($temp_dir)/windows_exporter_error.log"
+
+    (Get-Content "$($temp_dir)/e2e-output.txt") | Set-Content -Encoding utf8 "e2e-output.txt"
 
     exit 1
 }
