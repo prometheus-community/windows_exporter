@@ -75,6 +75,19 @@ func (c *Collector) Build(_ log.Logger, _ *wmi.Client) error {
 		nil,
 		nil,
 	)
+	c.processes = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "processes"),
+		"Current number of processes (WMI source: PerfOS_System.Processes)",
+		nil,
+		nil,
+	)
+	c.processesLimit = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "processes_limit"),
+		"Maximum number of processes.",
+		nil,
+		nil,
+	)
+
 	c.processorQueueLength = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "processor_queue_length"),
 		"Length of processor queue (WMI source: PerfOS_System.ProcessorQueueLength)",
