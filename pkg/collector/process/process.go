@@ -486,8 +486,16 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, logger log.Logger, ch chan
 
 // ref: https://github.com/microsoft/hcsshim/blob/8beabacfc2d21767a07c20f8dd5f9f3932dbf305/internal/uvm/stats.go#L25
 func (c *Collector) getProcessInformation(logger log.Logger, pid uint32) (string, string, uint32, error) {
+	if pid == 0 {
+		return "", "", 0, nil
+	}
+
 	hProcess, vmReadAccess, err := c.openProcess(pid)
 	if err != nil {
+		if errors.Is(err, windows.ERROR_ACCESS_DENIED) {
+			return "", "", 0, nil
+		}
+
 		return "", "", 0, err
 	}
 
@@ -566,6 +574,10 @@ func (c *Collector) getProcessOwner(logger log.Logger, hProcess windows.Handle) 
 	var tok windows.Token
 
 	if err := windows.OpenProcessToken(hProcess, windows.TOKEN_QUERY, &tok); err != nil {
+		if errors.Is(err, windows.ERROR_ACCESS_DENIED) {
+			return "", nil
+		}
+
 		return "", fmt.Errorf("failed to open process token: %w", err)
 	}
 
