@@ -16,7 +16,7 @@ import (
 
 var baseDir = "../../../tools/textfile-test"
 
-//nolint:tparallel
+//nolint:paralleltest
 func TestMultipleDirectories(t *testing.T) {
 	logger := log.NewLogfmtLogger(os.Stdout)
 	testDir := baseDir + "/multiple-dirs"
@@ -59,7 +59,7 @@ func TestMultipleDirectories(t *testing.T) {
 	}
 }
 
-//nolint:tparallel
+//nolint:paralleltest
 func TestDuplicateFileName(t *testing.T) {
 	logger := log.NewLogfmtLogger(os.Stdout)
 	testDir := baseDir + "/duplicate-filename"
