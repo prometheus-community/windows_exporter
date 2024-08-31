@@ -52,7 +52,13 @@ linters-settings:
         # Support string case: `camel`, `pascal`, `kebab`, `snake`, `upperSnake`, `goCamel`, `goPascal`, `goKebab`, `goSnake`, `upper`, `lower`, `header`
         json: camel
         yaml: snake
-
+  forbidigo:
+    forbid:
+      - "^(fmt\\.Print(|f|ln)|print|println)$"
+      - p: "^syscall\\..*$"
+        msg: use golang.org/x/sys/windows instead of syscall
+      - p: "^windows\\.NewLazyDLL$"
+        msg: use NewLazySystemDLL instead NewLazyDLL
 issues:
   exclude:
   - don't use underscores in Go names

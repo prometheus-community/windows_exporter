@@ -119,6 +119,8 @@ import (
 	"strings"
 	"syscall"
 	"unsafe"
+
+	"golang.org/x/sys/windows"
 )
 
 // TODO: There's a LittleEndian field in the PERF header - we ought to check it.
@@ -204,7 +206,7 @@ func queryRawData(query string) ([]byte, error) {
 
 	buffer = make([]byte, bufLen)
 
-	name, err := syscall.UTF16PtrFromString(query)
+	name, err := windows.UTF16PtrFromString(query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to encode query string: %w", err)
 	}
@@ -212,21 +214,22 @@ func queryRawData(query string) ([]byte, error) {
 	for {
 		bufLen := uint32(len(buffer))
 
+		//nolint:forbidigo // Legacy Code
 		err := syscall.RegQueryValueEx(
-			syscall.HKEY_PERFORMANCE_DATA,
+			windows.HKEY_PERFORMANCE_DATA,
 			name,
 			nil,
 			&valType,
 			(*byte)(unsafe.Pointer(&buffer[0])),
 			&bufLen)
 
-		if errors.Is(err, error(syscall.ERROR_MORE_DATA)) {
+		if errors.Is(err, error(syscall.ERROR_MORE_DATA)) { //nolint:forbidigo // Legacy Code
 			newBuffer := make([]byte, len(buffer)+16384)
 			copy(newBuffer, buffer)
 			buffer = newBuffer
 			continue
 		} else if err != nil {
-			var errNo syscall.Errno
+			var errNo syscall.Errno //nolint:forbidigo // Legacy Code
 			if errors.As(err, &errNo) {
 				return nil, fmt.Errorf("ReqQueryValueEx failed: %w errno %d", err, uint(errNo))
 			}

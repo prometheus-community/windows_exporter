@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io"
 	"sync"
-	"syscall"
 
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
@@ -68,7 +67,7 @@ func (l *eventlogLogger) Log(keyvals ...interface{}) error {
 	// golang.org/x/sys/windows/svc/eventlog does not provide func which allows to send more than one string.
 	// See: https://github.com/golang/go/issues/59780
 
-	msg, err := syscall.UTF16PtrFromString(lb.buf.String())
+	msg, err := windows.UTF16PtrFromString(lb.buf.String())
 	if err != nil {
 		return fmt.Errorf("error convert string to UTF-16: %w", err)
 	}

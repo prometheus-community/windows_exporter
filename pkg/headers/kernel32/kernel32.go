@@ -1,14 +1,16 @@
 package kernel32
 
 import (
-	"syscall"
 	"unsafe"
+
+	"golang.org/x/sys/windows"
 )
 
 var (
-	kernel32 = syscall.NewLazyDLL("kernel32.dll")
+	kernel32 = windows.NewLazySystemDLL("kernel32.dll")
 
 	procGetDynamicTimeZoneInformationSys = kernel32.NewProc("GetDynamicTimeZoneInformation")
+	kernelLocalFileTimeToFileTime        = kernel32.NewProc("LocalFileTimeToFileTime")
 )
 
 // SYSTEMTIME contains a date and time.
@@ -49,4 +51,12 @@ func GetDynamicTimeZoneInformation() (DynamicTimezoneInformation, error) {
 	}
 
 	return tzi, nil
+}
+
+func LocalFileTimeToFileTime(localFileTime, utcFileTime *windows.Filetime) uint32 {
+	ret, _, _ := kernelLocalFileTimeToFileTime.Call(
+		uintptr(unsafe.Pointer(localFileTime)),
+		uintptr(unsafe.Pointer(utcFileTime)))
+
+	return uint32(ret)
 }
