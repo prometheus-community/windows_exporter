@@ -1,0 +1,29 @@
+name: 'Close stale issues and PRs'
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: '30 1 * * *'
+permissions:
+  issues: write
+  pull-requests: write
+jobs:
+  stale:
+    if: github.repository_owner == 'prometheus' || github.repository_owner == 'prometheus-community' # Don't run this workflow on forks.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@28ca1036281a5e5922ead5184a1bbf96e5fc984e # v9.0.0
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          # opt out of defaults to avoid marking issues as stale and closing them
+          # https://github.com/actions/stale#days-before-close
+          # https://github.com/actions/stale#days-before-stale
+          days-before-stale: -1
+          days-before-close: -1
+          stale-pr-message: ''
+          stale-issue-message: 'This issue has been marked as stale because it has been open for 90 days with no activity. This thread will be automatically closed in 30 days if no further activity occurs.'
+          operations-per-run: 30
+          # override days-before-stale, for only marking the pull requests as stale
+          days-before-issue-stale: 90
+          days-before-issue-close: 30
+          stale-pr-label: stale
+          exempt-pr-labels: keepalive
