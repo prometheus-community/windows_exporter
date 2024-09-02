@@ -208,7 +208,7 @@ func (c *Collectors) Build(logger log.Logger) error {
 // PrepareScrapeContext creates a ScrapeContext to be used during a single scrape.
 func (c *Collectors) PrepareScrapeContext() (*types.ScrapeContext, error) {
 	if c.perfCounterQuery == "" { // if perfCounterQuery is empty, no perf counters are needed.
-		return nil, nil
+		return &types.ScrapeContext{}, nil
 	}
 
 	objs, err := perflib.GetPerflibSnapshot(c.perfCounterQuery)
