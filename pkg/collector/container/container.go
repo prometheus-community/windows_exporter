@@ -212,7 +212,7 @@ func (c *Collector) Collect(_ *types.ScrapeContext, logger log.Logger, ch chan<-
 	return nil
 }
 
-func (c *Collector) collect(ch chan<- prometheus.Metric) error {
+func (c *Collector) collect(logger log.Logger, ch chan<- prometheus.Metric) error {
 	// Types Container is passed to get the containers compute systems only
 	containers, err := hcsshim.GetContainers(hcsshim.ComputeSystemQuery{Types: []string{"Container"}})
 	if err != nil {
@@ -238,11 +238,11 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	for _, containerDetails := range containers {
 		containerIdWithPrefix := getContainerIdWithPrefix(containerDetails)
 
-		if err = c.collectContainer(ch, containerDetails, containerIdWithPrefix); err != nil {
+		if err = c.collectContainer(logger, ch, containerDetails, containerIdWithPrefix); err != nil {
 			if hcsshim.IsNotExist(err) {
-				_ = level.Debug(c.logger).Log("msg", "err in fetching container statistics", "containerId", containerDetails.ID, "err", err)
+				_ = level.Debug(logger).Log("msg", "err in fetching container statistics", "containerId", containerDetails.ID, "err", err)
 			} else {
-				_ = level.Error(c.logger).Log("msg", "err in fetching container statistics", "containerId", containerDetails.ID, "err", err)
+				_ = level.Error(logger).Log("msg", "err in fetching container statistics", "containerId", containerDetails.ID, "err", err)
 				collectErrors = append(collectErrors, err)
 			}
 
@@ -252,7 +252,7 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 		containerPrefixes[containerDetails.ID] = containerIdWithPrefix
 	}
 
-	if err = c.collectNetworkMetrics(ch, containerPrefixes); err != nil {
+	if err = c.collectNetworkMetrics(logger, ch, containerPrefixes); err != nil {
 		return fmt.Errorf("error in fetching container network statistics: %w", err)
 	}
 
@@ -263,7 +263,7 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	return nil
 }
 
-func (c *Collector) collectContainer(ch chan<- prometheus.Metric, containerDetails hcsshim.ContainerProperties, containerIdWithPrefix string) error {
+func (c *Collector) collectContainer(logger log.Logger, ch chan<- prometheus.Metric, containerDetails hcsshim.ContainerProperties, containerIdWithPrefix string) error {
 	container, err := hcsshim.OpenContainer(containerDetails.ID)
 	if err != nil {
 		return fmt.Errorf("error in opening container: %w", err)
@@ -358,7 +358,7 @@ func (c *Collector) collectContainer(ch chan<- prometheus.Metric, containerDetai
 // With HNSv2, the network stats must be collected from hcsshim.HNSListEndpointRequest.
 // Network statistics from the container.Statistics() are providing data only, if HNSv1 is used.
 // Ref: https://github.com/prometheus-community/windows_exporter/pull/1218
-func (c *Collector) collectNetworkMetrics(ch chan<- prometheus.Metric, containerPrefixes map[string]string) error {
+func (c *Collector) collectNetworkMetrics(logger log.Logger, ch chan<- prometheus.Metric, containerPrefixes map[string]string) error {
 	hnsEndpoints, err := hcsshim.HNSListEndpointRequest()
 	if err != nil {
 		_ = level.Warn(logger).Log("msg", "Failed to collect network stats for containers")
