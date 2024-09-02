@@ -6,6 +6,12 @@ on:
 permissions:
   contents: write
   packages: write
+
+
+
+env:
+  PROMU_VER: '0.14.0'
+
 jobs:
   stale:
     if: github.repository_owner == 'jkroepke'
