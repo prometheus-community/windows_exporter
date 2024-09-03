@@ -16,17 +16,16 @@ permissions:
   packages: write
 
 env:
-  PROMU_VER: '0.14.0'
+  VERSION_PROMU: '0.14.0'
+  VERSION_CONTAINERD: '1.7.21'
+  VERSION_BUILDKIT: '0.15.2'
+  VERSION_BUILDX: '0.16.2'
 
 jobs:
   build:
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
-        with:
-          # fetch-depth required for gitversion in `Build` step
-          fetch-depth: 0
-
       - uses: actions/setup-go@v5
         with:
           go-version-file: 'go.mod'
@@ -34,28 +33,24 @@ jobs:
       # https://github.com/pl4nty/Windows-Containers/blob/Main/helpful_tools/Install-BuildKit-GitHubActions/workflow.yaml
       - name: Setup containerd
         run: |
-          $version = "1.7.20"
-          curl.exe -L https://github.com/containerd/containerd/releases/download/v$version/containerd-$version-windows-amd64.tar.gz -o containerd.tar.gz
+          curl.exe -L https://github.com/containerd/containerd/releases/download/v${{ env.VERSION_CONTAINERD }}/containerd-${{ env.VERSION_CONTAINERD }}-windows-amd64.tar.gz -o containerd.tar.gz
           tar.exe xvf containerd.tar.gz
           .\bin\containerd.exe --register-service
           Start-Service containerd
       - name: Setup BuildKit
         run: |
-          $version = "v0.15.0"
-          curl.exe -L https://github.com/moby/buildkit/releases/download/$version/buildkit-$version.windows-amd64.tar.gz -o buildkit.tar.gz
+          curl.exe -L https://github.com/moby/buildkit/releases/download/v${{ env.VERSION_BUILDKIT }}/buildkit-v${{ env.VERSION_BUILDKIT }}.windows-amd64.tar.gz -o buildkit.tar.gz
           tar.exe xvf buildkit.tar.gz
           
           .\bin\buildkitd.exe --register-service
           Start-Service buildkitd
       - name: Setup Docker Buildx
         run: |
-          $version = "v0.16.1"
-          curl.exe -L https://github.com/docker/buildx/releases/download/$version/buildx-$version.windows-amd64.exe -o $env:ProgramData\Docker\cli-plugins\docker-buildx.exe
+          curl.exe -L https://github.com/docker/buildx/releases/download/v${{ env.VERSION_BUILDX }}/buildx-v${{ env.VERSION_BUILDX }}.windows-amd64.exe -o $env:ProgramData\Docker\cli-plugins\docker-buildx.exe
       - uses: docker/setup-buildx-action@v3
         with:
           driver: remote
           endpoint: npipe:////./pipe/buildkitd
-
       - name: Install WiX
         run: dotnet tool install --global wix
 
@@ -66,9 +61,9 @@ jobs:
 
       - name: Install Build deps
         run: |
-          Invoke-WebRequest -Uri https://github.com/prometheus/promu/releases/download/v$($Env:PROMU_VER)/promu-$($Env:PROMU_VER).windows-amd64.zip -OutFile promu-$($Env:PROMU_VER).windows-amd64.zip
-          Expand-Archive -Path promu-$($Env:PROMU_VER).windows-amd64.zip -DestinationPath .
-          Copy-Item -Path promu-$($Env:PROMU_VER).windows-amd64\promu.exe -Destination "$(go env GOPATH)\bin"
+          Invoke-WebRequest -Uri https://github.com/prometheus/promu/releases/download/v$($Env:VERSION_PROMU)/promu-$($Env:VERSION_PROMU).windows-amd64.zip -OutFile promu-$($Env:VERSION_PROMU).windows-amd64.zip
+          Expand-Archive -Path promu-$($Env:VERSION_PROMU).windows-amd64.zip -DestinationPath .
+          Copy-Item -Path promu-$($Env:VERSION_PROMU).windows-amd64\promu.exe -Destination "$(go env GOPATH)\bin"
 
           # GOPATH\bin dir must be added to PATH else the `promu` commands won't be found
           echo "$(go env GOPATH)\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
