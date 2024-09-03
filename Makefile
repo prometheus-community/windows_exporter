@@ -56,10 +56,10 @@ package: crossbuild
 	powershell -NonInteractive -ExecutionPolicy Bypass -File .\installer\build.ps1 -PathToExecutable .\output\amd64\windows_exporter.exe -Version $(shell git describe --tags --abbrev=0)
 
 build-image: crossbuild
-	$(DOCKER) build --build-arg=BASE=$(BASE_IMAGE):$(OS) -f Dockerfile -t local/$(DOCKER_IMAGE_NAME):pr1561 -$(OS) .
+	$(DOCKER) build --build-arg=BASE=$(BASE_IMAGE):$(OS) -f Dockerfile -t local/$(DOCKER_IMAGE_NAME):pr1561-$(OS) .
 
 build-hostprocess:
-	$(DOCKER) buildx build --build-arg=BASE=mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v1.0.0 -f Dockerfile -t local/$(DOCKER_IMAGE_NAME):pr1561 -hostprocess .
+	$(DOCKER) buildx build --build-arg=BASE=mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v1.0.0 -f Dockerfile -t local/$(DOCKER_IMAGE_NAME):pr1561-hostprocess .
 
 sub-build-%:
 	$(MAKE) OS=$* build-image
@@ -83,7 +83,7 @@ push:
 push-hostprocess:
 	set -x; \
 	for docker_repo in ${DOCKER_REPO}; do \
-		$(DOCKER) buildx build --push --build-arg=BASE=mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v1.0.0 -f Dockerfile -t $${docker_repo}/$(DOCKER_IMAGE_NAME):pr1561 -hostprocess .; \
+		$(DOCKER) buildx build --push --build-arg=BASE=mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v1.0.0 -f Dockerfile -t $${docker_repo}/$(DOCKER_IMAGE_NAME):pr1561-hostprocess .; \
 	done
 
 .PHONY: push-all
