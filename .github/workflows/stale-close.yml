@@ -1,8 +1,8 @@
-name: Stale Check
+name: 'Close stale issues and PRs'
 on:
   workflow_dispatch: {}
   schedule:
-    - cron: '16 22 * * *'
+    - cron: '30 1 * * *'
 permissions:
   issues: write
   pull-requests: write
@@ -19,13 +19,11 @@ jobs:
           # https://github.com/actions/stale#days-before-stale
           days-before-stale: -1
           days-before-close: -1
-          # Setting it to empty string to skip comments.
-          # https://github.com/actions/stale#stale-pr-message
-          # https://github.com/actions/stale#stale-issue-message
           stale-pr-message: ''
-          stale-issue-message: ''
+          stale-issue-message: 'This issue has been marked as stale because it has been open for 90 days with no activity. This thread will be automatically closed in 30 days if no further activity occurs.'
           operations-per-run: 30
           # override days-before-stale, for only marking the pull requests as stale
-          days-before-pr-stale: 60
+          days-before-issue-stale: 90
+          days-before-issue-close: 30
           stale-pr-label: stale
           exempt-pr-labels: keepalive

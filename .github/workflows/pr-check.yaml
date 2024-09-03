@@ -37,7 +37,7 @@ jobs:
       - name: check
         run: |
           PR_TITLE_PREFIX=$(echo "$PR_TITLE" | cut -d':' -f1)
-          if [[ -d "pkg/collector/$PR_TITLE_PREFIX" ]] || [[ -d "$PR_TITLE_PREFIX" ]] || [[ "$PR_TITLE_PREFIX" == "chore" ]] || [[ "$PR_TITLE_PREFIX" == "chore(deps)" ]] || [[ "$PR_TITLE_PREFIX" == "*" ]] || [[ "$PR_TITLE_PREFIX" == "Synchronize common files from prometheus/prometheus" ]]; then
+          if [[ -d "pkg/collector/$PR_TITLE_PREFIX" ]] ||[[ -d "pkg/$PR_TITLE_PREFIX" ]] || [[ -d "$PR_TITLE_PREFIX" ]] || [[ "$PR_TITLE_PREFIX" == "chore" ]] || [[ "$PR_TITLE_PREFIX" == "chore(deps)" ]] || [[ "$PR_TITLE_PREFIX" == "*" ]] || [[ "$PR_TITLE_PREFIX" == "Synchronize common files from prometheus/prometheus" ]]; then
             exit 0
           fi
 
