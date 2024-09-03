@@ -70,11 +70,11 @@ push:
 	set -x; \
 	for docker_repo in ${DOCKER_REPO}; do \
 		for osversion in ${ALL_OS}; do \
-			$(DOCKER) tag local/$(DOCKER_IMAGE_NAME):pr1561 -$${osversion} $${docker_repo}/$(DOCKER_IMAGE_NAME):pr1561 -$${osversion}; \
-			$(DOCKER) push $${docker_repo}/$(DOCKER_IMAGE_NAME):pr1561 -$${osversion}; \
-			$(DOCKER) manifest create --amend $${docker_repo}/$(DOCKER_IMAGE_NAME):pr1561  $${docker_repo}/$(DOCKER_IMAGE_NAME):pr1561 -$${osversion}; \
+			$(DOCKER) tag local/$(DOCKER_IMAGE_NAME):pr1561-$${osversion} $${docker_repo}/$(DOCKER_IMAGE_NAME):pr1561-$${osversion}; \
+			$(DOCKER) push $${docker_repo}/$(DOCKER_IMAGE_NAME):pr1561-$${osversion}; \
+			$(DOCKER) manifest create --amend $${docker_repo}/$(DOCKER_IMAGE_NAME):pr1561  $${docker_repo}/$(DOCKER_IMAGE_NAME):pr1561-$${osversion}; \
 			full_version=`$(DOCKER) manifest inspect $(BASE_IMAGE):$${osversion} | grep "os.version" | head -n 1 | awk -F\" '{print $$4}'` || true; \
-			$(DOCKER) manifest annotate --os windows --arch amd64 --os-version $${full_version} $${docker_repo}/$(DOCKER_IMAGE_NAME):pr1561  $${docker_repo}/$(DOCKER_IMAGE_NAME):pr1561 -$${osversion}; \
+			$(DOCKER) manifest annotate --os windows --arch amd64 --os-version $${full_version} $${docker_repo}/$(DOCKER_IMAGE_NAME):pr1561  $${docker_repo}/$(DOCKER_IMAGE_NAME):pr1561-$${osversion};  \
 		done; \
 		$(DOCKER) manifest push --purge $${docker_repo}/$(DOCKER_IMAGE_NAME):pr1561 ; \
 	done
