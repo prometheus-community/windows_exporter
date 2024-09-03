@@ -88,7 +88,7 @@ push-hostprocess:
 
 .PHONY: push-all
 push-all: build-all
-	$(MAKE) DOCKER_REPO="$(ALL_DOCKER_REPOS)" push # push-hostprocess - disabled until it works on Windows
+	$(MAKE) DOCKER_REPO="$(ALL_DOCKER_REPOS)" push  push-hostprocess
 
 # Mandatory target for container description sync action
 .PHONY: docker-repo-name

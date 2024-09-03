@@ -89,7 +89,6 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Push Latest image
-        if: ${{ github.event_name != 'pull_request' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ startsWith(github.ref, 'refs/tags/') && 'latest' || github.ref_name }}
