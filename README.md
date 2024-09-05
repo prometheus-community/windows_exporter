@@ -109,7 +109,7 @@ If the installer is run without any parameters, the exporter will run with defau
 | `TEXTFILE_DIRS`                  | Use the `--collector.textfile.directories` flag to specify one or more directories, separated by commas, where the collector should read text files containing metrics |
 | `REMOTE_ADDR`                    | Allows setting comma separated remote IP addresses for the Windows Firewall exception (allow list). Defaults to an empty string (any remote address).                  |
 | `EXTRA_FLAGS`                    | Allows passing full CLI flags. Defaults to an empty string.                                                                                                            |
-| `ADD_FIREWALL_EXCEPTION`         | Setup an firewall exception for windows_exporter. Defaults to `yes`.                                                                                                   |
+| `ADD_FIREWALL_EXCEPTION`         | Setup an firewall exception for windows_exporter. Defaults to `no`.                                                                                                   |
 | `ENABLE_V1_PERFORMANCE_COUNTERS` | Enables V1 performance counter on modern systems. Defaults to `yes`.                                                                                                   |
 
 Parameters are sent to the installer via `msiexec`. Example invocations:
