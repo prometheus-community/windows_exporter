@@ -60,9 +60,9 @@
                     Condition="Installed AND (NOT REMOVE) AND (NOT UPGRADINGPRODUCTCODE)"/>
             <Custom Action="set_reinstall_all_property" Before="set_reinstallmode_property" Condition="MAINTENANCE"/>
             <Custom Action="set_reinstallmode_property" Before="LaunchConditions" Condition="MAINTENANCE"/>
-            <Custom Action="CreateConfigFile" Before="StartServices" />
-
+            <Custom Action="CreateConfigFile" Before="InstallServices" />
         </InstallExecuteSequence>
+
         <Media Id="1" Cabinet="windows_exporter.cab" EmbedCab="yes"  />
         <MajorUpgrade Schedule="afterInstallInitialize" DowngradeErrorMessage="A later version of [ProductName] is already installed. Setup will now exit." AllowSameVersionUpgrades="yes" />
 
@@ -83,8 +83,6 @@
 
         <Property Id="TEXTFILE_DIRS" Secure="yes" />
         <SetProperty Id="TextfileDirsFlag" After="InstallFiles" Sequence="execute" Value="--collector.textfile.directories [TEXTFILE_DIRS]" Condition="TEXTFILE_DIRS" />
-
-        <Property Id="ADD_FIREWALL_EXCEPTION" Secure="yes" />
 
         <Property Id="ARPHELPLINK" Value="https://github.com/prometheus-community/windows_exporter/issues" />
         <Property Id="ARPSIZE" Value="9000" />
