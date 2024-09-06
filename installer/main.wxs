@@ -40,7 +40,7 @@
                       Property="REINSTALLMODE"
                       Value="amus" />
         <SetProperty
-            Id="WixSilentExecCmdLine"
+            Id="CreateConfigFile"
             Value="&quot;[%ComSpec]&quot; /c TYPE NUL >>&quot;[APPLICATIONFOLDER]config.yaml&quot;"
             Before="CreateConfigFile"
             Sequence="execute"
@@ -48,9 +48,10 @@
         <CustomAction
             Id="CreateConfigFile"
             BinaryRef="Wix4UtilCA_$(sys.BUILDARCHSHORT)"
-            DllEntry="WixSilentExec"
-            Execute="immediate"
+            DllEntry="WixQuietExec"
+            Execute="deferred"
             Return="check"
+            Impersonate="no"
         />
 
         <InstallExecuteSequence>
