@@ -62,6 +62,7 @@ jobs:
       - name: Install WiX extensions
         run: |
           wix extension add -g WixToolset.Util.wixext
+          wix extension add -g WixToolset.Ui.wixext
           wix extension add -g WixToolset.Firewall.wixext
 
       - name: Install Build deps
