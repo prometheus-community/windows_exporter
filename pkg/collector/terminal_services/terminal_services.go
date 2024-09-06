@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"syscall"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/go-kit/log"
@@ -17,6 +16,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
+	"golang.org/x/sys/windows"
 )
 
 const (
@@ -55,7 +55,7 @@ type Collector struct {
 
 	connectionBrokerEnabled bool
 
-	hServer syscall.Handle
+	hServer windows.Handle
 
 	sessionInfo                 *prometheus.Desc
 	connectionBrokerPerformance *prometheus.Desc

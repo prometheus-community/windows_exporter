@@ -60,6 +60,7 @@ windows_exporter_collector_success{collector="logical_disk"} 1
 windows_exporter_collector_success{collector="memory"} 1
 windows_exporter_collector_success{collector="net"} 1
 windows_exporter_collector_success{collector="os"} 1
+windows_exporter_collector_success{collector="perfdata"} 1
 windows_exporter_collector_success{collector="physical_disk"} 1
 windows_exporter_collector_success{collector="process"} 1
 windows_exporter_collector_success{collector="scheduled_task"} 1
@@ -75,6 +76,7 @@ windows_exporter_collector_timeout{collector="logical_disk"} 0
 windows_exporter_collector_timeout{collector="memory"} 0
 windows_exporter_collector_timeout{collector="net"} 0
 windows_exporter_collector_timeout{collector="os"} 0
+windows_exporter_collector_timeout{collector="perfdata"} 0
 windows_exporter_collector_timeout{collector="physical_disk"} 0
 windows_exporter_collector_timeout{collector="process"} 0
 windows_exporter_collector_timeout{collector="scheduled_task"} 0
@@ -241,6 +243,12 @@ windows_exporter_collector_timeout{collector="textfile"} 0
 # TYPE windows_os_virtual_memory_free_bytes gauge
 # HELP windows_os_visible_memory_bytes Deprecated: Use `windows_memory_physical_total_bytes` instead.
 # TYPE windows_os_visible_memory_bytes gauge
+# HELP windows_perfdata_memory_cache_faults_sec Performance data for \\Memory\\Cache Faults/sec
+# TYPE windows_perfdata_memory_cache_faults_sec counter
+# HELP windows_perfdata_processor_information__privileged_time Performance data for \\Processor Information\\% Privileged Time
+# TYPE windows_perfdata_processor_information__privileged_time counter
+# HELP windows_perfdata_processor_information__processor_time Performance data for \\Processor Information\\% Processor Time
+# TYPE windows_perfdata_processor_information__processor_time counter
 # HELP windows_physical_disk_idle_seconds_total Seconds that the disk was idle (PhysicalDisk.PercentIdleTime)
 # TYPE windows_physical_disk_idle_seconds_total counter
 # HELP windows_physical_disk_read_bytes_total The number of bytes transferred from the disk during read operations (PhysicalDisk.DiskReadBytesPerSec)

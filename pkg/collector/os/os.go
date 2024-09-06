@@ -8,7 +8,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
@@ -22,6 +21,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
+	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/registry"
 )
 
@@ -309,7 +309,7 @@ func (c *Collector) collectTime(ch chan<- prometheus.Metric) error {
 	}
 
 	// timeZoneKeyName contains the english name of the timezone.
-	timezoneName := syscall.UTF16ToString(timeZoneInfo.TimeZoneKeyName[:])
+	timezoneName := windows.UTF16ToString(timeZoneInfo.TimeZoneKeyName[:])
 
 	ch <- prometheus.MustNewConstMetric(
 		c.time,

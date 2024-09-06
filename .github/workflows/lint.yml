@@ -12,6 +12,8 @@ on:
     - "tools/e2e-output.txt"
     branches:
       - master
+      - next
+      - main
   pull_request:
     paths:
     - "go.mod"
@@ -21,6 +23,8 @@ on:
     - "tools/e2e-output.txt"
     branches:
       - master
+      - next
+      - main
 
 env:
   PROMU_VER: '0.14.0'

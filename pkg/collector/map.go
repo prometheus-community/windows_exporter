@@ -36,6 +36,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/collector/netframework_clrsecurity"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/nps"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/os"
+	"github.com/prometheus-community/windows_exporter/pkg/collector/perfdata"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/physical_disk"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/printer"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/process"
@@ -98,6 +99,7 @@ var BuildersWithFlags = map[string]BuilderWithFlags[Collector]{
 	netframework_clrsecurity.Name:        NewBuilderWithFlags(netframework_clrsecurity.NewWithFlags),
 	nps.Name:                             NewBuilderWithFlags(nps.NewWithFlags),
 	os.Name:                              NewBuilderWithFlags(os.NewWithFlags),
+	perfdata.Name:                        NewBuilderWithFlags(perfdata.NewWithFlags),
 	physical_disk.Name:                   NewBuilderWithFlags(physical_disk.NewWithFlags),
 	printer.Name:                         NewBuilderWithFlags(printer.NewWithFlags),
 	process.Name:                         NewBuilderWithFlags(process.NewWithFlags),
