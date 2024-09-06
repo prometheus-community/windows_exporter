@@ -1,0 +1,211 @@
+<?xml version="1.0"?>
+
+<?ifndef Version?>
+<?error Version must be defined?>
+<?endif?>
+<?if $(sys.BUILDARCH)=x64 ?>
+<?define PlatformProgramFiles = "ProgramFiles64Folder" ?>
+<?else?>
+<?error Platform $(var.Platform) is not supported?>
+<?endif?>
+
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:fw="http://wixtoolset.org/schemas/v4/wxs/firewall"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+    <Package UpgradeCode="66a6eb5b-1fc2-4b14-a362-5ceec6413308" Name="$(var.ProductName)" Version="$(var.Version)"
+             Manufacturer="prometheus-community" Language="1033" Scope="perMachine">
+        <SummaryInformation Manufacturer="prometheus-community" Description="$(var.ProductName) $(var.Version) installer" />
+
+        <Upgrade Id="66a6eb5b-1fc2-4b14-a362-5ceec6413308">
+            <UpgradeVersion IncludeMinimum="no"
+                            Minimum="$(var.Version)"
+                            OnlyDetect="no"
+                            Property="NEWERVERSIONDETECTED" />
+            <UpgradeVersion IncludeMaximum="yes"
+                            IncludeMinimum="yes"
+                            Maximum="$(var.Version)"
+                            Minimum="0.0.0.0"
+                            Property="OLDERVERSIONBEINGUPGRADED" />
+        </Upgrade>
+
+        <CustomAction Id="set_maintenance" Property="MAINTENANCE" Value="true" />
+
+        <!-- Set to reinstall all features. -->
+        <CustomAction Id="set_reinstall_all_property"
+                      Property="REINSTALL"
+                      Value="ALL" />
+        <!-- "amus" will force reinstall all files.
+             See https://docs.microsoft.com/en-us/windows/desktop/Msi/reinstallmode -->
+        <CustomAction Id="set_reinstallmode_property"
+                      Property="REINSTALLMODE"
+                      Value="amus" />
+        <SetProperty
+            Id="CreateConfigFile"
+            Value="&quot;[%ComSpec]&quot; /c TYPE NUL >>&quot;[APPLICATIONFOLDER]config.yaml&quot;"
+            Before="CreateConfigFile"
+            Sequence="execute"
+        />
+        <CustomAction
+            Id="CreateConfigFile"
+            BinaryRef="Wix4UtilCA_$(sys.BUILDARCHSHORT)"
+            DllEntry="WixQuietExec"
+            Execute="deferred"
+            Return="check"
+            Impersonate="no"
+        />
+
+        <InstallExecuteSequence>
+            <!-- Set REINSTALL=all and REINSTALLMODE=amus if the user reruns the
+                 MSI, which will force reinstalling all files and services.  -->
+            <Custom Action="set_maintenance" Before="set_reinstall_all_property"
+                    Condition="Installed AND (NOT REMOVE) AND (NOT UPGRADINGPRODUCTCODE)"/>
+            <Custom Action="set_reinstall_all_property" Before="set_reinstallmode_property" Condition="MAINTENANCE"/>
+            <Custom Action="set_reinstallmode_property" Before="LaunchConditions" Condition="MAINTENANCE"/>
+            <Custom Action="CreateConfigFile" Before="InstallServices" />
+        </InstallExecuteSequence>
+
+        <Media Id="1" Cabinet="windows_exporter.cab" EmbedCab="yes"  />
+        <MajorUpgrade Schedule="afterInstallInitialize" DowngradeErrorMessage="A later version of [ProductName] is already installed. Setup will now exit." AllowSameVersionUpgrades="yes" />
+
+        <Property Id="ENABLED_COLLECTORS" Secure="yes" Value="[defaults]" />
+        <SetProperty Id="CollectorsFlag" After="InstallFiles" Sequence="execute" Value="--collectors.enabled [ENABLED_COLLECTORS]" Condition="ENABLED_COLLECTORS" />
+
+        <Property Id="EXTRA_FLAGS" Secure="yes" />
+        <SetProperty Id="ExtraFlags" After="InstallFiles" Sequence="execute" Value="[EXTRA_FLAGS]" Condition="EXTRA_FLAGS" />
+
+        <Property Id="LISTEN_PORT" Secure="yes" Value="9182" />
+        <SetProperty Id="ListenFlag" After="InstallFiles" Sequence="execute" Value="--web.listen-address [LISTEN_ADDR]:[LISTEN_PORT]" Condition="LISTEN_ADDR&lt;&gt;&quot;&quot; OR LISTEN_PORT&lt;&gt;9182" />
+
+        <Property Id="METRICS_PATH" Secure="yes" />
+        <SetProperty Id="MetricsPathFlag" After="InstallFiles" Sequence="execute" Value="--telemetry.path [METRICS_PATH]" Condition="METRICS_PATH" />
+
+        <Property Id="REMOTE_ADDR" Secure="yes" />
+        <SetProperty Id="RemoteAddressFlag" After="InstallFiles" Sequence="execute" Value="[REMOTE_ADDR]" Condition="REMOTE_ADDR" />
+
+        <Property Id="TEXTFILE_DIRS" Secure="yes" />
+        <SetProperty Id="TextfileDirsFlag" After="InstallFiles" Sequence="execute" Value="--collector.textfile.directories [TEXTFILE_DIRS]" Condition="TEXTFILE_DIRS" />
+
+        <Property Id="ARPHELPLINK" Value="https://github.com/prometheus-community/windows_exporter/issues" />
+        <Property Id="ARPSIZE" Value="9000" />
+        <Property Id="ARPURLINFOABOUT" Value="https://github.com/prometheus-community/windows_exporter" />
+        <!--<Property Id="ARPNOMODIFY" Value="0" />-->
+        <!--<Property Id="ARPNOREPAIR" Value="1" />-->
+        <Property Id="START_MENU_FOLDER" Value="0" />
+        <Property Id="NOSTART" Value="0" />
+
+        <Feature
+            Id="DefaultFeature"
+            Level="1"
+            Title="$(var.ProductName) $(var.Version)"
+            Description="The binary and configuration files for $(var.ProductName)"
+            Display="expand"
+            ConfigurableDirectory="APPLICATIONFOLDER"
+            AllowAdvertise="no"
+            InstallDefault="local"
+            AllowAbsent="no"
+        >
+            <ComponentGroupRef Id="CG_Files" />
+
+            <Feature
+                Id="FirewallException"
+                Level="2"
+                Title="Firewall Exception"
+                Description="Allow $(var.ProductName) to listen on a port"
+                Display="expand"
+                AllowAdvertise="no"
+                AllowAbsent="yes">
+                <ComponentGroupRef Id="CG_FirewallException" />
+            </Feature>
+        </Feature>
+
+        <UI Id="FeatureTree">
+            <ui:WixUI Id="WixUI_FeatureTree" />
+            <UIRef Id="WixUI_ErrorProgressText" />
+            <Dialog Id="CustomPropertiesDlg" Width="370" Height="270" Title="windows_exporter configuration">
+                <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" TabSkip="no" Text="!(loc.CustomizeDlgBannerBitmap)" />
+                <!--<Control Id="Text" Type="Text" X="25" Y="55" Width="320" Height="20" Text="Text" />-->
+                <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="370" Height="0" />
+                <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="370" Height="0" />
+                <Control Id="Description" Type="Text" X="25" Y="23" Width="280" Height="15" Transparent="yes" NoPrefix="yes" Text="This pages contains configuration related to windows_exporter" />
+                <Control Id="Title" Type="Text" X="15" Y="6" Width="210" Height="15" Transparent="yes" NoPrefix="yes" Text="{\WixUI_Font_Title}windows_exporter configuration" />
+
+                <!-- Edit box for property input -->
+                <!-- cpu,cs,logical_disk,physical_disk,net,os,service,system -->
+                <Control Id="PropertyEdit_ENABLED_COLLECTORS_Title1" Type="Text" X="25" Y="55" Width="300" Height="15" Transparent="yes" NoPrefix="yes" Text="Comma-separated list of collectors to use. Use '[\[]defaults[\]]' as a placeholder for all" />
+                <Control Id="PropertyEdit_ENABLED_COLLECTORS_Title2" Type="Text" X="25" Y="65" Width="300" Height="15" Transparent="yes" NoPrefix="yes" Text="the collectors enabled by default." />
+                <Control Id="PropertyEdit_ENABLED_COLLECTORS" Type="Edit" X="24" Y="77" Width="300" Height="18" Property="ENABLED_COLLECTORS" Text="[ENABLED_COLLECTORS]" Indirect="no" />
+
+                <Control Id="PropertyEdit_EXTRA_FLAGS_Title" Type="Text" X="25" Y="100" Width="210" Height="15" Transparent="yes" NoPrefix="yes" Text="Additional command line flags" />
+                <Control Id="PropertyEdit_EXTRA_FLAGS" Type="Edit" X="24" Y="112" Width="300" Height="18" Property="EXTRA_FLAGS" Text="[EXTRA_FLAGS]" Indirect="no" />
+
+                <Control Id="PropertyEdit_LISTEN_PORT_Title" Type="Text" X="25" Y="135" Width="210" Height="15" Transparent="yes" NoPrefix="yes" Text="Port to listen" />
+                <Control Id="PropertyEdit_LISTEN_PORT" Type="Edit" X="24" Y="147" Width="300" Height="18" Property="LISTEN_PORT" Text="[LISTEN_PORT]" Indirect="no" />
+
+                <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Text="!(loc.WixUINext)">
+                    <Publish Event="NewDialog" Value="VerifyReadyDlg" />
+                </Control>
+                <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="!(loc.WixUIBack)">
+                    <Publish Event="NewDialog" Value="CustomizeDlg" />
+                </Control>
+                <Control Id="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Cancel="yes" Text="!(loc.WixUICancel)">
+                    <Publish Event="SpawnDialog" Value="CancelDlg" />
+                </Control>
+            </Dialog>
+
+            <!-- skip the license agreement dialog; higher Order takes priority (weird) -->
+
+            <Publish
+                Condition="NOT Installed"
+                Dialog="WelcomeDlg"
+                Control="Next"
+                Event="NewDialog"
+                Value="CustomizeDlg"
+                Order="10"/>
+            <Publish
+                Condition="NOT Installed"
+                Dialog="CustomizeDlg"
+                Control="Back"
+                Event="NewDialog"
+                Value="WelcomeDlg"
+                Order="10"/>
+            <Publish
+                Dialog="CustomizeDlg"
+                Control="Next"
+                Event="NewDialog"
+                Value="CustomPropertiesDlg"
+                Order="10"/>
+            <Publish
+                Dialog="VerifyReadyDlg"
+                Control="Back"
+                Event="NewDialog"
+                Value="CustomPropertiesDlg"
+                Order="10"/>
+
+
+            <!--CustomPropertyDlg-->
+        </UI>
+
+        <!-- InstallLocation key -->
+        <CustomAction Id="SetInstallLocation" Property="ARPINSTALLLOCATION" Value="[APPLICATIONFOLDER]" />
+
+        <StandardDirectory Id="ProgramFiles64Folder">
+            <Directory Id="APPLICATIONFOLDER" Name="windows_exporter">
+                <Directory Id="textfile_inputs" Name="textfile_inputs" />
+            </Directory>
+        </StandardDirectory>
+
+        <ComponentGroup Id="CG_FirewallException">
+            <Component Directory="APPLICATIONFOLDER" Id="C_FirewallException" Guid="9f522655-ac0e-42d2-a512-a7b19ebec7f7">
+                <fw:FirewallException
+                    Id="MetricsEndpoint"
+                    Name="$(var.ProductName)"
+                    Description="$(var.ProductName) HTTP endpoint"
+                    Program="[#windows_exporter.exe]"
+                    Port="[LISTEN_PORT]"
+                    Protocol="tcp">
+                    <fw:RemoteAddress Value="[REMOTE_ADDR]" />
+                </fw:FirewallException>
+            </Component>
+        </ComponentGroup>
+    </Package>
+</Wix>

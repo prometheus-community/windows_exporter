@@ -28,7 +28,7 @@ Copy-Item -Force $PathToExecutable Work/windows_exporter.exe
 Write-Verbose "Creating windows_exporter-${Version}-${Arch}.msi"
 $wixArch = @{"amd64" = "x64"; "arm64" = "arm64"}[$Arch]
 
-Invoke-Expression "wix build -arch $wixArch -o .\windows_exporter-$($Version)-$($Arch).msi .\windows_exporter.wxs -d Version=$($MsiVersion) -ext WixToolset.Firewall.wixext -ext WixToolset.Util.wixext"
+Invoke-Expression "wix build -arch $wixArch -o .\windows_exporter-$($Version)-$($Arch).msi .\files.wxs .\main.wxs -d ProductName=windows_exporter -d Version=$($MsiVersion) -ext WixToolset.Firewall.wixext -ext WixToolset.UI.wixext -ext WixToolset.Util.wixext"
 
 Write-Verbose "Done!"
 Pop-Location

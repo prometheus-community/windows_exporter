@@ -94,23 +94,33 @@ windows_exporter accepts flags to configure certain behaviours. The ones configu
 | `--config.file.insecure-skip-verify` | Skip TLS when loading config file from URL                                                                                                          | false         |
 
 ## Installation
+
 The latest release can be downloaded from the [releases page](https://github.com/prometheus-community/windows_exporter/releases).
 
 Each release provides a .msi installer. The installer will setup the windows_exporter as a Windows service, as well as create an exception in the Windows Firewall.
 
-If the installer is run without any parameters, the exporter will run with default settings for enabled collectors, ports, etc. The following parameters are available:
+If the installer is run without any parameters, the exporter will run with default settings for enabled collectors, ports, etc. 
 
-| Name                             | Description                                                                                                                                                            |
-|----------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `ENABLED_COLLECTORS`             | As the `--collectors.enabled` flag, provide a comma-separated list of enabled collectors                                                                               |
-| `LISTEN_ADDR`                    | The IP address to bind to. Defaults to an empty string. (any local address)                                                                                            |
-| `LISTEN_PORT`                    | The port to bind to. Defaults to `9182`.                                                                                                                               |
-| `METRICS_PATH`                   | The path at which to serve metrics. Defaults to `/metrics`                                                                                                             |
-| `TEXTFILE_DIRS`                  | Use the `--collector.textfile.directories` flag to specify one or more directories, separated by commas, where the collector should read text files containing metrics |
-| `REMOTE_ADDR`                    | Allows setting comma separated remote IP addresses for the Windows Firewall exception (allow list). Defaults to an empty string (any remote address).                  |
-| `EXTRA_FLAGS`                    | Allows passing full CLI flags. Defaults to an empty string.                                                                                                            |
-| `ADD_FIREWALL_EXCEPTION`         | Setup an firewall exception for windows_exporter. Defaults to `no`.                                                                                                   |
-| `ENABLE_V1_PERFORMANCE_COUNTERS` | Enables V1 performance counter on modern systems. Defaults to `yes`.                                                                                                   |
+The installer provides a configuration file to customize the exporter. 
+
+The configuration file
+* is located in the same directory as the exporter executable.
+* has the YAML format and is provided with the `--config.file` parameter.
+* can be used to enable or disable collectors, set collector-specific parameters, and set global parameters.
+
+The following parameters are available:
+
+| Name                 | Description                                                                                                                                                            |
+|----------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `ENABLED_COLLECTORS` | As the `--collectors.enabled` flag, provide a comma-separated list of enabled collectors                                                                               |
+| `LISTEN_ADDR`        | The IP address to bind to. Defaults to an empty string. (any local address)                                                                                            |
+| `LISTEN_PORT`        | The port to bind to. Defaults to `9182`.                                                                                                                               |
+| `METRICS_PATH`       | The path at which to serve metrics. Defaults to `/metrics`                                                                                                             |
+| `TEXTFILE_DIRS`      | Use the `--collector.textfile.directories` flag to specify one or more directories, separated by commas, where the collector should read text files containing metrics |
+| `REMOTE_ADDR`        | Allows setting comma separated remote IP addresses for the Windows Firewall exception (allow list). Defaults to an empty string (any remote address).                  |
+| `EXTRA_FLAGS`        | Allows passing full CLI flags. Defaults to an empty string.                                                                                                            |
+| `ADDLOCAL`           | Enables features within the windows_exporter installer. Supported values: `FirewallException`                                                                          |
+| `REMOVE`             | Disables features within the windows_exporter installer. Supported values: `FirewallException`                                                                         |
 
 Parameters are sent to the installer via `msiexec`. Example invocations:
 
@@ -132,13 +142,7 @@ msiexec /i C:\Users\Administrator\Downloads\windows_exporter.msi ENABLED_COLLECT
 To install the exporter with creating a firewall exception, use the following command:
 
 ```powershell
-msiexec /i <path-to-msi-file> ADD_FIREWALL_EXCEPTION=yes
-```
-
-To repair an installation, e.g force re-creating Windows service:
-
-```powershell
-msiexec /fa <path-to-msi-file>
+msiexec /i <path-to-msi-file> ADDLOCAL=FirewallException
 ```
 
 
