@@ -1,0 +1,38 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs" xmlns:netfx="http://wixtoolset.org/schemas/v4/wxs/netfx"
+     xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
+    <Fragment>
+        <DirectoryRef Id="APPLICATIONFOLDER">
+            <Component Transitive="yes">
+                <File Id="windows_exporter.exe" Name="windows_exporter.exe" Source="Work\windows_exporter.exe" KeyPath="yes" Vital="yes" Checksum="yes"/>
+                <ServiceInstall
+                    Id="InstallExporterService"
+                    Name="windows_exporter"
+                    DisplayName="windows_exporter"
+                    Description="Exports Prometheus metrics about the system"
+                    ErrorControl="normal"
+                    Start="auto"
+                    Type="ownProcess"
+                    Vital="yes"
+                    Arguments="--log.file eventlog --config.file=&quot;[APPLICATIONFOLDER]config.yaml&quot; [CollectorsFlag] [ListenFlag] [MetricsPathFlag] [TextfileDirsFlag] [ExtraFlags]">
+                    <util:ServiceConfig
+                        ResetPeriodInDays="1"
+                        FirstFailureActionType="restart"
+                        SecondFailureActionType="restart"
+                        ThirdFailureActionType="restart"
+                        RestartServiceDelayInSeconds="60"
+                    />
+                    <ServiceDependency Id="wmiApSrv" />
+                </ServiceInstall>
+                <ServiceControl Id="ServiceStateControl" Name="windows_exporter" Remove="uninstall" Start="install" Stop="both"/>
+            </Component>
+            <Component Id="CreateTextfileDirectory" Directory="textfile_inputs" Guid="d03ef58a-9cbf-4165-ad39-d143e9b27e14">
+                <CreateFolder />
+            </Component>
+        </DirectoryRef>
+
+        <ComponentGroup Id="CG_Files">
+            <ComponentRef Id="windows_exporter.exe" />
+            <ComponentRef Id="CreateTextfileDirectory" />
+        </ComponentGroup>
+    </Fragment>
+</Wix>
