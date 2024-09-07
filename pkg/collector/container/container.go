@@ -3,6 +3,8 @@
 package container
 
 import (
+	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/Microsoft/hcsshim"
@@ -194,6 +196,7 @@ func (c *Collector) Build(_ log.Logger, _ *wmi.Client) error {
 		[]string{"container_id"},
 		nil,
 	)
+
 	return nil
 }
 
@@ -205,15 +208,8 @@ func (c *Collector) Collect(_ *types.ScrapeContext, logger log.Logger, ch chan<-
 		_ = level.Error(logger).Log("msg", "failed collecting collector metrics", "err", err)
 		return err
 	}
-	return nil
-}
 
-// containerClose closes the container resource.
-func (c *Collector) containerClose(logger log.Logger, container hcsshim.Container) {
-	err := container.Close()
-	if err != nil {
-		_ = level.Error(logger).Log("err", err)
-	}
+	return nil
 }
 
 func (c *Collector) collect(logger log.Logger, ch chan<- prometheus.Metric) error {
@@ -231,102 +227,138 @@ func (c *Collector) collect(logger log.Logger, ch chan<- prometheus.Metric) erro
 		prometheus.GaugeValue,
 		float64(count),
 	)
+
 	if count == 0 {
 		return nil
 	}
 
 	containerPrefixes := make(map[string]string)
+	collectErrors := make([]error, 0, len(containers))
 
 	for _, containerDetails := range containers {
-		// https://stackoverflow.com/questions/45617758/proper-way-to-release-resources-with-defer-in-a-loop
-		func() {
-			container, err := hcsshim.OpenContainer(containerDetails.ID)
-			if container != nil {
-				defer c.containerClose(logger, container)
-			}
-			if err != nil {
-				_ = level.Error(logger).Log("msg", "err in opening container", "containerId", containerDetails.ID, "err", err)
-				return
-			}
+		containerIdWithPrefix := getContainerIdWithPrefix(containerDetails)
 
-			cstats, err := container.Statistics()
-			if err != nil {
-				_ = level.Error(logger).Log("msg", "err in fetching container Statistics", "containerId", containerDetails.ID, "err", err)
-				return
+		if err = c.collectContainer(logger, ch, containerDetails, containerIdWithPrefix); err != nil {
+			if hcsshim.IsNotExist(err) {
+				_ = level.Debug(logger).Log("msg", "err in fetching container statistics", "containerId", containerDetails.ID, "err", err)
+			} else {
+				_ = level.Error(logger).Log("msg", "err in fetching container statistics", "containerId", containerDetails.ID, "err", err)
+				collectErrors = append(collectErrors, err)
 			}
 
-			containerIdWithPrefix := getContainerIdWithPrefix(containerDetails)
-			containerPrefixes[containerDetails.ID] = containerIdWithPrefix
+			continue
+		}
 
-			ch <- prometheus.MustNewConstMetric(
-				c.containerAvailable,
-				prometheus.CounterValue,
-				1,
-				containerIdWithPrefix,
-			)
-			ch <- prometheus.MustNewConstMetric(
-				c.usageCommitBytes,
-				prometheus.GaugeValue,
-				float64(cstats.Memory.UsageCommitBytes),
-				containerIdWithPrefix,
-			)
-			ch <- prometheus.MustNewConstMetric(
-				c.usageCommitPeakBytes,
-				prometheus.GaugeValue,
-				float64(cstats.Memory.UsageCommitPeakBytes),
-				containerIdWithPrefix,
-			)
-			ch <- prometheus.MustNewConstMetric(
-				c.usagePrivateWorkingSetBytes,
-				prometheus.GaugeValue,
-				float64(cstats.Memory.UsagePrivateWorkingSetBytes),
-				containerIdWithPrefix,
-			)
-			ch <- prometheus.MustNewConstMetric(
-				c.runtimeTotal,
-				prometheus.CounterValue,
-				float64(cstats.Processor.TotalRuntime100ns)*perflib.TicksToSecondScaleFactor,
-				containerIdWithPrefix,
-			)
-			ch <- prometheus.MustNewConstMetric(
-				c.runtimeUser,
-				prometheus.CounterValue,
-				float64(cstats.Processor.RuntimeUser100ns)*perflib.TicksToSecondScaleFactor,
-				containerIdWithPrefix,
-			)
-			ch <- prometheus.MustNewConstMetric(
-				c.runtimeKernel,
-				prometheus.CounterValue,
-				float64(cstats.Processor.RuntimeKernel100ns)*perflib.TicksToSecondScaleFactor,
-				containerIdWithPrefix,
-			)
-			ch <- prometheus.MustNewConstMetric(
-				c.readCountNormalized,
-				prometheus.CounterValue,
-				float64(cstats.Storage.ReadCountNormalized),
-				containerIdWithPrefix,
-			)
-			ch <- prometheus.MustNewConstMetric(
-				c.readSizeBytes,
-				prometheus.CounterValue,
-				float64(cstats.Storage.ReadSizeBytes),
-				containerIdWithPrefix,
-			)
-			ch <- prometheus.MustNewConstMetric(
-				c.writeCountNormalized,
-				prometheus.CounterValue,
-				float64(cstats.Storage.WriteCountNormalized),
-				containerIdWithPrefix,
-			)
-			ch <- prometheus.MustNewConstMetric(
-				c.writeSizeBytes,
-				prometheus.CounterValue,
-				float64(cstats.Storage.WriteSizeBytes),
-				containerIdWithPrefix,
-			)
-		}()
+		containerPrefixes[containerDetails.ID] = containerIdWithPrefix
 	}
 
+	if err = c.collectNetworkMetrics(logger, ch, containerPrefixes); err != nil {
+		return fmt.Errorf("error in fetching container network statistics: %w", err)
+	}
+
+	if len(collectErrors) > 0 {
+		return fmt.Errorf("errors while fetching container statistics: %w", errors.Join(collectErrors...))
+	}
+
+	return nil
+}
+
+func (c *Collector) collectContainer(logger log.Logger, ch chan<- prometheus.Metric, containerDetails hcsshim.ContainerProperties, containerIdWithPrefix string) error {
+	container, err := hcsshim.OpenContainer(containerDetails.ID)
+	if err != nil {
+		return fmt.Errorf("error in opening container: %w", err)
+	}
+
+	defer func() {
+		if container == nil {
+			return
+		}
+
+		if err := container.Close(); err != nil {
+			_ = level.Error(logger).Log("err", fmt.Errorf("error in closing container: %w", err))
+		}
+	}()
+
+	containerStats, err := container.Statistics()
+	if err != nil {
+		return fmt.Errorf("error in fetching container statistics: %w", err)
+	}
+
+	ch <- prometheus.MustNewConstMetric(
+		c.containerAvailable,
+		prometheus.CounterValue,
+		1,
+		containerIdWithPrefix,
+	)
+	ch <- prometheus.MustNewConstMetric(
+		c.usageCommitBytes,
+		prometheus.GaugeValue,
+		float64(containerStats.Memory.UsageCommitBytes),
+		containerIdWithPrefix,
+	)
+	ch <- prometheus.MustNewConstMetric(
+		c.usageCommitPeakBytes,
+		prometheus.GaugeValue,
+		float64(containerStats.Memory.UsageCommitPeakBytes),
+		containerIdWithPrefix,
+	)
+	ch <- prometheus.MustNewConstMetric(
+		c.usagePrivateWorkingSetBytes,
+		prometheus.GaugeValue,
+		float64(containerStats.Memory.UsagePrivateWorkingSetBytes),
+		containerIdWithPrefix,
+	)
+	ch <- prometheus.MustNewConstMetric(
+		c.runtimeTotal,
+		prometheus.CounterValue,
+		float64(containerStats.Processor.TotalRuntime100ns)*perflib.TicksToSecondScaleFactor,
+		containerIdWithPrefix,
+	)
+	ch <- prometheus.MustNewConstMetric(
+		c.runtimeUser,
+		prometheus.CounterValue,
+		float64(containerStats.Processor.RuntimeUser100ns)*perflib.TicksToSecondScaleFactor,
+		containerIdWithPrefix,
+	)
+	ch <- prometheus.MustNewConstMetric(
+		c.runtimeKernel,
+		prometheus.CounterValue,
+		float64(containerStats.Processor.RuntimeKernel100ns)*perflib.TicksToSecondScaleFactor,
+		containerIdWithPrefix,
+	)
+	ch <- prometheus.MustNewConstMetric(
+		c.readCountNormalized,
+		prometheus.CounterValue,
+		float64(containerStats.Storage.ReadCountNormalized),
+		containerIdWithPrefix,
+	)
+	ch <- prometheus.MustNewConstMetric(
+		c.readSizeBytes,
+		prometheus.CounterValue,
+		float64(containerStats.Storage.ReadSizeBytes),
+		containerIdWithPrefix,
+	)
+	ch <- prometheus.MustNewConstMetric(
+		c.writeCountNormalized,
+		prometheus.CounterValue,
+		float64(containerStats.Storage.WriteCountNormalized),
+		containerIdWithPrefix,
+	)
+	ch <- prometheus.MustNewConstMetric(
+		c.writeSizeBytes,
+		prometheus.CounterValue,
+		float64(containerStats.Storage.WriteSizeBytes),
+		containerIdWithPrefix,
+	)
+
+	return nil
+}
+
+// collectNetworkMetrics collects network metrics for containers.
+// With HNSv2, the network stats must be collected from hcsshim.HNSListEndpointRequest.
+// Network statistics from the container.Statistics() are providing data only, if HNSv1 is used.
+// Ref: https://github.com/prometheus-community/windows_exporter/pull/1218
+func (c *Collector) collectNetworkMetrics(logger log.Logger, ch chan<- prometheus.Metric, containerPrefixes map[string]string) error {
 	hnsEndpoints, err := hcsshim.HNSListEndpointRequest()
 	if err != nil {
 		_ = level.Warn(logger).Log("msg", "Failed to collect network stats for containers")
@@ -347,12 +379,13 @@ func (c *Collector) collect(logger log.Logger, ch chan<- prometheus.Metric) erro
 
 		for _, containerId := range endpoint.SharedContainers {
 			containerIdWithPrefix, ok := containerPrefixes[containerId]
-			endpointId := strings.ToUpper(endpoint.Id)
 
 			if !ok {
-				_ = level.Warn(logger).Log("msg", "Failed to collect network stats for container "+containerId)
+				_ = level.Debug(logger).Log("msg", "Failed to collect network stats for container "+containerId)
 				continue
 			}
+
+			endpointId := strings.ToUpper(endpoint.Id)
 
 			ch <- prometheus.MustNewConstMetric(
 				c.bytesReceived,
