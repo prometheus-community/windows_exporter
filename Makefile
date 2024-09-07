@@ -7,7 +7,7 @@ DOCKER_REPO       ?= prometheuscommunity
 DOCKER_IMAGE_NAME ?= windows-exporter
 
 # ALL_DOCKER_REPOS is the list of repositories to push the image to. ghcr.io requires that org name be the same as the image repo name.
-ALL_DOCKER_REPOS  ?= docker.io/$(DOCKER_REPO) ghcr.io/prometheus-community # quay.io/$(DOCKER_REPO) 
+ALL_DOCKER_REPOS  ?= ghcr.io/jkroepke # quay.io/$(DOCKER_REPO)
 
 # Image Variables for host process Container
 # Windows image build is heavily influenced by https://github.com/kubernetes/kubernetes/blob/master/cluster/images/etcd/Makefile
@@ -56,10 +56,10 @@ package: crossbuild
 	powershell -NonInteractive -ExecutionPolicy Bypass -File .\installer\build.ps1 -PathToExecutable .\output\amd64\windows_exporter.exe -Version $(shell git describe --tags --abbrev=0)
 
 build-image: crossbuild
-	$(DOCKER) build --build-arg=BASE=$(BASE_IMAGE):$(OS) -f Dockerfile -t local/$(DOCKER_IMAGE_NAME):$(VERSION)-$(OS) .
+	$(DOCKER) build --build-arg=BASE=$(BASE_IMAGE):$(OS) -f Dockerfile -t local/$(DOCKER_IMAGE_NAME):pr1561-$(OS) .
 
 build-hostprocess:
-	$(DOCKER) buildx build --build-arg=BASE=mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v1.0.0 -f Dockerfile -t local/$(DOCKER_IMAGE_NAME):$(VERSION)-hostprocess .
+	$(DOCKER) buildx build --build-arg=BASE=mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v1.0.0 -f Dockerfile -t local/$(DOCKER_IMAGE_NAME):pr1561-hostprocess .
 
 sub-build-%:
 	$(MAKE) OS=$* build-image
@@ -70,20 +70,20 @@ push:
 	set -x; \
 	for docker_repo in ${DOCKER_REPO}; do \
 		for osversion in ${ALL_OS}; do \
-			$(DOCKER) tag local/$(DOCKER_IMAGE_NAME):$(VERSION)-$${osversion} $${docker_repo}/$(DOCKER_IMAGE_NAME):$(VERSION)-$${osversion}; \
-			$(DOCKER) push $${docker_repo}/$(DOCKER_IMAGE_NAME):$(VERSION)-$${osversion}; \
-			$(DOCKER) manifest create --amend $${docker_repo}/$(DOCKER_IMAGE_NAME):$(VERSION) $${docker_repo}/$(DOCKER_IMAGE_NAME):$(VERSION)-$${osversion}; \
+			$(DOCKER) tag local/$(DOCKER_IMAGE_NAME):pr1561-$${osversion} $${docker_repo}/$(DOCKER_IMAGE_NAME):pr1561-$${osversion}; \
+			$(DOCKER) push $${docker_repo}/$(DOCKER_IMAGE_NAME):pr1561-$${osversion}; \
+			$(DOCKER) manifest create --amend $${docker_repo}/$(DOCKER_IMAGE_NAME):pr1561  $${docker_repo}/$(DOCKER_IMAGE_NAME):pr1561-$${osversion}; \
 			full_version=`$(DOCKER) manifest inspect $(BASE_IMAGE):$${osversion} | grep "os.version" | head -n 1 | awk -F\" '{print $$4}'` || true; \
-			$(DOCKER) manifest annotate --os windows --arch amd64 --os-version $${full_version} $${docker_repo}/$(DOCKER_IMAGE_NAME):$(VERSION) $${docker_repo}/$(DOCKER_IMAGE_NAME):$(VERSION)-$${osversion}; \
+			$(DOCKER) manifest annotate --os windows --arch amd64 --os-version $${full_version} $${docker_repo}/$(DOCKER_IMAGE_NAME):pr1561  $${docker_repo}/$(DOCKER_IMAGE_NAME):pr1561-$${osversion};  \
 		done; \
-		$(DOCKER) manifest push --purge $${docker_repo}/$(DOCKER_IMAGE_NAME):$(VERSION); \
+		$(DOCKER) manifest push --purge $${docker_repo}/$(DOCKER_IMAGE_NAME):pr1561 ; \
 	done
 
 # We can't load the image into the local docker store, so we have to build and push it in one go
 push-hostprocess:
 	set -x; \
 	for docker_repo in ${DOCKER_REPO}; do \
-		$(DOCKER) buildx build --push --build-arg=BASE=mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v1.0.0 -f Dockerfile -t $${docker_repo}/$(DOCKER_IMAGE_NAME):$(VERSION)-hostprocess .; \
+		$(DOCKER) buildx build --push --build-arg=BASE=mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v1.0.0 -f Dockerfile -t $${docker_repo}/$(DOCKER_IMAGE_NAME):pr1561-hostprocess .; \
 	done
 
 .PHONY: push-all

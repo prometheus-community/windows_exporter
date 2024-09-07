@@ -44,6 +44,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/collector/netframework_clrsecurity"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/nps"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/os"
+	"github.com/prometheus-community/windows_exporter/pkg/collector/perfdata"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/physical_disk"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/printer"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/process"
@@ -117,6 +118,7 @@ func NewWithConfig(config Config) *Collectors {
 	collectors[netframework_clrsecurity.Name] = netframework_clrsecurity.New(&config.NetframeworkClrsecurity)
 	collectors[nps.Name] = nps.New(&config.Nps)
 	collectors[os.Name] = os.New(&config.Os)
+	collectors[perfdata.Name] = perfdata.New(&config.PerfData)
 	collectors[physical_disk.Name] = physical_disk.New(&config.PhysicalDisk)
 	collectors[printer.Name] = printer.New(&config.Printer)
 	collectors[process.Name] = process.New(&config.Process)
@@ -224,7 +226,7 @@ func (c *Collectors) Close() error {
 	errs := make([]error, 0, len(c.collectors))
 
 	for _, collector := range c.collectors {
-		if err := collector.Close(); err != nil {
+		if err := collector.Close(nil); err != nil {
 			errs = append(errs, err)
 		}
 	}

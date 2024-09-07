@@ -8,7 +8,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"syscall"
 	"unsafe"
 
 	"github.com/alecthomas/kingpin/v2"
@@ -128,7 +127,7 @@ func (c *Collector) GetPerfCounter(_ log.Logger) ([]string, error) {
 	return []string{"Process"}, nil
 }
 
-func (c *Collector) Close() error {
+func (c *Collector) Close(_ log.Logger) error {
 	return nil
 }
 
@@ -620,7 +619,7 @@ func (c *Collector) openProcess(pid uint32) (windows.Handle, bool, error) {
 		return 0, false, fmt.Errorf("failed to open process: %w", err)
 	}
 
-	if errors.Is(err, syscall.Errno(0x57)) { // invalid parameter, for PIDs that don't exist
+	if errors.Is(err, windows.Errno(0x57)) { // invalid parameter, for PIDs that don't exist
 		return 0, false, errors.New("process not found")
 	}
 

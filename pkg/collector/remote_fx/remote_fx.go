@@ -78,7 +78,7 @@ func (c *Collector) GetPerfCounter(_ log.Logger) ([]string, error) {
 	return []string{"RemoteFX Network", "RemoteFX Graphics"}, nil
 }
 
-func (c *Collector) Close() error {
+func (c *Collector) Close(_ log.Logger) error {
 	return nil
 }
 

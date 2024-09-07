@@ -3,6 +3,8 @@
 package system
 
 import (
+	"errors"
+
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
@@ -25,6 +27,8 @@ type Collector struct {
 	contextSwitchesTotal     *prometheus.Desc
 	exceptionDispatchesTotal *prometheus.Desc
 	processorQueueLength     *prometheus.Desc
+	processes                *prometheus.Desc
+	processesLimit           *prometheus.Desc
 	systemCallsTotal         *prometheus.Desc
 	systemUpTime             *prometheus.Desc
 	threads                  *prometheus.Desc
@@ -54,7 +58,7 @@ func (c *Collector) GetPerfCounter(_ log.Logger) ([]string, error) {
 	return []string{"System"}, nil
 }
 
-func (c *Collector) Close() error {
+func (c *Collector) Close(_ log.Logger) error {
 	return nil
 }
 
@@ -71,6 +75,19 @@ func (c *Collector) Build(_ log.Logger, _ *wmi.Client) error {
 		nil,
 		nil,
 	)
+	c.processes = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "processes"),
+		"Current number of processes (WMI source: PerfOS_System.Processes)",
+		nil,
+		nil,
+	)
+	c.processesLimit = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "processes_limit"),
+		"Maximum number of processes.",
+		nil,
+		nil,
+	)
+
 	c.processorQueueLength = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "processor_queue_length"),
 		"Length of processor queue (WMI source: PerfOS_System.ProcessorQueueLength)",
@@ -117,6 +134,7 @@ type system struct {
 	ProcessorQueueLength      float64 `perflib:"Processor Queue Length"`
 	SystemCallsPersec         float64 `perflib:"System Calls/sec"`
 	SystemUpTime              float64 `perflib:"System Up Time"`
+	Processes                 float64 `perflib:"Processes"`
 	Threads                   float64 `perflib:"Threads"`
 }
 
@@ -125,6 +143,10 @@ func (c *Collector) collect(ctx *types.ScrapeContext, logger log.Logger, ch chan
 	var dst []system
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["System"], &dst, logger); err != nil {
 		return err
+	}
+
+	if len(dst) == 0 {
+		return errors.New("no data returned from Performance Counter")
 	}
 
 	ch <- prometheus.MustNewConstMetric(
@@ -143,6 +165,11 @@ func (c *Collector) collect(ctx *types.ScrapeContext, logger log.Logger, ch chan
 		dst[0].ProcessorQueueLength,
 	)
 	ch <- prometheus.MustNewConstMetric(
+		c.processes,
+		prometheus.GaugeValue,
+		dst[0].Processes,
+	)
+	ch <- prometheus.MustNewConstMetric(
 		c.systemCallsTotal,
 		prometheus.CounterValue,
 		dst[0].SystemCallsPersec,
@@ -157,5 +184,15 @@ func (c *Collector) collect(ctx *types.ScrapeContext, logger log.Logger, ch chan
 		prometheus.GaugeValue,
 		dst[0].Threads,
 	)
+
+	// Windows has no defined limit, and is based off available resources. This currently isn't calculated by WMI and is set to default value.
+	// https://techcommunity.microsoft.com/t5/windows-blog-archive/pushing-the-limits-of-windows-processes-and-threads/ba-p/723824
+	// https://docs.microsoft.com/en-us/windows/win32/cimwin32prov/win32-operatingsystem
+	ch <- prometheus.MustNewConstMetric(
+		c.processesLimit,
+		prometheus.GaugeValue,
+		float64(4294967295),
+	)
+
 	return nil
 }
