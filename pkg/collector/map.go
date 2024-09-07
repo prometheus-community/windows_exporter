@@ -1,6 +1,9 @@
 package collector
 
 import (
+	"maps"
+	"slices"
+
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/ad"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/adcs"
@@ -54,7 +57,6 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/collector/time"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/vmware"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/vmware_blast"
-	"golang.org/x/exp/maps"
 )
 
 func NewBuilderWithFlags[C Collector](fn BuilderWithFlags[C]) BuilderWithFlags[Collector] {
@@ -119,5 +121,5 @@ var BuildersWithFlags = map[string]BuilderWithFlags[Collector]{
 }
 
 func Available() []string {
-	return maps.Keys(BuildersWithFlags)
+	return slices.Sorted(maps.Keys(BuildersWithFlags))
 }
