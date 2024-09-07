@@ -6,7 +6,6 @@ require (
 	github.com/Microsoft/hcsshim v0.12.6
 	github.com/alecthomas/kingpin/v2 v2.4.0
 	github.com/dimchansky/utfbom v1.1.1
-	github.com/go-kit/log v0.2.1
 	github.com/go-ole/go-ole v1.3.0
 	github.com/google/uuid v1.6.0
 	github.com/pkg/errors v0.9.1
@@ -29,7 +28,6 @@ require (
 	github.com/containerd/errdefs v0.1.0 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/go-logfmt/logfmt v0.6.0 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/jpillora/backoff v1.0.0 // indirect
 	github.com/klauspost/compress v1.17.9 // indirect
@@ -52,3 +50,6 @@ require (
 	google.golang.org/protobuf v1.34.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
+
+// https://github.com/prometheus/exporter-toolkit/pull/240
+replace github.com/prometheus/exporter-toolkit => github.com/lucacome/exporter-toolkit v0.0.0-20240903180955-e5104b3476c7

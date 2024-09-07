@@ -13,10 +13,6 @@ func BoolToFloat(b bool) float64 {
 	return 0.0
 }
 
-func IsEmpty(v *string) bool {
-	return v == nil || *v == ""
-}
-
 func ToPTR[t any](v t) *t {
 	return &v
 }

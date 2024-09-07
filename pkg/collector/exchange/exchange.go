@@ -4,12 +4,11 @@ package exchange
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/prometheus-community/windows_exporter/pkg/perflib"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
@@ -158,7 +157,7 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ log.Logger) ([]string, error) {
+func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
 	return []string{
 		"MSExchange ADAccess Processes",
 		"MSExchangeTransport Queues",
@@ -173,11 +172,11 @@ func (c *Collector) GetPerfCounter(_ log.Logger) ([]string, error) {
 	}, nil
 }
 
-func (c *Collector) Close(_ log.Logger) error {
+func (c *Collector) Close(_ *slog.Logger) error {
 	return nil
 }
 
-func (c *Collector) Build(_ log.Logger, _ *wmi.Client) error {
+func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 	// desc creates a new prometheus description
 	desc := func(metricName string, description string, labels ...string) *prometheus.Desc {
 		return prometheus.NewDesc(
@@ -231,9 +230,9 @@ func (c *Collector) Build(_ log.Logger, _ *wmi.Client) error {
 }
 
 // Collect collects exchange metrics and sends them to prometheus.
-func (c *Collector) Collect(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
-	logger = log.With(logger, "collector", Name)
-	collectorFuncs := map[string]func(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error{
+func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+	logger = logger.With(slog.String("collector", Name))
+	collectorFuncs := map[string]func(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error{
 		"ADAccessProcesses":   c.collectADAccessProcesses,
 		"TransportQueues":     c.collectTransportQueues,
 		"HttpProxy":           c.collectHTTPProxy,
@@ -248,7 +247,9 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, logger log.Logger, ch chan
 
 	for _, collectorName := range c.config.CollectorsEnabled {
 		if err := collectorFuncs[collectorName](ctx, logger, ch); err != nil {
-			_ = level.Error(logger).Log("msg", "Error in "+collectorName, "err", err)
+			logger.Error("Error in "+collectorName,
+				slog.Any("err", err),
+			)
 			return err
 		}
 	}
@@ -266,8 +267,8 @@ type perflibADAccessProcesses struct {
 	LongRunningLDAPOperationsPerMin float64 `perflib:"Long Running LDAP Operations/min"`
 }
 
-func (c *Collector) collectADAccessProcesses(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
-	logger = log.With(logger, "collector", Name)
+func (c *Collector) collectADAccessProcesses(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+	logger = logger.With(slog.String("collector", Name))
 	var data []perflibADAccessProcesses
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["MSExchange ADAccess Processes"], &data, logger); err != nil {
 		return err
@@ -325,8 +326,8 @@ type perflibAvailabilityService struct {
 	RequestsSec float64 `perflib:"Availability Requests (sec)"`
 }
 
-func (c *Collector) collectAvailabilityService(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
-	logger = log.With(logger, "collector", Name)
+func (c *Collector) collectAvailabilityService(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+	logger = logger.With(slog.String("collector", Name))
 	var data []perflibAvailabilityService
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["MSExchange Availability Service"], &data, logger); err != nil {
 		return err
@@ -354,8 +355,8 @@ type perflibHTTPProxy struct {
 	ProxyRequestsPerSec                float64 `perflib:"Proxy Requests/Sec"`
 }
 
-func (c *Collector) collectHTTPProxy(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
-	logger = log.With(logger, "collector", Name)
+func (c *Collector) collectHTTPProxy(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+	logger = logger.With(slog.String("collector", Name))
 	var data []perflibHTTPProxy
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["MSExchange HttpProxy"], &data, logger); err != nil {
 		return err
@@ -409,8 +410,8 @@ type perflibOWA struct {
 	RequestsPerSec     float64 `perflib:"Requests/sec"`
 }
 
-func (c *Collector) collectOWA(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
-	logger = log.With(logger, "collector", Name)
+func (c *Collector) collectOWA(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+	logger = logger.With(slog.String("collector", Name))
 	var data []perflibOWA
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["MSExchange OWA"], &data, logger); err != nil {
 		return err
@@ -438,8 +439,8 @@ type perflibActiveSync struct {
 	SyncCommandsPerSec  float64 `perflib:"Sync Commands/sec"`
 }
 
-func (c *Collector) collectActiveSync(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
-	logger = log.With(logger, "collector", Name)
+func (c *Collector) collectActiveSync(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+	logger = logger.With(slog.String("collector", Name))
 	var data []perflibActiveSync
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["MSExchange ActiveSync"], &data, logger); err != nil {
 		return err
@@ -475,8 +476,8 @@ type perflibRPCClientAccess struct {
 	UserCount           float64 `perflib:"User Count"`
 }
 
-func (c *Collector) collectRPC(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
-	logger = log.With(logger, "collector", Name)
+func (c *Collector) collectRPC(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+	logger = logger.With(slog.String("collector", Name))
 	var data []perflibRPCClientAccess
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["MSExchange RpcClientAccess"], &data, logger); err != nil {
 		return err
@@ -532,8 +533,8 @@ type perflibTransportQueues struct {
 	PoisonQueueLength                       float64 `perflib:"Poison Queue Length"`
 }
 
-func (c *Collector) collectTransportQueues(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
-	logger = log.With(logger, "collector", Name)
+func (c *Collector) collectTransportQueues(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+	logger = logger.With(slog.String("collector", Name))
 	var data []perflibTransportQueues
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["MSExchangeTransport Queues"], &data, logger); err != nil {
 		return err
@@ -607,8 +608,8 @@ type perflibWorkloadManagementWorkloads struct {
 	IsActive       float64 `perflib:"Active"`
 }
 
-func (c *Collector) collectWorkloadManagementWorkloads(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
-	logger = log.With(logger, "collector", Name)
+func (c *Collector) collectWorkloadManagementWorkloads(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+	logger = logger.With(slog.String("collector", Name))
 	var data []perflibWorkloadManagementWorkloads
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["MSExchange WorkloadManagement Workloads"], &data, logger); err != nil {
 		return err
@@ -659,8 +660,8 @@ type perflibAutodiscover struct {
 	RequestsPerSec float64 `perflib:"Requests/sec"`
 }
 
-func (c *Collector) collectAutoDiscover(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
-	logger = log.With(logger, "collector", Name)
+func (c *Collector) collectAutoDiscover(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+	logger = logger.With(slog.String("collector", Name))
 	var data []perflibAutodiscover
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["MSExchangeAutodiscover"], &data, logger); err != nil {
 		return err
@@ -680,8 +681,8 @@ type perflibMapiHttpEmsmdb struct {
 	ActiveUserCount float64 `perflib:"Active User Count"`
 }
 
-func (c *Collector) collectMapiHttpEmsmdb(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
-	logger = log.With(logger, "collector", Name)
+func (c *Collector) collectMapiHttpEmsmdb(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+	logger = logger.With(slog.String("collector", Name))
 	var data []perflibMapiHttpEmsmdb
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["MSExchange MapiHttp Emsmdb"], &data, logger); err != nil {
 		return err

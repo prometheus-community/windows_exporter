@@ -59,6 +59,21 @@ linters-settings:
         msg: use golang.org/x/sys/windows instead of syscall
       - p: "^windows\\.NewLazyDLL$"
         msg: use NewLazySystemDLL instead NewLazyDLL
+  sloglint:
+    no-mixed-args: true
+    kv-only: false
+    attr-only: true
+    no-global: "all"
+    context: "scope"
+    static-msg: false
+    no-raw-keys: false
+    key-naming-case: snake
+    forbidden-keys:
+      - time
+      - level
+      - msg
+      - source
+    args-on-sep-lines: true
 issues:
   exclude:
   - don't use underscores in Go names

@@ -5,12 +5,11 @@ package terminal_services
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"strconv"
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/prometheus-community/windows_exporter/pkg/headers/wtsapi32"
 	"github.com/prometheus-community/windows_exporter/pkg/perflib"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
@@ -32,7 +31,7 @@ type Win32_ServerFeature struct {
 	ID uint32
 }
 
-func isConnectionBrokerServer(logger log.Logger, wmiClient *wmi.Client) bool {
+func isConnectionBrokerServer(logger *slog.Logger, wmiClient *wmi.Client) bool {
 	var dst []Win32_ServerFeature
 	if err := wmiClient.Query("SELECT * FROM Win32_ServerFeature", &dst); err != nil {
 		return false
@@ -42,7 +41,7 @@ func isConnectionBrokerServer(logger log.Logger, wmiClient *wmi.Client) bool {
 			return true
 		}
 	}
-	_ = level.Debug(logger).Log("msg", "host is not a connection broker skipping Connection Broker performance metrics.")
+	logger.Debug("host is not a connection broker skipping Connection Broker performance metrics.")
 	return false
 }
 
@@ -94,14 +93,14 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ log.Logger) ([]string, error) {
+func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
 	return []string{
 		"Terminal Services Session",
 		"Remote Desktop Connection Broker Counterset",
 	}, nil
 }
 
-func (c *Collector) Close(_ log.Logger) error {
+func (c *Collector) Close(_ *slog.Logger) error {
 	err := wtsapi32.WTSCloseServer(c.hServer)
 	if err != nil {
 		return fmt.Errorf("failed to close WTS server: %w", err)
@@ -110,8 +109,8 @@ func (c *Collector) Close(_ log.Logger) error {
 	return nil
 }
 
-func (c *Collector) Build(logger log.Logger, wmiClient *wmi.Client) error {
-	logger = log.With(logger, "collector", Name)
+func (c *Collector) Build(logger *slog.Logger, wmiClient *wmi.Client) error {
+	logger = logger.With(slog.String("collector", Name))
 
 	c.connectionBrokerEnabled = isConnectionBrokerServer(logger, wmiClient)
 
@@ -218,21 +217,27 @@ func (c *Collector) Build(logger log.Logger, wmiClient *wmi.Client) error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
-	logger = log.With(logger, "collector", Name)
+func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+	logger = logger.With(slog.String("collector", Name))
 	if err := c.collectWTSSessions(logger, ch); err != nil {
-		_ = level.Error(logger).Log("msg", "failed collecting terminal services session infos", "err", err)
+		logger.Error("failed collecting terminal services session infos",
+			slog.Any("err", err),
+		)
 		return err
 	}
 	if err := c.collectTSSessionCounters(ctx, logger, ch); err != nil {
-		_ = level.Error(logger).Log("msg", "failed collecting terminal services session count metrics", "err", err)
+		logger.Error("failed collecting terminal services session count metrics",
+			slog.Any("err", err),
+		)
 		return err
 	}
 
 	// only collect CollectionBrokerPerformance if host is a Connection Broker
 	if c.connectionBrokerEnabled {
 		if err := c.collectCollectionBrokerPerformanceCounter(ctx, logger, ch); err != nil {
-			_ = level.Error(logger).Log("msg", "failed collecting Connection Broker performance metrics", "err", err)
+			logger.Error("failed collecting Connection Broker performance metrics",
+				slog.Any("err", err),
+			)
 			return err
 		}
 	}
@@ -258,8 +263,8 @@ type perflibTerminalServicesSession struct {
 	WorkingSetPeak        float64 `perflib:"Working Set Peak"`
 }
 
-func (c *Collector) collectTSSessionCounters(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
-	logger = log.With(logger, "collector", Name)
+func (c *Collector) collectTSSessionCounters(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+	logger = logger.With(slog.String("collector", Name))
 	dst := make([]perflibTerminalServicesSession, 0)
 	err := perflib.UnmarshalObject(ctx.PerfObjects["Terminal Services Session"], &dst, logger)
 	if err != nil {
@@ -382,8 +387,8 @@ type perflibRemoteDesktopConnectionBrokerCounterset struct {
 	FailedConnections     float64 `perflib:"Failed Connections"`
 }
 
-func (c *Collector) collectCollectionBrokerPerformanceCounter(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
-	logger = log.With(logger, "collector", Name)
+func (c *Collector) collectCollectionBrokerPerformanceCounter(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+	logger = logger.With(slog.String("collector", Name))
 	dst := make([]perflibRemoteDesktopConnectionBrokerCounterset, 0)
 	err := perflib.UnmarshalObject(ctx.PerfObjects["Remote Desktop Connection Broker Counterset"], &dst, logger)
 	if err != nil {
@@ -417,7 +422,7 @@ func (c *Collector) collectCollectionBrokerPerformanceCounter(ctx *types.ScrapeC
 	return nil
 }
 
-func (c *Collector) collectWTSSessions(logger log.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) collectWTSSessions(logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	sessions, err := wtsapi32.WTSEnumerateSessionsEx(c.hServer, logger)
 	if err != nil {
 		return fmt.Errorf("failed to enumerate WTS sessions: %w", err)

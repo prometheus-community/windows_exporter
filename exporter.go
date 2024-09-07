@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/http/pprof"
 	"os"
@@ -25,7 +26,6 @@ import (
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log/level"
 	"github.com/prometheus-community/windows_exporter/pkg/collector"
 	"github.com/prometheus-community/windows_exporter/pkg/config"
 	winlog "github.com/prometheus-community/windows_exporter/pkg/log"
@@ -137,24 +137,36 @@ func main() {
 
 	// Load values from configuration file(s). Executable flags must first be parsed, in order
 	// to load the specified file(s).
-	kingpin.MustParse(app.Parse(os.Args[1:]))
-	logger, err := winlog.New(winlogConfig)
-	if err != nil {
-		_ = level.Error(logger).Log("err", err)
+	if _, err := app.Parse(os.Args[1:]); err != nil {
+		//nolint:sloglint // we do not have an logger yet
+		slog.Error("Failed to parse CLI args",
+			slog.Any("err", err),
+		)
 		os.Exit(1)
 	}
 
-	_ = level.Debug(logger).Log("msg", "Logging has Started")
+	logger, err := winlog.New(winlogConfig)
+	if err != nil {
+		//nolint:sloglint // we do not have an logger yet
+		slog.Error("failed to create logger",
+			slog.Any("err", err),
+		)
+		os.Exit(1)
+	}
 
 	if *configFile != "" {
 		resolver, err := config.NewResolver(*configFile, logger, *insecureSkipVerify)
 		if err != nil {
-			_ = level.Error(logger).Log("msg", "could not load config file", "err", err)
+			logger.Error("could not load config file",
+				slog.Any("err", err),
+			)
 			os.Exit(1)
 		}
-		err = resolver.Bind(app, os.Args[1:])
-		if err != nil {
-			_ = level.Error(logger).Log("err", err)
+
+		if err = resolver.Bind(app, os.Args[1:]); err != nil {
+			logger.Error("Failed to bind configuration",
+				slog.Any("err", err),
+			)
 			os.Exit(1)
 		}
 
@@ -164,14 +176,24 @@ func main() {
 		*webConfig.WebListenAddresses = (*webConfig.WebListenAddresses)[1:]
 
 		// Parse flags once more to include those discovered in configuration file(s).
-		kingpin.MustParse(app.Parse(os.Args[1:]))
+		if _, err = app.Parse(os.Args[1:]); err != nil {
+			logger.Error("Failed to parse CLI args from YAML file",
+				slog.Any("err", err),
+			)
+			os.Exit(1)
+		}
 
 		logger, err = winlog.New(winlogConfig)
 		if err != nil {
-			_ = level.Error(logger).Log("err", err)
+			//nolint:sloglint // we do not have an logger yet
+			slog.Error("failed to create logger",
+				slog.Any("err", err),
+			)
 			os.Exit(1)
 		}
 	}
+
+	logger.Debug("Logging has Started")
 
 	if *printCollectors {
 		collectorNames := collector.Available()
@@ -187,10 +209,12 @@ func main() {
 
 	// Only set process priority if a non-default and valid value has been set
 	if *processPriority != "normal" && priorityStringToInt[*processPriority] != 0 {
-		_ = level.Debug(logger).Log("msg", "setting process priority to "+*processPriority)
+		logger.Debug("setting process priority to " + *processPriority)
 		err = setPriorityWindows(os.Getpid(), priorityStringToInt[*processPriority])
 		if err != nil {
-			_ = level.Error(logger).Log("msg", "failed to set process priority", "err", err)
+			logger.Error("failed to set process priority",
+				slog.Any("err", err),
+			)
 			os.Exit(1)
 		}
 	}
@@ -201,34 +225,39 @@ func main() {
 	// Initialize collectors before loading
 	err = collectors.Build(logger)
 	if err != nil {
-		_ = level.Error(logger).Log("msg", "Couldn't load collectors", "err", err)
+		logger.Error("Couldn't load collectors",
+			slog.Any("err", err),
+		)
 		os.Exit(1)
 	}
 	err = collectors.SetPerfCounterQuery(logger)
 	if err != nil {
-		_ = level.Error(logger).Log("msg", "Couldn't set performance counter query", "err", err)
+		logger.Error("Couldn't set performance counter query",
+			slog.Any("err", err),
+		)
 		os.Exit(1)
 	}
 
 	if u, err := user.Current(); err != nil {
-		_ = level.Warn(logger).Log("msg", "Unable to determine which user is running this exporter. More info: https://github.com/golang/go/issues/37348")
+		logger.Warn("Unable to determine which user is running this exporter. More info: https://github.com/golang/go/issues/37348")
 	} else {
-		_ = level.Info(logger).Log("msg", fmt.Sprintf("Running as %v", u.Username))
+		logger.Info("Running as " + u.Username)
 
 		if strings.Contains(u.Username, "ContainerAdministrator") || strings.Contains(u.Username, "ContainerUser") {
-			_ = level.Warn(logger).Log("msg", "Running as a preconfigured Windows Container user. This may mean you do not have Windows HostProcess containers configured correctly and some functionality will not work as expected.")
+			logger.Warn("Running as a preconfigured Windows Container user. This may mean you do not have Windows HostProcess containers configured correctly and some functionality will not work as expected.")
 		}
 	}
 
-	_ = level.Info(logger).Log("msg", fmt.Sprintf("Enabled collectors: %v", strings.Join(enabledCollectorList, ", ")))
+	logger.Info("Enabled collectors: " + strings.Join(enabledCollectorList, ", "))
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET "+*metricsPath, withConcurrencyLimit(*maxRequests, collectors.BuildServeHTTP(logger, *disableExporterMetrics, *timeoutMargin)))
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		_, err := fmt.Fprintln(w, `{"status":"ok"}`)
-		if err != nil {
-			_ = level.Debug(logger).Log("msg", "Failed to write to stream", "err", err)
+		if _, err := fmt.Fprintln(w, `{"status":"ok"}`); err != nil {
+			logger.Debug("Failed to write to stream",
+				slog.Any("err", err),
+			)
 		}
 	})
 	mux.HandleFunc("GET /version", func(w http.ResponseWriter, _ *http.Request) {
@@ -255,9 +284,9 @@ func main() {
 		mux.HandleFunc("GET /debug/pprof/trace", pprof.Trace)
 	}
 
-	_ = level.Info(logger).Log("msg", "Starting windows_exporter", "version", version.Info())
-	_ = level.Info(logger).Log("msg", "Build context", "build_context", version.BuildContext())
-	_ = level.Debug(logger).Log("msg", "Go MAXPROCS", "procs", runtime.GOMAXPROCS(0))
+	logger.Info("Starting windows_exporter", slog.String("version", version.Info()))
+	logger.Info("Build context", slog.String("build_context", version.BuildContext()))
+	logger.Debug("Go MAXPROCS", slog.Int("procs", runtime.GOMAXPROCS(0)))
 
 	server := &http.Server{
 		ReadHeaderTimeout: 5 * time.Second,
@@ -269,7 +298,9 @@ func main() {
 
 	go func() {
 		if err := web.ListenAndServe(server, webConfig, logger); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			_ = level.Error(logger).Log("msg", "cannot start windows_exporter", "err", err)
+			logger.Error("cannot start windows_exporter",
+				slog.Any("err", err),
+			)
 			os.Exit(1)
 		}
 	}()
@@ -279,9 +310,9 @@ func main() {
 
 	select {
 	case <-ctx.Done():
-		_ = level.Info(logger).Log("msg", "Shutting down windows_exporter via kill signal")
+		logger.Info("Shutting down windows_exporter via kill signal")
 	case <-initiate.StopCh:
-		_ = level.Info(logger).Log("msg", "Shutting down windows_exporter via service control")
+		logger.Info("Shutting down windows_exporter via service control")
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -289,7 +320,7 @@ func main() {
 
 	_ = server.Shutdown(ctx)
 
-	_ = level.Info(logger).Log("msg", "windows_exporter has shut down")
+	logger.Info("windows_exporter has shut down")
 }
 
 func withConcurrencyLimit(n int, next http.HandlerFunc) http.HandlerFunc {

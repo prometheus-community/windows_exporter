@@ -1,10 +1,10 @@
 package perflib
 
 import (
+	"io"
+	"log/slog"
 	"reflect"
 	"testing"
-
-	"github.com/go-kit/log"
 )
 
 type simple struct {
@@ -114,11 +114,14 @@ func TestUnmarshalPerflib(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
 
+			logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 			output := make([]simple, 0)
-			err := UnmarshalObject(c.obj, &output, log.NewNopLogger())
+
+			err := UnmarshalObject(c.obj, &output, logger)
 			if err != nil && !c.expectError {
 				t.Errorf("Did not expect error, got %q", err)
 			}
+
 			if err == nil && c.expectError {
 				t.Errorf("Expected an error, but got ok")
 			}

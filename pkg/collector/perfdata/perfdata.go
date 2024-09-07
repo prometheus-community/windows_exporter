@@ -5,16 +5,16 @@ package perfdata
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
+	"maps"
+	"slices"
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/prometheus-community/windows_exporter/pkg/perfdata"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
-	"golang.org/x/exp/maps"
 )
 
 const (
@@ -81,11 +81,11 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ log.Logger) ([]string, error) {
+func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
 	return []string{}, nil
 }
 
-func (c *Collector) Close(_ log.Logger) error {
+func (c *Collector) Close(_ *slog.Logger) error {
 	for _, object := range c.config.Objects {
 		object.collector.Close()
 	}
@@ -93,11 +93,11 @@ func (c *Collector) Close(_ log.Logger) error {
 	return nil
 }
 
-func (c *Collector) Build(logger log.Logger, _ *wmi.Client) error {
-	_ = level.Warn(logger).Log("msg", "The perfdata collector is in an experimental state! The configuration may change in future. Please report any issues.")
+func (c *Collector) Build(logger *slog.Logger, _ *wmi.Client) error {
+	logger.Warn("The perfdata collector is in an experimental state! The configuration may change in future. Please report any issues.")
 
 	for i, object := range c.config.Objects {
-		collector, err := perfdata.NewCollector(object.Object, object.Instances, maps.Keys(object.Counters))
+		collector, err := perfdata.NewCollector(object.Object, object.Instances, slices.Sorted(maps.Keys(object.Counters)))
 		if err != nil {
 			return fmt.Errorf("failed to create pdh collector: %w", err)
 		}
@@ -114,9 +114,11 @@ func (c *Collector) Build(logger log.Logger, _ *wmi.Client) error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(_ *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	if err := c.collect(ch); err != nil {
-		_ = level.Error(logger).Log("msg", "failed collecting performance data metrics", "err", err)
+		logger.Error("failed collecting performance data metrics",
+			slog.Any("err", err),
+		)
 		return err
 	}
 	return nil

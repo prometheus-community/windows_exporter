@@ -17,13 +17,12 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"gopkg.in/yaml.v3"
 )
 
@@ -37,7 +36,7 @@ type Resolver struct {
 }
 
 // NewResolver returns a Resolver structure.
-func NewResolver(file string, logger log.Logger, insecureSkipVerify bool) (*Resolver, error) {
+func NewResolver(file string, logger *slog.Logger, insecureSkipVerify bool) (*Resolver, error) {
 	flags := map[string]string{}
 	var fileBytes []byte
 	var err error
@@ -57,7 +56,7 @@ func NewResolver(file string, logger log.Logger, insecureSkipVerify bool) (*Reso
 
 	err = yaml.Unmarshal(fileBytes, &rawValues)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to unmarshal configuration file: %w", err)
 	}
 
 	// Flatten nested YAML values
@@ -71,28 +70,28 @@ func NewResolver(file string, logger log.Logger, insecureSkipVerify bool) (*Reso
 	return &Resolver{flags: flags}, nil
 }
 
-func readFromFile(file string, logger log.Logger) ([]byte, error) {
-	_ = level.Info(logger).Log("msg", fmt.Sprintf("Loading configuration file: %v", file))
+func readFromFile(file string, logger *slog.Logger) ([]byte, error) {
+	logger.Info("Loading configuration file: " + file)
 	if _, err := os.Stat(file); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to read configuration file: %w", err)
 	}
 
 	fileBytes, err := os.ReadFile(file)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to read configuration file: %w", err)
 	}
 
-	return fileBytes, err
+	return fileBytes, nil
 }
 
-func readFromURL(file string, logger log.Logger, insecureSkipVerify bool) ([]byte, error) {
-	_ = level.Info(logger).Log("msg", fmt.Sprintf("Loading configuration file from URL: %v", file))
+func readFromURL(file string, logger *slog.Logger, insecureSkipVerify bool) ([]byte, error) {
+	logger.Info("Loading configuration file from URL: " + file)
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: insecureSkipVerify}, //nolint:gosec
 	}
 
 	if insecureSkipVerify {
-		_ = level.Warn(logger).Log("msg", "Loading configuration file with TLS verification disabled")
+		logger.Warn("Loading configuration file with TLS verification disabled")
 	}
 
 	client := &http.Client{Transport: tr}

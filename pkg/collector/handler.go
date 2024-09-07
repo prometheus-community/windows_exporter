@@ -4,13 +4,11 @@ package collector
 
 import (
 	"fmt"
-	stdlog "log"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"time"
 
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/google/uuid"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
@@ -18,7 +16,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-func (c *Collectors) BuildServeHTTP(logger log.Logger, disableExporterMetrics bool, timeoutMargin float64) http.HandlerFunc {
+func (c *Collectors) BuildServeHTTP(logger *slog.Logger, disableExporterMetrics bool, timeoutMargin float64) http.HandlerFunc {
 	collectorFactory := func(timeout time.Duration, requestedCollectors []string) (error, *Prometheus) {
 		filteredCollectors := make(map[string]Collector)
 		// scrape all enabled collectors if no collector is requested
@@ -42,7 +40,10 @@ func (c *Collectors) BuildServeHTTP(logger log.Logger, disableExporterMetrics bo
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		logger := log.With(logger, "remote", r.RemoteAddr, "correlation_id", uuid.New().String())
+		logger := logger.With(
+			slog.String("remote", r.RemoteAddr),
+			slog.String("correlation_id", uuid.New().String()),
+		)
 
 		const defaultTimeout = 10.0
 
@@ -51,7 +52,7 @@ func (c *Collectors) BuildServeHTTP(logger log.Logger, disableExporterMetrics bo
 			var err error
 			timeoutSeconds, err = strconv.ParseFloat(v, 64)
 			if err != nil {
-				_ = level.Warn(logger).Log("msg", fmt.Sprintf("Couldn't parse X-Prometheus-Scrape-Timeout-Seconds: %q. Defaulting timeout to %f", v, defaultTimeout))
+				logger.Warn(fmt.Sprintf("Couldn't parse X-Prometheus-Scrape-Timeout-Seconds: %q. Defaulting timeout to %f", v, defaultTimeout))
 			}
 		}
 		if timeoutSeconds == 0 {
@@ -62,7 +63,9 @@ func (c *Collectors) BuildServeHTTP(logger log.Logger, disableExporterMetrics bo
 		reg := prometheus.NewRegistry()
 		err, wc := collectorFactory(time.Duration(timeoutSeconds*float64(time.Second)), r.URL.Query()["collect[]"])
 		if err != nil {
-			_ = level.Warn(logger).Log("msg", "Couldn't create filtered metrics handler", "err", err)
+			logger.Warn("Couldn't create filtered metrics handler",
+				slog.Any("err", err),
+			)
 			w.WriteHeader(http.StatusBadRequest)
 			_, _ = w.Write([]byte(fmt.Sprintf("Couldn't create filtered metrics handler: %s", err)))
 			return
@@ -78,7 +81,7 @@ func (c *Collectors) BuildServeHTTP(logger log.Logger, disableExporterMetrics bo
 		}
 
 		h := promhttp.HandlerFor(reg, promhttp.HandlerOpts{
-			ErrorLog: stdlog.New(log.NewStdlibAdapter(level.Error(logger)), "", stdlog.Lshortfile),
+			ErrorLog: slog.NewLogLogger(logger.Handler(), slog.LevelError),
 		})
 		h.ServeHTTP(w, r)
 	}

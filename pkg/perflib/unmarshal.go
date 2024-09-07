@@ -3,11 +3,9 @@ package perflib
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"reflect"
 	"strings"
-
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 )
 
 // Conversion factors.
@@ -16,7 +14,7 @@ const (
 	WindowsEpoch             = 116444736000000000
 )
 
-func UnmarshalObject(obj *PerfObject, vs interface{}, logger log.Logger) error {
+func UnmarshalObject(obj *PerfObject, vs interface{}, logger *slog.Logger) error {
 	if obj == nil {
 		return errors.New("counter not found")
 	}
@@ -67,7 +65,7 @@ func UnmarshalObject(obj *PerfObject, vs interface{}, logger log.Logger) error {
 
 			ctr, found := counters[tag]
 			if !found {
-				_ = level.Debug(logger).Log("msg", fmt.Sprintf("missing counter %q, have %v", tag, counterMapKeys(counters)))
+				logger.Debug(fmt.Sprintf("missing counter %q, have %v", tag, counterMapKeys(counters)))
 				continue
 			}
 			if !target.Field(i).CanSet() {
