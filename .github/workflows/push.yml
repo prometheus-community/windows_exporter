@@ -1,16 +1,8 @@
-name: Releases
-
-# Trigger on releases.
+name: Push Check
 on:
-  push:
+  pull_request:
     branches:
       - master
-  pull_request:
-  release:
-    types:
-      - published
-      - edited
-
 permissions:
   contents: write
   packages: write
@@ -22,7 +14,8 @@ env:
   VERSION_BUILDX: '0.16.2'
 
 jobs:
-  build:
+  stale:
+    if: github.repository_owner == 'jkroepke'
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
@@ -51,13 +44,13 @@ jobs:
         with:
           driver: remote
           endpoint: npipe:////./pipe/buildkitd
+
       - name: Install WiX
         run: dotnet tool install --global wix
 
       - name: Install WiX extensions
         run: |
           wix extension add -g WixToolset.Util.wixext
-          wix extension add -g WixToolset.Ui.wixext
           wix extension add -g WixToolset.Firewall.wixext
 
       - name: Install Build deps
@@ -88,55 +81,7 @@ jobs:
           
           Get-ChildItem -Path output
 
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: windows_exporter_binaries
-          path: output\windows_exporter-*.exe
-
-      - name: Build Release Artifacts
-        run: |
-          $ErrorActionPreference = "Stop"
-          $Version = Get-Content VERSION
-          
-          foreach($Arch in "amd64", "arm64") {
-            Write-Host "Building windows_exporter $Version msi for $Arch"
-            .\installer\build.ps1 -PathToExecutable .\output\windows_exporter-$Version-$Arch.exe -Version $Version -Arch "$Arch"
-          }
-          
-          Move-Item installer\*.msi output\
-          Get-ChildItem -Path output\
-
-          promu checksum output\
-
-      - name: Build Docker Artifacts
-        run: make build-all
-        env:
-          VERSION: >-
-            ${{
-              startsWith(github.ref, 'refs/tags/') && 'latest' || 
-              (
-                github.event_name == 'pull_request' && format('pr-{0}', github.event.number) || github.ref_name
-              )
-            }}
-
-      - name: Login to Docker Hub
-        if: ${{ github.event_name != 'pull_request' }}
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_HUB_LOGIN }}
-          password: ${{ secrets.DOCKER_HUB_PASSWORD }}
-
-      #- name: Login to quay.io
-      #  if: ${{ github.event_name != 'pull_request' }}
-      #  uses: docker/login-action@v3
-      #  with:
-      #    registry: quay.io
-      #    username: 'robot'
-      #    password: ${{ secrets.QUAY_IO_API_TOKEN }}
-
       - name: Login to GitHub container registry
-        if: ${{ github.event_name != 'pull_request' }}
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -144,18 +89,8 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Push Latest image
-        if: ${{ github.event_name != 'pull_request' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ startsWith(github.ref, 'refs/tags/') && 'latest' || github.ref_name }}
         run: |
-          make push-all
-
-      - name: Release
-        if: startsWith(github.ref, 'refs/tags/')
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          $TagName = $env:GITHUB_REF -replace 'refs/tags/', ''
-          Get-ChildItem -Path output\* -Include @('windows_exporter*.msi', 'windows_exporter*.exe', 'sha256sums.txt') | Foreach-Object {gh release upload $TagName $_}
           make push-all
