@@ -5,6 +5,8 @@ package perfdata
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
+	"slices"
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
@@ -14,7 +16,6 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
-	"golang.org/x/exp/maps"
 )
 
 const (
@@ -97,7 +98,7 @@ func (c *Collector) Build(logger log.Logger, _ *wmi.Client) error {
 	_ = level.Warn(logger).Log("msg", "The perfdata collector is in an experimental state! The configuration may change in future. Please report any issues.")
 
 	for i, object := range c.config.Objects {
-		collector, err := perfdata.NewCollector(object.Object, object.Instances, maps.Keys(object.Counters))
+		collector, err := perfdata.NewCollector(object.Object, object.Instances, slices.Sorted(maps.Keys(object.Counters)))
 		if err != nil {
 			return fmt.Errorf("failed to create pdh collector: %w", err)
 		}
