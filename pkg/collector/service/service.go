@@ -290,24 +290,24 @@ func (c *Collector) collectService(ch chan<- prometheus.Metric, logger log.Logge
 	}
 
 	processID := strconv.FormatUint(uint64(service.ServiceStatusProcess.ProcessId), 10)
-	if processID != "0" {
+
+	if processID != "0" { //nolint: nestif
 		processStartTime, err := getProcessStartTime(logger, service.ServiceStatusProcess.ProcessId)
 		if err != nil {
 			if errors.Is(err, windows.ERROR_ACCESS_DENIED) {
+				_ = level.Debug(logger).Log("msg", "failed to get process start time", "err", err, "service", serviceNameString)
+			} else {
 				_ = level.Warn(logger).Log("msg", "failed to get process start time", "err", err, "service", serviceNameString)
-				return nil
 			}
-
-			_ = level.Debug(logger).Log("msg", "failed to get process start time", "err", err, "service", serviceNameString)
+		} else {
+			ch <- prometheus.MustNewConstMetric(
+				c.processID,
+				prometheus.GaugeValue,
+				float64(processStartTime/1_000_000_000),
+				serviceNameString,
+				processID,
+			)
 		}
-
-		ch <- prometheus.MustNewConstMetric(
-			c.processID,
-			prometheus.GaugeValue,
-			float64(processStartTime/1_000_000_000),
-			serviceNameString,
-			processID,
-		)
 	}
 
 	return nil

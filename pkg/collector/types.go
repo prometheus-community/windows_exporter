@@ -8,10 +8,10 @@ import (
 	"github.com/yusufpapurcu/wmi"
 )
 
-type Collectors struct {
-	collectors       Map
-	wmiClient        *wmi.Client
-	perfCounterQuery string
+type MetricCollectors struct {
+	Collectors       Map
+	WMIClient        *wmi.Client
+	PerfCounterQuery string
 }
 
 type (
