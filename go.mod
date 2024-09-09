@@ -12,7 +12,7 @@ require (
 	github.com/prometheus/client_golang v1.20.3
 	github.com/prometheus/client_model v0.6.1
 	github.com/prometheus/common v0.59.1
-	github.com/prometheus/exporter-toolkit v0.12.1-0.20240909111842-d0e3731b4a8a
+	github.com/prometheus/exporter-toolkit v0.13.0
 	github.com/stretchr/testify v1.9.0
 	github.com/yusufpapurcu/wmi v1.2.4
 	golang.org/x/sys v0.25.0

@@ -88,8 +88,8 @@ github.com/prometheus/client_golang v1.20.3/go.mod h1:PIEt8X02hGcP8JWbeHyeZ53Y/j
 github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4/go.mod h1:xMI15A0UPsDsEKsMN9yxemIoYk6Tm2C1GtYGdfGttqA=
 github.com/prometheus/client_model v0.6.1 h1:ZKSh/rekM+n3CeS952MLRAdFwIKqeY8b62p8ais2e9E=
 github.com/prometheus/client_model v0.6.1/go.mod h1:OrxVMOVHjw3lKMa8+x6HeMGkHMQyHDk9E3jmP2AmGiY=
-github.com/prometheus/exporter-toolkit v0.12.1-0.20240909111842-d0e3731b4a8a h1:6Vjuw8Zk54IGXJa5Xp1NNBEuGAuMU0eXa0zor7oc3eQ=
-github.com/prometheus/exporter-toolkit v0.12.1-0.20240909111842-d0e3731b4a8a/go.mod h1:2uop99EZl80KdXhv/MxVI2181fMcwlsumFOqBecGkG0=
+github.com/prometheus/exporter-toolkit v0.13.0 h1:lmA0Q+8IaXgmFRKw09RldZmZdnvu9wwcDLIXGmTPw1c=
+github.com/prometheus/exporter-toolkit v0.13.0/go.mod h1:2uop99EZl80KdXhv/MxVI2181fMcwlsumFOqBecGkG0=
 github.com/prometheus/procfs v0.15.1 h1:YagwOFzUgYfKKHX6Dr+sHT7km/hxC76UB0learggepc=
 github.com/prometheus/procfs v0.15.1/go.mod h1:fB45yRUv8NstnjriLhBQLuOUt+WW4BsoGhij/e3PBqk=
 github.com/rogpeppe/go-internal v1.10.0 h1:TMyTOH3F/DB16zRVcYyreMH6GnZZrwQVAoYjRBZyWFQ=
