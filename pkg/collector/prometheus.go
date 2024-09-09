@@ -179,6 +179,7 @@ func (p *Prometheus) execute(name string, c Collector, ctx *types.ScrapeContext,
 	// Execute the collector
 	go func() {
 		errCh <- c.Collect(ctx, p.logger, bufCh)
+
 		close(bufCh)
 	}()
 

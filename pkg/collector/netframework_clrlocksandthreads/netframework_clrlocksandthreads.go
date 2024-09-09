@@ -109,6 +109,7 @@ func (c *Collector) Build(_ *slog.Logger, wmiClient *wmi.Client) error {
 		[]string{"process"},
 		nil,
 	)
+
 	return nil
 }
 
@@ -120,8 +121,10 @@ func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan
 		logger.Error("failed collecting win32_perfrawdata_netframework_netclrlocksandthreads metrics",
 			slog.Any("err", err),
 		)
+
 		return err
 	}
+
 	return nil
 }
 

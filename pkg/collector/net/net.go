@@ -206,8 +206,10 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch ch
 		logger.Error("failed collecting net metrics",
 			slog.Any("err", err),
 		)
+
 		return err
 	}
+
 	return nil
 }
 
@@ -238,6 +240,7 @@ type networkInterface struct {
 
 func (c *Collector) collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
+
 	var dst []networkInterface
 
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["Network Interface"], &dst, logger); err != nil {

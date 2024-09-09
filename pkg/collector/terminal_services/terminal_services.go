@@ -36,12 +36,15 @@ func isConnectionBrokerServer(logger *slog.Logger, wmiClient *wmi.Client) bool {
 	if err := wmiClient.Query("SELECT * FROM Win32_ServerFeature", &dst); err != nil {
 		return false
 	}
+
 	for _, d := range dst {
 		if d.ID == ConnectionBrokerFeatureID {
 			return true
 		}
 	}
+
 	logger.Debug("host is not a connection broker skipping Connection Broker performance metrics.")
+
 	return false
 }
 
@@ -223,12 +226,15 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch ch
 		logger.Error("failed collecting terminal services session infos",
 			slog.Any("err", err),
 		)
+
 		return err
 	}
+
 	if err := c.collectTSSessionCounters(ctx, logger, ch); err != nil {
 		logger.Error("failed collecting terminal services session count metrics",
 			slog.Any("err", err),
 		)
+
 		return err
 	}
 
@@ -238,9 +244,11 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch ch
 			logger.Error("failed collecting Connection Broker performance metrics",
 				slog.Any("err", err),
 			)
+
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -266,10 +274,12 @@ type perflibTerminalServicesSession struct {
 func (c *Collector) collectTSSessionCounters(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
 	dst := make([]perflibTerminalServicesSession, 0)
+
 	err := perflib.UnmarshalObject(ctx.PerfObjects["Terminal Services Session"], &dst, logger)
 	if err != nil {
 		return err
 	}
+
 	names := make(map[string]bool)
 
 	for _, d := range dst {
@@ -282,6 +292,7 @@ func (c *Collector) collectTSSessionCounters(ctx *types.ScrapeContext, logger *s
 		if _, ok := names[n]; ok {
 			continue
 		}
+
 		names[n] = true
 
 		ch <- prometheus.MustNewConstMetric(
@@ -378,6 +389,7 @@ func (c *Collector) collectTSSessionCounters(ctx *types.ScrapeContext, logger *s
 			d.Name,
 		)
 	}
+
 	return nil
 }
 
@@ -390,10 +402,12 @@ type perflibRemoteDesktopConnectionBrokerCounterset struct {
 func (c *Collector) collectCollectionBrokerPerformanceCounter(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
 	dst := make([]perflibRemoteDesktopConnectionBrokerCounterset, 0)
+
 	err := perflib.UnmarshalObject(ctx.PerfObjects["Remote Desktop Connection Broker Counterset"], &dst, logger)
 	if err != nil {
 		return err
 	}
+
 	if len(dst) == 0 {
 		return errors.New("WMI query returned empty result set")
 	}

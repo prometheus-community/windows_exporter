@@ -25,6 +25,7 @@ func (f *AllowedFile) String() string {
 // Set updates the value of the allowed format.
 func (f *AllowedFile) Set(s string) error {
 	f.s = s
+
 	switch s {
 	case "stdout":
 		f.w = os.Stdout
@@ -45,6 +46,7 @@ func (f *AllowedFile) Set(s string) error {
 
 		f.w = file
 	}
+
 	return nil
 }
 

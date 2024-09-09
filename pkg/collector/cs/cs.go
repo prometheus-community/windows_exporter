@@ -89,6 +89,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *wmi.Client) error {
 		},
 		nil,
 	)
+
 	return nil
 }
 
@@ -100,8 +101,10 @@ func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan
 		logger.Error("failed collecting cs metrics",
 			slog.Any("err", err),
 		)
+
 		return err
 	}
+
 	return nil
 }
 
@@ -131,10 +134,12 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	if err != nil {
 		return err
 	}
+
 	domain, err := sysinfoapi.GetComputerName(sysinfoapi.ComputerNameDNSDomain)
 	if err != nil {
 		return err
 	}
+
 	fqdn, err := sysinfoapi.GetComputerName(sysinfoapi.ComputerNameDNSFullyQualified)
 	if err != nil {
 		return err

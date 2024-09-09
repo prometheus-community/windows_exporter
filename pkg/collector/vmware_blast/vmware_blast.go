@@ -582,6 +582,7 @@ func (c *Collector) Build(logger *slog.Logger, wmiClient *wmi.Client) error {
 		nil,
 		nil,
 	)
+
 	return nil
 }
 
@@ -593,74 +594,98 @@ func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan
 		logger.Error("failed collecting vmware blast audio metrics",
 			slog.Any("err", err),
 		)
+
 		return err
 	}
+
 	if err := c.collectCdr(ch); err != nil {
 		logger.Error("failed collecting vmware blast CDR metrics",
 			slog.Any("err", err),
 		)
+
 		return err
 	}
+
 	if err := c.collectClipboard(ch); err != nil {
 		logger.Error("failed collecting vmware blast clipboard metrics",
 			slog.Any("err", err),
 		)
+
 		return err
 	}
+
 	if err := c.collectHtml5Mmr(ch); err != nil {
 		logger.Error("failed collecting vmware blast HTML5 MMR metrics",
 			slog.Any("err", err),
 		)
+
 		return err
 	}
+
 	if err := c.collectImaging(ch); err != nil {
 		logger.Error("failed collecting vmware blast imaging metrics",
 			slog.Any("err", err),
 		)
+
 		return err
 	}
+
 	if err := c.collectRtav(ch); err != nil {
 		logger.Error("failed collecting vmware blast RTAV metrics",
 			slog.Any("err", err),
 		)
+
 		return err
 	}
+
 	if err := c.collectSerialPortandScanner(ch); err != nil {
 		logger.Error("failed collecting vmware blast serial port and scanner metrics",
 			slog.Any("err", err),
 		)
+
 		return err
 	}
+
 	if err := c.collectSession(ch); err != nil {
 		logger.Error("failed collecting vmware blast metrics",
 			slog.Any("err", err),
 		)
+
 		return err
 	}
+
 	if err := c.collectSkypeforBusinessControl(ch); err != nil {
 		logger.Error("failed collecting vmware blast skype for business control metrics",
 			slog.Any("err", err),
 		)
+
 		return err
 	}
+
 	if err := c.collectThinPrint(ch); err != nil {
 		logger.Error("failed collecting vmware blast thin print metrics",
 			slog.Any("err", err),
 		)
+
 		return err
 	}
+
 	if err := c.collectUsb(ch); err != nil {
 		logger.Error("failed collecting vmware blast USB metrics",
 			slog.Any("err", err),
 		)
+
 		return err
 	}
+
 	if err := c.collectWindowsMediaMmr(ch); err != nil {
 		logger.Error("failed collecting vmware blast windows media MMR metrics",
 			slog.Any("err", err),
 		)
+
 		return err
 	}
+
 	return nil
 }
 

@@ -102,6 +102,7 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 	c.config.CollectorsEnabled = make([]string, 0)
 
 	var listAllCollectors bool
+
 	var collectorsEnabled string
 
 	app.Flag(
@@ -250,9 +251,11 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch ch
 			logger.Error("Error in "+collectorName,
 				slog.Any("err", err),
 			)
+
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -269,12 +272,15 @@ type perflibADAccessProcesses struct {
 
 func (c *Collector) collectADAccessProcesses(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
+
 	var data []perflibADAccessProcesses
+
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["MSExchange ADAccess Processes"], &data, logger); err != nil {
 		return err
 	}
 
 	labelUseCount := make(map[string]int)
+
 	for _, proc := range data {
 		labelName := c.toLabelName(proc.Name)
 		if strings.HasSuffix(labelName, "_total") {
@@ -318,6 +324,7 @@ func (c *Collector) collectADAccessProcesses(ctx *types.ScrapeContext, logger *s
 			labelName,
 		)
 	}
+
 	return nil
 }
 
@@ -328,7 +335,9 @@ type perflibAvailabilityService struct {
 
 func (c *Collector) collectAvailabilityService(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
+
 	var data []perflibAvailabilityService
+
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["MSExchange Availability Service"], &data, logger); err != nil {
 		return err
 	}
@@ -340,6 +349,7 @@ func (c *Collector) collectAvailabilityService(ctx *types.ScrapeContext, logger 
 			availservice.RequestsSec,
 		)
 	}
+
 	return nil
 }
 
@@ -357,7 +367,9 @@ type perflibHTTPProxy struct {
 
 func (c *Collector) collectHTTPProxy(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
+
 	var data []perflibHTTPProxy
+
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["MSExchange HttpProxy"], &data, logger); err != nil {
 		return err
 	}
@@ -401,6 +413,7 @@ func (c *Collector) collectHTTPProxy(ctx *types.ScrapeContext, logger *slog.Logg
 			labelName,
 		)
 	}
+
 	return nil
 }
 
@@ -412,7 +425,9 @@ type perflibOWA struct {
 
 func (c *Collector) collectOWA(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
+
 	var data []perflibOWA
+
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["MSExchange OWA"], &data, logger); err != nil {
 		return err
 	}
@@ -429,6 +444,7 @@ func (c *Collector) collectOWA(ctx *types.ScrapeContext, logger *slog.Logger, ch
 			owa.RequestsPerSec,
 		)
 	}
+
 	return nil
 }
 
@@ -441,7 +457,9 @@ type perflibActiveSync struct {
 
 func (c *Collector) collectActiveSync(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
+
 	var data []perflibActiveSync
+
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["MSExchange ActiveSync"], &data, logger); err != nil {
 		return err
 	}
@@ -463,6 +481,7 @@ func (c *Collector) collectActiveSync(ctx *types.ScrapeContext, logger *slog.Log
 			instance.SyncCommandsPerSec,
 		)
 	}
+
 	return nil
 }
 
@@ -478,7 +497,9 @@ type perflibRPCClientAccess struct {
 
 func (c *Collector) collectRPC(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
+
 	var data []perflibRPCClientAccess
+
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["MSExchange RpcClientAccess"], &data, logger); err != nil {
 		return err
 	}
@@ -535,7 +556,9 @@ type perflibTransportQueues struct {
 
 func (c *Collector) collectTransportQueues(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
+
 	var data []perflibTransportQueues
+
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["MSExchangeTransport Queues"], &data, logger); err != nil {
 		return err
 	}
@@ -594,6 +617,7 @@ func (c *Collector) collectTransportQueues(ctx *types.ScrapeContext, logger *slo
 			labelName,
 		)
 	}
+
 	return nil
 }
 
@@ -610,7 +634,9 @@ type perflibWorkloadManagementWorkloads struct {
 
 func (c *Collector) collectWorkloadManagementWorkloads(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
+
 	var data []perflibWorkloadManagementWorkloads
+
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["MSExchange WorkloadManagement Workloads"], &data, logger); err != nil {
 		return err
 	}
@@ -662,10 +688,13 @@ type perflibAutodiscover struct {
 
 func (c *Collector) collectAutoDiscover(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
+
 	var data []perflibAutodiscover
+
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["MSExchangeAutodiscover"], &data, logger); err != nil {
 		return err
 	}
+
 	for _, autodisc := range data {
 		ch <- prometheus.MustNewConstMetric(
 			c.autoDiscoverRequestsPerSec,
@@ -673,6 +702,7 @@ func (c *Collector) collectAutoDiscover(ctx *types.ScrapeContext, logger *slog.L
 			autodisc.RequestsPerSec,
 		)
 	}
+
 	return nil
 }
 
@@ -683,7 +713,9 @@ type perflibMapiHttpEmsmdb struct {
 
 func (c *Collector) collectMapiHttpEmsmdb(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
+
 	var data []perflibMapiHttpEmsmdb
+
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["MSExchange MapiHttp Emsmdb"], &data, logger); err != nil {
 		return err
 	}
@@ -703,6 +735,7 @@ func (c *Collector) collectMapiHttpEmsmdb(ctx *types.ScrapeContext, logger *slog
 func (c *Collector) toLabelName(name string) string {
 	s := strings.ReplaceAll(strings.Join(strings.Fields(strings.ToLower(name)), "_"), ".", "_")
 	s = strings.ReplaceAll(s, "__", "_")
+
 	return s
 }
 

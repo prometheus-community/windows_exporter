@@ -18,5 +18,6 @@ func GetPerflibSnapshot(objNames string) (map[string]*PerfObject, error) {
 	for _, obj := range objects {
 		indexed[obj.Name] = obj
 	}
+
 	return indexed, nil
 }

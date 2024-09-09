@@ -119,8 +119,10 @@ func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan
 		logger.Error("failed collecting performance data metrics",
 			slog.Any("err", err),
 		)
+
 		return err
 	}
+
 	return nil
 }
 
@@ -139,6 +141,7 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 				}
 
 				metricType := value.Type
+
 				if val, ok := object.Counters[counter]; ok {
 					switch val.Type {
 					case "counter":

@@ -209,8 +209,10 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch ch
 		logger.Error("failed collecting physical_disk metrics",
 			slog.Any("err", err),
 		)
+
 		return err
 	}
+
 	return nil
 }
 
@@ -235,7 +237,9 @@ type PhysicalDisk struct {
 
 func (c *Collector) collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
+
 	var dst []PhysicalDisk
+
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["PhysicalDisk"], &dst, logger); err != nil {
 		return err
 	}

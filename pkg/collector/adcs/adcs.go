@@ -156,8 +156,10 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch ch
 		logger.Error("failed collecting ADCS metrics",
 			slog.Any("err", err),
 		)
+
 		return err
 	}
+
 	return nil
 }
 
@@ -180,13 +182,16 @@ type perflibADCS struct {
 
 func (c *Collector) collectADCSCounters(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	dst := make([]perflibADCS, 0)
+
 	if _, ok := ctx.PerfObjects["Certification Authority"]; !ok {
 		return errors.New("perflib did not contain an entry for Certification Authority")
 	}
+
 	err := perflib.UnmarshalObject(ctx.PerfObjects["Certification Authority"], &dst, logger)
 	if err != nil {
 		return err
 	}
+
 	if len(dst) == 0 {
 		return errors.New("perflib query for Certification Authority (ADCS) returned empty result set")
 	}

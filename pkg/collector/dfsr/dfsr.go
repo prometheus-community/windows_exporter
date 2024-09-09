@@ -86,6 +86,7 @@ type dfsrCollectorFunc func(ctx *types.ScrapeContext, logger *slog.Logger, ch ch
 func dfsrGetPerfObjectName(collector string) string {
 	prefix := "DFS "
 	suffix := ""
+
 	switch collector {
 	case "connection":
 		suffix = "Replication Connections"
@@ -94,6 +95,7 @@ func dfsrGetPerfObjectName(collector string) string {
 	case "volume":
 		suffix = "Replication Service Volumes"
 	}
+
 	return prefix + suffix
 }
 
@@ -458,6 +460,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *wmi.Client) error {
 // for use in Collector.Collect().
 func (c *Collector) getDFSRChildCollectors(enabledCollectors []string) []dfsrCollectorFunc {
 	var dfsrCollectors []dfsrCollectorFunc
+
 	for _, collector := range enabledCollectors {
 		switch collector {
 		case "connection":
@@ -482,6 +485,7 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch ch
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -502,7 +506,9 @@ type PerflibDFSRConnection struct {
 
 func (c *Collector) collectConnection(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
+
 	var dst []PerflibDFSRConnection
+
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["DFS Replication Connections"], &dst, logger); err != nil {
 		return err
 	}
@@ -571,6 +577,7 @@ func (c *Collector) collectConnection(ctx *types.ScrapeContext, logger *slog.Log
 			connection.Name,
 		)
 	}
+
 	return nil
 }
 
@@ -609,7 +616,9 @@ type perflibDFSRFolder struct {
 
 func (c *Collector) collectFolder(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
+
 	var dst []perflibDFSRFolder
+
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["DFS Replicated Folders"], &dst, logger); err != nil {
 		return err
 	}
@@ -804,6 +813,7 @@ func (c *Collector) collectFolder(ctx *types.ScrapeContext, logger *slog.Logger,
 			folder.Name,
 		)
 	}
+
 	return nil
 }
 
@@ -820,7 +830,9 @@ type perflibDFSRVolume struct {
 
 func (c *Collector) collectVolume(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
+
 	var dst []perflibDFSRVolume
+
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["DFS Replication Service Volumes"], &dst, logger); err != nil {
 		return err
 	}
@@ -861,5 +873,6 @@ func (c *Collector) collectVolume(ctx *types.ScrapeContext, logger *slog.Logger,
 			volume.Name,
 		)
 	}
+
 	return nil
 }

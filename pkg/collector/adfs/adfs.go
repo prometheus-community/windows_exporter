@@ -406,7 +406,9 @@ type perflibADFS struct {
 
 func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
+
 	var adfsData []perflibADFS
+
 	err := perflib.UnmarshalObject(ctx.PerfObjects["AD FS"], &adfsData, logger)
 	if err != nil {
 		return err
@@ -669,5 +671,6 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch ch
 		prometheus.CounterValue,
 		adfsData[0].FederationMetadataRequests,
 	)
+
 	return nil
 }

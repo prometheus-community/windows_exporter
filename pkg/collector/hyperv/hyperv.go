@@ -749,6 +749,7 @@ func (c *Collector) Build(_ *slog.Logger, wmiClient *wmi.Client) error {
 		[]string{"vm"},
 		nil,
 	)
+
 	return nil
 }
 
@@ -760,6 +761,7 @@ func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan
 		logger.Error("failed collecting hyperV health status metrics",
 			slog.Any("err", err),
 		)
+
 		return err
 	}
 
@@ -767,6 +769,7 @@ func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan
 		logger.Error("failed collecting hyperV pages metrics",
 			slog.Any("err", err),
 		)
+
 		return err
 	}
 
@@ -774,6 +777,7 @@ func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan
 		logger.Error("failed collecting hyperV hv status metrics",
 			slog.Any("err", err),
 		)
+
 		return err
 	}
 
@@ -781,6 +785,7 @@ func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan
 		logger.Error("failed collecting hyperV processor metrics",
 			slog.Any("err", err),
 		)
+
 		return err
 	}
 
@@ -788,6 +793,7 @@ func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan
 		logger.Error("failed collecting hyperV host logical processors metrics",
 			slog.Any("err", err),
 		)
+
 		return err
 	}
 
@@ -795,6 +801,7 @@ func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan
 		logger.Error("failed collecting hyperV host CPU metrics",
 			slog.Any("err", err),
 		)
+
 		return err
 	}
 
@@ -802,6 +809,7 @@ func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan
 		logger.Error("failed collecting hyperV VM CPU metrics",
 			slog.Any("err", err),
 		)
+
 		return err
 	}
 
@@ -809,6 +817,7 @@ func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan
 		logger.Error("failed collecting hyperV switch metrics",
 			slog.Any("err", err),
 		)
+
 		return err
 	}
 
@@ -816,6 +825,7 @@ func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan
 		logger.Error("failed collecting hyperV ethernet metrics",
 			slog.Any("err", err),
 		)
+
 		return err
 	}
 
@@ -823,6 +833,7 @@ func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan
 		logger.Error("failed collecting hyperV virtual storage metrics",
 			slog.Any("err", err),
 		)
+
 		return err
 	}
 
@@ -830,6 +841,7 @@ func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan
 		logger.Error("failed collecting hyperV virtual network metrics",
 			slog.Any("err", err),
 		)
+
 		return err
 	}
 
@@ -837,6 +849,7 @@ func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan
 		logger.Error("failed collecting hyperV virtual memory metrics",
 			slog.Any("err", err),
 		)
+
 		return err
 	}
 
@@ -1119,12 +1132,15 @@ func (c *Collector) collectHostLPUsage(logger *slog.Logger, ch chan<- prometheus
 		if strings.Contains(obj.Name, "_Total") {
 			continue
 		}
+
 		// The name format is Hv LP <core id>
 		parts := strings.Split(obj.Name, " ")
 		if len(parts) != 3 {
 			logger.Warn(fmt.Sprintf("Unexpected format of Name in collectHostLPUsage: %q", obj.Name))
+
 			continue
 		}
+
 		coreId := parts[2]
 
 		ch <- prometheus.MustNewConstMetric(
@@ -1172,12 +1188,15 @@ func (c *Collector) collectHostCpuUsage(logger *slog.Logger, ch chan<- prometheu
 		if strings.Contains(obj.Name, "_Total") {
 			continue
 		}
+
 		// The name format is Root VP <core id>
 		parts := strings.Split(obj.Name, " ")
 		if len(parts) != 3 {
 			logger.Warn("Unexpected format of Name in collectHostCpuUsage: " + obj.Name)
+
 			continue
 		}
+
 		coreId := parts[2]
 
 		ch <- prometheus.MustNewConstMetric(
@@ -1239,17 +1258,22 @@ func (c *Collector) collectVmCpuUsage(logger *slog.Logger, ch chan<- prometheus.
 		if strings.Contains(obj.Name, "_Total") {
 			continue
 		}
+
 		// The name format is <VM Name>:Hv VP <vcore id>
 		parts := strings.Split(obj.Name, ":")
 		if len(parts) != 2 {
 			logger.Warn(fmt.Sprintf("Unexpected format of Name in collectVmCpuUsage: %q, expected %q. Skipping.", obj.Name, "<VM Name>:Hv VP <vcore id>"))
+
 			continue
 		}
+
 		coreParts := strings.Split(parts[1], " ")
 		if len(coreParts) != 3 {
 			logger.Warn(fmt.Sprintf("Unexpected format of core identifier in collectVmCpuUsage: %q, expected %q. Skipping.", parts[1], "Hv VP <vcore id>"))
+
 			continue
 		}
+
 		vmName := parts[0]
 		coreId := coreParts[2]
 

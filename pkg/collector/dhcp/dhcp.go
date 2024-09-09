@@ -228,6 +228,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 		nil,
 		nil,
 	)
+
 	return nil
 }
 
@@ -264,7 +265,9 @@ type dhcpPerf struct {
 
 func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
+
 	var dhcpPerfs []dhcpPerf
+
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["DHCP Server"], &dhcpPerfs, logger); err != nil {
 		return err
 	}

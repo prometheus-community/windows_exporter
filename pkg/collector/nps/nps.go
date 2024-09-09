@@ -235,6 +235,7 @@ func (c *Collector) Build(_ *slog.Logger, wmiClient *wmi.Client) error {
 		nil,
 		nil,
 	)
+
 	return nil
 }
 
@@ -244,12 +245,16 @@ func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan
 	logger = logger.With(slog.String("collector", Name))
 	if err := c.CollectAccept(ch); err != nil {
 		logger.Error(fmt.Sprintf("failed collecting NPS accept data: %s", err))
+
 		return err
 	}
+
 	if err := c.CollectAccounting(ch); err != nil {
 		logger.Error(fmt.Sprintf("failed collecting NPS accounting data: %s", err))
+
 		return err
 	}
+
 	return nil
 }
 

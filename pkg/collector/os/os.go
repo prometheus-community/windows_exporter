@@ -219,6 +219,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *wmi.Client) error {
 		nil,
 		nil,
 	)
+
 	return nil
 }
 
@@ -235,6 +236,7 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch ch
 		logger.Error("failed collecting os metrics",
 			slog.Any("err", err),
 		)
+
 		errs = append(errs, err)
 	}
 
@@ -242,6 +244,7 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch ch
 		logger.Error("failed collecting os user count metrics",
 			slog.Any("err", err),
 		)
+
 		errs = append(errs, err)
 	}
 
@@ -249,6 +252,7 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch ch
 		logger.Error("failed collecting os memory metrics",
 			slog.Any("err", err),
 		)
+
 		errs = append(errs, err)
 	}
 
@@ -256,6 +260,7 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch ch
 		logger.Error("failed collecting os time metrics",
 			slog.Any("err", err),
 		)
+
 		errs = append(errs, err)
 	}
 
@@ -263,6 +268,7 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch ch
 		logger.Error("failed collecting os paging metrics",
 			slog.Any("err", err),
 		)
+
 		errs = append(errs, err)
 	}
 
@@ -289,10 +295,12 @@ func (c *Collector) collectHostname(ch chan<- prometheus.Metric) error {
 	if err != nil {
 		return err
 	}
+
 	domain, err := sysinfoapi.GetComputerName(sysinfoapi.ComputerNameDNSDomain)
 	if err != nil {
 		return err
 	}
+
 	fqdn, err := sysinfoapi.GetComputerName(sysinfoapi.ComputerNameDNSFullyQualified)
 	if err != nil {
 		return err
@@ -386,6 +394,7 @@ func (c *Collector) collectPaging(ctx *types.ScrapeContext, logger *slog.Logger,
 	pagingFiles, _, pagingErr := memManKey.GetStringsValue("ExistingPageFiles")
 
 	var fsipf float64
+
 	for _, pagingFile := range pagingFiles {
 		fileString := strings.ReplaceAll(pagingFile, `\??\`, "")
 		file, err := os.Stat(fileString)
@@ -409,10 +418,12 @@ func (c *Collector) collectPaging(ctx *types.ScrapeContext, logger *slog.Logger,
 
 	// Get current page file usage.
 	var pfbRaw float64
+
 	for _, pageFile := range pfc {
 		if strings.Contains(strings.ToLower(pageFile.Name), "_total") {
 			continue
 		}
+
 		pfbRaw += pageFile.Usage
 	}
 

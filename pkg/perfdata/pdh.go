@@ -537,8 +537,10 @@ func PdhValidatePath(path string) uint32 {
 
 func PdhFormatError(msgID uint32) string {
 	var flags uint32 = windows.FORMAT_MESSAGE_FROM_HMODULE | windows.FORMAT_MESSAGE_ARGUMENT_ARRAY | windows.FORMAT_MESSAGE_IGNORE_INSERTS
+
 	buf := make([]uint16, 300)
 	_, err := windows.FormatMessage(flags, libPdhDll.Handle(), msgID, 0, buf, nil)
+
 	if err == nil {
 		return windows.UTF16PtrToString(&buf[0])
 	}
@@ -617,6 +619,7 @@ func PdhGetRawCounterArray(hCounter pdhCounterHandle, lpdwBufferSize *uint32, lp
 		uintptr(unsafe.Pointer(lpdwBufferSize)),
 		uintptr(unsafe.Pointer(lpdwBufferCount)),
 		uintptr(unsafe.Pointer(itemBuffer)))
+
 	return uint32(ret)
 }
 
@@ -630,5 +633,6 @@ func PdhGetCounterTimeBase(hCounter pdhCounterHandle, pTimeBase *float64) uint32
 	ret, _, _ := pdhPdhGetCounterTimeBase.Call(
 		uintptr(hCounter),
 		uintptr(unsafe.Pointer(pTimeBase)))
+
 	return uint32(ret)
 }

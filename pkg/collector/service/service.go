@@ -181,11 +181,13 @@ func (c *Collector) collect(logger *slog.Logger, ch chan<- prometheus.Metric) er
 		logger.Warn("Failed to query services",
 			slog.Any("err", err),
 		)
+
 		return err
 	}
 
 	if services == nil {
 		logger.Warn("No services queried")
+
 		return nil
 	}
 
@@ -398,8 +400,11 @@ func getProcessStartTime(logger *slog.Logger, pid uint32) (uint64, error) {
 	}(handle)
 
 	var creation windows.Filetime
+
 	var exit windows.Filetime
+
 	var krn windows.Filetime
+
 	var user windows.Filetime
 
 	err = windows.GetProcessTimes(handle, &creation, &exit, &krn, &user)

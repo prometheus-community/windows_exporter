@@ -167,6 +167,7 @@ func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan
 		logger.Error("failed collecting user metrics",
 			slog.Any("err", err),
 		)
+
 		return err
 	}
 
@@ -265,10 +266,12 @@ func getScheduledTasks() (ScheduledTasks, error) {
 	defer taskSchedulerObj.Release()
 
 	taskServiceObj := taskSchedulerObj.MustQueryInterface(ole.IID_IDispatch)
+
 	_, err = oleutil.CallMethod(taskServiceObj, "Connect")
 	if err != nil {
 		return scheduledTasks, err
 	}
+
 	defer taskServiceObj.Release()
 
 	res, err := oleutil.CallMethod(taskServiceObj, "GetFolder", `\`)
@@ -326,6 +329,7 @@ func fetchTasksRecursively(folder *ole.IDispatch, scheduledTasks *ScheduledTasks
 	err = oleutil.ForEach(subFolders, func(v *ole.VARIANT) error {
 		subFolder := v.ToIDispatch()
 		defer subFolder.Release()
+
 		return fetchTasksRecursively(subFolder, scheduledTasks)
 	})
 
@@ -339,6 +343,7 @@ func parseTask(task *ole.IDispatch) (ScheduledTask, error) {
 	if err != nil {
 		return scheduledTask, err
 	}
+
 	defer func() {
 		if tempErr := taskNameVar.Clear(); tempErr != nil {
 			err = tempErr
@@ -349,6 +354,7 @@ func parseTask(task *ole.IDispatch) (ScheduledTask, error) {
 	if err != nil {
 		return scheduledTask, err
 	}
+
 	defer func() {
 		if tempErr := taskPathVar.Clear(); tempErr != nil {
 			err = tempErr
@@ -359,6 +365,7 @@ func parseTask(task *ole.IDispatch) (ScheduledTask, error) {
 	if err != nil {
 		return scheduledTask, err
 	}
+
 	defer func() {
 		if tempErr := taskEnabledVar.Clear(); tempErr != nil {
 			err = tempErr
@@ -369,6 +376,7 @@ func parseTask(task *ole.IDispatch) (ScheduledTask, error) {
 	if err != nil {
 		return scheduledTask, err
 	}
+
 	defer func() {
 		if tempErr := taskStateVar.Clear(); tempErr != nil {
 			err = tempErr
@@ -379,6 +387,7 @@ func parseTask(task *ole.IDispatch) (ScheduledTask, error) {
 	if err != nil {
 		return scheduledTask, err
 	}
+
 	defer func() {
 		if tempErr := taskNumberOfMissedRunsVar.Clear(); tempErr != nil {
 			err = tempErr
@@ -389,6 +398,7 @@ func parseTask(task *ole.IDispatch) (ScheduledTask, error) {
 	if err != nil {
 		return scheduledTask, err
 	}
+
 	defer func() {
 		if tempErr := taskLastTaskResultVar.Clear(); tempErr != nil {
 			err = tempErr
@@ -397,9 +407,11 @@ func parseTask(task *ole.IDispatch) (ScheduledTask, error) {
 
 	scheduledTask.Name = taskNameVar.ToString()
 	scheduledTask.Path = strings.ReplaceAll(taskPathVar.ToString(), "\\", "/")
+
 	if val, ok := taskEnabledVar.Value().(bool); ok {
 		scheduledTask.Enabled = val
 	}
+
 	scheduledTask.State = TaskState(taskStateVar.Val)
 	scheduledTask.MissedRunsCount = float64(taskNumberOfMissedRunsVar.Val)
 	scheduledTask.LastTaskResult = TaskResult(taskLastTaskResultVar.Val)

@@ -267,8 +267,10 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch ch
 		logger.Error("failed collecting logical_disk metrics",
 			slog.Any("err", err),
 		)
+
 		return err
 	}
+
 	return nil
 }
 
@@ -297,6 +299,7 @@ type logicalDisk struct {
 
 func (c *Collector) collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
+
 	var (
 		err    error
 		diskID string
@@ -485,11 +488,13 @@ const diskExtentSize = 24
 func getDiskIDByVolume(rootDrive string) (string, error) {
 	// Open a volume handle to the Disk Root.
 	var err error
+
 	var f windows.Handle
 
 	// mode has to include FILE_SHARE permission to allow concurrent access to the disk.
 	// use 0 as access mode to avoid admin permission.
 	mode := uint32(windows.FILE_SHARE_READ | windows.FILE_SHARE_WRITE | windows.FILE_SHARE_DELETE)
+
 	f, err = windows.CreateFile(
 		windows.StringToUTF16Ptr(`\\.\`+rootDrive),
 		0, mode, nil, windows.OPEN_EXISTING, uint32(windows.FILE_ATTRIBUTE_READONLY), 0)
@@ -503,6 +508,7 @@ func getDiskIDByVolume(rootDrive string) (string, error) {
 	volumeDiskExtents := make([]byte, 16*1024)
 
 	var bytesReturned uint32
+
 	err = windows.DeviceIoControl(f, controlCode, nil, 0, &volumeDiskExtents[0], uint32(len(volumeDiskExtents)), &bytesReturned, nil)
 	if err != nil {
 		return "", fmt.Errorf("could not identify physical drive for %s: %w", rootDrive, err)

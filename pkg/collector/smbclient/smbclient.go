@@ -184,6 +184,7 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch ch
 		logger.Error("Error in ClientShares",
 			slog.Any("err", err),
 		)
+
 		return err
 	}
 
@@ -219,10 +220,13 @@ type perflibClientShares struct {
 
 func (c *Collector) collectClientShares(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
+
 	var data []perflibClientShares
+
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["SMB Client Shares"], &data, logger); err != nil {
 		return err
 	}
+
 	for _, instance := range data {
 		if instance.Name == "_Total" {
 			continue
@@ -381,5 +385,6 @@ func (c *Collector) collectClientShares(ctx *types.ScrapeContext, logger *slog.L
 			serverValue, shareValue,
 		)
 	}
+
 	return nil
 }

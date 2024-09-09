@@ -160,6 +160,7 @@ func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan
 		logger.Error("failed to collect printer status metrics",
 			slog.Any("err", err),
 		)
+
 		return err
 	}
 
@@ -167,6 +168,7 @@ func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan
 		logger.Error("failed to collect printer job status metrics",
 			slog.Any("err", err),
 		)
+
 		return err
 	}
 

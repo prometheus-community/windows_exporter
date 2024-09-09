@@ -899,8 +899,10 @@ func getIISVersion(logger *slog.Logger) simpleVersion {
 		logger.Warn("Couldn't open registry to determine IIS version",
 			slog.Any("err", err),
 		)
+
 		return simpleVersion{}
 	}
+
 	defer func() {
 		err = k.Close()
 		if err != nil {
@@ -915,13 +917,16 @@ func getIISVersion(logger *slog.Logger) simpleVersion {
 		logger.Warn("Couldn't open registry to determine IIS version",
 			slog.Any("err", err),
 		)
+
 		return simpleVersion{}
 	}
+
 	minor, _, err := k.GetIntegerValue("MinorVersion")
 	if err != nil {
 		logger.Warn("Couldn't open registry to determine IIS version",
 			slog.Any("err", err),
 		)
+
 		return simpleVersion{}
 	}
 
@@ -941,6 +946,7 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch ch
 		logger.Error("failed collecting iis metrics",
 			slog.Any("err", err),
 		)
+
 		return err
 	}
 
@@ -948,6 +954,7 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch ch
 		logger.Error("failed collecting iis metrics",
 			slog.Any("err", err),
 		)
+
 		return err
 	}
 
@@ -955,6 +962,7 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch ch
 		logger.Error("failed collecting iis metrics",
 			slog.Any("err", err),
 		)
+
 		return err
 	}
 
@@ -962,6 +970,7 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch ch
 		logger.Error("failed collecting iis metrics",
 			slog.Any("err", err),
 		)
+
 		return err
 	}
 
@@ -1055,12 +1064,15 @@ func dedupIISNames[V hasGetIISName](services []V) map[string]V {
 		name := strings.Split(entry.getIISName(), "#")[0]
 		webServiceDeDuplicated[name] = entry
 	}
+
 	return webServiceDeDuplicated
 }
 
 func (c *Collector) collectWebService(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
+
 	var webService []perflibWebService
+
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["Web Service"], &webService, logger); err != nil {
 		return err
 	}
@@ -1353,7 +1365,9 @@ var applicationStates = map[uint32]string{
 
 func (c *Collector) collectAPP_POOL_WAS(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
+
 	var APP_POOL_WAS []perflibAPP_POOL_WAS
+
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["APP_POOL_WAS"], &APP_POOL_WAS, logger); err != nil {
 		return err
 	}
@@ -1531,7 +1545,9 @@ type perflibW3SVC_W3WP_IIS8 struct {
 
 func (c *Collector) collectW3SVC_W3WP(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
+
 	var W3SVC_W3WP []perflibW3SVC_W3WP
+
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["W3SVC_W3WP"], &W3SVC_W3WP, logger); err != nil {
 		return err
 	}
@@ -1541,6 +1557,7 @@ func (c *Collector) collectW3SVC_W3WP(ctx *types.ScrapeContext, logger *slog.Log
 	for w3Name, app := range w3svcW3WPDeduplicated {
 		// Extract the apppool name from the format <PID>_<NAME>
 		pid := workerProcessNameExtractor.ReplaceAllString(w3Name, "$1")
+
 		name := workerProcessNameExtractor.ReplaceAllString(w3Name, "$2")
 		if name == "" || name == "_Total" ||
 			c.config.AppExclude.MatchString(name) ||
@@ -1799,6 +1816,7 @@ func (c *Collector) collectW3SVC_W3WP(ctx *types.ScrapeContext, logger *slog.Log
 		for w3Name, app := range w3svcW3WPIIS8Deduplicated {
 			// Extract the apppool name from the format <PID>_<NAME>
 			pid := workerProcessNameExtractor.ReplaceAllString(w3Name, "$1")
+
 			name := workerProcessNameExtractor.ReplaceAllString(w3Name, "$2")
 			if name == "" || name == "_Total" ||
 				c.config.AppExclude.MatchString(name) ||
@@ -1929,7 +1947,9 @@ type perflibWebServiceCache struct {
 
 func (c *Collector) collectWebServiceCache(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
+
 	var WebServiceCache []perflibWebServiceCache
+
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["Web Service Cache"], &WebServiceCache, logger); err != nil {
 		return err
 	}

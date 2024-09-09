@@ -72,6 +72,7 @@ func (c *MetricsHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	)
 
 	scrapeTimeout := c.getScrapeTimeout(logger, r)
+
 	handler, err := c.handlerFactory(logger, scrapeTimeout, r.URL.Query()["collect[]"])
 	if err != nil {
 		logger.Warn("Couldn't create filtered metrics handler",
@@ -92,6 +93,7 @@ func (c *MetricsHTTPHandler) getScrapeTimeout(logger *slog.Logger, r *http.Reque
 
 	if v := r.Header.Get("X-Prometheus-Scrape-Timeout-Seconds"); v != "" {
 		var err error
+
 		timeoutSeconds, err = strconv.ParseFloat(v, 64)
 		if err != nil {
 			logger.Warn(fmt.Sprintf("Couldn't parse X-Prometheus-Scrape-Timeout-Seconds: %q. Defaulting timeout to %f", v, defaultScrapeTimeout))
@@ -115,6 +117,7 @@ func (c *MetricsHTTPHandler) handlerFactory(logger *slog.Logger, scrapeTimeout t
 		metricCollectors = c.metricCollectors
 	} else {
 		filteredCollectors := make(collector.Map)
+
 		for _, name := range requestedCollectors {
 			metricCollector, ok := c.metricCollectors.Collectors[name]
 			if !ok {
@@ -132,6 +135,7 @@ func (c *MetricsHTTPHandler) handlerFactory(logger *slog.Logger, scrapeTimeout t
 	}
 
 	reg.MustRegister(version.NewCollector("windows_exporter"))
+
 	if err := reg.Register(metricCollectors.NewPrometheusCollector(scrapeTimeout, c.logger)); err != nil {
 		return nil, fmt.Errorf("couldn't register Prometheus collector: %w", err)
 	}
@@ -179,6 +183,7 @@ func (c *MetricsHTTPHandler) withConcurrencyLimit(next http.HandlerFunc) http.Ha
 		default:
 			w.WriteHeader(http.StatusServiceUnavailable)
 			_, _ = w.Write([]byte("Too many concurrent requests"))
+
 			return
 		}
 

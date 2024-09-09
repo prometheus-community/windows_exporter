@@ -5,7 +5,7 @@
 package main
 
 //goland:noinspection GoUnsortedImport
-
+//nolint:gofumpt
 import (
 	// Its important that we do these first so that we can register with the Windows service control ASAP to avoid timeouts.
 	"github.com/prometheus-community/windows_exporter/pkg/initiate"
@@ -23,7 +23,6 @@ import (
 	"sort"
 	"strings"
 	"time"
-
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/pkg/collector"
@@ -55,6 +54,7 @@ func main() {
 
 func run() int {
 	app := kingpin.New("windows_exporter", "A metrics collector for Windows.")
+
 	var (
 		configFile = app.Flag(
 			"config.file",

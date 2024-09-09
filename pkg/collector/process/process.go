@@ -286,6 +286,7 @@ type WorkerProcess struct {
 func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
 	data := make([]perflibProcess, 0)
+
 	err := perflib.UnmarshalObject(ctx.PerfObjects["Process"], &data, logger)
 	if err != nil {
 		return err
@@ -316,6 +317,7 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch ch
 			for _, wp := range workerProcesses {
 				if wp.ProcessId == uint64(process.IDProcess) {
 					processName = strings.Join([]string{processName, wp.AppPoolName}, "_")
+
 					break
 				}
 			}
@@ -533,12 +535,14 @@ func (c *Collector) getProcessInformation(logger *slog.Logger, pid uint32) (stri
 func (c *Collector) getExtendedProcessInformation(hProcess windows.Handle) (string, uint32, error) {
 	// Get the process environment block (PEB) address
 	var pbi windows.PROCESS_BASIC_INFORMATION
+
 	retLen := uint32(unsafe.Sizeof(pbi))
 	if err := windows.NtQueryInformationProcess(hProcess, windows.ProcessBasicInformation, unsafe.Pointer(&pbi), retLen, &retLen); err != nil {
 		return "", 0, fmt.Errorf("failed to query process basic information: %w", err)
 	}
 
 	peb := windows.PEB{}
+
 	err := windows.ReadProcessMemory(hProcess,
 		uintptr(unsafe.Pointer(pbi.PebBaseAddress)),
 		(*byte)(unsafe.Pointer(&peb)),
@@ -550,6 +554,7 @@ func (c *Collector) getExtendedProcessInformation(hProcess windows.Handle) (stri
 	}
 
 	processParameters := windows.RTL_USER_PROCESS_PARAMETERS{}
+
 	err = windows.ReadProcessMemory(hProcess,
 		uintptr(unsafe.Pointer(peb.ProcessParameters)),
 		(*byte)(unsafe.Pointer(&processParameters)),

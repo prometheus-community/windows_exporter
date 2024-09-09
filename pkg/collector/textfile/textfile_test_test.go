@@ -33,16 +33,21 @@ func TestMultipleDirectories(t *testing.T) {
 	if err != nil {
 		t.Errorf("Unexpected error %s", err)
 	}
+
 	metrics := make(chan prometheus.Metric)
 	got := ""
+
 	go func() {
 		for {
 			var metric dto.Metric
+
 			val := <-metrics
+
 			err := val.Write(&metric)
 			if err != nil {
 				t.Errorf("Unexpected error %s", err)
 			}
+
 			got += metric.String()
 		}
 	}()
@@ -74,19 +79,25 @@ func TestDuplicateFileName(t *testing.T) {
 	if err != nil {
 		t.Errorf("Unexpected error %s", err)
 	}
+
 	metrics := make(chan prometheus.Metric)
 	got := ""
+
 	go func() {
 		for {
 			var metric dto.Metric
+
 			val := <-metrics
+
 			err := val.Write(&metric)
 			if err != nil {
 				t.Errorf("Unexpected error %s", err)
 			}
+
 			got += metric.String()
 		}
 	}()
+
 	err = textFileCollector.Collect(scrapeContext, logger, metrics)
 	if err != nil {
 		t.Errorf("Unexpected error %s", err)

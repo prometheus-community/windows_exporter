@@ -124,6 +124,7 @@ func (c *Collector) Build(_ *slog.Logger, wmiClient *wmi.Client) error {
 		[]string{"path", "template"},
 		nil,
 	)
+
 	return nil
 }
 
@@ -135,8 +136,10 @@ func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan
 		logger.Error("failed collecting fsrmquota metrics",
 			slog.Any("err", err),
 		)
+
 		return err
 	}
+
 	return nil
 }
 
@@ -159,6 +162,7 @@ type MSFT_FSRMQuota struct {
 
 func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	var dst []MSFT_FSRMQuota
+
 	var count int
 
 	if err := c.wmiClient.Query("SELECT * FROM MSFT_FSRMQuota", &dst, nil, "root/microsoft/windows/fsrm"); err != nil {
@@ -226,5 +230,6 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 		prometheus.GaugeValue,
 		float64(count),
 	)
+
 	return nil
 }

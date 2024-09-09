@@ -410,8 +410,10 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch ch
 		logger.Error("failed collecting smtp metrics",
 			slog.Any("err", err),
 		)
+
 		return err
 	}
+
 	return nil
 }
 
@@ -465,7 +467,9 @@ type PerflibSMTPServer struct {
 
 func (c *Collector) collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
+
 	var dst []PerflibSMTPServer
+
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["SMTP Server"], &dst, logger); err != nil {
 		return err
 	}
@@ -764,5 +768,6 @@ func (c *Collector) collect(ctx *types.ScrapeContext, logger *slog.Logger, ch ch
 			server.Name,
 		)
 	}
+
 	return nil
 }

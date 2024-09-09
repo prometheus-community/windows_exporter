@@ -97,10 +97,13 @@ type perflibServerShares struct {
 
 func (c *Collector) collectServerShares(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
+
 	var data []perflibServerShares
+
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["SMB Server Shares"], &data, logger); err != nil {
 		return err
 	}
+
 	for _, instance := range data {
 		labelName := c.toLabelName(instance.Name)
 		if !strings.HasSuffix(labelName, "_total") {
@@ -119,6 +122,7 @@ func (c *Collector) collectServerShares(ctx *types.ScrapeContext, logger *slog.L
 			instance.TreeConnectCount,
 		)
 	}
+
 	return nil
 }
 
@@ -126,5 +130,6 @@ func (c *Collector) collectServerShares(ctx *types.ScrapeContext, logger *slog.L
 func (c *Collector) toLabelName(name string) string {
 	s := strings.ReplaceAll(strings.Join(strings.Fields(strings.ToLower(name)), "_"), ".", "_")
 	s = strings.ReplaceAll(s, "__", "_")
+
 	return s
 }

@@ -38,7 +38,9 @@ type Resolver struct {
 // NewResolver returns a Resolver structure.
 func NewResolver(file string, logger *slog.Logger, insecureSkipVerify bool) (*Resolver, error) {
 	flags := map[string]string{}
+
 	var fileBytes []byte
+
 	var err error
 	if strings.HasPrefix(file, "http://") || strings.HasPrefix(file, "https://") {
 		fileBytes, err = readFromURL(file, logger, insecureSkipVerify)
@@ -72,6 +74,7 @@ func NewResolver(file string, logger *slog.Logger, insecureSkipVerify bool) (*Re
 
 func readFromFile(file string, logger *slog.Logger) ([]byte, error) {
 	logger.Info("Loading configuration file: " + file)
+
 	if _, err := os.Stat(file); err != nil {
 		return nil, fmt.Errorf("failed to read configuration file: %w", err)
 	}
@@ -86,6 +89,7 @@ func readFromFile(file string, logger *slog.Logger) ([]byte, error) {
 
 func readFromURL(file string, logger *slog.Logger, insecureSkipVerify bool) ([]byte, error) {
 	logger.Info("Loading configuration file from URL: " + file)
+
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: insecureSkipVerify}, //nolint:gosec
 	}
@@ -129,6 +133,7 @@ func (c *Resolver) Bind(app *kingpin.Application, args []string) error {
 	}
 
 	c.setDefault(app)
+
 	if pc.SelectedCommand != nil {
 		c.setDefault(pc.SelectedCommand)
 	}

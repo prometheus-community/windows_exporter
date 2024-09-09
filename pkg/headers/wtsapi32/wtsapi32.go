@@ -152,6 +152,7 @@ func WTSFreeMemoryEx(class WTSTypeClass, pMemory uintptr, numberOfEntries uint32
 
 func WTSEnumerateSessionsEx(server windows.Handle, logger *slog.Logger) ([]WTSSession, error) {
 	var sessionInfoPointer uintptr
+
 	var count uint32
 
 	pLevel := uint32(1)
@@ -180,6 +181,7 @@ func WTSEnumerateSessionsEx(server windows.Handle, logger *slog.Logger) ([]WTSSe
 	sessionSize := unsafe.Sizeof(sizeTest)
 
 	sessions := make([]WTSSession, 0, count)
+
 	for i := range count {
 		curPtr := unsafe.Pointer(sessionInfoPointer + (uintptr(i) * sessionSize))
 		data := (*wtsSessionInfo1)(curPtr)

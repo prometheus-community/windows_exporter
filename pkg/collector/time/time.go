@@ -118,6 +118,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 		nil,
 		nil,
 	)
+
 	return nil
 }
 
@@ -132,6 +133,7 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch ch
 		logger.Error("failed collecting time metrics",
 			slog.Any("err", err),
 		)
+
 		errs = append(errs, err)
 	}
 
@@ -139,6 +141,7 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch ch
 		logger.Error("failed collecting time ntp metrics",
 			slog.Any("err", err),
 		)
+
 		errs = append(errs, err)
 	}
 
@@ -182,7 +185,9 @@ func (c *Collector) collectTime(ch chan<- prometheus.Metric) error {
 
 func (c *Collector) collectNTP(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
+
 	var dst []windowsTime // Single-instance class, array is required but will have single entry.
+
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["Windows Time Service"], &dst, logger); err != nil {
 		return err
 	}

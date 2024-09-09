@@ -207,6 +207,7 @@ func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan
 		logger.Error("failed collecting collector metrics",
 			slog.Any("err", err),
 		)
+
 		return err
 	}
 
@@ -220,6 +221,7 @@ func (c *Collector) collect(logger *slog.Logger, ch chan<- prometheus.Metric) er
 		logger.Error("Err in Getting containers",
 			slog.Any("err", err),
 		)
+
 		return err
 	}
 
@@ -252,6 +254,7 @@ func (c *Collector) collect(logger *slog.Logger, ch chan<- prometheus.Metric) er
 					slog.String("container_id", containerDetails.ID),
 					slog.Any("err", err),
 				)
+
 				collectErrors = append(collectErrors, err)
 			}
 
@@ -373,11 +376,13 @@ func (c *Collector) collectNetworkMetrics(logger *slog.Logger, ch chan<- prometh
 	hnsEndpoints, err := hcsshim.HNSListEndpointRequest()
 	if err != nil {
 		logger.Warn("Failed to collect network stats for containers")
+
 		return err
 	}
 
 	if len(hnsEndpoints) == 0 {
 		logger.Info("No network stats for containers to collect")
+
 		return nil
 	}
 
@@ -387,6 +392,7 @@ func (c *Collector) collectNetworkMetrics(logger *slog.Logger, ch chan<- prometh
 			logger.Warn("Failed to collect network stats for interface "+endpoint.Id,
 				slog.Any("err", err),
 			)
+
 			continue
 		}
 
@@ -395,6 +401,7 @@ func (c *Collector) collectNetworkMetrics(logger *slog.Logger, ch chan<- prometh
 
 			if !ok {
 				logger.Debug("Failed to collect network stats for container " + containerId)
+
 				continue
 			}
 

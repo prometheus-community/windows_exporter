@@ -29,6 +29,7 @@ func FuncBenchmarkCollector[C collector.Collector](b *testing.B, name string, co
 	require.NoError(b, err)
 
 	metrics := make(chan prometheus.Metric)
+
 	go func() {
 		for {
 			<-metrics

@@ -219,6 +219,7 @@ type perflibProcessorInformation struct {
 func (c *Collector) CollectFull(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
 	data := make([]perflibProcessorInformation, 0)
+
 	err := perflib.UnmarshalObject(ctx.PerfObjects["Processor Information"], &data, logger)
 	if err != nil {
 		return err
@@ -230,6 +231,7 @@ func (c *Collector) CollectFull(ctx *types.ScrapeContext, logger *slog.Logger, c
 		if strings.Contains(strings.ToLower(cpu.Name), "_total") {
 			continue
 		}
+
 		core := cpu.Name
 
 		coreCount++

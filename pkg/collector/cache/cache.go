@@ -257,6 +257,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 		nil,
 		nil,
 	)
+
 	return nil
 }
 
@@ -310,7 +311,9 @@ type perflibCache struct {
 
 func (c *Collector) collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
+
 	var dst []perflibCache // Single-instance class, array is required but will have single entry.
+
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["Cache"], &dst, logger); err != nil {
 		return err
 	}

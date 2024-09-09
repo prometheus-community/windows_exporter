@@ -32,6 +32,7 @@ func NewEventLogWriter(handle windows.Handle) *Writer {
 
 func (w *Writer) Write(p []byte) (int, error) {
 	var eType uint16
+
 	switch {
 	case bytes.Contains(p, []byte(" level=error")) || bytes.Contains(p, []byte(`"level":"error"`)):
 		eType = windows.EVENTLOG_ERROR_TYPE
@@ -47,5 +48,6 @@ func (w *Writer) Write(p []byte) (int, error) {
 	}
 
 	ss := []*uint16{msg, nil, nil, nil, nil, nil, nil, nil, nil}
+
 	return len(p), windows.ReportEvent(w.handle, eType, 0, neLogOemCode, 0, 9, 0, &ss[0], nil)
 }

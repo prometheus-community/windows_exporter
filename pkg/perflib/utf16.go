@@ -10,6 +10,7 @@ import (
 // readUTF16StringAtPos Read an unterminated UTF16 string at a given position, specifying its length.
 func readUTF16StringAtPos(r io.ReadSeeker, absPos int64, length uint32) (string, error) {
 	value := make([]uint16, length/2)
+
 	_, err := r.Seek(absPos, io.SeekStart)
 	if err != nil {
 		return "", err

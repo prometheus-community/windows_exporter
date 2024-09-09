@@ -214,6 +214,7 @@ func (c *Collector) Build(_ *slog.Logger, wmiClient *wmi.Client) error {
 		nil,
 		nil,
 	)
+
 	return nil
 }
 
@@ -225,8 +226,10 @@ func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan
 		logger.Error("failed collecting dns metrics",
 			slog.Any("err", err),
 		)
+
 		return err
 	}
+
 	return nil
 }
 
@@ -281,6 +284,7 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	if err := c.wmiClient.Query("SELECT * FROM Win32_PerfRawData_DNS_DNS", &dst); err != nil {
 		return err
 	}
+
 	if len(dst) == 0 {
 		return errors.New("WMI query returned empty result set")
 	}

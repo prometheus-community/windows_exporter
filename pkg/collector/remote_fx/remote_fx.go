@@ -205,6 +205,7 @@ func (c *Collector) Build(*slog.Logger, *wmi.Client) error {
 		[]string{"session_name"},
 		nil,
 	)
+
 	return nil
 }
 
@@ -216,14 +217,18 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch ch
 		logger.Error("failed collecting terminal services session count metrics",
 			slog.Any("err", err),
 		)
+
 		return err
 	}
+
 	if err := c.collectRemoteFXGraphicsCounters(ctx, logger, ch); err != nil {
 		logger.Error("failed collecting terminal services session count metrics",
 			slog.Any("err", err),
 		)
+
 		return err
 	}
+
 	return nil
 }
 
@@ -247,6 +252,7 @@ type perflibRemoteFxNetwork struct {
 func (c *Collector) collectRemoteFXNetworkCount(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
 	dst := make([]perflibRemoteFxNetwork, 0)
+
 	err := perflib.UnmarshalObject(ctx.PerfObjects["RemoteFX Network"], &dst, logger)
 	if err != nil {
 		return err
@@ -339,6 +345,7 @@ func (c *Collector) collectRemoteFXNetworkCount(ctx *types.ScrapeContext, logger
 			normalizeSessionName(d.Name),
 		)
 	}
+
 	return nil
 }
 
@@ -358,6 +365,7 @@ type perflibRemoteFxGraphics struct {
 func (c *Collector) collectRemoteFXGraphicsCounters(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
 	dst := make([]perflibRemoteFxGraphics, 0)
+
 	err := perflib.UnmarshalObject(ctx.PerfObjects["RemoteFX Graphics"], &dst, logger)
 	if err != nil {
 		return err
