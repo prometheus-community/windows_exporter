@@ -63,6 +63,7 @@ func New(config *Config) (*slog.Logger, error) {
 	}
 
 	config.Config.Writer = config.File.w
+	config.Config.Style = promslog.GoKitStyle
 
 	return promslog.New(config.Config), nil
 }

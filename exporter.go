@@ -235,8 +235,11 @@ func run() int {
 	}
 
 	logger.Info("Starting windows_exporter",
-		slog.String("version", version.Info()),
-		slog.String("build_context", version.BuildContext()),
+		slog.String("version", version.Version),
+		slog.String("branch", version.Branch),
+		slog.String("revision", version.GetRevision()),
+		slog.String("goversion", version.GoVersion),
+		slog.String("builddate", version.BuildDate),
 		slog.Int("maxprocs", runtime.GOMAXPROCS(0)),
 	)
 
