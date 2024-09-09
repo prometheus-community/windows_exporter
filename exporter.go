@@ -28,6 +28,7 @@ import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/pkg/collector"
 	"github.com/prometheus-community/windows_exporter/pkg/config"
+	"github.com/prometheus-community/windows_exporter/pkg/httphandler"
 	winlog "github.com/prometheus-community/windows_exporter/pkg/log"
 	"github.com/prometheus-community/windows_exporter/pkg/log/flag"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
@@ -251,7 +252,12 @@ func main() {
 	logger.Info("Enabled collectors: " + strings.Join(enabledCollectorList, ", "))
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET "+*metricsPath, withConcurrencyLimit(*maxRequests, collectors.BuildServeHTTP(logger, *disableExporterMetrics, *timeoutMargin)))
+	mux.Handle("GET "+*metricsPath, httphandler.New(logger, collectors, &httphandler.Options{
+		DisableExporterMetrics: *disableExporterMetrics,
+		TimeoutMargin:          *timeoutMargin,
+		MaxRequests:            *maxRequests,
+	}))
+
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		if _, err := fmt.Fprintln(w, `{"status":"ok"}`); err != nil {
@@ -260,6 +266,7 @@ func main() {
 			)
 		}
 	})
+
 	mux.HandleFunc("GET /version", func(w http.ResponseWriter, _ *http.Request) {
 		// we can't use "version" directly as it is a package, and not an object that
 		// can be serialized.
@@ -292,7 +299,7 @@ func main() {
 		ReadHeaderTimeout: 5 * time.Second,
 		IdleTimeout:       60 * time.Second,
 		ReadTimeout:       5 * time.Second,
-		WriteTimeout:      10 * time.Minute,
+		WriteTimeout:      5 * time.Minute,
 		Handler:           mux,
 	}
 
@@ -321,23 +328,4 @@ func main() {
 	_ = server.Shutdown(ctx)
 
 	logger.Info("windows_exporter has shut down")
-}
-
-func withConcurrencyLimit(n int, next http.HandlerFunc) http.HandlerFunc {
-	if n <= 0 {
-		return next
-	}
-
-	sem := make(chan struct{}, n)
-	return func(w http.ResponseWriter, r *http.Request) {
-		select {
-		case sem <- struct{}{}:
-			defer func() { <-sem }()
-		default:
-			w.WriteHeader(http.StatusServiceUnavailable)
-			_, _ = w.Write([]byte("Too many concurrent requests"))
-			return
-		}
-		next(w, r)
-	}
 }
