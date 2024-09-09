@@ -12,10 +12,9 @@ require (
 	github.com/prometheus/client_golang v1.20.3
 	github.com/prometheus/client_model v0.6.1
 	github.com/prometheus/common v0.59.1
-	github.com/prometheus/exporter-toolkit v0.12.0
+	github.com/prometheus/exporter-toolkit v0.12.1-0.20240909111842-d0e3731b4a8a
 	github.com/stretchr/testify v1.9.0
 	github.com/yusufpapurcu/wmi v1.2.4
-	golang.org/x/exp v0.0.0-20231006140011-7918f672742d
 	golang.org/x/sys v0.25.0
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -52,5 +51,4 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
 
-// https://github.com/prometheus/exporter-toolkit/pull/240
-replace github.com/prometheus/exporter-toolkit => github.com/lucacome/exporter-toolkit v0.0.0-20240903180955-e5104b3476c7
+replace github.com/prometheus/common => github.com/jkroepke/prometheus-common v0.0.0-20240907211841-5f9af24b97ad

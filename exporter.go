@@ -7,9 +7,6 @@ package main
 //goland:noinspection GoUnsortedImport
 //nolint:gofumpt
 import (
-	// Its important that we do these first so that we can register with the Windows service control ASAP to avoid timeouts.
-	"github.com/prometheus-community/windows_exporter/pkg/initiate"
-
 	"context"
 	"encoding/json"
 	"errors"
@@ -24,6 +21,9 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	// Its important that we do these first so that we can register with the Windows service control ASAP to avoid timeouts.
+	"github.com/prometheus-community/windows_exporter/pkg/initiate"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/pkg/collector"
@@ -291,9 +291,11 @@ func main() {
 		mux.HandleFunc("GET /debug/pprof/trace", pprof.Trace)
 	}
 
-	logger.Info("Starting windows_exporter", slog.String("version", version.Info()))
-	logger.Info("Build context", slog.String("build_context", version.BuildContext()))
-	logger.Debug("Go MAXPROCS", slog.Int("procs", runtime.GOMAXPROCS(0)))
+	logger.Info("Starting windows_exporter",
+		slog.String("version", version.Info()),
+		slog.String("build_context", version.BuildContext()),
+		slog.Int("maxprocs", runtime.GOMAXPROCS(0)),
+	)
 
 	server := &http.Server{
 		ReadHeaderTimeout: 5 * time.Second,
@@ -303,13 +305,14 @@ func main() {
 		Handler:           mux,
 	}
 
+	errCh := make(chan error, 1)
+
 	go func() {
 		if err := web.ListenAndServe(server, webConfig, logger); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			logger.Error("cannot start windows_exporter",
-				slog.Any("err", err),
-			)
-			os.Exit(1)
+			errCh <- err
 		}
+
+		errCh <- nil
 	}()
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
@@ -320,6 +323,14 @@ func main() {
 		logger.Info("Shutting down windows_exporter via kill signal")
 	case <-initiate.StopCh:
 		logger.Info("Shutting down windows_exporter via service control")
+	case err := <-errCh:
+		if err != nil {
+			logger.Error("Failed to start windows_exporter",
+				slog.Any("err", err),
+			)
+
+			os.Exit(1)
+		}
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

@@ -60,8 +60,7 @@ func New(config *Config) (*slog.Logger, error) {
 		return nil, errors.New("log file undefined")
 	}
 
-	// https://github.com/prometheus/common/pull/694
-	// config.Config.Writer = config.File.w
+	config.Config.Writer = config.File.w
 
 	return promslog.New(config.Config), nil
 }
