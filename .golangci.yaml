@@ -1,13 +1,11 @@
 linters:
   enable-all: true
   disable:
-    - containedctx
-    - contextcheck
     - cyclop
     - depguard
-    - dogsled
     - dupl
     - err113
+    - execinquery
     - exhaustive
     - exhaustruct
     - exportloopref
@@ -17,18 +15,16 @@ linters:
     - gocognit
     - goconst
     - gocyclo
-    - godox
-    - inamedparam
+    - gomnd
     - lll
+    - maintidx
     - mnd
-    - noctx
     - testpackage
     - varnamelen
     - wrapcheck
-    - execinquery
-    - gomnd
-    - stylecheck
-    - maintidx
+
+run:
+  timeout: 5m
 
 linters-settings:
   gosec:
@@ -71,6 +67,8 @@ linters-settings:
       - msg
       - source
     args-on-sep-lines: true
+  stylecheck:
+    checks: ["all", "-ST1003"]
 issues:
   exclude:
   - don't use underscores in Go names
@@ -84,3 +82,7 @@ issues:
   - text: "don't use ALL_CAPS in Go names; use CamelCase"
     linters:
     - revive
+  - path: pkg/perflib/
+    linters:
+      - godox
+      - stylecheck

@@ -14,6 +14,7 @@
 package config
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"io"
@@ -100,9 +101,14 @@ func readFromURL(file string, logger *slog.Logger, insecureSkipVerify bool) ([]b
 
 	client := &http.Client{Transport: tr}
 
-	resp, err := client.Get(file)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, file, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read configuration file from URL: %w", err)
 	}
 
 	defer resp.Body.Close()
