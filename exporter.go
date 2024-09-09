@@ -5,10 +5,12 @@
 package main
 
 //goland:noinspection GoUnsortedImport
-//nolint:gofumpt
+
 import (
+	// Its important that we do these first so that we can register with the Windows service control ASAP to avoid timeouts.
+	"github.com/prometheus-community/windows_exporter/pkg/initiate"
+
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -22,8 +24,6 @@ import (
 	"strings"
 	"time"
 
-	// Its important that we do these first so that we can register with the Windows service control ASAP to avoid timeouts.
-	"github.com/prometheus-community/windows_exporter/pkg/initiate"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/pkg/collector"
@@ -39,17 +39,6 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-// Same struct prometheus uses for their /version endpoint.
-// Separate copy to avoid pulling all of prometheus as a dependency.
-type prometheusVersion struct {
-	Version   string `json:"version"`
-	Revision  string `json:"revision"`
-	Branch    string `json:"branch"`
-	BuildUser string `json:"buildUser"`
-	BuildDate string `json:"buildDate"`
-	GoVersion string `json:"goVersion"`
-}
-
 // Mapping of priority names to uin32 values required by windows.SetPriorityClass.
 var priorityStringToInt = map[string]uint32{
 	"realtime":    windows.REALTIME_PRIORITY_CLASS,
@@ -60,28 +49,11 @@ var priorityStringToInt = map[string]uint32{
 	"low":         windows.IDLE_PRIORITY_CLASS,
 }
 
-func setPriorityWindows(pid int, priority uint32) error {
-	// https://learn.microsoft.com/en-us/windows/win32/procthread/process-security-and-access-rights
-	handle, err := windows.OpenProcess(
-		windows.STANDARD_RIGHTS_REQUIRED|windows.SYNCHRONIZE|windows.SPECIFIC_RIGHTS_ALL,
-		false, uint32(pid),
-	)
-	if err != nil {
-		return err
-	}
-
-	if err = windows.SetPriorityClass(handle, priority); err != nil {
-		return err
-	}
-
-	if err = windows.CloseHandle(handle); err != nil {
-		return fmt.Errorf("failed to close handle: %w", err)
-	}
-
-	return nil
+func main() {
+	os.Exit(run())
 }
 
-func main() {
+func run() int {
 	app := kingpin.New("windows_exporter", "A metrics collector for Windows.")
 	var (
 		configFile = app.Flag(
@@ -143,7 +115,8 @@ func main() {
 		slog.Error("Failed to parse CLI args",
 			slog.Any("err", err),
 		)
-		os.Exit(1)
+
+		return 1
 	}
 
 	logger, err := winlog.New(winlogConfig)
@@ -152,7 +125,8 @@ func main() {
 		slog.Error("failed to create logger",
 			slog.Any("err", err),
 		)
-		os.Exit(1)
+
+		return 1
 	}
 
 	if *configFile != "" {
@@ -161,14 +135,16 @@ func main() {
 			logger.Error("could not load config file",
 				slog.Any("err", err),
 			)
-			os.Exit(1)
+
+			return 1
 		}
 
 		if err = resolver.Bind(app, os.Args[1:]); err != nil {
 			logger.Error("Failed to bind configuration",
 				slog.Any("err", err),
 			)
-			os.Exit(1)
+
+			return 1
 		}
 
 		// NOTE: This is temporary fix for issue #1092, calling kingpin.Parse
@@ -181,7 +157,8 @@ func main() {
 			logger.Error("Failed to parse CLI args from YAML file",
 				slog.Any("err", err),
 			)
-			os.Exit(1)
+
+			return 1
 		}
 
 		logger, err = winlog.New(winlogConfig)
@@ -190,33 +167,29 @@ func main() {
 			slog.Error("failed to create logger",
 				slog.Any("err", err),
 			)
-			os.Exit(1)
+
+			return 1
 		}
 	}
 
 	logger.Debug("Logging has Started")
 
 	if *printCollectors {
-		collectorNames := collector.Available()
-		sort.Strings(collectorNames)
+		printCollectorsToStdout()
 
-		fmt.Printf("Available collectors:\n") //nolint:forbidigo
-		for _, n := range collectorNames {
-			fmt.Printf(" - %s\n", n) //nolint:forbidigo
-		}
-
-		return
+		return 0
 	}
 
 	// Only set process priority if a non-default and valid value has been set
-	if *processPriority != "normal" && priorityStringToInt[*processPriority] != 0 {
+	if priority, ok := priorityStringToInt[*processPriority]; ok && priority != windows.NORMAL_PRIORITY_CLASS {
 		logger.Debug("setting process priority to " + *processPriority)
-		err = setPriorityWindows(os.Getpid(), priorityStringToInt[*processPriority])
-		if err != nil {
+
+		if err = setPriorityWindows(os.Getpid(), priority); err != nil {
 			logger.Error("failed to set process priority",
 				slog.Any("err", err),
 			)
-			os.Exit(1)
+
+			return 1
 		}
 	}
 
@@ -224,64 +197,34 @@ func main() {
 	collectors.Enable(enabledCollectorList)
 
 	// Initialize collectors before loading
-	err = collectors.Build(logger)
-	if err != nil {
+	if err = collectors.Build(logger); err != nil {
 		logger.Error("Couldn't load collectors",
 			slog.Any("err", err),
 		)
-		os.Exit(1)
+
+		return 1
 	}
-	err = collectors.SetPerfCounterQuery(logger)
-	if err != nil {
+
+	if err = collectors.SetPerfCounterQuery(logger); err != nil {
 		logger.Error("Couldn't set performance counter query",
 			slog.Any("err", err),
 		)
-		os.Exit(1)
+
+		return 1
 	}
 
-	if u, err := user.Current(); err != nil {
-		logger.Warn("Unable to determine which user is running this exporter. More info: https://github.com/golang/go/issues/37348")
-	} else {
-		logger.Info("Running as " + u.Username)
-
-		if strings.Contains(u.Username, "ContainerAdministrator") || strings.Contains(u.Username, "ContainerUser") {
-			logger.Warn("Running as a preconfigured Windows Container user. This may mean you do not have Windows HostProcess containers configured correctly and some functionality will not work as expected.")
-		}
-	}
+	logCurrentUser(logger)
 
 	logger.Info("Enabled collectors: " + strings.Join(enabledCollectorList, ", "))
 
 	mux := http.NewServeMux()
+	mux.Handle("GET /health", httphandler.NewHealthHandler())
+	mux.Handle("GET /version", httphandler.NewVersionHandler())
 	mux.Handle("GET "+*metricsPath, httphandler.New(logger, collectors, &httphandler.Options{
 		DisableExporterMetrics: *disableExporterMetrics,
 		TimeoutMargin:          *timeoutMargin,
 		MaxRequests:            *maxRequests,
 	}))
-
-	mux.HandleFunc("GET /health", func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		if _, err := fmt.Fprintln(w, `{"status":"ok"}`); err != nil {
-			logger.Debug("Failed to write to stream",
-				slog.Any("err", err),
-			)
-		}
-	})
-
-	mux.HandleFunc("GET /version", func(w http.ResponseWriter, _ *http.Request) {
-		// we can't use "version" directly as it is a package, and not an object that
-		// can be serialized.
-		err := json.NewEncoder(w).Encode(prometheusVersion{
-			Version:   version.Version,
-			Revision:  version.Revision,
-			Branch:    version.Branch,
-			BuildUser: version.BuildUser,
-			BuildDate: version.BuildDate,
-			GoVersion: version.GoVersion,
-		})
-		if err != nil {
-			http.Error(w, fmt.Sprintf("error encoding JSON: %s", err), http.StatusInternalServerError)
-		}
-	})
 
 	if *debugEnabled {
 		mux.HandleFunc("GET /debug/pprof/", pprof.Index)
@@ -329,7 +272,7 @@ func main() {
 				slog.Any("err", err),
 			)
 
-			os.Exit(1)
+			return 1
 		}
 	}
 
@@ -339,4 +282,52 @@ func main() {
 	_ = server.Shutdown(ctx)
 
 	logger.Info("windows_exporter has shut down")
+
+	return 0
+}
+
+func printCollectorsToStdout() {
+	collectorNames := collector.Available()
+	sort.Strings(collectorNames)
+
+	fmt.Println("Available collectors:") //nolint:forbidigo
+
+	for _, n := range collectorNames {
+		fmt.Printf(" - %s\n", n) //nolint:forbidigo
+	}
+}
+
+func logCurrentUser(logger *slog.Logger) {
+	if u, err := user.Current(); err == nil {
+		logger.Info("Running as " + u.Username)
+
+		if strings.Contains(u.Username, "ContainerAdministrator") || strings.Contains(u.Username, "ContainerUser") {
+			logger.Warn("Running as a preconfigured Windows Container user. This may mean you do not have Windows HostProcess containers configured correctly and some functionality will not work as expected.")
+		}
+
+		return
+	}
+
+	logger.Warn("Unable to determine which user is running this exporter. More info: https://github.com/golang/go/issues/37348")
+}
+
+func setPriorityWindows(pid int, priority uint32) error {
+	// https://learn.microsoft.com/en-us/windows/win32/procthread/process-security-and-access-rights
+	handle, err := windows.OpenProcess(
+		windows.STANDARD_RIGHTS_REQUIRED|windows.SYNCHRONIZE|windows.SPECIFIC_RIGHTS_ALL,
+		false, uint32(pid),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to open own process: %w", err)
+	}
+
+	if err = windows.SetPriorityClass(handle, priority); err != nil {
+		return fmt.Errorf("failed to set priority class: %w", err)
+	}
+
+	if err = windows.CloseHandle(handle); err != nil {
+		return fmt.Errorf("failed to close handle: %w", err)
+	}
+
+	return nil
 }
