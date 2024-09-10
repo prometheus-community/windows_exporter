@@ -3,10 +3,10 @@
 package cpu
 
 import (
+	"log/slog"
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
 	"github.com/prometheus-community/windows_exporter/pkg/perflib"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
@@ -58,15 +58,15 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ log.Logger) ([]string, error) {
+func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
 	return []string{"Processor Information"}, nil
 }
 
-func (c *Collector) Close(_ log.Logger) error {
+func (c *Collector) Close(_ *slog.Logger) error {
 	return nil
 }
 
-func (c *Collector) Build(_ log.Logger, _ *wmi.Client) error {
+func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 	c.logicalProcessors = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "logical_processor"),
 		"Total number of logical processors",
@@ -181,8 +181,8 @@ func (c *Collector) Build(_ log.Logger, _ *wmi.Client) error {
 	return nil
 }
 
-func (c *Collector) Collect(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
-	logger = log.With(logger, "collector", Name)
+func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+	logger = logger.With(slog.String("collector", Name))
 
 	return c.CollectFull(ctx, logger, ch)
 }
@@ -216,9 +216,10 @@ type perflibProcessorInformation struct {
 	UserTimeSeconds          float64 `perflib:"% User Time"`
 }
 
-func (c *Collector) CollectFull(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
-	logger = log.With(logger, "collector", Name)
+func (c *Collector) CollectFull(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+	logger = logger.With(slog.String("collector", Name))
 	data := make([]perflibProcessorInformation, 0)
+
 	err := perflib.UnmarshalObject(ctx.PerfObjects["Processor Information"], &data, logger)
 	if err != nil {
 		return err
@@ -230,6 +231,7 @@ func (c *Collector) CollectFull(ctx *types.ScrapeContext, logger log.Logger, ch 
 		if strings.Contains(strings.ToLower(cpu.Name), "_total") {
 			continue
 		}
+
 		core := cpu.Name
 
 		coreCount++

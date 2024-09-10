@@ -4,12 +4,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 
-	"github.com/go-kit/log"
 	"github.com/prometheus-community/windows_exporter/pkg/log/eventlog"
-	"github.com/prometheus/common/promlog"
-	goeventlog "golang.org/x/sys/windows/svc/eventlog"
+	"github.com/prometheus/common/promslog"
+	"golang.org/x/sys/windows"
 )
 
 // AllowedFile is a settable identifier for the output file that the logger can have.
@@ -25,71 +25,45 @@ func (f *AllowedFile) String() string {
 // Set updates the value of the allowed format.
 func (f *AllowedFile) Set(s string) error {
 	f.s = s
+
 	switch s {
 	case "stdout":
 		f.w = os.Stdout
 	case "stderr":
 		f.w = os.Stderr
 	case "eventlog":
-		f.w = nil
+		handle, err := windows.RegisterEventSource(nil, windows.StringToUTF16Ptr("windows_exporter"))
+		if err != nil {
+			return fmt.Errorf("failed to open event log: %w", err)
+		}
+
+		f.w = eventlog.NewEventLogWriter(handle)
 	default:
 		file, err := os.OpenFile(s, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0o200)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to open log file: %w", err)
 		}
+
 		f.w = file
 	}
+
 	return nil
 }
 
 // Config is a struct containing configurable settings for the logger.
 type Config struct {
-	promlog.Config
+	*promslog.Config
 
 	File *AllowedFile
 }
 
-func New(config *Config) (log.Logger, error) {
+func New(config *Config) (*slog.Logger, error) {
 	if config.File == nil {
 		return nil, errors.New("log file undefined")
 	}
 
-	if config.Format == nil {
-		return nil, errors.New("log format undefined")
-	}
+	config.Config.Writer = config.File.w
+	config.Config.Style = promslog.GoKitStyle
 
-	var (
-		l          log.Logger
-		loggerFunc func(io.Writer) log.Logger
-	)
-
-	switch config.Format.String() {
-	case "json":
-		loggerFunc = log.NewJSONLogger
-	case "logfmt":
-		loggerFunc = log.NewLogfmtLogger
-	default:
-		return nil, fmt.Errorf("unsupported log.format %q", config.Format.String())
-	}
-
-	switch {
-	case config.File.s == "eventlog":
-
-		w, err := goeventlog.Open("windows_exporter")
-		if err != nil {
-			return nil, err
-		}
-		l = eventlog.NewEventLogLogger(w, loggerFunc)
-	case config.File.w == nil:
-		panic("logger: file writer is nil")
-	default:
-		l = loggerFunc(log.NewSyncWriter(config.File.w))
-	}
-
-	promlogConfig := promlog.Config{
-		Format: config.Format,
-		Level:  config.Level,
-	}
-
-	return promlog.NewWithLogger(l, &promlogConfig), nil
+	return promslog.New(config.Config), nil
 }

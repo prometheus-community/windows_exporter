@@ -4,12 +4,11 @@ package collector
 
 import (
 	"fmt"
+	"log/slog"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -20,7 +19,7 @@ var _ prometheus.Collector = (*Prometheus)(nil)
 // Prometheus implements prometheus.Collector for a set of Windows MetricCollectors.
 type Prometheus struct {
 	maxScrapeDuration time.Duration
-	logger            log.Logger
+	logger            *slog.Logger
 	metricCollectors  *MetricCollectors
 
 	// Base metrics returned by Prometheus
@@ -46,7 +45,7 @@ const (
 
 // NewPrometheusCollector returns a new Prometheus where the set of MetricCollectors must
 // return metrics within the given timeout.
-func (c *MetricCollectors) NewPrometheusCollector(timeout time.Duration, logger log.Logger) *Prometheus {
+func (c *MetricCollectors) NewPrometheusCollector(timeout time.Duration, logger *slog.Logger) *Prometheus {
 	return &Prometheus{
 		maxScrapeDuration: timeout,
 		metricCollectors:  c,
@@ -180,6 +179,7 @@ func (p *Prometheus) execute(name string, c Collector, ctx *types.ScrapeContext,
 	// Execute the collector
 	go func() {
 		errCh <- c.Collect(ctx, p.logger, bufCh)
+
 		close(bufCh)
 	}()
 
@@ -222,18 +222,20 @@ func (p *Prometheus) execute(name string, c Collector, ctx *types.ScrapeContext,
 			name,
 		)
 
-		_ = level.Warn(p.logger).Log("msg", fmt.Sprintf("collector %s timeouted after %s", name, p.maxScrapeDuration))
+		p.logger.Warn(fmt.Sprintf("collector %s timeouted after %s", name, p.maxScrapeDuration))
 
 		return pending
 	}
 
 	if err != nil {
-		_ = level.Error(p.logger).Log("msg", fmt.Sprintf("collector %s failed after %s", name, duration), "err", err)
+		p.logger.Error(fmt.Sprintf("collector %s failed after %s", name, p.maxScrapeDuration),
+			slog.Any("err", err),
+		)
 
 		return failed
 	}
 
-	_ = level.Debug(p.logger).Log("msg", fmt.Sprintf("collector %s succeeded after %s.", name, duration))
+	p.logger.Error(fmt.Sprintf("collector %s succeeded after %s", name, p.maxScrapeDuration))
 
 	return success
 }

@@ -227,6 +227,7 @@ func queryRawData(query string) ([]byte, error) {
 			newBuffer := make([]byte, len(buffer)+16384)
 			copy(newBuffer, buffer)
 			buffer = newBuffer
+
 			continue
 		} else if err != nil {
 			var errNo syscall.Errno //nolint:forbidigo // Legacy Code
@@ -279,6 +280,7 @@ func QueryPerformanceData(query string) ([]*PerfObject, error) {
 	// Read global header
 
 	header := new(perfDataBlock)
+
 	err = header.BinaryReadFrom(r)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read performance data block for %q with: %w", query, err)
@@ -303,6 +305,7 @@ func QueryPerformanceData(query string) ([]*PerfObject, error) {
 		}
 
 		obj := new(perfObjectType)
+
 		err = obj.BinaryReadFrom(r)
 		if err != nil {
 			return nil, err
@@ -332,6 +335,7 @@ func QueryPerformanceData(query string) ([]*PerfObject, error) {
 
 		for i := range numCounterDefs {
 			def := new(perfCounterDefinition)
+
 			err := def.BinaryReadFrom(r)
 			if err != nil {
 				return nil, err
@@ -413,7 +417,9 @@ func parseCounterBlock(b []byte, r io.ReadSeeker, pos int64, defs []*PerfCounter
 	if err != nil {
 		return 0, nil, err
 	}
+
 	block := new(perfCounterBlock)
+
 	err = block.BinaryReadFrom(r)
 	if err != nil {
 		return 0, nil, err
@@ -456,7 +462,6 @@ func convertCounterValue(counterDef *perfCounterDefinition, buffer []byte, value
 			272696576	64bit rate
 
 	*/
-
 	switch counterDef.CounterSize {
 	case 4:
 		value = int64(bo.Uint32(buffer[valueOffset:(valueOffset + 4)]))

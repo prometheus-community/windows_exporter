@@ -5,14 +5,13 @@ package os
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/prometheus-community/windows_exporter/pkg/headers/kernel32"
 	"github.com/prometheus-community/windows_exporter/pkg/headers/netapi32"
 	"github.com/prometheus-community/windows_exporter/pkg/headers/psapi"
@@ -102,18 +101,17 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ log.Logger) ([]string, error) {
+func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
 	return []string{"Paging File"}, nil
 }
 
-func (c *Collector) Close(_ log.Logger) error {
+func (c *Collector) Close(_ *slog.Logger) error {
 	return nil
 }
 
-func (c *Collector) Build(logger log.Logger, _ *wmi.Client) error {
-	_ = level.Warn(logger).
-		Log("msg", "The os collect holds a number of deprecated metrics and will be removed mid 2025. "+
-			"See https://github.com/prometheus-community/windows_exporter/pull/1596 for more information.")
+func (c *Collector) Build(logger *slog.Logger, _ *wmi.Client) error {
+	logger.Warn("The os collect holds a number of deprecated metrics and will be removed mid 2025. " +
+		"See https://github.com/prometheus-community/windows_exporter/pull/1596 for more information.")
 
 	workstationInfo, err := netapi32.GetWorkstationInfo()
 	if err != nil {
@@ -221,40 +219,56 @@ func (c *Collector) Build(logger log.Logger, _ *wmi.Client) error {
 		nil,
 		nil,
 	)
+
 	return nil
 }
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
-	logger = log.With(logger, "collector", Name)
+func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+	logger = logger.With(slog.String("collector", Name))
 
 	errs := make([]error, 0, 5)
 
 	c.collect(ch)
 
 	if err := c.collectHostname(ch); err != nil {
-		_ = level.Error(logger).Log("msg", "failed collecting os metrics", "err", err)
+		logger.Error("failed collecting os metrics",
+			slog.Any("err", err),
+		)
+
 		errs = append(errs, err)
 	}
 
 	if err := c.collectLoggedInUserCount(ch); err != nil {
-		_ = level.Error(logger).Log("msg", "failed collecting os user count metrics", "err", err)
+		logger.Error("failed collecting os user count metrics",
+			slog.Any("err", err),
+		)
+
 		errs = append(errs, err)
 	}
 
 	if err := c.collectMemory(ch); err != nil {
-		_ = level.Error(logger).Log("msg", "failed collecting os memory metrics", "err", err)
+		logger.Error("failed collecting os memory metrics",
+			slog.Any("err", err),
+		)
+
 		errs = append(errs, err)
 	}
 
 	if err := c.collectTime(ch); err != nil {
-		_ = level.Error(logger).Log("msg", "failed collecting os time metrics", "err", err)
+		logger.Error("failed collecting os time metrics",
+			slog.Any("err", err),
+		)
+
 		errs = append(errs, err)
 	}
 
 	if err := c.collectPaging(ctx, logger, ch); err != nil {
-		_ = level.Error(logger).Log("msg", "failed collecting os paging metrics", "err", err)
+		logger.Error("failed collecting os paging metrics",
+			slog.Any("err", err),
+		)
+
 		errs = append(errs, err)
 	}
 
@@ -281,10 +295,12 @@ func (c *Collector) collectHostname(ch chan<- prometheus.Metric) error {
 	if err != nil {
 		return err
 	}
+
 	domain, err := sysinfoapi.GetComputerName(sysinfoapi.ComputerNameDNSDomain)
 	if err != nil {
 		return err
 	}
+
 	fqdn, err := sysinfoapi.GetComputerName(sysinfoapi.ComputerNameDNSFullyQualified)
 	if err != nil {
 		return err
@@ -366,7 +382,7 @@ func (c *Collector) collectMemory(ch chan<- prometheus.Metric) error {
 	return nil
 }
 
-func (c *Collector) collectPaging(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) collectPaging(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	// Get total allocation of paging files across all disks.
 	memManKey, err := registry.OpenKey(registry.LOCAL_MACHINE, `SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management`, registry.QUERY_VALUE)
 	if err != nil {
@@ -378,12 +394,13 @@ func (c *Collector) collectPaging(ctx *types.ScrapeContext, logger log.Logger, c
 	pagingFiles, _, pagingErr := memManKey.GetStringsValue("ExistingPageFiles")
 
 	var fsipf float64
+
 	for _, pagingFile := range pagingFiles {
 		fileString := strings.ReplaceAll(pagingFile, `\??\`, "")
 		file, err := os.Stat(fileString)
 		// For unknown reasons, Windows doesn't always create a page file. Continue collection rather than aborting.
 		if err != nil {
-			_ = level.Debug(logger).Log("msg", fmt.Sprintf("Failed to read page file (reason: %s): %s\n", err, fileString))
+			logger.Debug(fmt.Sprintf("Failed to read page file (reason: %s): %s\n", err, fileString))
 		} else {
 			fsipf += float64(file.Size())
 		}
@@ -401,10 +418,12 @@ func (c *Collector) collectPaging(ctx *types.ScrapeContext, logger log.Logger, c
 
 	// Get current page file usage.
 	var pfbRaw float64
+
 	for _, pageFile := range pfc {
 		if strings.Contains(strings.ToLower(pageFile.Name), "_total") {
 			continue
 		}
+
 		pfbRaw += pageFile.Usage
 	}
 
@@ -424,7 +443,7 @@ func (c *Collector) collectPaging(ctx *types.ScrapeContext, logger log.Logger, c
 			fsipf,
 		)
 	} else {
-		_ = level.Debug(logger).Log("msg", "Could not find HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management key. windows_os_paging_free_bytes and windows_os_paging_limit_bytes will be omitted.")
+		logger.Debug("Could not find HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management key. windows_os_paging_free_bytes and windows_os_paging_limit_bytes will be omitted.")
 	}
 
 	ch <- prometheus.MustNewConstMetric(

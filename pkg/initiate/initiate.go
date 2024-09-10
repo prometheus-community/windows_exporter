@@ -50,7 +50,9 @@ func init() {
 		if err != nil {
 			os.Exit(2)
 		}
+
 		_ = logger.Error(102, fmt.Sprintf("Failed to detect service: %v", err))
+
 		os.Exit(1)
 	}
 
@@ -59,7 +61,9 @@ func init() {
 		if err != nil {
 			os.Exit(2)
 		}
+
 		_ = logger.Info(100, "Attempting to start exporter service")
+
 		go func() {
 			err = svc.Run(serviceName, &windowsExporterService{})
 			if err != nil {

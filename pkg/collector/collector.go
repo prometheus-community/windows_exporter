@@ -5,11 +5,11 @@ package collector
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"slices"
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/ad"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/adcs"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/adfs"
@@ -151,7 +151,7 @@ func New(collectors Map) *MetricCollectors {
 	}
 }
 
-func (c *MetricCollectors) SetPerfCounterQuery(logger log.Logger) error {
+func (c *MetricCollectors) SetPerfCounterQuery(logger *slog.Logger) error {
 	var (
 		err error
 
@@ -190,7 +190,7 @@ func (c *MetricCollectors) Enable(enabledCollectors []string) {
 }
 
 // Build To be called by the exporter for collector initialization.
-func (c *MetricCollectors) Build(logger log.Logger) error {
+func (c *MetricCollectors) Build(logger *slog.Logger) error {
 	var err error
 
 	c.WMIClient.SWbemServicesClient, err = wmi.InitializeSWbemServices(c.WMIClient)
@@ -222,11 +222,11 @@ func (c *MetricCollectors) PrepareScrapeContext() (*types.ScrapeContext, error) 
 }
 
 // Close To be called by the exporter for collector cleanup.
-func (c *MetricCollectors) Close() error {
+func (c *MetricCollectors) Close(logger *slog.Logger) error {
 	errs := make([]error, 0, len(c.Collectors))
 
 	for _, collector := range c.Collectors {
-		if err := collector.Close(nil); err != nil {
+		if err := collector.Close(logger); err != nil {
 			errs = append(errs, err)
 		}
 	}

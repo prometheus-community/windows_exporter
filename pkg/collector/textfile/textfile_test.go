@@ -14,6 +14,7 @@ func TestCRFilter(t *testing.T) {
 
 	sr := strings.NewReader("line 1\r\nline 2")
 	cr := carriageReturnFilteringReader{r: sr}
+
 	b, err := io.ReadAll(cr)
 	if err != nil {
 		t.Error(err)
@@ -43,9 +44,11 @@ func TestCheckBOM(t *testing.T) {
 		if d.err == "" && err != nil {
 			t.Error(err)
 		}
+
 		if d.err != "" && err == nil {
 			t.Errorf("Missing expected error %s", d.err)
 		}
+
 		if err != nil && !strings.Contains(err.Error(), d.err) {
 			t.Error(err)
 		}

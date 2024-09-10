@@ -4,13 +4,13 @@ package perfdata_test
 
 import (
 	"fmt"
+	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"regexp"
 	"testing"
 
-	"github.com/go-kit/log"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/perfdata"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -27,7 +27,9 @@ func (a collectorAdapter) Describe(_ chan<- *prometheus.Desc) {}
 
 // Collect implements the prometheus.Collector interface.
 func (a collectorAdapter) Collect(ch chan<- prometheus.Metric) {
-	if err := a.Collector.Collect(nil, log.NewLogfmtLogger(os.Stdout), ch); err != nil {
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+
+	if err := a.Collector.Collect(nil, logger, ch); err != nil {
 		panic(fmt.Sprintf("failed to update collector: %v", err))
 	}
 }
@@ -67,7 +69,7 @@ func TestCollector(t *testing.T) {
 				},
 			})
 
-			logger := log.NewLogfmtLogger(os.Stdout)
+			logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 			err := perfDataCollector.Build(logger, nil)
 			require.NoError(t, err)
 

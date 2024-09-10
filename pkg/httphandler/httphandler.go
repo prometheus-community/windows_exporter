@@ -2,13 +2,11 @@ package httphandler
 
 import (
 	"fmt"
-	stdlog "log"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"time"
 
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/google/uuid"
 	"github.com/prometheus-community/windows_exporter/pkg/collector"
 	"github.com/prometheus/client_golang/prometheus"
@@ -28,7 +26,7 @@ type MetricsHTTPHandler struct {
 	// the exporter itself.
 	exporterMetricsRegistry *prometheus.Registry
 
-	logger        log.Logger
+	logger        *slog.Logger
 	options       Options
 	concurrencyCh chan struct{}
 }
@@ -39,7 +37,7 @@ type Options struct {
 	MaxRequests            int
 }
 
-func New(logger log.Logger, metricCollectors *collector.MetricCollectors, options *Options) *MetricsHTTPHandler {
+func New(logger *slog.Logger, metricCollectors *collector.MetricCollectors, options *Options) *MetricsHTTPHandler {
 	if options == nil {
 		options = &Options{
 			DisableExporterMetrics: false,
@@ -68,28 +66,37 @@ func New(logger log.Logger, metricCollectors *collector.MetricCollectors, option
 }
 
 func (c *MetricsHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	logger := log.With(c.logger, "remote", r.RemoteAddr, "correlation_id", uuid.New().String())
+	logger := c.logger.With(
+		slog.Any("remote", r.RemoteAddr),
+		slog.Any("correlation_id", uuid.New().String()),
+	)
 
 	scrapeTimeout := c.getScrapeTimeout(logger, r)
-	handler, err := c.handlerFactory(scrapeTimeout, logger, r.URL.Query()["collect[]"])
+
+	handler, err := c.handlerFactory(logger, scrapeTimeout, r.URL.Query()["collect[]"])
 	if err != nil {
-		_ = level.Warn(logger).Log("msg", "Couldn't create filtered metrics handler", "err", err)
+		logger.Warn("Couldn't create filtered metrics handler",
+			slog.Any("err", err),
+		)
+
 		w.WriteHeader(http.StatusBadRequest)
 		_, _ = w.Write([]byte(fmt.Sprintf("Couldn't create filtered metrics handler: %s", err)))
+
 		return
 	}
 
 	handler.ServeHTTP(w, r)
 }
 
-func (c *MetricsHTTPHandler) getScrapeTimeout(logger log.Logger, r *http.Request) time.Duration {
+func (c *MetricsHTTPHandler) getScrapeTimeout(logger *slog.Logger, r *http.Request) time.Duration {
 	var timeoutSeconds float64
 
 	if v := r.Header.Get("X-Prometheus-Scrape-Timeout-Seconds"); v != "" {
 		var err error
+
 		timeoutSeconds, err = strconv.ParseFloat(v, 64)
 		if err != nil {
-			_ = level.Warn(logger).Log("msg", fmt.Sprintf("Couldn't parse X-Prometheus-Scrape-Timeout-Seconds: %q. Defaulting timeout to %f", v, defaultScrapeTimeout))
+			logger.Warn(fmt.Sprintf("Couldn't parse X-Prometheus-Scrape-Timeout-Seconds: %q. Defaulting timeout to %f", v, defaultScrapeTimeout))
 		}
 	}
 
@@ -102,7 +109,7 @@ func (c *MetricsHTTPHandler) getScrapeTimeout(logger log.Logger, r *http.Request
 	return time.Duration(timeoutSeconds) * time.Second
 }
 
-func (c *MetricsHTTPHandler) handlerFactory(scrapeTimeout time.Duration, logger log.Logger, requestedCollectors []string) (http.Handler, error) {
+func (c *MetricsHTTPHandler) handlerFactory(logger *slog.Logger, scrapeTimeout time.Duration, requestedCollectors []string) (http.Handler, error) {
 	reg := prometheus.NewRegistry()
 
 	var metricCollectors *collector.MetricCollectors
@@ -110,6 +117,7 @@ func (c *MetricsHTTPHandler) handlerFactory(scrapeTimeout time.Duration, logger 
 		metricCollectors = c.metricCollectors
 	} else {
 		filteredCollectors := make(collector.Map)
+
 		for _, name := range requestedCollectors {
 			metricCollector, ok := c.metricCollectors.Collectors[name]
 			if !ok {
@@ -127,6 +135,7 @@ func (c *MetricsHTTPHandler) handlerFactory(scrapeTimeout time.Duration, logger 
 	}
 
 	reg.MustRegister(version.NewCollector("windows_exporter"))
+
 	if err := reg.Register(metricCollectors.NewPrometheusCollector(scrapeTimeout, c.logger)); err != nil {
 		return nil, fmt.Errorf("couldn't register Prometheus collector: %w", err)
 	}
@@ -136,7 +145,7 @@ func (c *MetricsHTTPHandler) handlerFactory(scrapeTimeout time.Duration, logger 
 		handler = promhttp.HandlerFor(
 			prometheus.Gatherers{c.exporterMetricsRegistry, reg},
 			promhttp.HandlerOpts{
-				ErrorLog:            stdlog.New(log.NewStdlibAdapter(level.Error(logger)), "", stdlog.Lshortfile),
+				ErrorLog:            slog.NewLogLogger(logger.Handler(), slog.LevelError),
 				ErrorHandling:       promhttp.ContinueOnError,
 				MaxRequestsInFlight: c.options.MaxRequests,
 				Registry:            c.exporterMetricsRegistry,
@@ -152,7 +161,7 @@ func (c *MetricsHTTPHandler) handlerFactory(scrapeTimeout time.Duration, logger 
 		handler = promhttp.HandlerFor(
 			reg,
 			promhttp.HandlerOpts{
-				ErrorLog:            stdlog.New(log.NewStdlibAdapter(level.Error(logger)), "", 0),
+				ErrorLog:            slog.NewLogLogger(logger.Handler(), slog.LevelError),
 				ErrorHandling:       promhttp.ContinueOnError,
 				MaxRequestsInFlight: c.options.MaxRequests,
 			},
@@ -174,6 +183,7 @@ func (c *MetricsHTTPHandler) withConcurrencyLimit(next http.HandlerFunc) http.Ha
 		default:
 			w.WriteHeader(http.StatusServiceUnavailable)
 			_, _ = w.Write([]byte("Too many concurrent requests"))
+
 			return
 		}
 

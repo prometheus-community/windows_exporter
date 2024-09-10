@@ -6,17 +6,15 @@ require (
 	github.com/Microsoft/hcsshim v0.12.6
 	github.com/alecthomas/kingpin/v2 v2.4.0
 	github.com/dimchansky/utfbom v1.1.1
-	github.com/go-kit/log v0.2.1
 	github.com/go-ole/go-ole v1.3.0
 	github.com/google/uuid v1.6.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.20.3
 	github.com/prometheus/client_model v0.6.1
 	github.com/prometheus/common v0.59.1
-	github.com/prometheus/exporter-toolkit v0.12.0
+	github.com/prometheus/exporter-toolkit v0.13.0
 	github.com/stretchr/testify v1.9.0
 	github.com/yusufpapurcu/wmi v1.2.4
-	golang.org/x/exp v0.0.0-20231006140011-7918f672742d
 	golang.org/x/sys v0.25.0
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -30,7 +28,6 @@ require (
 	github.com/containerd/errdefs v0.1.0 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/go-logfmt/logfmt v0.6.0 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/jpillora/backoff v1.0.0 // indirect
 	github.com/klauspost/compress v1.17.9 // indirect
@@ -53,3 +50,6 @@ require (
 	google.golang.org/protobuf v1.34.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
+
+// https://github.com/prometheus/common/pull/694
+replace github.com/prometheus/common v0.59.1 => github.com/jkroepke/prometheus-common v0.0.0-20240907211841-5f9af24b97ad

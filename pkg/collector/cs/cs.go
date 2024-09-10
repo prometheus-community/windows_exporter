@@ -3,9 +3,9 @@
 package cs
 
 import (
+	"log/slog"
+
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/prometheus-community/windows_exporter/pkg/headers/sysinfoapi"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
@@ -53,20 +53,19 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ log.Logger) ([]string, error) {
+func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
 	return []string{}, nil
 }
 
-func (c *Collector) Close(_ log.Logger) error {
+func (c *Collector) Close(_ *slog.Logger) error {
 	return nil
 }
 
-func (c *Collector) Build(logger log.Logger, _ *wmi.Client) error {
-	_ = level.Warn(logger).
-		Log("msg", "The cs collector is deprecated and will be removed in a future release. "+
-			"Logical processors has been moved to cpu_info collector. "+
-			"Physical memory has been moved to memory collector. "+
-			"Hostname has been moved to os collector.")
+func (c *Collector) Build(logger *slog.Logger, _ *wmi.Client) error {
+	logger.Warn("The cs collector is deprecated and will be removed in a future release. " +
+		"Logical processors has been moved to cpu_info collector. " +
+		"Physical memory has been moved to memory collector. " +
+		"Hostname has been moved to os collector.")
 
 	c.logicalProcessors = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "logical_processors"),
@@ -90,17 +89,22 @@ func (c *Collector) Build(logger log.Logger, _ *wmi.Client) error {
 		},
 		nil,
 	)
+
 	return nil
 }
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(_ *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
-	logger = log.With(logger, "collector", Name)
+func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+	logger = logger.With(slog.String("collector", Name))
 	if err := c.collect(ch); err != nil {
-		_ = level.Error(logger).Log("msg", "failed collecting cs metrics", "err", err)
+		logger.Error("failed collecting cs metrics",
+			slog.Any("err", err),
+		)
+
 		return err
 	}
+
 	return nil
 }
 
@@ -130,10 +134,12 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	if err != nil {
 		return err
 	}
+
 	domain, err := sysinfoapi.GetComputerName(sysinfoapi.ComputerNameDNSDomain)
 	if err != nil {
 		return err
 	}
+
 	fqdn, err := sysinfoapi.GetComputerName(sysinfoapi.ComputerNameDNSFullyQualified)
 	if err != nil {
 		return err

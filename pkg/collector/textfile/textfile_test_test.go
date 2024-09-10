@@ -2,11 +2,11 @@ package textfile_test
 
 import (
 	"fmt"
-	"os"
+	"io"
+	"log/slog"
 	"strings"
 	"testing"
 
-	"github.com/go-kit/log"
 	"github.com/prometheus-community/windows_exporter/pkg/collector"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/textfile"
 	"github.com/prometheus/client_golang/prometheus"
@@ -18,7 +18,7 @@ var baseDir = "../../../tools/textfile-test"
 
 //nolint:paralleltest
 func TestMultipleDirectories(t *testing.T) {
-	logger := log.NewLogfmtLogger(os.Stdout)
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	testDir := baseDir + "/multiple-dirs"
 	testDirs := fmt.Sprintf("%[1]s/dir1,%[1]s/dir2,%[1]s/dir3", testDir)
 
@@ -33,16 +33,21 @@ func TestMultipleDirectories(t *testing.T) {
 	if err != nil {
 		t.Errorf("Unexpected error %s", err)
 	}
+
 	metrics := make(chan prometheus.Metric)
 	got := ""
+
 	go func() {
 		for {
 			var metric dto.Metric
+
 			val := <-metrics
+
 			err := val.Write(&metric)
 			if err != nil {
 				t.Errorf("Unexpected error %s", err)
 			}
+
 			got += metric.String()
 		}
 	}()
@@ -61,7 +66,7 @@ func TestMultipleDirectories(t *testing.T) {
 
 //nolint:paralleltest
 func TestDuplicateFileName(t *testing.T) {
-	logger := log.NewLogfmtLogger(os.Stdout)
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	testDir := baseDir + "/duplicate-filename"
 	textFileCollector := textfile.New(&textfile.Config{
 		TextFileDirectories: []string{testDir},
@@ -74,19 +79,25 @@ func TestDuplicateFileName(t *testing.T) {
 	if err != nil {
 		t.Errorf("Unexpected error %s", err)
 	}
+
 	metrics := make(chan prometheus.Metric)
 	got := ""
+
 	go func() {
 		for {
 			var metric dto.Metric
+
 			val := <-metrics
+
 			err := val.Write(&metric)
 			if err != nil {
 				t.Errorf("Unexpected error %s", err)
 			}
+
 			got += metric.String()
 		}
 	}()
+
 	err = textFileCollector.Collect(scrapeContext, logger, metrics)
 	if err != nil {
 		t.Errorf("Unexpected error %s", err)
