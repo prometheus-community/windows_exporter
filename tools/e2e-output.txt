@@ -1,4 +1,4 @@
-# HELP test_alpha_total Some random metric.
+﻿# HELP test_alpha_total Some random metric.
 # TYPE test_alpha_total counter
 test_alpha_total 42
 # HELP windows_cpu_clock_interrupts_total Total number of received and serviced clock tick interrupts
@@ -27,26 +27,30 @@ test_alpha_total 42
 # TYPE windows_cpu_info_thread gauge
 # HELP windows_cpu_interrupts_total Total number of received and serviced hardware interrupts
 # TYPE windows_cpu_interrupts_total counter
+# HELP windows_cpu_logical_processor Total number of logical processors
+# TYPE windows_cpu_logical_processor gauge
 # HELP windows_cpu_parking_status Parking Status represents whether a processor is parked or not
 # TYPE windows_cpu_parking_status gauge
-# HELP windows_cpu_processor_performance_total Processor Performance is the average performance of the processor while it is executing instructions, as a percentage of the nominal performance of the processor. On some processors, Processor Performance may exceed 100%
-# TYPE windows_cpu_processor_performance_total counter
-# HELP windows_cpu_time_total Time that processor spent in different modes (dpc, idle, interrupt, privileged, user)
-# TYPE windows_cpu_time_total counter
 # HELP windows_cpu_processor_mperf_total Processor MPerf is the number of TSC ticks incremented while executing instructions
 # TYPE windows_cpu_processor_mperf_total counter
+# HELP windows_cpu_processor_performance_total Processor Performance is the average performance of the processor while it is executing instructions, as a percentage of the nominal performance of the processor. On some processors, Processor Performance may exceed 100%
+# TYPE windows_cpu_processor_performance_total counter
 # HELP windows_cpu_processor_privileged_utility_total Processor Privileged Utility represents is the amount of time the core has spent executing instructions inside the kernel
 # TYPE windows_cpu_processor_privileged_utility_total counter
 # HELP windows_cpu_processor_rtc_total Processor RTC represents the number of RTC ticks made since the system booted. It should consistently be 64e6, and can be used to properly derive Processor Utility Rate
 # TYPE windows_cpu_processor_rtc_total counter
 # HELP windows_cpu_processor_utility_total Processor Utility represents is the amount of time the core spends executing instructions
 # TYPE windows_cpu_processor_utility_total counter
-# HELP windows_cs_hostname Labelled system hostname information as provided by ComputerSystem.DNSHostName and ComputerSystem.Domain
+# HELP windows_cpu_time_total Time that processor spent in different modes (dpc, idle, interrupt, privileged, user)
+# TYPE windows_cpu_time_total counter
+# HELP windows_cs_hostname Deprecated: Use windows_os_hostname instead
 # TYPE windows_cs_hostname gauge
-# HELP windows_cs_logical_processors ComputerSystem.NumberOfLogicalProcessors
+# HELP windows_cs_logical_processors Deprecated: Use windows_cpu_logical_processor instead
 # TYPE windows_cs_logical_processors gauge
-# HELP windows_cs_physical_memory_bytes ComputerSystem.TotalPhysicalMemory
+# HELP windows_cs_physical_memory_bytes Deprecated: Use windows_physical_memory_total_bytes instead
 # TYPE windows_cs_physical_memory_bytes gauge
+# HELP windows_exporter_build_info A metric with a constant '1' value labeled by version, revision, branch, goversion from which windows_exporter was built, and the goos and goarch for the build.
+# TYPE windows_exporter_build_info gauge
 # HELP windows_exporter_collector_duration_seconds windows_exporter: Duration of a collection.
 # TYPE windows_exporter_collector_duration_seconds gauge
 # HELP windows_exporter_collector_success windows_exporter: Whether the collector was successful.
@@ -55,9 +59,11 @@ windows_exporter_collector_success{collector="cpu"} 1
 windows_exporter_collector_success{collector="cpu_info"} 1
 windows_exporter_collector_success{collector="cs"} 1
 windows_exporter_collector_success{collector="logical_disk"} 1
-windows_exporter_collector_success{collector="physical_disk"} 1
+windows_exporter_collector_success{collector="memory"} 1
 windows_exporter_collector_success{collector="net"} 1
 windows_exporter_collector_success{collector="os"} 1
+windows_exporter_collector_success{collector="perfdata"} 1
+windows_exporter_collector_success{collector="physical_disk"} 1
 windows_exporter_collector_success{collector="process"} 1
 windows_exporter_collector_success{collector="scheduled_task"} 1
 windows_exporter_collector_success{collector="service"} 1
@@ -69,9 +75,11 @@ windows_exporter_collector_timeout{collector="cpu"} 0
 windows_exporter_collector_timeout{collector="cpu_info"} 0
 windows_exporter_collector_timeout{collector="cs"} 0
 windows_exporter_collector_timeout{collector="logical_disk"} 0
-windows_exporter_collector_timeout{collector="physical_disk"} 0
+windows_exporter_collector_timeout{collector="memory"} 0
 windows_exporter_collector_timeout{collector="net"} 0
 windows_exporter_collector_timeout{collector="os"} 0
+windows_exporter_collector_timeout{collector="perfdata"} 0
+windows_exporter_collector_timeout{collector="physical_disk"} 0
 windows_exporter_collector_timeout{collector="process"} 0
 windows_exporter_collector_timeout{collector="scheduled_task"} 0
 windows_exporter_collector_timeout{collector="service"} 0
@@ -79,6 +87,12 @@ windows_exporter_collector_timeout{collector="system"} 0
 windows_exporter_collector_timeout{collector="textfile"} 0
 # HELP windows_exporter_perflib_snapshot_duration_seconds Duration of perflib snapshot capture
 # TYPE windows_exporter_perflib_snapshot_duration_seconds gauge
+# HELP windows_exporter_scrape_duration_seconds windows_exporter: Total scrape duration.
+# TYPE windows_exporter_scrape_duration_seconds gauge
+# HELP windows_logical_disk_avg_read_requests_queued Average number of read requests that were queued for the selected disk during the sample interval (LogicalDisk.AvgDiskReadQueueLength)
+# TYPE windows_logical_disk_avg_read_requests_queued gauge
+# HELP windows_logical_disk_avg_write_requests_queued Average number of write requests that were queued for the selected disk during the sample interval (LogicalDisk.AvgDiskWriteQueueLength)
+# TYPE windows_logical_disk_avg_write_requests_queued gauge
 # HELP windows_logical_disk_free_bytes Free space in bytes, updates every 10-15 min (LogicalDisk.PercentFreeSpace)
 # TYPE windows_logical_disk_free_bytes gauge
 # HELP windows_logical_disk_idle_seconds_total Seconds that the disk was idle (LogicalDisk.PercentIdleTime)
@@ -97,10 +111,6 @@ windows_exporter_collector_timeout{collector="textfile"} 0
 # TYPE windows_logical_disk_reads_total counter
 # HELP windows_logical_disk_requests_queued The number of requests queued to the disk (LogicalDisk.CurrentDiskQueueLength)
 # TYPE windows_logical_disk_requests_queued gauge
-# HELP windows_logical_disk_avg_read_requests_queued Average number of read requests that were queued for the selected disk during the sample interval (LogicalDisk.AvgDiskReadQueueLength)
-# TYPE windows_logical_disk_avg_read_requests_queued gauge
-# HELP windows_logical_disk_avg_write_requests_queued Average number of write requests that were queued for the selected disk during the sample interval (LogicalDisk.AvgDiskWriteQueueLength)
-# TYPE windows_logical_disk_avg_write_requests_queued gauge
 # HELP windows_logical_disk_size_bytes Total space in bytes, updates every 10-15 min (LogicalDisk.PercentFreeSpace_Base)
 # TYPE windows_logical_disk_size_bytes gauge
 # HELP windows_logical_disk_split_ios_total The number of I/Os to the disk were split into multiple I/Os (LogicalDisk.SplitIOPerSec)
@@ -113,6 +123,136 @@ windows_exporter_collector_timeout{collector="textfile"} 0
 # TYPE windows_logical_disk_write_seconds_total counter
 # HELP windows_logical_disk_writes_total The number of write operations on the disk (LogicalDisk.DiskWritesPerSec)
 # TYPE windows_logical_disk_writes_total counter
+# HELP windows_memory_available_bytes The amount of physical memory immediately available for allocation to a process or for system use. It is equal to the sum of memory assigned to the standby (cached), free and zero page lists (AvailableBytes)
+# TYPE windows_memory_available_bytes gauge
+# HELP windows_memory_cache_bytes (CacheBytes)
+# TYPE windows_memory_cache_bytes gauge
+# HELP windows_memory_cache_bytes_peak (CacheBytesPeak)
+# TYPE windows_memory_cache_bytes_peak gauge
+# HELP windows_memory_cache_faults_total Number of faults which occur when a page sought in the file system cache is not found there and must be retrieved from elsewhere in memory (soft fault) or from disk (hard fault) (Cache Faults/sec)
+# TYPE windows_memory_cache_faults_total counter
+# HELP windows_memory_commit_limit (CommitLimit)
+# TYPE windows_memory_commit_limit gauge
+# HELP windows_memory_committed_bytes (CommittedBytes)
+# TYPE windows_memory_committed_bytes gauge
+# HELP windows_memory_demand_zero_faults_total The number of zeroed pages required to satisfy faults. Zeroed pages, pages emptied of previously stored data and filled with zeros, are a security feature of Windows that prevent processes from seeing data stored by earlier processes that used the memory space (Demand Zero Faults/sec)
+# TYPE windows_memory_demand_zero_faults_total counter
+# HELP windows_memory_free_and_zero_page_list_bytes The amount of physical memory, in bytes, that is assigned to the free and zero page lists. This memory does not contain cached data. It is immediately available for allocation to a process or for system use (FreeAndZeroPageListBytes)
+# TYPE windows_memory_free_and_zero_page_list_bytes gauge
+# HELP windows_memory_free_system_page_table_entries (FreeSystemPageTableEntries)
+# TYPE windows_memory_free_system_page_table_entries gauge
+# HELP windows_memory_modified_page_list_bytes The amount of physical memory, in bytes, that is assigned to the modified page list. This memory contains cached data and code that is not actively in use by processes, the system and the system cache (ModifiedPageListBytes)
+# TYPE windows_memory_modified_page_list_bytes gauge
+# HELP windows_memory_page_faults_total Overall rate at which faulted pages are handled by the processor (Page Faults/sec)
+# TYPE windows_memory_page_faults_total counter
+# HELP windows_memory_physical_free_bytes The amount of physical memory currently available, in bytes. This is the amount of physical memory that can be immediately reused without having to write its contents to disk first. It is the sum of the size of the standby, free, and zero lists.
+# TYPE windows_memory_physical_free_bytes gauge
+# HELP windows_memory_physical_total_bytes The amount of actual physical memory, in bytes.
+# TYPE windows_memory_physical_total_bytes gauge
+# HELP windows_memory_pool_nonpaged_allocs_total The number of calls to allocate space in the nonpaged pool. The nonpaged pool is an area of system memory area for objects that cannot be written to disk, and must remain in physical memory as long as they are allocated (PoolNonpagedAllocs)
+# TYPE windows_memory_pool_nonpaged_allocs_total gauge
+# HELP windows_memory_pool_nonpaged_bytes Number of bytes in the non-paged pool, an area of the system virtual memory that is used for objects that cannot be written to disk, but must remain in physical memory as long as they are allocated (PoolNonpagedBytes)
+# TYPE windows_memory_pool_nonpaged_bytes gauge
+# HELP windows_memory_pool_paged_allocs_total Number of calls to allocate space in the paged pool, regardless of the amount of space allocated in each call (PoolPagedAllocs)
+# TYPE windows_memory_pool_paged_allocs_total counter
+# HELP windows_memory_pool_paged_bytes (PoolPagedBytes)
+# TYPE windows_memory_pool_paged_bytes gauge
+# HELP windows_memory_pool_paged_resident_bytes The size, in bytes, of the portion of the paged pool that is currently resident and active in physical memory. The paged pool is an area of the system virtual memory that is used for objects that can be written to disk when they are not being used (PoolPagedResidentBytes)
+# TYPE windows_memory_pool_paged_resident_bytes gauge
+# HELP windows_memory_process_memory_limit_bytes The size of the user-mode portion of the virtual address space of the calling process, in bytes. This value depends on the type of process, the type of processor, and the configuration of the operating system.
+# TYPE windows_memory_process_memory_limit_bytes gauge
+# HELP windows_memory_standby_cache_core_bytes The amount of physical memory, in bytes, that is assigned to the core standby cache page lists. This memory contains cached data and code that is not actively in use by processes, the system and the system cache (StandbyCacheCoreBytes)
+# TYPE windows_memory_standby_cache_core_bytes gauge
+# HELP windows_memory_standby_cache_normal_priority_bytes The amount of physical memory, in bytes, that is assigned to the normal priority standby cache page lists. This memory contains cached data and code that is not actively in use by processes, the system and the system cache (StandbyCacheNormalPriorityBytes)
+# TYPE windows_memory_standby_cache_normal_priority_bytes gauge
+# HELP windows_memory_standby_cache_reserve_bytes The amount of physical memory, in bytes, that is assigned to the reserve standby cache page lists. This memory contains cached data and code that is not actively in use by processes, the system and the system cache (StandbyCacheReserveBytes)
+# TYPE windows_memory_standby_cache_reserve_bytes gauge
+# HELP windows_memory_swap_page_operations_total Total number of swap page read and writes (PagesPersec)
+# TYPE windows_memory_swap_page_operations_total counter
+# HELP windows_memory_swap_page_reads_total Number of disk page reads (a single read operation reading several pages is still only counted once) (PageReadsPersec)
+# TYPE windows_memory_swap_page_reads_total counter
+# HELP windows_memory_swap_page_writes_total Number of disk page writes (a single write operation writing several pages is still only counted once) (PageWritesPersec)
+# TYPE windows_memory_swap_page_writes_total counter
+# HELP windows_memory_swap_pages_read_total Number of pages read across all page reads (ie counting all pages read even if they are read in a single operation) (PagesInputPersec)
+# TYPE windows_memory_swap_pages_read_total counter
+# HELP windows_memory_swap_pages_written_total Number of pages written across all page writes (ie counting all pages written even if they are written in a single operation) (PagesOutputPersec)
+# TYPE windows_memory_swap_pages_written_total counter
+# HELP windows_memory_system_cache_resident_bytes The size, in bytes, of the portion of the system file cache which is currently resident and active in physical memory (SystemCacheResidentBytes)
+# TYPE windows_memory_system_cache_resident_bytes gauge
+# HELP windows_memory_system_code_resident_bytes The size, in bytes, of the pageable operating system code that is currently resident and active in physical memory (SystemCodeResidentBytes)
+# TYPE windows_memory_system_code_resident_bytes gauge
+# HELP windows_memory_system_code_total_bytes The size, in bytes, of the pageable operating system code currently mapped into the system virtual address space (SystemCodeTotalBytes)
+# TYPE windows_memory_system_code_total_bytes gauge
+# HELP windows_memory_system_driver_resident_bytes The size, in bytes, of the pageable physical memory being used by device drivers. It is the working set (physical memory area) of the drivers (SystemDriverResidentBytes)
+# TYPE windows_memory_system_driver_resident_bytes gauge
+# HELP windows_memory_system_driver_total_bytes The size, in bytes, of the pageable virtual memory currently being used by device drivers. Pageable memory can be written to disk when it is not being used (SystemDriverTotalBytes)
+# TYPE windows_memory_system_driver_total_bytes gauge
+# HELP windows_memory_transition_faults_total Number of faults rate at which page faults are resolved by recovering pages that were being used by another process sharing the page, or were on the modified page list or the standby list, or were being written to disk at the time of the page fault (TransitionFaultsPersec)
+# TYPE windows_memory_transition_faults_total counter
+# HELP windows_memory_transition_pages_repurposed_total Transition Pages RePurposed is the rate at which the number of transition cache pages were reused for a different purpose (TransitionPagesRePurposedPersec)
+# TYPE windows_memory_transition_pages_repurposed_total counter
+# HELP windows_memory_write_copies_total The number of page faults caused by attempting to write that were satisfied by copying the page from elsewhere in physical memory (WriteCopiesPersec)
+# TYPE windows_memory_write_copies_total counter
+# HELP windows_net_bytes_received_total (Network.BytesReceivedPerSec)
+# TYPE windows_net_bytes_received_total counter
+# HELP windows_net_bytes_sent_total (Network.BytesSentPerSec)
+# TYPE windows_net_bytes_sent_total counter
+# HELP windows_net_bytes_total (Network.BytesTotalPerSec)
+# TYPE windows_net_bytes_total counter
+# HELP windows_net_current_bandwidth_bytes (Network.CurrentBandwidth)
+# TYPE windows_net_current_bandwidth_bytes gauge
+# HELP windows_net_output_queue_length_packets (Network.OutputQueueLength)
+# TYPE windows_net_output_queue_length_packets gauge
+# HELP windows_net_packets_outbound_discarded_total (Network.PacketsOutboundDiscarded)
+# TYPE windows_net_packets_outbound_discarded_total counter
+# HELP windows_net_packets_outbound_errors_total (Network.PacketsOutboundErrors)
+# TYPE windows_net_packets_outbound_errors_total counter
+# HELP windows_net_packets_received_discarded_total (Network.PacketsReceivedDiscarded)
+# TYPE windows_net_packets_received_discarded_total counter
+# HELP windows_net_packets_received_errors_total (Network.PacketsReceivedErrors)
+# TYPE windows_net_packets_received_errors_total counter
+# HELP windows_net_packets_received_total (Network.PacketsReceivedPerSec)
+# TYPE windows_net_packets_received_total counter
+# HELP windows_net_packets_received_unknown_total (Network.PacketsReceivedUnknown)
+# TYPE windows_net_packets_received_unknown_total counter
+# HELP windows_net_packets_sent_total (Network.PacketsSentPerSec)
+# TYPE windows_net_packets_sent_total counter
+# HELP windows_net_packets_total (Network.PacketsPerSec)
+# TYPE windows_net_packets_total counter
+# HELP windows_os_hostname Labelled system hostname information as provided by ComputerSystem.DNSHostName and ComputerSystem.Domain
+# TYPE windows_os_hostname gauge
+# HELP windows_os_info Contains full product name & version in labels. Note that the "major_version" for Windows 11 is \\"10\\"; a build number greater than 22000 represents Windows 11.
+# TYPE windows_os_info gauge
+# HELP windows_os_paging_free_bytes OperatingSystem.FreeSpaceInPagingFiles
+# TYPE windows_os_paging_free_bytes gauge
+# HELP windows_os_paging_limit_bytes OperatingSystem.SizeStoredInPagingFiles
+# TYPE windows_os_paging_limit_bytes gauge
+# HELP windows_os_physical_memory_free_bytes Deprecated: Use `windows_memory_physical_free_bytes` instead.
+# TYPE windows_os_physical_memory_free_bytes gauge
+# HELP windows_os_process_memory_limit_bytes Deprecated: Use `windows_memory_process_memory_limit_bytes` instead.
+# TYPE windows_os_process_memory_limit_bytes gauge
+# HELP windows_os_processes Deprecated: Use `windows_system_processes` instead.
+# TYPE windows_os_processes gauge
+# HELP windows_os_processes_limit Deprecated: Use `windows_system_process_limit` instead.
+# TYPE windows_os_processes_limit gauge
+# HELP windows_os_time Deprecated: Use windows_time_current_timestamp_seconds instead.
+# TYPE windows_os_time gauge
+# HELP windows_os_timezone Deprecated: Use windows_time_timezone instead.
+# TYPE windows_os_timezone gauge
+# HELP windows_os_users Deprecated: Use `count(windows_logon_logon_type)` instead.
+# TYPE windows_os_users gauge
+# HELP windows_os_virtual_memory_bytes Deprecated: Use `windows_memory_commit_limit` instead.
+# TYPE windows_os_virtual_memory_bytes gauge
+# HELP windows_os_virtual_memory_free_bytes Deprecated: Use `windows_memory_commit_limit - windows_memory_committed_bytes` instead.
+# TYPE windows_os_virtual_memory_free_bytes gauge
+# HELP windows_os_visible_memory_bytes Deprecated: Use `windows_memory_physical_total_bytes` instead.
+# TYPE windows_os_visible_memory_bytes gauge
+# HELP windows_perfdata_memory_cache_faults_sec Performance data for \\Memory\\Cache Faults/sec
+# TYPE windows_perfdata_memory_cache_faults_sec counter
+# HELP windows_perfdata_processor_information__privileged_time Performance data for \\Processor Information\\% Privileged Time
+# TYPE windows_perfdata_processor_information__privileged_time counter
+# HELP windows_perfdata_processor_information__processor_time Performance data for \\Processor Information\\% Processor Time
+# TYPE windows_perfdata_processor_information__processor_time counter
 # HELP windows_physical_disk_idle_seconds_total Seconds that the disk was idle (PhysicalDisk.PercentIdleTime)
 # TYPE windows_physical_disk_idle_seconds_total counter
 # HELP windows_physical_disk_read_bytes_total The number of bytes transferred from the disk during read operations (PhysicalDisk.DiskReadBytesPerSec)
@@ -137,58 +277,6 @@ windows_exporter_collector_timeout{collector="textfile"} 0
 # TYPE windows_physical_disk_write_seconds_total counter
 # HELP windows_physical_disk_writes_total The number of write operations on the disk (PhysicalDisk.DiskWritesPerSec)
 # TYPE windows_physical_disk_writes_total counter
-# HELP windows_net_bytes_received_total (Network.BytesReceivedPerSec)
-# TYPE windows_net_bytes_received_total counter
-# HELP windows_net_bytes_sent_total (Network.BytesSentPerSec)
-# TYPE windows_net_bytes_sent_total counter
-# HELP windows_net_bytes_total (Network.BytesTotalPerSec)
-# TYPE windows_net_bytes_total counter
-# HELP windows_net_output_queue_length_packets (Network.OutputQueueLength)
-# TYPE windows_net_output_queue_length_packets gauge
-# HELP windows_net_current_bandwidth_bytes (Network.CurrentBandwidth)
-# TYPE windows_net_current_bandwidth_bytes gauge
-# HELP windows_net_packets_outbound_discarded_total (Network.PacketsOutboundDiscarded)
-# TYPE windows_net_packets_outbound_discarded_total counter
-# HELP windows_net_packets_outbound_errors_total (Network.PacketsOutboundErrors)
-# TYPE windows_net_packets_outbound_errors_total counter
-# HELP windows_net_packets_received_discarded_total (Network.PacketsReceivedDiscarded)
-# TYPE windows_net_packets_received_discarded_total counter
-# HELP windows_net_packets_received_errors_total (Network.PacketsReceivedErrors)
-# TYPE windows_net_packets_received_errors_total counter
-# HELP windows_net_packets_received_total (Network.PacketsReceivedPerSec)
-# TYPE windows_net_packets_received_total counter
-# HELP windows_net_packets_received_unknown_total (Network.PacketsReceivedUnknown)
-# TYPE windows_net_packets_received_unknown_total counter
-# HELP windows_net_packets_sent_total (Network.PacketsSentPerSec)
-# TYPE windows_net_packets_sent_total counter
-# HELP windows_net_packets_total (Network.PacketsPerSec)
-# TYPE windows_net_packets_total counter
-# HELP windows_os_info OperatingSystem.Caption, OperatingSystem.Version
-# TYPE windows_os_info gauge
-# HELP windows_os_paging_free_bytes OperatingSystem.FreeSpaceInPagingFiles
-# TYPE windows_os_paging_free_bytes gauge
-# HELP windows_os_paging_limit_bytes OperatingSystem.SizeStoredInPagingFiles
-# TYPE windows_os_paging_limit_bytes gauge
-# HELP windows_os_physical_memory_free_bytes OperatingSystem.FreePhysicalMemory
-# TYPE windows_os_physical_memory_free_bytes gauge
-# HELP windows_os_process_memory_limit_bytes OperatingSystem.MaxProcessMemorySize
-# TYPE windows_os_process_memory_limit_bytes gauge
-# HELP windows_os_processes OperatingSystem.NumberOfProcesses
-# TYPE windows_os_processes gauge
-# HELP windows_os_processes_limit OperatingSystem.MaxNumberOfProcesses
-# TYPE windows_os_processes_limit gauge
-# HELP windows_os_time OperatingSystem.LocalDateTime
-# TYPE windows_os_time gauge
-# HELP windows_os_timezone OperatingSystem.LocalDateTime
-# TYPE windows_os_timezone gauge
-# HELP windows_os_users OperatingSystem.NumberOfUsers
-# TYPE windows_os_users gauge
-# HELP windows_os_virtual_memory_bytes OperatingSystem.TotalVirtualMemorySize
-# TYPE windows_os_virtual_memory_bytes gauge
-# HELP windows_os_virtual_memory_free_bytes OperatingSystem.FreeVirtualMemory
-# TYPE windows_os_virtual_memory_free_bytes gauge
-# HELP windows_os_visible_memory_bytes OperatingSystem.TotalVisibleMemorySize
-# TYPE windows_os_visible_memory_bytes gauge
 # HELP windows_scheduled_task_state The current state of a scheduled task
 # TYPE windows_scheduled_task_state gauge
 windows_scheduled_task_state{state="disabled",task="/Microsoft/Windows/Maintenance/WinSAT"} 1
@@ -198,16 +286,33 @@ windows_scheduled_task_state{state="running",task="/Microsoft/Windows/Maintenanc
 windows_scheduled_task_state{state="unknown",task="/Microsoft/Windows/Maintenance/WinSAT"} 0
 # HELP windows_service_info A metric with a constant '1' value labeled with service information
 # TYPE windows_service_info gauge
+windows_service_info{display_name="Themes",name="Themes",path_name="C:\\WINDOWS\\System32\\svchost.exe -k netsvcs -p",run_as="LocalSystem"} 1
+# HELP windows_service_process Process of started service. The value is the creation time of the process as a unix timestamp.
+# TYPE windows_service_process gauge
 # HELP windows_service_start_mode The start mode of the service (StartMode)
 # TYPE windows_service_start_mode gauge
+windows_service_start_mode{name="Themes",start_mode="auto"} 1
+windows_service_start_mode{name="Themes",start_mode="boot"} 0
+windows_service_start_mode{name="Themes",start_mode="disabled"} 0
+windows_service_start_mode{name="Themes",start_mode="manual"} 0
+windows_service_start_mode{name="Themes",start_mode="system"} 0
 # HELP windows_service_state The state of the service (State)
 # TYPE windows_service_state gauge
-# HELP windows_service_status The status of the service (Status)
-# TYPE windows_service_status gauge
+windows_service_state{name="Themes",status="continue pending"} 0
+windows_service_state{name="Themes",status="pause pending"} 0
+windows_service_state{name="Themes",status="paused"} 0
+windows_service_state{name="Themes",status="running"} 1
+windows_service_state{name="Themes",status="start pending"} 0
+windows_service_state{name="Themes",status="stop pending"} 0
+windows_service_state{name="Themes",status="stopped"} 0
 # HELP windows_system_context_switches_total Total number of context switches (WMI source: PerfOS_System.ContextSwitchesPersec)
 # TYPE windows_system_context_switches_total counter
 # HELP windows_system_exception_dispatches_total Total number of exceptions dispatched (WMI source: PerfOS_System.ExceptionDispatchesPersec)
 # TYPE windows_system_exception_dispatches_total counter
+# HELP windows_system_processes Current number of processes (WMI source: PerfOS_System.Processes)
+# TYPE windows_system_processes gauge
+# HELP windows_system_processes_limit Maximum number of processes.
+# TYPE windows_system_processes_limit gauge
 # HELP windows_system_processor_queue_length Length of processor queue (WMI source: PerfOS_System.ProcessorQueueLength)
 # TYPE windows_system_processor_queue_length gauge
 # HELP windows_system_system_calls_total Total number of system calls (WMI source: PerfOS_System.SystemCallsPersec)

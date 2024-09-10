@@ -38,13 +38,16 @@ func TestExpandEnabled(t *testing.T) {
 			success = false
 		} else {
 			sort.Strings(testCase.expectedOutput)
+
 			for idx := range output {
 				if output[idx] != testCase.expectedOutput[idx] {
 					success = false
+
 					break
 				}
 			}
 		}
+
 		if !success {
 			t.Error("For", testCase.input, "expected", testCase.expectedOutput, "got", output)
 		}

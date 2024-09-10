@@ -132,7 +132,9 @@ func GlobalMemoryStatusEx() (MemoryStatus, error) {
 // https://docs.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getsysteminfo
 func GetSystemInfo() SystemInfo {
 	var info lpSystemInfo
+
 	procGetSystemInfo.Call(uintptr(unsafe.Pointer(&info))) //nolint:errcheck
+
 	return SystemInfo{
 		Arch:                      ProcessorArchitecture(info.Arch.WProcessorArchitecture),
 		PageSize:                  info.DwPageSize,
@@ -153,12 +155,16 @@ func GetComputerName(f WinComputerNameFormat) (string, error) {
 	// 1kb buffer to accept computer name. This should be more than enough as the maximum size
 	// returned is the max length of a DNS name, which this author believes is 253 characters.
 	size := 1024
+
 	var buffer [1024]uint16
+
 	r1, _, err := procGetComputerNameExW.Call(uintptr(f), uintptr(unsafe.Pointer(&buffer)), uintptr(unsafe.Pointer(&size)))
 	if r1 == 0 {
 		return "", err
 	}
+
 	bytes := buffer[0:size]
 	out := utf16.Decode(bytes)
+
 	return string(out), nil
 }

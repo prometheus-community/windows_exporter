@@ -11,9 +11,9 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/initiate"
 
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/http/pprof"
 	"os"
@@ -25,9 +25,9 @@ import (
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log/level"
 	"github.com/prometheus-community/windows_exporter/pkg/collector"
 	"github.com/prometheus-community/windows_exporter/pkg/config"
+	"github.com/prometheus-community/windows_exporter/pkg/httphandler"
 	winlog "github.com/prometheus-community/windows_exporter/pkg/log"
 	"github.com/prometheus-community/windows_exporter/pkg/log/flag"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
@@ -37,17 +37,6 @@ import (
 	webflag "github.com/prometheus/exporter-toolkit/web/kingpinflag"
 	"golang.org/x/sys/windows"
 )
-
-// Same struct prometheus uses for their /version endpoint.
-// Separate copy to avoid pulling all of prometheus as a dependency.
-type prometheusVersion struct {
-	Version   string `json:"version"`
-	Revision  string `json:"revision"`
-	Branch    string `json:"branch"`
-	BuildUser string `json:"buildUser"`
-	BuildDate string `json:"buildDate"`
-	GoVersion string `json:"goVersion"`
-}
 
 // Mapping of priority names to uin32 values required by windows.SetPriorityClass.
 var priorityStringToInt = map[string]uint32{
@@ -59,29 +48,13 @@ var priorityStringToInt = map[string]uint32{
 	"low":         windows.IDLE_PRIORITY_CLASS,
 }
 
-func setPriorityWindows(pid int, priority uint32) error {
-	// https://learn.microsoft.com/en-us/windows/win32/procthread/process-security-and-access-rights
-	handle, err := windows.OpenProcess(
-		windows.STANDARD_RIGHTS_REQUIRED|windows.SYNCHRONIZE|windows.SPECIFIC_RIGHTS_ALL,
-		false, uint32(pid),
-	)
-	if err != nil {
-		return err
-	}
-
-	if err = windows.SetPriorityClass(handle, priority); err != nil {
-		return err
-	}
-
-	if err = windows.CloseHandle(handle); err != nil {
-		return fmt.Errorf("failed to close handle: %w", err)
-	}
-
-	return nil
+func main() {
+	os.Exit(run())
 }
 
-func main() {
+func run() int {
 	app := kingpin.New("windows_exporter", "A metrics collector for Windows.")
+
 	var (
 		configFile = app.Flag(
 			"config.file",
@@ -137,25 +110,41 @@ func main() {
 
 	// Load values from configuration file(s). Executable flags must first be parsed, in order
 	// to load the specified file(s).
-	kingpin.MustParse(app.Parse(os.Args[1:]))
-	logger, err := winlog.New(winlogConfig)
-	if err != nil {
-		_ = level.Error(logger).Log("err", err)
-		os.Exit(1)
+	if _, err := app.Parse(os.Args[1:]); err != nil {
+		//nolint:sloglint // we do not have an logger yet
+		slog.Error("Failed to parse CLI args",
+			slog.Any("err", err),
+		)
+
+		return 1
 	}
 
-	_ = level.Debug(logger).Log("msg", "Logging has Started")
+	logger, err := winlog.New(winlogConfig)
+	if err != nil {
+		//nolint:sloglint // we do not have an logger yet
+		slog.Error("failed to create logger",
+			slog.Any("err", err),
+		)
+
+		return 1
+	}
 
 	if *configFile != "" {
 		resolver, err := config.NewResolver(*configFile, logger, *insecureSkipVerify)
 		if err != nil {
-			_ = level.Error(logger).Log("msg", "could not load config file", "err", err)
-			os.Exit(1)
+			logger.Error("could not load config file",
+				slog.Any("err", err),
+			)
+
+			return 1
 		}
-		err = resolver.Bind(app, os.Args[1:])
-		if err != nil {
-			_ = level.Error(logger).Log("err", err)
-			os.Exit(1)
+
+		if err = resolver.Bind(app, os.Args[1:]); err != nil {
+			logger.Error("Failed to bind configuration",
+				slog.Any("err", err),
+			)
+
+			return 1
 		}
 
 		// NOTE: This is temporary fix for issue #1092, calling kingpin.Parse
@@ -164,34 +153,43 @@ func main() {
 		*webConfig.WebListenAddresses = (*webConfig.WebListenAddresses)[1:]
 
 		// Parse flags once more to include those discovered in configuration file(s).
-		kingpin.MustParse(app.Parse(os.Args[1:]))
+		if _, err = app.Parse(os.Args[1:]); err != nil {
+			logger.Error("Failed to parse CLI args from YAML file",
+				slog.Any("err", err),
+			)
+
+			return 1
+		}
 
 		logger, err = winlog.New(winlogConfig)
 		if err != nil {
-			_ = level.Error(logger).Log("err", err)
-			os.Exit(1)
+			//nolint:sloglint // we do not have an logger yet
+			slog.Error("failed to create logger",
+				slog.Any("err", err),
+			)
+
+			return 1
 		}
 	}
 
+	logger.Debug("Logging has Started")
+
 	if *printCollectors {
-		collectorNames := collector.Available()
-		sort.Strings(collectorNames)
+		printCollectorsToStdout()
 
-		fmt.Printf("Available collectors:\n") //nolint:forbidigo
-		for _, n := range collectorNames {
-			fmt.Printf(" - %s\n", n) //nolint:forbidigo
-		}
-
-		return
+		return 0
 	}
 
 	// Only set process priority if a non-default and valid value has been set
-	if *processPriority != "normal" && priorityStringToInt[*processPriority] != 0 {
-		_ = level.Debug(logger).Log("msg", "setting process priority to "+*processPriority)
-		err = setPriorityWindows(os.Getpid(), priorityStringToInt[*processPriority])
-		if err != nil {
-			_ = level.Error(logger).Log("msg", "failed to set process priority", "err", err)
-			os.Exit(1)
+	if priority, ok := priorityStringToInt[*processPriority]; ok && priority != windows.NORMAL_PRIORITY_CLASS {
+		logger.Debug("setting process priority to " + *processPriority)
+
+		if err = setPriorityWindows(os.Getpid(), priority); err != nil {
+			logger.Error("failed to set process priority",
+				slog.Any("err", err),
+			)
+
+			return 1
 		}
 	}
 
@@ -199,79 +197,68 @@ func main() {
 	collectors.Enable(enabledCollectorList)
 
 	// Initialize collectors before loading
-	err = collectors.Build(logger)
-	if err != nil {
-		_ = level.Error(logger).Log("msg", "Couldn't load collectors", "err", err)
-		os.Exit(1)
-	}
-	err = collectors.SetPerfCounterQuery(logger)
-	if err != nil {
-		_ = level.Error(logger).Log("msg", "Couldn't set performance counter query", "err", err)
-		os.Exit(1)
+	if err = collectors.Build(logger); err != nil {
+		logger.Error("Couldn't load collectors",
+			slog.Any("err", err),
+		)
+
+		return 1
 	}
 
-	if u, err := user.Current(); err != nil {
-		_ = level.Warn(logger).Log("msg", "Unable to determine which user is running this exporter. More info: https://github.com/golang/go/issues/37348")
-	} else {
-		_ = level.Info(logger).Log("msg", fmt.Sprintf("Running as %v", u.Username))
+	if err = collectors.SetPerfCounterQuery(logger); err != nil {
+		logger.Error("Couldn't set performance counter query",
+			slog.Any("err", err),
+		)
 
-		if strings.Contains(u.Username, "ContainerAdministrator") || strings.Contains(u.Username, "ContainerUser") {
-			_ = level.Warn(logger).Log("msg", "Running as a preconfigured Windows Container user. This may mean you do not have Windows HostProcess containers configured correctly and some functionality will not work as expected.")
-		}
+		return 1
 	}
 
-	_ = level.Info(logger).Log("msg", fmt.Sprintf("Enabled collectors: %v", strings.Join(enabledCollectorList, ", ")))
+	logCurrentUser(logger)
+
+	logger.Info("Enabled collectors: " + strings.Join(enabledCollectorList, ", "))
 
 	mux := http.NewServeMux()
-	mux.HandleFunc(*metricsPath, withConcurrencyLimit(*maxRequests, collectors.BuildServeHTTP(logger, *disableExporterMetrics, *timeoutMargin)))
-	mux.HandleFunc("/health", func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		_, err := fmt.Fprintln(w, `{"status":"ok"}`)
-		if err != nil {
-			_ = level.Debug(logger).Log("msg", "Failed to write to stream", "err", err)
-		}
-	})
-	mux.HandleFunc("/version", func(w http.ResponseWriter, _ *http.Request) {
-		// we can't use "version" directly as it is a package, and not an object that
-		// can be serialized.
-		err := json.NewEncoder(w).Encode(prometheusVersion{
-			Version:   version.Version,
-			Revision:  version.Revision,
-			Branch:    version.Branch,
-			BuildUser: version.BuildUser,
-			BuildDate: version.BuildDate,
-			GoVersion: version.GoVersion,
-		})
-		if err != nil {
-			http.Error(w, fmt.Sprintf("error encoding JSON: %s", err), http.StatusInternalServerError)
-		}
-	})
+	mux.Handle("GET /health", httphandler.NewHealthHandler())
+	mux.Handle("GET /version", httphandler.NewVersionHandler())
+	mux.Handle("GET "+*metricsPath, httphandler.New(logger, collectors, &httphandler.Options{
+		DisableExporterMetrics: *disableExporterMetrics,
+		TimeoutMargin:          *timeoutMargin,
+		MaxRequests:            *maxRequests,
+	}))
 
 	if *debugEnabled {
-		mux.HandleFunc("/debug/pprof/", pprof.Index)
-		mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
-		mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
-		mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
-		mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
+		mux.HandleFunc("GET /debug/pprof/", pprof.Index)
+		mux.HandleFunc("GET /debug/pprof/cmdline", pprof.Cmdline)
+		mux.HandleFunc("GET /debug/pprof/profile", pprof.Profile)
+		mux.HandleFunc("GET /debug/pprof/symbol", pprof.Symbol)
+		mux.HandleFunc("GET /debug/pprof/trace", pprof.Trace)
 	}
 
-	_ = level.Info(logger).Log("msg", "Starting windows_exporter", "version", version.Info())
-	_ = level.Info(logger).Log("msg", "Build context", "build_context", version.BuildContext())
-	_ = level.Debug(logger).Log("msg", "Go MAXPROCS", "procs", runtime.GOMAXPROCS(0))
+	logger.Info("Starting windows_exporter",
+		slog.String("version", version.Version),
+		slog.String("branch", version.Branch),
+		slog.String("revision", version.GetRevision()),
+		slog.String("goversion", version.GoVersion),
+		slog.String("builddate", version.BuildDate),
+		slog.Int("maxprocs", runtime.GOMAXPROCS(0)),
+	)
 
 	server := &http.Server{
 		ReadHeaderTimeout: 5 * time.Second,
 		IdleTimeout:       60 * time.Second,
 		ReadTimeout:       5 * time.Second,
-		WriteTimeout:      10 * time.Minute,
+		WriteTimeout:      5 * time.Minute,
 		Handler:           mux,
 	}
 
+	errCh := make(chan error, 1)
+
 	go func() {
 		if err := web.ListenAndServe(server, webConfig, logger); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			_ = level.Error(logger).Log("msg", "cannot start windows_exporter", "err", err)
-			os.Exit(1)
+			errCh <- err
 		}
+
+		errCh <- nil
 	}()
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
@@ -279,9 +266,17 @@ func main() {
 
 	select {
 	case <-ctx.Done():
-		_ = level.Info(logger).Log("msg", "Shutting down windows_exporter via kill signal")
+		logger.Info("Shutting down windows_exporter via kill signal")
 	case <-initiate.StopCh:
-		_ = level.Info(logger).Log("msg", "Shutting down windows_exporter via service control")
+		logger.Info("Shutting down windows_exporter via service control")
+	case err := <-errCh:
+		if err != nil {
+			logger.Error("Failed to start windows_exporter",
+				slog.Any("err", err),
+			)
+
+			return 1
+		}
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -289,24 +284,53 @@ func main() {
 
 	_ = server.Shutdown(ctx)
 
-	_ = level.Info(logger).Log("msg", "windows_exporter has shut down")
+	logger.Info("windows_exporter has shut down")
+
+	return 0
 }
 
-func withConcurrencyLimit(n int, next http.HandlerFunc) http.HandlerFunc {
-	if n <= 0 {
-		return next
+func printCollectorsToStdout() {
+	collectorNames := collector.Available()
+	sort.Strings(collectorNames)
+
+	fmt.Println("Available collectors:") //nolint:forbidigo
+
+	for _, n := range collectorNames {
+		fmt.Printf(" - %s\n", n) //nolint:forbidigo
+	}
+}
+
+func logCurrentUser(logger *slog.Logger) {
+	if u, err := user.Current(); err == nil {
+		logger.Info("Running as " + u.Username)
+
+		if strings.Contains(u.Username, "ContainerAdministrator") || strings.Contains(u.Username, "ContainerUser") {
+			logger.Warn("Running as a preconfigured Windows Container user. This may mean you do not have Windows HostProcess containers configured correctly and some functionality will not work as expected.")
+		}
+
+		return
 	}
 
-	sem := make(chan struct{}, n)
-	return func(w http.ResponseWriter, r *http.Request) {
-		select {
-		case sem <- struct{}{}:
-			defer func() { <-sem }()
-		default:
-			w.WriteHeader(http.StatusServiceUnavailable)
-			_, _ = w.Write([]byte("Too many concurrent requests"))
-			return
-		}
-		next(w, r)
+	logger.Warn("Unable to determine which user is running this exporter. More info: https://github.com/golang/go/issues/37348")
+}
+
+func setPriorityWindows(pid int, priority uint32) error {
+	// https://learn.microsoft.com/en-us/windows/win32/procthread/process-security-and-access-rights
+	handle, err := windows.OpenProcess(
+		windows.STANDARD_RIGHTS_REQUIRED|windows.SYNCHRONIZE|windows.SPECIFIC_RIGHTS_ALL,
+		false, uint32(pid),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to open own process: %w", err)
 	}
+
+	if err = windows.SetPriorityClass(handle, priority); err != nil {
+		return fmt.Errorf("failed to set priority class: %w", err)
+	}
+
+	if err = windows.CloseHandle(handle); err != nil {
+		return fmt.Errorf("failed to close handle: %w", err)
+	}
+
+	return nil
 }

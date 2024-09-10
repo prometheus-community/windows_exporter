@@ -27,7 +27,7 @@ Name     | Description | Enabled by default
 [license](docs/collector.license.md) | Windows license status | 
 [logical_disk](docs/collector.logical_disk.md) | Logical disks, disk I/O | &#10003;
 [logon](docs/collector.logon.md) | User logon sessions |
-[memory](docs/collector.memory.md) | Memory usage metrics |
+[memory](docs/collector.memory.md) | Memory usage metrics | &#10003;
 [mscluster](docs/collector.mscluster.md) | MSCluster metrics |
 [msmq](docs/collector.msmq.md) | MSMQ queues |
 [mssql](docs/collector.mssql.md) | [SQL Server Performance Objects](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/use-sql-server-objects#SQLServerPOs) metrics  |
@@ -218,7 +218,7 @@ If you need to skip TLS verification, you can use the `--config.file.insecure-sk
 
 ```yaml
 collectors:
-  enabled: cpu,cs,net,service
+  enabled: cpu,net,service
 collector:
   service:
     services-where: "Name='windows_exporter'"

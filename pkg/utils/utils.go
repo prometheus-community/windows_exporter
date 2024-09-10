@@ -10,11 +10,8 @@ func BoolToFloat(b bool) float64 {
 	if b {
 		return 1.0
 	}
-	return 0.0
-}
 
-func IsEmpty(v *string) bool {
-	return v == nil || *v == ""
+	return 0.0
 }
 
 func ToPTR[t any](v t) *t {

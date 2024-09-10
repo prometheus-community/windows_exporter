@@ -6,9 +6,12 @@
 package memory
 
 import (
+	"errors"
+	"fmt"
+	"log/slog"
+
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
+	"github.com/prometheus-community/windows_exporter/pkg/headers/sysinfoapi"
 	"github.com/prometheus-community/windows_exporter/pkg/perflib"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
@@ -25,6 +28,7 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	config Config
 
+	// Performance metrics
 	availableBytes                  *prometheus.Desc
 	cacheBytes                      *prometheus.Desc
 	cacheBytesPeak                  *prometheus.Desc
@@ -57,6 +61,11 @@ type Collector struct {
 	transitionFaultsTotal           *prometheus.Desc
 	transitionPagesRepurposedTotal  *prometheus.Desc
 	writeCopiesTotal                *prometheus.Desc
+
+	// Global memory status
+	processMemoryLimitBytes  *prometheus.Desc
+	physicalMemoryTotalBytes *prometheus.Desc
+	physicalMemoryFreeBytes  *prometheus.Desc
 }
 
 func New(config *Config) *Collector {
@@ -79,15 +88,15 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ log.Logger) ([]string, error) {
+func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
 	return []string{"Memory"}, nil
 }
 
-func (c *Collector) Close() error {
+func (c *Collector) Close(_ *slog.Logger) error {
 	return nil
 }
 
-func (c *Collector) Build(_ log.Logger, _ *wmi.Client) error {
+func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 	c.availableBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "available_bytes"),
 		"The amount of physical memory immediately available for allocation to a process or for system use. It is equal to the sum of memory assigned to"+
@@ -292,17 +301,78 @@ func (c *Collector) Build(_ log.Logger, _ *wmi.Client) error {
 		nil,
 		nil,
 	)
+	c.processMemoryLimitBytes = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "process_memory_limit_bytes"),
+		"The size of the user-mode portion of the virtual address space of the calling process, in bytes. This value depends on the type of process, the type of processor, and the configuration of the operating system.",
+		nil,
+		nil,
+	)
+	c.physicalMemoryTotalBytes = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "physical_total_bytes"),
+		"The amount of actual physical memory, in bytes.",
+		nil,
+		nil,
+	)
+	c.physicalMemoryFreeBytes = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "physical_free_bytes"),
+		"The amount of physical memory currently available, in bytes. This is the amount of physical memory that can be immediately reused without having to write its contents to disk first. It is the sum of the size of the standby, free, and zero lists.",
+		nil,
+		nil,
+	)
+
 	return nil
 }
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
-	logger = log.With(logger, "collector", Name)
-	if err := c.collect(ctx, logger, ch); err != nil {
-		_ = level.Error(logger).Log("msg", "failed collecting memory metrics", "err", err)
-		return err
+func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+	logger = logger.With(slog.String("collector", Name))
+
+	errs := make([]error, 0, 2)
+
+	if err := c.collectPerformanceData(ctx, logger, ch); err != nil {
+		logger.Error("failed collecting memory metrics",
+			slog.Any("err", err),
+		)
+
+		errs = append(errs, err)
 	}
+
+	if err := c.collectGlobalMemoryStatus(ch); err != nil {
+		logger.Error("failed collecting memory metrics",
+			slog.Any("err", err),
+		)
+
+		errs = append(errs, err)
+	}
+
+	return errors.Join(errs...)
+}
+
+func (c *Collector) collectGlobalMemoryStatus(ch chan<- prometheus.Metric) error {
+	memoryStatusEx, err := sysinfoapi.GlobalMemoryStatusEx()
+	if err != nil {
+		return fmt.Errorf("failed to get memory status: %w", err)
+	}
+
+	ch <- prometheus.MustNewConstMetric(
+		c.processMemoryLimitBytes,
+		prometheus.GaugeValue,
+		float64(memoryStatusEx.TotalVirtual),
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.physicalMemoryTotalBytes,
+		prometheus.GaugeValue,
+		float64(memoryStatusEx.TotalPhys),
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.physicalMemoryFreeBytes,
+		prometheus.GaugeValue,
+		float64(memoryStatusEx.AvailPhys),
+	)
+
 	return nil
 }
 
@@ -343,9 +413,11 @@ type memory struct {
 	WriteCopiesPersec               float64 `perflib:"Write Copies/sec"`
 }
 
-func (c *Collector) collect(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
-	logger = log.With(logger, "collector", Name)
+func (c *Collector) collectPerformanceData(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+	logger = logger.With(slog.String("collector", Name))
+
 	var dst []memory
+
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["Memory"], &dst, logger); err != nil {
 		return err
 	}

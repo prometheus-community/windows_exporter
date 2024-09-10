@@ -76,6 +76,7 @@ func netApiBufferFree(buffer *wKSTAInfo102) {
 // https://docs.microsoft.com/en-us/windows/win32/api/lmwksta/nf-lmwksta-netwkstagetinfo
 func netWkstaGetInfo() (wKSTAInfo102, uint32, error) {
 	var lpwi *wKSTAInfo102
+
 	pLevel := uintptr(102)
 
 	r1, _, _ := procNetWkstaGetInfo.Call(0, pLevel, uintptr(unsafe.Pointer(&lpwi)))
@@ -86,6 +87,7 @@ func netWkstaGetInfo() (wKSTAInfo102, uint32, error) {
 	}
 
 	deref := *lpwi
+
 	return deref, 0, nil
 }
 
@@ -95,6 +97,7 @@ func GetWorkstationInfo() (WorkstationInfo, error) {
 	if err != nil {
 		return WorkstationInfo{}, err
 	}
+
 	workstationInfo := WorkstationInfo{
 		PlatformId:    info.wki102_platform_id,
 		ComputerName:  windows.UTF16PtrToString(info.wki102_computername),
@@ -104,5 +107,6 @@ func GetWorkstationInfo() (WorkstationInfo, error) {
 		LanRoot:       windows.UTF16PtrToString(info.wki102_lanroot),
 		LoggedOnUsers: info.wki102_logged_on_users,
 	}
+
 	return workstationInfo, nil
 }

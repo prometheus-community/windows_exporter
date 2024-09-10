@@ -1,13 +1,11 @@
 linters:
   enable-all: true
   disable:
-    - containedctx
-    - contextcheck
     - cyclop
     - depguard
-    - dogsled
     - dupl
     - err113
+    - execinquery
     - exhaustive
     - exhaustruct
     - exportloopref
@@ -17,21 +15,16 @@ linters:
     - gocognit
     - goconst
     - gocyclo
-    - godox
-    - inamedparam
-    - ireturn
+    - gomnd
     - lll
+    - maintidx
     - mnd
-    - nlreturn
-    - noctx
     - testpackage
     - varnamelen
     - wrapcheck
-    - wsl
-    - execinquery
-    - gomnd
-    - stylecheck
-    - maintidx
+
+run:
+  timeout: 5m
 
 linters-settings:
   gosec:
@@ -52,7 +45,33 @@ linters-settings:
         # Support string case: `camel`, `pascal`, `kebab`, `snake`, `upperSnake`, `goCamel`, `goPascal`, `goKebab`, `goSnake`, `upper`, `lower`, `header`
         json: camel
         yaml: snake
-
+  gomoddirectives:
+    replace-allow-list:
+      - github.com/prometheus/common # https://github.com/prometheus/common/pull/694
+  forbidigo:
+    forbid:
+      - "^(fmt\\.Print(|f|ln)|print|println)$"
+      - p: "^syscall\\..*$"
+        msg: use golang.org/x/sys/windows instead of syscall
+      - p: "^windows\\.NewLazyDLL$"
+        msg: use NewLazySystemDLL instead NewLazyDLL
+  sloglint:
+    no-mixed-args: true
+    kv-only: false
+    attr-only: true
+    no-global: "all"
+    context: "scope"
+    static-msg: false
+    no-raw-keys: false
+    key-naming-case: snake
+    forbidden-keys:
+      - time
+      - level
+      - msg
+      - source
+    args-on-sep-lines: true
+  stylecheck:
+    checks: ["all", "-ST1003"]
 issues:
   exclude:
   - don't use underscores in Go names
@@ -66,3 +85,7 @@ issues:
   - text: "don't use ALL_CAPS in Go names; use CamelCase"
     linters:
     - revive
+  - path: pkg/perflib/
+    linters:
+      - godox
+      - stylecheck

@@ -3,9 +3,9 @@
 package cache
 
 import (
+	"log/slog"
+
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/pkg/errors"
 	"github.com/prometheus-community/windows_exporter/pkg/perflib"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
@@ -74,15 +74,15 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ log.Logger) ([]string, error) {
+func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
 	return []string{"Cache"}, nil
 }
 
-func (c *Collector) Close() error {
+func (c *Collector) Close(_ *slog.Logger) error {
 	return nil
 }
 
-func (c *Collector) Build(_ log.Logger, _ *wmi.Client) error {
+func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 	c.asyncCopyReadsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "async_copy_reads_total"),
 		"(AsyncCopyReadsTotal)",
@@ -257,14 +257,17 @@ func (c *Collector) Build(_ log.Logger, _ *wmi.Client) error {
 		nil,
 		nil,
 	)
+
 	return nil
 }
 
 // Collect implements the Collector interface.
-func (c *Collector) Collect(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
-	logger = log.With(logger, "collector", Name)
+func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+	logger = logger.With(slog.String("collector", Name))
 	if err := c.collect(ctx, logger, ch); err != nil {
-		_ = level.Error(logger).Log("msg", "failed collecting cache metrics", "err", err)
+		logger.Error("failed collecting cache metrics",
+			slog.Any("err", err),
+		)
 
 		return err
 	}
@@ -306,9 +309,11 @@ type perflibCache struct {
 	SyncPinReadsTotal           float64 `perflib:"Sync Pin Reads/sec"`
 }
 
-func (c *Collector) collect(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
-	logger = log.With(logger, "collector", Name)
+func (c *Collector) collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+	logger = logger.With(slog.String("collector", Name))
+
 	var dst []perflibCache // Single-instance class, array is required but will have single entry.
+
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["Cache"], &dst, logger); err != nil {
 		return err
 	}
