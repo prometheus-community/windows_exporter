@@ -51,4 +51,5 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
 
+// https://github.com/prometheus/common/pull/694
 replace github.com/prometheus/common v0.59.1 => github.com/jkroepke/prometheus-common v0.0.0-20240907211841-5f9af24b97ad
