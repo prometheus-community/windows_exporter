@@ -3,7 +3,8 @@ package perflib
 import (
 	"encoding/binary"
 	"io"
-	"syscall"
+
+	"golang.org/x/sys/windows"
 )
 
 /*
@@ -36,7 +37,7 @@ type perfDataBlock struct {
 	HeaderLength     uint32
 	NumObjectTypes   uint32
 	DefaultObject    int32
-	SystemTime       syscall.Systemtime
+	SystemTime       windows.Systemtime
 	_                uint32 // TODO
 	PerfTime         int64
 	PerfFreq         int64

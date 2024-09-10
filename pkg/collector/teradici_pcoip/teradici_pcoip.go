@@ -4,10 +4,9 @@ package teradici_pcoip
 
 import (
 	"errors"
+	"log/slog"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
@@ -92,17 +91,18 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ log.Logger) ([]string, error) {
+func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
 	return []string{}, nil
 }
 
-func (c *Collector) Close() error {
+func (c *Collector) Close(_ *slog.Logger) error {
 	return nil
 }
 
-func (c *Collector) Build(logger log.Logger, wmiClient *wmi.Client) error {
-	_ = level.Warn(logger).
-		Log("msg", "teradici_pcoip collector is deprecated and will be removed in the future.", "collector", Name)
+func (c *Collector) Build(logger *slog.Logger, wmiClient *wmi.Client) error {
+	logger.Warn("teradici_pcoip collector is deprecated and will be removed in the future.",
+		slog.String("collector", Name),
+	)
 
 	if wmiClient == nil || wmiClient.SWbemServicesClient == nil {
 		return errors.New("wmiClient or SWbemServicesClient is nil")
@@ -336,33 +336,54 @@ func (c *Collector) Build(logger log.Logger, wmiClient *wmi.Client) error {
 		nil,
 		nil,
 	)
+
 	return nil
 }
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(_ *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
-	logger = log.With(logger, "collector", Name)
+func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+	logger = logger.With(slog.String("collector", Name))
 	if err := c.collectAudio(ch); err != nil {
-		_ = level.Error(logger).Log("msg", "failed collecting teradici session audio metrics", "err", err)
+		logger.Error("failed collecting teradici session audio metrics",
+			slog.Any("err", err),
+		)
+
 		return err
 	}
+
 	if err := c.collectGeneral(ch); err != nil {
-		_ = level.Error(logger).Log("msg", "failed collecting teradici session general metrics", "err", err)
+		logger.Error("failed collecting teradici session general metrics",
+			slog.Any("err", err),
+		)
+
 		return err
 	}
+
 	if err := c.collectImaging(ch); err != nil {
-		_ = level.Error(logger).Log("msg", "failed collecting teradici session imaging metrics", "err", err)
+		logger.Error("failed collecting teradici session imaging metrics",
+			slog.Any("err", err),
+		)
+
 		return err
 	}
+
 	if err := c.collectNetwork(ch); err != nil {
-		_ = level.Error(logger).Log("msg", "failed collecting teradici session network metrics", "err", err)
+		logger.Error("failed collecting teradici session network metrics",
+			slog.Any("err", err),
+		)
+
 		return err
 	}
+
 	if err := c.collectUsb(ch); err != nil {
-		_ = level.Error(logger).Log("msg", "failed collecting teradici session USB metrics", "err", err)
+		logger.Error("failed collecting teradici session USB metrics",
+			slog.Any("err", err),
+		)
+
 		return err
 	}
+
 	return nil
 }
 
@@ -423,6 +444,7 @@ func (c *Collector) collectAudio(ch chan<- prometheus.Metric) error {
 	if err := c.wmiClient.Query("SELECT * FROM win32_PerfRawData_TeradiciPerf_PCoIPSessionAudioStatistics", &dst); err != nil {
 		return err
 	}
+
 	if len(dst) == 0 {
 		return errors.New("WMI query returned empty result set")
 	}
@@ -465,6 +487,7 @@ func (c *Collector) collectGeneral(ch chan<- prometheus.Metric) error {
 	if err := c.wmiClient.Query("SELECT * FROM win32_PerfRawData_TeradiciPerf_PCoIPSessionGeneralStatistics", &dst); err != nil {
 		return err
 	}
+
 	if len(dst) == 0 {
 		return errors.New("WMI query returned empty result set")
 	}
@@ -519,6 +542,7 @@ func (c *Collector) collectImaging(ch chan<- prometheus.Metric) error {
 	if err := c.wmiClient.Query("SELECT * FROM win32_PerfRawData_TeradiciPerf_PCoIPSessionImagingStatistics", &dst); err != nil {
 		return err
 	}
+
 	if len(dst) == 0 {
 		return errors.New("WMI query returned empty result set")
 	}
@@ -597,6 +621,7 @@ func (c *Collector) collectNetwork(ch chan<- prometheus.Metric) error {
 	if err := c.wmiClient.Query("SELECT * FROM win32_PerfRawData_TeradiciPerf_PCoIPSessionNetworkStatistics", &dst); err != nil {
 		return err
 	}
+
 	if len(dst) == 0 {
 		return errors.New("WMI query returned empty result set")
 	}
@@ -669,6 +694,7 @@ func (c *Collector) collectUsb(ch chan<- prometheus.Metric) error {
 	if err := c.wmiClient.Query("SELECT * FROM win32_PerfRawData_TeradiciPerf_PCoIPSessionUsbStatistics", &dst); err != nil {
 		return err
 	}
+
 	if len(dst) == 0 {
 		return errors.New("WMI query returned empty result set")
 	}

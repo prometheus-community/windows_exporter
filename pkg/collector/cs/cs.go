@@ -3,9 +3,9 @@
 package cs
 
 import (
+	"log/slog"
+
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/prometheus-community/windows_exporter/pkg/headers/sysinfoapi"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
@@ -22,9 +22,15 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	config Config
 
+	// physicalMemoryBytes
+	// Deprecated: Use windows_cpu_logical_processor instead
 	physicalMemoryBytes *prometheus.Desc
-	logicalProcessors   *prometheus.Desc
-	hostname            *prometheus.Desc
+	// logicalProcessors
+	// Deprecated: Use windows_physical_memory_total_bytes instead
+	logicalProcessors *prometheus.Desc
+	// hostname
+	// Deprecated: Use windows_os_hostname instead
+	hostname *prometheus.Desc
 }
 
 func New(config *Config) *Collector {
@@ -47,30 +53,35 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ log.Logger) ([]string, error) {
+func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
 	return []string{}, nil
 }
 
-func (c *Collector) Close() error {
+func (c *Collector) Close(_ *slog.Logger) error {
 	return nil
 }
 
-func (c *Collector) Build(_ log.Logger, _ *wmi.Client) error {
+func (c *Collector) Build(logger *slog.Logger, _ *wmi.Client) error {
+	logger.Warn("The cs collector is deprecated and will be removed in a future release. " +
+		"Logical processors has been moved to cpu_info collector. " +
+		"Physical memory has been moved to memory collector. " +
+		"Hostname has been moved to os collector.")
+
 	c.logicalProcessors = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "logical_processors"),
-		"ComputerSystem.NumberOfLogicalProcessors",
+		"Deprecated: Use windows_cpu_logical_processor instead",
 		nil,
 		nil,
 	)
 	c.physicalMemoryBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "physical_memory_bytes"),
-		"ComputerSystem.TotalPhysicalMemory",
+		"Deprecated: Use windows_physical_memory_total_bytes instead",
 		nil,
 		nil,
 	)
 	c.hostname = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "hostname"),
-		"Labelled system hostname information as provided by ComputerSystem.DNSHostName and ComputerSystem.Domain",
+		"Deprecated: Use windows_os_hostname instead",
 		[]string{
 			"hostname",
 			"domain",
@@ -78,17 +89,22 @@ func (c *Collector) Build(_ log.Logger, _ *wmi.Client) error {
 		},
 		nil,
 	)
+
 	return nil
 }
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(_ *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
-	logger = log.With(logger, "collector", Name)
+func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+	logger = logger.With(slog.String("collector", Name))
 	if err := c.collect(ch); err != nil {
-		_ = level.Error(logger).Log("msg", "failed collecting cs metrics", "err", err)
+		logger.Error("failed collecting cs metrics",
+			slog.Any("err", err),
+		)
+
 		return err
 	}
+
 	return nil
 }
 
@@ -118,10 +134,12 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	if err != nil {
 		return err
 	}
+
 	domain, err := sysinfoapi.GetComputerName(sysinfoapi.ComputerNameDNSDomain)
 	if err != nil {
 		return err
 	}
+
 	fqdn, err := sysinfoapi.GetComputerName(sysinfoapi.ComputerNameDNSFullyQualified)
 	if err != nil {
 		return err

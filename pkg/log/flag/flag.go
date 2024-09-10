@@ -16,8 +16,8 @@ package flag
 import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/pkg/log"
-	"github.com/prometheus/common/promlog"
-	promlogflag "github.com/prometheus/common/promlog/flag"
+	"github.com/prometheus/common/promslog"
+	"github.com/prometheus/common/promslog/flag"
 )
 
 // FileFlagName is the canonical flag name to configure the log file.
@@ -29,15 +29,9 @@ const FileFlagHelp = "Output file of log messages. One of [stdout, stderr, event
 // AddFlags adds the flags used by this package to the Kingpin application.
 // To use the default Kingpin application, call AddFlags(kingpin.CommandLine).
 func AddFlags(a *kingpin.Application, config *log.Config) {
-	config.Level = &promlog.AllowedLevel{}
-	a.Flag(promlogflag.LevelFlagName, promlogflag.LevelFlagHelp).
-		Default("info").SetValue(config.Level)
+	config.Config = new(promslog.Config)
+	flag.AddFlags(a, config.Config)
 
 	config.File = &log.AllowedFile{}
-	a.Flag(FileFlagName, FileFlagHelp).
-		Default("stderr").SetValue(config.File)
-
-	config.Format = &promlog.AllowedFormat{}
-	a.Flag(promlogflag.FormatFlagName, promlogflag.FormatFlagHelp).
-		Default("logfmt").SetValue(config.Format)
+	a.Flag(FileFlagName, FileFlagHelp).Default("stderr").SetValue(config.File)
 }

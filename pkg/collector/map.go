@@ -1,6 +1,9 @@
 package collector
 
 import (
+	"maps"
+	"slices"
+
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/ad"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/adcs"
@@ -36,6 +39,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/collector/netframework_clrsecurity"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/nps"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/os"
+	"github.com/prometheus-community/windows_exporter/pkg/collector/perfdata"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/physical_disk"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/printer"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/process"
@@ -54,7 +58,6 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/collector/time"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/vmware"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/vmware_blast"
-	"golang.org/x/exp/maps"
 )
 
 func NewBuilderWithFlags[C Collector](fn BuilderWithFlags[C]) BuilderWithFlags[Collector] {
@@ -98,6 +101,7 @@ var BuildersWithFlags = map[string]BuilderWithFlags[Collector]{
 	netframework_clrsecurity.Name:        NewBuilderWithFlags(netframework_clrsecurity.NewWithFlags),
 	nps.Name:                             NewBuilderWithFlags(nps.NewWithFlags),
 	os.Name:                              NewBuilderWithFlags(os.NewWithFlags),
+	perfdata.Name:                        NewBuilderWithFlags(perfdata.NewWithFlags),
 	physical_disk.Name:                   NewBuilderWithFlags(physical_disk.NewWithFlags),
 	printer.Name:                         NewBuilderWithFlags(printer.NewWithFlags),
 	process.Name:                         NewBuilderWithFlags(process.NewWithFlags),
@@ -119,5 +123,5 @@ var BuildersWithFlags = map[string]BuilderWithFlags[Collector]{
 }
 
 func Available() []string {
-	return maps.Keys(BuildersWithFlags)
+	return slices.Sorted(maps.Keys(BuildersWithFlags))
 }

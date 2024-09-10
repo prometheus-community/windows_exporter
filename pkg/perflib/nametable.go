@@ -31,11 +31,13 @@ type NameTable struct {
 
 func (t *NameTable) LookupString(index uint32) string {
 	t.initialize()
+
 	return t.table.index[index]
 }
 
 func (t *NameTable) LookupIndex(str string) uint32 {
 	t.initialize()
+
 	return t.table.string[str]
 }
 
@@ -56,7 +58,9 @@ func (t *NameTable) initialize() {
 		if err != nil {
 			panic(err)
 		}
+
 		r := bytes.NewReader(buffer)
+
 		for {
 			index, err := readUTF16String(r)
 			if err != nil {

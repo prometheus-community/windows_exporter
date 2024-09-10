@@ -3,11 +3,10 @@
 package smbclient
 
 import (
+	"log/slog"
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/prometheus-community/windows_exporter/pkg/perflib"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
@@ -69,17 +68,17 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ log.Logger) ([]string, error) {
+func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
 	return []string{
 		"SMB Client Shares",
 	}, nil
 }
 
-func (c *Collector) Close() error {
+func (c *Collector) Close(_ *slog.Logger) error {
 	return nil
 }
 
-func (c *Collector) Build(_ log.Logger, _ *wmi.Client) error {
+func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 	// desc creates a new prometheus description
 	desc := func(metricName string, description string, labels []string) *prometheus.Desc {
 		return prometheus.NewDesc(
@@ -179,10 +178,13 @@ func (c *Collector) Build(_ log.Logger, _ *wmi.Client) error {
 }
 
 // Collect collects smb client metrics and sends them to prometheus.
-func (c *Collector) Collect(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
-	logger = log.With(logger, "collector", Name)
+func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+	logger = logger.With(slog.String("collector", Name))
 	if err := c.collectClientShares(ctx, logger, ch); err != nil {
-		_ = level.Error(logger).Log("msg", "Error in ClientShares", "err", err)
+		logger.Error("Error in ClientShares",
+			slog.Any("err", err),
+		)
+
 		return err
 	}
 
@@ -216,12 +218,15 @@ type perflibClientShares struct {
 	WriteRequestsPerSec                        float64 `perflib:"Write Requests/sec"`
 }
 
-func (c *Collector) collectClientShares(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
-	logger = log.With(logger, "collector", Name)
+func (c *Collector) collectClientShares(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+	logger = logger.With(slog.String("collector", Name))
+
 	var data []perflibClientShares
+
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["SMB Client Shares"], &data, logger); err != nil {
 		return err
 	}
+
 	for _, instance := range data {
 		if instance.Name == "_Total" {
 			continue
@@ -380,5 +385,6 @@ func (c *Collector) collectClientShares(ctx *types.ScrapeContext, logger log.Log
 			serverValue, shareValue,
 		)
 	}
+
 	return nil
 }

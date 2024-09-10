@@ -35,6 +35,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/collector/netframework_clrsecurity"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/nps"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/os"
+	"github.com/prometheus-community/windows_exporter/pkg/collector/perfdata"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/physical_disk"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/printer"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/process"
@@ -90,6 +91,7 @@ type Config struct {
 	NetframeworkClrsecurity        netframework_clrsecurity.Config        `yaml:"netframework_clrsecurity"`
 	Nps                            nps.Config                             `yaml:"nps"`
 	Os                             os.Config                              `yaml:"os"`
+	PerfData                       perfdata.Config                        `yaml:"perf_data"`
 	PhysicalDisk                   physical_disk.Config                   `yaml:"physical_disk"`
 	Printer                        printer.Config                         `yaml:"printer"`
 	Process                        process.Config                         `yaml:"process"`
@@ -148,6 +150,7 @@ var ConfigDefaults = Config{
 	NetframeworkClrsecurity:        netframework_clrsecurity.ConfigDefaults,
 	Nps:                            nps.ConfigDefaults,
 	Os:                             os.ConfigDefaults,
+	PerfData:                       perfdata.ConfigDefaults,
 	PhysicalDisk:                   physical_disk.ConfigDefaults,
 	Printer:                        printer.ConfigDefaults,
 	Process:                        process.ConfigDefaults,
