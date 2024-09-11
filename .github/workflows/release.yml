@@ -91,14 +91,6 @@ jobs:
           
           Get-ChildItem -Path output
 
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: windows_exporter_binaries
-          path: |
-            output\windows_exporter-*.exe
-            output\windows_exporter-*.msi
-
       - name: Build Release Artifacts
         run: |
           $ErrorActionPreference = "Stop"
@@ -113,6 +105,14 @@ jobs:
           Get-ChildItem -Path output\
 
           promu checksum output\
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows_exporter_binaries
+          path: |
+            output\windows_exporter-*.exe
+            output\windows_exporter-*.msi
 
       - name: Build Docker Artifacts
         run: make build-all
