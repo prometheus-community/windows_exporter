@@ -95,7 +95,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: windows_exporter_binaries
-          path: output\windows_exporter-*.exe
+          path: |
+            output\windows_exporter-*.exe
+            output\windows_exporter-*.msi
 
       - name: Build Release Artifacts
         run: |
