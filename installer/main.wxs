@@ -3,10 +3,10 @@
 <?ifndef Version?>
 <?error Version must be defined?>
 <?endif?>
-<?if $(sys.BUILDARCH)=x64 ?>
-<?define PlatformProgramFiles = "ProgramFiles64Folder" ?>
-<?else?>
-<?error Platform $(var.Platform) is not supported?>
+<?if $(sys.BUILDARCH) = x64 or $(sys.BUILDARCH) = arm64 ?>
+<?define PlatformProgramFilesFolder = "ProgramFiles64Folder" ?>
+<?else ?>
+<?define PlatformProgramFilesFolder = "ProgramFilesFolder" ?>
 <?endif?>
 
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
@@ -67,11 +67,15 @@
         <Media Id="1" Cabinet="windows_exporter.cab" EmbedCab="yes"  />
         <MajorUpgrade Schedule="afterInstallInitialize" DowngradeErrorMessage="A later version of [ProductName] is already installed. Setup will now exit." AllowSameVersionUpgrades="yes" />
 
-        <Property Id="ENABLED_COLLECTORS" Secure="yes" Value="[defaults]" />
+        <Property Id="ENABLED_COLLECTORS" Secure="yes" />
         <SetProperty Id="CollectorsFlag" After="InstallFiles" Sequence="execute" Value="--collectors.enabled [ENABLED_COLLECTORS]" Condition="ENABLED_COLLECTORS" />
 
         <Property Id="EXTRA_FLAGS" Secure="yes" />
         <SetProperty Id="ExtraFlags" After="InstallFiles" Sequence="execute" Value="[EXTRA_FLAGS]" Condition="EXTRA_FLAGS" />
+
+        <Property Id="CONFIG_FILE" Secure="yes" Value="config.yaml" />
+        <SetProperty Id="ConfigFile_NonDefault" After="InstallFiles" Sequence="execute" Value="--config.file=&quot;[CONFIG_FILE]&quot;" Condition="CONFIG_FILE AND CONFIG_FILE&lt;&gt;&quot;config.yaml&quot;" />
+        <SetProperty Id="ConfigFile_Default" After="InstallFiles" Sequence="execute" Value="--config.file=&quot;[APPLICATIONFOLDER]config.yaml&quot;" Condition="CONFIG_FILE=&quot;config.yaml&quot;" />
 
         <Property Id="LISTEN_PORT" Secure="yes" Value="9182" />
         <SetProperty Id="ListenFlag" After="InstallFiles" Sequence="execute" Value="--web.listen-address [LISTEN_ADDR]:[LISTEN_PORT]" Condition="LISTEN_ADDR&lt;&gt;&quot;&quot; OR LISTEN_PORT&lt;&gt;9182" />
@@ -132,14 +136,18 @@
                 <!-- Edit box for property input -->
                 <!-- cpu,cs,logical_disk,physical_disk,net,os,service,system -->
                 <Control Id="PropertyEdit_ENABLED_COLLECTORS_Title1" Type="Text" X="25" Y="55" Width="300" Height="15" Transparent="yes" NoPrefix="yes" Text="Comma-separated list of collectors to use. Use '[\[]defaults[\]]' as a placeholder for all" />
-                <Control Id="PropertyEdit_ENABLED_COLLECTORS_Title2" Type="Text" X="25" Y="65" Width="300" Height="15" Transparent="yes" NoPrefix="yes" Text="the collectors enabled by default." />
+                <Control Id="PropertyEdit_ENABLED_COLLECTORS_Title2" Type="Text" X="25" Y="65" Width="300" Height="15" Transparent="yes" NoPrefix="yes" Text="the collectors enabled by default. If value is empty, the exporter default will be used." />
                 <Control Id="PropertyEdit_ENABLED_COLLECTORS" Type="Edit" X="24" Y="77" Width="300" Height="18" Property="ENABLED_COLLECTORS" Text="[ENABLED_COLLECTORS]" Indirect="no" />
 
-                <Control Id="PropertyEdit_EXTRA_FLAGS_Title" Type="Text" X="25" Y="100" Width="210" Height="15" Transparent="yes" NoPrefix="yes" Text="Additional command line flags" />
+                <Control Id="PropertyEdit_EXTRA_FLAGS_Title" Type="Text" X="25" Y="100" Width="300" Height="15" Transparent="yes" NoPrefix="yes" Text="Additional command line flags" />
                 <Control Id="PropertyEdit_EXTRA_FLAGS" Type="Edit" X="24" Y="112" Width="300" Height="18" Property="EXTRA_FLAGS" Text="[EXTRA_FLAGS]" Indirect="no" />
 
-                <Control Id="PropertyEdit_LISTEN_PORT_Title" Type="Text" X="25" Y="135" Width="210" Height="15" Transparent="yes" NoPrefix="yes" Text="Port to listen" />
+                <Control Id="PropertyEdit_LISTEN_PORT_Title" Type="Text" X="25" Y="135" Width="300" Height="15" Transparent="yes" NoPrefix="yes" Text="Port to listen" />
                 <Control Id="PropertyEdit_LISTEN_PORT" Type="Edit" X="24" Y="147" Width="300" Height="18" Property="LISTEN_PORT" Text="[LISTEN_PORT]" Indirect="no" />
+
+                <Control Id="PropertyEdit_CONFIG_FILE_Title1" Type="Text" X="25" Y="170" Width="300" Height="15" Transparent="yes" NoPrefix="yes" Text="Path to config file. If empty, no config will be used. If set to 'config.yaml', " />
+                <Control Id="PropertyEdit_CONFIG_FILE_Title2" Type="Text" X="25" Y="180" Width="300" Height="15" Transparent="yes" NoPrefix="yes" Text="then the config.yaml at the install path will be used." />
+                <Control Id="PropertyEdit_CONFIG_FILE" Type="Edit" X="24" Y="192" Width="300" Height="18" Property="CONFIG_FILE" Text="[CONFIG_FILE]" Indirect="no" />
 
                 <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Text="!(loc.WixUINext)">
                     <Publish Event="NewDialog" Value="VerifyReadyDlg" />
