@@ -5,11 +5,11 @@ package collector
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"slices"
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/ad"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/adcs"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/adfs"
@@ -44,6 +44,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/collector/netframework_clrsecurity"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/nps"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/os"
+	"github.com/prometheus-community/windows_exporter/pkg/collector/perfdata"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/physical_disk"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/printer"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/process"
@@ -68,7 +69,7 @@ import (
 )
 
 // NewWithFlags To be called by the exporter for collector initialization before running kingpin.Parse.
-func NewWithFlags(app *kingpin.Application) *Collectors {
+func NewWithFlags(app *kingpin.Application) *MetricCollectors {
 	collectors := map[string]Collector{}
 
 	for name, builder := range BuildersWithFlags {
@@ -81,8 +82,8 @@ func NewWithFlags(app *kingpin.Application) *Collectors {
 // NewWithConfig To be called by the external libraries for collector initialization without running kingpin.Parse
 //
 //goland:noinspection GoUnusedExportedFunction
-func NewWithConfig(config Config) *Collectors {
-	collectors := map[string]Collector{}
+func NewWithConfig(config Config) *MetricCollectors {
+	collectors := Map{}
 	collectors[ad.Name] = ad.New(&config.AD)
 	collectors[adcs.Name] = adcs.New(&config.ADCS)
 	collectors[adfs.Name] = adfs.New(&config.ADFS)
@@ -117,6 +118,7 @@ func NewWithConfig(config Config) *Collectors {
 	collectors[netframework_clrsecurity.Name] = netframework_clrsecurity.New(&config.NetframeworkClrsecurity)
 	collectors[nps.Name] = nps.New(&config.Nps)
 	collectors[os.Name] = os.New(&config.Os)
+	collectors[perfdata.Name] = perfdata.New(&config.PerfData)
 	collectors[physical_disk.Name] = physical_disk.New(&config.PhysicalDisk)
 	collectors[printer.Name] = printer.New(&config.Printer)
 	collectors[process.Name] = process.New(&config.Process)
@@ -140,16 +142,16 @@ func NewWithConfig(config Config) *Collectors {
 }
 
 // New To be called by the external libraries for collector initialization.
-func New(collectors Map) *Collectors {
-	return &Collectors{
-		collectors: collectors,
-		wmiClient: &wmi.Client{
+func New(collectors Map) *MetricCollectors {
+	return &MetricCollectors{
+		Collectors: collectors,
+		WMIClient: &wmi.Client{
 			AllowMissingFields: true,
 		},
 	}
 }
 
-func (c *Collectors) SetPerfCounterQuery(logger log.Logger) error {
+func (c *MetricCollectors) SetPerfCounterQuery(logger *slog.Logger) error {
 	var (
 		err error
 
@@ -157,9 +159,9 @@ func (c *Collectors) SetPerfCounterQuery(logger log.Logger) error {
 		perfIndicies     []string
 	)
 
-	perfCounterDependencies := make([]string, 0, len(c.collectors))
+	perfCounterDependencies := make([]string, 0, len(c.Collectors))
 
-	for _, collector := range c.collectors {
+	for _, collector := range c.Collectors {
 		perfCounterNames, err = collector.GetPerfCounter(logger)
 		if err != nil {
 			return err
@@ -173,31 +175,31 @@ func (c *Collectors) SetPerfCounterQuery(logger log.Logger) error {
 		perfCounterDependencies = append(perfCounterDependencies, strings.Join(perfIndicies, " "))
 	}
 
-	c.perfCounterQuery = strings.Join(perfCounterDependencies, " ")
+	c.PerfCounterQuery = strings.Join(perfCounterDependencies, " ")
 
 	return nil
 }
 
 // Enable removes all collectors that not enabledCollectors.
-func (c *Collectors) Enable(enabledCollectors []string) {
-	for name := range c.collectors {
+func (c *MetricCollectors) Enable(enabledCollectors []string) {
+	for name := range c.Collectors {
 		if !slices.Contains(enabledCollectors, name) {
-			delete(c.collectors, name)
+			delete(c.Collectors, name)
 		}
 	}
 }
 
 // Build To be called by the exporter for collector initialization.
-func (c *Collectors) Build(logger log.Logger) error {
+func (c *MetricCollectors) Build(logger *slog.Logger) error {
 	var err error
 
-	c.wmiClient.SWbemServicesClient, err = wmi.InitializeSWbemServices(c.wmiClient)
+	c.WMIClient.SWbemServicesClient, err = wmi.InitializeSWbemServices(c.WMIClient)
 	if err != nil {
 		return fmt.Errorf("initialize SWbemServices: %w", err)
 	}
 
-	for _, collector := range c.collectors {
-		if err = collector.Build(logger, c.wmiClient); err != nil {
+	for _, collector := range c.Collectors {
+		if err = collector.Build(logger, c.WMIClient); err != nil {
 			return fmt.Errorf("error build collector %s: %w", collector.GetName(), err)
 		}
 	}
@@ -206,12 +208,12 @@ func (c *Collectors) Build(logger log.Logger) error {
 }
 
 // PrepareScrapeContext creates a ScrapeContext to be used during a single scrape.
-func (c *Collectors) PrepareScrapeContext() (*types.ScrapeContext, error) {
-	if c.perfCounterQuery == "" { // if perfCounterQuery is empty, no perf counters are needed.
+func (c *MetricCollectors) PrepareScrapeContext() (*types.ScrapeContext, error) {
+	if c.PerfCounterQuery == "" { // if perfCounterQuery is empty, no perf counters are needed.
 		return &types.ScrapeContext{}, nil
 	}
 
-	objs, err := perflib.GetPerflibSnapshot(c.perfCounterQuery)
+	objs, err := perflib.GetPerflibSnapshot(c.PerfCounterQuery)
 	if err != nil {
 		return nil, err
 	}
@@ -220,17 +222,17 @@ func (c *Collectors) PrepareScrapeContext() (*types.ScrapeContext, error) {
 }
 
 // Close To be called by the exporter for collector cleanup.
-func (c *Collectors) Close() error {
-	errs := make([]error, 0, len(c.collectors))
+func (c *MetricCollectors) Close(logger *slog.Logger) error {
+	errs := make([]error, 0, len(c.Collectors))
 
-	for _, collector := range c.collectors {
-		if err := collector.Close(); err != nil {
+	for _, collector := range c.Collectors {
+		if err := collector.Close(logger); err != nil {
 			errs = append(errs, err)
 		}
 	}
 
-	if c.wmiClient != nil && c.wmiClient.SWbemServicesClient != nil {
-		if err := c.wmiClient.SWbemServicesClient.Close(); err != nil {
+	if c.WMIClient != nil && c.WMIClient.SWbemServicesClient != nil {
+		if err := c.WMIClient.SWbemServicesClient.Close(); err != nil {
 			errs = append(errs, err)
 		}
 	}

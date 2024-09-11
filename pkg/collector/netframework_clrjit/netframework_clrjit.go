@@ -3,9 +3,9 @@
 package netframework_clrjit
 
 import (
+	"log/slog"
+
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
@@ -48,15 +48,15 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ log.Logger) ([]string, error) {
+func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
 	return []string{}, nil
 }
 
-func (c *Collector) Close() error {
+func (c *Collector) Close(_ *slog.Logger) error {
 	return nil
 }
 
-func (c *Collector) Build(_ log.Logger, _ *wmi.Client) error {
+func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 	c.numberOfMethodsJitted = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "jit_methods_total"),
 		"Displays the total number of methods JIT-compiled since the application started. This counter does not include pre-JIT-compiled methods.",
@@ -81,17 +81,22 @@ func (c *Collector) Build(_ log.Logger, _ *wmi.Client) error {
 		[]string{"process"},
 		nil,
 	)
+
 	return nil
 }
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(_ *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
-	logger = log.With(logger, "collector", Name)
+func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+	logger = logger.With(slog.String("collector", Name))
 	if err := c.collect(ch); err != nil {
-		_ = level.Error(logger).Log("msg", "failed collecting win32_perfrawdata_netframework_netclrjit metrics", "err", err)
+		logger.Error("failed collecting win32_perfrawdata_netframework_netclrjit metrics",
+			slog.Any("err", err),
+		)
+
 		return err
 	}
+
 	return nil
 }
 

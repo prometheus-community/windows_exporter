@@ -4,10 +4,9 @@ package vmware
 
 import (
 	"errors"
+	"log/slog"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/prometheus-community/windows_exporter/pkg/perflib"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
@@ -67,15 +66,15 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ log.Logger) ([]string, error) {
+func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
 	return []string{}, nil
 }
 
-func (c *Collector) Close() error {
+func (c *Collector) Close(_ *slog.Logger) error {
 	return nil
 }
 
-func (c *Collector) Build(_ log.Logger, wmiClient *wmi.Client) error {
+func (c *Collector) Build(_ *slog.Logger, wmiClient *wmi.Client) error {
 	if wmiClient == nil || wmiClient.SWbemServicesClient == nil {
 		return errors.New("wmiClient or SWbemServicesClient is nil")
 	}
@@ -197,21 +196,30 @@ func (c *Collector) Build(_ log.Logger, wmiClient *wmi.Client) error {
 		nil,
 		nil,
 	)
+
 	return nil
 }
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(_ *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
-	logger = log.With(logger, "collector", Name)
+func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+	logger = logger.With(slog.String("collector", Name))
 	if err := c.collectMem(ch); err != nil {
-		_ = level.Error(logger).Log("msg", "failed collecting vmware memory metrics", "err", err)
+		logger.Error("failed collecting vmware memory metrics",
+			slog.Any("err", err),
+		)
+
 		return err
 	}
+
 	if err := c.collectCpu(ch); err != nil {
-		_ = level.Error(logger).Log("msg", "failed collecting vmware cpu metrics", "err", err)
+		logger.Error("failed collecting vmware cpu metrics",
+			slog.Any("err", err),
+		)
+
 		return err
 	}
+
 	return nil
 }
 
@@ -245,6 +253,7 @@ func (c *Collector) collectMem(ch chan<- prometheus.Metric) error {
 	if err := c.wmiClient.Query("SELECT * FROM Win32_PerfRawData_vmGuestLib_VMem", &dst); err != nil {
 		return err
 	}
+
 	if len(dst) == 0 {
 		return errors.New("WMI query returned empty result set")
 	}
@@ -333,6 +342,7 @@ func (c *Collector) collectCpu(ch chan<- prometheus.Metric) error {
 	if err := c.wmiClient.Query("SELECT * FROM Win32_PerfRawData_vmGuestLib_VCPU", &dst); err != nil {
 		return err
 	}
+
 	if len(dst) == 0 {
 		return errors.New("WMI query returned empty result set")
 	}

@@ -4,13 +4,12 @@ package iis
 
 import (
 	"fmt"
+	"log/slog"
 	"regexp"
 	"sort"
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/prometheus-community/windows_exporter/pkg/perflib"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
@@ -250,7 +249,7 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ log.Logger) ([]string, error) {
+func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
 	return []string{
 		"Web Service",
 		"APP_POOL_WAS",
@@ -259,12 +258,12 @@ func (c *Collector) GetPerfCounter(_ log.Logger) ([]string, error) {
 	}, nil
 }
 
-func (c *Collector) Close() error {
+func (c *Collector) Close(_ *slog.Logger) error {
 	return nil
 }
 
-func (c *Collector) Build(logger log.Logger, _ *wmi.Client) error {
-	logger = log.With(logger, "collector", Name)
+func (c *Collector) Build(logger *slog.Logger, _ *wmi.Client) error {
+	logger = logger.With(slog.String("collector", Name))
 
 	c.iisVersion = getIISVersion(logger)
 
@@ -894,31 +893,44 @@ type simpleVersion struct {
 	minor uint64
 }
 
-func getIISVersion(logger log.Logger) simpleVersion {
+func getIISVersion(logger *slog.Logger) simpleVersion {
 	k, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\Microsoft\InetStp\`, registry.QUERY_VALUE)
 	if err != nil {
-		_ = level.Warn(logger).Log("msg", "Couldn't open registry to determine IIS version", "err", err)
+		logger.Warn("Couldn't open registry to determine IIS version",
+			slog.Any("err", err),
+		)
+
 		return simpleVersion{}
 	}
+
 	defer func() {
 		err = k.Close()
 		if err != nil {
-			_ = level.Warn(logger).Log("msg", "Failed to close registry key", "err", err)
+			logger.Warn("Failed to close registry key",
+				slog.Any("err", err),
+			)
 		}
 	}()
 
 	major, _, err := k.GetIntegerValue("MajorVersion")
 	if err != nil {
-		_ = level.Warn(logger).Log("msg", "Couldn't open registry to determine IIS version", "err", err)
-		return simpleVersion{}
-	}
-	minor, _, err := k.GetIntegerValue("MinorVersion")
-	if err != nil {
-		_ = level.Warn(logger).Log("msg", "Couldn't open registry to determine IIS version", "err", err)
+		logger.Warn("Couldn't open registry to determine IIS version",
+			slog.Any("err", err),
+		)
+
 		return simpleVersion{}
 	}
 
-	_ = level.Debug(logger).Log("msg", fmt.Sprintf("Detected IIS %d.%d\n", major, minor))
+	minor, _, err := k.GetIntegerValue("MinorVersion")
+	if err != nil {
+		logger.Warn("Couldn't open registry to determine IIS version",
+			slog.Any("err", err),
+		)
+
+		return simpleVersion{}
+	}
+
+	logger.Debug(fmt.Sprintf("Detected IIS %d.%d\n", major, minor))
 
 	return simpleVersion{
 		major: major,
@@ -928,25 +940,37 @@ func getIISVersion(logger log.Logger) simpleVersion {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
-	logger = log.With(logger, "collector", Name)
+func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+	logger = logger.With(slog.String("collector", Name))
 	if err := c.collectWebService(ctx, logger, ch); err != nil {
-		_ = level.Error(logger).Log("msg", "failed collecting iis metrics", "err", err)
+		logger.Error("failed collecting iis metrics",
+			slog.Any("err", err),
+		)
+
 		return err
 	}
 
 	if err := c.collectAPP_POOL_WAS(ctx, logger, ch); err != nil {
-		_ = level.Error(logger).Log("msg", "failed collecting iis metrics", "err", err)
+		logger.Error("failed collecting iis metrics",
+			slog.Any("err", err),
+		)
+
 		return err
 	}
 
 	if err := c.collectW3SVC_W3WP(ctx, logger, ch); err != nil {
-		_ = level.Error(logger).Log("msg", "failed collecting iis metrics", "err", err)
+		logger.Error("failed collecting iis metrics",
+			slog.Any("err", err),
+		)
+
 		return err
 	}
 
 	if err := c.collectWebServiceCache(ctx, logger, ch); err != nil {
-		_ = level.Error(logger).Log("msg", "failed collecting iis metrics", "err", err)
+		logger.Error("failed collecting iis metrics",
+			slog.Any("err", err),
+		)
+
 		return err
 	}
 
@@ -1040,12 +1064,15 @@ func dedupIISNames[V hasGetIISName](services []V) map[string]V {
 		name := strings.Split(entry.getIISName(), "#")[0]
 		webServiceDeDuplicated[name] = entry
 	}
+
 	return webServiceDeDuplicated
 }
 
-func (c *Collector) collectWebService(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
-	logger = log.With(logger, "collector", Name)
+func (c *Collector) collectWebService(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+	logger = logger.With(slog.String("collector", Name))
+
 	var webService []perflibWebService
+
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["Web Service"], &webService, logger); err != nil {
 		return err
 	}
@@ -1336,9 +1363,11 @@ var applicationStates = map[uint32]string{
 	7: "Delete Pending",
 }
 
-func (c *Collector) collectAPP_POOL_WAS(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
-	logger = log.With(logger, "collector", Name)
+func (c *Collector) collectAPP_POOL_WAS(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+	logger = logger.With(slog.String("collector", Name))
+
 	var APP_POOL_WAS []perflibAPP_POOL_WAS
+
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["APP_POOL_WAS"], &APP_POOL_WAS, logger); err != nil {
 		return err
 	}
@@ -1514,9 +1543,11 @@ type perflibW3SVC_W3WP_IIS8 struct {
 	WebSocketConnectionsRejected float64 `perflib:"WebSocket Connections Rejected / Sec"`
 }
 
-func (c *Collector) collectW3SVC_W3WP(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
-	logger = log.With(logger, "collector", Name)
+func (c *Collector) collectW3SVC_W3WP(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+	logger = logger.With(slog.String("collector", Name))
+
 	var W3SVC_W3WP []perflibW3SVC_W3WP
+
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["W3SVC_W3WP"], &W3SVC_W3WP, logger); err != nil {
 		return err
 	}
@@ -1526,6 +1557,7 @@ func (c *Collector) collectW3SVC_W3WP(ctx *types.ScrapeContext, logger log.Logge
 	for w3Name, app := range w3svcW3WPDeduplicated {
 		// Extract the apppool name from the format <PID>_<NAME>
 		pid := workerProcessNameExtractor.ReplaceAllString(w3Name, "$1")
+
 		name := workerProcessNameExtractor.ReplaceAllString(w3Name, "$2")
 		if name == "" || name == "_Total" ||
 			c.config.AppExclude.MatchString(name) ||
@@ -1784,6 +1816,7 @@ func (c *Collector) collectW3SVC_W3WP(ctx *types.ScrapeContext, logger log.Logge
 		for w3Name, app := range w3svcW3WPIIS8Deduplicated {
 			// Extract the apppool name from the format <PID>_<NAME>
 			pid := workerProcessNameExtractor.ReplaceAllString(w3Name, "$1")
+
 			name := workerProcessNameExtractor.ReplaceAllString(w3Name, "$2")
 			if name == "" || name == "_Total" ||
 				c.config.AppExclude.MatchString(name) ||
@@ -1912,9 +1945,11 @@ type perflibWebServiceCache struct {
 	ServiceCache_OutputCacheQueriesTotal       float64
 }
 
-func (c *Collector) collectWebServiceCache(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
-	logger = log.With(logger, "collector", Name)
+func (c *Collector) collectWebServiceCache(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+	logger = logger.With(slog.String("collector", Name))
+
 	var WebServiceCache []perflibWebServiceCache
+
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["Web Service Cache"], &WebServiceCache, logger); err != nil {
 		return err
 	}

@@ -3,11 +3,11 @@ package mscluster
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"slices"
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
@@ -213,15 +213,15 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ log.Logger) ([]string, error) {
+func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
 	return []string{"Memory"}, nil
 }
 
-func (c *Collector) Close() error {
+func (c *Collector) Close(_ *slog.Logger) error {
 	return nil
 }
 
-func (c *Collector) Build(_ log.Logger, wmiClient *wmi.Client) error {
+func (c *Collector) Build(_ *slog.Logger, wmiClient *wmi.Client) error {
 	if len(c.config.CollectorsEnabled) == 0 {
 		return nil
 	}
@@ -257,7 +257,7 @@ func (c *Collector) Build(_ log.Logger, wmiClient *wmi.Client) error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(_ *types.ScrapeContext, _ log.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(_ *types.ScrapeContext, _ *slog.Logger, ch chan<- prometheus.Metric) error {
 	if len(c.config.CollectorsEnabled) == 0 {
 		return nil
 	}

@@ -4,10 +4,9 @@ package vmware_blast
 
 import (
 	"errors"
+	"log/slog"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
@@ -139,17 +138,18 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ log.Logger) ([]string, error) {
+func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
 	return []string{}, nil
 }
 
-func (c *Collector) Close() error {
+func (c *Collector) Close(_ *slog.Logger) error {
 	return nil
 }
 
-func (c *Collector) Build(logger log.Logger, wmiClient *wmi.Client) error {
-	_ = level.Warn(logger).
-		Log("msg", "vmware_blast collector is deprecated and will be removed in the future.", "collector", Name)
+func (c *Collector) Build(logger *slog.Logger, wmiClient *wmi.Client) error {
+	logger.Warn("vmware_blast collector is deprecated and will be removed in the future.",
+		slog.String("collector", Name),
+	)
 
 	if wmiClient == nil || wmiClient.SWbemServicesClient == nil {
 		return errors.New("wmiClient or SWbemServicesClient is nil")
@@ -582,61 +582,110 @@ func (c *Collector) Build(logger log.Logger, wmiClient *wmi.Client) error {
 		nil,
 		nil,
 	)
+
 	return nil
 }
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(_ *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
-	logger = log.With(logger, "collector", Name)
+func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+	logger = logger.With(slog.String("collector", Name))
 	if err := c.collectAudio(ch); err != nil {
-		_ = level.Error(logger).Log("msg", "failed collecting vmware blast audio metrics", "err", err)
+		logger.Error("failed collecting vmware blast audio metrics",
+			slog.Any("err", err),
+		)
+
 		return err
 	}
+
 	if err := c.collectCdr(ch); err != nil {
-		_ = level.Error(logger).Log("msg", "failed collecting vmware blast CDR metrics", "err", err)
+		logger.Error("failed collecting vmware blast CDR metrics",
+			slog.Any("err", err),
+		)
+
 		return err
 	}
+
 	if err := c.collectClipboard(ch); err != nil {
-		_ = level.Error(logger).Log("msg", "failed collecting vmware blast clipboard metrics", "err", err)
+		logger.Error("failed collecting vmware blast clipboard metrics",
+			slog.Any("err", err),
+		)
+
 		return err
 	}
+
 	if err := c.collectHtml5Mmr(ch); err != nil {
-		_ = level.Error(logger).Log("msg", "failed collecting vmware blast HTML5 MMR metrics", "err", err)
+		logger.Error("failed collecting vmware blast HTML5 MMR metrics",
+			slog.Any("err", err),
+		)
+
 		return err
 	}
+
 	if err := c.collectImaging(ch); err != nil {
-		_ = level.Error(logger).Log("msg", "failed collecting vmware blast imaging metrics", "err", err)
+		logger.Error("failed collecting vmware blast imaging metrics",
+			slog.Any("err", err),
+		)
+
 		return err
 	}
+
 	if err := c.collectRtav(ch); err != nil {
-		_ = level.Error(logger).Log("msg", "failed collecting vmware blast RTAV metrics", "err", err)
+		logger.Error("failed collecting vmware blast RTAV metrics",
+			slog.Any("err", err),
+		)
+
 		return err
 	}
+
 	if err := c.collectSerialPortandScanner(ch); err != nil {
-		_ = level.Error(logger).Log("msg", "failed collecting vmware blast serial port and scanner metrics", "err", err)
+		logger.Error("failed collecting vmware blast serial port and scanner metrics",
+			slog.Any("err", err),
+		)
+
 		return err
 	}
+
 	if err := c.collectSession(ch); err != nil {
-		_ = level.Error(logger).Log("msg", "failed collecting vmware blast metrics", "err", err)
+		logger.Error("failed collecting vmware blast metrics",
+			slog.Any("err", err),
+		)
+
 		return err
 	}
+
 	if err := c.collectSkypeforBusinessControl(ch); err != nil {
-		_ = level.Error(logger).Log("msg", "failed collecting vmware blast skype for business control metrics", "err", err)
+		logger.Error("failed collecting vmware blast skype for business control metrics",
+			slog.Any("err", err),
+		)
+
 		return err
 	}
+
 	if err := c.collectThinPrint(ch); err != nil {
-		_ = level.Error(logger).Log("msg", "failed collecting vmware blast thin print metrics", "err", err)
+		logger.Error("failed collecting vmware blast thin print metrics",
+			slog.Any("err", err),
+		)
+
 		return err
 	}
+
 	if err := c.collectUsb(ch); err != nil {
-		_ = level.Error(logger).Log("msg", "failed collecting vmware blast USB metrics", "err", err)
+		logger.Error("failed collecting vmware blast USB metrics",
+			slog.Any("err", err),
+		)
+
 		return err
 	}
+
 	if err := c.collectWindowsMediaMmr(ch); err != nil {
-		_ = level.Error(logger).Log("msg", "failed collecting vmware blast windows media MMR metrics", "err", err)
+		logger.Error("failed collecting vmware blast windows media MMR metrics",
+			slog.Any("err", err),
+		)
+
 		return err
 	}
+
 	return nil
 }
 

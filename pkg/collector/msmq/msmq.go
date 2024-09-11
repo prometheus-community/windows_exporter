@@ -4,11 +4,10 @@ package msmq
 
 import (
 	"errors"
+	"log/slog"
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus-community/windows_exporter/pkg/utils"
 	"github.com/prometheus/client_golang/prometheus"
@@ -68,16 +67,16 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ log.Logger) ([]string, error) {
+func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
 	return []string{}, nil
 }
 
-func (c *Collector) Close() error {
+func (c *Collector) Close(_ *slog.Logger) error {
 	return nil
 }
 
-func (c *Collector) Build(logger log.Logger, wmiClient *wmi.Client) error {
-	logger = log.With(logger, "collector", Name)
+func (c *Collector) Build(logger *slog.Logger, wmiClient *wmi.Client) error {
+	logger = logger.With(slog.String("collector", Name))
 
 	if wmiClient == nil || wmiClient.SWbemServicesClient == nil {
 		return errors.New("wmiClient or SWbemServicesClient is nil")
@@ -86,7 +85,7 @@ func (c *Collector) Build(logger log.Logger, wmiClient *wmi.Client) error {
 	c.wmiClient = wmiClient
 
 	if *c.config.QueryWhereClause == "" {
-		_ = level.Warn(logger).Log("msg", "No where-clause specified for msmq collector. This will generate a very large number of metrics!")
+		logger.Warn("No where-clause specified for msmq collector. This will generate a very large number of metrics!")
 	}
 
 	c.bytesInJournalQueue = prometheus.NewDesc(
@@ -113,17 +112,22 @@ func (c *Collector) Build(logger log.Logger, wmiClient *wmi.Client) error {
 		[]string{"name"},
 		nil,
 	)
+
 	return nil
 }
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(_ *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
-	logger = log.With(logger, "collector", Name)
+func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+	logger = logger.With(slog.String("collector", Name))
 	if err := c.collect(ch); err != nil {
-		_ = level.Error(logger).Log("msg", "failed collecting msmq metrics", "err", err)
+		logger.Error("failed collecting msmq metrics",
+			slog.Any("err", err),
+		)
+
 		return err
 	}
+
 	return nil
 }
 

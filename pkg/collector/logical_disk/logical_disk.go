@@ -5,14 +5,13 @@ package logical_disk
 import (
 	"encoding/binary"
 	"fmt"
+	"log/slog"
 	"regexp"
 	"slices"
 	"strconv"
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/prometheus-community/windows_exporter/pkg/perflib"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
@@ -124,15 +123,15 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ log.Logger) ([]string, error) {
+func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
 	return []string{"LogicalDisk"}, nil
 }
 
-func (c *Collector) Close() error {
+func (c *Collector) Close(_ *slog.Logger) error {
 	return nil
 }
 
-func (c *Collector) Build(_ log.Logger, _ *wmi.Client) error {
+func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 	c.information = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "info"),
 		"A metric with a constant '1' value labeled with logical disk information",
@@ -262,12 +261,16 @@ func (c *Collector) Build(_ log.Logger, _ *wmi.Client) error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
-	logger = log.With(logger, "collector", Name)
+func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+	logger = logger.With(slog.String("collector", Name))
 	if err := c.collect(ctx, logger, ch); err != nil {
-		_ = level.Error(logger).Log("msg", "failed collecting logical_disk metrics", "err", err)
+		logger.Error("failed collecting logical_disk metrics",
+			slog.Any("err", err),
+		)
+
 		return err
 	}
+
 	return nil
 }
 
@@ -294,8 +297,9 @@ type logicalDisk struct {
 	AvgDiskSecPerTransfer   float64 `perflib:"Avg. Disk sec/Transfer"`
 }
 
-func (c *Collector) collect(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
-	logger = log.With(logger, "collector", Name)
+func (c *Collector) collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+	logger = logger.With(slog.String("collector", Name))
+
 	var (
 		err    error
 		diskID string
@@ -316,12 +320,16 @@ func (c *Collector) collect(ctx *types.ScrapeContext, logger log.Logger, ch chan
 
 		diskID, err = getDiskIDByVolume(volume.Name)
 		if err != nil {
-			_ = level.Warn(logger).Log("msg", "failed to get disk ID for "+volume.Name, "err", err)
+			logger.Warn("failed to get disk ID for "+volume.Name,
+				slog.Any("err", err),
+			)
 		}
 
 		info, err = getVolumeInfo(volume.Name)
 		if err != nil {
-			_ = level.Warn(logger).Log("msg", "failed to get volume information for %s"+volume.Name, "err", err)
+			logger.Warn("failed to get volume information for %s"+volume.Name,
+				slog.Any("err", err),
+			)
 		}
 
 		ch <- prometheus.MustNewConstMetric(
@@ -480,11 +488,13 @@ const diskExtentSize = 24
 func getDiskIDByVolume(rootDrive string) (string, error) {
 	// Open a volume handle to the Disk Root.
 	var err error
+
 	var f windows.Handle
 
 	// mode has to include FILE_SHARE permission to allow concurrent access to the disk.
 	// use 0 as access mode to avoid admin permission.
 	mode := uint32(windows.FILE_SHARE_READ | windows.FILE_SHARE_WRITE | windows.FILE_SHARE_DELETE)
+
 	f, err = windows.CreateFile(
 		windows.StringToUTF16Ptr(`\\.\`+rootDrive),
 		0, mode, nil, windows.OPEN_EXISTING, uint32(windows.FILE_ATTRIBUTE_READONLY), 0)
@@ -498,6 +508,7 @@ func getDiskIDByVolume(rootDrive string) (string, error) {
 	volumeDiskExtents := make([]byte, 16*1024)
 
 	var bytesReturned uint32
+
 	err = windows.DeviceIoControl(f, controlCode, nil, 0, &volumeDiskExtents[0], uint32(len(volumeDiskExtents)), &bytesReturned, nil)
 	if err != nil {
 		return "", fmt.Errorf("could not identify physical drive for %s: %w", rootDrive, err)

@@ -3,11 +3,9 @@ package perflib
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"reflect"
 	"strings"
-
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 )
 
 // Conversion factors.
@@ -16,14 +14,16 @@ const (
 	WindowsEpoch             = 116444736000000000
 )
 
-func UnmarshalObject(obj *PerfObject, vs interface{}, logger log.Logger) error {
+func UnmarshalObject(obj *PerfObject, vs interface{}, logger *slog.Logger) error {
 	if obj == nil {
 		return errors.New("counter not found")
 	}
+
 	rv := reflect.ValueOf(vs)
 	if rv.Kind() != reflect.Ptr || rv.IsNil() {
 		return fmt.Errorf("%v is nil or not a pointer to slice", reflect.TypeOf(vs))
 	}
+
 	ev := rv.Elem()
 	if ev.Kind() != reflect.Slice {
 		return fmt.Errorf("%v is not slice", reflect.TypeOf(vs))
@@ -40,6 +40,7 @@ func UnmarshalObject(obj *PerfObject, vs interface{}, logger log.Logger) error {
 		rt := target.Type()
 
 		counters := make(map[string]*PerfCounter, len(instance.Counters))
+
 		for _, ctr := range instance.Counters {
 			if ctr.Def.IsBaseValue && !ctr.Def.IsNanosecondCounter {
 				counters[ctr.Def.Name+"_Base"] = ctr
@@ -50,10 +51,12 @@ func UnmarshalObject(obj *PerfObject, vs interface{}, logger log.Logger) error {
 
 		for i := range target.NumField() {
 			f := rt.Field(i)
+
 			tag := f.Tag.Get("perflib")
 			if tag == "" {
 				continue
 			}
+
 			secondValue := false
 
 			st := strings.Split(tag, ",")
@@ -67,12 +70,15 @@ func UnmarshalObject(obj *PerfObject, vs interface{}, logger log.Logger) error {
 
 			ctr, found := counters[tag]
 			if !found {
-				_ = level.Debug(logger).Log("msg", fmt.Sprintf("missing counter %q, have %v", tag, counterMapKeys(counters)))
+				logger.Debug(fmt.Sprintf("missing counter %q, have %v", tag, counterMapKeys(counters)))
+
 				continue
 			}
+
 			if !target.Field(i).CanSet() {
 				return fmt.Errorf("tagged field %v cannot be written to", f.Name)
 			}
+
 			if fieldType := target.Field(i).Type(); fieldType != reflect.TypeOf((*float64)(nil)).Elem() {
 				return fmt.Errorf("tagged field %v has wrong type %v, must be float64", f.Name, fieldType)
 			}
@@ -81,7 +87,9 @@ func UnmarshalObject(obj *PerfObject, vs interface{}, logger log.Logger) error {
 				if !ctr.Def.HasSecondValue {
 					return fmt.Errorf("tagged field %v expected a SecondValue, which was not present", f.Name)
 				}
+
 				target.Field(i).SetFloat(float64(ctr.SecondValue))
+
 				continue
 			}
 
@@ -108,5 +116,6 @@ func counterMapKeys(m map[string]*PerfCounter) []string {
 	for k := range m {
 		keys = append(keys, k)
 	}
+
 	return keys
 }

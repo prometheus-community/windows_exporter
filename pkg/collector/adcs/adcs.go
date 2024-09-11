@@ -4,11 +4,10 @@ package adcs
 
 import (
 	"errors"
+	"log/slog"
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/prometheus-community/windows_exporter/pkg/perflib"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus-community/windows_exporter/pkg/utils"
@@ -60,15 +59,15 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ log.Logger) ([]string, error) {
+func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
 	return []string{"Certification Authority"}, nil
 }
 
-func (c *Collector) Close() error {
+func (c *Collector) Close(_ *slog.Logger) error {
 	return nil
 }
 
-func (c *Collector) Build(_ log.Logger, _ *wmi.Client) error {
+func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 	c.requestsPerSecond = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "requests_total"),
 		"Total certificate requests processed",
@@ -151,12 +150,16 @@ func (c *Collector) Build(_ log.Logger, _ *wmi.Client) error {
 	return nil
 }
 
-func (c *Collector) Collect(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
-	logger = log.With(logger, "collector", Name)
+func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+	logger = logger.With(slog.String("collector", Name))
 	if err := c.collectADCSCounters(ctx, logger, ch); err != nil {
-		_ = level.Error(logger).Log("msg", "failed collecting ADCS metrics", "err", err)
+		logger.Error("failed collecting ADCS metrics",
+			slog.Any("err", err),
+		)
+
 		return err
 	}
+
 	return nil
 }
 
@@ -177,15 +180,18 @@ type perflibADCS struct {
 	SignedCertificateTimestampListProcessingTime float64 `perflib:"Signed Certificate Timestamp List processing time (ms)"`
 }
 
-func (c *Collector) collectADCSCounters(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) collectADCSCounters(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	dst := make([]perflibADCS, 0)
+
 	if _, ok := ctx.PerfObjects["Certification Authority"]; !ok {
 		return errors.New("perflib did not contain an entry for Certification Authority")
 	}
+
 	err := perflib.UnmarshalObject(ctx.PerfObjects["Certification Authority"], &dst, logger)
 	if err != nil {
 		return err
 	}
+
 	if len(dst) == 0 {
 		return errors.New("perflib query for Certification Authority (ADCS) returned empty result set")
 	}

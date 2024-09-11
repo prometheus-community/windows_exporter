@@ -3,10 +3,11 @@
 package testutils
 
 import (
+	"io"
+	"log/slog"
 	"testing"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
 	"github.com/prometheus-community/windows_exporter/pkg/collector"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/require"
@@ -15,7 +16,7 @@ import (
 func FuncBenchmarkCollector[C collector.Collector](b *testing.B, name string, collectFunc collector.BuilderWithFlags[C]) {
 	b.Helper()
 
-	logger := log.NewNopLogger()
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 
 	c := collectFunc(kingpin.CommandLine)
 	collectors := collector.New(map[string]collector.Collector{name: c})
@@ -28,6 +29,7 @@ func FuncBenchmarkCollector[C collector.Collector](b *testing.B, name string, co
 	require.NoError(b, err)
 
 	metrics := make(chan prometheus.Metric)
+
 	go func() {
 		for {
 			<-metrics

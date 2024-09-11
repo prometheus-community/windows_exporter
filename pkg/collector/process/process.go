@@ -5,15 +5,13 @@ package process
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"regexp"
 	"strconv"
 	"strings"
-	"syscall"
 	"unsafe"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/prometheus-community/windows_exporter/pkg/perflib"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
@@ -124,16 +122,16 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ log.Logger) ([]string, error) {
+func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
 	return []string{"Process"}, nil
 }
 
-func (c *Collector) Close() error {
+func (c *Collector) Close(_ *slog.Logger) error {
 	return nil
 }
 
-func (c *Collector) Build(logger log.Logger, wmiClient *wmi.Client) error {
-	logger = log.With(logger, "collector", Name)
+func (c *Collector) Build(logger *slog.Logger, wmiClient *wmi.Client) error {
+	logger = logger.With(slog.String("collector", Name))
 
 	if wmiClient == nil || wmiClient.SWbemServicesClient == nil {
 		return errors.New("wmiClient or SWbemServicesClient is nil")
@@ -142,7 +140,7 @@ func (c *Collector) Build(logger log.Logger, wmiClient *wmi.Client) error {
 	c.wmiClient = wmiClient
 
 	if c.config.ProcessInclude.String() == "^(?:.*)$" && c.config.ProcessExclude.String() == "^(?:)$" {
-		_ = level.Warn(logger).Log("msg", "No filters specified for process collector. This will generate a very large number of metrics!")
+		logger.Warn("No filters specified for process collector. This will generate a very large number of metrics!")
 	}
 
 	c.info = prometheus.NewDesc(
@@ -285,9 +283,10 @@ type WorkerProcess struct {
 	ProcessId   uint64
 }
 
-func (c *Collector) Collect(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
-	logger = log.With(logger, "collector", Name)
+func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+	logger = logger.With(slog.String("collector", Name))
 	data := make([]perflibProcess, 0)
+
 	err := perflib.UnmarshalObject(ctx.PerfObjects["Process"], &data, logger)
 	if err != nil {
 		return err
@@ -296,7 +295,9 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, logger log.Logger, ch chan
 	var workerProcesses []WorkerProcess
 	if c.config.EnableWorkerProcess {
 		if err := c.wmiClient.Query("SELECT * FROM WorkerProcess", &workerProcesses, nil, "root\\WebAdministration"); err != nil {
-			_ = level.Debug(logger).Log("msg", "Could not query WebAdministration namespace for IIS worker processes", "err", err)
+			logger.Debug("Could not query WebAdministration namespace for IIS worker processes",
+				slog.Any("err", err),
+			)
 		}
 	}
 
@@ -316,6 +317,7 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, logger log.Logger, ch chan
 			for _, wp := range workerProcesses {
 				if wp.ProcessId == uint64(process.IDProcess) {
 					processName = strings.Join([]string{processName, wp.AppPoolName}, "_")
+
 					break
 				}
 			}
@@ -323,7 +325,10 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, logger log.Logger, ch chan
 
 		cmdLine, processOwner, processGroupID, err := c.getProcessInformation(logger, uint32(process.IDProcess))
 		if err != nil {
-			_ = level.Debug(logger).Log("msg", "Failed to get process information", "pid", pid, "err", err)
+			logger.Debug("Failed to get process information",
+				slog.String("pid", pid),
+				slog.Any("err", err),
+			)
 		}
 
 		ch <- prometheus.MustNewConstMetric(
@@ -485,7 +490,7 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, logger log.Logger, ch chan
 }
 
 // ref: https://github.com/microsoft/hcsshim/blob/8beabacfc2d21767a07c20f8dd5f9f3932dbf305/internal/uvm/stats.go#L25
-func (c *Collector) getProcessInformation(logger log.Logger, pid uint32) (string, string, uint32, error) {
+func (c *Collector) getProcessInformation(logger *slog.Logger, pid uint32) (string, string, uint32, error) {
 	if pid == 0 {
 		return "", "", 0, nil
 	}
@@ -501,7 +506,9 @@ func (c *Collector) getProcessInformation(logger log.Logger, pid uint32) (string
 
 	defer func(hProcess windows.Handle) {
 		if err := windows.CloseHandle(hProcess); err != nil {
-			_ = level.Warn(logger).Log("msg", "CloseHandle failed", "err", err)
+			logger.Warn("CloseHandle failed",
+				slog.Any("err", err),
+			)
 		}
 	}(hProcess)
 
@@ -528,12 +535,14 @@ func (c *Collector) getProcessInformation(logger log.Logger, pid uint32) (string
 func (c *Collector) getExtendedProcessInformation(hProcess windows.Handle) (string, uint32, error) {
 	// Get the process environment block (PEB) address
 	var pbi windows.PROCESS_BASIC_INFORMATION
+
 	retLen := uint32(unsafe.Sizeof(pbi))
 	if err := windows.NtQueryInformationProcess(hProcess, windows.ProcessBasicInformation, unsafe.Pointer(&pbi), retLen, &retLen); err != nil {
 		return "", 0, fmt.Errorf("failed to query process basic information: %w", err)
 	}
 
 	peb := windows.PEB{}
+
 	err := windows.ReadProcessMemory(hProcess,
 		uintptr(unsafe.Pointer(pbi.PebBaseAddress)),
 		(*byte)(unsafe.Pointer(&peb)),
@@ -545,6 +554,7 @@ func (c *Collector) getExtendedProcessInformation(hProcess windows.Handle) (stri
 	}
 
 	processParameters := windows.RTL_USER_PROCESS_PARAMETERS{}
+
 	err = windows.ReadProcessMemory(hProcess,
 		uintptr(unsafe.Pointer(peb.ProcessParameters)),
 		(*byte)(unsafe.Pointer(&processParameters)),
@@ -570,7 +580,7 @@ func (c *Collector) getExtendedProcessInformation(hProcess windows.Handle) (stri
 	return strings.TrimSpace(windows.UTF16ToString(cmdLineUTF16)), processParameters.ProcessGroupId, nil
 }
 
-func (c *Collector) getProcessOwner(logger log.Logger, hProcess windows.Handle) (string, error) {
+func (c *Collector) getProcessOwner(logger *slog.Logger, hProcess windows.Handle) (string, error) {
 	var tok windows.Token
 
 	if err := windows.OpenProcessToken(hProcess, windows.TOKEN_QUERY, &tok); err != nil {
@@ -583,7 +593,9 @@ func (c *Collector) getProcessOwner(logger log.Logger, hProcess windows.Handle) 
 
 	defer func(tok windows.Token) {
 		if err := tok.Close(); err != nil {
-			_ = level.Warn(logger).Log("msg", "Token close failed", "err", err)
+			logger.Warn("Token close failed",
+				slog.Any("err", err),
+			)
 		}
 	}(tok)
 
@@ -620,7 +632,7 @@ func (c *Collector) openProcess(pid uint32) (windows.Handle, bool, error) {
 		return 0, false, fmt.Errorf("failed to open process: %w", err)
 	}
 
-	if errors.Is(err, syscall.Errno(0x57)) { // invalid parameter, for PIDs that don't exist
+	if errors.Is(err, windows.Errno(0x57)) { // invalid parameter, for PIDs that don't exist
 		return 0, false, errors.New("process not found")
 	}
 

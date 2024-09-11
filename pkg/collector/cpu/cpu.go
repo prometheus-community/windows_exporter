@@ -3,13 +3,12 @@
 package cpu
 
 import (
+	"log/slog"
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
 	"github.com/prometheus-community/windows_exporter/pkg/perflib"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
-	"github.com/prometheus-community/windows_exporter/pkg/winversion"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
 )
@@ -23,6 +22,7 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	config Config
 
+	logicalProcessors          *prometheus.Desc
 	cStateSecondsTotal         *prometheus.Desc
 	timeTotal                  *prometheus.Desc
 	interruptsTotal            *prometheus.Desc
@@ -58,18 +58,22 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ log.Logger) ([]string, error) {
-	if winversion.WindowsVersionFloat() > 6.05 {
-		return []string{"Processor Information"}, nil
-	}
-	return []string{"Processor"}, nil
+func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
+	return []string{"Processor Information"}, nil
 }
 
-func (c *Collector) Close() error {
+func (c *Collector) Close(_ *slog.Logger) error {
 	return nil
 }
 
-func (c *Collector) Build(_ log.Logger, _ *wmi.Client) error {
+func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
+	c.logicalProcessors = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "logical_processor"),
+		"Total number of logical processors",
+		nil,
+		nil,
+	)
+
 	c.cStateSecondsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "cstate_seconds_total"),
 		"Time spent in low-power idle state",
@@ -94,16 +98,6 @@ func (c *Collector) Build(_ log.Logger, _ *wmi.Client) error {
 		[]string{"core"},
 		nil,
 	)
-
-	// For Windows 2008 (version 6.0) or earlier we only have the "Processor"
-	// class. As of Windows 2008 R2 (version 6.1) the more detailed
-	// "Processor Information" set is available (although some of the counters
-	// are added in later versions, so we aren't guaranteed to get all of
-	// them).
-	// Value 6.05 was selected to split between Windows versions.
-	if winversion.WindowsVersionFloat() < 6.05 {
-		return nil
-	}
 
 	c.cStateSecondsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "cstate_seconds_total"),
@@ -187,113 +181,10 @@ func (c *Collector) Build(_ log.Logger, _ *wmi.Client) error {
 	return nil
 }
 
-func (c *Collector) Collect(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
-	logger = log.With(logger, "collector", Name)
-	if winversion.WindowsVersionFloat() > 6.05 {
-		return c.CollectFull(ctx, logger, ch)
-	}
+func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+	logger = logger.With(slog.String("collector", Name))
 
-	return c.CollectBasic(ctx, logger, ch)
-}
-
-type perflibProcessor struct {
-	Name                  string
-	C1Transitions         float64 `perflib:"C1 Transitions/sec"`
-	C2Transitions         float64 `perflib:"C2 Transitions/sec"`
-	C3Transitions         float64 `perflib:"C3 Transitions/sec"`
-	DPCRate               float64 `perflib:"DPC Rate"`
-	DPCsQueued            float64 `perflib:"DPCs Queued/sec"`
-	Interrupts            float64 `perflib:"Interrupts/sec"`
-	PercentC1Time         float64 `perflib:"% C1 Time"`
-	PercentC2Time         float64 `perflib:"% C2 Time"`
-	PercentC3Time         float64 `perflib:"% C3 Time"`
-	PercentDPCTime        float64 `perflib:"% DPC Time"`
-	PercentIdleTime       float64 `perflib:"% Idle Time"`
-	PercentInterruptTime  float64 `perflib:"% Interrupt Time"`
-	PercentPrivilegedTime float64 `perflib:"% Privileged Time"`
-	PercentProcessorTime  float64 `perflib:"% Processor Time"`
-	PercentUserTime       float64 `perflib:"% User Time"`
-}
-
-func (c *Collector) CollectBasic(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
-	logger = log.With(logger, "collector", Name)
-	data := make([]perflibProcessor, 0)
-	err := perflib.UnmarshalObject(ctx.PerfObjects["Processor"], &data, logger)
-	if err != nil {
-		return err
-	}
-
-	for _, cpu := range data {
-		if strings.Contains(strings.ToLower(cpu.Name), "_total") {
-			continue
-		}
-		core := cpu.Name
-
-		ch <- prometheus.MustNewConstMetric(
-			c.cStateSecondsTotal,
-			prometheus.CounterValue,
-			cpu.PercentC1Time,
-			core, "c1",
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.cStateSecondsTotal,
-			prometheus.CounterValue,
-			cpu.PercentC2Time,
-			core, "c2",
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.cStateSecondsTotal,
-			prometheus.CounterValue,
-			cpu.PercentC3Time,
-			core, "c3",
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.timeTotal,
-			prometheus.CounterValue,
-			cpu.PercentIdleTime,
-			core, "idle",
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.timeTotal,
-			prometheus.CounterValue,
-			cpu.PercentInterruptTime,
-			core, "interrupt",
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.timeTotal,
-			prometheus.CounterValue,
-			cpu.PercentDPCTime,
-			core, "dpc",
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.timeTotal,
-			prometheus.CounterValue,
-			cpu.PercentPrivilegedTime,
-			core, "privileged",
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.timeTotal,
-			prometheus.CounterValue,
-			cpu.PercentUserTime,
-			core, "user",
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.interruptsTotal,
-			prometheus.CounterValue,
-			cpu.Interrupts,
-			core,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.dpcsTotal,
-			prometheus.CounterValue,
-			cpu.DPCsQueued,
-			core,
-		)
-	}
-
-	return nil
+	return c.CollectFull(ctx, logger, ch)
 }
 
 type perflibProcessorInformation struct {
@@ -325,19 +216,25 @@ type perflibProcessorInformation struct {
 	UserTimeSeconds          float64 `perflib:"% User Time"`
 }
 
-func (c *Collector) CollectFull(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
-	logger = log.With(logger, "collector", Name)
+func (c *Collector) CollectFull(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+	logger = logger.With(slog.String("collector", Name))
 	data := make([]perflibProcessorInformation, 0)
+
 	err := perflib.UnmarshalObject(ctx.PerfObjects["Processor Information"], &data, logger)
 	if err != nil {
 		return err
 	}
 
+	var coreCount float64
+
 	for _, cpu := range data {
 		if strings.Contains(strings.ToLower(cpu.Name), "_total") {
 			continue
 		}
+
 		core := cpu.Name
+
+		coreCount++
 
 		ch <- prometheus.MustNewConstMetric(
 			c.cStateSecondsTotal,
@@ -458,6 +355,12 @@ func (c *Collector) CollectFull(ctx *types.ScrapeContext, logger log.Logger, ch 
 			core,
 		)
 	}
+
+	ch <- prometheus.MustNewConstMetric(
+		c.logicalProcessors,
+		prometheus.GaugeValue,
+		coreCount,
+	)
 
 	return nil
 }

@@ -2,11 +2,9 @@ package wtsapi32
 
 import (
 	"fmt"
-	"syscall"
+	"log/slog"
 	"unsafe"
 
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"golang.org/x/sys/windows"
 )
 
@@ -105,30 +103,30 @@ var (
 	}
 )
 
-func WTSOpenServer(server string) (syscall.Handle, error) {
+func WTSOpenServer(server string) (windows.Handle, error) {
 	var (
 		err        error
 		serverName *uint16
 	)
 
 	if server != "" {
-		serverName, err = syscall.UTF16PtrFromString(server)
+		serverName, err = windows.UTF16PtrFromString(server)
 		if err != nil {
-			return syscall.InvalidHandle, err
+			return windows.InvalidHandle, err
 		}
 	}
 
 	r1, _, err := procWTSOpenServerEx.Call(uintptr(unsafe.Pointer(serverName)))
-	serverHandle := syscall.Handle(r1)
+	serverHandle := windows.Handle(r1)
 
-	if serverHandle == syscall.InvalidHandle {
-		return syscall.InvalidHandle, err
+	if serverHandle == windows.InvalidHandle {
+		return windows.InvalidHandle, err
 	}
 
 	return serverHandle, nil
 }
 
-func WTSCloseServer(server syscall.Handle) error {
+func WTSCloseServer(server windows.Handle) error {
 	r1, _, err := procWTSCloseServer.Call(uintptr(server))
 
 	if r1 != 1 {
@@ -152,8 +150,9 @@ func WTSFreeMemoryEx(class WTSTypeClass, pMemory uintptr, numberOfEntries uint32
 	return nil
 }
 
-func WTSEnumerateSessionsEx(server syscall.Handle, logger log.Logger) ([]WTSSession, error) {
+func WTSEnumerateSessionsEx(server windows.Handle, logger *slog.Logger) ([]WTSSession, error) {
 	var sessionInfoPointer uintptr
+
 	var count uint32
 
 	pLevel := uint32(1)
@@ -173,7 +172,7 @@ func WTSEnumerateSessionsEx(server syscall.Handle, logger log.Logger) ([]WTSSess
 		defer func(class WTSTypeClass, pMemory uintptr, NumberOfEntries uint32) {
 			err := WTSFreeMemoryEx(class, pMemory, NumberOfEntries)
 			if err != nil {
-				_ = level.Error(logger).Log("msg", "failed to free memory", "err", fmt.Errorf("WTSEnumerateSessionsEx: %w", err))
+				logger.Warn("failed to free memory", "err", fmt.Errorf("WTSEnumerateSessionsEx: %w", err))
 			}
 		}(WTSTypeSessionInfoLevel1, sessionInfoPointer, count)
 	}
@@ -182,6 +181,7 @@ func WTSEnumerateSessionsEx(server syscall.Handle, logger log.Logger) ([]WTSSess
 	sessionSize := unsafe.Sizeof(sizeTest)
 
 	sessions := make([]WTSSession, 0, count)
+
 	for i := range count {
 		curPtr := unsafe.Pointer(sessionInfoPointer + (uintptr(i) * sessionSize))
 		data := (*wtsSessionInfo1)(curPtr)

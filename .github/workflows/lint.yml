@@ -12,6 +12,8 @@ on:
     - "tools/e2e-output.txt"
     branches:
       - master
+      - next
+      - main
   pull_request:
     paths:
     - "go.mod"
@@ -21,6 +23,8 @@ on:
     - "tools/e2e-output.txt"
     branches:
       - master
+      - next
+      - main
 
 env:
   VERSION_PROMU: '0.14.0'
@@ -101,4 +105,4 @@ jobs:
         uses: golangci/golangci-lint-action@v6
         with:
           version: v1.60
-          args: "--timeout=5m --max-same-issues=0"
+          args: "--max-same-issues=0"

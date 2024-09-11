@@ -3,11 +3,10 @@
 package remote_fx
 
 import (
+	"log/slog"
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/prometheus-community/windows_exporter/pkg/perflib"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus-community/windows_exporter/pkg/utils"
@@ -74,15 +73,15 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ log.Logger) ([]string, error) {
+func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
 	return []string{"RemoteFX Network", "RemoteFX Graphics"}, nil
 }
 
-func (c *Collector) Close() error {
+func (c *Collector) Close(_ *slog.Logger) error {
 	return nil
 }
 
-func (c *Collector) Build(log.Logger, *wmi.Client) error {
+func (c *Collector) Build(*slog.Logger, *wmi.Client) error {
 	// net
 	c.baseTCPRTT = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "net_base_tcp_rtt_seconds"),
@@ -206,21 +205,30 @@ func (c *Collector) Build(log.Logger, *wmi.Client) error {
 		[]string{"session_name"},
 		nil,
 	)
+
 	return nil
 }
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
-	logger = log.With(logger, "collector", Name)
+func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+	logger = logger.With(slog.String("collector", Name))
 	if err := c.collectRemoteFXNetworkCount(ctx, logger, ch); err != nil {
-		_ = level.Error(logger).Log("msg", "failed collecting terminal services session count metrics", "err", err)
+		logger.Error("failed collecting terminal services session count metrics",
+			slog.Any("err", err),
+		)
+
 		return err
 	}
+
 	if err := c.collectRemoteFXGraphicsCounters(ctx, logger, ch); err != nil {
-		_ = level.Error(logger).Log("msg", "failed collecting terminal services session count metrics", "err", err)
+		logger.Error("failed collecting terminal services session count metrics",
+			slog.Any("err", err),
+		)
+
 		return err
 	}
+
 	return nil
 }
 
@@ -241,9 +249,10 @@ type perflibRemoteFxNetwork struct {
 	RetransmissionRate       float64 `perflib:"Percentage of packets that have been retransmitted"`
 }
 
-func (c *Collector) collectRemoteFXNetworkCount(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
-	logger = log.With(logger, "collector", Name)
+func (c *Collector) collectRemoteFXNetworkCount(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+	logger = logger.With(slog.String("collector", Name))
 	dst := make([]perflibRemoteFxNetwork, 0)
+
 	err := perflib.UnmarshalObject(ctx.PerfObjects["RemoteFX Network"], &dst, logger)
 	if err != nil {
 		return err
@@ -336,6 +345,7 @@ func (c *Collector) collectRemoteFXNetworkCount(ctx *types.ScrapeContext, logger
 			normalizeSessionName(d.Name),
 		)
 	}
+
 	return nil
 }
 
@@ -352,9 +362,10 @@ type perflibRemoteFxGraphics struct {
 	SourceFramesPerSecond                              float64 `perflib:"Source Frames/Second"`
 }
 
-func (c *Collector) collectRemoteFXGraphicsCounters(ctx *types.ScrapeContext, logger log.Logger, ch chan<- prometheus.Metric) error {
-	logger = log.With(logger, "collector", Name)
+func (c *Collector) collectRemoteFXGraphicsCounters(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+	logger = logger.With(slog.String("collector", Name))
 	dst := make([]perflibRemoteFxGraphics, 0)
+
 	err := perflib.UnmarshalObject(ctx.PerfObjects["RemoteFX Graphics"], &dst, logger)
 	if err != nil {
 		return err
