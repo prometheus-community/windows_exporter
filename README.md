@@ -110,47 +110,55 @@ The configuration file
 
 The following parameters are available:
 
-| Name                 | Description                                                                                                                                                            |
-|----------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `ENABLED_COLLECTORS` | As the `--collectors.enabled` flag, provide a comma-separated list of enabled collectors                                                                               |
-| `LISTEN_ADDR`        | The IP address to bind to. Defaults to an empty string. (any local address)                                                                                            |
-| `LISTEN_PORT`        | The port to bind to. Defaults to `9182`.                                                                                                                               |
-| `METRICS_PATH`       | The path at which to serve metrics. Defaults to `/metrics`                                                                                                             |
-| `TEXTFILE_DIRS`      | Use the `--collector.textfile.directories` flag to specify one or more directories, separated by commas, where the collector should read text files containing metrics |
-| `REMOTE_ADDR`        | Allows setting comma separated remote IP addresses for the Windows Firewall exception (allow list). Defaults to an empty string (any remote address).                  |
-| `EXTRA_FLAGS`        | Allows passing full CLI flags. Defaults to an empty string.                                                                                                            |
-| `ADDLOCAL`           | Enables features within the windows_exporter installer. Supported values: `FirewallException`                                                                          |
-| `REMOVE`             | Disables features within the windows_exporter installer. Supported values: `FirewallException`                                                                         |
+| Name                 | Description                                                                                                                                                                        |
+|----------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `ENABLED_COLLECTORS` | As the `--collectors.enabled` flag, provide a comma-separated list of enabled collectors                                                                                           |
+| `CONFIG_FILE`        | Use the `--config.file` flag to specify a config file. If empty, no config file will be set. The special value `config.yaml` set the path to the config.yaml at install dir        |                                                                                     |
+| `LISTEN_ADDR`        | The IP address to bind to. Defaults to an empty string. (any local address)                                                                                                        |
+| `LISTEN_PORT`        | The port to bind to. Defaults to `9182`.                                                                                                                                           |
+| `METRICS_PATH`       | The path at which to serve metrics. Defaults to `/metrics`                                                                                                                         |
+| `TEXTFILE_DIRS`      | Use the `--collector.textfile.directories` flag to specify one or more directories, separated by commas, where the collector should read text files containing metrics             |
+| `REMOTE_ADDR`        | Allows setting comma separated remote IP addresses for the Windows Firewall exception (allow list). Defaults to an empty string (any remote address).                              |
+| `EXTRA_FLAGS`        | Allows passing full CLI flags. Defaults to an empty string. For `--collectors.enabled` and `--config.file`, use the specialized properties  `ENABLED_COLLECTORS` and `CONFIG_FILE` |
+| `ADDLOCAL`           | Enables features within the windows_exporter installer. Supported values: `FirewallException`                                                                                      |
+| `REMOVE`             | Disables features within the windows_exporter installer. Supported values: `FirewallException`                                                                                     |
 
-Parameters are sent to the installer via `msiexec`. Example invocations:
+Parameters are sent to the installer via `msiexec`.
+On PowerShell, the `--%` should be passed before defining properties.
+
+Example invocations:
 
 ```powershell
-msiexec /i <path-to-msi-file> ENABLED_COLLECTORS=os,iis LISTEN_PORT=5000
+msiexec /i <path-to-msi-file> --% ENABLED_COLLECTORS=os,iis LISTEN_PORT=5000
 ```
 
 Example service collector with a custom query.
 ```powershell
-msiexec /i <path-to-msi-file> ENABLED_COLLECTORS=os,service --% EXTRA_FLAGS="--collector.service.services-where ""Name LIKE 'sql%'"""
+msiexec /i <path-to-msi-file> --% ENABLED_COLLECTORS=os,service EXTRA_FLAGS="--collectors.exchange.enabled=""ADAccessProcesses"""
+```
+
+Define a config file.
+```powershell
+msiexec /i <path-to-msi-file> --% CONFIG_FILE="D:\config.yaml"
 ```
 
 On some older versions of Windows,
 you may need to surround parameter values with double quotes to get the installation command parsing properly:
 ```powershell
-msiexec /i C:\Users\Administrator\Downloads\windows_exporter.msi ENABLED_COLLECTORS="ad,iis,logon,memory,process,tcp,textfile,thermalzone" TEXTFILE_DIRS="C:\custom_metrics\"
+msiexec /i C:\Users\Administrator\Downloads\windows_exporter.msi --% ENABLED_COLLECTORS="ad,iis,logon,memory,process,tcp,textfile,thermalzone" TEXTFILE_DIRS="C:\custom_metrics\"
 ```
 
 To install the exporter with creating a firewall exception, use the following command:
 
 ```powershell
-msiexec /i <path-to-msi-file> ADDLOCAL=FirewallException
+msiexec /i <path-to-msi-file> --% ADDLOCAL=FirewallException
 ```
 
-
-Powershell versions 7.3 and above require [PSNativeCommandArgumentPassing](https://learn.microsoft.com/en-us/powershell/scripting/learn/experimental-features?view=powershell-7.3) to be set to `Legacy` when using `--% EXTRA_FLAGS`:
+PowerShell versions 7.3 and above require [PSNativeCommandArgumentPassing](https://learn.microsoft.com/en-us/powershell/scripting/learn/experimental-features?view=powershell-7.3) to be set to `Legacy` when using `--% EXTRA_FLAGS`:
 
 ```powershell
 $PSNativeCommandArgumentPassing = 'Legacy'
-msiexec /i <path-to-msi-file> ENABLED_COLLECTORS=os,service --% EXTRA_FLAGS="--collector.service.services-where ""Name LIKE 'sql%'"""
+msiexec /i <path-to-msi-file> ENABLED_COLLECTORS=os,service --% EXTRA_FLAGS="--collectors.exchange.enabled=""ADAccessProcesses"""
 ```
 
 ## Docker Implementation

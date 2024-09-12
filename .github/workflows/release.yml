@@ -26,6 +26,9 @@ jobs:
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: '0'
+
       - uses: actions/setup-go@v5
         with:
           go-version-file: 'go.mod'
@@ -88,12 +91,6 @@ jobs:
           
           Get-ChildItem -Path output
 
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: windows_exporter_binaries
-          path: output\windows_exporter-*.exe
-
       - name: Build Release Artifacts
         run: |
           $ErrorActionPreference = "Stop"
@@ -108,6 +105,14 @@ jobs:
           Get-ChildItem -Path output\
 
           promu checksum output\
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows_exporter_binaries
+          path: |
+            output\windows_exporter-*.exe
+            output\windows_exporter-*.msi
 
       - name: Build Docker Artifacts
         run: make build-all
