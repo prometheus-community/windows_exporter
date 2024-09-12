@@ -13,7 +13,7 @@
                     Start="auto"
                     Type="ownProcess"
                     Vital="yes"
-                    Arguments="--log.file eventlog --config.file=&quot;[APPLICATIONFOLDER]config.yaml&quot; [CollectorsFlag] [ListenFlag] [MetricsPathFlag] [TextfileDirsFlag] [ExtraFlags]">
+                    Arguments="--log.file eventlog [ConfigFile_NonDefault][ConfigFile_Default] [CollectorsFlag] [ListenFlag] [MetricsPathFlag] [TextfileDirsFlag] [ExtraFlags]">
                     <util:ServiceConfig
                         ResetPeriodInDays="1"
                         FirstFailureActionType="restart"
