@@ -298,13 +298,13 @@ windows_service_start_mode{name="Themes",start_mode="manual"} 0
 windows_service_start_mode{name="Themes",start_mode="system"} 0
 # HELP windows_service_state The state of the service (State)
 # TYPE windows_service_state gauge
-windows_service_state{name="Themes",status="continue pending"} 0
-windows_service_state{name="Themes",status="pause pending"} 0
-windows_service_state{name="Themes",status="paused"} 0
-windows_service_state{name="Themes",status="running"} 1
-windows_service_state{name="Themes",status="start pending"} 0
-windows_service_state{name="Themes",status="stop pending"} 0
-windows_service_state{name="Themes",status="stopped"} 0
+windows_service_state{name="Themes",state="continue pending"} 0
+windows_service_state{name="Themes",state="pause pending"} 0
+windows_service_state{name="Themes",state="paused"} 0
+windows_service_state{name="Themes",state="running"} 1
+windows_service_state{name="Themes",state="start pending"} 0
+windows_service_state{name="Themes",state="stop pending"} 0
+windows_service_state{name="Themes",state="stopped"} 0
 # HELP windows_system_context_switches_total Total number of context switches (WMI source: PerfOS_System.ContextSwitchesPersec)
 # TYPE windows_system_context_switches_total counter
 # HELP windows_system_exception_dispatches_total Total number of exceptions dispatched (WMI source: PerfOS_System.ExceptionDispatchesPersec)
