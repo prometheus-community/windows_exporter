@@ -122,7 +122,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *wmi.Client) error {
 	c.state = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "state"),
 		"The state of the service (State)",
-		[]string{"name", "status"},
+		[]string{"name", "state"},
 		nil,
 	)
 	c.startMode = prometheus.NewDesc(

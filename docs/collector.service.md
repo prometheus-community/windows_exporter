@@ -72,20 +72,20 @@ windows_service_start_mode{name="dcsvc",start_mode="manual"} 1
 windows_service_start_mode{name="dcsvc",start_mode="system"} 0
 # HELP windows_service_state The state of the service (State)
 # TYPE windows_service_state gauge
-windows_service_state{name="Themes",status="continue pending"} 0
-windows_service_state{name="Themes",status="pause pending"} 0
-windows_service_state{name="Themes",status="paused"} 0
-windows_service_state{name="Themes",status="running"} 1
-windows_service_state{name="Themes",status="start pending"} 0
-windows_service_state{name="Themes",status="stop pending"} 0
-windows_service_state{name="Themes",status="stopped"} 0
-windows_service_state{name="dcsvc",status="continue pending"} 0
-windows_service_state{name="dcsvc",status="pause pending"} 0
-windows_service_state{name="dcsvc",status="paused"} 0
-windows_service_state{name="dcsvc",status="running"} 0
-windows_service_state{name="dcsvc",status="start pending"} 0
-windows_service_state{name="dcsvc",status="stop pending"} 0
-windows_service_state{name="dcsvc",status="stopped"} 1
+windows_service_state{name="Themes",state="continue pending"} 0
+windows_service_state{name="Themes",state="pause pending"} 0
+windows_service_state{name="Themes",state="paused"} 0
+windows_service_state{name="Themes",state="running"} 1
+windows_service_state{name="Themes",state="start pending"} 0
+windows_service_state{name="Themes",state="stop pending"} 0
+windows_service_state{name="Themes",state="stopped"} 0
+windows_service_state{name="dcsvc",state="continue pending"} 0
+windows_service_state{name="dcsvc",state="pause pending"} 0
+windows_service_state{name="dcsvc",state="paused"} 0
+windows_service_state{name="dcsvc",state="running"} 0
+windows_service_state{name="dcsvc",state="start pending"} 0
+windows_service_state{name="dcsvc",state="stop pending"} 0
+windows_service_state{name="dcsvc",state="stopped"} 1
 ```
 
 ## Useful queries
