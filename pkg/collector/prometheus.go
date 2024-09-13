@@ -228,14 +228,14 @@ func (p *Prometheus) execute(name string, c Collector, ctx *types.ScrapeContext,
 	}
 
 	if err != nil {
-		p.logger.Error(fmt.Sprintf("collector %s failed after %s", name, p.maxScrapeDuration),
+		p.logger.Error(fmt.Sprintf("collector %s failed after %s", name, duration),
 			slog.Any("err", err),
 		)
 
 		return failed
 	}
 
-	p.logger.Error(fmt.Sprintf("collector %s succeeded after %s", name, p.maxScrapeDuration))
+	p.logger.Info(fmt.Sprintf("collector %s succeeded after %s", name, duration))
 
 	return success
 }
