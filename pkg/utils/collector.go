@@ -3,6 +3,7 @@
 package utils
 
 import (
+	"os"
 	"strings"
 
 	"github.com/prometheus-community/windows_exporter/pkg/types"
@@ -25,4 +26,12 @@ func ExpandEnabledCollectors(enabled string) []string {
 	}
 
 	return result
+}
+
+func PDHEnabled() bool {
+	if v, ok := os.LookupEnv("WINDOWS_EXPORTER_PERF_COUNTERS_ENGINE"); ok && v == "pdh" {
+		return true
+	}
+
+	return false
 }
