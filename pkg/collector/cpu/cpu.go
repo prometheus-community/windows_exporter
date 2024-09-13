@@ -3,12 +3,15 @@
 package cpu
 
 import (
+	"fmt"
 	"log/slog"
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
+	"github.com/prometheus-community/windows_exporter/pkg/perfdata"
 	"github.com/prometheus-community/windows_exporter/pkg/perflib"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
+	"github.com/prometheus-community/windows_exporter/pkg/utils"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
 )
@@ -21,6 +24,8 @@ var ConfigDefaults = Config{}
 
 type Collector struct {
 	config Config
+
+	perfDataCollector *perfdata.Collector
 
 	logicalProcessors          *prometheus.Desc
 	cStateSecondsTotal         *prometheus.Desc
@@ -59,6 +64,10 @@ func (c *Collector) GetName() string {
 }
 
 func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
+	if utils.PDHEnabled() {
+		return []string{}, nil
+	}
+
 	return []string{"Processor Information"}, nil
 }
 
@@ -67,6 +76,41 @@ func (c *Collector) Close(_ *slog.Logger) error {
 }
 
 func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
+	if utils.PDHEnabled() {
+		counters := []string{
+			C1TimeSeconds,
+			C2TimeSeconds,
+			C3TimeSeconds,
+			C1TransitionsTotal,
+			C2TransitionsTotal,
+			C3TransitionsTotal,
+			ClockInterruptsTotal,
+			DPCsQueuedTotal,
+			DPCTimeSeconds,
+			IdleBreakEventsTotal,
+			IdleTimeSeconds,
+			InterruptsTotal,
+			InterruptTimeSeconds,
+			ParkingStatus,
+			PerformanceLimitPercent,
+			PriorityTimeSeconds,
+			PrivilegedTimeSeconds,
+			PrivilegedUtilitySeconds,
+			ProcessorFrequencyMHz,
+			ProcessorPerformance,
+			ProcessorTimeSeconds,
+			ProcessorUtilityRate,
+			UserTimeSeconds,
+		}
+
+		var err error
+
+		c.perfDataCollector, err = perfdata.NewCollector("Processor Information", []string{"*"}, counters)
+		if err != nil {
+			return fmt.Errorf("failed to create Processor Information collector: %w", err)
+		}
+	}
+
 	c.logicalProcessors = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "logical_processor"),
 		"Total number of logical processors",
@@ -184,7 +228,11 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
 
-	return c.CollectFull(ctx, logger, ch)
+	if utils.PDHEnabled() {
+		return c.collectPDH(ch)
+	}
+
+	return c.collectFull(ctx, logger, ch)
 }
 
 type perflibProcessorInformation struct {
@@ -216,8 +264,7 @@ type perflibProcessorInformation struct {
 	UserTimeSeconds          float64 `perflib:"% User Time"`
 }
 
-func (c *Collector) CollectFull(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	logger = logger.With(slog.String("collector", Name))
+func (c *Collector) collectFull(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	data := make([]perflibProcessorInformation, 0)
 
 	err := perflib.UnmarshalObject(ctx.PerfObjects["Processor Information"], &data, logger)
@@ -352,6 +399,146 @@ func (c *Collector) CollectFull(ctx *types.ScrapeContext, logger *slog.Logger, c
 			c.processorPrivilegedUtility,
 			prometheus.CounterValue,
 			cpu.PrivilegedUtilitySeconds,
+			core,
+		)
+	}
+
+	ch <- prometheus.MustNewConstMetric(
+		c.logicalProcessors,
+		prometheus.GaugeValue,
+		coreCount,
+	)
+
+	return nil
+}
+
+func (c *Collector) collectPDH(ch chan<- prometheus.Metric) error {
+	data, err := c.perfDataCollector.Collect()
+	if err != nil {
+		return fmt.Errorf("failed to collect Processor Information metrics: %w", err)
+	}
+
+	var coreCount float64
+
+	for core, coreData := range data {
+		coreCount++
+
+		ch <- prometheus.MustNewConstMetric(
+			c.cStateSecondsTotal,
+			prometheus.CounterValue,
+			coreData[C1TimeSeconds].FirstValue,
+			core, "c1",
+		)
+		ch <- prometheus.MustNewConstMetric(
+			c.cStateSecondsTotal,
+			prometheus.CounterValue,
+			coreData[C2TimeSeconds].FirstValue,
+			core, "c2",
+		)
+		ch <- prometheus.MustNewConstMetric(
+			c.cStateSecondsTotal,
+			prometheus.CounterValue,
+			coreData[C3TimeSeconds].FirstValue,
+			core, "c3",
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.timeTotal,
+			prometheus.CounterValue,
+			coreData[IdleTimeSeconds].FirstValue,
+			core, "idle",
+		)
+		ch <- prometheus.MustNewConstMetric(
+			c.timeTotal,
+			prometheus.CounterValue,
+			coreData[InterruptTimeSeconds].FirstValue,
+			core, "interrupt",
+		)
+		ch <- prometheus.MustNewConstMetric(
+			c.timeTotal,
+			prometheus.CounterValue,
+			coreData[DPCTimeSeconds].FirstValue,
+			core, "dpc",
+		)
+		ch <- prometheus.MustNewConstMetric(
+			c.timeTotal,
+			prometheus.CounterValue,
+			coreData[PrivilegedTimeSeconds].FirstValue,
+			core, "privileged",
+		)
+		ch <- prometheus.MustNewConstMetric(
+			c.timeTotal,
+			prometheus.CounterValue,
+			coreData[UserTimeSeconds].FirstValue,
+			core, "user",
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.interruptsTotal,
+			prometheus.CounterValue,
+			coreData[InterruptsTotal].FirstValue,
+			core,
+		)
+		ch <- prometheus.MustNewConstMetric(
+			c.dpcsTotal,
+			prometheus.CounterValue,
+			coreData[DPCsQueuedTotal].FirstValue,
+			core,
+		)
+		ch <- prometheus.MustNewConstMetric(
+			c.clockInterruptsTotal,
+			prometheus.CounterValue,
+			coreData[ClockInterruptsTotal].FirstValue,
+			core,
+		)
+		ch <- prometheus.MustNewConstMetric(
+			c.idleBreakEventsTotal,
+			prometheus.CounterValue,
+			coreData[IdleBreakEventsTotal].FirstValue,
+			core,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.parkingStatus,
+			prometheus.GaugeValue,
+			coreData[ParkingStatus].FirstValue,
+			core,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.processorFrequencyMHz,
+			prometheus.GaugeValue,
+			coreData[ProcessorFrequencyMHz].FirstValue,
+			core,
+		)
+		ch <- prometheus.MustNewConstMetric(
+			c.processorPerformance,
+			prometheus.CounterValue,
+			coreData[ProcessorPerformance].FirstValue,
+			core,
+		)
+		ch <- prometheus.MustNewConstMetric(
+			c.processorMPerf,
+			prometheus.CounterValue,
+			coreData[ProcessorPerformance].SecondValue,
+			core,
+		)
+		ch <- prometheus.MustNewConstMetric(
+			c.processorRTC,
+			prometheus.CounterValue,
+			coreData[ProcessorUtilityRate].SecondValue,
+			core,
+		)
+		ch <- prometheus.MustNewConstMetric(
+			c.processorUtility,
+			prometheus.CounterValue,
+			coreData[ProcessorUtilityRate].FirstValue,
+			core,
+		)
+		ch <- prometheus.MustNewConstMetric(
+			c.processorPrivilegedUtility,
+			prometheus.CounterValue,
+			coreData[PrivilegedUtilitySeconds].FirstValue,
 			core,
 		)
 	}
