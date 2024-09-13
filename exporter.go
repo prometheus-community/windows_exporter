@@ -216,6 +216,7 @@ func run() int {
 	logCurrentUser(logger)
 
 	logger.Info("Enabled collectors: " + strings.Join(enabledCollectorList, ", "))
+
 	if utils.PDHEnabled() {
 		logger.Info("Using performance data helper from PHD.dll for performance counter collection. This is in experimental state.")
 	}

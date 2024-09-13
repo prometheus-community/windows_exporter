@@ -1,6 +1,6 @@
 package cpu
 
-// Processor performance counters
+// Processor performance counters.
 const (
 	C1TimeSeconds            = "% C1 Time"
 	C2TimeSeconds            = "% C2 Time"
