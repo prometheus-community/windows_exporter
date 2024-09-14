@@ -45,9 +45,6 @@ linters-settings:
         # Support string case: `camel`, `pascal`, `kebab`, `snake`, `upperSnake`, `goCamel`, `goPascal`, `goKebab`, `goSnake`, `upper`, `lower`, `header`
         json: camel
         yaml: snake
-  gomoddirectives:
-    replace-allow-list:
-      - github.com/prometheus/common # https://github.com/prometheus/common/pull/694
   forbidigo:
     forbid:
       - "^(fmt\\.Print(|f|ln)|print|println)$"
