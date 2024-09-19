@@ -32,8 +32,6 @@ func (c *Collector) buildClrExceptions() {
 		[]string{"process"},
 		nil,
 	)
-
-	return
 }
 
 type Win32_PerfRawData_NETFramework_NETCLRExceptions struct {
