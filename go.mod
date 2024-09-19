@@ -8,10 +8,9 @@ require (
 	github.com/dimchansky/utfbom v1.1.1
 	github.com/go-ole/go-ole v1.3.0
 	github.com/google/uuid v1.6.0
-	github.com/pkg/errors v0.9.1
-	github.com/prometheus/client_golang v1.20.3
+	github.com/prometheus/client_golang v1.20.4
 	github.com/prometheus/client_model v0.6.1
-	github.com/prometheus/common v0.59.2-0.20240914165825-40d6251261f7
+	github.com/prometheus/common v0.59.2-0.20240918152650-14bac55a992f
 	github.com/prometheus/exporter-toolkit v0.13.0
 	github.com/stretchr/testify v1.9.0
 	github.com/yusufpapurcu/wmi v1.2.4
@@ -35,6 +34,7 @@ require (
 	github.com/mdlayher/vsock v1.2.1 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/mwitkow/go-conntrack v0.0.0-20190716064945-2f068394615f // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
