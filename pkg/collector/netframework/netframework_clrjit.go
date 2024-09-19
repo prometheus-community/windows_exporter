@@ -1,62 +1,13 @@
 //go:build windows
 
-package netframework_clrjit
+package netframework
 
 import (
-	"log/slog"
-
-	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/yusufpapurcu/wmi"
 )
 
-const Name = "netframework_clrjit"
-
-type Config struct{}
-
-var ConfigDefaults = Config{}
-
-// A Collector is a Prometheus Collector for WMI Win32_PerfRawData_NETFramework_NETCLRJit metrics.
-type Collector struct {
-	config    Config
-	wmiClient *wmi.Client
-
-	numberOfMethodsJitted      *prometheus.Desc
-	timeInJit                  *prometheus.Desc
-	standardJitFailures        *prometheus.Desc
-	totalNumberOfILBytesJitted *prometheus.Desc
-}
-
-func New(config *Config) *Collector {
-	if config == nil {
-		config = &ConfigDefaults
-	}
-
-	c := &Collector{
-		config: *config,
-	}
-
-	return c
-}
-
-func NewWithFlags(_ *kingpin.Application) *Collector {
-	return &Collector{}
-}
-
-func (c *Collector) GetName() string {
-	return Name
-}
-
-func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
-	return []string{}, nil
-}
-
-func (c *Collector) Close(_ *slog.Logger) error {
-	return nil
-}
-
-func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
+func (c *Collector) buildClrJIT() {
 	c.numberOfMethodsJitted = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "jit_methods_total"),
 		"Displays the total number of methods JIT-compiled since the application started. This counter does not include pre-JIT-compiled methods.",
@@ -81,23 +32,6 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 		[]string{"process"},
 		nil,
 	)
-
-	return nil
-}
-
-// Collect sends the metric values for each metric
-// to the provided prometheus Metric channel.
-func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	logger = logger.With(slog.String("collector", Name))
-	if err := c.collect(ch); err != nil {
-		logger.Error("failed collecting win32_perfrawdata_netframework_netclrjit metrics",
-			slog.Any("err", err),
-		)
-
-		return err
-	}
-
-	return nil
 }
 
 type Win32_PerfRawData_NETFramework_NETCLRJit struct {
@@ -112,7 +46,7 @@ type Win32_PerfRawData_NETFramework_NETCLRJit struct {
 	TotalNumberofILBytesJitted uint32
 }
 
-func (c *Collector) collect(ch chan<- prometheus.Metric) error {
+func (c *Collector) collectClrJIT(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_NETFramework_NETCLRJit
 	if err := c.wmiClient.Query("SELECT * FROM Win32_PerfRawData_NETFramework_NETCLRJit", &dst); err != nil {
 		return err

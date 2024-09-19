@@ -1,77 +1,13 @@
 //go:build windows
 
-package netframework_clrmemory
+package netframework
 
 import (
-	"errors"
-	"log/slog"
-
-	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/yusufpapurcu/wmi"
 )
 
-const Name = "netframework_clrmemory"
-
-type Config struct{}
-
-var ConfigDefaults = Config{}
-
-// A Collector is a Prometheus Collector for WMI Win32_PerfRawData_NETFramework_NETCLRMemory metrics.
-type Collector struct {
-	config    Config
-	wmiClient *wmi.Client
-
-	allocatedBytes            *prometheus.Desc
-	finalizationSurvivors     *prometheus.Desc
-	heapSize                  *prometheus.Desc
-	promotedBytes             *prometheus.Desc
-	numberGCHandles           *prometheus.Desc
-	numberCollections         *prometheus.Desc
-	numberInducedGC           *prometheus.Desc
-	numberOfPinnedObjects     *prometheus.Desc
-	numberOfSinkBlocksInUse   *prometheus.Desc
-	numberTotalCommittedBytes *prometheus.Desc
-	numberTotalReservedBytes  *prometheus.Desc
-	timeInGC                  *prometheus.Desc
-}
-
-func New(config *Config) *Collector {
-	if config == nil {
-		config = &ConfigDefaults
-	}
-
-	c := &Collector{
-		config: *config,
-	}
-
-	return c
-}
-
-func NewWithFlags(_ *kingpin.Application) *Collector {
-	return &Collector{}
-}
-
-func (c *Collector) GetName() string {
-	return Name
-}
-
-func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
-	return []string{}, nil
-}
-
-func (c *Collector) Close(_ *slog.Logger) error {
-	return nil
-}
-
-func (c *Collector) Build(_ *slog.Logger, wmiClient *wmi.Client) error {
-	if wmiClient == nil || wmiClient.SWbemServicesClient == nil {
-		return errors.New("wmiClient or SWbemServicesClient is nil")
-	}
-
-	c.wmiClient = wmiClient
-
+func (c *Collector) buildClrMemory() {
 	c.allocatedBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "allocated_bytes_total"),
 		"Displays the total number of bytes allocated on the garbage collection heap.",
@@ -144,23 +80,6 @@ func (c *Collector) Build(_ *slog.Logger, wmiClient *wmi.Client) error {
 		[]string{"process"},
 		nil,
 	)
-
-	return nil
-}
-
-// Collect sends the metric values for each metric
-// to the provided prometheus Metric channel.
-func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	logger = logger.With(slog.String("collector", Name))
-	if err := c.collect(ch); err != nil {
-		logger.Error("failed collecting win32_perfrawdata_netframework_netclrmemory metrics",
-			slog.Any("err", err),
-		)
-
-		return err
-	}
-
-	return nil
 }
 
 type Win32_PerfRawData_NETFramework_NETCLRMemory struct {
@@ -197,7 +116,7 @@ type Win32_PerfRawData_NETFramework_NETCLRMemory struct {
 	PromotedMemoryfromGen1             uint64
 }
 
-func (c *Collector) collect(ch chan<- prometheus.Metric) error {
+func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_NETFramework_NETCLRMemory
 	if err := c.wmiClient.Query("SELECT * FROM Win32_PerfRawData_NETFramework_NETCLRMemory", &dst); err != nil {
 		return err
