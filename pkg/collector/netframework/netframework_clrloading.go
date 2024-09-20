@@ -1,74 +1,13 @@
 //go:build windows
 
-package netframework_clrloading
+package netframework
 
 import (
-	"errors"
-	"log/slog"
-
-	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/yusufpapurcu/wmi"
 )
 
-const Name = "netframework_clrloading"
-
-type Config struct{}
-
-var ConfigDefaults = Config{}
-
-// A Collector is a Prometheus Collector for WMI Win32_PerfRawData_NETFramework_NETCLRLoading metrics.
-type Collector struct {
-	config    Config
-	wmiClient *wmi.Client
-
-	bytesInLoaderHeap         *prometheus.Desc
-	currentAppDomains         *prometheus.Desc
-	currentAssemblies         *prometheus.Desc
-	currentClassesLoaded      *prometheus.Desc
-	totalAppDomains           *prometheus.Desc
-	totalAppDomainsUnloaded   *prometheus.Desc
-	totalAssemblies           *prometheus.Desc
-	totalClassesLoaded        *prometheus.Desc
-	totalNumberOfLoadFailures *prometheus.Desc
-}
-
-func New(config *Config) *Collector {
-	if config == nil {
-		config = &ConfigDefaults
-	}
-
-	c := &Collector{
-		config: *config,
-	}
-
-	return c
-}
-
-func NewWithFlags(_ *kingpin.Application) *Collector {
-	return &Collector{}
-}
-
-func (c *Collector) GetName() string {
-	return Name
-}
-
-func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
-	return []string{}, nil
-}
-
-func (c *Collector) Close(_ *slog.Logger) error {
-	return nil
-}
-
-func (c *Collector) Build(_ *slog.Logger, wmiClient *wmi.Client) error {
-	if wmiClient == nil || wmiClient.SWbemServicesClient == nil {
-		return errors.New("wmiClient or SWbemServicesClient is nil")
-	}
-
-	c.wmiClient = wmiClient
-
+func (c *Collector) buildClrLoading() {
 	c.bytesInLoaderHeap = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "loader_heap_size_bytes"),
 		"Displays the current size, in bytes, of the memory committed by the class loader across all application domains. Committed memory is the physical space reserved in the disk paging file.",
@@ -123,23 +62,6 @@ func (c *Collector) Build(_ *slog.Logger, wmiClient *wmi.Client) error {
 		[]string{"process"},
 		nil,
 	)
-
-	return nil
-}
-
-// Collect sends the metric values for each metric
-// to the provided prometheus Metric channel.
-func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	logger = logger.With(slog.String("collector", Name))
-	if err := c.collect(ch); err != nil {
-		logger.Error("failed collecting win32_perfrawdata_netframework_netclrloading metrics",
-			slog.Any("err", err),
-		)
-
-		return err
-	}
-
-	return nil
 }
 
 type Win32_PerfRawData_NETFramework_NETCLRLoading struct {
@@ -163,7 +85,7 @@ type Win32_PerfRawData_NETFramework_NETCLRLoading struct {
 	TotalNumberofLoadFailures uint32
 }
 
-func (c *Collector) collect(ch chan<- prometheus.Metric) error {
+func (c *Collector) collectClrLoading(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_NETFramework_NETCLRLoading
 	if err := c.wmiClient.Query("SELECT * FROM Win32_PerfRawData_NETFramework_NETCLRLoading", &dst); err != nil {
 		return err

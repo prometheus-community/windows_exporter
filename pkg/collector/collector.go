@@ -34,14 +34,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/collector/msmq"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/mssql"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/net"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/netframework_clrexceptions"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/netframework_clrinterop"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/netframework_clrjit"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/netframework_clrloading"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/netframework_clrlocksandthreads"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/netframework_clrmemory"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/netframework_clrremoting"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/netframework_clrsecurity"
+	"github.com/prometheus-community/windows_exporter/pkg/collector/netframework"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/nps"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/os"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/perfdata"
@@ -108,14 +101,7 @@ func NewWithConfig(config Config) *MetricCollectors {
 	collectors[msmq.Name] = msmq.New(&config.Msmq)
 	collectors[mssql.Name] = mssql.New(&config.Mssql)
 	collectors[net.Name] = net.New(&config.Net)
-	collectors[netframework_clrexceptions.Name] = netframework_clrexceptions.New(&config.NetframeworkClrexceptions)
-	collectors[netframework_clrinterop.Name] = netframework_clrinterop.New(&config.NetframeworkClrinterop)
-	collectors[netframework_clrjit.Name] = netframework_clrjit.New(&config.NetframeworkClrjit)
-	collectors[netframework_clrloading.Name] = netframework_clrloading.New(&config.NetframeworkClrloading)
-	collectors[netframework_clrlocksandthreads.Name] = netframework_clrlocksandthreads.New(&config.NetframeworkClrlocksandthreads)
-	collectors[netframework_clrmemory.Name] = netframework_clrmemory.New(&config.NetframeworkClrmemory)
-	collectors[netframework_clrremoting.Name] = netframework_clrremoting.New(&config.NetframeworkClrremoting)
-	collectors[netframework_clrsecurity.Name] = netframework_clrsecurity.New(&config.NetframeworkClrsecurity)
+	collectors[netframework.Name] = netframework.New(&config.NetFramework)
 	collectors[nps.Name] = nps.New(&config.Nps)
 	collectors[os.Name] = os.New(&config.Os)
 	collectors[perfdata.Name] = perfdata.New(&config.PerfData)

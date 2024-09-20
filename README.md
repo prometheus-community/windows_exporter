@@ -14,7 +14,7 @@ Name     | Description | Enabled by default
 [cache](docs/collector.cache.md) | Cache metrics |
 [cpu](docs/collector.cpu.md) | CPU usage | &#10003;
 [cpu_info](docs/collector.cpu_info.md) | CPU Information |
-[cs](docs/collector.cs.md) | "Computer System" metrics (system properties, num cpus/total memory) | 
+[cs](docs/collector.cs.md) | "Computer System" metrics (system properties, num cpus/total memory) |
 [container](docs/collector.container.md) | Container metrics |
 [diskdrive](docs/collector.diskdrive.md) | Diskdrive metrics |
 [dfsr](docs/collector.dfsr.md) | DFSR metrics |
@@ -24,25 +24,18 @@ Name     | Description | Enabled by default
 [fsrmquota](docs/collector.fsrmquota.md) | Microsoft File Server Resource Manager (FSRM) Quotas collector |
 [hyperv](docs/collector.hyperv.md) | Hyper-V hosts |
 [iis](docs/collector.iis.md) | IIS sites and applications |
-[license](docs/collector.license.md) | Windows license status | 
+[license](docs/collector.license.md) | Windows license status |
 [logical_disk](docs/collector.logical_disk.md) | Logical disks, disk I/O | &#10003;
 [logon](docs/collector.logon.md) | User logon sessions |
 [memory](docs/collector.memory.md) | Memory usage metrics | &#10003;
 [mscluster](docs/collector.mscluster.md) | MSCluster metrics |
 [msmq](docs/collector.msmq.md) | MSMQ queues |
 [mssql](docs/collector.mssql.md) | [SQL Server Performance Objects](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/use-sql-server-objects#SQLServerPOs) metrics  |
-[netframework_clrexceptions](docs/collector.netframework_clrexceptions.md) | .NET Framework CLR Exceptions |
-[netframework_clrinterop](docs/collector.netframework_clrinterop.md) | .NET Framework Interop Metrics |
-[netframework_clrjit](docs/collector.netframework_clrjit.md) | .NET Framework JIT metrics |
-[netframework_clrloading](docs/collector.netframework_clrloading.md) | .NET Framework CLR Loading metrics |
-[netframework_clrlocksandthreads](docs/collector.netframework_clrlocksandthreads.md) | .NET Framework locks and metrics threads |
-[netframework_clrmemory](docs/collector.netframework_clrmemory.md) |  .NET Framework Memory metrics |
-[netframework_clrremoting](docs/collector.netframework_clrremoting.md) | .NET Framework Remoting metrics |
-[netframework_clrsecurity](docs/collector.netframework_clrsecurity.md) | .NET Framework Security Check metrics |
+[netframework](docs/collector.netframework.md) | .NET Framework metrics |
 [net](docs/collector.net.md) | Network interface I/O | &#10003;
 [os](docs/collector.os.md) | OS metrics (memory, processes, users) | &#10003;
 [physical_disk](docs/collector.physical_disk.md) | physical disk metrics | &#10003;
-[printer](docs/collector.printer.md) | Printer metrics | 
+[printer](docs/collector.printer.md) | Printer metrics |
 [process](docs/collector.process.md) | Per-process metrics |
 [remote_fx](docs/collector.remote_fx.md) | RemoteFX protocol (RDP) metrics |
 [scheduled_task](docs/collector.scheduled_task.md) | Scheduled Tasks metrics |
@@ -99,9 +92,9 @@ The latest release can be downloaded from the [releases page](https://github.com
 
 Each release provides a .msi installer. The installer will setup the windows_exporter as a Windows service, as well as create an exception in the Windows Firewall.
 
-If the installer is run without any parameters, the exporter will run with default settings for enabled collectors, ports, etc. 
+If the installer is run without any parameters, the exporter will run with default settings for enabled collectors, ports, etc.
 
-The installer provides a configuration file to customize the exporter. 
+The installer provides a configuration file to customize the exporter.
 
 The configuration file
 * is located in the same directory as the exporter executable.
@@ -163,7 +156,7 @@ msiexec /i <path-to-msi-file> ENABLED_COLLECTORS=os,service --% EXTRA_FLAGS="--c
 
 ## Docker Implementation
 
-The windows_exporter can be run as a Docker container. The Docker image is available on 
+The windows_exporter can be run as a Docker container. The Docker image is available on
 
 * [Docker Hub](https://hub.docker.com/r/prometheuscommunity/windows-exporter): `docker.io/prometheuscommunity/windows-exporter`
 * [GitHub Container Registry](https://github.com/prometheus-community/windows_exporter/pkgs/container/windows-exporter): `ghcr.io/prometheus-community/windows-exporter`
