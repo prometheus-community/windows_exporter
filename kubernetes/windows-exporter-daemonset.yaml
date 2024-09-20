@@ -32,7 +32,7 @@ spec:
           command: ["powershell"]
           args: ["New-NetFirewallRule", "-DisplayName", "'windows-exporter'", "-Direction", "inbound", "-Profile", "Any", "-Action", "Allow", "-LocalPort", "9182", "-Protocol", "TCP"]
       containers:
-      - args: 
+      - args:
         - --config.file=%CONTAINER_SANDBOX_MOUNT_POINT%/config.yml
         name: windows-exporter
         image: ghcr.io/prometheus-community/windows-exporter:latest
@@ -65,4 +65,4 @@ data:
       enabled: '[defaults],container'
     collector:
       service:
-        services-where: "Name='containerd' or Name='kubelet'"
+        include: "containerd|kubelet"
