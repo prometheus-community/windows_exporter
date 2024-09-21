@@ -29,6 +29,8 @@ test_alpha_total 42
 # TYPE windows_cpu_interrupts_total counter
 # HELP windows_cpu_logical_processor Total number of logical processors
 # TYPE windows_cpu_logical_processor gauge
+# HELP windows_net_nic_address_info A metric with a constant '1' value labeled with the network interface's address information.
+# TYPE windows_net_nic_address_info gauge
 # HELP windows_cpu_parking_status Parking Status represents whether a processor is parked or not
 # TYPE windows_cpu_parking_status gauge
 # HELP windows_cpu_processor_mperf_total Processor MPerf is the number of TSC ticks incremented while executing instructions
