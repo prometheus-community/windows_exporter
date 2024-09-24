@@ -15,18 +15,19 @@ const (
 	SegmentsRetransmittedPersec = "Segments Retransmitted/sec"
 	SegmentsSentPersec          = "Segments Sent/sec"
 
-    TCPTableClass               = 5
+	TCPTableClass = 5
 
-	TCPStateClosed              = 1
-    TCPStateListening           = 2
-    TCPStateSynSent             = 3
-    TCPStateSynRcvd             = 4
-    TCPStateEstablished         = 5
-    TCPStateFinWait1            = 6
-    TCPStateFinWait2            = 7
-    TCPStateCloseWait           = 8
-    TCPStateClosing             = 9
-    TCPStateLastAck             = 10
-    TCPStateTimeWait            = 11
-    TCPStateDeleteTcb           = 12
+	TCPStateUnknown     = 0
+	TCPStateClosed      = 1
+	TCPStateListening   = 2
+	TCPStateSynSent     = 3
+	TCPStateSynRcvd     = 4
+	TCPStateEstablished = 5
+	TCPStateFinWait1    = 6
+	TCPStateFinWait2    = 7
+	TCPStateCloseWait   = 8
+	TCPStateClosing     = 9
+	TCPStateLastAck     = 10
+	TCPStateTimeWait    = 11
+	TCPStateDeleteTcb   = 12
 )
