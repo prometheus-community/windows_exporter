@@ -12,7 +12,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
-	"syscall"
+	"golang.org/x/sys/windows"
 	"unsafe"
 )
 
