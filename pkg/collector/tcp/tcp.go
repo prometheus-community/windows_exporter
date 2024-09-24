@@ -21,7 +21,7 @@ const Name = "tcp"
 type Config struct{}
 
 var (
-	modiphlpapi             = syscall.NewLazyDLL("iphlpapi.dll")
+	modiphlpapi             = windows.NewLazySystemDLL("iphlpapi.dll")
 	procGetExtendedTcpTable = modiphlpapi.NewProc("GetExtendedTcpTable")
 )
 
@@ -349,12 +349,12 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 
 	writeTCPCounters(data[perfdata.EmptyInstance], []string{"ipv6"}, c, ch)
 
-	stateCountsIPv4, err := getTCPConnectionStates(syscall.AF_INET)
+	stateCountsIPv4, err := getTCPConnectionStates(windows.AF_INET)
 	if err != nil {
 		return fmt.Errorf("failed to collect TCP connection states for IPv4: %w", err)
 	}
 
-	stateCountsIPv6, err := getTCPConnectionStates(syscall.AF_INET6)
+	stateCountsIPv6, err := getTCPConnectionStates(windows.AF_INET6)
 	if err != nil {
 		return fmt.Errorf("failed to collect TCP connection states for IPv6: %w", err)
 	}
@@ -383,7 +383,7 @@ func getTCPConnectionStates(family uint32) (map[uint32]uint32, error) {
 	stateCounts := make(map[uint32]uint32)
 
 	ret := getExtendedTcpTable(0, &size, true, family, TCPTableClass, 0)
-	if ret != 0 && ret != uintptr(syscall.ERROR_INSUFFICIENT_BUFFER) {
+	if ret != 0 && ret != uintptr(windows.ERROR_INSUFFICIENT_BUFFER) {
 		return nil, errors.Errorf("getExtendedTcpTable failed with code %d", ret)
 	}
 
