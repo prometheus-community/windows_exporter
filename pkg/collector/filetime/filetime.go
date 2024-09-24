@@ -85,7 +85,11 @@ func (c *Collector) Close(_ *slog.Logger) error {
 	return nil
 }
 
-func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
+func (c *Collector) Build(logger *slog.Logger, _ *wmi.Client) error {
+	logger.Info("filetime collector is in an experimental state! It may subject to change.",
+		slog.String("collector", Name),
+	)
+
 	c.fileMTime = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "mtime_timestamp_seconds"),
 		"File modification time",
