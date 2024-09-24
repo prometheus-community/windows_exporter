@@ -11,6 +11,7 @@ var (
 
 	procGetDynamicTimeZoneInformationSys = kernel32.NewProc("GetDynamicTimeZoneInformation")
 	kernelLocalFileTimeToFileTime        = kernel32.NewProc("LocalFileTimeToFileTime")
+	findFirstFileExW                     = kernel32.NewProc("FindFirstFileExW")
 )
 
 // SYSTEMTIME contains a date and time.

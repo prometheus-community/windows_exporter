@@ -14,6 +14,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/collector/diskdrive"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/dns"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/exchange"
+	"github.com/prometheus-community/windows_exporter/pkg/collector/filetime"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/fsrmquota"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/hyperv"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/iis"
@@ -63,6 +64,7 @@ type Config struct {
 	DiskDrive        diskdrive.Config         `yaml:"diskdrive"` //nolint:tagliatelle
 	DNS              dns.Config               `yaml:"dns"`
 	Exchange         exchange.Config          `yaml:"exchange"`
+	Filetime         filetime.Config          `yaml:"filetime"`
 	Fsrmquota        fsrmquota.Config         `yaml:"fsrmquota"`
 	Hyperv           hyperv.Config            `yaml:"hyperv"`
 	IIS              iis.Config               `yaml:"iis"`
@@ -115,6 +117,7 @@ var ConfigDefaults = Config{
 	DiskDrive:        diskdrive.ConfigDefaults,
 	DNS:              dns.ConfigDefaults,
 	Exchange:         exchange.ConfigDefaults,
+	Filetime:         filetime.ConfigDefaults,
 	Fsrmquota:        fsrmquota.ConfigDefaults,
 	Hyperv:           hyperv.ConfigDefaults,
 	IIS:              iis.ConfigDefaults,
