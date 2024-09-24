@@ -31,7 +31,6 @@ var ConfigDefaults = Config{
 type Collector struct {
 	config Config
 
-	fileATime *prometheus.Desc
 	fileMTime *prometheus.Desc
 }
 
@@ -66,8 +65,7 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 
 	app.Action(func(*kingpin.ParseContext) error {
 		// doublestar.Glob() requires forward slashes
-		filePatterns = strings.ReplaceAll(filePatterns, "\\", "/")
-		c.config.filePatterns = strings.Split(filePatterns, ",")
+		c.config.filePatterns = strings.Split(filepath.ToSlash(filePatterns), ",")
 
 		return nil
 	})
@@ -88,12 +86,6 @@ func (c *Collector) Close(_ *slog.Logger) error {
 }
 
 func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
-	c.fileATime = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "atime_timestamp_seconds"),
-		"File access time",
-		[]string{"file"},
-		nil,
-	)
 	c.fileMTime = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "mtime_timestamp_seconds"),
 		"File modification time",
