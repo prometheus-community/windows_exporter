@@ -27,7 +27,7 @@ var ConfigDefaults = Config{
 	filePatterns: []string{},
 }
 
-// A Collector is a Prometheus Collector for collecting file times
+// A Collector is a Prometheus Collector for collecting file times.
 type Collector struct {
 	config Config
 
@@ -148,6 +148,7 @@ func (c *Collector) collectGlob(logger *slog.Logger, ch chan<- prometheus.Metric
 func (c *Collector) collectGlobFilePath(logger *slog.Logger, ch chan<- prometheus.Metric, filePattern string) error {
 	basePath, pattern := doublestar.SplitPattern(filePattern)
 	basePathFS := os.DirFS(basePath)
+
 	matches, err := doublestar.Glob(basePathFS, pattern, doublestar.WithFilesOnly())
 	if err != nil {
 		return fmt.Errorf("failed to glob: %w", err)
