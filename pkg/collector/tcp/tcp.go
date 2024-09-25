@@ -34,7 +34,7 @@ type Collector struct {
 	segmentsReceivedTotal      *prometheus.Desc
 	segmentsRetransmittedTotal *prometheus.Desc
 	segmentsSentTotal          *prometheus.Desc
-	TCPState                   *prometheus.Desc
+	connectionsStateCount      *prometheus.Desc
 }
 
 func New(config *Config) *Collector {
@@ -144,7 +144,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 		[]string{"af"},
 		nil,
 	)
-	c.TCPState = prometheus.NewDesc(
+	c.connectionsStateCount = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "connections_state_count"),
 		"Number of TCP connections by state and address family",
 		[]string{"af", "state"}, nil,
@@ -245,7 +245,7 @@ func (c *Collector) sendTCPStateMetrics(ch chan<- prometheus.Metric, stateCounts
 	for state, count := range stateCounts {
 		stateName := getTCPStateName(state)
 		ch <- prometheus.MustNewConstMetric(
-			c.TCPState,
+			c.connectionsStateCount,
 			prometheus.GaugeValue,
 			float64(count),
 			af,
