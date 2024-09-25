@@ -6,16 +6,13 @@ import (
 	"fmt"
 	"log/slog"
 
+    "github.com/prometheus-community/windows_exporter/pkg/perfdata"
+    "github.com/yusufpapurcu/wmi"
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/pkg/headers/iphlpapi"
-	"github.com/prometheus-community/windows_exporter/pkg/perfdata"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/yusufpapurcu/wmi"
-	"golang.org/x/sys/windows"
 )
-
-const Name = "tcp"
 
 type Config struct{}
 
@@ -148,10 +145,11 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 		nil,
 	)
 	c.TCPState = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "connection_state_count"),
+		prometheus.BuildFQName(types.Namespace, Name, "connections_state_count"),
 		"Number of TCP connections by state and address family",
 		[]string{"af", "state"}, nil,
 	)
+
 	return nil
 }
 
@@ -163,7 +161,6 @@ func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan
 		logger.Error("failed collecting tcp metrics",
 			slog.Any("err", err),
 		)
-
 		return err
 	}
 
@@ -228,30 +225,18 @@ func writeTCPCounters(metrics map[string]perfdata.CounterValues, labels []string
 }
 
 func (c *Collector) collect(ch chan<- prometheus.Metric) error {
-	connectionTypes := []struct {
-		name              string
-		perfDataCollector *perfdata.Collector
-		afFamily          uint32
-	}{
-		{"ipv4", c.perfDataCollector4, uint32(windows.AF_INET)},
-		{"ipv6", c.perfDataCollector6, uint32(windows.AF_INET6)},
+	stateCounts, err := iphlpapi.GetTCPConnectionStates()
+	if err != nil {
+		return fmt.Errorf("failed to collect TCP connection states for %s: %w", "ipv4", err)
 	}
+	c.sendTCPStateMetrics(ch, stateCounts, "ipv4")
 
-	for _, connType := range connectionTypes {
-		data, err := connType.perfDataCollector.Collect()
-		if err != nil {
-			return fmt.Errorf("failed to collect TCP%s metrics: %w", connType.name, err)
-		}
+	stateCounts, err = iphlpapi.GetTCP6ConnectionStates()
 
-		writeTCPCounters(data[perfdata.EmptyInstance], []string{connType.name}, c, ch)
-
-		stateCounts, err := iphlpapi.GetTCPConnectionStates(connType.afFamily)
-		if err != nil {
-			return fmt.Errorf("failed to collect TCP connection states for %s: %w", connType.name, err)
-		}
-
-		c.sendTCPStateMetrics(ch, stateCounts, connType.name)
+	if err != nil {
+		return fmt.Errorf("failed to collect TCP6 connection states for %s: %w", "ipv6", err)
 	}
+	c.sendTCPStateMetrics(ch, stateCounts, "ipv6")
 
 	return nil
 }

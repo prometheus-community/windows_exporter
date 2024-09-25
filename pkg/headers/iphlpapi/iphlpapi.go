@@ -1,9 +1,9 @@
 package iphlpapi
 
 import (
+	"fmt"
 	"unsafe"
 
-	"github.com/pkg/errors"
 	"golang.org/x/sys/windows"
 )
 
@@ -12,27 +12,45 @@ var (
 	procGetExtendedTcpTable = modiphlpapi.NewProc("GetExtendedTcpTable")
 )
 
-const TCPTableClass = 5
+func GetTCP6ConnectionStates() (map[uint32]uint32, error) {
+	return getTCPConnectionStates(AF_INET6, TCP6TableClass)
+}
 
-func GetTCPConnectionStates(family uint32) (map[uint32]uint32, error) {
+func GetTCPConnectionStates() (map[uint32]uint32, error) {
+	return getTCPConnectionStates(AF_INET, TCPTableClass)
+}
+
+func getTCPConnectionStates(family, tableClass uint32) (map[uint32]uint32, error) {
 	var size uint32
 	stateCounts := make(map[uint32]uint32)
 
-	ret := getExtendedTcpTable(0, &size, true, family, TCPTableClass, 0)
+	ret := getExtendedTcpTable(0, &size, true, family, tableClass, 0)
 	if ret != 0 && ret != uintptr(windows.ERROR_INSUFFICIENT_BUFFER) {
-		return nil, errors.Errorf("getExtendedTcpTable failed with code %d", ret)
+		return nil, fmt.Errorf("getExtendedTcpTable (size query) failed with code %d", ret)
 	}
 
 	buf := make([]byte, size)
-	ret = getExtendedTcpTable(uintptr(unsafe.Pointer(&buf[0])), &size, true, family, TCPTableClass, 0)
+	ret = getExtendedTcpTable(uintptr(unsafe.Pointer(&buf[0])), &size, true, family, tableClass, 0)
 	if ret != 0 {
-		return nil, errors.Errorf("getExtendedTcpTable failed with code %d", ret)
+		return nil, fmt.Errorf("getExtendedTcpTable (data query) failed with code %d", ret)
 	}
 
 	numEntries := *(*uint32)(unsafe.Pointer(&buf[0]))
+	rowSize := uint32(unsafe.Sizeof(MIB_TCP6ROW_OWNER_PID{}))
+	if family == AF_INET {
+		rowSize = uint32(unsafe.Sizeof(MIB_TCPROW_OWNER_PID{}))
+	}
+
 	for i := uint32(0); i < numEntries; i++ {
-		row := (*MIB_TCPROW_OWNER_PID)(unsafe.Pointer(&buf[4+i*uint32(unsafe.Sizeof(MIB_TCPROW_OWNER_PID{}))]))
-		stateCounts[row.dwState]++
+		var state uint32
+		if family == AF_INET6 {
+			row := (*MIB_TCP6ROW_OWNER_PID)(unsafe.Pointer(&buf[4+i*rowSize]))
+			state = row.dwState
+		} else {
+			row := (*MIB_TCPROW_OWNER_PID)(unsafe.Pointer(&buf[4+i*rowSize]))
+			state = row.dwState
+		}
+		stateCounts[state]++
 	}
 
 	return stateCounts, nil
@@ -47,6 +65,7 @@ func getExtendedTcpTable(pTCPTable uintptr, pdwSize *uint32, bOrder bool, ulAf u
 		uintptr(tableClass),
 		uintptr(reserved),
 	)
+
 	return ret
 }
 
@@ -54,5 +73,6 @@ func boolToInt(b bool) int {
 	if b {
 		return 1
 	}
+
 	return 0
 }
