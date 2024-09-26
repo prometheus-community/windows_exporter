@@ -14,8 +14,8 @@ var (
 
 func GetTCPConnectionStates(family uint32) (map[MIB_TCP_STATE]uint32, error) {
 	var size uint32
-	stateCounts := make(map[MIB_TCP_STATE]uint32)
 
+	stateCounts := make(map[MIB_TCP_STATE]uint32)
 	rowSize := uint32(unsafe.Sizeof(MIB_TCPROW_OWNER_PID{}))
 	tableClass := TCPTableClass
 
