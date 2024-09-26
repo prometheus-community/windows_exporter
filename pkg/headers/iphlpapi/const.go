@@ -1,8 +1,6 @@
 package iphlpapi
 
 const (
-	TCPTableClass  = 5
-	TCP6TableClass = 5
-	AF_INET        = 2
-	AF_INET6       = 23
+	TCPTableClass  uint32 = 5
+	TCP6TableClass uint32 = 5
 )

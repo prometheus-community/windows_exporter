@@ -1,6 +1,3 @@
-//go:build windows
-// +build windows
-
 package iphlpapi
 
 import (
@@ -15,44 +12,40 @@ var (
 	procGetExtendedTcpTable = modiphlpapi.NewProc("GetExtendedTcpTable")
 )
 
-func GetTCP6ConnectionStates() (map[uint32]uint32, error) {
-	return getTCPConnectionStates(AF_INET6, TCP6TableClass)
-}
-
-func GetTCPConnectionStates() (map[uint32]uint32, error) {
-	return getTCPConnectionStates(AF_INET, TCPTableClass)
-}
-
-func getTCPConnectionStates(family, tableClass uint32) (map[uint32]uint32, error) {
+func GetTCPConnectionStates(family uint32) (map[MIB_TCP_STATE]uint32, error) {
 	var size uint32
-	stateCounts := make(map[uint32]uint32)
+	stateCounts := make(map[MIB_TCP_STATE]uint32)
+
+	rowSize := uint32(unsafe.Sizeof(MIB_TCPROW_OWNER_PID{}))
+	tableClass := TCPTableClass
+
+	if family == windows.AF_INET6 {
+		rowSize = uint32(unsafe.Sizeof(MIB_TCP6ROW_OWNER_PID{}))
+		tableClass = TCP6TableClass
+	}
 
 	ret := getExtendedTcpTable(0, &size, true, family, tableClass, 0)
-
 	if ret != 0 && ret != uintptr(windows.ERROR_INSUFFICIENT_BUFFER) {
 		return nil, fmt.Errorf("getExtendedTcpTable (size query) failed with code %d", ret)
 	}
 
 	buf := make([]byte, size)
+
 	ret = getExtendedTcpTable(uintptr(unsafe.Pointer(&buf[0])), &size, true, family, tableClass, 0)
 	if ret != 0 {
 		return nil, fmt.Errorf("getExtendedTcpTable (data query) failed with code %d", ret)
 	}
 
 	numEntries := *(*uint32)(unsafe.Pointer(&buf[0]))
-	rowSize := uint32(unsafe.Sizeof(MIB_TCP6ROW_OWNER_PID{}))
 
-	if family == AF_INET {
-		rowSize = uint32(unsafe.Sizeof(MIB_TCPROW_OWNER_PID{}))
-	}
+	for i := range numEntries {
+		var state MIB_TCP_STATE
 
-	for i := range int(numEntries) {
-		var state uint32
-		if family == AF_INET6 {
-			row := (*MIB_TCP6ROW_OWNER_PID)(unsafe.Pointer(&buf[4+uint32(i)*rowSize]))
+		if family == windows.AF_INET6 {
+			row := (*MIB_TCP6ROW_OWNER_PID)(unsafe.Pointer(&buf[4+i*rowSize]))
 			state = row.dwState
 		} else {
-			row := (*MIB_TCPROW_OWNER_PID)(unsafe.Pointer(&buf[4+uint32(i)*rowSize]))
+			row := (*MIB_TCPROW_OWNER_PID)(unsafe.Pointer(&buf[4+i*rowSize]))
 			state = row.dwState
 		}
 
@@ -79,5 +72,6 @@ func boolToInt(b bool) int {
 	if b {
 		return 1
 	}
+
 	return 0
 }
