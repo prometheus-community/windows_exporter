@@ -273,7 +273,7 @@ func (p *Prometheus) execute(name string, c Collector, scrapeCtx *types.ScrapeCo
 		return failed
 	}
 
-	p.logger.Info(fmt.Sprintf("collector %s succeeded after %s, resulting in %d metrics", name, duration, numMetrics))
+	p.logger.Debug(fmt.Sprintf("collector %s succeeded after %s, resulting in %d metrics", name, duration, numMetrics))
 
 	return success
 }
