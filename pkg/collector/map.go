@@ -18,6 +18,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/collector/diskdrive"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/dns"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/exchange"
+	"github.com/prometheus-community/windows_exporter/pkg/collector/filetime"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/fsrmquota"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/hyperv"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/iis"
@@ -73,6 +74,7 @@ var BuildersWithFlags = map[string]BuilderWithFlags[Collector]{
 	diskdrive.Name:         NewBuilderWithFlags(diskdrive.NewWithFlags),
 	dns.Name:               NewBuilderWithFlags(dns.NewWithFlags),
 	exchange.Name:          NewBuilderWithFlags(exchange.NewWithFlags),
+	filetime.Name:          NewBuilderWithFlags(filetime.NewWithFlags),
 	fsrmquota.Name:         NewBuilderWithFlags(fsrmquota.NewWithFlags),
 	hyperv.Name:            NewBuilderWithFlags(hyperv.NewWithFlags),
 	iis.Name:               NewBuilderWithFlags(iis.NewWithFlags),

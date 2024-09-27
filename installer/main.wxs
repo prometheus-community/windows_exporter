@@ -41,9 +41,10 @@
                       Value="amus" />
         <SetProperty
             Id="CreateConfigFile"
-            Value="&quot;[%ComSpec]&quot; /c TYPE NUL >>&quot;[APPLICATIONFOLDER]config.yaml&quot;"
+            Value="&quot;[%ComSpec]&quot; /c TYPE NUL >>&quot;[ConfigFile_NonDefault][ConfigFile_Default]&quot;"
             Before="CreateConfigFile"
             Sequence="execute"
+            Condition="ConfigFile_NonDefault OR ConfigFile_Default"
         />
         <CustomAction
             Id="CreateConfigFile"
@@ -61,7 +62,7 @@
                     Condition="Installed AND (NOT REMOVE) AND (NOT UPGRADINGPRODUCTCODE)"/>
             <Custom Action="set_reinstall_all_property" Before="set_reinstallmode_property" Condition="MAINTENANCE"/>
             <Custom Action="set_reinstallmode_property" Before="LaunchConditions" Condition="MAINTENANCE"/>
-            <Custom Action="CreateConfigFile" Before="InstallServices" />
+            <Custom Action="CreateConfigFile" Before="InstallServices" Condition="ConfigFile_NonDefault OR ConfigFile_Default" />
         </InstallExecuteSequence>
 
         <Media Id="1" Cabinet="windows_exporter.cab" EmbedCab="yes"  />
@@ -74,8 +75,9 @@
         <SetProperty Id="ExtraFlags" After="InstallFiles" Sequence="execute" Value="[EXTRA_FLAGS]" Condition="EXTRA_FLAGS" />
 
         <Property Id="CONFIG_FILE" Secure="yes" Value="config.yaml" />
-        <SetProperty Id="ConfigFile_NonDefault" After="InstallFiles" Sequence="execute" Value="--config.file=&quot;[CONFIG_FILE]&quot;" Condition="CONFIG_FILE AND CONFIG_FILE&lt;&gt;&quot;config.yaml&quot;" />
-        <SetProperty Id="ConfigFile_Default" After="InstallFiles" Sequence="execute" Value="--config.file=&quot;[APPLICATIONFOLDER]config.yaml&quot;" Condition="CONFIG_FILE=&quot;config.yaml&quot;" />
+        <SetProperty Id="ConfigFile_NonDefault" After="InstallFiles" Sequence="execute" Value="[CONFIG_FILE]" Condition="CONFIG_FILE AND CONFIG_FILE&lt;&gt;&quot;config.yaml&quot;" />
+        <SetProperty Id="ConfigFile_Default" After="InstallFiles" Sequence="execute" Value="[APPLICATIONFOLDER]config.yaml" Condition="CONFIG_FILE=&quot;config.yaml&quot;" />
+        <SetProperty Id="ConfigFileFlag" After="InstallFiles" Sequence="execute" Value="--config.file=&quot;[ConfigFile_NonDefault][ConfigFile_Default]&quot;" Condition="ConfigFile_NonDefault OR ConfigFile_Default" />
 
         <Property Id="LISTEN_PORT" Secure="yes" Value="9182" />
         <SetProperty Id="ListenFlag" After="InstallFiles" Sequence="execute" Value="--web.listen-address [LISTEN_ADDR]:[LISTEN_PORT]" Condition="LISTEN_ADDR&lt;&gt;&quot;&quot; OR LISTEN_PORT&lt;&gt;9182" />
