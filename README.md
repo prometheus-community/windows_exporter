@@ -47,10 +47,11 @@ Name     | Description | Enabled by default
 [system](docs/collector.system.md) | System calls | &#10003;
 [tcp](docs/collector.tcp.md) | TCP connections |
 [teradici_pcoip](docs/collector.teradici_pcoip.md) | [Teradici PCoIP](https://www.teradici.com/web-help/pcoip_wmi_specs/) session metrics |
-[time](docs/collector.time.md) | Windows Time Service |
-[thermalzone](docs/collector.thermalzone.md) | Thermal information
 [terminal_services](docs/collector.terminal_services.md) | Terminal services (RDS)
 [textfile](docs/collector.textfile.md) | Read prometheus metrics from a text file |
+[thermalzone](docs/collector.thermalzone.md) | Thermal information |
+[time](docs/collector.time.md) | Windows Time Service |
+[updates](docs/collector.updates.md) | Windows Update Service |
 [vmware_blast](docs/collector.vmware_blast.md) | VMware Blast session metrics |
 [vmware](docs/collector.vmware.md) | Performance counters installed by the Vmware Guest agent |
 

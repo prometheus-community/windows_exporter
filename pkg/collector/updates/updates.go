@@ -24,13 +24,13 @@ import (
 const Name = "updates"
 
 type Config struct {
-	cacheDuration time.Duration `yaml:"cache_duration"`
-	online        bool          `yaml:"online"`
+	scrapeInterval time.Duration `yaml:"cache_duration"`
+	online         bool          `yaml:"online"`
 }
 
 var ConfigDefaults = Config{
-	cacheDuration: 6 * time.Hour,
-	online:        false,
+	scrapeInterval: 6 * time.Hour,
+	online:         false,
 }
 
 type Collector struct {
@@ -63,14 +63,14 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 	}
 
 	app.Flag(
-		"collector.updates.cache-duration",
-		"How long should the Windows Update information be cached for.",
-	).Default(ConfigDefaults.cacheDuration.String()).DurationVar(&c.config.cacheDuration)
-
-	app.Flag(
 		"collector.updates.online",
 		"Whether to search for updates online.",
 	).Default(strconv.FormatBool(ConfigDefaults.online)).BoolVar(&c.config.online)
+
+	app.Flag(
+		"collector.updates.scrape-interval",
+		"Define the interval of scraping Windows Update information.",
+	).Default(ConfigDefaults.scrapeInterval.String()).DurationVar(&c.config.scrapeInterval)
 
 	return c
 }
@@ -92,7 +92,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *wmi.Client) error {
 	}
 
 	c.pendingUpdate = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "pending"),
+		prometheus.BuildFQName(types.Namespace, Name, "pending_info"),
 		"Pending Windows Updates",
 		[]string{"category", "severity", "title"},
 		nil,
@@ -245,7 +245,7 @@ func (c *Collector) scheduleUpdateStatus(logger *slog.Logger, initErrCh chan<- e
 		c.metricsBuf = metricsBuf
 		c.mu.Unlock()
 
-		time.Sleep(c.config.cacheDuration)
+		time.Sleep(c.config.scrapeInterval)
 	}
 }
 
