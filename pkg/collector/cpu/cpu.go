@@ -142,7 +142,6 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 		[]string{"core"},
 		nil,
 	)
-
 	c.cStateSecondsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "cstate_seconds_total"),
 		"Time spent in low-power idle state",
@@ -226,11 +225,11 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 }
 
 func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	logger = logger.With(slog.String("collector", Name))
-
 	if utils.PDHEnabled() {
 		return c.collectPDH(ch)
 	}
+
+	logger = logger.With(slog.String("collector", Name))
 
 	return c.collectFull(ctx, logger, ch)
 }
