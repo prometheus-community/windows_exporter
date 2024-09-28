@@ -169,4 +169,4 @@ jobs:
           make push-all
 
       - run: |
-          docker buildx build --push --build-arg=BASE=mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v1.0.0 -f Dockerfile -t ghcr.io/prometheus-community/windows-exporter:test-hostprocess .; \
+          docker buildx build --no-cache --push --build-arg=BASE=mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v1.0.0 -f Dockerfile -t ghcr.io/prometheus-community/windows-exporter:test-hostprocess .
