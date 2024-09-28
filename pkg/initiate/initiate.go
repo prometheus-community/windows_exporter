@@ -71,10 +71,10 @@ func init() {
 func logToEventToLog(eType uint16, msg string) error {
 	eventLog, err := eventlog.Open("windows_exporter")
 	if err != nil {
-		return fmt.Errorf("failed to open event log: %v", err)
+		return fmt.Errorf("failed to open event log: %w", err)
 	}
 
-	p, err := windows.UTF16PtrFromString(string(msg))
+	p, err := windows.UTF16PtrFromString(msg)
 	if err != nil {
 		return fmt.Errorf("error convert string to UTF-16: %w", err)
 	}
