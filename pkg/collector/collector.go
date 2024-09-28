@@ -127,6 +127,7 @@ func NewWithConfig(config Config) *MetricCollectors {
 	collectors[updates.Name] = updates.New(&config.Updates)
 	collectors[vmware.Name] = vmware.New(&config.Vmware)
 	collectors[vmware_blast.Name] = vmware_blast.New(&config.VmwareBlast)
+
 	return New(collectors)
 }
 

@@ -15,23 +15,24 @@ import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/go-ole/go-ole"
 	"github.com/go-ole/go-ole/oleutil"
+	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
-
-	"github.com/prometheus-community/windows_exporter/pkg/types"
 )
 
 const Name = "updates"
 
 type Config struct {
-	scrapeInterval time.Duration `yaml:"cache_duration"`
 	online         bool          `yaml:"online"`
+	scrapeInterval time.Duration `yaml:"scrape_interval"`
 }
 
 var ConfigDefaults = Config{
-	scrapeInterval: 6 * time.Hour,
 	online:         false,
+	scrapeInterval: 6 * time.Hour,
 }
+
+var ErrNoUpdates = errors.New("no updates available")
 
 type Collector struct {
 	config Config
@@ -126,7 +127,7 @@ func (c *Collector) Collect(_ *types.ScrapeContext, _ *slog.Logger, ch chan<- pr
 	defer c.mu.RUnlock()
 
 	if c.metricsBuf == nil {
-		return fmt.Errorf("no metrics available")
+		return ErrNoUpdates
 	}
 
 	for _, m := range c.metricsBuf {
@@ -186,7 +187,7 @@ func (c *Collector) scheduleUpdateStatus(logger *slog.Logger, initErrCh chan<- e
 	us, err := oleutil.CallMethod(musQueryInterface, "CreateUpdateSearcher")
 	defer func(hc *ole.VARIANT) {
 		if us != nil {
-			_ = us.Clear()
+			_ = hc.Clear()
 		}
 	}(us)
 
@@ -221,8 +222,6 @@ func (c *Collector) scheduleUpdateStatus(logger *slog.Logger, initErrCh chan<- e
 	}
 
 	close(initErrCh)
-
-	initErrCh = nil
 
 	usd := us.ToIDispatch()
 	defer usd.Release()
@@ -318,10 +317,10 @@ type windowsUpdate struct {
 	title    string
 }
 
+// getUpdateStatus retrieves the update status of the given item.
+// other available properties can be found here:
+// https://learn.microsoft.com/en-us/previous-versions/windows/desktop/aa386114(v=vs.85)
 func (c *Collector) getUpdateStatus(updd *ole.IDispatch, item int) (windowsUpdate, error) {
-	// other available properties can be found here:
-	// https://learn.microsoft.com/en-us/previous-versions/windows/desktop/aa386114(v=vs.85)
-
 	itemRaw, err := oleutil.GetProperty(updd, "Item", item)
 	if err != nil {
 		return windowsUpdate{}, fmt.Errorf("get update item: %w", err)
@@ -397,7 +396,6 @@ func getUpdateCategory(categories *ole.IDispatch) (string, error) {
 
 			return nil
 		}(i)
-
 		if err != nil {
 			return "", fmt.Errorf("get Category item: %w", err)
 		}
