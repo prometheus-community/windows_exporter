@@ -46,7 +46,7 @@ jobs:
           ((Get-Content -path config.toml -Raw) -replace 'C:\\\\Program Files\\\\containerd', ((Get-Location) -replace '\\', '\\')) | Set-Content -Path config.toml
           .\bin\containerd.exe  --help
 
-          .\bin\containerd.exe --register-service -c .\config.toml
+          .\bin\containerd.exe --register-service -c "$(Get-Location)\config.toml"
           Start-Service containerd
       - name: Setup BuildKit
         run: |
