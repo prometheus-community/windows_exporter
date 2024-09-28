@@ -39,21 +39,23 @@ jobs:
       # https://github.com/pl4nty/Windows-Containers/blob/Main/helpful_tools/Install-BuildKit-GitHubActions/workflow.yaml
       - name: Setup containerd
         run: |
-          curl.exe -L https://github.com/containerd/containerd/releases/download/v${{ env.VERSION_CONTAINERD }}/containerd-${{ env.VERSION_CONTAINERD }}-windows-amd64.tar.gz -o containerd.tar.gz
+          curl.exe -sSfL https://github.com/containerd/containerd/releases/download/v${{ env.VERSION_CONTAINERD }}/containerd-${{ env.VERSION_CONTAINERD }}-windows-amd64.tar.gz -o containerd.tar.gz
           tar.exe xvf containerd.tar.gz
           .\bin\containerd.exe --register-service
           Start-Service containerd
       - name: Setup BuildKit
         run: |
-          curl.exe -L https://github.com/moby/buildkit/releases/download/v${{ env.VERSION_BUILDKIT }}/buildkit-v${{ env.VERSION_BUILDKIT }}.windows-amd64.tar.gz -o buildkit.tar.gz
+          curl.exe -sSfL https://github.com/moby/buildkit/releases/download/v${{ env.VERSION_BUILDKIT }}/buildkit-v${{ env.VERSION_BUILDKIT }}.windows-amd64.tar.gz -o buildkit.tar.gz
           tar.exe xvf buildkit.tar.gz
 
-          .\bin\buildkitd.exe --help
+          mkdir C:\ProgramData\buildkitd\
+          mkdir C:\ProgramData\buildkitd\.buildstate\
+
           .\bin\buildkitd.exe --register-service --debug --containerd-worker=true --service-name buildkitd
           Start-Service buildkitd
       - name: Setup Docker Buildx
         run: |
-          curl.exe -L https://github.com/docker/buildx/releases/download/v${{ env.VERSION_BUILDX }}/buildx-v${{ env.VERSION_BUILDX }}.windows-amd64.exe -o $env:ProgramData\Docker\cli-plugins\docker-buildx.exe
+          curl.exe -sSfL https://github.com/docker/buildx/releases/download/v${{ env.VERSION_BUILDX }}/buildx-v${{ env.VERSION_BUILDX }}.windows-amd64.exe -o $env:ProgramData\Docker\cli-plugins\docker-buildx.exe
       - uses: docker/setup-buildx-action@v3
         with:
           driver: remote
