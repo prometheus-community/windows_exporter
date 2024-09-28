@@ -48,7 +48,8 @@ jobs:
           curl.exe -L https://github.com/moby/buildkit/releases/download/v${{ env.VERSION_BUILDKIT }}/buildkit-v${{ env.VERSION_BUILDKIT }}.windows-amd64.tar.gz -o buildkit.tar.gz
           tar.exe xvf buildkit.tar.gz
 
-          .\bin\buildkitd.exe --register-service
+          .\bin\buildkitd.exe --help
+          .\bin\buildkitd.exe --register-service --debug --containerd-worker=true --service-name buildkitd
           Start-Service buildkitd
       - name: Setup Docker Buildx
         run: |
