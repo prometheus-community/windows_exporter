@@ -124,7 +124,7 @@ func NewWithConfig(config Config) *MetricCollectors {
 	collectors[textfile.Name] = textfile.New(&config.Textfile)
 	collectors[thermalzone.Name] = thermalzone.New(&config.Thermalzone)
 	collectors[time.Name] = time.New(&config.Time)
-	collectors[updates.Name] = updates.New(logger, &config.Updates)
+	collectors[updates.Name] = updates.New(&config.Updates)
 	collectors[vmware.Name] = vmware.New(&config.Vmware)
 	collectors[vmware_blast.Name] = vmware_blast.New(&config.VmwareBlast)
 	return New(collectors)
