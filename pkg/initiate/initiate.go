@@ -16,8 +16,7 @@ const (
 
 type windowsExporterService struct{}
 
-//nolint:nonamedreturns
-func (s *windowsExporterService) Execute(_ []string, r <-chan svc.ChangeRequest, changes chan<- svc.Status) (ssec bool, errno uint32) {
+func (s *windowsExporterService) Execute(_ []string, r <-chan svc.ChangeRequest, changes chan<- svc.Status) (bool, uint32) {
 	const cmdsAccepted = svc.AcceptStop | svc.AcceptShutdown
 	changes <- svc.Status{State: svc.StartPending}
 	changes <- svc.Status{State: svc.Running, Accepts: cmdsAccepted}
@@ -31,13 +30,13 @@ func (s *windowsExporterService) Execute(_ []string, r <-chan svc.ChangeRequest,
 
 			changes <- svc.Status{State: svc.StopPending}
 
-			return
+			return false, 0
 		default:
 			_ = logToEventToLog(windows.EVENTLOG_ERROR_TYPE, fmt.Sprintf("unexpected control request #%d", c))
 		}
 	}
 
-	return
+	return false, 0
 }
 
 var StopCh = make(chan bool)
