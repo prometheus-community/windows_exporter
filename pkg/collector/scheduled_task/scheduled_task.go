@@ -59,6 +59,8 @@ const (
 	SCHED_S_TASK_HAS_NOT_RUN TaskResult = 0x00041303
 )
 
+var taskStates = []string{"disabled", "queued", "ready", "running", "unknown"}
+
 type scheduledTask struct {
 	Name            string
 	Path            string
@@ -192,8 +194,6 @@ func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan
 	return nil
 }
 
-var TASK_STATES = []string{"disabled", "queued", "ready", "running", "unknown"}
-
 func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	scheduledTasks, err := c.getScheduledTasks()
 	if err != nil {
@@ -206,7 +206,7 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 			continue
 		}
 
-		for _, state := range TASK_STATES {
+		for _, state := range taskStates {
 			var stateValue float64
 
 			if strings.ToLower(task.State.String()) == state {
@@ -307,11 +307,13 @@ func (c *Collector) initializeScheduleService(initErrCh chan<- error) {
 
 	close(initErrCh)
 
-	var scheduledTasks []scheduledTask
+	scheduledTasks := make([]scheduledTask, 0, 100)
 
 	for range c.scheduledTasksCh {
 		func() {
+			// Clear the slice to avoid memory leaks
 			clear(scheduledTasks)
+			scheduledTasks = scheduledTasks[:0]
 
 			res, err := oleutil.CallMethod(taskServiceObj, "GetFolder", `\`)
 			if err != nil {
@@ -320,21 +322,17 @@ func (c *Collector) initializeScheduleService(initErrCh chan<- error) {
 				return
 			}
 
-			defer func(res *ole.VARIANT) {
-				_ = res.Clear()
-			}(res)
-
 			rootFolderObj := res.ToIDispatch()
 			defer rootFolderObj.Release()
 
-			err = fetchTasksRecursively(rootFolderObj, scheduledTasks)
+			err = fetchTasksRecursively(rootFolderObj, &scheduledTasks)
 
 			c.scheduledTasksCh <- &scheduledTaskResults{scheduledTasks: scheduledTasks, err: err}
 		}()
 	}
 }
 
-func fetchTasksRecursively(folder *ole.IDispatch, scheduledTasks []scheduledTask) error {
+func fetchTasksRecursively(folder *ole.IDispatch, scheduledTasks *[]scheduledTask) error {
 	if err := fetchTasksInFolder(folder, scheduledTasks); err != nil {
 		return err
 	}
@@ -357,7 +355,7 @@ func fetchTasksRecursively(folder *ole.IDispatch, scheduledTasks []scheduledTask
 	return err
 }
 
-func fetchTasksInFolder(folder *ole.IDispatch, scheduledTasks []scheduledTask) error {
+func fetchTasksInFolder(folder *ole.IDispatch, scheduledTasks *[]scheduledTask) error {
 	res, err := oleutil.CallMethod(folder, "GetTasks", 1)
 	if err != nil {
 		return err
@@ -375,7 +373,7 @@ func fetchTasksInFolder(folder *ole.IDispatch, scheduledTasks []scheduledTask) e
 			return err
 		}
 
-		scheduledTasks = append(scheduledTasks, parsedTask)
+		*scheduledTasks = append(*scheduledTasks, parsedTask)
 
 		return nil
 	})
