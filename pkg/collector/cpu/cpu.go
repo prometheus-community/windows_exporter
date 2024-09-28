@@ -466,7 +466,7 @@ func (c *Collector) collectPDH(ch chan<- prometheus.Metric) error {
 		} else {
 			c.processorRTCValues[core] = cpuCounter{
 				uint32(coreData[PrivilegedUtilitySeconds].SecondValue),
-				coreData[PrivilegedUtilitySeconds].SecondValue,
+				0,
 			}
 		}
 
@@ -478,7 +478,7 @@ func (c *Collector) collectPDH(ch chan<- prometheus.Metric) error {
 		} else {
 			c.processorMPerfValues[core] = cpuCounter{
 				uint32(coreData[ProcessorPerformance].SecondValue),
-				coreData[ProcessorPerformance].SecondValue,
+				0,
 			}
 		}
 
