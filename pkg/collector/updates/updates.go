@@ -5,16 +5,16 @@ package updates
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"runtime"
 	"sync"
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/go-ole/go-ole"
 	"github.com/go-ole/go-ole/oleutil"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/yusufpapurcu/wmi"
 
 	"github.com/prometheus-community/windows_exporter/pkg/types"
 )
@@ -33,9 +33,7 @@ var ConfigDefaults = Config{
 	cacheDuration: 24 * time.Hour,
 }
 
-type collector struct {
-	logger log.Logger
-
+type Collector struct {
 	mu            sync.Mutex
 	cacheDuration *time.Duration
 	lastScrape    time.Time
@@ -52,19 +50,20 @@ type update struct {
 
 type availableUpdateCount map[update]int
 
-func New(logger log.Logger, config *Config) types.Collector {
+func New(config *Config) *Collector {
 	if config == nil {
 		config = &ConfigDefaults
 	}
-	c := &collector{
+
+	c := &Collector{
 		cacheDuration: &config.cacheDuration,
 	}
-	c.SetLogger(logger)
+
 	return c
 }
 
-func NewWithFlags(app *kingpin.Application) types.Collector {
-	c := &collector{
+func NewWithFlags(app *kingpin.Application) *Collector {
+	c := &Collector{
 		cacheDuration: app.Flag(
 			FlagCacheDuration,
 			"How long should the Windows Update information be cached for.",
@@ -73,11 +72,11 @@ func NewWithFlags(app *kingpin.Application) types.Collector {
 	return c
 }
 
-func (c *collector) SetLogger(logger log.Logger) {
-	c.logger = log.With(logger, "collector", Name)
+func (c *Collector) Close(_ *slog.Logger) error {
+	return nil
 }
 
-func (c *collector) Build() error {
+func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 	c.update = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "update"),
 		"Windows Update information",
@@ -88,21 +87,26 @@ func (c *collector) Build() error {
 	return nil
 }
 
-func (c *collector) GetName() string { return Name }
+func (c *Collector) GetName() string { return Name }
 
-func (c *collector) GetPerfCounter() ([]string, error) { return []string{}, nil }
+func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
+	return []string{}, nil
+}
 
-func (c *collector) Collect(_ *types.ScrapeContext, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	var err error
 
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	if time.Since(c.lastScrape) > *c.cacheDuration {
-		c.updates, err = c.getUpdates()
+		c.updates, err = c.getUpdates(logger)
 
 		if err != nil {
-			_ = level.Error(c.logger).Log("msg", "failed to collect printer status metrics", "err", err)
+			logger.Error("failed to collect update status metrics",
+				slog.Any("collector", Name),
+			)
+
 			return err
 		}
 
@@ -138,7 +142,7 @@ const (
 	WUStatusAborted
 )
 
-func (c *collector) getUpdates() (availableUpdateCount, error) {
+func (c *Collector) getUpdates(logger *slog.Logger) (availableUpdateCount, error) {
 	// The only way to run WMI queries in parallel while being thread-safe is to
 	// ensure the CoInitialize[Ex]() call is bound to its current OS thread.
 	// Otherwise, attempting to initialize and run parallel queries across
@@ -152,6 +156,7 @@ func (c *collector) getUpdates() (availableUpdateCount, error) {
 			return nil, err
 		}
 	}
+
 	defer ole.CoUninitialize()
 
 	// Create a new instance of the WMI object
@@ -174,16 +179,32 @@ func (c *collector) getUpdates() (availableUpdateCount, error) {
 	}
 
 	us, err := oleutil.CallMethod(musQueryInterface, "CreateUpdateSearcher")
+	defer func(hc *ole.VARIANT) {
+		if us != nil {
+			_ = us.Clear()
+		}
+	}(us)
+
 	if err != nil {
 		return nil, fmt.Errorf("create update searcher: %w", err)
 	}
 
 	ush := us.ToIDispatch()
 	defer ush.Release()
+
 	// lets use the fast local-only query to check if WindowsUpdates service is enabled on the host
-	_, err = oleutil.CallMethod(ush, "GetTotalHistoryCount")
+	hc, err := oleutil.CallMethod(ush, "GetTotalHistoryCount")
+	defer func(hc *ole.VARIANT) {
+		if hc != nil {
+			_ = hc.Clear()
+		}
+	}(hc)
+
 	if err != nil {
-		_ = level.Error(c.logger).Log("msg", "Windows Updates service is disabled", "err", err)
+		logger.Error("Windows Updates service is disabled",
+			slog.Any("err", err),
+		)
+
 		return nil, nil
 	}
 
@@ -191,6 +212,12 @@ func (c *collector) getUpdates() (availableUpdateCount, error) {
 	defer usd.Release()
 
 	usr, err := oleutil.CallMethod(usd, "Search", "IsInstalled=0 and Type='Software' and IsHidden=0")
+	defer func(usr *ole.VARIANT) {
+		if usr != nil {
+			_ = usr.Clear()
+		}
+	}(usr)
+
 	if err != nil {
 		return nil, fmt.Errorf("search updates: %w", err)
 	}
@@ -199,6 +226,12 @@ func (c *collector) getUpdates() (availableUpdateCount, error) {
 	defer usrd.Release()
 
 	upd, err := oleutil.GetProperty(usrd, "Updates")
+	defer func(upd *ole.VARIANT) {
+		if upd != nil {
+			_ = usr.Clear()
+		}
+	}(upd)
+
 	if err != nil {
 		return nil, fmt.Errorf("get updates: %w", err)
 	}
@@ -207,43 +240,87 @@ func (c *collector) getUpdates() (availableUpdateCount, error) {
 	defer updd.Release()
 
 	countUpdd, err := oleutil.GetProperty(updd, "Count")
+	defer func(countUpdd *ole.VARIANT) {
+		if countUpdd != nil {
+			_ = countUpdd.Clear()
+		}
+	}(countUpdd)
+
 	if err != nil {
 		return nil, fmt.Errorf("get count: %w", err)
 	}
 
 	availableUpdates := availableUpdateCount{}
-	for i := 0; i < int(countUpdd.Val); i++ {
-		// other available properties can be found here:
-		// https://learn.microsoft.com/en-us/previous-versions/windows/desktop/aa386114(v=vs.85)
+	for i := range int(countUpdd.Val) {
+		func(i int) {
+			// other available properties can be found here:
+			// https://learn.microsoft.com/en-us/previous-versions/windows/desktop/aa386114(v=vs.85)
 
-		itemRaw, err := oleutil.GetProperty(updd, "Item", i)
-		if err != nil {
-			_ = level.Error(c.logger).Log("msg", "failed to fetch Windows Update history item", "err", err)
-			continue
-		}
+			itemRaw, err := oleutil.GetProperty(updd, "Item", i)
+			defer func(itemRaw *ole.VARIANT) {
+				if itemRaw != nil {
+					_ = itemRaw.Clear()
+				}
+			}(itemRaw)
 
-		item := itemRaw.ToIDispatch()
-		defer item.Release()
+			if err != nil {
+				logger.Error("failed to fetch Windows Update history item",
+					slog.Any("err", err),
+				)
 
-		updateType, err := oleutil.GetProperty(item, "Type")
-		if err != nil {
-			_ = level.Error(c.logger).Log("msg", "failed to fetch Windows Update history item type", "err", err)
-			continue
-		}
+				return
+			}
 
-		severity, err := oleutil.GetProperty(item, "MsrcSeverity")
-		if err != nil {
-			_ = level.Error(c.logger).Log("msg", "failed to fetch Windows Update history item severity", "err", err)
-			continue
-		}
+			item := itemRaw.ToIDispatch()
+			defer item.Release()
 
-		categories, err := oleutil.GetProperty(item, "Categories")
-		if err != nil {
-			_ = level.Error(c.logger).Log("msg", "failed to fetch Windows Update history item categories", "err", err)
-			continue
-		}
+			updateType, err := oleutil.GetProperty(item, "Type")
+			defer func(updateType *ole.VARIANT) {
+				if updateType != nil {
+					_ = updateType.Clear()
+				}
+			}(updateType)
 
-		_, _, _ = updateType, severity, categories
+			if err != nil {
+				logger.Error("failed to fetch Windows Update history item type",
+					slog.Any("err", err),
+				)
+
+				return
+			}
+
+			severity, err := oleutil.GetProperty(item, "MsrcSeverity")
+			defer func(severity *ole.VARIANT) {
+				if severity != nil {
+					_ = severity.Clear()
+				}
+			}(severity)
+
+			if err != nil {
+				logger.Error("failed to fetch Windows Update history item severity",
+					slog.Any("err", err),
+				)
+
+				return
+			}
+
+			categories, err := oleutil.GetProperty(item, "Categories")
+			defer func(categories *ole.VARIANT) {
+				if categories != nil {
+					_ = categories.Clear()
+				}
+			}(categories)
+
+			if err != nil {
+				logger.Error("failed to fetch Windows Update history item categories",
+					slog.Any("err", err),
+				)
+
+				return
+			}
+
+			_, _, _ = updateType, severity, categories
+		}(i)
 	}
 
 	return availableUpdates, nil
