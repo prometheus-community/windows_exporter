@@ -83,6 +83,9 @@ func logToEventToLog(eType uint16, msg string) error {
 	if err != nil {
 		return fmt.Errorf("failed to open event log: %w", err)
 	}
+	defer func(eventLog *eventlog.Log) {
+		_ = eventLog.Close()
+	}(eventLog)
 
 	p, err := windows.UTF16PtrFromString(msg)
 	if err != nil {
