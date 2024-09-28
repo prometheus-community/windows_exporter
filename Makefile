@@ -56,7 +56,7 @@ package: crossbuild
 	powershell -NonInteractive -ExecutionPolicy Bypass -File .\installer\build.ps1 -PathToExecutable .\output\amd64\windows_exporter.exe -Version $(shell git describe --tags --abbrev=0)
 
 build-image: crossbuild
-	$(DOCKER) buildx build --load --build-arg=BASE=$(BASE_IMAGE):$(OS) -f Dockerfile -t local/$(DOCKER_IMAGE_NAME):$(VERSION)-$(OS) .
+	$(DOCKER) build --build-arg=BASE=$(BASE_IMAGE):$(OS) -f Dockerfile -t local/$(DOCKER_IMAGE_NAME):$(VERSION)-$(OS) .
 
 build-hostprocess:
 	$(DOCKER) buildx build --load --build-arg=BASE=mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v1.0.0 -f Dockerfile -t local/$(DOCKER_IMAGE_NAME):$(VERSION)-hostprocess .
@@ -64,7 +64,7 @@ build-hostprocess:
 sub-build-%:
 	$(MAKE) OS=$* build-image
 
-build-all: $(addprefix sub-build-,$(ALL_OS)) build-hostprocess
+build-all: $(addprefix sub-build-,$(ALL_OS))
 
 push:
 	set -x; \
