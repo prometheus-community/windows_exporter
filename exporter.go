@@ -39,7 +39,15 @@ import (
 )
 
 func main() {
-	os.Exit(run())
+	exitCode := run()
+
+	if !initiate.IsService {
+		os.Exit(exitCode)
+	}
+
+	initiate.ExitCodeCh <- exitCode
+
+	<-initiate.StopCh
 }
 
 func run() int {

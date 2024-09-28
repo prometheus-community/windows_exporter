@@ -21,29 +21,40 @@ func (s *windowsExporterService) Execute(_ []string, r <-chan svc.ChangeRequest,
 	changes <- svc.Status{State: svc.StartPending}
 	changes <- svc.Status{State: svc.Running, Accepts: cmdsAccepted}
 
-	for c := range r {
-		switch c.Cmd {
-		case svc.Interrogate:
-			changes <- c.CurrentStatus
-		case svc.Stop, svc.Shutdown:
-			_ = logToEventToLog(windows.EVENTLOG_ERROR_TYPE, "service stop received")
-
+	for {
+		select {
+		case exitCodeCh := <-ExitCodeCh:
 			changes <- svc.Status{State: svc.StopPending}
 
-			return false, 0
-		default:
-			_ = logToEventToLog(windows.EVENTLOG_ERROR_TYPE, fmt.Sprintf("unexpected control request #%d", c))
+			return true, uint32(exitCodeCh)
+		case c := <-r:
+			switch c.Cmd {
+			case svc.Interrogate:
+				changes <- c.CurrentStatus
+			case svc.Stop, svc.Shutdown:
+				_ = logToEventToLog(windows.EVENTLOG_INFORMATION_TYPE, "service stop received")
+
+				changes <- svc.Status{State: svc.StopPending}
+
+				return false, 0
+			default:
+				_ = logToEventToLog(windows.EVENTLOG_ERROR_TYPE, fmt.Sprintf("unexpected control request #%d", c))
+			}
 		}
 	}
-
-	return false, 0
 }
 
-var StopCh = make(chan bool)
+var (
+	IsService  bool
+	ExitCodeCh = make(chan int)
+	StopCh     = make(chan struct{})
+)
 
 //nolint:gochecknoinits
 func init() {
-	isService, err := svc.IsWindowsService()
+	var err error
+
+	IsService, err = svc.IsWindowsService()
 	if err != nil {
 		err = logToEventToLog(windows.EVENTLOG_ERROR_TYPE, fmt.Sprintf("Failed to detect service: %v", err))
 		if err != nil {
@@ -53,7 +64,7 @@ func init() {
 		os.Exit(1)
 	}
 
-	if isService {
+	if IsService {
 		err = logToEventToLog(windows.EVENTLOG_INFORMATION_TYPE, "Attempting to start exporter service")
 
 		go func() {
@@ -62,7 +73,7 @@ func init() {
 				_ = logToEventToLog(windows.EVENTLOG_ERROR_TYPE, fmt.Sprintf("Failed to start service: %v", err))
 			}
 
-			StopCh <- true
+			StopCh <- struct{}{}
 		}()
 	}
 }
