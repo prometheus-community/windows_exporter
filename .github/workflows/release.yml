@@ -41,7 +41,12 @@ jobs:
         run: |
           curl.exe -sSfL https://github.com/containerd/containerd/releases/download/v${{ env.VERSION_CONTAINERD }}/containerd-${{ env.VERSION_CONTAINERD }}-windows-amd64.tar.gz -o containerd.tar.gz
           tar.exe xvf containerd.tar.gz
-          .\bin\containerd.exe --register-service
+          bin\containerd.exe config default | Out-File config.toml -Encoding ascii
+          ((Get-Content -path config.toml -Raw) -replace 'C:\\\\ProgramData\\\\containerd', ((Get-Location) -replace '\\', '\\')) | Set-Content -Path config.toml
+          ((Get-Content -path config.toml -Raw) -replace 'C:\\\\Program Files\\\\containerd', ((Get-Location) -replace '\\', '\\')) | Set-Content -Path config.toml
+          .\bin\containerd.exe  --help
+
+          .\bin\containerd.exe --register-service -c .\config.toml
           Start-Service containerd
       - name: Setup BuildKit
         run: |
