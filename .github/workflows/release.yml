@@ -113,6 +113,9 @@ jobs:
 
           promu checksum output\
 
+      - run: |
+          docker buildx build --sbom=false --provenance=false --no-cache --push --build-arg=BASE=mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v1.0.0 -f Dockerfile -t ghcr.io/prometheus-community/windows-exporter:test-hostprocess .
+
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -171,6 +174,3 @@ jobs:
           $TagName = $env:GITHUB_REF -replace 'refs/tags/', ''
           Get-ChildItem -Path output\* -Include @('windows_exporter*.msi', 'windows_exporter*.exe', 'sha256sums.txt') | Foreach-Object {gh release upload $TagName $_}
           make push-all
-
-      - run: |
-          docker buildx build --sbom=false --provenance=false --no-cache --load --build-arg=BASE=mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v1.0.0 -f Dockerfile -t ghcr.io/prometheus-community/windows-exporter:test-hostprocess .
