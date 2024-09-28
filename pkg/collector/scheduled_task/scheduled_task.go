@@ -33,7 +33,8 @@ var ConfigDefaults = Config{
 type Collector struct {
 	config Config
 
-	scheduledTasksCh chan *scheduledTaskResults
+	scheduledTasksReqCh chan struct{}
+	scheduledTasksCh    chan *scheduledTaskResults
 
 	lastResult *prometheus.Desc
 	missedRuns *prometheus.Desc
@@ -140,15 +141,16 @@ func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
 }
 
 func (c *Collector) Close(_ *slog.Logger) error {
-	close(c.scheduledTasksCh)
+	close(c.scheduledTasksReqCh)
 
-	c.scheduledTasksCh = nil
+	c.scheduledTasksReqCh = nil
 
 	return nil
 }
 
 func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 	initErrCh := make(chan error)
+	c.scheduledTasksReqCh = make(chan struct{})
 	c.scheduledTasksCh = make(chan *scheduledTaskResults)
 
 	go c.initializeScheduleService(initErrCh)
@@ -250,9 +252,21 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 }
 
 func (c *Collector) getScheduledTasks() ([]scheduledTask, error) {
-	c.scheduledTasksCh <- nil
+	c.scheduledTasksReqCh <- struct{}{}
 
-	scheduledTasks := <-c.scheduledTasksCh
+	scheduledTasks, ok := <-c.scheduledTasksCh
+
+	if !ok {
+		return []scheduledTask{}, nil
+	}
+
+	if scheduledTasks == nil {
+		return nil, errors.New("scheduled tasks channel is nil")
+	}
+
+	if scheduledTasks.err != nil {
+		return nil, scheduledTasks.err
+	}
 
 	return scheduledTasks.scheduledTasks, scheduledTasks.err
 }
@@ -309,7 +323,7 @@ func (c *Collector) initializeScheduleService(initErrCh chan<- error) {
 
 	scheduledTasks := make([]scheduledTask, 0, 100)
 
-	for range c.scheduledTasksCh {
+	for range c.scheduledTasksReqCh {
 		func() {
 			// Clear the slice to avoid memory leaks
 			clear(scheduledTasks)
@@ -330,6 +344,10 @@ func (c *Collector) initializeScheduleService(initErrCh chan<- error) {
 			c.scheduledTasksCh <- &scheduledTaskResults{scheduledTasks: scheduledTasks, err: err}
 		}()
 	}
+
+	close(c.scheduledTasksCh)
+
+	c.scheduledTasksCh = nil
 }
 
 func fetchTasksRecursively(folder *ole.IDispatch, scheduledTasks *[]scheduledTask) error {
