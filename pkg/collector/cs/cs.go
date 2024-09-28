@@ -97,6 +97,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *wmi.Client) error {
 // to the provided prometheus Metric channel.
 func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
+
 	if err := c.collect(ch); err != nil {
 		logger.Error("failed collecting cs metrics",
 			slog.Any("err", err),
