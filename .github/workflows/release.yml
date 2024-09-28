@@ -17,9 +17,12 @@ permissions:
 
 env:
   VERSION_PROMU: '0.14.0'
-  VERSION_CONTAINERD: '1.7.21'
-  VERSION_BUILDKIT: '0.15.2'
-  VERSION_BUILDX: '0.16.2'
+  # https://github.com/containerd/containerd/releases/latest
+  VERSION_CONTAINERD: '1.7.22'
+  # https://github.com/moby/buildkit/releases/latest
+  VERSION_BUILDKIT: '0.16.0'
+  # https://github.com/docker/buildx/releases/latest
+  VERSION_BUILDX: '0.17.1'
 
 jobs:
   build:
