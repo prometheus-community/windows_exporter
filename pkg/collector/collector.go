@@ -23,6 +23,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/collector/diskdrive"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/dns"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/exchange"
+	"github.com/prometheus-community/windows_exporter/pkg/collector/filetime"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/fsrmquota"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/hyperv"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/iis"
@@ -90,6 +91,7 @@ func NewWithConfig(config Config) *MetricCollectors {
 	collectors[diskdrive.Name] = diskdrive.New(&config.DiskDrive)
 	collectors[dns.Name] = dns.New(&config.DNS)
 	collectors[exchange.Name] = exchange.New(&config.Exchange)
+	collectors[filetime.Name] = filetime.New(&config.Filetime)
 	collectors[fsrmquota.Name] = fsrmquota.New(&config.Fsrmquota)
 	collectors[hyperv.Name] = hyperv.New(&config.Hyperv)
 	collectors[iis.Name] = iis.New(&config.IIS)

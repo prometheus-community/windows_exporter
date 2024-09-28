@@ -21,6 +21,7 @@ Name     | Description | Enabled by default
 [dhcp](docs/collector.dhcp.md) | DHCP Server |
 [dns](docs/collector.dns.md) | DNS Server |
 [exchange](docs/collector.exchange.md) | Exchange metrics |
+[filetime](docs/collector.filetime.md) | FileTime metrics |
 [fsrmquota](docs/collector.fsrmquota.md) | Microsoft File Server Resource Manager (FSRM) Quotas collector |
 [hyperv](docs/collector.hyperv.md) | Hyper-V hosts |
 [iis](docs/collector.iis.md) | IIS sites and applications |
