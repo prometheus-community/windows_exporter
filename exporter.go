@@ -39,7 +39,17 @@ import (
 )
 
 func main() {
-	os.Exit(run())
+	exitCode := run()
+
+	// If we are running as a service, we need to signal the service control manager that we are done.
+	if !initiate.IsService {
+		os.Exit(exitCode)
+	}
+
+	initiate.ExitCodeCh <- exitCode
+
+	// Wait for the service control manager to signal that we are done.
+	<-initiate.StopCh
 }
 
 func run() int {
