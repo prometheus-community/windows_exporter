@@ -6,7 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math"
 	"runtime"
+	"strconv"
 	"sync"
 	"time"
 
@@ -19,36 +21,29 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/types"
 )
 
-const (
-	Name = "updates"
-
-	FlagCacheDuration = "collector.updates.cache-duration"
-)
+const Name = "updates"
 
 type Config struct {
 	cacheDuration time.Duration `yaml:"cache_duration"`
+	online        bool          `yaml:"online"`
 }
 
 var ConfigDefaults = Config{
-	cacheDuration: 24 * time.Hour,
+	cacheDuration: 6 * time.Hour,
+	online:        false,
 }
 
 type Collector struct {
-	mu            sync.Mutex
-	cacheDuration *time.Duration
-	lastScrape    time.Time
+	config Config
 
-	updates availableUpdateCount
+	mu sync.RWMutex
 
-	update *prometheus.Desc
+	metricsBuf []prometheus.Metric
+
+	pendingUpdate        *prometheus.Desc
+	queryDurationSeconds *prometheus.Desc
+	lastScrapeMetric     *prometheus.Desc
 }
-
-type update struct {
-	status  windowsUpdateStatus
-	seventy string
-}
-
-type availableUpdateCount map[update]int
 
 func New(config *Config) *Collector {
 	if config == nil {
@@ -56,7 +51,7 @@ func New(config *Config) *Collector {
 	}
 
 	c := &Collector{
-		cacheDuration: &config.cacheDuration,
+		config: *config,
 	}
 
 	return c
@@ -64,11 +59,19 @@ func New(config *Config) *Collector {
 
 func NewWithFlags(app *kingpin.Application) *Collector {
 	c := &Collector{
-		cacheDuration: app.Flag(
-			FlagCacheDuration,
-			"How long should the Windows Update information be cached for.",
-		).Default(ConfigDefaults.cacheDuration.String()).Duration(),
+		config: ConfigDefaults,
 	}
+
+	app.Flag(
+		"collector.updates.cache-duration",
+		"How long should the Windows Update information be cached for.",
+	).Default(ConfigDefaults.cacheDuration.String()).DurationVar(&c.config.cacheDuration)
+
+	app.Flag(
+		"collector.updates.online",
+		"Whether to search for updates online.",
+	).Default(strconv.FormatBool(ConfigDefaults.online)).BoolVar(&c.config.online)
+
 	return c
 }
 
@@ -76,11 +79,36 @@ func (c *Collector) Close(_ *slog.Logger) error {
 	return nil
 }
 
-func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
-	c.update = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "update"),
-		"Windows Update information",
-		[]string{"severity"},
+func (c *Collector) Build(logger *slog.Logger, _ *wmi.Client) error {
+	logger = logger.With(slog.String("collector", Name))
+
+	logger.Info("update collector is in an experimental state! The configuration and metrics may change in future. Please report any issues.")
+
+	initErrCh := make(chan error, 1)
+	go c.scheduleUpdateStatus(logger, initErrCh, c.config.online)
+
+	if err := <-initErrCh; err != nil {
+		return fmt.Errorf("failed to initialize Windows Update collector: %w", err)
+	}
+
+	c.pendingUpdate = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "pending"),
+		"Pending Windows Updates",
+		[]string{"category", "severity", "title"},
+		nil,
+	)
+
+	c.queryDurationSeconds = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "scrape_query_duration_seconds"),
+		"Duration of the last scrape query to the Windows Update API",
+		nil,
+		nil,
+	)
+
+	c.lastScrapeMetric = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "scrape_timestamp_seconds"),
+		"Timestamp of the last scrape",
+		nil,
 		nil,
 	)
 
@@ -93,56 +121,22 @@ func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
 	return []string{}, nil
 }
 
-func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	var err error
+func (c *Collector) Collect(_ *types.ScrapeContext, _ *slog.Logger, ch chan<- prometheus.Metric) error {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	if time.Since(c.lastScrape) > *c.cacheDuration {
-		c.updates, err = c.getUpdates(logger)
-
-		if err != nil {
-			logger.Error("failed to collect update status metrics",
-				slog.Any("collector", Name),
-			)
-
-			return err
-		}
-
-		c.lastScrape = time.Now()
+	if c.metricsBuf == nil {
+		return fmt.Errorf("no metrics available")
 	}
 
-	/*
-		for _, update := range updates {
-			severity := "unknown"
-			ch <- prometheus.MustNewConstMetric(
-				c.update,
-				prometheus.GaugeValue,
-				1,
-				severity,
-			)
-		}
+	for _, m := range c.metricsBuf {
+		ch <- m
+	}
 
-	*/
 	return nil
 }
 
-// S_FALSE is returned by CoInitialize if it was already called on this thread.
-const S_FALSE = 0x00000001
-
-type windowsUpdateStatus int
-
-const (
-	WUStatusPending = iota
-	WUStatusInProgress
-	WUStatusCompleted
-	WUStatusCompletedWithErrors
-	WUStatusFailed
-	WUStatusAborted
-)
-
-func (c *Collector) getUpdates(logger *slog.Logger) (availableUpdateCount, error) {
+func (c *Collector) scheduleUpdateStatus(logger *slog.Logger, initErrCh chan<- error, online bool) {
 	// The only way to run WMI queries in parallel while being thread-safe is to
 	// ensure the CoInitialize[Ex]() call is bound to its current OS thread.
 	// Otherwise, attempting to initialize and run parallel queries across
@@ -152,8 +146,10 @@ func (c *Collector) getUpdates(logger *slog.Logger) (availableUpdateCount, error
 
 	if err := ole.CoInitializeEx(0, ole.COINIT_MULTITHREADED); err != nil {
 		var oleCode *ole.OleError
-		if errors.As(err, &oleCode) && oleCode.Code() != ole.S_OK && oleCode.Code() != S_FALSE {
-			return nil, err
+		if errors.As(err, &oleCode) && oleCode.Code() != ole.S_OK && oleCode.Code() != wmi.S_FALSE {
+			initErrCh <- fmt.Errorf("CoInitializeEx: %w", err)
+
+			return
 		}
 	}
 
@@ -162,22 +158,31 @@ func (c *Collector) getUpdates(logger *slog.Logger) (availableUpdateCount, error
 	// Create a new instance of the WMI object
 	mus, err := oleutil.CreateObject("Microsoft.Update.Session")
 	if err != nil {
-		return nil, fmt.Errorf("create Microsoft.Update.Session: %w", err)
+		initErrCh <- fmt.Errorf("create Microsoft.Update.Session: %w", err)
+
+		return
 	}
+
 	defer mus.Release()
 
 	// Query the IDispatch interface of the object
 	musQueryInterface, err := mus.QueryInterface(ole.IID_IDispatch)
 	if err != nil {
-		return nil, fmt.Errorf("IID_IDispatch: %w", err)
+		initErrCh <- fmt.Errorf("IID_IDispatch: %w", err)
+
+		return
 	}
+
 	defer musQueryInterface.Release()
 
 	_, err = oleutil.PutProperty(musQueryInterface, "ClientApplicationID", "windows_exporter")
 	if err != nil {
-		return nil, fmt.Errorf("put ClientApplicationID: %w", err)
+		initErrCh <- fmt.Errorf("put ClientApplicationID: %w", err)
+
+		return
 	}
 
+	// https://learn.microsoft.com/en-us/windows/win32/api/wuapi/nf-wuapi-iupdatesession-createupdatesearcher
 	us, err := oleutil.CallMethod(musQueryInterface, "CreateUpdateSearcher")
 	defer func(hc *ole.VARIANT) {
 		if us != nil {
@@ -186,11 +191,20 @@ func (c *Collector) getUpdates(logger *slog.Logger) (availableUpdateCount, error
 	}(us)
 
 	if err != nil {
-		return nil, fmt.Errorf("create update searcher: %w", err)
+		initErrCh <- fmt.Errorf("create update searcher: %w", err)
+
+		return
 	}
 
 	ush := us.ToIDispatch()
 	defer ush.Release()
+
+	_, err = oleutil.PutProperty(ush, "Online", online)
+	if err != nil {
+		initErrCh <- fmt.Errorf("put Online: %w", err)
+
+		return
+	}
 
 	// lets use the fast local-only query to check if WindowsUpdates service is enabled on the host
 	hc, err := oleutil.CallMethod(ush, "GetTotalHistoryCount")
@@ -201,37 +215,62 @@ func (c *Collector) getUpdates(logger *slog.Logger) (availableUpdateCount, error
 	}(hc)
 
 	if err != nil {
-		logger.Error("Windows Updates service is disabled",
-			slog.Any("err", err),
-		)
+		initErrCh <- fmt.Errorf("windows updates service is disabled: %w", err)
 
-		return nil, nil
+		return
 	}
+
+	close(initErrCh)
+
+	initErrCh = nil
 
 	usd := us.ToIDispatch()
 	defer usd.Release()
 
-	usr, err := oleutil.CallMethod(usd, "Search", "IsInstalled=0 and Type='Software' and IsHidden=0")
-	defer func(usr *ole.VARIANT) {
-		if usr != nil {
-			_ = usr.Clear()
-		}
-	}(usr)
+	for {
+		metricsBuf, err := c.fetchUpdates(logger, usd)
+		if err != nil {
+			logger.Error("failed to fetch updates",
+				slog.Any("err", err),
+			)
 
-	if err != nil {
-		return nil, fmt.Errorf("search updates: %w", err)
+			c.mu.Lock()
+			c.metricsBuf = nil
+			c.mu.Unlock()
+
+			continue
+		}
+
+		c.mu.Lock()
+		c.metricsBuf = metricsBuf
+		c.mu.Unlock()
+
+		time.Sleep(c.config.cacheDuration)
 	}
+}
+
+func (c *Collector) fetchUpdates(logger *slog.Logger, usd *ole.IDispatch) ([]prometheus.Metric, error) {
+	metricsBuf := make([]prometheus.Metric, 0, len(c.metricsBuf))
+
+	timeStart := time.Now()
+
+	usr, err := oleutil.CallMethod(usd, "Search", "IsInstalled=0 and IsHidden=0")
+	if err != nil {
+		return nil, fmt.Errorf("search for updates: %w", err)
+	}
+
+	logger.Debug(fmt.Sprintf("search for updates took %s", time.Since(timeStart)))
+
+	metricsBuf = append(metricsBuf, prometheus.MustNewConstMetric(
+		c.queryDurationSeconds,
+		prometheus.GaugeValue,
+		time.Since(timeStart).Seconds(),
+	))
 
 	usrd := usr.ToIDispatch()
 	defer usrd.Release()
 
 	upd, err := oleutil.GetProperty(usrd, "Updates")
-	defer func(upd *ole.VARIANT) {
-		if upd != nil {
-			_ = usr.Clear()
-		}
-	}(upd)
-
 	if err != nil {
 		return nil, fmt.Errorf("get updates: %w", err)
 	}
@@ -240,88 +279,129 @@ func (c *Collector) getUpdates(logger *slog.Logger) (availableUpdateCount, error
 	defer updd.Release()
 
 	countUpdd, err := oleutil.GetProperty(updd, "Count")
-	defer func(countUpdd *ole.VARIANT) {
-		if countUpdd != nil {
-			_ = countUpdd.Clear()
-		}
-	}(countUpdd)
-
 	if err != nil {
-		return nil, fmt.Errorf("get count: %w", err)
+		return nil, fmt.Errorf("get updates count: %w", err)
 	}
 
-	availableUpdates := availableUpdateCount{}
 	for i := range int(countUpdd.Val) {
-		func(i int) {
-			// other available properties can be found here:
-			// https://learn.microsoft.com/en-us/previous-versions/windows/desktop/aa386114(v=vs.85)
+		update, err := c.getUpdateStatus(updd, i)
+		if err != nil {
+			logger.Error("failed to fetch Windows Update history item",
+				slog.Any("err", err),
+			)
 
-			itemRaw, err := oleutil.GetProperty(updd, "Item", i)
-			defer func(itemRaw *ole.VARIANT) {
-				if itemRaw != nil {
-					_ = itemRaw.Clear()
-				}
-			}(itemRaw)
+			continue
+		}
 
-			if err != nil {
-				logger.Error("failed to fetch Windows Update history item",
-					slog.Any("err", err),
-				)
-
-				return
-			}
-
-			item := itemRaw.ToIDispatch()
-			defer item.Release()
-
-			updateType, err := oleutil.GetProperty(item, "Type")
-			defer func(updateType *ole.VARIANT) {
-				if updateType != nil {
-					_ = updateType.Clear()
-				}
-			}(updateType)
-
-			if err != nil {
-				logger.Error("failed to fetch Windows Update history item type",
-					slog.Any("err", err),
-				)
-
-				return
-			}
-
-			severity, err := oleutil.GetProperty(item, "MsrcSeverity")
-			defer func(severity *ole.VARIANT) {
-				if severity != nil {
-					_ = severity.Clear()
-				}
-			}(severity)
-
-			if err != nil {
-				logger.Error("failed to fetch Windows Update history item severity",
-					slog.Any("err", err),
-				)
-
-				return
-			}
-
-			categories, err := oleutil.GetProperty(item, "Categories")
-			defer func(categories *ole.VARIANT) {
-				if categories != nil {
-					_ = categories.Clear()
-				}
-			}(categories)
-
-			if err != nil {
-				logger.Error("failed to fetch Windows Update history item categories",
-					slog.Any("err", err),
-				)
-
-				return
-			}
-
-			_, _, _ = updateType, severity, categories
-		}(i)
+		metricsBuf = append(metricsBuf, prometheus.MustNewConstMetric(
+			c.pendingUpdate,
+			prometheus.GaugeValue,
+			1,
+			update.category,
+			update.severity,
+			update.title,
+		))
 	}
 
-	return availableUpdates, nil
+	metricsBuf = append(metricsBuf, prometheus.MustNewConstMetric(
+		c.lastScrapeMetric,
+		prometheus.GaugeValue,
+		float64(time.Now().Unix()),
+	))
+
+	return metricsBuf, nil
+}
+
+type windowsUpdate struct {
+	category string
+	severity string
+	title    string
+}
+
+func (c *Collector) getUpdateStatus(updd *ole.IDispatch, item int) (windowsUpdate, error) {
+	// other available properties can be found here:
+	// https://learn.microsoft.com/en-us/previous-versions/windows/desktop/aa386114(v=vs.85)
+
+	itemRaw, err := oleutil.GetProperty(updd, "Item", item)
+	if err != nil {
+		return windowsUpdate{}, fmt.Errorf("get update item: %w", err)
+	}
+
+	updateItem := itemRaw.ToIDispatch()
+	defer updateItem.Release()
+
+	severity, err := oleutil.GetProperty(updateItem, "MsrcSeverity")
+	if err != nil {
+		return windowsUpdate{}, fmt.Errorf("get MsrcSeverity: %w", err)
+	}
+
+	categoriesRaw, err := oleutil.GetProperty(updateItem, "Categories")
+	if err != nil {
+		return windowsUpdate{}, fmt.Errorf("get Categories: %w", err)
+	}
+
+	categories := categoriesRaw.ToIDispatch()
+	defer categories.Release()
+
+	categoryName, err := getUpdateCategory(categories)
+	if err != nil {
+		return windowsUpdate{}, fmt.Errorf("get Category: %w", err)
+	}
+
+	title, err := oleutil.GetProperty(updateItem, "Title")
+	if err != nil {
+		return windowsUpdate{}, fmt.Errorf("get Title: %w", err)
+	}
+
+	return windowsUpdate{
+		category: categoryName,
+		severity: severity.ToString(),
+		title:    title.ToString(),
+	}, nil
+}
+
+func getUpdateCategory(categories *ole.IDispatch) (string, error) {
+	var categoryName string
+
+	categoryCount, err := oleutil.GetProperty(categories, "Count")
+	if err != nil {
+		return categoryName, fmt.Errorf("get Categories count: %w", err)
+	}
+
+	order := int64(math.MaxInt64)
+
+	for i := range categoryCount.Val {
+		err = func(i int64) error {
+			categoryRaw, err := oleutil.GetProperty(categories, "Item", i)
+			if err != nil {
+				return fmt.Errorf("get Category item: %w", err)
+			}
+
+			category := categoryRaw.ToIDispatch()
+			defer category.Release()
+
+			categoryNameRaw, err := oleutil.GetProperty(category, "Name")
+			if err != nil {
+				return fmt.Errorf("get Category item Name: %w", err)
+			}
+
+			orderRaw, err := oleutil.GetProperty(category, "Order")
+			if err != nil {
+				return fmt.Errorf("get Category item Order: %w", err)
+			}
+
+			if orderRaw.Val < order {
+				order = orderRaw.Val
+				categoryName = categoryNameRaw.ToString()
+			}
+
+			return nil
+		}(i)
+
+		if err != nil {
+			return "", fmt.Errorf("get Category item: %w", err)
+		}
+	}
+
+	return categoryName, nil
 }

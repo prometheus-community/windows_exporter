@@ -107,7 +107,7 @@ var BuildersWithFlags = map[string]BuilderWithFlags[Collector]{
 	textfile.Name:          NewBuilderWithFlags(textfile.NewWithFlags),
 	thermalzone.Name:       NewBuilderWithFlags(thermalzone.NewWithFlags),
 	time.Name:              NewBuilderWithFlags(time.NewWithFlags),
-	updates.Name:                         updates.NewWithFlags,
+	updates.Name:           NewBuilderWithFlags(updates.NewWithFlags),
 	vmware.Name:            NewBuilderWithFlags(vmware.NewWithFlags),
 	vmware_blast.Name:      NewBuilderWithFlags(vmware_blast.NewWithFlags),
 }
