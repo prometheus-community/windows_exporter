@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"runtime/debug"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -187,6 +188,7 @@ func (p *Prometheus) execute(name string, c Collector, scrapeCtx *types.ScrapeCo
 			if r := recover(); r != nil {
 				p.logger.Error("panic in collector "+name,
 					slog.Any("panic", r),
+					slog.Any("stack", string(debug.Stack())),
 				)
 			}
 		}()
