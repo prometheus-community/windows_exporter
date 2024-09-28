@@ -58,6 +58,7 @@ func New(config *Config) *Collector {
 	c := &Collector{
 		serviceWhereClause: &config.ServiceWhereClause,
 		useAPI:             &config.UseAPI,
+		v2:                 &config.V2,
 	}
 
 	return c
