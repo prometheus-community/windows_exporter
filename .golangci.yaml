@@ -29,6 +29,7 @@ run:
 linters-settings:
   gosec:
     excludes:
+      - G101 # Potential hardcoded credentials
       - G115 # integer overflow conversion
 
   gci:

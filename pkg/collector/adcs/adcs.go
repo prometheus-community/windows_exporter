@@ -77,19 +77,19 @@ func (c *Collector) Close(_ *slog.Logger) error {
 func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 	if utils.PDHEnabled() {
 		counters := []string{
-			RequestsPerSecond,
-			RequestProcessingTime,
-			RetrievalsPerSecond,
-			RetrievalProcessingTime,
-			FailedRequestsPerSecond,
-			IssuedRequestsPerSecond,
-			PendingRequestsPerSecond,
-			RequestCryptographicSigningTime,
-			RequestPolicyModuleProcessingTime,
-			ChallengeResponsesPerSecond,
-			ChallengeResponseProcessingTime,
-			SignedCertificateTimestampListsPerSecond,
-			SignedCertificateTimestampListProcessingTime,
+			requestsPerSecond,
+			requestProcessingTime,
+			retrievalsPerSecond,
+			retrievalProcessingTime,
+			failedRequestsPerSecond,
+			issuedRequestsPerSecond,
+			pendingRequestsPerSecond,
+			requestCryptographicSigningTime,
+			requestPolicyModuleProcessingTime,
+			challengeResponsesPerSecond,
+			challengeResponseProcessingTime,
+			signedCertificateTimestampListsPerSecond,
+			signedCertificateTimestampListProcessingTime,
 		}
 
 		var err error
@@ -317,79 +317,79 @@ func (c *Collector) collectPDH(ch chan<- prometheus.Metric) error {
 		ch <- prometheus.MustNewConstMetric(
 			c.requestsPerSecond,
 			prometheus.CounterValue,
-			adcsData[RequestsPerSecond].FirstValue,
+			adcsData[requestsPerSecond].FirstValue,
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.requestProcessingTime,
 			prometheus.GaugeValue,
-			utils.MilliSecToSec(adcsData[RequestProcessingTime].FirstValue),
+			utils.MilliSecToSec(adcsData[requestProcessingTime].FirstValue),
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.retrievalsPerSecond,
 			prometheus.CounterValue,
-			adcsData[RetrievalsPerSecond].FirstValue,
+			adcsData[retrievalsPerSecond].FirstValue,
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.retrievalProcessingTime,
 			prometheus.GaugeValue,
-			utils.MilliSecToSec(adcsData[RetrievalProcessingTime].FirstValue),
+			utils.MilliSecToSec(adcsData[retrievalProcessingTime].FirstValue),
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.failedRequestsPerSecond,
 			prometheus.CounterValue,
-			adcsData[FailedRequestsPerSecond].FirstValue,
+			adcsData[failedRequestsPerSecond].FirstValue,
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.issuedRequestsPerSecond,
 			prometheus.CounterValue,
-			adcsData[IssuedRequestsPerSecond].FirstValue,
+			adcsData[issuedRequestsPerSecond].FirstValue,
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.pendingRequestsPerSecond,
 			prometheus.CounterValue,
-			adcsData[PendingRequestsPerSecond].FirstValue,
+			adcsData[pendingRequestsPerSecond].FirstValue,
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.requestCryptographicSigningTime,
 			prometheus.GaugeValue,
-			utils.MilliSecToSec(adcsData[RequestCryptographicSigningTime].FirstValue),
+			utils.MilliSecToSec(adcsData[requestCryptographicSigningTime].FirstValue),
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.requestPolicyModuleProcessingTime,
 			prometheus.GaugeValue,
-			utils.MilliSecToSec(adcsData[RequestPolicyModuleProcessingTime].FirstValue),
+			utils.MilliSecToSec(adcsData[requestPolicyModuleProcessingTime].FirstValue),
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.challengeResponsesPerSecond,
 			prometheus.CounterValue,
-			adcsData[ChallengeResponsesPerSecond].FirstValue,
+			adcsData[challengeResponsesPerSecond].FirstValue,
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.challengeResponseProcessingTime,
 			prometheus.GaugeValue,
-			utils.MilliSecToSec(adcsData[ChallengeResponseProcessingTime].FirstValue),
+			utils.MilliSecToSec(adcsData[challengeResponseProcessingTime].FirstValue),
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.signedCertificateTimestampListsPerSecond,
 			prometheus.CounterValue,
-			adcsData[SignedCertificateTimestampListsPerSecond].FirstValue,
+			adcsData[signedCertificateTimestampListsPerSecond].FirstValue,
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.signedCertificateTimestampListProcessingTime,
 			prometheus.GaugeValue,
-			utils.MilliSecToSec(adcsData[SignedCertificateTimestampListProcessingTime].FirstValue),
+			utils.MilliSecToSec(adcsData[signedCertificateTimestampListProcessingTime].FirstValue),
 			name,
 		)
 	}
