@@ -67,15 +67,15 @@ func (c *Collector) Close(_ *slog.Logger) error {
 
 func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 	counters := []string{
-		ConnectionFailures,
-		ConnectionsActive,
-		ConnectionsEstablished,
-		ConnectionsPassive,
-		ConnectionsReset,
-		SegmentsPersec,
-		SegmentsReceivedPersec,
-		SegmentsRetransmittedPersec,
-		SegmentsSentPersec,
+		connectionFailures,
+		connectionsActive,
+		connectionsEstablished,
+		connectionsPassive,
+		connectionsReset,
+		segmentsPerSec,
+		segmentsReceivedPerSec,
+		segmentsRetransmittedPerSec,
+		segmentsSentPerSec,
 	}
 
 	var err error
@@ -167,55 +167,55 @@ func writeTCPCounters(metrics map[string]perfdata.CounterValues, labels []string
 	ch <- prometheus.MustNewConstMetric(
 		c.connectionFailures,
 		prometheus.CounterValue,
-		metrics[ConnectionFailures].FirstValue,
+		metrics[connectionFailures].FirstValue,
 		labels...,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.connectionsActive,
 		prometheus.CounterValue,
-		metrics[ConnectionsActive].FirstValue,
+		metrics[connectionsActive].FirstValue,
 		labels...,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.connectionsEstablished,
 		prometheus.GaugeValue,
-		metrics[ConnectionsEstablished].FirstValue,
+		metrics[connectionsEstablished].FirstValue,
 		labels...,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.connectionsPassive,
 		prometheus.CounterValue,
-		metrics[ConnectionsPassive].FirstValue,
+		metrics[connectionsPassive].FirstValue,
 		labels...,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.connectionsReset,
 		prometheus.CounterValue,
-		metrics[ConnectionsReset].FirstValue,
+		metrics[connectionsReset].FirstValue,
 		labels...,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.segmentsTotal,
 		prometheus.CounterValue,
-		metrics[SegmentsPersec].FirstValue,
+		metrics[segmentsPerSec].FirstValue,
 		labels...,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.segmentsReceivedTotal,
 		prometheus.CounterValue,
-		metrics[SegmentsReceivedPersec].FirstValue,
+		metrics[segmentsReceivedPerSec].FirstValue,
 		labels...,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.segmentsRetransmittedTotal,
 		prometheus.CounterValue,
-		metrics[SegmentsRetransmittedPersec].FirstValue,
+		metrics[segmentsRetransmittedPerSec].FirstValue,
 		labels...,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.segmentsSentTotal,
 		prometheus.CounterValue,
-		metrics[SegmentsSentPersec].FirstValue,
+		metrics[segmentsSentPerSec].FirstValue,
 		labels...,
 	)
 }

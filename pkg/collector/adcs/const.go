@@ -1,19 +1,19 @@
 package adcs
 
 const (
-	RequestsPerSecond                            = "Requests/sec"
-	RequestProcessingTime                        = "Request processing time (ms)"
-	RetrievalsPerSecond                          = "Retrievals/sec"
-	RetrievalProcessingTime                      = "Retrieval processing time (ms)"
-	FailedRequestsPerSecond                      = "Failed Requests/sec"
-	IssuedRequestsPerSecond                      = "Issued Requests/sec"
-	PendingRequestsPerSecond                     = "Pending Requests/sec"
-	RequestCryptographicSigningTime              = "Request cryptographic signing time (ms)"
-	RequestPolicyModuleProcessingTime            = "Request policy module processing time (ms)"
-	ChallengeResponsesPerSecond                  = "Challenge Responses/sec"
-	ChallengeResponseProcessingTime              = "Challenge Response processing time (ms)"
-	SignedCertificateTimestampListsPerSecond     = "Signed Certificate Timestamp Lists/sec"
-	SignedCertificateTimestampListProcessingTime = "Signed Certificate Timestamp List processing time (ms)"
+	challengeResponseProcessingTime              = "Challenge Response processing time (ms)"
+	challengeResponsesPerSecond                  = "Challenge Responses/sec"
+	failedRequestsPerSecond                      = "Failed Requests/sec"
+	issuedRequestsPerSecond                      = "Issued Requests/sec"
+	pendingRequestsPerSecond                     = "Pending Requests/sec"
+	requestCryptographicSigningTime              = "Request cryptographic signing time (ms)"
+	requestPolicyModuleProcessingTime            = "Request policy module processing time (ms)"
+	requestProcessingTime                        = "Request processing time (ms)"
+	requestsPerSecond                            = "Requests/sec"
+	retrievalProcessingTime                      = "Retrieval processing time (ms)"
+	retrievalsPerSecond                          = "Retrievals/sec"
+	signedCertificateTimestampListProcessingTime = "Signed Certificate Timestamp List processing time (ms)"
+	signedCertificateTimestampListsPerSecond     = "Signed Certificate Timestamp Lists/sec"
 )
 
 type perflibADCS struct {
