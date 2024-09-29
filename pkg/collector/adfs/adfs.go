@@ -703,7 +703,6 @@ func (c *Collector) collect(ctx *types.ScrapeContext, logger *slog.Logger, ch ch
 }
 
 func (c *Collector) collectPDH(ch chan<- prometheus.Metric) error {
-
 	data, err := c.perfDataCollector.Collect()
 	if err != nil {
 		return fmt.Errorf("failed to collect Certification Authority (ADCS) metrics: %w", err)
