@@ -38,18 +38,18 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-// Mapping of priority names to uin32 values required by windows.SetPriorityClass.
-var priorityStringToInt = map[string]uint32{
-	"realtime":    windows.REALTIME_PRIORITY_CLASS,
-	"high":        windows.HIGH_PRIORITY_CLASS,
-	"abovenormal": windows.ABOVE_NORMAL_PRIORITY_CLASS,
-	"normal":      windows.NORMAL_PRIORITY_CLASS,
-	"belownormal": windows.BELOW_NORMAL_PRIORITY_CLASS,
-	"low":         windows.IDLE_PRIORITY_CLASS,
-}
-
 func main() {
-	os.Exit(run())
+	exitCode := run()
+
+	// If we are running as a service, we need to signal the service control manager that we are done.
+	if !initiate.IsService {
+		os.Exit(exitCode)
+	}
+
+	initiate.ExitCodeCh <- exitCode
+
+	// Wait for the service control manager to signal that we are done.
+	<-initiate.StopCh
 }
 
 func run() int {
@@ -180,17 +180,12 @@ func run() int {
 		return 0
 	}
 
-	// Only set process priority if a non-default and valid value has been set
-	if priority, ok := priorityStringToInt[*processPriority]; ok && priority != windows.NORMAL_PRIORITY_CLASS {
-		logger.Debug("setting process priority to " + *processPriority)
+	if err = setPriorityWindows(logger, os.Getpid(), *processPriority); err != nil {
+		logger.Error("failed to set process priority",
+			slog.Any("err", err),
+		)
 
-		if err = setPriorityWindows(os.Getpid(), priority); err != nil {
-			logger.Error("failed to set process priority",
-				slog.Any("err", err),
-			)
-
-			return 1
-		}
+		return 1
 	}
 
 	enabledCollectorList := utils.ExpandEnabledCollectors(*enabledCollectors)
@@ -305,20 +300,43 @@ func printCollectorsToStdout() {
 }
 
 func logCurrentUser(logger *slog.Logger) {
-	if u, err := user.Current(); err == nil {
-		logger.Info("Running as " + u.Username)
-
-		if strings.Contains(u.Username, "ContainerAdministrator") || strings.Contains(u.Username, "ContainerUser") {
-			logger.Warn("Running as a preconfigured Windows Container user. This may mean you do not have Windows HostProcess containers configured correctly and some functionality will not work as expected.")
-		}
+	u, err := user.Current()
+	if err != nil {
+		logger.Warn("Unable to determine which user is running this exporter. More info: https://github.com/golang/go/issues/37348",
+			slog.Any("err", err),
+		)
 
 		return
 	}
 
-	logger.Warn("Unable to determine which user is running this exporter. More info: https://github.com/golang/go/issues/37348")
+	logger.Info("Running as " + u.Username)
+
+	if strings.Contains(u.Username, "ContainerAdministrator") || strings.Contains(u.Username, "ContainerUser") {
+		logger.Warn("Running as a preconfigured Windows Container user. This may mean you do not have Windows HostProcess containers configured correctly and some functionality will not work as expected.")
+	}
 }
 
-func setPriorityWindows(pid int, priority uint32) error {
+// setPriorityWindows sets the priority of the current process to the specified value.
+func setPriorityWindows(logger *slog.Logger, pid int, priority string) error {
+	// Mapping of priority names to uin32 values required by windows.SetPriorityClass.
+	priorityStringToInt := map[string]uint32{
+		"realtime":    windows.REALTIME_PRIORITY_CLASS,
+		"high":        windows.HIGH_PRIORITY_CLASS,
+		"abovenormal": windows.ABOVE_NORMAL_PRIORITY_CLASS,
+		"normal":      windows.NORMAL_PRIORITY_CLASS,
+		"belownormal": windows.BELOW_NORMAL_PRIORITY_CLASS,
+		"low":         windows.IDLE_PRIORITY_CLASS,
+	}
+
+	winPriority, ok := priorityStringToInt[priority]
+
+	// Only set process priority if a non-default and valid value has been set
+	if !ok || winPriority != windows.NORMAL_PRIORITY_CLASS {
+		return nil
+	}
+
+	logger.Debug("setting process priority to " + priority)
+
 	// https://learn.microsoft.com/en-us/windows/win32/procthread/process-security-and-access-rights
 	handle, err := windows.OpenProcess(
 		windows.STANDARD_RIGHTS_REQUIRED|windows.SYNCHRONIZE|windows.SPECIFIC_RIGHTS_ALL,
@@ -328,7 +346,7 @@ func setPriorityWindows(pid int, priority uint32) error {
 		return fmt.Errorf("failed to open own process: %w", err)
 	}
 
-	if err = windows.SetPriorityClass(handle, priority); err != nil {
+	if err = windows.SetPriorityClass(handle, winPriority); err != nil {
 		return fmt.Errorf("failed to set priority class: %w", err)
 	}
 

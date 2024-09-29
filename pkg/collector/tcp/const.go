@@ -4,13 +4,13 @@ package tcp
 // - https://msdn.microsoft.com/en-us/library/aa394341(v=vs.85).aspx
 // The TCPv6 performance object uses the same fields.
 const (
-	ConnectionFailures          = "Connection Failures"
-	ConnectionsActive           = "Connections Active"
-	ConnectionsEstablished      = "Connections Established"
-	ConnectionsPassive          = "Connections Passive"
-	ConnectionsReset            = "Connections Reset"
-	SegmentsPersec              = "Segments/sec"
-	SegmentsReceivedPersec      = "Segments Received/sec"
-	SegmentsRetransmittedPersec = "Segments Retransmitted/sec"
-	SegmentsSentPersec          = "Segments Sent/sec"
+	connectionFailures          = "Connection Failures"
+	connectionsActive           = "Connections Active"
+	connectionsEstablished      = "Connections Established"
+	connectionsPassive          = "Connections Passive"
+	connectionsReset            = "Connections Reset"
+	segmentsPerSec              = "Segments/sec"
+	segmentsReceivedPerSec      = "Segments Received/sec"
+	segmentsRetransmittedPerSec = "Segments Retransmitted/sec"
+	segmentsSentPerSec          = "Segments Sent/sec"
 )

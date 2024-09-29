@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/svc"
 	"golang.org/x/sys/windows/svc/eventlog"
 )
@@ -15,61 +16,83 @@ const (
 
 type windowsExporterService struct{}
 
-var logger *eventlog.Log
-
-//nolint:nonamedreturns
-func (s *windowsExporterService) Execute(_ []string, r <-chan svc.ChangeRequest, changes chan<- svc.Status) (ssec bool, errno uint32) {
+func (s *windowsExporterService) Execute(_ []string, r <-chan svc.ChangeRequest, changes chan<- svc.Status) (bool, uint32) {
 	const cmdsAccepted = svc.AcceptStop | svc.AcceptShutdown
 	changes <- svc.Status{State: svc.StartPending}
 	changes <- svc.Status{State: svc.Running, Accepts: cmdsAccepted}
 
-	for c := range r {
-		switch c.Cmd {
-		case svc.Interrogate:
-			changes <- c.CurrentStatus
-		case svc.Stop, svc.Shutdown:
-			_ = logger.Info(100, "Service Stop Received")
+	for {
+		select {
+		case exitCodeCh := <-ExitCodeCh:
 			changes <- svc.Status{State: svc.StopPending}
 
-			return
-		default:
-			_ = logger.Error(102, fmt.Sprintf("unexpected control request #%d", c))
+			return true, uint32(exitCodeCh)
+		case c := <-r:
+			switch c.Cmd {
+			case svc.Interrogate:
+				changes <- c.CurrentStatus
+			case svc.Stop, svc.Shutdown:
+				_ = logToEventToLog(windows.EVENTLOG_INFORMATION_TYPE, "service stop received")
+
+				changes <- svc.Status{State: svc.StopPending}
+
+				return false, 0
+			default:
+				_ = logToEventToLog(windows.EVENTLOG_ERROR_TYPE, fmt.Sprintf("unexpected control request #%d", c))
+			}
 		}
 	}
-
-	return
 }
 
-var StopCh = make(chan bool)
+var (
+	IsService  bool
+	ExitCodeCh = make(chan int)
+	StopCh     = make(chan struct{})
+)
 
 //nolint:gochecknoinits
 func init() {
-	isService, err := svc.IsWindowsService()
+	var err error
+
+	IsService, err = svc.IsWindowsService()
 	if err != nil {
-		logger, err = eventlog.Open("windows_exporter")
+		err = logToEventToLog(windows.EVENTLOG_ERROR_TYPE, fmt.Sprintf("Failed to detect service: %v", err))
 		if err != nil {
 			os.Exit(2)
 		}
-
-		_ = logger.Error(102, fmt.Sprintf("Failed to detect service: %v", err))
 
 		os.Exit(1)
 	}
 
-	if isService {
-		logger, err = eventlog.Open("windows_exporter")
-		if err != nil {
-			os.Exit(2)
-		}
-
-		_ = logger.Info(100, "Attempting to start exporter service")
+	if IsService {
+		err = logToEventToLog(windows.EVENTLOG_INFORMATION_TYPE, "Attempting to start exporter service")
 
 		go func() {
 			err = svc.Run(serviceName, &windowsExporterService{})
 			if err != nil {
-				_ = logger.Error(102, fmt.Sprintf("Failed to start service: %v", err))
+				_ = logToEventToLog(windows.EVENTLOG_ERROR_TYPE, fmt.Sprintf("Failed to start service: %v", err))
 			}
-			StopCh <- true
+
+			StopCh <- struct{}{}
 		}()
 	}
+}
+
+func logToEventToLog(eType uint16, msg string) error {
+	eventLog, err := eventlog.Open("windows_exporter")
+	if err != nil {
+		return fmt.Errorf("failed to open event log: %w", err)
+	}
+	defer func(eventLog *eventlog.Log) {
+		_ = eventLog.Close()
+	}(eventLog)
+
+	p, err := windows.UTF16PtrFromString(msg)
+	if err != nil {
+		return fmt.Errorf("error convert string to UTF-16: %w", err)
+	}
+
+	ss := []*uint16{p, nil, nil, nil, nil, nil, nil, nil, nil}
+
+	return windows.ReportEvent(eventLog.Handle, eType, 0, 3299, 0, 9, 0, &ss[0], nil)
 }
