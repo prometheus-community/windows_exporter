@@ -179,5 +179,5 @@ jobs:
           make push-all
 
       - run: |
-          .\buildctl.exe build --frontend=dockerfile.v0 --local context=. --local dockerfile=. --output type=image,name=ghcr.io/prometheus-community/windows-exporter:test-hostprocess,push=true --opt build-arg:BASE=mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v1.0.0
+          ./bin/buildctl.exe build --frontend=dockerfile.v0 --local context=. --local dockerfile=. --output type=image,name=ghcr.io/prometheus-community/windows-exporter:test-hostprocess,push=true --opt build-arg:BASE=mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v1.0.0
           docker buildx build --sbom=false --provenance=false --no-cache --push --build-arg=BASE=mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v1.0.0 -f Dockerfile -t ghcr.io/prometheus-community/windows-exporter:test-hostprocess .
