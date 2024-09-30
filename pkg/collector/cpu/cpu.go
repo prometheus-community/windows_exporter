@@ -270,7 +270,7 @@ func (c *Collector) collectFull(ctx *types.ScrapeContext, logger *slog.Logger, c
 		} else {
 			c.processorRTCValues[core] = cpuCounter{
 				uint32(cpu.ProcessorRTC),
-				cpu.ProcessorRTC,
+				0,
 			}
 		}
 
@@ -282,7 +282,7 @@ func (c *Collector) collectFull(ctx *types.ScrapeContext, logger *slog.Logger, c
 		} else {
 			c.processorMPerfValues[core] = cpuCounter{
 				uint32(cpu.ProcessorMPerf),
-				cpu.ProcessorMPerf,
+				0,
 			}
 		}
 
