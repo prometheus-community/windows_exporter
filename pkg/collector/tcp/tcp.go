@@ -7,10 +7,12 @@ import (
 	"log/slog"
 
 	"github.com/alecthomas/kingpin/v2"
+	"github.com/prometheus-community/windows_exporter/pkg/headers/iphlpapi"
 	"github.com/prometheus-community/windows_exporter/pkg/perfdata"
 	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
+	"golang.org/x/sys/windows"
 )
 
 const Name = "tcp"
@@ -35,6 +37,7 @@ type Collector struct {
 	segmentsReceivedTotal      *prometheus.Desc
 	segmentsRetransmittedTotal *prometheus.Desc
 	segmentsSentTotal          *prometheus.Desc
+	connectionsStateCount      *prometheus.Desc
 }
 
 func New(config *Config) *Collector {
@@ -144,6 +147,11 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 		[]string{"af"},
 		nil,
 	)
+	c.connectionsStateCount = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "connections_state_count"),
+		"Number of TCP connections by state and address family",
+		[]string{"af", "state"}, nil,
+	)
 
 	return nil
 }
@@ -160,10 +168,36 @@ func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan
 		return err
 	}
 
+	if err := c.collectConnectionsState(ch); err != nil {
+		logger.Error("failed collecting tcp connection state metrics",
+			slog.Any("err", err),
+		)
+
+		return err
+	}
+
 	return nil
 }
 
-func writeTCPCounters(metrics map[string]perfdata.CounterValues, labels []string, c *Collector, ch chan<- prometheus.Metric) {
+func (c *Collector) collect(ch chan<- prometheus.Metric) error {
+	data, err := c.perfDataCollector4.Collect()
+	if err != nil {
+		return fmt.Errorf("failed to collect TCPv4 metrics: %w", err)
+	}
+
+	c.writeTCPCounters(ch, data[perfdata.EmptyInstance], []string{"ipv4"})
+
+	data, err = c.perfDataCollector6.Collect()
+	if err != nil {
+		return fmt.Errorf("failed to collect TCPv6 metrics: %w", err)
+	}
+
+	c.writeTCPCounters(ch, data[perfdata.EmptyInstance], []string{"ipv6"})
+
+	return nil
+}
+
+func (c *Collector) writeTCPCounters(ch chan<- prometheus.Metric, metrics map[string]perfdata.CounterValues, labels []string) {
 	ch <- prometheus.MustNewConstMetric(
 		c.connectionFailures,
 		prometheus.CounterValue,
@@ -220,20 +254,32 @@ func writeTCPCounters(metrics map[string]perfdata.CounterValues, labels []string
 	)
 }
 
-func (c *Collector) collect(ch chan<- prometheus.Metric) error {
-	data, err := c.perfDataCollector4.Collect()
+func (c *Collector) collectConnectionsState(ch chan<- prometheus.Metric) error {
+	stateCounts, err := iphlpapi.GetTCPConnectionStates(windows.AF_INET)
 	if err != nil {
-		return fmt.Errorf("failed to collect TCPv4 metrics: %w", err)
+		return fmt.Errorf("failed to collect TCP connection states for %s: %w", "ipv4", err)
 	}
 
-	writeTCPCounters(data[perfdata.EmptyInstance], []string{"ipv4"}, c, ch)
+	c.sendTCPStateMetrics(ch, stateCounts, "ipv4")
 
-	data, err = c.perfDataCollector6.Collect()
+	stateCounts, err = iphlpapi.GetTCPConnectionStates(windows.AF_INET6)
 	if err != nil {
-		return fmt.Errorf("failed to collect TCPv6 metrics: %w", err)
+		return fmt.Errorf("failed to collect TCP6 connection states for %s: %w", "ipv6", err)
 	}
 
-	writeTCPCounters(data[perfdata.EmptyInstance], []string{"ipv6"}, c, ch)
+	c.sendTCPStateMetrics(ch, stateCounts, "ipv6")
 
 	return nil
+}
+
+func (c *Collector) sendTCPStateMetrics(ch chan<- prometheus.Metric, stateCounts map[iphlpapi.MIB_TCP_STATE]uint32, af string) {
+	for state, count := range stateCounts {
+		ch <- prometheus.MustNewConstMetric(
+			c.connectionsStateCount,
+			prometheus.GaugeValue,
+			float64(count),
+			af,
+			state.String(),
+		)
+	}
 }
