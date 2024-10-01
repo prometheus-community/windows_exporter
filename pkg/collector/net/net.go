@@ -36,7 +36,6 @@ var ConfigDefaults = Config{
 	CollectorsEnabled: []string{
 		"metrics",
 		"addresses",
-		"routes",
 	},
 }
 
@@ -77,6 +76,10 @@ func New(config *Config) *Collector {
 		config.NicInclude = ConfigDefaults.NicInclude
 	}
 
+	if config.CollectorsEnabled == nil {
+		config.CollectorsEnabled = ConfigDefaults.CollectorsEnabled
+	}
+
 	c := &Collector{
 		config: *config,
 	}
@@ -105,7 +108,7 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 	).Default(c.config.NicInclude.String()).StringVar(&nicInclude)
 
 	app.Flag(
-		"collectors.net.enabled",
+		"collector.net.enabled",
 		"Comma-separated list of collectors to use. Defaults to all, if not specified.",
 	).Default(strings.Join(ConfigDefaults.CollectorsEnabled, ",")).StringVar(&collectorsEnabled)
 
@@ -146,7 +149,7 @@ func (c *Collector) Close(_ *slog.Logger) error {
 	return nil
 }
 
-func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
+func (c *Collector) Build(logger *slog.Logger, _ *wmi.Client) error {
 	if utils.PDHEnabled() {
 		counters := []string{
 			BytesReceivedPerSec,
@@ -170,6 +173,12 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 		if err != nil {
 			return fmt.Errorf("failed to create Processor Information collector: %w", err)
 		}
+	}
+
+	if slices.Contains(c.config.CollectorsEnabled, "addresses") {
+		logger.Info("nic/addresses collector is in an experimental state! The configuration and metrics may change in future. Please report any issues.",
+			slog.String("collector", Name),
+		)
 	}
 
 	c.bytesReceivedTotal = prometheus.NewDesc(
@@ -288,12 +297,6 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch ch
 	if slices.Contains(c.config.CollectorsEnabled, "addresses") {
 		if err := c.collectNICAddresses(ch); err != nil {
 			return fmt.Errorf("failed collecting net addresses: %w", err)
-		}
-	}
-
-	if slices.Contains(c.config.CollectorsEnabled, "routes") {
-		if err := c.collectRoutes(ch); err != nil {
-			return fmt.Errorf("failed collecting net routes: %w", err)
 		}
 	}
 
@@ -552,10 +555,6 @@ func (c *Collector) collectNICAddresses(ch chan<- prometheus.Metric) error {
 		}
 	}
 
-	return nil
-}
-
-func (c *Collector) collectRoutes(_ chan<- prometheus.Metric) error {
 	return nil
 }
 
