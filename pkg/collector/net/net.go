@@ -35,7 +35,7 @@ var ConfigDefaults = Config{
 	NicInclude: types.RegExpAny,
 	CollectorsEnabled: []string{
 		"metrics",
-		"addresses",
+		"nic_addresses",
 	},
 }
 
@@ -294,7 +294,7 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch ch
 		}
 	}
 
-	if slices.Contains(c.config.CollectorsEnabled, "addresses") {
+	if slices.Contains(c.config.CollectorsEnabled, "nic_addresses") {
 		if err := c.collectNICAddresses(ch); err != nil {
 			return fmt.Errorf("failed collecting net addresses: %w", err)
 		}
