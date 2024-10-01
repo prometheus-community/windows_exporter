@@ -5,6 +5,8 @@ package tcp
 import (
 	"fmt"
 	"log/slog"
+	"slices"
+	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/pkg/headers/iphlpapi"
@@ -17,9 +19,16 @@ import (
 
 const Name = "tcp"
 
-type Config struct{}
+type Config struct {
+	CollectorsEnabled []string `yaml:"collectors_enabled"`
+}
 
-var ConfigDefaults = Config{}
+var ConfigDefaults = Config{
+	CollectorsEnabled: []string{
+		"metrics",
+		"connections_state",
+	},
+}
 
 // A Collector is a Prometheus Collector for WMI Win32_PerfRawData_Tcpip_TCPv{4,6} metrics.
 type Collector struct {
@@ -45,6 +54,10 @@ func New(config *Config) *Collector {
 		config = &ConfigDefaults
 	}
 
+	if config.CollectorsEnabled == nil {
+		config.CollectorsEnabled = ConfigDefaults.CollectorsEnabled
+	}
+
 	c := &Collector{
 		config: *config,
 	}
@@ -52,8 +65,26 @@ func New(config *Config) *Collector {
 	return c
 }
 
-func NewWithFlags(_ *kingpin.Application) *Collector {
-	return &Collector{}
+func NewWithFlags(app *kingpin.Application) *Collector {
+	c := &Collector{
+		config: ConfigDefaults,
+	}
+	c.config.CollectorsEnabled = make([]string, 0)
+
+	var collectorsEnabled string
+
+	app.Flag(
+		"collector.tcp.enabled",
+		"Comma-separated list of collectors to use. Defaults to all, if not specified.",
+	).Default(strings.Join(ConfigDefaults.CollectorsEnabled, ",")).StringVar(&collectorsEnabled)
+
+	app.Action(func(*kingpin.ParseContext) error {
+		c.config.CollectorsEnabled = strings.Split(collectorsEnabled, ",")
+
+		return nil
+	})
+
+	return c
 }
 
 func (c *Collector) GetName() string {
@@ -160,20 +191,25 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 // to the provided prometheus Metric channel.
 func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
-	if err := c.collect(ch); err != nil {
-		logger.Error("failed collecting tcp metrics",
-			slog.Any("err", err),
-		)
 
-		return err
+	if slices.Contains(c.config.CollectorsEnabled, "metrics") {
+		if err := c.collect(ch); err != nil {
+			logger.Error("failed collecting tcp metrics",
+				slog.Any("err", err),
+			)
+
+			return err
+		}
 	}
 
-	if err := c.collectConnectionsState(ch); err != nil {
-		logger.Error("failed collecting tcp connection state metrics",
-			slog.Any("err", err),
-		)
+	if slices.Contains(c.config.CollectorsEnabled, "connections_state") {
+		if err := c.collectConnectionsState(ch); err != nil {
+			logger.Error("failed collecting tcp connection state metrics",
+				slog.Any("err", err),
+			)
 
-		return err
+			return err
+		}
 	}
 
 	return nil
