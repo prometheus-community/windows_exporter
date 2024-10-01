@@ -55,6 +55,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/collector/textfile"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/thermalzone"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/time"
+	"github.com/prometheus-community/windows_exporter/pkg/collector/updates"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/vmware"
 	"github.com/prometheus-community/windows_exporter/pkg/collector/vmware_blast"
 	"github.com/prometheus-community/windows_exporter/pkg/perflib"
@@ -123,6 +124,7 @@ func NewWithConfig(config Config) *MetricCollectors {
 	collectors[textfile.Name] = textfile.New(&config.Textfile)
 	collectors[thermalzone.Name] = thermalzone.New(&config.Thermalzone)
 	collectors[time.Name] = time.New(&config.Time)
+	collectors[updates.Name] = updates.New(&config.Updates)
 	collectors[vmware.Name] = vmware.New(&config.Vmware)
 	collectors[vmware_blast.Name] = vmware_blast.New(&config.VmwareBlast)
 
