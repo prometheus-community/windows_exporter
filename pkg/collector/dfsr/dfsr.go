@@ -122,7 +122,7 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 
 	var collectorsEnabled string
 
-	app.Flag("collectors.dfsr.sources-enabled", "Comma-separated list of DFSR Perflib sources to use.").
+	app.Flag("collector.dfsr.sources-enabled", "Comma-separated list of DFSR Perflib sources to use.").
 		Default(strings.Join(ConfigDefaults.CollectorsEnabled, ",")).StringVar(&collectorsEnabled)
 
 	app.Action(func(*kingpin.ParseContext) error {

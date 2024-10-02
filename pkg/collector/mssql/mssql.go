@@ -452,12 +452,12 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 	var collectorsEnabled string
 
 	app.Flag(
-		"collectors.mssql.class-print",
+		"collector.mssql.class-print",
 		"If true, print available mssql WMI classes and exit.  Only displays if the mssql collector is enabled.",
 	).BoolVar(&listAllCollectors)
 
 	app.Flag(
-		"collectors.mssql.classes-enabled",
+		"collector.mssql.classes-enabled",
 		"Comma-separated list of mssql WMI classes to use.",
 	).Default(strings.Join(c.config.CollectorsEnabled, ",")).StringVar(&collectorsEnabled)
 
