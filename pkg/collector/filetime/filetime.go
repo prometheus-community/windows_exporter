@@ -59,7 +59,7 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 	var filePatterns string
 
 	app.Flag(
-		"collectors.filetime.file-patterns",
+		"collector.filetime.file-patterns",
 		"Comma-separated list of file patterns. Each pattern is a glob pattern that can contain `*`, `?`, and `**` (recursive). See https://github.com/bmatcuk/doublestar#patterns",
 	).Default(strings.Join(ConfigDefaults.filePatterns, ",")).StringVar(&filePatterns)
 
