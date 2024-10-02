@@ -1519,75 +1519,75 @@ func (c *Collector) collectPDH(ch chan<- prometheus.Metric) error {
 	ch <- prometheus.MustNewConstMetric(
 		c.bindsTotal,
 		prometheus.CounterValue,
-		float64(dst[0].DigestBindsPersec),
+		adData[digestBindsPerSec].FirstValue,
 		"digest",
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.bindsTotal,
 		prometheus.CounterValue,
-		float64(dst[0].DSClientBindsPersec),
+		adData[dsClientBindsPerSec].FirstValue,
 		"ds_client",
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.bindsTotal,
 		prometheus.CounterValue,
-		float64(dst[0].DSServerBindsPersec),
+		adData[dsServerBindsPerSec].FirstValue,
 		"ds_server",
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.bindsTotal,
 		prometheus.CounterValue,
-		float64(dst[0].ExternalBindsPersec),
+		adData[externalBindsPerSec].FirstValue,
 		"external",
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.bindsTotal,
 		prometheus.CounterValue,
-		float64(dst[0].FastBindsPersec),
+		adData[fastBindsPerSec].FirstValue,
 		"fast",
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.bindsTotal,
 		prometheus.CounterValue,
-		float64(dst[0].NegotiatedBindsPersec),
+		adData[negotiatedBindsPerSec].FirstValue,
 		"negotiate",
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.bindsTotal,
 		prometheus.CounterValue,
-		float64(dst[0].NTLMBindsPersec),
+		adData[ntlmBindsPerSec].FirstValue,
 		"ntlm",
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.bindsTotal,
 		prometheus.CounterValue,
-		float64(dst[0].SimpleBindsPersec),
+		adData[simpleBindsPerSec].FirstValue,
 		"simple",
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.bindsTotal,
 		prometheus.CounterValue,
-		float64(dst[0].LDAPSuccessfulBindsPersec),
+		adData[ldapSuccessfulBindsPerSec].FirstValue,
 		"ldap",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.replicationHighestUsn,
 		prometheus.CounterValue,
-		float64(dst[0].DRAHighestUSNCommittedHighpart<<32)+float64(dst[0].DRAHighestUSNCommittedLowpart),
+		float64(uint64(adData[draHighestUSNCommittedHighPart].FirstValue)<<32)+adData[draHighestUSNCommittedLowPart].FirstValue,
 		"committed",
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.replicationHighestUsn,
 		prometheus.CounterValue,
-		float64(dst[0].DRAHighestUSNIssuedHighpart<<32)+float64(dst[0].DRAHighestUSNIssuedLowpart),
+		float64(uint64(adData[draHighestUSNIssuedHighPart].FirstValue)<<32)+adData[draHighestUSNIssuedLowPart].FirstValue,
 		"issued",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.interSiteReplicationDataBytesTotal,
 		prometheus.CounterValue,
-		float64(dst[0].DRAInboundBytesCompressedBetweenSitesAfterCompressionPersec),
+		adData[draInboundBytesCompressedBetweenSitesAfterCompressionPerSec].FirstValue,
 		"inbound",
 	)
 	// The pre-compression data size seems to have little value? Skipping for now
@@ -1600,7 +1600,7 @@ func (c *Collector) collectPDH(ch chan<- prometheus.Metric) error {
 	ch <- prometheus.MustNewConstMetric(
 		c.interSiteReplicationDataBytesTotal,
 		prometheus.CounterValue,
-		float64(dst[0].DRAOutboundBytesCompressedBetweenSitesAfterCompressionPersec),
+		adData[draOutboundBytesCompressedBetweenSitesAfterCompressionPerSec].FirstValue,
 		"outbound",
 	)
 	// ch <- prometheus.MustNewConstMetric(
@@ -1612,75 +1612,75 @@ func (c *Collector) collectPDH(ch chan<- prometheus.Metric) error {
 	ch <- prometheus.MustNewConstMetric(
 		c.intraSiteReplicationDataBytesTotal,
 		prometheus.CounterValue,
-		float64(dst[0].DRAInboundBytesNotCompressedWithinSitePersec),
+		adData[draInboundBytesNotCompressedWithinSitePerSec].FirstValue,
 		"inbound",
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.intraSiteReplicationDataBytesTotal,
 		prometheus.CounterValue,
-		float64(dst[0].DRAOutboundBytesNotCompressedWithinSitePersec),
+		adData[draOutboundBytesNotCompressedWithinSitePerSec].FirstValue,
 		"outbound",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.replicationInboundSyncObjectsRemaining,
 		prometheus.GaugeValue,
-		float64(dst[0].DRAInboundFullSyncObjectsRemaining),
+		adData[draInboundFullSyncObjectsRemaining].FirstValue,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.replicationInboundLinkValueUpdatesRemaining,
 		prometheus.GaugeValue,
-		float64(dst[0].DRAInboundLinkValueUpdatesRemaininginPacket),
+		adData[draInboundLinkValueUpdatesRemainingInPacket].FirstValue,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.replicationInboundObjectsUpdatedTotal,
 		prometheus.CounterValue,
-		float64(dst[0].DRAInboundObjectsAppliedPersec),
+		adData[draInboundObjectsAppliedPerSec].FirstValue,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.replicationInboundObjectsFilteredTotal,
 		prometheus.CounterValue,
-		float64(dst[0].DRAInboundObjectsFilteredPersec),
+		adData[draInboundObjectsFilteredPerSec].FirstValue,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.replicationInboundPropertiesUpdatedTotal,
 		prometheus.CounterValue,
-		float64(dst[0].DRAInboundPropertiesAppliedPersec),
+		adData[draInboundPropertiesAppliedPerSec].FirstValue,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.replicationInboundPropertiesFilteredTotal,
 		prometheus.CounterValue,
-		float64(dst[0].DRAInboundPropertiesFilteredPersec),
+		adData[draInboundPropertiesFilteredPerSec].FirstValue,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.replicationPendingOperations,
 		prometheus.GaugeValue,
-		float64(dst[0].DRAPendingReplicationOperations),
+		adData[draPendingReplicationOperations].FirstValue,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.replicationPendingSynchronizations,
 		prometheus.GaugeValue,
-		float64(dst[0].DRAPendingReplicationSynchronizations),
+		adData[draPendingReplicationSynchronizations].FirstValue,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.replicationSyncRequestsTotal,
 		prometheus.CounterValue,
-		float64(dst[0].DRASyncRequestsMade),
+		adData[draSyncRequestsMade].FirstValue,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.replicationSyncRequestsSuccessTotal,
 		prometheus.CounterValue,
-		float64(dst[0].DRASyncRequestsSuccessful),
+		adData[draSyncRequestsSuccessful].FirstValue,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.replicationSyncRequestsSchemaMismatchFailureTotal,
 		prometheus.CounterValue,
-		float64(dst[0].DRASyncFailuresonSchemaMismatch),
+		adData[draSyncFailuresOnSchemaMismatch].FirstValue,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
