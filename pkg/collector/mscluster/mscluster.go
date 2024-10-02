@@ -196,7 +196,7 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 	var collectorsEnabled string
 
 	app.Flag(
-		"collectors.mscluster.enabled",
+		"collector.mscluster.enabled",
 		"Comma-separated list of collectors to use.",
 	).Default(strings.Join(ConfigDefaults.CollectorsEnabled, ",")).StringVar(&collectorsEnabled)
 

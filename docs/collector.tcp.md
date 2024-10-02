@@ -26,6 +26,7 @@ Name | Description | Type | Labels
 `windows_tcp_segments_received_total` | Total segments received, including those received in error. This count includes segments received on currently established connections | counter | af
 `windows_tcp_segments_retransmitted_total` | Total segments retransmitted. That is, segments transmitted that contain one or more previously transmitted bytes | counter | af
 `windows_tcp_segments_sent_total` | Total segments sent, including those on current connections, but excluding those containing *only* retransmitted bytes | counter | af
+`windows_tcp_connections_state_count` | Number of TCP connections by state among: CLOSED, LISTENING, SYN_SENT, SYN_RECEIVED, ESTABLISHED, FIN_WAIT1, FIN_WAIT2, CLOSE_WAIT, CLOSING, LAST_ACK, TIME_WAIT, DELETE_TCB | gauge | af
 
 ### Example metric
 _This collector does not yet have explained examples, we would appreciate your help adding them!_

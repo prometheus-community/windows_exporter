@@ -27,6 +27,9 @@ type Collector struct {
 
 	perfDataCollector *perfdata.Collector
 
+	processorRTCValues   map[string]cpuCounter
+	processorMPerfValues map[string]cpuCounter
+
 	logicalProcessors          *prometheus.Desc
 	cStateSecondsTotal         *prometheus.Desc
 	timeTotal                  *prometheus.Desc
@@ -41,6 +44,11 @@ type Collector struct {
 	processorRTC               *prometheus.Desc
 	processorUtility           *prometheus.Desc
 	processorPrivilegedUtility *prometheus.Desc
+}
+
+type cpuCounter struct {
+	lastValue  uint32
+	totalValue float64
 }
 
 func New(config *Config) *Collector {
@@ -221,6 +229,9 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 		nil,
 	)
 
+	c.processorRTCValues = map[string]cpuCounter{}
+	c.processorMPerfValues = map[string]cpuCounter{}
+
 	return nil
 }
 
@@ -250,6 +261,30 @@ func (c *Collector) collectFull(ctx *types.ScrapeContext, logger *slog.Logger, c
 		}
 
 		core := cpu.Name
+
+		if val, ok := c.processorRTCValues[core]; ok {
+			c.processorRTCValues[core] = cpuCounter{
+				uint32(cpu.ProcessorRTC),
+				val.totalValue + float64(uint32(cpu.ProcessorRTC)-val.lastValue),
+			}
+		} else {
+			c.processorRTCValues[core] = cpuCounter{
+				uint32(cpu.ProcessorRTC),
+				0,
+			}
+		}
+
+		if val, ok := c.processorMPerfValues[core]; ok {
+			c.processorMPerfValues[core] = cpuCounter{
+				uint32(cpu.ProcessorMPerf),
+				val.totalValue + float64(uint32(cpu.ProcessorMPerf)-val.lastValue),
+			}
+		} else {
+			c.processorMPerfValues[core] = cpuCounter{
+				uint32(cpu.ProcessorMPerf),
+				0,
+			}
+		}
 
 		coreCount++
 
@@ -350,13 +385,13 @@ func (c *Collector) collectFull(ctx *types.ScrapeContext, logger *slog.Logger, c
 		ch <- prometheus.MustNewConstMetric(
 			c.processorMPerf,
 			prometheus.CounterValue,
-			cpu.ProcessorMPerf,
+			c.processorMPerfValues[core].totalValue,
 			core,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.processorRTC,
 			prometheus.CounterValue,
-			cpu.ProcessorRTC,
+			c.processorRTCValues[core].totalValue,
 			core,
 		)
 		ch <- prometheus.MustNewConstMetric(
@@ -392,6 +427,30 @@ func (c *Collector) collectPDH(ch chan<- prometheus.Metric) error {
 
 	for core, coreData := range data {
 		coreCount++
+
+		if val, ok := c.processorRTCValues[core]; ok {
+			c.processorRTCValues[core] = cpuCounter{
+				uint32(coreData[privilegedUtilitySeconds].SecondValue),
+				val.totalValue + float64(uint32(coreData[privilegedUtilitySeconds].SecondValue)-val.lastValue),
+			}
+		} else {
+			c.processorRTCValues[core] = cpuCounter{
+				uint32(coreData[privilegedUtilitySeconds].SecondValue),
+				0,
+			}
+		}
+
+		if val, ok := c.processorMPerfValues[core]; ok {
+			c.processorMPerfValues[core] = cpuCounter{
+				uint32(coreData[processorPerformance].SecondValue),
+				val.totalValue + float64(uint32(coreData[processorPerformance].SecondValue)-val.lastValue),
+			}
+		} else {
+			c.processorMPerfValues[core] = cpuCounter{
+				uint32(coreData[processorPerformance].SecondValue),
+				0,
+			}
+		}
 
 		ch <- prometheus.MustNewConstMetric(
 			c.cStateSecondsTotal,

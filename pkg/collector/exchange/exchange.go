@@ -106,12 +106,12 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 	var collectorsEnabled string
 
 	app.Flag(
-		"collectors.exchange.list",
+		"collector.exchange.list",
 		"List the collectors along with their perflib object name/ids",
 	).BoolVar(&listAllCollectors)
 
 	app.Flag(
-		"collectors.exchange.enabled",
+		"collector.exchange.enabled",
 		"Comma-separated list of collectors to use. Defaults to all, if not specified.",
 	).Default(strings.Join(ConfigDefaults.CollectorsEnabled, ",")).StringVar(&collectorsEnabled)
 
