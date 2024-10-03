@@ -1818,72 +1818,63 @@ func (c *Collector) collectPDH(ch chan<- prometheus.Metric) error {
 	ch <- prometheus.MustNewConstMetric(
 		c.directoryOperationsTotal,
 		prometheus.CounterValue,
-		adData[dsServerNameTranslationsPerSec].FirstValue,
-		float64(dst[0].DSPercentSearchesOther),
+		adData[dsPercentSearchesOther].FirstValue,
 		"search",
 		"other",
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.directoryOperationsTotal,
 		prometheus.CounterValue,
-		adData[dsServerNameTranslationsPerSec].FirstValue,
-		float64(dst[0].DSPercentWritesfromDRA),
+		adData[dsPercentWritesFromDRA].FirstValue,
 		"write",
 		"replication_agent",
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.directoryOperationsTotal,
 		prometheus.CounterValue,
-		adData[dsServerNameTranslationsPerSec].FirstValue,
-		float64(dst[0].DSPercentWritesfromKCC),
+		adData[dsPercentWritesFromKCC].FirstValue,
 		"write",
 		"knowledge_consistency_checker",
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.directoryOperationsTotal,
 		prometheus.CounterValue,
-		adData[dsServerNameTranslationsPerSec].FirstValue,
-		float64(dst[0].DSPercentWritesfromLDAP),
+		adData[dsPercentWritesFromLDAP].FirstValue,
 		"write",
 		"ldap",
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.directoryOperationsTotal,
 		prometheus.CounterValue,
-		adData[dsServerNameTranslationsPerSec].FirstValue,
-		float64(dst[0].DSPercentWritesfromLSA),
+		adData[dsPercentSearchesFromLSA].FirstValue,
 		"write",
 		"local_security_authority",
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.directoryOperationsTotal,
 		prometheus.CounterValue,
-		adData[dsServerNameTranslationsPerSec].FirstValue,
-		float64(dst[0].DSPercentWritesfromNSPI),
+		adData[dsPercentWritesFromNSPI].FirstValue,
 		"write",
 		"name_service_provider_interface",
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.directoryOperationsTotal,
 		prometheus.CounterValue,
-		adData[dsServerNameTranslationsPerSec].FirstValue,
-		float64(dst[0].DSPercentWritesfromNTDSAPI),
+		adData[dsPercentWritesFromNTDSAPI].FirstValue,
 		"write",
 		"directory_service_api",
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.directoryOperationsTotal,
 		prometheus.CounterValue,
-		adData[dsServerNameTranslationsPerSec].FirstValue,
-		float64(dst[0].DSPercentWritesfromSAM),
+		adData[dsPercentWritesFromSAM].FirstValue,
 		"write",
 		"security_account_manager",
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.directoryOperationsTotal,
 		prometheus.CounterValue,
-		adData[dsServerNameTranslationsPerSec].FirstValue,
-		float64(dst[0].DSPercentWritesOther),
+		adData[dsPercentWritesOther].FirstValue,
 		"write",
 		"other",
 	)
@@ -1891,243 +1882,207 @@ func (c *Collector) collectPDH(ch chan<- prometheus.Metric) error {
 	ch <- prometheus.MustNewConstMetric(
 		c.directorySearchSubOperationsTotal,
 		prometheus.CounterValue,
-		adData[dsServerNameTranslationsPerSec].FirstValue,
-		float64(dst[0].DSSearchsuboperationsPersec),
+		adData[dsSearchSubOperationsPerSec].FirstValue,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.securityDescriptorPropagationEventsTotal,
 		prometheus.CounterValue,
-		adData[dsServerNameTranslationsPerSec].FirstValue,
-		float64(dst[0].DSSecurityDescriptorsuboperationsPersec),
+		adData[dsSecurityDescriptorSubOperationsPerSec].FirstValue,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.securityDescriptorPropagationEventsQueued,
 		prometheus.GaugeValue,
-		adData[dsServerNameTranslationsPerSec].FirstValue,
-		float64(dst[0].DSSecurityDescriptorPropagationsEvents),
+		adData[dsSecurityDescriptorPropagationsEvents].FirstValue,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.securityDescriptorPropagationAccessWaitTotalSeconds,
 		prometheus.GaugeValue,
-		adData[dsServerNameTranslationsPerSec].FirstValue,
-		float64(dst[0].DSSecurityDescriptorPropagatorAverageExclusionTime),
+		adData[dsSecurityDescriptorPropagatorAverageExclusionTime].FirstValue,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.securityDescriptorPropagationItemsQueuedTotal,
 		prometheus.CounterValue,
-		adData[dsServerNameTranslationsPerSec].FirstValue,
-		float64(dst[0].DSSecurityDescriptorPropagatorRuntimeQueue),
+		adData[dsSecurityDescriptorPropagatorRuntimeQueue].FirstValue,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.directoryServiceThreads,
 		prometheus.GaugeValue,
-		adData[dsServerNameTranslationsPerSec].FirstValue,
-		float64(dst[0].DSThreadsinUse),
+		adData[dsThreadsInUse].FirstValue,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.ldapClosedConnectionsTotal,
 		prometheus.CounterValue,
-		adData[dsServerNameTranslationsPerSec].FirstValue,
-		float64(dst[0].LDAPClosedConnectionsPersec),
+		adData[ldapClosedConnectionsPerSec].FirstValue,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.ldapOpenedConnectionsTotal,
 		prometheus.CounterValue,
-		adData[dsServerNameTranslationsPerSec].FirstValue,
-		float64(dst[0].LDAPNewConnectionsPersec),
+		adData[ldapNewConnectionsPerSec].FirstValue,
 		"ldap",
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.ldapOpenedConnectionsTotal,
 		prometheus.CounterValue,
-		adData[dsServerNameTranslationsPerSec].FirstValue,
-		float64(dst[0].LDAPNewSSLConnectionsPersec),
+		adData[ldapNewSSLConnectionsPerSec].FirstValue,
 		"ldaps",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.ldapActiveThreads,
 		prometheus.GaugeValue,
-		adData[dsServerNameTranslationsPerSec].FirstValue,
-		float64(dst[0].LDAPActiveThreads),
+		adData[ldapActiveThreads].FirstValue,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.ldapLastBindTimeSeconds,
 		prometheus.GaugeValue,
-		adData[dsServerNameTranslationsPerSec].FirstValue,
-		float64(dst[0].LDAPBindTime)/1000,
+		adData[ldapBindTime].FirstValue/1000,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.ldapSearchesTotal,
 		prometheus.CounterValue,
-		adData[dsServerNameTranslationsPerSec].FirstValue,
-		float64(dst[0].LDAPSearchesPersec),
+		adData[ldapSearchesPerSec].FirstValue,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.ldapUdpOperationsTotal,
 		prometheus.CounterValue,
-		adData[dsServerNameTranslationsPerSec].FirstValue,
-		float64(dst[0].LDAPUDPoperationsPersec),
+		adData[ldapUDPOperationsPerSec].FirstValue,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.ldapWritesTotal,
 		prometheus.CounterValue,
-		adData[dsServerNameTranslationsPerSec].FirstValue,
-		float64(dst[0].LDAPWritesPersec),
+		adData[ldapWritesPerSec].FirstValue,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.ldapClientSessions,
 		prometheus.GaugeValue,
-		adData[dsServerNameTranslationsPerSec].FirstValue,
-		float64(dst[0].LDAPClientSessions),
+		adData[ldapClientSessions].FirstValue,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.linkValuesCleanedTotal,
 		prometheus.CounterValue,
-		adData[dsServerNameTranslationsPerSec].FirstValue,
-		float64(dst[0].LinkValuesCleanedPersec),
+		adData[linkValuesCleanedPerSec].FirstValue,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.phantomObjectsCleanedTotal,
 		prometheus.CounterValue,
-		adData[dsServerNameTranslationsPerSec].FirstValue,
-		float64(dst[0].PhantomsCleanedPersec),
+		adData[phantomsCleanedPerSec].FirstValue,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.phantomObjectsVisitedTotal,
 		prometheus.CounterValue,
-		adData[dsServerNameTranslationsPerSec].FirstValue,
-		float64(dst[0].PhantomsVisitedPersec),
+		adData[phantomsVisitedPerSec].FirstValue,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.samGroupMembershipEvaluationsTotal,
 		prometheus.CounterValue,
-		adData[dsServerNameTranslationsPerSec].FirstValue,
-		float64(dst[0].SAMGlobalGroupMembershipEvaluationsPersec),
+		adData[samGlobalGroupMembershipEvaluationsPerSec].FirstValue,
 		"global",
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.samGroupMembershipEvaluationsTotal,
 		prometheus.CounterValue,
-		adData[dsServerNameTranslationsPerSec].FirstValue,
-		float64(dst[0].SAMDomainLocalGroupMembershipEvaluationsPersec),
+		adData[samDomainLocalGroupMembershipEvaluationsPerSec].FirstValue,
 		"domain_local",
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.samGroupMembershipEvaluationsTotal,
 		prometheus.CounterValue,
-		adData[dsServerNameTranslationsPerSec].FirstValue,
-		float64(dst[0].SAMUniversalGroupMembershipEvaluationsPersec),
+		adData[samUniversalGroupMembershipEvaluationsPerSec].FirstValue,
 		"universal",
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.samGroupMembershipGlobalCatalogEvaluationsTotal,
 		prometheus.CounterValue,
-		adData[dsServerNameTranslationsPerSec].FirstValue,
-		float64(dst[0].SAMGCEvaluationsPersec),
+		adData[samGCEvaluationsPerSec].FirstValue,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.samGroupMembershipEvaluationsNonTransitiveTotal,
 		prometheus.CounterValue,
-		adData[dsServerNameTranslationsPerSec].FirstValue,
-		float64(dst[0].SAMNonTransitiveMembershipEvaluationsPersec),
+		adData[samNonTransitiveMembershipEvaluationsPerSec].FirstValue,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.samGroupMembershipEvaluationsTransitiveTotal,
 		prometheus.CounterValue,
-		adData[dsServerNameTranslationsPerSec].FirstValue,
-		float64(dst[0].SAMTransitiveMembershipEvaluationsPersec),
+		adData[samTransitiveMembershipEvaluationsPerSec].FirstValue,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.samGroupEvaluationLatency,
 		prometheus.GaugeValue,
-		adData[dsServerNameTranslationsPerSec].FirstValue,
-		float64(dst[0].SAMAccountGroupEvaluationLatency),
+		adData[samAccountGroupEvaluationLatency].FirstValue,
 		"account_group",
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.samGroupEvaluationLatency,
 		prometheus.GaugeValue,
-		adData[dsServerNameTranslationsPerSec].FirstValue,
-		float64(dst[0].SAMResourceGroupEvaluationLatency),
+		adData[samResourceGroupEvaluationLatency].FirstValue,
 		"resource_group",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.samComputerCreationRequestsTotal,
 		prometheus.CounterValue,
-		adData[dsServerNameTranslationsPerSec].FirstValue,
-		float64(dst[0].SAMSuccessfulComputerCreationsPersecIncludesallrequests),
+		adData[samSuccessfulComputerCreationsPerSecIncludesAllRequests].FirstValue,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.samComputerCreationSuccessfulRequestsTotal,
 		prometheus.CounterValue,
-		adData[dsServerNameTranslationsPerSec].FirstValue,
-		float64(dst[0].SAMMachineCreationAttemptsPersec),
+		adData[samMachineCreationAttemptsPerSec].FirstValue,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.samUserCreationRequestsTotal,
 		prometheus.CounterValue,
-		adData[dsServerNameTranslationsPerSec].FirstValue,
-		float64(dst[0].SAMUserCreationAttemptsPersec),
+		adData[samUserCreationAttemptsPerSec].FirstValue,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.samUserCreationSuccessfulRequestsTotal,
 		prometheus.CounterValue,
-		adData[dsServerNameTranslationsPerSec].FirstValue,
-		float64(dst[0].SAMSuccessfulUserCreationsPersec),
+		adData[samSuccessfulUserCreationsPerSec].FirstValue,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.samQueryDisplayRequestsTotal,
 		prometheus.CounterValue,
-		adData[dsServerNameTranslationsPerSec].FirstValue,
-		float64(dst[0].SAMDisplayInformationQueriesPersec),
+		adData[samDisplayInformationQueriesPerSec].FirstValue,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.samEnumerationsTotal,
 		prometheus.CounterValue,
-		adData[dsServerNameTranslationsPerSec].FirstValue,
-		float64(dst[0].SAMEnumerationsPersec),
+		adData[samEnumerationsPerSec].FirstValue,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.samMembershipChangesTotal,
 		prometheus.CounterValue,
-		adData[dsServerNameTranslationsPerSec].FirstValue,
-		float64(dst[0].SAMMembershipChangesPersec),
+		adData[samMembershipChangesPerSec].FirstValue,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.samPasswordChangesTotal,
 		prometheus.CounterValue,
-		adData[dsServerNameTranslationsPerSec].FirstValue,
-		float64(dst[0].SAMPasswordChangesPersec),
+		adData[samPasswordChangesPerSec].FirstValue,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.tombstonesObjectsCollectedTotal,
 		prometheus.CounterValue,
-		adData[dsServerNameTranslationsPerSec].FirstValue,
-		float64(dst[0].TombstonesGarbageCollectedPersec),
+		adData[tombstonesGarbageCollectedPerSec].FirstValue,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.tombstonesObjectsVisitedTotal,
 		prometheus.CounterValue,
-		adData[dsServerNameTranslationsPerSec].FirstValue,
-		float64(dst[0].TombstonesVisitedPersec),
+		adData[tombstonesVisitedPerSec].FirstValue,
 	)
 
 	return nil
