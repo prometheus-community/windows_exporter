@@ -11,7 +11,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/prometheus-community/windows_exporter/pkg/types"
+	types2 "github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -53,31 +53,31 @@ func (c *MetricCollectors) NewPrometheusCollector(timeout time.Duration, logger 
 		metricCollectors:  c,
 		logger:            logger,
 		scrapeDurationDesc: prometheus.NewDesc(
-			prometheus.BuildFQName(types.Namespace, "exporter", "scrape_duration_seconds"),
+			prometheus.BuildFQName(types2.Namespace, "exporter", "scrape_duration_seconds"),
 			"windows_exporter: Total scrape duration.",
 			nil,
 			nil,
 		),
 		collectorScrapeDurationDesc: prometheus.NewDesc(
-			prometheus.BuildFQName(types.Namespace, "exporter", "collector_duration_seconds"),
+			prometheus.BuildFQName(types2.Namespace, "exporter", "collector_duration_seconds"),
 			"windows_exporter: Duration of a collection.",
 			[]string{"collector"},
 			nil,
 		),
 		collectorScrapeSuccessDesc: prometheus.NewDesc(
-			prometheus.BuildFQName(types.Namespace, "exporter", "collector_success"),
+			prometheus.BuildFQName(types2.Namespace, "exporter", "collector_success"),
 			"windows_exporter: Whether the collector was successful.",
 			[]string{"collector"},
 			nil,
 		),
 		collectorScrapeTimeoutDesc: prometheus.NewDesc(
-			prometheus.BuildFQName(types.Namespace, "exporter", "collector_timeout"),
+			prometheus.BuildFQName(types2.Namespace, "exporter", "collector_timeout"),
 			"windows_exporter: Whether the collector timed out.",
 			[]string{"collector"},
 			nil,
 		),
 		snapshotDuration: prometheus.NewDesc(
-			prometheus.BuildFQName(types.Namespace, "exporter", "perflib_snapshot_duration_seconds"),
+			prometheus.BuildFQName(types2.Namespace, "exporter", "perflib_snapshot_duration_seconds"),
 			"Duration of perflib snapshot capture",
 			nil,
 			nil,
@@ -166,7 +166,7 @@ func (p *Prometheus) Collect(ch chan<- prometheus.Metric) {
 	)
 }
 
-func (p *Prometheus) execute(name string, c Collector, scrapeCtx *types.ScrapeContext, ch chan<- prometheus.Metric) collectorStatusCode {
+func (p *Prometheus) execute(name string, c Collector, scrapeCtx *types2.ScrapeContext, ch chan<- prometheus.Metric) collectorStatusCode {
 	var (
 		err        error
 		numMetrics int

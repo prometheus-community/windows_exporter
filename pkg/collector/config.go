@@ -1,54 +1,54 @@
 package collector
 
 import (
-	"github.com/prometheus-community/windows_exporter/pkg/collector/ad"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/adcs"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/adfs"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/cache"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/container"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/cpu"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/cpu_info"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/cs"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/dfsr"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/dhcp"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/diskdrive"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/dns"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/exchange"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/filetime"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/fsrmquota"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/hyperv"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/iis"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/license"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/logical_disk"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/logon"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/memory"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/mscluster"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/msmq"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/mssql"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/net"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/netframework"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/nps"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/os"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/perfdata"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/physical_disk"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/printer"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/process"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/remote_fx"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/scheduled_task"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/service"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/smb"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/smbclient"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/smtp"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/system"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/tcp"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/teradici_pcoip"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/terminal_services"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/textfile"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/thermalzone"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/time"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/updates"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/vmware"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/vmware_blast"
+	"github.com/prometheus-community/windows_exporter/internal/collector/ad"
+	"github.com/prometheus-community/windows_exporter/internal/collector/adcs"
+	"github.com/prometheus-community/windows_exporter/internal/collector/adfs"
+	"github.com/prometheus-community/windows_exporter/internal/collector/cache"
+	"github.com/prometheus-community/windows_exporter/internal/collector/container"
+	"github.com/prometheus-community/windows_exporter/internal/collector/cpu"
+	"github.com/prometheus-community/windows_exporter/internal/collector/cpu_info"
+	"github.com/prometheus-community/windows_exporter/internal/collector/cs"
+	"github.com/prometheus-community/windows_exporter/internal/collector/dfsr"
+	"github.com/prometheus-community/windows_exporter/internal/collector/dhcp"
+	"github.com/prometheus-community/windows_exporter/internal/collector/diskdrive"
+	"github.com/prometheus-community/windows_exporter/internal/collector/dns"
+	"github.com/prometheus-community/windows_exporter/internal/collector/exchange"
+	"github.com/prometheus-community/windows_exporter/internal/collector/filetime"
+	"github.com/prometheus-community/windows_exporter/internal/collector/fsrmquota"
+	"github.com/prometheus-community/windows_exporter/internal/collector/hyperv"
+	"github.com/prometheus-community/windows_exporter/internal/collector/iis"
+	"github.com/prometheus-community/windows_exporter/internal/collector/license"
+	"github.com/prometheus-community/windows_exporter/internal/collector/logical_disk"
+	"github.com/prometheus-community/windows_exporter/internal/collector/logon"
+	"github.com/prometheus-community/windows_exporter/internal/collector/memory"
+	"github.com/prometheus-community/windows_exporter/internal/collector/mscluster"
+	"github.com/prometheus-community/windows_exporter/internal/collector/msmq"
+	"github.com/prometheus-community/windows_exporter/internal/collector/mssql"
+	"github.com/prometheus-community/windows_exporter/internal/collector/net"
+	"github.com/prometheus-community/windows_exporter/internal/collector/netframework"
+	"github.com/prometheus-community/windows_exporter/internal/collector/nps"
+	"github.com/prometheus-community/windows_exporter/internal/collector/os"
+	"github.com/prometheus-community/windows_exporter/internal/collector/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/collector/physical_disk"
+	"github.com/prometheus-community/windows_exporter/internal/collector/printer"
+	"github.com/prometheus-community/windows_exporter/internal/collector/process"
+	"github.com/prometheus-community/windows_exporter/internal/collector/remote_fx"
+	"github.com/prometheus-community/windows_exporter/internal/collector/scheduled_task"
+	"github.com/prometheus-community/windows_exporter/internal/collector/service"
+	"github.com/prometheus-community/windows_exporter/internal/collector/smb"
+	"github.com/prometheus-community/windows_exporter/internal/collector/smbclient"
+	"github.com/prometheus-community/windows_exporter/internal/collector/smtp"
+	"github.com/prometheus-community/windows_exporter/internal/collector/system"
+	"github.com/prometheus-community/windows_exporter/internal/collector/tcp"
+	"github.com/prometheus-community/windows_exporter/internal/collector/teradici_pcoip"
+	"github.com/prometheus-community/windows_exporter/internal/collector/terminal_services"
+	"github.com/prometheus-community/windows_exporter/internal/collector/textfile"
+	"github.com/prometheus-community/windows_exporter/internal/collector/thermalzone"
+	"github.com/prometheus-community/windows_exporter/internal/collector/time"
+	"github.com/prometheus-community/windows_exporter/internal/collector/updates"
+	"github.com/prometheus-community/windows_exporter/internal/collector/vmware"
+	"github.com/prometheus-community/windows_exporter/internal/collector/vmware_blast"
 )
 
 type Config struct {
@@ -62,24 +62,24 @@ type Config struct {
 	Cs               cs.Config                `yaml:"cs"`
 	DFSR             dfsr.Config              `yaml:"dfsr"`
 	Dhcp             dhcp.Config              `yaml:"dhcp"`
-	DiskDrive        diskdrive.Config         `yaml:"diskdrive"` //nolint:tagliatelle
+	DiskDrive        diskdrive.Config         `yaml:"disk_drive"`
 	DNS              dns.Config               `yaml:"dns"`
 	Exchange         exchange.Config          `yaml:"exchange"`
 	Filetime         filetime.Config          `yaml:"filetime"`
 	Fsrmquota        fsrmquota.Config         `yaml:"fsrmquota"`
-	Hyperv           hyperv.Config            `yaml:"hyperv"`
+	HyperV           hyperv.Config            `yaml:"hyper_v"`
 	IIS              iis.Config               `yaml:"iis"`
 	License          license.Config           `yaml:"license"`
 	LogicalDisk      logical_disk.Config      `yaml:"logical_disk"`
 	Logon            logon.Config             `yaml:"logon"`
 	Memory           memory.Config            `yaml:"memory"`
-	Mscluster        mscluster.Config         `yaml:"mscluster"`
+	MSCluster        mscluster.Config         `yaml:"ms_cluster"`
 	Msmq             msmq.Config              `yaml:"msmq"`
 	Mssql            mssql.Config             `yaml:"mssql"`
 	Net              net.Config               `yaml:"net"`
 	NetFramework     netframework.Config      `yaml:"net_framework"`
 	Nps              nps.Config               `yaml:"nps"`
-	Os               os.Config                `yaml:"os"`
+	OS               os.Config                `yaml:"os"`
 	PerfData         perfdata.Config          `yaml:"perf_data"`
 	PhysicalDisk     physical_disk.Config     `yaml:"physical_disk"`
 	Printer          printer.Config           `yaml:"printer"`
@@ -88,14 +88,14 @@ type Config struct {
 	ScheduledTask    scheduled_task.Config    `yaml:"scheduled_task"`
 	Service          service.Config           `yaml:"service"`
 	SMB              smb.Config               `yaml:"smb"`
-	SMBClient        smbclient.Config         `yaml:"smbclient"` //nolint:tagliatelle
+	SMBClient        smbclient.Config         `yaml:"smb_client"`
 	SMTP             smtp.Config              `yaml:"smtp"`
 	System           system.Config            `yaml:"system"`
 	TeradiciPcoip    teradici_pcoip.Config    `yaml:"teradici_pcoip"`
 	TCP              tcp.Config               `yaml:"tcp"`
 	TerminalServices terminal_services.Config `yaml:"terminal_services"`
 	Textfile         textfile.Config          `yaml:"textfile"`
-	Thermalzone      thermalzone.Config       `yaml:"thermalzone"`
+	ThermalZone      thermalzone.Config       `yaml:"thermal_zone"`
 	Time             time.Config              `yaml:"time"`
 	Updates          updates.Config           `yaml:"updates"`
 	Vmware           vmware.Config            `yaml:"vmware"`
@@ -121,19 +121,19 @@ var ConfigDefaults = Config{
 	Exchange:         exchange.ConfigDefaults,
 	Filetime:         filetime.ConfigDefaults,
 	Fsrmquota:        fsrmquota.ConfigDefaults,
-	Hyperv:           hyperv.ConfigDefaults,
+	HyperV:           hyperv.ConfigDefaults,
 	IIS:              iis.ConfigDefaults,
 	License:          license.ConfigDefaults,
 	LogicalDisk:      logical_disk.ConfigDefaults,
 	Logon:            logon.ConfigDefaults,
 	Memory:           memory.ConfigDefaults,
-	Mscluster:        mscluster.ConfigDefaults,
+	MSCluster:        mscluster.ConfigDefaults,
 	Msmq:             msmq.ConfigDefaults,
 	Mssql:            mssql.ConfigDefaults,
 	Net:              net.ConfigDefaults,
 	NetFramework:     netframework.ConfigDefaults,
 	Nps:              nps.ConfigDefaults,
-	Os:               os.ConfigDefaults,
+	OS:               os.ConfigDefaults,
 	PerfData:         perfdata.ConfigDefaults,
 	PhysicalDisk:     physical_disk.ConfigDefaults,
 	Printer:          printer.ConfigDefaults,
@@ -149,7 +149,7 @@ var ConfigDefaults = Config{
 	TCP:              tcp.ConfigDefaults,
 	TerminalServices: terminal_services.ConfigDefaults,
 	Textfile:         textfile.ConfigDefaults,
-	Thermalzone:      thermalzone.ConfigDefaults,
+	ThermalZone:      thermalzone.ConfigDefaults,
 	Time:             time.ConfigDefaults,
 	Updates:          updates.ConfigDefaults,
 	Vmware:           vmware.ConfigDefaults,

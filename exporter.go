@@ -7,8 +7,7 @@ package main
 //goland:noinspection GoUnsortedImport
 //nolint:gofumpt
 import (
-	// Its important that we do these first so that we can register with the Windows service control ASAP to avoid timeouts.
-	"github.com/prometheus-community/windows_exporter/pkg/initiate"
+	"github.com/prometheus-community/windows_exporter/internal/initiate"
 
 	"context"
 	"errors"
@@ -25,13 +24,13 @@ import (
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
+	"github.com/prometheus-community/windows_exporter/internal/config"
+	"github.com/prometheus-community/windows_exporter/internal/httphandler"
+	"github.com/prometheus-community/windows_exporter/internal/log"
+	"github.com/prometheus-community/windows_exporter/internal/log/flag"
+	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus-community/windows_exporter/pkg/collector"
-	"github.com/prometheus-community/windows_exporter/pkg/config"
-	"github.com/prometheus-community/windows_exporter/pkg/httphandler"
-	winlog "github.com/prometheus-community/windows_exporter/pkg/log"
-	"github.com/prometheus-community/windows_exporter/pkg/log/flag"
-	"github.com/prometheus-community/windows_exporter/pkg/types"
-	"github.com/prometheus-community/windows_exporter/pkg/utils"
 	"github.com/prometheus/common/version"
 	"github.com/prometheus/exporter-toolkit/web"
 	webflag "github.com/prometheus/exporter-toolkit/web/kingpinflag"
@@ -99,8 +98,8 @@ func run() int {
 		).Default("normal").String()
 	)
 
-	winlogConfig := &winlog.Config{}
-	flag.AddFlags(app, winlogConfig)
+	logConfig := &log.Config{}
+	flag.AddFlags(app, logConfig)
 
 	app.Version(version.Print("windows_exporter"))
 	app.HelpFlag.Short('h')
@@ -119,7 +118,7 @@ func run() int {
 		return 1
 	}
 
-	logger, err := winlog.New(winlogConfig)
+	logger, err := log.New(logConfig)
 	if err != nil {
 		//nolint:sloglint // we do not have an logger yet
 		slog.Error("failed to create logger",
@@ -161,7 +160,7 @@ func run() int {
 			return 1
 		}
 
-		logger, err = winlog.New(winlogConfig)
+		logger, err = log.New(logConfig)
 		if err != nil {
 			//nolint:sloglint // we do not have an logger yet
 			slog.Error("failed to create logger",
