@@ -8,7 +8,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/perflib"
-	types2 "github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
 )
@@ -82,7 +82,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 	// desc creates a new prometheus description
 	desc := func(metricName string, description string, labels []string) *prometheus.Desc {
 		return prometheus.NewDesc(
-			prometheus.BuildFQName(types2.Namespace, "smbclient", metricName),
+			prometheus.BuildFQName(types.Namespace, "smbclient", metricName),
 			description,
 			labels,
 			nil,
@@ -178,7 +178,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 }
 
 // Collect collects smb client metrics and sends them to prometheus.
-func (c *Collector) Collect(ctx *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
 	if err := c.collectClientShares(ctx, logger, ch); err != nil {
 		logger.Error("Error in ClientShares",
@@ -218,7 +218,7 @@ type perflibClientShares struct {
 	WriteRequestsPerSec                        float64 `perflib:"Write Requests/sec"`
 }
 
-func (c *Collector) collectClientShares(ctx *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) collectClientShares(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
 
 	var data []perflibClientShares

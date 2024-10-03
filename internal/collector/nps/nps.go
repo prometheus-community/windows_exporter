@@ -6,7 +6,7 @@ import (
 	"log/slog"
 
 	"github.com/alecthomas/kingpin/v2"
-	types2 "github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
 )
@@ -85,152 +85,152 @@ func (c *Collector) Build(_ *slog.Logger, wmiClient *wmi.Client) error {
 
 	c.wmiClient = wmiClient
 	c.accessAccepts = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "access_accepts"),
+		prometheus.BuildFQName(types.Namespace, Name, "access_accepts"),
 		"(AccessAccepts)",
 		nil,
 		nil,
 	)
 	c.accessChallenges = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "access_challenges"),
+		prometheus.BuildFQName(types.Namespace, Name, "access_challenges"),
 		"(AccessChallenges)",
 		nil,
 		nil,
 	)
 	c.accessRejects = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "access_rejects"),
+		prometheus.BuildFQName(types.Namespace, Name, "access_rejects"),
 		"(AccessRejects)",
 		nil,
 		nil,
 	)
 	c.accessRequests = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "access_requests"),
+		prometheus.BuildFQName(types.Namespace, Name, "access_requests"),
 		"(AccessRequests)",
 		nil,
 		nil,
 	)
 	c.accessBadAuthenticators = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "access_bad_authenticators"),
+		prometheus.BuildFQName(types.Namespace, Name, "access_bad_authenticators"),
 		"(BadAuthenticators)",
 		nil,
 		nil,
 	)
 	c.accessDroppedPackets = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "access_dropped_packets"),
+		prometheus.BuildFQName(types.Namespace, Name, "access_dropped_packets"),
 		"(DroppedPackets)",
 		nil,
 		nil,
 	)
 	c.accessInvalidRequests = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "access_invalid_requests"),
+		prometheus.BuildFQName(types.Namespace, Name, "access_invalid_requests"),
 		"(InvalidRequests)",
 		nil,
 		nil,
 	)
 	c.accessMalformedPackets = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "access_malformed_packets"),
+		prometheus.BuildFQName(types.Namespace, Name, "access_malformed_packets"),
 		"(MalformedPackets)",
 		nil,
 		nil,
 	)
 	c.accessPacketsReceived = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "access_packets_received"),
+		prometheus.BuildFQName(types.Namespace, Name, "access_packets_received"),
 		"(PacketsReceived)",
 		nil,
 		nil,
 	)
 	c.accessPacketsSent = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "access_packets_sent"),
+		prometheus.BuildFQName(types.Namespace, Name, "access_packets_sent"),
 		"(PacketsSent)",
 		nil,
 		nil,
 	)
 	c.accessServerResetTime = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "access_server_reset_time"),
+		prometheus.BuildFQName(types.Namespace, Name, "access_server_reset_time"),
 		"(ServerResetTime)",
 		nil,
 		nil,
 	)
 	c.accessServerUpTime = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "access_server_up_time"),
+		prometheus.BuildFQName(types.Namespace, Name, "access_server_up_time"),
 		"(ServerUpTime)",
 		nil,
 		nil,
 	)
 	c.accessUnknownType = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "access_unknown_type"),
+		prometheus.BuildFQName(types.Namespace, Name, "access_unknown_type"),
 		"(UnknownType)",
 		nil,
 		nil,
 	)
 
 	c.accountingRequests = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "accounting_requests"),
+		prometheus.BuildFQName(types.Namespace, Name, "accounting_requests"),
 		"(AccountingRequests)",
 		nil,
 		nil,
 	)
 	c.accountingResponses = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "accounting_responses"),
+		prometheus.BuildFQName(types.Namespace, Name, "accounting_responses"),
 		"(AccountingResponses)",
 		nil,
 		nil,
 	)
 	c.accountingBadAuthenticators = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "accounting_bad_authenticators"),
+		prometheus.BuildFQName(types.Namespace, Name, "accounting_bad_authenticators"),
 		"(BadAuthenticators)",
 		nil,
 		nil,
 	)
 	c.accountingDroppedPackets = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "accounting_dropped_packets"),
+		prometheus.BuildFQName(types.Namespace, Name, "accounting_dropped_packets"),
 		"(DroppedPackets)",
 		nil,
 		nil,
 	)
 	c.accountingInvalidRequests = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "accounting_invalid_requests"),
+		prometheus.BuildFQName(types.Namespace, Name, "accounting_invalid_requests"),
 		"(InvalidRequests)",
 		nil,
 		nil,
 	)
 	c.accountingMalformedPackets = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "accounting_malformed_packets"),
+		prometheus.BuildFQName(types.Namespace, Name, "accounting_malformed_packets"),
 		"(MalformedPackets)",
 		nil,
 		nil,
 	)
 	c.accountingNoRecord = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "accounting_no_record"),
+		prometheus.BuildFQName(types.Namespace, Name, "accounting_no_record"),
 		"(NoRecord)",
 		nil,
 		nil,
 	)
 	c.accountingPacketsReceived = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "accounting_packets_received"),
+		prometheus.BuildFQName(types.Namespace, Name, "accounting_packets_received"),
 		"(PacketsReceived)",
 		nil,
 		nil,
 	)
 	c.accountingPacketsSent = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "accounting_packets_sent"),
+		prometheus.BuildFQName(types.Namespace, Name, "accounting_packets_sent"),
 		"(PacketsSent)",
 		nil,
 		nil,
 	)
 	c.accountingServerResetTime = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "accounting_server_reset_time"),
+		prometheus.BuildFQName(types.Namespace, Name, "accounting_server_reset_time"),
 		"(ServerResetTime)",
 		nil,
 		nil,
 	)
 	c.accountingServerUpTime = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "accounting_server_up_time"),
+		prometheus.BuildFQName(types.Namespace, Name, "accounting_server_up_time"),
 		"(ServerUpTime)",
 		nil,
 		nil,
 	)
 	c.accountingUnknownType = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "accounting_unknown_type"),
+		prometheus.BuildFQName(types.Namespace, Name, "accounting_unknown_type"),
 		"(UnknownType)",
 		nil,
 		nil,
@@ -241,7 +241,7 @@ func (c *Collector) Build(_ *slog.Logger, wmiClient *wmi.Client) error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(_ *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
 	if err := c.CollectAccept(ch); err != nil {
 		logger.Error(fmt.Sprintf("failed collecting NPS accept data: %s", err))

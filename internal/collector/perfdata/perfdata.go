@@ -12,7 +12,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	types2 "github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
 )
@@ -114,7 +114,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *wmi.Client) error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(_ *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	if err := c.collect(ch); err != nil {
 		logger.Error("failed collecting performance data metrics",
 			slog.Any("err", err),
@@ -153,7 +153,7 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 
 				ch <- prometheus.MustNewConstMetric(
 					prometheus.NewDesc(
-						sanitizeMetricName(fmt.Sprintf("%s_perfdata_%s_%s", types2.Namespace, object.Object, counter)),
+						sanitizeMetricName(fmt.Sprintf("%s_perfdata_%s_%s", types.Namespace, object.Object, counter)),
 						fmt.Sprintf("Performance data for \\%s\\%s", object.Object, counter),
 						nil,
 						labels,

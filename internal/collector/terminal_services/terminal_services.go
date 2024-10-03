@@ -12,7 +12,7 @@ import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/headers/wtsapi32"
 	"github.com/prometheus-community/windows_exporter/internal/perflib"
-	types2 "github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
 	"golang.org/x/sys/windows"
@@ -118,91 +118,91 @@ func (c *Collector) Build(logger *slog.Logger, wmiClient *wmi.Client) error {
 	c.connectionBrokerEnabled = isConnectionBrokerServer(logger, wmiClient)
 
 	c.sessionInfo = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "session_info"),
+		prometheus.BuildFQName(types.Namespace, Name, "session_info"),
 		"Terminal Services sessions info",
 		[]string{"session_name", "user", "host", "state", "id"},
 		nil,
 	)
 	c.connectionBrokerPerformance = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "connection_broker_performance_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "connection_broker_performance_total"),
 		"The total number of connections handled by the Connection Brokers since the service started.",
 		[]string{"connection"},
 		nil,
 	)
 	c.handleCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "handles"),
+		prometheus.BuildFQName(types.Namespace, Name, "handles"),
 		"Total number of handles currently opened by this process. This number is the sum of the handles currently opened by each thread in this process.",
 		[]string{"session_name"},
 		nil,
 	)
 	c.pageFaultsPerSec = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "page_fault_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "page_fault_total"),
 		"Rate at which page faults occur in the threads executing in this process. A page fault occurs when a thread refers to a virtual memory page that is not in its working set in main memory. The page may not be retrieved from disk if it is on the standby list and therefore already in main memory. The page also may not be retrieved if it is in use by another process which shares the page.",
 		[]string{"session_name"},
 		nil,
 	)
 	c.pageFileBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "page_file_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "page_file_bytes"),
 		"Current number of bytes this process has used in the paging file(s). Paging files are used to store pages of memory used by the process that are not contained in other files. Paging files are shared by all processes, and lack of space in paging files can prevent other processes from allocating memory.",
 		[]string{"session_name"},
 		nil,
 	)
 	c.pageFileBytesPeak = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "page_file_bytes_peak"),
+		prometheus.BuildFQName(types.Namespace, Name, "page_file_bytes_peak"),
 		"Maximum number of bytes this process has used in the paging file(s). Paging files are used to store pages of memory used by the process that are not contained in other files. Paging files are shared by all processes, and lack of space in paging files can prevent other processes from allocating memory.",
 		[]string{"session_name"},
 		nil,
 	)
 	c.percentCPUTime = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "cpu_time_seconds_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "cpu_time_seconds_total"),
 		"Total elapsed time that this process's threads have spent executing code.",
 		[]string{"mode", "session_name"},
 		nil,
 	)
 	c.poolNonPagedBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "pool_non_paged_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "pool_non_paged_bytes"),
 		"Number of bytes in the non-paged pool, an area of system memory (physical memory used by the operating system) for objects that cannot be written to disk, but must remain in physical memory as long as they are allocated. This property displays the last observed value only; it is not an average.",
 		[]string{"session_name"},
 		nil,
 	)
 	c.poolPagedBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "pool_paged_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "pool_paged_bytes"),
 		"Number of bytes in the paged pool, an area of system memory (physical memory used by the operating system) for objects that can be written to disk when they are not being used. This property displays the last observed value only; it is not an average.",
 		[]string{"session_name"},
 		nil,
 	)
 	c.privateBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "private_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "private_bytes"),
 		"Current number of bytes this process has allocated that cannot be shared with other processes.",
 		[]string{"session_name"},
 		nil,
 	)
 	c.threadCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "threads"),
+		prometheus.BuildFQName(types.Namespace, Name, "threads"),
 		"Number of threads currently active in this process. An instruction is the basic unit of execution in a processor, and a thread is the object that executes instructions. Every running process has at least one thread.",
 		[]string{"session_name"},
 		nil,
 	)
 	c.virtualBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "virtual_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "virtual_bytes"),
 		"Current size, in bytes, of the virtual address space the process is using. Use of virtual address space does not necessarily imply corresponding use of either disk or main memory pages. Virtual space is finite and, by using too much, the process can limit its ability to load libraries.",
 		[]string{"session_name"},
 		nil,
 	)
 	c.virtualBytesPeak = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "virtual_bytes_peak"),
+		prometheus.BuildFQName(types.Namespace, Name, "virtual_bytes_peak"),
 		"Maximum number of bytes of virtual address space the process has used at any one time. Use of virtual address space does not necessarily imply corresponding use of either disk or main memory pages. Virtual space is finite and, by using too much, the process might limit its ability to load libraries.",
 		[]string{"session_name"},
 		nil,
 	)
 	c.workingSet = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "working_set_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "working_set_bytes"),
 		"Current number of bytes in the working set of this process. The working set is the set of memory pages touched recently by the threads in the process. If free memory in the computer is above a threshold, pages are left in the working set of a process even if they are not in use. When free memory falls below a threshold, pages are trimmed from working sets. If they are needed, they are then soft-faulted back into the working set before they leave main memory.",
 		[]string{"session_name"},
 		nil,
 	)
 	c.workingSetPeak = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "working_set_bytes_peak"),
+		prometheus.BuildFQName(types.Namespace, Name, "working_set_bytes_peak"),
 		"Maximum number of bytes in the working set of this process at any point in time. The working set is the set of memory pages touched recently by the threads in the process. If free memory in the computer is above a threshold, pages are left in the working set of a process even if they are not in use. When free memory falls below a threshold, pages are trimmed from working sets. If they are needed, they are then soft-faulted back into the working set before they leave main memory.",
 		[]string{"session_name"},
 		nil,
@@ -220,7 +220,7 @@ func (c *Collector) Build(logger *slog.Logger, wmiClient *wmi.Client) error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(ctx *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
 	if err := c.collectWTSSessions(logger, ch); err != nil {
 		logger.Error("failed collecting terminal services session infos",
@@ -271,7 +271,7 @@ type perflibTerminalServicesSession struct {
 	WorkingSetPeak        float64 `perflib:"Working Set Peak"`
 }
 
-func (c *Collector) collectTSSessionCounters(ctx *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) collectTSSessionCounters(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
 	dst := make([]perflibTerminalServicesSession, 0)
 
@@ -399,7 +399,7 @@ type perflibRemoteDesktopConnectionBrokerCounterset struct {
 	FailedConnections     float64 `perflib:"Failed Connections"`
 }
 
-func (c *Collector) collectCollectionBrokerPerformanceCounter(ctx *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) collectCollectionBrokerPerformanceCounter(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
 	dst := make([]perflibRemoteDesktopConnectionBrokerCounterset, 0)
 

@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
-	types2 "github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
 )
@@ -69,7 +69,7 @@ func (c *Collector) Build(_ *slog.Logger, wmiClient *wmi.Client) error {
 
 	c.wmiClient = wmiClient
 	c.diskInfo = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "info"),
+		prometheus.BuildFQName(types.Namespace, Name, "info"),
 		"General drive information",
 		[]string{
 			"device_id",
@@ -80,25 +80,25 @@ func (c *Collector) Build(_ *slog.Logger, wmiClient *wmi.Client) error {
 		nil,
 	)
 	c.status = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "status"),
+		prometheus.BuildFQName(types.Namespace, Name, "status"),
 		"Status of the drive",
 		[]string{"name", "status"},
 		nil,
 	)
 	c.size = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "size"),
+		prometheus.BuildFQName(types.Namespace, Name, "size"),
 		"Size of the disk drive. It is calculated by multiplying the total number of cylinders, tracks in each cylinder, sectors in each track, and bytes in each sector.",
 		[]string{"name"},
 		nil,
 	)
 	c.partitions = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "partitions"),
+		prometheus.BuildFQName(types.Namespace, Name, "partitions"),
 		"Number of partitions",
 		[]string{"name"},
 		nil,
 	)
 	c.availability = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "availability"),
+		prometheus.BuildFQName(types.Namespace, Name, "availability"),
 		"Availability Status",
 		[]string{"name", "availability"},
 		nil,
@@ -160,7 +160,7 @@ var (
 )
 
 // Collect sends the metric values for each metric to the provided prometheus Metric channel.
-func (c *Collector) Collect(_ *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
 	if err := c.collect(ch); err != nil {
 		logger.Error("failed collecting disk_drive_info metrics",

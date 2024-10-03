@@ -29,7 +29,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/dimchansky/utfbom"
-	types2 "github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
@@ -110,7 +110,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *wmi.Client) error {
 	)
 
 	c.mTimeDesc = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, "textfile", "mtime_seconds"),
+		prometheus.BuildFQName(types.Namespace, "textfile", "mtime_seconds"),
 		"Unixtime mtime of textfiles successfully read.",
 		[]string{"file"},
 		nil,
@@ -308,7 +308,7 @@ func (cr carriageReturnFilteringReader) Read(p []byte) (int, error) {
 }
 
 // Collect implements the Collector interface.
-func (c *Collector) Collect(_ *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
 	errorMetric := 0.0
 	mTimes := map[string]time.Time{}
@@ -395,7 +395,7 @@ func (c *Collector) Collect(_ *types2.ScrapeContext, logger *slog.Logger, ch cha
 	// Export if there were errors.
 	ch <- prometheus.MustNewConstMetric(
 		prometheus.NewDesc(
-			prometheus.BuildFQName(types2.Namespace, "textfile", "scrape_error"),
+			prometheus.BuildFQName(types.Namespace, "textfile", "scrape_error"),
 			"1 if there was an error opening or reading a file, 0 otherwise",
 			nil, nil,
 		),

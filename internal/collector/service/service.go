@@ -11,7 +11,7 @@ import (
 	"unsafe"
 
 	"github.com/alecthomas/kingpin/v2"
-	types2 "github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
 	"golang.org/x/sys/windows"
@@ -26,8 +26,8 @@ type Config struct {
 }
 
 var ConfigDefaults = Config{
-	ServiceInclude: types2.RegExpAny,
-	ServiceExclude: types2.RegExpEmpty,
+	ServiceInclude: types.RegExpAny,
+	ServiceExclude: types.RegExpEmpty,
 }
 
 // A Collector is a Prometheus Collector for service metrics.
@@ -114,25 +114,25 @@ func (c *Collector) Build(logger *slog.Logger, _ *wmi.Client) error {
 	}
 
 	c.info = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "info"),
+		prometheus.BuildFQName(types.Namespace, Name, "info"),
 		"A metric with a constant '1' value labeled with service information",
 		[]string{"name", "display_name", "run_as", "path_name"},
 		nil,
 	)
 	c.state = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "state"),
+		prometheus.BuildFQName(types.Namespace, Name, "state"),
 		"The state of the service (State)",
 		[]string{"name", "state"},
 		nil,
 	)
 	c.startMode = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "start_mode"),
+		prometheus.BuildFQName(types.Namespace, Name, "start_mode"),
 		"The start mode of the service (StartMode)",
 		[]string{"name", "start_mode"},
 		nil,
 	)
 	c.processID = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "process"),
+		prometheus.BuildFQName(types.Namespace, Name, "process"),
 		"Process of started service. The value is the creation time of the process as a unix timestamp.",
 		[]string{"name", "process_id"},
 		nil,
@@ -161,7 +161,7 @@ func (c *Collector) Close(logger *slog.Logger) error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(_ *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
 
 	if err := c.collect(logger, ch); err != nil {

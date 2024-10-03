@@ -17,7 +17,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/headers/psapi"
 	"github.com/prometheus-community/windows_exporter/internal/headers/sysinfoapi"
 	"github.com/prometheus-community/windows_exporter/internal/perflib"
-	types2 "github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
 	"golang.org/x/sys/windows"
@@ -124,7 +124,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *wmi.Client) error {
 	}
 
 	c.osInformation = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "info"),
+		prometheus.BuildFQName(types.Namespace, Name, "info"),
 		`Contains full product name & version in labels. Note that the "major_version" for Windows 11 is \"10\"; a build number greater than 22000 represents Windows 11.`,
 		nil,
 		prometheus.Labels{
@@ -138,7 +138,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *wmi.Client) error {
 	)
 
 	c.hostname = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "hostname"),
+		prometheus.BuildFQName(types.Namespace, Name, "hostname"),
 		"Labelled system hostname information as provided by ComputerSystem.DNSHostName and ComputerSystem.Domain",
 		[]string{
 			"hostname",
@@ -148,73 +148,73 @@ func (c *Collector) Build(logger *slog.Logger, _ *wmi.Client) error {
 		nil,
 	)
 	c.pagingLimitBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "paging_limit_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "paging_limit_bytes"),
 		"OperatingSystem.SizeStoredInPagingFiles",
 		nil,
 		nil,
 	)
 	c.pagingFreeBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "paging_free_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "paging_free_bytes"),
 		"OperatingSystem.FreeSpaceInPagingFiles",
 		nil,
 		nil,
 	)
 	c.physicalMemoryFreeBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "physical_memory_free_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "physical_memory_free_bytes"),
 		"Deprecated: Use `windows_memory_physical_free_bytes` instead.",
 		nil,
 		nil,
 	)
 	c.time = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "time"),
+		prometheus.BuildFQName(types.Namespace, Name, "time"),
 		"Deprecated: Use windows_time_current_timestamp_seconds instead.",
 		nil,
 		nil,
 	)
 	c.timezone = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "timezone"),
+		prometheus.BuildFQName(types.Namespace, Name, "timezone"),
 		"Deprecated: Use windows_time_timezone instead.",
 		[]string{"timezone"},
 		nil,
 	)
 	c.processes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "processes"),
+		prometheus.BuildFQName(types.Namespace, Name, "processes"),
 		"Deprecated: Use `windows_system_processes` instead.",
 		nil,
 		nil,
 	)
 	c.processesLimit = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "processes_limit"),
+		prometheus.BuildFQName(types.Namespace, Name, "processes_limit"),
 		"Deprecated: Use `windows_system_process_limit` instead.",
 		nil,
 		nil,
 	)
 	c.processMemoryLimitBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "process_memory_limit_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "process_memory_limit_bytes"),
 		"Deprecated: Use `windows_memory_process_memory_limit_bytes` instead.",
 		nil,
 		nil,
 	)
 	c.users = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "users"),
+		prometheus.BuildFQName(types.Namespace, Name, "users"),
 		"Deprecated: Use `count(windows_logon_logon_type)` instead.",
 		nil,
 		nil,
 	)
 	c.virtualMemoryBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "virtual_memory_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "virtual_memory_bytes"),
 		"Deprecated: Use `windows_memory_commit_limit` instead.",
 		nil,
 		nil,
 	)
 	c.visibleMemoryBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "visible_memory_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "visible_memory_bytes"),
 		"Deprecated: Use `windows_memory_physical_total_bytes` instead.",
 		nil,
 		nil,
 	)
 	c.virtualMemoryFreeBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "virtual_memory_free_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "virtual_memory_free_bytes"),
 		"Deprecated: Use `windows_memory_commit_limit - windows_memory_committed_bytes` instead.",
 		nil,
 		nil,
@@ -225,7 +225,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *wmi.Client) error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(ctx *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
 
 	errs := make([]error, 0, 5)
@@ -382,7 +382,7 @@ func (c *Collector) collectMemory(ch chan<- prometheus.Metric) error {
 	return nil
 }
 
-func (c *Collector) collectPaging(ctx *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) collectPaging(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	// Get total allocation of paging files across all disks.
 	memManKey, err := registry.OpenKey(registry.LOCAL_MACHINE, `SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management`, registry.QUERY_VALUE)
 	if err != nil {

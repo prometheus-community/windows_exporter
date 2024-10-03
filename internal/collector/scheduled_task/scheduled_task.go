@@ -13,7 +13,7 @@ import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/go-ole/go-ole"
 	"github.com/go-ole/go-ole/oleutil"
-	types2 "github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
 )
@@ -26,8 +26,8 @@ type Config struct {
 }
 
 var ConfigDefaults = Config{
-	TaskExclude: types2.RegExpEmpty,
-	TaskInclude: types2.RegExpAny,
+	TaskExclude: types.RegExpEmpty,
+	TaskInclude: types.RegExpAny,
 }
 
 type Collector struct {
@@ -160,21 +160,21 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 	}
 
 	c.lastResult = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "last_result"),
+		prometheus.BuildFQName(types.Namespace, Name, "last_result"),
 		"The result that was returned the last time the registered task was run",
 		[]string{"task"},
 		nil,
 	)
 
 	c.missedRuns = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "missed_runs"),
+		prometheus.BuildFQName(types.Namespace, Name, "missed_runs"),
 		"The number of times the registered task missed a scheduled run",
 		[]string{"task"},
 		nil,
 	)
 
 	c.state = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "state"),
+		prometheus.BuildFQName(types.Namespace, Name, "state"),
 		"The current state of a scheduled task",
 		[]string{"task", "state"},
 		nil,
@@ -183,7 +183,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 	return nil
 }
 
-func (c *Collector) Collect(_ *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
 	if err := c.collect(ch); err != nil {
 		logger.Error("failed collecting user metrics",

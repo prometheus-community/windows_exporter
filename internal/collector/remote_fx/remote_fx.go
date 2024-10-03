@@ -8,7 +8,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/perflib"
-	types2 "github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
@@ -84,79 +84,79 @@ func (c *Collector) Close(_ *slog.Logger) error {
 func (c *Collector) Build(*slog.Logger, *wmi.Client) error {
 	// net
 	c.baseTCPRTT = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "net_base_tcp_rtt_seconds"),
+		prometheus.BuildFQName(types.Namespace, Name, "net_base_tcp_rtt_seconds"),
 		"Base TCP round-trip time (RTT) detected in seconds",
 		[]string{"session_name"},
 		nil,
 	)
 	c.baseUDPRTT = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "net_base_udp_rtt_seconds"),
+		prometheus.BuildFQName(types.Namespace, Name, "net_base_udp_rtt_seconds"),
 		"Base UDP round-trip time (RTT) detected in seconds.",
 		[]string{"session_name"},
 		nil,
 	)
 	c.currentTCPBandwidth = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "net_current_tcp_bandwidth"),
+		prometheus.BuildFQName(types.Namespace, Name, "net_current_tcp_bandwidth"),
 		"TCP Bandwidth detected in bytes per second.",
 		[]string{"session_name"},
 		nil,
 	)
 	c.currentTCPRTT = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "net_current_tcp_rtt_seconds"),
+		prometheus.BuildFQName(types.Namespace, Name, "net_current_tcp_rtt_seconds"),
 		"Average TCP round-trip time (RTT) detected in seconds.",
 		[]string{"session_name"},
 		nil,
 	)
 	c.currentUDPBandwidth = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "net_current_udp_bandwidth"),
+		prometheus.BuildFQName(types.Namespace, Name, "net_current_udp_bandwidth"),
 		"UDP Bandwidth detected in bytes per second.",
 		[]string{"session_name"},
 		nil,
 	)
 	c.currentUDPRTT = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "net_current_udp_rtt_seconds"),
+		prometheus.BuildFQName(types.Namespace, Name, "net_current_udp_rtt_seconds"),
 		"Average UDP round-trip time (RTT) detected in seconds.",
 		[]string{"session_name"},
 		nil,
 	)
 	c.totalReceivedBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "net_received_bytes_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "net_received_bytes_total"),
 		"(TotalReceivedBytes)",
 		[]string{"session_name"},
 		nil,
 	)
 	c.totalSentBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "net_sent_bytes_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "net_sent_bytes_total"),
 		"(TotalSentBytes)",
 		[]string{"session_name"},
 		nil,
 	)
 	c.udpPacketsReceivedPerSec = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "net_udp_packets_received_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "net_udp_packets_received_total"),
 		"Rate in packets per second at which packets are received over UDP.",
 		[]string{"session_name"},
 		nil,
 	)
 	c.udpPacketsSentPerSec = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "net_udp_packets_sent_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "net_udp_packets_sent_total"),
 		"Rate in packets per second at which packets are sent over UDP.",
 		[]string{"session_name"},
 		nil,
 	)
 	c.fecRate = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "net_fec_rate"),
+		prometheus.BuildFQName(types.Namespace, Name, "net_fec_rate"),
 		"Forward Error Correction (FEC) percentage",
 		[]string{"session_name"},
 		nil,
 	)
 	c.lossRate = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "net_loss_rate"),
+		prometheus.BuildFQName(types.Namespace, Name, "net_loss_rate"),
 		"Loss percentage",
 		[]string{"session_name"},
 		nil,
 	)
 	c.retransmissionRate = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "net_retransmission_rate"),
+		prometheus.BuildFQName(types.Namespace, Name, "net_retransmission_rate"),
 		"Percentage of packets that have been retransmitted",
 		[]string{"session_name"},
 		nil,
@@ -164,43 +164,43 @@ func (c *Collector) Build(*slog.Logger, *wmi.Client) error {
 
 	// gfx
 	c.averageEncodingTime = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "gfx_average_encoding_time_seconds"),
+		prometheus.BuildFQName(types.Namespace, Name, "gfx_average_encoding_time_seconds"),
 		"Average frame encoding time in seconds",
 		[]string{"session_name"},
 		nil,
 	)
 	c.frameQuality = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "gfx_frame_quality"),
+		prometheus.BuildFQName(types.Namespace, Name, "gfx_frame_quality"),
 		"Quality of the output frame expressed as a percentage of the quality of the source frame.",
 		[]string{"session_name"},
 		nil,
 	)
 	c.framesSkippedPerSecondInsufficientResources = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "gfx_frames_skipped_insufficient_resource_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "gfx_frames_skipped_insufficient_resource_total"),
 		"Number of frames skipped per second due to insufficient client resources.",
 		[]string{"session_name", "resource"},
 		nil,
 	)
 	c.graphicsCompressionRatio = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "gfx_graphics_compression_ratio"),
+		prometheus.BuildFQName(types.Namespace, Name, "gfx_graphics_compression_ratio"),
 		"Ratio of the number of bytes encoded to the number of bytes input.",
 		[]string{"session_name"},
 		nil,
 	)
 	c.inputFramesPerSecond = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "gfx_input_frames_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "gfx_input_frames_total"),
 		"Number of sources frames provided as input to RemoteFX graphics per second.",
 		[]string{"session_name"},
 		nil,
 	)
 	c.outputFramesPerSecond = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "gfx_output_frames_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "gfx_output_frames_total"),
 		"Number of frames sent to the client per second.",
 		[]string{"session_name"},
 		nil,
 	)
 	c.sourceFramesPerSecond = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "gfx_source_frames_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "gfx_source_frames_total"),
 		"Number of frames composed by the source (DWM) per second.",
 		[]string{"session_name"},
 		nil,
@@ -211,7 +211,7 @@ func (c *Collector) Build(*slog.Logger, *wmi.Client) error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(ctx *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
 	if err := c.collectRemoteFXNetworkCount(ctx, logger, ch); err != nil {
 		logger.Error("failed collecting terminal services session count metrics",
@@ -249,7 +249,7 @@ type perflibRemoteFxNetwork struct {
 	RetransmissionRate       float64 `perflib:"Percentage of packets that have been retransmitted"`
 }
 
-func (c *Collector) collectRemoteFXNetworkCount(ctx *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) collectRemoteFXNetworkCount(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
 	dst := make([]perflibRemoteFxNetwork, 0)
 
@@ -362,7 +362,7 @@ type perflibRemoteFxGraphics struct {
 	SourceFramesPerSecond                              float64 `perflib:"Source Frames/Second"`
 }
 
-func (c *Collector) collectRemoteFXGraphicsCounters(ctx *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) collectRemoteFXGraphicsCounters(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
 	dst := make([]perflibRemoteFxGraphics, 0)
 

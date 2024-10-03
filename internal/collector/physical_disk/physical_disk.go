@@ -10,7 +10,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/perflib"
-	types2 "github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
 )
@@ -23,8 +23,8 @@ type Config struct {
 }
 
 var ConfigDefaults = Config{
-	DiskInclude: types2.RegExpAny,
-	DiskExclude: types2.RegExpEmpty,
+	DiskInclude: types.RegExpAny,
+	DiskExclude: types.RegExpEmpty,
 }
 
 // A Collector is a Prometheus Collector for perflib PhysicalDisk metrics.
@@ -115,84 +115,84 @@ func (c *Collector) Close(_ *slog.Logger) error {
 
 func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 	c.requestsQueued = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "requests_queued"),
+		prometheus.BuildFQName(types.Namespace, Name, "requests_queued"),
 		"The number of requests queued to the disk (PhysicalDisk.CurrentDiskQueueLength)",
 		[]string{"disk"},
 		nil,
 	)
 
 	c.readBytesTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "read_bytes_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "read_bytes_total"),
 		"The number of bytes transferred from the disk during read operations (PhysicalDisk.DiskReadBytesPerSec)",
 		[]string{"disk"},
 		nil,
 	)
 
 	c.readsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "reads_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "reads_total"),
 		"The number of read operations on the disk (PhysicalDisk.DiskReadsPerSec)",
 		[]string{"disk"},
 		nil,
 	)
 
 	c.writeBytesTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "write_bytes_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "write_bytes_total"),
 		"The number of bytes transferred to the disk during write operations (PhysicalDisk.DiskWriteBytesPerSec)",
 		[]string{"disk"},
 		nil,
 	)
 
 	c.writesTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "writes_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "writes_total"),
 		"The number of write operations on the disk (PhysicalDisk.DiskWritesPerSec)",
 		[]string{"disk"},
 		nil,
 	)
 
 	c.readTime = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "read_seconds_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "read_seconds_total"),
 		"Seconds that the disk was busy servicing read requests (PhysicalDisk.PercentDiskReadTime)",
 		[]string{"disk"},
 		nil,
 	)
 
 	c.writeTime = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "write_seconds_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "write_seconds_total"),
 		"Seconds that the disk was busy servicing write requests (PhysicalDisk.PercentDiskWriteTime)",
 		[]string{"disk"},
 		nil,
 	)
 
 	c.idleTime = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "idle_seconds_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "idle_seconds_total"),
 		"Seconds that the disk was idle (PhysicalDisk.PercentIdleTime)",
 		[]string{"disk"},
 		nil,
 	)
 
 	c.splitIOs = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "split_ios_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "split_ios_total"),
 		"The number of I/Os to the disk were split into multiple I/Os (PhysicalDisk.SplitIOPerSec)",
 		[]string{"disk"},
 		nil,
 	)
 
 	c.readLatency = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "read_latency_seconds_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "read_latency_seconds_total"),
 		"Shows the average time, in seconds, of a read operation from the disk (PhysicalDisk.AvgDiskSecPerRead)",
 		[]string{"disk"},
 		nil,
 	)
 
 	c.writeLatency = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "write_latency_seconds_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "write_latency_seconds_total"),
 		"Shows the average time, in seconds, of a write operation to the disk (PhysicalDisk.AvgDiskSecPerWrite)",
 		[]string{"disk"},
 		nil,
 	)
 
 	c.readWriteLatency = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "read_write_latency_seconds_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "read_write_latency_seconds_total"),
 		"Shows the time, in seconds, of the average disk transfer (PhysicalDisk.AvgDiskSecPerTransfer)",
 		[]string{"disk"},
 		nil,
@@ -203,7 +203,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(ctx *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
 	if err := c.collect(ctx, logger, ch); err != nil {
 		logger.Error("failed collecting physical_disk metrics",
@@ -235,7 +235,7 @@ type PhysicalDisk struct {
 	AvgDiskSecPerTransfer  float64 `perflib:"Avg. Disk sec/Transfer"`
 }
 
-func (c *Collector) collect(ctx *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
 
 	var dst []PhysicalDisk

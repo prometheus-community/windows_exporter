@@ -8,7 +8,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/perflib"
-	types2 "github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
 )
@@ -63,50 +63,50 @@ func (c *Collector) Close(_ *slog.Logger) error {
 
 func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 	c.contextSwitchesTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "context_switches_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "context_switches_total"),
 		"Total number of context switches (WMI source: PerfOS_System.ContextSwitchesPersec)",
 		nil,
 		nil,
 	)
 	c.exceptionDispatchesTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "exception_dispatches_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "exception_dispatches_total"),
 		"Total number of exceptions dispatched (WMI source: PerfOS_System.ExceptionDispatchesPersec)",
 		nil,
 		nil,
 	)
 	c.processes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "processes"),
+		prometheus.BuildFQName(types.Namespace, Name, "processes"),
 		"Current number of processes (WMI source: PerfOS_System.Processes)",
 		nil,
 		nil,
 	)
 	c.processesLimit = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "processes_limit"),
+		prometheus.BuildFQName(types.Namespace, Name, "processes_limit"),
 		"Maximum number of processes.",
 		nil,
 		nil,
 	)
 
 	c.processorQueueLength = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "processor_queue_length"),
+		prometheus.BuildFQName(types.Namespace, Name, "processor_queue_length"),
 		"Length of processor queue (WMI source: PerfOS_System.ProcessorQueueLength)",
 		nil,
 		nil,
 	)
 	c.systemCallsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "system_calls_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "system_calls_total"),
 		"Total number of system calls (WMI source: PerfOS_System.SystemCallsPersec)",
 		nil,
 		nil,
 	)
 	c.systemUpTime = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "system_up_time"),
+		prometheus.BuildFQName(types.Namespace, Name, "system_up_time"),
 		"System boot time (WMI source: PerfOS_System.SystemUpTime)",
 		nil,
 		nil,
 	)
 	c.threads = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "threads"),
+		prometheus.BuildFQName(types.Namespace, Name, "threads"),
 		"Current number of threads (WMI source: PerfOS_System.Threads)",
 		nil,
 		nil,
@@ -117,7 +117,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(ctx *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
 	if err := c.collect(ctx, logger, ch); err != nil {
 		logger.Error("failed collecting system metrics",
@@ -142,7 +142,7 @@ type system struct {
 	Threads                   float64 `perflib:"Threads"`
 }
 
-func (c *Collector) collect(ctx *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
 
 	var dst []system

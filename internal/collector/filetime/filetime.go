@@ -12,7 +12,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/bmatcuk/doublestar/v4"
-	types2 "github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
 )
@@ -91,7 +91,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *wmi.Client) error {
 	)
 
 	c.fileMTime = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "mtime_timestamp_seconds"),
+		prometheus.BuildFQName(types.Namespace, Name, "mtime_timestamp_seconds"),
 		"File modification time",
 		[]string{"file"},
 		nil,
@@ -111,7 +111,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *wmi.Client) error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(_ *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
 
 	return c.collectGlob(logger, ch)

@@ -7,7 +7,7 @@ import (
 	"log/slog"
 
 	"github.com/alecthomas/kingpin/v2"
-	types2 "github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
 )
@@ -83,133 +83,133 @@ func (c *Collector) Build(_ *slog.Logger, wmiClient *wmi.Client) error {
 	c.wmiClient = wmiClient
 
 	c.zoneTransferRequestsReceived = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "zone_transfer_requests_received_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "zone_transfer_requests_received_total"),
 		"Number of zone transfer requests (AXFR/IXFR) received by the master DNS server",
 		[]string{"qtype"},
 		nil,
 	)
 	c.zoneTransferRequestsSent = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "zone_transfer_requests_sent_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "zone_transfer_requests_sent_total"),
 		"Number of zone transfer requests (AXFR/IXFR) sent by the secondary DNS server",
 		[]string{"qtype"},
 		nil,
 	)
 	c.zoneTransferResponsesReceived = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "zone_transfer_response_received_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "zone_transfer_response_received_total"),
 		"Number of zone transfer responses (AXFR/IXFR) received by the secondary DNS server",
 		[]string{"qtype"},
 		nil,
 	)
 	c.zoneTransferSuccessReceived = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "zone_transfer_success_received_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "zone_transfer_success_received_total"),
 		"Number of successful zone transfers (AXFR/IXFR) received by the secondary DNS server",
 		[]string{"qtype", "protocol"},
 		nil,
 	)
 	c.zoneTransferSuccessSent = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "zone_transfer_success_sent_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "zone_transfer_success_sent_total"),
 		"Number of successful zone transfers (AXFR/IXFR) of the master DNS server",
 		[]string{"qtype"},
 		nil,
 	)
 	c.zoneTransferFailures = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "zone_transfer_failures_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "zone_transfer_failures_total"),
 		"Number of failed zone transfers of the master DNS server",
 		nil,
 		nil,
 	)
 	c.memoryUsedBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "memory_used_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "memory_used_bytes"),
 		"Current memory used by DNS server",
 		[]string{"area"},
 		nil,
 	)
 	c.dynamicUpdatesQueued = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "dynamic_updates_queued"),
+		prometheus.BuildFQName(types.Namespace, Name, "dynamic_updates_queued"),
 		"Number of dynamic updates queued by the DNS server",
 		nil,
 		nil,
 	)
 	c.dynamicUpdatesReceived = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "dynamic_updates_received_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "dynamic_updates_received_total"),
 		"Number of secure update requests received by the DNS server",
 		[]string{"operation"},
 		nil,
 	)
 	c.dynamicUpdatesFailures = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "dynamic_updates_failures_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "dynamic_updates_failures_total"),
 		"Number of dynamic updates which timed out or were rejected by the DNS server",
 		[]string{"reason"},
 		nil,
 	)
 	c.notifyReceived = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "notify_received_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "notify_received_total"),
 		"Number of notifies received by the secondary DNS server",
 		nil,
 		nil,
 	)
 	c.notifySent = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "notify_sent_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "notify_sent_total"),
 		"Number of notifies sent by the master DNS server",
 		nil,
 		nil,
 	)
 	c.secureUpdateFailures = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "secure_update_failures_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "secure_update_failures_total"),
 		"Number of secure updates that failed on the DNS server",
 		nil,
 		nil,
 	)
 	c.secureUpdateReceived = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "secure_update_received_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "secure_update_received_total"),
 		"Number of secure update requests received by the DNS server",
 		nil,
 		nil,
 	)
 	c.queries = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "queries_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "queries_total"),
 		"Number of queries received by DNS server",
 		[]string{"protocol"},
 		nil,
 	)
 	c.responses = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "responses_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "responses_total"),
 		"Number of responses sent by DNS server",
 		[]string{"protocol"},
 		nil,
 	)
 	c.recursiveQueries = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "recursive_queries_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "recursive_queries_total"),
 		"Number of recursive queries received by DNS server",
 		nil,
 		nil,
 	)
 	c.recursiveQueryFailures = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "recursive_query_failures_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "recursive_query_failures_total"),
 		"Number of recursive query failures",
 		nil,
 		nil,
 	)
 	c.recursiveQuerySendTimeouts = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "recursive_query_send_timeouts_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "recursive_query_send_timeouts_total"),
 		"Number of recursive query sending timeouts",
 		nil,
 		nil,
 	)
 	c.winsQueries = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "wins_queries_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "wins_queries_total"),
 		"Number of WINS lookup requests received by the server",
 		[]string{"direction"},
 		nil,
 	)
 	c.winsResponses = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "wins_responses_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "wins_responses_total"),
 		"Number of WINS lookup responses sent by the server",
 		[]string{"direction"},
 		nil,
 	)
 	c.unmatchedResponsesReceived = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "unmatched_responses_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "unmatched_responses_total"),
 		"Number of response packets received by the DNS server that do not match any outstanding remote query",
 		nil,
 		nil,
@@ -220,7 +220,7 @@ func (c *Collector) Build(_ *slog.Logger, wmiClient *wmi.Client) error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(_ *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
 	if err := c.collect(ch); err != nil {
 		logger.Error("failed collecting dns metrics",
