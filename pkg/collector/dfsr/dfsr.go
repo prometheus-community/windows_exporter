@@ -172,6 +172,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *wmi.Client) error {
 
 	logger.Info("dfsr collector is in an experimental state! Metrics for this collector have not been tested.")
 
+	//nolint:nestif
 	if utils.PDHEnabled() {
 		var err error
 
