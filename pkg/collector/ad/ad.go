@@ -1389,7 +1389,7 @@ func (c *Collector) collectPDH(ch chan<- prometheus.Metric) error {
 		return fmt.Errorf("failed to collect DirectoryServices (AD) metrics: %w", err)
 	}
 
-	adData, ok := data[perfdata.EmptyInstance]
+	adData, ok := data["NTDS"]
 
 	if !ok {
 		return errors.New("perflib query for DirectoryServices (AD) returned empty result set")
@@ -1687,6 +1687,7 @@ func (c *Collector) collectPDH(ch chan<- prometheus.Metric) error {
 		c.nameTranslationsTotal,
 		prometheus.CounterValue,
 		adData[dsClientNameTranslationsPerSec].FirstValue,
+		"client",
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.nameTranslationsTotal,

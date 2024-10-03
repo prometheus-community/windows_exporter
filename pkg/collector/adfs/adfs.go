@@ -6,7 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"math"
+	"slices"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/pkg/perfdata"
@@ -705,13 +707,19 @@ func (c *Collector) collect(ctx *types.ScrapeContext, logger *slog.Logger, ch ch
 func (c *Collector) collectPDH(ch chan<- prometheus.Metric) error {
 	data, err := c.perfDataCollector.Collect()
 	if err != nil {
-		return fmt.Errorf("failed to collect Certification Authority (ADCS) metrics: %w", err)
+		return fmt.Errorf("failed to collect ADFS metrics: %w", err)
 	}
 
-	adfsData, ok := data[perfdata.EmptyInstance]
+	instanceKey := slices.Collect(maps.Keys(data))
+
+	if len(instanceKey) == 0 {
+		return errors.New("perflib query for ADFS returned empty result set")
+	}
+
+	adfsData, ok := data[instanceKey[0]]
 
 	if !ok {
-		return errors.New("perflib query for Certification Authority (ADCS) returned empty result set")
+		return errors.New("perflib query for ADFS returned empty result set")
 	}
 
 	ch <- prometheus.MustNewConstMetric(
