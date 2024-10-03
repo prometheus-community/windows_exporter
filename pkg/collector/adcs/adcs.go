@@ -94,9 +94,9 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 
 		var err error
 
-		c.perfDataCollector, err = perfdata.NewCollector("Processor Information", []string{"*"}, counters)
+		c.perfDataCollector, err = perfdata.NewCollector("Certification Authority", []string{"*"}, counters)
 		if err != nil {
-			return fmt.Errorf("failed to create Processor Information collector: %w", err)
+			return fmt.Errorf("failed to create Certification Authority collector: %w", err)
 		}
 	}
 

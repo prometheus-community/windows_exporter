@@ -186,16 +186,15 @@ func (p *Prometheus) execute(name string, c Collector, scrapeCtx *types.ScrapeCo
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
-				p.logger.Error("panic in collector "+name,
-					slog.Any("panic", r),
-					slog.Any("stack", string(debug.Stack())),
+				errCh <- fmt.Errorf("panic in collector %s: %v. stack: %s", name, r,
+					string(debug.Stack()),
 				)
 			}
+
+			close(bufCh)
 		}()
 
 		errCh <- c.Collect(scrapeCtx, p.logger, bufCh)
-
-		close(bufCh)
 	}()
 
 	wg := sync.WaitGroup{}

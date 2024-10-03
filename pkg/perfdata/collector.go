@@ -18,12 +18,13 @@ const EmptyInstance = "------"
 type Collector struct {
 	time     time.Time
 	object   string
-	counters []Counter
+	counters map[string]Counter
 	handle   pdhQueryHandle
 }
 
 type Counter struct {
 	Name      string
+	Desc      string
 	Instances map[string]pdhCounterHandle
 	Type      uint32
 	Frequency float64
@@ -48,7 +49,7 @@ func NewCollector(object string, instances []string, counters []string) (*Collec
 
 	collector := &Collector{
 		object:   object,
-		counters: make([]Counter, 0, len(counters)),
+		counters: make(map[string]Counter, len(counters)),
 		handle:   handle,
 	}
 
@@ -79,17 +80,18 @@ func NewCollector(object string, instances []string, counters []string) (*Collec
 				// Get the info with the current buffer size
 				bufLen := uint32(0)
 
-				if ret := PdhGetCounterInfo(counterHandle, 0, &bufLen, nil); ret != PdhMoreData {
+				if ret := PdhGetCounterInfo(counterHandle, 1, &bufLen, nil); ret != PdhMoreData {
 					return nil, fmt.Errorf("PdhGetCounterInfo: %w", NewPdhError(ret))
 				}
 
 				buf := make([]byte, bufLen)
-				if ret := PdhGetCounterInfo(counterHandle, 0, &bufLen, &buf[0]); ret != ErrorSuccess {
+				if ret := PdhGetCounterInfo(counterHandle, 1, &bufLen, &buf[0]); ret != ErrorSuccess {
 					return nil, fmt.Errorf("PdhGetCounterInfo: %w", NewPdhError(ret))
 				}
 
 				ci := (*PdhCounterInfo)(unsafe.Pointer(&buf[0]))
 				counter.Type = ci.DwType
+				counter.Desc = windows.UTF16PtrToString(ci.SzExplainText)
 
 				frequency := float64(0)
 
@@ -101,7 +103,7 @@ func NewCollector(object string, instances []string, counters []string) (*Collec
 			}
 		}
 
-		collector.counters = append(collector.counters, counter)
+		collector.counters[counterName] = counter
 	}
 
 	if len(collector.counters) == 0 {
@@ -113,6 +115,16 @@ func NewCollector(object string, instances []string, counters []string) (*Collec
 	}
 
 	return collector, nil
+}
+
+func (c *Collector) Describe() map[string]string {
+	desc := make(map[string]string, len(c.counters))
+
+	for _, counter := range c.counters {
+		desc[counter.Name] = counter.Desc
+	}
+
+	return desc
 }
 
 func (c *Collector) Collect() (map[string]map[string]CounterValues, error) {
