@@ -10,56 +10,56 @@ import (
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/ad"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/adcs"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/adfs"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/cache"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/container"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/cpu"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/cpu_info"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/cs"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/dfsr"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/dhcp"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/diskdrive"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/dns"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/exchange"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/filetime"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/fsrmquota"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/hyperv"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/iis"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/license"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/logical_disk"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/logon"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/memory"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/mscluster"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/msmq"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/mssql"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/net"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/netframework"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/nps"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/os"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/perfdata"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/physical_disk"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/printer"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/process"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/remote_fx"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/scheduled_task"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/service"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/smb"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/smbclient"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/smtp"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/system"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/tcp"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/teradici_pcoip"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/terminal_services"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/textfile"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/thermalzone"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/time"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/updates"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/vmware"
-	"github.com/prometheus-community/windows_exporter/pkg/collector/vmware_blast"
-	"github.com/prometheus-community/windows_exporter/pkg/perflib"
-	"github.com/prometheus-community/windows_exporter/pkg/types"
+	"github.com/prometheus-community/windows_exporter/internal/collector/ad"
+	"github.com/prometheus-community/windows_exporter/internal/collector/adcs"
+	"github.com/prometheus-community/windows_exporter/internal/collector/adfs"
+	"github.com/prometheus-community/windows_exporter/internal/collector/cache"
+	"github.com/prometheus-community/windows_exporter/internal/collector/container"
+	"github.com/prometheus-community/windows_exporter/internal/collector/cpu"
+	"github.com/prometheus-community/windows_exporter/internal/collector/cpu_info"
+	"github.com/prometheus-community/windows_exporter/internal/collector/cs"
+	"github.com/prometheus-community/windows_exporter/internal/collector/dfsr"
+	"github.com/prometheus-community/windows_exporter/internal/collector/dhcp"
+	"github.com/prometheus-community/windows_exporter/internal/collector/diskdrive"
+	"github.com/prometheus-community/windows_exporter/internal/collector/dns"
+	"github.com/prometheus-community/windows_exporter/internal/collector/exchange"
+	"github.com/prometheus-community/windows_exporter/internal/collector/filetime"
+	"github.com/prometheus-community/windows_exporter/internal/collector/fsrmquota"
+	"github.com/prometheus-community/windows_exporter/internal/collector/hyperv"
+	"github.com/prometheus-community/windows_exporter/internal/collector/iis"
+	"github.com/prometheus-community/windows_exporter/internal/collector/license"
+	"github.com/prometheus-community/windows_exporter/internal/collector/logical_disk"
+	"github.com/prometheus-community/windows_exporter/internal/collector/logon"
+	"github.com/prometheus-community/windows_exporter/internal/collector/memory"
+	"github.com/prometheus-community/windows_exporter/internal/collector/mscluster"
+	"github.com/prometheus-community/windows_exporter/internal/collector/msmq"
+	"github.com/prometheus-community/windows_exporter/internal/collector/mssql"
+	"github.com/prometheus-community/windows_exporter/internal/collector/net"
+	"github.com/prometheus-community/windows_exporter/internal/collector/netframework"
+	"github.com/prometheus-community/windows_exporter/internal/collector/nps"
+	"github.com/prometheus-community/windows_exporter/internal/collector/os"
+	"github.com/prometheus-community/windows_exporter/internal/collector/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/collector/physical_disk"
+	"github.com/prometheus-community/windows_exporter/internal/collector/printer"
+	"github.com/prometheus-community/windows_exporter/internal/collector/process"
+	"github.com/prometheus-community/windows_exporter/internal/collector/remote_fx"
+	"github.com/prometheus-community/windows_exporter/internal/collector/scheduled_task"
+	"github.com/prometheus-community/windows_exporter/internal/collector/service"
+	"github.com/prometheus-community/windows_exporter/internal/collector/smb"
+	"github.com/prometheus-community/windows_exporter/internal/collector/smbclient"
+	"github.com/prometheus-community/windows_exporter/internal/collector/smtp"
+	"github.com/prometheus-community/windows_exporter/internal/collector/system"
+	"github.com/prometheus-community/windows_exporter/internal/collector/tcp"
+	"github.com/prometheus-community/windows_exporter/internal/collector/teradici_pcoip"
+	"github.com/prometheus-community/windows_exporter/internal/collector/terminal_services"
+	"github.com/prometheus-community/windows_exporter/internal/collector/textfile"
+	"github.com/prometheus-community/windows_exporter/internal/collector/thermalzone"
+	"github.com/prometheus-community/windows_exporter/internal/collector/time"
+	"github.com/prometheus-community/windows_exporter/internal/collector/updates"
+	"github.com/prometheus-community/windows_exporter/internal/collector/vmware"
+	"github.com/prometheus-community/windows_exporter/internal/collector/vmware_blast"
+	"github.com/prometheus-community/windows_exporter/internal/perflib"
+	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/yusufpapurcu/wmi"
 )
 
@@ -74,7 +74,7 @@ func NewWithFlags(app *kingpin.Application) *MetricCollectors {
 	return New(collectors)
 }
 
-// NewWithConfig To be called by the external libraries for collector initialization without running kingpin.Parse
+// NewWithConfig To be called by the external libraries for collector initialization without running [kingpin.Parse].
 //
 //goland:noinspection GoUnusedExportedFunction
 func NewWithConfig(config Config) *MetricCollectors {
@@ -94,19 +94,19 @@ func NewWithConfig(config Config) *MetricCollectors {
 	collectors[exchange.Name] = exchange.New(&config.Exchange)
 	collectors[filetime.Name] = filetime.New(&config.Filetime)
 	collectors[fsrmquota.Name] = fsrmquota.New(&config.Fsrmquota)
-	collectors[hyperv.Name] = hyperv.New(&config.Hyperv)
+	collectors[hyperv.Name] = hyperv.New(&config.HyperV)
 	collectors[iis.Name] = iis.New(&config.IIS)
 	collectors[license.Name] = license.New(&config.License)
 	collectors[logical_disk.Name] = logical_disk.New(&config.LogicalDisk)
 	collectors[logon.Name] = logon.New(&config.Logon)
 	collectors[memory.Name] = memory.New(&config.Memory)
-	collectors[mscluster.Name] = mscluster.New(&config.Mscluster)
+	collectors[mscluster.Name] = mscluster.New(&config.MSCluster)
 	collectors[msmq.Name] = msmq.New(&config.Msmq)
 	collectors[mssql.Name] = mssql.New(&config.Mssql)
 	collectors[net.Name] = net.New(&config.Net)
 	collectors[netframework.Name] = netframework.New(&config.NetFramework)
 	collectors[nps.Name] = nps.New(&config.Nps)
-	collectors[os.Name] = os.New(&config.Os)
+	collectors[os.Name] = os.New(&config.OS)
 	collectors[perfdata.Name] = perfdata.New(&config.PerfData)
 	collectors[physical_disk.Name] = physical_disk.New(&config.PhysicalDisk)
 	collectors[printer.Name] = printer.New(&config.Printer)
@@ -122,7 +122,7 @@ func NewWithConfig(config Config) *MetricCollectors {
 	collectors[tcp.Name] = tcp.New(&config.TCP)
 	collectors[terminal_services.Name] = terminal_services.New(&config.TerminalServices)
 	collectors[textfile.Name] = textfile.New(&config.Textfile)
-	collectors[thermalzone.Name] = thermalzone.New(&config.Thermalzone)
+	collectors[thermalzone.Name] = thermalzone.New(&config.ThermalZone)
 	collectors[time.Name] = time.New(&config.Time)
 	collectors[updates.Name] = updates.New(&config.Updates)
 	collectors[vmware.Name] = vmware.New(&config.Vmware)
@@ -199,16 +199,17 @@ func (c *MetricCollectors) Build(logger *slog.Logger) error {
 
 // PrepareScrapeContext creates a ScrapeContext to be used during a single scrape.
 func (c *MetricCollectors) PrepareScrapeContext() (*types.ScrapeContext, error) {
-	if c.PerfCounterQuery == "" { // if perfCounterQuery is empty, no perf counters are needed.
+	// If no perf counters to query, return an empty context.
+	if c.PerfCounterQuery == "" {
 		return &types.ScrapeContext{}, nil
 	}
 
-	objs, err := perflib.GetPerflibSnapshot(c.PerfCounterQuery)
+	perfObjects, err := perflib.GetPerflibSnapshot(c.PerfCounterQuery)
 	if err != nil {
 		return nil, err
 	}
 
-	return &types.ScrapeContext{PerfObjects: objs}, nil
+	return &types.ScrapeContext{PerfObjects: perfObjects}, nil
 }
 
 // Close To be called by the exporter for collector cleanup.

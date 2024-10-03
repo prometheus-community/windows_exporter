@@ -34,7 +34,7 @@ linters-settings:
 
   gci:
     sections:
-      - prefix(github.com/prometheus-community/windows_exporter/pkg/initiate)
+      - prefix(github.com/prometheus-community/windows_exporter/internal/initiate)
       - standard # Standard section: captures all standard packages.
       - default # Default section: contains all imports that could not be matched to another section type.
     custom-order: true
@@ -83,7 +83,7 @@ issues:
   - text: "don't use ALL_CAPS in Go names; use CamelCase"
     linters:
     - revive
-  - path: pkg/perflib/
+  - path: internal/perflib/
     linters:
       - godox
       - stylecheck
