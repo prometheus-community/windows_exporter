@@ -11,7 +11,7 @@ import (
 	"github.com/Microsoft/hcsshim"
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/perflib"
-	types2 "github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
 )
@@ -88,109 +88,109 @@ func (c *Collector) Close(_ *slog.Logger) error {
 
 func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 	c.containerAvailable = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "available"),
+		prometheus.BuildFQName(types.Namespace, Name, "available"),
 		"Available",
 		[]string{"container_id"},
 		nil,
 	)
 	c.containersCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "count"),
+		prometheus.BuildFQName(types.Namespace, Name, "count"),
 		"Number of containers",
 		nil,
 		nil,
 	)
 	c.usageCommitBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "memory_usage_commit_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "memory_usage_commit_bytes"),
 		"Memory Usage Commit Bytes",
 		[]string{"container_id"},
 		nil,
 	)
 	c.usageCommitPeakBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "memory_usage_commit_peak_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "memory_usage_commit_peak_bytes"),
 		"Memory Usage Commit Peak Bytes",
 		[]string{"container_id"},
 		nil,
 	)
 	c.usagePrivateWorkingSetBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "memory_usage_private_working_set_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "memory_usage_private_working_set_bytes"),
 		"Memory Usage Private Working Set Bytes",
 		[]string{"container_id"},
 		nil,
 	)
 	c.runtimeTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "cpu_usage_seconds_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "cpu_usage_seconds_total"),
 		"Total Run time in Seconds",
 		[]string{"container_id"},
 		nil,
 	)
 	c.runtimeUser = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "cpu_usage_seconds_usermode"),
+		prometheus.BuildFQName(types.Namespace, Name, "cpu_usage_seconds_usermode"),
 		"Run Time in User mode in Seconds",
 		[]string{"container_id"},
 		nil,
 	)
 	c.runtimeKernel = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "cpu_usage_seconds_kernelmode"),
+		prometheus.BuildFQName(types.Namespace, Name, "cpu_usage_seconds_kernelmode"),
 		"Run time in Kernel mode in Seconds",
 		[]string{"container_id"},
 		nil,
 	)
 	c.bytesReceived = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "network_receive_bytes_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "network_receive_bytes_total"),
 		"Bytes Received on Interface",
 		[]string{"container_id", "interface"},
 		nil,
 	)
 	c.bytesSent = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "network_transmit_bytes_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "network_transmit_bytes_total"),
 		"Bytes Sent on Interface",
 		[]string{"container_id", "interface"},
 		nil,
 	)
 	c.packetsReceived = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "network_receive_packets_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "network_receive_packets_total"),
 		"Packets Received on Interface",
 		[]string{"container_id", "interface"},
 		nil,
 	)
 	c.packetsSent = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "network_transmit_packets_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "network_transmit_packets_total"),
 		"Packets Sent on Interface",
 		[]string{"container_id", "interface"},
 		nil,
 	)
 	c.droppedPacketsIncoming = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "network_receive_packets_dropped_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "network_receive_packets_dropped_total"),
 		"Dropped Incoming Packets on Interface",
 		[]string{"container_id", "interface"},
 		nil,
 	)
 	c.droppedPacketsOutgoing = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "network_transmit_packets_dropped_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "network_transmit_packets_dropped_total"),
 		"Dropped Outgoing Packets on Interface",
 		[]string{"container_id", "interface"},
 		nil,
 	)
 	c.readCountNormalized = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "storage_read_count_normalized_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "storage_read_count_normalized_total"),
 		"Read Count Normalized",
 		[]string{"container_id"},
 		nil,
 	)
 	c.readSizeBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "storage_read_size_bytes_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "storage_read_size_bytes_total"),
 		"Read Size Bytes",
 		[]string{"container_id"},
 		nil,
 	)
 	c.writeCountNormalized = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "storage_write_count_normalized_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "storage_write_count_normalized_total"),
 		"Write Count Normalized",
 		[]string{"container_id"},
 		nil,
 	)
 	c.writeSizeBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "storage_write_size_bytes_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "storage_write_size_bytes_total"),
 		"Write Size Bytes",
 		[]string{"container_id"},
 		nil,
@@ -201,7 +201,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(_ *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
 	if err := c.collect(logger, ch); err != nil {
 		logger.Error("failed collecting collector metrics",

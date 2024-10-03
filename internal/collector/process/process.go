@@ -13,7 +13,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/perflib"
-	types2 "github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
 	"golang.org/x/sys/windows"
@@ -28,8 +28,8 @@ type Config struct {
 }
 
 var ConfigDefaults = Config{
-	ProcessInclude:      types2.RegExpAny,
-	ProcessExclude:      types2.RegExpEmpty,
+	ProcessInclude:      types.RegExpAny,
+	ProcessExclude:      types.RegExpEmpty,
 	EnableWorkerProcess: false,
 }
 
@@ -144,98 +144,98 @@ func (c *Collector) Build(logger *slog.Logger, wmiClient *wmi.Client) error {
 	}
 
 	c.info = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "info"),
+		prometheus.BuildFQName(types.Namespace, Name, "info"),
 		"Process information.",
 		[]string{"process", "process_id", "creating_process_id", "process_group_id", "owner", "cmdline"},
 		nil,
 	)
 
 	c.startTime = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "start_time"),
+		prometheus.BuildFQName(types.Namespace, Name, "start_time"),
 		"Time of process start.",
 		[]string{"process", "process_id"},
 		nil,
 	)
 	c.cpuTimeTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "cpu_time_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "cpu_time_total"),
 		"Returns elapsed time that all of the threads of this process used the processor to execute instructions by mode (privileged, user).",
 		[]string{"process", "process_id", "mode"},
 		nil,
 	)
 	c.handleCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "handles"),
+		prometheus.BuildFQName(types.Namespace, Name, "handles"),
 		"Total number of handles the process has open. This number is the sum of the handles currently open by each thread in the process.",
 		[]string{"process", "process_id"},
 		nil,
 	)
 	c.ioBytesTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "io_bytes_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "io_bytes_total"),
 		"Bytes issued to I/O operations in different modes (read, write, other).",
 		[]string{"process", "process_id", "mode"},
 		nil,
 	)
 	c.ioOperationsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "io_operations_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "io_operations_total"),
 		"I/O operations issued in different modes (read, write, other).",
 		[]string{"process", "process_id", "mode"},
 		nil,
 	)
 	c.pageFaultsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "page_faults_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "page_faults_total"),
 		"Page faults by the threads executing in this process.",
 		[]string{"process", "process_id"},
 		nil,
 	)
 	c.pageFileBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "page_file_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "page_file_bytes"),
 		"Current number of bytes this process has used in the paging file(s).",
 		[]string{"process", "process_id"},
 		nil,
 	)
 	c.poolBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "pool_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "pool_bytes"),
 		"Pool Bytes is the last observed number of bytes in the paged or nonpaged pool.",
 		[]string{"process", "process_id", "pool"},
 		nil,
 	)
 	c.priorityBase = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "priority_base"),
+		prometheus.BuildFQName(types.Namespace, Name, "priority_base"),
 		"Current base priority of this process. Threads within a process can raise and lower their own base priority relative to the process base priority of the process.",
 		[]string{"process", "process_id"},
 		nil,
 	)
 	c.privateBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "private_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "private_bytes"),
 		"Current number of bytes this process has allocated that cannot be shared with other processes.",
 		[]string{"process", "process_id"},
 		nil,
 	)
 	c.threadCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "threads"),
+		prometheus.BuildFQName(types.Namespace, Name, "threads"),
 		"Number of threads currently active in this process.",
 		[]string{"process", "process_id"},
 		nil,
 	)
 	c.virtualBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "virtual_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "virtual_bytes"),
 		"Current size, in bytes, of the virtual address space that the process is using.",
 		[]string{"process", "process_id"},
 		nil,
 	)
 	c.workingSetPrivate = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "working_set_private_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "working_set_private_bytes"),
 		"Size of the working set, in bytes, that is use for this process only and not shared nor shareable by other processes.",
 		[]string{"process", "process_id"},
 		nil,
 	)
 	c.workingSetPeak = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "working_set_peak_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "working_set_peak_bytes"),
 		"Maximum size, in bytes, of the Working Set of this process at any point in time. The Working Set is the set of memory pages touched recently by the threads in the process.",
 		[]string{"process", "process_id"},
 		nil,
 	)
 	c.workingSet = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "working_set_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "working_set_bytes"),
 		"Maximum number of bytes in the working set of this process at any point in time. The working set is the set of memory pages touched recently by the threads in the process.",
 		[]string{"process", "process_id"},
 		nil,
@@ -283,7 +283,7 @@ type WorkerProcess struct {
 	ProcessId   uint64
 }
 
-func (c *Collector) Collect(ctx *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
 	data := make([]perflibProcess, 0)
 

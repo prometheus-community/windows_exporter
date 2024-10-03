@@ -7,7 +7,7 @@ import (
 	"log/slog"
 
 	"github.com/alecthomas/kingpin/v2"
-	types2 "github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
 )
@@ -111,227 +111,227 @@ func (c *Collector) Build(logger *slog.Logger, wmiClient *wmi.Client) error {
 	c.wmiClient = wmiClient
 
 	c.audioBytesReceived = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "audio_bytes_received_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "audio_bytes_received_total"),
 		"(AudioBytesReceived)",
 		nil,
 		nil,
 	)
 	c.audioBytesSent = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "audio_bytes_sent_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "audio_bytes_sent_total"),
 		"(AudioBytesSent)",
 		nil,
 		nil,
 	)
 	c.audioRXBWKBitPerSec = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "audio_rx_bw_KBit_persec"),
+		prometheus.BuildFQName(types.Namespace, Name, "audio_rx_bw_KBit_persec"),
 		"(AudioRXBWKBitPerSec)",
 		nil,
 		nil,
 	)
 	c.audioTXBWKBitPerSec = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "audio_tx_bw_KBit_persec"),
+		prometheus.BuildFQName(types.Namespace, Name, "audio_tx_bw_KBit_persec"),
 		"(AudioTXBWKBitPerSec)",
 		nil,
 		nil,
 	)
 	c.audioTXBWLimitKBitPerSec = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "audio_tx_bw_limit_KBit_persec"),
+		prometheus.BuildFQName(types.Namespace, Name, "audio_tx_bw_limit_KBit_persec"),
 		"(AudioTXBWLimitKBitPerSec)",
 		nil,
 		nil,
 	)
 
 	c.bytesReceived = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "bytes_received_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "bytes_received_total"),
 		"(BytesReceived)",
 		nil,
 		nil,
 	)
 	c.bytesSent = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "bytes_sent_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "bytes_sent_total"),
 		"(BytesSent)",
 		nil,
 		nil,
 	)
 	c.packetsReceived = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "packets_received_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "packets_received_total"),
 		"(PacketsReceived)",
 		nil,
 		nil,
 	)
 	c.packetsSent = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "packets_sent_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "packets_sent_total"),
 		"(PacketsSent)",
 		nil,
 		nil,
 	)
 	c.rxPacketsLost = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "rx_packets_lost_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "rx_packets_lost_total"),
 		"(RXPacketsLost)",
 		nil,
 		nil,
 	)
 	c.sessionDurationSeconds = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "session_duration_seconds_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "session_duration_seconds_total"),
 		"(SessionDurationSeconds)",
 		nil,
 		nil,
 	)
 	c.txPacketsLost = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "tx_packets_lost_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "tx_packets_lost_total"),
 		"(TXPacketsLost)",
 		nil,
 		nil,
 	)
 
 	c.imagingActiveMinimumQuality = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "imaging_active_min_quality"),
+		prometheus.BuildFQName(types.Namespace, Name, "imaging_active_min_quality"),
 		"(ImagingActiveMinimumQuality)",
 		nil,
 		nil,
 	)
 	c.imagingApex2800Offload = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "imaging_apex2800_offload"),
+		prometheus.BuildFQName(types.Namespace, Name, "imaging_apex2800_offload"),
 		"(ImagingApex2800Offload)",
 		nil,
 		nil,
 	)
 	c.imagingBytesReceived = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "imaging_bytes_received_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "imaging_bytes_received_total"),
 		"(ImagingBytesReceived)",
 		nil,
 		nil,
 	)
 	c.imagingBytesSent = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "imaging_bytes_sent_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "imaging_bytes_sent_total"),
 		"(ImagingBytesSent)",
 		nil,
 		nil,
 	)
 	c.imagingDecoderCapabilityKBitPerSec = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "imaging_decoder_capability_KBit_persec"),
+		prometheus.BuildFQName(types.Namespace, Name, "imaging_decoder_capability_KBit_persec"),
 		"(ImagingDecoderCapabilityKBitPerSec)",
 		nil,
 		nil,
 	)
 	c.imagingEncodedFramesPerSec = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "imaging_encoded_frames_persec"),
+		prometheus.BuildFQName(types.Namespace, Name, "imaging_encoded_frames_persec"),
 		"(ImagingEncodedFramesPerSec)",
 		nil,
 		nil,
 	)
 	c.imagingMegapixelPerSec = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "imaging_megapixel_persec"),
+		prometheus.BuildFQName(types.Namespace, Name, "imaging_megapixel_persec"),
 		"(ImagingMegapixelPerSec)",
 		nil,
 		nil,
 	)
 	c.imagingNegativeAcknowledgements = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "imaging_negative_acks_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "imaging_negative_acks_total"),
 		"(ImagingNegativeAcknowledgements)",
 		nil,
 		nil,
 	)
 	c.imagingRXBWKBitPerSec = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "imaging_rx_bw_KBit_persec"),
+		prometheus.BuildFQName(types.Namespace, Name, "imaging_rx_bw_KBit_persec"),
 		"(ImagingRXBWKBitPerSec)",
 		nil,
 		nil,
 	)
 	c.imagingSVGAdevTapframesPerSec = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "imaging_svga_devtap_frames_persec"),
+		prometheus.BuildFQName(types.Namespace, Name, "imaging_svga_devtap_frames_persec"),
 		"(ImagingSVGAdevTapframesPerSec)",
 		nil,
 		nil,
 	)
 	c.imagingTXBWKBitPerSec = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "imaging_tx_bw_KBit_persec"),
+		prometheus.BuildFQName(types.Namespace, Name, "imaging_tx_bw_KBit_persec"),
 		"(ImagingTXBWKBitPerSec)",
 		nil,
 		nil,
 	)
 
 	c.RoundTripLatencyms = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "round_trip_latency_ms"),
+		prometheus.BuildFQName(types.Namespace, Name, "round_trip_latency_ms"),
 		"(RoundTripLatencyms)",
 		nil,
 		nil,
 	)
 	c.rxBWKBitPerSec = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "rx_bw_KBit_persec"),
+		prometheus.BuildFQName(types.Namespace, Name, "rx_bw_KBit_persec"),
 		"(RXBWKBitPerSec)",
 		nil,
 		nil,
 	)
 	c.rxBWPeakKBitPerSec = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "rx_bw_peak_KBit_persec"),
+		prometheus.BuildFQName(types.Namespace, Name, "rx_bw_peak_KBit_persec"),
 		"(RXBWPeakKBitPerSec)",
 		nil,
 		nil,
 	)
 	c.rxPacketLossPercent = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "rx_packet_loss_percent"),
+		prometheus.BuildFQName(types.Namespace, Name, "rx_packet_loss_percent"),
 		"(RXPacketLossPercent)",
 		nil,
 		nil,
 	)
 	c.rxPacketLossPercentBase = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "rx_packet_loss_percent_base"),
+		prometheus.BuildFQName(types.Namespace, Name, "rx_packet_loss_percent_base"),
 		"(RXPacketLossPercent_Base)",
 		nil,
 		nil,
 	)
 	c.txBWActiveLimitKBitPerSec = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "tx_bw_active_limit_KBit_persec"),
+		prometheus.BuildFQName(types.Namespace, Name, "tx_bw_active_limit_KBit_persec"),
 		"(TXBWActiveLimitKBitPerSec)",
 		nil,
 		nil,
 	)
 	c.txBWKBitPerSec = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "tx_bw_KBit_persec"),
+		prometheus.BuildFQName(types.Namespace, Name, "tx_bw_KBit_persec"),
 		"(TXBWKBitPerSec)",
 		nil,
 		nil,
 	)
 	c.txBWLimitKBitPerSec = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "tx_bw_limit_KBit_persec"),
+		prometheus.BuildFQName(types.Namespace, Name, "tx_bw_limit_KBit_persec"),
 		"(TXBWLimitKBitPerSec)",
 		nil,
 		nil,
 	)
 	c.txPacketLossPercent = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "tx_packet_loss_percent"),
+		prometheus.BuildFQName(types.Namespace, Name, "tx_packet_loss_percent"),
 		"(TXPacketLossPercent)",
 		nil,
 		nil,
 	)
 	c.txPacketLossPercentBase = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "tx_packet_loss_percent_base"),
+		prometheus.BuildFQName(types.Namespace, Name, "tx_packet_loss_percent_base"),
 		"(TXPacketLossPercent_Base)",
 		nil,
 		nil,
 	)
 
 	c.usbBytesReceived = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "usb_bytes_received_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "usb_bytes_received_total"),
 		"(USBBytesReceived)",
 		nil,
 		nil,
 	)
 	c.usbBytesSent = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "usb_bytes_sent_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "usb_bytes_sent_total"),
 		"(USBBytesSent)",
 		nil,
 		nil,
 	)
 	c.usbRXBWKBitPerSec = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "usb_rx_bw_KBit_persec"),
+		prometheus.BuildFQName(types.Namespace, Name, "usb_rx_bw_KBit_persec"),
 		"(USBRXBWKBitPerSec)",
 		nil,
 		nil,
 	)
 	c.usbTXBWKBitPerSec = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "usb_tx_bw_KBit_persec"),
+		prometheus.BuildFQName(types.Namespace, Name, "usb_tx_bw_KBit_persec"),
 		"(USBTXBWKBitPerSec)",
 		nil,
 		nil,
@@ -342,7 +342,7 @@ func (c *Collector) Build(logger *slog.Logger, wmiClient *wmi.Client) error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(_ *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
 	if err := c.collectAudio(ch); err != nil {
 		logger.Error("failed collecting teradici session audio metrics",

@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
-	types2 "github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
 )
@@ -34,8 +34,8 @@ type Config struct {
 }
 
 var ConfigDefaults = Config{
-	PrinterInclude: types2.RegExpAny,
-	PrinterExclude: types2.RegExpEmpty,
+	PrinterInclude: types.RegExpAny,
+	PrinterExclude: types.RegExpEmpty,
 }
 
 type Collector struct {
@@ -115,19 +115,19 @@ func (c *Collector) Build(_ *slog.Logger, wmiClient *wmi.Client) error {
 	c.wmiClient = wmiClient
 
 	c.printerJobStatus = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "job_status"),
+		prometheus.BuildFQName(types.Namespace, Name, "job_status"),
 		"A counter of printer jobs by status",
 		[]string{"printer", "status"},
 		nil,
 	)
 	c.printerStatus = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "status"),
+		prometheus.BuildFQName(types.Namespace, Name, "status"),
 		"Printer status",
 		[]string{"printer", "status"},
 		nil,
 	)
 	c.printerJobCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "job_count"),
+		prometheus.BuildFQName(types.Namespace, Name, "job_count"),
 		"Number of jobs processed by the printer since the last reset",
 		[]string{"printer"},
 		nil,
@@ -154,7 +154,7 @@ type wmiPrintJob struct {
 	Status string
 }
 
-func (c *Collector) Collect(_ *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
 	if err := c.collectPrinterStatus(ch); err != nil {
 		logger.Error("failed to collect printer status metrics",

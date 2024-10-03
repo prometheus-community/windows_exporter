@@ -10,7 +10,7 @@ import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
 	"github.com/prometheus-community/windows_exporter/internal/perflib"
-	types2 "github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
@@ -101,79 +101,79 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 	}
 
 	c.requestsPerSecond = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "requests_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "requests_total"),
 		"Total certificate requests processed",
 		[]string{"cert_template"},
 		nil,
 	)
 	c.requestProcessingTime = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "request_processing_time_seconds"),
+		prometheus.BuildFQName(types.Namespace, Name, "request_processing_time_seconds"),
 		"Last time elapsed for certificate requests",
 		[]string{"cert_template"},
 		nil,
 	)
 	c.retrievalsPerSecond = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "retrievals_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "retrievals_total"),
 		"Total certificate retrieval requests processed",
 		[]string{"cert_template"},
 		nil,
 	)
 	c.retrievalProcessingTime = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "retrievals_processing_time_seconds"),
+		prometheus.BuildFQName(types.Namespace, Name, "retrievals_processing_time_seconds"),
 		"Last time elapsed for certificate retrieval request",
 		[]string{"cert_template"},
 		nil,
 	)
 	c.failedRequestsPerSecond = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "failed_requests_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "failed_requests_total"),
 		"Total failed certificate requests processed",
 		[]string{"cert_template"},
 		nil,
 	)
 	c.issuedRequestsPerSecond = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "issued_requests_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "issued_requests_total"),
 		"Total issued certificate requests processed",
 		[]string{"cert_template"},
 		nil,
 	)
 	c.pendingRequestsPerSecond = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "pending_requests_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "pending_requests_total"),
 		"Total pending certificate requests processed",
 		[]string{"cert_template"},
 		nil,
 	)
 	c.requestCryptographicSigningTime = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "request_cryptographic_signing_time_seconds"),
+		prometheus.BuildFQName(types.Namespace, Name, "request_cryptographic_signing_time_seconds"),
 		"Last time elapsed for signing operation request",
 		[]string{"cert_template"},
 		nil,
 	)
 	c.requestPolicyModuleProcessingTime = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "request_policy_module_processing_time_seconds"),
+		prometheus.BuildFQName(types.Namespace, Name, "request_policy_module_processing_time_seconds"),
 		"Last time elapsed for policy module processing request",
 		[]string{"cert_template"},
 		nil,
 	)
 	c.challengeResponsesPerSecond = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "challenge_responses_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "challenge_responses_total"),
 		"Total certificate challenge responses processed",
 		[]string{"cert_template"},
 		nil,
 	)
 	c.challengeResponseProcessingTime = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "challenge_response_processing_time_seconds"),
+		prometheus.BuildFQName(types.Namespace, Name, "challenge_response_processing_time_seconds"),
 		"Last time elapsed for challenge response",
 		[]string{"cert_template"},
 		nil,
 	)
 	c.signedCertificateTimestampListsPerSecond = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "signed_certificate_timestamp_lists_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "signed_certificate_timestamp_lists_total"),
 		"Total Signed Certificate Timestamp Lists processed",
 		[]string{"cert_template"},
 		nil,
 	)
 	c.signedCertificateTimestampListProcessingTime = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "signed_certificate_timestamp_list_processing_time_seconds"),
+		prometheus.BuildFQName(types.Namespace, Name, "signed_certificate_timestamp_list_processing_time_seconds"),
 		"Last time elapsed for Signed Certificate Timestamp List",
 		[]string{"cert_template"},
 		nil,
@@ -182,7 +182,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 	return nil
 }
 
-func (c *Collector) Collect(ctx *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	if utils.PDHEnabled() {
 		return c.collectPDH(ch)
 	}
@@ -199,7 +199,7 @@ func (c *Collector) Collect(ctx *types2.ScrapeContext, logger *slog.Logger, ch c
 	return nil
 }
 
-func (c *Collector) collectADCSCounters(ctx *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) collectADCSCounters(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	dst := make([]perflibADCS, 0)
 
 	if _, ok := ctx.PerfObjects["Certification Authority"]; !ok {

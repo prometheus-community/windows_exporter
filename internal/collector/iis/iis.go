@@ -11,7 +11,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/perflib"
-	types2 "github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
 	"golang.org/x/sys/windows/registry"
@@ -27,10 +27,10 @@ type Config struct {
 }
 
 var ConfigDefaults = Config{
-	SiteInclude: types2.RegExpAny,
-	SiteExclude: types2.RegExpEmpty,
-	AppInclude:  types2.RegExpAny,
-	AppExclude:  types2.RegExpEmpty,
+	SiteInclude: types.RegExpAny,
+	SiteExclude: types.RegExpEmpty,
+	AppInclude:  types.RegExpAny,
+	AppExclude:  types.RegExpEmpty,
 }
 
 type Collector struct {
@@ -268,7 +268,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *wmi.Client) error {
 	c.iisVersion = getIISVersion(logger)
 
 	c.info = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "info"),
+		prometheus.BuildFQName(types.Namespace, Name, "info"),
 		"ISS information",
 		[]string{},
 		prometheus.Labels{
@@ -278,133 +278,133 @@ func (c *Collector) Build(logger *slog.Logger, _ *wmi.Client) error {
 
 	// Web Service
 	c.currentAnonymousUsers = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "current_anonymous_users"),
+		prometheus.BuildFQName(types.Namespace, Name, "current_anonymous_users"),
 		"Number of users who currently have an anonymous connection using the Web service (WebService.CurrentAnonymousUsers)",
 		[]string{"site"},
 		nil,
 	)
 	c.currentBlockedAsyncIORequests = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "current_blocked_async_io_requests"),
+		prometheus.BuildFQName(types.Namespace, Name, "current_blocked_async_io_requests"),
 		"Current requests temporarily blocked due to bandwidth throttling settings (WebService.CurrentBlockedAsyncIORequests)",
 		[]string{"site"},
 		nil,
 	)
 	c.currentCGIRequests = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "current_cgi_requests"),
+		prometheus.BuildFQName(types.Namespace, Name, "current_cgi_requests"),
 		"Current number of CGI requests being simultaneously processed by the Web service (WebService.CurrentCGIRequests)",
 		[]string{"site"},
 		nil,
 	)
 	c.currentConnections = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "current_connections"),
+		prometheus.BuildFQName(types.Namespace, Name, "current_connections"),
 		"Current number of connections established with the Web service (WebService.CurrentConnections)",
 		[]string{"site"},
 		nil,
 	)
 	c.currentISAPIExtensionRequests = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "current_isapi_extension_requests"),
+		prometheus.BuildFQName(types.Namespace, Name, "current_isapi_extension_requests"),
 		"Current number of ISAPI requests being simultaneously processed by the Web service (WebService.CurrentISAPIExtensionRequests)",
 		[]string{"site"},
 		nil,
 	)
 	c.currentNonAnonymousUsers = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "current_non_anonymous_users"),
+		prometheus.BuildFQName(types.Namespace, Name, "current_non_anonymous_users"),
 		"Number of users who currently have a non-anonymous connection using the Web service (WebService.CurrentNonAnonymousUsers)",
 		[]string{"site"},
 		nil,
 	)
 	c.serviceUptime = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "service_uptime"),
+		prometheus.BuildFQName(types.Namespace, Name, "service_uptime"),
 		"Number of seconds the WebService is up (WebService.ServiceUptime)",
 		[]string{"site"},
 		nil,
 	)
 	c.totalBytesReceived = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "received_bytes_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "received_bytes_total"),
 		"Number of data bytes that have been received by the Web service (WebService.TotalBytesReceived)",
 		[]string{"site"},
 		nil,
 	)
 	c.totalBytesSent = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "sent_bytes_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "sent_bytes_total"),
 		"Number of data bytes that have been sent by the Web service (WebService.TotalBytesSent)",
 		[]string{"site"},
 		nil,
 	)
 	c.totalAnonymousUsers = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "anonymous_users_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "anonymous_users_total"),
 		"Total number of users who established an anonymous connection with the Web service (WebService.TotalAnonymousUsers)",
 		[]string{"site"},
 		nil,
 	)
 	c.totalBlockedAsyncIORequests = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "blocked_async_io_requests_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "blocked_async_io_requests_total"),
 		"Total requests temporarily blocked due to bandwidth throttling settings (WebService.TotalBlockedAsyncIORequests)",
 		[]string{"site"},
 		nil,
 	)
 	c.totalCGIRequests = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "cgi_requests_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "cgi_requests_total"),
 		"Total CGI requests is the total number of CGI requests (WebService.TotalCGIRequests)",
 		[]string{"site"},
 		nil,
 	)
 	c.totalConnectionAttemptsAllInstances = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "connection_attempts_all_instances_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "connection_attempts_all_instances_total"),
 		"Number of connections that have been attempted using the Web service (WebService.TotalConnectionAttemptsAllInstances)",
 		[]string{"site"},
 		nil,
 	)
 	c.totalRequests = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "requests_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "requests_total"),
 		"Number of HTTP requests (WebService.TotalRequests)",
 		[]string{"site", "method"},
 		nil,
 	)
 	c.totalFilesReceived = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "files_received_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "files_received_total"),
 		"Number of files received by the Web service (WebService.TotalFilesReceived)",
 		[]string{"site"},
 		nil,
 	)
 	c.totalFilesSent = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "files_sent_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "files_sent_total"),
 		"Number of files sent by the Web service (WebService.TotalFilesSent)",
 		[]string{"site"},
 		nil,
 	)
 	c.totalISAPIExtensionRequests = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "ipapi_extension_requests_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "ipapi_extension_requests_total"),
 		"ISAPI Extension Requests received (WebService.TotalISAPIExtensionRequests)",
 		[]string{"site"},
 		nil,
 	)
 	c.totalLockedErrors = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "locked_errors_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "locked_errors_total"),
 		"Number of requests that couldn't be satisfied by the server because the requested resource was locked (WebService.TotalLockedErrors)",
 		[]string{"site"},
 		nil,
 	)
 	c.totalLogonAttempts = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "logon_attempts_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "logon_attempts_total"),
 		"Number of logons attempts to the Web Service (WebService.TotalLogonAttempts)",
 		[]string{"site"},
 		nil,
 	)
 	c.totalNonAnonymousUsers = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "non_anonymous_users_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "non_anonymous_users_total"),
 		"Number of users who established a non-anonymous connection with the Web service (WebService.TotalNonAnonymousUsers)",
 		[]string{"site"},
 		nil,
 	)
 	c.totalNotFoundErrors = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "not_found_errors_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "not_found_errors_total"),
 		"Number of requests that couldn't be satisfied by the server because the requested document could not be found (WebService.TotalNotFoundErrors)",
 		[]string{"site"},
 		nil,
 	)
 	c.totalRejectedAsyncIORequests = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "rejected_async_io_requests_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "rejected_async_io_requests_total"),
 		"Requests rejected due to bandwidth throttling settings (WebService.TotalRejectedAsyncIORequests)",
 		[]string{"site"},
 		nil,
@@ -412,79 +412,79 @@ func (c *Collector) Build(logger *slog.Logger, _ *wmi.Client) error {
 
 	// APP_POOL_WAS
 	c.currentApplicationPoolState = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "current_application_pool_state"),
+		prometheus.BuildFQName(types.Namespace, Name, "current_application_pool_state"),
 		"The current status of the application pool (1 - Uninitialized, 2 - Initialized, 3 - Running, 4 - Disabling, 5 - Disabled, 6 - Shutdown Pending, 7 - Delete Pending) (CurrentApplicationPoolState)",
 		[]string{"app", "state"},
 		nil,
 	)
 	c.currentApplicationPoolUptime = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "current_application_pool_start_time"),
+		prometheus.BuildFQName(types.Namespace, Name, "current_application_pool_start_time"),
 		"The unix timestamp for the application pool start time (CurrentApplicationPoolUptime)",
 		[]string{"app"},
 		nil,
 	)
 	c.currentWorkerProcesses = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "current_worker_processes"),
+		prometheus.BuildFQName(types.Namespace, Name, "current_worker_processes"),
 		"The current number of worker processes that are running in the application pool (CurrentWorkerProcesses)",
 		[]string{"app"},
 		nil,
 	)
 	c.maximumWorkerProcesses = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "maximum_worker_processes"),
+		prometheus.BuildFQName(types.Namespace, Name, "maximum_worker_processes"),
 		"The maximum number of worker processes that have been created for the application pool since Windows Process Activation Service (WAS) started (MaximumWorkerProcesses)",
 		[]string{"app"},
 		nil,
 	)
 	c.recentWorkerProcessFailures = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "recent_worker_process_failures"),
+		prometheus.BuildFQName(types.Namespace, Name, "recent_worker_process_failures"),
 		"The number of times that worker processes for the application pool failed during the rapid-fail protection interval (RecentWorkerProcessFailures)",
 		[]string{"app"},
 		nil,
 	)
 	c.timeSinceLastWorkerProcessFailure = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "time_since_last_worker_process_failure"),
+		prometheus.BuildFQName(types.Namespace, Name, "time_since_last_worker_process_failure"),
 		"The length of time, in seconds, since the last worker process failure occurred for the application pool (TimeSinceLastWorkerProcessFailure)",
 		[]string{"app"},
 		nil,
 	)
 	c.totalApplicationPoolRecycles = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "total_application_pool_recycles"),
+		prometheus.BuildFQName(types.Namespace, Name, "total_application_pool_recycles"),
 		"The number of times that the application pool has been recycled since Windows Process Activation Service (WAS) started (TotalApplicationPoolRecycles)",
 		[]string{"app"},
 		nil,
 	)
 	c.totalApplicationPoolUptime = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "total_application_pool_start_time"),
+		prometheus.BuildFQName(types.Namespace, Name, "total_application_pool_start_time"),
 		"The unix timestamp for the application pool of when the Windows Process Activation Service (WAS) started (TotalApplicationPoolUptime)",
 		[]string{"app"},
 		nil,
 	)
 	c.totalWorkerProcessesCreated = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "total_worker_processes_created"),
+		prometheus.BuildFQName(types.Namespace, Name, "total_worker_processes_created"),
 		"The number of worker processes created for the application pool since Windows Process Activation Service (WAS) started (TotalWorkerProcessesCreated)",
 		[]string{"app"},
 		nil,
 	)
 	c.totalWorkerProcessFailures = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "total_worker_process_failures"),
+		prometheus.BuildFQName(types.Namespace, Name, "total_worker_process_failures"),
 		"The number of times that worker processes have crashed since the application pool was started (TotalWorkerProcessFailures)",
 		[]string{"app"},
 		nil,
 	)
 	c.totalWorkerProcessPingFailures = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "total_worker_process_ping_failures"),
+		prometheus.BuildFQName(types.Namespace, Name, "total_worker_process_ping_failures"),
 		"The number of times that Windows Process Activation Service (WAS) did not receive a response to ping messages sent to a worker process (TotalWorkerProcessPingFailures)",
 		[]string{"app"},
 		nil,
 	)
 	c.totalWorkerProcessShutdownFailures = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "total_worker_process_shutdown_failures"),
+		prometheus.BuildFQName(types.Namespace, Name, "total_worker_process_shutdown_failures"),
 		"The number of times that Windows Process Activation Service (WAS) failed to shut down a worker process (TotalWorkerProcessShutdownFailures)",
 		[]string{"app"},
 		nil,
 	)
 	c.totalWorkerProcessStartupFailures = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "total_worker_process_startup_failures"),
+		prometheus.BuildFQName(types.Namespace, Name, "total_worker_process_startup_failures"),
 		"The number of times that Windows Process Activation Service (WAS) failed to start a worker process (TotalWorkerProcessStartupFailures)",
 		[]string{"app"},
 		nil,
@@ -492,224 +492,224 @@ func (c *Collector) Build(logger *slog.Logger, _ *wmi.Client) error {
 
 	// W3SVC_W3WP
 	c.threads = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "worker_threads"),
+		prometheus.BuildFQName(types.Namespace, Name, "worker_threads"),
 		"Number of threads actively processing requests in the worker process",
 		[]string{"app", "pid", "state"},
 		nil,
 	)
 	c.maximumThreads = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "worker_max_threads"),
+		prometheus.BuildFQName(types.Namespace, Name, "worker_max_threads"),
 		"Maximum number of threads to which the thread pool can grow as needed",
 		[]string{"app", "pid"},
 		nil,
 	)
 	c.requestsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "worker_requests_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "worker_requests_total"),
 		"Total number of HTTP requests served by the worker process",
 		[]string{"app", "pid"},
 		nil,
 	)
 	c.requestsActive = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "worker_current_requests"),
+		prometheus.BuildFQName(types.Namespace, Name, "worker_current_requests"),
 		"Current number of requests being processed by the worker process",
 		[]string{"app", "pid"},
 		nil,
 	)
 	c.activeFlushedEntries = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "worker_cache_active_flushed_entries"),
+		prometheus.BuildFQName(types.Namespace, Name, "worker_cache_active_flushed_entries"),
 		"Number of file handles cached in user-mode that will be closed when all current transfers complete.",
 		[]string{"app", "pid"},
 		nil,
 	)
 	c.currentFileCacheMemoryUsage = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "worker_file_cache_memory_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "worker_file_cache_memory_bytes"),
 		"Current number of bytes used by user-mode file cache",
 		[]string{"app", "pid"},
 		nil,
 	)
 	c.maximumFileCacheMemoryUsage = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "worker_file_cache_max_memory_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "worker_file_cache_max_memory_bytes"),
 		"Maximum number of bytes used by user-mode file cache",
 		[]string{"app", "pid"},
 		nil,
 	)
 	c.fileCacheFlushesTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "worker_file_cache_flushes_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "worker_file_cache_flushes_total"),
 		"Total number of files removed from the user-mode cache",
 		[]string{"app", "pid"},
 		nil,
 	)
 	c.fileCacheQueriesTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "worker_file_cache_queries_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "worker_file_cache_queries_total"),
 		"Total file cache queries (hits + misses)",
 		[]string{"app", "pid"},
 		nil,
 	)
 	c.fileCacheHitsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "worker_file_cache_hits_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "worker_file_cache_hits_total"),
 		"Total number of successful lookups in the user-mode file cache",
 		[]string{"app", "pid"},
 		nil,
 	)
 	c.filesCached = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "worker_file_cache_items"),
+		prometheus.BuildFQName(types.Namespace, Name, "worker_file_cache_items"),
 		"Current number of files whose contents are present in user-mode cache",
 		[]string{"app", "pid"},
 		nil,
 	)
 	c.filesCachedTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "worker_file_cache_items_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "worker_file_cache_items_total"),
 		"Total number of files whose contents were ever added to the user-mode cache (since service startup)",
 		[]string{"app", "pid"},
 		nil,
 	)
 	c.filesFlushedTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "worker_file_cache_items_flushed_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "worker_file_cache_items_flushed_total"),
 		"Total number of file handles that have been removed from the user-mode cache (since service startup)",
 		[]string{"app", "pid"},
 		nil,
 	)
 	c.uriCacheFlushesTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "worker_uri_cache_flushes_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "worker_uri_cache_flushes_total"),
 		"Total number of URI cache flushes (since service startup)",
 		[]string{"app", "pid"},
 		nil,
 	)
 	c.uriCacheQueriesTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "worker_uri_cache_queries_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "worker_uri_cache_queries_total"),
 		"Total number of uri cache queries (hits + misses)",
 		[]string{"app", "pid"},
 		nil,
 	)
 	c.uriCacheHitsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "worker_uri_cache_hits_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "worker_uri_cache_hits_total"),
 		"Total number of successful lookups in the user-mode URI cache (since service startup)",
 		[]string{"app", "pid"},
 		nil,
 	)
 	c.urisCached = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "worker_uri_cache_items"),
+		prometheus.BuildFQName(types.Namespace, Name, "worker_uri_cache_items"),
 		"Number of URI information blocks currently in the user-mode cache",
 		[]string{"app", "pid"},
 		nil,
 	)
 	c.urisCachedTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "worker_uri_cache_items_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "worker_uri_cache_items_total"),
 		"Total number of URI information blocks added to the user-mode cache (since service startup)",
 		[]string{"app", "pid"},
 		nil,
 	)
 	c.urisFlushedTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "worker_uri_cache_items_flushed_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "worker_uri_cache_items_flushed_total"),
 		"The number of URI information blocks that have been removed from the user-mode cache (since service startup)",
 		[]string{"app", "pid"},
 		nil,
 	)
 	c.metadataCached = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "worker_metadata_cache_items"),
+		prometheus.BuildFQName(types.Namespace, Name, "worker_metadata_cache_items"),
 		"Number of metadata information blocks currently present in user-mode cache",
 		[]string{"app", "pid"},
 		nil,
 	)
 	c.metadataCacheFlushes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "worker_metadata_cache_flushes_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "worker_metadata_cache_flushes_total"),
 		"Total number of user-mode metadata cache flushes (since service startup)",
 		[]string{"app", "pid"},
 		nil,
 	)
 	c.metadataCacheQueriesTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "worker_metadata_cache_queries_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "worker_metadata_cache_queries_total"),
 		"Total metadata cache queries (hits + misses)",
 		[]string{"app", "pid"},
 		nil,
 	)
 	c.metadataCacheHitsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "worker_metadata_cache_hits_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "worker_metadata_cache_hits_total"),
 		"Total number of successful lookups in the user-mode metadata cache (since service startup)",
 		[]string{"app", "pid"},
 		nil,
 	)
 	c.metadataCachedTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "worker_metadata_cache_items_cached_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "worker_metadata_cache_items_cached_total"),
 		"Total number of metadata information blocks added to the user-mode cache (since service startup)",
 		[]string{"app", "pid"},
 		nil,
 	)
 	c.metadataFlushedTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "worker_metadata_cache_items_flushed_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "worker_metadata_cache_items_flushed_total"),
 		"Total number of metadata information blocks removed from the user-mode cache (since service startup)",
 		[]string{"app", "pid"},
 		nil,
 	)
 	c.outputCacheActiveFlushedItems = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "worker_output_cache_active_flushed_items"),
+		prometheus.BuildFQName(types.Namespace, Name, "worker_output_cache_active_flushed_items"),
 		"",
 		[]string{"app", "pid"},
 		nil,
 	)
 	c.outputCacheItems = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "worker_output_cache_items"),
+		prometheus.BuildFQName(types.Namespace, Name, "worker_output_cache_items"),
 		"Number of items current present in output cache",
 		[]string{"app", "pid"},
 		nil,
 	)
 	c.outputCacheMemoryUsage = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "worker_output_cache_memory_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "worker_output_cache_memory_bytes"),
 		"Current number of bytes used by output cache",
 		[]string{"app", "pid"},
 		nil,
 	)
 	c.outputCacheQueriesTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "worker_output_queries_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "worker_output_queries_total"),
 		"Total number of output cache queries (hits + misses)",
 		[]string{"app", "pid"},
 		nil,
 	)
 	c.outputCacheHitsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "worker_output_cache_hits_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "worker_output_cache_hits_total"),
 		"Total number of successful lookups in output cache (since service startup)",
 		[]string{"app", "pid"},
 		nil,
 	)
 	c.outputCacheFlushedItemsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "worker_output_cache_items_flushed_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "worker_output_cache_items_flushed_total"),
 		"Total number of items flushed from output cache (since service startup)",
 		[]string{"app", "pid"},
 		nil,
 	)
 	c.outputCacheFlushesTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "worker_output_cache_flushes_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "worker_output_cache_flushes_total"),
 		"Total number of flushes of output cache (since service startup)",
 		[]string{"app", "pid"},
 		nil,
 	)
 	// W3SVC_W3WP_IIS8
 	c.requestErrorsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "worker_request_errors_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "worker_request_errors_total"),
 		"Total number of requests that returned an error",
 		[]string{"app", "pid", "status_code"},
 		nil,
 	)
 	c.webSocketRequestsActive = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "worker_current_websocket_requests"),
+		prometheus.BuildFQName(types.Namespace, Name, "worker_current_websocket_requests"),
 		"",
 		[]string{"app", "pid"},
 		nil,
 	)
 	c.webSocketConnectionAttempts = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "worker_websocket_connection_attempts_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "worker_websocket_connection_attempts_total"),
 		"",
 		[]string{"app", "pid"},
 		nil,
 	)
 	c.webSocketConnectionsAccepted = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "worker_websocket_connection_accepted_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "worker_websocket_connection_accepted_total"),
 		"",
 		[]string{"app", "pid"},
 		nil,
 	)
 	c.webSocketConnectionsRejected = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "worker_websocket_connection_rejected_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "worker_websocket_connection_rejected_total"),
 		"",
 		[]string{"app", "pid"},
 		nil,
@@ -717,169 +717,169 @@ func (c *Collector) Build(logger *slog.Logger, _ *wmi.Client) error {
 
 	// Web Service Cache
 	c.serviceCacheActiveFlushedEntries = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "server_cache_active_flushed_entries"),
+		prometheus.BuildFQName(types.Namespace, Name, "server_cache_active_flushed_entries"),
 		"Number of file handles cached that will be closed when all current transfers complete.",
 		nil,
 		nil,
 	)
 	c.serviceCacheCurrentFileCacheMemoryUsage = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "server_file_cache_memory_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "server_file_cache_memory_bytes"),
 		"Current number of bytes used by file cache",
 		nil,
 		nil,
 	)
 	c.serviceCacheMaximumFileCacheMemoryUsage = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "server_file_cache_max_memory_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "server_file_cache_max_memory_bytes"),
 		"Maximum number of bytes used by file cache",
 		nil,
 		nil,
 	)
 	c.serviceCacheFileCacheFlushesTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "server_file_cache_flushes_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "server_file_cache_flushes_total"),
 		"Total number of file cache flushes (since service startup)",
 		nil,
 		nil,
 	)
 	c.serviceCacheFileCacheQueriesTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "server_file_cache_queries_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "server_file_cache_queries_total"),
 		"Total number of file cache queries (hits + misses)",
 		nil,
 		nil,
 	)
 	c.serviceCacheFileCacheHitsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "server_file_cache_hits_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "server_file_cache_hits_total"),
 		"Total number of successful lookups in the user-mode file cache",
 		nil,
 		nil,
 	)
 	c.serviceCacheFilesCached = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "server_file_cache_items"),
+		prometheus.BuildFQName(types.Namespace, Name, "server_file_cache_items"),
 		"Current number of files whose contents are present in cache",
 		nil,
 		nil,
 	)
 	c.serviceCacheFilesCachedTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "server_file_cache_items_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "server_file_cache_items_total"),
 		"Total number of files whose contents were ever added to the cache (since service startup)",
 		nil,
 		nil,
 	)
 	c.serviceCacheFilesFlushedTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "server_file_cache_items_flushed_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "server_file_cache_items_flushed_total"),
 		"Total number of file handles that have been removed from the cache (since service startup)",
 		nil,
 		nil,
 	)
 	c.serviceCacheURICacheFlushesTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "server_uri_cache_flushes_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "server_uri_cache_flushes_total"),
 		"Total number of URI cache flushes (since service startup)",
 		[]string{"mode"},
 		nil,
 	)
 	c.serviceCacheURICacheQueriesTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "server_uri_cache_queries_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "server_uri_cache_queries_total"),
 		"Total number of uri cache queries (hits + misses)",
 		[]string{"mode"},
 		nil,
 	)
 	c.serviceCacheURICacheHitsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "server_uri_cache_hits_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "server_uri_cache_hits_total"),
 		"Total number of successful lookups in the URI cache (since service startup)",
 		[]string{"mode"},
 		nil,
 	)
 	c.serviceCacheURIsCached = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "server_uri_cache_items"),
+		prometheus.BuildFQName(types.Namespace, Name, "server_uri_cache_items"),
 		"Number of URI information blocks currently in the cache",
 		[]string{"mode"},
 		nil,
 	)
 	c.serviceCacheURIsCachedTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "server_uri_cache_items_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "server_uri_cache_items_total"),
 		"Total number of URI information blocks added to the cache (since service startup)",
 		[]string{"mode"},
 		nil,
 	)
 	c.serviceCacheURIsFlushedTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "server_uri_cache_items_flushed_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "server_uri_cache_items_flushed_total"),
 		"The number of URI information blocks that have been removed from the cache (since service startup)",
 		[]string{"mode"},
 		nil,
 	)
 	c.serviceCacheMetadataCached = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "server_metadata_cache_items"),
+		prometheus.BuildFQName(types.Namespace, Name, "server_metadata_cache_items"),
 		"Number of metadata information blocks currently present in cache",
 		nil,
 		nil,
 	)
 	c.serviceCacheMetadataCacheFlushes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "server_metadata_cache_flushes_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "server_metadata_cache_flushes_total"),
 		"Total number of metadata cache flushes (since service startup)",
 		nil,
 		nil,
 	)
 	c.serviceCacheMetadataCacheQueriesTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "server_metadata_cache_queries_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "server_metadata_cache_queries_total"),
 		"Total metadata cache queries (hits + misses)",
 		nil,
 		nil,
 	)
 	c.serviceCacheMetadataCacheHitsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "server_metadata_cache_hits_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "server_metadata_cache_hits_total"),
 		"Total number of successful lookups in the metadata cache (since service startup)",
 		nil,
 		nil,
 	)
 	c.serviceCacheMetadataCachedTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "server_metadata_cache_items_cached_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "server_metadata_cache_items_cached_total"),
 		"Total number of metadata information blocks added to the cache (since service startup)",
 		nil,
 		nil,
 	)
 	c.serviceCacheMetadataFlushedTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "server_metadata_cache_items_flushed_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "server_metadata_cache_items_flushed_total"),
 		"Total number of metadata information blocks removed from the cache (since service startup)",
 		nil,
 		nil,
 	)
 	c.serviceCacheOutputCacheActiveFlushedItems = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "server_output_cache_active_flushed_items"),
+		prometheus.BuildFQName(types.Namespace, Name, "server_output_cache_active_flushed_items"),
 		"",
 		nil,
 		nil,
 	)
 	c.serviceCacheOutputCacheItems = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "server_output_cache_items"),
+		prometheus.BuildFQName(types.Namespace, Name, "server_output_cache_items"),
 		"Number of items current present in output cache",
 		nil,
 		nil,
 	)
 	c.serviceCacheOutputCacheMemoryUsage = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "server_output_cache_memory_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "server_output_cache_memory_bytes"),
 		"Current number of bytes used by output cache",
 		nil,
 		nil,
 	)
 	c.serviceCacheOutputCacheQueriesTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "server_output_cache_queries_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "server_output_cache_queries_total"),
 		"Total output cache queries (hits + misses)",
 		nil,
 		nil,
 	)
 	c.serviceCacheOutputCacheHitsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "server_output_cache_hits_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "server_output_cache_hits_total"),
 		"Total number of successful lookups in output cache (since service startup)",
 		nil,
 		nil,
 	)
 	c.serviceCacheOutputCacheFlushedItemsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "server_output_cache_items_flushed_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "server_output_cache_items_flushed_total"),
 		"Total number of items flushed from output cache (since service startup)",
 		nil,
 		nil,
 	)
 	c.serviceCacheOutputCacheFlushesTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "server_output_cache_flushes_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "server_output_cache_flushes_total"),
 		"Total number of flushes of output cache (since service startup)",
 		nil,
 		nil,
@@ -940,7 +940,7 @@ func getIISVersion(logger *slog.Logger) simpleVersion {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(ctx *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
 	if err := c.collectWebService(ctx, logger, ch); err != nil {
 		logger.Error("failed collecting iis metrics",
@@ -1068,7 +1068,7 @@ func dedupIISNames[V hasGetIISName](services []V) map[string]V {
 	return webServiceDeDuplicated
 }
 
-func (c *Collector) collectWebService(ctx *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) collectWebService(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
 
 	var webService []perflibWebService
@@ -1363,7 +1363,7 @@ var applicationStates = map[uint32]string{
 	7: "Delete Pending",
 }
 
-func (c *Collector) collectAPP_POOL_WAS(ctx *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) collectAPP_POOL_WAS(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
 
 	var APP_POOL_WAS []perflibAPP_POOL_WAS
@@ -1543,7 +1543,7 @@ type perflibW3SVC_W3WP_IIS8 struct {
 	WebSocketConnectionsRejected float64 `perflib:"WebSocket Connections Rejected / Sec"`
 }
 
-func (c *Collector) collectW3SVC_W3WP(ctx *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) collectW3SVC_W3WP(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
 
 	var W3SVC_W3WP []perflibW3SVC_W3WP
@@ -1945,7 +1945,7 @@ type perflibWebServiceCache struct {
 	ServiceCache_OutputCacheQueriesTotal       float64
 }
 
-func (c *Collector) collectWebServiceCache(ctx *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) collectWebServiceCache(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
 
 	var WebServiceCache []perflibWebServiceCache

@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
-	types2 "github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
 )
@@ -70,7 +70,7 @@ func (c *Collector) Build(_ *slog.Logger, wmiClient *wmi.Client) error {
 
 	c.wmiClient = wmiClient
 	c.cpuInfo = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, "", Name),
+		prometheus.BuildFQName(types.Namespace, "", Name),
 		"Labelled CPU information as provided by Win32_Processor",
 		[]string{
 			"architecture",
@@ -82,7 +82,7 @@ func (c *Collector) Build(_ *slog.Logger, wmiClient *wmi.Client) error {
 		nil,
 	)
 	c.cpuThreadCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "thread"),
+		prometheus.BuildFQName(types.Namespace, Name, "thread"),
 		"Number of threads per CPU",
 		[]string{
 			"device_id",
@@ -90,7 +90,7 @@ func (c *Collector) Build(_ *slog.Logger, wmiClient *wmi.Client) error {
 		nil,
 	)
 	c.cpuCoreCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "core"),
+		prometheus.BuildFQName(types.Namespace, Name, "core"),
 		"Number of cores per CPU",
 		[]string{
 			"device_id",
@@ -98,7 +98,7 @@ func (c *Collector) Build(_ *slog.Logger, wmiClient *wmi.Client) error {
 		nil,
 	)
 	c.cpuEnabledCoreCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "enabled_core"),
+		prometheus.BuildFQName(types.Namespace, Name, "enabled_core"),
 		"Number of enabled cores per CPU",
 		[]string{
 			"device_id",
@@ -106,7 +106,7 @@ func (c *Collector) Build(_ *slog.Logger, wmiClient *wmi.Client) error {
 		nil,
 	)
 	c.cpuLogicalProcessorsCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "logical_processor"),
+		prometheus.BuildFQName(types.Namespace, Name, "logical_processor"),
 		"Number of logical processors per CPU",
 		[]string{
 			"device_id",
@@ -114,7 +114,7 @@ func (c *Collector) Build(_ *slog.Logger, wmiClient *wmi.Client) error {
 		nil,
 	)
 	c.cpuL2CacheSize = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "l2_cache_size"),
+		prometheus.BuildFQName(types.Namespace, Name, "l2_cache_size"),
 		"Size of L2 cache per CPU",
 		[]string{
 			"device_id",
@@ -122,7 +122,7 @@ func (c *Collector) Build(_ *slog.Logger, wmiClient *wmi.Client) error {
 		nil,
 	)
 	c.cpuL3CacheSize = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "l3_cache_size"),
+		prometheus.BuildFQName(types.Namespace, Name, "l3_cache_size"),
 		"Size of L3 cache per CPU",
 		[]string{
 			"device_id",
@@ -149,7 +149,7 @@ type win32Processor struct {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(_ *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
 	if err := c.collect(ch); err != nil {
 		logger.Error("failed collecting cpu_info metrics",

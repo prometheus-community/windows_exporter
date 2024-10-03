@@ -9,7 +9,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	types2 "github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
@@ -284,374 +284,374 @@ func (c *Collector) Build(_ *slog.Logger, wmiClient *wmi.Client) error {
 	c.wmiClient = wmiClient
 
 	c.addressBookOperationsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "address_book_operations_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "address_book_operations_total"),
 		"",
 		[]string{"operation"},
 		nil,
 	)
 	c.addressBookClientSessions = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "address_book_client_sessions"),
+		prometheus.BuildFQName(types.Namespace, Name, "address_book_client_sessions"),
 		"",
 		nil,
 		nil,
 	)
 	c.approximateHighestDistinguishedNameTag = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "approximate_highest_distinguished_name_tag"),
+		prometheus.BuildFQName(types.Namespace, Name, "approximate_highest_distinguished_name_tag"),
 		"",
 		nil,
 		nil,
 	)
 	c.atqEstimatedDelaySeconds = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "atq_estimated_delay_seconds"),
+		prometheus.BuildFQName(types.Namespace, Name, "atq_estimated_delay_seconds"),
 		"",
 		nil,
 		nil,
 	)
 	c.atqOutstandingRequests = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "atq_outstanding_requests"),
+		prometheus.BuildFQName(types.Namespace, Name, "atq_outstanding_requests"),
 		"",
 		nil,
 		nil,
 	)
 	c.atqAverageRequestLatency = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "atq_average_request_latency"),
+		prometheus.BuildFQName(types.Namespace, Name, "atq_average_request_latency"),
 		"",
 		nil,
 		nil,
 	)
 	c.atqCurrentThreads = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "atq_current_threads"),
+		prometheus.BuildFQName(types.Namespace, Name, "atq_current_threads"),
 		"",
 		[]string{"service"},
 		nil,
 	)
 	c.searchesTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "searches_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "searches_total"),
 		"",
 		[]string{"scope"},
 		nil,
 	)
 	c.databaseOperationsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "database_operations_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "database_operations_total"),
 		"",
 		[]string{"operation"},
 		nil,
 	)
 	c.bindsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "binds_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "binds_total"),
 		"",
 		[]string{"bind_method"},
 		nil,
 	)
 	c.replicationHighestUsn = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "replication_highest_usn"),
+		prometheus.BuildFQName(types.Namespace, Name, "replication_highest_usn"),
 		"",
 		[]string{"state"},
 		nil,
 	)
 	c.intraSiteReplicationDataBytesTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "replication_data_intrasite_bytes_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "replication_data_intrasite_bytes_total"),
 		"",
 		[]string{"direction"},
 		nil,
 	)
 	c.interSiteReplicationDataBytesTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "replication_data_intersite_bytes_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "replication_data_intersite_bytes_total"),
 		"",
 		[]string{"direction"},
 		nil,
 	)
 	c.replicationInboundSyncObjectsRemaining = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "replication_inbound_sync_objects_remaining"),
+		prometheus.BuildFQName(types.Namespace, Name, "replication_inbound_sync_objects_remaining"),
 		"",
 		nil,
 		nil,
 	)
 	c.replicationInboundLinkValueUpdatesRemaining = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "replication_inbound_link_value_updates_remaining"),
+		prometheus.BuildFQName(types.Namespace, Name, "replication_inbound_link_value_updates_remaining"),
 		"",
 		nil,
 		nil,
 	)
 	c.replicationInboundObjectsUpdatedTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "replication_inbound_objects_updated_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "replication_inbound_objects_updated_total"),
 		"",
 		nil,
 		nil,
 	)
 	c.replicationInboundObjectsFilteredTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "replication_inbound_objects_filtered_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "replication_inbound_objects_filtered_total"),
 		"",
 		nil,
 		nil,
 	)
 	c.replicationInboundPropertiesUpdatedTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "replication_inbound_properties_updated_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "replication_inbound_properties_updated_total"),
 		"",
 		nil,
 		nil,
 	)
 	c.replicationInboundPropertiesFilteredTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "replication_inbound_properties_filtered_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "replication_inbound_properties_filtered_total"),
 		"",
 		nil,
 		nil,
 	)
 	c.replicationPendingOperations = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "replication_pending_operations"),
+		prometheus.BuildFQName(types.Namespace, Name, "replication_pending_operations"),
 		"",
 		nil,
 		nil,
 	)
 	c.replicationPendingSynchronizations = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "replication_pending_synchronizations"),
+		prometheus.BuildFQName(types.Namespace, Name, "replication_pending_synchronizations"),
 		"",
 		nil,
 		nil,
 	)
 	c.replicationSyncRequestsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "replication_sync_requests_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "replication_sync_requests_total"),
 		"",
 		nil,
 		nil,
 	)
 	c.replicationSyncRequestsSuccessTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "replication_sync_requests_success_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "replication_sync_requests_success_total"),
 		"",
 		nil,
 		nil,
 	)
 	c.replicationSyncRequestsSchemaMismatchFailureTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "replication_sync_requests_schema_mismatch_failure_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "replication_sync_requests_schema_mismatch_failure_total"),
 		"",
 		nil,
 		nil,
 	)
 	c.nameTranslationsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "name_translations_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "name_translations_total"),
 		"",
 		[]string{"target_name"},
 		nil,
 	)
 	c.changeMonitorsRegistered = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "change_monitors_registered"),
+		prometheus.BuildFQName(types.Namespace, Name, "change_monitors_registered"),
 		"",
 		nil,
 		nil,
 	)
 	c.changeMonitorUpdatesPending = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "change_monitor_updates_pending"),
+		prometheus.BuildFQName(types.Namespace, Name, "change_monitor_updates_pending"),
 		"",
 		nil,
 		nil,
 	)
 	c.nameCacheHitsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "name_cache_hits_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "name_cache_hits_total"),
 		"",
 		nil,
 		nil,
 	)
 	c.nameCacheLookupsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "name_cache_lookups_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "name_cache_lookups_total"),
 		"",
 		nil,
 		nil,
 	)
 	c.directoryOperationsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "directory_operations_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "directory_operations_total"),
 		"",
 		[]string{"operation", "origin"},
 		nil,
 	)
 	c.directorySearchSubOperationsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "directory_search_suboperations_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "directory_search_suboperations_total"),
 		"",
 		nil,
 		nil,
 	)
 	c.securityDescriptorPropagationEventsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "security_descriptor_propagation_events_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "security_descriptor_propagation_events_total"),
 		"",
 		nil,
 		nil,
 	)
 	c.securityDescriptorPropagationEventsQueued = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "security_descriptor_propagation_events_queued"),
+		prometheus.BuildFQName(types.Namespace, Name, "security_descriptor_propagation_events_queued"),
 		"",
 		nil,
 		nil,
 	)
 	c.securityDescriptorPropagationAccessWaitTotalSeconds = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "security_descriptor_propagation_access_wait_total_seconds"),
+		prometheus.BuildFQName(types.Namespace, Name, "security_descriptor_propagation_access_wait_total_seconds"),
 		"",
 		nil,
 		nil,
 	)
 	c.securityDescriptorPropagationItemsQueuedTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "security_descriptor_propagation_items_queued_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "security_descriptor_propagation_items_queued_total"),
 		"",
 		nil,
 		nil,
 	)
 	c.directoryServiceThreads = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "directory_service_threads"),
+		prometheus.BuildFQName(types.Namespace, Name, "directory_service_threads"),
 		"",
 		nil,
 		nil,
 	)
 	c.ldapClosedConnectionsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "ldap_closed_connections_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "ldap_closed_connections_total"),
 		"",
 		nil,
 		nil,
 	)
 	c.ldapOpenedConnectionsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "ldap_opened_connections_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "ldap_opened_connections_total"),
 		"",
 		[]string{"type"},
 		nil,
 	)
 	c.ldapActiveThreads = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "ldap_active_threads"),
+		prometheus.BuildFQName(types.Namespace, Name, "ldap_active_threads"),
 		"",
 		nil,
 		nil,
 	)
 	c.ldapLastBindTimeSeconds = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "ldap_last_bind_time_seconds"),
+		prometheus.BuildFQName(types.Namespace, Name, "ldap_last_bind_time_seconds"),
 		"",
 		nil,
 		nil,
 	)
 	c.ldapSearchesTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "ldap_searches_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "ldap_searches_total"),
 		"",
 		nil,
 		nil,
 	)
 	c.ldapUdpOperationsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "ldap_udp_operations_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "ldap_udp_operations_total"),
 		"",
 		nil,
 		nil,
 	)
 	c.ldapWritesTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "ldap_writes_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "ldap_writes_total"),
 		"",
 		nil,
 		nil,
 	)
 	c.ldapClientSessions = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "ldap_client_sessions"),
+		prometheus.BuildFQName(types.Namespace, Name, "ldap_client_sessions"),
 		"This is the number of sessions opened by LDAP clients at the time the data is taken. This is helpful in determining LDAP client activity and if the DC is able to handle the load. Of course, spikes during normal periods of authentication — such as first thing in the morning — are not necessarily a problem, but long sustained periods of high values indicate an overworked DC.",
 		nil,
 		nil,
 	)
 	c.linkValuesCleanedTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "link_values_cleaned_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "link_values_cleaned_total"),
 		"",
 		nil,
 		nil,
 	)
 	c.phantomObjectsCleanedTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "phantom_objects_cleaned_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "phantom_objects_cleaned_total"),
 		"",
 		nil,
 		nil,
 	)
 	c.phantomObjectsVisitedTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "phantom_objects_visited_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "phantom_objects_visited_total"),
 		"",
 		nil,
 		nil,
 	)
 	c.samGroupMembershipEvaluationsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "sam_group_membership_evaluations_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "sam_group_membership_evaluations_total"),
 		"",
 		[]string{"group_type"},
 		nil,
 	)
 	c.samGroupMembershipGlobalCatalogEvaluationsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "sam_group_membership_global_catalog_evaluations_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "sam_group_membership_global_catalog_evaluations_total"),
 		"",
 		nil,
 		nil,
 	)
 	c.samGroupMembershipEvaluationsNonTransitiveTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "sam_group_membership_evaluations_nontransitive_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "sam_group_membership_evaluations_nontransitive_total"),
 		"",
 		nil,
 		nil,
 	)
 	c.samGroupMembershipEvaluationsTransitiveTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "sam_group_membership_evaluations_transitive_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "sam_group_membership_evaluations_transitive_total"),
 		"",
 		nil,
 		nil,
 	)
 	c.samGroupEvaluationLatency = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "sam_group_evaluation_latency"),
+		prometheus.BuildFQName(types.Namespace, Name, "sam_group_evaluation_latency"),
 		"The mean latency of the last 100 group evaluations performed for authentication",
 		[]string{"evaluation_type"},
 		nil,
 	)
 	c.samComputerCreationRequestsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "sam_computer_creation_requests_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "sam_computer_creation_requests_total"),
 		"",
 		nil,
 		nil,
 	)
 	c.samComputerCreationSuccessfulRequestsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "sam_computer_creation_successful_requests_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "sam_computer_creation_successful_requests_total"),
 		"",
 		nil,
 		nil,
 	)
 	c.samUserCreationRequestsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "sam_user_creation_requests_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "sam_user_creation_requests_total"),
 		"",
 		nil,
 		nil,
 	)
 	c.samUserCreationSuccessfulRequestsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "sam_user_creation_successful_requests_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "sam_user_creation_successful_requests_total"),
 		"",
 		nil,
 		nil,
 	)
 	c.samQueryDisplayRequestsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "sam_query_display_requests_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "sam_query_display_requests_total"),
 		"",
 		nil,
 		nil,
 	)
 	c.samEnumerationsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "sam_enumerations_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "sam_enumerations_total"),
 		"",
 		nil,
 		nil,
 	)
 	c.samMembershipChangesTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "sam_membership_changes_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "sam_membership_changes_total"),
 		"",
 		nil,
 		nil,
 	)
 	c.samPasswordChangesTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "sam_password_changes_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "sam_password_changes_total"),
 		"",
 		nil,
 		nil,
 	)
 
 	c.tombstonesObjectsCollectedTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "tombstoned_objects_collected_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "tombstoned_objects_collected_total"),
 		"",
 		nil,
 		nil,
 	)
 	c.tombstonesObjectsVisitedTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "tombstoned_objects_visited_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "tombstoned_objects_visited_total"),
 		"",
 		nil,
 		nil,
@@ -662,7 +662,7 @@ func (c *Collector) Build(_ *slog.Logger, wmiClient *wmi.Client) error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(_ *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	if utils.PDHEnabled() {
 		return c.collectPDH(ch)
 	}

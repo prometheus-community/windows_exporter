@@ -13,7 +13,7 @@ import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
 	"github.com/prometheus-community/windows_exporter/internal/perflib"
-	types2 "github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
@@ -164,259 +164,259 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 	}
 
 	c.adLoginConnectionFailures = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "ad_login_connection_failures_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "ad_login_connection_failures_total"),
 		"Total number of connection failures to an Active Directory domain controller",
 		nil,
 		nil,
 	)
 	c.certificateAuthentications = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "certificate_authentications_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "certificate_authentications_total"),
 		"Total number of User Certificate authentications",
 		nil,
 		nil,
 	)
 	c.deviceAuthentications = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "device_authentications_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "device_authentications_total"),
 		"Total number of Device authentications",
 		nil,
 		nil,
 	)
 	c.extranetAccountLockouts = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "extranet_account_lockouts_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "extranet_account_lockouts_total"),
 		"Total number of Extranet Account Lockouts",
 		nil,
 		nil,
 	)
 	c.federatedAuthentications = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "federated_authentications_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "federated_authentications_total"),
 		"Total number of authentications from a federated source",
 		nil,
 		nil,
 	)
 	c.passportAuthentications = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "passport_authentications_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "passport_authentications_total"),
 		"Total number of Microsoft Passport SSO authentications",
 		nil,
 		nil,
 	)
 	c.passiveRequests = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "passive_requests_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "passive_requests_total"),
 		"Total number of passive (browser-based) requests",
 		nil,
 		nil,
 	)
 	c.passwordChangeFailed = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "password_change_failed_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "password_change_failed_total"),
 		"Total number of failed password changes",
 		nil,
 		nil,
 	)
 	c.passwordChangeSucceeded = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "password_change_succeeded_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "password_change_succeeded_total"),
 		"Total number of successful password changes",
 		nil,
 		nil,
 	)
 	c.tokenRequests = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "token_requests_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "token_requests_total"),
 		"Total number of token requests",
 		nil,
 		nil,
 	)
 	c.windowsIntegratedAuthentications = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "windows_integrated_authentications_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "windows_integrated_authentications_total"),
 		"Total number of Windows integrated authentications (Kerberos/NTLM)",
 		nil,
 		nil,
 	)
 	c.oAuthAuthZRequests = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "oauth_authorization_requests_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "oauth_authorization_requests_total"),
 		"Total number of incoming requests to the OAuth Authorization endpoint",
 		nil,
 		nil,
 	)
 	c.oAuthClientAuthentications = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "oauth_client_authentication_success_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "oauth_client_authentication_success_total"),
 		"Total number of successful OAuth client Authentications",
 		nil,
 		nil,
 	)
 	c.oAuthClientAuthenticationsFailures = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "oauth_client_authentication_failure_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "oauth_client_authentication_failure_total"),
 		"Total number of failed OAuth client Authentications",
 		nil,
 		nil,
 	)
 	c.oAuthClientCredentialsRequestFailures = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "oauth_client_credentials_failure_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "oauth_client_credentials_failure_total"),
 		"Total number of failed OAuth Client Credentials Requests",
 		nil,
 		nil,
 	)
 	c.oAuthClientCredentialsRequests = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "oauth_client_credentials_success_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "oauth_client_credentials_success_total"),
 		"Total number of successful RP tokens issued for OAuth Client Credentials Requests",
 		nil,
 		nil,
 	)
 	c.oAuthClientPrivateKeyJwtAuthenticationFailures = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "oauth_client_privkey_jwt_authentication_failure_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "oauth_client_privkey_jwt_authentication_failure_total"),
 		"Total number of failed OAuth Client Private Key Jwt Authentications",
 		nil,
 		nil,
 	)
 	c.oAuthClientPrivateKeyJwtAuthentications = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "oauth_client_privkey_jwt_authentications_success_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "oauth_client_privkey_jwt_authentications_success_total"),
 		"Total number of successful OAuth Client Private Key Jwt Authentications",
 		nil,
 		nil,
 	)
 	c.oAuthClientSecretBasicAuthenticationFailures = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "oauth_client_secret_basic_authentications_failure_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "oauth_client_secret_basic_authentications_failure_total"),
 		"Total number of failed OAuth Client Secret Basic Authentications",
 		nil,
 		nil,
 	)
 	c.oAuthClientSecretBasicAuthentications = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "oauth_client_secret_basic_authentications_success_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "oauth_client_secret_basic_authentications_success_total"),
 		"Total number of successful OAuth Client Secret Basic Authentications",
 		nil,
 		nil,
 	)
 	c.oAuthClientSecretPostAuthenticationFailures = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "oauth_client_secret_post_authentications_failure_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "oauth_client_secret_post_authentications_failure_total"),
 		"Total number of failed OAuth Client Secret Post Authentications",
 		nil,
 		nil,
 	)
 	c.oAuthClientSecretPostAuthentications = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "oauth_client_secret_post_authentications_success_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "oauth_client_secret_post_authentications_success_total"),
 		"Total number of successful OAuth Client Secret Post Authentications",
 		nil,
 		nil,
 	)
 	c.oAuthClientWindowsIntegratedAuthenticationFailures = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "oauth_client_windows_authentications_failure_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "oauth_client_windows_authentications_failure_total"),
 		"Total number of failed OAuth Client Windows Integrated Authentications",
 		nil,
 		nil,
 	)
 	c.oAuthClientWindowsIntegratedAuthentications = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "oauth_client_windows_authentications_success_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "oauth_client_windows_authentications_success_total"),
 		"Total number of successful OAuth Client Windows Integrated Authentications",
 		nil,
 		nil,
 	)
 	c.oAuthLogonCertificateRequestFailures = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "oauth_logon_certificate_requests_failure_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "oauth_logon_certificate_requests_failure_total"),
 		"Total number of failed OAuth Logon Certificate Requests",
 		nil,
 		nil,
 	)
 	c.oAuthLogonCertificateTokenRequests = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "oauth_logon_certificate_token_requests_success_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "oauth_logon_certificate_token_requests_success_total"),
 		"Total number of successful RP tokens issued for OAuth Logon Certificate Requests",
 		nil,
 		nil,
 	)
 	c.oAuthPasswordGrantRequestFailures = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "oauth_password_grant_requests_failure_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "oauth_password_grant_requests_failure_total"),
 		"Total number of failed OAuth Password Grant Requests",
 		nil,
 		nil,
 	)
 	c.oAuthPasswordGrantRequests = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "oauth_password_grant_requests_success_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "oauth_password_grant_requests_success_total"),
 		"Total number of successful OAuth Password Grant Requests",
 		nil,
 		nil,
 	)
 	c.oAuthTokenRequests = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "oauth_token_requests_success_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "oauth_token_requests_success_total"),
 		"Total number of successful RP tokens issued over OAuth protocol",
 		nil,
 		nil,
 	)
 	c.samlPTokenRequests = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "samlp_token_requests_success_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "samlp_token_requests_success_total"),
 		"Total number of successful RP tokens issued over SAML-P protocol",
 		nil,
 		nil,
 	)
 	c.ssoAuthenticationFailures = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "sso_authentications_failure_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "sso_authentications_failure_total"),
 		"Total number of failed SSO authentications",
 		nil,
 		nil,
 	)
 	c.ssoAuthentications = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "sso_authentications_success_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "sso_authentications_success_total"),
 		"Total number of successful SSO authentications",
 		nil,
 		nil,
 	)
 	c.wsFedTokenRequests = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "wsfed_token_requests_success_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "wsfed_token_requests_success_total"),
 		"Total number of successful RP tokens issued over WS-Fed protocol",
 		nil,
 		nil,
 	)
 	c.wsTrustTokenRequests = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "wstrust_token_requests_success_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "wstrust_token_requests_success_total"),
 		"Total number of successful RP tokens issued over WS-Trust protocol",
 		nil,
 		nil,
 	)
 	c.upAuthenticationFailures = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "userpassword_authentications_failure_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "userpassword_authentications_failure_total"),
 		"Total number of failed AD U/P authentications",
 		nil,
 		nil,
 	)
 	c.upAuthentications = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "userpassword_authentications_success_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "userpassword_authentications_success_total"),
 		"Total number of successful AD U/P authentications",
 		nil,
 		nil,
 	)
 	c.externalAuthenticationFailures = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "external_authentications_failure_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "external_authentications_failure_total"),
 		"Total number of failed authentications from external MFA providers",
 		nil,
 		nil,
 	)
 	c.externalAuthentications = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "external_authentications_success_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "external_authentications_success_total"),
 		"Total number of successful authentications from external MFA providers",
 		nil,
 		nil,
 	)
 	c.artifactDBFailures = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "db_artifact_failure_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "db_artifact_failure_total"),
 		"Total number of failures connecting to the artifact database",
 		nil,
 		nil,
 	)
 	c.avgArtifactDBQueryTime = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "db_artifact_query_time_seconds_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "db_artifact_query_time_seconds_total"),
 		"Accumulator of time taken for an artifact database query",
 		nil,
 		nil,
 	)
 	c.configDBFailures = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "db_config_failure_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "db_config_failure_total"),
 		"Total number of failures connecting to the configuration database",
 		nil,
 		nil,
 	)
 	c.avgConfigDBQueryTime = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "db_config_query_time_seconds_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "db_config_query_time_seconds_total"),
 		"Accumulator of time taken for a configuration database query",
 		nil,
 		nil,
 	)
 	c.federationMetadataRequests = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "federation_metadata_requests_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "federation_metadata_requests_total"),
 		"Total number of Federation Metadata requests",
 		nil,
 		nil,
@@ -425,7 +425,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 	return nil
 }
 
-func (c *Collector) Collect(ctx *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	if utils.PDHEnabled() {
 		return c.collectPDH(ch)
 	}
@@ -435,7 +435,7 @@ func (c *Collector) Collect(ctx *types2.ScrapeContext, logger *slog.Logger, ch c
 	return c.collect(ctx, logger, ch)
 }
 
-func (c *Collector) collect(ctx *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	var adfsData []perflibADFS
 
 	err := perflib.UnmarshalObject(ctx.PerfObjects["AD FS"], &adfsData, logger)

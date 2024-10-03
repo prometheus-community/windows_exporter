@@ -7,7 +7,7 @@ import (
 	"log/slog"
 
 	"github.com/alecthomas/kingpin/v2"
-	types2 "github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
@@ -71,55 +71,55 @@ func (c *Collector) Build(_ *slog.Logger, wmiClient *wmi.Client) error {
 	c.wmiClient = wmiClient
 
 	c.quotasCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "count"),
+		prometheus.BuildFQName(types.Namespace, Name, "count"),
 		"Number of Quotas",
 		nil,
 		nil,
 	)
 	c.peakUsage = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "peak_usage_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "peak_usage_bytes"),
 		"The highest amount of disk space usage charged to this quota. (PeakUsage)",
 		[]string{"path", "template"},
 		nil,
 	)
 	c.size = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "size_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "size_bytes"),
 		"The size of the quota. (Size)",
 		[]string{"path", "template"},
 		nil,
 	)
 	c.usage = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "usage_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "usage_bytes"),
 		"The current amount of disk space usage charged to this quota. (Usage)",
 		[]string{"path", "template"},
 		nil,
 	)
 	c.description = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "description"),
+		prometheus.BuildFQName(types.Namespace, Name, "description"),
 		"Description of the quota (Description)",
 		[]string{"path", "template", "description"},
 		nil,
 	)
 	c.disabled = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "disabled"),
+		prometheus.BuildFQName(types.Namespace, Name, "disabled"),
 		"If 1, the quota is disabled. The default value is 0. (Disabled)",
 		[]string{"path", "template"},
 		nil,
 	)
 	c.softLimit = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "softlimit"),
+		prometheus.BuildFQName(types.Namespace, Name, "softlimit"),
 		"If 1, the quota is a soft limit. If 0, the quota is a hard limit. The default value is 0. Optional (SoftLimit)",
 		[]string{"path", "template"},
 		nil,
 	)
 	c.template = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "template"),
+		prometheus.BuildFQName(types.Namespace, Name, "template"),
 		"Quota template name. (Template)",
 		[]string{"path", "template"},
 		nil,
 	)
 	c.matchesTemplate = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "matchestemplate"),
+		prometheus.BuildFQName(types.Namespace, Name, "matchestemplate"),
 		"If 1, the property values of this quota match those values of the template from which it was derived. (MatchesTemplate)",
 		[]string{"path", "template"},
 		nil,
@@ -130,7 +130,7 @@ func (c *Collector) Build(_ *slog.Logger, wmiClient *wmi.Client) error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(_ *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
 	if err := c.collect(ch); err != nil {
 		logger.Error("failed collecting fsrmquota metrics",

@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
-	types2 "github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
@@ -89,25 +89,25 @@ func (c *Collector) Build(logger *slog.Logger, wmiClient *wmi.Client) error {
 	}
 
 	c.bytesInJournalQueue = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "bytes_in_journal_queue"),
+		prometheus.BuildFQName(types.Namespace, Name, "bytes_in_journal_queue"),
 		"Size of queue journal in bytes",
 		[]string{"name"},
 		nil,
 	)
 	c.bytesInQueue = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "bytes_in_queue"),
+		prometheus.BuildFQName(types.Namespace, Name, "bytes_in_queue"),
 		"Size of queue in bytes",
 		[]string{"name"},
 		nil,
 	)
 	c.messagesInJournalQueue = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "messages_in_journal_queue"),
+		prometheus.BuildFQName(types.Namespace, Name, "messages_in_journal_queue"),
 		"Count messages in queue journal",
 		[]string{"name"},
 		nil,
 	)
 	c.messagesInQueue = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "messages_in_queue"),
+		prometheus.BuildFQName(types.Namespace, Name, "messages_in_queue"),
 		"Count messages in queue",
 		[]string{"name"},
 		nil,
@@ -118,7 +118,7 @@ func (c *Collector) Build(logger *slog.Logger, wmiClient *wmi.Client) error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(_ *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
 	if err := c.collect(ch); err != nil {
 		logger.Error("failed collecting msmq metrics",

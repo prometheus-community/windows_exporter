@@ -10,7 +10,7 @@ import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
 	"github.com/prometheus-community/windows_exporter/internal/perflib"
-	types2 "github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
@@ -134,175 +134,175 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 	}
 
 	c.asyncCopyReadsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "async_copy_reads_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "async_copy_reads_total"),
 		"(AsyncCopyReadsTotal)",
 		nil,
 		nil,
 	)
 	c.asyncDataMapsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "async_data_maps_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "async_data_maps_total"),
 		"(AsyncDataMapsTotal)",
 		nil,
 		nil,
 	)
 	c.asyncFastReadsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "async_fast_reads_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "async_fast_reads_total"),
 		"(AsyncFastReadsTotal)",
 		nil,
 		nil,
 	)
 	c.asyncMDLReadsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "async_mdl_reads_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "async_mdl_reads_total"),
 		"(AsyncMDLReadsTotal)",
 		nil,
 		nil,
 	)
 	c.asyncPinReadsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "async_pin_reads_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "async_pin_reads_total"),
 		"(AsyncPinReadsTotal)",
 		nil,
 		nil,
 	)
 	c.copyReadHitsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "copy_read_hits_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "copy_read_hits_total"),
 		"(CopyReadHitsTotal)",
 		nil,
 		nil,
 	)
 	c.copyReadsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "copy_reads_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "copy_reads_total"),
 		"(CopyReadsTotal)",
 		nil,
 		nil,
 	)
 	c.dataFlushesTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "data_flushes_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "data_flushes_total"),
 		"(DataFlushesTotal)",
 		nil,
 		nil,
 	)
 	c.dataFlushPagesTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "data_flush_pages_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "data_flush_pages_total"),
 		"(DataFlushPagesTotal)",
 		nil,
 		nil,
 	)
 	c.dataMapHitsPercent = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "data_map_hits_percent"),
+		prometheus.BuildFQName(types.Namespace, Name, "data_map_hits_percent"),
 		"(DataMapHitsPercent)",
 		nil,
 		nil,
 	)
 	c.dataMapPinsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "data_map_pins_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "data_map_pins_total"),
 		"(DataMapPinsTotal)",
 		nil,
 		nil,
 	)
 	c.dataMapsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "data_maps_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "data_maps_total"),
 		"(DataMapsTotal)",
 		nil,
 		nil,
 	)
 	c.dirtyPages = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "dirty_pages"),
+		prometheus.BuildFQName(types.Namespace, Name, "dirty_pages"),
 		"(DirtyPages)",
 		nil,
 		nil,
 	)
 	c.dirtyPageThreshold = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "dirty_page_threshold"),
+		prometheus.BuildFQName(types.Namespace, Name, "dirty_page_threshold"),
 		"(DirtyPageThreshold)",
 		nil,
 		nil,
 	)
 	c.fastReadNotPossiblesTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "fast_read_not_possibles_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "fast_read_not_possibles_total"),
 		"(FastReadNotPossiblesTotal)",
 		nil,
 		nil,
 	)
 	c.fastReadResourceMissesTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "fast_read_resource_misses_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "fast_read_resource_misses_total"),
 		"(FastReadResourceMissesTotal)",
 		nil,
 		nil,
 	)
 	c.fastReadsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "fast_reads_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "fast_reads_total"),
 		"(FastReadsTotal)",
 		nil,
 		nil,
 	)
 	c.lazyWriteFlushesTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "lazy_write_flushes_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "lazy_write_flushes_total"),
 		"(LazyWriteFlushesTotal)",
 		nil,
 		nil,
 	)
 	c.lazyWritePagesTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "lazy_write_pages_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "lazy_write_pages_total"),
 		"(LazyWritePagesTotal)",
 		nil,
 		nil,
 	)
 	c.mdlReadHitsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "mdl_read_hits_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "mdl_read_hits_total"),
 		"(MDLReadHitsTotal)",
 		nil,
 		nil,
 	)
 	c.mdlReadsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "mdl_reads_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "mdl_reads_total"),
 		"(MDLReadsTotal)",
 		nil,
 		nil,
 	)
 	c.pinReadHitsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "pin_read_hits_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "pin_read_hits_total"),
 		"(PinReadHitsTotal)",
 		nil,
 		nil,
 	)
 	c.pinReadsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "pin_reads_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "pin_reads_total"),
 		"(PinReadsTotal)",
 		nil,
 		nil,
 	)
 	c.readAheadsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "read_aheads_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "read_aheads_total"),
 		"(ReadAheadsTotal)",
 		nil,
 		nil,
 	)
 	c.syncCopyReadsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "sync_copy_reads_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "sync_copy_reads_total"),
 		"(SyncCopyReadsTotal)",
 		nil,
 		nil,
 	)
 	c.syncDataMapsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "sync_data_maps_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "sync_data_maps_total"),
 		"(SyncDataMapsTotal)",
 		nil,
 		nil,
 	)
 	c.syncFastReadsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "sync_fast_reads_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "sync_fast_reads_total"),
 		"(SyncFastReadsTotal)",
 		nil,
 		nil,
 	)
 	c.syncMDLReadsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "sync_mdl_reads_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "sync_mdl_reads_total"),
 		"(SyncMDLReadsTotal)",
 		nil,
 		nil,
 	)
 	c.syncPinReadsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "sync_pin_reads_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "sync_pin_reads_total"),
 		"(SyncPinReadsTotal)",
 		nil,
 		nil,
@@ -312,7 +312,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 }
 
 // Collect implements the Collector interface.
-func (c *Collector) Collect(ctx *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	if utils.PDHEnabled() {
 		return c.collectPDH(ch)
 	}
@@ -329,7 +329,7 @@ func (c *Collector) Collect(ctx *types2.ScrapeContext, logger *slog.Logger, ch c
 	return nil
 }
 
-func (c *Collector) collect(ctx *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	var dst []perflibCache // Single-instance class, array is required but will have single entry.
 
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["Cache"], &dst, logger); err != nil {

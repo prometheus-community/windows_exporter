@@ -8,7 +8,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/perflib"
-	types2 "github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
 )
@@ -82,116 +82,116 @@ func (c *Collector) Build(_ *slog.Logger, wmiClient *wmi.Client) error {
 	c.wmiClient = wmiClient
 
 	c.memActive = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "mem_active_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "mem_active_bytes"),
 		"(MemActiveMB)",
 		nil,
 		nil,
 	)
 	c.memBallooned = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "mem_ballooned_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "mem_ballooned_bytes"),
 		"(MemBalloonedMB)",
 		nil,
 		nil,
 	)
 	c.memLimit = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "mem_limit_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "mem_limit_bytes"),
 		"(MemLimitMB)",
 		nil,
 		nil,
 	)
 	c.memMapped = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "mem_mapped_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "mem_mapped_bytes"),
 		"(MemMappedMB)",
 		nil,
 		nil,
 	)
 	c.memOverhead = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "mem_overhead_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "mem_overhead_bytes"),
 		"(MemOverheadMB)",
 		nil,
 		nil,
 	)
 	c.memReservation = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "mem_reservation_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "mem_reservation_bytes"),
 		"(MemReservationMB)",
 		nil,
 		nil,
 	)
 	c.memShared = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "mem_shared_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "mem_shared_bytes"),
 		"(MemSharedMB)",
 		nil,
 		nil,
 	)
 	c.memSharedSaved = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "mem_shared_saved_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "mem_shared_saved_bytes"),
 		"(MemSharedSavedMB)",
 		nil,
 		nil,
 	)
 	c.memShares = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "mem_shares"),
+		prometheus.BuildFQName(types.Namespace, Name, "mem_shares"),
 		"(MemShares)",
 		nil,
 		nil,
 	)
 	c.memSwapped = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "mem_swapped_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "mem_swapped_bytes"),
 		"(MemSwappedMB)",
 		nil,
 		nil,
 	)
 	c.memTargetSize = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "mem_target_size_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "mem_target_size_bytes"),
 		"(MemTargetSizeMB)",
 		nil,
 		nil,
 	)
 	c.memUsed = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "mem_used_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "mem_used_bytes"),
 		"(MemUsedMB)",
 		nil,
 		nil,
 	)
 
 	c.cpuLimitMHz = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "cpu_limit_mhz"),
+		prometheus.BuildFQName(types.Namespace, Name, "cpu_limit_mhz"),
 		"(CpuLimitMHz)",
 		nil,
 		nil,
 	)
 	c.cpuReservationMHz = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "cpu_reservation_mhz"),
+		prometheus.BuildFQName(types.Namespace, Name, "cpu_reservation_mhz"),
 		"(CpuReservationMHz)",
 		nil,
 		nil,
 	)
 	c.cpuShares = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "cpu_shares"),
+		prometheus.BuildFQName(types.Namespace, Name, "cpu_shares"),
 		"(CpuShares)",
 		nil,
 		nil,
 	)
 	c.cpuStolenTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "cpu_stolen_seconds_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "cpu_stolen_seconds_total"),
 		"(CpuStolenMs)",
 		nil,
 		nil,
 	)
 	c.cpuTimeTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "cpu_time_seconds_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "cpu_time_seconds_total"),
 		"(CpuTimePercents)",
 		nil,
 		nil,
 	)
 	c.effectiveVMSpeedMHz = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "effective_vm_speed_mhz"),
+		prometheus.BuildFQName(types.Namespace, Name, "effective_vm_speed_mhz"),
 		"(EffectiveVMSpeedMHz)",
 		nil,
 		nil,
 	)
 	c.hostProcessorSpeedMHz = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "host_processor_speed_mhz"),
+		prometheus.BuildFQName(types.Namespace, Name, "host_processor_speed_mhz"),
 		"(HostProcessorSpeedMHz)",
 		nil,
 		nil,
@@ -202,7 +202,7 @@ func (c *Collector) Build(_ *slog.Logger, wmiClient *wmi.Client) error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(_ *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
 	if err := c.collectMem(ch); err != nil {
 		logger.Error("failed collecting vmware memory metrics",

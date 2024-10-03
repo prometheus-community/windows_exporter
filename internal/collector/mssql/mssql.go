@@ -14,7 +14,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/perflib"
-	types2 "github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
 	"golang.org/x/sys/windows/registry"
@@ -514,13 +514,13 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 
 	// meta
 	c.mssqlScrapeDurationDesc = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "collector_duration_seconds"),
+		prometheus.BuildFQName(types.Namespace, Name, "collector_duration_seconds"),
 		"windows_exporter: Duration of an mssql child collection.",
 		[]string{"collector", "mssql_instance"},
 		nil,
 	)
 	c.mssqlScrapeSuccessDesc = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "collector_success"),
+		prometheus.BuildFQName(types.Namespace, Name, "collector_success"),
 		"windows_exporter: Whether a mssql child collector was successful.",
 		[]string{"collector", "mssql_instance"},
 		nil,
@@ -528,265 +528,265 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 
 	// Win32_PerfRawData_{instance}_SQLServerAccessMethods
 	c.accessMethodsAUcleanupbatches = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "accessmethods_au_batch_cleanups"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_au_batch_cleanups"),
 		"(AccessMethods.AUcleanupbatches)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsAUcleanups = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "accessmethods_au_cleanups"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_au_cleanups"),
 		"(AccessMethods.AUcleanups)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsByReferenceLobCreateCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "accessmethods_by_reference_lob_creates"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_by_reference_lob_creates"),
 		"(AccessMethods.ByreferenceLobCreateCount)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsByReferenceLobUseCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "accessmethods_by_reference_lob_uses"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_by_reference_lob_uses"),
 		"(AccessMethods.ByreferenceLobUseCount)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsCountLobReadahead = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "accessmethods_lob_read_aheads"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_lob_read_aheads"),
 		"(AccessMethods.CountLobReadahead)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsCountPullInRow = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "accessmethods_column_value_pulls"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_column_value_pulls"),
 		"(AccessMethods.CountPullInRow)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsCountPushOffRow = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "accessmethods_column_value_pushes"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_column_value_pushes"),
 		"(AccessMethods.CountPushOffRow)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsDeferreddroppedAUs = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "accessmethods_deferred_dropped_aus"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_deferred_dropped_aus"),
 		"(AccessMethods.DeferreddroppedAUs)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsDeferredDroppedrowsets = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "accessmethods_deferred_dropped_rowsets"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_deferred_dropped_rowsets"),
 		"(AccessMethods.DeferredDroppedrowsets)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsDroppedrowsetcleanups = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "accessmethods_dropped_rowset_cleanups"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_dropped_rowset_cleanups"),
 		"(AccessMethods.Droppedrowsetcleanups)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsDroppedrowsetsskipped = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "accessmethods_dropped_rowset_skips"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_dropped_rowset_skips"),
 		"(AccessMethods.Droppedrowsetsskipped)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsExtentDeallocations = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "accessmethods_extent_deallocations"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_extent_deallocations"),
 		"(AccessMethods.ExtentDeallocations)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsExtentsAllocated = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "accessmethods_extent_allocations"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_extent_allocations"),
 		"(AccessMethods.ExtentsAllocated)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsFailedAUcleanupbatches = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "accessmethods_au_batch_cleanup_failures"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_au_batch_cleanup_failures"),
 		"(AccessMethods.FailedAUcleanupbatches)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsFailedleafpagecookie = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "accessmethods_leaf_page_cookie_failures"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_leaf_page_cookie_failures"),
 		"(AccessMethods.Failedleafpagecookie)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsFailedtreepagecookie = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "accessmethods_tree_page_cookie_failures"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_tree_page_cookie_failures"),
 		"(AccessMethods.Failedtreepagecookie)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsForwardedRecords = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "accessmethods_forwarded_records"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_forwarded_records"),
 		"(AccessMethods.ForwardedRecords)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsFreeSpacePageFetches = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "accessmethods_free_space_page_fetches"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_free_space_page_fetches"),
 		"(AccessMethods.FreeSpacePageFetches)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsFreeSpaceScans = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "accessmethods_free_space_scans"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_free_space_scans"),
 		"(AccessMethods.FreeSpaceScans)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsFullScans = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "accessmethods_full_scans"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_full_scans"),
 		"(AccessMethods.FullScans)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsIndexSearches = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "accessmethods_index_searches"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_index_searches"),
 		"(AccessMethods.IndexSearches)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsInSysXactwaits = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "accessmethods_insysxact_waits"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_insysxact_waits"),
 		"(AccessMethods.InSysXactwaits)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsLobHandleCreateCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "accessmethods_lob_handle_creates"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_lob_handle_creates"),
 		"(AccessMethods.LobHandleCreateCount)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsLobHandleDestroyCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "accessmethods_lob_handle_destroys"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_lob_handle_destroys"),
 		"(AccessMethods.LobHandleDestroyCount)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsLobSSProviderCreateCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "accessmethods_lob_ss_provider_creates"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_lob_ss_provider_creates"),
 		"(AccessMethods.LobSSProviderCreateCount)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsLobSSProviderDestroyCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "accessmethods_lob_ss_provider_destroys"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_lob_ss_provider_destroys"),
 		"(AccessMethods.LobSSProviderDestroyCount)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsLobSSProviderTruncationCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "accessmethods_lob_ss_provider_truncations"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_lob_ss_provider_truncations"),
 		"(AccessMethods.LobSSProviderTruncationCount)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsMixedPageAllocations = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "accessmethods_mixed_page_allocations"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_mixed_page_allocations"),
 		"(AccessMethods.MixedpageallocationsPersec)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsPageCompressionAttempts = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "accessmethods_page_compression_attempts"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_page_compression_attempts"),
 		"(AccessMethods.PagecompressionattemptsPersec)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsPageDeallocations = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "accessmethods_page_deallocations"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_page_deallocations"),
 		"(AccessMethods.PageDeallocationsPersec)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsPagesAllocated = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "accessmethods_page_allocations"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_page_allocations"),
 		"(AccessMethods.PagesAllocatedPersec)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsPagesCompressed = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "accessmethods_page_compressions"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_page_compressions"),
 		"(AccessMethods.PagescompressedPersec)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsPageSplits = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "accessmethods_page_splits"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_page_splits"),
 		"(AccessMethods.PageSplitsPersec)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsProbeScans = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "accessmethods_probe_scans"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_probe_scans"),
 		"(AccessMethods.ProbeScansPersec)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsRangeScans = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "accessmethods_range_scans"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_range_scans"),
 		"(AccessMethods.RangeScansPersec)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsScanPointRevalidations = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "accessmethods_scan_point_revalidations"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_scan_point_revalidations"),
 		"(AccessMethods.ScanPointRevalidationsPersec)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsSkippedGhostedRecords = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "accessmethods_ghost_record_skips"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_ghost_record_skips"),
 		"(AccessMethods.SkippedGhostedRecordsPersec)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsTableLockEscalations = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "accessmethods_table_lock_escalations"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_table_lock_escalations"),
 		"(AccessMethods.TableLockEscalationsPersec)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsUsedleafpagecookie = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "accessmethods_leaf_page_cookie_uses"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_leaf_page_cookie_uses"),
 		"(AccessMethods.Usedleafpagecookie)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsUsedtreepagecookie = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "accessmethods_tree_page_cookie_uses"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_tree_page_cookie_uses"),
 		"(AccessMethods.Usedtreepagecookie)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsWorkfilesCreated = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "accessmethods_workfile_creates"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_workfile_creates"),
 		"(AccessMethods.WorkfilesCreatedPersec)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsWorktablesCreated = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "accessmethods_worktables_creates"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_worktables_creates"),
 		"(AccessMethods.WorktablesCreatedPersec)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsWorktablesFromCacheHits = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "accessmethods_worktables_from_cache_hits"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_worktables_from_cache_hits"),
 		"(AccessMethods.WorktablesFromCacheRatio)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.accessMethodsWorktablesFromCacheLookups = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "accessmethods_worktables_from_cache_lookups"),
+		prometheus.BuildFQName(types.Namespace, Name, "accessmethods_worktables_from_cache_lookups"),
 		"(AccessMethods.WorktablesFromCacheRatio_Base)",
 		[]string{"mssql_instance"},
 		nil,
@@ -794,55 +794,55 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 
 	// Win32_PerfRawData_{instance}_SQLServerAvailabilityReplica
 	c.availReplicaBytesReceivedFromReplica = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "availreplica_received_from_replica_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "availreplica_received_from_replica_bytes"),
 		"(AvailabilityReplica.BytesReceivedfromReplica)",
 		[]string{"mssql_instance", "replica"},
 		nil,
 	)
 	c.availReplicaBytesSentToReplica = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "availreplica_sent_to_replica_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "availreplica_sent_to_replica_bytes"),
 		"(AvailabilityReplica.BytesSenttoReplica)",
 		[]string{"mssql_instance", "replica"},
 		nil,
 	)
 	c.availReplicaBytesSentToTransport = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "availreplica_sent_to_transport_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "availreplica_sent_to_transport_bytes"),
 		"(AvailabilityReplica.BytesSenttoTransport)",
 		[]string{"mssql_instance", "replica"},
 		nil,
 	)
 	c.availReplicaFlowControl = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "availreplica_initiated_flow_controls"),
+		prometheus.BuildFQName(types.Namespace, Name, "availreplica_initiated_flow_controls"),
 		"(AvailabilityReplica.FlowControl)",
 		[]string{"mssql_instance", "replica"},
 		nil,
 	)
 	c.availReplicaFlowControlTimeMS = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "availreplica_flow_control_wait_seconds"),
+		prometheus.BuildFQName(types.Namespace, Name, "availreplica_flow_control_wait_seconds"),
 		"(AvailabilityReplica.FlowControlTimems)",
 		[]string{"mssql_instance", "replica"},
 		nil,
 	)
 	c.availReplicaReceivesFromReplica = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "availreplica_receives_from_replica"),
+		prometheus.BuildFQName(types.Namespace, Name, "availreplica_receives_from_replica"),
 		"(AvailabilityReplica.ReceivesfromReplica)",
 		[]string{"mssql_instance", "replica"},
 		nil,
 	)
 	c.availReplicaResentMessages = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "availreplica_resent_messages"),
+		prometheus.BuildFQName(types.Namespace, Name, "availreplica_resent_messages"),
 		"(AvailabilityReplica.ResentMessages)",
 		[]string{"mssql_instance", "replica"},
 		nil,
 	)
 	c.availReplicaSendsToReplica = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "availreplica_sends_to_replica"),
+		prometheus.BuildFQName(types.Namespace, Name, "availreplica_sends_to_replica"),
 		"(AvailabilityReplica.SendstoReplica)",
 		[]string{"mssql_instance", "replica"},
 		nil,
 	)
 	c.availReplicaSendsToTransport = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "availreplica_sends_to_transport"),
+		prometheus.BuildFQName(types.Namespace, Name, "availreplica_sends_to_transport"),
 		"(AvailabilityReplica.SendstoTransport)",
 		[]string{"mssql_instance", "replica"},
 		nil,
@@ -850,139 +850,139 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 
 	// Win32_PerfRawData_{instance}_SQLServerBufferManager
 	c.bufManBackgroundwriterpages = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "bufman_background_writer_pages"),
+		prometheus.BuildFQName(types.Namespace, Name, "bufman_background_writer_pages"),
 		"(BufferManager.Backgroundwriterpages)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.bufManBuffercachehits = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "bufman_buffer_cache_hits"),
+		prometheus.BuildFQName(types.Namespace, Name, "bufman_buffer_cache_hits"),
 		"(BufferManager.Buffercachehitratio)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.bufManBuffercachelookups = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "bufman_buffer_cache_lookups"),
+		prometheus.BuildFQName(types.Namespace, Name, "bufman_buffer_cache_lookups"),
 		"(BufferManager.Buffercachehitratio_Base)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.bufManCheckpointpages = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "bufman_checkpoint_pages"),
+		prometheus.BuildFQName(types.Namespace, Name, "bufman_checkpoint_pages"),
 		"(BufferManager.Checkpointpages)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.bufManDatabasepages = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "bufman_database_pages"),
+		prometheus.BuildFQName(types.Namespace, Name, "bufman_database_pages"),
 		"(BufferManager.Databasepages)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.bufManExtensionallocatedpages = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "bufman_extension_allocated_pages"),
+		prometheus.BuildFQName(types.Namespace, Name, "bufman_extension_allocated_pages"),
 		"(BufferManager.Extensionallocatedpages)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.bufManExtensionfreepages = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "bufman_extension_free_pages"),
+		prometheus.BuildFQName(types.Namespace, Name, "bufman_extension_free_pages"),
 		"(BufferManager.Extensionfreepages)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.bufManExtensioninuseaspercentage = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "bufman_extension_in_use_as_percentage"),
+		prometheus.BuildFQName(types.Namespace, Name, "bufman_extension_in_use_as_percentage"),
 		"(BufferManager.Extensioninuseaspercentage)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.bufManExtensionoutstandingIOcounter = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "bufman_extension_outstanding_io"),
+		prometheus.BuildFQName(types.Namespace, Name, "bufman_extension_outstanding_io"),
 		"(BufferManager.ExtensionoutstandingIOcounter)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.bufManExtensionpageevictions = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "bufman_extension_page_evictions"),
+		prometheus.BuildFQName(types.Namespace, Name, "bufman_extension_page_evictions"),
 		"(BufferManager.Extensionpageevictions)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.bufManExtensionpagereads = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "bufman_extension_page_reads"),
+		prometheus.BuildFQName(types.Namespace, Name, "bufman_extension_page_reads"),
 		"(BufferManager.Extensionpagereads)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.bufManExtensionpageunreferencedtime = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "bufman_extension_page_unreferenced_seconds"),
+		prometheus.BuildFQName(types.Namespace, Name, "bufman_extension_page_unreferenced_seconds"),
 		"(BufferManager.Extensionpageunreferencedtime)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.bufManExtensionpagewrites = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "bufman_extension_page_writes"),
+		prometheus.BuildFQName(types.Namespace, Name, "bufman_extension_page_writes"),
 		"(BufferManager.Extensionpagewrites)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.bufManFreeliststalls = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "bufman_free_list_stalls"),
+		prometheus.BuildFQName(types.Namespace, Name, "bufman_free_list_stalls"),
 		"(BufferManager.Freeliststalls)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.bufManIntegralControllerSlope = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "bufman_integral_controller_slope"),
+		prometheus.BuildFQName(types.Namespace, Name, "bufman_integral_controller_slope"),
 		"(BufferManager.IntegralControllerSlope)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.bufManLazywrites = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "bufman_lazywrites"),
+		prometheus.BuildFQName(types.Namespace, Name, "bufman_lazywrites"),
 		"(BufferManager.Lazywrites)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.bufManPagelifeexpectancy = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "bufman_page_life_expectancy_seconds"),
+		prometheus.BuildFQName(types.Namespace, Name, "bufman_page_life_expectancy_seconds"),
 		"(BufferManager.Pagelifeexpectancy)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.bufManPagelookups = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "bufman_page_lookups"),
+		prometheus.BuildFQName(types.Namespace, Name, "bufman_page_lookups"),
 		"(BufferManager.Pagelookups)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.bufManPagereads = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "bufman_page_reads"),
+		prometheus.BuildFQName(types.Namespace, Name, "bufman_page_reads"),
 		"(BufferManager.Pagereads)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.bufManPagewrites = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "bufman_page_writes"),
+		prometheus.BuildFQName(types.Namespace, Name, "bufman_page_writes"),
 		"(BufferManager.Pagewrites)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.bufManReadaheadpages = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "bufman_read_ahead_pages"),
+		prometheus.BuildFQName(types.Namespace, Name, "bufman_read_ahead_pages"),
 		"(BufferManager.Readaheadpages)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.bufManReadaheadtime = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "bufman_read_ahead_issuing_seconds"),
+		prometheus.BuildFQName(types.Namespace, Name, "bufman_read_ahead_issuing_seconds"),
 		"(BufferManager.Readaheadtime)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.bufManTargetpages = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "bufman_target_pages"),
+		prometheus.BuildFQName(types.Namespace, Name, "bufman_target_pages"),
 		"(BufferManager.Targetpages)",
 		[]string{"mssql_instance"},
 		nil,
@@ -990,145 +990,145 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 
 	// Win32_PerfRawData_{instance}_SQLServerDatabaseReplica
 	c.dbReplicaDatabaseFlowControlDelay = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "dbreplica_database_flow_control_wait_seconds"),
+		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_database_flow_control_wait_seconds"),
 		"(DatabaseReplica.DatabaseFlowControlDelay)",
 		[]string{"mssql_instance", "replica"},
 		nil,
 	)
 	c.dbReplicaDatabaseFlowControls = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "dbreplica_database_initiated_flow_controls"),
+		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_database_initiated_flow_controls"),
 		"(DatabaseReplica.DatabaseFlowControls)",
 		[]string{"mssql_instance", "replica"},
 		nil,
 	)
 	c.dbReplicaFileBytesReceived = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "dbreplica_received_file_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_received_file_bytes"),
 		"(DatabaseReplica.FileBytesReceived)",
 		[]string{"mssql_instance", "replica"},
 		nil,
 	)
 	c.dbReplicaGroupCommits = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "dbreplica_group_commits"),
+		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_group_commits"),
 		"(DatabaseReplica.GroupCommits)",
 		[]string{"mssql_instance", "replica"},
 		nil,
 	)
 	c.dbReplicaGroupCommitTime = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "dbreplica_group_commit_stall_seconds"),
+		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_group_commit_stall_seconds"),
 		"(DatabaseReplica.GroupCommitTime)",
 		[]string{"mssql_instance", "replica"},
 		nil,
 	)
 	c.dbReplicaLogApplyPendingQueue = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "dbreplica_log_apply_pending_queue"),
+		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_log_apply_pending_queue"),
 		"(DatabaseReplica.LogApplyPendingQueue)",
 		[]string{"mssql_instance", "replica"},
 		nil,
 	)
 	c.dbReplicaLogApplyReadyQueue = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "dbreplica_log_apply_ready_queue"),
+		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_log_apply_ready_queue"),
 		"(DatabaseReplica.LogApplyReadyQueue)",
 		[]string{"mssql_instance", "replica"},
 		nil,
 	)
 	c.dbReplicaLogBytesCompressed = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "dbreplica_log_compressed_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_log_compressed_bytes"),
 		"(DatabaseReplica.LogBytesCompressed)",
 		[]string{"mssql_instance", "replica"},
 		nil,
 	)
 	c.dbReplicaLogBytesDecompressed = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "dbreplica_log_decompressed_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_log_decompressed_bytes"),
 		"(DatabaseReplica.LogBytesDecompressed)",
 		[]string{"mssql_instance", "replica"},
 		nil,
 	)
 	c.dbReplicaLogBytesReceived = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "dbreplica_log_received_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_log_received_bytes"),
 		"(DatabaseReplica.LogBytesReceived)",
 		[]string{"mssql_instance", "replica"},
 		nil,
 	)
 	c.dbReplicaLogCompressionCachehits = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "dbreplica_log_compression_cachehits"),
+		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_log_compression_cachehits"),
 		"(DatabaseReplica.LogCompressionCachehits)",
 		[]string{"mssql_instance", "replica"},
 		nil,
 	)
 	c.dbReplicaLogCompressionCachemisses = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "dbreplica_log_compression_cachemisses"),
+		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_log_compression_cachemisses"),
 		"(DatabaseReplica.LogCompressionCachemisses)",
 		[]string{"mssql_instance", "replica"},
 		nil,
 	)
 	c.dbReplicaLogCompressions = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "dbreplica_log_compressions"),
+		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_log_compressions"),
 		"(DatabaseReplica.LogCompressions)",
 		[]string{"mssql_instance", "replica"},
 		nil,
 	)
 	c.dbReplicaLogDecompressions = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "dbreplica_log_decompressions"),
+		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_log_decompressions"),
 		"(DatabaseReplica.LogDecompressions)",
 		[]string{"mssql_instance", "replica"},
 		nil,
 	)
 	c.dbReplicaLogremainingforundo = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "dbreplica_log_remaining_for_undo"),
+		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_log_remaining_for_undo"),
 		"(DatabaseReplica.Logremainingforundo)",
 		[]string{"mssql_instance", "replica"},
 		nil,
 	)
 	c.dbReplicaLogSendQueue = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "dbreplica_log_send_queue"),
+		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_log_send_queue"),
 		"(DatabaseReplica.LogSendQueue)",
 		[]string{"mssql_instance", "replica"},
 		nil,
 	)
 	c.dbReplicaMirroredWritetransactions = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "dbreplica_mirrored_write_transactions"),
+		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_mirrored_write_transactions"),
 		"(DatabaseReplica.MirroredWriteTransactions)",
 		[]string{"mssql_instance", "replica"},
 		nil,
 	)
 	c.dbReplicaRecoveryQueue = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "dbreplica_recovery_queue_records"),
+		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_recovery_queue_records"),
 		"(DatabaseReplica.RecoveryQueue)",
 		[]string{"mssql_instance", "replica"},
 		nil,
 	)
 	c.dbReplicaRedoblocked = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "dbreplica_redo_blocks"),
+		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_redo_blocks"),
 		"(DatabaseReplica.Redoblocked)",
 		[]string{"mssql_instance", "replica"},
 		nil,
 	)
 	c.dbReplicaRedoBytesRemaining = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "dbreplica_redo_remaining_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_redo_remaining_bytes"),
 		"(DatabaseReplica.RedoBytesRemaining)",
 		[]string{"mssql_instance", "replica"},
 		nil,
 	)
 	c.dbReplicaRedoneBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "dbreplica_redone_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_redone_bytes"),
 		"(DatabaseReplica.RedoneBytes)",
 		[]string{"mssql_instance", "replica"},
 		nil,
 	)
 	c.dbReplicaRedones = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "dbreplica_redones"),
+		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_redones"),
 		"(DatabaseReplica.Redones)",
 		[]string{"mssql_instance", "replica"},
 		nil,
 	)
 	c.dbReplicaTotalLogrequiringundo = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "dbreplica_total_log_requiring_undo"),
+		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_total_log_requiring_undo"),
 		"(DatabaseReplica.TotalLogrequiringundo)",
 		[]string{"mssql_instance", "replica"},
 		nil,
 	)
 	c.dbReplicaTransactionDelay = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "dbreplica_transaction_delay_seconds"),
+		prometheus.BuildFQName(types.Namespace, Name, "dbreplica_transaction_delay_seconds"),
 		"(DatabaseReplica.TransactionDelay)",
 		[]string{"mssql_instance", "replica"},
 		nil,
@@ -1136,289 +1136,289 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 
 	// Win32_PerfRawData_{instance}_SQLServerDatabases
 	c.databasesActiveParallelredothreads = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "databases_active_parallel_redo_threads"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_active_parallel_redo_threads"),
 		"(Databases.ActiveParallelredothreads)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesActiveTransactions = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "databases_active_transactions"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_active_transactions"),
 		"(Databases.ActiveTransactions)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesBackupPerRestoreThroughput = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "databases_backup_restore_operations"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_backup_restore_operations"),
 		"(Databases.BackupPerRestoreThroughput)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesBulkCopyRows = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "databases_bulk_copy_rows"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_bulk_copy_rows"),
 		"(Databases.BulkCopyRows)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesBulkCopyThroughput = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "databases_bulk_copy_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_bulk_copy_bytes"),
 		"(Databases.BulkCopyThroughput)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesCommitTableEntries = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "databases_commit_table_entries"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_commit_table_entries"),
 		"(Databases.Committableentries)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesDataFilesSizeKB = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "databases_data_files_size_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_data_files_size_bytes"),
 		"(Databases.DataFilesSizeKB)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesDBCCLogicalScanBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "databases_dbcc_logical_scan_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_dbcc_logical_scan_bytes"),
 		"(Databases.DBCCLogicalScanBytes)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesGroupCommitTime = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "databases_group_commit_stall_seconds"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_group_commit_stall_seconds"),
 		"(Databases.GroupCommitTime)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesLogBytesFlushed = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "databases_log_flushed_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_log_flushed_bytes"),
 		"(Databases.LogBytesFlushed)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesLogCacheHits = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "databases_log_cache_hits"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_log_cache_hits"),
 		"(Databases.LogCacheHitRatio)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesLogCacheLookups = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "databases_log_cache_lookups"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_log_cache_lookups"),
 		"(Databases.LogCacheHitRatio_Base)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesLogCacheReads = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "databases_log_cache_reads"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_log_cache_reads"),
 		"(Databases.LogCacheReads)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesLogFilesSizeKB = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "databases_log_files_size_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_log_files_size_bytes"),
 		"(Databases.LogFilesSizeKB)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesLogFilesUsedSizeKB = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "databases_log_files_used_size_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_log_files_used_size_bytes"),
 		"(Databases.LogFilesUsedSizeKB)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesLogFlushes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "databases_log_flushes"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_log_flushes"),
 		"(Databases.LogFlushes)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesLogFlushWaits = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "databases_log_flush_waits"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_log_flush_waits"),
 		"(Databases.LogFlushWaits)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesLogFlushWaitTime = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "databases_log_flush_wait_seconds"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_log_flush_wait_seconds"),
 		"(Databases.LogFlushWaitTime)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesLogFlushWriteTimeMS = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "databases_log_flush_write_seconds"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_log_flush_write_seconds"),
 		"(Databases.LogFlushWriteTimems)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesLogGrowths = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "databases_log_growths"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_log_growths"),
 		"(Databases.LogGrowths)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesLogPoolCacheMisses = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "databases_log_pool_cache_misses"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_log_pool_cache_misses"),
 		"(Databases.LogPoolCacheMisses)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesLogPoolDiskReads = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "databases_log_pool_disk_reads"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_log_pool_disk_reads"),
 		"(Databases.LogPoolDiskReads)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesLogPoolHashDeletes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "databases_log_pool_hash_deletes"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_log_pool_hash_deletes"),
 		"(Databases.LogPoolHashDeletes)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesLogPoolHashInserts = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "databases_log_pool_hash_inserts"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_log_pool_hash_inserts"),
 		"(Databases.LogPoolHashInserts)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesLogPoolInvalidHashEntry = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "databases_log_pool_invalid_hash_entries"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_log_pool_invalid_hash_entries"),
 		"(Databases.LogPoolInvalidHashEntry)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesLogPoolLogScanPushes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "databases_log_pool_log_scan_pushes"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_log_pool_log_scan_pushes"),
 		"(Databases.LogPoolLogScanPushes)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesLogPoolLogWriterPushes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "databases_log_pool_log_writer_pushes"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_log_pool_log_writer_pushes"),
 		"(Databases.LogPoolLogWriterPushes)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesLogPoolPushEmptyFreePool = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "databases_log_pool_empty_free_pool_pushes"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_log_pool_empty_free_pool_pushes"),
 		"(Databases.LogPoolPushEmptyFreePool)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesLogPoolPushLowMemory = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "databases_log_pool_low_memory_pushes"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_log_pool_low_memory_pushes"),
 		"(Databases.LogPoolPushLowMemory)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesLogPoolPushNoFreeBuffer = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "databases_log_pool_no_free_buffer_pushes"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_log_pool_no_free_buffer_pushes"),
 		"(Databases.LogPoolPushNoFreeBuffer)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesLogPoolReqBehindTrunc = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "databases_log_pool_req_behind_trunc"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_log_pool_req_behind_trunc"),
 		"(Databases.LogPoolReqBehindTrunc)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesLogPoolRequestsOldVLF = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "databases_log_pool_requests_old_vlf"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_log_pool_requests_old_vlf"),
 		"(Databases.LogPoolRequestsOldVLF)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesLogPoolRequests = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "databases_log_pool_requests"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_log_pool_requests"),
 		"(Databases.LogPoolRequests)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesLogPoolTotalActiveLogSize = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "databases_log_pool_total_active_log_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_log_pool_total_active_log_bytes"),
 		"(Databases.LogPoolTotalActiveLogSize)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesLogPoolTotalSharedPoolSize = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "databases_log_pool_total_shared_pool_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_log_pool_total_shared_pool_bytes"),
 		"(Databases.LogPoolTotalSharedPoolSize)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesLogShrinks = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "databases_log_shrinks"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_log_shrinks"),
 		"(Databases.LogShrinks)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesLogTruncations = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "databases_log_truncations"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_log_truncations"),
 		"(Databases.LogTruncations)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesPercentLogUsed = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "databases_log_used_percent"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_log_used_percent"),
 		"(Databases.PercentLogUsed)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesReplPendingXacts = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "databases_pending_repl_transactions"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_pending_repl_transactions"),
 		"(Databases.ReplPendingTransactions)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesReplTransRate = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "databases_repl_transactions"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_repl_transactions"),
 		"(Databases.ReplTranactions)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesShrinkDataMovementBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "databases_shrink_data_movement_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_shrink_data_movement_bytes"),
 		"(Databases.ShrinkDataMovementBytes)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesTrackedTransactions = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "databases_tracked_transactions"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_tracked_transactions"),
 		"(Databases.Trackedtransactions)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesTransactions = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "databases_transactions"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_transactions"),
 		"(Databases.Transactions)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesWriteTransactions = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "databases_write_transactions"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_write_transactions"),
 		"(Databases.WriteTransactions)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesXTPControllerDLCLatencyPerFetch = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "databases_xtp_controller_dlc_fetch_latency_seconds"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_xtp_controller_dlc_fetch_latency_seconds"),
 		"(Databases.XTPControllerDLCLatencyPerFetch)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesXTPControllerDLCPeakLatency = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "databases_xtp_controller_dlc_peak_latency_seconds"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_xtp_controller_dlc_peak_latency_seconds"),
 		"(Databases.XTPControllerDLCPeakLatency)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesXTPControllerLogProcessed = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "databases_xtp_controller_log_processed_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_xtp_controller_log_processed_bytes"),
 		"(Databases.XTPControllerLogProcessed)",
 		[]string{"mssql_instance", "database"},
 		nil,
 	)
 	c.databasesXTPMemoryUsedKB = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "databases_xtp_memory_used_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "databases_xtp_memory_used_bytes"),
 		"(Databases.XTPMemoryUsedKB)",
 		[]string{"mssql_instance", "database"},
 		nil,
@@ -1426,145 +1426,145 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 
 	// Win32_PerfRawData_{instance}_SQLServerGeneralStatistics
 	c.genStatsActiveTempTables = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "genstats_active_temp_tables"),
+		prometheus.BuildFQName(types.Namespace, Name, "genstats_active_temp_tables"),
 		"(GeneralStatistics.ActiveTempTables)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.genStatsConnectionReset = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "genstats_connection_resets"),
+		prometheus.BuildFQName(types.Namespace, Name, "genstats_connection_resets"),
 		"(GeneralStatistics.ConnectionReset)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.genStatsEventNotificationsDelayedDrop = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "genstats_event_notifications_delayed_drop"),
+		prometheus.BuildFQName(types.Namespace, Name, "genstats_event_notifications_delayed_drop"),
 		"(GeneralStatistics.EventNotificationsDelayedDrop)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.genStatsHTTPAuthenticatedRequests = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "genstats_http_authenticated_requests"),
+		prometheus.BuildFQName(types.Namespace, Name, "genstats_http_authenticated_requests"),
 		"(GeneralStatistics.HTTPAuthenticatedRequests)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.genStatsLogicalConnections = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "genstats_logical_connections"),
+		prometheus.BuildFQName(types.Namespace, Name, "genstats_logical_connections"),
 		"(GeneralStatistics.LogicalConnections)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.genStatsLogins = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "genstats_logins"),
+		prometheus.BuildFQName(types.Namespace, Name, "genstats_logins"),
 		"(GeneralStatistics.Logins)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.genStatsLogouts = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "genstats_logouts"),
+		prometheus.BuildFQName(types.Namespace, Name, "genstats_logouts"),
 		"(GeneralStatistics.Logouts)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.genStatsMarsDeadlocks = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "genstats_mars_deadlocks"),
+		prometheus.BuildFQName(types.Namespace, Name, "genstats_mars_deadlocks"),
 		"(GeneralStatistics.MarsDeadlocks)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.genStatsNonAtomicYieldRate = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "genstats_non_atomic_yields"),
+		prometheus.BuildFQName(types.Namespace, Name, "genstats_non_atomic_yields"),
 		"(GeneralStatistics.Nonatomicyields)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.genStatsProcessesBlocked = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "genstats_blocked_processes"),
+		prometheus.BuildFQName(types.Namespace, Name, "genstats_blocked_processes"),
 		"(GeneralStatistics.Processesblocked)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.genStatsSOAPEmptyRequests = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "genstats_soap_empty_requests"),
+		prometheus.BuildFQName(types.Namespace, Name, "genstats_soap_empty_requests"),
 		"(GeneralStatistics.SOAPEmptyRequests)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.genStatsSOAPMethodInvocations = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "genstats_soap_method_invocations"),
+		prometheus.BuildFQName(types.Namespace, Name, "genstats_soap_method_invocations"),
 		"(GeneralStatistics.SOAPMethodInvocations)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.genStatsSOAPSessionInitiateRequests = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "genstats_soap_session_initiate_requests"),
+		prometheus.BuildFQName(types.Namespace, Name, "genstats_soap_session_initiate_requests"),
 		"(GeneralStatistics.SOAPSessionInitiateRequests)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.genStatsSOAPSessionTerminateRequests = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "genstats_soap_session_terminate_requests"),
+		prometheus.BuildFQName(types.Namespace, Name, "genstats_soap_session_terminate_requests"),
 		"(GeneralStatistics.SOAPSessionTerminateRequests)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.genStatsSOAPSQLRequests = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "genstats_soapsql_requests"),
+		prometheus.BuildFQName(types.Namespace, Name, "genstats_soapsql_requests"),
 		"(GeneralStatistics.SOAPSQLRequests)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.genStatsSOAPWSDLRequests = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "genstats_soapwsdl_requests"),
+		prometheus.BuildFQName(types.Namespace, Name, "genstats_soapwsdl_requests"),
 		"(GeneralStatistics.SOAPWSDLRequests)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.genStatsSQLTraceIOProviderLockWaits = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "genstats_sql_trace_io_provider_lock_waits"),
+		prometheus.BuildFQName(types.Namespace, Name, "genstats_sql_trace_io_provider_lock_waits"),
 		"(GeneralStatistics.SQLTraceIOProviderLockWaits)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.genStatsTempDBRecoveryUnitID = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "genstats_tempdb_recovery_unit_ids_generated"),
+		prometheus.BuildFQName(types.Namespace, Name, "genstats_tempdb_recovery_unit_ids_generated"),
 		"(GeneralStatistics.Tempdbrecoveryunitid)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.genStatsTempDBrowSetID = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "genstats_tempdb_rowset_ids_generated"),
+		prometheus.BuildFQName(types.Namespace, Name, "genstats_tempdb_rowset_ids_generated"),
 		"(GeneralStatistics.Tempdbrowsetid)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.genStatsTempTablesCreationRate = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "genstats_temp_tables_creations"),
+		prometheus.BuildFQName(types.Namespace, Name, "genstats_temp_tables_creations"),
 		"(GeneralStatistics.TempTablesCreations)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.genStatsTempTablesForDestruction = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "genstats_temp_tables_awaiting_destruction"),
+		prometheus.BuildFQName(types.Namespace, Name, "genstats_temp_tables_awaiting_destruction"),
 		"(GeneralStatistics.TempTablesForDestruction)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.genStatsTraceEventNotificationQueue = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "genstats_trace_event_notification_queue_size"),
+		prometheus.BuildFQName(types.Namespace, Name, "genstats_trace_event_notification_queue_size"),
 		"(GeneralStatistics.TraceEventNotificationQueue)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.genStatsTransactions = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "genstats_transactions"),
+		prometheus.BuildFQName(types.Namespace, Name, "genstats_transactions"),
 		"(GeneralStatistics.Transactions)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.genStatsUserConnections = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "genstats_user_connections"),
+		prometheus.BuildFQName(types.Namespace, Name, "genstats_user_connections"),
 		"(GeneralStatistics.UserConnections)",
 		[]string{"mssql_instance"},
 		nil,
@@ -1572,49 +1572,49 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 
 	// Win32_PerfRawData_{instance}_SQLServerLocks
 	c.locksWaitTime = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "locks_wait_time_seconds"),
+		prometheus.BuildFQName(types.Namespace, Name, "locks_wait_time_seconds"),
 		"(Locks.AverageWaitTimems Total time in seconds which locks have been holding resources)",
 		[]string{"mssql_instance", "resource"},
 		nil,
 	)
 	c.locksCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "locks_count"),
+		prometheus.BuildFQName(types.Namespace, Name, "locks_count"),
 		"(Locks.AverageWaitTimems_Base count of how often requests have run into locks)",
 		[]string{"mssql_instance", "resource"},
 		nil,
 	)
 	c.locksLockRequests = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "locks_lock_requests"),
+		prometheus.BuildFQName(types.Namespace, Name, "locks_lock_requests"),
 		"(Locks.LockRequests)",
 		[]string{"mssql_instance", "resource"},
 		nil,
 	)
 	c.locksLockTimeouts = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "locks_lock_timeouts"),
+		prometheus.BuildFQName(types.Namespace, Name, "locks_lock_timeouts"),
 		"(Locks.LockTimeouts)",
 		[]string{"mssql_instance", "resource"},
 		nil,
 	)
 	c.locksLockTimeoutstimeout0 = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "locks_lock_timeouts_excluding_NOWAIT"),
+		prometheus.BuildFQName(types.Namespace, Name, "locks_lock_timeouts_excluding_NOWAIT"),
 		"(Locks.LockTimeoutstimeout0)",
 		[]string{"mssql_instance", "resource"},
 		nil,
 	)
 	c.locksLockWaits = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "locks_lock_waits"),
+		prometheus.BuildFQName(types.Namespace, Name, "locks_lock_waits"),
 		"(Locks.LockWaits)",
 		[]string{"mssql_instance", "resource"},
 		nil,
 	)
 	c.locksLockWaitTimeMS = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "locks_lock_wait_seconds"),
+		prometheus.BuildFQName(types.Namespace, Name, "locks_lock_wait_seconds"),
 		"(Locks.LockWaitTimems)",
 		[]string{"mssql_instance", "resource"},
 		nil,
 	)
 	c.locksNumberOfDeadlocks = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "locks_deadlocks"),
+		prometheus.BuildFQName(types.Namespace, Name, "locks_deadlocks"),
 		"(Locks.NumberOfDeadlocks)",
 		[]string{"mssql_instance", "resource"},
 		nil,
@@ -1622,121 +1622,121 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 
 	// Win32_PerfRawData_{instance}_SQLServerMemoryManager
 	c.memMgrConnectionMemoryKB = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "memmgr_connection_memory_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "memmgr_connection_memory_bytes"),
 		"(MemoryManager.ConnectionMemoryKB)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.memMgrDatabaseCacheMemoryKB = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "memmgr_database_cache_memory_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "memmgr_database_cache_memory_bytes"),
 		"(MemoryManager.DatabaseCacheMemoryKB)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.memMgrExternalbenefitofmemory = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "memmgr_external_benefit_of_memory"),
+		prometheus.BuildFQName(types.Namespace, Name, "memmgr_external_benefit_of_memory"),
 		"(MemoryManager.Externalbenefitofmemory)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.memMgrFreeMemoryKB = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "memmgr_free_memory_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "memmgr_free_memory_bytes"),
 		"(MemoryManager.FreeMemoryKB)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.memMgrGrantedWorkspaceMemoryKB = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "memmgr_granted_workspace_memory_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "memmgr_granted_workspace_memory_bytes"),
 		"(MemoryManager.GrantedWorkspaceMemoryKB)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.memMgrLockBlocks = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "memmgr_lock_blocks"),
+		prometheus.BuildFQName(types.Namespace, Name, "memmgr_lock_blocks"),
 		"(MemoryManager.LockBlocks)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.memMgrLockBlocksAllocated = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "memmgr_allocated_lock_blocks"),
+		prometheus.BuildFQName(types.Namespace, Name, "memmgr_allocated_lock_blocks"),
 		"(MemoryManager.LockBlocksAllocated)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.memMgrLockMemoryKB = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "memmgr_lock_memory_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "memmgr_lock_memory_bytes"),
 		"(MemoryManager.LockMemoryKB)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.memMgrLockOwnerBlocks = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "memmgr_lock_owner_blocks"),
+		prometheus.BuildFQName(types.Namespace, Name, "memmgr_lock_owner_blocks"),
 		"(MemoryManager.LockOwnerBlocks)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.memMgrLockOwnerBlocksAllocated = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "memmgr_allocated_lock_owner_blocks"),
+		prometheus.BuildFQName(types.Namespace, Name, "memmgr_allocated_lock_owner_blocks"),
 		"(MemoryManager.LockOwnerBlocksAllocated)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.memMgrLogPoolMemoryKB = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "memmgr_log_pool_memory_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "memmgr_log_pool_memory_bytes"),
 		"(MemoryManager.LogPoolMemoryKB)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.memMgrMaximumWorkspaceMemoryKB = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "memmgr_maximum_workspace_memory_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "memmgr_maximum_workspace_memory_bytes"),
 		"(MemoryManager.MaximumWorkspaceMemoryKB)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.memMgrMemoryGrantsOutstanding = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "memmgr_outstanding_memory_grants"),
+		prometheus.BuildFQName(types.Namespace, Name, "memmgr_outstanding_memory_grants"),
 		"(MemoryManager.MemoryGrantsOutstanding)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.memMgrMemoryGrantsPending = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "memmgr_pending_memory_grants"),
+		prometheus.BuildFQName(types.Namespace, Name, "memmgr_pending_memory_grants"),
 		"(MemoryManager.MemoryGrantsPending)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.memMgrOptimizerMemoryKB = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "memmgr_optimizer_memory_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "memmgr_optimizer_memory_bytes"),
 		"(MemoryManager.OptimizerMemoryKB)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.memMgrReservedServerMemoryKB = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "memmgr_reserved_server_memory_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "memmgr_reserved_server_memory_bytes"),
 		"(MemoryManager.ReservedServerMemoryKB)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.memMgrSQLCacheMemoryKB = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "memmgr_sql_cache_memory_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "memmgr_sql_cache_memory_bytes"),
 		"(MemoryManager.SQLCacheMemoryKB)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.memMgrStolenServerMemoryKB = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "memmgr_stolen_server_memory_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "memmgr_stolen_server_memory_bytes"),
 		"(MemoryManager.StolenServerMemoryKB)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.memMgrTargetServerMemoryKB = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "memmgr_target_server_memory_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "memmgr_target_server_memory_bytes"),
 		"(MemoryManager.TargetServerMemoryKB)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.memMgrTotalServerMemoryKB = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "memmgr_total_server_memory_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "memmgr_total_server_memory_bytes"),
 		"(MemoryManager.TotalServerMemoryKB)",
 		[]string{"mssql_instance"},
 		nil,
@@ -1744,67 +1744,67 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 
 	// Win32_PerfRawData_{instance}_SQLServerSQLStatistics
 	c.sqlStatsAutoParamAttempts = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "sqlstats_auto_parameterization_attempts"),
+		prometheus.BuildFQName(types.Namespace, Name, "sqlstats_auto_parameterization_attempts"),
 		"(SQLStatistics.AutoParamAttempts)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.sqlStatsBatchRequests = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "sqlstats_batch_requests"),
+		prometheus.BuildFQName(types.Namespace, Name, "sqlstats_batch_requests"),
 		"(SQLStatistics.BatchRequests)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.sqlStatsFailedAutoParams = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "sqlstats_failed_auto_parameterization_attempts"),
+		prometheus.BuildFQName(types.Namespace, Name, "sqlstats_failed_auto_parameterization_attempts"),
 		"(SQLStatistics.FailedAutoParams)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.sqlStatsForcedParameterizations = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "sqlstats_forced_parameterizations"),
+		prometheus.BuildFQName(types.Namespace, Name, "sqlstats_forced_parameterizations"),
 		"(SQLStatistics.ForcedParameterizations)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.sqlStatsGuidedplanexecutions = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "sqlstats_guided_plan_executions"),
+		prometheus.BuildFQName(types.Namespace, Name, "sqlstats_guided_plan_executions"),
 		"(SQLStatistics.Guidedplanexecutions)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.sqlStatsMisguidedplanexecutions = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "sqlstats_misguided_plan_executions"),
+		prometheus.BuildFQName(types.Namespace, Name, "sqlstats_misguided_plan_executions"),
 		"(SQLStatistics.Misguidedplanexecutions)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.sqlStatsSafeAutoParams = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "sqlstats_safe_auto_parameterization_attempts"),
+		prometheus.BuildFQName(types.Namespace, Name, "sqlstats_safe_auto_parameterization_attempts"),
 		"(SQLStatistics.SafeAutoParams)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.sqlStatsSQLAttentionrate = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "sqlstats_sql_attentions"),
+		prometheus.BuildFQName(types.Namespace, Name, "sqlstats_sql_attentions"),
 		"(SQLStatistics.SQLAttentions)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.sqlStatsSQLCompilations = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "sqlstats_sql_compilations"),
+		prometheus.BuildFQName(types.Namespace, Name, "sqlstats_sql_compilations"),
 		"(SQLStatistics.SQLCompilations)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.sqlStatsSQLReCompilations = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "sqlstats_sql_recompilations"),
+		prometheus.BuildFQName(types.Namespace, Name, "sqlstats_sql_recompilations"),
 		"(SQLStatistics.SQLReCompilations)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.sqlStatsUnsafeAutoParams = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "sqlstats_unsafe_auto_parameterization_attempts"),
+		prometheus.BuildFQName(types.Namespace, Name, "sqlstats_unsafe_auto_parameterization_attempts"),
 		"(SQLStatistics.UnsafeAutoParams)",
 		[]string{"mssql_instance"},
 		nil,
@@ -1812,7 +1812,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 
 	// Win32_PerfRawData_{instance}_SQLServerSQLErrors
 	c.sqlErrorsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "sql_errors_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "sql_errors_total"),
 		"(SQLErrors.Total)",
 		[]string{"mssql_instance", "resource"},
 		nil,
@@ -1820,79 +1820,79 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 
 	// Win32_PerfRawData_{instance}_SQLServerTransactions
 	c.transactionsTempDbFreeSpaceBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "transactions_tempdb_free_space_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "transactions_tempdb_free_space_bytes"),
 		"(Transactions.FreeSpaceInTempDbKB)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.transactionsLongestTransactionRunningSeconds = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "transactions_longest_transaction_running_seconds"),
+		prometheus.BuildFQName(types.Namespace, Name, "transactions_longest_transaction_running_seconds"),
 		"(Transactions.LongestTransactionRunningTime)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.transactionsNonSnapshotVersionActiveTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "transactions_nonsnapshot_version_active_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "transactions_nonsnapshot_version_active_total"),
 		"(Transactions.NonSnapshotVersionTransactions)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.transactionsSnapshotActiveTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "transactions_snapshot_active_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "transactions_snapshot_active_total"),
 		"(Transactions.SnapshotTransactions)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.transactionsActive = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "transactions_active"),
+		prometheus.BuildFQName(types.Namespace, Name, "transactions_active"),
 		"(Transactions.Transactions)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.transactionsUpdateConflictsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "transactions_update_conflicts_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "transactions_update_conflicts_total"),
 		"(Transactions.UpdateConflictRatio)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.transactionsUpdateSnapshotActiveTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "transactions_update_snapshot_active_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "transactions_update_snapshot_active_total"),
 		"(Transactions.UpdateSnapshotTransactions)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.transactionsVersionCleanupRateBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "transactions_version_cleanup_rate_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "transactions_version_cleanup_rate_bytes"),
 		"(Transactions.VersionCleanupRateKBs)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.transactionsVersionGenerationRateBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "transactions_version_generation_rate_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "transactions_version_generation_rate_bytes"),
 		"(Transactions.VersionGenerationRateKBs)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.transactionsVersionStoreSizeBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "transactions_version_store_size_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "transactions_version_store_size_bytes"),
 		"(Transactions.VersionStoreSizeKB)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.transactionsVersionStoreUnits = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "transactions_version_store_units"),
+		prometheus.BuildFQName(types.Namespace, Name, "transactions_version_store_units"),
 		"(Transactions.VersionStoreUnitCount)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.transactionsVersionStoreCreationUnits = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "transactions_version_store_creation_units"),
+		prometheus.BuildFQName(types.Namespace, Name, "transactions_version_store_creation_units"),
 		"(Transactions.VersionStoreUnitCreation)",
 		[]string{"mssql_instance"},
 		nil,
 	)
 	c.transactionsVersionStoreTruncationUnits = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "transactions_version_store_truncation_units"),
+		prometheus.BuildFQName(types.Namespace, Name, "transactions_version_store_truncation_units"),
 		"(Transactions.VersionStoreUnitTruncation)",
 		[]string{"mssql_instance"},
 		nil,
@@ -1900,74 +1900,74 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 
 	// Win32_PerfRawData_{instance}_SQLServerWaitStatistics
 	c.waitStatsLockWaits = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "waitstats_lock_waits"),
+		prometheus.BuildFQName(types.Namespace, Name, "waitstats_lock_waits"),
 		"(WaitStats.LockWaits)",
 		[]string{"mssql_instance", "item"},
 		nil,
 	)
 
 	c.waitStatsMemoryGrantQueueWaits = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "waitstats_memory_grant_queue_waits"),
+		prometheus.BuildFQName(types.Namespace, Name, "waitstats_memory_grant_queue_waits"),
 		"(WaitStats.MemoryGrantQueueWaits)",
 		[]string{"mssql_instance", "item"},
 		nil,
 	)
 	c.waitStatsThreadSafeMemoryObjectsWaits = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "waitstats_thread_safe_memory_objects_waits"),
+		prometheus.BuildFQName(types.Namespace, Name, "waitstats_thread_safe_memory_objects_waits"),
 		"(WaitStats.ThreadSafeMemoryObjectsWaits)",
 		[]string{"mssql_instance", "item"},
 		nil,
 	)
 	c.waitStatsLogWriteWaits = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "waitstats_log_write_waits"),
+		prometheus.BuildFQName(types.Namespace, Name, "waitstats_log_write_waits"),
 		"(WaitStats.LogWriteWaits)",
 		[]string{"mssql_instance", "item"},
 		nil,
 	)
 	c.waitStatsLogBufferWaits = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "waitstats_log_buffer_waits"),
+		prometheus.BuildFQName(types.Namespace, Name, "waitstats_log_buffer_waits"),
 		"(WaitStats.LogBufferWaits)",
 		[]string{"mssql_instance", "item"},
 		nil,
 	)
 	c.waitStatsNetworkIOWaits = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "waitstats_network_io_waits"),
+		prometheus.BuildFQName(types.Namespace, Name, "waitstats_network_io_waits"),
 		"(WaitStats.NetworkIOWaits)",
 		[]string{"mssql_instance", "item"},
 		nil,
 	)
 	c.waitStatsPageIOLatchWaits = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "waitstats_page_io_latch_waits"),
+		prometheus.BuildFQName(types.Namespace, Name, "waitstats_page_io_latch_waits"),
 		"(WaitStats.PageIOLatchWaits)",
 		[]string{"mssql_instance", "item"},
 		nil,
 	)
 	c.waitStatsPageLatchWaits = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "waitstats_page_latch_waits"),
+		prometheus.BuildFQName(types.Namespace, Name, "waitstats_page_latch_waits"),
 		"(WaitStats.PageLatchWaits)",
 		[]string{"mssql_instance", "item"},
 		nil,
 	)
 	c.waitStatsNonPageLatchWaits = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "waitstats_nonpage_latch_waits"),
+		prometheus.BuildFQName(types.Namespace, Name, "waitstats_nonpage_latch_waits"),
 		"(WaitStats.NonpageLatchWaits)",
 		[]string{"mssql_instance", "item"},
 		nil,
 	)
 	c.waitStatsWaitForTheWorkerWaits = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "waitstats_wait_for_the_worker_waits"),
+		prometheus.BuildFQName(types.Namespace, Name, "waitstats_wait_for_the_worker_waits"),
 		"(WaitStats.WaitForTheWorkerWaits)",
 		[]string{"mssql_instance", "item"},
 		nil,
 	)
 	c.waitStatsWorkspaceSynchronizationWaits = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "waitstats_workspace_synchronization_waits"),
+		prometheus.BuildFQName(types.Namespace, Name, "waitstats_workspace_synchronization_waits"),
 		"(WaitStats.WorkspaceSynchronizationWaits)",
 		[]string{"mssql_instance", "item"},
 		nil,
 	)
 	c.waitStatsTransactionOwnershipWaits = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "waitstats_transaction_ownership_waits"),
+		prometheus.BuildFQName(types.Namespace, Name, "waitstats_transaction_ownership_waits"),
 		"(WaitStats.TransactionOwnershipWaits)",
 		[]string{"mssql_instance", "item"},
 		nil,
@@ -1984,9 +1984,9 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 	return nil
 }
 
-type mssqlCollectorFunc func(ctx *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric, sqlInstance string) error
+type mssqlCollectorFunc func(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric, sqlInstance string) error
 
-func (c *Collector) execute(ctx *types2.ScrapeContext, logger *slog.Logger, name string, fn mssqlCollectorFunc, ch chan<- prometheus.Metric, sqlInstance string, wg *sync.WaitGroup) {
+func (c *Collector) execute(ctx *types.ScrapeContext, logger *slog.Logger, name string, fn mssqlCollectorFunc, ch chan<- prometheus.Metric, sqlInstance string, wg *sync.WaitGroup) {
 	// Reset failure counter on each scrape
 	c.mssqlChildCollectorFailure = 0
 
@@ -2026,7 +2026,7 @@ func (c *Collector) execute(ctx *types2.ScrapeContext, logger *slog.Logger, name
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(ctx *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
 	wg := sync.WaitGroup{}
 
@@ -2099,7 +2099,7 @@ type mssqlAccessMethods struct {
 	WorktablesFromCacheRatioBase  float64 `perflib:"Worktables From Cache Base_Base"`
 }
 
-func (c *Collector) collectAccessMethods(ctx *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric, sqlInstance string) error {
+func (c *Collector) collectAccessMethods(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric, sqlInstance string) error {
 	var dst []mssqlAccessMethods
 
 	logger.Debug(fmt.Sprintf("mssql_accessmethods collector iterating sql instance %s.", sqlInstance))
@@ -2436,7 +2436,7 @@ type mssqlAvailabilityReplica struct {
 	SendstoTransportPerSec         float64 `perflib:"Sends to Transport/sec"`
 }
 
-func (c *Collector) collectAvailabilityReplica(ctx *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric, sqlInstance string) error {
+func (c *Collector) collectAvailabilityReplica(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric, sqlInstance string) error {
 	var dst []mssqlAvailabilityReplica
 
 	logger.Debug(fmt.Sprintf("mssql_availreplica collector iterating sql instance %s.", sqlInstance))
@@ -2547,7 +2547,7 @@ type mssqlBufferManager struct {
 	TargetPages                   float64 `perflib:"Target pages"`
 }
 
-func (c *Collector) collectBufferManager(ctx *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric, sqlInstance string) error {
+func (c *Collector) collectBufferManager(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric, sqlInstance string) error {
 	var dst []mssqlBufferManager
 
 	logger.Debug(fmt.Sprintf("mssql_bufman collector iterating sql instance %s.", sqlInstance))
@@ -2752,7 +2752,7 @@ type mssqlDatabaseReplica struct {
 	TransactionDelay                float64 `perflib:"Transaction Delay"`
 }
 
-func (c *Collector) collectDatabaseReplica(ctx *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric, sqlInstance string) error {
+func (c *Collector) collectDatabaseReplica(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric, sqlInstance string) error {
 	var dst []mssqlDatabaseReplica
 
 	logger.Debug(fmt.Sprintf("mssql_dbreplica collector iterating sql instance %s.", sqlInstance))
@@ -2994,7 +2994,7 @@ type mssqlDatabases struct {
 	XTPMemoryUsedKB                  float64 `perflib:"XTP Memory Used (KB)"`
 }
 
-func (c *Collector) collectDatabases(ctx *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric, sqlInstance string) error {
+func (c *Collector) collectDatabases(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric, sqlInstance string) error {
 	var dst []mssqlDatabases
 
 	logger.Debug(fmt.Sprintf("mssql_databases collector iterating sql instance %s.", sqlInstance))
@@ -3379,7 +3379,7 @@ type mssqlGeneralStatistics struct {
 	UserConnections               float64 `perflib:"User Connections"`
 }
 
-func (c *Collector) collectGeneralStatistics(ctx *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric, sqlInstance string) error {
+func (c *Collector) collectGeneralStatistics(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric, sqlInstance string) error {
 	var dst []mssqlGeneralStatistics
 
 	logger.Debug(fmt.Sprintf("mssql_genstats collector iterating sql instance %s.", sqlInstance))
@@ -3575,7 +3575,7 @@ type mssqlLocks struct {
 	NumberOfDeadlocksPerSec    float64 `perflib:"Number of Deadlocks/sec"`
 }
 
-func (c *Collector) collectLocks(ctx *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric, sqlInstance string) error {
+func (c *Collector) collectLocks(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric, sqlInstance string) error {
 	var dst []mssqlLocks
 
 	logger.Debug(fmt.Sprintf("mssql_locks collector iterating sql instance %s.", sqlInstance))
@@ -3676,7 +3676,7 @@ type mssqlMemoryManager struct {
 	TotalServerMemoryKB      float64 `perflib:"Total Server Memory (KB)"`
 }
 
-func (c *Collector) collectMemoryManager(ctx *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric, sqlInstance string) error {
+func (c *Collector) collectMemoryManager(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric, sqlInstance string) error {
 	var dst []mssqlMemoryManager
 
 	logger.Debug(fmt.Sprintf("mssql_memmgr collector iterating sql instance %s.", sqlInstance))
@@ -3846,7 +3846,7 @@ type mssqlSQLStatistics struct {
 	UnsafeAutoParamsPerSec        float64 `perflib:"Unsafe Auto-Params/sec"`
 }
 
-func (c *Collector) collectSQLStats(ctx *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric, sqlInstance string) error {
+func (c *Collector) collectSQLStats(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric, sqlInstance string) error {
 	var dst []mssqlSQLStatistics
 
 	logger.Debug(fmt.Sprintf("mssql_sqlstats collector iterating sql instance %s.", sqlInstance))
@@ -3955,7 +3955,7 @@ type mssqlWaitStatistics struct {
 	WaitStatsTransactionOwnershipWaits     float64 `perflib:"Transaction ownership waits"`
 }
 
-func (c *Collector) collectWaitStats(ctx *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric, sqlInstance string) error {
+func (c *Collector) collectWaitStats(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric, sqlInstance string) error {
 	var dst []mssqlWaitStatistics
 
 	logger.Debug(fmt.Sprintf("mssql_waitstats collector iterating sql instance %s.", sqlInstance))
@@ -4062,7 +4062,7 @@ type mssqlSQLErrors struct {
 
 // Win32_PerfRawData_MSSQLSERVER_SQLServerErrors docs:
 // - https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-sql-errors-object
-func (c *Collector) collectSQLErrors(ctx *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric, sqlInstance string) error {
+func (c *Collector) collectSQLErrors(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric, sqlInstance string) error {
 	var dst []mssqlSQLErrors
 
 	logger.Debug(fmt.Sprintf("mssql_sqlerrors collector iterating sql instance %s.", sqlInstance))
@@ -4107,7 +4107,7 @@ type mssqlTransactions struct {
 
 // Win32_PerfRawData_MSSQLSERVER_Transactions docs:
 // - https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-transactions-object
-func (c *Collector) collectTransactions(ctx *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric, sqlInstance string) error {
+func (c *Collector) collectTransactions(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric, sqlInstance string) error {
 	var dst []mssqlTransactions
 
 	logger.Debug(fmt.Sprintf("mssql_transactions collector iterating sql instance %s.", sqlInstance))

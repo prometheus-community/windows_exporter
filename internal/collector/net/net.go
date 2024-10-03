@@ -15,7 +15,7 @@ import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
 	"github.com/prometheus-community/windows_exporter/internal/perflib"
-	types2 "github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
@@ -31,8 +31,8 @@ type Config struct {
 }
 
 var ConfigDefaults = Config{
-	NicExclude: types2.RegExpEmpty,
-	NicInclude: types2.RegExpAny,
+	NicExclude: types.RegExpEmpty,
+	NicInclude: types.RegExpAny,
 	CollectorsEnabled: []string{
 		"metrics",
 		"nic_addresses",
@@ -182,91 +182,91 @@ func (c *Collector) Build(logger *slog.Logger, _ *wmi.Client) error {
 	}
 
 	c.bytesReceivedTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "bytes_received_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "bytes_received_total"),
 		"(Network.BytesReceivedPerSec)",
 		[]string{"nic"},
 		nil,
 	)
 	c.bytesSentTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "bytes_sent_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "bytes_sent_total"),
 		"(Network.BytesSentPerSec)",
 		[]string{"nic"},
 		nil,
 	)
 	c.bytesTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "bytes_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "bytes_total"),
 		"(Network.BytesTotalPerSec)",
 		[]string{"nic"},
 		nil,
 	)
 	c.outputQueueLength = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "output_queue_length_packets"),
+		prometheus.BuildFQName(types.Namespace, Name, "output_queue_length_packets"),
 		"(Network.OutputQueueLength)",
 		[]string{"nic"},
 		nil,
 	)
 	c.packetsOutboundDiscarded = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "packets_outbound_discarded_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "packets_outbound_discarded_total"),
 		"(Network.PacketsOutboundDiscarded)",
 		[]string{"nic"},
 		nil,
 	)
 	c.packetsOutboundErrors = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "packets_outbound_errors_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "packets_outbound_errors_total"),
 		"(Network.PacketsOutboundErrors)",
 		[]string{"nic"},
 		nil,
 	)
 	c.packetsReceivedDiscarded = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "packets_received_discarded_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "packets_received_discarded_total"),
 		"(Network.PacketsReceivedDiscarded)",
 		[]string{"nic"},
 		nil,
 	)
 	c.packetsReceivedErrors = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "packets_received_errors_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "packets_received_errors_total"),
 		"(Network.PacketsReceivedErrors)",
 		[]string{"nic"},
 		nil,
 	)
 	c.packetsReceivedTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "packets_received_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "packets_received_total"),
 		"(Network.PacketsReceivedPerSec)",
 		[]string{"nic"},
 		nil,
 	)
 	c.packetsReceivedUnknown = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "packets_received_unknown_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "packets_received_unknown_total"),
 		"(Network.PacketsReceivedUnknown)",
 		[]string{"nic"},
 		nil,
 	)
 	c.packetsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "packets_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "packets_total"),
 		"(Network.PacketsPerSec)",
 		[]string{"nic"},
 		nil,
 	)
 	c.packetsSentTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "packets_sent_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "packets_sent_total"),
 		"(Network.PacketsSentPerSec)",
 		[]string{"nic"},
 		nil,
 	)
 	c.currentBandwidth = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "current_bandwidth_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "current_bandwidth_bytes"),
 		"(Network.CurrentBandwidth)",
 		[]string{"nic"},
 		nil,
 	)
 	c.nicAddressInfo = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "nic_address_info"),
+		prometheus.BuildFQName(types.Namespace, Name, "nic_address_info"),
 		"A metric with a constant '1' value labeled with the network interface's address information.",
 		[]string{"nic", "friendly_name", "address", "family"},
 		nil,
 	)
 	c.routeInfo = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "route_info"),
+		prometheus.BuildFQName(types.Namespace, Name, "route_info"),
 		"A metric with a constant '1' value labeled with the network interface's route information.",
 		[]string{"nic", "src", "dest", "metric"},
 		nil,
@@ -277,7 +277,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *wmi.Client) error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(ctx *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
 
 	if slices.Contains(c.config.CollectorsEnabled, "metrics") {
@@ -303,7 +303,7 @@ func (c *Collector) Collect(ctx *types2.ScrapeContext, logger *slog.Logger, ch c
 	return nil
 }
 
-func (c *Collector) collect(ctx *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	var dst []perflibNetworkInterface
 
 	if err := perflib.UnmarshalObject(ctx.PerfObjects["Network Interface"], &dst, logger); err != nil {

@@ -9,9 +9,9 @@ import (
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
-	iphlpapi2 "github.com/prometheus-community/windows_exporter/internal/headers/iphlpapi"
+	"github.com/prometheus-community/windows_exporter/internal/headers/iphlpapi"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	types2 "github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
 	"golang.org/x/sys/windows"
@@ -125,61 +125,61 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 	}
 
 	c.connectionFailures = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "connection_failures_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "connection_failures_total"),
 		"(TCP.ConnectionFailures)",
 		[]string{"af"},
 		nil,
 	)
 	c.connectionsActive = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "connections_active_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "connections_active_total"),
 		"(TCP.ConnectionsActive)",
 		[]string{"af"},
 		nil,
 	)
 	c.connectionsEstablished = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "connections_established"),
+		prometheus.BuildFQName(types.Namespace, Name, "connections_established"),
 		"(TCP.ConnectionsEstablished)",
 		[]string{"af"},
 		nil,
 	)
 	c.connectionsPassive = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "connections_passive_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "connections_passive_total"),
 		"(TCP.ConnectionsPassive)",
 		[]string{"af"},
 		nil,
 	)
 	c.connectionsReset = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "connections_reset_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "connections_reset_total"),
 		"(TCP.ConnectionsReset)",
 		[]string{"af"},
 		nil,
 	)
 	c.segmentsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "segments_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "segments_total"),
 		"(TCP.SegmentsTotal)",
 		[]string{"af"},
 		nil,
 	)
 	c.segmentsReceivedTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "segments_received_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "segments_received_total"),
 		"(TCP.SegmentsReceivedTotal)",
 		[]string{"af"},
 		nil,
 	)
 	c.segmentsRetransmittedTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "segments_retransmitted_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "segments_retransmitted_total"),
 		"(TCP.SegmentsRetransmittedTotal)",
 		[]string{"af"},
 		nil,
 	)
 	c.segmentsSentTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "segments_sent_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "segments_sent_total"),
 		"(TCP.SegmentsSentTotal)",
 		[]string{"af"},
 		nil,
 	)
 	c.connectionsStateCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "connections_state_count"),
+		prometheus.BuildFQName(types.Namespace, Name, "connections_state_count"),
 		"Number of TCP connections by state and address family",
 		[]string{"af", "state"}, nil,
 	)
@@ -189,7 +189,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(_ *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
 
 	if slices.Contains(c.config.CollectorsEnabled, "metrics") {
@@ -291,14 +291,14 @@ func (c *Collector) writeTCPCounters(ch chan<- prometheus.Metric, metrics map[st
 }
 
 func (c *Collector) collectConnectionsState(ch chan<- prometheus.Metric) error {
-	stateCounts, err := iphlpapi2.GetTCPConnectionStates(windows.AF_INET)
+	stateCounts, err := iphlpapi.GetTCPConnectionStates(windows.AF_INET)
 	if err != nil {
 		return fmt.Errorf("failed to collect TCP connection states for %s: %w", "ipv4", err)
 	}
 
 	c.sendTCPStateMetrics(ch, stateCounts, "ipv4")
 
-	stateCounts, err = iphlpapi2.GetTCPConnectionStates(windows.AF_INET6)
+	stateCounts, err = iphlpapi.GetTCPConnectionStates(windows.AF_INET6)
 	if err != nil {
 		return fmt.Errorf("failed to collect TCP6 connection states for %s: %w", "ipv6", err)
 	}
@@ -308,7 +308,7 @@ func (c *Collector) collectConnectionsState(ch chan<- prometheus.Metric) error {
 	return nil
 }
 
-func (c *Collector) sendTCPStateMetrics(ch chan<- prometheus.Metric, stateCounts map[iphlpapi2.MIB_TCP_STATE]uint32, af string) {
+func (c *Collector) sendTCPStateMetrics(ch chan<- prometheus.Metric, stateCounts map[iphlpapi.MIB_TCP_STATE]uint32, af string) {
 	for state, count := range stateCounts {
 		ch <- prometheus.MustNewConstMetric(
 			c.connectionsStateCount,

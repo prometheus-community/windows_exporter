@@ -7,7 +7,7 @@ import (
 	"log/slog"
 
 	"github.com/alecthomas/kingpin/v2"
-	types2 "github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
 )
@@ -158,426 +158,426 @@ func (c *Collector) Build(logger *slog.Logger, wmiClient *wmi.Client) error {
 	c.wmiClient = wmiClient
 
 	c.audioReceivedBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "audio_received_bytes_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "audio_received_bytes_total"),
 		"(AudioReceivedBytes)",
 		nil,
 		nil,
 	)
 	c.audioReceivedPackets = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "audio_received_packets_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "audio_received_packets_total"),
 		"(AudioReceivedPackets)",
 		nil,
 		nil,
 	)
 	c.audioTransmittedBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "audio_transmitted_bytes_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "audio_transmitted_bytes_total"),
 		"(AudioTransmittedBytes)",
 		nil,
 		nil,
 	)
 	c.audioTransmittedPackets = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "audio_transmitted_packets_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "audio_transmitted_packets_total"),
 		"(AudioTransmittedPackets)",
 		nil,
 		nil,
 	)
 
 	c.cdrReceivedBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "cdr_received_bytes_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "cdr_received_bytes_total"),
 		"(CDRReceivedBytes)",
 		nil,
 		nil,
 	)
 	c.cdrReceivedPackets = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "cdr_received_packets_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "cdr_received_packets_total"),
 		"(CDRReceivedPackets)",
 		nil,
 		nil,
 	)
 	c.cdrTransmittedBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "cdr_transmitted_bytes_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "cdr_transmitted_bytes_total"),
 		"(CDRTransmittedBytes)",
 		nil,
 		nil,
 	)
 	c.cdrTransmittedPackets = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "cdr_transmitted_packets_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "cdr_transmitted_packets_total"),
 		"(CDRTransmittedPackets)",
 		nil,
 		nil,
 	)
 
 	c.clipboardReceivedBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "clipboard_received_bytes_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "clipboard_received_bytes_total"),
 		"(ClipboardReceivedBytes)",
 		nil,
 		nil,
 	)
 	c.clipboardReceivedPackets = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "clipboard_received_packets_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "clipboard_received_packets_total"),
 		"(ClipboardReceivedPackets)",
 		nil,
 		nil,
 	)
 	c.clipboardTransmittedBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "clipboard_transmitted_bytes_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "clipboard_transmitted_bytes_total"),
 		"(ClipboardTransmittedBytes)",
 		nil,
 		nil,
 	)
 	c.clipboardTransmittedPackets = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "clipboard_transmitted_packets_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "clipboard_transmitted_packets_total"),
 		"(ClipboardTransmittedPackets)",
 		nil,
 		nil,
 	)
 
 	c.html5MMRReceivedBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "html5_mmr_received_bytes_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "html5_mmr_received_bytes_total"),
 		"(HTML5MMRReceivedBytes)",
 		nil,
 		nil,
 	)
 	c.html5MMRReceivedPackets = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "html5_mmr_received_packets_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "html5_mmr_received_packets_total"),
 		"(HTML5MMRReceivedPackets)",
 		nil,
 		nil,
 	)
 	c.html5MMRTransmittedBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "html5_mmr_transmitted_bytes_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "html5_mmr_transmitted_bytes_total"),
 		"(HTML5MMRTransmittedBytes)",
 		nil,
 		nil,
 	)
 	c.html5MMRTransmittedPackets = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "html5_mmr_transmitted_packets_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "html5_mmr_transmitted_packets_total"),
 		"(HTML5MMRTransmittedPackets)",
 		nil,
 		nil,
 	)
 
 	c.imagingDirtyFramesPerSecond = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "imaging_dirty_frames_per_second"),
+		prometheus.BuildFQName(types.Namespace, Name, "imaging_dirty_frames_per_second"),
 		"(ImagingDirtyFramesPerSecond)",
 		nil,
 		nil,
 	)
 	c.imagingFBCRate = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "imaging_fbc_rate"),
+		prometheus.BuildFQName(types.Namespace, Name, "imaging_fbc_rate"),
 		"(ImagingFBCRate)",
 		nil,
 		nil,
 	)
 	c.imagingFramesPerSecond = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "imaging_frames_per_second"),
+		prometheus.BuildFQName(types.Namespace, Name, "imaging_frames_per_second"),
 		"(ImagingFramesPerSecond)",
 		nil,
 		nil,
 	)
 	c.imagingPollRate = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "imaging_poll_rate"),
+		prometheus.BuildFQName(types.Namespace, Name, "imaging_poll_rate"),
 		"(ImagingPollRate)",
 		nil,
 		nil,
 	)
 	c.imagingReceivedBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "imaging_received_bytes_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "imaging_received_bytes_total"),
 		"(ImagingReceivedBytes)",
 		nil,
 		nil,
 	)
 	c.imagingReceivedPackets = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "imaging_received_packets_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "imaging_received_packets_total"),
 		"(ImagingReceivedPackets)",
 		nil,
 		nil,
 	)
 	c.imagingTotalDirtyFrames = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "imaging_total_dirty_frames_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "imaging_total_dirty_frames_total"),
 		"(ImagingTotalDirtyFrames)",
 		nil,
 		nil,
 	)
 	c.imagingTotalFBC = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "imaging_fbc_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "imaging_fbc_total"),
 		"(ImagingTotalFBC)",
 		nil,
 		nil,
 	)
 	c.imagingTotalFrames = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "imaging_frames_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "imaging_frames_total"),
 		"(ImagingTotalFrames)",
 		nil,
 		nil,
 	)
 	c.imagingTotalPoll = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "imaging_poll_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "imaging_poll_total"),
 		"(ImagingTotalPoll)",
 		nil,
 		nil,
 	)
 	c.imagingTransmittedBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "imaging_transmitted_bytes_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "imaging_transmitted_bytes_total"),
 		"(ImagingTransmittedBytes)",
 		nil,
 		nil,
 	)
 	c.imagingTransmittedPackets = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "imaging_transmitted_packets_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "imaging_transmitted_packets_total"),
 		"(ImagingTransmittedPackets)",
 		nil,
 		nil,
 	)
 
 	c.rtAVReceivedBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "rtav_received_bytes_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "rtav_received_bytes_total"),
 		"(RTAVReceivedBytes)",
 		nil,
 		nil,
 	)
 	c.rtAVReceivedPackets = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "rtav_received_packets_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "rtav_received_packets_total"),
 		"(RTAVReceivedPackets)",
 		nil,
 		nil,
 	)
 	c.rtAVTransmittedBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "rtav_transmitted_bytes_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "rtav_transmitted_bytes_total"),
 		"(RTAVTransmittedBytes)",
 		nil,
 		nil,
 	)
 	c.rtAVTransmittedPackets = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "rtav_transmitted_packets_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "rtav_transmitted_packets_total"),
 		"(RTAVTransmittedPackets)",
 		nil,
 		nil,
 	)
 
 	c.serialPortAndScannerReceivedBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "serial_port_and_scanner_received_bytes_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "serial_port_and_scanner_received_bytes_total"),
 		"(SerialPortandScannerReceivedBytes)",
 		nil,
 		nil,
 	)
 	c.serialPortAndScannerReceivedPackets = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "serial_port_and_scanner_received_packets_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "serial_port_and_scanner_received_packets_total"),
 		"(SerialPortandScannerReceivedPackets)",
 		nil,
 		nil,
 	)
 	c.serialPortAndScannerTransmittedBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "serial_port_and_scanner_transmitted_bytes_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "serial_port_and_scanner_transmitted_bytes_total"),
 		"(SerialPortandScannerTransmittedBytes)",
 		nil,
 		nil,
 	)
 	c.serialPortAndScannerTransmittedPackets = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "serial_port_and_scanner_transmitted_packets_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "serial_port_and_scanner_transmitted_packets_total"),
 		"(SerialPortandScannerTransmittedPackets)",
 		nil,
 		nil,
 	)
 
 	c.sessionAutomaticReconnectCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "session_automatic_reconnect_count_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "session_automatic_reconnect_count_total"),
 		"(SessionAutomaticReconnectCount)",
 		nil,
 		nil,
 	)
 	c.sessionCumulativeReceivedBytesOverTCP = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "session_cumlative_received_bytes_over_tcp_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "session_cumlative_received_bytes_over_tcp_total"),
 		"(SessionCumulativeReceivedBytesOverTCP)",
 		nil,
 		nil,
 	)
 	c.sessionCumulativeReceivedBytesOverUDP = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "session_cumlative_received_bytes_over_udp_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "session_cumlative_received_bytes_over_udp_total"),
 		"(SessionCumulativeReceivedBytesOverUDP)",
 		nil,
 		nil,
 	)
 	c.sessionCumulativeTransmittedBytesOverTCP = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "session_cumlative_transmitted_bytes_over_tcp_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "session_cumlative_transmitted_bytes_over_tcp_total"),
 		"(SessionCumulativeTransmittedBytesOverTCP)",
 		nil,
 		nil,
 	)
 	c.sessionCumulativeTransmittedBytesOverUDP = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "session_cumlative_transmitted_bytes_over_udp_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "session_cumlative_transmitted_bytes_over_udp_total"),
 		"(SessionCumulativeTransmittedBytesOverUDP)",
 		nil,
 		nil,
 	)
 	c.sessionEstimatedBandwidthUplink = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "session_estimated_bandwidth_uplink"),
+		prometheus.BuildFQName(types.Namespace, Name, "session_estimated_bandwidth_uplink"),
 		"(SessionEstimatedBandwidthUplink)",
 		nil,
 		nil,
 	)
 	c.sessionInstantaneousReceivedBytesOverTCP = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "session_instantaneous_received_bytes_over_tcp_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "session_instantaneous_received_bytes_over_tcp_total"),
 		"(SessionInstantaneousReceivedBytesOverTCP)",
 		nil,
 		nil,
 	)
 	c.sessionInstantaneousReceivedBytesOverUDP = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "session_instantaneous_received_bytes_over_udp_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "session_instantaneous_received_bytes_over_udp_total"),
 		"(SessionInstantaneousReceivedBytesOverUDP)",
 		nil,
 		nil,
 	)
 	c.sessionInstantaneousTransmittedBytesOverTCP = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "session_instantaneous_transmitted_bytes_over_tcp_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "session_instantaneous_transmitted_bytes_over_tcp_total"),
 		"(SessionInstantaneousTransmittedBytesOverTCP)",
 		nil,
 		nil,
 	)
 	c.sessionInstantaneousTransmittedBytesOverUDP = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "session_instantaneous_transmitted_bytes_over_udp_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "session_instantaneous_transmitted_bytes_over_udp_total"),
 		"(SessionInstantaneousTransmittedBytesOverUDP)",
 		nil,
 		nil,
 	)
 	c.sessionJitterUplink = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "session_jitter_uplink"),
+		prometheus.BuildFQName(types.Namespace, Name, "session_jitter_uplink"),
 		"(SessionJitterUplink)",
 		nil,
 		nil,
 	)
 	c.sessionPacketLossUplink = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "session_packet_loss_uplink"),
+		prometheus.BuildFQName(types.Namespace, Name, "session_packet_loss_uplink"),
 		"(SessionPacketLossUplink)",
 		nil,
 		nil,
 	)
 	c.sessionReceivedBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "session_received_bytes_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "session_received_bytes_total"),
 		"(SessionReceivedBytes)",
 		nil,
 		nil,
 	)
 	c.sessionReceivedPackets = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "session_received_packets_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "session_received_packets_total"),
 		"(SessionReceivedPackets)",
 		nil,
 		nil,
 	)
 	c.sessionRTT = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "session_rtt"),
+		prometheus.BuildFQName(types.Namespace, Name, "session_rtt"),
 		"(SessionRTT)",
 		nil,
 		nil,
 	)
 	c.sessionTransmittedBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "session_transmitted_bytes_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "session_transmitted_bytes_total"),
 		"(SessionTransmittedBytes)",
 		nil,
 		nil,
 	)
 	c.sessionTransmittedPackets = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "session_transmitted_packets_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "session_transmitted_packets_total"),
 		"(SessionTransmittedPackets)",
 		nil,
 		nil,
 	)
 
 	c.skypeForBusinessControlReceivedBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "skype_for_business_control_received_bytes_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "skype_for_business_control_received_bytes_total"),
 		"(SkypeforBusinessControlReceivedBytes)",
 		nil,
 		nil,
 	)
 	c.skypeForBusinessControlReceivedPackets = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "skype_for_business_control_received_packets_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "skype_for_business_control_received_packets_total"),
 		"(SkypeforBusinessControlReceivedPackets)",
 		nil,
 		nil,
 	)
 	c.skypeForBusinessControlTransmittedBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "skype_for_business_control_transmitted_bytes_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "skype_for_business_control_transmitted_bytes_total"),
 		"(SkypeforBusinessControlTransmittedBytes)",
 		nil,
 		nil,
 	)
 	c.skypeForBusinessControlTransmittedPackets = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "skype_for_business_control_transmitted_packets_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "skype_for_business_control_transmitted_packets_total"),
 		"(SkypeforBusinessControlTransmittedPackets)",
 		nil,
 		nil,
 	)
 
 	c.thinPrintReceivedBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "thinprint_received_bytes_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "thinprint_received_bytes_total"),
 		"(ThinPrintReceivedBytes)",
 		nil,
 		nil,
 	)
 	c.thinPrintReceivedPackets = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "thinprint_received_packets_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "thinprint_received_packets_total"),
 		"(ThinPrintReceivedPackets)",
 		nil,
 		nil,
 	)
 	c.thinPrintTransmittedBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "thinprint_transmitted_bytes_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "thinprint_transmitted_bytes_total"),
 		"(ThinPrintTransmittedBytes)",
 		nil,
 		nil,
 	)
 	c.thinPrintTransmittedPackets = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "thinprint_transmitted_packets_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "thinprint_transmitted_packets_total"),
 		"(ThinPrintTransmittedPackets)",
 		nil,
 		nil,
 	)
 
 	c.usbReceivedBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "usb_received_bytes_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "usb_received_bytes_total"),
 		"(USBReceivedBytes)",
 		nil,
 		nil,
 	)
 	c.usbReceivedPackets = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "usb_received_packets_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "usb_received_packets_total"),
 		"(USBReceivedPackets)",
 		nil,
 		nil,
 	)
 	c.usbTransmittedBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "usb_transmitted_bytes_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "usb_transmitted_bytes_total"),
 		"(USBTransmittedBytes)",
 		nil,
 		nil,
 	)
 	c.usbTransmittedPackets = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "usb_transmitted_packets_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "usb_transmitted_packets_total"),
 		"(USBTransmittedPackets)",
 		nil,
 		nil,
 	)
 
 	c.windowsMediaMMRReceivedBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "windows_media_mmr_received_bytes_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "windows_media_mmr_received_bytes_total"),
 		"(WindowsMediaMMRReceivedBytes)",
 		nil,
 		nil,
 	)
 	c.windowsMediaMMRReceivedPackets = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "windows_media_mmr_received_packets_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "windows_media_mmr_received_packets_total"),
 		"(WindowsMediaMMRReceivedPackets)",
 		nil,
 		nil,
 	)
 	c.windowsMediaMMRTransmittedBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "windows_media_mmr_transmitted_bytes_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "windows_media_mmr_transmitted_bytes_total"),
 		"(WindowsMediaMMRTransmittedBytes)",
 		nil,
 		nil,
 	)
 	c.windowsMediaMMRTransmittedPackets = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "windows_media_mmr_transmitted_packets_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "windows_media_mmr_transmitted_packets_total"),
 		"(WindowsMediaMMRTransmittedPackets)",
 		nil,
 		nil,
@@ -588,7 +588,7 @@ func (c *Collector) Build(logger *slog.Logger, wmiClient *wmi.Client) error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(_ *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
 	if err := c.collectAudio(ch); err != nil {
 		logger.Error("failed collecting vmware blast audio metrics",

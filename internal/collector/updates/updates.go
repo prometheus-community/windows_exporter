@@ -15,7 +15,7 @@ import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/go-ole/go-ole"
 	"github.com/go-ole/go-ole/oleutil"
-	types2 "github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
 )
@@ -93,21 +93,21 @@ func (c *Collector) Build(logger *slog.Logger, _ *wmi.Client) error {
 	}
 
 	c.pendingUpdate = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "pending_info"),
+		prometheus.BuildFQName(types.Namespace, Name, "pending_info"),
 		"Pending Windows Updates",
 		[]string{"category", "severity", "title"},
 		nil,
 	)
 
 	c.queryDurationSeconds = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "scrape_query_duration_seconds"),
+		prometheus.BuildFQName(types.Namespace, Name, "scrape_query_duration_seconds"),
 		"Duration of the last scrape query to the Windows Update API",
 		nil,
 		nil,
 	)
 
 	c.lastScrapeMetric = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "scrape_timestamp_seconds"),
+		prometheus.BuildFQName(types.Namespace, Name, "scrape_timestamp_seconds"),
 		"Timestamp of the last scrape",
 		nil,
 		nil,
@@ -122,7 +122,7 @@ func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
 	return []string{}, nil
 }
 
-func (c *Collector) Collect(_ *types2.ScrapeContext, _ *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(_ *types.ScrapeContext, _ *slog.Logger, ch chan<- prometheus.Metric) error {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 

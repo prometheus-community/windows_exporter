@@ -7,7 +7,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/headers/sysinfoapi"
-	types2 "github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
 )
@@ -68,19 +68,19 @@ func (c *Collector) Build(logger *slog.Logger, _ *wmi.Client) error {
 		"Hostname has been moved to os collector.")
 
 	c.logicalProcessors = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "logical_processors"),
+		prometheus.BuildFQName(types.Namespace, Name, "logical_processors"),
 		"Deprecated: Use windows_cpu_logical_processor instead",
 		nil,
 		nil,
 	)
 	c.physicalMemoryBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "physical_memory_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "physical_memory_bytes"),
 		"Deprecated: Use windows_physical_memory_total_bytes instead",
 		nil,
 		nil,
 	)
 	c.hostname = prometheus.NewDesc(
-		prometheus.BuildFQName(types2.Namespace, Name, "hostname"),
+		prometheus.BuildFQName(types.Namespace, Name, "hostname"),
 		"Deprecated: Use windows_os_hostname instead",
 		[]string{
 			"hostname",
@@ -95,7 +95,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *wmi.Client) error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(_ *types2.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
 
 	if err := c.collect(ch); err != nil {
