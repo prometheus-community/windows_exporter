@@ -304,92 +304,92 @@ func (c *Collector) collectADCSCounters(ctx *types.ScrapeContext, logger *slog.L
 }
 
 func (c *Collector) collectPDH(ch chan<- prometheus.Metric) error {
-	data, err := c.perfDataCollector.Collect()
+	perfData, err := c.perfDataCollector.Collect()
 	if err != nil {
 		return fmt.Errorf("failed to collect Certification Authority (ADCS) metrics: %w", err)
 	}
 
-	if len(data) == 0 {
+	if len(perfData) == 0 {
 		return errors.New("perflib query for Certification Authority (ADCS) returned empty result set")
 	}
 
-	for name, adcsData := range data {
+	for name, data := range perfData {
 		ch <- prometheus.MustNewConstMetric(
 			c.requestsPerSecond,
 			prometheus.CounterValue,
-			adcsData[requestsPerSecond].FirstValue,
+			data[requestsPerSecond].FirstValue,
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.requestProcessingTime,
 			prometheus.GaugeValue,
-			utils.MilliSecToSec(adcsData[requestProcessingTime].FirstValue),
+			utils.MilliSecToSec(data[requestProcessingTime].FirstValue),
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.retrievalsPerSecond,
 			prometheus.CounterValue,
-			adcsData[retrievalsPerSecond].FirstValue,
+			data[retrievalsPerSecond].FirstValue,
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.retrievalProcessingTime,
 			prometheus.GaugeValue,
-			utils.MilliSecToSec(adcsData[retrievalProcessingTime].FirstValue),
+			utils.MilliSecToSec(data[retrievalProcessingTime].FirstValue),
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.failedRequestsPerSecond,
 			prometheus.CounterValue,
-			adcsData[failedRequestsPerSecond].FirstValue,
+			data[failedRequestsPerSecond].FirstValue,
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.issuedRequestsPerSecond,
 			prometheus.CounterValue,
-			adcsData[issuedRequestsPerSecond].FirstValue,
+			data[issuedRequestsPerSecond].FirstValue,
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.pendingRequestsPerSecond,
 			prometheus.CounterValue,
-			adcsData[pendingRequestsPerSecond].FirstValue,
+			data[pendingRequestsPerSecond].FirstValue,
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.requestCryptographicSigningTime,
 			prometheus.GaugeValue,
-			utils.MilliSecToSec(adcsData[requestCryptographicSigningTime].FirstValue),
+			utils.MilliSecToSec(data[requestCryptographicSigningTime].FirstValue),
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.requestPolicyModuleProcessingTime,
 			prometheus.GaugeValue,
-			utils.MilliSecToSec(adcsData[requestPolicyModuleProcessingTime].FirstValue),
+			utils.MilliSecToSec(data[requestPolicyModuleProcessingTime].FirstValue),
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.challengeResponsesPerSecond,
 			prometheus.CounterValue,
-			adcsData[challengeResponsesPerSecond].FirstValue,
+			data[challengeResponsesPerSecond].FirstValue,
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.challengeResponseProcessingTime,
 			prometheus.GaugeValue,
-			utils.MilliSecToSec(adcsData[challengeResponseProcessingTime].FirstValue),
+			utils.MilliSecToSec(data[challengeResponseProcessingTime].FirstValue),
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.signedCertificateTimestampListsPerSecond,
 			prometheus.CounterValue,
-			adcsData[signedCertificateTimestampListsPerSecond].FirstValue,
+			data[signedCertificateTimestampListsPerSecond].FirstValue,
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.signedCertificateTimestampListProcessingTime,
 			prometheus.GaugeValue,
-			utils.MilliSecToSec(adcsData[signedCertificateTimestampListProcessingTime].FirstValue),
+			utils.MilliSecToSec(data[signedCertificateTimestampListProcessingTime].FirstValue),
 			name,
 		)
 	}
