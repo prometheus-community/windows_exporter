@@ -1,9 +1,24 @@
 package perfdata
 
+import "errors"
+
 // Error represents error returned from Performance Counters API.
 type Error struct {
 	ErrorCode uint32
 	errorText string
+}
+
+func (m *Error) Is(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	var e *Error
+	if errors.As(err, &e) {
+		return m.ErrorCode == e.ErrorCode
+	}
+
+	return false
 }
 
 func (m *Error) Error() string {
