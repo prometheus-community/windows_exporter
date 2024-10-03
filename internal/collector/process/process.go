@@ -162,6 +162,7 @@ func (c *Collector) Build(logger *slog.Logger, wmiClient *wmi.Client) error {
 
 	if utils.PDHEnabled() {
 		counters := []string{
+			processID,
 			percentProcessorTime,
 			percentPrivilegedTime,
 			percentUserTime,
@@ -181,7 +182,6 @@ func (c *Collector) Build(logger *slog.Logger, wmiClient *wmi.Client) error {
 			pageFileBytes,
 			poolNonPagedBytes,
 			poolPagedBytes,
-			processID,
 			priorityBase,
 			privateBytes,
 			threadCount,
@@ -195,37 +195,8 @@ func (c *Collector) Build(logger *slog.Logger, wmiClient *wmi.Client) error {
 		var err error
 
 		c.perfDataCollector, err = perfdata.NewCollector("Process V2", c.config.PerfCounterInstances, counters)
-		if errors.Is(err, perfdata.NewPdhError(perfdata.PdhNoData)) {
-			counters = []string{
-				percentProcessorTime,
-				percentPrivilegedTime,
-				percentUserTime,
-				creatingProcessID,
-				elapsedTime,
-				handleCount,
-				idProcess,
-				ioDataBytesPerSec,
-				ioDataOperationsPerSec,
-				ioOtherBytesPerSec,
-				ioOtherOperationsPerSec,
-				ioReadBytesPerSec,
-				ioReadOperationsPerSec,
-				ioWriteBytesPerSec,
-				ioWriteOperationsPerSec,
-				pageFaultsPerSec,
-				pageFileBytesPeak,
-				pageFileBytes,
-				poolNonPagedBytes,
-				poolPagedBytes,
-				priorityBase,
-				privateBytes,
-				threadCount,
-				virtualBytesPeak,
-				virtualBytes,
-				workingSetPrivate,
-				workingSetPeak,
-				workingSet,
-			}
+		if errors.Is(err, perfdata.NewPdhError(perfdata.PdhCstatusNoObject)) {
+			counters[0] = idProcess
 
 			c.perfDataCollector, err = perfdata.NewCollector("Process", c.config.PerfCounterInstances, counters)
 		}
