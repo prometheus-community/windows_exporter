@@ -1,6 +1,64 @@
 ﻿# HELP test_alpha_total Some random metric.
 # TYPE test_alpha_total counter
 test_alpha_total 42
+# HELP windows_cache_async_copy_reads_total (AsyncCopyReadsTotal)
+# TYPE windows_cache_async_copy_reads_total counter
+# HELP windows_cache_async_data_maps_total (AsyncDataMapsTotal)
+# TYPE windows_cache_async_data_maps_total counter
+# HELP windows_cache_async_fast_reads_total (AsyncFastReadsTotal)
+# TYPE windows_cache_async_fast_reads_total counter
+# HELP windows_cache_async_mdl_reads_total (AsyncMDLReadsTotal)
+# TYPE windows_cache_async_mdl_reads_total counter
+# HELP windows_cache_async_pin_reads_total (AsyncPinReadsTotal)
+# TYPE windows_cache_async_pin_reads_total counter
+# HELP windows_cache_copy_read_hits_total (CopyReadHitsTotal)
+# TYPE windows_cache_copy_read_hits_total gauge
+# HELP windows_cache_copy_reads_total (CopyReadsTotal)
+# TYPE windows_cache_copy_reads_total counter
+# HELP windows_cache_data_flush_pages_total (DataFlushPagesTotal)
+# TYPE windows_cache_data_flush_pages_total counter
+# HELP windows_cache_data_flushes_total (DataFlushesTotal)
+# TYPE windows_cache_data_flushes_total counter
+# HELP windows_cache_data_map_hits_percent (DataMapHitsPercent)
+# TYPE windows_cache_data_map_hits_percent gauge
+# HELP windows_cache_data_map_pins_total (DataMapPinsTotal)
+# TYPE windows_cache_data_map_pins_total counter
+# HELP windows_cache_data_maps_total (DataMapsTotal)
+# TYPE windows_cache_data_maps_total counter
+# HELP windows_cache_dirty_page_threshold (DirtyPageThreshold)
+# TYPE windows_cache_dirty_page_threshold gauge
+# HELP windows_cache_dirty_pages (DirtyPages)
+# TYPE windows_cache_dirty_pages gauge
+# HELP windows_cache_fast_read_not_possibles_total (FastReadNotPossiblesTotal)
+# TYPE windows_cache_fast_read_not_possibles_total counter
+# HELP windows_cache_fast_read_resource_misses_total (FastReadResourceMissesTotal)
+# TYPE windows_cache_fast_read_resource_misses_total counter
+# HELP windows_cache_fast_reads_total (FastReadsTotal)
+# TYPE windows_cache_fast_reads_total counter
+# HELP windows_cache_lazy_write_flushes_total (LazyWriteFlushesTotal)
+# TYPE windows_cache_lazy_write_flushes_total counter
+# HELP windows_cache_lazy_write_pages_total (LazyWritePagesTotal)
+# TYPE windows_cache_lazy_write_pages_total counter
+# HELP windows_cache_mdl_read_hits_total (MDLReadHitsTotal)
+# TYPE windows_cache_mdl_read_hits_total counter
+# HELP windows_cache_mdl_reads_total (MDLReadsTotal)
+# TYPE windows_cache_mdl_reads_total counter
+# HELP windows_cache_pin_read_hits_total (PinReadHitsTotal)
+# TYPE windows_cache_pin_read_hits_total counter
+# HELP windows_cache_pin_reads_total (PinReadsTotal)
+# TYPE windows_cache_pin_reads_total counter
+# HELP windows_cache_read_aheads_total (ReadAheadsTotal)
+# TYPE windows_cache_read_aheads_total counter
+# HELP windows_cache_sync_copy_reads_total (SyncCopyReadsTotal)
+# TYPE windows_cache_sync_copy_reads_total counter
+# HELP windows_cache_sync_data_maps_total (SyncDataMapsTotal)
+# TYPE windows_cache_sync_data_maps_total counter
+# HELP windows_cache_sync_fast_reads_total (SyncFastReadsTotal)
+# TYPE windows_cache_sync_fast_reads_total counter
+# HELP windows_cache_sync_mdl_reads_total (SyncMDLReadsTotal)
+# TYPE windows_cache_sync_mdl_reads_total counter
+# HELP windows_cache_sync_pin_reads_total (SyncPinReadsTotal)
+# TYPE windows_cache_sync_pin_reads_total counter
 # HELP windows_cpu_clock_interrupts_total Total number of received and serviced clock tick interrupts
 # TYPE windows_cpu_clock_interrupts_total counter
 # HELP windows_cpu_core_frequency_mhz Core frequency in megahertz
@@ -57,6 +115,7 @@ test_alpha_total 42
 # TYPE windows_exporter_collector_duration_seconds gauge
 # HELP windows_exporter_collector_success windows_exporter: Whether the collector was successful.
 # TYPE windows_exporter_collector_success gauge
+windows_exporter_collector_success{collector="cache"} 1
 windows_exporter_collector_success{collector="cpu"} 1
 windows_exporter_collector_success{collector="cpu_info"} 1
 windows_exporter_collector_success{collector="cs"} 1
@@ -73,6 +132,7 @@ windows_exporter_collector_success{collector="system"} 1
 windows_exporter_collector_success{collector="textfile"} 1
 # HELP windows_exporter_collector_timeout windows_exporter: Whether the collector timed out.
 # TYPE windows_exporter_collector_timeout gauge
+windows_exporter_collector_timeout{collector="cache"} 0
 windows_exporter_collector_timeout{collector="cpu"} 0
 windows_exporter_collector_timeout{collector="cpu_info"} 0
 windows_exporter_collector_timeout{collector="cs"} 0
