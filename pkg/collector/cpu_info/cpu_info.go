@@ -14,9 +14,7 @@ import (
 	"github.com/yusufpapurcu/wmi"
 )
 
-const (
-	Name = "cpu_info"
-)
+const Name = "cpu_info"
 
 type Config struct{}
 
