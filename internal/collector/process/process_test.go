@@ -24,7 +24,7 @@ func BenchmarkProcessCollector(b *testing.B) {
 }
 
 func TestProcessCollector(t *testing.T) {
-	t.Setenv("WINDOWS_EXPORTER_PERF_COUNTERS_ENGINE", "pdh")
+	t.Setenv("WINDOWS_EXPORTER_PERF_COUNTERS_ENGINE", "v2")
 
 	var (
 		metrics []prometheus.Metric

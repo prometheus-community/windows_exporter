@@ -1,6 +1,6 @@
 //go:build windows
 
-package pdh
+package v2
 
 import (
 	"errors"

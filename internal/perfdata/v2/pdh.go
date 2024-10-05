@@ -31,7 +31,7 @@
 
 //go:build windows
 
-package pdh
+package v2
 
 import (
 	"fmt"
@@ -257,7 +257,7 @@ type (
 )
 
 var (
-	libPdhDll = windows.NewLazySystemDLL("pdh.dll")
+	libPdhDll = windows.NewLazySystemDLL("v2.dll")
 
 	pdhAddCounterW               = libPdhDll.NewProc("PdhAddCounterW")
 	pdhAddEnglishCounterW        = libPdhDll.NewProc("PdhAddEnglishCounterW")
@@ -288,13 +288,13 @@ var (
 //	\\LogicalDisk(C:)\% Free Space
 //
 // To view all (internationalized...) counters on a system, there are three non-programmatic ways: perfmon utility,
-// the typeperf command, and the registry editor. perfmon.exe is perhaps the easiest way, because it's basically a
-// full implementation of the pdh.dll API, except with a GUI and all that. The registry setting also provides an
+// the typeperf command, and the v1 editor. perfmon.exe is perhaps the easiest way, because it's basically a
+// full implementation of the v2.dll API, except with a GUI and all that. The v1 setting also provides an
 // interface to the available counters, and can be found at the following key:
 //
 //	HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Perflib\CurrentLanguage
 //
-// This registry key contains several values as follows:
+// This v1 key contains several values as follows:
 //
 //	1
 //	1847

@@ -29,7 +29,7 @@ func ExpandEnabledCollectors(enabled string) []string {
 }
 
 func PDHEnabled() bool {
-	if v, ok := os.LookupEnv("WINDOWS_EXPORTER_PERF_COUNTERS_ENGINE"); ok && v == "pdh" {
+	if v, ok := os.LookupEnv("WINDOWS_EXPORTER_PERF_COUNTERS_ENGINE"); ok && v == "v2" {
 		return true
 	}
 

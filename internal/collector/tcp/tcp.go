@@ -115,12 +115,12 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 
 	var err error
 
-	c.perfDataCollector4, err = perfdata.NewCollector(perfdata.Registry, "TCPv4", nil, counters)
+	c.perfDataCollector4, err = perfdata.NewCollector(perfdata.V1, "TCPv4", nil, counters)
 	if err != nil {
 		return fmt.Errorf("failed to create TCPv4 collector: %w", err)
 	}
 
-	c.perfDataCollector6, err = perfdata.NewCollector(perfdata.Registry, "TCPv6", nil, counters)
+	c.perfDataCollector6, err = perfdata.NewCollector(perfdata.V1, "TCPv6", nil, counters)
 	if err != nil {
 		return fmt.Errorf("failed to create TCPv6 collector: %w", err)
 	}

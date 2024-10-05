@@ -96,9 +96,9 @@ func (c *Collector) Build(logger *slog.Logger, _ *wmi.Client) error {
 	logger.Warn("The perfdata collector is in an experimental state! The configuration may change in future. Please report any issues.")
 
 	for i, object := range c.config.Objects {
-		collector, err := perfdata.NewCollector(perfdata.PDH, object.Object, object.Instances, slices.Sorted(maps.Keys(object.Counters)))
+		collector, err := perfdata.NewCollector(perfdata.V2, object.Object, object.Instances, slices.Sorted(maps.Keys(object.Counters)))
 		if err != nil {
-			return fmt.Errorf("failed to create pdh collector: %w", err)
+			return fmt.Errorf("failed to create v2 collector: %w", err)
 		}
 
 		if object.InstanceLabel == "" {

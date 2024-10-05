@@ -9,7 +9,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata/registry"
+	"github.com/prometheus-community/windows_exporter/internal/perfdata/v1"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
@@ -113,7 +113,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 
 		var err error
 
-		c.perfDataCollector, err = perfdata.NewCollector(perfdata.Registry, "Processor Information", perfdata.AllInstances, counters)
+		c.perfDataCollector, err = perfdata.NewCollector(perfdata.V1, "Processor Information", perfdata.AllInstances, counters)
 		if err != nil {
 			return fmt.Errorf("failed to create Processor Information collector: %w", err)
 		}
@@ -248,7 +248,7 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch ch
 func (c *Collector) collectFull(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	data := make([]perflibProcessorInformation, 0)
 
-	err := registry.UnmarshalObject(ctx.PerfObjects["Processor Information"], &data, logger)
+	err := v1.UnmarshalObject(ctx.PerfObjects["Processor Information"], &data, logger)
 	if err != nil {
 		return err
 	}

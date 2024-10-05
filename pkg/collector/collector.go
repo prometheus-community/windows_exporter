@@ -59,7 +59,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/updates"
 	"github.com/prometheus-community/windows_exporter/internal/collector/vmware"
 	"github.com/prometheus-community/windows_exporter/internal/collector/vmware_blast"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata/registry"
+	"github.com/prometheus-community/windows_exporter/internal/perfdata/v1"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/yusufpapurcu/wmi"
 )
@@ -160,7 +160,7 @@ func (c *MetricCollectors) SetPerfCounterQuery(logger *slog.Logger) error {
 
 		perfIndicies = make([]string, 0, len(perfCounterNames))
 		for _, cn := range perfCounterNames {
-			perfIndicies = append(perfIndicies, registry.MapCounterToIndex(cn))
+			perfIndicies = append(perfIndicies, v1.MapCounterToIndex(cn))
 		}
 
 		perfCounterDependencies = append(perfCounterDependencies, strings.Join(perfIndicies, " "))
@@ -223,7 +223,7 @@ func (c *MetricCollectors) PrepareScrapeContext() (*types.ScrapeContext, error) 
 		return &types.ScrapeContext{}, nil
 	}
 
-	perfObjects, err := registry.GetPerflibSnapshot(c.PerfCounterQuery)
+	perfObjects, err := v1.GetPerflibSnapshot(c.PerfCounterQuery)
 	if err != nil {
 		return nil, err
 	}

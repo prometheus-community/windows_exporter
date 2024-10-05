@@ -1,4 +1,4 @@
-package registry
+package v1
 
 import (
 	"strconv"

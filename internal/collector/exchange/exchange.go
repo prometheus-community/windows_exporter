@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata/registry"
+	"github.com/prometheus-community/windows_exporter/internal/perfdata/v1"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
@@ -275,7 +275,7 @@ func (c *Collector) collectADAccessProcesses(ctx *types.ScrapeContext, logger *s
 
 	var data []perflibADAccessProcesses
 
-	if err := registry.UnmarshalObject(ctx.PerfObjects["MSExchange ADAccess Processes"], &data, logger); err != nil {
+	if err := v1.UnmarshalObject(ctx.PerfObjects["MSExchange ADAccess Processes"], &data, logger); err != nil {
 		return err
 	}
 
@@ -338,7 +338,7 @@ func (c *Collector) collectAvailabilityService(ctx *types.ScrapeContext, logger 
 
 	var data []perflibAvailabilityService
 
-	if err := registry.UnmarshalObject(ctx.PerfObjects["MSExchange Availability Service"], &data, logger); err != nil {
+	if err := v1.UnmarshalObject(ctx.PerfObjects["MSExchange Availability Service"], &data, logger); err != nil {
 		return err
 	}
 
@@ -370,7 +370,7 @@ func (c *Collector) collectHTTPProxy(ctx *types.ScrapeContext, logger *slog.Logg
 
 	var data []perflibHTTPProxy
 
-	if err := registry.UnmarshalObject(ctx.PerfObjects["MSExchange HttpProxy"], &data, logger); err != nil {
+	if err := v1.UnmarshalObject(ctx.PerfObjects["MSExchange HttpProxy"], &data, logger); err != nil {
 		return err
 	}
 
@@ -428,7 +428,7 @@ func (c *Collector) collectOWA(ctx *types.ScrapeContext, logger *slog.Logger, ch
 
 	var data []perflibOWA
 
-	if err := registry.UnmarshalObject(ctx.PerfObjects["MSExchange OWA"], &data, logger); err != nil {
+	if err := v1.UnmarshalObject(ctx.PerfObjects["MSExchange OWA"], &data, logger); err != nil {
 		return err
 	}
 
@@ -460,7 +460,7 @@ func (c *Collector) collectActiveSync(ctx *types.ScrapeContext, logger *slog.Log
 
 	var data []perflibActiveSync
 
-	if err := registry.UnmarshalObject(ctx.PerfObjects["MSExchange ActiveSync"], &data, logger); err != nil {
+	if err := v1.UnmarshalObject(ctx.PerfObjects["MSExchange ActiveSync"], &data, logger); err != nil {
 		return err
 	}
 
@@ -500,7 +500,7 @@ func (c *Collector) collectRPC(ctx *types.ScrapeContext, logger *slog.Logger, ch
 
 	var data []perflibRPCClientAccess
 
-	if err := registry.UnmarshalObject(ctx.PerfObjects["MSExchange RpcClientAccess"], &data, logger); err != nil {
+	if err := v1.UnmarshalObject(ctx.PerfObjects["MSExchange RpcClientAccess"], &data, logger); err != nil {
 		return err
 	}
 
@@ -559,7 +559,7 @@ func (c *Collector) collectTransportQueues(ctx *types.ScrapeContext, logger *slo
 
 	var data []perflibTransportQueues
 
-	if err := registry.UnmarshalObject(ctx.PerfObjects["MSExchangeTransport Queues"], &data, logger); err != nil {
+	if err := v1.UnmarshalObject(ctx.PerfObjects["MSExchangeTransport Queues"], &data, logger); err != nil {
 		return err
 	}
 
@@ -637,7 +637,7 @@ func (c *Collector) collectWorkloadManagementWorkloads(ctx *types.ScrapeContext,
 
 	var data []perflibWorkloadManagementWorkloads
 
-	if err := registry.UnmarshalObject(ctx.PerfObjects["MSExchange WorkloadManagement Workloads"], &data, logger); err != nil {
+	if err := v1.UnmarshalObject(ctx.PerfObjects["MSExchange WorkloadManagement Workloads"], &data, logger); err != nil {
 		return err
 	}
 
@@ -691,7 +691,7 @@ func (c *Collector) collectAutoDiscover(ctx *types.ScrapeContext, logger *slog.L
 
 	var data []perflibAutodiscover
 
-	if err := registry.UnmarshalObject(ctx.PerfObjects["MSExchangeAutodiscover"], &data, logger); err != nil {
+	if err := v1.UnmarshalObject(ctx.PerfObjects["MSExchangeAutodiscover"], &data, logger); err != nil {
 		return err
 	}
 
@@ -716,7 +716,7 @@ func (c *Collector) collectMapiHttpEmsmdb(ctx *types.ScrapeContext, logger *slog
 
 	var data []perflibMapiHttpEmsmdb
 
-	if err := registry.UnmarshalObject(ctx.PerfObjects["MSExchange MapiHttp Emsmdb"], &data, logger); err != nil {
+	if err := v1.UnmarshalObject(ctx.PerfObjects["MSExchange MapiHttp Emsmdb"], &data, logger); err != nil {
 		return err
 	}
 

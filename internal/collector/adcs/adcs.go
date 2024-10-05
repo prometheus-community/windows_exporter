@@ -9,7 +9,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata/registry"
+	"github.com/prometheus-community/windows_exporter/internal/perfdata/v1"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
@@ -94,7 +94,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 
 		var err error
 
-		c.perfDataCollector, err = perfdata.NewCollector(perfdata.Registry, "Certification Authority", perfdata.AllInstances, counters)
+		c.perfDataCollector, err = perfdata.NewCollector(perfdata.V1, "Certification Authority", perfdata.AllInstances, counters)
 		if err != nil {
 			return fmt.Errorf("failed to create Certification Authority collector: %w", err)
 		}
@@ -206,7 +206,7 @@ func (c *Collector) collectADCSCounters(ctx *types.ScrapeContext, logger *slog.L
 		return errors.New("perflib did not contain an entry for Certification Authority")
 	}
 
-	err := registry.UnmarshalObject(ctx.PerfObjects["Certification Authority"], &dst, logger)
+	err := v1.UnmarshalObject(ctx.PerfObjects["Certification Authority"], &dst, logger)
 	if err != nil {
 		return err
 	}

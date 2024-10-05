@@ -1,4 +1,4 @@
-package registry
+package v1
 
 /*
 Go bindings for the HKEY_PERFORMANCE_DATA perflib / Performance Counters interface.
@@ -49,7 +49,7 @@ There's one counter per counter definition and instance (or the object itself, i
 there are no instances).
 
 Behind the scenes, every perflib DLL provides one or more objects.
-Perflib has a registry where DLLs are dynamically registered and
+Perflib has a v1 where DLLs are dynamically registered and
 unregistered. Some third party applications like VMWare provide their own counters,
 but this is, sadly, a rare occurrence.
 

@@ -1,9 +1,9 @@
-package pdh_test
+package v2_test
 
 import (
 	"testing"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata/pdh"
+	"github.com/prometheus-community/windows_exporter/internal/perfdata/v2"
 	"github.com/stretchr/testify/require"
 )
 
@@ -38,7 +38,7 @@ func BenchmarkTestCollector(b *testing.B) {
 		"Working Set Peak",
 		"Working Set",
 	}
-	performanceData, err := pdh.NewCollector("Process", []string{"*"}, counters)
+	performanceData, err := v2.NewCollector("Process", []string{"*"}, counters)
 	require.NoError(b, err)
 
 	for i := 0; i < b.N; i++ {

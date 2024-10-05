@@ -31,7 +31,7 @@
 
 //go:build windows
 
-package pdh
+package v2
 
 import "golang.org/x/sys/windows"
 
@@ -42,42 +42,41 @@ type PdhFmtCountervalueDouble struct {
 }
 
 // PdhFmtCounterValueLarge is a union specialization for 64-bit integer values.
-type PdhFmtCounterValueLarge struct {
+type PdhFmtCountervalueLarge struct {
 	CStatus    uint32
 	LargeValue int64
 }
 
 // PdhFmtCounterValueLong is a union specialization for long values.
-type PdhFmtCounterValueLong struct {
+type PdhFmtCountervalueLong struct {
 	CStatus   uint32
 	LongValue int32
 	padding   [4]byte //nolint:unused // Memory reservation
 }
 
-// PdhFmtCountervalueItemDouble is a union specialization for double values, used by PdhGetFormattedCounterArrayDouble.
 type PdhFmtCountervalueItemDouble struct {
 	SzName   *uint16
 	FmtValue PdhFmtCountervalueDouble
 }
 
 // PdhFmtCounterValueItemLarge is a union specialization for 'large' values, used by PdhGetFormattedCounterArrayLarge().
-type PdhFmtCounterValueItemLarge struct {
+type PdhFmtCountervalueItemLarge struct {
 	SzName   *uint16 // pointer to a string
-	FmtValue PdhFmtCounterValueLarge
+	FmtValue PdhFmtCountervalueLarge
 }
 
 // PdhFmtCounterValueItemLong is a union specialization for long values, used by PdhGetFormattedCounterArrayLong().
-type PdhFmtCounterValueItemLong struct {
+type PdhFmtCountervalueItemLong struct {
 	SzName   *uint16 // pointer to a string
-	FmtValue PdhFmtCounterValueLong
+	FmtValue PdhFmtCountervalueLong
 }
 
 // PdhCounterInfo structure contains information describing the properties of a counter. This information also includes the counter path.
 type PdhCounterInfo struct {
 	// Size of the structure, including the appended strings, in bytes.
 	DwLength uint32
-	// Counter type. For a list of counter types,
-	// see the Counter Types section of the <a "href=http://go.microsoft.com/fwlink/p/?linkid=84422">Windows Server 2003 Deployment Kit</a>.
+	// Counter type. For a list of counter types, see the Counter Types section
+	// of the Windows Server 2003 Deployment Kit (http://go.microsoft.com/fwlink/p/?linkid=84422).
 	// The counter type constants are defined in Winperf.h.
 	DwType uint32
 	// Counter version information. Not used.
@@ -106,7 +105,8 @@ type PdhCounterInfo struct {
 	// The string follows this structure in memory.
 	SzInstanceName *uint16 // pointer to a string
 	// Null-terminated string that contains the name of the parent instance specified in the counter path.
-	// Is NULL, if the path does not specify a parent instance. The string follows this structure in memory.
+	// Is NULL, if the path does not specify a parent instance.
+	// The string follows this structure in memory.
 	SzParentInstance *uint16 // pointer to a string
 	// Instance index specified in the counter path. Is 0, if the path does not specify an instance index.
 	DwInstanceIndex uint32 // pointer to a string

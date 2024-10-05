@@ -16,7 +16,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/headers/netapi32"
 	"github.com/prometheus-community/windows_exporter/internal/headers/psapi"
 	"github.com/prometheus-community/windows_exporter/internal/headers/sysinfoapi"
-	registry2 "github.com/prometheus-community/windows_exporter/internal/perfdata/registry"
+	registry2 "github.com/prometheus-community/windows_exporter/internal/perfdata/v1"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
@@ -473,10 +473,10 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) {
 }
 
 func (c *Collector) getWindowsVersion() (string, string, string, error) {
-	// Get build number and product name from registry
+	// Get build number and product name from v1
 	ntKey, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\Microsoft\Windows NT\CurrentVersion`, registry.QUERY_VALUE)
 	if err != nil {
-		return "", "", "", fmt.Errorf("failed to open registry key: %w", err)
+		return "", "", "", fmt.Errorf("failed to open v1 key: %w", err)
 	}
 
 	defer ntKey.Close()

@@ -13,8 +13,8 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata/pdh"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata/registry"
+	"github.com/prometheus-community/windows_exporter/internal/perfdata/v1"
+	"github.com/prometheus-community/windows_exporter/internal/perfdata/v2"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
@@ -182,11 +182,11 @@ func (c *Collector) Build(logger *slog.Logger, wmiClient *wmi.Client) error {
 
 		var err error
 
-		c.perfDataCollector, err = perfdata.NewCollector(perfdata.PDH, "Process V2", perfdata.AllInstances, counters)
-		if errors.Is(err, pdh.NewPdhError(pdh.PdhCstatusNoObject)) {
+		c.perfDataCollector, err = perfdata.NewCollector(perfdata.V2, "Process V2", perfdata.AllInstances, counters)
+		if errors.Is(err, v2.NewPdhError(v2.PdhCstatusNoObject)) {
 			counters[0] = idProcess
 
-			c.perfDataCollector, err = perfdata.NewCollector(perfdata.Registry, "Process", perfdata.AllInstances, counters)
+			c.perfDataCollector, err = perfdata.NewCollector(perfdata.V1, "Process", perfdata.AllInstances, counters)
 		}
 
 		if err != nil {
@@ -326,7 +326,7 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch ch
 func (c *Collector) collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	data := make([]perflibProcess, 0)
 
-	err := registry.UnmarshalObject(ctx.PerfObjects["Process"], &data, logger)
+	err := v1.UnmarshalObject(ctx.PerfObjects["Process"], &data, logger)
 	if err != nil {
 		return err
 	}

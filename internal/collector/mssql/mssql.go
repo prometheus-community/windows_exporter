@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
-	registry2 "github.com/prometheus-community/windows_exporter/internal/perfdata/registry"
+	v1 "github.com/prometheus-community/windows_exporter/internal/perfdata/v1"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
@@ -48,7 +48,7 @@ type mssqlInstancesType map[string]string
 func getMSSQLInstances(logger *slog.Logger) mssqlInstancesType {
 	sqlInstances := make(mssqlInstancesType)
 
-	// in case querying the registry fails, return the default instance
+	// in case querying the v1 fails, return the default instance
 	sqlDefaultInstance := make(mssqlInstancesType)
 	sqlDefaultInstance["MSSQLSERVER"] = ""
 
@@ -56,7 +56,7 @@ func getMSSQLInstances(logger *slog.Logger) mssqlInstancesType {
 
 	k, err := registry.OpenKey(registry.LOCAL_MACHINE, regKey, registry.QUERY_VALUE)
 	if err != nil {
-		logger.Warn("Couldn't open registry to determine SQL instances",
+		logger.Warn("Couldn't open v1 to determine SQL instances",
 			slog.Any("err", err),
 		)
 
@@ -66,7 +66,7 @@ func getMSSQLInstances(logger *slog.Logger) mssqlInstancesType {
 	defer func() {
 		err = k.Close()
 		if err != nil {
-			logger.Warn("Failed to close registry key",
+			logger.Warn("Failed to close v1 key",
 				slog.Any("err", err),
 			)
 		}
@@ -2104,7 +2104,7 @@ func (c *Collector) collectAccessMethods(ctx *types.ScrapeContext, logger *slog.
 
 	logger.Debug(fmt.Sprintf("mssql_accessmethods collector iterating sql instance %s.", sqlInstance))
 
-	if err := registry2.UnmarshalObject(ctx.PerfObjects[mssqlGetPerfObjectName(sqlInstance, "accessmethods")], &dst, logger); err != nil {
+	if err := v1.UnmarshalObject(ctx.PerfObjects[mssqlGetPerfObjectName(sqlInstance, "accessmethods")], &dst, logger); err != nil {
 		return err
 	}
 
@@ -2441,7 +2441,7 @@ func (c *Collector) collectAvailabilityReplica(ctx *types.ScrapeContext, logger 
 
 	logger.Debug(fmt.Sprintf("mssql_availreplica collector iterating sql instance %s.", sqlInstance))
 
-	if err := registry2.UnmarshalObject(ctx.PerfObjects[mssqlGetPerfObjectName(sqlInstance, "availreplica")], &dst, logger); err != nil {
+	if err := v1.UnmarshalObject(ctx.PerfObjects[mssqlGetPerfObjectName(sqlInstance, "availreplica")], &dst, logger); err != nil {
 		return err
 	}
 
@@ -2552,7 +2552,7 @@ func (c *Collector) collectBufferManager(ctx *types.ScrapeContext, logger *slog.
 
 	logger.Debug(fmt.Sprintf("mssql_bufman collector iterating sql instance %s.", sqlInstance))
 
-	if err := registry2.UnmarshalObject(ctx.PerfObjects[mssqlGetPerfObjectName(sqlInstance, "bufman")], &dst, logger); err != nil {
+	if err := v1.UnmarshalObject(ctx.PerfObjects[mssqlGetPerfObjectName(sqlInstance, "bufman")], &dst, logger); err != nil {
 		return err
 	}
 
@@ -2757,7 +2757,7 @@ func (c *Collector) collectDatabaseReplica(ctx *types.ScrapeContext, logger *slo
 
 	logger.Debug(fmt.Sprintf("mssql_dbreplica collector iterating sql instance %s.", sqlInstance))
 
-	if err := registry2.UnmarshalObject(ctx.PerfObjects[mssqlGetPerfObjectName(sqlInstance, "dbreplica")], &dst, logger); err != nil {
+	if err := v1.UnmarshalObject(ctx.PerfObjects[mssqlGetPerfObjectName(sqlInstance, "dbreplica")], &dst, logger); err != nil {
 		return err
 	}
 
@@ -2999,7 +2999,7 @@ func (c *Collector) collectDatabases(ctx *types.ScrapeContext, logger *slog.Logg
 
 	logger.Debug(fmt.Sprintf("mssql_databases collector iterating sql instance %s.", sqlInstance))
 
-	if err := registry2.UnmarshalObject(ctx.PerfObjects[mssqlGetPerfObjectName(sqlInstance, "databases")], &dst, logger); err != nil {
+	if err := v1.UnmarshalObject(ctx.PerfObjects[mssqlGetPerfObjectName(sqlInstance, "databases")], &dst, logger); err != nil {
 		return err
 	}
 
@@ -3384,7 +3384,7 @@ func (c *Collector) collectGeneralStatistics(ctx *types.ScrapeContext, logger *s
 
 	logger.Debug(fmt.Sprintf("mssql_genstats collector iterating sql instance %s.", sqlInstance))
 
-	if err := registry2.UnmarshalObject(ctx.PerfObjects[mssqlGetPerfObjectName(sqlInstance, "genstats")], &dst, logger); err != nil {
+	if err := v1.UnmarshalObject(ctx.PerfObjects[mssqlGetPerfObjectName(sqlInstance, "genstats")], &dst, logger); err != nil {
 		return err
 	}
 
@@ -3580,7 +3580,7 @@ func (c *Collector) collectLocks(ctx *types.ScrapeContext, logger *slog.Logger, 
 
 	logger.Debug(fmt.Sprintf("mssql_locks collector iterating sql instance %s.", sqlInstance))
 
-	if err := registry2.UnmarshalObject(ctx.PerfObjects[mssqlGetPerfObjectName(sqlInstance, "locks")], &dst, logger); err != nil {
+	if err := v1.UnmarshalObject(ctx.PerfObjects[mssqlGetPerfObjectName(sqlInstance, "locks")], &dst, logger); err != nil {
 		return err
 	}
 
@@ -3681,7 +3681,7 @@ func (c *Collector) collectMemoryManager(ctx *types.ScrapeContext, logger *slog.
 
 	logger.Debug(fmt.Sprintf("mssql_memmgr collector iterating sql instance %s.", sqlInstance))
 
-	if err := registry2.UnmarshalObject(ctx.PerfObjects[mssqlGetPerfObjectName(sqlInstance, "memmgr")], &dst, logger); err != nil {
+	if err := v1.UnmarshalObject(ctx.PerfObjects[mssqlGetPerfObjectName(sqlInstance, "memmgr")], &dst, logger); err != nil {
 		return err
 	}
 
@@ -3851,7 +3851,7 @@ func (c *Collector) collectSQLStats(ctx *types.ScrapeContext, logger *slog.Logge
 
 	logger.Debug(fmt.Sprintf("mssql_sqlstats collector iterating sql instance %s.", sqlInstance))
 
-	if err := registry2.UnmarshalObject(ctx.PerfObjects[mssqlGetPerfObjectName(sqlInstance, "sqlstats")], &dst, logger); err != nil {
+	if err := v1.UnmarshalObject(ctx.PerfObjects[mssqlGetPerfObjectName(sqlInstance, "sqlstats")], &dst, logger); err != nil {
 		return err
 	}
 
@@ -3960,7 +3960,7 @@ func (c *Collector) collectWaitStats(ctx *types.ScrapeContext, logger *slog.Logg
 
 	logger.Debug(fmt.Sprintf("mssql_waitstats collector iterating sql instance %s.", sqlInstance))
 
-	if err := registry2.UnmarshalObject(ctx.PerfObjects[mssqlGetPerfObjectName(sqlInstance, "waitstats")], &dst, logger); err != nil {
+	if err := v1.UnmarshalObject(ctx.PerfObjects[mssqlGetPerfObjectName(sqlInstance, "waitstats")], &dst, logger); err != nil {
 		return err
 	}
 
@@ -4067,7 +4067,7 @@ func (c *Collector) collectSQLErrors(ctx *types.ScrapeContext, logger *slog.Logg
 
 	logger.Debug(fmt.Sprintf("mssql_sqlerrors collector iterating sql instance %s.", sqlInstance))
 
-	if err := registry2.UnmarshalObject(ctx.PerfObjects[mssqlGetPerfObjectName(sqlInstance, "sqlerrors")], &dst, logger); err != nil {
+	if err := v1.UnmarshalObject(ctx.PerfObjects[mssqlGetPerfObjectName(sqlInstance, "sqlerrors")], &dst, logger); err != nil {
 		return err
 	}
 
@@ -4112,7 +4112,7 @@ func (c *Collector) collectTransactions(ctx *types.ScrapeContext, logger *slog.L
 
 	logger.Debug(fmt.Sprintf("mssql_transactions collector iterating sql instance %s.", sqlInstance))
 
-	if err := registry2.UnmarshalObject(ctx.PerfObjects[mssqlGetPerfObjectName(sqlInstance, "transactions")], &dst, logger); err != nil {
+	if err := v1.UnmarshalObject(ctx.PerfObjects[mssqlGetPerfObjectName(sqlInstance, "transactions")], &dst, logger); err != nil {
 		return err
 	}
 

@@ -8,7 +8,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata/perftypes"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata/registry"
+	"github.com/prometheus-community/windows_exporter/internal/perfdata/v1"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
@@ -224,7 +224,7 @@ func (c *Collector) collectClientShares(ctx *types.ScrapeContext, logger *slog.L
 
 	var data []perflibClientShares
 
-	if err := registry.UnmarshalObject(ctx.PerfObjects["SMB Client Shares"], &data, logger); err != nil {
+	if err := v1.UnmarshalObject(ctx.PerfObjects["SMB Client Shares"], &data, logger); err != nil {
 		return err
 	}
 
