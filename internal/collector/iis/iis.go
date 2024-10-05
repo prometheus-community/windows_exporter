@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
-	registry2 "github.com/prometheus-community/windows_exporter/internal/perfdata/v1"
+	"github.com/prometheus-community/windows_exporter/internal/perfdata/v1"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
@@ -1073,7 +1073,7 @@ func (c *Collector) collectWebService(ctx *types.ScrapeContext, logger *slog.Log
 
 	var webService []perflibWebService
 
-	if err := registry2.UnmarshalObject(ctx.PerfObjects["Web Service"], &webService, logger); err != nil {
+	if err := v1.UnmarshalObject(ctx.PerfObjects["Web Service"], &webService, logger); err != nil {
 		return err
 	}
 
@@ -1368,7 +1368,7 @@ func (c *Collector) collectAPP_POOL_WAS(ctx *types.ScrapeContext, logger *slog.L
 
 	var APP_POOL_WAS []perflibAPP_POOL_WAS
 
-	if err := registry2.UnmarshalObject(ctx.PerfObjects["APP_POOL_WAS"], &APP_POOL_WAS, logger); err != nil {
+	if err := v1.UnmarshalObject(ctx.PerfObjects["APP_POOL_WAS"], &APP_POOL_WAS, logger); err != nil {
 		return err
 	}
 
@@ -1548,7 +1548,7 @@ func (c *Collector) collectW3SVC_W3WP(ctx *types.ScrapeContext, logger *slog.Log
 
 	var W3SVC_W3WP []perflibW3SVC_W3WP
 
-	if err := registry2.UnmarshalObject(ctx.PerfObjects["W3SVC_W3WP"], &W3SVC_W3WP, logger); err != nil {
+	if err := v1.UnmarshalObject(ctx.PerfObjects["W3SVC_W3WP"], &W3SVC_W3WP, logger); err != nil {
 		return err
 	}
 
@@ -1807,7 +1807,7 @@ func (c *Collector) collectW3SVC_W3WP(ctx *types.ScrapeContext, logger *slog.Log
 
 	if c.iisVersion.major >= 8 {
 		var W3SVC_W3WP_IIS8 []perflibW3SVC_W3WP_IIS8
-		if err := registry2.UnmarshalObject(ctx.PerfObjects["W3SVC_W3WP"], &W3SVC_W3WP_IIS8, logger); err != nil {
+		if err := v1.UnmarshalObject(ctx.PerfObjects["W3SVC_W3WP"], &W3SVC_W3WP_IIS8, logger); err != nil {
 			return err
 		}
 
@@ -1950,7 +1950,7 @@ func (c *Collector) collectWebServiceCache(ctx *types.ScrapeContext, logger *slo
 
 	var WebServiceCache []perflibWebServiceCache
 
-	if err := registry2.UnmarshalObject(ctx.PerfObjects["Web Service Cache"], &WebServiceCache, logger); err != nil {
+	if err := v1.UnmarshalObject(ctx.PerfObjects["Web Service Cache"], &WebServiceCache, logger); err != nil {
 		return err
 	}
 
