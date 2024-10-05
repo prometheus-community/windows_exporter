@@ -117,6 +117,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"time"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
@@ -221,13 +222,18 @@ func queryRawData(query string) ([]byte, error) {
 			(*byte)(unsafe.Pointer(&buffer[0])),
 			&bufLen)
 
-		if errors.Is(err, error(windows.ERROR_MORE_DATA)) {
+		switch {
+		case errors.Is(err, error(windows.ERROR_MORE_DATA)):
 			newBuffer := make([]byte, len(buffer)+16384)
 			copy(newBuffer, buffer)
 			buffer = newBuffer
 
 			continue
-		} else if err != nil {
+		case errors.Is(err, error(windows.ERROR_BUSY)):
+			time.Sleep(50 * time.Millisecond)
+
+			continue
+		case err != nil:
 			var errNo windows.Errno
 			if errors.As(err, &errNo) {
 				return nil, fmt.Errorf("ReqQueryValueEx failed: %w errno %d", err, uint(errNo))
