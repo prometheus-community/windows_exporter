@@ -1,4 +1,4 @@
-package perflib
+package registry
 
 import (
 	"errors"
@@ -6,12 +6,8 @@ import (
 	"log/slog"
 	"reflect"
 	"strings"
-)
 
-// Conversion factors.
-const (
-	TicksToSecondScaleFactor = 1 / 1e7
-	WindowsEpoch             = 116444736000000000
+	"github.com/prometheus-community/windows_exporter/internal/perfdata/perftypes"
 )
 
 func UnmarshalObject(obj *PerfObject, vs interface{}, logger *slog.Logger) error {
@@ -94,10 +90,10 @@ func UnmarshalObject(obj *PerfObject, vs interface{}, logger *slog.Logger) error
 			}
 
 			switch ctr.Def.CounterType {
-			case PERF_ELAPSED_TIME:
-				target.Field(i).SetFloat(float64(ctr.Value-WindowsEpoch) / float64(obj.Frequency))
-			case PERF_100NSEC_TIMER, PERF_PRECISION_100NS_TIMER:
-				target.Field(i).SetFloat(float64(ctr.Value) * TicksToSecondScaleFactor)
+			case perftypes.PERF_ELAPSED_TIME:
+				target.Field(i).SetFloat(float64(ctr.Value-perftypes.WindowsEpoch) / float64(obj.Frequency))
+			case perftypes.PERF_100NSEC_TIMER, perftypes.PERF_PRECISION_100NS_TIMER:
+				target.Field(i).SetFloat(float64(ctr.Value) * perftypes.TicksToSecondScaleFactor)
 			default:
 				target.Field(i).SetFloat(float64(ctr.Value))
 			}

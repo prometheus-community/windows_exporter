@@ -1,4 +1,4 @@
-package perflib
+package registry
 
 import (
 	"bytes"

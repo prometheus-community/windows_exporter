@@ -12,7 +12,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/headers/sysinfoapi"
-	"github.com/prometheus-community/windows_exporter/internal/perflib"
+	"github.com/prometheus-community/windows_exporter/internal/perfdata/registry"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
@@ -418,7 +418,7 @@ func (c *Collector) collectPerformanceData(ctx *types.ScrapeContext, logger *slo
 
 	var dst []memory
 
-	if err := perflib.UnmarshalObject(ctx.PerfObjects["Memory"], &dst, logger); err != nil {
+	if err := registry.UnmarshalObject(ctx.PerfObjects["Memory"], &dst, logger); err != nil {
 		return err
 	}
 

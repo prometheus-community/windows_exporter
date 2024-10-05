@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"slices"
 	"strings"
+	"sync"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/collector/ad"
@@ -58,7 +59,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/updates"
 	"github.com/prometheus-community/windows_exporter/internal/collector/vmware"
 	"github.com/prometheus-community/windows_exporter/internal/collector/vmware_blast"
-	"github.com/prometheus-community/windows_exporter/internal/perflib"
+	"github.com/prometheus-community/windows_exporter/internal/perfdata/registry"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/yusufpapurcu/wmi"
 )
@@ -159,7 +160,7 @@ func (c *MetricCollectors) SetPerfCounterQuery(logger *slog.Logger) error {
 
 		perfIndicies = make([]string, 0, len(perfCounterNames))
 		for _, cn := range perfCounterNames {
-			perfIndicies = append(perfIndicies, perflib.MapCounterToIndex(cn))
+			perfIndicies = append(perfIndicies, registry.MapCounterToIndex(cn))
 		}
 
 		perfCounterDependencies = append(perfCounterDependencies, strings.Join(perfIndicies, " "))
@@ -188,13 +189,31 @@ func (c *MetricCollectors) Build(logger *slog.Logger) error {
 		return fmt.Errorf("initialize SWbemServices: %w", err)
 	}
 
+	wg := sync.WaitGroup{}
+	wg.Add(len(c.Collectors))
+
+	errCh := make(chan error, len(c.Collectors))
+	errs := make([]error, 0, len(c.Collectors))
+
 	for _, collector := range c.Collectors {
-		if err = collector.Build(logger, c.WMIClient); err != nil {
-			return fmt.Errorf("error build collector %s: %w", collector.GetName(), err)
-		}
+		go func() {
+			wg.Done()
+
+			if err = collector.Build(logger, c.WMIClient); err != nil {
+				errCh <- fmt.Errorf("error build collector %s: %w", collector.GetName(), err)
+			}
+		}()
 	}
 
-	return nil
+	wg.Wait()
+
+	close(errCh)
+
+	for err := range errCh {
+		errs = append(errs, err)
+	}
+
+	return errors.Join(errs...)
 }
 
 // PrepareScrapeContext creates a ScrapeContext to be used during a single scrape.
@@ -204,7 +223,7 @@ func (c *MetricCollectors) PrepareScrapeContext() (*types.ScrapeContext, error) 
 		return &types.ScrapeContext{}, nil
 	}
 
-	perfObjects, err := perflib.GetPerflibSnapshot(c.PerfCounterQuery)
+	perfObjects, err := registry.GetPerflibSnapshot(c.PerfCounterQuery)
 	if err != nil {
 		return nil, err
 	}

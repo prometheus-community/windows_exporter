@@ -1,6 +1,6 @@
 //go:build windows
 
-package perfdata
+package pdh
 
 import (
 	"errors"
@@ -9,11 +9,10 @@ import (
 	"time"
 	"unsafe"
 
+	"github.com/prometheus-community/windows_exporter/internal/perfdata/perftypes"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows"
 )
-
-const EmptyInstance = "------"
 
 type Collector struct {
 	time     time.Time
@@ -30,12 +29,6 @@ type Counter struct {
 	Frequency float64
 }
 
-type CounterValues struct {
-	Type        prometheus.ValueType
-	FirstValue  float64
-	SecondValue float64
-}
-
 func NewCollector(object string, instances []string, counters []string) (*Collector, error) {
 	var handle pdhQueryHandle
 
@@ -44,7 +37,7 @@ func NewCollector(object string, instances []string, counters []string) (*Collec
 	}
 
 	if len(instances) == 0 {
-		instances = []string{EmptyInstance}
+		instances = []string{perftypes.EmptyInstance}
 	}
 
 	collector := &Collector{
@@ -127,9 +120,9 @@ func (c *Collector) Describe() map[string]string {
 	return desc
 }
 
-func (c *Collector) Collect() (map[string]map[string]CounterValues, error) {
+func (c *Collector) Collect() (map[string]map[string]perftypes.CounterValues, error) {
 	if len(c.counters) == 0 {
-		return map[string]map[string]CounterValues{}, nil
+		return map[string]map[string]perftypes.CounterValues{}, nil
 	}
 
 	if ret := PdhCollectQueryData(c.handle); ret != ErrorSuccess {
@@ -138,7 +131,7 @@ func (c *Collector) Collect() (map[string]map[string]CounterValues, error) {
 
 	c.time = time.Now()
 
-	var data map[string]map[string]CounterValues
+	var data map[string]map[string]perftypes.CounterValues
 
 	for _, counter := range c.counters {
 		for _, instance := range counter.Instances {
@@ -167,11 +160,11 @@ func (c *Collector) Collect() (map[string]map[string]CounterValues, error) {
 			items := (*[1 << 20]PdhRawCounterItem)(unsafe.Pointer(&buf[0]))[:itemCount]
 
 			if data == nil {
-				data = make(map[string]map[string]CounterValues, itemCount)
+				data = make(map[string]map[string]perftypes.CounterValues, itemCount)
 			}
 
 			var metricType prometheus.ValueType
-			if val, ok := supportedCounterTypes[counter.Type]; ok {
+			if val, ok := perftypes.SupportedCounterTypes[counter.Type]; ok {
 				metricType = val
 			} else {
 				metricType = prometheus.GaugeValue
@@ -185,14 +178,14 @@ func (c *Collector) Collect() (map[string]map[string]CounterValues, error) {
 					}
 
 					if instanceName == "" {
-						instanceName = EmptyInstance
+						instanceName = perftypes.EmptyInstance
 					}
 
 					if _, ok := data[instanceName]; !ok {
-						data[instanceName] = make(map[string]CounterValues, len(c.counters))
+						data[instanceName] = make(map[string]perftypes.CounterValues, len(c.counters))
 					}
 
-					values := CounterValues{
+					values := perftypes.CounterValues{
 						Type: metricType,
 					}
 
@@ -201,12 +194,12 @@ func (c *Collector) Collect() (map[string]map[string]CounterValues, error) {
 					// Ref: https://learn.microsoft.com/en-us/windows/win32/perfctrs/calculating-counter-values
 
 					switch counter.Type {
-					case PERF_ELAPSED_TIME:
-						values.FirstValue = float64(item.RawValue.FirstValue-WindowsEpoch) / counter.Frequency
-						values.SecondValue = float64(item.RawValue.SecondValue-WindowsEpoch) / counter.Frequency
-					case PERF_100NSEC_TIMER, PERF_PRECISION_100NS_TIMER:
-						values.FirstValue = float64(item.RawValue.FirstValue) * TicksToSecondScaleFactor
-						values.SecondValue = float64(item.RawValue.SecondValue) * TicksToSecondScaleFactor
+					case perftypes.PERF_ELAPSED_TIME:
+						values.FirstValue = float64(item.RawValue.FirstValue-perftypes.WindowsEpoch) / counter.Frequency
+						values.SecondValue = float64(item.RawValue.SecondValue-perftypes.WindowsEpoch) / counter.Frequency
+					case perftypes.PERF_100NSEC_TIMER, perftypes.PERF_PRECISION_100NS_TIMER:
+						values.FirstValue = float64(item.RawValue.FirstValue) * perftypes.TicksToSecondScaleFactor
+						values.SecondValue = float64(item.RawValue.SecondValue) * perftypes.TicksToSecondScaleFactor
 					default:
 						values.FirstValue = float64(item.RawValue.FirstValue)
 						values.SecondValue = float64(item.RawValue.SecondValue)
@@ -228,7 +221,7 @@ func (c *Collector) Close() {
 func formatCounterPath(object, instance, counterName string) string {
 	var counterPath string
 
-	if instance == EmptyInstance {
+	if instance == perftypes.EmptyInstance {
 		counterPath = fmt.Sprintf(`\%s\%s`, object, counterName)
 	} else {
 		counterPath = fmt.Sprintf(`\%s(%s)\%s`, object, instance, counterName)

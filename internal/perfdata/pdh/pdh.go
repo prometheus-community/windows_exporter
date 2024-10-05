@@ -31,7 +31,7 @@
 
 //go:build windows
 
-package perfdata
+package pdh
 
 import (
 	"fmt"
@@ -44,10 +44,9 @@ import (
 
 // Error codes.
 const (
-	ErrorSuccess                = 0
-	ErrorFailure                = 1
-	ErrorInvalidFunction        = 1
-	EpochDifferenceMicros int64 = 11644473600000000
+	ErrorSuccess         = 0
+	ErrorFailure         = 1
+	ErrorInvalidFunction = 1
 )
 
 type (
@@ -323,12 +322,6 @@ func PdhAddCounter(hQuery pdhQueryHandle, szFullCounterPath string, dwUserData u
 		uintptr(unsafe.Pointer(phCounter)))
 
 	return uint32(ret)
-}
-
-// PdhAddEnglishCounterSupported returns true if PdhAddEnglishCounterW Win API function was found in pdh.dll.
-// PdhAddEnglishCounterW function is not supported on pre-Windows Vista systems.
-func PdhAddEnglishCounterSupported() bool {
-	return pdhAddEnglishCounterW != nil
 }
 
 // PdhAddEnglishCounter adds the specified language-neutral counter to the query. See the PdhAddCounter function. This function only exists on

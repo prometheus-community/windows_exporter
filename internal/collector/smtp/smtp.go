@@ -8,7 +8,7 @@ import (
 	"regexp"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/prometheus-community/windows_exporter/internal/perflib"
+	"github.com/prometheus-community/windows_exporter/internal/perfdata/registry"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
@@ -470,7 +470,7 @@ func (c *Collector) collect(ctx *types.ScrapeContext, logger *slog.Logger, ch ch
 
 	var dst []PerflibSMTPServer
 
-	if err := perflib.UnmarshalObject(ctx.PerfObjects["SMTP Server"], &dst, logger); err != nil {
+	if err := registry.UnmarshalObject(ctx.PerfObjects["SMTP Server"], &dst, logger); err != nil {
 		return err
 	}
 

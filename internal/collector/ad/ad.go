@@ -26,7 +26,7 @@ type Collector struct {
 	config    Config
 	wmiClient *wmi.Client
 
-	perfDataCollector *perfdata.Collector
+	perfDataCollector perfdata.Collector
 
 	addressBookClientSessions                           *prometheus.Desc
 	addressBookOperationsTotal                          *prometheus.Desc
@@ -275,7 +275,7 @@ func (c *Collector) Build(_ *slog.Logger, wmiClient *wmi.Client) error {
 
 		var err error
 
-		c.perfDataCollector, err = perfdata.NewCollector("DirectoryServices", []string{"*"}, counters)
+		c.perfDataCollector, err = perfdata.NewCollector(perfdata.Registry, "DirectoryServices", perfdata.AllInstances, counters)
 		if err != nil {
 			return fmt.Errorf("failed to create DirectoryServices collector: %w", err)
 		}

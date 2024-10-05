@@ -13,7 +13,8 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	"github.com/prometheus-community/windows_exporter/internal/perflib"
+	"github.com/prometheus-community/windows_exporter/internal/perfdata/pdh"
+	"github.com/prometheus-community/windows_exporter/internal/perfdata/registry"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
@@ -24,24 +25,22 @@ import (
 const Name = "process"
 
 type Config struct {
-	ProcessInclude       *regexp.Regexp `yaml:"process_include"`
-	ProcessExclude       *regexp.Regexp `yaml:"process_exclude"`
-	EnableWorkerProcess  bool           `yaml:"enable_iis_worker_process"` //nolint:tagliatelle
-	PerfCounterInstances []string       `yaml:"perf_counter_instances"`
+	ProcessInclude      *regexp.Regexp `yaml:"process_include"`
+	ProcessExclude      *regexp.Regexp `yaml:"process_exclude"`
+	EnableWorkerProcess bool           `yaml:"enable_iis_worker_process"` //nolint:tagliatelle
 }
 
 var ConfigDefaults = Config{
-	ProcessInclude:       types.RegExpAny,
-	ProcessExclude:       types.RegExpEmpty,
-	EnableWorkerProcess:  false,
-	PerfCounterInstances: []string{"*"},
+	ProcessInclude:      types.RegExpAny,
+	ProcessExclude:      types.RegExpEmpty,
+	EnableWorkerProcess: false,
 }
 
 type Collector struct {
 	config    Config
 	wmiClient *wmi.Client
 
-	perfDataCollector *perfdata.Collector
+	perfDataCollector perfdata.Collector
 
 	lookupCache map[string]string
 
@@ -76,10 +75,6 @@ func New(config *Config) *Collector {
 		config.ProcessInclude = ConfigDefaults.ProcessInclude
 	}
 
-	if config.PerfCounterInstances == nil {
-		config.PerfCounterInstances = ConfigDefaults.PerfCounterInstances
-	}
-
 	c := &Collector{
 		config: *config,
 	}
@@ -109,14 +104,7 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 		"Enable IIS worker process name queries. May cause the collector to leak memory.",
 	).Default(strconv.FormatBool(c.config.EnableWorkerProcess)).BoolVar(&c.config.EnableWorkerProcess)
 
-	app.Flag(
-		"collector.process.perf-counter-instance",
-		"Advanced: List of process performance counter instances to query. If not set, all instances are queried.",
-	).Default(strings.Join(c.config.PerfCounterInstances, ",")).StringVar(&perfCounterInstances)
-
 	app.Action(func(*kingpin.ParseContext) error {
-		c.config.PerfCounterInstances = strings.Split(perfCounterInstances, ",")
-
 		var err error
 
 		c.config.ProcessExclude, err = regexp.Compile(fmt.Sprintf("^(?:%s)$", processExclude))
@@ -194,11 +182,11 @@ func (c *Collector) Build(logger *slog.Logger, wmiClient *wmi.Client) error {
 
 		var err error
 
-		c.perfDataCollector, err = perfdata.NewCollector("Process V2", c.config.PerfCounterInstances, counters)
-		if errors.Is(err, perfdata.NewPdhError(perfdata.PdhCstatusNoObject)) {
+		c.perfDataCollector, err = perfdata.NewCollector(perfdata.PDH, "Process V2", perfdata.AllInstances, counters)
+		if errors.Is(err, pdh.NewPdhError(pdh.PdhCstatusNoObject)) {
 			counters[0] = idProcess
 
-			c.perfDataCollector, err = perfdata.NewCollector("Process", c.config.PerfCounterInstances, counters)
+			c.perfDataCollector, err = perfdata.NewCollector(perfdata.Registry, "Process", perfdata.AllInstances, counters)
 		}
 
 		if err != nil {
@@ -338,7 +326,7 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch ch
 func (c *Collector) collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	data := make([]perflibProcess, 0)
 
-	err := perflib.UnmarshalObject(ctx.PerfObjects["Process"], &data, logger)
+	err := registry.UnmarshalObject(ctx.PerfObjects["Process"], &data, logger)
 	if err != nil {
 		return err
 	}

@@ -1,4 +1,4 @@
-package perfdata
+package pdh
 
 import "errors"
 

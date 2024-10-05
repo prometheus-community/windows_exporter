@@ -1,9 +1,9 @@
 package types
 
 import (
-	"github.com/prometheus-community/windows_exporter/internal/perflib"
+	"github.com/prometheus-community/windows_exporter/internal/perfdata/registry"
 )
 
 type ScrapeContext struct {
-	PerfObjects map[string]*perflib.PerfObject
+	PerfObjects map[string]*registry.PerfObject
 }

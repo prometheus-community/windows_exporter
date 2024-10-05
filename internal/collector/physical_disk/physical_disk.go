@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/prometheus-community/windows_exporter/internal/perflib"
+	"github.com/prometheus-community/windows_exporter/internal/perfdata/registry"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
@@ -240,7 +240,7 @@ func (c *Collector) collect(ctx *types.ScrapeContext, logger *slog.Logger, ch ch
 
 	var dst []PhysicalDisk
 
-	if err := perflib.UnmarshalObject(ctx.PerfObjects["PhysicalDisk"], &dst, logger); err != nil {
+	if err := registry.UnmarshalObject(ctx.PerfObjects["PhysicalDisk"], &dst, logger); err != nil {
 		return err
 	}
 
@@ -321,21 +321,21 @@ func (c *Collector) collect(ctx *types.ScrapeContext, logger *slog.Logger, ch ch
 		ch <- prometheus.MustNewConstMetric(
 			c.readLatency,
 			prometheus.CounterValue,
-			disk.AvgDiskSecPerRead*perflib.TicksToSecondScaleFactor,
+			disk.AvgDiskSecPerRead*registry.TicksToSecondScaleFactor,
 			disk_number,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.writeLatency,
 			prometheus.CounterValue,
-			disk.AvgDiskSecPerWrite*perflib.TicksToSecondScaleFactor,
+			disk.AvgDiskSecPerWrite*registry.TicksToSecondScaleFactor,
 			disk_number,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.readWriteLatency,
 			prometheus.CounterValue,
-			disk.AvgDiskSecPerTransfer*perflib.TicksToSecondScaleFactor,
+			disk.AvgDiskSecPerTransfer*registry.TicksToSecondScaleFactor,
 			disk_number,
 		)
 	}

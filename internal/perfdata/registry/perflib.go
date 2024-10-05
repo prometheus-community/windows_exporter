@@ -1,4 +1,4 @@
-package perflib
+package registry
 
 /*
 Go bindings for the HKEY_PERFORMANCE_DATA perflib / Performance Counters interface.
@@ -117,7 +117,6 @@ import (
 	"fmt"
 	"io"
 	"strings"
-	"syscall"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
@@ -214,8 +213,7 @@ func queryRawData(query string) ([]byte, error) {
 	for {
 		bufLen := uint32(len(buffer))
 
-		//nolint:forbidigo // Legacy Code
-		err := syscall.RegQueryValueEx(
+		err := windows.RegQueryValueEx(
 			windows.HKEY_PERFORMANCE_DATA,
 			name,
 			nil,
@@ -223,14 +221,14 @@ func queryRawData(query string) ([]byte, error) {
 			(*byte)(unsafe.Pointer(&buffer[0])),
 			&bufLen)
 
-		if errors.Is(err, error(syscall.ERROR_MORE_DATA)) { //nolint:forbidigo // Legacy Code
+		if errors.Is(err, error(windows.ERROR_MORE_DATA)) {
 			newBuffer := make([]byte, len(buffer)+16384)
 			copy(newBuffer, buffer)
 			buffer = newBuffer
 
 			continue
 		} else if err != nil {
-			var errNo syscall.Errno //nolint:forbidigo // Legacy Code
+			var errNo windows.Errno
 			if errors.As(err, &errNo) {
 				return nil, fmt.Errorf("ReqQueryValueEx failed: %w errno %d", err, uint(errNo))
 			}
@@ -446,8 +444,7 @@ func parseCounterBlock(b []byte, r io.ReadSeeker, pos int64, defs []*PerfCounter
 	return int64(block.ByteLength), counters, nil
 }
 
-//nolint:nonamedreturns
-func convertCounterValue(counterDef *perfCounterDefinition, buffer []byte, valueOffset int64) (value int64) {
+func convertCounterValue(counterDef *perfCounterDefinition, buffer []byte, valueOffset int64) int64 {
 	/*
 		We can safely ignore the type since we're not interested in anything except the raw value.
 		We also ignore all of the other attributes (timestamp, presentation, multi counter values...)
@@ -464,12 +461,10 @@ func convertCounterValue(counterDef *perfCounterDefinition, buffer []byte, value
 	*/
 	switch counterDef.CounterSize {
 	case 4:
-		value = int64(bo.Uint32(buffer[valueOffset:(valueOffset + 4)]))
+		return int64(bo.Uint32(buffer[valueOffset:(valueOffset + 4)]))
 	case 8:
-		value = int64(bo.Uint64(buffer[valueOffset:(valueOffset + 8)]))
+		return int64(bo.Uint64(buffer[valueOffset:(valueOffset + 8)]))
 	default:
-		value = int64(bo.Uint32(buffer[valueOffset:(valueOffset + 4)]))
+		return int64(bo.Uint32(buffer[valueOffset:(valueOffset + 4)]))
 	}
-
-	return
 }

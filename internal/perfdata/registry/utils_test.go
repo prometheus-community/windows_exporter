@@ -1,10 +1,12 @@
-package perflib
+package registry
 
 import (
 	"io"
 	"log/slog"
 	"reflect"
 	"testing"
+
+	"github.com/prometheus-community/windows_exporter/internal/perfdata/perftypes"
 )
 
 type simple struct {
@@ -38,7 +40,7 @@ func TestUnmarshalPerflib(t *testing.T) {
 							{
 								Def: &PerfCounterDef{
 									Name:        "Something",
-									CounterType: PERF_COUNTER_COUNTER,
+									CounterType: perftypes.PERF_COUNTER_COUNTER,
 								},
 								Value: 123,
 							},
@@ -58,14 +60,14 @@ func TestUnmarshalPerflib(t *testing.T) {
 							{
 								Def: &PerfCounterDef{
 									Name:        "Something",
-									CounterType: PERF_COUNTER_COUNTER,
+									CounterType: perftypes.PERF_COUNTER_COUNTER,
 								},
 								Value: 123,
 							},
 							{
 								Def: &PerfCounterDef{
 									Name:           "Something Else",
-									CounterType:    PERF_COUNTER_COUNTER,
+									CounterType:    perftypes.PERF_COUNTER_COUNTER,
 									HasSecondValue: true,
 								},
 								Value:       256,
@@ -87,7 +89,7 @@ func TestUnmarshalPerflib(t *testing.T) {
 							{
 								Def: &PerfCounterDef{
 									Name:        "Something",
-									CounterType: PERF_COUNTER_COUNTER,
+									CounterType: perftypes.PERF_COUNTER_COUNTER,
 								},
 								Value: 321,
 							},
@@ -98,7 +100,7 @@ func TestUnmarshalPerflib(t *testing.T) {
 							{
 								Def: &PerfCounterDef{
 									Name:        "Something",
-									CounterType: PERF_COUNTER_COUNTER,
+									CounterType: perftypes.PERF_COUNTER_COUNTER,
 								},
 								Value: 231,
 							},

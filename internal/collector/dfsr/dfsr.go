@@ -11,7 +11,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	"github.com/prometheus-community/windows_exporter/internal/perflib"
+	"github.com/prometheus-community/windows_exporter/internal/perfdata/registry"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
@@ -32,9 +32,9 @@ var ConfigDefaults = Config{
 type Collector struct {
 	config Config
 
-	perfDataCollectorConnection *perfdata.Collector
-	perfDataCollectorFolder     *perfdata.Collector
-	perfDataCollectorVolume     *perfdata.Collector
+	perfDataCollectorConnection perfdata.Collector
+	perfDataCollectorFolder     perfdata.Collector
+	perfDataCollectorVolume     perfdata.Collector
 
 	// connection source
 	connectionBandwidthSavingsUsingDFSReplicationTotal *prometheus.Desc
@@ -189,7 +189,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *wmi.Client) error {
 				sizeOfFilesReceivedTotal,
 			}
 
-			c.perfDataCollectorConnection, err = perfdata.NewCollector("DFS Replication Connections", []string{"*"}, counters)
+			c.perfDataCollectorConnection, err = perfdata.NewCollector(perfdata.Registry, "DFS Replication Connections", perfdata.AllInstances, counters)
 			if err != nil {
 				return fmt.Errorf("failed to create Replication Connections collector: %w", err)
 			}
@@ -226,7 +226,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *wmi.Client) error {
 				updatesDroppedTotal,
 			}
 
-			c.perfDataCollectorFolder, err = perfdata.NewCollector("DFS Replicated Folders", []string{"*"}, counters)
+			c.perfDataCollectorFolder, err = perfdata.NewCollector(perfdata.Registry, "DFS Replicated Folders", perfdata.AllInstances, counters)
 			if err != nil {
 				return fmt.Errorf("failed to create Replication Connections collector: %w", err)
 			}
@@ -241,7 +241,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *wmi.Client) error {
 				usnJournalUnreadPercentage,
 			}
 
-			c.perfDataCollectorVolume, err = perfdata.NewCollector("DFS Replication Service Volumes", []string{"*"}, counters)
+			c.perfDataCollectorVolume, err = perfdata.NewCollector(perfdata.Registry, "DFS Replication Service Volumes", perfdata.AllInstances, counters)
 			if err != nil {
 				return fmt.Errorf("failed to create Replication Connections collector: %w", err)
 			}
@@ -585,7 +585,7 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch ch
 func (c *Collector) collectConnection(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	var dst []PerflibDFSRConnection
 
-	if err := perflib.UnmarshalObject(ctx.PerfObjects["DFS Replication Connections"], &dst, logger); err != nil {
+	if err := registry.UnmarshalObject(ctx.PerfObjects["DFS Replication Connections"], &dst, logger); err != nil {
 		return err
 	}
 
@@ -660,7 +660,7 @@ func (c *Collector) collectConnection(ctx *types.ScrapeContext, logger *slog.Log
 func (c *Collector) collectFolder(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	var dst []perflibDFSRFolder
 
-	if err := perflib.UnmarshalObject(ctx.PerfObjects["DFS Replicated Folders"], &dst, logger); err != nil {
+	if err := registry.UnmarshalObject(ctx.PerfObjects["DFS Replicated Folders"], &dst, logger); err != nil {
 		return err
 	}
 
@@ -861,7 +861,7 @@ func (c *Collector) collectFolder(ctx *types.ScrapeContext, logger *slog.Logger,
 func (c *Collector) collectVolume(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	var dst []perflibDFSRVolume
 
-	if err := perflib.UnmarshalObject(ctx.PerfObjects["DFS Replication Service Volumes"], &dst, logger); err != nil {
+	if err := registry.UnmarshalObject(ctx.PerfObjects["DFS Replication Service Volumes"], &dst, logger); err != nil {
 		return err
 	}
 

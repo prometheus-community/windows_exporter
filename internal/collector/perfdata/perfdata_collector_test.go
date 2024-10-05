@@ -51,7 +51,7 @@ func TestCollector(t *testing.T) {
 		},
 		{
 			object:          "Process",
-			instances:       []string{"*"},
+			instances:       perfdata.AllInstances,
 			counters:        map[string]perfdata.Counter{"Thread Count": {Type: "counter"}},
 			expectedMetrics: regexp.MustCompile(`^# HELP windows_perfdata_process_thread_count Performance data for \\\\Process\\\\Thread Count\s*# TYPE windows_perfdata_process_thread_count counter\s*windows_perfdata_process_thread_count\{instance=".+"} \d`),
 		},

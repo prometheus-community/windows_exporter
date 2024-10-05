@@ -6,7 +6,7 @@ import (
 	"log/slog"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/prometheus-community/windows_exporter/internal/perflib"
+	"github.com/prometheus-community/windows_exporter/internal/perfdata/registry"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
@@ -268,7 +268,7 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch ch
 
 	var dhcpPerfs []dhcpPerf
 
-	if err := perflib.UnmarshalObject(ctx.PerfObjects["DHCP Server"], &dhcpPerfs, logger); err != nil {
+	if err := registry.UnmarshalObject(ctx.PerfObjects["DHCP Server"], &dhcpPerfs, logger); err != nil {
 		return err
 	}
 

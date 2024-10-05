@@ -9,7 +9,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/headers/kernel32"
-	"github.com/prometheus-community/windows_exporter/internal/perflib"
+	"github.com/prometheus-community/windows_exporter/internal/perfdata/registry"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
@@ -183,7 +183,7 @@ func (c *Collector) collectNTP(ctx *types.ScrapeContext, logger *slog.Logger, ch
 
 	var dst []windowsTime // Single-instance class, array is required but will have single entry.
 
-	if err := perflib.UnmarshalObject(ctx.PerfObjects["Windows Time Service"], &dst, logger); err != nil {
+	if err := registry.UnmarshalObject(ctx.PerfObjects["Windows Time Service"], &dst, logger); err != nil {
 		return err
 	}
 

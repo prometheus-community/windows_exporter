@@ -1,12 +1,12 @@
 //go:build windows
 
-package perfdata_test
+package pdh_test
 
 import (
 	"testing"
 	"time"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/perfdata/pdh"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -61,7 +61,7 @@ func TestCollector(t *testing.T) {
 		t.Run(tc.object, func(t *testing.T) {
 			t.Parallel()
 
-			performanceData, err := perfdata.NewCollector(tc.object, tc.instances, tc.counters)
+			performanceData, err := pdh.NewCollector(tc.object, tc.instances, tc.counters)
 			require.NoError(t, err)
 
 			time.Sleep(100 * time.Millisecond)

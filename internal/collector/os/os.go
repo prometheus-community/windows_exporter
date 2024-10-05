@@ -16,7 +16,8 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/headers/netapi32"
 	"github.com/prometheus-community/windows_exporter/internal/headers/psapi"
 	"github.com/prometheus-community/windows_exporter/internal/headers/sysinfoapi"
-	"github.com/prometheus-community/windows_exporter/internal/perflib"
+	registry2 "github.com/prometheus-community/windows_exporter/internal/perfdata/registry"
+	"github.com/prometheus-community/windows_exporter/internal/registry"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
@@ -412,7 +413,7 @@ func (c *Collector) collectPaging(ctx *types.ScrapeContext, logger *slog.Logger,
 	}
 
 	pfc := make([]pagingFileCounter, 0)
-	if err = perflib.UnmarshalObject(ctx.PerfObjects["Paging File"], &pfc, logger); err != nil {
+	if err = registry2.UnmarshalObject(ctx.PerfObjects["Paging File"], &pfc, logger); err != nil {
 		return err
 	}
 
