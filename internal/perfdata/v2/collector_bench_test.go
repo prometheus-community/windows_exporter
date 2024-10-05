@@ -3,7 +3,7 @@ package v2_test
 import (
 	"testing"
 
-	v2 "github.com/prometheus-community/windows_exporter/internal/perfdata/v2"
+	"github.com/prometheus-community/windows_exporter/internal/perfdata/v2"
 	"github.com/stretchr/testify/require"
 )
 
