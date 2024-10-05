@@ -12,7 +12,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	perfdatatypes "github.com/prometheus-community/windows_exporter/internal/perfdata/perftypes"
+	"github.com/prometheus-community/windows_exporter/internal/perfdata/perftypes"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
@@ -135,7 +135,7 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 		for instance, counters := range data {
 			for counter, value := range counters {
 				var labels prometheus.Labels
-				if instance != perfdatatypes.EmptyInstance {
+				if instance != perftypes.EmptyInstance {
 					labels = prometheus.Labels{object.InstanceLabel: instance}
 				}
 

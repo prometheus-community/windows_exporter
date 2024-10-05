@@ -22,8 +22,10 @@ const (
 	V2
 )
 
-var ErrUnknownEngine = errors.New("unknown engine")
-var AllInstances = []string{"*"}
+var (
+	ErrUnknownEngine = errors.New("unknown engine")
+	AllInstances     = []string{"*"}
+)
 
 func NewCollector(engine Engine, object string, instances []string, counters []string) (Collector, error) {
 	switch engine {

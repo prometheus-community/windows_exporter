@@ -103,5 +103,4 @@ func (c *Collector) Collect() (map[string]map[string]perftypes.CounterValues, er
 }
 
 func (c *Collector) Close() {
-
 }
