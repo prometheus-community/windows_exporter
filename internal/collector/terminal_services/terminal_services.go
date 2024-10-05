@@ -11,7 +11,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/headers/wtsapi32"
-	"github.com/prometheus-community/windows_exporter/internal/perflib"
+	v1 "github.com/prometheus-community/windows_exporter/internal/perfdata/v1"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
@@ -275,7 +275,7 @@ func (c *Collector) collectTSSessionCounters(ctx *types.ScrapeContext, logger *s
 	logger = logger.With(slog.String("collector", Name))
 	dst := make([]perflibTerminalServicesSession, 0)
 
-	err := perflib.UnmarshalObject(ctx.PerfObjects["Terminal Services Session"], &dst, logger)
+	err := v1.UnmarshalObject(ctx.PerfObjects["Terminal Services Session"], &dst, logger)
 	if err != nil {
 		return err
 	}
@@ -403,7 +403,7 @@ func (c *Collector) collectCollectionBrokerPerformanceCounter(ctx *types.ScrapeC
 	logger = logger.With(slog.String("collector", Name))
 	dst := make([]perflibRemoteDesktopConnectionBrokerCounterset, 0)
 
-	err := perflib.UnmarshalObject(ctx.PerfObjects["Remote Desktop Connection Broker Counterset"], &dst, logger)
+	err := v1.UnmarshalObject(ctx.PerfObjects["Remote Desktop Connection Broker Counterset"], &dst, logger)
 	if err != nil {
 		return err
 	}

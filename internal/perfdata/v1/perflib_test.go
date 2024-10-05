@@ -1,4 +1,4 @@
-package perflib
+package v1
 
 import (
 	"testing"

@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/prometheus-community/windows_exporter/internal/perflib"
+	v1 "github.com/prometheus-community/windows_exporter/internal/perfdata/v1"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
@@ -100,7 +100,7 @@ func (c *Collector) collectServerShares(ctx *types.ScrapeContext, logger *slog.L
 
 	var data []perflibServerShares
 
-	if err := perflib.UnmarshalObject(ctx.PerfObjects["SMB Server Shares"], &data, logger); err != nil {
+	if err := v1.UnmarshalObject(ctx.PerfObjects["SMB Server Shares"], &data, logger); err != nil {
 		return err
 	}
 

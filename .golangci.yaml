@@ -83,7 +83,7 @@ issues:
   - text: "don't use ALL_CAPS in Go names; use CamelCase"
     linters:
     - revive
-  - path: internal/perflib/
+  - path: internal/perfdata/v1/
     linters:
       - godox
       - stylecheck

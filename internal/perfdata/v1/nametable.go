@@ -1,4 +1,4 @@
-package perflib
+package v1
 
 import (
 	"bytes"
@@ -41,7 +41,7 @@ func (t *NameTable) LookupIndex(str string) uint32 {
 	return t.table.string[str]
 }
 
-// QueryNameTable Query a perflib name table from the registry. Specify the type and the language
+// QueryNameTable Query a perflib name table from the v1. Specify the type and the language
 // code (i.e. "Counter 009" or "Help 009") for English language.
 func QueryNameTable(tableName string) *NameTable {
 	return &NameTable{

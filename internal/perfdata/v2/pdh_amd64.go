@@ -31,7 +31,7 @@
 
 //go:build windows
 
-package perfdata
+package v2
 
 import "golang.org/x/sys/windows"
 

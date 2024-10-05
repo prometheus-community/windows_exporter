@@ -7,7 +7,8 @@ import (
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/prometheus-community/windows_exporter/internal/perflib"
+	"github.com/prometheus-community/windows_exporter/internal/perfdata/perftypes"
+	v1 "github.com/prometheus-community/windows_exporter/internal/perfdata/v1"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
@@ -223,7 +224,7 @@ func (c *Collector) collectClientShares(ctx *types.ScrapeContext, logger *slog.L
 
 	var data []perflibClientShares
 
-	if err := perflib.UnmarshalObject(ctx.PerfObjects["SMB Client Shares"], &data, logger); err != nil {
+	if err := v1.UnmarshalObject(ctx.PerfObjects["SMB Client Shares"], &data, logger); err != nil {
 		return err
 	}
 
@@ -239,7 +240,7 @@ func (c *Collector) collectClientShares(ctx *types.ScrapeContext, logger *slog.L
 		ch <- prometheus.MustNewConstMetric(
 			c.requestQueueSecsTotal,
 			prometheus.CounterValue,
-			instance.AvgDataQueueLength*perflib.TicksToSecondScaleFactor,
+			instance.AvgDataQueueLength*perftypes.TicksToSecondScaleFactor,
 			serverValue, shareValue,
 		)
 
@@ -247,28 +248,28 @@ func (c *Collector) collectClientShares(ctx *types.ScrapeContext, logger *slog.L
 		ch <- prometheus.MustNewConstMetric(
 			c.readRequestQueueSecsTotal,
 			prometheus.CounterValue,
-			instance.AvgReadQueueLength*perflib.TicksToSecondScaleFactor,
+			instance.AvgReadQueueLength*perftypes.TicksToSecondScaleFactor,
 			serverValue, shareValue,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.readSecsTotal,
 			prometheus.CounterValue,
-			instance.AvgSecPerRead*perflib.TicksToSecondScaleFactor,
+			instance.AvgSecPerRead*perftypes.TicksToSecondScaleFactor,
 			serverValue, shareValue,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.writeSecsTotal,
 			prometheus.CounterValue,
-			instance.AvgSecPerWrite*perflib.TicksToSecondScaleFactor,
+			instance.AvgSecPerWrite*perftypes.TicksToSecondScaleFactor,
 			serverValue, shareValue,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.requestSecs,
 			prometheus.CounterValue,
-			instance.AvgSecPerDataRequest*perflib.TicksToSecondScaleFactor,
+			instance.AvgSecPerDataRequest*perftypes.TicksToSecondScaleFactor,
 			serverValue, shareValue,
 		)
 
@@ -276,7 +277,7 @@ func (c *Collector) collectClientShares(ctx *types.ScrapeContext, logger *slog.L
 		ch <- prometheus.MustNewConstMetric(
 			c.writeRequestQueueSecsTotal,
 			prometheus.CounterValue,
-			instance.AvgWriteQueueLength*perflib.TicksToSecondScaleFactor,
+			instance.AvgWriteQueueLength*perftypes.TicksToSecondScaleFactor,
 			serverValue, shareValue,
 		)
 

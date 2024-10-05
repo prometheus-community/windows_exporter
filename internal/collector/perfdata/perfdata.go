@@ -12,14 +12,13 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/perfdata/perftypes"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
 )
 
-const (
-	Name = "perfdata"
-)
+const Name = "perfdata"
 
 type Config struct {
 	Objects []Object `yaml:"objects"`
@@ -97,9 +96,9 @@ func (c *Collector) Build(logger *slog.Logger, _ *wmi.Client) error {
 	logger.Warn("The perfdata collector is in an experimental state! The configuration may change in future. Please report any issues.")
 
 	for i, object := range c.config.Objects {
-		collector, err := perfdata.NewCollector(object.Object, object.Instances, slices.Sorted(maps.Keys(object.Counters)))
+		collector, err := perfdata.NewCollector(perfdata.V2, object.Object, object.Instances, slices.Sorted(maps.Keys(object.Counters)))
 		if err != nil {
-			return fmt.Errorf("failed to create pdh collector: %w", err)
+			return fmt.Errorf("failed to create v2 collector: %w", err)
 		}
 
 		if object.InstanceLabel == "" {
@@ -136,7 +135,7 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 		for instance, counters := range data {
 			for counter, value := range counters {
 				var labels prometheus.Labels
-				if instance != perfdata.EmptyInstance {
+				if instance != perftypes.EmptyInstance {
 					labels = prometheus.Labels{object.InstanceLabel: instance}
 				}
 

@@ -7,7 +7,7 @@ import (
 	"log/slog"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/prometheus-community/windows_exporter/internal/perflib"
+	v1 "github.com/prometheus-community/windows_exporter/internal/perfdata/v1"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
@@ -147,7 +147,7 @@ func (c *Collector) collect(ctx *types.ScrapeContext, logger *slog.Logger, ch ch
 
 	var dst []system
 
-	if err := perflib.UnmarshalObject(ctx.PerfObjects["System"], &dst, logger); err != nil {
+	if err := v1.UnmarshalObject(ctx.PerfObjects["System"], &dst, logger); err != nil {
 		return err
 	}
 

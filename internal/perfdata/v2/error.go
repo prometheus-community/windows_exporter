@@ -1,4 +1,4 @@
-package perfdata
+package v2
 
 import "errors"
 

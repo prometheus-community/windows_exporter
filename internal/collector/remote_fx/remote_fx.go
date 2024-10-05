@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/prometheus-community/windows_exporter/internal/perflib"
+	v1 "github.com/prometheus-community/windows_exporter/internal/perfdata/v1"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
@@ -253,7 +253,7 @@ func (c *Collector) collectRemoteFXNetworkCount(ctx *types.ScrapeContext, logger
 	logger = logger.With(slog.String("collector", Name))
 	dst := make([]perflibRemoteFxNetwork, 0)
 
-	err := perflib.UnmarshalObject(ctx.PerfObjects["RemoteFX Network"], &dst, logger)
+	err := v1.UnmarshalObject(ctx.PerfObjects["RemoteFX Network"], &dst, logger)
 	if err != nil {
 		return err
 	}
@@ -366,7 +366,7 @@ func (c *Collector) collectRemoteFXGraphicsCounters(ctx *types.ScrapeContext, lo
 	logger = logger.With(slog.String("collector", Name))
 	dst := make([]perflibRemoteFxGraphics, 0)
 
-	err := perflib.UnmarshalObject(ctx.PerfObjects["RemoteFX Graphics"], &dst, logger)
+	err := v1.UnmarshalObject(ctx.PerfObjects["RemoteFX Graphics"], &dst, logger)
 	if err != nil {
 		return err
 	}

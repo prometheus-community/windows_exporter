@@ -7,7 +7,7 @@ import (
 	"log/slog"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/prometheus-community/windows_exporter/internal/perflib"
+	"github.com/prometheus-community/windows_exporter/internal/perfdata/perftypes"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
@@ -368,13 +368,13 @@ func (c *Collector) collectCpu(ch chan<- prometheus.Metric) error {
 	ch <- prometheus.MustNewConstMetric(
 		c.cpuStolenTotal,
 		prometheus.CounterValue,
-		float64(dst[0].CpuStolenMs)*perflib.TicksToSecondScaleFactor,
+		float64(dst[0].CpuStolenMs)*perftypes.TicksToSecondScaleFactor,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.cpuTimeTotal,
 		prometheus.CounterValue,
-		float64(dst[0].CpuTimePercents)*perflib.TicksToSecondScaleFactor,
+		float64(dst[0].CpuTimePercents)*perftypes.TicksToSecondScaleFactor,
 	)
 
 	ch <- prometheus.MustNewConstMetric(

@@ -12,7 +12,8 @@ import (
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/prometheus-community/windows_exporter/internal/perflib"
+	"github.com/prometheus-community/windows_exporter/internal/perfdata/perftypes"
+	v1 "github.com/prometheus-community/windows_exporter/internal/perfdata/v1"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
@@ -307,7 +308,7 @@ func (c *Collector) collect(ctx *types.ScrapeContext, logger *slog.Logger, ch ch
 		dst    []logicalDisk
 	)
 
-	if err = perflib.UnmarshalObject(ctx.PerfObjects["LogicalDisk"], &dst, logger); err != nil {
+	if err = v1.UnmarshalObject(ctx.PerfObjects["LogicalDisk"], &dst, logger); err != nil {
 		return err
 	}
 
@@ -354,14 +355,14 @@ func (c *Collector) collect(ctx *types.ScrapeContext, logger *slog.Logger, ch ch
 		ch <- prometheus.MustNewConstMetric(
 			c.avgReadQueue,
 			prometheus.GaugeValue,
-			volume.AvgDiskReadQueueLength*perflib.TicksToSecondScaleFactor,
+			volume.AvgDiskReadQueueLength*perftypes.TicksToSecondScaleFactor,
 			volume.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.avgWriteQueue,
 			prometheus.GaugeValue,
-			volume.AvgDiskWriteQueueLength*perflib.TicksToSecondScaleFactor,
+			volume.AvgDiskWriteQueueLength*perftypes.TicksToSecondScaleFactor,
 			volume.Name,
 		)
 
@@ -438,21 +439,21 @@ func (c *Collector) collect(ctx *types.ScrapeContext, logger *slog.Logger, ch ch
 		ch <- prometheus.MustNewConstMetric(
 			c.readLatency,
 			prometheus.CounterValue,
-			volume.AvgDiskSecPerRead*perflib.TicksToSecondScaleFactor,
+			volume.AvgDiskSecPerRead*perftypes.TicksToSecondScaleFactor,
 			volume.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.writeLatency,
 			prometheus.CounterValue,
-			volume.AvgDiskSecPerWrite*perflib.TicksToSecondScaleFactor,
+			volume.AvgDiskSecPerWrite*perftypes.TicksToSecondScaleFactor,
 			volume.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.readWriteLatency,
 			prometheus.CounterValue,
-			volume.AvgDiskSecPerTransfer*perflib.TicksToSecondScaleFactor,
+			volume.AvgDiskSecPerTransfer*perftypes.TicksToSecondScaleFactor,
 			volume.Name,
 		)
 	}
