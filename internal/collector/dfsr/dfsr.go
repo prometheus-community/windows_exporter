@@ -191,7 +191,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *wmi.Client) error {
 
 			c.perfDataCollectorConnection, err = perfdata.NewCollector(perfdata.V1, "DFS Replication Connections", perfdata.AllInstances, counters)
 			if err != nil {
-				return fmt.Errorf("failed to create Replication Connections collector: %w", err)
+				return fmt.Errorf("failed to create DFS Replication Connections collector: %w", err)
 			}
 		}
 
@@ -228,7 +228,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *wmi.Client) error {
 
 			c.perfDataCollectorFolder, err = perfdata.NewCollector(perfdata.V1, "DFS Replicated Folders", perfdata.AllInstances, counters)
 			if err != nil {
-				return fmt.Errorf("failed to create Replication Connections collector: %w", err)
+				return fmt.Errorf("failed to create DFS Replicated Folders collector: %w", err)
 			}
 		}
 
@@ -243,7 +243,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *wmi.Client) error {
 
 			c.perfDataCollectorVolume, err = perfdata.NewCollector(perfdata.V1, "DFS Replication Service Volumes", perfdata.AllInstances, counters)
 			if err != nil {
-				return fmt.Errorf("failed to create Replication Connections collector: %w", err)
+				return fmt.Errorf("failed to create DFS Replication Service Volumes collector: %w", err)
 			}
 		}
 	}
