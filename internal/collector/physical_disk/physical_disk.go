@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
+	"github.com/prometheus-community/windows_exporter/internal/perfdata/perftypes"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata/registry"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
@@ -321,21 +322,21 @@ func (c *Collector) collect(ctx *types.ScrapeContext, logger *slog.Logger, ch ch
 		ch <- prometheus.MustNewConstMetric(
 			c.readLatency,
 			prometheus.CounterValue,
-			disk.AvgDiskSecPerRead*registry.TicksToSecondScaleFactor,
+			disk.AvgDiskSecPerRead*perftypes.TicksToSecondScaleFactor,
 			disk_number,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.writeLatency,
 			prometheus.CounterValue,
-			disk.AvgDiskSecPerWrite*registry.TicksToSecondScaleFactor,
+			disk.AvgDiskSecPerWrite*perftypes.TicksToSecondScaleFactor,
 			disk_number,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.readWriteLatency,
 			prometheus.CounterValue,
-			disk.AvgDiskSecPerTransfer*registry.TicksToSecondScaleFactor,
+			disk.AvgDiskSecPerTransfer*perftypes.TicksToSecondScaleFactor,
 			disk_number,
 		)
 	}

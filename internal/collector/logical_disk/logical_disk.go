@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
+	"github.com/prometheus-community/windows_exporter/internal/perfdata/perftypes"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata/registry"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
@@ -354,14 +355,14 @@ func (c *Collector) collect(ctx *types.ScrapeContext, logger *slog.Logger, ch ch
 		ch <- prometheus.MustNewConstMetric(
 			c.avgReadQueue,
 			prometheus.GaugeValue,
-			volume.AvgDiskReadQueueLength*registry.TicksToSecondScaleFactor,
+			volume.AvgDiskReadQueueLength*perftypes.TicksToSecondScaleFactor,
 			volume.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.avgWriteQueue,
 			prometheus.GaugeValue,
-			volume.AvgDiskWriteQueueLength*registry.TicksToSecondScaleFactor,
+			volume.AvgDiskWriteQueueLength*perftypes.TicksToSecondScaleFactor,
 			volume.Name,
 		)
 
@@ -438,21 +439,21 @@ func (c *Collector) collect(ctx *types.ScrapeContext, logger *slog.Logger, ch ch
 		ch <- prometheus.MustNewConstMetric(
 			c.readLatency,
 			prometheus.CounterValue,
-			volume.AvgDiskSecPerRead*registry.TicksToSecondScaleFactor,
+			volume.AvgDiskSecPerRead*perftypes.TicksToSecondScaleFactor,
 			volume.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.writeLatency,
 			prometheus.CounterValue,
-			volume.AvgDiskSecPerWrite*registry.TicksToSecondScaleFactor,
+			volume.AvgDiskSecPerWrite*perftypes.TicksToSecondScaleFactor,
 			volume.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.readWriteLatency,
 			prometheus.CounterValue,
-			volume.AvgDiskSecPerTransfer*registry.TicksToSecondScaleFactor,
+			volume.AvgDiskSecPerTransfer*perftypes.TicksToSecondScaleFactor,
 			volume.Name,
 		)
 	}

@@ -197,7 +197,7 @@ func (c *MetricCollectors) Build(logger *slog.Logger) error {
 
 	for _, collector := range c.Collectors {
 		go func() {
-			wg.Done()
+			defer wg.Done()
 
 			if err = collector.Build(logger, c.WMIClient); err != nil {
 				errCh <- fmt.Errorf("error build collector %s: %w", collector.GetName(), err)

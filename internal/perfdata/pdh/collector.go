@@ -177,7 +177,7 @@ func (c *Collector) Collect() (map[string]map[string]perftypes.CounterValues, er
 						continue
 					}
 
-					if instanceName == "" {
+					if instanceName == "" || instanceName == "*" {
 						instanceName = perftypes.EmptyInstance
 					}
 

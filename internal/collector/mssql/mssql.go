@@ -14,7 +14,6 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	registry2 "github.com/prometheus-community/windows_exporter/internal/perfdata/registry"
-	"github.com/prometheus-community/windows_exporter/internal/registry"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"

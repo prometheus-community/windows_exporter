@@ -87,7 +87,7 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 		config: ConfigDefaults,
 	}
 
-	var processExclude, processInclude, perfCounterInstances string
+	var processExclude, processInclude string
 
 	app.Flag(
 		"collector.process.exclude",

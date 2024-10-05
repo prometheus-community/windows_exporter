@@ -11,7 +11,7 @@ import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/headers/iphlpapi"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata/pdh"
+	"github.com/prometheus-community/windows_exporter/internal/perfdata/perftypes"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
@@ -222,19 +222,19 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 		return fmt.Errorf("failed to collect TCPv4 metrics: %w", err)
 	}
 
-	c.writeTCPCounters(ch, data[pdh.EmptyInstance], []string{"ipv4"})
+	c.writeTCPCounters(ch, data[perftypes.EmptyInstance], []string{"ipv4"})
 
 	data, err = c.perfDataCollector6.Collect()
 	if err != nil {
 		return fmt.Errorf("failed to collect TCPv6 metrics: %w", err)
 	}
 
-	c.writeTCPCounters(ch, data[pdh.EmptyInstance], []string{"ipv6"})
+	c.writeTCPCounters(ch, data[perftypes.EmptyInstance], []string{"ipv6"})
 
 	return nil
 }
 
-func (c *Collector) writeTCPCounters(ch chan<- prometheus.Metric, metrics map[string]pdh.CounterValues, labels []string) {
+func (c *Collector) writeTCPCounters(ch chan<- prometheus.Metric, metrics map[string]perftypes.CounterValues, labels []string) {
 	ch <- prometheus.MustNewConstMetric(
 		c.connectionFailures,
 		prometheus.CounterValue,

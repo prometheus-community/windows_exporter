@@ -9,6 +9,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/perfdata/perftypes"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata/registry"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus-community/windows_exporter/internal/utils"
@@ -523,7 +524,7 @@ func (c *Collector) collectPDH(ch chan<- prometheus.Metric) error {
 		return fmt.Errorf("failed to collect Cache metrics: %w", err)
 	}
 
-	cacheData, ok := data["*"]
+	cacheData, ok := data[perftypes.EmptyInstance]
 
 	if !ok {
 		return errors.New("perflib query for Cache returned empty result set")

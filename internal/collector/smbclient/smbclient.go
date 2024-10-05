@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
+	"github.com/prometheus-community/windows_exporter/internal/perfdata/perftypes"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata/registry"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
@@ -239,7 +240,7 @@ func (c *Collector) collectClientShares(ctx *types.ScrapeContext, logger *slog.L
 		ch <- prometheus.MustNewConstMetric(
 			c.requestQueueSecsTotal,
 			prometheus.CounterValue,
-			instance.AvgDataQueueLength*registry.TicksToSecondScaleFactor,
+			instance.AvgDataQueueLength*perftypes.TicksToSecondScaleFactor,
 			serverValue, shareValue,
 		)
 
@@ -247,28 +248,28 @@ func (c *Collector) collectClientShares(ctx *types.ScrapeContext, logger *slog.L
 		ch <- prometheus.MustNewConstMetric(
 			c.readRequestQueueSecsTotal,
 			prometheus.CounterValue,
-			instance.AvgReadQueueLength*registry.TicksToSecondScaleFactor,
+			instance.AvgReadQueueLength*perftypes.TicksToSecondScaleFactor,
 			serverValue, shareValue,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.readSecsTotal,
 			prometheus.CounterValue,
-			instance.AvgSecPerRead*registry.TicksToSecondScaleFactor,
+			instance.AvgSecPerRead*perftypes.TicksToSecondScaleFactor,
 			serverValue, shareValue,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.writeSecsTotal,
 			prometheus.CounterValue,
-			instance.AvgSecPerWrite*registry.TicksToSecondScaleFactor,
+			instance.AvgSecPerWrite*perftypes.TicksToSecondScaleFactor,
 			serverValue, shareValue,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.requestSecs,
 			prometheus.CounterValue,
-			instance.AvgSecPerDataRequest*registry.TicksToSecondScaleFactor,
+			instance.AvgSecPerDataRequest*perftypes.TicksToSecondScaleFactor,
 			serverValue, shareValue,
 		)
 
@@ -276,7 +277,7 @@ func (c *Collector) collectClientShares(ctx *types.ScrapeContext, logger *slog.L
 		ch <- prometheus.MustNewConstMetric(
 			c.writeRequestQueueSecsTotal,
 			prometheus.CounterValue,
-			instance.AvgWriteQueueLength*registry.TicksToSecondScaleFactor,
+			instance.AvgWriteQueueLength*perftypes.TicksToSecondScaleFactor,
 			serverValue, shareValue,
 		)
 
