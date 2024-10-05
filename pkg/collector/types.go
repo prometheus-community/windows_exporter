@@ -29,6 +29,6 @@ type Collector interface {
 	GetName() string
 	// GetPerfCounter returns the perf counter required by the collector
 	GetPerfCounter(logger *slog.Logger) ([]string, error)
-	// Collect Get new metrics and expose them via prometheus v1.
+	// Collect Get new metrics and expose them via prometheus registry.
 	Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) (err error)
 }

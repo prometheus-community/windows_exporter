@@ -136,11 +136,11 @@ jobs:
       #  if: ${{ github.event_name != 'pull_request' }}
       #  uses: docker/login-action@v3
       #  with:
-      #    v1: quay.io
+      #    registry: quay.io
       #    username: 'robot'
       #    password: ${{ secrets.QUAY_IO_API_TOKEN }}
 
-      - name: Login to GitHub container v1
+      - name: Login to GitHub container registry
         if: ${{ github.event_name != 'pull_request' }}
         uses: docker/login-action@v3
         with:

@@ -175,7 +175,7 @@ func (p *Prometheus) execute(name string, c Collector, scrapeCtx *types.ScrapeCo
 	)
 
 	// bufCh is a buffer channel to store the metrics
-	// This is needed because once timeout is reached, the prometheus v1 channel is closed.
+	// This is needed because once timeout is reached, the prometheus registry channel is closed.
 	bufCh := make(chan prometheus.Metric, 1000)
 	errCh := make(chan error, 1)
 
@@ -208,7 +208,7 @@ func (p *Prometheus) execute(name string, c Collector, scrapeCtx *types.ScrapeCo
 			wg.Done()
 		}()
 
-		// Pass metrics to the prometheus v1
+		// Pass metrics to the prometheus registry
 		// If timeout is reached, the channel is closed.
 		// This will cause a panic if we try to write to it.
 		for {

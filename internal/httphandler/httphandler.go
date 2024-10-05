@@ -22,7 +22,7 @@ const defaultScrapeTimeout = 10.0
 
 type MetricsHTTPHandler struct {
 	metricCollectors *collector.MetricCollectors
-	// exporterMetricsRegistry is a separate v1 for the metrics about
+	// exporterMetricsRegistry is a separate registry for the metrics about
 	// the exporter itself.
 	exporterMetricsRegistry *prometheus.Registry
 
