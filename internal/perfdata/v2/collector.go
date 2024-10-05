@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 	"unsafe"
 
 	"github.com/prometheus-community/windows_exporter/internal/perfdata/perftypes"
@@ -15,7 +14,6 @@ import (
 )
 
 type Collector struct {
-	time     time.Time
 	object   string
 	counters map[string]Counter
 	handle   pdhQueryHandle
@@ -128,8 +126,6 @@ func (c *Collector) Collect() (map[string]map[string]perftypes.CounterValues, er
 	if ret := PdhCollectQueryData(c.handle); ret != ErrorSuccess {
 		return nil, fmt.Errorf("failed to collect query data: %w", NewPdhError(ret))
 	}
-
-	c.time = time.Now()
 
 	var data map[string]map[string]perftypes.CounterValues
 

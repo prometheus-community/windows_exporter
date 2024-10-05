@@ -4,8 +4,8 @@ import (
 	"errors"
 
 	"github.com/prometheus-community/windows_exporter/internal/perfdata/perftypes"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata/v1"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata/v2"
+	v1 "github.com/prometheus-community/windows_exporter/internal/perfdata/v1"
+	v2 "github.com/prometheus-community/windows_exporter/internal/perfdata/v2"
 )
 
 type Collector interface {
@@ -27,6 +27,7 @@ var (
 	AllInstances     = []string{"*"}
 )
 
+//nolint:ireturn
 func NewCollector(engine Engine, object string, instances []string, counters []string) (Collector, error) {
 	switch engine {
 	case V1:

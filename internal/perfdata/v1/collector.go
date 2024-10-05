@@ -2,14 +2,12 @@ package v1
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/prometheus-community/windows_exporter/internal/perfdata/perftypes"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 type Collector struct {
-	time   time.Time
 	object string
 	query  string
 }
@@ -22,11 +20,7 @@ type Counter struct {
 	Frequency float64
 }
 
-func NewCollector(object string, instances []string, _ []string) (*Collector, error) {
-	if len(instances) == 0 {
-		instances = []string{perftypes.EmptyInstance}
-	}
-
+func NewCollector(object string, _ []string, _ []string) (*Collector, error) {
 	collector := &Collector{
 		object: object,
 		query:  MapCounterToIndex(object),
@@ -48,8 +42,6 @@ func (c *Collector) Collect() (map[string]map[string]perftypes.CounterValues, er
 	if err != nil {
 		return nil, fmt.Errorf("QueryPerformanceData: %w", err)
 	}
-
-	c.time = time.Now()
 
 	data := make(map[string]map[string]perftypes.CounterValues, len(perfObjects[0].Instances))
 

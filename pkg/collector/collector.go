@@ -59,7 +59,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/updates"
 	"github.com/prometheus-community/windows_exporter/internal/collector/vmware"
 	"github.com/prometheus-community/windows_exporter/internal/collector/vmware_blast"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata/v1"
+	v1 "github.com/prometheus-community/windows_exporter/internal/perfdata/v1"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/yusufpapurcu/wmi"
 )
