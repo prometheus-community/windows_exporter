@@ -473,10 +473,10 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) {
 }
 
 func (c *Collector) getWindowsVersion() (string, string, string, error) {
-	// Get build number and product name from v1
+	// Get build number and product name from registry
 	ntKey, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\Microsoft\Windows NT\CurrentVersion`, registry.QUERY_VALUE)
 	if err != nil {
-		return "", "", "", fmt.Errorf("failed to open v1 key: %w", err)
+		return "", "", "", fmt.Errorf("failed to open registry key: %w", err)
 	}
 
 	defer ntKey.Close()

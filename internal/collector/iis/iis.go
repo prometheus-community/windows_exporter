@@ -896,7 +896,7 @@ type simpleVersion struct {
 func getIISVersion(logger *slog.Logger) simpleVersion {
 	k, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\Microsoft\InetStp\`, registry.QUERY_VALUE)
 	if err != nil {
-		logger.Warn("Couldn't open v1 to determine IIS version",
+		logger.Warn("Couldn't open registry to determine IIS version",
 			slog.Any("err", err),
 		)
 
@@ -906,7 +906,7 @@ func getIISVersion(logger *slog.Logger) simpleVersion {
 	defer func() {
 		err = k.Close()
 		if err != nil {
-			logger.Warn("Failed to close v1 key",
+			logger.Warn("Failed to close registry key",
 				slog.Any("err", err),
 			)
 		}
@@ -914,7 +914,7 @@ func getIISVersion(logger *slog.Logger) simpleVersion {
 
 	major, _, err := k.GetIntegerValue("MajorVersion")
 	if err != nil {
-		logger.Warn("Couldn't open v1 to determine IIS version",
+		logger.Warn("Couldn't open registry to determine IIS version",
 			slog.Any("err", err),
 		)
 
@@ -923,7 +923,7 @@ func getIISVersion(logger *slog.Logger) simpleVersion {
 
 	minor, _, err := k.GetIntegerValue("MinorVersion")
 	if err != nil {
-		logger.Warn("Couldn't open v1 to determine IIS version",
+		logger.Warn("Couldn't open registry to determine IIS version",
 			slog.Any("err", err),
 		)
 

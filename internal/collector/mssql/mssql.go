@@ -48,7 +48,7 @@ type mssqlInstancesType map[string]string
 func getMSSQLInstances(logger *slog.Logger) mssqlInstancesType {
 	sqlInstances := make(mssqlInstancesType)
 
-	// in case querying the v1 fails, return the default instance
+	// in case querying the registry fails, return the default instance
 	sqlDefaultInstance := make(mssqlInstancesType)
 	sqlDefaultInstance["MSSQLSERVER"] = ""
 
@@ -56,7 +56,7 @@ func getMSSQLInstances(logger *slog.Logger) mssqlInstancesType {
 
 	k, err := registry.OpenKey(registry.LOCAL_MACHINE, regKey, registry.QUERY_VALUE)
 	if err != nil {
-		logger.Warn("Couldn't open v1 to determine SQL instances",
+		logger.Warn("Couldn't open registry to determine SQL instances",
 			slog.Any("err", err),
 		)
 
@@ -66,7 +66,7 @@ func getMSSQLInstances(logger *slog.Logger) mssqlInstancesType {
 	defer func() {
 		err = k.Close()
 		if err != nil {
-			logger.Warn("Failed to close v1 key",
+			logger.Warn("Failed to close registry key",
 				slog.Any("err", err),
 			)
 		}
