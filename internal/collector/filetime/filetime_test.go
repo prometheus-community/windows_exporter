@@ -12,5 +12,7 @@ func BenchmarkCollector(b *testing.B) {
 }
 
 func TestCollector(t *testing.T) {
-	testutils.TestCollector(t, filetime.New, nil)
+	testutils.TestCollector(t, filetime.New, &filetime.Config{
+		FilePatterns: []string{"*.*"},
+	})
 }

@@ -20,11 +20,11 @@ import (
 const Name = "filetime"
 
 type Config struct {
-	filePatterns []string
+	FilePatterns []string
 }
 
 var ConfigDefaults = Config{
-	filePatterns: []string{},
+	FilePatterns: []string{},
 }
 
 // A Collector is a Prometheus Collector for collecting file times.
@@ -39,8 +39,8 @@ func New(config *Config) *Collector {
 		config = &ConfigDefaults
 	}
 
-	if config.filePatterns == nil {
-		config.filePatterns = ConfigDefaults.filePatterns
+	if config.FilePatterns == nil {
+		config.FilePatterns = ConfigDefaults.FilePatterns
 	}
 
 	c := &Collector{
@@ -54,18 +54,18 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 	c := &Collector{
 		config: ConfigDefaults,
 	}
-	c.config.filePatterns = make([]string, 0)
+	c.config.FilePatterns = make([]string, 0)
 
 	var filePatterns string
 
 	app.Flag(
 		"collector.filetime.file-patterns",
 		"Comma-separated list of file patterns. Each pattern is a glob pattern that can contain `*`, `?`, and `**` (recursive). See https://github.com/bmatcuk/doublestar#patterns",
-	).Default(strings.Join(ConfigDefaults.filePatterns, ",")).StringVar(&filePatterns)
+	).Default(strings.Join(ConfigDefaults.FilePatterns, ",")).StringVar(&filePatterns)
 
 	app.Action(func(*kingpin.ParseContext) error {
 		// doublestar.Glob() requires forward slashes
-		c.config.filePatterns = strings.Split(filepath.ToSlash(filePatterns), ",")
+		c.config.FilePatterns = strings.Split(filepath.ToSlash(filePatterns), ",")
 
 		return nil
 	})
@@ -97,7 +97,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *wmi.Client) error {
 		nil,
 	)
 
-	for _, filePattern := range c.config.filePatterns {
+	for _, filePattern := range c.config.FilePatterns {
 		basePath, pattern := doublestar.SplitPattern(filePattern)
 
 		_, err := doublestar.Glob(os.DirFS(basePath), pattern, doublestar.WithFilesOnly())
@@ -121,7 +121,7 @@ func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan
 func (c *Collector) collectGlob(logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	wg := sync.WaitGroup{}
 
-	for _, filePattern := range c.config.filePatterns {
+	for _, filePattern := range c.config.FilePatterns {
 		wg.Add(1)
 
 		go func(filePattern string) {

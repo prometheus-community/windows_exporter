@@ -16,6 +16,7 @@ linters:
     - goconst
     - gocyclo
     - gomnd
+    - paralleltest
     - lll
     - maintidx
     - mnd
