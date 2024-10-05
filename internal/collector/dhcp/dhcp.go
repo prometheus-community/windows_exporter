@@ -3,11 +3,16 @@
 package dhcp
 
 import (
+	"errors"
+	"fmt"
 	"log/slog"
 
 	"github.com/alecthomas/kingpin/v2"
+	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/perfdata/perftypes"
 	v1 "github.com/prometheus-community/windows_exporter/internal/perfdata/v1"
 	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
 )
@@ -22,6 +27,8 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	config Config
 
+	perfDataCollector perfdata.Collector
+
 	acksTotal                                        *prometheus.Desc
 	activeQueueLength                                *prometheus.Desc
 	conflictCheckQueueLength                         *prometheus.Desc
@@ -30,12 +37,12 @@ type Collector struct {
 	deniedDueToNonMatch                              *prometheus.Desc
 	discoversTotal                                   *prometheus.Desc
 	duplicatesDroppedTotal                           *prometheus.Desc
-	failoverBndackReceivedTotal                      *prometheus.Desc
-	failoverBndackSentTotal                          *prometheus.Desc
-	failoverBndupdDropped                            *prometheus.Desc
-	failoverBndupdPendingOutboundQueue               *prometheus.Desc
-	failoverBndupdReceivedTotal                      *prometheus.Desc
-	failoverBndupdSentTotal                          *prometheus.Desc
+	failoverBndAckReceivedTotal                      *prometheus.Desc
+	failoverBndAckSentTotal                          *prometheus.Desc
+	failoverBndUpdDropped                            *prometheus.Desc
+	failoverBndUpdPendingOutboundQueue               *prometheus.Desc
+	failoverBndUpdReceivedTotal                      *prometheus.Desc
+	failoverBndUpdSentTotal                          *prometheus.Desc
 	failoverTransitionsCommunicationInterruptedState *prometheus.Desc
 	failoverTransitionsPartnerDownState              *prometheus.Desc
 	failoverTransitionsRecoverState                  *prometheus.Desc
@@ -78,6 +85,43 @@ func (c *Collector) Close(_ *slog.Logger) error {
 }
 
 func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
+	if utils.PDHEnabled() {
+		counters := []string{
+			acksTotal,
+			activeQueueLength,
+			conflictCheckQueueLength,
+			declinesTotal,
+			deniedDueToMatch,
+			deniedDueToNonMatch,
+			discoversTotal,
+			duplicatesDroppedTotal,
+			failoverBndAckReceivedTotal,
+			failoverBndAckSentTotal,
+			failoverBndUpdDropped,
+			failoverBndUpdPendingOutboundQueue,
+			failoverBndUpdReceivedTotal,
+			failoverBndUpdSentTotal,
+			failoverTransitionsCommunicationInterruptedState,
+			failoverTransitionsPartnerDownState,
+			failoverTransitionsRecoverState,
+			informsTotal,
+			nacksTotal,
+			offerQueueLength,
+			offersTotal,
+			packetsExpiredTotal,
+			packetsReceivedTotal,
+			releasesTotal,
+			requestsTotal,
+		}
+
+		var err error
+
+		c.perfDataCollector, err = perfdata.NewCollector(perfdata.V1, "DHCP Server", perfdata.AllInstances, counters)
+		if err != nil {
+			return fmt.Errorf("failed to create DHCP Server collector: %w", err)
+		}
+	}
+
 	c.packetsReceivedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "packets_received_total"),
 		"Total number of packets received by the DHCP server (PacketsReceivedTotal)",
@@ -174,31 +218,31 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 		nil,
 		nil,
 	)
-	c.failoverBndupdSentTotal = prometheus.NewDesc(
+	c.failoverBndUpdSentTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "failover_bndupd_sent_total"),
 		"Number of DHCP fail over Binding Update messages sent (FailoverBndupdSentTotal)",
 		nil,
 		nil,
 	)
-	c.failoverBndupdReceivedTotal = prometheus.NewDesc(
+	c.failoverBndUpdReceivedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "failover_bndupd_received_total"),
 		"Number of DHCP fail over Binding Update messages received (FailoverBndupdReceivedTotal)",
 		nil,
 		nil,
 	)
-	c.failoverBndackSentTotal = prometheus.NewDesc(
+	c.failoverBndAckSentTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "failover_bndack_sent_total"),
 		"Number of DHCP fail over Binding Ack messages sent (FailoverBndackSentTotal)",
 		nil,
 		nil,
 	)
-	c.failoverBndackReceivedTotal = prometheus.NewDesc(
+	c.failoverBndAckReceivedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "failover_bndack_received_total"),
 		"Number of DHCP fail over Binding Ack messages received (FailoverBndackReceivedTotal)",
 		nil,
 		nil,
 	)
-	c.failoverBndupdPendingOutboundQueue = prometheus.NewDesc(
+	c.failoverBndUpdPendingOutboundQueue = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "failover_bndupd_pending_in_outbound_queue"),
 		"Number of pending outbound DHCP fail over Binding Update messages (FailoverBndupdPendingOutboundQueue)",
 		nil,
@@ -222,7 +266,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 		nil,
 		nil,
 	)
-	c.failoverBndupdDropped = prometheus.NewDesc(
+	c.failoverBndUpdDropped = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "failover_bndupd_dropped_total"),
 		"Total number of DHCP fail over Binding Updates dropped (FailoverBndupdDropped)",
 		nil,
@@ -232,40 +276,17 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 	return nil
 }
 
-// represents perflib metrics from the DHCP Server class.
-// While the name of a number of perflib metrics would indicate a rate is being returned (E.G. Packets Received/sec),
-// perflib instead returns a counter, hence the "Total" suffix in some of the variable names.
-type dhcpPerf struct {
-	PacketsReceivedTotal                             float64 `perflib:"Packets Received/sec"`
-	DuplicatesDroppedTotal                           float64 `perflib:"Duplicates Dropped/sec"`
-	PacketsExpiredTotal                              float64 `perflib:"Packets Expired/sec"`
-	ActiveQueueLength                                float64 `perflib:"Active Queue Length"`
-	ConflictCheckQueueLength                         float64 `perflib:"Conflict Check Queue Length"`
-	DiscoversTotal                                   float64 `perflib:"Discovers/sec"`
-	OffersTotal                                      float64 `perflib:"Offers/sec"`
-	RequestsTotal                                    float64 `perflib:"Requests/sec"`
-	InformsTotal                                     float64 `perflib:"Informs/sec"`
-	AcksTotal                                        float64 `perflib:"Acks/sec"`
-	NacksTotal                                       float64 `perflib:"Nacks/sec"`
-	DeclinesTotal                                    float64 `perflib:"Declines/sec"`
-	ReleasesTotal                                    float64 `perflib:"Releases/sec"`
-	DeniedDueToMatch                                 float64 `perflib:"Denied due to match."`
-	DeniedDueToNonMatch                              float64 `perflib:"Denied due to match."`
-	OfferQueueLength                                 float64 `perflib:"Offer Queue Length"`
-	FailoverBndupdSentTotal                          float64 `perflib:"Failover: BndUpd sent/sec."`
-	FailoverBndupdReceivedTotal                      float64 `perflib:"Failover: BndUpd received/sec."`
-	FailoverBndackSentTotal                          float64 `perflib:"Failover: BndAck sent/sec."`
-	FailoverBndackReceivedTotal                      float64 `perflib:"Failover: BndAck received/sec."`
-	FailoverBndupdPendingOutboundQueue               float64 `perflib:"Failover: BndUpd pending in outbound queue."`
-	FailoverTransitionsCommunicationinterruptedState float64 `perflib:"Failover: Transitions to COMMUNICATION-INTERRUPTED state."`
-	FailoverTransitionsPartnerdownState              float64 `perflib:"Failover: Transitions to PARTNER-DOWN state."`
-	FailoverTransitionsRecoverState                  float64 `perflib:"Failover: Transitions to RECOVER state."`
-	FailoverBndupdDropped                            float64 `perflib:"Failover: BndUpd Dropped."`
-}
-
 func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+	if utils.PDHEnabled() {
+		return c.collectPDH(ch)
+	}
+
 	logger = logger.With(slog.String("collector", Name))
 
+	return c.collect(ctx, logger, ch)
+}
+
+func (c *Collector) collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	var dhcpPerfs []dhcpPerf
 
 	if err := v1.UnmarshalObject(ctx.PerfObjects["DHCP Server"], &dhcpPerfs, logger); err != nil {
@@ -369,45 +390,45 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch ch
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.failoverBndupdSentTotal,
+		c.failoverBndUpdSentTotal,
 		prometheus.CounterValue,
-		dhcpPerfs[0].FailoverBndupdSentTotal,
+		dhcpPerfs[0].FailoverBndUpdSentTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.failoverBndupdReceivedTotal,
+		c.failoverBndUpdReceivedTotal,
 		prometheus.CounterValue,
-		dhcpPerfs[0].FailoverBndupdReceivedTotal,
+		dhcpPerfs[0].FailoverBndUpdReceivedTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.failoverBndackSentTotal,
+		c.failoverBndAckSentTotal,
 		prometheus.CounterValue,
-		dhcpPerfs[0].FailoverBndackSentTotal,
+		dhcpPerfs[0].FailoverBndAckSentTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.failoverBndackReceivedTotal,
+		c.failoverBndAckReceivedTotal,
 		prometheus.CounterValue,
-		dhcpPerfs[0].FailoverBndackReceivedTotal,
+		dhcpPerfs[0].FailoverBndAckReceivedTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.failoverBndupdPendingOutboundQueue,
+		c.failoverBndUpdPendingOutboundQueue,
 		prometheus.GaugeValue,
-		dhcpPerfs[0].FailoverBndupdPendingOutboundQueue,
+		dhcpPerfs[0].FailoverBndUpdPendingOutboundQueue,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.failoverTransitionsCommunicationInterruptedState,
 		prometheus.CounterValue,
-		dhcpPerfs[0].FailoverTransitionsCommunicationinterruptedState,
+		dhcpPerfs[0].FailoverTransitionsCommunicationInterruptedState,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.failoverTransitionsPartnerDownState,
 		prometheus.CounterValue,
-		dhcpPerfs[0].FailoverTransitionsPartnerdownState,
+		dhcpPerfs[0].FailoverTransitionsPartnerDownState,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
@@ -417,9 +438,173 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch ch
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.failoverBndupdDropped,
+		c.failoverBndUpdDropped,
 		prometheus.CounterValue,
-		dhcpPerfs[0].FailoverBndupdDropped,
+		dhcpPerfs[0].FailoverBndUpdDropped,
+	)
+
+	return nil
+}
+
+func (c *Collector) collectPDH(ch chan<- prometheus.Metric) error {
+	perfData, err := c.perfDataCollector.Collect()
+	if err != nil {
+		return fmt.Errorf("failed to collect DHCP Server metrics: %w", err)
+	}
+
+	data, ok := perfData[perftypes.EmptyInstance]
+	if !ok {
+		return errors.New("perflib query for DHCP Server returned empty result set")
+	}
+
+	ch <- prometheus.MustNewConstMetric(
+		c.packetsReceivedTotal,
+		prometheus.CounterValue,
+		data[packetsReceivedTotal].FirstValue,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.duplicatesDroppedTotal,
+		prometheus.CounterValue,
+		data[duplicatesDroppedTotal].FirstValue,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.packetsExpiredTotal,
+		prometheus.CounterValue,
+		data[packetsExpiredTotal].FirstValue,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.activeQueueLength,
+		prometheus.GaugeValue,
+		data[activeQueueLength].FirstValue,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.conflictCheckQueueLength,
+		prometheus.GaugeValue,
+		data[conflictCheckQueueLength].FirstValue,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.discoversTotal,
+		prometheus.CounterValue,
+		data[discoversTotal].FirstValue,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.offersTotal,
+		prometheus.CounterValue,
+		data[offersTotal].FirstValue,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.requestsTotal,
+		prometheus.CounterValue,
+		data[requestsTotal].FirstValue,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.informsTotal,
+		prometheus.CounterValue,
+		data[informsTotal].FirstValue,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.acksTotal,
+		prometheus.CounterValue,
+		data[acksTotal].FirstValue,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.nACKsTotal,
+		prometheus.CounterValue,
+		data[nacksTotal].FirstValue,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.declinesTotal,
+		prometheus.CounterValue,
+		data[declinesTotal].FirstValue,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.releasesTotal,
+		prometheus.CounterValue,
+		data[releasesTotal].FirstValue,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.offerQueueLength,
+		prometheus.GaugeValue,
+		data[offerQueueLength].FirstValue,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.deniedDueToMatch,
+		prometheus.CounterValue,
+		data[deniedDueToMatch].FirstValue,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.deniedDueToNonMatch,
+		prometheus.CounterValue,
+		data[deniedDueToNonMatch].FirstValue,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.failoverBndUpdSentTotal,
+		prometheus.CounterValue,
+		data[failoverBndUpdSentTotal].FirstValue,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.failoverBndUpdReceivedTotal,
+		prometheus.CounterValue,
+		data[failoverBndUpdReceivedTotal].FirstValue,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.failoverBndAckSentTotal,
+		prometheus.CounterValue,
+		data[failoverBndAckSentTotal].FirstValue,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.failoverBndAckReceivedTotal,
+		prometheus.CounterValue,
+		data[failoverBndAckReceivedTotal].FirstValue,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.failoverBndUpdPendingOutboundQueue,
+		prometheus.GaugeValue,
+		data[failoverBndUpdPendingOutboundQueue].FirstValue,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.failoverTransitionsCommunicationInterruptedState,
+		prometheus.CounterValue,
+		data[failoverTransitionsCommunicationInterruptedState].FirstValue,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.failoverTransitionsPartnerDownState,
+		prometheus.CounterValue,
+		data[failoverTransitionsPartnerDownState].FirstValue,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.failoverTransitionsRecoverState,
+		prometheus.CounterValue,
+		data[failoverTransitionsRecoverState].FirstValue,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.failoverBndUpdDropped,
+		prometheus.CounterValue,
+		data[failoverBndUpdDropped].FirstValue,
 	)
 
 	return nil
