@@ -6,6 +6,7 @@ import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/collector/logical_disk"
 	"github.com/prometheus-community/windows_exporter/internal/testutils"
+	"github.com/prometheus-community/windows_exporter/internal/types"
 )
 
 func BenchmarkCollector(b *testing.B) {
@@ -13,4 +14,10 @@ func BenchmarkCollector(b *testing.B) {
 	localVolumeInclude := ".+"
 	kingpin.CommandLine.GetArg("collector.logical_disk.volume-include").StringVar(&localVolumeInclude)
 	testutils.FuncBenchmarkCollector(b, "logical_disk", logical_disk.NewWithFlags)
+}
+
+func TestCollector(t *testing.T) {
+	testutils.TestCollector(t, logical_disk.New, &logical_disk.Config{
+		VolumeInclude: types.RegExpAny,
+	})
 }

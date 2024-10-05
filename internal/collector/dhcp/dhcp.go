@@ -77,6 +77,10 @@ func (c *Collector) GetName() string {
 }
 
 func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
+	if utils.PDHEnabled() {
+		return []string{}, nil
+	}
+
 	return []string{"DHCP Server"}, nil
 }
 

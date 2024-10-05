@@ -14,3 +14,7 @@ func BenchmarkCollector(b *testing.B) {
 	kingpin.CommandLine.GetArg("collector.printer.include").StringVar(&printersInclude)
 	testutils.FuncBenchmarkCollector(b, "printer", printer.NewWithFlags)
 }
+
+func TestCollector(t *testing.T) {
+	testutils.TestCollector(t, printer.New, nil)
+}
