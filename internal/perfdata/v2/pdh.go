@@ -257,7 +257,7 @@ type (
 )
 
 var (
-	libPdhDll = windows.NewLazySystemDLL("v2.dll")
+	libPdhDll = windows.NewLazySystemDLL("pdh.dll")
 
 	pdhAddCounterW               = libPdhDll.NewProc("PdhAddCounterW")
 	pdhAddEnglishCounterW        = libPdhDll.NewProc("PdhAddEnglishCounterW")
