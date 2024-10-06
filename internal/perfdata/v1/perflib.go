@@ -117,15 +117,15 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"time"
 	"unsafe"
 
+	"github.com/prometheus-community/windows_exporter/internal/perfdata/perftypes"
 	"golang.org/x/sys/windows"
 )
 
 // TODO: There's a LittleEndian field in the PERF header - we ought to check it.
 var bo = binary.LittleEndian
-
-const averageCount64Type = 1073874176
 
 // PerfObject Top-level performance object (like "Process").
 type PerfObject struct {
@@ -221,13 +221,18 @@ func queryRawData(query string) ([]byte, error) {
 			(*byte)(unsafe.Pointer(&buffer[0])),
 			&bufLen)
 
-		if errors.Is(err, error(windows.ERROR_MORE_DATA)) {
+		switch {
+		case errors.Is(err, error(windows.ERROR_MORE_DATA)):
 			newBuffer := make([]byte, len(buffer)+16384)
 			copy(newBuffer, buffer)
 			buffer = newBuffer
 
 			continue
-		} else if err != nil {
+		case errors.Is(err, error(windows.ERROR_BUSY)):
+			time.Sleep(50 * time.Millisecond)
+
+			continue
+		case err != nil:
 			var errNo windows.Errno
 			if errors.As(err, &errNo) {
 				return nil, fmt.Errorf("ReqQueryValueEx failed: %w errno %d", err, uint(errNo))
@@ -349,7 +354,7 @@ func QueryPerformanceData(query string) ([]*PerfObject, error) {
 				IsCounter:           def.CounterType&0x400 == 0x400,
 				IsBaseValue:         def.CounterType&0x00030000 == 0x00030000,
 				IsNanosecondCounter: def.CounterType&0x00100000 == 0x00100000,
-				HasSecondValue:      def.CounterType == averageCount64Type,
+				HasSecondValue:      def.CounterType == perftypes.PERF_AVERAGE_BULK,
 			}
 		}
 

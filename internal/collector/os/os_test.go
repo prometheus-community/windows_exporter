@@ -10,3 +10,9 @@ import (
 func BenchmarkCollector(b *testing.B) {
 	testutils.FuncBenchmarkCollector(b, os.Name, os.NewWithFlags)
 }
+
+func TestCollector(t *testing.T) {
+	t.Skip()
+
+	testutils.TestCollector(t, os.New, nil)
+}

@@ -10,3 +10,9 @@ import (
 func BenchmarkCollector(b *testing.B) {
 	testutils.FuncBenchmarkCollector(b, filetime.Name, filetime.NewWithFlags)
 }
+
+func TestCollector(t *testing.T) {
+	testutils.TestCollector(t, filetime.New, &filetime.Config{
+		FilePatterns: []string{"*.*"},
+	})
+}

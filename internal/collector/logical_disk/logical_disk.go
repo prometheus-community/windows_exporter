@@ -4,6 +4,7 @@ package logical_disk
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"log/slog"
 	"regexp"
@@ -12,9 +13,11 @@ import (
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
+	"github.com/prometheus-community/windows_exporter/internal/perfdata"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata/perftypes"
 	v1 "github.com/prometheus-community/windows_exporter/internal/perfdata/v1"
 	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
 	"golang.org/x/sys/windows"
@@ -35,6 +38,8 @@ var ConfigDefaults = Config{
 // A Collector is a Prometheus Collector for perflib logicalDisk metrics.
 type Collector struct {
 	config Config
+
+	perfDataCollector perfdata.Collector
 
 	avgReadQueue     *prometheus.Desc
 	avgWriteQueue    *prometheus.Desc
@@ -125,6 +130,10 @@ func (c *Collector) GetName() string {
 }
 
 func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
+	if utils.PDHEnabled() {
+		return []string{}, nil
+	}
+
 	return []string{"LogicalDisk"}, nil
 }
 
@@ -133,6 +142,34 @@ func (c *Collector) Close(_ *slog.Logger) error {
 }
 
 func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
+	if utils.PDHEnabled() {
+		counters := []string{
+			currentDiskQueueLength,
+			avgDiskReadQueueLength,
+			avgDiskWriteQueueLength,
+			diskReadBytesPerSec,
+			diskReadsPerSec,
+			diskWriteBytesPerSec,
+			diskWritesPerSec,
+			percentDiskReadTime,
+			percentDiskWriteTime,
+			percentFreeSpace,
+			freeSpace,
+			percentIdleTime,
+			SplitIOPerSec,
+			avgDiskSecPerRead,
+			avgDiskSecPerWrite,
+			avgDiskSecPerTransfer,
+		}
+
+		var err error
+
+		c.perfDataCollector, err = perfdata.NewCollector(perfdata.V1, "LogicalDisk", perfdata.AllInstances, counters)
+		if err != nil {
+			return fmt.Errorf("failed to create LogicalDisk collector: %w", err)
+		}
+	}
+
 	c.information = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "info"),
 		"A metric with a constant '1' value labeled with logical disk information",
@@ -264,6 +301,11 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 // to the provided prometheus Metric channel.
 func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
+
+	if utils.PDHEnabled() {
+		return c.collectPDH(logger, ch)
+	}
+
 	if err := c.collect(ctx, logger, ch); err != nil {
 		logger.Error("failed collecting logical_disk metrics",
 			slog.Any("err", err),
@@ -275,32 +317,172 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch ch
 	return nil
 }
 
-// Win32_PerfRawData_PerfDisk_LogicalDisk docs:
-// - https://msdn.microsoft.com/en-us/windows/hardware/aa394307(v=vs.71) - Win32_PerfRawData_PerfDisk_LogicalDisk class
-// - https://msdn.microsoft.com/en-us/library/ms803973.aspx - LogicalDisk object reference.
-type logicalDisk struct {
-	Name                    string
-	CurrentDiskQueueLength  float64 `perflib:"Current Disk Queue Length"`
-	AvgDiskReadQueueLength  float64 `perflib:"Avg. Disk Read Queue Length"`
-	AvgDiskWriteQueueLength float64 `perflib:"Avg. Disk Write Queue Length"`
-	DiskReadBytesPerSec     float64 `perflib:"Disk Read Bytes/sec"`
-	DiskReadsPerSec         float64 `perflib:"Disk Reads/sec"`
-	DiskWriteBytesPerSec    float64 `perflib:"Disk Write Bytes/sec"`
-	DiskWritesPerSec        float64 `perflib:"Disk Writes/sec"`
-	PercentDiskReadTime     float64 `perflib:"% Disk Read Time"`
-	PercentDiskWriteTime    float64 `perflib:"% Disk Write Time"`
-	PercentFreeSpace        float64 `perflib:"% Free Space_Base"`
-	PercentFreeSpace_Base   float64 `perflib:"Free Megabytes"`
-	PercentIdleTime         float64 `perflib:"% Idle Time"`
-	SplitIOPerSec           float64 `perflib:"Split IO/Sec"`
-	AvgDiskSecPerRead       float64 `perflib:"Avg. Disk sec/Read"`
-	AvgDiskSecPerWrite      float64 `perflib:"Avg. Disk sec/Write"`
-	AvgDiskSecPerTransfer   float64 `perflib:"Avg. Disk sec/Transfer"`
+func (c *Collector) collectPDH(logger *slog.Logger, ch chan<- prometheus.Metric) error {
+	var (
+		err    error
+		diskID string
+		info   volumeInfo
+	)
+
+	perfData, err := c.perfDataCollector.Collect()
+	if err != nil {
+		return fmt.Errorf("failed to collect LogicalDisk metrics: %w", err)
+	}
+
+	if len(perfData) == 0 {
+		return errors.New("perflib query for LogicalDisk returned empty result set")
+	}
+
+	for name, volume := range perfData {
+		if name == "_Total" ||
+			c.config.VolumeExclude.MatchString(name) ||
+			!c.config.VolumeInclude.MatchString(name) {
+			continue
+		}
+
+		diskID, err = getDiskIDByVolume(name)
+		if err != nil {
+			logger.Warn("failed to get disk ID for "+name,
+				slog.Any("err", err),
+			)
+		}
+
+		info, err = getVolumeInfo(name)
+		if err != nil {
+			logger.Warn("failed to get volume information for "+name,
+				slog.Any("err", err),
+			)
+		}
+
+		ch <- prometheus.MustNewConstMetric(
+			c.information,
+			prometheus.GaugeValue,
+			1,
+			diskID,
+			info.volumeType,
+			name,
+			info.label,
+			info.filesystem,
+			info.serialNumber,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.requestsQueued,
+			prometheus.GaugeValue,
+			volume[currentDiskQueueLength].FirstValue,
+			name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.avgReadQueue,
+			prometheus.GaugeValue,
+			volume[avgDiskReadQueueLength].FirstValue*perftypes.TicksToSecondScaleFactor,
+			name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.avgWriteQueue,
+			prometheus.GaugeValue,
+			volume[avgDiskWriteQueueLength].FirstValue*perftypes.TicksToSecondScaleFactor,
+			name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.readBytesTotal,
+			prometheus.CounterValue,
+			volume[diskReadBytesPerSec].FirstValue,
+			name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.readsTotal,
+			prometheus.CounterValue,
+			volume[diskReadsPerSec].FirstValue,
+			name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.writeBytesTotal,
+			prometheus.CounterValue,
+			volume[diskWriteBytesPerSec].FirstValue,
+			name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.writesTotal,
+			prometheus.CounterValue,
+			volume[diskWritesPerSec].FirstValue,
+			name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.readTime,
+			prometheus.CounterValue,
+			volume[percentDiskReadTime].FirstValue,
+			name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.writeTime,
+			prometheus.CounterValue,
+			volume[percentDiskWriteTime].FirstValue,
+			name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.freeSpace,
+			prometheus.GaugeValue,
+			volume[freeSpace].FirstValue*1024*1024,
+			name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.totalSpace,
+			prometheus.GaugeValue,
+			volume[percentFreeSpace].FirstValue*1024*1024,
+			name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.idleTime,
+			prometheus.CounterValue,
+			volume[percentIdleTime].FirstValue,
+			name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.splitIOs,
+			prometheus.CounterValue,
+			volume[SplitIOPerSec].FirstValue,
+			name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.readLatency,
+			prometheus.CounterValue,
+			volume[avgDiskSecPerRead].FirstValue*perftypes.TicksToSecondScaleFactor,
+			name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.writeLatency,
+			prometheus.CounterValue,
+			volume[avgDiskSecPerWrite].FirstValue*perftypes.TicksToSecondScaleFactor,
+			name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.readWriteLatency,
+			prometheus.CounterValue,
+			volume[avgDiskSecPerTransfer].FirstValue*perftypes.TicksToSecondScaleFactor,
+			name,
+		)
+	}
+
+	return nil
 }
 
 func (c *Collector) collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	logger = logger.With(slog.String("collector", Name))
-
 	var (
 		err    error
 		diskID string
