@@ -481,6 +481,7 @@ func (c *Collector) collectPDH(logger *slog.Logger, ch chan<- prometheus.Metric)
 
 	return nil
 }
+
 func (c *Collector) collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	var (
 		err    error
