@@ -1,22 +1,22 @@
 package logical_disk
 
 const (
-	CurrentDiskQueueLength  = "Current Disk Queue Length"
-	AvgDiskReadQueueLength  = "Avg. Disk Read Queue Length"
-	AvgDiskWriteQueueLength = "Avg. Disk Write Queue Length"
-	DiskReadBytesPerSec     = "Disk Read Bytes/sec"
-	DiskReadsPerSec         = "Disk Reads/sec"
-	DiskWriteBytesPerSec    = "Disk Write Bytes/sec"
-	DiskWritesPerSec        = "Disk Writes/sec"
-	PercentDiskReadTime     = "% Disk Read Time"
-	PercentDiskWriteTime    = "% Disk Write Time"
-	PercentFreeSpace        = "% Free Space_Base"
-	PercentFreeSpace_Base   = "Free Megabytes"
-	PercentIdleTime         = "% Idle Time"
+	avgDiskReadQueueLength  = "Avg. Disk Read Queue Length"
+	avgDiskSecPerRead       = "Avg. Disk sec/Read"
+	avgDiskSecPerTransfer   = "Avg. Disk sec/Transfer"
+	avgDiskSecPerWrite      = "Avg. Disk sec/Write"
+	avgDiskWriteQueueLength = "Avg. Disk Write Queue Length"
+	currentDiskQueueLength  = "Current Disk Queue Length"
+	freeSpace               = "Free Megabytes"
+	diskReadBytesPerSec     = "Disk Read Bytes/sec"
+	diskReadsPerSec         = "Disk Reads/sec"
+	diskWriteBytesPerSec    = "Disk Write Bytes/sec"
+	diskWritesPerSec        = "Disk Writes/sec"
+	percentDiskReadTime     = "% Disk Read Time"
+	percentDiskWriteTime    = "% Disk Write Time"
+	percentFreeSpace        = "% Free Space"
+	percentIdleTime         = "% Idle Time"
 	SplitIOPerSec           = "Split IO/Sec"
-	AvgDiskSecPerRead       = "Avg. Disk sec/Read"
-	AvgDiskSecPerWrite      = "Avg. Disk sec/Write"
-	AvgDiskSecPerTransfer   = "Avg. Disk sec/Transfer"
 )
 
 // Win32_PerfRawData_PerfDisk_LogicalDisk docs:

@@ -120,13 +120,12 @@ import (
 	"time"
 	"unsafe"
 
+	"github.com/prometheus-community/windows_exporter/internal/perfdata/perftypes"
 	"golang.org/x/sys/windows"
 )
 
 // TODO: There's a LittleEndian field in the PERF header - we ought to check it.
 var bo = binary.LittleEndian
-
-const averageCount64Type = 1073874176
 
 // PerfObject Top-level performance object (like "Process").
 type PerfObject struct {
@@ -355,7 +354,7 @@ func QueryPerformanceData(query string) ([]*PerfObject, error) {
 				IsCounter:           def.CounterType&0x400 == 0x400,
 				IsBaseValue:         def.CounterType&0x00030000 == 0x00030000,
 				IsNanosecondCounter: def.CounterType&0x00100000 == 0x00100000,
-				HasSecondValue:      def.CounterType == averageCount64Type,
+				HasSecondValue:      def.CounterType == perftypes.PERF_AVERAGE_BULK,
 			}
 		}
 

@@ -2,6 +2,7 @@ package v1
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/prometheus-community/windows_exporter/internal/perfdata/perftypes"
 	"github.com/prometheus/client_golang/prometheus"
@@ -43,11 +44,23 @@ func (c *Collector) Collect() (map[string]map[string]perftypes.CounterValues, er
 		return nil, fmt.Errorf("QueryPerformanceData: %w", err)
 	}
 
+	if len(perfObjects) == 0 {
+		return map[string]map[string]perftypes.CounterValues{}, nil
+	}
+
 	data := make(map[string]map[string]perftypes.CounterValues, len(perfObjects[0].Instances))
 
 	for _, perfObject := range perfObjects {
+		if perfObject.Name != c.object {
+			continue
+		}
+
 		for _, perfInstance := range perfObject.Instances {
 			instanceName := perfInstance.Name
+			if strings.HasSuffix(instanceName, "_Total") {
+				continue
+			}
+
 			if instanceName == "" || instanceName == "*" {
 				instanceName = perftypes.EmptyInstance
 			}
@@ -57,6 +70,10 @@ func (c *Collector) Collect() (map[string]map[string]perftypes.CounterValues, er
 			}
 
 			for _, perfCounter := range perfInstance.Counters {
+				if perfCounter.Def.IsBaseValue && !perfCounter.Def.IsNanosecondCounter {
+					continue
+				}
+
 				if _, ok := data[instanceName][perfCounter.Def.Name]; !ok {
 					data[instanceName][perfCounter.Def.Name] = perftypes.CounterValues{
 						Type: prometheus.GaugeValue,
