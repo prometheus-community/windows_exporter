@@ -11,7 +11,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/prometheus/client_golang v1.20.4
 	github.com/prometheus/client_model v0.6.1
-	github.com/prometheus/common v0.59.2-0.20240918152650-14bac55a992f
+	github.com/prometheus/common v0.60.0
 	github.com/prometheus/exporter-toolkit v0.13.0
 	github.com/stretchr/testify v1.9.0
 	github.com/yusufpapurcu/wmi v1.2.4
