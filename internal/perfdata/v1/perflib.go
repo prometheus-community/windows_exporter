@@ -272,7 +272,7 @@ The query can be any of the following:
 Many objects have dependencies - if you query one of them, you often get back
 more than you asked for.
 */
-func QueryPerformanceData(query string) ([]*PerfObject, error) {
+func QueryPerformanceData(query string, counterName string) ([]*PerfObject, error) {
 	buffer, err := queryRawData(query)
 	if err != nil {
 		return nil, err
@@ -297,6 +297,8 @@ func QueryPerformanceData(query string) ([]*PerfObject, error) {
 	// Parse the performance data
 
 	numObjects := int(header.NumObjectTypes)
+	numFilteredObjects := 0
+
 	objects := make([]*PerfObject, numObjects)
 
 	objOffset := int64(header.HeaderLength)
@@ -314,6 +316,14 @@ func QueryPerformanceData(query string) ([]*PerfObject, error) {
 			return nil, err
 		}
 
+		perfCounterName := obj.LookupName()
+
+		if counterName != "" && perfCounterName != counterName {
+			objOffset += int64(obj.TotalByteLength)
+
+			continue
+		}
+
 		numCounterDefs := int(obj.NumCounters)
 		numInstances := int(obj.NumInstances)
 
@@ -328,7 +338,7 @@ func QueryPerformanceData(query string) ([]*PerfObject, error) {
 		counterDefs := make([]*PerfCounterDef, numCounterDefs)
 
 		objects[i] = &PerfObject{
-			Name:        obj.LookupName(),
+			Name:        perfCounterName,
 			NameIndex:   uint(obj.ObjectNameTitleIndex),
 			Instances:   instances,
 			CounterDefs: counterDefs,
@@ -345,7 +355,7 @@ func QueryPerformanceData(query string) ([]*PerfObject, error) {
 			}
 
 			counterDefs[i] = &PerfCounterDef{
-				Name:      def.LookupName(),
+				Name:      perfCounterName,
 				NameIndex: uint(def.CounterNameTitleIndex),
 				rawData:   def,
 
@@ -410,9 +420,10 @@ func QueryPerformanceData(query string) ([]*PerfObject, error) {
 
 		// Next perfObjectType
 		objOffset += int64(obj.TotalByteLength)
+		numFilteredObjects += 1
 	}
 
-	return objects, nil
+	return objects[:numFilteredObjects], nil
 }
 
 func parseCounterBlock(b []byte, r io.ReadSeeker, pos int64, defs []*PerfCounterDef) (int64, []*PerfCounter, error) {
