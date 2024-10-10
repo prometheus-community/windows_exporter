@@ -39,7 +39,7 @@ func (c *Collector) Describe() map[string]string {
 }
 
 func (c *Collector) Collect() (map[string]map[string]perftypes.CounterValues, error) {
-	perfObjects, err := QueryPerformanceData(c.query)
+	perfObjects, err := QueryPerformanceData(c.query, c.object)
 	if err != nil {
 		return nil, fmt.Errorf("QueryPerformanceData: %w", err)
 	}
