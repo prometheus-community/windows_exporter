@@ -199,22 +199,22 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 	app.Flag(
 		"collector.iis.app-exclude",
 		"Regexp of apps to exclude. App name must both match include and not match exclude to be included.",
-	).Default(c.config.AppExclude.String()).StringVar(&appExclude)
+	).Default("").StringVar(&appExclude)
 
 	app.Flag(
 		"collector.iis.app-include",
 		"Regexp of apps to include. App name must both match include and not match exclude to be included.",
-	).Default(c.config.AppInclude.String()).StringVar(&appInclude)
+	).Default(".+").StringVar(&appInclude)
 
 	app.Flag(
 		"collector.iis.site-exclude",
 		"Regexp of sites to exclude. Site name must both match include and not match exclude to be included.",
-	).Default(c.config.SiteExclude.String()).StringVar(&siteExclude)
+	).Default("").StringVar(&siteExclude)
 
 	app.Flag(
 		"collector.iis.site-include",
 		"Regexp of sites to include. Site name must both match include and not match exclude to be included.",
-	).Default(c.config.SiteInclude.String()).StringVar(&siteInclude)
+	).Default(".+").StringVar(&siteInclude)
 
 	app.Action(func(*kingpin.ParseContext) error {
 		var err error
