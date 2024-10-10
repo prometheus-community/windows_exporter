@@ -355,7 +355,7 @@ func QueryPerformanceData(query string, counterName string) ([]*PerfObject, erro
 			}
 
 			counterDefs[i] = &PerfCounterDef{
-				Name:      perfCounterName,
+				Name:      def.LookupName(),
 				NameIndex: uint(def.CounterNameTitleIndex),
 				rawData:   def,
 
@@ -420,7 +420,7 @@ func QueryPerformanceData(query string, counterName string) ([]*PerfObject, erro
 
 		// Next perfObjectType
 		objOffset += int64(obj.TotalByteLength)
-		numFilteredObjects += 1
+		numFilteredObjects++
 	}
 
 	return objects[:numFilteredObjects], nil
