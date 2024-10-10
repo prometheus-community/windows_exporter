@@ -77,12 +77,12 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 	app.Flag(
 		"collector.printer.include",
 		"Regular expression to match printers to collect metrics for",
-	).Default(c.config.PrinterInclude.String()).StringVar(&printerInclude)
+	).Default(".+").StringVar(&printerInclude)
 
 	app.Flag(
 		"collector.printer.exclude",
 		"Regular expression to match printers to exclude",
-	).Default(c.config.PrinterExclude.String()).StringVar(&printerExclude)
+	).Default("").StringVar(&printerExclude)
 
 	app.Action(func(*kingpin.ParseContext) error {
 		var err error

@@ -100,12 +100,12 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 	app.Flag(
 		"collector.net.nic-exclude",
 		"Regexp of NIC:s to exclude. NIC name must both match include and not match exclude to be included.",
-	).Default(c.config.NicExclude.String()).StringVar(&nicExclude)
+	).Default("").StringVar(&nicExclude)
 
 	app.Flag(
 		"collector.net.nic-include",
 		"Regexp of NIC:s to include. NIC name must both match include and not match exclude to be included.",
-	).Default(c.config.NicInclude.String()).StringVar(&nicInclude)
+	).Default(".+").StringVar(&nicInclude)
 
 	app.Flag(
 		"collector.net.enabled",

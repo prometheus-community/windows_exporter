@@ -103,12 +103,12 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 	app.Flag(
 		"collector.smtp.server-exclude",
 		"Regexp of virtual servers to exclude. Server name must both match include and not match exclude to be included.",
-	).Default(c.config.ServerExclude.String()).StringVar(&serverExclude)
+	).Default("").StringVar(&serverExclude)
 
 	app.Flag(
 		"collector.smtp.server-include",
 		"Regexp of virtual servers to include. Server name must both match include and not match exclude to be included.",
-	).Default(c.config.ServerInclude.String()).StringVar(&serverInclude)
+	).Default(".+").StringVar(&serverInclude)
 
 	app.Action(func(*kingpin.ParseContext) error {
 		var err error

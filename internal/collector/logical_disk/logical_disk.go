@@ -99,12 +99,12 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 	app.Flag(
 		"collector.logical_disk.volume-exclude",
 		"Regexp of volumes to exclude. Volume name must both match include and not match exclude to be included.",
-	).Default(c.config.VolumeExclude.String()).StringVar(&volumeExclude)
+	).Default("").StringVar(&volumeExclude)
 
 	app.Flag(
 		"collector.logical_disk.volume-include",
 		"Regexp of volumes to include. Volume name must both match include and not match exclude to be included.",
-	).Default(c.config.VolumeInclude.String()).StringVar(&volumeInclude)
+	).Default(".+").StringVar(&volumeInclude)
 
 	app.Action(func(*kingpin.ParseContext) error {
 		var err error

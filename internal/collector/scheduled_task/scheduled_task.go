@@ -106,12 +106,12 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 	app.Flag(
 		"collector.scheduled_task.exclude",
 		"Regexp of tasks to exclude. Task path must both match include and not match exclude to be included.",
-	).Default(c.config.TaskExclude.String()).StringVar(&taskExclude)
+	).Default("").StringVar(&taskExclude)
 
 	app.Flag(
 		"collector.scheduled_task.include",
 		"Regexp of tasks to include. Task path must both match include and not match exclude to be included.",
-	).Default(c.config.TaskInclude.String()).StringVar(&taskInclude)
+	).Default(".+").StringVar(&taskInclude)
 
 	app.Action(func(*kingpin.ParseContext) error {
 		var err error
