@@ -92,12 +92,12 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 	app.Flag(
 		"collector.process.exclude",
 		"Regexp of processes to exclude. Process name must both match include and not match exclude to be included.",
-	).Default(c.config.ProcessExclude.String()).StringVar(&processExclude)
+	).Default("").StringVar(&processExclude)
 
 	app.Flag(
 		"collector.process.include",
 		"Regexp of processes to include. Process name must both match include and not match exclude to be included.",
-	).Default(c.config.ProcessInclude.String()).StringVar(&processInclude)
+	).Default(".+").StringVar(&processInclude)
 
 	app.Flag(
 		"collector.process.iis",
