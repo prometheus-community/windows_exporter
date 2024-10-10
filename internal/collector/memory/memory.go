@@ -12,8 +12,11 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/headers/sysinfoapi"
+	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/perfdata/perftypes"
 	v1 "github.com/prometheus-community/windows_exporter/internal/perfdata/v1"
 	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
 )
@@ -27,6 +30,8 @@ var ConfigDefaults = Config{}
 // A Collector is a Prometheus Collector for perflib Memory metrics.
 type Collector struct {
 	config Config
+
+	perfDataCollector perfdata.Collector
 
 	// Performance metrics
 	availableBytes                  *prometheus.Desc
@@ -89,6 +94,10 @@ func (c *Collector) GetName() string {
 }
 
 func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
+	if utils.PDHEnabled() {
+		return []string{}, nil
+	}
+
 	return []string{"Memory"}, nil
 }
 
@@ -97,6 +106,52 @@ func (c *Collector) Close(_ *slog.Logger) error {
 }
 
 func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
+	if utils.PDHEnabled() {
+		counters := []string{
+			availableBytes,
+			availableKBytes,
+			availableMBytes,
+			cacheBytes,
+			cacheBytesPeak,
+			cacheFaultsPerSec,
+			commitLimit,
+			committedBytes,
+			demandZeroFaultsPerSec,
+			freeAndZeroPageListBytes,
+			freeSystemPageTableEntries,
+			modifiedPageListBytes,
+			pageFaultsPerSec,
+			pageReadsPerSec,
+			pagesInputPerSec,
+			pagesOutputPerSec,
+			pagesPerSec,
+			pageWritesPerSec,
+			poolNonpagedAllocs,
+			poolNonpagedBytes,
+			poolPagedAllocs,
+			poolPagedBytes,
+			poolPagedResidentBytes,
+			standbyCacheCoreBytes,
+			standbyCacheNormalPriorityBytes,
+			standbyCacheReserveBytes,
+			systemCacheResidentBytes,
+			systemCodeResidentBytes,
+			systemCodeTotalBytes,
+			systemDriverResidentBytes,
+			systemDriverTotalBytes,
+			transitionFaultsPerSec,
+			transitionPagesRePurposedPerSec,
+			writeCopiesPerSec,
+		}
+
+		var err error
+
+		c.perfDataCollector, err = perfdata.NewCollector(perfdata.V1, "Memory", perfdata.AllInstances, counters)
+		if err != nil {
+			return fmt.Errorf("failed to create LogicalDisk collector: %w", err)
+		}
+	}
+
 	c.availableBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "available_bytes"),
 		"The amount of physical memory immediately available for allocation to a process or for system use. It is equal to the sum of memory assigned to"+
@@ -170,31 +225,31 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 	)
 	c.swapPageReadsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "swap_page_reads_total"),
-		"Number of disk page reads (a single read operation reading several pages is still only counted once) (PageReadsPersec)",
+		"Number of disk page reads (a single read operation reading several pages is still only counted once) (PageReadsPerSec)",
 		nil,
 		nil,
 	)
 	c.swapPagesReadTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "swap_pages_read_total"),
-		"Number of pages read across all page reads (ie counting all pages read even if they are read in a single operation) (PagesInputPersec)",
+		"Number of pages read across all page reads (ie counting all pages read even if they are read in a single operation) (PagesInputPerSec)",
 		nil,
 		nil,
 	)
 	c.swapPagesWrittenTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "swap_pages_written_total"),
-		"Number of pages written across all page writes (ie counting all pages written even if they are written in a single operation) (PagesOutputPersec)",
+		"Number of pages written across all page writes (ie counting all pages written even if they are written in a single operation) (PagesOutputPerSec)",
 		nil,
 		nil,
 	)
 	c.swapPageOperationsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "swap_page_operations_total"),
-		"Total number of swap page read and writes (PagesPersec)",
+		"Total number of swap page read and writes (PagesPerSec)",
 		nil,
 		nil,
 	)
 	c.swapPageWritesTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "swap_page_writes_total"),
-		"Number of disk page writes (a single write operation writing several pages is still only counted once) (PageWritesPersec)",
+		"Number of disk page writes (a single write operation writing several pages is still only counted once) (PageWritesPerSec)",
 		nil,
 		nil,
 	)
@@ -285,19 +340,19 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 	c.transitionFaultsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "transition_faults_total"),
 		"Number of faults rate at which page faults are resolved by recovering pages that were being used by another process sharing the page, or were on the "+
-			"modified page list or the standby list, or were being written to disk at the time of the page fault (TransitionFaultsPersec)",
+			"modified page list or the standby list, or were being written to disk at the time of the page fault (TransitionFaultsPerSec)",
 		nil,
 		nil,
 	)
 	c.transitionPagesRepurposedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "transition_pages_repurposed_total"),
-		"Transition Pages RePurposed is the rate at which the number of transition cache pages were reused for a different purpose (TransitionPagesRePurposedPersec)",
+		"Transition Pages RePurposed is the rate at which the number of transition cache pages were reused for a different purpose (TransitionPagesRePurposedPerSec)",
 		nil,
 		nil,
 	)
 	c.writeCopiesTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "write_copies_total"),
-		"The number of page faults caused by attempting to write that were satisfied by copying the page from elsewhere in physical memory (WriteCopiesPersec)",
+		"The number of page faults caused by attempting to write that were satisfied by copying the page from elsewhere in physical memory (WriteCopiesPerSec)",
 		nil,
 		nil,
 	)
@@ -330,7 +385,14 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch ch
 
 	errs := make([]error, 0, 2)
 
-	if err := c.collectPerformanceData(ctx, logger, ch); err != nil {
+	var err error
+	if utils.PDHEnabled() {
+		err = c.collectPDH(ch)
+	} else {
+		err = c.collectPerformanceData(ctx, logger, ch)
+	}
+
+	if err != nil {
 		logger.Error("failed collecting memory metrics",
 			slog.Any("err", err),
 		)
@@ -376,43 +438,6 @@ func (c *Collector) collectGlobalMemoryStatus(ch chan<- prometheus.Metric) error
 	return nil
 }
 
-type memory struct {
-	AvailableBytes                  float64 `perflib:"Available Bytes"`
-	AvailableKBytes                 float64 `perflib:"Available KBytes"`
-	AvailableMBytes                 float64 `perflib:"Available MBytes"`
-	CacheBytes                      float64 `perflib:"Cache Bytes"`
-	CacheBytesPeak                  float64 `perflib:"Cache Bytes Peak"`
-	CacheFaultsPersec               float64 `perflib:"Cache Faults/sec"`
-	CommitLimit                     float64 `perflib:"Commit Limit"`
-	CommittedBytes                  float64 `perflib:"Committed Bytes"`
-	DemandZeroFaultsPersec          float64 `perflib:"Demand Zero Faults/sec"`
-	FreeAndZeroPageListBytes        float64 `perflib:"Free & Zero Page List Bytes"`
-	FreeSystemPageTableEntries      float64 `perflib:"Free System Page Table Entries"`
-	ModifiedPageListBytes           float64 `perflib:"Modified Page List Bytes"`
-	PageFaultsPersec                float64 `perflib:"Page Faults/sec"`
-	PageReadsPersec                 float64 `perflib:"Page Reads/sec"`
-	PagesInputPersec                float64 `perflib:"Pages Input/sec"`
-	PagesOutputPersec               float64 `perflib:"Pages Output/sec"`
-	PagesPersec                     float64 `perflib:"Pages/sec"`
-	PageWritesPersec                float64 `perflib:"Page Writes/sec"`
-	PoolNonpagedAllocs              float64 `perflib:"Pool Nonpaged Allocs"`
-	PoolNonpagedBytes               float64 `perflib:"Pool Nonpaged Bytes"`
-	PoolPagedAllocs                 float64 `perflib:"Pool Paged Allocs"`
-	PoolPagedBytes                  float64 `perflib:"Pool Paged Bytes"`
-	PoolPagedResidentBytes          float64 `perflib:"Pool Paged Resident Bytes"`
-	StandbyCacheCoreBytes           float64 `perflib:"Standby Cache Core Bytes"`
-	StandbyCacheNormalPriorityBytes float64 `perflib:"Standby Cache Normal Priority Bytes"`
-	StandbyCacheReserveBytes        float64 `perflib:"Standby Cache Reserve Bytes"`
-	SystemCacheResidentBytes        float64 `perflib:"System Cache Resident Bytes"`
-	SystemCodeResidentBytes         float64 `perflib:"System Code Resident Bytes"`
-	SystemCodeTotalBytes            float64 `perflib:"System Code Total Bytes"`
-	SystemDriverResidentBytes       float64 `perflib:"System Driver Resident Bytes"`
-	SystemDriverTotalBytes          float64 `perflib:"System Driver Total Bytes"`
-	TransitionFaultsPersec          float64 `perflib:"Transition Faults/sec"`
-	TransitionPagesRePurposedPersec float64 `perflib:"Transition Pages RePurposed/sec"`
-	WriteCopiesPersec               float64 `perflib:"Write Copies/sec"`
-}
-
 func (c *Collector) collectPerformanceData(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
 
@@ -443,7 +468,7 @@ func (c *Collector) collectPerformanceData(ctx *types.ScrapeContext, logger *slo
 	ch <- prometheus.MustNewConstMetric(
 		c.cacheFaultsTotal,
 		prometheus.CounterValue,
-		dst[0].CacheFaultsPersec,
+		dst[0].CacheFaultsPerSec,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
@@ -461,7 +486,7 @@ func (c *Collector) collectPerformanceData(ctx *types.ScrapeContext, logger *slo
 	ch <- prometheus.MustNewConstMetric(
 		c.demandZeroFaultsTotal,
 		prometheus.CounterValue,
-		dst[0].DemandZeroFaultsPersec,
+		dst[0].DemandZeroFaultsPerSec,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
@@ -485,37 +510,37 @@ func (c *Collector) collectPerformanceData(ctx *types.ScrapeContext, logger *slo
 	ch <- prometheus.MustNewConstMetric(
 		c.pageFaultsTotal,
 		prometheus.CounterValue,
-		dst[0].PageFaultsPersec,
+		dst[0].PageFaultsPerSec,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.swapPageReadsTotal,
 		prometheus.CounterValue,
-		dst[0].PageReadsPersec,
+		dst[0].PageReadsPerSec,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.swapPagesReadTotal,
 		prometheus.CounterValue,
-		dst[0].PagesInputPersec,
+		dst[0].PagesInputPerSec,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.swapPagesWrittenTotal,
 		prometheus.CounterValue,
-		dst[0].PagesOutputPersec,
+		dst[0].PagesOutputPerSec,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.swapPageOperationsTotal,
 		prometheus.CounterValue,
-		dst[0].PagesPersec,
+		dst[0].PagesPerSec,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.swapPageWritesTotal,
 		prometheus.CounterValue,
-		dst[0].PageWritesPersec,
+		dst[0].PageWritesPerSec,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
@@ -599,19 +624,226 @@ func (c *Collector) collectPerformanceData(ctx *types.ScrapeContext, logger *slo
 	ch <- prometheus.MustNewConstMetric(
 		c.transitionFaultsTotal,
 		prometheus.CounterValue,
-		dst[0].TransitionFaultsPersec,
+		dst[0].TransitionFaultsPerSec,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.transitionPagesRepurposedTotal,
 		prometheus.CounterValue,
-		dst[0].TransitionPagesRePurposedPersec,
+		dst[0].TransitionPagesRePurposedPerSec,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.writeCopiesTotal,
 		prometheus.CounterValue,
-		dst[0].WriteCopiesPersec,
+		dst[0].WriteCopiesPerSec,
+	)
+
+	return nil
+}
+
+func (c *Collector) collectPDH(ch chan<- prometheus.Metric) error {
+	perfData, err := c.perfDataCollector.Collect()
+	if err != nil {
+		return fmt.Errorf("failed to collect Memory metrics: %w", err)
+	}
+
+	data, ok := perfData[perftypes.EmptyInstance]
+
+	if !ok {
+		return errors.New("perflib query for Memory returned empty result set")
+	}
+
+	ch <- prometheus.MustNewConstMetric(
+		c.availableBytes,
+		prometheus.GaugeValue,
+		data[availableBytes].FirstValue,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.cacheBytes,
+		prometheus.GaugeValue,
+		data[cacheBytes].FirstValue,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.cacheBytesPeak,
+		prometheus.GaugeValue,
+		data[cacheBytesPeak].FirstValue,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.cacheFaultsTotal,
+		prometheus.CounterValue,
+		data[cacheFaultsPerSec].FirstValue,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.commitLimit,
+		prometheus.GaugeValue,
+		data[commitLimit].FirstValue,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.committedBytes,
+		prometheus.GaugeValue,
+		data[committedBytes].FirstValue,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.demandZeroFaultsTotal,
+		prometheus.CounterValue,
+		data[demandZeroFaultsPerSec].FirstValue,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.freeAndZeroPageListBytes,
+		prometheus.GaugeValue,
+		data[freeAndZeroPageListBytes].FirstValue,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.freeSystemPageTableEntries,
+		prometheus.GaugeValue,
+		data[freeSystemPageTableEntries].FirstValue,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.modifiedPageListBytes,
+		prometheus.GaugeValue,
+		data[modifiedPageListBytes].FirstValue,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.pageFaultsTotal,
+		prometheus.CounterValue,
+		data[pageFaultsPerSec].FirstValue,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.swapPageReadsTotal,
+		prometheus.CounterValue,
+		data[pageReadsPerSec].FirstValue,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.swapPagesReadTotal,
+		prometheus.CounterValue,
+		data[pagesInputPerSec].FirstValue,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.swapPagesWrittenTotal,
+		prometheus.CounterValue,
+		data[pagesOutputPerSec].FirstValue,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.swapPageOperationsTotal,
+		prometheus.CounterValue,
+		data[pagesPerSec].FirstValue,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.swapPageWritesTotal,
+		prometheus.CounterValue,
+		data[pageWritesPerSec].FirstValue,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.poolNonPagedAllocationsTotal,
+		prometheus.GaugeValue,
+		data[poolNonpagedAllocs].FirstValue,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.poolNonPagedBytes,
+		prometheus.GaugeValue,
+		data[poolNonpagedBytes].FirstValue,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.poolPagedAllocationsTotal,
+		prometheus.CounterValue,
+		data[poolPagedAllocs].FirstValue,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.poolPagedBytes,
+		prometheus.GaugeValue,
+		data[poolPagedBytes].FirstValue,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.poolPagedResidentBytes,
+		prometheus.GaugeValue,
+		data[poolPagedResidentBytes].FirstValue,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.standbyCacheCoreBytes,
+		prometheus.GaugeValue,
+		data[standbyCacheCoreBytes].FirstValue,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.standbyCacheNormalPriorityBytes,
+		prometheus.GaugeValue,
+		data[standbyCacheNormalPriorityBytes].FirstValue,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.standbyCacheReserveBytes,
+		prometheus.GaugeValue,
+		data[standbyCacheReserveBytes].FirstValue,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.systemCacheResidentBytes,
+		prometheus.GaugeValue,
+		data[systemCacheResidentBytes].FirstValue,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.systemCodeResidentBytes,
+		prometheus.GaugeValue,
+		data[systemCodeResidentBytes].FirstValue,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.systemCodeTotalBytes,
+		prometheus.GaugeValue,
+		data[systemCodeTotalBytes].FirstValue,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.systemDriverResidentBytes,
+		prometheus.GaugeValue,
+		data[systemDriverResidentBytes].FirstValue,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.systemDriverTotalBytes,
+		prometheus.GaugeValue,
+		data[systemDriverTotalBytes].FirstValue,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.transitionFaultsTotal,
+		prometheus.CounterValue,
+		data[transitionFaultsPerSec].FirstValue,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.transitionPagesRepurposedTotal,
+		prometheus.CounterValue,
+		data[transitionPagesRePurposedPerSec].FirstValue,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.writeCopiesTotal,
+		prometheus.CounterValue,
+		data[writeCopiesPerSec].FirstValue,
 	)
 
 	return nil
