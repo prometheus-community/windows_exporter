@@ -9,7 +9,7 @@ func MapCounterToIndex(name string) string {
 }
 
 func GetPerflibSnapshot(objNames string) (map[string]*PerfObject, error) {
-	objects, err := QueryPerformanceData(objNames)
+	objects, err := QueryPerformanceData(objNames, "")
 	if err != nil {
 		return nil, err
 	}
