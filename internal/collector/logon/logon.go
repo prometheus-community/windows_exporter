@@ -56,7 +56,7 @@ func (c *Collector) Close(_ *slog.Logger) error {
 
 func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 	c.sessionInfo = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "session_timestamp_seconds"),
+		prometheus.BuildFQName(types.Namespace, Name, "session_logon_timestamp_seconds"),
 		"timestamp of the logon session in seconds.",
 		[]string{"id", "username", "domain", "type"},
 		nil,
