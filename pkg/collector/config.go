@@ -41,14 +41,12 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/smtp"
 	"github.com/prometheus-community/windows_exporter/internal/collector/system"
 	"github.com/prometheus-community/windows_exporter/internal/collector/tcp"
-	"github.com/prometheus-community/windows_exporter/internal/collector/teradici_pcoip"
 	"github.com/prometheus-community/windows_exporter/internal/collector/terminal_services"
 	"github.com/prometheus-community/windows_exporter/internal/collector/textfile"
 	"github.com/prometheus-community/windows_exporter/internal/collector/thermalzone"
 	"github.com/prometheus-community/windows_exporter/internal/collector/time"
 	"github.com/prometheus-community/windows_exporter/internal/collector/updates"
 	"github.com/prometheus-community/windows_exporter/internal/collector/vmware"
-	"github.com/prometheus-community/windows_exporter/internal/collector/vmware_blast"
 )
 
 type Config struct {
@@ -143,7 +141,6 @@ var ConfigDefaults = Config{
 	SMBClient:        smbclient.ConfigDefaults,
 	SMTP:             smtp.ConfigDefaults,
 	System:           system.ConfigDefaults,
-	TeradiciPcoip:    teradici_pcoip.ConfigDefaults,
 	TCP:              tcp.ConfigDefaults,
 	TerminalServices: terminal_services.ConfigDefaults,
 	Textfile:         textfile.ConfigDefaults,
@@ -151,5 +148,4 @@ var ConfigDefaults = Config{
 	Time:             time.ConfigDefaults,
 	Updates:          updates.ConfigDefaults,
 	Vmware:           vmware.ConfigDefaults,
-	VmwareBlast:      vmware_blast.ConfigDefaults,
 }
