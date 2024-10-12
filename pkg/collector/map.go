@@ -45,14 +45,12 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/smtp"
 	"github.com/prometheus-community/windows_exporter/internal/collector/system"
 	"github.com/prometheus-community/windows_exporter/internal/collector/tcp"
-	"github.com/prometheus-community/windows_exporter/internal/collector/teradici_pcoip"
 	"github.com/prometheus-community/windows_exporter/internal/collector/terminal_services"
 	"github.com/prometheus-community/windows_exporter/internal/collector/textfile"
 	"github.com/prometheus-community/windows_exporter/internal/collector/thermalzone"
 	"github.com/prometheus-community/windows_exporter/internal/collector/time"
 	"github.com/prometheus-community/windows_exporter/internal/collector/updates"
 	"github.com/prometheus-community/windows_exporter/internal/collector/vmware"
-	"github.com/prometheus-community/windows_exporter/internal/collector/vmware_blast"
 )
 
 func NewBuilderWithFlags[C Collector](fn BuilderWithFlags[C]) BuilderWithFlags[Collector] {
@@ -101,7 +99,6 @@ var BuildersWithFlags = map[string]BuilderWithFlags[Collector]{
 	smbclient.Name:         NewBuilderWithFlags(smbclient.NewWithFlags),
 	smtp.Name:              NewBuilderWithFlags(smtp.NewWithFlags),
 	system.Name:            NewBuilderWithFlags(system.NewWithFlags),
-	teradici_pcoip.Name:    NewBuilderWithFlags(teradici_pcoip.NewWithFlags),
 	tcp.Name:               NewBuilderWithFlags(tcp.NewWithFlags),
 	terminal_services.Name: NewBuilderWithFlags(terminal_services.NewWithFlags),
 	textfile.Name:          NewBuilderWithFlags(textfile.NewWithFlags),
@@ -109,7 +106,6 @@ var BuildersWithFlags = map[string]BuilderWithFlags[Collector]{
 	time.Name:              NewBuilderWithFlags(time.NewWithFlags),
 	updates.Name:           NewBuilderWithFlags(updates.NewWithFlags),
 	vmware.Name:            NewBuilderWithFlags(vmware.NewWithFlags),
-	vmware_blast.Name:      NewBuilderWithFlags(vmware_blast.NewWithFlags),
 }
 
 func Available() []string {
