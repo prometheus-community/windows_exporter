@@ -101,6 +101,7 @@ func (c *Collector) collectHTTPProxy(ctx *types.ScrapeContext, logger *slog.Logg
 
 	return nil
 }
+
 func (c *Collector) collectPDHHTTPProxy(ch chan<- prometheus.Metric) error {
 	perfData, err := c.perfDataCollectorHttpProxy.Collect()
 	if err != nil {
