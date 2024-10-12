@@ -3,7 +3,6 @@ package secur32
 import (
 	"errors"
 	"fmt"
-	"syscall"
 	"time"
 	"unsafe"
 
@@ -23,8 +22,10 @@ var (
 )
 
 func GetLogonSessions() ([]*LogonSessionData, error) {
-	var sessionCount uint32
-	var buffer uintptr
+	var (
+		buffer       uintptr
+		sessionCount uint32
+	)
 
 	err := LsaEnumerateLogonSessions(&sessionCount, &buffer)
 	if err != nil {
@@ -94,6 +95,7 @@ func LsaFreeReturnBuffer(buffer uintptr) error {
 
 func LsaNtStatusToWinError(ntstatus uintptr) error {
 	r0, _, err := procLsaNtStatusToWinError.Call(ntstatus)
+
 	switch {
 	case errors.Is(err, windows.ERROR_SUCCESS):
 		if r0 == 0 {
@@ -103,7 +105,7 @@ func LsaNtStatusToWinError(ntstatus uintptr) error {
 		return fmt.Errorf("unknown LSA NTSTATUS code %x", ntstatus)
 	}
 
-	return syscall.Errno(r0)
+	return windows.Errno(r0)
 }
 
 func newLogonSessionData(data *SECURITY_LOGON_SESSION_DATA) *LogonSessionData {
