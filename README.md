@@ -46,13 +46,11 @@ Name     | Description | Enabled by default
 [smtp](docs/collector.smtp.md) | IIS SMTP Server |
 [system](docs/collector.system.md) | System calls | &#10003;
 [tcp](docs/collector.tcp.md) | TCP connections |
-[teradici_pcoip](docs/collector.teradici_pcoip.md) | [Teradici PCoIP](https://www.teradici.com/web-help/pcoip_wmi_specs/) session metrics |
 [terminal_services](docs/collector.terminal_services.md) | Terminal services (RDS)
 [textfile](docs/collector.textfile.md) | Read prometheus metrics from a text file |
 [thermalzone](docs/collector.thermalzone.md) | Thermal information |
 [time](docs/collector.time.md) | Windows Time Service |
 [update](docs/collector.update.md) | Windows Update Service |
-[vmware_blast](docs/collector.vmware_blast.md) | VMware Blast session metrics |
 [vmware](docs/collector.vmware.md) | Performance counters installed by the Vmware Guest agent |
 
 See the linked documentation on each collector for more information on reported metrics, configuration settings and usage examples.

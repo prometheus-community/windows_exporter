@@ -51,14 +51,12 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/smtp"
 	"github.com/prometheus-community/windows_exporter/internal/collector/system"
 	"github.com/prometheus-community/windows_exporter/internal/collector/tcp"
-	"github.com/prometheus-community/windows_exporter/internal/collector/teradici_pcoip"
 	"github.com/prometheus-community/windows_exporter/internal/collector/terminal_services"
 	"github.com/prometheus-community/windows_exporter/internal/collector/textfile"
 	"github.com/prometheus-community/windows_exporter/internal/collector/thermalzone"
 	"github.com/prometheus-community/windows_exporter/internal/collector/time"
 	"github.com/prometheus-community/windows_exporter/internal/collector/updates"
 	"github.com/prometheus-community/windows_exporter/internal/collector/vmware"
-	"github.com/prometheus-community/windows_exporter/internal/collector/vmware_blast"
 	v1 "github.com/prometheus-community/windows_exporter/internal/perfdata/v1"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/yusufpapurcu/wmi"
@@ -119,7 +117,6 @@ func NewWithConfig(config Config) *MetricCollectors {
 	collectors[smbclient.Name] = smbclient.New(&config.SMBClient)
 	collectors[smtp.Name] = smtp.New(&config.SMTP)
 	collectors[system.Name] = system.New(&config.System)
-	collectors[teradici_pcoip.Name] = teradici_pcoip.New(&config.TeradiciPcoip)
 	collectors[tcp.Name] = tcp.New(&config.TCP)
 	collectors[terminal_services.Name] = terminal_services.New(&config.TerminalServices)
 	collectors[textfile.Name] = textfile.New(&config.Textfile)
@@ -127,7 +124,6 @@ func NewWithConfig(config Config) *MetricCollectors {
 	collectors[time.Name] = time.New(&config.Time)
 	collectors[updates.Name] = updates.New(&config.Updates)
 	collectors[vmware.Name] = vmware.New(&config.Vmware)
-	collectors[vmware_blast.Name] = vmware_blast.New(&config.VmwareBlast)
 
 	return New(collectors)
 }
