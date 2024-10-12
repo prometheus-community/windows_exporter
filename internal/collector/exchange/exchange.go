@@ -3,19 +3,34 @@
 package exchange
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
-	v1 "github.com/prometheus-community/windows_exporter/internal/perfdata/v1"
+	"github.com/prometheus-community/windows_exporter/internal/perfdata"
 	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
 )
 
 const Name = "exchange"
+
+const (
+	adAccessProcesses   = "ADAccessProcesses"
+	transportQueues     = "TransportQueues"
+	httpProxy           = "HttpProxy"
+	activeSync          = "ActiveSync"
+	availabilityService = "AvailabilityService"
+	outlookWebAccess    = "OutlookWebAccess"
+	autoDiscover        = "Autodiscover"
+	workloadManagement  = "WorkloadManagement"
+	rpcClientAccess     = "RpcClientAccess"
+	mapiHttpEmsmdb      = "MapiHttpEmsmdb"
+)
 
 type Config struct {
 	CollectorsEnabled []string `yaml:"collectors_enabled"`
@@ -23,21 +38,32 @@ type Config struct {
 
 var ConfigDefaults = Config{
 	CollectorsEnabled: []string{
-		"ADAccessProcesses",
-		"TransportQueues",
-		"HttpProxy",
-		"ActiveSync",
-		"AvailabilityService",
-		"OutlookWebAccess",
-		"Autodiscover",
-		"WorkloadManagement",
-		"RpcClientAccess",
-		"MapiHttpEmsmdb",
+		adAccessProcesses,
+		transportQueues,
+		httpProxy,
+		activeSync,
+		availabilityService,
+		outlookWebAccess,
+		autoDiscover,
+		workloadManagement,
+		rpcClientAccess,
+		mapiHttpEmsmdb,
 	},
 }
 
 type Collector struct {
 	config Config
+
+	perfDataCollectorADAccessProcesses           perfdata.Collector
+	perfDataCollectorTransportQueues             perfdata.Collector
+	perfDataCollectorHttpProxy                   perfdata.Collector
+	perfDataCollectorActiveSync                  perfdata.Collector
+	perfDataCollectorAvailabilityService         perfdata.Collector
+	perfDataCollectorOWA                         perfdata.Collector
+	perfDataCollectorAutoDiscover                perfdata.Collector
+	perfDataCollectorWorkloadManagementWorkloads perfdata.Collector
+	perfDataCollectorRpcClientAccess             perfdata.Collector
+	perfDataCollectorMapiHttpEmsmdb              perfdata.Collector
 
 	activeMailboxDeliveryQueueLength        *prometheus.Desc
 	activeSyncRequestsPerSec                *prometheus.Desc
@@ -118,16 +144,16 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 	app.PreAction(func(*kingpin.ParseContext) error {
 		if listAllCollectors {
 			collectorDesc := map[string]string{
-				"ADAccessProcesses":   "[19108] MSExchange ADAccess Processes",
-				"TransportQueues":     "[20524] MSExchangeTransport Queues",
-				"HttpProxy":           "[36934] MSExchange HttpProxy",
-				"ActiveSync":          "[25138] MSExchange ActiveSync",
-				"AvailabilityService": "[24914] MSExchange Availability Service",
-				"OutlookWebAccess":    "[24618] MSExchange OWA",
-				"Autodiscover":        "[29240] MSExchange Autodiscover",
-				"WorkloadManagement":  "[19430] MSExchange WorkloadManagement Workloads",
-				"RpcClientAccess":     "[29336] MSExchange RpcClientAccess",
-				"MapiHttpEmsmdb":      "[26463] MSExchange MapiHttp Emsmdb",
+				adAccessProcesses:   "[19108] MSExchange ADAccess Processes",
+				transportQueues:     "[20524] MSExchangeTransport Queues",
+				httpProxy:           "[36934] MSExchange HttpProxy",
+				activeSync:          "[25138] MSExchange ActiveSync",
+				availabilityService: "[24914] MSExchange Availability Service",
+				outlookWebAccess:    "[24618] MSExchange OWA",
+				autoDiscover:        "[29240] MSExchange Autodiscover",
+				workloadManagement:  "[19430] MSExchange WorkloadManagement Workloads",
+				rpcClientAccess:     "[29336] MSExchange RpcClientAccess",
+				mapiHttpEmsmdb:      "[26463] MSExchange MapiHttp Emsmdb",
 			}
 
 			sb := strings.Builder{}
@@ -159,6 +185,10 @@ func (c *Collector) GetName() string {
 }
 
 func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
+	if utils.PDHEnabled() {
+		return []string{}, nil
+	}
+
 	return []string{
 		"MSExchange ADAccess Processes",
 		"MSExchangeTransport Queues",
@@ -178,10 +208,31 @@ func (c *Collector) Close(_ *slog.Logger) error {
 }
 
 func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
+	if utils.PDHEnabled() {
+		collectorFuncs := map[string]func() error{
+			adAccessProcesses:   c.buildADAccessProcesses,
+			transportQueues:     c.buildTransportQueues,
+			httpProxy:           c.buildHTTPProxy,
+			activeSync:          c.buildActiveSync,
+			availabilityService: c.buildAvailabilityService,
+			outlookWebAccess:    c.buildOWA,
+			autoDiscover:        c.buildAutoDiscover,
+			workloadManagement:  c.buildWorkloadManagementWorkloads,
+			rpcClientAccess:     c.buildRPC,
+			mapiHttpEmsmdb:      c.buildMapiHttpEmsmdb,
+		}
+
+		for _, collectorName := range c.config.CollectorsEnabled {
+			if err := collectorFuncs[collectorName](); err != nil {
+				return err
+			}
+		}
+	}
+
 	// desc creates a new prometheus description
 	desc := func(metricName string, description string, labels ...string) *prometheus.Desc {
 		return prometheus.NewDesc(
-			prometheus.BuildFQName(types.Namespace, "exchange", metricName),
+			prometheus.BuildFQName(types.Namespace, Name, metricName),
 			description,
 			labels,
 			nil,
@@ -232,18 +283,22 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 
 // Collect collects exchange metrics and sends them to prometheus.
 func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+	if utils.PDHEnabled() {
+		return c.collectPDH(ch)
+	}
+
 	logger = logger.With(slog.String("collector", Name))
 	collectorFuncs := map[string]func(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error{
-		"ADAccessProcesses":   c.collectADAccessProcesses,
-		"TransportQueues":     c.collectTransportQueues,
-		"HttpProxy":           c.collectHTTPProxy,
-		"ActiveSync":          c.collectActiveSync,
-		"AvailabilityService": c.collectAvailabilityService,
-		"OutlookWebAccess":    c.collectOWA,
-		"Autodiscover":        c.collectAutoDiscover,
-		"WorkloadManagement":  c.collectWorkloadManagementWorkloads,
-		"RpcClientAccess":     c.collectRPC,
-		"MapiHttpEmsmdb":      c.collectMapiHttpEmsmdb,
+		adAccessProcesses:   c.collectADAccessProcesses,
+		transportQueues:     c.collectTransportQueues,
+		httpProxy:           c.collectHTTPProxy,
+		activeSync:          c.collectActiveSync,
+		availabilityService: c.collectAvailabilityService,
+		outlookWebAccess:    c.collectOWA,
+		autoDiscover:        c.collectAutoDiscover,
+		workloadManagement:  c.collectWorkloadManagementWorkloads,
+		rpcClientAccess:     c.collectRPC,
+		mapiHttpEmsmdb:      c.collectMapiHttpEmsmdb,
 	}
 
 	for _, collectorName := range c.config.CollectorsEnabled {
@@ -259,476 +314,28 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch ch
 	return nil
 }
 
-// Perflib: [19108] MSExchange ADAccess Processes.
-type perflibADAccessProcesses struct {
-	Name string
-
-	LDAPReadTime                    float64 `perflib:"LDAP Read Time"`
-	LDAPSearchTime                  float64 `perflib:"LDAP Search Time"`
-	LDAPWriteTime                   float64 `perflib:"LDAP Write Time"`
-	LDAPTimeoutErrorsPerSec         float64 `perflib:"LDAP Timeout Errors/sec"`
-	LongRunningLDAPOperationsPerMin float64 `perflib:"Long Running LDAP Operations/min"`
-}
-
-func (c *Collector) collectADAccessProcesses(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	logger = logger.With(slog.String("collector", Name))
-
-	var data []perflibADAccessProcesses
-
-	if err := v1.UnmarshalObject(ctx.PerfObjects["MSExchange ADAccess Processes"], &data, logger); err != nil {
-		return err
+// Collect collects exchange metrics and sends them to prometheus.
+func (c *Collector) collectPDH(ch chan<- prometheus.Metric) error {
+	collectorFuncs := map[string]func(ch chan<- prometheus.Metric) error{
+		adAccessProcesses:   c.collectPDHADAccessProcesses,
+		transportQueues:     c.collectPDHTransportQueues,
+		httpProxy:           c.collectPDHHTTPProxy,
+		activeSync:          c.collectPDHActiveSync,
+		availabilityService: c.collectPDHAvailabilityService,
+		outlookWebAccess:    c.collectPDHOWA,
+		autoDiscover:        c.collectPDHAutoDiscover,
+		workloadManagement:  c.collectPDHWorkloadManagementWorkloads,
+		rpcClientAccess:     c.collectPDHRPC,
+		mapiHttpEmsmdb:      c.collectPDHMapiHttpEmsmdb,
 	}
 
-	labelUseCount := make(map[string]int)
+	errs := make([]error, len(c.config.CollectorsEnabled))
 
-	for _, proc := range data {
-		labelName := c.toLabelName(proc.Name)
-		if strings.HasSuffix(labelName, "_total") {
-			continue
-		}
-
-		// Since we're not including the PID suffix from the instance names in the label names, we get an occasional duplicate.
-		// This seems to affect about 4 instances only of this object.
-		labelUseCount[labelName]++
-		if labelUseCount[labelName] > 1 {
-			labelName = fmt.Sprintf("%s_%d", labelName, labelUseCount[labelName])
-		}
-		ch <- prometheus.MustNewConstMetric(
-			c.ldapReadTime,
-			prometheus.CounterValue,
-			c.msToSec(proc.LDAPReadTime),
-			labelName,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.ldapSearchTime,
-			prometheus.CounterValue,
-			c.msToSec(proc.LDAPSearchTime),
-			labelName,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.ldapWriteTime,
-			prometheus.CounterValue,
-			c.msToSec(proc.LDAPWriteTime),
-			labelName,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.ldapTimeoutErrorsPerSec,
-			prometheus.CounterValue,
-			proc.LDAPTimeoutErrorsPerSec,
-			labelName,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.longRunningLDAPOperationsPerMin,
-			prometheus.CounterValue,
-			proc.LongRunningLDAPOperationsPerMin*60,
-			labelName,
-		)
+	for i, collectorName := range c.config.CollectorsEnabled {
+		errs[i] = collectorFuncs[collectorName](ch)
 	}
 
-	return nil
-}
-
-// Perflib: [24914] MSExchange Availability Service.
-type perflibAvailabilityService struct {
-	RequestsSec float64 `perflib:"Availability Requests (sec)"`
-}
-
-func (c *Collector) collectAvailabilityService(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	logger = logger.With(slog.String("collector", Name))
-
-	var data []perflibAvailabilityService
-
-	if err := v1.UnmarshalObject(ctx.PerfObjects["MSExchange Availability Service"], &data, logger); err != nil {
-		return err
-	}
-
-	for _, availservice := range data {
-		ch <- prometheus.MustNewConstMetric(
-			c.availabilityRequestsSec,
-			prometheus.CounterValue,
-			availservice.RequestsSec,
-		)
-	}
-
-	return nil
-}
-
-// Perflib: [36934] MSExchange HttpProxy.
-type perflibHTTPProxy struct {
-	Name string
-
-	MailboxServerLocatorAverageLatency float64 `perflib:"MailboxServerLocator Average Latency (Moving Average)"`
-	AverageAuthenticationLatency       float64 `perflib:"Average Authentication Latency"`
-	AverageCASProcessingLatency        float64 `perflib:"Average ClientAccess Server Processing Latency"`
-	MailboxServerProxyFailureRate      float64 `perflib:"Mailbox Server Proxy Failure Rate"`
-	OutstandingProxyRequests           float64 `perflib:"Outstanding Proxy Requests"`
-	ProxyRequestsPerSec                float64 `perflib:"Proxy Requests/Sec"`
-}
-
-func (c *Collector) collectHTTPProxy(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	logger = logger.With(slog.String("collector", Name))
-
-	var data []perflibHTTPProxy
-
-	if err := v1.UnmarshalObject(ctx.PerfObjects["MSExchange HttpProxy"], &data, logger); err != nil {
-		return err
-	}
-
-	for _, instance := range data {
-		labelName := c.toLabelName(instance.Name)
-		ch <- prometheus.MustNewConstMetric(
-			c.mailboxServerLocatorAverageLatency,
-			prometheus.GaugeValue,
-			c.msToSec(instance.MailboxServerLocatorAverageLatency),
-			labelName,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.averageAuthenticationLatency,
-			prometheus.GaugeValue,
-			instance.AverageAuthenticationLatency,
-			labelName,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.averageCASProcessingLatency,
-			prometheus.GaugeValue,
-			c.msToSec(instance.AverageCASProcessingLatency),
-			labelName,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.mailboxServerProxyFailureRate,
-			prometheus.GaugeValue,
-			instance.MailboxServerProxyFailureRate,
-			labelName,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.outstandingProxyRequests,
-			prometheus.GaugeValue,
-			instance.OutstandingProxyRequests,
-			labelName,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.proxyRequestsPerSec,
-			prometheus.CounterValue,
-			instance.ProxyRequestsPerSec,
-			labelName,
-		)
-	}
-
-	return nil
-}
-
-// Perflib: [24618] MSExchange OWA.
-type perflibOWA struct {
-	CurrentUniqueUsers float64 `perflib:"Current Unique Users"`
-	RequestsPerSec     float64 `perflib:"Requests/sec"`
-}
-
-func (c *Collector) collectOWA(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	logger = logger.With(slog.String("collector", Name))
-
-	var data []perflibOWA
-
-	if err := v1.UnmarshalObject(ctx.PerfObjects["MSExchange OWA"], &data, logger); err != nil {
-		return err
-	}
-
-	for _, owa := range data {
-		ch <- prometheus.MustNewConstMetric(
-			c.currentUniqueUsers,
-			prometheus.GaugeValue,
-			owa.CurrentUniqueUsers,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.owaRequestsPerSec,
-			prometheus.CounterValue,
-			owa.RequestsPerSec,
-		)
-	}
-
-	return nil
-}
-
-// Perflib: [25138] MSExchange ActiveSync.
-type perflibActiveSync struct {
-	RequestsPerSec      float64 `perflib:"Requests/sec"`
-	PingCommandsPending float64 `perflib:"Ping Commands Pending"`
-	SyncCommandsPerSec  float64 `perflib:"Sync Commands/sec"`
-}
-
-func (c *Collector) collectActiveSync(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	logger = logger.With(slog.String("collector", Name))
-
-	var data []perflibActiveSync
-
-	if err := v1.UnmarshalObject(ctx.PerfObjects["MSExchange ActiveSync"], &data, logger); err != nil {
-		return err
-	}
-
-	for _, instance := range data {
-		ch <- prometheus.MustNewConstMetric(
-			c.activeSyncRequestsPerSec,
-			prometheus.CounterValue,
-			instance.RequestsPerSec,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.pingCommandsPending,
-			prometheus.GaugeValue,
-			instance.PingCommandsPending,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.syncCommandsPerSec,
-			prometheus.CounterValue,
-			instance.SyncCommandsPerSec,
-		)
-	}
-
-	return nil
-}
-
-// Perflib: [29366] MSExchange RpcClientAccess.
-type perflibRPCClientAccess struct {
-	RPCAveragedLatency  float64 `perflib:"RPC Averaged Latency"`
-	RPCRequests         float64 `perflib:"RPC Requests"`
-	ActiveUserCount     float64 `perflib:"Active User Count"`
-	ConnectionCount     float64 `perflib:"Connection Count"`
-	RPCOperationsPerSec float64 `perflib:"RPC Operations/sec"`
-	UserCount           float64 `perflib:"User Count"`
-}
-
-func (c *Collector) collectRPC(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	logger = logger.With(slog.String("collector", Name))
-
-	var data []perflibRPCClientAccess
-
-	if err := v1.UnmarshalObject(ctx.PerfObjects["MSExchange RpcClientAccess"], &data, logger); err != nil {
-		return err
-	}
-
-	for _, rpc := range data {
-		ch <- prometheus.MustNewConstMetric(
-			c.rpcAveragedLatency,
-			prometheus.GaugeValue,
-			c.msToSec(rpc.RPCAveragedLatency),
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.rpcRequests,
-			prometheus.GaugeValue,
-			rpc.RPCRequests,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.activeUserCount,
-			prometheus.GaugeValue,
-			rpc.ActiveUserCount,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.connectionCount,
-			prometheus.GaugeValue,
-			rpc.ConnectionCount,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.rpcOperationsPerSec,
-			prometheus.CounterValue,
-			rpc.RPCOperationsPerSec,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.userCount,
-			prometheus.GaugeValue,
-			rpc.UserCount,
-		)
-	}
-
-	return nil
-}
-
-// Perflib: [20524] MSExchangeTransport Queues.
-type perflibTransportQueues struct {
-	Name string
-
-	ExternalActiveRemoteDeliveryQueueLength float64 `perflib:"External Active Remote Delivery Queue Length"`
-	InternalActiveRemoteDeliveryQueueLength float64 `perflib:"Internal Active Remote Delivery Queue Length"`
-	ActiveMailboxDeliveryQueueLength        float64 `perflib:"Active Mailbox Delivery Queue Length"`
-	RetryMailboxDeliveryQueueLength         float64 `perflib:"Retry Mailbox Delivery Queue Length"`
-	UnreachableQueueLength                  float64 `perflib:"Unreachable Queue Length"`
-	ExternalLargestDeliveryQueueLength      float64 `perflib:"External Largest Delivery Queue Length"`
-	InternalLargestDeliveryQueueLength      float64 `perflib:"Internal Largest Delivery Queue Length"`
-	PoisonQueueLength                       float64 `perflib:"Poison Queue Length"`
-}
-
-func (c *Collector) collectTransportQueues(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	logger = logger.With(slog.String("collector", Name))
-
-	var data []perflibTransportQueues
-
-	if err := v1.UnmarshalObject(ctx.PerfObjects["MSExchangeTransport Queues"], &data, logger); err != nil {
-		return err
-	}
-
-	for _, queue := range data {
-		labelName := c.toLabelName(queue.Name)
-		if strings.HasSuffix(labelName, "_total") {
-			continue
-		}
-		ch <- prometheus.MustNewConstMetric(
-			c.externalActiveRemoteDeliveryQueueLength,
-			prometheus.GaugeValue,
-			queue.ExternalActiveRemoteDeliveryQueueLength,
-			labelName,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.internalActiveRemoteDeliveryQueueLength,
-			prometheus.GaugeValue,
-			queue.InternalActiveRemoteDeliveryQueueLength,
-			labelName,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.activeMailboxDeliveryQueueLength,
-			prometheus.GaugeValue,
-			queue.ActiveMailboxDeliveryQueueLength,
-			labelName,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.retryMailboxDeliveryQueueLength,
-			prometheus.GaugeValue,
-			queue.RetryMailboxDeliveryQueueLength,
-			labelName,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.unreachableQueueLength,
-			prometheus.GaugeValue,
-			queue.UnreachableQueueLength,
-			labelName,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.externalLargestDeliveryQueueLength,
-			prometheus.GaugeValue,
-			queue.ExternalLargestDeliveryQueueLength,
-			labelName,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.internalLargestDeliveryQueueLength,
-			prometheus.GaugeValue,
-			queue.InternalLargestDeliveryQueueLength,
-			labelName,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.poisonQueueLength,
-			prometheus.GaugeValue,
-			queue.PoisonQueueLength,
-			labelName,
-		)
-	}
-
-	return nil
-}
-
-// Perflib: [19430] MSExchange WorkloadManagement Workloads.
-type perflibWorkloadManagementWorkloads struct {
-	Name string
-
-	ActiveTasks    float64 `perflib:"ActiveTasks"`
-	CompletedTasks float64 `perflib:"CompletedTasks"`
-	QueuedTasks    float64 `perflib:"QueuedTasks"`
-	YieldedTasks   float64 `perflib:"YieldedTasks"`
-	IsActive       float64 `perflib:"Active"`
-}
-
-func (c *Collector) collectWorkloadManagementWorkloads(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	logger = logger.With(slog.String("collector", Name))
-
-	var data []perflibWorkloadManagementWorkloads
-
-	if err := v1.UnmarshalObject(ctx.PerfObjects["MSExchange WorkloadManagement Workloads"], &data, logger); err != nil {
-		return err
-	}
-
-	for _, instance := range data {
-		labelName := c.toLabelName(instance.Name)
-		if strings.HasSuffix(labelName, "_total") {
-			continue
-		}
-		ch <- prometheus.MustNewConstMetric(
-			c.activeTasks,
-			prometheus.GaugeValue,
-			instance.ActiveTasks,
-			labelName,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.completedTasks,
-			prometheus.CounterValue,
-			instance.CompletedTasks,
-			labelName,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.queuedTasks,
-			prometheus.CounterValue,
-			instance.QueuedTasks,
-			labelName,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.yieldedTasks,
-			prometheus.CounterValue,
-			instance.YieldedTasks,
-			labelName,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.isActive,
-			prometheus.GaugeValue,
-			instance.IsActive,
-			labelName,
-		)
-	}
-
-	return nil
-}
-
-// [29240] MSExchangeAutodiscover.
-type perflibAutodiscover struct {
-	RequestsPerSec float64 `perflib:"Requests/sec"`
-}
-
-func (c *Collector) collectAutoDiscover(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	logger = logger.With(slog.String("collector", Name))
-
-	var data []perflibAutodiscover
-
-	if err := v1.UnmarshalObject(ctx.PerfObjects["MSExchangeAutodiscover"], &data, logger); err != nil {
-		return err
-	}
-
-	for _, autodisc := range data {
-		ch <- prometheus.MustNewConstMetric(
-			c.autoDiscoverRequestsPerSec,
-			prometheus.CounterValue,
-			autodisc.RequestsPerSec,
-		)
-	}
-
-	return nil
-}
-
-// perflib [26463] MSExchange MapiHttp Emsmdb.
-type perflibMapiHttpEmsmdb struct {
-	ActiveUserCount float64 `perflib:"Active User Count"`
-}
-
-func (c *Collector) collectMapiHttpEmsmdb(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	logger = logger.With(slog.String("collector", Name))
-
-	var data []perflibMapiHttpEmsmdb
-
-	if err := v1.UnmarshalObject(ctx.PerfObjects["MSExchange MapiHttp Emsmdb"], &data, logger); err != nil {
-		return err
-	}
-
-	for _, mapihttp := range data {
-		ch <- prometheus.MustNewConstMetric(
-			c.activeUserCountMapiHttpEmsMDB,
-			prometheus.GaugeValue,
-			mapihttp.ActiveUserCount,
-		)
-	}
-
-	return nil
+	return errors.Join(errs...)
 }
 
 // toLabelName converts strings to lowercase and replaces all whitespaces and dots with underscores.
