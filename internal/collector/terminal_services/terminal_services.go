@@ -11,10 +11,11 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/headers/wtsapi32"
+	"github.com/prometheus-community/windows_exporter/internal/mi"
 	v1 "github.com/prometheus-community/windows_exporter/internal/perfdata/v1"
 	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/yusufpapurcu/wmi"
 	"golang.org/x/sys/windows"
 )
 
@@ -31,9 +32,9 @@ type Win32_ServerFeature struct {
 	ID uint32
 }
 
-func isConnectionBrokerServer(logger *slog.Logger, wmiClient *wmi.Client) bool {
+func isConnectionBrokerServer(logger *slog.Logger, miSession *mi.Session) bool {
 	var dst []Win32_ServerFeature
-	if err := wmiClient.Query("SELECT * FROM Win32_ServerFeature", &dst); err != nil {
+	if err := miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * FROM Win32_ServerFeature"))); err != nil {
 		return false
 	}
 
@@ -112,10 +113,14 @@ func (c *Collector) Close(_ *slog.Logger) error {
 	return nil
 }
 
-func (c *Collector) Build(logger *slog.Logger, wmiClient *wmi.Client) error {
+func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
+	if miSession == nil {
+		return errors.New("miSession is nil")
+	}
+
 	logger = logger.With(slog.String("collector", Name))
 
-	c.connectionBrokerEnabled = isConnectionBrokerServer(logger, wmiClient)
+	c.connectionBrokerEnabled = isConnectionBrokerServer(logger, miSession)
 
 	c.sessionInfo = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "session_info"),

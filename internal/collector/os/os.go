@@ -16,10 +16,10 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/headers/netapi32"
 	"github.com/prometheus-community/windows_exporter/internal/headers/psapi"
 	"github.com/prometheus-community/windows_exporter/internal/headers/sysinfoapi"
+	"github.com/prometheus-community/windows_exporter/internal/mi"
 	v1 "github.com/prometheus-community/windows_exporter/internal/perfdata/v1"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/yusufpapurcu/wmi"
 	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/registry"
 )
@@ -109,9 +109,11 @@ func (c *Collector) Close(_ *slog.Logger) error {
 	return nil
 }
 
-func (c *Collector) Build(logger *slog.Logger, _ *wmi.Client) error {
-	logger.Warn("The os collect holds a number of deprecated metrics and will be removed mid 2025. " +
-		"See https://github.com/prometheus-community/windows_exporter/pull/1596 for more information.")
+func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
+	logger.Warn("The os collect holds a number of deprecated metrics and will be removed mid 2025. "+
+		"See https://github.com/prometheus-community/windows_exporter/pull/1596 for more information.",
+		slog.String("collector", Name),
+	)
 
 	workstationInfo, err := netapi32.GetWorkstationInfo()
 	if err != nil {

@@ -35,3 +35,11 @@ func PDHEnabled() bool {
 
 	return false
 }
+
+func MIEnabled() bool {
+	if v, ok := os.LookupEnv("WINDOWS_EXPORTER_WMI_ENGINE"); ok && v == "mi" {
+		return true
+	}
+
+	return false
+}

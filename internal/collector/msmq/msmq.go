@@ -4,14 +4,15 @@ package msmq
 
 import (
 	"errors"
+	"fmt"
 	"log/slog"
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
+	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/yusufpapurcu/wmi"
 )
 
 const Name = "msmq"
@@ -27,7 +28,7 @@ var ConfigDefaults = Config{
 // A Collector is a Prometheus Collector for WMI Win32_PerfRawData_MSMQ_MSMQQueue metrics.
 type Collector struct {
 	config    Config
-	wmiClient *wmi.Client
+	miSession *mi.Session
 
 	bytesInJournalQueue    *prometheus.Desc
 	bytesInQueue           *prometheus.Desc
@@ -75,14 +76,14 @@ func (c *Collector) Close(_ *slog.Logger) error {
 	return nil
 }
 
-func (c *Collector) Build(logger *slog.Logger, wmiClient *wmi.Client) error {
+func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 	logger = logger.With(slog.String("collector", Name))
 
-	if wmiClient == nil || wmiClient.SWbemServicesClient == nil {
-		return errors.New("wmiClient or SWbemServicesClient is nil")
+	if miSession == nil {
+		return errors.New("miSession is nil")
 	}
 
-	c.wmiClient = wmiClient
+	c.miSession = miSession
 
 	if *c.config.QueryWhereClause == "" {
 		logger.Warn("No where-clause specified for msmq collector. This will generate a very large number of metrics!")
@@ -132,12 +133,12 @@ func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan
 }
 
 type msmqQueue struct {
-	Name string
+	Name string `mi:"Name"`
 
-	BytesInJournalQueue    uint64
-	BytesInQueue           uint64
-	MessagesInJournalQueue uint64
-	MessagesInQueue        uint64
+	BytesInJournalQueue    uint64 `mi:"BytesInJournalQueue"`
+	BytesInQueue           uint64 `mi:"BytesInQueue"`
+	MessagesInJournalQueue uint64 `mi:"MessagesInJournalQueue"`
+	MessagesInQueue        uint64 `mi:"MessagesInQueue"`
 }
 
 func (c *Collector) collect(ch chan<- prometheus.Metric) error {
@@ -148,8 +149,13 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 		query += " WHERE " + *c.config.QueryWhereClause
 	}
 
-	if err := c.wmiClient.Query(query, &dst); err != nil {
-		return err
+	queryExpression, err := mi.NewQuery(query)
+	if err != nil {
+		return fmt.Errorf("failed to create WMI query: %w", err)
+	}
+
+	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, queryExpression); err != nil {
+		return fmt.Errorf("WMI query failed: %w", err)
 	}
 
 	for _, msmq := range dst {
