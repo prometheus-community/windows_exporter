@@ -4,16 +4,21 @@ package fsrmquota
 
 import (
 	"errors"
+	"fmt"
 	"log/slog"
 
 	"github.com/alecthomas/kingpin/v2"
+	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/yusufpapurcu/wmi"
 )
 
-const Name = "fsrmquota"
+const (
+	Name = "fsrmquota"
+
+	wmiQuery = "SELECT * FROM MSFT_FSRMQuota"
+)
 
 type Config struct{}
 
@@ -21,7 +26,7 @@ var ConfigDefaults = Config{}
 
 type Collector struct {
 	config    Config
-	wmiClient *wmi.Client
+	miSession *mi.Session
 
 	quotasCount *prometheus.Desc
 	peakUsage   *prometheus.Desc
@@ -63,12 +68,12 @@ func (c *Collector) Close(_ *slog.Logger) error {
 	return nil
 }
 
-func (c *Collector) Build(_ *slog.Logger, wmiClient *wmi.Client) error {
-	if wmiClient == nil || wmiClient.SWbemServicesClient == nil {
-		return errors.New("wmiClient or SWbemServicesClient is nil")
+func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
+	if miSession == nil {
+		return errors.New("miSession is nil")
 	}
 
-	c.wmiClient = wmiClient
+	c.miSession = miSession
 
 	c.quotasCount = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "count"),
@@ -162,12 +167,11 @@ type MSFT_FSRMQuota struct {
 
 func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	var dst []MSFT_FSRMQuota
+	if err := c.miSession.Query(&dst, mi.NamespaceRootWindowsFSRM, wmiQuery); err != nil {
+		return fmt.Errorf("WMI query failed: %w", err)
+	}
 
 	var count int
-
-	if err := c.wmiClient.Query("SELECT * FROM MSFT_FSRMQuota", &dst, nil, "root/microsoft/windows/fsrm"); err != nil {
-		return err
-	}
 
 	for _, quota := range dst {
 		count++

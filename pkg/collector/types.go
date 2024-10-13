@@ -4,14 +4,14 @@ import (
 	"log/slog"
 
 	"github.com/alecthomas/kingpin/v2"
+	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/yusufpapurcu/wmi"
 )
 
 type MetricCollectors struct {
 	Collectors       Map
-	WMIClient        *wmi.Client
+	MISession        *mi.Session
 	PerfCounterQuery string
 }
 
@@ -22,7 +22,7 @@ type (
 
 // Collector interface that a collector has to implement.
 type Collector interface {
-	Build(logger *slog.Logger, wmiClient *wmi.Client) error
+	Build(logger *slog.Logger, miSession *mi.Session) error
 	// Close closes the collector
 	Close(logger *slog.Logger) error
 	// GetName get the name of the collector

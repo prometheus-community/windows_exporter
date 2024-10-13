@@ -4,12 +4,13 @@ package thermalzone
 
 import (
 	"errors"
+	"fmt"
 	"log/slog"
 
 	"github.com/alecthomas/kingpin/v2"
+	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/yusufpapurcu/wmi"
 )
 
 const Name = "thermalzone"
@@ -21,7 +22,7 @@ var ConfigDefaults = Config{}
 // A Collector is a Prometheus Collector for WMI Win32_PerfRawData_Counters_ThermalZoneInformation metrics.
 type Collector struct {
 	config    Config
-	wmiClient *wmi.Client
+	miSession *mi.Session
 
 	percentPassiveLimit *prometheus.Desc
 	temperature         *prometheus.Desc
@@ -56,12 +57,12 @@ func (c *Collector) Close(_ *slog.Logger) error {
 	return nil
 }
 
-func (c *Collector) Build(_ *slog.Logger, wmiClient *wmi.Client) error {
-	if wmiClient == nil || wmiClient.SWbemServicesClient == nil {
-		return errors.New("wmiClient or SWbemServicesClient is nil")
+func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
+	if miSession == nil {
+		return errors.New("miSession is nil")
 	}
 
-	c.wmiClient = wmiClient
+	c.miSession = miSession
 	c.temperature = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "temperature_celsius"),
 		"(Temperature)",
@@ -108,22 +109,20 @@ func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan
 // Win32_PerfRawData_Counters_ThermalZoneInformation docs:
 // https://wutils.com/wmi/root/cimv2/win32_perfrawdata_counters_thermalzoneinformation/
 type Win32_PerfRawData_Counters_ThermalZoneInformation struct {
-	Name string
-
-	HighPrecisionTemperature uint32
-	PercentPassiveLimit      uint32
-	ThrottleReasons          uint32
+	Name                     string `mi:"Name"`
+	HighPrecisionTemperature uint32 `mi:"HighPrecisionTemperature"`
+	PercentPassiveLimit      uint32 `mi:"PercentPassiveLimit"`
+	ThrottleReasons          uint32 `mi:"ThrottleReasons"`
 }
 
 func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_Counters_ThermalZoneInformation
-	if err := c.wmiClient.Query("SELECT * FROM Win32_PerfRawData_Counters_ThermalZoneInformation", &dst); err != nil {
-		return err
+	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, "SELECT * FROM Win32_PerfRawData_Counters_ThermalZoneInformation"); err != nil {
+		return fmt.Errorf("WMI query failed: %w", err)
 	}
 
-	// ThermalZone collector has been known to 'successfully' return an empty result.
 	if len(dst) == 0 {
-		return errors.New("empty results set for collector")
+		return errors.New("WMI query returned empty result set")
 	}
 
 	for _, info := range dst {

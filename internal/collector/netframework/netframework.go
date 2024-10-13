@@ -9,9 +9,9 @@ import (
 	"slices"
 
 	"github.com/alecthomas/kingpin/v2"
+	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/yusufpapurcu/wmi"
 )
 
 const Name = "netframework"
@@ -47,7 +47,7 @@ const (
 // A Collector is a Prometheus Collector for WMI Win32_PerfRawData_NETFramework_NETCLRExceptions metrics.
 type Collector struct {
 	config    Config
-	wmiClient *wmi.Client
+	miSession *mi.Session
 
 	// clrexceptions
 	numberOfExceptionsThrown *prometheus.Desc
@@ -143,12 +143,12 @@ func (c *Collector) Close(_ *slog.Logger) error {
 	return nil
 }
 
-func (c *Collector) Build(_ *slog.Logger, wmiClient *wmi.Client) error {
-	if wmiClient == nil || wmiClient.SWbemServicesClient == nil {
-		return errors.New("wmiClient or SWbemServicesClient is nil")
+func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
+	if miSession == nil {
+		return errors.New("miSession is nil")
 	}
 
-	c.wmiClient = wmiClient
+	c.miSession = miSession
 
 	if slices.Contains(c.config.CollectorsEnabled, collectorClrExceptions) {
 		c.buildClrExceptions()

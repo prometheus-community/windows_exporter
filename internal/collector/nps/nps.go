@@ -6,9 +6,9 @@ import (
 	"log/slog"
 
 	"github.com/alecthomas/kingpin/v2"
+	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/yusufpapurcu/wmi"
 )
 
 const Name = "nps"
@@ -20,7 +20,7 @@ var ConfigDefaults = Config{}
 // Collector is a Prometheus Collector for WMI Win32_PerfRawData_IAS_NPSAuthenticationServer and Win32_PerfRawData_IAS_NPSAccountingServer metrics.
 type Collector struct {
 	config    Config
-	wmiClient *wmi.Client
+	miSession *mi.Session
 
 	accessAccepts           *prometheus.Desc
 	accessChallenges        *prometheus.Desc
@@ -78,12 +78,12 @@ func (c *Collector) Close(_ *slog.Logger) error {
 	return nil
 }
 
-func (c *Collector) Build(_ *slog.Logger, wmiClient *wmi.Client) error {
-	if wmiClient == nil || wmiClient.SWbemServicesClient == nil {
-		return errors.New("wmiClient or SWbemServicesClient is nil")
+func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
+	if miSession == nil {
+		return errors.New("miSession is nil")
 	}
 
-	c.wmiClient = wmiClient
+	c.miSession = miSession
 	c.accessAccepts = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "access_accepts"),
 		"(AccessAccepts)",
@@ -299,8 +299,8 @@ type Win32_PerfRawData_IAS_NPSAccountingServer struct {
 // to the provided prometheus Metric channel.
 func (c *Collector) CollectAccept(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_IAS_NPSAuthenticationServer
-	if err := c.wmiClient.Query("SELECT * FROM Win32_PerfRawData_IAS_NPSAuthenticationServer", &dst); err != nil {
-		return err
+	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, "SELECT * FROM Win32_PerfRawData_IAS_NPSAuthenticationServer"); err != nil {
+		return fmt.Errorf("WMI query failed: %w", err)
 	}
 
 	ch <- prometheus.MustNewConstMetric(
@@ -386,8 +386,8 @@ func (c *Collector) CollectAccept(ch chan<- prometheus.Metric) error {
 
 func (c *Collector) CollectAccounting(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_IAS_NPSAccountingServer
-	if err := c.wmiClient.Query("SELECT * FROM Win32_PerfRawData_IAS_NPSAccountingServer", &dst); err != nil {
-		return err
+	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, "SELECT * FROM Win32_PerfRawData_IAS_NPSAccountingServer"); err != nil {
+		return fmt.Errorf("WMI query failed: %w", err)
 	}
 
 	ch <- prometheus.MustNewConstMetric(
