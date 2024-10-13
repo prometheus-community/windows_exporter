@@ -35,6 +35,7 @@ Name     | Description | Enabled by default
 [netframework](docs/collector.netframework.md) | .NET Framework metrics |
 [net](docs/collector.net.md) | Network interface I/O | &#10003;
 [os](docs/collector.os.md) | OS metrics (memory, processes, users) | &#10003;
+[perfdata](docs/collector.perfdata.md) | Custom perfdata metrics |
 [physical_disk](docs/collector.physical_disk.md) | physical disk metrics | &#10003;
 [printer](docs/collector.printer.md) | Printer metrics |
 [process](docs/collector.process.md) | Per-process metrics |
