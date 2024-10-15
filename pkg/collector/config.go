@@ -45,7 +45,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/textfile"
 	"github.com/prometheus-community/windows_exporter/internal/collector/thermalzone"
 	"github.com/prometheus-community/windows_exporter/internal/collector/time"
-	"github.com/prometheus-community/windows_exporter/internal/collector/updates"
+	"github.com/prometheus-community/windows_exporter/internal/collector/update"
 	"github.com/prometheus-community/windows_exporter/internal/collector/vmware"
 )
 
@@ -94,7 +94,7 @@ type Config struct {
 	Textfile         textfile.Config          `yaml:"textfile"`
 	ThermalZone      thermalzone.Config       `yaml:"thermal_zone"`
 	Time             time.Config              `yaml:"time"`
-	Updates          updates.Config           `yaml:"updates"`
+	Update           update.Config            `yaml:"update"`
 	Vmware           vmware.Config            `yaml:"vmware"`
 }
 
@@ -146,6 +146,6 @@ var ConfigDefaults = Config{
 	Textfile:         textfile.ConfigDefaults,
 	ThermalZone:      thermalzone.ConfigDefaults,
 	Time:             time.ConfigDefaults,
-	Updates:          updates.ConfigDefaults,
+	Update:           update.ConfigDefaults,
 	Vmware:           vmware.ConfigDefaults,
 }
