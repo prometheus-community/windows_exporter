@@ -49,7 +49,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/textfile"
 	"github.com/prometheus-community/windows_exporter/internal/collector/thermalzone"
 	"github.com/prometheus-community/windows_exporter/internal/collector/time"
-	"github.com/prometheus-community/windows_exporter/internal/collector/updates"
+	"github.com/prometheus-community/windows_exporter/internal/collector/update"
 	"github.com/prometheus-community/windows_exporter/internal/collector/vmware"
 )
 
@@ -104,7 +104,7 @@ var BuildersWithFlags = map[string]BuilderWithFlags[Collector]{
 	textfile.Name:          NewBuilderWithFlags(textfile.NewWithFlags),
 	thermalzone.Name:       NewBuilderWithFlags(thermalzone.NewWithFlags),
 	time.Name:              NewBuilderWithFlags(time.NewWithFlags),
-	updates.Name:           NewBuilderWithFlags(updates.NewWithFlags),
+	update.Name:            NewBuilderWithFlags(update.NewWithFlags),
 	vmware.Name:            NewBuilderWithFlags(vmware.NewWithFlags),
 }
 

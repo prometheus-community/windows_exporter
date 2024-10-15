@@ -1,6 +1,6 @@
 //go:build windows
 
-package updates
+package update
 
 import (
 	"errors"
@@ -20,7 +20,7 @@ import (
 	"github.com/yusufpapurcu/wmi"
 )
 
-const Name = "updates"
+const Name = "update"
 
 type Config struct {
 	online         bool          `yaml:"online"`
