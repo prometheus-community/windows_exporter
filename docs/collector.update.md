@@ -1,19 +1,20 @@
 # update collector
 
-The update collector exposes the Windows Update Service metrics. Note that the Windows Update Service must be running, else metric collection will fail.
+The update collector exposes the Windows Update service metrics. Note that the Windows Update service (`wuauserv`) must be running, else metric collection will fail.
 
-The Windows Update Service is responsible for managing the installation of updates for the operating system and other Microsoft software. The service can be configured to automatically download and install updates, or to notify the user when updates are available.
+The Windows Update service is responsible for managing the installation of updates for the operating system and other Microsoft software. The service can be configured to automatically download and install updates, or to notify the user when updates are available.
 
 
 |                     |                        |
 |---------------------|------------------------|
 | Metric name prefix  | `update`               |
-| Data source         | Windows Update Service |
+| Data source         | Windows Update service |
 | Enabled by default? | No                     |
+
 ## Flags
 
 ### `--collector.updates.online`
-Whether to search for updates online. If set to `false`, the collector will only list updates that are already found by the Windows Update Service.
+Whether to search for updates online. If set to `false`, the collector will only list updates that are already found by the Windows Update service.
 Set to `true` to search for updates online, which will take longer to complete.
 
 ### `--collector.updates.scrape-interval`
