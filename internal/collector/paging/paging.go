@@ -67,14 +67,14 @@ func (c *Collector) Close(_ *slog.Logger) error {
 
 func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 	c.pagingLimitBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "paging_limit_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "limit_bytes"),
 		"OperatingSystem.SizeStoredInPagingFiles",
 		nil,
 		nil,
 	)
 
 	c.pagingFreeBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "paging_free_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, "free_bytes"),
 		"OperatingSystem.FreeSpaceInPagingFiles",
 		nil,
 		nil,
