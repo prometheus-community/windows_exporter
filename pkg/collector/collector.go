@@ -168,12 +168,20 @@ func (c *MetricCollectors) SetPerfCounterQuery(logger *slog.Logger) error {
 }
 
 // Enable removes all collectors that not enabledCollectors.
-func (c *MetricCollectors) Enable(enabledCollectors []string) {
+func (c *MetricCollectors) Enable(enabledCollectors []string) error {
+	for _, name := range enabledCollectors {
+		if _, ok := c.Collectors[name]; !ok {
+			return fmt.Errorf("unknown collector %s", name)
+		}
+	}
+
 	for name := range c.Collectors {
 		if !slices.Contains(enabledCollectors, name) {
 			delete(c.Collectors, name)
 		}
 	}
+
+	return nil
 }
 
 // Build To be called by the exporter for collector initialization.

@@ -188,7 +188,11 @@ func run() int {
 	}
 
 	enabledCollectorList := utils.ExpandEnabledCollectors(*enabledCollectors)
-	collectors.Enable(enabledCollectorList)
+	if err := collectors.Enable(enabledCollectorList); err != nil {
+		logger.Error(err.Error())
+
+		return 1
+	}
 
 	// Initialize collectors before loading
 	if err = collectors.Build(logger); err != nil {
