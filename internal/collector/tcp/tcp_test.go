@@ -10,3 +10,7 @@ import (
 func BenchmarkCollector(b *testing.B) {
 	testutils.FuncBenchmarkCollector(b, tcp.Name, tcp.NewWithFlags)
 }
+
+func TestCollector(t *testing.T) {
+	testutils.TestCollector(t, tcp.New, nil)
+}
