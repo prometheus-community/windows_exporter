@@ -207,9 +207,10 @@ func (c *Collector) Build(logger *slog.Logger, wmiClient *wmi.Client) error {
 	c.privateBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "private_bytes"),
 		"Current number of bytes this process has allocated that cannot be shared with other processes.",
-		[]string{"process", "process_id"},
+		[]string{"process", "process_id", "username"},
 		nil,
 	)
+
 	c.threadCount = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "threads"),
 		"Number of threads currently active in this process.",
@@ -447,7 +448,7 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch ch
 			c.privateBytes,
 			prometheus.GaugeValue,
 			process.PrivateBytes,
-			processName, pid,
+			processName, pid, processOwner,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
