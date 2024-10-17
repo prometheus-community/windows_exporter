@@ -418,6 +418,10 @@ func QueryPerformanceData(query string, counterName string) ([]*PerfObject, erro
 			}
 		}
 
+		if counterName != "" {
+			return objects[i : i+1], nil
+		}
+
 		// Next perfObjectType
 		objOffset += int64(obj.TotalByteLength)
 		numFilteredObjects++

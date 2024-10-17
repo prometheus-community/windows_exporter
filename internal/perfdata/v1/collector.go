@@ -44,7 +44,7 @@ func (c *Collector) Collect() (map[string]map[string]perftypes.CounterValues, er
 		return nil, fmt.Errorf("QueryPerformanceData: %w", err)
 	}
 
-	if len(perfObjects) == 0 {
+	if len(perfObjects) == 0 || perfObjects[0] == nil || len(perfObjects[0].Instances) == 0 {
 		return map[string]map[string]perftypes.CounterValues{}, nil
 	}
 
