@@ -41,6 +41,9 @@ type SessionFT struct {
 	TestConnection      uintptr
 }
 
+// Close closes a session and releases all associated memory.
+//
+// https://learn.microsoft.com/en-us/windows/win32/api/mi/nf-mi-mi_session_close
 func (s *Session) Close() error {
 	if s == nil || s.ft == nil {
 		return ErrNotInitialized
@@ -171,11 +174,23 @@ func (s *Session) Query(dst any, namespaceName Namespace, queryExpression string
 		return fmt.Errorf("WMI query failed: %w", err)
 	}
 
-	if err := operation.Unmarshal(dst); err != nil {
+	if err = operation.Unmarshal(dst); err != nil {
 		return fmt.Errorf("failed to unmarshal WMI query results: %w", err)
 	}
 
-	_ = operation.Close()
+	for {
+		instance, moreResults, err := operation.GetInstance()
+
+		_, _ = instance, err
+
+		if !moreResults {
+			break
+		}
+	}
+
+	if err = operation.Close(); err != nil {
+		return fmt.Errorf("failed to close WMI query operation: %w", err)
+	}
 
 	return nil
 }

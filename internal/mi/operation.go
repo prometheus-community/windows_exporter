@@ -70,6 +70,9 @@ type OperationOptionsFT struct {
 	GetInterval        uintptr
 }
 
+// Close closes an operation handle.
+//
+// https://learn.microsoft.com/en-us/windows/win32/api/mi/nf-mi-mi_operation_close
 func (o *Operation) Close() error {
 	if o == nil || o.ft == nil {
 		return ErrNotInitialized

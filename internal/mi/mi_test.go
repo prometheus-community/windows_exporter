@@ -14,6 +14,13 @@ type win32Process struct {
 	Name string `mi:"Name"`
 }
 
+type wmiPrinter struct {
+	Name                   string `mi:"Name"`
+	Default                bool   `mi:"Default"`
+	PrinterStatus          uint16 `mi:"PrinterStatus"`
+	JobCountSinceLastReset uint32 `mi:"JobCountSinceLastReset"`
+}
+
 type wmiPrintJob struct {
 	Name   string `mi:"Name"`
 	Status string `mi:"Status"`
@@ -190,7 +197,7 @@ func Test_MI_Query_Unmarshal(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func Test_MI_FD_Lead(t *testing.T) {
+func Test_MI_FD_Leak(t *testing.T) {
 	application, err := mi.Application_Initialize()
 	require.NoError(t, err)
 	require.NotEmpty(t, application)
@@ -203,28 +210,13 @@ func Test_MI_FD_Lead(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("Current File Handle Count: ", currentFileHandle)
-
 	for range 1000 {
-		currentFileHandle, err = testutils.GetProcessHandleCount(windows.CurrentProcess())
+		var wmiPrinters []wmiPrinter
+		err := session.Query(&wmiPrinters, mi.NamespaceRootCIMv2, "SELECT Name, Default, PrinterStatus, JobCountSinceLastReset FROM win32_Printer")
 		require.NoError(t, err)
 
-		t.Log("Current File Handle Count: ", currentFileHandle)
-		operation, err := session.QueryInstances(mi.OperationFlagsStandardRTTI, nil, mi.NamespaceRootCIMv2, mi.QueryDialectWQL, "SELECT Name, Status FROM win32_PrintJob")
-
-		require.NoError(t, err)
-		require.NotEmpty(t, operation)
-
-		var processes []wmiPrintJob
-
-		err = operation.Unmarshal(&processes)
-		require.NoError(t, err)
-
-		currentFileHandle, err = testutils.GetProcessHandleCount(windows.CurrentProcess())
-		require.NoError(t, err)
-
-		t.Log("Current File Handle Count: ", currentFileHandle)
-
-		err = operation.Close()
+		var wmiPrintJobs []wmiPrintJob
+		err = session.Query(&wmiPrintJobs, mi.NamespaceRootCIMv2, "SELECT Name, Status FROM win32_PrintJob")
 		require.NoError(t, err)
 
 		currentFileHandle, err = testutils.GetProcessHandleCount(windows.CurrentProcess())
@@ -241,6 +233,16 @@ func Test_MI_FD_Lead(t *testing.T) {
 	err = session.Close()
 	require.NoError(t, err)
 
+	currentFileHandle, err = testutils.GetProcessHandleCount(windows.CurrentProcess())
+	require.NoError(t, err)
+
+	t.Log("Current File Handle Count: ", currentFileHandle)
+
 	err = application.Close()
 	require.NoError(t, err)
+
+	currentFileHandle, err = testutils.GetProcessHandleCount(windows.CurrentProcess())
+	require.NoError(t, err)
+
+	t.Log("Current File Handle Count: ", currentFileHandle)
 }

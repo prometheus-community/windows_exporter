@@ -57,6 +57,20 @@ type ClassDecl struct {
 	OwningClass uintptr
 }
 
+func (instance *Instance) Delete() error {
+	if instance == nil || instance.ft == nil {
+		return ErrNotInitialized
+	}
+
+	r0, _, _ := syscall.SyscallN(instance.ft.Delete, uintptr(unsafe.Pointer(instance)))
+
+	if result := ResultError(r0); !errors.Is(result, MI_RESULT_OK) {
+		return result
+	}
+
+	return nil
+}
+
 func (instance *Instance) GetElement(elementName string) (*Element, error) {
 	if instance == nil || instance.ft == nil {
 		return nil, ErrNotInitialized
