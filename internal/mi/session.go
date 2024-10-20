@@ -68,9 +68,9 @@ func (s *Session) Close() error {
 // The instance returned by [Operation.GetInstance] is always nil.
 //
 // https://learn.microsoft.com/en-us/windows/win32/api/mi/nf-mi-mi_session_testconnection
-func (s *Session) TestConnection() (*Operation, error) {
+func (s *Session) TestConnection() error {
 	if s == nil || s.ft == nil {
-		return nil, ErrNotInitialized
+		return ErrNotInitialized
 	}
 
 	operation := &Operation{}
@@ -85,10 +85,20 @@ func (s *Session) TestConnection() (*Operation, error) {
 	)
 
 	if result := ResultError(r0); !errors.Is(result, MI_RESULT_OK) {
-		return nil, result
+		return result
 	}
 
-	return operation, nil
+	var err error
+
+	if _, _, err = operation.GetInstance(); err != nil {
+		return fmt.Errorf("failed to get instance: %w", err)
+	}
+
+	if err = operation.Close(); err != nil {
+		return fmt.Errorf("failed to close operation: %w", err)
+	}
+
+	return nil
 }
 
 // GetApplication gets the Application handle that was used to create the specified session.

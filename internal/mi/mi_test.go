@@ -5,11 +5,18 @@ import (
 	"time"
 
 	"github.com/prometheus-community/windows_exporter/internal/mi"
+	"github.com/prometheus-community/windows_exporter/internal/testutils"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sys/windows"
 )
 
 type win32Process struct {
 	Name string `mi:"Name"`
+}
+
+type wmiPrintJob struct {
+	Name   string `mi:"Name"`
+	Status string `mi:"Status"`
 }
 
 func Test_MI_Application_Initialize(t *testing.T) {
@@ -40,15 +47,9 @@ func Test_MI_Application_TestConnection(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, session)
 
-	operation, err := session.TestConnection()
+	err = session.TestConnection()
 	require.NoError(t, err)
 	require.NotEmpty(t, session)
-
-	_, _, err = operation.GetInstance()
-	require.NoError(t, err)
-
-	err = operation.Close()
-	require.NoError(t, err)
 
 	err = session.Close()
 	require.NoError(t, err)
@@ -76,8 +77,7 @@ func Test_MI_Query(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, session)
 
-	operation, err := session.QueryInstances(mi.OperationFlagsStandardRTTI, nil, mi.NamespaceRootCIMv2, mi.QueryDialectWQL,
-		"select Name from win32_process where handle = 0")
+	operation, err := session.QueryInstances(mi.OperationFlagsStandardRTTI, nil, mi.NamespaceRootCIMv2, mi.QueryDialectWQL, "select Name from win32_process where handle = 0")
 
 	require.NoError(t, err)
 	require.NotEmpty(t, operation)
@@ -130,8 +130,7 @@ func Test_MI_EmptyQuery(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, session)
 
-	operation, err := session.QueryInstances(mi.OperationFlagsStandardRTTI, nil, mi.NamespaceRootCIMv2, mi.QueryDialectWQL,
-		"SELECT Name, Status FROM win32_PrintJob")
+	operation, err := session.QueryInstances(mi.OperationFlagsStandardRTTI, nil, mi.NamespaceRootCIMv2, mi.QueryDialectWQL, "SELECT Name, Status FROM win32_PrintJob")
 
 	require.NoError(t, err)
 	require.NotEmpty(t, operation)
@@ -170,8 +169,7 @@ func Test_MI_Query_Unmarshal(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, session)
 
-	operation, err := session.QueryInstances(mi.OperationFlagsStandardRTTI, nil, mi.NamespaceRootCIMv2, mi.QueryDialectWQL,
-		"select Name from win32_process where handle = 0 or handle = 4")
+	operation, err := session.QueryInstances(mi.OperationFlagsStandardRTTI, nil, mi.NamespaceRootCIMv2, mi.QueryDialectWQL, "SELECT Name FROM Win32_Process WHERE Handle = 0 OR Handle = 4")
 
 	require.NoError(t, err)
 	require.NotEmpty(t, operation)
@@ -184,6 +182,61 @@ func Test_MI_Query_Unmarshal(t *testing.T) {
 
 	err = operation.Close()
 	require.NoError(t, err)
+
+	err = session.Close()
+	require.NoError(t, err)
+
+	err = application.Close()
+	require.NoError(t, err)
+}
+
+func Test_MI_FD_Lead(t *testing.T) {
+	application, err := mi.Application_Initialize()
+	require.NoError(t, err)
+	require.NotEmpty(t, application)
+
+	session, err := application.NewSession(nil)
+	require.NoError(t, err)
+	require.NotEmpty(t, session)
+
+	currentFileHandle, err := testutils.GetProcessHandleCount(windows.CurrentProcess())
+	require.NoError(t, err)
+
+	t.Log("Current File Handle Count: ", currentFileHandle)
+
+	for range 1000 {
+		currentFileHandle, err = testutils.GetProcessHandleCount(windows.CurrentProcess())
+		require.NoError(t, err)
+
+		t.Log("Current File Handle Count: ", currentFileHandle)
+		operation, err := session.QueryInstances(mi.OperationFlagsStandardRTTI, nil, mi.NamespaceRootCIMv2, mi.QueryDialectWQL, "SELECT Name, Status FROM win32_PrintJob")
+
+		require.NoError(t, err)
+		require.NotEmpty(t, operation)
+
+		var processes []wmiPrintJob
+
+		err = operation.Unmarshal(&processes)
+		require.NoError(t, err)
+
+		currentFileHandle, err = testutils.GetProcessHandleCount(windows.CurrentProcess())
+		require.NoError(t, err)
+
+		t.Log("Current File Handle Count: ", currentFileHandle)
+
+		err = operation.Close()
+		require.NoError(t, err)
+
+		currentFileHandle, err = testutils.GetProcessHandleCount(windows.CurrentProcess())
+		require.NoError(t, err)
+
+		t.Log("Current File Handle Count: ", currentFileHandle)
+	}
+
+	currentFileHandle, err = testutils.GetProcessHandleCount(windows.CurrentProcess())
+	require.NoError(t, err)
+
+	t.Log("Current File Handle Count: ", currentFileHandle)
 
 	err = session.Close()
 	require.NoError(t, err)
