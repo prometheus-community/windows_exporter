@@ -75,17 +75,18 @@ This can be useful for having different Prometheus servers collect specific metr
 
 windows_exporter accepts flags to configure certain behaviours. The ones configuring the global behaviour of the exporter are listed below, while collector-specific ones are documented in the respective collector documentation above.
 
-| Flag                                 | Description                                                                                                                                         | Default value |
-|--------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------|---------------|
-| `--web.listen-address`               | host:port for exporter.                                                                                                                             | `:9182`       |
-| `--telemetry.path`                   | URL path for surfacing collected metrics.                                                                                                           | `/metrics`    |
-| `--telemetry.max-requests`           | Maximum number of concurrent requests. 0 to disable.                                                                                                | `5`           |
-| `--collectors.enabled`               | Comma-separated list of collectors to use. Use `[defaults]` as a placeholder which gets expanded containing all the collectors enabled by default." | `[defaults]`  |
-| `--collectors.print`                 | If true, print available collectors and exit.                                                                                                       |               |
-| `--scrape.timeout-margin`            | Seconds to subtract from the timeout allowed by the client. Tune to allow for overhead or high loads.                                               | `0.5`         |
-| `--web.config.file`                  | A [web config][web_config] for setting up TLS and Auth                                                                                              | None          |
-| `--config.file`                      | [Using a config file](#using-a-configuration-file) from path or URL                                                                                 | None          |
-| `--config.file.insecure-skip-verify` | Skip TLS when loading config file from URL                                                                                                          | false         |
+| Flag                                 | Description                                                                                                                                                                                      | Default value |
+|--------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------|
+| `--web.listen-address`               | host:port for exporter.                                                                                                                                                                          | `:9182`       |
+| `--telemetry.path`                   | URL path for surfacing collected metrics.                                                                                                                                                        | `/metrics`    |
+| `--telemetry.max-requests`           | Maximum number of concurrent requests. 0 to disable.                                                                                                                                             | `5`           |
+| `--collectors.enabled`               | Comma-separated list of collectors to use. Use `[defaults]` as a placeholder which gets expanded containing all the collectors enabled by default."                                              | `[defaults]`  |
+| `--collectors.print`                 | If true, print available collectors and exit.                                                                                                                                                    |               |
+| `--scrape.timeout-margin`            | Seconds to subtract from the timeout allowed by the client. Tune to allow for overhead or high loads.                                                                                            | `0.5`         |
+| `--web.config.file`                  | A [web config][web_config] for setting up TLS and Auth                                                                                                                                           | None          |
+| `--config.file`                      | [Using a config file](#using-a-configuration-file) from path or URL                                                                                                                              | None          |
+| `--config.file.insecure-skip-verify` | Skip TLS when loading config file from URL                                                                                                                                                       | false         |
+| `--log.file`                         | Output file of log messages. One of [stdout, stderr, eventlog, \<path to log file>]<br>**NOTE:** The MSI installer will add a default argument to the installed service setting this to eventlog | stderr        |
 
 ## Installation
 
