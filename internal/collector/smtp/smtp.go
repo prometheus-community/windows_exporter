@@ -8,10 +8,10 @@ import (
 	"regexp"
 
 	"github.com/alecthomas/kingpin/v2"
+	"github.com/prometheus-community/windows_exporter/internal/mi"
 	v1 "github.com/prometheus-community/windows_exporter/internal/perfdata/v1"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/yusufpapurcu/wmi"
 )
 
 const Name = "smtp"
@@ -141,10 +141,10 @@ func (c *Collector) Close(_ *slog.Logger) error {
 	return nil
 }
 
-func (c *Collector) Build(logger *slog.Logger, _ *wmi.Client) error {
-	logger = logger.With(slog.String("collector", Name))
-
-	logger.Info("smtp collector is in an experimental state! Metrics for this collector have not been tested.")
+func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
+	logger.Info("smtp collector is in an experimental state! Metrics for this collector have not been tested.",
+		slog.String("collector", Name),
+	)
 
 	c.badMailedMessagesBadPickupFileTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "badmailed_messages_bad_pickup_file_total"),

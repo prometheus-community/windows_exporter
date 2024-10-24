@@ -4,13 +4,14 @@ package diskdrive
 
 import (
 	"errors"
+	"fmt"
 	"log/slog"
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
+	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/yusufpapurcu/wmi"
 )
 
 const (
@@ -25,7 +26,7 @@ var ConfigDefaults = Config{}
 // A Collector is a Prometheus Collector for a few WMI metrics in Win32_DiskDrive.
 type Collector struct {
 	config    Config
-	wmiClient *wmi.Client
+	miSession *mi.Session
 
 	availability *prometheus.Desc
 	diskInfo     *prometheus.Desc
@@ -62,12 +63,12 @@ func (c *Collector) Close(_ *slog.Logger) error {
 	return nil
 }
 
-func (c *Collector) Build(_ *slog.Logger, wmiClient *wmi.Client) error {
-	if wmiClient == nil || wmiClient.SWbemServicesClient == nil {
-		return errors.New("wmiClient or SWbemServicesClient is nil")
+func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
+	if miSession == nil {
+		return errors.New("miSession is nil")
 	}
 
-	c.wmiClient = wmiClient
+	c.miSession = miSession
 	c.diskInfo = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "info"),
 		"General drive information",
@@ -175,9 +176,8 @@ func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan
 
 func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	var dst []win32_DiskDrive
-
-	if err := c.wmiClient.Query(win32DiskQuery, &dst); err != nil {
-		return err
+	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, win32DiskQuery); err != nil {
+		return fmt.Errorf("WMI query failed: %w", err)
 	}
 
 	if len(dst) == 0 {

@@ -7,9 +7,9 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/headers/sysinfoapi"
+	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/yusufpapurcu/wmi"
 )
 
 const Name = "cs"
@@ -61,7 +61,7 @@ func (c *Collector) Close(_ *slog.Logger) error {
 	return nil
 }
 
-func (c *Collector) Build(logger *slog.Logger, _ *wmi.Client) error {
+func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	logger.Warn("The cs collector is deprecated and will be removed in a future release. " +
 		"Logical processors has been moved to cpu_info collector. " +
 		"Physical memory has been moved to memory collector. " +
