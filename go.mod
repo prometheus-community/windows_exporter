@@ -3,7 +3,7 @@ module github.com/prometheus-community/windows_exporter
 go 1.23
 
 require (
-	github.com/Microsoft/hcsshim v0.12.7
+	github.com/Microsoft/hcsshim v0.12.8
 	github.com/alecthomas/kingpin/v2 v2.4.0
 	github.com/bmatcuk/doublestar/v4 v4.7.1
 	github.com/dimchansky/utfbom v1.1.1
@@ -25,7 +25,8 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/containerd/cgroups/v3 v3.0.3 // indirect
-	github.com/containerd/errdefs v0.1.0 // indirect
+	github.com/containerd/containerd v1.7.23 // indirect
+	github.com/containerd/errdefs v0.3.0 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
