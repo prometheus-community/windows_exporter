@@ -9,10 +9,10 @@ import (
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/prometheus-community/windows_exporter/internal/mi"
+	"github.com/prometheus-community/windows_exporter/internal/perfdata"
 	"github.com/prometheus-community/windows_exporter/internal/types"
-	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/yusufpapurcu/wmi"
 )
 
 const Name = "hyperv"
@@ -23,122 +23,211 @@ var ConfigDefaults = Config{}
 
 // Collector is a Prometheus Collector for hyper-v.
 type Collector struct {
-	config    Config
-	miSession *mi.Session
+	config Config
 
-	// Win32_PerfRawData_VmmsVirtualMachineStats_HyperVVirtualMachineHealthSummary
-	healthCritical *prometheus.Desc
-	healthOk       *prometheus.Desc
+	// Hyper-V Virtual Machine Health Summa metrics
+	perfDataCollectorVirtualMachineHealthSummary perfdata.Collector
+	healthCritical                               *prometheus.Desc // \Hyper-V Virtual Machine Health Summary\Health Critical
+	healthOk                                     *prometheus.Desc // \Hyper-V Virtual Machine Health Summary\Health Ok
 
-	// Win32_PerfRawData_VidPerfProvider_HyperVVMVidPartition
-	physicalPagesAllocated *prometheus.Desc
-	preferredNUMANodeIndex *prometheus.Desc
-	remotePhysicalPages    *prometheus.Desc
+	// Hyper-V VM Vid Partition metadata
+	perfDataCollectorVMVidPartition perfdata.Collector
+	physicalPagesAllocated          *prometheus.Desc // \Hyper-V VM Vid Partition(*)\Physical Pages Allocated
+	preferredNUMANodeIndex          *prometheus.Desc // \Hyper-V VM Vid Partition(*)\Preferred NUMA Node Index
+	remotePhysicalPages             *prometheus.Desc // \Hyper-V VM Vid Partition(*)\Remote Physical Pages
 
-	// Win32_PerfRawData_HvStats_HyperVHypervisorRootPartition
-	addressSpaces                 *prometheus.Desc
-	attachedDevices               *prometheus.Desc
-	depositedPages                *prometheus.Desc
-	deviceDMAErrors               *prometheus.Desc
-	deviceInterruptErrors         *prometheus.Desc
-	deviceInterruptMappings       *prometheus.Desc
-	deviceInterruptThrottleEvents *prometheus.Desc
-	gpaPages                      *prometheus.Desc
-	gpaSpaceModifications         *prometheus.Desc
-	ioTLBFlushCost                *prometheus.Desc
-	ioTLBFlushes                  *prometheus.Desc
-	recommendedVirtualTLBSize     *prometheus.Desc
-	skippedTimerTicks             *prometheus.Desc
-	value1Gdevicepages            *prometheus.Desc
-	value1GGPApages               *prometheus.Desc
-	value2Mdevicepages            *prometheus.Desc
-	value2MGPApages               *prometheus.Desc
-	value4Kdevicepages            *prometheus.Desc
-	value4KGPApages               *prometheus.Desc
-	virtualTLBFlushEntires        *prometheus.Desc
-	virtualTLBPages               *prometheus.Desc
+	// Hyper-V Hypervisor Root Partition metrics
+	addressSpaces                 *prometheus.Desc // \Hyper-V Hypervisor Root Partition(*)\Address Spaces
+	attachedDevices               *prometheus.Desc // \Hyper-V Hypervisor Root Partition(*)\Attached Devices
+	depositedPages                *prometheus.Desc // \Hyper-V Hypervisor Root Partition(*)\Deposited Pages
+	deviceDMAErrors               *prometheus.Desc // \Hyper-V Hypervisor Root Partition(*)\Device DMA Errors
+	deviceInterruptErrors         *prometheus.Desc // \Hyper-V Hypervisor Root Partition(*)\Device Interrupt Errors
+	deviceInterruptMappings       *prometheus.Desc // \Hyper-V Hypervisor Root Partition(*)\Device Interrupt Mappings
+	deviceInterruptThrottleEvents *prometheus.Desc // \Hyper-V Hypervisor Root Partition(*)\Device Interrupt Throttle Events
+	gpaPages                      *prometheus.Desc // \Hyper-V Hypervisor Root Partition(*)\GPA Pages
+	gpaSpaceModifications         *prometheus.Desc // \Hyper-V Hypervisor Root Partition(*)\GPA Space Modifications/sec
+	ioTLBFlushCost                *prometheus.Desc // \Hyper-V Hypervisor Root Partition(*)\I/O TLB Flush Cost
+	ioTLBFlushes                  *prometheus.Desc // \Hyper-V Hypervisor Root Partition(*)\I/O TLB Flushes/sec
+	recommendedVirtualTLBSize     *prometheus.Desc // \Hyper-V Hypervisor Root Partition(*)\Recommended Virtual TLB Size
+	skippedTimerTicks             *prometheus.Desc // \Hyper-V Hypervisor Root Partition(*)\Skipped Timer Ticks
+	value1Gdevicepages            *prometheus.Desc // \Hyper-V Hypervisor Root Partition(*)\1G device pages
+	value1GGPApages               *prometheus.Desc // \Hyper-V Hypervisor Root Partition(*)\1G GPA pages
+	value2Mdevicepages            *prometheus.Desc // \Hyper-V Hypervisor Root Partition(*)\2M device pages
+	value2MGPApages               *prometheus.Desc // \Hyper-V Hypervisor Root Partition(*)\2M GPA pages
+	value4Kdevicepages            *prometheus.Desc // \Hyper-V Hypervisor Root Partition(*)\4K device pages
+	value4KGPApages               *prometheus.Desc // \Hyper-V Hypervisor Root Partition(*)\4K GPA pages
+	virtualTLBFlushEntires        *prometheus.Desc // \Hyper-V Hypervisor Root Partition(*)\Virtual TLB Flush Entires/sec
+	virtualTLBPages               *prometheus.Desc // \Hyper-V Hypervisor Root Partition(*)\Virtual TLB Pages
 
 	// Win32_PerfRawData_HvStats_HyperVHypervisor
-	logicalProcessors *prometheus.Desc
-	virtualProcessors *prometheus.Desc
+	logicalProcessors *prometheus.Desc // \Hyper-V Hypervisor\Logical Processors
+	virtualProcessors *prometheus.Desc // \Hyper-V Hypervisor\Virtual Processors
 
 	// Win32_PerfRawData_HvStats_HyperVHypervisorLogicalProcessor
-	hostLPGuestRunTimePercent      *prometheus.Desc
-	hostLPHypervisorRunTimePercent *prometheus.Desc
-	hostLPTotalRunTimePercent      *prometheus.Desc
+	hostLPGuestRunTimePercent      *prometheus.Desc // \Hyper-V Hypervisor Logical Processor(*)\% Guest Run Time
+	hostLPHypervisorRunTimePercent *prometheus.Desc // \Hyper-V Hypervisor Logical Processor(*)\% Hypervisor Run Time
+	hostLPTotalRunTimePercent      *prometheus.Desc // \Hyper-V Hypervisor Logical Processor(*)\% Total Run Time
+	hostLPIdleRunTimePercent       *prometheus.Desc // \Hyper-V Hypervisor Logical Processor(*)\% Idle Time
 
 	// Win32_PerfRawData_HvStats_HyperVHypervisorRootVirtualProcessor
-	hostGuestRunTime           *prometheus.Desc
-	hostHypervisorRunTime      *prometheus.Desc
-	hostRemoteRunTime          *prometheus.Desc
-	hostTotalRunTime           *prometheus.Desc
-	hostCPUWaitTimePerDispatch *prometheus.Desc
+	hostGuestRunTime           *prometheus.Desc // \Hyper-V Hypervisor Root Virtual Processor(*)\% Guest Run Time
+	hostHypervisorRunTime      *prometheus.Desc // \Hyper-V Hypervisor Root Virtual Processor(*)\% Hypervisor Run Time
+	hostRemoteRunTime          *prometheus.Desc // \Hyper-V Hypervisor Root Virtual Processor(*)\% Remote Run Time
+	hostTotalRunTime           *prometheus.Desc // \Hyper-V Hypervisor Root Virtual Processor(*)\% Total Run Time
+	hostCPUWaitTimePerDispatch *prometheus.Desc // \Hyper-V Hypervisor Root Virtual Processor(*)\CPU Wait Time Per Dispatch
 
 	// Win32_PerfRawData_HvStats_HyperVHypervisorVirtualProcessor
-	vmGuestRunTime           *prometheus.Desc
-	vmHypervisorRunTime      *prometheus.Desc
-	vmRemoteRunTime          *prometheus.Desc
-	vmTotalRunTime           *prometheus.Desc
-	vmCPUWaitTimePerDispatch *prometheus.Desc
+	vmGuestRunTime           *prometheus.Desc // \Hyper-V Hypervisor Virtual Processor(*)\% Guest Run Time
+	vmHypervisorRunTime      *prometheus.Desc // \Hyper-V Hypervisor Virtual Processor(*)\% Hypervisor Run Time
+	vmRemoteRunTime          *prometheus.Desc // \Hyper-V Hypervisor Virtual Processor(*)\% Remote Run Time
+	vmTotalRunTime           *prometheus.Desc // \Hyper-V Hypervisor Virtual Processor(*)\% Total Run Time
+	vmCPUWaitTimePerDispatch *prometheus.Desc // \Hyper-V Hypervisor Virtual Processor(*)\CPU Wait Time Per Dispatch
 
-	// Win32_PerfRawData_NvspSwitchStats_HyperVVirtualSwitch
-	broadcastPacketsReceived         *prometheus.Desc
-	broadcastPacketsSent             *prometheus.Desc
-	bytes                            *prometheus.Desc
-	bytesReceived                    *prometheus.Desc
-	bytesSent                        *prometheus.Desc
-	directedPacketsReceived          *prometheus.Desc
-	directedPacketsSent              *prometheus.Desc
-	droppedPacketsIncoming           *prometheus.Desc
-	droppedPacketsOutgoing           *prometheus.Desc
-	extensionsDroppedPacketsIncoming *prometheus.Desc
-	extensionsDroppedPacketsOutgoing *prometheus.Desc
-	learnedMacAddresses              *prometheus.Desc
-	multicastPacketsReceived         *prometheus.Desc
-	multicastPacketsSent             *prometheus.Desc
-	numberOfSendChannelMoves         *prometheus.Desc
-	numberOfVMQMoves                 *prometheus.Desc
-	packetsFlooded                   *prometheus.Desc
-	packets                          *prometheus.Desc
-	packetsReceived                  *prometheus.Desc
-	packetsSent                      *prometheus.Desc
-	purgedMacAddresses               *prometheus.Desc
+	// Hyper-V Virtual Switch metrics
+	broadcastPacketsReceived         *prometheus.Desc // \Hyper-V Virtual Switch(*)\Broadcast Packets Received/sec
+	broadcastPacketsSent             *prometheus.Desc // \Hyper-V Virtual Switch(*)\Broadcast Packets Sent/sec
+	bytes                            *prometheus.Desc // \Hyper-V Virtual Switch(*)\Bytes/sec
+	bytesReceived                    *prometheus.Desc // \Hyper-V Virtual Switch(*)\Bytes Received/sec
+	bytesSent                        *prometheus.Desc // \Hyper-V Virtual Switch(*)\Bytes Sent/sec
+	directedPacketsReceived          *prometheus.Desc // \Hyper-V Virtual Switch(*)\Directed Packets Received/sec
+	directedPacketsSent              *prometheus.Desc // \Hyper-V Virtual Switch(*)\Directed Packets Sent/sec
+	droppedPacketsIncoming           *prometheus.Desc // \Hyper-V Virtual Switch(*)\Dropped Packets Incoming/sec
+	droppedPacketsOutgoing           *prometheus.Desc // \Hyper-V Virtual Switch(*)\Dropped Packets Outgoing/sec
+	extensionsDroppedPacketsIncoming *prometheus.Desc // \Hyper-V Virtual Switch(*)\Extensions Dropped Packets Incoming/sec
+	extensionsDroppedPacketsOutgoing *prometheus.Desc // \Hyper-V Virtual Switch(*)\Extensions Dropped Packets Outgoing/sec
+	learnedMacAddresses              *prometheus.Desc // \Hyper-V Virtual Switch(*)\Learned Mac Addresses
+	multicastPacketsReceived         *prometheus.Desc // \Hyper-V Virtual Switch(*)\Multicast Packets Received/sec
+	multicastPacketsSent             *prometheus.Desc // \Hyper-V Virtual Switch(*)\Multicast Packets Sent/sec
+	numberOfSendChannelMoves         *prometheus.Desc // \Hyper-V Virtual Switch(*)\Number of Send Channel Moves/sec
+	numberOfVMQMoves                 *prometheus.Desc // \Hyper-V Virtual Switch(*)\Number of VMQ Moves/sec
+	packetsFlooded                   *prometheus.Desc // \Hyper-V Virtual Switch(*)\Packets Flooded
+	packets                          *prometheus.Desc // \Hyper-V Virtual Switch(*)\Packets/sec
+	packetsReceived                  *prometheus.Desc // \Hyper-V Virtual Switch(*)\Packets Received/sec
+	packetsSent                      *prometheus.Desc // \Hyper-V Virtual Switch(*)\Packets Sent/sec
+	purgedMacAddresses               *prometheus.Desc // \Hyper-V Virtual Switch(*)\Purged Mac Addresses
 
-	// Win32_PerfRawData_EthernetPerfProvider_HyperVLegacyNetworkAdapter
-	adapterBytesDropped   *prometheus.Desc
-	adapterBytesReceived  *prometheus.Desc
-	adapterBytesSent      *prometheus.Desc
-	adapterFramesDropped  *prometheus.Desc
-	adapterFramesReceived *prometheus.Desc
-	adapterFramesSent     *prometheus.Desc
+	// Hyper-V Legacy Network Adapter metrics
+	adapterBytesDropped   *prometheus.Desc // \Hyper-V Legacy Network Adapter(*)\Bytes Dropped
+	adapterBytesReceived  *prometheus.Desc // \Hyper-V Legacy Network Adapter(*)\Bytes Received/sec
+	adapterBytesSent      *prometheus.Desc // \Hyper-V Legacy Network Adapter(*)\Bytes Sent/sec
+	adapterFramesDropped  *prometheus.Desc // \Hyper-V Legacy Network Adapter(*)\Frames Dropped
+	adapterFramesReceived *prometheus.Desc // \Hyper-V Legacy Network Adapter(*)\Frames Received/sec
+	adapterFramesSent     *prometheus.Desc // \Hyper-V Legacy Network Adapter(*)\Frames Sent/sec
 
-	// Win32_PerfRawData_Counters_HyperVVirtualStorageDevice
-	vmStorageErrorCount      *prometheus.Desc
-	vmStorageQueueLength     *prometheus.Desc
-	vmStorageReadBytes       *prometheus.Desc
-	vmStorageReadOperations  *prometheus.Desc
-	vmStorageWriteBytes      *prometheus.Desc
-	vmStorageWriteOperations *prometheus.Desc
+	// Hyper-V Virtual Network Adapter metrics
+	vmStorageBytesReceived          *prometheus.Desc // \Hyper-V Virtual Network Adapter(*)\Bytes Received/sec
+	vmStorageBytesSent              *prometheus.Desc // \Hyper-V Virtual Network Adapter(*)\Bytes Sent/sec
+	vmStorageDroppedPacketsIncoming *prometheus.Desc // \Hyper-V Virtual Network Adapter(*)\Dropped Packets Incoming/sec
+	vmStorageDroppedPacketsOutgoing *prometheus.Desc // \Hyper-V Virtual Network Adapter(*)\Dropped Packets Outgoing/sec
+	vmStoragePacketsReceived        *prometheus.Desc // \Hyper-V Virtual Network Adapter(*)\Packets Received/sec
+	vmStoragePacketsSent            *prometheus.Desc // \Hyper-V Virtual Network Adapter(*)\Packets Sent/sec
 
-	// Win32_PerfRawData_NvspNicStats_HyperVVirtualNetworkAdapter
-	vmStorageBytesReceived          *prometheus.Desc
-	vmStorageBytesSent              *prometheus.Desc
-	vmStorageDroppedPacketsIncoming *prometheus.Desc
-	vmStorageDroppedPacketsOutgoing *prometheus.Desc
-	vmStoragePacketsReceived        *prometheus.Desc
-	vmStoragePacketsSent            *prometheus.Desc
+	// Hyper-V Dynamic Memory VM metrics
+	vmMemoryAddedMemory                *prometheus.Desc // \Hyper-V Dynamic Memory VM(*)\Added Memory
+	vmMemoryAveragePressure            *prometheus.Desc // \Hyper-V Dynamic Memory VM(*)\Average Pressure
+	vmMemoryCurrentPressure            *prometheus.Desc // \Hyper-V Dynamic Memory VM(*)\Current Pressure
+	vmMemoryGuestVisiblePhysicalMemory *prometheus.Desc // \Hyper-V Dynamic Memory VM(*)\Guest Visible Physical Memory
+	vmMemoryMaximumPressure            *prometheus.Desc // \Hyper-V Dynamic Memory VM(*)\Maximum Pressure
+	vmMemoryMemoryAddOperations        *prometheus.Desc // \Hyper-V Dynamic Memory VM(*)\Memory Add Operations
+	vmMemoryMemoryRemoveOperations     *prometheus.Desc // \Hyper-V Dynamic Memory VM(*)\Memory Remove Operations
+	vmMemoryMinimumPressure            *prometheus.Desc // \Hyper-V Dynamic Memory VM(*)\Minimum Pressure
+	vmMemoryPhysicalMemory             *prometheus.Desc // \Hyper-V Dynamic Memory VM(*)\Physical Memory
+	vmMemoryRemovedMemory              *prometheus.Desc // \Hyper-V Dynamic Memory VM(*)\Removed Memory
+	// TODO: \Hyper-V Dynamic Memory VM(*)\Guest Available Memory
 
-	// Win32_PerfRawData_BalancerStats_HyperVDynamicMemoryVM
-	vmMemoryAddedMemory                *prometheus.Desc
-	vmMemoryAveragePressure            *prometheus.Desc
-	vmMemoryCurrentPressure            *prometheus.Desc
-	vmMemoryGuestVisiblePhysicalMemory *prometheus.Desc
-	vmMemoryMaximumPressure            *prometheus.Desc
-	vmMemoryMemoryAddOperations        *prometheus.Desc
-	vmMemoryMemoryRemoveOperations     *prometheus.Desc
-	vmMemoryMinimumPressure            *prometheus.Desc
-	vmMemoryPhysicalMemory             *prometheus.Desc
-	vmMemoryRemovedMemory              *prometheus.Desc
+	// Hyper-V Dynamic Memory Balancer metrics
+	// TODO: \Hyper-V Dynamic Memory Balancer(*)\Available Memory For Balancing
+	// TODO: \Hyper-V Dynamic Memory Balancer(*)\System Current Pressure
+	// TODO: \Hyper-V Dynamic Memory Balancer(*)\Available Memory
+	// TODO: \Hyper-V Dynamic Memory Balancer(*)\Average Pressure
+
+	// Hyper-V Virtual Storage Device metrics
+	vmStorageErrorCount      *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\Error Count
+	vmStorageQueueLength     *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\Queue Length
+	vmStorageReadBytes       *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\Read Bytes/sec
+	vmStorageReadOperations  *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\Read Operations/Sec
+	vmStorageWriteBytes      *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\Write Bytes/sec
+	vmStorageWriteOperations *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\Write Operations/Sec
+	// TODO: \Hyper-V Virtual Storage Device(*)\Latency
+	// TODO: \Hyper-V Virtual Storage Device(*)\Throughput
+	// TODO: \Hyper-V Virtual Storage Device(*)\Normalized Throughput
+
+	// Hyper-V DataStore metrics
+	// TODO: \Hyper-V DataStore(*)\Fragmentation ratio
+	// TODO: \Hyper-V DataStore(*)\Sector size
+	// TODO: \Hyper-V DataStore(*)\Data alignment
+	// TODO: \Hyper-V DataStore(*)\Current replay logSize
+	// TODO: \Hyper-V DataStore(*)\Number of available entries inside object tables
+	// TODO: \Hyper-V DataStore(*)\Number of empty entries inside object tables
+	// TODO: \Hyper-V DataStore(*)\Number of free bytes inside key tables
+	// TODO: \Hyper-V DataStore(*)\Data end
+	// TODO: \Hyper-V DataStore(*)\Number of file objects
+	// TODO: \Hyper-V DataStore(*)\Number of object tables
+	// TODO: \Hyper-V DataStore(*)\Number of key tables
+	// TODO: \Hyper-V DataStore(*)\File data size in bytes
+	// TODO: \Hyper-V DataStore(*)\Table data size in bytes
+	// TODO: \Hyper-V DataStore(*)\Names size in bytes
+	// TODO: \Hyper-V DataStore(*)\Number of keys
+	// TODO: \Hyper-V DataStore(*)\Reconnect latency microseconds
+	// TODO: \Hyper-V DataStore(*)\Disconnect count
+	// TODO: \Hyper-V DataStore(*)\Write to file byte latency microseconds
+	// TODO: \Hyper-V DataStore(*)\Write to file byte count
+	// TODO: \Hyper-V DataStore(*)\Write to file count
+	// TODO: \Hyper-V DataStore(*)\Read from file byte latency microseconds
+	// TODO: \Hyper-V DataStore(*)\Read from file byte count
+	// TODO: \Hyper-V DataStore(*)\Read from file count
+	// TODO: \Hyper-V DataStore(*)\Write to storage byte latency microseconds
+	// TODO: \Hyper-V DataStore(*)\Write to storage byte count
+	// TODO: \Hyper-V DataStore(*)\Write to storage count
+	// TODO: \Hyper-V DataStore(*)\Read from storage byte latency microseconds
+	// TODO: \Hyper-V DataStore(*)\Read from storage byte count
+	// TODO: \Hyper-V DataStore(*)\Read from storage count
+	// TODO: \Hyper-V DataStore(*)\Commit byte latency microseconds
+	// TODO: \Hyper-V DataStore(*)\Commit byte count
+	// TODO: \Hyper-V DataStore(*)\Commit count
+	// TODO: \Hyper-V DataStore(*)\Cache update operation latency microseconds
+	// TODO: \Hyper-V DataStore(*)\Cache update operation count
+	// TODO: \Hyper-V DataStore(*)\Commit operation latency microseconds
+	// TODO: \Hyper-V DataStore(*)\Commit operation count
+	// TODO: \Hyper-V DataStore(*)\Compact operation latency microseconds
+	// TODO: \Hyper-V DataStore(*)\Compact operation count
+	// TODO: \Hyper-V DataStore(*)\Load file operation latency microseconds
+	// TODO: \Hyper-V DataStore(*)\Load file operation count
+	// TODO: \Hyper-V DataStore(*)\Remove operation latency microseconds
+	// TODO: \Hyper-V DataStore(*)\Remove operation count
+	// TODO: \Hyper-V DataStore(*)\Query size operation latency microseconds
+	// TODO: \Hyper-V DataStore(*)\Query size operation count
+	// TODO: \Hyper-V DataStore(*)\Set operation latency microseconds
+	// TODO: \Hyper-V DataStore(*)\Set operation count
+	// TODO: \Hyper-V DataStore(*)\Get operation latency microseconds
+	// TODO: \Hyper-V DataStore(*)\Get operation count
+	// TODO: \Hyper-V DataStore(*)\File lock release latency microseconds
+	// TODO: \Hyper-V DataStore(*)\File lock acquire latency microseconds
+	// TODO: \Hyper-V DataStore(*)\File lock count
+	// TODO: \Hyper-V DataStore(*)\Storage lock release latency microseconds
+	// TODO: \Hyper-V DataStore(*)\Storage lock acquire latency microseconds
+	// TODO: \Hyper-V DataStore(*)\Storage lock count
+
+	// Hyper-V Virtual SMB metrics
+	// TODO: \Hyper-V Virtual SMB(*)\Direct-Mapped Sections
+	// TODO: \Hyper-V Virtual SMB(*)\Direct-Mapped Pages
+	// TODO: \Hyper-V Virtual SMB(*)\Write Bytes/sec (RDMA)
+	// TODO: \Hyper-V Virtual SMB(*)\Write Bytes/sec
+	// TODO: \Hyper-V Virtual SMB(*)\Read Bytes/sec (RDMA)
+	// TODO: \Hyper-V Virtual SMB(*)\Read Bytes/sec
+	// TODO: \Hyper-V Virtual SMB(*)\Flush Requests/sec
+	// TODO: \Hyper-V Virtual SMB(*)\Write Requests/sec (RDMA)
+	// TODO: \Hyper-V Virtual SMB(*)\Write Requests/sec
+	// TODO: \Hyper-V Virtual SMB(*)\Read Requests/sec (RDMA)
+	// TODO: \Hyper-V Virtual SMB(*)\Read Requests/sec
+	// TODO: \Hyper-V Virtual SMB(*)\Avg. sec/Request
+	// TODO: \Hyper-V Virtual SMB(*)\Current Pending Requests
+	// TODO: \Hyper-V Virtual SMB(*)\Current Open File Count
+	// TODO: \Hyper-V Virtual SMB(*)\Tree Connect Count
+	// TODO: \Hyper-V Virtual SMB(*)\Requests/sec
+	// TODO: \Hyper-V Virtual SMB(*)\Sent Bytes/sec
+	// TODO: \Hyper-V Virtual SMB(*)\Received Bytes/sec
+
 }
 
 func New(config *Config) *Collector {
@@ -166,53 +255,18 @@ func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
 }
 
 func (c *Collector) Close(_ *slog.Logger) error {
+	c.perfDataCollectorVirtualMachineHealthSummary.Close()
+	c.perfDataCollectorVMVidPartition.Close()
+
 	return nil
 }
 
-func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
-	if miSession == nil {
-		return errors.New("miSession is nil")
+func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
+	if err := c.buildVirtualMachine(); err != nil {
+		return err
 	}
 
-	c.miSession = miSession
-
 	buildSubsystemName := func(component string) string { return "hyperv_" + component }
-
-	c.healthCritical = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("health"), "critical"),
-		"This counter represents the number of virtual machines with critical health",
-		nil,
-		nil,
-	)
-	c.healthOk = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("health"), "ok"),
-		"This counter represents the number of virtual machines with ok health",
-		nil,
-		nil,
-	)
-
-	//
-
-	c.physicalPagesAllocated = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("vid"), "physical_pages_allocated"),
-		"The number of physical pages allocated",
-		[]string{"vm"},
-		nil,
-	)
-	c.preferredNUMANodeIndex = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("vid"), "preferred_numa_node_index"),
-		"The preferred NUMA node index associated with this partition",
-		[]string{"vm"},
-		nil,
-	)
-	c.remotePhysicalPages = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("vid"), "remote_physical_pages"),
-		"The number of physical pages not allocated from the preferred NUMA node",
-		[]string{"vm"},
-		nil,
-	)
-
-	//
 
 	c.addressSpaces = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, buildSubsystemName("root_partition"), "address_spaces"),
@@ -756,22 +810,11 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	logger = logger.With(slog.String("collector", Name))
-	if err := c.collectVmHealth(ch); err != nil {
-		logger.Error("failed collecting hyperV health status metrics",
-			slog.Any("err", err),
-		)
+func (c *Collector) Collect(_ *types.ScrapeContext, _ *slog.Logger, ch chan<- prometheus.Metric) error {
+	errs := make([]error, 0)
 
-		return err
-	}
-
-	if err := c.collectVmVid(ch); err != nil {
-		logger.Error("failed collecting hyperV pages metrics",
-			slog.Any("err", err),
-		)
-
-		return err
+	if err := c.collectVirtualMachine(ch); err != nil {
+		errs = append(errs, fmt.Errorf("failed collecting hyperV health status metrics: %w", err))
 	}
 
 	if err := c.collectVmHv(ch); err != nil {
@@ -854,116 +897,43 @@ func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan
 		return err
 	}
 
-	return nil
-}
-
-// Win32_PerfRawData_VmmsVirtualMachineStats_HyperVVirtualMachineHealthSummary vm health status.
-type Win32_PerfRawData_VmmsVirtualMachineStats_HyperVVirtualMachineHealthSummary struct {
-	HealthCritical uint32 `mi:"HealthCritical"`
-	HealthOk       uint32 `mi:"HealthOK"`
-}
-
-func (c *Collector) collectVmHealth(ch chan<- prometheus.Metric) error {
-	var dst []Win32_PerfRawData_VmmsVirtualMachineStats_HyperVVirtualMachineHealthSummary
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * Win32_PerfRawData_VmmsVirtualMachineStats_HyperVVirtualMachineHealthSummary"))); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
-	}
-
-	for _, health := range dst {
-		ch <- prometheus.MustNewConstMetric(
-			c.healthCritical,
-			prometheus.GaugeValue,
-			float64(health.HealthCritical),
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.healthOk,
-			prometheus.GaugeValue,
-			float64(health.HealthOk),
-		)
-	}
-
-	return nil
-}
-
-// Win32_PerfRawData_VidPerfProvider_HyperVVMVidPartition ..,.
-type Win32_PerfRawData_VidPerfProvider_HyperVVMVidPartition struct {
-	Name                   string `mi:"Name"`
-	PhysicalPagesAllocated uint64 `mi:"PhysicalPagesAllocated"`
-	PreferredNUMANodeIndex uint64 `mi:"PreferredNUMANodeIndex"`
-	RemotePhysicalPages    uint64 `mi:"RemotePhysicalPages"`
-}
-
-func (c *Collector) collectVmVid(ch chan<- prometheus.Metric) error {
-	var dst []Win32_PerfRawData_VidPerfProvider_HyperVVMVidPartition
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * Win32_PerfRawData_VidPerfProvider_HyperVVMVidPartition"))); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
-	}
-
-	for _, page := range dst {
-		if strings.Contains(page.Name, "_Total") {
-			continue
-		}
-
-		ch <- prometheus.MustNewConstMetric(
-			c.physicalPagesAllocated,
-			prometheus.GaugeValue,
-			float64(page.PhysicalPagesAllocated),
-			page.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.preferredNUMANodeIndex,
-			prometheus.GaugeValue,
-			float64(page.PreferredNUMANodeIndex),
-			page.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.remotePhysicalPages,
-			prometheus.GaugeValue,
-			float64(page.RemotePhysicalPages),
-			page.Name,
-		)
-	}
-
-	return nil
+	return errors.Join(errs...)
 }
 
 // Win32_PerfRawData_HvStats_HyperVHypervisorRootPartition ...
 type Win32_PerfRawData_HvStats_HyperVHypervisorRootPartition struct {
-	Name                          string `mi:"Name"`
-	AddressSpaces                 uint64 `mi:"AddressSpaces"`
-	AttachedDevices               uint64 `mi:"AttachedDevices"`
-	DepositedPages                uint64 `mi:"DepositedPages"`
-	DeviceDMAErrors               uint64 `mi:"DeviceDMAErrors"`
-	DeviceInterruptErrors         uint64 `mi:"DeviceInterruptErrors"`
-	DeviceInterruptMappings       uint64 `mi:"DeviceInterruptMappings"`
-	DeviceInterruptThrottleEvents uint64 `mi:"DeviceInterruptThrottleEvents"`
-	GPAPages                      uint64 `mi:"GPAPages"`
-	GPASpaceModificationsPersec   uint64 `mi:"GPASpaceModificationsPersec"`
-	IOTLBFlushCost                uint64 `mi:"IOTLBFlushCost"`
-	IOTLBFlushesPersec            uint64 `mi:"IOTLBFlushesPersec"`
-	RecommendedVirtualTLBSize     uint64 `mi:"RecommendedVirtualTLBSize"`
-	SkippedTimerTicks             uint64 `mi:"SkippedTimerTicks"`
-	Value1Gdevicepages            uint64 `mi:"Value1Gdevicepages"`
-	Value1GGPApages               uint64 `mi:"Value1GGPApages"`
-	Value2Mdevicepages            uint64 `mi:"Value2Mdevicepages"`
-	Value2MGPApages               uint64 `mi:"Value2MGPApages"`
-	Value4Kdevicepages            uint64 `mi:"Value4Kdevicepages"`
-	Value4KGPApages               uint64 `mi:"Value4KGPApages"`
-	VirtualTLBFlushEntiresPersec  uint64 `mi:"VirtualTLBFlushEntiresPersec"`
-	VirtualTLBPages               uint64 `mi:"VirtualTLBPages"`
+	Name                          string
+	AddressSpaces                 uint64
+	AttachedDevices               uint64
+	DepositedPages                uint64
+	DeviceDMAErrors               uint64
+	DeviceInterruptErrors         uint64
+	DeviceInterruptMappings       uint64
+	DeviceInterruptThrottleEvents uint64
+	GPAPages                      uint64
+	GPASpaceModificationsPersec   uint64
+	IOTLBFlushCost                uint64
+	IOTLBFlushesPersec            uint64
+	RecommendedVirtualTLBSize     uint64
+	SkippedTimerTicks             uint64
+	Value1Gdevicepages            uint64
+	Value1GGPApages               uint64
+	Value2Mdevicepages            uint64
+	Value2MGPApages               uint64
+	Value4Kdevicepages            uint64
+	Value4KGPApages               uint64
+	VirtualTLBFlushEntiresPersec  uint64
+	VirtualTLBPages               uint64
 }
 
 func (c *Collector) collectVmHv(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_HvStats_HyperVHypervisorRootPartition
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * Win32_PerfRawData_HvStats_HyperVHypervisorRootPartition"))); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
+	if err := c.wmiClient.Query("SELECT * FROM Win32_PerfRawData_HvStats_HyperVHypervisorRootPartition", &dst); err != nil {
+		return err
 	}
 
 	for _, obj := range dst {
-		if strings.Contains(obj.Name, "_Total") {
+		if strings.Contains(obj.Name, "*") {
 			continue
 		}
 
@@ -1088,14 +1058,14 @@ func (c *Collector) collectVmHv(ch chan<- prometheus.Metric) error {
 
 // Win32_PerfRawData_HvStats_HyperVHypervisor ...
 type Win32_PerfRawData_HvStats_HyperVHypervisor struct {
-	LogicalProcessors uint64 `mi:"LogicalProcessors"`
-	VirtualProcessors uint64 `mi:"VirtualProcessors"`
+	LogicalProcessors uint64
+	VirtualProcessors uint64
 }
 
 func (c *Collector) collectVmProcessor(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_HvStats_HyperVHypervisor
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * Win32_PerfRawData_HvStats_HyperVHypervisor"))); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
+	if err := c.wmiClient.Query("SELECT * FROM Win32_PerfRawData_HvStats_HyperVHypervisor", &dst); err != nil {
+		return err
 	}
 
 	for _, obj := range dst {
@@ -1117,20 +1087,20 @@ func (c *Collector) collectVmProcessor(ch chan<- prometheus.Metric) error {
 
 // Win32_PerfRawData_HvStats_HyperVHypervisorLogicalProcessor ...
 type Win32_PerfRawData_HvStats_HyperVHypervisorLogicalProcessor struct {
-	Name                     string `mi:"Name"`
-	PercentGuestRunTime      uint64 `mi:"PercentGuestRunTime"`
-	PercentHypervisorRunTime uint64 `mi:"PercentHypervisorRunTime"`
-	PercentTotalRunTime      uint64 `mi:"PercentTotalRunTime"`
+	Name                     string
+	PercentGuestRunTime      uint64
+	PercentHypervisorRunTime uint64
+	PercentTotalRunTime      uint
 }
 
 func (c *Collector) collectHostLPUsage(logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_HvStats_HyperVHypervisorLogicalProcessor
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * Win32_PerfRawData_HvStats_HyperVHypervisorLogicalProcessor"))); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
+	if err := c.wmiClient.Query("SELECT * FROM Win32_PerfRawData_HvStats_HyperVHypervisorLogicalProcessor", &dst); err != nil {
+		return err
 	}
 
 	for _, obj := range dst {
-		if strings.Contains(obj.Name, "_Total") {
+		if strings.Contains(obj.Name, "*") {
 			continue
 		}
 
@@ -1171,22 +1141,22 @@ func (c *Collector) collectHostLPUsage(logger *slog.Logger, ch chan<- prometheus
 
 // Win32_PerfRawData_HvStats_HyperVHypervisorRootVirtualProcessor ...
 type Win32_PerfRawData_HvStats_HyperVHypervisorRootVirtualProcessor struct {
-	Name                     string `mi:"Name"`
-	PercentGuestRunTime      uint64 `mi:"PercentGuestRunTime"`
-	PercentHypervisorRunTime uint64 `mi:"PercentHypervisorRunTime"`
-	PercentRemoteRunTime     uint64 `mi:"PercentRemoteRunTime"`
-	PercentTotalRunTime      uint64 `mi:"PercentTotalRunTime"`
-	CPUWaitTimePerDispatch   uint64 `mi:"CPUWaitTimePerDispatch"`
+	Name                     string
+	PercentGuestRunTime      uint64
+	PercentHypervisorRunTime uint64
+	PercentRemoteRunTime     uint64
+	PercentTotalRunTime      uint64
+	CPUWaitTimePerDispatch   uint64
 }
 
 func (c *Collector) collectHostCpuUsage(logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_HvStats_HyperVHypervisorRootVirtualProcessor
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * Win32_PerfRawData_HvStats_HyperVHypervisorRootVirtualProcessor"))); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
+	if err := c.wmiClient.Query("SELECT * FROM Win32_PerfRawData_HvStats_HyperVHypervisorRootVirtualProcessor", &dst); err != nil {
+		return err
 	}
 
 	for _, obj := range dst {
-		if strings.Contains(obj.Name, "_Total") {
+		if strings.Contains(obj.Name, "*") {
 			continue
 		}
 
@@ -1241,22 +1211,22 @@ func (c *Collector) collectHostCpuUsage(logger *slog.Logger, ch chan<- prometheu
 
 // Win32_PerfRawData_HvStats_HyperVHypervisorVirtualProcessor ...
 type Win32_PerfRawData_HvStats_HyperVHypervisorVirtualProcessor struct {
-	Name                     string `mi:"Name"`
-	PercentGuestRunTime      uint64 `mi:"PercentGuestRunTime"`
-	PercentHypervisorRunTime uint64 `mi:"PercentHypervisorRunTime"`
-	PercentRemoteRunTime     uint64 `mi:"PercentRemoteRunTime"`
-	PercentTotalRunTime      uint64 `mi:"PercentTotalRunTime"`
-	CPUWaitTimePerDispatch   uint64 `mi:"CPUWaitTimePerDispatch"`
+	Name                     string
+	PercentGuestRunTime      uint64
+	PercentHypervisorRunTime uint64
+	PercentRemoteRunTime     uint64
+	PercentTotalRunTime      uint64
+	CPUWaitTimePerDispatch   uint64
 }
 
 func (c *Collector) collectVmCpuUsage(logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_HvStats_HyperVHypervisorVirtualProcessor
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * Win32_PerfRawData_HvStats_HyperVHypervisorVirtualProcessor"))); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
+	if err := c.wmiClient.Query("SELECT * FROM Win32_PerfRawData_HvStats_HyperVHypervisorVirtualProcessor", &dst); err != nil {
+		return err
 	}
 
 	for _, obj := range dst {
-		if strings.Contains(obj.Name, "_Total") {
+		if strings.Contains(obj.Name, "*") {
 			continue
 		}
 
@@ -1319,41 +1289,41 @@ func (c *Collector) collectVmCpuUsage(logger *slog.Logger, ch chan<- prometheus.
 
 // Win32_PerfRawData_NvspSwitchStats_HyperVVirtualSwitch ...
 type Win32_PerfRawData_NvspSwitchStats_HyperVVirtualSwitch struct {
-	Name                                   string `mi:"Name"`
-	BroadcastPacketsReceivedPersec         uint64 `mi:"BroadcastPacketsReceivedPersec"`
-	BroadcastPacketsSentPersec             uint64 `mi:"BroadcastPacketsSentPersec"`
-	BytesPersec                            uint64 `mi:"BytesPersec"`
-	BytesReceivedPersec                    uint64 `mi:"BytesReceivedPersec"`
-	BytesSentPersec                        uint64 `mi:"BytesSentPersec"`
-	DirectedPacketsReceivedPersec          uint64 `mi:"DirectedPacketsReceivedPersec"`
-	DirectedPacketsSentPersec              uint64 `mi:"DirectedPacketsSentPersec"`
-	DroppedPacketsIncomingPersec           uint64 `mi:"DroppedPacketsIncomingPersec"`
-	DroppedPacketsOutgoingPersec           uint64 `mi:"DroppedPacketsOutgoingPersec"`
-	ExtensionsDroppedPacketsIncomingPersec uint64 `mi:"ExtensionsDroppedPacketsIncomingPersec"`
-	ExtensionsDroppedPacketsOutgoingPersec uint64 `mi:"ExtensionsDroppedPacketsOutgoingPersec"`
-	LearnedMacAddresses                    uint64 `mi:"LearnedMacAddresses"`
-	LearnedMacAddressesPersec              uint64 `mi:"LearnedMacAddressesPersec"`
-	MulticastPacketsReceivedPersec         uint64 `mi:"MulticastPacketsReceivedPersec"`
-	MulticastPacketsSentPersec             uint64 `mi:"MulticastPacketsSentPersec"`
-	NumberofSendChannelMovesPersec         uint64 `mi:"NumberofSendChannelMovesPersec"`
-	NumberofVMQMovesPersec                 uint64 `mi:"NumberofVMQMovesPersec"`
-	PacketsFlooded                         uint64 `mi:"PacketsFlooded"`
-	PacketsFloodedPersec                   uint64 `mi:"PacketsFloodedPersec"`
-	PacketsPersec                          uint64 `mi:"PacketsPersec"`
-	PacketsReceivedPersec                  uint64 `mi:"PacketsReceivedPersec"`
-	PacketsSentPersec                      uint64 `mi:"PacketsSentPersec"`
-	PurgedMacAddresses                     uint64 `mi:"PurgedMacAddresses"`
-	PurgedMacAddressesPersec               uint64 `mi:"PurgedMacAddressesPersec"`
+	Name                                   string
+	BroadcastPacketsReceivedPersec         uint64
+	BroadcastPacketsSentPersec             uint64
+	BytesPersec                            uint64
+	BytesReceivedPersec                    uint64
+	BytesSentPersec                        uint64
+	DirectedPacketsReceivedPersec          uint64
+	DirectedPacketsSentPersec              uint64
+	DroppedPacketsIncomingPersec           uint64
+	DroppedPacketsOutgoingPersec           uint64
+	ExtensionsDroppedPacketsIncomingPersec uint64
+	ExtensionsDroppedPacketsOutgoingPersec uint64
+	LearnedMacAddresses                    uint64
+	LearnedMacAddressesPersec              uint64
+	MulticastPacketsReceivedPersec         uint64
+	MulticastPacketsSentPersec             uint64
+	NumberofSendChannelMovesPersec         uint64
+	NumberofVMQMovesPersec                 uint64
+	PacketsFlooded                         uint64
+	PacketsFloodedPersec                   uint64
+	PacketsPersec                          uint64
+	PacketsReceivedPersec                  uint64
+	PacketsSentPersec                      uint64
+	PurgedMacAddresses                     uint64
+	PurgedMacAddressesPersec               uint64
 }
 
 func (c *Collector) collectVmSwitch(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_NvspSwitchStats_HyperVVirtualSwitch
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * Win32_PerfRawData_NvspSwitchStats_HyperVVirtualSwitch"))); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
+	if err := c.wmiClient.Query("SELECT * FROM Win32_PerfRawData_NvspSwitchStats_HyperVVirtualSwitch", &dst); err != nil {
+		return err
 	}
 
 	for _, obj := range dst {
-		if strings.Contains(obj.Name, "_Total") {
+		if strings.Contains(obj.Name, "*") {
 			continue
 		}
 
@@ -1501,23 +1471,23 @@ func (c *Collector) collectVmSwitch(ch chan<- prometheus.Metric) error {
 
 // Win32_PerfRawData_EthernetPerfProvider_HyperVLegacyNetworkAdapter ...
 type Win32_PerfRawData_EthernetPerfProvider_HyperVLegacyNetworkAdapter struct {
-	Name                 string `mi:"Name"`
-	BytesDropped         uint64 `mi:"BytesDropped"`
-	BytesReceivedPersec  uint64 `mi:"BytesReceivedPersec"`
-	BytesSentPersec      uint64 `mi:"BytesSentPersec"`
-	FramesDropped        uint64 `mi:"FramesDropped"`
-	FramesReceivedPersec uint64 `mi:"FramesReceivedPersec"`
-	FramesSentPersec     uint64 `mi:"FramesSentPersec"`
+	Name                 string
+	BytesDropped         uint64
+	BytesReceivedPersec  uint64
+	BytesSentPersec      uint64
+	FramesDropped        uint64
+	FramesReceivedPersec uint64
+	FramesSentPersec     uint64
 }
 
 func (c *Collector) collectVmEthernet(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_EthernetPerfProvider_HyperVLegacyNetworkAdapter
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * Win32_PerfRawData_EthernetPerfProvider_HyperVLegacyNetworkAdapter"))); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
+	if err := c.wmiClient.Query("SELECT * FROM Win32_PerfRawData_EthernetPerfProvider_HyperVLegacyNetworkAdapter", &dst); err != nil {
+		return err
 	}
 
 	for _, obj := range dst {
-		if strings.Contains(obj.Name, "_Total") {
+		if strings.Contains(obj.Name, "*") {
 			continue
 		}
 
@@ -1569,23 +1539,23 @@ func (c *Collector) collectVmEthernet(ch chan<- prometheus.Metric) error {
 
 // Win32_PerfRawData_Counters_HyperVVirtualStorageDevice ...
 type Win32_PerfRawData_Counters_HyperVVirtualStorageDevice struct {
-	Name                  string `mi:"Name"`
-	ErrorCount            uint64 `mi:"ErrorCount"`
-	QueueLength           uint32 `mi:"QueueLength"`
-	ReadBytesPersec       uint64 `mi:"ReadBytesPersec"`
-	ReadOperationsPerSec  uint64 `mi:"ReadOperationsPerSec"`
-	WriteBytesPersec      uint64 `mi:"WriteBytesPersec"`
-	WriteOperationsPerSec uint64 `mi:"WriteOperationsPerSec"`
+	Name                  string
+	ErrorCount            uint64
+	QueueLength           uint32
+	ReadBytesPersec       uint64
+	ReadOperationsPerSec  uint64
+	WriteBytesPersec      uint64
+	WriteOperationsPerSec uint64
 }
 
 func (c *Collector) collectVmStorage(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_Counters_HyperVVirtualStorageDevice
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * Win32_PerfRawData_Counters_HyperVVirtualStorageDevice"))); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
+	if err := c.wmiClient.Query("SELECT * FROM Win32_PerfRawData_Counters_HyperVVirtualStorageDevice", &dst); err != nil {
+		return err
 	}
 
 	for _, obj := range dst {
-		if strings.Contains(obj.Name, "_Total") {
+		if strings.Contains(obj.Name, "*") {
 			continue
 		}
 
@@ -1637,23 +1607,23 @@ func (c *Collector) collectVmStorage(ch chan<- prometheus.Metric) error {
 
 // Win32_PerfRawData_NvspNicStats_HyperVVirtualNetworkAdapter ...
 type Win32_PerfRawData_NvspNicStats_HyperVVirtualNetworkAdapter struct {
-	Name                         string `mi:"Name"`
-	BytesReceivedPersec          uint64 `mi:"BytesReceivedPersec"`
-	BytesSentPersec              uint64 `mi:"BytesSentPersec"`
-	DroppedPacketsIncomingPersec uint64 `mi:"DroppedPacketsIncomingPersec"`
-	DroppedPacketsOutgoingPersec uint64 `mi:"DroppedPacketsOutgoingPersec"`
-	PacketsReceivedPersec        uint64 `mi:"PacketsReceivedPersec"`
-	PacketsSentPersec            uint64 `mi:"PacketsSentPersec"`
+	Name                         string
+	BytesReceivedPersec          uint64
+	BytesSentPersec              uint64
+	DroppedPacketsIncomingPersec uint64
+	DroppedPacketsOutgoingPersec uint64
+	PacketsReceivedPersec        uint64
+	PacketsSentPersec            uint64
 }
 
 func (c *Collector) collectVmNetwork(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_NvspNicStats_HyperVVirtualNetworkAdapter
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * Win32_PerfRawData_NvspNicStats_HyperVVirtualNetworkAdapter"))); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
+	if err := c.wmiClient.Query("SELECT * FROM Win32_PerfRawData_NvspNicStats_HyperVVirtualNetworkAdapter", &dst); err != nil {
+		return err
 	}
 
 	for _, obj := range dst {
-		if strings.Contains(obj.Name, "_Total") {
+		if strings.Contains(obj.Name, "*") {
 			continue
 		}
 
@@ -1705,27 +1675,27 @@ func (c *Collector) collectVmNetwork(ch chan<- prometheus.Metric) error {
 
 // Win32_PerfRawData_BalancerStats_HyperVDynamicMemoryVM ...
 type Win32_PerfRawData_BalancerStats_HyperVDynamicMemoryVM struct {
-	Name                       string `mi:"Name"`
-	AddedMemory                uint64 `mi:"AddedMemory"`
-	AveragePressure            uint64 `mi:"AveragePressure"`
-	CurrentPressure            uint64 `mi:"CurrentPressure"`
-	GuestVisiblePhysicalMemory uint64 `mi:"GuestVisiblePhysicalMemory"`
-	MaximumPressure            uint64 `mi:"MaximumPressure"`
-	MemoryAddOperations        uint64 `mi:"MemoryAddOperations"`
-	MemoryRemoveOperations     uint64 `mi:"MemoryRemoveOperations"`
-	MinimumPressure            uint64 `mi:"MinimumPressure"`
-	PhysicalMemory             uint64 `mi:"PhysicalMemory"`
-	RemovedMemory              uint64 `mi:"RemovedMemory"`
+	Name                       string
+	AddedMemory                uint64
+	AveragePressure            uint64
+	CurrentPressure            uint64
+	GuestVisiblePhysicalMemory uint64
+	MaximumPressure            uint64
+	MemoryAddOperations        uint64
+	MemoryRemoveOperations     uint64
+	MinimumPressure            uint64
+	PhysicalMemory             uint64
+	RemovedMemory              uint64
 }
 
 func (c *Collector) collectVmMemory(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_BalancerStats_HyperVDynamicMemoryVM
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * Win32_PerfRawData_BalancerStats_HyperVDynamicMemoryVM"))); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
+	if err := c.wmiClient.Query("SELECT * FROM Win32_PerfRawData_BalancerStats_HyperVDynamicMemoryVM", &dst); err != nil {
+		return err
 	}
 
 	for _, obj := range dst {
-		if strings.Contains(obj.Name, "_Total") {
+		if strings.Contains(obj.Name, "*") {
 			continue
 		}
 
