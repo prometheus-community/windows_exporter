@@ -18,11 +18,6 @@ None
 
 | Name                                                                | Description          | Type    | Labels         |
 |---------------------------------------------------------------------|----------------------|---------|----------------|
-| `windows_hyperv_health_critical`                                    | _Not yet documented_ | counter | None           |
-| `windows_hyperv_health_ok`                                          | _Not yet documented_ | counter | None           |
-| `windows_hyperv_vid_physical_pages_allocated`                       | _Not yet documented_ | counter | `vm`           |
-| `windows_hyperv_vid_preferred_numa_node_index`                      | _Not yet documented_ | counter | `vm`           |
-| `windows_hyperv_vid_remote_physical_pages`                          | _Not yet documented_ | counter | `vm`           |
 | `windows_hyperv_root_partition_address_spaces`                      | _Not yet documented_ | counter | None           |
 | `windows_hyperv_root_partition_attached_devices`                    | _Not yet documented_ | counter | None           |
 | `windows_hyperv_root_partition_deposited_pages`                     | _Not yet documented_ | counter | None           |
@@ -59,27 +54,6 @@ None
 | `windows_hyperv_vm_cpu_remote_run_time`                             | _Not yet documented_ | counter | `vm`, `core`   |
 | `windows_hyperv_vm_cpu_wait_time_per_dispatch_total`                | _Not yet documented_ | counter | `vm`, `core`   |
 | `windows_hyperv_vm_cpu_total_run_time`                              | _Not yet documented_ | counter | `vm`, `core`   |
-| `windows_hyperv_vswitch_broadcast_packets_received_total`           | _Not yet documented_ | counter | `vswitch`      |
-| `windows_hyperv_vswitch_broadcast_packets_sent_total`               | _Not yet documented_ | counter | `vswitch`      |
-| `windows_hyperv_vswitch_bytes_total`                                | _Not yet documented_ | counter | `vswitch`      |
-| `windows_hyperv_vswitch_bytes_received_total`                       | _Not yet documented_ | counter | `vswitch`      |
-| `windows_hyperv_vswitch_bytes_sent_total`                           | _Not yet documented_ | counter | `vswitch`      |
-| `windows_hyperv_vswitch_directed_packets_received_total`            | _Not yet documented_ | counter | `vswitch`      |
-| `windows_hyperv_vswitch_directed_packets_send_total`                | _Not yet documented_ | counter | `vswitch`      |
-| `windows_hyperv_vswitch_dropped_packets_incoming_total`             | _Not yet documented_ | counter | `vswitch`      |
-| `windows_hyperv_vswitch_dropped_packets_outcoming_total`            | _Not yet documented_ | counter | `vswitch`      |
-| `windows_hyperv_vswitch_extensions_dropped_packets_incoming_total`  | _Not yet documented_ | counter | `vswitch`      |
-| `windows_hyperv_vswitch_extensions_dropped_packets_outcoming_total` | _Not yet documented_ | counter | `vswitch`      |
-| `windows_hyperv_vswitch_learned_mac_addresses_total`                | _Not yet documented_ | counter | `vswitch`      |
-| `windows_hyperv_vswitch_multicast_packets_received_total`           | _Not yet documented_ | counter | `vswitch`      |
-| `windows_hyperv_vswitch_multicast_packets_sent_total`               | _Not yet documented_ | counter | `vswitch`      |
-| `windows_hyperv_vswitch_number_of_send_channel_moves_total`         | _Not yet documented_ | counter | `vswitch`      |
-| `windows_hyperv_vswitch_number_of_vmq_moves_total`                  | _Not yet documented_ | counter | `vswitch`      |
-| `windows_hyperv_vswitch_packets_flooded_total`                      | _Not yet documented_ | counter | `vswitch`      |
-| `windows_hyperv_vswitch_packets_total`                              | _Not yet documented_ | counter | `vswitch`      |
-| `windows_hyperv_vswitch_packets_received_total`                     | _Not yet documented_ | counter | `vswitch`      |
-| `windows_hyperv_vswitch_packets_sent_total`                         | _Not yet documented_ | counter | `vswitch`      |
-| `windows_hyperv_vswitch_purged_mac_addresses_total`                 | _Not yet documented_ | counter | `vswitch`      |
 | `windows_hyperv_ethernet_bytes_dropped`                             | _Not yet documented_ | counter | `adapter`      |
 | `windows_hyperv_ethernet_bytes_received`                            | _Not yet documented_ | counter | `adapter`      |
 | `windows_hyperv_ethernet_bytes_sent`                                | _Not yet documented_ | counter | `adapter`      |
@@ -93,9 +67,31 @@ None
 | `windows_hyperv_vm_interface_packets_received`                      | _Not yet documented_ | counter | `vm_interface` |
 | `windows_hyperv_vm_interface_packets_sent`                          | _Not yet documented_ | counter | `vm_interface` |
 
+### Hyper-V Virtual Switch
 
-
-
+| Name                                                                | Description                                                                                                              | Type    | Labels    |
+|---------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------|---------|-----------|
+| `windows_hyperv_vswitch_broadcast_packets_received_total`           | This represents the total number of broadcast packets received per second by the virtual switch                          | counter | `vswitch` |
+| `windows_hyperv_vswitch_broadcast_packets_sent_total`               | This represents the total number of broadcast packets sent per second by the virtual switch                              | counter | `vswitch` |
+| `windows_hyperv_vswitch_bytes_total`                                | This represents the total number of bytes per second traversing the virtual switch                                       | counter | `vswitch` |
+| `windows_hyperv_vswitch_bytes_received_total`                       | This represents the total number of bytes received per second by the virtual switch                                      | counter | `vswitch` |
+| `windows_hyperv_vswitch_bytes_sent_total`                           | This represents the total number of bytes sent per second by the virtual switch                                          | counter | `vswitch` |
+| `windows_hyperv_vswitch_directed_packets_received_total`            | This represents the total number of directed packets received per second by the virtual switch                           | counter | `vswitch` |
+| `windows_hyperv_vswitch_directed_packets_send_total`                | This represents the total number of directed packets sent per second by the virtual switch                               | counter | `vswitch` |
+| `windows_hyperv_vswitch_dropped_packets_incoming_total`             | This represents the total number of packet dropped per second by the virtual switch in the incoming direction            | counter | `vswitch` |
+| `windows_hyperv_vswitch_dropped_packets_outcoming_total`            | This represents the total number of packet dropped per second by the virtual switch in the outgoing direction            | counter | `vswitch` |
+| `windows_hyperv_vswitch_extensions_dropped_packets_incoming_total`  | This represents the total number of packet dropped per second by the virtual switch extensions in the incoming direction | counter | `vswitch` |
+| `windows_hyperv_vswitch_extensions_dropped_packets_outcoming_total` | This represents the total number of packet dropped per second by the virtual switch extensions in the outgoing direction | counter | `vswitch` |
+| `windows_hyperv_vswitch_learned_mac_addresses_total`                | This counter represents the total number of learned MAC addresses of the virtual switch                                  | counter | `vswitch` |
+| `windows_hyperv_vswitch_multicast_packets_received_total`           | This represents the total number of multicast packets received per second by the virtual switch                          | counter | `vswitch` |
+| `windows_hyperv_vswitch_multicast_packets_sent_total`               | This represents the total number of multicast packets sent per second by the virtual switch                              | counter | `vswitch` |
+| `windows_hyperv_vswitch_number_of_send_channel_moves_total`         | This represents the total number of send channel moves per second on this virtual switch                                 | counter | `vswitch` |
+| `windows_hyperv_vswitch_number_of_vmq_moves_total`                  | This represents the total number of VMQ moves per second on this virtual switch                                          | counter | `vswitch` |
+| `windows_hyperv_vswitch_packets_flooded_total`                      | This counter represents the total number of packets flooded by the virtual switch                                        | counter | `vswitch` |
+| `windows_hyperv_vswitch_packets_total`                              | This represents the total number of packets per second traversing the virtual switch                                     | counter | `vswitch` |
+| `windows_hyperv_vswitch_packets_received_total`                     | This represents the total number of packets received per second by the virtual switch                                    | counter | `vswitch` |
+| `windows_hyperv_vswitch_packets_sent_total`                         | This represents the total number of packets send per second by the virtual switch                                        | counter | `vswitch` |
+| `windows_hyperv_vswitch_purged_mac_addresses_total`                 | This counter represents the total number of purged MAC addresses of the virtual switch                                   | counter | `vswitch` |
 
 ### Hyper-V Virtual Storage Device
 
@@ -103,9 +99,9 @@ None
 |------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------|---------|----------|
 | `windows_hyperv_virtual_storage_device_error_count_total`        | This counter represents the total number of errors that have occurred on this virtual device.                        | counter | `device` |
 | `windows_hyperv_virtual_storage_device_queue_length`             | This counter represents the average queue length on this virtual device.                                             | gauge   | `device` |
-| `windows_hyperv_virtual_storage_device_bytes_read`               | This counter represents the total number of bytes that have been read on this virtual device.                        | gauge   | `device` |
+| `windows_hyperv_virtual_storage_device_bytes_read`               | This counter represents the total number of bytes that have been read on this virtual device.                        | counter | `device` |
 | `windows_hyperv_virtual_storage_device_operations_read_total`    | This counter represents the total number of read operations that have occured on this virtual device.                | counter | `device` |
-| `windows_hyperv_virtual_storage_device_bytes_written`            | This counter represents the total number of bytes that have been written on this virtual device.                     | gauge   | `device` |
+| `windows_hyperv_virtual_storage_device_bytes_written`            | This counter represents the total number of bytes that have been written on this virtual device.                     | counter | `device` |
 | `windows_hyperv_virtual_storage_device_operations_written_total` | This counter represents the total number of write operations that have occured on this virtual device.               | counter | `device` |
 | `windows_hyperv_virtual_storage_device_latency_seconds`          | This counter represents the average IO transfer latency for this virtual device.                                     | gauge   | `device` |
 | `windows_hyperv_virtual_storage_device_throughput`               | This counter represents the average number of 8KB IO transfers completed by this virtual device.                     | gauge   | `device` |
@@ -126,7 +122,6 @@ Some metrics explained: https://learn.microsoft.com/en-us/archive/blogs/chrisavi
 
 
 ### Hyper-V Dynamic Memory VM
-
 
 | Name                                                                   | Description                                                                                    | Type    | Labels |
 |------------------------------------------------------------------------|------------------------------------------------------------------------------------------------|---------|--------|

@@ -29,6 +29,7 @@ type Collector struct {
 	collectorVirtualMachineHealthSummary
 	collectorVirtualMachineVidPartition
 	collectorVirtualStorageDevice
+	collectorVirtualSwitch
 
 	// Hyper-V Hypervisor Root Partition metrics
 	addressSpaces                 *prometheus.Desc // \Hyper-V Hypervisor Root Partition(*)\Address Spaces
@@ -76,29 +77,6 @@ type Collector struct {
 	vmRemoteRunTime          *prometheus.Desc // \Hyper-V Hypervisor Virtual Processor(*)\% Remote Run Time
 	vmTotalRunTime           *prometheus.Desc // \Hyper-V Hypervisor Virtual Processor(*)\% Total Run Time
 	vmCPUWaitTimePerDispatch *prometheus.Desc // \Hyper-V Hypervisor Virtual Processor(*)\CPU Wait Time Per Dispatch
-
-	// Hyper-V Virtual Switch metrics
-	broadcastPacketsReceived         *prometheus.Desc // \Hyper-V Virtual Switch(*)\Broadcast Packets Received/sec
-	broadcastPacketsSent             *prometheus.Desc // \Hyper-V Virtual Switch(*)\Broadcast Packets Sent/sec
-	bytes                            *prometheus.Desc // \Hyper-V Virtual Switch(*)\Bytes/sec
-	bytesReceived                    *prometheus.Desc // \Hyper-V Virtual Switch(*)\Bytes Received/sec
-	bytesSent                        *prometheus.Desc // \Hyper-V Virtual Switch(*)\Bytes Sent/sec
-	directedPacketsReceived          *prometheus.Desc // \Hyper-V Virtual Switch(*)\Directed Packets Received/sec
-	directedPacketsSent              *prometheus.Desc // \Hyper-V Virtual Switch(*)\Directed Packets Sent/sec
-	droppedPacketsIncoming           *prometheus.Desc // \Hyper-V Virtual Switch(*)\Dropped Packets Incoming/sec
-	droppedPacketsOutgoing           *prometheus.Desc // \Hyper-V Virtual Switch(*)\Dropped Packets Outgoing/sec
-	extensionsDroppedPacketsIncoming *prometheus.Desc // \Hyper-V Virtual Switch(*)\Extensions Dropped Packets Incoming/sec
-	extensionsDroppedPacketsOutgoing *prometheus.Desc // \Hyper-V Virtual Switch(*)\Extensions Dropped Packets Outgoing/sec
-	learnedMacAddresses              *prometheus.Desc // \Hyper-V Virtual Switch(*)\Learned Mac Addresses
-	multicastPacketsReceived         *prometheus.Desc // \Hyper-V Virtual Switch(*)\Multicast Packets Received/sec
-	multicastPacketsSent             *prometheus.Desc // \Hyper-V Virtual Switch(*)\Multicast Packets Sent/sec
-	numberOfSendChannelMoves         *prometheus.Desc // \Hyper-V Virtual Switch(*)\Number of Send Channel Moves/sec
-	numberOfVMQMoves                 *prometheus.Desc // \Hyper-V Virtual Switch(*)\Number of VMQ Moves/sec
-	packetsFlooded                   *prometheus.Desc // \Hyper-V Virtual Switch(*)\Packets Flooded
-	packets                          *prometheus.Desc // \Hyper-V Virtual Switch(*)\Packets/sec
-	packetsReceived                  *prometheus.Desc // \Hyper-V Virtual Switch(*)\Packets Received/sec
-	packetsSent                      *prometheus.Desc // \Hyper-V Virtual Switch(*)\Packets Sent/sec
-	purgedMacAddresses               *prometheus.Desc // \Hyper-V Virtual Switch(*)\Purged Mac Addresses
 
 	// Hyper-V Legacy Network Adapter metrics
 	adapterBytesDropped   *prometheus.Desc // \Hyper-V Legacy Network Adapter(*)\Bytes Dropped
@@ -221,8 +199,9 @@ func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
 func (c *Collector) Close(_ *slog.Logger) error {
 	c.perfDataCollectorDynamicMemoryBalancer.Close()
 	c.perfDataCollectorDynamicMemoryVM.Close()
-	c.perfDataCollectorVirtualStorageDevice.Close()
 	c.perfDataCollectorVirtualMachineHealthSummary.Close()
+	c.perfDataCollectorVirtualStorageDevice.Close()
+	c.perfDataCollectorVirtualSwitch.Close()
 	c.perfDataCollectorVMVidPartition.Close()
 
 	return nil
@@ -246,6 +225,10 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 	}
 
 	if err := c.buildVirtualMachineVidPartition(); err != nil {
+		return err
+	}
+
+	if err := c.buildVirtualSwitch(); err != nil {
 		return err
 	}
 
@@ -479,134 +462,6 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 	)
 
 	//
-	c.broadcastPacketsReceived = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "vswitch_broadcast_packets_received_total"),
-		"This represents the total number of broadcast packets received per second by the virtual switch",
-		[]string{"vswitch"},
-		nil,
-	)
-	c.broadcastPacketsSent = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "vswitch_broadcast_packets_sent_total"),
-		"This represents the total number of broadcast packets sent per second by the virtual switch",
-		[]string{"vswitch"},
-		nil,
-	)
-	c.bytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "vswitch_bytes_total"),
-		"This represents the total number of bytes per second traversing the virtual switch",
-		[]string{"vswitch"},
-		nil,
-	)
-	c.bytesReceived = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "vswitch_bytes_received_total"),
-		"This represents the total number of bytes received per second by the virtual switch",
-		[]string{"vswitch"},
-		nil,
-	)
-	c.bytesSent = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "vswitch_bytes_sent_total"),
-		"This represents the total number of bytes sent per second by the virtual switch",
-		[]string{"vswitch"},
-		nil,
-	)
-	c.directedPacketsReceived = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "vswitch_directed_packets_received_total"),
-		"This represents the total number of directed packets received per second by the virtual switch",
-		[]string{"vswitch"},
-		nil,
-	)
-	c.directedPacketsSent = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "vswitch_directed_packets_send_total"),
-		"This represents the total number of directed packets sent per second by the virtual switch",
-		[]string{"vswitch"},
-		nil,
-	)
-	c.droppedPacketsIncoming = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "vswitch_dropped_packets_incoming_total"),
-		"This represents the total number of packet dropped per second by the virtual switch in the incoming direction",
-		[]string{"vswitch"},
-		nil,
-	)
-	c.droppedPacketsOutgoing = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "vswitch_dropped_packets_outcoming_total"),
-		"This represents the total number of packet dropped per second by the virtual switch in the outgoing direction",
-		[]string{"vswitch"},
-		nil,
-	)
-	c.extensionsDroppedPacketsIncoming = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "vswitch_extensions_dropped_packets_incoming_total"),
-		"This represents the total number of packet dropped per second by the virtual switch extensions in the incoming direction",
-		[]string{"vswitch"},
-		nil,
-	)
-	c.extensionsDroppedPacketsOutgoing = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "vswitch_extensions_dropped_packets_outcoming_total"),
-		"This represents the total number of packet dropped per second by the virtual switch extensions in the outgoing direction",
-		[]string{"vswitch"},
-		nil,
-	)
-	c.learnedMacAddresses = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "vswitch_learned_mac_addresses_total"),
-		"This counter represents the total number of learned MAC addresses of the virtual switch",
-		[]string{"vswitch"},
-		nil,
-	)
-	c.multicastPacketsReceived = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "vswitch_multicast_packets_received_total"),
-		"This represents the total number of multicast packets received per second by the virtual switch",
-		[]string{"vswitch"},
-		nil,
-	)
-	c.multicastPacketsSent = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "vswitch_multicast_packets_sent_total"),
-		"This represents the total number of multicast packets sent per second by the virtual switch",
-		[]string{"vswitch"},
-		nil,
-	)
-	c.numberOfSendChannelMoves = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "vswitch_number_of_send_channel_moves_total"),
-		"This represents the total number of send channel moves per second on this virtual switch",
-		[]string{"vswitch"},
-		nil,
-	)
-	c.numberOfVMQMoves = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "vswitch_number_of_vmq_moves_total"),
-		"This represents the total number of VMQ moves per second on this virtual switch",
-		[]string{"vswitch"},
-		nil,
-	)
-	c.packetsFlooded = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "vswitch_packets_flooded_total"),
-		"This counter represents the total number of packets flooded by the virtual switch",
-		[]string{"vswitch"},
-		nil,
-	)
-	c.packets = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "vswitch_packets_total"),
-		"This represents the total number of packets per second traversing the virtual switch",
-		[]string{"vswitch"},
-		nil,
-	)
-	c.packetsReceived = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "vswitch_packets_received_total"),
-		"This represents the total number of packets received per second by the virtual switch",
-		[]string{"vswitch"},
-		nil,
-	)
-	c.packetsSent = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "vswitch_packets_sent_total"),
-		"This represents the total number of packets send per second by the virtual switch",
-		[]string{"vswitch"},
-		nil,
-	)
-	c.purgedMacAddresses = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "vswitch_purged_mac_addresses_total"),
-		"This counter represents the total number of purged MAC addresses of the virtual switch",
-		[]string{"vswitch"},
-		nil,
-	)
-
-	//
 
 	c.adapterBytesDropped = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "ethernet_bytes_dropped"),
@@ -709,6 +564,10 @@ func (c *Collector) Collect(_ *types.ScrapeContext, _ *slog.Logger, ch chan<- pr
 	}
 
 	if err := c.collectVirtualStorageDevice(ch); err != nil {
+		errs = append(errs, fmt.Errorf("failed collecting Hyper-V Virtual Storage Device metrics: %w", err))
+	}
+
+	if err := c.collectVirtualSwitch(ch); err != nil {
 		errs = append(errs, fmt.Errorf("failed collecting Hyper-V Virtual Storage Device metrics: %w", err))
 	}
 
@@ -1096,188 +955,6 @@ func (c *Collector) collectVmCpuUsage(logger *slog.Logger, ch chan<- prometheus.
 			prometheus.CounterValue,
 			float64(obj.CPUWaitTimePerDispatch),
 			vmName, coreId,
-		)
-	}
-
-	return nil
-}
-
-// Win32_PerfRawData_NvspSwitchStats_HyperVVirtualSwitch ...
-type Win32_PerfRawData_NvspSwitchStats_HyperVVirtualSwitch struct {
-	Name                                   string
-	BroadcastPacketsReceivedPersec         uint64
-	BroadcastPacketsSentPersec             uint64
-	BytesPersec                            uint64
-	BytesReceivedPersec                    uint64
-	BytesSentPersec                        uint64
-	DirectedPacketsReceivedPersec          uint64
-	DirectedPacketsSentPersec              uint64
-	DroppedPacketsIncomingPersec           uint64
-	DroppedPacketsOutgoingPersec           uint64
-	ExtensionsDroppedPacketsIncomingPersec uint64
-	ExtensionsDroppedPacketsOutgoingPersec uint64
-	LearnedMacAddresses                    uint64
-	LearnedMacAddressesPersec              uint64
-	MulticastPacketsReceivedPersec         uint64
-	MulticastPacketsSentPersec             uint64
-	NumberofSendChannelMovesPersec         uint64
-	NumberofVMQMovesPersec                 uint64
-	PacketsFlooded                         uint64
-	PacketsFloodedPersec                   uint64
-	PacketsPersec                          uint64
-	PacketsReceivedPersec                  uint64
-	PacketsSentPersec                      uint64
-	PurgedMacAddresses                     uint64
-	PurgedMacAddressesPersec               uint64
-}
-
-func (c *Collector) collectVmSwitch(ch chan<- prometheus.Metric) error {
-	var dst []Win32_PerfRawData_NvspSwitchStats_HyperVVirtualSwitch
-	if err := c.wmiClient.Query("SELECT * FROM Win32_PerfRawData_NvspSwitchStats_HyperVVirtualSwitch", &dst); err != nil {
-		return err
-	}
-
-	for _, obj := range dst {
-		if strings.Contains(obj.Name, "*") {
-			continue
-		}
-
-		ch <- prometheus.MustNewConstMetric(
-			c.broadcastPacketsReceived,
-			prometheus.CounterValue,
-			float64(obj.BroadcastPacketsReceivedPersec),
-			obj.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.broadcastPacketsSent,
-			prometheus.CounterValue,
-			float64(obj.BroadcastPacketsSentPersec),
-			obj.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.bytes,
-			prometheus.CounterValue,
-			float64(obj.BytesPersec),
-			obj.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.bytesReceived,
-			prometheus.CounterValue,
-			float64(obj.BytesReceivedPersec),
-			obj.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.bytesSent,
-			prometheus.CounterValue,
-			float64(obj.BytesSentPersec),
-			obj.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.directedPacketsReceived,
-			prometheus.CounterValue,
-			float64(obj.DirectedPacketsReceivedPersec),
-			obj.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.directedPacketsSent,
-			prometheus.CounterValue,
-			float64(obj.DirectedPacketsSentPersec),
-			obj.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.droppedPacketsIncoming,
-			prometheus.CounterValue,
-			float64(obj.DroppedPacketsIncomingPersec),
-			obj.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.droppedPacketsOutgoing,
-			prometheus.CounterValue,
-			float64(obj.DroppedPacketsOutgoingPersec),
-			obj.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.extensionsDroppedPacketsIncoming,
-			prometheus.CounterValue,
-			float64(obj.ExtensionsDroppedPacketsIncomingPersec),
-			obj.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.extensionsDroppedPacketsOutgoing,
-			prometheus.CounterValue,
-			float64(obj.ExtensionsDroppedPacketsOutgoingPersec),
-			obj.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.learnedMacAddresses,
-			prometheus.CounterValue,
-			float64(obj.LearnedMacAddresses),
-			obj.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.multicastPacketsReceived,
-			prometheus.CounterValue,
-			float64(obj.MulticastPacketsReceivedPersec),
-			obj.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.multicastPacketsSent,
-			prometheus.CounterValue,
-			float64(obj.MulticastPacketsSentPersec),
-			obj.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.numberOfSendChannelMoves,
-			prometheus.CounterValue,
-			float64(obj.NumberofSendChannelMovesPersec),
-			obj.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.numberOfVMQMoves,
-			prometheus.CounterValue,
-			float64(obj.NumberofVMQMovesPersec),
-			obj.Name,
-		)
-
-		// ...
-		ch <- prometheus.MustNewConstMetric(
-			c.packetsFlooded,
-			prometheus.CounterValue,
-			float64(obj.PacketsFlooded),
-			obj.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.packets,
-			prometheus.CounterValue,
-			float64(obj.PacketsPersec),
-			obj.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.packetsReceived,
-			prometheus.CounterValue,
-			float64(obj.PacketsReceivedPersec),
-			obj.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.packetsSent,
-			prometheus.CounterValue,
-			float64(obj.PacketsSentPersec),
-			obj.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.purgedMacAddresses,
-			prometheus.CounterValue,
-			float64(obj.PurgedMacAddresses),
-			obj.Name,
 		)
 	}
 
