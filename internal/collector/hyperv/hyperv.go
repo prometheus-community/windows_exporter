@@ -28,6 +28,7 @@ type Collector struct {
 	collectorDynamicMemoryVM
 	collectorVirtualMachineHealthSummary
 	collectorVirtualMachineVidPartition
+	collectorVirtualStorageDevice
 
 	// Hyper-V Hypervisor Root Partition metrics
 	addressSpaces                 *prometheus.Desc // \Hyper-V Hypervisor Root Partition(*)\Address Spaces
@@ -114,17 +115,6 @@ type Collector struct {
 	vmStorageDroppedPacketsOutgoing *prometheus.Desc // \Hyper-V Virtual Network Adapter(*)\Dropped Packets Outgoing/sec
 	vmStoragePacketsReceived        *prometheus.Desc // \Hyper-V Virtual Network Adapter(*)\Packets Received/sec
 	vmStoragePacketsSent            *prometheus.Desc // \Hyper-V Virtual Network Adapter(*)\Packets Sent/sec
-
-	// Hyper-V Virtual Storage Device metrics
-	vmStorageErrorCount      *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\Error Count
-	vmStorageQueueLength     *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\Queue Length
-	vmStorageReadBytes       *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\Read Bytes/sec
-	vmStorageReadOperations  *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\Read Operations/Sec
-	vmStorageWriteBytes      *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\Write Bytes/sec
-	vmStorageWriteOperations *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\Write Operations/Sec
-	// TODO: \Hyper-V Virtual Storage Device(*)\Latency
-	// TODO: \Hyper-V Virtual Storage Device(*)\Throughput
-	// TODO: \Hyper-V Virtual Storage Device(*)\Normalized Throughput
 
 	// Hyper-V DataStore metrics
 	// TODO: \Hyper-V DataStore(*)\Fragmentation ratio
@@ -229,6 +219,9 @@ func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
 }
 
 func (c *Collector) Close(_ *slog.Logger) error {
+	c.perfDataCollectorDynamicMemoryBalancer.Close()
+	c.perfDataCollectorDynamicMemoryVM.Close()
+	c.perfDataCollectorVirtualStorageDevice.Close()
 	c.perfDataCollectorVirtualMachineHealthSummary.Close()
 	c.perfDataCollectorVMVidPartition.Close()
 
@@ -244,11 +237,15 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 		return err
 	}
 
-	if err := c.buildDynamicMemoryVM(); err != nil {
+	if err := c.buildVirtualStorageDevice(); err != nil {
 		return err
 	}
 
-	if err := c.buildDynamicMemoryBalancer(); err != nil {
+	if err := c.buildVirtualMachineHealthSummary(); err != nil {
+		return err
+	}
+
+	if err := c.buildVirtualMachineVidPartition(); err != nil {
 		return err
 	}
 
@@ -650,45 +647,6 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 
 	//
 
-	c.vmStorageErrorCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "vm_device_error_count"),
-		"This counter represents the total number of errors that have occurred on this virtual device",
-		[]string{"vm_device"},
-		nil,
-	)
-	c.vmStorageQueueLength = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "vm_device_queue_length"),
-		"This counter represents the current queue length on this virtual device",
-		[]string{"vm_device"},
-		nil,
-	)
-	c.vmStorageReadBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "vm_device_bytes_read"),
-		"This counter represents the total number of bytes that have been read per second on this virtual device",
-		[]string{"vm_device"},
-		nil,
-	)
-	c.vmStorageReadOperations = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "vm_device_operations_read"),
-		"This counter represents the number of read operations that have occurred per second on this virtual device",
-		[]string{"vm_device"},
-		nil,
-	)
-	c.vmStorageWriteBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "vm_device_bytes_written"),
-		"This counter represents the total number of bytes that have been written per second on this virtual device",
-		[]string{"vm_device"},
-		nil,
-	)
-	c.vmStorageWriteOperations = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "vm_device_operations_written"),
-		"This counter represents the number of write operations that have occurred per second on this virtual device",
-		[]string{"vm_device"},
-		nil,
-	)
-
-	//
-
 	c.vmStorageBytesReceived = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "vm_interface_bytes_received"),
 		"This counter represents the total number of bytes received per second by the network adapter",
@@ -748,6 +706,10 @@ func (c *Collector) Collect(_ *types.ScrapeContext, _ *slog.Logger, ch chan<- pr
 
 	if err := c.collectVirtualMachineVidPartition(ch); err != nil {
 		errs = append(errs, fmt.Errorf("failed collecting Hyper-V VM Vid Partition metrics: %w", err))
+	}
+
+	if err := c.collectVirtualStorageDevice(ch); err != nil {
+		errs = append(errs, fmt.Errorf("failed collecting Hyper-V Virtual Storage Device metrics: %w", err))
 	}
 
 	return errors.Join(errs...)
