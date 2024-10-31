@@ -39,8 +39,6 @@ None
 | `windows_hyperv_root_partition_4K_gpa_pages`                        | _Not yet documented_ | counter | None           |
 | `windows_hyperv_root_partition_virtual_tlb_flush_entires`           | _Not yet documented_ | counter | None           |
 | `windows_hyperv_root_partition_virtual_tlb_pages`                   | _Not yet documented_ | counter | None           |
-| `windows_hyperv_hypervisor_virtual_processors`                      | _Not yet documented_ | counter | None           |
-| `windows_hyperv_hypervisor_logical_processors`                      | _Not yet documented_ | counter | None           |
 | `windows_hyperv_host_lp_guest_run_time_percent`                     | _Not yet documented_ | counter | `core`         |
 | `windows_hyperv_host_lp_hypervisor_run_time_percent`                | _Not yet documented_ | counter | `core`         |
 | `windows_hyperv_host_lp_total_run_time_percent`                     | _Not yet documented_ | counter | `core`         |
@@ -60,12 +58,17 @@ None
 | `windows_hyperv_ethernet_frames_dropped`                            | _Not yet documented_ | counter | `adapter`      |
 | `windows_hyperv_ethernet_frames_received`                           | _Not yet documented_ | counter | `adapter`      |
 | `windows_hyperv_ethernet_frames_sent`                               | _Not yet documented_ | counter | `adapter`      |
-| `windows_hyperv_vm_interface_bytes_received`                        | _Not yet documented_ | counter | `vm_interface` |
-| `windows_hyperv_vm_interface_bytes_sent`                            | _Not yet documented_ | counter | `vm_interface` |
-| `windows_hyperv_vm_interface_packets_incoming_dropped`              | _Not yet documented_ | counter | `vm_interface` |
-| `windows_hyperv_vm_interface_packets_outgoing_dropped`              | _Not yet documented_ | counter | `vm_interface` |
-| `windows_hyperv_vm_interface_packets_received`                      | _Not yet documented_ | counter | `vm_interface` |
-| `windows_hyperv_vm_interface_packets_sent`                          | _Not yet documented_ | counter | `vm_interface` |
+
+### Hyper-V Virtual Network Adapter
+
+| Name                                                                    | Description          | Type    | Labels    |
+|-------------------------------------------------------------------------|----------------------|---------|-----------|
+| `windows_hyperv_virtual_network_adapter_received_bytes_total`                 | _Not yet documented_ | counter | `adapter` |
+| `windows_hyperv_virtual_network_adapter_sent_bytes_total`                     | _Not yet documented_ | counter | `adapter` |
+| `windows_hyperv_virtual_network_adapter_incoming_dropped_packets_total` | _Not yet documented_ | counter | `adapter` |
+| `windows_hyperv_virtual_network_adapter_outgoing_dropped_packets_total` | _Not yet documented_ | counter | `adapter` |
+| `windows_hyperv_virtual_network_adapter_received_packets_total`         | _Not yet documented_ | counter | `adapter` |
+| `windows_hyperv_virtual_network_adapter_sent_packets_total`             | _Not yet documented_ | counter | `adapter` |
 
 ### Hyper-V Virtual Switch
 
@@ -95,19 +98,20 @@ None
 
 ### Hyper-V Virtual Storage Device
 
-| Name                                                             | Description                                                                                                          | Type    | Labels   |
-|------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------|---------|----------|
-| `windows_hyperv_virtual_storage_device_error_count_total`        | This counter represents the total number of errors that have occurred on this virtual device.                        | counter | `device` |
-| `windows_hyperv_virtual_storage_device_queue_length`             | This counter represents the average queue length on this virtual device.                                             | gauge   | `device` |
-| `windows_hyperv_virtual_storage_device_bytes_read`               | This counter represents the total number of bytes that have been read on this virtual device.                        | counter | `device` |
-| `windows_hyperv_virtual_storage_device_operations_read_total`    | This counter represents the total number of read operations that have occured on this virtual device.                | counter | `device` |
-| `windows_hyperv_virtual_storage_device_bytes_written`            | This counter represents the total number of bytes that have been written on this virtual device.                     | counter | `device` |
-| `windows_hyperv_virtual_storage_device_operations_written_total` | This counter represents the total number of write operations that have occured on this virtual device.               | counter | `device` |
-| `windows_hyperv_virtual_storage_device_latency_seconds`          | This counter represents the average IO transfer latency for this virtual device.                                     | gauge   | `device` |
-| `windows_hyperv_virtual_storage_device_throughput`               | This counter represents the average number of 8KB IO transfers completed by this virtual device.                     | gauge   | `device` |
-| `windows_hyperv_virtual_storage_device_normalized_throughput`    | This counter represents the average number of IO transfers completed by this virtual device.                         | gauge   | `device` |
-| `windows_hyperv_virtual_storage_device_lower_queue_length`       | This counter represents the average queue length on the underlying storage subsystem for this device.                | gauge   | `device` |
-| `windows_hyperv_virtual_storage_device_lower_latency_seconds`    | This counter represents the average IO transfer latency on the underlying storage subsystem for this virtual device. | gauge   | `device` |
+| Name                                                                | Description                                                                                                          | Type    | Labels   |
+|---------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------|---------|----------|
+| `windows_hyperv_virtual_storage_device_error_count_total`           | This counter represents the total number of errors that have occurred on this virtual device.                        | counter | `device` |
+| `windows_hyperv_virtual_storage_device_queue_length`                | This counter represents the average queue length on this virtual device.                                             | gauge   | `device` |
+| `windows_hyperv_virtual_storage_device_bytes_read`                  | This counter represents the total number of bytes that have been read on this virtual device.                        | counter | `device` |
+| `windows_hyperv_virtual_storage_device_operations_read_total`       | This counter represents the total number of read operations that have occured on this virtual device.                | counter | `device` |
+| `windows_hyperv_virtual_storage_device_bytes_written`               | This counter represents the total number of bytes that have been written on this virtual device.                     | counter | `device` |
+| `windows_hyperv_virtual_storage_device_operations_written_total`    | This counter represents the total number of write operations that have occured on this virtual device.               | counter | `device` |
+| `windows_hyperv_virtual_storage_device_latency_seconds`             | This counter represents the average IO transfer latency for this virtual device.                                     | gauge   | `device` |
+| `windows_hyperv_virtual_storage_device_throughput`                  | This counter represents the average number of 8KB IO transfers completed by this virtual device.                     | gauge   | `device` |
+| `windows_hyperv_virtual_storage_device_normalized_throughput`       | This counter represents the average number of IO transfers completed by this virtual device.                         | gauge   | `device` |
+| `windows_hyperv_virtual_storage_device_lower_queue_length`          | This counter represents the average queue length on the underlying storage subsystem for this device.                | gauge   | `device` |
+| `windows_hyperv_virtual_storage_device_lower_latency_seconds`       | This counter represents the average IO transfer latency on the underlying storage subsystem for this virtual device. | gauge   | `device` |
+| `windows_hyperv_virtual_storage_device_io_quota_replenishment_rate` | This counter represents the IO quota replenishment rate for this virtual device.                                     | gauge   | `device` |
 
 ### Hyper-V Dynamic Memory Balancer
 

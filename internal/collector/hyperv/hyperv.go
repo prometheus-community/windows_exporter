@@ -28,6 +28,7 @@ type Collector struct {
 	collectorDynamicMemoryVM
 	collectorVirtualMachineHealthSummary
 	collectorVirtualMachineVidPartition
+	collectorVirtualNetworkAdapter
 	collectorVirtualStorageDevice
 	collectorVirtualSwitch
 
@@ -54,15 +55,12 @@ type Collector struct {
 	virtualTLBFlushEntires        *prometheus.Desc // \Hyper-V Hypervisor Root Partition(*)\Virtual TLB Flush Entires/sec
 	virtualTLBPages               *prometheus.Desc // \Hyper-V Hypervisor Root Partition(*)\Virtual TLB Pages
 
-	// Win32_PerfRawData_HvStats_HyperVHypervisor
-	logicalProcessors *prometheus.Desc // \Hyper-V Hypervisor\Logical Processors
-	virtualProcessors *prometheus.Desc // \Hyper-V Hypervisor\Virtual Processors
-
 	// Win32_PerfRawData_HvStats_HyperVHypervisorLogicalProcessor
 	hostLPGuestRunTimePercent      *prometheus.Desc // \Hyper-V Hypervisor Logical Processor(*)\% Guest Run Time
 	hostLPHypervisorRunTimePercent *prometheus.Desc // \Hyper-V Hypervisor Logical Processor(*)\% Hypervisor Run Time
 	hostLPTotalRunTimePercent      *prometheus.Desc // \Hyper-V Hypervisor Logical Processor(*)\% Total Run Time
 	hostLPIdleRunTimePercent       *prometheus.Desc // \Hyper-V Hypervisor Logical Processor(*)\% Idle Time
+	// TODO: Hyper-V Hypervisor Logical Processor(*)\Context Switches/sec
 
 	// Win32_PerfRawData_HvStats_HyperVHypervisorRootVirtualProcessor
 	hostGuestRunTime           *prometheus.Desc // \Hyper-V Hypervisor Root Virtual Processor(*)\% Guest Run Time
@@ -85,14 +83,6 @@ type Collector struct {
 	adapterFramesDropped  *prometheus.Desc // \Hyper-V Legacy Network Adapter(*)\Frames Dropped
 	adapterFramesReceived *prometheus.Desc // \Hyper-V Legacy Network Adapter(*)\Frames Received/sec
 	adapterFramesSent     *prometheus.Desc // \Hyper-V Legacy Network Adapter(*)\Frames Sent/sec
-
-	// Hyper-V Virtual Network Adapter metrics
-	vmStorageBytesReceived          *prometheus.Desc // \Hyper-V Virtual Network Adapter(*)\Bytes Received/sec
-	vmStorageBytesSent              *prometheus.Desc // \Hyper-V Virtual Network Adapter(*)\Bytes Sent/sec
-	vmStorageDroppedPacketsIncoming *prometheus.Desc // \Hyper-V Virtual Network Adapter(*)\Dropped Packets Incoming/sec
-	vmStorageDroppedPacketsOutgoing *prometheus.Desc // \Hyper-V Virtual Network Adapter(*)\Dropped Packets Outgoing/sec
-	vmStoragePacketsReceived        *prometheus.Desc // \Hyper-V Virtual Network Adapter(*)\Packets Received/sec
-	vmStoragePacketsSent            *prometheus.Desc // \Hyper-V Virtual Network Adapter(*)\Packets Sent/sec
 
 	// Hyper-V DataStore metrics
 	// TODO: \Hyper-V DataStore(*)\Fragmentation ratio
@@ -170,6 +160,83 @@ type Collector struct {
 	// TODO: \Hyper-V Virtual SMB(*)\Sent Bytes/sec
 	// TODO: \Hyper-V Virtual SMB(*)\Received Bytes/sec
 
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing LowPowerPacketFilter
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming LowPowerPacketFilter
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing InvalidPDQueue
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming InvalidPDQueue
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing FilteredIsolationUntagged
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming FilteredIsolationUntagged
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing SwitchDataFlowDisabled
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming SwitchDataFlowDisabled
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing FailedPacketFilter
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming FailedPacketFilter
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing NicDisabled
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming NicDisabled
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing FailedDestinationListUpdate
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming FailedDestinationListUpdate
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing InjectedIcmp
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming InjectedIcmp
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing StormLimit
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming StormLimit
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing InvalidFirstNBTooSmall
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming InvalidFirstNBTooSmall
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing InvalidSourceMac
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming InvalidSourceMac
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing InvalidDestMac
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming InvalidDestMac
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing InvalidVlanFormat
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming InvalidVlanFormat
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing NativeFwdingReq
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming NativeFwdingReq
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing MTUMismatch
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming MTUMismatch
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing InvalidConfig
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming InvalidConfig
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing RequiredExtensionMissing
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming RequiredExtensionMissing
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing VirtualSubnetId
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming VirtualSubnetId
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing BridgeReserved
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming BridgeReserved
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing RouterGuard
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming RouterGuard
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing DhcpGuard
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming DhcpGuard
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing MacSpoofing
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming MacSpoofing
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing Ipsec
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming Ipsec
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing Qos
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming Qos
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing FailedPvlanSetting
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming FailedPvlanSetting
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing FailedSecurityPolicy
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming FailedSecurityPolicy
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing UnauthorizedMAC
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming UnauthorizedMAC
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing UnauthorizedVLAN
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming UnauthorizedVLAN
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing FilteredVLAN
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming FilteredVLAN
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing Filtered
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming Filtered
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing Busy
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming Busy
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing NotAccepted
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming NotAccepted
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing Disconnected
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming Disconnected
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing NotReady
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming NotReady
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing Resources
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming Resources
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing InvalidPacket
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming InvalidPacket
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing InvalidData
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming InvalidData
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing Unknown
+	// TODO: \Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming Unknown
+
 }
 
 func New(config *Config) *Collector {
@@ -200,9 +267,10 @@ func (c *Collector) Close(_ *slog.Logger) error {
 	c.perfDataCollectorDynamicMemoryBalancer.Close()
 	c.perfDataCollectorDynamicMemoryVM.Close()
 	c.perfDataCollectorVirtualMachineHealthSummary.Close()
+	c.perfDataCollectorVirtualMachineVidPartition.Close()
+	c.perfDataCollectorVirtualNetworkAdapter.Close()
 	c.perfDataCollectorVirtualStorageDevice.Close()
 	c.perfDataCollectorVirtualSwitch.Close()
-	c.perfDataCollectorVMVidPartition.Close()
 
 	return nil
 }
@@ -225,6 +293,10 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 	}
 
 	if err := c.buildVirtualMachineVidPartition(); err != nil {
+		return err
+	}
+
+	if err := c.buildVirtualNetworkAdapter(); err != nil {
 		return err
 	}
 
@@ -361,21 +433,6 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 
 	//
 
-	c.virtualProcessors = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "hypervisor_virtual_processors"),
-		"The number of virtual processors present in the system",
-		nil,
-		nil,
-	)
-	c.logicalProcessors = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "hypervisor_logical_processors"),
-		"The number of logical processors present in the system",
-		nil,
-		nil,
-	)
-
-	//
-
 	c.hostLPGuestRunTimePercent = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "host_lp_guest_run_time_percent"),
 		"The percentage of time spent by the processor in guest code",
@@ -500,45 +557,6 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 		nil,
 	)
 
-	//
-
-	c.vmStorageBytesReceived = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "vm_interface_bytes_received"),
-		"This counter represents the total number of bytes received per second by the network adapter",
-		[]string{"vm_interface"},
-		nil,
-	)
-	c.vmStorageBytesSent = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "vm_interface_bytes_sent"),
-		"This counter represents the total number of bytes sent per second by the network adapter",
-		[]string{"vm_interface"},
-		nil,
-	)
-	c.vmStorageDroppedPacketsIncoming = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "vm_interface_packets_incoming_dropped"),
-		"This counter represents the total number of dropped packets per second in the incoming direction of the network adapter",
-		[]string{"vm_interface"},
-		nil,
-	)
-	c.vmStorageDroppedPacketsOutgoing = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "vm_interface_packets_outgoing_dropped"),
-		"This counter represents the total number of dropped packets per second in the outgoing direction of the network adapter",
-		[]string{"vm_interface"},
-		nil,
-	)
-	c.vmStoragePacketsReceived = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "vm_interface_packets_received"),
-		"This counter represents the total number of packets received per second by the network adapter",
-		[]string{"vm_interface"},
-		nil,
-	)
-	c.vmStoragePacketsSent = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "vm_interface_packets_sent"),
-		"This counter represents the total number of packets sent per second by the network adapter",
-		[]string{"vm_interface"},
-		nil,
-	)
-
 	return nil
 }
 
@@ -563,12 +581,16 @@ func (c *Collector) Collect(_ *types.ScrapeContext, _ *slog.Logger, ch chan<- pr
 		errs = append(errs, fmt.Errorf("failed collecting Hyper-V VM Vid Partition metrics: %w", err))
 	}
 
+	if err := c.collectVirtualNetworkAdapter(ch); err != nil {
+		errs = append(errs, fmt.Errorf("failed collecting Hyper-V Virtual Network Adapter metrics: %w", err))
+	}
+
 	if err := c.collectVirtualStorageDevice(ch); err != nil {
 		errs = append(errs, fmt.Errorf("failed collecting Hyper-V Virtual Storage Device metrics: %w", err))
 	}
 
 	if err := c.collectVirtualSwitch(ch); err != nil {
-		errs = append(errs, fmt.Errorf("failed collecting Hyper-V Virtual Storage Device metrics: %w", err))
+		errs = append(errs, fmt.Errorf("failed collecting Hyper-V Virtual Switch metrics: %w", err))
 	}
 
 	return errors.Join(errs...)
@@ -1090,74 +1112,6 @@ func (c *Collector) collectVmStorage(ch chan<- prometheus.Metric) error {
 			c.vmStorageWriteOperations,
 			prometheus.CounterValue,
 			float64(obj.WriteOperationsPerSec),
-			obj.Name,
-		)
-	}
-
-	return nil
-}
-
-// Win32_PerfRawData_NvspNicStats_HyperVVirtualNetworkAdapter ...
-type Win32_PerfRawData_NvspNicStats_HyperVVirtualNetworkAdapter struct {
-	Name                         string
-	BytesReceivedPersec          uint64
-	BytesSentPersec              uint64
-	DroppedPacketsIncomingPersec uint64
-	DroppedPacketsOutgoingPersec uint64
-	PacketsReceivedPersec        uint64
-	PacketsSentPersec            uint64
-}
-
-func (c *Collector) collectVmNetwork(ch chan<- prometheus.Metric) error {
-	var dst []Win32_PerfRawData_NvspNicStats_HyperVVirtualNetworkAdapter
-	if err := c.wmiClient.Query("SELECT * FROM Win32_PerfRawData_NvspNicStats_HyperVVirtualNetworkAdapter", &dst); err != nil {
-		return err
-	}
-
-	for _, obj := range dst {
-		if strings.Contains(obj.Name, "*") {
-			continue
-		}
-
-		ch <- prometheus.MustNewConstMetric(
-			c.vmStorageBytesReceived,
-			prometheus.CounterValue,
-			float64(obj.BytesReceivedPersec),
-			obj.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.vmStorageBytesSent,
-			prometheus.CounterValue,
-			float64(obj.BytesSentPersec),
-			obj.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.vmStorageDroppedPacketsIncoming,
-			prometheus.CounterValue,
-			float64(obj.DroppedPacketsIncomingPersec),
-			obj.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.vmStorageDroppedPacketsOutgoing,
-			prometheus.CounterValue,
-			float64(obj.DroppedPacketsOutgoingPersec),
-			obj.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.vmStoragePacketsReceived,
-			prometheus.CounterValue,
-			float64(obj.PacketsReceivedPersec),
-			obj.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.vmStoragePacketsSent,
-			prometheus.CounterValue,
-			float64(obj.PacketsSentPersec),
 			obj.Name,
 		)
 	}

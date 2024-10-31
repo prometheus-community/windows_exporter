@@ -10,10 +10,10 @@ import (
 
 // collectorVirtualMachineVidPartition Hyper-V VM Vid Partition metrics
 type collectorVirtualMachineVidPartition struct {
-	perfDataCollectorVMVidPartition perfdata.Collector
-	physicalPagesAllocated          *prometheus.Desc // \Hyper-V VM Vid Partition(*)\Physical Pages Allocated
-	preferredNUMANodeIndex          *prometheus.Desc // \Hyper-V VM Vid Partition(*)\Preferred NUMA Node Index
-	remotePhysicalPages             *prometheus.Desc // \Hyper-V VM Vid Partition(*)\Remote Physical Pages
+	perfDataCollectorVirtualMachineVidPartition perfdata.Collector
+	physicalPagesAllocated                      *prometheus.Desc // \Hyper-V VM Vid Partition(*)\Physical Pages Allocated
+	preferredNUMANodeIndex                      *prometheus.Desc // \Hyper-V VM Vid Partition(*)\Preferred NUMA Node Index
+	remotePhysicalPages                         *prometheus.Desc // \Hyper-V VM Vid Partition(*)\Remote Physical Pages
 }
 
 const (
@@ -25,7 +25,7 @@ const (
 func (c *Collector) buildVirtualMachineVidPartition() error {
 	var err error
 
-	c.perfDataCollectorVMVidPartition, err = perfdata.NewCollector(perfdata.V2, "Hyper-V VM Vid Partition", perfdata.AllInstances, []string{
+	c.perfDataCollectorVirtualMachineVidPartition, err = perfdata.NewCollector(perfdata.V2, "Hyper-V VM Vid Partition", perfdata.AllInstances, []string{
 		physicalPagesAllocated,
 		preferredNUMANodeIndex,
 		remotePhysicalPages,
@@ -58,7 +58,7 @@ func (c *Collector) buildVirtualMachineVidPartition() error {
 }
 
 func (c *Collector) collectVirtualMachineVidPartition(ch chan<- prometheus.Metric) error {
-	data, err := c.perfDataCollectorVMVidPartition.Collect()
+	data, err := c.perfDataCollectorVirtualMachineVidPartition.Collect()
 	if err != nil {
 		return fmt.Errorf("failed to collect Hyper-V VM Vid Partition metrics: %w", err)
 	}

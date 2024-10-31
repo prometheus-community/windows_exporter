@@ -12,31 +12,33 @@ import (
 type collectorVirtualStorageDevice struct {
 	perfDataCollectorVirtualStorageDevice perfdata.Collector
 
-	virtualStorageDeviceErrorCount           *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\Error Count
-	virtualStorageDeviceQueueLength          *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\Queue Length
-	virtualStorageDeviceReadBytes            *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\Read Bytes/sec
-	virtualStorageDeviceReadOperations       *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\Read Operations/Sec
-	virtualStorageDeviceWriteBytes           *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\Write Bytes/sec
-	virtualStorageDeviceWriteOperations      *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\Write Operations/Sec
-	virtualStorageDeviceLatency              *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\Latency
-	virtualStorageDeviceThroughput           *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\Throughput
-	virtualStorageDeviceNormalizedThroughput *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\Normalized Throughput
-	virtualStorageDeviceLowerQueueLength     *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\Lower Queue Length
-	virtualStorageDeviceLowerLatency         *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\Lower Latency
+	virtualStorageDeviceErrorCount               *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\Error Count
+	virtualStorageDeviceQueueLength              *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\Queue Length
+	virtualStorageDeviceReadBytes                *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\Read Bytes/sec
+	virtualStorageDeviceReadOperations           *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\Read Operations/Sec
+	virtualStorageDeviceWriteBytes               *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\Write Bytes/sec
+	virtualStorageDeviceWriteOperations          *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\Write Operations/Sec
+	virtualStorageDeviceLatency                  *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\Latency
+	virtualStorageDeviceThroughput               *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\Throughput
+	virtualStorageDeviceNormalizedThroughput     *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\Normalized Throughput
+	virtualStorageDeviceLowerQueueLength         *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\Lower Queue Length
+	virtualStorageDeviceLowerLatency             *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\Lower Latency
+	virtualStorageDeviceIOQuotaReplenishmentRate *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\IO Quota Replenishment Rate
 }
 
 const (
-	virtualStorageDeviceErrorCount           = "Error Count"
-	virtualStorageDeviceQueueLength          = "Queue Length"
-	virtualStorageDeviceReadBytes            = "Read Bytes/sec"
-	virtualStorageDeviceReadOperations       = "Read Count"
-	virtualStorageDeviceWriteBytes           = "Write Bytes/sec"
-	virtualStorageDeviceWriteOperations      = "Write Count"
-	virtualStorageDeviceLatency              = "Latency"
-	virtualStorageDeviceThroughput           = "Throughput"
-	virtualStorageDeviceNormalizedThroughput = "Normalized Throughput"
-	virtualStorageDeviceLowerQueueLength     = "Lower Queue Length"
-	virtualStorageDeviceLowerLatency         = "Lower Latency"
+	virtualStorageDeviceErrorCount               = "Error Count"
+	virtualStorageDeviceQueueLength              = "Queue Length"
+	virtualStorageDeviceReadBytes                = "Read Bytes/sec"
+	virtualStorageDeviceReadOperations           = "Read Count"
+	virtualStorageDeviceWriteBytes               = "Write Bytes/sec"
+	virtualStorageDeviceWriteOperations          = "Write Count"
+	virtualStorageDeviceLatency                  = "Latency"
+	virtualStorageDeviceThroughput               = "Throughput"
+	virtualStorageDeviceNormalizedThroughput     = "Normalized Throughput"
+	virtualStorageDeviceLowerQueueLength         = "Lower Queue Length"
+	virtualStorageDeviceLowerLatency             = "Lower Latency"
+	virtualStorageDeviceIOQuotaReplenishmentRate = "IO Quota Replenishment Rate"
 )
 
 func (c *Collector) buildVirtualStorageDevice() error {
@@ -54,6 +56,7 @@ func (c *Collector) buildVirtualStorageDevice() error {
 		virtualStorageDeviceNormalizedThroughput,
 		virtualStorageDeviceLowerQueueLength,
 		virtualStorageDeviceLowerLatency,
+		virtualStorageDeviceIOQuotaReplenishmentRate,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create Hyper-V Virtual Storage Device collector: %w", err)
@@ -122,6 +125,12 @@ func (c *Collector) buildVirtualStorageDevice() error {
 	c.virtualStorageDeviceLowerLatency = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "virtual_storage_device_lower_latency_seconds"),
 		"This counter represents the average IO transfer latency on the underlying storage subsystem for this virtual device.",
+		[]string{"device"},
+		nil,
+	)
+	c.virtualStorageDeviceIOQuotaReplenishmentRate = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "io_quota_replenishment_rate"),
+		"This counter represents the IO quota replenishment rate for this virtual device.",
 		[]string{"device"},
 		nil,
 	)
@@ -210,6 +219,13 @@ func (c *Collector) collectVirtualStorageDevice(ch chan<- prometheus.Metric) err
 			c.virtualStorageDeviceLowerLatency,
 			prometheus.GaugeValue,
 			device[virtualStorageDeviceLowerLatency].FirstValue,
+			name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.virtualStorageDeviceIOQuotaReplenishmentRate,
+			prometheus.GaugeValue,
+			device[virtualStorageDeviceIOQuotaReplenishmentRate].FirstValue,
 			name,
 		)
 	}
