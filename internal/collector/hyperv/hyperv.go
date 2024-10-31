@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yusufpapurcu/wmi"
@@ -25,16 +24,10 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	config Config
 
-	// Hyper-V Virtual Machine Health Summa metrics
-	perfDataCollectorVirtualMachineHealthSummary perfdata.Collector
-	healthCritical                               *prometheus.Desc // \Hyper-V Virtual Machine Health Summary\Health Critical
-	healthOk                                     *prometheus.Desc // \Hyper-V Virtual Machine Health Summary\Health Ok
-
-	// Hyper-V VM Vid Partition metadata
-	perfDataCollectorVMVidPartition perfdata.Collector
-	physicalPagesAllocated          *prometheus.Desc // \Hyper-V VM Vid Partition(*)\Physical Pages Allocated
-	preferredNUMANodeIndex          *prometheus.Desc // \Hyper-V VM Vid Partition(*)\Preferred NUMA Node Index
-	remotePhysicalPages             *prometheus.Desc // \Hyper-V VM Vid Partition(*)\Remote Physical Pages
+	collectorDynamicMemoryBalancer
+	collectorDynamicMemoryVM
+	collectorVirtualMachineHealthSummary
+	collectorVirtualMachineVidPartition
 
 	// Hyper-V Hypervisor Root Partition metrics
 	addressSpaces                 *prometheus.Desc // \Hyper-V Hypervisor Root Partition(*)\Address Spaces
@@ -121,25 +114,6 @@ type Collector struct {
 	vmStorageDroppedPacketsOutgoing *prometheus.Desc // \Hyper-V Virtual Network Adapter(*)\Dropped Packets Outgoing/sec
 	vmStoragePacketsReceived        *prometheus.Desc // \Hyper-V Virtual Network Adapter(*)\Packets Received/sec
 	vmStoragePacketsSent            *prometheus.Desc // \Hyper-V Virtual Network Adapter(*)\Packets Sent/sec
-
-	// Hyper-V Dynamic Memory VM metrics
-	vmMemoryAddedMemory                *prometheus.Desc // \Hyper-V Dynamic Memory VM(*)\Added Memory
-	vmMemoryAveragePressure            *prometheus.Desc // \Hyper-V Dynamic Memory VM(*)\Average Pressure
-	vmMemoryCurrentPressure            *prometheus.Desc // \Hyper-V Dynamic Memory VM(*)\Current Pressure
-	vmMemoryGuestVisiblePhysicalMemory *prometheus.Desc // \Hyper-V Dynamic Memory VM(*)\Guest Visible Physical Memory
-	vmMemoryMaximumPressure            *prometheus.Desc // \Hyper-V Dynamic Memory VM(*)\Maximum Pressure
-	vmMemoryMemoryAddOperations        *prometheus.Desc // \Hyper-V Dynamic Memory VM(*)\Memory Add Operations
-	vmMemoryMemoryRemoveOperations     *prometheus.Desc // \Hyper-V Dynamic Memory VM(*)\Memory Remove Operations
-	vmMemoryMinimumPressure            *prometheus.Desc // \Hyper-V Dynamic Memory VM(*)\Minimum Pressure
-	vmMemoryPhysicalMemory             *prometheus.Desc // \Hyper-V Dynamic Memory VM(*)\Physical Memory
-	vmMemoryRemovedMemory              *prometheus.Desc // \Hyper-V Dynamic Memory VM(*)\Removed Memory
-	// TODO: \Hyper-V Dynamic Memory VM(*)\Guest Available Memory
-
-	// Hyper-V Dynamic Memory Balancer metrics
-	// TODO: \Hyper-V Dynamic Memory Balancer(*)\Available Memory For Balancing
-	// TODO: \Hyper-V Dynamic Memory Balancer(*)\System Current Pressure
-	// TODO: \Hyper-V Dynamic Memory Balancer(*)\Available Memory
-	// TODO: \Hyper-V Dynamic Memory Balancer(*)\Average Pressure
 
 	// Hyper-V Virtual Storage Device metrics
 	vmStorageErrorCount      *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\Error Count
@@ -262,134 +236,144 @@ func (c *Collector) Close(_ *slog.Logger) error {
 }
 
 func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
-	if err := c.buildVirtualMachine(); err != nil {
+	if err := c.buildDynamicMemoryBalancer(); err != nil {
 		return err
 	}
 
-	buildSubsystemName := func(component string) string { return "hyperv_" + component }
+	if err := c.buildDynamicMemoryVM(); err != nil {
+		return err
+	}
+
+	if err := c.buildDynamicMemoryVM(); err != nil {
+		return err
+	}
+
+	if err := c.buildDynamicMemoryBalancer(); err != nil {
+		return err
+	}
 
 	c.addressSpaces = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("root_partition"), "address_spaces"),
+		prometheus.BuildFQName(types.Namespace, Name, "root_partition_address_spaces"),
 		"The number of address spaces in the virtual TLB of the partition",
 		nil,
 		nil,
 	)
 	c.attachedDevices = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("root_partition"), "attached_devices"),
+		prometheus.BuildFQName(types.Namespace, Name, "root_partition_attached_devices"),
 		"The number of devices attached to the partition",
 		nil,
 		nil,
 	)
 	c.depositedPages = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("root_partition"), "deposited_pages"),
+		prometheus.BuildFQName(types.Namespace, Name, "root_partition_deposited_pages"),
 		"The number of pages deposited into the partition",
 		nil,
 		nil,
 	)
 	c.deviceDMAErrors = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("root_partition"), "device_dma_errors"),
+		prometheus.BuildFQName(types.Namespace, Name, "root_partition_device_dma_errors"),
 		"An indicator of illegal DMA requests generated by all devices assigned to the partition",
 		nil,
 		nil,
 	)
 	c.deviceInterruptErrors = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("root_partition"), "device_interrupt_errors"),
+		prometheus.BuildFQName(types.Namespace, Name, "root_partition_device_interrupt_errors"),
 		"An indicator of illegal interrupt requests generated by all devices assigned to the partition",
 		nil,
 		nil,
 	)
 	c.deviceInterruptMappings = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("root_partition"), "device_interrupt_mappings"),
+		prometheus.BuildFQName(types.Namespace, Name, "root_partition_device_interrupt_mappings"),
 		"The number of device interrupt mappings used by the partition",
 		nil,
 		nil,
 	)
 	c.deviceInterruptThrottleEvents = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("root_partition"), "device_interrupt_throttle_events"),
+		prometheus.BuildFQName(types.Namespace, Name, "root_partition_device_interrupt_throttle_events"),
 		"The number of times an interrupt from a device assigned to the partition was temporarily throttled because the device was generating too many interrupts",
 		nil,
 		nil,
 	)
 	c.gpaPages = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("root_partition"), "preferred_numa_node_index"),
+		prometheus.BuildFQName(types.Namespace, Name, "root_partition_preferred_numa_node_index"),
 		"The number of pages present in the GPA space of the partition (zero for root partition)",
 		nil,
 		nil,
 	)
 	c.gpaSpaceModifications = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("root_partition"), "gpa_space_modifications"),
+		prometheus.BuildFQName(types.Namespace, Name, "root_partition_gpa_space_modifications"),
 		"The rate of modifications to the GPA space of the partition",
 		nil,
 		nil,
 	)
 	c.ioTLBFlushCost = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("root_partition"), "io_tlb_flush_cost"),
+		prometheus.BuildFQName(types.Namespace, Name, "root_partition_io_tlb_flush_cost"),
 		"The average time (in nanoseconds) spent processing an I/O TLB flush",
 		nil,
 		nil,
 	)
 	c.ioTLBFlushes = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("root_partition"), "io_tlb_flush"),
+		prometheus.BuildFQName(types.Namespace, Name, "root_partition_io_tlb_flush"),
 		"The rate of flushes of I/O TLBs of the partition",
 		nil,
 		nil,
 	)
 	c.recommendedVirtualTLBSize = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("root_partition"), "recommended_virtual_tlb_size"),
+		prometheus.BuildFQName(types.Namespace, Name, "root_partition_recommended_virtual_tlb_size"),
 		"The recommended number of pages to be deposited for the virtual TLB",
 		nil,
 		nil,
 	)
 	c.skippedTimerTicks = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("root_partition"), "physical_pages_allocated"),
+		prometheus.BuildFQName(types.Namespace, Name, "root_partition_physical_pages_allocated"),
 		"The number of timer interrupts skipped for the partition",
 		nil,
 		nil,
 	)
 	c.value1Gdevicepages = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("root_partition"), "1G_device_pages"),
+		prometheus.BuildFQName(types.Namespace, Name, "root_partition_1G_device_pages"),
 		"The number of 1G pages present in the device space of the partition",
 		nil,
 		nil,
 	)
 	c.value1GGPApages = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("root_partition"), "1G_gpa_pages"),
+		prometheus.BuildFQName(types.Namespace, Name, "root_partition_1G_gpa_pages"),
 		"The number of 1G pages present in the GPA space of the partition",
 		nil,
 		nil,
 	)
 	c.value2Mdevicepages = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("root_partition"), "2M_device_pages"),
+		prometheus.BuildFQName(types.Namespace, Name, "root_partition_2M_device_pages"),
 		"The number of 2M pages present in the device space of the partition",
 		nil,
 		nil,
 	)
 	c.value2MGPApages = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("root_partition"), "2M_gpa_pages"),
+		prometheus.BuildFQName(types.Namespace, Name, "root_partition_2M_gpa_pages"),
 		"The number of 2M pages present in the GPA space of the partition",
 		nil,
 		nil,
 	)
 	c.value4Kdevicepages = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("root_partition"), "4K_device_pages"),
+		prometheus.BuildFQName(types.Namespace, Name, "root_partition_4K_device_pages"),
 		"The number of 4K pages present in the device space of the partition",
 		nil,
 		nil,
 	)
 	c.value4KGPApages = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("root_partition"), "4K_gpa_pages"),
+		prometheus.BuildFQName(types.Namespace, Name, "root_partition_4K_gpa_pages"),
 		"The number of 4K pages present in the GPA space of the partition",
 		nil,
 		nil,
 	)
 	c.virtualTLBFlushEntires = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("root_partition"), "virtual_tlb_flush_entires"),
+		prometheus.BuildFQName(types.Namespace, Name, "root_partition_virtual_tlb_flush_entires"),
 		"The rate of flushes of the entire virtual TLB",
 		nil,
 		nil,
 	)
 	c.virtualTLBPages = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("root_partition"), "virtual_tlb_pages"),
+		prometheus.BuildFQName(types.Namespace, Name, "root_partition_virtual_tlb_pages"),
 		"The number of pages used by the virtual TLB of the partition",
 		nil,
 		nil,
@@ -398,13 +382,13 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 	//
 
 	c.virtualProcessors = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("hypervisor"), "virtual_processors"),
+		prometheus.BuildFQName(types.Namespace, Name, "hypervisor_virtual_processors"),
 		"The number of virtual processors present in the system",
 		nil,
 		nil,
 	)
 	c.logicalProcessors = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("hypervisor"), "logical_processors"),
+		prometheus.BuildFQName(types.Namespace, Name, "hypervisor_logical_processors"),
 		"The number of logical processors present in the system",
 		nil,
 		nil,
@@ -413,19 +397,19 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 	//
 
 	c.hostLPGuestRunTimePercent = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("host_lp"), "guest_run_time_percent"),
+		prometheus.BuildFQName(types.Namespace, Name, "host_lp_guest_run_time_percent"),
 		"The percentage of time spent by the processor in guest code",
 		[]string{"core"},
 		nil,
 	)
 	c.hostLPHypervisorRunTimePercent = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("host_lp"), "hypervisor_run_time_percent"),
+		prometheus.BuildFQName(types.Namespace, Name, "host_lp_hypervisor_run_time_percent"),
 		"The percentage of time spent by the processor in hypervisor code",
 		[]string{"core"},
 		nil,
 	)
 	c.hostLPTotalRunTimePercent = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("host_lp"), "total_run_time_percent"),
+		prometheus.BuildFQName(types.Namespace, Name, "host_lp_total_run_time_percent"),
 		"The percentage of time spent by the processor in guest and hypervisor code",
 		[]string{"core"},
 		nil,
@@ -434,31 +418,31 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 	//
 
 	c.hostGuestRunTime = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("host_cpu"), "guest_run_time"),
+		prometheus.BuildFQName(types.Namespace, Name, "host_cpu_guest_run_time"),
 		"The time spent by the virtual processor in guest code",
 		[]string{"core"},
 		nil,
 	)
 	c.hostHypervisorRunTime = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("host_cpu"), "hypervisor_run_time"),
+		prometheus.BuildFQName(types.Namespace, Name, "host_cpu_hypervisor_run_time"),
 		"The time spent by the virtual processor in hypervisor code",
 		[]string{"core"},
 		nil,
 	)
 	c.hostRemoteRunTime = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("host_cpu"), "remote_run_time"),
+		prometheus.BuildFQName(types.Namespace, Name, "host_cpu_remote_run_time"),
 		"The time spent by the virtual processor running on a remote node",
 		[]string{"core"},
 		nil,
 	)
 	c.hostTotalRunTime = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("host_cpu"), "total_run_time"),
+		prometheus.BuildFQName(types.Namespace, Name, "host_cpu_total_run_time"),
 		"The time spent by the virtual processor in guest and hypervisor code",
 		[]string{"core"},
 		nil,
 	)
 	c.hostCPUWaitTimePerDispatch = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("host_cpu"), "wait_time_per_dispatch_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "host_cpu_wait_time_per_dispatch_total"),
 		"Time in nanoseconds waiting for a virtual processor to be dispatched onto a logical processor",
 		[]string{"core"},
 		nil,
@@ -467,31 +451,31 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 	//
 
 	c.vmGuestRunTime = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("vm_cpu"), "guest_run_time"),
+		prometheus.BuildFQName(types.Namespace, Name, "vm_cpu_guest_run_time"),
 		"The time spent by the virtual processor in guest code",
 		[]string{"vm", "core"},
 		nil,
 	)
 	c.vmHypervisorRunTime = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("vm_cpu"), "hypervisor_run_time"),
+		prometheus.BuildFQName(types.Namespace, Name, "vm_cpu_hypervisor_run_time"),
 		"The time spent by the virtual processor in hypervisor code",
 		[]string{"vm", "core"},
 		nil,
 	)
 	c.vmRemoteRunTime = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("vm_cpu"), "remote_run_time"),
+		prometheus.BuildFQName(types.Namespace, Name, "vm_cpu_remote_run_time"),
 		"The time spent by the virtual processor running on a remote node",
 		[]string{"vm", "core"},
 		nil,
 	)
 	c.vmTotalRunTime = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("vm_cpu"), "total_run_time"),
+		prometheus.BuildFQName(types.Namespace, Name, "vm_cpu_total_run_time"),
 		"The time spent by the virtual processor in guest and hypervisor code",
 		[]string{"vm", "core"},
 		nil,
 	)
 	c.vmCPUWaitTimePerDispatch = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("vm_cpu"), "wait_time_per_dispatch_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "vm_cpu_wait_time_per_dispatch_total"),
 		"Time in nanoseconds waiting for a virtual processor to be dispatched onto a logical processor",
 		[]string{"vm", "core"},
 		nil,
@@ -499,127 +483,127 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 
 	//
 	c.broadcastPacketsReceived = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("vswitch"), "broadcast_packets_received_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "vswitch_broadcast_packets_received_total"),
 		"This represents the total number of broadcast packets received per second by the virtual switch",
 		[]string{"vswitch"},
 		nil,
 	)
 	c.broadcastPacketsSent = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("vswitch"), "broadcast_packets_sent_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "vswitch_broadcast_packets_sent_total"),
 		"This represents the total number of broadcast packets sent per second by the virtual switch",
 		[]string{"vswitch"},
 		nil,
 	)
 	c.bytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("vswitch"), "bytes_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "vswitch_bytes_total"),
 		"This represents the total number of bytes per second traversing the virtual switch",
 		[]string{"vswitch"},
 		nil,
 	)
 	c.bytesReceived = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("vswitch"), "bytes_received_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "vswitch_bytes_received_total"),
 		"This represents the total number of bytes received per second by the virtual switch",
 		[]string{"vswitch"},
 		nil,
 	)
 	c.bytesSent = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("vswitch"), "bytes_sent_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "vswitch_bytes_sent_total"),
 		"This represents the total number of bytes sent per second by the virtual switch",
 		[]string{"vswitch"},
 		nil,
 	)
 	c.directedPacketsReceived = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("vswitch"), "directed_packets_received_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "vswitch_directed_packets_received_total"),
 		"This represents the total number of directed packets received per second by the virtual switch",
 		[]string{"vswitch"},
 		nil,
 	)
 	c.directedPacketsSent = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("vswitch"), "directed_packets_send_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "vswitch_directed_packets_send_total"),
 		"This represents the total number of directed packets sent per second by the virtual switch",
 		[]string{"vswitch"},
 		nil,
 	)
 	c.droppedPacketsIncoming = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("vswitch"), "dropped_packets_incoming_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "vswitch_dropped_packets_incoming_total"),
 		"This represents the total number of packet dropped per second by the virtual switch in the incoming direction",
 		[]string{"vswitch"},
 		nil,
 	)
 	c.droppedPacketsOutgoing = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("vswitch"), "dropped_packets_outcoming_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "vswitch_dropped_packets_outcoming_total"),
 		"This represents the total number of packet dropped per second by the virtual switch in the outgoing direction",
 		[]string{"vswitch"},
 		nil,
 	)
 	c.extensionsDroppedPacketsIncoming = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("vswitch"), "extensions_dropped_packets_incoming_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "vswitch_extensions_dropped_packets_incoming_total"),
 		"This represents the total number of packet dropped per second by the virtual switch extensions in the incoming direction",
 		[]string{"vswitch"},
 		nil,
 	)
 	c.extensionsDroppedPacketsOutgoing = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("vswitch"), "extensions_dropped_packets_outcoming_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "vswitch_extensions_dropped_packets_outcoming_total"),
 		"This represents the total number of packet dropped per second by the virtual switch extensions in the outgoing direction",
 		[]string{"vswitch"},
 		nil,
 	)
 	c.learnedMacAddresses = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("vswitch"), "learned_mac_addresses_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "vswitch_learned_mac_addresses_total"),
 		"This counter represents the total number of learned MAC addresses of the virtual switch",
 		[]string{"vswitch"},
 		nil,
 	)
 	c.multicastPacketsReceived = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("vswitch"), "multicast_packets_received_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "vswitch_multicast_packets_received_total"),
 		"This represents the total number of multicast packets received per second by the virtual switch",
 		[]string{"vswitch"},
 		nil,
 	)
 	c.multicastPacketsSent = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("vswitch"), "multicast_packets_sent_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "vswitch_multicast_packets_sent_total"),
 		"This represents the total number of multicast packets sent per second by the virtual switch",
 		[]string{"vswitch"},
 		nil,
 	)
 	c.numberOfSendChannelMoves = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("vswitch"), "number_of_send_channel_moves_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "vswitch_number_of_send_channel_moves_total"),
 		"This represents the total number of send channel moves per second on this virtual switch",
 		[]string{"vswitch"},
 		nil,
 	)
 	c.numberOfVMQMoves = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("vswitch"), "number_of_vmq_moves_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "vswitch_number_of_vmq_moves_total"),
 		"This represents the total number of VMQ moves per second on this virtual switch",
 		[]string{"vswitch"},
 		nil,
 	)
 	c.packetsFlooded = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("vswitch"), "packets_flooded_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "vswitch_packets_flooded_total"),
 		"This counter represents the total number of packets flooded by the virtual switch",
 		[]string{"vswitch"},
 		nil,
 	)
 	c.packets = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("vswitch"), "packets_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "vswitch_packets_total"),
 		"This represents the total number of packets per second traversing the virtual switch",
 		[]string{"vswitch"},
 		nil,
 	)
 	c.packetsReceived = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("vswitch"), "packets_received_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "vswitch_packets_received_total"),
 		"This represents the total number of packets received per second by the virtual switch",
 		[]string{"vswitch"},
 		nil,
 	)
 	c.packetsSent = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("vswitch"), "packets_sent_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "vswitch_packets_sent_total"),
 		"This represents the total number of packets send per second by the virtual switch",
 		[]string{"vswitch"},
 		nil,
 	)
 	c.purgedMacAddresses = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("vswitch"), "purged_mac_addresses_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "vswitch_purged_mac_addresses_total"),
 		"This counter represents the total number of purged MAC addresses of the virtual switch",
 		[]string{"vswitch"},
 		nil,
@@ -628,37 +612,37 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 	//
 
 	c.adapterBytesDropped = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("ethernet"), "bytes_dropped"),
+		prometheus.BuildFQName(types.Namespace, Name, "ethernet_bytes_dropped"),
 		"Bytes Dropped is the number of bytes dropped on the network adapter",
 		[]string{"adapter"},
 		nil,
 	)
 	c.adapterBytesReceived = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("ethernet"), "bytes_received"),
+		prometheus.BuildFQName(types.Namespace, Name, "ethernet_bytes_received"),
 		"Bytes received is the number of bytes received on the network adapter",
 		[]string{"adapter"},
 		nil,
 	)
 	c.adapterBytesSent = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("ethernet"), "bytes_sent"),
+		prometheus.BuildFQName(types.Namespace, Name, "ethernet_bytes_sent"),
 		"Bytes sent is the number of bytes sent over the network adapter",
 		[]string{"adapter"},
 		nil,
 	)
 	c.adapterFramesDropped = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("ethernet"), "frames_dropped"),
+		prometheus.BuildFQName(types.Namespace, Name, "ethernet_frames_dropped"),
 		"Frames Dropped is the number of frames dropped on the network adapter",
 		[]string{"adapter"},
 		nil,
 	)
 	c.adapterFramesReceived = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("ethernet"), "frames_received"),
+		prometheus.BuildFQName(types.Namespace, Name, "ethernet_frames_received"),
 		"Frames received is the number of frames received on the network adapter",
 		[]string{"adapter"},
 		nil,
 	)
 	c.adapterFramesSent = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("ethernet"), "frames_sent"),
+		prometheus.BuildFQName(types.Namespace, Name, "ethernet_frames_sent"),
 		"Frames sent is the number of frames sent over the network adapter",
 		[]string{"adapter"},
 		nil,
@@ -667,37 +651,37 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 	//
 
 	c.vmStorageErrorCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("vm_device"), "error_count"),
+		prometheus.BuildFQName(types.Namespace, Name, "vm_device_error_count"),
 		"This counter represents the total number of errors that have occurred on this virtual device",
 		[]string{"vm_device"},
 		nil,
 	)
 	c.vmStorageQueueLength = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("vm_device"), "queue_length"),
+		prometheus.BuildFQName(types.Namespace, Name, "vm_device_queue_length"),
 		"This counter represents the current queue length on this virtual device",
 		[]string{"vm_device"},
 		nil,
 	)
 	c.vmStorageReadBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("vm_device"), "bytes_read"),
+		prometheus.BuildFQName(types.Namespace, Name, "vm_device_bytes_read"),
 		"This counter represents the total number of bytes that have been read per second on this virtual device",
 		[]string{"vm_device"},
 		nil,
 	)
 	c.vmStorageReadOperations = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("vm_device"), "operations_read"),
+		prometheus.BuildFQName(types.Namespace, Name, "vm_device_operations_read"),
 		"This counter represents the number of read operations that have occurred per second on this virtual device",
 		[]string{"vm_device"},
 		nil,
 	)
 	c.vmStorageWriteBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("vm_device"), "bytes_written"),
+		prometheus.BuildFQName(types.Namespace, Name, "vm_device_bytes_written"),
 		"This counter represents the total number of bytes that have been written per second on this virtual device",
 		[]string{"vm_device"},
 		nil,
 	)
 	c.vmStorageWriteOperations = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("vm_device"), "operations_written"),
+		prometheus.BuildFQName(types.Namespace, Name, "vm_device_operations_written"),
 		"This counter represents the number of write operations that have occurred per second on this virtual device",
 		[]string{"vm_device"},
 		nil,
@@ -706,102 +690,39 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 	//
 
 	c.vmStorageBytesReceived = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("vm_interface"), "bytes_received"),
+		prometheus.BuildFQName(types.Namespace, Name, "vm_interface_bytes_received"),
 		"This counter represents the total number of bytes received per second by the network adapter",
 		[]string{"vm_interface"},
 		nil,
 	)
 	c.vmStorageBytesSent = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("vm_interface"), "bytes_sent"),
+		prometheus.BuildFQName(types.Namespace, Name, "vm_interface_bytes_sent"),
 		"This counter represents the total number of bytes sent per second by the network adapter",
 		[]string{"vm_interface"},
 		nil,
 	)
 	c.vmStorageDroppedPacketsIncoming = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("vm_interface"), "packets_incoming_dropped"),
+		prometheus.BuildFQName(types.Namespace, Name, "vm_interface_packets_incoming_dropped"),
 		"This counter represents the total number of dropped packets per second in the incoming direction of the network adapter",
 		[]string{"vm_interface"},
 		nil,
 	)
 	c.vmStorageDroppedPacketsOutgoing = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("vm_interface"), "packets_outgoing_dropped"),
+		prometheus.BuildFQName(types.Namespace, Name, "vm_interface_packets_outgoing_dropped"),
 		"This counter represents the total number of dropped packets per second in the outgoing direction of the network adapter",
 		[]string{"vm_interface"},
 		nil,
 	)
 	c.vmStoragePacketsReceived = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("vm_interface"), "packets_received"),
+		prometheus.BuildFQName(types.Namespace, Name, "vm_interface_packets_received"),
 		"This counter represents the total number of packets received per second by the network adapter",
 		[]string{"vm_interface"},
 		nil,
 	)
 	c.vmStoragePacketsSent = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("vm_interface"), "packets_sent"),
+		prometheus.BuildFQName(types.Namespace, Name, "vm_interface_packets_sent"),
 		"This counter represents the total number of packets sent per second by the network adapter",
 		[]string{"vm_interface"},
-		nil,
-	)
-
-	//
-
-	c.vmMemoryAddedMemory = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("vm_memory"), "added_total"),
-		"This counter represents memory in MB added to the VM",
-		[]string{"vm"},
-		nil,
-	)
-	c.vmMemoryAveragePressure = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("vm_memory"), "pressure_average"),
-		"This gauge represents the average pressure in the VM.",
-		[]string{"vm"},
-		nil,
-	)
-	c.vmMemoryCurrentPressure = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("vm_memory"), "pressure_current"),
-		"This gauge represents the current pressure in the VM.",
-		[]string{"vm"},
-		nil,
-	)
-	c.vmMemoryGuestVisiblePhysicalMemory = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("vm_memory"), "physical_guest_visible"),
-		"'This gauge represents the amount of memory in MB visible to the VM guest.'",
-		[]string{"vm"},
-		nil,
-	)
-	c.vmMemoryMaximumPressure = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("vm_memory"), "pressure_maximum"),
-		"This gauge represents the maximum pressure band in the VM.",
-		[]string{"vm"},
-		nil,
-	)
-	c.vmMemoryMemoryAddOperations = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("vm_memory"), "add_operations_total"),
-		"This counter represents the number of operations adding memory to the VM.",
-		[]string{"vm"},
-		nil,
-	)
-	c.vmMemoryMemoryRemoveOperations = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("vm_memory"), "remove_operations_total"),
-		"This counter represents the number of operations removing memory from the VM.",
-		[]string{"vm"},
-		nil,
-	)
-	c.vmMemoryMinimumPressure = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("vm_memory"), "pressure_minimum"),
-		"This gauge represents the minimum pressure band in the VM.",
-		[]string{"vm"},
-		nil,
-	)
-	c.vmMemoryPhysicalMemory = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("vm_memory"), "physical"),
-		"This gauge represents the current amount of memory in MB assigned to the VM.",
-		[]string{"vm"},
-		nil,
-	)
-	c.vmMemoryRemovedMemory = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, buildSubsystemName("vm_memory"), "removed_total"),
-		"This counter represents memory in MB removed from the VM",
-		[]string{"vm"},
 		nil,
 	)
 
@@ -811,90 +732,22 @@ func (c *Collector) Build(_ *slog.Logger, _ *wmi.Client) error {
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *Collector) Collect(_ *types.ScrapeContext, _ *slog.Logger, ch chan<- prometheus.Metric) error {
-	errs := make([]error, 0)
+	errs := make([]error, 0, 4)
 
-	if err := c.collectVirtualMachine(ch); err != nil {
-		errs = append(errs, fmt.Errorf("failed collecting hyperV health status metrics: %w", err))
+	if err := c.collectDynamicMemoryBalancer(ch); err != nil {
+		errs = append(errs, fmt.Errorf("failed collecting Hyper-V Dynamic Memory Balancer metrics: %w", err))
 	}
 
-	if err := c.collectVmHv(ch); err != nil {
-		logger.Error("failed collecting hyperV hv status metrics",
-			slog.Any("err", err),
-		)
-
-		return err
+	if err := c.collectDynamicMemoryVM(ch); err != nil {
+		errs = append(errs, fmt.Errorf("failed collecting Hyper-V Dynamic Memory VM metrics: %w", err))
 	}
 
-	if err := c.collectVmProcessor(ch); err != nil {
-		logger.Error("failed collecting hyperV processor metrics",
-			slog.Any("err", err),
-		)
-
-		return err
+	if err := c.collectVirtualMachineHealthSummary(ch); err != nil {
+		errs = append(errs, fmt.Errorf("failed collecting Hyper-V Virtual Machine Health Summary metrics: %w", err))
 	}
 
-	if err := c.collectHostLPUsage(logger, ch); err != nil {
-		logger.Error("failed collecting hyperV host logical processors metrics",
-			slog.Any("err", err),
-		)
-
-		return err
-	}
-
-	if err := c.collectHostCpuUsage(logger, ch); err != nil {
-		logger.Error("failed collecting hyperV host CPU metrics",
-			slog.Any("err", err),
-		)
-
-		return err
-	}
-
-	if err := c.collectVmCpuUsage(logger, ch); err != nil {
-		logger.Error("failed collecting hyperV VM CPU metrics",
-			slog.Any("err", err),
-		)
-
-		return err
-	}
-
-	if err := c.collectVmSwitch(ch); err != nil {
-		logger.Error("failed collecting hyperV switch metrics",
-			slog.Any("err", err),
-		)
-
-		return err
-	}
-
-	if err := c.collectVmEthernet(ch); err != nil {
-		logger.Error("failed collecting hyperV ethernet metrics",
-			slog.Any("err", err),
-		)
-
-		return err
-	}
-
-	if err := c.collectVmStorage(ch); err != nil {
-		logger.Error("failed collecting hyperV virtual storage metrics",
-			slog.Any("err", err),
-		)
-
-		return err
-	}
-
-	if err := c.collectVmNetwork(ch); err != nil {
-		logger.Error("failed collecting hyperV virtual network metrics",
-			slog.Any("err", err),
-		)
-
-		return err
-	}
-
-	if err := c.collectVmMemory(ch); err != nil {
-		logger.Error("failed collecting hyperV virtual memory metrics",
-			slog.Any("err", err),
-		)
-
-		return err
+	if err := c.collectVirtualMachineVidPartition(ch); err != nil {
+		errs = append(errs, fmt.Errorf("failed collecting Hyper-V VM Vid Partition metrics: %w", err))
 	}
 
 	return errors.Join(errs...)
@@ -1666,106 +1519,6 @@ func (c *Collector) collectVmNetwork(ch chan<- prometheus.Metric) error {
 			c.vmStoragePacketsSent,
 			prometheus.CounterValue,
 			float64(obj.PacketsSentPersec),
-			obj.Name,
-		)
-	}
-
-	return nil
-}
-
-// Win32_PerfRawData_BalancerStats_HyperVDynamicMemoryVM ...
-type Win32_PerfRawData_BalancerStats_HyperVDynamicMemoryVM struct {
-	Name                       string
-	AddedMemory                uint64
-	AveragePressure            uint64
-	CurrentPressure            uint64
-	GuestVisiblePhysicalMemory uint64
-	MaximumPressure            uint64
-	MemoryAddOperations        uint64
-	MemoryRemoveOperations     uint64
-	MinimumPressure            uint64
-	PhysicalMemory             uint64
-	RemovedMemory              uint64
-}
-
-func (c *Collector) collectVmMemory(ch chan<- prometheus.Metric) error {
-	var dst []Win32_PerfRawData_BalancerStats_HyperVDynamicMemoryVM
-	if err := c.wmiClient.Query("SELECT * FROM Win32_PerfRawData_BalancerStats_HyperVDynamicMemoryVM", &dst); err != nil {
-		return err
-	}
-
-	for _, obj := range dst {
-		if strings.Contains(obj.Name, "*") {
-			continue
-		}
-
-		ch <- prometheus.MustNewConstMetric(
-			c.vmMemoryAddedMemory,
-			prometheus.CounterValue,
-			float64(obj.AddedMemory),
-			obj.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.vmMemoryAveragePressure,
-			prometheus.GaugeValue,
-			float64(obj.AveragePressure),
-			obj.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.vmMemoryCurrentPressure,
-			prometheus.GaugeValue,
-			float64(obj.CurrentPressure),
-			obj.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.vmMemoryGuestVisiblePhysicalMemory,
-			prometheus.GaugeValue,
-			float64(obj.GuestVisiblePhysicalMemory),
-			obj.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.vmMemoryMaximumPressure,
-			prometheus.GaugeValue,
-			float64(obj.MaximumPressure),
-			obj.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.vmMemoryMemoryAddOperations,
-			prometheus.CounterValue,
-			float64(obj.MemoryAddOperations),
-			obj.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.vmMemoryMemoryRemoveOperations,
-			prometheus.CounterValue,
-			float64(obj.MemoryRemoveOperations),
-			obj.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.vmMemoryMinimumPressure,
-			prometheus.GaugeValue,
-			float64(obj.MinimumPressure),
-			obj.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.vmMemoryPhysicalMemory,
-			prometheus.GaugeValue,
-			float64(obj.PhysicalMemory),
-			obj.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.vmMemoryRemovedMemory,
-			prometheus.CounterValue,
-			float64(obj.RemovedMemory),
 			obj.Name,
 		)
 	}

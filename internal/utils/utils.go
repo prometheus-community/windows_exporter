@@ -18,6 +18,14 @@ func ToPTR[t any](v t) *t {
 	return &v
 }
 
+func MBToBytes(mb float64) float64 {
+	return mb * 1024 * 1024
+}
+
+func PercentageToRatio(percentage float64) float64 {
+	return percentage / 100
+}
+
 // Must panics if the error is not nil.
 //
 //nolint:ireturn
