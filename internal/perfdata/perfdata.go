@@ -27,7 +27,6 @@ var (
 	AllInstances     = []string{"*"}
 )
 
-//nolint:ireturn
 func NewCollector(engine Engine, object string, instances []string, counters []string) (Collector, error) {
 	switch engine {
 	case V1:
