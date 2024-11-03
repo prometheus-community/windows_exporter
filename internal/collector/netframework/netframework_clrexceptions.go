@@ -3,7 +3,11 @@
 package netframework
 
 import (
+	"fmt"
+
+	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -35,19 +39,19 @@ func (c *Collector) buildClrExceptions() {
 }
 
 type Win32_PerfRawData_NETFramework_NETCLRExceptions struct {
-	Name string
+	Name string `mi:"Name"`
 
-	NumberofExcepsThrown       uint32
-	NumberofExcepsThrownPersec uint32
-	NumberofFiltersPersec      uint32
-	NumberofFinallysPersec     uint32
-	ThrowToCatchDepthPersec    uint32
+	NumberofExcepsThrown       uint32 `mi:"NumberofExcepsThrown"`
+	NumberofExcepsThrownPersec uint32 `mi:"NumberofExcepsThrownPersec"`
+	NumberofFiltersPersec      uint32 `mi:"NumberofFiltersPersec"`
+	NumberofFinallysPersec     uint32 `mi:"NumberofFinallysPersec"`
+	ThrowToCatchDepthPersec    uint32 `mi:"ThrowToCatchDepthPersec"`
 }
 
 func (c *Collector) collectClrExceptions(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_NETFramework_NETCLRExceptions
-	if err := c.wmiClient.Query("SELECT * FROM Win32_PerfRawData_NETFramework_NETCLRExceptions", &dst); err != nil {
-		return err
+	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * Win32_PerfRawData_NETFramework_NETCLRExceptions"))); err != nil {
+		return fmt.Errorf("WMI query failed: %w", err)
 	}
 
 	for _, process := range dst {

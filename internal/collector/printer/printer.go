@@ -10,9 +10,9 @@ import (
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
+	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/yusufpapurcu/wmi"
 )
 
 const Name = "printer"
@@ -39,8 +39,10 @@ var ConfigDefaults = Config{
 }
 
 type Collector struct {
-	config    Config
-	wmiClient *wmi.Client
+	config             Config
+	miSession          *mi.Session
+	miQueryPrinterJobs mi.Query
+	miQueryPrinter     mi.Query
 
 	printerStatus    *prometheus.Desc
 	printerJobStatus *prometheus.Desc
@@ -107,12 +109,25 @@ func (c *Collector) Close(_ *slog.Logger) error {
 	return nil
 }
 
-func (c *Collector) Build(_ *slog.Logger, wmiClient *wmi.Client) error {
-	if wmiClient == nil || wmiClient.SWbemServicesClient == nil {
-		return errors.New("wmiClient or SWbemServicesClient is nil")
+func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
+	if miSession == nil {
+		return errors.New("miSession is nil")
 	}
 
-	c.wmiClient = wmiClient
+	miQuery, err := mi.NewQuery("SELECT Name, Default, PrinterStatus, JobCountSinceLastReset FROM win32_Printer")
+	if err != nil {
+		return fmt.Errorf("failed to create WMI query: %w", err)
+	}
+
+	c.miQueryPrinter = miQuery
+
+	miQuery, err = mi.NewQuery("SELECT Name, Status FROM win32_PrintJob")
+	if err != nil {
+		return fmt.Errorf("failed to create WMI query: %w", err)
+	}
+
+	c.miQueryPrinterJobs = miQuery
+	c.miSession = miSession
 
 	c.printerJobStatus = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "job_status"),
@@ -143,42 +158,35 @@ func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
 }
 
 type wmiPrinter struct {
-	Name                   string
-	Default                bool
-	PrinterStatus          uint16
-	JobCountSinceLastReset uint32
+	Name                   string `mi:"Name"`
+	Default                bool   `mi:"Default"`
+	PrinterStatus          uint16 `mi:"PrinterStatus"`
+	JobCountSinceLastReset uint32 `mi:"JobCountSinceLastReset"`
 }
 
 type wmiPrintJob struct {
-	Name   string
-	Status string
+	Name   string `mi:"Name"`
+	Status string `mi:"Status"`
 }
 
-func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	logger = logger.With(slog.String("collector", Name))
-	if err := c.collectPrinterStatus(ch); err != nil {
-		logger.Error("failed to collect printer status metrics",
-			slog.Any("err", err),
-		)
+func (c *Collector) Collect(_ *types.ScrapeContext, _ *slog.Logger, ch chan<- prometheus.Metric) error {
+	var errs []error
 
-		return err
+	if err := c.collectPrinterStatus(ch); err != nil {
+		errs = append(errs, fmt.Errorf("failed to collect printer status metrics: %w", err))
 	}
 
 	if err := c.collectPrinterJobStatus(ch); err != nil {
-		logger.Error("failed to collect printer job status metrics",
-			slog.Any("err", err),
-		)
-
-		return err
+		errs = append(errs, fmt.Errorf("failed to collect printer job status metrics: %w", err))
 	}
 
-	return nil
+	return errors.Join(errs...)
 }
 
 func (c *Collector) collectPrinterStatus(ch chan<- prometheus.Metric) error {
 	var printers []wmiPrinter
-	if err := c.wmiClient.Query("SELECT * FROM win32_Printer", &printers); err != nil {
-		return err
+	if err := c.miSession.Query(&printers, mi.NamespaceRootCIMv2, c.miQueryPrinter); err != nil {
+		return fmt.Errorf("WMI query failed: %w", err)
 	}
 
 	for _, printer := range printers {
@@ -215,8 +223,8 @@ func (c *Collector) collectPrinterStatus(ch chan<- prometheus.Metric) error {
 
 func (c *Collector) collectPrinterJobStatus(ch chan<- prometheus.Metric) error {
 	var printJobs []wmiPrintJob
-	if err := c.wmiClient.Query("SELECT * FROM win32_PrintJob", &printJobs); err != nil {
-		return err
+	if err := c.miSession.Query(&printJobs, mi.NamespaceRootCIMv2, c.miQueryPrinterJobs); err != nil {
+		return fmt.Errorf("WMI query failed: %w", err)
 	}
 
 	groupedPrintJobs := c.groupPrintJobs(printJobs)

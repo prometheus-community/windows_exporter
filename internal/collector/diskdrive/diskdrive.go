@@ -4,19 +4,17 @@ package diskdrive
 
 import (
 	"errors"
+	"fmt"
 	"log/slog"
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
+	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/yusufpapurcu/wmi"
 )
 
-const (
-	Name           = "diskdrive"
-	win32DiskQuery = "SELECT DeviceID, Model, Caption, Name, Partitions, Size, Status, Availability FROM WIN32_DiskDrive"
-)
+const Name = "diskdrive"
 
 type Config struct{}
 
@@ -25,7 +23,8 @@ var ConfigDefaults = Config{}
 // A Collector is a Prometheus Collector for a few WMI metrics in Win32_DiskDrive.
 type Collector struct {
 	config    Config
-	wmiClient *wmi.Client
+	miSession *mi.Session
+	miQuery   mi.Query
 
 	availability *prometheus.Desc
 	diskInfo     *prometheus.Desc
@@ -62,12 +61,19 @@ func (c *Collector) Close(_ *slog.Logger) error {
 	return nil
 }
 
-func (c *Collector) Build(_ *slog.Logger, wmiClient *wmi.Client) error {
-	if wmiClient == nil || wmiClient.SWbemServicesClient == nil {
-		return errors.New("wmiClient or SWbemServicesClient is nil")
+func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
+	if miSession == nil {
+		return errors.New("miSession is nil")
 	}
 
-	c.wmiClient = wmiClient
+	miQuery, err := mi.NewQuery("SELECT DeviceID, Model, Caption, Name, Partitions, Size, Status, Availability FROM WIN32_DiskDrive")
+	if err != nil {
+		return fmt.Errorf("failed to create WMI query: %w", err)
+	}
+
+	c.miQuery = miQuery
+	c.miSession = miSession
+
 	c.diskInfo = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "info"),
 		"General drive information",
@@ -108,14 +114,14 @@ func (c *Collector) Build(_ *slog.Logger, wmiClient *wmi.Client) error {
 }
 
 type win32_DiskDrive struct {
-	DeviceID     string
-	Model        string
-	Size         uint64
-	Name         string
-	Caption      string
-	Partitions   uint32
-	Status       string
-	Availability uint16
+	DeviceID     string `mi:"DeviceID"`
+	Model        string `mi:"Model"`
+	Size         uint64 `mi:"Size"`
+	Name         string `mi:"Name"`
+	Caption      string `mi:"Caption"`
+	Partitions   uint32 `mi:"Partitions"`
+	Status       string `mi:"Status"`
+	Availability uint16 `mi:"Availability"`
 }
 
 var (
@@ -175,9 +181,8 @@ func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan
 
 func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	var dst []win32_DiskDrive
-
-	if err := c.wmiClient.Query(win32DiskQuery, &dst); err != nil {
-		return err
+	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, c.miQuery); err != nil {
+		return fmt.Errorf("WMI query failed: %w", err)
 	}
 
 	if len(dst) == 0 {

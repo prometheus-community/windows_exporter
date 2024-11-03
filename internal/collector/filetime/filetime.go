@@ -12,9 +12,9 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/bmatcuk/doublestar/v4"
+	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/yusufpapurcu/wmi"
 )
 
 const Name = "filetime"
@@ -85,7 +85,7 @@ func (c *Collector) Close(_ *slog.Logger) error {
 	return nil
 }
 
-func (c *Collector) Build(logger *slog.Logger, _ *wmi.Client) error {
+func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	logger.Info("filetime collector is in an experimental state! It may subject to change.",
 		slog.String("collector", Name),
 	)

@@ -17,3 +17,14 @@ func BoolToFloat(b bool) float64 {
 func ToPTR[t any](v t) *t {
 	return &v
 }
+
+// Must panics if the error is not nil.
+//
+//nolint:ireturn
+func Must[T any](v T, err error) T {
+	if err != nil {
+		panic(err)
+	}
+
+	return v
+}
