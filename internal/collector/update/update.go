@@ -15,9 +15,9 @@ import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/go-ole/go-ole"
 	"github.com/go-ole/go-ole/oleutil"
-	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/yusufpapurcu/wmi"
 )
 
 const Name = "update"
@@ -80,7 +80,7 @@ func (c *Collector) Close(_ *slog.Logger) error {
 	return nil
 }
 
-func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
+func (c *Collector) Build(logger *slog.Logger, _ *wmi.Client) error {
 	logger = logger.With(slog.String("collector", Name))
 
 	logger.Info("update collector is in an experimental state! The configuration and metrics may change in future. Please report any issues.")
@@ -147,7 +147,7 @@ func (c *Collector) scheduleUpdateStatus(logger *slog.Logger, initErrCh chan<- e
 
 	if err := ole.CoInitializeEx(0, ole.COINIT_MULTITHREADED); err != nil {
 		var oleCode *ole.OleError
-		if errors.As(err, &oleCode) && oleCode.Code() != ole.S_OK && oleCode.Code() != 0x00000001 {
+		if errors.As(err, &oleCode) && oleCode.Code() != ole.S_OK && oleCode.Code() != wmi.S_FALSE {
 			initErrCh <- fmt.Errorf("CoInitializeEx: %w", err)
 
 			return

@@ -3,11 +3,7 @@
 package netframework
 
 import (
-	"fmt"
-
-	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
-	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -87,43 +83,43 @@ func (c *Collector) buildClrMemory() {
 }
 
 type Win32_PerfRawData_NETFramework_NETCLRMemory struct {
-	Name string `mi:"Name"`
+	Name string
 
-	AllocatedBytesPersec      uint64 `mi:"AllocatedBytesPersec"`
-	FinalizationSurvivors     uint64 `mi:"FinalizationSurvivors"`
-	Frequency_PerfTime        uint64 `mi:"Frequency_PerfTime"`
-	Gen0heapsize              uint64 `mi:"Gen0heapsize"`
-	Gen0PromotedBytesPerSec   uint64 `mi:"Gen0PromotedBytesPersec"`
-	Gen1heapsize              uint64 `mi:"Gen1heapsize"`
-	Gen1PromotedBytesPerSec   uint64 `mi:"Gen1PromotedBytesPersec"`
-	Gen2heapsize              uint64 `mi:"Gen2heapsize"`
-	LargeObjectHeapsize       uint64 `mi:"LargeObjectHeapsize"`
-	NumberBytesinallHeaps     uint64 `mi:"NumberBytesinallHeaps"`
-	NumberGCHandles           uint64 `mi:"NumberGCHandles"`
-	NumberGen0Collections     uint64 `mi:"NumberGen0Collections"`
-	NumberGen1Collections     uint64 `mi:"NumberGen1Collections"`
-	NumberGen2Collections     uint64 `mi:"NumberGen2Collections"`
-	NumberInducedGC           uint64 `mi:"NumberInducedGC"`
-	NumberofPinnedObjects     uint64 `mi:"NumberofPinnedObjects"`
-	NumberofSinkBlocksinuse   uint64 `mi:"NumberofSinkBlocksinuse"`
-	NumberTotalcommittedBytes uint64 `mi:"NumberTotalcommittedBytes"`
-	NumberTotalreservedBytes  uint64 `mi:"NumberTotalreservedBytes"`
+	AllocatedBytesPersec      uint64
+	FinalizationSurvivors     uint64
+	Frequency_PerfTime        uint64
+	Gen0heapsize              uint64
+	Gen0PromotedBytesPerSec   uint64
+	Gen1heapsize              uint64
+	Gen1PromotedBytesPerSec   uint64
+	Gen2heapsize              uint64
+	LargeObjectHeapsize       uint64
+	NumberBytesinallHeaps     uint64
+	NumberGCHandles           uint64
+	NumberGen0Collections     uint64
+	NumberGen1Collections     uint64
+	NumberGen2Collections     uint64
+	NumberInducedGC           uint64
+	NumberofPinnedObjects     uint64
+	NumberofSinkBlocksinuse   uint64
+	NumberTotalcommittedBytes uint64
+	NumberTotalreservedBytes  uint64
 	// PercentTimeinGC has countertype=PERF_RAW_FRACTION.
 	// Formula: (100 * CounterValue) / BaseValue
 	// By docs https://docs.microsoft.com/en-us/previous-versions/windows/internet-explorer/ie-developer/scripting-articles/ms974615(v=msdn.10)#perf_raw_fraction
-	PercentTimeinGC uint32 `mi:"PercentTimeinGC"`
+	PercentTimeinGC uint32
 	// BaseValue is just a "magic" number used to make the calculation come out right.
-	PercentTimeinGC_base               uint32 `mi:"PercentTimeinGC_base"`
-	ProcessID                          uint64 `mi:"ProcessID"`
-	PromotedFinalizationMemoryfromGen0 uint64 `mi:"PromotedFinalizationMemoryfromGen0"`
-	PromotedMemoryfromGen0             uint64 `mi:"PromotedMemoryfromGen0"`
-	PromotedMemoryfromGen1             uint64 `mi:"PromotedMemoryfromGen1"`
+	PercentTimeinGC_base               uint32
+	ProcessID                          uint64
+	PromotedFinalizationMemoryfromGen0 uint64
+	PromotedMemoryfromGen0             uint64
+	PromotedMemoryfromGen1             uint64
 }
 
 func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_NETFramework_NETCLRMemory
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * Win32_PerfRawData_NETFramework_NETCLRMemory"))); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
+	if err := c.wmiClient.Query("SELECT * FROM Win32_PerfRawData_NETFramework_NETCLRMemory", &dst); err != nil {
+		return err
 	}
 
 	for _, process := range dst {

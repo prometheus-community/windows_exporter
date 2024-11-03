@@ -3,11 +3,7 @@
 package netframework
 
 import (
-	"fmt"
-
-	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
-	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -33,19 +29,19 @@ func (c *Collector) buildClrInterop() {
 }
 
 type Win32_PerfRawData_NETFramework_NETCLRInterop struct {
-	Name string `mi:"Name"`
+	Name string
 
-	NumberofCCWs             uint32 `mi:"NumberofCCWs"`
-	Numberofmarshalling      uint32 `mi:"Numberofmarshalling"`
-	NumberofStubs            uint32 `mi:"NumberofStubs"`
-	NumberofTLBexportsPersec uint32 `mi:"NumberofTLBexportsPersec"`
-	NumberofTLBimportsPersec uint32 `mi:"NumberofTLBimportsPersec"`
+	NumberofCCWs             uint32
+	Numberofmarshalling      uint32
+	NumberofStubs            uint32
+	NumberofTLBexportsPersec uint32
+	NumberofTLBimportsPersec uint32
 }
 
 func (c *Collector) collectClrInterop(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_NETFramework_NETCLRInterop
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * Win32_PerfRawData_NETFramework_NETCLRInterop"))); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
+	if err := c.wmiClient.Query("SELECT * FROM Win32_PerfRawData_NETFramework_NETCLRInterop", &dst); err != nil {
+		return err
 	}
 
 	for _, process := range dst {

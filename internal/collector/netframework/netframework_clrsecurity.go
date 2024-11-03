@@ -3,11 +3,7 @@
 package netframework
 
 import (
-	"fmt"
-
-	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
-	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -39,20 +35,20 @@ func (c *Collector) buildClrSecurity() {
 }
 
 type Win32_PerfRawData_NETFramework_NETCLRSecurity struct {
-	Name string `mi:"Name"`
+	Name string
 
-	Frequency_PerfTime           uint32 `mi:"Frequency_PerfTime"`
-	NumberLinkTimeChecks         uint32 `mi:"NumberLinkTimeChecks"`
-	PercentTimeinRTchecks        uint32 `mi:"PercentTimeinRTchecks"`
-	PercentTimeSigAuthenticating uint64 `mi:"PercentTimeSigAuthenticating"`
-	StackWalkDepth               uint32 `mi:"StackWalkDepth"`
-	TotalRuntimeChecks           uint32 `mi:"TotalRuntimeChecks"`
+	Frequency_PerfTime           uint32
+	NumberLinkTimeChecks         uint32
+	PercentTimeinRTchecks        uint32
+	PercentTimeSigAuthenticating uint64
+	StackWalkDepth               uint32
+	TotalRuntimeChecks           uint32
 }
 
 func (c *Collector) collectClrSecurity(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_NETFramework_NETCLRSecurity
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * Win32_PerfRawData_NETFramework_NETCLRSecurity"))); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
+	if err := c.wmiClient.Query("SELECT * FROM Win32_PerfRawData_NETFramework_NETCLRSecurity", &dst); err != nil {
+		return err
 	}
 
 	for _, process := range dst {

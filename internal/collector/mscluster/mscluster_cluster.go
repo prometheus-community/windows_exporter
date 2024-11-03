@@ -1,11 +1,7 @@
 package mscluster
 
 import (
-	"fmt"
-
-	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
-	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -14,85 +10,85 @@ const nameCluster = Name + "_cluster"
 // msClusterCluster represents the MSCluster_Cluster WMI class
 // - https://docs.microsoft.com/en-us/previous-versions/windows/desktop/cluswmi/mscluster-cluster
 type msClusterCluster struct {
-	Name string `mi:"Name"`
+	Name string
 
-	AddEvictDelay                           uint `mi:"AddEvictDelay"`
-	AdminAccessPoint                        uint `mi:"AdminAccessPoint"`
-	AutoAssignNodeSite                      uint `mi:"AutoAssignNodeSite"`
-	AutoBalancerLevel                       uint `mi:"AutoBalancerLevel"`
-	AutoBalancerMode                        uint `mi:"AutoBalancerMode"`
-	BackupInProgress                        uint `mi:"BackupInProgress"`
-	BlockCacheSize                          uint `mi:"BlockCacheSize"`
-	ClusSvcHangTimeout                      uint `mi:"ClusSvcHangTimeout"`
-	ClusSvcRegroupOpeningTimeout            uint `mi:"ClusSvcRegroupOpeningTimeout"`
-	ClusSvcRegroupPruningTimeout            uint `mi:"ClusSvcRegroupPruningTimeout"`
-	ClusSvcRegroupStageTimeout              uint `mi:"ClusSvcRegroupStageTimeout"`
-	ClusSvcRegroupTickInMilliseconds        uint `mi:"ClusSvcRegroupTickInMilliseconds"`
-	ClusterEnforcedAntiAffinity             uint `mi:"ClusterEnforcedAntiAffinity"`
-	ClusterFunctionalLevel                  uint `mi:"ClusterFunctionalLevel"`
-	ClusterGroupWaitDelay                   uint `mi:"ClusterGroupWaitDelay"`
-	ClusterLogLevel                         uint `mi:"ClusterLogLevel"`
-	ClusterLogSize                          uint `mi:"ClusterLogSize"`
-	ClusterUpgradeVersion                   uint `mi:"ClusterUpgradeVersion"`
-	CrossSiteDelay                          uint `mi:"CrossSiteDelay"`
-	CrossSiteThreshold                      uint `mi:"CrossSiteThreshold"`
-	CrossSubnetDelay                        uint `mi:"CrossSubnetDelay"`
-	CrossSubnetThreshold                    uint `mi:"CrossSubnetThreshold"`
-	CsvBalancer                             uint `mi:"CsvBalancer"`
-	DatabaseReadWriteMode                   uint `mi:"DatabaseReadWriteMode"`
-	DefaultNetworkRole                      uint `mi:"DefaultNetworkRole"`
-	DetectedCloudPlatform                   uint `mi:"DetectedCloudPlatform"`
-	DetectManagedEvents                     uint `mi:"DetectManagedEvents"`
-	DetectManagedEventsThreshold            uint `mi:"DetectManagedEventsThreshold"`
-	DisableGroupPreferredOwnerRandomization uint `mi:"DisableGroupPreferredOwnerRandomization"`
-	DrainOnShutdown                         uint `mi:"DrainOnShutdown"`
-	DynamicQuorumEnabled                    uint `mi:"DynamicQuorumEnabled"`
-	EnableSharedVolumes                     uint `mi:"EnableSharedVolumes"`
-	FixQuorum                               uint `mi:"FixQuorum"`
-	GracePeriodEnabled                      uint `mi:"GracePeriodEnabled"`
-	GracePeriodTimeout                      uint `mi:"GracePeriodTimeout"`
-	GroupDependencyTimeout                  uint `mi:"GroupDependencyTimeout"`
-	HangRecoveryAction                      uint `mi:"HangRecoveryAction"`
-	IgnorePersistentStateOnStartup          uint `mi:"IgnorePersistentStateOnStartup"`
-	LogResourceControls                     uint `mi:"LogResourceControls"`
-	LowerQuorumPriorityNodeId               uint `mi:"LowerQuorumPriorityNodeId"`
-	MaxNumberOfNodes                        uint `mi:"MaxNumberOfNodes"`
-	MessageBufferLength                     uint `mi:"MessageBufferLength"`
-	MinimumNeverPreemptPriority             uint `mi:"MinimumNeverPreemptPriority"`
-	MinimumPreemptorPriority                uint `mi:"MinimumPreemptorPriority"`
-	NetftIPSecEnabled                       uint `mi:"NetftIPSecEnabled"`
-	PlacementOptions                        uint `mi:"PlacementOptions"`
-	PlumbAllCrossSubnetRoutes               uint `mi:"PlumbAllCrossSubnetRoutes"`
-	PreventQuorum                           uint `mi:"PreventQuorum"`
-	QuarantineDuration                      uint `mi:"QuarantineDuration"`
-	QuarantineThreshold                     uint `mi:"QuarantineThreshold"`
-	QuorumArbitrationTimeMax                uint `mi:"QuorumArbitrationTimeMax"`
-	QuorumArbitrationTimeMin                uint `mi:"QuorumArbitrationTimeMin"`
-	QuorumLogFileSize                       uint `mi:"QuorumLogFileSize"`
-	QuorumTypeValue                         uint `mi:"QuorumTypeValue"`
-	RequestReplyTimeout                     uint `mi:"RequestReplyTimeout"`
-	ResiliencyDefaultPeriod                 uint `mi:"ResiliencyDefaultPeriod"`
-	ResiliencyLevel                         uint `mi:"ResiliencyLevel"`
-	ResourceDllDeadlockPeriod               uint `mi:"ResourceDllDeadlockPeriod"`
-	RootMemoryReserved                      uint `mi:"RootMemoryReserved"`
-	RouteHistoryLength                      uint `mi:"RouteHistoryLength"`
-	S2DBusTypes                             uint `mi:"S2DBusTypes"`
-	S2DCacheDesiredState                    uint `mi:"S2DCacheDesiredState"`
-	S2DCacheFlashReservePercent             uint `mi:"S2DCacheFlashReservePercent"`
-	S2DCachePageSizeKBytes                  uint `mi:"S2DCachePageSizeKBytes"`
-	S2DEnabled                              uint `mi:"S2DEnabled"`
-	S2DIOLatencyThreshold                   uint `mi:"S2DIOLatencyThreshold"`
-	S2DOptimizations                        uint `mi:"S2DOptimizations"`
-	SameSubnetDelay                         uint `mi:"SameSubnetDelay"`
-	SameSubnetThreshold                     uint `mi:"SameSubnetThreshold"`
-	SecurityLevel                           uint `mi:"SecurityLevel"`
-	SecurityLevelForStorage                 uint `mi:"SecurityLevelForStorage"`
-	SharedVolumeVssWriterOperationTimeout   uint `mi:"SharedVolumeVssWriterOperationTimeout"`
-	ShutdownTimeoutInMinutes                uint `mi:"ShutdownTimeoutInMinutes"`
-	UseClientAccessNetworksForSharedVolumes uint `mi:"UseClientAccessNetworksForSharedVolumes"`
-	WitnessDatabaseWriteTimeout             uint `mi:"WitnessDatabaseWriteTimeout"`
-	WitnessDynamicWeight                    uint `mi:"WitnessDynamicWeight"`
-	WitnessRestartInterval                  uint `mi:"WitnessRestartInterval"`
+	AddEvictDelay                           uint
+	AdminAccessPoint                        uint
+	AutoAssignNodeSite                      uint
+	AutoBalancerLevel                       uint
+	AutoBalancerMode                        uint
+	BackupInProgress                        uint
+	BlockCacheSize                          uint
+	ClusSvcHangTimeout                      uint
+	ClusSvcRegroupOpeningTimeout            uint
+	ClusSvcRegroupPruningTimeout            uint
+	ClusSvcRegroupStageTimeout              uint
+	ClusSvcRegroupTickInMilliseconds        uint
+	ClusterEnforcedAntiAffinity             uint
+	ClusterFunctionalLevel                  uint
+	ClusterGroupWaitDelay                   uint
+	ClusterLogLevel                         uint
+	ClusterLogSize                          uint
+	ClusterUpgradeVersion                   uint
+	CrossSiteDelay                          uint
+	CrossSiteThreshold                      uint
+	CrossSubnetDelay                        uint
+	CrossSubnetThreshold                    uint
+	CsvBalancer                             uint
+	DatabaseReadWriteMode                   uint
+	DefaultNetworkRole                      uint
+	DetectedCloudPlatform                   uint
+	DetectManagedEvents                     uint
+	DetectManagedEventsThreshold            uint
+	DisableGroupPreferredOwnerRandomization uint
+	DrainOnShutdown                         uint
+	DynamicQuorumEnabled                    uint
+	EnableSharedVolumes                     uint
+	FixQuorum                               uint
+	GracePeriodEnabled                      uint
+	GracePeriodTimeout                      uint
+	GroupDependencyTimeout                  uint
+	HangRecoveryAction                      uint
+	IgnorePersistentStateOnStartup          uint
+	LogResourceControls                     uint
+	LowerQuorumPriorityNodeId               uint
+	MaxNumberOfNodes                        uint
+	MessageBufferLength                     uint
+	MinimumNeverPreemptPriority             uint
+	MinimumPreemptorPriority                uint
+	NetftIPSecEnabled                       uint
+	PlacementOptions                        uint
+	PlumbAllCrossSubnetRoutes               uint
+	PreventQuorum                           uint
+	QuarantineDuration                      uint
+	QuarantineThreshold                     uint
+	QuorumArbitrationTimeMax                uint
+	QuorumArbitrationTimeMin                uint
+	QuorumLogFileSize                       uint
+	QuorumTypeValue                         uint
+	RequestReplyTimeout                     uint
+	ResiliencyDefaultPeriod                 uint
+	ResiliencyLevel                         uint
+	ResourceDllDeadlockPeriod               uint
+	RootMemoryReserved                      uint
+	RouteHistoryLength                      uint
+	S2DBusTypes                             uint
+	S2DCacheDesiredState                    uint
+	S2DCacheFlashReservePercent             uint
+	S2DCachePageSizeKBytes                  uint
+	S2DEnabled                              uint
+	S2DIOLatencyThreshold                   uint
+	S2DOptimizations                        uint
+	SameSubnetDelay                         uint
+	SameSubnetThreshold                     uint
+	SecurityLevel                           uint
+	SecurityLevelForStorage                 uint
+	SharedVolumeVssWriterOperationTimeout   uint
+	ShutdownTimeoutInMinutes                uint
+	UseClientAccessNetworksForSharedVolumes uint
+	WitnessDatabaseWriteTimeout             uint
+	WitnessDynamicWeight                    uint
+	WitnessRestartInterval                  uint
 }
 
 func (c *Collector) buildCluster() {
@@ -562,8 +558,8 @@ func (c *Collector) buildCluster() {
 
 func (c *Collector) collectCluster(ch chan<- prometheus.Metric) error {
 	var dst []msClusterCluster
-	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, utils.Must(mi.NewQuery("SELECT * MSCluster_Cluster"))); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
+	if err := c.wmiClient.Query("SELECT * FROM MSCluster_Cluster", &dst, nil, "root/MSCluster"); err != nil {
+		return err
 	}
 
 	for _, v := range dst {
