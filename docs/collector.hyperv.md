@@ -18,9 +18,6 @@ None
 
 | Name                                                                | Description          | Type    | Labels         |
 |---------------------------------------------------------------------|----------------------|---------|----------------|
-| `windows_hyperv_host_lp_guest_run_time_percent`                     | _Not yet documented_ | counter | `core`         |
-| `windows_hyperv_host_lp_hypervisor_run_time_percent`                | _Not yet documented_ | counter | `core`         |
-| `windows_hyperv_host_lp_total_run_time_percent`                     | _Not yet documented_ | counter | `core`         |
 | `windows_hyperv_host_cpu_guest_run_time`                            | _Not yet documented_ | counter | `core`         |
 | `windows_hyperv_host_cpu_hypervisor_run_time`                       | _Not yet documented_ | counter | `core`         |
 | `windows_hyperv_host_cpu_remote_run_time`                           | _Not yet documented_ | counter | `core`         |
@@ -37,6 +34,41 @@ None
 | `windows_hyperv_ethernet_frames_dropped`                            | _Not yet documented_ | counter | `adapter`      |
 | `windows_hyperv_ethernet_frames_received`                           | _Not yet documented_ | counter | `adapter`      |
 | `windows_hyperv_ethernet_frames_sent`                               | _Not yet documented_ | counter | `adapter`      |
+
+### Hyper-V Dynamic Memory Balancer
+
+Some metrics explained: https://learn.microsoft.com/en-us/archive/blogs/chrisavis/monitoring-dynamic-memory-in-windows-server-hyper-v-2012
+
+| Name                                                                          | Description                                                                                          | Type  | Labels     |
+|-------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------|-------|------------|
+| `windows_hyperv_dynamic_memory_balancer_available_memory_bytes`               | This counter represents the amount of memory left on the node.                                       | gauge | `balancer` |
+| `windows_hyperv_dynamic_memory_balancer_available_memory_for_balancing_bytes` | This counter represents the available memory for balancing purposes.                                 | gauge | `balancer` |
+| `windows_hyperv_dynamic_memory_balancer_average_pressure_ratio`               | This counter represents the average system pressure on the balancer node among all balanced objects. | gauge | `balancer` |
+| `windows_hyperv_dynamic_memory_balancer_system_current_pressure_ratio`        | This counter represents the current pressure in the system.                                          | gauge | `balancer` |
+
+
+### Hyper-V Dynamic Memory VM
+
+| Name                                                                   | Description                                                                                    | Type    | Labels |
+|------------------------------------------------------------------------|------------------------------------------------------------------------------------------------|---------|--------|
+| `windows_hyperv_dynamic_memory_vm_added_bytes_total`                   | This counter represents the cumulative amount of memory added to the VM.                       | counter | `vm`   |
+| `windows_hyperv_dynamic_memory_vm_pressure_current_ratio`              | This counter represents the current pressure in the VM.                                        | gauge   | `vm`   |
+| `windows_hyperv_dynamic_memory_vm_guest_available_bytes`               | This counter represents the current amount of available memory in the VM (reported by the VM). | gauge   | `vm`   |
+| `windows_hyperv_dynamic_memory_vm_guest_visible_physical_memory_bytes` | This counter represents the amount of memory visible in the VM                                 | gauge   | `vm`   |
+| `windows_hyperv_dynamic_memory_vm_pressure_maximum_ratio`              | This counter represents the maximum pressure band in the VM.                                   | gauge   | `vm`   |
+| `windows_hyperv_dynamic_memory_vm_add_operations_total`                | This counter represents the total number of add operations for the VM.                         | counter | `vm`   |
+| `windows_hyperv_dynamic_memory_vm_remove_operations_total`             | This counter represents the total number of remove operations for the VM.                      | counter | `vm`   |
+| `windows_hyperv_dynamic_memory_vm_pressure_minimum_ratio`              | This counter represents the minimum pressure band in the VM.                                   | gauge   | `vm`   |
+| `windows_hyperv_dynamic_memory_vm_physical`                            | This counter represents the current amount of memory in the VM.                                | gauge   | `vm`   |
+| `windows_hyperv_dynamic_memory_vm_removed_bytes_total`                 | This counter represents the cumulative amount of memory removed from the VM.                   | counter | `vm`   |
+
+### Hyper-V Hypervisor Logical Processor
+
+| Name                                                                 | Description                                                            | Type    | Labels         |
+|----------------------------------------------------------------------|------------------------------------------------------------------------|---------|----------------|
+| `windows_hyperv_hypervisor_logical_processor_time_total`             | Time that processor spent in different modes (hypervisor, guest, idle) | counter | `core`.`state` |
+| `windows_hyperv_hypervisor_logical_processor_context_switches_total` | The rate of virtual processor context switches on the processor.       | counter | `core`         |
+
 
 ### Hyper-V Hypervisor Root Partition
 
@@ -118,33 +150,6 @@ None
 | `windows_hyperv_virtual_storage_device_lower_latency_seconds`       | This counter represents the average IO transfer latency on the underlying storage subsystem for this virtual device. | gauge   | `device` |
 | `windows_hyperv_virtual_storage_device_io_quota_replenishment_rate` | This counter represents the IO quota replenishment rate for this virtual device.                                     | gauge   | `device` |
 
-### Hyper-V Dynamic Memory Balancer
-
-Some metrics explained: https://learn.microsoft.com/en-us/archive/blogs/chrisavis/monitoring-dynamic-memory-in-windows-server-hyper-v-2012
-
-| Name                                                                          | Description                                                                                          | Type  | Labels     |
-|-------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------|-------|------------|
-| `windows_hyperv_dynamic_memory_balancer_available_memory_bytes`               | This counter represents the amount of memory left on the node.                                       | gauge | `balancer` |
-| `windows_hyperv_dynamic_memory_balancer_available_memory_for_balancing_bytes` | This counter represents the available memory for balancing purposes.                                 | gauge | `balancer` |
-| `windows_hyperv_dynamic_memory_balancer_average_pressure_ratio`               | This counter represents the average system pressure on the balancer node among all balanced objects. | gauge | `balancer` |
-| `windows_hyperv_dynamic_memory_balancer_system_current_pressure_ratio`        | This counter represents the current pressure in the system.                                          | gauge | `balancer` |
-
-
-### Hyper-V Dynamic Memory VM
-
-| Name                                                                   | Description                                                                                    | Type    | Labels |
-|------------------------------------------------------------------------|------------------------------------------------------------------------------------------------|---------|--------|
-| `windows_hyperv_dynamic_memory_vm_added_bytes_total`                   | This counter represents the cummulative amount of memory added to the VM.                      | counter | `vm`   |
-| `windows_hyperv_dynamic_memory_vm_pressure_current_ratio`              | This counter represents the current pressure in the VM.                                        | gauge   | `vm`   |
-| `windows_hyperv_dynamic_memory_vm_guest_available_bytes`               | This counter represents the current amount of available memory in the VM (reported by the VM). | gauge   | `vm`   |
-| `windows_hyperv_dynamic_memory_vm_guest_visible_physical_memory_bytes` | This counter represents the amount of memory visible in the VM                                 | gauge   | `vm`   |
-| `windows_hyperv_dynamic_memory_vm_pressure_maximum_ratio`              | This counter represents the maximum pressure band in the VM.                                   | gauge   | `vm`   |
-| `windows_hyperv_dynamic_memory_vm_add_operations_total`                | This counter represents the total number of add operations for the VM.                         | counter | `vm`   |
-| `windows_hyperv_dynamic_memory_vm_remove_operations_total`             | This counter represents the total number of remove operations for the VM.                      | counter | `vm`   |
-| `windows_hyperv_dynamic_memory_vm_pressure_minimum_ratio`              | This counter represents the minimum pressure band in the VM.                                   | gauge   | `vm`   |
-| `windows_hyperv_dynamic_memory_vm_physical`                            | This counter represents the current amount of memory in the VM.                                | gauge   | `vm`   |
-| `windows_hyperv_dynamic_memory_vm_removed_bytes_total`                 | This counter represents the cummulative amount of memory removed from the VM.                  | counter | `vm`   |
-
 ### Hyper-V VM Vid Partition
 
 | Name                                           | Description                                                             | Type  | Labels |
@@ -154,7 +159,7 @@ Some metrics explained: https://learn.microsoft.com/en-us/archive/blogs/chrisavi
 | `windows_hyperv_vid_remote_physical_pages`     | The number of physical pages not allocated from the preferred NUMA node | gauge | `vm`   |
 
 
-### HyperHyper-V Virtual Machine Health Summary
+### Hyper-V Virtual Machine Health Summary
 
 | Name                             | Description                                                                 | Type  | Labels |
 |----------------------------------|-----------------------------------------------------------------------------|-------|--------|

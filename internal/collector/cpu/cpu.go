@@ -125,31 +125,6 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		nil,
 		nil,
 	)
-
-	c.cStateSecondsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "cstate_seconds_total"),
-		"Time spent in low-power idle state",
-		[]string{"core", "state"},
-		nil,
-	)
-	c.timeTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "time_total"),
-		"Time that processor spent in different modes (dpc, idle, interrupt, privileged, user)",
-		[]string{"core", "mode"},
-		nil,
-	)
-	c.interruptsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "interrupts_total"),
-		"Total number of received and serviced hardware interrupts",
-		[]string{"core"},
-		nil,
-	)
-	c.dpcsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "dpcs_total"),
-		"Total number of received and serviced deferred procedure calls (DPCs)",
-		[]string{"core"},
-		nil,
-	)
 	c.cStateSecondsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "cstate_seconds_total"),
 		"Time spent in low-power idle state",
