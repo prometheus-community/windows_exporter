@@ -27,8 +27,7 @@ var (
 	AllInstances     = []string{"*"}
 )
 
-//nolint:ireturn
-func NewCollector(engine Engine, object string, instances []string, counters []string) (Collector, error) {
+func NewCollector(engine Engine, object string, instances []string, counters []string) (Collector, error) { //nolint:ireturn
 	switch engine {
 	case V1:
 		return v1.NewCollector(object, instances, counters)
