@@ -10,10 +10,10 @@ import (
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
+	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/pkg/collector"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/require"
-	"github.com/yusufpapurcu/wmi"
 )
 
 func FuncBenchmarkCollector[C collector.Collector](b *testing.B, name string, collectFunc collector.BuilderWithFlags[C]) {
@@ -57,14 +57,16 @@ func TestCollector[C collector.Collector, V interface{}](t *testing.T, fn func(*
 	c := fn(conf)
 	ch := make(chan prometheus.Metric, 10000)
 
-	wmiClient := &wmi.Client{
-		AllowMissingFields: true,
-	}
-	wmiClient.SWbemServicesClient, err = wmi.InitializeSWbemServices(wmiClient)
+	miApp, err := mi.Application_Initialize()
+	require.NoError(t, err)
+
+	miSession, err := miApp.NewSession(nil)
 	require.NoError(t, err)
 
 	t.Cleanup(func() {
 		require.NoError(t, c.Close(logger))
+		require.NoError(t, miSession.Close())
+		require.NoError(t, miApp.Close())
 	})
 
 	wg := sync.WaitGroup{}
@@ -78,7 +80,7 @@ func TestCollector[C collector.Collector, V interface{}](t *testing.T, fn func(*
 		}
 	}()
 
-	require.NoError(t, c.Build(logger, wmiClient))
+	require.NoError(t, c.Build(logger, miSession))
 
 	time.Sleep(1 * time.Second)
 
