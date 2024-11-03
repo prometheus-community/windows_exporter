@@ -93,7 +93,7 @@ Some metrics explained: https://learn.microsoft.com/en-us/archive/blogs/chrisavi
 | `windows_hyperv_root_partition_2M_gpa_pages`                     | The number of 2M pages present in the GPA space of the partition                                                                                         | gauge   | None   |
 | `windows_hyperv_root_partition_4K_device_pages`                  | The number of 4K pages present in the device space of the partition                                                                                      | gauge   | None   |
 | `windows_hyperv_root_partition_4K_gpa_pages`                     | The number of 4K pages present in the GPA space of the partition                                                                                         | gauge   | None   |
-| `windows_hyperv_root_partition_virtual_tlb_flush_entires`        | The rate of flushes of the entire virtual TLB                                                                                                            | counter | None   |
+| `windows_hyperv_root_partition_virtual_tlb_flush_entries`        | The rate of flushes of the entire virtual TLB                                                                                                            | counter | None   |
 | `windows_hyperv_root_partition_virtual_tlb_pages`                | The number of pages used by the virtual TLB of the partition                                                                                             | gauge   | None   |
 
 ### Hyper-V Virtual Network Adapter
@@ -140,9 +140,9 @@ Some metrics explained: https://learn.microsoft.com/en-us/archive/blogs/chrisavi
 | `windows_hyperv_virtual_storage_device_error_count_total`           | This counter represents the total number of errors that have occurred on this virtual device.                        | counter | `device` |
 | `windows_hyperv_virtual_storage_device_queue_length`                | This counter represents the average queue length on this virtual device.                                             | gauge   | `device` |
 | `windows_hyperv_virtual_storage_device_bytes_read`                  | This counter represents the total number of bytes that have been read on this virtual device.                        | counter | `device` |
-| `windows_hyperv_virtual_storage_device_operations_read_total`       | This counter represents the total number of read operations that have occured on this virtual device.                | counter | `device` |
+| `windows_hyperv_virtual_storage_device_operations_read_total`       | This counter represents the total number of read operations that have occurred on this virtual device.                | counter | `device` |
 | `windows_hyperv_virtual_storage_device_bytes_written`               | This counter represents the total number of bytes that have been written on this virtual device.                     | counter | `device` |
-| `windows_hyperv_virtual_storage_device_operations_written_total`    | This counter represents the total number of write operations that have occured on this virtual device.               | counter | `device` |
+| `windows_hyperv_virtual_storage_device_operations_written_total`    | This counter represents the total number of write operations that have occurred on this virtual device.               | counter | `device` |
 | `windows_hyperv_virtual_storage_device_latency_seconds`             | This counter represents the average IO transfer latency for this virtual device.                                     | gauge   | `device` |
 | `windows_hyperv_virtual_storage_device_throughput`                  | This counter represents the average number of 8KB IO transfers completed by this virtual device.                     | gauge   | `device` |
 | `windows_hyperv_virtual_storage_device_normalized_throughput`       | This counter represents the average number of IO transfers completed by this virtual device.                         | gauge   | `device` |

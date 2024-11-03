@@ -31,7 +31,7 @@ type collectorHypervisorRootPartition struct {
 	hypervisorRootPartition2MGPAPages                    *prometheus.Desc // \Hyper-V Hypervisor Root Partition(*)\2M GPA pages
 	hypervisorRootPartition4KDevicePages                 *prometheus.Desc // \Hyper-V Hypervisor Root Partition(*)\4K device pages
 	hypervisorRootPartition4KGPAPages                    *prometheus.Desc // \Hyper-V Hypervisor Root Partition(*)\4K GPA pages
-	hypervisorRootPartitionVirtualTLBFlushEntires        *prometheus.Desc // \Hyper-V Hypervisor Root Partition(*)\Virtual TLB Flush Entires/sec
+	hypervisorRootPartitionVirtualTLBFlushEntries        *prometheus.Desc // \Hyper-V Hypervisor Root Partition(*)\Virtual TLB Flush Entries/sec
 	hypervisorRootPartitionVirtualTLBPages               *prometheus.Desc // \Hyper-V Hypervisor Root Partition(*)\Virtual TLB Pages
 }
 
@@ -55,7 +55,7 @@ const (
 	hypervisorRootPartition2MGPAPages                    = "2M GPA pages"
 	hypervisorRootPartition4KDevicePages                 = "4K device pages"
 	hypervisorRootPartition4KGPAPages                    = "4K GPA pages"
-	hypervisorRootPartitionVirtualTLBFlushEntires        = "Virtual TLB Flush Entires/sec"
+	hypervisorRootPartitionVirtualTLBFlushEntries        = "Virtual TLB Flush Entires/sec"
 	hypervisorRootPartitionVirtualTLBPages               = "Virtual TLB Pages"
 )
 
@@ -82,7 +82,7 @@ func (c *Collector) buildHypervisorRootPartition() error {
 		hypervisorRootPartition2MGPAPages,
 		hypervisorRootPartition4KDevicePages,
 		hypervisorRootPartition4KGPAPages,
-		hypervisorRootPartitionVirtualTLBFlushEntires,
+		hypervisorRootPartitionVirtualTLBFlushEntries,
 		hypervisorRootPartitionVirtualTLBPages,
 	})
 
@@ -204,8 +204,8 @@ func (c *Collector) buildHypervisorRootPartition() error {
 		nil,
 		nil,
 	)
-	c.hypervisorRootPartitionVirtualTLBFlushEntires = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "root_partition_virtual_tlb_flush_entires"),
+	c.hypervisorRootPartitionVirtualTLBFlushEntries = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "root_partition_virtual_tlb_flush_entries"),
 		"The rate of flushes of the entire virtual TLB",
 		nil,
 		nil,
@@ -338,9 +338,9 @@ func (c *Collector) collectHypervisorRootPartition(ch chan<- prometheus.Metric) 
 		rootData[hypervisorRootPartition4KGPAPages].FirstValue,
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.hypervisorRootPartitionVirtualTLBFlushEntires,
+		c.hypervisorRootPartitionVirtualTLBFlushEntries,
 		prometheus.CounterValue,
-		rootData[hypervisorRootPartitionVirtualTLBFlushEntires].FirstValue,
+		rootData[hypervisorRootPartitionVirtualTLBFlushEntries].FirstValue,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.hypervisorRootPartitionVirtualTLBPages,

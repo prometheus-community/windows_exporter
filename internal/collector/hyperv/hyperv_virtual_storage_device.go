@@ -82,7 +82,7 @@ func (c *Collector) buildVirtualStorageDevice() error {
 	)
 	c.virtualStorageDeviceReadOperations = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "virtual_storage_device_operations_read_total"),
-		"This counter represents the total number of read operations that have occured on this virtual device.",
+		"This counter represents the total number of read operations that have occurred on this virtual device.",
 		[]string{"device"},
 		nil,
 	)
@@ -94,7 +94,7 @@ func (c *Collector) buildVirtualStorageDevice() error {
 	)
 	c.virtualStorageDeviceWriteOperations = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "virtual_storage_device_operations_written_total"),
-		"This counter represents the total number of write operations that have occured on this virtual device.",
+		"This counter represents the total number of write operations that have occurred on this virtual device.",
 		[]string{"device"},
 		nil,
 	)

@@ -60,7 +60,7 @@ func (c *Collector) buildDynamicMemoryVM() error {
 
 	c.vmMemoryAddedMemory = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "dynamic_memory_vm_added_total"),
-		"This counter represents the cummulative amount of memory added to the VM.",
+		"This counter represents the cumulative amount of memory added to the VM.",
 		[]string{"vm"},
 		nil,
 	)
@@ -114,7 +114,7 @@ func (c *Collector) buildDynamicMemoryVM() error {
 	)
 	c.vmMemoryRemovedMemory = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "dynamic_memory_vm_removed_bytes_total"),
-		"This counter represents the cummulative amount of memory removed from the VM.",
+		"This counter represents the cumulative amount of memory removed from the VM.",
 		[]string{"vm"},
 		nil,
 	)
