@@ -57,9 +57,9 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/time"
 	"github.com/prometheus-community/windows_exporter/internal/collector/update"
 	"github.com/prometheus-community/windows_exporter/internal/collector/vmware"
-	"github.com/prometheus-community/windows_exporter/internal/mi"
 	v1 "github.com/prometheus-community/windows_exporter/internal/perfdata/v1"
 	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/yusufpapurcu/wmi"
 )
 
 // NewWithFlags To be called by the exporter for collector initialization before running kingpin.Parse.
@@ -132,6 +132,9 @@ func NewWithConfig(config Config) *MetricCollectors {
 func New(collectors Map) *MetricCollectors {
 	return &MetricCollectors{
 		Collectors: collectors,
+		WMIClient: &wmi.Client{
+			AllowMissingFields: true,
+		},
 	}
 }
 
@@ -183,9 +186,11 @@ func (c *MetricCollectors) Enable(enabledCollectors []string) error {
 
 // Build To be called by the exporter for collector initialization.
 func (c *MetricCollectors) Build(logger *slog.Logger) error {
-	err := c.initMI()
+	var err error
+
+	c.WMIClient.SWbemServicesClient, err = wmi.InitializeSWbemServices(c.WMIClient)
 	if err != nil {
-		return fmt.Errorf("error from initialize MI: %w", err)
+		return fmt.Errorf("initialize SWbemServices: %w", err)
 	}
 
 	wg := sync.WaitGroup{}
@@ -198,7 +203,7 @@ func (c *MetricCollectors) Build(logger *slog.Logger) error {
 		go func() {
 			defer wg.Done()
 
-			if err = collector.Build(logger, c.MISession); err != nil {
+			if err = collector.Build(logger, c.WMIClient); err != nil {
 				errCh <- fmt.Errorf("error build collector %s: %w", collector.GetName(), err)
 			}
 		}()
@@ -240,42 +245,11 @@ func (c *MetricCollectors) Close(logger *slog.Logger) error {
 		}
 	}
 
-	app, err := c.MISession.GetApplication()
-	if err != nil && !errors.Is(err, mi.ErrNotInitialized) {
-		errs = append(errs, err)
-	}
-
-	if err := c.MISession.Close(); err != nil && !errors.Is(err, mi.ErrNotInitialized) {
-		errs = append(errs, err)
-	}
-
-	if err := app.Close(); err != nil && !errors.Is(err, mi.ErrNotInitialized) {
-		errs = append(errs, err)
+	if c.WMIClient != nil && c.WMIClient.SWbemServicesClient != nil {
+		if err := c.WMIClient.SWbemServicesClient.Close(); err != nil {
+			errs = append(errs, err)
+		}
 	}
 
 	return errors.Join(errs...)
-}
-
-// Close To be called by the exporter for collector cleanup.
-func (c *MetricCollectors) initMI() error {
-	app, err := mi.Application_Initialize()
-	if err != nil {
-		return fmt.Errorf("error from initialize MI application: %w", err)
-	}
-
-	destinationOptions, err := app.NewDestinationOptions()
-	if err != nil {
-		return fmt.Errorf("error from create NewDestinationOptions: %w", err)
-	}
-
-	if err = destinationOptions.SetLocale(mi.LocaleEnglish); err != nil {
-		return fmt.Errorf("error from set locale: %w", err)
-	}
-
-	c.MISession, err = app.NewSession(destinationOptions)
-	if err != nil {
-		return fmt.Errorf("error from create NewSession: %w", err)
-	}
-
-	return nil
 }

@@ -3,11 +3,7 @@
 package netframework
 
 import (
-	"fmt"
-
-	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
-	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -69,30 +65,30 @@ func (c *Collector) buildClrLoading() {
 }
 
 type Win32_PerfRawData_NETFramework_NETCLRLoading struct {
-	Name string `mi:"Name"`
+	Name string
 
-	AssemblySearchLength      uint32 `mi:"AssemblySearchLength"`
-	BytesinLoaderHeap         uint64 `mi:"BytesinLoaderHeap"`
-	Currentappdomains         uint32 `mi:"Currentappdomains"`
-	CurrentAssemblies         uint32 `mi:"CurrentAssemblies"`
-	CurrentClassesLoaded      uint32 `mi:"CurrentClassesLoaded"`
-	PercentTimeLoading        uint64 `mi:"PercentTimeLoading"`
-	Rateofappdomains          uint32 `mi:"Rateofappdomains"`
-	Rateofappdomainsunloaded  uint32 `mi:"Rateofappdomainsunloaded"`
-	RateofAssemblies          uint32 `mi:"RateofAssemblies"`
-	RateofClassesLoaded       uint32 `mi:"RateofClassesLoaded"`
-	RateofLoadFailures        uint32 `mi:"RateofLoadFailures"`
-	TotalAppdomains           uint32 `mi:"TotalAppdomains"`
-	Totalappdomainsunloaded   uint32 `mi:"Totalappdomainsunloaded"`
-	TotalAssemblies           uint32 `mi:"TotalAssemblies"`
-	TotalClassesLoaded        uint32 `mi:"TotalClassesLoaded"`
-	TotalNumberofLoadFailures uint32 `mi:"TotalNumberofLoadFailures"`
+	AssemblySearchLength      uint32
+	BytesinLoaderHeap         uint64
+	Currentappdomains         uint32
+	CurrentAssemblies         uint32
+	CurrentClassesLoaded      uint32
+	PercentTimeLoading        uint64
+	Rateofappdomains          uint32
+	Rateofappdomainsunloaded  uint32
+	RateofAssemblies          uint32
+	RateofClassesLoaded       uint32
+	RateofLoadFailures        uint32
+	TotalAppdomains           uint32
+	Totalappdomainsunloaded   uint32
+	TotalAssemblies           uint32
+	TotalClassesLoaded        uint32
+	TotalNumberofLoadFailures uint32
 }
 
 func (c *Collector) collectClrLoading(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_NETFramework_NETCLRLoading
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * Win32_PerfRawData_NETFramework_NETCLRLoading"))); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
+	if err := c.wmiClient.Query("SELECT * FROM Win32_PerfRawData_NETFramework_NETCLRLoading", &dst); err != nil {
+		return err
 	}
 
 	for _, process := range dst {

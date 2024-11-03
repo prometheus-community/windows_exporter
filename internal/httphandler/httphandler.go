@@ -129,7 +129,7 @@ func (c *MetricsHTTPHandler) handlerFactory(logger *slog.Logger, scrapeTimeout t
 
 		metricCollectors = &collector.MetricCollectors{
 			Collectors:       filteredCollectors,
-			MISession:        c.metricCollectors.MISession,
+			WMIClient:        c.metricCollectors.WMIClient,
 			PerfCounterQuery: c.metricCollectors.PerfCounterQuery,
 		}
 	}

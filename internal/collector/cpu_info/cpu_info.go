@@ -4,15 +4,14 @@ package cpu_info
 
 import (
 	"errors"
-	"fmt"
 	"log/slog"
 	"strconv"
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/yusufpapurcu/wmi"
 )
 
 const Name = "cpu_info"
@@ -23,9 +22,9 @@ var ConfigDefaults = Config{}
 
 // A Collector is a Prometheus Collector for a few WMI metrics in Win32_Processor.
 type Collector struct {
-	config    Config
-	miSession *mi.Session
-	miQuery   mi.Query
+	config Config
+
+	wmiClient *wmi.Client
 
 	cpuInfo                   *prometheus.Desc
 	cpuCoreCount              *prometheus.Desc
@@ -64,19 +63,12 @@ func (c *Collector) Close(_ *slog.Logger) error {
 	return nil
 }
 
-func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
-	if miSession == nil {
-		return errors.New("miSession is nil")
+func (c *Collector) Build(_ *slog.Logger, wmiClient *wmi.Client) error {
+	if wmiClient == nil || wmiClient.SWbemServicesClient == nil {
+		return errors.New("wmiClient or SWbemServicesClient is nil")
 	}
 
-	miQuery, err := mi.NewQuery("SELECT Architecture, DeviceId, Description, Family, L2CacheSize, L3CacheSize, Name, ThreadCount, NumberOfCores, NumberOfEnabledCore, NumberOfLogicalProcessors FROM Win32_Processor")
-	if err != nil {
-		return fmt.Errorf("failed to create WMI query: %w", err)
-	}
-
-	c.miQuery = miQuery
-	c.miSession = miSession
-
+	c.wmiClient = wmiClient
 	c.cpuInfo = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, "", Name),
 		"Labelled CPU information as provided by Win32_Processor",
@@ -141,20 +133,18 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 	return nil
 }
 
-type miProcessor struct {
-	Architecture              uint32 `mi:"Architecture"`
-	DeviceID                  string `mi:"DeviceID"`
-	Description               string `mi:"Description"`
-	Family                    uint16 `mi:"Family"`
-	L2CacheSize               uint32 `mi:"L2CacheSize"`
-	L3CacheSize               uint32 `mi:"L3CacheSize"`
-	Name                      string `mi:"Name"`
-	ThreadCount               uint32 `mi:"ThreadCount"`
-	NumberOfCores             uint32 `mi:"NumberOfCores"`
-	NumberOfEnabledCore       uint32 `mi:"NumberOfEnabledCore"`
-	NumberOfLogicalProcessors uint32 `mi:"NumberOfLogicalProcessors"`
-
-	Total int
+type win32Processor struct {
+	Architecture              uint32
+	DeviceID                  string
+	Description               string
+	Family                    uint16
+	L2CacheSize               uint32
+	L3CacheSize               uint32
+	Name                      string
+	ThreadCount               uint32
+	NumberOfCores             uint32
+	NumberOfEnabledCore       uint32
+	NumberOfLogicalProcessors uint32
 }
 
 // Collect sends the metric values for each metric
@@ -173,9 +163,16 @@ func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan
 }
 
 func (c *Collector) collect(ch chan<- prometheus.Metric) error {
-	var dst []miProcessor
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, c.miQuery); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
+	var dst []win32Processor
+	// We use a static query here because the provided methods in wmi.go all issue a SELECT *;
+	// This results in the time-consuming LoadPercentage field being read which seems to measure each CPU
+	// serially over a 1 second interval, so the scrape time is at least 1s * num_sockets
+	if err := c.wmiClient.Query("SELECT Architecture, DeviceId, Description, Family, L2CacheSize, L3CacheSize, Name, ThreadCount, NumberOfCores, NumberOfEnabledCore, NumberOfLogicalProcessors FROM Win32_Processor", &dst); err != nil {
+		return err
+	}
+
+	if len(dst) == 0 {
+		return errors.New("WMI query returned empty result set")
 	}
 
 	// Some CPUs end up exposing trailing spaces for certain strings, so clean them up

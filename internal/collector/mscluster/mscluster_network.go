@@ -1,11 +1,7 @@
 package mscluster
 
 import (
-	"fmt"
-
-	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
-	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -14,13 +10,13 @@ const nameNetwork = Name + "_network"
 // msClusterNetwork represents the MSCluster_Network WMI class
 // - https://docs.microsoft.com/en-us/previous-versions/windows/desktop/cluswmi/mscluster-network
 type msClusterNetwork struct {
-	Name string `mi:"Name"`
+	Name string
 
-	Characteristics uint `mi:"Characteristics"`
-	Flags           uint `mi:"Flags"`
-	Metric          uint `mi:"Metric"`
-	Role            uint `mi:"Role"`
-	State           uint `mi:"State"`
+	Characteristics uint
+	Flags           uint
+	Metric          uint
+	Role            uint
+	State           uint
 }
 
 func (c *Collector) buildNetwork() {
@@ -61,8 +57,8 @@ func (c *Collector) buildNetwork() {
 func (c *Collector) collectNetwork(ch chan<- prometheus.Metric) error {
 	var dst []msClusterNetwork
 
-	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, utils.Must(mi.NewQuery("SELECT * MSCluster_Node"))); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
+	if err := c.wmiClient.Query("SELECT * FROM MSCluster_Network", &dst, nil, "root/MSCluster"); err != nil {
+		return err
 	}
 
 	for _, v := range dst {

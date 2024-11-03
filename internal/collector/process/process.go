@@ -12,13 +12,13 @@ import (
 	"unsafe"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
 	v1 "github.com/prometheus-community/windows_exporter/internal/perfdata/v1"
 	v2 "github.com/prometheus-community/windows_exporter/internal/perfdata/v2"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/yusufpapurcu/wmi"
 	"golang.org/x/sys/windows"
 )
 
@@ -38,9 +38,7 @@ var ConfigDefaults = Config{
 
 type Collector struct {
 	config    Config
-	miSession *mi.Session
-
-	workerProcessMIQueryQuery mi.Query
+	wmiClient *wmi.Client
 
 	perfDataCollector perfdata.Collector
 
@@ -141,20 +139,14 @@ func (c *Collector) Close(_ *slog.Logger) error {
 	return nil
 }
 
-func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
+func (c *Collector) Build(logger *slog.Logger, wmiClient *wmi.Client) error {
 	logger = logger.With(slog.String("collector", Name))
 
-	if miSession == nil {
-		return errors.New("miSession is nil")
+	if wmiClient == nil || wmiClient.SWbemServicesClient == nil {
+		return errors.New("wmiClient or SWbemServicesClient is nil")
 	}
 
-	miQuery, err := mi.NewQuery("SELECT AppPoolName, ProcessId FROM WorkerProcess")
-	if err != nil {
-		return fmt.Errorf("failed to create WMI query: %w", err)
-	}
-
-	c.workerProcessMIQueryQuery = miQuery
-	c.miSession = miSession
+	c.wmiClient = wmiClient
 
 	if utils.PDHEnabled() {
 		counters := []string{
@@ -310,8 +302,8 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 }
 
 type WorkerProcess struct {
-	AppPoolName string `mi:"AppPoolName"`
-	ProcessId   uint64 `mi:"ProcessId"`
+	AppPoolName string
+	ProcessId   uint64
 }
 
 func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
@@ -341,8 +333,10 @@ func (c *Collector) collect(ctx *types.ScrapeContext, logger *slog.Logger, ch ch
 
 	var workerProcesses []WorkerProcess
 	if c.config.EnableWorkerProcess {
-		if err := c.miSession.Query(&workerProcesses, mi.NamespaceRootWebAdministration, c.workerProcessMIQueryQuery); err != nil {
-			return fmt.Errorf("WMI query failed: %w", err)
+		if err := c.wmiClient.Query("SELECT * FROM WorkerProcess", &workerProcesses, nil, "root\\WebAdministration"); err != nil {
+			logger.Debug("Could not query WebAdministration namespace for IIS worker processes",
+				slog.Any("err", err),
+			)
 		}
 	}
 
@@ -546,8 +540,10 @@ func (c *Collector) collectPDH(logger *slog.Logger, ch chan<- prometheus.Metric)
 
 	var workerProcesses []WorkerProcess
 	if c.config.EnableWorkerProcess {
-		if err := c.miSession.Query(&workerProcesses, mi.NamespaceRootWebAdministration, c.workerProcessMIQueryQuery); err != nil {
-			return fmt.Errorf("WMI query failed: %w", err)
+		if err := c.wmiClient.Query("SELECT * FROM WorkerProcess", &workerProcesses, nil, "root\\WebAdministration"); err != nil {
+			logger.Debug("Could not query WebAdministration namespace for IIS worker processes",
+				slog.Any("err", err),
+			)
 		}
 	}
 

@@ -1,11 +1,7 @@
 package mscluster
 
 import (
-	"fmt"
-
-	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
-	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -14,22 +10,22 @@ const nameResourceGroup = Name + "_resourcegroup"
 // msClusterResourceGroup represents the MSCluster_ResourceGroup WMI class
 // - https://docs.microsoft.com/en-us/previous-versions/windows/desktop/cluswmi/mscluster-resourcegroup
 type msClusterResourceGroup struct {
-	Name string `mi:"Name"`
+	Name string
 
-	AutoFailbackType    uint   `mi:"AutoFailbackType"`
-	Characteristics     uint   `mi:"Characteristics"`
-	ColdStartSetting    uint   `mi:"ColdStartSetting"`
-	DefaultOwner        uint   `mi:"DefaultOwner"`
-	FailbackWindowEnd   int    `mi:"FailbackWindowEnd"`
-	FailbackWindowStart int    `mi:"FailbackWindowStart"`
-	FailoverPeriod      uint   `mi:"FailoverPeriod"`
-	FailoverThreshold   uint   `mi:"FailoverThreshold"`
-	Flags               uint   `mi:"Flags"`
-	GroupType           uint   `mi:"GroupType"`
-	OwnerNode           string `mi:"OwnerNode"`
-	Priority            uint   `mi:"Priority"`
-	ResiliencyPeriod    uint   `mi:"ResiliencyPeriod"`
-	State               uint   `mi:"State"`
+	AutoFailbackType    uint
+	Characteristics     uint
+	ColdStartSetting    uint
+	DefaultOwner        uint
+	FailbackWindowEnd   int
+	FailbackWindowStart int
+	FailoverPeriod      uint
+	FailoverThreshold   uint
+	Flags               uint
+	GroupType           uint
+	OwnerNode           string
+	Priority            uint
+	ResiliencyPeriod    uint
+	State               uint
 }
 
 func (c *Collector) buildResourceGroup() {
@@ -130,8 +126,8 @@ func (c *Collector) buildResourceGroup() {
 func (c *Collector) collectResourceGroup(ch chan<- prometheus.Metric, nodeNames []string) error {
 	var dst []msClusterResourceGroup
 
-	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, utils.Must(mi.NewQuery("SELECT * FROM MSCluster_ResourceGroup"))); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
+	if err := c.wmiClient.Query("SELECT * FROM MSCluster_ResourceGroup", &dst, nil, "root/MSCluster"); err != nil {
+		return err
 	}
 
 	for _, v := range dst {

@@ -9,10 +9,9 @@ import (
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
-	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/yusufpapurcu/wmi"
 )
 
 const Name = "hyperv"
@@ -24,7 +23,7 @@ var ConfigDefaults = Config{}
 // Collector is a Prometheus Collector for hyper-v.
 type Collector struct {
 	config    Config
-	miSession *mi.Session
+	wmiClient *wmi.Client
 
 	// Win32_PerfRawData_VmmsVirtualMachineStats_HyperVVirtualMachineHealthSummary
 	healthCritical *prometheus.Desc
@@ -169,12 +168,12 @@ func (c *Collector) Close(_ *slog.Logger) error {
 	return nil
 }
 
-func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
-	if miSession == nil {
-		return errors.New("miSession is nil")
+func (c *Collector) Build(_ *slog.Logger, wmiClient *wmi.Client) error {
+	if wmiClient == nil || wmiClient.SWbemServicesClient == nil {
+		return errors.New("wmiClient or SWbemServicesClient is nil")
 	}
 
-	c.miSession = miSession
+	c.wmiClient = wmiClient
 
 	buildSubsystemName := func(component string) string { return "hyperv_" + component }
 
@@ -859,14 +858,14 @@ func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan
 
 // Win32_PerfRawData_VmmsVirtualMachineStats_HyperVVirtualMachineHealthSummary vm health status.
 type Win32_PerfRawData_VmmsVirtualMachineStats_HyperVVirtualMachineHealthSummary struct {
-	HealthCritical uint32 `mi:"HealthCritical"`
-	HealthOk       uint32 `mi:"HealthOK"`
+	HealthCritical uint32
+	HealthOk       uint32
 }
 
 func (c *Collector) collectVmHealth(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_VmmsVirtualMachineStats_HyperVVirtualMachineHealthSummary
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * Win32_PerfRawData_VmmsVirtualMachineStats_HyperVVirtualMachineHealthSummary"))); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
+	if err := c.wmiClient.Query("SELECT * FROM Win32_PerfRawData_VmmsVirtualMachineStats_HyperVVirtualMachineHealthSummary", &dst); err != nil {
+		return err
 	}
 
 	for _, health := range dst {
@@ -888,16 +887,16 @@ func (c *Collector) collectVmHealth(ch chan<- prometheus.Metric) error {
 
 // Win32_PerfRawData_VidPerfProvider_HyperVVMVidPartition ..,.
 type Win32_PerfRawData_VidPerfProvider_HyperVVMVidPartition struct {
-	Name                   string `mi:"Name"`
-	PhysicalPagesAllocated uint64 `mi:"PhysicalPagesAllocated"`
-	PreferredNUMANodeIndex uint64 `mi:"PreferredNUMANodeIndex"`
-	RemotePhysicalPages    uint64 `mi:"RemotePhysicalPages"`
+	Name                   string
+	PhysicalPagesAllocated uint64
+	PreferredNUMANodeIndex uint64
+	RemotePhysicalPages    uint64
 }
 
 func (c *Collector) collectVmVid(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_VidPerfProvider_HyperVVMVidPartition
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * Win32_PerfRawData_VidPerfProvider_HyperVVMVidPartition"))); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
+	if err := c.wmiClient.Query("SELECT * FROM Win32_PerfRawData_VidPerfProvider_HyperVVMVidPartition", &dst); err != nil {
+		return err
 	}
 
 	for _, page := range dst {
@@ -932,34 +931,34 @@ func (c *Collector) collectVmVid(ch chan<- prometheus.Metric) error {
 
 // Win32_PerfRawData_HvStats_HyperVHypervisorRootPartition ...
 type Win32_PerfRawData_HvStats_HyperVHypervisorRootPartition struct {
-	Name                          string `mi:"Name"`
-	AddressSpaces                 uint64 `mi:"AddressSpaces"`
-	AttachedDevices               uint64 `mi:"AttachedDevices"`
-	DepositedPages                uint64 `mi:"DepositedPages"`
-	DeviceDMAErrors               uint64 `mi:"DeviceDMAErrors"`
-	DeviceInterruptErrors         uint64 `mi:"DeviceInterruptErrors"`
-	DeviceInterruptMappings       uint64 `mi:"DeviceInterruptMappings"`
-	DeviceInterruptThrottleEvents uint64 `mi:"DeviceInterruptThrottleEvents"`
-	GPAPages                      uint64 `mi:"GPAPages"`
-	GPASpaceModificationsPersec   uint64 `mi:"GPASpaceModificationsPersec"`
-	IOTLBFlushCost                uint64 `mi:"IOTLBFlushCost"`
-	IOTLBFlushesPersec            uint64 `mi:"IOTLBFlushesPersec"`
-	RecommendedVirtualTLBSize     uint64 `mi:"RecommendedVirtualTLBSize"`
-	SkippedTimerTicks             uint64 `mi:"SkippedTimerTicks"`
-	Value1Gdevicepages            uint64 `mi:"Value1Gdevicepages"`
-	Value1GGPApages               uint64 `mi:"Value1GGPApages"`
-	Value2Mdevicepages            uint64 `mi:"Value2Mdevicepages"`
-	Value2MGPApages               uint64 `mi:"Value2MGPApages"`
-	Value4Kdevicepages            uint64 `mi:"Value4Kdevicepages"`
-	Value4KGPApages               uint64 `mi:"Value4KGPApages"`
-	VirtualTLBFlushEntiresPersec  uint64 `mi:"VirtualTLBFlushEntiresPersec"`
-	VirtualTLBPages               uint64 `mi:"VirtualTLBPages"`
+	Name                          string
+	AddressSpaces                 uint64
+	AttachedDevices               uint64
+	DepositedPages                uint64
+	DeviceDMAErrors               uint64
+	DeviceInterruptErrors         uint64
+	DeviceInterruptMappings       uint64
+	DeviceInterruptThrottleEvents uint64
+	GPAPages                      uint64
+	GPASpaceModificationsPersec   uint64
+	IOTLBFlushCost                uint64
+	IOTLBFlushesPersec            uint64
+	RecommendedVirtualTLBSize     uint64
+	SkippedTimerTicks             uint64
+	Value1Gdevicepages            uint64
+	Value1GGPApages               uint64
+	Value2Mdevicepages            uint64
+	Value2MGPApages               uint64
+	Value4Kdevicepages            uint64
+	Value4KGPApages               uint64
+	VirtualTLBFlushEntiresPersec  uint64
+	VirtualTLBPages               uint64
 }
 
 func (c *Collector) collectVmHv(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_HvStats_HyperVHypervisorRootPartition
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * Win32_PerfRawData_HvStats_HyperVHypervisorRootPartition"))); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
+	if err := c.wmiClient.Query("SELECT * FROM Win32_PerfRawData_HvStats_HyperVHypervisorRootPartition", &dst); err != nil {
+		return err
 	}
 
 	for _, obj := range dst {
@@ -1088,14 +1087,14 @@ func (c *Collector) collectVmHv(ch chan<- prometheus.Metric) error {
 
 // Win32_PerfRawData_HvStats_HyperVHypervisor ...
 type Win32_PerfRawData_HvStats_HyperVHypervisor struct {
-	LogicalProcessors uint64 `mi:"LogicalProcessors"`
-	VirtualProcessors uint64 `mi:"VirtualProcessors"`
+	LogicalProcessors uint64
+	VirtualProcessors uint64
 }
 
 func (c *Collector) collectVmProcessor(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_HvStats_HyperVHypervisor
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * Win32_PerfRawData_HvStats_HyperVHypervisor"))); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
+	if err := c.wmiClient.Query("SELECT * FROM Win32_PerfRawData_HvStats_HyperVHypervisor", &dst); err != nil {
+		return err
 	}
 
 	for _, obj := range dst {
@@ -1117,16 +1116,16 @@ func (c *Collector) collectVmProcessor(ch chan<- prometheus.Metric) error {
 
 // Win32_PerfRawData_HvStats_HyperVHypervisorLogicalProcessor ...
 type Win32_PerfRawData_HvStats_HyperVHypervisorLogicalProcessor struct {
-	Name                     string `mi:"Name"`
-	PercentGuestRunTime      uint64 `mi:"PercentGuestRunTime"`
-	PercentHypervisorRunTime uint64 `mi:"PercentHypervisorRunTime"`
-	PercentTotalRunTime      uint64 `mi:"PercentTotalRunTime"`
+	Name                     string
+	PercentGuestRunTime      uint64
+	PercentHypervisorRunTime uint64
+	PercentTotalRunTime      uint
 }
 
 func (c *Collector) collectHostLPUsage(logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_HvStats_HyperVHypervisorLogicalProcessor
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * Win32_PerfRawData_HvStats_HyperVHypervisorLogicalProcessor"))); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
+	if err := c.wmiClient.Query("SELECT * FROM Win32_PerfRawData_HvStats_HyperVHypervisorLogicalProcessor", &dst); err != nil {
+		return err
 	}
 
 	for _, obj := range dst {
@@ -1171,18 +1170,18 @@ func (c *Collector) collectHostLPUsage(logger *slog.Logger, ch chan<- prometheus
 
 // Win32_PerfRawData_HvStats_HyperVHypervisorRootVirtualProcessor ...
 type Win32_PerfRawData_HvStats_HyperVHypervisorRootVirtualProcessor struct {
-	Name                     string `mi:"Name"`
-	PercentGuestRunTime      uint64 `mi:"PercentGuestRunTime"`
-	PercentHypervisorRunTime uint64 `mi:"PercentHypervisorRunTime"`
-	PercentRemoteRunTime     uint64 `mi:"PercentRemoteRunTime"`
-	PercentTotalRunTime      uint64 `mi:"PercentTotalRunTime"`
-	CPUWaitTimePerDispatch   uint64 `mi:"CPUWaitTimePerDispatch"`
+	Name                     string
+	PercentGuestRunTime      uint64
+	PercentHypervisorRunTime uint64
+	PercentRemoteRunTime     uint64
+	PercentTotalRunTime      uint64
+	CPUWaitTimePerDispatch   uint64
 }
 
 func (c *Collector) collectHostCpuUsage(logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_HvStats_HyperVHypervisorRootVirtualProcessor
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * Win32_PerfRawData_HvStats_HyperVHypervisorRootVirtualProcessor"))); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
+	if err := c.wmiClient.Query("SELECT * FROM Win32_PerfRawData_HvStats_HyperVHypervisorRootVirtualProcessor", &dst); err != nil {
+		return err
 	}
 
 	for _, obj := range dst {
@@ -1241,18 +1240,18 @@ func (c *Collector) collectHostCpuUsage(logger *slog.Logger, ch chan<- prometheu
 
 // Win32_PerfRawData_HvStats_HyperVHypervisorVirtualProcessor ...
 type Win32_PerfRawData_HvStats_HyperVHypervisorVirtualProcessor struct {
-	Name                     string `mi:"Name"`
-	PercentGuestRunTime      uint64 `mi:"PercentGuestRunTime"`
-	PercentHypervisorRunTime uint64 `mi:"PercentHypervisorRunTime"`
-	PercentRemoteRunTime     uint64 `mi:"PercentRemoteRunTime"`
-	PercentTotalRunTime      uint64 `mi:"PercentTotalRunTime"`
-	CPUWaitTimePerDispatch   uint64 `mi:"CPUWaitTimePerDispatch"`
+	Name                     string
+	PercentGuestRunTime      uint64
+	PercentHypervisorRunTime uint64
+	PercentRemoteRunTime     uint64
+	PercentTotalRunTime      uint64
+	CPUWaitTimePerDispatch   uint64
 }
 
 func (c *Collector) collectVmCpuUsage(logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_HvStats_HyperVHypervisorVirtualProcessor
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * Win32_PerfRawData_HvStats_HyperVHypervisorVirtualProcessor"))); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
+	if err := c.wmiClient.Query("SELECT * FROM Win32_PerfRawData_HvStats_HyperVHypervisorVirtualProcessor", &dst); err != nil {
+		return err
 	}
 
 	for _, obj := range dst {
@@ -1319,37 +1318,37 @@ func (c *Collector) collectVmCpuUsage(logger *slog.Logger, ch chan<- prometheus.
 
 // Win32_PerfRawData_NvspSwitchStats_HyperVVirtualSwitch ...
 type Win32_PerfRawData_NvspSwitchStats_HyperVVirtualSwitch struct {
-	Name                                   string `mi:"Name"`
-	BroadcastPacketsReceivedPersec         uint64 `mi:"BroadcastPacketsReceivedPersec"`
-	BroadcastPacketsSentPersec             uint64 `mi:"BroadcastPacketsSentPersec"`
-	BytesPersec                            uint64 `mi:"BytesPersec"`
-	BytesReceivedPersec                    uint64 `mi:"BytesReceivedPersec"`
-	BytesSentPersec                        uint64 `mi:"BytesSentPersec"`
-	DirectedPacketsReceivedPersec          uint64 `mi:"DirectedPacketsReceivedPersec"`
-	DirectedPacketsSentPersec              uint64 `mi:"DirectedPacketsSentPersec"`
-	DroppedPacketsIncomingPersec           uint64 `mi:"DroppedPacketsIncomingPersec"`
-	DroppedPacketsOutgoingPersec           uint64 `mi:"DroppedPacketsOutgoingPersec"`
-	ExtensionsDroppedPacketsIncomingPersec uint64 `mi:"ExtensionsDroppedPacketsIncomingPersec"`
-	ExtensionsDroppedPacketsOutgoingPersec uint64 `mi:"ExtensionsDroppedPacketsOutgoingPersec"`
-	LearnedMacAddresses                    uint64 `mi:"LearnedMacAddresses"`
-	LearnedMacAddressesPersec              uint64 `mi:"LearnedMacAddressesPersec"`
-	MulticastPacketsReceivedPersec         uint64 `mi:"MulticastPacketsReceivedPersec"`
-	MulticastPacketsSentPersec             uint64 `mi:"MulticastPacketsSentPersec"`
-	NumberofSendChannelMovesPersec         uint64 `mi:"NumberofSendChannelMovesPersec"`
-	NumberofVMQMovesPersec                 uint64 `mi:"NumberofVMQMovesPersec"`
-	PacketsFlooded                         uint64 `mi:"PacketsFlooded"`
-	PacketsFloodedPersec                   uint64 `mi:"PacketsFloodedPersec"`
-	PacketsPersec                          uint64 `mi:"PacketsPersec"`
-	PacketsReceivedPersec                  uint64 `mi:"PacketsReceivedPersec"`
-	PacketsSentPersec                      uint64 `mi:"PacketsSentPersec"`
-	PurgedMacAddresses                     uint64 `mi:"PurgedMacAddresses"`
-	PurgedMacAddressesPersec               uint64 `mi:"PurgedMacAddressesPersec"`
+	Name                                   string
+	BroadcastPacketsReceivedPersec         uint64
+	BroadcastPacketsSentPersec             uint64
+	BytesPersec                            uint64
+	BytesReceivedPersec                    uint64
+	BytesSentPersec                        uint64
+	DirectedPacketsReceivedPersec          uint64
+	DirectedPacketsSentPersec              uint64
+	DroppedPacketsIncomingPersec           uint64
+	DroppedPacketsOutgoingPersec           uint64
+	ExtensionsDroppedPacketsIncomingPersec uint64
+	ExtensionsDroppedPacketsOutgoingPersec uint64
+	LearnedMacAddresses                    uint64
+	LearnedMacAddressesPersec              uint64
+	MulticastPacketsReceivedPersec         uint64
+	MulticastPacketsSentPersec             uint64
+	NumberofSendChannelMovesPersec         uint64
+	NumberofVMQMovesPersec                 uint64
+	PacketsFlooded                         uint64
+	PacketsFloodedPersec                   uint64
+	PacketsPersec                          uint64
+	PacketsReceivedPersec                  uint64
+	PacketsSentPersec                      uint64
+	PurgedMacAddresses                     uint64
+	PurgedMacAddressesPersec               uint64
 }
 
 func (c *Collector) collectVmSwitch(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_NvspSwitchStats_HyperVVirtualSwitch
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * Win32_PerfRawData_NvspSwitchStats_HyperVVirtualSwitch"))); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
+	if err := c.wmiClient.Query("SELECT * FROM Win32_PerfRawData_NvspSwitchStats_HyperVVirtualSwitch", &dst); err != nil {
+		return err
 	}
 
 	for _, obj := range dst {
@@ -1501,19 +1500,19 @@ func (c *Collector) collectVmSwitch(ch chan<- prometheus.Metric) error {
 
 // Win32_PerfRawData_EthernetPerfProvider_HyperVLegacyNetworkAdapter ...
 type Win32_PerfRawData_EthernetPerfProvider_HyperVLegacyNetworkAdapter struct {
-	Name                 string `mi:"Name"`
-	BytesDropped         uint64 `mi:"BytesDropped"`
-	BytesReceivedPersec  uint64 `mi:"BytesReceivedPersec"`
-	BytesSentPersec      uint64 `mi:"BytesSentPersec"`
-	FramesDropped        uint64 `mi:"FramesDropped"`
-	FramesReceivedPersec uint64 `mi:"FramesReceivedPersec"`
-	FramesSentPersec     uint64 `mi:"FramesSentPersec"`
+	Name                 string
+	BytesDropped         uint64
+	BytesReceivedPersec  uint64
+	BytesSentPersec      uint64
+	FramesDropped        uint64
+	FramesReceivedPersec uint64
+	FramesSentPersec     uint64
 }
 
 func (c *Collector) collectVmEthernet(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_EthernetPerfProvider_HyperVLegacyNetworkAdapter
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * Win32_PerfRawData_EthernetPerfProvider_HyperVLegacyNetworkAdapter"))); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
+	if err := c.wmiClient.Query("SELECT * FROM Win32_PerfRawData_EthernetPerfProvider_HyperVLegacyNetworkAdapter", &dst); err != nil {
+		return err
 	}
 
 	for _, obj := range dst {
@@ -1569,19 +1568,19 @@ func (c *Collector) collectVmEthernet(ch chan<- prometheus.Metric) error {
 
 // Win32_PerfRawData_Counters_HyperVVirtualStorageDevice ...
 type Win32_PerfRawData_Counters_HyperVVirtualStorageDevice struct {
-	Name                  string `mi:"Name"`
-	ErrorCount            uint64 `mi:"ErrorCount"`
-	QueueLength           uint32 `mi:"QueueLength"`
-	ReadBytesPersec       uint64 `mi:"ReadBytesPersec"`
-	ReadOperationsPerSec  uint64 `mi:"ReadOperationsPerSec"`
-	WriteBytesPersec      uint64 `mi:"WriteBytesPersec"`
-	WriteOperationsPerSec uint64 `mi:"WriteOperationsPerSec"`
+	Name                  string
+	ErrorCount            uint64
+	QueueLength           uint32
+	ReadBytesPersec       uint64
+	ReadOperationsPerSec  uint64
+	WriteBytesPersec      uint64
+	WriteOperationsPerSec uint64
 }
 
 func (c *Collector) collectVmStorage(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_Counters_HyperVVirtualStorageDevice
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * Win32_PerfRawData_Counters_HyperVVirtualStorageDevice"))); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
+	if err := c.wmiClient.Query("SELECT * FROM Win32_PerfRawData_Counters_HyperVVirtualStorageDevice", &dst); err != nil {
+		return err
 	}
 
 	for _, obj := range dst {
@@ -1637,19 +1636,19 @@ func (c *Collector) collectVmStorage(ch chan<- prometheus.Metric) error {
 
 // Win32_PerfRawData_NvspNicStats_HyperVVirtualNetworkAdapter ...
 type Win32_PerfRawData_NvspNicStats_HyperVVirtualNetworkAdapter struct {
-	Name                         string `mi:"Name"`
-	BytesReceivedPersec          uint64 `mi:"BytesReceivedPersec"`
-	BytesSentPersec              uint64 `mi:"BytesSentPersec"`
-	DroppedPacketsIncomingPersec uint64 `mi:"DroppedPacketsIncomingPersec"`
-	DroppedPacketsOutgoingPersec uint64 `mi:"DroppedPacketsOutgoingPersec"`
-	PacketsReceivedPersec        uint64 `mi:"PacketsReceivedPersec"`
-	PacketsSentPersec            uint64 `mi:"PacketsSentPersec"`
+	Name                         string
+	BytesReceivedPersec          uint64
+	BytesSentPersec              uint64
+	DroppedPacketsIncomingPersec uint64
+	DroppedPacketsOutgoingPersec uint64
+	PacketsReceivedPersec        uint64
+	PacketsSentPersec            uint64
 }
 
 func (c *Collector) collectVmNetwork(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_NvspNicStats_HyperVVirtualNetworkAdapter
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * Win32_PerfRawData_NvspNicStats_HyperVVirtualNetworkAdapter"))); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
+	if err := c.wmiClient.Query("SELECT * FROM Win32_PerfRawData_NvspNicStats_HyperVVirtualNetworkAdapter", &dst); err != nil {
+		return err
 	}
 
 	for _, obj := range dst {
@@ -1705,23 +1704,23 @@ func (c *Collector) collectVmNetwork(ch chan<- prometheus.Metric) error {
 
 // Win32_PerfRawData_BalancerStats_HyperVDynamicMemoryVM ...
 type Win32_PerfRawData_BalancerStats_HyperVDynamicMemoryVM struct {
-	Name                       string `mi:"Name"`
-	AddedMemory                uint64 `mi:"AddedMemory"`
-	AveragePressure            uint64 `mi:"AveragePressure"`
-	CurrentPressure            uint64 `mi:"CurrentPressure"`
-	GuestVisiblePhysicalMemory uint64 `mi:"GuestVisiblePhysicalMemory"`
-	MaximumPressure            uint64 `mi:"MaximumPressure"`
-	MemoryAddOperations        uint64 `mi:"MemoryAddOperations"`
-	MemoryRemoveOperations     uint64 `mi:"MemoryRemoveOperations"`
-	MinimumPressure            uint64 `mi:"MinimumPressure"`
-	PhysicalMemory             uint64 `mi:"PhysicalMemory"`
-	RemovedMemory              uint64 `mi:"RemovedMemory"`
+	Name                       string
+	AddedMemory                uint64
+	AveragePressure            uint64
+	CurrentPressure            uint64
+	GuestVisiblePhysicalMemory uint64
+	MaximumPressure            uint64
+	MemoryAddOperations        uint64
+	MemoryRemoveOperations     uint64
+	MinimumPressure            uint64
+	PhysicalMemory             uint64
+	RemovedMemory              uint64
 }
 
 func (c *Collector) collectVmMemory(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_BalancerStats_HyperVDynamicMemoryVM
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * Win32_PerfRawData_BalancerStats_HyperVDynamicMemoryVM"))); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
+	if err := c.wmiClient.Query("SELECT * FROM Win32_PerfRawData_BalancerStats_HyperVDynamicMemoryVM", &dst); err != nil {
+		return err
 	}
 
 	for _, obj := range dst {

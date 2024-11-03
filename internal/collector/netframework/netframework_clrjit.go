@@ -3,11 +3,7 @@
 package netframework
 
 import (
-	"fmt"
-
-	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
-	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -39,21 +35,21 @@ func (c *Collector) buildClrJIT() {
 }
 
 type Win32_PerfRawData_NETFramework_NETCLRJit struct {
-	Name string `mi:"Name"`
+	Name string
 
-	Frequency_PerfTime         uint32 `mi:"Frequency_PerfTime"`
-	ILBytesJittedPersec        uint32 `mi:"ILBytesJittedPersec"`
-	NumberofILBytesJitted      uint32 `mi:"NumberofILBytesJitted"`
-	NumberofMethodsJitted      uint32 `mi:"NumberofMethodsJitted"`
-	PercentTimeinJit           uint32 `mi:"PercentTimeinJit"`
-	StandardJitFailures        uint32 `mi:"StandardJitFailures"`
-	TotalNumberofILBytesJitted uint32 `mi:"TotalNumberofILBytesJitted"`
+	Frequency_PerfTime         uint32
+	ILBytesJittedPersec        uint32
+	NumberofILBytesJitted      uint32
+	NumberofMethodsJitted      uint32
+	PercentTimeinJit           uint32
+	StandardJitFailures        uint32
+	TotalNumberofILBytesJitted uint32
 }
 
 func (c *Collector) collectClrJIT(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_NETFramework_NETCLRJit
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * Win32_PerfRawData_NETFramework_NETCLRJit"))); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
+	if err := c.wmiClient.Query("SELECT * FROM Win32_PerfRawData_NETFramework_NETCLRJit", &dst); err != nil {
+		return err
 	}
 
 	for _, process := range dst {
