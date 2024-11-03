@@ -3,7 +3,11 @@
 package netframework
 
 import (
+	"fmt"
+
+	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -47,21 +51,21 @@ func (c *Collector) buildClrRemoting() {
 }
 
 type Win32_PerfRawData_NETFramework_NETCLRRemoting struct {
-	Name string
+	Name string `mi:"Name"`
 
-	Channels                       uint32
-	ContextBoundClassesLoaded      uint32
-	ContextBoundObjectsAllocPersec uint32
-	ContextProxies                 uint32
-	Contexts                       uint32
-	RemoteCallsPersec              uint32
-	TotalRemoteCalls               uint32
+	Channels                       uint32 `mi:"Channels"`
+	ContextBoundClassesLoaded      uint32 `mi:"ContextBoundClassesLoaded"`
+	ContextBoundObjectsAllocPersec uint32 `mi:"ContextBoundObjectsAllocPersec"`
+	ContextProxies                 uint32 `mi:"ContextProxies"`
+	Contexts                       uint32 `mi:"Contexts"`
+	RemoteCallsPersec              uint32 `mi:"RemoteCallsPersec"`
+	TotalRemoteCalls               uint32 `mi:"TotalRemoteCalls"`
 }
 
 func (c *Collector) collectClrRemoting(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_NETFramework_NETCLRRemoting
-	if err := c.wmiClient.Query("SELECT * FROM Win32_PerfRawData_NETFramework_NETCLRRemoting", &dst); err != nil {
-		return err
+	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * Win32_PerfRawData_NETFramework_NETCLRRemoting"))); err != nil {
+		return fmt.Errorf("WMI query failed: %w", err)
 	}
 
 	for _, process := range dst {

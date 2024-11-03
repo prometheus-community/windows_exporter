@@ -6,9 +6,9 @@ import (
 	"log/slog"
 
 	"github.com/alecthomas/kingpin/v2"
+	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/yusufpapurcu/wmi"
 )
 
 const Name = "nps"
@@ -20,7 +20,10 @@ var ConfigDefaults = Config{}
 // Collector is a Prometheus Collector for WMI Win32_PerfRawData_IAS_NPSAuthenticationServer and Win32_PerfRawData_IAS_NPSAccountingServer metrics.
 type Collector struct {
 	config    Config
-	wmiClient *wmi.Client
+	miSession *mi.Session
+
+	miQueryAuthenticationServer mi.Query
+	miQueryAccountingServer     mi.Query
 
 	accessAccepts           *prometheus.Desc
 	accessChallenges        *prometheus.Desc
@@ -78,12 +81,26 @@ func (c *Collector) Close(_ *slog.Logger) error {
 	return nil
 }
 
-func (c *Collector) Build(_ *slog.Logger, wmiClient *wmi.Client) error {
-	if wmiClient == nil || wmiClient.SWbemServicesClient == nil {
-		return errors.New("wmiClient or SWbemServicesClient is nil")
+func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
+	if miSession == nil {
+		return errors.New("miSession is nil")
 	}
 
-	c.wmiClient = wmiClient
+	miQuery, err := mi.NewQuery("SELECT Name, AccessAccepts, AccessChallenges, AccessRejects, AccessRequests, AccessBadAuthenticators, AccessDroppedPackets, AccessInvalidRequests, AccessMalformedPackets, AccessPacketsReceived, AccessPacketsSent, AccessServerResetTime, AccessServerUpTime, AccessUnknownType FROM Win32_PerfRawData_IAS_NPSAuthenticationServer")
+	if err != nil {
+		return fmt.Errorf("failed to create WMI query: %w", err)
+	}
+
+	c.miQueryAuthenticationServer = miQuery
+
+	miQuery, err = mi.NewQuery("SELECT Name, AccountingRequests, AccountingResponses, AccountingBadAuthenticators, AccountingDroppedPackets, AccountingInvalidRequests, AccountingMalformedPackets, AccountingNoRecord, AccountingPacketsReceived, AccountingPacketsSent, AccountingServerResetTime, AccountingServerUpTime, AccountingUnknownType FROM Win32_PerfRawData_IAS_NPSAccountingServer")
+	if err != nil {
+		return fmt.Errorf("failed to create WMI query: %w", err)
+	}
+
+	c.miQueryAccountingServer = miQuery
+	c.miSession = miSession
+
 	c.accessAccepts = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "access_accepts"),
 		"(AccessAccepts)",
@@ -261,46 +278,46 @@ func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan
 // Win32_PerfRawData_IAS_NPSAuthenticationServer docs:
 // at the moment there is no Microsoft documentation.
 type Win32_PerfRawData_IAS_NPSAuthenticationServer struct {
-	Name string
+	Name string `mi:"Name"`
 
-	AccessAccepts           uint32
-	AccessChallenges        uint32
-	AccessRejects           uint32
-	AccessRequests          uint32
-	AccessBadAuthenticators uint32
-	AccessDroppedPackets    uint32
-	AccessInvalidRequests   uint32
-	AccessMalformedPackets  uint32
-	AccessPacketsReceived   uint32
-	AccessPacketsSent       uint32
-	AccessServerResetTime   uint32
-	AccessServerUpTime      uint32
-	AccessUnknownType       uint32
+	AccessAccepts           uint32 `mi:"AccessAccepts"`
+	AccessChallenges        uint32 `mi:"AccessChallenges"`
+	AccessRejects           uint32 `mi:"AccessRejects"`
+	AccessRequests          uint32 `mi:"AccessRequests"`
+	AccessBadAuthenticators uint32 `mi:"AccessBadAuthenticators"`
+	AccessDroppedPackets    uint32 `mi:"AccessDroppedPackets"`
+	AccessInvalidRequests   uint32 `mi:"AccessInvalidRequests"`
+	AccessMalformedPackets  uint32 `mi:"AccessMalformedPackets"`
+	AccessPacketsReceived   uint32 `mi:"AccessPacketsReceived"`
+	AccessPacketsSent       uint32 `mi:"AccessPacketsSent"`
+	AccessServerResetTime   uint32 `mi:"AccessServerResetTime"`
+	AccessServerUpTime      uint32 `mi:"AccessServerUpTime"`
+	AccessUnknownType       uint32 `mi:"AccessUnknownType"`
 }
 
 type Win32_PerfRawData_IAS_NPSAccountingServer struct {
-	Name string
+	Name string `mi:"Name"`
 
-	AccountingRequests          uint32
-	AccountingResponses         uint32
-	AccountingBadAuthenticators uint32
-	AccountingDroppedPackets    uint32
-	AccountingInvalidRequests   uint32
-	AccountingMalformedPackets  uint32
-	AccountingNoRecord          uint32
-	AccountingPacketsReceived   uint32
-	AccountingPacketsSent       uint32
-	AccountingServerResetTime   uint32
-	AccountingServerUpTime      uint32
-	AccountingUnknownType       uint32
+	AccountingRequests          uint32 `mi:"AccountingRequests"`
+	AccountingResponses         uint32 `mi:"AccountingResponses"`
+	AccountingBadAuthenticators uint32 `mi:"AccountingBadAuthenticators"`
+	AccountingDroppedPackets    uint32 `mi:"AccountingDroppedPackets"`
+	AccountingInvalidRequests   uint32 `mi:"AccountingInvalidRequests"`
+	AccountingMalformedPackets  uint32 `mi:"AccountingMalformedPackets"`
+	AccountingNoRecord          uint32 `mi:"AccountingNoRecord"`
+	AccountingPacketsReceived   uint32 `mi:"AccountingPacketsReceived"`
+	AccountingPacketsSent       uint32 `mi:"AccountingPacketsSent"`
+	AccountingServerResetTime   uint32 `mi:"AccountingServerResetTime"`
+	AccountingServerUpTime      uint32 `mi:"AccountingServerUpTime"`
+	AccountingUnknownType       uint32 `mi:"AccountingUnknownType"`
 }
 
 // CollectAccept sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *Collector) CollectAccept(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_IAS_NPSAuthenticationServer
-	if err := c.wmiClient.Query("SELECT * FROM Win32_PerfRawData_IAS_NPSAuthenticationServer", &dst); err != nil {
-		return err
+	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, c.miQueryAuthenticationServer); err != nil {
+		return fmt.Errorf("WMI query failed: %w", err)
 	}
 
 	ch <- prometheus.MustNewConstMetric(
@@ -386,8 +403,8 @@ func (c *Collector) CollectAccept(ch chan<- prometheus.Metric) error {
 
 func (c *Collector) CollectAccounting(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_IAS_NPSAccountingServer
-	if err := c.wmiClient.Query("SELECT * FROM Win32_PerfRawData_IAS_NPSAccountingServer", &dst); err != nil {
-		return err
+	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, c.miQueryAccountingServer); err != nil {
+		return fmt.Errorf("WMI query failed: %w", err)
 	}
 
 	ch <- prometheus.MustNewConstMetric(

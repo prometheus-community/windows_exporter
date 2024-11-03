@@ -4,13 +4,14 @@ package fsrmquota
 
 import (
 	"errors"
+	"fmt"
 	"log/slog"
 
 	"github.com/alecthomas/kingpin/v2"
+	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/yusufpapurcu/wmi"
 )
 
 const Name = "fsrmquota"
@@ -21,7 +22,8 @@ var ConfigDefaults = Config{}
 
 type Collector struct {
 	config    Config
-	wmiClient *wmi.Client
+	miSession *mi.Session
+	miQuery   mi.Query
 
 	quotasCount *prometheus.Desc
 	peakUsage   *prometheus.Desc
@@ -63,12 +65,18 @@ func (c *Collector) Close(_ *slog.Logger) error {
 	return nil
 }
 
-func (c *Collector) Build(_ *slog.Logger, wmiClient *wmi.Client) error {
-	if wmiClient == nil || wmiClient.SWbemServicesClient == nil {
-		return errors.New("wmiClient or SWbemServicesClient is nil")
+func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
+	if miSession == nil {
+		return errors.New("miSession is nil")
 	}
 
-	c.wmiClient = wmiClient
+	miQuery, err := mi.NewQuery("SELECT * FROM MSFT_FSRMQuota")
+	if err != nil {
+		return fmt.Errorf("failed to create WMI query: %w", err)
+	}
+
+	c.miQuery = miQuery
+	c.miSession = miSession
 
 	c.quotasCount = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "count"),
@@ -146,28 +154,27 @@ func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan
 // MSFT_FSRMQuota docs:
 // https://docs.microsoft.com/en-us/previous-versions/windows/desktop/fsrm/msft-fsrmquota
 type MSFT_FSRMQuota struct {
-	Name string
+	Name string `mi:"Name"`
 
-	Path        string
-	PeakUsage   uint64
-	Size        uint64
-	Usage       uint64
-	Description string
-	Template    string
-	// Threshold             string
-	Disabled        bool
-	MatchesTemplate bool
-	SoftLimit       bool
+	Path        string `mi:"Path"`
+	PeakUsage   uint64 `mi:"PeakUsage"`
+	Size        uint64 `mi:"Size"`
+	Usage       uint64 `mi:"Usage"`
+	Description string `mi:"Description"`
+	Template    string `mi:"Template"`
+	// Threshold string `mi:"Threshold"`
+	Disabled        bool `mi:"Disabled"`
+	MatchesTemplate bool `mi:"MatchesTemplate"`
+	SoftLimit       bool `mi:"SoftLimit"`
 }
 
 func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	var dst []MSFT_FSRMQuota
+	if err := c.miSession.Query(&dst, mi.NamespaceRootWindowsFSRM, c.miQuery); err != nil {
+		return fmt.Errorf("WMI query failed: %w", err)
+	}
 
 	var count int
-
-	if err := c.wmiClient.Query("SELECT * FROM MSFT_FSRMQuota", &dst, nil, "root/microsoft/windows/fsrm"); err != nil {
-		return err
-	}
 
 	for _, quota := range dst {
 		count++

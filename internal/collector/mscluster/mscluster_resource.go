@@ -1,7 +1,11 @@
 package mscluster
 
 import (
+	"fmt"
+
+	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -10,27 +14,27 @@ const nameResource = Name + "_resource"
 // msClusterResource represents the MSCluster_Resource WMI class
 // - https://docs.microsoft.com/en-us/previous-versions/windows/desktop/cluswmi/mscluster-resource
 type msClusterResource struct {
-	Name       string
-	Type       string
-	OwnerGroup string
-	OwnerNode  string
+	Name       string `mi:"Name"`
+	Type       string `mi:"Type"`
+	OwnerGroup string `mi:"OwnerGroup"`
+	OwnerNode  string `mi:"OwnerNode"`
 
-	Characteristics        uint
-	DeadlockTimeout        uint
-	EmbeddedFailureAction  uint
-	Flags                  uint
-	IsAlivePollInterval    uint
-	LooksAlivePollInterval uint
-	MonitorProcessId       uint
-	PendingTimeout         uint
-	ResourceClass          uint
-	RestartAction          uint
-	RestartDelay           uint
-	RestartPeriod          uint
-	RestartThreshold       uint
-	RetryPeriodOnFailure   uint
-	State                  uint
-	Subclass               uint
+	Characteristics        uint `mi:"Characteristics"`
+	DeadlockTimeout        uint `mi:"DeadlockTimeout"`
+	EmbeddedFailureAction  uint `mi:"EmbeddedFailureAction"`
+	Flags                  uint `mi:"Flags"`
+	IsAlivePollInterval    uint `mi:"IsAlivePollInterval"`
+	LooksAlivePollInterval uint `mi:"LooksAlivePollInterval"`
+	MonitorProcessId       uint `mi:"MonitorProcessId"`
+	PendingTimeout         uint `mi:"PendingTimeout"`
+	ResourceClass          uint `mi:"ResourceClass"`
+	RestartAction          uint `mi:"RestartAction"`
+	RestartDelay           uint `mi:"RestartDelay"`
+	RestartPeriod          uint `mi:"RestartPeriod"`
+	RestartThreshold       uint `mi:"RestartThreshold"`
+	RetryPeriodOnFailure   uint `mi:"RetryPeriodOnFailure"`
+	State                  uint `mi:"State"`
+	Subclass               uint `mi:"Subclass"`
 }
 
 func (c *Collector) buildResource() {
@@ -149,8 +153,8 @@ func (c *Collector) buildResource() {
 func (c *Collector) collectResource(ch chan<- prometheus.Metric, nodeNames []string) error {
 	var dst []msClusterResource
 
-	if err := c.wmiClient.Query("SELECT * FROM MSCluster_Resource", &dst, nil, "root/MSCluster"); err != nil {
-		return err
+	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, utils.Must(mi.NewQuery("SELECT * FROM MSCluster_Resource"))); err != nil {
+		return fmt.Errorf("WMI query failed: %w", err)
 	}
 
 	for _, v := range dst {
