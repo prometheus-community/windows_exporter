@@ -4,13 +4,14 @@ package vmware
 
 import (
 	"errors"
+	"fmt"
 	"log/slog"
 
 	"github.com/alecthomas/kingpin/v2"
+	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata/perftypes"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/yusufpapurcu/wmi"
 )
 
 const Name = "vmware"
@@ -21,8 +22,10 @@ var ConfigDefaults = Config{}
 
 // A Collector is a Prometheus Collector for WMI Win32_PerfRawData_vmGuestLib_VMem/Win32_PerfRawData_vmGuestLib_VCPU metrics.
 type Collector struct {
-	config    Config
-	wmiClient *wmi.Client
+	config     Config
+	miSession  *mi.Session
+	miQueryCPU mi.Query
+	miQueryMem mi.Query
 
 	memActive      *prometheus.Desc
 	memBallooned   *prometheus.Desc
@@ -74,12 +77,25 @@ func (c *Collector) Close(_ *slog.Logger) error {
 	return nil
 }
 
-func (c *Collector) Build(_ *slog.Logger, wmiClient *wmi.Client) error {
-	if wmiClient == nil || wmiClient.SWbemServicesClient == nil {
-		return errors.New("wmiClient or SWbemServicesClient is nil")
+func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
+	if miSession == nil {
+		return errors.New("miSession is nil")
 	}
 
-	c.wmiClient = wmiClient
+	miQuery, err := mi.NewQuery("SELECT * FROM Win32_PerfRawData_vmGuestLib_VCPU")
+	if err != nil {
+		return fmt.Errorf("failed to create WMI query: %w", err)
+	}
+
+	c.miQueryCPU = miQuery
+
+	miQuery, err = mi.NewQuery("SELECT * FROM Win32_PerfRawData_vmGuestLib_VMem")
+	if err != nil {
+		return fmt.Errorf("failed to create WMI query: %w", err)
+	}
+
+	c.miQueryMem = miQuery
+	c.miSession = miSession
 
 	c.memActive = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "mem_active_bytes"),
@@ -224,34 +240,34 @@ func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan
 }
 
 type Win32_PerfRawData_vmGuestLib_VMem struct {
-	MemActiveMB      uint64
-	MemBalloonedMB   uint64
-	MemLimitMB       uint64
-	MemMappedMB      uint64
-	MemOverheadMB    uint64
-	MemReservationMB uint64
-	MemSharedMB      uint64
-	MemSharedSavedMB uint64
-	MemShares        uint64
-	MemSwappedMB     uint64
-	MemTargetSizeMB  uint64
-	MemUsedMB        uint64
+	MemActiveMB      uint64 `mi:"MemActiveMB"`
+	MemBalloonedMB   uint64 `mi:"MemBalloonedMB"`
+	MemLimitMB       uint64 `mi:"MemLimitMB"`
+	MemMappedMB      uint64 `mi:"MemMappedMB"`
+	MemOverheadMB    uint64 `mi:"MemOverheadMB"`
+	MemReservationMB uint64 `mi:"MemReservationMB"`
+	MemSharedMB      uint64 `mi:"MemSharedMB"`
+	MemSharedSavedMB uint64 `mi:"MemSharedSavedMB"`
+	MemShares        uint64 `mi:"MemShares"`
+	MemSwappedMB     uint64 `mi:"MemSwappedMB"`
+	MemTargetSizeMB  uint64 `mi:"MemTargetSizeMB"`
+	MemUsedMB        uint64 `mi:"MemUsedMB"`
 }
 
 type Win32_PerfRawData_vmGuestLib_VCPU struct {
-	CpuLimitMHz           uint64
-	CpuReservationMHz     uint64
-	CpuShares             uint64
-	CpuStolenMs           uint64
-	CpuTimePercents       uint64
-	EffectiveVMSpeedMHz   uint64
-	HostProcessorSpeedMHz uint64
+	CpuLimitMHz           uint64 `mi:"CpuLimitMHz"`
+	CpuReservationMHz     uint64 `mi:"CpuReservationMHz"`
+	CpuShares             uint64 `mi:"CpuShares"`
+	CpuStolenMs           uint64 `mi:"CpuStolenMs"`
+	CpuTimePercents       uint64 `mi:"CpuTimePercents"`
+	EffectiveVMSpeedMHz   uint64 `mi:"EffectiveVMSpeedMHz"`
+	HostProcessorSpeedMHz uint64 `mi:"HostProcessorSpeedMHz"`
 }
 
 func (c *Collector) collectMem(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_vmGuestLib_VMem
-	if err := c.wmiClient.Query("SELECT * FROM Win32_PerfRawData_vmGuestLib_VMem", &dst); err != nil {
-		return err
+	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, c.miQueryMem); err != nil {
+		return fmt.Errorf("WMI query failed: %w", err)
 	}
 
 	if len(dst) == 0 {
@@ -333,14 +349,15 @@ func (c *Collector) collectMem(ch chan<- prometheus.Metric) error {
 	return nil
 }
 
+// mbToBytes moved to utils package
 func mbToBytes(mb uint64) float64 {
 	return float64(mb * 1024 * 1024)
 }
 
 func (c *Collector) collectCpu(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_vmGuestLib_VCPU
-	if err := c.wmiClient.Query("SELECT * FROM Win32_PerfRawData_vmGuestLib_VCPU", &dst); err != nil {
-		return err
+	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, c.miQueryCPU); err != nil {
+		return fmt.Errorf("WMI query failed: %w", err)
 	}
 
 	if len(dst) == 0 {

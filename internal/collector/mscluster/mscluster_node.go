@@ -1,7 +1,11 @@
 package mscluster
 
 import (
+	"fmt"
+
+	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -10,22 +14,22 @@ const nameNode = Name + "_node"
 // msClusterNode represents the MSCluster_Node WMI class
 // - https://docs.microsoft.com/en-us/previous-versions/windows/desktop/cluswmi/mscluster-node
 type msClusterNode struct {
-	Name string
+	Name string `mi:"Name"`
 
-	BuildNumber           uint
-	Characteristics       uint
-	DetectedCloudPlatform uint
-	DynamicWeight         uint
-	Flags                 uint
-	MajorVersion          uint
-	MinorVersion          uint
-	NeedsPreventQuorum    uint
-	NodeDrainStatus       uint
-	NodeHighestVersion    uint
-	NodeLowestVersion     uint
-	NodeWeight            uint
-	State                 uint
-	StatusInformation     uint
+	BuildNumber           uint `mi:"BuildNumber"`
+	Characteristics       uint `mi:"Characteristics"`
+	DetectedCloudPlatform uint `mi:"DetectedCloudPlatform"`
+	DynamicWeight         uint `mi:"DynamicWeight"`
+	Flags                 uint `mi:"Flags"`
+	MajorVersion          uint `mi:"MajorVersion"`
+	MinorVersion          uint `mi:"MinorVersion"`
+	NeedsPreventQuorum    uint `mi:"NeedsPreventQuorum"`
+	NodeDrainStatus       uint `mi:"NodeDrainStatus"`
+	NodeHighestVersion    uint `mi:"NodeHighestVersion"`
+	NodeLowestVersion     uint `mi:"NodeLowestVersion"`
+	NodeWeight            uint `mi:"NodeWeight"`
+	State                 uint `mi:"State"`
+	StatusInformation     uint `mi:"StatusInformation"`
 }
 
 func (c *Collector) buildNode() {
@@ -120,8 +124,8 @@ func (c *Collector) buildNode() {
 func (c *Collector) collectNode(ch chan<- prometheus.Metric) ([]string, error) {
 	var dst []msClusterNode
 
-	if err := c.wmiClient.Query("SELECT * FROM MSCluster_Node", &dst, nil, "root/MSCluster"); err != nil {
-		return nil, err
+	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, utils.Must(mi.NewQuery("SELECT * FROM MSCluster_Node"))); err != nil {
+		return nil, fmt.Errorf("WMI query failed: %w", err)
 	}
 
 	nodeNames := make([]string, 0, len(dst))

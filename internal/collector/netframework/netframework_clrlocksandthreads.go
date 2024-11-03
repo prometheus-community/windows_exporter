@@ -3,7 +3,11 @@
 package netframework
 
 import (
+	"fmt"
+
+	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -53,24 +57,24 @@ func (c *Collector) buildClrLocksAndThreads() {
 }
 
 type Win32_PerfRawData_NETFramework_NETCLRLocksAndThreads struct {
-	Name string
+	Name string `mi:"Name"`
 
-	ContentionRatePersec             uint32
-	CurrentQueueLength               uint32
-	NumberofcurrentlogicalThreads    uint32
-	NumberofcurrentphysicalThreads   uint32
-	Numberofcurrentrecognizedthreads uint32
-	Numberoftotalrecognizedthreads   uint32
-	QueueLengthPeak                  uint32
-	QueueLengthPersec                uint32
-	RateOfRecognizedThreadsPersec    uint32
-	TotalNumberofContentions         uint32
+	ContentionRatePersec             uint32 `mi:"ContentionRatePersec"`
+	CurrentQueueLength               uint32 `mi:"CurrentQueueLength"`
+	NumberofcurrentlogicalThreads    uint32 `mi:"NumberofcurrentlogicalThreads"`
+	NumberofcurrentphysicalThreads   uint32 `mi:"NumberofcurrentphysicalThreads"`
+	Numberofcurrentrecognizedthreads uint32 `mi:"Numberofcurrentrecognizedthreads"`
+	Numberoftotalrecognizedthreads   uint32 `mi:"Numberoftotalrecognizedthreads"`
+	QueueLengthPeak                  uint32 `mi:"QueueLengthPeak"`
+	QueueLengthPersec                uint32 `mi:"QueueLengthPersec"`
+	RateOfRecognizedThreadsPersec    uint32 `mi:"RateOfRecognizedThreadsPersec"`
+	TotalNumberofContentions         uint32 `mi:"TotalNumberofContentions"`
 }
 
 func (c *Collector) collectClrLocksAndThreads(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_NETFramework_NETCLRLocksAndThreads
-	if err := c.wmiClient.Query("SELECT * FROM Win32_PerfRawData_NETFramework_NETCLRLocksAndThreads", &dst); err != nil {
-		return err
+	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * Win32_PerfRawData_NETFramework_NETCLRLocksAndThreads"))); err != nil {
+		return fmt.Errorf("WMI query failed: %w", err)
 	}
 
 	for _, process := range dst {

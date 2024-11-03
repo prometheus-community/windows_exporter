@@ -51,7 +51,7 @@ linters-settings:
   forbidigo:
     forbid:
       - "^(fmt\\.Print(|f|ln)|print|println)$"
-      - p: "^syscall\\..*$"
+      - p: "^syscall\\.(.{1,7}|.{7}[^N]|.{9,})$"
         msg: use golang.org/x/sys/windows instead of syscall
       - p: "^windows\\.NewLazyDLL$"
         msg: use NewLazySystemDLL instead NewLazyDLL
