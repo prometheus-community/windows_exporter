@@ -11,6 +11,26 @@ import (
 
 const nameResource = Name + "_resource"
 
+type collectorResource struct {
+	resourceCharacteristics        *prometheus.Desc
+	resourceDeadlockTimeout        *prometheus.Desc
+	resourceEmbeddedFailureAction  *prometheus.Desc
+	resourceFlags                  *prometheus.Desc
+	resourceIsAlivePollInterval    *prometheus.Desc
+	resourceLooksAlivePollInterval *prometheus.Desc
+	resourceMonitorProcessId       *prometheus.Desc
+	resourceOwnerNode              *prometheus.Desc
+	resourcePendingTimeout         *prometheus.Desc
+	resourceResourceClass          *prometheus.Desc
+	resourceRestartAction          *prometheus.Desc
+	resourceRestartDelay           *prometheus.Desc
+	resourceRestartPeriod          *prometheus.Desc
+	resourceRestartThreshold       *prometheus.Desc
+	resourceRetryPeriodOnFailure   *prometheus.Desc
+	resourceState                  *prometheus.Desc
+	resourceSubClass               *prometheus.Desc
+}
+
 // msClusterResource represents the MSCluster_Resource WMI class
 // - https://docs.microsoft.com/en-us/previous-versions/windows/desktop/cluswmi/mscluster-resource
 type msClusterResource struct {

@@ -11,6 +11,86 @@ import (
 
 const nameCluster = Name + "_cluster"
 
+type collectorCluster struct {
+	clusterAddEvictDelay                           *prometheus.Desc
+	clusterAdminAccessPoint                        *prometheus.Desc
+	clusterAutoAssignNodeSite                      *prometheus.Desc
+	clusterAutoBalancerLevel                       *prometheus.Desc
+	clusterAutoBalancerMode                        *prometheus.Desc
+	clusterBackupInProgress                        *prometheus.Desc
+	clusterBlockCacheSize                          *prometheus.Desc
+	clusterClusSvcHangTimeout                      *prometheus.Desc
+	clusterClusSvcRegroupOpeningTimeout            *prometheus.Desc
+	clusterClusSvcRegroupPruningTimeout            *prometheus.Desc
+	clusterClusSvcRegroupStageTimeout              *prometheus.Desc
+	clusterClusSvcRegroupTickInMilliseconds        *prometheus.Desc
+	clusterClusterEnforcedAntiAffinity             *prometheus.Desc
+	clusterClusterFunctionalLevel                  *prometheus.Desc
+	clusterClusterGroupWaitDelay                   *prometheus.Desc
+	clusterClusterLogLevel                         *prometheus.Desc
+	clusterClusterLogSize                          *prometheus.Desc
+	clusterClusterUpgradeVersion                   *prometheus.Desc
+	clusterCrossSiteDelay                          *prometheus.Desc
+	clusterCrossSiteThreshold                      *prometheus.Desc
+	clusterCrossSubnetDelay                        *prometheus.Desc
+	clusterCrossSubnetThreshold                    *prometheus.Desc
+	clusterCsvBalancer                             *prometheus.Desc
+	clusterDatabaseReadWriteMode                   *prometheus.Desc
+	clusterDefaultNetworkRole                      *prometheus.Desc
+	clusterDetectedCloudPlatform                   *prometheus.Desc
+	clusterDetectManagedEvents                     *prometheus.Desc
+	clusterDetectManagedEventsThreshold            *prometheus.Desc
+	clusterDisableGroupPreferredOwnerRandomization *prometheus.Desc
+	clusterDrainOnShutdown                         *prometheus.Desc
+	clusterDynamicQuorumEnabled                    *prometheus.Desc
+	clusterEnableSharedVolumes                     *prometheus.Desc
+	clusterFixQuorum                               *prometheus.Desc
+	clusterGracePeriodEnabled                      *prometheus.Desc
+	clusterGracePeriodTimeout                      *prometheus.Desc
+	clusterGroupDependencyTimeout                  *prometheus.Desc
+	clusterHangRecoveryAction                      *prometheus.Desc
+	clusterIgnorePersistentStateOnStartup          *prometheus.Desc
+	clusterLogResourceControls                     *prometheus.Desc
+	clusterLowerQuorumPriorityNodeId               *prometheus.Desc
+	clusterMaxNumberOfNodes                        *prometheus.Desc
+	clusterMessageBufferLength                     *prometheus.Desc
+	clusterMinimumNeverPreemptPriority             *prometheus.Desc
+	clusterMinimumPreemptorPriority                *prometheus.Desc
+	clusterNetftIPSecEnabled                       *prometheus.Desc
+	clusterPlacementOptions                        *prometheus.Desc
+	clusterPlumbAllCrossSubnetRoutes               *prometheus.Desc
+	clusterPreventQuorum                           *prometheus.Desc
+	clusterQuarantineDuration                      *prometheus.Desc
+	clusterQuarantineThreshold                     *prometheus.Desc
+	clusterQuorumArbitrationTimeMax                *prometheus.Desc
+	clusterQuorumArbitrationTimeMin                *prometheus.Desc
+	clusterQuorumLogFileSize                       *prometheus.Desc
+	clusterQuorumTypeValue                         *prometheus.Desc
+	clusterRequestReplyTimeout                     *prometheus.Desc
+	clusterResiliencyDefaultPeriod                 *prometheus.Desc
+	clusterResiliencyLevel                         *prometheus.Desc
+	clusterResourceDllDeadlockPeriod               *prometheus.Desc
+	clusterRootMemoryReserved                      *prometheus.Desc
+	clusterRouteHistoryLength                      *prometheus.Desc
+	clusterS2DBusTypes                             *prometheus.Desc
+	clusterS2DCacheDesiredState                    *prometheus.Desc
+	clusterS2DCacheFlashReservePercent             *prometheus.Desc
+	clusterS2DCachePageSizeKBytes                  *prometheus.Desc
+	clusterS2DEnabled                              *prometheus.Desc
+	clusterS2DIOLatencyThreshold                   *prometheus.Desc
+	clusterS2DOptimizations                        *prometheus.Desc
+	clusterSameSubnetDelay                         *prometheus.Desc
+	clusterSameSubnetThreshold                     *prometheus.Desc
+	clusterSecurityLevel                           *prometheus.Desc
+	clusterSecurityLevelForStorage                 *prometheus.Desc
+	clusterSharedVolumeVssWriterOperationTimeout   *prometheus.Desc
+	clusterShutdownTimeoutInMinutes                *prometheus.Desc
+	clusterUseClientAccessNetworksForSharedVolumes *prometheus.Desc
+	clusterWitnessDatabaseWriteTimeout             *prometheus.Desc
+	clusterWitnessDynamicWeight                    *prometheus.Desc
+	clusterWitnessRestartInterval                  *prometheus.Desc
+}
+
 // msClusterCluster represents the MSCluster_Cluster WMI class
 // - https://docs.microsoft.com/en-us/previous-versions/windows/desktop/cluswmi/mscluster-cluster
 type msClusterCluster struct {

@@ -11,6 +11,14 @@ import (
 
 const nameNetwork = Name + "_network"
 
+type collectorNetwork struct {
+	networkCharacteristics *prometheus.Desc
+	networkFlags           *prometheus.Desc
+	networkMetric          *prometheus.Desc
+	networkRole            *prometheus.Desc
+	networkState           *prometheus.Desc
+}
+
 // msClusterNetwork represents the MSCluster_Network WMI class
 // - https://docs.microsoft.com/en-us/previous-versions/windows/desktop/cluswmi/mscluster-network
 type msClusterNetwork struct {

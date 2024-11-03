@@ -11,6 +11,23 @@ import (
 
 const nameResourceGroup = Name + "_resourcegroup"
 
+type collectorResourceGroup struct {
+	resourceGroupAutoFailbackType    *prometheus.Desc
+	resourceGroupCharacteristics     *prometheus.Desc
+	resourceGroupColdStartSetting    *prometheus.Desc
+	resourceGroupDefaultOwner        *prometheus.Desc
+	resourceGroupFailbackWindowEnd   *prometheus.Desc
+	resourceGroupFailbackWindowStart *prometheus.Desc
+	resourceGroupFailOverPeriod      *prometheus.Desc
+	resourceGroupFailOverThreshold   *prometheus.Desc
+	resourceGroupFlags               *prometheus.Desc
+	resourceGroupGroupType           *prometheus.Desc
+	resourceGroupOwnerNode           *prometheus.Desc
+	resourceGroupPriority            *prometheus.Desc
+	resourceGroupResiliencyPeriod    *prometheus.Desc
+	resourceGroupState               *prometheus.Desc
+}
+
 // msClusterResourceGroup represents the MSCluster_ResourceGroup WMI class
 // - https://docs.microsoft.com/en-us/previous-versions/windows/desktop/cluswmi/mscluster-resourcegroup
 type msClusterResourceGroup struct {
