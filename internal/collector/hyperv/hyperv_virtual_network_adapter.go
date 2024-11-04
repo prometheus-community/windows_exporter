@@ -1,9 +1,11 @@
 package hyperv
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	v2 "github.com/prometheus-community/windows_exporter/internal/perfdata/v2"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -32,7 +34,7 @@ const (
 func (c *Collector) buildVirtualNetworkAdapter() error {
 	var err error
 
-	c.perfDataCollectorVirtualSwitch, err = perfdata.NewCollector(perfdata.V2, "Hyper-V Virtual Network Adapter", perfdata.AllInstances, []string{
+	c.perfDataCollectorVirtualNetworkAdapter, err = perfdata.NewCollector(perfdata.V2, "Hyper-V Virtual Network Adapter", perfdata.AllInstances, []string{
 		virtualNetworkAdapterBytesReceived,
 		virtualNetworkAdapterBytesSent,
 		virtualNetworkAdapterDroppedPacketsIncoming,
@@ -40,44 +42,43 @@ func (c *Collector) buildVirtualNetworkAdapter() error {
 		virtualNetworkAdapterPacketsReceived,
 		virtualNetworkAdapterPacketsSent,
 	})
-
-	if err != nil {
+	if err != nil && !errors.Is(err, v2.ErrNoData) {
 		return fmt.Errorf("failed to create Hyper-V Virtual Network Adapter collector: %w", err)
 	}
 
 	c.virtualNetworkAdapterBytesReceived = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "virtual_network_adapter_received_bytes_total"),
-		"This counter represents the total number of bytes received per second by the network adapter",
+		"Represents the total number of bytes received per second by the network adapter",
 		[]string{"adapter"},
 		nil,
 	)
 	c.virtualNetworkAdapterBytesSent = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "virtual_network_adapter_sent_bytes_total"),
-		"This counter represents the total number of bytes sent per second by the network adapter",
+		"Represents the total number of bytes sent per second by the network adapter",
 		[]string{"adapter"},
 		nil,
 	)
 	c.virtualNetworkAdapterDroppedPacketsIncoming = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "virtual_network_adapter_incoming_dropped_packets_total"),
-		"This counter represents the total number of dropped packets per second in the incoming direction of the network adapter",
+		"Represents the total number of dropped packets per second in the incoming direction of the network adapter",
 		[]string{"adapter"},
 		nil,
 	)
 	c.virtualNetworkAdapterDroppedPacketsOutgoing = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "virtual_network_adapter_outgoing_dropped_packets_total"),
-		"This counter represents the total number of dropped packets per second in the outgoing direction of the network adapter",
+		"Represents the total number of dropped packets per second in the outgoing direction of the network adapter",
 		[]string{"adapter"},
 		nil,
 	)
 	c.virtualNetworkAdapterPacketsReceived = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "virtual_network_adapter_received_packets_total"),
-		"This counter represents the total number of packets received per second by the network adapter",
+		"Represents the total number of packets received per second by the network adapter",
 		[]string{"adapter"},
 		nil,
 	)
 	c.virtualNetworkAdapterPacketsSent = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "virtual_network_adapter_sent_packets_total"),
-		"This counter represents the total number of packets sent per second by the network adapter",
+		"Represents the total number of packets sent per second by the network adapter",
 		[]string{"adapter"},
 		nil,
 	)
@@ -86,8 +87,8 @@ func (c *Collector) buildVirtualNetworkAdapter() error {
 }
 
 func (c *Collector) collectVirtualNetworkAdapter(ch chan<- prometheus.Metric) error {
-	data, err := c.perfDataCollectorVirtualSwitch.Collect()
-	if err != nil {
+	data, err := c.perfDataCollectorVirtualNetworkAdapter.Collect()
+	if err != nil && !errors.Is(err, v2.ErrNoData) {
 		return fmt.Errorf("failed to collect Hyper-V Virtual Network Adapter metrics: %w", err)
 	}
 

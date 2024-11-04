@@ -102,7 +102,7 @@ func NewCollector(object string, instances []string, counters []string) (*Collec
 	}
 
 	if _, err := collector.Collect(); err != nil {
-		return nil, fmt.Errorf("failed to collect initial data: %w", err)
+		return collector, fmt.Errorf("failed to collect initial data: %w", err)
 	}
 
 	return collector, nil

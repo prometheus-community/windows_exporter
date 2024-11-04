@@ -1,9 +1,11 @@
 package hyperv
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	v2 "github.com/prometheus-community/windows_exporter/internal/perfdata/v2"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -58,79 +60,79 @@ func (c *Collector) buildVirtualStorageDevice() error {
 		virtualStorageDeviceLowerLatency,
 		virtualStorageDeviceIOQuotaReplenishmentRate,
 	})
-	if err != nil {
+	if err != nil && !errors.Is(err, v2.ErrNoData) {
 		return fmt.Errorf("failed to create Hyper-V Virtual Storage Device collector: %w", err)
 	}
 
 	c.virtualStorageDeviceErrorCount = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "virtual_storage_device_error_count_total"),
-		"This counter represents the total number of errors that have occurred on this virtual device.",
+		"Represents the total number of errors that have occurred on this virtual device.",
 		[]string{"device"},
 		nil,
 	)
 	c.virtualStorageDeviceQueueLength = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "virtual_storage_device_queue_length"),
-		"This counter represents the average queue length on this virtual device.",
+		"Represents the average queue length on this virtual device.",
 		[]string{"device"},
 		nil,
 	)
 	c.virtualStorageDeviceReadBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "virtual_storage_device_bytes_read"),
-		"This counter represents the total number of bytes that have been read on this virtual device.",
+		"Represents the total number of bytes that have been read on this virtual device.",
 		[]string{"device"},
 		nil,
 	)
 	c.virtualStorageDeviceReadOperations = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "virtual_storage_device_operations_read_total"),
-		"This counter represents the total number of read operations that have occurred on this virtual device.",
+		"Represents the total number of read operations that have occurred on this virtual device.",
 		[]string{"device"},
 		nil,
 	)
 	c.virtualStorageDeviceWriteBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "virtual_storage_device_bytes_written"),
-		"This counter represents the total number of bytes that have been written on this virtual device.",
+		"Represents the total number of bytes that have been written on this virtual device.",
 		[]string{"device"},
 		nil,
 	)
 	c.virtualStorageDeviceWriteOperations = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "virtual_storage_device_operations_written_total"),
-		"This counter represents the total number of write operations that have occurred on this virtual device.",
+		"Represents the total number of write operations that have occurred on this virtual device.",
 		[]string{"device"},
 		nil,
 	)
 	c.virtualStorageDeviceLatency = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "virtual_storage_device_latency_seconds"),
-		"This counter represents the average IO transfer latency for this virtual device.",
+		"Represents the average IO transfer latency for this virtual device.",
 		[]string{"device"},
 		nil,
 	)
 	c.virtualStorageDeviceThroughput = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "virtual_storage_device_throughput"),
-		"This counter represents the average number of 8KB IO transfers completed by this virtual device.",
+		"Represents the average number of 8KB IO transfers completed by this virtual device.",
 		[]string{"device"},
 		nil,
 	)
 	c.virtualStorageDeviceNormalizedThroughput = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "virtual_storage_device_normalized_throughput"),
-		"This counter represents the average number of IO transfers completed by this virtual device.",
+		"Represents the average number of IO transfers completed by this virtual device.",
 		[]string{"device"},
 		nil,
 	)
 	c.virtualStorageDeviceLowerQueueLength = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "virtual_storage_device_lower_queue_length"),
-		"This counter represents the average queue length on the underlying storage subsystem for this device.",
+		"Represents the average queue length on the underlying storage subsystem for this device.",
 		[]string{"device"},
 		nil,
 	)
 	c.virtualStorageDeviceLowerLatency = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "virtual_storage_device_lower_latency_seconds"),
-		"This counter represents the average IO transfer latency on the underlying storage subsystem for this virtual device.",
+		"Represents the average IO transfer latency on the underlying storage subsystem for this virtual device.",
 		[]string{"device"},
 		nil,
 	)
 	c.virtualStorageDeviceIOQuotaReplenishmentRate = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "io_quota_replenishment_rate"),
-		"This counter represents the IO quota replenishment rate for this virtual device.",
+		"Represents the IO quota replenishment rate for this virtual device.",
 		[]string{"device"},
 		nil,
 	)
@@ -140,7 +142,7 @@ func (c *Collector) buildVirtualStorageDevice() error {
 
 func (c *Collector) collectVirtualStorageDevice(ch chan<- prometheus.Metric) error {
 	data, err := c.perfDataCollectorVirtualStorageDevice.Collect()
-	if err != nil {
+	if err != nil && !errors.Is(err, v2.ErrNoData) {
 		return fmt.Errorf("failed to collect Hyper-V Virtual Storage Device metrics: %w", err)
 	}
 

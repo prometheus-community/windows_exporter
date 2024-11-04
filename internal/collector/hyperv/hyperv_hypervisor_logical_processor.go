@@ -1,7 +1,6 @@
 package hyperv
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
@@ -15,11 +14,11 @@ type collectorHypervisorLogicalProcessor struct {
 	perfDataCollectorHypervisorLogicalProcessor perfdata.Collector
 
 	// \Hyper-V Hypervisor Logical Processor(*)\% Guest Run Time
-	// \Hyper-V Hypervisor Logical Processor(*)\% Total Run Time
 	// \Hyper-V Hypervisor Logical Processor(*)\% Hypervisor Run Time
 	// \Hyper-V Hypervisor Logical Processor(*)\% Idle Time
-	hypervisorLogicalProcessorRunTimeTotal    *prometheus.Desc
-	hypervisorLogicalProcessorContextSwitches *prometheus.Desc // \Hyper-V Hypervisor Logical Processor(*)\Context Switches/sec
+	hypervisorLogicalProcessorTimeTotal         *prometheus.Desc
+	hypervisorLogicalProcessorTotalRunTimeTotal *prometheus.Desc // \Hyper-V Hypervisor Logical Processor(*)\% Total Run Time
+	hypervisorLogicalProcessorContextSwitches   *prometheus.Desc // \Hyper-V Hypervisor Logical Processor(*)\Context Switches/sec
 }
 
 const (
@@ -40,15 +39,20 @@ func (c *Collector) buildHypervisorLogicalProcessor() error {
 		hypervisorLogicalProcessorIdleRunTimePercent,
 		hypervisorLogicalProcessorContextSwitches,
 	})
-
 	if err != nil {
 		return fmt.Errorf("failed to create Hyper-V Hypervisor Logical Processor collector: %w", err)
 	}
 
-	c.hypervisorLogicalProcessorRunTimeTotal = prometheus.NewDesc(
+	c.hypervisorLogicalProcessorTimeTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "hypervisor_logical_processor_time_total"),
 		"Time that processor spent in different modes (hypervisor, guest, idle)",
 		[]string{"core", "state"},
+		nil,
+	)
+	c.hypervisorLogicalProcessorTotalRunTimeTotal = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "hypervisor_logical_processor_total_run_time_total"),
+		"Time that processor spent",
+		[]string{"core"},
 		nil,
 	)
 
@@ -66,8 +70,6 @@ func (c *Collector) collectHypervisorLogicalProcessor(ch chan<- prometheus.Metri
 	data, err := c.perfDataCollectorHypervisorLogicalProcessor.Collect()
 	if err != nil {
 		return fmt.Errorf("failed to collect Hyper-V Hypervisor Logical Processor metrics: %w", err)
-	} else if len(data) == 0 {
-		return errors.New("no data returned from Hyper-V Hypervisor Root Partition")
 	}
 
 	for coreName, coreData := range data {
@@ -80,31 +82,31 @@ func (c *Collector) collectHypervisorLogicalProcessor(ch chan<- prometheus.Metri
 		coreId := parts[2]
 
 		ch <- prometheus.MustNewConstMetric(
-			c.hypervisorLogicalProcessorRunTimeTotal,
+			c.hypervisorLogicalProcessorTimeTotal,
 			prometheus.CounterValue,
 			coreData[hypervisorLogicalProcessorGuestRunTimePercent].FirstValue,
 			coreId, "guest",
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.hypervisorLogicalProcessorRunTimeTotal,
+			c.hypervisorLogicalProcessorTimeTotal,
 			prometheus.CounterValue,
 			coreData[hypervisorLogicalProcessorHypervisorRunTimePercent].FirstValue,
 			coreId, "hypervisor",
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.hypervisorLogicalProcessorRunTimeTotal,
+			c.hypervisorLogicalProcessorTimeTotal,
 			prometheus.CounterValue,
 			coreData[hypervisorLogicalProcessorIdleRunTimePercent].FirstValue,
 			coreId, "idle",
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.hypervisorLogicalProcessorRunTimeTotal,
+			c.hypervisorLogicalProcessorTotalRunTimeTotal,
 			prometheus.CounterValue,
 			coreData[hypervisorLogicalProcessorTotalRunTimePercent].FirstValue,
-			coreId, "total",
+			coreId,
 		)
 
 		ch <- prometheus.MustNewConstMetric(

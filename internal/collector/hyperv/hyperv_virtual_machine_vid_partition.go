@@ -1,9 +1,11 @@
 package hyperv
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	v2 "github.com/prometheus-community/windows_exporter/internal/perfdata/v2"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -30,8 +32,7 @@ func (c *Collector) buildVirtualMachineVidPartition() error {
 		preferredNUMANodeIndex,
 		remotePhysicalPages,
 	})
-
-	if err != nil {
+	if err != nil && !errors.Is(err, v2.ErrNoData) {
 		return fmt.Errorf("failed to create Hyper-V VM Vid Partition collector: %w", err)
 	}
 
@@ -59,7 +60,7 @@ func (c *Collector) buildVirtualMachineVidPartition() error {
 
 func (c *Collector) collectVirtualMachineVidPartition(ch chan<- prometheus.Metric) error {
 	data, err := c.perfDataCollectorVirtualMachineVidPartition.Collect()
-	if err != nil {
+	if err != nil && !errors.Is(err, v2.ErrNoData) {
 		return fmt.Errorf("failed to collect Hyper-V VM Vid Partition metrics: %w", err)
 	}
 

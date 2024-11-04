@@ -1,9 +1,11 @@
 package hyperv
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	v2 "github.com/prometheus-community/windows_exporter/internal/perfdata/v2"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -84,134 +86,133 @@ func (c *Collector) buildVirtualSwitch() error {
 		virtualSwitchPacketsSent,
 		virtualSwitchPurgedMacAddresses,
 	})
-
-	if err != nil {
+	if err != nil && !errors.Is(err, v2.ErrNoData) {
 		return fmt.Errorf("failed to create Hyper-V Virtual Switch collector: %w", err)
 	}
 
 	c.virtualSwitchBroadcastPacketsReceived = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "vswitch_broadcast_packets_received_total"),
-		"This represents the total number of broadcast packets received per second by the virtual switch",
+		"Represents the total number of broadcast packets received per second by the virtual switch",
 		[]string{"vswitch"},
 		nil,
 	)
 	c.virtualSwitchBroadcastPacketsSent = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "vswitch_broadcast_packets_sent_total"),
-		"This represents the total number of broadcast packets sent per second by the virtual switch",
+		"Represents the total number of broadcast packets sent per second by the virtual switch",
 		[]string{"vswitch"},
 		nil,
 	)
 	c.virtualSwitchBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "vswitch_bytes_total"),
-		"This represents the total number of bytes per second traversing the virtual switch",
+		"Represents the total number of bytes per second traversing the virtual switch",
 		[]string{"vswitch"},
 		nil,
 	)
 	c.virtualSwitchBytesReceived = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "vswitch_bytes_received_total"),
-		"This represents the total number of bytes received per second by the virtual switch",
+		"Represents the total number of bytes received per second by the virtual switch",
 		[]string{"vswitch"},
 		nil,
 	)
 	c.virtualSwitchBytesSent = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "vswitch_bytes_sent_total"),
-		"This represents the total number of bytes sent per second by the virtual switch",
+		"Represents the total number of bytes sent per second by the virtual switch",
 		[]string{"vswitch"},
 		nil,
 	)
 	c.virtualSwitchDirectedPacketsReceived = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "vswitch_directed_packets_received_total"),
-		"This represents the total number of directed packets received per second by the virtual switch",
+		"Represents the total number of directed packets received per second by the virtual switch",
 		[]string{"vswitch"},
 		nil,
 	)
 	c.virtualSwitchDirectedPacketsSent = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "vswitch_directed_packets_send_total"),
-		"This represents the total number of directed packets sent per second by the virtual switch",
+		"Represents the total number of directed packets sent per second by the virtual switch",
 		[]string{"vswitch"},
 		nil,
 	)
 	c.virtualSwitchDroppedPacketsIncoming = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "vswitch_dropped_packets_incoming_total"),
-		"This represents the total number of packet dropped per second by the virtual switch in the incoming direction",
+		"Represents the total number of packet dropped per second by the virtual switch in the incoming direction",
 		[]string{"vswitch"},
 		nil,
 	)
 	c.virtualSwitchDroppedPacketsOutgoing = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "vswitch_dropped_packets_outcoming_total"),
-		"This represents the total number of packet dropped per second by the virtual switch in the outgoing direction",
+		"Represents the total number of packet dropped per second by the virtual switch in the outgoing direction",
 		[]string{"vswitch"},
 		nil,
 	)
 	c.virtualSwitchExtensionsDroppedPacketsIncoming = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "vswitch_extensions_dropped_packets_incoming_total"),
-		"This represents the total number of packet dropped per second by the virtual switch extensions in the incoming direction",
+		"Represents the total number of packet dropped per second by the virtual switch extensions in the incoming direction",
 		[]string{"vswitch"},
 		nil,
 	)
 	c.virtualSwitchExtensionsDroppedPacketsOutgoing = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "vswitch_extensions_dropped_packets_outcoming_total"),
-		"This represents the total number of packet dropped per second by the virtual switch extensions in the outgoing direction",
+		"Represents the total number of packet dropped per second by the virtual switch extensions in the outgoing direction",
 		[]string{"vswitch"},
 		nil,
 	)
 	c.virtualSwitchLearnedMacAddresses = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "vswitch_learned_mac_addresses_total"),
-		"This counter represents the total number of learned MAC addresses of the virtual switch",
+		"Represents the total number of learned MAC addresses of the virtual switch",
 		[]string{"vswitch"},
 		nil,
 	)
 	c.virtualSwitchMulticastPacketsReceived = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "vswitch_multicast_packets_received_total"),
-		"This represents the total number of multicast packets received per second by the virtual switch",
+		"Represents the total number of multicast packets received per second by the virtual switch",
 		[]string{"vswitch"},
 		nil,
 	)
 	c.virtualSwitchMulticastPacketsSent = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "vswitch_multicast_packets_sent_total"),
-		"This represents the total number of multicast packets sent per second by the virtual switch",
+		"Represents the total number of multicast packets sent per second by the virtual switch",
 		[]string{"vswitch"},
 		nil,
 	)
 	c.virtualSwitchNumberOfSendChannelMoves = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "vswitch_number_of_send_channel_moves_total"),
-		"This represents the total number of send channel moves per second on this virtual switch",
+		"Represents the total number of send channel moves per second on this virtual switch",
 		[]string{"vswitch"},
 		nil,
 	)
 	c.virtualSwitchNumberOfVMQMoves = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "vswitch_number_of_vmq_moves_total"),
-		"This represents the total number of VMQ moves per second on this virtual switch",
+		"Represents the total number of VMQ moves per second on this virtual switch",
 		[]string{"vswitch"},
 		nil,
 	)
 	c.virtualSwitchPacketsFlooded = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "vswitch_packets_flooded_total"),
-		"This counter represents the total number of packets flooded by the virtual switch",
+		"Represents the total number of packets flooded by the virtual switch",
 		[]string{"vswitch"},
 		nil,
 	)
 	c.virtualSwitchPackets = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "vswitch_packets_total"),
-		"This represents the total number of packets per second traversing the virtual switch",
+		"Represents the total number of packets per second traversing the virtual switch",
 		[]string{"vswitch"},
 		nil,
 	)
 	c.virtualSwitchPacketsReceived = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "vswitch_packets_received_total"),
-		"This represents the total number of packets received per second by the virtual switch",
+		"Represents the total number of packets received per second by the virtual switch",
 		[]string{"vswitch"},
 		nil,
 	)
 	c.virtualSwitchPacketsSent = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "vswitch_packets_sent_total"),
-		"This represents the total number of packets send per second by the virtual switch",
+		"Represents the total number of packets send per second by the virtual switch",
 		[]string{"vswitch"},
 		nil,
 	)
 	c.virtualSwitchPurgedMacAddresses = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "vswitch_purged_mac_addresses_total"),
-		"This counter represents the total number of purged MAC addresses of the virtual switch",
+		"Represents the total number of purged MAC addresses of the virtual switch",
 		[]string{"vswitch"},
 		nil,
 	)
@@ -221,7 +222,7 @@ func (c *Collector) buildVirtualSwitch() error {
 
 func (c *Collector) collectVirtualSwitch(ch chan<- prometheus.Metric) error {
 	data, err := c.perfDataCollectorVirtualSwitch.Collect()
-	if err != nil {
+	if err != nil && !errors.Is(err, v2.ErrNoData) {
 		return fmt.Errorf("failed to collect Hyper-V Virtual Switch metrics: %w", err)
 	}
 

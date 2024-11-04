@@ -1,9 +1,11 @@
 package hyperv
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	v2 "github.com/prometheus-community/windows_exporter/internal/perfdata/v2"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
@@ -53,68 +55,67 @@ func (c *Collector) buildDynamicMemoryVM() error {
 		vmMemoryRemovedMemory,
 		vmMemoryGuestAvailableMemory,
 	})
-
-	if err != nil {
+	if err != nil && !errors.Is(err, v2.ErrNoData) {
 		return fmt.Errorf("failed to create Hyper-V Dynamic Memory VM collector: %w", err)
 	}
 
 	c.vmMemoryAddedMemory = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "dynamic_memory_vm_added_total"),
-		"This counter represents the cumulative amount of memory added to the VM.",
+		"Represents the cumulative amount of memory added to the VM.",
 		[]string{"vm"},
 		nil,
 	)
 	c.vmMemoryCurrentPressure = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "dynamic_memory_vm_pressure_current_ratio"),
-		"This counter represents the current pressure in the VM.",
+		"Represents the current pressure in the VM.",
 		[]string{"vm"},
 		nil,
 	)
 	c.vmMemoryGuestAvailableMemory = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "dynamic_memory_vm_guest_available_bytes"),
-		"This counter represents the current amount of available memory in the VM (reported by the VM).",
+		"Represents the current amount of available memory in the VM (reported by the VM).",
 		[]string{"vm"},
 		nil,
 	)
 	c.vmMemoryGuestVisiblePhysicalMemory = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "dynamic_memory_vm_guest_visible_physical_memory_bytes"),
-		"This counter represents the amount of memory visible in the VM.'",
+		"Represents the amount of memory visible in the VM.'",
 		[]string{"vm"},
 		nil,
 	)
 	c.vmMemoryMaximumPressure = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "dynamic_memory_vm_pressure_maximum_ratio"),
-		"This counter represents the maximum pressure band in the VM.",
+		"Represents the maximum pressure band in the VM.",
 		[]string{"vm"},
 		nil,
 	)
 	c.vmMemoryMemoryAddOperations = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "dynamic_memory_vm_add_operations_total"),
-		"This counter represents the total number of add operations for the VM.",
+		"Represents the total number of add operations for the VM.",
 		[]string{"vm"},
 		nil,
 	)
 	c.vmMemoryMemoryRemoveOperations = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "dynamic_memory_vm_remove_operations_total"),
-		"This counter represents the total number of remove operations for the VM.",
+		"Represents the total number of remove operations for the VM.",
 		[]string{"vm"},
 		nil,
 	)
 	c.vmMemoryMinimumPressure = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "dynamic_memory_vm_pressure_minimum_ratio"),
-		"This counter represents the minimum pressure band in the VM.",
+		"Represents the minimum pressure band in the VM.",
 		[]string{"vm"},
 		nil,
 	)
 	c.vmMemoryPhysicalMemory = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "dynamic_memory_vm_physical_bytes"),
-		"This counter represents the current amount of memory in the VM.",
+		"Represents the current amount of memory in the VM.",
 		[]string{"vm"},
 		nil,
 	)
 	c.vmMemoryRemovedMemory = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "dynamic_memory_vm_removed_bytes_total"),
-		"This counter represents the cumulative amount of memory removed from the VM.",
+		"Represents the cumulative amount of memory removed from the VM.",
 		[]string{"vm"},
 		nil,
 	)
@@ -124,7 +125,7 @@ func (c *Collector) buildDynamicMemoryVM() error {
 
 func (c *Collector) collectDynamicMemoryVM(ch chan<- prometheus.Metric) error {
 	data, err := c.perfDataCollectorDynamicMemoryVM.Collect()
-	if err != nil {
+	if err != nil && !errors.Is(err, v2.ErrNoData) {
 		return fmt.Errorf("failed to collect Hyper-V Dynamic Memory VM metrics: %w", err)
 	}
 

@@ -1,7 +1,6 @@
 package hyperv
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
@@ -37,32 +36,31 @@ func (c *Collector) buildDynamicMemoryBalancer() error {
 		vmDynamicMemoryBalancerAveragePressure,
 		vmDynamicMemoryBalancerSystemCurrentPressure,
 	})
-
 	if err != nil {
 		return fmt.Errorf("failed to create Hyper-V Virtual Machine Health Summary collector: %w", err)
 	}
 
 	c.vmDynamicMemoryBalancerAvailableMemory = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "dynamic_memory_balancer_available_memory_bytes"),
-		"This counter represents the amount of memory left on the node.",
+		"Represents the amount of memory left on the node.",
 		[]string{"balancer"},
 		nil,
 	)
 	c.vmDynamicMemoryBalancerAvailableMemoryForBalancing = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "dynamic_memory_balancer_available_memory_for_balancing_bytes"),
-		"This counter represents the available memory for balancing purposes.",
+		"Represents the available memory for balancing purposes.",
 		[]string{"balancer"},
 		nil,
 	)
 	c.vmDynamicMemoryBalancerAveragePressure = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "dynamic_memory_balancer_average_pressure_ratio"),
-		"This counter represents the average system pressure on the balancer node among all balanced objects.",
+		"Represents the average system pressure on the balancer node among all balanced objects.",
 		[]string{"balancer"},
 		nil,
 	)
 	c.vmDynamicMemoryBalancerSystemCurrentPressure = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "dynamic_memory_balancer_system_current_pressure_ratio"),
-		"This counter represents the current pressure in the system.",
+		"Represents the current pressure in the system.",
 		[]string{"balancer"},
 		nil,
 	)
@@ -74,8 +72,6 @@ func (c *Collector) collectDynamicMemoryBalancer(ch chan<- prometheus.Metric) er
 	data, err := c.perfDataCollectorDynamicMemoryBalancer.Collect()
 	if err != nil {
 		return fmt.Errorf("failed to collect Hyper-V Dynamic Memory Balancer metrics: %w", err)
-	} else if len(data) == 0 {
-		return errors.New("perflib query for Hyper-V Dynamic Memory Balancer returned empty result set")
 	}
 
 	for name, page := range data {

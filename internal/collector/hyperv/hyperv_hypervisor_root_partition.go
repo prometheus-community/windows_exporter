@@ -85,7 +85,6 @@ func (c *Collector) buildHypervisorRootPartition() error {
 		hypervisorRootPartitionVirtualTLBFlushEntries,
 		hypervisorRootPartitionVirtualTLBPages,
 	})
-
 	if err != nil {
 		return fmt.Errorf("failed to create Hyper-V Hypervisor Root Partition collector: %w", err)
 	}
@@ -224,8 +223,6 @@ func (c *Collector) collectHypervisorRootPartition(ch chan<- prometheus.Metric) 
 	data, err := c.perfDataCollectorHypervisorRootPartition.Collect()
 	if err != nil {
 		return fmt.Errorf("failed to collect Hyper-V Hypervisor Root Partition metrics: %w", err)
-	} else if len(data) == 0 {
-		return errors.New("no data returned from Hyper-V Hypervisor Root Partition")
 	}
 
 	rootData, ok := data["Root"]

@@ -2,6 +2,8 @@ package v2
 
 import "errors"
 
+var ErrNoData = NewPdhError(PdhNoData)
+
 // Error represents error returned from Performance Counters API.
 type Error struct {
 	ErrorCode uint32
