@@ -27,8 +27,8 @@ type Collector struct {
 
 	perfDataCollector perfdata.Collector
 
-	processorRTCValues   map[string]cpuCounter
-	processorMPerfValues map[string]cpuCounter
+	processorRTCValues   map[string]utils.Counter
+	processorMPerfValues map[string]utils.Counter
 
 	logicalProcessors          *prometheus.Desc
 	cStateSecondsTotal         *prometheus.Desc
@@ -44,11 +44,6 @@ type Collector struct {
 	processorRTC               *prometheus.Desc
 	processorUtility           *prometheus.Desc
 	processorPrivilegedUtility *prometheus.Desc
-}
-
-type cpuCounter struct {
-	lastValue  uint32
-	totalValue float64
 }
 
 func New(config *Config) *Collector {
@@ -204,8 +199,8 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 
-	c.processorRTCValues = map[string]cpuCounter{}
-	c.processorMPerfValues = map[string]cpuCounter{}
+	c.processorRTCValues = map[string]utils.Counter{}
+	c.processorMPerfValues = map[string]utils.Counter{}
 
 	return nil
 }
@@ -237,29 +232,27 @@ func (c *Collector) collectFull(ctx *types.ScrapeContext, logger *slog.Logger, c
 
 		core := cpu.Name
 
-		if val, ok := c.processorRTCValues[core]; ok {
-			c.processorRTCValues[core] = cpuCounter{
-				uint32(cpu.ProcessorRTC),
-				val.totalValue + float64(uint32(cpu.ProcessorRTC)-val.lastValue),
-			}
+		var (
+			counterProcessorRTCValues   utils.Counter
+			counterProcessorMPerfValues utils.Counter
+			ok                          bool
+		)
+
+		if counterProcessorRTCValues, ok = c.processorRTCValues[core]; ok {
+			counterProcessorRTCValues.AddValue(uint32(cpu.ProcessorRTC))
 		} else {
-			c.processorRTCValues[core] = cpuCounter{
-				uint32(cpu.ProcessorRTC),
-				0,
-			}
+			counterProcessorRTCValues = utils.NewCounter(uint32(cpu.ProcessorRTC))
 		}
 
-		if val, ok := c.processorMPerfValues[core]; ok {
-			c.processorMPerfValues[core] = cpuCounter{
-				uint32(cpu.ProcessorMPerf),
-				val.totalValue + float64(uint32(cpu.ProcessorMPerf)-val.lastValue),
-			}
+		c.processorRTCValues[core] = counterProcessorRTCValues
+
+		if counterProcessorMPerfValues, ok = c.processorMPerfValues[core]; ok {
+			counterProcessorMPerfValues.AddValue(uint32(cpu.ProcessorMPerf))
 		} else {
-			c.processorMPerfValues[core] = cpuCounter{
-				uint32(cpu.ProcessorMPerf),
-				0,
-			}
+			counterProcessorMPerfValues = utils.NewCounter(uint32(cpu.ProcessorMPerf))
 		}
+
+		c.processorMPerfValues[core] = counterProcessorMPerfValues
 
 		coreCount++
 
@@ -360,13 +353,13 @@ func (c *Collector) collectFull(ctx *types.ScrapeContext, logger *slog.Logger, c
 		ch <- prometheus.MustNewConstMetric(
 			c.processorMPerf,
 			prometheus.CounterValue,
-			c.processorMPerfValues[core].totalValue,
+			counterProcessorMPerfValues.Value(),
 			core,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.processorRTC,
 			prometheus.CounterValue,
-			c.processorRTCValues[core].totalValue,
+			counterProcessorRTCValues.Value(),
 			core,
 		)
 		ch <- prometheus.MustNewConstMetric(
@@ -403,29 +396,27 @@ func (c *Collector) collectPDH(ch chan<- prometheus.Metric) error {
 	for core, coreData := range data {
 		coreCount++
 
-		if val, ok := c.processorRTCValues[core]; ok {
-			c.processorRTCValues[core] = cpuCounter{
-				uint32(coreData[privilegedUtilitySeconds].SecondValue),
-				val.totalValue + float64(uint32(coreData[privilegedUtilitySeconds].SecondValue)-val.lastValue),
-			}
+		var (
+			counterProcessorRTCValues   utils.Counter
+			counterProcessorMPerfValues utils.Counter
+			ok                          bool
+		)
+
+		if counterProcessorRTCValues, ok = c.processorRTCValues[core]; ok {
+			counterProcessorRTCValues.AddValue(uint32(coreData[processorUtilityRate].SecondValue))
 		} else {
-			c.processorRTCValues[core] = cpuCounter{
-				uint32(coreData[privilegedUtilitySeconds].SecondValue),
-				0,
-			}
+			counterProcessorRTCValues = utils.NewCounter(uint32(coreData[privilegedUtilitySeconds].SecondValue))
 		}
 
-		if val, ok := c.processorMPerfValues[core]; ok {
-			c.processorMPerfValues[core] = cpuCounter{
-				uint32(coreData[processorPerformance].SecondValue),
-				val.totalValue + float64(uint32(coreData[processorPerformance].SecondValue)-val.lastValue),
-			}
+		c.processorRTCValues[core] = counterProcessorRTCValues
+
+		if counterProcessorMPerfValues, ok = c.processorMPerfValues[core]; ok {
+			counterProcessorMPerfValues.AddValue(uint32(coreData[processorPerformance].SecondValue))
 		} else {
-			c.processorMPerfValues[core] = cpuCounter{
-				uint32(coreData[processorPerformance].SecondValue),
-				0,
-			}
+			counterProcessorMPerfValues = utils.NewCounter(uint32(coreData[processorPerformance].SecondValue))
 		}
+
+		c.processorMPerfValues[core] = counterProcessorMPerfValues
 
 		ch <- prometheus.MustNewConstMetric(
 			c.cStateSecondsTotal,
@@ -524,13 +515,13 @@ func (c *Collector) collectPDH(ch chan<- prometheus.Metric) error {
 		ch <- prometheus.MustNewConstMetric(
 			c.processorMPerf,
 			prometheus.CounterValue,
-			coreData[processorPerformance].SecondValue,
+			counterProcessorMPerfValues.Value(),
 			core,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.processorRTC,
 			prometheus.CounterValue,
-			coreData[processorUtilityRate].SecondValue,
+			counterProcessorRTCValues.Value(),
 			core,
 		)
 		ch <- prometheus.MustNewConstMetric(
