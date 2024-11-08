@@ -6,7 +6,7 @@ The textfile collector exposes metrics from files written by other processes.
 -|-
 Metric name prefix  | `textfile`
 Classes             | None
-Enabled by default? | Yes
+Enabled by default? | No
 
 ## Flags
 
