@@ -16,8 +16,8 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata/perftypes"
 	v1 "github.com/prometheus-community/windows_exporter/internal/perfdata/v1"
+	"github.com/prometheus-community/windows_exporter/internal/toggle"
 	"github.com/prometheus-community/windows_exporter/internal/types"
-	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -94,7 +94,7 @@ func (c *Collector) GetName() string {
 }
 
 func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
-	if utils.PDHEnabled() {
+	if toggle.IsPDHEnabled() {
 		return []string{}, nil
 	}
 
@@ -106,7 +106,7 @@ func (c *Collector) Close(_ *slog.Logger) error {
 }
 
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
-	if utils.PDHEnabled() {
+	if toggle.IsPDHEnabled() {
 		counters := []string{
 			availableBytes,
 			availableKBytes,
@@ -386,7 +386,7 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch ch
 	errs := make([]error, 0, 2)
 
 	var err error
-	if utils.PDHEnabled() {
+	if toggle.IsPDHEnabled() {
 		err = c.collectPDH(ch)
 	} else {
 		err = c.collectPerformanceData(ctx, logger, ch)

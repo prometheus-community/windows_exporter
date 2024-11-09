@@ -16,8 +16,8 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
 	v1 "github.com/prometheus-community/windows_exporter/internal/perfdata/v1"
 	v2 "github.com/prometheus-community/windows_exporter/internal/perfdata/v2"
+	"github.com/prometheus-community/windows_exporter/internal/toggle"
 	"github.com/prometheus-community/windows_exporter/internal/types"
-	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows"
 )
@@ -130,7 +130,7 @@ func (c *Collector) GetName() string {
 }
 
 func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
-	if utils.PDHEnabled() {
+	if toggle.IsPDHEnabled() {
 		return []string{}, nil
 	}
 
@@ -156,7 +156,7 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 	c.workerProcessMIQueryQuery = miQuery
 	c.miSession = miSession
 
-	if utils.PDHEnabled() {
+	if toggle.IsPDHEnabled() {
 		counters := []string{
 			processID,
 			percentProcessorTime,
@@ -315,7 +315,7 @@ type WorkerProcess struct {
 }
 
 func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	if utils.PDHEnabled() {
+	if toggle.IsPDHEnabled() {
 		return c.collectPDH(logger, ch)
 	}
 
