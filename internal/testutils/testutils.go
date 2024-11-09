@@ -11,6 +11,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
+	"github.com/prometheus-community/windows_exporter/internal/toggle"
 	"github.com/prometheus-community/windows_exporter/pkg/collector"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/require"
@@ -46,7 +47,8 @@ func FuncBenchmarkCollector[C collector.Collector](b *testing.B, name string, co
 
 func TestCollector[C collector.Collector, V interface{}](t *testing.T, fn func(*V) C, conf *V) {
 	t.Helper()
-	t.Setenv("WINDOWS_EXPORTER_PERF_COUNTERS_ENGINE", "pdh")
+
+	toggle.PHDEnabled = true
 
 	var (
 		metrics []prometheus.Metric

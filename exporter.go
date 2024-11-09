@@ -8,7 +8,6 @@ package main
 //nolint:gofumpt
 import (
 	"github.com/prometheus-community/windows_exporter/internal/initiate"
-	"github.com/prometheus-community/windows_exporter/internal/toggle"
 
 	"context"
 	"errors"
@@ -29,6 +28,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/httphandler"
 	"github.com/prometheus-community/windows_exporter/internal/log"
 	"github.com/prometheus-community/windows_exporter/internal/log/flag"
+	"github.com/prometheus-community/windows_exporter/internal/toggle"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus-community/windows_exporter/pkg/collector"
@@ -100,7 +100,7 @@ func run() int {
 
 		togglePDH = app.Flag(
 			"perfcounter.engine",
-			"EXPERIMENTAL: Performance counter engine to use. Can be one of [\"pdh\", \"registy\"]. PDH is in experimental state. This flag will be removed in 0.31.",
+			"EXPERIMENTAL: Performance counter engine to use. Can be one of \"pdh\", \"registry\". PDH is in experimental state. This flag will be removed in 0.31.",
 		).Default("registry").String()
 	)
 
