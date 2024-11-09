@@ -13,8 +13,8 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
 	v1 "github.com/prometheus-community/windows_exporter/internal/perfdata/v1"
+	"github.com/prometheus-community/windows_exporter/internal/toggle"
 	"github.com/prometheus-community/windows_exporter/internal/types"
-	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -148,7 +148,7 @@ func (c *Collector) GetName() string {
 }
 
 func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
-	if utils.PDHEnabled() {
+	if toggle.IsPDHEnabled() {
 		return []string{}, nil
 	}
 
@@ -173,7 +173,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	logger.Info("dfsr collector is in an experimental state! Metrics for this collector have not been tested.")
 
 	//nolint:nestif
-	if utils.PDHEnabled() {
+	if toggle.IsPDHEnabled() {
 		var err error
 
 		if slices.Contains(c.config.CollectorsEnabled, "connection") {
@@ -567,7 +567,7 @@ func (c *Collector) getDFSRChildCollectors(enabledCollectors []string) []dfsrCol
 // Collect implements the Collector interface.
 // Sends metric values for each metric to the provided prometheus Metric channel.
 func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	if utils.PDHEnabled() {
+	if toggle.IsPDHEnabled() {
 		return c.collectPDH(ch)
 	}
 

@@ -8,6 +8,7 @@ package main
 //nolint:gofumpt
 import (
 	"github.com/prometheus-community/windows_exporter/internal/initiate"
+	"github.com/prometheus-community/windows_exporter/internal/toggle"
 
 	"context"
 	"errors"
@@ -96,6 +97,11 @@ func run() int {
 			"process.priority",
 			"Priority of the exporter process. Higher priorities may improve exporter responsiveness during periods of system load. Can be one of [\"realtime\", \"high\", \"abovenormal\", \"normal\", \"belownormal\", \"low\"]",
 		).Default("normal").String()
+
+		togglePDH = app.Flag(
+			"perfcounter.engine",
+			"EXPERIMENTAL: Performance counter engine to use. Can be one of [\"pdh\", \"registy\"]. PDH is in experimental state. This flag will be removed in 0.31.",
+		).Default("registry").String()
 	)
 
 	logConfig := &log.Config{}
@@ -215,8 +221,10 @@ func run() int {
 
 	logger.Info("Enabled collectors: " + strings.Join(enabledCollectorList, ", "))
 
-	if utils.PDHEnabled() {
+	if v, ok := os.LookupEnv("WINDOWS_EXPORTER_PERF_COUNTERS_ENGINE"); ok && v == "pdh" || *togglePDH == "pdh" {
 		logger.Info("Using performance data helper from PHD.dll for performance counter collection. This is in experimental state.")
+
+		toggle.PHDEnabled = true
 	}
 
 	mux := http.NewServeMux()

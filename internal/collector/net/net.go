@@ -16,8 +16,8 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
 	v1 "github.com/prometheus-community/windows_exporter/internal/perfdata/v1"
+	"github.com/prometheus-community/windows_exporter/internal/toggle"
 	"github.com/prometheus-community/windows_exporter/internal/types"
-	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows"
 )
@@ -138,7 +138,7 @@ func (c *Collector) GetName() string {
 }
 
 func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
-	if utils.PDHEnabled() {
+	if toggle.IsPDHEnabled() {
 		return []string{}, nil
 	}
 
@@ -150,7 +150,7 @@ func (c *Collector) Close(_ *slog.Logger) error {
 }
 
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
-	if utils.PDHEnabled() {
+	if toggle.IsPDHEnabled() {
 		counters := []string{
 			BytesReceivedPerSec,
 			BytesSentPerSec,
@@ -283,7 +283,7 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch ch
 	if slices.Contains(c.config.CollectorsEnabled, "metrics") {
 		var err error
 
-		if utils.PDHEnabled() {
+		if toggle.IsPDHEnabled() {
 			err = c.collectPDH(ch)
 		} else {
 			err = c.collect(ctx, logger, ch)
