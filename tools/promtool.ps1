@@ -131,6 +131,10 @@ try {
 
 $ExitCode = Start-RawProcess -InputVar $output -CommandName promtool.exe -CommandArgs @("check metrics")
 if ($ExitCode -ne 0) {
+    Write-Host "OUPUT"
+
+    Write-Host $output
+
     Write-Host "Promtool command returned exit code $($ExitCode). See output for details."
     EXIT 1
 }
