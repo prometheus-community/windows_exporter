@@ -115,7 +115,8 @@ $skip_re = "^([#]?\s*(HELP|TYPE)?\s*go_|windows_memory_pool_nonpaged_allocs_tota
 
 try {
     # Need to remove carriage returns, as promtool expects LF line endings
-    $output = (((Invoke-WebRequest -UseBasicParsing -URI http://127.0.0.1:9183/metrics).Content) -Split "`r?`n" | Select-String -NotMatch $skip_re) -join "`n"
+    $output = ((Invoke-WebRequest -UseBasicParsing -URI http://127.0.0.1:9183/metrics).Content) -Split "`r?`n" | Select-String -NotMatch $skip_re | Join-String -Separator "`n"
+    # $output = (((Invoke-WebRequest -UseBasicParsing -URI http://127.0.0.1:9183/metrics).Content) -Split "`r?`n" | Select-String -NotMatch $skip_re) -join "`n"
     # Join the split lines back to a single String (with LF line endings!)
     $output = $output -Join "`n"
 

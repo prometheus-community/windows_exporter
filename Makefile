@@ -40,7 +40,7 @@ e2e-test: windows_exporter.exe
 
 .PHONY: promtool
 promtool: windows_exporter.exe
-	powershell -NonInteractive -ExecutionPolicy Bypass -File .\tools\promtool.ps1
+	pwsh -NonInteractive -ExecutionPolicy Bypass -File .\tools\promtool.ps1
 
 fmt:
 	gofmt -l -w -s .
