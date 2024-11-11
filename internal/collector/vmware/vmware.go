@@ -9,6 +9,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
+	"github.com/prometheus-community/windows_exporter/internal/perfdata"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata/perftypes"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
@@ -22,10 +23,8 @@ var ConfigDefaults = Config{}
 
 // A Collector is a Prometheus Collector for WMI Win32_PerfRawData_vmGuestLib_VMem/Win32_PerfRawData_vmGuestLib_VCPU metrics.
 type Collector struct {
-	config     Config
-	miSession  *mi.Session
-	miQueryCPU mi.Query
-	miQueryMem mi.Query
+	config            Config
+	perfDataCollector perfdata.Collector
 
 	memActive      *prometheus.Desc
 	memBallooned   *prometheus.Desc
@@ -77,25 +76,66 @@ func (c *Collector) Close(_ *slog.Logger) error {
 	return nil
 }
 
-func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
-	if miSession == nil {
-		return errors.New("miSession is nil")
+func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
+	counters := []string{
+		cpuLimitMHz,
+		cpuReservationMHz,
+		cpuShares,
+		cpuStolenMs,
+		cpuTimePercents,
+		couEffectiveVMSpeedMHz,
+		cpuHostProcessorSpeedMHz,
 	}
 
-	miQuery, err := mi.NewQuery("SELECT * FROM Win32_PerfRawData_vmGuestLib_VCPU")
+	var err error
+
+	c.perfDataCollector, err = perfdata.NewCollector(perfdata.V2, "VM Processor", perfdata.AllInstances, counters)
 	if err != nil {
-		return fmt.Errorf("failed to create WMI query: %w", err)
+		return fmt.Errorf("failed to create DNS collector: %w", err)
 	}
 
-	c.miQueryCPU = miQuery
-
-	miQuery, err = mi.NewQuery("SELECT * FROM Win32_PerfRawData_vmGuestLib_VMem")
-	if err != nil {
-		return fmt.Errorf("failed to create WMI query: %w", err)
-	}
-
-	c.miQueryMem = miQuery
-	c.miSession = miSession
+	c.cpuLimitMHz = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "cpu_limit_mhz"),
+		"(CpuLimitMHz)",
+		nil,
+		nil,
+	)
+	c.cpuReservationMHz = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "cpu_reservation_mhz"),
+		"(CpuReservationMHz)",
+		nil,
+		nil,
+	)
+	c.cpuShares = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "cpu_shares"),
+		"(CpuShares)",
+		nil,
+		nil,
+	)
+	c.cpuStolenTotal = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "cpu_stolen_seconds_total"),
+		"(CpuStolenMs)",
+		nil,
+		nil,
+	)
+	c.cpuTimeTotal = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "cpu_time_seconds_total"),
+		"(CpuTimePercents)",
+		nil,
+		nil,
+	)
+	c.effectiveVMSpeedMHz = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "effective_vm_speed_mhz"),
+		"(EffectiveVMSpeedMHz)",
+		nil,
+		nil,
+	)
+	c.hostProcessorSpeedMHz = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "host_processor_speed_mhz"),
+		"(HostProcessorSpeedMHz)",
+		nil,
+		nil,
+	)
 
 	c.memActive = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "mem_active_bytes"),
@@ -170,49 +210,6 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 		nil,
 	)
 
-	c.cpuLimitMHz = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "cpu_limit_mhz"),
-		"(CpuLimitMHz)",
-		nil,
-		nil,
-	)
-	c.cpuReservationMHz = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "cpu_reservation_mhz"),
-		"(CpuReservationMHz)",
-		nil,
-		nil,
-	)
-	c.cpuShares = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "cpu_shares"),
-		"(CpuShares)",
-		nil,
-		nil,
-	)
-	c.cpuStolenTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "cpu_stolen_seconds_total"),
-		"(CpuStolenMs)",
-		nil,
-		nil,
-	)
-	c.cpuTimeTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "cpu_time_seconds_total"),
-		"(CpuTimePercents)",
-		nil,
-		nil,
-	)
-	c.effectiveVMSpeedMHz = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "effective_vm_speed_mhz"),
-		"(EffectiveVMSpeedMHz)",
-		nil,
-		nil,
-	)
-	c.hostProcessorSpeedMHz = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "host_processor_speed_mhz"),
-		"(HostProcessorSpeedMHz)",
-		nil,
-		nil,
-	)
-
 	return nil
 }
 
@@ -237,31 +234,6 @@ func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan
 	}
 
 	return nil
-}
-
-type Win32_PerfRawData_vmGuestLib_VMem struct {
-	MemActiveMB      uint64 `mi:"MemActiveMB"`
-	MemBalloonedMB   uint64 `mi:"MemBalloonedMB"`
-	MemLimitMB       uint64 `mi:"MemLimitMB"`
-	MemMappedMB      uint64 `mi:"MemMappedMB"`
-	MemOverheadMB    uint64 `mi:"MemOverheadMB"`
-	MemReservationMB uint64 `mi:"MemReservationMB"`
-	MemSharedMB      uint64 `mi:"MemSharedMB"`
-	MemSharedSavedMB uint64 `mi:"MemSharedSavedMB"`
-	MemShares        uint64 `mi:"MemShares"`
-	MemSwappedMB     uint64 `mi:"MemSwappedMB"`
-	MemTargetSizeMB  uint64 `mi:"MemTargetSizeMB"`
-	MemUsedMB        uint64 `mi:"MemUsedMB"`
-}
-
-type Win32_PerfRawData_vmGuestLib_VCPU struct {
-	CpuLimitMHz           uint64 `mi:"CpuLimitMHz"`
-	CpuReservationMHz     uint64 `mi:"CpuReservationMHz"`
-	CpuShares             uint64 `mi:"CpuShares"`
-	CpuStolenMs           uint64 `mi:"CpuStolenMs"`
-	CpuTimePercents       uint64 `mi:"CpuTimePercents"`
-	EffectiveVMSpeedMHz   uint64 `mi:"EffectiveVMSpeedMHz"`
-	HostProcessorSpeedMHz uint64 `mi:"HostProcessorSpeedMHz"`
 }
 
 func (c *Collector) collectMem(ch chan<- prometheus.Metric) error {
