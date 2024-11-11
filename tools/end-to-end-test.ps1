@@ -10,7 +10,7 @@ if (-not (Test-Path -Path '..\windows_exporter.exe')) {
     Write-Output "..\windows_exporter.exe not found. Consider running \`go build\` first"
 }
 
-$temp_dir = Join-Path $env:TEMP $(New-Guid) | ForEach-Object { mkdir $_ }
+$temp_dir = Join-Path $env:TEMP $([guid]::newguid()) | ForEach-Object { mkdir $_ }
 
 # Create temporary directory for textfile collector
 $textfile_dir = "$($temp_dir)/textfile"
