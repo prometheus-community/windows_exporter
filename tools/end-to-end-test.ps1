@@ -25,7 +25,7 @@ $skip_re = "^(go_|windows_exporter_build_info|windows_exporter_collector_duratio
 $exporter_proc = Start-Process `
     -PassThru `
     -FilePath ..\windows_exporter.exe `
-    -ArgumentList "--log.level=debug","--web.disable-exporter-metrics","--collectors.enabled=[defaults],cache,cpu_info,textfile,process,perfdata,scheduled_task","--collector.process.include=explorer.exe","--collector.scheduled_task.include=.*WinSAT","--collector.service.include=Themes","--collector.textfile.directories=$($textfile_dir)",@"
+    -ArgumentList "--log.level=debug","--web.disable-exporter-metrics","--collectors.enabled=[defaults],cpu_info,textfile,process,perfdata,scheduled_task,tcp,udp,time,system,service,logical_disk,printer,os,net,memory,logon,cache","--collector.process.include=explorer.exe","--collector.scheduled_task.include=.*WinSAT","--collector.service.include=Themes","--collector.textfile.directories=$($textfile_dir)",@"
 --collector.perfdata.objects="[{\"object\":\"Processor Information\",\"instance_label\":\"core\",\"instances\":[\"*\"],\"counters\":{\"% Processor Time\":{},\"% Privileged Time\":{}}},{\"object\":\"Memory\",\"counters\":{\"Cache Faults/sec\":{\"type\":\"counter\"}}}]"
 "@ `
     -WindowStyle Hidden `
