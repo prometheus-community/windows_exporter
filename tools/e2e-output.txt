@@ -87,8 +87,6 @@ test_alpha_total 42
 # TYPE windows_cpu_interrupts_total counter
 # HELP windows_cpu_logical_processor Total number of logical processors
 # TYPE windows_cpu_logical_processor gauge
-# HELP windows_net_nic_address_info A metric with a constant '1' value labeled with the network interface's address information.
-# TYPE windows_net_nic_address_info gauge
 # HELP windows_cpu_parking_status Parking Status represents whether a processor is parked or not
 # TYPE windows_cpu_parking_status gauge
 # HELP windows_cpu_processor_mperf_total Processor MPerf is the number of TSC ticks incremented while executing instructions
@@ -229,15 +227,15 @@ windows_exporter_collector_timeout{collector="textfile"} 0
 # TYPE windows_memory_standby_cache_normal_priority_bytes gauge
 # HELP windows_memory_standby_cache_reserve_bytes The amount of physical memory, in bytes, that is assigned to the reserve standby cache page lists. This memory contains cached data and code that is not actively in use by processes, the system and the system cache (StandbyCacheReserveBytes)
 # TYPE windows_memory_standby_cache_reserve_bytes gauge
-# HELP windows_memory_swap_page_operations_total Total number of swap page read and writes (PagesPersec)
+# HELP windows_memory_swap_page_operations_total Total number of swap page read and writes (PagesPerSec)
 # TYPE windows_memory_swap_page_operations_total counter
-# HELP windows_memory_swap_page_reads_total Number of disk page reads (a single read operation reading several pages is still only counted once) (PageReadsPersec)
+# HELP windows_memory_swap_page_reads_total Number of disk page reads (a single read operation reading several pages is still only counted once) (PageReadsPerSec)
 # TYPE windows_memory_swap_page_reads_total counter
-# HELP windows_memory_swap_page_writes_total Number of disk page writes (a single write operation writing several pages is still only counted once) (PageWritesPersec)
+# HELP windows_memory_swap_page_writes_total Number of disk page writes (a single write operation writing several pages is still only counted once) (PageWritesPerSec)
 # TYPE windows_memory_swap_page_writes_total counter
-# HELP windows_memory_swap_pages_read_total Number of pages read across all page reads (ie counting all pages read even if they are read in a single operation) (PagesInputPersec)
+# HELP windows_memory_swap_pages_read_total Number of pages read across all page reads (ie counting all pages read even if they are read in a single operation) (PagesInputPerSec)
 # TYPE windows_memory_swap_pages_read_total counter
-# HELP windows_memory_swap_pages_written_total Number of pages written across all page writes (ie counting all pages written even if they are written in a single operation) (PagesOutputPersec)
+# HELP windows_memory_swap_pages_written_total Number of pages written across all page writes (ie counting all pages written even if they are written in a single operation) (PagesOutputPerSec)
 # TYPE windows_memory_swap_pages_written_total counter
 # HELP windows_memory_system_cache_resident_bytes The size, in bytes, of the portion of the system file cache which is currently resident and active in physical memory (SystemCacheResidentBytes)
 # TYPE windows_memory_system_cache_resident_bytes gauge
@@ -249,11 +247,11 @@ windows_exporter_collector_timeout{collector="textfile"} 0
 # TYPE windows_memory_system_driver_resident_bytes gauge
 # HELP windows_memory_system_driver_total_bytes The size, in bytes, of the pageable virtual memory currently being used by device drivers. Pageable memory can be written to disk when it is not being used (SystemDriverTotalBytes)
 # TYPE windows_memory_system_driver_total_bytes gauge
-# HELP windows_memory_transition_faults_total Number of faults rate at which page faults are resolved by recovering pages that were being used by another process sharing the page, or were on the modified page list or the standby list, or were being written to disk at the time of the page fault (TransitionFaultsPersec)
+# HELP windows_memory_transition_faults_total Number of faults rate at which page faults are resolved by recovering pages that were being used by another process sharing the page, or were on the modified page list or the standby list, or were being written to disk at the time of the page fault (TransitionFaultsPerSec)
 # TYPE windows_memory_transition_faults_total counter
-# HELP windows_memory_transition_pages_repurposed_total Transition Pages RePurposed is the rate at which the number of transition cache pages were reused for a different purpose (TransitionPagesRePurposedPersec)
+# HELP windows_memory_transition_pages_repurposed_total Transition Pages RePurposed is the rate at which the number of transition cache pages were reused for a different purpose (TransitionPagesRePurposedPerSec)
 # TYPE windows_memory_transition_pages_repurposed_total counter
-# HELP windows_memory_write_copies_total The number of page faults caused by attempting to write that were satisfied by copying the page from elsewhere in physical memory (WriteCopiesPersec)
+# HELP windows_memory_write_copies_total The number of page faults caused by attempting to write that were satisfied by copying the page from elsewhere in physical memory (WriteCopiesPerSec)
 # TYPE windows_memory_write_copies_total counter
 # HELP windows_net_bytes_received_total (Network.BytesReceivedPerSec)
 # TYPE windows_net_bytes_received_total counter
@@ -263,6 +261,8 @@ windows_exporter_collector_timeout{collector="textfile"} 0
 # TYPE windows_net_bytes_total counter
 # HELP windows_net_current_bandwidth_bytes (Network.CurrentBandwidth)
 # TYPE windows_net_current_bandwidth_bytes gauge
+# HELP windows_net_nic_address_info A metric with a constant '1' value labeled with the network interface's address information.
+# TYPE windows_net_nic_address_info gauge
 # HELP windows_net_output_queue_length_packets (Network.OutputQueueLength)
 # TYPE windows_net_output_queue_length_packets gauge
 # HELP windows_net_packets_outbound_discarded_total (Network.PacketsOutboundDiscarded)

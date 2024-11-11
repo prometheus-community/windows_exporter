@@ -78,12 +78,12 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 
 	var err error
 
-	c.perfDataCollector4, err = perfdata.NewCollector(perfdata.V1, "UDPv4", nil, counters)
+	c.perfDataCollector4, err = perfdata.NewCollector(perfdata.V2, "UDPv4", nil, counters)
 	if err != nil {
 		return fmt.Errorf("failed to create UDPv4 collector: %w", err)
 	}
 
-	c.perfDataCollector6, err = perfdata.NewCollector(perfdata.V1, "UDPv6", nil, counters)
+	c.perfDataCollector6, err = perfdata.NewCollector(perfdata.V2, "UDPv6", nil, counters)
 	if err != nil {
 		return fmt.Errorf("failed to create UDPv6 collector: %w", err)
 	}
