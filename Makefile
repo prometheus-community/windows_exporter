@@ -36,11 +36,11 @@ lint:
 
 .PHONY: e2e-test
 e2e-test: windows_exporter.exe
-	pwsh -NonInteractive -ExecutionPolicy Bypass -File .\tools\end-to-end-test.ps1
+	powershell -NonInteractive -ExecutionPolicy Bypass -File .\tools\end-to-end-test.ps1
 
 .PHONY: promtool
 promtool: windows_exporter.exe
-	pwsh -NonInteractive -ExecutionPolicy Bypass -File .\tools\promtool.ps1
+	powershell -NonInteractive -ExecutionPolicy Bypass -File .\tools\promtool.ps1
 
 fmt:
 	gofmt -l -w -s .
