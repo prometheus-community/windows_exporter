@@ -85,7 +85,7 @@ $script_path = $MyInvocation.MyCommand.Path
 $working_dir = Split-Path $script_path
 Push-Location $working_dir
 
-$temp_dir = Join-Path $env:TEMP $(New-Guid) | ForEach-Object { mkdir $_ }
+$temp_dir = Join-Path $env:TEMP $([guid]::newguid()) | ForEach-Object { mkdir $_ }
 
 # Start process in background, awaiting HTTP requests.
 # Listen on 9183/TCP, preventing conflicts with 9182/TCP used by end-to-end-test.ps1
