@@ -195,33 +195,6 @@ windows_exporter_collector_timeout{collector="udp"} 0
 # TYPE windows_logical_disk_writes_total counter
 # HELP windows_logon_session_logon_timestamp_seconds timestamp of the logon session in seconds.
 # TYPE windows_logon_session_logon_timestamp_seconds gauge
-windows_logon_session_logon_timestamp_seconds{domain="",id="0x0:0x7d24",type="System",username=""} 1.731321419e+09
-windows_logon_session_logon_timestamp_seconds{domain="Font Driver Host",id="0x0:0x27bdb3",type="Interactive",username="UMFD-2"} 1.731329046e+09
-windows_logon_session_logon_timestamp_seconds{domain="Font Driver Host",id="0x0:0x27bde0",type="Interactive",username="UMFD-2"} 1.731329046e+09
-windows_logon_session_logon_timestamp_seconds{domain="Font Driver Host",id="0x0:0x9135",type="Interactive",username="UMFD-1"} 1.731321422e+09
-windows_logon_session_logon_timestamp_seconds{domain="Font Driver Host",id="0x0:0x9143",type="Interactive",username="UMFD-0"} 1.731321422e+09
-windows_logon_session_logon_timestamp_seconds{domain="Font Driver Host",id="0x0:0x9157",type="Interactive",username="UMFD-0"} 1.731321422e+09
-windows_logon_session_logon_timestamp_seconds{domain="Font Driver Host",id="0x0:0x91ad",type="Interactive",username="UMFD-1"} 1.731321422e+09
-windows_logon_session_logon_timestamp_seconds{domain="JKROEPKE",id="0x0:0x112385",type="Network",username="vm-jok-dev$"} 1.731322336e+09
-windows_logon_session_logon_timestamp_seconds{domain="JKROEPKE",id="0x0:0x27b4cb",type="Network",username="jok"} 1.731329045e+09
-windows_logon_session_logon_timestamp_seconds{domain="JKROEPKE",id="0x0:0x28540f",type="RemoteInteractive",username="jok"} 1.731329047e+09
-windows_logon_session_logon_timestamp_seconds{domain="JKROEPKE",id="0x0:0x322bbf",type="Network",username="vm-jok-dev$"} 1.731330614e+09
-windows_logon_session_logon_timestamp_seconds{domain="JKROEPKE",id="0x0:0x3e4",type="Service",username="vm-jok-dev$"} 1.731321423e+09
-windows_logon_session_logon_timestamp_seconds{domain="JKROEPKE",id="0x0:0x3e7",type="System",username="vm-jok-dev$"} 1.731321419e+09
-windows_logon_session_logon_timestamp_seconds{domain="JKROEPKE",id="0x0:0x6e20d",type="Network",username="vm-jok-dev$"} 1.731321466e+09
-windows_logon_session_logon_timestamp_seconds{domain="JKROEPKE",id="0x0:0x6e4fe",type="Network",username="vm-jok-dev$"} 1.731321466e+09
-windows_logon_session_logon_timestamp_seconds{domain="JKROEPKE",id="0x0:0x6ea71",type="Network",username="vm-jok-dev$"} 1.731321466e+09
-windows_logon_session_logon_timestamp_seconds{domain="JKROEPKE",id="0x0:0x73b90",type="Network",username="vm-jok-dev$"} 1.731321466e+09
-windows_logon_session_logon_timestamp_seconds{domain="JKROEPKE",id="0x0:0xa1c6e",type="Network",username="vm-jok-dev$"} 1.731321527e+09
-windows_logon_session_logon_timestamp_seconds{domain="JKROEPKE",id="0x0:0xc405d",type="Network",username="vm-jok-dev$"} 1.731321766e+09
-windows_logon_session_logon_timestamp_seconds{domain="NT AUTHORITY",id="0x0:0x3e3",type="Service",username="IUSR"} 1.731321436e+09
-windows_logon_session_logon_timestamp_seconds{domain="NT AUTHORITY",id="0x0:0x3e5",type="Service",username="LOCAL SERVICE"} 1.731321423e+09
-windows_logon_session_logon_timestamp_seconds{domain="NT Service",id="0x0:0xabf9a",type="Service",username="MSSQLSERVER"} 1.731321567e+09
-windows_logon_session_logon_timestamp_seconds{domain="NT Service",id="0x0:0xb2dcf",type="Service",username="SQLTELEMETRY"} 1.731321573e+09
-windows_logon_session_logon_timestamp_seconds{domain="Window Manager",id="0x0:0x118e0",type="Interactive",username="DWM-1"} 1.731321427e+09
-windows_logon_session_logon_timestamp_seconds{domain="Window Manager",id="0x0:0x11919",type="Interactive",username="DWM-1"} 1.731321427e+09
-windows_logon_session_logon_timestamp_seconds{domain="Window Manager",id="0x0:0x27c128",type="Interactive",username="DWM-2"} 1.731329046e+09
-windows_logon_session_logon_timestamp_seconds{domain="Window Manager",id="0x0:0x27c145",type="Interactive",username="DWM-2"} 1.731329046e+09
 # HELP windows_memory_available_bytes The amount of physical memory immediately available for allocation to a process or for system use. It is equal to the sum of memory assigned to the standby (cached), free and zero page lists (AvailableBytes)
 # TYPE windows_memory_available_bytes gauge
 # HELP windows_memory_cache_bytes (CacheBytes)
