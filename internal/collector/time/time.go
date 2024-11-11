@@ -145,7 +145,7 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch ch
 
 // Perflib "Windows Time Service".
 type windowsTime struct {
-	ClockFrequencyAdjustmentPPBTotal float64 `perflib:"Clock Frequency Adjustment (ppb)"`
+	ClockFrequencyAdjustmentPPBTotal float64 `perflib:"Clock Frequency Adjustment (PPB)"`
 	ComputedTimeOffset               float64 `perflib:"Computed Time Offset"`
 	NTPClientTimeSourceCount         float64 `perflib:"NTP Client Time Source Count"`
 	NTPRoundTripDelay                float64 `perflib:"NTP Roundtrip Delay"`
