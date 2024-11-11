@@ -55,6 +55,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/textfile"
 	"github.com/prometheus-community/windows_exporter/internal/collector/thermalzone"
 	"github.com/prometheus-community/windows_exporter/internal/collector/time"
+	"github.com/prometheus-community/windows_exporter/internal/collector/udp"
 	"github.com/prometheus-community/windows_exporter/internal/collector/update"
 	"github.com/prometheus-community/windows_exporter/internal/collector/vmware"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
@@ -122,6 +123,7 @@ func NewWithConfig(config Config) *MetricCollectors {
 	collectors[textfile.Name] = textfile.New(&config.Textfile)
 	collectors[thermalzone.Name] = thermalzone.New(&config.ThermalZone)
 	collectors[time.Name] = time.New(&config.Time)
+	collectors[udp.Name] = udp.New(&config.UDP)
 	collectors[update.Name] = update.New(&config.Update)
 	collectors[vmware.Name] = vmware.New(&config.Vmware)
 

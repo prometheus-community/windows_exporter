@@ -51,6 +51,7 @@ Name     | Description | Enabled by default
 [textfile](docs/collector.textfile.md) | Read prometheus metrics from a text file |
 [thermalzone](docs/collector.thermalzone.md) | Thermal information |
 [time](docs/collector.time.md) | Windows Time Service |
+[udp](docs/collector.udp.md) | UDP connections |
 [update](docs/collector.update.md) | Windows Update Service |
 [vmware](docs/collector.vmware.md) | Performance counters installed by the Vmware Guest agent |
 
