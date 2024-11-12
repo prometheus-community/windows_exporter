@@ -143,18 +143,18 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 	)
 
 	counters = []string{
-		MemActiveMB,
-		MemBalloonedMB,
-		MemLimitMB,
-		MemMappedMB,
-		MemOverheadMB,
-		MemReservationMB,
-		MemSharedMB,
-		MemSharedSavedMB,
-		MemShares,
-		MemSwappedMB,
-		MemTargetSizeMB,
-		MemUsedMB,
+		memActiveMB,
+		memBalloonedMB,
+		memLimitMB,
+		memMappedMB,
+		memOverheadMB,
+		memReservationMB,
+		memSharedMB,
+		memSharedSavedMB,
+		memShares,
+		memSwappedMB,
+		memTargetSizeMB,
+		memUsedMB,
 	}
 
 	c.perfDataCollectorMemory, err = perfdata.NewCollector(perfdata.V2, "VM Memory", nil, counters)
@@ -268,73 +268,73 @@ func (c *Collector) collectMem(ch chan<- prometheus.Metric) error {
 	ch <- prometheus.MustNewConstMetric(
 		c.memActive,
 		prometheus.GaugeValue,
-		utils.MBToBytes(data[MemActiveMB].FirstValue),
+		utils.MBToBytes(data[memActiveMB].FirstValue),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memBallooned,
 		prometheus.GaugeValue,
-		utils.MBToBytes(data[MemBalloonedMB].FirstValue),
+		utils.MBToBytes(data[memBalloonedMB].FirstValue),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memLimit,
 		prometheus.GaugeValue,
-		utils.MBToBytes(data[MemLimitMB].FirstValue),
+		utils.MBToBytes(data[memLimitMB].FirstValue),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memMapped,
 		prometheus.GaugeValue,
-		utils.MBToBytes(data[MemMappedMB].FirstValue),
+		utils.MBToBytes(data[memMappedMB].FirstValue),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memOverhead,
 		prometheus.GaugeValue,
-		utils.MBToBytes(data[MemOverheadMB].FirstValue),
+		utils.MBToBytes(data[memOverheadMB].FirstValue),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memReservation,
 		prometheus.GaugeValue,
-		utils.MBToBytes(data[MemReservationMB].FirstValue),
+		utils.MBToBytes(data[memReservationMB].FirstValue),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memShared,
 		prometheus.GaugeValue,
-		utils.MBToBytes(data[MemSharedMB].FirstValue),
+		utils.MBToBytes(data[memSharedMB].FirstValue),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memSharedSaved,
 		prometheus.GaugeValue,
-		utils.MBToBytes(data[MemSharedSavedMB].FirstValue),
+		utils.MBToBytes(data[memSharedSavedMB].FirstValue),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memShares,
 		prometheus.GaugeValue,
-		data[MemShares].FirstValue,
+		data[memShares].FirstValue,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memSwapped,
 		prometheus.GaugeValue,
-		utils.MBToBytes(data[MemSwappedMB].FirstValue),
+		utils.MBToBytes(data[memSwappedMB].FirstValue),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memTargetSize,
 		prometheus.GaugeValue,
-		utils.MBToBytes(data[MemTargetSizeMB].FirstValue),
+		utils.MBToBytes(data[memTargetSizeMB].FirstValue),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memUsed,
 		prometheus.GaugeValue,
-		utils.MBToBytes(data[MemUsedMB].FirstValue),
+		utils.MBToBytes(data[memUsedMB].FirstValue),
 	)
 
 	return nil
