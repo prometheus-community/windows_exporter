@@ -9,8 +9,10 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
+	"github.com/prometheus-community/windows_exporter/internal/perfdata"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata/perftypes"
 	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -22,10 +24,9 @@ var ConfigDefaults = Config{}
 
 // A Collector is a Prometheus Collector for WMI Win32_PerfRawData_vmGuestLib_VMem/Win32_PerfRawData_vmGuestLib_VCPU metrics.
 type Collector struct {
-	config     Config
-	miSession  *mi.Session
-	miQueryCPU mi.Query
-	miQueryMem mi.Query
+	config                  Config
+	perfDataCollectorCPU    perfdata.Collector
+	perfDataCollectorMemory perfdata.Collector
 
 	memActive      *prometheus.Desc
 	memBallooned   *prometheus.Desc
@@ -40,13 +41,13 @@ type Collector struct {
 	memTargetSize  *prometheus.Desc
 	memUsed        *prometheus.Desc
 
-	cpuLimitMHz           *prometheus.Desc
-	cpuReservationMHz     *prometheus.Desc
-	cpuShares             *prometheus.Desc
-	cpuStolenTotal        *prometheus.Desc
-	cpuTimeTotal          *prometheus.Desc
-	effectiveVMSpeedMHz   *prometheus.Desc
-	hostProcessorSpeedMHz *prometheus.Desc
+	cpuLimitMHz            *prometheus.Desc
+	cpuReservationMHz      *prometheus.Desc
+	cpuShares              *prometheus.Desc
+	cpuStolenTotal         *prometheus.Desc
+	cpuTimeTotal           *prometheus.Desc
+	cpuEffectiveVMSpeedMHz *prometheus.Desc
+	hostProcessorSpeedMHz  *prometheus.Desc
 }
 
 func New(config *Config) *Collector {
@@ -74,141 +75,162 @@ func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
 }
 
 func (c *Collector) Close(_ *slog.Logger) error {
+	c.perfDataCollectorCPU.Close()
+	c.perfDataCollectorMemory.Close()
+
 	return nil
 }
 
-func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
-	if miSession == nil {
-		return errors.New("miSession is nil")
+func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
+	counters := []string{
+		cpuLimitMHz,
+		cpuReservationMHz,
+		cpuShares,
+		cpuStolenMs,
+		cpuTimePercents,
+		couEffectiveVMSpeedMHz,
+		cpuHostProcessorSpeedMHz,
 	}
 
-	miQuery, err := mi.NewQuery("SELECT * FROM Win32_PerfRawData_vmGuestLib_VCPU")
+	var err error
+
+	c.perfDataCollectorCPU, err = perfdata.NewCollector(perfdata.V2, "VM Processor", perftypes.TotalInstance, counters)
 	if err != nil {
-		return fmt.Errorf("failed to create WMI query: %w", err)
+		return fmt.Errorf("failed to create VM Processor collector: %w", err)
 	}
-
-	c.miQueryCPU = miQuery
-
-	miQuery, err = mi.NewQuery("SELECT * FROM Win32_PerfRawData_vmGuestLib_VMem")
-	if err != nil {
-		return fmt.Errorf("failed to create WMI query: %w", err)
-	}
-
-	c.miQueryMem = miQuery
-	c.miSession = miSession
-
-	c.memActive = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "mem_active_bytes"),
-		"(MemActiveMB)",
-		nil,
-		nil,
-	)
-	c.memBallooned = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "mem_ballooned_bytes"),
-		"(MemBalloonedMB)",
-		nil,
-		nil,
-	)
-	c.memLimit = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "mem_limit_bytes"),
-		"(MemLimitMB)",
-		nil,
-		nil,
-	)
-	c.memMapped = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "mem_mapped_bytes"),
-		"(MemMappedMB)",
-		nil,
-		nil,
-	)
-	c.memOverhead = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "mem_overhead_bytes"),
-		"(MemOverheadMB)",
-		nil,
-		nil,
-	)
-	c.memReservation = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "mem_reservation_bytes"),
-		"(MemReservationMB)",
-		nil,
-		nil,
-	)
-	c.memShared = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "mem_shared_bytes"),
-		"(MemSharedMB)",
-		nil,
-		nil,
-	)
-	c.memSharedSaved = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "mem_shared_saved_bytes"),
-		"(MemSharedSavedMB)",
-		nil,
-		nil,
-	)
-	c.memShares = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "mem_shares"),
-		"(MemShares)",
-		nil,
-		nil,
-	)
-	c.memSwapped = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "mem_swapped_bytes"),
-		"(MemSwappedMB)",
-		nil,
-		nil,
-	)
-	c.memTargetSize = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "mem_target_size_bytes"),
-		"(MemTargetSizeMB)",
-		nil,
-		nil,
-	)
-	c.memUsed = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "mem_used_bytes"),
-		"(MemUsedMB)",
-		nil,
-		nil,
-	)
 
 	c.cpuLimitMHz = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "cpu_limit_mhz"),
-		"(CpuLimitMHz)",
+		"The maximum processing power in MHz allowed to the virtual machine. Assigning a CPU Limit ensures that this virtual machine never consumes more than a certain amount of the available processor power. By limiting the amount of processing power consumed, a portion of the processing power becomes available to other virtual machines.",
 		nil,
 		nil,
 	)
 	c.cpuReservationMHz = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "cpu_reservation_mhz"),
-		"(CpuReservationMHz)",
+		"The minimum processing power in MHz available to the virtual machine. Assigning a CPU Reservation ensures that even as other virtual machines on the same host consume shared processing power, there is still a certain minimum amount for this virtual machine.",
 		nil,
 		nil,
 	)
 	c.cpuShares = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "cpu_shares"),
-		"(CpuShares)",
+		"The number of CPU shares allocated to the virtual machine.",
 		nil,
 		nil,
 	)
 	c.cpuStolenTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "cpu_stolen_seconds_total"),
-		"(CpuStolenMs)",
+		"The time that the VM was runnable but not scheduled to run.",
 		nil,
 		nil,
 	)
 	c.cpuTimeTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "cpu_time_seconds_total"),
-		"(CpuTimePercents)",
+		"Current load of the VM’s virtual processor",
 		nil,
 		nil,
 	)
-	c.effectiveVMSpeedMHz = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "effective_vm_speed_mhz"),
-		"(EffectiveVMSpeedMHz)",
+	c.cpuEffectiveVMSpeedMHz = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "cpu_effective_vm_speed_mhz_total"),
+		"The effective speed of the VM’s virtual CPU",
 		nil,
 		nil,
 	)
 	c.hostProcessorSpeedMHz = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "host_processor_speed_mhz"),
-		"(HostProcessorSpeedMHz)",
+		"Host Processor speed",
+		nil,
+		nil,
+	)
+
+	counters = []string{
+		MemActiveMB,
+		MemBalloonedMB,
+		MemLimitMB,
+		MemMappedMB,
+		MemOverheadMB,
+		MemReservationMB,
+		MemSharedMB,
+		MemSharedSavedMB,
+		MemShares,
+		MemSwappedMB,
+		MemTargetSizeMB,
+		MemUsedMB,
+	}
+
+	c.perfDataCollectorMemory, err = perfdata.NewCollector(perfdata.V2, "VM Memory", nil, counters)
+	if err != nil {
+		return fmt.Errorf("failed to create VM Memory collector: %w", err)
+	}
+
+	c.memActive = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "mem_active_bytes"),
+		"The estimated amount of memory the virtual machine is actively using.",
+		nil,
+		nil,
+	)
+	c.memBallooned = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "mem_ballooned_bytes"),
+		"The amount of memory that has been reclaimed from this virtual machine via the VMware Memory Balloon mechanism.",
+		nil,
+		nil,
+	)
+	c.memLimit = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "mem_limit_bytes"),
+		"The maximum amount of memory that is allowed to the virtual machine. Assigning a Memory Limit ensures that this virtual machine never consumes more than a certain amount of the allowed memory. By limiting the amount of memory consumed, a portion of this shared resource is allowed to other virtual machines.",
+		nil,
+		nil,
+	)
+	c.memMapped = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "mem_mapped_bytes"),
+		"The mapped memory size of this virtual machine. This is the current total amount of guest memory that is backed by physical memory. Note that this number may include pages of memory shared between multiple virtual machines and thus may be an overestimate of the amount of physical host memory consumed by this virtual machine.",
+		nil,
+		nil,
+	)
+	c.memOverhead = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "mem_overhead_bytes"),
+		"The amount of overhead memory associated with this virtual machine consumed on the host system.",
+		nil,
+		nil,
+	)
+	c.memReservation = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "mem_reservation_bytes"),
+		"The minimum amount of memory that is guaranteed to the virtual machine. Assigning a Memory Reservation ensures that even as other virtual machines on the same host consume memory, there is still a certain minimum amount for this virtual machine.",
+		nil,
+		nil,
+	)
+	c.memShared = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "mem_shared_bytes"),
+		"The amount of physical memory associated with this virtual machine that is copy-on-write (COW) shared on the host.",
+		nil,
+		nil,
+	)
+	c.memSharedSaved = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "mem_shared_saved_bytes"),
+		"The estimated amount of physical memory on the host saved from copy-on-write (COW) shared guest physical memory.",
+		nil,
+		nil,
+	)
+	c.memShares = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "mem_shares"),
+		"The number of memory shares allocated to the virtual machine.",
+		nil,
+		nil,
+	)
+	c.memSwapped = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "mem_swapped_bytes"),
+		"The amount of memory associated with this virtual machine that has been swapped by ESX.",
+		nil,
+		nil,
+	)
+	c.memTargetSize = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "mem_target_size_bytes"),
+		"Memory Target Size.",
+		nil,
+		nil,
+	)
+	c.memUsed = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "mem_used_bytes"),
+		"The estimated amount of physical host memory currently consumed for this virtual machine’s physical memory.",
 		nil,
 		nil,
 	)
@@ -218,192 +240,157 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	logger = logger.With(slog.String("collector", Name))
-	if err := c.collectMem(ch); err != nil {
-		logger.Error("failed collecting vmware memory metrics",
-			slog.Any("err", err),
-		)
-
-		return err
-	}
+func (c *Collector) Collect(_ *types.ScrapeContext, _ *slog.Logger, ch chan<- prometheus.Metric) error {
+	errs := make([]error, 0, 2)
 
 	if err := c.collectCpu(ch); err != nil {
-		logger.Error("failed collecting vmware cpu metrics",
-			slog.Any("err", err),
-		)
-
-		return err
+		errs = append(errs, fmt.Errorf("failed collecting vmware cpu metrics: %w", err))
 	}
 
-	return nil
-}
+	if err := c.collectMem(ch); err != nil {
+		errs = append(errs, fmt.Errorf("failed collecting vmware memory metrics: %w", err))
+	}
 
-type Win32_PerfRawData_vmGuestLib_VMem struct {
-	MemActiveMB      uint64 `mi:"MemActiveMB"`
-	MemBalloonedMB   uint64 `mi:"MemBalloonedMB"`
-	MemLimitMB       uint64 `mi:"MemLimitMB"`
-	MemMappedMB      uint64 `mi:"MemMappedMB"`
-	MemOverheadMB    uint64 `mi:"MemOverheadMB"`
-	MemReservationMB uint64 `mi:"MemReservationMB"`
-	MemSharedMB      uint64 `mi:"MemSharedMB"`
-	MemSharedSavedMB uint64 `mi:"MemSharedSavedMB"`
-	MemShares        uint64 `mi:"MemShares"`
-	MemSwappedMB     uint64 `mi:"MemSwappedMB"`
-	MemTargetSizeMB  uint64 `mi:"MemTargetSizeMB"`
-	MemUsedMB        uint64 `mi:"MemUsedMB"`
-}
-
-type Win32_PerfRawData_vmGuestLib_VCPU struct {
-	CpuLimitMHz           uint64 `mi:"CpuLimitMHz"`
-	CpuReservationMHz     uint64 `mi:"CpuReservationMHz"`
-	CpuShares             uint64 `mi:"CpuShares"`
-	CpuStolenMs           uint64 `mi:"CpuStolenMs"`
-	CpuTimePercents       uint64 `mi:"CpuTimePercents"`
-	EffectiveVMSpeedMHz   uint64 `mi:"EffectiveVMSpeedMHz"`
-	HostProcessorSpeedMHz uint64 `mi:"HostProcessorSpeedMHz"`
+	return errors.Join(errs...)
 }
 
 func (c *Collector) collectMem(ch chan<- prometheus.Metric) error {
-	var dst []Win32_PerfRawData_vmGuestLib_VMem
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, c.miQueryMem); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
+	perfData, err := c.perfDataCollectorMemory.Collect()
+	if err != nil {
+		return fmt.Errorf("failed to collect VM Memory metrics: %w", err)
 	}
 
-	if len(dst) == 0 {
-		return errors.New("WMI query returned empty result set")
+	data, ok := perfData[perftypes.EmptyInstance]
+	if !ok {
+		return errors.New("query for VM Memory returned empty result set")
 	}
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memActive,
 		prometheus.GaugeValue,
-		mbToBytes(dst[0].MemActiveMB),
+		utils.MBToBytes(data[MemActiveMB].FirstValue),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memBallooned,
 		prometheus.GaugeValue,
-		mbToBytes(dst[0].MemBalloonedMB),
+		utils.MBToBytes(data[MemBalloonedMB].FirstValue),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memLimit,
 		prometheus.GaugeValue,
-		mbToBytes(dst[0].MemLimitMB),
+		utils.MBToBytes(data[MemLimitMB].FirstValue),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memMapped,
 		prometheus.GaugeValue,
-		mbToBytes(dst[0].MemMappedMB),
+		utils.MBToBytes(data[MemMappedMB].FirstValue),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memOverhead,
 		prometheus.GaugeValue,
-		mbToBytes(dst[0].MemOverheadMB),
+		utils.MBToBytes(data[MemOverheadMB].FirstValue),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memReservation,
 		prometheus.GaugeValue,
-		mbToBytes(dst[0].MemReservationMB),
+		utils.MBToBytes(data[MemReservationMB].FirstValue),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memShared,
 		prometheus.GaugeValue,
-		mbToBytes(dst[0].MemSharedMB),
+		utils.MBToBytes(data[MemSharedMB].FirstValue),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memSharedSaved,
 		prometheus.GaugeValue,
-		mbToBytes(dst[0].MemSharedSavedMB),
+		utils.MBToBytes(data[MemSharedSavedMB].FirstValue),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memShares,
 		prometheus.GaugeValue,
-		float64(dst[0].MemShares),
+		data[MemShares].FirstValue,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memSwapped,
 		prometheus.GaugeValue,
-		mbToBytes(dst[0].MemSwappedMB),
+		utils.MBToBytes(data[MemSwappedMB].FirstValue),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memTargetSize,
 		prometheus.GaugeValue,
-		mbToBytes(dst[0].MemTargetSizeMB),
+		utils.MBToBytes(data[MemTargetSizeMB].FirstValue),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memUsed,
 		prometheus.GaugeValue,
-		mbToBytes(dst[0].MemUsedMB),
+		utils.MBToBytes(data[MemUsedMB].FirstValue),
 	)
 
 	return nil
 }
 
-// mbToBytes moved to utils package
-func mbToBytes(mb uint64) float64 {
-	return float64(mb * 1024 * 1024)
-}
-
 func (c *Collector) collectCpu(ch chan<- prometheus.Metric) error {
-	var dst []Win32_PerfRawData_vmGuestLib_VCPU
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, c.miQueryCPU); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
+	perfData, err := c.perfDataCollectorCPU.Collect()
+	if err != nil {
+		return fmt.Errorf("failed to collect VM Memory metrics: %w", err)
 	}
 
-	if len(dst) == 0 {
-		return errors.New("WMI query returned empty result set")
+	data, ok := perfData["_Total"]
+	if !ok {
+		return errors.New("query for VM CPU returned empty result set")
 	}
 
 	ch <- prometheus.MustNewConstMetric(
 		c.cpuLimitMHz,
 		prometheus.GaugeValue,
-		float64(dst[0].CpuLimitMHz),
+		data[cpuLimitMHz].FirstValue,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.cpuReservationMHz,
 		prometheus.GaugeValue,
-		float64(dst[0].CpuReservationMHz),
+		data[cpuReservationMHz].FirstValue,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.cpuShares,
 		prometheus.GaugeValue,
-		float64(dst[0].CpuShares),
+		data[cpuShares].FirstValue,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.cpuStolenTotal,
 		prometheus.CounterValue,
-		float64(dst[0].CpuStolenMs)*perftypes.TicksToSecondScaleFactor,
+		utils.MilliSecToSec(data[cpuStolenMs].FirstValue),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.cpuTimeTotal,
 		prometheus.CounterValue,
-		float64(dst[0].CpuTimePercents)*perftypes.TicksToSecondScaleFactor,
+		utils.MilliSecToSec(data[cpuTimePercents].FirstValue),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		c.effectiveVMSpeedMHz,
+		c.cpuEffectiveVMSpeedMHz,
 		prometheus.GaugeValue,
-		float64(dst[0].EffectiveVMSpeedMHz),
+		data[couEffectiveVMSpeedMHz].FirstValue,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.hostProcessorSpeedMHz,
 		prometheus.GaugeValue,
-		float64(dst[0].HostProcessorSpeedMHz),
+		data[cpuHostProcessorSpeedMHz].FirstValue,
 	)
 
 	return nil

@@ -166,10 +166,12 @@ func (c *Collector) Collect() (map[string]map[string]perftypes.CounterValues, er
 				metricType = prometheus.GaugeValue
 			}
 
+			_, isTotalCounterRequests := c.counters["_Total"]
+
 			for _, item := range items {
 				if item.RawValue.CStatus == PdhCstatusValidData || item.RawValue.CStatus == PdhCstatusNewData {
 					instanceName := windows.UTF16PtrToString(item.SzName)
-					if strings.HasSuffix(instanceName, "_Total") {
+					if strings.HasSuffix(instanceName, "_Total") && !isTotalCounterRequests {
 						continue
 					}
 
