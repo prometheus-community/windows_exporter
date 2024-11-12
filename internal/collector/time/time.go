@@ -80,7 +80,7 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 
 	app.Flag(
 		"collector.time.enabled",
-		"Comma-separated list of collectors to use. Defaults to all, if not specified.",
+		"Comma-separated list of collectors to use. Defaults to all, if not specified. ntp may not available on all systems.",
 	).Default(strings.Join(ConfigDefaults.CollectorsEnabled, ",")).StringVar(&collectorsEnabled)
 
 	app.Action(func(*kingpin.ParseContext) error {
