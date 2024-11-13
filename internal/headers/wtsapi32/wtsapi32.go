@@ -170,8 +170,7 @@ func WTSEnumerateSessionsEx(server windows.Handle, logger *slog.Logger) ([]WTSSe
 
 	if sessionInfoPointer != 0 {
 		defer func(class WTSTypeClass, pMemory uintptr, NumberOfEntries uint32) {
-			err := WTSFreeMemoryEx(class, pMemory, NumberOfEntries)
-			if err != nil {
+			if err := WTSFreeMemoryEx(class, pMemory, NumberOfEntries); err != nil {
 				logger.Warn("failed to free memory", "err", fmt.Errorf("WTSEnumerateSessionsEx: %w", err))
 			}
 		}(WTSTypeSessionInfoLevel1, sessionInfoPointer, count)

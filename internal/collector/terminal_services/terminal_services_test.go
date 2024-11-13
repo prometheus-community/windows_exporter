@@ -10,3 +10,7 @@ import (
 func BenchmarkCollector(b *testing.B) {
 	testutils.FuncBenchmarkCollector(b, terminal_services.Name, terminal_services.NewWithFlags)
 }
+
+func TestCollector(t *testing.T) {
+	testutils.TestCollector(t, terminal_services.New, nil)
+}

@@ -14,7 +14,6 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata/perftypes"
-	v1 "github.com/prometheus-community/windows_exporter/internal/perfdata/v1"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
@@ -279,7 +278,7 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch ch
 		errs = append(errs, fmt.Errorf("failed collecting terminal services session infos: %w", err))
 	}
 
-	if err := c.collectTSSessionCounters(ctx, logger, ch); err != nil {
+	if err := c.collectTSSessionCounters(ch); err != nil {
 		errs = append(errs, fmt.Errorf("failed collecting terminal services session count metrics: %w", err))
 	}
 
@@ -293,19 +292,17 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch ch
 	return errors.Join(errs...)
 }
 
-func (c *Collector) collectTSSessionCounters(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	dst := make([]perflibTerminalServicesSession, 0)
-
-	err := v1.UnmarshalObject(ctx.PerfObjects["Terminal Services Session"], &dst, logger)
+func (c *Collector) collectTSSessionCounters(ch chan<- prometheus.Metric) error {
+	perfData, err := c.perfDataCollectorTerminalServicesSession.Collect()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to collect Terminal Services Session metrics: %w", err)
 	}
 
 	names := make(map[string]bool)
 
-	for _, d := range dst {
+	for name, data := range perfData {
 		// only connect metrics for remote named sessions
-		n := strings.ToLower(d.Name)
+		n := strings.ToLower(name)
 		if n == "" || n == "services" || n == "console" {
 			continue
 		}
@@ -319,95 +316,95 @@ func (c *Collector) collectTSSessionCounters(ctx *types.ScrapeContext, logger *s
 		ch <- prometheus.MustNewConstMetric(
 			c.handleCount,
 			prometheus.GaugeValue,
-			d.HandleCount,
-			d.Name,
+			data[HandleCount].FirstValue,
+			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.pageFaultsPerSec,
 			prometheus.CounterValue,
-			d.PageFaultsPersec,
-			d.Name,
+			data[PageFaultsPersec].FirstValue,
+			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.pageFileBytes,
 			prometheus.GaugeValue,
-			d.PageFileBytes,
-			d.Name,
+			data[PageFileBytes].FirstValue,
+			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.pageFileBytesPeak,
 			prometheus.GaugeValue,
-			d.PageFileBytesPeak,
-			d.Name,
+			data[PageFileBytesPeak].FirstValue,
+			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.percentCPUTime,
 			prometheus.CounterValue,
-			d.PercentPrivilegedTime,
-			d.Name,
+			data[PercentPrivilegedTime].FirstValue,
+			name,
 			"privileged",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.percentCPUTime,
 			prometheus.CounterValue,
-			d.PercentProcessorTime,
-			d.Name,
+			data[PercentProcessorTime].FirstValue,
+			name,
 			"processor",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.percentCPUTime,
 			prometheus.CounterValue,
-			d.PercentUserTime,
-			d.Name,
+			data[PercentUserTime].FirstValue,
+			name,
 			"user",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.poolNonPagedBytes,
 			prometheus.GaugeValue,
-			d.PoolNonpagedBytes,
-			d.Name,
+			data[PoolNonpagedBytes].FirstValue,
+			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.poolPagedBytes,
 			prometheus.GaugeValue,
-			d.PoolPagedBytes,
-			d.Name,
+			data[PoolPagedBytes].FirstValue,
+			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.privateBytes,
 			prometheus.GaugeValue,
-			d.PrivateBytes,
-			d.Name,
+			data[PrivateBytes].FirstValue,
+			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.threadCount,
 			prometheus.GaugeValue,
-			d.ThreadCount,
-			d.Name,
+			data[ThreadCount].FirstValue,
+			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualBytes,
 			prometheus.GaugeValue,
-			d.VirtualBytes,
-			d.Name,
+			data[VirtualBytes].FirstValue,
+			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualBytesPeak,
 			prometheus.GaugeValue,
-			d.VirtualBytesPeak,
-			d.Name,
+			data[VirtualBytesPeak].FirstValue,
+			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.workingSet,
 			prometheus.GaugeValue,
-			d.WorkingSet,
-			d.Name,
+			data[WorkingSet].FirstValue,
+			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.workingSetPeak,
 			prometheus.GaugeValue,
-			d.WorkingSetPeak,
-			d.Name,
+			data[WorkingSetPeak].FirstValue,
+			name,
 		)
 	}
 
