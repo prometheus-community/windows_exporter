@@ -153,7 +153,6 @@ func (c *Collector) Collect() (map[string]map[string]perftypes.CounterValues, er
 				continue
 			}
 
-			// items := (*[1 << 20]PdhRawCounterItem)(unsafe.Pointer(&buf[0]))[:itemCount]
 			items := unsafe.Slice((*PdhRawCounterItem)(unsafe.Pointer(&buf[0])), itemCount)
 
 			if data == nil {
