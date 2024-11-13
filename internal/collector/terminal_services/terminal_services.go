@@ -110,6 +110,7 @@ func (c *Collector) Close(_ *slog.Logger) error {
 	}
 
 	c.perfDataCollectorTerminalServicesSession.Close()
+
 	if c.connectionBrokerEnabled {
 		c.perfDataCollectorBroker.Close()
 	}
@@ -269,7 +270,7 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
 
 	errs := make([]error, 0, 3)
