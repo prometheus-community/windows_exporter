@@ -64,31 +64,19 @@ build-hostprocess:
 sub-build-%:
 	$(MAKE) OS=$* build-image
 
-build-all: $(addprefix sub-build-,$(ALL_OS)) build-hostprocess
-
-push:
-	set -x; \
-	for docker_repo in ${DOCKER_REPO}; do \
-		for osversion in ${ALL_OS}; do \
-			$(DOCKER) tag local/$(DOCKER_IMAGE_NAME):$(VERSION)-$${osversion} $${docker_repo}/$(DOCKER_IMAGE_NAME):$(VERSION)-$${osversion}; \
-			$(DOCKER) push $${docker_repo}/$(DOCKER_IMAGE_NAME):$(VERSION)-$${osversion}; \
-			$(DOCKER) manifest create --amend $${docker_repo}/$(DOCKER_IMAGE_NAME):$(VERSION) $${docker_repo}/$(DOCKER_IMAGE_NAME):$(VERSION)-$${osversion}; \
-			full_version=`$(DOCKER) manifest inspect $(BASE_IMAGE):$${osversion} | grep "os.version" | head -n 1 | awk -F\" '{print $$4}'` || true; \
-			$(DOCKER) manifest annotate --os windows --arch amd64 --os-version $${full_version} $${docker_repo}/$(DOCKER_IMAGE_NAME):$(VERSION) $${docker_repo}/$(DOCKER_IMAGE_NAME):$(VERSION)-$${osversion}; \
-		done; \
-		$(DOCKER) manifest push --purge $${docker_repo}/$(DOCKER_IMAGE_NAME):$(VERSION); \
+build-all:
+	@for docker_repo in ${DOCKER_REPO}; do \
+		echo $(DOCKER) buildx build -f Dockerfile -t $${docker_repo}/$(DOCKER_IMAGE_NAME):$(VERSION) .; \
 	done
 
-# We can't load the image into the local docker store, so we have to build and push it in one go
-push-hostprocess:
-	set -x; \
-	for docker_repo in ${DOCKER_REPO}; do \
-		$(DOCKER) buildx build --push --build-arg=BASE=mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v1.0.0 -f Dockerfile -t $${docker_repo}/$(DOCKER_IMAGE_NAME):$(VERSION)-hostprocess .; \
+push:
+	@for docker_repo in ${DOCKER_REPO}; do \
+		echo $(DOCKER) buildx build --push -f Dockerfile -t $${docker_repo}/$(DOCKER_IMAGE_NAME):$(VERSION) .; \
 	done
 
 .PHONY: push-all
 push-all: build-all
-	$(MAKE) DOCKER_REPO="$(ALL_DOCKER_REPOS)" push # push-hostprocess - disabled until it works on Windows
+	$(MAKE) DOCKER_REPO="$(ALL_DOCKER_REPOS)" push
 
 # Mandatory target for container description sync action
 .PHONY: docker-repo-name
