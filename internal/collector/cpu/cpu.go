@@ -109,7 +109,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 
 		var err error
 
-		c.perfDataCollector, err = perfdata.NewCollector(perfdata.V1, "Processor Information", perfdata.AllInstances, counters)
+		c.perfDataCollector, err = perfdata.NewCollector(perfdata.V2, "Processor Information", perfdata.AllInstances, counters)
 		if err != nil {
 			return fmt.Errorf("failed to create Processor Information collector: %w", err)
 		}

@@ -4,8 +4,8 @@ import "github.com/prometheus/client_golang/prometheus"
 
 // Conversion factors.
 const (
-	TicksToSecondScaleFactor = 1 / 1e7
-	WindowsEpoch             = 116444736000000000
+	TicksToSecondScaleFactor       = 1 / 1e7
+	WindowsEpoch             int64 = 116444736000000000
 )
 
 // Based on https://github.com/leoluk/perflib_exporter/blob/master/collector/mapper.go

@@ -179,6 +179,12 @@ func run() int {
 
 	logger.Debug("Logging has Started")
 
+	if v, ok := os.LookupEnv("WINDOWS_EXPORTER_PERF_COUNTERS_ENGINE"); ok && v == "pdh" || *togglePDH == "pdh" {
+		logger.Info("Using performance data helper from PHD.dll for performance counter collection. This is in experimental state.")
+
+		toggle.PHDEnabled = true
+	}
+
 	if *printCollectors {
 		printCollectorsToStdout()
 
@@ -220,12 +226,6 @@ func run() int {
 	logCurrentUser(logger)
 
 	logger.Info("Enabled collectors: " + strings.Join(enabledCollectorList, ", "))
-
-	if v, ok := os.LookupEnv("WINDOWS_EXPORTER_PERF_COUNTERS_ENGINE"); ok && v == "pdh" || *togglePDH == "pdh" {
-		logger.Info("Using performance data helper from PHD.dll for performance counter collection. This is in experimental state.")
-
-		toggle.PHDEnabled = true
-	}
 
 	mux := http.NewServeMux()
 	mux.Handle("GET /health", httphandler.NewHealthHandler())

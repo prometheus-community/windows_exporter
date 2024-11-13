@@ -622,7 +622,7 @@ func PdhGetRawCounterArray(hCounter pdhCounterHandle, lpdwBufferSize *uint32, lp
 //
 // lpdwItemCount
 // Time base that specifies the number of performance values a counter samples per second.
-func PdhGetCounterTimeBase(hCounter pdhCounterHandle, pTimeBase *float64) uint32 {
+func PdhGetCounterTimeBase(hCounter pdhCounterHandle, pTimeBase *int64) uint32 {
 	ret, _, _ := pdhPdhGetCounterTimeBase.Call(
 		uintptr(hCounter),
 		uintptr(unsafe.Pointer(pTimeBase)))
