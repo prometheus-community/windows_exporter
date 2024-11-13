@@ -212,9 +212,16 @@ func (s *Session) QueryUnmarshal(dst any,
 
 	errs := make([]error, 0)
 
-	for err := range errCh {
-		if err != nil {
+	// We need an active go routine to prevent a
+	// fatal error: all goroutines are asleep - deadlock!
+	// ref: https://github.com/golang/go/issues/55015
+	// go time.Sleep(5 * time.Second)
+
+	for {
+		if err, ok := <-errCh; err != nil {
 			errs = append(errs, err)
+		} else if !ok {
+			break
 		}
 	}
 

@@ -7,10 +7,17 @@ import (
 	"fmt"
 	"reflect"
 	"sync"
+	"time"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
 )
+
+func init() {
+	// Workaround for a deadlock issue in go.
+	// Ref: https://github.com/golang/go/issues/55015
+	go time.Sleep(24 * 365 * time.Hour)
+}
 
 // We have to registry a global callback function, since the amount of callbacks is limited.
 var operationUnmarshalCallbacksInstanceResult = sync.OnceValue[uintptr](func() uintptr {
