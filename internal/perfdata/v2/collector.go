@@ -24,7 +24,7 @@ type Counter struct {
 	Desc      string
 	Instances map[string]pdhCounterHandle
 	Type      uint32
-	Frequency float64
+	Frequency int64
 }
 
 func NewCollector(object string, instances []string, counters []string) (*Collector, error) {
@@ -84,10 +84,11 @@ func NewCollector(object string, instances []string, counters []string) (*Collec
 				counter.Type = ci.DwType
 				counter.Desc = windows.UTF16PtrToString(ci.SzExplainText)
 
-				frequency := float64(0)
-
-				if ret := PdhGetCounterTimeBase(counterHandle, &frequency); ret != ErrorSuccess {
-					return nil, fmt.Errorf("PdhGetCounterTimeBase: %w", NewPdhError(ret))
+				frequency := int64(0)
+				if counter.Type == perftypes.PERF_ELAPSED_TIME {
+					if ret := PdhGetCounterTimeBase(counterHandle, &frequency); ret != ErrorSuccess {
+						return nil, fmt.Errorf("PdhGetCounterTimeBase: %w", NewPdhError(ret))
+					}
 				}
 
 				counter.Frequency = frequency
@@ -193,14 +194,14 @@ func (c *Collector) Collect() (map[string]map[string]perftypes.CounterValues, er
 
 					switch counter.Type {
 					case perftypes.PERF_ELAPSED_TIME:
-						values.FirstValue = float64(item.RawValue.FirstValue-perftypes.WindowsEpoch) / counter.Frequency
-						values.SecondValue = float64(item.RawValue.SecondValue-perftypes.WindowsEpoch) / counter.Frequency
+						values.FirstValue = float64((item.RawValue.FirstValue - perftypes.WindowsEpoch) / counter.Frequency)
 					case perftypes.PERF_100NSEC_TIMER, perftypes.PERF_PRECISION_100NS_TIMER:
 						values.FirstValue = float64(item.RawValue.FirstValue) * perftypes.TicksToSecondScaleFactor
-						values.SecondValue = float64(item.RawValue.SecondValue) * perftypes.TicksToSecondScaleFactor
-					default:
+					case perftypes.PERF_AVERAGE_BULK:
 						values.FirstValue = float64(item.RawValue.FirstValue)
 						values.SecondValue = float64(item.RawValue.SecondValue)
+					default:
+						values.FirstValue = float64(item.RawValue.FirstValue)
 					}
 
 					data[instanceName][counter.Name] = values
