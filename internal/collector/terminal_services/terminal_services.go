@@ -454,6 +454,12 @@ func (c *Collector) collectWTSSessions(logger *slog.Logger, ch chan<- prometheus
 	}
 
 	for _, session := range sessions {
+		// only connect metrics for remote named sessions
+		n := strings.ReplaceAll(session.SessionName, "#", " ")
+		if n == "" || n == "Services" || n == "Console" {
+			continue
+		}
+
 		userName := session.UserName
 		if session.DomainName != "" {
 			userName = fmt.Sprintf("%s\\%s", session.DomainName, session.UserName)
@@ -464,12 +470,11 @@ func (c *Collector) collectWTSSessions(logger *slog.Logger, ch chan<- prometheus
 			if session.State == stateID {
 				isState = 1.0
 			}
-
 			ch <- prometheus.MustNewConstMetric(
 				c.sessionInfo,
 				prometheus.GaugeValue,
 				isState,
-				strings.ReplaceAll(session.SessionName, "#", " "),
+				n,
 				userName,
 				session.HostName,
 				stateName,
