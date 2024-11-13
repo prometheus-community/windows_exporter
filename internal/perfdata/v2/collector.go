@@ -67,31 +67,30 @@ func NewCollector(object string, instances []string, counters []string) (*Collec
 
 			counter.Instances[instance] = counterHandle
 
-			if counter.Type == 0 {
-				// Get the info with the current buffer size
-				bufLen := uint32(0)
+			if counter.Type != 0 {
+				continue
+			}
 
-				if ret := PdhGetCounterInfo(counterHandle, 1, &bufLen, nil); ret != PdhMoreData {
-					return nil, fmt.Errorf("PdhGetCounterInfo: %w", NewPdhError(ret))
+			// Get the info with the current buffer size
+			bufLen := uint32(0)
+
+			if ret := PdhGetCounterInfo(counterHandle, 1, &bufLen, nil); ret != PdhMoreData {
+				return nil, fmt.Errorf("PdhGetCounterInfo: %w", NewPdhError(ret))
+			}
+
+			buf := make([]byte, bufLen)
+			if ret := PdhGetCounterInfo(counterHandle, 1, &bufLen, &buf[0]); ret != ErrorSuccess {
+				return nil, fmt.Errorf("PdhGetCounterInfo: %w", NewPdhError(ret))
+			}
+
+			ci := (*PdhCounterInfo)(unsafe.Pointer(&buf[0]))
+			counter.Type = ci.DwType
+			counter.Desc = windows.UTF16PtrToString(ci.SzExplainText)
+
+			if counter.Type == perftypes.PERF_ELAPSED_TIME {
+				if ret := PdhGetCounterTimeBase(counterHandle, &counter.Frequency); ret != ErrorSuccess {
+					return nil, fmt.Errorf("PdhGetCounterTimeBase: %w", NewPdhError(ret))
 				}
-
-				buf := make([]byte, bufLen)
-				if ret := PdhGetCounterInfo(counterHandle, 1, &bufLen, &buf[0]); ret != ErrorSuccess {
-					return nil, fmt.Errorf("PdhGetCounterInfo: %w", NewPdhError(ret))
-				}
-
-				ci := (*PdhCounterInfo)(unsafe.Pointer(&buf[0]))
-				counter.Type = ci.DwType
-				counter.Desc = windows.UTF16PtrToString(ci.SzExplainText)
-
-				frequency := int64(0)
-				if counter.Type == perftypes.PERF_ELAPSED_TIME {
-					if ret := PdhGetCounterTimeBase(counterHandle, &frequency); ret != ErrorSuccess {
-						return nil, fmt.Errorf("PdhGetCounterTimeBase: %w", NewPdhError(ret))
-					}
-				}
-
-				counter.Frequency = frequency
 			}
 		}
 
@@ -154,7 +153,8 @@ func (c *Collector) Collect() (map[string]map[string]perftypes.CounterValues, er
 				continue
 			}
 
-			items := (*[1 << 20]PdhRawCounterItem)(unsafe.Pointer(&buf[0]))[:itemCount]
+			// items := (*[1 << 20]PdhRawCounterItem)(unsafe.Pointer(&buf[0]))[:itemCount]
+			items := unsafe.Slice((*PdhRawCounterItem)(unsafe.Pointer(&buf[0])), itemCount)
 
 			if data == nil {
 				data = make(map[string]map[string]perftypes.CounterValues, itemCount)
