@@ -64,7 +64,7 @@ build-hostprocess:
 sub-build-%:
 	$(MAKE) OS=$* build-image
 
-build-all:
+build-all: crossbuild
 	@for docker_repo in ${DOCKER_REPO}; do \
 		echo $(DOCKER) buildx build -f Dockerfile -t $${docker_repo}/$(DOCKER_IMAGE_NAME):$(VERSION) .; \
 	done
