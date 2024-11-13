@@ -5,6 +5,7 @@ package mi
 import (
 	"errors"
 	"fmt"
+	"math"
 	"reflect"
 	"sync"
 	"time"
@@ -16,7 +17,7 @@ import (
 func init() {
 	// Workaround for a deadlock issue in go.
 	// Ref: https://github.com/golang/go/issues/55015
-	go time.Sleep(24 * 365 * time.Hour)
+	go time.Sleep(time.Duration(math.MaxInt64))
 }
 
 // We have to registry a global callback function, since the amount of callbacks is limited.
