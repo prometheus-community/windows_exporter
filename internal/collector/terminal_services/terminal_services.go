@@ -126,21 +126,21 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 	logger = logger.With(slog.String("collector", Name))
 
 	counters := []string{
-		HandleCount,
-		PageFaultsPersec,
-		PageFileBytes,
-		PageFileBytesPeak,
-		PercentPrivilegedTime,
-		PercentProcessorTime,
-		PercentUserTime,
-		PoolNonpagedBytes,
-		PoolPagedBytes,
-		PrivateBytes,
-		ThreadCount,
-		VirtualBytes,
-		VirtualBytesPeak,
-		WorkingSet,
-		WorkingSetPeak,
+		handleCount,
+		pageFaultsPersec,
+		pageFileBytes,
+		pageFileBytesPeak,
+		percentPrivilegedTime,
+		percentProcessorTime,
+		percentUserTime,
+		poolNonpagedBytes,
+		poolPagedBytes,
+		privateBytes,
+		threadCount,
+		virtualBytes,
+		virtualBytesPeak,
+		workingSet,
+		workingSetPeak,
 	}
 
 	var err error
@@ -154,9 +154,9 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 
 	if c.connectionBrokerEnabled {
 		counters = []string{
-			SuccessfulConnections,
-			PendingConnections,
-			FailedConnections,
+			successfulConnections,
+			pendingConnections,
+			failedConnections,
 		}
 
 		var err error
@@ -317,94 +317,94 @@ func (c *Collector) collectTSSessionCounters(ch chan<- prometheus.Metric) error 
 		ch <- prometheus.MustNewConstMetric(
 			c.handleCount,
 			prometheus.GaugeValue,
-			data[HandleCount].FirstValue,
+			data[handleCount].FirstValue,
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.pageFaultsPerSec,
 			prometheus.CounterValue,
-			data[PageFaultsPersec].FirstValue,
+			data[pageFaultsPersec].FirstValue,
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.pageFileBytes,
 			prometheus.GaugeValue,
-			data[PageFileBytes].FirstValue,
+			data[pageFileBytes].FirstValue,
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.pageFileBytesPeak,
 			prometheus.GaugeValue,
-			data[PageFileBytesPeak].FirstValue,
+			data[pageFileBytesPeak].FirstValue,
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.percentCPUTime,
 			prometheus.CounterValue,
-			data[PercentPrivilegedTime].FirstValue,
+			data[percentPrivilegedTime].FirstValue,
 			name,
 			"privileged",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.percentCPUTime,
 			prometheus.CounterValue,
-			data[PercentProcessorTime].FirstValue,
+			data[percentProcessorTime].FirstValue,
 			name,
 			"processor",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.percentCPUTime,
 			prometheus.CounterValue,
-			data[PercentUserTime].FirstValue,
+			data[percentUserTime].FirstValue,
 			name,
 			"user",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.poolNonPagedBytes,
 			prometheus.GaugeValue,
-			data[PoolNonpagedBytes].FirstValue,
+			data[poolNonpagedBytes].FirstValue,
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.poolPagedBytes,
 			prometheus.GaugeValue,
-			data[PoolPagedBytes].FirstValue,
+			data[poolPagedBytes].FirstValue,
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.privateBytes,
 			prometheus.GaugeValue,
-			data[PrivateBytes].FirstValue,
+			data[privateBytes].FirstValue,
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.threadCount,
 			prometheus.GaugeValue,
-			data[ThreadCount].FirstValue,
+			data[threadCount].FirstValue,
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualBytes,
 			prometheus.GaugeValue,
-			data[VirtualBytes].FirstValue,
+			data[virtualBytes].FirstValue,
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualBytesPeak,
 			prometheus.GaugeValue,
-			data[VirtualBytesPeak].FirstValue,
+			data[virtualBytesPeak].FirstValue,
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.workingSet,
 			prometheus.GaugeValue,
-			data[WorkingSet].FirstValue,
+			data[workingSet].FirstValue,
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.workingSetPeak,
 			prometheus.GaugeValue,
-			data[WorkingSetPeak].FirstValue,
+			data[workingSetPeak].FirstValue,
 			name,
 		)
 	}
@@ -426,21 +426,21 @@ func (c *Collector) collectCollectionBrokerPerformanceCounter(ch chan<- promethe
 	ch <- prometheus.MustNewConstMetric(
 		c.connectionBrokerPerformance,
 		prometheus.CounterValue,
-		data[SuccessfulConnections].FirstValue,
+		data[successfulConnections].FirstValue,
 		"Successful",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.connectionBrokerPerformance,
 		prometheus.CounterValue,
-		data[PendingConnections].FirstValue,
+		data[pendingConnections].FirstValue,
 		"Pending",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.connectionBrokerPerformance,
 		prometheus.CounterValue,
-		data[FailedConnections].FirstValue,
+		data[failedConnections].FirstValue,
 		"Failed",
 	)
 
