@@ -39,7 +39,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/netframework"
 	"github.com/prometheus-community/windows_exporter/internal/collector/nps"
 	"github.com/prometheus-community/windows_exporter/internal/collector/os"
-	"github.com/prometheus-community/windows_exporter/internal/collector/paging"
+	"github.com/prometheus-community/windows_exporter/internal/collector/pagefile"
 	"github.com/prometheus-community/windows_exporter/internal/collector/perfdata"
 	"github.com/prometheus-community/windows_exporter/internal/collector/physical_disk"
 	"github.com/prometheus-community/windows_exporter/internal/collector/printer"
@@ -108,7 +108,7 @@ func NewWithConfig(config Config) *MetricCollectors {
 	collectors[netframework.Name] = netframework.New(&config.NetFramework)
 	collectors[nps.Name] = nps.New(&config.Nps)
 	collectors[os.Name] = os.New(&config.OS)
-	collectors[paging.Name] = paging.New(&config.Paging)
+	collectors[pagefile.Name] = pagefile.New(&config.Paging)
 	collectors[perfdata.Name] = perfdata.New(&config.PerfData)
 	collectors[physical_disk.Name] = physical_disk.New(&config.PhysicalDisk)
 	collectors[printer.Name] = printer.New(&config.Printer)
