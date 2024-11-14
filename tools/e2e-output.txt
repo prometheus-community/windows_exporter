@@ -297,9 +297,9 @@ windows_exporter_collector_timeout{collector="udp"} 0
 # TYPE windows_os_hostname gauge
 # HELP windows_os_info Contains full product name & version in labels. Note that the "major_version" for Windows 11 is \\"10\\"; a build number greater than 22000 represents Windows 11.
 # TYPE windows_os_info gauge
-# HELP windows_os_paging_free_bytes OperatingSystem.FreeSpaceInPagingFiles
+# HELP windows_os_paging_free_bytes Deprecated: Use windows_pagefile_free_bytes instead.
 # TYPE windows_os_paging_free_bytes gauge
-# HELP windows_os_paging_limit_bytes OperatingSystem.SizeStoredInPagingFiles
+# HELP windows_os_paging_limit_bytes Deprecated: Use windows_pagefile_limit_bytes instead.
 # TYPE windows_os_paging_limit_bytes gauge
 # HELP windows_os_physical_memory_free_bytes Deprecated: Use `windows_memory_physical_free_bytes` instead.
 # TYPE windows_os_physical_memory_free_bytes gauge
