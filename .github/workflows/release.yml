@@ -120,13 +120,13 @@ jobs:
           username: ${{ secrets.DOCKER_HUB_LOGIN }}
           password: ${{ secrets.DOCKER_HUB_PASSWORD }}
 
-      - name: Login to quay.io
-        if: ${{ github.event_name != 'pull_request' }}
-        uses: docker/login-action@v3
-        with:
-          registry: quay.io
-          username: ${{ secrets.QUAY_USER }}
-          password: ${{ secrets.QUAY_PASS }}
+      #- name: Login to quay.io
+      #  if: ${{ github.event_name != 'pull_request' }}
+      #  uses: docker/login-action@v3
+      #  with:
+      #    registry: quay.io
+      #    username: ${{ secrets.QUAY_USER }}
+      #    password: ${{ secrets.QUAY_PASS }}
 
       - name: Login to GitHub container registry
         if: ${{ github.event_name != 'pull_request' }}
@@ -142,8 +142,8 @@ jobs:
         with:
           images: |
             ghcr.io/prometheus-community/windows-exporter
-            quay.io/prometheuscommunity/windows-exporter
             docker.io/prometheuscommunity/windows-exporter
+          # quay.io/prometheuscommunity/windows-exporter
           tags: |
             type=semver,pattern={{version}}
             type=ref,event=branch
