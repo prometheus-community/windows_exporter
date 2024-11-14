@@ -4,7 +4,6 @@ package logical_disk
 
 import (
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"log/slog"
 	"regexp"
@@ -156,7 +155,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 			percentFreeSpace,
 			freeSpace,
 			percentIdleTime,
-			SplitIOPerSec,
+			splitIOPerSec,
 			avgDiskSecPerRead,
 			avgDiskSecPerWrite,
 			avgDiskSecPerTransfer,
@@ -329,10 +328,6 @@ func (c *Collector) collectPDH(logger *slog.Logger, ch chan<- prometheus.Metric)
 		return fmt.Errorf("failed to collect LogicalDisk metrics: %w", err)
 	}
 
-	if len(perfData) == 0 {
-		return errors.New("perflib query for LogicalDisk returned empty result set")
-	}
-
 	for name, volume := range perfData {
 		if name == "_Total" ||
 			c.config.VolumeExclude.MatchString(name) ||
@@ -453,7 +448,7 @@ func (c *Collector) collectPDH(logger *slog.Logger, ch chan<- prometheus.Metric)
 		ch <- prometheus.MustNewConstMetric(
 			c.splitIOs,
 			prometheus.CounterValue,
-			volume[SplitIOPerSec].FirstValue,
+			volume[splitIOPerSec].FirstValue,
 			name,
 		)
 

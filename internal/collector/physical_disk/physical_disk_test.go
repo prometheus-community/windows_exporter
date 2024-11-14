@@ -5,6 +5,7 @@ import (
 
 	"github.com/prometheus-community/windows_exporter/internal/collector/physical_disk"
 	"github.com/prometheus-community/windows_exporter/internal/testutils"
+	"github.com/prometheus-community/windows_exporter/internal/types"
 )
 
 func BenchmarkCollector(b *testing.B) {
@@ -12,7 +13,7 @@ func BenchmarkCollector(b *testing.B) {
 }
 
 func TestCollector(t *testing.T) {
-	t.Skip()
-
-	testutils.TestCollector(t, physical_disk.New, nil)
+	testutils.TestCollector(t, physical_disk.New, &physical_disk.Config{
+		DiskInclude: types.RegExpAny,
+	})
 }
