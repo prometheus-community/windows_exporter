@@ -33,6 +33,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/netframework"
 	"github.com/prometheus-community/windows_exporter/internal/collector/nps"
 	"github.com/prometheus-community/windows_exporter/internal/collector/os"
+	"github.com/prometheus-community/windows_exporter/internal/collector/pagefile"
 	"github.com/prometheus-community/windows_exporter/internal/collector/perfdata"
 	"github.com/prometheus-community/windows_exporter/internal/collector/physical_disk"
 	"github.com/prometheus-community/windows_exporter/internal/collector/printer"
@@ -89,6 +90,7 @@ var BuildersWithFlags = map[string]BuilderWithFlags[Collector]{
 	netframework.Name:      NewBuilderWithFlags(netframework.NewWithFlags),
 	nps.Name:               NewBuilderWithFlags(nps.NewWithFlags),
 	os.Name:                NewBuilderWithFlags(os.NewWithFlags),
+	pagefile.Name:          NewBuilderWithFlags(pagefile.NewWithFlags),
 	perfdata.Name:          NewBuilderWithFlags(perfdata.NewWithFlags),
 	physical_disk.Name:     NewBuilderWithFlags(physical_disk.NewWithFlags),
 	printer.Name:           NewBuilderWithFlags(printer.NewWithFlags),

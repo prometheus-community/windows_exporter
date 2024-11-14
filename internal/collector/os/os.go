@@ -34,9 +34,14 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	config Config
 
-	hostname         *prometheus.Desc
-	osInformation    *prometheus.Desc
-	pagingFreeBytes  *prometheus.Desc
+	hostname      *prometheus.Desc
+	osInformation *prometheus.Desc
+
+	// pagingFreeBytes
+	// Deprecated: Use windows_paging_free_bytes instead.
+	pagingFreeBytes *prometheus.Desc
+	// pagingLimitBytes
+	// Deprecated: Use windows_paging_total_bytes instead.
 	pagingLimitBytes *prometheus.Desc
 
 	// users
@@ -151,13 +156,13 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	)
 	c.pagingLimitBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "paging_limit_bytes"),
-		"OperatingSystem.SizeStoredInPagingFiles",
+		"Deprecated: Use windows_pagefile_limit_bytes instead.",
 		nil,
 		nil,
 	)
 	c.pagingFreeBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "paging_free_bytes"),
-		"OperatingSystem.FreeSpaceInPagingFiles",
+		"Deprecated: Use windows_pagefile_free_bytes instead.",
 		nil,
 		nil,
 	)

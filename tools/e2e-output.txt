@@ -122,6 +122,7 @@ windows_exporter_collector_success{collector="logon"} 1
 windows_exporter_collector_success{collector="memory"} 1
 windows_exporter_collector_success{collector="net"} 1
 windows_exporter_collector_success{collector="os"} 1
+windows_exporter_collector_success{collector="pagefile"} 1
 windows_exporter_collector_success{collector="perfdata"} 1
 windows_exporter_collector_success{collector="physical_disk"} 1
 windows_exporter_collector_success{collector="printer"} 1
@@ -144,6 +145,7 @@ windows_exporter_collector_timeout{collector="logon"} 0
 windows_exporter_collector_timeout{collector="memory"} 0
 windows_exporter_collector_timeout{collector="net"} 0
 windows_exporter_collector_timeout{collector="os"} 0
+windows_exporter_collector_timeout{collector="pagefile"} 0
 windows_exporter_collector_timeout{collector="perfdata"} 0
 windows_exporter_collector_timeout{collector="physical_disk"} 0
 windows_exporter_collector_timeout{collector="printer"} 0
@@ -297,9 +299,9 @@ windows_exporter_collector_timeout{collector="udp"} 0
 # TYPE windows_os_hostname gauge
 # HELP windows_os_info Contains full product name & version in labels. Note that the "major_version" for Windows 11 is \\"10\\"; a build number greater than 22000 represents Windows 11.
 # TYPE windows_os_info gauge
-# HELP windows_os_paging_free_bytes OperatingSystem.FreeSpaceInPagingFiles
+# HELP windows_os_paging_free_bytes Deprecated: Use windows_pagefile_free_bytes instead.
 # TYPE windows_os_paging_free_bytes gauge
-# HELP windows_os_paging_limit_bytes OperatingSystem.SizeStoredInPagingFiles
+# HELP windows_os_paging_limit_bytes Deprecated: Use windows_pagefile_limit_bytes instead.
 # TYPE windows_os_paging_limit_bytes gauge
 # HELP windows_os_physical_memory_free_bytes Deprecated: Use `windows_memory_physical_free_bytes` instead.
 # TYPE windows_os_physical_memory_free_bytes gauge
@@ -321,6 +323,10 @@ windows_exporter_collector_timeout{collector="udp"} 0
 # TYPE windows_os_virtual_memory_free_bytes gauge
 # HELP windows_os_visible_memory_bytes Deprecated: Use `windows_memory_physical_total_bytes` instead.
 # TYPE windows_os_visible_memory_bytes gauge
+# HELP windows_pagefile_free_bytes Number of bytes that can be mapped into the operating system paging files without causing any other pages to be swapped out
+# TYPE windows_pagefile_free_bytes gauge
+# HELP windows_pagefile_limit_bytes Number of bytes that can be stored in the operating system paging files. 0 (zero) indicates that there are no paging files
+# TYPE windows_pagefile_limit_bytes gauge
 # HELP windows_perfdata_memory_cache_faults_sec Performance data for \\Memory\\Cache Faults/sec
 # TYPE windows_perfdata_memory_cache_faults_sec counter
 # HELP windows_perfdata_processor_information__privileged_time Performance data for \\Processor Information\\% Privileged Time
