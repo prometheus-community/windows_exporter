@@ -1,9 +1,13 @@
-# Note this image doesn't really matter for hostprocess but it is good to build per OS version
-# the files in the image are copied to $env:CONTAINER_SANDBOX_MOUNT_POINT on the host
-# but the file system is the Host NOT the container
-ARG BASE="mcr.microsoft.com/windows/nanoserver:ltsc2022"
+# mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v1.0.0
+# Using this image as a base for HostProcess containers has a few advantages over using other base images for Windows containers including:
+# - Smaller image size
+# - OS compatibility (works on any Windows version that supports containers)
+
+# This image MUST be built with docker buildx build (buildx) command on a Linux system.
+# Ref: https://github.com/microsoft/windows-host-process-containers-base-image
+
+ARG BASE="mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v1.0.0"
 FROM $BASE
 
-ENV PATH="C:\Windows\system32;C:\Windows;"
-COPY output/amd64/windows_exporter.exe /windows_exporter.exe
+COPY windows_exporter*-amd64.exe /windows_exporter.exe
 ENTRYPOINT ["windows_exporter.exe"]
