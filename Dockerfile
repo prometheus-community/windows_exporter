@@ -9,5 +9,5 @@
 ARG BASE="mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v1.0.0"
 FROM $BASE
 
-COPY output/amd64/windows_exporter.exe /windows_exporter.exe
+COPY windows_exporter*-amd64.exe /windows_exporter.exe
 ENTRYPOINT ["windows_exporter.exe"]
