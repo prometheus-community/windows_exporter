@@ -16,7 +16,7 @@ const (
 	percentDiskWriteTime    = "% Disk Write Time"
 	percentFreeSpace        = "% Free Space"
 	percentIdleTime         = "% Idle Time"
-	SplitIOPerSec           = "Split IO/Sec"
+	splitIOPerSec           = "Split IO/Sec"
 )
 
 // Win32_PerfRawData_PerfDisk_LogicalDisk docs:

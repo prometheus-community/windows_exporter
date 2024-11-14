@@ -74,12 +74,12 @@ func NewCollector(object string, instances []string, counters []string) (*Collec
 			// Get the info with the current buffer size
 			bufLen := uint32(0)
 
-			if ret := PdhGetCounterInfo(counterHandle, 1, &bufLen, nil); ret != PdhMoreData {
+			if ret := PdhGetCounterInfo(counterHandle, 0, &bufLen, nil); ret != PdhMoreData {
 				return nil, fmt.Errorf("PdhGetCounterInfo: %w", NewPdhError(ret))
 			}
 
 			buf := make([]byte, bufLen)
-			if ret := PdhGetCounterInfo(counterHandle, 1, &bufLen, &buf[0]); ret != ErrorSuccess {
+			if ret := PdhGetCounterInfo(counterHandle, 0, &bufLen, &buf[0]); ret != ErrorSuccess {
 				return nil, fmt.Errorf("PdhGetCounterInfo: %w", NewPdhError(ret))
 			}
 
