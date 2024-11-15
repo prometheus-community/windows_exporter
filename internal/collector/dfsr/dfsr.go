@@ -164,7 +164,6 @@ func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
 }
 
 func (c *Collector) Close(_ *slog.Logger) error {
-	//nolint:nestif
 	if toggle.IsPDHEnabled() {
 		if slices.Contains(c.config.CollectorsEnabled, "connection") {
 			c.perfDataCollectorConnection.Close()

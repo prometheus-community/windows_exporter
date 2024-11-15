@@ -234,10 +234,12 @@ func (c *Collector) scheduleUpdateStatus(ctx context.Context, logger *slog.Logge
 	usd := us.ToIDispatch()
 	defer usd.Release()
 
+	var metricsBuf []prometheus.Metric
+
 	for {
-		metricsBuf, err := c.fetchUpdates(logger, usd)
+		metricsBuf, err = c.fetchUpdates(logger, usd)
 		if err != nil {
-			logger.Error("failed to fetch updates",
+			logger.ErrorContext(ctx, "failed to fetch updates",
 				slog.Any("err", err),
 			)
 
