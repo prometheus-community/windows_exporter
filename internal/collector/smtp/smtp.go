@@ -9,7 +9,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
-	v1 "github.com/prometheus-community/windows_exporter/internal/perfdata/v1"
+	"github.com/prometheus-community/windows_exporter/internal/perfdata"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -28,6 +28,8 @@ var ConfigDefaults = Config{
 
 type Collector struct {
 	config Config
+
+	perfDataCollector perfdata.Collector
 
 	badMailedMessagesBadPickupFileTotal     *prometheus.Desc
 	badMailedMessagesGeneralFailureTotal    *prometheus.Desc
@@ -138,10 +140,62 @@ func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
 }
 
 func (c *Collector) Close(_ *slog.Logger) error {
+	c.perfDataCollector.Close()
+
 	return nil
 }
 
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
+	var err error
+
+	c.perfDataCollector, err = perfdata.NewCollector(perfdata.V2, "SMTP Server", perfdata.AllInstances, []string{
+		BadmailedMessagesBadPickupFileTotal,
+		BadmailedMessagesGeneralFailureTotal,
+		BadmailedMessagesHopCountExceededTotal,
+		BadmailedMessagesNDROfDSNTotal,
+		BadmailedMessagesNoRecipientsTotal,
+		BadmailedMessagesTriggeredViaEventTotal,
+		BytesSentTotal,
+		BytesReceivedTotal,
+		CategorizerQueueLength,
+		ConnectionErrorsTotal,
+		CurrentMessagesInLocalDelivery,
+		DirectoryDropsTotal,
+		DNSQueriesTotal,
+		DSNFailuresTotal,
+		ETRNMessagesTotal,
+		InboundConnectionsCurrent,
+		InboundConnectionsTotal,
+		LocalQueueLength,
+		LocalRetryQueueLength,
+		MailFilesOpen,
+		MessageBytesReceivedTotal,
+		MessageBytesSentTotal,
+		MessageDeliveryRetriesTotal,
+		MessageSendRetriesTotal,
+		MessagesCurrentlyUndeliverable,
+		MessagesDeliveredTotal,
+		MessagesPendingRouting,
+		MessagesReceivedTotal,
+		MessagesRefusedForAddressObjectsTotal,
+		MessagesRefusedForMailObjectsTotal,
+		MessagesRefusedForSizeTotal,
+		MessagesSentTotal,
+		MessagesSubmittedTotal,
+		NDRsGeneratedTotal,
+		OutboundConnectionsCurrent,
+		OutboundConnectionsRefusedTotal,
+		OutboundConnectionsTotal,
+		QueueFilesOpen,
+		PickupDirectoryMessagesRetrievedTotal,
+		RemoteQueueLength,
+		RemoteRetryQueueLength,
+		RoutingTableLookupsTotal,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create SMTP Server collector: %w", err)
+	}
+
 	logger.Info("smtp collector is in an experimental state! Metrics for this collector have not been tested.",
 		slog.String("collector", Name),
 	)
@@ -404,368 +458,311 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	logger = logger.With(slog.String("collector", Name))
-	if err := c.collect(ctx, logger, ch); err != nil {
-		logger.Error("failed collecting smtp metrics",
-			slog.Any("err", err),
-		)
-
-		return err
+func (c *Collector) Collect(_ *types.ScrapeContext, _ *slog.Logger, ch chan<- prometheus.Metric) error {
+	if err := c.collect(ch); err != nil {
+		return fmt.Errorf("failed collecting smtp metrics: %w", err)
 	}
 
 	return nil
 }
 
-// PerflibSMTPServer Perflib: "SMTP Server".
-type PerflibSMTPServer struct {
-	Name string
-
-	BadmailedMessagesBadPickupFileTotal     float64 `perflib:"Badmailed Messages (Bad Pickup File)"`
-	BadmailedMessagesGeneralFailureTotal    float64 `perflib:"Badmailed Messages (General Failure)"`
-	BadmailedMessagesHopCountExceededTotal  float64 `perflib:"Badmailed Messages (Hop Count Exceeded)"`
-	BadmailedMessagesNDROfDSNTotal          float64 `perflib:"Badmailed Messages (NDR of DSN)"`
-	BadmailedMessagesNoRecipientsTotal      float64 `perflib:"Badmailed Messages (No Recipients)"`
-	BadmailedMessagesTriggeredViaEventTotal float64 `perflib:"Badmailed Messages (Triggered via Event)"`
-	BytesSentTotal                          float64 `perflib:"Bytes Sent Total"`
-	BytesReceivedTotal                      float64 `perflib:"Bytes Received Total"`
-	CategorizerQueueLength                  float64 `perflib:"Categorizer Queue Length"`
-	ConnectionErrorsTotal                   float64 `perflib:"Total Connection Errors"`
-	CurrentMessagesInLocalDelivery          float64 `perflib:"Current Messages in Local Delivery"`
-	DirectoryDropsTotal                     float64 `perflib:"Directory Drops Total"`
-	DNSQueriesTotal                         float64 `perflib:"DNS Queries Total"`
-	DSNFailuresTotal                        float64 `perflib:"Total DSN Failures"`
-	ETRNMessagesTotal                       float64 `perflib:"ETRN Messages Total"`
-	InboundConnectionsCurrent               float64 `perflib:"Inbound Connections Current"`
-	InboundConnectionsTotal                 float64 `perflib:"Inbound Connections Total"`
-	LocalQueueLength                        float64 `perflib:"Local Queue Length"`
-	LocalRetryQueueLength                   float64 `perflib:"Local Retry Queue Length"`
-	MailFilesOpen                           float64 `perflib:"Number of MailFiles Open"`
-	MessageBytesReceivedTotal               float64 `perflib:"Message Bytes Received Total"`
-	MessageBytesSentTotal                   float64 `perflib:"Message Bytes Sent Total"`
-	MessageDeliveryRetriesTotal             float64 `perflib:"Message Delivery Retries"`
-	MessageSendRetriesTotal                 float64 `perflib:"Message Send Retries"`
-	MessagesCurrentlyUndeliverable          float64 `perflib:"Messages Currently Undeliverable"`
-	MessagesDeliveredTotal                  float64 `perflib:"Messages Delivered Total"`
-	MessagesPendingRouting                  float64 `perflib:"Messages Pending Routing"`
-	MessagesReceivedTotal                   float64 `perflib:"Messages Received Total"`
-	MessagesRefusedForAddressObjectsTotal   float64 `perflib:"Messages Refused for Address Objects"`
-	MessagesRefusedForMailObjectsTotal      float64 `perflib:"Messages Refused for Mail Objects"`
-	MessagesRefusedForSizeTotal             float64 `perflib:"Messages Refused for Size"`
-	MessagesSentTotal                       float64 `perflib:"Messages Sent Total"`
-	MessagesSubmittedTotal                  float64 `perflib:"Total messages submitted"`
-	NDRsGeneratedTotal                      float64 `perflib:"NDRs Generated"`
-	OutboundConnectionsCurrent              float64 `perflib:"Outbound Connections Current"`
-	OutboundConnectionsRefusedTotal         float64 `perflib:"Outbound Connections Refused"`
-	OutboundConnectionsTotal                float64 `perflib:"Outbound Connections Total"`
-	QueueFilesOpen                          float64 `perflib:"Number of QueueFiles Open"`
-	PickupDirectoryMessagesRetrievedTotal   float64 `perflib:"Pickup Directory Messages Retrieved Total"`
-	RemoteQueueLength                       float64 `perflib:"Remote Queue Length"`
-	RemoteRetryQueueLength                  float64 `perflib:"Remote Retry Queue Length"`
-	RoutingTableLookupsTotal                float64 `perflib:"Routing Table Lookups Total"`
-}
-
-func (c *Collector) collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	logger = logger.With(slog.String("collector", Name))
-
-	var dst []PerflibSMTPServer
-
-	if err := v1.UnmarshalObject(ctx.PerfObjects["SMTP Server"], &dst, logger); err != nil {
-		return err
+func (c *Collector) collect(ch chan<- prometheus.Metric) error {
+	perfData, err := c.perfDataCollector.Collect()
+	if err != nil {
+		return fmt.Errorf("failed to collect SMTP Server metrics: %w", err)
 	}
 
-	for _, server := range dst {
-		if server.Name == "_Total" ||
-			c.config.ServerExclude.MatchString(server.Name) ||
-			!c.config.ServerInclude.MatchString(server.Name) {
+	for name, server := range perfData {
+		if c.config.ServerExclude.MatchString(name) ||
+			!c.config.ServerInclude.MatchString(name) {
 			continue
 		}
 
 		ch <- prometheus.MustNewConstMetric(
 			c.badMailedMessagesBadPickupFileTotal,
 			prometheus.CounterValue,
-			server.BadmailedMessagesBadPickupFileTotal,
-			server.Name,
+			server[BadmailedMessagesBadPickupFileTotal].FirstValue,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.badMailedMessagesHopCountExceededTotal,
 			prometheus.CounterValue,
-			server.BadmailedMessagesHopCountExceededTotal,
-			server.Name,
+			server[BadmailedMessagesHopCountExceededTotal].FirstValue,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.badMailedMessagesNDROfDSNTotal,
 			prometheus.CounterValue,
-			server.BadmailedMessagesNDROfDSNTotal,
-			server.Name,
+			server[BadmailedMessagesNDROfDSNTotal].FirstValue,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.badMailedMessagesNoRecipientsTotal,
 			prometheus.CounterValue,
-			server.BadmailedMessagesNoRecipientsTotal,
-			server.Name,
+			server[BadmailedMessagesNoRecipientsTotal].FirstValue,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.badMailedMessagesTriggeredViaEventTotal,
 			prometheus.CounterValue,
-			server.BadmailedMessagesTriggeredViaEventTotal,
-			server.Name,
+			server[BadmailedMessagesTriggeredViaEventTotal].FirstValue,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.bytesSentTotal,
 			prometheus.CounterValue,
-			server.BytesSentTotal,
-			server.Name,
+			server[BytesSentTotal].FirstValue,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.bytesReceivedTotal,
 			prometheus.CounterValue,
-			server.BytesReceivedTotal,
-			server.Name,
+			server[BytesReceivedTotal].FirstValue,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.categorizerQueueLength,
 			prometheus.GaugeValue,
-			server.CategorizerQueueLength,
-			server.Name,
+			server[CategorizerQueueLength].FirstValue,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.connectionErrorsTotal,
 			prometheus.CounterValue,
-			server.ConnectionErrorsTotal,
-			server.Name,
+			server[ConnectionErrorsTotal].FirstValue,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.currentMessagesInLocalDelivery,
 			prometheus.GaugeValue,
-			server.CurrentMessagesInLocalDelivery,
-			server.Name,
+			server[CurrentMessagesInLocalDelivery].FirstValue,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.directoryDropsTotal,
 			prometheus.CounterValue,
-			server.DirectoryDropsTotal,
-			server.Name,
+			server[DirectoryDropsTotal].FirstValue,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dsnFailuresTotal,
 			prometheus.CounterValue,
-			server.DSNFailuresTotal,
-			server.Name,
+			server[DSNFailuresTotal].FirstValue,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dnsQueriesTotal,
 			prometheus.CounterValue,
-			server.DNSQueriesTotal,
-			server.Name,
+			server[DNSQueriesTotal].FirstValue,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.etrnMessagesTotal,
 			prometheus.CounterValue,
-			server.ETRNMessagesTotal,
-			server.Name,
+			server[ETRNMessagesTotal].FirstValue,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.inboundConnectionsTotal,
 			prometheus.CounterValue,
-			server.InboundConnectionsTotal,
-			server.Name,
+			server[InboundConnectionsTotal].FirstValue,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.inboundConnectionsCurrent,
 			prometheus.GaugeValue,
-			server.InboundConnectionsCurrent,
-			server.Name,
+			server[InboundConnectionsCurrent].FirstValue,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.localQueueLength,
 			prometheus.GaugeValue,
-			server.LocalQueueLength,
-			server.Name,
+			server[LocalQueueLength].FirstValue,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.localRetryQueueLength,
 			prometheus.GaugeValue,
-			server.LocalRetryQueueLength,
-			server.Name,
+			server[LocalRetryQueueLength].FirstValue,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.mailFilesOpen,
 			prometheus.GaugeValue,
-			server.MailFilesOpen,
-			server.Name,
+			server[MailFilesOpen].FirstValue,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.messageBytesReceivedTotal,
 			prometheus.CounterValue,
-			server.MessageBytesReceivedTotal,
-			server.Name,
+			server[MessageBytesReceivedTotal].FirstValue,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.messageBytesSentTotal,
 			prometheus.CounterValue,
-			server.MessageBytesSentTotal,
-			server.Name,
+			server[MessageBytesSentTotal].FirstValue,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.messageDeliveryRetriesTotal,
 			prometheus.CounterValue,
-			server.MessageDeliveryRetriesTotal,
-			server.Name,
+			server[MessageDeliveryRetriesTotal].FirstValue,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.messageSendRetriesTotal,
 			prometheus.CounterValue,
-			server.MessageSendRetriesTotal,
-			server.Name,
+			server[MessageSendRetriesTotal].FirstValue,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.messagesCurrentlyUndeliverable,
 			prometheus.GaugeValue,
-			server.MessagesCurrentlyUndeliverable,
-			server.Name,
+			server[MessagesCurrentlyUndeliverable].FirstValue,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.messagesDeliveredTotal,
 			prometheus.CounterValue,
-			server.MessagesDeliveredTotal,
-			server.Name,
+			server[MessagesDeliveredTotal].FirstValue,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.messagesPendingRouting,
 			prometheus.GaugeValue,
-			server.MessagesPendingRouting,
-			server.Name,
+			server[MessagesPendingRouting].FirstValue,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.messagesReceivedTotal,
 			prometheus.CounterValue,
-			server.MessagesReceivedTotal,
-			server.Name,
+			server[MessagesReceivedTotal].FirstValue,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.messagesRefusedForAddressObjectsTotal,
 			prometheus.CounterValue,
-			server.MessagesRefusedForAddressObjectsTotal,
-			server.Name,
+			server[MessagesRefusedForAddressObjectsTotal].FirstValue,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.messagesRefusedForMailObjectsTotal,
 			prometheus.CounterValue,
-			server.MessagesRefusedForMailObjectsTotal,
-			server.Name,
+			server[MessagesRefusedForMailObjectsTotal].FirstValue,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.messagesRefusedForSizeTotal,
 			prometheus.CounterValue,
-			server.MessagesRefusedForSizeTotal,
-			server.Name,
+			server[MessagesRefusedForSizeTotal].FirstValue,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.messagesSentTotal,
 			prometheus.CounterValue,
-			server.MessagesSentTotal,
-			server.Name,
+			server[MessagesSentTotal].FirstValue,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.messagesSubmittedTotal,
 			prometheus.CounterValue,
-			server.MessagesSubmittedTotal,
-			server.Name,
+			server[MessagesSubmittedTotal].FirstValue,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.ndrsGeneratedTotal,
 			prometheus.CounterValue,
-			server.NDRsGeneratedTotal,
-			server.Name,
+			server[NDRsGeneratedTotal].FirstValue,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.outboundConnectionsCurrent,
 			prometheus.GaugeValue,
-			server.OutboundConnectionsCurrent,
-			server.Name,
+			server[OutboundConnectionsCurrent].FirstValue,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.outboundConnectionsRefusedTotal,
 			prometheus.CounterValue,
-			server.OutboundConnectionsRefusedTotal,
-			server.Name,
+			server[OutboundConnectionsRefusedTotal].FirstValue,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.outboundConnectionsTotal,
 			prometheus.CounterValue,
-			server.OutboundConnectionsTotal,
-			server.Name,
+			server[OutboundConnectionsTotal].FirstValue,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.queueFilesOpen,
 			prometheus.GaugeValue,
-			server.QueueFilesOpen,
-			server.Name,
+			server[QueueFilesOpen].FirstValue,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.pickupDirectoryMessagesRetrievedTotal,
 			prometheus.CounterValue,
-			server.PickupDirectoryMessagesRetrievedTotal,
-			server.Name,
+			server[PickupDirectoryMessagesRetrievedTotal].FirstValue,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.remoteQueueLength,
 			prometheus.GaugeValue,
-			server.RemoteQueueLength,
-			server.Name,
+			server[RemoteQueueLength].FirstValue,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.remoteRetryQueueLength,
 			prometheus.GaugeValue,
-			server.RemoteRetryQueueLength,
-			server.Name,
+			server[RemoteRetryQueueLength].FirstValue,
+			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.routingTableLookupsTotal,
 			prometheus.CounterValue,
-			server.RoutingTableLookupsTotal,
-			server.Name,
+			server[RoutingTableLookupsTotal].FirstValue,
+			name,
 		)
 	}
 
