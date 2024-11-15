@@ -10,6 +10,7 @@ import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/toggle"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -115,6 +116,10 @@ func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
 }
 
 func (c *Collector) Close(_ *slog.Logger) error {
+	if toggle.IsPDHEnabled() {
+		c.perfDataCollector.Close()
+	}
+
 	return nil
 }
 
@@ -268,7 +273,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 
 	var err error
 
-	c.perfDataCollector, err = perfdata.NewCollector(perfdata.V1, "DirectoryServices", perfdata.AllInstances, counters)
+	c.perfDataCollector, err = perfdata.NewCollector(perfdata.V2, "DirectoryServices", perfdata.AllInstances, counters)
 	if err != nil {
 		return fmt.Errorf("failed to create DirectoryServices collector: %w", err)
 	}

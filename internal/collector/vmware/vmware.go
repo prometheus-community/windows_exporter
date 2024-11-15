@@ -82,7 +82,9 @@ func (c *Collector) Close(_ *slog.Logger) error {
 }
 
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
-	counters := []string{
+	var err error
+
+	c.perfDataCollectorCPU, err = perfdata.NewCollector(perfdata.V2, "VM Processor", perftypes.TotalInstance, []string{
 		cpuLimitMHz,
 		cpuReservationMHz,
 		cpuShares,
@@ -90,11 +92,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		cpuTimePercents,
 		couEffectiveVMSpeedMHz,
 		cpuHostProcessorSpeedMHz,
-	}
-
-	var err error
-
-	c.perfDataCollectorCPU, err = perfdata.NewCollector(perfdata.V2, "VM Processor", perftypes.TotalInstance, counters)
+	})
 	if err != nil {
 		return fmt.Errorf("failed to create VM Processor collector: %w", err)
 	}
@@ -142,7 +140,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 
-	counters = []string{
+	c.perfDataCollectorMemory, err = perfdata.NewCollector(perfdata.V2, "VM Memory", nil, []string{
 		memActiveMB,
 		memBalloonedMB,
 		memLimitMB,
@@ -155,9 +153,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		memSwappedMB,
 		memTargetSizeMB,
 		memUsedMB,
-	}
-
-	c.perfDataCollectorMemory, err = perfdata.NewCollector(perfdata.V2, "VM Memory", nil, counters)
+	})
 	if err != nil {
 		return fmt.Errorf("failed to create VM Memory collector: %w", err)
 	}

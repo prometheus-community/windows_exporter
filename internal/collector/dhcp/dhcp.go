@@ -85,12 +85,18 @@ func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
 }
 
 func (c *Collector) Close(_ *slog.Logger) error {
+	if toggle.IsPDHEnabled() {
+		c.perfDataCollector.Close()
+	}
+
 	return nil
 }
 
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 	if toggle.IsPDHEnabled() {
-		counters := []string{
+		var err error
+
+		c.perfDataCollector, err = perfdata.NewCollector(perfdata.V2, "DHCP Server", perfdata.AllInstances, []string{
 			acksTotal,
 			activeQueueLength,
 			conflictCheckQueueLength,
@@ -116,11 +122,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 			packetsReceivedTotal,
 			releasesTotal,
 			requestsTotal,
-		}
-
-		var err error
-
-		c.perfDataCollector, err = perfdata.NewCollector(perfdata.V1, "DHCP Server", perfdata.AllInstances, counters)
+		})
 		if err != nil {
 			return fmt.Errorf("failed to create DHCP Server collector: %w", err)
 		}

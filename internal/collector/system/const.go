@@ -1,11 +1,11 @@
 package system
 
 const (
-	ContextSwitchesPersec     = "Context Switches/sec"
-	ExceptionDispatchesPersec = "Exception Dispatches/sec"
-	ProcessorQueueLength      = "Processor Queue Length"
-	SystemCallsPersec         = "System Calls/sec"
-	SystemUpTime              = "System Up Time"
-	Processes                 = "Processes"
-	Threads                   = "Threads"
+	contextSwitchesPersec     = "Context Switches/sec"
+	exceptionDispatchesPersec = "Exception Dispatches/sec"
+	processorQueueLength      = "Processor Queue Length"
+	systemCallsPersec         = "System Calls/sec"
+	systemUpTime              = "System Up Time"
+	processes                 = "Processes"
+	threads                   = "Threads"
 )

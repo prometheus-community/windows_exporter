@@ -33,7 +33,7 @@ func (c *Collector) buildActiveSync() error {
 
 	var err error
 
-	c.perfDataCollectorActiveSync, err = perfdata.NewCollector(perfdata.V1, "MSExchange ActiveSync", perfdata.AllInstances, counters)
+	c.perfDataCollectorActiveSync, err = perfdata.NewCollector(perfdata.V2, "MSExchange ActiveSync", perfdata.AllInstances, counters)
 	if err != nil {
 		return fmt.Errorf("failed to create MSExchange ActiveSync collector: %w", err)
 	}

@@ -76,6 +76,10 @@ func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
 }
 
 func (c *Collector) Close(_ *slog.Logger) error {
+	if toggle.IsPDHEnabled() {
+		c.perfDataCollector.Close()
+	}
+
 	return nil
 }
 

@@ -138,6 +138,10 @@ func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
 }
 
 func (c *Collector) Close(_ *slog.Logger) error {
+	if toggle.IsPDHEnabled() {
+		c.perfDataCollector.Close()
+	}
+
 	return nil
 }
 
@@ -194,7 +198,7 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 		if errors.Is(err, v2.NewPdhError(v2.PdhCstatusNoObject)) {
 			counters[0] = idProcess
 
-			c.perfDataCollector, err = perfdata.NewCollector(perfdata.V1, "Process", perfdata.AllInstances, counters)
+			c.perfDataCollector, err = perfdata.NewCollector(perfdata.V2, "Process", perfdata.AllInstances, counters)
 		}
 
 		if err != nil {

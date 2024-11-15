@@ -76,11 +76,15 @@ func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
 }
 
 func (c *Collector) Close(_ *slog.Logger) error {
+	c.perfDataCollector.Close()
+
 	return nil
 }
 
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
-	counters := []string{
+	var err error
+
+	c.perfDataCollector, err = perfdata.NewCollector(perfdata.V2, "DNS", perfdata.AllInstances, []string{
 		axfrRequestReceived,
 		axfrRequestSent,
 		axfrResponseReceived,
@@ -121,11 +125,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		winsReverseResponseSent,
 		zoneTransferFailure,
 		zoneTransferSOARequestSent,
-	}
-
-	var err error
-
-	c.perfDataCollector, err = perfdata.NewCollector(perfdata.V1, "DNS", perfdata.AllInstances, counters)
+	})
 	if err != nil {
 		return fmt.Errorf("failed to create DNS collector: %w", err)
 	}

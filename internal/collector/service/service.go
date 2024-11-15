@@ -165,10 +165,6 @@ func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan
 	logger = logger.With(slog.String("collector", Name))
 
 	if err := c.collect(logger, ch); err != nil {
-		logger.Error("failed collecting API service metrics:",
-			slog.Any("err", err),
-		)
-
 		return fmt.Errorf("failed collecting API service metrics: %w", err)
 	}
 
