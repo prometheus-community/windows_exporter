@@ -21,7 +21,7 @@ func (c *Collector) buildAvailabilityService() error {
 
 	var err error
 
-	c.perfDataCollectorAvailabilityService, err = perfdata.NewCollector(perfdata.V1, "MSExchange Availability Service", perfdata.AllInstances, counters)
+	c.perfDataCollectorAvailabilityService, err = perfdata.NewCollector(perfdata.V2, "MSExchange Availability Service", perfdata.AllInstances, counters)
 	if err != nil {
 		return fmt.Errorf("failed to create MSExchange Availability Service collector: %w", err)
 	}

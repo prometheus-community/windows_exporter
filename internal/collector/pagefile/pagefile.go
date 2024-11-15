@@ -57,6 +57,8 @@ func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
 }
 
 func (c *Collector) Close(_ *slog.Logger) error {
+	c.perfDataCollector.Close()
+
 	return nil
 }
 

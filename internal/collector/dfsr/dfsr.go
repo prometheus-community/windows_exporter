@@ -164,6 +164,21 @@ func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
 }
 
 func (c *Collector) Close(_ *slog.Logger) error {
+	//nolint:nestif
+	if toggle.IsPDHEnabled() {
+		if slices.Contains(c.config.CollectorsEnabled, "connection") {
+			c.perfDataCollectorConnection.Close()
+		}
+
+		if slices.Contains(c.config.CollectorsEnabled, "folder") {
+			c.perfDataCollectorFolder.Close()
+		}
+
+		if slices.Contains(c.config.CollectorsEnabled, "volume") {
+			c.perfDataCollectorVolume.Close()
+		}
+	}
+
 	return nil
 }
 
@@ -189,7 +204,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 				sizeOfFilesReceivedTotal,
 			}
 
-			c.perfDataCollectorConnection, err = perfdata.NewCollector(perfdata.V1, "DFS Replication Connections", perfdata.AllInstances, counters)
+			c.perfDataCollectorConnection, err = perfdata.NewCollector(perfdata.V2, "DFS Replication Connections", perfdata.AllInstances, counters)
 			if err != nil {
 				return fmt.Errorf("failed to create DFS Replication Connections collector: %w", err)
 			}
@@ -226,7 +241,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 				updatesDroppedTotal,
 			}
 
-			c.perfDataCollectorFolder, err = perfdata.NewCollector(perfdata.V1, "DFS Replicated Folders", perfdata.AllInstances, counters)
+			c.perfDataCollectorFolder, err = perfdata.NewCollector(perfdata.V2, "DFS Replicated Folders", perfdata.AllInstances, counters)
 			if err != nil {
 				return fmt.Errorf("failed to create DFS Replicated Folders collector: %w", err)
 			}
@@ -241,7 +256,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 				usnJournalUnreadPercentage,
 			}
 
-			c.perfDataCollectorVolume, err = perfdata.NewCollector(perfdata.V1, "DFS Replication Service Volumes", perfdata.AllInstances, counters)
+			c.perfDataCollectorVolume, err = perfdata.NewCollector(perfdata.V2, "DFS Replication Service Volumes", perfdata.AllInstances, counters)
 			if err != nil {
 				return fmt.Errorf("failed to create DFS Replication Service Volumes collector: %w", err)
 			}

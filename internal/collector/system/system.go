@@ -62,23 +62,23 @@ func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
 }
 
 func (c *Collector) Close(_ *slog.Logger) error {
+	c.perfDataCollector.Close()
+
 	return nil
 }
 
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
-	counters := []string{
-		ContextSwitchesPersec,
-		ExceptionDispatchesPersec,
-		ProcessorQueueLength,
-		SystemCallsPersec,
-		SystemUpTime,
-		Processes,
-		Threads,
-	}
-
 	var err error
 
-	c.perfDataCollector, err = perfdata.NewCollector(perfdata.V2, "System", nil, counters)
+	c.perfDataCollector, err = perfdata.NewCollector(perfdata.V2, "System", nil, []string{
+		contextSwitchesPersec,
+		exceptionDispatchesPersec,
+		processorQueueLength,
+		systemCallsPersec,
+		systemUpTime,
+		processes,
+		threads,
+	})
 	if err != nil {
 		return fmt.Errorf("failed to create System collector: %w", err)
 	}
@@ -160,37 +160,37 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	ch <- prometheus.MustNewConstMetric(
 		c.contextSwitchesTotal,
 		prometheus.CounterValue,
-		data[ContextSwitchesPersec].FirstValue,
+		data[contextSwitchesPersec].FirstValue,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.exceptionDispatchesTotal,
 		prometheus.CounterValue,
-		data[ExceptionDispatchesPersec].FirstValue,
+		data[exceptionDispatchesPersec].FirstValue,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.processorQueueLength,
 		prometheus.GaugeValue,
-		data[ProcessorQueueLength].FirstValue,
+		data[processorQueueLength].FirstValue,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.processes,
 		prometheus.GaugeValue,
-		data[Processes].FirstValue,
+		data[processes].FirstValue,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.systemCallsTotal,
 		prometheus.CounterValue,
-		data[SystemCallsPersec].FirstValue,
+		data[systemCallsPersec].FirstValue,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.systemUpTime,
 		prometheus.GaugeValue,
-		data[SystemUpTime].FirstValue,
+		data[systemUpTime].FirstValue,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.threads,
 		prometheus.GaugeValue,
-		data[Threads].FirstValue,
+		data[threads].FirstValue,
 	)
 
 	// Windows has no defined limit, and is based off available resources. This currently isn't calculated by WMI and is set to default value.

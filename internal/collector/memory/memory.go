@@ -146,7 +146,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 
 		var err error
 
-		c.perfDataCollector, err = perfdata.NewCollector(perfdata.V1, "Memory", perfdata.AllInstances, counters)
+		c.perfDataCollector, err = perfdata.NewCollector(perfdata.V2, "Memory", perfdata.AllInstances, counters)
 		if err != nil {
 			return fmt.Errorf("failed to create LogicalDisk collector: %w", err)
 		}

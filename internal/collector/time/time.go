@@ -115,18 +115,16 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		}
 	}
 
-	counters := []string{
+	var err error
+
+	c.perfDataCollector, err = perfdata.NewCollector(perfdata.V2, "Windows Time Service", nil, []string{
 		ClockFrequencyAdjustmentPPBTotal,
 		ComputedTimeOffset,
 		NTPClientTimeSourceCount,
 		NTPRoundTripDelay,
 		NTPServerIncomingRequestsTotal,
 		NTPServerOutgoingResponsesTotal,
-	}
-
-	var err error
-
-	c.perfDataCollector, err = perfdata.NewCollector(perfdata.V2, "Windows Time Service", nil, counters)
+	})
 	if err != nil {
 		return fmt.Errorf("failed to create Windows Time Service collector: %w", err)
 	}

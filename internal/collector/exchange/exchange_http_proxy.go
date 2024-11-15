@@ -44,7 +44,7 @@ func (c *Collector) buildHTTPProxy() error {
 
 	var err error
 
-	c.perfDataCollectorHttpProxy, err = perfdata.NewCollector(perfdata.V1, "MSExchange HttpProxy", perfdata.AllInstances, counters)
+	c.perfDataCollectorHttpProxy, err = perfdata.NewCollector(perfdata.V2, "MSExchange HttpProxy", perfdata.AllInstances, counters)
 	if err != nil {
 		return fmt.Errorf("failed to create MSExchange HttpProxy collector: %w", err)
 	}

@@ -146,12 +146,18 @@ func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
 }
 
 func (c *Collector) Close(_ *slog.Logger) error {
+	if toggle.IsPDHEnabled() {
+		c.perfDataCollector.Close()
+	}
+
 	return nil
 }
 
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	if toggle.IsPDHEnabled() {
-		counters := []string{
+		var err error
+
+		c.perfDataCollector, err = perfdata.NewCollector(perfdata.V2, "Network Interface", perfdata.AllInstances, []string{
 			BytesReceivedPerSec,
 			BytesSentPerSec,
 			BytesTotalPerSec,
@@ -165,11 +171,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 			PacketsReceivedUnknown,
 			PacketsSentPerSec,
 			CurrentBandwidth,
-		}
-
-		var err error
-
-		c.perfDataCollector, err = perfdata.NewCollector(perfdata.V1, "Network Interface", perfdata.AllInstances, counters)
+		})
 		if err != nil {
 			return fmt.Errorf("failed to create Processor Information collector: %w", err)
 		}
