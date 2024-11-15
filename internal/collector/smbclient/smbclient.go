@@ -3,13 +3,14 @@
 package smbclient
 
 import (
+	"fmt"
 	"log/slog"
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
+	"github.com/prometheus-community/windows_exporter/internal/perfdata"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata/perftypes"
-	v1 "github.com/prometheus-community/windows_exporter/internal/perfdata/v1"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -24,6 +25,8 @@ var ConfigDefaults = Config{}
 
 type Collector struct {
 	config Config
+
+	perfDataCollector perfdata.Collector
 
 	readBytesTotal                            *prometheus.Desc
 	readBytesTransmittedViaSMBDirectTotal     *prometheus.Desc
@@ -70,9 +73,7 @@ func (c *Collector) GetName() string {
 }
 
 func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
-	return []string{
-		"SMB Client Shares",
-	}, nil
+	return []string{}, nil
 }
 
 func (c *Collector) Close(_ *slog.Logger) error {
@@ -80,10 +81,39 @@ func (c *Collector) Close(_ *slog.Logger) error {
 }
 
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
+	var err error
+
+	c.perfDataCollector, err = perfdata.NewCollector(perfdata.V2, "SMB Client Shares", nil, []string{
+		AvgDataQueueLength,
+		AvgReadQueueLength,
+		AvgSecPerRead,
+		AvgSecPerWrite,
+		AvgSecPerDataRequest,
+		AvgWriteQueueLength,
+		CreditStallsPerSec,
+		CurrentDataQueueLength,
+		DataBytesPerSec,
+		DataRequestsPerSec,
+		MetadataRequestsPerSec,
+		ReadBytesTransmittedViaSMBDirectPerSec,
+		ReadBytesPerSec,
+		ReadRequestsTransmittedViaSMBDirectPerSec,
+		ReadRequestsPerSec,
+		TurboIOReadsPerSec,
+		TurboIOWritesPerSec,
+		WriteBytesTransmittedViaSMBDirectPerSec,
+		WriteBytesPerSec,
+		WriteRequestsTransmittedViaSMBDirectPerSec,
+		WriteRequestsPerSec,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create SMB Client Shares collector: %w", err)
+	}
+
 	// desc creates a new prometheus description
 	desc := func(metricName string, description string, labels []string) *prometheus.Desc {
 		return prometheus.NewDesc(
-			prometheus.BuildFQName(types.Namespace, "smbclient", metricName),
+			prometheus.BuildFQName(types.Namespace, Name, metricName),
 			description,
 			labels,
 			nil,
@@ -179,68 +209,30 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 }
 
 // Collect collects smb client metrics and sends them to prometheus.
-func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	logger = logger.With(slog.String("collector", Name))
-	if err := c.collectClientShares(ctx, logger, ch); err != nil {
-		logger.Error("Error in ClientShares",
-			slog.Any("err", err),
-		)
-
+func (c *Collector) Collect(_ *types.ScrapeContext, _ *slog.Logger, ch chan<- prometheus.Metric) error {
+	if err := c.collectClientShares(ch); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-// Perflib: SMB Client Shares.
-type perflibClientShares struct {
-	Name string
-
-	AvgDataQueueLength                         float64 `perflib:"Avg. Data Queue Length"`
-	AvgReadQueueLength                         float64 `perflib:"Avg. Read Queue Length"`
-	AvgSecPerRead                              float64 `perflib:"Avg. sec/Read"`
-	AvgSecPerWrite                             float64 `perflib:"Avg. sec/Write"`
-	AvgSecPerDataRequest                       float64 `perflib:"Avg. sec/Data Request"`
-	AvgWriteQueueLength                        float64 `perflib:"Avg. Write Queue Length"`
-	CreditStallsPerSec                         float64 `perflib:"Credit Stalls/sec"`
-	CurrentDataQueueLength                     float64 `perflib:"Current Data Queue Length"`
-	DataBytesPerSec                            float64 `perflib:"Data Bytes/sec"`
-	DataRequestsPerSec                         float64 `perflib:"Data Requests/sec"`
-	MetadataRequestsPerSec                     float64 `perflib:"Metadata Requests/sec"`
-	ReadBytesTransmittedViaSMBDirectPerSec     float64 `perflib:"Read Bytes transmitted via SMB Direct/sec"`
-	ReadBytesPerSec                            float64 `perflib:"Read Bytes/sec"`
-	ReadRequestsTransmittedViaSMBDirectPerSec  float64 `perflib:"Read Requests transmitted via SMB Direct/sec"`
-	ReadRequestsPerSec                         float64 `perflib:"Read Requests/sec"`
-	TurboIOReadsPerSec                         float64 `perflib:"Turbo I/O Reads/sec"`
-	TurboIOWritesPerSec                        float64 `perflib:"Turbo I/O Writes/sec"`
-	WriteBytesTransmittedViaSMBDirectPerSec    float64 `perflib:"Write Bytes transmitted via SMB Direct/sec"`
-	WriteBytesPerSec                           float64 `perflib:"Write Bytes/sec"`
-	WriteRequestsTransmittedViaSMBDirectPerSec float64 `perflib:"Write Requests transmitted via SMB Direct/sec"`
-	WriteRequestsPerSec                        float64 `perflib:"Write Requests/sec"`
-}
-
-func (c *Collector) collectClientShares(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	logger = logger.With(slog.String("collector", Name))
-
-	var data []perflibClientShares
-
-	if err := v1.UnmarshalObject(ctx.PerfObjects["SMB Client Shares"], &data, logger); err != nil {
-		return err
+func (c *Collector) collectClientShares(ch chan<- prometheus.Metric) error {
+	perfData, err := c.perfDataCollector.Collect()
+	if err != nil {
+		return fmt.Errorf("failed to collect SMB Client Shares metrics: %w", err)
 	}
 
-	for _, instance := range data {
-		if instance.Name == "_Total" {
-			continue
-		}
-
-		parsed := strings.FieldsFunc(instance.Name, func(r rune) bool { return r == '\\' })
+	for name, data := range perfData {
+		parsed := strings.FieldsFunc(name, func(r rune) bool { return r == '\\' })
 		serverValue := parsed[0]
 		shareValue := parsed[1]
+
 		// Request time spent on queue. Convert from ticks to seconds.
 		ch <- prometheus.MustNewConstMetric(
 			c.requestQueueSecsTotal,
 			prometheus.CounterValue,
-			instance.AvgDataQueueLength*perftypes.TicksToSecondScaleFactor,
+			data[AvgDataQueueLength].FirstValue*perftypes.TicksToSecondScaleFactor,
 			serverValue, shareValue,
 		)
 
@@ -248,28 +240,28 @@ func (c *Collector) collectClientShares(ctx *types.ScrapeContext, logger *slog.L
 		ch <- prometheus.MustNewConstMetric(
 			c.readRequestQueueSecsTotal,
 			prometheus.CounterValue,
-			instance.AvgReadQueueLength*perftypes.TicksToSecondScaleFactor,
+			data[AvgReadQueueLength].FirstValue*perftypes.TicksToSecondScaleFactor,
 			serverValue, shareValue,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.readSecsTotal,
 			prometheus.CounterValue,
-			instance.AvgSecPerRead*perftypes.TicksToSecondScaleFactor,
+			data[AvgSecPerRead].FirstValue*perftypes.TicksToSecondScaleFactor,
 			serverValue, shareValue,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.writeSecsTotal,
 			prometheus.CounterValue,
-			instance.AvgSecPerWrite*perftypes.TicksToSecondScaleFactor,
+			data[AvgSecPerWrite].FirstValue*perftypes.TicksToSecondScaleFactor,
 			serverValue, shareValue,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.requestSecs,
 			prometheus.CounterValue,
-			instance.AvgSecPerDataRequest*perftypes.TicksToSecondScaleFactor,
+			data[AvgSecPerDataRequest].FirstValue*perftypes.TicksToSecondScaleFactor,
 			serverValue, shareValue,
 		)
 
@@ -277,112 +269,112 @@ func (c *Collector) collectClientShares(ctx *types.ScrapeContext, logger *slog.L
 		ch <- prometheus.MustNewConstMetric(
 			c.writeRequestQueueSecsTotal,
 			prometheus.CounterValue,
-			instance.AvgWriteQueueLength*perftypes.TicksToSecondScaleFactor,
+			data[AvgWriteQueueLength].FirstValue*perftypes.TicksToSecondScaleFactor,
 			serverValue, shareValue,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.creditStallsTotal,
 			prometheus.CounterValue,
-			instance.CreditStallsPerSec,
+			data[CreditStallsPerSec].FirstValue,
 			serverValue, shareValue,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.currentDataQueued,
 			prometheus.GaugeValue,
-			instance.CurrentDataQueueLength,
+			data[CurrentDataQueueLength].FirstValue,
 			serverValue, shareValue,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dataBytesTotal,
 			prometheus.CounterValue,
-			instance.DataBytesPerSec,
+			data[DataBytesPerSec].FirstValue,
 			serverValue, shareValue,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dataRequestsTotal,
 			prometheus.CounterValue,
-			instance.DataRequestsPerSec,
+			data[DataRequestsPerSec].FirstValue,
 			serverValue, shareValue,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.metadataRequestsTotal,
 			prometheus.CounterValue,
-			instance.MetadataRequestsPerSec,
+			data[MetadataRequestsPerSec].FirstValue,
 			serverValue, shareValue,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.readBytesTransmittedViaSMBDirectTotal,
 			prometheus.CounterValue,
-			instance.ReadBytesTransmittedViaSMBDirectPerSec,
+			data[ReadBytesTransmittedViaSMBDirectPerSec].FirstValue,
 			serverValue, shareValue,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.readBytesTotal,
 			prometheus.CounterValue,
-			instance.ReadBytesPerSec,
+			data[ReadBytesPerSec].FirstValue,
 			serverValue, shareValue,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.readRequestsTransmittedViaSMBDirectTotal,
 			prometheus.CounterValue,
-			instance.ReadRequestsTransmittedViaSMBDirectPerSec,
+			data[ReadRequestsTransmittedViaSMBDirectPerSec].FirstValue,
 			serverValue, shareValue,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.readsTotal,
 			prometheus.CounterValue,
-			instance.ReadRequestsPerSec,
+			data[ReadRequestsPerSec].FirstValue,
 			serverValue, shareValue,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.turboIOReadsTotal,
 			prometheus.CounterValue,
-			instance.TurboIOReadsPerSec,
+			data[TurboIOReadsPerSec].FirstValue,
 			serverValue, shareValue,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.TurboIOWritesTotal,
 			prometheus.CounterValue,
-			instance.TurboIOWritesPerSec,
+			data[TurboIOWritesPerSec].FirstValue,
 			serverValue, shareValue,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.writeBytesTransmittedViaSMBDirectTotal,
 			prometheus.CounterValue,
-			instance.WriteBytesTransmittedViaSMBDirectPerSec,
+			data[WriteBytesTransmittedViaSMBDirectPerSec].FirstValue,
 			serverValue, shareValue,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.writeBytesTotal,
 			prometheus.CounterValue,
-			instance.WriteBytesPerSec,
+			data[WriteBytesPerSec].FirstValue,
 			serverValue, shareValue,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.writeRequestsTransmittedViaSMBDirectTotal,
 			prometheus.CounterValue,
-			instance.WriteRequestsTransmittedViaSMBDirectPerSec,
+			data[WriteRequestsTransmittedViaSMBDirectPerSec].FirstValue,
 			serverValue, shareValue,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.writesTotal,
 			prometheus.CounterValue,
-			instance.WriteRequestsPerSec,
+			data[WriteRequestsPerSec].FirstValue,
 			serverValue, shareValue,
 		)
 	}
