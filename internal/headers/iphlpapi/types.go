@@ -9,6 +9,8 @@ import (
 
 // MIB_TCPROW_OWNER_PID structure for IPv4.
 // https://learn.microsoft.com/en-us/windows/win32/api/tcpmib/ns-tcpmib-mib_tcprow_owner_pid
+//
+//nolint:unused
 type MIB_TCPROW_OWNER_PID struct {
 	dwState      MIB_TCP_STATE
 	dwLocalAddr  BigEndianUint32
@@ -20,6 +22,8 @@ type MIB_TCPROW_OWNER_PID struct {
 
 // MIB_TCP6ROW_OWNER_PID structure for IPv6.
 // https://learn.microsoft.com/en-us/windows/win32/api/tcpmib/ns-tcpmib-mib_tcp6row_owner_pid
+//
+//nolint:unused
 type MIB_TCP6ROW_OWNER_PID struct {
 	ucLocalAddr     [16]byte
 	dwLocalScopeId  uint32
@@ -85,5 +89,6 @@ type BigEndianUint32 uint32
 func (b BigEndianUint32) uint16() uint16 {
 	data := make([]byte, 2)
 	binary.BigEndian.PutUint16(data, uint16(b))
+
 	return binary.LittleEndian.Uint16(data)
 }

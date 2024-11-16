@@ -430,7 +430,7 @@ func (c *Collector) getMSSQLServerVersion(port uint16) (string, string, error) {
 		return "", "", fmt.Errorf("failed to open the process with PID %d: %w", pid, err)
 	}
 
-	defer windows.CloseHandle(hProcess)
+	defer windows.CloseHandle(hProcess) //nolint:errcheck
 
 	processFilePath, err := process.QueryFullProcessImageName(hProcess, process.ImageNameFormatWin32Path)
 	if err != nil {

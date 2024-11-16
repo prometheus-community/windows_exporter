@@ -22,6 +22,8 @@ func TestGetOwnerPIDOfTCPPort(t *testing.T) {
 	t.Parallel()
 
 	lister, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+
 	t.Cleanup(func() {
 		require.NoError(t, lister.Close())
 	})
