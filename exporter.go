@@ -20,6 +20,7 @@ import (
 	"os/signal"
 	"os/user"
 	"runtime"
+	"slices"
 	"strings"
 	"time"
 
@@ -28,7 +29,6 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/httphandler"
 	"github.com/prometheus-community/windows_exporter/internal/log"
 	"github.com/prometheus-community/windows_exporter/internal/log/flag"
-	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus-community/windows_exporter/pkg/collector"
 	"github.com/prometheus/common/version"
 	"github.com/prometheus/exporter-toolkit/web"
@@ -77,7 +77,7 @@ func run() int {
 		).Default("5").Int()
 		enabledCollectors = app.Flag(
 			"collectors.enabled",
-			fmt.Sprintf("Comma-separated list of collectors to use. Use '%s' as a placeholder for all the collectors enabled by default.", collector.DefaultCollectorsPlaceholder)).
+			"Comma-separated list of collectors to use. Use '[defaults]' as a placeholder for all the collectors enabled by default.").
 			Default(collector.DefaultCollectors).String()
 		timeoutMargin = app.Flag(
 			"scrape.timeout-margin",
@@ -176,7 +176,7 @@ func run() int {
 		return 1
 	}
 
-	enabledCollectorList := utils.ExpandEnabledCollectors(*enabledCollectors)
+	enabledCollectorList := expandEnabledCollectors(*enabledCollectors)
 	if err := collectors.Enable(enabledCollectorList); err != nil {
 		logger.Error("Couldn't enable collectors",
 			slog.Any("err", err),
@@ -326,4 +326,10 @@ func setPriorityWindows(logger *slog.Logger, pid int, priority string) error {
 	}
 
 	return nil
+}
+
+func expandEnabledCollectors(enabled string) []string {
+	expanded := strings.ReplaceAll(enabled, "[defaults]", collector.DefaultCollectors)
+
+	return slices.Compact(strings.Split(expanded, ","))
 }

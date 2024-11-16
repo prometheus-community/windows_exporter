@@ -1,3 +1,5 @@
+//go:build windows
+
 package scheduled_task_test
 
 import (

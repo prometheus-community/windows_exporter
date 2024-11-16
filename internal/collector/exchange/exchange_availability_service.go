@@ -1,20 +1,14 @@
+//go:build windows
+
 package exchange
 
 import (
 	"errors"
 	"fmt"
-	"log/slog"
 
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	v1 "github.com/prometheus-community/windows_exporter/internal/perfdata/v1"
-	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
-
-// Perflib: [24914] MSExchange Availability Service.
-type perflibAvailabilityService struct {
-	RequestsSec float64 `perflib:"Availability Requests (sec)"`
-}
 
 func (c *Collector) buildAvailabilityService() error {
 	counters := []string{}
@@ -29,25 +23,7 @@ func (c *Collector) buildAvailabilityService() error {
 	return nil
 }
 
-func (c *Collector) collectAvailabilityService(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	var data []perflibAvailabilityService
-
-	if err := v1.UnmarshalObject(ctx.PerfObjects["MSExchange Availability Service"], &data, logger); err != nil {
-		return err
-	}
-
-	for _, availservice := range data {
-		ch <- prometheus.MustNewConstMetric(
-			c.availabilityRequestsSec,
-			prometheus.CounterValue,
-			availservice.RequestsSec,
-		)
-	}
-
-	return nil
-}
-
-func (c *Collector) collectPDHAvailabilityService(ch chan<- prometheus.Metric) error {
+func (c *Collector) collectAvailabilityService(ch chan<- prometheus.Metric) error {
 	perfData, err := c.perfDataCollectorAvailabilityService.Collect()
 	if err != nil {
 		return fmt.Errorf("failed to collect MSExchange Availability Service metrics: %w", err)

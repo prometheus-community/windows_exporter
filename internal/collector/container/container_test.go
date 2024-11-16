@@ -1,3 +1,5 @@
+//go:build windows
+
 package container_test
 
 import (

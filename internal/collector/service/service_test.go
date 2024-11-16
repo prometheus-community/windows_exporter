@@ -1,3 +1,5 @@
+//go:build windows
+
 package service_test
 
 import (

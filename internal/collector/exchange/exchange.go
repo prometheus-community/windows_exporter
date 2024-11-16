@@ -12,7 +12,7 @@ import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	"github.com/prometheus-community/windows_exporter/pkg/types"
+	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -262,16 +262,16 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 // Collect collects exchange metrics and sends them to prometheus.
 func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	collectorFuncs := map[string]func(ch chan<- prometheus.Metric) error{
-		adAccessProcesses:   c.collectPDHADAccessProcesses,
-		transportQueues:     c.collectPDHTransportQueues,
-		httpProxy:           c.collectPDHHTTPProxy,
-		activeSync:          c.collectPDHActiveSync,
-		availabilityService: c.collectPDHAvailabilityService,
-		outlookWebAccess:    c.collectPDHOWA,
-		autoDiscover:        c.collectPDHAutoDiscover,
-		workloadManagement:  c.collectPDHWorkloadManagementWorkloads,
-		rpcClientAccess:     c.collectPDHRPC,
-		mapiHttpEmsmdb:      c.collectPDHMapiHttpEmsmdb,
+		adAccessProcesses:   c.collectADAccessProcesses,
+		transportQueues:     c.collectTransportQueues,
+		httpProxy:           c.collectHTTPProxy,
+		activeSync:          c.collectActiveSync,
+		availabilityService: c.collectAvailabilityService,
+		outlookWebAccess:    c.collectOWA,
+		autoDiscover:        c.collectAutoDiscover,
+		workloadManagement:  c.collectWorkloadManagementWorkloads,
+		rpcClientAccess:     c.collectRPC,
+		mapiHttpEmsmdb:      c.collectMapiHttpEmsmdb,
 	}
 
 	errs := make([]error, len(c.config.CollectorsEnabled))

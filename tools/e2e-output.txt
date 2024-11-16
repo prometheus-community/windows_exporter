@@ -307,8 +307,6 @@ windows_exporter_collector_timeout{collector="udp"} 0
 # TYPE windows_os_physical_memory_free_bytes gauge
 # HELP windows_os_process_memory_limit_bytes Deprecated: Use `windows_memory_process_memory_limit_bytes` instead.
 # TYPE windows_os_process_memory_limit_bytes gauge
-# HELP windows_os_processes Deprecated: Use `windows_system_processes` instead.
-# TYPE windows_os_processes gauge
 # HELP windows_os_processes_limit Deprecated: Use `windows_system_process_limit` instead.
 # TYPE windows_os_processes_limit gauge
 # HELP windows_os_time Deprecated: Use windows_time_current_timestamp_seconds instead.
@@ -323,10 +321,6 @@ windows_exporter_collector_timeout{collector="udp"} 0
 # TYPE windows_os_virtual_memory_free_bytes gauge
 # HELP windows_os_visible_memory_bytes Deprecated: Use `windows_memory_physical_total_bytes` instead.
 # TYPE windows_os_visible_memory_bytes gauge
-# HELP windows_pagefile_free_bytes Number of bytes that can be mapped into the operating system paging files without causing any other pages to be swapped out
-# TYPE windows_pagefile_free_bytes gauge
-# HELP windows_pagefile_limit_bytes Number of bytes that can be stored in the operating system paging files. 0 (zero) indicates that there are no paging files
-# TYPE windows_pagefile_limit_bytes gauge
 # HELP windows_perfdata_memory_cache_faults_sec Performance data for \\Memory\\Cache Faults/sec
 # TYPE windows_perfdata_memory_cache_faults_sec counter
 # HELP windows_perfdata_processor_information__privileged_time Performance data for \\Processor Information\\% Privileged Time
@@ -433,9 +427,6 @@ windows_service_state{name="Themes",state="stopped"} 0
 # TYPE windows_tcp_segments_total counter
 # HELP windows_textfile_mtime_seconds Unixtime mtime of textfiles successfully read.
 # TYPE windows_textfile_mtime_seconds gauge
-# HELP windows_textfile_scrape_error 1 if there was an error opening or reading a file, 0 otherwise
-# TYPE windows_textfile_scrape_error gauge
-windows_textfile_scrape_error 0
 # HELP windows_time_clock_frequency_adjustment_ppb_total Total adjustment made to the local system clock frequency by W32Time in Parts Per Billion (PPB) units.
 # TYPE windows_time_clock_frequency_adjustment_ppb_total counter
 # HELP windows_time_computed_time_offset_seconds Absolute time offset between the system clock and the chosen time source, in seconds

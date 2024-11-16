@@ -1,10 +1,12 @@
+//go:build windows
+
 package iis
 
 import (
 	"fmt"
 
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	"github.com/prometheus-community/windows_exporter/pkg/types"
+	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 

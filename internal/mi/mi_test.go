@@ -7,9 +7,7 @@ import (
 	"time"
 
 	"github.com/prometheus-community/windows_exporter/internal/mi"
-	"github.com/prometheus-community/windows_exporter/internal/utils/testutils"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/sys/windows"
 )
 
 type win32Process struct {
@@ -232,63 +230,4 @@ func Test_MI_Query_Unmarshal(t *testing.T) {
 
 	err = application.Close()
 	require.NoError(t, err)
-}
-
-func Test_MI_FD_Leak(t *testing.T) {
-	t.Skip("This test is disabled because it is not deterministic and may fail on some systems.")
-
-	application, err := mi.Application_Initialize()
-	require.NoError(t, err)
-	require.NotEmpty(t, application)
-
-	session, err := application.NewSession(nil)
-	require.NoError(t, err)
-	require.NotEmpty(t, session)
-
-	currentFileHandle, err := testutils.GetProcessHandleCount(windows.CurrentProcess())
-	require.NoError(t, err)
-
-	t.Log("Current File Handle Count: ", currentFileHandle)
-
-	queryPrinter, err := mi.NewQuery("SELECT Name, Default, PrinterStatus, JobCountSinceLastReset FROM win32_Printer")
-	require.NoError(t, err)
-
-	queryPrinterJob, err := mi.NewQuery("SELECT Name, Status FROM win32_PrintJob")
-	require.NoError(t, err)
-
-	for range 1000 {
-		var wmiPrinters []wmiPrinter
-		err := session.Query(&wmiPrinters, mi.NamespaceRootCIMv2, queryPrinter)
-		require.NoError(t, err)
-
-		var wmiPrintJobs []wmiPrintJob
-		err = session.Query(&wmiPrintJobs, mi.NamespaceRootCIMv2, queryPrinterJob)
-		require.NoError(t, err)
-
-		currentFileHandle, err = testutils.GetProcessHandleCount(windows.CurrentProcess())
-		require.NoError(t, err)
-
-		t.Log("Current File Handle Count: ", currentFileHandle)
-	}
-
-	currentFileHandle, err = testutils.GetProcessHandleCount(windows.CurrentProcess())
-	require.NoError(t, err)
-
-	t.Log("Current File Handle Count: ", currentFileHandle)
-
-	err = session.Close()
-	require.NoError(t, err)
-
-	currentFileHandle, err = testutils.GetProcessHandleCount(windows.CurrentProcess())
-	require.NoError(t, err)
-
-	t.Log("Current File Handle Count: ", currentFileHandle)
-
-	err = application.Close()
-	require.NoError(t, err)
-
-	currentFileHandle, err = testutils.GetProcessHandleCount(windows.CurrentProcess())
-	require.NoError(t, err)
-
-	t.Log("Current File Handle Count: ", currentFileHandle)
 }

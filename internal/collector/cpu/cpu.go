@@ -5,13 +5,12 @@ package cpu
 import (
 	"fmt"
 	"log/slog"
-	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus-community/windows_exporter/internal/utils"
-	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -65,14 +64,6 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
-	if toggle.IsPDHEnabled() {
-		return []string{}, nil
-	}
-
-	return []string{"Processor Information"}, nil
-}
-
 func (c *Collector) Close() error {
 	c.perfDataCollector.Close()
 
@@ -80,39 +71,35 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
-	if toggle.IsPDHEnabled() {
-		counters := []string{
-			c1TimeSeconds,
-			c2TimeSeconds,
-			c3TimeSeconds,
-			c1TransitionsTotal,
-			c2TransitionsTotal,
-			c3TransitionsTotal,
-			clockInterruptsTotal,
-			dpcQueuedPerSecond,
-			dpcTimeSeconds,
-			idleBreakEventsTotal,
-			idleTimeSeconds,
-			interruptsTotal,
-			interruptTimeSeconds,
-			parkingStatus,
-			performanceLimitPercent,
-			priorityTimeSeconds,
-			privilegedTimeSeconds,
-			privilegedUtilitySeconds,
-			processorFrequencyMHz,
-			processorPerformance,
-			processorTimeSeconds,
-			processorUtilityRate,
-			userTimeSeconds,
-		}
+	var err error
 
-		var err error
-
-		c.perfDataCollector, err = perfdata.NewCollector("Processor Information", perfdata.InstanceAll, counters)
-		if err != nil {
-			return fmt.Errorf("failed to create Processor Information collector: %w", err)
-		}
+	c.perfDataCollector, err = perfdata.NewCollector("Processor Information", perfdata.InstanceAll, []string{
+		c1TimeSeconds,
+		c2TimeSeconds,
+		c3TimeSeconds,
+		c1TransitionsTotal,
+		c2TransitionsTotal,
+		c3TransitionsTotal,
+		clockInterruptsTotal,
+		dpcQueuedPerSecond,
+		dpcTimeSeconds,
+		idleBreakEventsTotal,
+		idleTimeSeconds,
+		interruptsTotal,
+		interruptTimeSeconds,
+		parkingStatus,
+		performanceLimitPercent,
+		priorityTimeSeconds,
+		privilegedTimeSeconds,
+		privilegedUtilitySeconds,
+		processorFrequencyMHz,
+		processorPerformance,
+		processorTimeSeconds,
+		processorUtilityRate,
+		userTimeSeconds,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create Processor Information collector: %w", err)
 	}
 
 	c.logicalProcessors = prometheus.NewDesc(
@@ -232,186 +219,6 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 }
 
 func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
-	if toggle.IsPDHEnabled() {
-		return c.collectPDH(ch)
-	}
-
-	logger = logger.With(slog.String("collector", Name))
-
-	return c.collectFull(ctx, logger, ch)
-}
-
-func (c *Collector) collectFull(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	data := make([]perflibProcessorInformation, 0)
-
-	err := v1.UnmarshalObject(ctx.PerfObjects["Processor Information"], &data, logger)
-	if err != nil {
-		return err
-	}
-
-	var coreCount float64
-
-	for _, cpu := range data {
-		if strings.Contains(strings.ToLower(cpu.Name), "_total") {
-			continue
-		}
-
-		core := cpu.Name
-
-		var (
-			counterProcessorRTCValues   utils.Counter
-			counterProcessorMPerfValues utils.Counter
-			ok                          bool
-		)
-
-		if counterProcessorRTCValues, ok = c.processorRTCValues[core]; ok {
-			counterProcessorRTCValues.AddValue(uint32(cpu.ProcessorRTC))
-		} else {
-			counterProcessorRTCValues = utils.NewCounter(uint32(cpu.ProcessorRTC))
-		}
-
-		c.processorRTCValues[core] = counterProcessorRTCValues
-
-		if counterProcessorMPerfValues, ok = c.processorMPerfValues[core]; ok {
-			counterProcessorMPerfValues.AddValue(uint32(cpu.ProcessorMPerf))
-		} else {
-			counterProcessorMPerfValues = utils.NewCounter(uint32(cpu.ProcessorMPerf))
-		}
-
-		c.processorMPerfValues[core] = counterProcessorMPerfValues
-
-		coreCount++
-
-		ch <- prometheus.MustNewConstMetric(
-			c.cStateSecondsTotal,
-			prometheus.CounterValue,
-			cpu.C1TimeSeconds,
-			core, "c1",
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.cStateSecondsTotal,
-			prometheus.CounterValue,
-			cpu.C2TimeSeconds,
-			core, "c2",
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.cStateSecondsTotal,
-			prometheus.CounterValue,
-			cpu.C3TimeSeconds,
-			core, "c3",
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.timeTotal,
-			prometheus.CounterValue,
-			cpu.IdleTimeSeconds,
-			core, "idle",
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.timeTotal,
-			prometheus.CounterValue,
-			cpu.InterruptTimeSeconds,
-			core, "interrupt",
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.timeTotal,
-			prometheus.CounterValue,
-			cpu.DPCTimeSeconds,
-			core, "dpc",
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.timeTotal,
-			prometheus.CounterValue,
-			cpu.PrivilegedTimeSeconds,
-			core, "privileged",
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.timeTotal,
-			prometheus.CounterValue,
-			cpu.UserTimeSeconds,
-			core, "user",
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.interruptsTotal,
-			prometheus.CounterValue,
-			cpu.InterruptsTotal,
-			core,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.dpcsTotal,
-			prometheus.CounterValue,
-			cpu.DPCsQueuedTotal,
-			core,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.clockInterruptsTotal,
-			prometheus.CounterValue,
-			cpu.ClockInterruptsTotal,
-			core,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.idleBreakEventsTotal,
-			prometheus.CounterValue,
-			cpu.IdleBreakEventsTotal,
-			core,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.parkingStatus,
-			prometheus.GaugeValue,
-			cpu.ParkingStatus,
-			core,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.processorFrequencyMHz,
-			prometheus.GaugeValue,
-			cpu.ProcessorFrequencyMHz,
-			core,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.processorPerformance,
-			prometheus.CounterValue,
-			cpu.ProcessorPerformance,
-			core,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.processorMPerf,
-			prometheus.CounterValue,
-			counterProcessorMPerfValues.Value(),
-			core,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.processorRTC,
-			prometheus.CounterValue,
-			counterProcessorRTCValues.Value(),
-			core,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.processorUtility,
-			prometheus.CounterValue,
-			cpu.ProcessorUtilityRate,
-			core,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.processorPrivilegedUtility,
-			prometheus.CounterValue,
-			cpu.PrivilegedUtilitySeconds,
-			core,
-		)
-	}
-
-	ch <- prometheus.MustNewConstMetric(
-		c.logicalProcessors,
-		prometheus.GaugeValue,
-		coreCount,
-	)
-
-	return nil
-}
-
-func (c *Collector) collectPDH(ch chan<- prometheus.Metric) error {
 	data, err := c.perfDataCollector.Collect()
 	if err != nil {
 		return fmt.Errorf("failed to collect Processor Information metrics: %w", err)

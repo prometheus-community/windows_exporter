@@ -1,3 +1,5 @@
+//go:build windows
+
 package memory_test
 
 import (

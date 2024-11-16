@@ -14,7 +14,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/headers/netapi32"
 	"github.com/prometheus-community/windows_exporter/internal/headers/sysinfoapi"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
-	"github.com/prometheus-community/windows_exporter/pkg/types"
+	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/registry"
@@ -33,16 +33,6 @@ type Collector struct {
 	hostname      *prometheus.Desc
 	osInformation *prometheus.Desc
 
-	// pagingFreeBytes
-	// Deprecated: Use windows_paging_free_bytes instead.
-	pagingFreeBytes *prometheus.Desc
-	// pagingLimitBytes
-	// Deprecated: Use windows_paging_total_bytes instead.
-	pagingLimitBytes *prometheus.Desc
-
-	// users
-	// Deprecated: Use windows_system_processes instead.
-	processes *prometheus.Desc
 	// users
 	// Deprecated: Use windows_system_process_limit instead.
 	processesLimit *prometheus.Desc
@@ -146,18 +136,6 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		},
 		nil,
 	)
-	c.pagingLimitBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "paging_limit_bytes"),
-		"Deprecated: Use windows_pagefile_limit_bytes instead.",
-		nil,
-		nil,
-	)
-	c.pagingFreeBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "paging_free_bytes"),
-		"Deprecated: Use windows_pagefile_free_bytes instead.",
-		nil,
-		nil,
-	)
 	c.physicalMemoryFreeBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "physical_memory_free_bytes"),
 		"Deprecated: Use `windows_memory_physical_free_bytes` instead.",
@@ -176,12 +154,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		[]string{"timezone"},
 		nil,
 	)
-	c.processes = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "processes"),
-		"Deprecated: Use `windows_system_processes` instead.",
-		nil,
-		nil,
-	)
+
 	c.processesLimit = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "processes_limit"),
 		"Deprecated: Use `windows_system_process_limit` instead.",

@@ -8,6 +8,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+const DefaultCollectors = "cpu,cs,memory,logical_disk,physical_disk,net,os,service,system"
+
 type MetricCollectors struct {
 	Collectors       Map
 	MISession        *mi.Session

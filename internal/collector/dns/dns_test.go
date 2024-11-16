@@ -1,3 +1,5 @@
+//go:build windows
+
 package dns_test
 
 import (

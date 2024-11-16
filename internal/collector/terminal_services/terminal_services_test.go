@@ -1,3 +1,5 @@
+//go:build windows
+
 package terminal_services_test
 
 import (

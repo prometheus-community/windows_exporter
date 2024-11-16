@@ -1,3 +1,5 @@
+//go:build windows
+
 package iis_test
 
 import (

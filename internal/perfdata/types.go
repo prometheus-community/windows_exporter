@@ -1,3 +1,5 @@
+//go:build windows
+
 package perfdata
 
 import "github.com/prometheus/client_golang/prometheus"
