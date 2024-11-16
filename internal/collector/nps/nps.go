@@ -17,7 +17,6 @@ type Config struct{}
 
 var ConfigDefaults = Config{}
 
-// Collector is a Prometheus Collector for WMI Win32_PerfRawData_IAS_NPSAuthenticationServer and Win32_PerfRawData_IAS_NPSAccountingServer metrics.
 type Collector struct {
 	config    Config
 	miSession *mi.Session
