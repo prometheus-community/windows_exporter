@@ -11,7 +11,7 @@ import (
 )
 
 func main() {
-	pid, err := iphlpapi.GetOwnerPIDOfTCPPort(windows.AF_INET, 135)
+	pid, err := iphlpapi.GetOwnerPIDOfTCPPort(windows.AF_INET, 1433)
 	if err != nil {
 		panic(err)
 	}
@@ -42,7 +42,7 @@ func main() {
 	var verSize uint32
 	var verData *byte
 
-	err = windows.VerQueryValue(unsafe.Pointer(&data[0]), `\StringFileInfo\040904E4\ProductVersion`, unsafe.Pointer(&verData), &verSize)
+	err = windows.VerQueryValue(unsafe.Pointer(&data[0]), `\StringFileInfo\040904b0\ProductVersion`, unsafe.Pointer(&verData), &verSize)
 	if err != nil {
 		panic(err)
 	}
