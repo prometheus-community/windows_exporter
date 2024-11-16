@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	"github.com/prometheus-community/windows_exporter/internal/collector/physical_disk"
-	"github.com/prometheus-community/windows_exporter/internal/testutils"
-	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/utils/testutils"
+	"github.com/prometheus-community/windows_exporter/pkg/types"
 )
 
 func BenchmarkCollector(b *testing.B) {

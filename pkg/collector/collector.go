@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
-	"strings"
 	"sync"
 
 	"github.com/alecthomas/kingpin/v2"
@@ -60,8 +59,6 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/update"
 	"github.com/prometheus-community/windows_exporter/internal/collector/vmware"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
-	v1 "github.com/prometheus-community/windows_exporter/internal/perfdata/v1"
-	"github.com/prometheus-community/windows_exporter/internal/types"
 )
 
 // NewWithFlags To be called by the exporter for collector initialization before running kingpin.Parse.
@@ -139,35 +136,6 @@ func New(collectors Map) *MetricCollectors {
 	}
 }
 
-func (c *MetricCollectors) SetPerfCounterQuery(logger *slog.Logger) error {
-	var (
-		err error
-
-		perfCounterNames []string
-		perfIndicies     []string
-	)
-
-	perfCounterDependencies := make([]string, 0, len(c.Collectors))
-
-	for _, collector := range c.Collectors {
-		perfCounterNames, err = collector.GetPerfCounter(logger)
-		if err != nil {
-			return err
-		}
-
-		perfIndicies = make([]string, 0, len(perfCounterNames))
-		for _, cn := range perfCounterNames {
-			perfIndicies = append(perfIndicies, v1.MapCounterToIndex(cn))
-		}
-
-		perfCounterDependencies = append(perfCounterDependencies, strings.Join(perfIndicies, " "))
-	}
-
-	c.PerfCounterQuery = strings.Join(perfCounterDependencies, " ")
-
-	return nil
-}
-
 // Enable removes all collectors that not enabledCollectors.
 func (c *MetricCollectors) Enable(enabledCollectors []string) error {
 	for _, name := range enabledCollectors {
@@ -219,42 +187,27 @@ func (c *MetricCollectors) Build(logger *slog.Logger) error {
 	return errors.Join(errs...)
 }
 
-// PrepareScrapeContext creates a ScrapeContext to be used during a single scrape.
-func (c *MetricCollectors) PrepareScrapeContext() (*types.ScrapeContext, error) {
-	// If no perf counters to query, return an empty context.
-	if c.PerfCounterQuery == "" {
-		return &types.ScrapeContext{}, nil
-	}
-
-	perfObjects, err := v1.GetPerflibSnapshot(c.PerfCounterQuery)
-	if err != nil {
-		return nil, err
-	}
-
-	return &types.ScrapeContext{PerfObjects: perfObjects}, nil
-}
-
 // Close To be called by the exporter for collector cleanup.
 func (c *MetricCollectors) Close(logger *slog.Logger) error {
 	errs := make([]error, 0, len(c.Collectors))
 
 	for _, collector := range c.Collectors {
-		if err := collector.Close(logger); err != nil {
-			errs = append(errs, err)
+		if err := collector.Close(); err != nil {
+			errs = append(errs, fmt.Errorf("error from close collector %s: %w", collector.GetName(), err))
 		}
 	}
 
 	app, err := c.MISession.GetApplication()
 	if err != nil && !errors.Is(err, mi.ErrNotInitialized) {
-		errs = append(errs, err)
+		errs = append(errs, fmt.Errorf("error from get MI application: %w", err))
 	}
 
 	if err := c.MISession.Close(); err != nil && !errors.Is(err, mi.ErrNotInitialized) {
-		errs = append(errs, err)
+		errs = append(errs, fmt.Errorf("error from close MI session: %w", err))
 	}
 
 	if err := app.Close(); err != nil && !errors.Is(err, mi.ErrNotInitialized) {
-		errs = append(errs, err)
+		errs = append(errs, fmt.Errorf("error from close MI application: %w", err))
 	}
 
 	return errors.Join(errs...)

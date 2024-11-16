@@ -28,12 +28,6 @@ func TestMultipleDirectories(t *testing.T) {
 
 	collectors := collector.New(map[string]collector.Collector{textfile.Name: textFileCollector})
 	require.NoError(t, collectors.Build(logger))
-
-	scrapeContext, err := collectors.PrepareScrapeContext()
-	if err != nil {
-		t.Errorf("Unexpected error %s", err)
-	}
-
 	metrics := make(chan prometheus.Metric)
 	got := ""
 
@@ -52,7 +46,7 @@ func TestMultipleDirectories(t *testing.T) {
 		}
 	}()
 
-	err = textFileCollector.Collect(scrapeContext, logger, metrics)
+	err := textFileCollector.Collect(metrics)
 	if err != nil {
 		t.Errorf("Unexpected error %s", err)
 	}
@@ -75,11 +69,6 @@ func TestDuplicateFileName(t *testing.T) {
 	collectors := collector.New(map[string]collector.Collector{textfile.Name: textFileCollector})
 	require.NoError(t, collectors.Build(logger))
 
-	scrapeContext, err := collectors.PrepareScrapeContext()
-	if err != nil {
-		t.Errorf("Unexpected error %s", err)
-	}
-
 	metrics := make(chan prometheus.Metric)
 	got := ""
 
@@ -98,7 +87,7 @@ func TestDuplicateFileName(t *testing.T) {
 		}
 	}()
 
-	err = textFileCollector.Collect(scrapeContext, logger, metrics)
+	err := textFileCollector.Collect(metrics)
 	if err != nil {
 		t.Errorf("Unexpected error %s", err)
 	}

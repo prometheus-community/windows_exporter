@@ -1,9 +1,9 @@
-package v2_test
+package perfdata_test
 
 import (
 	"testing"
 
-	v2 "github.com/prometheus-community/windows_exporter/internal/perfdata/v2"
+	v2 "github.com/prometheus-community/windows_exporter/internal/perfdata"
 	"github.com/stretchr/testify/require"
 )
 

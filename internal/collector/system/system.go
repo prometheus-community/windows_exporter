@@ -10,8 +10,7 @@ import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata/perftypes"
-	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -25,7 +24,7 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	config Config
 
-	perfDataCollector perfdata.Collector
+	perfDataCollector *perfdata.Collector
 
 	contextSwitchesTotal     *prometheus.Desc
 	exceptionDispatchesTotal *prometheus.Desc
@@ -57,11 +56,7 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
-	return []string{}, nil
-}
-
-func (c *Collector) Close(_ *slog.Logger) error {
+func (c *Collector) Close() error {
 	c.perfDataCollector.Close()
 
 	return nil
@@ -70,7 +65,7 @@ func (c *Collector) Close(_ *slog.Logger) error {
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 	var err error
 
-	c.perfDataCollector, err = perfdata.NewCollector(perfdata.V2, "System", nil, []string{
+	c.perfDataCollector, err = perfdata.NewCollector("System", nil, []string{
 		contextSwitchesPersec,
 		exceptionDispatchesPersec,
 		processorQueueLength,
@@ -138,21 +133,13 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(_ *types.ScrapeContext, _ *slog.Logger, ch chan<- prometheus.Metric) error {
-	if err := c.collect(ch); err != nil {
-		return fmt.Errorf("failed collecting system metrics: %w", err)
-	}
-
-	return nil
-}
-
-func (c *Collector) collect(ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	perfData, err := c.perfDataCollector.Collect()
 	if err != nil {
 		return fmt.Errorf("failed to collect System metrics: %w", err)
 	}
 
-	data, ok := perfData[perftypes.EmptyInstance]
+	data, ok := perfData[perfdata.EmptyInstance]
 	if !ok {
 		return errors.New("query for System returned empty result set")
 	}

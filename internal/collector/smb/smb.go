@@ -10,8 +10,7 @@ import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata/perftypes"
-	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -24,7 +23,7 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	config Config
 
-	perfDataCollector perfdata.Collector
+	perfDataCollector *perfdata.Collector
 
 	treeConnectCount     *prometheus.Desc
 	currentOpenFileCount *prometheus.Desc
@@ -50,11 +49,7 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
-	return []string{}, nil
-}
-
-func (c *Collector) Close(_ *slog.Logger) error {
+func (c *Collector) Close() error {
 	c.perfDataCollector.Close()
 
 	return nil
@@ -63,7 +58,7 @@ func (c *Collector) Close(_ *slog.Logger) error {
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 	var err error
 
-	c.perfDataCollector, err = perfdata.NewCollector(perfdata.V2, "SMB Server Shares", nil, []string{
+	c.perfDataCollector, err = perfdata.NewCollector("SMB Server Shares", nil, []string{
 		currentOpenFileCount,
 		treeConnectCount,
 	})
@@ -88,21 +83,13 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 }
 
 // Collect collects smb metrics and sends them to prometheus.
-func (c *Collector) Collect(_ *types.ScrapeContext, _ *slog.Logger, ch chan<- prometheus.Metric) error {
-	if err := c.collectServerShares(ch); err != nil {
-		return fmt.Errorf("failed to collect server share metrics: %w", err)
-	}
-
-	return nil
-}
-
-func (c *Collector) collectServerShares(ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	perfData, err := c.perfDataCollector.Collect()
 	if err != nil {
 		return fmt.Errorf("failed to collect SMB Server Shares metrics: %w", err)
 	}
 
-	data, ok := perfData[perftypes.EmptyInstance]
+	data, ok := perfData[perfdata.EmptyInstance]
 	if !ok {
 		return errors.New("query for SMB Server Shares returned empty result set")
 	}

@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/prometheus-community/windows_exporter/internal/mi"
-	"github.com/prometheus-community/windows_exporter/internal/testutils"
+	"github.com/prometheus-community/windows_exporter/internal/utils/testutils"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sys/windows"
 )

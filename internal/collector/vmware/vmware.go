@@ -10,9 +10,8 @@ import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata/perftypes"
-	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus-community/windows_exporter/internal/utils"
+	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -25,8 +24,8 @@ var ConfigDefaults = Config{}
 // A Collector is a Prometheus Collector for WMI Win32_PerfRawData_vmGuestLib_VMem/Win32_PerfRawData_vmGuestLib_VCPU metrics.
 type Collector struct {
 	config                  Config
-	perfDataCollectorCPU    perfdata.Collector
-	perfDataCollectorMemory perfdata.Collector
+	perfDataCollectorCPU    *perfdata.Collector
+	perfDataCollectorMemory *perfdata.Collector
 
 	memActive      *prometheus.Desc
 	memBallooned   *prometheus.Desc
@@ -70,11 +69,7 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
-	return []string{}, nil
-}
-
-func (c *Collector) Close(_ *slog.Logger) error {
+func (c *Collector) Close() error {
 	c.perfDataCollectorCPU.Close()
 	c.perfDataCollectorMemory.Close()
 
@@ -84,7 +79,7 @@ func (c *Collector) Close(_ *slog.Logger) error {
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 	var err error
 
-	c.perfDataCollectorCPU, err = perfdata.NewCollector(perfdata.V2, "VM Processor", perftypes.TotalInstance, []string{
+	c.perfDataCollectorCPU, err = perfdata.NewCollector("VM Processor", perfdata.InstanceTotal, []string{
 		cpuLimitMHz,
 		cpuReservationMHz,
 		cpuShares,
@@ -140,7 +135,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 
-	c.perfDataCollectorMemory, err = perfdata.NewCollector(perfdata.V2, "VM Memory", nil, []string{
+	c.perfDataCollectorMemory, err = perfdata.NewCollector("VM Memory", nil, []string{
 		memActiveMB,
 		memBalloonedMB,
 		memLimitMB,
@@ -236,7 +231,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(_ *types.ScrapeContext, _ *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	errs := make([]error, 0, 2)
 
 	if err := c.collectCpu(ch); err != nil {
@@ -256,7 +251,7 @@ func (c *Collector) collectMem(ch chan<- prometheus.Metric) error {
 		return fmt.Errorf("failed to collect VM Memory metrics: %w", err)
 	}
 
-	data, ok := perfData[perftypes.EmptyInstance]
+	data, ok := perfData[perfdata.EmptyInstance]
 	if !ok {
 		return errors.New("query for VM Memory returned empty result set")
 	}

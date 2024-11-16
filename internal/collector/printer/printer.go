@@ -11,7 +11,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
-	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -105,7 +105,7 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 	return c
 }
 
-func (c *Collector) Close(_ *slog.Logger) error {
+func (c *Collector) Close() error {
 	return nil
 }
 
@@ -153,10 +153,6 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 
 func (c *Collector) GetName() string { return Name }
 
-func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
-	return []string{"Printer"}, nil
-}
-
 type wmiPrinter struct {
 	Name                   string `mi:"Name"`
 	Default                bool   `mi:"Default"`
@@ -169,7 +165,7 @@ type wmiPrintJob struct {
 	Status string `mi:"Status"`
 }
 
-func (c *Collector) Collect(_ *types.ScrapeContext, _ *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	var errs []error
 
 	if err := c.collectPrinterStatus(ch); err != nil {

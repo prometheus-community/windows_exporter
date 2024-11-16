@@ -11,8 +11,8 @@ import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus-community/windows_exporter/internal/utils"
+	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -30,8 +30,8 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	config Config
 
-	perfDataCollectorNetwork  perfdata.Collector
-	perfDataCollectorGraphics perfdata.Collector
+	perfDataCollectorNetwork  *perfdata.Collector
+	perfDataCollectorGraphics *perfdata.Collector
 
 	// net
 	baseTCPRTT               *prometheus.Desc
@@ -78,11 +78,7 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
-	return []string{}, nil
-}
-
-func (c *Collector) Close(_ *slog.Logger) error {
+func (c *Collector) Close() error {
 	c.perfDataCollectorNetwork.Close()
 	c.perfDataCollectorGraphics.Close()
 
@@ -92,7 +88,7 @@ func (c *Collector) Close(_ *slog.Logger) error {
 func (c *Collector) Build(*slog.Logger, *mi.Session) error {
 	var err error
 
-	c.perfDataCollectorNetwork, err = perfdata.NewCollector(perfdata.V2, "RemoteFX Network", perfdata.AllInstances, []string{
+	c.perfDataCollectorNetwork, err = perfdata.NewCollector("RemoteFX Network", perfdata.InstanceAll, []string{
 		BaseTCPRTT,
 		BaseUDPRTT,
 		CurrentTCPBandwidth,
@@ -111,7 +107,7 @@ func (c *Collector) Build(*slog.Logger, *mi.Session) error {
 		return fmt.Errorf("failed to create RemoteFX Network collector: %w", err)
 	}
 
-	c.perfDataCollectorGraphics, err = perfdata.NewCollector(perfdata.V2, "RemoteFX Graphics", perfdata.AllInstances, []string{
+	c.perfDataCollectorGraphics, err = perfdata.NewCollector("RemoteFX Graphics", perfdata.InstanceAll, []string{
 		AverageEncodingTime,
 		FrameQuality,
 		FramesSkippedPerSecondInsufficientClientResources,
@@ -255,7 +251,7 @@ func (c *Collector) Build(*slog.Logger, *mi.Session) error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(_ *types.ScrapeContext, _ *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	errs := make([]error, 0, 2)
 
 	if err := c.collectRemoteFXNetworkCount(ch); err != nil {

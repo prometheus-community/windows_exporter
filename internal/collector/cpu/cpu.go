@@ -10,10 +10,8 @@ import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	v1 "github.com/prometheus-community/windows_exporter/internal/perfdata/v1"
-	"github.com/prometheus-community/windows_exporter/internal/toggle"
-	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus-community/windows_exporter/internal/utils"
+	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -26,7 +24,7 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	config Config
 
-	perfDataCollector perfdata.Collector
+	perfDataCollector *perfdata.Collector
 
 	processorRTCValues   map[string]utils.Counter
 	processorMPerfValues map[string]utils.Counter
@@ -75,10 +73,8 @@ func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
 	return []string{"Processor Information"}, nil
 }
 
-func (c *Collector) Close(_ *slog.Logger) error {
-	if toggle.IsPDHEnabled() {
-		c.perfDataCollector.Close()
-	}
+func (c *Collector) Close() error {
+	c.perfDataCollector.Close()
 
 	return nil
 }
@@ -113,7 +109,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 
 		var err error
 
-		c.perfDataCollector, err = perfdata.NewCollector(perfdata.V2, "Processor Information", perfdata.AllInstances, counters)
+		c.perfDataCollector, err = perfdata.NewCollector("Processor Information", perfdata.InstanceAll, counters)
 		if err != nil {
 			return fmt.Errorf("failed to create Processor Information collector: %w", err)
 		}
@@ -235,7 +231,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 	return nil
 }
 
-func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	if toggle.IsPDHEnabled() {
 		return c.collectPDH(ch)
 	}

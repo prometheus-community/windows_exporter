@@ -14,7 +14,7 @@ import (
 	"github.com/go-ole/go-ole"
 	"github.com/go-ole/go-ole/oleutil"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
-	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -136,11 +136,7 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
-	return []string{}, nil
-}
-
-func (c *Collector) Close(_ *slog.Logger) error {
+func (c *Collector) Close() error {
 	close(c.scheduledTasksReqCh)
 
 	c.scheduledTasksReqCh = nil
@@ -183,20 +179,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 	return nil
 }
 
-func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	logger = logger.With(slog.String("collector", Name))
-	if err := c.collect(ch); err != nil {
-		logger.Error("failed collecting user metrics",
-			slog.Any("err", err),
-		)
-
-		return err
-	}
-
-	return nil
-}
-
-func (c *Collector) collect(ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	scheduledTasks, err := c.getScheduledTasks()
 	if err != nil {
 		return fmt.Errorf("get scheduled tasks: %w", err)

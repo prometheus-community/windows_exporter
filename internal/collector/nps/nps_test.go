@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/prometheus-community/windows_exporter/internal/collector/nps"
-	"github.com/prometheus-community/windows_exporter/internal/testutils"
+	"github.com/prometheus-community/windows_exporter/internal/utils/testutils"
 )
 
 func BenchmarkCollector(b *testing.B) {

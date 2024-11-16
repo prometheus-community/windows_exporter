@@ -10,7 +10,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
-	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -53,11 +53,7 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
-	return []string{}, nil
-}
-
-func (c *Collector) Close(_ *slog.Logger) error {
+func (c *Collector) Close() error {
 	return nil
 }
 
@@ -113,7 +109,7 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 	return nil
 }
 
-type win32_DiskDrive struct {
+type diskDrive struct {
 	DeviceID     string `mi:"DeviceID"`
 	Model        string `mi:"Model"`
 	Size         uint64 `mi:"Size"`
@@ -166,21 +162,8 @@ var (
 )
 
 // Collect sends the metric values for each metric to the provided prometheus Metric channel.
-func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	logger = logger.With(slog.String("collector", Name))
-	if err := c.collect(ch); err != nil {
-		logger.Error("failed collecting disk_drive_info metrics",
-			slog.Any("err", err),
-		)
-
-		return err
-	}
-
-	return nil
-}
-
-func (c *Collector) collect(ch chan<- prometheus.Metric) error {
-	var dst []win32_DiskDrive
+func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
+	var dst []diskDrive
 	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, c.miQuery); err != nil {
 		return fmt.Errorf("WMI query failed: %w", err)
 	}
@@ -190,14 +173,16 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	}
 
 	for _, disk := range dst {
+		distName := strings.Trim(disk.Name, "\\.\\")
+
 		ch <- prometheus.MustNewConstMetric(
 			c.diskInfo,
 			prometheus.GaugeValue,
 			1.0,
-			strings.Trim(disk.DeviceID, "\\.\\"), //nolint:staticcheck
+			strings.Trim(disk.DeviceID, "\\.\\"),
 			strings.TrimRight(disk.Model, " "),
 			strings.TrimRight(disk.Caption, " "),
-			strings.TrimRight(disk.Name, "\\.\\"), //nolint:staticcheck
+			distName,
 		)
 
 		for _, status := range allDiskStatus {
@@ -210,7 +195,7 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 				c.status,
 				prometheus.GaugeValue,
 				isCurrentState,
-				strings.Trim(disk.Name, "\\.\\"), //nolint:staticcheck
+				distName,
 				status,
 			)
 		}
@@ -219,14 +204,14 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 			c.size,
 			prometheus.GaugeValue,
 			float64(disk.Size),
-			strings.Trim(disk.Name, "\\.\\"), //nolint:staticcheck
+			distName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.partitions,
 			prometheus.GaugeValue,
 			float64(disk.Partitions),
-			strings.Trim(disk.Name, "\\.\\"), //nolint:staticcheck
+			distName,
 		)
 
 		for availNum, val := range availMap {
@@ -238,7 +223,7 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 				c.availability,
 				prometheus.GaugeValue,
 				isCurrentState,
-				strings.Trim(disk.Name, "\\.\\"), //nolint:staticcheck
+				distName,
 				val,
 			)
 		}

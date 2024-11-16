@@ -10,7 +10,7 @@ import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -29,7 +29,7 @@ var ConfigDefaults = Config{
 type Collector struct {
 	config Config
 
-	perfDataCollector perfdata.Collector
+	perfDataCollector *perfdata.Collector
 
 	badMailedMessagesBadPickupFileTotal     *prometheus.Desc
 	badMailedMessagesGeneralFailureTotal    *prometheus.Desc
@@ -139,7 +139,7 @@ func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
 	return []string{"SMTP Server"}, nil
 }
 
-func (c *Collector) Close(_ *slog.Logger) error {
+func (c *Collector) Close() error {
 	c.perfDataCollector.Close()
 
 	return nil
@@ -148,7 +148,7 @@ func (c *Collector) Close(_ *slog.Logger) error {
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	var err error
 
-	c.perfDataCollector, err = perfdata.NewCollector(perfdata.V2, "SMTP Server", perfdata.AllInstances, []string{
+	c.perfDataCollector, err = perfdata.NewCollector("SMTP Server", perfdata.InstanceAll, []string{
 		badmailedMessagesBadPickupFileTotal,
 		badmailedMessagesGeneralFailureTotal,
 		badmailedMessagesHopCountExceededTotal,
@@ -458,15 +458,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(_ *types.ScrapeContext, _ *slog.Logger, ch chan<- prometheus.Metric) error {
-	if err := c.collect(ch); err != nil {
-		return fmt.Errorf("failed collecting smtp metrics: %w", err)
-	}
-
-	return nil
-}
-
-func (c *Collector) collect(ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	perfData, err := c.perfDataCollector.Collect()
 	if err != nil {
 		return fmt.Errorf("failed to collect SMTP Server metrics: %w", err)

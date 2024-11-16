@@ -8,7 +8,7 @@ type Object struct {
 	Counters      map[string]Counter `json:"counters"       yaml:"counters"`
 	InstanceLabel string             `json:"instance_label" yaml:"instance_label"` //nolint:tagliatelle
 
-	collector perfdata.Collector
+	collector *perfdata.Collector
 }
 
 type Counter struct {

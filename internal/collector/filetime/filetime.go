@@ -13,7 +13,7 @@ import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/bmatcuk/doublestar/v4"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
-	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -31,6 +31,7 @@ var ConfigDefaults = Config{
 type Collector struct {
 	config Config
 
+	logger    *slog.Logger
 	fileMTime *prometheus.Desc
 }
 
@@ -77,18 +78,14 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
-	return []string{}, nil
-}
-
-func (c *Collector) Close(_ *slog.Logger) error {
+func (c *Collector) Close() error {
 	return nil
 }
 
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
-	logger.Info("filetime collector is in an experimental state! It may subject to change.",
-		slog.String("collector", Name),
-	)
+	c.logger = logger.With(slog.String("collector", Name))
+
+	c.logger.Info("filetime collector is in an experimental state! It may subject to change.")
 
 	c.fileMTime = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "mtime_timestamp_seconds"),
@@ -111,14 +108,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	logger = logger.With(slog.String("collector", Name))
-
-	return c.collectGlob(logger, ch)
-}
-
-// collectWin32 collects file times for each file path in the config. It using Win32 FindFirstFile and FindNextFile.
-func (c *Collector) collectGlob(logger *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	wg := sync.WaitGroup{}
 
 	for _, filePattern := range c.config.FilePatterns {
@@ -127,8 +117,8 @@ func (c *Collector) collectGlob(logger *slog.Logger, ch chan<- prometheus.Metric
 		go func(filePattern string) {
 			defer wg.Done()
 
-			if err := c.collectGlobFilePath(logger, ch, filePattern); err != nil {
-				logger.Error("failed collecting metrics for filepath",
+			if err := c.collectGlobFilePath(ch, filePattern); err != nil {
+				c.logger.Error("failed collecting metrics for filepath",
 					slog.String("filepath", filePattern),
 					slog.Any("err", err),
 				)
@@ -141,7 +131,7 @@ func (c *Collector) collectGlob(logger *slog.Logger, ch chan<- prometheus.Metric
 	return nil
 }
 
-func (c *Collector) collectGlobFilePath(logger *slog.Logger, ch chan<- prometheus.Metric, filePattern string) error {
+func (c *Collector) collectGlobFilePath(ch chan<- prometheus.Metric, filePattern string) error {
 	basePath, pattern := doublestar.SplitPattern(filePattern)
 	basePathFS := os.DirFS(basePath)
 
@@ -155,7 +145,7 @@ func (c *Collector) collectGlobFilePath(logger *slog.Logger, ch chan<- prometheu
 
 		fileInfo, err := os.Stat(filePath)
 		if err != nil {
-			logger.Warn("failed to state file",
+			c.logger.Warn("failed to state file",
 				slog.String("file", filePath),
 				slog.Any("err", err),
 			)

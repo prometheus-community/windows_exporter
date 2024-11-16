@@ -10,10 +10,7 @@ import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata/perftypes"
-	v1 "github.com/prometheus-community/windows_exporter/internal/perfdata/v1"
-	"github.com/prometheus-community/windows_exporter/internal/toggle"
-	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -27,7 +24,7 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	config Config
 
-	perfDataCollector perfdata.Collector
+	perfDataCollector *perfdata.Collector
 
 	asyncCopyReadsTotal         *prometheus.Desc
 	asyncDataMapsTotal          *prometheus.Desc
@@ -80,62 +77,48 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
-	if toggle.IsPDHEnabled() {
-		return []string{}, nil
-	}
-
-	return []string{"Cache"}, nil
-}
-
-func (c *Collector) Close(_ *slog.Logger) error {
-	if toggle.IsPDHEnabled() {
-		c.perfDataCollector.Close()
-	}
+func (c *Collector) Close() error {
+	c.perfDataCollector.Close()
 
 	return nil
 }
 
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
-	if toggle.IsPDHEnabled() {
-		counters := []string{
-			asyncCopyReadsTotal,
-			asyncDataMapsTotal,
-			asyncFastReadsTotal,
-			asyncMDLReadsTotal,
-			asyncPinReadsTotal,
-			copyReadHitsTotal,
-			copyReadsTotal,
-			dataFlushesTotal,
-			dataFlushPagesTotal,
-			dataMapHitsPercent,
-			dataMapPinsTotal,
-			dataMapsTotal,
-			dirtyPages,
-			dirtyPageThreshold,
-			fastReadNotPossiblesTotal,
-			fastReadResourceMissesTotal,
-			fastReadsTotal,
-			lazyWriteFlushesTotal,
-			lazyWritePagesTotal,
-			mdlReadHitsTotal,
-			mdlReadsTotal,
-			pinReadHitsTotal,
-			pinReadsTotal,
-			readAheadsTotal,
-			syncCopyReadsTotal,
-			syncDataMapsTotal,
-			syncFastReadsTotal,
-			syncMDLReadsTotal,
-			syncPinReadsTotal,
-		}
+	var err error
 
-		var err error
-
-		c.perfDataCollector, err = perfdata.NewCollector(perfdata.V2, "Cache", perfdata.AllInstances, counters)
-		if err != nil {
-			return fmt.Errorf("failed to create Cache collector: %w", err)
-		}
+	c.perfDataCollector, err = perfdata.NewCollector("Cache", perfdata.InstanceAll, []string{
+		asyncCopyReadsTotal,
+		asyncDataMapsTotal,
+		asyncFastReadsTotal,
+		asyncMDLReadsTotal,
+		asyncPinReadsTotal,
+		copyReadHitsTotal,
+		copyReadsTotal,
+		dataFlushesTotal,
+		dataFlushPagesTotal,
+		dataMapHitsPercent,
+		dataMapPinsTotal,
+		dataMapsTotal,
+		dirtyPages,
+		dirtyPageThreshold,
+		fastReadNotPossiblesTotal,
+		fastReadResourceMissesTotal,
+		fastReadsTotal,
+		lazyWriteFlushesTotal,
+		lazyWritePagesTotal,
+		mdlReadHitsTotal,
+		mdlReadsTotal,
+		pinReadHitsTotal,
+		pinReadsTotal,
+		readAheadsTotal,
+		syncCopyReadsTotal,
+		syncDataMapsTotal,
+		syncFastReadsTotal,
+		syncMDLReadsTotal,
+		syncPinReadsTotal,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create Cache collector: %w", err)
 	}
 
 	c.asyncCopyReadsTotal = prometheus.NewDesc(
@@ -317,218 +300,13 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 }
 
 // Collect implements the Collector interface.
-func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	if toggle.IsPDHEnabled() {
-		return c.collectPDH(ch)
-	}
-
-	logger = logger.With(slog.String("collector", Name))
-	if err := c.collect(ctx, logger, ch); err != nil {
-		logger.Error("failed collecting cache metrics",
-			slog.Any("err", err),
-		)
-
-		return err
-	}
-
-	return nil
-}
-
-func (c *Collector) collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	var dst []perflibCache // Single-instance class, array is required but will have single entry.
-
-	if err := v1.UnmarshalObject(ctx.PerfObjects["Cache"], &dst, logger); err != nil {
-		return err
-	}
-
-	if len(dst) != 1 {
-		return errors.New("expected single instance of Cache")
-	}
-
-	ch <- prometheus.MustNewConstMetric(
-		c.asyncCopyReadsTotal,
-		prometheus.CounterValue,
-		dst[0].AsyncCopyReadsTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.asyncDataMapsTotal,
-		prometheus.CounterValue,
-		dst[0].AsyncDataMapsTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.asyncFastReadsTotal,
-		prometheus.CounterValue,
-		dst[0].AsyncFastReadsTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.asyncMDLReadsTotal,
-		prometheus.CounterValue,
-		dst[0].AsyncMDLReadsTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.asyncPinReadsTotal,
-		prometheus.CounterValue,
-		dst[0].AsyncPinReadsTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.copyReadHitsTotal,
-		prometheus.GaugeValue,
-		dst[0].CopyReadHitsTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.copyReadsTotal,
-		prometheus.CounterValue,
-		dst[0].CopyReadsTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.dataFlushesTotal,
-		prometheus.CounterValue,
-		dst[0].DataFlushesTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.dataFlushPagesTotal,
-		prometheus.CounterValue,
-		dst[0].DataFlushPagesTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.dataMapHitsPercent,
-		prometheus.GaugeValue,
-		dst[0].DataMapHitsPercent,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.dataMapPinsTotal,
-		prometheus.CounterValue,
-		dst[0].DataMapPinsTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.dataMapsTotal,
-		prometheus.CounterValue,
-		dst[0].DataMapsTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.dirtyPages,
-		prometheus.GaugeValue,
-		dst[0].DirtyPages,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.dirtyPageThreshold,
-		prometheus.GaugeValue,
-		dst[0].DirtyPageThreshold,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.fastReadNotPossiblesTotal,
-		prometheus.CounterValue,
-		dst[0].FastReadNotPossiblesTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.fastReadResourceMissesTotal,
-		prometheus.CounterValue,
-		dst[0].FastReadResourceMissesTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.fastReadsTotal,
-		prometheus.CounterValue,
-		dst[0].FastReadsTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.lazyWriteFlushesTotal,
-		prometheus.CounterValue,
-		dst[0].LazyWriteFlushesTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.lazyWritePagesTotal,
-		prometheus.CounterValue,
-		dst[0].LazyWritePagesTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.mdlReadHitsTotal,
-		prometheus.CounterValue,
-		dst[0].MDLReadHitsTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.mdlReadsTotal,
-		prometheus.CounterValue,
-		dst[0].MDLReadsTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.pinReadHitsTotal,
-		prometheus.CounterValue,
-		dst[0].PinReadHitsTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.pinReadsTotal,
-		prometheus.CounterValue,
-		dst[0].PinReadsTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.readAheadsTotal,
-		prometheus.CounterValue,
-		dst[0].ReadAheadsTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.syncCopyReadsTotal,
-		prometheus.CounterValue,
-		dst[0].SyncCopyReadsTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.syncDataMapsTotal,
-		prometheus.CounterValue,
-		dst[0].SyncDataMapsTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.syncFastReadsTotal,
-		prometheus.CounterValue,
-		dst[0].SyncFastReadsTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.syncMDLReadsTotal,
-		prometheus.CounterValue,
-		dst[0].SyncMDLReadsTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.syncPinReadsTotal,
-		prometheus.CounterValue,
-		dst[0].SyncPinReadsTotal,
-	)
-
-	return nil
-}
-
-func (c *Collector) collectPDH(ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	data, err := c.perfDataCollector.Collect()
 	if err != nil {
 		return fmt.Errorf("failed to collect Cache metrics: %w", err)
 	}
 
-	cacheData, ok := data[perftypes.EmptyInstance]
+	cacheData, ok := data[perfdata.EmptyInstance]
 
 	if !ok {
 		return errors.New("perflib query for Cache returned empty result set")

@@ -1,4 +1,4 @@
-package perftypes
+package perfdata
 
 import "github.com/prometheus/client_golang/prometheus"
 

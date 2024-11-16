@@ -36,7 +36,7 @@ linters-settings:
 
   gci:
     sections:
-      - prefix(github.com/prometheus-community/windows_exporter/internal/initiate)
+      - prefix(github.com/prometheus-community/windows_exporter/internal/service)
       - standard # Standard section: captures all standard packages.
       - default # Default section: contains all imports that could not be matched to another section type.
     custom-order: true

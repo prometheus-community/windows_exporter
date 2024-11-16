@@ -31,7 +31,7 @@
 
 //go:build windows
 
-package v2
+package perfdata
 
 import (
 	"fmt"

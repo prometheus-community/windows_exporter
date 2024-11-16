@@ -1,5 +1,5 @@
-// Package initiate allows us to initiate Time Sensitive components (Like registering the windows service) as early as possible in the startup process
-package initiate
+// windowsservice allows us to initiate Time Sensitive components (Like registering the windows service) as early as possible in the startup process
+package windowsservice
 
 import (
 	"fmt"

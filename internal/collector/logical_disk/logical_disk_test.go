@@ -5,8 +5,8 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/collector/logical_disk"
-	"github.com/prometheus-community/windows_exporter/internal/testutils"
-	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/utils/testutils"
+	"github.com/prometheus-community/windows_exporter/pkg/types"
 )
 
 func BenchmarkCollector(b *testing.B) {

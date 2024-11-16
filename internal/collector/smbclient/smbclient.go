@@ -10,8 +10,7 @@ import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata/perftypes"
-	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -26,7 +25,7 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	config Config
 
-	perfDataCollector perfdata.Collector
+	perfDataCollector *perfdata.Collector
 
 	readBytesTotal                            *prometheus.Desc
 	readBytesTransmittedViaSMBDirectTotal     *prometheus.Desc
@@ -72,18 +71,14 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
-	return []string{}, nil
-}
-
-func (c *Collector) Close(_ *slog.Logger) error {
+func (c *Collector) Close() error {
 	return nil
 }
 
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 	var err error
 
-	c.perfDataCollector, err = perfdata.NewCollector(perfdata.V2, "SMB Client Shares", nil, []string{
+	c.perfDataCollector, err = perfdata.NewCollector("SMB Client Shares", nil, []string{
 		AvgDataQueueLength,
 		AvgReadQueueLength,
 		AvgSecPerRead,
@@ -209,15 +204,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 }
 
 // Collect collects smb client metrics and sends them to prometheus.
-func (c *Collector) Collect(_ *types.ScrapeContext, _ *slog.Logger, ch chan<- prometheus.Metric) error {
-	if err := c.collectClientShares(ch); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (c *Collector) collectClientShares(ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	perfData, err := c.perfDataCollector.Collect()
 	if err != nil {
 		return fmt.Errorf("failed to collect SMB Client Shares metrics: %w", err)
@@ -232,7 +219,7 @@ func (c *Collector) collectClientShares(ch chan<- prometheus.Metric) error {
 		ch <- prometheus.MustNewConstMetric(
 			c.requestQueueSecsTotal,
 			prometheus.CounterValue,
-			data[AvgDataQueueLength].FirstValue*perftypes.TicksToSecondScaleFactor,
+			data[AvgDataQueueLength].FirstValue*perfdata.TicksToSecondScaleFactor,
 			serverValue, shareValue,
 		)
 
@@ -240,28 +227,28 @@ func (c *Collector) collectClientShares(ch chan<- prometheus.Metric) error {
 		ch <- prometheus.MustNewConstMetric(
 			c.readRequestQueueSecsTotal,
 			prometheus.CounterValue,
-			data[AvgReadQueueLength].FirstValue*perftypes.TicksToSecondScaleFactor,
+			data[AvgReadQueueLength].FirstValue*perfdata.TicksToSecondScaleFactor,
 			serverValue, shareValue,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.readSecsTotal,
 			prometheus.CounterValue,
-			data[AvgSecPerRead].FirstValue*perftypes.TicksToSecondScaleFactor,
+			data[AvgSecPerRead].FirstValue*perfdata.TicksToSecondScaleFactor,
 			serverValue, shareValue,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.writeSecsTotal,
 			prometheus.CounterValue,
-			data[AvgSecPerWrite].FirstValue*perftypes.TicksToSecondScaleFactor,
+			data[AvgSecPerWrite].FirstValue*perfdata.TicksToSecondScaleFactor,
 			serverValue, shareValue,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.requestSecs,
 			prometheus.CounterValue,
-			data[AvgSecPerDataRequest].FirstValue*perftypes.TicksToSecondScaleFactor,
+			data[AvgSecPerDataRequest].FirstValue*perfdata.TicksToSecondScaleFactor,
 			serverValue, shareValue,
 		)
 
@@ -269,7 +256,7 @@ func (c *Collector) collectClientShares(ch chan<- prometheus.Metric) error {
 		ch <- prometheus.MustNewConstMetric(
 			c.writeRequestQueueSecsTotal,
 			prometheus.CounterValue,
-			data[AvgWriteQueueLength].FirstValue*perftypes.TicksToSecondScaleFactor,
+			data[AvgWriteQueueLength].FirstValue*perfdata.TicksToSecondScaleFactor,
 			serverValue, shareValue,
 		)
 

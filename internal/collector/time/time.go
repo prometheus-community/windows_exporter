@@ -14,8 +14,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/headers/kernel32"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata/perftypes"
-	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows"
 )
@@ -42,7 +41,7 @@ var ConfigDefaults = Config{
 type Collector struct {
 	config Config
 
-	perfDataCollector perfdata.Collector
+	perfDataCollector *perfdata.Collector
 
 	currentTime                      *prometheus.Desc
 	timezone                         *prometheus.Desc
@@ -96,11 +95,7 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
-	return []string{}, nil
-}
-
-func (c *Collector) Close(_ *slog.Logger) error {
+func (c *Collector) Close() error {
 	if slices.Contains(c.config.CollectorsEnabled, collectorNTP) {
 		c.perfDataCollector.Close()
 	}
@@ -117,7 +112,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 
 	var err error
 
-	c.perfDataCollector, err = perfdata.NewCollector(perfdata.V2, "Windows Time Service", nil, []string{
+	c.perfDataCollector, err = perfdata.NewCollector("Windows Time Service", nil, []string{
 		ClockFrequencyAdjustmentPPBTotal,
 		ComputedTimeOffset,
 		NTPClientTimeSourceCount,
@@ -183,7 +178,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(_ *types.ScrapeContext, _ *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	errs := make([]error, 0, 2)
 
 	if slices.Contains(c.config.CollectorsEnabled, collectorSystemTime) {
@@ -232,7 +227,7 @@ func (c *Collector) collectNTP(ch chan<- prometheus.Metric) error {
 		return fmt.Errorf("failed to collect VM Memory metrics: %w", err)
 	}
 
-	data, ok := perfData[perftypes.EmptyInstance]
+	data, ok := perfData[perfdata.EmptyInstance]
 	if !ok {
 		return errors.New("query for Windows Time Service returned empty result set")
 	}

@@ -5,7 +5,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/collector/process"
-	"github.com/prometheus-community/windows_exporter/internal/testutils"
+	"github.com/prometheus-community/windows_exporter/internal/utils/testutils"
 )
 
 func BenchmarkProcessCollector(b *testing.B) {

@@ -9,8 +9,8 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
-	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus-community/windows_exporter/internal/utils"
+	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -57,11 +57,7 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
-	return []string{}, nil
-}
-
-func (c *Collector) Close(_ *slog.Logger) error {
+func (c *Collector) Close() error {
 	return nil
 }
 
@@ -136,21 +132,6 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 	return nil
 }
 
-// Collect sends the metric values for each metric
-// to the provided prometheus Metric channel.
-func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	logger = logger.With(slog.String("collector", Name))
-	if err := c.collect(ch); err != nil {
-		logger.Error("failed collecting fsrmquota metrics",
-			slog.Any("err", err),
-		)
-
-		return err
-	}
-
-	return nil
-}
-
 // MSFT_FSRMQuota docs:
 // https://docs.microsoft.com/en-us/previous-versions/windows/desktop/fsrm/msft-fsrmquota
 type MSFT_FSRMQuota struct {
@@ -168,7 +149,9 @@ type MSFT_FSRMQuota struct {
 	SoftLimit       bool `mi:"SoftLimit"`
 }
 
-func (c *Collector) collect(ch chan<- prometheus.Metric) error {
+// Collect sends the metric values for each metric
+// to the provided prometheus Metric channel.
+func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	var dst []MSFT_FSRMQuota
 	if err := c.miSession.Query(&dst, mi.NamespaceRootWindowsFSRM, c.miQuery); err != nil {
 		return fmt.Errorf("WMI query failed: %w", err)

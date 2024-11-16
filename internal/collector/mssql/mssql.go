@@ -15,7 +15,7 @@ import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	v1 "github.com/prometheus-community/windows_exporter/internal/perfdata/v1"
-	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows/registry"
 )
@@ -504,7 +504,7 @@ func (c *Collector) GetPerfCounter(logger *slog.Logger) ([]string, error) {
 	return perfCounters, nil
 }
 
-func (c *Collector) Close(_ *slog.Logger) error {
+func (c *Collector) Close() error {
 	return nil
 }
 
@@ -2026,7 +2026,7 @@ func (c *Collector) execute(ctx *types.ScrapeContext, logger *slog.Logger, name 
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	logger = logger.With(slog.String("collector", Name))
 	wg := sync.WaitGroup{}
 

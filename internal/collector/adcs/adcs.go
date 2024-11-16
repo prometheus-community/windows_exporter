@@ -10,10 +10,8 @@ import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	v1 "github.com/prometheus-community/windows_exporter/internal/perfdata/v1"
-	"github.com/prometheus-community/windows_exporter/internal/toggle"
-	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus-community/windows_exporter/internal/utils"
+	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -26,7 +24,7 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	config Config
 
-	perfDataCollector perfdata.Collector
+	perfDataCollector *perfdata.Collector
 
 	challengeResponseProcessingTime              *prometheus.Desc
 	challengeResponsesPerSecond                  *prometheus.Desc
@@ -63,46 +61,32 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
-	if toggle.IsPDHEnabled() {
-		return []string{}, nil
-	}
-
-	return []string{"Certification Authority"}, nil
-}
-
-func (c *Collector) Close(_ *slog.Logger) error {
-	if toggle.IsPDHEnabled() {
-		c.perfDataCollector.Close()
-	}
+func (c *Collector) Close() error {
+	c.perfDataCollector.Close()
 
 	return nil
 }
 
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
-	if toggle.IsPDHEnabled() {
-		counters := []string{
-			requestsPerSecond,
-			requestProcessingTime,
-			retrievalsPerSecond,
-			retrievalProcessingTime,
-			failedRequestsPerSecond,
-			issuedRequestsPerSecond,
-			pendingRequestsPerSecond,
-			requestCryptographicSigningTime,
-			requestPolicyModuleProcessingTime,
-			challengeResponsesPerSecond,
-			challengeResponseProcessingTime,
-			signedCertificateTimestampListsPerSecond,
-			signedCertificateTimestampListProcessingTime,
-		}
+	var err error
 
-		var err error
-
-		c.perfDataCollector, err = perfdata.NewCollector(perfdata.V2, "Certification Authority", perfdata.AllInstances, counters)
-		if err != nil {
-			return fmt.Errorf("failed to create Certification Authority collector: %w", err)
-		}
+	c.perfDataCollector, err = perfdata.NewCollector("Certification Authority", perfdata.InstanceAll, []string{
+		requestsPerSecond,
+		requestProcessingTime,
+		retrievalsPerSecond,
+		retrievalProcessingTime,
+		failedRequestsPerSecond,
+		issuedRequestsPerSecond,
+		pendingRequestsPerSecond,
+		requestCryptographicSigningTime,
+		requestPolicyModuleProcessingTime,
+		challengeResponsesPerSecond,
+		challengeResponseProcessingTime,
+		signedCertificateTimestampListsPerSecond,
+		signedCertificateTimestampListProcessingTime,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create Certification Authority collector: %w", err)
 	}
 
 	c.requestsPerSecond = prometheus.NewDesc(
@@ -187,128 +171,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 	return nil
 }
 
-func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	if toggle.IsPDHEnabled() {
-		return c.collectPDH(ch)
-	}
-
-	logger = logger.With(slog.String("collector", Name))
-	if err := c.collectADCSCounters(ctx, logger, ch); err != nil {
-		logger.Error("failed collecting ADCS metrics",
-			slog.Any("err", err),
-		)
-
-		return err
-	}
-
-	return nil
-}
-
-func (c *Collector) collectADCSCounters(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	dst := make([]perflibADCS, 0)
-
-	if _, ok := ctx.PerfObjects["Certification Authority"]; !ok {
-		return errors.New("perflib did not contain an entry for Certification Authority")
-	}
-
-	err := v1.UnmarshalObject(ctx.PerfObjects["Certification Authority"], &dst, logger)
-	if err != nil {
-		return err
-	}
-
-	if len(dst) == 0 {
-		return errors.New("perflib query for Certification Authority (ADCS) returned empty result set")
-	}
-
-	for _, d := range dst {
-		if d.Name == "" {
-			continue
-		}
-
-		ch <- prometheus.MustNewConstMetric(
-			c.requestsPerSecond,
-			prometheus.CounterValue,
-			d.RequestsPerSecond,
-			d.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.requestProcessingTime,
-			prometheus.GaugeValue,
-			utils.MilliSecToSec(d.RequestProcessingTime),
-			d.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.retrievalsPerSecond,
-			prometheus.CounterValue,
-			d.RetrievalsPerSecond,
-			d.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.retrievalProcessingTime,
-			prometheus.GaugeValue,
-			utils.MilliSecToSec(d.RetrievalProcessingTime),
-			d.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.failedRequestsPerSecond,
-			prometheus.CounterValue,
-			d.FailedRequestsPerSecond,
-			d.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.issuedRequestsPerSecond,
-			prometheus.CounterValue,
-			d.IssuedRequestsPerSecond,
-			d.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.pendingRequestsPerSecond,
-			prometheus.CounterValue,
-			d.PendingRequestsPerSecond,
-			d.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.requestCryptographicSigningTime,
-			prometheus.GaugeValue,
-			utils.MilliSecToSec(d.RequestCryptographicSigningTime),
-			d.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.requestPolicyModuleProcessingTime,
-			prometheus.GaugeValue,
-			utils.MilliSecToSec(d.RequestPolicyModuleProcessingTime),
-			d.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.challengeResponsesPerSecond,
-			prometheus.CounterValue,
-			d.ChallengeResponsesPerSecond,
-			d.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.challengeResponseProcessingTime,
-			prometheus.GaugeValue,
-			utils.MilliSecToSec(d.ChallengeResponseProcessingTime),
-			d.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.signedCertificateTimestampListsPerSecond,
-			prometheus.CounterValue,
-			d.SignedCertificateTimestampListsPerSecond,
-			d.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.signedCertificateTimestampListProcessingTime,
-			prometheus.GaugeValue,
-			utils.MilliSecToSec(d.SignedCertificateTimestampListProcessingTime),
-			d.Name,
-		)
-	}
-
-	return nil
-}
-
-func (c *Collector) collectPDH(ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	perfData, err := c.perfDataCollector.Collect()
 	if err != nil {
 		return fmt.Errorf("failed to collect Certification Authority (ADCS) metrics: %w", err)

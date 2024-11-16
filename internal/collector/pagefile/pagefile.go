@@ -12,7 +12,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/headers/psapi"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -26,7 +26,7 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	config Config
 
-	perfDataCollector perfdata.Collector
+	perfDataCollector *perfdata.Collector
 
 	pagingFreeBytes  *prometheus.Desc
 	pagingLimitBytes *prometheus.Desc
@@ -52,24 +52,18 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
-	return []string{}, nil
-}
-
-func (c *Collector) Close(_ *slog.Logger) error {
+func (c *Collector) Close() error {
 	c.perfDataCollector.Close()
 
 	return nil
 }
 
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
-	counters := []string{
-		usage,
-	}
-
 	var err error
 
-	c.perfDataCollector, err = perfdata.NewCollector(perfdata.V2, "Paging File", perfdata.AllInstances, counters)
+	c.perfDataCollector, err = perfdata.NewCollector("Paging File", perfdata.InstanceAll, []string{
+		usage,
+	})
 	if err != nil {
 		return fmt.Errorf("failed to create Paging File collector: %w", err)
 	}
@@ -93,11 +87,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(_ *types.ScrapeContext, _ *slog.Logger, ch chan<- prometheus.Metric) error {
-	return c.collectPaging(ch)
-}
-
-func (c *Collector) collectPaging(ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	data, err := c.perfDataCollector.Collect()
 	if err != nil {
 		return fmt.Errorf("failed to collect Paging File metrics: %w", err)

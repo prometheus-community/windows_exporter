@@ -13,8 +13,7 @@ import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata/perftypes"
-	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -80,11 +79,7 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
-	return []string{}, nil
-}
-
-func (c *Collector) Close(_ *slog.Logger) error {
+func (c *Collector) Close() error {
 	for _, object := range c.config.Objects {
 		object.collector.Close()
 	}
@@ -96,7 +91,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	logger.Warn("The perfdata collector is in an experimental state! The configuration may change in future. Please report any issues.")
 
 	for i, object := range c.config.Objects {
-		collector, err := perfdata.NewCollector(perfdata.V2, object.Object, object.Instances, slices.Sorted(maps.Keys(object.Counters)))
+		collector, err := perfdata.NewCollector(object.Object, object.Instances, slices.Sorted(maps.Keys(object.Counters)))
 		if err != nil {
 			return fmt.Errorf("failed to create v2 collector: %w", err)
 		}
@@ -113,19 +108,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	if err := c.collect(ch); err != nil {
-		logger.Error("failed collecting performance data metrics",
-			slog.Any("err", err),
-		)
-
-		return err
-	}
-
-	return nil
-}
-
-func (c *Collector) collect(ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	for _, object := range c.config.Objects {
 		data, err := object.collector.Collect()
 		if err != nil {
@@ -135,7 +118,7 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 		for instance, counters := range data {
 			for counter, value := range counters {
 				var labels prometheus.Labels
-				if instance != perftypes.EmptyInstance {
+				if instance != perfdata.EmptyInstance {
 					labels = prometheus.Labels{object.InstanceLabel: instance}
 				}
 
