@@ -46,7 +46,7 @@ func GetTCPConnectionStates(family uint32) (map[MIB_TCP_STATE]uint32, error) {
 	}
 }
 
-func GetOwnerPIDOfTCPPort(family uint32, tcpPort uint16) (int, error) {
+func GetOwnerPIDOfTCPPort(family uint32, tcpPort uint16) (uint32, error) {
 	switch family {
 	case windows.AF_INET:
 		table, err := getExtendedTcpTable[MIB_TCPROW_OWNER_PID](family, TCPTableOwnerPIDListener)
@@ -56,7 +56,7 @@ func GetOwnerPIDOfTCPPort(family uint32, tcpPort uint16) (int, error) {
 
 		for _, row := range table {
 			if row.dwLocalPort.uint16() == tcpPort {
-				return int(row.dwOwningPid), nil
+				return row.dwOwningPid, nil
 			}
 		}
 
@@ -69,7 +69,7 @@ func GetOwnerPIDOfTCPPort(family uint32, tcpPort uint16) (int, error) {
 
 		for _, row := range table {
 			if row.dwLocalPort.uint16() == tcpPort {
-				return int(row.dwOwningPid), nil
+				return row.dwOwningPid, nil
 			}
 		}
 

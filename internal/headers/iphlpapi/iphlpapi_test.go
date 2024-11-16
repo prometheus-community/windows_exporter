@@ -28,5 +28,5 @@ func TestGetOwnerPIDOfTCPPort(t *testing.T) {
 
 	pid, err := iphlpapi.GetOwnerPIDOfTCPPort(windows.AF_INET, uint16(lister.Addr().(*net.TCPAddr).Port))
 	require.NoError(t, err)
-	require.Equal(t, os.Getpid(), pid)
+	require.EqualValues(t, os.Getpid(), pid)
 }
