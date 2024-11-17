@@ -269,6 +269,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	for err := range errCh {
 		errs = append(errs, err)
 	}
+
 	return errors.Join(errs...)
 }
 
