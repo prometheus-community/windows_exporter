@@ -30,6 +30,7 @@ func TestMultipleDirectories(t *testing.T) {
 
 	collectors := collector.New(map[string]collector.Collector{textfile.Name: textFileCollector})
 	require.NoError(t, collectors.Build(logger))
+
 	metrics := make(chan prometheus.Metric)
 	got := ""
 

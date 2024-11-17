@@ -173,13 +173,13 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	}
 
 	for _, disk := range dst {
-		distName := strings.Trim(disk.Name, "\\.\\")
+		distName := strings.Trim(disk.Name, `\.`)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.diskInfo,
 			prometheus.GaugeValue,
 			1.0,
-			strings.Trim(disk.DeviceID, "\\.\\"),
+			strings.Trim(disk.DeviceID, `\.`),
 			strings.TrimRight(disk.Model, " "),
 			strings.TrimRight(disk.Caption, " "),
 			distName,
