@@ -14,18 +14,6 @@ type win32Process struct {
 	Name string `mi:"Name"`
 }
 
-type wmiPrinter struct {
-	Name                   string `mi:"Name"`
-	Default                bool   `mi:"Default"`
-	PrinterStatus          uint16 `mi:"PrinterStatus"`
-	JobCountSinceLastReset uint32 `mi:"JobCountSinceLastReset"`
-}
-
-type wmiPrintJob struct {
-	Name   string `mi:"Name"`
-	Status string `mi:"Status"`
-}
-
 func Test_MI_Application_Initialize(t *testing.T) {
 	application, err := mi.Application_Initialize()
 	require.NoError(t, err)

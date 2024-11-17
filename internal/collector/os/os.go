@@ -66,12 +66,6 @@ type Collector struct {
 	visibleMemoryBytes *prometheus.Desc
 }
 
-type pagingFileCounter struct {
-	Name      string
-	Usage     float64 `perflib:"% Usage"`
-	UsagePeak float64 `perflib:"% Usage Peak"`
-}
-
 func New(config *Config) *Collector {
 	if config == nil {
 		config = &ConfigDefaults

@@ -188,7 +188,7 @@ func (c *MetricCollectors) Build(logger *slog.Logger) error {
 }
 
 // Close To be called by the exporter for collector cleanup.
-func (c *MetricCollectors) Close(logger *slog.Logger) error {
+func (c *MetricCollectors) Close() error {
 	errs := make([]error, 0, len(c.Collectors))
 
 	for _, collector := range c.Collectors {
