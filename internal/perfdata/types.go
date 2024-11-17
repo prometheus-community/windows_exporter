@@ -1,10 +1,10 @@
-package perftypes
+//go:build windows
+
+package perfdata
 
 import "github.com/prometheus/client_golang/prometheus"
 
 const EmptyInstance = "------"
-
-var TotalInstance = []string{"_Total"}
 
 type CounterValues struct {
 	Type        prometheus.ValueType

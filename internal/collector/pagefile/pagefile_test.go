@@ -1,10 +1,12 @@
+//go:build windows
+
 package pagefile_test
 
 import (
 	"testing"
 
 	"github.com/prometheus-community/windows_exporter/internal/collector/pagefile"
-	"github.com/prometheus-community/windows_exporter/internal/testutils"
+	"github.com/prometheus-community/windows_exporter/internal/utils/testutils"
 )
 
 func BenchmarkCollector(b *testing.B) {

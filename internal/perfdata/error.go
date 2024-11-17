@@ -1,4 +1,6 @@
-package v2
+//go:build windows
+
+package perfdata
 
 import "errors"
 

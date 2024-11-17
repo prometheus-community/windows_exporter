@@ -3,13 +3,13 @@
 package udp
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata/perftypes"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -24,8 +24,8 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	config Config
 
-	perfDataCollector4 perfdata.Collector
-	perfDataCollector6 perfdata.Collector
+	perfDataCollector4 *perfdata.Collector
+	perfDataCollector6 *perfdata.Collector
 
 	datagramsNoPortTotal         *prometheus.Desc
 	datagramsReceivedTotal       *prometheus.Desc
@@ -57,11 +57,7 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
-	return []string{}, nil
-}
-
-func (c *Collector) Close(_ *slog.Logger) error {
+func (c *Collector) Close() error {
 	c.perfDataCollector4.Close()
 	c.perfDataCollector6.Close()
 
@@ -78,12 +74,12 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 
 	var err error
 
-	c.perfDataCollector4, err = perfdata.NewCollector(perfdata.V2, "UDPv4", nil, counters)
+	c.perfDataCollector4, err = perfdata.NewCollector("UDPv4", nil, counters)
 	if err != nil {
 		return fmt.Errorf("failed to create UDPv4 collector: %w", err)
 	}
 
-	c.perfDataCollector6, err = perfdata.NewCollector(perfdata.V2, "UDPv6", nil, counters)
+	c.perfDataCollector6, err = perfdata.NewCollector("UDPv6", nil, counters)
 	if err != nil {
 		return fmt.Errorf("failed to create UDPv6 collector: %w", err)
 	}
@@ -118,7 +114,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(_ *types.ScrapeContext, _ *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	return c.collect(ch)
 }
 
@@ -128,19 +124,27 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 		return fmt.Errorf("failed to collect UDPv4 metrics: %w", err)
 	}
 
-	c.writeUDPCounters(ch, data[perftypes.EmptyInstance], []string{"ipv4"})
+	if _, ok := data[perfdata.EmptyInstance]; !ok {
+		return errors.New("no data for UDPv4")
+	}
+
+	c.writeUDPCounters(ch, data[perfdata.EmptyInstance], []string{"ipv4"})
 
 	data, err = c.perfDataCollector6.Collect()
 	if err != nil {
 		return fmt.Errorf("failed to collect UDPv6 metrics: %w", err)
 	}
 
-	c.writeUDPCounters(ch, data[perftypes.EmptyInstance], []string{"ipv6"})
+	if _, ok := data[perfdata.EmptyInstance]; !ok {
+		return errors.New("no data for UDPv6")
+	}
+
+	c.writeUDPCounters(ch, data[perfdata.EmptyInstance], []string{"ipv6"})
 
 	return nil
 }
 
-func (c *Collector) writeUDPCounters(ch chan<- prometheus.Metric, metrics map[string]perftypes.CounterValues, labels []string) {
+func (c *Collector) writeUDPCounters(ch chan<- prometheus.Metric, metrics map[string]perfdata.CounterValues, labels []string) {
 	ch <- prometheus.MustNewConstMetric(
 		c.datagramsNoPortTotal,
 		prometheus.CounterValue,

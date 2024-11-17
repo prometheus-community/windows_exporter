@@ -15,8 +15,6 @@ import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	v1 "github.com/prometheus-community/windows_exporter/internal/perfdata/v1"
-	"github.com/prometheus-community/windows_exporter/internal/toggle"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows"
@@ -43,7 +41,7 @@ var ConfigDefaults = Config{
 type Collector struct {
 	config Config
 
-	perfDataCollector perfdata.Collector
+	perfDataCollector *perfdata.Collector
 
 	bytesReceivedTotal       *prometheus.Desc
 	bytesSentTotal           *prometheus.Desc
@@ -137,44 +135,32 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
-	if toggle.IsPDHEnabled() {
-		return []string{}, nil
-	}
-
-	return []string{"Network Interface"}, nil
-}
-
-func (c *Collector) Close(_ *slog.Logger) error {
-	if toggle.IsPDHEnabled() {
-		c.perfDataCollector.Close()
-	}
+func (c *Collector) Close() error {
+	c.perfDataCollector.Close()
 
 	return nil
 }
 
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
-	if toggle.IsPDHEnabled() {
-		var err error
+	var err error
 
-		c.perfDataCollector, err = perfdata.NewCollector(perfdata.V2, "Network Interface", perfdata.AllInstances, []string{
-			BytesReceivedPerSec,
-			BytesSentPerSec,
-			BytesTotalPerSec,
-			OutputQueueLength,
-			PacketsOutboundDiscarded,
-			PacketsOutboundErrors,
-			PacketsPerSec,
-			PacketsReceivedDiscarded,
-			PacketsReceivedErrors,
-			PacketsReceivedPerSec,
-			PacketsReceivedUnknown,
-			PacketsSentPerSec,
-			CurrentBandwidth,
-		})
-		if err != nil {
-			return fmt.Errorf("failed to create Processor Information collector: %w", err)
-		}
+	c.perfDataCollector, err = perfdata.NewCollector("Network Interface", perfdata.InstanceAll, []string{
+		bytesReceivedPerSec,
+		bytesSentPerSec,
+		bytesTotalPerSec,
+		outputQueueLength,
+		packetsOutboundDiscarded,
+		packetsOutboundErrors,
+		packetsPerSec,
+		packetsReceivedDiscarded,
+		packetsReceivedErrors,
+		packetsReceivedPerSec,
+		packetsReceivedUnknown,
+		packetsSentPerSec,
+		currentBandwidth,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create Processor Information collector: %w", err)
 	}
 
 	if slices.Contains(c.config.CollectorsEnabled, "addresses") {
@@ -279,130 +265,25 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	logger = logger.With(slog.String("collector", Name))
+func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
+	errs := make([]error, 0, 2)
 
 	if slices.Contains(c.config.CollectorsEnabled, "metrics") {
-		var err error
-
-		if toggle.IsPDHEnabled() {
-			err = c.collectPDH(ch)
-		} else {
-			err = c.collect(ctx, logger, ch)
-		}
-
-		if err != nil {
-			return fmt.Errorf("failed collecting net metrics: %w", err)
+		if err := c.collect(ch); err != nil {
+			errs = append(errs, fmt.Errorf("failed collecting metrics: %w", err))
 		}
 	}
 
 	if slices.Contains(c.config.CollectorsEnabled, "nic_addresses") {
 		if err := c.collectNICAddresses(ch); err != nil {
-			return fmt.Errorf("failed collecting net addresses: %w", err)
+			errs = append(errs, fmt.Errorf("failed collecting net addresses: %w", err))
 		}
 	}
 
-	return nil
+	return errors.Join(errs...)
 }
 
-func (c *Collector) collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	var dst []perflibNetworkInterface
-
-	if err := v1.UnmarshalObject(ctx.PerfObjects["Network Interface"], &dst, logger); err != nil {
-		return err
-	}
-
-	for _, nic := range dst {
-		if c.config.NicExclude.MatchString(nic.Name) ||
-			!c.config.NicInclude.MatchString(nic.Name) {
-			continue
-		}
-
-		// Counters
-		ch <- prometheus.MustNewConstMetric(
-			c.bytesReceivedTotal,
-			prometheus.CounterValue,
-			nic.BytesReceivedPerSec,
-			nic.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.bytesSentTotal,
-			prometheus.CounterValue,
-			nic.BytesSentPerSec,
-			nic.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.bytesTotal,
-			prometheus.CounterValue,
-			nic.BytesTotalPerSec,
-			nic.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.outputQueueLength,
-			prometheus.GaugeValue,
-			nic.OutputQueueLength,
-			nic.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.packetsOutboundDiscarded,
-			prometheus.CounterValue,
-			nic.PacketsOutboundDiscarded,
-			nic.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.packetsOutboundErrors,
-			prometheus.CounterValue,
-			nic.PacketsOutboundErrors,
-			nic.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.packetsTotal,
-			prometheus.CounterValue,
-			nic.PacketsPerSec,
-			nic.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.packetsReceivedDiscarded,
-			prometheus.CounterValue,
-			nic.PacketsReceivedDiscarded,
-			nic.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.packetsReceivedErrors,
-			prometheus.CounterValue,
-			nic.PacketsReceivedErrors,
-			nic.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.packetsReceivedTotal,
-			prometheus.CounterValue,
-			nic.PacketsReceivedPerSec,
-			nic.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.packetsReceivedUnknown,
-			prometheus.CounterValue,
-			nic.PacketsReceivedUnknown,
-			nic.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.packetsSentTotal,
-			prometheus.CounterValue,
-			nic.PacketsSentPerSec,
-			nic.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.currentBandwidth,
-			prometheus.GaugeValue,
-			nic.CurrentBandwidth/8,
-			nic.Name,
-		)
-	}
-
-	return nil
-}
-
-func (c *Collector) collectPDH(ch chan<- prometheus.Metric) error {
+func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	data, err := c.perfDataCollector.Collect()
 	if err != nil {
 		return fmt.Errorf("failed to collect Network Information metrics: %w", err)
@@ -418,79 +299,79 @@ func (c *Collector) collectPDH(ch chan<- prometheus.Metric) error {
 		ch <- prometheus.MustNewConstMetric(
 			c.bytesReceivedTotal,
 			prometheus.CounterValue,
-			nicData[BytesReceivedPerSec].FirstValue,
+			nicData[bytesReceivedPerSec].FirstValue,
 			nicName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.bytesSentTotal,
 			prometheus.CounterValue,
-			nicData[BytesSentPerSec].FirstValue,
+			nicData[bytesSentPerSec].FirstValue,
 			nicName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.bytesTotal,
 			prometheus.CounterValue,
-			nicData[BytesTotalPerSec].FirstValue,
+			nicData[bytesTotalPerSec].FirstValue,
 			nicName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.outputQueueLength,
 			prometheus.GaugeValue,
-			nicData[OutputQueueLength].FirstValue,
+			nicData[outputQueueLength].FirstValue,
 			nicName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.packetsOutboundDiscarded,
 			prometheus.CounterValue,
-			nicData[PacketsOutboundDiscarded].FirstValue,
+			nicData[packetsOutboundDiscarded].FirstValue,
 			nicName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.packetsOutboundErrors,
 			prometheus.CounterValue,
-			nicData[PacketsOutboundErrors].FirstValue,
+			nicData[packetsOutboundErrors].FirstValue,
 			nicName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.packetsTotal,
 			prometheus.CounterValue,
-			nicData[PacketsPerSec].FirstValue,
+			nicData[packetsPerSec].FirstValue,
 			nicName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.packetsReceivedDiscarded,
 			prometheus.CounterValue,
-			nicData[PacketsReceivedDiscarded].FirstValue,
+			nicData[packetsReceivedDiscarded].FirstValue,
 			nicName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.packetsReceivedErrors,
 			prometheus.CounterValue,
-			nicData[PacketsReceivedErrors].FirstValue,
+			nicData[packetsReceivedErrors].FirstValue,
 			nicName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.packetsReceivedTotal,
 			prometheus.CounterValue,
-			nicData[PacketsReceivedPerSec].FirstValue,
+			nicData[packetsReceivedPerSec].FirstValue,
 			nicName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.packetsReceivedUnknown,
 			prometheus.CounterValue,
-			nicData[PacketsReceivedUnknown].FirstValue,
+			nicData[packetsReceivedUnknown].FirstValue,
 			nicName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.packetsSentTotal,
 			prometheus.CounterValue,
-			nicData[PacketsSentPerSec].FirstValue,
+			nicData[packetsSentPerSec].FirstValue,
 			nicName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.currentBandwidth,
 			prometheus.GaugeValue,
-			nicData[CurrentBandwidth].FirstValue/8,
+			nicData[currentBandwidth].FirstValue/8,
 			nicName,
 		)
 	}

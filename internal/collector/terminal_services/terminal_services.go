@@ -13,7 +13,6 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/headers/wtsapi32"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata/perftypes"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
@@ -55,10 +54,12 @@ func isConnectionBrokerServer(miSession *mi.Session) bool {
 type Collector struct {
 	config Config
 
+	logger *slog.Logger
+
 	connectionBrokerEnabled bool
 
-	perfDataCollectorTerminalServicesSession perfdata.Collector
-	perfDataCollectorBroker                  perfdata.Collector
+	perfDataCollectorTerminalServicesSession *perfdata.Collector
+	perfDataCollectorBroker                  *perfdata.Collector
 
 	hServer windows.Handle
 
@@ -99,11 +100,7 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
-	return []string{}, nil
-}
-
-func (c *Collector) Close(_ *slog.Logger) error {
+func (c *Collector) Close() error {
 	err := wtsapi32.WTSCloseServer(c.hServer)
 	if err != nil {
 		return fmt.Errorf("failed to close WTS server: %w", err)
@@ -123,7 +120,7 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 		return errors.New("miSession is nil")
 	}
 
-	logger = logger.With(slog.String("collector", Name))
+	c.logger = logger.With(slog.String("collector", Name))
 
 	counters := []string{
 		handleCount,
@@ -145,7 +142,7 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 
 	var err error
 
-	c.perfDataCollectorTerminalServicesSession, err = perfdata.NewCollector(perfdata.V2, "Terminal Services Session", perfdata.AllInstances, counters)
+	c.perfDataCollectorTerminalServicesSession, err = perfdata.NewCollector("Terminal Services Session", perfdata.InstanceAll, counters)
 	if err != nil {
 		return fmt.Errorf("failed to create Terminal Services Session collector: %w", err)
 	}
@@ -161,7 +158,7 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 
 		var err error
 
-		c.perfDataCollectorBroker, err = perfdata.NewCollector(perfdata.V2, "Remote Desktop Connection Broker Counterset", perfdata.AllInstances, counters)
+		c.perfDataCollectorBroker, err = perfdata.NewCollector("Remote Desktop Connection Broker Counterset", perfdata.InstanceAll, counters)
 		if err != nil {
 			return fmt.Errorf("failed to create Remote Desktop Connection Broker Counterset collector: %w", err)
 		}
@@ -270,12 +267,10 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	logger = logger.With(slog.String("collector", Name))
-
+func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	errs := make([]error, 0, 3)
 
-	if err := c.collectWTSSessions(logger, ch); err != nil {
+	if err := c.collectWTSSessions(ch); err != nil {
 		errs = append(errs, fmt.Errorf("failed collecting terminal services session infos: %w", err))
 	}
 
@@ -418,7 +413,7 @@ func (c *Collector) collectCollectionBrokerPerformanceCounter(ch chan<- promethe
 		return fmt.Errorf("failed to collect Remote Desktop Connection Broker Counterset metrics: %w", err)
 	}
 
-	data, ok := perfData[perftypes.EmptyInstance]
+	data, ok := perfData[perfdata.EmptyInstance]
 	if !ok {
 		return errors.New("query for Remote Desktop Connection Broker Counterset returned empty result set")
 	}
@@ -447,8 +442,8 @@ func (c *Collector) collectCollectionBrokerPerformanceCounter(ch chan<- promethe
 	return nil
 }
 
-func (c *Collector) collectWTSSessions(logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	sessions, err := wtsapi32.WTSEnumerateSessionsEx(c.hServer, logger)
+func (c *Collector) collectWTSSessions(ch chan<- prometheus.Metric) error {
+	sessions, err := wtsapi32.WTSEnumerateSessionsEx(c.hServer, c.logger)
 	if err != nil {
 		return fmt.Errorf("failed to enumerate WTS sessions: %w", err)
 	}

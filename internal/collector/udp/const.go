@@ -1,3 +1,5 @@
+//go:build windows
+
 package udp
 
 // The TCPv6 performance object uses the same fields.

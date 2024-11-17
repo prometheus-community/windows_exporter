@@ -6,18 +6,14 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"os"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/headers/kernel32"
 	"github.com/prometheus-community/windows_exporter/internal/headers/netapi32"
-	"github.com/prometheus-community/windows_exporter/internal/headers/psapi"
 	"github.com/prometheus-community/windows_exporter/internal/headers/sysinfoapi"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
-	v1 "github.com/prometheus-community/windows_exporter/internal/perfdata/v1"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows"
@@ -37,16 +33,6 @@ type Collector struct {
 	hostname      *prometheus.Desc
 	osInformation *prometheus.Desc
 
-	// pagingFreeBytes
-	// Deprecated: Use windows_paging_free_bytes instead.
-	pagingFreeBytes *prometheus.Desc
-	// pagingLimitBytes
-	// Deprecated: Use windows_paging_total_bytes instead.
-	pagingLimitBytes *prometheus.Desc
-
-	// users
-	// Deprecated: Use windows_system_processes instead.
-	processes *prometheus.Desc
 	// users
 	// Deprecated: Use windows_system_process_limit instead.
 	processesLimit *prometheus.Desc
@@ -80,12 +66,6 @@ type Collector struct {
 	visibleMemoryBytes *prometheus.Desc
 }
 
-type pagingFileCounter struct {
-	Name      string
-	Usage     float64 `perflib:"% Usage"`
-	UsagePeak float64 `perflib:"% Usage Peak"`
-}
-
 func New(config *Config) *Collector {
 	if config == nil {
 		config = &ConfigDefaults
@@ -106,11 +86,7 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
-	return []string{"Paging File"}, nil
-}
-
-func (c *Collector) Close(_ *slog.Logger) error {
+func (c *Collector) Close() error {
 	return nil
 }
 
@@ -154,18 +130,6 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		},
 		nil,
 	)
-	c.pagingLimitBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "paging_limit_bytes"),
-		"Deprecated: Use windows_pagefile_limit_bytes instead.",
-		nil,
-		nil,
-	)
-	c.pagingFreeBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "paging_free_bytes"),
-		"Deprecated: Use windows_pagefile_free_bytes instead.",
-		nil,
-		nil,
-	)
 	c.physicalMemoryFreeBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "physical_memory_free_bytes"),
 		"Deprecated: Use `windows_memory_physical_free_bytes` instead.",
@@ -184,12 +148,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		[]string{"timezone"},
 		nil,
 	)
-	c.processes = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "processes"),
-		"Deprecated: Use `windows_system_processes` instead.",
-		nil,
-		nil,
-	)
+
 	c.processesLimit = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "processes_limit"),
 		"Deprecated: Use `windows_system_process_limit` instead.",
@@ -232,51 +191,25 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	logger = logger.With(slog.String("collector", Name))
-
-	errs := make([]error, 0, 5)
+func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
+	errs := make([]error, 0, 4)
 
 	c.collect(ch)
 
 	if err := c.collectHostname(ch); err != nil {
-		logger.Error("failed collecting os metrics",
-			slog.Any("err", err),
-		)
-
-		errs = append(errs, err)
+		errs = append(errs, fmt.Errorf("failed to collect hostname metrics: %w", err))
 	}
 
 	if err := c.collectLoggedInUserCount(ch); err != nil {
-		logger.Error("failed collecting os user count metrics",
-			slog.Any("err", err),
-		)
-
-		errs = append(errs, err)
+		errs = append(errs, fmt.Errorf("failed to collect user count metrics: %w", err))
 	}
 
 	if err := c.collectMemory(ch); err != nil {
-		logger.Error("failed collecting os memory metrics",
-			slog.Any("err", err),
-		)
-
-		errs = append(errs, err)
+		errs = append(errs, fmt.Errorf("failed to collect memory metrics: %w", err))
 	}
 
 	if err := c.collectTime(ch); err != nil {
-		logger.Error("failed collecting os time metrics",
-			slog.Any("err", err),
-		)
-
-		errs = append(errs, err)
-	}
-
-	if err := c.collectPaging(ctx, logger, ch); err != nil {
-		logger.Error("failed collecting os paging metrics",
-			slog.Any("err", err),
-		)
-
-		errs = append(errs, err)
+		errs = append(errs, fmt.Errorf("failed to collect time metrics: %w", err))
 	}
 
 	return errors.Join(errs...)
@@ -384,79 +317,6 @@ func (c *Collector) collectMemory(ch chan<- prometheus.Metric) error {
 		c.processMemoryLimitBytes,
 		prometheus.GaugeValue,
 		float64(memoryStatusEx.TotalVirtual),
-	)
-
-	return nil
-}
-
-func (c *Collector) collectPaging(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	// Get total allocation of paging files across all disks.
-	memManKey, err := registry.OpenKey(registry.LOCAL_MACHINE, `SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management`, registry.QUERY_VALUE)
-	if err != nil {
-		return err
-	}
-
-	defer memManKey.Close()
-
-	pagingFiles, _, pagingErr := memManKey.GetStringsValue("ExistingPageFiles")
-
-	var fsipf float64
-
-	for _, pagingFile := range pagingFiles {
-		fileString := strings.ReplaceAll(pagingFile, `\??\`, "")
-		file, err := os.Stat(fileString)
-		// For unknown reasons, Windows doesn't always create a page file. Continue collection rather than aborting.
-		if err != nil {
-			logger.Debug(fmt.Sprintf("Failed to read page file (reason: %s): %s\n", err, fileString))
-		} else {
-			fsipf += float64(file.Size())
-		}
-	}
-
-	gpi, err := psapi.GetPerformanceInfo()
-	if err != nil {
-		return err
-	}
-
-	pfc := make([]pagingFileCounter, 0)
-	if err = v1.UnmarshalObject(ctx.PerfObjects["Paging File"], &pfc, logger); err != nil {
-		return err
-	}
-
-	// Get current page file usage.
-	var pfbRaw float64
-
-	for _, pageFile := range pfc {
-		if strings.Contains(strings.ToLower(pageFile.Name), "_total") {
-			continue
-		}
-
-		pfbRaw += pageFile.Usage
-	}
-
-	if pagingErr == nil {
-		// Subtract from total page file allocation on disk.
-		pfb := fsipf - (pfbRaw * float64(gpi.PageSize))
-
-		ch <- prometheus.MustNewConstMetric(
-			c.pagingFreeBytes,
-			prometheus.GaugeValue,
-			pfb,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.pagingLimitBytes,
-			prometheus.GaugeValue,
-			fsipf,
-		)
-	} else {
-		logger.Debug("Could not find HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management key. windows_os_paging_free_bytes and windows_os_paging_limit_bytes will be omitted.")
-	}
-
-	ch <- prometheus.MustNewConstMetric(
-		c.processes,
-		prometheus.GaugeValue,
-		float64(gpi.ProcessCount),
 	)
 
 	return nil

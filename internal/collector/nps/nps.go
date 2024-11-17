@@ -1,3 +1,5 @@
+//go:build windows
+
 package nps
 
 import (
@@ -17,7 +19,6 @@ type Config struct{}
 
 var ConfigDefaults = Config{}
 
-// Collector is a Prometheus Collector for WMI Win32_PerfRawData_IAS_NPSAuthenticationServer and Win32_PerfRawData_IAS_NPSAccountingServer metrics.
 type Collector struct {
 	config    Config
 	miSession *mi.Session
@@ -73,11 +74,7 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
-	return []string{}, nil
-}
-
-func (c *Collector) Close(_ *slog.Logger) error {
+func (c *Collector) Close() error {
 	return nil
 }
 
@@ -258,21 +255,18 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	logger = logger.With(slog.String("collector", Name))
-	if err := c.CollectAccept(ch); err != nil {
-		logger.Error(fmt.Sprintf("failed collecting NPS accept data: %s", err))
+func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
+	errs := make([]error, 0, 2)
 
-		return err
+	if err := c.CollectAccept(ch); err != nil {
+		errs = append(errs, fmt.Errorf("failed collecting NPS accept data: %w", err))
 	}
 
 	if err := c.CollectAccounting(ch); err != nil {
-		logger.Error(fmt.Sprintf("failed collecting NPS accounting data: %s", err))
-
-		return err
+		errs = append(errs, fmt.Errorf("failed collecting NPS accounting data: %w", err))
 	}
 
-	return nil
+	return errors.Join(errs...)
 }
 
 // Win32_PerfRawData_IAS_NPSAuthenticationServer docs:

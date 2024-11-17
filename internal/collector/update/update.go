@@ -78,7 +78,7 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 	return c
 }
 
-func (c *Collector) Close(_ *slog.Logger) error {
+func (c *Collector) Close() error {
 	c.ctxCancelFn()
 
 	return nil
@@ -126,11 +126,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 func (c *Collector) GetName() string { return Name }
 
-func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
-	return []string{}, nil
-}
-
-func (c *Collector) Collect(_ *types.ScrapeContext, _ *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 

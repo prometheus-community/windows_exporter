@@ -1,10 +1,12 @@
+//go:build windows
+
 package exchange_test
 
 import (
 	"testing"
 
 	"github.com/prometheus-community/windows_exporter/internal/collector/exchange"
-	"github.com/prometheus-community/windows_exporter/internal/testutils"
+	"github.com/prometheus-community/windows_exporter/internal/utils/testutils"
 )
 
 func BenchmarkCollector(b *testing.B) {

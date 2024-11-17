@@ -12,8 +12,6 @@ import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	v1 "github.com/prometheus-community/windows_exporter/internal/perfdata/v1"
-	"github.com/prometheus-community/windows_exporter/internal/toggle"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -32,9 +30,9 @@ var ConfigDefaults = Config{
 type Collector struct {
 	config Config
 
-	perfDataCollectorConnection perfdata.Collector
-	perfDataCollectorFolder     perfdata.Collector
-	perfDataCollectorVolume     perfdata.Collector
+	perfDataCollectorConnection *perfdata.Collector
+	perfDataCollectorFolder     *perfdata.Collector
+	perfDataCollectorVolume     *perfdata.Collector
 
 	// connection source
 	connectionBandwidthSavingsUsingDFSReplicationTotal *prometheus.Desc
@@ -82,29 +80,6 @@ type Collector struct {
 	volumeUSNJournalUnreadPercentage     *prometheus.Desc
 	volumeUSNJournalRecordsAcceptedTotal *prometheus.Desc
 	volumeUSNJournalRecordsReadTotal     *prometheus.Desc
-
-	// Map of child Collector functions used during collection
-	dfsrChildCollectors []dfsrCollectorFunc
-}
-
-type dfsrCollectorFunc func(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error
-
-// Map Perflib sources to DFSR Collector names
-// e.g, volume -> DFS Replication Service Volumes.
-func dfsrGetPerfObjectName(collector string) string {
-	prefix := "DFS "
-	suffix := ""
-
-	switch collector {
-	case "connection":
-		suffix = "Replication Connections"
-	case "folder":
-		suffix = "Replicated Folders"
-	case "volume":
-		suffix = "Replication Service Volumes"
-	}
-
-	return prefix + suffix
 }
 
 func New(config *Config) *Collector {
@@ -147,35 +122,17 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
-	if toggle.IsPDHEnabled() {
-		return []string{}, nil
+func (c *Collector) Close() error {
+	if slices.Contains(c.config.CollectorsEnabled, "connection") {
+		c.perfDataCollectorConnection.Close()
 	}
 
-	// Perflib sources are dynamic, depending on the enabled child collectors
-	expandedChildCollectors := slices.Compact(c.config.CollectorsEnabled)
-	perflibDependencies := make([]string, 0, len(expandedChildCollectors))
-
-	for _, source := range expandedChildCollectors {
-		perflibDependencies = append(perflibDependencies, dfsrGetPerfObjectName(source))
+	if slices.Contains(c.config.CollectorsEnabled, "folder") {
+		c.perfDataCollectorFolder.Close()
 	}
 
-	return perflibDependencies, nil
-}
-
-func (c *Collector) Close(_ *slog.Logger) error {
-	if toggle.IsPDHEnabled() {
-		if slices.Contains(c.config.CollectorsEnabled, "connection") {
-			c.perfDataCollectorConnection.Close()
-		}
-
-		if slices.Contains(c.config.CollectorsEnabled, "folder") {
-			c.perfDataCollectorFolder.Close()
-		}
-
-		if slices.Contains(c.config.CollectorsEnabled, "volume") {
-			c.perfDataCollectorVolume.Close()
-		}
+	if slices.Contains(c.config.CollectorsEnabled, "volume") {
+		c.perfDataCollectorVolume.Close()
 	}
 
 	return nil
@@ -186,82 +143,72 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 	logger.Info("dfsr collector is in an experimental state! Metrics for this collector have not been tested.")
 
-	//nolint:nestif
-	if toggle.IsPDHEnabled() {
-		var err error
+	var err error
 
-		if slices.Contains(c.config.CollectorsEnabled, "connection") {
-			counters := []string{
-				bandwidthSavingsUsingDFSReplicationTotal,
-				bytesReceivedTotal,
-				compressedSizeOfFilesReceivedTotal,
-				filesReceivedTotal,
-				rdcBytesReceivedTotal,
-				rdcCompressedSizeOfFilesReceivedTotal,
-				rdcNumberOfFilesReceivedTotal,
-				rdcSizeOfFilesReceivedTotal,
-				sizeOfFilesReceivedTotal,
-			}
-
-			c.perfDataCollectorConnection, err = perfdata.NewCollector(perfdata.V2, "DFS Replication Connections", perfdata.AllInstances, counters)
-			if err != nil {
-				return fmt.Errorf("failed to create DFS Replication Connections collector: %w", err)
-			}
-		}
-
-		if slices.Contains(c.config.CollectorsEnabled, "folder") {
-			counters := []string{
-				bandwidthSavingsUsingDFSReplicationTotal,
-				compressedSizeOfFilesReceivedTotal,
-				conflictBytesCleanedUpTotal,
-				conflictBytesGeneratedTotal,
-				conflictFilesCleanedUpTotal,
-				conflictFilesGeneratedTotal,
-				conflictFolderCleanupsCompletedTotal,
-				conflictSpaceInUse,
-				deletedSpaceInUse,
-				deletedBytesCleanedUpTotal,
-				deletedBytesGeneratedTotal,
-				deletedFilesCleanedUpTotal,
-				deletedFilesGeneratedTotal,
-				fileInstallsRetriedTotal,
-				fileInstallsSucceededTotal,
-				filesReceivedTotal,
-				rdcBytesReceivedTotal,
-				rdcCompressedSizeOfFilesReceivedTotal,
-				rdcNumberOfFilesReceivedTotal,
-				rdcSizeOfFilesReceivedTotal,
-				sizeOfFilesReceivedTotal,
-				stagingSpaceInUse,
-				stagingBytesCleanedUpTotal,
-				stagingBytesGeneratedTotal,
-				stagingFilesCleanedUpTotal,
-				stagingFilesGeneratedTotal,
-				updatesDroppedTotal,
-			}
-
-			c.perfDataCollectorFolder, err = perfdata.NewCollector(perfdata.V2, "DFS Replicated Folders", perfdata.AllInstances, counters)
-			if err != nil {
-				return fmt.Errorf("failed to create DFS Replicated Folders collector: %w", err)
-			}
-		}
-
-		if slices.Contains(c.config.CollectorsEnabled, "volume") {
-			counters := []string{
-				databaseCommitsTotal,
-				databaseLookupsTotal,
-				usnJournalRecordsReadTotal,
-				usnJournalRecordsAcceptedTotal,
-				usnJournalUnreadPercentage,
-			}
-
-			c.perfDataCollectorVolume, err = perfdata.NewCollector(perfdata.V2, "DFS Replication Service Volumes", perfdata.AllInstances, counters)
-			if err != nil {
-				return fmt.Errorf("failed to create DFS Replication Service Volumes collector: %w", err)
-			}
+	if slices.Contains(c.config.CollectorsEnabled, "connection") {
+		c.perfDataCollectorConnection, err = perfdata.NewCollector("DFS Replication Connections", perfdata.InstanceAll, []string{
+			bandwidthSavingsUsingDFSReplicationTotal,
+			bytesReceivedTotal,
+			compressedSizeOfFilesReceivedTotal,
+			filesReceivedTotal,
+			rdcBytesReceivedTotal,
+			rdcCompressedSizeOfFilesReceivedTotal,
+			rdcNumberOfFilesReceivedTotal,
+			rdcSizeOfFilesReceivedTotal,
+			sizeOfFilesReceivedTotal,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to create DFS Replication Connections collector: %w", err)
 		}
 	}
 
+	if slices.Contains(c.config.CollectorsEnabled, "folder") {
+		c.perfDataCollectorFolder, err = perfdata.NewCollector("DFS Replicated Folders", perfdata.InstanceAll, []string{
+			bandwidthSavingsUsingDFSReplicationTotal,
+			compressedSizeOfFilesReceivedTotal,
+			conflictBytesCleanedUpTotal,
+			conflictBytesGeneratedTotal,
+			conflictFilesCleanedUpTotal,
+			conflictFilesGeneratedTotal,
+			conflictFolderCleanupsCompletedTotal,
+			conflictSpaceInUse,
+			deletedSpaceInUse,
+			deletedBytesCleanedUpTotal,
+			deletedBytesGeneratedTotal,
+			deletedFilesCleanedUpTotal,
+			deletedFilesGeneratedTotal,
+			fileInstallsRetriedTotal,
+			fileInstallsSucceededTotal,
+			filesReceivedTotal,
+			rdcBytesReceivedTotal,
+			rdcCompressedSizeOfFilesReceivedTotal,
+			rdcNumberOfFilesReceivedTotal,
+			rdcSizeOfFilesReceivedTotal,
+			sizeOfFilesReceivedTotal,
+			stagingSpaceInUse,
+			stagingBytesCleanedUpTotal,
+			stagingBytesGeneratedTotal,
+			stagingFilesCleanedUpTotal,
+			stagingFilesGeneratedTotal,
+			updatesDroppedTotal,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to create DFS Replicated Folders collector: %w", err)
+		}
+	}
+
+	if slices.Contains(c.config.CollectorsEnabled, "volume") {
+		c.perfDataCollectorVolume, err = perfdata.NewCollector("DFS Replication Service Volumes", perfdata.InstanceAll, []string{
+			databaseCommitsTotal,
+			databaseLookupsTotal,
+			usnJournalRecordsReadTotal,
+			usnJournalRecordsAcceptedTotal,
+			usnJournalUnreadPercentage,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to create DFS Replication Service Volumes collector: %w", err)
+		}
+	}
 	// connection
 	c.connectionBandwidthSavingsUsingDFSReplicationTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "connection_bandwidth_savings_using_dfs_replication_bytes_total"),
@@ -552,374 +499,12 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 
-	// Perflib sources are dynamic, depending on the enabled child collectors
-	expandedChildCollectors := slices.Compact(c.config.CollectorsEnabled)
-	c.dfsrChildCollectors = c.getDFSRChildCollectors(expandedChildCollectors)
-
 	return nil
-}
-
-// Maps enabled child collectors names to their relevant collection function,
-// for use in Collector.Collect().
-func (c *Collector) getDFSRChildCollectors(enabledCollectors []string) []dfsrCollectorFunc {
-	var dfsrCollectors []dfsrCollectorFunc
-
-	for _, collector := range enabledCollectors {
-		switch collector {
-		case "connection":
-			dfsrCollectors = append(dfsrCollectors, c.collectConnection)
-		case "folder":
-			dfsrCollectors = append(dfsrCollectors, c.collectFolder)
-		case "volume":
-			dfsrCollectors = append(dfsrCollectors, c.collectVolume)
-		}
-	}
-
-	return dfsrCollectors
 }
 
 // Collect implements the Collector interface.
 // Sends metric values for each metric to the provided prometheus Metric channel.
-func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	if toggle.IsPDHEnabled() {
-		return c.collectPDH(ch)
-	}
-
-	logger = logger.With(slog.String("collector", Name))
-	for _, fn := range c.dfsrChildCollectors {
-		err := fn(ctx, logger, ch)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (c *Collector) collectConnection(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	var dst []PerflibDFSRConnection
-
-	if err := v1.UnmarshalObject(ctx.PerfObjects["DFS Replication Connections"], &dst, logger); err != nil {
-		return err
-	}
-
-	for _, connection := range dst {
-		ch <- prometheus.MustNewConstMetric(
-			c.connectionBandwidthSavingsUsingDFSReplicationTotal,
-			prometheus.CounterValue,
-			connection.BandwidthSavingsUsingDFSReplicationTotal,
-			connection.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.connectionBytesReceivedTotal,
-			prometheus.CounterValue,
-			connection.BytesReceivedTotal,
-			connection.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.connectionCompressedSizeOfFilesReceivedTotal,
-			prometheus.CounterValue,
-			connection.CompressedSizeOfFilesReceivedTotal,
-			connection.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.connectionFilesReceivedTotal,
-			prometheus.CounterValue,
-			connection.FilesReceivedTotal,
-			connection.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.connectionRDCBytesReceivedTotal,
-			prometheus.CounterValue,
-			connection.RDCBytesReceivedTotal,
-			connection.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.connectionRDCCompressedSizeOfFilesReceivedTotal,
-			prometheus.CounterValue,
-			connection.RDCCompressedSizeOfFilesReceivedTotal,
-			connection.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.connectionRDCSizeOfFilesReceivedTotal,
-			prometheus.CounterValue,
-			connection.RDCSizeOfFilesReceivedTotal,
-			connection.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.connectionRDCNumberOfFilesReceivedTotal,
-			prometheus.CounterValue,
-			connection.RDCNumberOfFilesReceivedTotal,
-			connection.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.connectionSizeOfFilesReceivedTotal,
-			prometheus.CounterValue,
-			connection.SizeOfFilesReceivedTotal,
-			connection.Name,
-		)
-	}
-
-	return nil
-}
-
-func (c *Collector) collectFolder(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	var dst []perflibDFSRFolder
-
-	if err := v1.UnmarshalObject(ctx.PerfObjects["DFS Replicated Folders"], &dst, logger); err != nil {
-		return err
-	}
-
-	for _, folder := range dst {
-		ch <- prometheus.MustNewConstMetric(
-			c.folderBandwidthSavingsUsingDFSReplicationTotal,
-			prometheus.CounterValue,
-			folder.BandwidthSavingsUsingDFSReplicationTotal,
-			folder.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.folderCompressedSizeOfFilesReceivedTotal,
-			prometheus.CounterValue,
-			folder.CompressedSizeOfFilesReceivedTotal,
-			folder.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.folderConflictBytesCleanedUpTotal,
-			prometheus.CounterValue,
-			folder.ConflictBytesCleanedUpTotal,
-			folder.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.folderConflictBytesGeneratedTotal,
-			prometheus.CounterValue,
-			folder.ConflictBytesGeneratedTotal,
-			folder.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.folderConflictFilesCleanedUpTotal,
-			prometheus.CounterValue,
-			folder.ConflictFilesCleanedUpTotal,
-			folder.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.folderConflictFilesGeneratedTotal,
-			prometheus.CounterValue,
-			folder.ConflictFilesGeneratedTotal,
-			folder.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.folderConflictFolderCleanupsCompletedTotal,
-			prometheus.CounterValue,
-			folder.ConflictFolderCleanupsCompletedTotal,
-			folder.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.folderConflictSpaceInUse,
-			prometheus.GaugeValue,
-			folder.ConflictSpaceInUse,
-			folder.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.folderDeletedSpaceInUse,
-			prometheus.GaugeValue,
-			folder.DeletedSpaceInUse,
-			folder.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.folderDeletedBytesCleanedUpTotal,
-			prometheus.CounterValue,
-			folder.DeletedBytesCleanedUpTotal,
-			folder.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.folderDeletedBytesGeneratedTotal,
-			prometheus.CounterValue,
-			folder.DeletedBytesGeneratedTotal,
-			folder.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.folderDeletedFilesCleanedUpTotal,
-			prometheus.CounterValue,
-			folder.DeletedFilesCleanedUpTotal,
-			folder.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.folderDeletedFilesGeneratedTotal,
-			prometheus.CounterValue,
-			folder.DeletedFilesGeneratedTotal,
-			folder.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.folderFileInstallsRetriedTotal,
-			prometheus.CounterValue,
-			folder.FileInstallsRetriedTotal,
-			folder.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.folderFileInstallsSucceededTotal,
-			prometheus.CounterValue,
-			folder.FileInstallsSucceededTotal,
-			folder.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.folderFilesReceivedTotal,
-			prometheus.CounterValue,
-			folder.FilesReceivedTotal,
-			folder.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.folderRDCBytesReceivedTotal,
-			prometheus.CounterValue,
-			folder.RDCBytesReceivedTotal,
-			folder.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.folderRDCCompressedSizeOfFilesReceivedTotal,
-			prometheus.CounterValue,
-			folder.RDCCompressedSizeOfFilesReceivedTotal,
-			folder.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.folderRDCNumberOfFilesReceivedTotal,
-			prometheus.CounterValue,
-			folder.RDCNumberOfFilesReceivedTotal,
-			folder.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.folderRDCSizeOfFilesReceivedTotal,
-			prometheus.CounterValue,
-			folder.RDCSizeOfFilesReceivedTotal,
-			folder.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.folderSizeOfFilesReceivedTotal,
-			prometheus.CounterValue,
-			folder.SizeOfFilesReceivedTotal,
-			folder.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.folderStagingSpaceInUse,
-			prometheus.GaugeValue,
-			folder.StagingSpaceInUse,
-			folder.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.folderStagingBytesCleanedUpTotal,
-			prometheus.CounterValue,
-			folder.StagingBytesCleanedUpTotal,
-			folder.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.folderStagingBytesGeneratedTotal,
-			prometheus.CounterValue,
-			folder.StagingBytesGeneratedTotal,
-			folder.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.folderStagingFilesCleanedUpTotal,
-			prometheus.CounterValue,
-			folder.StagingFilesCleanedUpTotal,
-			folder.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.folderStagingFilesGeneratedTotal,
-			prometheus.CounterValue,
-			folder.StagingFilesGeneratedTotal,
-			folder.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.folderUpdatesDroppedTotal,
-			prometheus.CounterValue,
-			folder.UpdatesDroppedTotal,
-			folder.Name,
-		)
-	}
-
-	return nil
-}
-
-func (c *Collector) collectVolume(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	var dst []perflibDFSRVolume
-
-	if err := v1.UnmarshalObject(ctx.PerfObjects["DFS Replication Service Volumes"], &dst, logger); err != nil {
-		return err
-	}
-
-	for _, volume := range dst {
-		ch <- prometheus.MustNewConstMetric(
-			c.volumeDatabaseLookupsTotal,
-			prometheus.CounterValue,
-			volume.DatabaseLookupsTotal,
-			volume.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.volumeDatabaseCommitsTotal,
-			prometheus.CounterValue,
-			volume.DatabaseCommitsTotal,
-			volume.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.volumeUSNJournalRecordsAcceptedTotal,
-			prometheus.CounterValue,
-			volume.USNJournalRecordsAcceptedTotal,
-			volume.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.volumeUSNJournalRecordsReadTotal,
-			prometheus.CounterValue,
-			volume.USNJournalRecordsReadTotal,
-			volume.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.volumeUSNJournalUnreadPercentage,
-			prometheus.GaugeValue,
-			volume.USNJournalUnreadPercentage,
-			volume.Name,
-		)
-	}
-
-	return nil
-}
-
-func (c *Collector) collectPDH(ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	errs := make([]error, 0, 3)
 
 	if slices.Contains(c.config.CollectorsEnabled, "connection") {

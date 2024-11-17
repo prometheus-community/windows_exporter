@@ -299,16 +299,10 @@ windows_exporter_collector_timeout{collector="udp"} 0
 # TYPE windows_os_hostname gauge
 # HELP windows_os_info Contains full product name & version in labels. Note that the "major_version" for Windows 11 is \\"10\\"; a build number greater than 22000 represents Windows 11.
 # TYPE windows_os_info gauge
-# HELP windows_os_paging_free_bytes Deprecated: Use windows_pagefile_free_bytes instead.
-# TYPE windows_os_paging_free_bytes gauge
-# HELP windows_os_paging_limit_bytes Deprecated: Use windows_pagefile_limit_bytes instead.
-# TYPE windows_os_paging_limit_bytes gauge
 # HELP windows_os_physical_memory_free_bytes Deprecated: Use `windows_memory_physical_free_bytes` instead.
 # TYPE windows_os_physical_memory_free_bytes gauge
 # HELP windows_os_process_memory_limit_bytes Deprecated: Use `windows_memory_process_memory_limit_bytes` instead.
 # TYPE windows_os_process_memory_limit_bytes gauge
-# HELP windows_os_processes Deprecated: Use `windows_system_processes` instead.
-# TYPE windows_os_processes gauge
 # HELP windows_os_processes_limit Deprecated: Use `windows_system_process_limit` instead.
 # TYPE windows_os_processes_limit gauge
 # HELP windows_os_time Deprecated: Use windows_time_current_timestamp_seconds instead.
@@ -433,9 +427,6 @@ windows_service_state{name="Themes",state="stopped"} 0
 # TYPE windows_tcp_segments_total counter
 # HELP windows_textfile_mtime_seconds Unixtime mtime of textfiles successfully read.
 # TYPE windows_textfile_mtime_seconds gauge
-# HELP windows_textfile_scrape_error 1 if there was an error opening or reading a file, 0 otherwise
-# TYPE windows_textfile_scrape_error gauge
-windows_textfile_scrape_error 0
 # HELP windows_time_clock_frequency_adjustment_ppb_total Total adjustment made to the local system clock frequency by W32Time in Parts Per Billion (PPB) units.
 # TYPE windows_time_clock_frequency_adjustment_ppb_total counter
 # HELP windows_time_computed_time_offset_seconds Absolute time offset between the system clock and the chosen time source, in seconds
