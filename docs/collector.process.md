@@ -35,7 +35,7 @@ metrics.
 
 Enables IIS process name queries. IIS process names are combined with their app pool name to form the `process` label.
 
-Disabled by default, and can be enabled with `--collector.process.iis=true`.
+Disabled by default, and can be enabled with `--collector.process.iis`. NOTE: Just plain parameter without `true`.
 
 
 ### Example
@@ -44,7 +44,7 @@ Note that multiple processes with the same name will be disambiguated by
 Windows by adding a number suffix, such as `firefox#2`. Your [regexp](https://en.wikipedia.org/wiki/Regular_expression) must take
 these suffixes into consideration.
 
-:warning: The regexp is case-sensitive, so `--collector.process.include="FIREFOX.*"` will **NOT** match a process named `firefox` . 
+:warning: The regexp is case-sensitive, so `--collector.process.include="FIREFOX.*"` will **NOT** match a process named `firefox` .
 
 To specify multiple names, use the pipe `|` character:
 ```

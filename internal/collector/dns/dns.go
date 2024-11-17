@@ -10,7 +10,6 @@ import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata/perftypes"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -25,7 +24,7 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	config Config
 
-	perfDataCollector perfdata.Collector
+	perfDataCollector *perfdata.Collector
 
 	dynamicUpdatesFailures        *prometheus.Desc
 	dynamicUpdatesQueued          *prometheus.Desc
@@ -71,16 +70,16 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
-	return []string{}, nil
-}
+func (c *Collector) Close() error {
+	c.perfDataCollector.Close()
 
-func (c *Collector) Close(_ *slog.Logger) error {
 	return nil
 }
 
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
-	counters := []string{
+	var err error
+
+	c.perfDataCollector, err = perfdata.NewCollector("DNS", perfdata.InstanceAll, []string{
 		axfrRequestReceived,
 		axfrRequestSent,
 		axfrResponseReceived,
@@ -121,11 +120,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		winsReverseResponseSent,
 		zoneTransferFailure,
 		zoneTransferSOARequestSent,
-	}
-
-	var err error
-
-	c.perfDataCollector, err = perfdata.NewCollector(perfdata.V1, "DNS", perfdata.AllInstances, counters)
+	})
 	if err != nil {
 		return fmt.Errorf("failed to create DNS collector: %w", err)
 	}
@@ -268,13 +263,13 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(_ *types.ScrapeContext, _ *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	perfData, err := c.perfDataCollector.Collect()
 	if err != nil {
 		return fmt.Errorf("failed to collect DNS metrics: %w", err)
 	}
 
-	data, ok := perfData[perftypes.EmptyInstance]
+	data, ok := perfData[perfdata.EmptyInstance]
 	if !ok {
 		return errors.New("perflib query for DNS returned empty result set")
 	}

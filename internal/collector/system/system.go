@@ -4,11 +4,12 @@ package system
 
 import (
 	"errors"
+	"fmt"
 	"log/slog"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
-	v1 "github.com/prometheus-community/windows_exporter/internal/perfdata/v1"
+	"github.com/prometheus-community/windows_exporter/internal/perfdata"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -22,6 +23,8 @@ var ConfigDefaults = Config{}
 // A Collector is a Prometheus Collector for WMI metrics.
 type Collector struct {
 	config Config
+
+	perfDataCollector *perfdata.Collector
 
 	contextSwitchesTotal     *prometheus.Desc
 	exceptionDispatchesTotal *prometheus.Desc
@@ -53,15 +56,28 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
-	return []string{"System"}, nil
-}
+func (c *Collector) Close() error {
+	c.perfDataCollector.Close()
 
-func (c *Collector) Close(_ *slog.Logger) error {
 	return nil
 }
 
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
+	var err error
+
+	c.perfDataCollector, err = perfdata.NewCollector("System", nil, []string{
+		contextSwitchesPersec,
+		exceptionDispatchesPersec,
+		processorQueueLength,
+		systemCallsPersec,
+		systemUpTime,
+		processes,
+		threads,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create System collector: %w", err)
+	}
+
 	c.contextSwitchesTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "context_switches_total"),
 		"Total number of context switches (WMI source: PerfOS_System.ContextSwitchesPersec)",
@@ -117,78 +133,51 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	logger = logger.With(slog.String("collector", Name))
-	if err := c.collect(ctx, logger, ch); err != nil {
-		logger.Error("failed collecting system metrics",
-			slog.Any("err", err),
-		)
-
-		return err
+func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
+	perfData, err := c.perfDataCollector.Collect()
+	if err != nil {
+		return fmt.Errorf("failed to collect System metrics: %w", err)
 	}
 
-	return nil
-}
-
-// Win32_PerfRawData_PerfOS_System docs:
-// - https://web.archive.org/web/20050830140516/http://msdn.microsoft.com/library/en-us/wmisdk/wmi/win32_perfrawdata_perfos_system.asp
-type system struct {
-	ContextSwitchesPersec     float64 `perflib:"Context Switches/sec"`
-	ExceptionDispatchesPersec float64 `perflib:"Exception Dispatches/sec"`
-	ProcessorQueueLength      float64 `perflib:"Processor Queue Length"`
-	SystemCallsPersec         float64 `perflib:"System Calls/sec"`
-	SystemUpTime              float64 `perflib:"System Up Time"`
-	Processes                 float64 `perflib:"Processes"`
-	Threads                   float64 `perflib:"Threads"`
-}
-
-func (c *Collector) collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	logger = logger.With(slog.String("collector", Name))
-
-	var dst []system
-
-	if err := v1.UnmarshalObject(ctx.PerfObjects["System"], &dst, logger); err != nil {
-		return err
-	}
-
-	if len(dst) == 0 {
-		return errors.New("no data returned from Performance Counter")
+	data, ok := perfData[perfdata.EmptyInstance]
+	if !ok {
+		return errors.New("query for System returned empty result set")
 	}
 
 	ch <- prometheus.MustNewConstMetric(
 		c.contextSwitchesTotal,
 		prometheus.CounterValue,
-		dst[0].ContextSwitchesPersec,
+		data[contextSwitchesPersec].FirstValue,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.exceptionDispatchesTotal,
 		prometheus.CounterValue,
-		dst[0].ExceptionDispatchesPersec,
+		data[exceptionDispatchesPersec].FirstValue,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.processorQueueLength,
 		prometheus.GaugeValue,
-		dst[0].ProcessorQueueLength,
+		data[processorQueueLength].FirstValue,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.processes,
 		prometheus.GaugeValue,
-		dst[0].Processes,
+		data[processes].FirstValue,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.systemCallsTotal,
 		prometheus.CounterValue,
-		dst[0].SystemCallsPersec,
+		data[systemCallsPersec].FirstValue,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.systemUpTime,
 		prometheus.GaugeValue,
-		dst[0].SystemUpTime,
+		data[systemUpTime].FirstValue,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.threads,
 		prometheus.GaugeValue,
-		dst[0].Threads,
+		data[threads].FirstValue,
 	)
 
 	// Windows has no defined limit, and is based off available resources. This currently isn't calculated by WMI and is set to default value.

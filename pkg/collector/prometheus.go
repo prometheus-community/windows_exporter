@@ -92,20 +92,11 @@ func (p *Prometheus) Describe(_ chan<- *prometheus.Desc) {}
 func (p *Prometheus) Collect(ch chan<- prometheus.Metric) {
 	t := time.Now()
 
-	// Scrape Performance Counters for all collectors
-	scrapeContext, err := p.metricCollectors.PrepareScrapeContext()
-
 	ch <- prometheus.MustNewConstMetric(
 		p.snapshotDuration,
 		prometheus.GaugeValue,
 		time.Since(t).Seconds(),
 	)
-
-	if err != nil {
-		ch <- prometheus.NewInvalidMetric(p.collectorScrapeSuccessDesc, fmt.Errorf("failed to prepare scrape: %w", err))
-
-		return
-	}
 
 	// WaitGroup to wait for all collectors to finish
 	wg := sync.WaitGroup{}
@@ -123,7 +114,7 @@ func (p *Prometheus) Collect(ch chan<- prometheus.Metric) {
 
 			collectorStatusCh <- collectorStatus{
 				name:       name,
-				statusCode: p.execute(name, metricsCollector, scrapeContext, ch),
+				statusCode: p.execute(name, metricsCollector, ch),
 			}
 		}(name, metricsCollector)
 	}
@@ -166,7 +157,7 @@ func (p *Prometheus) Collect(ch chan<- prometheus.Metric) {
 	)
 }
 
-func (p *Prometheus) execute(name string, c Collector, scrapeCtx *types.ScrapeContext, ch chan<- prometheus.Metric) collectorStatusCode {
+func (p *Prometheus) execute(name string, c Collector, ch chan<- prometheus.Metric) collectorStatusCode {
 	var (
 		err        error
 		numMetrics int
@@ -194,7 +185,7 @@ func (p *Prometheus) execute(name string, c Collector, scrapeCtx *types.ScrapeCo
 			close(bufCh)
 		}()
 
-		errCh <- c.Collect(scrapeCtx, p.logger, bufCh)
+		errCh <- c.Collect(bufCh)
 	}()
 
 	wg := sync.WaitGroup{}

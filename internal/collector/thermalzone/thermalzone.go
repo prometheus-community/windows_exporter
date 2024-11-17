@@ -50,11 +50,7 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
-	return []string{}, nil
-}
-
-func (c *Collector) Close(_ *slog.Logger) error {
+func (c *Collector) Close() error {
 	return nil
 }
 
@@ -101,14 +97,9 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	logger = logger.With(slog.String("collector", Name))
+func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	if err := c.collect(ch); err != nil {
-		logger.Error("failed collecting thermalzone metrics",
-			slog.Any("err", err),
-		)
-
-		return err
+		return fmt.Errorf("failed collecting thermalzone metrics: %w", err)
 	}
 
 	return nil

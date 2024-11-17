@@ -10,10 +10,7 @@ import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata/perftypes"
-	v1 "github.com/prometheus-community/windows_exporter/internal/perfdata/v1"
 	"github.com/prometheus-community/windows_exporter/internal/types"
-	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -27,7 +24,7 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	config Config
 
-	perfDataCollector perfdata.Collector
+	perfDataCollector *perfdata.Collector
 
 	acksTotal                                        *prometheus.Desc
 	activeQueueLength                                *prometheus.Desc
@@ -76,54 +73,44 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
-	if utils.PDHEnabled() {
-		return []string{}, nil
-	}
+func (c *Collector) Close() error {
+	c.perfDataCollector.Close()
 
-	return []string{"DHCP Server"}, nil
-}
-
-func (c *Collector) Close(_ *slog.Logger) error {
 	return nil
 }
 
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
-	if utils.PDHEnabled() {
-		counters := []string{
-			acksTotal,
-			activeQueueLength,
-			conflictCheckQueueLength,
-			declinesTotal,
-			deniedDueToMatch,
-			deniedDueToNonMatch,
-			discoversTotal,
-			duplicatesDroppedTotal,
-			failoverBndAckReceivedTotal,
-			failoverBndAckSentTotal,
-			failoverBndUpdDropped,
-			failoverBndUpdPendingOutboundQueue,
-			failoverBndUpdReceivedTotal,
-			failoverBndUpdSentTotal,
-			failoverTransitionsCommunicationInterruptedState,
-			failoverTransitionsPartnerDownState,
-			failoverTransitionsRecoverState,
-			informsTotal,
-			nacksTotal,
-			offerQueueLength,
-			offersTotal,
-			packetsExpiredTotal,
-			packetsReceivedTotal,
-			releasesTotal,
-			requestsTotal,
-		}
+	var err error
 
-		var err error
-
-		c.perfDataCollector, err = perfdata.NewCollector(perfdata.V1, "DHCP Server", perfdata.AllInstances, counters)
-		if err != nil {
-			return fmt.Errorf("failed to create DHCP Server collector: %w", err)
-		}
+	c.perfDataCollector, err = perfdata.NewCollector("DHCP Server", perfdata.InstanceAll, []string{
+		acksTotal,
+		activeQueueLength,
+		conflictCheckQueueLength,
+		declinesTotal,
+		deniedDueToMatch,
+		deniedDueToNonMatch,
+		discoversTotal,
+		duplicatesDroppedTotal,
+		failoverBndAckReceivedTotal,
+		failoverBndAckSentTotal,
+		failoverBndUpdDropped,
+		failoverBndUpdPendingOutboundQueue,
+		failoverBndUpdReceivedTotal,
+		failoverBndUpdSentTotal,
+		failoverTransitionsCommunicationInterruptedState,
+		failoverTransitionsPartnerDownState,
+		failoverTransitionsRecoverState,
+		informsTotal,
+		nacksTotal,
+		offerQueueLength,
+		offersTotal,
+		packetsExpiredTotal,
+		packetsReceivedTotal,
+		releasesTotal,
+		requestsTotal,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create DHCP Server collector: %w", err)
 	}
 
 	c.packetsReceivedTotal = prometheus.NewDesc(
@@ -280,183 +267,13 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 	return nil
 }
 
-func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	if utils.PDHEnabled() {
-		return c.collectPDH(ch)
-	}
-
-	logger = logger.With(slog.String("collector", Name))
-
-	return c.collect(ctx, logger, ch)
-}
-
-func (c *Collector) collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	var dhcpPerfs []dhcpPerf
-
-	if err := v1.UnmarshalObject(ctx.PerfObjects["DHCP Server"], &dhcpPerfs, logger); err != nil {
-		return err
-	}
-
-	ch <- prometheus.MustNewConstMetric(
-		c.packetsReceivedTotal,
-		prometheus.CounterValue,
-		dhcpPerfs[0].PacketsReceivedTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.duplicatesDroppedTotal,
-		prometheus.CounterValue,
-		dhcpPerfs[0].DuplicatesDroppedTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.packetsExpiredTotal,
-		prometheus.CounterValue,
-		dhcpPerfs[0].PacketsExpiredTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.activeQueueLength,
-		prometheus.GaugeValue,
-		dhcpPerfs[0].ActiveQueueLength,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.conflictCheckQueueLength,
-		prometheus.GaugeValue,
-		dhcpPerfs[0].ConflictCheckQueueLength,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.discoversTotal,
-		prometheus.CounterValue,
-		dhcpPerfs[0].DiscoversTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.offersTotal,
-		prometheus.CounterValue,
-		dhcpPerfs[0].OffersTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.requestsTotal,
-		prometheus.CounterValue,
-		dhcpPerfs[0].RequestsTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.informsTotal,
-		prometheus.CounterValue,
-		dhcpPerfs[0].InformsTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.acksTotal,
-		prometheus.CounterValue,
-		dhcpPerfs[0].AcksTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.nACKsTotal,
-		prometheus.CounterValue,
-		dhcpPerfs[0].NacksTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.declinesTotal,
-		prometheus.CounterValue,
-		dhcpPerfs[0].DeclinesTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.releasesTotal,
-		prometheus.CounterValue,
-		dhcpPerfs[0].ReleasesTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.offerQueueLength,
-		prometheus.GaugeValue,
-		dhcpPerfs[0].OfferQueueLength,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.deniedDueToMatch,
-		prometheus.CounterValue,
-		dhcpPerfs[0].DeniedDueToMatch,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.deniedDueToNonMatch,
-		prometheus.CounterValue,
-		dhcpPerfs[0].DeniedDueToNonMatch,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.failoverBndUpdSentTotal,
-		prometheus.CounterValue,
-		dhcpPerfs[0].FailoverBndUpdSentTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.failoverBndUpdReceivedTotal,
-		prometheus.CounterValue,
-		dhcpPerfs[0].FailoverBndUpdReceivedTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.failoverBndAckSentTotal,
-		prometheus.CounterValue,
-		dhcpPerfs[0].FailoverBndAckSentTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.failoverBndAckReceivedTotal,
-		prometheus.CounterValue,
-		dhcpPerfs[0].FailoverBndAckReceivedTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.failoverBndUpdPendingOutboundQueue,
-		prometheus.GaugeValue,
-		dhcpPerfs[0].FailoverBndUpdPendingOutboundQueue,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.failoverTransitionsCommunicationInterruptedState,
-		prometheus.CounterValue,
-		dhcpPerfs[0].FailoverTransitionsCommunicationInterruptedState,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.failoverTransitionsPartnerDownState,
-		prometheus.CounterValue,
-		dhcpPerfs[0].FailoverTransitionsPartnerDownState,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.failoverTransitionsRecoverState,
-		prometheus.CounterValue,
-		dhcpPerfs[0].FailoverTransitionsRecoverState,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.failoverBndUpdDropped,
-		prometheus.CounterValue,
-		dhcpPerfs[0].FailoverBndUpdDropped,
-	)
-
-	return nil
-}
-
-func (c *Collector) collectPDH(ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	perfData, err := c.perfDataCollector.Collect()
 	if err != nil {
 		return fmt.Errorf("failed to collect DHCP Server metrics: %w", err)
 	}
 
-	data, ok := perfData[perftypes.EmptyInstance]
+	data, ok := perfData[perfdata.EmptyInstance]
 	if !ok {
 		return errors.New("perflib query for DHCP Server returned empty result set")
 	}

@@ -1,6 +1,9 @@
+//go:build windows
+
 package wtsapi32
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"unsafe"
@@ -129,7 +132,7 @@ func WTSOpenServer(server string) (windows.Handle, error) {
 func WTSCloseServer(server windows.Handle) error {
 	r1, _, err := procWTSCloseServer.Call(uintptr(server))
 
-	if r1 != 1 {
+	if r1 != 1 && !errors.Is(err, windows.ERROR_SUCCESS) {
 		return fmt.Errorf("failed to close server: %w", err)
 	}
 
@@ -170,8 +173,7 @@ func WTSEnumerateSessionsEx(server windows.Handle, logger *slog.Logger) ([]WTSSe
 
 	if sessionInfoPointer != 0 {
 		defer func(class WTSTypeClass, pMemory uintptr, NumberOfEntries uint32) {
-			err := WTSFreeMemoryEx(class, pMemory, NumberOfEntries)
-			if err != nil {
+			if err := WTSFreeMemoryEx(class, pMemory, NumberOfEntries); err != nil {
 				logger.Warn("failed to free memory", "err", fmt.Errorf("WTSEnumerateSessionsEx: %w", err))
 			}
 		}(WTSTypeSessionInfoLevel1, sessionInfoPointer, count)

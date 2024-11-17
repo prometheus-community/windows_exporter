@@ -6,6 +6,10 @@ func MilliSecToSec(t float64) float64 {
 	return t / 1000
 }
 
+func MBToBytes(mb float64) float64 {
+	return mb * 1024 * 1024
+}
+
 func BoolToFloat(b bool) float64 {
 	if b {
 		return 1.0

@@ -7,7 +7,8 @@ package main
 //goland:noinspection GoUnsortedImport
 //nolint:gofumpt
 import (
-	"github.com/prometheus-community/windows_exporter/internal/initiate"
+	// Its important that we do these first so that we can register with the Windows service control ASAP to avoid timeouts.
+	"github.com/prometheus-community/windows_exporter/internal/windowsservice"
 
 	"context"
 	"errors"
@@ -19,7 +20,7 @@ import (
 	"os/signal"
 	"os/user"
 	"runtime"
-	"sort"
+	"slices"
 	"strings"
 	"time"
 
@@ -28,8 +29,6 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/httphandler"
 	"github.com/prometheus-community/windows_exporter/internal/log"
 	"github.com/prometheus-community/windows_exporter/internal/log/flag"
-	"github.com/prometheus-community/windows_exporter/internal/types"
-	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus-community/windows_exporter/pkg/collector"
 	"github.com/prometheus/common/version"
 	"github.com/prometheus/exporter-toolkit/web"
@@ -41,14 +40,14 @@ func main() {
 	exitCode := run()
 
 	// If we are running as a service, we need to signal the service control manager that we are done.
-	if !initiate.IsService {
+	if !windowsservice.IsService {
 		os.Exit(exitCode)
 	}
 
-	initiate.ExitCodeCh <- exitCode
+	windowsservice.ExitCodeCh <- exitCode
 
 	// Wait for the service control manager to signal that we are done.
-	<-initiate.StopCh
+	<-windowsservice.StopCh
 }
 
 func run() int {
@@ -79,11 +78,7 @@ func run() int {
 		enabledCollectors = app.Flag(
 			"collectors.enabled",
 			"Comma-separated list of collectors to use. Use '[defaults]' as a placeholder for all the collectors enabled by default.").
-			Default(types.DefaultCollectors).String()
-		printCollectors = app.Flag(
-			"collectors.print",
-			"If true, print available collectors and exit.",
-		).Bool()
+			Default(collector.DefaultCollectors).String()
 		timeoutMargin = app.Flag(
 			"scrape.timeout-margin",
 			"Seconds to subtract from the timeout allowed by the client. Tune to allow for overhead or high loads.",
@@ -173,12 +168,6 @@ func run() int {
 
 	logger.Debug("Logging has Started")
 
-	if *printCollectors {
-		printCollectorsToStdout()
-
-		return 0
-	}
-
 	if err = setPriorityWindows(logger, os.Getpid(), *processPriority); err != nil {
 		logger.Error("failed to set process priority",
 			slog.Any("err", err),
@@ -187,9 +176,11 @@ func run() int {
 		return 1
 	}
 
-	enabledCollectorList := utils.ExpandEnabledCollectors(*enabledCollectors)
+	enabledCollectorList := expandEnabledCollectors(*enabledCollectors)
 	if err := collectors.Enable(enabledCollectorList); err != nil {
-		logger.Error(err.Error())
+		logger.Error("Couldn't enable collectors",
+			slog.Any("err", err),
+		)
 
 		return 1
 	}
@@ -203,21 +194,9 @@ func run() int {
 		return 1
 	}
 
-	if err = collectors.SetPerfCounterQuery(logger); err != nil {
-		logger.Error("Couldn't set performance counter query",
-			slog.Any("err", err),
-		)
-
-		return 1
-	}
-
 	logCurrentUser(logger)
 
 	logger.Info("Enabled collectors: " + strings.Join(enabledCollectorList, ", "))
-
-	if utils.PDHEnabled() {
-		logger.Info("Using performance data helper from PHD.dll for performance counter collection. This is in experimental state.")
-	}
 
 	mux := http.NewServeMux()
 	mux.Handle("GET /health", httphandler.NewHealthHandler())
@@ -260,7 +239,7 @@ func run() int {
 			errCh <- err
 		}
 
-		errCh <- nil
+		close(errCh)
 	}()
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
@@ -269,7 +248,7 @@ func run() int {
 	select {
 	case <-ctx.Done():
 		logger.Info("Shutting down windows_exporter via kill signal")
-	case <-initiate.StopCh:
+	case <-windowsservice.StopCh:
 		logger.Info("Shutting down windows_exporter via service control")
 	case err := <-errCh:
 		if err != nil {
@@ -289,17 +268,6 @@ func run() int {
 	logger.Info("windows_exporter has shut down")
 
 	return 0
-}
-
-func printCollectorsToStdout() {
-	collectorNames := collector.Available()
-	sort.Strings(collectorNames)
-
-	fmt.Println("Available collectors:") //nolint:forbidigo
-
-	for _, n := range collectorNames {
-		fmt.Printf(" - %s\n", n) //nolint:forbidigo
-	}
 }
 
 func logCurrentUser(logger *slog.Logger) {
@@ -358,4 +326,10 @@ func setPriorityWindows(logger *slog.Logger, pid int, priority string) error {
 	}
 
 	return nil
+}
+
+func expandEnabledCollectors(enabled string) []string {
+	expanded := strings.ReplaceAll(enabled, "[defaults]", collector.DefaultCollectors)
+
+	return slices.Compact(strings.Split(expanded, ","))
 }

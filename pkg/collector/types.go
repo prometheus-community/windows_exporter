@@ -5,9 +5,10 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
-	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
+
+const DefaultCollectors = "cpu,cs,memory,logical_disk,physical_disk,net,os,service,system"
 
 type MetricCollectors struct {
 	Collectors       Map
@@ -22,13 +23,12 @@ type (
 
 // Collector interface that a collector has to implement.
 type Collector interface {
-	Build(logger *slog.Logger, miSession *mi.Session) error
-	// Close closes the collector
-	Close(logger *slog.Logger) error
 	// GetName get the name of the collector
 	GetName() string
-	// GetPerfCounter returns the perf counter required by the collector
-	GetPerfCounter(logger *slog.Logger) ([]string, error)
+	// Build build the collector
+	Build(logger *slog.Logger, miSession *mi.Session) error
 	// Collect Get new metrics and expose them via prometheus registry.
-	Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) (err error)
+	Collect(ch chan<- prometheus.Metric) (err error)
+	// Close closes the collector
+	Close() error
 }

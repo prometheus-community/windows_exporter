@@ -33,6 +33,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/netframework"
 	"github.com/prometheus-community/windows_exporter/internal/collector/nps"
 	"github.com/prometheus-community/windows_exporter/internal/collector/os"
+	"github.com/prometheus-community/windows_exporter/internal/collector/pagefile"
 	"github.com/prometheus-community/windows_exporter/internal/collector/perfdata"
 	"github.com/prometheus-community/windows_exporter/internal/collector/physical_disk"
 	"github.com/prometheus-community/windows_exporter/internal/collector/printer"
@@ -49,6 +50,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/textfile"
 	"github.com/prometheus-community/windows_exporter/internal/collector/thermalzone"
 	"github.com/prometheus-community/windows_exporter/internal/collector/time"
+	"github.com/prometheus-community/windows_exporter/internal/collector/udp"
 	"github.com/prometheus-community/windows_exporter/internal/collector/update"
 	"github.com/prometheus-community/windows_exporter/internal/collector/vmware"
 )
@@ -88,6 +90,7 @@ var BuildersWithFlags = map[string]BuilderWithFlags[Collector]{
 	netframework.Name:      NewBuilderWithFlags(netframework.NewWithFlags),
 	nps.Name:               NewBuilderWithFlags(nps.NewWithFlags),
 	os.Name:                NewBuilderWithFlags(os.NewWithFlags),
+	pagefile.Name:          NewBuilderWithFlags(pagefile.NewWithFlags),
 	perfdata.Name:          NewBuilderWithFlags(perfdata.NewWithFlags),
 	physical_disk.Name:     NewBuilderWithFlags(physical_disk.NewWithFlags),
 	printer.Name:           NewBuilderWithFlags(printer.NewWithFlags),
@@ -104,6 +107,7 @@ var BuildersWithFlags = map[string]BuilderWithFlags[Collector]{
 	textfile.Name:          NewBuilderWithFlags(textfile.NewWithFlags),
 	thermalzone.Name:       NewBuilderWithFlags(thermalzone.NewWithFlags),
 	time.Name:              NewBuilderWithFlags(time.NewWithFlags),
+	udp.Name:               NewBuilderWithFlags(udp.NewWithFlags),
 	update.Name:            NewBuilderWithFlags(update.NewWithFlags),
 	vmware.Name:            NewBuilderWithFlags(vmware.NewWithFlags),
 }

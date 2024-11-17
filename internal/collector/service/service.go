@@ -34,6 +34,8 @@ var ConfigDefaults = Config{
 type Collector struct {
 	config Config
 
+	logger *slog.Logger
+
 	state     *prometheus.Desc
 	processID *prometheus.Desc
 	info      *prometheus.Desc
@@ -102,15 +104,11 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
-	return []string{}, nil
-}
-
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
-	logger = logger.With(slog.String("collector", Name))
+	c.logger = logger.With(slog.String("collector", Name))
 
 	if c.config.ServiceInclude.String() == "^(?:.*)$" && c.config.ServiceExclude.String() == "^(?:)$" {
-		logger.Warn("No filters specified for service collector. This will generate a very large number of metrics!")
+		c.logger.Warn("No filters specified for service collector. This will generate a very large number of metrics!")
 	}
 
 	c.info = prometheus.NewDesc(
@@ -149,9 +147,9 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	return nil
 }
 
-func (c *Collector) Close(logger *slog.Logger) error {
+func (c *Collector) Close() error {
 	if err := c.serviceManagerHandle.Disconnect(); err != nil {
-		logger.Warn("Failed to disconnect from scm",
+		c.logger.Warn("Failed to disconnect from scm",
 			slog.Any("err", err),
 		)
 	}
@@ -161,32 +159,14 @@ func (c *Collector) Close(logger *slog.Logger) error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	logger = logger.With(slog.String("collector", Name))
-
-	if err := c.collect(logger, ch); err != nil {
-		logger.Error("failed collecting API service metrics:",
-			slog.Any("err", err),
-		)
-
-		return fmt.Errorf("failed collecting API service metrics: %w", err)
-	}
-
-	return nil
-}
-
-func (c *Collector) collect(logger *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	services, err := c.queryAllServices()
 	if err != nil {
-		logger.Warn("Failed to query services",
-			slog.Any("err", err),
-		)
-
-		return err
+		return fmt.Errorf("failed to query services: %w", err)
 	}
 
-	if services == nil {
-		logger.Warn("No services queried")
+	if len(services) == 0 {
+		c.logger.Warn("No services queried")
 
 		return nil
 	}
@@ -199,8 +179,8 @@ func (c *Collector) collect(logger *slog.Logger, ch chan<- prometheus.Metric) er
 			continue
 		}
 
-		if err := c.collectService(ch, logger, service); err != nil {
-			logger.Warn("failed collecting service info",
+		if err := c.collectService(ch, service); err != nil {
+			c.logger.Warn("failed collecting service info",
 				slog.Any("err", err),
 				slog.String("service", windows.UTF16PtrToString(service.ServiceName)),
 			)
@@ -228,7 +208,7 @@ var apiStartModeValues = map[uint32]string{
 	windows.SERVICE_SYSTEM_START: "system",
 }
 
-func (c *Collector) collectService(ch chan<- prometheus.Metric, logger *slog.Logger, service windows.ENUM_SERVICE_STATUS_PROCESS) error {
+func (c *Collector) collectService(ch chan<- prometheus.Metric, service windows.ENUM_SERVICE_STATUS_PROCESS) error {
 	// Open connection for service handler.
 	serviceHandle, err := windows.OpenService(c.serviceManagerHandle.Handle, service.ServiceName, windows.SERVICE_QUERY_CONFIG)
 	if err != nil {
@@ -241,7 +221,7 @@ func (c *Collector) collectService(ch chan<- prometheus.Metric, logger *slog.Log
 	serviceManager := &mgr.Service{Name: serviceNameString, Handle: serviceHandle}
 	defer func(serviceManager *mgr.Service) {
 		if err := serviceManager.Close(); err != nil {
-			logger.Warn("failed to close service handle",
+			c.logger.Warn("failed to close service handle",
 				slog.Any("err", err),
 				slog.String("service", serviceNameString),
 			)
@@ -255,7 +235,7 @@ func (c *Collector) collectService(ch chan<- prometheus.Metric, logger *slog.Log
 			return fmt.Errorf("failed to get service configuration: %w", err)
 		}
 
-		logger.Debug("failed collecting service",
+		c.logger.Debug("failed collecting service",
 			slog.Any("err", err),
 			slog.String("service", serviceNameString),
 		)
@@ -305,31 +285,35 @@ func (c *Collector) collectService(ch chan<- prometheus.Metric, logger *slog.Log
 		)
 	}
 
+	if service.ServiceStatusProcess.ProcessId == 0 {
+		return nil
+	}
+
 	processID := strconv.FormatUint(uint64(service.ServiceStatusProcess.ProcessId), 10)
 
-	if processID != "0" { //nolint: nestif
-		processStartTime, err := getProcessStartTime(logger, service.ServiceStatusProcess.ProcessId)
-		if err != nil {
-			if errors.Is(err, windows.ERROR_ACCESS_DENIED) {
-				logger.Debug("failed to get process start time",
-					slog.String("service", serviceNameString),
-					slog.Any("err", err),
-				)
-			} else {
-				logger.Warn("failed to get process start time",
-					slog.String("service", serviceNameString),
-					slog.Any("err", err),
-				)
-			}
-		} else {
-			ch <- prometheus.MustNewConstMetric(
-				c.processID,
-				prometheus.GaugeValue,
-				float64(processStartTime/1_000_000_000),
-				serviceNameString,
-				processID,
-			)
-		}
+	processStartTime, err := c.getProcessStartTime(service.ServiceStatusProcess.ProcessId)
+	if err == nil {
+		ch <- prometheus.MustNewConstMetric(
+			c.processID,
+			prometheus.GaugeValue,
+			float64(processStartTime/1_000_000_000),
+			serviceNameString,
+			processID,
+		)
+
+		return nil
+	}
+
+	if errors.Is(err, windows.ERROR_ACCESS_DENIED) {
+		c.logger.Debug("failed to get process start time",
+			slog.String("service", serviceNameString),
+			slog.Any("err", err),
+		)
+	} else {
+		c.logger.Warn("failed to get process start time",
+			slog.String("service", serviceNameString),
+			slog.Any("err", err),
+		)
 	}
 
 	return nil
@@ -376,7 +360,7 @@ func (c *Collector) queryAllServices() ([]windows.ENUM_SERVICE_STATUS_PROCESS, e
 	}
 
 	if servicesReturned == 0 {
-		return nil, nil
+		return []windows.ENUM_SERVICE_STATUS_PROCESS{}, nil
 	}
 
 	services := unsafe.Slice((*windows.ENUM_SERVICE_STATUS_PROCESS)(unsafe.Pointer(&buf[0])), int(servicesReturned))
@@ -384,7 +368,7 @@ func (c *Collector) queryAllServices() ([]windows.ENUM_SERVICE_STATUS_PROCESS, e
 	return services, nil
 }
 
-func getProcessStartTime(logger *slog.Logger, pid uint32) (uint64, error) {
+func (c *Collector) getProcessStartTime(pid uint32) (uint64, error) {
 	handle, err := windows.OpenProcess(windows.PROCESS_QUERY_LIMITED_INFORMATION, false, pid)
 	if err != nil {
 		return 0, fmt.Errorf("failed to open process %w", err)
@@ -393,19 +377,18 @@ func getProcessStartTime(logger *slog.Logger, pid uint32) (uint64, error) {
 	defer func(handle windows.Handle) {
 		err := windows.CloseHandle(handle)
 		if err != nil {
-			logger.Warn("failed to close process handle",
+			c.logger.Warn("failed to close process handle",
 				slog.Any("err", err),
 			)
 		}
 	}(handle)
 
-	var creation windows.Filetime
-
-	var exit windows.Filetime
-
-	var krn windows.Filetime
-
-	var user windows.Filetime
+	var (
+		creation windows.Filetime
+		exit     windows.Filetime
+		krn      windows.Filetime
+		user     windows.Filetime
+	)
 
 	err = windows.GetProcessTimes(handle, &creation, &exit, &krn, &user)
 	if err != nil {

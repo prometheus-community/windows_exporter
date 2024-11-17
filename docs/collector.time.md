@@ -5,15 +5,19 @@ If the Windows Time Service is stopped after collection has started, collector m
 
 Please note the Time Service perflib counters are only available on [Windows Server 2016 or newer](https://docs.microsoft.com/en-us/windows-server/networking/windows-time-service/windows-server-2016-improvements).
 
-|                     |         |
-|---------------------|---------|
-| Metric name prefix  | `time`  |
-| Data source         | Perflib |
-| Enabled by default? | No      |
+|                     |        |
+|---------------------|--------|
+| Metric name prefix  | `time` |
+| Data source         | PDH    |
+| Enabled by default? | No     |
 
 ## Flags
 
-None
+### `--collectors.time.enabled`
+Comma-separated list of collectors to use, for example: `--collectors.time.enabled=ntp,system_time`.
+Matching is case-sensitive.
+
+
 
 ## Metrics
 

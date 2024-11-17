@@ -1,3 +1,5 @@
+//go:build windows
+
 package tcp
 
 // Win32_PerfRawData_Tcpip_TCPv4 docs

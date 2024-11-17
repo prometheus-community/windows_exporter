@@ -1,6 +1,12 @@
 # windows_exporter
 
-![Build Status](https://github.com/prometheus-community/windows_exporter/workflows/windows_exporter%20CI/CD/badge.svg)
+[![CI](https://github.com/prometheus-community/windows_exporter/actions/workflows/release.yml/badge.svg)](https://github.com/prometheus-community/windows_exporter)
+[![Linting](https://github.com/prometheus-community/windows_exporter/actions/workflows/lint.yml/badge.svg)](https://github.com/prometheus-community/windows_exporter)
+[![GitHub license](https://img.shields.io/github/license/prometheus-community/windows_exporter)](https://github.com/prometheus-community/windows_exporter/blob/master/LICENSE.txt)
+[![Current Release](https://img.shields.io/github/release/prometheus-community/windows_exporter.svg?logo=github)](https://github.com/prometheus-community/windows_exporter/releases/latest)
+[![GitHub Repo stars](https://img.shields.io/github/stars/prometheus-community/windows_exporter?style=flat&logo=github)](https://github.com/prometheus-community/windows_exporter/stargazers)
+[![GitHub all releases](https://img.shields.io/github/downloads/prometheus-community/windows_exporter/total?logo=github)](https://github.com/prometheus-community/windows_exporter/releases/latest)
+[![Go Report Card](https://goreportcard.com/badge/github.com/prometheus-community/windows_exporter)](https://goreportcard.com/report/github.com/prometheus-community/windows_exporter)
 
 A Prometheus exporter for Windows machines.
 
@@ -35,6 +41,7 @@ Name     | Description | Enabled by default
 [netframework](docs/collector.netframework.md) | .NET Framework metrics |
 [net](docs/collector.net.md) | Network interface I/O | &#10003;
 [os](docs/collector.os.md) | OS metrics (memory, processes, users) | &#10003;
+[pagefile](docs/collector.pagefile.md) | pagefile metrics |
 [perfdata](docs/collector.perfdata.md) | Custom perfdata metrics |
 [physical_disk](docs/collector.physical_disk.md) | physical disk metrics | &#10003;
 [printer](docs/collector.printer.md) | Printer metrics |
@@ -51,6 +58,7 @@ Name     | Description | Enabled by default
 [textfile](docs/collector.textfile.md) | Read prometheus metrics from a text file |
 [thermalzone](docs/collector.thermalzone.md) | Thermal information |
 [time](docs/collector.time.md) | Windows Time Service |
+[udp](docs/collector.udp.md) | UDP connections |
 [update](docs/collector.update.md) | Windows Update Service |
 [vmware](docs/collector.vmware.md) | Performance counters installed by the Vmware Guest agent |
 

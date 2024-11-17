@@ -29,6 +29,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/netframework"
 	"github.com/prometheus-community/windows_exporter/internal/collector/nps"
 	"github.com/prometheus-community/windows_exporter/internal/collector/os"
+	"github.com/prometheus-community/windows_exporter/internal/collector/pagefile"
 	"github.com/prometheus-community/windows_exporter/internal/collector/perfdata"
 	"github.com/prometheus-community/windows_exporter/internal/collector/physical_disk"
 	"github.com/prometheus-community/windows_exporter/internal/collector/printer"
@@ -45,6 +46,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/textfile"
 	"github.com/prometheus-community/windows_exporter/internal/collector/thermalzone"
 	"github.com/prometheus-community/windows_exporter/internal/collector/time"
+	"github.com/prometheus-community/windows_exporter/internal/collector/udp"
 	"github.com/prometheus-community/windows_exporter/internal/collector/update"
 	"github.com/prometheus-community/windows_exporter/internal/collector/vmware"
 )
@@ -78,6 +80,7 @@ type Config struct {
 	NetFramework     netframework.Config      `yaml:"net_framework"`
 	Nps              nps.Config               `yaml:"nps"`
 	OS               os.Config                `yaml:"os"`
+	Paging           pagefile.Config          `yaml:"paging"`
 	PerfData         perfdata.Config          `yaml:"perf_data"`
 	PhysicalDisk     physical_disk.Config     `yaml:"physical_disk"`
 	Printer          printer.Config           `yaml:"printer"`
@@ -94,6 +97,7 @@ type Config struct {
 	Textfile         textfile.Config          `yaml:"textfile"`
 	ThermalZone      thermalzone.Config       `yaml:"thermal_zone"`
 	Time             time.Config              `yaml:"time"`
+	UDP              udp.Config               `yaml:"udp"`
 	Update           update.Config            `yaml:"update"`
 	Vmware           vmware.Config            `yaml:"vmware"`
 }
@@ -130,6 +134,7 @@ var ConfigDefaults = Config{
 	NetFramework:     netframework.ConfigDefaults,
 	Nps:              nps.ConfigDefaults,
 	OS:               os.ConfigDefaults,
+	Paging:           pagefile.ConfigDefaults,
 	PerfData:         perfdata.ConfigDefaults,
 	PhysicalDisk:     physical_disk.ConfigDefaults,
 	Printer:          printer.ConfigDefaults,
@@ -146,6 +151,7 @@ var ConfigDefaults = Config{
 	Textfile:         textfile.ConfigDefaults,
 	ThermalZone:      thermalzone.ConfigDefaults,
 	Time:             time.ConfigDefaults,
+	UDP:              udp.ConfigDefaults,
 	Update:           update.ConfigDefaults,
 	Vmware:           vmware.ConfigDefaults,
 }

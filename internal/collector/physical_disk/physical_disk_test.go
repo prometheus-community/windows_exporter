@@ -1,10 +1,13 @@
+//go:build windows
+
 package physical_disk_test
 
 import (
 	"testing"
 
 	"github.com/prometheus-community/windows_exporter/internal/collector/physical_disk"
-	"github.com/prometheus-community/windows_exporter/internal/testutils"
+	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/utils/testutils"
 )
 
 func BenchmarkCollector(b *testing.B) {
@@ -12,7 +15,7 @@ func BenchmarkCollector(b *testing.B) {
 }
 
 func TestCollector(t *testing.T) {
-	t.Skip()
-
-	testutils.TestCollector(t, physical_disk.New, nil)
+	testutils.TestCollector(t, physical_disk.New, &physical_disk.Config{
+		DiskInclude: types.RegExpAny,
+	})
 }

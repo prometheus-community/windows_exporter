@@ -13,7 +13,6 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
 	"github.com/prometheus-community/windows_exporter/internal/types"
-	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -54,16 +53,16 @@ var ConfigDefaults = Config{
 type Collector struct {
 	config Config
 
-	perfDataCollectorADAccessProcesses           perfdata.Collector
-	perfDataCollectorTransportQueues             perfdata.Collector
-	perfDataCollectorHttpProxy                   perfdata.Collector
-	perfDataCollectorActiveSync                  perfdata.Collector
-	perfDataCollectorAvailabilityService         perfdata.Collector
-	perfDataCollectorOWA                         perfdata.Collector
-	perfDataCollectorAutoDiscover                perfdata.Collector
-	perfDataCollectorWorkloadManagementWorkloads perfdata.Collector
-	perfDataCollectorRpcClientAccess             perfdata.Collector
-	perfDataCollectorMapiHttpEmsmdb              perfdata.Collector
+	perfDataCollectorADAccessProcesses           *perfdata.Collector
+	perfDataCollectorTransportQueues             *perfdata.Collector
+	perfDataCollectorHttpProxy                   *perfdata.Collector
+	perfDataCollectorActiveSync                  *perfdata.Collector
+	perfDataCollectorAvailabilityService         *perfdata.Collector
+	perfDataCollectorOWA                         *perfdata.Collector
+	perfDataCollectorAutoDiscover                *perfdata.Collector
+	perfDataCollectorWorkloadManagementWorkloads *perfdata.Collector
+	perfDataCollectorRpcClientAccess             *perfdata.Collector
+	perfDataCollectorMapiHttpEmsmdb              *perfdata.Collector
 
 	activeMailboxDeliveryQueueLength        *prometheus.Desc
 	activeSyncRequestsPerSec                *prometheus.Desc
@@ -184,48 +183,27 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
-	if utils.PDHEnabled() {
-		return []string{}, nil
-	}
-
-	return []string{
-		"MSExchange ADAccess Processes",
-		"MSExchangeTransport Queues",
-		"MSExchange HttpProxy",
-		"MSExchange ActiveSync",
-		"MSExchange Availability Service",
-		"MSExchange OWA",
-		"MSExchangeAutodiscover",
-		"MSExchange WorkloadManagement Workloads",
-		"MSExchange RpcClientAccess",
-		"MSExchange MapiHttp Emsmdb",
-	}, nil
-}
-
-func (c *Collector) Close(_ *slog.Logger) error {
+func (c *Collector) Close() error {
 	return nil
 }
 
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
-	if utils.PDHEnabled() {
-		collectorFuncs := map[string]func() error{
-			adAccessProcesses:   c.buildADAccessProcesses,
-			transportQueues:     c.buildTransportQueues,
-			httpProxy:           c.buildHTTPProxy,
-			activeSync:          c.buildActiveSync,
-			availabilityService: c.buildAvailabilityService,
-			outlookWebAccess:    c.buildOWA,
-			autoDiscover:        c.buildAutoDiscover,
-			workloadManagement:  c.buildWorkloadManagementWorkloads,
-			rpcClientAccess:     c.buildRPC,
-			mapiHttpEmsmdb:      c.buildMapiHttpEmsmdb,
-		}
+	collectorFuncs := map[string]func() error{
+		adAccessProcesses:   c.buildADAccessProcesses,
+		transportQueues:     c.buildTransportQueues,
+		httpProxy:           c.buildHTTPProxy,
+		activeSync:          c.buildActiveSync,
+		availabilityService: c.buildAvailabilityService,
+		outlookWebAccess:    c.buildOWA,
+		autoDiscover:        c.buildAutoDiscover,
+		workloadManagement:  c.buildWorkloadManagementWorkloads,
+		rpcClientAccess:     c.buildRPC,
+		mapiHttpEmsmdb:      c.buildMapiHttpEmsmdb,
+	}
 
-		for _, collectorName := range c.config.CollectorsEnabled {
-			if err := collectorFuncs[collectorName](); err != nil {
-				return err
-			}
+	for _, collectorName := range c.config.CollectorsEnabled {
+		if err := collectorFuncs[collectorName](); err != nil {
+			return err
 		}
 	}
 
@@ -282,13 +260,8 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 }
 
 // Collect collects exchange metrics and sends them to prometheus.
-func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	if utils.PDHEnabled() {
-		return c.collectPDH(ch)
-	}
-
-	logger = logger.With(slog.String("collector", Name))
-	collectorFuncs := map[string]func(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error{
+func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
+	collectorFuncs := map[string]func(ch chan<- prometheus.Metric) error{
 		adAccessProcesses:   c.collectADAccessProcesses,
 		transportQueues:     c.collectTransportQueues,
 		httpProxy:           c.collectHTTPProxy,
@@ -299,34 +272,6 @@ func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch ch
 		workloadManagement:  c.collectWorkloadManagementWorkloads,
 		rpcClientAccess:     c.collectRPC,
 		mapiHttpEmsmdb:      c.collectMapiHttpEmsmdb,
-	}
-
-	for _, collectorName := range c.config.CollectorsEnabled {
-		if err := collectorFuncs[collectorName](ctx, logger, ch); err != nil {
-			logger.Error("Error in "+collectorName,
-				slog.Any("err", err),
-			)
-
-			return err
-		}
-	}
-
-	return nil
-}
-
-// Collect collects exchange metrics and sends them to prometheus.
-func (c *Collector) collectPDH(ch chan<- prometheus.Metric) error {
-	collectorFuncs := map[string]func(ch chan<- prometheus.Metric) error{
-		adAccessProcesses:   c.collectPDHADAccessProcesses,
-		transportQueues:     c.collectPDHTransportQueues,
-		httpProxy:           c.collectPDHHTTPProxy,
-		activeSync:          c.collectPDHActiveSync,
-		availabilityService: c.collectPDHAvailabilityService,
-		outlookWebAccess:    c.collectPDHOWA,
-		autoDiscover:        c.collectPDHAutoDiscover,
-		workloadManagement:  c.collectPDHWorkloadManagementWorkloads,
-		rpcClientAccess:     c.collectPDHRPC,
-		mapiHttpEmsmdb:      c.collectPDHMapiHttpEmsmdb,
 	}
 
 	errs := make([]error, len(c.config.CollectorsEnabled))
