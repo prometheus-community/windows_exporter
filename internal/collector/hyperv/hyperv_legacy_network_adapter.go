@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	v2 "github.com/prometheus-community/windows_exporter/internal/perfdata/v2"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -42,7 +41,7 @@ func (c *Collector) buildLegacyNetworkAdapter() error {
 		legacyNetworkAdapterFramesReceived,
 		legacyNetworkAdapterFramesSent,
 	})
-	if err != nil && !errors.Is(err, v2.ErrNoData) {
+	if err != nil && !errors.Is(err, perfdata.ErrNoData) {
 		return fmt.Errorf("failed to create Hyper-V Legacy Network Adapter collector: %w", err)
 	}
 
@@ -88,7 +87,7 @@ func (c *Collector) buildLegacyNetworkAdapter() error {
 
 func (c *Collector) collectLegacyNetworkAdapter(ch chan<- prometheus.Metric) error {
 	data, err := c.perfDataCollectorLegacyNetworkAdapter.Collect()
-	if err != nil && !errors.Is(err, v2.ErrNoData) {
+	if err != nil && !errors.Is(err, perfdata.ErrNoData) {
 		return fmt.Errorf("failed to collect Hyper-V Legacy Network Adapter metrics: %w", err)
 	}
 

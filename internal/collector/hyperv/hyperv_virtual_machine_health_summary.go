@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata/perftypes"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -52,7 +51,7 @@ func (c *Collector) collectVirtualMachineHealthSummary(ch chan<- prometheus.Metr
 		return fmt.Errorf("failed to collect Hyper-V Virtual Machine Health Summary metrics: %w", err)
 	}
 
-	healthData, ok := data[perftypes.EmptyInstance]
+	healthData, ok := data[perfdata.EmptyInstance]
 	if !ok {
 		return errors.New("no data returned for Hyper-V Virtual Machine Health Summary")
 	}

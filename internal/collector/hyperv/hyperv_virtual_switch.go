@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	v2 "github.com/prometheus-community/windows_exporter/internal/perfdata/v2"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -86,7 +85,7 @@ func (c *Collector) buildVirtualSwitch() error {
 		virtualSwitchPacketsSent,
 		virtualSwitchPurgedMacAddresses,
 	})
-	if err != nil && !errors.Is(err, v2.ErrNoData) {
+	if err != nil && !errors.Is(err, perfdata.ErrNoData) {
 		return fmt.Errorf("failed to create Hyper-V Virtual Switch collector: %w", err)
 	}
 
@@ -222,7 +221,7 @@ func (c *Collector) buildVirtualSwitch() error {
 
 func (c *Collector) collectVirtualSwitch(ch chan<- prometheus.Metric) error {
 	data, err := c.perfDataCollectorVirtualSwitch.Collect()
-	if err != nil && !errors.Is(err, v2.ErrNoData) {
+	if err != nil && !errors.Is(err, perfdata.ErrNoData) {
 		return fmt.Errorf("failed to collect Hyper-V Virtual Switch metrics: %w", err)
 	}
 

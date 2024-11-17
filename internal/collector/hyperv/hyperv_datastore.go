@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	v2 "github.com/prometheus-community/windows_exporter/internal/perfdata/v2"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -163,7 +162,7 @@ func (c *Collector) buildDataStore() error {
 		dataStoreSetOperationLatencyMicro,
 		dataStoreSetOperationCount,
 	})
-	if err != nil && !errors.Is(err, v2.ErrNoData) {
+	if err != nil && !errors.Is(err, perfdata.ErrNoData) {
 		return fmt.Errorf("failed to create Hyper-V DataStore collector: %w", err)
 	}
 
@@ -449,7 +448,7 @@ func (c *Collector) buildDataStore() error {
 
 func (c *Collector) collectDataStore(ch chan<- prometheus.Metric) error {
 	data, err := c.perfDataCollectorDataStore.Collect()
-	if err != nil && !errors.Is(err, v2.ErrNoData) {
+	if err != nil && !errors.Is(err, perfdata.ErrNoData) {
 		return fmt.Errorf("failed to collect Hyper-V DataStore metrics: %w", err)
 	}
 
