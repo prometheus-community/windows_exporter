@@ -3,6 +3,7 @@
 package udp
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 
@@ -124,7 +125,7 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	}
 
 	if _, ok := data[perfdata.EmptyInstance]; !ok {
-		return fmt.Errorf("no data for UDPv4")
+		return errors.New("no data for UDPv4")
 	}
 
 	c.writeUDPCounters(ch, data[perfdata.EmptyInstance], []string{"ipv4"})
@@ -135,7 +136,7 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	}
 
 	if _, ok := data[perfdata.EmptyInstance]; !ok {
-		return fmt.Errorf("no data for UDPv6")
+		return errors.New("no data for UDPv6")
 	}
 
 	c.writeUDPCounters(ch, data[perfdata.EmptyInstance], []string{"ipv6"})

@@ -362,7 +362,7 @@ func (c *Collector) collectNetworkMetrics(ch chan<- prometheus.Metric, container
 	}
 
 	if len(hnsEndpoints) == 0 {
-		return fmt.Errorf("no network stats for containers to collect")
+		return errors.New("no network stats for containers to collect")
 	}
 
 	for _, endpoint := range hnsEndpoints {

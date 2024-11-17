@@ -216,7 +216,7 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	}
 
 	if _, ok := data[perfdata.EmptyInstance]; !ok {
-		return fmt.Errorf("no data for TCPv4")
+		return errors.New("no data for TCPv4")
 	}
 
 	c.writeTCPCounters(ch, data[perfdata.EmptyInstance], []string{"ipv4"})
@@ -227,7 +227,7 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	}
 
 	if _, ok := data[perfdata.EmptyInstance]; !ok {
-		return fmt.Errorf("no data for TCPv6")
+		return errors.New("no data for TCPv6")
 	}
 
 	c.writeTCPCounters(ch, data[perfdata.EmptyInstance], []string{"ipv6"})
