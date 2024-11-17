@@ -11,7 +11,7 @@ import (
 
 // collectorHypervisorRootPartition Hyper-V Hypervisor Root Partition metrics
 type collectorHypervisorRootPartition struct {
-	perfDataCollectorHypervisorRootPartition             perfdata.Collector
+	perfDataCollectorHypervisorRootPartition             *perfdata.Collector
 	hypervisorRootPartitionAddressSpaces                 *prometheus.Desc // \Hyper-V Hypervisor Root Partition(*)\Address Spaces
 	hypervisorRootPartitionAttachedDevices               *prometheus.Desc // \Hyper-V Hypervisor Root Partition(*)\Attached Devices
 	hypervisorRootPartitionDepositedPages                *prometheus.Desc // \Hyper-V Hypervisor Root Partition(*)\Deposited Pages
@@ -62,7 +62,7 @@ const (
 func (c *Collector) buildHypervisorRootPartition() error {
 	var err error
 
-	c.perfDataCollectorHypervisorRootPartition, err = perfdata.NewCollector(perfdata.V2, "Hyper-V Hypervisor Root Partition", []string{"Root"}, []string{
+	c.perfDataCollectorHypervisorRootPartition, err = perfdata.NewCollector("Hyper-V Hypervisor Root Partition", []string{"Root"}, []string{
 		hypervisorRootPartitionAddressSpaces,
 		hypervisorRootPartitionAttachedDevices,
 		hypervisorRootPartitionDepositedPages,

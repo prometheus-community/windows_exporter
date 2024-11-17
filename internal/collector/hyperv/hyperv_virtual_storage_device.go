@@ -12,7 +12,7 @@ import (
 
 // Hyper-V Virtual Storage Device metrics
 type collectorVirtualStorageDevice struct {
-	perfDataCollectorVirtualStorageDevice perfdata.Collector
+	perfDataCollectorVirtualStorageDevice *perfdata.Collector
 
 	virtualStorageDeviceErrorCount               *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\Error Count
 	virtualStorageDeviceQueueLength              *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\Queue Length
@@ -46,7 +46,7 @@ const (
 func (c *Collector) buildVirtualStorageDevice() error {
 	var err error
 
-	c.perfDataCollectorVirtualStorageDevice, err = perfdata.NewCollector(perfdata.V2, "Hyper-V Virtual Storage Device", perfdata.AllInstances, []string{
+	c.perfDataCollectorVirtualStorageDevice, err = perfdata.NewCollector("Hyper-V Virtual Storage Device", perfdata.InstanceAll, []string{
 		virtualStorageDeviceErrorCount,
 		virtualStorageDeviceQueueLength,
 		virtualStorageDeviceReadBytes,

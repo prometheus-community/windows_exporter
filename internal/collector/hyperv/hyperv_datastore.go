@@ -12,7 +12,7 @@ import (
 
 // collectorDataStore Hyper-V DataStore metrics
 type collectorDataStore struct {
-	perfDataCollectorDataStore perfdata.Collector
+	perfDataCollectorDataStore *perfdata.Collector
 
 	dataStoreFragmentationRatio          *prometheus.Desc // \Hyper-V DataStore(*)\Fragmentation ratio
 	dataStoreSectorSize                  *prometheus.Desc // \Hyper-V DataStore(*)\Sector size
@@ -115,7 +115,7 @@ const (
 func (c *Collector) buildDataStore() error {
 	var err error
 
-	c.perfDataCollectorDataStore, err = perfdata.NewCollector(perfdata.V2, "Hyper-V DataStore", perfdata.AllInstances, []string{
+	c.perfDataCollectorDataStore, err = perfdata.NewCollector("Hyper-V DataStore", perfdata.InstanceAll, []string{
 		dataStoreFragmentationRatio,
 		dataStoreSectorSize,
 		dataStoreDataAlignment,

@@ -12,7 +12,7 @@ import (
 
 // collectorVirtualNetworkAdapter Hyper-V Virtual Network Adapter metrics
 type collectorVirtualNetworkAdapter struct {
-	perfDataCollectorVirtualNetworkAdapter perfdata.Collector
+	perfDataCollectorVirtualNetworkAdapter *perfdata.Collector
 
 	virtualNetworkAdapterBytesReceived          *prometheus.Desc // \Hyper-V Virtual Network Adapter(*)\Bytes Received/sec
 	virtualNetworkAdapterBytesSent              *prometheus.Desc // \Hyper-V Virtual Network Adapter(*)\Bytes Sent/sec
@@ -34,7 +34,7 @@ const (
 func (c *Collector) buildVirtualNetworkAdapter() error {
 	var err error
 
-	c.perfDataCollectorVirtualNetworkAdapter, err = perfdata.NewCollector(perfdata.V2, "Hyper-V Virtual Network Adapter", perfdata.AllInstances, []string{
+	c.perfDataCollectorVirtualNetworkAdapter, err = perfdata.NewCollector("Hyper-V Virtual Network Adapter", perfdata.InstanceAll, []string{
 		virtualNetworkAdapterBytesReceived,
 		virtualNetworkAdapterBytesSent,
 		virtualNetworkAdapterDroppedPacketsIncoming,

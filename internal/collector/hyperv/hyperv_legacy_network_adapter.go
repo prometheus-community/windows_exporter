@@ -12,7 +12,7 @@ import (
 
 // collectorLegacyNetworkAdapter Hyper-V Legacy Network Adapter metrics
 type collectorLegacyNetworkAdapter struct {
-	perfDataCollectorLegacyNetworkAdapter perfdata.Collector
+	perfDataCollectorLegacyNetworkAdapter *perfdata.Collector
 
 	legacyNetworkAdapterBytesDropped   *prometheus.Desc // \Hyper-V Legacy Network Adapter(*)\Bytes Dropped
 	legacyNetworkAdapterBytesReceived  *prometheus.Desc // \Hyper-V Legacy Network Adapter(*)\Bytes Received/sec
@@ -34,7 +34,7 @@ const (
 func (c *Collector) buildLegacyNetworkAdapter() error {
 	var err error
 
-	c.perfDataCollectorLegacyNetworkAdapter, err = perfdata.NewCollector(perfdata.V2, "Hyper-V Legacy Network Adapter", perfdata.AllInstances, []string{
+	c.perfDataCollectorLegacyNetworkAdapter, err = perfdata.NewCollector("Hyper-V Legacy Network Adapter", perfdata.InstanceAll, []string{
 		legacyNetworkAdapterBytesDropped,
 		legacyNetworkAdapterBytesReceived,
 		legacyNetworkAdapterBytesSent,

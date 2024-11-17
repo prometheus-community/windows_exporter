@@ -11,7 +11,7 @@ import (
 
 // collectorHypervisorRootVirtualProcessor Hyper-V Hypervisor Root Virtual Processor metrics
 type collectorHypervisorRootVirtualProcessor struct {
-	perfDataCollectorHypervisorRootVirtualProcessor perfdata.Collector
+	perfDataCollectorHypervisorRootVirtualProcessor *perfdata.Collector
 
 	// \Hyper-V Hypervisor Root Virtual Processor(*)\% Guest Idle Time
 	// \Hyper-V Hypervisor Root Virtual Processor(*)\% Guest Run Time
@@ -35,7 +35,7 @@ const (
 func (c *Collector) buildHypervisorRootVirtualProcessor() error {
 	var err error
 
-	c.perfDataCollectorHypervisorRootVirtualProcessor, err = perfdata.NewCollector(perfdata.V2, "Hyper-V Hypervisor Root Virtual Processor", perfdata.AllInstances, []string{
+	c.perfDataCollectorHypervisorRootVirtualProcessor, err = perfdata.NewCollector("Hyper-V Hypervisor Root Virtual Processor", perfdata.InstanceAll, []string{
 		hypervisorRootVirtualProcessorGuestIdleTimePercent,
 		hypervisorRootVirtualProcessorGuestRunTimePercent,
 		hypervisorRootVirtualProcessorHypervisorRunTimePercent,

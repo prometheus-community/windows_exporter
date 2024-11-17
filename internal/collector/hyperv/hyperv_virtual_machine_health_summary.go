@@ -12,7 +12,7 @@ import (
 
 // collectorVirtualMachineHealthSummary Hyper-V Virtual Machine Health Summary metrics
 type collectorVirtualMachineHealthSummary struct {
-	perfDataCollectorVirtualMachineHealthSummary perfdata.Collector
+	perfDataCollectorVirtualMachineHealthSummary *perfdata.Collector
 
 	// \Hyper-V Virtual Machine Health Summary\Health Critical
 	// \Hyper-V Virtual Machine Health Summary\Health Ok
@@ -28,7 +28,7 @@ const (
 func (c *Collector) buildVirtualMachineHealthSummary() error {
 	var err error
 
-	c.perfDataCollectorVirtualMachineHealthSummary, err = perfdata.NewCollector(perfdata.V2, "Hyper-V Virtual Machine Health Summary", nil, []string{
+	c.perfDataCollectorVirtualMachineHealthSummary, err = perfdata.NewCollector("Hyper-V Virtual Machine Health Summary", nil, []string{
 		healthCritical,
 		healthOk,
 	})

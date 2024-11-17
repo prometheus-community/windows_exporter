@@ -12,7 +12,7 @@ import (
 
 // collectorVirtualMachineVidPartition Hyper-V VM Vid Partition metrics
 type collectorVirtualMachineVidPartition struct {
-	perfDataCollectorVirtualMachineVidPartition perfdata.Collector
+	perfDataCollectorVirtualMachineVidPartition *perfdata.Collector
 	physicalPagesAllocated                      *prometheus.Desc // \Hyper-V VM Vid Partition(*)\Physical Pages Allocated
 	preferredNUMANodeIndex                      *prometheus.Desc // \Hyper-V VM Vid Partition(*)\Preferred NUMA Node Index
 	remotePhysicalPages                         *prometheus.Desc // \Hyper-V VM Vid Partition(*)\Remote Physical Pages
@@ -27,7 +27,7 @@ const (
 func (c *Collector) buildVirtualMachineVidPartition() error {
 	var err error
 
-	c.perfDataCollectorVirtualMachineVidPartition, err = perfdata.NewCollector(perfdata.V2, "Hyper-V VM Vid Partition", perfdata.AllInstances, []string{
+	c.perfDataCollectorVirtualMachineVidPartition, err = perfdata.NewCollector("Hyper-V VM Vid Partition", perfdata.InstanceAll, []string{
 		physicalPagesAllocated,
 		preferredNUMANodeIndex,
 		remotePhysicalPages,

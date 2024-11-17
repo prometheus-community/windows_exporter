@@ -11,7 +11,7 @@ import (
 
 // collectorHypervisorLogicalProcessor Hyper-V Hypervisor Logical Processor metrics
 type collectorHypervisorLogicalProcessor struct {
-	perfDataCollectorHypervisorLogicalProcessor perfdata.Collector
+	perfDataCollectorHypervisorLogicalProcessor *perfdata.Collector
 
 	// \Hyper-V Hypervisor Logical Processor(*)\% Guest Run Time
 	// \Hyper-V Hypervisor Logical Processor(*)\% Hypervisor Run Time
@@ -32,7 +32,7 @@ const (
 func (c *Collector) buildHypervisorLogicalProcessor() error {
 	var err error
 
-	c.perfDataCollectorHypervisorLogicalProcessor, err = perfdata.NewCollector(perfdata.V2, "Hyper-V Hypervisor Logical Processor", perfdata.AllInstances, []string{
+	c.perfDataCollectorHypervisorLogicalProcessor, err = perfdata.NewCollector("Hyper-V Hypervisor Logical Processor", perfdata.InstanceAll, []string{
 		hypervisorLogicalProcessorGuestRunTimePercent,
 		hypervisorLogicalProcessorHypervisorRunTimePercent,
 		hypervisorLogicalProcessorTotalRunTimePercent,

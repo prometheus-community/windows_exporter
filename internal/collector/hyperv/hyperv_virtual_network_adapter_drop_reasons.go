@@ -12,7 +12,7 @@ import (
 
 // collectorVirtualNetworkAdapterDropReasons Hyper-V Virtual Network Adapter Drop Reasons metrics
 type collectorVirtualNetworkAdapterDropReasons struct {
-	perfDataCollectorVirtualNetworkAdapterDropReasons perfdata.Collector
+	perfDataCollectorVirtualNetworkAdapterDropReasons *perfdata.Collector
 
 	// \Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing LowPowerPacketFilter
 	// \Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming LowPowerPacketFilter
@@ -149,7 +149,7 @@ const (
 func (c *Collector) buildVirtualNetworkAdapterDropReasons() error {
 	var err error
 
-	c.perfDataCollectorVirtualNetworkAdapterDropReasons, err = perfdata.NewCollector(perfdata.V2, "Hyper-V Virtual Network Adapter Drop Reasons", perfdata.AllInstances, []string{
+	c.perfDataCollectorVirtualNetworkAdapterDropReasons, err = perfdata.NewCollector("Hyper-V Virtual Network Adapter Drop Reasons", perfdata.InstanceAll, []string{
 		virtualNetworkAdapterDropReasonsOutgoingNativeFwdingReq,
 		virtualNetworkAdapterDropReasonsIncomingNativeFwdingReq,
 		virtualNetworkAdapterDropReasonsOutgoingMTUMismatch,

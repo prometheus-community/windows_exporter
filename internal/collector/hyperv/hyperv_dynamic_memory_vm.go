@@ -13,7 +13,7 @@ import (
 
 // collectorDynamicMemoryVM Hyper-V Dynamic Memory VM metrics
 type collectorDynamicMemoryVM struct {
-	perfDataCollectorDynamicMemoryVM   perfdata.Collector
+	perfDataCollectorDynamicMemoryVM   *perfdata.Collector
 	vmMemoryAddedMemory                *prometheus.Desc // \Hyper-V Dynamic Memory VM(*)\Added Memory
 	vmMemoryCurrentPressure            *prometheus.Desc // \Hyper-V Dynamic Memory VM(*)\Current Pressure
 	vmMemoryGuestVisiblePhysicalMemory *prometheus.Desc // \Hyper-V Dynamic Memory VM(*)\Guest Visible Physical Memory
@@ -43,7 +43,7 @@ const (
 func (c *Collector) buildDynamicMemoryVM() error {
 	var err error
 
-	c.perfDataCollectorDynamicMemoryVM, err = perfdata.NewCollector(perfdata.V2, "Hyper-V Dynamic Memory VM", perfdata.AllInstances, []string{
+	c.perfDataCollectorDynamicMemoryVM, err = perfdata.NewCollector("Hyper-V Dynamic Memory VM", perfdata.InstanceAll, []string{
 		vmMemoryAddedMemory,
 		vmMemoryCurrentPressure,
 		vmMemoryGuestVisiblePhysicalMemory,

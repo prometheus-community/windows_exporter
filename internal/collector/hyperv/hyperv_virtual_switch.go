@@ -12,7 +12,7 @@ import (
 
 // collectorVirtualMachineHealthSummary Hyper-V Virtual Switch Summary metrics
 type collectorVirtualSwitch struct {
-	perfDataCollectorVirtualSwitch                perfdata.Collector
+	perfDataCollectorVirtualSwitch                *perfdata.Collector
 	virtualSwitchBroadcastPacketsReceived         *prometheus.Desc // \Hyper-V Virtual Switch(*)\Broadcast Packets Received/sec
 	virtualSwitchBroadcastPacketsSent             *prometheus.Desc // \Hyper-V Virtual Switch(*)\Broadcast Packets Sent/sec
 	virtualSwitchBytes                            *prometheus.Desc // \Hyper-V Virtual Switch(*)\Bytes/sec
@@ -63,7 +63,7 @@ const (
 func (c *Collector) buildVirtualSwitch() error {
 	var err error
 
-	c.perfDataCollectorVirtualSwitch, err = perfdata.NewCollector(perfdata.V2, "Hyper-V Virtual Switch", perfdata.AllInstances, []string{
+	c.perfDataCollectorVirtualSwitch, err = perfdata.NewCollector("Hyper-V Virtual Switch", perfdata.InstanceAll, []string{
 		virtualSwitchBroadcastPacketsReceived,
 		virtualSwitchBroadcastPacketsSent,
 		virtualSwitchBytes,

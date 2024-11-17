@@ -12,7 +12,7 @@ import (
 
 // collectorVirtualSMB Hyper-V Virtual SMB metrics
 type collectorVirtualSMB struct {
-	perfDataCollectorVirtualSMB perfdata.Collector
+	perfDataCollectorVirtualSMB *perfdata.Collector
 
 	virtualSMBDirectMappedSections   *prometheus.Desc // \Hyper-V Virtual SMB(*)\Direct-Mapped Sections
 	virtualSMBDirectMappedPages      *prometheus.Desc // \Hyper-V Virtual SMB(*)\Direct-Mapped Pages
@@ -56,7 +56,7 @@ const (
 func (c *Collector) buildVirtualSMB() error {
 	var err error
 
-	c.perfDataCollectorVirtualSMB, err = perfdata.NewCollector(perfdata.V2, "Hyper-V Virtual SMB", perfdata.AllInstances, []string{
+	c.perfDataCollectorVirtualSMB, err = perfdata.NewCollector("Hyper-V Virtual SMB", perfdata.InstanceAll, []string{
 		virtualSMBDirectMappedSections,
 		virtualSMBDirectMappedPages,
 		virtualSMBWriteBytesRDMA,
