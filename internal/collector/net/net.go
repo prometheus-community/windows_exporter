@@ -280,7 +280,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		}
 	}
 
-	return nil
+	return errors.Join(errs...)
 }
 
 func (c *Collector) collect(ch chan<- prometheus.Metric) error {
