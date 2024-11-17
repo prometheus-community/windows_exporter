@@ -103,7 +103,7 @@ const (
 	accessMethodsWorkfilesCreatedPerSec        = "Workfiles Created/sec"
 	accessMethodsWorktablesCreatedPerSec       = "Worktables Created/sec"
 	accessMethodsWorktablesFromCacheRatio      = "Worktables From Cache Ratio"
-	accessMethodsWorktablesFromCacheRatioBase  = "Worktables From Cache Base_Base"
+	accessMethodsWorktablesFromCacheRatioBase  = "Worktables From Cache Base"
 )
 
 func (c *Collector) buildAccessMethods() error {
@@ -158,7 +158,7 @@ func (c *Collector) buildAccessMethods() error {
 	}
 
 	for sqlInstance := range c.mssqlInstances {
-		c.accessMethodsPerfDataCollectors[sqlInstance], err = perfdata.NewCollector(c.mssqlGetPerfObjectName(sqlInstance, "AccessMethods"), nil, counters)
+		c.accessMethodsPerfDataCollectors[sqlInstance], err = perfdata.NewCollector(c.mssqlGetPerfObjectName(sqlInstance, "Access Methods"), nil, counters)
 		if err != nil {
 			return fmt.Errorf("failed to create AccessMethods collector for instance %s: %w", sqlInstance, err)
 		}

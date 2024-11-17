@@ -75,7 +75,7 @@ const (
 	databasesGroupCommitTimePerSec            = "Group Commit Time/sec"
 	databasesLogBytesFlushedPerSec            = "Log Bytes Flushed/sec"
 	databasesLogCacheHitRatio                 = "Log Cache Hit Ratio"
-	databasesLogCacheHitRatioBase             = "Log Cache Hit Ratio Base_Base"
+	databasesLogCacheHitRatioBase             = "Log Cache Hit Ratio Base"
 	databasesLogCacheReadsPerSec              = "Log Cache Reads/sec"
 	databasesLogFilesSizeKB                   = "Log File(s) Size (KB)"
 	databasesLogFilesUsedSizeKB               = "Log File(s) Used Size (KB)"

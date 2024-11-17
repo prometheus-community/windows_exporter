@@ -26,7 +26,7 @@ type collectorLocks struct {
 
 const (
 	locksAverageWaitTimeMS          = "Average Wait Time (ms)"
-	locksAverageWaitTimeMSBase      = "Average Wait Time Base_Base"
+	locksAverageWaitTimeMSBase      = "Average Wait Time Base"
 	locksLockRequestsPerSec         = "Lock Requests/sec"
 	locksLockTimeoutsPerSec         = "Lock Timeouts/sec"
 	locksLockTimeoutsTimeout0PerSec = "Lock Timeouts (timeout > 0)/sec"

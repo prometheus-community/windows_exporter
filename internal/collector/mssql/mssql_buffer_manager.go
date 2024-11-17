@@ -41,7 +41,7 @@ type collectorBufferManager struct {
 const (
 	bufManBackgroundWriterPagesPerSec   = "Background writer pages/sec"
 	bufManBufferCacheHitRatio           = "Buffer cache hit ratio"
-	bufManBufferCacheHitRatioBase       = "Buffer cache hit ratio base_Base"
+	bufManBufferCacheHitRatioBase       = "Buffer cache hit ratio base"
 	bufManCheckpointPagesPerSec         = "Checkpoint pages/sec"
 	bufManDatabasePages                 = "Database pages"
 	bufManExtensionAllocatedPages       = "Extension allocated pages"
