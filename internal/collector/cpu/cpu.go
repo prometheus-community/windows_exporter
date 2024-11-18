@@ -5,6 +5,7 @@ package cpu
 import (
 	"fmt"
 	"log/slog"
+	"sync"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
@@ -24,6 +25,8 @@ type Collector struct {
 	config Config
 
 	perfDataCollector *perfdata.Collector
+
+	mu sync.Mutex
 
 	processorRTCValues   map[string]utils.Counter
 	processorMPerfValues map[string]utils.Counter
@@ -72,6 +75,8 @@ func (c *Collector) Close() error {
 
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 	var err error
+
+	c.mu = sync.Mutex{}
 
 	c.perfDataCollector, err = perfdata.NewCollector("Processor Information", perfdata.InstanceAll, []string{
 		c1TimeSeconds,
@@ -194,6 +199,9 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 }
 
 func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
+	c.mu.Lock() // Lock is needed to prevent concurrent map access to c.processorRTCValues
+	defer c.mu.Unlock()
+
 	data, err := c.perfDataCollector.Collect()
 	if err != nil {
 		return fmt.Errorf("failed to collect Processor Information metrics: %w", err)
