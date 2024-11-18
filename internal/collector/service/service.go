@@ -9,7 +9,6 @@ import (
 	"regexp"
 	"strconv"
 	"sync"
-	"syscall"
 	"unsafe"
 
 	"github.com/alecthomas/kingpin/v2"
@@ -381,7 +380,7 @@ func (c *Collector) queryAllServices() ([]windows.ENUM_SERVICE_STATUS_PROCESS, e
 			break
 		}
 
-		if !errors.Is(err, syscall.ERROR_MORE_DATA) {
+		if !errors.Is(err, windows.ERROR_MORE_DATA) {
 			return nil, err
 		}
 
@@ -445,12 +444,13 @@ func (c *Collector) getServiceConfig(service *mgr.Service) (mgr.Config, error) {
 
 	for {
 		serviceConfig = (*windows.QUERY_SERVICE_CONFIG)(unsafe.Pointer(&(*buf)[0]))
+
 		err := windows.QueryServiceConfig(service.Handle, serviceConfig, bytesNeeded, &bytesNeeded)
 		if err == nil {
 			break
 		}
 
-		if !errors.Is(err.(syscall.Errno), syscall.ERROR_INSUFFICIENT_BUFFER) {
+		if !errors.Is(err, windows.ERROR_INSUFFICIENT_BUFFER) {
 			return mgr.Config{}, err
 		}
 
