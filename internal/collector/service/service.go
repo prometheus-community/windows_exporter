@@ -440,6 +440,8 @@ func (c *Collector) getServiceConfig(service *mgr.Service) (mgr.Config, error) {
 	buf, ok := c.serviceConfigPoolBytes.Get().(*[]byte)
 	if !ok || len(*buf) == 0 {
 		*buf = make([]byte, bytesNeeded)
+	} else {
+		bytesNeeded = uint32(cap(*buf))
 	}
 
 	for {
@@ -450,12 +452,12 @@ func (c *Collector) getServiceConfig(service *mgr.Service) (mgr.Config, error) {
 			break
 		}
 
-		if !errors.Is(err, windows.ERROR_INSUFFICIENT_BUFFER) {
+		if !errors.Is(err, windows.ERROR_INSUFFICIENT_BUFFER) && !errors.Is(err, windows.ERROR_MORE_DATA) {
 			return mgr.Config{}, err
 		}
 
 		if bytesNeeded <= uint32(len(*buf)) {
-			return mgr.Config{}, err
+			return mgr.Config{}, fmt.Errorf("win32 reports buffer too small (%d), but buffer is large enough (%d): %w", uint32(cap(*buf)), bytesNeeded, err)
 		}
 
 		*buf = make([]byte, bytesNeeded)
