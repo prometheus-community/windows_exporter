@@ -22,6 +22,10 @@ func ToPTR[t any](v t) *t {
 	return &v
 }
 
+func PercentageToRatio(percentage float64) float64 {
+	return percentage / 100
+}
+
 // Must panics if the error is not nil.
 //
 //nolint:ireturn
