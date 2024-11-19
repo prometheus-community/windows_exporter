@@ -271,7 +271,7 @@ func (c *Collector) collectBufferManagerInstance(ch chan<- prometheus.Metric, sq
 		ch <- prometheus.MustNewConstMetric(
 			c.bufManBuffercachelookups,
 			prometheus.GaugeValue,
-			data[bufManBufferCacheHitRatioBase].FirstValue,
+			data[bufManBufferCacheHitRatioBase].SecondValue,
 			sqlInstance,
 		)
 

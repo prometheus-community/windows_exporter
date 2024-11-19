@@ -752,7 +752,7 @@ func (c *Collector) collectAccessMethodsInstance(ch chan<- prometheus.Metric, sq
 	ch <- prometheus.MustNewConstMetric(
 		c.accessMethodsWorktablesFromCacheLookups,
 		prometheus.CounterValue,
-		data[accessMethodsWorktablesFromCacheRatioBase].FirstValue,
+		data[accessMethodsWorktablesFromCacheRatioBase].SecondValue,
 		sqlInstance,
 	)
 
