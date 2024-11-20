@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -33,6 +34,37 @@ func (c *Collector) buildADAccessProcesses() error {
 	if err != nil {
 		return fmt.Errorf("failed to create MSExchange ADAccess Processes collector: %w", err)
 	}
+
+	c.ldapReadTime = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "ldap_read_time_sec"),
+		"Time (sec) to send an LDAP read request and receive a response",
+		[]string{"name"},
+		nil,
+	)
+	c.ldapSearchTime = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "ldap_search_time_sec"),
+		"Time (sec) to send an LDAP search request and receive a response",
+		[]string{"name"},
+		nil,
+	)
+	c.ldapWriteTime = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "ldap_write_time_sec"),
+		"Time (sec) to send an LDAP Add/Modify/Delete request and receive a response",
+		[]string{"name"},
+		nil,
+	)
+	c.ldapTimeoutErrorsPerSec = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "ldap_timeout_errors_total"),
+		"Total number of LDAP timeout errors",
+		[]string{"name"},
+		nil,
+	)
+	c.longRunningLDAPOperationsPerMin = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "ldap_long_running_ops_per_sec"),
+		"Long Running LDAP operations per second",
+		[]string{"name"},
+		nil,
+	)
 
 	return nil
 }
