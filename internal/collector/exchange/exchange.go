@@ -274,10 +274,12 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		mapiHttpEmsmdb:      c.collectMapiHttpEmsmdb,
 	}
 
-	errs := make([]error, len(c.config.CollectorsEnabled))
+	errs := make([]error, 0, len(c.config.CollectorsEnabled))
 
-	for i, collectorName := range c.config.CollectorsEnabled {
-		errs[i] = collectorFuncs[collectorName](ch)
+	for _, collectorName := range c.config.CollectorsEnabled {
+		if err := collectorFuncs[collectorName](ch); err != nil {
+			errs = append(errs, fmt.Errorf("collector %s: %w", collectorName, err))
+		}
 	}
 
 	return errors.Join(errs...)

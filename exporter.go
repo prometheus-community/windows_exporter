@@ -29,6 +29,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/httphandler"
 	"github.com/prometheus-community/windows_exporter/internal/log"
 	"github.com/prometheus-community/windows_exporter/internal/log/flag"
+	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus-community/windows_exporter/pkg/collector"
 	"github.com/prometheus/common/version"
 	"github.com/prometheus/exporter-toolkit/web"
@@ -187,11 +188,11 @@ func run() int {
 
 	// Initialize collectors before loading
 	if err = collectors.Build(logger); err != nil {
-		logger.Error("Couldn't load collectors",
-			slog.Any("err", err),
-		)
-
-		return 1
+		for _, err := range utils.SplitError(err) {
+			logger.Error("Couldn't initialize collector",
+				slog.Any("err", err),
+			)
+		}
 	}
 
 	logCurrentUser(logger)

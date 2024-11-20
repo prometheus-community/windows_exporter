@@ -289,6 +289,10 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 }
 
 func (c *Collector) collectTSSessionCounters(ch chan<- prometheus.Metric) error {
+	if c.perfDataCollectorTerminalServicesSession == nil {
+		return types.ErrPerfCounterCollectorNotInitialized
+	}
+
 	perfData, err := c.perfDataCollectorTerminalServicesSession.Collect()
 	if err != nil {
 		return fmt.Errorf("failed to collect Terminal Services Session metrics: %w", err)
@@ -408,6 +412,10 @@ func (c *Collector) collectTSSessionCounters(ch chan<- prometheus.Metric) error 
 }
 
 func (c *Collector) collectCollectionBrokerPerformanceCounter(ch chan<- prometheus.Metric) error {
+	if c.perfDataCollectorBroker == nil {
+		return types.ErrPerfCounterCollectorNotInitialized
+	}
+
 	perfData, err := c.perfDataCollectorBroker.Collect()
 	if err != nil {
 		return fmt.Errorf("failed to collect Remote Desktop Connection Broker Counterset metrics: %w", err)

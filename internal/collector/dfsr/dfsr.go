@@ -523,6 +523,10 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 }
 
 func (c *Collector) collectPDHConnection(ch chan<- prometheus.Metric) error {
+	if c.perfDataCollectorConnection == nil {
+		return types.ErrPerfCounterCollectorNotInitialized
+	}
+
 	perfData, err := c.perfDataCollectorConnection.Collect()
 	if err != nil {
 		return fmt.Errorf("failed to collect DFS Replication Connections metrics: %w", err)
@@ -601,6 +605,10 @@ func (c *Collector) collectPDHConnection(ch chan<- prometheus.Metric) error {
 }
 
 func (c *Collector) collectPDHFolder(ch chan<- prometheus.Metric) error {
+	if c.perfDataCollectorFolder == nil {
+		return types.ErrPerfCounterCollectorNotInitialized
+	}
+
 	perfData, err := c.perfDataCollectorFolder.Collect()
 	if err != nil {
 		return fmt.Errorf("failed to collect DFS Replicated Folders metrics: %w", err)
@@ -805,6 +813,10 @@ func (c *Collector) collectPDHFolder(ch chan<- prometheus.Metric) error {
 }
 
 func (c *Collector) collectPDHVolume(ch chan<- prometheus.Metric) error {
+	if c.perfDataCollectorVolume == nil {
+		return types.ErrPerfCounterCollectorNotInitialized
+	}
+
 	perfData, err := c.perfDataCollectorVolume.Collect()
 	if err != nil {
 		return fmt.Errorf("failed to collect DFS Replication Volumes metrics: %w", err)

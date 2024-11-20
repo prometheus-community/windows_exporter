@@ -205,6 +205,10 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 
 // Collect collects smb client metrics and sends them to prometheus.
 func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
+	if c.perfDataCollector == nil {
+		return types.ErrPerfCounterCollectorNotInitialized
+	}
+
 	perfData, err := c.perfDataCollector.Collect()
 	if err != nil {
 		return fmt.Errorf("failed to collect SMB Client Shares metrics: %w", err)

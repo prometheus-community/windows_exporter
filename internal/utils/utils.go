@@ -32,3 +32,12 @@ func Must[T any](v T, err error) T {
 
 	return v
 }
+
+// SplitError returns a slice of errors from the given error. It reverses the [errors.Join] function.
+func SplitError(err error) []error {
+	if errs, ok := err.(interface{ Unwrap() []error }); ok {
+		return errs.Unwrap()
+	}
+
+	return []error{err}
+}

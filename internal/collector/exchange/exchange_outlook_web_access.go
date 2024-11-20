@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -32,6 +33,10 @@ func (c *Collector) buildOWA() error {
 }
 
 func (c *Collector) collectOWA(ch chan<- prometheus.Metric) error {
+	if c.perfDataCollectorOWA == nil {
+		return types.ErrPerfCounterCollectorNotInitialized
+	}
+
 	perfData, err := c.perfDataCollectorOWA.Collect()
 	if err != nil {
 		return fmt.Errorf("failed to collect MSExchange OWA metrics: %w", err)
