@@ -16,6 +16,7 @@
 package mssql
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
@@ -61,6 +62,7 @@ func (c *Collector) buildTransactions() error {
 	var err error
 
 	c.transactionsPerfDataCollectors = make(map[string]*perfdata.Collector, len(c.mssqlInstances))
+	errs := make([]error, 0, len(c.mssqlInstances))
 	counters := []string{
 		transactionsFreeSpaceintempdbKB,
 		transactionsLongestTransactionRunningTime,
@@ -80,7 +82,7 @@ func (c *Collector) buildTransactions() error {
 	for sqlInstance := range c.mssqlInstances {
 		c.transactionsPerfDataCollectors[sqlInstance], err = perfdata.NewCollector(c.mssqlGetPerfObjectName(sqlInstance, "Transactions"), nil, counters)
 		if err != nil {
-			return fmt.Errorf("failed to create Transactions collector for instance %s: %w", sqlInstance, err)
+			errs = append(errs, fmt.Errorf("failed to create Transactions collector for instance %s: %w", sqlInstance, err))
 		}
 	}
 
@@ -163,7 +165,7 @@ func (c *Collector) buildTransactions() error {
 		nil,
 	)
 
-	return nil
+	return errors.Join(errs...)
 }
 
 func (c *Collector) collectTransactions(ch chan<- prometheus.Metric) error {
@@ -173,6 +175,10 @@ func (c *Collector) collectTransactions(ch chan<- prometheus.Metric) error {
 // Win32_PerfRawData_MSSQLSERVER_Transactions docs:
 // - https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-transactions-object
 func (c *Collector) collectTransactionsInstance(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *perfdata.Collector) error {
+	if perfDataCollector == nil {
+		return types.ErrPerfCounterCollectorNotInitialized
+	}
+
 	perfData, err := perfDataCollector.Collect()
 	if err != nil {
 		return fmt.Errorf("failed to collect %s metrics: %w", c.mssqlGetPerfObjectName(sqlInstance, "Transactions"), err)
