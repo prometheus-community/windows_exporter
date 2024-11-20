@@ -3,6 +3,7 @@
 package mssql
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
@@ -70,6 +71,7 @@ func (c *Collector) buildDatabaseReplica() error {
 	var err error
 
 	c.dbReplicaPerfDataCollectors = make(map[string]*perfdata.Collector, len(c.mssqlInstances))
+	errs := make([]error, 0, len(c.mssqlInstances))
 	counters := []string{
 		dbReplicaDatabaseFlowControlDelay,
 		dbReplicaDatabaseFlowControlsPerSec,
@@ -100,7 +102,7 @@ func (c *Collector) buildDatabaseReplica() error {
 	for sqlInstance := range c.mssqlInstances {
 		c.dbReplicaPerfDataCollectors[sqlInstance], err = perfdata.NewCollector(c.mssqlGetPerfObjectName(sqlInstance, "Database Replica"), perfdata.InstanceAll, counters)
 		if err != nil {
-			return fmt.Errorf("failed to create Database Replica collector for instance %s: %w", sqlInstance, err)
+			errs = append(errs, fmt.Errorf("failed to create Database Replica collector for instance %s: %w", sqlInstance, err))
 		}
 	}
 
@@ -250,7 +252,7 @@ func (c *Collector) buildDatabaseReplica() error {
 		nil,
 	)
 
-	return nil
+	return errors.Join(errs...)
 }
 
 func (c *Collector) collectDatabaseReplica(ch chan<- prometheus.Metric) error {
@@ -258,6 +260,10 @@ func (c *Collector) collectDatabaseReplica(ch chan<- prometheus.Metric) error {
 }
 
 func (c *Collector) collectDatabaseReplicaInstance(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *perfdata.Collector) error {
+	if perfDataCollector == nil {
+		return types.ErrPerfCounterCollectorNotInitialized
+	}
+
 	perfData, err := perfDataCollector.Collect()
 	if err != nil {
 		return fmt.Errorf("failed to collect %s metrics: %w", c.mssqlGetPerfObjectName(sqlInstance, "Database Replica"), err)

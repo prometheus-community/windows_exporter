@@ -3,6 +3,7 @@
 package mssql
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
@@ -25,6 +26,7 @@ func (c *Collector) buildSQLErrors() error {
 	var err error
 
 	c.genStatsPerfDataCollectors = make(map[string]*perfdata.Collector, len(c.mssqlInstances))
+	errs := make([]error, 0, len(c.mssqlInstances))
 	counters := []string{
 		sqlErrorsErrorsPerSec,
 	}
@@ -32,7 +34,7 @@ func (c *Collector) buildSQLErrors() error {
 	for sqlInstance := range c.mssqlInstances {
 		c.genStatsPerfDataCollectors[sqlInstance], err = perfdata.NewCollector(c.mssqlGetPerfObjectName(sqlInstance, "SQL Errors"), perfdata.InstanceAll, counters)
 		if err != nil {
-			return fmt.Errorf("failed to create SQL Errors collector for instance %s: %w", sqlInstance, err)
+			errs = append(errs, fmt.Errorf("failed to create SQL Errors collector for instance %s: %w", sqlInstance, err))
 		}
 	}
 
@@ -44,7 +46,7 @@ func (c *Collector) buildSQLErrors() error {
 		nil,
 	)
 
-	return nil
+	return errors.Join(errs...)
 }
 
 func (c *Collector) collectSQLErrors(ch chan<- prometheus.Metric) error {
@@ -52,6 +54,10 @@ func (c *Collector) collectSQLErrors(ch chan<- prometheus.Metric) error {
 }
 
 func (c *Collector) collectSQLErrorsInstance(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *perfdata.Collector) error {
+	if perfDataCollector == nil {
+		return types.ErrPerfCounterCollectorNotInitialized
+	}
+
 	perfData, err := perfDataCollector.Collect()
 	if err != nil {
 		return fmt.Errorf("failed to collect %s metrics: %w", c.mssqlGetPerfObjectName(sqlInstance, "SQL Errors"), err)
