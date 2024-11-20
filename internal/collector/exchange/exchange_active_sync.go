@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -29,6 +30,25 @@ func (c *Collector) buildActiveSync() error {
 	if err != nil {
 		return fmt.Errorf("failed to create MSExchange ActiveSync collector: %w", err)
 	}
+
+	c.pingCommandsPending = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "activesync_ping_cmds_pending"),
+		"Number of ping commands currently pending in the queue",
+		nil,
+		nil,
+	)
+	c.syncCommandsPerSec = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "activesync_sync_cmds_total"),
+		"Number of sync commands processed per second. Clients use this command to synchronize items within a folder",
+		nil,
+		nil,
+	)
+	c.activeSyncRequestsPerSec = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "activesync_requests_total"),
+		"Num HTTP requests received from the client via ASP.NET per sec. Shows Current user load",
+		nil,
+		nil,
+	)
 
 	return nil
 }
