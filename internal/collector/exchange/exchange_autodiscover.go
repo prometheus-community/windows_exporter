@@ -29,6 +29,7 @@ func (c *Collector) buildAutoDiscover() error {
 		nil,
 		nil,
 	)
+
 	return nil
 }
 
