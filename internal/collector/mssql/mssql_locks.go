@@ -130,7 +130,7 @@ func (c *Collector) collectLocksInstance(ch chan<- prometheus.Metric, sqlInstanc
 		ch <- prometheus.MustNewConstMetric(
 			c.locksCount,
 			prometheus.GaugeValue,
-			data[locksAverageWaitTimeMSBase].FirstValue/1000.0,
+			data[locksAverageWaitTimeMSBase].SecondValue/1000.0,
 			sqlInstance, lockResourceName,
 		)
 

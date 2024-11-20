@@ -408,7 +408,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		ch <- prometheus.MustNewConstMetric(
 			c.totalSpace,
 			prometheus.GaugeValue,
-			volume[percentFreeSpace].FirstValue*1024*1024,
+			volume[percentFreeSpace].SecondValue*1024*1024,
 			name,
 		)
 

@@ -23,10 +23,10 @@ type Collector struct {
 	config Config
 
 	// physicalMemoryBytes
-	// Deprecated: Use windows_cpu_logical_processor instead
+	// Deprecated: Use windows_physical_memory_total_bytes instead
 	physicalMemoryBytes *prometheus.Desc
 	// logicalProcessors
-	// Deprecated: Use windows_physical_memory_total_bytes instead
+	// Deprecated: Use windows_cpu_logical_processor instead
 	logicalProcessors *prometheus.Desc
 	// hostname
 	// Deprecated: Use windows_os_hostname instead

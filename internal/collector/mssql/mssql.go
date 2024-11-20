@@ -7,15 +7,20 @@ import (
 	"fmt"
 	"log/slog"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
+	"unsafe"
 
+	"github.com/Microsoft/go-winio/pkg/process"
 	"github.com/alecthomas/kingpin/v2"
+	"github.com/prometheus-community/windows_exporter/internal/headers/iphlpapi"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
+	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/registry"
 )
 
@@ -38,6 +43,7 @@ const (
 
 type Config struct {
 	CollectorsEnabled []string `yaml:"collectors_enabled"`
+	Port              uint16   `yaml:"port"`
 }
 
 var ConfigDefaults = Config{
@@ -55,6 +61,7 @@ var ConfigDefaults = Config{
 		subCollectorTransactions,
 		subCollectorWaitStats,
 	},
+	Port: 1433,
 }
 
 // A Collector is a Prometheus Collector for various WMI Win32_PerfRawData_MSSQLSERVER_* metrics.
@@ -67,9 +74,13 @@ type Collector struct {
 	collectorFns   []func(ch chan<- prometheus.Metric) error
 	closeFns       []func()
 
+	fileVersion    string
+	productVersion string
+
 	// meta
 	mssqlScrapeDurationDesc *prometheus.Desc
 	mssqlScrapeSuccessDesc  *prometheus.Desc
+	mssqlInfoDesc           *prometheus.Desc
 
 	collectorAccessMethods
 	collectorAvailabilityReplica
@@ -96,6 +107,10 @@ func New(config *Config) *Collector {
 		config.CollectorsEnabled = ConfigDefaults.CollectorsEnabled
 	}
 
+	if config.Port == 0 {
+		config.Port = ConfigDefaults.Port
+	}
+
 	c := &Collector{
 		config: *config,
 	}
@@ -114,6 +129,11 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 		"collector.mssql.enabled",
 		"Comma-separated list of collectors to use.",
 	).Default(strings.Join(c.config.CollectorsEnabled, ",")).StringVar(&collectorsEnabled)
+
+	app.Flag(
+		"collector.mssql.port",
+		"Port of MSSQL server used for windows_mssql_info metric.",
+	).Default(strconv.FormatUint(uint64(c.config.Port), 10)).Uint16Var(&c.config.Port)
 
 	app.Action(func(*kingpin.ParseContext) error {
 		c.config.CollectorsEnabled = strings.Split(collectorsEnabled, ",")
@@ -139,6 +159,17 @@ func (c *Collector) Close() error {
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	c.logger = logger.With(slog.String("collector", Name))
 	c.mssqlInstances = c.getMSSQLInstances()
+
+	fileVersion, productVersion, err := c.getMSSQLServerVersion(c.config.Port)
+	if err != nil {
+		logger.Warn("Failed to get MSSQL server version",
+			slog.Any("err", err),
+			slog.String("collector", Name),
+		)
+	}
+
+	c.fileVersion = fileVersion
+	c.productVersion = productVersion
 
 	subCollectors := map[string]struct {
 		build   func() error
@@ -209,7 +240,6 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 	c.collectorFns = make([]func(ch chan<- prometheus.Metric) error, 0, len(c.config.CollectorsEnabled))
 	c.closeFns = make([]func(), 0, len(c.config.CollectorsEnabled))
-
 	// Result must order, to prevent test failures.
 	sort.Strings(c.config.CollectorsEnabled)
 
@@ -227,6 +257,13 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	}
 
 	// meta
+	c.mssqlInfoDesc = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "info"),
+		"mssql server information",
+		[]string{"file_version", "version"},
+		nil,
+	)
+
 	c.mssqlScrapeDurationDesc = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "collector_duration_seconds"),
 		"windows_exporter: Duration of an mssql child collection.",
@@ -378,4 +415,69 @@ func (c *Collector) collect(
 	}
 
 	return errors.Join(errs...)
+}
+
+// getMSSQLServerVersion get the version of the SQL Server instance by
+// reading the version information from the process running the SQL Server instance port.
+func (c *Collector) getMSSQLServerVersion(port uint16) (string, string, error) {
+	pid, err := iphlpapi.GetOwnerPIDOfTCPPort(windows.AF_INET, port)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to get the PID of the process running on port 1433: %w", err)
+	}
+
+	hProcess, err := windows.OpenProcess(windows.PROCESS_QUERY_LIMITED_INFORMATION, false, pid)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to open the process with PID %d: %w", pid, err)
+	}
+
+	defer windows.CloseHandle(hProcess) //nolint:errcheck
+
+	processFilePath, err := process.QueryFullProcessImageName(hProcess, process.ImageNameFormatWin32Path)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to query the full path of the process with PID %d: %w", pid, err)
+	}
+
+	// Load the file version information
+	size, err := windows.GetFileVersionInfoSize(processFilePath, nil)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to get the size of the file version information: %w", err)
+	}
+
+	fileVersionInfo := make([]byte, size)
+
+	err = windows.GetFileVersionInfo(processFilePath, 0, size, unsafe.Pointer(&fileVersionInfo[0]))
+	if err != nil {
+		return "", "", fmt.Errorf("failed to get the file version information: %w", err)
+	}
+
+	var (
+		verData *byte
+		verSize uint32
+	)
+
+	err = windows.VerQueryValue(
+		unsafe.Pointer(&fileVersionInfo[0]),
+		`\StringFileInfo\040904b0\ProductVersion`,
+		unsafe.Pointer(&verData),
+		&verSize,
+	)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to query the product version: %w", err)
+	}
+
+	productVersion := windows.UTF16ToString((*[1 << 16]uint16)(unsafe.Pointer(verData))[:verSize])
+
+	err = windows.VerQueryValue(
+		unsafe.Pointer(&fileVersionInfo[0]),
+		`\StringFileInfo\040904b0\FileVersion`,
+		unsafe.Pointer(&verData),
+		&verSize,
+	)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to query the file version: %w", err)
+	}
+
+	fileVersion := windows.UTF16ToString((*[1 << 16]uint16)(unsafe.Pointer(verData))[:verSize])
+
+	return fileVersion, productVersion, nil
 }

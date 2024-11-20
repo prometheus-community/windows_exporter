@@ -13,6 +13,23 @@ import (
 
 const nameNode = Name + "_node"
 
+type collectorNode struct {
+	nodeBuildNumber           *prometheus.Desc
+	nodeCharacteristics       *prometheus.Desc
+	nodeDetectedCloudPlatform *prometheus.Desc
+	nodeDynamicWeight         *prometheus.Desc
+	nodeFlags                 *prometheus.Desc
+	nodeMajorVersion          *prometheus.Desc
+	nodeMinorVersion          *prometheus.Desc
+	nodeNeedsPreventQuorum    *prometheus.Desc
+	nodeNodeDrainStatus       *prometheus.Desc
+	nodeNodeHighestVersion    *prometheus.Desc
+	nodeNodeLowestVersion     *prometheus.Desc
+	nodeNodeWeight            *prometheus.Desc
+	nodeState                 *prometheus.Desc
+	nodeStatusInformation     *prometheus.Desc
+}
+
 // msClusterNode represents the MSCluster_Node WMI class
 // - https://docs.microsoft.com/en-us/previous-versions/windows/desktop/cluswmi/mscluster-node
 type msClusterNode struct {

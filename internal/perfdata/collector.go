@@ -112,7 +112,7 @@ func NewCollector(object string, instances []string, counters []string) (*Collec
 	}
 
 	if _, err := collector.Collect(); err != nil {
-		return nil, fmt.Errorf("failed to collect initial data: %w", err)
+		return collector, fmt.Errorf("failed to collect initial data: %w", err)
 	}
 
 	return collector, nil
@@ -211,7 +211,7 @@ func (c *Collector) Collect() (map[string]map[string]CounterValues, error) {
 						values.FirstValue = float64((item.RawValue.FirstValue - WindowsEpoch) / counter.Frequency)
 					case PERF_100NSEC_TIMER, PERF_PRECISION_100NS_TIMER:
 						values.FirstValue = float64(item.RawValue.FirstValue) * TicksToSecondScaleFactor
-					case PERF_AVERAGE_BULK:
+					case PERF_AVERAGE_BULK, PERF_RAW_FRACTION:
 						values.FirstValue = float64(item.RawValue.FirstValue)
 						values.SecondValue = float64(item.RawValue.SecondValue)
 					default:

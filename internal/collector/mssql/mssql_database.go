@@ -559,7 +559,7 @@ func (c *Collector) collectDatabasesInstance(ch chan<- prometheus.Metric, sqlIns
 		ch <- prometheus.MustNewConstMetric(
 			c.databasesLogCacheLookups,
 			prometheus.GaugeValue,
-			data[databasesLogCacheHitRatioBase].FirstValue,
+			data[databasesLogCacheHitRatioBase].SecondValue,
 			sqlInstance, dbName,
 		)
 
