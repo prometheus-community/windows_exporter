@@ -27,6 +27,13 @@ func (c *Collector) buildMapiHttpEmsmdb() error {
 		return fmt.Errorf("failed to create MSExchange MapiHttp Emsmdb: %w", err)
 	}
 
+	c.activeUserCountMapiHttpEmsMDB = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "mapihttp_emsmdb_active_user_count"),
+		"Number of unique outlook users that have shown some kind of activity in the last 2 minutes",
+		nil,
+		nil,
+	)
+
 	return nil
 }
 

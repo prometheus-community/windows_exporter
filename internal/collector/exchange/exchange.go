@@ -12,7 +12,6 @@ import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -102,6 +101,17 @@ type Collector struct {
 	unreachableQueueLength                  *prometheus.Desc
 	userCount                               *prometheus.Desc
 	yieldedTasks                            *prometheus.Desc
+	messagesQueuedForDeliveryTotal          *prometheus.Desc
+	messagesSubmittedTotal                  *prometheus.Desc
+	messagesDelayedTotal                    *prometheus.Desc
+	messagesCompletedDeliveryTotal          *prometheus.Desc
+	shadowQueueLength                       *prometheus.Desc
+	submissionQueueLength                   *prometheus.Desc
+	delayQueueLength                        *prometheus.Desc
+	itemsCompletedDeliveryTotal             *prometheus.Desc
+	itemsQueuedForDeliveryExpiredTotal      *prometheus.Desc
+	itemsQueuedForDeliveryTotal             *prometheus.Desc
+	itemsResubmittedTotal                   *prometheus.Desc
 }
 
 func New(config *Config) *Collector {
@@ -206,55 +216,6 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 			return err
 		}
 	}
-
-	// desc creates a new prometheus description
-	desc := func(metricName string, description string, labels ...string) *prometheus.Desc {
-		return prometheus.NewDesc(
-			prometheus.BuildFQName(types.Namespace, Name, metricName),
-			description,
-			labels,
-			nil,
-		)
-	}
-
-	c.rpcAveragedLatency = desc("rpc_avg_latency_sec", "The latency (sec) averaged for the past 1024 packets")
-	c.rpcRequests = desc("rpc_requests", "Number of client requests currently being processed by  the RPC Client Access service")
-	c.activeUserCount = desc("rpc_active_user_count", "Number of unique users that have shown some kind of activity in the last 2 minutes")
-	c.connectionCount = desc("rpc_connection_count", "Total number of client connections maintained")
-	c.rpcOperationsPerSec = desc("rpc_operations_total", "The rate at which RPC operations occur")
-	c.userCount = desc("rpc_user_count", "Number of users")
-	c.ldapReadTime = desc("ldap_read_time_sec", "Time (sec) to send an LDAP read request and receive a response", "name")
-	c.ldapSearchTime = desc("ldap_search_time_sec", "Time (sec) to send an LDAP search request and receive a response", "name")
-	c.ldapWriteTime = desc("ldap_write_time_sec", "Time (sec) to send an LDAP Add/Modify/Delete request and receive a response", "name")
-	c.ldapTimeoutErrorsPerSec = desc("ldap_timeout_errors_total", "Total number of LDAP timeout errors", "name")
-	c.longRunningLDAPOperationsPerMin = desc("ldap_long_running_ops_per_sec", "Long Running LDAP operations per second", "name")
-	c.externalActiveRemoteDeliveryQueueLength = desc("transport_queues_external_active_remote_delivery", "External Active Remote Delivery Queue length", "name")
-	c.internalActiveRemoteDeliveryQueueLength = desc("transport_queues_internal_active_remote_delivery", "Internal Active Remote Delivery Queue length", "name")
-	c.activeMailboxDeliveryQueueLength = desc("transport_queues_active_mailbox_delivery", "Active Mailbox Delivery Queue length", "name")
-	c.retryMailboxDeliveryQueueLength = desc("transport_queues_retry_mailbox_delivery", "Retry Mailbox Delivery Queue length", "name")
-	c.unreachableQueueLength = desc("transport_queues_unreachable", "Unreachable Queue length", "name")
-	c.externalLargestDeliveryQueueLength = desc("transport_queues_external_largest_delivery", "External Largest Delivery Queue length", "name")
-	c.internalLargestDeliveryQueueLength = desc("transport_queues_internal_largest_delivery", "Internal Largest Delivery Queue length", "name")
-	c.poisonQueueLength = desc("transport_queues_poison", "Poison Queue length", "name")
-	c.mailboxServerLocatorAverageLatency = desc("http_proxy_mailbox_server_locator_avg_latency_sec", "Average latency (sec) of MailboxServerLocator web service calls", "name")
-	c.averageAuthenticationLatency = desc("http_proxy_avg_auth_latency", "Average time spent authenticating CAS requests over the last 200 samples", "name")
-	c.outstandingProxyRequests = desc("http_proxy_outstanding_proxy_requests", "Number of concurrent outstanding proxy requests", "name")
-	c.proxyRequestsPerSec = desc("http_proxy_requests_total", "Number of proxy requests processed each second", "name")
-	c.availabilityRequestsSec = desc("avail_service_requests_per_sec", "Number of requests serviced per second")
-	c.currentUniqueUsers = desc("owa_current_unique_users", "Number of unique users currently logged on to Outlook Web App")
-	c.owaRequestsPerSec = desc("owa_requests_total", "Number of requests handled by Outlook Web App per second")
-	c.autoDiscoverRequestsPerSec = desc("autodiscover_requests_total", "Number of autodiscover service requests processed each second")
-	c.activeTasks = desc("workload_active_tasks", "Number of active tasks currently running in the background for workload management", "name")
-	c.completedTasks = desc("workload_completed_tasks", "Number of workload management tasks that have been completed", "name")
-	c.queuedTasks = desc("workload_queued_tasks", "Number of workload management tasks that are currently queued up waiting to be processed", "name")
-	c.yieldedTasks = desc("workload_yielded_tasks", "The total number of tasks that have been yielded by a workload", "name")
-	c.isActive = desc("workload_is_active", "Active indicates whether the workload is in an active (1) or paused (0) state", "name")
-	c.activeSyncRequestsPerSec = desc("activesync_requests_total", "Num HTTP requests received from the client via ASP.NET per sec. Shows Current user load")
-	c.averageCASProcessingLatency = desc("http_proxy_avg_cas_processing_latency_sec", "Average latency (sec) of CAS processing time over the last 200 reqs", "name")
-	c.mailboxServerProxyFailureRate = desc("http_proxy_mailbox_proxy_failure_rate", "% of failures between this CAS and MBX servers over the last 200 samples", "name")
-	c.pingCommandsPending = desc("activesync_ping_cmds_pending", "Number of ping commands currently pending in the queue")
-	c.syncCommandsPerSec = desc("activesync_sync_cmds_total", "Number of sync commands processed per second. Clients use this command to synchronize items within a folder")
-	c.activeUserCountMapiHttpEmsMDB = desc("mapihttp_emsmdb_active_user_count", "Number of unique outlook users that have shown some kind of activity in the last 2 minutes")
 
 	return nil
 }

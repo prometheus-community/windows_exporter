@@ -29,6 +29,19 @@ func (c *Collector) buildOWA() error {
 		return fmt.Errorf("failed to create MSExchange OWA collector: %w", err)
 	}
 
+	c.currentUniqueUsers = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "owa_current_unique_users"),
+		"Number of unique users currently logged on to Outlook Web App",
+		nil,
+		nil,
+	)
+	c.owaRequestsPerSec = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "owa_requests_total"),
+		"Number of requests handled by Outlook Web App per second",
+		nil,
+		nil,
+	)
+
 	return nil
 }
 

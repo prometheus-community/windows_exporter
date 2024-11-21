@@ -59,6 +59,7 @@ type Collector struct {
 }
 
 type volumeInfo struct {
+	diskIDs      string
 	filesystem   string
 	serialNumber string
 	label        string
@@ -288,9 +289,8 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 // to the provided prometheus Metric channel.
 func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	var (
-		err    error
-		diskID string
-		info   volumeInfo
+		err  error
+		info volumeInfo
 	)
 
 	if c.perfDataCollector == nil {
@@ -303,17 +303,8 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	}
 
 	for name, volume := range perfData {
-		if name == "_Total" ||
-			c.config.VolumeExclude.MatchString(name) ||
-			!c.config.VolumeInclude.MatchString(name) {
+		if c.config.VolumeExclude.MatchString(name) || !c.config.VolumeInclude.MatchString(name) {
 			continue
-		}
-
-		diskID, err = getDiskIDByVolume(name)
-		if err != nil {
-			c.logger.Warn("failed to get disk ID for "+name,
-				slog.Any("err", err),
-			)
 		}
 
 		info, err = getVolumeInfo(name)
@@ -327,7 +318,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 			c.information,
 			prometheus.GaugeValue,
 			1,
-			diskID,
+			info.diskIDs,
 			info.volumeType,
 			name,
 			info.label,
@@ -476,38 +467,60 @@ func getDriveType(driveType uint32) string {
 const diskExtentSize = 24
 
 // getDiskIDByVolume returns the disk ID for a given volume.
-func getDiskIDByVolume(rootDrive string) (string, error) {
-	// Open a volume handle to the Disk Root.
-	var err error
+func getVolumeInfo(rootDrive string) (volumeInfo, error) {
+	volumePath := rootDrive
 
-	var f windows.Handle
+	// If rootDrive is a NTFS directory, convert it to a volume GUID.
+	if strings.Contains(volumePath, `\`) {
+		volumePathName, err := windows.UTF16PtrFromString(volumePath + `\`)
+		if err != nil {
+			return volumeInfo{}, fmt.Errorf("could not convert rootDrive to volume path: %w", err)
+		}
+
+		volumeGUIDPtr := make([]uint16, 50)
+		if err := windows.GetVolumeNameForVolumeMountPoint(volumePathName, &volumeGUIDPtr[0], uint32(len(volumeGUIDPtr))); err != nil {
+			panic(fmt.Errorf("could not get volume GUID: %w", err))
+		}
+
+		volumePath = windows.UTF16ToString(volumeGUIDPtr)
+
+		// GetVolumeNameForVolumeMountPoint returns the volume GUID path as \\?\Volume{GUID}\
+		// According https://learn.microsoft.com/en-us/windows/win32/api/ioapiset/nf-ioapiset-deviceiocontrol#remarks
+		// Win32 Drive Namespace is prefixed with \\.\, so we need to remove the \\?\ prefix.
+		volumePath, _ = strings.CutPrefix(volumePath, `\\?\`)
+
+		// https://stackoverflow.com/questions/55710326/how-to-get-the-physical-device-that-a-volume-guid-path-belongs-to#comment98104360_55710326
+		// DeviceIoControl expects no trailing backslash in the volume GUID path.
+		volumePath = strings.TrimRight(volumePath, `\`)
+	}
+
+	volumePathPtr := windows.StringToUTF16Ptr(`\\.\` + volumePath)
 
 	// mode has to include FILE_SHARE permission to allow concurrent access to the disk.
 	// use 0 as access mode to avoid admin permission.
 	mode := uint32(windows.FILE_SHARE_READ | windows.FILE_SHARE_WRITE | windows.FILE_SHARE_DELETE)
+	attr := uint32(windows.FILE_ATTRIBUTE_READONLY)
 
-	f, err = windows.CreateFile(
-		windows.StringToUTF16Ptr(`\\.\`+rootDrive),
-		0, mode, nil, windows.OPEN_EXISTING, uint32(windows.FILE_ATTRIBUTE_READONLY), 0)
+	volumeHandle, err := windows.CreateFile(volumePathPtr, 0, mode, nil, windows.OPEN_EXISTING, attr, 0)
 	if err != nil {
-		return "", err
+		return volumeInfo{}, fmt.Errorf("could not open volume for %s: %w", rootDrive, err)
 	}
 
-	defer windows.Close(f)
+	defer windows.Close(volumeHandle)
 
 	controlCode := uint32(5636096) // IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS
 	volumeDiskExtents := make([]byte, 16*1024)
 
 	var bytesReturned uint32
 
-	err = windows.DeviceIoControl(f, controlCode, nil, 0, &volumeDiskExtents[0], uint32(len(volumeDiskExtents)), &bytesReturned, nil)
+	err = windows.DeviceIoControl(volumeHandle, controlCode, nil, 0, &volumeDiskExtents[0], uint32(len(volumeDiskExtents)), &bytesReturned, nil)
 	if err != nil {
-		return "", fmt.Errorf("could not identify physical drive for %s: %w", rootDrive, err)
+		return volumeInfo{}, fmt.Errorf("could not identify physical drive for %s: %w", rootDrive, err)
 	}
 
 	numDiskIDs := uint(binary.LittleEndian.Uint32(volumeDiskExtents))
 	if numDiskIDs < 1 {
-		return "", fmt.Errorf("could not identify physical drive for %s: no disk IDs returned", rootDrive)
+		return volumeInfo{}, fmt.Errorf("could not identify physical drive for %s: no disk IDs returned", rootDrive)
 	}
 
 	diskIDs := make([]string, numDiskIDs)
@@ -519,34 +532,35 @@ func getDiskIDByVolume(rootDrive string) (string, error) {
 	slices.Sort(diskIDs)
 	diskIDs = slices.Compact(diskIDs)
 
-	return strings.Join(diskIDs, ";"), nil
-}
+	volumeInformationRootDrive := volumePath + `\`
 
-func getVolumeInfo(rootDrive string) (volumeInfo, error) {
-	if !strings.HasSuffix(rootDrive, ":") {
-		return volumeInfo{}, nil
+	if strings.Contains(volumePath, `Volume`) {
+		volumeInformationRootDrive = `\\?\` + volumeInformationRootDrive
 	}
 
-	volPath := windows.StringToUTF16Ptr(rootDrive + `\`)
-
+	volumeInformationRootDrivePtr := windows.StringToUTF16Ptr(volumeInformationRootDrive)
+	driveType := windows.GetDriveType(volumeInformationRootDrivePtr)
 	volBufLabel := make([]uint16, windows.MAX_PATH+1)
 	volSerialNum := uint32(0)
 	fsFlags := uint32(0)
 	volBufType := make([]uint16, windows.MAX_PATH+1)
 
-	driveType := windows.GetDriveType(volPath)
-
-	err := windows.GetVolumeInformation(volPath, &volBufLabel[0], uint32(len(volBufLabel)),
-		&volSerialNum, nil, &fsFlags, &volBufType[0], uint32(len(volBufType)))
+	err = windows.GetVolumeInformation(
+		volumeInformationRootDrivePtr,
+		&volBufLabel[0], uint32(len(volBufLabel)),
+		&volSerialNum, nil, &fsFlags,
+		&volBufType[0], uint32(len(volBufType)),
+	)
 	if err != nil {
-		if driveType != windows.DRIVE_CDROM && driveType != windows.DRIVE_REMOVABLE {
-			return volumeInfo{}, err
+		if driveType == windows.DRIVE_CDROM || driveType == windows.DRIVE_REMOVABLE {
+			return volumeInfo{}, nil
 		}
 
-		return volumeInfo{}, nil
+		return volumeInfo{}, fmt.Errorf("could not get volume information for %s: %w", volumeInformationRootDrive, err)
 	}
 
 	return volumeInfo{
+		diskIDs:      strings.Join(diskIDs, ";"),
 		volumeType:   getDriveType(driveType),
 		label:        windows.UTF16PtrToString(&volBufLabel[0]),
 		filesystem:   windows.UTF16PtrToString(&volBufType[0]),
