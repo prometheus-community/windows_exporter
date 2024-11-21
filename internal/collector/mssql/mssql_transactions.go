@@ -162,7 +162,6 @@ func (c *Collector) collectTransactions(ch chan<- prometheus.Metric) error {
 // Win32_PerfRawData_MSSQLSERVER_Transactions docs:
 // - https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-transactions-object
 func (c *Collector) collectTransactionsInstance(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *perfdata.Collector) error {
-
 	perfData, err := perfDataCollector.Collect()
 	if err != nil {
 		return fmt.Errorf("failed to collect %s metrics: %w", c.mssqlGetPerfObjectName(sqlInstance, "Transactions"), err)

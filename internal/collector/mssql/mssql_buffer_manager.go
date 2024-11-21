@@ -250,7 +250,6 @@ func (c *Collector) collectBufferManager(ch chan<- prometheus.Metric) error {
 }
 
 func (c *Collector) collectBufferManagerInstance(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *perfdata.Collector) error {
-
 	perfData, err := perfDataCollector.Collect()
 	if err != nil {
 		return fmt.Errorf("failed to collect %s metrics: %w", c.mssqlGetPerfObjectName(sqlInstance, "Buffer Manager"), err)

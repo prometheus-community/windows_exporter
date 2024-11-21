@@ -260,7 +260,6 @@ func (c *Collector) collectDatabaseReplica(ch chan<- prometheus.Metric) error {
 }
 
 func (c *Collector) collectDatabaseReplicaInstance(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *perfdata.Collector) error {
-
 	perfData, err := perfDataCollector.Collect()
 	if err != nil {
 		return fmt.Errorf("failed to collect %s metrics: %w", c.mssqlGetPerfObjectName(sqlInstance, "Database Replica"), err)
