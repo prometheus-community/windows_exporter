@@ -266,10 +266,6 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 }
 
 func (c *Collector) collectRemoteFXNetworkCount(ch chan<- prometheus.Metric) error {
-	if c.perfDataCollectorNetwork == nil {
-		return types.ErrPerfCounterCollectorNotInitialized
-	}
-
 	perfData, err := c.perfDataCollectorNetwork.Collect()
 	if err != nil {
 		return fmt.Errorf("failed to collect RemoteFX Network metrics: %w", err)
@@ -368,10 +364,6 @@ func (c *Collector) collectRemoteFXNetworkCount(ch chan<- prometheus.Metric) err
 }
 
 func (c *Collector) collectRemoteFXGraphicsCounters(ch chan<- prometheus.Metric) error {
-	if c.perfDataCollectorNetwork == nil {
-		return types.ErrPerfCounterCollectorNotInitialized
-	}
-
 	perfData, err := c.perfDataCollectorNetwork.Collect()
 	if err != nil {
 		return fmt.Errorf("failed to collect RemoteFX Graphics metrics: %w", err)

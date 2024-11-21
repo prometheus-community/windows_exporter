@@ -88,10 +88,6 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
-	if c.perfDataCollector == nil {
-		return types.ErrPerfCounterCollectorNotInitialized
-	}
-
 	data, err := c.perfDataCollector.Collect()
 	if err != nil {
 		return fmt.Errorf("failed to collect Paging File metrics: %w", err)

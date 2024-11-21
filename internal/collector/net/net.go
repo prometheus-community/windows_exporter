@@ -284,10 +284,6 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 }
 
 func (c *Collector) collect(ch chan<- prometheus.Metric) error {
-	if c.perfDataCollector == nil {
-		return types.ErrPerfCounterCollectorNotInitialized
-	}
-
 	data, err := c.perfDataCollector.Collect()
 	if err != nil {
 		return fmt.Errorf("failed to collect Network Information metrics: %w", err)

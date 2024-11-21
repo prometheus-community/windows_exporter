@@ -119,6 +119,13 @@ func NewCollector(object string, instances []string, counters []string) (*Collec
 }
 
 func (c *Collector) Describe() map[string]string {
+	if c == nil {
+		return map[string]string{}
+	}
+
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
 	desc := make(map[string]string, len(c.counters))
 
 	for _, counter := range c.counters {
@@ -129,12 +136,16 @@ func (c *Collector) Describe() map[string]string {
 }
 
 func (c *Collector) Collect() (map[string]map[string]CounterValues, error) {
-	if len(c.counters) == 0 {
-		return map[string]map[string]CounterValues{}, nil
+	if c == nil {
+		return map[string]map[string]CounterValues{}, ErrCollectorNotInitialized
 	}
 
 	c.mu.RLock()
 	defer c.mu.RUnlock()
+
+	if len(c.counters) == 0 {
+		return map[string]map[string]CounterValues{}, nil
+	}
 
 	if c.handle == 0 {
 		return map[string]map[string]CounterValues{}, nil
@@ -228,6 +239,9 @@ func (c *Collector) Collect() (map[string]map[string]CounterValues, error) {
 }
 
 func (c *Collector) Close() {
+	if c == nil {
+		return
+	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 

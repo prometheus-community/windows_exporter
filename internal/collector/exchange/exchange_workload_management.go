@@ -70,10 +70,6 @@ func (c *Collector) buildWorkloadManagementWorkloads() error {
 }
 
 func (c *Collector) collectWorkloadManagementWorkloads(ch chan<- prometheus.Metric) error {
-	if c.perfDataCollectorWorkloadManagementWorkloads == nil {
-		return types.ErrPerfCounterCollectorNotInitialized
-	}
-
 	perfData, err := c.perfDataCollectorWorkloadManagementWorkloads.Collect()
 	if err != nil {
 		return fmt.Errorf("failed to collect MSExchange WorkloadManagement Workloads: %w", err)

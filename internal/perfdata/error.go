@@ -2,9 +2,14 @@
 
 package perfdata
 
-import "errors"
+import (
+	"errors"
+)
 
-var ErrNoData = NewPdhError(PdhNoData)
+var (
+	ErrNoData                  = NewPdhError(PdhNoData)
+	ErrCollectorNotInitialized = errors.New("perf counter collector not initialized")
+)
 
 // Error represents error returned from Performance Counters API.
 type Error struct {

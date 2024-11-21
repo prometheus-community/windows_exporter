@@ -38,10 +38,6 @@ func (c *Collector) buildMapiHttpEmsmdb() error {
 }
 
 func (c *Collector) collectMapiHttpEmsmdb(ch chan<- prometheus.Metric) error {
-	if c.perfDataCollectorMapiHttpEmsmdb == nil {
-		return types.ErrPerfCounterCollectorNotInitialized
-	}
-
 	perfData, err := c.perfDataCollectorMapiHttpEmsmdb.Collect()
 	if err != nil {
 		return fmt.Errorf("failed to collect MSExchange MapiHttp Emsmdb metrics: %w", err)

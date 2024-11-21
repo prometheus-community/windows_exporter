@@ -54,10 +54,6 @@ func (c *Collector) buildActiveSync() error {
 }
 
 func (c *Collector) collectActiveSync(ch chan<- prometheus.Metric) error {
-	if c.perfDataCollectorActiveSync == nil {
-		return types.ErrPerfCounterCollectorNotInitialized
-	}
-
 	perfData, err := c.perfDataCollectorActiveSync.Collect()
 	if err != nil {
 		return fmt.Errorf("failed to collect MSExchange ActiveSync metrics: %w", err)

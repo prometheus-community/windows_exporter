@@ -78,10 +78,6 @@ func (c *Collector) buildRPC() error {
 }
 
 func (c *Collector) collectRPC(ch chan<- prometheus.Metric) error {
-	if c.perfDataCollectorRpcClientAccess == nil {
-		return types.ErrPerfCounterCollectorNotInitialized
-	}
-
 	perfData, err := c.perfDataCollectorRpcClientAccess.Collect()
 	if err != nil {
 		return fmt.Errorf("failed to collect MSExchange RpcClientAccess: %w", err)

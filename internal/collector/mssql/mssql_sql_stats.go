@@ -142,9 +142,6 @@ func (c *Collector) collectSQLStats(ch chan<- prometheus.Metric) error {
 }
 
 func (c *Collector) collectSQLStatsInstance(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *perfdata.Collector) error {
-	if perfDataCollector == nil {
-		return types.ErrPerfCounterCollectorNotInitialized
-	}
 
 	perfData, err := perfDataCollector.Collect()
 	if err != nil {

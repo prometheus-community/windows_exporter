@@ -34,10 +34,6 @@ func (c *Collector) buildAvailabilityService() error {
 }
 
 func (c *Collector) collectAvailabilityService(ch chan<- prometheus.Metric) error {
-	if c.perfDataCollectorAvailabilityService == nil {
-		return types.ErrPerfCounterCollectorNotInitialized
-	}
-
 	perfData, err := c.perfDataCollectorAvailabilityService.Collect()
 	if err != nil {
 		return fmt.Errorf("failed to collect MSExchange Availability Service metrics: %w", err)

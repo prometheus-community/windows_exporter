@@ -12,7 +12,3 @@
 // limitations under the License.
 
 package types
-
-import "errors"
-
-var ErrPerfCounterCollectorNotInitialized = errors.New("perf counter collector not initialized")

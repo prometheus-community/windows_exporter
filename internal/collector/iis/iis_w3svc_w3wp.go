@@ -416,10 +416,6 @@ func (c *Collector) buildW3SVCW3WP() error {
 }
 
 func (c *Collector) collectW3SVCW3WP(ch chan<- prometheus.Metric) error {
-	if c.perfDataCollectorW3SVCW3WP == nil {
-		return types.ErrPerfCounterCollectorNotInitialized
-	}
-
 	perfData, err := c.perfDataCollectorW3SVCW3WP.Collect()
 	if err != nil {
 		return fmt.Errorf("failed to collect APP_POOL_WAS metrics: %w", err)

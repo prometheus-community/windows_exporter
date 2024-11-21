@@ -202,10 +202,6 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	c.mu.Lock() // Lock is needed to prevent concurrent map access to c.processorRTCValues
 	defer c.mu.Unlock()
 
-	if c.perfDataCollector == nil {
-		return types.ErrPerfCounterCollectorNotInitialized
-	}
-
 	data, err := c.perfDataCollector.Collect()
 	if err != nil {
 		return fmt.Errorf("failed to collect Processor Information metrics: %w", err)

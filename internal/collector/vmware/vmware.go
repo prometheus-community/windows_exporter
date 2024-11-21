@@ -246,10 +246,6 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 }
 
 func (c *Collector) collectMem(ch chan<- prometheus.Metric) error {
-	if c.perfDataCollectorMemory == nil {
-		return types.ErrPerfCounterCollectorNotInitialized
-	}
-
 	perfData, err := c.perfDataCollectorMemory.Collect()
 	if err != nil {
 		return fmt.Errorf("failed to collect VM Memory metrics: %w", err)
@@ -336,10 +332,6 @@ func (c *Collector) collectMem(ch chan<- prometheus.Metric) error {
 }
 
 func (c *Collector) collectCpu(ch chan<- prometheus.Metric) error {
-	if c.perfDataCollectorCPU == nil {
-		return types.ErrPerfCounterCollectorNotInitialized
-	}
-
 	perfData, err := c.perfDataCollectorCPU.Collect()
 	if err != nil {
 		return fmt.Errorf("failed to collect VM Memory metrics: %w", err)

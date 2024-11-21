@@ -210,10 +210,6 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 }
 
 func (c *Collector) collect(ch chan<- prometheus.Metric) error {
-	if c.perfDataCollector4 == nil {
-		return types.ErrPerfCounterCollectorNotInitialized
-	}
-
 	data, err := c.perfDataCollector4.Collect()
 	if err != nil {
 		return fmt.Errorf("failed to collect TCPv4 metrics: %w", err)
@@ -224,10 +220,6 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	}
 
 	c.writeTCPCounters(ch, data[perfdata.EmptyInstance], []string{"ipv4"})
-
-	if c.perfDataCollector6 == nil {
-		return types.ErrPerfCounterCollectorNotInitialized
-	}
 
 	data, err = c.perfDataCollector6.Collect()
 	if err != nil {

@@ -222,10 +222,6 @@ func (c *Collector) collectTime(ch chan<- prometheus.Metric) error {
 }
 
 func (c *Collector) collectNTP(ch chan<- prometheus.Metric) error {
-	if c.perfDataCollector == nil {
-		return types.ErrPerfCounterCollectorNotInitialized
-	}
-
 	perfData, err := c.perfDataCollector.Collect()
 	if err != nil {
 		return fmt.Errorf("failed to collect VM Memory metrics: %w", err)

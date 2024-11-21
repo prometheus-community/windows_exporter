@@ -34,10 +34,6 @@ func (c *Collector) buildAutoDiscover() error {
 }
 
 func (c *Collector) collectAutoDiscover(ch chan<- prometheus.Metric) error {
-	if c.perfDataCollectorAutoDiscover == nil {
-		return types.ErrPerfCounterCollectorNotInitialized
-	}
-
 	perfData, err := c.perfDataCollectorAutoDiscover.Collect()
 	if err != nil {
 		return fmt.Errorf("failed to collect MSExchange Autodiscover metrics: %w", err)

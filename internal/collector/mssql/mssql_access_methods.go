@@ -440,9 +440,6 @@ func (c *Collector) collectAccessMethods(ch chan<- prometheus.Metric) error {
 }
 
 func (c *Collector) collectAccessMethodsInstance(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *perfdata.Collector) error {
-	if perfDataCollector == nil {
-		return types.ErrPerfCounterCollectorNotInitialized
-	}
 
 	perfData, err := perfDataCollector.Collect()
 	if err != nil {
