@@ -360,9 +360,10 @@ func (c *Collector) getMSSQLInstances() mssqlInstancesType {
 // Counter object for the given SQL instance and Collector.
 func (c *Collector) mssqlGetPerfObjectName(sqlInstance string, collector string) string {
 	sb := strings.Builder{}
-	sb.WriteString("SQLServer:")
 
-	if sqlInstance != "MSSQLSERVER" {
+	if sqlInstance == "MSSQLSERVER" {
+		sb.WriteString("SQLServer:")
+	} else {
 		sb.WriteString("MSSQL$")
 		sb.WriteString(sqlInstance)
 		sb.WriteString(":")
