@@ -29,7 +29,6 @@ type Prometheus struct {
 	collectorScrapeDurationDesc *prometheus.Desc
 	collectorScrapeSuccessDesc  *prometheus.Desc
 	collectorScrapeTimeoutDesc  *prometheus.Desc
-	snapshotDuration            *prometheus.Desc
 }
 
 type collectorStatus struct {
