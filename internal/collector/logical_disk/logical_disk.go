@@ -468,14 +468,17 @@ func getVolumeInfo(rootDrive string) (volumeInfo, error) {
 
 	// If rootDrive is a NTFS directory, convert it to a volume GUID.
 	if strings.Contains(volumePath, `\`) {
-		volumePathName, err := windows.UTF16PtrFromString(volumePath + `\`)
+		// GetVolumeNameForVolumeMountPoint expects a trailing backslash.
+		volumePath += `\`
+
+		volumePathName, err := windows.UTF16PtrFromString(volumePath)
 		if err != nil {
-			return volumeInfo{}, fmt.Errorf("could not convert rootDrive to volume path: %w", err)
+			return volumeInfo{}, fmt.Errorf("could not convert rootDrive to volume path %s: %w", volumePath, err)
 		}
 
 		volumeGUIDPtr := make([]uint16, 50)
 		if err := windows.GetVolumeNameForVolumeMountPoint(volumePathName, &volumeGUIDPtr[0], uint32(len(volumeGUIDPtr))); err != nil {
-			panic(fmt.Errorf("could not get volume GUID: %w", err))
+			return volumeInfo{}, fmt.Errorf("could not get volume GUID for volume %s: %w", volumePath, err)
 		}
 
 		volumePath = windows.UTF16ToString(volumeGUIDPtr)
