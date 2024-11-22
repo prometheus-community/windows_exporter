@@ -12,6 +12,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
+	"github.com/prometheus-community/windows_exporter/internal/perfdata"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -133,7 +134,7 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
+func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	c.collectorFns = make([]func(ch chan<- prometheus.Metric) error, 0, len(c.config.CollectorsEnabled))
 	c.closeFns = make([]func(), 0, len(c.config.CollectorsEnabled))
 
@@ -232,7 +233,17 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		}
 
 		if err := subCollectors[name].build(); err != nil {
-			return fmt.Errorf("failed to build %s collector: %w", name, err)
+			var errPdh *perfdata.Error
+
+			if errors.As(err, &errPdh) && errPdh.ErrorCode == perfdata.PdhCstatusNoCounter {
+				logger.Info(fmt.Sprintf("no performance counter available for %s collector.", name),
+					slog.String("collector", Name),
+				)
+
+				continue
+			}
+
+			return fmt.Errorf("failed to build %s collector (err %d): %w", name, errPdh.ErrorCode, err)
 		}
 
 		c.collectorFns = append(c.collectorFns, subCollectors[name].collect)
