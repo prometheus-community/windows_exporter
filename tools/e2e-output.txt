@@ -157,8 +157,6 @@ windows_exporter_collector_timeout{collector="tcp"} 0
 windows_exporter_collector_timeout{collector="textfile"} 0
 windows_exporter_collector_timeout{collector="time"} 0
 windows_exporter_collector_timeout{collector="udp"} 0
-# HELP windows_exporter_perflib_snapshot_duration_seconds Duration of perflib snapshot capture
-# TYPE windows_exporter_perflib_snapshot_duration_seconds gauge
 # HELP windows_exporter_scrape_duration_seconds windows_exporter: Total scrape duration.
 # TYPE windows_exporter_scrape_duration_seconds gauge
 # HELP windows_logical_disk_avg_read_requests_queued Average number of read requests that were queued for the selected disk during the sample interval (LogicalDisk.AvgDiskReadQueueLength)

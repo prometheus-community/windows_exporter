@@ -135,10 +135,6 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
-	return []string{"SMTP Server"}, nil
-}
-
 func (c *Collector) Close() error {
 	c.perfDataCollector.Close()
 
