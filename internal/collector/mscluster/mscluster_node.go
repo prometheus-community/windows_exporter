@@ -144,6 +144,8 @@ func (c *Collector) buildNode() error {
 		[]string{"name"},
 		nil,
 	)
+
+	return nil
 }
 
 // Collect sends the metric values for each metric
