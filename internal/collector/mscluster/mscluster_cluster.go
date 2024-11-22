@@ -7,13 +7,14 @@ import (
 
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
-	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 const nameCluster = Name + "_cluster"
 
 type collectorCluster struct {
+	clusterMIQuery mi.Query
+
 	clusterAddEvictDelay                           *prometheus.Desc
 	clusterAdminAccessPoint                        *prometheus.Desc
 	clusterAutoAssignNodeSite                      *prometheus.Desc
@@ -177,7 +178,14 @@ type msClusterCluster struct {
 	WitnessRestartInterval                  uint `mi:"WitnessRestartInterval"`
 }
 
-func (c *Collector) buildCluster() {
+func (c *Collector) buildCluster() error {
+	clusterMIQuery, err := mi.NewQuery("SELECT * FROM MSCluster_Cluster")
+	if err != nil {
+		return fmt.Errorf("failed to create WMI query: %w", err)
+	}
+
+	c.clusterMIQuery = clusterMIQuery
+
 	c.clusterAddEvictDelay = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "add_evict_delay"),
 		"Provides access to the cluster's AddEvictDelay property, which is the number a seconds that a new node is delayed after an eviction of another node.",
@@ -640,11 +648,13 @@ func (c *Collector) buildCluster() {
 		[]string{"name"},
 		nil,
 	)
+
+	return nil
 }
 
 func (c *Collector) collectCluster(ch chan<- prometheus.Metric) error {
 	var dst []msClusterCluster
-	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, utils.Must(mi.NewQuery("SELECT * MSCluster_Cluster"))); err != nil {
+	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, c.clusterMIQuery); err != nil {
 		return fmt.Errorf("WMI query failed: %w", err)
 	}
 
