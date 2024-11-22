@@ -188,7 +188,6 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 			var err error
 
 			nodeNames, err = c.collectNode(ch)
-
 			if err != nil {
 				errCh <- fmt.Errorf("failed to collect node metrics: %w", err)
 			}
