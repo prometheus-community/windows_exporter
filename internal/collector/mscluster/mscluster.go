@@ -93,10 +93,6 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
-	return []string{"Memory"}, nil
-}
-
 func (c *Collector) Close() error {
 	return nil
 }

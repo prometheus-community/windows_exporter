@@ -29,7 +29,6 @@ type Prometheus struct {
 	collectorScrapeDurationDesc *prometheus.Desc
 	collectorScrapeSuccessDesc  *prometheus.Desc
 	collectorScrapeTimeoutDesc  *prometheus.Desc
-	snapshotDuration            *prometheus.Desc
 }
 
 type collectorStatus struct {
@@ -76,12 +75,6 @@ func (c *MetricCollectors) NewPrometheusCollector(timeout time.Duration, logger 
 			[]string{"collector"},
 			nil,
 		),
-		snapshotDuration: prometheus.NewDesc(
-			prometheus.BuildFQName(types.Namespace, "exporter", "perflib_snapshot_duration_seconds"),
-			"Duration of perflib snapshot capture",
-			nil,
-			nil,
-		),
 	}
 }
 
@@ -90,13 +83,7 @@ func (p *Prometheus) Describe(_ chan<- *prometheus.Desc) {}
 // Collect sends the collected metrics from each of the MetricCollectors to
 // prometheus.
 func (p *Prometheus) Collect(ch chan<- prometheus.Metric) {
-	t := time.Now()
-
-	ch <- prometheus.MustNewConstMetric(
-		p.snapshotDuration,
-		prometheus.GaugeValue,
-		time.Since(t).Seconds(),
-	)
+	collectorStartTime := time.Now()
 
 	// WaitGroup to wait for all collectors to finish
 	wg := sync.WaitGroup{}
@@ -153,7 +140,7 @@ func (p *Prometheus) Collect(ch chan<- prometheus.Metric) {
 	ch <- prometheus.MustNewConstMetric(
 		p.scrapeDurationDesc,
 		prometheus.GaugeValue,
-		time.Since(t).Seconds(),
+		time.Since(collectorStartTime).Seconds(),
 	)
 }
 
