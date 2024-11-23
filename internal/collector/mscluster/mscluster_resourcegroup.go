@@ -53,7 +53,7 @@ type msClusterResourceGroup struct {
 }
 
 func (c *Collector) buildResourceGroup() error {
-	resourceGroupMIQuery, err := mi.NewQuery("SELECT * FROM MSCluster_Resource")
+	resourceGroupMIQuery, err := mi.NewQuery("SELECT * FROM MSCluster_ResourceGroup")
 	if err != nil {
 		return fmt.Errorf("failed to create WMI query: %w", err)
 	}
