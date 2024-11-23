@@ -102,7 +102,7 @@ func (c *Collector) Close() error {
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 	var err error
 
-	c.perfDataCollector, err = perfdata.NewCollector("AD FS", perfdata.InstanceAll, []string{
+	c.perfDataCollector, err = perfdata.NewCollector("AD FS", nil, []string{
 		adLoginConnectionFailures,
 		certificateAuthentications,
 		deviceAuthentications,
