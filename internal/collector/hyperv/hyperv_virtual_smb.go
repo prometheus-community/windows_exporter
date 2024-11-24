@@ -16,11 +16,10 @@
 package hyperv
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -89,7 +88,7 @@ func (c *Collector) buildVirtualSMB() error {
 		virtualSMBSentBytes,
 		virtualSMBReceivedBytes,
 	})
-	if err != nil && !errors.Is(err, perfdata.ErrNoData) {
+	if err != nil {
 		return fmt.Errorf("failed to create Hyper-V Virtual SMB collector: %w", err)
 	}
 
@@ -201,7 +200,7 @@ func (c *Collector) buildVirtualSMB() error {
 
 func (c *Collector) collectVirtualSMB(ch chan<- prometheus.Metric) error {
 	data, err := c.perfDataCollectorVirtualSMB.Collect()
-	if err != nil && !errors.Is(err, perfdata.ErrNoData) {
+	if err != nil {
 		return fmt.Errorf("failed to collect Hyper-V Virtual SMB metrics: %w", err)
 	}
 

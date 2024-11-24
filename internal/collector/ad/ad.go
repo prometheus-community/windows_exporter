@@ -16,14 +16,13 @@
 package ad
 
 import (
-	"errors"
 	"fmt"
 	"log/slog"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -671,7 +670,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	data, ok := perfData["NTDS"]
 
 	if !ok {
-		return errors.New("perflib query for DirectoryServices (AD) returned empty result set")
+		return fmt.Errorf("failed to collect DirectoryServices (AD) metrics: %w", types.ErrNoData)
 	}
 
 	ch <- prometheus.MustNewConstMetric(

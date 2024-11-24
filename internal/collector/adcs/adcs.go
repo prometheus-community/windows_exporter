@@ -16,15 +16,14 @@
 package adcs
 
 import (
-	"errors"
 	"fmt"
 	"log/slog"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus-community/windows_exporter/internal/utils"
+	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -191,7 +190,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	}
 
 	if len(perfData) == 0 {
-		return errors.New("perflib query for Certification Authority (ADCS) returned empty result set")
+		return fmt.Errorf("failed to collect Certification Authority (ADCS) metrics: %w", types.ErrNoData)
 	}
 
 	for name, data := range perfData {

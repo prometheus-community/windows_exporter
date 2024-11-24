@@ -17,6 +17,7 @@ package collector
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"runtime/debug"
@@ -24,7 +25,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/mi"
+	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -258,7 +261,12 @@ func (p *Prometheus) execute(name string, c Collector, ch chan<- prometheus.Metr
 	}
 
 	if err != nil {
-		p.logger.Error(fmt.Sprintf("collector %s failed after %s, resulting in %d metrics", name, duration, numMetrics),
+		loggerFn := p.logger.Warn
+		if errors.Is(err, types.ErrNoData) || errors.Is(err, perfdata.ErrNoData) || errors.Is(err, mi.MI_RESULT_INVALID_NAMESPACE) {
+			loggerFn = p.logger.Debug
+		}
+
+		loggerFn(fmt.Sprintf("collector %s failed after %s, resulting in %d metrics", name, duration, numMetrics),
 			slog.Any("err", err),
 		)
 

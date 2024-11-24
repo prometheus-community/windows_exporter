@@ -11,24 +11,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build windows
-
-package physical_disk_test
+package types
 
 import (
-	"testing"
-
-	"github.com/prometheus-community/windows_exporter/internal/collector/physical_disk"
-	"github.com/prometheus-community/windows_exporter/internal/utils/testutils"
-	"github.com/prometheus-community/windows_exporter/pkg/types"
+	"errors"
 )
 
-func BenchmarkCollector(b *testing.B) {
-	testutils.FuncBenchmarkCollector(b, physical_disk.Name, physical_disk.NewWithFlags)
-}
-
-func TestCollector(t *testing.T) {
-	testutils.TestCollector(t, physical_disk.New, &physical_disk.Config{
-		DiskInclude: types.RegExpAny,
-	})
-}
+var (
+	ErrCollectorNotInitialized = errors.New("collector not initialized")
+	ErrNoData                  = errors.New("no data")
+)

@@ -31,7 +31,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/headers/iphlpapi"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/registry"
@@ -175,7 +175,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 	fileVersion, productVersion, err := c.getMSSQLServerVersion(c.config.Port)
 	if err != nil {
-		logger.Warn("Failed to get MSSQL server version",
+		logger.Warn("failed to get MSSQL server version",
 			slog.Any("err", err),
 			slog.String("collector", Name),
 		)
@@ -334,7 +334,7 @@ func (c *Collector) getMSSQLInstances() mssqlInstancesType {
 
 	k, err := registry.OpenKey(registry.LOCAL_MACHINE, regKey, registry.QUERY_VALUE)
 	if err != nil {
-		c.logger.Warn("Couldn't open registry to determine SQL instances",
+		c.logger.Warn("couldn't open registry to determine SQL instances",
 			slog.Any("err", err),
 		)
 
@@ -343,7 +343,7 @@ func (c *Collector) getMSSQLInstances() mssqlInstancesType {
 
 	defer func(key registry.Key) {
 		if err := key.Close(); err != nil {
-			c.logger.Warn("Failed to close registry key",
+			c.logger.Warn("failed to close registry key",
 				slog.Any("err", err),
 			)
 		}
@@ -351,7 +351,7 @@ func (c *Collector) getMSSQLInstances() mssqlInstancesType {
 
 	instanceNames, err := k.ReadValueNames(0)
 	if err != nil {
-		c.logger.Warn("Can't ReadSubKeyNames",
+		c.logger.Warn("can't ReadSubKeyNames",
 			slog.Any("err", err),
 		)
 
@@ -364,7 +364,7 @@ func (c *Collector) getMSSQLInstances() mssqlInstancesType {
 		}
 	}
 
-	c.logger.Debug(fmt.Sprintf("Detected MSSQL Instances: %#v\n", sqlInstances))
+	c.logger.Debug(fmt.Sprintf("detected MSSQL Instances: %#v\n", sqlInstances))
 
 	return sqlInstances
 }

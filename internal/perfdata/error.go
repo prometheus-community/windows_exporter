@@ -17,7 +17,10 @@ package perfdata
 
 import "errors"
 
-var ErrNoData = NewPdhError(PdhNoData)
+var (
+	ErrNoData                           = NewPdhError(PdhNoData)
+	ErrPerformanceCounterNotInitialized = errors.New("performance counter not initialized")
+)
 
 // Error represents error returned from Performance Counters API.
 type Error struct {

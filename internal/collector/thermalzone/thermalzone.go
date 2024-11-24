@@ -22,7 +22,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
-	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -134,7 +134,7 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	}
 
 	if len(dst) == 0 {
-		return errors.New("WMI query returned empty result set")
+		return fmt.Errorf("WMI query failed: %w", types.ErrNoData)
 	}
 
 	for _, info := range dst {

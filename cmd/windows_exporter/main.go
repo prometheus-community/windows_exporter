@@ -20,6 +20,7 @@ package main
 //goland:noinspection GoUnsortedImport
 //nolint:gofumpt
 import (
+	"github.com/prometheus-community/windows_exporter/internal/utils"
 	// Its important that we do these first so that we can register with the Windows service control ASAP to avoid timeouts.
 	"github.com/prometheus-community/windows_exporter/internal/windowsservice"
 
@@ -191,7 +192,7 @@ func run() int {
 
 	enabledCollectorList := expandEnabledCollectors(*enabledCollectors)
 	if err := collectors.Enable(enabledCollectorList); err != nil {
-		logger.Error("Couldn't enable collectors",
+		logger.Error("couldn't enable collectors",
 			slog.Any("err", err),
 		)
 
@@ -200,11 +201,11 @@ func run() int {
 
 	// Initialize collectors before loading
 	if err = collectors.Build(logger); err != nil {
-		logger.Error("Couldn't load collectors",
-			slog.Any("err", err),
-		)
-
-		return 1
+		for _, err := range utils.SplitError(err) {
+			logger.Warn("couldn't initialize collector",
+				slog.Any("err", err),
+			)
+		}
 	}
 
 	logCurrentUser(logger)

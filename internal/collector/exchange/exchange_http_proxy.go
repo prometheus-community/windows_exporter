@@ -16,11 +16,10 @@
 package exchange
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -97,7 +96,7 @@ func (c *Collector) collectHTTPProxy(ch chan<- prometheus.Metric) error {
 	}
 
 	if len(perfData) == 0 {
-		return errors.New("perflib query for MSExchange HttpProxy Service returned empty result set")
+		return fmt.Errorf("failed to collect MSExchange HttpProxy Service metrics: %w", types.ErrNoData)
 	}
 
 	for name, data := range perfData {

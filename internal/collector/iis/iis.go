@@ -27,7 +27,7 @@ import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows/registry"
 )
@@ -195,7 +195,7 @@ type simpleVersion struct {
 func (c *Collector) getIISVersion(logger *slog.Logger) simpleVersion {
 	k, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\Microsoft\InetStp\`, registry.QUERY_VALUE)
 	if err != nil {
-		logger.Warn("Couldn't open registry to determine IIS version",
+		logger.Warn("couldn't open registry to determine IIS version",
 			slog.Any("err", err),
 		)
 
@@ -273,7 +273,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 // discarded, and "Site_B#2" would be kept and presented as "Site_B" in the
 // Collector metrics.
 // [ "Site_A", "Site_B", "Site_C", "Site_B#2" ].
-func deduplicateIISNames(counterValues map[string]map[string]perfdata.CounterValues) {
+func deduplicateIISNames(counterValues map[string]map[string]perfdata.CounterValue) {
 	services := slices.Collect(maps.Keys(counterValues))
 
 	// Ensure IIS entry with the highest suffix occurs last

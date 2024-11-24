@@ -23,7 +23,7 @@ import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -157,7 +157,7 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	return nil
 }
 
-func (c *Collector) writeUDPCounters(ch chan<- prometheus.Metric, metrics map[string]perfdata.CounterValues, labels []string) {
+func (c *Collector) writeUDPCounters(ch chan<- prometheus.Metric, metrics map[string]perfdata.CounterValue, labels []string) {
 	ch <- prometheus.MustNewConstMetric(
 		c.datagramsNoPortTotal,
 		prometheus.CounterValue,

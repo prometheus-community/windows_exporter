@@ -16,14 +16,13 @@
 package cache
 
 import (
-	"errors"
 	"fmt"
 	"log/slog"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -322,7 +321,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	cacheData, ok := data[perfdata.InstanceEmpty]
 
 	if !ok {
-		return errors.New("perflib query for Cache returned empty result set")
+		return fmt.Errorf("failed to collect Cache metrics: %w", types.ErrNoData)
 	}
 
 	ch <- prometheus.MustNewConstMetric(

@@ -27,7 +27,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/headers/sysinfoapi"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -430,7 +430,7 @@ func (c *Collector) collectPDH(ch chan<- prometheus.Metric) error {
 	data, ok := perfData[perfdata.InstanceEmpty]
 
 	if !ok {
-		return errors.New("perflib query for Memory returned empty result set")
+		return fmt.Errorf("failed to collect Memory metrics: %w", types.ErrNoData)
 	}
 
 	ch <- prometheus.MustNewConstMetric(

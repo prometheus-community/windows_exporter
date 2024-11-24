@@ -22,7 +22,7 @@ const (
 	InstanceTotal = "_Total"
 )
 
-type CounterValues struct {
+type CounterValue struct {
 	Type        prometheus.ValueType
 	FirstValue  float64
 	SecondValue float64
