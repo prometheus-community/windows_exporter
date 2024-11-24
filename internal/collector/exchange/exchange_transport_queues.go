@@ -58,7 +58,7 @@ func (c *Collector) buildTransportQueues() error {
 
 	var err error
 
-	c.perfDataCollectorTransportQueues, err = perfdata.NewCollector("MSExchangeTransport Queues", perfdata.InstanceAll, counters)
+	c.perfDataCollectorTransportQueues, err = perfdata.NewCollector("MSExchangeTransport Queues", perfdata.InstancesAll, counters)
 	if err != nil {
 		return fmt.Errorf("failed to create MSExchangeTransport Queues collector: %w", err)
 	}

@@ -86,7 +86,7 @@ func (c *Collector) Close() error {
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 	var err error
 
-	c.perfDataCollector, err = perfdata.NewCollector("Cache", perfdata.InstanceAll, []string{
+	c.perfDataCollector, err = perfdata.NewCollector("Cache", perfdata.InstancesAll, []string{
 		asyncCopyReadsTotal,
 		asyncDataMapsTotal,
 		asyncFastReadsTotal,
@@ -306,7 +306,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		return fmt.Errorf("failed to collect Cache metrics: %w", err)
 	}
 
-	cacheData, ok := data[perfdata.EmptyInstance]
+	cacheData, ok := data[perfdata.InstanceEmpty]
 
 	if !ok {
 		return errors.New("perflib query for Cache returned empty result set")

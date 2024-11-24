@@ -227,7 +227,7 @@ func (c *Collector) collectNTP(ch chan<- prometheus.Metric) error {
 		return fmt.Errorf("failed to collect VM Memory metrics: %w", err)
 	}
 
-	data, ok := perfData[perfdata.EmptyInstance]
+	data, ok := perfData[perfdata.InstanceEmpty]
 	if !ok {
 		return errors.New("query for Windows Time Service returned empty result set")
 	}

@@ -42,7 +42,7 @@ const (
 func (c *Collector) buildDynamicMemoryVM() error {
 	var err error
 
-	c.perfDataCollectorDynamicMemoryVM, err = perfdata.NewCollector("Hyper-V Dynamic Memory VM", perfdata.InstanceAll, []string{
+	c.perfDataCollectorDynamicMemoryVM, err = perfdata.NewCollector("Hyper-V Dynamic Memory VM", perfdata.InstancesAll, []string{
 		vmMemoryAddedMemory,
 		vmMemoryCurrentPressure,
 		vmMemoryGuestVisiblePhysicalMemory,

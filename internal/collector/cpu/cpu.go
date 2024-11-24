@@ -78,7 +78,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 
 	c.mu = sync.Mutex{}
 
-	c.perfDataCollector, err = perfdata.NewCollector("Processor Information", perfdata.InstanceAll, []string{
+	c.perfDataCollector, err = perfdata.NewCollector("Processor Information", perfdata.InstancesAll, []string{
 		c1TimeSeconds,
 		c2TimeSeconds,
 		c3TimeSeconds,

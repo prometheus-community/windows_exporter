@@ -443,7 +443,7 @@ func (c *Collector) collectAccessMethodsInstance(ch chan<- prometheus.Metric, sq
 		return fmt.Errorf("failed to collect %s metrics: %w", c.mssqlGetPerfObjectName(sqlInstance, "AccessMethods"), err)
 	}
 
-	data, ok := perfData[perfdata.EmptyInstance]
+	data, ok := perfData[perfdata.InstanceEmpty]
 	if !ok {
 		return fmt.Errorf("perflib query for %s returned empty result set", c.mssqlGetPerfObjectName(sqlInstance, "AccessMethods"))
 	}

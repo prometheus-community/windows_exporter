@@ -26,7 +26,7 @@ const (
 func (c *Collector) buildVirtualMachineVidPartition() error {
 	var err error
 
-	c.perfDataCollectorVirtualMachineVidPartition, err = perfdata.NewCollector("Hyper-V VM Vid Partition", perfdata.InstanceAll, []string{
+	c.perfDataCollectorVirtualMachineVidPartition, err = perfdata.NewCollector("Hyper-V VM Vid Partition", perfdata.InstancesAll, []string{
 		physicalPagesAllocated,
 		preferredNUMANodeIndex,
 		remotePhysicalPages,

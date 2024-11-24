@@ -57,7 +57,7 @@ var applicationStates = map[uint32]string{
 func (c *Collector) buildAppPoolWAS() error {
 	var err error
 
-	c.perfDataCollectorAppPoolWAS, err = perfdata.NewCollector("APP_POOL_WAS", perfdata.InstanceAll, []string{
+	c.perfDataCollectorAppPoolWAS, err = perfdata.NewCollector("APP_POOL_WAS", perfdata.InstancesAll, []string{
 		CurrentApplicationPoolState,
 		CurrentApplicationPoolUptime,
 		CurrentWorkerProcesses,

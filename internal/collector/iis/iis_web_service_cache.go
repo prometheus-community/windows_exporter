@@ -87,7 +87,7 @@ const (
 func (c *Collector) buildWebServiceCache() error {
 	var err error
 
-	c.perfDataCollectorWebService, err = perfdata.NewCollector("Web Service Cache", perfdata.InstanceAll, []string{
+	c.perfDataCollectorWebService, err = perfdata.NewCollector("Web Service Cache", perfdata.InstancesAll, []string{
 		ServiceCacheActiveFlushedEntries,
 		ServiceCacheCurrentFileCacheMemoryUsage,
 		ServiceCacheMaximumFileCacheMemoryUsage,

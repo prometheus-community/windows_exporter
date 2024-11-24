@@ -70,7 +70,7 @@ func (c *Collector) Close() error {
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 	var err error
 
-	c.perfDataCollector, err = perfdata.NewCollector("Certification Authority", perfdata.InstanceAll, []string{
+	c.perfDataCollector, err = perfdata.NewCollector("Certification Authority", perfdata.InstancesAll, []string{
 		requestsPerSecond,
 		requestProcessingTime,
 		retrievalsPerSecond,
