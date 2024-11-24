@@ -144,7 +144,7 @@ func (c *Collector) Close() error {
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	var err error
 
-	c.perfDataCollector, err = perfdata.NewCollector("Network Interface", perfdata.InstanceAll, []string{
+	c.perfDataCollector, err = perfdata.NewCollector("Network Interface", perfdata.InstancesAll, []string{
 		bytesReceivedPerSec,
 		bytesSentPerSec,
 		bytesTotalPerSec,

@@ -180,11 +180,11 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 		workingSet,
 	}
 
-	c.perfDataCollector, err = perfdata.NewCollector("Process V2", perfdata.InstanceAll, counters)
+	c.perfDataCollector, err = perfdata.NewCollector("Process V2", perfdata.InstancesAll, counters)
 	if errors.Is(err, perfdata.NewPdhError(perfdata.PdhCstatusNoObject)) {
 		counters[0] = idProcess
 
-		c.perfDataCollector, err = perfdata.NewCollector("Process", perfdata.InstanceAll, counters)
+		c.perfDataCollector, err = perfdata.NewCollector("Process", perfdata.InstancesAll, counters)
 	}
 
 	if err != nil {
@@ -324,9 +324,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		// Duplicate processes are suffixed #, and an index number. Remove those.
 		name, _, _ = strings.Cut(name, "#")
 
-		if name == "_Total" ||
-			c.config.ProcessExclude.MatchString(name) ||
-			!c.config.ProcessInclude.MatchString(name) {
+		if c.config.ProcessExclude.MatchString(name) || !c.config.ProcessInclude.MatchString(name) {
 			continue
 		}
 

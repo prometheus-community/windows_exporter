@@ -3,7 +3,6 @@
 package smb
 
 import (
-	"errors"
 	"fmt"
 	"log/slog"
 
@@ -27,6 +26,12 @@ type Collector struct {
 
 	treeConnectCount     *prometheus.Desc
 	currentOpenFileCount *prometheus.Desc
+	receivedBytes        *prometheus.Desc
+	writeRequests        *prometheus.Desc
+	readRequests         *prometheus.Desc
+	metadataRequests     *prometheus.Desc
+	sentBytes            *prometheus.Desc
+	filesOpened          *prometheus.Desc
 }
 
 func New(config *Config) *Collector {
@@ -58,9 +63,15 @@ func (c *Collector) Close() error {
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 	var err error
 
-	c.perfDataCollector, err = perfdata.NewCollector("SMB Server Shares", perfdata.InstanceAll, []string{
+	c.perfDataCollector, err = perfdata.NewCollector("SMB Server Shares", perfdata.InstancesAll, []string{
 		currentOpenFileCount,
 		treeConnectCount,
+		receivedBytes,
+		writeRequests,
+		readRequests,
+		metadataRequests,
+		sentBytes,
+		filesOpened,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create SMB Server Shares collector: %w", err)
@@ -68,14 +79,50 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 
 	c.currentOpenFileCount = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "server_shares_current_open_file_count"),
-		"Current total count open files on the SMB Server",
-		nil,
+		"Current total count open files on the SMB Server Share",
+		[]string{"share"},
 		nil,
 	)
 	c.treeConnectCount = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "server_shares_tree_connect_count"),
-		"Count of user connections to the SMB Server",
+		"Count of user connections to the SMB Server Share",
+		[]string{"share"},
 		nil,
+	)
+	c.receivedBytes = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "server_shares_received_bytes_total"),
+		"Received bytes on the SMB Server Share",
+		[]string{"share"},
+		nil,
+	)
+	c.writeRequests = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "server_shares_write_requests_count"),
+		"Writes requests on the SMB Server Share",
+		[]string{"share"},
+		nil,
+	)
+	c.readRequests = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "server_shares_read_requests_count"),
+		"Read requests on the SMB Server Share",
+		[]string{"share"},
+		nil,
+	)
+	c.metadataRequests = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "server_shares_metadata_requests_count"),
+		"Metadata requests on the SMB Server Share",
+		[]string{"share"},
+		nil,
+	)
+	c.sentBytes = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "server_shares_sent_bytes_total"),
+		"Sent bytes on the SMB Server Share",
+		[]string{"share"},
+		nil,
+	)
+	c.filesOpened = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "server_shares_filed_opened_count"),
+		"Files opened on the SMB Server Share",
+		[]string{"share"},
 		nil,
 	)
 
@@ -89,22 +136,63 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		return fmt.Errorf("failed to collect SMB Server Shares metrics: %w", err)
 	}
 
-	data, ok := perfData[perfdata.EmptyInstance]
-	if !ok {
-		return errors.New("query for SMB Server Shares returned empty result set")
+	for share, data := range perfData {
+		ch <- prometheus.MustNewConstMetric(
+			c.currentOpenFileCount,
+			prometheus.CounterValue,
+			data[currentOpenFileCount].FirstValue,
+			share,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.treeConnectCount,
+			prometheus.CounterValue,
+			data[treeConnectCount].FirstValue,
+			share,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.receivedBytes,
+			prometheus.CounterValue,
+			data[receivedBytes].FirstValue,
+			share,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.writeRequests,
+			prometheus.GaugeValue,
+			data[writeRequests].FirstValue,
+			share,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.readRequests,
+			prometheus.GaugeValue,
+			data[readRequests].FirstValue,
+			share,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.metadataRequests,
+			prometheus.GaugeValue,
+			data[metadataRequests].FirstValue,
+			share,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.sentBytes,
+			prometheus.CounterValue,
+			data[sentBytes].FirstValue,
+			share,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.filesOpened,
+			prometheus.GaugeValue,
+			data[filesOpened].FirstValue,
+			share,
+		)
 	}
-
-	ch <- prometheus.MustNewConstMetric(
-		c.currentOpenFileCount,
-		prometheus.CounterValue,
-		data[currentOpenFileCount].FirstValue,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.treeConnectCount,
-		prometheus.CounterValue,
-		data[treeConnectCount].FirstValue,
-	)
 
 	return nil
 }

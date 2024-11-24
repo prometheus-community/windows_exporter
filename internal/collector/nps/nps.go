@@ -298,7 +298,7 @@ func (c *Collector) collectAccept(ch chan<- prometheus.Metric) error {
 		return fmt.Errorf("failed to collect NPS Authentication Server metrics: %w", err)
 	}
 
-	data, ok := perfData[perfdata.EmptyInstance]
+	data, ok := perfData[perfdata.InstanceEmpty]
 	if !ok {
 		return errors.New("perflib query for NPS Authentication Server returned empty result set")
 	}
@@ -390,7 +390,7 @@ func (c *Collector) collectAccounting(ch chan<- prometheus.Metric) error {
 		return fmt.Errorf("failed to collect NPS Accounting Server metrics: %w", err)
 	}
 
-	data, ok := perfData[perfdata.EmptyInstance]
+	data, ok := perfData[perfdata.InstanceEmpty]
 	if !ok {
 		return errors.New("perflib query for NPS Accounting Server returned empty result set")
 	}

@@ -134,7 +134,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 
 	var err error
 
-	c.perfDataCollector, err = perfdata.NewCollector("Memory", perfdata.InstanceAll, counters)
+	c.perfDataCollector, err = perfdata.NewCollector("Memory", perfdata.InstancesAll, counters)
 	if err != nil {
 		return fmt.Errorf("failed to create Memory collector: %w", err)
 	}
@@ -414,7 +414,7 @@ func (c *Collector) collectPDH(ch chan<- prometheus.Metric) error {
 		return fmt.Errorf("failed to collect Memory metrics: %w", err)
 	}
 
-	data, ok := perfData[perfdata.EmptyInstance]
+	data, ok := perfData[perfdata.InstanceEmpty]
 
 	if !ok {
 		return errors.New("perflib query for Memory returned empty result set")

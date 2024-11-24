@@ -129,7 +129,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 
 	var err error
 
-	c.perfDataCollector, err = perfdata.NewCollector("PhysicalDisk", perfdata.InstanceAll, counters)
+	c.perfDataCollector, err = perfdata.NewCollector("PhysicalDisk", perfdata.InstancesAll, counters)
 	if err != nil {
 		return fmt.Errorf("failed to create PhysicalDisk collector: %w", err)
 	}

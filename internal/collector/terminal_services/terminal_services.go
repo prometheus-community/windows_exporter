@@ -142,7 +142,7 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 
 	var err error
 
-	c.perfDataCollectorTerminalServicesSession, err = perfdata.NewCollector("Terminal Services Session", perfdata.InstanceAll, counters)
+	c.perfDataCollectorTerminalServicesSession, err = perfdata.NewCollector("Terminal Services Session", perfdata.InstancesAll, counters)
 	if err != nil {
 		return fmt.Errorf("failed to create Terminal Services Session collector: %w", err)
 	}
@@ -158,7 +158,7 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 
 		var err error
 
-		c.perfDataCollectorBroker, err = perfdata.NewCollector("Remote Desktop Connection Broker Counterset", perfdata.InstanceAll, counters)
+		c.perfDataCollectorBroker, err = perfdata.NewCollector("Remote Desktop Connection Broker Counterset", perfdata.InstancesAll, counters)
 		if err != nil {
 			return fmt.Errorf("failed to create Remote Desktop Connection Broker Counterset collector: %w", err)
 		}
@@ -413,7 +413,7 @@ func (c *Collector) collectCollectionBrokerPerformanceCounter(ch chan<- promethe
 		return fmt.Errorf("failed to collect Remote Desktop Connection Broker Counterset metrics: %w", err)
 	}
 
-	data, ok := perfData[perfdata.EmptyInstance]
+	data, ok := perfData[perfdata.InstanceEmpty]
 	if !ok {
 		return errors.New("query for Remote Desktop Connection Broker Counterset returned empty result set")
 	}

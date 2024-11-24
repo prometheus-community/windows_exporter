@@ -15,8 +15,8 @@ import (
 )
 
 var (
-	InstanceAll   = []string{"*"}
-	InstanceTotal = []string{"_Total"}
+	InstancesAll   = []string{"*"}
+	InstancesTotal = []string{InstanceTotal}
 )
 
 type Collector struct {
@@ -43,14 +43,14 @@ func NewCollector(object string, instances []string, counters []string) (*Collec
 	}
 
 	if len(instances) == 0 {
-		instances = []string{EmptyInstance}
+		instances = []string{InstanceEmpty}
 	}
 
 	collector := &Collector{
 		object:                object,
 		counters:              make(map[string]Counter, len(counters)),
 		handle:                handle,
-		totalCounterRequested: slices.Contains(instances, "_Total"),
+		totalCounterRequested: slices.Contains(instances, InstanceTotal),
 		mu:                    sync.RWMutex{},
 	}
 
@@ -186,12 +186,12 @@ func (c *Collector) Collect() (map[string]map[string]CounterValues, error) {
 			for _, item := range items {
 				if item.RawValue.CStatus == PdhCstatusValidData || item.RawValue.CStatus == PdhCstatusNewData {
 					instanceName := windows.UTF16PtrToString(item.SzName)
-					if strings.HasSuffix(instanceName, "_Total") && !c.totalCounterRequested {
+					if strings.HasSuffix(instanceName, InstanceTotal) && !c.totalCounterRequested {
 						continue
 					}
 
 					if instanceName == "" || instanceName == "*" {
-						instanceName = EmptyInstance
+						instanceName = InstanceEmpty
 					}
 
 					if _, ok := data[instanceName]; !ok {
@@ -239,7 +239,7 @@ func (c *Collector) Close() {
 func formatCounterPath(object, instance, counterName string) string {
 	var counterPath string
 
-	if instance == EmptyInstance {
+	if instance == InstanceEmpty {
 		counterPath = fmt.Sprintf(`\%s\%s`, object, counterName)
 	} else {
 		counterPath = fmt.Sprintf(`\%s(%s)\%s`, object, instance, counterName)

@@ -32,7 +32,7 @@ const (
 func (c *Collector) buildHypervisorLogicalProcessor() error {
 	var err error
 
-	c.perfDataCollectorHypervisorLogicalProcessor, err = perfdata.NewCollector("Hyper-V Hypervisor Logical Processor", perfdata.InstanceAll, []string{
+	c.perfDataCollectorHypervisorLogicalProcessor, err = perfdata.NewCollector("Hyper-V Hypervisor Logical Processor", perfdata.InstancesAll, []string{
 		hypervisorLogicalProcessorGuestRunTimePercent,
 		hypervisorLogicalProcessorHypervisorRunTimePercent,
 		hypervisorLogicalProcessorTotalRunTimePercent,

@@ -80,7 +80,7 @@ const (
 func (c *Collector) buildWebService() error {
 	var err error
 
-	c.perfDataCollectorWebService, err = perfdata.NewCollector("Web Service", perfdata.InstanceAll, []string{
+	c.perfDataCollectorWebService, err = perfdata.NewCollector("Web Service", perfdata.InstancesAll, []string{
 		CurrentAnonymousUsers,
 		CurrentBlockedAsyncIORequests,
 		CurrentCGIRequests,

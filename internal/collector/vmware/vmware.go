@@ -79,7 +79,7 @@ func (c *Collector) Close() error {
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 	var err error
 
-	c.perfDataCollectorCPU, err = perfdata.NewCollector("VM Processor", perfdata.InstanceTotal, []string{
+	c.perfDataCollectorCPU, err = perfdata.NewCollector("VM Processor", perfdata.InstancesTotal, []string{
 		cpuLimitMHz,
 		cpuReservationMHz,
 		cpuShares,
@@ -251,7 +251,7 @@ func (c *Collector) collectMem(ch chan<- prometheus.Metric) error {
 		return fmt.Errorf("failed to collect VM Memory metrics: %w", err)
 	}
 
-	data, ok := perfData[perfdata.EmptyInstance]
+	data, ok := perfData[perfdata.InstanceEmpty]
 	if !ok {
 		return errors.New("query for VM Memory returned empty result set")
 	}
@@ -337,7 +337,7 @@ func (c *Collector) collectCpu(ch chan<- prometheus.Metric) error {
 		return fmt.Errorf("failed to collect VM Memory metrics: %w", err)
 	}
 
-	data, ok := perfData["_Total"]
+	data, ok := perfData[perfdata.InstanceTotal]
 	if !ok {
 		return errors.New("query for VM CPU returned empty result set")
 	}

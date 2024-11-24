@@ -55,7 +55,7 @@ const (
 func (c *Collector) buildVirtualSMB() error {
 	var err error
 
-	c.perfDataCollectorVirtualSMB, err = perfdata.NewCollector("Hyper-V Virtual SMB", perfdata.InstanceAll, []string{
+	c.perfDataCollectorVirtualSMB, err = perfdata.NewCollector("Hyper-V Virtual SMB", perfdata.InstancesAll, []string{
 		virtualSMBDirectMappedSections,
 		virtualSMBDirectMappedPages,
 		virtualSMBWriteBytesRDMA,

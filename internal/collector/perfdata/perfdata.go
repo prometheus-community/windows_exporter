@@ -118,7 +118,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		for instance, counters := range data {
 			for counter, value := range counters {
 				var labels prometheus.Labels
-				if instance != perfdata.EmptyInstance {
+				if instance != perfdata.InstanceEmpty {
 					labels = prometheus.Labels{object.InstanceLabel: instance}
 				}
 

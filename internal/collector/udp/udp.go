@@ -124,22 +124,22 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 		return fmt.Errorf("failed to collect UDPv4 metrics: %w", err)
 	}
 
-	if _, ok := data[perfdata.EmptyInstance]; !ok {
+	if _, ok := data[perfdata.InstanceEmpty]; !ok {
 		return errors.New("no data for UDPv4")
 	}
 
-	c.writeUDPCounters(ch, data[perfdata.EmptyInstance], []string{"ipv4"})
+	c.writeUDPCounters(ch, data[perfdata.InstanceEmpty], []string{"ipv4"})
 
 	data, err = c.perfDataCollector6.Collect()
 	if err != nil {
 		return fmt.Errorf("failed to collect UDPv6 metrics: %w", err)
 	}
 
-	if _, ok := data[perfdata.EmptyInstance]; !ok {
+	if _, ok := data[perfdata.InstanceEmpty]; !ok {
 		return errors.New("no data for UDPv6")
 	}
 
-	c.writeUDPCounters(ch, data[perfdata.EmptyInstance], []string{"ipv6"})
+	c.writeUDPCounters(ch, data[perfdata.InstanceEmpty], []string{"ipv6"})
 
 	return nil
 }
