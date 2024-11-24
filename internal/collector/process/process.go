@@ -126,7 +126,7 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 
 	app.Flag(
 		"collector.process.iis",
-		"Enable IIS worker process name queries. May cause the collector to leak memory.",
+		"Enable IIS collectWorker process name queries. May cause the collector to leak memory.",
 	).Default(strconv.FormatBool(c.config.EnableWorkerProcess)).BoolVar(&c.config.EnableWorkerProcess)
 
 	app.Action(func(*kingpin.ParseContext) error {
@@ -178,9 +178,6 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 	c.workerProcessMIQueryQuery = miQuery
 	c.miSession = miSession
 
-	c.workerCh = make(chan processWorkerRequest, 32)
-	c.mu = sync.RWMutex{}
-
 	counters := []string{
 		processID,
 		percentProcessorTime,
@@ -221,6 +218,14 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 
 	if err != nil {
 		return fmt.Errorf("failed to create Process collector: %w", err)
+	}
+
+	c.workerCh = make(chan processWorkerRequest, 32)
+	c.mu = sync.RWMutex{}
+	c.lookupCache = make(map[string]string)
+
+	for range 4 {
+		go c.collectWorker()
 	}
 
 	if c.config.ProcessInclude.String() == "^(?:.*)$" && c.config.ProcessExclude.String() == "^(?:)$" {
@@ -325,8 +330,6 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 		nil,
 	)
 
-	c.lookupCache = make(map[string]string)
-
 	return nil
 }
 
@@ -371,7 +374,18 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	return nil
 }
 
-func (c *Collector) worker() {
+func (c *Collector) collectWorker() {
+	defer func() {
+		if r := recover(); r != nil {
+			c.logger.Error("Worker panic",
+				slog.Any("panic", r),
+			)
+
+			// Restart the collectWorker
+			go c.collectWorker()
+		}
+	}()
+
 	for req := range c.workerCh {
 		ch := req.ch
 		name := req.name

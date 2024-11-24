@@ -51,6 +51,8 @@ var ConfigDefaults = Config{
 type Collector struct {
 	config Config
 
+	logger *slog.Logger
+
 	scheduledTasksReqCh  chan struct{}
 	scheduledTasksWorker chan scheduledTaskWorkerRequest
 	scheduledTasksCh     chan scheduledTaskResults
@@ -168,7 +170,9 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
+func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
+	c.logger = logger.With(slog.String("collector", Name))
+
 	initErrCh := make(chan error)
 	c.scheduledTasksReqCh = make(chan struct{})
 	c.scheduledTasksCh = make(chan scheduledTaskResults)
@@ -286,7 +290,7 @@ func (c *Collector) initializeScheduleService(initErrCh chan<- error) {
 	for range workerCount {
 		errCh := make(chan error, workerCount)
 
-		go c.fetchTasksInFolderWorker(errCh)
+		go c.collectWorker(errCh)
 
 		if err := <-errCh; err != nil {
 			errs = append(errs, err)
@@ -358,7 +362,25 @@ func (c *Collector) initializeScheduleService(initErrCh chan<- error) {
 	c.scheduledTasksWorker = nil
 }
 
-func (c *Collector) fetchTasksInFolderWorker(errCh chan<- error) {
+func (c *Collector) collectWorker(errCh chan<- error) {
+	defer func() {
+		if r := recover(); r != nil {
+			c.logger.Error("worker panic",
+				slog.Any("panic", r),
+			)
+
+			errCh := make(chan error, 1)
+			// Restart the collectWorker
+			go c.collectWorker(errCh)
+
+			if err := <-errCh; err != nil {
+				c.logger.Error("failed to restart worker",
+					slog.Any("err", err),
+				)
+			}
+		}
+	}()
+
 	service := schedule_service.New()
 	if err := service.Connect(); err != nil {
 		errCh <- fmt.Errorf("failed to connect to schedule service: %w", err)
