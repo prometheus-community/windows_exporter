@@ -78,7 +78,7 @@ func (c *Collector) Close() error {
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 	var err error
 
-	c.perfDataCollector, err = perfdata.NewCollector("SMB Client Shares", nil, []string{
+	c.perfDataCollector, err = perfdata.NewCollector("SMB Client Shares", perfdata.InstancesAll, []string{
 		AvgDataQueueLength,
 		AvgReadQueueLength,
 		AvgSecPerRead,

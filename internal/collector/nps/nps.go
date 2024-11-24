@@ -9,6 +9,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
+	"github.com/prometheus-community/windows_exporter/internal/perfdata"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -20,12 +21,9 @@ type Config struct{}
 var ConfigDefaults = Config{}
 
 type Collector struct {
-	config    Config
-	miSession *mi.Session
+	config Config
 
-	miQueryAuthenticationServer mi.Query
-	miQueryAccountingServer     mi.Query
-
+	accessPerfDataCollector *perfdata.Collector
 	accessAccepts           *prometheus.Desc
 	accessChallenges        *prometheus.Desc
 	accessRejects           *prometheus.Desc
@@ -40,6 +38,7 @@ type Collector struct {
 	accessServerUpTime      *prometheus.Desc
 	accessUnknownType       *prometheus.Desc
 
+	accountingPerfDataCollector *perfdata.Collector
 	accountingRequests          *prometheus.Desc
 	accountingResponses         *prometheus.Desc
 	accountingBadAuthenticators *prometheus.Desc
@@ -78,25 +77,47 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
-	if miSession == nil {
-		return errors.New("miSession is nil")
-	}
+func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
+	var err error
 
-	miQuery, err := mi.NewQuery("SELECT Name, AccessAccepts, AccessChallenges, AccessRejects, AccessRequests, AccessBadAuthenticators, AccessDroppedPackets, AccessInvalidRequests, AccessMalformedPackets, AccessPacketsReceived, AccessPacketsSent, AccessServerResetTime, AccessServerUpTime, AccessUnknownType FROM Win32_PerfRawData_IAS_NPSAuthenticationServer")
+	errs := make([]error, 0, 2)
+
+	c.accessPerfDataCollector, err = perfdata.NewCollector("NPS Authentication Server", nil, []string{
+		accessAccepts,
+		accessChallenges,
+		accessRejects,
+		accessRequests,
+		accessBadAuthenticators,
+		accessDroppedPackets,
+		accessInvalidRequests,
+		accessMalformedPackets,
+		accessPacketsReceived,
+		accessPacketsSent,
+		accessServerResetTime,
+		accessServerUpTime,
+		accessUnknownType,
+	})
 	if err != nil {
-		return fmt.Errorf("failed to create WMI query: %w", err)
+		errs = append(errs, fmt.Errorf("failed to create NPS Authentication Server collector: %w", err))
 	}
 
-	c.miQueryAuthenticationServer = miQuery
-
-	miQuery, err = mi.NewQuery("SELECT Name, AccountingRequests, AccountingResponses, AccountingBadAuthenticators, AccountingDroppedPackets, AccountingInvalidRequests, AccountingMalformedPackets, AccountingNoRecord, AccountingPacketsReceived, AccountingPacketsSent, AccountingServerResetTime, AccountingServerUpTime, AccountingUnknownType FROM Win32_PerfRawData_IAS_NPSAccountingServer")
+	c.accountingPerfDataCollector, err = perfdata.NewCollector("NPS Accounting Server", nil, []string{
+		accountingRequests,
+		accountingResponses,
+		accountingBadAuthenticators,
+		accountingDroppedPackets,
+		accountingInvalidRequests,
+		accountingMalformedPackets,
+		accountingNoRecord,
+		accountingPacketsReceived,
+		accountingPacketsSent,
+		accountingServerResetTime,
+		accountingServerUpTime,
+		accountingUnknownType,
+	})
 	if err != nil {
-		return fmt.Errorf("failed to create WMI query: %w", err)
+		errs = append(errs, fmt.Errorf("failed to create NPS Accounting Server collector: %w", err))
 	}
-
-	c.miQueryAccountingServer = miQuery
-	c.miSession = miSession
 
 	c.accessAccepts = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "access_accepts"),
@@ -250,7 +271,7 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 		nil,
 	)
 
-	return nil
+	return errors.Join(errs...)
 }
 
 // Collect sends the metric values for each metric
@@ -258,219 +279,192 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	errs := make([]error, 0, 2)
 
-	if err := c.CollectAccept(ch); err != nil {
+	if err := c.collectAccept(ch); err != nil {
 		errs = append(errs, fmt.Errorf("failed collecting NPS accept data: %w", err))
 	}
 
-	if err := c.CollectAccounting(ch); err != nil {
+	if err := c.collectAccounting(ch); err != nil {
 		errs = append(errs, fmt.Errorf("failed collecting NPS accounting data: %w", err))
 	}
 
 	return errors.Join(errs...)
 }
 
-// Win32_PerfRawData_IAS_NPSAuthenticationServer docs:
-// at the moment there is no Microsoft documentation.
-type Win32_PerfRawData_IAS_NPSAuthenticationServer struct {
-	Name string `mi:"Name"`
-
-	AccessAccepts           uint32 `mi:"AccessAccepts"`
-	AccessChallenges        uint32 `mi:"AccessChallenges"`
-	AccessRejects           uint32 `mi:"AccessRejects"`
-	AccessRequests          uint32 `mi:"AccessRequests"`
-	AccessBadAuthenticators uint32 `mi:"AccessBadAuthenticators"`
-	AccessDroppedPackets    uint32 `mi:"AccessDroppedPackets"`
-	AccessInvalidRequests   uint32 `mi:"AccessInvalidRequests"`
-	AccessMalformedPackets  uint32 `mi:"AccessMalformedPackets"`
-	AccessPacketsReceived   uint32 `mi:"AccessPacketsReceived"`
-	AccessPacketsSent       uint32 `mi:"AccessPacketsSent"`
-	AccessServerResetTime   uint32 `mi:"AccessServerResetTime"`
-	AccessServerUpTime      uint32 `mi:"AccessServerUpTime"`
-	AccessUnknownType       uint32 `mi:"AccessUnknownType"`
-}
-
-type Win32_PerfRawData_IAS_NPSAccountingServer struct {
-	Name string `mi:"Name"`
-
-	AccountingRequests          uint32 `mi:"AccountingRequests"`
-	AccountingResponses         uint32 `mi:"AccountingResponses"`
-	AccountingBadAuthenticators uint32 `mi:"AccountingBadAuthenticators"`
-	AccountingDroppedPackets    uint32 `mi:"AccountingDroppedPackets"`
-	AccountingInvalidRequests   uint32 `mi:"AccountingInvalidRequests"`
-	AccountingMalformedPackets  uint32 `mi:"AccountingMalformedPackets"`
-	AccountingNoRecord          uint32 `mi:"AccountingNoRecord"`
-	AccountingPacketsReceived   uint32 `mi:"AccountingPacketsReceived"`
-	AccountingPacketsSent       uint32 `mi:"AccountingPacketsSent"`
-	AccountingServerResetTime   uint32 `mi:"AccountingServerResetTime"`
-	AccountingServerUpTime      uint32 `mi:"AccountingServerUpTime"`
-	AccountingUnknownType       uint32 `mi:"AccountingUnknownType"`
-}
-
-// CollectAccept sends the metric values for each metric
+// collectAccept sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) CollectAccept(ch chan<- prometheus.Metric) error {
-	var dst []Win32_PerfRawData_IAS_NPSAuthenticationServer
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, c.miQueryAuthenticationServer); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
+func (c *Collector) collectAccept(ch chan<- prometheus.Metric) error {
+	perfData, err := c.accessPerfDataCollector.Collect()
+	if err != nil {
+		return fmt.Errorf("failed to collect NPS Authentication Server metrics: %w", err)
+	}
+
+	data, ok := perfData[perfdata.InstanceEmpty]
+	if !ok {
+		return errors.New("perflib query for NPS Authentication Server returned empty result set")
 	}
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessAccepts,
 		prometheus.CounterValue,
-		float64(dst[0].AccessAccepts),
+		data[accessAccepts].FirstValue,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessChallenges,
 		prometheus.CounterValue,
-		float64(dst[0].AccessChallenges),
+		data[accessChallenges].FirstValue,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessRejects,
 		prometheus.CounterValue,
-		float64(dst[0].AccessRejects),
+		data[accessRejects].FirstValue,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessRequests,
 		prometheus.CounterValue,
-		float64(dst[0].AccessRequests),
+		data[accessRequests].FirstValue,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessBadAuthenticators,
 		prometheus.CounterValue,
-		float64(dst[0].AccessBadAuthenticators),
+		data[accessBadAuthenticators].FirstValue,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessDroppedPackets,
 		prometheus.CounterValue,
-		float64(dst[0].AccessDroppedPackets),
+		data[accessDroppedPackets].FirstValue,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessInvalidRequests,
 		prometheus.CounterValue,
-		float64(dst[0].AccessInvalidRequests),
+		data[accessInvalidRequests].FirstValue,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessMalformedPackets,
 		prometheus.CounterValue,
-		float64(dst[0].AccessMalformedPackets),
+		data[accessMalformedPackets].FirstValue,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessPacketsReceived,
 		prometheus.CounterValue,
-		float64(dst[0].AccessPacketsReceived),
+		data[accessPacketsReceived].FirstValue,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessPacketsSent,
 		prometheus.CounterValue,
-		float64(dst[0].AccessPacketsSent),
+		data[accessPacketsSent].FirstValue,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessServerResetTime,
 		prometheus.CounterValue,
-		float64(dst[0].AccessServerResetTime),
+		data[accessServerResetTime].FirstValue,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessServerUpTime,
 		prometheus.CounterValue,
-		float64(dst[0].AccessServerUpTime),
+		data[accessServerUpTime].FirstValue,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessUnknownType,
 		prometheus.CounterValue,
-		float64(dst[0].AccessUnknownType),
+		data[accessUnknownType].FirstValue,
 	)
 
 	return nil
 }
 
-func (c *Collector) CollectAccounting(ch chan<- prometheus.Metric) error {
-	var dst []Win32_PerfRawData_IAS_NPSAccountingServer
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, c.miQueryAccountingServer); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
+func (c *Collector) collectAccounting(ch chan<- prometheus.Metric) error {
+	perfData, err := c.accountingPerfDataCollector.Collect()
+	if err != nil {
+		return fmt.Errorf("failed to collect NPS Accounting Server metrics: %w", err)
+	}
+
+	data, ok := perfData[perfdata.InstanceEmpty]
+	if !ok {
+		return errors.New("perflib query for NPS Accounting Server returned empty result set")
 	}
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accountingRequests,
 		prometheus.CounterValue,
-		float64(dst[0].AccountingRequests),
+		data[accountingRequests].FirstValue,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accountingResponses,
 		prometheus.CounterValue,
-		float64(dst[0].AccountingResponses),
+		data[accountingResponses].FirstValue,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accountingBadAuthenticators,
 		prometheus.CounterValue,
-		float64(dst[0].AccountingBadAuthenticators),
+		data[accountingBadAuthenticators].FirstValue,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accountingDroppedPackets,
 		prometheus.CounterValue,
-		float64(dst[0].AccountingDroppedPackets),
+		data[accountingDroppedPackets].FirstValue,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accountingInvalidRequests,
 		prometheus.CounterValue,
-		float64(dst[0].AccountingInvalidRequests),
+		data[accountingInvalidRequests].FirstValue,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accountingMalformedPackets,
 		prometheus.CounterValue,
-		float64(dst[0].AccountingMalformedPackets),
+		data[accountingMalformedPackets].FirstValue,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accountingNoRecord,
 		prometheus.CounterValue,
-		float64(dst[0].AccountingNoRecord),
+		data[accountingNoRecord].FirstValue,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accountingPacketsReceived,
 		prometheus.CounterValue,
-		float64(dst[0].AccountingPacketsReceived),
+		data[accountingPacketsReceived].FirstValue,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accountingPacketsSent,
 		prometheus.CounterValue,
-		float64(dst[0].AccountingPacketsSent),
+		data[accountingPacketsSent].FirstValue,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accountingServerResetTime,
 		prometheus.CounterValue,
-		float64(dst[0].AccountingServerResetTime),
+		data[accountingServerResetTime].FirstValue,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accountingServerUpTime,
 		prometheus.CounterValue,
-		float64(dst[0].AccountingServerUpTime),
+		data[accountingServerUpTime].FirstValue,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accountingUnknownType,
 		prometheus.CounterValue,
-		float64(dst[0].AccountingUnknownType),
+		data[accountingUnknownType].FirstValue,
 	)
 
 	return nil

@@ -146,7 +146,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	var err error
 
 	if slices.Contains(c.config.CollectorsEnabled, "connection") {
-		c.perfDataCollectorConnection, err = perfdata.NewCollector("DFS Replication Connections", perfdata.InstanceAll, []string{
+		c.perfDataCollectorConnection, err = perfdata.NewCollector("DFS Replication Connections", perfdata.InstancesAll, []string{
 			bandwidthSavingsUsingDFSReplicationTotal,
 			bytesReceivedTotal,
 			compressedSizeOfFilesReceivedTotal,
@@ -163,7 +163,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	}
 
 	if slices.Contains(c.config.CollectorsEnabled, "folder") {
-		c.perfDataCollectorFolder, err = perfdata.NewCollector("DFS Replicated Folders", perfdata.InstanceAll, []string{
+		c.perfDataCollectorFolder, err = perfdata.NewCollector("DFS Replicated Folders", perfdata.InstancesAll, []string{
 			bandwidthSavingsUsingDFSReplicationTotal,
 			compressedSizeOfFilesReceivedTotal,
 			conflictBytesCleanedUpTotal,
@@ -198,7 +198,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	}
 
 	if slices.Contains(c.config.CollectorsEnabled, "volume") {
-		c.perfDataCollectorVolume, err = perfdata.NewCollector("DFS Replication Service Volumes", perfdata.InstanceAll, []string{
+		c.perfDataCollectorVolume, err = perfdata.NewCollector("DFS Replication Service Volumes", perfdata.InstancesAll, []string{
 			databaseCommitsTotal,
 			databaseLookupsTotal,
 			usnJournalRecordsReadTotal,

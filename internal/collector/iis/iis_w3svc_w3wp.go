@@ -182,7 +182,7 @@ func (c *Collector) buildW3SVCW3WP() error {
 
 	var err error
 
-	c.perfDataCollectorW3SVCW3WP, err = perfdata.NewCollector("W3SVC_W3WP", perfdata.InstanceAll, counters)
+	c.perfDataCollectorW3SVCW3WP, err = perfdata.NewCollector("W3SVC_W3WP", perfdata.InstancesAll, counters)
 	if err != nil {
 		return fmt.Errorf("failed to create W3SVC_W3WP collector: %w", err)
 	}
@@ -432,8 +432,7 @@ func (c *Collector) collectW3SVCW3WP(ch chan<- prometheus.Metric) error {
 		pid := workerProcessNameExtractor.ReplaceAllString(name, "$1")
 
 		name := workerProcessNameExtractor.ReplaceAllString(name, "$2")
-		if name == "" || name == "_Total" ||
-			c.config.AppExclude.MatchString(name) ||
+		if name == "" || c.config.AppExclude.MatchString(name) ||
 			!c.config.AppInclude.MatchString(name) {
 			continue
 		}

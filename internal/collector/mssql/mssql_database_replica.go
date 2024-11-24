@@ -98,7 +98,7 @@ func (c *Collector) buildDatabaseReplica() error {
 	}
 
 	for sqlInstance := range c.mssqlInstances {
-		c.dbReplicaPerfDataCollectors[sqlInstance], err = perfdata.NewCollector(c.mssqlGetPerfObjectName(sqlInstance, "Database Replica"), perfdata.InstanceAll, counters)
+		c.dbReplicaPerfDataCollectors[sqlInstance], err = perfdata.NewCollector(c.mssqlGetPerfObjectName(sqlInstance, "Database Replica"), perfdata.InstancesAll, counters)
 		if err != nil {
 			return fmt.Errorf("failed to create Database Replica collector for instance %s: %w", sqlInstance, err)
 		}

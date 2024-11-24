@@ -33,7 +33,7 @@ const (
 func (c *Collector) buildLegacyNetworkAdapter() error {
 	var err error
 
-	c.perfDataCollectorLegacyNetworkAdapter, err = perfdata.NewCollector("Hyper-V Legacy Network Adapter", perfdata.InstanceAll, []string{
+	c.perfDataCollectorLegacyNetworkAdapter, err = perfdata.NewCollector("Hyper-V Legacy Network Adapter", perfdata.InstancesAll, []string{
 		legacyNetworkAdapterBytesDropped,
 		legacyNetworkAdapterBytesReceived,
 		legacyNetworkAdapterBytesSent,

@@ -18,7 +18,7 @@ func (c *Collector) buildAutoDiscover() error {
 
 	var err error
 
-	c.perfDataCollectorAutoDiscover, err = perfdata.NewCollector("MSExchange Autodiscover", perfdata.InstanceAll, counters)
+	c.perfDataCollectorAutoDiscover, err = perfdata.NewCollector("MSExchange Autodiscover", perfdata.InstancesAll, counters)
 	if err != nil {
 		return fmt.Errorf("failed to create MSExchange Autodiscover collector: %w", err)
 	}

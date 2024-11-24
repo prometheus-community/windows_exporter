@@ -54,7 +54,7 @@ func (c *Collector) buildAvailabilityReplica() error {
 	}
 
 	for sqlInstance := range c.mssqlInstances {
-		c.availabilityReplicaPerfDataCollectors[sqlInstance], err = perfdata.NewCollector(c.mssqlGetPerfObjectName(sqlInstance, "Availability Replica"), perfdata.InstanceAll, counters)
+		c.availabilityReplicaPerfDataCollectors[sqlInstance], err = perfdata.NewCollector(c.mssqlGetPerfObjectName(sqlInstance, "Availability Replica"), perfdata.InstancesAll, counters)
 		if err != nil {
 			return fmt.Errorf("failed to create Availability Replica collector for instance %s: %w", sqlInstance, err)
 		}

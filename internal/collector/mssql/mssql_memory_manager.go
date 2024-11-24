@@ -86,7 +86,7 @@ func (c *Collector) buildMemoryManager() error {
 	}
 
 	for sqlInstance := range c.mssqlInstances {
-		c.memMgrPerfDataCollectors[sqlInstance], err = perfdata.NewCollector(c.mssqlGetPerfObjectName(sqlInstance, "Memory Manager"), perfdata.InstanceAll, counters)
+		c.memMgrPerfDataCollectors[sqlInstance], err = perfdata.NewCollector(c.mssqlGetPerfObjectName(sqlInstance, "Memory Manager"), perfdata.InstancesAll, counters)
 		if err != nil {
 			return fmt.Errorf("failed to create Locks collector for instance %s: %w", sqlInstance, err)
 		}
@@ -226,7 +226,7 @@ func (c *Collector) collectMemoryManagerInstance(ch chan<- prometheus.Metric, sq
 		return fmt.Errorf("failed to collect %s metrics: %w", c.mssqlGetPerfObjectName(sqlInstance, "Memory Manager"), err)
 	}
 
-	data, ok := perfData[perfdata.EmptyInstance]
+	data, ok := perfData[perfdata.InstanceEmpty]
 	if !ok {
 		return fmt.Errorf("perflib query for %s returned empty result set", c.mssqlGetPerfObjectName(sqlInstance, "Memory Manager"))
 	}

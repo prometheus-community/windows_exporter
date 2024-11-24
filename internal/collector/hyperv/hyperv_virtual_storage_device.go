@@ -45,7 +45,7 @@ const (
 func (c *Collector) buildVirtualStorageDevice() error {
 	var err error
 
-	c.perfDataCollectorVirtualStorageDevice, err = perfdata.NewCollector("Hyper-V Virtual Storage Device", perfdata.InstanceAll, []string{
+	c.perfDataCollectorVirtualStorageDevice, err = perfdata.NewCollector("Hyper-V Virtual Storage Device", perfdata.InstancesAll, []string{
 		virtualStorageDeviceErrorCount,
 		virtualStorageDeviceQueueLength,
 		virtualStorageDeviceReadBytes,

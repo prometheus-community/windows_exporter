@@ -136,7 +136,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 	var err error
 
-	c.perfDataCollector, err = perfdata.NewCollector("LogicalDisk", perfdata.InstanceAll, []string{
+	c.perfDataCollector, err = perfdata.NewCollector("LogicalDisk", perfdata.InstancesAll, []string{
 		currentDiskQueueLength,
 		avgDiskReadQueueLength,
 		avgDiskWriteQueueLength,

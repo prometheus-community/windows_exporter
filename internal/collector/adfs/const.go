@@ -19,7 +19,7 @@ const (
 	oAuthClientAuthenticationFailures              = "OAuth Client Authentications Failures"
 	oAuthClientAuthentications                     = "OAuth Client Authentications"
 	oAuthClientBasicAuthenticationFailures         = "OAuth Client Secret Basic Authentication Failures"
-	oAuthClientBasicAuthentications                = "OAuth Client Secret Basic Authentication Requests"
+	oAuthClientBasicAuthentications                = "OAuth Client Secret Basic Authentications"
 	oAuthClientCredentialRequestFailures           = "OAuth Client Credentials Request Failures"
 	oAuthClientCredentialRequests                  = "OAuth Client Credentials Requests"
 	oAuthClientPrivateKeyJWTAuthenticationFailures = "OAuth Client Private Key Jwt Authentication Failures"

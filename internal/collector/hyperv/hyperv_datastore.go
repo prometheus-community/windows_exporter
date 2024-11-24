@@ -114,7 +114,7 @@ const (
 func (c *Collector) buildDataStore() error {
 	var err error
 
-	c.perfDataCollectorDataStore, err = perfdata.NewCollector("Hyper-V DataStore", perfdata.InstanceAll, []string{
+	c.perfDataCollectorDataStore, err = perfdata.NewCollector("Hyper-V DataStore", perfdata.InstancesAll, []string{
 		dataStoreFragmentationRatio,
 		dataStoreSectorSize,
 		dataStoreDataAlignment,

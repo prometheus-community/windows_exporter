@@ -35,7 +35,7 @@ const (
 func (c *Collector) buildHypervisorRootVirtualProcessor() error {
 	var err error
 
-	c.perfDataCollectorHypervisorRootVirtualProcessor, err = perfdata.NewCollector("Hyper-V Hypervisor Root Virtual Processor", perfdata.InstanceAll, []string{
+	c.perfDataCollectorHypervisorRootVirtualProcessor, err = perfdata.NewCollector("Hyper-V Hypervisor Root Virtual Processor", perfdata.InstancesAll, []string{
 		hypervisorRootVirtualProcessorGuestIdleTimePercent,
 		hypervisorRootVirtualProcessorGuestRunTimePercent,
 		hypervisorRootVirtualProcessorHypervisorRunTimePercent,

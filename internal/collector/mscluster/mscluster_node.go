@@ -7,13 +7,14 @@ import (
 
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
-	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 const nameNode = Name + "_node"
 
 type collectorNode struct {
+	nodeMIQuery mi.Query
+
 	nodeBuildNumber           *prometheus.Desc
 	nodeCharacteristics       *prometheus.Desc
 	nodeDetectedCloudPlatform *prometheus.Desc
@@ -51,7 +52,14 @@ type msClusterNode struct {
 	StatusInformation     uint `mi:"StatusInformation"`
 }
 
-func (c *Collector) buildNode() {
+func (c *Collector) buildNode() error {
+	nodeMIQuery, err := mi.NewQuery("SELECT * FROM MSCluster_Node")
+	if err != nil {
+		return fmt.Errorf("failed to create WMI query: %w", err)
+	}
+
+	c.nodeMIQuery = nodeMIQuery
+
 	c.nodeBuildNumber = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameNode, "build_number"),
 		"Provides access to the node's BuildNumber property.",
@@ -136,6 +144,8 @@ func (c *Collector) buildNode() {
 		[]string{"name"},
 		nil,
 	)
+
+	return nil
 }
 
 // Collect sends the metric values for each metric
@@ -143,7 +153,7 @@ func (c *Collector) buildNode() {
 func (c *Collector) collectNode(ch chan<- prometheus.Metric) ([]string, error) {
 	var dst []msClusterNode
 
-	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, utils.Must(mi.NewQuery("SELECT * FROM MSCluster_Node"))); err != nil {
+	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, c.nodeMIQuery); err != nil {
 		return nil, fmt.Errorf("WMI query failed: %w", err)
 	}
 

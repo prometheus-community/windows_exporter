@@ -33,7 +33,7 @@ var ConfigDefaults = Config{
 	scrapeInterval: 6 * time.Hour,
 }
 
-var ErrNoUpdates = errors.New("no updates available")
+var ErrNoUpdates = errors.New("pending gather update metrics")
 
 type Collector struct {
 	config Config
