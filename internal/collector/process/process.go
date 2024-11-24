@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"log/slog"
 	"regexp"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"sync"
@@ -84,6 +85,7 @@ type processWorkerRequest struct {
 	ch                       chan<- prometheus.Metric
 	name                     string
 	performanceCounterValues map[string]perfdata.CounterValue
+	waitGroup                *sync.WaitGroup
 	workerProcesses          []WorkerProcess
 }
 
@@ -355,6 +357,8 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		}
 	}
 
+	wg := &sync.WaitGroup{}
+
 	for name, process := range perfData {
 		// Duplicate processes are suffixed #, and an index number. Remove those.
 		name, _, _ = strings.Cut(name, "#")
@@ -363,13 +367,18 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 			continue
 		}
 
+		wg.Add(1)
+
 		c.workerCh <- processWorkerRequest{
 			ch:                       ch,
 			name:                     name,
 			performanceCounterValues: process,
 			workerProcesses:          workerProcesses,
+			waitGroup:                wg,
 		}
 	}
+
+	wg.Wait()
 
 	return nil
 }
@@ -379,6 +388,7 @@ func (c *Collector) collectWorker() {
 		if r := recover(); r != nil {
 			c.logger.Error("Worker panic",
 				slog.Any("panic", r),
+				slog.String("stack", string(debug.Stack())),
 			)
 
 			// Restart the collectWorker
@@ -387,193 +397,197 @@ func (c *Collector) collectWorker() {
 	}()
 
 	for req := range c.workerCh {
-		ch := req.ch
-		name := req.name
-		process := req.performanceCounterValues
+		(func() {
+			defer req.waitGroup.Done()
 
-		var pid uint64
+			ch := req.ch
+			name := req.name
+			process := req.performanceCounterValues
 
-		if v, ok := process[processID]; ok {
-			pid = uint64(v.FirstValue)
-		} else if v, ok = process[idProcess]; ok {
-			pid = uint64(v.FirstValue)
-		}
+			var pid uint64
 
-		parentPID := strconv.FormatUint(uint64(process[creatingProcessID].FirstValue), 10)
+			if v, ok := process[processID]; ok {
+				pid = uint64(v.FirstValue)
+			} else if v, ok = process[idProcess]; ok {
+				pid = uint64(v.FirstValue)
+			}
 
-		if c.config.EnableWorkerProcess {
-			for _, wp := range req.workerProcesses {
-				if wp.ProcessId == pid {
-					name = strings.Join([]string{name, wp.AppPoolName}, "_")
+			parentPID := strconv.FormatUint(uint64(process[creatingProcessID].FirstValue), 10)
 
-					break
+			if c.config.EnableWorkerProcess {
+				for _, wp := range req.workerProcesses {
+					if wp.ProcessId == pid {
+						name = strings.Join([]string{name, wp.AppPoolName}, "_")
+
+						break
+					}
 				}
 			}
-		}
 
-		cmdLine, processOwner, processGroupID, err := c.getProcessInformation(uint32(pid))
-		if err != nil {
-			c.logger.Debug("Failed to get process information",
-				slog.Uint64("pid", pid),
-				slog.Any("err", err),
+			cmdLine, processOwner, processGroupID, err := c.getProcessInformation(uint32(pid))
+			if err != nil {
+				c.logger.Debug("Failed to get process information",
+					slog.Uint64("pid", pid),
+					slog.Any("err", err),
+				)
+			}
+
+			pidString := strconv.FormatUint(pid, 10)
+
+			ch <- prometheus.MustNewConstMetric(
+				c.info,
+				prometheus.GaugeValue,
+				1.0,
+				name, pidString, parentPID, strconv.Itoa(int(processGroupID)), processOwner, cmdLine,
 			)
-		}
 
-		pidString := strconv.FormatUint(pid, 10)
+			ch <- prometheus.MustNewConstMetric(
+				c.startTime,
+				prometheus.GaugeValue,
+				process[elapsedTime].FirstValue,
+				name, pidString,
+			)
 
-		ch <- prometheus.MustNewConstMetric(
-			c.info,
-			prometheus.GaugeValue,
-			1.0,
-			name, pidString, parentPID, strconv.Itoa(int(processGroupID)), processOwner, cmdLine,
-		)
+			ch <- prometheus.MustNewConstMetric(
+				c.handleCount,
+				prometheus.GaugeValue,
+				process[handleCount].FirstValue,
+				name, pidString,
+			)
 
-		ch <- prometheus.MustNewConstMetric(
-			c.startTime,
-			prometheus.GaugeValue,
-			process[elapsedTime].FirstValue,
-			name, pidString,
-		)
+			ch <- prometheus.MustNewConstMetric(
+				c.cpuTimeTotal,
+				prometheus.CounterValue,
+				process[percentPrivilegedTime].FirstValue,
+				name, pidString, "privileged",
+			)
 
-		ch <- prometheus.MustNewConstMetric(
-			c.handleCount,
-			prometheus.GaugeValue,
-			process[handleCount].FirstValue,
-			name, pidString,
-		)
+			ch <- prometheus.MustNewConstMetric(
+				c.cpuTimeTotal,
+				prometheus.CounterValue,
+				process[percentUserTime].FirstValue,
+				name, pidString, "user",
+			)
 
-		ch <- prometheus.MustNewConstMetric(
-			c.cpuTimeTotal,
-			prometheus.CounterValue,
-			process[percentPrivilegedTime].FirstValue,
-			name, pidString, "privileged",
-		)
+			ch <- prometheus.MustNewConstMetric(
+				c.ioBytesTotal,
+				prometheus.CounterValue,
+				process[ioOtherBytesPerSec].FirstValue,
+				name, pidString, "other",
+			)
 
-		ch <- prometheus.MustNewConstMetric(
-			c.cpuTimeTotal,
-			prometheus.CounterValue,
-			process[percentUserTime].FirstValue,
-			name, pidString, "user",
-		)
+			ch <- prometheus.MustNewConstMetric(
+				c.ioOperationsTotal,
+				prometheus.CounterValue,
+				process[ioOtherOperationsPerSec].FirstValue,
+				name, pidString, "other",
+			)
 
-		ch <- prometheus.MustNewConstMetric(
-			c.ioBytesTotal,
-			prometheus.CounterValue,
-			process[ioOtherBytesPerSec].FirstValue,
-			name, pidString, "other",
-		)
+			ch <- prometheus.MustNewConstMetric(
+				c.ioBytesTotal,
+				prometheus.CounterValue,
+				process[ioReadBytesPerSec].FirstValue,
+				name, pidString, "read",
+			)
 
-		ch <- prometheus.MustNewConstMetric(
-			c.ioOperationsTotal,
-			prometheus.CounterValue,
-			process[ioOtherOperationsPerSec].FirstValue,
-			name, pidString, "other",
-		)
+			ch <- prometheus.MustNewConstMetric(
+				c.ioOperationsTotal,
+				prometheus.CounterValue,
+				process[ioReadOperationsPerSec].FirstValue,
+				name, pidString, "read",
+			)
 
-		ch <- prometheus.MustNewConstMetric(
-			c.ioBytesTotal,
-			prometheus.CounterValue,
-			process[ioReadBytesPerSec].FirstValue,
-			name, pidString, "read",
-		)
+			ch <- prometheus.MustNewConstMetric(
+				c.ioBytesTotal,
+				prometheus.CounterValue,
+				process[ioWriteBytesPerSec].FirstValue,
+				name, pidString, "write",
+			)
 
-		ch <- prometheus.MustNewConstMetric(
-			c.ioOperationsTotal,
-			prometheus.CounterValue,
-			process[ioReadOperationsPerSec].FirstValue,
-			name, pidString, "read",
-		)
+			ch <- prometheus.MustNewConstMetric(
+				c.ioOperationsTotal,
+				prometheus.CounterValue,
+				process[ioWriteOperationsPerSec].FirstValue,
+				name, pidString, "write",
+			)
 
-		ch <- prometheus.MustNewConstMetric(
-			c.ioBytesTotal,
-			prometheus.CounterValue,
-			process[ioWriteBytesPerSec].FirstValue,
-			name, pidString, "write",
-		)
+			ch <- prometheus.MustNewConstMetric(
+				c.pageFaultsTotal,
+				prometheus.CounterValue,
+				process[pageFaultsPerSec].FirstValue,
+				name, pidString,
+			)
 
-		ch <- prometheus.MustNewConstMetric(
-			c.ioOperationsTotal,
-			prometheus.CounterValue,
-			process[ioWriteOperationsPerSec].FirstValue,
-			name, pidString, "write",
-		)
+			ch <- prometheus.MustNewConstMetric(
+				c.pageFileBytes,
+				prometheus.GaugeValue,
+				process[pageFileBytes].FirstValue,
+				name, pidString,
+			)
 
-		ch <- prometheus.MustNewConstMetric(
-			c.pageFaultsTotal,
-			prometheus.CounterValue,
-			process[pageFaultsPerSec].FirstValue,
-			name, pidString,
-		)
+			ch <- prometheus.MustNewConstMetric(
+				c.poolBytes,
+				prometheus.GaugeValue,
+				process[poolNonPagedBytes].FirstValue,
+				name, pidString, "nonpaged",
+			)
 
-		ch <- prometheus.MustNewConstMetric(
-			c.pageFileBytes,
-			prometheus.GaugeValue,
-			process[pageFileBytes].FirstValue,
-			name, pidString,
-		)
+			ch <- prometheus.MustNewConstMetric(
+				c.poolBytes,
+				prometheus.GaugeValue,
+				process[poolPagedBytes].FirstValue,
+				name, pidString, "paged",
+			)
 
-		ch <- prometheus.MustNewConstMetric(
-			c.poolBytes,
-			prometheus.GaugeValue,
-			process[poolNonPagedBytes].FirstValue,
-			name, pidString, "nonpaged",
-		)
+			ch <- prometheus.MustNewConstMetric(
+				c.priorityBase,
+				prometheus.GaugeValue,
+				process[priorityBase].FirstValue,
+				name, pidString,
+			)
 
-		ch <- prometheus.MustNewConstMetric(
-			c.poolBytes,
-			prometheus.GaugeValue,
-			process[poolPagedBytes].FirstValue,
-			name, pidString, "paged",
-		)
+			ch <- prometheus.MustNewConstMetric(
+				c.privateBytes,
+				prometheus.GaugeValue,
+				process[privateBytes].FirstValue,
+				name, pidString,
+			)
 
-		ch <- prometheus.MustNewConstMetric(
-			c.priorityBase,
-			prometheus.GaugeValue,
-			process[priorityBase].FirstValue,
-			name, pidString,
-		)
+			ch <- prometheus.MustNewConstMetric(
+				c.threadCount,
+				prometheus.GaugeValue,
+				process[threadCount].FirstValue,
+				name, pidString,
+			)
 
-		ch <- prometheus.MustNewConstMetric(
-			c.privateBytes,
-			prometheus.GaugeValue,
-			process[privateBytes].FirstValue,
-			name, pidString,
-		)
+			ch <- prometheus.MustNewConstMetric(
+				c.virtualBytes,
+				prometheus.GaugeValue,
+				process[virtualBytes].FirstValue,
+				name, pidString,
+			)
 
-		ch <- prometheus.MustNewConstMetric(
-			c.threadCount,
-			prometheus.GaugeValue,
-			process[threadCount].FirstValue,
-			name, pidString,
-		)
+			ch <- prometheus.MustNewConstMetric(
+				c.workingSetPrivate,
+				prometheus.GaugeValue,
+				process[workingSetPrivate].FirstValue,
+				name, pidString,
+			)
 
-		ch <- prometheus.MustNewConstMetric(
-			c.virtualBytes,
-			prometheus.GaugeValue,
-			process[virtualBytes].FirstValue,
-			name, pidString,
-		)
+			ch <- prometheus.MustNewConstMetric(
+				c.workingSetPeak,
+				prometheus.GaugeValue,
+				process[workingSetPeak].FirstValue,
+				name, pidString,
+			)
 
-		ch <- prometheus.MustNewConstMetric(
-			c.workingSetPrivate,
-			prometheus.GaugeValue,
-			process[workingSetPrivate].FirstValue,
-			name, pidString,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.workingSetPeak,
-			prometheus.GaugeValue,
-			process[workingSetPeak].FirstValue,
-			name, pidString,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.workingSet,
-			prometheus.GaugeValue,
-			process[workingSet].FirstValue,
-			name, pidString,
-		)
+			ch <- prometheus.MustNewConstMetric(
+				c.workingSet,
+				prometheus.GaugeValue,
+				process[workingSet].FirstValue,
+				name, pidString,
+			)
+		})()
 	}
 }
 
