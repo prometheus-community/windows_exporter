@@ -8,6 +8,7 @@ repository:
 build:
   binaries:
     - name: windows_exporter
+      path: ./cmd/windows_exporter
   tags:
     all:
       - trimpath
