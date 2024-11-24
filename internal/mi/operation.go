@@ -214,7 +214,7 @@ func (o *Operation) Unmarshal(dst any) error {
 
 			element, err := instance.GetElement(miTag)
 			if err != nil {
-				return fmt.Errorf("failed to get element: %w", err)
+				return fmt.Errorf("failed to get element %s: %w", miTag, err)
 			}
 
 			switch element.valueType {

@@ -135,7 +135,7 @@ func (o *OperationUnmarshalCallbacks) InstanceResult(
 
 		element, err := instance.GetElement(miTag)
 		if err != nil {
-			o.errCh <- fmt.Errorf("failed to get element: %w", err)
+			o.errCh <- fmt.Errorf("failed to get element %s: %w", miTag, err)
 
 			return 0
 		}
@@ -149,9 +149,8 @@ func (o *OperationUnmarshalCallbacks) InstanceResult(
 			field.SetInt(int64(element.value))
 		case ValueTypeSTRING:
 			if element.value == 0 {
-				o.errCh <- fmt.Errorf("%s: invalid pointer: value is nil", miTag)
-
-				return 0
+				// value is null
+				continue
 			}
 
 			// Convert the UTF-16 string to a Go string

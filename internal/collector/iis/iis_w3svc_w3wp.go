@@ -96,18 +96,17 @@ const (
 	FilesCachedTotal            = "Total Files Cached"
 	FilesFlushedTotal           = "Total Flushed Files"
 
-	URICacheFlushesTotal       = "Total Flushed URIs"
-	URICacheFlushesTotalKernel = "Total Flushed URIs"
-	URIsFlushedTotalKernel     = "Kernel: Total Flushed URIs"
-	URICacheHitsTotal          = "URI Cache Hits"
-	URICacheHitsTotalKernel    = "Kernel: URI Cache Hits"
-	URICacheMissesTotal        = "URI Cache Misses"
-	URICacheMissesTotalKernel  = "Kernel: URI Cache Misses"
-	URIsCached                 = "Current URIs Cached"
-	URIsCachedKernel           = "Kernel: Current URIs Cached"
-	URIsCachedTotal            = "Total URIs Cached"
-	URIsCachedTotalKernel      = "Total URIs Cached"
-	URIsFlushedTotal           = "Total Flushed URIs"
+	URICacheFlushesTotal      = "Total Flushed URIs"
+	URIsFlushedTotalKernel    = "Kernel: Total Flushed URIs"
+	URICacheHitsTotal         = "URI Cache Hits"
+	URICacheHitsTotalKernel   = "Kernel: URI Cache Hits"
+	URICacheMissesTotal       = "URI Cache Misses"
+	URICacheMissesTotalKernel = "Kernel: URI Cache Misses"
+	URIsCached                = "Current URIs Cached"
+	URIsCachedKernel          = "Kernel: Current URIs Cached"
+	URIsCachedTotal           = "Total URIs Cached"
+	URIsCachedTotalKernel     = "Total URIs Cached"
+	URIsFlushedTotal          = "Total Flushed URIs"
 
 	MetaDataCacheHits    = "Metadata Cache Hits"
 	MetaDataCacheMisses  = "Metadata Cache Misses"
@@ -153,7 +152,6 @@ func (c *Collector) buildW3SVCW3WP() error {
 		FilesCachedTotal,
 		FilesFlushedTotal,
 		URICacheFlushesTotal,
-		URICacheFlushesTotalKernel,
 		URIsFlushedTotalKernel,
 		URICacheHitsTotal,
 		URICacheHitsTotalKernel,

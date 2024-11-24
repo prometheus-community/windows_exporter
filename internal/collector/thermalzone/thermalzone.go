@@ -70,7 +70,7 @@ func (c *Collector) Close() error {
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 	var err error
 
-	c.perfDataCollector, err = perfdata.NewCollector("Thermal Zone Information", nil, []string{
+	c.perfDataCollector, err = perfdata.NewCollector("Thermal Zone Information", perfdata.InstancesAll, []string{
 		HighPrecisionTemperature,
 		PercentPassiveLimit,
 		ThrottleReasons,
