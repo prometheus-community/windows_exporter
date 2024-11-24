@@ -65,6 +65,8 @@ func main() {
 }
 
 func run() int {
+	startTime := time.Now()
+
 	app := kingpin.New("windows_exporter", "A metrics collector for Windows.")
 
 	var (
@@ -229,7 +231,7 @@ func run() int {
 		mux.HandleFunc("GET /debug/pprof/trace", pprof.Trace)
 	}
 
-	logger.Info("Starting windows_exporter",
+	logger.Info(fmt.Sprintf("starting windows_exporter in %s", time.Since(startTime)),
 		slog.String("version", version.Version),
 		slog.String("branch", version.Branch),
 		slog.String("revision", version.GetRevision()),
