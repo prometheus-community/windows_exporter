@@ -26,7 +26,10 @@ linters:
     - wrapcheck
 
 run:
-  timeout: 5m
+  timeout: 15m
+
+output:
+  sort-results: true
 
 linters-settings:
   gosec:
