@@ -27,7 +27,7 @@ import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	types "github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows/registry"
 )
@@ -150,7 +150,7 @@ func (c *Collector) GetName() string {
 func (c *Collector) Close() error {
 	c.perfDataCollectorWebService.Close()
 	c.perfDataCollectorAppPoolWAS.Close()
-	c.perfDataCollectorW3SVCW3WP.Close()
+	c.w3SVCW3WPPerfDataCollector.Close()
 	c.perfDataCollectorWebServiceCache.Close()
 
 	return nil

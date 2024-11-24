@@ -14,7 +14,7 @@
 package thermalzone
 
 const (
-	HighPrecisionTemperature = "High Precision Temperature"
-	PercentPassiveLimit      = "% Passive Limit"
-	ThrottleReasons          = "Throttle Reasons"
+	highPrecisionTemperature = "High Precision Temperature"
+	percentPassiveLimit      = "% Passive Limit"
+	throttleReasons          = "Throttle Reasons"
 )

@@ -26,243 +26,243 @@ import (
 type collectorWebService struct {
 	perfDataCollectorWebService *perfdata.Collector
 
-	currentAnonymousUsers               *prometheus.Desc
-	currentBlockedAsyncIORequests       *prometheus.Desc
-	currentCGIRequests                  *prometheus.Desc
-	currentConnections                  *prometheus.Desc
-	currentISAPIExtensionRequests       *prometheus.Desc
-	currentNonAnonymousUsers            *prometheus.Desc
-	serviceUptime                       *prometheus.Desc
-	totalBytesReceived                  *prometheus.Desc
-	totalBytesSent                      *prometheus.Desc
-	totalAnonymousUsers                 *prometheus.Desc
-	totalBlockedAsyncIORequests         *prometheus.Desc
-	totalCGIRequests                    *prometheus.Desc
-	totalConnectionAttemptsAllInstances *prometheus.Desc
-	totalRequests                       *prometheus.Desc
-	totalFilesReceived                  *prometheus.Desc
-	totalFilesSent                      *prometheus.Desc
-	totalISAPIExtensionRequests         *prometheus.Desc
-	totalLockedErrors                   *prometheus.Desc
-	totalLogonAttempts                  *prometheus.Desc
-	totalNonAnonymousUsers              *prometheus.Desc
-	totalNotFoundErrors                 *prometheus.Desc
-	totalRejectedAsyncIORequests        *prometheus.Desc
+	webServiceCurrentAnonymousUsers               *prometheus.Desc
+	webServiceCurrentBlockedAsyncIORequests       *prometheus.Desc
+	webServiceCurrentCGIRequests                  *prometheus.Desc
+	webServiceCurrentConnections                  *prometheus.Desc
+	webServiceCurrentISAPIExtensionRequests       *prometheus.Desc
+	webServiceCurrentNonAnonymousUsers            *prometheus.Desc
+	webServiceServiceUptime                       *prometheus.Desc
+	webServiceTotalBytesReceived                  *prometheus.Desc
+	webServiceTotalBytesSent                      *prometheus.Desc
+	webServiceTotalAnonymousUsers                 *prometheus.Desc
+	webServiceTotalBlockedAsyncIORequests         *prometheus.Desc
+	webServiceTotalCGIRequests                    *prometheus.Desc
+	webServiceTotalConnectionAttemptsAllInstances *prometheus.Desc
+	webServiceTotalRequests                       *prometheus.Desc
+	webServiceTotalFilesReceived                  *prometheus.Desc
+	webServiceTotalFilesSent                      *prometheus.Desc
+	webServiceTotalISAPIExtensionRequests         *prometheus.Desc
+	webServiceTotalLockedErrors                   *prometheus.Desc
+	webServiceTotalLogonAttempts                  *prometheus.Desc
+	webServiceTotalNonAnonymousUsers              *prometheus.Desc
+	webServiceTotalNotFoundErrors                 *prometheus.Desc
+	webServiceTotalRejectedAsyncIORequests        *prometheus.Desc
 }
 
 const (
-	CurrentAnonymousUsers               = "Current Anonymous Users"
-	CurrentBlockedAsyncIORequests       = "Current Blocked Async I/O Requests"
-	CurrentCGIRequests                  = "Current CGI Requests"
-	CurrentConnections                  = "Current Connections"
-	CurrentISAPIExtensionRequests       = "Current ISAPI Extension Requests"
-	CurrentNonAnonymousUsers            = "Current NonAnonymous Users"
-	ServiceUptime                       = "Service Uptime"
-	TotalBytesReceived                  = "Total Bytes Received"
-	TotalBytesSent                      = "Total Bytes Sent"
-	TotalAnonymousUsers                 = "Total Anonymous Users"
-	TotalBlockedAsyncIORequests         = "Total Blocked Async I/O Requests"
-	TotalCGIRequests                    = "Total CGI Requests"
-	TotalConnectionAttemptsAllInstances = "Total Connection Attempts (all instances)"
-	TotalFilesReceived                  = "Total Files Received"
-	TotalFilesSent                      = "Total Files Sent"
-	TotalISAPIExtensionRequests         = "Total ISAPI Extension Requests"
-	TotalLockedErrors                   = "Total Locked Errors"
-	TotalLogonAttempts                  = "Total Logon Attempts"
-	TotalNonAnonymousUsers              = "Total NonAnonymous Users"
-	TotalNotFoundErrors                 = "Total Not Found Errors"
-	TotalRejectedAsyncIORequests        = "Total Rejected Async I/O Requests"
-	TotalCopyRequests                   = "Total Copy Requests"
-	TotalDeleteRequests                 = "Total Delete Requests"
-	TotalGetRequests                    = "Total Get Requests"
-	TotalHeadRequests                   = "Total Head Requests"
-	TotalLockRequests                   = "Total Lock Requests"
-	TotalMkcolRequests                  = "Total Mkcol Requests"
-	TotalMoveRequests                   = "Total Move Requests"
-	TotalOptionsRequests                = "Total Options Requests"
-	TotalOtherRequests                  = "Total Other Request Methods"
-	TotalPostRequests                   = "Total Post Requests"
-	TotalPropfindRequests               = "Total Propfind Requests"
-	TotalProppatchRequests              = "Total Proppatch Requests"
-	TotalPutRequests                    = "Total Put Requests"
-	TotalSearchRequests                 = "Total Search Requests"
-	TotalTraceRequests                  = "Total Trace Requests"
-	TotalUnlockRequests                 = "Total Unlock Requests"
+	webServiceCurrentAnonymousUsers               = "Current Anonymous Users"
+	webServiceCurrentBlockedAsyncIORequests       = "Current Blocked Async I/O Requests"
+	webServiceCurrentCGIRequests                  = "Current CGI Requests"
+	webServiceCurrentConnections                  = "Current Connections"
+	webServiceCurrentISAPIExtensionRequests       = "Current ISAPI Extension Requests"
+	webServiceCurrentNonAnonymousUsers            = "Current NonAnonymous Users"
+	webServiceServiceUptime                       = "Service Uptime"
+	webServiceTotalBytesReceived                  = "Total Bytes Received"
+	webServiceTotalBytesSent                      = "Total Bytes Sent"
+	webServiceTotalAnonymousUsers                 = "Total Anonymous Users"
+	webServiceTotalBlockedAsyncIORequests         = "Total Blocked Async I/O Requests"
+	webServiceTotalCGIRequests                    = "Total CGI Requests"
+	webServiceTotalConnectionAttemptsAllInstances = "Total Connection Attempts (all instances)"
+	webServiceTotalFilesReceived                  = "Total Files Received"
+	webServiceTotalFilesSent                      = "Total Files Sent"
+	webServiceTotalISAPIExtensionRequests         = "Total ISAPI Extension Requests"
+	webServiceTotalLockedErrors                   = "Total Locked Errors"
+	webServiceTotalLogonAttempts                  = "Total Logon Attempts"
+	webServiceTotalNonAnonymousUsers              = "Total NonAnonymous Users"
+	webServiceTotalNotFoundErrors                 = "Total Not Found Errors"
+	webServiceTotalRejectedAsyncIORequests        = "Total Rejected Async I/O Requests"
+	webServiceTotalCopyRequests                   = "Total Copy Requests"
+	webServiceTotalDeleteRequests                 = "Total Delete Requests"
+	webServiceTotalGetRequests                    = "Total Get Requests"
+	webServiceTotalHeadRequests                   = "Total Head Requests"
+	webServiceTotalLockRequests                   = "Total Lock Requests"
+	webServiceTotalMkcolRequests                  = "Total Mkcol Requests"
+	webServiceTotalMoveRequests                   = "Total Move Requests"
+	webServiceTotalOptionsRequests                = "Total Options Requests"
+	webServiceTotalOtherRequests                  = "Total Other Request Methods"
+	webServiceTotalPostRequests                   = "Total Post Requests"
+	webServiceTotalPropfindRequests               = "Total Propfind Requests"
+	webServiceTotalProppatchRequests              = "Total Proppatch Requests"
+	webServiceTotalPutRequests                    = "Total Put Requests"
+	webServiceTotalSearchRequests                 = "Total Search Requests"
+	webServiceTotalTraceRequests                  = "Total Trace Requests"
+	webServiceTotalUnlockRequests                 = "Total Unlock Requests"
 )
 
 func (c *Collector) buildWebService() error {
 	var err error
 
 	c.perfDataCollectorWebService, err = perfdata.NewCollector("Web Service", perfdata.InstancesAll, []string{
-		CurrentAnonymousUsers,
-		CurrentBlockedAsyncIORequests,
-		CurrentCGIRequests,
-		CurrentConnections,
-		CurrentISAPIExtensionRequests,
-		CurrentNonAnonymousUsers,
-		ServiceUptime,
-		TotalBytesReceived,
-		TotalBytesSent,
-		TotalAnonymousUsers,
-		TotalBlockedAsyncIORequests,
-		TotalCGIRequests,
-		TotalConnectionAttemptsAllInstances,
-		TotalFilesReceived,
-		TotalFilesSent,
-		TotalISAPIExtensionRequests,
-		TotalLockedErrors,
-		TotalLogonAttempts,
-		TotalNonAnonymousUsers,
-		TotalNotFoundErrors,
-		TotalRejectedAsyncIORequests,
-		TotalCopyRequests,
-		TotalDeleteRequests,
-		TotalGetRequests,
-		TotalHeadRequests,
-		TotalLockRequests,
-		TotalMkcolRequests,
-		TotalMoveRequests,
-		TotalOptionsRequests,
-		TotalOtherRequests,
-		TotalPostRequests,
-		TotalPropfindRequests,
-		TotalProppatchRequests,
-		TotalPutRequests,
-		TotalSearchRequests,
-		TotalTraceRequests,
-		TotalUnlockRequests,
+		webServiceCurrentAnonymousUsers,
+		webServiceCurrentBlockedAsyncIORequests,
+		webServiceCurrentCGIRequests,
+		webServiceCurrentConnections,
+		webServiceCurrentISAPIExtensionRequests,
+		webServiceCurrentNonAnonymousUsers,
+		webServiceServiceUptime,
+		webServiceTotalBytesReceived,
+		webServiceTotalBytesSent,
+		webServiceTotalAnonymousUsers,
+		webServiceTotalBlockedAsyncIORequests,
+		webServiceTotalCGIRequests,
+		webServiceTotalConnectionAttemptsAllInstances,
+		webServiceTotalFilesReceived,
+		webServiceTotalFilesSent,
+		webServiceTotalISAPIExtensionRequests,
+		webServiceTotalLockedErrors,
+		webServiceTotalLogonAttempts,
+		webServiceTotalNonAnonymousUsers,
+		webServiceTotalNotFoundErrors,
+		webServiceTotalRejectedAsyncIORequests,
+		webServiceTotalCopyRequests,
+		webServiceTotalDeleteRequests,
+		webServiceTotalGetRequests,
+		webServiceTotalHeadRequests,
+		webServiceTotalLockRequests,
+		webServiceTotalMkcolRequests,
+		webServiceTotalMoveRequests,
+		webServiceTotalOptionsRequests,
+		webServiceTotalOtherRequests,
+		webServiceTotalPostRequests,
+		webServiceTotalPropfindRequests,
+		webServiceTotalProppatchRequests,
+		webServiceTotalPutRequests,
+		webServiceTotalSearchRequests,
+		webServiceTotalTraceRequests,
+		webServiceTotalUnlockRequests,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create Web Service collector: %w", err)
 	}
 
-	c.currentAnonymousUsers = prometheus.NewDesc(
+	c.webServiceCurrentAnonymousUsers = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "current_anonymous_users"),
 		"Number of users who currently have an anonymous connection using the Web service (WebService.CurrentAnonymousUsers)",
 		[]string{"site"},
 		nil,
 	)
-	c.currentBlockedAsyncIORequests = prometheus.NewDesc(
+	c.webServiceCurrentBlockedAsyncIORequests = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "current_blocked_async_io_requests"),
 		"Current requests temporarily blocked due to bandwidth throttling settings (WebService.CurrentBlockedAsyncIORequests)",
 		[]string{"site"},
 		nil,
 	)
-	c.currentCGIRequests = prometheus.NewDesc(
+	c.webServiceCurrentCGIRequests = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "current_cgi_requests"),
 		"Current number of CGI requests being simultaneously processed by the Web service (WebService.CurrentCGIRequests)",
 		[]string{"site"},
 		nil,
 	)
-	c.currentConnections = prometheus.NewDesc(
+	c.webServiceCurrentConnections = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "current_connections"),
 		"Current number of connections established with the Web service (WebService.CurrentConnections)",
 		[]string{"site"},
 		nil,
 	)
-	c.currentISAPIExtensionRequests = prometheus.NewDesc(
+	c.webServiceCurrentISAPIExtensionRequests = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "current_isapi_extension_requests"),
 		"Current number of ISAPI requests being simultaneously processed by the Web service (WebService.CurrentISAPIExtensionRequests)",
 		[]string{"site"},
 		nil,
 	)
-	c.currentNonAnonymousUsers = prometheus.NewDesc(
+	c.webServiceCurrentNonAnonymousUsers = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "current_non_anonymous_users"),
 		"Number of users who currently have a non-anonymous connection using the Web service (WebService.CurrentNonAnonymousUsers)",
 		[]string{"site"},
 		nil,
 	)
-	c.serviceUptime = prometheus.NewDesc(
+	c.webServiceServiceUptime = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "service_uptime"),
 		"Number of seconds the WebService is up (WebService.ServiceUptime)",
 		[]string{"site"},
 		nil,
 	)
-	c.totalBytesReceived = prometheus.NewDesc(
+	c.webServiceTotalBytesReceived = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "received_bytes_total"),
 		"Number of data bytes that have been received by the Web service (WebService.TotalBytesReceived)",
 		[]string{"site"},
 		nil,
 	)
-	c.totalBytesSent = prometheus.NewDesc(
+	c.webServiceTotalBytesSent = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "sent_bytes_total"),
 		"Number of data bytes that have been sent by the Web service (WebService.TotalBytesSent)",
 		[]string{"site"},
 		nil,
 	)
-	c.totalAnonymousUsers = prometheus.NewDesc(
+	c.webServiceTotalAnonymousUsers = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "anonymous_users_total"),
 		"Total number of users who established an anonymous connection with the Web service (WebService.TotalAnonymousUsers)",
 		[]string{"site"},
 		nil,
 	)
-	c.totalBlockedAsyncIORequests = prometheus.NewDesc(
+	c.webServiceTotalBlockedAsyncIORequests = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "blocked_async_io_requests_total"),
 		"Total requests temporarily blocked due to bandwidth throttling settings (WebService.TotalBlockedAsyncIORequests)",
 		[]string{"site"},
 		nil,
 	)
-	c.totalCGIRequests = prometheus.NewDesc(
+	c.webServiceTotalCGIRequests = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "cgi_requests_total"),
 		"Total CGI requests is the total number of CGI requests (WebService.TotalCGIRequests)",
 		[]string{"site"},
 		nil,
 	)
-	c.totalConnectionAttemptsAllInstances = prometheus.NewDesc(
+	c.webServiceTotalConnectionAttemptsAllInstances = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "connection_attempts_all_instances_total"),
 		"Number of connections that have been attempted using the Web service (WebService.TotalConnectionAttemptsAllInstances)",
 		[]string{"site"},
 		nil,
 	)
-	c.totalRequests = prometheus.NewDesc(
+	c.webServiceTotalRequests = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "requests_total"),
 		"Number of HTTP requests (WebService.TotalRequests)",
 		[]string{"site", "method"},
 		nil,
 	)
-	c.totalFilesReceived = prometheus.NewDesc(
+	c.webServiceTotalFilesReceived = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "files_received_total"),
 		"Number of files received by the Web service (WebService.TotalFilesReceived)",
 		[]string{"site"},
 		nil,
 	)
-	c.totalFilesSent = prometheus.NewDesc(
+	c.webServiceTotalFilesSent = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "files_sent_total"),
 		"Number of files sent by the Web service (WebService.TotalFilesSent)",
 		[]string{"site"},
 		nil,
 	)
-	c.totalISAPIExtensionRequests = prometheus.NewDesc(
+	c.webServiceTotalISAPIExtensionRequests = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "ipapi_extension_requests_total"),
 		"ISAPI Extension Requests received (WebService.TotalISAPIExtensionRequests)",
 		[]string{"site"},
 		nil,
 	)
-	c.totalLockedErrors = prometheus.NewDesc(
+	c.webServiceTotalLockedErrors = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "locked_errors_total"),
 		"Number of requests that couldn't be satisfied by the server because the requested resource was locked (WebService.TotalLockedErrors)",
 		[]string{"site"},
 		nil,
 	)
-	c.totalLogonAttempts = prometheus.NewDesc(
+	c.webServiceTotalLogonAttempts = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "logon_attempts_total"),
 		"Number of logons attempts to the Web Service (WebService.TotalLogonAttempts)",
 		[]string{"site"},
 		nil,
 	)
-	c.totalNonAnonymousUsers = prometheus.NewDesc(
+	c.webServiceTotalNonAnonymousUsers = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "non_anonymous_users_total"),
 		"Number of users who established a non-anonymous connection with the Web service (WebService.TotalNonAnonymousUsers)",
 		[]string{"site"},
 		nil,
 	)
-	c.totalNotFoundErrors = prometheus.NewDesc(
+	c.webServiceTotalNotFoundErrors = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "not_found_errors_total"),
 		"Number of requests that couldn't be satisfied by the server because the requested document could not be found (WebService.TotalNotFoundErrors)",
 		[]string{"site"},
 		nil,
 	)
-	c.totalRejectedAsyncIORequests = prometheus.NewDesc(
+	c.webServiceTotalRejectedAsyncIORequests = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "rejected_async_io_requests_total"),
 		"Requests rejected due to bandwidth throttling settings (WebService.TotalRejectedAsyncIORequests)",
 		[]string{"site"},
@@ -286,240 +286,240 @@ func (c *Collector) collectWebService(ch chan<- prometheus.Metric) error {
 		}
 
 		ch <- prometheus.MustNewConstMetric(
-			c.currentAnonymousUsers,
+			c.webServiceCurrentAnonymousUsers,
 			prometheus.GaugeValue,
-			app[CurrentAnonymousUsers].FirstValue,
+			app[webServiceCurrentAnonymousUsers].FirstValue,
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.currentBlockedAsyncIORequests,
+			c.webServiceCurrentBlockedAsyncIORequests,
 			prometheus.GaugeValue,
-			app[CurrentBlockedAsyncIORequests].FirstValue,
+			app[webServiceCurrentBlockedAsyncIORequests].FirstValue,
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.currentCGIRequests,
+			c.webServiceCurrentCGIRequests,
 			prometheus.GaugeValue,
-			app[CurrentCGIRequests].FirstValue,
+			app[webServiceCurrentCGIRequests].FirstValue,
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.currentConnections,
+			c.webServiceCurrentConnections,
 			prometheus.GaugeValue,
-			app[CurrentConnections].FirstValue,
+			app[webServiceCurrentConnections].FirstValue,
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.currentISAPIExtensionRequests,
+			c.webServiceCurrentISAPIExtensionRequests,
 			prometheus.GaugeValue,
-			app[CurrentISAPIExtensionRequests].FirstValue,
+			app[webServiceCurrentISAPIExtensionRequests].FirstValue,
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.currentNonAnonymousUsers,
+			c.webServiceCurrentNonAnonymousUsers,
 			prometheus.GaugeValue,
-			app[CurrentNonAnonymousUsers].FirstValue,
+			app[webServiceCurrentNonAnonymousUsers].FirstValue,
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.serviceUptime,
+			c.webServiceServiceUptime,
 			prometheus.GaugeValue,
-			app[ServiceUptime].FirstValue,
+			app[webServiceServiceUptime].FirstValue,
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.totalBytesReceived,
+			c.webServiceTotalBytesReceived,
 			prometheus.CounterValue,
-			app[TotalBytesReceived].FirstValue,
+			app[webServiceTotalBytesReceived].FirstValue,
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.totalBytesSent,
+			c.webServiceTotalBytesSent,
 			prometheus.CounterValue,
-			app[TotalBytesSent].FirstValue,
+			app[webServiceTotalBytesSent].FirstValue,
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.totalAnonymousUsers,
+			c.webServiceTotalAnonymousUsers,
 			prometheus.CounterValue,
-			app[TotalAnonymousUsers].FirstValue,
+			app[webServiceTotalAnonymousUsers].FirstValue,
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.totalBlockedAsyncIORequests,
+			c.webServiceTotalBlockedAsyncIORequests,
 			prometheus.CounterValue,
-			app[TotalBlockedAsyncIORequests].FirstValue,
+			app[webServiceTotalBlockedAsyncIORequests].FirstValue,
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.totalCGIRequests,
+			c.webServiceTotalCGIRequests,
 			prometheus.CounterValue,
-			app[TotalCGIRequests].FirstValue,
+			app[webServiceTotalCGIRequests].FirstValue,
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.totalConnectionAttemptsAllInstances,
+			c.webServiceTotalConnectionAttemptsAllInstances,
 			prometheus.CounterValue,
-			app[TotalConnectionAttemptsAllInstances].FirstValue,
+			app[webServiceTotalConnectionAttemptsAllInstances].FirstValue,
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.totalFilesReceived,
+			c.webServiceTotalFilesReceived,
 			prometheus.CounterValue,
-			app[TotalFilesReceived].FirstValue,
+			app[webServiceTotalFilesReceived].FirstValue,
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.totalFilesSent,
+			c.webServiceTotalFilesSent,
 			prometheus.CounterValue,
-			app[TotalFilesSent].FirstValue,
+			app[webServiceTotalFilesSent].FirstValue,
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.totalISAPIExtensionRequests,
+			c.webServiceTotalISAPIExtensionRequests,
 			prometheus.CounterValue,
-			app[TotalISAPIExtensionRequests].FirstValue,
+			app[webServiceTotalISAPIExtensionRequests].FirstValue,
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.totalLockedErrors,
+			c.webServiceTotalLockedErrors,
 			prometheus.CounterValue,
-			app[TotalLockedErrors].FirstValue,
+			app[webServiceTotalLockedErrors].FirstValue,
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.totalLogonAttempts,
+			c.webServiceTotalLogonAttempts,
 			prometheus.CounterValue,
-			app[TotalLogonAttempts].FirstValue,
+			app[webServiceTotalLogonAttempts].FirstValue,
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.totalNonAnonymousUsers,
+			c.webServiceTotalNonAnonymousUsers,
 			prometheus.CounterValue,
-			app[TotalNonAnonymousUsers].FirstValue,
+			app[webServiceTotalNonAnonymousUsers].FirstValue,
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.totalNotFoundErrors,
+			c.webServiceTotalNotFoundErrors,
 			prometheus.CounterValue,
-			app[TotalNotFoundErrors].FirstValue,
+			app[webServiceTotalNotFoundErrors].FirstValue,
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.totalRejectedAsyncIORequests,
+			c.webServiceTotalRejectedAsyncIORequests,
 			prometheus.CounterValue,
-			app[TotalRejectedAsyncIORequests].FirstValue,
+			app[webServiceTotalRejectedAsyncIORequests].FirstValue,
 			name,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.totalRequests,
+			c.webServiceTotalRequests,
 			prometheus.CounterValue,
-			app[TotalOtherRequests].FirstValue,
+			app[webServiceTotalOtherRequests].FirstValue,
 			name,
 			"other",
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.totalRequests,
+			c.webServiceTotalRequests,
 			prometheus.CounterValue,
-			app[TotalCopyRequests].FirstValue,
+			app[webServiceTotalCopyRequests].FirstValue,
 			name,
 			"COPY",
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.totalRequests,
+			c.webServiceTotalRequests,
 			prometheus.CounterValue,
-			app[TotalDeleteRequests].FirstValue,
+			app[webServiceTotalDeleteRequests].FirstValue,
 			name,
 			"DELETE",
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.totalRequests,
+			c.webServiceTotalRequests,
 			prometheus.CounterValue,
-			app[TotalGetRequests].FirstValue,
+			app[webServiceTotalGetRequests].FirstValue,
 			name,
 			"GET",
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.totalRequests,
+			c.webServiceTotalRequests,
 			prometheus.CounterValue,
-			app[TotalHeadRequests].FirstValue,
+			app[webServiceTotalHeadRequests].FirstValue,
 			name,
 			"HEAD",
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.totalRequests,
+			c.webServiceTotalRequests,
 			prometheus.CounterValue,
-			app[TotalLockRequests].FirstValue,
+			app[webServiceTotalLockRequests].FirstValue,
 			name,
 			"LOCK",
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.totalRequests,
+			c.webServiceTotalRequests,
 			prometheus.CounterValue,
-			app[TotalMkcolRequests].FirstValue,
+			app[webServiceTotalMkcolRequests].FirstValue,
 			name,
 			"MKCOL",
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.totalRequests,
+			c.webServiceTotalRequests,
 			prometheus.CounterValue,
-			app[TotalMoveRequests].FirstValue,
+			app[webServiceTotalMoveRequests].FirstValue,
 			name,
 			"MOVE",
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.totalRequests,
+			c.webServiceTotalRequests,
 			prometheus.CounterValue,
-			app[TotalOptionsRequests].FirstValue,
+			app[webServiceTotalOptionsRequests].FirstValue,
 			name,
 			"OPTIONS",
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.totalRequests,
+			c.webServiceTotalRequests,
 			prometheus.CounterValue,
-			app[TotalPostRequests].FirstValue,
+			app[webServiceTotalPostRequests].FirstValue,
 			name,
 			"POST",
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.totalRequests,
+			c.webServiceTotalRequests,
 			prometheus.CounterValue,
-			app[TotalPropfindRequests].FirstValue,
+			app[webServiceTotalPropfindRequests].FirstValue,
 			name,
 			"PROPFIND",
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.totalRequests,
+			c.webServiceTotalRequests,
 			prometheus.CounterValue,
-			app[TotalProppatchRequests].FirstValue,
+			app[webServiceTotalProppatchRequests].FirstValue,
 			name,
 			"PROPPATCH",
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.totalRequests,
+			c.webServiceTotalRequests,
 			prometheus.CounterValue,
-			app[TotalPutRequests].FirstValue,
+			app[webServiceTotalPutRequests].FirstValue,
 			name,
 			"PUT",
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.totalRequests,
+			c.webServiceTotalRequests,
 			prometheus.CounterValue,
-			app[TotalSearchRequests].FirstValue,
+			app[webServiceTotalSearchRequests].FirstValue,
 			name,
 			"SEARCH",
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.totalRequests,
+			c.webServiceTotalRequests,
 			prometheus.CounterValue,
-			app[TotalTraceRequests].FirstValue,
+			app[webServiceTotalTraceRequests].FirstValue,
 			name,
 			"TRACE",
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.totalRequests,
+			c.webServiceTotalRequests,
 			prometheus.CounterValue,
-			app[TotalUnlockRequests].FirstValue,
+			app[webServiceTotalUnlockRequests].FirstValue,
 			name,
 			"UNLOCK",
 		)

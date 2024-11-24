@@ -71,9 +71,9 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 	var err error
 
 	c.perfDataCollector, err = perfdata.NewCollector("Thermal Zone Information", perfdata.InstancesAll, []string{
-		HighPrecisionTemperature,
-		PercentPassiveLimit,
-		ThrottleReasons,
+		highPrecisionTemperature,
+		percentPassiveLimit,
+		throttleReasons,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create Thermal Zone Information collector: %w", err)
@@ -120,21 +120,21 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		ch <- prometheus.MustNewConstMetric(
 			c.temperature,
 			prometheus.GaugeValue,
-			(data[HighPrecisionTemperature].FirstValue/10.0)-273.15,
+			(data[highPrecisionTemperature].FirstValue/10.0)-273.15,
 			sensorName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.percentPassiveLimit,
 			prometheus.GaugeValue,
-			data[PercentPassiveLimit].FirstValue,
+			data[percentPassiveLimit].FirstValue,
 			sensorName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.throttleReasons,
 			prometheus.GaugeValue,
-			data[ThrottleReasons].FirstValue,
+			data[throttleReasons].FirstValue,
 			sensorName,
 		)
 	}

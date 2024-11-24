@@ -26,397 +26,387 @@ import (
 )
 
 type collectorW3SVCW3WP struct {
-	perfDataCollectorW3SVCW3WP *perfdata.Collector
+	w3SVCW3WPPerfDataCollector *perfdata.Collector
 
 	// W3SVC_W3WP
-	threads        *prometheus.Desc
-	maximumThreads *prometheus.Desc
+	w3SVCW3WPThreads        *prometheus.Desc
+	w3SVCW3WPMaximumThreads *prometheus.Desc
 
-	requestsTotal  *prometheus.Desc
-	requestsActive *prometheus.Desc
+	w3SVCW3WPRequestsTotal  *prometheus.Desc
+	w3SVCW3WPRequestsActive *prometheus.Desc
 
-	activeFlushedEntries *prometheus.Desc
+	w3SVCW3WPActiveFlushedEntries *prometheus.Desc
 
-	currentFileCacheMemoryUsage *prometheus.Desc
-	maximumFileCacheMemoryUsage *prometheus.Desc
-	fileCacheFlushesTotal       *prometheus.Desc
-	fileCacheQueriesTotal       *prometheus.Desc
-	fileCacheHitsTotal          *prometheus.Desc
-	filesCached                 *prometheus.Desc
-	filesCachedTotal            *prometheus.Desc
-	filesFlushedTotal           *prometheus.Desc
+	w3SVCW3WPCurrentFileCacheMemoryUsage *prometheus.Desc
+	w3SVCW3WPMaximumFileCacheMemoryUsage *prometheus.Desc
+	w3SVCW3WPFileCacheFlushesTotal       *prometheus.Desc
+	w3SVCW3WPFileCacheQueriesTotal       *prometheus.Desc
+	w3SVCW3WPFileCacheHitsTotal          *prometheus.Desc
+	w3SVCW3WPFilesCached                 *prometheus.Desc
+	w3SVCW3WPFilesCachedTotal            *prometheus.Desc
+	w3SVCW3WPFilesFlushedTotal           *prometheus.Desc
 
-	uriCacheFlushesTotal *prometheus.Desc
-	uriCacheQueriesTotal *prometheus.Desc
-	uriCacheHitsTotal    *prometheus.Desc
-	urisCached           *prometheus.Desc
-	urisCachedTotal      *prometheus.Desc
-	urisFlushedTotal     *prometheus.Desc
+	w3SVCW3WPURICacheFlushesTotal *prometheus.Desc
+	w3SVCW3WPURICacheQueriesTotal *prometheus.Desc
+	w3SVCW3WPURICacheHitsTotal    *prometheus.Desc
+	w3SVCW3WPURIsCached           *prometheus.Desc
+	w3SVCW3WPURIsCachedTotal      *prometheus.Desc
+	w3SVCW3WPURIsFlushedTotal     *prometheus.Desc
 
-	metadataCached            *prometheus.Desc
-	metadataCacheFlushes      *prometheus.Desc
-	metadataCacheQueriesTotal *prometheus.Desc
-	metadataCacheHitsTotal    *prometheus.Desc
-	metadataCachedTotal       *prometheus.Desc
-	metadataFlushedTotal      *prometheus.Desc
+	w3SVCW3WPMetadataCached            *prometheus.Desc
+	w3SVCW3WPMetadataCacheFlushes      *prometheus.Desc
+	w3SVCW3WPMetadataCacheQueriesTotal *prometheus.Desc
+	w3SVCW3WPMetadataCacheHitsTotal    *prometheus.Desc
+	w3SVCW3WPMetadataCachedTotal       *prometheus.Desc
+	w3SVCW3WPMetadataFlushedTotal      *prometheus.Desc
 
-	outputCacheActiveFlushedItems *prometheus.Desc
-	outputCacheItems              *prometheus.Desc
-	outputCacheMemoryUsage        *prometheus.Desc
-	outputCacheQueriesTotal       *prometheus.Desc
-	outputCacheHitsTotal          *prometheus.Desc
-	outputCacheFlushedItemsTotal  *prometheus.Desc
-	outputCacheFlushesTotal       *prometheus.Desc
+	w3SVCW3WPOutputCacheActiveFlushedItems *prometheus.Desc
+	w3SVCW3WPOutputCacheItems              *prometheus.Desc
+	w3SVCW3WPOutputCacheMemoryUsage        *prometheus.Desc
+	w3SVCW3WPOutputCacheQueriesTotal       *prometheus.Desc
+	w3SVCW3WPOutputCacheHitsTotal          *prometheus.Desc
+	w3SVCW3WPOutputCacheFlushedItemsTotal  *prometheus.Desc
+	w3SVCW3WPOutputCacheFlushesTotal       *prometheus.Desc
 
 	// IIS 8+ Only
-	requestErrorsTotal           *prometheus.Desc
-	webSocketRequestsActive      *prometheus.Desc
-	webSocketConnectionAttempts  *prometheus.Desc
-	webSocketConnectionsAccepted *prometheus.Desc
-	webSocketConnectionsRejected *prometheus.Desc
+	w3SVCW3WPRequestErrorsTotal           *prometheus.Desc
+	w3SVCW3WPWebSocketRequestsActive      *prometheus.Desc
+	w3SVCW3WPWebSocketConnectionAttempts  *prometheus.Desc
+	w3SVCW3WPWebSocketConnectionsAccepted *prometheus.Desc
+	w3SVCW3WPWebSocketConnectionsRejected *prometheus.Desc
 }
 
 var workerProcessNameExtractor = regexp.MustCompile(`^(\d+)_(.+)$`)
 
 const (
-	Threads        = "Active Threads Count"
-	MaximumThreads = "Maximum Threads Count"
+	w3SVCW3WPThreads        = "Active Threads Count"
+	w3SVCW3WPMaximumThreads = "Maximum Threads Count"
 
-	RequestsTotal  = "Total HTTP Requests Served"
-	RequestsActive = "Active Requests"
+	w3SVCW3WPRequestsTotal  = "Total HTTP Requests Served"
+	w3SVCW3WPRequestsActive = "Active Requests"
 
-	ActiveFlushedEntries = "Active Flushed Entries"
+	w3SVCW3WPActiveFlushedEntries = "Active Flushed Entries"
 
-	CurrentFileCacheMemoryUsage = "Current File Cache Memory Usage"
-	MaximumFileCacheMemoryUsage = "Maximum File Cache Memory Usage"
-	FileCacheFlushesTotal       = "File Cache Flushes"
-	FileCacheHitsTotal          = "File Cache Hits"
-	FileCacheMissesTotal        = "File Cache Misses"
-	FilesCached                 = "Current Files Cached"
-	FilesCachedTotal            = "Total Files Cached"
-	FilesFlushedTotal           = "Total Flushed Files"
+	w3SVCW3WPCurrentFileCacheMemoryUsage = "Current File Cache Memory Usage"
+	w3SVCW3WPMaximumFileCacheMemoryUsage = "Maximum File Cache Memory Usage"
+	w3SVCW3WPFileCacheFlushesTotal       = "File Cache Flushes"
+	w3SVCW3WPFileCacheHitsTotal          = "File Cache Hits"
+	w3SVCW3WPFileCacheMissesTotal        = "File Cache Misses"
+	w3SVCW3WPFilesCached                 = "Current Files Cached"
+	w3SVCW3WPFilesCachedTotal            = "Total Files Cached"
+	w3SVCW3WPFilesFlushedTotal           = "Total Flushed Files"
 
-	URICacheFlushesTotal      = "Total Flushed URIs"
-	URIsFlushedTotalKernel    = "Kernel: Total Flushed URIs"
-	URICacheHitsTotal         = "URI Cache Hits"
-	URICacheHitsTotalKernel   = "Kernel: URI Cache Hits"
-	URICacheMissesTotal       = "URI Cache Misses"
-	URICacheMissesTotalKernel = "Kernel: URI Cache Misses"
-	URIsCached                = "Current URIs Cached"
-	URIsCachedKernel          = "Kernel: Current URIs Cached"
-	URIsCachedTotal           = "Total URIs Cached"
-	URIsCachedTotalKernel     = "Total URIs Cached"
-	URIsFlushedTotal          = "Total Flushed URIs"
+	w3SVCW3WPURICacheFlushesTotal = "Total Flushed URIs"
+	w3SVCW3WPURICacheHitsTotal    = "URI Cache Hits"
+	w3SVCW3WPURICacheMissesTotal  = "URI Cache Misses"
+	w3SVCW3WPURIsCached           = "Current URIs Cached"
+	w3SVCW3WPURIsCachedTotal      = "Total URIs Cached"
+	w3SVCW3WPURIsFlushedTotal     = "Total Flushed URIs"
 
-	MetaDataCacheHits    = "Metadata Cache Hits"
-	MetaDataCacheMisses  = "Metadata Cache Misses"
-	MetadataCached       = "Current Metadata Cached"
-	MetadataCacheFlushes = "Metadata Cache Flushes"
-	MetadataCachedTotal  = "Total Metadata Cached"
-	MetadataFlushedTotal = "Total Flushed Metadata"
+	w3SVCW3WPMetaDataCacheHits    = "Metadata Cache Hits"
+	w3SVCW3WPMetaDataCacheMisses  = "Metadata Cache Misses"
+	w3SVCW3WPMetadataCached       = "Current Metadata Cached"
+	w3SVCW3WPMetadataCacheFlushes = "Metadata Cache Flushes"
+	w3SVCW3WPMetadataCachedTotal  = "Total Metadata Cached"
+	w3SVCW3WPMetadataFlushedTotal = "Total Flushed Metadata"
 
-	OutputCacheActiveFlushedItems = "Output Cache Current Flushed Items"
-	OutputCacheItems              = "Output Cache Current Items"
-	OutputCacheMemoryUsage        = "Output Cache Current Memory Usage"
-	OutputCacheHitsTotal          = "Output Cache Total Hits"
-	OutputCacheMissesTotal        = "Output Cache Total Misses"
-	OutputCacheFlushedItemsTotal  = "Output Cache Total Flushed Items"
-	OutputCacheFlushesTotal       = "Output Cache Total Flushes"
+	w3SVCW3WPOutputCacheActiveFlushedItems = "Output Cache Current Flushed Items"
+	w3SVCW3WPOutputCacheItems              = "Output Cache Current Items"
+	w3SVCW3WPOutputCacheMemoryUsage        = "Output Cache Current Memory Usage"
+	w3SVCW3WPOutputCacheHitsTotal          = "Output Cache Total Hits"
+	w3SVCW3WPOutputCacheMissesTotal        = "Output Cache Total Misses"
+	w3SVCW3WPOutputCacheFlushedItemsTotal  = "Output Cache Total Flushed Items"
+	w3SVCW3WPOutputCacheFlushesTotal       = "Output Cache Total Flushes"
 
 	// IIS8
-	RequestErrors500 = "% 500 HTTP Response Sent"
-	RequestErrors503 = "% 503 HTTP Response Sent"
-	RequestErrors404 = "% 404 HTTP Response Sent"
-	RequestErrors403 = "% 403 HTTP Response Sent"
-	RequestErrors401 = "% 401 HTTP Response Sent"
+	w3SVCW3WPRequestErrors500 = "% 500 HTTP Response Sent"
+	w3SVCW3WPRequestErrors503 = "% 503 HTTP Response Sent"
+	w3SVCW3WPRequestErrors404 = "% 404 HTTP Response Sent"
+	w3SVCW3WPRequestErrors403 = "% 403 HTTP Response Sent"
+	w3SVCW3WPRequestErrors401 = "% 401 HTTP Response Sent"
 
-	WebSocketRequestsActive      = "WebSocket Active Requests"
-	WebSocketConnectionAttempts  = "WebSocket Connection Attempts / Sec"
-	WebSocketConnectionsAccepted = "WebSocket Connections Accepted / Sec"
-	WebSocketConnectionsRejected = "WebSocket Connections Rejected / Sec"
+	w3SVCW3WPWebSocketRequestsActive      = "WebSocket Active Requests"
+	w3SVCW3WPWebSocketConnectionAttempts  = "WebSocket Connection Attempts / Sec"
+	w3SVCW3WPWebSocketConnectionsAccepted = "WebSocket Connections Accepted / Sec"
+	w3SVCW3WPWebSocketConnectionsRejected = "WebSocket Connections Rejected / Sec"
 )
 
 func (c *Collector) buildW3SVCW3WP() error {
 	counters := []string{
-		Threads,
-		MaximumThreads,
-		RequestsTotal,
-		RequestsActive,
-		ActiveFlushedEntries,
-		CurrentFileCacheMemoryUsage,
-		MaximumFileCacheMemoryUsage,
-		FileCacheFlushesTotal,
-		FileCacheHitsTotal,
-		FileCacheMissesTotal,
-		FilesCached,
-		FilesCachedTotal,
-		FilesFlushedTotal,
-		URICacheFlushesTotal,
-		URIsFlushedTotalKernel,
-		URICacheHitsTotal,
-		URICacheHitsTotalKernel,
-		URICacheMissesTotal,
-		URICacheMissesTotalKernel,
-		URIsCached,
-		URIsCachedKernel,
-		URIsCachedTotal,
-		URIsCachedTotalKernel,
-		URIsFlushedTotal,
-		MetaDataCacheHits,
-		MetaDataCacheMisses,
-		MetadataCached,
-		MetadataCacheFlushes,
-		MetadataCachedTotal,
-		MetadataFlushedTotal,
-		OutputCacheActiveFlushedItems,
-		OutputCacheItems,
-		OutputCacheMemoryUsage,
-		OutputCacheHitsTotal,
-		OutputCacheMissesTotal,
-		OutputCacheFlushedItemsTotal,
-		OutputCacheFlushesTotal,
+		w3SVCW3WPThreads,
+		w3SVCW3WPMaximumThreads,
+		w3SVCW3WPRequestsTotal,
+		w3SVCW3WPRequestsActive,
+		w3SVCW3WPActiveFlushedEntries,
+		w3SVCW3WPCurrentFileCacheMemoryUsage,
+		w3SVCW3WPMaximumFileCacheMemoryUsage,
+		w3SVCW3WPFileCacheFlushesTotal,
+		w3SVCW3WPFileCacheHitsTotal,
+		w3SVCW3WPFileCacheMissesTotal,
+		w3SVCW3WPFilesCached,
+		w3SVCW3WPFilesCachedTotal,
+		w3SVCW3WPFilesFlushedTotal,
+		w3SVCW3WPURICacheFlushesTotal,
+		w3SVCW3WPURICacheHitsTotal,
+		w3SVCW3WPURICacheMissesTotal,
+		w3SVCW3WPURIsCached,
+		w3SVCW3WPURIsCachedTotal,
+		w3SVCW3WPURIsFlushedTotal,
+		w3SVCW3WPMetaDataCacheHits,
+		w3SVCW3WPMetaDataCacheMisses,
+		w3SVCW3WPMetadataCached,
+		w3SVCW3WPMetadataCacheFlushes,
+		w3SVCW3WPMetadataCachedTotal,
+		w3SVCW3WPMetadataFlushedTotal,
+		w3SVCW3WPOutputCacheActiveFlushedItems,
+		w3SVCW3WPOutputCacheItems,
+		w3SVCW3WPOutputCacheMemoryUsage,
+		w3SVCW3WPOutputCacheHitsTotal,
+		w3SVCW3WPOutputCacheMissesTotal,
+		w3SVCW3WPOutputCacheFlushedItemsTotal,
+		w3SVCW3WPOutputCacheFlushesTotal,
 	}
 
 	if c.iisVersion.major >= 8 {
 		counters = append(counters, []string{
-			RequestErrors500,
-			RequestErrors503,
-			RequestErrors404,
-			RequestErrors403,
-			RequestErrors401,
-			WebSocketRequestsActive,
-			WebSocketConnectionAttempts,
-			WebSocketConnectionsAccepted,
-			WebSocketConnectionsRejected,
+			w3SVCW3WPRequestErrors500,
+			w3SVCW3WPRequestErrors503,
+			w3SVCW3WPRequestErrors404,
+			w3SVCW3WPRequestErrors403,
+			w3SVCW3WPRequestErrors401,
+			w3SVCW3WPWebSocketRequestsActive,
+			w3SVCW3WPWebSocketConnectionAttempts,
+			w3SVCW3WPWebSocketConnectionsAccepted,
+			w3SVCW3WPWebSocketConnectionsRejected,
 		}...)
 	}
 
 	var err error
 
-	c.perfDataCollectorW3SVCW3WP, err = perfdata.NewCollector("W3SVC_W3WP", perfdata.InstancesAll, counters)
+	c.w3SVCW3WPPerfDataCollector, err = perfdata.NewCollector("W3SVC_W3WP", perfdata.InstancesAll, counters)
 	if err != nil {
 		return fmt.Errorf("failed to create W3SVC_W3WP collector: %w", err)
 	}
 
 	// W3SVC_W3WP
-	c.threads = prometheus.NewDesc(
+	c.w3SVCW3WPThreads = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "worker_threads"),
 		"Number of threads actively processing requests in the worker process",
 		[]string{"app", "pid", "state"},
 		nil,
 	)
-	c.maximumThreads = prometheus.NewDesc(
+	c.w3SVCW3WPMaximumThreads = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "worker_max_threads"),
 		"Maximum number of threads to which the thread pool can grow as needed",
 		[]string{"app", "pid"},
 		nil,
 	)
-	c.requestsTotal = prometheus.NewDesc(
+	c.w3SVCW3WPRequestsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "worker_requests_total"),
 		"Total number of HTTP requests served by the worker process",
 		[]string{"app", "pid"},
 		nil,
 	)
-	c.requestsActive = prometheus.NewDesc(
+	c.w3SVCW3WPRequestsActive = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "worker_current_requests"),
 		"Current number of requests being processed by the worker process",
 		[]string{"app", "pid"},
 		nil,
 	)
-	c.activeFlushedEntries = prometheus.NewDesc(
+	c.w3SVCW3WPActiveFlushedEntries = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "worker_cache_active_flushed_entries"),
 		"Number of file handles cached in user-mode that will be closed when all current transfers complete.",
 		[]string{"app", "pid"},
 		nil,
 	)
-	c.currentFileCacheMemoryUsage = prometheus.NewDesc(
+	c.w3SVCW3WPCurrentFileCacheMemoryUsage = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "worker_file_cache_memory_bytes"),
 		"Current number of bytes used by user-mode file cache",
 		[]string{"app", "pid"},
 		nil,
 	)
-	c.maximumFileCacheMemoryUsage = prometheus.NewDesc(
+	c.w3SVCW3WPMaximumFileCacheMemoryUsage = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "worker_file_cache_max_memory_bytes"),
 		"Maximum number of bytes used by user-mode file cache",
 		[]string{"app", "pid"},
 		nil,
 	)
-	c.fileCacheFlushesTotal = prometheus.NewDesc(
+	c.w3SVCW3WPFileCacheFlushesTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "worker_file_cache_flushes_total"),
 		"Total number of files removed from the user-mode cache",
 		[]string{"app", "pid"},
 		nil,
 	)
-	c.fileCacheQueriesTotal = prometheus.NewDesc(
+	c.w3SVCW3WPFileCacheQueriesTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "worker_file_cache_queries_total"),
 		"Total file cache queries (hits + misses)",
 		[]string{"app", "pid"},
 		nil,
 	)
-	c.fileCacheHitsTotal = prometheus.NewDesc(
+	c.w3SVCW3WPFileCacheHitsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "worker_file_cache_hits_total"),
 		"Total number of successful lookups in the user-mode file cache",
 		[]string{"app", "pid"},
 		nil,
 	)
-	c.filesCached = prometheus.NewDesc(
+	c.w3SVCW3WPFilesCached = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "worker_file_cache_items"),
 		"Current number of files whose contents are present in user-mode cache",
 		[]string{"app", "pid"},
 		nil,
 	)
-	c.filesCachedTotal = prometheus.NewDesc(
+	c.w3SVCW3WPFilesCachedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "worker_file_cache_items_total"),
 		"Total number of files whose contents were ever added to the user-mode cache (since service startup)",
 		[]string{"app", "pid"},
 		nil,
 	)
-	c.filesFlushedTotal = prometheus.NewDesc(
+	c.w3SVCW3WPFilesFlushedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "worker_file_cache_items_flushed_total"),
 		"Total number of file handles that have been removed from the user-mode cache (since service startup)",
 		[]string{"app", "pid"},
 		nil,
 	)
-	c.uriCacheFlushesTotal = prometheus.NewDesc(
+	c.w3SVCW3WPURICacheFlushesTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "worker_uri_cache_flushes_total"),
 		"Total number of URI cache flushes (since service startup)",
 		[]string{"app", "pid"},
 		nil,
 	)
-	c.uriCacheQueriesTotal = prometheus.NewDesc(
+	c.w3SVCW3WPURICacheQueriesTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "worker_uri_cache_queries_total"),
 		"Total number of uri cache queries (hits + misses)",
 		[]string{"app", "pid"},
 		nil,
 	)
-	c.uriCacheHitsTotal = prometheus.NewDesc(
+	c.w3SVCW3WPURICacheHitsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "worker_uri_cache_hits_total"),
 		"Total number of successful lookups in the user-mode URI cache (since service startup)",
 		[]string{"app", "pid"},
 		nil,
 	)
-	c.urisCached = prometheus.NewDesc(
+	c.w3SVCW3WPURIsCached = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "worker_uri_cache_items"),
 		"Number of URI information blocks currently in the user-mode cache",
 		[]string{"app", "pid"},
 		nil,
 	)
-	c.urisCachedTotal = prometheus.NewDesc(
+	c.w3SVCW3WPURIsCachedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "worker_uri_cache_items_total"),
 		"Total number of URI information blocks added to the user-mode cache (since service startup)",
 		[]string{"app", "pid"},
 		nil,
 	)
-	c.urisFlushedTotal = prometheus.NewDesc(
+	c.w3SVCW3WPURIsFlushedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "worker_uri_cache_items_flushed_total"),
 		"The number of URI information blocks that have been removed from the user-mode cache (since service startup)",
 		[]string{"app", "pid"},
 		nil,
 	)
-	c.metadataCached = prometheus.NewDesc(
+	c.w3SVCW3WPMetadataCached = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "worker_metadata_cache_items"),
 		"Number of metadata information blocks currently present in user-mode cache",
 		[]string{"app", "pid"},
 		nil,
 	)
-	c.metadataCacheFlushes = prometheus.NewDesc(
+	c.w3SVCW3WPMetadataCacheFlushes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "worker_metadata_cache_flushes_total"),
 		"Total number of user-mode metadata cache flushes (since service startup)",
 		[]string{"app", "pid"},
 		nil,
 	)
-	c.metadataCacheQueriesTotal = prometheus.NewDesc(
+	c.w3SVCW3WPMetadataCacheQueriesTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "worker_metadata_cache_queries_total"),
 		"Total metadata cache queries (hits + misses)",
 		[]string{"app", "pid"},
 		nil,
 	)
-	c.metadataCacheHitsTotal = prometheus.NewDesc(
+	c.w3SVCW3WPMetadataCacheHitsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "worker_metadata_cache_hits_total"),
 		"Total number of successful lookups in the user-mode metadata cache (since service startup)",
 		[]string{"app", "pid"},
 		nil,
 	)
-	c.metadataCachedTotal = prometheus.NewDesc(
+	c.w3SVCW3WPMetadataCachedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "worker_metadata_cache_items_cached_total"),
 		"Total number of metadata information blocks added to the user-mode cache (since service startup)",
 		[]string{"app", "pid"},
 		nil,
 	)
-	c.metadataFlushedTotal = prometheus.NewDesc(
+	c.w3SVCW3WPMetadataFlushedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "worker_metadata_cache_items_flushed_total"),
 		"Total number of metadata information blocks removed from the user-mode cache (since service startup)",
 		[]string{"app", "pid"},
 		nil,
 	)
-	c.outputCacheActiveFlushedItems = prometheus.NewDesc(
+	c.w3SVCW3WPOutputCacheActiveFlushedItems = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "worker_output_cache_active_flushed_items"),
 		"",
 		[]string{"app", "pid"},
 		nil,
 	)
-	c.outputCacheItems = prometheus.NewDesc(
+	c.w3SVCW3WPOutputCacheItems = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "worker_output_cache_items"),
 		"Number of items current present in output cache",
 		[]string{"app", "pid"},
 		nil,
 	)
-	c.outputCacheMemoryUsage = prometheus.NewDesc(
+	c.w3SVCW3WPOutputCacheMemoryUsage = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "worker_output_cache_memory_bytes"),
 		"Current number of bytes used by output cache",
 		[]string{"app", "pid"},
 		nil,
 	)
-	c.outputCacheQueriesTotal = prometheus.NewDesc(
+	c.w3SVCW3WPOutputCacheQueriesTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "worker_output_queries_total"),
 		"Total number of output cache queries (hits + misses)",
 		[]string{"app", "pid"},
 		nil,
 	)
-	c.outputCacheHitsTotal = prometheus.NewDesc(
+	c.w3SVCW3WPOutputCacheHitsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "worker_output_cache_hits_total"),
 		"Total number of successful lookups in output cache (since service startup)",
 		[]string{"app", "pid"},
 		nil,
 	)
-	c.outputCacheFlushedItemsTotal = prometheus.NewDesc(
+	c.w3SVCW3WPOutputCacheFlushedItemsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "worker_output_cache_items_flushed_total"),
 		"Total number of items flushed from output cache (since service startup)",
 		[]string{"app", "pid"},
 		nil,
 	)
-	c.outputCacheFlushesTotal = prometheus.NewDesc(
+	c.w3SVCW3WPOutputCacheFlushesTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "worker_output_cache_flushes_total"),
 		"Total number of flushes of output cache (since service startup)",
 		[]string{"app", "pid"},
 		nil,
 	)
 	// W3SVC_W3WP_IIS8
-	c.requestErrorsTotal = prometheus.NewDesc(
+	c.w3SVCW3WPRequestErrorsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "worker_request_errors_total"),
 		"Total number of requests that returned an error",
 		[]string{"app", "pid", "status_code"},
 		nil,
 	)
-	c.webSocketRequestsActive = prometheus.NewDesc(
+	c.w3SVCW3WPWebSocketRequestsActive = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "worker_current_websocket_requests"),
 		"",
 		[]string{"app", "pid"},
 		nil,
 	)
-	c.webSocketConnectionAttempts = prometheus.NewDesc(
+	c.w3SVCW3WPWebSocketConnectionAttempts = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "worker_websocket_connection_attempts_total"),
 		"",
 		[]string{"app", "pid"},
 		nil,
 	)
-	c.webSocketConnectionsAccepted = prometheus.NewDesc(
+	c.w3SVCW3WPWebSocketConnectionsAccepted = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "worker_websocket_connection_accepted_total"),
 		"",
 		[]string{"app", "pid"},
 		nil,
 	)
-	c.webSocketConnectionsRejected = prometheus.NewDesc(
+	c.w3SVCW3WPWebSocketConnectionsRejected = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "worker_websocket_connection_rejected_total"),
 		"",
 		[]string{"app", "pid"},
@@ -427,7 +417,7 @@ func (c *Collector) buildW3SVCW3WP() error {
 }
 
 func (c *Collector) collectW3SVCW3WP(ch chan<- prometheus.Metric) error {
-	perfData, err := c.perfDataCollectorW3SVCW3WP.Collect()
+	perfData, err := c.w3SVCW3WPPerfDataCollector.Collect()
 	if err != nil {
 		return fmt.Errorf("failed to collect APP_POOL_WAS metrics: %w", err)
 	}
@@ -454,297 +444,297 @@ func (c *Collector) collectW3SVCW3WP(ch chan<- prometheus.Metric) error {
 		}
 
 		ch <- prometheus.MustNewConstMetric(
-			c.threads,
+			c.w3SVCW3WPThreads,
 			prometheus.GaugeValue,
-			app[Threads].FirstValue,
+			app[w3SVCW3WPThreads].FirstValue,
 			name,
 			pid,
 			"busy",
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.maximumThreads,
+			c.w3SVCW3WPMaximumThreads,
 			prometheus.CounterValue,
-			app[MaximumThreads].FirstValue,
+			app[w3SVCW3WPMaximumThreads].FirstValue,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.requestsTotal,
+			c.w3SVCW3WPRequestsTotal,
 			prometheus.CounterValue,
-			app[RequestsTotal].FirstValue,
+			app[w3SVCW3WPRequestsTotal].FirstValue,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.requestsActive,
+			c.w3SVCW3WPRequestsActive,
 			prometheus.CounterValue,
-			app[RequestsActive].FirstValue,
+			app[w3SVCW3WPRequestsActive].FirstValue,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.activeFlushedEntries,
+			c.w3SVCW3WPActiveFlushedEntries,
 			prometheus.GaugeValue,
-			app[ActiveFlushedEntries].FirstValue,
+			app[w3SVCW3WPActiveFlushedEntries].FirstValue,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.currentFileCacheMemoryUsage,
+			c.w3SVCW3WPCurrentFileCacheMemoryUsage,
 			prometheus.GaugeValue,
-			app[CurrentFileCacheMemoryUsage].FirstValue,
+			app[w3SVCW3WPCurrentFileCacheMemoryUsage].FirstValue,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.maximumFileCacheMemoryUsage,
+			c.w3SVCW3WPMaximumFileCacheMemoryUsage,
 			prometheus.CounterValue,
-			app[MaximumFileCacheMemoryUsage].FirstValue,
+			app[w3SVCW3WPMaximumFileCacheMemoryUsage].FirstValue,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.fileCacheFlushesTotal,
+			c.w3SVCW3WPFileCacheFlushesTotal,
 			prometheus.CounterValue,
-			app[FileCacheFlushesTotal].FirstValue,
+			app[w3SVCW3WPFileCacheFlushesTotal].FirstValue,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.fileCacheQueriesTotal,
+			c.w3SVCW3WPFileCacheQueriesTotal,
 			prometheus.CounterValue,
-			app[FileCacheHitsTotal].FirstValue+app[FileCacheMissesTotal].FirstValue,
+			app[w3SVCW3WPFileCacheHitsTotal].FirstValue+app[w3SVCW3WPFileCacheMissesTotal].FirstValue,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.fileCacheHitsTotal,
+			c.w3SVCW3WPFileCacheHitsTotal,
 			prometheus.CounterValue,
-			app[FileCacheHitsTotal].FirstValue,
+			app[w3SVCW3WPFileCacheHitsTotal].FirstValue,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.filesCached,
+			c.w3SVCW3WPFilesCached,
 			prometheus.GaugeValue,
-			app[FilesCached].FirstValue,
+			app[w3SVCW3WPFilesCached].FirstValue,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.filesCachedTotal,
+			c.w3SVCW3WPFilesCachedTotal,
 			prometheus.CounterValue,
-			app[FilesCachedTotal].FirstValue,
+			app[w3SVCW3WPFilesCachedTotal].FirstValue,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.filesFlushedTotal,
+			c.w3SVCW3WPFilesFlushedTotal,
 			prometheus.CounterValue,
-			app[FilesFlushedTotal].FirstValue,
+			app[w3SVCW3WPFilesFlushedTotal].FirstValue,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.uriCacheFlushesTotal,
+			c.w3SVCW3WPURICacheFlushesTotal,
 			prometheus.CounterValue,
-			app[URICacheFlushesTotal].FirstValue,
+			app[w3SVCW3WPURICacheFlushesTotal].FirstValue,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.uriCacheQueriesTotal,
+			c.w3SVCW3WPURICacheQueriesTotal,
 			prometheus.CounterValue,
-			app[URICacheHitsTotal].FirstValue+app[URICacheMissesTotal].FirstValue,
+			app[w3SVCW3WPURICacheHitsTotal].FirstValue+app[w3SVCW3WPURICacheMissesTotal].FirstValue,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.uriCacheHitsTotal,
+			c.w3SVCW3WPURICacheHitsTotal,
 			prometheus.CounterValue,
-			app[URICacheHitsTotal].FirstValue,
+			app[w3SVCW3WPURICacheHitsTotal].FirstValue,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.urisCached,
+			c.w3SVCW3WPURIsCached,
 			prometheus.GaugeValue,
-			app[URIsCached].FirstValue,
+			app[w3SVCW3WPURIsCached].FirstValue,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.urisCachedTotal,
+			c.w3SVCW3WPURIsCachedTotal,
 			prometheus.CounterValue,
-			app[URIsCachedTotal].FirstValue,
+			app[w3SVCW3WPURIsCachedTotal].FirstValue,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.urisFlushedTotal,
+			c.w3SVCW3WPURIsFlushedTotal,
 			prometheus.CounterValue,
-			app[URIsFlushedTotal].FirstValue,
+			app[w3SVCW3WPURIsFlushedTotal].FirstValue,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.metadataCached,
+			c.w3SVCW3WPMetadataCached,
 			prometheus.GaugeValue,
-			app[MetadataCached].FirstValue,
+			app[w3SVCW3WPMetadataCached].FirstValue,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.metadataCacheFlushes,
+			c.w3SVCW3WPMetadataCacheFlushes,
 			prometheus.CounterValue,
-			app[MetadataCacheFlushes].FirstValue,
+			app[w3SVCW3WPMetadataCacheFlushes].FirstValue,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.metadataCacheQueriesTotal,
+			c.w3SVCW3WPMetadataCacheQueriesTotal,
 			prometheus.CounterValue,
-			app[MetaDataCacheHits].FirstValue+app[MetaDataCacheMisses].FirstValue,
+			app[w3SVCW3WPMetaDataCacheHits].FirstValue+app[w3SVCW3WPMetaDataCacheMisses].FirstValue,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.metadataCacheHitsTotal,
+			c.w3SVCW3WPMetadataCacheHitsTotal,
 			prometheus.CounterValue,
-			app[MetaDataCacheHits].FirstValue,
+			app[w3SVCW3WPMetaDataCacheHits].FirstValue,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.metadataCachedTotal,
+			c.w3SVCW3WPMetadataCachedTotal,
 			prometheus.CounterValue,
-			app[MetadataCachedTotal].FirstValue,
+			app[w3SVCW3WPMetadataCachedTotal].FirstValue,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.metadataFlushedTotal,
+			c.w3SVCW3WPMetadataFlushedTotal,
 			prometheus.CounterValue,
-			app[MetadataFlushedTotal].FirstValue,
+			app[w3SVCW3WPMetadataFlushedTotal].FirstValue,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.outputCacheActiveFlushedItems,
+			c.w3SVCW3WPOutputCacheActiveFlushedItems,
 			prometheus.CounterValue,
-			app[OutputCacheActiveFlushedItems].FirstValue,
+			app[w3SVCW3WPOutputCacheActiveFlushedItems].FirstValue,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.outputCacheItems,
+			c.w3SVCW3WPOutputCacheItems,
 			prometheus.CounterValue,
-			app[OutputCacheItems].FirstValue,
+			app[w3SVCW3WPOutputCacheItems].FirstValue,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.outputCacheMemoryUsage,
+			c.w3SVCW3WPOutputCacheMemoryUsage,
 			prometheus.CounterValue,
-			app[OutputCacheMemoryUsage].FirstValue,
+			app[w3SVCW3WPOutputCacheMemoryUsage].FirstValue,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.outputCacheQueriesTotal,
+			c.w3SVCW3WPOutputCacheQueriesTotal,
 			prometheus.CounterValue,
-			app[OutputCacheHitsTotal].FirstValue+app[OutputCacheMissesTotal].FirstValue,
+			app[w3SVCW3WPOutputCacheHitsTotal].FirstValue+app[w3SVCW3WPOutputCacheMissesTotal].FirstValue,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.outputCacheHitsTotal,
+			c.w3SVCW3WPOutputCacheHitsTotal,
 			prometheus.CounterValue,
-			app[OutputCacheHitsTotal].FirstValue,
+			app[w3SVCW3WPOutputCacheHitsTotal].FirstValue,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.outputCacheFlushedItemsTotal,
+			c.w3SVCW3WPOutputCacheFlushedItemsTotal,
 			prometheus.CounterValue,
-			app[OutputCacheFlushedItemsTotal].FirstValue,
+			app[w3SVCW3WPOutputCacheFlushedItemsTotal].FirstValue,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.outputCacheFlushesTotal,
+			c.w3SVCW3WPOutputCacheFlushesTotal,
 			prometheus.CounterValue,
-			app[OutputCacheFlushesTotal].FirstValue,
+			app[w3SVCW3WPOutputCacheFlushesTotal].FirstValue,
 			name,
 			pid,
 		)
 
 		if c.iisVersion.major >= 8 {
 			ch <- prometheus.MustNewConstMetric(
-				c.requestErrorsTotal,
+				c.w3SVCW3WPRequestErrorsTotal,
 				prometheus.CounterValue,
-				app[RequestErrors401].FirstValue,
+				app[w3SVCW3WPRequestErrors401].FirstValue,
 				name,
 				pid,
 				"401",
 			)
 			ch <- prometheus.MustNewConstMetric(
-				c.requestErrorsTotal,
+				c.w3SVCW3WPRequestErrorsTotal,
 				prometheus.CounterValue,
-				app[RequestErrors403].FirstValue,
+				app[w3SVCW3WPRequestErrors403].FirstValue,
 				name,
 				pid,
 				"403",
 			)
 			ch <- prometheus.MustNewConstMetric(
-				c.requestErrorsTotal,
+				c.w3SVCW3WPRequestErrorsTotal,
 				prometheus.CounterValue,
-				app[RequestErrors404].FirstValue,
+				app[w3SVCW3WPRequestErrors404].FirstValue,
 				name,
 				pid,
 				"404",
 			)
 			ch <- prometheus.MustNewConstMetric(
-				c.requestErrorsTotal,
+				c.w3SVCW3WPRequestErrorsTotal,
 				prometheus.CounterValue,
-				app[RequestErrors500].FirstValue,
+				app[w3SVCW3WPRequestErrors500].FirstValue,
 				name,
 				pid,
 				"500",
 			)
 			ch <- prometheus.MustNewConstMetric(
-				c.requestErrorsTotal,
+				c.w3SVCW3WPRequestErrorsTotal,
 				prometheus.CounterValue,
-				app[RequestErrors503].FirstValue,
+				app[w3SVCW3WPRequestErrors503].FirstValue,
 				name,
 				pid,
 				"503",
 			)
 			ch <- prometheus.MustNewConstMetric(
-				c.webSocketRequestsActive,
+				c.w3SVCW3WPWebSocketRequestsActive,
 				prometheus.CounterValue,
-				app[WebSocketRequestsActive].FirstValue,
+				app[w3SVCW3WPWebSocketRequestsActive].FirstValue,
 				name,
 				pid,
 			)
 			ch <- prometheus.MustNewConstMetric(
-				c.webSocketConnectionAttempts,
+				c.w3SVCW3WPWebSocketConnectionAttempts,
 				prometheus.CounterValue,
-				app[WebSocketConnectionAttempts].FirstValue,
+				app[w3SVCW3WPWebSocketConnectionAttempts].FirstValue,
 				name,
 				pid,
 			)
 			ch <- prometheus.MustNewConstMetric(
-				c.webSocketConnectionsAccepted,
+				c.w3SVCW3WPWebSocketConnectionsAccepted,
 				prometheus.CounterValue,
-				app[WebSocketConnectionsAccepted].FirstValue,
+				app[w3SVCW3WPWebSocketConnectionsAccepted].FirstValue,
 				name,
 				pid,
 			)
 			ch <- prometheus.MustNewConstMetric(
-				c.webSocketConnectionsRejected,
+				c.w3SVCW3WPWebSocketConnectionsRejected,
 				prometheus.CounterValue,
-				app[WebSocketConnectionsRejected].FirstValue,
+				app[w3SVCW3WPWebSocketConnectionsRejected].FirstValue,
 				name,
 				pid,
 			)

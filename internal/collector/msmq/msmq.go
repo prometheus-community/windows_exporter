@@ -75,10 +75,10 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 	var err error
 
 	c.perfDataCollector, err = perfdata.NewCollector("MSMQ Queue", perfdata.InstancesAll, []string{
-		BytesInJournalQueue,
-		BytesInQueue,
-		MessagesInJournalQueue,
-		MessagesInQueue,
+		bytesInJournalQueue,
+		bytesInQueue,
+		messagesInJournalQueue,
+		messagesInQueue,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create MSMQ Queue collector: %w", err)
@@ -124,28 +124,28 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		ch <- prometheus.MustNewConstMetric(
 			c.bytesInJournalQueue,
 			prometheus.GaugeValue,
-			data[BytesInJournalQueue].FirstValue,
+			data[bytesInJournalQueue].FirstValue,
 			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.bytesInQueue,
 			prometheus.GaugeValue,
-			data[BytesInQueue].FirstValue,
+			data[bytesInQueue].FirstValue,
 			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.messagesInJournalQueue,
 			prometheus.GaugeValue,
-			data[MessagesInJournalQueue].FirstValue,
+			data[messagesInJournalQueue].FirstValue,
 			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.messagesInQueue,
 			prometheus.GaugeValue,
-			data[MessagesInQueue].FirstValue,
+			data[messagesInQueue].FirstValue,
 			name,
 		)
 	}
