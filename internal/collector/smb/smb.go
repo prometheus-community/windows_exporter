@@ -58,7 +58,7 @@ func (c *Collector) Close() error {
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 	var err error
 
-	c.perfDataCollector, err = perfdata.NewCollector("SMB Server Shares", nil, []string{
+	c.perfDataCollector, err = perfdata.NewCollector("SMB Server Shares", perfdata.InstanceAll, []string{
 		currentOpenFileCount,
 		treeConnectCount,
 	})
