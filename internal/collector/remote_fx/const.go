@@ -13,9 +13,9 @@ const (
 	TotalSentBytes           = "Total Sent Bytes"
 	UDPPacketsReceivedPersec = "UDP Packets Received/sec"
 	UDPPacketsSentPersec     = "UDP Packets Sent/sec"
-	FECRate                  = "Forward Error Correction (FEC) percentage"
-	LossRate                 = "Loss percentage"
-	RetransmissionRate       = "Percentage of packets that have been retransmitted"
+	FECRate                  = "FEC rate"
+	LossRate                 = "Loss rate"
+	RetransmissionRate       = "Retransmission rate"
 
 	AverageEncodingTime                                = "Average Encoding Time"
 	FrameQuality                                       = "Frame Quality"

@@ -83,19 +83,19 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 		return errors.New("miSession is nil")
 	}
 
-	miQuery, err := mi.NewQuery("SELECT Name, AccessAccepts, AccessChallenges, AccessRejects, AccessRequests, AccessBadAuthenticators, AccessDroppedPackets, AccessInvalidRequests, AccessMalformedPackets, AccessPacketsReceived, AccessPacketsSent, AccessServerResetTime, AccessServerUpTime, AccessUnknownType FROM Win32_PerfRawData_IAS_NPSAuthenticationServer")
+	miQueryAuthenticationServer, err := mi.NewQuery("SELECT * FROM Win32_PerfRawData_IAS_NPSAuthenticationServer")
 	if err != nil {
 		return fmt.Errorf("failed to create WMI query: %w", err)
 	}
 
-	c.miQueryAuthenticationServer = miQuery
+	c.miQueryAuthenticationServer = miQueryAuthenticationServer
 
-	miQuery, err = mi.NewQuery("SELECT Name, AccountingRequests, AccountingResponses, AccountingBadAuthenticators, AccountingDroppedPackets, AccountingInvalidRequests, AccountingMalformedPackets, AccountingNoRecord, AccountingPacketsReceived, AccountingPacketsSent, AccountingServerResetTime, AccountingServerUpTime, AccountingUnknownType FROM Win32_PerfRawData_IAS_NPSAccountingServer")
+	miQueryAccountingServer, err := mi.NewQuery("SELECT * FROM Win32_PerfRawData_IAS_NPSAccountingServer")
 	if err != nil {
 		return fmt.Errorf("failed to create WMI query: %w", err)
 	}
 
-	c.miQueryAccountingServer = miQuery
+	c.miQueryAccountingServer = miQueryAccountingServer
 	c.miSession = miSession
 
 	c.accessAccepts = prometheus.NewDesc(
