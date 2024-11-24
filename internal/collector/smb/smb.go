@@ -133,7 +133,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 	c.filesOpened = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "server_shares_filed_opened_count_total"),
+		prometheus.BuildFQName(types.Namespace, Name, "server_shares_files_opened_count_total"),
 		"Files opened on the SMB Server Share",
 		[]string{"share"},
 		nil,
