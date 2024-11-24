@@ -168,23 +168,25 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		prometheus.Labels{"version": fmt.Sprintf("%d.%d", c.iisVersion.major, c.iisVersion.minor)},
 	)
 
+	errs := make([]error, 0, 4)
+
 	if err := c.buildWebService(); err != nil {
-		return fmt.Errorf("failed to build Web Service collector: %w", err)
+		errs = append(errs, fmt.Errorf("failed to build Web Service collector: %w", err))
 	}
 
 	if err := c.buildAppPoolWAS(); err != nil {
-		return fmt.Errorf("failed to build APP_POOL_WAS collector: %w", err)
+		errs = append(errs, fmt.Errorf("failed to build APP_POOL_WAS collector: %w", err))
 	}
 
 	if err := c.buildW3SVCW3WP(); err != nil {
-		return fmt.Errorf("failed to build W3SVC_W3WP collector: %w", err)
+		errs = append(errs, fmt.Errorf("failed to build W3SVC_W3WP collector: %w", err))
 	}
 
 	if err := c.buildWebServiceCache(); err != nil {
-		return fmt.Errorf("failed to build Web Service Cache collector: %w", err)
+		errs = append(errs, fmt.Errorf("failed to build Web Service Cache collector: %w", err))
 	}
 
-	return nil
+	return errors.Join(errs...)
 }
 
 type simpleVersion struct {

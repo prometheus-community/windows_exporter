@@ -120,7 +120,6 @@ const (
 
 	// IIS8
 	w3SVCW3WPRequestErrors500 = "% 500 HTTP Response Sent"
-	w3SVCW3WPRequestErrors503 = "% 503 HTTP Response Sent"
 	w3SVCW3WPRequestErrors404 = "% 404 HTTP Response Sent"
 	w3SVCW3WPRequestErrors403 = "% 403 HTTP Response Sent"
 	w3SVCW3WPRequestErrors401 = "% 401 HTTP Response Sent"
@@ -170,7 +169,6 @@ func (c *Collector) buildW3SVCW3WP() error {
 	if c.iisVersion.major >= 8 {
 		counters = append(counters, []string{
 			w3SVCW3WPRequestErrors500,
-			w3SVCW3WPRequestErrors503,
 			w3SVCW3WPRequestErrors404,
 			w3SVCW3WPRequestErrors403,
 			w3SVCW3WPRequestErrors401,
@@ -701,14 +699,6 @@ func (c *Collector) collectW3SVCW3WP(ch chan<- prometheus.Metric) error {
 				name,
 				pid,
 				"500",
-			)
-			ch <- prometheus.MustNewConstMetric(
-				c.w3SVCW3WPRequestErrorsTotal,
-				prometheus.CounterValue,
-				app[w3SVCW3WPRequestErrors503].FirstValue,
-				name,
-				pid,
-				"503",
 			)
 			ch <- prometheus.MustNewConstMetric(
 				c.w3SVCW3WPWebSocketRequestsActive,
