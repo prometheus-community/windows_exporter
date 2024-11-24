@@ -403,15 +403,15 @@ func (c *Collector) collect(
 		err := collectFn(ch, sqlInstance, perfDataCollector)
 		duration := time.Since(begin).Seconds()
 
-		if err != nil {
+		if err != nil && !errors.Is(err, perfdata.ErrNoData) {
 			errs = append(errs, err)
 			success = 0.0
 
-			c.logger.Error(fmt.Sprintf("mssql class collector %s failed after %fs", collector, duration),
+			c.logger.Error(fmt.Sprintf("mssql class collector %s for instance %s failed after %fs", collector, sqlInstance, duration),
 				slog.Any("err", err),
 			)
 		} else {
-			c.logger.Debug(fmt.Sprintf("mssql class collector %s succeeded after %fs.", collector, duration))
+			c.logger.Debug(fmt.Sprintf("mssql class collector %s for instance %s succeeded after %fs.", collector, sqlInstance, duration))
 		}
 
 		ch <- prometheus.MustNewConstMetric(
