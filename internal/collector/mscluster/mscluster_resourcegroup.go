@@ -7,13 +7,14 @@ import (
 
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
-	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 const nameResourceGroup = Name + "_resourcegroup"
 
 type collectorResourceGroup struct {
+	resourceGroupMIQuery mi.Query
+
 	resourceGroupAutoFailbackType    *prometheus.Desc
 	resourceGroupCharacteristics     *prometheus.Desc
 	resourceGroupColdStartSetting    *prometheus.Desc
@@ -51,7 +52,14 @@ type msClusterResourceGroup struct {
 	State               uint   `mi:"State"`
 }
 
-func (c *Collector) buildResourceGroup() {
+func (c *Collector) buildResourceGroup() error {
+	resourceGroupMIQuery, err := mi.NewQuery("SELECT * FROM MSCluster_ResourceGroup")
+	if err != nil {
+		return fmt.Errorf("failed to create WMI query: %w", err)
+	}
+
+	c.resourceGroupMIQuery = resourceGroupMIQuery
+
 	c.resourceGroupAutoFailbackType = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameResourceGroup, "auto_failback_type"),
 		"Provides access to the group's AutoFailbackType property.",
@@ -142,6 +150,8 @@ func (c *Collector) buildResourceGroup() {
 		[]string{"name"},
 		nil,
 	)
+
+	return nil
 }
 
 // Collect sends the metric values for each metric
@@ -149,7 +159,7 @@ func (c *Collector) buildResourceGroup() {
 func (c *Collector) collectResourceGroup(ch chan<- prometheus.Metric, nodeNames []string) error {
 	var dst []msClusterResourceGroup
 
-	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, utils.Must(mi.NewQuery("SELECT * FROM MSCluster_ResourceGroup"))); err != nil {
+	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, c.resourceGroupMIQuery); err != nil {
 		return fmt.Errorf("WMI query failed: %w", err)
 	}
 

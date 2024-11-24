@@ -7,13 +7,14 @@ import (
 
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
-	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 const nameNetwork = Name + "_network"
 
 type collectorNetwork struct {
+	networkMIQuery mi.Query
+
 	networkCharacteristics *prometheus.Desc
 	networkFlags           *prometheus.Desc
 	networkMetric          *prometheus.Desc
@@ -33,7 +34,14 @@ type msClusterNetwork struct {
 	State           uint `mi:"State"`
 }
 
-func (c *Collector) buildNetwork() {
+func (c *Collector) buildNetwork() error {
+	networkMIQuery, err := mi.NewQuery("SELECT * FROM MSCluster_Network")
+	if err != nil {
+		return fmt.Errorf("failed to create WMI query: %w", err)
+	}
+
+	c.networkMIQuery = networkMIQuery
+
 	c.networkCharacteristics = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameNetwork, "characteristics"),
 		"Provides the characteristics of the network.",
@@ -64,6 +72,8 @@ func (c *Collector) buildNetwork() {
 		[]string{"name"},
 		nil,
 	)
+
+	return nil
 }
 
 // Collect sends the metric values for each metric
@@ -71,7 +81,7 @@ func (c *Collector) buildNetwork() {
 func (c *Collector) collectNetwork(ch chan<- prometheus.Metric) error {
 	var dst []msClusterNetwork
 
-	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, utils.Must(mi.NewQuery("SELECT * MSCluster_Node"))); err != nil {
+	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, c.networkMIQuery); err != nil {
 		return fmt.Errorf("WMI query failed: %w", err)
 	}
 

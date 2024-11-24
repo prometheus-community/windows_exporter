@@ -7,13 +7,14 @@ import (
 
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
-	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 const nameResource = Name + "_resource"
 
 type collectorResource struct {
+	resourceMIQuery mi.Query
+
 	resourceCharacteristics        *prometheus.Desc
 	resourceDeadlockTimeout        *prometheus.Desc
 	resourceEmbeddedFailureAction  *prometheus.Desc
@@ -59,7 +60,14 @@ type msClusterResource struct {
 	Subclass               uint `mi:"Subclass"`
 }
 
-func (c *Collector) buildResource() {
+func (c *Collector) buildResource() error {
+	resourceMIQuery, err := mi.NewQuery("SELECT * FROM MSCluster_Resource")
+	if err != nil {
+		return fmt.Errorf("failed to create WMI query: %w", err)
+	}
+
+	c.resourceMIQuery = resourceMIQuery
+
 	c.resourceCharacteristics = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameResource, "characteristics"),
 		"Provides the characteristics of the object.",
@@ -168,6 +176,8 @@ func (c *Collector) buildResource() {
 		[]string{"type", "owner_group", "name"},
 		nil,
 	)
+
+	return nil
 }
 
 // Collect sends the metric values for each metric
@@ -175,7 +185,7 @@ func (c *Collector) buildResource() {
 func (c *Collector) collectResource(ch chan<- prometheus.Metric, nodeNames []string) error {
 	var dst []msClusterResource
 
-	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, utils.Must(mi.NewQuery("SELECT * FROM MSCluster_Resource"))); err != nil {
+	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, c.resourceMIQuery); err != nil {
 		return fmt.Errorf("WMI query failed: %w", err)
 	}
 

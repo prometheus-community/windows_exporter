@@ -8,13 +8,22 @@ import (
 	"log/slog"
 	"slices"
 	"strings"
+	"sync"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-const Name = "mscluster"
+const (
+	Name = "mscluster"
+
+	subCollectorCluster       = "cluster"
+	subCollectorNetwork       = "network"
+	subCollectorNode          = "node"
+	subCollectorResource      = "resource"
+	subCollectorResourceGroup = "resourcegroup"
+)
 
 type Config struct {
 	CollectorsEnabled []string `yaml:"collectors_enabled"`
@@ -22,11 +31,11 @@ type Config struct {
 
 var ConfigDefaults = Config{
 	CollectorsEnabled: []string{
-		"cluster",
-		"network",
-		"node",
-		"resource",
-		"resourcegroup",
+		subCollectorCluster,
+		subCollectorNetwork,
+		subCollectorNode,
+		subCollectorResource,
+		subCollectorResourceGroup,
 	},
 }
 
@@ -99,27 +108,39 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 
 	c.miSession = miSession
 
-	if slices.Contains(c.config.CollectorsEnabled, "cluster") {
-		c.buildCluster()
+	errs := make([]error, 0, 5)
+
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorCluster) {
+		if err := c.buildCluster(); err != nil {
+			errs = append(errs, fmt.Errorf("failed to build cluster collector: %w", err))
+		}
 	}
 
-	if slices.Contains(c.config.CollectorsEnabled, "network") {
-		c.buildNetwork()
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorNetwork) {
+		if err := c.buildNetwork(); err != nil {
+			errs = append(errs, fmt.Errorf("failed to build network collector: %w", err))
+		}
 	}
 
-	if slices.Contains(c.config.CollectorsEnabled, "node") {
-		c.buildNode()
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorNode) {
+		if err := c.buildNode(); err != nil {
+			errs = append(errs, fmt.Errorf("failed to build node collector: %w", err))
+		}
 	}
 
-	if slices.Contains(c.config.CollectorsEnabled, "resource") {
-		c.buildResource()
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorResource) {
+		if err := c.buildResource(); err != nil {
+			errs = append(errs, fmt.Errorf("failed to build resource collector: %w", err))
+		}
 	}
 
-	if slices.Contains(c.config.CollectorsEnabled, "resourcegroup") {
-		c.buildResourceGroup()
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorResourceGroup) {
+		if err := c.buildResourceGroup(); err != nil {
+			errs = append(errs, fmt.Errorf("failed to build resource group collector: %w", err))
+		}
 	}
 
-	return nil
+	return errors.Join(errs...)
 }
 
 // Collect sends the metric values for each metric
@@ -129,40 +150,73 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		return nil
 	}
 
-	var (
-		err       error
-		errs      []error
-		nodeNames []string
-	)
+	errCh := make(chan error, 5)
 
-	if slices.Contains(c.config.CollectorsEnabled, "cluster") {
-		if err = c.collectCluster(ch); err != nil {
-			errs = append(errs, fmt.Errorf("failed to collect cluster metrics: %w", err))
-		}
-	}
+	wg := sync.WaitGroup{}
+	wg.Add(5)
 
-	if slices.Contains(c.config.CollectorsEnabled, "network") {
-		if err = c.collectNetwork(ch); err != nil {
-			errs = append(errs, fmt.Errorf("failed to collect network metrics: %w", err))
-		}
-	}
+	go func() {
+		defer wg.Done()
 
-	if slices.Contains(c.config.CollectorsEnabled, "node") {
-		if nodeNames, err = c.collectNode(ch); err != nil {
-			errs = append(errs, fmt.Errorf("failed to collect node metrics: %w", err))
+		if slices.Contains(c.config.CollectorsEnabled, subCollectorCluster) {
+			if err := c.collectCluster(ch); err != nil {
+				errCh <- fmt.Errorf("failed to collect cluster metrics: %w", err)
+			}
 		}
-	}
+	}()
 
-	if slices.Contains(c.config.CollectorsEnabled, "resource") {
-		if err = c.collectResource(ch, nodeNames); err != nil {
-			errs = append(errs, fmt.Errorf("failed to collect resource metrics: %w", err))
-		}
-	}
+	go func() {
+		defer wg.Done()
 
-	if slices.Contains(c.config.CollectorsEnabled, "resourcegroup") {
-		if err = c.collectResourceGroup(ch, nodeNames); err != nil {
-			errs = append(errs, fmt.Errorf("failed to collect resource group metrics: %w", err))
+		if slices.Contains(c.config.CollectorsEnabled, subCollectorNetwork) {
+			if err := c.collectNetwork(ch); err != nil {
+				errCh <- fmt.Errorf("failed to collect network metrics: %w", err)
+			}
 		}
+	}()
+
+	go func() {
+		defer wg.Done()
+
+		nodeNames := make([]string, 0)
+
+		if slices.Contains(c.config.CollectorsEnabled, subCollectorNode) {
+			var err error
+
+			nodeNames, err = c.collectNode(ch)
+			if err != nil {
+				errCh <- fmt.Errorf("failed to collect node metrics: %w", err)
+			}
+		}
+
+		go func() {
+			defer wg.Done()
+
+			if slices.Contains(c.config.CollectorsEnabled, subCollectorResource) {
+				if err := c.collectResource(ch, nodeNames); err != nil {
+					errCh <- fmt.Errorf("failed to collect resource metrics: %w", err)
+				}
+			}
+		}()
+
+		go func() {
+			defer wg.Done()
+
+			if slices.Contains(c.config.CollectorsEnabled, subCollectorResourceGroup) {
+				if err := c.collectResourceGroup(ch, nodeNames); err != nil {
+					errCh <- fmt.Errorf("failed to collect resource group metrics: %w", err)
+				}
+			}
+		}()
+	}()
+
+	wg.Wait()
+	close(errCh)
+
+	errs := make([]error, 0, 5)
+
+	for err := range errCh {
+		errs = append(errs, err)
 	}
 
 	return errors.Join(errs...)
