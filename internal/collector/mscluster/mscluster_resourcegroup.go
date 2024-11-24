@@ -19,7 +19,7 @@ import (
 	"fmt"
 
 	"github.com/prometheus-community/windows_exporter/internal/mi"
-	"github.com/prometheus-community/windows_exporter/pkg/types"
+	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -163,6 +163,12 @@ func (c *Collector) buildResourceGroup() error {
 		[]string{"name"},
 		nil,
 	)
+
+	var dst []msClusterResourceGroup
+
+	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, c.resourceGroupMIQuery); err != nil {
+		return fmt.Errorf("WMI query failed: %w", err)
+	}
 
 	return nil
 }

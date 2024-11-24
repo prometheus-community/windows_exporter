@@ -27,7 +27,7 @@ import (
 
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	"github.com/prometheus-community/windows_exporter/pkg/types"
+	types "github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -262,7 +262,10 @@ func (p *Prometheus) execute(name string, c Collector, ch chan<- prometheus.Metr
 
 	if err != nil {
 		loggerFn := p.logger.Warn
-		if errors.Is(err, types.ErrNoData) || errors.Is(err, perfdata.ErrNoData) || errors.Is(err, mi.MI_RESULT_INVALID_NAMESPACE) {
+		if errors.Is(err, types.ErrNoData) ||
+			errors.Is(err, perfdata.ErrNoData) ||
+			errors.Is(err, perfdata.ErrPerformanceCounterNotInitialized) ||
+			errors.Is(err, mi.MI_RESULT_INVALID_NAMESPACE) {
 			loggerFn = p.logger.Debug
 		}
 

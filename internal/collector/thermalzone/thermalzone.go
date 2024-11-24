@@ -16,13 +16,13 @@
 package thermalzone
 
 import (
-	"errors"
 	"fmt"
 	"log/slog"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
-	"github.com/prometheus-community/windows_exporter/pkg/types"
+	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -34,9 +34,9 @@ var ConfigDefaults = Config{}
 
 // A Collector is a Prometheus Collector for WMI Win32_PerfRawData_Counters_ThermalZoneInformation metrics.
 type Collector struct {
-	config    Config
-	miSession *mi.Session
-	miQuery   mi.Query
+	config Config
+
+	perfDataCollector *perfdata.Collector
 
 	percentPassiveLimit *prometheus.Desc
 	temperature         *prometheus.Desc
@@ -67,18 +67,17 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
-	if miSession == nil {
-		return errors.New("miSession is nil")
-	}
+func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
+	var err error
 
-	miQuery, err := mi.NewQuery("SELECT Name, HighPrecisionTemperature, PercentPassiveLimit, ThrottleReasons FROM Win32_PerfRawData_Counters_ThermalZoneInformation")
+	c.perfDataCollector, err = perfdata.NewCollector("Thermal Zone Information", nil, []string{
+		HighPrecisionTemperature,
+		PercentPassiveLimit,
+		ThrottleReasons,
+	})
 	if err != nil {
-		return fmt.Errorf("failed to create WMI query: %w", err)
+		return fmt.Errorf("failed to create Thermal Zone Information collector: %w", err)
 	}
-
-	c.miQuery = miQuery
-	c.miSession = miSession
 
 	c.temperature = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "temperature_celsius"),
@@ -111,53 +110,32 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
-	if err := c.collect(ch); err != nil {
-		return fmt.Errorf("failed collecting thermalzone metrics: %w", err)
+	perfData, err := c.perfDataCollector.Collect()
+	if err != nil {
+		return fmt.Errorf("failed to collect Thermal Zone Information metrics: %w", err)
 	}
 
-	return nil
-}
-
-// Win32_PerfRawData_Counters_ThermalZoneInformation docs:
-// https://wutils.com/wmi/root/cimv2/win32_perfrawdata_counters_thermalzoneinformation/
-type Win32_PerfRawData_Counters_ThermalZoneInformation struct {
-	Name                     string `mi:"Name"`
-	HighPrecisionTemperature uint32 `mi:"HighPrecisionTemperature"`
-	PercentPassiveLimit      uint32 `mi:"PercentPassiveLimit"`
-	ThrottleReasons          uint32 `mi:"ThrottleReasons"`
-}
-
-func (c *Collector) collect(ch chan<- prometheus.Metric) error {
-	var dst []Win32_PerfRawData_Counters_ThermalZoneInformation
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, c.miQuery); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
-	}
-
-	if len(dst) == 0 {
-		return fmt.Errorf("WMI query failed: %w", types.ErrNoData)
-	}
-
-	for _, info := range dst {
+	for sensorName, data := range perfData {
 		// Divide by 10 and subtract 273.15 to convert decikelvin to celsius
 		ch <- prometheus.MustNewConstMetric(
 			c.temperature,
 			prometheus.GaugeValue,
-			(float64(info.HighPrecisionTemperature)/10.0)-273.15,
-			info.Name,
+			(data[HighPrecisionTemperature].FirstValue/10.0)-273.15,
+			sensorName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.percentPassiveLimit,
 			prometheus.GaugeValue,
-			float64(info.PercentPassiveLimit),
-			info.Name,
+			data[PercentPassiveLimit].FirstValue,
+			sensorName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.throttleReasons,
 			prometheus.GaugeValue,
-			float64(info.ThrottleReasons),
-			info.Name,
+			data[ThrottleReasons].FirstValue,
+			sensorName,
 		)
 	}
 

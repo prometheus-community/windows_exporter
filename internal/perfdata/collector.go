@@ -73,6 +73,8 @@ func NewCollector(object string, instances []string, counters []string) (*Collec
 		mu:                    sync.RWMutex{},
 	}
 
+	errs := make([]error, 0, len(counters))
+
 	for _, counterName := range counters {
 		if counterName == "*" {
 			return nil, errors.New("wildcard counters are not supported")
@@ -91,7 +93,9 @@ func NewCollector(object string, instances []string, counters []string) (*Collec
 			var counterHandle pdhCounterHandle
 
 			if ret := PdhAddEnglishCounter(handle, counterPath, 0, &counterHandle); ret != ErrorSuccess {
-				return nil, fmt.Errorf("failed to add counter %s: %w", counterPath, NewPdhError(ret))
+				errs = append(errs, fmt.Errorf("failed to add counter %s: %w", counterPath, NewPdhError(ret)))
+
+				continue
 			}
 
 			counter.Instances[instance] = counterHandle
@@ -104,12 +108,16 @@ func NewCollector(object string, instances []string, counters []string) (*Collec
 			bufLen := uint32(0)
 
 			if ret := PdhGetCounterInfo(counterHandle, 0, &bufLen, nil); ret != PdhMoreData {
-				return nil, fmt.Errorf("PdhGetCounterInfo: %w", NewPdhError(ret))
+				errs = append(errs, fmt.Errorf("PdhGetCounterInfo: %w", NewPdhError(ret)))
+
+				continue
 			}
 
 			buf := make([]byte, bufLen)
 			if ret := PdhGetCounterInfo(counterHandle, 0, &bufLen, &buf[0]); ret != ErrorSuccess {
-				return nil, fmt.Errorf("PdhGetCounterInfo: %w", NewPdhError(ret))
+				errs = append(errs, fmt.Errorf("PdhGetCounterInfo: %w", NewPdhError(ret)))
+
+				continue
 			}
 
 			ci := (*PdhCounterInfo)(unsafe.Pointer(&buf[0]))
@@ -118,12 +126,18 @@ func NewCollector(object string, instances []string, counters []string) (*Collec
 
 			if counter.Type == PERF_ELAPSED_TIME {
 				if ret := PdhGetCounterTimeBase(counterHandle, &counter.Frequency); ret != ErrorSuccess {
-					return nil, fmt.Errorf("PdhGetCounterTimeBase: %w", NewPdhError(ret))
+					errs = append(errs, fmt.Errorf("PdhGetCounterTimeBase: %w", NewPdhError(ret)))
+
+					continue
 				}
 			}
 		}
 
 		collector.counters[counterName] = counter
+	}
+
+	if err := errors.Join(errs...); err != nil {
+		return collector, fmt.Errorf("failed to initialize collector: %w", err)
 	}
 
 	if len(collector.counters) == 0 {
@@ -162,14 +176,14 @@ func (c *Collector) Describe() map[string]string {
 
 func (c *Collector) Collect() (CounterValues, error) {
 	if c == nil {
-		return CounterValues{}, nil
+		return CounterValues{}, ErrPerformanceCounterNotInitialized
 	}
 
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
 	if len(c.counters) == 0 || c.handle == 0 || c.collectCh == nil || c.counterValuesCh == nil || c.errorCh == nil {
-		return nil, errors.New("collector not initialized")
+		return nil, ErrPerformanceCounterNotInitialized
 	}
 
 	c.collectCh <- struct{}{}
@@ -269,6 +283,10 @@ func (c *Collector) collectRoutine() {
 
 			return data, nil
 		})()
+
+		if err == nil && len(counterValues) == 0 {
+			err = ErrNoData
+		}
 
 		c.counterValuesCh <- counterValues
 		c.errorCh <- err
