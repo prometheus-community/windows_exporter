@@ -22,12 +22,13 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"unsafe"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	types "github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows"
 )
@@ -58,6 +59,9 @@ type Collector struct {
 
 	lookupCache map[string]string
 
+	workerCh chan processWorkerRequest
+	mu       sync.RWMutex
+
 	info              *prometheus.Desc
 	cpuTimeTotal      *prometheus.Desc
 	handleCount       *prometheus.Desc
@@ -74,6 +78,13 @@ type Collector struct {
 	workingSet        *prometheus.Desc
 	workingSetPeak    *prometheus.Desc
 	workingSetPrivate *prometheus.Desc
+}
+
+type processWorkerRequest struct {
+	ch                       chan<- prometheus.Metric
+	name                     string
+	performanceCounterValues map[string]perfdata.CounterValue
+	workerProcesses          []WorkerProcess
 }
 
 func New(config *Config) *Collector {
@@ -142,7 +153,12 @@ func (c *Collector) GetName() string {
 }
 
 func (c *Collector) Close() error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	c.perfDataCollector.Close()
+
+	close(c.workerCh)
 
 	return nil
 }
@@ -161,6 +177,9 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 
 	c.workerProcessMIQueryQuery = miQuery
 	c.miSession = miSession
+
+	c.workerCh = make(chan processWorkerRequest, 32)
+	c.mu = sync.RWMutex{}
 
 	counters := []string{
 		processID,
@@ -341,6 +360,23 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 			continue
 		}
 
+		c.workerCh <- processWorkerRequest{
+			ch:                       ch,
+			name:                     name,
+			performanceCounterValues: process,
+			workerProcesses:          workerProcesses,
+		}
+	}
+
+	return nil
+}
+
+func (c *Collector) worker() {
+	for req := range c.workerCh {
+		ch := req.ch
+		name := req.name
+		process := req.performanceCounterValues
+
 		var pid uint64
 
 		if v, ok := process[processID]; ok {
@@ -352,7 +388,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		parentPID := strconv.FormatUint(uint64(process[creatingProcessID].FirstValue), 10)
 
 		if c.config.EnableWorkerProcess {
-			for _, wp := range workerProcesses {
+			for _, wp := range req.workerProcesses {
 				if wp.ProcessId == pid {
 					name = strings.Join([]string{name, wp.AppPoolName}, "_")
 
@@ -525,8 +561,6 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 			name, pidString,
 		)
 	}
-
-	return nil
 }
 
 // ref: https://github.com/microsoft/hcsshim/blob/8beabacfc2d21767a07c20f8dd5f9f3932dbf305/internal/uvm/stats.go#L25
