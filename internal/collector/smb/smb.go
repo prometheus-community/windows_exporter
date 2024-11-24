@@ -96,19 +96,19 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 	c.writeRequests = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "server_shares_write_requests_count"),
+		prometheus.BuildFQName(types.Namespace, Name, "server_shares_write_requests_count_total"),
 		"Writes requests on the SMB Server Share",
 		[]string{"share"},
 		nil,
 	)
 	c.readRequests = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "server_shares_read_requests_count"),
+		prometheus.BuildFQName(types.Namespace, Name, "server_shares_read_requests_count_total"),
 		"Read requests on the SMB Server Share",
 		[]string{"share"},
 		nil,
 	)
 	c.metadataRequests = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "server_shares_metadata_requests_count"),
+		prometheus.BuildFQName(types.Namespace, Name, "server_shares_metadata_requests_count_total"),
 		"Metadata requests on the SMB Server Share",
 		[]string{"share"},
 		nil,
@@ -120,7 +120,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 	c.filesOpened = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "server_shares_filed_opened_count"),
+		prometheus.BuildFQName(types.Namespace, Name, "server_shares_filed_opened_count_total"),
 		"Files opened on the SMB Server Share",
 		[]string{"share"},
 		nil,
@@ -160,21 +160,21 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 
 		ch <- prometheus.MustNewConstMetric(
 			c.writeRequests,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			data[writeRequests].FirstValue,
 			share,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.readRequests,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			data[readRequests].FirstValue,
 			share,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.metadataRequests,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			data[metadataRequests].FirstValue,
 			share,
 		)
@@ -188,7 +188,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 
 		ch <- prometheus.MustNewConstMetric(
 			c.filesOpened,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			data[filesOpened].FirstValue,
 			share,
 		)
