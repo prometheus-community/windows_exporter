@@ -51,7 +51,7 @@ func (c *Collector) collectVirtualMachineHealthSummary(ch chan<- prometheus.Metr
 		return fmt.Errorf("failed to collect Hyper-V Virtual Machine Health Summary metrics: %w", err)
 	}
 
-	healthData, ok := data[perfdata.EmptyInstance]
+	healthData, ok := data[perfdata.InstanceEmpty]
 	if !ok {
 		return errors.New("no data returned for Hyper-V Virtual Machine Health Summary")
 	}

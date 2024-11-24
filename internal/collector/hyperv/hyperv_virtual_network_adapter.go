@@ -33,7 +33,7 @@ const (
 func (c *Collector) buildVirtualNetworkAdapter() error {
 	var err error
 
-	c.perfDataCollectorVirtualNetworkAdapter, err = perfdata.NewCollector("Hyper-V Virtual Network Adapter", perfdata.InstanceAll, []string{
+	c.perfDataCollectorVirtualNetworkAdapter, err = perfdata.NewCollector("Hyper-V Virtual Network Adapter", perfdata.InstancesAll, []string{
 		virtualNetworkAdapterBytesReceived,
 		virtualNetworkAdapterBytesSent,
 		virtualNetworkAdapterDroppedPacketsIncoming,

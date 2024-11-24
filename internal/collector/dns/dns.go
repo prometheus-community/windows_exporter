@@ -79,7 +79,7 @@ func (c *Collector) Close() error {
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 	var err error
 
-	c.perfDataCollector, err = perfdata.NewCollector("DNS", perfdata.InstanceAll, []string{
+	c.perfDataCollector, err = perfdata.NewCollector("DNS", perfdata.InstancesAll, []string{
 		axfrRequestReceived,
 		axfrRequestSent,
 		axfrResponseReceived,
@@ -269,7 +269,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		return fmt.Errorf("failed to collect DNS metrics: %w", err)
 	}
 
-	data, ok := perfData[perfdata.EmptyInstance]
+	data, ok := perfData[perfdata.InstanceEmpty]
 	if !ok {
 		return errors.New("perflib query for DNS returned empty result set")
 	}

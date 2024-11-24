@@ -180,11 +180,11 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 		workingSet,
 	}
 
-	c.perfDataCollector, err = perfdata.NewCollector("Process V2", perfdata.InstanceAll, counters)
+	c.perfDataCollector, err = perfdata.NewCollector("Process V2", perfdata.InstancesAll, counters)
 	if errors.Is(err, perfdata.NewPdhError(perfdata.PdhCstatusNoObject)) {
 		counters[0] = idProcess
 
-		c.perfDataCollector, err = perfdata.NewCollector("Process", perfdata.InstanceAll, counters)
+		c.perfDataCollector, err = perfdata.NewCollector("Process", perfdata.InstancesAll, counters)
 	}
 
 	if err != nil {

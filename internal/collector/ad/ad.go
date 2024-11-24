@@ -265,7 +265,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 
 	var err error
 
-	c.perfDataCollector, err = perfdata.NewCollector("DirectoryServices", perfdata.InstanceAll, counters)
+	c.perfDataCollector, err = perfdata.NewCollector("DirectoryServices", perfdata.InstancesAll, counters)
 	if err != nil {
 		return fmt.Errorf("failed to create DirectoryServices collector: %w", err)
 	}

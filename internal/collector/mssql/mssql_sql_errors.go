@@ -30,7 +30,7 @@ func (c *Collector) buildSQLErrors() error {
 	}
 
 	for sqlInstance := range c.mssqlInstances {
-		c.genStatsPerfDataCollectors[sqlInstance], err = perfdata.NewCollector(c.mssqlGetPerfObjectName(sqlInstance, "SQL Errors"), perfdata.InstanceAll, counters)
+		c.genStatsPerfDataCollectors[sqlInstance], err = perfdata.NewCollector(c.mssqlGetPerfObjectName(sqlInstance, "SQL Errors"), perfdata.InstancesAll, counters)
 		if err != nil {
 			return fmt.Errorf("failed to create SQL Errors collector for instance %s: %w", sqlInstance, err)
 		}

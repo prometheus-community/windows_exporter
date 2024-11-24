@@ -148,7 +148,7 @@ const (
 func (c *Collector) buildVirtualNetworkAdapterDropReasons() error {
 	var err error
 
-	c.perfDataCollectorVirtualNetworkAdapterDropReasons, err = perfdata.NewCollector("Hyper-V Virtual Network Adapter Drop Reasons", perfdata.InstanceAll, []string{
+	c.perfDataCollectorVirtualNetworkAdapterDropReasons, err = perfdata.NewCollector("Hyper-V Virtual Network Adapter Drop Reasons", perfdata.InstancesAll, []string{
 		virtualNetworkAdapterDropReasonsOutgoingNativeFwdingReq,
 		virtualNetworkAdapterDropReasonsIncomingNativeFwdingReq,
 		virtualNetworkAdapterDropReasonsOutgoingMTUMismatch,

@@ -30,7 +30,7 @@ func (c *Collector) buildDynamicMemoryBalancer() error {
 	var err error
 
 	// https://learn.microsoft.com/en-us/archive/blogs/chrisavis/monitoring-dynamic-memory-in-windows-server-hyper-v-2012
-	c.perfDataCollectorDynamicMemoryBalancer, err = perfdata.NewCollector("Hyper-V Dynamic Memory Balancer", perfdata.InstanceAll, []string{
+	c.perfDataCollectorDynamicMemoryBalancer, err = perfdata.NewCollector("Hyper-V Dynamic Memory Balancer", perfdata.InstancesAll, []string{
 		vmDynamicMemoryBalancerAvailableMemory,
 		vmDynamicMemoryBalancerAvailableMemoryForBalancing,
 		vmDynamicMemoryBalancerAveragePressure,

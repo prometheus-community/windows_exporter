@@ -62,7 +62,7 @@ const (
 func (c *Collector) buildVirtualSwitch() error {
 	var err error
 
-	c.perfDataCollectorVirtualSwitch, err = perfdata.NewCollector("Hyper-V Virtual Switch", perfdata.InstanceAll, []string{
+	c.perfDataCollectorVirtualSwitch, err = perfdata.NewCollector("Hyper-V Virtual Switch", perfdata.InstancesAll, []string{
 		virtualSwitchBroadcastPacketsReceived,
 		virtualSwitchBroadcastPacketsSent,
 		virtualSwitchBytes,

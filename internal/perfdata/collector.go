@@ -15,8 +15,8 @@ import (
 )
 
 var (
-	InstanceAll   = []string{"*"}
-	InstanceTotal = []string{"_Total"}
+	InstancesAll   = []string{"*"}
+	InstancesTotal = []string{InstanceTotal}
 )
 
 type Collector struct {
@@ -43,7 +43,7 @@ func NewCollector(object string, instances []string, counters []string) (*Collec
 	}
 
 	if len(instances) == 0 {
-		instances = []string{EmptyInstance}
+		instances = []string{InstanceEmpty}
 	}
 
 	collector := &Collector{
@@ -191,7 +191,7 @@ func (c *Collector) Collect() (map[string]map[string]CounterValues, error) {
 					}
 
 					if instanceName == "" || instanceName == "*" {
-						instanceName = EmptyInstance
+						instanceName = InstanceEmpty
 					}
 
 					if _, ok := data[instanceName]; !ok {
@@ -239,7 +239,7 @@ func (c *Collector) Close() {
 func formatCounterPath(object, instance, counterName string) string {
 	var counterPath string
 
-	if instance == EmptyInstance {
+	if instance == InstanceEmpty {
 		counterPath = fmt.Sprintf(`\%s\%s`, object, counterName)
 	} else {
 		counterPath = fmt.Sprintf(`\%s(%s)\%s`, object, instance, counterName)

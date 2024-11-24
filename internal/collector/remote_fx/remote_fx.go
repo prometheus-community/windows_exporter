@@ -88,7 +88,7 @@ func (c *Collector) Close() error {
 func (c *Collector) Build(*slog.Logger, *mi.Session) error {
 	var err error
 
-	c.perfDataCollectorNetwork, err = perfdata.NewCollector("RemoteFX Network", perfdata.InstanceAll, []string{
+	c.perfDataCollectorNetwork, err = perfdata.NewCollector("RemoteFX Network", perfdata.InstancesAll, []string{
 		BaseTCPRTT,
 		BaseUDPRTT,
 		CurrentTCPBandwidth,
@@ -107,7 +107,7 @@ func (c *Collector) Build(*slog.Logger, *mi.Session) error {
 		return fmt.Errorf("failed to create RemoteFX Network collector: %w", err)
 	}
 
-	c.perfDataCollectorGraphics, err = perfdata.NewCollector("RemoteFX Graphics", perfdata.InstanceAll, []string{
+	c.perfDataCollectorGraphics, err = perfdata.NewCollector("RemoteFX Graphics", perfdata.InstancesAll, []string{
 		AverageEncodingTime,
 		FrameQuality,
 		FramesSkippedPerSecondInsufficientClientResources,

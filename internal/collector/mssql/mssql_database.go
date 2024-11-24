@@ -170,7 +170,7 @@ func (c *Collector) buildDatabases() error {
 	}
 
 	for sqlInstance := range c.mssqlInstances {
-		c.databasesPerfDataCollectors[sqlInstance], err = perfdata.NewCollector(c.mssqlGetPerfObjectName(sqlInstance, "Databases"), perfdata.InstanceAll, counters)
+		c.databasesPerfDataCollectors[sqlInstance], err = perfdata.NewCollector(c.mssqlGetPerfObjectName(sqlInstance, "Databases"), perfdata.InstancesAll, counters)
 		if err != nil {
 			return fmt.Errorf("failed to create Databases collector for instance %s: %w", sqlInstance, err)
 		}
