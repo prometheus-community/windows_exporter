@@ -50,7 +50,7 @@ func NewCollector(object string, instances []string, counters []string) (*Collec
 		object:                object,
 		counters:              make(map[string]Counter, len(counters)),
 		handle:                handle,
-		totalCounterRequested: slices.Contains(instances, "_Total"),
+		totalCounterRequested: slices.Contains(instances, InstanceTotal),
 		mu:                    sync.RWMutex{},
 	}
 
@@ -186,7 +186,7 @@ func (c *Collector) Collect() (map[string]map[string]CounterValues, error) {
 			for _, item := range items {
 				if item.RawValue.CStatus == PdhCstatusValidData || item.RawValue.CStatus == PdhCstatusNewData {
 					instanceName := windows.UTF16PtrToString(item.SzName)
-					if strings.HasSuffix(instanceName, "_Total") && !c.totalCounterRequested {
+					if strings.HasSuffix(instanceName, InstanceTotal) && !c.totalCounterRequested {
 						continue
 					}
 

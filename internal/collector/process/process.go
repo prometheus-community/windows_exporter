@@ -324,9 +324,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		// Duplicate processes are suffixed #, and an index number. Remove those.
 		name, _, _ = strings.Cut(name, "#")
 
-		if name == "_Total" ||
-			c.config.ProcessExclude.MatchString(name) ||
-			!c.config.ProcessInclude.MatchString(name) {
+		if c.config.ProcessExclude.MatchString(name) || !c.config.ProcessInclude.MatchString(name) {
 			continue
 		}
 

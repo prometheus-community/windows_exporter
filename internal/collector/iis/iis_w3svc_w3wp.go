@@ -432,8 +432,7 @@ func (c *Collector) collectW3SVCW3WP(ch chan<- prometheus.Metric) error {
 		pid := workerProcessNameExtractor.ReplaceAllString(name, "$1")
 
 		name := workerProcessNameExtractor.ReplaceAllString(name, "$2")
-		if name == "" || name == "_Total" ||
-			c.config.AppExclude.MatchString(name) ||
+		if name == "" || c.config.AppExclude.MatchString(name) ||
 			!c.config.AppInclude.MatchString(name) {
 			continue
 		}

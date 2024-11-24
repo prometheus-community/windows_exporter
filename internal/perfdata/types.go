@@ -4,8 +4,10 @@ package perfdata
 
 import "github.com/prometheus/client_golang/prometheus"
 
-const InstanceEmpty = "------"
-const InstanceTotal = "_Total"
+const (
+	InstanceEmpty = "------"
+	InstanceTotal = "_Total"
+)
 
 type CounterValues struct {
 	Type        prometheus.ValueType

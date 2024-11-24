@@ -337,7 +337,7 @@ func (c *Collector) collectCpu(ch chan<- prometheus.Metric) error {
 		return fmt.Errorf("failed to collect VM Memory metrics: %w", err)
 	}
 
-	data, ok := perfData["_Total"]
+	data, ok := perfData[perfdata.InstanceTotal]
 	if !ok {
 		return errors.New("query for VM CPU returned empty result set")
 	}
