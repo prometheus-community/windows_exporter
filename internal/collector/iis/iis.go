@@ -151,7 +151,7 @@ func (c *Collector) Close() error {
 	c.perfDataCollectorWebService.Close()
 	c.perfDataCollectorAppPoolWAS.Close()
 	c.w3SVCW3WPPerfDataCollector.Close()
-	c.perfDataCollectorWebServiceCache.Close()
+	c.serviceCachePerfDataCollector.Close()
 
 	return nil
 }
