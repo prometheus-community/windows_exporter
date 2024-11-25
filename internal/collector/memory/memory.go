@@ -35,6 +35,7 @@ const Name = "memory"
 
 type Config struct{}
 
+//nolint:gochecknoglobals
 var ConfigDefaults = Config{}
 
 // A Collector is a Prometheus Collector for perflib Memory metrics.
@@ -430,7 +431,7 @@ func (c *Collector) collectPDH(ch chan<- prometheus.Metric) error {
 	data, ok := perfData[perfdata.InstanceEmpty]
 
 	if !ok {
-		return errors.New("perflib query for Memory returned empty result set")
+		return fmt.Errorf("failed to collect Memory metrics: %w", types.ErrNoData)
 	}
 
 	ch <- prometheus.MustNewConstMetric(

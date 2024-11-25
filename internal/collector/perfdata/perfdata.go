@@ -36,6 +36,7 @@ type Config struct {
 	Objects []Object `yaml:"objects"`
 }
 
+//nolint:gochecknoglobals
 var ConfigDefaults = Config{
 	Objects: make([]Object, 0),
 }

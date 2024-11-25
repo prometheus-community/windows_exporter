@@ -31,6 +31,7 @@ const Name = "nps"
 
 type Config struct{}
 
+//nolint:gochecknoglobals
 var ConfigDefaults = Config{}
 
 type Collector struct {
@@ -313,7 +314,7 @@ func (c *Collector) collectAccept(ch chan<- prometheus.Metric) error {
 
 	data, ok := perfData[perfdata.InstanceEmpty]
 	if !ok {
-		return errors.New("perflib query for NPS Authentication Server returned empty result set")
+		return fmt.Errorf("failed to collect NPS Authentication Server metrics: %w", types.ErrNoData)
 	}
 
 	ch <- prometheus.MustNewConstMetric(
@@ -405,7 +406,7 @@ func (c *Collector) collectAccounting(ch chan<- prometheus.Metric) error {
 
 	data, ok := perfData[perfdata.InstanceEmpty]
 	if !ok {
-		return errors.New("perflib query for NPS Accounting Server returned empty result set")
+		return fmt.Errorf("failed to collect NPS Accounting Server metrics: %w", types.ErrNoData)
 	}
 
 	ch <- prometheus.MustNewConstMetric(

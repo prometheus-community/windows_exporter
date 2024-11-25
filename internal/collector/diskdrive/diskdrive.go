@@ -31,6 +31,7 @@ const Name = "diskdrive"
 
 type Config struct{}
 
+//nolint:gochecknoglobals
 var ConfigDefaults = Config{}
 
 // A Collector is a Prometheus Collector for a few WMI metrics in Win32_DiskDrive.
@@ -119,6 +120,11 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 		nil,
 	)
 
+	var dst []diskDrive
+	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, c.miQuery); err != nil {
+		return fmt.Errorf("WMI query failed: %w", err)
+	}
+
 	return nil
 }
 
@@ -133,6 +139,7 @@ type diskDrive struct {
 	Availability uint16 `mi:"Availability"`
 }
 
+//nolint:gochecknoglobals
 var (
 	allDiskStatus = []string{
 		"OK",

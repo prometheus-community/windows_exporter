@@ -16,7 +16,6 @@
 package exchange
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
@@ -65,7 +64,7 @@ func (c *Collector) collectOWA(ch chan<- prometheus.Metric) error {
 	}
 
 	if len(perfData) == 0 {
-		return errors.New("perflib query for MSExchange OWA returned empty result set")
+		return fmt.Errorf("failed to collect MSExchange OWA metrics: %w", types.ErrNoData)
 	}
 
 	for _, data := range perfData {

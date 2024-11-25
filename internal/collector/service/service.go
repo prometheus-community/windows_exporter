@@ -39,6 +39,7 @@ type Config struct {
 	ServiceExclude *regexp.Regexp `yaml:"service_exclude"`
 }
 
+//nolint:gochecknoglobals
 var ConfigDefaults = Config{
 	ServiceInclude: types.RegExpAny,
 	ServiceExclude: types.RegExpEmpty,

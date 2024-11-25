@@ -29,6 +29,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+//nolint:gochecknoglobals
 var baseDir = "../../../tools/textfile-test"
 
 //nolint:paralleltest

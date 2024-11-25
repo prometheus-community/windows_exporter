@@ -158,6 +158,12 @@ func (c *Collector) buildNode() error {
 		nil,
 	)
 
+	var dst []msClusterNode
+
+	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, c.nodeMIQuery); err != nil {
+		return fmt.Errorf("WMI query failed: %w", err)
+	}
+
 	return nil
 }
 

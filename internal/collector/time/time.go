@@ -43,6 +43,7 @@ type Config struct {
 	CollectorsEnabled []string `yaml:"collectors_enabled"`
 }
 
+//nolint:gochecknoglobals
 var ConfigDefaults = Config{
 	CollectorsEnabled: []string{
 		collectorSystemTime,
@@ -242,7 +243,7 @@ func (c *Collector) collectNTP(ch chan<- prometheus.Metric) error {
 
 	data, ok := perfData[perfdata.InstanceEmpty]
 	if !ok {
-		return errors.New("query for Windows Time Service returned empty result set")
+		return fmt.Errorf("failed to collect VM Memory metrics: %w", err)
 	}
 
 	ch <- prometheus.MustNewConstMetric(

@@ -33,6 +33,7 @@ const Name = "remote_fx"
 
 type Config struct{}
 
+//nolint:gochecknoglobals
 var ConfigDefaults = Config{}
 
 // Collector

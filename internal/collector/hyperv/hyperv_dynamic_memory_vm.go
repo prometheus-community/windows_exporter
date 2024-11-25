@@ -16,7 +16,6 @@
 package hyperv
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
@@ -69,7 +68,7 @@ func (c *Collector) buildDynamicMemoryVM() error {
 		vmMemoryRemovedMemory,
 		vmMemoryGuestAvailableMemory,
 	})
-	if err != nil && !errors.Is(err, perfdata.ErrNoData) {
+	if err != nil {
 		return fmt.Errorf("failed to create Hyper-V Dynamic Memory VM collector: %w", err)
 	}
 
@@ -139,7 +138,7 @@ func (c *Collector) buildDynamicMemoryVM() error {
 
 func (c *Collector) collectDynamicMemoryVM(ch chan<- prometheus.Metric) error {
 	data, err := c.perfDataCollectorDynamicMemoryVM.Collect()
-	if err != nil && !errors.Is(err, perfdata.ErrNoData) {
+	if err != nil {
 		return fmt.Errorf("failed to collect Hyper-V Dynamic Memory VM metrics: %w", err)
 	}
 

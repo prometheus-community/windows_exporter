@@ -16,7 +16,6 @@
 package hyperv
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
@@ -58,7 +57,7 @@ func (c *Collector) buildHypervisorVirtualProcessor() error {
 		hypervisorVirtualProcessorRemoteRunTimePercent,
 		hypervisorVirtualProcessorCPUWaitTimePerDispatch,
 	})
-	if err != nil && !errors.Is(err, perfdata.ErrNoData) {
+	if err != nil {
 		return fmt.Errorf("failed to create Hyper-V Hypervisor Virtual Processor collector: %w", err)
 	}
 
@@ -86,7 +85,7 @@ func (c *Collector) buildHypervisorVirtualProcessor() error {
 
 func (c *Collector) collectHypervisorVirtualProcessor(ch chan<- prometheus.Metric) error {
 	data, err := c.perfDataCollectorHypervisorVirtualProcessor.Collect()
-	if err != nil && !errors.Is(err, perfdata.ErrNoData) {
+	if err != nil {
 		return fmt.Errorf("failed to collect Hyper-V Hypervisor Virtual Processor metrics: %w", err)
 	}
 

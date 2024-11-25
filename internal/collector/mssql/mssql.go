@@ -59,6 +59,7 @@ type Config struct {
 	Port              uint16   `yaml:"port"`
 }
 
+//nolint:gochecknoglobals
 var ConfigDefaults = Config{
 	CollectorsEnabled: []string{
 		subCollectorAccessMethods,
@@ -175,7 +176,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 	fileVersion, productVersion, err := c.getMSSQLServerVersion(c.config.Port)
 	if err != nil {
-		logger.Warn("Failed to get MSSQL server version",
+		logger.Warn("failed to get MSSQL server version",
 			slog.Any("err", err),
 			slog.String("collector", Name),
 		)
@@ -334,7 +335,7 @@ func (c *Collector) getMSSQLInstances() mssqlInstancesType {
 
 	k, err := registry.OpenKey(registry.LOCAL_MACHINE, regKey, registry.QUERY_VALUE)
 	if err != nil {
-		c.logger.Warn("Couldn't open registry to determine SQL instances",
+		c.logger.Warn("couldn't open registry to determine SQL instances",
 			slog.Any("err", err),
 		)
 
@@ -343,7 +344,7 @@ func (c *Collector) getMSSQLInstances() mssqlInstancesType {
 
 	defer func(key registry.Key) {
 		if err := key.Close(); err != nil {
-			c.logger.Warn("Failed to close registry key",
+			c.logger.Warn("failed to close registry key",
 				slog.Any("err", err),
 			)
 		}
@@ -351,7 +352,7 @@ func (c *Collector) getMSSQLInstances() mssqlInstancesType {
 
 	instanceNames, err := k.ReadValueNames(0)
 	if err != nil {
-		c.logger.Warn("Can't ReadSubKeyNames",
+		c.logger.Warn("can't ReadSubKeyNames",
 			slog.Any("err", err),
 		)
 
@@ -364,7 +365,7 @@ func (c *Collector) getMSSQLInstances() mssqlInstancesType {
 		}
 	}
 
-	c.logger.Debug(fmt.Sprintf("Detected MSSQL Instances: %#v\n", sqlInstances))
+	c.logger.Debug(fmt.Sprintf("detected MSSQL Instances: %#v\n", sqlInstances))
 
 	return sqlInstances
 }
@@ -401,23 +402,23 @@ func (c *Collector) collect(
 		begin := time.Now()
 		success := 1.0
 		err := collectFn(ch, sqlInstance, perfDataCollector)
-		duration := time.Since(begin).Seconds()
+		duration := time.Since(begin)
 
-		if err != nil {
+		if err != nil && !errors.Is(err, perfdata.ErrNoData) {
 			errs = append(errs, err)
 			success = 0.0
 
-			c.logger.Error(fmt.Sprintf("mssql class collector %s failed after %fs", collector, duration),
+			c.logger.Error(fmt.Sprintf("mssql class collector %s for instance %s failed after %s", collector, sqlInstance, duration),
 				slog.Any("err", err),
 			)
 		} else {
-			c.logger.Debug(fmt.Sprintf("mssql class collector %s succeeded after %fs.", collector, duration))
+			c.logger.Debug(fmt.Sprintf("mssql class collector %s for instance %s succeeded after %s.", collector, sqlInstance, duration))
 		}
 
 		ch <- prometheus.MustNewConstMetric(
 			c.mssqlScrapeDurationDesc,
 			prometheus.GaugeValue,
-			duration,
+			duration.Seconds(),
 			collector, sqlInstance,
 		)
 		ch <- prometheus.MustNewConstMetric(

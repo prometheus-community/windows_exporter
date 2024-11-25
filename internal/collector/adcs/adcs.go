@@ -16,7 +16,6 @@
 package adcs
 
 import (
-	"errors"
 	"fmt"
 	"log/slog"
 
@@ -32,6 +31,7 @@ const Name = "adcs"
 
 type Config struct{}
 
+//nolint:gochecknoglobals
 var ConfigDefaults = Config{}
 
 type Collector struct {
@@ -191,7 +191,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	}
 
 	if len(perfData) == 0 {
-		return errors.New("perflib query for Certification Authority (ADCS) returned empty result set")
+		return fmt.Errorf("failed to collect Certification Authority (ADCS) metrics: %w", types.ErrNoData)
 	}
 
 	for name, data := range perfData {

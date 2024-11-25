@@ -16,8 +16,8 @@
 package msmq
 
 const (
-	BytesInJournalQueue    = "Bytes in Journal Queue"
-	BytesInQueue           = "Bytes in Queue"
-	MessagesInJournalQueue = "Messages in Journal Queue"
-	MessagesInQueue        = "Messages in Queue"
+	bytesInJournalQueue    = "Bytes in Journal Queue"
+	bytesInQueue           = "Bytes in Queue"
+	messagesInJournalQueue = "Messages in Journal Queue"
+	messagesInQueue        = "Messages in Queue"
 )

@@ -37,6 +37,7 @@ type Config struct {
 	CollectorsEnabled []string `yaml:"collectors_enabled"`
 }
 
+//nolint:gochecknoglobals
 var ConfigDefaults = Config{
 	CollectorsEnabled: []string{
 		"metrics",
@@ -248,7 +249,7 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	return nil
 }
 
-func (c *Collector) writeTCPCounters(ch chan<- prometheus.Metric, metrics map[string]perfdata.CounterValues, labels []string) {
+func (c *Collector) writeTCPCounters(ch chan<- prometheus.Metric, metrics map[string]perfdata.CounterValue, labels []string) {
 	ch <- prometheus.MustNewConstMetric(
 		c.connectionFailures,
 		prometheus.CounterValue,

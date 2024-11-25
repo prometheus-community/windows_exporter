@@ -16,7 +16,6 @@
 package dhcp
 
 import (
-	"errors"
 	"fmt"
 	"log/slog"
 
@@ -31,6 +30,7 @@ const Name = "dhcp"
 
 type Config struct{}
 
+//nolint:gochecknoglobals
 var ConfigDefaults = Config{}
 
 // A Collector is a Prometheus Collector perflib DHCP metrics.
@@ -288,7 +288,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 
 	data, ok := perfData[perfdata.InstanceEmpty]
 	if !ok {
-		return errors.New("perflib query for DHCP Server returned empty result set")
+		return fmt.Errorf("failed to collect DHCP Server metrics: %w", types.ErrNoData)
 	}
 
 	ch <- prometheus.MustNewConstMetric(

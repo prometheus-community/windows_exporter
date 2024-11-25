@@ -25,7 +25,9 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
+	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
+	"golang.org/x/sys/windows"
 )
 
 const (
@@ -52,6 +54,7 @@ type Config struct {
 	CollectorsEnabled []string `yaml:"collectors_enabled"`
 }
 
+//nolint:gochecknoglobals
 var ConfigDefaults = Config{
 	CollectorsEnabled: []string{
 		subCollectorDataStore,
@@ -154,15 +157,19 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		return nil
 	}
 
+	version := windows.RtlGetVersion()
+
 	subCollectors := map[string]struct {
-		build   func() error
-		collect func(ch chan<- prometheus.Metric) error
-		close   func()
+		build          func() error
+		collect        func(ch chan<- prometheus.Metric) error
+		close          func()
+		minBuildNumber uint32
 	}{
 		subCollectorDataStore: {
-			build:   c.buildDataStore,
-			collect: c.collectDataStore,
-			close:   c.perfDataCollectorDataStore.Close,
+			build:          c.buildDataStore,
+			collect:        c.collectDataStore,
+			close:          c.perfDataCollectorDataStore.Close,
+			minBuildNumber: types.BuildNumberWindowsServer2022,
 		},
 		subCollectorDynamicMemoryBalancer: {
 			build:   c.buildDynamicMemoryBalancer,
@@ -239,20 +246,30 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 	// Result must order, to prevent test failures.
 	sort.Strings(c.config.CollectorsEnabled)
 
+	errs := make([]error, 0, len(c.config.CollectorsEnabled))
+
 	for _, name := range c.config.CollectorsEnabled {
 		if _, ok := subCollectors[name]; !ok {
 			return fmt.Errorf("unknown collector: %s", name)
 		}
 
+		if version.BuildNumber < subCollectors[name].minBuildNumber {
+			errs = append(errs, fmt.Errorf("collector %s requires Windows Server 2022 or newer", name))
+
+			continue
+		}
+
 		if err := subCollectors[name].build(); err != nil {
-			return fmt.Errorf("failed to build %s collector: %w", name, err)
+			errs = append(errs, fmt.Errorf("failed to build %s collector: %w", name, err))
+
+			continue
 		}
 
 		c.collectorFns = append(c.collectorFns, subCollectors[name].collect)
 		c.closeFns = append(c.closeFns, subCollectors[name].close)
 	}
 
-	return nil
+	return errors.Join(errs...)
 }
 
 // Collect sends the metric values for each metric

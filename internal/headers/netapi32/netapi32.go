@@ -45,6 +45,7 @@ type WorkstationInfo struct {
 	LoggedOnUsers uint32
 }
 
+//nolint:gochecknoglobals
 var (
 	netapi32             = windows.NewLazySystemDLL("netapi32")
 	procNetWkstaGetInfo  = netapi32.NewProc("NetWkstaGetInfo")
@@ -53,6 +54,8 @@ var (
 
 // NetApiStatus is a map of Network Management Error Codes.
 // https://docs.microsoft.com/en-gb/windows/win32/netmgmt/network-management-error-codes?redirectedfrom=MSDN
+//
+//nolint:gochecknoglobals
 var NetApiStatus = map[uint32]string{
 	// Success
 	0: "NERR_Success",

@@ -11,7 +11,6 @@ linters:
     - exportloopref
     - fatcontext
     - funlen
-    - gochecknoglobals
     - gocognit
     - goconst
     - gocyclo
@@ -88,7 +87,3 @@ issues:
   - text: "don't use ALL_CAPS in Go names; use CamelCase"
     linters:
     - revive
-  - path: internal/perfdata/v1/
-    linters:
-      - godox
-      - stylecheck

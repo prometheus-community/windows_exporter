@@ -16,7 +16,6 @@
 package ad
 
 import (
-	"errors"
 	"fmt"
 	"log/slog"
 
@@ -31,6 +30,7 @@ const Name = "ad"
 
 type Config struct{}
 
+//nolint:gochecknoglobals
 var ConfigDefaults = Config{}
 
 type Collector struct {
@@ -671,7 +671,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	data, ok := perfData["NTDS"]
 
 	if !ok {
-		return errors.New("perflib query for DirectoryServices (AD) returned empty result set")
+		return fmt.Errorf("failed to collect DirectoryServices (AD) metrics: %w", types.ErrNoData)
 	}
 
 	ch <- prometheus.MustNewConstMetric(

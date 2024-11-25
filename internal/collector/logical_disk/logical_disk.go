@@ -39,6 +39,7 @@ type Config struct {
 	VolumeExclude *regexp.Regexp `yaml:"volume_exclude"`
 }
 
+//nolint:gochecknoglobals
 var ConfigDefaults = Config{
 	VolumeInclude: types.RegExpAny,
 	VolumeExclude: types.RegExpEmpty,

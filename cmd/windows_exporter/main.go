@@ -42,6 +42,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/httphandler"
 	"github.com/prometheus-community/windows_exporter/internal/log"
 	"github.com/prometheus-community/windows_exporter/internal/log/flag"
+	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus-community/windows_exporter/pkg/collector"
 	"github.com/prometheus/common/version"
 	"github.com/prometheus/exporter-toolkit/web"
@@ -64,6 +65,8 @@ func main() {
 }
 
 func run() int {
+	startTime := time.Now()
+
 	app := kingpin.New("windows_exporter", "A metrics collector for Windows.")
 
 	var (
@@ -191,7 +194,7 @@ func run() int {
 
 	enabledCollectorList := expandEnabledCollectors(*enabledCollectors)
 	if err := collectors.Enable(enabledCollectorList); err != nil {
-		logger.Error("Couldn't enable collectors",
+		logger.Error("couldn't enable collectors",
 			slog.Any("err", err),
 		)
 
@@ -200,11 +203,11 @@ func run() int {
 
 	// Initialize collectors before loading
 	if err = collectors.Build(logger); err != nil {
-		logger.Error("Couldn't load collectors",
-			slog.Any("err", err),
-		)
-
-		return 1
+		for _, err := range utils.SplitError(err) {
+			logger.Warn("couldn't initialize collector",
+				slog.Any("err", err),
+			)
+		}
 	}
 
 	logCurrentUser(logger)
@@ -228,7 +231,7 @@ func run() int {
 		mux.HandleFunc("GET /debug/pprof/trace", pprof.Trace)
 	}
 
-	logger.Info("Starting windows_exporter",
+	logger.Info(fmt.Sprintf("starting windows_exporter in %s", time.Since(startTime)),
 		slog.String("version", version.Version),
 		slog.String("branch", version.Branch),
 		slog.String("revision", version.GetRevision()),

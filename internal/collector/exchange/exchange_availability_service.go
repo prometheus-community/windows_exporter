@@ -16,7 +16,6 @@
 package exchange
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
@@ -53,7 +52,7 @@ func (c *Collector) collectAvailabilityService(ch chan<- prometheus.Metric) erro
 	}
 
 	if len(perfData) == 0 {
-		return errors.New("perflib query for MSExchange Availability Service returned empty result set")
+		return fmt.Errorf("failed to collect MSExchange Availability Service metrics: %w", types.ErrNoData)
 	}
 
 	for _, data := range perfData {

@@ -16,6 +16,7 @@
 package mssql
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
@@ -131,6 +132,7 @@ func (c *Collector) buildDatabases() error {
 	var err error
 
 	c.databasesPerfDataCollectors = make(map[string]*perfdata.Collector, len(c.mssqlInstances))
+	errs := make([]error, 0, len(c.mssqlInstances))
 	counters := []string{
 		databasesActiveParallelRedoThreads,
 		databasesActiveTransactions,
@@ -185,7 +187,7 @@ func (c *Collector) buildDatabases() error {
 	for sqlInstance := range c.mssqlInstances {
 		c.databasesPerfDataCollectors[sqlInstance], err = perfdata.NewCollector(c.mssqlGetPerfObjectName(sqlInstance, "Databases"), perfdata.InstancesAll, counters)
 		if err != nil {
-			return fmt.Errorf("failed to create Databases collector for instance %s: %w", sqlInstance, err)
+			errs = append(errs, fmt.Errorf("failed to create Databases collector for instance %s: %w", sqlInstance, err))
 		}
 	}
 
@@ -478,7 +480,7 @@ func (c *Collector) buildDatabases() error {
 		nil,
 	)
 
-	return nil
+	return errors.Join(errs...)
 }
 
 func (c *Collector) collectDatabases(ch chan<- prometheus.Metric) error {
@@ -486,6 +488,10 @@ func (c *Collector) collectDatabases(ch chan<- prometheus.Metric) error {
 }
 
 func (c *Collector) collectDatabasesInstance(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *perfdata.Collector) error {
+	if perfDataCollector == nil {
+		return types.ErrCollectorNotInitialized
+	}
+
 	perfData, err := perfDataCollector.Collect()
 	if err != nil {
 		return fmt.Errorf("failed to collect %s metrics: %w", c.mssqlGetPerfObjectName(sqlInstance, "Databases"), err)

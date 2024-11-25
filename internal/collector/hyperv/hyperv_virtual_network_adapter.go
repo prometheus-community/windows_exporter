@@ -16,7 +16,6 @@
 package hyperv
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
@@ -56,7 +55,7 @@ func (c *Collector) buildVirtualNetworkAdapter() error {
 		virtualNetworkAdapterPacketsReceived,
 		virtualNetworkAdapterPacketsSent,
 	})
-	if err != nil && !errors.Is(err, perfdata.ErrNoData) {
+	if err != nil {
 		return fmt.Errorf("failed to create Hyper-V Virtual Network Adapter collector: %w", err)
 	}
 
@@ -102,7 +101,7 @@ func (c *Collector) buildVirtualNetworkAdapter() error {
 
 func (c *Collector) collectVirtualNetworkAdapter(ch chan<- prometheus.Metric) error {
 	data, err := c.perfDataCollectorVirtualNetworkAdapter.Collect()
-	if err != nil && !errors.Is(err, perfdata.ErrNoData) {
+	if err != nil {
 		return fmt.Errorf("failed to collect Hyper-V Virtual Network Adapter metrics: %w", err)
 	}
 

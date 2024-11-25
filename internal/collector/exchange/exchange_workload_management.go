@@ -16,7 +16,6 @@
 package exchange
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
@@ -89,7 +88,7 @@ func (c *Collector) collectWorkloadManagementWorkloads(ch chan<- prometheus.Metr
 	}
 
 	if len(perfData) == 0 {
-		return errors.New("perflib query for MSExchange WorkloadManagement Workloads returned empty result set")
+		return fmt.Errorf("failed to collect MSExchange WorkloadManagement Workloads metrics: %w", types.ErrNoData)
 	}
 
 	for name, data := range perfData {

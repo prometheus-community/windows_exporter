@@ -23,6 +23,7 @@ import (
 	"golang.org/x/sys/windows"
 )
 
+//nolint:gochecknoglobals
 var (
 	modiphlpapi             = windows.NewLazySystemDLL("iphlpapi.dll")
 	procGetExtendedTcpTable = modiphlpapi.NewProc("GetExtendedTcpTable")

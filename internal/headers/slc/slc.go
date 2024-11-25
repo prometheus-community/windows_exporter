@@ -22,6 +22,7 @@ import (
 	"golang.org/x/sys/windows"
 )
 
+//nolint:gochecknoglobals
 var (
 	slc                         = windows.NewLazySystemDLL("slc.dll")
 	procSLIsWindowsGenuineLocal = slc.NewProc("SLIsWindowsGenuineLocal")

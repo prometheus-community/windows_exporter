@@ -16,7 +16,6 @@
 package exchange
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
@@ -201,7 +200,7 @@ func (c *Collector) collectTransportQueues(ch chan<- prometheus.Metric) error {
 	}
 
 	if len(perfData) == 0 {
-		return errors.New("perflib query for MSExchangeTransport Queues returned empty result set")
+		return fmt.Errorf("failed to collect MSExchangeTransport Queues metrics: %w", types.ErrNoData)
 	}
 
 	for name, data := range perfData {

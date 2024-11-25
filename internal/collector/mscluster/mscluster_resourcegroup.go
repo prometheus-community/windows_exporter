@@ -164,6 +164,12 @@ func (c *Collector) buildResourceGroup() error {
 		nil,
 	)
 
+	var dst []msClusterResourceGroup
+
+	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, c.resourceGroupMIQuery); err != nil {
+		return fmt.Errorf("WMI query failed: %w", err)
+	}
+
 	return nil
 }
 

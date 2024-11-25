@@ -113,6 +113,7 @@ const (
 	ComputerNameMax
 )
 
+//nolint:gochecknoglobals
 var (
 	kernel32                 = windows.NewLazySystemDLL("kernel32.dll")
 	procGetSystemInfo        = kernel32.NewProc("GetSystemInfo")

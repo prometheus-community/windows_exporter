@@ -97,6 +97,7 @@ type WTSSession struct {
 	FarmName    string
 }
 
+//nolint:gochecknoglobals
 var (
 	wtsapi32 = windows.NewLazySystemDLL("wtsapi32.dll")
 

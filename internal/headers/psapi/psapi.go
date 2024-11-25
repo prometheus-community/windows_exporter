@@ -40,6 +40,7 @@ type PerformanceInformation struct {
 	ThreadCount       uint32
 }
 
+//nolint:gochecknoglobals
 var (
 	psapi                  = windows.NewLazySystemDLL("psapi.dll")
 	procGetPerformanceInfo = psapi.NewProc("GetPerformanceInfo")

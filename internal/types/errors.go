@@ -11,15 +11,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build windows
-
 package types
 
-const (
-	BuildNumberWindowsServer2025 uint32 = 26100
-	BuildNumberWindowsServer2022 uint32 = 20348
-	BuildNumberWindowsServer2019 uint32 = 17763
-	BuildNumberWindowsServer2016 uint32 = 14393
+import (
+	"errors"
+)
 
-	Namespace = "windows"
+var (
+	ErrCollectorNotInitialized = errors.New("collector not initialized")
+	ErrNoData                  = errors.New("no data")
 )

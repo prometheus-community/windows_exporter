@@ -31,6 +31,7 @@ const Name = "fsrmquota"
 
 type Config struct{}
 
+//nolint:gochecknoglobals
 var ConfigDefaults = Config{}
 
 type Collector struct {
@@ -142,30 +143,32 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 		nil,
 	)
 
+	var dst []msftFSRMQuota
+	if err := c.miSession.Query(&dst, mi.NamespaceRootWindowsFSRM, c.miQuery); err != nil {
+		return fmt.Errorf("WMI query failed: %w", err)
+	}
+
 	return nil
 }
 
 // MSFT_FSRMQuota docs:
 // https://docs.microsoft.com/en-us/previous-versions/windows/desktop/fsrm/msft-fsrmquota
-type MSFT_FSRMQuota struct {
-	Name string `mi:"Name"`
-
-	Path        string `mi:"Path"`
-	PeakUsage   uint64 `mi:"PeakUsage"`
-	Size        uint64 `mi:"Size"`
-	Usage       uint64 `mi:"Usage"`
-	Description string `mi:"Description"`
-	Template    string `mi:"Template"`
-	// Threshold string `mi:"Threshold"`
-	Disabled        bool `mi:"Disabled"`
-	MatchesTemplate bool `mi:"MatchesTemplate"`
-	SoftLimit       bool `mi:"SoftLimit"`
+type msftFSRMQuota struct {
+	Path            string `mi:"Path"`
+	PeakUsage       uint64 `mi:"PeakUsage"`
+	Size            uint64 `mi:"Size"`
+	Usage           uint64 `mi:"Usage"`
+	Description     string `mi:"Description"`
+	Template        string `mi:"Template"`
+	Disabled        bool   `mi:"Disabled"`
+	MatchesTemplate bool   `mi:"MatchesTemplate"`
+	SoftLimit       bool   `mi:"SoftLimit"`
 }
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
-	var dst []MSFT_FSRMQuota
+	var dst []msftFSRMQuota
 	if err := c.miSession.Query(&dst, mi.NamespaceRootWindowsFSRM, c.miQuery); err != nil {
 		return fmt.Errorf("WMI query failed: %w", err)
 	}

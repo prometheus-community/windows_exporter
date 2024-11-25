@@ -29,6 +29,8 @@ import (
 // OperationOptionsTimeout is the key for the timeout option.
 //
 // https://github.com/microsoft/win32metadata/blob/527806d20d83d3abd43d16cd3fa8795d8deba343/generation/WinSDK/RecompiledIdlHeaders/um/mi.h#L9240
+//
+//nolint:gochecknoglobals
 var OperationOptionsTimeout = UTF16PtrFromString[*uint16]("__MI_OPERATIONOPTIONS_TIMEOUT")
 
 // OperationFlags represents the flags for an operation.
@@ -214,7 +216,7 @@ func (o *Operation) Unmarshal(dst any) error {
 
 			element, err := instance.GetElement(miTag)
 			if err != nil {
-				return fmt.Errorf("failed to get element: %w", err)
+				return fmt.Errorf("failed to get element %s: %w", miTag, err)
 			}
 
 			switch element.valueType {

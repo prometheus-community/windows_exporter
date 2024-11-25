@@ -53,5 +53,5 @@ const (
 	databaseLookupsTotal           = "Database Lookups"
 	usnJournalRecordsReadTotal     = "USN Journal Records Read"
 	usnJournalRecordsAcceptedTotal = "USN Journal Records Accepted"
-	usnJournalUnreadPercentage     = "USN Journal Records Unread Percentage"
+	usnJournalUnreadPercentage     = "USN Journal Unread Percentage"
 )

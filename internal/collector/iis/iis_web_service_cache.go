@@ -24,7 +24,7 @@ import (
 )
 
 type collectorWebServiceCache struct {
-	perfDataCollectorWebServiceCache *perfdata.Collector
+	serviceCachePerfDataCollector *perfdata.Collector
 
 	serviceCacheActiveFlushedEntries *prometheus.Desc
 
@@ -61,80 +61,80 @@ type collectorWebServiceCache struct {
 }
 
 const (
-	ServiceCacheActiveFlushedEntries          = "Active Flushed Entries"
-	ServiceCacheCurrentFileCacheMemoryUsage   = "Current File Cache Memory Usage"
-	ServiceCacheMaximumFileCacheMemoryUsage   = "Maximum File Cache Memory Usage"
-	ServiceCacheFileCacheFlushesTotal         = "File Cache Flushes"
-	ServiceCacheFileCacheHitsTotal            = "File Cache Hits"
-	ServiceCacheFileCacheMissesTotal          = "File Cache Misses"
-	ServiceCacheFilesCached                   = "Current Files Cached"
-	ServiceCacheFilesCachedTotal              = "Total Files Cached"
-	ServiceCacheFilesFlushedTotal             = "Total Flushed Files"
-	ServiceCacheURICacheFlushesTotal          = "Total Flushed URIs"
-	ServiceCacheURICacheFlushesTotalKernel    = "Total Flushed URIs"
-	ServiceCacheURIsFlushedTotalKernel        = "Kernel: Total Flushed URIs"
-	ServiceCacheURICacheHitsTotal             = "URI Cache Hits"
-	ServiceCacheURICacheHitsTotalKernel       = "Kernel: URI Cache Hits"
-	ServiceCacheURICacheMissesTotal           = "URI Cache Misses"
-	ServiceCacheURICacheMissesTotalKernel     = "Kernel: URI Cache Misses"
-	ServiceCacheURIsCached                    = "Current URIs Cached"
-	ServiceCacheURIsCachedKernel              = "Kernel: Current URIs Cached"
-	ServiceCacheURIsCachedTotal               = "Total URIs Cached"
-	ServiceCacheURIsCachedTotalKernel         = "Total URIs Cached"
-	ServiceCacheURIsFlushedTotal              = "Total Flushed URIs"
-	ServiceCacheMetaDataCacheHits             = "Metadata Cache Hits"
-	ServiceCacheMetaDataCacheMisses           = "Metadata Cache Misses"
-	ServiceCacheMetadataCached                = "Current Metadata Cached"
-	ServiceCacheMetadataCacheFlushes          = "Metadata Cache Flushes"
-	ServiceCacheMetadataCachedTotal           = "Total Metadata Cached"
-	ServiceCacheMetadataFlushedTotal          = "Total Flushed Metadata"
-	ServiceCacheOutputCacheActiveFlushedItems = "Output Cache Current Flushed Items"
-	ServiceCacheOutputCacheItems              = "Output Cache Current Items"
-	ServiceCacheOutputCacheMemoryUsage        = "Output Cache Current Memory Usage"
-	ServiceCacheOutputCacheHitsTotal          = "Output Cache Total Hits"
-	ServiceCacheOutputCacheMissesTotal        = "Output Cache Total Misses"
-	ServiceCacheOutputCacheFlushedItemsTotal  = "Output Cache Total Flushed Items"
-	ServiceCacheOutputCacheFlushesTotal       = "Output Cache Total Flushes"
+	serviceCacheActiveFlushedEntries          = "Active Flushed Entries"
+	serviceCacheCurrentFileCacheMemoryUsage   = "Current File Cache Memory Usage"
+	serviceCacheMaximumFileCacheMemoryUsage   = "Maximum File Cache Memory Usage"
+	serviceCacheFileCacheFlushesTotal         = "File Cache Flushes"
+	serviceCacheFileCacheHitsTotal            = "File Cache Hits"
+	serviceCacheFileCacheMissesTotal          = "File Cache Misses"
+	serviceCacheFilesCached                   = "Current Files Cached"
+	serviceCacheFilesCachedTotal              = "Total Files Cached"
+	serviceCacheFilesFlushedTotal             = "Total Flushed Files"
+	serviceCacheURICacheFlushesTotal          = "Total Flushed URIs"
+	serviceCacheURICacheFlushesTotalKernel    = "Total Flushed URIs"
+	serviceCacheURIsFlushedTotalKernel        = "Kernel: Total Flushed URIs"
+	serviceCacheURICacheHitsTotal             = "URI Cache Hits"
+	serviceCacheURICacheHitsTotalKernel       = "Kernel: URI Cache Hits"
+	serviceCacheURICacheMissesTotal           = "URI Cache Misses"
+	serviceCacheURICacheMissesTotalKernel     = "Kernel: URI Cache Misses"
+	serviceCacheURIsCached                    = "Current URIs Cached"
+	serviceCacheURIsCachedKernel              = "Kernel: Current URIs Cached"
+	serviceCacheURIsCachedTotal               = "Total URIs Cached"
+	serviceCacheURIsCachedTotalKernel         = "Total URIs Cached"
+	serviceCacheURIsFlushedTotal              = "Total Flushed URIs"
+	serviceCacheMetaDataCacheHits             = "Metadata Cache Hits"
+	serviceCacheMetaDataCacheMisses           = "Metadata Cache Misses"
+	serviceCacheMetadataCached                = "Current Metadata Cached"
+	serviceCacheMetadataCacheFlushes          = "Metadata Cache Flushes"
+	serviceCacheMetadataCachedTotal           = "Total Metadata Cached"
+	serviceCacheMetadataFlushedTotal          = "Total Flushed Metadata"
+	serviceCacheOutputCacheActiveFlushedItems = "Output Cache Current Flushed Items"
+	serviceCacheOutputCacheItems              = "Output Cache Current Items"
+	serviceCacheOutputCacheMemoryUsage        = "Output Cache Current Memory Usage"
+	serviceCacheOutputCacheHitsTotal          = "Output Cache Total Hits"
+	serviceCacheOutputCacheMissesTotal        = "Output Cache Total Misses"
+	serviceCacheOutputCacheFlushedItemsTotal  = "Output Cache Total Flushed Items"
+	serviceCacheOutputCacheFlushesTotal       = "Output Cache Total Flushes"
 )
 
 func (c *Collector) buildWebServiceCache() error {
 	var err error
 
 	c.perfDataCollectorWebService, err = perfdata.NewCollector("Web Service Cache", perfdata.InstancesAll, []string{
-		ServiceCacheActiveFlushedEntries,
-		ServiceCacheCurrentFileCacheMemoryUsage,
-		ServiceCacheMaximumFileCacheMemoryUsage,
-		ServiceCacheFileCacheFlushesTotal,
-		ServiceCacheFileCacheHitsTotal,
-		ServiceCacheFileCacheMissesTotal,
-		ServiceCacheFilesCached,
-		ServiceCacheFilesCachedTotal,
-		ServiceCacheFilesFlushedTotal,
-		ServiceCacheURICacheFlushesTotal,
-		ServiceCacheURICacheFlushesTotalKernel,
-		ServiceCacheURIsFlushedTotalKernel,
-		ServiceCacheURICacheHitsTotal,
-		ServiceCacheURICacheHitsTotalKernel,
-		ServiceCacheURICacheMissesTotal,
-		ServiceCacheURICacheMissesTotalKernel,
-		ServiceCacheURIsCached,
-		ServiceCacheURIsCachedKernel,
-		ServiceCacheURIsCachedTotal,
-		ServiceCacheURIsCachedTotalKernel,
-		ServiceCacheURIsFlushedTotal,
-		ServiceCacheMetaDataCacheHits,
-		ServiceCacheMetaDataCacheMisses,
-		ServiceCacheMetadataCached,
-		ServiceCacheMetadataCacheFlushes,
-		ServiceCacheMetadataCachedTotal,
-		ServiceCacheMetadataFlushedTotal,
-		ServiceCacheOutputCacheActiveFlushedItems,
-		ServiceCacheOutputCacheItems,
-		ServiceCacheOutputCacheMemoryUsage,
-		ServiceCacheOutputCacheHitsTotal,
-		ServiceCacheOutputCacheMissesTotal,
-		ServiceCacheOutputCacheFlushedItemsTotal,
-		ServiceCacheOutputCacheFlushesTotal,
+		serviceCacheActiveFlushedEntries,
+		serviceCacheCurrentFileCacheMemoryUsage,
+		serviceCacheMaximumFileCacheMemoryUsage,
+		serviceCacheFileCacheFlushesTotal,
+		serviceCacheFileCacheHitsTotal,
+		serviceCacheFileCacheMissesTotal,
+		serviceCacheFilesCached,
+		serviceCacheFilesCachedTotal,
+		serviceCacheFilesFlushedTotal,
+		serviceCacheURICacheFlushesTotal,
+		serviceCacheURICacheFlushesTotalKernel,
+		serviceCacheURIsFlushedTotalKernel,
+		serviceCacheURICacheHitsTotal,
+		serviceCacheURICacheHitsTotalKernel,
+		serviceCacheURICacheMissesTotal,
+		serviceCacheURICacheMissesTotalKernel,
+		serviceCacheURIsCached,
+		serviceCacheURIsCachedKernel,
+		serviceCacheURIsCachedTotal,
+		serviceCacheURIsCachedTotalKernel,
+		serviceCacheURIsFlushedTotal,
+		serviceCacheMetaDataCacheHits,
+		serviceCacheMetaDataCacheMisses,
+		serviceCacheMetadataCached,
+		serviceCacheMetadataCacheFlushes,
+		serviceCacheMetadataCachedTotal,
+		serviceCacheMetadataFlushedTotal,
+		serviceCacheOutputCacheActiveFlushedItems,
+		serviceCacheOutputCacheItems,
+		serviceCacheOutputCacheMemoryUsage,
+		serviceCacheOutputCacheHitsTotal,
+		serviceCacheOutputCacheMissesTotal,
+		serviceCacheOutputCacheFlushedItemsTotal,
+		serviceCacheOutputCacheFlushesTotal,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create Web Service Cache collector: %w", err)
@@ -329,184 +329,184 @@ func (c *Collector) collectWebServiceCache(ch chan<- prometheus.Metric) error {
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheActiveFlushedEntries,
 			prometheus.GaugeValue,
-			app[ServiceCacheActiveFlushedEntries].FirstValue,
+			app[serviceCacheActiveFlushedEntries].FirstValue,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheCurrentFileCacheMemoryUsage,
 			prometheus.GaugeValue,
-			app[ServiceCacheCurrentFileCacheMemoryUsage].FirstValue,
+			app[serviceCacheCurrentFileCacheMemoryUsage].FirstValue,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheMaximumFileCacheMemoryUsage,
 			prometheus.CounterValue,
-			app[ServiceCacheMaximumFileCacheMemoryUsage].FirstValue,
+			app[serviceCacheMaximumFileCacheMemoryUsage].FirstValue,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheFileCacheFlushesTotal,
 			prometheus.CounterValue,
-			app[ServiceCacheFileCacheFlushesTotal].FirstValue,
+			app[serviceCacheFileCacheFlushesTotal].FirstValue,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheFileCacheQueriesTotal,
 			prometheus.CounterValue,
-			app[ServiceCacheFileCacheHitsTotal].FirstValue+app[ServiceCacheFileCacheMissesTotal].FirstValue,
+			app[serviceCacheFileCacheHitsTotal].FirstValue+app[serviceCacheFileCacheMissesTotal].FirstValue,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheFileCacheHitsTotal,
 			prometheus.CounterValue,
-			app[ServiceCacheFileCacheHitsTotal].FirstValue,
+			app[serviceCacheFileCacheHitsTotal].FirstValue,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheFilesCached,
 			prometheus.GaugeValue,
-			app[ServiceCacheFilesCached].FirstValue,
+			app[serviceCacheFilesCached].FirstValue,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheFilesCachedTotal,
 			prometheus.CounterValue,
-			app[ServiceCacheFilesCachedTotal].FirstValue,
+			app[serviceCacheFilesCachedTotal].FirstValue,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheFilesFlushedTotal,
 			prometheus.CounterValue,
-			app[ServiceCacheFilesFlushedTotal].FirstValue,
+			app[serviceCacheFilesFlushedTotal].FirstValue,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheURICacheFlushesTotal,
 			prometheus.CounterValue,
-			app[ServiceCacheURICacheFlushesTotal].FirstValue,
+			app[serviceCacheURICacheFlushesTotal].FirstValue,
 			"user",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheURICacheFlushesTotal,
 			prometheus.CounterValue,
-			app[ServiceCacheURICacheFlushesTotalKernel].FirstValue,
+			app[serviceCacheURICacheFlushesTotalKernel].FirstValue,
 			"kernel",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheURICacheQueriesTotal,
 			prometheus.CounterValue,
-			app[ServiceCacheURICacheHitsTotal].FirstValue+app[ServiceCacheURICacheMissesTotal].FirstValue,
+			app[serviceCacheURICacheHitsTotal].FirstValue+app[serviceCacheURICacheMissesTotal].FirstValue,
 			"user",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheURICacheQueriesTotal,
 			prometheus.CounterValue,
-			app[ServiceCacheURICacheHitsTotalKernel].FirstValue+app[ServiceCacheURICacheMissesTotalKernel].FirstValue,
+			app[serviceCacheURICacheHitsTotalKernel].FirstValue+app[serviceCacheURICacheMissesTotalKernel].FirstValue,
 			"kernel",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheURICacheHitsTotal,
 			prometheus.CounterValue,
-			app[ServiceCacheURICacheHitsTotal].FirstValue,
+			app[serviceCacheURICacheHitsTotal].FirstValue,
 			"user",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheURICacheHitsTotal,
 			prometheus.CounterValue,
-			app[ServiceCacheURICacheHitsTotalKernel].FirstValue,
+			app[serviceCacheURICacheHitsTotalKernel].FirstValue,
 			"kernel",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheURIsCached,
 			prometheus.GaugeValue,
-			app[ServiceCacheURIsCached].FirstValue,
+			app[serviceCacheURIsCached].FirstValue,
 			"user",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheURIsCached,
 			prometheus.GaugeValue,
-			app[ServiceCacheURIsCachedKernel].FirstValue,
+			app[serviceCacheURIsCachedKernel].FirstValue,
 			"kernel",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheURIsCachedTotal,
 			prometheus.CounterValue,
-			app[ServiceCacheURIsCachedTotal].FirstValue,
+			app[serviceCacheURIsCachedTotal].FirstValue,
 			"user",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheURIsCachedTotal,
 			prometheus.CounterValue,
-			app[ServiceCacheURIsCachedTotalKernel].FirstValue,
+			app[serviceCacheURIsCachedTotalKernel].FirstValue,
 			"kernel",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheURIsFlushedTotal,
 			prometheus.CounterValue,
-			app[ServiceCacheURIsFlushedTotal].FirstValue,
+			app[serviceCacheURIsFlushedTotal].FirstValue,
 			"user",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheURIsFlushedTotal,
 			prometheus.CounterValue,
-			app[ServiceCacheURIsFlushedTotalKernel].FirstValue,
+			app[serviceCacheURIsFlushedTotalKernel].FirstValue,
 			"kernel",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheMetadataCached,
 			prometheus.GaugeValue,
-			app[ServiceCacheMetadataCached].FirstValue,
+			app[serviceCacheMetadataCached].FirstValue,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheMetadataCacheFlushes,
 			prometheus.CounterValue,
-			app[ServiceCacheMetadataCacheFlushes].FirstValue,
+			app[serviceCacheMetadataCacheFlushes].FirstValue,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheMetadataCacheQueriesTotal,
 			prometheus.CounterValue,
-			app[ServiceCacheMetaDataCacheHits].FirstValue+app[ServiceCacheMetaDataCacheMisses].FirstValue,
+			app[serviceCacheMetaDataCacheHits].FirstValue+app[serviceCacheMetaDataCacheMisses].FirstValue,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheMetadataCacheHitsTotal,
 			prometheus.CounterValue,
-			0, // app[ServiceCacheMetadataCacheHitsTotal].FirstValue,
+			0, // app[serviceCacheMetadataCacheHitsTotal].FirstValue,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheMetadataCachedTotal,
 			prometheus.CounterValue,
-			app[ServiceCacheMetadataCachedTotal].FirstValue,
+			app[serviceCacheMetadataCachedTotal].FirstValue,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheMetadataFlushedTotal,
 			prometheus.CounterValue,
-			app[ServiceCacheMetadataFlushedTotal].FirstValue,
+			app[serviceCacheMetadataFlushedTotal].FirstValue,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheOutputCacheActiveFlushedItems,
 			prometheus.CounterValue,
-			app[ServiceCacheOutputCacheActiveFlushedItems].FirstValue,
+			app[serviceCacheOutputCacheActiveFlushedItems].FirstValue,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheOutputCacheItems,
 			prometheus.CounterValue,
-			app[ServiceCacheOutputCacheItems].FirstValue,
+			app[serviceCacheOutputCacheItems].FirstValue,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheOutputCacheMemoryUsage,
 			prometheus.CounterValue,
-			app[ServiceCacheOutputCacheMemoryUsage].FirstValue,
+			app[serviceCacheOutputCacheMemoryUsage].FirstValue,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheOutputCacheQueriesTotal,
 			prometheus.CounterValue,
-			app[ServiceCacheOutputCacheHitsTotal].FirstValue+app[ServiceCacheOutputCacheMissesTotal].FirstValue,
+			app[serviceCacheOutputCacheHitsTotal].FirstValue+app[serviceCacheOutputCacheMissesTotal].FirstValue,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheOutputCacheHitsTotal,
 			prometheus.CounterValue,
-			app[ServiceCacheOutputCacheHitsTotal].FirstValue,
+			app[serviceCacheOutputCacheHitsTotal].FirstValue,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheOutputCacheFlushedItemsTotal,
 			prometheus.CounterValue,
-			app[ServiceCacheOutputCacheFlushedItemsTotal].FirstValue,
+			app[serviceCacheOutputCacheFlushedItemsTotal].FirstValue,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheOutputCacheFlushesTotal,
 			prometheus.CounterValue,
-			app[ServiceCacheOutputCacheFlushesTotal].FirstValue,
+			app[serviceCacheOutputCacheFlushesTotal].FirstValue,
 		)
 	}
 

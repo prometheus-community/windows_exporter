@@ -31,6 +31,7 @@ const (
 	LocaleEnglish = "en-us"
 )
 
+//nolint:gochecknoglobals
 var (
 	// DestinationOptionsTimeout is the key for the timeout option.
 	//
@@ -43,6 +44,7 @@ var (
 	DestinationOptionsUILocale = UTF16PtrFromString[*uint16]("__MI_DESTINATIONOPTIONS_UI_LOCALE")
 )
 
+//nolint:gochecknoglobals
 var (
 	modMi = windows.NewLazySystemDLL("mi.dll")
 

@@ -19,7 +19,8 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"slices"
+	"sort"
+	"sync"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
@@ -32,6 +33,7 @@ type Config struct {
 	CollectorsEnabled []string `yaml:"collectors_enabled"`
 }
 
+//nolint:gochecknoglobals
 var ConfigDefaults = Config{
 	CollectorsEnabled: []string{
 		collectorClrExceptions,
@@ -60,6 +62,8 @@ const (
 type Collector struct {
 	config    Config
 	miSession *mi.Session
+
+	collectorFns []func(ch chan<- prometheus.Metric) error
 
 	// clrexceptions
 	numberOfExceptionsThrown *prometheus.Desc
@@ -152,42 +156,68 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
+	if len(c.config.CollectorsEnabled) == 0 {
+		return nil
+	}
+
 	if miSession == nil {
 		return errors.New("miSession is nil")
 	}
 
 	c.miSession = miSession
 
-	if slices.Contains(c.config.CollectorsEnabled, collectorClrExceptions) {
-		c.buildClrExceptions()
+	c.collectorFns = make([]func(ch chan<- prometheus.Metric) error, 0, len(c.config.CollectorsEnabled))
+
+	subCollectors := map[string]struct {
+		build   func()
+		collect func(ch chan<- prometheus.Metric) error
+		close   func()
+	}{
+		collectorClrExceptions: {
+			build:   c.buildClrExceptions,
+			collect: c.collectClrExceptions,
+		},
+		collectorClrJIT: {
+			build:   c.buildClrJIT,
+			collect: c.collectClrJIT,
+		},
+		collectorClrLoading: {
+			build:   c.buildClrLoading,
+			collect: c.collectClrLoading,
+		},
+		collectorClrInterop: {
+			build:   c.buildClrInterop,
+			collect: c.collectClrInterop,
+		},
+		collectorClrLocksAndThreads: {
+			build:   c.buildClrLocksAndThreads,
+			collect: c.collectClrLocksAndThreads,
+		},
+		collectorClrMemory: {
+			build:   c.buildClrMemory,
+			collect: c.collectClrMemory,
+		},
+		collectorClrRemoting: {
+			build:   c.buildClrRemoting,
+			collect: c.collectClrRemoting,
+		},
+		collectorClrSecurity: {
+			build:   c.buildClrSecurity,
+			collect: c.collectClrSecurity,
+		},
 	}
 
-	if slices.Contains(c.config.CollectorsEnabled, collectorClrInterop) {
-		c.buildClrInterop()
-	}
+	// Result must order, to prevent test failures.
+	sort.Strings(c.config.CollectorsEnabled)
 
-	if slices.Contains(c.config.CollectorsEnabled, collectorClrJIT) {
-		c.buildClrJIT()
-	}
+	for _, name := range c.config.CollectorsEnabled {
+		if _, ok := subCollectors[name]; !ok {
+			return fmt.Errorf("unknown collector: %s", name)
+		}
 
-	if slices.Contains(c.config.CollectorsEnabled, collectorClrLoading) {
-		c.buildClrLoading()
-	}
+		subCollectors[name].build()
 
-	if slices.Contains(c.config.CollectorsEnabled, collectorClrLocksAndThreads) {
-		c.buildClrLocksAndThreads()
-	}
-
-	if slices.Contains(c.config.CollectorsEnabled, collectorClrMemory) {
-		c.buildClrMemory()
-	}
-
-	if slices.Contains(c.config.CollectorsEnabled, collectorClrRemoting) {
-		c.buildClrRemoting()
-	}
-
-	if slices.Contains(c.config.CollectorsEnabled, collectorClrSecurity) {
-		c.buildClrSecurity()
+		c.collectorFns = append(c.collectorFns, subCollectors[name].collect)
 	}
 
 	return nil
@@ -196,57 +226,29 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
-	var (
-		err  error
-		errs []error
-	)
+	errCh := make(chan error, len(c.collectorFns))
+	errs := make([]error, 0, len(c.collectorFns))
 
-	if slices.Contains(c.config.CollectorsEnabled, collectorClrExceptions) {
-		if err = c.collectClrExceptions(ch); err != nil {
-			errs = append(errs, fmt.Errorf("failed to collect %s metrics: %w", collectorClrExceptions, err))
-		}
+	wg := sync.WaitGroup{}
+
+	for _, fn := range c.collectorFns {
+		wg.Add(1)
+
+		go func(fn func(ch chan<- prometheus.Metric) error) {
+			defer wg.Done()
+
+			if err := fn(ch); err != nil {
+				errCh <- err
+			}
+		}(fn)
 	}
 
-	if slices.Contains(c.config.CollectorsEnabled, collectorClrInterop) {
-		if err = c.collectClrInterop(ch); err != nil {
-			errs = append(errs, fmt.Errorf("failed to collect %s metrics: %w", collectorClrInterop, err))
-		}
-	}
+	wg.Wait()
 
-	if slices.Contains(c.config.CollectorsEnabled, collectorClrJIT) {
-		if err = c.collectClrJIT(ch); err != nil {
-			errs = append(errs, fmt.Errorf("failed to collect %s metrics: %w", collectorClrJIT, err))
-		}
-	}
+	close(errCh)
 
-	if slices.Contains(c.config.CollectorsEnabled, collectorClrLoading) {
-		if err = c.collectClrLoading(ch); err != nil {
-			errs = append(errs, fmt.Errorf("failed to collect %s metrics: %w", collectorClrLoading, err))
-		}
-	}
-
-	if slices.Contains(c.config.CollectorsEnabled, collectorClrLocksAndThreads) {
-		if err = c.collectClrLocksAndThreads(ch); err != nil {
-			errs = append(errs, fmt.Errorf("failed to collect %s metrics: %w", collectorClrLocksAndThreads, err))
-		}
-	}
-
-	if slices.Contains(c.config.CollectorsEnabled, collectorClrMemory) {
-		if err = c.collectClrMemory(ch); err != nil {
-			errs = append(errs, fmt.Errorf("failed to collect %s metrics: %w", collectorClrMemory, err))
-		}
-	}
-
-	if slices.Contains(c.config.CollectorsEnabled, collectorClrRemoting) {
-		if err = c.collectClrRemoting(ch); err != nil {
-			errs = append(errs, fmt.Errorf("failed to collect %s metrics: %w", collectorClrRemoting, err))
-		}
-	}
-
-	if slices.Contains(c.config.CollectorsEnabled, collectorClrSecurity) {
-		if err = c.collectClrSecurity(ch); err != nil {
-			errs = append(errs, fmt.Errorf("failed to collect %s metrics: %w", collectorClrSecurity, err))
-		}
+	for err := range errCh {
+		errs = append(errs, err)
 	}
 
 	return errors.Join(errs...)

@@ -31,6 +31,7 @@ const Name = "udp"
 
 type Config struct{}
 
+//nolint:gochecknoglobals
 var ConfigDefaults = Config{}
 
 // A Collector is a Prometheus Collector for WMI Win32_PerfRawData_Tcpip_TCPv{4,6} metrics.
@@ -157,7 +158,7 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	return nil
 }
 
-func (c *Collector) writeUDPCounters(ch chan<- prometheus.Metric, metrics map[string]perfdata.CounterValues, labels []string) {
+func (c *Collector) writeUDPCounters(ch chan<- prometheus.Metric, metrics map[string]perfdata.CounterValue, labels []string) {
 	ch <- prometheus.MustNewConstMetric(
 		c.datagramsNoPortTotal,
 		prometheus.CounterValue,

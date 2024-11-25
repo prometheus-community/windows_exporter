@@ -21,6 +21,7 @@ import (
 	"golang.org/x/sys/windows/svc"
 )
 
+//nolint:gochecknoglobals
 var (
 	// IsService is true if the exporter is running as a Windows service.
 	IsService bool

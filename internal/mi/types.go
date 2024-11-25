@@ -36,10 +36,8 @@ func NewQueryDialect(queryDialect string) (QueryDialect, error) {
 	return windows.UTF16PtrFromString(queryDialect)
 }
 
-var (
-	QueryDialectWQL = utils.Must(NewQueryDialect("WQL"))
-	QueryDialectCQL = utils.Must(NewQueryDialect("CQL"))
-)
+//nolint:gochecknoglobals
+var QueryDialectWQL = utils.Must(NewQueryDialect("WQL"))
 
 type Namespace *uint16
 
@@ -47,6 +45,7 @@ func NewNamespace(namespace string) (Namespace, error) {
 	return windows.UTF16PtrFromString(namespace)
 }
 
+//nolint:gochecknoglobals
 var (
 	NamespaceRootCIMv2             = utils.Must(NewNamespace("root/CIMv2"))
 	NamespaceRootWindowsFSRM       = utils.Must(NewNamespace("root/microsoft/windows/fsrm"))

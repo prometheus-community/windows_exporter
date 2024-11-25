@@ -16,7 +16,6 @@
 package cache
 
 import (
-	"errors"
 	"fmt"
 	"log/slog"
 
@@ -31,6 +30,7 @@ const Name = "cache"
 
 type Config struct{}
 
+//nolint:gochecknoglobals
 var ConfigDefaults = Config{}
 
 // A Collector is a Prometheus Collector for Perflib Cache metrics.
@@ -322,7 +322,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	cacheData, ok := data[perfdata.InstanceEmpty]
 
 	if !ok {
-		return errors.New("perflib query for Cache returned empty result set")
+		return fmt.Errorf("failed to collect Cache metrics: %w", types.ErrNoData)
 	}
 
 	ch <- prometheus.MustNewConstMetric(

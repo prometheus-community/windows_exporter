@@ -31,6 +31,8 @@ import (
 const Name = "printer"
 
 // printerStatusMap source: https://learn.microsoft.com/en-us/windows/win32/cimwin32prov/win32-printer#:~:text=Power%20Save-,PrinterStatus,Offline%20(7),-PrintJobDataType
+//
+//nolint:gochecknoglobals
 var printerStatusMap = map[uint16]string{
 	1: "Other",
 	2: "Unknown",
@@ -46,6 +48,7 @@ type Config struct {
 	PrinterExclude *regexp.Regexp `yaml:"printer_exclude"`
 }
 
+//nolint:gochecknoglobals
 var ConfigDefaults = Config{
 	PrinterInclude: types.RegExpAny,
 	PrinterExclude: types.RegExpEmpty,

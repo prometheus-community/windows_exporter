@@ -37,6 +37,7 @@ const Name = "os"
 
 type Config struct{}
 
+//nolint:gochecknoglobals
 var ConfigDefaults = Config{}
 
 // A Collector is a Prometheus Collector for WMI metrics.
@@ -109,15 +110,12 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		slog.String("collector", Name),
 	)
 
-	workstationInfo, err := netapi32.GetWorkstationInfo()
-	if err != nil {
-		return fmt.Errorf("failed to get workstation info: %w", err)
-	}
-
-	productName, buildNumber, revision, err := c.getWindowsVersion()
+	productName, revision, err := c.getWindowsVersion()
 	if err != nil {
 		return fmt.Errorf("failed to get Windows version: %w", err)
 	}
+
+	version := windows.RtlGetVersion()
 
 	c.osInformation = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "info"),
@@ -125,10 +123,10 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		nil,
 		prometheus.Labels{
 			"product":       productName,
-			"version":       fmt.Sprintf("%d.%d.%s", workstationInfo.VersionMajor, workstationInfo.VersionMinor, buildNumber),
-			"major_version": strconv.FormatUint(uint64(workstationInfo.VersionMajor), 10),
-			"minor_version": strconv.FormatUint(uint64(workstationInfo.VersionMinor), 10),
-			"build_number":  buildNumber,
+			"version":       fmt.Sprintf("%d.%d.%d", version.MajorVersion, version.MinorVersion, version.BuildNumber),
+			"major_version": strconv.FormatUint(uint64(version.MajorVersion), 10),
+			"minor_version": strconv.FormatUint(uint64(version.MinorVersion), 10),
+			"build_number":  strconv.FormatUint(uint64(version.BuildNumber), 10),
 			"revision":      revision,
 		},
 	)
@@ -352,31 +350,26 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) {
 	)
 }
 
-func (c *Collector) getWindowsVersion() (string, string, string, error) {
+func (c *Collector) getWindowsVersion() (string, string, error) {
 	// Get build number and product name from registry
 	ntKey, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\Microsoft\Windows NT\CurrentVersion`, registry.QUERY_VALUE)
 	if err != nil {
-		return "", "", "", fmt.Errorf("failed to open registry key: %w", err)
+		return "", "", fmt.Errorf("failed to open registry key: %w", err)
 	}
 
 	defer ntKey.Close()
 
 	productName, _, err := ntKey.GetStringValue("ProductName")
 	if err != nil {
-		return "", "", "", err
-	}
-
-	buildNumber, _, err := ntKey.GetStringValue("CurrentBuildNumber")
-	if err != nil {
-		return "", "", "", err
+		return "", "", err
 	}
 
 	revision, _, err := ntKey.GetIntegerValue("UBR")
 	if errors.Is(err, registry.ErrNotExist) {
 		revision = 0
 	} else if err != nil {
-		return "", "", "", err
+		return "", "", err
 	}
 
-	return productName, buildNumber, strconv.FormatUint(revision, 10), nil
+	return productName, strconv.FormatUint(revision, 10), nil
 }

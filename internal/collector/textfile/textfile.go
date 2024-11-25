@@ -42,6 +42,7 @@ type Config struct {
 	TextFileDirectories []string `yaml:"text_file_directories"`
 }
 
+//nolint:gochecknoglobals
 var ConfigDefaults = Config{
 	TextFileDirectories: []string{getDefaultPath()},
 }

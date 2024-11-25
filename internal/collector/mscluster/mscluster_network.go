@@ -86,6 +86,12 @@ func (c *Collector) buildNetwork() error {
 		nil,
 	)
 
+	var dst []msClusterNetwork
+
+	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, c.networkMIQuery); err != nil {
+		return fmt.Errorf("WMI query failed: %w", err)
+	}
+
 	return nil
 }
 

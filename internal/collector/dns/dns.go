@@ -16,7 +16,6 @@
 package dns
 
 import (
-	"errors"
 	"fmt"
 	"log/slog"
 
@@ -31,6 +30,7 @@ const Name = "dns"
 
 type Config struct{}
 
+//nolint:gochecknoglobals
 var ConfigDefaults = Config{}
 
 // A Collector is a Prometheus Collector for WMI Win32_PerfRawData_DNS_DNS metrics.
@@ -284,7 +284,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 
 	data, ok := perfData[perfdata.InstanceEmpty]
 	if !ok {
-		return errors.New("perflib query for DNS returned empty result set")
+		return fmt.Errorf("failed to collect DNS metrics: %w", types.ErrNoData)
 	}
 
 	ch <- prometheus.MustNewConstMetric(

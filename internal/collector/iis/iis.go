@@ -41,6 +41,7 @@ type Config struct {
 	AppExclude  *regexp.Regexp `yaml:"app_exclude"`
 }
 
+//nolint:gochecknoglobals
 var ConfigDefaults = Config{
 	SiteInclude: types.RegExpAny,
 	SiteExclude: types.RegExpEmpty,
@@ -150,8 +151,8 @@ func (c *Collector) GetName() string {
 func (c *Collector) Close() error {
 	c.perfDataCollectorWebService.Close()
 	c.perfDataCollectorAppPoolWAS.Close()
-	c.perfDataCollectorW3SVCW3WP.Close()
-	c.perfDataCollectorWebServiceCache.Close()
+	c.w3SVCW3WPPerfDataCollector.Close()
+	c.serviceCachePerfDataCollector.Close()
 
 	return nil
 }
@@ -168,23 +169,25 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		prometheus.Labels{"version": fmt.Sprintf("%d.%d", c.iisVersion.major, c.iisVersion.minor)},
 	)
 
+	errs := make([]error, 0, 4)
+
 	if err := c.buildWebService(); err != nil {
-		return fmt.Errorf("failed to build Web Service collector: %w", err)
+		errs = append(errs, fmt.Errorf("failed to build Web Service collector: %w", err))
 	}
 
 	if err := c.buildAppPoolWAS(); err != nil {
-		return fmt.Errorf("failed to build APP_POOL_WAS collector: %w", err)
+		errs = append(errs, fmt.Errorf("failed to build APP_POOL_WAS collector: %w", err))
 	}
 
 	if err := c.buildW3SVCW3WP(); err != nil {
-		return fmt.Errorf("failed to build W3SVC_W3WP collector: %w", err)
+		errs = append(errs, fmt.Errorf("failed to build W3SVC_W3WP collector: %w", err))
 	}
 
 	if err := c.buildWebServiceCache(); err != nil {
-		return fmt.Errorf("failed to build Web Service Cache collector: %w", err)
+		errs = append(errs, fmt.Errorf("failed to build Web Service Cache collector: %w", err))
 	}
 
-	return nil
+	return errors.Join(errs...)
 }
 
 type simpleVersion struct {
@@ -195,7 +198,7 @@ type simpleVersion struct {
 func (c *Collector) getIISVersion(logger *slog.Logger) simpleVersion {
 	k, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\Microsoft\InetStp\`, registry.QUERY_VALUE)
 	if err != nil {
-		logger.Warn("Couldn't open registry to determine IIS version",
+		logger.Warn("couldn't open registry to determine IIS version",
 			slog.Any("err", err),
 		)
 
@@ -273,7 +276,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 // discarded, and "Site_B#2" would be kept and presented as "Site_B" in the
 // Collector metrics.
 // [ "Site_A", "Site_B", "Site_C", "Site_B#2" ].
-func deduplicateIISNames(counterValues map[string]map[string]perfdata.CounterValues) {
+func deduplicateIISNames(counterValues map[string]map[string]perfdata.CounterValue) {
 	services := slices.Collect(maps.Keys(counterValues))
 
 	// Ensure IIS entry with the highest suffix occurs last

@@ -16,7 +16,6 @@
 package hyperv
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
@@ -215,7 +214,7 @@ func (c *Collector) buildVirtualNetworkAdapterDropReasons() error {
 		virtualNetworkAdapterDropReasonsOutgoingUnknown,
 		virtualNetworkAdapterDropReasonsIncomingUnknown,
 	})
-	if err != nil && !errors.Is(err, perfdata.ErrNoData) {
+	if err != nil {
 		return fmt.Errorf("failed to create Hyper-V Virtual Network Adapter Drop Reasons collector: %w", err)
 	}
 
@@ -231,7 +230,7 @@ func (c *Collector) buildVirtualNetworkAdapterDropReasons() error {
 
 func (c *Collector) collectVirtualNetworkAdapterDropReasons(ch chan<- prometheus.Metric) error {
 	data, err := c.perfDataCollectorVirtualNetworkAdapterDropReasons.Collect()
-	if err != nil && !errors.Is(err, perfdata.ErrNoData) {
+	if err != nil {
 		return fmt.Errorf("failed to collect Hyper-V Virtual Network Adapter Drop Reasons metrics: %w", err)
 	}
 

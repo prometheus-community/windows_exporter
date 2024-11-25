@@ -32,6 +32,7 @@ const Name = "vmware"
 
 type Config struct{}
 
+//nolint:gochecknoglobals
 var ConfigDefaults = Config{}
 
 // A Collector is a Prometheus Collector for WMI Win32_PerfRawData_vmGuestLib_VMem/Win32_PerfRawData_vmGuestLib_VCPU metrics.
@@ -266,7 +267,7 @@ func (c *Collector) collectMem(ch chan<- prometheus.Metric) error {
 
 	data, ok := perfData[perfdata.InstanceEmpty]
 	if !ok {
-		return errors.New("query for VM Memory returned empty result set")
+		return fmt.Errorf("failed to collect VM Memory metrics: %w", types.ErrNoData)
 	}
 
 	ch <- prometheus.MustNewConstMetric(
@@ -347,12 +348,12 @@ func (c *Collector) collectMem(ch chan<- prometheus.Metric) error {
 func (c *Collector) collectCpu(ch chan<- prometheus.Metric) error {
 	perfData, err := c.perfDataCollectorCPU.Collect()
 	if err != nil {
-		return fmt.Errorf("failed to collect VM Memory metrics: %w", err)
+		return fmt.Errorf("failed to collect VM CPU metrics: %w", err)
 	}
 
 	data, ok := perfData[perfdata.InstanceTotal]
 	if !ok {
-		return errors.New("query for VM CPU returned empty result set")
+		return fmt.Errorf("failed to collect VM CPU metrics: %w", types.ErrNoData)
 	}
 
 	ch <- prometheus.MustNewConstMetric(

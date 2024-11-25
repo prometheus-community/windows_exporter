@@ -16,7 +16,6 @@
 package adfs
 
 import (
-	"errors"
 	"fmt"
 	"log/slog"
 	"maps"
@@ -34,6 +33,7 @@ const Name = "adfs"
 
 type Config struct{}
 
+//nolint:gochecknoglobals
 var ConfigDefaults = Config{}
 
 type Collector struct {
@@ -160,7 +160,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		avgConfigDBQueryTime,
 		federationMetadataRequests,
 	})
-	if err != nil && !errors.Is(err, perfdata.ErrNoData) {
+	if err != nil {
 		return fmt.Errorf("failed to create AD FS collector: %w", err)
 	}
 
@@ -435,13 +435,13 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	instanceKey := slices.Collect(maps.Keys(data))
 
 	if len(instanceKey) == 0 {
-		return errors.New("perflib query for ADFS returned empty result set")
+		return fmt.Errorf("failed to collect ADFS metrics: %w", types.ErrNoData)
 	}
 
 	adfsData, ok := data[instanceKey[0]]
 
 	if !ok {
-		return errors.New("perflib query for ADFS returned empty result set")
+		return fmt.Errorf("failed to collect ADFS metrics: %w", types.ErrNoData)
 	}
 
 	ch <- prometheus.MustNewConstMetric(
