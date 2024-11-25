@@ -131,21 +131,10 @@ func (c *MetricsHTTPHandler) handlerFactory(logger *slog.Logger, scrapeTimeout t
 	if len(requestedCollectors) == 0 {
 		metricCollectors = c.metricCollectors
 	} else {
-		filteredCollectors := make(collector.Map)
-
-		for _, name := range requestedCollectors {
-			metricCollector, ok := c.metricCollectors.Collectors[name]
-			if !ok {
-				return nil, fmt.Errorf("couldn't find collector %s", name)
-			}
-
-			filteredCollectors[name] = metricCollector
-		}
-
-		metricCollectors = &collector.MetricCollectors{
-			Collectors:       filteredCollectors,
-			MISession:        c.metricCollectors.MISession,
-			PerfCounterQuery: c.metricCollectors.PerfCounterQuery,
+		var err error
+		metricCollectors, err = c.metricCollectors.CloneWithCollectors(requestedCollectors)
+		if err != nil {
+			return nil, fmt.Errorf("couldn't clone metric collectors: %w", err)
 		}
 	}
 
@@ -164,6 +153,8 @@ func (c *MetricsHTTPHandler) handlerFactory(logger *slog.Logger, scrapeTimeout t
 				ErrorHandling:       promhttp.ContinueOnError,
 				MaxRequestsInFlight: c.options.MaxRequests,
 				Registry:            c.exporterMetricsRegistry,
+				EnableOpenMetrics:   true,
+				ProcessStartTime:    c.metricCollectors.GetStartTime(),
 			},
 		)
 
@@ -179,6 +170,8 @@ func (c *MetricsHTTPHandler) handlerFactory(logger *slog.Logger, scrapeTimeout t
 				ErrorLog:            slog.NewLogLogger(logger.Handler(), slog.LevelError),
 				ErrorHandling:       promhttp.ContinueOnError,
 				MaxRequestsInFlight: c.options.MaxRequests,
+				EnableOpenMetrics:   true,
+				ProcessStartTime:    c.metricCollectors.GetStartTime(),
 			},
 		)
 	}

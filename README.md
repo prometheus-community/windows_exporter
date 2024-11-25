@@ -199,6 +199,14 @@ Windows Server 2012 and 2012R2 are supported as best-effort only, but not guaran
 
 The prometheus metrics will be exposed on [localhost:9182](http://localhost:9182)
 
+### HTTP Endpoints
+
+windows_exporter provides the following HTTP endpoints:
+
+* `/metrics`: Exposes metrics in the [Prometheus text format](https://prometheus.io/docs/instrumenting/exposition_formats/).
+* `/health`: Returns 200 OK when the exporter is running.
+* `/debug/pprof/`: Exposes the [pprof](https://golang.org/pkg/net/http/pprof/) endpoints. Only, if `--debug.enabled` is set.
+
 ## Examples
 
 ### Enable only service collector and specify a custom query
