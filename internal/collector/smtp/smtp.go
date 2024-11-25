@@ -34,7 +34,8 @@ type Config struct {
 	ServerExclude *regexp.Regexp `yaml:"server_exclude"`
 }
 
-//nolint:gochecknoglobals = Config{
+//nolint:gochecknoglobals
+var ConfigDefaults = Config{
 	ServerInclude: types.RegExpAny,
 	ServerExclude: types.RegExpEmpty,
 }
