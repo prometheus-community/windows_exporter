@@ -24,9 +24,9 @@
   ~ limitations under the License.
   -->
 
-<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
-     xmlns:fw="http://wixtoolset.org/schemas/v4/wxs/firewall"
-     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+<Wix xmlns:fw="http://wixtoolset.org/schemas/v4/wxs/firewall"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui"
+     xmlns="http://wixtoolset.org/schemas/v4/wxs">
     <Package UpgradeCode="66a6eb5b-1fc2-4b14-a362-5ceec6413308" Name="$(var.ProductName)" Version="$(var.Version)"
              Manufacturer="prometheus-community" Language="1033" Scope="perMachine">
         <SummaryInformation Manufacturer="prometheus-community" Description="$(var.ProductName) $(var.Version) installer" />
