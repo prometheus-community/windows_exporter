@@ -70,7 +70,8 @@ const (
 	PERF_COUNTER_HISTOGRAM_TYPE         = 0x80000000
 )
 
-var SupportedCounterTypes = map[uint32]prometheus.ValueType{
+//nolint:gochecknoglobals
+var supportedCounterTypes = map[uint32]prometheus.ValueType{
 	PERF_COUNTER_RAWCOUNT_HEX:       prometheus.GaugeValue,
 	PERF_COUNTER_LARGE_RAWCOUNT_HEX: prometheus.GaugeValue,
 	PERF_COUNTER_RAWCOUNT:           prometheus.GaugeValue,

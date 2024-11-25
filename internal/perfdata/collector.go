@@ -27,6 +27,7 @@ import (
 	"golang.org/x/sys/windows"
 )
 
+//nolint:gochecknoglobals
 var (
 	InstancesAll   = []string{"*"}
 	InstancesTotal = []string{InstanceTotal}
@@ -234,7 +235,7 @@ func (c *Collector) collectRoutine() {
 					}
 
 					var metricType prometheus.ValueType
-					if val, ok := SupportedCounterTypes[counter.Type]; ok {
+					if val, ok := supportedCounterTypes[counter.Type]; ok {
 						metricType = val
 					} else {
 						metricType = prometheus.GaugeValue
@@ -291,8 +292,6 @@ func (c *Collector) collectRoutine() {
 		c.counterValuesCh <- counterValues
 		c.errorCh <- err
 	}
-
-	return
 }
 
 func (c *Collector) Close() {

@@ -256,6 +256,7 @@ type (
 	pdhCounterHandle HANDLE // counter handle
 )
 
+//nolint:gochecknoglobals
 var (
 	libPdhDll = windows.NewLazySystemDLL("pdh.dll")
 
