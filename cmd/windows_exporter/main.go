@@ -20,7 +20,6 @@ package main
 //goland:noinspection GoUnsortedImport
 //nolint:gofumpt
 import (
-	"github.com/prometheus-community/windows_exporter/internal/utils"
 	// Its important that we do these first so that we can register with the Windows service control ASAP to avoid timeouts.
 	"github.com/prometheus-community/windows_exporter/internal/windowsservice"
 
@@ -43,6 +42,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/httphandler"
 	"github.com/prometheus-community/windows_exporter/internal/log"
 	"github.com/prometheus-community/windows_exporter/internal/log/flag"
+	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus-community/windows_exporter/pkg/collector"
 	"github.com/prometheus/common/version"
 	"github.com/prometheus/exporter-toolkit/web"

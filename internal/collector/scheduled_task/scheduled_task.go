@@ -470,7 +470,6 @@ func fetchTasksInFolder(taskServiceObj *ole.IDispatch, folderPath string) ([]sch
 
 		return nil
 	})
-
 	if err != nil {
 		return nil, fmt.Errorf("failed to iterate over tasks: %w", err)
 	}
