@@ -44,6 +44,7 @@ var (
 	DestinationOptionsUILocale = UTF16PtrFromString[*uint16]("__MI_DESTINATIONOPTIONS_UI_LOCALE")
 )
 
+//nolint:gochecknoglobals
 var (
 	modMi = windows.NewLazySystemDLL("mi.dll")
 

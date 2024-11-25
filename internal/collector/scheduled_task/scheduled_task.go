@@ -82,6 +82,7 @@ const (
 	SCHED_S_TASK_HAS_NOT_RUN TaskResult = 0x00041303
 )
 
+//nolint:gochecknoglobals
 var taskStates = []string{"disabled", "queued", "ready", "running", "unknown"}
 
 type scheduledTask struct {

@@ -27,6 +27,7 @@ import (
 
 const Name = "license"
 
+//nolint:gochecknoglobals
 var labelMap = map[slc.SL_GENUINE_STATE]string{
 	slc.SL_GEN_STATE_IS_GENUINE:      "genuine",
 	slc.SL_GEN_STATE_INVALID_LICENSE: "invalid_license",

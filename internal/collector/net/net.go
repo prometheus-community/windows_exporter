@@ -393,6 +393,8 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	return nil
 }
 
+//nolint:gochecknoglobals
+
 var addressFamily = map[uint16]string{
 	windows.AF_INET:  "ipv4",
 	windows.AF_INET6: "ipv6",

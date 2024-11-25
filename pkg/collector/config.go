@@ -119,6 +119,7 @@ type Config struct {
 
 // ConfigDefaults Is an interface to be used by the external libraries. It holds all ConfigDefaults form all collectors
 //
+//nolint:gochecknoglobals
 //goland:noinspection GoUnusedGlobalVariable
 var ConfigDefaults = Config{
 	AD:               ad.ConfigDefaults,

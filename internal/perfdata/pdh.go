@@ -144,6 +144,7 @@ const (
 	PdhQueryPerfDataTimeout               uint32 = 0xC0000BFE
 )
 
+//nolint:gochecknoglobals
 var PDHErrors = map[uint32]string{
 	PdhCstatusValidData:                   "PDH_CSTATUS_VALID_DATA",
 	PdhCstatusNewData:                     "PDH_CSTATUS_NEW_DATA",

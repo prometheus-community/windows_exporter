@@ -76,6 +76,7 @@ func NewBuilderWithFlags[C Collector](fn BuilderWithFlags[C]) BuilderWithFlags[C
 	}
 }
 
+//nolint:gochecknoglobals
 var BuildersWithFlags = map[string]BuilderWithFlags[Collector]{
 	ad.Name:                NewBuilderWithFlags(ad.NewWithFlags),
 	adcs.Name:              NewBuilderWithFlags(adcs.NewWithFlags),
