@@ -43,6 +43,7 @@ type Config struct {
 	TaskInclude *regexp.Regexp `yaml:"task_include"`
 }
 
+//nolint:gochecknoglobals
 var ConfigDefaults = Config{
 	TaskExclude: types.RegExpEmpty,
 	TaskInclude: types.RegExpAny,

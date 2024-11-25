@@ -35,6 +35,7 @@ type Config struct {
 	CollectorsEnabled []string `yaml:"collectors_enabled"`
 }
 
+//nolint:gochecknoglobals
 var ConfigDefaults = Config{
 	CollectorsEnabled: []string{"connection", "folder", "volume"},
 }

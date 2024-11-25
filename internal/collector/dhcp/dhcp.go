@@ -30,6 +30,7 @@ const Name = "dhcp"
 
 type Config struct{}
 
+//nolint:gochecknoglobals
 var ConfigDefaults = Config{}
 
 // A Collector is a Prometheus Collector perflib DHCP metrics.

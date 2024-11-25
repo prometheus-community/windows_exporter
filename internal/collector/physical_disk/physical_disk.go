@@ -35,6 +35,7 @@ type Config struct {
 	DiskExclude *regexp.Regexp `yaml:"disk_exclude"`
 }
 
+//nolint:gochecknoglobals
 var ConfigDefaults = Config{
 	DiskInclude: types.RegExpAny,
 	DiskExclude: types.RegExpEmpty,

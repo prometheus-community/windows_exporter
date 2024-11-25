@@ -59,6 +59,7 @@ type Config struct {
 	Port              uint16   `yaml:"port"`
 }
 
+//nolint:gochecknoglobals
 var ConfigDefaults = Config{
 	CollectorsEnabled: []string{
 		subCollectorAccessMethods,

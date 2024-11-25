@@ -35,6 +35,7 @@ const Name = "memory"
 
 type Config struct{}
 
+//nolint:gochecknoglobals
 var ConfigDefaults = Config{}
 
 // A Collector is a Prometheus Collector for perflib Memory metrics.

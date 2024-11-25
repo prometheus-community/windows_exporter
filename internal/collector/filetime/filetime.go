@@ -36,6 +36,7 @@ type Config struct {
 	FilePatterns []string
 }
 
+//nolint:gochecknoglobals
 var ConfigDefaults = Config{
 	FilePatterns: []string{},
 }

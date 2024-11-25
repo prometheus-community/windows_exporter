@@ -33,6 +33,7 @@ const Name = "adfs"
 
 type Config struct{}
 
+//nolint:gochecknoglobals
 var ConfigDefaults = Config{}
 
 type Collector struct {

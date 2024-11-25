@@ -41,6 +41,7 @@ type Config struct {
 	AppExclude  *regexp.Regexp `yaml:"app_exclude"`
 }
 
+//nolint:gochecknoglobals
 var ConfigDefaults = Config{
 	SiteInclude: types.RegExpAny,
 	SiteExclude: types.RegExpEmpty,

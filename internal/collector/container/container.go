@@ -33,6 +33,7 @@ const Name = "container"
 
 type Config struct{}
 
+//nolint:gochecknoglobals
 var ConfigDefaults = Config{}
 
 // A Collector is a Prometheus Collector for containers metrics.

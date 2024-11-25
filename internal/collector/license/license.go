@@ -37,6 +37,7 @@ var labelMap = map[slc.SL_GENUINE_STATE]string{
 
 type Config struct{}
 
+//nolint:gochecknoglobals
 var ConfigDefaults = Config{}
 
 // A Collector is a Prometheus Collector for WMI Win32_PerfRawData_DNS_DNS metrics.

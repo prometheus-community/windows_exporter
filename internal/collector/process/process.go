@@ -42,6 +42,7 @@ type Config struct {
 	EnableWorkerProcess bool           `yaml:"enable_iis_worker_process"` //nolint:tagliatelle
 }
 
+//nolint:gochecknoglobals
 var ConfigDefaults = Config{
 	ProcessInclude:      types.RegExpAny,
 	ProcessExclude:      types.RegExpEmpty,
@@ -58,7 +59,7 @@ type Collector struct {
 
 	perfDataCollector *perfdata.Collector
 
-	lookupCache map[string]string
+	lookupCache sync.Map
 
 	workerCh chan processWorkerRequest
 	mu       sync.RWMutex
@@ -224,7 +225,7 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 
 	c.workerCh = make(chan processWorkerRequest, 32)
 	c.mu = sync.RWMutex{}
-	c.lookupCache = make(map[string]string)
+	c.lookupCache = sync.Map{}
 
 	for range 4 {
 		go c.collectWorker()
@@ -708,7 +709,14 @@ func (c *Collector) getProcessOwner(logger *slog.Logger, hProcess windows.Handle
 
 	sid := tokenUser.User.Sid.String()
 
-	owner, ok := c.lookupCache[sid]
+	var owner string
+
+	ownerVal, ok := c.lookupCache.Load(sid)
+
+	if ok {
+		owner, ok = ownerVal.(string)
+	}
+
 	if !ok {
 		account, domain, _, err := tokenUser.User.Sid.LookupAccount("")
 		if err != nil {
@@ -717,7 +725,7 @@ func (c *Collector) getProcessOwner(logger *slog.Logger, hProcess windows.Handle
 			owner = fmt.Sprintf(`%s\%s`, account, domain)
 		}
 
-		c.lookupCache[sid] = owner
+		c.lookupCache.Store(sid, owner)
 	}
 
 	return owner, nil

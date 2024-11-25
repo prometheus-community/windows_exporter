@@ -41,6 +41,7 @@ type Config struct {
 	scrapeInterval time.Duration `yaml:"scrape_interval"`
 }
 
+//nolint:gochecknoglobals
 var ConfigDefaults = Config{
 	online:         false,
 	scrapeInterval: 6 * time.Hour,

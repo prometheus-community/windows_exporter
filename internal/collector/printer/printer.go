@@ -46,6 +46,7 @@ type Config struct {
 	PrinterExclude *regexp.Regexp `yaml:"printer_exclude"`
 }
 
+//nolint:gochecknoglobals
 var ConfigDefaults = Config{
 	PrinterInclude: types.RegExpAny,
 	PrinterExclude: types.RegExpEmpty,

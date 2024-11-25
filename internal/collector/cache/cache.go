@@ -30,6 +30,7 @@ const Name = "cache"
 
 type Config struct{}
 
+//nolint:gochecknoglobals
 var ConfigDefaults = Config{}
 
 // A Collector is a Prometheus Collector for Perflib Cache metrics.

@@ -33,6 +33,7 @@ type Config struct {
 	CollectorsEnabled []string `yaml:"collectors_enabled"`
 }
 
+//nolint:gochecknoglobals
 var ConfigDefaults = Config{
 	CollectorsEnabled: []string{
 		collectorClrExceptions,
@@ -176,13 +177,17 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 			build:   c.buildClrExceptions,
 			collect: c.collectClrExceptions,
 		},
-		collectorClrInterop: {
+		collectorClrJIT: {
 			build:   c.buildClrJIT,
 			collect: c.collectClrJIT,
 		},
 		collectorClrLoading: {
 			build:   c.buildClrLoading,
 			collect: c.collectClrLoading,
+		},
+		collectorClrInterop: {
+			build:   c.buildClrInterop,
+			collect: c.collectClrInterop,
 		},
 		collectorClrLocksAndThreads: {
 			build:   c.buildClrLocksAndThreads,
