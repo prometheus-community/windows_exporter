@@ -25,7 +25,8 @@ import (
 )
 
 // based on https://github.com/carlpett/winlsa/blob/master/winlsa.go
-
+//
+//nolint:gochecknoglobals
 var (
 	secur32  = windows.NewLazySystemDLL("Secur32.dll")
 	advapi32 = windows.NewLazySystemDLL("advapi32.dll")

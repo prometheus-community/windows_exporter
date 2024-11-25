@@ -139,6 +139,7 @@ type diskDrive struct {
 	Availability uint16 `mi:"Availability"`
 }
 
+//nolint:gochecknoglobals
 var (
 	allDiskStatus = []string{
 		"OK",

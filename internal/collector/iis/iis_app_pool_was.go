@@ -57,6 +57,7 @@ const (
 	TotalWorkerProcessStartupFailures  = "Total Worker Process Startup Failures"
 )
 
+//nolint:gochecknoglobals
 var applicationStates = map[uint32]string{
 	1: "Uninitialized",
 	2: "Initialized",

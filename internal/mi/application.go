@@ -31,6 +31,7 @@ const (
 	LocaleEnglish = "en-us"
 )
 
+//nolint:gochecknoglobals
 var (
 	// DestinationOptionsTimeout is the key for the timeout option.
 	//

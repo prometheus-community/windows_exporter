@@ -27,7 +27,10 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-// We have to registry a global callback function, since the amount of callbacks is limited.
+// operationUnmarshalCallbacksInstanceResult registers a global callback function.
+// The amount of system callbacks is limited to 2000.
+//
+//nolint:gochecknoglobals
 var operationUnmarshalCallbacksInstanceResult = sync.OnceValue[uintptr](func() uintptr {
 	// Workaround for a deadlock issue in go.
 	// Ref: https://github.com/golang/go/issues/55015
