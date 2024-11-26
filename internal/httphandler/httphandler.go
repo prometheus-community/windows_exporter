@@ -57,7 +57,8 @@ func New(logger *slog.Logger, metricCollectors *collector.MetricCollectors, opti
 		options = &Options{
 			DisableExporterMetrics: false,
 			TimeoutMargin:          0.5,
-			MaxRequests:            5,
+			// We are expose metrics directly from the memory region of the Win32 API. We should not allow more than one request at a time.
+			MaxRequests: 1,
 		}
 	}
 
@@ -132,6 +133,7 @@ func (c *MetricsHTTPHandler) handlerFactory(logger *slog.Logger, scrapeTimeout t
 		metricCollectors = c.metricCollectors
 	} else {
 		var err error
+
 		metricCollectors, err = c.metricCollectors.CloneWithCollectors(requestedCollectors)
 		if err != nil {
 			return nil, fmt.Errorf("couldn't clone metric collectors: %w", err)
