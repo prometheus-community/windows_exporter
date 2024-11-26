@@ -359,6 +359,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 			errs = append(errs, fmt.Errorf("error reading textfile directory %q: %w", directory, err))
 		}
 	}
+
 	c.exportMTimes(mTimes, ch)
 
 	// If duplicates are detected across *multiple* files, return error.
