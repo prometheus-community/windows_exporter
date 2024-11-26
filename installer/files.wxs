@@ -13,8 +13,8 @@
   ~ limitations under the License.
   -->
 
-<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
-     xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
+<Wix xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util"
+     xmlns="http://wixtoolset.org/schemas/v4/wxs">
     <Fragment>
         <DirectoryRef Id="APPLICATIONFOLDER">
             <Component Transitive="yes">
@@ -28,7 +28,7 @@
                     Start="auto"
                     Type="ownProcess"
                     Vital="yes"
-                    Arguments="--log.file eventlog [ConfigFileFlag] [CollectorsFlag] [ListenFlag] [MetricsPathFlag] [TextfileDirsFlag] [ExtraFlags]">
+                    Arguments="[ConfigFileFlag] [CollectorsFlag] [ListenFlag] [MetricsPathFlag] [TextfileDirsFlag] [ExtraFlags]">
                     <util:ServiceConfig
                         ResetPeriodInDays="1"
                         FirstFailureActionType="restart"

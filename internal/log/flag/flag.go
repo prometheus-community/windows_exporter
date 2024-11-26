@@ -34,6 +34,9 @@ func AddFlags(a *kingpin.Application, config *log.Config) {
 	config.Config = new(promslog.Config)
 	flag.AddFlags(a, config.Config)
 
-	config.File = &log.AllowedFile{}
-	a.Flag(FileFlagName, FileFlagHelp).Default("stderr").SetValue(config.File)
+	if config.File == nil {
+		config.File = &log.AllowedFile{}
+	}
+
+	a.Flag(FileFlagName, FileFlagHelp).Default(config.File.String()).SetValue(config.File)
 }

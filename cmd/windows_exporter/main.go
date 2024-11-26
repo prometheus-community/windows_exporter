@@ -105,7 +105,14 @@ func run() int {
 		).Default("normal").String()
 	)
 
-	logConfig := &log.Config{}
+	logFile := &log.AllowedFile{}
+
+	_ = logFile.Set("stdout")
+	if windowsservice.IsService {
+		_ = logFile.Set("eventlog")
+	}
+
+	logConfig := &log.Config{File: logFile}
 	flag.AddFlags(app, logConfig)
 
 	app.Version(version.Print("windows_exporter"))

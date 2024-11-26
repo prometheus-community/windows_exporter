@@ -34,6 +34,10 @@ type AllowedFile struct {
 }
 
 func (f *AllowedFile) String() string {
+	if f == nil {
+		return ""
+	}
+
 	return f.s
 }
 
