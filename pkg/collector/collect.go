@@ -11,8 +11,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build windows
-
 package collector
 
 import (
@@ -31,22 +29,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-// Interface guard.
-var _ prometheus.Collector = (*Prometheus)(nil)
-
-// Prometheus implements prometheus.Collector for a set of Windows MetricCollectors.
-type Prometheus struct {
-	maxScrapeDuration time.Duration
-	logger            *slog.Logger
-	metricCollectors  *MetricCollectors
-
-	// Base metrics returned by Prometheus
-	scrapeDurationDesc          *prometheus.Desc
-	collectorScrapeDurationDesc *prometheus.Desc
-	collectorScrapeSuccessDesc  *prometheus.Desc
-	collectorScrapeTimeoutDesc  *prometheus.Desc
-}
-
 type collectorStatus struct {
 	name       string
 	statusCode collectorStatusCode
@@ -60,64 +42,26 @@ const (
 	failed
 )
 
-// NewPrometheusCollector returns a new Prometheus where the set of MetricCollectors must
-// return metrics within the given timeout.
-func (c *MetricCollectors) NewPrometheusCollector(timeout time.Duration, logger *slog.Logger) *Prometheus {
-	return &Prometheus{
-		maxScrapeDuration: timeout,
-		metricCollectors:  c,
-		logger:            logger,
-		scrapeDurationDesc: prometheus.NewDesc(
-			prometheus.BuildFQName(types.Namespace, "exporter", "scrape_duration_seconds"),
-			"windows_exporter: Total scrape duration.",
-			nil,
-			nil,
-		),
-		collectorScrapeDurationDesc: prometheus.NewDesc(
-			prometheus.BuildFQName(types.Namespace, "exporter", "collector_duration_seconds"),
-			"windows_exporter: Duration of a collection.",
-			[]string{"collector"},
-			nil,
-		),
-		collectorScrapeSuccessDesc: prometheus.NewDesc(
-			prometheus.BuildFQName(types.Namespace, "exporter", "collector_success"),
-			"windows_exporter: Whether the collector was successful.",
-			[]string{"collector"},
-			nil,
-		),
-		collectorScrapeTimeoutDesc: prometheus.NewDesc(
-			prometheus.BuildFQName(types.Namespace, "exporter", "collector_timeout"),
-			"windows_exporter: Whether the collector timed out.",
-			[]string{"collector"},
-			nil,
-		),
-	}
-}
-
-func (p *Prometheus) Describe(_ chan<- *prometheus.Desc) {}
-
-// Collect sends the collected metrics from each of the MetricCollectors to
-// prometheus.
-func (p *Prometheus) Collect(ch chan<- prometheus.Metric) {
+func (c *Collection) collectAll(ch chan<- prometheus.Metric, logger *slog.Logger, maxScrapeDuration time.Duration) {
 	collectorStartTime := time.Now()
 
 	// WaitGroup to wait for all collectors to finish
 	wg := sync.WaitGroup{}
-	wg.Add(len(p.metricCollectors.collectors))
+	wg.Add(len(c.collectors))
 
 	// Using a channel to collect the status of each collector
 	// A channel is safe to use concurrently while a map is not
-	collectorStatusCh := make(chan collectorStatus, len(p.metricCollectors.collectors))
+	collectorStatusCh := make(chan collectorStatus, len(c.collectors))
 
 	// Execute all collectors concurrently
 	// timeout handling is done in the execute function
-	for name, metricsCollector := range p.metricCollectors.collectors {
+	for name, metricsCollector := range c.collectors {
 		go func(name string, metricsCollector Collector) {
 			defer wg.Done()
 
 			collectorStatusCh <- collectorStatus{
 				name:       name,
-				statusCode: p.execute(name, metricsCollector, ch),
+				statusCode: c.collectCollector(ch, logger, name, metricsCollector, maxScrapeDuration),
 			}
 		}(name, metricsCollector)
 	}
@@ -139,14 +83,14 @@ func (p *Prometheus) Collect(ch chan<- prometheus.Metric) {
 		}
 
 		ch <- prometheus.MustNewConstMetric(
-			p.collectorScrapeSuccessDesc,
+			c.collectorScrapeSuccessDesc,
 			prometheus.GaugeValue,
 			successValue,
 			status.name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			p.collectorScrapeTimeoutDesc,
+			c.collectorScrapeTimeoutDesc,
 			prometheus.GaugeValue,
 			timeoutValue,
 			status.name,
@@ -154,13 +98,13 @@ func (p *Prometheus) Collect(ch chan<- prometheus.Metric) {
 	}
 
 	ch <- prometheus.MustNewConstMetric(
-		p.scrapeDurationDesc,
+		c.scrapeDurationDesc,
 		prometheus.GaugeValue,
 		time.Since(collectorStartTime).Seconds(),
 	)
 }
 
-func (p *Prometheus) execute(name string, c Collector, ch chan<- prometheus.Metric) collectorStatusCode {
+func (c *Collection) collectCollector(ch chan<- prometheus.Metric, logger *slog.Logger, name string, collector Collector, maxScrapeDuration time.Duration) collectorStatusCode {
 	var (
 		err        error
 		numMetrics int
@@ -173,10 +117,10 @@ func (p *Prometheus) execute(name string, c Collector, ch chan<- prometheus.Metr
 	bufCh := make(chan prometheus.Metric, 1000)
 	errCh := make(chan error, 1)
 
-	ctx, cancel := context.WithTimeout(context.Background(), p.maxScrapeDuration)
+	ctx, cancel := context.WithTimeout(context.Background(), maxScrapeDuration)
 	defer cancel()
 
-	// Execute the collector
+	// execute the collector
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
@@ -188,7 +132,7 @@ func (p *Prometheus) execute(name string, c Collector, ch chan<- prometheus.Metr
 			close(bufCh)
 		}()
 
-		errCh <- c.Collect(bufCh)
+		errCh <- collector.Collect(bufCh)
 	}()
 
 	wg := sync.WaitGroup{}
@@ -232,7 +176,7 @@ func (p *Prometheus) execute(name string, c Collector, ch chan<- prometheus.Metr
 
 		duration = time.Since(t)
 		ch <- prometheus.MustNewConstMetric(
-			p.collectorScrapeDurationDesc,
+			c.collectorScrapeDurationDesc,
 			prometheus.GaugeValue,
 			duration.Seconds(),
 			name,
@@ -242,13 +186,13 @@ func (p *Prometheus) execute(name string, c Collector, ch chan<- prometheus.Metr
 
 		duration = time.Since(t)
 		ch <- prometheus.MustNewConstMetric(
-			p.collectorScrapeDurationDesc,
+			c.collectorScrapeDurationDesc,
 			prometheus.GaugeValue,
 			duration.Seconds(),
 			name,
 		)
 
-		p.logger.Warn(fmt.Sprintf("collector %s timeouted after %s, resulting in %d metrics", name, p.maxScrapeDuration, numMetrics))
+		logger.Warn(fmt.Sprintf("collector %s timeouted after %s, resulting in %d metrics", name, maxScrapeDuration, numMetrics))
 
 		go func() {
 			// Drain channel in case of premature return to not leak a goroutine.
@@ -261,12 +205,12 @@ func (p *Prometheus) execute(name string, c Collector, ch chan<- prometheus.Metr
 	}
 
 	if err != nil {
-		loggerFn := p.logger.Warn
+		loggerFn := logger.Warn
 		if errors.Is(err, types.ErrNoData) ||
 			errors.Is(err, perfdata.ErrNoData) ||
 			errors.Is(err, perfdata.ErrPerformanceCounterNotInitialized) ||
 			errors.Is(err, mi.MI_RESULT_INVALID_NAMESPACE) {
-			loggerFn = p.logger.Debug
+			loggerFn = logger.Debug
 		}
 
 		loggerFn(fmt.Sprintf("collector %s failed after %s, resulting in %d metrics", name, duration, numMetrics),
@@ -276,7 +220,7 @@ func (p *Prometheus) execute(name string, c Collector, ch chan<- prometheus.Metr
 		return failed
 	}
 
-	p.logger.Debug(fmt.Sprintf("collector %s succeeded after %s, resulting in %d metrics", name, duration, numMetrics))
+	logger.Debug(fmt.Sprintf("collector %s succeeded after %s, resulting in %d metrics", name, duration, numMetrics))
 
 	return success
 }
