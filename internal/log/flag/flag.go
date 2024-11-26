@@ -37,5 +37,6 @@ func AddFlags(a *kingpin.Application, config *log.Config) {
 	if config.File == nil {
 		config.File = &log.AllowedFile{}
 	}
+
 	a.Flag(FileFlagName, FileFlagHelp).Default(config.File.String()).SetValue(config.File)
 }
