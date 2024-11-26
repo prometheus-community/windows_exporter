@@ -257,13 +257,15 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	// Result must order, to prevent test failures.
 	sort.Strings(c.config.CollectorsEnabled)
 
+	errs := make([]error, 0, len(c.config.CollectorsEnabled))
+
 	for _, name := range c.config.CollectorsEnabled {
 		if _, ok := subCollectors[name]; !ok {
 			return fmt.Errorf("unknown collector: %s", name)
 		}
 
 		if err := subCollectors[name].build(); err != nil {
-			return fmt.Errorf("failed to build %s collector: %w", name, err)
+			errs = append(errs, fmt.Errorf("failed to build %s collector: %w", name, err))
 		}
 
 		c.collectorFns = append(c.collectorFns, subCollectors[name].collect)
@@ -291,7 +293,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 
-	return nil
+	return errors.Join(errs...)
 }
 
 // Collect sends the metric values for each metric
@@ -408,7 +410,7 @@ func (c *Collector) collect(
 			errs = append(errs, err)
 			success = 0.0
 
-			c.logger.Error(fmt.Sprintf("mssql class collector %s for instance %s failed after %s", collector, sqlInstance, duration),
+			c.logger.Debug(fmt.Sprintf("mssql class collector %s for instance %s failed after %s", collector, sqlInstance, duration),
 				slog.Any("err", err),
 			)
 		} else {
