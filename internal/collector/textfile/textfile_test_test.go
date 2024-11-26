@@ -26,6 +26,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/collector"
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -48,30 +49,26 @@ func TestMultipleDirectories(t *testing.T) {
 	metrics := make(chan prometheus.Metric)
 	got := ""
 
+	errCh := make(chan error, 1)
 	go func() {
-		for {
-			var metric dto.Metric
+		errCh <- textFileCollector.Collect(metrics)
 
-			val := <-metrics
-
-			err := val.Write(&metric)
-			if err != nil {
-				t.Errorf("Unexpected error %s", err)
-			}
-
-			got += metric.String()
-		}
+		close(metrics)
 	}()
 
-	err := textFileCollector.Collect(metrics)
-	if err != nil {
-		t.Errorf("Unexpected error %s", err)
+	for val := range metrics {
+		var metric dto.Metric
+
+		err := val.Write(&metric)
+		require.NoError(t, err)
+
+		got += metric.String()
 	}
 
+	require.NoError(t, <-errCh)
+
 	for _, f := range []string{"dir1", "dir2", "dir3", "dir3sub"} {
-		if !strings.Contains(got, f) {
-			t.Errorf("Unexpected output %s: %q", f, got)
-		}
+		assert.Contains(t, got, f)
 	}
 }
 
@@ -89,31 +86,24 @@ func TestDuplicateFileName(t *testing.T) {
 	metrics := make(chan prometheus.Metric)
 	got := ""
 
+	errCh := make(chan error, 1)
 	go func() {
-		for {
-			var metric dto.Metric
+		errCh <- textFileCollector.Collect(metrics)
 
-			val := <-metrics
-
-			err := val.Write(&metric)
-			if err != nil {
-				t.Errorf("Unexpected error %s", err)
-			}
-
-			got += metric.String()
-		}
+		close(metrics)
 	}()
 
-	err := textFileCollector.Collect(metrics)
-	if err != nil {
-		t.Errorf("Unexpected error %s", err)
+	for val := range metrics {
+		var metric dto.Metric
+
+		err := val.Write(&metric)
+		require.NoError(t, err)
+
+		got += metric.String()
 	}
 
-	if !strings.Contains(got, "file") {
-		t.Errorf("Unexpected output  %q", got)
-	}
+	require.ErrorContains(t, <-errCh, "duplicate filename detected")
 
-	if strings.Contains(got, "sub_file") {
-		t.Errorf("Unexpected output  %q", got)
-	}
+	assert.Contains(t, got, "file")
+	assert.NotContains(t, got, "sub_file")
 }

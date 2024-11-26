@@ -54,7 +54,7 @@ type Collector struct {
 	// Only set for testing to get predictable output.
 	mTime *float64
 
-	mTimeDesc *prometheus.Desc
+	modTimeDesc *prometheus.Desc
 }
 
 func New(config *Config) *Collector {
@@ -105,9 +105,9 @@ func (c *Collector) Close() error {
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	c.logger = logger.With(slog.String("collector", Name))
 
-	c.logger.Info("textfile Collector directories: " + strings.Join(c.config.TextFileDirectories, ","))
+	c.logger.Info("textfile directories: " + strings.Join(c.config.TextFileDirectories, ","))
 
-	c.mTimeDesc = prometheus.NewDesc(
+	c.modTimeDesc = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, "textfile", "mtime_seconds"),
 		"Unixtime mtime of textfiles successfully read.",
 		[]string{"file"},
@@ -165,7 +165,7 @@ func (c *Collector) convertMetricFamily(logger *slog.Logger, metricFamily *dto.M
 
 	for _, metric := range metricFamily.GetMetric() {
 		if metric.TimestampMs != nil {
-			logger.Warn(fmt.Sprintf("Ignoring unsupported custom timestamp on textfile Collector metric %v", metric))
+			logger.Warn(fmt.Sprintf("Ignoring unsupported custom timestamp on textfile metric %v", metric))
 		}
 
 		labels := metric.GetLabel()
@@ -259,23 +259,24 @@ func (c *Collector) convertMetricFamily(logger *slog.Logger, metricFamily *dto.M
 	}
 }
 
-func (c *Collector) exportMTimes(mTimes map[string]time.Time, ch chan<- prometheus.Metric) {
+func (c *Collector) exportMTimes(modTimes map[string]time.Time, ch chan<- prometheus.Metric) {
 	// Export the mtimes of the successful files.
-	if len(mTimes) > 0 {
+	if len(modTimes) > 0 {
 		// Sorting is needed for predictable output comparison in tests.
-		filenames := make([]string, 0, len(mTimes))
-		for filename := range mTimes {
+		filenames := make([]string, 0, len(modTimes))
+		for filename := range modTimes {
 			filenames = append(filenames, filename)
 		}
 
 		sort.Strings(filenames)
 
 		for _, filename := range filenames {
-			mtime := float64(mTimes[filename].UnixNano() / 1e9)
+			modTime := float64(modTimes[filename].UnixNano() / 1e9)
 			if c.mTime != nil {
-				mtime = *c.mTime
+				modTime = *c.mTime
 			}
-			ch <- prometheus.MustNewConstMetric(c.mTimeDesc, prometheus.GaugeValue, mtime, filename)
+
+			ch <- prometheus.MustNewConstMetric(c.modTimeDesc, prometheus.GaugeValue, modTime, filename)
 		}
 	}
 }
@@ -314,6 +315,8 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	// This will ensure that duplicate metrics are correctly detected between multiple .prom files.
 	var metricFamilies []*dto.MetricFamily
 
+	errs := make([]error, 0)
+
 	// Iterate over files and accumulate their metrics.
 	for _, directory := range c.config.TextFileDirectories {
 		err := filepath.WalkDir(directory, func(path string, dirEntry os.DirEntry, err error) error {
@@ -326,24 +329,20 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 
 				families_array, err := scrapeFile(path, c.logger)
 				if err != nil {
-					c.logger.Error(fmt.Sprintf("Error scraping file: %q. Skip File.", path),
-						slog.Any("err", err),
-					)
+					errs = append(errs, fmt.Errorf("error scraping file %q: %w", path, err))
 
 					return nil
 				}
 
 				fileInfo, err := os.Stat(path)
 				if err != nil {
-					c.logger.Error(fmt.Sprintf("Error reading file info: %q. Skip File.", path),
-						slog.Any("err", err),
-					)
+					errs = append(errs, fmt.Errorf("error reading file info %q: %w", path, err))
 
 					return nil
 				}
 
 				if _, hasName := mTimes[fileInfo.Name()]; hasName {
-					c.logger.Error(fmt.Sprintf("Duplicate filename detected: %q. Skip File.", path))
+					errs = append(errs, fmt.Errorf("duplicate filename detected: %q", path))
 
 					return nil
 				}
@@ -355,25 +354,24 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 
 			return nil
 		})
+
 		if err != nil && directory != "" {
-			c.logger.Error("Error reading textfile Collector directory: "+directory,
-				slog.Any("err", err),
-			)
+			errs = append(errs, fmt.Errorf("error reading textfile directory %q: %w", directory, err))
 		}
 	}
 
+	c.exportMTimes(mTimes, ch)
+
 	// If duplicates are detected across *multiple* files, return error.
 	if duplicateMetricEntry(metricFamilies) {
-		c.logger.Error("Duplicate metrics detected across multiple files")
+		c.logger.Warn("duplicate metrics detected across multiple files")
 	} else {
 		for _, mf := range metricFamilies {
 			c.convertMetricFamily(c.logger, mf, ch)
 		}
 	}
 
-	c.exportMTimes(mTimes, ch)
-
-	return nil
+	return errors.Join(errs...)
 }
 
 func scrapeFile(path string, logger *slog.Logger) ([]*dto.MetricFamily, error) {

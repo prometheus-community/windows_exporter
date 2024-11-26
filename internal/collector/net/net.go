@@ -304,8 +304,7 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	}
 
 	for nicName, nicData := range data {
-		if c.config.NicExclude.MatchString(nicName) ||
-			!c.config.NicInclude.MatchString(nicName) {
+		if c.config.NicExclude.MatchString(nicName) || !c.config.NicInclude.MatchString(nicName) {
 			continue
 		}
 
