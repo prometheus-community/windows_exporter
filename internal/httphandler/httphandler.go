@@ -152,7 +152,7 @@ func (c *MetricsHTTPHandler) handlerFactory(logger *slog.Logger, scrapeTimeout t
 			promhttp.HandlerOpts{
 				ErrorLog:            slog.NewLogLogger(logger.Handler(), slog.LevelError),
 				ErrorHandling:       promhttp.ContinueOnError,
-				MaxRequestsInFlight: c.options.MaxRequests,
+				MaxRequestsInFlight: 1,
 				Registry:            c.exporterMetricsRegistry,
 				EnableOpenMetrics:   true,
 				ProcessStartTime:    c.metricCollectors.GetStartTime(),
@@ -170,7 +170,7 @@ func (c *MetricsHTTPHandler) handlerFactory(logger *slog.Logger, scrapeTimeout t
 			promhttp.HandlerOpts{
 				ErrorLog:            slog.NewLogLogger(logger.Handler(), slog.LevelError),
 				ErrorHandling:       promhttp.ContinueOnError,
-				MaxRequestsInFlight: c.options.MaxRequests,
+				MaxRequestsInFlight: 1,
 				EnableOpenMetrics:   true,
 				ProcessStartTime:    c.metricCollectors.GetStartTime(),
 			},
@@ -181,10 +181,6 @@ func (c *MetricsHTTPHandler) handlerFactory(logger *slog.Logger, scrapeTimeout t
 }
 
 func (c *MetricsHTTPHandler) withConcurrencyLimit(next http.HandlerFunc) http.HandlerFunc {
-	if c.options.MaxRequests <= 0 {
-		return next
-	}
-
 	return func(w http.ResponseWriter, r *http.Request) {
 		select {
 		case c.concurrencyCh <- struct{}{}:
