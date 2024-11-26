@@ -204,12 +204,9 @@ func (c *Collection) collectCollector(ch chan<- prometheus.Metric, logger *slog.
 		return pending
 	}
 
-	if err != nil {
+	if err != nil && !errors.Is(err, perfdata.ErrNoData) && !errors.Is(err, types.ErrNoData) {
 		loggerFn := logger.Warn
-		if errors.Is(err, types.ErrNoData) ||
-			errors.Is(err, perfdata.ErrNoData) ||
-			errors.Is(err, perfdata.ErrPerformanceCounterNotInitialized) ||
-			errors.Is(err, mi.MI_RESULT_INVALID_NAMESPACE) {
+		if errors.Is(err, perfdata.ErrPerformanceCounterNotInitialized) || errors.Is(err, mi.MI_RESULT_INVALID_NAMESPACE) {
 			loggerFn = logger.Debug
 		}
 
