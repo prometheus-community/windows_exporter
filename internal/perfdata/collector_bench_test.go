@@ -61,4 +61,6 @@ func BenchmarkTestCollector(b *testing.B) {
 	}
 
 	performanceData.Close()
+
+	b.ReportAllocs()
 }

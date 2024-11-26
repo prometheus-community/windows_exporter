@@ -193,6 +193,13 @@ func (c *Collector) Collect() (CounterValues, error) {
 }
 
 func (c *Collector) collectRoutine() {
+	var (
+		itemCount   uint32
+		bytesNeeded uint32
+	)
+
+	buf := make([]byte, 1)
+
 	for range c.collectCh {
 		if ret := PdhCollectQueryData(c.handle); ret != ErrorSuccess {
 			c.counterValuesCh <- nil
@@ -207,25 +214,24 @@ func (c *Collector) collectRoutine() {
 			for _, counter := range c.counters {
 				for _, instance := range counter.Instances {
 					// Get the info with the current buffer size
-					var itemCount uint32
+					bytesNeeded = uint32(cap(buf))
 
-					// Get the info with the current buffer size
-					bufLen := uint32(0)
+					for {
+						ret := PdhGetRawCounterArray(instance, &bytesNeeded, &itemCount, &buf[0])
 
-					ret := PdhGetRawCounterArray(instance, &bufLen, &itemCount, nil)
-					if ret != PdhMoreData {
-						return nil, fmt.Errorf("PdhGetRawCounterArray: %w", NewPdhError(ret))
-					}
+						if ret == ErrorSuccess {
+							break
+						}
 
-					buf := make([]byte, bufLen)
-
-					ret = PdhGetRawCounterArray(instance, &bufLen, &itemCount, &buf[0])
-					if ret != ErrorSuccess {
-						if err := NewPdhError(ret); !isKnownCounterDataError(err) {
+						if err := NewPdhError(ret); ret != PdhMoreData && !isKnownCounterDataError(err) {
 							return nil, fmt.Errorf("PdhGetRawCounterArray: %w", err)
 						}
 
-						continue
+						if bytesNeeded <= uint32(cap(buf)) {
+							return nil, fmt.Errorf("PdhGetRawCounterArray reports buffer too small (%d), but buffer is large enough (%d): %w", uint32(cap(buf)), bytesNeeded, NewPdhError(ret))
+						}
+
+						buf = make([]byte, bytesNeeded)
 					}
 
 					items := unsafe.Slice((*PdhRawCounterItem)(unsafe.Pointer(&buf[0])), itemCount)
