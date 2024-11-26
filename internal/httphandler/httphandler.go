@@ -36,7 +36,7 @@ var _ http.Handler = (*MetricsHTTPHandler)(nil)
 const defaultScrapeTimeout = 10.0
 
 type MetricsHTTPHandler struct {
-	metricCollectors *collector.MetricCollectors
+	metricCollectors *collector.Collection
 	// exporterMetricsRegistry is a separate registry for the metrics about
 	// the exporter itself.
 	exporterMetricsRegistry *prometheus.Registry
@@ -51,7 +51,7 @@ type Options struct {
 	TimeoutMargin          float64
 }
 
-func New(logger *slog.Logger, metricCollectors *collector.MetricCollectors, options *Options) *MetricsHTTPHandler {
+func New(logger *slog.Logger, metricCollectors *collector.Collection, options *Options) *MetricsHTTPHandler {
 	if options == nil {
 		options = &Options{
 			DisableExporterMetrics: false,
@@ -126,28 +126,20 @@ func (c *MetricsHTTPHandler) getScrapeTimeout(logger *slog.Logger, r *http.Reque
 
 func (c *MetricsHTTPHandler) handlerFactory(logger *slog.Logger, scrapeTimeout time.Duration, requestedCollectors []string) (http.Handler, error) {
 	reg := prometheus.NewRegistry()
-
-	var metricCollectors *collector.MetricCollectors
-	if len(requestedCollectors) == 0 {
-		metricCollectors = c.metricCollectors
-	} else {
-		var err error
-
-		metricCollectors, err = c.metricCollectors.CloneWithCollectors(requestedCollectors)
-		if err != nil {
-			return nil, fmt.Errorf("couldn't clone metric collectors: %w", err)
-		}
-	}
-
 	reg.MustRegister(version.NewCollector("windows_exporter"))
 
-	if err := reg.Register(metricCollectors.NewPrometheusCollector(scrapeTimeout, c.logger)); err != nil {
+	collectionHandler, err := c.metricCollectors.NewHandler(scrapeTimeout, c.logger, requestedCollectors)
+	if err != nil {
+		return nil, fmt.Errorf("couldn't create collector handler: %w", err)
+	}
+
+	if err := reg.Register(collectionHandler); err != nil {
 		return nil, fmt.Errorf("couldn't register Prometheus collector: %w", err)
 	}
 
-	var handler http.Handler
+	var regHandler http.Handler
 	if c.exporterMetricsRegistry != nil {
-		handler = promhttp.HandlerFor(
+		regHandler = promhttp.HandlerFor(
 			prometheus.Gatherers{c.exporterMetricsRegistry, reg},
 			promhttp.HandlerOpts{
 				ErrorLog:            slog.NewLogLogger(logger.Handler(), slog.LevelError),
@@ -161,11 +153,11 @@ func (c *MetricsHTTPHandler) handlerFactory(logger *slog.Logger, scrapeTimeout t
 
 		// Note that we have to use h.exporterMetricsRegistry here to
 		// use the same promhttp metrics for all expositions.
-		handler = promhttp.InstrumentMetricHandler(
-			c.exporterMetricsRegistry, handler,
+		regHandler = promhttp.InstrumentMetricHandler(
+			c.exporterMetricsRegistry, regHandler,
 		)
 	} else {
-		handler = promhttp.HandlerFor(
+		regHandler = promhttp.HandlerFor(
 			reg,
 			promhttp.HandlerOpts{
 				ErrorLog:            slog.NewLogLogger(logger.Handler(), slog.LevelError),
@@ -177,21 +169,5 @@ func (c *MetricsHTTPHandler) handlerFactory(logger *slog.Logger, scrapeTimeout t
 		)
 	}
 
-	return c.withConcurrencyLimit(handler.ServeHTTP), nil
-}
-
-func (c *MetricsHTTPHandler) withConcurrencyLimit(next http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		select {
-		case c.concurrencyCh <- struct{}{}:
-			defer func() { <-c.concurrencyCh }()
-		default:
-			w.WriteHeader(http.StatusServiceUnavailable)
-			_, _ = w.Write([]byte("Too many concurrent requests"))
-
-			return
-		}
-
-		next(w, r)
-	}
+	return regHandler, nil
 }

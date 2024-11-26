@@ -26,10 +26,16 @@ import (
 
 const DefaultCollectors = "cpu,cs,memory,logical_disk,physical_disk,net,os,service,system"
 
-type MetricCollectors struct {
-	collectors Map
-	miSession  *mi.Session
-	startTime  time.Time
+type Collection struct {
+	collectors    Map
+	miSession     *mi.Session
+	startTime     time.Time
+	concurrencyCh chan struct{}
+
+	scrapeDurationDesc          *prometheus.Desc
+	collectorScrapeDurationDesc *prometheus.Desc
+	collectorScrapeSuccessDesc  *prometheus.Desc
+	collectorScrapeTimeoutDesc  *prometheus.Desc
 }
 
 type (
