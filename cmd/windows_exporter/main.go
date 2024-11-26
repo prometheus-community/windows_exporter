@@ -87,10 +87,6 @@ func run() int {
 			"web.disable-exporter-metrics",
 			"Exclude metrics about the exporter itself (promhttp_*, process_*, go_*).",
 		).Bool()
-		maxRequests = app.Flag(
-			"telemetry.max-requests",
-			"Maximum number of concurrent requests. 0 to disable.",
-		).Default("5").Int()
 		enabledCollectors = app.Flag(
 			"collectors.enabled",
 			"Comma-separated list of collectors to use. Use '[defaults]' as a placeholder for all the collectors enabled by default.").
@@ -220,7 +216,6 @@ func run() int {
 	mux.Handle("GET "+*metricsPath, httphandler.New(logger, collectors, &httphandler.Options{
 		DisableExporterMetrics: *disableExporterMetrics,
 		TimeoutMargin:          *timeoutMargin,
-		MaxRequests:            *maxRequests,
 	}))
 
 	if *debugEnabled {

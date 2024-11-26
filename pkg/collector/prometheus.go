@@ -27,7 +27,7 @@ import (
 
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	types "github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -103,15 +103,15 @@ func (p *Prometheus) Collect(ch chan<- prometheus.Metric) {
 
 	// WaitGroup to wait for all collectors to finish
 	wg := sync.WaitGroup{}
-	wg.Add(len(p.metricCollectors.Collectors))
+	wg.Add(len(p.metricCollectors.collectors))
 
 	// Using a channel to collect the status of each collector
 	// A channel is safe to use concurrently while a map is not
-	collectorStatusCh := make(chan collectorStatus, len(p.metricCollectors.Collectors))
+	collectorStatusCh := make(chan collectorStatus, len(p.metricCollectors.collectors))
 
 	// Execute all collectors concurrently
 	// timeout handling is done in the execute function
-	for name, metricsCollector := range p.metricCollectors.Collectors {
+	for name, metricsCollector := range p.metricCollectors.collectors {
 		go func(name string, metricsCollector Collector) {
 			defer wg.Done()
 

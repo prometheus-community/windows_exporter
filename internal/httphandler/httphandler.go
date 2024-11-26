@@ -49,7 +49,6 @@ type MetricsHTTPHandler struct {
 type Options struct {
 	DisableExporterMetrics bool
 	TimeoutMargin          float64
-	MaxRequests            int
 }
 
 func New(logger *slog.Logger, metricCollectors *collector.MetricCollectors, options *Options) *MetricsHTTPHandler {
@@ -57,7 +56,6 @@ func New(logger *slog.Logger, metricCollectors *collector.MetricCollectors, opti
 		options = &Options{
 			DisableExporterMetrics: false,
 			TimeoutMargin:          0.5,
-			MaxRequests:            5,
 		}
 	}
 
@@ -65,7 +63,9 @@ func New(logger *slog.Logger, metricCollectors *collector.MetricCollectors, opti
 		metricCollectors: metricCollectors,
 		logger:           logger,
 		options:          *options,
-		concurrencyCh:    make(chan struct{}, options.MaxRequests),
+
+		// We are expose metrics directly from the memory region of the Win32 API. We should not allow more than one request at a time.
+		concurrencyCh: make(chan struct{}, 1),
 	}
 
 	if !options.DisableExporterMetrics {
@@ -131,21 +131,11 @@ func (c *MetricsHTTPHandler) handlerFactory(logger *slog.Logger, scrapeTimeout t
 	if len(requestedCollectors) == 0 {
 		metricCollectors = c.metricCollectors
 	} else {
-		filteredCollectors := make(collector.Map)
+		var err error
 
-		for _, name := range requestedCollectors {
-			metricCollector, ok := c.metricCollectors.Collectors[name]
-			if !ok {
-				return nil, fmt.Errorf("couldn't find collector %s", name)
-			}
-
-			filteredCollectors[name] = metricCollector
-		}
-
-		metricCollectors = &collector.MetricCollectors{
-			Collectors:       filteredCollectors,
-			MISession:        c.metricCollectors.MISession,
-			PerfCounterQuery: c.metricCollectors.PerfCounterQuery,
+		metricCollectors, err = c.metricCollectors.CloneWithCollectors(requestedCollectors)
+		if err != nil {
+			return nil, fmt.Errorf("couldn't clone metric collectors: %w", err)
 		}
 	}
 
@@ -162,8 +152,10 @@ func (c *MetricsHTTPHandler) handlerFactory(logger *slog.Logger, scrapeTimeout t
 			promhttp.HandlerOpts{
 				ErrorLog:            slog.NewLogLogger(logger.Handler(), slog.LevelError),
 				ErrorHandling:       promhttp.ContinueOnError,
-				MaxRequestsInFlight: c.options.MaxRequests,
+				MaxRequestsInFlight: 1,
 				Registry:            c.exporterMetricsRegistry,
+				EnableOpenMetrics:   true,
+				ProcessStartTime:    c.metricCollectors.GetStartTime(),
 			},
 		)
 
@@ -178,7 +170,9 @@ func (c *MetricsHTTPHandler) handlerFactory(logger *slog.Logger, scrapeTimeout t
 			promhttp.HandlerOpts{
 				ErrorLog:            slog.NewLogLogger(logger.Handler(), slog.LevelError),
 				ErrorHandling:       promhttp.ContinueOnError,
-				MaxRequestsInFlight: c.options.MaxRequests,
+				MaxRequestsInFlight: 1,
+				EnableOpenMetrics:   true,
+				ProcessStartTime:    c.metricCollectors.GetStartTime(),
 			},
 		)
 	}
@@ -187,10 +181,6 @@ func (c *MetricsHTTPHandler) handlerFactory(logger *slog.Logger, scrapeTimeout t
 }
 
 func (c *MetricsHTTPHandler) withConcurrencyLimit(next http.HandlerFunc) http.HandlerFunc {
-	if c.options.MaxRequests <= 0 {
-		return next
-	}
-
 	return func(w http.ResponseWriter, r *http.Request) {
 		select {
 		case c.concurrencyCh <- struct{}{}:

@@ -17,6 +17,7 @@ package collector
 
 import (
 	"log/slog"
+	"time"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
@@ -26,9 +27,9 @@ import (
 const DefaultCollectors = "cpu,cs,memory,logical_disk,physical_disk,net,os,service,system"
 
 type MetricCollectors struct {
-	Collectors       Map
-	MISession        *mi.Session
-	PerfCounterQuery string
+	collectors Map
+	miSession  *mi.Session
+	startTime  time.Time
 }
 
 type (
