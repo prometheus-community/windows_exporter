@@ -49,7 +49,6 @@ type MetricsHTTPHandler struct {
 type Options struct {
 	DisableExporterMetrics bool
 	TimeoutMargin          float64
-	MaxRequests            int
 }
 
 func New(logger *slog.Logger, metricCollectors *collector.MetricCollectors, options *Options) *MetricsHTTPHandler {
@@ -57,8 +56,6 @@ func New(logger *slog.Logger, metricCollectors *collector.MetricCollectors, opti
 		options = &Options{
 			DisableExporterMetrics: false,
 			TimeoutMargin:          0.5,
-			// We are expose metrics directly from the memory region of the Win32 API. We should not allow more than one request at a time.
-			MaxRequests: 1,
 		}
 	}
 
@@ -66,7 +63,9 @@ func New(logger *slog.Logger, metricCollectors *collector.MetricCollectors, opti
 		metricCollectors: metricCollectors,
 		logger:           logger,
 		options:          *options,
-		concurrencyCh:    make(chan struct{}, options.MaxRequests),
+
+		// We are expose metrics directly from the memory region of the Win32 API. We should not allow more than one request at a time.
+		concurrencyCh: make(chan struct{}, 1),
 	}
 
 	if !options.DisableExporterMetrics {

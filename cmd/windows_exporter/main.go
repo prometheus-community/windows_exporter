@@ -216,7 +216,6 @@ func run() int {
 	mux.Handle("GET "+*metricsPath, httphandler.New(logger, collectors, &httphandler.Options{
 		DisableExporterMetrics: *disableExporterMetrics,
 		TimeoutMargin:          *timeoutMargin,
-		MaxRequests:            *maxRequests,
 	}))
 
 	if *debugEnabled {
