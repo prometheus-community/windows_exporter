@@ -19,8 +19,10 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"slices"
 	"sync"
+	gotime "time"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/collector/ad"
@@ -72,10 +74,12 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/update"
 	"github.com/prometheus-community/windows_exporter/internal/collector/vmware"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
+	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 // NewWithFlags To be called by the exporter for collector initialization before running kingpin.Parse.
-func NewWithFlags(app *kingpin.Application) *MetricCollectors {
+func NewWithFlags(app *kingpin.Application) *Collection {
 	collectors := map[string]Collector{}
 
 	for name, builder := range BuildersWithFlags {
@@ -88,7 +92,7 @@ func NewWithFlags(app *kingpin.Application) *MetricCollectors {
 // NewWithConfig To be called by the external libraries for collector initialization without running [kingpin.Parse].
 //
 //goland:noinspection GoUnusedExportedFunction
-func NewWithConfig(config Config) *MetricCollectors {
+func NewWithConfig(config Config) *Collection {
 	collectors := Map{}
 	collectors[ad.Name] = ad.New(&config.AD)
 	collectors[adcs.Name] = adcs.New(&config.ADCS)
@@ -143,23 +147,48 @@ func NewWithConfig(config Config) *MetricCollectors {
 }
 
 // New To be called by the external libraries for collector initialization.
-func New(collectors Map) *MetricCollectors {
-	return &MetricCollectors{
-		Collectors: collectors,
+func New(collectors Map) *Collection {
+	return &Collection{
+		collectors:    collectors,
+		concurrencyCh: make(chan struct{}, 1),
+		scrapeDurationDesc: prometheus.NewDesc(
+			prometheus.BuildFQName(types.Namespace, "exporter", "scrape_duration_seconds"),
+			"windows_exporter: Total scrape duration.",
+			nil,
+			nil,
+		),
+		collectorScrapeDurationDesc: prometheus.NewDesc(
+			prometheus.BuildFQName(types.Namespace, "exporter", "collector_duration_seconds"),
+			"windows_exporter: Duration of a collection.",
+			[]string{"collector"},
+			nil,
+		),
+		collectorScrapeSuccessDesc: prometheus.NewDesc(
+			prometheus.BuildFQName(types.Namespace, "exporter", "collector_success"),
+			"windows_exporter: Whether the collector was successful.",
+			[]string{"collector"},
+			nil,
+		),
+		collectorScrapeTimeoutDesc: prometheus.NewDesc(
+			prometheus.BuildFQName(types.Namespace, "exporter", "collector_timeout"),
+			"windows_exporter: Whether the collector timed out.",
+			[]string{"collector"},
+			nil,
+		),
 	}
 }
 
 // Enable removes all collectors that not enabledCollectors.
-func (c *MetricCollectors) Enable(enabledCollectors []string) error {
+func (c *Collection) Enable(enabledCollectors []string) error {
 	for _, name := range enabledCollectors {
-		if _, ok := c.Collectors[name]; !ok {
+		if _, ok := c.collectors[name]; !ok {
 			return fmt.Errorf("unknown collector %s", name)
 		}
 	}
 
-	for name := range c.Collectors {
+	for name := range c.collectors {
 		if !slices.Contains(enabledCollectors, name) {
-			delete(c.Collectors, name)
+			delete(c.collectors, name)
 		}
 	}
 
@@ -167,23 +196,25 @@ func (c *MetricCollectors) Enable(enabledCollectors []string) error {
 }
 
 // Build To be called by the exporter for collector initialization.
-func (c *MetricCollectors) Build(logger *slog.Logger) error {
+func (c *Collection) Build(logger *slog.Logger) error {
+	c.startTime = gotime.Now()
+
 	err := c.initMI()
 	if err != nil {
 		return fmt.Errorf("error from initialize MI: %w", err)
 	}
 
 	wg := sync.WaitGroup{}
-	wg.Add(len(c.Collectors))
+	wg.Add(len(c.collectors))
 
-	errCh := make(chan error, len(c.Collectors))
-	errs := make([]error, 0, len(c.Collectors))
+	errCh := make(chan error, len(c.collectors))
+	errs := make([]error, 0, len(c.collectors))
 
-	for _, collector := range c.Collectors {
+	for _, collector := range c.collectors {
 		go func() {
 			defer wg.Done()
 
-			if err = collector.Build(logger, c.MISession); err != nil {
+			if err = collector.Build(logger, c.miSession); err != nil {
 				errCh <- fmt.Errorf("error build collector %s: %w", collector.GetName(), err)
 			}
 		}()
@@ -201,21 +232,21 @@ func (c *MetricCollectors) Build(logger *slog.Logger) error {
 }
 
 // Close To be called by the exporter for collector cleanup.
-func (c *MetricCollectors) Close() error {
-	errs := make([]error, 0, len(c.Collectors))
+func (c *Collection) Close() error {
+	errs := make([]error, 0, len(c.collectors))
 
-	for _, collector := range c.Collectors {
+	for _, collector := range c.collectors {
 		if err := collector.Close(); err != nil {
 			errs = append(errs, fmt.Errorf("error from close collector %s: %w", collector.GetName(), err))
 		}
 	}
 
-	app, err := c.MISession.GetApplication()
+	app, err := c.miSession.GetApplication()
 	if err != nil && !errors.Is(err, mi.ErrNotInitialized) {
 		errs = append(errs, fmt.Errorf("error from get MI application: %w", err))
 	}
 
-	if err := c.MISession.Close(); err != nil && !errors.Is(err, mi.ErrNotInitialized) {
+	if err := c.miSession.Close(); err != nil && !errors.Is(err, mi.ErrNotInitialized) {
 		errs = append(errs, fmt.Errorf("error from close MI session: %w", err))
 	}
 
@@ -226,8 +257,8 @@ func (c *MetricCollectors) Close() error {
 	return errors.Join(errs...)
 }
 
-// Close To be called by the exporter for collector cleanup.
-func (c *MetricCollectors) initMI() error {
+// initMI To be called by the exporter for collector initialization.
+func (c *Collection) initMI() error {
 	app, err := mi.Application_Initialize()
 	if err != nil {
 		return fmt.Errorf("error from initialize MI application: %w", err)
@@ -242,10 +273,34 @@ func (c *MetricCollectors) initMI() error {
 		return fmt.Errorf("error from set locale: %w", err)
 	}
 
-	c.MISession, err = app.NewSession(destinationOptions)
+	c.miSession, err = app.NewSession(destinationOptions)
 	if err != nil {
 		return fmt.Errorf("error from create NewSession: %w", err)
 	}
 
 	return nil
+}
+
+// WithCollectors To be called by the exporter for collector initialization.
+func (c *Collection) WithCollectors(collectors []string) (*Collection, error) {
+	metricCollectors := &Collection{
+		miSession:                   c.miSession,
+		startTime:                   c.startTime,
+		concurrencyCh:               c.concurrencyCh,
+		scrapeDurationDesc:          c.scrapeDurationDesc,
+		collectorScrapeDurationDesc: c.collectorScrapeDurationDesc,
+		collectorScrapeSuccessDesc:  c.collectorScrapeSuccessDesc,
+		collectorScrapeTimeoutDesc:  c.collectorScrapeTimeoutDesc,
+		collectors:                  maps.Clone(c.collectors),
+	}
+
+	if err := metricCollectors.Enable(collectors); err != nil {
+		return nil, err
+	}
+
+	return metricCollectors, nil
+}
+
+func (c *Collection) GetStartTime() gotime.Time {
+	return c.startTime
 }
