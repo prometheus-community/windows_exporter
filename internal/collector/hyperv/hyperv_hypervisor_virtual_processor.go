@@ -28,7 +28,6 @@ import (
 type collectorHypervisorVirtualProcessor struct {
 	perfDataCollectorHypervisorVirtualProcessor *perfdata.Collector
 
-	// \Hyper-V Hypervisor Virtual Processor(*)\% Guest Idle Time
 	// \Hyper-V Hypervisor Virtual Processor(*)\% Guest Run Time
 	// \Hyper-V Hypervisor Virtual Processor(*)\% Hypervisor Run Time
 	// \Hyper-V Hypervisor Virtual Processor(*)\% Remote Run Time
@@ -38,7 +37,6 @@ type collectorHypervisorVirtualProcessor struct {
 }
 
 const (
-	hypervisorVirtualProcessorGuestRunTimePercent      = "% Guest Run Time"
 	hypervisorVirtualProcessorGuestIdleTimePercent     = "% Guest Idle Time"
 	hypervisorVirtualProcessorHypervisorRunTimePercent = "% Hypervisor Run Time"
 	hypervisorVirtualProcessorTotalRunTimePercent      = "% Total Run Time"
@@ -50,7 +48,6 @@ func (c *Collector) buildHypervisorVirtualProcessor() error {
 	var err error
 
 	c.perfDataCollectorHypervisorVirtualProcessor, err = perfdata.NewCollector("Hyper-V Hypervisor Virtual Processor", perfdata.InstancesAll, []string{
-		hypervisorVirtualProcessorGuestRunTimePercent,
 		hypervisorVirtualProcessorGuestIdleTimePercent,
 		hypervisorVirtualProcessorHypervisorRunTimePercent,
 		hypervisorVirtualProcessorTotalRunTimePercent,
@@ -103,13 +100,6 @@ func (c *Collector) collectHypervisorVirtualProcessor(ch chan<- prometheus.Metri
 
 		vmName := parts[0]
 		coreId := coreParts[2]
-
-		ch <- prometheus.MustNewConstMetric(
-			c.hypervisorVirtualProcessorTimeTotal,
-			prometheus.CounterValue,
-			coreData[hypervisorVirtualProcessorGuestRunTimePercent].FirstValue,
-			vmName, coreId, "guest_run",
-		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.hypervisorVirtualProcessorTimeTotal,
