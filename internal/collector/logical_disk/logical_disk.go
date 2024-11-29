@@ -17,6 +17,7 @@ package logical_disk
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"log/slog"
 	"regexp"
@@ -312,12 +313,17 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		return fmt.Errorf("failed to collect LogicalDisk metrics: %w", err)
 	}
 
+	volumes, err := getAllMountedVolumes()
+	if err != nil {
+		return fmt.Errorf("failed to get volumes: %w", err)
+	}
+
 	for name, volume := range perfData {
 		if c.config.VolumeExclude.MatchString(name) || !c.config.VolumeInclude.MatchString(name) {
 			continue
 		}
 
-		info, err = getVolumeInfo(name)
+		info, err = getVolumeInfo(volumes, name)
 		if err != nil {
 			c.logger.Warn("failed to get volume information for "+name,
 				slog.Any("err", err),
@@ -477,34 +483,15 @@ func getDriveType(driveType uint32) string {
 const diskExtentSize = 24
 
 // getDiskIDByVolume returns the disk ID for a given volume.
-func getVolumeInfo(rootDrive string) (volumeInfo, error) {
+func getVolumeInfo(volumes map[string]string, rootDrive string) (volumeInfo, error) {
 	volumePath := rootDrive
 
 	// If rootDrive is a NTFS directory, convert it to a volume GUID.
-	if strings.Contains(volumePath, `\`) {
-		// GetVolumeNameForVolumeMountPoint expects a trailing backslash.
-		volumePath += `\`
-
-		volumePathName, err := windows.UTF16PtrFromString(volumePath)
-		if err != nil {
-			return volumeInfo{}, fmt.Errorf("could not convert rootDrive to volume path %s: %w", volumePath, err)
-		}
-
-		volumeGUIDPtr := make([]uint16, 50)
-		if err := windows.GetVolumeNameForVolumeMountPoint(volumePathName, &volumeGUIDPtr[0], uint32(len(volumeGUIDPtr))); err != nil {
-			return volumeInfo{}, fmt.Errorf("could not get volume GUID for volume %s: %w", volumePath, err)
-		}
-
-		volumePath = windows.UTF16ToString(volumeGUIDPtr)
-
+	if volumeGUID, ok := volumes[rootDrive]; ok {
 		// GetVolumeNameForVolumeMountPoint returns the volume GUID path as \\?\Volume{GUID}\
 		// According https://learn.microsoft.com/en-us/windows/win32/api/ioapiset/nf-ioapiset-deviceiocontrol#remarks
 		// Win32 Drive Namespace is prefixed with \\.\, so we need to remove the \\?\ prefix.
-		volumePath, _ = strings.CutPrefix(volumePath, `\\?\`)
-
-		// https://stackoverflow.com/questions/55710326/how-to-get-the-physical-device-that-a-volume-guid-path-belongs-to#comment98104360_55710326
-		// DeviceIoControl expects no trailing backslash in the volume GUID path.
-		volumePath = strings.TrimRight(volumePath, `\`)
+		volumePath, _ = strings.CutPrefix(volumeGUID, `\\?\`)
 	}
 
 	volumePathPtr := windows.StringToUTF16Ptr(`\\.\` + volumePath)
@@ -580,4 +567,60 @@ func getVolumeInfo(rootDrive string) (volumeInfo, error) {
 		serialNumber: fmt.Sprintf("%X", volSerialNum),
 		readonly:     float64(fsFlags & windows.FILE_READ_ONLY_VOLUME),
 	}, nil
+}
+
+func getAllMountedVolumes() (map[string]string, error) {
+	guidBuf := make([]uint16, windows.MAX_PATH+1)
+	guidBufLen := uint32(len(guidBuf) * 2)
+
+	hFindVolume, err := windows.FindFirstVolume(&guidBuf[0], guidBufLen)
+	if err != nil {
+		return nil, fmt.Errorf("FindFirstVolume: %w", err)
+	}
+
+	defer func() {
+		_ = windows.FindVolumeClose(hFindVolume)
+	}()
+
+	volumes := map[string]string{}
+
+	for ; ; err = windows.FindNextVolume(hFindVolume, &guidBuf[0], guidBufLen) {
+		if err != nil {
+			switch {
+			case errors.Is(err, windows.ERROR_NO_MORE_FILES):
+				return volumes, nil
+			default:
+				return nil, fmt.Errorf("FindNextVolume: %w", err)
+			}
+		}
+
+		var rootPathLen uint32
+
+		rootPathBuf := make([]uint16, windows.MAX_PATH+1)
+		rootPathBufLen := uint32(len(rootPathBuf) * 2)
+
+		for {
+			err = windows.GetVolumePathNamesForVolumeName(&guidBuf[0], &rootPathBuf[0], rootPathBufLen, &rootPathLen)
+			if err == nil {
+				break
+			}
+
+			if errors.Is(err, windows.ERROR_NO_MORE_FILES) {
+				rootPathBuf = make([]uint16, (rootPathLen+1)/2)
+
+				continue
+			}
+
+			return nil, fmt.Errorf("GetVolumePathNamesForVolumeName: %w", err)
+		}
+
+		mountPoint := windows.UTF16ToString(rootPathBuf)
+
+		// Skip unmounted volumes
+		if len(mountPoint) == 0 {
+			continue
+		}
+
+		volumes[strings.TrimSuffix(mountPoint, `\`)] = strings.TrimSuffix(windows.UTF16ToString(guidBuf), `\`)
+	}
 }
