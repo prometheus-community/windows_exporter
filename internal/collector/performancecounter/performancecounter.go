@@ -108,8 +108,9 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		counters := make([]string, 0, len(object.Counters))
 		for j, counter := range object.Counters {
 			counters = append(counters, counter.Name)
+
 			if counter.Metric == "" {
-				c.config.Objects[i].Counters[j].Metric = sanitizeMetricName(fmt.Sprintf("%s_perfdata_%s_%s", types.Namespace, object.Object, counter.Name))
+				c.config.Objects[i].Counters[j].Metric = sanitizeMetricName(fmt.Sprintf("%s_%s_%s_%s", types.Namespace, Name, object.Object, counter.Name))
 			}
 		}
 
@@ -142,6 +143,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 				collectedCounterValue, ok := collectedInstanceCounters[counter.Name]
 				if !ok {
 					c.logger.Warn(fmt.Sprintf("counter %s not found in collected data", counter.Name))
+
 					continue
 				}
 

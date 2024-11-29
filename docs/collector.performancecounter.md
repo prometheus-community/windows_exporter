@@ -30,11 +30,11 @@ YAML:
   instance_label: "core"
   counters:
     - name: "% Processor Time"
-      metric: windows_perfdata_processor_information_processor_time # optional
+      metric: windows_performancecounter_processor_information_processor_time # optional
       labels:
         state: active
     - name: "% Idle Time"
-      metric: windows_perfdata_processor_information_processor_time # optional
+      metric: windows_performancecounter_processor_information_processor_time # optional
       labels:
         state: idle
 - object: "Memory"
@@ -59,14 +59,14 @@ YAML:
     "counters": [
       {
         "name": "% Processor Time",
-        "metric": "windows_perfdata_processor_information_processor_time",
+        "metric": "windows_performancecounter_processor_information_processor_time",
         "labels": {
           "state": "active"
         }
       },
       {
         "name": "% Idle Time",
-        "metric": "windows_perfdata_processor_information_processor_time",
+        "metric": "windows_performancecounter_processor_information_processor_time",
         "labels": {
           "state": "idle"
         }
@@ -131,36 +131,59 @@ Labels is a map of key-value pairs that will be added as labels to the metric.
 ### Example
 
 ```
-# HELP windows_perfdata_memory_cache_faults_sec
-# TYPE windows_perfdata_memory_cache_faults_sec counter
-windows_perfdata_memory_cache_faults_sec 2.369977e+07
-# HELP windows_perfdata_processor_information__processor_time
-# TYPE windows_perfdata_processor_information__processor_time gauge
-windows_perfdata_processor_information__processor_time{instance="0,0"} 1.7259640625e+11
-windows_perfdata_processor_information__processor_time{instance="0,1"} 1.7576796875e+11
-windows_perfdata_processor_information__processor_time{instance="0,10"} 2.2704234375e+11
-windows_perfdata_processor_information__processor_time{instance="0,11"} 2.3069296875e+11
-windows_perfdata_processor_information__processor_time{instance="0,12"} 2.3302265625e+11
-windows_perfdata_processor_information__processor_time{instance="0,13"} 2.32851875e+11
-windows_perfdata_processor_information__processor_time{instance="0,14"} 2.3282421875e+11
-windows_perfdata_processor_information__processor_time{instance="0,15"} 2.3271234375e+11
-windows_perfdata_processor_information__processor_time{instance="0,16"} 2.329590625e+11
-windows_perfdata_processor_information__processor_time{instance="0,17"} 2.32800625e+11
-windows_perfdata_processor_information__processor_time{instance="0,18"} 2.3194359375e+11
-windows_perfdata_processor_information__processor_time{instance="0,19"} 2.32380625e+11
-windows_perfdata_processor_information__processor_time{instance="0,2"} 1.954765625e+11
-windows_perfdata_processor_information__processor_time{instance="0,20"} 2.3259765625e+11
-windows_perfdata_processor_information__processor_time{instance="0,21"} 2.3268515625e+11
-windows_perfdata_processor_information__processor_time{instance="0,22"} 2.3301765625e+11
-windows_perfdata_processor_information__processor_time{instance="0,23"} 2.3264328125e+11
-windows_perfdata_processor_information__processor_time{instance="0,3"} 1.94745625e+11
-windows_perfdata_processor_information__processor_time{instance="0,4"} 2.2011453125e+11
-windows_perfdata_processor_information__processor_time{instance="0,5"} 2.27244375e+11
-windows_perfdata_processor_information__processor_time{instance="0,6"} 2.25501875e+11
-windows_perfdata_processor_information__processor_time{instance="0,7"} 2.2995265625e+11
-windows_perfdata_processor_information__processor_time{instance="0,8"} 2.2929890625e+11
-windows_perfdata_processor_information__processor_time{instance="0,9"} 2.313540625e+11
-windows_perfdata_processor_information__processor_time{instance="0,_Total"} 2.23009459635e+11
+# HELP windows_performancecounter_memory_cache_faults_sec
+# TYPE windows_performancecounter_memory_cache_faults_sec counter
+windows_performancecounter_memory_cache_faults_sec 7.028097e+06
+# HELP windows_performancecounter_processor_information_processor_time
+# TYPE windows_performancecounter_processor_information_processor_time counter
+windows_performancecounter_processor_information_processor_time{core="0,0",state="active"} 8.3809375e+10
+windows_performancecounter_processor_information_processor_time{core="0,0",state="idle"} 8380.9375
+windows_performancecounter_processor_information_processor_time{core="0,1",state="active"} 8.2868125e+10
+windows_performancecounter_processor_information_processor_time{core="0,1",state="idle"} 8286.8125
+windows_performancecounter_processor_information_processor_time{core="0,10",state="active"} 9.720046875e+10
+windows_performancecounter_processor_information_processor_time{core="0,10",state="idle"} 9720.046875
+windows_performancecounter_processor_information_processor_time{core="0,11",state="active"} 9.994921875e+10
+windows_performancecounter_processor_information_processor_time{core="0,11",state="idle"} 9994.921875
+windows_performancecounter_processor_information_processor_time{core="0,12",state="active"} 1.014403125e+11
+windows_performancecounter_processor_information_processor_time{core="0,12",state="idle"} 10144.03125
+windows_performancecounter_processor_information_processor_time{core="0,13",state="active"} 1.0155453125e+11
+windows_performancecounter_processor_information_processor_time{core="0,13",state="idle"} 10155.453125
+windows_performancecounter_processor_information_processor_time{core="0,14",state="active"} 1.01290625e+11
+windows_performancecounter_processor_information_processor_time{core="0,14",state="idle"} 10129.0625
+windows_performancecounter_processor_information_processor_time{core="0,15",state="active"} 1.0134890625e+11
+windows_performancecounter_processor_information_processor_time{core="0,15",state="idle"} 10134.890625
+windows_performancecounter_processor_information_processor_time{core="0,16",state="active"} 1.01405625e+11
+windows_performancecounter_processor_information_processor_time{core="0,16",state="idle"} 10140.5625
+windows_performancecounter_processor_information_processor_time{core="0,17",state="active"} 1.0153421875e+11
+windows_performancecounter_processor_information_processor_time{core="0,17",state="idle"} 10153.421875
+windows_performancecounter_processor_information_processor_time{core="0,18",state="active"} 1.0086390625e+11
+windows_performancecounter_processor_information_processor_time{core="0,18",state="idle"} 10086.390625
+windows_performancecounter_processor_information_processor_time{core="0,19",state="active"} 1.0123453125e+11
+windows_performancecounter_processor_information_processor_time{core="0,19",state="idle"} 10123.453125
+windows_performancecounter_processor_information_processor_time{core="0,2",state="active"} 8.3548125e+10
+windows_performancecounter_processor_information_processor_time{core="0,2",state="idle"} 8354.8125
+windows_performancecounter_processor_information_processor_time{core="0,20",state="active"} 1.011703125e+11
+windows_performancecounter_processor_information_processor_time{core="0,20",state="idle"} 10117.03125
+windows_performancecounter_processor_information_processor_time{core="0,21",state="active"} 1.0140984375e+11
+windows_performancecounter_processor_information_processor_time{core="0,21",state="idle"} 10140.984375
+windows_performancecounter_processor_information_processor_time{core="0,22",state="active"} 1.014615625e+11
+windows_performancecounter_processor_information_processor_time{core="0,22",state="idle"} 10146.15625
+windows_performancecounter_processor_information_processor_time{core="0,23",state="active"} 1.0145125e+11
+windows_performancecounter_processor_information_processor_time{core="0,23",state="idle"} 10145.125
+windows_performancecounter_processor_information_processor_time{core="0,3",state="active"} 8.488953125e+10
+windows_performancecounter_processor_information_processor_time{core="0,3",state="idle"} 8488.953125
+windows_performancecounter_processor_information_processor_time{core="0,4",state="active"} 9.338234375e+10
+windows_performancecounter_processor_information_processor_time{core="0,4",state="idle"} 9338.234375
+windows_performancecounter_processor_information_processor_time{core="0,5",state="active"} 9.776453125e+10
+windows_performancecounter_processor_information_processor_time{core="0,5",state="idle"} 9776.453125
+windows_performancecounter_processor_information_processor_time{core="0,6",state="active"} 9.736265625e+10
+windows_performancecounter_processor_information_processor_time{core="0,6",state="idle"} 9736.265625
+windows_performancecounter_processor_information_processor_time{core="0,7",state="active"} 9.959375e+10
+windows_performancecounter_processor_information_processor_time{core="0,7",state="idle"} 9959.375
+windows_performancecounter_processor_information_processor_time{core="0,8",state="active"} 9.939421875e+10
+windows_performancecounter_processor_information_processor_time{core="0,8",state="idle"} 9939.421875
+windows_performancecounter_processor_information_processor_time{core="0,9",state="active"} 1.0059484375e+11
+windows_performancecounter_processor_information_processor_time{core="0,9",state="idle"} 10059.484375
 ```
 
 ## Metrics

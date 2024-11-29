@@ -59,20 +59,20 @@ func TestCollector(t *testing.T) {
 			object:          "Memory",
 			instances:       nil,
 			counters:        []performancecounter.Counter{{Name: "Available Bytes", Type: "gauge"}},
-			expectedMetrics: regexp.MustCompile(`^# HELP windows_perfdata_memory_available_bytes \S*\s*# TYPE windows_perfdata_memory_available_bytes gauge\s*windows_perfdata_memory_available_bytes \d`),
+			expectedMetrics: regexp.MustCompile(`^# HELP windows_performancecounter_memory_available_bytes \S*\s*# TYPE windows_performancecounter_memory_available_bytes gauge\s*windows_performancecounter_memory_available_bytes \d`),
 		},
 		{
 			object:          "Process",
 			instances:       []string{"*"},
 			counters:        []performancecounter.Counter{{Name: "Thread Count", Type: "counter"}},
-			expectedMetrics: regexp.MustCompile(`^# HELP windows_perfdata_process_thread_count \S*\s*# TYPE windows_perfdata_process_thread_count counter\s*windows_perfdata_process_thread_count\{instance=".+"} \d`),
+			expectedMetrics: regexp.MustCompile(`^# HELP windows_performancecounter_process_thread_count \S*\s*# TYPE windows_performancecounter_process_thread_count counter\s*windows_performancecounter_process_thread_count\{instance=".+"} \d`),
 		},
 		{
 			object:          "Processor Information",
 			instances:       []string{"*"},
 			instanceLabel:   "core",
-			counters:        []performancecounter.Counter{{Name: "% Processor Time", Metric: "windows_perfdata_processor_information_processor_time", Labels: map[string]string{"state": "active"}}, {Name: "% Idle Time", Metric: "windows_perfdata_processor_information_processor_time", Labels: map[string]string{"state": "idle"}}},
-			expectedMetrics: regexp.MustCompile(`^# HELP windows_perfdata_processor_information_processor_time\s+# TYPE windows_perfdata_processor_information_processor_time counter\s+windows_perfdata_processor_information_processor_time\{core="0,0",state="active"} [0-9.e+]+\s+windows_perfdata_processor_information_processor_time\{core="0,0",state="idle"} [0-9.e+]+`),
+			counters:        []performancecounter.Counter{{Name: "% Processor Time", Metric: "windows_performancecounter_processor_information_processor_time", Labels: map[string]string{"state": "active"}}, {Name: "% Idle Time", Metric: "windows_performancecounter_processor_information_processor_time", Labels: map[string]string{"state": "idle"}}},
+			expectedMetrics: regexp.MustCompile(`^# HELP windows_performancecounter_processor_information_processor_time\s+# TYPE windows_performancecounter_processor_information_processor_time counter\s+windows_performancecounter_processor_information_processor_time\{core="0,0",state="active"} [0-9.e+]+\s+windows_performancecounter_processor_information_processor_time\{core="0,0",state="idle"} [0-9.e+]+`),
 		},
 	} {
 		t.Run(tc.object, func(t *testing.T) {

@@ -27,8 +27,8 @@ type Object struct {
 }
 
 type Counter struct {
-	Name   string            `json:"name" yaml:"name"`
-	Type   string            `json:"type" yaml:"type"`
+	Name   string            `json:"name"   yaml:"name"`
+	Type   string            `json:"type"   yaml:"type"`
 	Metric string            `json:"metric" yaml:"metric"`
 	Labels map[string]string `json:"labels" yaml:"labels"`
 }

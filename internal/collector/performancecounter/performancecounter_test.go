@@ -24,7 +24,7 @@ import (
 )
 
 func BenchmarkCollector(b *testing.B) {
-	perfDataObjects := `[{"object":"Processor Information","instances":["*"],"instance_label":"core","counters":[{"name":"% Processor Time","metric":"windows_perfdata_processor_information_processor_time","labels":{"state":"active"}},{"name":"% Idle Time","metric":"windows_perfdata_processor_information_processor_time","labels":{"state":"idle"}}]},{"object":"Memory","counters":[{"name":"Cache Faults/sec","type":"counter"}]}]`
+	perfDataObjects := `[{"object":"Processor Information","instances":["*"],"instance_label":"core","counters":[{"name":"% Processor Time","metric":"windows_performancecounter_processor_information_processor_time","labels":{"state":"active"}},{"name":"% Idle Time","metric":"windows_performancecounter_processor_information_processor_time","labels":{"state":"idle"}}]},{"object":"Memory","counters":[{"name":"Cache Faults/sec","type":"counter"}]}]`
 	kingpin.CommandLine.GetArg("collector.perfdata.objects").StringVar(&perfDataObjects)
 
 	testutils.FuncBenchmarkCollector(b, performancecounter.Name, performancecounter.NewWithFlags)
