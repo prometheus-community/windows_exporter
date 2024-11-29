@@ -13,19 +13,24 @@
 
 //go:build windows
 
-package perfdata
+package performancecounter
 
 import "github.com/prometheus-community/windows_exporter/internal/perfdata"
 
 type Object struct {
-	Object        string             `json:"object"         yaml:"object"`
-	Instances     []string           `json:"instances"      yaml:"instances"`
-	Counters      map[string]Counter `json:"counters"       yaml:"counters"`
-	InstanceLabel string             `json:"instance_label" yaml:"instance_label"` //nolint:tagliatelle
+	Object        string    `json:"object"         yaml:"object"`
+	Instances     []string  `json:"instances"      yaml:"instances"`
+	Counters      []Counter `json:"counters"       yaml:"counters"`
+	InstanceLabel string    `json:"instance_label" yaml:"instance_label"` //nolint:tagliatelle
 
 	collector *perfdata.Collector
 }
 
 type Counter struct {
-	Type string `json:"type" yaml:"type"`
+	Name   string            `json:"name" yaml:"name"`
+	Type   string            `json:"type" yaml:"type"`
+	Metric string            `json:"metric" yaml:"metric"`
+	Labels map[string]string `json:"labels" yaml:"labels"`
 }
+
+// https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/54691ebe11bb9ec32b4e35cd31fcb94a352de134/receiver/windowsperfcountersreceiver/README.md?plain=1#L150

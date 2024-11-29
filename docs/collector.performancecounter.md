@@ -1,17 +1,17 @@
-# Perfdata collector
+# performancecounter collector
 
-The perfdata collector exposes any configured metric.
+The performancecounter collector exposes any configured metric.
 
 |                     |                         |
 |---------------------|-------------------------|
-| Metric name prefix  | `perfdata`              |
+| Metric name prefix  | `performancecounter`              |
 | Data source         | Performance Data Helper |
 | Enabled by default? | No                      |
 
 ## Flags
 
 
-### `--collector.perfdata.objects`
+### `--collector.performancecounter.objects`
 
 Objects is a list of objects to collect metrics from. The value takes the form of a JSON array of strings. YAML is also supported.
 
@@ -19,25 +19,69 @@ The collector supports only english named counter. Localized counter-names are n
 
 #### Schema
 
-YAML: 
+YAML:
+
+<details>
+<summary>Click to expand YAML schema</summary>
+
 ```yaml
 - object: "Processor Information"
   instances: ["*"]
   instance_label: "core"
   counters:
-    "% Processor Time": {}
+    - name: "% Processor Time"
+      metric: windows_perfdata_processor_information_processor_time # optional
+      labels:
+        state: active
+    - name: "% Idle Time"
+      metric: windows_perfdata_processor_information_processor_time # optional
+      labels:
+        state: idle
 - object: "Memory"
   counters:
-    "Cache Faults/sec":
-      type: "counter"
+    - name: "Cache Faults/sec"
+      type: "counter" # optional
 ```
 
-JSON:
+</details>
+
+<details>
+<summary>Click to expand JSON schema</summary>
 
 ```json
 [
-  {"object":"Processor Information","instance_label": "core","instances":["*"],"counters": {"% Processor Time": {}}},
-  {"object":"Memory","counters": {"Cache Faults/sec": {"type": "counter"}}}
+  {
+    "object": "Processor Information",
+    "instances": [
+      "*"
+    ],
+    "instance_label": "core",
+    "counters": [
+      {
+        "name": "% Processor Time",
+        "metric": "windows_perfdata_processor_information_processor_time",
+        "labels": {
+          "state": "active"
+        }
+      },
+      {
+        "name": "% Idle Time",
+        "metric": "windows_perfdata_processor_information_processor_time",
+        "labels": {
+          "state": "idle"
+        }
+      }
+    ]
+  },
+  {
+    "object": "Memory",
+    "counters": [
+      {
+        "name": "Cache Faults/sec",
+        "type": "counter"
+      }
+    ]
+  }
 ]
 ```
 
@@ -53,32 +97,44 @@ The instances key (this is an array) declares the instances of a counter you wou
 
 Example: Instances = `["C:","D:","E:"]`
 
-This will return only for the instances C:, D: and E: where relevant. To get all instances of a Counter, use `["*"]` only. 
+This will return only for the instances C:, D: and E: where relevant. To get all instances of a Counter, use `["*"]` only.
 
 Some Objects like `Memory` do not have instances to select from at all. In this case, the `instances` key can be omitted.
 
 #### counters
 
-The Counters key (this is an object) declares the counters of the ObjectName you would like returned, it can also be one or more values.
-
-Example: Counters = `{"% Idle Time": {}, "% Disk Read Time": {}, "% Disk Write Time": {}}`
-
-This must be specified for every counter you want the results. Wildcards are not supported.
+List of counters to collect from the object. See the counters sub-schema for more information.
 
 #### counters Sub-Schema
 
+##### name
+
+The name of the counter to collect.
+
+##### metric
+
+It indicates the name of the metric to be exposed. If not specified, the metric name will be generated based on the object name and the counter name.
+
+This key is optional.
+
 ##### type
 
-This key is optional. It indicates the type of the counter. The value can be `counter` or `gauge`. 
+It indicates the type of the counter. The value can be `counter` or `gauge`.
 If not specified, the windows_exporter will try to determine the type based on the counter type.
+
+This key is optional.
+
+##### labels
+
+Labels is a map of key-value pairs that will be added as labels to the metric.
 
 ### Example
 
 ```
-# HELP windows_perfdata_memory_cache_faults_sec 
+# HELP windows_perfdata_memory_cache_faults_sec
 # TYPE windows_perfdata_memory_cache_faults_sec counter
 windows_perfdata_memory_cache_faults_sec 2.369977e+07
-# HELP windows_perfdata_processor_information__processor_time 
+# HELP windows_perfdata_processor_information__processor_time
 # TYPE windows_perfdata_processor_information__processor_time gauge
 windows_perfdata_processor_information__processor_time{instance="0,0"} 1.7259640625e+11
 windows_perfdata_processor_information__processor_time{instance="0,1"} 1.7576796875e+11
@@ -109,6 +165,6 @@ windows_perfdata_processor_information__processor_time{instance="0,_Total"} 2.23
 
 ## Metrics
 
-The perfdata collector returns metrics based on the user configuration. 
+The perfdata collector returns metrics based on the user configuration.
 The metrics are named based on the object name and the counter name.
 The instance name is added as a label to the metric.

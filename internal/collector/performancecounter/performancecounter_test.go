@@ -13,19 +13,19 @@
 
 //go:build windows
 
-package perfdata_test
+package performancecounter_test
 
 import (
 	"testing"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/prometheus-community/windows_exporter/internal/collector/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/collector/performancecounter"
 	"github.com/prometheus-community/windows_exporter/internal/utils/testutils"
 )
 
 func BenchmarkCollector(b *testing.B) {
-	perfDataObjects := `[{"object":"Processor Information","instances":["*"],"counters":{"*": {}}}]`
+	perfDataObjects := `[{"object":"Processor Information","instances":["*"],"instance_label":"core","counters":[{"name":"% Processor Time","metric":"windows_perfdata_processor_information_processor_time","labels":{"state":"active"}},{"name":"% Idle Time","metric":"windows_perfdata_processor_information_processor_time","labels":{"state":"idle"}}]},{"object":"Memory","counters":[{"name":"Cache Faults/sec","type":"counter"}]}]`
 	kingpin.CommandLine.GetArg("collector.perfdata.objects").StringVar(&perfDataObjects)
 
-	testutils.FuncBenchmarkCollector(b, perfdata.Name, perfdata.NewWithFlags)
+	testutils.FuncBenchmarkCollector(b, performancecounter.Name, performancecounter.NewWithFlags)
 }
