@@ -46,7 +46,7 @@ type Collector struct {
 	processes                *prometheus.Desc
 	processesLimit           *prometheus.Desc
 	systemCallsTotal         *prometheus.Desc
-	systemUpTime             *prometheus.Desc
+	bootTime                 *prometheus.Desc
 	threads                  *prometheus.Desc
 }
 
@@ -92,6 +92,12 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		return fmt.Errorf("failed to create System collector: %w", err)
 	}
 
+	c.bootTime = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "boot_time_timestamp_seconds"),
+		"Unix timestamp of system boot time",
+		nil,
+		nil,
+	)
 	c.contextSwitchesTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "context_switches_total"),
 		"Total number of context switches (WMI source: PerfOS_System.ContextSwitchesPersec)",
@@ -126,12 +132,6 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 	c.systemCallsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "system_calls_total"),
 		"Total number of system calls (WMI source: PerfOS_System.SystemCallsPersec)",
-		nil,
-		nil,
-	)
-	c.systemUpTime = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "system_up_time"),
-		"System boot time (WMI source: PerfOS_System.SystemUpTime)",
 		nil,
 		nil,
 	)
@@ -184,7 +184,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		data[systemCallsPersec].FirstValue,
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.systemUpTime,
+		c.bootTime,
 		prometheus.GaugeValue,
 		data[systemUpTime].FirstValue,
 	)

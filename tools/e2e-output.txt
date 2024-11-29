@@ -387,6 +387,8 @@ windows_service_state{name="Themes",state="running"} 1
 windows_service_state{name="Themes",state="start pending"} 0
 windows_service_state{name="Themes",state="stop pending"} 0
 windows_service_state{name="Themes",state="stopped"} 0
+# HELP windows_system_boot_time_timestamp_seconds Unix timestamp of system boot time
+# TYPE windows_system_boot_time_timestamp_seconds gauge
 # HELP windows_system_context_switches_total Total number of context switches (WMI source: PerfOS_System.ContextSwitchesPersec)
 # TYPE windows_system_context_switches_total counter
 # HELP windows_system_exception_dispatches_total Total number of exceptions dispatched (WMI source: PerfOS_System.ExceptionDispatchesPersec)
@@ -399,8 +401,6 @@ windows_service_state{name="Themes",state="stopped"} 0
 # TYPE windows_system_processor_queue_length gauge
 # HELP windows_system_system_calls_total Total number of system calls (WMI source: PerfOS_System.SystemCallsPersec)
 # TYPE windows_system_system_calls_total counter
-# HELP windows_system_system_up_time System boot time (WMI source: PerfOS_System.SystemUpTime)
-# TYPE windows_system_system_up_time gauge
 # HELP windows_system_threads Current number of threads (WMI source: PerfOS_System.Threads)
 # TYPE windows_system_threads gauge
 # HELP windows_tcp_connection_failures_total (TCP.ConnectionFailures)
