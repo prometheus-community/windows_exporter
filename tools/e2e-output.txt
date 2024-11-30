@@ -319,9 +319,9 @@ windows_exporter_collector_timeout{collector="udp"} 0
 # TYPE windows_pagefile_free_bytes gauge
 # HELP windows_pagefile_limit_bytes Number of bytes that can be stored in the operating system paging files. 0 (zero) indicates that there are no paging files
 # TYPE windows_pagefile_limit_bytes gauge
-# HELP windows_performancecounter_memory_cache_faults_sec
+# HELP windows_performancecounter_memory_cache_faults_sec windows_exporter: custom Performance Counter metric
 # TYPE windows_performancecounter_memory_cache_faults_sec counter
-# HELP windows_performancecounter_processor_information_processor_time
+# HELP windows_performancecounter_processor_information_processor_time windows_exporter: custom Performance Counter metric
 # TYPE windows_performancecounter_processor_information_processor_time counter
 # HELP windows_physical_disk_idle_seconds_total Seconds that the disk was idle (PhysicalDisk.PercentIdleTime)
 # TYPE windows_physical_disk_idle_seconds_total counter

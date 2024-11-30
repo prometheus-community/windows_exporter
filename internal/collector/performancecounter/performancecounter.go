@@ -170,7 +170,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 				ch <- prometheus.MustNewConstMetric(
 					prometheus.NewDesc(
 						counter.Metric,
-						"",
+						"windows_exporter: custom Performance Counter metric",
 						nil,
 						labels,
 					),
@@ -182,7 +182,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 					ch <- prometheus.MustNewConstMetric(
 						prometheus.NewDesc(
 							counter.Metric+"_second",
-							"",
+							"windows_exporter: custom Performance Counter metric",
 							nil,
 							labels,
 						),
