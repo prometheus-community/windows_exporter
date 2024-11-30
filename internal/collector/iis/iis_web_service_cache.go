@@ -100,7 +100,7 @@ const (
 func (c *Collector) buildWebServiceCache() error {
 	var err error
 
-	c.perfDataCollectorWebService, err = perfdata.NewCollector("Web Service Cache", perfdata.InstancesAll, []string{
+	c.serviceCachePerfDataCollector, err = perfdata.NewCollector("Web Service Cache", perfdata.InstancesAll, []string{
 		serviceCacheActiveFlushedEntries,
 		serviceCacheCurrentFileCacheMemoryUsage,
 		serviceCacheMaximumFileCacheMemoryUsage,
@@ -314,7 +314,7 @@ func (c *Collector) buildWebServiceCache() error {
 }
 
 func (c *Collector) collectWebServiceCache(ch chan<- prometheus.Metric) error {
-	perfData, err := c.perfDataCollectorWebService.Collect()
+	perfData, err := c.serviceCachePerfDataCollector.Collect()
 	if err != nil {
 		return fmt.Errorf("failed to collect Web Service Cache metrics: %w", err)
 	}
