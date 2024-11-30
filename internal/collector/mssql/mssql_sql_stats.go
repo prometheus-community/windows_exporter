@@ -57,7 +57,7 @@ const (
 func (c *Collector) buildSQLStats() error {
 	var err error
 
-	c.genStatsPerfDataCollectors = make(map[string]*perfdata.Collector, len(c.mssqlInstances))
+	c.sqlStatsPerfDataCollectors = make(map[string]*perfdata.Collector, len(c.mssqlInstances))
 	errs := make([]error, 0, len(c.mssqlInstances))
 	counters := []string{
 		sqlStatsAutoParamAttemptsPerSec,
@@ -74,7 +74,7 @@ func (c *Collector) buildSQLStats() error {
 	}
 
 	for sqlInstance := range c.mssqlInstances {
-		c.genStatsPerfDataCollectors[sqlInstance], err = perfdata.NewCollector(c.mssqlGetPerfObjectName(sqlInstance, "SQL Statistics"), nil, counters)
+		c.sqlStatsPerfDataCollectors[sqlInstance], err = perfdata.NewCollector(c.mssqlGetPerfObjectName(sqlInstance, "SQL Statistics"), nil, counters)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("failed to create SQL Statistics collector for instance %s: %w", sqlInstance, err))
 		}

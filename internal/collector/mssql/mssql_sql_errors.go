@@ -38,14 +38,14 @@ const (
 func (c *Collector) buildSQLErrors() error {
 	var err error
 
-	c.genStatsPerfDataCollectors = make(map[string]*perfdata.Collector, len(c.mssqlInstances))
+	c.sqlErrorsPerfDataCollectors = make(map[string]*perfdata.Collector, len(c.mssqlInstances))
 	errs := make([]error, 0, len(c.mssqlInstances))
 	counters := []string{
 		sqlErrorsErrorsPerSec,
 	}
 
 	for sqlInstance := range c.mssqlInstances {
-		c.genStatsPerfDataCollectors[sqlInstance], err = perfdata.NewCollector(c.mssqlGetPerfObjectName(sqlInstance, "SQL Errors"), perfdata.InstancesAll, counters)
+		c.sqlErrorsPerfDataCollectors[sqlInstance], err = perfdata.NewCollector(c.mssqlGetPerfObjectName(sqlInstance, "SQL Errors"), perfdata.InstancesAll, counters)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("failed to create SQL Errors collector for instance %s: %w", sqlInstance, err))
 		}
@@ -63,7 +63,7 @@ func (c *Collector) buildSQLErrors() error {
 }
 
 func (c *Collector) collectSQLErrors(ch chan<- prometheus.Metric) error {
-	return c.collect(ch, subCollectorSQLErrors, c.dbReplicaPerfDataCollectors, c.collectSQLErrorsInstance)
+	return c.collect(ch, subCollectorSQLErrors, c.sqlErrorsPerfDataCollectors, c.collectSQLErrorsInstance)
 }
 
 func (c *Collector) collectSQLErrorsInstance(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *perfdata.Collector) error {
