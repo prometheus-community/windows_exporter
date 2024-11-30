@@ -24,16 +24,16 @@ const (
 	cpuStolenMs              = "CPU stolen time"             // \VM Processor(*)\CPU stolen time
 	cpuTimePercents          = "% Processor Time"            // \VM Processor(*)\% Processor Time
 
-	memActiveMB      = "MemActiveMB"      // \VM Memory\Memory Active in MB
-	memBalloonedMB   = "MemBalloonedMB"   // \VM Memory\Memory Ballooned in MB
-	memLimitMB       = "MemLimitMB"       // \VM Memory\Memory Limit in MB
-	memMappedMB      = "MemMappedMB"      // \VM Memory\Memory Mapped in MB
-	memOverheadMB    = "MemOverheadMB"    // \VM Memory\Memory Overhead in MB
-	memReservationMB = "MemReservationMB" // \VM Memory\Memory Reservation in MB
-	memSharedMB      = "MemSharedMB"      // \VM Memory\Memory Shared in MB
-	memSharedSavedMB = "MemSharedSavedMB" // \VM Memory\Memory Shared Saved in MB
-	memShares        = "MemShares"        // \VM Memory\Memory Shares
-	memSwappedMB     = "MemSwappedMB"     // \VM Memory\Memory Swapped in MB
-	memTargetSizeMB  = "MemTargetSizeMB"  // \VM Memory\Memory Target Size
-	memUsedMB        = "MemUsedMB"        // \VM Memory\Memory Used in MB
+	memActiveMB      = "Memory Active in MB"       // \VM Memory\Memory Active in MB
+	memBalloonedMB   = "Memory Ballooned in MB"    // \VM Memory\Memory Ballooned in MB
+	memLimitMB       = "Memory Limit in MB"        // \VM Memory\Memory Limit in MB
+	memMappedMB      = "Memory Mapped in MB"       // \VM Memory\Memory Mapped in MB
+	memOverheadMB    = "Memory Overhead in MB"     // \VM Memory\Memory Overhead in MB
+	memReservationMB = "Memory Reservation in MB"  // \VM Memory\Memory Reservation in MB
+	memSharedMB      = "Memory Shared in MB"       // \VM Memory\Memory Shared in MB
+	memSharedSavedMB = "Memory Shared Saved in MB" // \VM Memory\Memory Shared Saved in MB
+	memShares        = "Memory Shares"             // \VM Memory\Memory Shares
+	memSwappedMB     = "Memory Swapped in MB"      // \VM Memory\Memory Swapped in MB
+	memTargetSizeMB  = "Memory Target Size"        // \VM Memory\Memory Target Size
+	memUsedMB        = "Memory Used in MB"         // \VM Memory\Memory Used in MB
 )
