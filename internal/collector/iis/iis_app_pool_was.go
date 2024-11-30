@@ -174,7 +174,7 @@ func (c *Collector) buildAppPoolWAS() error {
 }
 
 func (c *Collector) collectAppPoolWAS(ch chan<- prometheus.Metric) error {
-	perfData, err := c.perfDataCollectorWebService.Collect()
+	perfData, err := c.perfDataCollectorAppPoolWAS.Collect()
 	if err != nil {
 		return fmt.Errorf("failed to collect APP_POOL_WAS metrics: %w", err)
 	}
