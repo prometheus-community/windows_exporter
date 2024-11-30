@@ -13,7 +13,7 @@
 
 //go:build windows
 
-package perfdata_test
+package performancecounter_test
 
 import (
 	"fmt"
@@ -24,7 +24,7 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/prometheus-community/windows_exporter/internal/collector/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/collector/performancecounter"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/stretchr/testify/assert"
@@ -32,7 +32,7 @@ import (
 )
 
 type collectorAdapter struct {
-	perfdata.Collector
+	performancecounter.Collector
 }
 
 // Describe implements the prometheus.Collector interface.
@@ -51,31 +51,40 @@ func TestCollector(t *testing.T) {
 	for _, tc := range []struct {
 		object          string
 		instances       []string
-		counters        map[string]perfdata.Counter
+		instanceLabel   string
+		counters        []performancecounter.Counter
 		expectedMetrics *regexp.Regexp
 	}{
 		{
 			object:          "Memory",
 			instances:       nil,
-			counters:        map[string]perfdata.Counter{"Available Bytes": {Type: "gauge"}},
-			expectedMetrics: regexp.MustCompile(`^# HELP windows_perfdata_memory_available_bytes Performance data for \\\\Memory\\\\Available Bytes\s*# TYPE windows_perfdata_memory_available_bytes gauge\s*windows_perfdata_memory_available_bytes \d`),
+			counters:        []performancecounter.Counter{{Name: "Available Bytes", Type: "gauge"}},
+			expectedMetrics: regexp.MustCompile(`^# HELP windows_performancecounter_memory_available_bytes windows_exporter: custom Performance Counter metric\S*\s*# TYPE windows_performancecounter_memory_available_bytes gauge\s*windows_performancecounter_memory_available_bytes \d`),
 		},
 		{
 			object:          "Process",
 			instances:       []string{"*"},
-			counters:        map[string]perfdata.Counter{"Thread Count": {Type: "counter"}},
-			expectedMetrics: regexp.MustCompile(`^# HELP windows_perfdata_process_thread_count Performance data for \\\\Process\\\\Thread Count\s*# TYPE windows_perfdata_process_thread_count counter\s*windows_perfdata_process_thread_count\{instance=".+"} \d`),
+			counters:        []performancecounter.Counter{{Name: "Thread Count", Type: "counter"}},
+			expectedMetrics: regexp.MustCompile(`^# HELP windows_performancecounter_process_thread_count windows_exporter: custom Performance Counter metric\S*\s*# TYPE windows_performancecounter_process_thread_count counter\s*windows_performancecounter_process_thread_count\{instance=".+"} \d`),
+		},
+		{
+			object:          "Processor Information",
+			instances:       []string{"*"},
+			instanceLabel:   "core",
+			counters:        []performancecounter.Counter{{Name: "% Processor Time", Metric: "windows_performancecounter_processor_information_processor_time", Labels: map[string]string{"state": "active"}}, {Name: "% Idle Time", Metric: "windows_performancecounter_processor_information_processor_time", Labels: map[string]string{"state": "idle"}}},
+			expectedMetrics: regexp.MustCompile(`^# HELP windows_performancecounter_processor_information_processor_time windows_exporter: custom Performance Counter metric\s+# TYPE windows_performancecounter_processor_information_processor_time counter\s+windows_performancecounter_processor_information_processor_time\{core="0,0",state="active"} [0-9.e+]+\s+windows_performancecounter_processor_information_processor_time\{core="0,0",state="idle"} [0-9.e+]+`),
 		},
 	} {
 		t.Run(tc.object, func(t *testing.T) {
 			t.Parallel()
 
-			perfDataCollector := perfdata.New(&perfdata.Config{
-				Objects: []perfdata.Object{
+			perfDataCollector := performancecounter.New(&performancecounter.Config{
+				Objects: []performancecounter.Object{
 					{
-						Object:    tc.object,
-						Instances: tc.instances,
-						Counters:  tc.counters,
+						Object:        tc.object,
+						Instances:     tc.instances,
+						InstanceLabel: tc.instanceLabel,
+						Counters:      tc.counters,
 					},
 				},
 			})

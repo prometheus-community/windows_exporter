@@ -42,7 +42,7 @@ Name     | Description | Enabled by default
 [net](docs/collector.net.md) | Network interface I/O | &#10003;
 [os](docs/collector.os.md) | OS metrics (memory, processes, users) | &#10003;
 [pagefile](docs/collector.pagefile.md) | pagefile metrics |
-[perfdata](docs/collector.perfdata.md) | Custom perfdata metrics |
+[performancecounter](docs/collector.performancecounter.md) | Custom performance counter metrics |
 [physical_disk](docs/collector.physical_disk.md) | physical disk metrics | &#10003;
 [printer](docs/collector.printer.md) | Printer metrics |
 [process](docs/collector.process.md) | Per-process metrics |

@@ -54,7 +54,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/nps"
 	"github.com/prometheus-community/windows_exporter/internal/collector/os"
 	"github.com/prometheus-community/windows_exporter/internal/collector/pagefile"
-	"github.com/prometheus-community/windows_exporter/internal/collector/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/collector/performancecounter"
 	"github.com/prometheus-community/windows_exporter/internal/collector/physical_disk"
 	"github.com/prometheus-community/windows_exporter/internal/collector/printer"
 	"github.com/prometheus-community/windows_exporter/internal/collector/process"
@@ -123,7 +123,7 @@ func NewWithConfig(config Config) *Collection {
 	collectors[nps.Name] = nps.New(&config.Nps)
 	collectors[os.Name] = os.New(&config.OS)
 	collectors[pagefile.Name] = pagefile.New(&config.Paging)
-	collectors[perfdata.Name] = perfdata.New(&config.PerfData)
+	collectors[performancecounter.Name] = performancecounter.New(&config.PerformanceCounter)
 	collectors[physical_disk.Name] = physical_disk.New(&config.PhysicalDisk)
 	collectors[printer.Name] = printer.New(&config.Printer)
 	collectors[process.Name] = process.New(&config.Process)
