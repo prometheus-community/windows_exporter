@@ -25,3 +25,7 @@ import (
 func BenchmarkCollector(b *testing.B) {
 	testutils.FuncBenchmarkCollector(b, iis.Name, iis.NewWithFlags)
 }
+
+func TestCollector(t *testing.T) {
+	testutils.TestCollector(t, iis.New, nil)
+}

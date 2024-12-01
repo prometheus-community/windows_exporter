@@ -25,3 +25,7 @@ import (
 func BenchmarkCollector(b *testing.B) {
 	testutils.FuncBenchmarkCollector(b, dfsr.Name, dfsr.NewWithFlags)
 }
+
+func TestCollector(t *testing.T) {
+	testutils.TestCollector(t, dfsr.New, nil)
+}

@@ -312,9 +312,17 @@ func (c *Collector) Close() {
 
 	c.handle = 0
 
-	close(c.collectCh)
-	close(c.counterValuesCh)
-	close(c.errorCh)
+	if c.collectCh != nil {
+		close(c.collectCh)
+	}
+
+	if c.counterValuesCh != nil {
+		close(c.counterValuesCh)
+	}
+
+	if c.errorCh != nil {
+		close(c.errorCh)
+	}
 
 	c.counterValuesCh = nil
 	c.collectCh = nil
