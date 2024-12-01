@@ -68,10 +68,10 @@ func (c *Collector) buildAvailabilityReplica() error {
 		availReplicaSendsToTransportPerSec,
 	}
 
-	for sqlInstance := range c.mssqlInstances {
-		c.availabilityReplicaPerfDataCollectors[sqlInstance], err = perfdata.NewCollector(c.mssqlGetPerfObjectName(sqlInstance, "Availability Replica"), perfdata.InstancesAll, counters)
+	for _, sqlInstance := range c.mssqlInstances {
+		c.availabilityReplicaPerfDataCollectors[sqlInstance.name], err = perfdata.NewCollector(c.mssqlGetPerfObjectName(sqlInstance.name, "Availability Replica"), perfdata.InstancesAll, counters)
 		if err != nil {
-			errs = append(errs, fmt.Errorf("failed to create Availability Replica collector for instance %s: %w", sqlInstance, err))
+			errs = append(errs, fmt.Errorf("failed to create Availability Replica collector for instance %s: %w", sqlInstance.name, err))
 		}
 	}
 

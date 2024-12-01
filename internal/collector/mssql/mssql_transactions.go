@@ -79,10 +79,10 @@ func (c *Collector) buildTransactions() error {
 		transactionsVersionStoreunittruncation,
 	}
 
-	for sqlInstance := range c.mssqlInstances {
-		c.transactionsPerfDataCollectors[sqlInstance], err = perfdata.NewCollector(c.mssqlGetPerfObjectName(sqlInstance, "Transactions"), nil, counters)
+	for _, sqlInstance := range c.mssqlInstances {
+		c.transactionsPerfDataCollectors[sqlInstance.name], err = perfdata.NewCollector(c.mssqlGetPerfObjectName(sqlInstance.name, "Transactions"), nil, counters)
 		if err != nil {
-			errs = append(errs, fmt.Errorf("failed to create Transactions collector for instance %s: %w", sqlInstance, err))
+			errs = append(errs, fmt.Errorf("failed to create Transactions collector for instance %s: %w", sqlInstance.name, err))
 		}
 	}
 

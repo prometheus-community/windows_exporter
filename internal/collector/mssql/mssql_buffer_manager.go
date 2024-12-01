@@ -109,10 +109,10 @@ func (c *Collector) buildBufferManager() error {
 		bufManTargetPages,
 	}
 
-	for sqlInstance := range c.mssqlInstances {
-		c.bufManPerfDataCollectors[sqlInstance], err = perfdata.NewCollector(c.mssqlGetPerfObjectName(sqlInstance, "Buffer Manager"), nil, counters)
+	for _, sqlInstance := range c.mssqlInstances {
+		c.bufManPerfDataCollectors[sqlInstance.name], err = perfdata.NewCollector(c.mssqlGetPerfObjectName(sqlInstance.name, "Buffer Manager"), nil, counters)
 		if err != nil {
-			errs = append(errs, fmt.Errorf("failed to create Buffer Manager collector for instance %s: %w", sqlInstance, err))
+			errs = append(errs, fmt.Errorf("failed to create Buffer Manager collector for instance %s: %w", sqlInstance.name, err))
 		}
 	}
 

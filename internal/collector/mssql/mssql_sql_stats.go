@@ -73,10 +73,10 @@ func (c *Collector) buildSQLStats() error {
 		sqlStatsUnsafeAutoParamsPerSec,
 	}
 
-	for sqlInstance := range c.mssqlInstances {
-		c.sqlStatsPerfDataCollectors[sqlInstance], err = perfdata.NewCollector(c.mssqlGetPerfObjectName(sqlInstance, "SQL Statistics"), nil, counters)
+	for _, sqlInstance := range c.mssqlInstances {
+		c.sqlStatsPerfDataCollectors[sqlInstance.name], err = perfdata.NewCollector(c.mssqlGetPerfObjectName(sqlInstance.name, "SQL Statistics"), nil, counters)
 		if err != nil {
-			errs = append(errs, fmt.Errorf("failed to create SQL Statistics collector for instance %s: %w", sqlInstance, err))
+			errs = append(errs, fmt.Errorf("failed to create SQL Statistics collector for instance %s: %w", sqlInstance.name, err))
 		}
 	}
 

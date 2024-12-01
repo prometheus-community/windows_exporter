@@ -44,10 +44,10 @@ func (c *Collector) buildSQLErrors() error {
 		sqlErrorsErrorsPerSec,
 	}
 
-	for sqlInstance := range c.mssqlInstances {
-		c.sqlErrorsPerfDataCollectors[sqlInstance], err = perfdata.NewCollector(c.mssqlGetPerfObjectName(sqlInstance, "SQL Errors"), perfdata.InstancesAll, counters)
+	for _, sqlInstance := range c.mssqlInstances {
+		c.sqlErrorsPerfDataCollectors[sqlInstance.name], err = perfdata.NewCollector(c.mssqlGetPerfObjectName(sqlInstance.name, "SQL Errors"), perfdata.InstancesAll, counters)
 		if err != nil {
-			errs = append(errs, fmt.Errorf("failed to create SQL Errors collector for instance %s: %w", sqlInstance, err))
+			errs = append(errs, fmt.Errorf("failed to create SQL Errors collector for instance %s: %w", sqlInstance.name, err))
 		}
 	}
 

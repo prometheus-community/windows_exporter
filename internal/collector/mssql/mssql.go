@@ -20,20 +20,15 @@ import (
 	"fmt"
 	"log/slog"
 	"sort"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
-	"unsafe"
 
-	"github.com/Microsoft/go-winio/pkg/process"
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/prometheus-community/windows_exporter/internal/headers/iphlpapi"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
-	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/registry"
 )
 
@@ -46,6 +41,7 @@ const (
 	subCollectorDatabases           = "databases"
 	subCollectorDatabaseReplica     = "dbreplica"
 	subCollectorGeneralStatistics   = "genstats"
+	subCollectorInfo                = "info"
 	subCollectorLocks               = "locks"
 	subCollectorMemoryManager       = "memmgr"
 	subCollectorSQLErrors           = "sqlerrors"
@@ -56,7 +52,6 @@ const (
 
 type Config struct {
 	CollectorsEnabled []string `yaml:"collectors_enabled"`
-	Port              uint16   `yaml:"port"`
 }
 
 //nolint:gochecknoglobals
@@ -68,6 +63,7 @@ var ConfigDefaults = Config{
 		subCollectorDatabases,
 		subCollectorDatabaseReplica,
 		subCollectorGeneralStatistics,
+		subCollectorInfo,
 		subCollectorLocks,
 		subCollectorMemoryManager,
 		subCollectorSQLErrors,
@@ -75,7 +71,6 @@ var ConfigDefaults = Config{
 		subCollectorTransactions,
 		subCollectorWaitStats,
 	},
-	Port: 1433,
 }
 
 // A Collector is a Prometheus Collector for various WMI Win32_PerfRawData_MSSQLSERVER_* metrics.
@@ -84,17 +79,13 @@ type Collector struct {
 
 	logger *slog.Logger
 
-	mssqlInstances mssqlInstancesType
+	mssqlInstances []mssqlInstance
 	collectorFns   []func(ch chan<- prometheus.Metric) error
 	closeFns       []func()
-
-	fileVersion    string
-	productVersion string
 
 	// meta
 	mssqlScrapeDurationDesc *prometheus.Desc
 	mssqlScrapeSuccessDesc  *prometheus.Desc
-	mssqlInfoDesc           *prometheus.Desc
 
 	collectorAccessMethods
 	collectorAvailabilityReplica
@@ -102,6 +93,7 @@ type Collector struct {
 	collectorDatabaseReplica
 	collectorDatabases
 	collectorGeneralStatistics
+	collectorInstance
 	collectorLocks
 	collectorMemoryManager
 	collectorSQLErrors
@@ -110,8 +102,6 @@ type Collector struct {
 	collectorWaitStats
 }
 
-type mssqlInstancesType map[string]string
-
 func New(config *Config) *Collector {
 	if config == nil {
 		config = &ConfigDefaults
@@ -119,10 +109,6 @@ func New(config *Config) *Collector {
 
 	if config.CollectorsEnabled == nil {
 		config.CollectorsEnabled = ConfigDefaults.CollectorsEnabled
-	}
-
-	if config.Port == 0 {
-		config.Port = ConfigDefaults.Port
 	}
 
 	c := &Collector{
@@ -143,11 +129,6 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 		"collector.mssql.enabled",
 		"Comma-separated list of collectors to use.",
 	).Default(strings.Join(c.config.CollectorsEnabled, ",")).StringVar(&collectorsEnabled)
-
-	app.Flag(
-		"collector.mssql.port",
-		"Port of MSSQL server used for windows_mssql_info metric.",
-	).Default(strconv.FormatUint(uint64(c.config.Port), 10)).Uint16Var(&c.config.Port)
 
 	app.Action(func(*kingpin.ParseContext) error {
 		c.config.CollectorsEnabled = strings.Split(collectorsEnabled, ",")
@@ -172,18 +153,13 @@ func (c *Collector) Close() error {
 
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	c.logger = logger.With(slog.String("collector", Name))
-	c.mssqlInstances = c.getMSSQLInstances()
 
-	fileVersion, productVersion, err := c.getMSSQLServerVersion(c.config.Port)
+	instances, err := c.getMSSQLInstances()
 	if err != nil {
-		logger.Warn("failed to get MSSQL server version",
-			slog.Any("err", err),
-			slog.String("collector", Name),
-		)
+		return fmt.Errorf("couldn't get SQL instances: %w", err)
 	}
 
-	c.fileVersion = fileVersion
-	c.productVersion = productVersion
+	c.mssqlInstances = instances
 
 	subCollectors := map[string]struct {
 		build   func() error
@@ -219,6 +195,11 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 			build:   c.buildGeneralStatistics,
 			collect: c.collectGeneralStatistics,
 			close:   c.closeGeneralStatistics,
+		},
+		subCollectorInfo: {
+			build:   c.buildInstance,
+			collect: c.collectInstance,
+			close:   c.closeInstance,
 		},
 		subCollectorLocks: {
 			build:   c.buildLocks,
@@ -272,14 +253,6 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		c.closeFns = append(c.closeFns, subCollectors[name].close)
 	}
 
-	// meta
-	c.mssqlInfoDesc = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "info"),
-		"mssql server information",
-		[]string{"file_version", "version"},
-		nil,
-	)
-
 	c.mssqlScrapeDurationDesc = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "collector_duration_seconds"),
 		"windows_exporter: Duration of an mssql child collection.",
@@ -326,22 +299,12 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	return errors.Join(errs...)
 }
 
-func (c *Collector) getMSSQLInstances() mssqlInstancesType {
-	sqlInstances := make(mssqlInstancesType)
-
-	// in case querying the registry fails, return the default instance
-	sqlDefaultInstance := make(mssqlInstancesType)
-	sqlDefaultInstance["MSSQLSERVER"] = ""
-
+func (c *Collector) getMSSQLInstances() ([]mssqlInstance, error) {
 	regKey := `Software\Microsoft\Microsoft SQL Server\Instance Names\SQL`
 
 	k, err := registry.OpenKey(registry.LOCAL_MACHINE, regKey, registry.QUERY_VALUE)
 	if err != nil {
-		c.logger.Warn("couldn't open registry to determine SQL instances",
-			slog.Any("err", err),
-		)
-
-		return sqlDefaultInstance
+		return nil, fmt.Errorf("couldn't open registry to determine SQL instances: %w", err)
 	}
 
 	defer func(key registry.Key) {
@@ -354,22 +317,28 @@ func (c *Collector) getMSSQLInstances() mssqlInstancesType {
 
 	instanceNames, err := k.ReadValueNames(0)
 	if err != nil {
-		c.logger.Warn("can't ReadSubKeyNames",
-			slog.Any("err", err),
-		)
-
-		return sqlDefaultInstance
+		return nil, fmt.Errorf("couldn't read subkey names: %w", err)
 	}
 
+	sqlInstances := make([]mssqlInstance, 0, len(instanceNames))
+
 	for _, instanceName := range instanceNames {
-		if instanceVersion, _, err := k.GetStringValue(instanceName); err == nil {
-			sqlInstances[instanceName] = instanceVersion
+		instanceVersion, _, err := k.GetStringValue(instanceName)
+		if err != nil {
+			return nil, fmt.Errorf("couldn't get instance info: %w", err)
 		}
+
+		instance, err := newMssqlInstance(instanceVersion)
+		if err != nil {
+			return nil, err
+		}
+
+		sqlInstances = append(sqlInstances, instance)
 	}
 
 	c.logger.Debug(fmt.Sprintf("detected MSSQL Instances: %#v\n", sqlInstances))
 
-	return sqlInstances
+	return sqlInstances, nil
 }
 
 // mssqlGetPerfObjectName returns the name of the Windows Performance
@@ -432,69 +401,4 @@ func (c *Collector) collect(
 	}
 
 	return errors.Join(errs...)
-}
-
-// getMSSQLServerVersion get the version of the SQL Server instance by
-// reading the version information from the process running the SQL Server instance port.
-func (c *Collector) getMSSQLServerVersion(port uint16) (string, string, error) {
-	pid, err := iphlpapi.GetOwnerPIDOfTCPPort(windows.AF_INET, port)
-	if err != nil {
-		return "", "", fmt.Errorf("failed to get the PID of the process running on port 1433: %w", err)
-	}
-
-	hProcess, err := windows.OpenProcess(windows.PROCESS_QUERY_LIMITED_INFORMATION, false, pid)
-	if err != nil {
-		return "", "", fmt.Errorf("failed to open the process with PID %d: %w", pid, err)
-	}
-
-	defer windows.CloseHandle(hProcess) //nolint:errcheck
-
-	processFilePath, err := process.QueryFullProcessImageName(hProcess, process.ImageNameFormatWin32Path)
-	if err != nil {
-		return "", "", fmt.Errorf("failed to query the full path of the process with PID %d: %w", pid, err)
-	}
-
-	// Load the file version information
-	size, err := windows.GetFileVersionInfoSize(processFilePath, nil)
-	if err != nil {
-		return "", "", fmt.Errorf("failed to get the size of the file version information: %w", err)
-	}
-
-	fileVersionInfo := make([]byte, size)
-
-	err = windows.GetFileVersionInfo(processFilePath, 0, size, unsafe.Pointer(&fileVersionInfo[0]))
-	if err != nil {
-		return "", "", fmt.Errorf("failed to get the file version information: %w", err)
-	}
-
-	var (
-		verData *byte
-		verSize uint32
-	)
-
-	err = windows.VerQueryValue(
-		unsafe.Pointer(&fileVersionInfo[0]),
-		`\StringFileInfo\040904b0\ProductVersion`,
-		unsafe.Pointer(&verData),
-		&verSize,
-	)
-	if err != nil {
-		return "", "", fmt.Errorf("failed to query the product version: %w", err)
-	}
-
-	productVersion := windows.UTF16ToString((*[1 << 16]uint16)(unsafe.Pointer(verData))[:verSize])
-
-	err = windows.VerQueryValue(
-		unsafe.Pointer(&fileVersionInfo[0]),
-		`\StringFileInfo\040904b0\FileVersion`,
-		unsafe.Pointer(&verData),
-		&verSize,
-	)
-	if err != nil {
-		return "", "", fmt.Errorf("failed to query the file version: %w", err)
-	}
-
-	fileVersion := windows.UTF16ToString((*[1 << 16]uint16)(unsafe.Pointer(verData))[:verSize])
-
-	return fileVersion, productVersion, nil
 }

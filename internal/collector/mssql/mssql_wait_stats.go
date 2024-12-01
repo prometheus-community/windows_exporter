@@ -76,10 +76,10 @@ func (c *Collector) buildWaitStats() error {
 		waitStatsTransactionOwnershipWaits,
 	}
 
-	for sqlInstance := range c.mssqlInstances {
-		c.waitStatsPerfDataCollectors[sqlInstance], err = perfdata.NewCollector(c.mssqlGetPerfObjectName(sqlInstance, "Wait Statistics"), perfdata.InstancesAll, counters)
+	for _, sqlInstance := range c.mssqlInstances {
+		c.waitStatsPerfDataCollectors[sqlInstance.name], err = perfdata.NewCollector(c.mssqlGetPerfObjectName(sqlInstance.name, "Wait Statistics"), perfdata.InstancesAll, counters)
 		if err != nil {
-			errs = append(errs, fmt.Errorf("failed to create Wait Statistics collector for instance %s: %w", sqlInstance, err))
+			errs = append(errs, fmt.Errorf("failed to create Wait Statistics collector for instance %s: %w", sqlInstance.name, err))
 		}
 	}
 

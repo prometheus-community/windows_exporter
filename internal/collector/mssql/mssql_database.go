@@ -134,7 +134,6 @@ func (c *Collector) buildDatabases() error {
 	c.databasesPerfDataCollectors = make(map[string]*perfdata.Collector, len(c.mssqlInstances))
 	errs := make([]error, 0, len(c.mssqlInstances))
 	counters := []string{
-		databasesActiveParallelRedoThreads,
 		databasesActiveTransactions,
 		databasesBackupPerRestoreThroughputPerSec,
 		databasesBulkCopyRowsPerSec,
@@ -184,10 +183,14 @@ func (c *Collector) buildDatabases() error {
 		databasesXTPMemoryUsedKB,
 	}
 
-	for sqlInstance := range c.mssqlInstances {
-		c.databasesPerfDataCollectors[sqlInstance], err = perfdata.NewCollector(c.mssqlGetPerfObjectName(sqlInstance, "Databases"), perfdata.InstancesAll, counters)
+	for _, sqlInstance := range c.mssqlInstances {
+		if sqlInstance.isVersionGreaterOrEqualThan(serverVersion2019) {
+			counters = append(counters, databasesActiveParallelRedoThreads)
+		}
+
+		c.databasesPerfDataCollectors[sqlInstance.name], err = perfdata.NewCollector(c.mssqlGetPerfObjectName(sqlInstance.name, "Databases"), perfdata.InstancesAll, counters)
 		if err != nil {
-			errs = append(errs, fmt.Errorf("failed to create Databases collector for instance %s: %w", sqlInstance, err))
+			errs = append(errs, fmt.Errorf("failed to create Databases collector for instance %s: %w", sqlInstance.name, err))
 		}
 	}
 
@@ -498,12 +501,14 @@ func (c *Collector) collectDatabasesInstance(ch chan<- prometheus.Metric, sqlIns
 	}
 
 	for dbName, data := range perfData {
-		ch <- prometheus.MustNewConstMetric(
-			c.databasesActiveParallelRedoThreads,
-			prometheus.GaugeValue,
-			data[databasesActiveParallelRedoThreads].FirstValue,
-			sqlInstance, dbName,
-		)
+		if counter, ok := data[databasesActiveParallelRedoThreads]; ok {
+			ch <- prometheus.MustNewConstMetric(
+				c.databasesActiveParallelRedoThreads,
+				prometheus.GaugeValue,
+				counter.FirstValue,
+				sqlInstance, dbName,
+			)
+		}
 
 		ch <- prometheus.MustNewConstMetric(
 			c.databasesActiveTransactions,
