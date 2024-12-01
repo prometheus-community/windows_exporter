@@ -272,6 +272,10 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
+	if len(c.mssqlInstances) == 0 {
+		return fmt.Errorf("no SQL instances found: %w", perfdata.ErrNoData)
+	}
+
 	errCh := make(chan error, len(c.collectorFns))
 	errs := make([]error, 0, len(c.collectorFns))
 

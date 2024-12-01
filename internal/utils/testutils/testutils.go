@@ -113,7 +113,9 @@ func TestCollector[C collector.Collector, V interface{}](t *testing.T, fn func(*
 		errors.Is(err, perfdata.ErrNoData),
 		errors.Is(err, mi.MI_RESULT_INVALID_NAMESPACE),
 		errors.Is(err, mi.MI_RESULT_INVALID_QUERY),
-		errors.Is(err, update.ErrNoUpdates):
+		errors.Is(err, update.ErrNoUpdates),
+		errors.Is(err, update.ErrUpdateServiceDisabled):
+		t.Skip("collector not supported on this system")
 	default:
 		require.NoError(t, err)
 	}

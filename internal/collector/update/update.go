@@ -47,7 +47,10 @@ var ConfigDefaults = Config{
 	scrapeInterval: 6 * time.Hour,
 }
 
-var ErrNoUpdates = errors.New("pending gather update metrics")
+var (
+	ErrNoUpdates             = errors.New("pending gather update metrics")
+	ErrUpdateServiceDisabled = errors.New("windows updates service is disabled")
+)
 
 type Collector struct {
 	config Config
@@ -234,7 +237,7 @@ func (c *Collector) scheduleUpdateStatus(ctx context.Context, logger *slog.Logge
 	}(hc)
 
 	if err != nil {
-		initErrCh <- fmt.Errorf("windows updates service is disabled: %w", err)
+		initErrCh <- ErrUpdateServiceDisabled
 
 		return
 	}
