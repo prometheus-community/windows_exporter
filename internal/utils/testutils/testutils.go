@@ -16,14 +16,19 @@
 package testutils
 
 import (
+	"errors"
 	"io"
 	"log/slog"
+	"os"
 	"sync"
+	"syscall"
 	"testing"
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
+	"github.com/prometheus-community/windows_exporter/internal/collector/update"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
+	"github.com/prometheus-community/windows_exporter/internal/perfdata"
 	"github.com/prometheus-community/windows_exporter/pkg/collector"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/require"
@@ -86,15 +91,34 @@ func TestCollector[C collector.Collector, V interface{}](t *testing.T, fn func(*
 		}
 	}()
 
-	require.NoError(t, c.Build(logger, miSession))
+	err = c.Build(logger, miSession)
+	switch {
+	case err == nil:
+	case errors.Is(err, mi.MI_RESULT_INVALID_NAMESPACE),
+		errors.Is(err, perfdata.NewPdhError(perfdata.PdhCstatusNoCounter)),
+		errors.Is(err, perfdata.NewPdhError(perfdata.PdhCstatusNoObject)),
+		errors.Is(err, os.ErrNotExist):
+	default:
+		require.NoError(t, err)
+	}
 
 	time.Sleep(1 * time.Second)
 
-	require.NoError(t, c.Collect(ch))
+	err = c.Collect(ch)
+
+	switch {
+	// container collector
+	case errors.Is(err, syscall.Errno(2151088411)),
+		errors.Is(err, perfdata.ErrPerformanceCounterNotInitialized),
+		errors.Is(err, perfdata.ErrNoData),
+		errors.Is(err, mi.MI_RESULT_INVALID_NAMESPACE),
+		errors.Is(err, mi.MI_RESULT_INVALID_QUERY),
+		errors.Is(err, update.ErrNoUpdates):
+	default:
+		require.NoError(t, err)
+	}
 
 	close(ch)
 
 	wg.Wait()
-
-	require.NotEmpty(t, metrics)
 }

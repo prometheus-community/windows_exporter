@@ -23,5 +23,9 @@ import (
 )
 
 func BenchmarkCollector(b *testing.B) {
-	testutils.FuncBenchmarkCollector(b, "printer", update.NewWithFlags)
+	testutils.FuncBenchmarkCollector(b, update.Name, update.NewWithFlags)
+}
+
+func TestCollector(t *testing.T) {
+	testutils.TestCollector(t, update.New, nil)
 }
