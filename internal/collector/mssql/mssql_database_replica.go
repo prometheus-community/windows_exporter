@@ -112,10 +112,10 @@ func (c *Collector) buildDatabaseReplica() error {
 		dbReplicaTransactionDelay,
 	}
 
-	for sqlInstance := range c.mssqlInstances {
-		c.dbReplicaPerfDataCollectors[sqlInstance], err = perfdata.NewCollector(c.mssqlGetPerfObjectName(sqlInstance, "Database Replica"), perfdata.InstancesAll, counters)
+	for _, sqlInstance := range c.mssqlInstances {
+		c.dbReplicaPerfDataCollectors[sqlInstance.name], err = perfdata.NewCollector(c.mssqlGetPerfObjectName(sqlInstance.name, "Database Replica"), perfdata.InstancesAll, counters)
 		if err != nil {
-			errs = append(errs, fmt.Errorf("failed to create Database Replica collector for instance %s: %w", sqlInstance, err))
+			errs = append(errs, fmt.Errorf("failed to create Database Replica collector for instance %s: %w", sqlInstance.name, err))
 		}
 	}
 

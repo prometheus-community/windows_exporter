@@ -172,10 +172,10 @@ func (c *Collector) buildAccessMethods() error {
 		accessMethodsWorktablesFromCacheRatioBase,
 	}
 
-	for sqlInstance := range c.mssqlInstances {
-		c.accessMethodsPerfDataCollectors[sqlInstance], err = perfdata.NewCollector(c.mssqlGetPerfObjectName(sqlInstance, "Access Methods"), nil, counters)
+	for _, sqlInstance := range c.mssqlInstances {
+		c.accessMethodsPerfDataCollectors[sqlInstance.name], err = perfdata.NewCollector(c.mssqlGetPerfObjectName(sqlInstance.name, "Access Methods"), nil, counters)
 		if err != nil {
-			errs = append(errs, fmt.Errorf("failed to create AccessMethods collector for instance %s: %w", sqlInstance, err))
+			errs = append(errs, fmt.Errorf("failed to create AccessMethods collector for instance %s: %w", sqlInstance.name, err))
 		}
 	}
 

@@ -112,10 +112,10 @@ func (c *Collector) buildGeneralStatistics() error {
 		genStatsUserConnections,
 	}
 
-	for sqlInstance := range c.mssqlInstances {
-		c.genStatsPerfDataCollectors[sqlInstance], err = perfdata.NewCollector(c.mssqlGetPerfObjectName(sqlInstance, "General Statistics"), nil, counters)
+	for _, sqlInstance := range c.mssqlInstances {
+		c.genStatsPerfDataCollectors[sqlInstance.name], err = perfdata.NewCollector(c.mssqlGetPerfObjectName(sqlInstance.name, "General Statistics"), nil, counters)
 		if err != nil {
-			errs = append(errs, fmt.Errorf("failed to create General Statistics collector for instance %s: %w", sqlInstance, err))
+			errs = append(errs, fmt.Errorf("failed to create General Statistics collector for instance %s: %w", sqlInstance.name, err))
 		}
 	}
 

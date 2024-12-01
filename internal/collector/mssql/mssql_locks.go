@@ -65,10 +65,10 @@ func (c *Collector) buildLocks() error {
 		locksNumberOfDeadlocksPerSec,
 	}
 
-	for sqlInstance := range c.mssqlInstances {
-		c.locksPerfDataCollectors[sqlInstance], err = perfdata.NewCollector(c.mssqlGetPerfObjectName(sqlInstance, "Locks"), perfdata.InstancesAll, counters)
+	for _, sqlInstance := range c.mssqlInstances {
+		c.locksPerfDataCollectors[sqlInstance.name], err = perfdata.NewCollector(c.mssqlGetPerfObjectName(sqlInstance.name, "Locks"), perfdata.InstancesAll, counters)
 		if err != nil {
-			errs = append(errs, fmt.Errorf("failed to create Locks collector for instance %s: %w", sqlInstance, err))
+			errs = append(errs, fmt.Errorf("failed to create Locks collector for instance %s: %w", sqlInstance.name, err))
 		}
 	}
 
