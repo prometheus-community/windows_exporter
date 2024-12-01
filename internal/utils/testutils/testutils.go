@@ -21,7 +21,6 @@ import (
 	"log/slog"
 	"os"
 	"sync"
-	"syscall"
 	"testing"
 	"time"
 
@@ -32,6 +31,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/pkg/collector"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sys/windows"
 )
 
 func FuncBenchmarkCollector[C collector.Collector](b *testing.B, name string, collectFunc collector.BuilderWithFlags[C]) {
@@ -92,11 +92,13 @@ func TestCollector[C collector.Collector, V interface{}](t *testing.T, fn func(*
 	}()
 
 	err = c.Build(logger, miSession)
+
 	switch {
 	case err == nil:
 	case errors.Is(err, mi.MI_RESULT_INVALID_NAMESPACE),
 		errors.Is(err, perfdata.NewPdhError(perfdata.PdhCstatusNoCounter)),
 		errors.Is(err, perfdata.NewPdhError(perfdata.PdhCstatusNoObject)),
+		errors.Is(err, update.ErrUpdateServiceDisabled),
 		errors.Is(err, os.ErrNotExist):
 	default:
 		require.NoError(t, err)
@@ -108,13 +110,12 @@ func TestCollector[C collector.Collector, V interface{}](t *testing.T, fn func(*
 
 	switch {
 	// container collector
-	case errors.Is(err, syscall.Errno(2151088411)),
+	case errors.Is(err, windows.Errno(2151088411)),
 		errors.Is(err, perfdata.ErrPerformanceCounterNotInitialized),
 		errors.Is(err, perfdata.ErrNoData),
 		errors.Is(err, mi.MI_RESULT_INVALID_NAMESPACE),
 		errors.Is(err, mi.MI_RESULT_INVALID_QUERY),
-		errors.Is(err, update.ErrNoUpdates),
-		errors.Is(err, update.ErrUpdateServiceDisabled):
+		errors.Is(err, update.ErrNoUpdates):
 		t.Skip("collector not supported on this system")
 	default:
 		require.NoError(t, err)

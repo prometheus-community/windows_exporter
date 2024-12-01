@@ -315,9 +315,11 @@ func (c *Collector) Close() {
 	if c.collectCh != nil {
 		close(c.collectCh)
 	}
+
 	if c.counterValuesCh != nil {
 		close(c.counterValuesCh)
 	}
+
 	if c.errorCh != nil {
 		close(c.errorCh)
 	}
