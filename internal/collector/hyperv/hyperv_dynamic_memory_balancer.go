@@ -18,7 +18,7 @@ package hyperv
 import (
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
@@ -26,31 +26,30 @@ import (
 
 // collectorDynamicMemoryBalancer Hyper-V Dynamic Memory Balancer metrics
 type collectorDynamicMemoryBalancer struct {
-	perfDataCollectorDynamicMemoryBalancer             *perfdata.Collector
+	perfDataCollectorDynamicMemoryBalancer *pdh.Collector
+	perfDataObjectDynamicMemoryBalancer    []perfDataCounterValuesDynamicMemoryBalancer
+
 	vmDynamicMemoryBalancerAvailableMemoryForBalancing *prometheus.Desc // \Hyper-V Dynamic Memory Balancer(*)\Available Memory For Balancing
 	vmDynamicMemoryBalancerSystemCurrentPressure       *prometheus.Desc // \Hyper-V Dynamic Memory Balancer(*)\System Current Pressure
 	vmDynamicMemoryBalancerAvailableMemory             *prometheus.Desc // \Hyper-V Dynamic Memory Balancer(*)\Available Memory
 	vmDynamicMemoryBalancerAveragePressure             *prometheus.Desc // \Hyper-V Dynamic Memory Balancer(*)\Average Pressure
 }
 
-const (
+type perfDataCounterValuesDynamicMemoryBalancer struct {
+	Name string
+
 	// Hyper-V Dynamic Memory Balancer metrics
-	vmDynamicMemoryBalancerAvailableMemory             = "Available Memory"
-	vmDynamicMemoryBalancerAvailableMemoryForBalancing = "Available Memory For Balancing"
-	vmDynamicMemoryBalancerAveragePressure             = "Average Pressure"
-	vmDynamicMemoryBalancerSystemCurrentPressure       = "System Current Pressure"
-)
+	VmDynamicMemoryBalancerAvailableMemory             float64 `perfdata:"Available Memory"`
+	VmDynamicMemoryBalancerAvailableMemoryForBalancing float64 `perfdata:"Available Memory For Balancing"`
+	VmDynamicMemoryBalancerAveragePressure             float64 `perfdata:"Average Pressure"`
+	VmDynamicMemoryBalancerSystemCurrentPressure       float64 `perfdata:"System Current Pressure"`
+}
 
 func (c *Collector) buildDynamicMemoryBalancer() error {
 	var err error
 
 	// https://learn.microsoft.com/en-us/archive/blogs/chrisavis/monitoring-dynamic-memory-in-windows-server-hyper-v-2012
-	c.perfDataCollectorDynamicMemoryBalancer, err = perfdata.NewCollector("Hyper-V Dynamic Memory Balancer", perfdata.InstancesAll, []string{
-		vmDynamicMemoryBalancerAvailableMemory,
-		vmDynamicMemoryBalancerAvailableMemoryForBalancing,
-		vmDynamicMemoryBalancerAveragePressure,
-		vmDynamicMemoryBalancerSystemCurrentPressure,
-	})
+	c.perfDataCollectorDynamicMemoryBalancer, err = pdh.NewCollector[perfDataCounterValuesDynamicMemoryBalancer]("Hyper-V Dynamic Memory Balancer", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create Hyper-V Virtual Machine Health Summary collector: %w", err)
 	}
@@ -84,38 +83,38 @@ func (c *Collector) buildDynamicMemoryBalancer() error {
 }
 
 func (c *Collector) collectDynamicMemoryBalancer(ch chan<- prometheus.Metric) error {
-	data, err := c.perfDataCollectorDynamicMemoryBalancer.Collect()
+	err := c.perfDataCollectorDynamicMemoryBalancer.Collect(&c.perfDataObjectDynamicMemoryBalancer)
 	if err != nil {
 		return fmt.Errorf("failed to collect Hyper-V Dynamic Memory Balancer metrics: %w", err)
 	}
 
-	for name, page := range data {
+	for _, data := range c.perfDataObjectDynamicMemoryBalancer {
 		ch <- prometheus.MustNewConstMetric(
 			c.vmDynamicMemoryBalancerAvailableMemory,
 			prometheus.GaugeValue,
-			utils.MBToBytes(page[vmDynamicMemoryBalancerAvailableMemory].FirstValue),
-			name,
+			utils.MBToBytes(data.VmDynamicMemoryBalancerAvailableMemory),
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.vmDynamicMemoryBalancerAvailableMemoryForBalancing,
 			prometheus.GaugeValue,
-			utils.MBToBytes(page[vmDynamicMemoryBalancerAvailableMemoryForBalancing].FirstValue),
-			name,
+			utils.MBToBytes(data.VmDynamicMemoryBalancerAvailableMemoryForBalancing),
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.vmDynamicMemoryBalancerAveragePressure,
 			prometheus.GaugeValue,
-			utils.PercentageToRatio(page[vmDynamicMemoryBalancerAveragePressure].FirstValue),
-			name,
+			utils.PercentageToRatio(data.VmDynamicMemoryBalancerAveragePressure),
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.vmDynamicMemoryBalancerSystemCurrentPressure,
 			prometheus.GaugeValue,
-			utils.PercentageToRatio(page[vmDynamicMemoryBalancerSystemCurrentPressure].FirstValue),
-			name,
+			utils.PercentageToRatio(data.VmDynamicMemoryBalancerSystemCurrentPressure),
+			data.Name,
 		)
 	}
 

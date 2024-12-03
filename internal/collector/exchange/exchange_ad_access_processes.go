@@ -18,31 +18,37 @@ package exchange
 import (
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-const (
-	ldapReadTime                    = "LDAP Read Time"
-	ldapSearchTime                  = "LDAP Search Time"
-	ldapWriteTime                   = "LDAP Write Time"
-	ldapTimeoutErrorsPerSec         = "LDAP Timeout Errors/sec"
-	longRunningLDAPOperationsPerMin = "Long Running LDAP Operations/min"
-)
+type collectorADAccessProcesses struct {
+	perfDataCollectorADAccessProcesses *pdh.Collector
+	perfDataObjectADAccessProcesses    []perfDataCounterValuesADAccessProcesses
+
+	ldapReadTime                    *prometheus.Desc
+	ldapSearchTime                  *prometheus.Desc
+	ldapTimeoutErrorsPerSec         *prometheus.Desc
+	ldapWriteTime                   *prometheus.Desc
+	longRunningLDAPOperationsPerMin *prometheus.Desc
+}
+
+type perfDataCounterValuesADAccessProcesses struct {
+	Name string
+
+	LdapReadTime                    float64 `perfdata:"LDAP Read Time"`
+	LdapSearchTime                  float64 `perfdata:"LDAP Search Time"`
+	LdapWriteTime                   float64 `perfdata:"LDAP Write Time"`
+	LdapTimeoutErrorsPerSec         float64 `perfdata:"LDAP Timeout Errors/sec"`
+	LongRunningLDAPOperationsPerMin float64 `perfdata:"Long Running LDAP Operations/min"`
+}
 
 func (c *Collector) buildADAccessProcesses() error {
-	counters := []string{
-		ldapReadTime,
-		ldapSearchTime,
-		ldapWriteTime,
-		ldapTimeoutErrorsPerSec,
-		longRunningLDAPOperationsPerMin,
-	}
-
 	var err error
 
-	c.perfDataCollectorADAccessProcesses, err = perfdata.NewCollector("MSExchange ADAccess Processes", perfdata.InstancesAll, counters)
+	c.perfDataCollectorADAccessProcesses, err = pdh.NewCollector[perfDataCounterValuesADAccessProcesses]("MSExchange ADAccess Processes", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create MSExchange ADAccess Processes collector: %w", err)
 	}
@@ -82,19 +88,15 @@ func (c *Collector) buildADAccessProcesses() error {
 }
 
 func (c *Collector) collectADAccessProcesses(ch chan<- prometheus.Metric) error {
-	perfData, err := c.perfDataCollectorADAccessProcesses.Collect()
+	err := c.perfDataCollectorADAccessProcesses.Collect(&c.perfDataObjectADAccessProcesses)
 	if err != nil {
 		return fmt.Errorf("failed to collect MSExchange ADAccess Processes metrics: %w", err)
 	}
 
-	if len(perfData) == 0 {
-		return fmt.Errorf("failed to collect MSExchange ADAccess Processes metrics: %w", types.ErrNoData)
-	}
-
 	labelUseCount := make(map[string]int)
 
-	for name, data := range perfData {
-		labelName := c.toLabelName(name)
+	for _, data := range c.perfDataObjectADAccessProcesses {
+		labelName := c.toLabelName(data.Name)
 
 		// Since we're not including the PID suffix from the instance names in the label names, we get an occasional duplicate.
 		// This seems to affect about 4 instances only of this object.
@@ -106,31 +108,31 @@ func (c *Collector) collectADAccessProcesses(ch chan<- prometheus.Metric) error 
 		ch <- prometheus.MustNewConstMetric(
 			c.ldapReadTime,
 			prometheus.CounterValue,
-			c.msToSec(data[ldapReadTime].FirstValue),
+			utils.MilliSecToSec(data.LdapReadTime),
 			labelName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.ldapSearchTime,
 			prometheus.CounterValue,
-			c.msToSec(data[ldapSearchTime].FirstValue),
+			utils.MilliSecToSec(data.LdapSearchTime),
 			labelName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.ldapWriteTime,
 			prometheus.CounterValue,
-			c.msToSec(data[ldapWriteTime].FirstValue),
+			utils.MilliSecToSec(data.LdapWriteTime),
 			labelName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.ldapTimeoutErrorsPerSec,
 			prometheus.CounterValue,
-			data[ldapTimeoutErrorsPerSec].FirstValue,
+			data.LdapTimeoutErrorsPerSec,
 			labelName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.longRunningLDAPOperationsPerMin,
 			prometheus.CounterValue,
-			data[longRunningLDAPOperationsPerMin].FirstValue*60,
+			data.LongRunningLDAPOperationsPerMin*60,
 			labelName,
 		)
 	}

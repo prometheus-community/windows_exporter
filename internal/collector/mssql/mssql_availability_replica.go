@@ -19,14 +19,15 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 type collectorAvailabilityReplica struct {
-	availabilityReplicaPerfDataCollectors map[string]*perfdata.Collector
+	availabilityReplicaPerfDataCollectors map[string]*pdh.Collector
+	availabilityReplicaPerfDataObject     []perfDataCounterValuesAvailabilityReplica
 
 	availReplicaBytesReceivedFromReplica *prometheus.Desc
 	availReplicaBytesSentToReplica       *prometheus.Desc
@@ -39,37 +40,30 @@ type collectorAvailabilityReplica struct {
 	availReplicaSendsToTransport         *prometheus.Desc
 }
 
-const (
-	availReplicaBytesReceivedFromReplicaPerSec = "Bytes Received from Replica/sec"
-	availReplicaBytesSentToReplicaPerSec       = "Bytes Sent to Replica/sec"
-	availReplicaBytesSentToTransportPerSec     = "Bytes Sent to Transport/sec"
-	availReplicaFlowControlPerSec              = "Flow Control/sec"
-	availReplicaFlowControlTimeMSPerSec        = "Flow Control Time (ms/sec)"
-	availReplicaReceivesFromReplicaPerSec      = "Receives from Replica/sec"
-	availReplicaResentMessagesPerSec           = "Resent Messages/sec"
-	availReplicaSendsToReplicaPerSec           = "Sends to Replica/sec"
-	availReplicaSendsToTransportPerSec         = "Sends to Transport/sec"
-)
+type perfDataCounterValuesAvailabilityReplica struct {
+	Name string
+
+	AvailReplicaBytesReceivedFromReplicaPerSec float64 `perfdata:"Bytes Received from Replica/sec"`
+	AvailReplicaBytesSentToReplicaPerSec       float64 `perfdata:"Bytes Sent to Replica/sec"`
+	AvailReplicaBytesSentToTransportPerSec     float64 `perfdata:"Bytes Sent to Transport/sec"`
+	AvailReplicaFlowControlPerSec              float64 `perfdata:"Flow Control/sec"`
+	AvailReplicaFlowControlTimeMSPerSec        float64 `perfdata:"Flow Control Time (ms/sec)"`
+	AvailReplicaReceivesFromReplicaPerSec      float64 `perfdata:"Receives from Replica/sec"`
+	AvailReplicaResentMessagesPerSec           float64 `perfdata:"Resent Messages/sec"`
+	AvailReplicaSendsToReplicaPerSec           float64 `perfdata:"Sends to Replica/sec"`
+	AvailReplicaSendsToTransportPerSec         float64 `perfdata:"Sends to Transport/sec"`
+}
 
 func (c *Collector) buildAvailabilityReplica() error {
 	var err error
 
-	c.availabilityReplicaPerfDataCollectors = make(map[string]*perfdata.Collector, len(c.mssqlInstances))
+	c.availabilityReplicaPerfDataCollectors = make(map[string]*pdh.Collector, len(c.mssqlInstances))
 	errs := make([]error, 0, len(c.mssqlInstances))
-	counters := []string{
-		availReplicaBytesReceivedFromReplicaPerSec,
-		availReplicaBytesSentToReplicaPerSec,
-		availReplicaBytesSentToTransportPerSec,
-		availReplicaFlowControlPerSec,
-		availReplicaFlowControlTimeMSPerSec,
-		availReplicaReceivesFromReplicaPerSec,
-		availReplicaResentMessagesPerSec,
-		availReplicaSendsToReplicaPerSec,
-		availReplicaSendsToTransportPerSec,
-	}
 
 	for _, sqlInstance := range c.mssqlInstances {
-		c.availabilityReplicaPerfDataCollectors[sqlInstance.name], err = perfdata.NewCollector(c.mssqlGetPerfObjectName(sqlInstance.name, "Availability Replica"), perfdata.InstancesAll, counters)
+		c.availabilityReplicaPerfDataCollectors[sqlInstance.name], err = pdh.NewCollector[perfDataCounterValuesAvailabilityReplica](
+			c.mssqlGetPerfObjectName(sqlInstance.name, "Availability Replica"), pdh.InstancesAll,
+		)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("failed to create Availability Replica collector for instance %s: %w", sqlInstance.name, err))
 		}
@@ -138,78 +132,74 @@ func (c *Collector) collectAvailabilityReplica(ch chan<- prometheus.Metric) erro
 	return c.collect(ch, subCollectorAvailabilityReplica, c.availabilityReplicaPerfDataCollectors, c.collectAvailabilityReplicaInstance)
 }
 
-func (c *Collector) collectAvailabilityReplicaInstance(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *perfdata.Collector) error {
-	if perfDataCollector == nil {
-		return types.ErrCollectorNotInitialized
-	}
-
-	perfData, err := perfDataCollector.Collect()
+func (c *Collector) collectAvailabilityReplicaInstance(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *pdh.Collector) error {
+	err := perfDataCollector.Collect(&c.availabilityReplicaPerfDataObject)
 	if err != nil {
 		return fmt.Errorf("failed to collect %s metrics: %w", c.mssqlGetPerfObjectName(sqlInstance, "Availability Replica"), err)
 	}
 
-	for replicaName, data := range perfData {
+	for _, data := range c.availabilityReplicaPerfDataObject {
 		ch <- prometheus.MustNewConstMetric(
 			c.availReplicaBytesReceivedFromReplica,
 			prometheus.CounterValue,
-			data[availReplicaBytesReceivedFromReplicaPerSec].FirstValue,
-			sqlInstance, replicaName,
+			data.AvailReplicaBytesReceivedFromReplicaPerSec,
+			sqlInstance, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.availReplicaBytesSentToReplica,
 			prometheus.CounterValue,
-			data[availReplicaBytesSentToReplicaPerSec].FirstValue,
-			sqlInstance, replicaName,
+			data.AvailReplicaBytesSentToReplicaPerSec,
+			sqlInstance, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.availReplicaBytesSentToTransport,
 			prometheus.CounterValue,
-			data[availReplicaBytesSentToTransportPerSec].FirstValue,
-			sqlInstance, replicaName,
+			data.AvailReplicaBytesSentToTransportPerSec,
+			sqlInstance, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.availReplicaFlowControl,
 			prometheus.CounterValue,
-			data[availReplicaFlowControlPerSec].FirstValue,
-			sqlInstance, replicaName,
+			data.AvailReplicaFlowControlPerSec,
+			sqlInstance, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.availReplicaFlowControlTimeMS,
 			prometheus.CounterValue,
-			utils.MilliSecToSec(data[availReplicaFlowControlTimeMSPerSec].FirstValue),
-			sqlInstance, replicaName,
+			utils.MilliSecToSec(data.AvailReplicaFlowControlTimeMSPerSec),
+			sqlInstance, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.availReplicaReceivesFromReplica,
 			prometheus.CounterValue,
-			data[availReplicaReceivesFromReplicaPerSec].FirstValue,
-			sqlInstance, replicaName,
+			data.AvailReplicaReceivesFromReplicaPerSec,
+			sqlInstance, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.availReplicaResentMessages,
 			prometheus.CounterValue,
-			data[availReplicaResentMessagesPerSec].FirstValue,
-			sqlInstance, replicaName,
+			data.AvailReplicaResentMessagesPerSec,
+			sqlInstance, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.availReplicaSendsToReplica,
 			prometheus.CounterValue,
-			data[availReplicaSendsToReplicaPerSec].FirstValue,
-			sqlInstance, replicaName,
+			data.AvailReplicaSendsToReplicaPerSec,
+			sqlInstance, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.availReplicaSendsToTransport,
 			prometheus.CounterValue,
-			data[availReplicaSendsToTransportPerSec].FirstValue,
-			sqlInstance, replicaName,
+			data.AvailReplicaSendsToTransportPerSec,
+			sqlInstance, data.Name,
 		)
 	}
 

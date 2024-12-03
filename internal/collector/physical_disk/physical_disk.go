@@ -23,7 +23,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -45,7 +45,8 @@ var ConfigDefaults = Config{
 type Collector struct {
 	config Config
 
-	perfDataCollector *perfdata.Collector
+	perfDataCollector *pdh.Collector
+	perfDataObject    []perfDataCounterValues
 
 	idleTime         *prometheus.Desc
 	readBytesTotal   *prometheus.Desc
@@ -126,24 +127,9 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
-	counters := []string{
-		CurrentDiskQueueLength,
-		DiskReadBytesPerSec,
-		DiskReadsPerSec,
-		DiskWriteBytesPerSec,
-		DiskWritesPerSec,
-		PercentDiskReadTime,
-		PercentDiskWriteTime,
-		PercentIdleTime,
-		SplitIOPerSec,
-		AvgDiskSecPerRead,
-		AvgDiskSecPerWrite,
-		AvgDiskSecPerTransfer,
-	}
-
 	var err error
 
-	c.perfDataCollector, err = perfdata.NewCollector("PhysicalDisk", perfdata.InstancesAll, counters)
+	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues]("PhysicalDisk", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create PhysicalDisk collector: %w", err)
 	}
@@ -238,102 +224,102 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
-	perfData, err := c.perfDataCollector.Collect()
+	err := c.perfDataCollector.Collect(&c.perfDataObject)
 	if err != nil {
 		return fmt.Errorf("failed to collect PhysicalDisk metrics: %w", err)
 	}
 
-	for name, disk := range perfData {
-		if c.config.DiskExclude.MatchString(name) ||
-			!c.config.DiskInclude.MatchString(name) {
+	for _, data := range c.perfDataObject {
+		if c.config.DiskExclude.MatchString(data.Name) ||
+			!c.config.DiskInclude.MatchString(data.Name) {
 			continue
 		}
 
 		// Parse physical disk number from disk.Name. Mountpoint information is
 		// sometimes included, e.g. "1 C:".
-		disk_number, _, _ := strings.Cut(name, " ")
+		disk_number, _, _ := strings.Cut(data.Name, " ")
 
 		ch <- prometheus.MustNewConstMetric(
 			c.requestsQueued,
 			prometheus.GaugeValue,
-			disk[CurrentDiskQueueLength].FirstValue,
+			data.CurrentDiskQueueLength,
 			disk_number,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.readBytesTotal,
 			prometheus.CounterValue,
-			disk[DiskReadBytesPerSec].FirstValue,
+			data.DiskReadBytesPerSec,
 			disk_number,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.readsTotal,
 			prometheus.CounterValue,
-			disk[DiskReadsPerSec].FirstValue,
+			data.DiskReadsPerSec,
 			disk_number,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.writeBytesTotal,
 			prometheus.CounterValue,
-			disk[DiskWriteBytesPerSec].FirstValue,
+			data.DiskWriteBytesPerSec,
 			disk_number,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.writesTotal,
 			prometheus.CounterValue,
-			disk[DiskWritesPerSec].FirstValue,
+			data.DiskWritesPerSec,
 			disk_number,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.readTime,
 			prometheus.CounterValue,
-			disk[PercentDiskReadTime].FirstValue,
+			data.PercentDiskReadTime,
 			disk_number,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.writeTime,
 			prometheus.CounterValue,
-			disk[PercentDiskWriteTime].FirstValue,
+			data.PercentDiskWriteTime,
 			disk_number,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.idleTime,
 			prometheus.CounterValue,
-			disk[PercentIdleTime].FirstValue,
+			data.PercentIdleTime,
 			disk_number,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.splitIOs,
 			prometheus.CounterValue,
-			disk[SplitIOPerSec].FirstValue,
+			data.SplitIOPerSec,
 			disk_number,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.readLatency,
 			prometheus.CounterValue,
-			disk[AvgDiskSecPerRead].FirstValue*perfdata.TicksToSecondScaleFactor,
+			data.AvgDiskSecPerRead*pdh.TicksToSecondScaleFactor,
 			disk_number,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.writeLatency,
 			prometheus.CounterValue,
-			disk[AvgDiskSecPerWrite].FirstValue*perfdata.TicksToSecondScaleFactor,
+			data.AvgDiskSecPerWrite*pdh.TicksToSecondScaleFactor,
 			disk_number,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.readWriteLatency,
 			prometheus.CounterValue,
-			disk[AvgDiskSecPerTransfer].FirstValue*perfdata.TicksToSecondScaleFactor,
+			data.AvgDiskSecPerTransfer*pdh.TicksToSecondScaleFactor,
 			disk_number,
 		)
 	}

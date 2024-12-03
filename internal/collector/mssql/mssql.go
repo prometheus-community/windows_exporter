@@ -26,7 +26,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows/registry"
@@ -273,7 +273,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 // to the provided prometheus Metric channel.
 func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	if len(c.mssqlInstances) == 0 {
-		return fmt.Errorf("no SQL instances found: %w", perfdata.ErrNoData)
+		return fmt.Errorf("no SQL instances found: %w", pdh.ErrNoData)
 	}
 
 	errCh := make(chan error, len(c.collectorFns))
@@ -368,8 +368,8 @@ func (c *Collector) mssqlGetPerfObjectName(sqlInstance string, collector string)
 func (c *Collector) collect(
 	ch chan<- prometheus.Metric,
 	collector string,
-	perfDataCollectors map[string]*perfdata.Collector,
-	collectFn func(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *perfdata.Collector) error,
+	perfDataCollectors map[string]*pdh.Collector,
+	collectFn func(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *pdh.Collector) error,
 ) error {
 	errs := make([]error, 0, len(perfDataCollectors))
 
@@ -379,7 +379,7 @@ func (c *Collector) collect(
 		err := collectFn(ch, sqlInstance, perfDataCollector)
 		duration := time.Since(begin)
 
-		if err != nil && !errors.Is(err, perfdata.ErrNoData) {
+		if err != nil && !errors.Is(err, pdh.ErrNoData) {
 			errs = append(errs, err)
 			success = 0.0
 
@@ -388,6 +388,10 @@ func (c *Collector) collect(
 			)
 		} else {
 			c.logger.Debug(fmt.Sprintf("mssql class collector %s for instance %s succeeded after %s", collector, sqlInstance, duration))
+		}
+
+		if collector == "" {
+			continue
 		}
 
 		ch <- prometheus.MustNewConstMetric(

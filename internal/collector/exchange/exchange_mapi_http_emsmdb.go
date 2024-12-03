@@ -18,23 +18,26 @@ package exchange
 import (
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-const (
-	activeUserCount = "Active User Count"
-)
+type collectorMapiHttpEmsmdb struct {
+	perfDataCollectorMapiHttpEmsmdb *pdh.Collector
+	perfDataObjectMapiHttpEmsmdb    []perfDataCounterValuesMapiHttpEmsmdb
+
+	activeUserCountMapiHttpEmsMDB *prometheus.Desc
+}
+
+type perfDataCounterValuesMapiHttpEmsmdb struct {
+	ActiveUserCount float64 `perfdata:"Active User Count"`
+}
 
 func (c *Collector) buildMapiHttpEmsmdb() error {
-	counters := []string{
-		activeUserCount,
-	}
-
 	var err error
 
-	c.perfDataCollectorMapiHttpEmsmdb, err = perfdata.NewCollector("MSExchange MapiHttp Emsmdb", perfdata.InstancesAll, counters)
+	c.perfDataCollectorMapiHttpEmsmdb, err = pdh.NewCollector[perfDataCounterValuesMapiHttpEmsmdb]("MSExchange MapiHttp Emsmdb", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create MSExchange MapiHttp Emsmdb: %w", err)
 	}
@@ -50,20 +53,16 @@ func (c *Collector) buildMapiHttpEmsmdb() error {
 }
 
 func (c *Collector) collectMapiHttpEmsmdb(ch chan<- prometheus.Metric) error {
-	perfData, err := c.perfDataCollectorMapiHttpEmsmdb.Collect()
+	err := c.perfDataCollectorMapiHttpEmsmdb.Collect(&c.perfDataObjectMapiHttpEmsmdb)
 	if err != nil {
 		return fmt.Errorf("failed to collect MSExchange MapiHttp Emsmdb metrics: %w", err)
 	}
 
-	if len(perfData) == 0 {
-		return fmt.Errorf("failed to collect MSExchange MapiHttp Emsmdb metrics: %w", types.ErrNoData)
-	}
-
-	for _, data := range perfData {
+	for _, data := range c.perfDataObjectMapiHttpEmsmdb {
 		ch <- prometheus.MustNewConstMetric(
 			c.activeUserCountMapiHttpEmsMDB,
 			prometheus.GaugeValue,
-			data[activeUserCount].FirstValue,
+			data.ActiveUserCount,
 		)
 	}
 

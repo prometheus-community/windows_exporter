@@ -16,17 +16,18 @@
 package hyperv
 
 import (
-	"errors"
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 // collectorHypervisorRootPartition Hyper-V Hypervisor Root Partition metrics
 type collectorHypervisorRootPartition struct {
-	perfDataCollectorHypervisorRootPartition             *perfdata.Collector
+	perfDataCollectorHypervisorRootPartition *pdh.Collector
+	perfDataObjectHypervisorRootPartition    []perfDataCounterValuesHypervisorRootPartition
+
 	hypervisorRootPartitionAddressSpaces                 *prometheus.Desc // \Hyper-V Hypervisor Root Partition(*)\Address Spaces
 	hypervisorRootPartitionAttachedDevices               *prometheus.Desc // \Hyper-V Hypervisor Root Partition(*)\Attached Devices
 	hypervisorRootPartitionDepositedPages                *prometheus.Desc // \Hyper-V Hypervisor Root Partition(*)\Deposited Pages
@@ -50,56 +51,34 @@ type collectorHypervisorRootPartition struct {
 	hypervisorRootPartitionVirtualTLBPages               *prometheus.Desc // \Hyper-V Hypervisor Root Partition(*)\Virtual TLB Pages
 }
 
-const (
-	hypervisorRootPartitionAddressSpaces                 = "Address Spaces"
-	hypervisorRootPartitionAttachedDevices               = "Attached Devices"
-	hypervisorRootPartitionDepositedPages                = "Deposited Pages"
-	hypervisorRootPartitionDeviceDMAErrors               = "Device DMA Errors"
-	hypervisorRootPartitionDeviceInterruptErrors         = "Device Interrupt Errors"
-	hypervisorRootPartitionDeviceInterruptMappings       = "Device Interrupt Mappings"
-	hypervisorRootPartitionDeviceInterruptThrottleEvents = "Device Interrupt Throttle Events"
-	hypervisorRootPartitionGPAPages                      = "GPA Pages"
-	hypervisorRootPartitionGPASpaceModifications         = "GPA Space Modifications/sec"
-	hypervisorRootPartitionIOTLBFlushCost                = "I/O TLB Flush Cost"
-	hypervisorRootPartitionIOTLBFlushes                  = "I/O TLB Flushes/sec"
-	hypervisorRootPartitionRecommendedVirtualTLBSize     = "Recommended Virtual TLB Size"
-	hypervisorRootPartitionSkippedTimerTicks             = "Skipped Timer Ticks"
-	hypervisorRootPartition1GDevicePages                 = "1G device pages"
-	hypervisorRootPartition1GGPAPages                    = "1G GPA pages"
-	hypervisorRootPartition2MDevicePages                 = "2M device pages"
-	hypervisorRootPartition2MGPAPages                    = "2M GPA pages"
-	hypervisorRootPartition4KDevicePages                 = "4K device pages"
-	hypervisorRootPartition4KGPAPages                    = "4K GPA pages"
-	hypervisorRootPartitionVirtualTLBFlushEntries        = "Virtual TLB Flush Entires/sec"
-	hypervisorRootPartitionVirtualTLBPages               = "Virtual TLB Pages"
-)
+type perfDataCounterValuesHypervisorRootPartition struct {
+	HypervisorRootPartitionAddressSpaces                 float64 `perfdata:"Address Spaces"`
+	HypervisorRootPartitionAttachedDevices               float64 `perfdata:"Attached Devices"`
+	HypervisorRootPartitionDepositedPages                float64 `perfdata:"Deposited Pages"`
+	HypervisorRootPartitionDeviceDMAErrors               float64 `perfdata:"Device DMA Errors"`
+	HypervisorRootPartitionDeviceInterruptErrors         float64 `perfdata:"Device Interrupt Errors"`
+	HypervisorRootPartitionDeviceInterruptMappings       float64 `perfdata:"Device Interrupt Mappings"`
+	HypervisorRootPartitionDeviceInterruptThrottleEvents float64 `perfdata:"Device Interrupt Throttle Events"`
+	HypervisorRootPartitionGPAPages                      float64 `perfdata:"GPA Pages"`
+	HypervisorRootPartitionGPASpaceModifications         float64 `perfdata:"GPA Space Modifications/sec"`
+	HypervisorRootPartitionIOTLBFlushCost                float64 `perfdata:"I/O TLB Flush Cost"`
+	HypervisorRootPartitionIOTLBFlushes                  float64 `perfdata:"I/O TLB Flushes/sec"`
+	HypervisorRootPartitionRecommendedVirtualTLBSize     float64 `perfdata:"Recommended Virtual TLB Size"`
+	HypervisorRootPartitionSkippedTimerTicks             float64 `perfdata:"Skipped Timer Ticks"`
+	HypervisorRootPartition1GDevicePages                 float64 `perfdata:"1G device pages"`
+	HypervisorRootPartition1GGPAPages                    float64 `perfdata:"1G GPA pages"`
+	HypervisorRootPartition2MDevicePages                 float64 `perfdata:"2M device pages"`
+	HypervisorRootPartition2MGPAPages                    float64 `perfdata:"2M GPA pages"`
+	HypervisorRootPartition4KDevicePages                 float64 `perfdata:"4K device pages"`
+	HypervisorRootPartition4KGPAPages                    float64 `perfdata:"4K GPA pages"`
+	HypervisorRootPartitionVirtualTLBFlushEntries        float64 `perfdata:"Virtual TLB Flush Entires/sec"`
+	HypervisorRootPartitionVirtualTLBPages               float64 `perfdata:"Virtual TLB Pages"`
+}
 
 func (c *Collector) buildHypervisorRootPartition() error {
 	var err error
 
-	c.perfDataCollectorHypervisorRootPartition, err = perfdata.NewCollector("Hyper-V Hypervisor Root Partition", []string{"Root"}, []string{
-		hypervisorRootPartitionAddressSpaces,
-		hypervisorRootPartitionAttachedDevices,
-		hypervisorRootPartitionDepositedPages,
-		hypervisorRootPartitionDeviceDMAErrors,
-		hypervisorRootPartitionDeviceInterruptErrors,
-		hypervisorRootPartitionDeviceInterruptMappings,
-		hypervisorRootPartitionDeviceInterruptThrottleEvents,
-		hypervisorRootPartitionGPAPages,
-		hypervisorRootPartitionGPASpaceModifications,
-		hypervisorRootPartitionIOTLBFlushCost,
-		hypervisorRootPartitionIOTLBFlushes,
-		hypervisorRootPartitionRecommendedVirtualTLBSize,
-		hypervisorRootPartitionSkippedTimerTicks,
-		hypervisorRootPartition1GDevicePages,
-		hypervisorRootPartition1GGPAPages,
-		hypervisorRootPartition2MDevicePages,
-		hypervisorRootPartition2MGPAPages,
-		hypervisorRootPartition4KDevicePages,
-		hypervisorRootPartition4KGPAPages,
-		hypervisorRootPartitionVirtualTLBFlushEntries,
-		hypervisorRootPartitionVirtualTLBPages,
-	})
+	c.perfDataCollectorHypervisorRootPartition, err = pdh.NewCollector[perfDataCounterValuesHypervisorRootPartition]("Hyper-V Hypervisor Root Partition", []string{"Root"})
 	if err != nil {
 		return fmt.Errorf("failed to create Hyper-V Hypervisor Root Partition collector: %w", err)
 	}
@@ -235,129 +214,124 @@ func (c *Collector) buildHypervisorRootPartition() error {
 }
 
 func (c *Collector) collectHypervisorRootPartition(ch chan<- prometheus.Metric) error {
-	data, err := c.perfDataCollectorHypervisorRootPartition.Collect()
+	err := c.perfDataCollectorHypervisorRootPartition.Collect(&c.perfDataObjectHypervisorRootPartition)
 	if err != nil {
 		return fmt.Errorf("failed to collect Hyper-V Hypervisor Root Partition metrics: %w", err)
-	}
-
-	rootData, ok := data["Root"]
-	if !ok {
-		return errors.New("no data returned from Hyper-V Hypervisor Root Partition")
 	}
 
 	ch <- prometheus.MustNewConstMetric(
 		c.hypervisorRootPartitionAddressSpaces,
 		prometheus.GaugeValue,
-		rootData[hypervisorRootPartitionAddressSpaces].FirstValue,
+		c.perfDataObjectHypervisorRootPartition[0].HypervisorRootPartitionAddressSpaces,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.hypervisorRootPartitionAttachedDevices,
 		prometheus.GaugeValue,
-		rootData[hypervisorRootPartitionAttachedDevices].FirstValue,
+		c.perfDataObjectHypervisorRootPartition[0].HypervisorRootPartitionAttachedDevices,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.hypervisorRootPartitionDepositedPages,
 		prometheus.GaugeValue,
-		rootData[hypervisorRootPartitionDepositedPages].FirstValue,
+		c.perfDataObjectHypervisorRootPartition[0].HypervisorRootPartitionDepositedPages,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.hypervisorRootPartitionDeviceDMAErrors,
 		prometheus.GaugeValue,
-		rootData[hypervisorRootPartitionDeviceDMAErrors].FirstValue,
+		c.perfDataObjectHypervisorRootPartition[0].HypervisorRootPartitionDeviceDMAErrors,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.hypervisorRootPartitionDeviceInterruptErrors,
 		prometheus.GaugeValue,
-		rootData[hypervisorRootPartitionDeviceInterruptErrors].FirstValue,
+		c.perfDataObjectHypervisorRootPartition[0].HypervisorRootPartitionDeviceInterruptErrors,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.hypervisorRootPartitionDeviceInterruptThrottleEvents,
 		prometheus.GaugeValue,
-		rootData[hypervisorRootPartitionDeviceInterruptThrottleEvents].FirstValue,
+		c.perfDataObjectHypervisorRootPartition[0].HypervisorRootPartitionDeviceInterruptThrottleEvents,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.hypervisorRootPartitionGPAPages,
 		prometheus.GaugeValue,
-		rootData[hypervisorRootPartitionGPAPages].FirstValue,
+		c.perfDataObjectHypervisorRootPartition[0].HypervisorRootPartitionGPAPages,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.hypervisorRootPartitionGPASpaceModifications,
 		prometheus.CounterValue,
-		rootData[hypervisorRootPartitionGPASpaceModifications].FirstValue,
+		c.perfDataObjectHypervisorRootPartition[0].HypervisorRootPartitionGPASpaceModifications,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.hypervisorRootPartitionIOTLBFlushCost,
 		prometheus.GaugeValue,
-		rootData[hypervisorRootPartitionIOTLBFlushCost].FirstValue,
+		c.perfDataObjectHypervisorRootPartition[0].HypervisorRootPartitionIOTLBFlushCost,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.hypervisorRootPartitionIOTLBFlushes,
 		prometheus.CounterValue,
-		rootData[hypervisorRootPartitionIOTLBFlushes].FirstValue,
+		c.perfDataObjectHypervisorRootPartition[0].HypervisorRootPartitionIOTLBFlushes,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.hypervisorRootPartitionRecommendedVirtualTLBSize,
 		prometheus.GaugeValue,
-		rootData[hypervisorRootPartitionRecommendedVirtualTLBSize].FirstValue,
+		c.perfDataObjectHypervisorRootPartition[0].HypervisorRootPartitionRecommendedVirtualTLBSize,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.hypervisorRootPartitionSkippedTimerTicks,
 		prometheus.GaugeValue,
-		rootData[hypervisorRootPartitionSkippedTimerTicks].FirstValue,
+		c.perfDataObjectHypervisorRootPartition[0].HypervisorRootPartitionSkippedTimerTicks,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.hypervisorRootPartition1GDevicePages,
 		prometheus.GaugeValue,
-		rootData[hypervisorRootPartition1GDevicePages].FirstValue,
+		c.perfDataObjectHypervisorRootPartition[0].HypervisorRootPartition1GDevicePages,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.hypervisorRootPartition1GGPAPages,
 		prometheus.GaugeValue,
-		rootData[hypervisorRootPartition1GGPAPages].FirstValue,
+		c.perfDataObjectHypervisorRootPartition[0].HypervisorRootPartition1GGPAPages,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.hypervisorRootPartition2MDevicePages,
 		prometheus.GaugeValue,
-		rootData[hypervisorRootPartition2MDevicePages].FirstValue,
+		c.perfDataObjectHypervisorRootPartition[0].HypervisorRootPartition2MDevicePages,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.hypervisorRootPartition2MGPAPages,
 		prometheus.GaugeValue,
-		rootData[hypervisorRootPartition2MGPAPages].FirstValue,
+		c.perfDataObjectHypervisorRootPartition[0].HypervisorRootPartition2MGPAPages,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.hypervisorRootPartition4KDevicePages,
 		prometheus.GaugeValue,
-		rootData[hypervisorRootPartition4KDevicePages].FirstValue,
+		c.perfDataObjectHypervisorRootPartition[0].HypervisorRootPartition4KDevicePages,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.hypervisorRootPartition4KGPAPages,
 		prometheus.GaugeValue,
-		rootData[hypervisorRootPartition4KGPAPages].FirstValue,
+		c.perfDataObjectHypervisorRootPartition[0].HypervisorRootPartition4KGPAPages,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.hypervisorRootPartitionVirtualTLBFlushEntries,
 		prometheus.CounterValue,
-		rootData[hypervisorRootPartitionVirtualTLBFlushEntries].FirstValue,
+		c.perfDataObjectHypervisorRootPartition[0].HypervisorRootPartitionVirtualTLBFlushEntries,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.hypervisorRootPartitionVirtualTLBPages,
 		prometheus.GaugeValue,
-		rootData[hypervisorRootPartitionVirtualTLBPages].FirstValue,
+		c.perfDataObjectHypervisorRootPartition[0].HypervisorRootPartitionVirtualTLBPages,
 	)
 
 	return nil

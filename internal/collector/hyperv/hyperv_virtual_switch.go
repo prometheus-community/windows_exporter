@@ -18,14 +18,16 @@ package hyperv
 import (
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 // collectorVirtualMachineHealthSummary Hyper-V Virtual Switch Summary metrics
 type collectorVirtualSwitch struct {
-	perfDataCollectorVirtualSwitch                *perfdata.Collector
+	perfDataCollectorVirtualSwitch *pdh.Collector
+	perfDataObjectVirtualSwitch    []perfDataCounterValuesVirtualSwitch
+
 	virtualSwitchBroadcastPacketsReceived         *prometheus.Desc // \Hyper-V Virtual Switch(*)\Broadcast Packets Received/sec
 	virtualSwitchBroadcastPacketsSent             *prometheus.Desc // \Hyper-V Virtual Switch(*)\Broadcast Packets Sent/sec
 	virtualSwitchBytes                            *prometheus.Desc // \Hyper-V Virtual Switch(*)\Bytes/sec
@@ -49,56 +51,36 @@ type collectorVirtualSwitch struct {
 	virtualSwitchPurgedMacAddresses               *prometheus.Desc // \Hyper-V Virtual Switch(*)\Purged Mac Addresses
 }
 
-const (
-	virtualSwitchBroadcastPacketsReceived         = "Broadcast Packets Received/sec"
-	virtualSwitchBroadcastPacketsSent             = "Broadcast Packets Sent/sec"
-	virtualSwitchBytes                            = "Bytes/sec"
-	virtualSwitchBytesReceived                    = "Bytes Received/sec"
-	virtualSwitchBytesSent                        = "Bytes Sent/sec"
-	virtualSwitchDirectedPacketsReceived          = "Directed Packets Received/sec"
-	virtualSwitchDirectedPacketsSent              = "Directed Packets Sent/sec"
-	virtualSwitchDroppedPacketsIncoming           = "Dropped Packets Incoming/sec"
-	virtualSwitchDroppedPacketsOutgoing           = "Dropped Packets Outgoing/sec"
-	virtualSwitchExtensionsDroppedPacketsIncoming = "Extensions Dropped Packets Incoming/sec"
-	virtualSwitchExtensionsDroppedPacketsOutgoing = "Extensions Dropped Packets Outgoing/sec"
-	virtualSwitchLearnedMacAddresses              = "Learned Mac Addresses"
-	virtualSwitchMulticastPacketsReceived         = "Multicast Packets Received/sec"
-	virtualSwitchMulticastPacketsSent             = "Multicast Packets Sent/sec"
-	virtualSwitchNumberOfSendChannelMoves         = "Number of Send Channel Moves/sec"
-	virtualSwitchNumberOfVMQMoves                 = "Number of VMQ Moves/sec"
-	virtualSwitchPacketsFlooded                   = "Packets Flooded"
-	virtualSwitchPackets                          = "Packets/sec"
-	virtualSwitchPacketsReceived                  = "Packets Received/sec"
-	virtualSwitchPacketsSent                      = "Packets Sent/sec"
-	virtualSwitchPurgedMacAddresses               = "Purged Mac Addresses"
-)
+type perfDataCounterValuesVirtualSwitch struct {
+	Name string
+
+	VirtualSwitchBroadcastPacketsReceived         float64 `perfdata:"Broadcast Packets Received/sec"`
+	VirtualSwitchBroadcastPacketsSent             float64 `perfdata:"Broadcast Packets Sent/sec"`
+	VirtualSwitchBytes                            float64 `perfdata:"Bytes/sec"`
+	VirtualSwitchBytesReceived                    float64 `perfdata:"Bytes Received/sec"`
+	VirtualSwitchBytesSent                        float64 `perfdata:"Bytes Sent/sec"`
+	VirtualSwitchDirectedPacketsReceived          float64 `perfdata:"Directed Packets Received/sec"`
+	VirtualSwitchDirectedPacketsSent              float64 `perfdata:"Directed Packets Sent/sec"`
+	VirtualSwitchDroppedPacketsIncoming           float64 `perfdata:"Dropped Packets Incoming/sec"`
+	VirtualSwitchDroppedPacketsOutgoing           float64 `perfdata:"Dropped Packets Outgoing/sec"`
+	VirtualSwitchExtensionsDroppedPacketsIncoming float64 `perfdata:"Extensions Dropped Packets Incoming/sec"`
+	VirtualSwitchExtensionsDroppedPacketsOutgoing float64 `perfdata:"Extensions Dropped Packets Outgoing/sec"`
+	VirtualSwitchLearnedMacAddresses              float64 `perfdata:"Learned Mac Addresses"`
+	VirtualSwitchMulticastPacketsReceived         float64 `perfdata:"Multicast Packets Received/sec"`
+	VirtualSwitchMulticastPacketsSent             float64 `perfdata:"Multicast Packets Sent/sec"`
+	VirtualSwitchNumberOfSendChannelMoves         float64 `perfdata:"Number of Send Channel Moves/sec"`
+	VirtualSwitchNumberOfVMQMoves                 float64 `perfdata:"Number of VMQ Moves/sec"`
+	VirtualSwitchPacketsFlooded                   float64 `perfdata:"Packets Flooded"`
+	VirtualSwitchPackets                          float64 `perfdata:"Packets/sec"`
+	VirtualSwitchPacketsReceived                  float64 `perfdata:"Packets Received/sec"`
+	VirtualSwitchPacketsSent                      float64 `perfdata:"Packets Sent/sec"`
+	VirtualSwitchPurgedMacAddresses               float64 `perfdata:"Purged Mac Addresses"`
+}
 
 func (c *Collector) buildVirtualSwitch() error {
 	var err error
 
-	c.perfDataCollectorVirtualSwitch, err = perfdata.NewCollector("Hyper-V Virtual Switch", perfdata.InstancesAll, []string{
-		virtualSwitchBroadcastPacketsReceived,
-		virtualSwitchBroadcastPacketsSent,
-		virtualSwitchBytes,
-		virtualSwitchBytesReceived,
-		virtualSwitchBytesSent,
-		virtualSwitchDirectedPacketsReceived,
-		virtualSwitchDirectedPacketsSent,
-		virtualSwitchDroppedPacketsIncoming,
-		virtualSwitchDroppedPacketsOutgoing,
-		virtualSwitchExtensionsDroppedPacketsIncoming,
-		virtualSwitchExtensionsDroppedPacketsOutgoing,
-		virtualSwitchLearnedMacAddresses,
-		virtualSwitchMulticastPacketsReceived,
-		virtualSwitchMulticastPacketsSent,
-		virtualSwitchNumberOfSendChannelMoves,
-		virtualSwitchNumberOfVMQMoves,
-		virtualSwitchPacketsFlooded,
-		virtualSwitchPackets,
-		virtualSwitchPacketsReceived,
-		virtualSwitchPacketsSent,
-		virtualSwitchPurgedMacAddresses,
-	})
+	c.perfDataCollectorVirtualSwitch, err = pdh.NewCollector[perfDataCounterValuesVirtualSwitch]("Hyper-V Virtual Switch", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create Hyper-V Virtual Switch collector: %w", err)
 	}
@@ -234,147 +216,147 @@ func (c *Collector) buildVirtualSwitch() error {
 }
 
 func (c *Collector) collectVirtualSwitch(ch chan<- prometheus.Metric) error {
-	data, err := c.perfDataCollectorVirtualSwitch.Collect()
+	err := c.perfDataCollectorVirtualSwitch.Collect(&c.perfDataObjectVirtualSwitch)
 	if err != nil {
 		return fmt.Errorf("failed to collect Hyper-V Virtual Switch metrics: %w", err)
 	}
 
-	for name, switchData := range data {
+	for _, data := range c.perfDataObjectVirtualSwitch {
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualSwitchBroadcastPacketsReceived,
 			prometheus.CounterValue,
-			switchData[virtualSwitchBroadcastPacketsReceived].FirstValue,
-			name,
+			data.VirtualSwitchBroadcastPacketsReceived,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualSwitchBroadcastPacketsSent,
 			prometheus.CounterValue,
-			switchData[virtualSwitchBroadcastPacketsSent].FirstValue,
-			name,
+			data.VirtualSwitchBroadcastPacketsSent,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualSwitchBytes,
 			prometheus.CounterValue,
-			switchData[virtualSwitchBytes].FirstValue,
-			name,
+			data.VirtualSwitchBytes,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualSwitchBytesReceived,
 			prometheus.CounterValue,
-			switchData[virtualSwitchBytesReceived].FirstValue,
-			name,
+			data.VirtualSwitchBytesReceived,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualSwitchBytesSent,
 			prometheus.CounterValue,
-			switchData[virtualSwitchBytesSent].FirstValue,
-			name,
+			data.VirtualSwitchBytesSent,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualSwitchDirectedPacketsReceived,
 			prometheus.CounterValue,
-			switchData[virtualSwitchDirectedPacketsReceived].FirstValue,
-			name,
+			data.VirtualSwitchDirectedPacketsReceived,
+			data.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualSwitchDirectedPacketsSent,
 			prometheus.CounterValue,
-			switchData[virtualSwitchDirectedPacketsSent].FirstValue,
-			name,
+			data.VirtualSwitchDirectedPacketsSent,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualSwitchDroppedPacketsIncoming,
 			prometheus.CounterValue,
-			switchData[virtualSwitchDroppedPacketsIncoming].FirstValue,
-			name,
+			data.VirtualSwitchDroppedPacketsIncoming,
+			data.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualSwitchDroppedPacketsOutgoing,
 			prometheus.CounterValue,
-			switchData[virtualSwitchDroppedPacketsOutgoing].FirstValue,
-			name,
+			data.VirtualSwitchDroppedPacketsOutgoing,
+			data.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualSwitchExtensionsDroppedPacketsIncoming,
 			prometheus.CounterValue,
-			switchData[virtualSwitchExtensionsDroppedPacketsIncoming].FirstValue,
-			name,
+			data.VirtualSwitchExtensionsDroppedPacketsIncoming,
+			data.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualSwitchExtensionsDroppedPacketsOutgoing,
 			prometheus.CounterValue,
-			switchData[virtualSwitchExtensionsDroppedPacketsOutgoing].FirstValue,
-			name,
+			data.VirtualSwitchExtensionsDroppedPacketsOutgoing,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualSwitchLearnedMacAddresses,
 			prometheus.CounterValue,
-			switchData[virtualSwitchLearnedMacAddresses].FirstValue,
-			name,
+			data.VirtualSwitchLearnedMacAddresses,
+			data.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualSwitchMulticastPacketsReceived,
 			prometheus.CounterValue,
-			switchData[virtualSwitchMulticastPacketsReceived].FirstValue,
-			name,
+			data.VirtualSwitchMulticastPacketsReceived,
+			data.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualSwitchMulticastPacketsSent,
 			prometheus.CounterValue,
-			switchData[virtualSwitchMulticastPacketsSent].FirstValue,
-			name,
+			data.VirtualSwitchMulticastPacketsSent,
+			data.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualSwitchNumberOfSendChannelMoves,
 			prometheus.CounterValue,
-			switchData[virtualSwitchNumberOfSendChannelMoves].FirstValue,
-			name,
+			data.VirtualSwitchNumberOfSendChannelMoves,
+			data.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualSwitchNumberOfVMQMoves,
 			prometheus.CounterValue,
-			switchData[virtualSwitchNumberOfVMQMoves].FirstValue,
-			name,
+			data.VirtualSwitchNumberOfVMQMoves,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualSwitchPacketsFlooded,
 			prometheus.CounterValue,
-			switchData[virtualSwitchPacketsFlooded].FirstValue,
-			name,
+			data.VirtualSwitchPacketsFlooded,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualSwitchPackets,
 			prometheus.CounterValue,
-			switchData[virtualSwitchPackets].FirstValue,
-			name,
+			data.VirtualSwitchPackets,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualSwitchPacketsReceived,
 			prometheus.CounterValue,
-			switchData[virtualSwitchPacketsReceived].FirstValue,
-			name,
+			data.VirtualSwitchPacketsReceived,
+			data.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualSwitchPacketsSent,
 			prometheus.CounterValue,
-			switchData[virtualSwitchPacketsSent].FirstValue,
-			name,
+			data.VirtualSwitchPacketsSent,
+			data.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualSwitchPurgedMacAddresses,
 			prometheus.CounterValue,
-			switchData[virtualSwitchPurgedMacAddresses].FirstValue,
-			name,
+			data.VirtualSwitchPurgedMacAddresses,
+			data.Name,
 		)
 	}
 

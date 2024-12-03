@@ -26,7 +26,7 @@ import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/headers/kernel32"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows"
@@ -55,7 +55,8 @@ var ConfigDefaults = Config{
 type Collector struct {
 	config Config
 
-	perfDataCollector *perfdata.Collector
+	perfDataCollector *pdh.Collector
+	perfDataObject    []perfDataCounterValues
 
 	currentTime                      *prometheus.Desc
 	timezone                         *prometheus.Desc
@@ -126,14 +127,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 
 	var err error
 
-	c.perfDataCollector, err = perfdata.NewCollector("Windows Time Service", nil, []string{
-		ClockFrequencyAdjustmentPPBTotal,
-		ComputedTimeOffset,
-		NTPClientTimeSourceCount,
-		NTPRoundTripDelay,
-		NTPServerIncomingRequestsTotal,
-		NTPServerOutgoingResponsesTotal,
-	})
+	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues]("Windows Time Service", nil)
 	if err != nil {
 		return fmt.Errorf("failed to create Windows Time Service collector: %w", err)
 	}
@@ -236,45 +230,40 @@ func (c *Collector) collectTime(ch chan<- prometheus.Metric) error {
 }
 
 func (c *Collector) collectNTP(ch chan<- prometheus.Metric) error {
-	perfData, err := c.perfDataCollector.Collect()
+	err := c.perfDataCollector.Collect(&c.perfDataObject)
 	if err != nil {
-		return fmt.Errorf("failed to collect VM Memory metrics: %w", err)
-	}
-
-	data, ok := perfData[perfdata.InstanceEmpty]
-	if !ok {
 		return fmt.Errorf("failed to collect VM Memory metrics: %w", err)
 	}
 
 	ch <- prometheus.MustNewConstMetric(
 		c.clockFrequencyAdjustmentPPBTotal,
 		prometheus.CounterValue,
-		data[ClockFrequencyAdjustmentPPBTotal].FirstValue,
+		c.perfDataObject[0].ClockFrequencyAdjustmentPPBTotal,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.computedTimeOffset,
 		prometheus.GaugeValue,
-		data[ComputedTimeOffset].FirstValue/1000000, // microseconds -> seconds
+		c.perfDataObject[0].ComputedTimeOffset/1000000, // microseconds -> seconds
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.ntpClientTimeSourceCount,
 		prometheus.GaugeValue,
-		data[NTPClientTimeSourceCount].FirstValue,
+		c.perfDataObject[0].NTPClientTimeSourceCount,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.ntpRoundTripDelay,
 		prometheus.GaugeValue,
-		data[NTPRoundTripDelay].FirstValue/1000000, // microseconds -> seconds
+		c.perfDataObject[0].NTPRoundTripDelay/1000000, // microseconds -> seconds
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.ntpServerIncomingRequestsTotal,
 		prometheus.CounterValue,
-		data[NTPServerIncomingRequestsTotal].FirstValue,
+		c.perfDataObject[0].NTPServerIncomingRequestsTotal,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.ntpServerOutgoingResponsesTotal,
 		prometheus.CounterValue,
-		data[NTPServerOutgoingResponsesTotal].FirstValue,
+		c.perfDataObject[0].NTPServerOutgoingResponsesTotal,
 	)
 
 	return nil

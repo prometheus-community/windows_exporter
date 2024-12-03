@@ -18,27 +18,30 @@ package exchange
 import (
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-const (
-	requestsPerSec      = "Requests/sec"
-	pingCommandsPending = "Ping Commands Pending"
-	syncCommandsPerSec  = "Sync Commands/sec"
-)
+type collectorActiveSync struct {
+	perfDataCollectorActiveSync *pdh.Collector
+	perfDataObjectActiveSync    []perfDataCounterValuesActiveSync
+
+	activeSyncRequestsPerSec *prometheus.Desc
+	pingCommandsPending      *prometheus.Desc
+	syncCommandsPerSec       *prometheus.Desc
+}
+
+type perfDataCounterValuesActiveSync struct {
+	RequestsPerSec      float64 `perfdata:"Requests/sec"`
+	PingCommandsPending float64 `perfdata:"Ping Commands Pending"`
+	SyncCommandsPerSec  float64 `perfdata:"Sync Commands/sec"`
+}
 
 func (c *Collector) buildActiveSync() error {
-	counters := []string{
-		requestsPerSec,
-		pingCommandsPending,
-		syncCommandsPerSec,
-	}
-
 	var err error
 
-	c.perfDataCollectorActiveSync, err = perfdata.NewCollector("MSExchange ActiveSync", perfdata.InstancesAll, counters)
+	c.perfDataCollectorActiveSync, err = pdh.NewCollector[perfDataCounterValuesActiveSync]("MSExchange ActiveSync", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create MSExchange ActiveSync collector: %w", err)
 	}
@@ -66,30 +69,26 @@ func (c *Collector) buildActiveSync() error {
 }
 
 func (c *Collector) collectActiveSync(ch chan<- prometheus.Metric) error {
-	perfData, err := c.perfDataCollectorActiveSync.Collect()
+	err := c.perfDataCollectorActiveSync.Collect(&c.perfDataObjectActiveSync)
 	if err != nil {
 		return fmt.Errorf("failed to collect MSExchange ActiveSync metrics: %w", err)
 	}
 
-	if len(perfData) == 0 {
-		return fmt.Errorf("failed to collect MSExchange ActiveSync metrics: %w", types.ErrNoData)
-	}
-
-	for _, data := range perfData {
+	for _, data := range c.perfDataObjectActiveSync {
 		ch <- prometheus.MustNewConstMetric(
 			c.activeSyncRequestsPerSec,
 			prometheus.CounterValue,
-			data[requestsPerSec].FirstValue,
+			data.RequestsPerSec,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.pingCommandsPending,
 			prometheus.GaugeValue,
-			data[pingCommandsPending].FirstValue,
+			data.PingCommandsPending,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.syncCommandsPerSec,
 			prometheus.CounterValue,
-			data[syncCommandsPerSec].FirstValue,
+			data.SyncCommandsPerSec,
 		)
 	}
 

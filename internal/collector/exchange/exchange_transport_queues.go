@@ -18,59 +18,64 @@ package exchange
 import (
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-const (
-	externalActiveRemoteDeliveryQueueLength = "External Active Remote Delivery Queue Length"
-	internalActiveRemoteDeliveryQueueLength = "Internal Active Remote Delivery Queue Length"
-	activeMailboxDeliveryQueueLength        = "Active Mailbox Delivery Queue Length"
-	retryMailboxDeliveryQueueLength         = "Retry Mailbox Delivery Queue Length"
-	unreachableQueueLength                  = "Unreachable Queue Length"
-	externalLargestDeliveryQueueLength      = "External Largest Delivery Queue Length"
-	internalLargestDeliveryQueueLength      = "Internal Largest Delivery Queue Length"
-	poisonQueueLength                       = "Poison Queue Length"
-	messagesQueuedForDeliveryTotal          = "Messages Queued For Delivery Total"
-	messagesSubmittedTotal                  = "Messages Submitted Total"
-	messagesDelayedTotal                    = "Messages Delayed Total"
-	messagesCompletedDeliveryTotal          = "Messages Completed Delivery Total"
-	shadowQueueLength                       = "Shadow Queue Length"
-	submissionQueueLength                   = "Submission Queue Length"
-	delayQueueLength                        = "Delay Queue Length"
-	itemsCompletedDeliveryTotal             = "Items Completed Delivery Total"
-	itemsQueuedForDeliveryExpiredTotal      = "Items Queued For Delivery Expired Total"
-	itemsQueuedForDeliveryTotal             = "Items Queued For Delivery Total"
-	itemsResubmittedTotal                   = "Items Resubmitted Total"
-)
+type collectorTransportQueues struct {
+	perfDataCollectorTransportQueues *pdh.Collector
+	perfDataObjectTransportQueues    []perfDataCounterValuesTransportQueues
+
+	activeMailboxDeliveryQueueLength        *prometheus.Desc
+	externalActiveRemoteDeliveryQueueLength *prometheus.Desc
+	externalLargestDeliveryQueueLength      *prometheus.Desc
+	internalActiveRemoteDeliveryQueueLength *prometheus.Desc
+	internalLargestDeliveryQueueLength      *prometheus.Desc
+	poisonQueueLength                       *prometheus.Desc
+	retryMailboxDeliveryQueueLength         *prometheus.Desc
+	unreachableQueueLength                  *prometheus.Desc
+	messagesQueuedForDeliveryTotal          *prometheus.Desc
+	messagesSubmittedTotal                  *prometheus.Desc
+	messagesDelayedTotal                    *prometheus.Desc
+	messagesCompletedDeliveryTotal          *prometheus.Desc
+	shadowQueueLength                       *prometheus.Desc
+	submissionQueueLength                   *prometheus.Desc
+	delayQueueLength                        *prometheus.Desc
+	itemsCompletedDeliveryTotal             *prometheus.Desc
+	itemsQueuedForDeliveryExpiredTotal      *prometheus.Desc
+	itemsQueuedForDeliveryTotal             *prometheus.Desc
+	itemsResubmittedTotal                   *prometheus.Desc
+}
+
+type perfDataCounterValuesTransportQueues struct {
+	Name string
+
+	ExternalActiveRemoteDeliveryQueueLength float64 `perfdata:"External Active Remote Delivery Queue Length"`
+	InternalActiveRemoteDeliveryQueueLength float64 `perfdata:"Internal Active Remote Delivery Queue Length"`
+	ActiveMailboxDeliveryQueueLength        float64 `perfdata:"Active Mailbox Delivery Queue Length"`
+	RetryMailboxDeliveryQueueLength         float64 `perfdata:"Retry Mailbox Delivery Queue Length"`
+	UnreachableQueueLength                  float64 `perfdata:"Unreachable Queue Length"`
+	ExternalLargestDeliveryQueueLength      float64 `perfdata:"External Largest Delivery Queue Length"`
+	InternalLargestDeliveryQueueLength      float64 `perfdata:"Internal Largest Delivery Queue Length"`
+	PoisonQueueLength                       float64 `perfdata:"Poison Queue Length"`
+	MessagesQueuedForDeliveryTotal          float64 `perfdata:"Messages Queued For Delivery Total"`
+	MessagesSubmittedTotal                  float64 `perfdata:"Messages Submitted Total"`
+	MessagesDelayedTotal                    float64 `perfdata:"Messages Delayed Total"`
+	MessagesCompletedDeliveryTotal          float64 `perfdata:"Messages Completed Delivery Total"`
+	ShadowQueueLength                       float64 `perfdata:"Shadow Queue Length"`
+	SubmissionQueueLength                   float64 `perfdata:"Submission Queue Length"`
+	DelayQueueLength                        float64 `perfdata:"Delay Queue Length"`
+	ItemsCompletedDeliveryTotal             float64 `perfdata:"Items Completed Delivery Total"`
+	ItemsQueuedForDeliveryExpiredTotal      float64 `perfdata:"Items Queued For Delivery Expired Total"`
+	ItemsQueuedForDeliveryTotal             float64 `perfdata:"Items Queued For Delivery Total"`
+	ItemsResubmittedTotal                   float64 `perfdata:"Items Resubmitted Total"`
+}
 
 func (c *Collector) buildTransportQueues() error {
-	counters := []string{
-		externalActiveRemoteDeliveryQueueLength,
-		internalActiveRemoteDeliveryQueueLength,
-		activeMailboxDeliveryQueueLength,
-		retryMailboxDeliveryQueueLength,
-		unreachableQueueLength,
-		externalLargestDeliveryQueueLength,
-		internalLargestDeliveryQueueLength,
-		poisonQueueLength,
-		messagesQueuedForDeliveryTotal,
-		messagesSubmittedTotal,
-		messagesDelayedTotal,
-		messagesCompletedDeliveryTotal,
-		shadowQueueLength,
-		submissionQueueLength,
-		delayQueueLength,
-		itemsCompletedDeliveryTotal,
-		itemsQueuedForDeliveryExpiredTotal,
-		itemsQueuedForDeliveryTotal,
-		itemsResubmittedTotal,
-	}
-
 	var err error
 
-	c.perfDataCollectorTransportQueues, err = perfdata.NewCollector("MSExchangeTransport Queues", perfdata.InstancesAll, counters)
+	c.perfDataCollectorTransportQueues, err = pdh.NewCollector[perfDataCounterValuesTransportQueues]("MSExchangeTransport Queues", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create MSExchangeTransport Queues collector: %w", err)
 	}
@@ -194,130 +199,126 @@ func (c *Collector) buildTransportQueues() error {
 }
 
 func (c *Collector) collectTransportQueues(ch chan<- prometheus.Metric) error {
-	perfData, err := c.perfDataCollectorTransportQueues.Collect()
+	err := c.perfDataCollectorTransportQueues.Collect(&c.perfDataObjectTransportQueues)
 	if err != nil {
 		return fmt.Errorf("failed to collect MSExchangeTransport Queues: %w", err)
 	}
 
-	if len(perfData) == 0 {
-		return fmt.Errorf("failed to collect MSExchangeTransport Queues metrics: %w", types.ErrNoData)
-	}
-
-	for name, data := range perfData {
-		labelName := c.toLabelName(name)
+	for _, data := range c.perfDataObjectTransportQueues {
+		labelName := c.toLabelName(data.Name)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.externalActiveRemoteDeliveryQueueLength,
 			prometheus.GaugeValue,
-			data[externalActiveRemoteDeliveryQueueLength].FirstValue,
+			data.ExternalActiveRemoteDeliveryQueueLength,
 			labelName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.internalActiveRemoteDeliveryQueueLength,
 			prometheus.GaugeValue,
-			data[internalActiveRemoteDeliveryQueueLength].FirstValue,
+			data.InternalActiveRemoteDeliveryQueueLength,
 			labelName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.activeMailboxDeliveryQueueLength,
 			prometheus.GaugeValue,
-			data[activeMailboxDeliveryQueueLength].FirstValue,
+			data.ActiveMailboxDeliveryQueueLength,
 			labelName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.retryMailboxDeliveryQueueLength,
 			prometheus.GaugeValue,
-			data[retryMailboxDeliveryQueueLength].FirstValue,
+			data.RetryMailboxDeliveryQueueLength,
 			labelName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.unreachableQueueLength,
 			prometheus.GaugeValue,
-			data[unreachableQueueLength].FirstValue,
+			data.UnreachableQueueLength,
 			labelName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.externalLargestDeliveryQueueLength,
 			prometheus.GaugeValue,
-			data[externalLargestDeliveryQueueLength].FirstValue,
+			data.ExternalLargestDeliveryQueueLength,
 			labelName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.internalLargestDeliveryQueueLength,
 			prometheus.GaugeValue,
-			data[internalLargestDeliveryQueueLength].FirstValue,
+			data.InternalLargestDeliveryQueueLength,
 			labelName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.poisonQueueLength,
 			prometheus.GaugeValue,
-			data[poisonQueueLength].FirstValue,
+			data.PoisonQueueLength,
 			labelName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.messagesQueuedForDeliveryTotal,
 			prometheus.CounterValue,
-			data[messagesQueuedForDeliveryTotal].FirstValue,
+			data.MessagesQueuedForDeliveryTotal,
 			labelName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.messagesSubmittedTotal,
 			prometheus.CounterValue,
-			data[messagesSubmittedTotal].FirstValue,
+			data.MessagesSubmittedTotal,
 			labelName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.messagesDelayedTotal,
 			prometheus.CounterValue,
-			data[messagesDelayedTotal].FirstValue,
+			data.MessagesDelayedTotal,
 			labelName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.messagesCompletedDeliveryTotal,
 			prometheus.CounterValue,
-			data[messagesCompletedDeliveryTotal].FirstValue,
+			data.MessagesCompletedDeliveryTotal,
 			labelName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.shadowQueueLength,
 			prometheus.GaugeValue,
-			data[shadowQueueLength].FirstValue,
+			data.ShadowQueueLength,
 			labelName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.submissionQueueLength,
 			prometheus.GaugeValue,
-			data[submissionQueueLength].FirstValue,
+			data.SubmissionQueueLength,
 			labelName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.delayQueueLength,
 			prometheus.GaugeValue,
-			data[delayQueueLength].FirstValue,
+			data.DelayQueueLength,
 			labelName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.itemsCompletedDeliveryTotal,
 			prometheus.CounterValue,
-			data[itemsCompletedDeliveryTotal].FirstValue,
+			data.ItemsCompletedDeliveryTotal,
 			labelName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.itemsQueuedForDeliveryExpiredTotal,
 			prometheus.CounterValue,
-			data[itemsQueuedForDeliveryExpiredTotal].FirstValue,
+			data.ItemsQueuedForDeliveryExpiredTotal,
 			labelName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.itemsQueuedForDeliveryTotal,
 			prometheus.CounterValue,
-			data[itemsQueuedForDeliveryTotal].FirstValue,
+			data.ItemsQueuedForDeliveryTotal,
 			labelName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.itemsResubmittedTotal,
 			prometheus.CounterValue,
-			data[itemsResubmittedTotal].FirstValue,
+			data.ItemsResubmittedTotal,
 			labelName,
 		)
 	}

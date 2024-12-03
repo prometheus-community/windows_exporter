@@ -20,13 +20,16 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 type collectorW3SVCW3WP struct {
-	w3SVCW3WPPerfDataCollector *perfdata.Collector
+	w3SVCW3WPPerfDataCollector   *pdh.Collector
+	w3SVCW3WPPerfDataCollectorV8 *pdh.Collector
+	perfDataObjectW3SVCW3WP      []perfDataCounterValuesW3SVCW3WP
+	perfDataObjectW3SVCW3WPV8    []perfDataCounterValuesW3SVCW3WPV8
 
 	// W3SVC_W3WP
 	w3SVCW3WPThreads        *prometheus.Desc
@@ -78,112 +81,85 @@ type collectorW3SVCW3WP struct {
 
 var workerProcessNameExtractor = regexp.MustCompile(`^(\d+)_(.+)$`)
 
-const (
-	w3SVCW3WPThreads        = "Active Threads Count"
-	w3SVCW3WPMaximumThreads = "Maximum Threads Count"
+type perfDataCounterValuesW3SVCW3WP struct {
+	Name string
 
-	w3SVCW3WPRequestsTotal  = "Total HTTP Requests Served"
-	w3SVCW3WPRequestsActive = "Active Requests"
+	W3SVCW3WPThreads        float64 `perfdata:"Active Threads Count"`
+	W3SVCW3WPMaximumThreads float64 `perfdata:"Maximum Threads Count"`
 
-	w3SVCW3WPActiveFlushedEntries = "Active Flushed Entries"
+	W3SVCW3WPRequestsTotal  float64 `perfdata:"Total HTTP Requests Served"`
+	W3SVCW3WPRequestsActive float64 `perfdata:"Active Requests"`
 
-	w3SVCW3WPCurrentFileCacheMemoryUsage = "Current File Cache Memory Usage"
-	w3SVCW3WPMaximumFileCacheMemoryUsage = "Maximum File Cache Memory Usage"
-	w3SVCW3WPFileCacheFlushesTotal       = "File Cache Flushes"
-	w3SVCW3WPFileCacheHitsTotal          = "File Cache Hits"
-	w3SVCW3WPFileCacheMissesTotal        = "File Cache Misses"
-	w3SVCW3WPFilesCached                 = "Current Files Cached"
-	w3SVCW3WPFilesCachedTotal            = "Total Files Cached"
-	w3SVCW3WPFilesFlushedTotal           = "Total Flushed Files"
+	W3SVCW3WPActiveFlushedEntries float64 `perfdata:"Active Flushed Entries"`
 
-	w3SVCW3WPURICacheFlushesTotal = "Total Flushed URIs"
-	w3SVCW3WPURICacheHitsTotal    = "URI Cache Hits"
-	w3SVCW3WPURICacheMissesTotal  = "URI Cache Misses"
-	w3SVCW3WPURIsCached           = "Current URIs Cached"
-	w3SVCW3WPURIsCachedTotal      = "Total URIs Cached"
-	w3SVCW3WPURIsFlushedTotal     = "Total Flushed URIs"
+	W3SVCW3WPCurrentFileCacheMemoryUsage float64 `perfdata:"Current File Cache Memory Usage"`
+	W3SVCW3WPMaximumFileCacheMemoryUsage float64 `perfdata:"Maximum File Cache Memory Usage"`
+	W3SVCW3WPFileCacheFlushesTotal       float64 `perfdata:"File Cache Flushes"`
+	W3SVCW3WPFileCacheHitsTotal          float64 `perfdata:"File Cache Hits"`
+	W3SVCW3WPFileCacheMissesTotal        float64 `perfdata:"File Cache Misses"`
+	W3SVCW3WPFilesCached                 float64 `perfdata:"Current Files Cached"`
+	W3SVCW3WPFilesCachedTotal            float64 `perfdata:"Total Files Cached"`
+	W3SVCW3WPFilesFlushedTotal           float64 `perfdata:"Total Flushed Files"`
 
-	w3SVCW3WPMetaDataCacheHits    = "Metadata Cache Hits"
-	w3SVCW3WPMetaDataCacheMisses  = "Metadata Cache Misses"
-	w3SVCW3WPMetadataCached       = "Current Metadata Cached"
-	w3SVCW3WPMetadataCacheFlushes = "Metadata Cache Flushes"
-	w3SVCW3WPMetadataCachedTotal  = "Total Metadata Cached"
-	w3SVCW3WPMetadataFlushedTotal = "Total Flushed Metadata"
+	W3SVCW3WPURICacheFlushesTotal float64 `perfdata:"Total Flushed URIs"`
+	W3SVCW3WPURICacheHitsTotal    float64 `perfdata:"URI Cache Hits"`
+	W3SVCW3WPURICacheMissesTotal  float64 `perfdata:"URI Cache Misses"`
+	W3SVCW3WPURIsCached           float64 `perfdata:"Current URIs Cached"`
+	W3SVCW3WPURIsCachedTotal      float64 `perfdata:"Total URIs Cached"`
+	W3SVCW3WPURIsFlushedTotal     float64 `perfdata:"Total Flushed URIs"`
 
-	w3SVCW3WPOutputCacheActiveFlushedItems = "Output Cache Current Flushed Items"
-	w3SVCW3WPOutputCacheItems              = "Output Cache Current Items"
-	w3SVCW3WPOutputCacheMemoryUsage        = "Output Cache Current Memory Usage"
-	w3SVCW3WPOutputCacheHitsTotal          = "Output Cache Total Hits"
-	w3SVCW3WPOutputCacheMissesTotal        = "Output Cache Total Misses"
-	w3SVCW3WPOutputCacheFlushedItemsTotal  = "Output Cache Total Flushed Items"
-	w3SVCW3WPOutputCacheFlushesTotal       = "Output Cache Total Flushes"
+	W3SVCW3WPMetaDataCacheHits    float64 `perfdata:"Metadata Cache Hits"`
+	W3SVCW3WPMetaDataCacheMisses  float64 `perfdata:"Metadata Cache Misses"`
+	W3SVCW3WPMetadataCached       float64 `perfdata:"Current Metadata Cached"`
+	W3SVCW3WPMetadataCacheFlushes float64 `perfdata:"Metadata Cache Flushes"`
+	W3SVCW3WPMetadataCachedTotal  float64 `perfdata:"Total Metadata Cached"`
+	W3SVCW3WPMetadataFlushedTotal float64 `perfdata:"Total Flushed Metadata"`
+
+	W3SVCW3WPOutputCacheActiveFlushedItems float64 `perfdata:"Output Cache Current Flushed Items"`
+	W3SVCW3WPOutputCacheItems              float64 `perfdata:"Output Cache Current Items"`
+	W3SVCW3WPOutputCacheMemoryUsage        float64 `perfdata:"Output Cache Current Memory Usage"`
+	W3SVCW3WPOutputCacheHitsTotal          float64 `perfdata:"Output Cache Total Hits"`
+	W3SVCW3WPOutputCacheMissesTotal        float64 `perfdata:"Output Cache Total Misses"`
+	W3SVCW3WPOutputCacheFlushedItemsTotal  float64 `perfdata:"Output Cache Total Flushed Items"`
+	W3SVCW3WPOutputCacheFlushesTotal       float64 `perfdata:"Output Cache Total Flushes"`
+}
+
+func (p perfDataCounterValuesW3SVCW3WP) GetName() string {
+	return p.Name
+}
+
+type perfDataCounterValuesW3SVCW3WPV8 struct {
+	Name string
 
 	// IIS8
-	w3SVCW3WPRequestErrors500 = "% 500 HTTP Response Sent"
-	w3SVCW3WPRequestErrors404 = "% 404 HTTP Response Sent"
-	w3SVCW3WPRequestErrors403 = "% 403 HTTP Response Sent"
-	w3SVCW3WPRequestErrors401 = "% 401 HTTP Response Sent"
+	W3SVCW3WPRequestErrors500 float64 `perfdata:"% 500 HTTP Response Sent"`
+	W3SVCW3WPRequestErrors404 float64 `perfdata:"% 404 HTTP Response Sent"`
+	W3SVCW3WPRequestErrors403 float64 `perfdata:"% 403 HTTP Response Sent"`
+	W3SVCW3WPRequestErrors401 float64 `perfdata:"% 401 HTTP Response Sent"`
 
-	w3SVCW3WPWebSocketRequestsActive      = "WebSocket Active Requests"
-	w3SVCW3WPWebSocketConnectionAttempts  = "WebSocket Connection Attempts / Sec"
-	w3SVCW3WPWebSocketConnectionsAccepted = "WebSocket Connections Accepted / Sec"
-	w3SVCW3WPWebSocketConnectionsRejected = "WebSocket Connections Rejected / Sec"
-)
+	W3SVCW3WPWebSocketRequestsActive      float64 `perfdata:"WebSocket Active Requests"`
+	W3SVCW3WPWebSocketConnectionAttempts  float64 `perfdata:"WebSocket Connection Attempts / Sec"`
+	W3SVCW3WPWebSocketConnectionsAccepted float64 `perfdata:"WebSocket Connections Accepted / Sec"`
+	W3SVCW3WPWebSocketConnectionsRejected float64 `perfdata:"WebSocket Connections Rejected / Sec"`
+}
+
+func (p perfDataCounterValuesW3SVCW3WPV8) GetName() string {
+	return p.Name
+}
 
 func (c *Collector) buildW3SVCW3WP() error {
-	counters := []string{
-		w3SVCW3WPThreads,
-		w3SVCW3WPMaximumThreads,
-		w3SVCW3WPRequestsTotal,
-		w3SVCW3WPRequestsActive,
-		w3SVCW3WPActiveFlushedEntries,
-		w3SVCW3WPCurrentFileCacheMemoryUsage,
-		w3SVCW3WPMaximumFileCacheMemoryUsage,
-		w3SVCW3WPFileCacheFlushesTotal,
-		w3SVCW3WPFileCacheHitsTotal,
-		w3SVCW3WPFileCacheMissesTotal,
-		w3SVCW3WPFilesCached,
-		w3SVCW3WPFilesCachedTotal,
-		w3SVCW3WPFilesFlushedTotal,
-		w3SVCW3WPURICacheFlushesTotal,
-		w3SVCW3WPURICacheHitsTotal,
-		w3SVCW3WPURICacheMissesTotal,
-		w3SVCW3WPURIsCached,
-		w3SVCW3WPURIsCachedTotal,
-		w3SVCW3WPURIsFlushedTotal,
-		w3SVCW3WPMetaDataCacheHits,
-		w3SVCW3WPMetaDataCacheMisses,
-		w3SVCW3WPMetadataCached,
-		w3SVCW3WPMetadataCacheFlushes,
-		w3SVCW3WPMetadataCachedTotal,
-		w3SVCW3WPMetadataFlushedTotal,
-		w3SVCW3WPOutputCacheActiveFlushedItems,
-		w3SVCW3WPOutputCacheItems,
-		w3SVCW3WPOutputCacheMemoryUsage,
-		w3SVCW3WPOutputCacheHitsTotal,
-		w3SVCW3WPOutputCacheMissesTotal,
-		w3SVCW3WPOutputCacheFlushedItemsTotal,
-		w3SVCW3WPOutputCacheFlushesTotal,
+	var err error
+
+	c.w3SVCW3WPPerfDataCollector, err = pdh.NewCollector[perfDataCounterValuesW3SVCW3WP]("W3SVC_W3WP", pdh.InstancesAll)
+	if err != nil {
+		return fmt.Errorf("failed to create W3SVC_W3WP collector: %w", err)
 	}
 
 	if c.iisVersion.major >= 8 {
-		counters = append(counters, []string{
-			w3SVCW3WPRequestErrors500,
-			w3SVCW3WPRequestErrors404,
-			w3SVCW3WPRequestErrors403,
-			w3SVCW3WPRequestErrors401,
-			w3SVCW3WPWebSocketRequestsActive,
-			w3SVCW3WPWebSocketConnectionAttempts,
-			w3SVCW3WPWebSocketConnectionsAccepted,
-			w3SVCW3WPWebSocketConnectionsRejected,
-		}...)
-	}
-
-	var err error
-
-	c.w3SVCW3WPPerfDataCollector, err = perfdata.NewCollector("W3SVC_W3WP", perfdata.InstancesAll, counters)
-	if err != nil {
-		return fmt.Errorf("failed to create W3SVC_W3WP collector: %w", err)
+		c.w3SVCW3WPPerfDataCollectorV8, err = pdh.NewCollector[perfDataCounterValuesW3SVCW3WPV8]("W3SVC_W3WP", pdh.InstancesAll)
+		if err != nil {
+			return fmt.Errorf("failed to create W3SVC_W3WP collector: %w", err)
+		}
 	}
 
 	// W3SVC_W3WP
@@ -415,22 +391,128 @@ func (c *Collector) buildW3SVCW3WP() error {
 }
 
 func (c *Collector) collectW3SVCW3WP(ch chan<- prometheus.Metric) error {
-	perfData, err := c.w3SVCW3WPPerfDataCollector.Collect()
+	if err := c.collectW3SVCW3WPv7(ch); err != nil {
+		return err
+	}
+
+	if c.iisVersion.major >= 8 {
+		if err := c.collectW3SVCW3WPv8(ch); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (c *Collector) collectW3SVCW3WPv8(ch chan<- prometheus.Metric) error {
+	err := c.w3SVCW3WPPerfDataCollector.Collect(&c.perfDataObjectW3SVCW3WPV8)
 	if err != nil {
 		return fmt.Errorf("failed to collect APP_POOL_WAS metrics: %w", err)
 	}
 
-	deduplicateIISNames(perfData)
+	deduplicateIISNames(c.perfDataObjectW3SVCW3WPV8)
 
-	for name, app := range perfData {
-		if c.config.AppExclude.MatchString(name) || !c.config.AppInclude.MatchString(name) {
+	for _, data := range c.perfDataObjectW3SVCW3WPV8 {
+		if c.config.AppExclude.MatchString(data.Name) || !c.config.AppInclude.MatchString(data.Name) {
 			continue
 		}
 
 		// Extract the apppool name from the format <PID>_<NAME>
-		pid := workerProcessNameExtractor.ReplaceAllString(name, "$1")
+		pid := workerProcessNameExtractor.ReplaceAllString(data.Name, "$1")
 
-		name := workerProcessNameExtractor.ReplaceAllString(name, "$2")
+		name := workerProcessNameExtractor.ReplaceAllString(data.Name, "$2")
+		if name == "" || c.config.AppExclude.MatchString(name) ||
+			!c.config.AppInclude.MatchString(name) {
+			continue
+		}
+
+		// Duplicate instances are suffixed # with an index number. These should be ignored
+		if strings.Contains(name, "#") {
+			continue
+		}
+
+		ch <- prometheus.MustNewConstMetric(
+			c.w3SVCW3WPRequestErrorsTotal,
+			prometheus.CounterValue,
+			data.W3SVCW3WPRequestErrors401,
+			name,
+			pid,
+			"401",
+		)
+		ch <- prometheus.MustNewConstMetric(
+			c.w3SVCW3WPRequestErrorsTotal,
+			prometheus.CounterValue,
+			data.W3SVCW3WPRequestErrors403,
+			name,
+			pid,
+			"403",
+		)
+		ch <- prometheus.MustNewConstMetric(
+			c.w3SVCW3WPRequestErrorsTotal,
+			prometheus.CounterValue,
+			data.W3SVCW3WPRequestErrors404,
+			name,
+			pid,
+			"404",
+		)
+		ch <- prometheus.MustNewConstMetric(
+			c.w3SVCW3WPRequestErrorsTotal,
+			prometheus.CounterValue,
+			data.W3SVCW3WPRequestErrors500,
+			name,
+			pid,
+			"500",
+		)
+		ch <- prometheus.MustNewConstMetric(
+			c.w3SVCW3WPWebSocketRequestsActive,
+			prometheus.CounterValue,
+			data.W3SVCW3WPWebSocketRequestsActive,
+			name,
+			pid,
+		)
+		ch <- prometheus.MustNewConstMetric(
+			c.w3SVCW3WPWebSocketConnectionAttempts,
+			prometheus.CounterValue,
+			data.W3SVCW3WPWebSocketConnectionAttempts,
+			name,
+			pid,
+		)
+		ch <- prometheus.MustNewConstMetric(
+			c.w3SVCW3WPWebSocketConnectionsAccepted,
+			prometheus.CounterValue,
+			data.W3SVCW3WPWebSocketConnectionsAccepted,
+			name,
+			pid,
+		)
+		ch <- prometheus.MustNewConstMetric(
+			c.w3SVCW3WPWebSocketConnectionsRejected,
+			prometheus.CounterValue,
+			data.W3SVCW3WPWebSocketConnectionsRejected,
+			name,
+			pid,
+		)
+	}
+
+	return nil
+}
+
+func (c *Collector) collectW3SVCW3WPv7(ch chan<- prometheus.Metric) error {
+	err := c.w3SVCW3WPPerfDataCollector.Collect(&c.perfDataObjectW3SVCW3WP)
+	if err != nil {
+		return fmt.Errorf("failed to collect APP_POOL_WAS metrics: %w", err)
+	}
+
+	deduplicateIISNames(c.perfDataObjectW3SVCW3WP)
+
+	for _, data := range c.perfDataObjectW3SVCW3WP {
+		if c.config.AppExclude.MatchString(data.Name) || !c.config.AppInclude.MatchString(data.Name) {
+			continue
+		}
+
+		// Extract the apppool name from the format <PID>_<NAME>
+		pid := workerProcessNameExtractor.ReplaceAllString(data.Name, "$1")
+
+		name := workerProcessNameExtractor.ReplaceAllString(data.Name, "$2")
 		if name == "" || c.config.AppExclude.MatchString(name) ||
 			!c.config.AppInclude.MatchString(name) {
 			continue
@@ -444,7 +526,7 @@ func (c *Collector) collectW3SVCW3WP(ch chan<- prometheus.Metric) error {
 		ch <- prometheus.MustNewConstMetric(
 			c.w3SVCW3WPThreads,
 			prometheus.GaugeValue,
-			app[w3SVCW3WPThreads].FirstValue,
+			data.W3SVCW3WPThreads,
 			name,
 			pid,
 			"busy",
@@ -452,283 +534,220 @@ func (c *Collector) collectW3SVCW3WP(ch chan<- prometheus.Metric) error {
 		ch <- prometheus.MustNewConstMetric(
 			c.w3SVCW3WPMaximumThreads,
 			prometheus.CounterValue,
-			app[w3SVCW3WPMaximumThreads].FirstValue,
+			data.W3SVCW3WPMaximumThreads,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.w3SVCW3WPRequestsTotal,
 			prometheus.CounterValue,
-			app[w3SVCW3WPRequestsTotal].FirstValue,
+			data.W3SVCW3WPRequestsTotal,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.w3SVCW3WPRequestsActive,
 			prometheus.CounterValue,
-			app[w3SVCW3WPRequestsActive].FirstValue,
+			data.W3SVCW3WPRequestsActive,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.w3SVCW3WPActiveFlushedEntries,
 			prometheus.GaugeValue,
-			app[w3SVCW3WPActiveFlushedEntries].FirstValue,
+			data.W3SVCW3WPActiveFlushedEntries,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.w3SVCW3WPCurrentFileCacheMemoryUsage,
 			prometheus.GaugeValue,
-			app[w3SVCW3WPCurrentFileCacheMemoryUsage].FirstValue,
+			data.W3SVCW3WPCurrentFileCacheMemoryUsage,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.w3SVCW3WPMaximumFileCacheMemoryUsage,
 			prometheus.CounterValue,
-			app[w3SVCW3WPMaximumFileCacheMemoryUsage].FirstValue,
+			data.W3SVCW3WPMaximumFileCacheMemoryUsage,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.w3SVCW3WPFileCacheFlushesTotal,
 			prometheus.CounterValue,
-			app[w3SVCW3WPFileCacheFlushesTotal].FirstValue,
+			data.W3SVCW3WPFileCacheFlushesTotal,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.w3SVCW3WPFileCacheQueriesTotal,
 			prometheus.CounterValue,
-			app[w3SVCW3WPFileCacheHitsTotal].FirstValue+app[w3SVCW3WPFileCacheMissesTotal].FirstValue,
+			data.W3SVCW3WPFileCacheHitsTotal+data.W3SVCW3WPFileCacheMissesTotal,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.w3SVCW3WPFileCacheHitsTotal,
 			prometheus.CounterValue,
-			app[w3SVCW3WPFileCacheHitsTotal].FirstValue,
+			data.W3SVCW3WPFileCacheHitsTotal,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.w3SVCW3WPFilesCached,
 			prometheus.GaugeValue,
-			app[w3SVCW3WPFilesCached].FirstValue,
+			data.W3SVCW3WPFilesCached,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.w3SVCW3WPFilesCachedTotal,
 			prometheus.CounterValue,
-			app[w3SVCW3WPFilesCachedTotal].FirstValue,
+			data.W3SVCW3WPFilesCachedTotal,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.w3SVCW3WPFilesFlushedTotal,
 			prometheus.CounterValue,
-			app[w3SVCW3WPFilesFlushedTotal].FirstValue,
+			data.W3SVCW3WPFilesFlushedTotal,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.w3SVCW3WPURICacheFlushesTotal,
 			prometheus.CounterValue,
-			app[w3SVCW3WPURICacheFlushesTotal].FirstValue,
+			data.W3SVCW3WPURICacheFlushesTotal,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.w3SVCW3WPURICacheQueriesTotal,
 			prometheus.CounterValue,
-			app[w3SVCW3WPURICacheHitsTotal].FirstValue+app[w3SVCW3WPURICacheMissesTotal].FirstValue,
+			data.W3SVCW3WPURICacheHitsTotal+data.W3SVCW3WPURICacheMissesTotal,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.w3SVCW3WPURICacheHitsTotal,
 			prometheus.CounterValue,
-			app[w3SVCW3WPURICacheHitsTotal].FirstValue,
+			data.W3SVCW3WPURICacheHitsTotal,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.w3SVCW3WPURIsCached,
 			prometheus.GaugeValue,
-			app[w3SVCW3WPURIsCached].FirstValue,
+			data.W3SVCW3WPURIsCached,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.w3SVCW3WPURIsCachedTotal,
 			prometheus.CounterValue,
-			app[w3SVCW3WPURIsCachedTotal].FirstValue,
+			data.W3SVCW3WPURIsCachedTotal,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.w3SVCW3WPURIsFlushedTotal,
 			prometheus.CounterValue,
-			app[w3SVCW3WPURIsFlushedTotal].FirstValue,
+			data.W3SVCW3WPURIsFlushedTotal,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.w3SVCW3WPMetadataCached,
 			prometheus.GaugeValue,
-			app[w3SVCW3WPMetadataCached].FirstValue,
+			data.W3SVCW3WPMetadataCached,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.w3SVCW3WPMetadataCacheFlushes,
 			prometheus.CounterValue,
-			app[w3SVCW3WPMetadataCacheFlushes].FirstValue,
+			data.W3SVCW3WPMetadataCacheFlushes,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.w3SVCW3WPMetadataCacheQueriesTotal,
 			prometheus.CounterValue,
-			app[w3SVCW3WPMetaDataCacheHits].FirstValue+app[w3SVCW3WPMetaDataCacheMisses].FirstValue,
+			data.W3SVCW3WPMetaDataCacheHits+data.W3SVCW3WPMetaDataCacheMisses,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.w3SVCW3WPMetadataCacheHitsTotal,
 			prometheus.CounterValue,
-			app[w3SVCW3WPMetaDataCacheHits].FirstValue,
+			data.W3SVCW3WPMetaDataCacheHits,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.w3SVCW3WPMetadataCachedTotal,
 			prometheus.CounterValue,
-			app[w3SVCW3WPMetadataCachedTotal].FirstValue,
+			data.W3SVCW3WPMetadataCachedTotal,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.w3SVCW3WPMetadataFlushedTotal,
 			prometheus.CounterValue,
-			app[w3SVCW3WPMetadataFlushedTotal].FirstValue,
+			data.W3SVCW3WPMetadataFlushedTotal,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.w3SVCW3WPOutputCacheActiveFlushedItems,
 			prometheus.CounterValue,
-			app[w3SVCW3WPOutputCacheActiveFlushedItems].FirstValue,
+			data.W3SVCW3WPOutputCacheActiveFlushedItems,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.w3SVCW3WPOutputCacheItems,
 			prometheus.CounterValue,
-			app[w3SVCW3WPOutputCacheItems].FirstValue,
+			data.W3SVCW3WPOutputCacheItems,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.w3SVCW3WPOutputCacheMemoryUsage,
 			prometheus.CounterValue,
-			app[w3SVCW3WPOutputCacheMemoryUsage].FirstValue,
+			data.W3SVCW3WPOutputCacheMemoryUsage,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.w3SVCW3WPOutputCacheQueriesTotal,
 			prometheus.CounterValue,
-			app[w3SVCW3WPOutputCacheHitsTotal].FirstValue+app[w3SVCW3WPOutputCacheMissesTotal].FirstValue,
+			data.W3SVCW3WPOutputCacheHitsTotal+data.W3SVCW3WPOutputCacheMissesTotal,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.w3SVCW3WPOutputCacheHitsTotal,
 			prometheus.CounterValue,
-			app[w3SVCW3WPOutputCacheHitsTotal].FirstValue,
+			data.W3SVCW3WPOutputCacheHitsTotal,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.w3SVCW3WPOutputCacheFlushedItemsTotal,
 			prometheus.CounterValue,
-			app[w3SVCW3WPOutputCacheFlushedItemsTotal].FirstValue,
+			data.W3SVCW3WPOutputCacheFlushedItemsTotal,
 			name,
 			pid,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.w3SVCW3WPOutputCacheFlushesTotal,
 			prometheus.CounterValue,
-			app[w3SVCW3WPOutputCacheFlushesTotal].FirstValue,
+			data.W3SVCW3WPOutputCacheFlushesTotal,
 			name,
 			pid,
 		)
-
-		if c.iisVersion.major >= 8 {
-			ch <- prometheus.MustNewConstMetric(
-				c.w3SVCW3WPRequestErrorsTotal,
-				prometheus.CounterValue,
-				app[w3SVCW3WPRequestErrors401].FirstValue,
-				name,
-				pid,
-				"401",
-			)
-			ch <- prometheus.MustNewConstMetric(
-				c.w3SVCW3WPRequestErrorsTotal,
-				prometheus.CounterValue,
-				app[w3SVCW3WPRequestErrors403].FirstValue,
-				name,
-				pid,
-				"403",
-			)
-			ch <- prometheus.MustNewConstMetric(
-				c.w3SVCW3WPRequestErrorsTotal,
-				prometheus.CounterValue,
-				app[w3SVCW3WPRequestErrors404].FirstValue,
-				name,
-				pid,
-				"404",
-			)
-			ch <- prometheus.MustNewConstMetric(
-				c.w3SVCW3WPRequestErrorsTotal,
-				prometheus.CounterValue,
-				app[w3SVCW3WPRequestErrors500].FirstValue,
-				name,
-				pid,
-				"500",
-			)
-			ch <- prometheus.MustNewConstMetric(
-				c.w3SVCW3WPWebSocketRequestsActive,
-				prometheus.CounterValue,
-				app[w3SVCW3WPWebSocketRequestsActive].FirstValue,
-				name,
-				pid,
-			)
-			ch <- prometheus.MustNewConstMetric(
-				c.w3SVCW3WPWebSocketConnectionAttempts,
-				prometheus.CounterValue,
-				app[w3SVCW3WPWebSocketConnectionAttempts].FirstValue,
-				name,
-				pid,
-			)
-			ch <- prometheus.MustNewConstMetric(
-				c.w3SVCW3WPWebSocketConnectionsAccepted,
-				prometheus.CounterValue,
-				app[w3SVCW3WPWebSocketConnectionsAccepted].FirstValue,
-				name,
-				pid,
-			)
-			ch <- prometheus.MustNewConstMetric(
-				c.w3SVCW3WPWebSocketConnectionsRejected,
-				prometheus.CounterValue,
-				app[w3SVCW3WPWebSocketConnectionsRejected].FirstValue,
-				name,
-				pid,
-			)
-		}
 	}
 
 	return nil
