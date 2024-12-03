@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/prometheus-community/windows_exporter/internal/pdh/perftypes"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 )
 
 func UnmarshalObject(obj *PerfObject, vs interface{}, logger *slog.Logger) error {
@@ -90,10 +90,10 @@ func UnmarshalObject(obj *PerfObject, vs interface{}, logger *slog.Logger) error
 			}
 
 			switch ctr.Def.CounterType {
-			case perftypes.PERF_ELAPSED_TIME:
-				target.Field(i).SetFloat(float64(ctr.Value-perftypes.WindowsEpoch) / float64(obj.Frequency))
-			case perftypes.PERF_100NSEC_TIMER, perftypes.PERF_PRECISION_100NS_TIMER:
-				target.Field(i).SetFloat(float64(ctr.Value) * perftypes.TicksToSecondScaleFactor)
+			case pdh.PERF_ELAPSED_TIME:
+				target.Field(i).SetFloat(float64(ctr.Value-pdh.WindowsEpoch) / float64(obj.Frequency))
+			case pdh.PERF_100NSEC_TIMER, pdh.PERF_PRECISION_100NS_TIMER:
+				target.Field(i).SetFloat(float64(ctr.Value) * pdh.TicksToSecondScaleFactor)
 			default:
 				target.Field(i).SetFloat(float64(ctr.Value))
 			}

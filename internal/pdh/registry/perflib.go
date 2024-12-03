@@ -120,7 +120,7 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/prometheus-community/windows_exporter/internal/pdh/perftypes"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"golang.org/x/sys/windows"
 )
 
@@ -364,7 +364,7 @@ func QueryPerformanceData(query string, counterName string) ([]*PerfObject, erro
 				IsCounter:           def.CounterType&0x400 == 0x400,
 				IsBaseValue:         def.CounterType&0x00030000 == 0x00030000,
 				IsNanosecondCounter: def.CounterType&0x00100000 == 0x00100000,
-				HasSecondValue:      def.CounterType == perftypes.PERF_AVERAGE_BULK,
+				HasSecondValue:      def.CounterType == pdh.PERF_AVERAGE_BULK,
 			}
 		}
 
