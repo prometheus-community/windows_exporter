@@ -218,6 +218,7 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 	if true {
 		counters[0] = idProcess
 
+		//c.perfDataCollector, err = pdh.NewCollector("Process", pdh.InstancesAll, counters)
 		c.perfDataCollector, err = registry.NewCollector("Process", pdh.InstancesAll, counters)
 	}
 
