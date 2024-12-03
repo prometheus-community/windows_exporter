@@ -27,7 +27,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows"
@@ -51,7 +51,7 @@ type Collector struct {
 	config Config
 	logger *slog.Logger
 
-	perfDataCollector *perfdata.Collector
+	perfDataCollector *pdh.Collector
 
 	avgReadQueue     *prometheus.Desc
 	avgWriteQueue    *prometheus.Desc
@@ -151,7 +151,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 	var err error
 
-	c.perfDataCollector, err = perfdata.NewCollector("LogicalDisk", perfdata.InstancesAll, []string{
+	c.perfDataCollector, err = pdh.NewCollector("LogicalDisk", pdh.InstancesAll, []string{
 		currentDiskQueueLength,
 		avgDiskReadQueueLength,
 		avgDiskWriteQueueLength,
@@ -352,14 +352,14 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		ch <- prometheus.MustNewConstMetric(
 			c.avgReadQueue,
 			prometheus.GaugeValue,
-			volume[avgDiskReadQueueLength].FirstValue*perfdata.TicksToSecondScaleFactor,
+			volume[avgDiskReadQueueLength].FirstValue*pdh.TicksToSecondScaleFactor,
 			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.avgWriteQueue,
 			prometheus.GaugeValue,
-			volume[avgDiskWriteQueueLength].FirstValue*perfdata.TicksToSecondScaleFactor,
+			volume[avgDiskWriteQueueLength].FirstValue*pdh.TicksToSecondScaleFactor,
 			name,
 		)
 
@@ -436,21 +436,21 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		ch <- prometheus.MustNewConstMetric(
 			c.readLatency,
 			prometheus.CounterValue,
-			volume[avgDiskSecPerRead].FirstValue*perfdata.TicksToSecondScaleFactor,
+			volume[avgDiskSecPerRead].FirstValue*pdh.TicksToSecondScaleFactor,
 			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.writeLatency,
 			prometheus.CounterValue,
-			volume[avgDiskSecPerWrite].FirstValue*perfdata.TicksToSecondScaleFactor,
+			volume[avgDiskSecPerWrite].FirstValue*pdh.TicksToSecondScaleFactor,
 			name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.readWriteLatency,
 			prometheus.CounterValue,
-			volume[avgDiskSecPerTransfer].FirstValue*perfdata.TicksToSecondScaleFactor,
+			volume[avgDiskSecPerTransfer].FirstValue*pdh.TicksToSecondScaleFactor,
 			name,
 		)
 	}

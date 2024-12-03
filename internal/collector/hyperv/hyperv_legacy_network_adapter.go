@@ -18,14 +18,14 @@ package hyperv
 import (
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 // collectorLegacyNetworkAdapter Hyper-V Legacy Network Adapter metrics
 type collectorLegacyNetworkAdapter struct {
-	perfDataCollectorLegacyNetworkAdapter *perfdata.Collector
+	perfDataCollectorLegacyNetworkAdapter *pdh.Collector
 
 	legacyNetworkAdapterBytesDropped   *prometheus.Desc // \Hyper-V Legacy Network Adapter(*)\Bytes Dropped
 	legacyNetworkAdapterBytesReceived  *prometheus.Desc // \Hyper-V Legacy Network Adapter(*)\Bytes Received/sec
@@ -47,7 +47,7 @@ const (
 func (c *Collector) buildLegacyNetworkAdapter() error {
 	var err error
 
-	c.perfDataCollectorLegacyNetworkAdapter, err = perfdata.NewCollector("Hyper-V Legacy Network Adapter", perfdata.InstancesAll, []string{
+	c.perfDataCollectorLegacyNetworkAdapter, err = pdh.NewCollector("Hyper-V Legacy Network Adapter", pdh.InstancesAll, []string{
 		legacyNetworkAdapterBytesDropped,
 		legacyNetworkAdapterBytesReceived,
 		legacyNetworkAdapterBytesSent,

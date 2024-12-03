@@ -18,7 +18,7 @@ package exchange
 import (
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -36,7 +36,7 @@ func (c *Collector) buildOWA() error {
 
 	var err error
 
-	c.perfDataCollectorOWA, err = perfdata.NewCollector("MSExchange OWA", perfdata.InstancesAll, counters)
+	c.perfDataCollectorOWA, err = pdh.NewCollector("MSExchange OWA", pdh.InstancesAll, counters)
 	if err != nil {
 		return fmt.Errorf("failed to create MSExchange OWA collector: %w", err)
 	}

@@ -25,7 +25,7 @@ import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/headers/iphlpapi"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows"
@@ -49,8 +49,8 @@ var ConfigDefaults = Config{
 type Collector struct {
 	config Config
 
-	perfDataCollector4 *perfdata.Collector
-	perfDataCollector6 *perfdata.Collector
+	perfDataCollector4 *pdh.Collector
+	perfDataCollector6 *pdh.Collector
 
 	connectionFailures         *prometheus.Desc
 	connectionsActive          *prometheus.Desc
@@ -130,12 +130,12 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 
 	var err error
 
-	c.perfDataCollector4, err = perfdata.NewCollector("TCPv4", nil, counters)
+	c.perfDataCollector4, err = pdh.NewCollector("TCPv4", nil, counters)
 	if err != nil {
 		return fmt.Errorf("failed to create TCPv4 collector: %w", err)
 	}
 
-	c.perfDataCollector6, err = perfdata.NewCollector("TCPv6", nil, counters)
+	c.perfDataCollector6, err = pdh.NewCollector("TCPv6", nil, counters)
 	if err != nil {
 		return fmt.Errorf("failed to create TCPv6 collector: %w", err)
 	}
@@ -229,27 +229,27 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 		return fmt.Errorf("failed to collect TCPv4 metrics: %w", err)
 	}
 
-	if _, ok := data[perfdata.InstanceEmpty]; !ok {
+	if _, ok := data[pdh.InstanceEmpty]; !ok {
 		return errors.New("no data for TCPv4")
 	}
 
-	c.writeTCPCounters(ch, data[perfdata.InstanceEmpty], []string{"ipv4"})
+	c.writeTCPCounters(ch, data[pdh.InstanceEmpty], []string{"ipv4"})
 
 	data, err = c.perfDataCollector6.Collect()
 	if err != nil {
 		return fmt.Errorf("failed to collect TCPv6 metrics: %w", err)
 	}
 
-	if _, ok := data[perfdata.InstanceEmpty]; !ok {
+	if _, ok := data[pdh.InstanceEmpty]; !ok {
 		return errors.New("no data for TCPv6")
 	}
 
-	c.writeTCPCounters(ch, data[perfdata.InstanceEmpty], []string{"ipv6"})
+	c.writeTCPCounters(ch, data[pdh.InstanceEmpty], []string{"ipv6"})
 
 	return nil
 }
 
-func (c *Collector) writeTCPCounters(ch chan<- prometheus.Metric, metrics map[string]perfdata.CounterValue, labels []string) {
+func (c *Collector) writeTCPCounters(ch chan<- prometheus.Metric, metrics map[string]pdh.CounterValue, labels []string) {
 	ch <- prometheus.MustNewConstMetric(
 		c.connectionFailures,
 		prometheus.CounterValue,

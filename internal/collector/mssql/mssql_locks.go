@@ -19,13 +19,13 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 type collectorLocks struct {
-	locksPerfDataCollectors map[string]*perfdata.Collector
+	locksPerfDataCollectors map[string]*pdh.Collector
 
 	// Win32_PerfRawData_{instance}_SQLServerLocks
 	locksWaitTime             *prometheus.Desc
@@ -52,7 +52,7 @@ const (
 func (c *Collector) buildLocks() error {
 	var err error
 
-	c.locksPerfDataCollectors = make(map[string]*perfdata.Collector, len(c.mssqlInstances))
+	c.locksPerfDataCollectors = make(map[string]*pdh.Collector, len(c.mssqlInstances))
 	errs := make([]error, 0, len(c.mssqlInstances))
 	counters := []string{
 		locksAverageWaitTimeMS,
@@ -66,7 +66,7 @@ func (c *Collector) buildLocks() error {
 	}
 
 	for _, sqlInstance := range c.mssqlInstances {
-		c.locksPerfDataCollectors[sqlInstance.name], err = perfdata.NewCollector(c.mssqlGetPerfObjectName(sqlInstance.name, "Locks"), perfdata.InstancesAll, counters)
+		c.locksPerfDataCollectors[sqlInstance.name], err = pdh.NewCollector(c.mssqlGetPerfObjectName(sqlInstance.name, "Locks"), pdh.InstancesAll, counters)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("failed to create Locks collector for instance %s: %w", sqlInstance.name, err))
 		}
@@ -128,7 +128,7 @@ func (c *Collector) collectLocks(ch chan<- prometheus.Metric) error {
 	return c.collect(ch, subCollectorLocks, c.locksPerfDataCollectors, c.collectLocksInstance)
 }
 
-func (c *Collector) collectLocksInstance(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *perfdata.Collector) error {
+func (c *Collector) collectLocksInstance(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *pdh.Collector) error {
 	if perfDataCollector == nil {
 		return types.ErrCollectorNotInitialized
 	}

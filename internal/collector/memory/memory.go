@@ -26,7 +26,7 @@ import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/headers/sysinfoapi"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -42,7 +42,7 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	config Config
 
-	perfDataCollector *perfdata.Collector
+	perfDataCollector *pdh.Collector
 
 	// Performance metrics
 	availableBytes                  *prometheus.Desc
@@ -148,7 +148,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 
 	var err error
 
-	c.perfDataCollector, err = perfdata.NewCollector("Memory", perfdata.InstancesAll, counters)
+	c.perfDataCollector, err = pdh.NewCollector("Memory", pdh.InstancesAll, counters)
 	if err != nil {
 		return fmt.Errorf("failed to create Memory collector: %w", err)
 	}
@@ -428,7 +428,7 @@ func (c *Collector) collectPDH(ch chan<- prometheus.Metric) error {
 		return fmt.Errorf("failed to collect Memory metrics: %w", err)
 	}
 
-	data, ok := perfData[perfdata.InstanceEmpty]
+	data, ok := perfData[pdh.InstanceEmpty]
 
 	if !ok {
 		return fmt.Errorf("failed to collect Memory metrics: %w", types.ErrNoData)

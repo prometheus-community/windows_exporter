@@ -22,7 +22,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -38,8 +38,8 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	config Config
 
-	perfDataCollector4 *perfdata.Collector
-	perfDataCollector6 *perfdata.Collector
+	perfDataCollector4 *pdh.Collector
+	perfDataCollector6 *pdh.Collector
 
 	datagramsNoPortTotal         *prometheus.Desc
 	datagramsReceivedTotal       *prometheus.Desc
@@ -88,12 +88,12 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 
 	var err error
 
-	c.perfDataCollector4, err = perfdata.NewCollector("UDPv4", nil, counters)
+	c.perfDataCollector4, err = pdh.NewCollector("UDPv4", nil, counters)
 	if err != nil {
 		return fmt.Errorf("failed to create UDPv4 collector: %w", err)
 	}
 
-	c.perfDataCollector6, err = perfdata.NewCollector("UDPv6", nil, counters)
+	c.perfDataCollector6, err = pdh.NewCollector("UDPv6", nil, counters)
 	if err != nil {
 		return fmt.Errorf("failed to create UDPv6 collector: %w", err)
 	}
@@ -138,27 +138,27 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 		return fmt.Errorf("failed to collect UDPv4 metrics: %w", err)
 	}
 
-	if _, ok := data[perfdata.InstanceEmpty]; !ok {
+	if _, ok := data[pdh.InstanceEmpty]; !ok {
 		return errors.New("no data for UDPv4")
 	}
 
-	c.writeUDPCounters(ch, data[perfdata.InstanceEmpty], []string{"ipv4"})
+	c.writeUDPCounters(ch, data[pdh.InstanceEmpty], []string{"ipv4"})
 
 	data, err = c.perfDataCollector6.Collect()
 	if err != nil {
 		return fmt.Errorf("failed to collect UDPv6 metrics: %w", err)
 	}
 
-	if _, ok := data[perfdata.InstanceEmpty]; !ok {
+	if _, ok := data[pdh.InstanceEmpty]; !ok {
 		return errors.New("no data for UDPv6")
 	}
 
-	c.writeUDPCounters(ch, data[perfdata.InstanceEmpty], []string{"ipv6"})
+	c.writeUDPCounters(ch, data[pdh.InstanceEmpty], []string{"ipv6"})
 
 	return nil
 }
 
-func (c *Collector) writeUDPCounters(ch chan<- prometheus.Metric, metrics map[string]perfdata.CounterValue, labels []string) {
+func (c *Collector) writeUDPCounters(ch chan<- prometheus.Metric, metrics map[string]pdh.CounterValue, labels []string) {
 	ch <- prometheus.MustNewConstMetric(
 		c.datagramsNoPortTotal,
 		prometheus.CounterValue,

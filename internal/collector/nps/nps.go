@@ -22,7 +22,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -37,7 +37,7 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	config Config
 
-	accessPerfDataCollector *perfdata.Collector
+	accessPerfDataCollector *pdh.Collector
 	accessAccepts           *prometheus.Desc
 	accessChallenges        *prometheus.Desc
 	accessRejects           *prometheus.Desc
@@ -52,7 +52,7 @@ type Collector struct {
 	accessServerUpTime      *prometheus.Desc
 	accessUnknownType       *prometheus.Desc
 
-	accountingPerfDataCollector *perfdata.Collector
+	accountingPerfDataCollector *pdh.Collector
 	accountingRequests          *prometheus.Desc
 	accountingResponses         *prometheus.Desc
 	accountingBadAuthenticators *prometheus.Desc
@@ -96,7 +96,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 
 	errs := make([]error, 0, 2)
 
-	c.accessPerfDataCollector, err = perfdata.NewCollector("NPS Authentication Server", nil, []string{
+	c.accessPerfDataCollector, err = pdh.NewCollector("NPS Authentication Server", nil, []string{
 		accessAccepts,
 		accessChallenges,
 		accessRejects,
@@ -115,7 +115,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		errs = append(errs, fmt.Errorf("failed to create NPS Authentication Server collector: %w", err))
 	}
 
-	c.accountingPerfDataCollector, err = perfdata.NewCollector("NPS Accounting Server", nil, []string{
+	c.accountingPerfDataCollector, err = pdh.NewCollector("NPS Accounting Server", nil, []string{
 		accountingRequests,
 		accountingResponses,
 		accountingBadAuthenticators,
@@ -312,7 +312,7 @@ func (c *Collector) collectAccept(ch chan<- prometheus.Metric) error {
 		return fmt.Errorf("failed to collect NPS Authentication Server metrics: %w", err)
 	}
 
-	data, ok := perfData[perfdata.InstanceEmpty]
+	data, ok := perfData[pdh.InstanceEmpty]
 	if !ok {
 		return fmt.Errorf("failed to collect NPS Authentication Server metrics: %w", types.ErrNoData)
 	}
@@ -404,7 +404,7 @@ func (c *Collector) collectAccounting(ch chan<- prometheus.Metric) error {
 		return fmt.Errorf("failed to collect NPS Accounting Server metrics: %w", err)
 	}
 
-	data, ok := perfData[perfdata.InstanceEmpty]
+	data, ok := perfData[pdh.InstanceEmpty]
 	if !ok {
 		return fmt.Errorf("failed to collect NPS Accounting Server metrics: %w", types.ErrNoData)
 	}

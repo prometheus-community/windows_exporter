@@ -19,13 +19,13 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 type collectorSQLErrors struct {
-	sqlErrorsPerfDataCollectors map[string]*perfdata.Collector
+	sqlErrorsPerfDataCollectors map[string]*pdh.Collector
 
 	// Win32_PerfRawData_{instance}_SQLServerSQLErrors
 	sqlErrorsTotal *prometheus.Desc
@@ -38,14 +38,14 @@ const (
 func (c *Collector) buildSQLErrors() error {
 	var err error
 
-	c.sqlErrorsPerfDataCollectors = make(map[string]*perfdata.Collector, len(c.mssqlInstances))
+	c.sqlErrorsPerfDataCollectors = make(map[string]*pdh.Collector, len(c.mssqlInstances))
 	errs := make([]error, 0, len(c.mssqlInstances))
 	counters := []string{
 		sqlErrorsErrorsPerSec,
 	}
 
 	for _, sqlInstance := range c.mssqlInstances {
-		c.sqlErrorsPerfDataCollectors[sqlInstance.name], err = perfdata.NewCollector(c.mssqlGetPerfObjectName(sqlInstance.name, "SQL Errors"), perfdata.InstancesAll, counters)
+		c.sqlErrorsPerfDataCollectors[sqlInstance.name], err = pdh.NewCollector(c.mssqlGetPerfObjectName(sqlInstance.name, "SQL Errors"), pdh.InstancesAll, counters)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("failed to create SQL Errors collector for instance %s: %w", sqlInstance.name, err))
 		}
@@ -66,7 +66,7 @@ func (c *Collector) collectSQLErrors(ch chan<- prometheus.Metric) error {
 	return c.collect(ch, subCollectorSQLErrors, c.sqlErrorsPerfDataCollectors, c.collectSQLErrorsInstance)
 }
 
-func (c *Collector) collectSQLErrorsInstance(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *perfdata.Collector) error {
+func (c *Collector) collectSQLErrorsInstance(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *pdh.Collector) error {
 	if perfDataCollector == nil {
 		return types.ErrCollectorNotInitialized
 	}

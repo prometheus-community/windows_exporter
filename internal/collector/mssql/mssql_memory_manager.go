@@ -19,13 +19,13 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 type collectorMemoryManager struct {
-	memMgrPerfDataCollectors map[string]*perfdata.Collector
+	memMgrPerfDataCollectors map[string]*pdh.Collector
 
 	memMgrConnectionMemoryKB       *prometheus.Desc
 	memMgrDatabaseCacheMemoryKB    *prometheus.Desc
@@ -75,7 +75,7 @@ const (
 func (c *Collector) buildMemoryManager() error {
 	var err error
 
-	c.memMgrPerfDataCollectors = make(map[string]*perfdata.Collector, len(c.mssqlInstances))
+	c.memMgrPerfDataCollectors = make(map[string]*pdh.Collector, len(c.mssqlInstances))
 	errs := make([]error, 0, len(c.mssqlInstances))
 	counters := []string{
 		memMgrConnectionMemoryKB,
@@ -101,7 +101,7 @@ func (c *Collector) buildMemoryManager() error {
 	}
 
 	for _, sqlInstance := range c.mssqlInstances {
-		c.memMgrPerfDataCollectors[sqlInstance.name], err = perfdata.NewCollector(c.mssqlGetPerfObjectName(sqlInstance.name, "Memory Manager"), perfdata.InstancesAll, counters)
+		c.memMgrPerfDataCollectors[sqlInstance.name], err = pdh.NewCollector(c.mssqlGetPerfObjectName(sqlInstance.name, "Memory Manager"), pdh.InstancesAll, counters)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("failed to create Memory Manager collector for instance %s: %w", sqlInstance.name, err))
 		}
@@ -235,7 +235,7 @@ func (c *Collector) collectMemoryManager(ch chan<- prometheus.Metric) error {
 	return c.collect(ch, subCollectorMemoryManager, c.memMgrPerfDataCollectors, c.collectMemoryManagerInstance)
 }
 
-func (c *Collector) collectMemoryManagerInstance(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *perfdata.Collector) error {
+func (c *Collector) collectMemoryManagerInstance(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *pdh.Collector) error {
 	if perfDataCollector == nil {
 		return types.ErrCollectorNotInitialized
 	}
@@ -245,7 +245,7 @@ func (c *Collector) collectMemoryManagerInstance(ch chan<- prometheus.Metric, sq
 		return fmt.Errorf("failed to collect %s metrics: %w", c.mssqlGetPerfObjectName(sqlInstance, "Memory Manager"), err)
 	}
 
-	data, ok := perfData[perfdata.InstanceEmpty]
+	data, ok := perfData[pdh.InstanceEmpty]
 	if !ok {
 		return fmt.Errorf("perflib query for %s returned empty result set", c.mssqlGetPerfObjectName(sqlInstance, "Memory Manager"))
 	}

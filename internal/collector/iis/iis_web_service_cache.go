@@ -18,13 +18,13 @@ package iis
 import (
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 type collectorWebServiceCache struct {
-	serviceCachePerfDataCollector *perfdata.Collector
+	serviceCachePerfDataCollector *pdh.Collector
 
 	serviceCacheActiveFlushedEntries *prometheus.Desc
 
@@ -100,7 +100,7 @@ const (
 func (c *Collector) buildWebServiceCache() error {
 	var err error
 
-	c.serviceCachePerfDataCollector, err = perfdata.NewCollector("Web Service Cache", perfdata.InstancesAll, []string{
+	c.serviceCachePerfDataCollector, err = pdh.NewCollector("Web Service Cache", pdh.InstancesAll, []string{
 		serviceCacheActiveFlushedEntries,
 		serviceCacheCurrentFileCacheMemoryUsage,
 		serviceCacheMaximumFileCacheMemoryUsage,

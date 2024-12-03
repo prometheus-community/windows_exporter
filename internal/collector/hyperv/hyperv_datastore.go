@@ -18,14 +18,14 @@ package hyperv
 import (
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 // collectorDataStore Hyper-V DataStore metrics
 type collectorDataStore struct {
-	perfDataCollectorDataStore *perfdata.Collector
+	perfDataCollectorDataStore *pdh.Collector
 
 	dataStoreFragmentationRatio          *prometheus.Desc // \Hyper-V DataStore(*)\Fragmentation ratio
 	dataStoreSectorSize                  *prometheus.Desc // \Hyper-V DataStore(*)\Sector size
@@ -128,7 +128,7 @@ const (
 func (c *Collector) buildDataStore() error {
 	var err error
 
-	c.perfDataCollectorDataStore, err = perfdata.NewCollector("Hyper-V DataStore", perfdata.InstancesAll, []string{
+	c.perfDataCollectorDataStore, err = pdh.NewCollector("Hyper-V DataStore", pdh.InstancesAll, []string{
 		dataStoreFragmentationRatio,
 		dataStoreSectorSize,
 		dataStoreDataAlignment,

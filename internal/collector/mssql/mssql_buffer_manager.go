@@ -19,13 +19,13 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 type collectorBufferManager struct {
-	bufManPerfDataCollectors map[string]*perfdata.Collector
+	bufManPerfDataCollectors map[string]*pdh.Collector
 
 	bufManBackgroundwriterpages         *prometheus.Desc
 	bufManBuffercachehits               *prometheus.Desc
@@ -81,7 +81,7 @@ const (
 func (c *Collector) buildBufferManager() error {
 	var err error
 
-	c.bufManPerfDataCollectors = make(map[string]*perfdata.Collector, len(c.mssqlInstances))
+	c.bufManPerfDataCollectors = make(map[string]*pdh.Collector, len(c.mssqlInstances))
 	errs := make([]error, 0, len(c.mssqlInstances))
 	counters := []string{
 		bufManBackgroundWriterPagesPerSec,
@@ -110,7 +110,7 @@ func (c *Collector) buildBufferManager() error {
 	}
 
 	for _, sqlInstance := range c.mssqlInstances {
-		c.bufManPerfDataCollectors[sqlInstance.name], err = perfdata.NewCollector(c.mssqlGetPerfObjectName(sqlInstance.name, "Buffer Manager"), nil, counters)
+		c.bufManPerfDataCollectors[sqlInstance.name], err = pdh.NewCollector(c.mssqlGetPerfObjectName(sqlInstance.name, "Buffer Manager"), nil, counters)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("failed to create Buffer Manager collector for instance %s: %w", sqlInstance.name, err))
 		}
@@ -262,7 +262,7 @@ func (c *Collector) collectBufferManager(ch chan<- prometheus.Metric) error {
 	return c.collect(ch, subCollectorBufferManager, c.bufManPerfDataCollectors, c.collectBufferManagerInstance)
 }
 
-func (c *Collector) collectBufferManagerInstance(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *perfdata.Collector) error {
+func (c *Collector) collectBufferManagerInstance(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *pdh.Collector) error {
 	if perfDataCollector == nil {
 		return types.ErrCollectorNotInitialized
 	}

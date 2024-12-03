@@ -20,13 +20,13 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 type collectorW3SVCW3WP struct {
-	w3SVCW3WPPerfDataCollector *perfdata.Collector
+	w3SVCW3WPPerfDataCollector *pdh.Collector
 
 	// W3SVC_W3WP
 	w3SVCW3WPThreads        *prometheus.Desc
@@ -181,7 +181,7 @@ func (c *Collector) buildW3SVCW3WP() error {
 
 	var err error
 
-	c.w3SVCW3WPPerfDataCollector, err = perfdata.NewCollector("W3SVC_W3WP", perfdata.InstancesAll, counters)
+	c.w3SVCW3WPPerfDataCollector, err = pdh.NewCollector("W3SVC_W3WP", pdh.InstancesAll, counters)
 	if err != nil {
 		return fmt.Errorf("failed to create W3SVC_W3WP collector: %w", err)
 	}

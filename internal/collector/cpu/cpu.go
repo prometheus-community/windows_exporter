@@ -22,7 +22,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
@@ -38,7 +38,7 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	config Config
 
-	perfDataCollector *perfdata.Collector
+	perfDataCollector *pdh.Collector
 
 	mu sync.Mutex
 
@@ -92,7 +92,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 
 	c.mu = sync.Mutex{}
 
-	c.perfDataCollector, err = perfdata.NewCollector("Processor Information", perfdata.InstancesAll, []string{
+	c.perfDataCollector, err = pdh.NewCollector("Processor Information", pdh.InstancesAll, []string{
 		c1TimeSeconds,
 		c2TimeSeconds,
 		c3TimeSeconds,

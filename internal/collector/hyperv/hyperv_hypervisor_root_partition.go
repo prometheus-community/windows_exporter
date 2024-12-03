@@ -19,14 +19,14 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 // collectorHypervisorRootPartition Hyper-V Hypervisor Root Partition metrics
 type collectorHypervisorRootPartition struct {
-	perfDataCollectorHypervisorRootPartition             *perfdata.Collector
+	perfDataCollectorHypervisorRootPartition             *pdh.Collector
 	hypervisorRootPartitionAddressSpaces                 *prometheus.Desc // \Hyper-V Hypervisor Root Partition(*)\Address Spaces
 	hypervisorRootPartitionAttachedDevices               *prometheus.Desc // \Hyper-V Hypervisor Root Partition(*)\Attached Devices
 	hypervisorRootPartitionDepositedPages                *prometheus.Desc // \Hyper-V Hypervisor Root Partition(*)\Deposited Pages
@@ -77,7 +77,7 @@ const (
 func (c *Collector) buildHypervisorRootPartition() error {
 	var err error
 
-	c.perfDataCollectorHypervisorRootPartition, err = perfdata.NewCollector("Hyper-V Hypervisor Root Partition", []string{"Root"}, []string{
+	c.perfDataCollectorHypervisorRootPartition, err = pdh.NewCollector("Hyper-V Hypervisor Root Partition", []string{"Root"}, []string{
 		hypervisorRootPartitionAddressSpaces,
 		hypervisorRootPartitionAttachedDevices,
 		hypervisorRootPartitionDepositedPages,

@@ -19,13 +19,13 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 type collectorSQLStats struct {
-	sqlStatsPerfDataCollectors map[string]*perfdata.Collector
+	sqlStatsPerfDataCollectors map[string]*pdh.Collector
 
 	sqlStatsAutoParamAttempts       *prometheus.Desc
 	sqlStatsBatchRequests           *prometheus.Desc
@@ -57,7 +57,7 @@ const (
 func (c *Collector) buildSQLStats() error {
 	var err error
 
-	c.sqlStatsPerfDataCollectors = make(map[string]*perfdata.Collector, len(c.mssqlInstances))
+	c.sqlStatsPerfDataCollectors = make(map[string]*pdh.Collector, len(c.mssqlInstances))
 	errs := make([]error, 0, len(c.mssqlInstances))
 	counters := []string{
 		sqlStatsAutoParamAttemptsPerSec,
@@ -74,7 +74,7 @@ func (c *Collector) buildSQLStats() error {
 	}
 
 	for _, sqlInstance := range c.mssqlInstances {
-		c.sqlStatsPerfDataCollectors[sqlInstance.name], err = perfdata.NewCollector(c.mssqlGetPerfObjectName(sqlInstance.name, "SQL Statistics"), nil, counters)
+		c.sqlStatsPerfDataCollectors[sqlInstance.name], err = pdh.NewCollector(c.mssqlGetPerfObjectName(sqlInstance.name, "SQL Statistics"), nil, counters)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("failed to create SQL Statistics collector for instance %s: %w", sqlInstance.name, err))
 		}
@@ -154,7 +154,7 @@ func (c *Collector) collectSQLStats(ch chan<- prometheus.Metric) error {
 	return c.collect(ch, subCollectorSQLStats, c.sqlStatsPerfDataCollectors, c.collectSQLStatsInstance)
 }
 
-func (c *Collector) collectSQLStatsInstance(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *perfdata.Collector) error {
+func (c *Collector) collectSQLStatsInstance(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *pdh.Collector) error {
 	if perfDataCollector == nil {
 		return types.ErrCollectorNotInitialized
 	}
@@ -164,7 +164,7 @@ func (c *Collector) collectSQLStatsInstance(ch chan<- prometheus.Metric, sqlInst
 		return fmt.Errorf("failed to collect %s metrics: %w", c.mssqlGetPerfObjectName(sqlInstance, "SQL Statistics"), err)
 	}
 
-	data, ok := perfData[perfdata.InstanceEmpty]
+	data, ok := perfData[pdh.InstanceEmpty]
 	if !ok {
 		return fmt.Errorf("perflib query for %s returned empty result set", c.mssqlGetPerfObjectName(sqlInstance, "SQL Statistics"))
 	}

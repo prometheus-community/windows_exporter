@@ -21,7 +21,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -36,7 +36,7 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	config Config
 
-	perfDataCollector *perfdata.Collector
+	perfDataCollector *pdh.Collector
 
 	addressBookClientSessions                           *prometheus.Desc
 	addressBookOperationsTotal                          *prometheus.Desc
@@ -278,7 +278,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 
 	var err error
 
-	c.perfDataCollector, err = perfdata.NewCollector("DirectoryServices", perfdata.InstancesAll, counters)
+	c.perfDataCollector, err = pdh.NewCollector("DirectoryServices", pdh.InstancesAll, counters)
 	if err != nil {
 		return fmt.Errorf("failed to create DirectoryServices collector: %w", err)
 	}

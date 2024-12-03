@@ -24,7 +24,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -44,9 +44,9 @@ var ConfigDefaults = Config{
 type Collector struct {
 	config Config
 
-	perfDataCollectorConnection *perfdata.Collector
-	perfDataCollectorFolder     *perfdata.Collector
-	perfDataCollectorVolume     *perfdata.Collector
+	perfDataCollectorConnection *pdh.Collector
+	perfDataCollectorFolder     *pdh.Collector
+	perfDataCollectorVolume     *pdh.Collector
 
 	// connection source
 	connectionBandwidthSavingsUsingDFSReplicationTotal *prometheus.Desc
@@ -160,7 +160,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	var err error
 
 	if slices.Contains(c.config.CollectorsEnabled, "connection") {
-		c.perfDataCollectorConnection, err = perfdata.NewCollector("DFS Replication Connections", perfdata.InstancesAll, []string{
+		c.perfDataCollectorConnection, err = pdh.NewCollector("DFS Replication Connections", pdh.InstancesAll, []string{
 			bandwidthSavingsUsingDFSReplicationTotal,
 			bytesReceivedTotal,
 			compressedSizeOfFilesReceivedTotal,
@@ -177,7 +177,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	}
 
 	if slices.Contains(c.config.CollectorsEnabled, "folder") {
-		c.perfDataCollectorFolder, err = perfdata.NewCollector("DFS Replicated Folders", perfdata.InstancesAll, []string{
+		c.perfDataCollectorFolder, err = pdh.NewCollector("DFS Replicated Folders", pdh.InstancesAll, []string{
 			bandwidthSavingsUsingDFSReplicationTotal,
 			compressedSizeOfFilesReceivedTotal,
 			conflictBytesCleanedUpTotal,
@@ -212,7 +212,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	}
 
 	if slices.Contains(c.config.CollectorsEnabled, "volume") {
-		c.perfDataCollectorVolume, err = perfdata.NewCollector("DFS Replication Service Volumes", perfdata.InstancesAll, []string{
+		c.perfDataCollectorVolume, err = pdh.NewCollector("DFS Replication Service Volumes", pdh.InstancesAll, []string{
 			databaseCommitsTotal,
 			databaseLookupsTotal,
 			usnJournalRecordsReadTotal,

@@ -25,7 +25,7 @@ import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/headers/wtsapi32"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
@@ -72,8 +72,8 @@ type Collector struct {
 
 	connectionBrokerEnabled bool
 
-	perfDataCollectorTerminalServicesSession *perfdata.Collector
-	perfDataCollectorBroker                  *perfdata.Collector
+	perfDataCollectorTerminalServicesSession *pdh.Collector
+	perfDataCollectorBroker                  *pdh.Collector
 
 	hServer windows.Handle
 
@@ -156,7 +156,7 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 
 	var err error
 
-	c.perfDataCollectorTerminalServicesSession, err = perfdata.NewCollector("Terminal Services Session", perfdata.InstancesAll, counters)
+	c.perfDataCollectorTerminalServicesSession, err = pdh.NewCollector("Terminal Services Session", pdh.InstancesAll, counters)
 	if err != nil {
 		return fmt.Errorf("failed to create Terminal Services Session collector: %w", err)
 	}
@@ -172,7 +172,7 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 
 		var err error
 
-		c.perfDataCollectorBroker, err = perfdata.NewCollector("Remote Desktop Connection Broker Counterset", perfdata.InstancesAll, counters)
+		c.perfDataCollectorBroker, err = pdh.NewCollector("Remote Desktop Connection Broker Counterset", pdh.InstancesAll, counters)
 		if err != nil {
 			return fmt.Errorf("failed to create Remote Desktop Connection Broker Counterset collector: %w", err)
 		}
@@ -427,7 +427,7 @@ func (c *Collector) collectCollectionBrokerPerformanceCounter(ch chan<- promethe
 		return fmt.Errorf("failed to collect Remote Desktop Connection Broker Counterset metrics: %w", err)
 	}
 
-	data, ok := perfData[perfdata.InstanceEmpty]
+	data, ok := perfData[pdh.InstanceEmpty]
 	if !ok {
 		return errors.New("query for Remote Desktop Connection Broker Counterset returned empty result set")
 	}

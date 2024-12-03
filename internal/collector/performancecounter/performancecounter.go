@@ -23,7 +23,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -114,7 +114,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 			}
 		}
 
-		collector, err := perfdata.NewCollector(object.Object, object.Instances, counters)
+		collector, err := pdh.NewCollector(object.Object, object.Instances, counters)
 		if err != nil {
 			return fmt.Errorf("failed to create v2 collector: %w", err)
 		}
@@ -148,7 +148,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 				}
 
 				labels := make(prometheus.Labels, len(counter.Labels)+1)
-				if collectedInstance != perfdata.InstanceEmpty {
+				if collectedInstance != pdh.InstanceEmpty {
 					labels[perfDataObject.InstanceLabel] = collectedInstance
 				}
 

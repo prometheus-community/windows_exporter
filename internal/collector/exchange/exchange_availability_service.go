@@ -18,7 +18,7 @@ package exchange
 import (
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -30,7 +30,7 @@ func (c *Collector) buildAvailabilityService() error {
 
 	var err error
 
-	c.perfDataCollectorAvailabilityService, err = perfdata.NewCollector("MSExchange Availability Service", perfdata.InstancesAll, counters)
+	c.perfDataCollectorAvailabilityService, err = pdh.NewCollector("MSExchange Availability Service", pdh.InstancesAll, counters)
 	if err != nil {
 		return fmt.Errorf("failed to create MSExchange Availability Service collector: %w", err)
 	}

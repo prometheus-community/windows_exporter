@@ -18,14 +18,14 @@ package hyperv
 import (
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 // Hyper-V Virtual Storage Device metrics
 type collectorVirtualStorageDevice struct {
-	perfDataCollectorVirtualStorageDevice *perfdata.Collector
+	perfDataCollectorVirtualStorageDevice *pdh.Collector
 
 	virtualStorageDeviceErrorCount               *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\Error Count
 	virtualStorageDeviceQueueLength              *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\Queue Length
@@ -59,7 +59,7 @@ const (
 func (c *Collector) buildVirtualStorageDevice() error {
 	var err error
 
-	c.perfDataCollectorVirtualStorageDevice, err = perfdata.NewCollector("Hyper-V Virtual Storage Device", perfdata.InstancesAll, []string{
+	c.perfDataCollectorVirtualStorageDevice, err = pdh.NewCollector("Hyper-V Virtual Storage Device", pdh.InstancesAll, []string{
 		virtualStorageDeviceErrorCount,
 		virtualStorageDeviceQueueLength,
 		virtualStorageDeviceReadBytes,

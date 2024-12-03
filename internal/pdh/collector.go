@@ -13,7 +13,7 @@
 
 //go:build windows
 
-package perfdata
+package pdh
 
 import (
 	"errors"
@@ -241,7 +241,7 @@ func (c *Collector) collectRoutine() {
 					}
 
 					var metricType prometheus.ValueType
-					if val, ok := supportedCounterTypes[counter.Type]; ok {
+					if val, ok := SupportedCounterTypes[counter.Type]; ok {
 						metricType = val
 					} else {
 						metricType = prometheus.GaugeValue

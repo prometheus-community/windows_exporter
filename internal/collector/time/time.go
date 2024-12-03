@@ -26,7 +26,7 @@ import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/headers/kernel32"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows"
@@ -55,7 +55,7 @@ var ConfigDefaults = Config{
 type Collector struct {
 	config Config
 
-	perfDataCollector *perfdata.Collector
+	perfDataCollector *pdh.Collector
 
 	currentTime                      *prometheus.Desc
 	timezone                         *prometheus.Desc
@@ -126,7 +126,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 
 	var err error
 
-	c.perfDataCollector, err = perfdata.NewCollector("Windows Time Service", nil, []string{
+	c.perfDataCollector, err = pdh.NewCollector("Windows Time Service", nil, []string{
 		ClockFrequencyAdjustmentPPBTotal,
 		ComputedTimeOffset,
 		NTPClientTimeSourceCount,
@@ -241,7 +241,7 @@ func (c *Collector) collectNTP(ch chan<- prometheus.Metric) error {
 		return fmt.Errorf("failed to collect VM Memory metrics: %w", err)
 	}
 
-	data, ok := perfData[perfdata.InstanceEmpty]
+	data, ok := perfData[pdh.InstanceEmpty]
 	if !ok {
 		return fmt.Errorf("failed to collect VM Memory metrics: %w", err)
 	}

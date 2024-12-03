@@ -23,7 +23,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
@@ -44,8 +44,8 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	config Config
 
-	perfDataCollectorNetwork  *perfdata.Collector
-	perfDataCollectorGraphics *perfdata.Collector
+	perfDataCollectorNetwork  *pdh.Collector
+	perfDataCollectorGraphics *pdh.Collector
 
 	// net
 	baseTCPRTT               *prometheus.Desc
@@ -102,7 +102,7 @@ func (c *Collector) Close() error {
 func (c *Collector) Build(*slog.Logger, *mi.Session) error {
 	var err error
 
-	c.perfDataCollectorNetwork, err = perfdata.NewCollector("RemoteFX Network", perfdata.InstancesAll, []string{
+	c.perfDataCollectorNetwork, err = pdh.NewCollector("RemoteFX Network", pdh.InstancesAll, []string{
 		BaseTCPRTT,
 		BaseUDPRTT,
 		CurrentTCPBandwidth,
@@ -121,7 +121,7 @@ func (c *Collector) Build(*slog.Logger, *mi.Session) error {
 		return fmt.Errorf("failed to create RemoteFX Network collector: %w", err)
 	}
 
-	c.perfDataCollectorGraphics, err = perfdata.NewCollector("RemoteFX Graphics", perfdata.InstancesAll, []string{
+	c.perfDataCollectorGraphics, err = pdh.NewCollector("RemoteFX Graphics", pdh.InstancesAll, []string{
 		AverageEncodingTime,
 		FrameQuality,
 		FramesSkippedPerSecondInsufficientClientResources,

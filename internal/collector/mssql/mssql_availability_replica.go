@@ -19,14 +19,14 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 type collectorAvailabilityReplica struct {
-	availabilityReplicaPerfDataCollectors map[string]*perfdata.Collector
+	availabilityReplicaPerfDataCollectors map[string]*pdh.Collector
 
 	availReplicaBytesReceivedFromReplica *prometheus.Desc
 	availReplicaBytesSentToReplica       *prometheus.Desc
@@ -54,7 +54,7 @@ const (
 func (c *Collector) buildAvailabilityReplica() error {
 	var err error
 
-	c.availabilityReplicaPerfDataCollectors = make(map[string]*perfdata.Collector, len(c.mssqlInstances))
+	c.availabilityReplicaPerfDataCollectors = make(map[string]*pdh.Collector, len(c.mssqlInstances))
 	errs := make([]error, 0, len(c.mssqlInstances))
 	counters := []string{
 		availReplicaBytesReceivedFromReplicaPerSec,
@@ -69,7 +69,7 @@ func (c *Collector) buildAvailabilityReplica() error {
 	}
 
 	for _, sqlInstance := range c.mssqlInstances {
-		c.availabilityReplicaPerfDataCollectors[sqlInstance.name], err = perfdata.NewCollector(c.mssqlGetPerfObjectName(sqlInstance.name, "Availability Replica"), perfdata.InstancesAll, counters)
+		c.availabilityReplicaPerfDataCollectors[sqlInstance.name], err = pdh.NewCollector(c.mssqlGetPerfObjectName(sqlInstance.name, "Availability Replica"), pdh.InstancesAll, counters)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("failed to create Availability Replica collector for instance %s: %w", sqlInstance.name, err))
 		}
@@ -138,7 +138,7 @@ func (c *Collector) collectAvailabilityReplica(ch chan<- prometheus.Metric) erro
 	return c.collect(ch, subCollectorAvailabilityReplica, c.availabilityReplicaPerfDataCollectors, c.collectAvailabilityReplicaInstance)
 }
 
-func (c *Collector) collectAvailabilityReplicaInstance(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *perfdata.Collector) error {
+func (c *Collector) collectAvailabilityReplicaInstance(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *pdh.Collector) error {
 	if perfDataCollector == nil {
 		return types.ErrCollectorNotInitialized
 	}

@@ -18,7 +18,7 @@ package hyperv
 import (
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
@@ -26,7 +26,7 @@ import (
 
 // collectorDynamicMemoryBalancer Hyper-V Dynamic Memory Balancer metrics
 type collectorDynamicMemoryBalancer struct {
-	perfDataCollectorDynamicMemoryBalancer             *perfdata.Collector
+	perfDataCollectorDynamicMemoryBalancer             *pdh.Collector
 	vmDynamicMemoryBalancerAvailableMemoryForBalancing *prometheus.Desc // \Hyper-V Dynamic Memory Balancer(*)\Available Memory For Balancing
 	vmDynamicMemoryBalancerSystemCurrentPressure       *prometheus.Desc // \Hyper-V Dynamic Memory Balancer(*)\System Current Pressure
 	vmDynamicMemoryBalancerAvailableMemory             *prometheus.Desc // \Hyper-V Dynamic Memory Balancer(*)\Available Memory
@@ -45,7 +45,7 @@ func (c *Collector) buildDynamicMemoryBalancer() error {
 	var err error
 
 	// https://learn.microsoft.com/en-us/archive/blogs/chrisavis/monitoring-dynamic-memory-in-windows-server-hyper-v-2012
-	c.perfDataCollectorDynamicMemoryBalancer, err = perfdata.NewCollector("Hyper-V Dynamic Memory Balancer", perfdata.InstancesAll, []string{
+	c.perfDataCollectorDynamicMemoryBalancer, err = pdh.NewCollector("Hyper-V Dynamic Memory Balancer", pdh.InstancesAll, []string{
 		vmDynamicMemoryBalancerAvailableMemory,
 		vmDynamicMemoryBalancerAvailableMemoryForBalancing,
 		vmDynamicMemoryBalancerAveragePressure,

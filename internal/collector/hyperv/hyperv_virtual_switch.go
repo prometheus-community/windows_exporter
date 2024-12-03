@@ -18,14 +18,14 @@ package hyperv
 import (
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 // collectorVirtualMachineHealthSummary Hyper-V Virtual Switch Summary metrics
 type collectorVirtualSwitch struct {
-	perfDataCollectorVirtualSwitch                *perfdata.Collector
+	perfDataCollectorVirtualSwitch                *pdh.Collector
 	virtualSwitchBroadcastPacketsReceived         *prometheus.Desc // \Hyper-V Virtual Switch(*)\Broadcast Packets Received/sec
 	virtualSwitchBroadcastPacketsSent             *prometheus.Desc // \Hyper-V Virtual Switch(*)\Broadcast Packets Sent/sec
 	virtualSwitchBytes                            *prometheus.Desc // \Hyper-V Virtual Switch(*)\Bytes/sec
@@ -76,7 +76,7 @@ const (
 func (c *Collector) buildVirtualSwitch() error {
 	var err error
 
-	c.perfDataCollectorVirtualSwitch, err = perfdata.NewCollector("Hyper-V Virtual Switch", perfdata.InstancesAll, []string{
+	c.perfDataCollectorVirtualSwitch, err = pdh.NewCollector("Hyper-V Virtual Switch", pdh.InstancesAll, []string{
 		virtualSwitchBroadcastPacketsReceived,
 		virtualSwitchBroadcastPacketsSent,
 		virtualSwitchBytes,

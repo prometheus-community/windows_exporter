@@ -19,13 +19,13 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 type collectorDatabaseReplica struct {
-	dbReplicaPerfDataCollectors map[string]*perfdata.Collector
+	dbReplicaPerfDataCollectors map[string]*pdh.Collector
 
 	dbReplicaDatabaseFlowControlDelay  *prometheus.Desc
 	dbReplicaDatabaseFlowControls      *prometheus.Desc
@@ -83,7 +83,7 @@ const (
 func (c *Collector) buildDatabaseReplica() error {
 	var err error
 
-	c.dbReplicaPerfDataCollectors = make(map[string]*perfdata.Collector, len(c.mssqlInstances))
+	c.dbReplicaPerfDataCollectors = make(map[string]*pdh.Collector, len(c.mssqlInstances))
 	errs := make([]error, 0, len(c.mssqlInstances))
 	counters := []string{
 		dbReplicaDatabaseFlowControlDelay,
@@ -113,7 +113,7 @@ func (c *Collector) buildDatabaseReplica() error {
 	}
 
 	for _, sqlInstance := range c.mssqlInstances {
-		c.dbReplicaPerfDataCollectors[sqlInstance.name], err = perfdata.NewCollector(c.mssqlGetPerfObjectName(sqlInstance.name, "Database Replica"), perfdata.InstancesAll, counters)
+		c.dbReplicaPerfDataCollectors[sqlInstance.name], err = pdh.NewCollector(c.mssqlGetPerfObjectName(sqlInstance.name, "Database Replica"), pdh.InstancesAll, counters)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("failed to create Database Replica collector for instance %s: %w", sqlInstance.name, err))
 		}
@@ -272,7 +272,7 @@ func (c *Collector) collectDatabaseReplica(ch chan<- prometheus.Metric) error {
 	return c.collect(ch, subCollectorDatabaseReplica, c.dbReplicaPerfDataCollectors, c.collectDatabaseReplicaInstance)
 }
 
-func (c *Collector) collectDatabaseReplicaInstance(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *perfdata.Collector) error {
+func (c *Collector) collectDatabaseReplicaInstance(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *pdh.Collector) error {
 	if perfDataCollector == nil {
 		return types.ErrCollectorNotInitialized
 	}

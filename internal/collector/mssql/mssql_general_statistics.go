@@ -19,13 +19,13 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 type collectorGeneralStatistics struct {
-	genStatsPerfDataCollectors map[string]*perfdata.Collector
+	genStatsPerfDataCollectors map[string]*pdh.Collector
 
 	genStatsActiveTempTables              *prometheus.Desc
 	genStatsConnectionReset               *prometheus.Desc
@@ -83,7 +83,7 @@ const (
 func (c *Collector) buildGeneralStatistics() error {
 	var err error
 
-	c.genStatsPerfDataCollectors = make(map[string]*perfdata.Collector, len(c.mssqlInstances))
+	c.genStatsPerfDataCollectors = make(map[string]*pdh.Collector, len(c.mssqlInstances))
 	errs := make([]error, 0, len(c.mssqlInstances))
 	counters := []string{
 		genStatsActiveTempTables,
@@ -113,7 +113,7 @@ func (c *Collector) buildGeneralStatistics() error {
 	}
 
 	for _, sqlInstance := range c.mssqlInstances {
-		c.genStatsPerfDataCollectors[sqlInstance.name], err = perfdata.NewCollector(c.mssqlGetPerfObjectName(sqlInstance.name, "General Statistics"), nil, counters)
+		c.genStatsPerfDataCollectors[sqlInstance.name], err = pdh.NewCollector(c.mssqlGetPerfObjectName(sqlInstance.name, "General Statistics"), nil, counters)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("failed to create General Statistics collector for instance %s: %w", sqlInstance.name, err))
 		}
@@ -272,7 +272,7 @@ func (c *Collector) collectGeneralStatistics(ch chan<- prometheus.Metric) error 
 	return c.collect(ch, subCollectorGeneralStatistics, c.genStatsPerfDataCollectors, c.collectGeneralStatisticsInstance)
 }
 
-func (c *Collector) collectGeneralStatisticsInstance(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *perfdata.Collector) error {
+func (c *Collector) collectGeneralStatisticsInstance(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *pdh.Collector) error {
 	if perfDataCollector == nil {
 		return types.ErrCollectorNotInitialized
 	}
@@ -282,7 +282,7 @@ func (c *Collector) collectGeneralStatisticsInstance(ch chan<- prometheus.Metric
 		return fmt.Errorf("failed to collect %s metrics: %w", c.mssqlGetPerfObjectName(sqlInstance, "General Statistics"), err)
 	}
 
-	data, ok := perfData[perfdata.InstanceEmpty]
+	data, ok := perfData[pdh.InstanceEmpty]
 	if !ok {
 		return fmt.Errorf("perflib query for %s returned empty result set", c.mssqlGetPerfObjectName(sqlInstance, "General Statistics"))
 	}

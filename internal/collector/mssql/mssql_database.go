@@ -19,13 +19,13 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 type collectorDatabases struct {
-	databasesPerfDataCollectors map[string]*perfdata.Collector
+	databasesPerfDataCollectors map[string]*pdh.Collector
 
 	databasesActiveParallelRedoThreads       *prometheus.Desc
 	databasesActiveTransactions              *prometheus.Desc
@@ -131,7 +131,7 @@ const (
 func (c *Collector) buildDatabases() error {
 	var err error
 
-	c.databasesPerfDataCollectors = make(map[string]*perfdata.Collector, len(c.mssqlInstances))
+	c.databasesPerfDataCollectors = make(map[string]*pdh.Collector, len(c.mssqlInstances))
 	errs := make([]error, 0, len(c.mssqlInstances))
 	counters := []string{
 		databasesActiveTransactions,
@@ -188,7 +188,7 @@ func (c *Collector) buildDatabases() error {
 			counters = append(counters, databasesActiveParallelRedoThreads)
 		}
 
-		c.databasesPerfDataCollectors[sqlInstance.name], err = perfdata.NewCollector(c.mssqlGetPerfObjectName(sqlInstance.name, "Databases"), perfdata.InstancesAll, counters)
+		c.databasesPerfDataCollectors[sqlInstance.name], err = pdh.NewCollector(c.mssqlGetPerfObjectName(sqlInstance.name, "Databases"), pdh.InstancesAll, counters)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("failed to create Databases collector for instance %s: %w", sqlInstance.name, err))
 		}
@@ -490,7 +490,7 @@ func (c *Collector) collectDatabases(ch chan<- prometheus.Metric) error {
 	return c.collect(ch, subCollectorDatabases, c.databasesPerfDataCollectors, c.collectDatabasesInstance)
 }
 
-func (c *Collector) collectDatabasesInstance(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *perfdata.Collector) error {
+func (c *Collector) collectDatabasesInstance(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *pdh.Collector) error {
 	if perfDataCollector == nil {
 		return types.ErrCollectorNotInitialized
 	}

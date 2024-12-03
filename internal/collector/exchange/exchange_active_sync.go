@@ -18,7 +18,7 @@ package exchange
 import (
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -38,7 +38,7 @@ func (c *Collector) buildActiveSync() error {
 
 	var err error
 
-	c.perfDataCollectorActiveSync, err = perfdata.NewCollector("MSExchange ActiveSync", perfdata.InstancesAll, counters)
+	c.perfDataCollectorActiveSync, err = pdh.NewCollector("MSExchange ActiveSync", pdh.InstancesAll, counters)
 	if err != nil {
 		return fmt.Errorf("failed to create MSExchange ActiveSync collector: %w", err)
 	}

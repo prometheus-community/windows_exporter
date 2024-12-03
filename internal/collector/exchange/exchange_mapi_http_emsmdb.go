@@ -18,7 +18,7 @@ package exchange
 import (
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -34,7 +34,7 @@ func (c *Collector) buildMapiHttpEmsmdb() error {
 
 	var err error
 
-	c.perfDataCollectorMapiHttpEmsmdb, err = perfdata.NewCollector("MSExchange MapiHttp Emsmdb", perfdata.InstancesAll, counters)
+	c.perfDataCollectorMapiHttpEmsmdb, err = pdh.NewCollector("MSExchange MapiHttp Emsmdb", pdh.InstancesAll, counters)
 	if err != nil {
 		return fmt.Errorf("failed to create MSExchange MapiHttp Emsmdb: %w", err)
 	}

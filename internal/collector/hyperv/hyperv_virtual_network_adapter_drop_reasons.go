@@ -18,14 +18,14 @@ package hyperv
 import (
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 // collectorVirtualNetworkAdapterDropReasons Hyper-V Virtual Network Adapter Drop Reasons metrics
 type collectorVirtualNetworkAdapterDropReasons struct {
-	perfDataCollectorVirtualNetworkAdapterDropReasons *perfdata.Collector
+	perfDataCollectorVirtualNetworkAdapterDropReasons *pdh.Collector
 
 	// \Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing LowPowerPacketFilter
 	// \Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming LowPowerPacketFilter
@@ -162,7 +162,7 @@ const (
 func (c *Collector) buildVirtualNetworkAdapterDropReasons() error {
 	var err error
 
-	c.perfDataCollectorVirtualNetworkAdapterDropReasons, err = perfdata.NewCollector("Hyper-V Virtual Network Adapter Drop Reasons", perfdata.InstancesAll, []string{
+	c.perfDataCollectorVirtualNetworkAdapterDropReasons, err = pdh.NewCollector("Hyper-V Virtual Network Adapter Drop Reasons", pdh.InstancesAll, []string{
 		virtualNetworkAdapterDropReasonsOutgoingNativeFwdingReq,
 		virtualNetworkAdapterDropReasonsIncomingNativeFwdingReq,
 		virtualNetworkAdapterDropReasonsOutgoingMTUMismatch,

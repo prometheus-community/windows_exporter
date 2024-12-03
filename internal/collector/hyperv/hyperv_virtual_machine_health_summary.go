@@ -19,14 +19,14 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 // collectorVirtualMachineHealthSummary Hyper-V Virtual Machine Health Summary metrics
 type collectorVirtualMachineHealthSummary struct {
-	perfDataCollectorVirtualMachineHealthSummary *perfdata.Collector
+	perfDataCollectorVirtualMachineHealthSummary *pdh.Collector
 
 	// \Hyper-V Virtual Machine Health Summary\Health Critical
 	// \Hyper-V Virtual Machine Health Summary\Health Ok
@@ -42,7 +42,7 @@ const (
 func (c *Collector) buildVirtualMachineHealthSummary() error {
 	var err error
 
-	c.perfDataCollectorVirtualMachineHealthSummary, err = perfdata.NewCollector("Hyper-V Virtual Machine Health Summary", nil, []string{
+	c.perfDataCollectorVirtualMachineHealthSummary, err = pdh.NewCollector("Hyper-V Virtual Machine Health Summary", nil, []string{
 		healthCritical,
 		healthOk,
 	})
@@ -66,7 +66,7 @@ func (c *Collector) collectVirtualMachineHealthSummary(ch chan<- prometheus.Metr
 		return fmt.Errorf("failed to collect Hyper-V Virtual Machine Health Summary metrics: %w", err)
 	}
 
-	healthData, ok := data[perfdata.InstanceEmpty]
+	healthData, ok := data[pdh.InstanceEmpty]
 	if !ok {
 		return errors.New("no data returned for Hyper-V Virtual Machine Health Summary")
 	}

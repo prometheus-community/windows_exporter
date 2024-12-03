@@ -19,14 +19,14 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 // collectorHypervisorVirtualProcessor Hyper-V Hypervisor Virtual Processor metrics
 type collectorHypervisorVirtualProcessor struct {
-	perfDataCollectorHypervisorVirtualProcessor *perfdata.Collector
+	perfDataCollectorHypervisorVirtualProcessor *pdh.Collector
 
 	// \Hyper-V Hypervisor Virtual Processor(*)\% Guest Run Time
 	// \Hyper-V Hypervisor Virtual Processor(*)\% Hypervisor Run Time
@@ -47,7 +47,7 @@ const (
 func (c *Collector) buildHypervisorVirtualProcessor() error {
 	var err error
 
-	c.perfDataCollectorHypervisorVirtualProcessor, err = perfdata.NewCollector("Hyper-V Hypervisor Virtual Processor", perfdata.InstancesAll, []string{
+	c.perfDataCollectorHypervisorVirtualProcessor, err = pdh.NewCollector("Hyper-V Hypervisor Virtual Processor", pdh.InstancesAll, []string{
 		hypervisorVirtualProcessorGuestIdleTimePercent,
 		hypervisorVirtualProcessorHypervisorRunTimePercent,
 		hypervisorVirtualProcessorTotalRunTimePercent,

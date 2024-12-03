@@ -19,13 +19,13 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 type collectorTransactions struct {
-	transactionsPerfDataCollectors map[string]*perfdata.Collector
+	transactionsPerfDataCollectors map[string]*pdh.Collector
 
 	transactionsTempDbFreeSpaceBytes             *prometheus.Desc
 	transactionsLongestTransactionRunningSeconds *prometheus.Desc
@@ -61,7 +61,7 @@ const (
 func (c *Collector) buildTransactions() error {
 	var err error
 
-	c.transactionsPerfDataCollectors = make(map[string]*perfdata.Collector, len(c.mssqlInstances))
+	c.transactionsPerfDataCollectors = make(map[string]*pdh.Collector, len(c.mssqlInstances))
 	errs := make([]error, 0, len(c.mssqlInstances))
 	counters := []string{
 		transactionsFreeSpaceintempdbKB,
@@ -80,7 +80,7 @@ func (c *Collector) buildTransactions() error {
 	}
 
 	for _, sqlInstance := range c.mssqlInstances {
-		c.transactionsPerfDataCollectors[sqlInstance.name], err = perfdata.NewCollector(c.mssqlGetPerfObjectName(sqlInstance.name, "Transactions"), nil, counters)
+		c.transactionsPerfDataCollectors[sqlInstance.name], err = pdh.NewCollector(c.mssqlGetPerfObjectName(sqlInstance.name, "Transactions"), nil, counters)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("failed to create Transactions collector for instance %s: %w", sqlInstance.name, err))
 		}
@@ -174,7 +174,7 @@ func (c *Collector) collectTransactions(ch chan<- prometheus.Metric) error {
 
 // Win32_PerfRawData_MSSQLSERVER_Transactions docs:
 // - https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-transactions-object
-func (c *Collector) collectTransactionsInstance(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *perfdata.Collector) error {
+func (c *Collector) collectTransactionsInstance(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *pdh.Collector) error {
 	if perfDataCollector == nil {
 		return types.ErrCollectorNotInitialized
 	}
@@ -184,7 +184,7 @@ func (c *Collector) collectTransactionsInstance(ch chan<- prometheus.Metric, sql
 		return fmt.Errorf("failed to collect %s metrics: %w", c.mssqlGetPerfObjectName(sqlInstance, "Transactions"), err)
 	}
 
-	data, ok := perfData[perfdata.InstanceEmpty]
+	data, ok := perfData[pdh.InstanceEmpty]
 	if !ok {
 		return fmt.Errorf("perflib query for %s returned empty result set", c.mssqlGetPerfObjectName(sqlInstance, "Transactions"))
 	}

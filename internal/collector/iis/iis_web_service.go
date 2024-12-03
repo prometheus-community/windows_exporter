@@ -18,13 +18,13 @@ package iis
 import (
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 type collectorWebService struct {
-	perfDataCollectorWebService *perfdata.Collector
+	perfDataCollectorWebService *pdh.Collector
 
 	webServiceCurrentAnonymousUsers               *prometheus.Desc
 	webServiceCurrentBlockedAsyncIORequests       *prometheus.Desc
@@ -93,7 +93,7 @@ const (
 func (c *Collector) buildWebService() error {
 	var err error
 
-	c.perfDataCollectorWebService, err = perfdata.NewCollector("Web Service", perfdata.InstancesAll, []string{
+	c.perfDataCollectorWebService, err = pdh.NewCollector("Web Service", pdh.InstancesAll, []string{
 		webServiceCurrentAnonymousUsers,
 		webServiceCurrentBlockedAsyncIORequests,
 		webServiceCurrentCGIRequests,

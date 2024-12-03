@@ -18,14 +18,14 @@ package hyperv
 import (
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 // collectorVirtualNetworkAdapter Hyper-V Virtual Network Adapter metrics
 type collectorVirtualNetworkAdapter struct {
-	perfDataCollectorVirtualNetworkAdapter *perfdata.Collector
+	perfDataCollectorVirtualNetworkAdapter *pdh.Collector
 
 	virtualNetworkAdapterBytesReceived          *prometheus.Desc // \Hyper-V Virtual Network Adapter(*)\Bytes Received/sec
 	virtualNetworkAdapterBytesSent              *prometheus.Desc // \Hyper-V Virtual Network Adapter(*)\Bytes Sent/sec
@@ -47,7 +47,7 @@ const (
 func (c *Collector) buildVirtualNetworkAdapter() error {
 	var err error
 
-	c.perfDataCollectorVirtualNetworkAdapter, err = perfdata.NewCollector("Hyper-V Virtual Network Adapter", perfdata.InstancesAll, []string{
+	c.perfDataCollectorVirtualNetworkAdapter, err = pdh.NewCollector("Hyper-V Virtual Network Adapter", pdh.InstancesAll, []string{
 		virtualNetworkAdapterBytesReceived,
 		virtualNetworkAdapterBytesSent,
 		virtualNetworkAdapterDroppedPacketsIncoming,

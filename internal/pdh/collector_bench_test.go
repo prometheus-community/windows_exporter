@@ -13,12 +13,12 @@
 
 //go:build windows
 
-package perfdata_test
+package pdh_test
 
 import (
 	"testing"
 
-	v2 "github.com/prometheus-community/windows_exporter/internal/perfdata"
+	v2 "github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/stretchr/testify/require"
 )
 

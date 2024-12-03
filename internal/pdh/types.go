@@ -13,7 +13,7 @@
 
 //go:build windows
 
-package perfdata
+package pdh
 
 import "github.com/prometheus/client_golang/prometheus"
 

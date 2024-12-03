@@ -19,14 +19,14 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 // collectorHypervisorRootVirtualProcessor Hyper-V Hypervisor Root Virtual Processor metrics
 type collectorHypervisorRootVirtualProcessor struct {
-	perfDataCollectorHypervisorRootVirtualProcessor *perfdata.Collector
+	perfDataCollectorHypervisorRootVirtualProcessor *pdh.Collector
 
 	// \Hyper-V Hypervisor Root Virtual Processor(*)\% Guest Run Time
 	// \Hyper-V Hypervisor Root Virtual Processor(*)\% Hypervisor Run Time
@@ -48,7 +48,7 @@ const (
 func (c *Collector) buildHypervisorRootVirtualProcessor() error {
 	var err error
 
-	c.perfDataCollectorHypervisorRootVirtualProcessor, err = perfdata.NewCollector("Hyper-V Hypervisor Root Virtual Processor", perfdata.InstancesAll, []string{
+	c.perfDataCollectorHypervisorRootVirtualProcessor, err = pdh.NewCollector("Hyper-V Hypervisor Root Virtual Processor", pdh.InstancesAll, []string{
 		hypervisorRootVirtualProcessorGuestRunTimePercent,
 		hypervisorRootVirtualProcessorHypervisorRunTimePercent,
 		hypervisorRootVirtualProcessorTotalRunTimePercent,

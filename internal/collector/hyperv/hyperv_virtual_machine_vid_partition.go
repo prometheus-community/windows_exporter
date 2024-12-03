@@ -18,14 +18,14 @@ package hyperv
 import (
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 // collectorVirtualMachineVidPartition Hyper-V VM Vid Partition metrics
 type collectorVirtualMachineVidPartition struct {
-	perfDataCollectorVirtualMachineVidPartition *perfdata.Collector
+	perfDataCollectorVirtualMachineVidPartition *pdh.Collector
 	physicalPagesAllocated                      *prometheus.Desc // \Hyper-V VM Vid Partition(*)\Physical Pages Allocated
 	preferredNUMANodeIndex                      *prometheus.Desc // \Hyper-V VM Vid Partition(*)\Preferred NUMA Node Index
 	remotePhysicalPages                         *prometheus.Desc // \Hyper-V VM Vid Partition(*)\Remote Physical Pages
@@ -40,7 +40,7 @@ const (
 func (c *Collector) buildVirtualMachineVidPartition() error {
 	var err error
 
-	c.perfDataCollectorVirtualMachineVidPartition, err = perfdata.NewCollector("Hyper-V VM Vid Partition", perfdata.InstancesAll, []string{
+	c.perfDataCollectorVirtualMachineVidPartition, err = pdh.NewCollector("Hyper-V VM Vid Partition", pdh.InstancesAll, []string{
 		physicalPagesAllocated,
 		preferredNUMANodeIndex,
 		remotePhysicalPages,

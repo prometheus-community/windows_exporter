@@ -19,13 +19,13 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 type collectorWaitStats struct {
-	waitStatsPerfDataCollectors map[string]*perfdata.Collector
+	waitStatsPerfDataCollectors map[string]*pdh.Collector
 
 	waitStatsLockWaits                     *prometheus.Desc
 	waitStatsMemoryGrantQueueWaits         *prometheus.Desc
@@ -59,7 +59,7 @@ const (
 func (c *Collector) buildWaitStats() error {
 	var err error
 
-	c.waitStatsPerfDataCollectors = make(map[string]*perfdata.Collector, len(c.mssqlInstances))
+	c.waitStatsPerfDataCollectors = make(map[string]*pdh.Collector, len(c.mssqlInstances))
 	errs := make([]error, 0, len(c.mssqlInstances))
 	counters := []string{
 		waitStatsLockWaits,
@@ -77,7 +77,7 @@ func (c *Collector) buildWaitStats() error {
 	}
 
 	for _, sqlInstance := range c.mssqlInstances {
-		c.waitStatsPerfDataCollectors[sqlInstance.name], err = perfdata.NewCollector(c.mssqlGetPerfObjectName(sqlInstance.name, "Wait Statistics"), perfdata.InstancesAll, counters)
+		c.waitStatsPerfDataCollectors[sqlInstance.name], err = pdh.NewCollector(c.mssqlGetPerfObjectName(sqlInstance.name, "Wait Statistics"), pdh.InstancesAll, counters)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("failed to create Wait Statistics collector for instance %s: %w", sqlInstance.name, err))
 		}
@@ -164,7 +164,7 @@ func (c *Collector) collectWaitStats(ch chan<- prometheus.Metric) error {
 	return c.collect(ch, subCollectorWaitStats, c.waitStatsPerfDataCollectors, c.collectWaitStatsInstance)
 }
 
-func (c *Collector) collectWaitStatsInstance(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *perfdata.Collector) error {
+func (c *Collector) collectWaitStatsInstance(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *pdh.Collector) error {
 	if perfDataCollector == nil {
 		return types.ErrCollectorNotInitialized
 	}

@@ -27,7 +27,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows"
@@ -55,7 +55,7 @@ var ConfigDefaults = Config{
 type Collector struct {
 	config Config
 
-	perfDataCollector *perfdata.Collector
+	perfDataCollector *pdh.Collector
 
 	bytesReceivedTotal       *prometheus.Desc
 	bytesSentTotal           *prometheus.Desc
@@ -158,7 +158,7 @@ func (c *Collector) Close() error {
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	var err error
 
-	c.perfDataCollector, err = perfdata.NewCollector("Network Interface", perfdata.InstancesAll, []string{
+	c.perfDataCollector, err = pdh.NewCollector("Network Interface", pdh.InstancesAll, []string{
 		bytesReceivedPerSec,
 		bytesSentPerSec,
 		bytesTotalPerSec,

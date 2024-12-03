@@ -18,7 +18,7 @@ package exchange
 import (
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -30,7 +30,7 @@ func (c *Collector) buildAutoDiscover() error {
 
 	var err error
 
-	c.perfDataCollectorAutoDiscover, err = perfdata.NewCollector("MSExchange Autodiscover", perfdata.InstancesAll, counters)
+	c.perfDataCollectorAutoDiscover, err = pdh.NewCollector("MSExchange Autodiscover", pdh.InstancesAll, counters)
 	if err != nil {
 		return fmt.Errorf("failed to create MSExchange Autodiscover collector: %w", err)
 	}

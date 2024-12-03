@@ -18,7 +18,7 @@ package exchange
 import (
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -44,7 +44,7 @@ func (c *Collector) buildRPC() error {
 
 	var err error
 
-	c.perfDataCollectorRpcClientAccess, err = perfdata.NewCollector("MSExchange RpcClientAccess", perfdata.InstancesAll, counters)
+	c.perfDataCollectorRpcClientAccess, err = pdh.NewCollector("MSExchange RpcClientAccess", pdh.InstancesAll, counters)
 	if err != nil {
 		return fmt.Errorf("failed to create MSExchange RpcClientAccess collector: %w", err)
 	}

@@ -22,7 +22,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
@@ -38,8 +38,8 @@ var ConfigDefaults = Config{}
 // A Collector is a Prometheus Collector for WMI Win32_PerfRawData_vmGuestLib_VMem/Win32_PerfRawData_vmGuestLib_VCPU metrics.
 type Collector struct {
 	config                  Config
-	perfDataCollectorCPU    *perfdata.Collector
-	perfDataCollectorMemory *perfdata.Collector
+	perfDataCollectorCPU    *pdh.Collector
+	perfDataCollectorMemory *pdh.Collector
 
 	memActive      *prometheus.Desc
 	memBallooned   *prometheus.Desc
@@ -93,7 +93,7 @@ func (c *Collector) Close() error {
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 	var err error
 
-	c.perfDataCollectorCPU, err = perfdata.NewCollector("VM Processor", perfdata.InstancesTotal, []string{
+	c.perfDataCollectorCPU, err = pdh.NewCollector("VM Processor", pdh.InstancesTotal, []string{
 		cpuLimitMHz,
 		cpuReservationMHz,
 		cpuShares,
@@ -149,7 +149,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 
-	c.perfDataCollectorMemory, err = perfdata.NewCollector("VM Memory", nil, []string{
+	c.perfDataCollectorMemory, err = pdh.NewCollector("VM Memory", nil, []string{
 		memActiveMB,
 		memBalloonedMB,
 		memLimitMB,
@@ -265,7 +265,7 @@ func (c *Collector) collectMem(ch chan<- prometheus.Metric) error {
 		return fmt.Errorf("failed to collect VM Memory metrics: %w", err)
 	}
 
-	data, ok := perfData[perfdata.InstanceEmpty]
+	data, ok := perfData[pdh.InstanceEmpty]
 	if !ok {
 		return fmt.Errorf("failed to collect VM Memory metrics: %w", types.ErrNoData)
 	}
@@ -351,7 +351,7 @@ func (c *Collector) collectCpu(ch chan<- prometheus.Metric) error {
 		return fmt.Errorf("failed to collect VM CPU metrics: %w", err)
 	}
 
-	data, ok := perfData[perfdata.InstanceTotal]
+	data, ok := perfData[pdh.InstanceTotal]
 	if !ok {
 		return fmt.Errorf("failed to collect VM CPU metrics: %w", types.ErrNoData)
 	}

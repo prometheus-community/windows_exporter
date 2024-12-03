@@ -19,13 +19,13 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 type collectorAccessMethods struct {
-	accessMethodsPerfDataCollectors map[string]*perfdata.Collector
+	accessMethodsPerfDataCollectors map[string]*pdh.Collector
 
 	accessMethodsAUcleanupbatches             *prometheus.Desc
 	accessMethodsAUcleanups                   *prometheus.Desc
@@ -123,7 +123,7 @@ const (
 func (c *Collector) buildAccessMethods() error {
 	var err error
 
-	c.accessMethodsPerfDataCollectors = make(map[string]*perfdata.Collector, len(c.mssqlInstances))
+	c.accessMethodsPerfDataCollectors = make(map[string]*pdh.Collector, len(c.mssqlInstances))
 	errs := make([]error, 0, len(c.mssqlInstances))
 	counters := []string{
 		accessMethodsAUCleanupbatchesPerSec,
@@ -173,7 +173,7 @@ func (c *Collector) buildAccessMethods() error {
 	}
 
 	for _, sqlInstance := range c.mssqlInstances {
-		c.accessMethodsPerfDataCollectors[sqlInstance.name], err = perfdata.NewCollector(c.mssqlGetPerfObjectName(sqlInstance.name, "Access Methods"), nil, counters)
+		c.accessMethodsPerfDataCollectors[sqlInstance.name], err = pdh.NewCollector(c.mssqlGetPerfObjectName(sqlInstance.name, "Access Methods"), nil, counters)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("failed to create AccessMethods collector for instance %s: %w", sqlInstance.name, err))
 		}
@@ -452,7 +452,7 @@ func (c *Collector) collectAccessMethods(ch chan<- prometheus.Metric) error {
 	return c.collect(ch, subCollectorAccessMethods, c.accessMethodsPerfDataCollectors, c.collectAccessMethodsInstance)
 }
 
-func (c *Collector) collectAccessMethodsInstance(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *perfdata.Collector) error {
+func (c *Collector) collectAccessMethodsInstance(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *pdh.Collector) error {
 	if perfDataCollector == nil {
 		return types.ErrCollectorNotInitialized
 	}
@@ -462,7 +462,7 @@ func (c *Collector) collectAccessMethodsInstance(ch chan<- prometheus.Metric, sq
 		return fmt.Errorf("failed to collect %s metrics: %w", c.mssqlGetPerfObjectName(sqlInstance, "AccessMethods"), err)
 	}
 
-	data, ok := perfData[perfdata.InstanceEmpty]
+	data, ok := perfData[pdh.InstanceEmpty]
 	if !ok {
 		return fmt.Errorf("perflib query for %s returned empty result set", c.mssqlGetPerfObjectName(sqlInstance, "AccessMethods"))
 	}

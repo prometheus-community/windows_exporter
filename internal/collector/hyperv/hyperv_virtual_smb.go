@@ -18,14 +18,14 @@ package hyperv
 import (
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 // collectorVirtualSMB Hyper-V Virtual SMB metrics
 type collectorVirtualSMB struct {
-	perfDataCollectorVirtualSMB *perfdata.Collector
+	perfDataCollectorVirtualSMB *pdh.Collector
 
 	virtualSMBDirectMappedSections   *prometheus.Desc // \Hyper-V Virtual SMB(*)\Direct-Mapped Sections
 	virtualSMBDirectMappedPages      *prometheus.Desc // \Hyper-V Virtual SMB(*)\Direct-Mapped Pages
@@ -69,7 +69,7 @@ const (
 func (c *Collector) buildVirtualSMB() error {
 	var err error
 
-	c.perfDataCollectorVirtualSMB, err = perfdata.NewCollector("Hyper-V Virtual SMB", perfdata.InstancesAll, []string{
+	c.perfDataCollectorVirtualSMB, err = pdh.NewCollector("Hyper-V Virtual SMB", pdh.InstancesAll, []string{
 		virtualSMBDirectMappedSections,
 		virtualSMBDirectMappedPages,
 		virtualSMBWriteBytesRDMA,

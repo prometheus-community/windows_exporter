@@ -26,7 +26,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows/registry"
@@ -276,7 +276,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 // discarded, and "Site_B#2" would be kept and presented as "Site_B" in the
 // Collector metrics.
 // [ "Site_A", "Site_B", "Site_C", "Site_B#2" ].
-func deduplicateIISNames(counterValues map[string]map[string]perfdata.CounterValue) {
+func deduplicateIISNames(counterValues map[string]map[string]pdh.CounterValue) {
 	services := slices.Collect(maps.Keys(counterValues))
 
 	// Ensure IIS entry with the highest suffix occurs last
