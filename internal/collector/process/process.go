@@ -362,7 +362,8 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 
 	for name, process := range perfData {
 		// Duplicate processes are suffixed #, and an index number. Remove those.
-		name, _, _ = strings.Cut(name, ":")
+		name, _, _ = strings.Cut(name, ":") // Process V2
+		name, _, _ = strings.Cut(name, "#") // Process
 
 		if c.config.ProcessExclude.MatchString(name) || !c.config.ProcessInclude.MatchString(name) {
 			continue
