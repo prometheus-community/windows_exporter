@@ -243,7 +243,7 @@ func (c *Collector) collectRoutine() {
 					for _, instance := range expandedInstances {
 						var counterHandle PDHCounterHandle
 						if ret := PdhAddCounter(handle, instance, 0, &counterHandle); ret != ErrorSuccess {
-							return nil, fmt.Errorf("failed to add counter %s: %w", NewPdhError(ret))
+							return nil, fmt.Errorf("failed to add counter %w", NewPdhError(ret))
 						}
 
 						instances[instance] = counterHandle
