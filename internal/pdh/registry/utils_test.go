@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/prometheus-community/windows_exporter/internal/pdh/perftypes"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 )
 
 type simple struct {
@@ -40,7 +40,7 @@ func TestUnmarshalPerflib(t *testing.T) {
 							{
 								Def: &PerfCounterDef{
 									Name:        "Something",
-									CounterType: perftypes.PERF_COUNTER_COUNTER,
+									CounterType: pdh.PERF_COUNTER_COUNTER,
 								},
 								Value: 123,
 							},
@@ -60,14 +60,14 @@ func TestUnmarshalPerflib(t *testing.T) {
 							{
 								Def: &PerfCounterDef{
 									Name:        "Something",
-									CounterType: perftypes.PERF_COUNTER_COUNTER,
+									CounterType: pdh.PERF_COUNTER_COUNTER,
 								},
 								Value: 123,
 							},
 							{
 								Def: &PerfCounterDef{
 									Name:           "Something Else",
-									CounterType:    perftypes.PERF_COUNTER_COUNTER,
+									CounterType:    pdh.PERF_COUNTER_COUNTER,
 									HasSecondValue: true,
 								},
 								Value:       256,
@@ -89,7 +89,7 @@ func TestUnmarshalPerflib(t *testing.T) {
 							{
 								Def: &PerfCounterDef{
 									Name:        "Something",
-									CounterType: perftypes.PERF_COUNTER_COUNTER,
+									CounterType: pdh.PERF_COUNTER_COUNTER,
 								},
 								Value: 321,
 							},
@@ -100,7 +100,7 @@ func TestUnmarshalPerflib(t *testing.T) {
 							{
 								Def: &PerfCounterDef{
 									Name:        "Something",
-									CounterType: perftypes.PERF_COUNTER_COUNTER,
+									CounterType: pdh.PERF_COUNTER_COUNTER,
 								},
 								Value: 231,
 							},
