@@ -148,7 +148,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 
 	var err error
 
-	c.perfDataCollector, err = pdh.NewCollector("Memory", pdh.InstancesAll, counters)
+	c.perfDataCollector, err = pdh.NewCollector("Memory", pdh.InstancesAll, counters, false)
 	if err != nil {
 		return fmt.Errorf("failed to create Memory collector: %w", err)
 	}

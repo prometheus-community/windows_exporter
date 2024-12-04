@@ -135,7 +135,7 @@ func (c *Collector) buildWebServiceCache() error {
 		serviceCacheOutputCacheMissesTotal,
 		serviceCacheOutputCacheFlushedItemsTotal,
 		serviceCacheOutputCacheFlushesTotal,
-	})
+	}, false)
 	if err != nil {
 		return fmt.Errorf("failed to create Web Service Cache collector: %w", err)
 	}

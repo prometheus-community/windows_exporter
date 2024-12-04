@@ -114,7 +114,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 			}
 		}
 
-		collector, err := pdh.NewCollector(object.Object, object.Instances, counters)
+		collector, err := pdh.NewCollector(object.Object, object.Instances, counters, false)
 		if err != nil {
 			return fmt.Errorf("failed to create v2 collector: %w", err)
 		}

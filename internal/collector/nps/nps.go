@@ -110,7 +110,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		accessServerResetTime,
 		accessServerUpTime,
 		accessUnknownType,
-	})
+	}, false)
 	if err != nil {
 		errs = append(errs, fmt.Errorf("failed to create NPS Authentication Server collector: %w", err))
 	}
@@ -128,7 +128,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		accountingServerResetTime,
 		accountingServerUpTime,
 		accountingUnknownType,
-	})
+	}, false)
 	if err != nil {
 		errs = append(errs, fmt.Errorf("failed to create NPS Accounting Server collector: %w", err))
 	}

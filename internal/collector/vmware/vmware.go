@@ -101,7 +101,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		cpuTimePercents,
 		couEffectiveVMSpeedMHz,
 		cpuHostProcessorSpeedMHz,
-	})
+	}, false)
 	if err != nil {
 		return fmt.Errorf("failed to create VM Processor collector: %w", err)
 	}
@@ -162,7 +162,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		memSwappedMB,
 		memTargetSizeMB,
 		memUsedMB,
-	})
+	}, false)
 	if err != nil {
 		return fmt.Errorf("failed to create VM Memory collector: %w", err)
 	}

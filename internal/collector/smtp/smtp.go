@@ -201,7 +201,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		remoteQueueLength,
 		remoteRetryQueueLength,
 		routingTableLookupsTotal,
-	})
+	}, false)
 	if err != nil {
 		return fmt.Errorf("failed to create SMTP Server collector: %w", err)
 	}

@@ -36,7 +36,7 @@ func (c *Collector) buildOWA() error {
 
 	var err error
 
-	c.perfDataCollectorOWA, err = pdh.NewCollector("MSExchange OWA", pdh.InstancesAll, counters)
+	c.perfDataCollectorOWA, err = pdh.NewCollector("MSExchange OWA", pdh.InstancesAll, counters, false)
 	if err != nil {
 		return fmt.Errorf("failed to create MSExchange OWA collector: %w", err)
 	}

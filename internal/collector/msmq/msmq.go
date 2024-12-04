@@ -80,7 +80,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		bytesInQueue,
 		messagesInJournalQueue,
 		messagesInQueue,
-	})
+	}, false)
 	if err != nil {
 		return fmt.Errorf("failed to create MSMQ Queue collector: %w", err)
 	}

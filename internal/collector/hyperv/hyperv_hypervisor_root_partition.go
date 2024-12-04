@@ -99,7 +99,7 @@ func (c *Collector) buildHypervisorRootPartition() error {
 		hypervisorRootPartition4KGPAPages,
 		hypervisorRootPartitionVirtualTLBFlushEntries,
 		hypervisorRootPartitionVirtualTLBPages,
-	})
+	}, false)
 	if err != nil {
 		return fmt.Errorf("failed to create Hyper-V Hypervisor Root Partition collector: %w", err)
 	}

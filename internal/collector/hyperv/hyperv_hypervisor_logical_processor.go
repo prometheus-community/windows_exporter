@@ -53,7 +53,7 @@ func (c *Collector) buildHypervisorLogicalProcessor() error {
 		hypervisorLogicalProcessorTotalRunTimePercent,
 		hypervisorLogicalProcessorIdleRunTimePercent,
 		hypervisorLogicalProcessorContextSwitches,
-	})
+	}, false)
 	if err != nil {
 		return fmt.Errorf("failed to create Hyper-V Hypervisor Logical Processor collector: %w", err)
 	}

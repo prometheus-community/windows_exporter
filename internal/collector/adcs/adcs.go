@@ -97,7 +97,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		challengeResponseProcessingTime,
 		signedCertificateTimestampListsPerSecond,
 		signedCertificateTimestampListProcessingTime,
-	})
+	}, false)
 	if err != nil {
 		return fmt.Errorf("failed to create Certification Authority collector: %w", err)
 	}

@@ -188,7 +188,7 @@ func (c *Collector) buildDatabases() error {
 			counters = append(counters, databasesActiveParallelRedoThreads)
 		}
 
-		c.databasesPerfDataCollectors[sqlInstance.name], err = pdh.NewCollector(c.mssqlGetPerfObjectName(sqlInstance.name, "Databases"), pdh.InstancesAll, counters)
+		c.databasesPerfDataCollectors[sqlInstance.name], err = pdh.NewCollector(c.mssqlGetPerfObjectName(sqlInstance.name, "Databases"), pdh.InstancesAll, counters, false)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("failed to create Databases collector for instance %s: %w", sqlInstance.name, err))
 		}

@@ -101,7 +101,7 @@ func (c *Collector) buildMemoryManager() error {
 	}
 
 	for _, sqlInstance := range c.mssqlInstances {
-		c.memMgrPerfDataCollectors[sqlInstance.name], err = pdh.NewCollector(c.mssqlGetPerfObjectName(sqlInstance.name, "Memory Manager"), pdh.InstancesAll, counters)
+		c.memMgrPerfDataCollectors[sqlInstance.name], err = pdh.NewCollector(c.mssqlGetPerfObjectName(sqlInstance.name, "Memory Manager"), pdh.InstancesAll, counters, false)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("failed to create Memory Manager collector for instance %s: %w", sqlInstance.name, err))
 		}

@@ -42,7 +42,7 @@ func (c *Collector) buildADAccessProcesses() error {
 
 	var err error
 
-	c.perfDataCollectorADAccessProcesses, err = pdh.NewCollector("MSExchange ADAccess Processes", pdh.InstancesAll, counters)
+	c.perfDataCollectorADAccessProcesses, err = pdh.NewCollector("MSExchange ADAccess Processes", pdh.InstancesAll, counters, false)
 	if err != nil {
 		return fmt.Errorf("failed to create MSExchange ADAccess Processes collector: %w", err)
 	}

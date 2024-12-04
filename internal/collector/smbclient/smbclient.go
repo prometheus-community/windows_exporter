@@ -114,7 +114,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		WriteBytesPerSec,
 		WriteRequestsTransmittedViaSMBDirectPerSec,
 		WriteRequestsPerSec,
-	})
+	}, false)
 	if err != nil {
 		return fmt.Errorf("failed to create SMB Client Shares collector: %w", err)
 	}

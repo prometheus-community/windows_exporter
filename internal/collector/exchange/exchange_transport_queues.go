@@ -70,7 +70,7 @@ func (c *Collector) buildTransportQueues() error {
 
 	var err error
 
-	c.perfDataCollectorTransportQueues, err = pdh.NewCollector("MSExchangeTransport Queues", pdh.InstancesAll, counters)
+	c.perfDataCollectorTransportQueues, err = pdh.NewCollector("MSExchangeTransport Queues", pdh.InstancesAll, counters, false)
 	if err != nil {
 		return fmt.Errorf("failed to create MSExchangeTransport Queues collector: %w", err)
 	}

@@ -74,7 +74,7 @@ func TestCollector(t *testing.T) {
 		t.Run(tc.object, func(t *testing.T) {
 			t.Parallel()
 
-			performanceData, err := v2.NewCollector(tc.object, tc.instances, tc.counters)
+			performanceData, err := v2.NewCollector(tc.object, tc.instances, tc.counters, false)
 			require.NoError(t, err)
 
 			time.Sleep(100 * time.Millisecond)

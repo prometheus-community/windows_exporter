@@ -133,7 +133,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		winsReverseResponseSent,
 		zoneTransferFailure,
 		zoneTransferSOARequestSent,
-	})
+	}, false)
 	if err != nil {
 		return fmt.Errorf("failed to create DNS collector: %w", err)
 	}

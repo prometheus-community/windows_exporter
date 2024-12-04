@@ -72,7 +72,7 @@ func (c *Collector) buildVirtualStorageDevice() error {
 		virtualStorageDeviceLowerQueueLength,
 		virtualStorageDeviceLowerLatency,
 		virtualStorageDeviceIOQuotaReplenishmentRate,
-	})
+	}, false)
 	if err != nil {
 		return fmt.Errorf("failed to create Hyper-V Virtual Storage Device collector: %w", err)
 	}

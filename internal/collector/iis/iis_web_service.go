@@ -131,7 +131,7 @@ func (c *Collector) buildWebService() error {
 		webServiceTotalSearchRequests,
 		webServiceTotalTraceRequests,
 		webServiceTotalUnlockRequests,
-	})
+	}, false)
 	if err != nil {
 		return fmt.Errorf("failed to create Web Service collector: %w", err)
 	}

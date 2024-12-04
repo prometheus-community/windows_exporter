@@ -54,7 +54,7 @@ func (c *Collector) buildLegacyNetworkAdapter() error {
 		legacyNetworkAdapterFramesDropped,
 		legacyNetworkAdapterFramesReceived,
 		legacyNetworkAdapterFramesSent,
-	})
+	}, false)
 	if err != nil {
 		return fmt.Errorf("failed to create Hyper-V Legacy Network Adapter collector: %w", err)
 	}

@@ -77,7 +77,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 
 	c.perfDataCollector, err = pdh.NewCollector("Paging File", pdh.InstancesAll, []string{
 		usage,
-	})
+	}, false)
 	if err != nil {
 		return fmt.Errorf("failed to create Paging File collector: %w", err)
 	}

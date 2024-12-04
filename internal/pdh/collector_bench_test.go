@@ -53,7 +53,7 @@ func BenchmarkTestCollector(b *testing.B) {
 		"Working Set Peak",
 		"Working Set",
 	}
-	performanceData, err := v2.NewCollector("Process", []string{"*"}, counters)
+	performanceData, err := v2.NewCollector("Process", []string{"*"}, counters, false)
 	require.NoError(b, err)
 
 	for i := 0; i < b.N; i++ {

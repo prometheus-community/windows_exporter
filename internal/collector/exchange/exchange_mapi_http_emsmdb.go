@@ -34,7 +34,7 @@ func (c *Collector) buildMapiHttpEmsmdb() error {
 
 	var err error
 
-	c.perfDataCollectorMapiHttpEmsmdb, err = pdh.NewCollector("MSExchange MapiHttp Emsmdb", pdh.InstancesAll, counters)
+	c.perfDataCollectorMapiHttpEmsmdb, err = pdh.NewCollector("MSExchange MapiHttp Emsmdb", pdh.InstancesAll, counters, false)
 	if err != nil {
 		return fmt.Errorf("failed to create MSExchange MapiHttp Emsmdb: %w", err)
 	}

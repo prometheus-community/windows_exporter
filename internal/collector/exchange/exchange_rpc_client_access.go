@@ -44,7 +44,7 @@ func (c *Collector) buildRPC() error {
 
 	var err error
 
-	c.perfDataCollectorRpcClientAccess, err = pdh.NewCollector("MSExchange RpcClientAccess", pdh.InstancesAll, counters)
+	c.perfDataCollectorRpcClientAccess, err = pdh.NewCollector("MSExchange RpcClientAccess", pdh.InstancesAll, counters, false)
 	if err != nil {
 		return fmt.Errorf("failed to create MSExchange RpcClientAccess collector: %w", err)
 	}

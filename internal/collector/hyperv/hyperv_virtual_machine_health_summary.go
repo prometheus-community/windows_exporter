@@ -45,7 +45,7 @@ func (c *Collector) buildVirtualMachineHealthSummary() error {
 	c.perfDataCollectorVirtualMachineHealthSummary, err = pdh.NewCollector("Hyper-V Virtual Machine Health Summary", nil, []string{
 		healthCritical,
 		healthOk,
-	})
+	}, false)
 	if err != nil {
 		return fmt.Errorf("failed to create Hyper-V Virtual Machine Health Summary collector: %w", err)
 	}

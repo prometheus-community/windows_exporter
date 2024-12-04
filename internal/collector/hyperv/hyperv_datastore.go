@@ -175,7 +175,7 @@ func (c *Collector) buildDataStore() error {
 		dataStoreQuerySizeOperationCount,
 		dataStoreSetOperationLatencyMicro,
 		dataStoreSetOperationCount,
-	})
+	}, false)
 	if err != nil {
 		return fmt.Errorf("failed to create Hyper-V DataStore collector: %w", err)
 	}

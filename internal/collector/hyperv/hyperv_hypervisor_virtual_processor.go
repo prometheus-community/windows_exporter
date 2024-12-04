@@ -53,7 +53,7 @@ func (c *Collector) buildHypervisorVirtualProcessor() error {
 		hypervisorVirtualProcessorTotalRunTimePercent,
 		hypervisorVirtualProcessorRemoteRunTimePercent,
 		hypervisorVirtualProcessorCPUWaitTimePerDispatch,
-	})
+	}, false)
 	if err != nil {
 		return fmt.Errorf("failed to create Hyper-V Hypervisor Virtual Processor collector: %w", err)
 	}

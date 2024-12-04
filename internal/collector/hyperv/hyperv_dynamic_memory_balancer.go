@@ -50,7 +50,7 @@ func (c *Collector) buildDynamicMemoryBalancer() error {
 		vmDynamicMemoryBalancerAvailableMemoryForBalancing,
 		vmDynamicMemoryBalancerAveragePressure,
 		vmDynamicMemoryBalancerSystemCurrentPressure,
-	})
+	}, false)
 	if err != nil {
 		return fmt.Errorf("failed to create Hyper-V Virtual Machine Health Summary collector: %w", err)
 	}

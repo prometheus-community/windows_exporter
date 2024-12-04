@@ -170,7 +170,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 			rdcNumberOfFilesReceivedTotal,
 			rdcSizeOfFilesReceivedTotal,
 			sizeOfFilesReceivedTotal,
-		})
+		}, false)
 		if err != nil {
 			return fmt.Errorf("failed to create DFS Replication Connections collector: %w", err)
 		}
@@ -205,7 +205,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 			stagingFilesCleanedUpTotal,
 			stagingFilesGeneratedTotal,
 			updatesDroppedTotal,
-		})
+		}, false)
 		if err != nil {
 			return fmt.Errorf("failed to create DFS Replicated Folders collector: %w", err)
 		}
@@ -218,7 +218,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 			usnJournalRecordsReadTotal,
 			usnJournalRecordsAcceptedTotal,
 			usnJournalUnreadPercentage,
-		})
+		}, false)
 		if err != nil {
 			return fmt.Errorf("failed to create DFS Replication Service Volumes collector: %w", err)
 		}

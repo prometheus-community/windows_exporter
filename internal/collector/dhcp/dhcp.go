@@ -121,7 +121,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		packetsReceivedTotal,
 		releasesTotal,
 		requestsTotal,
-	})
+	}, false)
 	if err != nil {
 		return fmt.Errorf("failed to create DHCP Server collector: %w", err)
 	}

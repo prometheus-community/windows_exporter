@@ -44,7 +44,7 @@ func (c *Collector) buildVirtualMachineVidPartition() error {
 		physicalPagesAllocated,
 		preferredNUMANodeIndex,
 		remotePhysicalPages,
-	})
+	}, false)
 	if err != nil {
 		return fmt.Errorf("failed to create Hyper-V VM Vid Partition collector: %w", err)
 	}

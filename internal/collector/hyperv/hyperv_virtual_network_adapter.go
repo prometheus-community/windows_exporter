@@ -54,7 +54,7 @@ func (c *Collector) buildVirtualNetworkAdapter() error {
 		virtualNetworkAdapterDroppedPacketsOutgoing,
 		virtualNetworkAdapterPacketsReceived,
 		virtualNetworkAdapterPacketsSent,
-	})
+	}, false)
 	if err != nil {
 		return fmt.Errorf("failed to create Hyper-V Virtual Network Adapter collector: %w", err)
 	}

@@ -87,7 +87,7 @@ func (c *Collector) buildVirtualSMB() error {
 		virtualSMBRequests,
 		virtualSMBSentBytes,
 		virtualSMBReceivedBytes,
-	})
+	}, false)
 	if err != nil {
 		return fmt.Errorf("failed to create Hyper-V Virtual SMB collector: %w", err)
 	}

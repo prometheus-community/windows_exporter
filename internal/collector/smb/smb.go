@@ -86,7 +86,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		metadataRequests,
 		sentBytes,
 		filesOpened,
-	})
+	}, false)
 	if err != nil {
 		return fmt.Errorf("failed to create SMB Server Shares collector: %w", err)
 	}

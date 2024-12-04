@@ -38,7 +38,7 @@ func (c *Collector) buildActiveSync() error {
 
 	var err error
 
-	c.perfDataCollectorActiveSync, err = pdh.NewCollector("MSExchange ActiveSync", pdh.InstancesAll, counters)
+	c.perfDataCollectorActiveSync, err = pdh.NewCollector("MSExchange ActiveSync", pdh.InstancesAll, counters, false)
 	if err != nil {
 		return fmt.Errorf("failed to create MSExchange ActiveSync collector: %w", err)
 	}

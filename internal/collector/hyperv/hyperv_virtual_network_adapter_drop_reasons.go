@@ -213,7 +213,7 @@ func (c *Collector) buildVirtualNetworkAdapterDropReasons() error {
 		virtualNetworkAdapterDropReasonsIncomingInvalidData,
 		virtualNetworkAdapterDropReasonsOutgoingUnknown,
 		virtualNetworkAdapterDropReasonsIncomingUnknown,
-	})
+	}, false)
 	if err != nil {
 		return fmt.Errorf("failed to create Hyper-V Virtual Network Adapter Drop Reasons collector: %w", err)
 	}

@@ -67,7 +67,7 @@ func (c *Collector) buildDynamicMemoryVM() error {
 		vmMemoryPhysicalMemory,
 		vmMemoryRemovedMemory,
 		vmMemoryGuestAvailableMemory,
-	})
+	}, false)
 	if err != nil {
 		return fmt.Errorf("failed to create Hyper-V Dynamic Memory VM collector: %w", err)
 	}

@@ -98,7 +98,7 @@ func (c *Collector) buildVirtualSwitch() error {
 		virtualSwitchPacketsReceived,
 		virtualSwitchPacketsSent,
 		virtualSwitchPurgedMacAddresses,
-	})
+	}, false)
 	if err != nil {
 		return fmt.Errorf("failed to create Hyper-V Virtual Switch collector: %w", err)
 	}

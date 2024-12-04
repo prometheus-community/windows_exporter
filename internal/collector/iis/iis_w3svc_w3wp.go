@@ -181,7 +181,7 @@ func (c *Collector) buildW3SVCW3WP() error {
 
 	var err error
 
-	c.w3SVCW3WPPerfDataCollector, err = pdh.NewCollector("W3SVC_W3WP", pdh.InstancesAll, counters)
+	c.w3SVCW3WPPerfDataCollector, err = pdh.NewCollector("W3SVC_W3WP", pdh.InstancesAll, counters, false)
 	if err != nil {
 		return fmt.Errorf("failed to create W3SVC_W3WP collector: %w", err)
 	}

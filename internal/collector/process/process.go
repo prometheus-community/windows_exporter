@@ -29,7 +29,6 @@ import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
-	"github.com/prometheus-community/windows_exporter/internal/pdh/registry"
 	pdhtypes "github.com/prometheus-community/windows_exporter/internal/pdh/types"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
@@ -214,12 +213,12 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 		workingSet,
 	}
 
-	c.perfDataCollector, err = pdh.NewCollector("Process V2", pdh.InstancesAll, counters)
+	c.perfDataCollector, err = pdh.NewCollector("Process V2", pdh.InstancesAll, counters, false)
 	if true {
 		counters[0] = idProcess
 
 		//c.perfDataCollector, err = pdh.NewCollector("Process", pdh.InstancesAll, counters)
-		c.perfDataCollector, err = registry.NewCollector("Process", pdh.InstancesAll, counters)
+		c.perfDataCollector, err = pdh.NewCollector("Process", pdh.InstancesAll, counters, true)
 	}
 
 	if err != nil {

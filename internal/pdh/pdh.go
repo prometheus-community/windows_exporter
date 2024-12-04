@@ -253,8 +253,8 @@ const (
 )
 
 type (
-	pdhQueryHandle   HANDLE // query handle
-	pdhCounterHandle HANDLE // counter handle
+	PDHQueryHandle   HANDLE // query handle
+	PDHCounterHandle HANDLE // counter handle
 )
 
 //nolint:gochecknoglobals
@@ -315,7 +315,7 @@ var (
 // The typeperf command may also be pretty easy. To find all performance counters, simply execute:
 //
 //	typeperf -qx
-func PdhAddCounter(hQuery pdhQueryHandle, szFullCounterPath string, dwUserData uintptr, phCounter *pdhCounterHandle) uint32 {
+func PdhAddCounter(hQuery PDHQueryHandle, szFullCounterPath string, dwUserData uintptr, phCounter *PDHCounterHandle) uint32 {
 	ptxt, _ := windows.UTF16PtrFromString(szFullCounterPath)
 	ret, _, _ := pdhAddCounterW.Call(
 		uintptr(hQuery),
@@ -328,7 +328,7 @@ func PdhAddCounter(hQuery pdhQueryHandle, szFullCounterPath string, dwUserData u
 
 // PdhAddEnglishCounter adds the specified language-neutral counter to the query. See the PdhAddCounter function. This function only exists on
 // Windows versions higher than Vista.
-func PdhAddEnglishCounter(hQuery pdhQueryHandle, szFullCounterPath string, dwUserData uintptr, phCounter *pdhCounterHandle) uint32 {
+func PdhAddEnglishCounter(hQuery PDHQueryHandle, szFullCounterPath string, dwUserData uintptr, phCounter *PDHCounterHandle) uint32 {
 	if pdhAddEnglishCounterW == nil {
 		return ErrorInvalidFunction
 	}
@@ -345,7 +345,7 @@ func PdhAddEnglishCounter(hQuery pdhQueryHandle, szFullCounterPath string, dwUse
 
 // PdhCloseQuery closes all counters contained in the specified query, closes all handles related to the query,
 // and frees all memory associated with the query.
-func PdhCloseQuery(hQuery pdhQueryHandle) uint32 {
+func PdhCloseQuery(hQuery PDHQueryHandle) uint32 {
 	ret, _, _ := pdhCloseQuery.Call(uintptr(hQuery))
 
 	return uint32(ret)
@@ -372,7 +372,7 @@ func PdhCloseQuery(hQuery pdhQueryHandle) uint32 {
 //
 // The PdhCollectQueryData will return an error in the first call because it needs two values for
 // displaying the correct data for the processor idle time. The second call will have a 0 return code.
-func PdhCollectQueryData(hQuery pdhQueryHandle) uint32 {
+func PdhCollectQueryData(hQuery PDHQueryHandle) uint32 {
 	ret, _, _ := pdhCollectQueryData.Call(uintptr(hQuery))
 
 	return uint32(ret)
@@ -380,7 +380,7 @@ func PdhCollectQueryData(hQuery pdhQueryHandle) uint32 {
 
 // PdhCollectQueryDataWithTime queries data from perfmon, retrieving the device/windows timestamp from the node it was collected on.
 // Converts the filetime structure to a GO time class and returns the native time.
-func PdhCollectQueryDataWithTime(hQuery pdhQueryHandle) (uint32, time.Time) {
+func PdhCollectQueryDataWithTime(hQuery PDHQueryHandle) (uint32, time.Time) {
 	var localFileTime windows.Filetime
 
 	ret, _, _ := pdhCollectQueryDataWithTime.Call(uintptr(hQuery), uintptr(unsafe.Pointer(&localFileTime)))
@@ -402,7 +402,7 @@ func PdhCollectQueryDataWithTime(hQuery pdhQueryHandle) (uint32, time.Time) {
 
 // PdhGetFormattedCounterValueDouble formats the given hCounter using a 'double'. The result is set into the specialized union struct pValue.
 // This function does not directly translate to a Windows counterpart due to union specialization tricks.
-func PdhGetFormattedCounterValueDouble(hCounter pdhCounterHandle, lpdwType *uint32, pValue *PdhFmtCountervalueDouble) uint32 {
+func PdhGetFormattedCounterValueDouble(hCounter PDHCounterHandle, lpdwType *uint32, pValue *PdhFmtCountervalueDouble) uint32 {
 	ret, _, _ := pdhGetFormattedCounterValue.Call(
 		uintptr(hCounter),
 		uintptr(PdhFmtDouble|PdhFmtNocap100),
@@ -449,7 +449,7 @@ func PdhGetFormattedCounterValueDouble(hCounter pdhCounterHandle, lpdwType *uint
 //			time.Sleep(2000 * time.Millisecond)
 //		}
 //	}
-func PdhGetFormattedCounterArrayDouble(hCounter pdhCounterHandle, lpdwBufferSize *uint32, lpdwBufferCount *uint32, itemBuffer *byte) uint32 {
+func PdhGetFormattedCounterArrayDouble(hCounter PDHCounterHandle, lpdwBufferSize *uint32, lpdwBufferCount *uint32, itemBuffer *byte) uint32 {
 	ret, _, _ := pdhGetFormattedCounterArrayW.Call(
 		uintptr(hCounter),
 		uintptr(PdhFmtDouble|PdhFmtNocap100),
@@ -467,7 +467,7 @@ func PdhGetFormattedCounterArrayDouble(hCounter pdhCounterHandle, lpdwBufferSize
 // call PdhGetCounterInfo and access dwQueryUserData of the PdhCounterInfo structure. phQuery is
 // the handle to the query, and must be used in subsequent calls. This function returns a PDH_
 // constant error code, or ErrorSuccess if the call succeeded.
-func PdhOpenQuery(szDataSource uintptr, dwUserData uintptr, phQuery *pdhQueryHandle) uint32 {
+func PdhOpenQuery(szDataSource uintptr, dwUserData uintptr, phQuery *PDHQueryHandle) uint32 {
 	ret, _, _ := pdhOpenQuery.Call(
 		szDataSource,
 		dwUserData,
@@ -560,7 +560,7 @@ func PdhFormatError(msgID uint32) string {
 // Caller-allocated buffer that receives a PdhCounterInfo structure.
 // The structure is variable-length, because the string data is appended to the end of the fixed-format portion of the structure.
 // This is done so that all data is returned in a single buffer allocated by the caller. Set to NULL if pdwBufferSize is zero.
-func PdhGetCounterInfo(hCounter pdhCounterHandle, bRetrieveExplainText int, pdwBufferSize *uint32, lpBuffer *byte) uint32 {
+func PdhGetCounterInfo(hCounter PDHCounterHandle, bRetrieveExplainText int, pdwBufferSize *uint32, lpBuffer *byte) uint32 {
 	ret, _, _ := pdhGetCounterInfoW.Call(
 		uintptr(hCounter),
 		uintptr(bRetrieveExplainText),
@@ -583,7 +583,7 @@ func PdhGetCounterInfo(hCounter pdhCounterHandle, bRetrieveExplainText int, pdwB
 //
 // pValue [out]
 // A PdhRawCounter structure that receives the counter value.
-func PdhGetRawCounterValue(hCounter pdhCounterHandle, lpdwType *uint32, pValue *PdhRawCounter) uint32 {
+func PdhGetRawCounterValue(hCounter PDHCounterHandle, lpdwType *uint32, pValue *PdhRawCounter) uint32 {
 	ret, _, _ := pdhGetRawCounterValue.Call(
 		uintptr(hCounter),
 		uintptr(unsafe.Pointer(lpdwType)),
@@ -608,7 +608,7 @@ func PdhGetRawCounterValue(hCounter pdhCounterHandle, lpdwType *uint32, pValue *
 // ItemBuffer
 // Caller-allocated buffer that receives the array of PdhRawCounterItem structures; the structures contain the raw instance counter values.
 // Set to NULL if lpdwBufferSize is zero.
-func PdhGetRawCounterArray(hCounter pdhCounterHandle, lpdwBufferSize *uint32, lpdwBufferCount *uint32, itemBuffer *byte) uint32 {
+func PdhGetRawCounterArray(hCounter PDHCounterHandle, lpdwBufferSize *uint32, lpdwBufferCount *uint32, itemBuffer *byte) uint32 {
 	ret, _, _ := pdhGetRawCounterArrayW.Call(
 		uintptr(hCounter),
 		uintptr(unsafe.Pointer(lpdwBufferSize)),
@@ -624,10 +624,24 @@ func PdhGetRawCounterArray(hCounter pdhCounterHandle, lpdwBufferSize *uint32, lp
 //
 // lpdwItemCount
 // Time base that specifies the number of performance values a counter samples per second.
-func PdhGetCounterTimeBase(hCounter pdhCounterHandle, pTimeBase *int64) uint32 {
+func PdhGetCounterTimeBase(hCounter PDHCounterHandle, pTimeBase *int64) uint32 {
 	ret, _, _ := pdhPdhGetCounterTimeBase.Call(
 		uintptr(hCounter),
 		uintptr(unsafe.Pointer(pTimeBase)))
 
 	return uint32(ret)
+}
+
+// UTF16ToStringArray converts list of Windows API NULL terminated strings  to go string array
+func UTF16ToStringArray(buf []uint16) []string {
+	var strings []string
+	nextLineStart := 0
+	stringLine := windows.UTF16PtrToString(&buf[0])
+	for stringLine != "" {
+		strings = append(strings, stringLine)
+		nextLineStart += len([]rune(stringLine)) + 1
+		remainingBuf := buf[nextLineStart:]
+		stringLine = windows.UTF16PtrToString(&remainingBuf[0])
+	}
+	return strings
 }

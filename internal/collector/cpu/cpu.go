@@ -116,7 +116,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		processorTimeSeconds,
 		processorUtilityRate,
 		userTimeSeconds,
-	})
+	}, false)
 	if err != nil {
 		return fmt.Errorf("failed to create Processor Information collector: %w", err)
 	}

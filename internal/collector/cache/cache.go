@@ -129,7 +129,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		syncFastReadsTotal,
 		syncMDLReadsTotal,
 		syncPinReadsTotal,
-	})
+	}, false)
 	if err != nil {
 		return fmt.Errorf("failed to create Cache collector: %w", err)
 	}

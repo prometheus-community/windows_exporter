@@ -75,7 +75,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		highPrecisionTemperature,
 		percentPassiveLimit,
 		throttleReasons,
-	})
+	}, false)
 	if err != nil {
 		return fmt.Errorf("failed to create Thermal Zone Information collector: %w", err)
 	}

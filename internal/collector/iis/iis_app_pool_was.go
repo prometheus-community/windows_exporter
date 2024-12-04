@@ -85,7 +85,7 @@ func (c *Collector) buildAppPoolWAS() error {
 		TotalWorkerProcessPingFailures,
 		TotalWorkerProcessShutdownFailures,
 		TotalWorkerProcessStartupFailures,
-	})
+	}, false)
 	if err != nil {
 		return fmt.Errorf("failed to create APP_POOL_WAS collector: %w", err)
 	}

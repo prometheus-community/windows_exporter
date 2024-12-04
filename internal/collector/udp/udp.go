@@ -88,12 +88,12 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 
 	var err error
 
-	c.perfDataCollector4, err = pdh.NewCollector("UDPv4", nil, counters)
+	c.perfDataCollector4, err = pdh.NewCollector("UDPv4", nil, counters, false)
 	if err != nil {
 		return fmt.Errorf("failed to create UDPv4 collector: %w", err)
 	}
 
-	c.perfDataCollector6, err = pdh.NewCollector("UDPv6", nil, counters)
+	c.perfDataCollector6, err = pdh.NewCollector("UDPv6", nil, counters, false)
 	if err != nil {
 		return fmt.Errorf("failed to create UDPv6 collector: %w", err)
 	}

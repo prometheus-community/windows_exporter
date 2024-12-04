@@ -172,7 +172,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		packetsReceivedUnknown,
 		packetsSentPerSec,
 		currentBandwidth,
-	})
+	}, false)
 	if err != nil {
 		return fmt.Errorf("failed to create Processor Information collector: %w", err)
 	}

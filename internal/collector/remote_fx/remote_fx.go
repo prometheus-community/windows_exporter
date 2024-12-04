@@ -116,7 +116,7 @@ func (c *Collector) Build(*slog.Logger, *mi.Session) error {
 		FECRate,
 		LossRate,
 		RetransmissionRate,
-	})
+	}, false)
 	if err != nil {
 		return fmt.Errorf("failed to create RemoteFX Network collector: %w", err)
 	}
@@ -131,7 +131,7 @@ func (c *Collector) Build(*slog.Logger, *mi.Session) error {
 		InputFramesPerSecond,
 		OutputFramesPerSecond,
 		SourceFramesPerSecond,
-	})
+	}, false)
 	if err != nil {
 		return fmt.Errorf("failed to create RemoteFX Graphics collector: %w", err)
 	}

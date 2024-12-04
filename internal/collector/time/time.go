@@ -133,7 +133,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		NTPRoundTripDelay,
 		NTPServerIncomingRequestsTotal,
 		NTPServerOutgoingResponsesTotal,
-	})
+	}, false)
 	if err != nil {
 		return fmt.Errorf("failed to create Windows Time Service collector: %w", err)
 	}

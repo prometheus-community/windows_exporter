@@ -18,6 +18,7 @@ package pdh
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 	"sync"
@@ -38,9 +39,12 @@ type CounterValues = map[string]map[string]CounterValue
 type Collector struct {
 	object                string
 	counters              map[string]Counter
-	handle                pdhQueryHandle
+	handle                PDHQueryHandle
 	totalCounterRequested bool
 	mu                    sync.RWMutex
+
+	// expandInstance is a flag to determine if the collector should expand the instance names via PdhExpandWildCardPath.
+	expandInstance bool
 
 	collectCh       chan struct{}
 	counterValuesCh chan CounterValues
@@ -48,15 +52,16 @@ type Collector struct {
 }
 
 type Counter struct {
-	Name      string
-	Desc      string
-	Instances map[string]pdhCounterHandle
-	Type      uint32
-	Frequency int64
+	Name          string
+	SzExplainText string
+	Instances     map[string]PDHCounterHandle
+	SzFullPath    string
+	Type          uint32
+	Frequency     int64
 }
 
-func NewCollector(object string, instances []string, counters []string) (*Collector, error) {
-	var handle pdhQueryHandle
+func NewCollector(object string, instances []string, counters []string, expandInstance bool) (*Collector, error) {
+	var handle PDHQueryHandle
 
 	if ret := PdhOpenQuery(0, 0, &handle); ret != ErrorSuccess {
 		return nil, NewPdhError(ret)
@@ -72,6 +77,7 @@ func NewCollector(object string, instances []string, counters []string) (*Collec
 		handle:                handle,
 		totalCounterRequested: slices.Contains(instances, InstanceTotal),
 		mu:                    sync.RWMutex{},
+		expandInstance:        expandInstance,
 	}
 
 	errs := make([]error, 0, len(counters))
@@ -83,7 +89,7 @@ func NewCollector(object string, instances []string, counters []string) (*Collec
 
 		counter := Counter{
 			Name:      counterName,
-			Instances: make(map[string]pdhCounterHandle, len(instances)),
+			Instances: make(map[string]PDHCounterHandle, len(instances)),
 		}
 
 		var counterPath string
@@ -91,7 +97,7 @@ func NewCollector(object string, instances []string, counters []string) (*Collec
 		for _, instance := range instances {
 			counterPath = formatCounterPath(object, instance, counterName)
 
-			var counterHandle pdhCounterHandle
+			var counterHandle PDHCounterHandle
 
 			if ret := PdhAddEnglishCounter(handle, counterPath, 0, &counterHandle); ret != ErrorSuccess {
 				errs = append(errs, fmt.Errorf("failed to add counter %s: %w", counterPath, NewPdhError(ret)))
@@ -123,7 +129,8 @@ func NewCollector(object string, instances []string, counters []string) (*Collec
 
 			ci := (*PdhCounterInfo)(unsafe.Pointer(&buf[0]))
 			counter.Type = ci.DwType
-			counter.Desc = windows.UTF16PtrToString(ci.SzExplainText)
+			counter.SzExplainText = windows.UTF16PtrToString(ci.SzExplainText)
+			counter.SzFullPath = windows.UTF16PtrToString(ci.SzFullPath)
 
 			if counter.Type == PERF_ELAPSED_TIME {
 				if ret := PdhGetCounterTimeBase(counterHandle, &counter.Frequency); ret != ErrorSuccess {
@@ -169,7 +176,7 @@ func (c *Collector) Describe() map[string]string {
 	desc := make(map[string]string, len(c.counters))
 
 	for _, counter := range c.counters {
-		desc[counter.Name] = counter.Desc
+		desc[counter.Name] = counter.SzExplainText
 	}
 
 	return desc
@@ -201,17 +208,57 @@ func (c *Collector) collectRoutine() {
 	buf := make([]byte, 1)
 
 	for range c.collectCh {
-		if ret := PdhCollectQueryData(c.handle); ret != ErrorSuccess {
-			c.counterValuesCh <- nil
-			c.errorCh <- fmt.Errorf("failed to collect query data: %w", NewPdhError(ret))
-
-			continue
-		}
-
 		counterValues, err := (func() (CounterValues, error) {
 			var data CounterValues
 
-			for _, counter := range c.counters {
+			handle := c.handle
+			counters := c.counters
+
+			if c.expandInstance {
+				if ret := PdhOpenQuery(0, 0, &handle); ret != ErrorSuccess {
+					return nil, fmt.Errorf("failed to open query: %w", NewPdhError(ret))
+				}
+
+				defer PdhCloseQuery(handle)
+
+				counters = maps.Clone(c.counters)
+
+				for name, counter := range c.counters {
+					// Get the info with the current buffer size
+					bufExpandWildCardLen := uint32(0)
+
+					if ret := PdhExpandWildCardPath(counter.SzFullPath, nil, &bufExpandWildCardLen); ret != PdhMoreData {
+						return nil, fmt.Errorf("failed to expand wildcard path: %w", NewPdhError(ret))
+					}
+
+					buf16 := make([]uint16, bufExpandWildCardLen)
+
+					if ret := PdhExpandWildCardPath(counter.SzFullPath, &buf16[0], &bufExpandWildCardLen); ret != ErrorSuccess {
+						return nil, fmt.Errorf("failed to expand wildcard path: %w", NewPdhError(ret))
+					}
+
+					expandedInstances := UTF16ToStringArray(buf16)
+					instances := make(map[string]PDHCounterHandle, len(expandedInstances))
+
+					for _, instance := range expandedInstances {
+						var counterHandle PDHCounterHandle
+						if ret := PdhAddCounter(handle, instance, 0, &counterHandle); ret != ErrorSuccess {
+							return nil, fmt.Errorf("failed to add counter %s: %w", NewPdhError(ret))
+						}
+
+						instances[instance] = counterHandle
+					}
+
+					counter.Instances = instances
+					counters[name] = counter
+				}
+			}
+
+			if ret := PdhCollectQueryData(handle); ret != ErrorSuccess {
+				return nil, fmt.Errorf("failed to collect query data: %w", NewPdhError(ret))
+			}
+
+			for _, counter := range counters {
 				for _, instance := range counter.Instances {
 					// Get the info with the current buffer size
 					bytesNeeded = uint32(cap(buf))

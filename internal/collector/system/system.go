@@ -87,7 +87,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		systemUpTime,
 		processes,
 		threads,
-	})
+	}, false)
 	if err != nil {
 		return fmt.Errorf("failed to create System collector: %w", err)
 	}

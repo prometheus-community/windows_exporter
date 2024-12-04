@@ -168,7 +168,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		avgDiskSecPerRead,
 		avgDiskSecPerWrite,
 		avgDiskSecPerTransfer,
-	})
+	}, false)
 	if err != nil {
 		return fmt.Errorf("failed to create LogicalDisk collector: %w", err)
 	}

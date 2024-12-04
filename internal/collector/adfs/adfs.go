@@ -159,7 +159,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		configDBFailures,
 		avgConfigDBQueryTime,
 		federationMetadataRequests,
-	})
+	}, false)
 	if err != nil {
 		return fmt.Errorf("failed to create AD FS collector: %w", err)
 	}

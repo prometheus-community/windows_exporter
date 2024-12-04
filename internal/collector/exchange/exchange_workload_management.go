@@ -42,7 +42,7 @@ func (c *Collector) buildWorkloadManagementWorkloads() error {
 
 	var err error
 
-	c.perfDataCollectorWorkloadManagementWorkloads, err = pdh.NewCollector("MSExchange WorkloadManagement Workloads", pdh.InstancesAll, counters)
+	c.perfDataCollectorWorkloadManagementWorkloads, err = pdh.NewCollector("MSExchange WorkloadManagement Workloads", pdh.InstancesAll, counters, false)
 	if err != nil {
 		return fmt.Errorf("failed to create MSExchange WorkloadManagement Workloads collector: %w", err)
 	}
