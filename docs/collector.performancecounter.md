@@ -84,8 +84,9 @@ YAML:
   }
 ]
 ```
+</details>
 
-#### name
+#### object
 
 ObjectName is the Object to query for, like Processor, DirectoryServices, LogicalDisk or similar.
 
