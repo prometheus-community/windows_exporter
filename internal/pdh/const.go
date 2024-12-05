@@ -13,7 +13,7 @@
 
 //go:build windows
 
-package perfdata
+package pdh
 
 import "github.com/prometheus/client_golang/prometheus"
 
@@ -71,7 +71,7 @@ const (
 )
 
 //nolint:gochecknoglobals
-var supportedCounterTypes = map[uint32]prometheus.ValueType{
+var SupportedCounterTypes = map[uint32]prometheus.ValueType{
 	PERF_COUNTER_RAWCOUNT_HEX:       prometheus.GaugeValue,
 	PERF_COUNTER_LARGE_RAWCOUNT_HEX: prometheus.GaugeValue,
 	PERF_COUNTER_RAWCOUNT:           prometheus.GaugeValue,

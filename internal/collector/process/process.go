@@ -28,7 +28,8 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
+	pdhtypes "github.com/prometheus-community/windows_exporter/internal/pdh/types"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows"
@@ -57,7 +58,7 @@ type Collector struct {
 	miSession                 *mi.Session
 	workerProcessMIQueryQuery mi.Query
 
-	perfDataCollector *perfdata.Collector
+	perfDataCollector pdhtypes.Collector
 
 	lookupCache sync.Map
 
@@ -85,7 +86,7 @@ type Collector struct {
 type processWorkerRequest struct {
 	ch                       chan<- prometheus.Metric
 	name                     string
-	performanceCounterValues map[string]perfdata.CounterValue
+	performanceCounterValues map[string]pdh.CounterValue
 	waitGroup                *sync.WaitGroup
 	workerProcesses          []WorkerProcess
 }
@@ -212,11 +213,12 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 		workingSet,
 	}
 
-	c.perfDataCollector, err = perfdata.NewCollector("Process V2", perfdata.InstancesAll, counters)
-	if errors.Is(err, perfdata.NewPdhError(perfdata.PdhCstatusNoObject)) {
+	c.perfDataCollector, err = pdh.NewCollector("Process V2", pdh.InstancesAll, counters, false)
+	if true {
 		counters[0] = idProcess
 
-		c.perfDataCollector, err = perfdata.NewCollector("Process", perfdata.InstancesAll, counters)
+		//c.perfDataCollector, err = pdh.NewCollector("Process", pdh.InstancesAll, counters)
+		c.perfDataCollector, err = pdh.NewCollector("Process", pdh.InstancesAll, counters, true)
 	}
 
 	if err != nil {

@@ -24,7 +24,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -66,16 +66,16 @@ var ConfigDefaults = Config{
 type Collector struct {
 	config Config
 
-	perfDataCollectorADAccessProcesses           *perfdata.Collector
-	perfDataCollectorTransportQueues             *perfdata.Collector
-	perfDataCollectorHttpProxy                   *perfdata.Collector
-	perfDataCollectorActiveSync                  *perfdata.Collector
-	perfDataCollectorAvailabilityService         *perfdata.Collector
-	perfDataCollectorOWA                         *perfdata.Collector
-	perfDataCollectorAutoDiscover                *perfdata.Collector
-	perfDataCollectorWorkloadManagementWorkloads *perfdata.Collector
-	perfDataCollectorRpcClientAccess             *perfdata.Collector
-	perfDataCollectorMapiHttpEmsmdb              *perfdata.Collector
+	perfDataCollectorADAccessProcesses           *pdh.Collector
+	perfDataCollectorTransportQueues             *pdh.Collector
+	perfDataCollectorHttpProxy                   *pdh.Collector
+	perfDataCollectorActiveSync                  *pdh.Collector
+	perfDataCollectorAvailabilityService         *pdh.Collector
+	perfDataCollectorOWA                         *pdh.Collector
+	perfDataCollectorAutoDiscover                *pdh.Collector
+	perfDataCollectorWorkloadManagementWorkloads *pdh.Collector
+	perfDataCollectorRpcClientAccess             *pdh.Collector
+	perfDataCollectorMapiHttpEmsmdb              *pdh.Collector
 
 	activeMailboxDeliveryQueueLength        *prometheus.Desc
 	activeSyncRequestsPerSec                *prometheus.Desc
