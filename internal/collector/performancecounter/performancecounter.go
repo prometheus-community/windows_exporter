@@ -16,7 +16,6 @@
 package performancecounter
 
 import (
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -26,6 +25,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
+	"gopkg.in/yaml.v3"
 )
 
 const Name = "performancecounter"
@@ -79,7 +79,7 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 			return nil
 		}
 
-		if err := json.Unmarshal([]byte(objects), &c.config.Objects); err != nil {
+		if err := yaml.Unmarshal([]byte(objects), &c.config.Objects); err != nil {
 			return fmt.Errorf("failed to parse objects: %w", err)
 		}
 
