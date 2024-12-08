@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
 	"time"
 
@@ -112,15 +113,42 @@ func (c *Collector) Close() error {
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	c.logger = logger.With(slog.String("collector", Name))
 
-	var errs []error
+	names := make([]string, 0, len(c.config.Objects))
+	errs := make([]error, 0, len(c.config.Objects))
 
 	for i, object := range c.config.Objects {
 		if object.Name == "" {
 			return fmt.Errorf("object name is required")
 		}
 
+		if object.Object == "" {
+			errs = append(errs, fmt.Errorf("object %s: object is required", object.Name))
+
+			continue
+		}
+
+		if slices.Contains(names, object.Name) {
+			errs = append(errs, fmt.Errorf("object %s: name is duplicated", object.Name))
+
+			continue
+		}
+
+		names = append(names, object.Name)
+
 		counters := make([]string, 0, len(object.Counters))
 		for j, counter := range object.Counters {
+			if counter.Name == "" {
+				errs = append(errs, errors.New("counter name is required"))
+
+				continue
+			}
+
+			if slices.Contains(counters, counter.Name) {
+				errs = append(errs, fmt.Errorf("counter name %s is duplicated", counter.Name))
+
+				continue
+			}
+
 			counters = append(counters, counter.Name)
 
 			if counter.Metric == "" {

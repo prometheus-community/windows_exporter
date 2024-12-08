@@ -49,30 +49,47 @@ func TestCollector(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range []struct {
+		name            string
 		object          string
 		instances       []string
 		instanceLabel   string
+		buildErr        error
 		counters        []performancecounter.Counter
 		expectedMetrics *regexp.Regexp
 	}{
 		{
+			name:            "memory",
 			object:          "Memory",
 			instances:       nil,
+			buildErr:        nil,
 			counters:        []performancecounter.Counter{{Name: "Available Bytes", Type: "gauge"}},
 			expectedMetrics: regexp.MustCompile(`^# HELP windows_performancecounter_memory_available_bytes windows_exporter: custom Performance Counter metric\S*\s*# TYPE windows_performancecounter_memory_available_bytes gauge\s*windows_performancecounter_memory_available_bytes \d`),
 		},
 		{
+			name:            "process",
 			object:          "Process",
 			instances:       []string{"*"},
+			buildErr:        nil,
 			counters:        []performancecounter.Counter{{Name: "Thread Count", Type: "counter"}},
 			expectedMetrics: regexp.MustCompile(`^# HELP windows_performancecounter_process_thread_count windows_exporter: custom Performance Counter metric\S*\s*# TYPE windows_performancecounter_process_thread_count counter\s*windows_performancecounter_process_thread_count\{instance=".+"} \d`),
 		},
 		{
+			name:            "processor_information",
 			object:          "Processor Information",
 			instances:       []string{"*"},
 			instanceLabel:   "core",
+			buildErr:        nil,
 			counters:        []performancecounter.Counter{{Name: "% Processor Time", Metric: "windows_performancecounter_processor_information_processor_time", Labels: map[string]string{"state": "active"}}, {Name: "% Idle Time", Metric: "windows_performancecounter_processor_information_processor_time", Labels: map[string]string{"state": "idle"}}},
 			expectedMetrics: regexp.MustCompile(`^# HELP windows_performancecounter_processor_information_processor_time windows_exporter: custom Performance Counter metric\s+# TYPE windows_performancecounter_processor_information_processor_time counter\s+windows_performancecounter_processor_information_processor_time\{core="0,0",state="active"} [0-9.e+]+\s+windows_performancecounter_processor_information_processor_time\{core="0,0",state="idle"} [0-9.e+]+`),
+		},
+		{
+			name:            "",
+			object:          "Processor Information",
+			instances:       nil,
+			instanceLabel:   "",
+			buildErr:        fmt.Errorf("object name is empty"),
+			counters:        nil,
+			expectedMetrics: nil,
 		},
 	} {
 		t.Run(tc.object, func(t *testing.T) {
@@ -91,6 +108,12 @@ func TestCollector(t *testing.T) {
 
 			logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 			err := perfDataCollector.Build(logger, nil)
+			if tc.buildErr != nil {
+				require.ErrorIs(t, err, tc.buildErr)
+
+				return
+			}
+
 			require.NoError(t, err)
 
 			registry := prometheus.NewRegistry()
