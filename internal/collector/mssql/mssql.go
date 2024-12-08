@@ -387,7 +387,7 @@ func (c *Collector) collect(
 				slog.Any("err", err),
 			)
 		} else {
-			c.logger.Debug(fmt.Sprintf("mssql class collector %s for instance %s succeeded after %s.", collector, sqlInstance, duration))
+			c.logger.Debug(fmt.Sprintf("mssql class collector %s for instance %s succeeded after %s", collector, sqlInstance, duration))
 		}
 
 		ch <- prometheus.MustNewConstMetric(
