@@ -18,7 +18,7 @@ package performancecounter
 import "github.com/prometheus-community/windows_exporter/internal/perfdata"
 
 type Object struct {
-	Name          string    `json:"name" yaml:"name"`
+	Name          string    `json:"name"           yaml:"name"`
 	Object        string    `json:"object"         yaml:"object"`
 	Instances     []string  `json:"instances"      yaml:"instances"`
 	Counters      []Counter `json:"counters"       yaml:"counters"`

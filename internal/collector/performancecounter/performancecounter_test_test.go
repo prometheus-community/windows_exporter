@@ -144,6 +144,7 @@ windows_performancecounter_processor_information_processor_time\{core="0,0",stat
 
 			logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 			err := perfDataCollector.Build(logger, nil)
+
 			if tc.buildErr != "" {
 				require.ErrorContains(t, err, tc.buildErr)
 

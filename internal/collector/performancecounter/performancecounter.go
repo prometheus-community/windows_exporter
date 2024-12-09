@@ -129,7 +129,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 	for i, object := range c.config.Objects {
 		if object.Name == "" {
-			return fmt.Errorf("object name is required")
+			return errors.New("object name is required")
 		}
 
 		if object.Object == "" {
@@ -145,8 +145,8 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		}
 
 		names = append(names, object.Name)
-
 		counters := make([]string, 0, len(object.Counters))
+
 		for j, counter := range object.Counters {
 			if counter.Metric == "" {
 				c.config.Objects[i].Counters[j].Metric = c.sanitizeMetricName(
@@ -239,7 +239,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		)
 	}
 
-	return nil
+	return errors.Join(errs...)
 }
 
 func (c *Collector) collectObject(ch chan<- prometheus.Metric, perfDataObject Object) error {
