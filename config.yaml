@@ -1,9 +1,16 @@
 # example configuration file for windows_exporter
 
 collectors:
-  enabled: cpu,cpu_info,exchange,iis,logical_disk,logon,memory,net,os,process,remote_fx,service,system,tcp,time,terminal_services,textfile
+  enabled: cpu,cpu_info,exchange,iis,logical_disk,logon,memory,net,os,performancecounter,process,remote_fx,service,system,tcp,time,terminal_services,textfile
 collector:
   service:
     include: "windows_exporter"
+  performancecounter:
+    objects: |-
+      - name: memory
+        object: "Memory"
+        counters:
+          - name: "Cache Faults/sec"
+            type: "counter" # optional
 log:
   level: warn

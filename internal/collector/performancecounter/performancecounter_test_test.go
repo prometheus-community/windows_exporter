@@ -53,51 +53,87 @@ func TestCollector(t *testing.T) {
 		object          string
 		instances       []string
 		instanceLabel   string
-		buildErr        error
+		buildErr        string
 		counters        []performancecounter.Counter
 		expectedMetrics *regexp.Regexp
 	}{
 		{
-			name:            "memory",
-			object:          "Memory",
-			instances:       nil,
-			buildErr:        nil,
-			counters:        []performancecounter.Counter{{Name: "Available Bytes", Type: "gauge"}},
-			expectedMetrics: regexp.MustCompile(`^# HELP windows_performancecounter_memory_available_bytes windows_exporter: custom Performance Counter metric\S*\s*# TYPE windows_performancecounter_memory_available_bytes gauge\s*windows_performancecounter_memory_available_bytes \d`),
+			name:      "memory",
+			object:    "Memory",
+			instances: nil,
+			buildErr:  "",
+			counters:  []performancecounter.Counter{{Name: "Available Bytes", Type: "gauge"}},
+			expectedMetrics: regexp.MustCompile(`^# HELP windows_performancecounter_collector_duration_seconds windows_exporter: Duration of an performancecounter child collection.
+# TYPE windows_performancecounter_collector_duration_seconds gauge
+windows_performancecounter_collector_duration_seconds\{collector="memory"} [0-9.e+-]+
+# HELP windows_performancecounter_collector_success windows_exporter: Whether a performancecounter child collector was successful.
+# TYPE windows_performancecounter_collector_success gauge
+windows_performancecounter_collector_success\{collector="memory"} 1
+# HELP windows_performancecounter_memory_available_bytes windows_exporter: custom Performance Counter metric
+# TYPE windows_performancecounter_memory_available_bytes gauge
+windows_performancecounter_memory_available_bytes [0-9.e+-]+`),
 		},
 		{
-			name:            "process",
-			object:          "Process",
-			instances:       []string{"*"},
-			buildErr:        nil,
-			counters:        []performancecounter.Counter{{Name: "Thread Count", Type: "counter"}},
-			expectedMetrics: regexp.MustCompile(`^# HELP windows_performancecounter_process_thread_count windows_exporter: custom Performance Counter metric\S*\s*# TYPE windows_performancecounter_process_thread_count counter\s*windows_performancecounter_process_thread_count\{instance=".+"} \d`),
+			name:      "process",
+			object:    "Process",
+			instances: []string{"*"},
+			buildErr:  "",
+			counters:  []performancecounter.Counter{{Name: "Thread Count", Type: "counter"}},
+			expectedMetrics: regexp.MustCompile(`^# HELP windows_performancecounter_collector_duration_seconds windows_exporter: Duration of an performancecounter child collection.
+# TYPE windows_performancecounter_collector_duration_seconds gauge
+windows_performancecounter_collector_duration_seconds\{collector="process"} [0-9.e+-]+
+# HELP windows_performancecounter_collector_success windows_exporter: Whether a performancecounter child collector was successful.
+# TYPE windows_performancecounter_collector_success gauge
+windows_performancecounter_collector_success\{collector="process"} 1
+# HELP windows_performancecounter_process_thread_count windows_exporter: custom Performance Counter metric
+# TYPE windows_performancecounter_process_thread_count counter
+windows_performancecounter_process_thread_count\{instance=".+"} [0-9.e+-]+
+.*`),
 		},
 		{
-			name:            "processor_information",
-			object:          "Processor Information",
-			instances:       []string{"*"},
-			instanceLabel:   "core",
-			buildErr:        nil,
-			counters:        []performancecounter.Counter{{Name: "% Processor Time", Metric: "windows_performancecounter_processor_information_processor_time", Labels: map[string]string{"state": "active"}}, {Name: "% Idle Time", Metric: "windows_performancecounter_processor_information_processor_time", Labels: map[string]string{"state": "idle"}}},
-			expectedMetrics: regexp.MustCompile(`^# HELP windows_performancecounter_processor_information_processor_time windows_exporter: custom Performance Counter metric\s+# TYPE windows_performancecounter_processor_information_processor_time counter\s+windows_performancecounter_processor_information_processor_time\{core="0,0",state="active"} [0-9.e+]+\s+windows_performancecounter_processor_information_processor_time\{core="0,0",state="idle"} [0-9.e+]+`),
+			name:          "processor_information",
+			object:        "Processor Information",
+			instances:     []string{"*"},
+			instanceLabel: "core",
+			buildErr:      "",
+			counters:      []performancecounter.Counter{{Name: "% Processor Time", Metric: "windows_performancecounter_processor_information_processor_time", Labels: map[string]string{"state": "active"}}, {Name: "% Idle Time", Metric: "windows_performancecounter_processor_information_processor_time", Labels: map[string]string{"state": "idle"}}},
+			expectedMetrics: regexp.MustCompile(`^# HELP windows_performancecounter_collector_duration_seconds windows_exporter: Duration of an performancecounter child collection.
+# TYPE windows_performancecounter_collector_duration_seconds gauge
+windows_performancecounter_collector_duration_seconds\{collector="processor_information"} [0-9.e+-]+
+# HELP windows_performancecounter_collector_success windows_exporter: Whether a performancecounter child collector was successful.
+# TYPE windows_performancecounter_collector_success gauge
+windows_performancecounter_collector_success\{collector="processor_information"} 1
+# HELP windows_performancecounter_processor_information_processor_time windows_exporter: custom Performance Counter metric
+# TYPE windows_performancecounter_processor_information_processor_time counter
+windows_performancecounter_processor_information_processor_time\{core="0,0",state="active"} [0-9.e+-]+
+windows_performancecounter_processor_information_processor_time\{core="0,0",state="idle"} [0-9.e+-]+
+.*`),
 		},
 		{
 			name:            "",
 			object:          "Processor Information",
 			instances:       nil,
 			instanceLabel:   "",
-			buildErr:        fmt.Errorf("object name is empty"),
+			buildErr:        "object name is required",
 			counters:        nil,
 			expectedMetrics: nil,
 		},
+		{
+			name:            "double_counter",
+			object:          "Memory",
+			instances:       nil,
+			buildErr:        "counter name Available Bytes is duplicated",
+			counters:        []performancecounter.Counter{{Name: "Available Bytes", Type: "gauge"}, {Name: "Available Bytes", Type: "gauge"}},
+			expectedMetrics: nil,
+		},
 	} {
-		t.Run(tc.object, func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
 			perfDataCollector := performancecounter.New(&performancecounter.Config{
 				Objects: []performancecounter.Object{
 					{
+						Name:          tc.name,
 						Object:        tc.object,
 						Instances:     tc.instances,
 						InstanceLabel: tc.instanceLabel,
@@ -108,8 +144,8 @@ func TestCollector(t *testing.T) {
 
 			logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 			err := perfDataCollector.Build(logger, nil)
-			if tc.buildErr != nil {
-				require.ErrorIs(t, err, tc.buildErr)
+			if tc.buildErr != "" {
+				require.ErrorContains(t, err, tc.buildErr)
 
 				return
 			}
@@ -124,6 +160,7 @@ func TestCollector(t *testing.T) {
 			got := rw.Body.String()
 
 			assert.NotEmpty(t, got)
+			require.NotEmpty(t, tc.expectedMetrics)
 			assert.Regexp(t, tc.expectedMetrics, got)
 		})
 	}

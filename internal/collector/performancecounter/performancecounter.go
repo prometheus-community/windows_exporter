@@ -48,6 +48,8 @@ type Collector struct {
 
 	logger *slog.Logger
 
+	objects []Object
+
 	metricNameReplacer *strings.Replacer
 
 	// meta
@@ -113,6 +115,15 @@ func (c *Collector) Close() error {
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	c.logger = logger.With(slog.String("collector", Name))
 
+	c.metricNameReplacer = strings.NewReplacer(
+		".", "",
+		"%", "",
+		"/", "_",
+		" ", "_",
+		"-", "_",
+	)
+
+	c.objects = make([]Object, 0, len(c.config.Objects))
 	names := make([]string, 0, len(c.config.Objects))
 	errs := make([]error, 0, len(c.config.Objects))
 
@@ -137,8 +148,15 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 		counters := make([]string, 0, len(object.Counters))
 		for j, counter := range object.Counters {
+			if counter.Metric == "" {
+				c.config.Objects[i].Counters[j].Metric = c.sanitizeMetricName(
+					fmt.Sprintf("%s_%s_%s_%s", types.Namespace, Name, object.Object, counter.Name),
+				)
+			}
+
 			if counter.Name == "" {
 				errs = append(errs, errors.New("counter name is required"))
+				c.config.Objects = slices.Delete(c.config.Objects, i, 1)
 
 				continue
 			}
@@ -150,12 +168,6 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 			}
 
 			counters = append(counters, counter.Name)
-
-			if counter.Metric == "" {
-				c.config.Objects[i].Counters[j].Metric = c.sanitizeMetricName(
-					fmt.Sprintf("%s_%s_%s_%s", types.Namespace, Name, object.Object, counter.Name),
-				)
-			}
 		}
 
 		collector, err := perfdata.NewCollector(object.Object, object.Instances, counters)
@@ -166,19 +178,13 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		}
 
 		if object.InstanceLabel == "" {
-			c.config.Objects[i].InstanceLabel = "instance"
+			object.InstanceLabel = "instance"
 		}
 
-		c.config.Objects[i].collector = collector
-	}
+		object.collector = collector
 
-	c.metricNameReplacer = strings.NewReplacer(
-		".", "",
-		"%", "",
-		"/", "_",
-		" ", "_",
-		"-", "_",
-	)
+		c.objects = append(c.objects, object)
+	}
 
 	c.subCollectorScrapeDurationDesc = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "collector_duration_seconds"),
@@ -193,15 +199,15 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 
-	return errors.Join()
+	return errors.Join(errs...)
 }
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
-	errs := make([]error, 0, len(c.config.Objects))
+	errs := make([]error, 0, len(c.objects))
 
-	for _, perfDataObject := range c.config.Objects {
+	for _, perfDataObject := range c.objects {
 		startTime := time.Now()
 		err := c.collectObject(ch, perfDataObject)
 		duration := time.Since(startTime)
@@ -253,8 +259,7 @@ func (c *Collector) collectObject(ch chan<- prometheus.Metric, perfDataObject Ob
 				continue
 			}
 
-			labels := make(prometheus.Labels, len(counter.Labels)+2)
-			labels["collector"] = perfDataObject.Name
+			labels := make(prometheus.Labels, len(counter.Labels)+1)
 
 			if collectedInstance != perfdata.InstanceEmpty {
 				labels[perfDataObject.InstanceLabel] = collectedInstance
