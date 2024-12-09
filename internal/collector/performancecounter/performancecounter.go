@@ -125,7 +125,8 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 	c.objects = make([]Object, 0, len(c.config.Objects))
 	names := make([]string, 0, len(c.config.Objects))
-	errs := make([]error, 0, len(c.config.Objects))
+
+	var errs []error
 
 	for i, object := range c.config.Objects {
 		if object.Name == "" {
@@ -205,7 +206,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
-	errs := make([]error, 0, len(c.objects))
+	var errs []error
 
 	for _, perfDataObject := range c.objects {
 		startTime := time.Now()
@@ -306,7 +307,7 @@ func (c *Collector) collectObject(ch chan<- prometheus.Metric, perfDataObject Ob
 		}
 	}
 
-	return errors.Join()
+	return errors.Join(errs...)
 }
 
 func (c *Collector) sanitizeMetricName(name string) string {

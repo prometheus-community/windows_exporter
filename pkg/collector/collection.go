@@ -196,6 +196,8 @@ func (c *Collection) Enable(enabledCollectors []string) error {
 }
 
 // Build To be called by the exporter for collector initialization.
+// Instead, fail fast, it will try to build all collectors and return all errors.
+// errors are joined with errors.Join.
 func (c *Collection) Build(logger *slog.Logger) error {
 	c.startTime = gotime.Now()
 

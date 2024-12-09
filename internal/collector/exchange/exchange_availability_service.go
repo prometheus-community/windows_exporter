@@ -20,6 +20,7 @@ import (
 
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
 	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/pkg/public"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -52,7 +53,7 @@ func (c *Collector) collectAvailabilityService(ch chan<- prometheus.Metric) erro
 	}
 
 	if len(perfData) == 0 {
-		return fmt.Errorf("failed to collect MSExchange Availability Service metrics: %w", types.ErrNoData)
+		return fmt.Errorf("failed to collect MSExchange Availability Service metrics: %w", public.ErrNoData)
 	}
 
 	for _, data := range perfData {

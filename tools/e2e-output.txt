@@ -319,6 +319,10 @@ windows_exporter_collector_timeout{collector="udp"} 0
 # TYPE windows_pagefile_free_bytes gauge
 # HELP windows_pagefile_limit_bytes Number of bytes that can be stored in the operating system paging files. 0 (zero) indicates that there are no paging files
 # TYPE windows_pagefile_limit_bytes gauge
+# HELP windows_performancecounter_collector_duration_seconds windows_exporter: Duration of an performancecounter child collection.
+# TYPE windows_performancecounter_collector_duration_seconds gauge
+# HELP windows_performancecounter_collector_success windows_exporter: Whether a performancecounter child collector was successful.
+# TYPE windows_performancecounter_collector_success gauge
 # HELP windows_performancecounter_memory_cache_faults_sec windows_exporter: custom Performance Counter metric
 # TYPE windows_performancecounter_memory_cache_faults_sec counter
 # HELP windows_performancecounter_processor_information_processor_time windows_exporter: custom Performance Counter metric

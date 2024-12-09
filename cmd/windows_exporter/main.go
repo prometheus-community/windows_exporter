@@ -22,6 +22,7 @@ package main
 import (
 	// Its important that we do these first so that we can register with the Windows service control ASAP to avoid timeouts.
 	"github.com/prometheus-community/windows_exporter/internal/windowsservice"
+	"github.com/prometheus-community/windows_exporter/pkg/public"
 
 	"context"
 	"errors"
@@ -207,9 +208,19 @@ func run() int {
 	// Initialize collectors before loading
 	if err = collectors.Build(logger); err != nil {
 		for _, err := range utils.SplitError(err) {
-			logger.Warn("couldn't initialize collector",
-				slog.Any("err", err),
-			)
+			for _, ignoreErr := range public.ErrsBuildCanIgnored {
+				if errors.Is(err, ignoreErr) {
+					logger.Warn("couldn't initialize collector",
+						slog.Any("err", err),
+					)
+				} else {
+					logger.Error("couldn't initialize collector",
+						slog.Any("err", err),
+					)
+
+					return 1
+				}
+			}
 		}
 	}
 

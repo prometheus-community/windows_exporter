@@ -24,6 +24,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
 	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/pkg/public"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -314,7 +315,7 @@ func (c *Collector) collectAccept(ch chan<- prometheus.Metric) error {
 
 	data, ok := perfData[perfdata.InstanceEmpty]
 	if !ok {
-		return fmt.Errorf("failed to collect NPS Authentication Server metrics: %w", types.ErrNoData)
+		return fmt.Errorf("failed to collect NPS Authentication Server metrics: %w", public.ErrNoData)
 	}
 
 	ch <- prometheus.MustNewConstMetric(
@@ -406,7 +407,7 @@ func (c *Collector) collectAccounting(ch chan<- prometheus.Metric) error {
 
 	data, ok := perfData[perfdata.InstanceEmpty]
 	if !ok {
-		return fmt.Errorf("failed to collect NPS Accounting Server metrics: %w", types.ErrNoData)
+		return fmt.Errorf("failed to collect NPS Accounting Server metrics: %w", public.ErrNoData)
 	}
 
 	ch <- prometheus.MustNewConstMetric(

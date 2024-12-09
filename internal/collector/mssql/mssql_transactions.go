@@ -21,6 +21,7 @@ import (
 
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
 	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/pkg/public"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -176,7 +177,7 @@ func (c *Collector) collectTransactions(ch chan<- prometheus.Metric) error {
 // - https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-transactions-object
 func (c *Collector) collectTransactionsInstance(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *perfdata.Collector) error {
 	if perfDataCollector == nil {
-		return types.ErrCollectorNotInitialized
+		return public.ErrCollectorNotInitialized
 	}
 
 	perfData, err := perfDataCollector.Collect()

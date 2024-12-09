@@ -12,12 +12,3 @@
 // limitations under the License.
 
 package types
-
-import (
-	"errors"
-)
-
-var (
-	ErrCollectorNotInitialized = errors.New("collector not initialized")
-	ErrNoData                  = errors.New("no data")
-)
