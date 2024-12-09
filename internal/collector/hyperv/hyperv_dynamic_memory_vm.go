@@ -18,7 +18,7 @@ package hyperv
 import (
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
@@ -26,7 +26,7 @@ import (
 
 // collectorDynamicMemoryVM Hyper-V Dynamic Memory VM metrics
 type collectorDynamicMemoryVM struct {
-	perfDataCollectorDynamicMemoryVM   *perfdata.Collector
+	perfDataCollectorDynamicMemoryVM   *pdh.Collector
 	vmMemoryAddedMemory                *prometheus.Desc // \Hyper-V Dynamic Memory VM(*)\Added Memory
 	vmMemoryCurrentPressure            *prometheus.Desc // \Hyper-V Dynamic Memory VM(*)\Current Pressure
 	vmMemoryGuestVisiblePhysicalMemory *prometheus.Desc // \Hyper-V Dynamic Memory VM(*)\Guest Visible Physical Memory
@@ -56,7 +56,7 @@ const (
 func (c *Collector) buildDynamicMemoryVM() error {
 	var err error
 
-	c.perfDataCollectorDynamicMemoryVM, err = perfdata.NewCollector("Hyper-V Dynamic Memory VM", perfdata.InstancesAll, []string{
+	c.perfDataCollectorDynamicMemoryVM, err = pdh.NewCollector("Hyper-V Dynamic Memory VM", pdh.InstancesAll, []string{
 		vmMemoryAddedMemory,
 		vmMemoryCurrentPressure,
 		vmMemoryGuestVisiblePhysicalMemory,
@@ -67,7 +67,7 @@ func (c *Collector) buildDynamicMemoryVM() error {
 		vmMemoryPhysicalMemory,
 		vmMemoryRemovedMemory,
 		vmMemoryGuestAvailableMemory,
-	})
+	}, false)
 	if err != nil {
 		return fmt.Errorf("failed to create Hyper-V Dynamic Memory VM collector: %w", err)
 	}

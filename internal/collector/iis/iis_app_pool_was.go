@@ -18,13 +18,13 @@ package iis
 import (
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 type collectorAppPoolWAS struct {
-	perfDataCollectorAppPoolWAS *perfdata.Collector
+	perfDataCollectorAppPoolWAS *pdh.Collector
 
 	currentApplicationPoolState        *prometheus.Desc
 	currentApplicationPoolUptime       *prometheus.Desc
@@ -71,7 +71,7 @@ var applicationStates = map[uint32]string{
 func (c *Collector) buildAppPoolWAS() error {
 	var err error
 
-	c.perfDataCollectorAppPoolWAS, err = perfdata.NewCollector("APP_POOL_WAS", perfdata.InstancesAll, []string{
+	c.perfDataCollectorAppPoolWAS, err = pdh.NewCollector("APP_POOL_WAS", pdh.InstancesAll, []string{
 		CurrentApplicationPoolState,
 		CurrentApplicationPoolUptime,
 		CurrentWorkerProcesses,
@@ -85,7 +85,7 @@ func (c *Collector) buildAppPoolWAS() error {
 		TotalWorkerProcessPingFailures,
 		TotalWorkerProcessShutdownFailures,
 		TotalWorkerProcessStartupFailures,
-	})
+	}, false)
 	if err != nil {
 		return fmt.Errorf("failed to create APP_POOL_WAS collector: %w", err)
 	}
