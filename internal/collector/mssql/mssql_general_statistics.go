@@ -21,7 +21,6 @@ import (
 
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
 	"github.com/prometheus-community/windows_exporter/internal/types"
-	"github.com/prometheus-community/windows_exporter/pkg/public"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -275,7 +274,7 @@ func (c *Collector) collectGeneralStatistics(ch chan<- prometheus.Metric) error 
 
 func (c *Collector) collectGeneralStatisticsInstance(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *perfdata.Collector) error {
 	if perfDataCollector == nil {
-		return public.ErrCollectorNotInitialized
+		return types.ErrCollectorNotInitialized
 	}
 
 	perfData, err := perfDataCollector.Collect()

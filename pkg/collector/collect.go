@@ -25,7 +25,7 @@ import (
 
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	"github.com/prometheus-community/windows_exporter/pkg/public"
+	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -204,7 +204,7 @@ func (c *Collection) collectCollector(ch chan<- prometheus.Metric, logger *slog.
 		return pending
 	}
 
-	if err != nil && !errors.Is(err, perfdata.ErrNoData) && !errors.Is(err, public.ErrNoData) {
+	if err != nil && !errors.Is(err, perfdata.ErrNoData) && !errors.Is(err, types.ErrNoData) {
 		loggerFn := logger.Warn
 
 		if errors.Is(err, perfdata.ErrPerformanceCounterNotInitialized) || errors.Is(err, mi.MI_RESULT_INVALID_NAMESPACE) {

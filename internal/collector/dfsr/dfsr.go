@@ -26,7 +26,6 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
 	"github.com/prometheus-community/windows_exporter/internal/types"
-	"github.com/prometheus-community/windows_exporter/pkg/public"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -544,7 +543,7 @@ func (c *Collector) collectPDHConnection(ch chan<- prometheus.Metric) error {
 	}
 
 	if len(perfData) == 0 {
-		return fmt.Errorf("failed to collect DFS Replication Connections metrics: %w", public.ErrNoData)
+		return fmt.Errorf("failed to collect DFS Replication Connections metrics: %w", types.ErrNoData)
 	}
 
 	for name, connection := range perfData {
@@ -622,7 +621,7 @@ func (c *Collector) collectPDHFolder(ch chan<- prometheus.Metric) error {
 	}
 
 	if len(perfData) == 0 {
-		return fmt.Errorf("failed to collect DFS Replicated Folders metrics: %w", public.ErrNoData)
+		return fmt.Errorf("failed to collect DFS Replicated Folders metrics: %w", types.ErrNoData)
 	}
 
 	for name, folder := range perfData {
@@ -826,7 +825,7 @@ func (c *Collector) collectPDHVolume(ch chan<- prometheus.Metric) error {
 	}
 
 	if len(perfData) == 0 {
-		return fmt.Errorf("failed to collect DFS Replication Volumes metrics: %w", public.ErrNoData)
+		return fmt.Errorf("failed to collect DFS Replication Volumes metrics: %w", types.ErrNoData)
 	}
 
 	for name, volume := range perfData {

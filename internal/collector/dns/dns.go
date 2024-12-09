@@ -23,7 +23,6 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
 	"github.com/prometheus-community/windows_exporter/internal/types"
-	"github.com/prometheus-community/windows_exporter/pkg/public"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -285,7 +284,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 
 	data, ok := perfData[perfdata.InstanceEmpty]
 	if !ok {
-		return fmt.Errorf("failed to collect DNS metrics: %w", public.ErrNoData)
+		return fmt.Errorf("failed to collect DNS metrics: %w", types.ErrNoData)
 	}
 
 	ch <- prometheus.MustNewConstMetric(

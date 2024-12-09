@@ -20,7 +20,6 @@ import (
 
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
 	"github.com/prometheus-community/windows_exporter/internal/types"
-	"github.com/prometheus-community/windows_exporter/pkg/public"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -89,7 +88,7 @@ func (c *Collector) collectADAccessProcesses(ch chan<- prometheus.Metric) error 
 	}
 
 	if len(perfData) == 0 {
-		return fmt.Errorf("failed to collect MSExchange ADAccess Processes metrics: %w", public.ErrNoData)
+		return fmt.Errorf("failed to collect MSExchange ADAccess Processes metrics: %w", types.ErrNoData)
 	}
 
 	labelUseCount := make(map[string]int)

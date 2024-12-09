@@ -26,7 +26,6 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
 	"github.com/prometheus-community/windows_exporter/internal/types"
-	"github.com/prometheus-community/windows_exporter/pkg/public"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -436,13 +435,13 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	instanceKey := slices.Collect(maps.Keys(data))
 
 	if len(instanceKey) == 0 {
-		return fmt.Errorf("failed to collect ADFS metrics: %w", public.ErrNoData)
+		return fmt.Errorf("failed to collect ADFS metrics: %w", types.ErrNoData)
 	}
 
 	adfsData, ok := data[instanceKey[0]]
 
 	if !ok {
-		return fmt.Errorf("failed to collect ADFS metrics: %w", public.ErrNoData)
+		return fmt.Errorf("failed to collect ADFS metrics: %w", types.ErrNoData)
 	}
 
 	ch <- prometheus.MustNewConstMetric(

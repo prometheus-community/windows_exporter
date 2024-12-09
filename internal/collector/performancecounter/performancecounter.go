@@ -174,8 +174,6 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		collector, err := perfdata.NewCollector(object.Object, object.Instances, counters)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("failed collector for %s: %w", object.Name, err))
-
-			continue
 		}
 
 		if object.InstanceLabel == "" {
