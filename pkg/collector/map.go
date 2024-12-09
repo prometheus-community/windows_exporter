@@ -128,6 +128,9 @@ var BuildersWithFlags = map[string]BuilderWithFlags[Collector]{
 	vmware.Name:             NewBuilderWithFlags(vmware.NewWithFlags),
 }
 
+// Available returns a sorted list of available collectors.
+//
+//goland:noinspection GoUnusedExportedFunction
 func Available() []string {
 	return slices.Sorted(maps.Keys(BuildersWithFlags))
 }
