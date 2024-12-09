@@ -26,7 +26,7 @@ $exporter_proc = Start-Process `
     -PassThru `
     -FilePath ..\windows_exporter.exe `
     -ArgumentList "--log.level=debug","--web.disable-exporter-metrics","--collectors.enabled=[defaults],cpu_info,textfile,process,pagefile,performancecounter,scheduled_task,tcp,udp,time,system,service,logical_disk,printer,os,net,memory,logon,cache","--collector.process.include=explorer.exe","--collector.scheduled_task.include=.*GAEvents","--collector.service.include=Themes","--collector.textfile.directories=$($textfile_dir)",@"
---collector.performancecounter.objects="[{\"object\":\"Processor Information\",\"instances\":[\"*\"],\"instance_label\":\"core\",\"counters\":[{\"name\":\"% Processor Time\",\"metric\":\"windows_performancecounter_processor_information_processor_time\",\"labels\":{\"state\":\"active\"}},{\"name\":\"% Idle Time\",\"metric\":\"windows_performancecounter_processor_information_processor_time\",\"labels\":{\"state\":\"idle\"}}]},{\"object\":\"Memory\",\"counters\":[{\"name\":\"Cache Faults/sec\",\"type\":\"counter\"}]}]"
+--collector.performancecounter.objects="[{\"name\":\"cpu\",\"object\":\"Processor Information\",\"instances\":[\"*\"],\"instance_label\":\"core\",\"counters\":[{\"name\":\"% Processor Time\",\"metric\":\"windows_performancecounter_processor_information_processor_time\",\"labels\":{\"state\":\"active\"}},{\"name\":\"% Idle Time\",\"metric\":\"windows_performancecounter_processor_information_processor_time\",\"labels\":{\"state\":\"idle\"}}]},{\"name\":\"memory\",\"object\":\"Memory\",\"counters\":[{\"name\":\"Cache Faults/sec\",\"type\":\"counter\"}]}]"
 "@ `
     -WindowStyle Hidden `
     -RedirectStandardOutput "$($temp_dir)/windows_exporter.log" `

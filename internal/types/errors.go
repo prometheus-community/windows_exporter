@@ -13,9 +13,7 @@
 
 package types
 
-import (
-	"errors"
-)
+import "errors"
 
 var (
 	ErrCollectorNotInitialized = errors.New("collector not initialized")

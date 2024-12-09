@@ -207,9 +207,11 @@ func run() int {
 	// Initialize collectors before loading
 	if err = collectors.Build(logger); err != nil {
 		for _, err := range utils.SplitError(err) {
-			logger.Warn("couldn't initialize collector",
+			logger.Error("couldn't initialize collector",
 				slog.Any("err", err),
 			)
+
+			return 1
 		}
 	}
 

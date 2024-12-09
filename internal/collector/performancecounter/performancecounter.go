@@ -16,16 +16,19 @@
 package performancecounter
 
 import (
-	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
+	"time"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/perfdata"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
+	"gopkg.in/yaml.v3"
 )
 
 const Name = "performancecounter"
@@ -44,6 +47,14 @@ type Collector struct {
 	config Config
 
 	logger *slog.Logger
+
+	objects []Object
+
+	metricNameReplacer *strings.Replacer
+
+	// meta
+	subCollectorScrapeDurationDesc *prometheus.Desc
+	subCollectorScrapeSuccessDesc  *prometheus.Desc
 }
 
 func New(config *Config) *Collector {
@@ -79,7 +90,7 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 			return nil
 		}
 
-		if err := json.Unmarshal([]byte(objects), &c.config.Objects); err != nil {
+		if err := yaml.Unmarshal([]byte(objects), &c.config.Objects); err != nil {
 			return fmt.Errorf("failed to parse objects: %w", err)
 		}
 
@@ -104,101 +115,7 @@ func (c *Collector) Close() error {
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	c.logger = logger.With(slog.String("collector", Name))
 
-	for i, object := range c.config.Objects {
-		counters := make([]string, 0, len(object.Counters))
-		for j, counter := range object.Counters {
-			counters = append(counters, counter.Name)
-
-			if counter.Metric == "" {
-				c.config.Objects[i].Counters[j].Metric = sanitizeMetricName(fmt.Sprintf("%s_%s_%s_%s", types.Namespace, Name, object.Object, counter.Name))
-			}
-		}
-
-		collector, err := perfdata.NewCollector(object.Object, object.Instances, counters)
-		if err != nil {
-			return fmt.Errorf("failed to create v2 collector: %w", err)
-		}
-
-		if object.InstanceLabel == "" {
-			c.config.Objects[i].InstanceLabel = "instance"
-		}
-
-		c.config.Objects[i].collector = collector
-	}
-
-	return nil
-}
-
-// Collect sends the metric values for each metric
-// to the provided prometheus Metric channel.
-func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
-	for _, perfDataObject := range c.config.Objects {
-		collectedPerfData, err := perfDataObject.collector.Collect()
-		if err != nil {
-			return fmt.Errorf("failed to collect data: %w", err)
-		}
-
-		for collectedInstance, collectedInstanceCounters := range collectedPerfData {
-			for _, counter := range perfDataObject.Counters {
-				collectedCounterValue, ok := collectedInstanceCounters[counter.Name]
-				if !ok {
-					c.logger.Warn(fmt.Sprintf("counter %s not found in collected data", counter.Name))
-
-					continue
-				}
-
-				labels := make(prometheus.Labels, len(counter.Labels)+1)
-				if collectedInstance != perfdata.InstanceEmpty {
-					labels[perfDataObject.InstanceLabel] = collectedInstance
-				}
-
-				for key, value := range counter.Labels {
-					labels[key] = value
-				}
-
-				var metricType prometheus.ValueType
-
-				switch counter.Type {
-				case "counter":
-					metricType = prometheus.CounterValue
-				case "gauge":
-					metricType = prometheus.GaugeValue
-				default:
-					metricType = collectedCounterValue.Type
-				}
-
-				ch <- prometheus.MustNewConstMetric(
-					prometheus.NewDesc(
-						counter.Metric,
-						"windows_exporter: custom Performance Counter metric",
-						nil,
-						labels,
-					),
-					metricType,
-					collectedCounterValue.FirstValue,
-				)
-
-				if collectedCounterValue.SecondValue != 0 {
-					ch <- prometheus.MustNewConstMetric(
-						prometheus.NewDesc(
-							counter.Metric+"_second",
-							"windows_exporter: custom Performance Counter metric",
-							nil,
-							labels,
-						),
-						metricType,
-						collectedCounterValue.SecondValue,
-					)
-				}
-			}
-		}
-	}
-
-	return nil
-}
-
-func sanitizeMetricName(name string) string {
-	replacer := strings.NewReplacer(
+	c.metricNameReplacer = strings.NewReplacer(
 		".", "",
 		"%", "",
 		"/", "_",
@@ -206,5 +123,191 @@ func sanitizeMetricName(name string) string {
 		"-", "_",
 	)
 
-	return strings.Trim(replacer.Replace(strings.ToLower(name)), "_")
+	c.objects = make([]Object, 0, len(c.config.Objects))
+	names := make([]string, 0, len(c.config.Objects))
+
+	var errs []error
+
+	for i, object := range c.config.Objects {
+		if object.Name == "" {
+			return errors.New("object name is required")
+		}
+
+		if object.Object == "" {
+			errs = append(errs, fmt.Errorf("object %s: object is required", object.Name))
+
+			continue
+		}
+
+		if slices.Contains(names, object.Name) {
+			errs = append(errs, fmt.Errorf("object %s: name is duplicated", object.Name))
+
+			continue
+		}
+
+		names = append(names, object.Name)
+		counters := make([]string, 0, len(object.Counters))
+
+		for j, counter := range object.Counters {
+			if counter.Metric == "" {
+				c.config.Objects[i].Counters[j].Metric = c.sanitizeMetricName(
+					fmt.Sprintf("%s_%s_%s_%s", types.Namespace, Name, object.Object, counter.Name),
+				)
+			}
+
+			if counter.Name == "" {
+				errs = append(errs, errors.New("counter name is required"))
+				c.config.Objects = slices.Delete(c.config.Objects, i, 1)
+
+				continue
+			}
+
+			if slices.Contains(counters, counter.Name) {
+				errs = append(errs, fmt.Errorf("counter name %s is duplicated", counter.Name))
+
+				continue
+			}
+
+			counters = append(counters, counter.Name)
+		}
+
+		collector, err := perfdata.NewCollector(object.Object, object.Instances, counters)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("failed collector for %s: %w", object.Name, err))
+		}
+
+		if object.InstanceLabel == "" {
+			object.InstanceLabel = "instance"
+		}
+
+		object.collector = collector
+
+		c.objects = append(c.objects, object)
+	}
+
+	c.subCollectorScrapeDurationDesc = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "collector_duration_seconds"),
+		"windows_exporter: Duration of an performancecounter child collection.",
+		[]string{"collector"},
+		nil,
+	)
+	c.subCollectorScrapeSuccessDesc = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "collector_success"),
+		"windows_exporter: Whether a performancecounter child collector was successful.",
+		[]string{"collector"},
+		nil,
+	)
+
+	return errors.Join(errs...)
+}
+
+// Collect sends the metric values for each metric
+// to the provided prometheus Metric channel.
+func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
+	var errs []error
+
+	for _, perfDataObject := range c.objects {
+		startTime := time.Now()
+		err := c.collectObject(ch, perfDataObject)
+		duration := time.Since(startTime)
+		success := 1.0
+
+		if err != nil {
+			errs = append(errs, fmt.Errorf("failed to collect object %s: %w", perfDataObject.Name, err))
+			success = 0.0
+
+			c.logger.Debug(fmt.Sprintf("performancecounter collector %s failed after %s", perfDataObject.Name, duration),
+				slog.Any("err", err),
+			)
+		} else {
+			c.logger.Debug(fmt.Sprintf("performancecounter collector %s succeeded after %s", perfDataObject.Name, duration))
+		}
+
+		ch <- prometheus.MustNewConstMetric(
+			c.subCollectorScrapeSuccessDesc,
+			prometheus.GaugeValue,
+			success,
+			perfDataObject.Name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.subCollectorScrapeDurationDesc,
+			prometheus.GaugeValue,
+			duration.Seconds(),
+			perfDataObject.Name,
+		)
+	}
+
+	return errors.Join(errs...)
+}
+
+func (c *Collector) collectObject(ch chan<- prometheus.Metric, perfDataObject Object) error {
+	collectedPerfData, err := perfDataObject.collector.Collect()
+	if err != nil {
+		return fmt.Errorf("failed to collect data: %w", err)
+	}
+
+	var errs []error
+
+	for collectedInstance, collectedInstanceCounters := range collectedPerfData {
+		for _, counter := range perfDataObject.Counters {
+			collectedCounterValue, ok := collectedInstanceCounters[counter.Name]
+			if !ok {
+				errs = append(errs, fmt.Errorf("counter %s not found in collected data", counter.Name))
+
+				continue
+			}
+
+			labels := make(prometheus.Labels, len(counter.Labels)+1)
+
+			if collectedInstance != perfdata.InstanceEmpty {
+				labels[perfDataObject.InstanceLabel] = collectedInstance
+			}
+
+			for key, value := range counter.Labels {
+				labels[key] = value
+			}
+
+			var metricType prometheus.ValueType
+
+			switch counter.Type {
+			case "counter":
+				metricType = prometheus.CounterValue
+			case "gauge":
+				metricType = prometheus.GaugeValue
+			default:
+				metricType = collectedCounterValue.Type
+			}
+
+			ch <- prometheus.MustNewConstMetric(
+				prometheus.NewDesc(
+					counter.Metric,
+					"windows_exporter: custom Performance Counter metric",
+					nil,
+					labels,
+				),
+				metricType,
+				collectedCounterValue.FirstValue,
+			)
+
+			if collectedCounterValue.SecondValue != 0 {
+				ch <- prometheus.MustNewConstMetric(
+					prometheus.NewDesc(
+						counter.Metric+"_second",
+						"windows_exporter: custom Performance Counter metric",
+						nil,
+						labels,
+					),
+					metricType,
+					collectedCounterValue.SecondValue,
+				)
+			}
+		}
+	}
+
+	return errors.Join(errs...)
+}
+
+func (c *Collector) sanitizeMetricName(name string) string {
+	return strings.Trim(c.metricNameReplacer.Replace(strings.ToLower(name)), "_")
 }

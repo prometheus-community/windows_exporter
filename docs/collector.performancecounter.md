@@ -13,9 +13,28 @@ The performancecounter collector exposes any configured metric.
 
 ### `--collector.performancecounter.objects`
 
-Objects is a list of objects to collect metrics from. The value takes the form of a JSON array of strings. YAML is also supported.
+Objects is a list of objects to collect metrics from. The value takes the form of a JSON array of strings.
+YAML is supported.
 
-The collector supports only english named counter. Localized counter-names are not supported.
+The collector supports only English-named counter. Localized counter-names aren’t supported.
+
+> [!CAUTION]
+> If you are using a configuration file, the value must be kept as a string.
+>
+> Use a `|-` to keep the value as a string.
+
+#### Example
+
+```yaml
+collector:
+  performancecounter:
+    objects: |-
+      - name: memory
+        object: "Memory"
+        counters:
+          - name: "Cache Faults/sec"
+            type: "counter" # optional
+```
 
 #### Schema
 
@@ -25,7 +44,8 @@ YAML:
 <summary>Click to expand YAML schema</summary>
 
 ```yaml
-- object: "Processor Information"
+- name: cpu # free text name
+  object: "Processor Information" # Performance counter object name
   instances: ["*"]
   instance_label: "core"
   counters:
@@ -37,7 +57,8 @@ YAML:
       metric: windows_performancecounter_processor_information_processor_time # optional
       labels:
         state: idle
-- object: "Memory"
+- name: memory
+  object: "Memory"
   counters:
     - name: "Cache Faults/sec"
       type: "counter" # optional
@@ -51,6 +72,7 @@ YAML:
 ```json
 [
   {
+    "name": "cpu",
     "object": "Processor Information",
     "instances": [
       "*"
@@ -74,6 +96,7 @@ YAML:
     ]
   },
   {
+    "name": "memory",
     "object": "Memory",
     "counters": [
       {
@@ -85,6 +108,11 @@ YAML:
 ]
 ```
 </details>
+
+#### name
+
+The name is used to identify the object in the logs and metrics.
+Must unique across all objects.
 
 #### object
 
@@ -186,6 +214,17 @@ windows_performancecounter_processor_information_processor_time{core="0,8",state
 windows_performancecounter_processor_information_processor_time{core="0,9",state="active"} 1.0059484375e+11
 windows_performancecounter_processor_information_processor_time{core="0,9",state="idle"} 10059.484375
 ```
+> [!NOTE]
+> If you are using a configuration file, the value must be keep as string.
+
+Example:
+
+```yaml
+collector:
+  performancecounter:
+    objects: |
+```
+
 
 ## Metrics
 

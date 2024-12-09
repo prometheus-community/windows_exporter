@@ -74,6 +74,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/update"
 	"github.com/prometheus-community/windows_exporter/internal/collector/vmware"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
+	"github.com/prometheus-community/windows_exporter/internal/perfdata"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -196,6 +197,8 @@ func (c *Collection) Enable(enabledCollectors []string) error {
 }
 
 // Build To be called by the exporter for collector initialization.
+// Instead, fail fast, it will try to build all collectors and return all errors.
+// errors are joined with errors.Join.
 func (c *Collection) Build(logger *slog.Logger) error {
 	c.startTime = gotime.Now()
 
@@ -208,7 +211,6 @@ func (c *Collection) Build(logger *slog.Logger) error {
 	wg.Add(len(c.collectors))
 
 	errCh := make(chan error, len(c.collectors))
-	errs := make([]error, 0, len(c.collectors))
 
 	for _, collector := range c.collectors {
 		go func() {
@@ -224,7 +226,20 @@ func (c *Collection) Build(logger *slog.Logger) error {
 
 	close(errCh)
 
+	errs := make([]error, 0, len(c.collectors))
+
 	for err := range errCh {
+		if errors.Is(err, perfdata.ErrNoData) ||
+			errors.Is(err, perfdata.NewPdhError(perfdata.PdhCstatusNoObject)) ||
+			errors.Is(err, perfdata.NewPdhError(perfdata.PdhCstatusNoCounter)) ||
+			errors.Is(err, mi.MI_RESULT_INVALID_NAMESPACE) {
+			logger.Warn("couldn't initialize collector",
+				slog.Any("err", err),
+			)
+
+			continue
+		}
+
 		errs = append(errs, err)
 	}
 

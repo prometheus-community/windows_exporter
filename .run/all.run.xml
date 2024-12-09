@@ -2,7 +2,7 @@
   <configuration default="false" name="all" type="GoApplicationRunConfiguration" factoryName="Go Application" folderName="run">
     <module name="windows_exporter" />
     <working_directory value="$PROJECT_DIR$" />
-    <parameters value="--web.listen-address=127.0.0.1:9182 --log.level=info --collectors.enabled=ad,adcs,adfs,cache,container,cpu,cpu_info,cs,dfsr,dhcp,diskdrive,dns,exchange,filetime,fsrmquota,hyperv,iis,license,logical_disk,logon,memory,mscluster,msmq,mssql,net,netframework,nps,os,pagefile,performancecounter,physical_disk,printer,process,remote_fx,scheduled_task,service,smb,smbclient,smtp,system,tcp,terminal_services,thermalzone,time,udp,update,vmware --debug.enabled" />
+    <parameters value="--web.listen-address=127.0.0.1:9182 --log.level=info --collectors.enabled=ad,adcs,adfs,cache,container,cpu,cpu_info,cs,dfsr,dhcp,diskdrive,dns,exchange,filetime,fsrmquota,hyperv,iis,license,logical_disk,logon,memory,mscluster,msmq,mssql,net,netframework,nps,os,pagefile,performancecounter,physical_disk,printer,process,remote_fx,scheduled_task,service,smb,smbclient,smtp,system,tcp,terminal_services,thermalzone,time,udp,update,vmware,performancecounter --debug.enabled --collector.performancecounter.objects='[{ &quot;name&quot;: &quot;memory&quot;, &quot;object&quot;: &quot;Memory&quot;, &quot;counters&quot;: [{ &quot;name&quot;:&quot;Cache Faults/sc&quot;, &quot;type&quot;:&quot;counter&quot; }]}]'" />
     <sudo value="true" />
     <kind value="PACKAGE" />
     <package value="github.com/prometheus-community/windows_exporter/cmd/windows_exporter" />

@@ -206,8 +206,9 @@ func (c *Collection) collectCollector(ch chan<- prometheus.Metric, logger *slog.
 
 	if err != nil && !errors.Is(err, perfdata.ErrNoData) && !errors.Is(err, types.ErrNoData) {
 		loggerFn := logger.Warn
+
 		if errors.Is(err, perfdata.ErrPerformanceCounterNotInitialized) || errors.Is(err, mi.MI_RESULT_INVALID_NAMESPACE) {
-			loggerFn = logger.Debug
+			err = fmt.Errorf("%w. Check application logs from initialization pharse for more information", err)
 		}
 
 		loggerFn(fmt.Sprintf("collector %s failed after %s, resulting in %d metrics", name, duration, numMetrics),
