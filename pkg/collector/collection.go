@@ -226,7 +226,7 @@ func (c *Collection) Build(logger *slog.Logger) error {
 
 	close(errCh)
 
-	var errs []error
+	errs := make([]error, 0, len(c.collectors))
 
 	for err := range errCh {
 		if errors.Is(err, perfdata.ErrNoData) ||
