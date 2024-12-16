@@ -18,14 +18,15 @@ package hyperv
 import (
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 // collectorVirtualNetworkAdapter Hyper-V Virtual Network Adapter metrics
 type collectorVirtualNetworkAdapter struct {
-	perfDataCollectorVirtualNetworkAdapter *perfdata.Collector
+	perfDataCollectorVirtualNetworkAdapter *pdh.Collector
+	perfDataObjectVirtualNetworkAdapter    []perfDataCounterValuesVirtualNetworkAdapter
 
 	virtualNetworkAdapterBytesReceived          *prometheus.Desc // \Hyper-V Virtual Network Adapter(*)\Bytes Received/sec
 	virtualNetworkAdapterBytesSent              *prometheus.Desc // \Hyper-V Virtual Network Adapter(*)\Bytes Sent/sec
@@ -35,26 +36,21 @@ type collectorVirtualNetworkAdapter struct {
 	virtualNetworkAdapterPacketsSent            *prometheus.Desc // \Hyper-V Virtual Network Adapter(*)\Packets Sent/sec
 }
 
-const (
-	virtualNetworkAdapterBytesReceived          = "Bytes Received/sec"
-	virtualNetworkAdapterBytesSent              = "Bytes Sent/sec"
-	virtualNetworkAdapterDroppedPacketsIncoming = "Dropped Packets Incoming/sec"
-	virtualNetworkAdapterDroppedPacketsOutgoing = "Dropped Packets Outgoing/sec"
-	virtualNetworkAdapterPacketsReceived        = "Packets Received/sec"
-	virtualNetworkAdapterPacketsSent            = "Packets Sent/sec"
-)
+type perfDataCounterValuesVirtualNetworkAdapter struct {
+	Name string
+
+	VirtualNetworkAdapterBytesReceived          float64 `perfdata:"Bytes Received/sec"`
+	VirtualNetworkAdapterBytesSent              float64 `perfdata:"Bytes Sent/sec"`
+	VirtualNetworkAdapterDroppedPacketsIncoming float64 `perfdata:"Dropped Packets Incoming/sec"`
+	VirtualNetworkAdapterDroppedPacketsOutgoing float64 `perfdata:"Dropped Packets Outgoing/sec"`
+	VirtualNetworkAdapterPacketsReceived        float64 `perfdata:"Packets Received/sec"`
+	VirtualNetworkAdapterPacketsSent            float64 `perfdata:"Packets Sent/sec"`
+}
 
 func (c *Collector) buildVirtualNetworkAdapter() error {
 	var err error
 
-	c.perfDataCollectorVirtualNetworkAdapter, err = perfdata.NewCollector("Hyper-V Virtual Network Adapter", perfdata.InstancesAll, []string{
-		virtualNetworkAdapterBytesReceived,
-		virtualNetworkAdapterBytesSent,
-		virtualNetworkAdapterDroppedPacketsIncoming,
-		virtualNetworkAdapterDroppedPacketsOutgoing,
-		virtualNetworkAdapterPacketsReceived,
-		virtualNetworkAdapterPacketsSent,
-	})
+	c.perfDataCollectorVirtualNetworkAdapter, err = pdh.NewCollector[perfDataCounterValuesVirtualNetworkAdapter]("Hyper-V Virtual Network Adapter", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create Hyper-V Virtual Network Adapter collector: %w", err)
 	}
@@ -100,52 +96,52 @@ func (c *Collector) buildVirtualNetworkAdapter() error {
 }
 
 func (c *Collector) collectVirtualNetworkAdapter(ch chan<- prometheus.Metric) error {
-	data, err := c.perfDataCollectorVirtualNetworkAdapter.Collect()
+	err := c.perfDataCollectorVirtualNetworkAdapter.Collect(&c.perfDataObjectVirtualNetworkAdapter)
 	if err != nil {
 		return fmt.Errorf("failed to collect Hyper-V Virtual Network Adapter metrics: %w", err)
 	}
 
-	for name, adapterData := range data {
+	for _, data := range c.perfDataObjectVirtualNetworkAdapter {
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualNetworkAdapterBytesReceived,
 			prometheus.CounterValue,
-			adapterData[virtualNetworkAdapterBytesReceived].FirstValue,
-			name,
+			data.VirtualNetworkAdapterBytesReceived,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualNetworkAdapterBytesSent,
 			prometheus.CounterValue,
-			adapterData[virtualNetworkAdapterBytesSent].FirstValue,
-			name,
+			data.VirtualNetworkAdapterBytesSent,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualNetworkAdapterDroppedPacketsIncoming,
 			prometheus.CounterValue,
-			adapterData[virtualNetworkAdapterDroppedPacketsIncoming].FirstValue,
-			name,
+			data.VirtualNetworkAdapterDroppedPacketsIncoming,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualNetworkAdapterDroppedPacketsOutgoing,
 			prometheus.CounterValue,
-			adapterData[virtualNetworkAdapterDroppedPacketsOutgoing].FirstValue,
-			name,
+			data.VirtualNetworkAdapterDroppedPacketsOutgoing,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualNetworkAdapterPacketsReceived,
 			prometheus.CounterValue,
-			adapterData[virtualNetworkAdapterPacketsReceived].FirstValue,
-			name,
+			data.VirtualNetworkAdapterPacketsReceived,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualNetworkAdapterPacketsSent,
 			prometheus.CounterValue,
-			adapterData[virtualNetworkAdapterPacketsSent].FirstValue,
-			name,
+			data.VirtualNetworkAdapterPacketsSent,
+			data.Name,
 		)
 	}
 

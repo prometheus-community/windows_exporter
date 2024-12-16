@@ -21,7 +21,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -37,7 +37,8 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	config Config
 
-	perfDataCollector *perfdata.Collector
+	perfDataCollector *pdh.Collector
+	perfDataObject    []perfDataCounterValues
 
 	acksTotal                                        *prometheus.Desc
 	activeQueueLength                                *prometheus.Desc
@@ -95,33 +96,7 @@ func (c *Collector) Close() error {
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 	var err error
 
-	c.perfDataCollector, err = perfdata.NewCollector("DHCP Server", nil, []string{
-		acksTotal,
-		activeQueueLength,
-		conflictCheckQueueLength,
-		declinesTotal,
-		deniedDueToMatch,
-		deniedDueToNonMatch,
-		discoversTotal,
-		duplicatesDroppedTotal,
-		failoverBndAckReceivedTotal,
-		failoverBndAckSentTotal,
-		failoverBndUpdDropped,
-		failoverBndUpdPendingOutboundQueue,
-		failoverBndUpdReceivedTotal,
-		failoverBndUpdSentTotal,
-		failoverTransitionsCommunicationInterruptedState,
-		failoverTransitionsPartnerDownState,
-		failoverTransitionsRecoverState,
-		informsTotal,
-		nacksTotal,
-		offerQueueLength,
-		offersTotal,
-		packetsExpiredTotal,
-		packetsReceivedTotal,
-		releasesTotal,
-		requestsTotal,
-	})
+	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues]("DHCP Server", nil)
 	if err != nil {
 		return fmt.Errorf("failed to create DHCP Server collector: %w", err)
 	}
@@ -281,164 +256,159 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 }
 
 func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
-	perfData, err := c.perfDataCollector.Collect()
+	err := c.perfDataCollector.Collect(&c.perfDataObject)
 	if err != nil {
 		return fmt.Errorf("failed to collect DHCP Server metrics: %w", err)
-	}
-
-	data, ok := perfData[perfdata.InstanceEmpty]
-	if !ok {
-		return fmt.Errorf("failed to collect DHCP Server metrics: %w", types.ErrNoData)
 	}
 
 	ch <- prometheus.MustNewConstMetric(
 		c.packetsReceivedTotal,
 		prometheus.CounterValue,
-		data[packetsReceivedTotal].FirstValue,
+		c.perfDataObject[0].PacketsReceivedTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.duplicatesDroppedTotal,
 		prometheus.CounterValue,
-		data[duplicatesDroppedTotal].FirstValue,
+		c.perfDataObject[0].DuplicatesDroppedTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.packetsExpiredTotal,
 		prometheus.CounterValue,
-		data[packetsExpiredTotal].FirstValue,
+		c.perfDataObject[0].PacketsExpiredTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.activeQueueLength,
 		prometheus.GaugeValue,
-		data[activeQueueLength].FirstValue,
+		c.perfDataObject[0].ActiveQueueLength,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.conflictCheckQueueLength,
 		prometheus.GaugeValue,
-		data[conflictCheckQueueLength].FirstValue,
+		c.perfDataObject[0].ConflictCheckQueueLength,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.discoversTotal,
 		prometheus.CounterValue,
-		data[discoversTotal].FirstValue,
+		c.perfDataObject[0].DiscoversTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.offersTotal,
 		prometheus.CounterValue,
-		data[offersTotal].FirstValue,
+		c.perfDataObject[0].OffersTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.requestsTotal,
 		prometheus.CounterValue,
-		data[requestsTotal].FirstValue,
+		c.perfDataObject[0].RequestsTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.informsTotal,
 		prometheus.CounterValue,
-		data[informsTotal].FirstValue,
+		c.perfDataObject[0].InformsTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.acksTotal,
 		prometheus.CounterValue,
-		data[acksTotal].FirstValue,
+		c.perfDataObject[0].AcksTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.nACKsTotal,
 		prometheus.CounterValue,
-		data[nacksTotal].FirstValue,
+		c.perfDataObject[0].NacksTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.declinesTotal,
 		prometheus.CounterValue,
-		data[declinesTotal].FirstValue,
+		c.perfDataObject[0].DeclinesTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.releasesTotal,
 		prometheus.CounterValue,
-		data[releasesTotal].FirstValue,
+		c.perfDataObject[0].ReleasesTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.offerQueueLength,
 		prometheus.GaugeValue,
-		data[offerQueueLength].FirstValue,
+		c.perfDataObject[0].OfferQueueLength,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.deniedDueToMatch,
 		prometheus.CounterValue,
-		data[deniedDueToMatch].FirstValue,
+		c.perfDataObject[0].DeniedDueToMatch,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.deniedDueToNonMatch,
 		prometheus.CounterValue,
-		data[deniedDueToNonMatch].FirstValue,
+		c.perfDataObject[0].DeniedDueToNonMatch,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.failoverBndUpdSentTotal,
 		prometheus.CounterValue,
-		data[failoverBndUpdSentTotal].FirstValue,
+		c.perfDataObject[0].FailoverBndUpdSentTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.failoverBndUpdReceivedTotal,
 		prometheus.CounterValue,
-		data[failoverBndUpdReceivedTotal].FirstValue,
+		c.perfDataObject[0].FailoverBndUpdReceivedTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.failoverBndAckSentTotal,
 		prometheus.CounterValue,
-		data[failoverBndAckSentTotal].FirstValue,
+		c.perfDataObject[0].FailoverBndAckSentTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.failoverBndAckReceivedTotal,
 		prometheus.CounterValue,
-		data[failoverBndAckReceivedTotal].FirstValue,
+		c.perfDataObject[0].FailoverBndAckReceivedTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.failoverBndUpdPendingOutboundQueue,
 		prometheus.GaugeValue,
-		data[failoverBndUpdPendingOutboundQueue].FirstValue,
+		c.perfDataObject[0].FailoverBndUpdPendingOutboundQueue,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.failoverTransitionsCommunicationInterruptedState,
 		prometheus.CounterValue,
-		data[failoverTransitionsCommunicationInterruptedState].FirstValue,
+		c.perfDataObject[0].FailoverTransitionsCommunicationInterruptedState,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.failoverTransitionsPartnerDownState,
 		prometheus.CounterValue,
-		data[failoverTransitionsPartnerDownState].FirstValue,
+		c.perfDataObject[0].FailoverTransitionsPartnerDownState,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.failoverTransitionsRecoverState,
 		prometheus.CounterValue,
-		data[failoverTransitionsRecoverState].FirstValue,
+		c.perfDataObject[0].FailoverTransitionsRecoverState,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.failoverBndUpdDropped,
 		prometheus.CounterValue,
-		data[failoverBndUpdDropped].FirstValue,
+		c.perfDataObject[0].FailoverBndUpdDropped,
 	)
 
 	return nil

@@ -18,13 +18,14 @@ package iis
 import (
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 type collectorAppPoolWAS struct {
-	perfDataCollectorAppPoolWAS *perfdata.Collector
+	perfDataCollectorAppPoolWAS *pdh.Collector
+	perfDataObjectAppPoolWAS    []perfDataCounterValuesAppPoolWAS
 
 	currentApplicationPoolState        *prometheus.Desc
 	currentApplicationPoolUptime       *prometheus.Desc
@@ -40,22 +41,27 @@ type collectorAppPoolWAS struct {
 	totalWorkerProcessShutdownFailures *prometheus.Desc
 	totalWorkerProcessStartupFailures  *prometheus.Desc
 }
+type perfDataCounterValuesAppPoolWAS struct {
+	Name string
 
-const (
-	CurrentApplicationPoolState        = "Current Application Pool State"
-	CurrentApplicationPoolUptime       = "Current Application Pool Uptime"
-	CurrentWorkerProcesses             = "Current Worker Processes"
-	MaximumWorkerProcesses             = "Maximum Worker Processes"
-	RecentWorkerProcessFailures        = "Recent Worker Process Failures"
-	TimeSinceLastWorkerProcessFailure  = "Time Since Last Worker Process Failure"
-	TotalApplicationPoolRecycles       = "Total Application Pool Recycles"
-	TotalApplicationPoolUptime         = "Total Application Pool Uptime"
-	TotalWorkerProcessesCreated        = "Total Worker Processes Created"
-	TotalWorkerProcessFailures         = "Total Worker Process Failures"
-	TotalWorkerProcessPingFailures     = "Total Worker Process Ping Failures"
-	TotalWorkerProcessShutdownFailures = "Total Worker Process Shutdown Failures"
-	TotalWorkerProcessStartupFailures  = "Total Worker Process Startup Failures"
-)
+	CurrentApplicationPoolState        float64 `perfdata:"Current Application Pool State"`
+	CurrentApplicationPoolUptime       float64 `perfdata:"Current Application Pool Uptime"`
+	CurrentWorkerProcesses             float64 `perfdata:"Current Worker Processes"`
+	MaximumWorkerProcesses             float64 `perfdata:"Maximum Worker Processes"`
+	RecentWorkerProcessFailures        float64 `perfdata:"Recent Worker Process Failures"`
+	TimeSinceLastWorkerProcessFailure  float64 `perfdata:"Time Since Last Worker Process Failure"`
+	TotalApplicationPoolRecycles       float64 `perfdata:"Total Application Pool Recycles"`
+	TotalApplicationPoolUptime         float64 `perfdata:"Total Application Pool Uptime"`
+	TotalWorkerProcessesCreated        float64 `perfdata:"Total Worker Processes Created"`
+	TotalWorkerProcessFailures         float64 `perfdata:"Total Worker Process Failures"`
+	TotalWorkerProcessPingFailures     float64 `perfdata:"Total Worker Process Ping Failures"`
+	TotalWorkerProcessShutdownFailures float64 `perfdata:"Total Worker Process Shutdown Failures"`
+	TotalWorkerProcessStartupFailures  float64 `perfdata:"Total Worker Process Startup Failures"`
+}
+
+func (p perfDataCounterValuesAppPoolWAS) GetName() string {
+	return p.Name
+}
 
 //nolint:gochecknoglobals
 var applicationStates = map[uint32]string{
@@ -71,21 +77,7 @@ var applicationStates = map[uint32]string{
 func (c *Collector) buildAppPoolWAS() error {
 	var err error
 
-	c.perfDataCollectorAppPoolWAS, err = perfdata.NewCollector("APP_POOL_WAS", perfdata.InstancesAll, []string{
-		CurrentApplicationPoolState,
-		CurrentApplicationPoolUptime,
-		CurrentWorkerProcesses,
-		MaximumWorkerProcesses,
-		RecentWorkerProcessFailures,
-		TimeSinceLastWorkerProcessFailure,
-		TotalApplicationPoolRecycles,
-		TotalApplicationPoolUptime,
-		TotalWorkerProcessesCreated,
-		TotalWorkerProcessFailures,
-		TotalWorkerProcessPingFailures,
-		TotalWorkerProcessShutdownFailures,
-		TotalWorkerProcessStartupFailures,
-	})
+	c.perfDataCollectorAppPoolWAS, err = pdh.NewCollector[perfDataCounterValuesAppPoolWAS]("APP_POOL_WAS", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create APP_POOL_WAS collector: %w", err)
 	}
@@ -174,21 +166,21 @@ func (c *Collector) buildAppPoolWAS() error {
 }
 
 func (c *Collector) collectAppPoolWAS(ch chan<- prometheus.Metric) error {
-	perfData, err := c.perfDataCollectorAppPoolWAS.Collect()
+	err := c.perfDataCollectorAppPoolWAS.Collect(&c.perfDataObjectAppPoolWAS)
 	if err != nil {
 		return fmt.Errorf("failed to collect APP_POOL_WAS metrics: %w", err)
 	}
 
-	deduplicateIISNames(perfData)
+	deduplicateIISNames(c.perfDataObjectAppPoolWAS)
 
-	for name, app := range perfData {
-		if c.config.AppExclude.MatchString(name) || !c.config.AppInclude.MatchString(name) {
+	for _, data := range c.perfDataObjectAppPoolWAS {
+		if c.config.AppExclude.MatchString(data.Name) || !c.config.AppInclude.MatchString(data.Name) {
 			continue
 		}
 
 		for key, label := range applicationStates {
 			isCurrentState := 0.0
-			if key == uint32(app[CurrentApplicationPoolState].FirstValue) {
+			if key == uint32(data.CurrentApplicationPoolState) {
 				isCurrentState = 1.0
 			}
 
@@ -196,7 +188,7 @@ func (c *Collector) collectAppPoolWAS(ch chan<- prometheus.Metric) error {
 				c.currentApplicationPoolState,
 				prometheus.GaugeValue,
 				isCurrentState,
-				name,
+				data.Name,
 				label,
 			)
 		}
@@ -204,74 +196,74 @@ func (c *Collector) collectAppPoolWAS(ch chan<- prometheus.Metric) error {
 		ch <- prometheus.MustNewConstMetric(
 			c.currentApplicationPoolUptime,
 			prometheus.GaugeValue,
-			app[CurrentApplicationPoolUptime].FirstValue,
-			name,
+			data.CurrentApplicationPoolUptime,
+			data.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.currentWorkerProcesses,
 			prometheus.GaugeValue,
-			app[CurrentWorkerProcesses].FirstValue,
-			name,
+			data.CurrentWorkerProcesses,
+			data.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.maximumWorkerProcesses,
 			prometheus.GaugeValue,
-			app[MaximumWorkerProcesses].FirstValue,
-			name,
+			data.MaximumWorkerProcesses,
+			data.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.recentWorkerProcessFailures,
 			prometheus.GaugeValue,
-			app[RecentWorkerProcessFailures].FirstValue,
-			name,
+			data.RecentWorkerProcessFailures,
+			data.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.timeSinceLastWorkerProcessFailure,
 			prometheus.GaugeValue,
-			app[TimeSinceLastWorkerProcessFailure].FirstValue,
-			name,
+			data.TimeSinceLastWorkerProcessFailure,
+			data.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.totalApplicationPoolRecycles,
 			prometheus.CounterValue,
-			app[TotalApplicationPoolRecycles].FirstValue,
-			name,
+			data.TotalApplicationPoolRecycles,
+			data.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.totalApplicationPoolUptime,
 			prometheus.CounterValue,
-			app[TotalApplicationPoolUptime].FirstValue,
-			name,
+			data.TotalApplicationPoolUptime,
+			data.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.totalWorkerProcessesCreated,
 			prometheus.CounterValue,
-			app[TotalWorkerProcessesCreated].FirstValue,
-			name,
+			data.TotalWorkerProcessesCreated,
+			data.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.totalWorkerProcessFailures,
 			prometheus.CounterValue,
-			app[TotalWorkerProcessFailures].FirstValue,
-			name,
+			data.TotalWorkerProcessFailures,
+			data.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.totalWorkerProcessPingFailures,
 			prometheus.CounterValue,
-			app[TotalWorkerProcessPingFailures].FirstValue,
-			name,
+			data.TotalWorkerProcessPingFailures,
+			data.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.totalWorkerProcessShutdownFailures,
 			prometheus.CounterValue,
-			app[TotalWorkerProcessShutdownFailures].FirstValue,
-			name,
+			data.TotalWorkerProcessShutdownFailures,
+			data.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.totalWorkerProcessStartupFailures,
 			prometheus.CounterValue,
-			app[TotalWorkerProcessStartupFailures].FirstValue,
-			name,
+			data.TotalWorkerProcessStartupFailures,
+			data.Name,
 		)
 	}
 

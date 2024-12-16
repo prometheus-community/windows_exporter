@@ -18,7 +18,7 @@ package hyperv
 import (
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
@@ -26,7 +26,9 @@ import (
 
 // collectorDynamicMemoryVM Hyper-V Dynamic Memory VM metrics
 type collectorDynamicMemoryVM struct {
-	perfDataCollectorDynamicMemoryVM   *perfdata.Collector
+	perfDataCollectorDynamicMemoryVM *pdh.Collector
+	perfDataObjectDynamicMemoryVM    []perfDataCounterValuesDynamicMemoryVM
+
 	vmMemoryAddedMemory                *prometheus.Desc // \Hyper-V Dynamic Memory VM(*)\Added Memory
 	vmMemoryCurrentPressure            *prometheus.Desc // \Hyper-V Dynamic Memory VM(*)\Current Pressure
 	vmMemoryGuestVisiblePhysicalMemory *prometheus.Desc // \Hyper-V Dynamic Memory VM(*)\Guest Visible Physical Memory
@@ -39,35 +41,26 @@ type collectorDynamicMemoryVM struct {
 	vmMemoryGuestAvailableMemory       *prometheus.Desc // \Hyper-V Dynamic Memory VM(*)\Guest Available Memory
 }
 
-const (
+type perfDataCounterValuesDynamicMemoryVM struct {
+	Name string
+
 	// Hyper-V Dynamic Memory VM metrics
-	vmMemoryAddedMemory                = "Added Memory"
-	vmMemoryCurrentPressure            = "Current Pressure"
-	vmMemoryGuestAvailableMemory       = "Guest Available Memory"
-	vmMemoryGuestVisiblePhysicalMemory = "Guest Visible Physical Memory"
-	vmMemoryMaximumPressure            = "Maximum Pressure"
-	vmMemoryMemoryAddOperations        = "Memory Add Operations"
-	vmMemoryMemoryRemoveOperations     = "Memory Remove Operations"
-	vmMemoryMinimumPressure            = "Minimum Pressure"
-	vmMemoryPhysicalMemory             = "Physical Memory"
-	vmMemoryRemovedMemory              = "Removed Memory"
-)
+	VmMemoryAddedMemory                float64 `perfdata:"Added Memory"`
+	VmMemoryCurrentPressure            float64 `perfdata:"Current Pressure"`
+	VmMemoryGuestAvailableMemory       float64 `perfdata:"Guest Available Memory"`
+	VmMemoryGuestVisiblePhysicalMemory float64 `perfdata:"Guest Visible Physical Memory"`
+	VmMemoryMaximumPressure            float64 `perfdata:"Maximum Pressure"`
+	VmMemoryMemoryAddOperations        float64 `perfdata:"Memory Add Operations"`
+	VmMemoryMemoryRemoveOperations     float64 `perfdata:"Memory Remove Operations"`
+	VmMemoryMinimumPressure            float64 `perfdata:"Minimum Pressure"`
+	VmMemoryPhysicalMemory             float64 `perfdata:"Physical Memory"`
+	VmMemoryRemovedMemory              float64 `perfdata:"Removed Memory"`
+}
 
 func (c *Collector) buildDynamicMemoryVM() error {
 	var err error
 
-	c.perfDataCollectorDynamicMemoryVM, err = perfdata.NewCollector("Hyper-V Dynamic Memory VM", perfdata.InstancesAll, []string{
-		vmMemoryAddedMemory,
-		vmMemoryCurrentPressure,
-		vmMemoryGuestVisiblePhysicalMemory,
-		vmMemoryMaximumPressure,
-		vmMemoryMemoryAddOperations,
-		vmMemoryMemoryRemoveOperations,
-		vmMemoryMinimumPressure,
-		vmMemoryPhysicalMemory,
-		vmMemoryRemovedMemory,
-		vmMemoryGuestAvailableMemory,
-	})
+	c.perfDataCollectorDynamicMemoryVM, err = pdh.NewCollector[perfDataCounterValuesDynamicMemoryVM]("Hyper-V Dynamic Memory VM", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create Hyper-V Dynamic Memory VM collector: %w", err)
 	}
@@ -137,80 +130,80 @@ func (c *Collector) buildDynamicMemoryVM() error {
 }
 
 func (c *Collector) collectDynamicMemoryVM(ch chan<- prometheus.Metric) error {
-	data, err := c.perfDataCollectorDynamicMemoryVM.Collect()
+	err := c.perfDataCollectorDynamicMemoryVM.Collect(&c.perfDataObjectDynamicMemoryVM)
 	if err != nil {
 		return fmt.Errorf("failed to collect Hyper-V Dynamic Memory VM metrics: %w", err)
 	}
 
-	for vmName, vmData := range data {
+	for _, data := range c.perfDataObjectDynamicMemoryVM {
 		ch <- prometheus.MustNewConstMetric(
 			c.vmMemoryAddedMemory,
 			prometheus.CounterValue,
-			utils.MBToBytes(vmData[vmMemoryAddedMemory].FirstValue),
-			vmName,
+			utils.MBToBytes(data.VmMemoryAddedMemory),
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.vmMemoryCurrentPressure,
 			prometheus.GaugeValue,
-			utils.PercentageToRatio(vmData[vmMemoryCurrentPressure].FirstValue),
-			vmName,
+			utils.PercentageToRatio(data.VmMemoryCurrentPressure),
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.vmMemoryGuestAvailableMemory,
 			prometheus.GaugeValue,
-			utils.MBToBytes(vmData[vmMemoryGuestAvailableMemory].FirstValue),
-			vmName,
+			utils.MBToBytes(data.VmMemoryGuestAvailableMemory),
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.vmMemoryGuestVisiblePhysicalMemory,
 			prometheus.GaugeValue,
-			utils.MBToBytes(vmData[vmMemoryGuestVisiblePhysicalMemory].FirstValue),
-			vmName,
+			utils.MBToBytes(data.VmMemoryGuestVisiblePhysicalMemory),
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.vmMemoryMaximumPressure,
 			prometheus.GaugeValue,
-			utils.PercentageToRatio(vmData[vmMemoryMaximumPressure].FirstValue),
-			vmName,
+			utils.PercentageToRatio(data.VmMemoryMaximumPressure),
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.vmMemoryMemoryAddOperations,
 			prometheus.CounterValue,
-			vmData[vmMemoryMemoryAddOperations].FirstValue,
-			vmName,
+			data.VmMemoryMemoryAddOperations,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.vmMemoryMemoryRemoveOperations,
 			prometheus.CounterValue,
-			vmData[vmMemoryMemoryRemoveOperations].FirstValue,
-			vmName,
+			data.VmMemoryMemoryRemoveOperations,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.vmMemoryMinimumPressure,
 			prometheus.GaugeValue,
-			utils.PercentageToRatio(vmData[vmMemoryMinimumPressure].FirstValue),
-			vmName,
+			utils.PercentageToRatio(data.VmMemoryMinimumPressure),
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.vmMemoryPhysicalMemory,
 			prometheus.GaugeValue,
-			utils.MBToBytes(vmData[vmMemoryPhysicalMemory].FirstValue),
-			vmName,
+			utils.MBToBytes(data.VmMemoryPhysicalMemory),
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.vmMemoryRemovedMemory,
 			prometheus.CounterValue,
-			utils.MBToBytes(vmData[vmMemoryRemovedMemory].FirstValue),
-			vmName,
+			utils.MBToBytes(data.VmMemoryRemovedMemory),
+			data.Name,
 		)
 	}
 

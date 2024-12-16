@@ -19,13 +19,14 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 type collectorMemoryManager struct {
-	memMgrPerfDataCollectors map[string]*perfdata.Collector
+	memMgrPerfDataCollectors map[string]*pdh.Collector
+	memMgrPerfDataObject     []perfDataCounterValuesMemMgr
 
 	memMgrConnectionMemoryKB       *prometheus.Desc
 	memMgrDatabaseCacheMemoryKB    *prometheus.Desc
@@ -49,59 +50,39 @@ type collectorMemoryManager struct {
 	memMgrTotalServerMemoryKB      *prometheus.Desc
 }
 
-const (
-	memMgrConnectionMemoryKB       = "Connection Memory (KB)"
-	memMgrDatabaseCacheMemoryKB    = "Database Cache Memory (KB)"
-	memMgrExternalBenefitOfMemory  = "External benefit of memory"
-	memMgrFreeMemoryKB             = "Free Memory (KB)"
-	memMgrGrantedWorkspaceMemoryKB = "Granted Workspace Memory (KB)"
-	memMgrLockBlocks               = "Lock Blocks"
-	memMgrLockBlocksAllocated      = "Lock Blocks Allocated"
-	memMgrLockMemoryKB             = "Lock Memory (KB)"
-	memMgrLockOwnerBlocks          = "Lock Owner Blocks"
-	memMgrLockOwnerBlocksAllocated = "Lock Owner Blocks Allocated"
-	memMgrLogPoolMemoryKB          = "Log Pool Memory (KB)"
-	memMgrMaximumWorkspaceMemoryKB = "Maximum Workspace Memory (KB)"
-	memMgrMemoryGrantsOutstanding  = "Memory Grants Outstanding"
-	memMgrMemoryGrantsPending      = "Memory Grants Pending"
-	memMgrOptimizerMemoryKB        = "Optimizer Memory (KB)"
-	memMgrReservedServerMemoryKB   = "Reserved Server Memory (KB)"
-	memMgrSQLCacheMemoryKB         = "SQL Cache Memory (KB)"
-	memMgrStolenServerMemoryKB     = "Stolen Server Memory (KB)"
-	memMgrTargetServerMemoryKB     = "Target Server Memory (KB)"
-	memMgrTotalServerMemoryKB      = "Total Server Memory (KB)"
-)
+type perfDataCounterValuesMemMgr struct {
+	MemMgrConnectionMemoryKB       float64 `perfdata:"Connection Memory (KB)"`
+	MemMgrDatabaseCacheMemoryKB    float64 `perfdata:"Database Cache Memory (KB)"`
+	MemMgrExternalBenefitOfMemory  float64 `perfdata:"External benefit of memory"`
+	MemMgrFreeMemoryKB             float64 `perfdata:"Free Memory (KB)"`
+	MemMgrGrantedWorkspaceMemoryKB float64 `perfdata:"Granted Workspace Memory (KB)"`
+	MemMgrLockBlocks               float64 `perfdata:"Lock Blocks"`
+	MemMgrLockBlocksAllocated      float64 `perfdata:"Lock Blocks Allocated"`
+	MemMgrLockMemoryKB             float64 `perfdata:"Lock Memory (KB)"`
+	MemMgrLockOwnerBlocks          float64 `perfdata:"Lock Owner Blocks"`
+	MemMgrLockOwnerBlocksAllocated float64 `perfdata:"Lock Owner Blocks Allocated"`
+	MemMgrLogPoolMemoryKB          float64 `perfdata:"Log Pool Memory (KB)"`
+	MemMgrMaximumWorkspaceMemoryKB float64 `perfdata:"Maximum Workspace Memory (KB)"`
+	MemMgrMemoryGrantsOutstanding  float64 `perfdata:"Memory Grants Outstanding"`
+	MemMgrMemoryGrantsPending      float64 `perfdata:"Memory Grants Pending"`
+	MemMgrOptimizerMemoryKB        float64 `perfdata:"Optimizer Memory (KB)"`
+	MemMgrReservedServerMemoryKB   float64 `perfdata:"Reserved Server Memory (KB)"`
+	MemMgrSQLCacheMemoryKB         float64 `perfdata:"SQL Cache Memory (KB)"`
+	MemMgrStolenServerMemoryKB     float64 `perfdata:"Stolen Server Memory (KB)"`
+	MemMgrTargetServerMemoryKB     float64 `perfdata:"Target Server Memory (KB)"`
+	MemMgrTotalServerMemoryKB      float64 `perfdata:"Total Server Memory (KB)"`
+}
 
 func (c *Collector) buildMemoryManager() error {
 	var err error
 
-	c.memMgrPerfDataCollectors = make(map[string]*perfdata.Collector, len(c.mssqlInstances))
+	c.memMgrPerfDataCollectors = make(map[string]*pdh.Collector, len(c.mssqlInstances))
 	errs := make([]error, 0, len(c.mssqlInstances))
-	counters := []string{
-		memMgrConnectionMemoryKB,
-		memMgrDatabaseCacheMemoryKB,
-		memMgrExternalBenefitOfMemory,
-		memMgrFreeMemoryKB,
-		memMgrGrantedWorkspaceMemoryKB,
-		memMgrLockBlocks,
-		memMgrLockBlocksAllocated,
-		memMgrLockMemoryKB,
-		memMgrLockOwnerBlocks,
-		memMgrLockOwnerBlocksAllocated,
-		memMgrLogPoolMemoryKB,
-		memMgrMaximumWorkspaceMemoryKB,
-		memMgrMemoryGrantsOutstanding,
-		memMgrMemoryGrantsPending,
-		memMgrOptimizerMemoryKB,
-		memMgrReservedServerMemoryKB,
-		memMgrSQLCacheMemoryKB,
-		memMgrStolenServerMemoryKB,
-		memMgrTargetServerMemoryKB,
-		memMgrTotalServerMemoryKB,
-	}
 
 	for _, sqlInstance := range c.mssqlInstances {
-		c.memMgrPerfDataCollectors[sqlInstance.name], err = perfdata.NewCollector(c.mssqlGetPerfObjectName(sqlInstance.name, "Memory Manager"), perfdata.InstancesAll, counters)
+		c.memMgrPerfDataCollectors[sqlInstance.name], err = pdh.NewCollector[perfDataCounterValuesMemMgr](
+			c.mssqlGetPerfObjectName(sqlInstance.name, "Memory Manager"), pdh.InstancesAll,
+		)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("failed to create Memory Manager collector for instance %s: %w", sqlInstance.name, err))
 		}
@@ -235,158 +216,149 @@ func (c *Collector) collectMemoryManager(ch chan<- prometheus.Metric) error {
 	return c.collect(ch, subCollectorMemoryManager, c.memMgrPerfDataCollectors, c.collectMemoryManagerInstance)
 }
 
-func (c *Collector) collectMemoryManagerInstance(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *perfdata.Collector) error {
-	if perfDataCollector == nil {
-		return types.ErrCollectorNotInitialized
-	}
-
-	perfData, err := perfDataCollector.Collect()
+func (c *Collector) collectMemoryManagerInstance(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *pdh.Collector) error {
+	err := perfDataCollector.Collect(&c.memMgrPerfDataObject)
 	if err != nil {
 		return fmt.Errorf("failed to collect %s metrics: %w", c.mssqlGetPerfObjectName(sqlInstance, "Memory Manager"), err)
-	}
-
-	data, ok := perfData[perfdata.InstanceEmpty]
-	if !ok {
-		return fmt.Errorf("perflib query for %s returned empty result set", c.mssqlGetPerfObjectName(sqlInstance, "Memory Manager"))
 	}
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memMgrConnectionMemoryKB,
 		prometheus.GaugeValue,
-		data[memMgrConnectionMemoryKB].FirstValue*1024,
+		c.memMgrPerfDataObject[0].MemMgrConnectionMemoryKB*1024,
 		sqlInstance,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memMgrDatabaseCacheMemoryKB,
 		prometheus.GaugeValue,
-		data[memMgrDatabaseCacheMemoryKB].FirstValue*1024,
+		c.memMgrPerfDataObject[0].MemMgrDatabaseCacheMemoryKB*1024,
 		sqlInstance,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memMgrExternalBenefitOfMemory,
 		prometheus.GaugeValue,
-		data[memMgrExternalBenefitOfMemory].FirstValue,
+		c.memMgrPerfDataObject[0].MemMgrExternalBenefitOfMemory,
 		sqlInstance,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memMgrFreeMemoryKB,
 		prometheus.GaugeValue,
-		data[memMgrFreeMemoryKB].FirstValue*1024,
+		c.memMgrPerfDataObject[0].MemMgrFreeMemoryKB*1024,
 		sqlInstance,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memMgrGrantedWorkspaceMemoryKB,
 		prometheus.GaugeValue,
-		data[memMgrGrantedWorkspaceMemoryKB].FirstValue*1024,
+		c.memMgrPerfDataObject[0].MemMgrGrantedWorkspaceMemoryKB*1024,
 		sqlInstance,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memMgrLockBlocks,
 		prometheus.GaugeValue,
-		data[memMgrLockBlocks].FirstValue,
+		c.memMgrPerfDataObject[0].MemMgrLockBlocks,
 		sqlInstance,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memMgrLockBlocksAllocated,
 		prometheus.GaugeValue,
-		data[memMgrLockBlocksAllocated].FirstValue,
+		c.memMgrPerfDataObject[0].MemMgrLockBlocksAllocated,
 		sqlInstance,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memMgrLockMemoryKB,
 		prometheus.GaugeValue,
-		data[memMgrLockMemoryKB].FirstValue*1024,
+		c.memMgrPerfDataObject[0].MemMgrLockMemoryKB*1024,
 		sqlInstance,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memMgrLockOwnerBlocks,
 		prometheus.GaugeValue,
-		data[memMgrLockOwnerBlocks].FirstValue,
+		c.memMgrPerfDataObject[0].MemMgrLockOwnerBlocks,
 		sqlInstance,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memMgrLockOwnerBlocksAllocated,
 		prometheus.GaugeValue,
-		data[memMgrLockOwnerBlocksAllocated].FirstValue,
+		c.memMgrPerfDataObject[0].MemMgrLockOwnerBlocksAllocated,
 		sqlInstance,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memMgrLogPoolMemoryKB,
 		prometheus.GaugeValue,
-		data[memMgrLogPoolMemoryKB].FirstValue*1024,
+		c.memMgrPerfDataObject[0].MemMgrLogPoolMemoryKB*1024,
 		sqlInstance,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memMgrMaximumWorkspaceMemoryKB,
 		prometheus.GaugeValue,
-		data[memMgrMaximumWorkspaceMemoryKB].FirstValue*1024,
+		c.memMgrPerfDataObject[0].MemMgrMaximumWorkspaceMemoryKB*1024,
 		sqlInstance,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memMgrMemoryGrantsOutstanding,
 		prometheus.GaugeValue,
-		data[memMgrMemoryGrantsOutstanding].FirstValue,
+		c.memMgrPerfDataObject[0].MemMgrMemoryGrantsOutstanding,
 		sqlInstance,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memMgrMemoryGrantsPending,
 		prometheus.GaugeValue,
-		data[memMgrMemoryGrantsPending].FirstValue,
+		c.memMgrPerfDataObject[0].MemMgrMemoryGrantsPending,
 		sqlInstance,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memMgrOptimizerMemoryKB,
 		prometheus.GaugeValue,
-		data[memMgrOptimizerMemoryKB].FirstValue*1024,
+		c.memMgrPerfDataObject[0].MemMgrOptimizerMemoryKB*1024,
 		sqlInstance,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memMgrReservedServerMemoryKB,
 		prometheus.GaugeValue,
-		data[memMgrReservedServerMemoryKB].FirstValue*1024,
+		c.memMgrPerfDataObject[0].MemMgrReservedServerMemoryKB*1024,
 		sqlInstance,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memMgrSQLCacheMemoryKB,
 		prometheus.GaugeValue,
-		data[memMgrSQLCacheMemoryKB].FirstValue*1024,
+		c.memMgrPerfDataObject[0].MemMgrSQLCacheMemoryKB*1024,
 		sqlInstance,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memMgrStolenServerMemoryKB,
 		prometheus.GaugeValue,
-		data[memMgrStolenServerMemoryKB].FirstValue*1024,
+		c.memMgrPerfDataObject[0].MemMgrStolenServerMemoryKB*1024,
 		sqlInstance,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memMgrTargetServerMemoryKB,
 		prometheus.GaugeValue,
-		data[memMgrTargetServerMemoryKB].FirstValue*1024,
+		c.memMgrPerfDataObject[0].MemMgrTargetServerMemoryKB*1024,
 		sqlInstance,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memMgrTotalServerMemoryKB,
 		prometheus.GaugeValue,
-		data[memMgrTotalServerMemoryKB].FirstValue*1024,
+		c.memMgrPerfDataObject[0].MemMgrTotalServerMemoryKB*1024,
 		sqlInstance,
 	)
 

@@ -16,36 +16,33 @@
 package hyperv
 
 import (
-	"errors"
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 // collectorVirtualMachineHealthSummary Hyper-V Virtual Machine Health Summary metrics
 type collectorVirtualMachineHealthSummary struct {
-	perfDataCollectorVirtualMachineHealthSummary *perfdata.Collector
+	perfDataCollectorVirtualMachineHealthSummary *pdh.Collector
+	perfDataObjectVirtualMachineHealthSummary    []perfDataCounterValuesVirtualMachineHealthSummary
 
 	// \Hyper-V Virtual Machine Health Summary\Health Critical
 	// \Hyper-V Virtual Machine Health Summary\Health Ok
 	health *prometheus.Desc
 }
 
-const (
+type perfDataCounterValuesVirtualMachineHealthSummary struct {
 	// Hyper-V Virtual Machine Health Summary
-	healthCritical = "Health Critical"
-	healthOk       = "Health Ok"
-)
+	HealthCritical float64 `perfdata:"Health Critical"`
+	HealthOk       float64 `perfdata:"Health Ok"`
+}
 
 func (c *Collector) buildVirtualMachineHealthSummary() error {
 	var err error
 
-	c.perfDataCollectorVirtualMachineHealthSummary, err = perfdata.NewCollector("Hyper-V Virtual Machine Health Summary", nil, []string{
-		healthCritical,
-		healthOk,
-	})
+	c.perfDataCollectorVirtualMachineHealthSummary, err = pdh.NewCollector[perfDataCounterValuesVirtualMachineHealthSummary]("Hyper-V Virtual Machine Health Summary", nil)
 	if err != nil {
 		return fmt.Errorf("failed to create Hyper-V Virtual Machine Health Summary collector: %w", err)
 	}
@@ -61,27 +58,22 @@ func (c *Collector) buildVirtualMachineHealthSummary() error {
 }
 
 func (c *Collector) collectVirtualMachineHealthSummary(ch chan<- prometheus.Metric) error {
-	data, err := c.perfDataCollectorVirtualMachineHealthSummary.Collect()
+	err := c.perfDataCollectorVirtualMachineHealthSummary.Collect(&c.perfDataObjectVirtualMachineHealthSummary)
 	if err != nil {
 		return fmt.Errorf("failed to collect Hyper-V Virtual Machine Health Summary metrics: %w", err)
-	}
-
-	healthData, ok := data[perfdata.InstanceEmpty]
-	if !ok {
-		return errors.New("no data returned for Hyper-V Virtual Machine Health Summary")
 	}
 
 	ch <- prometheus.MustNewConstMetric(
 		c.health,
 		prometheus.GaugeValue,
-		healthData[healthCritical].FirstValue,
+		c.perfDataObjectVirtualMachineHealthSummary[0].HealthCritical,
 		"critical",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.health,
 		prometheus.GaugeValue,
-		healthData[healthOk].FirstValue,
+		c.perfDataObjectVirtualMachineHealthSummary[0].HealthOk,
 		"ok",
 	)
 

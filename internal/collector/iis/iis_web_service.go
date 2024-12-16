@@ -18,13 +18,14 @@ package iis
 import (
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 type collectorWebService struct {
-	perfDataCollectorWebService *perfdata.Collector
+	perfDataCollectorWebService *pdh.Collector
+	perfDataObjectWebService    []perfDataCounterValuesWebService
 
 	webServiceCurrentAnonymousUsers               *prometheus.Desc
 	webServiceCurrentBlockedAsyncIORequests       *prometheus.Desc
@@ -50,88 +51,56 @@ type collectorWebService struct {
 	webServiceTotalRejectedAsyncIORequests        *prometheus.Desc
 }
 
-const (
-	webServiceCurrentAnonymousUsers               = "Current Anonymous Users"
-	webServiceCurrentBlockedAsyncIORequests       = "Current Blocked Async I/O Requests"
-	webServiceCurrentCGIRequests                  = "Current CGI Requests"
-	webServiceCurrentConnections                  = "Current Connections"
-	webServiceCurrentISAPIExtensionRequests       = "Current ISAPI Extension Requests"
-	webServiceCurrentNonAnonymousUsers            = "Current NonAnonymous Users"
-	webServiceServiceUptime                       = "Service Uptime"
-	webServiceTotalBytesReceived                  = "Total Bytes Received"
-	webServiceTotalBytesSent                      = "Total Bytes Sent"
-	webServiceTotalAnonymousUsers                 = "Total Anonymous Users"
-	webServiceTotalBlockedAsyncIORequests         = "Total Blocked Async I/O Requests"
-	webServiceTotalCGIRequests                    = "Total CGI Requests"
-	webServiceTotalConnectionAttemptsAllInstances = "Total Connection Attempts (all instances)"
-	webServiceTotalFilesReceived                  = "Total Files Received"
-	webServiceTotalFilesSent                      = "Total Files Sent"
-	webServiceTotalISAPIExtensionRequests         = "Total ISAPI Extension Requests"
-	webServiceTotalLockedErrors                   = "Total Locked Errors"
-	webServiceTotalLogonAttempts                  = "Total Logon Attempts"
-	webServiceTotalNonAnonymousUsers              = "Total NonAnonymous Users"
-	webServiceTotalNotFoundErrors                 = "Total Not Found Errors"
-	webServiceTotalRejectedAsyncIORequests        = "Total Rejected Async I/O Requests"
-	webServiceTotalCopyRequests                   = "Total Copy Requests"
-	webServiceTotalDeleteRequests                 = "Total Delete Requests"
-	webServiceTotalGetRequests                    = "Total Get Requests"
-	webServiceTotalHeadRequests                   = "Total Head Requests"
-	webServiceTotalLockRequests                   = "Total Lock Requests"
-	webServiceTotalMkcolRequests                  = "Total Mkcol Requests"
-	webServiceTotalMoveRequests                   = "Total Move Requests"
-	webServiceTotalOptionsRequests                = "Total Options Requests"
-	webServiceTotalOtherRequests                  = "Total Other Request Methods"
-	webServiceTotalPostRequests                   = "Total Post Requests"
-	webServiceTotalPropfindRequests               = "Total Propfind Requests"
-	webServiceTotalProppatchRequests              = "Total Proppatch Requests"
-	webServiceTotalPutRequests                    = "Total Put Requests"
-	webServiceTotalSearchRequests                 = "Total Search Requests"
-	webServiceTotalTraceRequests                  = "Total Trace Requests"
-	webServiceTotalUnlockRequests                 = "Total Unlock Requests"
-)
+type perfDataCounterValuesWebService struct {
+	Name string
+
+	WebServiceCurrentAnonymousUsers               float64 `perfdata:"Current Anonymous Users"`
+	WebServiceCurrentBlockedAsyncIORequests       float64 `perfdata:"Current Blocked Async I/O Requests"`
+	WebServiceCurrentCGIRequests                  float64 `perfdata:"Current CGI Requests"`
+	WebServiceCurrentConnections                  float64 `perfdata:"Current Connections"`
+	WebServiceCurrentISAPIExtensionRequests       float64 `perfdata:"Current ISAPI Extension Requests"`
+	WebServiceCurrentNonAnonymousUsers            float64 `perfdata:"Current NonAnonymous Users"`
+	WebServiceServiceUptime                       float64 `perfdata:"Service Uptime"`
+	WebServiceTotalBytesReceived                  float64 `perfdata:"Total Bytes Received"`
+	WebServiceTotalBytesSent                      float64 `perfdata:"Total Bytes Sent"`
+	WebServiceTotalAnonymousUsers                 float64 `perfdata:"Total Anonymous Users"`
+	WebServiceTotalBlockedAsyncIORequests         float64 `perfdata:"Total Blocked Async I/O Requests"`
+	WebServiceTotalCGIRequests                    float64 `perfdata:"Total CGI Requests"`
+	WebServiceTotalConnectionAttemptsAllInstances float64 `perfdata:"Total Connection Attempts (all instances)"`
+	WebServiceTotalFilesReceived                  float64 `perfdata:"Total Files Received"`
+	WebServiceTotalFilesSent                      float64 `perfdata:"Total Files Sent"`
+	WebServiceTotalISAPIExtensionRequests         float64 `perfdata:"Total ISAPI Extension Requests"`
+	WebServiceTotalLockedErrors                   float64 `perfdata:"Total Locked Errors"`
+	WebServiceTotalLogonAttempts                  float64 `perfdata:"Total Logon Attempts"`
+	WebServiceTotalNonAnonymousUsers              float64 `perfdata:"Total NonAnonymous Users"`
+	WebServiceTotalNotFoundErrors                 float64 `perfdata:"Total Not Found Errors"`
+	WebServiceTotalRejectedAsyncIORequests        float64 `perfdata:"Total Rejected Async I/O Requests"`
+	WebServiceTotalCopyRequests                   float64 `perfdata:"Total Copy Requests"`
+	WebServiceTotalDeleteRequests                 float64 `perfdata:"Total Delete Requests"`
+	WebServiceTotalGetRequests                    float64 `perfdata:"Total Get Requests"`
+	WebServiceTotalHeadRequests                   float64 `perfdata:"Total Head Requests"`
+	WebServiceTotalLockRequests                   float64 `perfdata:"Total Lock Requests"`
+	WebServiceTotalMkcolRequests                  float64 `perfdata:"Total Mkcol Requests"`
+	WebServiceTotalMoveRequests                   float64 `perfdata:"Total Move Requests"`
+	WebServiceTotalOptionsRequests                float64 `perfdata:"Total Options Requests"`
+	WebServiceTotalOtherRequests                  float64 `perfdata:"Total Other Request Methods"`
+	WebServiceTotalPostRequests                   float64 `perfdata:"Total Post Requests"`
+	WebServiceTotalPropfindRequests               float64 `perfdata:"Total Propfind Requests"`
+	WebServiceTotalProppatchRequests              float64 `perfdata:"Total Proppatch Requests"`
+	WebServiceTotalPutRequests                    float64 `perfdata:"Total Put Requests"`
+	WebServiceTotalSearchRequests                 float64 `perfdata:"Total Search Requests"`
+	WebServiceTotalTraceRequests                  float64 `perfdata:"Total Trace Requests"`
+	WebServiceTotalUnlockRequests                 float64 `perfdata:"Total Unlock Requests"`
+}
+
+func (p perfDataCounterValuesWebService) GetName() string {
+	return p.Name
+}
 
 func (c *Collector) buildWebService() error {
 	var err error
 
-	c.perfDataCollectorWebService, err = perfdata.NewCollector("Web Service", perfdata.InstancesAll, []string{
-		webServiceCurrentAnonymousUsers,
-		webServiceCurrentBlockedAsyncIORequests,
-		webServiceCurrentCGIRequests,
-		webServiceCurrentConnections,
-		webServiceCurrentISAPIExtensionRequests,
-		webServiceCurrentNonAnonymousUsers,
-		webServiceServiceUptime,
-		webServiceTotalBytesReceived,
-		webServiceTotalBytesSent,
-		webServiceTotalAnonymousUsers,
-		webServiceTotalBlockedAsyncIORequests,
-		webServiceTotalCGIRequests,
-		webServiceTotalConnectionAttemptsAllInstances,
-		webServiceTotalFilesReceived,
-		webServiceTotalFilesSent,
-		webServiceTotalISAPIExtensionRequests,
-		webServiceTotalLockedErrors,
-		webServiceTotalLogonAttempts,
-		webServiceTotalNonAnonymousUsers,
-		webServiceTotalNotFoundErrors,
-		webServiceTotalRejectedAsyncIORequests,
-		webServiceTotalCopyRequests,
-		webServiceTotalDeleteRequests,
-		webServiceTotalGetRequests,
-		webServiceTotalHeadRequests,
-		webServiceTotalLockRequests,
-		webServiceTotalMkcolRequests,
-		webServiceTotalMoveRequests,
-		webServiceTotalOptionsRequests,
-		webServiceTotalOtherRequests,
-		webServiceTotalPostRequests,
-		webServiceTotalPropfindRequests,
-		webServiceTotalProppatchRequests,
-		webServiceTotalPutRequests,
-		webServiceTotalSearchRequests,
-		webServiceTotalTraceRequests,
-		webServiceTotalUnlockRequests,
-	})
+	c.perfDataCollectorWebService, err = pdh.NewCollector[perfDataCounterValuesWebService]("Web Service", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create Web Service collector: %w", err)
 	}
@@ -273,254 +242,254 @@ func (c *Collector) buildWebService() error {
 }
 
 func (c *Collector) collectWebService(ch chan<- prometheus.Metric) error {
-	perfData, err := c.perfDataCollectorWebService.Collect()
+	err := c.perfDataCollectorWebService.Collect(&c.perfDataObjectWebService)
 	if err != nil {
 		return fmt.Errorf("failed to collect Web Service metrics: %w", err)
 	}
 
-	deduplicateIISNames(perfData)
+	deduplicateIISNames(c.perfDataObjectWebService)
 
-	for name, app := range perfData {
-		if c.config.SiteExclude.MatchString(name) || !c.config.SiteInclude.MatchString(name) {
+	for _, data := range c.perfDataObjectWebService {
+		if c.config.SiteExclude.MatchString(data.Name) || !c.config.SiteInclude.MatchString(data.Name) {
 			continue
 		}
 
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceCurrentAnonymousUsers,
 			prometheus.GaugeValue,
-			app[webServiceCurrentAnonymousUsers].FirstValue,
-			name,
+			data.WebServiceCurrentAnonymousUsers,
+			data.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceCurrentBlockedAsyncIORequests,
 			prometheus.GaugeValue,
-			app[webServiceCurrentBlockedAsyncIORequests].FirstValue,
-			name,
+			data.WebServiceCurrentBlockedAsyncIORequests,
+			data.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceCurrentCGIRequests,
 			prometheus.GaugeValue,
-			app[webServiceCurrentCGIRequests].FirstValue,
-			name,
+			data.WebServiceCurrentCGIRequests,
+			data.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceCurrentConnections,
 			prometheus.GaugeValue,
-			app[webServiceCurrentConnections].FirstValue,
-			name,
+			data.WebServiceCurrentConnections,
+			data.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceCurrentISAPIExtensionRequests,
 			prometheus.GaugeValue,
-			app[webServiceCurrentISAPIExtensionRequests].FirstValue,
-			name,
+			data.WebServiceCurrentISAPIExtensionRequests,
+			data.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceCurrentNonAnonymousUsers,
 			prometheus.GaugeValue,
-			app[webServiceCurrentNonAnonymousUsers].FirstValue,
-			name,
+			data.WebServiceCurrentNonAnonymousUsers,
+			data.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceServiceUptime,
 			prometheus.GaugeValue,
-			app[webServiceServiceUptime].FirstValue,
-			name,
+			data.WebServiceServiceUptime,
+			data.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalBytesReceived,
 			prometheus.CounterValue,
-			app[webServiceTotalBytesReceived].FirstValue,
-			name,
+			data.WebServiceTotalBytesReceived,
+			data.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalBytesSent,
 			prometheus.CounterValue,
-			app[webServiceTotalBytesSent].FirstValue,
-			name,
+			data.WebServiceTotalBytesSent,
+			data.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalAnonymousUsers,
 			prometheus.CounterValue,
-			app[webServiceTotalAnonymousUsers].FirstValue,
-			name,
+			data.WebServiceTotalAnonymousUsers,
+			data.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalBlockedAsyncIORequests,
 			prometheus.CounterValue,
-			app[webServiceTotalBlockedAsyncIORequests].FirstValue,
-			name,
+			data.WebServiceTotalBlockedAsyncIORequests,
+			data.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalCGIRequests,
 			prometheus.CounterValue,
-			app[webServiceTotalCGIRequests].FirstValue,
-			name,
+			data.WebServiceTotalCGIRequests,
+			data.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalConnectionAttemptsAllInstances,
 			prometheus.CounterValue,
-			app[webServiceTotalConnectionAttemptsAllInstances].FirstValue,
-			name,
+			data.WebServiceTotalConnectionAttemptsAllInstances,
+			data.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalFilesReceived,
 			prometheus.CounterValue,
-			app[webServiceTotalFilesReceived].FirstValue,
-			name,
+			data.WebServiceTotalFilesReceived,
+			data.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalFilesSent,
 			prometheus.CounterValue,
-			app[webServiceTotalFilesSent].FirstValue,
-			name,
+			data.WebServiceTotalFilesSent,
+			data.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalISAPIExtensionRequests,
 			prometheus.CounterValue,
-			app[webServiceTotalISAPIExtensionRequests].FirstValue,
-			name,
+			data.WebServiceTotalISAPIExtensionRequests,
+			data.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalLockedErrors,
 			prometheus.CounterValue,
-			app[webServiceTotalLockedErrors].FirstValue,
-			name,
+			data.WebServiceTotalLockedErrors,
+			data.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalLogonAttempts,
 			prometheus.CounterValue,
-			app[webServiceTotalLogonAttempts].FirstValue,
-			name,
+			data.WebServiceTotalLogonAttempts,
+			data.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalNonAnonymousUsers,
 			prometheus.CounterValue,
-			app[webServiceTotalNonAnonymousUsers].FirstValue,
-			name,
+			data.WebServiceTotalNonAnonymousUsers,
+			data.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalNotFoundErrors,
 			prometheus.CounterValue,
-			app[webServiceTotalNotFoundErrors].FirstValue,
-			name,
+			data.WebServiceTotalNotFoundErrors,
+			data.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalRejectedAsyncIORequests,
 			prometheus.CounterValue,
-			app[webServiceTotalRejectedAsyncIORequests].FirstValue,
-			name,
+			data.WebServiceTotalRejectedAsyncIORequests,
+			data.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalRequests,
 			prometheus.CounterValue,
-			app[webServiceTotalOtherRequests].FirstValue,
-			name,
+			data.WebServiceTotalOtherRequests,
+			data.Name,
 			"other",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalRequests,
 			prometheus.CounterValue,
-			app[webServiceTotalCopyRequests].FirstValue,
-			name,
+			data.WebServiceTotalCopyRequests,
+			data.Name,
 			"COPY",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalRequests,
 			prometheus.CounterValue,
-			app[webServiceTotalDeleteRequests].FirstValue,
-			name,
+			data.WebServiceTotalDeleteRequests,
+			data.Name,
 			"DELETE",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalRequests,
 			prometheus.CounterValue,
-			app[webServiceTotalGetRequests].FirstValue,
-			name,
+			data.WebServiceTotalGetRequests,
+			data.Name,
 			"GET",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalRequests,
 			prometheus.CounterValue,
-			app[webServiceTotalHeadRequests].FirstValue,
-			name,
+			data.WebServiceTotalHeadRequests,
+			data.Name,
 			"HEAD",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalRequests,
 			prometheus.CounterValue,
-			app[webServiceTotalLockRequests].FirstValue,
-			name,
+			data.WebServiceTotalLockRequests,
+			data.Name,
 			"LOCK",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalRequests,
 			prometheus.CounterValue,
-			app[webServiceTotalMkcolRequests].FirstValue,
-			name,
+			data.WebServiceTotalMkcolRequests,
+			data.Name,
 			"MKCOL",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalRequests,
 			prometheus.CounterValue,
-			app[webServiceTotalMoveRequests].FirstValue,
-			name,
+			data.WebServiceTotalMoveRequests,
+			data.Name,
 			"MOVE",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalRequests,
 			prometheus.CounterValue,
-			app[webServiceTotalOptionsRequests].FirstValue,
-			name,
+			data.WebServiceTotalOptionsRequests,
+			data.Name,
 			"OPTIONS",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalRequests,
 			prometheus.CounterValue,
-			app[webServiceTotalPostRequests].FirstValue,
-			name,
+			data.WebServiceTotalPostRequests,
+			data.Name,
 			"POST",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalRequests,
 			prometheus.CounterValue,
-			app[webServiceTotalPropfindRequests].FirstValue,
-			name,
+			data.WebServiceTotalPropfindRequests,
+			data.Name,
 			"PROPFIND",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalRequests,
 			prometheus.CounterValue,
-			app[webServiceTotalProppatchRequests].FirstValue,
-			name,
+			data.WebServiceTotalProppatchRequests,
+			data.Name,
 			"PROPPATCH",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalRequests,
 			prometheus.CounterValue,
-			app[webServiceTotalPutRequests].FirstValue,
-			name,
+			data.WebServiceTotalPutRequests,
+			data.Name,
 			"PUT",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalRequests,
 			prometheus.CounterValue,
-			app[webServiceTotalSearchRequests].FirstValue,
-			name,
+			data.WebServiceTotalSearchRequests,
+			data.Name,
 			"SEARCH",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalRequests,
 			prometheus.CounterValue,
-			app[webServiceTotalTraceRequests].FirstValue,
-			name,
+			data.WebServiceTotalTraceRequests,
+			data.Name,
 			"TRACE",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalRequests,
 			prometheus.CounterValue,
-			app[webServiceTotalUnlockRequests].FirstValue,
-			name,
+			data.WebServiceTotalUnlockRequests,
+			data.Name,
 			"UNLOCK",
 		)
 	}

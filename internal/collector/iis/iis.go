@@ -19,14 +19,12 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"maps"
 	"regexp"
 	"slices"
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows/registry"
@@ -270,26 +268,36 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	return errors.Join(errs...)
 }
 
+type collectorName interface {
+	GetName() string
+}
+
 // deduplicateIISNames deduplicate IIS site names from various IIS perflib objects.
 //
 // E.G. Given the following list of site names, "Site_B" would be
 // discarded, and "Site_B#2" would be kept and presented as "Site_B" in the
 // Collector metrics.
 // [ "Site_A", "Site_B", "Site_C", "Site_B#2" ].
-func deduplicateIISNames(counterValues map[string]map[string]perfdata.CounterValue) {
-	services := slices.Collect(maps.Keys(counterValues))
+func deduplicateIISNames[T collectorName](counterValues []T) {
+	indexes := make(map[string]int)
 
 	// Ensure IIS entry with the highest suffix occurs last
-	slices.Sort(services)
+	slices.SortFunc(counterValues, func(a, b T) int {
+		return strings.Compare(a.GetName(), b.GetName())
+	})
 
 	// Use map to deduplicate IIS entries
-	for _, entry := range services {
-		name := strings.Split(entry, "#")[0]
-		if name == entry {
+	for index, counterValue := range counterValues {
+		name := strings.Split(counterValue.GetName(), "#")[0]
+		if name == counterValue.GetName() {
 			continue
 		}
 
-		counterValues[name] = counterValues[entry]
-		delete(counterValues, entry)
+		if originalIndex, ok := indexes[name]; !ok {
+			counterValues[originalIndex] = counterValue
+			counterValues = slices.Delete(counterValues, index, 1)
+		} else {
+			indexes[name] = index
+		}
 	}
 }

@@ -18,14 +18,15 @@ package hyperv
 import (
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 // collectorDataStore Hyper-V DataStore metrics
 type collectorDataStore struct {
-	perfDataCollectorDataStore *perfdata.Collector
+	perfDataCollectorDataStore *pdh.Collector
+	perfDataObjectDataStore    []perfDataCounterValuesDataStore
 
 	dataStoreFragmentationRatio          *prometheus.Desc // \Hyper-V DataStore(*)\Fragmentation ratio
 	dataStoreSectorSize                  *prometheus.Desc // \Hyper-V DataStore(*)\Sector size
@@ -75,107 +76,61 @@ type collectorDataStore struct {
 	dataStoreSetOperationCount           *prometheus.Desc // \Hyper-V DataStore(*)\Set operation count
 }
 
-const (
+type perfDataCounterValuesDataStore struct {
+	Name string
 	// Hyper-V DataStore metrics
-	dataStoreFragmentationRatio          = "Fragmentation ratio"
-	dataStoreSectorSize                  = "Sector size"
-	dataStoreDataAlignment               = "Data alignment"
-	dataStoreCurrentReplayLogSize        = "Current replay logSize"
-	dataStoreAvailableEntries            = "Number of available entries inside object tables"
-	dataStoreEmptyEntries                = "Number of empty entries inside object tables"
-	dataStoreFreeBytes                   = "Number of free bytes inside key tables"
-	dataStoreDataEnd                     = "Data end"
-	dataStoreFileObjects                 = "Number of file objects"
-	dataStoreObjectTables                = "Number of object tables"
-	dataStoreKeyTables                   = "Number of key tables"
-	dataStoreFileDataSize                = "File data size in bytes"
-	dataStoreTableDataSize               = "Table data size in bytes"
-	dataStoreNamesSize                   = "Names size in bytes"
-	dataStoreNumberOfKeys                = "Number of keys"
-	dataStoreReconnectLatencyMicro       = "Reconnect latency microseconds"
-	dataStoreDisconnectCount             = "Disconnect count"
-	dataStoreWriteToFileByteLatency      = "Write to file byte latency microseconds"
-	dataStoreWriteToFileByteCount        = "Write to file byte count"
-	dataStoreWriteToFileCount            = "Write to file count"
-	dataStoreReadFromFileByteLatency     = "Read from file byte latency microseconds"
-	dataStoreReadFromFileByteCount       = "Read from file byte count"
-	dataStoreReadFromFileCount           = "Read from file count"
-	dataStoreWriteToStorageByteLatency   = "Write to storage byte latency microseconds"
-	dataStoreWriteToStorageByteCount     = "Write to storage byte count"
-	dataStoreWriteToStorageCount         = "Write to storage count"
-	dataStoreReadFromStorageByteLatency  = "Read from storage byte latency microseconds"
-	dataStoreReadFromStorageByteCount    = "Read from storage byte count"
-	dataStoreReadFromStorageCount        = "Read from storage count"
-	dataStoreCommitByteLatency           = "Commit byte latency microseconds"
-	dataStoreCommitByteCount             = "Commit byte count"
-	dataStoreCommitCount                 = "Commit count"
-	dataStoreCacheUpdateOperationLatency = "Cache update operation latency microseconds"
-	dataStoreCacheUpdateOperationCount   = "Cache update operation count"
-	dataStoreCommitOperationLatency      = "Commit operation latency microseconds"
-	dataStoreCommitOperationCount        = "Commit operation count"
-	dataStoreCompactOperationLatency     = "Compact operation latency microseconds"
-	dataStoreCompactOperationCount       = "Compact operation count"
-	dataStoreLoadFileOperationLatency    = "Load file operation latency microseconds"
-	dataStoreLoadFileOperationCount      = "Load file operation count"
-	dataStoreRemoveOperationLatency      = "Remove operation latency microseconds"
-	dataStoreRemoveOperationCount        = "Remove operation count"
-	dataStoreQuerySizeOperationLatency   = "Query size operation latency microseconds"
-	dataStoreQuerySizeOperationCount     = "Query size operation count"
-	dataStoreSetOperationLatencyMicro    = "Set operation latency microseconds"
-	dataStoreSetOperationCount           = "Set operation count"
-)
+	DataStoreFragmentationRatio          float64 `perfdata:"Fragmentation ratio"`
+	DataStoreSectorSize                  float64 `perfdata:"Sector size"`
+	DataStoreDataAlignment               float64 `perfdata:"Data alignment"`
+	DataStoreCurrentReplayLogSize        float64 `perfdata:"Current replay logSize"`
+	DataStoreAvailableEntries            float64 `perfdata:"Number of available entries inside object tables"`
+	DataStoreEmptyEntries                float64 `perfdata:"Number of empty entries inside object tables"`
+	DataStoreFreeBytes                   float64 `perfdata:"Number of free bytes inside key tables"`
+	DataStoreDataEnd                     float64 `perfdata:"Data end"`
+	DataStoreFileObjects                 float64 `perfdata:"Number of file objects"`
+	DataStoreObjectTables                float64 `perfdata:"Number of object tables"`
+	DataStoreKeyTables                   float64 `perfdata:"Number of key tables"`
+	DataStoreFileDataSize                float64 `perfdata:"File data size in bytes"`
+	DataStoreTableDataSize               float64 `perfdata:"Table data size in bytes"`
+	DataStoreNamesSize                   float64 `perfdata:"Names size in bytes"`
+	DataStoreNumberOfKeys                float64 `perfdata:"Number of keys"`
+	DataStoreReconnectLatencyMicro       float64 `perfdata:"Reconnect latency microseconds"`
+	DataStoreDisconnectCount             float64 `perfdata:"Disconnect count"`
+	DataStoreWriteToFileByteLatency      float64 `perfdata:"Write to file byte latency microseconds"`
+	DataStoreWriteToFileByteCount        float64 `perfdata:"Write to file byte count"`
+	DataStoreWriteToFileCount            float64 `perfdata:"Write to file count"`
+	DataStoreReadFromFileByteLatency     float64 `perfdata:"Read from file byte latency microseconds"`
+	DataStoreReadFromFileByteCount       float64 `perfdata:"Read from file byte count"`
+	DataStoreReadFromFileCount           float64 `perfdata:"Read from file count"`
+	DataStoreWriteToStorageByteLatency   float64 `perfdata:"Write to storage byte latency microseconds"`
+	DataStoreWriteToStorageByteCount     float64 `perfdata:"Write to storage byte count"`
+	DataStoreWriteToStorageCount         float64 `perfdata:"Write to storage count"`
+	DataStoreReadFromStorageByteLatency  float64 `perfdata:"Read from storage byte latency microseconds"`
+	DataStoreReadFromStorageByteCount    float64 `perfdata:"Read from storage byte count"`
+	DataStoreReadFromStorageCount        float64 `perfdata:"Read from storage count"`
+	DataStoreCommitByteLatency           float64 `perfdata:"Commit byte latency microseconds"`
+	DataStoreCommitByteCount             float64 `perfdata:"Commit byte count"`
+	DataStoreCommitCount                 float64 `perfdata:"Commit count"`
+	DataStoreCacheUpdateOperationLatency float64 `perfdata:"Cache update operation latency microseconds"`
+	DataStoreCacheUpdateOperationCount   float64 `perfdata:"Cache update operation count"`
+	DataStoreCommitOperationLatency      float64 `perfdata:"Commit operation latency microseconds"`
+	DataStoreCommitOperationCount        float64 `perfdata:"Commit operation count"`
+	DataStoreCompactOperationLatency     float64 `perfdata:"Compact operation latency microseconds"`
+	DataStoreCompactOperationCount       float64 `perfdata:"Compact operation count"`
+	DataStoreLoadFileOperationLatency    float64 `perfdata:"Load file operation latency microseconds"`
+	DataStoreLoadFileOperationCount      float64 `perfdata:"Load file operation count"`
+	DataStoreRemoveOperationLatency      float64 `perfdata:"Remove operation latency microseconds"`
+	DataStoreRemoveOperationCount        float64 `perfdata:"Remove operation count"`
+	DataStoreQuerySizeOperationLatency   float64 `perfdata:"Query size operation latency microseconds"`
+	DataStoreQuerySizeOperationCount     float64 `perfdata:"Query size operation count"`
+	DataStoreSetOperationLatencyMicro    float64 `perfdata:"Set operation latency microseconds"`
+	DataStoreSetOperationCount           float64 `perfdata:"Set operation count"`
+}
 
 func (c *Collector) buildDataStore() error {
 	var err error
 
-	c.perfDataCollectorDataStore, err = perfdata.NewCollector("Hyper-V DataStore", perfdata.InstancesAll, []string{
-		dataStoreFragmentationRatio,
-		dataStoreSectorSize,
-		dataStoreDataAlignment,
-		dataStoreCurrentReplayLogSize,
-		dataStoreAvailableEntries,
-		dataStoreEmptyEntries,
-		dataStoreFreeBytes,
-		dataStoreDataEnd,
-		dataStoreFileObjects,
-		dataStoreObjectTables,
-		dataStoreKeyTables,
-		dataStoreFileDataSize,
-		dataStoreTableDataSize,
-		dataStoreNamesSize,
-		dataStoreNumberOfKeys,
-		dataStoreReconnectLatencyMicro,
-		dataStoreDisconnectCount,
-		dataStoreWriteToFileByteLatency,
-		dataStoreWriteToFileByteCount,
-		dataStoreWriteToFileCount,
-		dataStoreReadFromFileByteLatency,
-		dataStoreReadFromFileByteCount,
-		dataStoreReadFromFileCount,
-		dataStoreWriteToStorageByteLatency,
-		dataStoreWriteToStorageByteCount,
-		dataStoreWriteToStorageCount,
-		dataStoreReadFromStorageByteLatency,
-		dataStoreReadFromStorageByteCount,
-		dataStoreReadFromStorageCount,
-		dataStoreCommitByteLatency,
-		dataStoreCommitByteCount,
-		dataStoreCommitCount,
-		dataStoreCacheUpdateOperationLatency,
-		dataStoreCacheUpdateOperationCount,
-		dataStoreCommitOperationLatency,
-		dataStoreCommitOperationCount,
-		dataStoreCompactOperationLatency,
-		dataStoreCompactOperationCount,
-		dataStoreLoadFileOperationLatency,
-		dataStoreLoadFileOperationCount,
-		dataStoreRemoveOperationLatency,
-		dataStoreRemoveOperationCount,
-		dataStoreQuerySizeOperationLatency,
-		dataStoreQuerySizeOperationCount,
-		dataStoreSetOperationLatencyMicro,
-		dataStoreSetOperationCount,
-	})
+	c.perfDataCollectorDataStore, err = pdh.NewCollector[perfDataCounterValuesDataStore]("Hyper-V DataStore", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create Hyper-V DataStore collector: %w", err)
 	}
@@ -461,332 +416,332 @@ func (c *Collector) buildDataStore() error {
 }
 
 func (c *Collector) collectDataStore(ch chan<- prometheus.Metric) error {
-	data, err := c.perfDataCollectorDataStore.Collect()
+	err := c.perfDataCollectorDataStore.Collect(&c.perfDataObjectDataStore)
 	if err != nil {
 		return fmt.Errorf("failed to collect Hyper-V DataStore metrics: %w", err)
 	}
 
-	for name, page := range data {
+	for _, data := range c.perfDataObjectDataStore {
 		ch <- prometheus.MustNewConstMetric(
 			c.dataStoreFragmentationRatio,
 			prometheus.GaugeValue,
-			page[dataStoreFragmentationRatio].FirstValue,
-			name,
+			data.DataStoreFragmentationRatio,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dataStoreSectorSize,
 			prometheus.GaugeValue,
-			page[dataStoreSectorSize].FirstValue,
-			name,
+			data.DataStoreSectorSize,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dataStoreDataAlignment,
 			prometheus.GaugeValue,
-			page[dataStoreDataAlignment].FirstValue,
-			name,
+			data.DataStoreDataAlignment,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dataStoreCurrentReplayLogSize,
 			prometheus.GaugeValue,
-			page[dataStoreCurrentReplayLogSize].FirstValue,
-			name,
+			data.DataStoreCurrentReplayLogSize,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dataStoreAvailableEntries,
 			prometheus.GaugeValue,
-			page[dataStoreAvailableEntries].FirstValue,
-			name,
+			data.DataStoreAvailableEntries,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dataStoreEmptyEntries,
 			prometheus.GaugeValue,
-			page[dataStoreEmptyEntries].FirstValue,
-			name,
+			data.DataStoreEmptyEntries,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dataStoreFreeBytes,
 			prometheus.GaugeValue,
-			page[dataStoreFreeBytes].FirstValue,
-			name,
+			data.DataStoreFreeBytes,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dataStoreDataEnd,
 			prometheus.GaugeValue,
-			page[dataStoreDataEnd].FirstValue,
-			name,
+			data.DataStoreDataEnd,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dataStoreFileObjects,
 			prometheus.GaugeValue,
-			page[dataStoreFileObjects].FirstValue,
-			name,
+			data.DataStoreFileObjects,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dataStoreObjectTables,
 			prometheus.GaugeValue,
-			page[dataStoreObjectTables].FirstValue,
-			name,
+			data.DataStoreObjectTables,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dataStoreKeyTables,
 			prometheus.GaugeValue,
-			page[dataStoreKeyTables].FirstValue,
-			name,
+			data.DataStoreKeyTables,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dataStoreFileDataSize,
 			prometheus.GaugeValue,
-			page[dataStoreFileDataSize].FirstValue,
-			name,
+			data.DataStoreFileDataSize,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dataStoreTableDataSize,
 			prometheus.GaugeValue,
-			page[dataStoreTableDataSize].FirstValue,
-			name,
+			data.DataStoreTableDataSize,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dataStoreNamesSize,
 			prometheus.GaugeValue,
-			page[dataStoreNamesSize].FirstValue,
-			name,
+			data.DataStoreNamesSize,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dataStoreNumberOfKeys,
 			prometheus.GaugeValue,
-			page[dataStoreNumberOfKeys].FirstValue,
-			name,
+			data.DataStoreNumberOfKeys,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dataStoreReconnectLatencyMicro,
 			prometheus.GaugeValue,
-			page[dataStoreReconnectLatencyMicro].FirstValue,
-			name,
+			data.DataStoreReconnectLatencyMicro,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dataStoreDisconnectCount,
 			prometheus.CounterValue,
-			page[dataStoreDisconnectCount].FirstValue,
-			name,
+			data.DataStoreDisconnectCount,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dataStoreWriteToFileByteLatency,
 			prometheus.GaugeValue,
-			page[dataStoreWriteToFileByteLatency].FirstValue,
-			name,
+			data.DataStoreWriteToFileByteLatency,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dataStoreWriteToFileByteCount,
 			prometheus.CounterValue,
-			page[dataStoreWriteToFileByteCount].FirstValue,
-			name,
+			data.DataStoreWriteToFileByteCount,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dataStoreWriteToFileCount,
 			prometheus.CounterValue,
-			page[dataStoreWriteToFileCount].FirstValue,
-			name,
+			data.DataStoreWriteToFileCount,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dataStoreReadFromFileByteLatency,
 			prometheus.GaugeValue,
-			page[dataStoreReadFromFileByteLatency].FirstValue,
-			name,
+			data.DataStoreReadFromFileByteLatency,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dataStoreReadFromFileByteCount,
 			prometheus.CounterValue,
-			page[dataStoreReadFromFileByteCount].FirstValue,
-			name,
+			data.DataStoreReadFromFileByteCount,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dataStoreReadFromFileCount,
 			prometheus.CounterValue,
-			page[dataStoreReadFromFileCount].FirstValue,
-			name,
+			data.DataStoreReadFromFileCount,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dataStoreWriteToStorageByteLatency,
 			prometheus.GaugeValue,
-			page[dataStoreWriteToStorageByteLatency].FirstValue,
-			name,
+			data.DataStoreWriteToStorageByteLatency,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dataStoreWriteToStorageByteCount,
 			prometheus.CounterValue,
-			page[dataStoreWriteToStorageByteCount].FirstValue,
-			name,
+			data.DataStoreWriteToStorageByteCount,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dataStoreWriteToStorageCount,
 			prometheus.CounterValue,
-			page[dataStoreWriteToStorageCount].FirstValue,
-			name,
+			data.DataStoreWriteToStorageCount,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dataStoreReadFromStorageByteLatency,
 			prometheus.GaugeValue,
-			page[dataStoreReadFromStorageByteLatency].FirstValue,
-			name,
+			data.DataStoreReadFromStorageByteLatency,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dataStoreReadFromStorageByteCount,
 			prometheus.CounterValue,
-			page[dataStoreReadFromStorageByteCount].FirstValue,
-			name,
+			data.DataStoreReadFromStorageByteCount,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dataStoreReadFromStorageCount,
 			prometheus.CounterValue,
-			page[dataStoreReadFromStorageCount].FirstValue,
-			name,
+			data.DataStoreReadFromStorageCount,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dataStoreCommitByteLatency,
 			prometheus.GaugeValue,
-			page[dataStoreCommitByteLatency].FirstValue,
-			name,
+			data.DataStoreCommitByteLatency,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dataStoreCommitByteCount,
 			prometheus.CounterValue,
-			page[dataStoreCommitByteCount].FirstValue,
-			name,
+			data.DataStoreCommitByteCount,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dataStoreCommitCount,
 			prometheus.CounterValue,
-			page[dataStoreCommitCount].FirstValue,
-			name,
+			data.DataStoreCommitCount,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dataStoreCacheUpdateOperationLatency,
 			prometheus.GaugeValue,
-			page[dataStoreCacheUpdateOperationLatency].FirstValue,
-			name,
+			data.DataStoreCacheUpdateOperationLatency,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dataStoreCacheUpdateOperationCount,
 			prometheus.CounterValue,
-			page[dataStoreCacheUpdateOperationCount].FirstValue,
-			name,
+			data.DataStoreCacheUpdateOperationCount,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dataStoreCommitOperationLatency,
 			prometheus.GaugeValue,
-			page[dataStoreCommitOperationLatency].FirstValue,
-			name,
+			data.DataStoreCommitOperationLatency,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dataStoreCommitOperationCount,
 			prometheus.CounterValue,
-			page[dataStoreCommitOperationCount].FirstValue,
-			name,
+			data.DataStoreCommitOperationCount,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dataStoreCompactOperationLatency,
 			prometheus.GaugeValue,
-			page[dataStoreCompactOperationLatency].FirstValue,
-			name,
+			data.DataStoreCompactOperationLatency,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dataStoreCompactOperationCount,
 			prometheus.CounterValue,
-			page[dataStoreCompactOperationCount].FirstValue,
-			name,
+			data.DataStoreCompactOperationCount,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dataStoreLoadFileOperationLatency,
 			prometheus.GaugeValue,
-			page[dataStoreLoadFileOperationLatency].FirstValue,
-			name,
+			data.DataStoreLoadFileOperationLatency,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dataStoreLoadFileOperationCount,
 			prometheus.CounterValue,
-			page[dataStoreLoadFileOperationCount].FirstValue,
-			name,
+			data.DataStoreLoadFileOperationCount,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dataStoreRemoveOperationLatency,
 			prometheus.GaugeValue,
-			page[dataStoreRemoveOperationLatency].FirstValue,
-			name,
+			data.DataStoreRemoveOperationLatency,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dataStoreRemoveOperationCount,
 			prometheus.CounterValue,
-			page[dataStoreRemoveOperationCount].FirstValue,
-			name,
+			data.DataStoreRemoveOperationCount,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dataStoreQuerySizeOperationLatency,
 			prometheus.GaugeValue,
-			page[dataStoreQuerySizeOperationLatency].FirstValue,
-			name,
+			data.DataStoreQuerySizeOperationLatency,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dataStoreQuerySizeOperationCount,
 			prometheus.CounterValue,
-			page[dataStoreQuerySizeOperationCount].FirstValue,
-			name,
+			data.DataStoreQuerySizeOperationCount,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dataStoreSetOperationLatencyMicro,
 			prometheus.GaugeValue,
-			page[dataStoreSetOperationLatencyMicro].FirstValue,
-			name,
+			data.DataStoreSetOperationLatencyMicro,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dataStoreSetOperationCount,
 			prometheus.CounterValue,
-			page[dataStoreSetOperationCount].FirstValue,
-			name,
+			data.DataStoreSetOperationCount,
+			data.Name,
 		)
 	}
 

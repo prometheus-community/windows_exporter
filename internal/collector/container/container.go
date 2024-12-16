@@ -24,7 +24,7 @@ import (
 	"github.com/Microsoft/hcsshim"
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -322,19 +322,19 @@ func (c *Collector) collectContainer(ch chan<- prometheus.Metric, containerDetai
 	ch <- prometheus.MustNewConstMetric(
 		c.runtimeTotal,
 		prometheus.CounterValue,
-		float64(containerStats.Processor.TotalRuntime100ns)*perfdata.TicksToSecondScaleFactor,
+		float64(containerStats.Processor.TotalRuntime100ns)*pdh.TicksToSecondScaleFactor,
 		containerIdWithPrefix,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.runtimeUser,
 		prometheus.CounterValue,
-		float64(containerStats.Processor.RuntimeUser100ns)*perfdata.TicksToSecondScaleFactor,
+		float64(containerStats.Processor.RuntimeUser100ns)*pdh.TicksToSecondScaleFactor,
 		containerIdWithPrefix,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.runtimeKernel,
 		prometheus.CounterValue,
-		float64(containerStats.Processor.RuntimeKernel100ns)*perfdata.TicksToSecondScaleFactor,
+		float64(containerStats.Processor.RuntimeKernel100ns)*pdh.TicksToSecondScaleFactor,
 		containerIdWithPrefix,
 	)
 	ch <- prometheus.MustNewConstMetric(

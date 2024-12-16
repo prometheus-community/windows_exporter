@@ -21,7 +21,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -36,7 +36,8 @@ var ConfigDefaults = Config{}
 // A Collector is a Prometheus Collector for WMI Win32_PerfRawData_MSMQ_MSMQQueue metrics.
 type Collector struct {
 	config            Config
-	perfDataCollector *perfdata.Collector
+	perfDataCollector *pdh.Collector
+	perfDataObject    []perfDataCounterValues
 
 	bytesInJournalQueue    *prometheus.Desc
 	bytesInQueue           *prometheus.Desc
@@ -75,12 +76,7 @@ func (c *Collector) Close() error {
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 	var err error
 
-	c.perfDataCollector, err = perfdata.NewCollector("MSMQ Queue", perfdata.InstancesAll, []string{
-		bytesInJournalQueue,
-		bytesInQueue,
-		messagesInJournalQueue,
-		messagesInQueue,
-	})
+	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues]("MSMQ Queue", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create MSMQ Queue collector: %w", err)
 	}
@@ -116,38 +112,38 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
-	perfData, err := c.perfDataCollector.Collect()
+	err := c.perfDataCollector.Collect(&c.perfDataObject)
 	if err != nil {
 		return fmt.Errorf("failed to collect MSMQ Queue metrics: %w", err)
 	}
 
-	for name, data := range perfData {
+	for _, data := range c.perfDataObject {
 		ch <- prometheus.MustNewConstMetric(
 			c.bytesInJournalQueue,
 			prometheus.GaugeValue,
-			data[bytesInJournalQueue].FirstValue,
-			name,
+			data.BytesInJournalQueue,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.bytesInQueue,
 			prometheus.GaugeValue,
-			data[bytesInQueue].FirstValue,
-			name,
+			data.BytesInQueue,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.messagesInJournalQueue,
 			prometheus.GaugeValue,
-			data[messagesInJournalQueue].FirstValue,
-			name,
+			data.MessagesInJournalQueue,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.messagesInQueue,
 			prometheus.GaugeValue,
-			data[messagesInQueue].FirstValue,
-			name,
+			data.MessagesInQueue,
+			data.Name,
 		)
 	}
 

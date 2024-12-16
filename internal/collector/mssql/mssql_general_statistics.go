@@ -19,13 +19,14 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 type collectorGeneralStatistics struct {
-	genStatsPerfDataCollectors map[string]*perfdata.Collector
+	genStatsPerfDataCollectors map[string]*pdh.Collector
+	genStatsPerfDataObject     []perfDataCounterValuesGenStats
 
 	genStatsActiveTempTables              *prometheus.Desc
 	genStatsConnectionReset               *prometheus.Desc
@@ -53,67 +54,43 @@ type collectorGeneralStatistics struct {
 	genStatsUserConnections               *prometheus.Desc
 }
 
-const (
-	genStatsActiveTempTables              = "Active Temp Tables"
-	genStatsConnectionResetPerSec         = "Connection Reset/sec"
-	genStatsEventNotificationsDelayedDrop = "Event Notifications Delayed Drop"
-	genStatsHTTPAuthenticatedRequests     = "HTTP Authenticated Requests"
-	genStatsLogicalConnections            = "Logical Connections"
-	genStatsLoginsPerSec                  = "Logins/sec"
-	genStatsLogoutsPerSec                 = "Logouts/sec"
-	genStatsMarsDeadlocks                 = "Mars Deadlocks"
-	genStatsNonatomicYieldRate            = "Non-atomic yield rate"
-	genStatsProcessesBlocked              = "Processes blocked"
-	genStatsSOAPEmptyRequests             = "SOAP Empty Requests"
-	genStatsSOAPMethodInvocations         = "SOAP Method Invocations"
-	genStatsSOAPSessionInitiateRequests   = "SOAP Session Initiate Requests"
-	genStatsSOAPSessionTerminateRequests  = "SOAP Session Terminate Requests"
-	genStatsSOAPSQLRequests               = "SOAP SQL Requests"
-	genStatsSOAPWSDLRequests              = "SOAP WSDL Requests"
-	genStatsSQLTraceIOProviderLockWaits   = "SQL Trace IO Provider Lock Waits"
-	genStatsTempdbRecoveryUnitID          = "Tempdb recovery unit id"
-	genStatsTempdbRowsetID                = "Tempdb rowset id"
-	genStatsTempTablesCreationRate        = "Temp Tables Creation Rate"
-	genStatsTempTablesForDestruction      = "Temp Tables For Destruction"
-	genStatsTraceEventNotificationQueue   = "Trace Event Notification Queue"
-	genStatsTransactions                  = "Transactions"
-	genStatsUserConnections               = "User Connections"
-)
+type perfDataCounterValuesGenStats struct {
+	GenStatsActiveTempTables              float64 `perfdata:"Active Temp Tables"`
+	GenStatsConnectionResetPerSec         float64 `perfdata:"Connection Reset/sec"`
+	GenStatsEventNotificationsDelayedDrop float64 `perfdata:"Event Notifications Delayed Drop"`
+	GenStatsHTTPAuthenticatedRequests     float64 `perfdata:"HTTP Authenticated Requests"`
+	GenStatsLogicalConnections            float64 `perfdata:"Logical Connections"`
+	GenStatsLoginsPerSec                  float64 `perfdata:"Logins/sec"`
+	GenStatsLogoutsPerSec                 float64 `perfdata:"Logouts/sec"`
+	GenStatsMarsDeadlocks                 float64 `perfdata:"Mars Deadlocks"`
+	GenStatsNonatomicYieldRate            float64 `perfdata:"Non-atomic yield rate"`
+	GenStatsProcessesBlocked              float64 `perfdata:"Processes blocked"`
+	GenStatsSOAPEmptyRequests             float64 `perfdata:"SOAP Empty Requests"`
+	GenStatsSOAPMethodInvocations         float64 `perfdata:"SOAP Method Invocations"`
+	GenStatsSOAPSessionInitiateRequests   float64 `perfdata:"SOAP Session Initiate Requests"`
+	GenStatsSOAPSessionTerminateRequests  float64 `perfdata:"SOAP Session Terminate Requests"`
+	GenStatsSOAPSQLRequests               float64 `perfdata:"SOAP SQL Requests"`
+	GenStatsSOAPWSDLRequests              float64 `perfdata:"SOAP WSDL Requests"`
+	GenStatsSQLTraceIOProviderLockWaits   float64 `perfdata:"SQL Trace IO Provider Lock Waits"`
+	GenStatsTempdbRecoveryUnitID          float64 `perfdata:"Tempdb recovery unit id"`
+	GenStatsTempdbRowsetID                float64 `perfdata:"Tempdb rowset id"`
+	GenStatsTempTablesCreationRate        float64 `perfdata:"Temp Tables Creation Rate"`
+	GenStatsTempTablesForDestruction      float64 `perfdata:"Temp Tables For Destruction"`
+	GenStatsTraceEventNotificationQueue   float64 `perfdata:"Trace Event Notification Queue"`
+	GenStatsTransactions                  float64 `perfdata:"Transactions"`
+	GenStatsUserConnections               float64 `perfdata:"User Connections"`
+}
 
 func (c *Collector) buildGeneralStatistics() error {
 	var err error
 
-	c.genStatsPerfDataCollectors = make(map[string]*perfdata.Collector, len(c.mssqlInstances))
+	c.genStatsPerfDataCollectors = make(map[string]*pdh.Collector, len(c.mssqlInstances))
 	errs := make([]error, 0, len(c.mssqlInstances))
-	counters := []string{
-		genStatsActiveTempTables,
-		genStatsConnectionResetPerSec,
-		genStatsEventNotificationsDelayedDrop,
-		genStatsHTTPAuthenticatedRequests,
-		genStatsLogicalConnections,
-		genStatsLoginsPerSec,
-		genStatsLogoutsPerSec,
-		genStatsMarsDeadlocks,
-		genStatsNonatomicYieldRate,
-		genStatsProcessesBlocked,
-		genStatsSOAPEmptyRequests,
-		genStatsSOAPMethodInvocations,
-		genStatsSOAPSessionInitiateRequests,
-		genStatsSOAPSessionTerminateRequests,
-		genStatsSOAPSQLRequests,
-		genStatsSOAPWSDLRequests,
-		genStatsSQLTraceIOProviderLockWaits,
-		genStatsTempdbRecoveryUnitID,
-		genStatsTempdbRowsetID,
-		genStatsTempTablesCreationRate,
-		genStatsTempTablesForDestruction,
-		genStatsTraceEventNotificationQueue,
-		genStatsTransactions,
-		genStatsUserConnections,
-	}
 
 	for _, sqlInstance := range c.mssqlInstances {
-		c.genStatsPerfDataCollectors[sqlInstance.name], err = perfdata.NewCollector(c.mssqlGetPerfObjectName(sqlInstance.name, "General Statistics"), nil, counters)
+		c.genStatsPerfDataCollectors[sqlInstance.name], err = pdh.NewCollector[perfDataCounterValuesGenStats](
+			c.mssqlGetPerfObjectName(sqlInstance.name, "General Statistics"), nil,
+		)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("failed to create General Statistics collector for instance %s: %w", sqlInstance.name, err))
 		}
@@ -272,186 +249,177 @@ func (c *Collector) collectGeneralStatistics(ch chan<- prometheus.Metric) error 
 	return c.collect(ch, subCollectorGeneralStatistics, c.genStatsPerfDataCollectors, c.collectGeneralStatisticsInstance)
 }
 
-func (c *Collector) collectGeneralStatisticsInstance(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *perfdata.Collector) error {
-	if perfDataCollector == nil {
-		return types.ErrCollectorNotInitialized
-	}
-
-	perfData, err := perfDataCollector.Collect()
+func (c *Collector) collectGeneralStatisticsInstance(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *pdh.Collector) error {
+	err := perfDataCollector.Collect(&c.genStatsPerfDataObject)
 	if err != nil {
 		return fmt.Errorf("failed to collect %s metrics: %w", c.mssqlGetPerfObjectName(sqlInstance, "General Statistics"), err)
-	}
-
-	data, ok := perfData[perfdata.InstanceEmpty]
-	if !ok {
-		return fmt.Errorf("perflib query for %s returned empty result set", c.mssqlGetPerfObjectName(sqlInstance, "General Statistics"))
 	}
 
 	ch <- prometheus.MustNewConstMetric(
 		c.genStatsActiveTempTables,
 		prometheus.GaugeValue,
-		data[genStatsActiveTempTables].FirstValue,
+		c.genStatsPerfDataObject[0].GenStatsActiveTempTables,
 		sqlInstance,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.genStatsConnectionReset,
 		prometheus.CounterValue,
-		data[genStatsConnectionResetPerSec].FirstValue,
+		c.genStatsPerfDataObject[0].GenStatsConnectionResetPerSec,
 		sqlInstance,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.genStatsEventNotificationsDelayedDrop,
 		prometheus.GaugeValue,
-		data[genStatsEventNotificationsDelayedDrop].FirstValue,
+		c.genStatsPerfDataObject[0].GenStatsEventNotificationsDelayedDrop,
 		sqlInstance,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.genStatsHTTPAuthenticatedRequests,
 		prometheus.GaugeValue,
-		data[genStatsHTTPAuthenticatedRequests].FirstValue,
+		c.genStatsPerfDataObject[0].GenStatsHTTPAuthenticatedRequests,
 		sqlInstance,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.genStatsLogicalConnections,
 		prometheus.GaugeValue,
-		data[genStatsLogicalConnections].FirstValue,
+		c.genStatsPerfDataObject[0].GenStatsLogicalConnections,
 		sqlInstance,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.genStatsLogins,
 		prometheus.CounterValue,
-		data[genStatsLoginsPerSec].FirstValue,
+		c.genStatsPerfDataObject[0].GenStatsLoginsPerSec,
 		sqlInstance,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.genStatsLogouts,
 		prometheus.CounterValue,
-		data[genStatsLogoutsPerSec].FirstValue,
+		c.genStatsPerfDataObject[0].GenStatsLogoutsPerSec,
 		sqlInstance,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.genStatsMarsDeadlocks,
 		prometheus.GaugeValue,
-		data[genStatsMarsDeadlocks].FirstValue,
+		c.genStatsPerfDataObject[0].GenStatsMarsDeadlocks,
 		sqlInstance,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.genStatsNonAtomicYieldRate,
 		prometheus.CounterValue,
-		data[genStatsNonatomicYieldRate].FirstValue,
+		c.genStatsPerfDataObject[0].GenStatsNonatomicYieldRate,
 		sqlInstance,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.genStatsProcessesBlocked,
 		prometheus.GaugeValue,
-		data[genStatsProcessesBlocked].FirstValue,
+		c.genStatsPerfDataObject[0].GenStatsProcessesBlocked,
 		sqlInstance,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.genStatsSOAPEmptyRequests,
 		prometheus.GaugeValue,
-		data[genStatsSOAPEmptyRequests].FirstValue,
+		c.genStatsPerfDataObject[0].GenStatsSOAPEmptyRequests,
 		sqlInstance,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.genStatsSOAPMethodInvocations,
 		prometheus.GaugeValue,
-		data[genStatsSOAPMethodInvocations].FirstValue,
+		c.genStatsPerfDataObject[0].GenStatsSOAPMethodInvocations,
 		sqlInstance,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.genStatsSOAPSessionInitiateRequests,
 		prometheus.GaugeValue,
-		data[genStatsSOAPSessionInitiateRequests].FirstValue,
+		c.genStatsPerfDataObject[0].GenStatsSOAPSessionInitiateRequests,
 		sqlInstance,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.genStatsSOAPSessionTerminateRequests,
 		prometheus.GaugeValue,
-		data[genStatsSOAPSessionTerminateRequests].FirstValue,
+		c.genStatsPerfDataObject[0].GenStatsSOAPSessionTerminateRequests,
 		sqlInstance,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.genStatsSOAPSQLRequests,
 		prometheus.GaugeValue,
-		data[genStatsSOAPSQLRequests].FirstValue,
+		c.genStatsPerfDataObject[0].GenStatsSOAPSQLRequests,
 		sqlInstance,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.genStatsSOAPWSDLRequests,
 		prometheus.GaugeValue,
-		data[genStatsSOAPWSDLRequests].FirstValue,
+		c.genStatsPerfDataObject[0].GenStatsSOAPWSDLRequests,
 		sqlInstance,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.genStatsSQLTraceIOProviderLockWaits,
 		prometheus.GaugeValue,
-		data[genStatsSQLTraceIOProviderLockWaits].FirstValue,
+		c.genStatsPerfDataObject[0].GenStatsSQLTraceIOProviderLockWaits,
 		sqlInstance,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.genStatsTempDBRecoveryUnitID,
 		prometheus.GaugeValue,
-		data[genStatsTempdbRecoveryUnitID].FirstValue,
+		c.genStatsPerfDataObject[0].GenStatsTempdbRecoveryUnitID,
 		sqlInstance,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.genStatsTempDBrowSetID,
 		prometheus.GaugeValue,
-		data[genStatsTempdbRowsetID].FirstValue,
+		c.genStatsPerfDataObject[0].GenStatsTempdbRowsetID,
 		sqlInstance,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.genStatsTempTablesCreationRate,
 		prometheus.CounterValue,
-		data[genStatsTempTablesCreationRate].FirstValue,
+		c.genStatsPerfDataObject[0].GenStatsTempTablesCreationRate,
 		sqlInstance,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.genStatsTempTablesForDestruction,
 		prometheus.GaugeValue,
-		data[genStatsTempTablesForDestruction].FirstValue,
+		c.genStatsPerfDataObject[0].GenStatsTempTablesForDestruction,
 		sqlInstance,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.genStatsTraceEventNotificationQueue,
 		prometheus.GaugeValue,
-		data[genStatsTraceEventNotificationQueue].FirstValue,
+		c.genStatsPerfDataObject[0].GenStatsTraceEventNotificationQueue,
 		sqlInstance,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.genStatsTransactions,
 		prometheus.GaugeValue,
-		data[genStatsTransactions].FirstValue,
+		c.genStatsPerfDataObject[0].GenStatsTransactions,
 		sqlInstance,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.genStatsUserConnections,
 		prometheus.GaugeValue,
-		data[genStatsUserConnections].FirstValue,
+		c.genStatsPerfDataObject[0].GenStatsUserConnections,
 		sqlInstance,
 	)
 

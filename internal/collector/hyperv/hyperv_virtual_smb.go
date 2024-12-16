@@ -18,14 +18,15 @@ package hyperv
 import (
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 // collectorVirtualSMB Hyper-V Virtual SMB metrics
 type collectorVirtualSMB struct {
-	perfDataCollectorVirtualSMB *perfdata.Collector
+	perfDataCollectorVirtualSMB *pdh.Collector
+	perfDataObjectVirtualSMB    []perfDataCounterValuesVirtualSMB
 
 	virtualSMBDirectMappedSections   *prometheus.Desc // \Hyper-V Virtual SMB(*)\Direct-Mapped Sections
 	virtualSMBDirectMappedPages      *prometheus.Desc // \Hyper-V Virtual SMB(*)\Direct-Mapped Pages
@@ -46,48 +47,32 @@ type collectorVirtualSMB struct {
 	virtualSMBReceivedBytes          *prometheus.Desc // \Hyper-V Virtual SMB(*)\Received Bytes/sec
 }
 
-const (
-	virtualSMBDirectMappedSections   = "Direct-Mapped Sections"
-	virtualSMBDirectMappedPages      = "Direct-Mapped Pages"
-	virtualSMBWriteBytesRDMA         = "Write Bytes/sec (RDMA)"
-	virtualSMBWriteBytes             = "Write Bytes/sec"
-	virtualSMBReadBytesRDMA          = "Read Bytes/sec (RDMA)"
-	virtualSMBReadBytes              = "Read Bytes/sec"
-	virtualSMBFlushRequests          = "Flush Requests/sec"
-	virtualSMBWriteRequestsRDMA      = "Write Requests/sec (RDMA)"
-	virtualSMBWriteRequests          = "Write Requests/sec"
-	virtualSMBReadRequestsRDMA       = "Read Requests/sec (RDMA)"
-	virtualSMBReadRequests           = "Read Requests/sec"
-	virtualSMBCurrentPendingRequests = "Current Pending Requests"
-	virtualSMBCurrentOpenFileCount   = "Current Open File Count"
-	virtualSMBTreeConnectCount       = "Tree Connect Count"
-	virtualSMBRequests               = "Requests/sec"
-	virtualSMBSentBytes              = "Sent Bytes/sec"
-	virtualSMBReceivedBytes          = "Received Bytes/sec"
-)
+type perfDataCounterValuesVirtualSMB struct {
+	Name string
+
+	VirtualSMBDirectMappedSections   float64 `perfdata:"Direct-Mapped Sections"`
+	VirtualSMBDirectMappedPages      float64 `perfdata:"Direct-Mapped Pages"`
+	VirtualSMBWriteBytesRDMA         float64 `perfdata:"Write Bytes/sec (RDMA)"`
+	VirtualSMBWriteBytes             float64 `perfdata:"Write Bytes/sec"`
+	VirtualSMBReadBytesRDMA          float64 `perfdata:"Read Bytes/sec (RDMA)"`
+	VirtualSMBReadBytes              float64 `perfdata:"Read Bytes/sec"`
+	VirtualSMBFlushRequests          float64 `perfdata:"Flush Requests/sec"`
+	VirtualSMBWriteRequestsRDMA      float64 `perfdata:"Write Requests/sec (RDMA)"`
+	VirtualSMBWriteRequests          float64 `perfdata:"Write Requests/sec"`
+	VirtualSMBReadRequestsRDMA       float64 `perfdata:"Read Requests/sec (RDMA)"`
+	VirtualSMBReadRequests           float64 `perfdata:"Read Requests/sec"`
+	VirtualSMBCurrentPendingRequests float64 `perfdata:"Current Pending Requests"`
+	VirtualSMBCurrentOpenFileCount   float64 `perfdata:"Current Open File Count"`
+	VirtualSMBTreeConnectCount       float64 `perfdata:"Tree Connect Count"`
+	VirtualSMBRequests               float64 `perfdata:"Requests/sec"`
+	VirtualSMBSentBytes              float64 `perfdata:"Sent Bytes/sec"`
+	VirtualSMBReceivedBytes          float64 `perfdata:"Received Bytes/sec"`
+}
 
 func (c *Collector) buildVirtualSMB() error {
 	var err error
 
-	c.perfDataCollectorVirtualSMB, err = perfdata.NewCollector("Hyper-V Virtual SMB", perfdata.InstancesAll, []string{
-		virtualSMBDirectMappedSections,
-		virtualSMBDirectMappedPages,
-		virtualSMBWriteBytesRDMA,
-		virtualSMBWriteBytes,
-		virtualSMBReadBytesRDMA,
-		virtualSMBReadBytes,
-		virtualSMBFlushRequests,
-		virtualSMBWriteRequestsRDMA,
-		virtualSMBWriteRequests,
-		virtualSMBReadRequestsRDMA,
-		virtualSMBReadRequests,
-		virtualSMBCurrentPendingRequests,
-		virtualSMBCurrentOpenFileCount,
-		virtualSMBTreeConnectCount,
-		virtualSMBRequests,
-		virtualSMBSentBytes,
-		virtualSMBReceivedBytes,
-	})
+	c.perfDataCollectorVirtualSMB, err = pdh.NewCollector[perfDataCounterValuesVirtualSMB]("Hyper-V Virtual SMB", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create Hyper-V Virtual SMB collector: %w", err)
 	}
@@ -199,129 +184,129 @@ func (c *Collector) buildVirtualSMB() error {
 }
 
 func (c *Collector) collectVirtualSMB(ch chan<- prometheus.Metric) error {
-	data, err := c.perfDataCollectorVirtualSMB.Collect()
+	err := c.perfDataCollectorVirtualSMB.Collect(&c.perfDataObjectVirtualSMB)
 	if err != nil {
 		return fmt.Errorf("failed to collect Hyper-V Virtual SMB metrics: %w", err)
 	}
 
-	for name, smbData := range data {
+	for _, data := range c.perfDataObjectVirtualSMB {
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualSMBDirectMappedSections,
 			prometheus.GaugeValue,
-			smbData[virtualSMBDirectMappedSections].FirstValue,
-			name,
+			data.VirtualSMBDirectMappedSections,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualSMBDirectMappedPages,
 			prometheus.GaugeValue,
-			smbData[virtualSMBDirectMappedPages].FirstValue,
-			name,
+			data.VirtualSMBDirectMappedPages,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualSMBWriteBytesRDMA,
 			prometheus.CounterValue,
-			smbData[virtualSMBWriteBytesRDMA].FirstValue,
-			name,
+			data.VirtualSMBWriteBytesRDMA,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualSMBWriteBytes,
 			prometheus.CounterValue,
-			smbData[virtualSMBWriteBytes].FirstValue,
-			name,
+			data.VirtualSMBWriteBytes,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualSMBReadBytesRDMA,
 			prometheus.CounterValue,
-			smbData[virtualSMBReadBytesRDMA].FirstValue,
-			name,
+			data.VirtualSMBReadBytesRDMA,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualSMBReadBytes,
 			prometheus.CounterValue,
-			smbData[virtualSMBReadBytes].FirstValue,
-			name,
+			data.VirtualSMBReadBytes,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualSMBFlushRequests,
 			prometheus.CounterValue,
-			smbData[virtualSMBFlushRequests].FirstValue,
-			name,
+			data.VirtualSMBFlushRequests,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualSMBWriteRequestsRDMA,
 			prometheus.CounterValue,
-			smbData[virtualSMBWriteRequestsRDMA].FirstValue,
-			name,
+			data.VirtualSMBWriteRequestsRDMA,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualSMBWriteRequests,
 			prometheus.CounterValue,
-			smbData[virtualSMBWriteRequests].FirstValue,
-			name,
+			data.VirtualSMBWriteRequests,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualSMBReadRequestsRDMA,
 			prometheus.CounterValue,
-			smbData[virtualSMBReadRequestsRDMA].FirstValue,
-			name,
+			data.VirtualSMBReadRequestsRDMA,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualSMBReadRequests,
 			prometheus.CounterValue,
-			smbData[virtualSMBReadRequests].FirstValue,
-			name,
+			data.VirtualSMBReadRequests,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualSMBCurrentPendingRequests,
 			prometheus.GaugeValue,
-			smbData[virtualSMBCurrentPendingRequests].FirstValue,
-			name,
+			data.VirtualSMBCurrentPendingRequests,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualSMBCurrentOpenFileCount,
 			prometheus.GaugeValue,
-			smbData[virtualSMBCurrentOpenFileCount].FirstValue,
-			name,
+			data.VirtualSMBCurrentOpenFileCount,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualSMBTreeConnectCount,
 			prometheus.GaugeValue,
-			smbData[virtualSMBTreeConnectCount].FirstValue,
-			name,
+			data.VirtualSMBTreeConnectCount,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualSMBRequests,
 			prometheus.CounterValue,
-			smbData[virtualSMBRequests].FirstValue,
-			name,
+			data.VirtualSMBRequests,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualSMBSentBytes,
 			prometheus.CounterValue,
-			smbData[virtualSMBSentBytes].FirstValue,
-			name,
+			data.VirtualSMBSentBytes,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualSMBReceivedBytes,
 			prometheus.CounterValue,
-			smbData[virtualSMBReceivedBytes].FirstValue,
-			name,
+			data.VirtualSMBReceivedBytes,
+			data.Name,
 		)
 	}
 

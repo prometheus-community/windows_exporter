@@ -18,19 +18,26 @@ package exchange
 import (
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-func (c *Collector) buildAvailabilityService() error {
-	counters := []string{
-		requestsPerSec,
-	}
+type collectorAvailabilityService struct {
+	perfDataCollectorAvailabilityService *pdh.Collector
+	perfDataObjectAvailabilityService    []perfDataCounterValuesAvailabilityService
 
+	availabilityRequestsSec *prometheus.Desc
+}
+
+type perfDataCounterValuesAvailabilityService struct {
+	RequestsPerSec float64 `perfdata:"Requests/sec"`
+}
+
+func (c *Collector) buildAvailabilityService() error {
 	var err error
 
-	c.perfDataCollectorAvailabilityService, err = perfdata.NewCollector("MSExchange Availability Service", perfdata.InstancesAll, counters)
+	c.perfDataCollectorAvailabilityService, err = pdh.NewCollector[perfDataCounterValuesAvailabilityService]("MSExchange Availability Service", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create MSExchange Availability Service collector: %w", err)
 	}
@@ -46,20 +53,16 @@ func (c *Collector) buildAvailabilityService() error {
 }
 
 func (c *Collector) collectAvailabilityService(ch chan<- prometheus.Metric) error {
-	perfData, err := c.perfDataCollectorAvailabilityService.Collect()
+	err := c.perfDataCollectorAvailabilityService.Collect(&c.perfDataObjectAvailabilityService)
 	if err != nil {
 		return fmt.Errorf("failed to collect MSExchange Availability Service metrics: %w", err)
 	}
 
-	if len(perfData) == 0 {
-		return fmt.Errorf("failed to collect MSExchange Availability Service metrics: %w", types.ErrNoData)
-	}
-
-	for _, data := range perfData {
+	for _, data := range c.perfDataObjectAvailabilityService {
 		ch <- prometheus.MustNewConstMetric(
 			c.availabilityRequestsSec,
 			prometheus.CounterValue,
-			data[requestsPerSec].FirstValue,
+			data.RequestsPerSec,
 		)
 	}
 

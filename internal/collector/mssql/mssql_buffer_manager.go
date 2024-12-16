@@ -19,13 +19,14 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 type collectorBufferManager struct {
-	bufManPerfDataCollectors map[string]*perfdata.Collector
+	bufManPerfDataCollectors map[string]*pdh.Collector
+	bufManPerfDataObject     []perfDataCounterValuesBufMan
 
 	bufManBackgroundwriterpages         *prometheus.Desc
 	bufManBuffercachehits               *prometheus.Desc
@@ -52,65 +53,42 @@ type collectorBufferManager struct {
 	bufManTargetpages                   *prometheus.Desc
 }
 
-const (
-	bufManBackgroundWriterPagesPerSec   = "Background writer pages/sec"
-	bufManBufferCacheHitRatio           = "Buffer cache hit ratio"
-	bufManBufferCacheHitRatioBase       = "Buffer cache hit ratio base"
-	bufManCheckpointPagesPerSec         = "Checkpoint pages/sec"
-	bufManDatabasePages                 = "Database pages"
-	bufManExtensionAllocatedPages       = "Extension allocated pages"
-	bufManExtensionFreePages            = "Extension free pages"
-	bufManExtensionInUseAsPercentage    = "Extension in use as percentage"
-	bufManExtensionOutstandingIOCounter = "Extension outstanding IO counter"
-	bufManExtensionPageEvictionsPerSec  = "Extension page evictions/sec"
-	bufManExtensionPageReadsPerSec      = "Extension page reads/sec"
-	bufManExtensionPageUnreferencedTime = "Extension page unreferenced time"
-	bufManExtensionPageWritesPerSec     = "Extension page writes/sec"
-	bufManFreeListStallsPerSec          = "Free list stalls/sec"
-	bufManIntegralControllerSlope       = "Integral Controller Slope"
-	bufManLazyWritesPerSec              = "Lazy writes/sec"
-	bufManPageLifeExpectancy            = "Page life expectancy"
-	bufManPageLookupsPerSec             = "Page lookups/sec"
-	bufManPageReadsPerSec               = "Page reads/sec"
-	bufManPageWritesPerSec              = "Page writes/sec"
-	bufManReadaheadPagesPerSec          = "Readahead pages/sec"
-	bufManReadaheadTimePerSec           = "Readahead time/sec"
-	bufManTargetPages                   = "Target pages"
-)
+type perfDataCounterValuesBufMan struct {
+	BufManBackgroundWriterPagesPerSec   float64 `perfdata:"Background writer pages/sec"`
+	BufManBufferCacheHitRatio           float64 `perfdata:"Buffer cache hit ratio"`
+	BufManBufferCacheHitRatioBase       float64 `perfdata:"Buffer cache hit ratio base,secondvalue"`
+	BufManCheckpointPagesPerSec         float64 `perfdata:"Checkpoint pages/sec"`
+	BufManDatabasePages                 float64 `perfdata:"Database pages"`
+	BufManExtensionAllocatedPages       float64 `perfdata:"Extension allocated pages"`
+	BufManExtensionFreePages            float64 `perfdata:"Extension free pages"`
+	BufManExtensionInUseAsPercentage    float64 `perfdata:"Extension in use as percentage"`
+	BufManExtensionOutstandingIOCounter float64 `perfdata:"Extension outstanding IO counter"`
+	BufManExtensionPageEvictionsPerSec  float64 `perfdata:"Extension page evictions/sec"`
+	BufManExtensionPageReadsPerSec      float64 `perfdata:"Extension page reads/sec"`
+	BufManExtensionPageUnreferencedTime float64 `perfdata:"Extension page unreferenced time"`
+	BufManExtensionPageWritesPerSec     float64 `perfdata:"Extension page writes/sec"`
+	BufManFreeListStallsPerSec          float64 `perfdata:"Free list stalls/sec"`
+	BufManIntegralControllerSlope       float64 `perfdata:"Integral Controller Slope"`
+	BufManLazyWritesPerSec              float64 `perfdata:"Lazy writes/sec"`
+	BufManPageLifeExpectancy            float64 `perfdata:"Page life expectancy"`
+	BufManPageLookupsPerSec             float64 `perfdata:"Page lookups/sec"`
+	BufManPageReadsPerSec               float64 `perfdata:"Page reads/sec"`
+	BufManPageWritesPerSec              float64 `perfdata:"Page writes/sec"`
+	BufManReadaheadPagesPerSec          float64 `perfdata:"Readahead pages/sec"`
+	BufManReadaheadTimePerSec           float64 `perfdata:"Readahead time/sec"`
+	BufManTargetPages                   float64 `perfdata:"Target pages"`
+}
 
 func (c *Collector) buildBufferManager() error {
 	var err error
 
-	c.bufManPerfDataCollectors = make(map[string]*perfdata.Collector, len(c.mssqlInstances))
+	c.bufManPerfDataCollectors = make(map[string]*pdh.Collector, len(c.mssqlInstances))
 	errs := make([]error, 0, len(c.mssqlInstances))
-	counters := []string{
-		bufManBackgroundWriterPagesPerSec,
-		bufManBufferCacheHitRatio,
-		bufManBufferCacheHitRatioBase,
-		bufManCheckpointPagesPerSec,
-		bufManDatabasePages,
-		bufManExtensionAllocatedPages,
-		bufManExtensionFreePages,
-		bufManExtensionInUseAsPercentage,
-		bufManExtensionOutstandingIOCounter,
-		bufManExtensionPageEvictionsPerSec,
-		bufManExtensionPageReadsPerSec,
-		bufManExtensionPageUnreferencedTime,
-		bufManExtensionPageWritesPerSec,
-		bufManFreeListStallsPerSec,
-		bufManIntegralControllerSlope,
-		bufManLazyWritesPerSec,
-		bufManPageLifeExpectancy,
-		bufManPageLookupsPerSec,
-		bufManPageReadsPerSec,
-		bufManPageWritesPerSec,
-		bufManReadaheadPagesPerSec,
-		bufManReadaheadTimePerSec,
-		bufManTargetPages,
-	}
 
 	for _, sqlInstance := range c.mssqlInstances {
-		c.bufManPerfDataCollectors[sqlInstance.name], err = perfdata.NewCollector(c.mssqlGetPerfObjectName(sqlInstance.name, "Buffer Manager"), nil, counters)
+		c.bufManPerfDataCollectors[sqlInstance.name], err = pdh.NewCollector[perfDataCounterValuesBufMan](
+			c.mssqlGetPerfObjectName(sqlInstance.name, "Buffer Manager"), nil,
+		)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("failed to create Buffer Manager collector for instance %s: %w", sqlInstance.name, err))
 		}
@@ -262,175 +240,171 @@ func (c *Collector) collectBufferManager(ch chan<- prometheus.Metric) error {
 	return c.collect(ch, subCollectorBufferManager, c.bufManPerfDataCollectors, c.collectBufferManagerInstance)
 }
 
-func (c *Collector) collectBufferManagerInstance(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *perfdata.Collector) error {
-	if perfDataCollector == nil {
-		return types.ErrCollectorNotInitialized
-	}
-
-	perfData, err := perfDataCollector.Collect()
+func (c *Collector) collectBufferManagerInstance(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *pdh.Collector) error {
+	err := perfDataCollector.Collect(&c.bufManPerfDataObject)
 	if err != nil {
 		return fmt.Errorf("failed to collect %s metrics: %w", c.mssqlGetPerfObjectName(sqlInstance, "Buffer Manager"), err)
 	}
 
-	for _, data := range perfData {
+	for _, data := range c.bufManPerfDataObject {
 		ch <- prometheus.MustNewConstMetric(
 			c.bufManBackgroundwriterpages,
 			prometheus.CounterValue,
-			data[bufManBackgroundWriterPagesPerSec].FirstValue,
+			data.BufManBackgroundWriterPagesPerSec,
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.bufManBuffercachehits,
 			prometheus.GaugeValue,
-			data[bufManBufferCacheHitRatio].FirstValue,
+			data.BufManBufferCacheHitRatio,
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.bufManBuffercachelookups,
 			prometheus.GaugeValue,
-			data[bufManBufferCacheHitRatioBase].SecondValue,
+			data.BufManBufferCacheHitRatioBase,
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.bufManCheckpointpages,
 			prometheus.CounterValue,
-			data[bufManCheckpointPagesPerSec].FirstValue,
+			data.BufManCheckpointPagesPerSec,
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.bufManDatabasepages,
 			prometheus.GaugeValue,
-			data[bufManDatabasePages].FirstValue,
+			data.BufManDatabasePages,
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.bufManExtensionallocatedpages,
 			prometheus.GaugeValue,
-			data[bufManExtensionAllocatedPages].FirstValue,
+			data.BufManExtensionAllocatedPages,
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.bufManExtensionfreepages,
 			prometheus.GaugeValue,
-			data[bufManExtensionFreePages].FirstValue,
+			data.BufManExtensionFreePages,
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.bufManExtensioninuseaspercentage,
 			prometheus.GaugeValue,
-			data[bufManExtensionInUseAsPercentage].FirstValue,
+			data.BufManExtensionInUseAsPercentage,
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.bufManExtensionoutstandingIOcounter,
 			prometheus.GaugeValue,
-			data[bufManExtensionOutstandingIOCounter].FirstValue,
+			data.BufManExtensionOutstandingIOCounter,
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.bufManExtensionpageevictions,
 			prometheus.CounterValue,
-			data[bufManExtensionPageEvictionsPerSec].FirstValue,
+			data.BufManExtensionPageEvictionsPerSec,
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.bufManExtensionpagereads,
 			prometheus.CounterValue,
-			data[bufManExtensionPageReadsPerSec].FirstValue,
+			data.BufManExtensionPageReadsPerSec,
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.bufManExtensionpageunreferencedtime,
 			prometheus.GaugeValue,
-			data[bufManExtensionPageUnreferencedTime].FirstValue,
+			data.BufManExtensionPageUnreferencedTime,
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.bufManExtensionpagewrites,
 			prometheus.CounterValue,
-			data[bufManExtensionPageWritesPerSec].FirstValue,
+			data.BufManExtensionPageWritesPerSec,
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.bufManFreeliststalls,
 			prometheus.CounterValue,
-			data[bufManFreeListStallsPerSec].FirstValue,
+			data.BufManFreeListStallsPerSec,
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.bufManIntegralControllerSlope,
 			prometheus.GaugeValue,
-			data[bufManIntegralControllerSlope].FirstValue,
+			data.BufManIntegralControllerSlope,
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.bufManLazywrites,
 			prometheus.CounterValue,
-			data[bufManLazyWritesPerSec].FirstValue,
+			data.BufManLazyWritesPerSec,
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.bufManPagelifeexpectancy,
 			prometheus.GaugeValue,
-			data[bufManPageLifeExpectancy].FirstValue,
+			data.BufManPageLifeExpectancy,
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.bufManPagelookups,
 			prometheus.CounterValue,
-			data[bufManPageLookupsPerSec].FirstValue,
+			data.BufManPageLookupsPerSec,
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.bufManPagereads,
 			prometheus.CounterValue,
-			data[bufManPageReadsPerSec].FirstValue,
+			data.BufManPageReadsPerSec,
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.bufManPagewrites,
 			prometheus.CounterValue,
-			data[bufManPageWritesPerSec].FirstValue,
+			data.BufManPageWritesPerSec,
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.bufManReadaheadpages,
 			prometheus.CounterValue,
-			data[bufManReadaheadPagesPerSec].FirstValue,
+			data.BufManReadaheadPagesPerSec,
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.bufManReadaheadtime,
 			prometheus.CounterValue,
-			data[bufManReadaheadTimePerSec].FirstValue,
+			data.BufManReadaheadTimePerSec,
 			sqlInstance,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.bufManTargetpages,
 			prometheus.GaugeValue,
-			data[bufManTargetPages].FirstValue,
+			data.BufManTargetPages,
 			sqlInstance,
 		)
 	}

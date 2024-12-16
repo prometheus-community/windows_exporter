@@ -26,7 +26,7 @@ import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/headers/sysinfoapi"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -42,7 +42,8 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	config Config
 
-	perfDataCollector *perfdata.Collector
+	perfDataCollector *pdh.Collector
+	perfDataObject    []perfDataCounterValues
 
 	// Performance metrics
 	availableBytes                  *prometheus.Desc
@@ -109,46 +110,9 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
-	counters := []string{
-		availableBytes,
-		availableKBytes,
-		availableMBytes,
-		cacheBytes,
-		cacheBytesPeak,
-		cacheFaultsPerSec,
-		commitLimit,
-		committedBytes,
-		demandZeroFaultsPerSec,
-		freeAndZeroPageListBytes,
-		freeSystemPageTableEntries,
-		modifiedPageListBytes,
-		pageFaultsPerSec,
-		pageReadsPerSec,
-		pagesInputPerSec,
-		pagesOutputPerSec,
-		pagesPerSec,
-		pageWritesPerSec,
-		poolNonpagedAllocs,
-		poolNonpagedBytes,
-		poolPagedAllocs,
-		poolPagedBytes,
-		poolPagedResidentBytes,
-		standbyCacheCoreBytes,
-		standbyCacheNormalPriorityBytes,
-		standbyCacheReserveBytes,
-		systemCacheResidentBytes,
-		systemCodeResidentBytes,
-		systemCodeTotalBytes,
-		systemDriverResidentBytes,
-		systemDriverTotalBytes,
-		transitionFaultsPerSec,
-		transitionPagesRePurposedPerSec,
-		writeCopiesPerSec,
-	}
-
 	var err error
 
-	c.perfDataCollector, err = perfdata.NewCollector("Memory", perfdata.InstancesAll, counters)
+	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues]("Memory", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create Memory collector: %w", err)
 	}
@@ -423,207 +387,201 @@ func (c *Collector) collectGlobalMemoryStatus(ch chan<- prometheus.Metric) error
 }
 
 func (c *Collector) collectPDH(ch chan<- prometheus.Metric) error {
-	perfData, err := c.perfDataCollector.Collect()
+	err := c.perfDataCollector.Collect(&c.perfDataObject)
 	if err != nil {
 		return fmt.Errorf("failed to collect Memory metrics: %w", err)
-	}
-
-	data, ok := perfData[perfdata.InstanceEmpty]
-
-	if !ok {
-		return fmt.Errorf("failed to collect Memory metrics: %w", types.ErrNoData)
 	}
 
 	ch <- prometheus.MustNewConstMetric(
 		c.availableBytes,
 		prometheus.GaugeValue,
-		data[availableBytes].FirstValue,
+		c.perfDataObject[0].AvailableBytes,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.cacheBytes,
 		prometheus.GaugeValue,
-		data[cacheBytes].FirstValue,
+		c.perfDataObject[0].CacheBytes,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.cacheBytesPeak,
 		prometheus.GaugeValue,
-		data[cacheBytesPeak].FirstValue,
+		c.perfDataObject[0].CacheBytesPeak,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.cacheFaultsTotal,
 		prometheus.CounterValue,
-		data[cacheFaultsPerSec].FirstValue,
+		c.perfDataObject[0].CacheFaultsPerSec,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.commitLimit,
 		prometheus.GaugeValue,
-		data[commitLimit].FirstValue,
+		c.perfDataObject[0].CommitLimit,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.committedBytes,
 		prometheus.GaugeValue,
-		data[committedBytes].FirstValue,
+		c.perfDataObject[0].CommittedBytes,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.demandZeroFaultsTotal,
 		prometheus.CounterValue,
-		data[demandZeroFaultsPerSec].FirstValue,
+		c.perfDataObject[0].DemandZeroFaultsPerSec,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.freeAndZeroPageListBytes,
 		prometheus.GaugeValue,
-		data[freeAndZeroPageListBytes].FirstValue,
+		c.perfDataObject[0].FreeAndZeroPageListBytes,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.freeSystemPageTableEntries,
 		prometheus.GaugeValue,
-		data[freeSystemPageTableEntries].FirstValue,
+		c.perfDataObject[0].FreeSystemPageTableEntries,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.modifiedPageListBytes,
 		prometheus.GaugeValue,
-		data[modifiedPageListBytes].FirstValue,
+		c.perfDataObject[0].ModifiedPageListBytes,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.pageFaultsTotal,
 		prometheus.CounterValue,
-		data[pageFaultsPerSec].FirstValue,
+		c.perfDataObject[0].PageFaultsPerSec,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.swapPageReadsTotal,
 		prometheus.CounterValue,
-		data[pageReadsPerSec].FirstValue,
+		c.perfDataObject[0].PageReadsPerSec,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.swapPagesReadTotal,
 		prometheus.CounterValue,
-		data[pagesInputPerSec].FirstValue,
+		c.perfDataObject[0].PagesInputPerSec,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.swapPagesWrittenTotal,
 		prometheus.CounterValue,
-		data[pagesOutputPerSec].FirstValue,
+		c.perfDataObject[0].PagesOutputPerSec,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.swapPageOperationsTotal,
 		prometheus.CounterValue,
-		data[pagesPerSec].FirstValue,
+		c.perfDataObject[0].PagesPerSec,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.swapPageWritesTotal,
 		prometheus.CounterValue,
-		data[pageWritesPerSec].FirstValue,
+		c.perfDataObject[0].PageWritesPerSec,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.poolNonPagedAllocationsTotal,
 		prometheus.GaugeValue,
-		data[poolNonpagedAllocs].FirstValue,
+		c.perfDataObject[0].PoolNonpagedAllocs,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.poolNonPagedBytes,
 		prometheus.GaugeValue,
-		data[poolNonpagedBytes].FirstValue,
+		c.perfDataObject[0].PoolNonpagedBytes,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.poolPagedAllocationsTotal,
 		prometheus.CounterValue,
-		data[poolPagedAllocs].FirstValue,
+		c.perfDataObject[0].PoolPagedAllocs,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.poolPagedBytes,
 		prometheus.GaugeValue,
-		data[poolPagedBytes].FirstValue,
+		c.perfDataObject[0].PoolPagedBytes,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.poolPagedResidentBytes,
 		prometheus.GaugeValue,
-		data[poolPagedResidentBytes].FirstValue,
+		c.perfDataObject[0].PoolPagedResidentBytes,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.standbyCacheCoreBytes,
 		prometheus.GaugeValue,
-		data[standbyCacheCoreBytes].FirstValue,
+		c.perfDataObject[0].StandbyCacheCoreBytes,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.standbyCacheNormalPriorityBytes,
 		prometheus.GaugeValue,
-		data[standbyCacheNormalPriorityBytes].FirstValue,
+		c.perfDataObject[0].StandbyCacheNormalPriorityBytes,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.standbyCacheReserveBytes,
 		prometheus.GaugeValue,
-		data[standbyCacheReserveBytes].FirstValue,
+		c.perfDataObject[0].StandbyCacheReserveBytes,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.systemCacheResidentBytes,
 		prometheus.GaugeValue,
-		data[systemCacheResidentBytes].FirstValue,
+		c.perfDataObject[0].SystemCacheResidentBytes,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.systemCodeResidentBytes,
 		prometheus.GaugeValue,
-		data[systemCodeResidentBytes].FirstValue,
+		c.perfDataObject[0].SystemCodeResidentBytes,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.systemCodeTotalBytes,
 		prometheus.GaugeValue,
-		data[systemCodeTotalBytes].FirstValue,
+		c.perfDataObject[0].SystemCodeTotalBytes,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.systemDriverResidentBytes,
 		prometheus.GaugeValue,
-		data[systemDriverResidentBytes].FirstValue,
+		c.perfDataObject[0].SystemDriverResidentBytes,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.systemDriverTotalBytes,
 		prometheus.GaugeValue,
-		data[systemDriverTotalBytes].FirstValue,
+		c.perfDataObject[0].SystemDriverTotalBytes,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.transitionFaultsTotal,
 		prometheus.CounterValue,
-		data[transitionFaultsPerSec].FirstValue,
+		c.perfDataObject[0].TransitionFaultsPerSec,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.transitionPagesRepurposedTotal,
 		prometheus.CounterValue,
-		data[transitionPagesRePurposedPerSec].FirstValue,
+		c.perfDataObject[0].TransitionPagesRePurposedPerSec,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.writeCopiesTotal,
 		prometheus.CounterValue,
-		data[writeCopiesPerSec].FirstValue,
+		c.perfDataObject[0].WriteCopiesPerSec,
 	)
 
 	return nil

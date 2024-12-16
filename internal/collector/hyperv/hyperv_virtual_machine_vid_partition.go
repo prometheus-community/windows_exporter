@@ -18,33 +18,33 @@ package hyperv
 import (
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 // collectorVirtualMachineVidPartition Hyper-V VM Vid Partition metrics
 type collectorVirtualMachineVidPartition struct {
-	perfDataCollectorVirtualMachineVidPartition *perfdata.Collector
-	physicalPagesAllocated                      *prometheus.Desc // \Hyper-V VM Vid Partition(*)\Physical Pages Allocated
-	preferredNUMANodeIndex                      *prometheus.Desc // \Hyper-V VM Vid Partition(*)\Preferred NUMA Node Index
-	remotePhysicalPages                         *prometheus.Desc // \Hyper-V VM Vid Partition(*)\Remote Physical Pages
+	perfDataCollectorVirtualMachineVidPartition *pdh.Collector
+	perfDataObjectVirtualMachineVidPartition    []perfDataCounterValuesVirtualMachineVidPartition
+
+	physicalPagesAllocated *prometheus.Desc // \Hyper-V VM Vid Partition(*)\Physical Pages Allocated
+	preferredNUMANodeIndex *prometheus.Desc // \Hyper-V VM Vid Partition(*)\Preferred NUMA Node Index
+	remotePhysicalPages    *prometheus.Desc // \Hyper-V VM Vid Partition(*)\Remote Physical Pages
 }
 
-const (
-	physicalPagesAllocated = "Physical Pages Allocated"
-	preferredNUMANodeIndex = "Preferred NUMA Node Index"
-	remotePhysicalPages    = "Remote Physical Pages"
-)
+type perfDataCounterValuesVirtualMachineVidPartition struct {
+	Name string
+
+	PhysicalPagesAllocated float64 `perfdata:"Physical Pages Allocated"`
+	PreferredNUMANodeIndex float64 `perfdata:"Preferred NUMA Node Index"`
+	RemotePhysicalPages    float64 `perfdata:"Remote Physical Pages"`
+}
 
 func (c *Collector) buildVirtualMachineVidPartition() error {
 	var err error
 
-	c.perfDataCollectorVirtualMachineVidPartition, err = perfdata.NewCollector("Hyper-V VM Vid Partition", perfdata.InstancesAll, []string{
-		physicalPagesAllocated,
-		preferredNUMANodeIndex,
-		remotePhysicalPages,
-	})
+	c.perfDataCollectorVirtualMachineVidPartition, err = pdh.NewCollector[perfDataCounterValuesVirtualMachineVidPartition]("Hyper-V VM Vid Partition", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create Hyper-V VM Vid Partition collector: %w", err)
 	}
@@ -72,31 +72,31 @@ func (c *Collector) buildVirtualMachineVidPartition() error {
 }
 
 func (c *Collector) collectVirtualMachineVidPartition(ch chan<- prometheus.Metric) error {
-	data, err := c.perfDataCollectorVirtualMachineVidPartition.Collect()
+	err := c.perfDataCollectorVirtualMachineVidPartition.Collect(&c.perfDataObjectVirtualMachineVidPartition)
 	if err != nil {
 		return fmt.Errorf("failed to collect Hyper-V VM Vid Partition metrics: %w", err)
 	}
 
-	for name, page := range data {
+	for _, data := range c.perfDataObjectVirtualMachineVidPartition {
 		ch <- prometheus.MustNewConstMetric(
 			c.physicalPagesAllocated,
 			prometheus.GaugeValue,
-			page[physicalPagesAllocated].FirstValue,
-			name,
+			data.PhysicalPagesAllocated,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.preferredNUMANodeIndex,
 			prometheus.GaugeValue,
-			page[preferredNUMANodeIndex].FirstValue,
-			name,
+			data.PreferredNUMANodeIndex,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.remotePhysicalPages,
 			prometheus.GaugeValue,
-			page[remotePhysicalPages].FirstValue,
-			name,
+			data.RemotePhysicalPages,
+			data.Name,
 		)
 	}
 

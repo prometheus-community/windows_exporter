@@ -18,14 +18,15 @@ package hyperv
 import (
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 // Hyper-V Virtual Storage Device metrics
 type collectorVirtualStorageDevice struct {
-	perfDataCollectorVirtualStorageDevice *perfdata.Collector
+	perfDataCollectorVirtualStorageDevice *pdh.Collector
+	perfDataObjectVirtualStorageDevice    []perfDataCounterValuesVirtualStorageDevice
 
 	virtualStorageDeviceErrorCount               *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\Error Count
 	virtualStorageDeviceQueueLength              *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\Queue Length
@@ -41,38 +42,27 @@ type collectorVirtualStorageDevice struct {
 	virtualStorageDeviceIOQuotaReplenishmentRate *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\IO Quota Replenishment Rate
 }
 
-const (
-	virtualStorageDeviceErrorCount               = "Error Count"
-	virtualStorageDeviceQueueLength              = "Queue Length"
-	virtualStorageDeviceReadBytes                = "Read Bytes/sec"
-	virtualStorageDeviceReadOperations           = "Read Count"
-	virtualStorageDeviceWriteBytes               = "Write Bytes/sec"
-	virtualStorageDeviceWriteOperations          = "Write Count"
-	virtualStorageDeviceLatency                  = "Latency"
-	virtualStorageDeviceThroughput               = "Throughput"
-	virtualStorageDeviceNormalizedThroughput     = "Normalized Throughput"
-	virtualStorageDeviceLowerQueueLength         = "Lower Queue Length"
-	virtualStorageDeviceLowerLatency             = "Lower Latency"
-	virtualStorageDeviceIOQuotaReplenishmentRate = "IO Quota Replenishment Rate"
-)
+type perfDataCounterValuesVirtualStorageDevice struct {
+	Name string
+
+	VirtualStorageDeviceErrorCount               float64 `perfdata:"Error Count"`
+	VirtualStorageDeviceQueueLength              float64 `perfdata:"Queue Length"`
+	VirtualStorageDeviceReadBytes                float64 `perfdata:"Read Bytes/sec"`
+	VirtualStorageDeviceReadOperations           float64 `perfdata:"Read Count"`
+	VirtualStorageDeviceWriteBytes               float64 `perfdata:"Write Bytes/sec"`
+	VirtualStorageDeviceWriteOperations          float64 `perfdata:"Write Count"`
+	VirtualStorageDeviceLatency                  float64 `perfdata:"Latency"`
+	VirtualStorageDeviceThroughput               float64 `perfdata:"Throughput"`
+	VirtualStorageDeviceNormalizedThroughput     float64 `perfdata:"Normalized Throughput"`
+	VirtualStorageDeviceLowerQueueLength         float64 `perfdata:"Lower Queue Length"`
+	VirtualStorageDeviceLowerLatency             float64 `perfdata:"Lower Latency"`
+	VirtualStorageDeviceIOQuotaReplenishmentRate float64 `perfdata:"IO Quota Replenishment Rate"`
+}
 
 func (c *Collector) buildVirtualStorageDevice() error {
 	var err error
 
-	c.perfDataCollectorVirtualStorageDevice, err = perfdata.NewCollector("Hyper-V Virtual Storage Device", perfdata.InstancesAll, []string{
-		virtualStorageDeviceErrorCount,
-		virtualStorageDeviceQueueLength,
-		virtualStorageDeviceReadBytes,
-		virtualStorageDeviceReadOperations,
-		virtualStorageDeviceWriteBytes,
-		virtualStorageDeviceWriteOperations,
-		virtualStorageDeviceLatency,
-		virtualStorageDeviceThroughput,
-		virtualStorageDeviceNormalizedThroughput,
-		virtualStorageDeviceLowerQueueLength,
-		virtualStorageDeviceLowerLatency,
-		virtualStorageDeviceIOQuotaReplenishmentRate,
-	})
+	c.perfDataCollectorVirtualStorageDevice, err = pdh.NewCollector[perfDataCounterValuesVirtualStorageDevice]("Hyper-V Virtual Storage Device", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create Hyper-V Virtual Storage Device collector: %w", err)
 	}
@@ -154,94 +144,94 @@ func (c *Collector) buildVirtualStorageDevice() error {
 }
 
 func (c *Collector) collectVirtualStorageDevice(ch chan<- prometheus.Metric) error {
-	data, err := c.perfDataCollectorVirtualStorageDevice.Collect()
+	err := c.perfDataCollectorVirtualStorageDevice.Collect(&c.perfDataObjectVirtualStorageDevice)
 	if err != nil {
 		return fmt.Errorf("failed to collect Hyper-V Virtual Storage Device metrics: %w", err)
 	}
 
-	for name, device := range data {
+	for _, data := range c.perfDataObjectVirtualStorageDevice {
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualStorageDeviceErrorCount,
 			prometheus.CounterValue,
-			device[virtualStorageDeviceErrorCount].FirstValue,
-			name,
+			data.VirtualStorageDeviceErrorCount,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualStorageDeviceQueueLength,
 			prometheus.GaugeValue,
-			device[virtualStorageDeviceQueueLength].FirstValue,
-			name,
+			data.VirtualStorageDeviceQueueLength,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualStorageDeviceReadBytes,
 			prometheus.CounterValue,
-			device[virtualStorageDeviceReadBytes].FirstValue,
-			name,
+			data.VirtualStorageDeviceReadBytes,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualStorageDeviceReadOperations,
 			prometheus.CounterValue,
-			device[virtualStorageDeviceReadOperations].FirstValue,
-			name,
+			data.VirtualStorageDeviceReadOperations,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualStorageDeviceWriteBytes,
 			prometheus.CounterValue,
-			device[virtualStorageDeviceWriteBytes].FirstValue,
-			name,
+			data.VirtualStorageDeviceWriteBytes,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualStorageDeviceWriteOperations,
 			prometheus.CounterValue,
-			device[virtualStorageDeviceWriteOperations].FirstValue,
-			name,
+			data.VirtualStorageDeviceWriteOperations,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualStorageDeviceLatency,
 			prometheus.GaugeValue,
-			device[virtualStorageDeviceLatency].FirstValue,
-			name,
+			data.VirtualStorageDeviceLatency,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualStorageDeviceThroughput,
 			prometheus.GaugeValue,
-			device[virtualStorageDeviceThroughput].FirstValue,
-			name,
+			data.VirtualStorageDeviceThroughput,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualStorageDeviceNormalizedThroughput,
 			prometheus.GaugeValue,
-			device[virtualStorageDeviceNormalizedThroughput].FirstValue,
-			name,
+			data.VirtualStorageDeviceNormalizedThroughput,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualStorageDeviceLowerQueueLength,
 			prometheus.GaugeValue,
-			device[virtualStorageDeviceLowerQueueLength].FirstValue,
-			name,
+			data.VirtualStorageDeviceLowerQueueLength,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualStorageDeviceLowerLatency,
 			prometheus.GaugeValue,
-			device[virtualStorageDeviceLowerLatency].FirstValue,
-			name,
+			data.VirtualStorageDeviceLowerLatency,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualStorageDeviceIOQuotaReplenishmentRate,
 			prometheus.GaugeValue,
-			device[virtualStorageDeviceIOQuotaReplenishmentRate].FirstValue,
-			name,
+			data.VirtualStorageDeviceIOQuotaReplenishmentRate,
+			data.Name,
 		)
 	}
 

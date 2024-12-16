@@ -25,7 +25,7 @@ import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/headers/iphlpapi"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows"
@@ -49,8 +49,10 @@ var ConfigDefaults = Config{
 type Collector struct {
 	config Config
 
-	perfDataCollector4 *perfdata.Collector
-	perfDataCollector6 *perfdata.Collector
+	perfDataCollector4 *pdh.Collector
+	perfDataCollector6 *pdh.Collector
+	perfDataObject4    []perfDataCounterValues
+	perfDataObject6    []perfDataCounterValues
 
 	connectionFailures         *prometheus.Desc
 	connectionsActive          *prometheus.Desc
@@ -116,26 +118,14 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
-	counters := []string{
-		connectionFailures,
-		connectionsActive,
-		connectionsEstablished,
-		connectionsPassive,
-		connectionsReset,
-		segmentsPerSec,
-		segmentsReceivedPerSec,
-		segmentsRetransmittedPerSec,
-		segmentsSentPerSec,
-	}
-
 	var err error
 
-	c.perfDataCollector4, err = perfdata.NewCollector("TCPv4", nil, counters)
+	c.perfDataCollector4, err = pdh.NewCollector[perfDataCounterValues]("TCPv4", nil)
 	if err != nil {
 		return fmt.Errorf("failed to create TCPv4 collector: %w", err)
 	}
 
-	c.perfDataCollector6, err = perfdata.NewCollector("TCPv6", nil, counters)
+	c.perfDataCollector6, err = pdh.NewCollector[perfDataCounterValues]("TCPv6", nil)
 	if err != nil {
 		return fmt.Errorf("failed to create TCPv6 collector: %w", err)
 	}
@@ -224,84 +214,76 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 }
 
 func (c *Collector) collect(ch chan<- prometheus.Metric) error {
-	data, err := c.perfDataCollector4.Collect()
+	err := c.perfDataCollector4.Collect(&c.perfDataObject4)
 	if err != nil {
-		return fmt.Errorf("failed to collect TCPv4 metrics: %w", err)
+		return fmt.Errorf("failed to collect TCPv4 metrics[0]. %w", err)
 	}
 
-	if _, ok := data[perfdata.InstanceEmpty]; !ok {
-		return errors.New("no data for TCPv4")
-	}
+	c.writeTCPCounters(ch, c.perfDataObject4, []string{"ipv4"})
 
-	c.writeTCPCounters(ch, data[perfdata.InstanceEmpty], []string{"ipv4"})
-
-	data, err = c.perfDataCollector6.Collect()
+	err = c.perfDataCollector6.Collect(&c.perfDataObject6)
 	if err != nil {
-		return fmt.Errorf("failed to collect TCPv6 metrics: %w", err)
+		return fmt.Errorf("failed to collect TCPv6 metrics[0]. %w", err)
 	}
 
-	if _, ok := data[perfdata.InstanceEmpty]; !ok {
-		return errors.New("no data for TCPv6")
-	}
-
-	c.writeTCPCounters(ch, data[perfdata.InstanceEmpty], []string{"ipv6"})
+	c.writeTCPCounters(ch, c.perfDataObject6, []string{"ipv6"})
 
 	return nil
 }
 
-func (c *Collector) writeTCPCounters(ch chan<- prometheus.Metric, metrics map[string]perfdata.CounterValue, labels []string) {
+func (c *Collector) writeTCPCounters(ch chan<- prometheus.Metric, metrics []perfDataCounterValues, labels []string) {
 	ch <- prometheus.MustNewConstMetric(
 		c.connectionFailures,
 		prometheus.CounterValue,
-		metrics[connectionFailures].FirstValue,
+		metrics[0].ConnectionFailures,
 		labels...,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.connectionsActive,
 		prometheus.CounterValue,
-		metrics[connectionsActive].FirstValue,
+		metrics[0].ConnectionsActive,
 		labels...,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.connectionsEstablished,
 		prometheus.GaugeValue,
-		metrics[connectionsEstablished].FirstValue,
+		metrics[0].ConnectionsEstablished,
 		labels...,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.connectionsPassive,
 		prometheus.CounterValue,
-		metrics[connectionsPassive].FirstValue,
+		metrics[0].ConnectionsPassive,
 		labels...,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.connectionsReset,
 		prometheus.CounterValue,
-		metrics[connectionsReset].FirstValue,
+		metrics[0].ConnectionsReset,
 		labels...,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.segmentsTotal,
 		prometheus.CounterValue,
-		metrics[segmentsPerSec].FirstValue,
+		metrics[0].SegmentsPerSec,
 		labels...,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.segmentsReceivedTotal,
 		prometheus.CounterValue,
-		metrics[segmentsReceivedPerSec].FirstValue,
+		metrics[0].SegmentsReceivedPerSec,
 		labels...,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.segmentsRetransmittedTotal,
 		prometheus.CounterValue,
-		metrics[segmentsRetransmittedPerSec].FirstValue,
+		metrics[0].SegmentsRetransmittedPerSec,
 		labels...,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.segmentsSentTotal,
 		prometheus.CounterValue,
-		metrics[segmentsSentPerSec].FirstValue,
+		metrics[0].SegmentsSentPerSec,
 		labels...,
 	)
 }

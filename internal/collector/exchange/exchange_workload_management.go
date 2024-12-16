@@ -18,31 +18,36 @@ package exchange
 import (
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-const (
-	activeTasks    = "ActiveTasks"
-	completedTasks = "CompletedTasks"
-	queuedTasks    = "QueuedTasks"
-	yieldedTasks   = "YieldedTasks"
-	isActive       = "Active"
-)
+type collectorWorkloadManagementWorkloads struct {
+	perfDataCollectorWorkloadManagementWorkloads *pdh.Collector
+	perfDataObjectWorkloadManagementWorkloads    []perfDataCounterValuesWorkloadManagementWorkloads
+
+	activeTasks    *prometheus.Desc
+	isActive       *prometheus.Desc
+	completedTasks *prometheus.Desc
+	queuedTasks    *prometheus.Desc
+	yieldedTasks   *prometheus.Desc
+}
+
+type perfDataCounterValuesWorkloadManagementWorkloads struct {
+	Name string
+
+	ActiveTasks    float64 `perfdata:"ActiveTasks"`
+	CompletedTasks float64 `perfdata:"CompletedTasks"`
+	QueuedTasks    float64 `perfdata:"QueuedTasks"`
+	YieldedTasks   float64 `perfdata:"YieldedTasks"`
+	IsActive       float64 `perfdata:"Active"`
+}
 
 func (c *Collector) buildWorkloadManagementWorkloads() error {
-	counters := []string{
-		activeTasks,
-		completedTasks,
-		queuedTasks,
-		yieldedTasks,
-		isActive,
-	}
-
 	var err error
 
-	c.perfDataCollectorWorkloadManagementWorkloads, err = perfdata.NewCollector("MSExchange WorkloadManagement Workloads", perfdata.InstancesAll, counters)
+	c.perfDataCollectorWorkloadManagementWorkloads, err = pdh.NewCollector[perfDataCounterValuesWorkloadManagementWorkloads]("MSExchange WorkloadManagement Workloads", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create MSExchange WorkloadManagement Workloads collector: %w", err)
 	}
@@ -82,46 +87,42 @@ func (c *Collector) buildWorkloadManagementWorkloads() error {
 }
 
 func (c *Collector) collectWorkloadManagementWorkloads(ch chan<- prometheus.Metric) error {
-	perfData, err := c.perfDataCollectorWorkloadManagementWorkloads.Collect()
+	err := c.perfDataCollectorWorkloadManagementWorkloads.Collect(&c.perfDataObjectWorkloadManagementWorkloads)
 	if err != nil {
 		return fmt.Errorf("failed to collect MSExchange WorkloadManagement Workloads: %w", err)
 	}
 
-	if len(perfData) == 0 {
-		return fmt.Errorf("failed to collect MSExchange WorkloadManagement Workloads metrics: %w", types.ErrNoData)
-	}
-
-	for name, data := range perfData {
-		labelName := c.toLabelName(name)
+	for _, data := range c.perfDataObjectWorkloadManagementWorkloads {
+		labelName := c.toLabelName(data.Name)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.activeTasks,
 			prometheus.GaugeValue,
-			data[activeTasks].FirstValue,
+			data.ActiveTasks,
 			labelName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.completedTasks,
 			prometheus.CounterValue,
-			data[completedTasks].FirstValue,
+			data.CompletedTasks,
 			labelName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.queuedTasks,
 			prometheus.CounterValue,
-			data[queuedTasks].FirstValue,
+			data.QueuedTasks,
 			labelName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.yieldedTasks,
 			prometheus.CounterValue,
-			data[yieldedTasks].FirstValue,
+			data.YieldedTasks,
 			labelName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.isActive,
 			prometheus.GaugeValue,
-			data[isActive].FirstValue,
+			data.IsActive,
 			labelName,
 		)
 	}

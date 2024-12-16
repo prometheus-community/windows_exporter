@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"log/slog"
 	"regexp"
-	"runtime/debug"
 	"strconv"
 	"strings"
 	"sync"
@@ -28,7 +27,8 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
+	"github.com/prometheus-community/windows_exporter/internal/pdh/registry"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows"
@@ -57,12 +57,14 @@ type Collector struct {
 	miSession                 *mi.Session
 	workerProcessMIQueryQuery mi.Query
 
-	perfDataCollector *perfdata.Collector
+	collectorVersion int
+
+	collectorV1
+	collectorV2
 
 	lookupCache sync.Map
 
-	workerCh chan processWorkerRequest
-	mu       sync.RWMutex
+	mu sync.RWMutex
 
 	info              *prometheus.Desc
 	cpuTimeTotal      *prometheus.Desc
@@ -80,14 +82,6 @@ type Collector struct {
 	workingSet        *prometheus.Desc
 	workingSetPeak    *prometheus.Desc
 	workingSetPrivate *prometheus.Desc
-}
-
-type processWorkerRequest struct {
-	ch                       chan<- prometheus.Metric
-	name                     string
-	performanceCounterValues map[string]perfdata.CounterValue
-	waitGroup                *sync.WaitGroup
-	workerProcesses          []WorkerProcess
 }
 
 func New(config *Config) *Collector {
@@ -159,9 +153,8 @@ func (c *Collector) Close() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	c.perfDataCollector.Close()
-
-	close(c.workerCh)
+	c.closeV1()
+	c.closeV2()
 
 	return nil
 }
@@ -181,55 +174,34 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 	c.workerProcessMIQueryQuery = miQuery
 	c.miSession = miSession
 
-	counters := []string{
-		processID,
-		percentProcessorTime,
-		percentPrivilegedTime,
-		percentUserTime,
-		creatingProcessID,
-		elapsedTime,
-		handleCount,
-		ioDataBytesPerSec,
-		ioDataOperationsPerSec,
-		ioOtherBytesPerSec,
-		ioOtherOperationsPerSec,
-		ioReadBytesPerSec,
-		ioReadOperationsPerSec,
-		ioWriteBytesPerSec,
-		ioWriteOperationsPerSec,
-		pageFaultsPerSec,
-		pageFileBytesPeak,
-		pageFileBytes,
-		poolNonPagedBytes,
-		poolPagedBytes,
-		priorityBase,
-		privateBytes,
-		threadCount,
-		virtualBytesPeak,
-		virtualBytes,
-		workingSetPrivate,
-		workingSetPeak,
-		workingSet,
-	}
+	c.collectorVersion = 2
+	c.perfDataCollectorV2, err = pdh.NewCollector[perfDataCounterValuesV2]("Process V2", pdh.InstancesAll)
 
-	c.perfDataCollector, err = perfdata.NewCollector("Process V2", perfdata.InstancesAll, counters)
-	if errors.Is(err, perfdata.NewPdhError(perfdata.PdhCstatusNoObject)) {
-		counters[0] = idProcess
-
-		c.perfDataCollector, err = perfdata.NewCollector("Process", perfdata.InstancesAll, counters)
+	if errors.Is(err, pdh.NewPdhError(pdh.CstatusNoObject)) {
+		c.collectorVersion = 1
+		c.perfDataCollectorV1, err = registry.NewCollector[perfDataCounterValuesV1]("Process", pdh.InstancesAll)
 	}
 
 	if err != nil {
 		return fmt.Errorf("failed to create Process collector: %w", err)
 	}
 
-	c.workerCh = make(chan processWorkerRequest, 32)
+	if c.collectorVersion == 1 {
+		c.workerChV1 = make(chan processWorkerRequestV1, 32)
+
+		for range 4 {
+			go c.collectWorkerV1()
+		}
+	} else {
+		c.workerChV2 = make(chan processWorkerRequestV2, 32)
+
+		for range 4 {
+			go c.collectWorkerV2()
+		}
+	}
+
 	c.mu = sync.RWMutex{}
 	c.lookupCache = sync.Map{}
-
-	for range 4 {
-		go c.collectWorker()
-	}
 
 	if c.config.ProcessInclude.String() == "^(?:.*)$" && c.config.ProcessExclude.String() == "^(?:)$" {
 		logger.Warn("No filters specified for process collector. This will generate a very large number of metrics!")
@@ -336,21 +308,7 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 	return nil
 }
 
-type WorkerProcess struct {
-	AppPoolName string `mi:"AppPoolName"`
-	ProcessId   uint64 `mi:"ProcessId"`
-}
-
 func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
-	perfData, err := c.perfDataCollector.Collect()
-	if err != nil {
-		return fmt.Errorf("failed to collect metrics: %w", err)
-	}
-
-	if len(perfData) == 0 {
-		return errors.New("perflib query returned empty result set")
-	}
-
 	var workerProcesses []WorkerProcess
 	if c.config.EnableWorkerProcess {
 		if err := c.miSession.Query(&workerProcesses, mi.NamespaceRootWebAdministration, c.workerProcessMIQueryQuery); err != nil {
@@ -358,239 +316,11 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		}
 	}
 
-	wg := &sync.WaitGroup{}
-
-	for name, process := range perfData {
-		// Duplicate processes are suffixed #, and an index number. Remove those.
-		name, _, _ = strings.Cut(name, ":") // Process V2
-		name, _, _ = strings.Cut(name, "#") // Process
-
-		if c.config.ProcessExclude.MatchString(name) || !c.config.ProcessInclude.MatchString(name) {
-			continue
-		}
-
-		wg.Add(1)
-
-		c.workerCh <- processWorkerRequest{
-			ch:                       ch,
-			name:                     name,
-			performanceCounterValues: process,
-			workerProcesses:          workerProcesses,
-			waitGroup:                wg,
-		}
+	if c.collectorVersion == 1 {
+		return c.collectV1(ch, workerProcesses)
 	}
 
-	wg.Wait()
-
-	return nil
-}
-
-func (c *Collector) collectWorker() {
-	defer func() {
-		if r := recover(); r != nil {
-			c.logger.Error("Worker panic",
-				slog.Any("panic", r),
-				slog.String("stack", string(debug.Stack())),
-			)
-
-			// Restart the collectWorker
-			go c.collectWorker()
-		}
-	}()
-
-	for req := range c.workerCh {
-		(func() {
-			defer req.waitGroup.Done()
-
-			ch := req.ch
-			name := req.name
-			process := req.performanceCounterValues
-
-			var pid uint64
-
-			if v, ok := process[processID]; ok {
-				pid = uint64(v.FirstValue)
-			} else if v, ok = process[idProcess]; ok {
-				pid = uint64(v.FirstValue)
-			}
-
-			parentPID := strconv.FormatUint(uint64(process[creatingProcessID].FirstValue), 10)
-
-			if c.config.EnableWorkerProcess {
-				for _, wp := range req.workerProcesses {
-					if wp.ProcessId == pid {
-						name = strings.Join([]string{name, wp.AppPoolName}, "_")
-
-						break
-					}
-				}
-			}
-
-			cmdLine, processOwner, processGroupID, err := c.getProcessInformation(uint32(pid))
-			if err != nil {
-				c.logger.Debug("Failed to get process information",
-					slog.Uint64("pid", pid),
-					slog.Any("err", err),
-				)
-			}
-
-			pidString := strconv.FormatUint(pid, 10)
-
-			ch <- prometheus.MustNewConstMetric(
-				c.info,
-				prometheus.GaugeValue,
-				1.0,
-				name, pidString, parentPID, strconv.Itoa(int(processGroupID)), processOwner, cmdLine,
-			)
-
-			ch <- prometheus.MustNewConstMetric(
-				c.startTime,
-				prometheus.GaugeValue,
-				process[elapsedTime].FirstValue,
-				name, pidString,
-			)
-
-			ch <- prometheus.MustNewConstMetric(
-				c.handleCount,
-				prometheus.GaugeValue,
-				process[handleCount].FirstValue,
-				name, pidString,
-			)
-
-			ch <- prometheus.MustNewConstMetric(
-				c.cpuTimeTotal,
-				prometheus.CounterValue,
-				process[percentPrivilegedTime].FirstValue,
-				name, pidString, "privileged",
-			)
-
-			ch <- prometheus.MustNewConstMetric(
-				c.cpuTimeTotal,
-				prometheus.CounterValue,
-				process[percentUserTime].FirstValue,
-				name, pidString, "user",
-			)
-
-			ch <- prometheus.MustNewConstMetric(
-				c.ioBytesTotal,
-				prometheus.CounterValue,
-				process[ioOtherBytesPerSec].FirstValue,
-				name, pidString, "other",
-			)
-
-			ch <- prometheus.MustNewConstMetric(
-				c.ioOperationsTotal,
-				prometheus.CounterValue,
-				process[ioOtherOperationsPerSec].FirstValue,
-				name, pidString, "other",
-			)
-
-			ch <- prometheus.MustNewConstMetric(
-				c.ioBytesTotal,
-				prometheus.CounterValue,
-				process[ioReadBytesPerSec].FirstValue,
-				name, pidString, "read",
-			)
-
-			ch <- prometheus.MustNewConstMetric(
-				c.ioOperationsTotal,
-				prometheus.CounterValue,
-				process[ioReadOperationsPerSec].FirstValue,
-				name, pidString, "read",
-			)
-
-			ch <- prometheus.MustNewConstMetric(
-				c.ioBytesTotal,
-				prometheus.CounterValue,
-				process[ioWriteBytesPerSec].FirstValue,
-				name, pidString, "write",
-			)
-
-			ch <- prometheus.MustNewConstMetric(
-				c.ioOperationsTotal,
-				prometheus.CounterValue,
-				process[ioWriteOperationsPerSec].FirstValue,
-				name, pidString, "write",
-			)
-
-			ch <- prometheus.MustNewConstMetric(
-				c.pageFaultsTotal,
-				prometheus.CounterValue,
-				process[pageFaultsPerSec].FirstValue,
-				name, pidString,
-			)
-
-			ch <- prometheus.MustNewConstMetric(
-				c.pageFileBytes,
-				prometheus.GaugeValue,
-				process[pageFileBytes].FirstValue,
-				name, pidString,
-			)
-
-			ch <- prometheus.MustNewConstMetric(
-				c.poolBytes,
-				prometheus.GaugeValue,
-				process[poolNonPagedBytes].FirstValue,
-				name, pidString, "nonpaged",
-			)
-
-			ch <- prometheus.MustNewConstMetric(
-				c.poolBytes,
-				prometheus.GaugeValue,
-				process[poolPagedBytes].FirstValue,
-				name, pidString, "paged",
-			)
-
-			ch <- prometheus.MustNewConstMetric(
-				c.priorityBase,
-				prometheus.GaugeValue,
-				process[priorityBase].FirstValue,
-				name, pidString,
-			)
-
-			ch <- prometheus.MustNewConstMetric(
-				c.privateBytes,
-				prometheus.GaugeValue,
-				process[privateBytes].FirstValue,
-				name, pidString,
-			)
-
-			ch <- prometheus.MustNewConstMetric(
-				c.threadCount,
-				prometheus.GaugeValue,
-				process[threadCount].FirstValue,
-				name, pidString,
-			)
-
-			ch <- prometheus.MustNewConstMetric(
-				c.virtualBytes,
-				prometheus.GaugeValue,
-				process[virtualBytes].FirstValue,
-				name, pidString,
-			)
-
-			ch <- prometheus.MustNewConstMetric(
-				c.workingSetPrivate,
-				prometheus.GaugeValue,
-				process[workingSetPrivate].FirstValue,
-				name, pidString,
-			)
-
-			ch <- prometheus.MustNewConstMetric(
-				c.workingSetPeak,
-				prometheus.GaugeValue,
-				process[workingSetPeak].FirstValue,
-				name, pidString,
-			)
-
-			ch <- prometheus.MustNewConstMetric(
-				c.workingSet,
-				prometheus.GaugeValue,
-				process[workingSet].FirstValue,
-				name, pidString,
-			)
-		})()
-	}
+	return c.collectV2(ch, workerProcesses)
 }
 
 // ref: https://github.com/microsoft/hcsshim/blob/8beabacfc2d21767a07c20f8dd5f9f3932dbf305/internal/uvm/stats.go#L25
