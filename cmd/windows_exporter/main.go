@@ -20,9 +20,6 @@ package main
 //goland:noinspection GoUnsortedImport
 //nolint:gofumpt
 import (
-	// Its important that we do these first so that we can register with the Windows service control ASAP to avoid timeouts.
-	"github.com/prometheus-community/windows_exporter/internal/windowsservice"
-
 	"context"
 	"errors"
 	"fmt"
@@ -33,9 +30,13 @@ import (
 	"os/signal"
 	"os/user"
 	"runtime"
+	"runtime/debug"
 	"slices"
 	"strings"
 	"time"
+
+	// Its important that we do these first so that we can register with the Windows service control ASAP to avoid timeouts.
+	"github.com/prometheus-community/windows_exporter/internal/windowsservice"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/config"
@@ -103,6 +104,10 @@ func run() int {
 			"process.priority",
 			"Priority of the exporter process. Higher priorities may improve exporter responsiveness during periods of system load. Can be one of [\"realtime\", \"high\", \"abovenormal\", \"normal\", \"belownormal\", \"low\"]",
 		).Default("normal").String()
+		memoryLimit = app.Flag(
+			"process.memory-limit",
+			"Limit memory usage in bytes. This is a soft-limit and not guaranteed. 0 means no limit. Read more at https://pkg.go.dev/runtime/debug#SetMemoryLimit .",
+		).Default("200000000").Int64()
 	)
 
 	logFile := &log.AllowedFile{}
@@ -131,6 +136,8 @@ func run() int {
 
 		return 1
 	}
+
+	debug.SetMemoryLimit(*memoryLimit)
 
 	logger, err := log.New(logConfig)
 	if err != nil {
