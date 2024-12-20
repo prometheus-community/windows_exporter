@@ -30,8 +30,10 @@ type Counter struct {
 
 func NewCollector[T any](object string, _ []string) (*Collector, error) {
 	collector := &Collector{
-		object: object,
-		query:  MapCounterToIndex(object),
+		object:         object,
+		query:          MapCounterToIndex(object),
+		nameIndexValue: -1,
+		counters:       make(map[string]Counter),
 	}
 
 	var values [0]T
@@ -44,7 +46,7 @@ func NewCollector[T any](object string, _ []string) (*Collector, error) {
 	}
 
 	for _, f := range reflect.VisibleFields(valueType) {
-		counterName, ok := f.Tag.Lookup("perflib")
+		counterName, ok := f.Tag.Lookup("perfdata")
 		if !ok {
 			continue
 		}
@@ -52,11 +54,13 @@ func NewCollector[T any](object string, _ []string) (*Collector, error) {
 		var counter Counter
 		if counter, ok = collector.counters[counterName]; !ok {
 			counter = Counter{
-				Name: counterName,
+				Name:                  counterName,
+				FieldIndexSecondValue: -1,
+				FieldIndexValue:       -1,
 			}
 		}
 
-		if strings.HasPrefix(counterName, ",secondvalue") {
+		if strings.HasSuffix(counterName, ",secondvalue") {
 			counterName = strings.TrimSuffix(counterName, ",secondvalue")
 
 			counter.FieldIndexSecondValue = f.Index[0]
@@ -125,7 +129,7 @@ func (c *Collector) Collect(data any) error {
 				instanceName = pdh.InstanceEmpty
 			}
 
-			if c.nameIndexValue != 0 {
+			if c.nameIndexValue != -1 {
 				elemValue.Field(c.nameIndexValue).SetString(instanceName)
 			}
 
@@ -142,23 +146,27 @@ func (c *Collector) Collect(data any) error {
 					continue
 				}
 
-				value := dv.Index(index).Field(counter.FieldIndexValue)
-
 				switch perfCounter.Def.CounterType {
 				case pdh.PERF_ELAPSED_TIME:
-					value.SetFloat(float64((perfCounter.Value - pdh.WindowsEpoch) / perfObject.Frequency))
+					dv.Index(index).
+						Field(counter.FieldIndexValue).
+						SetFloat(float64((perfCounter.Value - pdh.WindowsEpoch) / perfObject.Frequency))
 				case pdh.PERF_100NSEC_TIMER, pdh.PERF_PRECISION_100NS_TIMER:
-					value.SetFloat(float64(perfCounter.Value) * pdh.TicksToSecondScaleFactor)
-				case pdh.PERF_AVERAGE_BULK, pdh.PERF_RAW_FRACTION:
-					if counter.FieldIndexSecondValue != 0 {
+					dv.Index(index).
+						Field(counter.FieldIndexValue).
+						SetFloat(float64(perfCounter.Value) * pdh.TicksToSecondScaleFactor)
+				default:
+					if counter.FieldIndexSecondValue != -1 {
 						dv.Index(index).
 							Field(counter.FieldIndexSecondValue).
 							SetFloat(float64(perfCounter.SecondValue))
 					}
 
-					fallthrough
-				default:
-					value.SetFloat(float64(perfCounter.Value))
+					if counter.FieldIndexValue != -1 {
+						dv.Index(index).
+							Field(counter.FieldIndexValue).
+							SetFloat(float64(perfCounter.Value))
+					}
 				}
 			}
 		}
