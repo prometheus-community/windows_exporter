@@ -20,6 +20,9 @@ package main
 //goland:noinspection GoUnsortedImport
 //nolint:gofumpt
 import (
+	// Its important that we do these first so that we can register with the Windows service control ASAP to avoid timeouts.
+	"github.com/prometheus-community/windows_exporter/internal/windowsservice"
+
 	"context"
 	"errors"
 	"fmt"
@@ -34,9 +37,6 @@ import (
 	"slices"
 	"strings"
 	"time"
-
-	// Its important that we do these first so that we can register with the Windows service control ASAP to avoid timeouts.
-	"github.com/prometheus-community/windows_exporter/internal/windowsservice"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/config"
