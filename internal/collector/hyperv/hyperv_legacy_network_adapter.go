@@ -18,14 +18,15 @@ package hyperv
 import (
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 // collectorLegacyNetworkAdapter Hyper-V Legacy Network Adapter metrics
 type collectorLegacyNetworkAdapter struct {
-	perfDataCollectorLegacyNetworkAdapter *perfdata.Collector
+	perfDataCollectorLegacyNetworkAdapter *pdh.Collector
+	perfDataObjectLegacyNetworkAdapter    []perfDataCounterValuesLegacyNetworkAdapter
 
 	legacyNetworkAdapterBytesDropped   *prometheus.Desc // \Hyper-V Legacy Network Adapter(*)\Bytes Dropped
 	legacyNetworkAdapterBytesReceived  *prometheus.Desc // \Hyper-V Legacy Network Adapter(*)\Bytes Received/sec
@@ -35,26 +36,21 @@ type collectorLegacyNetworkAdapter struct {
 	legacyNetworkAdapterFramesSent     *prometheus.Desc // \Hyper-V Legacy Network Adapter(*)\Frames Sent/sec
 }
 
-const (
-	legacyNetworkAdapterBytesDropped   = "Bytes Dropped"
-	legacyNetworkAdapterBytesReceived  = "Bytes Received/sec"
-	legacyNetworkAdapterBytesSent      = "Bytes Sent/sec"
-	legacyNetworkAdapterFramesDropped  = "Frames Dropped"
-	legacyNetworkAdapterFramesReceived = "Frames Received/sec"
-	legacyNetworkAdapterFramesSent     = "Frames Sent/sec"
-)
+type perfDataCounterValuesLegacyNetworkAdapter struct {
+	Name string
+
+	LegacyNetworkAdapterBytesDropped   float64 `perfdata:"Bytes Dropped"`
+	LegacyNetworkAdapterBytesReceived  float64 `perfdata:"Bytes Received/sec"`
+	LegacyNetworkAdapterBytesSent      float64 `perfdata:"Bytes Sent/sec"`
+	LegacyNetworkAdapterFramesDropped  float64 `perfdata:"Frames Dropped"`
+	LegacyNetworkAdapterFramesReceived float64 `perfdata:"Frames Received/sec"`
+	LegacyNetworkAdapterFramesSent     float64 `perfdata:"Frames Sent/sec"`
+}
 
 func (c *Collector) buildLegacyNetworkAdapter() error {
 	var err error
 
-	c.perfDataCollectorLegacyNetworkAdapter, err = perfdata.NewCollector("Hyper-V Legacy Network Adapter", perfdata.InstancesAll, []string{
-		legacyNetworkAdapterBytesDropped,
-		legacyNetworkAdapterBytesReceived,
-		legacyNetworkAdapterBytesSent,
-		legacyNetworkAdapterFramesDropped,
-		legacyNetworkAdapterFramesReceived,
-		legacyNetworkAdapterFramesSent,
-	})
+	c.perfDataCollectorLegacyNetworkAdapter, err = pdh.NewCollector[perfDataCounterValuesLegacyNetworkAdapter]("Hyper-V Legacy Network Adapter", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create Hyper-V Legacy Network Adapter collector: %w", err)
 	}
@@ -100,52 +96,52 @@ func (c *Collector) buildLegacyNetworkAdapter() error {
 }
 
 func (c *Collector) collectLegacyNetworkAdapter(ch chan<- prometheus.Metric) error {
-	data, err := c.perfDataCollectorLegacyNetworkAdapter.Collect()
+	err := c.perfDataCollectorLegacyNetworkAdapter.Collect(&c.perfDataObjectLegacyNetworkAdapter)
 	if err != nil {
 		return fmt.Errorf("failed to collect Hyper-V Legacy Network Adapter metrics: %w", err)
 	}
 
-	for name, adapter := range data {
+	for _, data := range c.perfDataObjectLegacyNetworkAdapter {
 		ch <- prometheus.MustNewConstMetric(
 			c.legacyNetworkAdapterBytesDropped,
 			prometheus.GaugeValue,
-			adapter[legacyNetworkAdapterBytesDropped].FirstValue,
-			name,
+			data.LegacyNetworkAdapterBytesDropped,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.legacyNetworkAdapterBytesReceived,
 			prometheus.CounterValue,
-			adapter[legacyNetworkAdapterBytesReceived].FirstValue,
-			name,
+			data.LegacyNetworkAdapterBytesReceived,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.legacyNetworkAdapterBytesSent,
 			prometheus.CounterValue,
-			adapter[legacyNetworkAdapterBytesSent].FirstValue,
-			name,
+			data.LegacyNetworkAdapterBytesSent,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.legacyNetworkAdapterFramesReceived,
 			prometheus.CounterValue,
-			adapter[legacyNetworkAdapterFramesReceived].FirstValue,
-			name,
+			data.LegacyNetworkAdapterFramesReceived,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.legacyNetworkAdapterFramesDropped,
 			prometheus.CounterValue,
-			adapter[legacyNetworkAdapterFramesDropped].FirstValue,
-			name,
+			data.LegacyNetworkAdapterFramesDropped,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.legacyNetworkAdapterFramesSent,
 			prometheus.CounterValue,
-			adapter[legacyNetworkAdapterFramesSent].FirstValue,
-			name,
+			data.LegacyNetworkAdapterFramesSent,
+			data.Name,
 		)
 	}
 

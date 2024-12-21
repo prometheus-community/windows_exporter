@@ -33,6 +33,7 @@ import (
 	"os/signal"
 	"os/user"
 	"runtime"
+	"runtime/debug"
 	"slices"
 	"strings"
 	"time"
@@ -66,6 +67,7 @@ func main() {
 
 func run() int {
 	startTime := time.Now()
+	ctx := context.Background()
 
 	app := kingpin.New("windows_exporter", "A metrics collector for Windows.")
 
@@ -103,6 +105,10 @@ func run() int {
 			"process.priority",
 			"Priority of the exporter process. Higher priorities may improve exporter responsiveness during periods of system load. Can be one of [\"realtime\", \"high\", \"abovenormal\", \"normal\", \"belownormal\", \"low\"]",
 		).Default("normal").String()
+		memoryLimit = app.Flag(
+			"process.memory-limit",
+			"Limit memory usage in bytes. This is a soft-limit and not guaranteed. 0 means no limit. Read more at https://pkg.go.dev/runtime/debug#SetMemoryLimit .",
+		).Default("200000000").Int64()
 	)
 
 	logFile := &log.AllowedFile{}
@@ -132,6 +138,8 @@ func run() int {
 		return 1
 	}
 
+	debug.SetMemoryLimit(*memoryLimit)
+
 	logger, err := log.New(logConfig)
 	if err != nil {
 		//nolint:sloglint // we do not have an logger yet
@@ -143,7 +151,7 @@ func run() int {
 	}
 
 	if *configFile != "" {
-		resolver, err := config.NewResolver(*configFile, logger, *insecureSkipVerify)
+		resolver, err := config.NewResolver(ctx, *configFile, logger, *insecureSkipVerify)
 		if err != nil {
 			logger.Error("could not load config file",
 				slog.Any("err", err),
@@ -153,7 +161,7 @@ func run() int {
 		}
 
 		if err = resolver.Bind(app, os.Args[1:]); err != nil {
-			logger.Error("Failed to bind configuration",
+			logger.ErrorContext(ctx, "failed to bind configuration",
 				slog.Any("err", err),
 			)
 
@@ -167,7 +175,7 @@ func run() int {
 
 		// Parse flags once more to include those discovered in configuration file(s).
 		if _, err = app.Parse(os.Args[1:]); err != nil {
-			logger.Error("Failed to parse CLI args from YAML file",
+			logger.ErrorContext(ctx, "failed to parse CLI args from YAML file",
 				slog.Any("err", err),
 			)
 
@@ -185,7 +193,7 @@ func run() int {
 		}
 	}
 
-	logger.Debug("Logging has Started")
+	logger.LogAttrs(ctx, slog.LevelDebug, "logging has Started")
 
 	if err = setPriorityWindows(logger, os.Getpid(), *processPriority); err != nil {
 		logger.Error("failed to set process priority",
@@ -217,7 +225,7 @@ func run() int {
 
 	logCurrentUser(logger)
 
-	logger.Info("Enabled collectors: " + strings.Join(enabledCollectorList, ", "))
+	logger.InfoContext(ctx, "Enabled collectors: "+strings.Join(enabledCollectorList, ", "))
 
 	mux := http.NewServeMux()
 	mux.Handle("GET /health", httphandler.NewHealthHandler())
@@ -235,7 +243,7 @@ func run() int {
 		mux.HandleFunc("GET /debug/pprof/trace", pprof.Trace)
 	}
 
-	logger.Info(fmt.Sprintf("starting windows_exporter in %s", time.Since(startTime)),
+	logger.LogAttrs(ctx, slog.LevelInfo, fmt.Sprintf("starting windows_exporter in %s", time.Since(startTime)),
 		slog.String("version", version.Version),
 		slog.String("branch", version.Branch),
 		slog.String("revision", version.GetRevision()),
@@ -262,7 +270,7 @@ func run() int {
 		close(errCh)
 	}()
 
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
+	ctx, stop := signal.NotifyContext(ctx, os.Interrupt, os.Kill)
 	defer stop()
 
 	select {
@@ -272,7 +280,7 @@ func run() int {
 		logger.Info("Shutting down windows_exporter via service control")
 	case err := <-errCh:
 		if err != nil {
-			logger.Error("Failed to start windows_exporter",
+			logger.ErrorContext(ctx, "Failed to start windows_exporter",
 				slog.Any("err", err),
 			)
 
@@ -285,7 +293,7 @@ func run() int {
 
 	_ = server.Shutdown(ctx)
 
-	logger.Info("windows_exporter has shut down")
+	logger.InfoContext(ctx, "windows_exporter has shut down")
 
 	return 0
 }
@@ -326,7 +334,7 @@ func setPriorityWindows(logger *slog.Logger, pid int, priority string) error {
 		return nil
 	}
 
-	logger.Debug("setting process priority to " + priority)
+	logger.LogAttrs(context.Background(), slog.LevelDebug, "setting process priority to "+priority)
 
 	// https://learn.microsoft.com/en-us/windows/win32/procthread/process-security-and-access-rights
 	handle, err := windows.OpenProcess(

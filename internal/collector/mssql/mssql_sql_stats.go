@@ -19,13 +19,14 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 type collectorSQLStats struct {
-	sqlStatsPerfDataCollectors map[string]*perfdata.Collector
+	sqlStatsPerfDataCollectors map[string]*pdh.Collector
+	sqlStatsPerfDataObject     []perfDataCounterValuesSqlStats
 
 	sqlStatsAutoParamAttempts       *prometheus.Desc
 	sqlStatsBatchRequests           *prometheus.Desc
@@ -40,41 +41,30 @@ type collectorSQLStats struct {
 	sqlStatsUnsafeAutoParams        *prometheus.Desc
 }
 
-const (
-	sqlStatsAutoParamAttemptsPerSec       = "Auto-Param Attempts/sec"
-	sqlStatsBatchRequestsPerSec           = "Batch Requests/sec"
-	sqlStatsFailedAutoParamsPerSec        = "Failed Auto-Params/sec"
-	sqlStatsForcedParameterizationsPerSec = "Forced Parameterizations/sec"
-	sqlStatsGuidedplanexecutionsPerSec    = "Guided plan executions/sec"
-	sqlStatsMisguidedplanexecutionsPerSec = "Misguided plan executions/sec"
-	sqlStatsSafeAutoParamsPerSec          = "Safe Auto-Params/sec"
-	sqlStatsSQLAttentionrate              = "SQL Attention rate"
-	sqlStatsSQLCompilationsPerSec         = "SQL Compilations/sec"
-	sqlStatsSQLReCompilationsPerSec       = "SQL Re-Compilations/sec"
-	sqlStatsUnsafeAutoParamsPerSec        = "Unsafe Auto-Params/sec"
-)
+type perfDataCounterValuesSqlStats struct {
+	SqlStatsAutoParamAttemptsPerSec       float64 `perfdata:"Auto-Param Attempts/sec"`
+	SqlStatsBatchRequestsPerSec           float64 `perfdata:"Batch Requests/sec"`
+	SqlStatsFailedAutoParamsPerSec        float64 `perfdata:"Failed Auto-Params/sec"`
+	SqlStatsForcedParameterizationsPerSec float64 `perfdata:"Forced Parameterizations/sec"`
+	SqlStatsGuidedplanexecutionsPerSec    float64 `perfdata:"Guided plan executions/sec"`
+	SqlStatsMisguidedplanexecutionsPerSec float64 `perfdata:"Misguided plan executions/sec"`
+	SqlStatsSafeAutoParamsPerSec          float64 `perfdata:"Safe Auto-Params/sec"`
+	SqlStatsSQLAttentionrate              float64 `perfdata:"SQL Attention rate"`
+	SqlStatsSQLCompilationsPerSec         float64 `perfdata:"SQL Compilations/sec"`
+	SqlStatsSQLReCompilationsPerSec       float64 `perfdata:"SQL Re-Compilations/sec"`
+	SqlStatsUnsafeAutoParamsPerSec        float64 `perfdata:"Unsafe Auto-Params/sec"`
+}
 
 func (c *Collector) buildSQLStats() error {
 	var err error
 
-	c.sqlStatsPerfDataCollectors = make(map[string]*perfdata.Collector, len(c.mssqlInstances))
+	c.sqlStatsPerfDataCollectors = make(map[string]*pdh.Collector, len(c.mssqlInstances))
 	errs := make([]error, 0, len(c.mssqlInstances))
-	counters := []string{
-		sqlStatsAutoParamAttemptsPerSec,
-		sqlStatsBatchRequestsPerSec,
-		sqlStatsFailedAutoParamsPerSec,
-		sqlStatsForcedParameterizationsPerSec,
-		sqlStatsGuidedplanexecutionsPerSec,
-		sqlStatsMisguidedplanexecutionsPerSec,
-		sqlStatsSafeAutoParamsPerSec,
-		sqlStatsSQLAttentionrate,
-		sqlStatsSQLCompilationsPerSec,
-		sqlStatsSQLReCompilationsPerSec,
-		sqlStatsUnsafeAutoParamsPerSec,
-	}
 
 	for _, sqlInstance := range c.mssqlInstances {
-		c.sqlStatsPerfDataCollectors[sqlInstance.name], err = perfdata.NewCollector(c.mssqlGetPerfObjectName(sqlInstance.name, "SQL Statistics"), nil, counters)
+		c.sqlStatsPerfDataCollectors[sqlInstance.name], err = pdh.NewCollector[perfDataCounterValuesSqlStats](
+			c.mssqlGetPerfObjectName(sqlInstance.name, "SQL Statistics"), nil,
+		)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("failed to create SQL Statistics collector for instance %s: %w", sqlInstance.name, err))
 		}
@@ -154,95 +144,86 @@ func (c *Collector) collectSQLStats(ch chan<- prometheus.Metric) error {
 	return c.collect(ch, subCollectorSQLStats, c.sqlStatsPerfDataCollectors, c.collectSQLStatsInstance)
 }
 
-func (c *Collector) collectSQLStatsInstance(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *perfdata.Collector) error {
-	if perfDataCollector == nil {
-		return types.ErrCollectorNotInitialized
-	}
-
-	perfData, err := perfDataCollector.Collect()
+func (c *Collector) collectSQLStatsInstance(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *pdh.Collector) error {
+	err := perfDataCollector.Collect(&c.sqlStatsPerfDataObject)
 	if err != nil {
 		return fmt.Errorf("failed to collect %s metrics: %w", c.mssqlGetPerfObjectName(sqlInstance, "SQL Statistics"), err)
-	}
-
-	data, ok := perfData[perfdata.InstanceEmpty]
-	if !ok {
-		return fmt.Errorf("perflib query for %s returned empty result set", c.mssqlGetPerfObjectName(sqlInstance, "SQL Statistics"))
 	}
 
 	ch <- prometheus.MustNewConstMetric(
 		c.sqlStatsAutoParamAttempts,
 		prometheus.CounterValue,
-		data[sqlStatsAutoParamAttemptsPerSec].FirstValue,
+		c.sqlStatsPerfDataObject[0].SqlStatsAutoParamAttemptsPerSec,
 		sqlInstance,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.sqlStatsBatchRequests,
 		prometheus.CounterValue,
-		data[sqlStatsBatchRequestsPerSec].FirstValue,
+		c.sqlStatsPerfDataObject[0].SqlStatsBatchRequestsPerSec,
 		sqlInstance,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.sqlStatsFailedAutoParams,
 		prometheus.CounterValue,
-		data[sqlStatsFailedAutoParamsPerSec].FirstValue,
+		c.sqlStatsPerfDataObject[0].SqlStatsFailedAutoParamsPerSec,
 		sqlInstance,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.sqlStatsForcedParameterizations,
 		prometheus.CounterValue,
-		data[sqlStatsForcedParameterizationsPerSec].FirstValue,
+		c.sqlStatsPerfDataObject[0].SqlStatsForcedParameterizationsPerSec,
 		sqlInstance,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.sqlStatsGuidedplanexecutions,
 		prometheus.CounterValue,
-		data[sqlStatsGuidedplanexecutionsPerSec].FirstValue,
+		c.sqlStatsPerfDataObject[0].SqlStatsGuidedplanexecutionsPerSec,
 		sqlInstance,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.sqlStatsMisguidedplanexecutions,
 		prometheus.CounterValue,
-		data[sqlStatsMisguidedplanexecutionsPerSec].FirstValue,
+		c.sqlStatsPerfDataObject[0].SqlStatsMisguidedplanexecutionsPerSec,
 		sqlInstance,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.sqlStatsSafeAutoParams,
 		prometheus.CounterValue,
-		data[sqlStatsSafeAutoParamsPerSec].FirstValue,
+		c.sqlStatsPerfDataObject[0].SqlStatsSafeAutoParamsPerSec,
 		sqlInstance,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.sqlStatsSQLAttentionrate,
 		prometheus.CounterValue,
-		data[sqlStatsSQLAttentionrate].FirstValue,
+		c.sqlStatsPerfDataObject[0].SqlStatsSQLAttentionrate,
 		sqlInstance,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.sqlStatsSQLCompilations,
 		prometheus.CounterValue,
-		data[sqlStatsSQLCompilationsPerSec].FirstValue,
+		c.sqlStatsPerfDataObject[0].SqlStatsSQLCompilationsPerSec,
 		sqlInstance,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.sqlStatsSQLReCompilations,
 		prometheus.CounterValue,
-		data[sqlStatsSQLReCompilationsPerSec].FirstValue,
+		c.sqlStatsPerfDataObject[0].SqlStatsSQLReCompilationsPerSec,
 		sqlInstance,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.sqlStatsUnsafeAutoParams,
 		prometheus.CounterValue,
-		data[sqlStatsUnsafeAutoParamsPerSec].FirstValue,
+		c.sqlStatsPerfDataObject[0].SqlStatsUnsafeAutoParamsPerSec,
 		sqlInstance,
 	)
 

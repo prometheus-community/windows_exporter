@@ -19,14 +19,15 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 // collectorHypervisorVirtualProcessor Hyper-V Hypervisor Virtual Processor metrics
 type collectorHypervisorVirtualProcessor struct {
-	perfDataCollectorHypervisorVirtualProcessor *perfdata.Collector
+	perfDataCollectorHypervisorVirtualProcessor *pdh.Collector
+	perfDataObjectHypervisorVirtualProcessor    []perfDataCounterValuesHypervisorVirtualProcessor
 
 	// \Hyper-V Hypervisor Virtual Processor(*)\% Guest Run Time
 	// \Hyper-V Hypervisor Virtual Processor(*)\% Hypervisor Run Time
@@ -36,24 +37,20 @@ type collectorHypervisorVirtualProcessor struct {
 	hypervisorVirtualProcessorContextSwitches   *prometheus.Desc // \Hyper-V Hypervisor Virtual Processor(*)\CPU Wait Time Per Dispatch
 }
 
-const (
-	hypervisorVirtualProcessorGuestIdleTimePercent     = "% Guest Idle Time"
-	hypervisorVirtualProcessorHypervisorRunTimePercent = "% Hypervisor Run Time"
-	hypervisorVirtualProcessorTotalRunTimePercent      = "% Total Run Time"
-	hypervisorVirtualProcessorRemoteRunTimePercent     = "% Remote Run Time"
-	hypervisorVirtualProcessorCPUWaitTimePerDispatch   = "CPU Wait Time Per Dispatch"
-)
+type perfDataCounterValuesHypervisorVirtualProcessor struct {
+	Name string
+
+	HypervisorVirtualProcessorGuestIdleTimePercent     float64 `perfdata:"% Guest Idle Time"`
+	HypervisorVirtualProcessorHypervisorRunTimePercent float64 `perfdata:"% Hypervisor Run Time"`
+	HypervisorVirtualProcessorTotalRunTimePercent      float64 `perfdata:"% Total Run Time"`
+	HypervisorVirtualProcessorRemoteRunTimePercent     float64 `perfdata:"% Remote Run Time"`
+	HypervisorVirtualProcessorCPUWaitTimePerDispatch   float64 `perfdata:"CPU Wait Time Per Dispatch"`
+}
 
 func (c *Collector) buildHypervisorVirtualProcessor() error {
 	var err error
 
-	c.perfDataCollectorHypervisorVirtualProcessor, err = perfdata.NewCollector("Hyper-V Hypervisor Virtual Processor", perfdata.InstancesAll, []string{
-		hypervisorVirtualProcessorGuestIdleTimePercent,
-		hypervisorVirtualProcessorHypervisorRunTimePercent,
-		hypervisorVirtualProcessorTotalRunTimePercent,
-		hypervisorVirtualProcessorRemoteRunTimePercent,
-		hypervisorVirtualProcessorCPUWaitTimePerDispatch,
-	})
+	c.perfDataCollectorHypervisorVirtualProcessor, err = pdh.NewCollector[perfDataCounterValuesHypervisorVirtualProcessor]("Hyper-V Hypervisor Virtual Processor", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create Hyper-V Hypervisor Virtual Processor collector: %w", err)
 	}
@@ -81,16 +78,16 @@ func (c *Collector) buildHypervisorVirtualProcessor() error {
 }
 
 func (c *Collector) collectHypervisorVirtualProcessor(ch chan<- prometheus.Metric) error {
-	data, err := c.perfDataCollectorHypervisorVirtualProcessor.Collect()
+	err := c.perfDataCollectorHypervisorVirtualProcessor.Collect(&c.perfDataObjectHypervisorVirtualProcessor)
 	if err != nil {
 		return fmt.Errorf("failed to collect Hyper-V Hypervisor Virtual Processor metrics: %w", err)
 	}
 
-	for coreName, coreData := range data {
+	for _, data := range c.perfDataObjectHypervisorVirtualProcessor {
 		// The name format is <VM Name>:Hv VP <vcore id>
-		parts := strings.Split(coreName, ":")
+		parts := strings.Split(data.Name, ":")
 		if len(parts) != 2 {
-			return fmt.Errorf("unexpected format of Name in Hyper-V Hypervisor Virtual Processor: %q, expected %q", coreName, "<VM Name>:Hv VP <vcore id>")
+			return fmt.Errorf("unexpected format of Name in Hyper-V Hypervisor Virtual Processor: %q, expected %q", data.Name, "<VM Name>:Hv VP <vcore id>")
 		}
 
 		coreParts := strings.Split(parts[1], " ")
@@ -99,41 +96,41 @@ func (c *Collector) collectHypervisorVirtualProcessor(ch chan<- prometheus.Metri
 		}
 
 		vmName := parts[0]
-		coreId := coreParts[2]
+		coreID := coreParts[2]
 
 		ch <- prometheus.MustNewConstMetric(
 			c.hypervisorVirtualProcessorTimeTotal,
 			prometheus.CounterValue,
-			coreData[hypervisorVirtualProcessorHypervisorRunTimePercent].FirstValue,
-			vmName, coreId, "hypervisor",
+			data.HypervisorVirtualProcessorHypervisorRunTimePercent,
+			vmName, coreID, "hypervisor",
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.hypervisorVirtualProcessorTimeTotal,
 			prometheus.CounterValue,
-			coreData[hypervisorVirtualProcessorGuestIdleTimePercent].FirstValue,
-			vmName, coreId, "guest_idle",
+			data.HypervisorVirtualProcessorGuestIdleTimePercent,
+			vmName, coreID, "guest_idle",
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.hypervisorVirtualProcessorTimeTotal,
 			prometheus.CounterValue,
-			coreData[hypervisorVirtualProcessorGuestIdleTimePercent].FirstValue,
-			vmName, coreId, "guest_idle",
+			data.HypervisorVirtualProcessorGuestIdleTimePercent,
+			vmName, coreID, "guest_idle",
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.hypervisorVirtualProcessorTotalRunTimeTotal,
 			prometheus.CounterValue,
-			coreData[hypervisorVirtualProcessorTotalRunTimePercent].FirstValue,
-			vmName, coreId,
+			data.HypervisorVirtualProcessorTotalRunTimePercent,
+			vmName, coreID,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.hypervisorVirtualProcessorContextSwitches,
 			prometheus.CounterValue,
-			coreData[hypervisorVirtualProcessorCPUWaitTimePerDispatch].FirstValue,
-			vmName, coreId,
+			data.HypervisorVirtualProcessorCPUWaitTimePerDispatch,
+			vmName, coreID,
 		)
 	}
 

@@ -22,7 +22,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -37,7 +37,8 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	config Config
 
-	accessPerfDataCollector *perfdata.Collector
+	accessPerfDataCollector *pdh.Collector
+	accessPerfDataObject    []perfDataCounterValuesAccess
 	accessAccepts           *prometheus.Desc
 	accessChallenges        *prometheus.Desc
 	accessRejects           *prometheus.Desc
@@ -52,7 +53,8 @@ type Collector struct {
 	accessServerUpTime      *prometheus.Desc
 	accessUnknownType       *prometheus.Desc
 
-	accountingPerfDataCollector *perfdata.Collector
+	accountingPerfDataCollector *pdh.Collector
+	accountingPerfDataObject    []perfDataCounterValuesAccounting
 	accountingRequests          *prometheus.Desc
 	accountingResponses         *prometheus.Desc
 	accountingBadAuthenticators *prometheus.Desc
@@ -96,39 +98,12 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 
 	errs := make([]error, 0, 2)
 
-	c.accessPerfDataCollector, err = perfdata.NewCollector("NPS Authentication Server", nil, []string{
-		accessAccepts,
-		accessChallenges,
-		accessRejects,
-		accessRequests,
-		accessBadAuthenticators,
-		accessDroppedPackets,
-		accessInvalidRequests,
-		accessMalformedPackets,
-		accessPacketsReceived,
-		accessPacketsSent,
-		accessServerResetTime,
-		accessServerUpTime,
-		accessUnknownType,
-	})
+	c.accessPerfDataCollector, err = pdh.NewCollector[perfDataCounterValuesAccess]("NPS Authentication Server", nil)
 	if err != nil {
 		errs = append(errs, fmt.Errorf("failed to create NPS Authentication Server collector: %w", err))
 	}
 
-	c.accountingPerfDataCollector, err = perfdata.NewCollector("NPS Accounting Server", nil, []string{
-		accountingRequests,
-		accountingResponses,
-		accountingBadAuthenticators,
-		accountingDroppedPackets,
-		accountingInvalidRequests,
-		accountingMalformedPackets,
-		accountingNoRecord,
-		accountingPacketsReceived,
-		accountingPacketsSent,
-		accountingServerResetTime,
-		accountingServerUpTime,
-		accountingUnknownType,
-	})
+	c.accountingPerfDataCollector, err = pdh.NewCollector[perfDataCounterValuesAccounting]("NPS Accounting Server", nil)
 	if err != nil {
 		errs = append(errs, fmt.Errorf("failed to create NPS Accounting Server collector: %w", err))
 	}
@@ -307,178 +282,168 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 // collectAccept sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *Collector) collectAccept(ch chan<- prometheus.Metric) error {
-	perfData, err := c.accessPerfDataCollector.Collect()
+	err := c.accessPerfDataCollector.Collect(&c.accessPerfDataObject)
 	if err != nil {
 		return fmt.Errorf("failed to collect NPS Authentication Server metrics: %w", err)
-	}
-
-	data, ok := perfData[perfdata.InstanceEmpty]
-	if !ok {
-		return fmt.Errorf("failed to collect NPS Authentication Server metrics: %w", types.ErrNoData)
 	}
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessAccepts,
 		prometheus.CounterValue,
-		data[accessAccepts].FirstValue,
+		c.accessPerfDataObject[0].AccessAccepts,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessChallenges,
 		prometheus.CounterValue,
-		data[accessChallenges].FirstValue,
+		c.accessPerfDataObject[0].AccessChallenges,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessRejects,
 		prometheus.CounterValue,
-		data[accessRejects].FirstValue,
+		c.accessPerfDataObject[0].AccessRejects,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessRequests,
 		prometheus.CounterValue,
-		data[accessRequests].FirstValue,
+		c.accessPerfDataObject[0].AccessRequests,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessBadAuthenticators,
 		prometheus.CounterValue,
-		data[accessBadAuthenticators].FirstValue,
+		c.accessPerfDataObject[0].AccessBadAuthenticators,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessDroppedPackets,
 		prometheus.CounterValue,
-		data[accessDroppedPackets].FirstValue,
+		c.accessPerfDataObject[0].AccessDroppedPackets,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessInvalidRequests,
 		prometheus.CounterValue,
-		data[accessInvalidRequests].FirstValue,
+		c.accessPerfDataObject[0].AccessInvalidRequests,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessMalformedPackets,
 		prometheus.CounterValue,
-		data[accessMalformedPackets].FirstValue,
+		c.accessPerfDataObject[0].AccessMalformedPackets,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessPacketsReceived,
 		prometheus.CounterValue,
-		data[accessPacketsReceived].FirstValue,
+		c.accessPerfDataObject[0].AccessPacketsReceived,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessPacketsSent,
 		prometheus.CounterValue,
-		data[accessPacketsSent].FirstValue,
+		c.accessPerfDataObject[0].AccessPacketsSent,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessServerResetTime,
 		prometheus.CounterValue,
-		data[accessServerResetTime].FirstValue,
+		c.accessPerfDataObject[0].AccessServerResetTime,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessServerUpTime,
 		prometheus.CounterValue,
-		data[accessServerUpTime].FirstValue,
+		c.accessPerfDataObject[0].AccessServerUpTime,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessUnknownType,
 		prometheus.CounterValue,
-		data[accessUnknownType].FirstValue,
+		c.accessPerfDataObject[0].AccessUnknownType,
 	)
 
 	return nil
 }
 
 func (c *Collector) collectAccounting(ch chan<- prometheus.Metric) error {
-	perfData, err := c.accountingPerfDataCollector.Collect()
+	err := c.accountingPerfDataCollector.Collect(&c.accountingPerfDataObject)
 	if err != nil {
 		return fmt.Errorf("failed to collect NPS Accounting Server metrics: %w", err)
-	}
-
-	data, ok := perfData[perfdata.InstanceEmpty]
-	if !ok {
-		return fmt.Errorf("failed to collect NPS Accounting Server metrics: %w", types.ErrNoData)
 	}
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accountingRequests,
 		prometheus.CounterValue,
-		data[accountingRequests].FirstValue,
+		c.accountingPerfDataObject[0].AccountingRequests,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accountingResponses,
 		prometheus.CounterValue,
-		data[accountingResponses].FirstValue,
+		c.accountingPerfDataObject[0].AccountingResponses,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accountingBadAuthenticators,
 		prometheus.CounterValue,
-		data[accountingBadAuthenticators].FirstValue,
+		c.accountingPerfDataObject[0].AccountingBadAuthenticators,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accountingDroppedPackets,
 		prometheus.CounterValue,
-		data[accountingDroppedPackets].FirstValue,
+		c.accountingPerfDataObject[0].AccountingDroppedPackets,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accountingInvalidRequests,
 		prometheus.CounterValue,
-		data[accountingInvalidRequests].FirstValue,
+		c.accountingPerfDataObject[0].AccountingInvalidRequests,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accountingMalformedPackets,
 		prometheus.CounterValue,
-		data[accountingMalformedPackets].FirstValue,
+		c.accountingPerfDataObject[0].AccountingMalformedPackets,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accountingNoRecord,
 		prometheus.CounterValue,
-		data[accountingNoRecord].FirstValue,
+		c.accountingPerfDataObject[0].AccountingNoRecord,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accountingPacketsReceived,
 		prometheus.CounterValue,
-		data[accountingPacketsReceived].FirstValue,
+		c.accountingPerfDataObject[0].AccountingPacketsReceived,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accountingPacketsSent,
 		prometheus.CounterValue,
-		data[accountingPacketsSent].FirstValue,
+		c.accountingPerfDataObject[0].AccountingPacketsSent,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accountingServerResetTime,
 		prometheus.CounterValue,
-		data[accountingServerResetTime].FirstValue,
+		c.accountingPerfDataObject[0].AccountingServerResetTime,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accountingServerUpTime,
 		prometheus.CounterValue,
-		data[accountingServerUpTime].FirstValue,
+		c.accountingPerfDataObject[0].AccountingServerUpTime,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accountingUnknownType,
 		prometheus.CounterValue,
-		data[accountingUnknownType].FirstValue,
+		c.accountingPerfDataObject[0].AccountingUnknownType,
 	)
 
 	return nil

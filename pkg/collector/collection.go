@@ -16,6 +16,7 @@
 package collector
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -74,7 +75,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/update"
 	"github.com/prometheus-community/windows_exporter/internal/collector/vmware"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -229,13 +230,11 @@ func (c *Collection) Build(logger *slog.Logger) error {
 	errs := make([]error, 0, len(c.collectors))
 
 	for err := range errCh {
-		if errors.Is(err, perfdata.ErrNoData) ||
-			errors.Is(err, perfdata.NewPdhError(perfdata.PdhCstatusNoObject)) ||
-			errors.Is(err, perfdata.NewPdhError(perfdata.PdhCstatusNoCounter)) ||
+		if errors.Is(err, pdh.ErrNoData) ||
+			errors.Is(err, pdh.NewPdhError(pdh.CstatusNoObject)) ||
+			errors.Is(err, pdh.NewPdhError(pdh.CstatusNoCounter)) ||
 			errors.Is(err, mi.MI_RESULT_INVALID_NAMESPACE) {
-			logger.Warn("couldn't initialize collector",
-				slog.Any("err", err),
-			)
+			logger.LogAttrs(context.Background(), slog.LevelWarn, "couldn't initialize collector", slog.Any("err", err))
 
 			continue
 		}

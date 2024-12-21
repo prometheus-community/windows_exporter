@@ -18,14 +18,15 @@ package hyperv
 import (
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 // collectorVirtualNetworkAdapterDropReasons Hyper-V Virtual Network Adapter Drop Reasons metrics
 type collectorVirtualNetworkAdapterDropReasons struct {
-	perfDataCollectorVirtualNetworkAdapterDropReasons *perfdata.Collector
+	perfDataCollectorVirtualNetworkAdapterDropReasons *pdh.Collector
+	perfDataObjectVirtualNetworkAdapterDropReasons    []perfDataCounterValuesVirtualNetworkAdapterDropReasons
 
 	// \Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing LowPowerPacketFilter
 	// \Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming LowPowerPacketFilter
@@ -106,114 +107,65 @@ type collectorVirtualNetworkAdapterDropReasons struct {
 	virtualNetworkAdapterDropReasons *prometheus.Desc
 }
 
-const (
-	virtualNetworkAdapterDropReasonsOutgoingNativeFwdingReq          = "Outgoing NativeFwdingReq"
-	virtualNetworkAdapterDropReasonsIncomingNativeFwdingReq          = "Incoming NativeFwdingReq"
-	virtualNetworkAdapterDropReasonsOutgoingMTUMismatch              = "Outgoing MTUMismatch"
-	virtualNetworkAdapterDropReasonsIncomingMTUMismatch              = "Incoming MTUMismatch"
-	virtualNetworkAdapterDropReasonsOutgoingInvalidConfig            = "Outgoing InvalidConfig"
-	virtualNetworkAdapterDropReasonsIncomingInvalidConfig            = "Incoming InvalidConfig"
-	virtualNetworkAdapterDropReasonsOutgoingRequiredExtensionMissing = "Outgoing RequiredExtensionMissing"
-	virtualNetworkAdapterDropReasonsIncomingRequiredExtensionMissing = "Incoming RequiredExtensionMissing"
-	virtualNetworkAdapterDropReasonsOutgoingVirtualSubnetId          = "Outgoing VirtualSubnetId"
-	virtualNetworkAdapterDropReasonsIncomingVirtualSubnetId          = "Incoming VirtualSubnetId"
-	virtualNetworkAdapterDropReasonsOutgoingBridgeReserved           = "Outgoing BridgeReserved"
-	virtualNetworkAdapterDropReasonsIncomingBridgeReserved           = "Incoming BridgeReserved"
-	virtualNetworkAdapterDropReasonsOutgoingRouterGuard              = "Outgoing RouterGuard"
-	virtualNetworkAdapterDropReasonsIncomingRouterGuard              = "Incoming RouterGuard"
-	virtualNetworkAdapterDropReasonsOutgoingDhcpGuard                = "Outgoing DhcpGuard"
-	virtualNetworkAdapterDropReasonsIncomingDhcpGuard                = "Incoming DhcpGuard"
-	virtualNetworkAdapterDropReasonsOutgoingMacSpoofing              = "Outgoing MacSpoofing"
-	virtualNetworkAdapterDropReasonsIncomingMacSpoofing              = "Incoming MacSpoofing"
-	virtualNetworkAdapterDropReasonsOutgoingIpsec                    = "Outgoing Ipsec"
-	virtualNetworkAdapterDropReasonsIncomingIpsec                    = "Incoming Ipsec"
-	virtualNetworkAdapterDropReasonsOutgoingQos                      = "Outgoing Qos"
-	virtualNetworkAdapterDropReasonsIncomingQos                      = "Incoming Qos"
-	virtualNetworkAdapterDropReasonsOutgoingFailedPvlanSetting       = "Outgoing FailedPvlanSetting"
-	virtualNetworkAdapterDropReasonsIncomingFailedPvlanSetting       = "Incoming FailedPvlanSetting"
-	virtualNetworkAdapterDropReasonsOutgoingFailedSecurityPolicy     = "Outgoing FailedSecurityPolicy"
-	virtualNetworkAdapterDropReasonsIncomingFailedSecurityPolicy     = "Incoming FailedSecurityPolicy"
-	virtualNetworkAdapterDropReasonsOutgoingUnauthorizedMAC          = "Outgoing UnauthorizedMAC"
-	virtualNetworkAdapterDropReasonsIncomingUnauthorizedMAC          = "Incoming UnauthorizedMAC"
-	virtualNetworkAdapterDropReasonsOutgoingUnauthorizedVLAN         = "Outgoing UnauthorizedVLAN"
-	virtualNetworkAdapterDropReasonsIncomingUnauthorizedVLAN         = "Incoming UnauthorizedVLAN"
-	virtualNetworkAdapterDropReasonsOutgoingFilteredVLAN             = "Outgoing FilteredVLAN"
-	virtualNetworkAdapterDropReasonsIncomingFilteredVLAN             = "Incoming FilteredVLAN"
-	virtualNetworkAdapterDropReasonsOutgoingFiltered                 = "Outgoing Filtered"
-	virtualNetworkAdapterDropReasonsIncomingFiltered                 = "Incoming Filtered"
-	virtualNetworkAdapterDropReasonsOutgoingBusy                     = "Outgoing Busy"
-	virtualNetworkAdapterDropReasonsIncomingBusy                     = "Incoming Busy"
-	virtualNetworkAdapterDropReasonsOutgoingNotAccepted              = "Outgoing NotAccepted"
-	virtualNetworkAdapterDropReasonsIncomingNotAccepted              = "Incoming NotAccepted"
-	virtualNetworkAdapterDropReasonsOutgoingDisconnected             = "Outgoing Disconnected"
-	virtualNetworkAdapterDropReasonsIncomingDisconnected             = "Incoming Disconnected"
-	virtualNetworkAdapterDropReasonsOutgoingNotReady                 = "Outgoing NotReady"
-	virtualNetworkAdapterDropReasonsIncomingNotReady                 = "Incoming NotReady"
-	virtualNetworkAdapterDropReasonsOutgoingResources                = "Outgoing Resources"
-	virtualNetworkAdapterDropReasonsIncomingResources                = "Incoming Resources"
-	virtualNetworkAdapterDropReasonsOutgoingInvalidPacket            = "Outgoing InvalidPacket"
-	virtualNetworkAdapterDropReasonsIncomingInvalidPacket            = "Incoming InvalidPacket"
-	virtualNetworkAdapterDropReasonsOutgoingInvalidData              = "Outgoing InvalidData"
-	virtualNetworkAdapterDropReasonsIncomingInvalidData              = "Incoming InvalidData"
-	virtualNetworkAdapterDropReasonsOutgoingUnknown                  = "Outgoing Unknown"
-	virtualNetworkAdapterDropReasonsIncomingUnknown                  = "Incoming Unknown"
-)
+type perfDataCounterValuesVirtualNetworkAdapterDropReasons struct {
+	Name string
+
+	VirtualNetworkAdapterDropReasonsOutgoingNativeFwdingReq          float64 `perfdata:"Outgoing NativeFwdingReq"`
+	VirtualNetworkAdapterDropReasonsIncomingNativeFwdingReq          float64 `perfdata:"Incoming NativeFwdingReq"`
+	VirtualNetworkAdapterDropReasonsOutgoingMTUMismatch              float64 `perfdata:"Outgoing MTUMismatch"`
+	VirtualNetworkAdapterDropReasonsIncomingMTUMismatch              float64 `perfdata:"Incoming MTUMismatch"`
+	VirtualNetworkAdapterDropReasonsOutgoingInvalidConfig            float64 `perfdata:"Outgoing InvalidConfig"`
+	VirtualNetworkAdapterDropReasonsIncomingInvalidConfig            float64 `perfdata:"Incoming InvalidConfig"`
+	VirtualNetworkAdapterDropReasonsOutgoingRequiredExtensionMissing float64 `perfdata:"Outgoing RequiredExtensionMissing"`
+	VirtualNetworkAdapterDropReasonsIncomingRequiredExtensionMissing float64 `perfdata:"Incoming RequiredExtensionMissing"`
+	VirtualNetworkAdapterDropReasonsOutgoingVirtualSubnetId          float64 `perfdata:"Outgoing VirtualSubnetId"`
+	VirtualNetworkAdapterDropReasonsIncomingVirtualSubnetId          float64 `perfdata:"Incoming VirtualSubnetId"`
+	VirtualNetworkAdapterDropReasonsOutgoingBridgeReserved           float64 `perfdata:"Outgoing BridgeReserved"`
+	VirtualNetworkAdapterDropReasonsIncomingBridgeReserved           float64 `perfdata:"Incoming BridgeReserved"`
+	VirtualNetworkAdapterDropReasonsOutgoingRouterGuard              float64 `perfdata:"Outgoing RouterGuard"`
+	VirtualNetworkAdapterDropReasonsIncomingRouterGuard              float64 `perfdata:"Incoming RouterGuard"`
+	VirtualNetworkAdapterDropReasonsOutgoingDhcpGuard                float64 `perfdata:"Outgoing DhcpGuard"`
+	VirtualNetworkAdapterDropReasonsIncomingDhcpGuard                float64 `perfdata:"Incoming DhcpGuard"`
+	VirtualNetworkAdapterDropReasonsOutgoingMacSpoofing              float64 `perfdata:"Outgoing MacSpoofing"`
+	VirtualNetworkAdapterDropReasonsIncomingMacSpoofing              float64 `perfdata:"Incoming MacSpoofing"`
+	VirtualNetworkAdapterDropReasonsOutgoingIpsec                    float64 `perfdata:"Outgoing Ipsec"`
+	VirtualNetworkAdapterDropReasonsIncomingIpsec                    float64 `perfdata:"Incoming Ipsec"`
+	VirtualNetworkAdapterDropReasonsOutgoingQos                      float64 `perfdata:"Outgoing Qos"`
+	VirtualNetworkAdapterDropReasonsIncomingQos                      float64 `perfdata:"Incoming Qos"`
+	VirtualNetworkAdapterDropReasonsOutgoingFailedPvlanSetting       float64 `perfdata:"Outgoing FailedPvlanSetting"`
+	VirtualNetworkAdapterDropReasonsIncomingFailedPvlanSetting       float64 `perfdata:"Incoming FailedPvlanSetting"`
+	VirtualNetworkAdapterDropReasonsOutgoingFailedSecurityPolicy     float64 `perfdata:"Outgoing FailedSecurityPolicy"`
+	VirtualNetworkAdapterDropReasonsIncomingFailedSecurityPolicy     float64 `perfdata:"Incoming FailedSecurityPolicy"`
+	VirtualNetworkAdapterDropReasonsOutgoingUnauthorizedMAC          float64 `perfdata:"Outgoing UnauthorizedMAC"`
+	VirtualNetworkAdapterDropReasonsIncomingUnauthorizedMAC          float64 `perfdata:"Incoming UnauthorizedMAC"`
+	VirtualNetworkAdapterDropReasonsOutgoingUnauthorizedVLAN         float64 `perfdata:"Outgoing UnauthorizedVLAN"`
+	VirtualNetworkAdapterDropReasonsIncomingUnauthorizedVLAN         float64 `perfdata:"Incoming UnauthorizedVLAN"`
+	VirtualNetworkAdapterDropReasonsOutgoingFilteredVLAN             float64 `perfdata:"Outgoing FilteredVLAN"`
+	VirtualNetworkAdapterDropReasonsIncomingFilteredVLAN             float64 `perfdata:"Incoming FilteredVLAN"`
+	VirtualNetworkAdapterDropReasonsOutgoingFiltered                 float64 `perfdata:"Outgoing Filtered"`
+	VirtualNetworkAdapterDropReasonsIncomingFiltered                 float64 `perfdata:"Incoming Filtered"`
+	VirtualNetworkAdapterDropReasonsOutgoingBusy                     float64 `perfdata:"Outgoing Busy"`
+	VirtualNetworkAdapterDropReasonsIncomingBusy                     float64 `perfdata:"Incoming Busy"`
+	VirtualNetworkAdapterDropReasonsOutgoingNotAccepted              float64 `perfdata:"Outgoing NotAccepted"`
+	VirtualNetworkAdapterDropReasonsIncomingNotAccepted              float64 `perfdata:"Incoming NotAccepted"`
+	VirtualNetworkAdapterDropReasonsOutgoingDisconnected             float64 `perfdata:"Outgoing Disconnected"`
+	VirtualNetworkAdapterDropReasonsIncomingDisconnected             float64 `perfdata:"Incoming Disconnected"`
+	VirtualNetworkAdapterDropReasonsOutgoingNotReady                 float64 `perfdata:"Outgoing NotReady"`
+	VirtualNetworkAdapterDropReasonsIncomingNotReady                 float64 `perfdata:"Incoming NotReady"`
+	VirtualNetworkAdapterDropReasonsOutgoingResources                float64 `perfdata:"Outgoing Resources"`
+	VirtualNetworkAdapterDropReasonsIncomingResources                float64 `perfdata:"Incoming Resources"`
+	VirtualNetworkAdapterDropReasonsOutgoingInvalidPacket            float64 `perfdata:"Outgoing InvalidPacket"`
+	VirtualNetworkAdapterDropReasonsIncomingInvalidPacket            float64 `perfdata:"Incoming InvalidPacket"`
+	VirtualNetworkAdapterDropReasonsOutgoingInvalidData              float64 `perfdata:"Outgoing InvalidData"`
+	VirtualNetworkAdapterDropReasonsIncomingInvalidData              float64 `perfdata:"Incoming InvalidData"`
+	VirtualNetworkAdapterDropReasonsOutgoingUnknown                  float64 `perfdata:"Outgoing Unknown"`
+	VirtualNetworkAdapterDropReasonsIncomingUnknown                  float64 `perfdata:"Incoming Unknown"`
+}
 
 func (c *Collector) buildVirtualNetworkAdapterDropReasons() error {
 	var err error
 
-	c.perfDataCollectorVirtualNetworkAdapterDropReasons, err = perfdata.NewCollector("Hyper-V Virtual Network Adapter Drop Reasons", perfdata.InstancesAll, []string{
-		virtualNetworkAdapterDropReasonsOutgoingNativeFwdingReq,
-		virtualNetworkAdapterDropReasonsIncomingNativeFwdingReq,
-		virtualNetworkAdapterDropReasonsOutgoingMTUMismatch,
-		virtualNetworkAdapterDropReasonsIncomingMTUMismatch,
-		virtualNetworkAdapterDropReasonsOutgoingInvalidConfig,
-		virtualNetworkAdapterDropReasonsIncomingInvalidConfig,
-		virtualNetworkAdapterDropReasonsOutgoingRequiredExtensionMissing,
-		virtualNetworkAdapterDropReasonsIncomingRequiredExtensionMissing,
-		virtualNetworkAdapterDropReasonsOutgoingVirtualSubnetId,
-		virtualNetworkAdapterDropReasonsIncomingVirtualSubnetId,
-		virtualNetworkAdapterDropReasonsOutgoingBridgeReserved,
-		virtualNetworkAdapterDropReasonsIncomingBridgeReserved,
-		virtualNetworkAdapterDropReasonsOutgoingRouterGuard,
-		virtualNetworkAdapterDropReasonsIncomingRouterGuard,
-		virtualNetworkAdapterDropReasonsOutgoingDhcpGuard,
-		virtualNetworkAdapterDropReasonsIncomingDhcpGuard,
-		virtualNetworkAdapterDropReasonsOutgoingMacSpoofing,
-		virtualNetworkAdapterDropReasonsIncomingMacSpoofing,
-		virtualNetworkAdapterDropReasonsOutgoingIpsec,
-		virtualNetworkAdapterDropReasonsIncomingIpsec,
-		virtualNetworkAdapterDropReasonsOutgoingQos,
-		virtualNetworkAdapterDropReasonsIncomingQos,
-		virtualNetworkAdapterDropReasonsOutgoingFailedPvlanSetting,
-		virtualNetworkAdapterDropReasonsIncomingFailedPvlanSetting,
-		virtualNetworkAdapterDropReasonsOutgoingFailedSecurityPolicy,
-		virtualNetworkAdapterDropReasonsIncomingFailedSecurityPolicy,
-		virtualNetworkAdapterDropReasonsOutgoingUnauthorizedMAC,
-		virtualNetworkAdapterDropReasonsIncomingUnauthorizedMAC,
-		virtualNetworkAdapterDropReasonsOutgoingUnauthorizedVLAN,
-		virtualNetworkAdapterDropReasonsIncomingUnauthorizedVLAN,
-		virtualNetworkAdapterDropReasonsOutgoingFilteredVLAN,
-		virtualNetworkAdapterDropReasonsIncomingFilteredVLAN,
-		virtualNetworkAdapterDropReasonsOutgoingFiltered,
-		virtualNetworkAdapterDropReasonsIncomingFiltered,
-		virtualNetworkAdapterDropReasonsOutgoingBusy,
-		virtualNetworkAdapterDropReasonsIncomingBusy,
-		virtualNetworkAdapterDropReasonsOutgoingNotAccepted,
-		virtualNetworkAdapterDropReasonsIncomingNotAccepted,
-		virtualNetworkAdapterDropReasonsOutgoingDisconnected,
-		virtualNetworkAdapterDropReasonsIncomingDisconnected,
-		virtualNetworkAdapterDropReasonsOutgoingNotReady,
-		virtualNetworkAdapterDropReasonsIncomingNotReady,
-		virtualNetworkAdapterDropReasonsOutgoingResources,
-		virtualNetworkAdapterDropReasonsIncomingResources,
-		virtualNetworkAdapterDropReasonsOutgoingInvalidPacket,
-		virtualNetworkAdapterDropReasonsIncomingInvalidPacket,
-		virtualNetworkAdapterDropReasonsOutgoingInvalidData,
-		virtualNetworkAdapterDropReasonsIncomingInvalidData,
-		virtualNetworkAdapterDropReasonsOutgoingUnknown,
-		virtualNetworkAdapterDropReasonsIncomingUnknown,
-	})
+	c.perfDataCollectorVirtualNetworkAdapterDropReasons, err = pdh.NewCollector[perfDataCounterValuesVirtualNetworkAdapterDropReasons]("Hyper-V Virtual Network Adapter Drop Reasons", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create Hyper-V Virtual Network Adapter Drop Reasons collector: %w", err)
 	}
@@ -229,311 +181,311 @@ func (c *Collector) buildVirtualNetworkAdapterDropReasons() error {
 }
 
 func (c *Collector) collectVirtualNetworkAdapterDropReasons(ch chan<- prometheus.Metric) error {
-	data, err := c.perfDataCollectorVirtualNetworkAdapterDropReasons.Collect()
+	err := c.perfDataCollectorVirtualNetworkAdapterDropReasons.Collect(&c.perfDataObjectVirtualNetworkAdapterDropReasons)
 	if err != nil {
 		return fmt.Errorf("failed to collect Hyper-V Virtual Network Adapter Drop Reasons metrics: %w", err)
 	}
 
-	for name, adapterData := range data {
+	for _, data := range c.perfDataObjectVirtualNetworkAdapterDropReasons {
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualNetworkAdapterDropReasons,
 			prometheus.CounterValue,
-			adapterData[virtualNetworkAdapterDropReasonsOutgoingNativeFwdingReq].FirstValue,
-			name, "NativeFwdingReq", "outgoing",
+			data.VirtualNetworkAdapterDropReasonsOutgoingNativeFwdingReq,
+			data.Name, "NativeFwdingReq", "outgoing",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualNetworkAdapterDropReasons,
 			prometheus.CounterValue,
-			adapterData[virtualNetworkAdapterDropReasonsIncomingNativeFwdingReq].FirstValue,
-			name, "NativeFwdingReq", "incoming",
+			data.VirtualNetworkAdapterDropReasonsIncomingNativeFwdingReq,
+			data.Name, "NativeFwdingReq", "incoming",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualNetworkAdapterDropReasons,
 			prometheus.CounterValue,
-			adapterData[virtualNetworkAdapterDropReasonsOutgoingMTUMismatch].FirstValue,
-			name, "MTUMismatch", "outgoing",
+			data.VirtualNetworkAdapterDropReasonsOutgoingMTUMismatch,
+			data.Name, "MTUMismatch", "outgoing",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualNetworkAdapterDropReasons,
 			prometheus.CounterValue,
-			adapterData[virtualNetworkAdapterDropReasonsIncomingMTUMismatch].FirstValue,
-			name, "MTUMismatch", "incoming",
+			data.VirtualNetworkAdapterDropReasonsIncomingMTUMismatch,
+			data.Name, "MTUMismatch", "incoming",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualNetworkAdapterDropReasons,
 			prometheus.CounterValue,
-			adapterData[virtualNetworkAdapterDropReasonsOutgoingInvalidConfig].FirstValue,
-			name, "InvalidConfig", "outgoing",
+			data.VirtualNetworkAdapterDropReasonsOutgoingInvalidConfig,
+			data.Name, "InvalidConfig", "outgoing",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualNetworkAdapterDropReasons,
 			prometheus.CounterValue,
-			adapterData[virtualNetworkAdapterDropReasonsIncomingInvalidConfig].FirstValue,
-			name, "InvalidConfig", "incoming",
+			data.VirtualNetworkAdapterDropReasonsIncomingInvalidConfig,
+			data.Name, "InvalidConfig", "incoming",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualNetworkAdapterDropReasons,
 			prometheus.CounterValue,
-			adapterData[virtualNetworkAdapterDropReasonsOutgoingRequiredExtensionMissing].FirstValue,
-			name, "RequiredExtensionMissing", "outgoing",
+			data.VirtualNetworkAdapterDropReasonsOutgoingRequiredExtensionMissing,
+			data.Name, "RequiredExtensionMissing", "outgoing",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualNetworkAdapterDropReasons,
 			prometheus.CounterValue,
-			adapterData[virtualNetworkAdapterDropReasonsIncomingRequiredExtensionMissing].FirstValue,
-			name, "RequiredExtensionMissing", "incoming",
+			data.VirtualNetworkAdapterDropReasonsIncomingRequiredExtensionMissing,
+			data.Name, "RequiredExtensionMissing", "incoming",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualNetworkAdapterDropReasons,
 			prometheus.CounterValue,
-			adapterData[virtualNetworkAdapterDropReasonsOutgoingVirtualSubnetId].FirstValue,
-			name, "VirtualSubnetId", "outgoing",
+			data.VirtualNetworkAdapterDropReasonsOutgoingVirtualSubnetId,
+			data.Name, "VirtualSubnetId", "outgoing",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualNetworkAdapterDropReasons,
 			prometheus.CounterValue,
-			adapterData[virtualNetworkAdapterDropReasonsIncomingVirtualSubnetId].FirstValue,
-			name, "VirtualSubnetId", "incoming",
+			data.VirtualNetworkAdapterDropReasonsIncomingVirtualSubnetId,
+			data.Name, "VirtualSubnetId", "incoming",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualNetworkAdapterDropReasons,
 			prometheus.CounterValue,
-			adapterData[virtualNetworkAdapterDropReasonsOutgoingBridgeReserved].FirstValue,
-			name, "BridgeReserved", "outgoing",
+			data.VirtualNetworkAdapterDropReasonsOutgoingBridgeReserved,
+			data.Name, "BridgeReserved", "outgoing",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualNetworkAdapterDropReasons,
 			prometheus.CounterValue,
-			adapterData[virtualNetworkAdapterDropReasonsIncomingBridgeReserved].FirstValue,
-			name, "BridgeReserved", "incoming",
+			data.VirtualNetworkAdapterDropReasonsIncomingBridgeReserved,
+			data.Name, "BridgeReserved", "incoming",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualNetworkAdapterDropReasons,
 			prometheus.CounterValue,
-			adapterData[virtualNetworkAdapterDropReasonsOutgoingRouterGuard].FirstValue,
-			name, "RouterGuard", "outgoing",
+			data.VirtualNetworkAdapterDropReasonsOutgoingRouterGuard,
+			data.Name, "RouterGuard", "outgoing",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualNetworkAdapterDropReasons,
 			prometheus.CounterValue,
-			adapterData[virtualNetworkAdapterDropReasonsIncomingRouterGuard].FirstValue,
-			name, "RouterGuard", "incoming",
+			data.VirtualNetworkAdapterDropReasonsIncomingRouterGuard,
+			data.Name, "RouterGuard", "incoming",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualNetworkAdapterDropReasons,
 			prometheus.CounterValue,
-			adapterData[virtualNetworkAdapterDropReasonsOutgoingDhcpGuard].FirstValue,
-			name, "DhcpGuard", "outgoing",
+			data.VirtualNetworkAdapterDropReasonsOutgoingDhcpGuard,
+			data.Name, "DhcpGuard", "outgoing",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualNetworkAdapterDropReasons,
 			prometheus.CounterValue,
-			adapterData[virtualNetworkAdapterDropReasonsIncomingDhcpGuard].FirstValue,
-			name, "DhcpGuard", "incoming",
+			data.VirtualNetworkAdapterDropReasonsIncomingDhcpGuard,
+			data.Name, "DhcpGuard", "incoming",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualNetworkAdapterDropReasons,
 			prometheus.CounterValue,
-			adapterData[virtualNetworkAdapterDropReasonsOutgoingMacSpoofing].FirstValue,
-			name, "MacSpoofing", "outgoing",
+			data.VirtualNetworkAdapterDropReasonsOutgoingMacSpoofing,
+			data.Name, "MacSpoofing", "outgoing",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualNetworkAdapterDropReasons,
 			prometheus.CounterValue,
-			adapterData[virtualNetworkAdapterDropReasonsIncomingMacSpoofing].FirstValue,
-			name, "MacSpoofing", "incoming",
+			data.VirtualNetworkAdapterDropReasonsIncomingMacSpoofing,
+			data.Name, "MacSpoofing", "incoming",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualNetworkAdapterDropReasons,
 			prometheus.CounterValue,
-			adapterData[virtualNetworkAdapterDropReasonsOutgoingIpsec].FirstValue,
-			name, "Ipsec", "outgoing",
+			data.VirtualNetworkAdapterDropReasonsOutgoingIpsec,
+			data.Name, "Ipsec", "outgoing",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualNetworkAdapterDropReasons,
 			prometheus.CounterValue,
-			adapterData[virtualNetworkAdapterDropReasonsIncomingIpsec].FirstValue,
-			name, "Ipsec", "incoming",
+			data.VirtualNetworkAdapterDropReasonsIncomingIpsec,
+			data.Name, "Ipsec", "incoming",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualNetworkAdapterDropReasons,
 			prometheus.CounterValue,
-			adapterData[virtualNetworkAdapterDropReasonsOutgoingQos].FirstValue,
-			name, "Qos", "outgoing",
+			data.VirtualNetworkAdapterDropReasonsOutgoingQos,
+			data.Name, "Qos", "outgoing",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualNetworkAdapterDropReasons,
 			prometheus.CounterValue,
-			adapterData[virtualNetworkAdapterDropReasonsIncomingQos].FirstValue,
-			name, "Qos", "incoming",
+			data.VirtualNetworkAdapterDropReasonsIncomingQos,
+			data.Name, "Qos", "incoming",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualNetworkAdapterDropReasons,
 			prometheus.CounterValue,
-			adapterData[virtualNetworkAdapterDropReasonsOutgoingFailedPvlanSetting].FirstValue,
-			name, "FailedPvlanSetting", "outgoing",
+			data.VirtualNetworkAdapterDropReasonsOutgoingFailedPvlanSetting,
+			data.Name, "FailedPvlanSetting", "outgoing",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualNetworkAdapterDropReasons,
 			prometheus.CounterValue,
-			adapterData[virtualNetworkAdapterDropReasonsIncomingFailedPvlanSetting].FirstValue,
-			name, "FailedPvlanSetting", "incoming",
+			data.VirtualNetworkAdapterDropReasonsIncomingFailedPvlanSetting,
+			data.Name, "FailedPvlanSetting", "incoming",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualNetworkAdapterDropReasons,
 			prometheus.CounterValue,
-			adapterData[virtualNetworkAdapterDropReasonsOutgoingFailedSecurityPolicy].FirstValue,
-			name, "FailedSecurityPolicy", "outgoing",
+			data.VirtualNetworkAdapterDropReasonsOutgoingFailedSecurityPolicy,
+			data.Name, "FailedSecurityPolicy", "outgoing",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualNetworkAdapterDropReasons,
 			prometheus.CounterValue,
-			adapterData[virtualNetworkAdapterDropReasonsIncomingFailedSecurityPolicy].FirstValue,
-			name, "FailedSecurityPolicy", "incoming",
+			data.VirtualNetworkAdapterDropReasonsIncomingFailedSecurityPolicy,
+			data.Name, "FailedSecurityPolicy", "incoming",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualNetworkAdapterDropReasons,
 			prometheus.CounterValue,
-			adapterData[virtualNetworkAdapterDropReasonsOutgoingUnauthorizedMAC].FirstValue,
-			name, "UnauthorizedMAC", "outgoing",
+			data.VirtualNetworkAdapterDropReasonsOutgoingUnauthorizedMAC,
+			data.Name, "UnauthorizedMAC", "outgoing",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualNetworkAdapterDropReasons,
 			prometheus.CounterValue,
-			adapterData[virtualNetworkAdapterDropReasonsIncomingUnauthorizedMAC].FirstValue,
-			name, "UnauthorizedMAC", "incoming",
+			data.VirtualNetworkAdapterDropReasonsIncomingUnauthorizedMAC,
+			data.Name, "UnauthorizedMAC", "incoming",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualNetworkAdapterDropReasons,
 			prometheus.CounterValue,
-			adapterData[virtualNetworkAdapterDropReasonsOutgoingUnauthorizedVLAN].FirstValue,
-			name, "UnauthorizedVLAN", "outgoing",
+			data.VirtualNetworkAdapterDropReasonsOutgoingUnauthorizedVLAN,
+			data.Name, "UnauthorizedVLAN", "outgoing",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualNetworkAdapterDropReasons,
 			prometheus.CounterValue,
-			adapterData[virtualNetworkAdapterDropReasonsIncomingUnauthorizedVLAN].FirstValue,
-			name, "UnauthorizedVLAN", "incoming",
+			data.VirtualNetworkAdapterDropReasonsIncomingUnauthorizedVLAN,
+			data.Name, "UnauthorizedVLAN", "incoming",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualNetworkAdapterDropReasons,
 			prometheus.CounterValue,
-			adapterData[virtualNetworkAdapterDropReasonsOutgoingFilteredVLAN].FirstValue,
-			name, "FilteredVLAN", "outgoing",
+			data.VirtualNetworkAdapterDropReasonsOutgoingFilteredVLAN,
+			data.Name, "FilteredVLAN", "outgoing",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualNetworkAdapterDropReasons,
 			prometheus.CounterValue,
-			adapterData[virtualNetworkAdapterDropReasonsIncomingFilteredVLAN].FirstValue,
-			name, "FilteredVLAN", "incoming",
+			data.VirtualNetworkAdapterDropReasonsIncomingFilteredVLAN,
+			data.Name, "FilteredVLAN", "incoming",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualNetworkAdapterDropReasons,
 			prometheus.CounterValue,
-			adapterData[virtualNetworkAdapterDropReasonsOutgoingFiltered].FirstValue,
-			name, "Filtered", "outgoing",
+			data.VirtualNetworkAdapterDropReasonsOutgoingFiltered,
+			data.Name, "Filtered", "outgoing",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualNetworkAdapterDropReasons,
 			prometheus.CounterValue,
-			adapterData[virtualNetworkAdapterDropReasonsIncomingFiltered].FirstValue,
-			name, "Filtered", "incoming",
+			data.VirtualNetworkAdapterDropReasonsIncomingFiltered,
+			data.Name, "Filtered", "incoming",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualNetworkAdapterDropReasons,
 			prometheus.CounterValue,
-			adapterData[virtualNetworkAdapterDropReasonsOutgoingBusy].FirstValue,
-			name, "Busy", "outgoing",
+			data.VirtualNetworkAdapterDropReasonsOutgoingBusy,
+			data.Name, "Busy", "outgoing",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualNetworkAdapterDropReasons,
 			prometheus.CounterValue,
-			adapterData[virtualNetworkAdapterDropReasonsIncomingBusy].FirstValue,
-			name, "Busy", "incoming",
+			data.VirtualNetworkAdapterDropReasonsIncomingBusy,
+			data.Name, "Busy", "incoming",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualNetworkAdapterDropReasons,
 			prometheus.CounterValue,
-			adapterData[virtualNetworkAdapterDropReasonsOutgoingNotAccepted].FirstValue,
-			name, "NotAccepted", "outgoing",
+			data.VirtualNetworkAdapterDropReasonsOutgoingNotAccepted,
+			data.Name, "NotAccepted", "outgoing",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualNetworkAdapterDropReasons,
 			prometheus.CounterValue,
-			adapterData[virtualNetworkAdapterDropReasonsIncomingNotAccepted].FirstValue,
-			name, "NotAccepted", "incoming",
+			data.VirtualNetworkAdapterDropReasonsIncomingNotAccepted,
+			data.Name, "NotAccepted", "incoming",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualNetworkAdapterDropReasons,
 			prometheus.CounterValue,
-			adapterData[virtualNetworkAdapterDropReasonsOutgoingDisconnected].FirstValue,
-			name, "Disconnected", "outgoing",
+			data.VirtualNetworkAdapterDropReasonsOutgoingDisconnected,
+			data.Name, "Disconnected", "outgoing",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualNetworkAdapterDropReasons,
 			prometheus.CounterValue,
-			adapterData[virtualNetworkAdapterDropReasonsIncomingDisconnected].FirstValue,
-			name, "Disconnected", "incoming",
+			data.VirtualNetworkAdapterDropReasonsIncomingDisconnected,
+			data.Name, "Disconnected", "incoming",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualNetworkAdapterDropReasons,
 			prometheus.CounterValue,
-			adapterData[virtualNetworkAdapterDropReasonsOutgoingNotReady].FirstValue,
-			name, "NotReady", "outgoing",
+			data.VirtualNetworkAdapterDropReasonsOutgoingNotReady,
+			data.Name, "NotReady", "outgoing",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualNetworkAdapterDropReasons,
 			prometheus.CounterValue,
-			adapterData[virtualNetworkAdapterDropReasonsIncomingNotReady].FirstValue,
-			name, "NotReady", "incoming",
+			data.VirtualNetworkAdapterDropReasonsIncomingNotReady,
+			data.Name, "NotReady", "incoming",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualNetworkAdapterDropReasons,
 			prometheus.CounterValue,
-			adapterData[virtualNetworkAdapterDropReasonsOutgoingResources].FirstValue,
-			name, "Resources", "outgoing",
+			data.VirtualNetworkAdapterDropReasonsOutgoingResources,
+			data.Name, "Resources", "outgoing",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualNetworkAdapterDropReasons,
 			prometheus.CounterValue,
-			adapterData[virtualNetworkAdapterDropReasonsIncomingResources].FirstValue,
-			name, "Resources", "incoming",
+			data.VirtualNetworkAdapterDropReasonsIncomingResources,
+			data.Name, "Resources", "incoming",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualNetworkAdapterDropReasons,
 			prometheus.CounterValue,
-			adapterData[virtualNetworkAdapterDropReasonsOutgoingInvalidPacket].FirstValue,
-			name, "InvalidPacket", "outgoing",
+			data.VirtualNetworkAdapterDropReasonsOutgoingInvalidPacket,
+			data.Name, "InvalidPacket", "outgoing",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualNetworkAdapterDropReasons,
 			prometheus.CounterValue,
-			adapterData[virtualNetworkAdapterDropReasonsIncomingInvalidPacket].FirstValue,
-			name, "InvalidPacket", "incoming",
+			data.VirtualNetworkAdapterDropReasonsIncomingInvalidPacket,
+			data.Name, "InvalidPacket", "incoming",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualNetworkAdapterDropReasons,
 			prometheus.CounterValue,
-			adapterData[virtualNetworkAdapterDropReasonsOutgoingInvalidData].FirstValue,
-			name, "InvalidData", "outgoing",
+			data.VirtualNetworkAdapterDropReasonsOutgoingInvalidData,
+			data.Name, "InvalidData", "outgoing",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualNetworkAdapterDropReasons,
 			prometheus.CounterValue,
-			adapterData[virtualNetworkAdapterDropReasonsIncomingInvalidData].FirstValue,
-			name, "InvalidData", "incoming",
+			data.VirtualNetworkAdapterDropReasonsIncomingInvalidData,
+			data.Name, "InvalidData", "incoming",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualNetworkAdapterDropReasons,
 			prometheus.CounterValue,
-			adapterData[virtualNetworkAdapterDropReasonsOutgoingUnknown].FirstValue,
-			name, "Unknown", "outgoing",
+			data.VirtualNetworkAdapterDropReasonsOutgoingUnknown,
+			data.Name, "Unknown", "outgoing",
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualNetworkAdapterDropReasons,
 			prometheus.CounterValue,
-			adapterData[virtualNetworkAdapterDropReasonsIncomingUnknown].FirstValue,
-			name, "Unknown", "incoming",
+			data.VirtualNetworkAdapterDropReasonsIncomingUnknown,
+			data.Name, "Unknown", "incoming",
 		)
 	}
 

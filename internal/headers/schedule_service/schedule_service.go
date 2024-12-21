@@ -57,12 +57,12 @@ func (s *ScheduleService) Connect() error {
 		return err
 	}
 
-	s.taskServiceObj = s.taskSchedulerObj.MustQueryInterface(ole.IID_IDispatch)
-
 	s.taskService, err = oleutil.CallMethod(s.taskServiceObj, "Connect")
 	if err != nil {
 		return fmt.Errorf("failed to connect to task service: %w", err)
 	}
+
+	s.taskServiceObj = s.taskSchedulerObj.MustQueryInterface(ole.IID_IDispatch)
 
 	return nil
 }

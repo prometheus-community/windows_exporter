@@ -19,13 +19,14 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"reflect"
 	"slices"
 	"strings"
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"gopkg.in/yaml.v3"
@@ -91,7 +92,7 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 		}
 
 		if err := yaml.Unmarshal([]byte(objects), &c.config.Objects); err != nil {
-			return fmt.Errorf("failed to parse objects: %w", err)
+			return fmt.Errorf("failed to parse objects %s: %w", objects, err)
 		}
 
 		return nil
@@ -147,6 +148,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 		names = append(names, object.Name)
 		counters := make([]string, 0, len(object.Counters))
+		fields := make([]reflect.StructField, 0, len(object.Counters)+2)
 
 		for j, counter := range object.Counters {
 			if counter.Metric == "" {
@@ -169,9 +171,28 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 			}
 
 			counters = append(counters, counter.Name)
+			fields = append(fields, reflect.StructField{
+				Name: strings.ToUpper(c.sanitizeMetricName(counter.Name)),
+				Type: reflect.TypeOf(float64(0)),
+				Tag:  reflect.StructTag(fmt.Sprintf(`perfdata:"%s"`, counter.Name)),
+			})
 		}
 
-		collector, err := perfdata.NewCollector(object.Object, object.Instances, counters)
+		if object.Instances != nil {
+			fields = append(fields, reflect.StructField{
+				Name: "Name",
+				Type: reflect.TypeOf(""),
+			})
+		}
+
+		fields = append(fields, reflect.StructField{
+			Name: "MetricType",
+			Type: reflect.TypeOf(prometheus.ValueType(0)),
+		})
+
+		valueType := reflect.StructOf(fields)
+
+		collector, err := pdh.NewCollectorWithReflection(object.Object, object.Instances, valueType)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("failed collector for %s: %w", object.Name, err))
 		}
@@ -181,6 +202,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		}
 
 		object.collector = collector
+		object.perfDataObject = reflect.New(reflect.SliceOf(valueType)).Interface()
 
 		c.objects = append(c.objects, object)
 	}
@@ -242,41 +264,79 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 }
 
 func (c *Collector) collectObject(ch chan<- prometheus.Metric, perfDataObject Object) error {
-	collectedPerfData, err := perfDataObject.collector.Collect()
+	err := perfDataObject.collector.Collect(perfDataObject.perfDataObject)
 	if err != nil {
 		return fmt.Errorf("failed to collect data: %w", err)
 	}
 
 	var errs []error
 
-	for collectedInstance, collectedInstanceCounters := range collectedPerfData {
+	sliceValue := reflect.ValueOf(perfDataObject.perfDataObject).Elem().Interface()
+	for i := range reflect.ValueOf(sliceValue).Len() {
 		for _, counter := range perfDataObject.Counters {
-			collectedCounterValue, ok := collectedInstanceCounters[counter.Name]
-			if !ok {
-				errs = append(errs, fmt.Errorf("counter %s not found in collected data", counter.Name))
+			val := reflect.ValueOf(sliceValue).Index(i)
+
+			field := val.FieldByName(strings.ToUpper(c.sanitizeMetricName(counter.Name)))
+			if !field.IsValid() {
+				errs = append(errs, fmt.Errorf("%s not found in collected data", counter.Name))
 
 				continue
 			}
 
+			if field.Kind() != reflect.Float64 {
+				errs = append(errs, fmt.Errorf("failed to cast %s to float64", counter.Name))
+
+				continue
+			}
+
+			collectedCounterValue := field.Float()
+
+			field = val.FieldByName("MetricType")
+			if !field.IsValid() {
+				errs = append(errs, errors.New("field MetricType not found in collected data"))
+
+				continue
+			}
+
+			if field.Kind() != reflect.TypeOf(prometheus.ValueType(0)).Kind() {
+				errs = append(errs, fmt.Errorf("failed to cast MetricType for %s to prometheus.ValueType", counter.Name))
+
+				continue
+			}
+
+			metricType, _ := field.Interface().(prometheus.ValueType)
+
 			labels := make(prometheus.Labels, len(counter.Labels)+1)
 
-			if collectedInstance != perfdata.InstanceEmpty {
-				labels[perfDataObject.InstanceLabel] = collectedInstance
+			if perfDataObject.Instances != nil {
+				field := val.FieldByName("Name")
+				if !field.IsValid() {
+					errs = append(errs, errors.New("field Name not found in collected data"))
+
+					continue
+				}
+
+				if field.Kind() != reflect.String {
+					errs = append(errs, fmt.Errorf("failed to cast Name for %s to string", counter.Name))
+
+					continue
+				}
+
+				collectedInstance := field.String()
+				if collectedInstance != pdh.InstanceEmpty {
+					labels[perfDataObject.InstanceLabel] = collectedInstance
+				}
 			}
 
 			for key, value := range counter.Labels {
 				labels[key] = value
 			}
 
-			var metricType prometheus.ValueType
-
 			switch counter.Type {
 			case "counter":
 				metricType = prometheus.CounterValue
 			case "gauge":
 				metricType = prometheus.GaugeValue
-			default:
-				metricType = collectedCounterValue.Type
 			}
 
 			ch <- prometheus.MustNewConstMetric(
@@ -287,21 +347,8 @@ func (c *Collector) collectObject(ch chan<- prometheus.Metric, perfDataObject Ob
 					labels,
 				),
 				metricType,
-				collectedCounterValue.FirstValue,
+				collectedCounterValue,
 			)
-
-			if collectedCounterValue.SecondValue != 0 {
-				ch <- prometheus.MustNewConstMetric(
-					prometheus.NewDesc(
-						counter.Metric+"_second",
-						"windows_exporter: custom Performance Counter metric",
-						nil,
-						labels,
-					),
-					metricType,
-					collectedCounterValue.SecondValue,
-				)
-			}
 		}
 	}
 

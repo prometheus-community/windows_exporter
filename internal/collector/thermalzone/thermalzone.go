@@ -21,7 +21,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -37,7 +37,8 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	config Config
 
-	perfDataCollector *perfdata.Collector
+	perfDataCollector *pdh.Collector
+	perfDataObject    []perfDataCounterValues
 
 	percentPassiveLimit *prometheus.Desc
 	temperature         *prometheus.Desc
@@ -71,11 +72,7 @@ func (c *Collector) Close() error {
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 	var err error
 
-	c.perfDataCollector, err = perfdata.NewCollector("Thermal Zone Information", perfdata.InstancesAll, []string{
-		highPrecisionTemperature,
-		percentPassiveLimit,
-		throttleReasons,
-	})
+	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues]("Thermal Zone Information", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create Thermal Zone Information collector: %w", err)
 	}
@@ -111,32 +108,32 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
-	perfData, err := c.perfDataCollector.Collect()
+	err := c.perfDataCollector.Collect(&c.perfDataObject)
 	if err != nil {
 		return fmt.Errorf("failed to collect Thermal Zone Information metrics: %w", err)
 	}
 
-	for sensorName, data := range perfData {
+	for _, data := range c.perfDataObject {
 		// Divide by 10 and subtract 273.15 to convert decikelvin to celsius
 		ch <- prometheus.MustNewConstMetric(
 			c.temperature,
 			prometheus.GaugeValue,
-			(data[highPrecisionTemperature].FirstValue/10.0)-273.15,
-			sensorName,
+			(data.HighPrecisionTemperature/10.0)-273.15,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.percentPassiveLimit,
 			prometheus.GaugeValue,
-			data[percentPassiveLimit].FirstValue,
-			sensorName,
+			data.PercentPassiveLimit,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.throttleReasons,
 			prometheus.GaugeValue,
-			data[throttleReasons].FirstValue,
-			sensorName,
+			data.ThrottleReasons,
+			data.Name,
 		)
 	}
 

@@ -22,7 +22,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
@@ -38,8 +38,10 @@ var ConfigDefaults = Config{}
 // A Collector is a Prometheus Collector for WMI Win32_PerfRawData_vmGuestLib_VMem/Win32_PerfRawData_vmGuestLib_VCPU metrics.
 type Collector struct {
 	config                  Config
-	perfDataCollectorCPU    *perfdata.Collector
-	perfDataCollectorMemory *perfdata.Collector
+	perfDataCollectorCPU    *pdh.Collector
+	perfDataCollectorMemory *pdh.Collector
+	perfDataObjectCPU       []perfDataCounterValuesCPU
+	perfDataObjectMemory    []perfDataCounterValuesMemory
 
 	memActive      *prometheus.Desc
 	memBallooned   *prometheus.Desc
@@ -93,15 +95,7 @@ func (c *Collector) Close() error {
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 	var err error
 
-	c.perfDataCollectorCPU, err = perfdata.NewCollector("VM Processor", perfdata.InstancesTotal, []string{
-		cpuLimitMHz,
-		cpuReservationMHz,
-		cpuShares,
-		cpuStolenMs,
-		cpuTimePercents,
-		couEffectiveVMSpeedMHz,
-		cpuHostProcessorSpeedMHz,
-	})
+	c.perfDataCollectorCPU, err = pdh.NewCollector[perfDataCounterValuesCPU]("VM Processor", pdh.InstancesTotal)
 	if err != nil {
 		return fmt.Errorf("failed to create VM Processor collector: %w", err)
 	}
@@ -149,20 +143,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 
-	c.perfDataCollectorMemory, err = perfdata.NewCollector("VM Memory", nil, []string{
-		memActiveMB,
-		memBalloonedMB,
-		memLimitMB,
-		memMappedMB,
-		memOverheadMB,
-		memReservationMB,
-		memSharedMB,
-		memSharedSavedMB,
-		memShares,
-		memSwappedMB,
-		memTargetSizeMB,
-		memUsedMB,
-	})
+	c.perfDataCollectorMemory, err = pdh.NewCollector[perfDataCounterValuesMemory]("VM Memory", nil)
 	if err != nil {
 		return fmt.Errorf("failed to create VM Memory collector: %w", err)
 	}
@@ -260,142 +241,132 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 }
 
 func (c *Collector) collectMem(ch chan<- prometheus.Metric) error {
-	perfData, err := c.perfDataCollectorMemory.Collect()
+	err := c.perfDataCollectorMemory.Collect(&c.perfDataObjectMemory)
 	if err != nil {
 		return fmt.Errorf("failed to collect VM Memory metrics: %w", err)
-	}
-
-	data, ok := perfData[perfdata.InstanceEmpty]
-	if !ok {
-		return fmt.Errorf("failed to collect VM Memory metrics: %w", types.ErrNoData)
 	}
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memActive,
 		prometheus.GaugeValue,
-		utils.MBToBytes(data[memActiveMB].FirstValue),
+		utils.MBToBytes(c.perfDataObjectMemory[0].MemActiveMB),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memBallooned,
 		prometheus.GaugeValue,
-		utils.MBToBytes(data[memBalloonedMB].FirstValue),
+		utils.MBToBytes(c.perfDataObjectMemory[0].MemBalloonedMB),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memLimit,
 		prometheus.GaugeValue,
-		utils.MBToBytes(data[memLimitMB].FirstValue),
+		utils.MBToBytes(c.perfDataObjectMemory[0].MemLimitMB),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memMapped,
 		prometheus.GaugeValue,
-		utils.MBToBytes(data[memMappedMB].FirstValue),
+		utils.MBToBytes(c.perfDataObjectMemory[0].MemMappedMB),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memOverhead,
 		prometheus.GaugeValue,
-		utils.MBToBytes(data[memOverheadMB].FirstValue),
+		utils.MBToBytes(c.perfDataObjectMemory[0].MemOverheadMB),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memReservation,
 		prometheus.GaugeValue,
-		utils.MBToBytes(data[memReservationMB].FirstValue),
+		utils.MBToBytes(c.perfDataObjectMemory[0].MemReservationMB),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memShared,
 		prometheus.GaugeValue,
-		utils.MBToBytes(data[memSharedMB].FirstValue),
+		utils.MBToBytes(c.perfDataObjectMemory[0].MemSharedMB),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memSharedSaved,
 		prometheus.GaugeValue,
-		utils.MBToBytes(data[memSharedSavedMB].FirstValue),
+		utils.MBToBytes(c.perfDataObjectMemory[0].MemSharedSavedMB),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memShares,
 		prometheus.GaugeValue,
-		data[memShares].FirstValue,
+		c.perfDataObjectMemory[0].MemShares,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memSwapped,
 		prometheus.GaugeValue,
-		utils.MBToBytes(data[memSwappedMB].FirstValue),
+		utils.MBToBytes(c.perfDataObjectMemory[0].MemSwappedMB),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memTargetSize,
 		prometheus.GaugeValue,
-		utils.MBToBytes(data[memTargetSizeMB].FirstValue),
+		utils.MBToBytes(c.perfDataObjectMemory[0].MemTargetSizeMB),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.memUsed,
 		prometheus.GaugeValue,
-		utils.MBToBytes(data[memUsedMB].FirstValue),
+		utils.MBToBytes(c.perfDataObjectMemory[0].MemUsedMB),
 	)
 
 	return nil
 }
 
 func (c *Collector) collectCpu(ch chan<- prometheus.Metric) error {
-	perfData, err := c.perfDataCollectorCPU.Collect()
+	err := c.perfDataCollectorCPU.Collect(&c.perfDataObjectCPU)
 	if err != nil {
 		return fmt.Errorf("failed to collect VM CPU metrics: %w", err)
-	}
-
-	data, ok := perfData[perfdata.InstanceTotal]
-	if !ok {
-		return fmt.Errorf("failed to collect VM CPU metrics: %w", types.ErrNoData)
 	}
 
 	ch <- prometheus.MustNewConstMetric(
 		c.cpuLimitMHz,
 		prometheus.GaugeValue,
-		data[cpuLimitMHz].FirstValue,
+		c.perfDataObjectCPU[0].CpuLimitMHz,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.cpuReservationMHz,
 		prometheus.GaugeValue,
-		data[cpuReservationMHz].FirstValue,
+		c.perfDataObjectCPU[0].CpuReservationMHz,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.cpuShares,
 		prometheus.GaugeValue,
-		data[cpuShares].FirstValue,
+		c.perfDataObjectCPU[0].CpuShares,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.cpuStolenTotal,
 		prometheus.CounterValue,
-		utils.MilliSecToSec(data[cpuStolenMs].FirstValue),
+		utils.MilliSecToSec(c.perfDataObjectCPU[0].CpuStolenMs),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.cpuTimeTotal,
 		prometheus.CounterValue,
-		utils.MilliSecToSec(data[cpuTimePercents].FirstValue),
+		utils.MilliSecToSec(c.perfDataObjectCPU[0].CpuTimePercents),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.cpuEffectiveVMSpeedMHz,
 		prometheus.GaugeValue,
-		data[couEffectiveVMSpeedMHz].FirstValue,
+		c.perfDataObjectCPU[0].CouEffectiveVMSpeedMHz,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.hostProcessorSpeedMHz,
 		prometheus.GaugeValue,
-		data[cpuHostProcessorSpeedMHz].FirstValue,
+		c.perfDataObjectCPU[0].CpuHostProcessorSpeedMHz,
 	)
 
 	return nil

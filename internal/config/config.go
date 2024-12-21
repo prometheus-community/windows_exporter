@@ -39,19 +39,19 @@ type Resolver struct {
 }
 
 // NewResolver returns a Resolver structure.
-func NewResolver(file string, logger *slog.Logger, insecureSkipVerify bool) (*Resolver, error) {
+func NewResolver(ctx context.Context, file string, logger *slog.Logger, insecureSkipVerify bool) (*Resolver, error) {
 	flags := map[string]string{}
 
 	var fileBytes []byte
 
 	var err error
 	if strings.HasPrefix(file, "http://") || strings.HasPrefix(file, "https://") {
-		fileBytes, err = readFromURL(file, logger, insecureSkipVerify)
+		fileBytes, err = readFromURL(ctx, file, logger, insecureSkipVerify)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		fileBytes, err = readFromFile(file, logger)
+		fileBytes, err = readFromFile(ctx, file, logger)
 		if err != nil {
 			return nil, err
 		}
@@ -75,8 +75,8 @@ func NewResolver(file string, logger *slog.Logger, insecureSkipVerify bool) (*Re
 	return &Resolver{flags: flags}, nil
 }
 
-func readFromFile(file string, logger *slog.Logger) ([]byte, error) {
-	logger.Info("Loading configuration file: " + file)
+func readFromFile(ctx context.Context, file string, logger *slog.Logger) ([]byte, error) {
+	logger.InfoContext(ctx, "loading configuration file: "+file)
 
 	if _, err := os.Stat(file); err != nil {
 		return nil, fmt.Errorf("failed to read configuration file: %w", err)
@@ -90,20 +90,20 @@ func readFromFile(file string, logger *slog.Logger) ([]byte, error) {
 	return fileBytes, nil
 }
 
-func readFromURL(file string, logger *slog.Logger, insecureSkipVerify bool) ([]byte, error) {
-	logger.Info("Loading configuration file from URL: " + file)
+func readFromURL(ctx context.Context, file string, logger *slog.Logger, insecureSkipVerify bool) ([]byte, error) {
+	logger.InfoContext(ctx, "loading configuration file from URL: "+file)
 
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: insecureSkipVerify}, //nolint:gosec
 	}
 
 	if insecureSkipVerify {
-		logger.Warn("Loading configuration file with TLS verification disabled")
+		logger.WarnContext(ctx, "Loading configuration file with TLS verification disabled")
 	}
 
 	client := &http.Client{Transport: tr}
 
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, file, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, file, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
 	}
