@@ -67,6 +67,7 @@ func main() {
 
 func run() int {
 	startTime := time.Now()
+	ctx := context.Background()
 
 	app := kingpin.New("windows_exporter", "A metrics collector for Windows.")
 
@@ -150,7 +151,7 @@ func run() int {
 	}
 
 	if *configFile != "" {
-		resolver, err := config.NewResolver(*configFile, logger, *insecureSkipVerify)
+		resolver, err := config.NewResolver(ctx, *configFile, logger, *insecureSkipVerify)
 		if err != nil {
 			logger.Error("could not load config file",
 				slog.Any("err", err),
@@ -160,7 +161,7 @@ func run() int {
 		}
 
 		if err = resolver.Bind(app, os.Args[1:]); err != nil {
-			logger.Error("Failed to bind configuration",
+			logger.ErrorContext(ctx, "failed to bind configuration",
 				slog.Any("err", err),
 			)
 
@@ -174,7 +175,7 @@ func run() int {
 
 		// Parse flags once more to include those discovered in configuration file(s).
 		if _, err = app.Parse(os.Args[1:]); err != nil {
-			logger.Error("Failed to parse CLI args from YAML file",
+			logger.ErrorContext(ctx, "failed to parse CLI args from YAML file",
 				slog.Any("err", err),
 			)
 
@@ -224,7 +225,7 @@ func run() int {
 
 	logCurrentUser(logger)
 
-	logger.Info("Enabled collectors: " + strings.Join(enabledCollectorList, ", "))
+	logger.InfoContext(ctx, "Enabled collectors: "+strings.Join(enabledCollectorList, ", "))
 
 	mux := http.NewServeMux()
 	mux.Handle("GET /health", httphandler.NewHealthHandler())
@@ -242,7 +243,7 @@ func run() int {
 		mux.HandleFunc("GET /debug/pprof/trace", pprof.Trace)
 	}
 
-	logger.Info(fmt.Sprintf("starting windows_exporter in %s", time.Since(startTime)),
+	logger.InfoContext(ctx, fmt.Sprintf("starting windows_exporter in %s", time.Since(startTime)),
 		slog.String("version", version.Version),
 		slog.String("branch", version.Branch),
 		slog.String("revision", version.GetRevision()),
@@ -269,7 +270,7 @@ func run() int {
 		close(errCh)
 	}()
 
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
+	ctx, stop := signal.NotifyContext(ctx, os.Interrupt, os.Kill)
 	defer stop()
 
 	select {
@@ -279,7 +280,7 @@ func run() int {
 		logger.Info("Shutting down windows_exporter via service control")
 	case err := <-errCh:
 		if err != nil {
-			logger.Error("Failed to start windows_exporter",
+			logger.ErrorContext(ctx, "Failed to start windows_exporter",
 				slog.Any("err", err),
 			)
 
@@ -292,7 +293,7 @@ func run() int {
 
 	_ = server.Shutdown(ctx)
 
-	logger.Info("windows_exporter has shut down")
+	logger.InfoContext(ctx, "windows_exporter has shut down")
 
 	return 0
 }

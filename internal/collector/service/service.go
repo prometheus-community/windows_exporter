@@ -16,6 +16,7 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -211,12 +212,6 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		return fmt.Errorf("failed to query services: %w", err)
 	}
 
-	if len(services) == 0 {
-		c.logger.Warn("No services queried")
-
-		return nil
-	}
-
 	servicesCh := make(chan windows.ENUM_SERVICE_STATUS_PROCESS, len(services))
 	wg := sync.WaitGroup{}
 	wg.Add(len(services))
@@ -249,7 +244,7 @@ func (c *Collector) collectWorker(ch chan<- prometheus.Metric, service windows.E
 	}
 
 	if err := c.collectService(ch, serviceName, service); err != nil {
-		c.logger.Warn("failed collecting service info",
+		c.logger.Log(context.Background(), slog.LevelWarn, "failed collecting service info",
 			slog.Any("err", err),
 			slog.String("service", serviceName),
 		)
@@ -267,7 +262,7 @@ func (c *Collector) collectService(ch chan<- prometheus.Metric, serviceName stri
 	serviceManager := &mgr.Service{Name: serviceName, Handle: serviceHandle}
 	defer func(serviceManager *mgr.Service) {
 		if err := serviceManager.Close(); err != nil {
-			c.logger.Warn("failed to close service handle",
+			c.logger.Log(context.Background(), slog.LevelWarn, "failed to close service handle",
 				slog.Any("err", err),
 				slog.String("service", serviceName),
 			)
@@ -281,7 +276,7 @@ func (c *Collector) collectService(ch chan<- prometheus.Metric, serviceName stri
 			return fmt.Errorf("failed to get service configuration: %w", err)
 		}
 
-		c.logger.Debug("failed collecting service config",
+		c.logger.Log(context.Background(), slog.LevelDebug, "failed collecting service config",
 			slog.Any("err", err),
 			slog.String("service", serviceName),
 		)
@@ -350,17 +345,16 @@ func (c *Collector) collectService(ch chan<- prometheus.Metric, serviceName stri
 		return nil
 	}
 
+	logLevel := slog.LevelWarn
+
 	if errors.Is(err, windows.ERROR_ACCESS_DENIED) {
-		c.logger.Debug("failed to get process start time",
-			slog.String("service", serviceName),
-			slog.Any("err", err),
-		)
-	} else {
-		c.logger.Warn("failed to get process start time",
-			slog.String("service", serviceName),
-			slog.Any("err", err),
-		)
+		logLevel = slog.LevelDebug
 	}
+
+	c.logger.Log(context.Background(), logLevel, "failed to get process start time",
+		slog.String("service", serviceName),
+		slog.Any("err", err),
+	)
 
 	return nil
 }

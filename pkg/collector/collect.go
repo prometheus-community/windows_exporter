@@ -192,7 +192,7 @@ func (c *Collection) collectCollector(ch chan<- prometheus.Metric, logger *slog.
 			name,
 		)
 
-		logger.Warn(fmt.Sprintf("collector %s timeouted after %s, resulting in %d metrics", name, maxScrapeDuration, numMetrics))
+		logger.LogAttrs(ctx, slog.LevelWarn, fmt.Sprintf("collector %s timeouted after %s, resulting in %d metrics", name, maxScrapeDuration, numMetrics))
 
 		go func() {
 			// Drain channel in case of premature return to not leak a goroutine.
@@ -205,20 +205,19 @@ func (c *Collection) collectCollector(ch chan<- prometheus.Metric, logger *slog.
 	}
 
 	if err != nil && !errors.Is(err, pdh.ErrNoData) && !errors.Is(err, types.ErrNoData) {
-		loggerFn := logger.Warn
-
 		if errors.Is(err, pdh.ErrPerformanceCounterNotInitialized) || errors.Is(err, mi.MI_RESULT_INVALID_NAMESPACE) {
 			err = fmt.Errorf("%w. Check application logs from initialization pharse for more information", err)
 		}
 
-		loggerFn(fmt.Sprintf("collector %s failed after %s, resulting in %d metrics", name, duration, numMetrics),
+		logger.LogAttrs(ctx, slog.LevelWarn,
+			fmt.Sprintf("collector %s failed after %s, resulting in %d metrics", name, duration, numMetrics),
 			slog.Any("err", err),
 		)
 
 		return failed
 	}
 
-	logger.Debug(fmt.Sprintf("collector %s succeeded after %s, resulting in %d metrics", name, duration, numMetrics))
+	logger.LogAttrs(ctx, slog.LevelDebug, fmt.Sprintf("collector %s succeeded after %s, resulting in %d metrics", name, duration, numMetrics))
 
 	return success
 }

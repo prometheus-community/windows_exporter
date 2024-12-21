@@ -16,6 +16,7 @@
 package collector
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -233,9 +234,7 @@ func (c *Collection) Build(logger *slog.Logger) error {
 			errors.Is(err, pdh.NewPdhError(pdh.CstatusNoObject)) ||
 			errors.Is(err, pdh.NewPdhError(pdh.CstatusNoCounter)) ||
 			errors.Is(err, mi.MI_RESULT_INVALID_NAMESPACE) {
-			logger.Warn("couldn't initialize collector",
-				slog.Any("err", err),
-			)
+			logger.LogAttrs(context.Background(), slog.LevelWarn, "couldn't initialize collector", slog.Any("err", err))
 
 			continue
 		}
