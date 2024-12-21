@@ -92,7 +92,7 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 		}
 
 		if err := yaml.Unmarshal([]byte(objects), &c.config.Objects); err != nil {
-			return fmt.Errorf("failed to parse objects: %w", err)
+			return fmt.Errorf("failed to parse objects %s: %w", objects, err)
 		}
 
 		return nil

@@ -455,6 +455,10 @@ func fetchTasksInFolder(taskServiceObj *ole.IDispatch, folderPath string) ([]sch
 
 	taskCount := int(countVariant.Val)
 
+	defer func(countVariant *ole.VARIANT) {
+		_ = countVariant.Clear()
+	}(countVariant)
+
 	scheduledTasks := make([]scheduledTask, 0, taskCount)
 
 	err = oleutil.ForEach(tasks, func(v *ole.VARIANT) error {
