@@ -38,6 +38,7 @@ type Config struct {
 	TaskInclude *regexp.Regexp `yaml:"task_include"`
 }
 
+//nolint:gochecknoglobals
 var ConfigDefaults = Config{
 	TaskExclude: types.RegExpEmpty,
 	TaskInclude: types.RegExpAny,
@@ -174,6 +175,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	return c.collect(ch)
 }
 
+//nolint:gochecknoglobals
 var TASK_STATES = []string{"disabled", "queued", "ready", "running", "unknown"}
 
 func (c *Collector) collect(ch chan<- prometheus.Metric) error {
