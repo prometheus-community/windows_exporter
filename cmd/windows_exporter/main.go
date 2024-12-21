@@ -193,7 +193,7 @@ func run() int {
 		}
 	}
 
-	logger.Debug("Logging has Started")
+	logger.LogAttrs(ctx, slog.LevelDebug, "logging has Started")
 
 	if err = setPriorityWindows(logger, os.Getpid(), *processPriority); err != nil {
 		logger.Error("failed to set process priority",
@@ -243,7 +243,7 @@ func run() int {
 		mux.HandleFunc("GET /debug/pprof/trace", pprof.Trace)
 	}
 
-	logger.InfoContext(ctx, fmt.Sprintf("starting windows_exporter in %s", time.Since(startTime)),
+	logger.LogAttrs(ctx, slog.LevelInfo, fmt.Sprintf("starting windows_exporter in %s", time.Since(startTime)),
 		slog.String("version", version.Version),
 		slog.String("branch", version.Branch),
 		slog.String("revision", version.GetRevision()),
@@ -334,7 +334,7 @@ func setPriorityWindows(logger *slog.Logger, pid int, priority string) error {
 		return nil
 	}
 
-	logger.Debug("setting process priority to " + priority)
+	logger.LogAttrs(context.Background(), slog.LevelDebug, "setting process priority to "+priority)
 
 	// https://learn.microsoft.com/en-us/windows/win32/procthread/process-security-and-access-rights
 	handle, err := windows.OpenProcess(

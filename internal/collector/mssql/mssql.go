@@ -16,6 +16,7 @@
 package mssql
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -373,6 +374,8 @@ func (c *Collector) collect(
 ) error {
 	errs := make([]error, 0, len(perfDataCollectors))
 
+	ctx := context.Background()
+
 	for sqlInstance, perfDataCollector := range perfDataCollectors {
 		begin := time.Now()
 		success := 1.0
@@ -383,11 +386,11 @@ func (c *Collector) collect(
 			errs = append(errs, err)
 			success = 0.0
 
-			c.logger.Debug(fmt.Sprintf("mssql class collector %s for instance %s failed after %s", collector, sqlInstance, duration),
+			c.logger.LogAttrs(ctx, slog.LevelDebug, fmt.Sprintf("mssql class collector %s for instance %s failed after %s", collector, sqlInstance, duration),
 				slog.Any("err", err),
 			)
 		} else {
-			c.logger.Debug(fmt.Sprintf("mssql class collector %s for instance %s succeeded after %s", collector, sqlInstance, duration))
+			c.logger.LogAttrs(ctx, slog.LevelDebug, fmt.Sprintf("mssql class collector %s for instance %s succeeded after %s", collector, sqlInstance, duration))
 		}
 
 		if collector == "" {

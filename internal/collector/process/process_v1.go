@@ -16,6 +16,7 @@
 package process
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"runtime/debug"
@@ -118,7 +119,7 @@ func (c *Collector) collectWorkerV1() {
 
 			cmdLine, processOwner, processGroupID, err := c.getProcessInformation(uint32(pid))
 			if err != nil {
-				c.logger.Debug("Failed to get process information",
+				slog.LogAttrs(context.Background(), slog.LevelDebug, "Failed to get process information",
 					slog.Uint64("pid", pid),
 					slog.Any("err", err),
 				)
