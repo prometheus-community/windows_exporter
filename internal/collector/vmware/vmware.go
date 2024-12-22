@@ -330,43 +330,43 @@ func (c *Collector) collectCpu(ch chan<- prometheus.Metric) error {
 	ch <- prometheus.MustNewConstMetric(
 		c.cpuLimitMHz,
 		prometheus.GaugeValue,
-		c.perfDataObjectCPU[0].CpuLimitMHz,
+		c.perfDataObjectCPU[0].CPULimitMHz,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.cpuReservationMHz,
 		prometheus.GaugeValue,
-		c.perfDataObjectCPU[0].CpuReservationMHz,
+		c.perfDataObjectCPU[0].CPUReservationMHz,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.cpuShares,
 		prometheus.GaugeValue,
-		c.perfDataObjectCPU[0].CpuShares,
+		c.perfDataObjectCPU[0].CPUShares,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.cpuStolenTotal,
 		prometheus.CounterValue,
-		utils.MilliSecToSec(c.perfDataObjectCPU[0].CpuStolenMs),
+		utils.MilliSecToSec(c.perfDataObjectCPU[0].CPUStolenMs),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.cpuTimeTotal,
 		prometheus.CounterValue,
-		utils.MilliSecToSec(c.perfDataObjectCPU[0].CpuTimePercents),
+		utils.MilliSecToSec(c.perfDataObjectCPU[0].CPUTimePercents),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.cpuEffectiveVMSpeedMHz,
 		prometheus.GaugeValue,
-		c.perfDataObjectCPU[0].CouEffectiveVMSpeedMHz,
+		c.perfDataObjectCPU[0].CPUEffectiveVMSpeedMHz,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.hostProcessorSpeedMHz,
 		prometheus.GaugeValue,
-		c.perfDataObjectCPU[0].CpuHostProcessorSpeedMHz,
+		c.perfDataObjectCPU[0].CPUHostProcessorSpeedMHz,
 	)
 
 	return nil

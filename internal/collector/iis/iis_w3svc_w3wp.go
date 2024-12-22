@@ -405,7 +405,7 @@ func (c *Collector) collectW3SVCW3WP(ch chan<- prometheus.Metric) error {
 }
 
 func (c *Collector) collectW3SVCW3WPv8(ch chan<- prometheus.Metric) error {
-	err := c.w3SVCW3WPPerfDataCollector.Collect(&c.perfDataObjectW3SVCW3WPV8)
+	err := c.w3SVCW3WPPerfDataCollectorV8.Collect(&c.perfDataObjectW3SVCW3WPV8)
 	if err != nil {
 		return fmt.Errorf("failed to collect APP_POOL_WAS metrics: %w", err)
 	}
