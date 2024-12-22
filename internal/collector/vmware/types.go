@@ -16,13 +16,13 @@
 package vmware
 
 type perfDataCounterValuesCPU struct {
-	CouEffectiveVMSpeedMHz   float64 `perfdata:"Effective VM Speed in MHz"`   // \VM Processor(*)\Effective VM Speed in MHz
-	CpuHostProcessorSpeedMHz float64 `perfdata:"Host processor speed in MHz"` // \VM Processor(*)\Host processor speed in MHz
-	CpuLimitMHz              float64 `perfdata:"Limit in MHz"`                // \VM Processor(*)\Limit in MHz
-	CpuReservationMHz        float64 `perfdata:"Reservation in MHz"`          // \VM Processor(*)\Reservation in MHz
-	CpuShares                float64 `perfdata:"Shares"`                      // \VM Processor(*)\Shares
-	CpuStolenMs              float64 `perfdata:"CPU stolen time"`             // \VM Processor(*)\CPU stolen time
-	CpuTimePercents          float64 `perfdata:"% Processor Time"`            // \VM Processor(*)\% Processor Time
+	CPUEffectiveVMSpeedMHz   float64 `perfdata:"Effective VM Speed in MHz"`   // \VM Processor(*)\Effective VM Speed in MHz
+	CPUHostProcessorSpeedMHz float64 `perfdata:"Host processor speed in MHz"` // \VM Processor(*)\Host processor speed in MHz
+	CPULimitMHz              float64 `perfdata:"Limit in MHz"`                // \VM Processor(*)\Limit in MHz
+	CPUReservationMHz        float64 `perfdata:"Reservation in MHz"`          // \VM Processor(*)\Reservation in MHz
+	CPUShares                float64 `perfdata:"Shares"`                      // \VM Processor(*)\Shares
+	CPUStolenMs              float64 `perfdata:"CPU stolen time"`             // \VM Processor(*)\CPU stolen time
+	CPUTimePercents          float64 `perfdata:"% Processor Time"`            // \VM Processor(*)\% Processor Time
 }
 
 type perfDataCounterValuesMemory struct {
