@@ -54,8 +54,6 @@ type Collector struct {
 
 	objects []Object
 
-	metricNameReplacer *strings.Replacer
-
 	// meta
 	subCollectorScrapeDurationDesc *prometheus.Desc
 	subCollectorScrapeSuccessDesc  *prometheus.Desc
@@ -166,7 +164,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 			counters = append(counters, counter.Name)
 
-			field, err := func(name string) (field reflect.StructField, err error) {
+			field, err := func(name string) (_ reflect.StructField, err error) {
 				defer func() {
 					if r := recover(); r != nil {
 						err = fmt.Errorf("failed to create field for %s: %v", name, r)
@@ -179,7 +177,6 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 					Tag:  reflect.StructTag(fmt.Sprintf(`perfdata:"%s"`, name)),
 				}, nil
 			}(counter.Name)
-
 			if err != nil {
 				errs = append(errs, err)
 
