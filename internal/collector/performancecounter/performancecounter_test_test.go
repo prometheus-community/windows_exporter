@@ -129,10 +129,10 @@ windows_performancecounter_processor_information_processor_time\{core="0,0",stat
 		},
 		{
 			name:            "counter with spaces and brackets",
-			object:          "User Input Delay per Session",
+			object:          "invalid",
 			instances:       nil,
-			buildErr:        pdh.NewPdhError(pdh.CstatusNoCounter).Error(),
-			counters:        []performancecounter.Counter{{Name: "Max Session Input Delay (ms)", Type: "counter"}},
+			buildErr:        pdh.NewPdhError(pdh.CstatusNoObject).Error(),
+			counters:        []performancecounter.Counter{{Name: "Total Memory Usage --- Non-Paged Pool", Type: "counter"}, {Name: "Max Session Input Delay (ms)", Type: "counter"}},
 			expectedMetrics: nil,
 		},
 	} {
