@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"log/slog"
 	"reflect"
+	"regexp"
 	"slices"
 	"strings"
 	"time"
@@ -33,6 +34,8 @@ import (
 )
 
 const Name = "performancecounter"
+
+var reNonAlphaNum = regexp.MustCompile(`[^a-zA-Z0-9]`)
 
 type Config struct {
 	Objects []Object `yaml:"objects"`
@@ -115,15 +118,6 @@ func (c *Collector) Close() error {
 
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	c.logger = logger.With(slog.String("collector", Name))
-
-	c.metricNameReplacer = strings.NewReplacer(
-		".", "",
-		"%", "",
-		"/", "_",
-		" ", "_",
-		"-", "_",
-	)
-
 	c.objects = make([]Object, 0, len(c.config.Objects))
 	names := make([]string, 0, len(c.config.Objects))
 
@@ -152,7 +146,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 		for j, counter := range object.Counters {
 			if counter.Metric == "" {
-				c.config.Objects[i].Counters[j].Metric = c.sanitizeMetricName(
+				c.config.Objects[i].Counters[j].Metric = sanitizeMetricName(
 					fmt.Sprintf("%s_%s_%s_%s", types.Namespace, Name, object.Object, counter.Name),
 				)
 			}
@@ -171,11 +165,28 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 			}
 
 			counters = append(counters, counter.Name)
-			fields = append(fields, reflect.StructField{
-				Name: strings.ToUpper(c.sanitizeMetricName(counter.Name)),
-				Type: reflect.TypeOf(float64(0)),
-				Tag:  reflect.StructTag(fmt.Sprintf(`perfdata:"%s"`, counter.Name)),
-			})
+
+			field, err := func(name string) (field reflect.StructField, err error) {
+				defer func() {
+					if r := recover(); r != nil {
+						err = fmt.Errorf("failed to create field for %s: %v", name, r)
+					}
+				}()
+
+				return reflect.StructField{
+					Name: strings.ToUpper(sanitizeMetricName(name)),
+					Type: reflect.TypeOf(float64(0)),
+					Tag:  reflect.StructTag(fmt.Sprintf(`perfdata:"%s"`, name)),
+				}, nil
+			}(counter.Name)
+
+			if err != nil {
+				errs = append(errs, err)
+
+				continue
+			}
+
+			fields = append(fields, field)
 		}
 
 		if object.Instances != nil {
@@ -276,7 +287,7 @@ func (c *Collector) collectObject(ch chan<- prometheus.Metric, perfDataObject Ob
 		for _, counter := range perfDataObject.Counters {
 			val := reflect.ValueOf(sliceValue).Index(i)
 
-			field := val.FieldByName(strings.ToUpper(c.sanitizeMetricName(counter.Name)))
+			field := val.FieldByName(strings.ToUpper(sanitizeMetricName(counter.Name)))
 			if !field.IsValid() {
 				errs = append(errs, fmt.Errorf("%s not found in collected data", counter.Name))
 
@@ -355,6 +366,6 @@ func (c *Collector) collectObject(ch chan<- prometheus.Metric, perfDataObject Ob
 	return errors.Join(errs...)
 }
 
-func (c *Collector) sanitizeMetricName(name string) string {
-	return strings.Trim(c.metricNameReplacer.Replace(strings.ToLower(name)), "_")
+func sanitizeMetricName(name string) string {
+	return strings.Trim(reNonAlphaNum.ReplaceAllString(strings.ToLower(name), "_"), "_")
 }

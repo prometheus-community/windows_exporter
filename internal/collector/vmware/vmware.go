@@ -93,11 +93,19 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
-	var err error
+	var (
+		err  error
+		errs []error
+	)
 
 	c.perfDataCollectorCPU, err = pdh.NewCollector[perfDataCounterValuesCPU]("VM Processor", pdh.InstancesTotal)
 	if err != nil {
-		return fmt.Errorf("failed to create VM Processor collector: %w", err)
+		errs = append(errs, fmt.Errorf("failed to create VM Processor collector: %w", err))
+	}
+
+	c.perfDataCollectorMemory, err = pdh.NewCollector[perfDataCounterValuesMemory]("VM Memory", nil)
+	if err != nil {
+		errs = append(errs, fmt.Errorf("failed to create VM Memory collector: %w", err))
 	}
 
 	c.cpuLimitMHz = prometheus.NewDesc(
@@ -142,11 +150,6 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		nil,
 		nil,
 	)
-
-	c.perfDataCollectorMemory, err = pdh.NewCollector[perfDataCounterValuesMemory]("VM Memory", nil)
-	if err != nil {
-		return fmt.Errorf("failed to create VM Memory collector: %w", err)
-	}
 
 	c.memActive = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "mem_active_bytes"),
@@ -221,7 +224,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 
-	return nil
+	return errors.Join(errs...)
 }
 
 // Collect sends the metric values for each metric
