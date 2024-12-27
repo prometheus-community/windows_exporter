@@ -25,6 +25,7 @@ import (
 	"testing"
 
 	"github.com/prometheus-community/windows_exporter/internal/collector/performancecounter"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/stretchr/testify/assert"
@@ -124,6 +125,14 @@ windows_performancecounter_processor_information_processor_time\{core="0,0",stat
 			instances:       nil,
 			buildErr:        "counter name Available Bytes is duplicated",
 			counters:        []performancecounter.Counter{{Name: "Available Bytes", Type: "gauge"}, {Name: "Available Bytes", Type: "gauge"}},
+			expectedMetrics: nil,
+		},
+		{
+			name:            "counter with spaces and brackets",
+			object:          "invalid",
+			instances:       nil,
+			buildErr:        pdh.NewPdhError(pdh.CstatusNoObject).Error(),
+			counters:        []performancecounter.Counter{{Name: "Total Memory Usage --- Non-Paged Pool", Type: "counter"}, {Name: "Max Session Input Delay (ms)", Type: "counter"}},
 			expectedMetrics: nil,
 		},
 	} {
