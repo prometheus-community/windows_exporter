@@ -127,7 +127,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 
 	var err error
 
-	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues]("Windows Time Service", nil)
+	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "Windows Time Service", nil)
 	if err != nil {
 		return fmt.Errorf("failed to create Windows Time Service collector: %w", err)
 	}

@@ -88,9 +88,7 @@ func (c *Collector) buildGeneralStatistics() error {
 	errs := make([]error, 0, len(c.mssqlInstances))
 
 	for _, sqlInstance := range c.mssqlInstances {
-		c.genStatsPerfDataCollectors[sqlInstance.name], err = pdh.NewCollector[perfDataCounterValuesGenStats](
-			c.mssqlGetPerfObjectName(sqlInstance.name, "General Statistics"), nil,
-		)
+		c.genStatsPerfDataCollectors[sqlInstance.name], err = pdh.NewCollector[perfDataCounterValuesGenStats](pdh.CounterTypeRaw, c.mssqlGetPerfObjectName(sqlInstance.name, "General Statistics"), nil)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("failed to create General Statistics collector for instance %s: %w", sqlInstance.name, err))
 		}

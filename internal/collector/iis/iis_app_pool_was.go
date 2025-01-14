@@ -77,7 +77,7 @@ var applicationStates = map[uint32]string{
 func (c *Collector) buildAppPoolWAS() error {
 	var err error
 
-	c.perfDataCollectorAppPoolWAS, err = pdh.NewCollector[perfDataCounterValuesAppPoolWAS]("APP_POOL_WAS", pdh.InstancesAll)
+	c.perfDataCollectorAppPoolWAS, err = pdh.NewCollector[perfDataCounterValuesAppPoolWAS](pdh.CounterTypeRaw, "APP_POOL_WAS", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create APP_POOL_WAS collector: %w", err)
 	}

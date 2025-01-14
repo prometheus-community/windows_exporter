@@ -42,7 +42,7 @@ type perfDataCounterValuesVirtualMachineHealthSummary struct {
 func (c *Collector) buildVirtualMachineHealthSummary() error {
 	var err error
 
-	c.perfDataCollectorVirtualMachineHealthSummary, err = pdh.NewCollector[perfDataCounterValuesVirtualMachineHealthSummary]("Hyper-V Virtual Machine Health Summary", nil)
+	c.perfDataCollectorVirtualMachineHealthSummary, err = pdh.NewCollector[perfDataCounterValuesVirtualMachineHealthSummary](pdh.CounterTypeRaw, "Hyper-V Virtual Machine Health Summary", nil)
 	if err != nil {
 		return fmt.Errorf("failed to create Hyper-V Virtual Machine Health Summary collector: %w", err)
 	}

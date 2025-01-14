@@ -78,6 +78,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
+	"golang.org/x/sys/windows/registry"
 )
 
 // NewWithFlags To be called by the exporter for collector initialization before running kingpin.Parse.
@@ -231,6 +232,7 @@ func (c *Collection) Build(logger *slog.Logger) error {
 
 	for err := range errCh {
 		if errors.Is(err, pdh.ErrNoData) ||
+			errors.Is(err, registry.ErrNotExist) ||
 			errors.Is(err, pdh.NewPdhError(pdh.CstatusNoObject)) ||
 			errors.Is(err, pdh.NewPdhError(pdh.CstatusNoCounter)) ||
 			errors.Is(err, mi.MI_RESULT_INVALID_NAMESPACE) {

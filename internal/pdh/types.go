@@ -20,6 +20,13 @@ import (
 	"golang.org/x/sys/windows"
 )
 
+type CounterType string
+
+const (
+	CounterTypeRaw       CounterType = "raw"
+	CounterTypeFormatted CounterType = "formatted"
+)
+
 const (
 	InstanceEmpty = "------"
 	InstanceTotal = "_Total"

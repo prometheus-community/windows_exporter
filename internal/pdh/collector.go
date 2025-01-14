@@ -63,13 +63,13 @@ type Counter struct {
 	FieldIndexSecondValue int
 }
 
-func NewCollector[T any](object string, instances []string) (*Collector, error) {
+func NewCollector[T any](resultType CounterType, object string, instances []string) (*Collector, error) {
 	valueType := reflect.TypeFor[T]()
 
-	return NewCollectorWithReflection(object, instances, valueType)
+	return NewCollectorWithReflection(resultType, object, instances, valueType)
 }
 
-func NewCollectorWithReflection(object string, instances []string, valueType reflect.Type) (*Collector, error) {
+func NewCollectorWithReflection(resultType CounterType, object string, instances []string, valueType reflect.Type) (*Collector, error) {
 	var handle pdhQueryHandle
 
 	if ret := OpenQuery(0, 0, &handle); ret != ErrorSuccess {
@@ -78,6 +78,10 @@ func NewCollectorWithReflection(object string, instances []string, valueType ref
 
 	if len(instances) == 0 {
 		instances = []string{InstanceEmpty}
+	}
+
+	if resultType != CounterTypeRaw && resultType != CounterTypeFormatted {
+		return nil, fmt.Errorf("invalid result type: %v", resultType)
 	}
 
 	collector := &Collector{
@@ -209,7 +213,11 @@ func NewCollectorWithReflection(object string, instances []string, valueType ref
 	collector.collectCh = make(chan any)
 	collector.errorCh = make(chan error)
 
-	go collector.collectRoutine()
+	if resultType == CounterTypeRaw {
+		go collector.collectWorkerRaw()
+	} else {
+		go collector.collectWorkerFormatted()
+	}
 
 	// Collect initial data because some counters need to be read twice to get the correct value.
 	collectValues := reflect.New(reflect.SliceOf(valueType)).Elem()
@@ -254,7 +262,7 @@ func (c *Collector) Collect(dst any) error {
 	return <-c.errorCh
 }
 
-func (c *Collector) collectRoutine() {
+func (c *Collector) collectWorkerRaw() {
 	var (
 		err         error
 		itemCount   uint32
@@ -310,7 +318,11 @@ func (c *Collector) collectRoutine() {
 							break
 						}
 
-						if err := NewPdhError(ret); ret != MoreData && !isKnownCounterDataError(err) {
+						if err := NewPdhError(ret); ret != MoreData {
+							if isKnownCounterDataError(err) {
+								break
+							}
+
 							return fmt.Errorf("GetRawCounterArray: %w", err)
 						}
 
@@ -395,6 +407,142 @@ func (c *Collector) collectRoutine() {
 									Field(counter.FieldIndexValue).
 									SetFloat(float64(item.RawValue.FirstValue))
 							}
+						}
+					}
+				}
+			}
+
+			if dv.Len() == 0 {
+				return ErrNoData
+			}
+
+			return nil
+		})()
+
+		c.errorCh <- err
+	}
+}
+
+func (c *Collector) collectWorkerFormatted() {
+	var (
+		err         error
+		itemCount   uint32
+		items       []FmtCounterValueItemDouble
+		bytesNeeded uint32
+	)
+
+	buf := make([]byte, 1)
+
+	for data := range c.collectCh {
+		err = (func() error {
+			if ret := CollectQueryData(c.handle); ret != ErrorSuccess {
+				return fmt.Errorf("failed to collect query data: %w", NewPdhError(ret))
+			}
+
+			dv := reflect.ValueOf(data)
+			if dv.Kind() != reflect.Ptr || dv.IsNil() {
+				return fmt.Errorf("expected a pointer, got %s: %w", dv.Kind(), mi.ErrInvalidEntityType)
+			}
+
+			dv = dv.Elem()
+
+			if dv.Kind() != reflect.Slice {
+				return fmt.Errorf("expected a pointer to a slice, got %s: %w", dv.Kind(), mi.ErrInvalidEntityType)
+			}
+
+			elemType := dv.Type().Elem()
+
+			if elemType.Kind() != reflect.Struct {
+				return fmt.Errorf("expected a pointer to a slice of structs, got a slice of %s: %w", elemType.Kind(), mi.ErrInvalidEntityType)
+			}
+
+			if dv.Len() != 0 {
+				dv.Set(reflect.MakeSlice(dv.Type(), 0, 0))
+			}
+
+			dv.Clear()
+
+			elemValue := reflect.ValueOf(reflect.New(elemType).Interface()).Elem()
+
+			indexMap := map[string]int{}
+			stringMap := map[*uint16]string{}
+
+			for _, counter := range c.counters {
+				for _, instance := range counter.Instances {
+					// Get the info with the current buffer size
+					bytesNeeded = uint32(cap(buf))
+
+					for {
+						ret := GetFormattedCounterArrayDouble(instance, &bytesNeeded, &itemCount, &buf[0])
+
+						if ret == ErrorSuccess {
+							break
+						}
+
+						if err := NewPdhError(ret); ret != MoreData {
+							if isKnownCounterDataError(err) {
+								break
+							}
+
+							return fmt.Errorf("GetFormattedCounterArrayDouble: %w", err)
+						}
+
+						if bytesNeeded <= uint32(cap(buf)) {
+							return fmt.Errorf("GetFormattedCounterArrayDouble reports buffer too small (%d), but buffer is large enough (%d): %w", uint32(cap(buf)), bytesNeeded, NewPdhError(ret))
+						}
+
+						buf = make([]byte, bytesNeeded)
+					}
+
+					items = unsafe.Slice((*FmtCounterValueItemDouble)(unsafe.Pointer(&buf[0])), itemCount)
+
+					var (
+						instanceName string
+						ok           bool
+					)
+
+					for _, item := range items {
+						if item.FmtValue.CStatus != CstatusValidData && item.FmtValue.CStatus != CstatusNewData {
+							continue
+						}
+
+						if instanceName, ok = stringMap[item.SzName]; !ok {
+							instanceName = windows.UTF16PtrToString(item.SzName)
+							stringMap[item.SzName] = instanceName
+						}
+
+						if strings.HasSuffix(instanceName, InstanceTotal) && !c.totalCounterRequested {
+							continue
+						}
+
+						if instanceName == "" || instanceName == "*" {
+							instanceName = InstanceEmpty
+						}
+
+						var (
+							index int
+							ok    bool
+						)
+
+						if index, ok = indexMap[instanceName]; !ok {
+							index = dv.Len()
+							indexMap[instanceName] = index
+
+							if c.nameIndexValue != -1 {
+								elemValue.Field(c.nameIndexValue).SetString(instanceName)
+							}
+
+							if c.metricsTypeIndexValue != -1 {
+								elemValue.Field(c.metricsTypeIndexValue).Set(reflect.ValueOf(prometheus.GaugeValue))
+							}
+
+							dv.Set(reflect.Append(dv, elemValue))
+						}
+
+						if counter.FieldIndexValue != -1 {
+							dv.Index(index).
+								Field(counter.FieldIndexValue).
+								SetFloat(item.FmtValue.DoubleValue)
 						}
 					}
 				}

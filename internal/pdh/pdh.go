@@ -452,7 +452,7 @@ func GetFormattedCounterValueDouble(hCounter pdhCounterHandle, lpdwType *uint32,
 func GetFormattedCounterArrayDouble(hCounter pdhCounterHandle, lpdwBufferSize *uint32, lpdwBufferCount *uint32, itemBuffer *byte) uint32 {
 	ret, _, _ := pdhGetFormattedCounterArrayW.Call(
 		uintptr(hCounter),
-		uintptr(FmtDouble|FmtNocap100),
+		uintptr(FmtDouble),
 		uintptr(unsafe.Pointer(lpdwBufferSize)),
 		uintptr(unsafe.Pointer(lpdwBufferCount)),
 		uintptr(unsafe.Pointer(itemBuffer)))

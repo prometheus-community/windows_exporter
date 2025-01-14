@@ -37,7 +37,7 @@ type perfDataCounterValuesMapiHttpEmsmdb struct {
 func (c *Collector) buildMapiHttpEmsmdb() error {
 	var err error
 
-	c.perfDataCollectorMapiHttpEmsmdb, err = pdh.NewCollector[perfDataCounterValuesMapiHttpEmsmdb]("MSExchange MapiHttp Emsmdb", pdh.InstancesAll)
+	c.perfDataCollectorMapiHttpEmsmdb, err = pdh.NewCollector[perfDataCounterValuesMapiHttpEmsmdb](pdh.CounterTypeRaw, "MSExchange MapiHttp Emsmdb", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create MSExchange MapiHttp Emsmdb: %w", err)
 	}

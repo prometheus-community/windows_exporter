@@ -79,7 +79,7 @@ func (c *Collector) Close() error {
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 	var err error
 
-	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues]("System", nil)
+	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "System", nil)
 	if err != nil {
 		return fmt.Errorf("failed to create System collector: %w", err)
 	}

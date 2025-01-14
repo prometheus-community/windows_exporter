@@ -93,7 +93,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 
 	c.mu = sync.Mutex{}
 
-	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues]("Processor Information", pdh.InstancesAll)
+	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "Processor Information", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create Processor Information collector: %w", err)
 	}

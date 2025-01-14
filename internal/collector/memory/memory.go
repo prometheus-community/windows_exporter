@@ -112,7 +112,7 @@ func (c *Collector) Close() error {
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 	var err error
 
-	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues]("Memory", pdh.InstancesAll)
+	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "Memory", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create Memory collector: %w", err)
 	}

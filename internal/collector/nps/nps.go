@@ -98,12 +98,12 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 
 	errs := make([]error, 0, 2)
 
-	c.accessPerfDataCollector, err = pdh.NewCollector[perfDataCounterValuesAccess]("NPS Authentication Server", nil)
+	c.accessPerfDataCollector, err = pdh.NewCollector[perfDataCounterValuesAccess](pdh.CounterTypeRaw, "NPS Authentication Server", nil)
 	if err != nil {
 		errs = append(errs, fmt.Errorf("failed to create NPS Authentication Server collector: %w", err))
 	}
 
-	c.accountingPerfDataCollector, err = pdh.NewCollector[perfDataCounterValuesAccounting]("NPS Accounting Server", nil)
+	c.accountingPerfDataCollector, err = pdh.NewCollector[perfDataCounterValuesAccounting](pdh.CounterTypeRaw, "NPS Accounting Server", nil)
 	if err != nil {
 		errs = append(errs, fmt.Errorf("failed to create NPS Accounting Server collector: %w", err))
 	}

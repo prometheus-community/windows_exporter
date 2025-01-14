@@ -93,7 +93,7 @@ func (c *Collector) Close() error {
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 	var err error
 
-	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues]("SMB Client Shares", pdh.InstancesAll)
+	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "SMB Client Shares", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create SMB Client Shares collector: %w", err)
 	}

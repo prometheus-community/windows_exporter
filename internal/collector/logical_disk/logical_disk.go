@@ -152,7 +152,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 	var err error
 
-	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues]("LogicalDisk", pdh.InstancesAll)
+	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "LogicalDisk", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create LogicalDisk collector: %w", err)
 	}

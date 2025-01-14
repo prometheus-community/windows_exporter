@@ -51,7 +51,7 @@ type perfDataCounterValuesHypervisorRootVirtualProcessor struct {
 func (c *Collector) buildHypervisorRootVirtualProcessor() error {
 	var err error
 
-	c.perfDataCollectorHypervisorRootVirtualProcessor, err = pdh.NewCollector[perfDataCounterValuesHypervisorRootVirtualProcessor]("Hyper-V Hypervisor Root Virtual Processor", pdh.InstancesAll)
+	c.perfDataCollectorHypervisorRootVirtualProcessor, err = pdh.NewCollector[perfDataCounterValuesHypervisorRootVirtualProcessor](pdh.CounterTypeRaw, "Hyper-V Hypervisor Root Virtual Processor", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create Hyper-V Hypervisor Root Virtual Processor collector: %w", err)
 	}
