@@ -163,9 +163,9 @@ windows_performancecounter_processor_information_processor_time\{core="0,0",stat
 			expectedMetrics: nil,
 		},
 		{
-			name:            "counter with spaces and brackets",
+			name:            "invalid counter type",
 			object:          "invalid",
-			counterType:     "",
+			counterType:     "invalid",
 			instances:       nil,
 			buildErr:        "invalid result type: ",
 			counters:        []performancecounter.Counter{{Name: "Total Memory Usage --- Non-Paged Pool", Type: "counter"}, {Name: "Max Session Input Delay (ms)", Type: "counter"}},
