@@ -36,7 +36,9 @@ import (
 const Name = "performancecounter"
 
 var (
-	reNonAlphaNum  = regexp.MustCompile(`[^a-zA-Z0-9]`)
+	reNonAlphaNum = regexp.MustCompile(`[^a-zA-Z0-9]`)
+
+	//nolint:gochecknoglobals strings.NewReplacer is safe for concurrent use
 	stringReplacer = strings.NewReplacer(
 		"%", "percent",
 		"(", "",
