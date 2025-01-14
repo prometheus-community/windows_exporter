@@ -210,7 +210,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		valueType := reflect.StructOf(fields)
 
 		if object.Type == "" {
-			object.Type = pdh.CounterTypeFormatted
+			object.Type = pdh.CounterTypeRaw
 		}
 
 		collector, err := pdh.NewCollectorWithReflection(object.Type, object.Object, object.Instances, valueType)
