@@ -59,6 +59,7 @@ YAML:
         state: idle
 - name: memory
   object: "Memory"
+  type: "formatted"
   counters:
     - name: "Cache Faults/sec"
       type: "counter" # optional
@@ -98,6 +99,7 @@ YAML:
   {
     "name": "memory",
     "object": "Memory",
+    "type": "formatted",
     "counters": [
       {
         "name": "Cache Faults/sec",
@@ -119,6 +121,33 @@ Must unique across all objects.
 ObjectName is the Object to query for, like Processor, DirectoryServices, LogicalDisk or similar.
 
 The collector supports only english named counter. Localized counter-names are not supported.
+
+#### type
+
+The counter-type. The value can be `raw` or `formatted`. Optional and defaults to `raw`.
+
+- `raw` returns the raw value of the counter. This is the default.
+- `formatted` returns the formatted value of the counter. This is useful for counters like `Processor Information` where the value is a percentage.
+
+The difference between a raw Windows Performance Counter and a formatted Windows Performance Counter is about how the data is presented and processed:
+
+1. Raw Windows Performance Counter:
+
+   This provides the counter's data in its basic, unprocessed form.
+   The values may represent cumulative counts, time intervals, or other uncalibrated metrics.
+   Interpreting these values often requires more calculations or context, such as calculating deltas or normalizing values over time.
+
+2. Formatted Windows Performance Counter:
+
+   This presents data that has already been processed and interpreted according to the counter type (e.g., rates per second, averages, percentages).
+   Formatted counters are easier to understand directly since the necessary calculations have been applied.
+   These are often what monitoring tools display to users because they are meaningful at a glance.
+
+For example:
+
+* A raw counter for CPU time might give the total number of clock ticks used since the system started.
+* A formatted counter would convert this into a percentage of CPU utilization over a specific time interval.
+
 
 #### instances
 

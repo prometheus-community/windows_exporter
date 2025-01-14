@@ -56,7 +56,7 @@ type processFull struct {
 }
 
 func BenchmarkTestCollector(b *testing.B) {
-	performanceData, err := pdh.NewCollector[processFull]("Process", []string{"*"})
+	performanceData, err := pdh.NewCollector[processFull](pdh.ResultTypeRaw, "Process", []string{"*"})
 	require.NoError(b, err)
 
 	var data []processFull

@@ -104,12 +104,12 @@ func (c *Collector) Close() error {
 func (c *Collector) Build(*slog.Logger, *mi.Session) error {
 	var err error
 
-	c.perfDataCollectorNetwork, err = pdh.NewCollector[perfDataCounterValuesNetwork]("RemoteFX Network", pdh.InstancesAll)
+	c.perfDataCollectorNetwork, err = pdh.NewCollector[perfDataCounterValuesNetwork](pdh.ResultTypeRaw, "RemoteFX Network", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create RemoteFX Network collector: %w", err)
 	}
 
-	c.perfDataCollectorGraphics, err = pdh.NewCollector[perfDataCounterValuesGraphics]("RemoteFX Graphics", pdh.InstancesAll)
+	c.perfDataCollectorGraphics, err = pdh.NewCollector[perfDataCounterValuesGraphics](pdh.ResultTypeRaw, "RemoteFX Graphics", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create RemoteFX Graphics collector: %w", err)
 	}

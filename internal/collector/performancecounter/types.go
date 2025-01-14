@@ -20,11 +20,12 @@ import (
 )
 
 type Object struct {
-	Name          string    `json:"name"           yaml:"name"`
-	Object        string    `json:"object"         yaml:"object"`
-	Instances     []string  `json:"instances"      yaml:"instances"`
-	Counters      []Counter `json:"counters"       yaml:"counters"`
-	InstanceLabel string    `json:"instance_label" yaml:"instance_label"` //nolint:tagliatelle
+	Name          string         `json:"name"           yaml:"name"`
+	Object        string         `json:"object"         yaml:"object"`
+	Type          pdh.ResultType `json:"type"           yaml:"type"`
+	Instances     []string       `json:"instances"      yaml:"instances"`
+	Counters      []Counter      `json:"counters"       yaml:"counters"`
+	InstanceLabel string         `json:"instance_label" yaml:"instance_label"` //nolint:tagliatelle
 
 	collector      *pdh.Collector
 	perfDataObject any

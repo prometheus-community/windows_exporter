@@ -78,7 +78,7 @@ type perfDataCounterValuesHypervisorRootPartition struct {
 func (c *Collector) buildHypervisorRootPartition() error {
 	var err error
 
-	c.perfDataCollectorHypervisorRootPartition, err = pdh.NewCollector[perfDataCounterValuesHypervisorRootPartition]("Hyper-V Hypervisor Root Partition", []string{"Root"})
+	c.perfDataCollectorHypervisorRootPartition, err = pdh.NewCollector[perfDataCounterValuesHypervisorRootPartition](pdh.ResultTypeRaw, "Hyper-V Hypervisor Root Partition", []string{"Root"})
 	if err != nil {
 		return fmt.Errorf("failed to create Hyper-V Hypervisor Root Partition collector: %w", err)
 	}

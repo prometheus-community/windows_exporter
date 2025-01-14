@@ -114,7 +114,7 @@ func (c *Collector) Close() error {
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 	var err error
 
-	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues]("AD FS", nil)
+	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.ResultTypeRaw, "AD FS", nil)
 	if err != nil {
 		return fmt.Errorf("failed to create AD FS collector: %w", err)
 	}

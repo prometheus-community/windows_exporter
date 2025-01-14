@@ -132,7 +132,7 @@ func (c *Collector) Close() error {
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 	var err error
 
-	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues]("DirectoryServices", pdh.InstancesAll)
+	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.ResultTypeRaw, "DirectoryServices", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create DirectoryServices collector: %w", err)
 	}

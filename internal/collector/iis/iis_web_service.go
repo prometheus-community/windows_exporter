@@ -100,7 +100,7 @@ func (p perfDataCounterValuesWebService) GetName() string {
 func (c *Collector) buildWebService() error {
 	var err error
 
-	c.perfDataCollectorWebService, err = pdh.NewCollector[perfDataCounterValuesWebService]("Web Service", pdh.InstancesAll)
+	c.perfDataCollectorWebService, err = pdh.NewCollector[perfDataCounterValuesWebService](pdh.ResultTypeRaw, "Web Service", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create Web Service collector: %w", err)
 	}

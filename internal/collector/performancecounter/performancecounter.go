@@ -35,7 +35,14 @@ import (
 
 const Name = "performancecounter"
 
-var reNonAlphaNum = regexp.MustCompile(`[^a-zA-Z0-9]`)
+var (
+	reNonAlphaNum  = regexp.MustCompile(`[^a-zA-Z0-9]`)
+	stringReplacer = strings.NewReplacer(
+		"%", "percent",
+		"(", "",
+		")", "",
+	)
+)
 
 type Config struct {
 	Objects []Object `yaml:"objects"`
@@ -200,7 +207,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 		valueType := reflect.StructOf(fields)
 
-		collector, err := pdh.NewCollectorWithReflection(object.Object, object.Instances, valueType)
+		collector, err := pdh.NewCollectorWithReflection(object.Type, object.Object, object.Instances, valueType)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("failed collector for %s: %w", object.Name, err))
 		}
@@ -364,5 +371,5 @@ func (c *Collector) collectObject(ch chan<- prometheus.Metric, perfDataObject Ob
 }
 
 func sanitizeMetricName(name string) string {
-	return strings.Trim(reNonAlphaNum.ReplaceAllString(strings.ToLower(name), "_"), "_")
+	return strings.Trim(reNonAlphaNum.ReplaceAllString(strings.ToLower(stringReplacer.Replace(name)), "_"), "_")
 }

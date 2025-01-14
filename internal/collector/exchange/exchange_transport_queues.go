@@ -75,7 +75,7 @@ type perfDataCounterValuesTransportQueues struct {
 func (c *Collector) buildTransportQueues() error {
 	var err error
 
-	c.perfDataCollectorTransportQueues, err = pdh.NewCollector[perfDataCounterValuesTransportQueues]("MSExchangeTransport Queues", pdh.InstancesAll)
+	c.perfDataCollectorTransportQueues, err = pdh.NewCollector[perfDataCounterValuesTransportQueues](pdh.ResultTypeRaw, "MSExchangeTransport Queues", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create MSExchangeTransport Queues collector: %w", err)
 	}

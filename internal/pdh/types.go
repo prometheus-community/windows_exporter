@@ -20,6 +20,13 @@ import (
 	"golang.org/x/sys/windows"
 )
 
+type ResultType string
+
+const (
+	ResultTypeRaw       ResultType = "raw"
+	ResultTypeFormatted ResultType = "formatted"
+)
+
 const (
 	InstanceEmpty = "------"
 	InstanceTotal = "_Total"

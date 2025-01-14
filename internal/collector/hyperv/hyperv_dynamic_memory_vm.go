@@ -60,7 +60,7 @@ type perfDataCounterValuesDynamicMemoryVM struct {
 func (c *Collector) buildDynamicMemoryVM() error {
 	var err error
 
-	c.perfDataCollectorDynamicMemoryVM, err = pdh.NewCollector[perfDataCounterValuesDynamicMemoryVM]("Hyper-V Dynamic Memory VM", pdh.InstancesAll)
+	c.perfDataCollectorDynamicMemoryVM, err = pdh.NewCollector[perfDataCounterValuesDynamicMemoryVM](pdh.ResultTypeRaw, "Hyper-V Dynamic Memory VM", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create Hyper-V Dynamic Memory VM collector: %w", err)
 	}

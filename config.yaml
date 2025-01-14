@@ -7,10 +7,17 @@ collector:
     include: "windows_exporter"
   performancecounter:
     objects: |-
-      - name: memory
-        object: "Memory"
+      - name: photon_udp
+        object: "Photon Socket Server: UDP"
+        instances: ["*"]
         counters:
-          - name: "Cache Faults/sec"
-            type: "counter" # optional
+          - name: "UDP: Datagrams in"
+            metric: "photon_udp_datagrams"
+            labels:
+              direction: "in"
+          - name: "UDP: Datagrams out"
+            metric: "photon_udp_datagrams"
+            labels:
+              direction: "out"
 log:
   level: warn

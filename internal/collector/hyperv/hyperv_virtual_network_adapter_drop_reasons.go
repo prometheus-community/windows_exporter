@@ -165,7 +165,7 @@ type perfDataCounterValuesVirtualNetworkAdapterDropReasons struct {
 func (c *Collector) buildVirtualNetworkAdapterDropReasons() error {
 	var err error
 
-	c.perfDataCollectorVirtualNetworkAdapterDropReasons, err = pdh.NewCollector[perfDataCounterValuesVirtualNetworkAdapterDropReasons]("Hyper-V Virtual Network Adapter Drop Reasons", pdh.InstancesAll)
+	c.perfDataCollectorVirtualNetworkAdapterDropReasons, err = pdh.NewCollector[perfDataCounterValuesVirtualNetworkAdapterDropReasons](pdh.ResultTypeRaw, "Hyper-V Virtual Network Adapter Drop Reasons", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create Hyper-V Virtual Network Adapter Drop Reasons collector: %w", err)
 	}

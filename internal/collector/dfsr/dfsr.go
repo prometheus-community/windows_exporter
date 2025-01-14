@@ -163,21 +163,21 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	var err error
 
 	if slices.Contains(c.config.CollectorsEnabled, "connection") {
-		c.perfDataCollectorConnection, err = pdh.NewCollector[perfDataCounterValuesConnection]("DFS Replication Connections", pdh.InstancesAll)
+		c.perfDataCollectorConnection, err = pdh.NewCollector[perfDataCounterValuesConnection](pdh.ResultTypeRaw, "DFS Replication Connections", pdh.InstancesAll)
 		if err != nil {
 			return fmt.Errorf("failed to create DFS Replication Connections collector: %w", err)
 		}
 	}
 
 	if slices.Contains(c.config.CollectorsEnabled, "folder") {
-		c.perfDataCollectorFolder, err = pdh.NewCollector[perfDataCounterValuesFolder]("DFS Replicated Folders", pdh.InstancesAll)
+		c.perfDataCollectorFolder, err = pdh.NewCollector[perfDataCounterValuesFolder](pdh.ResultTypeRaw, "DFS Replicated Folders", pdh.InstancesAll)
 		if err != nil {
 			return fmt.Errorf("failed to create DFS Replicated Folders collector: %w", err)
 		}
 	}
 
 	if slices.Contains(c.config.CollectorsEnabled, "volume") {
-		c.perfDataCollectorVolume, err = pdh.NewCollector[perfDataCounterValuesVolume]("DFS Replication Service Volumes", pdh.InstancesAll)
+		c.perfDataCollectorVolume, err = pdh.NewCollector[perfDataCounterValuesVolume](pdh.ResultTypeRaw, "DFS Replication Service Volumes", pdh.InstancesAll)
 		if err != nil {
 			return fmt.Errorf("failed to create DFS Replication Service Volumes collector: %w", err)
 		}

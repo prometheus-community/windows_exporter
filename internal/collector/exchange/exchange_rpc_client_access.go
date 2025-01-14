@@ -48,7 +48,7 @@ type perfDataCounterValuesRpcClientAccess struct {
 func (c *Collector) buildRpcClientAccess() error {
 	var err error
 
-	c.perfDataCollectorRpcClientAccess, err = pdh.NewCollector[perfDataCounterValuesRpcClientAccess]("MSExchange RpcClientAccess", pdh.InstancesAll)
+	c.perfDataCollectorRpcClientAccess, err = pdh.NewCollector[perfDataCounterValuesRpcClientAccess](pdh.ResultTypeRaw, "MSExchange RpcClientAccess", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create MSExchange RpcClientAccess collector: %w", err)
 	}
