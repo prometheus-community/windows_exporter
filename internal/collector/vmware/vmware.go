@@ -98,12 +98,12 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		errs []error
 	)
 
-	c.perfDataCollectorCPU, err = pdh.NewCollector[perfDataCounterValuesCPU](pdh.ResultTypeRaw, "VM Processor", pdh.InstancesTotal)
+	c.perfDataCollectorCPU, err = pdh.NewCollector[perfDataCounterValuesCPU](pdh.CounterTypeRaw, "VM Processor", pdh.InstancesTotal)
 	if err != nil {
 		errs = append(errs, fmt.Errorf("failed to create VM Processor collector: %w", err))
 	}
 
-	c.perfDataCollectorMemory, err = pdh.NewCollector[perfDataCounterValuesMemory](pdh.ResultTypeRaw, "VM Memory", nil)
+	c.perfDataCollectorMemory, err = pdh.NewCollector[perfDataCounterValuesMemory](pdh.CounterTypeRaw, "VM Memory", nil)
 	if err != nil {
 		errs = append(errs, fmt.Errorf("failed to create VM Memory collector: %w", err))
 	}

@@ -63,13 +63,13 @@ type Counter struct {
 	FieldIndexSecondValue int
 }
 
-func NewCollector[T any](resultType ResultType, object string, instances []string) (*Collector, error) {
+func NewCollector[T any](resultType CounterType, object string, instances []string) (*Collector, error) {
 	valueType := reflect.TypeFor[T]()
 
 	return NewCollectorWithReflection(resultType, object, instances, valueType)
 }
 
-func NewCollectorWithReflection(resultType ResultType, object string, instances []string, valueType reflect.Type) (*Collector, error) {
+func NewCollectorWithReflection(resultType CounterType, object string, instances []string, valueType reflect.Type) (*Collector, error) {
 	var handle pdhQueryHandle
 
 	if ret := OpenQuery(0, 0, &handle); ret != ErrorSuccess {
@@ -80,7 +80,7 @@ func NewCollectorWithReflection(resultType ResultType, object string, instances 
 		instances = []string{InstanceEmpty}
 	}
 
-	if resultType != ResultTypeRaw && resultType != ResultTypeFormatted {
+	if resultType != CounterTypeRaw && resultType != CounterTypeFormatted {
 		return nil, fmt.Errorf("invalid result type: %v", resultType)
 	}
 
@@ -213,7 +213,7 @@ func NewCollectorWithReflection(resultType ResultType, object string, instances 
 	collector.collectCh = make(chan any)
 	collector.errorCh = make(chan error)
 
-	if resultType == ResultTypeRaw {
+	if resultType == CounterTypeRaw {
 		go collector.collectWorkerRaw()
 	} else {
 		go collector.collectWorkerFormatted()

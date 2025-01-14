@@ -38,7 +38,7 @@ const Name = "performancecounter"
 var (
 	reNonAlphaNum = regexp.MustCompile(`[^a-zA-Z0-9]`)
 
-	//nolint:gochecknoglobals strings.NewReplacer is safe for concurrent use
+	//nolint:gochecknoglobals // strings.NewReplacer is safe for concurrent use
 	stringReplacer = strings.NewReplacer(
 		"%", "percent",
 		"(", "",
@@ -208,6 +208,10 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		})
 
 		valueType := reflect.StructOf(fields)
+
+		if object.Type == "" {
+			object.Type = pdh.CounterTypeFormatted
+		}
 
 		collector, err := pdh.NewCollectorWithReflection(object.Type, object.Object, object.Instances, valueType)
 		if err != nil {

@@ -50,7 +50,7 @@ type perfDataCounterValuesVirtualNetworkAdapter struct {
 func (c *Collector) buildVirtualNetworkAdapter() error {
 	var err error
 
-	c.perfDataCollectorVirtualNetworkAdapter, err = pdh.NewCollector[perfDataCounterValuesVirtualNetworkAdapter](pdh.ResultTypeRaw, "Hyper-V Virtual Network Adapter", pdh.InstancesAll)
+	c.perfDataCollectorVirtualNetworkAdapter, err = pdh.NewCollector[perfDataCounterValuesVirtualNetworkAdapter](pdh.CounterTypeRaw, "Hyper-V Virtual Network Adapter", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create Hyper-V Virtual Network Adapter collector: %w", err)
 	}

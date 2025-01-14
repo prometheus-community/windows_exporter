@@ -20,11 +20,11 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-type ResultType string
+type CounterType string
 
 const (
-	ResultTypeRaw       ResultType = "raw"
-	ResultTypeFormatted ResultType = "formatted"
+	CounterTypeRaw       CounterType = "raw"
+	CounterTypeFormatted CounterType = "formatted"
 )
 
 const (

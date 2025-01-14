@@ -159,7 +159,7 @@ func (c *Collector) Close() error {
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	var err error
 
-	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.ResultTypeRaw, "SMTP Server", pdh.InstancesAll)
+	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "SMTP Server", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create SMTP Server collector: %w", err)
 	}

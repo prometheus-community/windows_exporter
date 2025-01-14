@@ -52,7 +52,7 @@ func TestCollector(t *testing.T) {
 	for _, tc := range []struct {
 		name            string
 		object          string
-		counterType     pdh.ResultType
+		counterType     pdh.CounterType
 		instances       []string
 		instanceLabel   string
 		buildErr        string
@@ -62,7 +62,7 @@ func TestCollector(t *testing.T) {
 		{
 			name:        "memory",
 			object:      "Memory",
-			counterType: pdh.ResultTypeRaw,
+			counterType: pdh.CounterTypeRaw,
 			instances:   nil,
 			buildErr:    "",
 			counters:    []performancecounter.Counter{{Name: "Available Bytes", Type: "gauge"}},
@@ -79,7 +79,7 @@ windows_performancecounter_memory_available_bytes [0-9.e+-]+`),
 		{
 			name:        "process",
 			object:      "Process",
-			counterType: pdh.ResultTypeRaw,
+			counterType: "",
 			instances:   []string{"*"},
 			buildErr:    "",
 			counters:    []performancecounter.Counter{{Name: "Thread Count", Type: "counter"}},
@@ -97,7 +97,7 @@ windows_performancecounter_process_thread_count\{instance=".+"} [0-9.e+-]+
 		{
 			name:          "processor_information",
 			object:        "Processor Information",
-			counterType:   pdh.ResultTypeRaw,
+			counterType:   pdh.CounterTypeRaw,
 			instances:     []string{"*"},
 			instanceLabel: "core",
 			buildErr:      "",
@@ -117,7 +117,7 @@ windows_performancecounter_processor_information_processor_time\{core="0,0",stat
 		{
 			name:          "processor_information_formatted",
 			object:        "Processor Information",
-			counterType:   pdh.ResultTypeFormatted,
+			counterType:   pdh.CounterTypeFormatted,
 			instances:     []string{"*"},
 			instanceLabel: "core",
 			buildErr:      "",
@@ -137,7 +137,7 @@ windows_performancecounter_processor_information_processor_time\{core="0,0",stat
 		{
 			name:            "",
 			object:          "Processor Information",
-			counterType:     pdh.ResultTypeRaw,
+			counterType:     pdh.CounterTypeRaw,
 			instances:       nil,
 			instanceLabel:   "",
 			buildErr:        "object name is required",
@@ -147,7 +147,7 @@ windows_performancecounter_processor_information_processor_time\{core="0,0",stat
 		{
 			name:            "double_counter",
 			object:          "Memory",
-			counterType:     pdh.ResultTypeRaw,
+			counterType:     pdh.CounterTypeRaw,
 			instances:       nil,
 			buildErr:        "counter name Available Bytes is duplicated",
 			counters:        []performancecounter.Counter{{Name: "Available Bytes", Type: "gauge"}, {Name: "Available Bytes", Type: "gauge"}},
@@ -156,7 +156,7 @@ windows_performancecounter_processor_information_processor_time\{core="0,0",stat
 		{
 			name:            "counter with spaces and brackets",
 			object:          "invalid",
-			counterType:     pdh.ResultTypeRaw,
+			counterType:     pdh.CounterTypeRaw,
 			instances:       nil,
 			buildErr:        pdh.NewPdhError(pdh.CstatusNoObject).Error(),
 			counters:        []performancecounter.Counter{{Name: "Total Memory Usage --- Non-Paged Pool", Type: "counter"}, {Name: "Max Session Input Delay (ms)", Type: "counter"}},

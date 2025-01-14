@@ -76,7 +76,7 @@ func (c *Collector) Close() error {
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 	var err error
 
-	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.ResultTypeRaw, "Paging File", pdh.InstancesAll)
+	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "Paging File", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create Paging File collector: %w", err)
 	}

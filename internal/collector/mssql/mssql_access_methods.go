@@ -128,7 +128,7 @@ func (c *Collector) buildAccessMethods() error {
 	errs := make([]error, 0, len(c.mssqlInstances))
 
 	for _, sqlInstance := range c.mssqlInstances {
-		c.accessMethodsPerfDataCollectors[sqlInstance.name], err = pdh.NewCollector[perfDataCounterValuesAccessMethods](pdh.ResultTypeRaw, c.mssqlGetPerfObjectName(sqlInstance.name, "Access Methods"), nil)
+		c.accessMethodsPerfDataCollectors[sqlInstance.name], err = pdh.NewCollector[perfDataCounterValuesAccessMethods](pdh.CounterTypeRaw, c.mssqlGetPerfObjectName(sqlInstance.name, "Access Methods"), nil)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("failed to create AccessMethods collector for instance %s: %w", sqlInstance.name, err))
 		}

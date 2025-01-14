@@ -141,7 +141,7 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 
 	var err error
 
-	c.perfDataCollectorTerminalServicesSession, err = pdh.NewCollector[perfDataCounterValuesTerminalServicesSession](pdh.ResultTypeRaw, "Terminal Services Session", pdh.InstancesAll)
+	c.perfDataCollectorTerminalServicesSession, err = pdh.NewCollector[perfDataCounterValuesTerminalServicesSession](pdh.CounterTypeRaw, "Terminal Services Session", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create Terminal Services Session collector: %w", err)
 	}
@@ -151,7 +151,7 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 	if c.connectionBrokerEnabled {
 		var err error
 
-		c.perfDataCollectorBroker, err = pdh.NewCollector[perfDataCounterValuesBroker](pdh.ResultTypeRaw, "Remote Desktop Connection Broker Counterset", pdh.InstancesAll)
+		c.perfDataCollectorBroker, err = pdh.NewCollector[perfDataCounterValuesBroker](pdh.CounterTypeRaw, "Remote Desktop Connection Broker Counterset", pdh.InstancesAll)
 		if err != nil {
 			return fmt.Errorf("failed to create Remote Desktop Connection Broker Counterset collector: %w", err)
 		}

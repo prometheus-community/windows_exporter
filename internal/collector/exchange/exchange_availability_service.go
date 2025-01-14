@@ -37,7 +37,7 @@ type perfDataCounterValuesAvailabilityService struct {
 func (c *Collector) buildAvailabilityService() error {
 	var err error
 
-	c.perfDataCollectorAvailabilityService, err = pdh.NewCollector[perfDataCounterValuesAvailabilityService](pdh.ResultTypeRaw, "MSExchange Availability Service", pdh.InstancesAll)
+	c.perfDataCollectorAvailabilityService, err = pdh.NewCollector[perfDataCounterValuesAvailabilityService](pdh.CounterTypeRaw, "MSExchange Availability Service", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create MSExchange Availability Service collector: %w", err)
 	}

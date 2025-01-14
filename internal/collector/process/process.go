@@ -175,7 +175,7 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 	c.miSession = miSession
 
 	c.collectorVersion = 2
-	c.perfDataCollectorV2, err = pdh.NewCollector[perfDataCounterValuesV2](pdh.ResultTypeRaw, "Process V2", pdh.InstancesAll)
+	c.perfDataCollectorV2, err = pdh.NewCollector[perfDataCounterValuesV2](pdh.CounterTypeRaw, "Process V2", pdh.InstancesAll)
 
 	if errors.Is(err, pdh.NewPdhError(pdh.CstatusNoObject)) {
 		c.collectorVersion = 1

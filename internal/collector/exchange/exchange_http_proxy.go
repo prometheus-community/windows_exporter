@@ -50,7 +50,7 @@ type perfDataCounterValuesHTTPProxy struct {
 func (c *Collector) buildHTTPProxy() error {
 	var err error
 
-	c.perfDataCollectorHTTPProxy, err = pdh.NewCollector[perfDataCounterValuesHTTPProxy](pdh.ResultTypeRaw, "MSExchange HttpProxy", pdh.InstancesAll)
+	c.perfDataCollectorHTTPProxy, err = pdh.NewCollector[perfDataCounterValuesHTTPProxy](pdh.CounterTypeRaw, "MSExchange HttpProxy", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create MSExchange HttpProxy collector: %w", err)
 	}
