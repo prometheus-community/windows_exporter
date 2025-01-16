@@ -67,19 +67,27 @@ type Collector struct {
 	packetsReceivedTotal                             *prometheus.Desc
 	releasesTotal                                    *prometheus.Desc
 	requestsTotal                                    *prometheus.Desc
+	scopeAddressesFree                               *prometheus.Desc
+	scopeAddressesFreePartnerServer                  *prometheus.Desc
+	scopeAddressesFreeThisServer                     *prometheus.Desc
+	scopeAddressesInUse                              *prometheus.Desc
+	scopeAddressesInUsePartnerServer                 *prometheus.Desc
+	scopeAddressesInUseThisServer                    *prometheus.Desc
+	scopePendingOffers                               *prometheus.Desc
+	scopeReservedAddress                             *prometheus.Desc
 }
 
 type ScopeStatistics struct {
-	AddressesFree                 uint32 `mi:"AddressesFree"`
-	AddressesInUse                uint32 `mi:"AddressesInUse"`
-	PendingOffers                 uint32 `mi:"PendingOffers"`
-	ScopeId                       string `mi:"ScopeId"`
-	SuperscopeName                string `mi:"SuperscopeName"`
-	ReservedAddress               uint32 `mi:"ReservedAddress"`
-	AddressesFreeOnThisServer     uint32 `mi:"AddressesFreeOnThisServer"`
-	AddressesFreeOnPartnerServer  uint32 `mi:"AddressesFreeOnPartnerServer"`
-	AddressesInUseOnThisServer    uint32 `mi:"AddressesInUseOnThisServer"`
-	AddressesInUseOnPartnerServer uint32 `mi:"AddressesInUseOnPartnerServer"`
+	AddressesFree               uint32 `mi:"AddressesFree"`
+	AddressesInUse              uint32 `mi:"AddressesInUse"`
+	PendingOffers               uint32 `mi:"PendingOffers"`
+	ScopeId                     string `mi:"ScopeId"`
+	SuperscopeName              string `mi:"SuperscopeName"`
+	ReservedAddress             uint32 `mi:"ReservedAddress"`
+	AddressesFreeThisServer     uint32 `mi:"AddressesFreeOnThisServer"`
+	AddressesFreePartnerServer  uint32 `mi:"AddressesFreeOnPartnerServer"`
+	AddressesInUseThisServer    uint32 `mi:"AddressesInUseOnThisServer"`
+	AddressesInUsePartnerServer uint32 `mi:"AddressesInUseOnPartnerServer"`
 	// PercentageInUse               real32 `mi:PercentageInUse`
 }
 
@@ -278,7 +286,54 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 		nil,
 		nil,
 	)
-
+	c.scopeAddressesFree = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "scope_addresses_free"),
+		"Number of addresses free on given scope on the DHCP server (AddressesFree)",
+		[]string{"scope_id", "superscope_name"},
+		nil,
+	)
+	c.scopeAddressesFreePartnerServer = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "scope_addresses_free_partner_server"),
+		"Number of addresses free on partner server based on the ownership assignment of the free address pool. Applies to a failover scope. (AddressesFreeOnPartnerServer)",
+		[]string{"scope_id", "superscope_name"},
+		nil,
+	)
+	c.scopeAddressesFreeThisServer = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "scope_addresses_free_this_server"),
+		"Number of addresses free on this server based on the ownership assignment of the free address pool. Applies to a failover scope. (AddressesFreeOnThisServer)",
+		[]string{"scope_id", "superscope_name"},
+		nil,
+	)
+	c.scopeAddressesInUse = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "scope_addresses_in_use"),
+		"Number of addresses in use on given scope on the DHCP server (AddressesInUse)",
+		[]string{"scope_id", "superscope_name"},
+		nil,
+	)
+	c.scopeAddressesInUsePartnerServer = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "scope_addresses_in_use_partner_server"),
+		"Number of addresses leased/renewed by partner server. Applies to a failover scope. (AddressesInUseOnPartnerServer)",
+		[]string{"scope_id", "superscope_name"},
+		nil,
+	)
+	c.scopeAddressesInUseThisServer = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "scope_addresses_in_use_this_server"),
+		"Number of addresses leased/renewed by this server. Applies to a failover scope. (AddressesInUseOnThisServer)",
+		[]string{"scope_id", "superscope_name"},
+		nil,
+	)
+	c.scopePendingOffers = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "scope_pending_offers"),
+		"Number of pending offers on given scope on the DHCP server (PendingOffers)",
+		[]string{"scope_id", "superscope_name"},
+		nil,
+	)
+	c.scopeReservedAddress = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "scope_reserved_address"),
+		"Number of reserved addresses on given scope on the DHCP server (ReservedAddress)",
+		[]string{"scope_id", "superscope_name"},
+		nil,
+	)
 	return nil
 }
 
@@ -290,17 +345,17 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 
 	class, err := mi.NewClass("PS_DhcpServerv4ScopeStatistics")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to collect DHCP Server scope metrics: %w", err)
 	}
 	method, err := mi.NewMethod("Get")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to collect DHCP Server scope metrics: %w", err)
 	}
 
-	var res []ScopeStatisticsResponse
+	var dst []ScopeStatisticsResponse
 
 	err = c.miSession.InvokeUnmarshal(
-		&res,
+		&dst,
 		mi.OperationFlagsDefaultRTTI,
 		&mi.OperationOptions{},
 		mi.NamespaceRootWindowsDHCP,
@@ -308,7 +363,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		method,
 	)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to collect DHCP Server scope metrics: %w", err)
 	}
 
 	ch <- prometheus.MustNewConstMetric(
@@ -460,6 +515,67 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		prometheus.CounterValue,
 		c.perfDataObject[0].FailoverBndUpdDropped,
 	)
+
+	for d := range dst {
+		for scope := range dst[d].CmdletOutput {
+			ch <- prometheus.MustNewConstMetric(
+				c.scopeAddressesFree,
+				prometheus.GaugeValue,
+				float64(dst[d].CmdletOutput[scope].AddressesFree),
+				dst[d].CmdletOutput[scope].ScopeId,
+				dst[d].CmdletOutput[scope].SuperscopeName,
+			)
+			ch <- prometheus.MustNewConstMetric(
+				c.scopeAddressesFreePartnerServer,
+				prometheus.GaugeValue,
+				float64(dst[d].CmdletOutput[scope].AddressesFreePartnerServer),
+				dst[d].CmdletOutput[scope].ScopeId,
+				dst[d].CmdletOutput[scope].SuperscopeName,
+			)
+			ch <- prometheus.MustNewConstMetric(
+				c.scopeAddressesFreeThisServer,
+				prometheus.GaugeValue,
+				float64(dst[d].CmdletOutput[scope].AddressesFreeThisServer),
+				dst[d].CmdletOutput[scope].ScopeId,
+				dst[d].CmdletOutput[scope].SuperscopeName,
+			)
+			ch <- prometheus.MustNewConstMetric(
+				c.scopeAddressesInUse,
+				prometheus.GaugeValue,
+				float64(dst[d].CmdletOutput[scope].AddressesInUse),
+				dst[d].CmdletOutput[scope].ScopeId,
+				dst[d].CmdletOutput[scope].SuperscopeName,
+			)
+			ch <- prometheus.MustNewConstMetric(
+				c.scopeAddressesInUsePartnerServer,
+				prometheus.GaugeValue,
+				float64(dst[d].CmdletOutput[scope].AddressesInUsePartnerServer),
+				dst[d].CmdletOutput[scope].ScopeId,
+				dst[d].CmdletOutput[scope].SuperscopeName,
+			)
+			ch <- prometheus.MustNewConstMetric(
+				c.scopeAddressesInUseThisServer,
+				prometheus.GaugeValue,
+				float64(dst[d].CmdletOutput[scope].AddressesInUseThisServer),
+				dst[d].CmdletOutput[scope].ScopeId,
+				dst[d].CmdletOutput[scope].SuperscopeName,
+			)
+			ch <- prometheus.MustNewConstMetric(
+				c.scopePendingOffers,
+				prometheus.GaugeValue,
+				float64(dst[d].CmdletOutput[scope].PendingOffers),
+				dst[d].CmdletOutput[scope].ScopeId,
+				dst[d].CmdletOutput[scope].SuperscopeName,
+			)
+			ch <- prometheus.MustNewConstMetric(
+				c.scopeReservedAddress,
+				prometheus.GaugeValue,
+				float64(dst[d].CmdletOutput[scope].ReservedAddress),
+				dst[d].CmdletOutput[scope].ScopeId,
+				dst[d].CmdletOutput[scope].SuperscopeName,
+			)
+		}
+	}
 
 	return nil
 }
