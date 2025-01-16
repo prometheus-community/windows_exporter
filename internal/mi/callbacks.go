@@ -164,6 +164,7 @@ func (o *OperationUnmarshalCallbacks) InstanceResult(
 			field.SetFloat(float64(element.value))
 		case ValueTypeINSTANCEA:
 			// todo
+			// https://learn.microsoft.com/en-us/windows/win32/api/mi/ns-mi-mi_constinstancea
 		default:
 			o.errCh <- fmt.Errorf("unsupported value type: %d", element.valueType)
 
