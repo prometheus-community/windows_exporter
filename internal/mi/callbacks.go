@@ -162,6 +162,8 @@ func (o *OperationUnmarshalCallbacks) InstanceResult(
 			field.SetString(stringValue)
 		case ValueTypeREAL32, ValueTypeREAL64:
 			field.SetFloat(float64(element.value))
+		case ValueTypeINSTANCEA:
+			// todo
 		default:
 			o.errCh <- fmt.Errorf("unsupported value type: %d", element.valueType)
 

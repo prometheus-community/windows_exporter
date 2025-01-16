@@ -16,6 +16,7 @@
 package dhcp
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 
@@ -35,7 +36,8 @@ var ConfigDefaults = Config{}
 
 // A Collector is a Prometheus Collector perflib DHCP metrics.
 type Collector struct {
-	config Config
+	config    Config
+	miSession *mi.Session
 
 	perfDataCollector *pdh.Collector
 	perfDataObject    []perfDataCounterValues
@@ -67,6 +69,25 @@ type Collector struct {
 	requestsTotal                                    *prometheus.Desc
 }
 
+type ScopeStatistics struct {
+	AddressesFree                 uint32 `mi:"AddressesFree"`
+	AddressesInUse                uint32 `mi:"AddressesInUse"`
+	PendingOffers                 uint32 `mi:"PendingOffers"`
+	ScopeId                       string `mi:"ScopeId"`
+	SuperscopeName                string `mi:"SuperscopeName"`
+	ReservedAddress               uint32 `mi:"ReservedAddress"`
+	AddressesFreeOnThisServer     uint32 `mi:"AddressesFreeOnThisServer"`
+	AddressesFreeOnPartnerServer  uint32 `mi:"AddressesFreeOnPartnerServer"`
+	AddressesInUseOnThisServer    uint32 `mi:"AddressesInUseOnThisServer"`
+	AddressesInUseOnPartnerServer uint32 `mi:"AddressesInUseOnPartnerServer"`
+	// PercentageInUse               real32 `mi:PercentageInUse`
+}
+
+type ScopeStatisticsResponse struct {
+	CmdletOutput []ScopeStatistics `mi:"cmdletOutput"`
+	ReturnValue  uint32            `mi:"ReturnValue"`
+}
+
 func New(config *Config) *Collector {
 	if config == nil {
 		config = &ConfigDefaults
@@ -93,8 +114,14 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
+func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 	var err error
+
+	if miSession == nil {
+		return errors.New("miSession is nil")
+	}
+
+	c.miSession = miSession
 
 	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "DHCP Server", nil)
 	if err != nil {
@@ -259,6 +286,29 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	err := c.perfDataCollector.Collect(&c.perfDataObject)
 	if err != nil {
 		return fmt.Errorf("failed to collect DHCP Server metrics: %w", err)
+	}
+
+	class, err := mi.NewClass("PS_DhcpServerv4ScopeStatistics")
+	if err != nil {
+		return err
+	}
+	method, err := mi.NewMethod("Get")
+	if err != nil {
+		return err
+	}
+
+	var res []ScopeStatisticsResponse
+
+	err = c.miSession.InvokeUnmarshal(
+		&res,
+		mi.OperationFlagsDefaultRTTI,
+		&mi.OperationOptions{},
+		mi.NamespaceRootWindowsDHCP,
+		class,
+		method,
+	)
+	if err != nil {
+		return err
 	}
 
 	ch <- prometheus.MustNewConstMetric(

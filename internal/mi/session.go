@@ -253,3 +253,63 @@ func (s *Session) Query(dst any, namespaceName Namespace, queryExpression Query)
 
 	return nil
 }
+
+// Invokes a method in the provider
+//
+// https://learn.microsoft.com/en-us/windows/win32/api/mi/nf-mi-mi_session_invoke
+func (s *Session) InvokeUnmarshal(dst any, flags OperationFlags, operationOptions *OperationOptions, namespaceName Namespace, className Class, methodName Method) error {
+	if s == nil || s.ft == nil {
+		return ErrNotInitialized
+	}
+
+	operation := &Operation{}
+
+	if operationOptions == nil {
+		operationOptions = s.defaultOperationOptions
+	}
+
+	errCh := make(chan error, 1)
+
+	operationCallbacks, err := NewUnmarshalOperationsCallbacks(dst, errCh)
+	if err != nil {
+		return err
+	}
+
+	r0, _, _ := syscall.SyscallN(
+		s.ft.Invoke,
+		uintptr(unsafe.Pointer(s)),
+		uintptr(flags),
+		uintptr(unsafe.Pointer(operationOptions)),
+		uintptr(unsafe.Pointer(namespaceName)),
+		uintptr(unsafe.Pointer(className)),
+		uintptr(unsafe.Pointer(methodName)),
+		0,
+		0,
+		uintptr(unsafe.Pointer(operationCallbacks)),
+		uintptr(unsafe.Pointer(operation)),
+	)
+
+	if result := ResultError(r0); !errors.Is(result, MI_RESULT_OK) {
+		return result
+	}
+
+	errs := make([]error, 0)
+
+	// We need an active go routine to prevent a
+	// fatal error: all goroutines are asleep - deadlock!
+	// ref: https://github.com/golang/go/issues/55015
+	// go time.Sleep(5 * time.Second)
+
+	for {
+		if err, ok := <-errCh; err != nil {
+			errs = append(errs, err)
+		} else if !ok {
+			break
+		}
+	}
+
+	// KeepAlive is used to ensure that the callbacks are not garbage collected before the operation is closed.
+	runtime.KeepAlive(operationCallbacks.CallbackContext)
+
+	return errors.Join(errs...)
+}

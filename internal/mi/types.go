@@ -49,9 +49,22 @@ func NewNamespace(namespace string) (Namespace, error) {
 var (
 	NamespaceRootCIMv2             = utils.Must(NewNamespace("root/CIMv2"))
 	NamespaceRootWindowsFSRM       = utils.Must(NewNamespace("root/microsoft/windows/fsrm"))
+	NamespaceRootWindowsDHCP       = utils.Must(NewNamespace("root/microsoft/windows/dhcp"))
 	NamespaceRootWebAdministration = utils.Must(NewNamespace("root/WebAdministration"))
 	NamespaceRootMSCluster         = utils.Must(NewNamespace("root/MSCluster"))
 )
+
+type Method *uint16
+
+func NewMethod(methodName string) (Method, error) {
+	return windows.UTF16PtrFromString(methodName)
+}
+
+type Class *uint16
+
+func NewClass(ClassName string) (Class, error) {
+	return windows.UTF16PtrFromString(ClassName)
+}
 
 type Query *uint16
 
