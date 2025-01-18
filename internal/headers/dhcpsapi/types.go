@@ -3,14 +3,12 @@ package dhcpsapi
 import (
 	"encoding/binary"
 	"net"
-	"syscall"
 
 	"github.com/prometheus-community/windows_exporter/internal/headers/win32api"
+	"golang.org/x/sys/windows"
 )
 
-var (
-	ERROR_DHCP_FO_SCOPE_NOT_IN_RELATIONSHIP = syscall.Errno(20116)
-)
+var ERROR_DHCP_FO_SCOPE_NOT_IN_RELATIONSHIP = windows.Errno(20116)
 
 type DHCPV4Scope struct {
 	Name             string
@@ -29,8 +27,10 @@ type DHCPV4Scope struct {
 	ReservedAddress               float64
 }
 
-type DHCP_IP_ADDRESS win32api.DWORD
-type DHCP_IP_MASK win32api.DWORD
+type (
+	DHCP_IP_ADDRESS win32api.DWORD
+	DHCP_IP_MASK    win32api.DWORD
+)
 
 func (ip DHCP_IP_ADDRESS) IPv4() net.IP {
 	ipBytes := make([]byte, 4)
@@ -87,6 +87,7 @@ const (
 	DhcpSubnetInvalidState     DHCP_SUBNET_STATE = 4
 )
 
+//nolint:gochecknoglobals
 var DHCP_SUBNET_STATE_NAMES = map[DHCP_SUBNET_STATE]string{
 	DhcpSubnetEnabled:          "Enabled",
 	DhcpSubnetDisabled:         "Disabled",

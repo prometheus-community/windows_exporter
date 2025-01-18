@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"syscall"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
@@ -128,7 +127,7 @@ func dhcpGetSubnetInfo(subnetAddress DHCP_IP_ADDRESS, subnetInfo **DHCP_SUBNET_I
 	)
 
 	if ret != 0 {
-		return fmt.Errorf("dhcpGetSubnetInfo failed with code %w", syscall.Errno(ret))
+		return fmt.Errorf("dhcpGetSubnetInfo failed with code %w", windows.Errno(ret))
 	}
 
 	return nil
@@ -143,7 +142,7 @@ func dhcpV4FailoverGetScopeStatistics(scopeId DHCP_IP_ADDRESS, stats **DHCP_FAIL
 	)
 
 	if ret != 0 {
-		return fmt.Errorf("dhcpV4FailoverGetScopeStatistics failed with code %w", syscall.Errno(ret))
+		return fmt.Errorf("dhcpV4FailoverGetScopeStatistics failed with code %w", windows.Errno(ret))
 	}
 
 	return nil
@@ -157,7 +156,7 @@ func dhcpGetSuperScopeInfoV4(superScopeTable **DHCP_SUPER_SCOPE_TABLE) error {
 	)
 
 	if ret != 0 {
-		return fmt.Errorf("dhcpGetSuperScopeInfoV4 failed with code %w", syscall.Errno(ret))
+		return fmt.Errorf("dhcpGetSuperScopeInfoV4 failed with code %w", windows.Errno(ret))
 	}
 
 	return nil
@@ -171,7 +170,7 @@ func dhcpGetMibInfoV5(mibInfo **DHCP_MIB_INFO_V5) error {
 	)
 
 	if ret != 0 {
-		return fmt.Errorf("dhcpGetMibInfoV5 failed with code %w", syscall.Errno(ret))
+		return fmt.Errorf("dhcpGetMibInfoV5 failed with code %w", windows.Errno(ret))
 	}
 
 	return nil
@@ -179,10 +178,12 @@ func dhcpGetMibInfoV5(mibInfo **DHCP_MIB_INFO_V5) error {
 
 // dhcpV4EnumSubnetReservations https://learn.microsoft.com/en-us/windows/win32/api/dhcpsapi/nf-dhcpsapi-dhcpv4enumsubnetreservations
 func dhcpV4EnumSubnetReservations(subnetAddress DHCP_IP_ADDRESS) (uint32, error) {
-	var elementsRead uint32
-	var elementsTotal uint32
-	var elementsInfo uintptr
-	var resumeHandle *windows.Handle
+	var (
+		elementsRead  uint32
+		elementsTotal uint32
+		elementsInfo  uintptr
+		resumeHandle  *windows.Handle
+	)
 
 	ret, _, _ := procDhcpV4EnumSubnetReservations.Call(
 		0,
@@ -196,8 +197,8 @@ func dhcpV4EnumSubnetReservations(subnetAddress DHCP_IP_ADDRESS) (uint32, error)
 
 	dhcpRpcFreeMemory(unsafe.Pointer(elementsInfo))
 
-	if !errors.Is(syscall.Errno(ret), windows.ERROR_MORE_DATA) && !errors.Is(syscall.Errno(ret), windows.ERROR_NO_MORE_ITEMS) {
-		return 0, fmt.Errorf("dhcpV4EnumSubnetReservations failed with code %w", syscall.Errno(ret))
+	if !errors.Is(windows.Errno(ret), windows.ERROR_MORE_DATA) && !errors.Is(windows.Errno(ret), windows.ERROR_NO_MORE_ITEMS) {
+		return 0, fmt.Errorf("dhcpV4EnumSubnetReservations failed with code %w", windows.Errno(ret))
 	}
 
 	return elementsRead + elementsTotal, nil
@@ -208,5 +209,6 @@ func dhcpRpcFreeMemory(pointer unsafe.Pointer) {
 		return
 	}
 
+	//nolint:dogsled
 	_, _, _ = procDhcpRpcFreeMemory.Call(uintptr(pointer))
 }
