@@ -34,6 +34,9 @@ const (
 // Interface guard.
 var _ io.Writer = (*Writer)(nil)
 
+//nolint:gochecknoglobals
+var EmptyStringUTF16 uint16
+
 type Writer struct {
 	handle windows.Handle
 }
@@ -60,7 +63,7 @@ func (w *Writer) Write(p []byte) (int, error) {
 		return 0, fmt.Errorf("error convert string to UTF-16: %w", err)
 	}
 
-	ss := []*uint16{msg, nil, nil, nil, nil, nil, nil, nil, nil}
+	ss := []*uint16{msg, &EmptyStringUTF16, &EmptyStringUTF16, &EmptyStringUTF16, &EmptyStringUTF16, &EmptyStringUTF16, &EmptyStringUTF16, &EmptyStringUTF16, &EmptyStringUTF16}
 
 	return len(p), windows.ReportEvent(w.handle, eType, 0, NeLogOemCode, 0, 9, 0, &ss[0], nil)
 }

@@ -27,10 +27,15 @@
                     ErrorControl="normal"
                     Start="auto"
                     Type="ownProcess"
+                    Interactive="no"
                     Vital="yes"
                     Arguments="[ConfigFileFlag] [CollectorsFlag] [ListenFlag] [MetricsPathFlag] [TextfileDirsFlag] [ExtraFlags]">
+                    <ServiceConfig
+                        DelayedAutoStart="yes"
+                        OnInstall="yes"
+                        OnReinstall="yes" />
                     <util:ServiceConfig
-                        ResetPeriodInDays="1"
+                        ResetPeriodInDays="0"
                         FirstFailureActionType="restart"
                         SecondFailureActionType="restart"
                         ThirdFailureActionType="restart"
