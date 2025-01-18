@@ -8,6 +8,7 @@ import (
 	"golang.org/x/sys/windows"
 )
 
+//nolint:gochecknoglobals
 var ERROR_DHCP_FO_SCOPE_NOT_IN_RELATIONSHIP = windows.Errno(20116)
 
 type DHCPV4Scope struct {
