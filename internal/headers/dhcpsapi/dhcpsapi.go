@@ -28,7 +28,7 @@ func GetDHCPV4ScopeStatistics() ([]DHCPV4Scope, error) {
 		return nil, err
 	}
 
-	defer dhcpRpcFreeMemory(unsafe.Pointer(&mibInfo))
+	defer dhcpRpcFreeMemory(unsafe.Pointer(mibInfo))
 
 	subnetScopeInfos := make(map[DHCP_IP_ADDRESS]DHCP_SUBNET_MIB_INFO_V5, mibInfo.Scopes)
 	subnetMIBScopeInfos := unsafe.Slice(mibInfo.ScopeInfo, mibInfo.Scopes)
@@ -45,7 +45,7 @@ func GetDHCPV4ScopeStatistics() ([]DHCPV4Scope, error) {
 		return nil, errors.New("dhcpGetSuperScopeInfoV4 returned nil")
 	}
 
-	defer dhcpRpcFreeMemory(unsafe.Pointer(&superScopeTable))
+	defer dhcpRpcFreeMemory(unsafe.Pointer(superScopeTable))
 
 	scopes := make([]DHCPV4Scope, 0, superScopeTable.Count)
 	subnets := unsafe.Slice(superScopeTable.Entries, superScopeTable.Count)
@@ -60,7 +60,7 @@ func GetDHCPV4ScopeStatistics() ([]DHCPV4Scope, error) {
 				return fmt.Errorf("failed to get subnet info: %w", err)
 			}
 
-			defer dhcpRpcFreeMemory(unsafe.Pointer(&subnetInfo))
+			defer dhcpRpcFreeMemory(unsafe.Pointer(subnetInfo))
 
 			scope := DHCPV4Scope{
 				Name:             subnetInfo.SubnetName.String(),
@@ -95,7 +95,7 @@ func GetDHCPV4ScopeStatistics() ([]DHCPV4Scope, error) {
 			var subnetStatistics *DHCP_FAILOVER_STATISTICS
 			err = dhcpV4FailoverGetScopeStatistics(subnet.SubnetAddress, &subnetStatistics)
 
-			defer dhcpRpcFreeMemory(unsafe.Pointer(&subnetStatistics))
+			defer dhcpRpcFreeMemory(unsafe.Pointer(subnetStatistics))
 
 			if err == nil {
 				scope.AddressesFree = float64(subnetStatistics.AddrFree)
@@ -194,7 +194,7 @@ func dhcpV4EnumSubnetReservations(subnetAddress DHCP_IP_ADDRESS) (uint32, error)
 		uintptr(unsafe.Pointer(&elementsTotal)),
 	)
 
-	dhcpRpcFreeMemory(unsafe.Pointer(&elementsInfo))
+	dhcpRpcFreeMemory(unsafe.Pointer(elementsInfo))
 
 	if !errors.Is(syscall.Errno(ret), windows.ERROR_MORE_DATA) && !errors.Is(syscall.Errno(ret), windows.ERROR_NO_MORE_ITEMS) {
 		return 0, fmt.Errorf("dhcpV4EnumSubnetReservations failed with code %w", syscall.Errno(ret))
