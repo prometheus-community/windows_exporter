@@ -391,7 +391,7 @@ func (c *Collector) collectNICAddresses(ch chan<- prometheus.Metric) error {
 		return err
 	}
 
-	convertNicName := strings.NewReplacer("(", "[", ")", "]")
+	convertNicName := strings.NewReplacer("(", "[", ")", "]", "#", "_")
 
 	for _, nicAdapterAddress := range nicAdapterAddresses {
 		friendlyName := windows.UTF16PtrToString(nicAdapterAddress.FriendlyName)
