@@ -10,7 +10,9 @@ The netframework collector exposes metrics about dotnet framework.
 
 ## Flags
 
-None
+### `--collector.netframework.enabled`
+
+Comma-separated list of collectors to use. Defaults to all, if not specified.
 
 ## Metrics
 

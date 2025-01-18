@@ -322,56 +322,56 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		)
 
 		c.scopeAddressesFreeTotal = prometheus.NewDesc(
-			prometheus.BuildFQName(types.Namespace, Name, "scope_addresses_free_total"),
+			prometheus.BuildFQName(types.Namespace, Name, "scope_addresses_free"),
 			"DHCP Scope free addresses",
 			[]string{"scope"},
 			nil,
 		)
 
 		c.scopeAddressesFreeOnPartnerServerTotal = prometheus.NewDesc(
-			prometheus.BuildFQName(types.Namespace, Name, "scope_addresses_free_on_partner_server_total"),
+			prometheus.BuildFQName(types.Namespace, Name, "scope_addresses_free_on_partner_server"),
 			"DHCP Scope free addresses on partner server",
 			[]string{"scope"},
 			nil,
 		)
 
 		c.scopeAddressesFreeOnThisServerTotal = prometheus.NewDesc(
-			prometheus.BuildFQName(types.Namespace, Name, "scope_addresses_free_on_this_server_total"),
+			prometheus.BuildFQName(types.Namespace, Name, "scope_addresses_free_on_this_server"),
 			"DHCP Scope free addresses on this server",
 			[]string{"scope"},
 			nil,
 		)
 
 		c.scopeAddressesInUseTotal = prometheus.NewDesc(
-			prometheus.BuildFQName(types.Namespace, Name, "scope_addresses_in_use_total"),
+			prometheus.BuildFQName(types.Namespace, Name, "scope_addresses_in_use"),
 			"DHCP Scope addresses in use",
 			[]string{"scope"},
 			nil,
 		)
 
 		c.scopeAddressesInUseOnPartnerServerTotal = prometheus.NewDesc(
-			prometheus.BuildFQName(types.Namespace, Name, "scope_addresses_in_use_on_partner_server_total"),
+			prometheus.BuildFQName(types.Namespace, Name, "scope_addresses_in_use_on_partner_server"),
 			"DHCP Scope addresses in use on partner server",
 			[]string{"scope"},
 			nil,
 		)
 
 		c.scopeAddressesInUseOnThisServerTotal = prometheus.NewDesc(
-			prometheus.BuildFQName(types.Namespace, Name, "scope_addresses_in_use_on_this_server_total"),
+			prometheus.BuildFQName(types.Namespace, Name, "scope_addresses_in_use_on_this_server"),
 			"DHCP Scope addresses in use on this server",
 			[]string{"scope"},
 			nil,
 		)
 
 		c.scopePendingOffersTotal = prometheus.NewDesc(
-			prometheus.BuildFQName(types.Namespace, Name, "scope_pending_offers_total"),
+			prometheus.BuildFQName(types.Namespace, Name, "scope_pending_offers"),
 			"DHCP Scope pending offers",
 			[]string{"scope"},
 			nil,
 		)
 
 		c.scopeReservedAddressTotal = prometheus.NewDesc(
-			prometheus.BuildFQName(types.Namespace, Name, "scope_reserved_address_total"),
+			prometheus.BuildFQName(types.Namespace, Name, "scope_reserved_address"),
 			"DHCP Scope reserved addresses",
 			[]string{"scope"},
 			nil,
