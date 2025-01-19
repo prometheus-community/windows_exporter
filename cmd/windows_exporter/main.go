@@ -17,12 +17,7 @@
 
 package main
 
-//goland:noinspection GoUnsortedImport
-//nolint:gofumpt
 import (
-	// Its important that we do these first so that we can register with the Windows service control ASAP to avoid timeouts.
-	"github.com/prometheus-community/windows_exporter/internal/windowsservice"
-
 	"context"
 	"errors"
 	"fmt"
@@ -55,14 +50,14 @@ func main() {
 	exitCode := run()
 
 	// If we are running as a service, we need to signal the service control manager that we are done.
-	if !windowsservice.IsService {
+	if !IsService {
 		os.Exit(exitCode)
 	}
 
-	windowsservice.ExitCodeCh <- exitCode
+	exitCodeCh <- exitCode
 
 	// Wait for the service control manager to signal that we are done.
-	<-windowsservice.StopCh
+	<-stopCh
 }
 
 func run() int {
@@ -114,7 +109,7 @@ func run() int {
 	logFile := &log.AllowedFile{}
 
 	_ = logFile.Set("stdout")
-	if windowsservice.IsService {
+	if IsService {
 		_ = logFile.Set("eventlog")
 	}
 
@@ -276,7 +271,7 @@ func run() int {
 	select {
 	case <-ctx.Done():
 		logger.Info("Shutting down windows_exporter via kill signal")
-	case <-windowsservice.StopCh:
+	case <-stopCh:
 		logger.Info("Shutting down windows_exporter via service control")
 	case err := <-errCh:
 		if err != nil {
