@@ -59,7 +59,7 @@
             Value="&quot;[%ComSpec]&quot; /c TYPE NUL >>&quot;[ConfigFile_NonDefault][ConfigFile_Default]&quot;"
             Before="CreateConfigFile"
             Sequence="execute"
-            Condition="ConfigFile_NonDefault OR ConfigFile_Default"
+            Condition="(ConfigFile_NonDefault OR ConfigFile_Default) AND NOT CONFIG_FILE ~ http*"
         />
         <CustomAction
             Id="CreateConfigFile"
