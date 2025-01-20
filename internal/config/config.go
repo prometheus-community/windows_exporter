@@ -46,6 +46,7 @@ func NewResolver(ctx context.Context, file string, logger *slog.Logger, insecure
 
 	var err error
 	if strings.HasPrefix(file, "http://") || strings.HasPrefix(file, "https://") {
+		logger.Warn("Loading configuration file from URL is deprecated and will be removed in 0.31.0. Use a local file instead.")
 		fileBytes, err = readFromURL(ctx, file, logger, insecureSkipVerify)
 		if err != nil {
 			return nil, err
