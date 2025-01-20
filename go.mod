@@ -5,7 +5,7 @@ go 1.23
 require (
 	github.com/Microsoft/hcsshim v0.12.9
 	github.com/alecthomas/kingpin/v2 v2.4.0
-	github.com/bmatcuk/doublestar/v4 v4.7.1
+	github.com/bmatcuk/doublestar/v4 v4.8.0
 	github.com/dimchansky/utfbom v1.1.1
 	github.com/go-ole/go-ole v1.3.0
 	github.com/google/uuid v1.6.0
