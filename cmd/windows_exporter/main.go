@@ -325,7 +325,7 @@ func setPriorityWindows(logger *slog.Logger, pid int, priority string) error {
 	winPriority, ok := priorityStringToInt[priority]
 
 	// Only set process priority if a non-default and valid value has been set
-	if !ok || winPriority != windows.NORMAL_PRIORITY_CLASS {
+	if !ok || winPriority == windows.NORMAL_PRIORITY_CLASS {
 		return nil
 	}
 
