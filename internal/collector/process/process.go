@@ -76,7 +76,7 @@ type Collector struct {
 	poolBytes         *prometheus.Desc
 	priorityBase      *prometheus.Desc
 	privateBytes      *prometheus.Desc
-	// DEPRECATED: Use start_time_seconds_timestamp instead
+	// Deprecated: Use start_time_seconds_timestamp instead
 	startTimeOld      *prometheus.Desc
 	startTime         *prometheus.Desc
 	threadCount       *prometheus.Desc
