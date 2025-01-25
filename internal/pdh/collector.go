@@ -390,7 +390,7 @@ func (c *Collector) collectWorkerRaw() {
 						case PERF_ELAPSED_TIME:
 							dv.Index(index).
 								Field(counter.FieldIndexValue).
-								SetFloat(float64((item.RawValue.FirstValue - WindowsEpoch) / counter.Frequency))
+								SetFloat(float64((item.RawValue.SecondValue - item.RawValue.FirstValue) / counter.Frequency))
 						case PERF_100NSEC_TIMER, PERF_PRECISION_100NS_TIMER:
 							dv.Index(index).
 								Field(counter.FieldIndexValue).

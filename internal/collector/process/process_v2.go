@@ -23,6 +23,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus/client_golang/prometheus"
@@ -134,10 +135,19 @@ func (c *Collector) collectWorkerV2() {
 				name, pidString, parentPID, strconv.Itoa(int(processGroupID)), processOwner, cmdLine,
 			)
 
+			startTime := float64(time.Now().Unix() - int64(data.ElapsedTime))
+
+			ch <- prometheus.MustNewConstMetric(
+				c.startTimeOld,
+				prometheus.GaugeValue,
+				startTime,
+				name, pidString,
+			)
+
 			ch <- prometheus.MustNewConstMetric(
 				c.startTime,
 				prometheus.GaugeValue,
-				data.ElapsedTime,
+				startTime,
 				name, pidString,
 			)
 

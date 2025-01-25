@@ -142,6 +142,13 @@ func (c *Collector) collectWorkerV1() {
 			)
 
 			ch <- prometheus.MustNewConstMetric(
+				c.startTimeOld,
+				prometheus.GaugeValue,
+				data.ElapsedTime,
+				name, pidString,
+			)
+
+			ch <- prometheus.MustNewConstMetric(
 				c.handleCount,
 				prometheus.GaugeValue,
 				data.HandleCount,
