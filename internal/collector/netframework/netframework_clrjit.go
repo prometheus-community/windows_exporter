@@ -65,7 +65,7 @@ type Win32_PerfRawData_NETFramework_NETCLRJit struct {
 
 func (c *Collector) collectClrJIT(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_NETFramework_NETCLRJit
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * Win32_PerfRawData_NETFramework_NETCLRJit"))); err != nil {
+	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * FROM Win32_PerfRawData_NETFramework_NETCLRJit"))); err != nil {
 		return fmt.Errorf("WMI query failed: %w", err)
 	}
 

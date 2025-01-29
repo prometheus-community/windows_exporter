@@ -63,7 +63,7 @@ type Win32_PerfRawData_NETFramework_NETCLRExceptions struct {
 
 func (c *Collector) collectClrExceptions(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_NETFramework_NETCLRExceptions
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * Win32_PerfRawData_NETFramework_NETCLRExceptions"))); err != nil {
+	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * FROM Win32_PerfRawData_NETFramework_NETCLRExceptions"))); err != nil {
 		return fmt.Errorf("WMI query failed: %w", err)
 	}
 

@@ -86,7 +86,7 @@ type Win32_PerfRawData_NETFramework_NETCLRLocksAndThreads struct {
 
 func (c *Collector) collectClrLocksAndThreads(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_NETFramework_NETCLRLocksAndThreads
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * Win32_PerfRawData_NETFramework_NETCLRLocksAndThreads"))); err != nil {
+	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * FROM Win32_PerfRawData_NETFramework_NETCLRLocksAndThreads"))); err != nil {
 		return fmt.Errorf("WMI query failed: %w", err)
 	}
 

@@ -77,7 +77,7 @@ type Win32_PerfRawData_NETFramework_NETCLRRemoting struct {
 
 func (c *Collector) collectClrRemoting(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_NETFramework_NETCLRRemoting
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * Win32_PerfRawData_NETFramework_NETCLRRemoting"))); err != nil {
+	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * FROM Win32_PerfRawData_NETFramework_NETCLRRemoting"))); err != nil {
 		return fmt.Errorf("WMI query failed: %w", err)
 	}
 

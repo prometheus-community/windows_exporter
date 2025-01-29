@@ -104,7 +104,7 @@ type Win32_PerfRawData_NETFramework_NETCLRLoading struct {
 
 func (c *Collector) collectClrLoading(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_NETFramework_NETCLRLoading
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * Win32_PerfRawData_NETFramework_NETCLRLoading"))); err != nil {
+	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * FROM Win32_PerfRawData_NETFramework_NETCLRLoading"))); err != nil {
 		return fmt.Errorf("WMI query failed: %w", err)
 	}
 
