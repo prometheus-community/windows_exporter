@@ -76,6 +76,8 @@ type Collector struct {
 	poolBytes         *prometheus.Desc
 	priorityBase      *prometheus.Desc
 	privateBytes      *prometheus.Desc
+	// Deprecated: Use start_time_seconds_timestamp instead
+	startTimeOld      *prometheus.Desc
 	startTime         *prometheus.Desc
 	threadCount       *prometheus.Desc
 	virtualBytes      *prometheus.Desc
@@ -214,8 +216,15 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 		nil,
 	)
 
-	c.startTime = prometheus.NewDesc(
+	c.startTimeOld = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "start_time"),
+		"DEPRECATED: Use start_time_seconds_timestamp instead",
+		[]string{"process", "process_id"},
+		nil,
+	)
+
+	c.startTime = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "start_time_seconds_timestamp"),
 		"Time of process start.",
 		[]string{"process", "process_id"},
 		nil,
