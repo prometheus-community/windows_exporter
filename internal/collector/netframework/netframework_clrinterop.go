@@ -57,7 +57,7 @@ type Win32_PerfRawData_NETFramework_NETCLRInterop struct {
 
 func (c *Collector) collectClrInterop(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_NETFramework_NETCLRInterop
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * Win32_PerfRawData_NETFramework_NETCLRInterop"))); err != nil {
+	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * FROM Win32_PerfRawData_NETFramework_NETCLRInterop"))); err != nil {
 		return fmt.Errorf("WMI query failed: %w", err)
 	}
 
