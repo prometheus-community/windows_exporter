@@ -43,6 +43,9 @@
                             Property="OLDERVERSIONBEINGUPGRADED" />
         </Upgrade>
 
+        <CustomAction Id="CheckExtraFlags"
+                      Error="The parameter '--config.file' must not be included in EXTRA_FLAGS. Use CONFIG_FILE instead. Please remove it and try again." />
+
         <CustomAction Id="set_maintenance" Property="MAINTENANCE" Value="true" />
 
         <!-- Set to reinstall all features. -->
@@ -97,6 +100,9 @@
             <Custom Action="set_reinstallmode_property" Before="LaunchConditions" Condition="MAINTENANCE"/>
             <Custom Action="CreateConfigFile" Before="InstallServices" Condition="ConfigFile_NonDefault OR ConfigFile_Default" />
             <Custom Action="KillProcess" Before="RemoveFiles" />
+
+            <Custom Action="CheckExtraFlags" Before="InstallInitialize"
+                    Condition="EXTRA_FLAGS AND (EXTRA_FLAGS&gt;&lt;&quot;--config.file&quot;)" />
         </InstallExecuteSequence>
 
         <Media Id="1" Cabinet="windows_exporter.cab" EmbedCab="yes"  />
