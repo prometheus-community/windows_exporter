@@ -33,6 +33,9 @@ var (
 
 	// stopCh is a channel to send a signal to the service manager that the service is stopping.
 	stopCh = make(chan struct{})
+
+	// serviceManagerFinishedCh is a channel to send a signal to the main function that the service manager has stopped the service.
+	serviceManagerFinishedCh = make(chan struct{})
 )
 
 // IsService variable declaration allows initiating time-sensitive components like registering the Windows service
@@ -49,29 +52,29 @@ var (
 //
 //nolint:gochecknoglobals
 var IsService = func() bool {
-	defer func() {
-		go func() {
-			err := svc.Run(serviceName, &windowsExporterService{})
-			if err == nil {
-				return
-			}
-
-			_ = logToEventToLog(windows.EVENTLOG_ERROR_TYPE, fmt.Sprintf("failed to start service: %v", err))
-		}()
-	}()
-
 	var err error
 
 	isService, err := svc.IsWindowsService()
 	if err != nil {
 		_ = logToEventToLog(windows.EVENTLOG_ERROR_TYPE, fmt.Sprintf("failed to detect service: %v", err))
 
-		exitCodeCh <- 1
+		return false
 	}
 
 	if !isService {
 		return false
 	}
+
+	defer func() {
+		go func() {
+			err := svc.Run(serviceName, &windowsExporterService{})
+			if err != nil {
+				_ = logToEventToLog(windows.EVENTLOG_ERROR_TYPE, fmt.Sprintf("failed to start service: %v", err))
+			}
+
+			serviceManagerFinishedCh <- struct{}{}
+		}()
+	}()
 
 	if err := logToEventToLog(windows.EVENTLOG_INFORMATION_TYPE, "attempting to start exporter service"); err != nil {
 		//nolint:gosec
