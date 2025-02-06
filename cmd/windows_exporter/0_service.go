@@ -56,7 +56,8 @@ var IsService = func() bool {
 
 	isService, err := svc.IsWindowsService()
 	if err != nil {
-		_ = logToEventToLog(windows.EVENTLOG_ERROR_TYPE, fmt.Sprintf("failed to detect service: %v", err))
+		//nolint:gosec
+		_ = os.WriteFile("C:\\Program Files\\windows_exporter\\start-service.error.log", []byte(fmt.Sprintf("failed to detect service: %v", err)), 0o644)
 
 		return false
 	}
