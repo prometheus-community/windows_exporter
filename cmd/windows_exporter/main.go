@@ -57,7 +57,7 @@ func main() {
 	exitCodeCh <- exitCode
 
 	// Wait for the service control manager to signal that we are done.
-	<-stopCh
+	<-serviceManagerFinishedCh
 }
 
 func run() int {
