@@ -69,7 +69,7 @@ jobs:
 
           Get-ChildItem -Path output
 
-      - name: Sign artifacts
+      - name: Sign build artifacts
         if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == 'prometheus-community/windows_exporter' || github.repository == 'prometheus-community/windows_exporter' }}
         run: |
           $ErrorActionPreference = "Stop"
@@ -117,6 +117,40 @@ jobs:
           Get-ChildItem -Path output\
 
           promu checksum output\
+
+      - name: Sign installer artifacts
+        if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == 'prometheus-community/windows_exporter' || github.repository == 'prometheus-community/windows_exporter' }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $Version = Get-Content VERSION
+
+          $b64      = $env:CODE_SIGN_KEY
+          $filename = 'windows_exporter_CodeSign.pfx'
+
+          $bytes = [Convert]::FromBase64String($b64)
+          [IO.File]::WriteAllBytes($filename, $bytes)
+
+          $basePath = "C:\Program Files (x86)\Windows Kits\10\bin"
+          $latestSigntool = Get-ChildItem -Path $basePath -Directory |
+          Where-Object { $_.Name -match "^\d+\.\d+\.\d+\.\d+$" } |
+          Sort-Object { [Version]$_.Name } -Descending |
+          Select-Object -First 1 |
+          ForEach-Object { Join-Path $_.FullName "x64\signtool.exe" }
+
+          if (Test-Path $latestSigntool) {
+            Write-Output $latestSigntool
+          } else {
+            Write-Output "signtool.exe not found"
+          }
+
+          foreach($Arch in "amd64", "arm64") {
+            & $latestSigntool sign /v /tr "http://timestamp.digicert.com" /d "Prometheus exporter for Windows machines" /td SHA256 /fd SHA256 /a /f "windows_exporter_CodeSign.pfx" /p $env:CODE_SIGN_PASSWORD "output\windows_exporter-$Version-$Arch.msi"
+          }
+
+          rm windows_exporter_CodeSign.pfx
+        env:
+          CODE_SIGN_KEY: ${{ secrets.CODE_SIGN_KEY }}
+          CODE_SIGN_PASSWORD: ${{ secrets.CODE_SIGN_PASSWORD }}
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
