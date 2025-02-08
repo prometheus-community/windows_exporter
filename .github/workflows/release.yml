@@ -70,7 +70,7 @@ jobs:
           Get-ChildItem -Path output
 
       - name: Sign artifacts
-        if: ${{ secrets.CODE_SIGN_PASSWORD != '' }}
+        if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == 'prometheus-community/windows_exporter' || github.repository == 'prometheus-community/windows_exporter' }}
         run: |
           $ErrorActionPreference = "Stop"
           $Version = Get-Content VERSION
