@@ -100,6 +100,9 @@ windows_exporter accepts flags to configure certain behaviours. The ones configu
 
 The latest release can be downloaded from the [releases page](https://github.com/prometheus-community/windows_exporter/releases).
 
+All binaries and installation packages are signed with an self-signed certificate. The public key can be found [here](https://github.com/prometheus-community/windows_exporter/blob/master/installer/codesign.cer).
+Once import into the trusted root certificate store, the binaries and installation packages will be trusted.
+
 Each release provides a .msi installer. The installer will setup the windows_exporter as a Windows service, as well as create an exception in the Windows Firewall.
 
 If the installer is run without any parameters, the exporter will run with default settings for enabled collectors, ports, etc.
