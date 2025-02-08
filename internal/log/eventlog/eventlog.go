@@ -17,8 +17,8 @@
 package eventlog
 
 import (
-	"bytes"
 	"io"
+	"strings"
 
 	"golang.org/x/sys/windows/svc/eventlog"
 )
@@ -27,24 +27,26 @@ import (
 var _ io.Writer = (*Writer)(nil)
 
 type Writer struct {
-	handle eventlog.Log
+	handle *eventlog.Log
 }
 
 // NewEventLogWriter returns a new Writer, which writes to Windows EventLog.
-func NewEventLogWriter(handle eventlog.Log) *Writer {
+func NewEventLogWriter(handle *eventlog.Log) *Writer {
 	return &Writer{handle: handle}
 }
 
 func (w *Writer) Write(p []byte) (int, error) {
 	var err error
 
+	msg := strings.TrimSpace(string(p))
+
 	switch {
-	case bytes.Contains(p, []byte(" level=error")) || bytes.Contains(p, []byte(`"level":"error"`)):
-		err = w.handle.Error(1, string(p))
-	case bytes.Contains(p, []byte(" level=warn")) || bytes.Contains(p, []byte(`"level":"warn"`)):
-		err = w.handle.Warning(1, string(p))
+	case strings.Contains(msg, " level=error") || strings.Contains(msg, `"level":"error"`):
+		err = w.handle.Error(102, msg)
+	case strings.Contains(msg, " level=warn") || strings.Contains(msg, `"level":"warn"`):
+		err = w.handle.Warning(101, msg)
 	default:
-		err = w.handle.Info(1, string(p))
+		err = w.handle.Info(100, msg)
 	}
 
 	return len(p), err

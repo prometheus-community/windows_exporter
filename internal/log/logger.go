@@ -24,7 +24,6 @@ import (
 
 	"github.com/prometheus-community/windows_exporter/internal/log/eventlog"
 	"github.com/prometheus/common/promslog"
-	"golang.org/x/sys/windows"
 	wineventlog "golang.org/x/sys/windows/svc/eventlog"
 )
 

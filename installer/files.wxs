@@ -46,7 +46,7 @@
                 <ServiceControl Id="ServiceStateControl" Name="windows_exporter" Remove="uninstall" Start="install" Stop="both"/>
                 <!-- The "Name" field must match the argument to eventlog.Open() -->
                 <util:EventSource Log="Application" Name="windows_exporter"
-                                  EventMessageFile="[APPLICATIONFOLDER]windows_exporter.exe"
+                                  EventMessageFile="%SystemRoot%\System32\EventCreate.exe"
                                   SupportsErrors="yes"
                                   SupportsInformationals="yes"
                                   SupportsWarnings="yes"/>
