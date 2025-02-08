@@ -138,6 +138,9 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - build
+    env:
+      DOCKER_BUILD_SUMMARY: false
+      DOCKER_BUILD_RECORD_UPLOAD: false
     steps:
       - uses: actions/checkout@v4
         with:
@@ -200,3 +203,4 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           platforms: windows/amd64
+          annotations: ${{ steps.meta.outputs.labels }}
