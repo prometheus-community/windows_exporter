@@ -80,9 +80,21 @@ jobs:
           $bytes = [Convert]::FromBase64String($b64)
           [IO.File]::WriteAllBytes($filename, $bytes)
 
+          $basePath = "C:\Program Files (x86)\Windows Kits\10\bin"
+          $latestSigntool = Get-ChildItem -Path $basePath -Directory |
+          Where-Object { $_.Name -match "^\d+\.\d+\.\d+\.\d+$" } |
+          Sort-Object { [Version]$_.Name } -Descending |
+          Select-Object -First 1 |
+          ForEach-Object { Join-Path $_.FullName "x64\signtool.exe" }
+
+          if (Test-Path $latestSigntool) {
+            Write-Output $latestSigntool
+          } else {
+            Write-Output "signtool.exe not found"
+          }
 
           foreach($Arch in "amd64", "arm64") {
-            signtool sign /fd SHA256 /a /f "windows_exporter_CodeSign.pfx" /p $env:CODE_SIGN_PASSWORD "output\windows_exporter-$Version-$Arch.exe"
+            $latestSigntool sign /tr http://timestamp.digicert.com' /td SHA256 /fd SHA256 /a /f "windows_exporter_CodeSign.pfx" /p $env:CODE_SIGN_PASSWORD "output\windows_exporter-$Version-$Arch.exe"
           }
 
           rm windows_exporter_CodeSign.pfx
