@@ -22,6 +22,7 @@ env:
 jobs:
   build:
     runs-on: windows-2022
+    environment: build
     steps:
       - uses: actions/checkout@v4
         with:
@@ -67,6 +68,40 @@ jobs:
           }
 
           Get-ChildItem -Path output
+
+      - name: Sign artifacts
+        if: ${{ secrets.CODE_SIGN_PASSWORD != '' }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $Version = Get-Content VERSION
+
+          $b64      = $env:CODE_SIGN_KEY
+          $filename = 'windows_exporter_CodeSign.pfx'
+
+          $bytes = [Convert]::FromBase64String($b64)
+          [IO.File]::WriteAllBytes($filename, $bytes)
+
+          $basePath = "C:\Program Files (x86)\Windows Kits\10\bin"
+          $latestSigntool = Get-ChildItem -Path $basePath -Directory |
+          Where-Object { $_.Name -match "^\d+\.\d+\.\d+\.\d+$" } |
+          Sort-Object { [Version]$_.Name } -Descending |
+          Select-Object -First 1 |
+          ForEach-Object { Join-Path $_.FullName "x64\signtool.exe" }
+
+          if (Test-Path $latestSigntool) {
+            Write-Output $latestSigntool
+          } else {
+            Write-Output "signtool.exe not found"
+          }
+
+          foreach($Arch in "amd64", "arm64") {
+            & $latestSigntool sign /v /tr "http://timestamp.digicert.com" /d "Prometheus exporter for Windows machines" /td SHA256 /fd SHA256 /a /f "windows_exporter_CodeSign.pfx" /p $env:CODE_SIGN_PASSWORD "output\windows_exporter-$Version-$Arch.exe"
+          }
+
+          rm windows_exporter_CodeSign.pfx
+        env:
+          CODE_SIGN_KEY: ${{ secrets.CODE_SIGN_KEY }}
+          CODE_SIGN_PASSWORD: ${{ secrets.CODE_SIGN_PASSWORD }}
 
       - name: Build Release Artifacts
         run: |
