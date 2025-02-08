@@ -94,7 +94,7 @@ jobs:
           }
 
           foreach($Arch in "amd64", "arm64") {
-            $latestSigntool sign /tr http://timestamp.digicert.com' /td SHA256 /fd SHA256 /a /f "windows_exporter_CodeSign.pfx" /p $env:CODE_SIGN_PASSWORD "output\windows_exporter-$Version-$Arch.exe"
+            & $latestSigntool sign /v /tr http://timestamp.digicert.com' /td SHA256 /fd SHA256 /a /f "windows_exporter_CodeSign.pfx" /p $env:CODE_SIGN_PASSWORD "output\windows_exporter-$Version-$Arch.exe"
           }
 
           rm windows_exporter_CodeSign.pfx
