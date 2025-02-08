@@ -22,6 +22,7 @@ env:
 jobs:
   build:
     runs-on: windows-2022
+    environment: build
     steps:
       - uses: actions/checkout@v4
         with:
@@ -68,6 +69,26 @@ jobs:
 
           Get-ChildItem -Path output
 
+      - name: Sign artifacts
+        run: |
+          $ErrorActionPreference = "Stop"
+          $Version = Get-Content VERSION
+
+          $b64      = $env:CODE_SIGN_KEY
+          $filename = 'windows_exporter_CodeSign.pfx'
+
+          $bytes = [Convert]::FromBase64String($b64)
+          [IO.File]::WriteAllBytes($filename, $bytes)
+
+
+          foreach($Arch in "amd64", "arm64") {
+            signtool sign /fd SHA256 /a /f "windows_exporter_CodeSign.pfx" /p $env:CODE_SIGN_PASSWORD "output\windows_exporter-$Version-$Arch.exe"
+          }
+
+          rm windows_exporter_CodeSign.pfx
+        env:
+          CODE_SIGN_KEY: ${{ secrets.CODE_SIGN_KEY }}
+          CODE_SIGN_PASSWORD: ${{ secrets.CODE_SIGN_PASSWORD }}
       - name: Build Release Artifacts
         run: |
           $ErrorActionPreference = "Stop"
