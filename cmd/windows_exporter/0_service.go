@@ -134,15 +134,15 @@ func logToEventToLog(eType uint16, msg string) error {
 		_ = eventLog.Close()
 	}(eventLog)
 
-	p, err := windows.UTF16PtrFromString(msg)
-	if err != nil {
-		return fmt.Errorf("error convert string to UTF-16: %w", err)
+	switch eType {
+	case windows.EVENTLOG_ERROR_TYPE:
+		err = eventLog.Error(1, msg)
+	case windows.EVENTLOG_WARNING_TYPE:
+		err = eventLog.Warning(1, msg)
+	case windows.EVENTLOG_INFORMATION_TYPE:
+		err = eventLog.Info(1, msg)
 	}
 
-	zero := uint16(0)
-	ss := []*uint16{p, &zero, &zero, &zero, &zero, &zero, &zero, &zero, &zero}
-
-	err = windows.ReportEvent(eventLog.Handle, eType, 0, 3299, 0, 9, 0, &ss[0], nil)
 	if err != nil {
 		return fmt.Errorf("error report event: %w", err)
 	}
