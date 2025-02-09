@@ -41,9 +41,9 @@ func (w *Writer) Write(p []byte) (int, error) {
 	msg := strings.TrimSpace(string(p))
 
 	switch {
-	case strings.Contains(msg, " level=error") || strings.Contains(msg, `"level":"error"`):
+	case strings.Contains(msg, " level=ERROR") || strings.Contains(msg, `"level":"error"`):
 		err = w.handle.Error(102, msg)
-	case strings.Contains(msg, " level=warn") || strings.Contains(msg, `"level":"warn"`):
+	case strings.Contains(msg, " level=WARN") || strings.Contains(msg, `"level":"warn"`):
 		err = w.handle.Warning(101, msg)
 	default:
 		err = w.handle.Info(100, msg)
