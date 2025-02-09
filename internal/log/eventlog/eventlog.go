@@ -18,6 +18,7 @@ package eventlog
 
 import (
 	"io"
+	"regexp"
 	"strings"
 
 	"golang.org/x/sys/windows/svc/eventlog"
@@ -25,6 +26,8 @@ import (
 
 // Interface guard.
 var _ io.Writer = (*Writer)(nil)
+
+var reStripTimeAndLevel = regexp.MustCompile(`^time=\S+ level=\S+ `)
 
 type Writer struct {
 	handle *eventlog.Log
@@ -39,14 +42,15 @@ func (w *Writer) Write(p []byte) (int, error) {
 	var err error
 
 	msg := strings.TrimSpace(string(p))
+	eventLogMsg := reStripTimeAndLevel.ReplaceAllString(msg, "")
 
 	switch {
 	case strings.Contains(msg, " level=ERROR") || strings.Contains(msg, `"level":"error"`):
-		err = w.handle.Error(102, msg)
+		err = w.handle.Error(102, eventLogMsg)
 	case strings.Contains(msg, " level=WARN") || strings.Contains(msg, `"level":"warn"`):
-		err = w.handle.Warning(101, msg)
+		err = w.handle.Warning(101, eventLogMsg)
 	default:
-		err = w.handle.Info(100, msg)
+		err = w.handle.Info(100, eventLogMsg)
 	}
 
 	return len(p), err
