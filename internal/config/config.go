@@ -16,12 +16,7 @@
 package config
 
 import (
-	"context"
-	"crypto/tls"
 	"fmt"
-	"io"
-	"log/slog"
-	"net/http"
 	"os"
 	"strings"
 
@@ -38,8 +33,52 @@ type Resolver struct {
 	flags map[string]string
 }
 
-// NewResolver returns a Resolver structure.
-func NewResolver(ctx context.Context, file string, logger *slog.Logger, insecureSkipVerify bool) (*Resolver, error) {
+// Parse parses the command line arguments and configuration files.
+func Parse(app *kingpin.Application, args []string) error {
+	configFile := ParseConfigFile(args)
+	if configFile != "" {
+		resolver, err := NewConfigFileResolver(configFile)
+		if err != nil {
+			return fmt.Errorf("failed to load configuration file: %w", err)
+		}
+
+		if err = resolver.Bind(app, args); err != nil {
+			return fmt.Errorf("failed to bind configuration: %w", err)
+		}
+	}
+
+	if _, err := app.Parse(args); err != nil {
+		return fmt.Errorf("failed to parse flags: %w", err)
+	}
+
+	return nil
+}
+
+// ParseConfigFile manually parses the configuration file from the command line arguments.
+func ParseConfigFile(args []string) string {
+	for i, cliFlag := range args {
+		if strings.HasPrefix(cliFlag, "--config.file=") {
+			return strings.TrimPrefix(cliFlag, "--config.file=")
+		}
+
+		if strings.HasPrefix(cliFlag, "-config.file=") {
+			return strings.TrimPrefix(cliFlag, "-config.file=")
+		}
+
+		if strings.HasSuffix(cliFlag, "-config.file") {
+			if len(os.Args) <= i+1 {
+				return ""
+			}
+
+			return os.Args[i+1]
+		}
+	}
+
+	return ""
+}
+
+// NewConfigFileResolver returns a Resolver structure.
+func NewConfigFileResolver(file string) (*Resolver, error) {
 	flags := map[string]string{}
 
 	var (
@@ -47,18 +86,9 @@ func NewResolver(ctx context.Context, file string, logger *slog.Logger, insecure
 		fileBytes []byte
 	)
 
-	if strings.HasPrefix(file, "http://") || strings.HasPrefix(file, "https://") {
-		logger.WarnContext(ctx, "Loading configuration file from URL is deprecated and will be removed in 0.31.0. Use a local file instead.")
-
-		fileBytes, err = readFromURL(ctx, file, logger, insecureSkipVerify)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		fileBytes, err = readFromFile(ctx, file, logger)
-		if err != nil {
-			return nil, err
-		}
+	fileBytes, err = readFromFile(file)
+	if err != nil {
+		return nil, err
 	}
 
 	var rawValues map[string]interface{}
@@ -79,9 +109,7 @@ func NewResolver(ctx context.Context, file string, logger *slog.Logger, insecure
 	return &Resolver{flags: flags}, nil
 }
 
-func readFromFile(ctx context.Context, file string, logger *slog.Logger) ([]byte, error) {
-	logger.InfoContext(ctx, "loading configuration file: "+file)
-
+func readFromFile(file string) ([]byte, error) {
 	if _, err := os.Stat(file); err != nil {
 		return nil, fmt.Errorf("failed to read configuration file: %w", err)
 	}
@@ -89,39 +117,6 @@ func readFromFile(ctx context.Context, file string, logger *slog.Logger) ([]byte
 	fileBytes, err := os.ReadFile(file)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read configuration file: %w", err)
-	}
-
-	return fileBytes, nil
-}
-
-func readFromURL(ctx context.Context, file string, logger *slog.Logger, insecureSkipVerify bool) ([]byte, error) {
-	logger.InfoContext(ctx, "loading configuration file from URL: "+file)
-
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: insecureSkipVerify}, //nolint:gosec
-	}
-
-	if insecureSkipVerify {
-		logger.WarnContext(ctx, "Loading configuration file with TLS verification disabled")
-	}
-
-	client := &http.Client{Transport: tr}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, file, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read configuration file from URL: %w", err)
-	}
-
-	defer resp.Body.Close()
-
-	fileBytes, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
 	}
 
 	return fileBytes, nil
