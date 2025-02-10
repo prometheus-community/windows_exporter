@@ -74,7 +74,7 @@ type msClusterResource struct {
 }
 
 func (c *Collector) buildResource() error {
-	resourceMIQuery, err := mi.NewQuery("SELECT * FROM MSCluster_Resource")
+	resourceMIQuery, err := mi.NewQuery("SELECT Name,Type,OwnerGroup,OwnerNode,Characteristics,DeadlockTimeout,EmbeddedFailureAction,Flags,IsAlivePollInterval,LooksAlivePollInterval,MonitorProcessId,PendingTimeout,ResourceClass,RestartAction,RestartDelay,RestartPeriod,RestartThreshold,RetryPeriodOnFailure,State,Subclass FROM MSCluster_Resource")
 	if err != nil {
 		return fmt.Errorf("failed to create WMI query: %w", err)
 	}

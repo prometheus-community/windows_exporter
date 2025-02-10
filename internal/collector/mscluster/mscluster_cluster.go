@@ -18,6 +18,7 @@ package mscluster
 import (
 	"fmt"
 
+	"github.com/Microsoft/hcsshim/osversion"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
@@ -192,7 +193,14 @@ type msClusterCluster struct {
 }
 
 func (c *Collector) buildCluster() error {
-	clusterMIQuery, err := mi.NewQuery("SELECT * FROM MSCluster_Cluster")
+	buildNumber := osversion.Build()
+
+	wmiSelect := "AddEvictDelay,AdminAccessPoint,AutoAssignNodeSite,AutoBalancerLevel,AutoBalancerMode,BackupInProgress,BlockCacheSize,ClusSvcHangTimeout,ClusSvcRegroupOpeningTimeout,ClusSvcRegroupPruningTimeout,ClusSvcRegroupStageTimeout,ClusSvcRegroupTickInMilliseconds,ClusterEnforcedAntiAffinity,ClusterFunctionalLevel,ClusterGroupWaitDelay,ClusterLogLevel,ClusterLogSize,ClusterUpgradeVersion,CrossSiteDelay,CrossSiteThreshold,CrossSubnetDelay,CrossSubnetThreshold,CsvBalancer,DatabaseReadWriteMode,DefaultNetworkRole,DetectManagedEvents,DetectManagedEventsThreshold,DisableGroupPreferredOwnerRandomization,DrainOnShutdown,DynamicQuorumEnabled,EnableSharedVolumes,FixQuorum,GracePeriodEnabled,GracePeriodTimeout,GroupDependencyTimeout,HangRecoveryAction,IgnorePersistentStateOnStartup,LogResourceControls,LowerQuorumPriorityNodeId,MaxNumberOfNodes,MessageBufferLength,MinimumNeverPreemptPriority,MinimumPreemptorPriority,NetftIPSecEnabled,PlacementOptions,PlumbAllCrossSubnetRoutes,PreventQuorum,QuarantineDuration,QuarantineThreshold,QuorumArbitrationTimeMax,QuorumArbitrationTimeMin,QuorumLogFileSize,QuorumTypeValue,RequestReplyTimeout,ResiliencyDefaultPeriod,ResiliencyLevel,ResourceDllDeadlockPeriod,RootMemoryReserved,RouteHistoryLength,S2DBusTypes,S2DCacheDesiredState,S2DCacheFlashReservePercent,S2DCachePageSizeKBytes,S2DEnabled,S2DIOLatencyThreshold,S2DOptimizations,SameSubnetDelay,SameSubnetThreshold,SecurityLevel,SecurityLevelForStorage,SharedVolumeVssWriterOperationTimeout,ShutdownTimeoutInMinutes,UseClientAccessNetworksForSharedVolumes,WitnessDatabaseWriteTimeout,WitnessDynamicWeight,WitnessRestartInterval"
+	if buildNumber >= osversion.LTSC2022 {
+		wmiSelect += ",DetectedCloudPlatform"
+	}
+
+	clusterMIQuery, err := mi.NewQuery(fmt.Sprintf("SELECT %s FROM MSCluster_Cluster", wmiSelect))
 	if err != nil {
 		return fmt.Errorf("failed to create WMI query: %w", err)
 	}
