@@ -172,6 +172,12 @@ func NewCollectorWithReflection(resultType CounterType, object string, instances
 				continue
 			}
 
+			if bufLen == 0 {
+				errs = append(errs, errors.New("GetCounterInfo: buffer length is zero"))
+
+				continue
+			}
+
 			buf := make([]byte, bufLen)
 			if ret := GetCounterInfo(counterHandle, 0, &bufLen, &buf[0]); ret != ErrorSuccess {
 				errs = append(errs, fmt.Errorf("GetCounterInfo: %w", NewPdhError(ret)))
