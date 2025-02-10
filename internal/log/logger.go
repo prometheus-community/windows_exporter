@@ -24,7 +24,7 @@ import (
 
 	"github.com/prometheus-community/windows_exporter/internal/log/eventlog"
 	"github.com/prometheus/common/promslog"
-	"golang.org/x/sys/windows"
+	wineventlog "golang.org/x/sys/windows/svc/eventlog"
 )
 
 // AllowedFile is a settable identifier for the output file that the logger can have.
@@ -51,12 +51,12 @@ func (f *AllowedFile) Set(s string) error {
 	case "stderr":
 		f.w = os.Stderr
 	case "eventlog":
-		handle, err := windows.RegisterEventSource(nil, windows.StringToUTF16Ptr("windows_exporter"))
+		eventLog, err := wineventlog.Open("windows_exporter")
 		if err != nil {
 			return fmt.Errorf("failed to open event log: %w", err)
 		}
 
-		f.w = eventlog.NewEventLogWriter(handle)
+		f.w = eventlog.NewEventLogWriter(eventLog)
 	default:
 		file, err := os.OpenFile(s, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0o200)
 		if err != nil {
