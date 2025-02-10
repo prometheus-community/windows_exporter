@@ -257,6 +257,8 @@ func run() int {
 
 	errCh := make(chan error, 1)
 
+	logger.LogAttrs(ctx, slog.LevelDebug, fmt.Sprintf("listening on %+v", webConfig.WebListenAddresses))
+
 	go func() {
 		if err := web.ListenAndServe(server, webConfig, logger); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			errCh <- err
