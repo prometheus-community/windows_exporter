@@ -126,7 +126,7 @@ func (s *windowsExporterService) Execute(_ []string, r <-chan svc.ChangeRequest,
 
 // logToEventToLog logs a message to the Windows event log.
 func logToEventToLog(eType uint16, msg string) error {
-	eventLog, err := eventlog.Open("windows_exporter")
+	eventLog, err := eventlog.Open(serviceName)
 	if err != nil {
 		return fmt.Errorf("failed to open event log: %w", err)
 	}
@@ -134,15 +134,15 @@ func logToEventToLog(eType uint16, msg string) error {
 		_ = eventLog.Close()
 	}(eventLog)
 
-	p, err := windows.UTF16PtrFromString(msg)
-	if err != nil {
-		return fmt.Errorf("error convert string to UTF-16: %w", err)
+	switch eType {
+	case windows.EVENTLOG_ERROR_TYPE:
+		err = eventLog.Error(102, msg)
+	case windows.EVENTLOG_WARNING_TYPE:
+		err = eventLog.Warning(101, msg)
+	case windows.EVENTLOG_INFORMATION_TYPE:
+		err = eventLog.Info(100, msg)
 	}
 
-	zero := uint16(0)
-	ss := []*uint16{p, &zero, &zero, &zero, &zero, &zero, &zero, &zero, &zero}
-
-	err = windows.ReportEvent(eventLog.Handle, eType, 0, 3299, 0, 9, 0, &ss[0], nil)
 	if err != nil {
 		return fmt.Errorf("error report event: %w", err)
 	}
