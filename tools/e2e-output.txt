@@ -105,7 +105,7 @@ test_alpha_total 42
 # TYPE windows_cs_hostname gauge
 # HELP windows_cs_logical_processors Deprecated: Use windows_cpu_logical_processor instead
 # TYPE windows_cs_logical_processors gauge
-# HELP windows_cs_physical_memory_bytes Deprecated: Use windows_physical_memory_total_bytes instead
+# HELP windows_cs_physical_memory_bytes Deprecated: Use windows_memory_physical_total_bytes instead
 # TYPE windows_cs_physical_memory_bytes gauge
 # HELP windows_exporter_build_info A metric with a constant '1' value labeled by version, revision, branch, goversion from which windows_exporter was built, and the goos and goarch for the build.
 # TYPE windows_exporter_build_info gauge
