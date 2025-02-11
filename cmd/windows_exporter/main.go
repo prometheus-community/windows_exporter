@@ -71,10 +71,6 @@ func run() int {
 			"config.file",
 			"YAML configuration file to use. Values set in this file will be overridden by CLI flags.",
 		).String()
-		insecureSkipVerify = app.Flag(
-			"config.file.insecure-skip-verify",
-			"Skip TLS verification in loading YAML configuration.",
-		).Default("false").Bool()
 		webConfig   = webflag.AddFlags(app, ":9182")
 		metricsPath = app.Flag(
 			"telemetry.path",
@@ -122,11 +118,9 @@ func run() int {
 	// Initialize collectors before loading and parsing CLI arguments
 	collectors := collector.NewWithFlags(app)
 
-	// Load values from configuration file(s). Executable flags must first be parsed, in order
-	// to load the specified file(s).
-	if _, err := app.Parse(os.Args[1:]); err != nil {
+	if err := config.Parse(app, os.Args[1:]); err != nil {
 		//nolint:sloglint // we do not have an logger yet
-		slog.Error("Failed to parse CLI args",
+		slog.Error("Failed to load configuration",
 			slog.Any("err", err),
 		)
 
@@ -145,50 +139,10 @@ func run() int {
 		return 1
 	}
 
-	if *configFile != "" {
-		resolver, err := config.NewResolver(ctx, *configFile, logger, *insecureSkipVerify)
-		if err != nil {
-			logger.Error("could not load config file",
-				slog.Any("err", err),
-			)
-
-			return 1
-		}
-
-		if err = resolver.Bind(app, os.Args[1:]); err != nil {
-			logger.ErrorContext(ctx, "failed to bind configuration",
-				slog.Any("err", err),
-			)
-
-			return 1
-		}
-
-		// NOTE: This is temporary fix for issue #1092, calling kingpin.Parse
-		// twice makes slices flags duplicate its value, this clean up
-		// the first parse before the second call.
-		*webConfig.WebListenAddresses = (*webConfig.WebListenAddresses)[1:]
-
-		// Parse flags once more to include those discovered in configuration file(s).
-		if _, err = app.Parse(os.Args[1:]); err != nil {
-			logger.ErrorContext(ctx, "failed to parse CLI args from YAML file",
-				slog.Any("err", err),
-			)
-
-			return 1
-		}
-
-		logger, err = log.New(logConfig)
-		if err != nil {
-			//nolint:sloglint // we do not have an logger yet
-			slog.Error("failed to create logger",
-				slog.Any("err", err),
-			)
-
-			return 1
-		}
-	}
-
 	logger.LogAttrs(ctx, slog.LevelDebug, "logging has Started")
+	if configFile != nil && *configFile != "" {
+		logger.InfoContext(ctx, "using configuration file: "+*configFile)
+	}
 
 	if err = setPriorityWindows(logger, os.Getpid(), *processPriority); err != nil {
 		logger.Error("failed to set process priority",
