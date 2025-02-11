@@ -163,11 +163,6 @@ func run() int {
 			return 1
 		}
 
-		// NOTE: This is temporary fix for issue #1092, calling kingpin.Parse
-		// twice makes slices flags duplicate its value, this clean up
-		// the first parse before the second call.
-		*webConfig.WebListenAddresses = slices.Compact(*webConfig.WebListenAddresses)
-
 		// Parse flags once more to include those discovered in configuration file(s).
 		if _, err = app.Parse(os.Args[1:]); err != nil {
 			logger.ErrorContext(ctx, "failed to parse CLI args from YAML file",
@@ -176,6 +171,12 @@ func run() int {
 
 			return 1
 		}
+
+		// NOTE: This is temporary fix for issue #1092, calling kingpin.Parse
+		// twice makes slices flags duplicate its value, this clean up
+		// the first parse before the second call.
+		slices.Sort(*webConfig.WebListenAddresses)
+		*webConfig.WebListenAddresses = slices.Clip(slices.Compact(*webConfig.WebListenAddresses))
 
 		logger, err = log.New(logConfig)
 		if err != nil {
