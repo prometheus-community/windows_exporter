@@ -66,7 +66,7 @@ type msClusterResourceGroup struct {
 }
 
 func (c *Collector) buildResourceGroup() error {
-	resourceGroupMIQuery, err := mi.NewQuery("SELECT * FROM MSCluster_ResourceGroup")
+	resourceGroupMIQuery, err := mi.NewQuery("SELECT AutoFailbackType,Characteristics,ColdStartSetting,DefaultOwner,FailbackWindowEnd,FailbackWindowStart,FailoverPeriod,FailoverThreshold,Flags,GroupType,OwnerNode,Priority,ResiliencyPeriod,State FROM MSCluster_ResourceGroup")
 	if err != nil {
 		return fmt.Errorf("failed to create WMI query: %w", err)
 	}

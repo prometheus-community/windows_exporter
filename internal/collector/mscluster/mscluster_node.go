@@ -18,6 +18,7 @@ package mscluster
 import (
 	"fmt"
 
+	"github.com/Microsoft/hcsshim/osversion"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
@@ -66,7 +67,14 @@ type msClusterNode struct {
 }
 
 func (c *Collector) buildNode() error {
-	nodeMIQuery, err := mi.NewQuery("SELECT * FROM MSCluster_Node")
+	buildNumber := osversion.Build()
+
+	wmiSelect := "BuildNumber,Characteristics,DynamicWeight,Flags,MajorVersion,MinorVersion,NeedsPreventQuorum,NodeDrainStatus,NodeHighestVersion,NodeLowestVersion,NodeWeight,State,StatusInformation"
+	if buildNumber >= osversion.LTSC2022 {
+		wmiSelect += ",DetectedCloudPlatform"
+	}
+
+	nodeMIQuery, err := mi.NewQuery(fmt.Sprintf("SELECT %s FROM MSCluster_Node", wmiSelect))
 	if err != nil {
 		return fmt.Errorf("failed to create WMI query: %w", err)
 	}

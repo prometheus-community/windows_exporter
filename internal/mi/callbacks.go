@@ -138,6 +138,10 @@ func (o *OperationUnmarshalCallbacks) InstanceResult(
 
 		element, err := instance.GetElement(miTag)
 		if err != nil {
+			if errors.Is(err, MI_RESULT_NO_SUCH_PROPERTY) {
+				continue
+			}
+
 			o.errCh <- fmt.Errorf("failed to get element %s: %w", miTag, err)
 
 			return 0

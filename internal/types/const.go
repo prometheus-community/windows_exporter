@@ -16,10 +16,5 @@
 package types
 
 const (
-	BuildNumberWindowsServer2025 uint32 = 26100
-	BuildNumberWindowsServer2022 uint32 = 20348
-	BuildNumberWindowsServer2019 uint32 = 17763
-	BuildNumberWindowsServer2016 uint32 = 14393
-
 	Namespace = "windows"
 )

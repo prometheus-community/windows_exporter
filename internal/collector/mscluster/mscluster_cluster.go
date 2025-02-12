@@ -18,6 +18,7 @@ package mscluster
 import (
 	"fmt"
 
+	"github.com/Microsoft/hcsshim/osversion"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
@@ -192,7 +193,14 @@ type msClusterCluster struct {
 }
 
 func (c *Collector) buildCluster() error {
-	clusterMIQuery, err := mi.NewQuery("SELECT * FROM MSCluster_Cluster")
+	buildNumber := osversion.Build()
+
+	wmiSelect := "AddEvictDelay,AdminAccessPoint,AutoAssignNodeSite,AutoBalancerLevel,AutoBalancerMode,BackupInProgress,BlockCacheSize,ClusSvcHangTimeout,ClusSvcRegroupOpeningTimeout,ClusSvcRegroupPruningTimeout,ClusSvcRegroupStageTimeout,ClusSvcRegroupTickInMilliseconds,ClusterEnforcedAntiAffinity,ClusterFunctionalLevel,ClusterGroupWaitDelay,ClusterLogLevel,ClusterLogSize,ClusterUpgradeVersion,CrossSiteDelay,CrossSiteThreshold,CrossSubnetDelay,CrossSubnetThreshold,CsvBalancer,DatabaseReadWriteMode,DefaultNetworkRole,DisableGroupPreferredOwnerRandomization,DrainOnShutdown,DynamicQuorumEnabled,EnableSharedVolumes,FixQuorum,GracePeriodEnabled,GracePeriodTimeout,GroupDependencyTimeout,HangRecoveryAction,IgnorePersistentStateOnStartup,LogResourceControls,LowerQuorumPriorityNodeId,MessageBufferLength,MinimumNeverPreemptPriority,MinimumPreemptorPriority,NetftIPSecEnabled,PlacementOptions,PlumbAllCrossSubnetRoutes,PreventQuorum,QuarantineDuration,QuarantineThreshold,QuorumArbitrationTimeMax,QuorumArbitrationTimeMin,QuorumLogFileSize,QuorumTypeValue,RequestReplyTimeout,ResiliencyDefaultPeriod,ResiliencyLevel,ResourceDllDeadlockPeriod,RootMemoryReserved,RouteHistoryLength,S2DBusTypes,S2DCacheDesiredState,S2DCacheFlashReservePercent,S2DCachePageSizeKBytes,S2DEnabled,S2DIOLatencyThreshold,S2DOptimizations,SameSubnetDelay,SameSubnetThreshold,SecurityLevel,SharedVolumeVssWriterOperationTimeout,ShutdownTimeoutInMinutes,UseClientAccessNetworksForSharedVolumes,WitnessDatabaseWriteTimeout,WitnessDynamicWeight,WitnessRestartInterval"
+	if buildNumber >= osversion.LTSC2022 {
+		wmiSelect += ",DetectManagedEvents,SecurityLevelForStorage,MaxNumberOfNodes,DetectManagedEventsThreshold,DetectedCloudPlatform"
+	}
+
+	clusterMIQuery, err := mi.NewQuery(fmt.Sprintf("SELECT %s FROM MSCluster_Cluster", wmiSelect))
 	if err != nil {
 		return fmt.Errorf("failed to create WMI query: %w", err)
 	}
@@ -853,27 +861,6 @@ func (c *Collector) collectCluster(ch chan<- prometheus.Metric) error {
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.clusterDetectedCloudPlatform,
-			prometheus.GaugeValue,
-			float64(v.DetectedCloudPlatform),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterDetectManagedEvents,
-			prometheus.GaugeValue,
-			float64(v.DetectManagedEvents),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterDetectManagedEventsThreshold,
-			prometheus.GaugeValue,
-			float64(v.DetectManagedEventsThreshold),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
 			c.clusterDisableGroupPreferredOwnerRandomization,
 			prometheus.GaugeValue,
 			float64(v.DisableGroupPreferredOwnerRandomization),
@@ -954,13 +941,6 @@ func (c *Collector) collectCluster(ch chan<- prometheus.Metric) error {
 			c.clusterLowerQuorumPriorityNodeId,
 			prometheus.GaugeValue,
 			float64(v.LowerQuorumPriorityNodeId),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterMaxNumberOfNodes,
-			prometheus.GaugeValue,
-			float64(v.MaxNumberOfNodes),
 			v.Name,
 		)
 
@@ -1168,13 +1148,6 @@ func (c *Collector) collectCluster(ch chan<- prometheus.Metric) error {
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.clusterSecurityLevelForStorage,
-			prometheus.GaugeValue,
-			float64(v.SecurityLevelForStorage),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
 			c.clusterSharedVolumeVssWriterOperationTimeout,
 			prometheus.GaugeValue,
 			float64(v.SharedVolumeVssWriterOperationTimeout),
@@ -1215,6 +1188,43 @@ func (c *Collector) collectCluster(ch chan<- prometheus.Metric) error {
 			float64(v.WitnessRestartInterval),
 			v.Name,
 		)
+
+		if osversion.Build() >= osversion.LTSC2022 {
+			ch <- prometheus.MustNewConstMetric(
+				c.clusterDetectManagedEvents,
+				prometheus.GaugeValue,
+				float64(v.DetectManagedEvents),
+				v.Name,
+			)
+
+			ch <- prometheus.MustNewConstMetric(
+				c.clusterDetectManagedEventsThreshold,
+				prometheus.GaugeValue,
+				float64(v.DetectManagedEventsThreshold),
+				v.Name,
+			)
+
+			ch <- prometheus.MustNewConstMetric(
+				c.clusterSecurityLevelForStorage,
+				prometheus.GaugeValue,
+				float64(v.SecurityLevelForStorage),
+				v.Name,
+			)
+
+			ch <- prometheus.MustNewConstMetric(
+				c.clusterMaxNumberOfNodes,
+				prometheus.GaugeValue,
+				float64(v.MaxNumberOfNodes),
+				v.Name,
+			)
+
+			ch <- prometheus.MustNewConstMetric(
+				c.clusterDetectedCloudPlatform,
+				prometheus.GaugeValue,
+				float64(v.DetectedCloudPlatform),
+				v.Name,
+			)
+		}
 	}
 
 	return nil
