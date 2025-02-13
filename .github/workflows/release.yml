@@ -33,13 +33,14 @@ jobs:
           go-version-file: 'go.mod'
 
       - name: Install WiX
-        run: dotnet tool install --global wix
+        run: |
+          dotnet tool install --global wix --version 5.0.2
 
       - name: Install WiX extensions
         run: |
-          wix extension add -g WixToolset.Util.wixext
-          wix extension add -g WixToolset.Ui.wixext
-          wix extension add -g WixToolset.Firewall.wixext
+          wix extension add -g WixToolset.Util.wixext/5.0.2
+          wix extension add -g WixToolset.Ui.wixext/5.0.2
+          wix extension add -g WixToolset.Firewall.wixext/5.0.2
 
       - name: Install Build deps
         run: |
