@@ -69,6 +69,23 @@ Show volume usage (%)
 100.0 - 100 * (windows_logical_disk_free_bytes{instance="localhost", volume="C:"} / windows_logical_disk_size_bytes{instance="localhost", volume="C:"})
 ```
 
+Disk Activity
+```promql
+  (
+      rate(windows_logical_disk_read_seconds_total[2m])
+    +
+      rate(windows_logical_disk_write_seconds_total[2m])
+  )
+/
+  (
+      rate(windows_logical_disk_read_seconds_total[2m])
+    +
+      rate(windows_logical_disk_write_seconds_total[2m])
+    +
+      rate(windows_logical_disk_idle_seconds_total[2m])
+  )
+```
+
 ## Alerting examples
 **prometheus.rules**
 ```yaml
