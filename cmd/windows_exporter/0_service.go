@@ -56,8 +56,7 @@ var IsService = func() bool {
 
 	isService, err := svc.IsWindowsService()
 	if err != nil {
-		//nolint:gosec
-		_ = os.WriteFile("C:\\Program Files\\windows_exporter\\start-service.error.log", []byte(fmt.Sprintf("failed to detect service: %v", err)), 0o644)
+		logToFile(fmt.Sprintf("failed to detect service: %v", err))
 
 		return false
 	}
@@ -70,7 +69,9 @@ var IsService = func() bool {
 		go func() {
 			err := svc.Run(serviceName, &windowsExporterService{})
 			if err != nil {
-				_ = logToEventToLog(windows.EVENTLOG_ERROR_TYPE, fmt.Sprintf("failed to start service: %v", err))
+				if logErr := logToEventToLog(windows.EVENTLOG_ERROR_TYPE, fmt.Sprintf("failed to start service: %v", err)); logErr != nil {
+					logToFile(fmt.Sprintf("failed to start service: %v", err))
+				}
 			}
 
 			serviceManagerFinishedCh <- struct{}{}
@@ -78,8 +79,7 @@ var IsService = func() bool {
 	}()
 
 	if err := logToEventToLog(windows.EVENTLOG_INFORMATION_TYPE, "attempting to start exporter service"); err != nil {
-		//nolint:gosec
-		_ = os.WriteFile("C:\\Program Files\\windows_exporter\\start-service.error.log", []byte(fmt.Sprintf("failed sent log to event log: %v", err)), 0o644)
+		logToFile(fmt.Sprintf("failed sent log to event log: %v", err))
 
 		exitCodeCh <- 2
 	}
@@ -148,4 +148,11 @@ func logToEventToLog(eType uint16, msg string) error {
 	}
 
 	return nil
+}
+
+func logToFile(msg string) {
+	if file, err := os.CreateTemp("", "windows_exporter.service.error.log"); err == nil {
+		_, _ = file.WriteString(msg)
+		_ = file.Close()
+	}
 }
