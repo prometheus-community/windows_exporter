@@ -30,7 +30,6 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -208,9 +207,9 @@ windows_performancecounter_processor_information_processor_time\{core="0,0",stat
 			promhttp.HandlerFor(registry, promhttp.HandlerOpts{ErrorHandling: promhttp.ContinueOnError}).ServeHTTP(rw, &http.Request{})
 			got := rw.Body.String()
 
-			assert.NotEmpty(t, got)
+			require.NotEmpty(t, got)
 			require.NotEmpty(t, tc.expectedMetrics)
-			assert.Regexp(t, tc.expectedMetrics, got)
+			require.Regexp(t, tc.expectedMetrics, got)
 		})
 	}
 }

@@ -28,7 +28,7 @@ type Object struct {
 	Type          pdh.CounterType `json:"type"           yaml:"type"`
 	Instances     []string        `json:"instances"      yaml:"instances"`
 	Counters      []Counter       `json:"counters"       yaml:"counters"`
-	InstanceLabel string          `json:"instance_label" yaml:"instance_label"` //nolint:tagliatelle
+	InstanceLabel string          `json:"instance_label" yaml:"instance_label"`
 
 	collector      *pdh.Collector
 	perfDataObject any

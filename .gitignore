@@ -4,9 +4,10 @@ VERSION
 *.un~
 output/
 .vscode
-.idea
 *.syso
 installer/*.msi
 installer/*.wixpdb
 local/
-!.idea/inspectionProfiles/Project_Default.xml
+/.idea/*
+!/.idea/inspectionProfiles/Project_Default.xml
+!/.idea/copyright/

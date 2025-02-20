@@ -27,8 +27,8 @@ import (
 	"sync"
 	"unsafe"
 
-	"github.com/Microsoft/hcsshim/osversion"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
+	"github.com/prometheus-community/windows_exporter/internal/osversion"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows"
 )
