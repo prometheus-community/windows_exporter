@@ -39,7 +39,7 @@ const Name = "process"
 type Config struct {
 	ProcessInclude      *regexp.Regexp `yaml:"process_include"`
 	ProcessExclude      *regexp.Regexp `yaml:"process_exclude"`
-	EnableWorkerProcess bool           `yaml:"enable_iis_worker_process"` //nolint:tagliatelle
+	EnableWorkerProcess bool           `yaml:"enable_iis_worker_process"`
 }
 
 //nolint:gochecknoglobals

@@ -33,7 +33,12 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-const Name = "net"
+const (
+	Name = "net"
+
+	subCollectorMetrics      = "metrics"
+	subCollectorNICAddresses = "nic_addresses"
+)
 
 type Config struct {
 	NicExclude        *regexp.Regexp `yaml:"nic_exclude"`
@@ -46,8 +51,8 @@ var ConfigDefaults = Config{
 	NicExclude: types.RegExpEmpty,
 	NicInclude: types.RegExpAny,
 	CollectorsEnabled: []string{
-		"metrics",
-		"nic_addresses",
+		subCollectorMetrics,
+		subCollectorNICAddresses,
 	},
 }
 
@@ -157,14 +162,13 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
-	var err error
-
-	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "Network Interface", pdh.InstancesAll)
-	if err != nil {
-		return fmt.Errorf("failed to create Network Interface collector: %w", err)
+	for _, collector := range c.config.CollectorsEnabled {
+		if !slices.Contains([]string{subCollectorMetrics, subCollectorNICAddresses}, collector) {
+			return fmt.Errorf("unknown collector: %s", collector)
+		}
 	}
 
-	if slices.Contains(c.config.CollectorsEnabled, "addresses") {
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorNICAddresses) {
 		logger.Info("nic/addresses collector is in an experimental state! The configuration and metrics may change in future. Please report any issues.",
 			slog.String("collector", Name),
 		)
@@ -261,6 +265,13 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 
+	var err error
+
+	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "Network Interface", pdh.InstancesAll)
+	if err != nil {
+		return fmt.Errorf("failed to create Network Interface collector: %w", err)
+	}
+
 	return nil
 }
 
@@ -269,13 +280,13 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	errs := make([]error, 0, 2)
 
-	if slices.Contains(c.config.CollectorsEnabled, "metrics") {
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorMetrics) {
 		if err := c.collect(ch); err != nil {
 			errs = append(errs, fmt.Errorf("failed collecting metrics: %w", err))
 		}
 	}
 
-	if slices.Contains(c.config.CollectorsEnabled, "nic_addresses") {
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorNICAddresses) {
 		if err := c.collectNICAddresses(ch); err != nil {
 			errs = append(errs, fmt.Errorf("failed collecting net addresses: %w", err))
 		}
