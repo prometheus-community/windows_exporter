@@ -125,13 +125,6 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		}
 	}
 
-	var err error
-
-	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "Windows Time Service", nil)
-	if err != nil {
-		return fmt.Errorf("failed to create Windows Time Service collector: %w", err)
-	}
-
 	c.currentTime = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "current_timestamp_seconds"),
 		"OperatingSystem.LocalDateTime",
@@ -180,6 +173,13 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		nil,
 		nil,
 	)
+
+	var err error
+
+	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "Windows Time Service", nil)
+	if err != nil {
+		return fmt.Errorf("failed to create Windows Time Service collector: %w", err)
+	}
 
 	return nil
 }
