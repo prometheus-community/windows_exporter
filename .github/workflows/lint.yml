@@ -4,23 +4,11 @@ name: Linting
 # have been changed.
 on:
   push:
-    paths:
-    - "go.mod"
-    - "go.sum"
-    - "**.go"
-    - ".github/workflows/lint.yml"
-    - "tools/e2e-output.txt"
     branches:
       - master
       - next
       - main
   pull_request:
-    paths:
-    - "go.mod"
-    - "go.sum"
-    - "**.go"
-    - ".github/workflows/lint.yml"
-    - "tools/e2e-output.txt"
     branches:
       - master
       - next
