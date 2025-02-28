@@ -139,13 +139,6 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 
 	c.logger = logger.With(slog.String("collector", Name))
 
-	var err error
-
-	c.perfDataCollectorTerminalServicesSession, err = pdh.NewCollector[perfDataCounterValuesTerminalServicesSession](pdh.CounterTypeRaw, "Terminal Services Session", pdh.InstancesAll)
-	if err != nil {
-		return fmt.Errorf("failed to create Terminal Services Session collector: %w", err)
-	}
-
 	c.connectionBrokerEnabled = isConnectionBrokerServer(miSession)
 
 	if c.connectionBrokerEnabled {
@@ -250,9 +243,16 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 		nil,
 	)
 
+	var err error
+
 	c.hServer, err = wtsapi32.WTSOpenServer("")
 	if err != nil {
 		return fmt.Errorf("failed to open WTS server: %w", err)
+	}
+
+	c.perfDataCollectorTerminalServicesSession, err = pdh.NewCollector[perfDataCounterValuesTerminalServicesSession](pdh.CounterTypeRaw, "Terminal Services Session", pdh.InstancesAll)
+	if err != nil {
+		return fmt.Errorf("failed to create Terminal Services Session collector: %w", err)
 	}
 
 	return nil
