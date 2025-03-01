@@ -23,6 +23,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Microsoft/hcsshim/osversion"
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/headers/kernel32"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
@@ -57,6 +58,8 @@ type Collector struct {
 
 	perfDataCollector *pdh.Collector
 	perfDataObject    []perfDataCounterValues
+
+	ppbCounterPresent bool
 
 	currentTime                      *prometheus.Desc
 	timezone                         *prometheus.Desc
@@ -124,6 +127,9 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 			return fmt.Errorf("unknown collector: %s", collector)
 		}
 	}
+
+	// https://github.com/prometheus-community/windows_exporter/issues/1891
+	c.ppbCounterPresent = osversion.Build() >= osversion.LTSC2019
 
 	c.currentTime = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "current_timestamp_seconds"),
@@ -232,13 +238,18 @@ func (c *Collector) collectTime(ch chan<- prometheus.Metric) error {
 func (c *Collector) collectNTP(ch chan<- prometheus.Metric) error {
 	err := c.perfDataCollector.Collect(&c.perfDataObject)
 	if err != nil {
-		return fmt.Errorf("failed to collect VM Memory metrics: %w", err)
+		return fmt.Errorf("failed to collect time metrics: %w", err)
+	}
+
+	clockFrequencyAdjustmentPPBTotal := c.perfDataObject[0].ClockFrequencyAdjustmentPPBTotal
+	if !c.ppbCounterPresent {
+		clockFrequencyAdjustmentPPBTotal = c.perfDataObject[0].ClockFrequencyAdjustmentTotal
 	}
 
 	ch <- prometheus.MustNewConstMetric(
 		c.clockFrequencyAdjustmentPPBTotal,
 		prometheus.CounterValue,
-		c.perfDataObject[0].ClockFrequencyAdjustmentPPBTotal,
+		clockFrequencyAdjustmentPPBTotal,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.computedTimeOffset,

@@ -16,7 +16,8 @@
 package time
 
 type perfDataCounterValues struct {
-	ClockFrequencyAdjustmentPPBTotal float64 `perfdata:"Clock Frequency Adjustment (ppb)"`
+	ClockFrequencyAdjustmentTotal    float64 `perfdata:"Clock Frequency Adjustment"`
+	ClockFrequencyAdjustmentPPBTotal float64 `perfdata:"Clock Frequency Adjustment (ppb)" perfdata_min_build:"17763"`
 	ComputedTimeOffset               float64 `perfdata:"Computed Time Offset"`
 	NTPClientTimeSourceCount         float64 `perfdata:"NTP Client Time Source Count"`
 	NTPRoundTripDelay                float64 `perfdata:"NTP Roundtrip Delay"`

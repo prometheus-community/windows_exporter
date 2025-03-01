@@ -20,10 +20,12 @@ import (
 	"fmt"
 	"reflect"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"unsafe"
 
+	"github.com/Microsoft/hcsshim/osversion"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows"
@@ -152,6 +154,16 @@ func NewCollectorWithReflection(resultType CounterType, object string, instances
 			var counterHandle pdhCounterHandle
 
 			if ret := AddEnglishCounter(handle, counterPath, 0, &counterHandle); ret != ErrorSuccess {
+				if ret == CstatusNoCounter {
+					if minOSBuildTag, ok := f.Tag.Lookup("perfdata_min_build"); ok {
+						if minOSBuild, err := strconv.Atoi(minOSBuildTag); err == nil {
+							if uint16(minOSBuild) > osversion.Build() {
+								continue
+							}
+						}
+					}
+				}
+
 				errs = append(errs, fmt.Errorf("failed to add counter %s: %w", counterPath, NewPdhError(ret)))
 
 				continue
