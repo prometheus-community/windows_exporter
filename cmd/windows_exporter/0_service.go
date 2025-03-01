@@ -14,8 +14,11 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
+	"strings"
+	"unsafe"
 
 	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/svc"
@@ -54,7 +57,7 @@ var (
 var IsService = func() bool {
 	var err error
 
-	isService, err := svc.IsWindowsService()
+	isService, err := isWindowsServiceInsideContainer()
 	if err != nil {
 		logToFile(fmt.Sprintf("failed to detect service: %v", err))
 
@@ -155,4 +158,49 @@ func logToFile(msg string) {
 		_, _ = file.WriteString(msg)
 		_ = file.Close()
 	}
+}
+
+// isWindowsServiceInsideContainer is a clone of "golang.org/x/sys/windows/svc:IsWindowsService", but with a fix
+// for Windows containers.
+// Go cloned the .NET implementation of this function, which has since
+// been patched to support Windows containers, which don't use Session ID 0 for services.
+// https://github.com/dotnet/runtime/pull/74188
+// This function can be replaced with go's once go brings in the fix.
+//
+// Copyright 2023-present Datadog, Inc.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// https://github.com/DataDog/datadog-agent/blob/46740e82ef40a04c4be545ed8c16a4b0d1f046cf/pkg/util/winutil/servicemain/servicemain.go#L128
+func isWindowsServiceInsideContainer() (bool, error) {
+	var currentProcess windows.PROCESS_BASIC_INFORMATION
+	infoSize := uint32(unsafe.Sizeof(currentProcess))
+
+	err := windows.NtQueryInformationProcess(windows.CurrentProcess(), windows.ProcessBasicInformation, unsafe.Pointer(&currentProcess), infoSize, &infoSize)
+	if err != nil {
+		return false, err
+	}
+
+	var parentProcess *windows.SYSTEM_PROCESS_INFORMATION
+
+	for infoSize = uint32((unsafe.Sizeof(*parentProcess) + unsafe.Sizeof(uintptr(0))) * 1024); ; {
+		parentProcess = (*windows.SYSTEM_PROCESS_INFORMATION)(unsafe.Pointer(&make([]byte, infoSize)[0]))
+
+		err = windows.NtQuerySystemInformation(windows.SystemProcessInformation, unsafe.Pointer(parentProcess), infoSize, &infoSize)
+		if err == nil {
+			break
+		} else if !errors.Is(err, windows.STATUS_INFO_LENGTH_MISMATCH) {
+			return false, err
+		}
+	}
+
+	for ; ; parentProcess = (*windows.SYSTEM_PROCESS_INFORMATION)(unsafe.Pointer(uintptr(unsafe.Pointer(parentProcess)) + uintptr(parentProcess.NextEntryOffset))) {
+		if parentProcess.UniqueProcessID == currentProcess.InheritedFromUniqueProcessId {
+			return strings.EqualFold("services.exe", parentProcess.ImageName.String()), nil
+		}
+
+		if parentProcess.NextEntryOffset == 0 {
+			break
+		}
+	}
+
+	return false, nil
 }
