@@ -63,6 +63,7 @@ type Collector struct {
 
 	currentTime                      *prometheus.Desc
 	timezone                         *prometheus.Desc
+	clockFrequencyAdjustmentTotal    *prometheus.Desc
 	clockFrequencyAdjustmentPPBTotal *prometheus.Desc
 	computedTimeOffset               *prometheus.Desc
 	ntpClientTimeSourceCount         *prometheus.Desc
@@ -143,9 +144,15 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		[]string{"timezone"},
 		nil,
 	)
+	c.clockFrequencyAdjustmentTotal = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "clock_frequency_adjustment_total"),
+		"This value reflects the adjustment made to the local system clock frequency by W32Time in nominal clock units. This counter helps visualize the finer adjustments being made by W32time to synchronize the local clock.",
+		nil,
+		nil,
+	)
 	c.clockFrequencyAdjustmentPPBTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "clock_frequency_adjustment_ppb_total"),
-		"Total adjustment made to the local system clock frequency by W32Time in Parts Per Billion (PPB) units.",
+		"This value reflects the adjustment made to the local system clock frequency by W32Time in Parts Per Billion (PPB) units. 1 PPB adjustment imples the system clock was adjusted at a rate of 1 nanosecond per second. The smallest possible adjustment can vary and can be expected to be in the order of 100&apos;s of PPB. This counter helps visualize the finer actions being taken by W32time to synchronize the local clock.",
 		nil,
 		nil,
 	)
@@ -246,11 +253,14 @@ func (c *Collector) collectNTP(ch chan<- prometheus.Metric) error {
 		clockFrequencyAdjustmentPPBTotal = c.perfDataObject[0].ClockFrequencyAdjustmentTotal
 	}
 
-	ch <- prometheus.MustNewConstMetric(
-		c.clockFrequencyAdjustmentPPBTotal,
-		prometheus.CounterValue,
-		clockFrequencyAdjustmentPPBTotal,
-	)
+	if c.ppbCounterPresent {
+		ch <- prometheus.MustNewConstMetric(
+			c.clockFrequencyAdjustmentPPBTotal,
+			prometheus.GaugeValue,
+			clockFrequencyAdjustmentPPBTotal,
+		)
+	}
+
 	ch <- prometheus.MustNewConstMetric(
 		c.computedTimeOffset,
 		prometheus.GaugeValue,

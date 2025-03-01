@@ -153,6 +153,7 @@ func NewCollectorWithReflection(resultType CounterType, object string, instances
 
 			var counterHandle pdhCounterHandle
 
+			//nolint:nestif
 			if ret := AddEnglishCounter(handle, counterPath, 0, &counterHandle); ret != ErrorSuccess {
 				if ret == CstatusNoCounter {
 					if minOSBuildTag, ok := f.Tag.Lookup("perfdata_min_build"); ok {
