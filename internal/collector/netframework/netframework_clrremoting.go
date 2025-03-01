@@ -26,37 +26,37 @@ import (
 
 func (c *Collector) buildClrRemoting() {
 	c.channels = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "channels_total"),
+		prometheus.BuildFQName(types.Namespace, Name, collectorClrRemoting+"_channels_total"),
 		"Displays the total number of remoting channels registered across all application domains since application started.",
 		[]string{"process"},
 		nil,
 	)
 	c.contextBoundClassesLoaded = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "context_bound_classes_loaded"),
+		prometheus.BuildFQName(types.Namespace, Name, collectorClrRemoting+"_context_bound_classes_loaded"),
 		"Displays the current number of context-bound classes that are loaded.",
 		[]string{"process"},
 		nil,
 	)
 	c.contextBoundObjects = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "context_bound_objects_total"),
+		prometheus.BuildFQName(types.Namespace, Name, collectorClrRemoting+"_context_bound_objects_total"),
 		"Displays the total number of context-bound objects allocated.",
 		[]string{"process"},
 		nil,
 	)
 	c.contextProxies = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "context_proxies_total"),
+		prometheus.BuildFQName(types.Namespace, Name, collectorClrRemoting+"_context_proxies_total"),
 		"Displays the total number of remoting proxy objects in this process since it started.",
 		[]string{"process"},
 		nil,
 	)
 	c.contexts = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "contexts"),
+		prometheus.BuildFQName(types.Namespace, Name, collectorClrRemoting+"_contexts"),
 		"Displays the current number of remoting contexts in the application.",
 		[]string{"process"},
 		nil,
 	)
 	c.totalRemoteCalls = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "remote_calls_total"),
+		prometheus.BuildFQName(types.Namespace, Name, collectorClrRemoting+"_remote_calls_total"),
 		"Displays the total number of remote procedure calls invoked since the application started.",
 		[]string{"process"},
 		nil,

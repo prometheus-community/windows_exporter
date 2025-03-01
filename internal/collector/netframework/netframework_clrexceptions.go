@@ -26,25 +26,25 @@ import (
 
 func (c *Collector) buildClrExceptions() {
 	c.numberOfExceptionsThrown = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "exceptions_thrown_total"),
+		prometheus.BuildFQName(types.Namespace, Name, collectorClrExceptions+"_exceptions_thrown_total"),
 		"Displays the total number of exceptions thrown since the application started. This includes both .NET exceptions and unmanaged exceptions that are converted into .NET exceptions.",
 		[]string{"process"},
 		nil,
 	)
 	c.numberOfFilters = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "exceptions_filters_total"),
+		prometheus.BuildFQName(types.Namespace, Name, collectorClrExceptions+"_exceptions_filters_total"),
 		"Displays the total number of .NET exception filters executed. An exception filter evaluates regardless of whether an exception is handled.",
 		[]string{"process"},
 		nil,
 	)
 	c.numberOfFinally = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "exceptions_finallys_total"),
+		prometheus.BuildFQName(types.Namespace, Name, collectorClrExceptions+"_exceptions_finallys_total"),
 		"Displays the total number of finally blocks executed. Only the finally blocks executed for an exception are counted; finally blocks on normal code paths are not counted by this counter.",
 		[]string{"process"},
 		nil,
 	)
 	c.throwToCatchDepth = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "throw_to_catch_depth_total"),
+		prometheus.BuildFQName(types.Namespace, Name, collectorClrExceptions+"_throw_to_catch_depth_total"),
 		"Displays the total number of stack frames traversed, from the frame that threw the exception to the frame that handled the exception.",
 		[]string{"process"},
 		nil,

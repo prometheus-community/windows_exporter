@@ -26,19 +26,19 @@ import (
 
 func (c *Collector) buildClrInterop() {
 	c.numberOfCCWs = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "com_callable_wrappers_total"),
+		prometheus.BuildFQName(types.Namespace, Name, collectorClrInterop+"_com_callable_wrappers_total"),
 		"Displays the current number of COM callable wrappers (CCWs). A CCW is a proxy for a managed object being referenced from an unmanaged COM client.",
 		[]string{"process"},
 		nil,
 	)
 	c.numberOfMarshalling = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "interop_marshalling_total"),
+		prometheus.BuildFQName(types.Namespace, Name, collectorClrInterop+"_interop_marshalling_total"),
 		"Displays the total number of times arguments and return values have been marshaled from managed to unmanaged code, and vice versa, since the application started.",
 		[]string{"process"},
 		nil,
 	)
 	c.numberOfStubs = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "interop_stubs_created_total"),
+		prometheus.BuildFQName(types.Namespace, Name, collectorClrInterop+"_interop_stubs_created_total"),
 		"Displays the current number of stubs created by the common language runtime. Stubs are responsible for marshaling arguments and return values from managed to unmanaged code, and vice versa, during a COM interop call or a platform invoke call.",
 		[]string{"process"},
 		nil,
