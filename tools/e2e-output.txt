@@ -427,8 +427,10 @@ windows_service_state{name="Themes",state="stopped"} 0
 # TYPE windows_tcp_segments_total counter
 # HELP windows_textfile_mtime_seconds Unixtime mtime of textfiles successfully read.
 # TYPE windows_textfile_mtime_seconds gauge
-# HELP windows_time_clock_frequency_adjustment_ppb_total Total adjustment made to the local system clock frequency by W32Time in Parts Per Billion (PPB) units.
-# TYPE windows_time_clock_frequency_adjustment_ppb_total counter
+# HELP windows_time_clock_frequency_adjustment This value reflects the adjustment made to the local system clock frequency by W32Time in nominal clock units. This counter helps visualize the finer adjustments being made by W32time to synchronize the local clock.
+# TYPE windows_time_clock_frequency_adjustment gauge
+# HELP windows_time_clock_frequency_adjustment_ppb This value reflects the adjustment made to the local system clock frequency by W32Time in Parts Per Billion (PPB) units. 1 PPB adjustment imples the system clock was adjusted at a rate of 1 nanosecond per second. The smallest possible adjustment can vary and can be expected to be in the order of 100&apos;s of PPB. This counter helps visualize the finer actions being taken by W32time to synchronize the local clock.
+# TYPE windows_time_clock_frequency_adjustment_ppb gauge
 # HELP windows_time_computed_time_offset_seconds Absolute time offset between the system clock and the chosen time source, in seconds
 # TYPE windows_time_computed_time_offset_seconds gauge
 # HELP windows_time_current_timestamp_seconds OperatingSystem.LocalDateTime
@@ -451,4 +453,3 @@ windows_service_state{name="Themes",state="stopped"} 0
 # TYPE windows_udp_datagram_received_total gauge
 # HELP windows_udp_datagram_sent_total UDP datagrams are sent from the entity
 # TYPE windows_udp_datagram_sent_total counter
-
