@@ -57,7 +57,7 @@ var (
 var IsService = func() bool {
 	var err error
 
-	isService, err := isWindowsServiceInsideContainer()
+	isService, err := isWindowsService()
 	if err != nil {
 		logToFile(fmt.Sprintf("failed to detect service: %v", err))
 
@@ -163,7 +163,7 @@ func logToFile(msg string) {
 	}
 }
 
-// isWindowsServiceInsideContainer is a clone of "golang.org/x/sys/windows/svc:IsWindowsService", but with a fix
+// isWindowsService is a clone of "golang.org/x/sys/windows/svc:IsWindowsService", but with a fix
 // for Windows containers.
 // Go cloned the .NET implementation of this function, which has since
 // been patched to support Windows containers, which don't use Session ID 0 for services.
@@ -173,7 +173,7 @@ func logToFile(msg string) {
 // Copyright 2023-present Datadog, Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // https://github.com/DataDog/datadog-agent/blob/46740e82ef40a04c4be545ed8c16a4b0d1f046cf/pkg/util/winutil/servicemain/servicemain.go#L128
-func isWindowsServiceInsideContainer() (bool, error) {
+func isWindowsService() (bool, error) {
 	var currentProcess windows.PROCESS_BASIC_INFORMATION
 	infoSize := uint32(unsafe.Sizeof(currentProcess))
 
