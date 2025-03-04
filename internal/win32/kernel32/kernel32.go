@@ -27,6 +27,8 @@ var (
 
 	procGetDynamicTimeZoneInformationSys = kernel32.NewProc("GetDynamicTimeZoneInformation")
 	kernelLocalFileTimeToFileTime        = kernel32.NewProc("LocalFileTimeToFileTime")
+	procOpenJobObject                    = kernel32.NewProc("OpenJobObjectW")
+	procIsProcessInJob                   = kernel32.NewProc("IsProcessInJob")
 )
 
 // SYSTEMTIME contains a date and time.
