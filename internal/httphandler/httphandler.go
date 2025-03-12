@@ -22,7 +22,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/prometheus-community/windows_exporter/pkg/collector"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
@@ -82,8 +81,7 @@ func New(logger *slog.Logger, metricCollectors *collector.Collection, options *O
 
 func (c *MetricsHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	logger := c.logger.With(
-		slog.Any("remote", r.RemoteAddr),
-		slog.Any("correlation_id", uuid.New().String()),
+		slog.String("remote", r.RemoteAddr),
 	)
 
 	scrapeTimeout := c.getScrapeTimeout(logger, r)

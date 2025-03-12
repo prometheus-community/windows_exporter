@@ -22,6 +22,7 @@ env:
 jobs:
   build:
     runs-on: windows-2022
+    environment: build
     steps:
       - uses: actions/checkout@v4
         with:
@@ -32,13 +33,14 @@ jobs:
           go-version-file: 'go.mod'
 
       - name: Install WiX
-        run: dotnet tool install --global wix
+        run: |
+          dotnet tool install --global wix --version 5.0.2
 
       - name: Install WiX extensions
         run: |
-          wix extension add -g WixToolset.Util.wixext
-          wix extension add -g WixToolset.Ui.wixext
-          wix extension add -g WixToolset.Firewall.wixext
+          wix extension add -g WixToolset.Util.wixext/5.0.2
+          wix extension add -g WixToolset.Ui.wixext/5.0.2
+          wix extension add -g WixToolset.Firewall.wixext/5.0.2
 
       - name: Install Build deps
         run: |
@@ -68,6 +70,40 @@ jobs:
 
           Get-ChildItem -Path output
 
+      - name: Sign build artifacts
+        if: ${{ (github.event_name != 'pull_request' && github.repository == 'prometheus-community/windows_exporter') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == 'prometheus-community/windows_exporter') }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $Version = Get-Content VERSION
+
+          $b64      = $env:CODE_SIGN_KEY
+          $filename = 'windows_exporter_CodeSign.pfx'
+
+          $bytes = [Convert]::FromBase64String($b64)
+          [IO.File]::WriteAllBytes($filename, $bytes)
+
+          $basePath = "C:\Program Files (x86)\Windows Kits\10\bin"
+          $latestSigntool = Get-ChildItem -Path $basePath -Directory |
+          Where-Object { $_.Name -match "^\d+\.\d+\.\d+\.\d+$" } |
+          Sort-Object { [Version]$_.Name } -Descending |
+          Select-Object -First 1 |
+          ForEach-Object { Join-Path $_.FullName "x64\signtool.exe" }
+
+          if (Test-Path $latestSigntool) {
+            Write-Output $latestSigntool
+          } else {
+            Write-Output "signtool.exe not found"
+          }
+
+          foreach($Arch in "amd64", "arm64") {
+            & $latestSigntool sign /v /tr "http://timestamp.digicert.com" /d "Prometheus exporter for Windows machines" /td SHA256 /fd SHA256 /a /f "windows_exporter_CodeSign.pfx" /p $env:CODE_SIGN_PASSWORD "output\windows_exporter-$Version-$Arch.exe"
+          }
+
+          rm windows_exporter_CodeSign.pfx
+        env:
+          CODE_SIGN_KEY: ${{ secrets.CODE_SIGN_KEY }}
+          CODE_SIGN_PASSWORD: ${{ secrets.CODE_SIGN_PASSWORD }}
+
       - name: Build Release Artifacts
         run: |
           $ErrorActionPreference = "Stop"
@@ -79,9 +115,46 @@ jobs:
           }
 
           Move-Item installer\*.msi output\
-          Get-ChildItem -Path output\
+          Get-ChildItem -Path output\ g
 
-          promu checksum output\
+      - name: Sign installer artifacts
+        if: ${{ (github.event_name != 'pull_request' && github.repository == 'prometheus-community/windows_exporter') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == 'prometheus-community/windows_exporter') }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $Version = Get-Content VERSION
+
+          $b64      = $env:CODE_SIGN_KEY
+          $filename = 'windows_exporter_CodeSign.pfx'
+
+          $bytes = [Convert]::FromBase64String($b64)
+          [IO.File]::WriteAllBytes($filename, $bytes)
+
+          $basePath = "C:\Program Files (x86)\Windows Kits\10\bin"
+          $latestSigntool = Get-ChildItem -Path $basePath -Directory |
+          Where-Object { $_.Name -match "^\d+\.\d+\.\d+\.\d+$" } |
+          Sort-Object { [Version]$_.Name } -Descending |
+          Select-Object -First 1 |
+          ForEach-Object { Join-Path $_.FullName "x64\signtool.exe" }
+
+          if (Test-Path $latestSigntool) {
+            Write-Output $latestSigntool
+          } else {
+            Write-Output "signtool.exe not found"
+          }
+
+          foreach($Arch in "amd64", "arm64") {
+            & $latestSigntool sign /v /tr "http://timestamp.digicert.com" /d "Prometheus exporter for Windows machines" /td SHA256 /fd SHA256 /a /f "windows_exporter_CodeSign.pfx" /p $env:CODE_SIGN_PASSWORD "output\windows_exporter-$Version-$Arch.msi"
+          }
+
+          rm windows_exporter_CodeSign.pfx
+        env:
+          CODE_SIGN_KEY: ${{ secrets.CODE_SIGN_KEY }}
+          CODE_SIGN_PASSWORD: ${{ secrets.CODE_SIGN_PASSWORD }}
+
+      - name: Generate checksums
+        run: |
+          promu checksum output
+          cat output\sha256sums.txt
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
@@ -103,6 +176,9 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - build
+    env:
+      DOCKER_BUILD_SUMMARY: false
+      DOCKER_BUILD_RECORD_UPLOAD: false
     steps:
       - uses: actions/checkout@v4
         with:
@@ -165,3 +241,4 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           platforms: windows/amd64
+          annotations: ${{ steps.meta.outputs.labels }}

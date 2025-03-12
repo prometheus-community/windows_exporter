@@ -64,7 +64,8 @@ type Collector struct {
 	// ref: https://victoriametrics.com/blog/go-sync-pool/
 	serviceConfigPoolBytes sync.Pool
 
-	serviceManagerHandle *mgr.Mgr
+	serviceManagerHandle   *mgr.Mgr
+	queryAllServicesBuffer []byte
 }
 
 func New(config *Config) *Collector {
@@ -140,6 +141,8 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		},
 	}
 
+	c.queryAllServicesBuffer = make([]byte, 1024*100)
+
 	c.info = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "info"),
 		"A metric with a constant '1' value labeled with service information",
@@ -209,7 +212,7 @@ func (c *Collector) Close() error {
 func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	services, err := c.queryAllServices()
 	if err != nil {
-		return fmt.Errorf("failed to query services: %w", err)
+		return fmt.Errorf("failed to query all services: %w", err)
 	}
 
 	servicesCh := make(chan windows.ENUM_SERVICE_STATUS_PROCESS, len(services))
@@ -368,16 +371,16 @@ func (c *Collector) queryAllServices() ([]windows.ENUM_SERVICE_STATUS_PROCESS, e
 		err              error
 	)
 
-	buf := make([]byte, 1024*100)
-
 	for {
+		currentBufferSize := uint32(cap(c.queryAllServicesBuffer))
+
 		err = windows.EnumServicesStatusEx(
 			c.serviceManagerHandle.Handle,
 			windows.SC_STATUS_PROCESS_INFO,
 			windows.SERVICE_WIN32,
 			windows.SERVICE_STATE_ALL,
-			&buf[0],
-			uint32(len(buf)),
+			&c.queryAllServicesBuffer[0],
+			currentBufferSize,
 			&bytesNeeded,
 			&servicesReturned,
 			nil,
@@ -392,18 +395,18 @@ func (c *Collector) queryAllServices() ([]windows.ENUM_SERVICE_STATUS_PROCESS, e
 			return nil, err
 		}
 
-		if bytesNeeded <= uint32(len(buf)) {
-			return nil, err
+		if bytesNeeded <= currentBufferSize {
+			return nil, fmt.Errorf("windows.EnumServicesStatusEx reports buffer too small (%d), but buffer is large enough (%d)", currentBufferSize, bytesNeeded)
 		}
 
-		buf = make([]byte, bytesNeeded)
+		c.queryAllServicesBuffer = make([]byte, bytesNeeded)
 	}
 
 	if servicesReturned == 0 {
 		return []windows.ENUM_SERVICE_STATUS_PROCESS{}, nil
 	}
 
-	services := unsafe.Slice((*windows.ENUM_SERVICE_STATUS_PROCESS)(unsafe.Pointer(&buf[0])), int(servicesReturned))
+	services := unsafe.Slice((*windows.ENUM_SERVICE_STATUS_PROCESS)(unsafe.Pointer(&c.queryAllServicesBuffer[0])), int(servicesReturned))
 
 	return services, nil
 }

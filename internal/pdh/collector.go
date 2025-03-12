@@ -20,10 +20,12 @@ import (
 	"fmt"
 	"reflect"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"unsafe"
 
+	"github.com/Microsoft/hcsshim/osversion"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows"
@@ -151,7 +153,18 @@ func NewCollectorWithReflection(resultType CounterType, object string, instances
 
 			var counterHandle pdhCounterHandle
 
+			//nolint:nestif
 			if ret := AddEnglishCounter(handle, counterPath, 0, &counterHandle); ret != ErrorSuccess {
+				if ret == CstatusNoCounter {
+					if minOSBuildTag, ok := f.Tag.Lookup("perfdata_min_build"); ok {
+						if minOSBuild, err := strconv.Atoi(minOSBuildTag); err == nil {
+							if uint16(minOSBuild) > osversion.Build() {
+								continue
+							}
+						}
+					}
+				}
+
 				errs = append(errs, fmt.Errorf("failed to add counter %s: %w", counterPath, NewPdhError(ret)))
 
 				continue
@@ -168,6 +181,12 @@ func NewCollectorWithReflection(resultType CounterType, object string, instances
 
 			if ret := GetCounterInfo(counterHandle, 0, &bufLen, nil); ret != MoreData {
 				errs = append(errs, fmt.Errorf("GetCounterInfo: %w", NewPdhError(ret)))
+
+				continue
+			}
+
+			if bufLen == 0 {
+				errs = append(errs, errors.New("GetCounterInfo: buffer length is zero"))
 
 				continue
 			}
@@ -390,7 +409,7 @@ func (c *Collector) collectWorkerRaw() {
 						case PERF_ELAPSED_TIME:
 							dv.Index(index).
 								Field(counter.FieldIndexValue).
-								SetFloat(float64((item.RawValue.FirstValue - WindowsEpoch) / counter.Frequency))
+								SetFloat(float64((item.RawValue.SecondValue - item.RawValue.FirstValue) / counter.Frequency))
 						case PERF_100NSEC_TIMER, PERF_PRECISION_100NS_TIMER:
 							dv.Index(index).
 								Field(counter.FieldIndexValue).

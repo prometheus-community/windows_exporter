@@ -100,6 +100,9 @@ windows_exporter accepts flags to configure certain behaviours. The ones configu
 
 The latest release can be downloaded from the [releases page](https://github.com/prometheus-community/windows_exporter/releases).
 
+All binaries and installation packages are signed with an self-signed certificate. The public key can be found [here](https://github.com/prometheus-community/windows_exporter/blob/master/installer/codesign.cer).
+Once import into the trusted root certificate store, the binaries and installation packages will be trusted.
+
 Each release provides a .msi installer. The installer will setup the windows_exporter as a Windows service, as well as create an exception in the Windows Firewall.
 
 If the installer is run without any parameters, the exporter will run with default settings for enabled collectors, ports, etc.
@@ -125,6 +128,8 @@ The following parameters are available:
 | `EXTRA_FLAGS`        | Allows passing full CLI flags. Defaults to an empty string. For `--collectors.enabled` and `--config.file`, use the specialized properties  `ENABLED_COLLECTORS` and `CONFIG_FILE` |
 | `ADDLOCAL`           | Enables features within the windows_exporter installer. Supported values: `FirewallException`                                                                                      |
 | `REMOVE`             | Disables features within the windows_exporter installer. Supported values: `FirewallException`                                                                                     |
+| `APPLICATIONFOLDER`  | Directory to install windows_exporter. Defaults to `C:\Program Files\windows_exporter`                                                                                             |
+
 
 Parameters are sent to the installer via `msiexec`.
 On PowerShell, the `--%` should be passed before defining properties.
@@ -143,6 +148,11 @@ msiexec /i <path-to-msi-file> --% ENABLED_COLLECTORS=os,service EXTRA_FLAGS="--c
 Define a config file.
 ```powershell
 msiexec /i <path-to-msi-file> --% CONFIG_FILE="D:\config.yaml"
+```
+
+Alternative install directory
+```powershell
+msiexec /i <path-to-msi-file> --% ADDLOCAL=FirewallException APPLICATIONFOLDER="F:\Program Files\windows_exporter"
 ```
 
 On some older versions of Windows,

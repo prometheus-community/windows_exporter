@@ -48,7 +48,7 @@ type msClusterNetwork struct {
 }
 
 func (c *Collector) buildNetwork() error {
-	networkMIQuery, err := mi.NewQuery("SELECT * FROM MSCluster_Network")
+	networkMIQuery, err := mi.NewQuery("SELECT Characteristics,Flags,Metric,Role,State FROM MSCluster_Network")
 	if err != nil {
 		return fmt.Errorf("failed to create WMI query: %w", err)
 	}

@@ -37,7 +37,7 @@ type Collector struct {
 	config Config
 
 	// physicalMemoryBytes
-	// Deprecated: Use windows_physical_memory_total_bytes instead
+	// Deprecated: Use windows_memory_physical_total_bytes instead
 	physicalMemoryBytes *prometheus.Desc
 	// logicalProcessors
 	// Deprecated: Use windows_cpu_logical_processor instead
@@ -85,7 +85,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	)
 	c.physicalMemoryBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "physical_memory_bytes"),
-		"Deprecated: Use windows_physical_memory_total_bytes instead",
+		"Deprecated: Use windows_memory_physical_total_bytes instead",
 		nil,
 		nil,
 	)
