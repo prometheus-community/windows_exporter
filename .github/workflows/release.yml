@@ -33,13 +33,14 @@ jobs:
           go-version-file: 'go.mod'
 
       - name: Install WiX
-        run: dotnet tool install --global wix
+        run: |
+          dotnet tool install --global wix --version 5.0.2
 
       - name: Install WiX extensions
         run: |
-          wix extension add -g WixToolset.Util.wixext
-          wix extension add -g WixToolset.Ui.wixext
-          wix extension add -g WixToolset.Firewall.wixext
+          wix extension add -g WixToolset.Util.wixext/5.0.2
+          wix extension add -g WixToolset.Ui.wixext/5.0.2
+          wix extension add -g WixToolset.Firewall.wixext/5.0.2
 
       - name: Install Build deps
         run: |
@@ -114,9 +115,7 @@ jobs:
           }
 
           Move-Item installer\*.msi output\
-          Get-ChildItem -Path output\
-
-          promu checksum output\
+          Get-ChildItem -Path output\ g
 
       - name: Sign installer artifacts
         if: ${{ (github.event_name != 'pull_request' && github.repository == 'prometheus-community/windows_exporter') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == 'prometheus-community/windows_exporter') }}
@@ -151,6 +150,11 @@ jobs:
         env:
           CODE_SIGN_KEY: ${{ secrets.CODE_SIGN_KEY }}
           CODE_SIGN_PASSWORD: ${{ secrets.CODE_SIGN_PASSWORD }}
+
+      - name: Generate checksums
+        run: |
+          promu checksum output
+          cat output\sha256sums.txt
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4

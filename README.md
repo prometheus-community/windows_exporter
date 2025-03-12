@@ -128,6 +128,8 @@ The following parameters are available:
 | `EXTRA_FLAGS`        | Allows passing full CLI flags. Defaults to an empty string. For `--collectors.enabled` and `--config.file`, use the specialized properties  `ENABLED_COLLECTORS` and `CONFIG_FILE` |
 | `ADDLOCAL`           | Enables features within the windows_exporter installer. Supported values: `FirewallException`                                                                                      |
 | `REMOVE`             | Disables features within the windows_exporter installer. Supported values: `FirewallException`                                                                                     |
+| `APPLICATIONFOLDER`  | Directory to install windows_exporter. Defaults to `C:\Program Files\windows_exporter`                                                                                             |
+
 
 Parameters are sent to the installer via `msiexec`.
 On PowerShell, the `--%` should be passed before defining properties.
@@ -146,6 +148,11 @@ msiexec /i <path-to-msi-file> --% ENABLED_COLLECTORS=os,service EXTRA_FLAGS="--c
 Define a config file.
 ```powershell
 msiexec /i <path-to-msi-file> --% CONFIG_FILE="D:\config.yaml"
+```
+
+Alternative install directory
+```powershell
+msiexec /i <path-to-msi-file> --% ADDLOCAL=FirewallException APPLICATIONFOLDER="F:\Program Files\windows_exporter"
 ```
 
 On some older versions of Windows,
