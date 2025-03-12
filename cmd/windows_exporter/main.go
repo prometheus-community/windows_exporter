@@ -140,6 +140,7 @@ func run() int {
 	}
 
 	logger.LogAttrs(ctx, slog.LevelDebug, "logging has Started")
+	
 	if configFile != nil && *configFile != "" {
 		logger.InfoContext(ctx, "using configuration file: "+*configFile)
 	}
