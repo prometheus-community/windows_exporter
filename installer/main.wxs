@@ -115,10 +115,9 @@
         <SetProperty Id="ExtraFlags" After="InstallFiles" Sequence="execute" Value="[EXTRA_FLAGS]" Condition="EXTRA_FLAGS" />
 
         <Property Id="CONFIG_FILE" Secure="yes" Value="config.yaml" />
-        <SetProperty Id="ConfigFile_Remote" After="InstallFiles" Sequence="execute" Value="[CONFIG_FILE]" Condition="CONFIG_FILE AND (CONFIG_FILE&lt;&lt;&quot;http://&quot; OR CONFIG_FILE&lt;&lt;&quot;https://&quot;)" />
-        <SetProperty Id="ConfigFile_NonDefault" After="InstallFiles" Sequence="execute" Value="[CONFIG_FILE]" Condition="CONFIG_FILE AND CONFIG_FILE&lt;&gt;&quot;config.yaml&quot; AND NOT (CONFIG_FILE&lt;&lt;&quot;http://&quot; OR CONFIG_FILE&lt;&lt;&quot;https://&quot;)" />
+        <SetProperty Id="ConfigFile_NonDefault" After="InstallFiles" Sequence="execute" Value="[CONFIG_FILE]" Condition="CONFIG_FILE AND CONFIG_FILE&lt;&gt;&quot;config.yaml&quot;" />
         <SetProperty Id="ConfigFile_Default" After="InstallFiles" Sequence="execute" Value="[APPLICATIONFOLDER]config.yaml" Condition="CONFIG_FILE=&quot;config.yaml&quot;" />
-        <SetProperty Id="ConfigFileFlag" After="InstallFiles" Sequence="execute" Value="--config.file=&quot;[ConfigFile_Remote][ConfigFile_NonDefault][ConfigFile_Default]&quot;" Condition="ConfigFile_Remote OR ConfigFile_NonDefault OR ConfigFile_Default" />
+        <SetProperty Id="ConfigFileFlag" After="InstallFiles" Sequence="execute" Value="--config.file=&quot;[ConfigFile_NonDefault][ConfigFile_Default]&quot;" Condition="ConfigFile_NonDefault OR ConfigFile_Default" />
 
         <Property Id="LISTEN_PORT" Secure="yes" Value="9182" />
         <SetProperty Id="ListenFlag" After="InstallFiles" Sequence="execute" Value="--web.listen-address [LISTEN_ADDR]:[LISTEN_PORT]" Condition="LISTEN_ADDR&lt;&gt;&quot;&quot; OR LISTEN_PORT&lt;&gt;9182" />
