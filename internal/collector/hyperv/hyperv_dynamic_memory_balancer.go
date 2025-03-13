@@ -18,6 +18,7 @@ package hyperv
 import (
 	"fmt"
 
+	"github.com/Microsoft/hcsshim/osversion"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus-community/windows_exporter/internal/utils"
@@ -40,7 +41,7 @@ type perfDataCounterValuesDynamicMemoryBalancer struct {
 
 	// Hyper-V Dynamic Memory Balancer metrics
 	VmDynamicMemoryBalancerAvailableMemory             float64 `perfdata:"Available Memory"`
-	VmDynamicMemoryBalancerAvailableMemoryForBalancing float64 `perfdata:"Available Memory For Balancing"`
+	VmDynamicMemoryBalancerAvailableMemoryForBalancing float64 `perfdata:"Available Memory For Balancing" perfdata_min_build:"17763"`
 	VmDynamicMemoryBalancerAveragePressure             float64 `perfdata:"Average Pressure"`
 	VmDynamicMemoryBalancerSystemCurrentPressure       float64 `perfdata:"System Current Pressure"`
 }
@@ -96,12 +97,14 @@ func (c *Collector) collectDynamicMemoryBalancer(ch chan<- prometheus.Metric) er
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
-			c.vmDynamicMemoryBalancerAvailableMemoryForBalancing,
-			prometheus.GaugeValue,
-			utils.MBToBytes(data.VmDynamicMemoryBalancerAvailableMemoryForBalancing),
-			data.Name,
-		)
+		if osversion.Build() >= osversion.LTSC2019 {
+			ch <- prometheus.MustNewConstMetric(
+				c.vmDynamicMemoryBalancerAvailableMemoryForBalancing,
+				prometheus.GaugeValue,
+				utils.MBToBytes(data.VmDynamicMemoryBalancerAvailableMemoryForBalancing),
+				data.Name,
+			)
+		}
 
 		ch <- prometheus.MustNewConstMetric(
 			c.vmDynamicMemoryBalancerAveragePressure,
