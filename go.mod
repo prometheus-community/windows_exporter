@@ -12,7 +12,7 @@ require (
 	github.com/go-ole/go-ole v1.3.0
 	github.com/prometheus/client_golang v1.21.1
 	github.com/prometheus/client_model v0.6.1
-	github.com/prometheus/common v0.62.0
+	github.com/prometheus/common v0.63.0
 	github.com/prometheus/exporter-toolkit v0.14.0
 	github.com/stretchr/testify v1.10.0
 	golang.org/x/sys v0.31.0
