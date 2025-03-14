@@ -92,5 +92,6 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
-          version: v1.60
+          # renovate: github=golangci/golangci-lint
+          version: v1.64.7
           args: "--max-same-issues=0"
