@@ -27,6 +27,9 @@
     ],
     "postUpdateOptions": [
         "gomodTidy"
+    ],  
+    "ignoreDeps": [
+        "mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image"
     ],
     "customManagers": [
         {
