@@ -18,6 +18,7 @@ package hyperv
 import (
 	"fmt"
 
+	"github.com/Microsoft/hcsshim/osversion"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus-community/windows_exporter/internal/utils"
@@ -47,7 +48,7 @@ type perfDataCounterValuesDynamicMemoryVM struct {
 	// Hyper-V Dynamic Memory VM metrics
 	VmMemoryAddedMemory                float64 `perfdata:"Added Memory"`
 	VmMemoryCurrentPressure            float64 `perfdata:"Current Pressure"`
-	VmMemoryGuestAvailableMemory       float64 `perfdata:"Guest Available Memory"`
+	VmMemoryGuestAvailableMemory       float64 `perfdata:"Guest Available Memory"        perfdata_min_build:"17763"`
 	VmMemoryGuestVisiblePhysicalMemory float64 `perfdata:"Guest Visible Physical Memory"`
 	VmMemoryMaximumPressure            float64 `perfdata:"Maximum Pressure"`
 	VmMemoryMemoryAddOperations        float64 `perfdata:"Memory Add Operations"`
@@ -150,12 +151,14 @@ func (c *Collector) collectDynamicMemoryVM(ch chan<- prometheus.Metric) error {
 			data.Name,
 		)
 
-		ch <- prometheus.MustNewConstMetric(
-			c.vmMemoryGuestAvailableMemory,
-			prometheus.GaugeValue,
-			utils.MBToBytes(data.VmMemoryGuestAvailableMemory),
-			data.Name,
-		)
+		if osversion.Build() >= osversion.LTSC2019 {
+			ch <- prometheus.MustNewConstMetric(
+				c.vmMemoryGuestAvailableMemory,
+				prometheus.GaugeValue,
+				utils.MBToBytes(data.VmMemoryGuestAvailableMemory),
+				data.Name,
+			)
+		}
 
 		ch <- prometheus.MustNewConstMetric(
 			c.vmMemoryGuestVisiblePhysicalMemory,
