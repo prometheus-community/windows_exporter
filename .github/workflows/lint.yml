@@ -20,7 +20,7 @@ env:
 
 jobs:
   test:
-    runs-on: windows-2019
+    runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -43,7 +43,7 @@ jobs:
         run: make e2e-test
 
   promtool:
-    runs-on: windows-2019
+    runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
