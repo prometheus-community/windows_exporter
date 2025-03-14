@@ -191,14 +191,14 @@ jobs:
 
       - name: Login to Docker Hub
         if: ${{ github.event_name != 'pull_request' }}
-        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3
         with:
           username: ${{ secrets.DOCKER_HUB_LOGIN }}
           password: ${{ secrets.DOCKER_HUB_PASSWORD }}
 
       - name: Login to quay.io
         if: ${{ github.event_name != 'pull_request' }}
-        uses: docker/login-action@v3
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3
         with:
           registry: quay.io
           username: ${{ secrets.QUAY_IO_LOGIN }}
@@ -206,7 +206,7 @@ jobs:
 
       - name: Login to GitHub container registry
         if: ${{ github.event_name != 'pull_request' }}
-        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
