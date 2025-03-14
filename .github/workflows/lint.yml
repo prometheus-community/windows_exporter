@@ -22,8 +22,8 @@ jobs:
   test:
     runs-on: windows-2019
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34 # v5
         with:
           go-version-file: 'go.mod'
 
@@ -45,8 +45,8 @@ jobs:
   promtool:
     runs-on: windows-2019
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34 # v5
         with:
           go-version-file: 'go.mod'
 
@@ -67,7 +67,7 @@ jobs:
         run: make promtool
 
       - name: Upload windows_exporter.exe
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4
         if: always()
         with:
           name: windows_exporter.amd64.exe
@@ -84,13 +84,13 @@ jobs:
           git config --global core.autocrlf false
           git config --global core.eol lf
 
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34 # v5
         with:
           go-version-file: 'go.mod'
 
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@4696ba8babb6127d732c3c6dde519db15edab9ea # v6
         with:
           version: v1.60
           args: "--max-same-issues=0"
