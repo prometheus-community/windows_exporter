@@ -177,7 +177,7 @@ func NewCollectorWithReflection(resultType CounterType, object string, instances
 			}
 
 			// Get the info with the current buffer size
-			bufLen := uint32(0)
+			var bufLen uint32
 
 			if ret := GetCounterInfo(counterHandle, 0, &bufLen, nil); ret != MoreData {
 				errs = append(errs, fmt.Errorf("GetCounterInfo: %w", NewPdhError(ret)))
@@ -185,23 +185,29 @@ func NewCollectorWithReflection(resultType CounterType, object string, instances
 				continue
 			}
 
-			if bufLen == 0 {
+			buf := make([]byte, bufLen)
+			if len(buf) == 0 {
 				errs = append(errs, errors.New("GetCounterInfo: buffer length is zero"))
 
 				continue
 			}
 
-			buf := make([]byte, bufLen)
 			if ret := GetCounterInfo(counterHandle, 0, &bufLen, &buf[0]); ret != ErrorSuccess {
 				errs = append(errs, fmt.Errorf("GetCounterInfo: %w", NewPdhError(ret)))
 
 				continue
 			}
 
-			ci := (*CounterInfo)(unsafe.Pointer(&buf[0]))
-			counter.Type = ci.DwType
-			counter.Desc = windows.UTF16PtrToString(ci.SzExplainText)
-			counter.Desc = windows.UTF16PtrToString(ci.SzExplainText)
+			counterInfo := (*CounterInfo)(unsafe.Pointer(&buf[0]))
+			if counterInfo == nil {
+				errs = append(errs, errors.New("GetCounterInfo: counter info is nil"))
+
+				continue
+			}
+
+			counter.Type = counterInfo.DwType
+			counter.Desc = windows.UTF16PtrToString(counterInfo.SzExplainText)
+			counter.Desc = windows.UTF16PtrToString(counterInfo.SzExplainText)
 
 			if val, ok := SupportedCounterTypes[counter.Type]; ok {
 				counter.MetricType = val
