@@ -2,7 +2,7 @@ module github.com/prometheus-community/windows_exporter
 
 go 1.23.0
 
-toolchain go1.23.4
+toolchain go1.24.1
 
 require (
 	github.com/Microsoft/hcsshim v0.12.9
