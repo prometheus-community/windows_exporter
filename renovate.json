@@ -1,0 +1,62 @@
+{
+    "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+    "extends": [
+        "config:best-practices"
+    ],
+    "labels": [
+        "🛠️ dependencies"
+    ],
+    "dependencyDashboardApproval": true,
+    "packageRules": [
+        {
+            "groupName": "GitHub Actions",
+            "matchManagers": [
+                "github-actions"
+            ]
+        },
+        {
+            "groupName": "Go tools",
+            "matchFileNames": [
+                "tools/**",
+                "Makefile"
+            ],
+            "matchPackageNames": [
+                "*"
+            ]
+        }
+    ],
+    "postUpdateOptions": [
+        "gomodTidy"
+    ],
+    "customManagers": [
+        {
+            "customType": "regex",
+            "fileMatch": ["."],
+            "matchStrings": [
+                "[\\t ]*(?:#|//) ?renovate: (?<datasource>[^=]+)=(?<depName>\\S+)( registry=(?<registryUrl>\\S+))?( versioning=(?<versioning>\\S+))?[\\t ]*\\r?\\n.+?[:=][\\t ]*[\"']?(?<currentValue>[^@\\s\"'=]+)(?:@(?<currentDigest>sha256:[a-f0-9]+))?[\"']?"
+            ],
+            "datasourceTemplate": "{{#if (equals datasource 'github')}}github-tags{{else}}{{{datasource}}}{{/if}}",
+            "versioningTemplate": "{{#if versioning}}{{{versioning}}}{{else if (equals datasource 'docker')}}docker{{else if (equals datasource 'deb')}}deb{{else}}semver{{/if}}"
+        },
+        {
+            "customType": "regex",
+            "fileMatch": ["Makefile"],
+            "matchStrings": [
+                "go run (?<depName>\\S+)@(?<currentValue>\\S+)"
+            ],
+            "datasourceTemplate": "go"
+        },
+        {
+            "customType": "regex",
+            "fileMatch": [
+                "(^|/).+\\.yaml$"
+            ],
+            "matchStrings": [
+                "[\\t ]*image:[\\t ]*\\r?\\n[\\t ]*registry:[\\t ]*[\"']?(?<registry>.*?)[\"']?[\\t ]*\\r?\\n[\\t ]*(?:repository|name):[\\t ]*[\"']?(?<repository>.*?)[\"']?[\\t ]*\\r?\\n[\\t ]*tag:[\\t ]*[\"']?(?<currentValue>[\\w\\.+-]*)(?:@(?<currentDigest>sha256:[a-f0-9]+))?[\"']?",
+                "[\\t ]*image:[\\t ]*[\"']?(?<registry>.+\\..+?)/(?<repository>.*?):(?<currentValue>[\\w\\.+-]*)(?:@(?<currentDigest>sha256:[a-f0-9]+))?[\"']?"
+            ],
+            "depNameTemplate": "{{{ registry }}}/{{{ repository }}}",
+            "datasourceTemplate": "docker"
+        }
+    ]
+}
