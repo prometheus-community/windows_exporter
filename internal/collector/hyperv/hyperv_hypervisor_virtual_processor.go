@@ -40,7 +40,7 @@ type collectorHypervisorVirtualProcessor struct {
 type perfDataCounterValuesHypervisorVirtualProcessor struct {
 	Name string
 
-	HypervisorVirtualProcessorGuestIdleTimePercent     float64 `perfdata:"% Guest Idle Time"`
+	HypervisorVirtualProcessorGuestRunTimePercent      float64 `perfdata:"% Guest Run Time"`
 	HypervisorVirtualProcessorHypervisorRunTimePercent float64 `perfdata:"% Hypervisor Run Time"`
 	HypervisorVirtualProcessorTotalRunTimePercent      float64 `perfdata:"% Total Run Time"`
 	HypervisorVirtualProcessorRemoteRunTimePercent     float64 `perfdata:"% Remote Run Time"`
@@ -108,15 +108,15 @@ func (c *Collector) collectHypervisorVirtualProcessor(ch chan<- prometheus.Metri
 		ch <- prometheus.MustNewConstMetric(
 			c.hypervisorVirtualProcessorTimeTotal,
 			prometheus.CounterValue,
-			data.HypervisorVirtualProcessorGuestIdleTimePercent,
-			vmName, coreID, "guest_idle",
+			data.HypervisorVirtualProcessorGuestRunTimePercent,
+			vmName, coreID, "guest",
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.hypervisorVirtualProcessorTimeTotal,
 			prometheus.CounterValue,
-			data.HypervisorVirtualProcessorGuestIdleTimePercent,
-			vmName, coreID, "guest_idle",
+			data.HypervisorVirtualProcessorRemoteRunTimePercent,
+			vmName, coreID, "remote",
 		)
 
 		ch <- prometheus.MustNewConstMetric(
