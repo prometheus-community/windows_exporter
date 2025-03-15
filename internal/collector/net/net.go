@@ -259,6 +259,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		[]string{"nic", "src", "dest", "metric"},
 		nil,
 	)
+
 	var err error
 
 	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "Network Interface", pdh.InstancesAll)
