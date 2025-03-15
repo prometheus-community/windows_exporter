@@ -163,19 +163,6 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
-	var err error
-
-	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "Network Interface", pdh.InstancesAll)
-	if err != nil {
-		return fmt.Errorf("failed to create Network Interface collector: %w", err)
-	}
-
-	if slices.Contains(c.config.CollectorsEnabled, "addresses") {
-		logger.Info("nic/addresses collector is in an experimental state! The configuration and metrics may change in future. Please report any issues.",
-			slog.String("collector", Name),
-		)
-	}
-
 	c.bytesReceivedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "bytes_received_total"),
 		"(Network.BytesReceivedPerSec)",
@@ -272,6 +259,18 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		[]string{"nic", "src", "dest", "metric"},
 		nil,
 	)
+	var err error
+
+	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "Network Interface", pdh.InstancesAll)
+	if err != nil {
+		return fmt.Errorf("failed to create Network Interface collector: %w", err)
+	}
+
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorNicAddresses) {
+		logger.Info("nic/addresses collector is in an experimental state! The configuration and metrics may change in future. Please report any issues.",
+			slog.String("collector", Name),
+		)
+	}
 
 	return nil
 }
@@ -405,9 +404,9 @@ func (c *Collector) collectNICAddresses(ch chan<- prometheus.Metric) error {
 
 	convertNicName := strings.NewReplacer("(", "[", ")", "]", "#", "_")
 
-	for _, nicAdapterAddress := range nicAdapterAddresses {
-		friendlyName := windows.UTF16PtrToString(nicAdapterAddress.FriendlyName)
-		nicName := convertNicName.Replace(windows.UTF16PtrToString(nicAdapterAddress.Description))
+	for _, nicAdapter := range nicAdapterAddresses {
+		friendlyName := windows.UTF16PtrToString(nicAdapter.FriendlyName)
+		nicName := convertNicName.Replace(windows.UTF16PtrToString(nicAdapter.Description))
 
 		if c.config.NicExclude.MatchString(nicName) ||
 			!c.config.NicInclude.MatchString(nicName) {
@@ -415,12 +414,12 @@ func (c *Collector) collectNICAddresses(ch chan<- prometheus.Metric) error {
 		}
 
 		macAddress := fmt.Sprintf("%02X:%02X:%02X:%02X:%02X:%02X",
-			nicAdapterAddress.PhysicalAddress[0],
-			nicAdapterAddress.PhysicalAddress[1],
-			nicAdapterAddress.PhysicalAddress[2],
-			nicAdapterAddress.PhysicalAddress[3],
-			nicAdapterAddress.PhysicalAddress[4],
-			nicAdapterAddress.PhysicalAddress[5],
+			nicAdapter.PhysicalAddress[0],
+			nicAdapter.PhysicalAddress[1],
+			nicAdapter.PhysicalAddress[2],
+			nicAdapter.PhysicalAddress[3],
+			nicAdapter.PhysicalAddress[4],
+			nicAdapter.PhysicalAddress[5],
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -432,7 +431,11 @@ func (c *Collector) collectNICAddresses(ch chan<- prometheus.Metric) error {
 			macAddress,
 		)
 
-		for address := nicAdapterAddress.FirstUnicastAddress; address != nil; address = address.Next {
+		if nicAdapter.OperStatus != windows.IfOperStatusUp {
+			continue
+		}
+
+		for address := nicAdapter.FirstUnicastAddress; address != nil; address = address.Next {
 			ipAddr := address.Address.IP()
 
 			if ipAddr == nil || !ipAddr.IsGlobalUnicast() {
@@ -449,7 +452,7 @@ func (c *Collector) collectNICAddresses(ch chan<- prometheus.Metric) error {
 			)
 		}
 
-		for address := nicAdapterAddress.FirstAnycastAddress; address != nil; address = address.Next {
+		for address := nicAdapter.FirstAnycastAddress; address != nil; address = address.Next {
 			ipAddr := address.Address.IP()
 
 			if ipAddr == nil || !ipAddr.IsGlobalUnicast() {
@@ -505,10 +508,6 @@ func adapterAddresses() ([]*windows.IpAdapterAddresses, error) {
 	var addresses []*windows.IpAdapterAddresses
 
 	for address := (*windows.IpAdapterAddresses)(unsafe.Pointer(&b[0])); address != nil; address = address.Next {
-		if address.OperStatus != windows.IfOperStatusUp {
-			continue
-		}
-
 		addresses = append(addresses, address)
 	}
 

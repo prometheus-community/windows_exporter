@@ -275,7 +275,7 @@ windows_exporter_collector_timeout{collector="udp"} 0
 # TYPE windows_net_current_bandwidth_bytes gauge
 # HELP windows_net_nic_address_info A metric with a constant '1' value labeled with the network interface's address information.
 # TYPE windows_net_nic_address_info gauge
-# HELP windows_net_nic_address_info A metric with a constant '1' value labeled with the network interface's general information.
+# HELP windows_net_nic_info A metric with a constant '1' value labeled with the network interface's general information.
 # TYPE windows_net_nic_info gauge
 # HELP windows_net_output_queue_length_packets (Network.OutputQueueLength)
 # TYPE windows_net_output_queue_length_packets gauge
