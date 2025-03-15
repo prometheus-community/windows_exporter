@@ -33,7 +33,12 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-const Name = "net"
+const (
+	Name = "net"
+
+	subCollectorMetrics      = "metrics"
+	subCollectorNicAddresses = "nic_addresses"
+)
 
 type Config struct {
 	NicExclude        *regexp.Regexp `yaml:"nic_exclude"`
@@ -46,8 +51,8 @@ var ConfigDefaults = Config{
 	NicExclude: types.RegExpEmpty,
 	NicInclude: types.RegExpAny,
 	CollectorsEnabled: []string{
-		"metrics",
-		"nic_addresses",
+		subCollectorMetrics,
+		subCollectorNicAddresses,
 	},
 }
 
@@ -72,8 +77,9 @@ type Collector struct {
 	packetsSentTotal         *prometheus.Desc
 	currentBandwidth         *prometheus.Desc
 
-	nicAddressInfo *prometheus.Desc
-	routeInfo      *prometheus.Desc
+	nicIPAddressInfo *prometheus.Desc
+	nicInfo          *prometheus.Desc
+	routeInfo        *prometheus.Desc
 }
 
 func New(config *Config) *Collector {
@@ -248,10 +254,16 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		[]string{"nic"},
 		nil,
 	)
-	c.nicAddressInfo = prometheus.NewDesc(
+	c.nicIPAddressInfo = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "nic_address_info"),
 		"A metric with a constant '1' value labeled with the network interface's address information.",
-		[]string{"nic", "friendly_name", "address", "family"},
+		[]string{"nic", "address", "family"},
+		nil,
+	)
+	c.nicInfo = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "nic_info"),
+		"A metric with a constant '1' value labeled with the network interface's general information.",
+		[]string{"nic", "friendly_name", "mac"},
 		nil,
 	)
 	c.routeInfo = prometheus.NewDesc(
@@ -269,13 +281,13 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	errs := make([]error, 0, 2)
 
-	if slices.Contains(c.config.CollectorsEnabled, "metrics") {
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorMetrics) {
 		if err := c.collect(ch); err != nil {
 			errs = append(errs, fmt.Errorf("failed collecting metrics: %w", err))
 		}
 	}
 
-	if slices.Contains(c.config.CollectorsEnabled, "nic_addresses") {
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorNicAddresses) {
 		if err := c.collectNICAddresses(ch); err != nil {
 			errs = append(errs, fmt.Errorf("failed collecting net addresses: %w", err))
 		}
@@ -395,12 +407,30 @@ func (c *Collector) collectNICAddresses(ch chan<- prometheus.Metric) error {
 
 	for _, nicAdapterAddress := range nicAdapterAddresses {
 		friendlyName := windows.UTF16PtrToString(nicAdapterAddress.FriendlyName)
-		nicName := windows.UTF16PtrToString(nicAdapterAddress.Description)
+		nicName := convertNicName.Replace(windows.UTF16PtrToString(nicAdapterAddress.Description))
 
 		if c.config.NicExclude.MatchString(nicName) ||
 			!c.config.NicInclude.MatchString(nicName) {
 			continue
 		}
+
+		macAddress := fmt.Sprintf("%02X:%02X:%02X:%02X:%02X:%02X",
+			nicAdapterAddress.PhysicalAddress[0],
+			nicAdapterAddress.PhysicalAddress[1],
+			nicAdapterAddress.PhysicalAddress[2],
+			nicAdapterAddress.PhysicalAddress[3],
+			nicAdapterAddress.PhysicalAddress[4],
+			nicAdapterAddress.PhysicalAddress[5],
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.nicInfo,
+			prometheus.GaugeValue,
+			1,
+			nicName,
+			friendlyName,
+			macAddress,
+		)
 
 		for address := nicAdapterAddress.FirstUnicastAddress; address != nil; address = address.Next {
 			ipAddr := address.Address.IP()
@@ -410,11 +440,10 @@ func (c *Collector) collectNICAddresses(ch chan<- prometheus.Metric) error {
 			}
 
 			ch <- prometheus.MustNewConstMetric(
-				c.nicAddressInfo,
+				c.nicIPAddressInfo,
 				prometheus.GaugeValue,
 				1,
-				convertNicName.Replace(nicName),
-				friendlyName,
+				nicName,
 				ipAddr.String(),
 				addressFamily[address.Address.Sockaddr.Addr.Family],
 			)
@@ -428,11 +457,10 @@ func (c *Collector) collectNICAddresses(ch chan<- prometheus.Metric) error {
 			}
 
 			ch <- prometheus.MustNewConstMetric(
-				c.nicAddressInfo,
+				c.nicIPAddressInfo,
 				prometheus.GaugeValue,
 				1,
-				convertNicName.Replace(nicName),
-				friendlyName,
+				nicName,
 				ipAddr.String(),
 				addressFamily[address.Address.Sockaddr.Addr.Family],
 			)
@@ -475,7 +503,12 @@ func adapterAddresses() ([]*windows.IpAdapterAddresses, error) {
 	}
 
 	var addresses []*windows.IpAdapterAddresses
+
 	for address := (*windows.IpAdapterAddresses)(unsafe.Pointer(&b[0])); address != nil; address = address.Next {
+		if address.OperStatus != windows.IfOperStatusUp {
+			continue
+		}
+
 		addresses = append(addresses, address)
 	}
 

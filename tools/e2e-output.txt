@@ -275,6 +275,8 @@ windows_exporter_collector_timeout{collector="udp"} 0
 # TYPE windows_net_current_bandwidth_bytes gauge
 # HELP windows_net_nic_address_info A metric with a constant '1' value labeled with the network interface's address information.
 # TYPE windows_net_nic_address_info gauge
+# HELP windows_net_nic_address_info A metric with a constant '1' value labeled with the network interface's general information.
+# TYPE windows_net_nic_info gauge
 # HELP windows_net_output_queue_length_packets (Network.OutputQueueLength)
 # TYPE windows_net_output_queue_length_packets gauge
 # HELP windows_net_packets_outbound_discarded_total (Network.PacketsOutboundDiscarded)
@@ -453,4 +455,3 @@ windows_service_state{name="Themes",state="stopped"} 0
 # TYPE windows_udp_datagram_received_total gauge
 # HELP windows_udp_datagram_sent_total UDP datagrams are sent from the entity
 # TYPE windows_udp_datagram_sent_total counter
-
