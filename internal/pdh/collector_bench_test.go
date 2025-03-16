@@ -61,7 +61,7 @@ func BenchmarkTestCollector(b *testing.B) {
 
 	var data []processFull
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = performanceData.Collect(&data)
 	}
 

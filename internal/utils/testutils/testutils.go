@@ -57,7 +57,7 @@ func FuncBenchmarkCollector[C collector.Collector](b *testing.B, name string, co
 		}
 	}()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		require.NoError(b, c.Collect(metrics))
 	}
 }

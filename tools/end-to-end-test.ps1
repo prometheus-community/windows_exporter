@@ -66,7 +66,7 @@ try {
     throw $_
 }
 
-$output_diff = Compare-Object (Get-Content 'e2e-output.txt') (Get-Content "$($temp_dir)/e2e-output.txt")
+$output_diff = Compare-Object ((Get-Content 'e2e-output.txt' | Out-String).Trim()) ((Get-Content "$($temp_dir)/e2e-output.txt" | Out-String).Trim())
 
 # Fail if differences in output are detected
 if (-not ($null -eq $output_diff)) {

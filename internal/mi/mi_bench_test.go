@@ -38,7 +38,7 @@ func Benchmark_MI_Query_Unmarshal(b *testing.B) {
 	query, err := mi.NewQuery("SELECT Name FROM Win32_Process WHERE Handle = 0 OR Handle = 4")
 	require.NoError(b, err)
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		err := session.QueryUnmarshal(&processes, mi.OperationFlagsStandardRTTI, nil, mi.NamespaceRootCIMv2, mi.QueryDialectWQL, query)
 		require.NoError(b, err)
 		require.Equal(b, []win32Process{{Name: "System Idle Process"}, {Name: "System"}}, processes)
