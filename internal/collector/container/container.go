@@ -596,7 +596,7 @@ func (c *Collector) collectNetworkMetrics(ch chan<- prometheus.Metric) error {
 //
 // Job containers are containers that aren't managed by HCS, e.g host process containers.
 func (c *Collector) collectJobContainers(ch chan<- prometheus.Metric) error {
-	containerDStateFS := os.DirFS(`C:\ProgramData\containerd\state\io.containerd.runtime.v2.task\k8s.io\`)
+	containerDStateFS := os.DirFS(containerDStateDir)
 
 	allContainerIDs := make([]string, 0, len(c.annotationsCacheJob)+len(c.annotationsCacheHCS))
 	jobContainerIDs := make([]string, 0, len(allContainerIDs))
@@ -618,7 +618,7 @@ func (c *Collector) collectJobContainers(ch chan<- prometheus.Metric) error {
 		// Skip the directory content
 		return fs.SkipDir
 	}); err != nil {
-		return err
+		return fmt.Errorf("error in walking containerd state directory: %w", err)
 	}
 
 	errs := make([]error, 0)
