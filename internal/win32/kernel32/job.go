@@ -11,6 +11,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build windows
+
 package kernel32
 
 import (
@@ -20,19 +22,14 @@ import (
 )
 
 const (
-	// JOB_OBJECT_QUERY is required to retrieve certain information about a job object,
+	// JobObjectQuery is required to retrieve certain information about a job object,
 	// such as attributes and accounting information (see QueryInformationJobObject and IsProcessInJob).
 	// https://learn.microsoft.com/en-us/windows/win32/procthread/job-object-security-and-access-rights
-	JOB_OBJECT_QUERY = 0x0004
-
-	ClassJobObjectBasicProcessIdList uint16 = 3
-	// ClassJobObjectExtendedLimitInformation
-	// https://learn.microsoft.com/en-us/windows/win32/api/jobapi2/nf-jobapi2-queryinformationjobobject
-	ClassJobObjectExtendedLimitInformation uint16 = 9
+	JobObjectQuery = 0x0004
 )
 
 func OpenJobObject(name string) (windows.Handle, error) {
-	handle, _, err := procOpenJobObject.Call(JOB_OBJECT_QUERY, 0, uintptr(unsafe.Pointer(&name)))
+	handle, _, err := procOpenJobObject.Call(JobObjectQuery, 0, uintptr(unsafe.Pointer(&name)))
 	if handle == 0 {
 		return 0, err
 	}

@@ -12,8 +12,10 @@ var (
 	ErrIDNotFound          = windows.Errno(2151088398)
 )
 
-type Operation = windows.Handle
-type ComputeSystem = windows.Handle
+type (
+	Operation     = windows.Handle
+	ComputeSystem = windows.Handle
+)
 
 type Properties struct {
 	ID          string           `json:"Id,omitempty"`
