@@ -8,8 +8,6 @@ output/
 installer/*.msi
 installer/*.wixpdb
 local/
-/.idea/
+/.idea/*
 !/.idea/inspectionProfiles/Project_Default.xml
 !/.idea/copyright/
-!/.idea/copyright/*
-!/.idea/dictionaries/*

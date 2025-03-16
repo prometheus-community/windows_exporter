@@ -1,0 +1,11 @@
+<component name="CopyrightManager">
+  <settings default="windows_exporter">
+    <module2copyright>
+      <element module="All Changed Files" copyright="windows_exporter" />
+    </module2copyright>
+    <LanguageOptions name="Go">
+      <option name="fileTypeOverride" value="3" />
+      <option name="block" value="false" />
+    </LanguageOptions>
+  </settings>
+</component>
