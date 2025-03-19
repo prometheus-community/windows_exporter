@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
@@ -116,6 +117,11 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	}
 
 	version := windows.RtlGetVersion()
+
+	// Microsoft has decided to keep the major version as "10" for Windows 11, including the product name.
+	if version.BuildNumber >= 22000 {
+		productName = strings.Replace(productName, " 10 ", " 11 ", 1)
+	}
 
 	c.osInformation = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "info"),
@@ -371,5 +377,5 @@ func (c *Collector) getWindowsVersion() (string, string, error) {
 		return "", "", err
 	}
 
-	return productName, strconv.FormatUint(revision, 10), nil
+	return strings.TrimSpace(productName), strconv.FormatUint(revision, 10), nil
 }
