@@ -18,7 +18,7 @@ package hyperv
 import (
 	"fmt"
 
-	"github.com/Microsoft/hcsshim/osversion"
+	"github.com/prometheus-community/windows_exporter/internal/osversion"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus-community/windows_exporter/internal/utils"
