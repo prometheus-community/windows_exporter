@@ -53,6 +53,7 @@ type Collector struct {
 
 	info *prometheus.Desc
 	collectorWebService
+	collectorHttpService
 	collectorAppPoolWAS
 	collectorW3SVCW3WP
 	collectorWebServiceCache
@@ -148,6 +149,7 @@ func (c *Collector) GetName() string {
 
 func (c *Collector) Close() error {
 	c.perfDataCollectorWebService.Close()
+	c.perfDataCollectorHttpService.Close()
 	c.perfDataCollectorAppPoolWAS.Close()
 	c.w3SVCW3WPPerfDataCollector.Close()
 	c.serviceCachePerfDataCollector.Close()
@@ -171,6 +173,10 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 	if err := c.buildWebService(); err != nil {
 		errs = append(errs, fmt.Errorf("failed to build Web Service collector: %w", err))
+	}
+
+	if err := c.buildHttpService(); err != nil {
+		errs = append(errs, fmt.Errorf("failed to build Http Service collector: %w", err))
 	}
 
 	if err := c.buildAppPoolWAS(); err != nil {
@@ -251,6 +257,10 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 
 	if err := c.collectWebService(ch); err != nil {
 		errs = append(errs, fmt.Errorf("failed to collect Web Service metrics: %w", err))
+	}
+
+	if err := c.collectHttpService(ch); err != nil {
+		errs = append(errs, fmt.Errorf("failed to collect Http Service metrics: %w", err))
 	}
 
 	if err := c.collectAppPoolWAS(ch); err != nil {
