@@ -49,10 +49,6 @@ type collectorWebService struct {
 	webServiceTotalNonAnonymousUsers              *prometheus.Desc
 	webServiceTotalNotFoundErrors                 *prometheus.Desc
 	webServiceTotalRejectedAsyncIORequests        *prometheus.Desc
-	httpRequestQueuesCurrentQueueSize             *prometheus.Desc
-	httpRequestQueuesTotalRejectedRequest         *prometheus.Desc
-	httpRequestQueuesMaxQueueItemAge              *prometheus.Desc
-	httpRequestQueuesArrivalRate                  *prometheus.Desc
 }
 
 type perfDataCounterValuesWebService struct {
@@ -95,10 +91,6 @@ type perfDataCounterValuesWebService struct {
 	WebServiceTotalSearchRequests                 float64 `perfdata:"Total Search Requests"`
 	WebServiceTotalTraceRequests                  float64 `perfdata:"Total Trace Requests"`
 	WebServiceTotalUnlockRequests                 float64 `perfdata:"Total Unlock Requests"`
-	HttpRequestQueuesCurrentQueueSize             float64 `perfdata:"CurrentQueueSize"`
-	HttpRequestQueuesTotalRejectedRequest         float64 `perfdata:"RejectedRequest"`
-	HttpRequestQueuesMaxQueueItemAge              float64 `perfdata:"MaxQueueItemAge"`
-	HttpRequestQueuesArrivalRate                  float64 `perfdata:"ArrivalRate"`
 }
 
 func (p perfDataCounterValuesWebService) GetName() string {
@@ -245,30 +237,6 @@ func (c *Collector) buildWebService() error {
 		[]string{"site"},
 		nil,
 	)
-	c.httpRequestQueuesCurrentQueueSize = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "http_requests_current_queue_size"),
-		"Http Request Current Queue Size",
-		[]string{"site"},
-		nil,
-	)
-	c.httpRequestQueuesTotalRejectedRequest = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "http_request_total_rejected_request"),
-		"Http Request Total Rejected Request",
-		[]string{"site"},
-		nil,
-	)
-	c.httpRequestQueuesMaxQueueItemAge = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "http_requests_max_queue_item_age"),
-		"Http Request Max Queue Item Age",
-		[]string{"site"},
-		nil,
-	)
-	c.httpRequestQueuesArrivalRate = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "http_requests_arrival_rate"),
-		"Http Request Arrival Rate",
-		[]string{"site"},
-		nil,
-	)
 
 	return nil
 }
@@ -410,30 +378,6 @@ func (c *Collector) collectWebService(ch chan<- prometheus.Metric) error {
 			c.webServiceTotalRejectedAsyncIORequests,
 			prometheus.CounterValue,
 			data.WebServiceTotalRejectedAsyncIORequests,
-			data.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.httpRequestQueuesCurrentQueueSize,
-			prometheus.GaugeValue,
-			data.HttpRequestQueuesCurrentQueueSize,
-			data.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.httpRequestQueuesTotalRejectedRequest,
-			prometheus.GaugeValue,
-			data.HttpRequestQueuesTotalRejectedRequest,
-			data.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.httpRequestQueuesMaxQueueItemAge,
-			prometheus.GaugeValue,
-			data.HttpRequestQueuesMaxQueueItemAge,
-			data.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.httpRequestQueuesArrivalRate,
-			prometheus.GaugeValue,
-			data.HttpRequestQueuesArrivalRate,
 			data.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(

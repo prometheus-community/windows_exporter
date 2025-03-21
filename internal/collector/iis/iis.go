@@ -149,7 +149,7 @@ func (c *Collector) GetName() string {
 
 func (c *Collector) Close() error {
 	c.perfDataCollectorWebService.Close()
-	c.collectorHttpService.Close()
+	c.perfDataCollectorHttpService.Close()
 	c.perfDataCollectorAppPoolWAS.Close()
 	c.w3SVCW3WPPerfDataCollector.Close()
 	c.serviceCachePerfDataCollector.Close()

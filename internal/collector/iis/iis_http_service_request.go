@@ -24,7 +24,7 @@ import (
 )
 
 type collectorHttpService struct {
-	perfDatacollectorHttpService *pdh.Collector
+	perfDataCollectorHttpService *pdh.Collector
 	perfDataObjectHttpService    []perfDataCounterValuesHttpService
 
 	httpRequestQueuesCurrentQueueSize     *prometheus.Desc
@@ -49,7 +49,7 @@ func (p perfDataCounterValuesHttpService) GetName() string {
 func (c *Collector) buildHttpService() error {
 	var err error
 
-	c.perfDatacollectorHttpService, err = pdh.NewCollector[perfDataCounterValuesHttpService](pdh.CounterTypeRaw, "Http Service", pdh.InstancesAll)
+	c.perfDataCollectorHttpService, err = pdh.NewCollector[perfDataCounterValuesHttpService](pdh.CounterTypeRaw, "HTTP Service Request Queues", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create Http Service collector: %w", err)
 	}
@@ -83,7 +83,7 @@ func (c *Collector) buildHttpService() error {
 }
 
 func (c *Collector) collectHttpService(ch chan<- prometheus.Metric) error {
-	err := c.perfDatacollectorHttpService.Collect(&c.perfDataObjectHttpService)
+	err := c.perfDataCollectorHttpService.Collect(&c.perfDataObjectHttpService)
 	if err != nil {
 		return fmt.Errorf("failed to collect Http Service metrics: %w", err)
 	}
