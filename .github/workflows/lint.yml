@@ -23,7 +23,7 @@ jobs:
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
-      - uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34 # v5
+      - uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b # v5
         with:
           go-version-file: 'go.mod'
 
@@ -46,7 +46,7 @@ jobs:
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
-      - uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34 # v5
+      - uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b # v5
         with:
           go-version-file: 'go.mod'
 
@@ -67,7 +67,7 @@ jobs:
         run: make promtool
 
       - name: Upload windows_exporter.exe
-        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
           name: windows_exporter.amd64.exe
@@ -85,7 +85,7 @@ jobs:
           git config --global core.eol lf
 
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
-      - uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34 # v5
+      - uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b # v5
         with:
           go-version-file: 'go.mod'
 
