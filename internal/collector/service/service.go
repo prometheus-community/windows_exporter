@@ -366,9 +366,9 @@ func (c *Collector) collectService(ch chan<- prometheus.Metric, serviceName stri
 // This is realized by ask Service Manager directly.
 func (c *Collector) queryAllServices() ([]windows.ENUM_SERVICE_STATUS_PROCESS, error) {
 	var (
-		bytesNeeded      uint32
-		servicesReturned uint32
-		err              error
+		additionalBytesNeeded uint32
+		servicesReturned      uint32
+		err                   error
 	)
 
 	for {
@@ -381,7 +381,7 @@ func (c *Collector) queryAllServices() ([]windows.ENUM_SERVICE_STATUS_PROCESS, e
 			windows.SERVICE_STATE_ALL,
 			&c.queryAllServicesBuffer[0],
 			currentBufferSize,
-			&bytesNeeded,
+			&additionalBytesNeeded,
 			&servicesReturned,
 			nil,
 			nil,
@@ -395,11 +395,14 @@ func (c *Collector) queryAllServices() ([]windows.ENUM_SERVICE_STATUS_PROCESS, e
 			return nil, err
 		}
 
-		if bytesNeeded <= currentBufferSize {
-			return nil, fmt.Errorf("windows.EnumServicesStatusEx reports buffer too small (%d), but buffer is large enough (%d)", currentBufferSize, bytesNeeded)
-		}
+		/*
+			Unlike other WIN32 API calls, additionalBytesNeeded is not returning the absolute amount bytes needed,
+			but the additional bytes needed relative to the cbBufSize parameter.
+			ref:
+			https://stackoverflow.com/questions/14756347/when-calling-enumservicesstatusex-twice-i-still-get-eror-more-data-in-c
+		*/
 
-		c.queryAllServicesBuffer = make([]byte, bytesNeeded)
+		c.queryAllServicesBuffer = make([]byte, currentBufferSize+additionalBytesNeeded)
 	}
 
 	if servicesReturned == 0 {
