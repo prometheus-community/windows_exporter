@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"net"
 
-	"github.com/prometheus-community/windows_exporter/internal/headers/win32api"
+	"github.com/prometheus-community/windows_exporter/internal/win32/win32api"
 	"golang.org/x/sys/windows"
 )
 

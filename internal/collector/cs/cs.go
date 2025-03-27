@@ -19,9 +19,9 @@ import (
 	"log/slog"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/prometheus-community/windows_exporter/internal/headers/sysinfoapi"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/win32/sysinfoapi"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
