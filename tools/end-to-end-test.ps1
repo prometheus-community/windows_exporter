@@ -67,7 +67,7 @@ try {
 }
 
 # Compare the expected and actual output
-$output_diff = Compare-Object (Get-Content 'e2e-output.txt' | Where-Object { $_ -ne "" }) (Get-Content "$($temp_dir)/e2e-output.txt' | Where-Object { $_ -ne "" })
+$output_diff = Compare-Object (Get-Content 'e2e-output.txt' | Where-Object { $_ -ne "" }) (Get-Content "$($temp_dir)/e2e-output.txt" | Where-Object { $_ -ne "" })
 
 # Fail if differences in output are detected
 if (-not ($null -eq $output_diff)) {
