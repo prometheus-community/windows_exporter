@@ -37,7 +37,8 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	config Config
 
-	sessionInfo *prometheus.Desc
+	sessionInfo   *prometheus.Desc
+	sessionLogoff *prometheus.Desc
 }
 
 func New(config *Config) *Collector {
@@ -71,6 +72,12 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		[]string{"id", "username", "domain", "type"},
 		nil,
 	)
+	c.sessionLogoff = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "session_logoff_timestamp_seconds"),
+		"timestamp of the logoff session in seconds.",
+		[]string{"id", "username", "domain", "type"},
+		nil,
+	)
 
 	return nil
 }
@@ -88,6 +95,12 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 			c.sessionInfo,
 			prometheus.GaugeValue,
 			float64(session.LogonTime.Unix()),
+			session.LogonId.String(), session.UserName, session.LogonDomain, session.LogonType.String(),
+		)
+		ch <- prometheus.MustNewConstMetric(
+			c.sessionLogoff,
+			prometheus.GaugeValue,
+			float64(session.LogoffTime.Unix()),
 			session.LogonId.String(), session.UserName, session.LogonDomain, session.LogonType.String(),
 		)
 	}

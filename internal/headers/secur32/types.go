@@ -118,6 +118,7 @@ type LogonSessionData struct {
 	Session               uint32
 	Sid                   *windows.SID
 	LogonTime             time.Time
+	LogoffTime            time.Time
 }
 
 type LUID windows.LUID

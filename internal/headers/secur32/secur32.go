@@ -131,5 +131,6 @@ func newLogonSessionData(data *SECURITY_LOGON_SESSION_DATA) *LogonSessionData {
 		LogonDomain: data.LogonDomain.String(),
 		LogonType:   data.LogonType,
 		LogonTime:   time.Unix(0, data.LogonTime.Nanoseconds()),
+		LogoffTime:  time.Unix(0, data.LogoffTime.Nanoseconds()),
 	}
 }
