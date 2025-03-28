@@ -70,17 +70,11 @@ $expected = (Get-Content 'e2e-output.txt' | Out-String).Trim()
 $actual = (Get-Content "$($temp_dir)/e2e-output.txt" | Out-String).Trim()
 
 # Compare the expected and actual output
-$output_diff = Compare-Object -ReferenceObject $expected -DifferenceObject $actual
+$output_diff = Compare-Object (Get-Content 'e2e-output.txt') (Get-Content "$($temp_dir)/e2e-output.txt")
 
 # Fail if differences in output are detected
-if ($output_diff) {
-    $output_diff | ForEach-Object {
-        if ($_.SideIndicator -eq "<=") {
-            Write-Host "Expected: $($_.InputObject)"
-        } elseif ($_.SideIndicator -eq "=>") {
-            Write-Host "Actual: $($_.InputObject)"
-        }
-    }
+if (-not ($null -eq $output_diff)) {
+    $output_diff | Format-Table -AutoSize | Out-String -Width 10000
 
     Write-Host "STDOUT"
     Get-Content "$($temp_dir)/windows_exporter.log"
