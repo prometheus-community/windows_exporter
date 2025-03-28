@@ -25,7 +25,7 @@ import (
 )
 
 type collectorGeneralStatistics struct {
-	genStatsPerfDataCollectors map[string]*pdh.Collector
+	genStatsPerfDataCollectors map[mssqlInstance]*pdh.Collector
 	genStatsPerfDataObject     []perfDataCounterValuesGenStats
 
 	genStatsActiveTempTables              *prometheus.Desc
@@ -84,11 +84,11 @@ type perfDataCounterValuesGenStats struct {
 func (c *Collector) buildGeneralStatistics() error {
 	var err error
 
-	c.genStatsPerfDataCollectors = make(map[string]*pdh.Collector, len(c.mssqlInstances))
+	c.genStatsPerfDataCollectors = make(map[mssqlInstance]*pdh.Collector, len(c.mssqlInstances))
 	errs := make([]error, 0, len(c.mssqlInstances))
 
 	for _, sqlInstance := range c.mssqlInstances {
-		c.genStatsPerfDataCollectors[sqlInstance.name], err = pdh.NewCollector[perfDataCounterValuesGenStats](pdh.CounterTypeRaw, c.mssqlGetPerfObjectName(sqlInstance.name, "General Statistics"), nil)
+		c.genStatsPerfDataCollectors[sqlInstance], err = pdh.NewCollector[perfDataCounterValuesGenStats](pdh.CounterTypeRaw, c.mssqlGetPerfObjectName(sqlInstance, "General Statistics"), nil)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("failed to create General Statistics collector for instance %s: %w", sqlInstance.name, err))
 		}
@@ -247,7 +247,7 @@ func (c *Collector) collectGeneralStatistics(ch chan<- prometheus.Metric) error 
 	return c.collect(ch, subCollectorGeneralStatistics, c.genStatsPerfDataCollectors, c.collectGeneralStatisticsInstance)
 }
 
-func (c *Collector) collectGeneralStatisticsInstance(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *pdh.Collector) error {
+func (c *Collector) collectGeneralStatisticsInstance(ch chan<- prometheus.Metric, sqlInstance mssqlInstance, perfDataCollector *pdh.Collector) error {
 	err := perfDataCollector.Collect(&c.genStatsPerfDataObject)
 	if err != nil {
 		return fmt.Errorf("failed to collect %s metrics: %w", c.mssqlGetPerfObjectName(sqlInstance, "General Statistics"), err)
@@ -257,168 +257,168 @@ func (c *Collector) collectGeneralStatisticsInstance(ch chan<- prometheus.Metric
 		c.genStatsActiveTempTables,
 		prometheus.GaugeValue,
 		c.genStatsPerfDataObject[0].GenStatsActiveTempTables,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.genStatsConnectionReset,
 		prometheus.CounterValue,
 		c.genStatsPerfDataObject[0].GenStatsConnectionResetPerSec,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.genStatsEventNotificationsDelayedDrop,
 		prometheus.GaugeValue,
 		c.genStatsPerfDataObject[0].GenStatsEventNotificationsDelayedDrop,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.genStatsHTTPAuthenticatedRequests,
 		prometheus.GaugeValue,
 		c.genStatsPerfDataObject[0].GenStatsHTTPAuthenticatedRequests,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.genStatsLogicalConnections,
 		prometheus.GaugeValue,
 		c.genStatsPerfDataObject[0].GenStatsLogicalConnections,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.genStatsLogins,
 		prometheus.CounterValue,
 		c.genStatsPerfDataObject[0].GenStatsLoginsPerSec,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.genStatsLogouts,
 		prometheus.CounterValue,
 		c.genStatsPerfDataObject[0].GenStatsLogoutsPerSec,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.genStatsMarsDeadlocks,
 		prometheus.GaugeValue,
 		c.genStatsPerfDataObject[0].GenStatsMarsDeadlocks,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.genStatsNonAtomicYieldRate,
 		prometheus.CounterValue,
 		c.genStatsPerfDataObject[0].GenStatsNonatomicYieldRate,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.genStatsProcessesBlocked,
 		prometheus.GaugeValue,
 		c.genStatsPerfDataObject[0].GenStatsProcessesBlocked,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.genStatsSOAPEmptyRequests,
 		prometheus.GaugeValue,
 		c.genStatsPerfDataObject[0].GenStatsSOAPEmptyRequests,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.genStatsSOAPMethodInvocations,
 		prometheus.GaugeValue,
 		c.genStatsPerfDataObject[0].GenStatsSOAPMethodInvocations,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.genStatsSOAPSessionInitiateRequests,
 		prometheus.GaugeValue,
 		c.genStatsPerfDataObject[0].GenStatsSOAPSessionInitiateRequests,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.genStatsSOAPSessionTerminateRequests,
 		prometheus.GaugeValue,
 		c.genStatsPerfDataObject[0].GenStatsSOAPSessionTerminateRequests,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.genStatsSOAPSQLRequests,
 		prometheus.GaugeValue,
 		c.genStatsPerfDataObject[0].GenStatsSOAPSQLRequests,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.genStatsSOAPWSDLRequests,
 		prometheus.GaugeValue,
 		c.genStatsPerfDataObject[0].GenStatsSOAPWSDLRequests,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.genStatsSQLTraceIOProviderLockWaits,
 		prometheus.GaugeValue,
 		c.genStatsPerfDataObject[0].GenStatsSQLTraceIOProviderLockWaits,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.genStatsTempDBRecoveryUnitID,
 		prometheus.GaugeValue,
 		c.genStatsPerfDataObject[0].GenStatsTempdbRecoveryUnitID,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.genStatsTempDBrowSetID,
 		prometheus.GaugeValue,
 		c.genStatsPerfDataObject[0].GenStatsTempdbRowsetID,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.genStatsTempTablesCreationRate,
 		prometheus.CounterValue,
 		c.genStatsPerfDataObject[0].GenStatsTempTablesCreationRate,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.genStatsTempTablesForDestruction,
 		prometheus.GaugeValue,
 		c.genStatsPerfDataObject[0].GenStatsTempTablesForDestruction,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.genStatsTraceEventNotificationQueue,
 		prometheus.GaugeValue,
 		c.genStatsPerfDataObject[0].GenStatsTraceEventNotificationQueue,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.genStatsTransactions,
 		prometheus.GaugeValue,
 		c.genStatsPerfDataObject[0].GenStatsTransactions,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.genStatsUserConnections,
 		prometheus.GaugeValue,
 		c.genStatsPerfDataObject[0].GenStatsUserConnections,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	return nil

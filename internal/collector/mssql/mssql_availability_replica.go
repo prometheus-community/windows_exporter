@@ -26,7 +26,7 @@ import (
 )
 
 type collectorAvailabilityReplica struct {
-	availabilityReplicaPerfDataCollectors map[string]*pdh.Collector
+	availabilityReplicaPerfDataCollectors map[mssqlInstance]*pdh.Collector
 	availabilityReplicaPerfDataObject     []perfDataCounterValuesAvailabilityReplica
 
 	availReplicaBytesReceivedFromReplica *prometheus.Desc
@@ -57,11 +57,11 @@ type perfDataCounterValuesAvailabilityReplica struct {
 func (c *Collector) buildAvailabilityReplica() error {
 	var err error
 
-	c.availabilityReplicaPerfDataCollectors = make(map[string]*pdh.Collector, len(c.mssqlInstances))
+	c.availabilityReplicaPerfDataCollectors = make(map[mssqlInstance]*pdh.Collector, len(c.mssqlInstances))
 	errs := make([]error, 0, len(c.mssqlInstances))
 
 	for _, sqlInstance := range c.mssqlInstances {
-		c.availabilityReplicaPerfDataCollectors[sqlInstance.name], err = pdh.NewCollector[perfDataCounterValuesAvailabilityReplica](pdh.CounterTypeRaw, c.mssqlGetPerfObjectName(sqlInstance.name, "Availability Replica"), pdh.InstancesAll)
+		c.availabilityReplicaPerfDataCollectors[sqlInstance], err = pdh.NewCollector[perfDataCounterValuesAvailabilityReplica](pdh.CounterTypeRaw, c.mssqlGetPerfObjectName(sqlInstance, "Availability Replica"), pdh.InstancesAll)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("failed to create Availability Replica collector for instance %s: %w", sqlInstance.name, err))
 		}
@@ -130,7 +130,7 @@ func (c *Collector) collectAvailabilityReplica(ch chan<- prometheus.Metric) erro
 	return c.collect(ch, subCollectorAvailabilityReplica, c.availabilityReplicaPerfDataCollectors, c.collectAvailabilityReplicaInstance)
 }
 
-func (c *Collector) collectAvailabilityReplicaInstance(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *pdh.Collector) error {
+func (c *Collector) collectAvailabilityReplicaInstance(ch chan<- prometheus.Metric, sqlInstance mssqlInstance, perfDataCollector *pdh.Collector) error {
 	err := perfDataCollector.Collect(&c.availabilityReplicaPerfDataObject)
 	if err != nil {
 		return fmt.Errorf("failed to collect %s metrics: %w", c.mssqlGetPerfObjectName(sqlInstance, "Availability Replica"), err)
@@ -141,63 +141,63 @@ func (c *Collector) collectAvailabilityReplicaInstance(ch chan<- prometheus.Metr
 			c.availReplicaBytesReceivedFromReplica,
 			prometheus.CounterValue,
 			data.AvailReplicaBytesReceivedFromReplicaPerSec,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.availReplicaBytesSentToReplica,
 			prometheus.CounterValue,
 			data.AvailReplicaBytesSentToReplicaPerSec,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.availReplicaBytesSentToTransport,
 			prometheus.CounterValue,
 			data.AvailReplicaBytesSentToTransportPerSec,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.availReplicaFlowControl,
 			prometheus.CounterValue,
 			data.AvailReplicaFlowControlPerSec,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.availReplicaFlowControlTimeMS,
 			prometheus.CounterValue,
 			utils.MilliSecToSec(data.AvailReplicaFlowControlTimeMSPerSec),
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.availReplicaReceivesFromReplica,
 			prometheus.CounterValue,
 			data.AvailReplicaReceivesFromReplicaPerSec,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.availReplicaResentMessages,
 			prometheus.CounterValue,
 			data.AvailReplicaResentMessagesPerSec,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.availReplicaSendsToReplica,
 			prometheus.CounterValue,
 			data.AvailReplicaSendsToReplicaPerSec,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.availReplicaSendsToTransport,
 			prometheus.CounterValue,
 			data.AvailReplicaSendsToTransportPerSec,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 	}
 

@@ -25,8 +25,8 @@ import (
 )
 
 type collectorDatabases struct {
-	databasesPerfDataCollectors     map[string]*pdh.Collector
-	databasesPerfDataCollectors2019 map[string]*pdh.Collector
+	databasesPerfDataCollectors     map[mssqlInstance]*pdh.Collector
+	databasesPerfDataCollectors2019 map[mssqlInstance]*pdh.Collector
 	databasesPerfDataObject         []perfDataCounterValuesDatabases
 	databasesPerfDataObject2019     []perfDataCounterValuesDatabases2019
 
@@ -141,18 +141,18 @@ type perfDataCounterValuesDatabases2019 struct {
 func (c *Collector) buildDatabases() error {
 	var err error
 
-	c.databasesPerfDataCollectors = make(map[string]*pdh.Collector, len(c.mssqlInstances))
-	c.databasesPerfDataCollectors2019 = make(map[string]*pdh.Collector, len(c.mssqlInstances))
+	c.databasesPerfDataCollectors = make(map[mssqlInstance]*pdh.Collector, len(c.mssqlInstances))
+	c.databasesPerfDataCollectors2019 = make(map[mssqlInstance]*pdh.Collector, len(c.mssqlInstances))
 	errs := make([]error, 0, len(c.mssqlInstances))
 
 	for _, sqlInstance := range c.mssqlInstances {
-		c.databasesPerfDataCollectors[sqlInstance.name], err = pdh.NewCollector[perfDataCounterValuesDatabases](pdh.CounterTypeRaw, c.mssqlGetPerfObjectName(sqlInstance.name, "Databases"), pdh.InstancesAll)
+		c.databasesPerfDataCollectors[sqlInstance], err = pdh.NewCollector[perfDataCounterValuesDatabases](pdh.CounterTypeRaw, c.mssqlGetPerfObjectName(sqlInstance, "Databases"), pdh.InstancesAll)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("failed to create Databases collector for instance %s: %w", sqlInstance.name, err))
 		}
 
 		if sqlInstance.isVersionGreaterOrEqualThan(serverVersion2019) {
-			c.databasesPerfDataCollectors2019[sqlInstance.name], err = pdh.NewCollector[perfDataCounterValuesDatabases2019](pdh.CounterTypeRaw, c.mssqlGetPerfObjectName(sqlInstance.name, "Databases"), pdh.InstancesAll)
+			c.databasesPerfDataCollectors2019[sqlInstance], err = pdh.NewCollector[perfDataCounterValuesDatabases2019](pdh.CounterTypeRaw, c.mssqlGetPerfObjectName(sqlInstance, "Databases"), pdh.InstancesAll)
 			if err != nil {
 				errs = append(errs, fmt.Errorf("failed to create Databases 2019 collector for instance %s: %w", sqlInstance.name, err))
 			}
@@ -458,7 +458,7 @@ func (c *Collector) collectDatabases(ch chan<- prometheus.Metric) error {
 	)
 }
 
-func (c *Collector) collectDatabasesInstance(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *pdh.Collector) error {
+func (c *Collector) collectDatabasesInstance(ch chan<- prometheus.Metric, sqlInstance mssqlInstance, perfDataCollector *pdh.Collector) error {
 	err := perfDataCollector.Collect(&c.databasesPerfDataObject)
 	if err != nil {
 		return fmt.Errorf("failed to collect %s metrics: %w", c.mssqlGetPerfObjectName(sqlInstance, "Databases"), err)
@@ -469,336 +469,336 @@ func (c *Collector) collectDatabasesInstance(ch chan<- prometheus.Metric, sqlIns
 			c.databasesActiveTransactions,
 			prometheus.GaugeValue,
 			data.DatabasesActiveTransactions,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.databasesBackupPerRestoreThroughput,
 			prometheus.CounterValue,
 			data.DatabasesBackupPerRestoreThroughputPerSec,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.databasesBulkCopyRows,
 			prometheus.CounterValue,
 			data.DatabasesBulkCopyRowsPerSec,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.databasesBulkCopyThroughput,
 			prometheus.CounterValue,
 			data.DatabasesBulkCopyThroughputPerSec*1024,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.databasesCommitTableEntries,
 			prometheus.GaugeValue,
 			data.DatabasesCommitTableEntries,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.databasesDataFilesSizeKB,
 			prometheus.GaugeValue,
 			data.DatabasesDataFilesSizeKB*1024,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.databasesDBCCLogicalScanBytes,
 			prometheus.CounterValue,
 			data.DatabasesDBCCLogicalScanBytesPerSec,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.databasesGroupCommitTime,
 			prometheus.CounterValue,
 			data.DatabasesGroupCommitTimePerSec/1000000.0,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.databasesLogBytesFlushed,
 			prometheus.CounterValue,
 			data.DatabasesLogBytesFlushedPerSec,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.databasesLogCacheHits,
 			prometheus.GaugeValue,
 			data.DatabasesLogCacheHitRatio,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.databasesLogCacheLookups,
 			prometheus.GaugeValue,
 			data.DatabasesLogCacheHitRatioBase,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.databasesLogCacheReads,
 			prometheus.CounterValue,
 			data.DatabasesLogCacheReadsPerSec,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.databasesLogFilesSizeKB,
 			prometheus.GaugeValue,
 			data.DatabasesLogFilesSizeKB*1024,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.databasesLogFilesUsedSizeKB,
 			prometheus.GaugeValue,
 			data.DatabasesLogFilesUsedSizeKB*1024,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.databasesLogFlushes,
 			prometheus.CounterValue,
 			data.DatabasesLogFlushesPerSec,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.databasesLogFlushWaits,
 			prometheus.CounterValue,
 			data.DatabasesLogFlushWaitsPerSec,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.databasesLogFlushWaitTime,
 			prometheus.GaugeValue,
 			data.DatabasesLogFlushWaitTime/1000.0,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.databasesLogFlushWriteTimeMS,
 			prometheus.GaugeValue,
 			data.DatabasesLogFlushWriteTimeMS/1000.0,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.databasesLogGrowths,
 			prometheus.GaugeValue,
 			data.DatabasesLogGrowths,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.databasesLogPoolCacheMisses,
 			prometheus.CounterValue,
 			data.DatabasesLogPoolCacheMissesPerSec,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.databasesLogPoolDiskReads,
 			prometheus.CounterValue,
 			data.DatabasesLogPoolDiskReadsPerSec,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.databasesLogPoolHashDeletes,
 			prometheus.CounterValue,
 			data.DatabasesLogPoolHashDeletesPerSec,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.databasesLogPoolHashInserts,
 			prometheus.CounterValue,
 			data.DatabasesLogPoolHashInsertsPerSec,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.databasesLogPoolInvalidHashEntry,
 			prometheus.CounterValue,
 			data.DatabasesLogPoolInvalidHashEntryPerSec,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.databasesLogPoolLogScanPushes,
 			prometheus.CounterValue,
 			data.DatabasesLogPoolLogScanPushesPerSec,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.databasesLogPoolLogWriterPushes,
 			prometheus.CounterValue,
 			data.DatabasesLogPoolLogWriterPushesPerSec,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.databasesLogPoolPushEmptyFreePool,
 			prometheus.CounterValue,
 			data.DatabasesLogPoolPushEmptyFreePoolPerSec,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.databasesLogPoolPushLowMemory,
 			prometheus.CounterValue,
 			data.DatabasesLogPoolPushLowMemoryPerSec,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.databasesLogPoolPushNoFreeBuffer,
 			prometheus.CounterValue,
 			data.DatabasesLogPoolPushNoFreeBufferPerSec,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.databasesLogPoolReqBehindTrunc,
 			prometheus.CounterValue,
 			data.DatabasesLogPoolReqBehindTruncPerSec,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.databasesLogPoolRequestsOldVLF,
 			prometheus.CounterValue,
 			data.DatabasesLogPoolRequestsOldVLFPerSec,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.databasesLogPoolRequests,
 			prometheus.CounterValue,
 			data.DatabasesLogPoolRequestsPerSec,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.databasesLogPoolTotalActiveLogSize,
 			prometheus.GaugeValue,
 			data.DatabasesLogPoolTotalActiveLogSize,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.databasesLogPoolTotalSharedPoolSize,
 			prometheus.GaugeValue,
 			data.DatabasesLogPoolTotalSharedPoolSize,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.databasesLogShrinks,
 			prometheus.GaugeValue,
 			data.DatabasesLogShrinks,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.databasesLogTruncations,
 			prometheus.GaugeValue,
 			data.DatabasesLogTruncations,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.databasesPercentLogUsed,
 			prometheus.GaugeValue,
 			data.DatabasesPercentLogUsed,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.databasesReplPendingXacts,
 			prometheus.GaugeValue,
 			data.DatabasesReplPendingXacts,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.databasesReplTransRate,
 			prometheus.CounterValue,
 			data.DatabasesReplTransRate,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.databasesShrinkDataMovementBytes,
 			prometheus.CounterValue,
 			data.DatabasesShrinkDataMovementBytesPerSec,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.databasesTrackedTransactions,
 			prometheus.CounterValue,
 			data.DatabasesTrackedTransactionsPerSec,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.databasesTransactions,
 			prometheus.CounterValue,
 			data.DatabasesTransactionsPerSec,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.databasesWriteTransactions,
 			prometheus.CounterValue,
 			data.DatabasesWriteTransactionsPerSec,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.databasesXTPControllerDLCLatencyPerFetch,
 			prometheus.GaugeValue,
 			data.DatabasesXTPControllerDLCLatencyPerFetch,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.databasesXTPControllerDLCPeakLatency,
 			prometheus.GaugeValue,
 			data.DatabasesXTPControllerDLCPeakLatency*1000000.0,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.databasesXTPControllerLogProcessed,
 			prometheus.CounterValue,
 			data.DatabasesXTPControllerLogProcessedPerSec,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.databasesXTPMemoryUsedKB,
 			prometheus.GaugeValue,
 			data.DatabasesXTPMemoryUsedKB*1024,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 	}
 
 	return nil
 }
 
-func (c *Collector) collectDatabasesInstance2019(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *pdh.Collector) error {
+func (c *Collector) collectDatabasesInstance2019(ch chan<- prometheus.Metric, sqlInstance mssqlInstance, perfDataCollector *pdh.Collector) error {
 	err := perfDataCollector.Collect(&c.databasesPerfDataObject2019)
 	if err != nil {
 		return fmt.Errorf("failed to collect %s metrics: %w", c.mssqlGetPerfObjectName(sqlInstance, "Databases"), err)
@@ -809,7 +809,7 @@ func (c *Collector) collectDatabasesInstance2019(ch chan<- prometheus.Metric, sq
 			c.databasesActiveParallelRedoThreads,
 			prometheus.GaugeValue,
 			data.DatabasesActiveParallelRedoThreads,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 	}
 

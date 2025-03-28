@@ -25,7 +25,7 @@ import (
 )
 
 type collectorLocks struct {
-	locksPerfDataCollectors map[string]*pdh.Collector
+	locksPerfDataCollectors map[mssqlInstance]*pdh.Collector
 	locksPerfDataObject     []perfDataCounterValuesLocks
 
 	// Win32_PerfRawData_{instance}_SQLServerLocks
@@ -55,11 +55,11 @@ type perfDataCounterValuesLocks struct {
 func (c *Collector) buildLocks() error {
 	var err error
 
-	c.locksPerfDataCollectors = make(map[string]*pdh.Collector, len(c.mssqlInstances))
+	c.locksPerfDataCollectors = make(map[mssqlInstance]*pdh.Collector, len(c.mssqlInstances))
 	errs := make([]error, 0, len(c.mssqlInstances))
 
 	for _, sqlInstance := range c.mssqlInstances {
-		c.locksPerfDataCollectors[sqlInstance.name], err = pdh.NewCollector[perfDataCounterValuesLocks](pdh.CounterTypeRaw, c.mssqlGetPerfObjectName(sqlInstance.name, "Locks"), pdh.InstancesAll)
+		c.locksPerfDataCollectors[sqlInstance], err = pdh.NewCollector[perfDataCounterValuesLocks](pdh.CounterTypeRaw, c.mssqlGetPerfObjectName(sqlInstance, "Locks"), pdh.InstancesAll)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("failed to create Locks collector for instance %s: %w", sqlInstance.name, err))
 		}
@@ -121,7 +121,7 @@ func (c *Collector) collectLocks(ch chan<- prometheus.Metric) error {
 	return c.collect(ch, subCollectorLocks, c.locksPerfDataCollectors, c.collectLocksInstance)
 }
 
-func (c *Collector) collectLocksInstance(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *pdh.Collector) error {
+func (c *Collector) collectLocksInstance(ch chan<- prometheus.Metric, sqlInstance mssqlInstance, perfDataCollector *pdh.Collector) error {
 	err := perfDataCollector.Collect(&c.locksPerfDataObject)
 	if err != nil {
 		return fmt.Errorf("failed to collect %s metrics: %w", c.mssqlGetPerfObjectName(sqlInstance, "Locks"), err)
@@ -132,56 +132,56 @@ func (c *Collector) collectLocksInstance(ch chan<- prometheus.Metric, sqlInstanc
 			c.locksWaitTime,
 			prometheus.GaugeValue,
 			data.LocksAverageWaitTimeMS/1000.0,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.locksCount,
 			prometheus.GaugeValue,
 			data.LocksAverageWaitTimeMSBase/1000.0,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.locksLockRequests,
 			prometheus.CounterValue,
 			data.LocksLockRequestsPerSec,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.locksLockTimeouts,
 			prometheus.CounterValue,
 			data.LocksLockTimeoutsPerSec,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.locksLockTimeoutstimeout0,
 			prometheus.CounterValue,
 			data.LocksLockTimeoutsTimeout0PerSec,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.locksLockWaits,
 			prometheus.CounterValue,
 			data.LocksLockWaitsPerSec,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.locksLockWaitTimeMS,
 			prometheus.GaugeValue,
 			data.LocksLockWaitTimeMS/1000.0,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.locksNumberOfDeadlocks,
 			prometheus.CounterValue,
 			data.LocksNumberOfDeadlocksPerSec,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 	}
 

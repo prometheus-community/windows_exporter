@@ -25,7 +25,7 @@ import (
 )
 
 type collectorBufferManager struct {
-	bufManPerfDataCollectors map[string]*pdh.Collector
+	bufManPerfDataCollectors map[mssqlInstance]*pdh.Collector
 	bufManPerfDataObject     []perfDataCounterValuesBufMan
 
 	bufManBackgroundwriterpages         *prometheus.Desc
@@ -82,11 +82,11 @@ type perfDataCounterValuesBufMan struct {
 func (c *Collector) buildBufferManager() error {
 	var err error
 
-	c.bufManPerfDataCollectors = make(map[string]*pdh.Collector, len(c.mssqlInstances))
+	c.bufManPerfDataCollectors = make(map[mssqlInstance]*pdh.Collector, len(c.mssqlInstances))
 	errs := make([]error, 0, len(c.mssqlInstances))
 
 	for _, sqlInstance := range c.mssqlInstances {
-		c.bufManPerfDataCollectors[sqlInstance.name], err = pdh.NewCollector[perfDataCounterValuesBufMan](pdh.CounterTypeRaw, c.mssqlGetPerfObjectName(sqlInstance.name, "Buffer Manager"), nil)
+		c.bufManPerfDataCollectors[sqlInstance], err = pdh.NewCollector[perfDataCounterValuesBufMan](pdh.CounterTypeRaw, c.mssqlGetPerfObjectName(sqlInstance, "Buffer Manager"), nil)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("failed to create Buffer Manager collector for instance %s: %w", sqlInstance.name, err))
 		}
@@ -238,7 +238,7 @@ func (c *Collector) collectBufferManager(ch chan<- prometheus.Metric) error {
 	return c.collect(ch, subCollectorBufferManager, c.bufManPerfDataCollectors, c.collectBufferManagerInstance)
 }
 
-func (c *Collector) collectBufferManagerInstance(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *pdh.Collector) error {
+func (c *Collector) collectBufferManagerInstance(ch chan<- prometheus.Metric, sqlInstance mssqlInstance, perfDataCollector *pdh.Collector) error {
 	err := perfDataCollector.Collect(&c.bufManPerfDataObject)
 	if err != nil {
 		return fmt.Errorf("failed to collect %s metrics: %w", c.mssqlGetPerfObjectName(sqlInstance, "Buffer Manager"), err)
@@ -249,161 +249,161 @@ func (c *Collector) collectBufferManagerInstance(ch chan<- prometheus.Metric, sq
 			c.bufManBackgroundwriterpages,
 			prometheus.CounterValue,
 			data.BufManBackgroundWriterPagesPerSec,
-			sqlInstance,
+			sqlInstance.name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.bufManBuffercachehits,
 			prometheus.GaugeValue,
 			data.BufManBufferCacheHitRatio,
-			sqlInstance,
+			sqlInstance.name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.bufManBuffercachelookups,
 			prometheus.GaugeValue,
 			data.BufManBufferCacheHitRatioBase,
-			sqlInstance,
+			sqlInstance.name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.bufManCheckpointpages,
 			prometheus.CounterValue,
 			data.BufManCheckpointPagesPerSec,
-			sqlInstance,
+			sqlInstance.name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.bufManDatabasepages,
 			prometheus.GaugeValue,
 			data.BufManDatabasePages,
-			sqlInstance,
+			sqlInstance.name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.bufManExtensionallocatedpages,
 			prometheus.GaugeValue,
 			data.BufManExtensionAllocatedPages,
-			sqlInstance,
+			sqlInstance.name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.bufManExtensionfreepages,
 			prometheus.GaugeValue,
 			data.BufManExtensionFreePages,
-			sqlInstance,
+			sqlInstance.name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.bufManExtensioninuseaspercentage,
 			prometheus.GaugeValue,
 			data.BufManExtensionInUseAsPercentage,
-			sqlInstance,
+			sqlInstance.name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.bufManExtensionoutstandingIOcounter,
 			prometheus.GaugeValue,
 			data.BufManExtensionOutstandingIOCounter,
-			sqlInstance,
+			sqlInstance.name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.bufManExtensionpageevictions,
 			prometheus.CounterValue,
 			data.BufManExtensionPageEvictionsPerSec,
-			sqlInstance,
+			sqlInstance.name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.bufManExtensionpagereads,
 			prometheus.CounterValue,
 			data.BufManExtensionPageReadsPerSec,
-			sqlInstance,
+			sqlInstance.name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.bufManExtensionpageunreferencedtime,
 			prometheus.GaugeValue,
 			data.BufManExtensionPageUnreferencedTime,
-			sqlInstance,
+			sqlInstance.name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.bufManExtensionpagewrites,
 			prometheus.CounterValue,
 			data.BufManExtensionPageWritesPerSec,
-			sqlInstance,
+			sqlInstance.name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.bufManFreeliststalls,
 			prometheus.CounterValue,
 			data.BufManFreeListStallsPerSec,
-			sqlInstance,
+			sqlInstance.name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.bufManIntegralControllerSlope,
 			prometheus.GaugeValue,
 			data.BufManIntegralControllerSlope,
-			sqlInstance,
+			sqlInstance.name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.bufManLazywrites,
 			prometheus.CounterValue,
 			data.BufManLazyWritesPerSec,
-			sqlInstance,
+			sqlInstance.name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.bufManPagelifeexpectancy,
 			prometheus.GaugeValue,
 			data.BufManPageLifeExpectancy,
-			sqlInstance,
+			sqlInstance.name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.bufManPagelookups,
 			prometheus.CounterValue,
 			data.BufManPageLookupsPerSec,
-			sqlInstance,
+			sqlInstance.name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.bufManPagereads,
 			prometheus.CounterValue,
 			data.BufManPageReadsPerSec,
-			sqlInstance,
+			sqlInstance.name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.bufManPagewrites,
 			prometheus.CounterValue,
 			data.BufManPageWritesPerSec,
-			sqlInstance,
+			sqlInstance.name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.bufManReadaheadpages,
 			prometheus.CounterValue,
 			data.BufManReadaheadPagesPerSec,
-			sqlInstance,
+			sqlInstance.name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.bufManReadaheadtime,
 			prometheus.CounterValue,
 			data.BufManReadaheadTimePerSec,
-			sqlInstance,
+			sqlInstance.name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.bufManTargetpages,
 			prometheus.GaugeValue,
 			data.BufManTargetPages,
-			sqlInstance,
+			sqlInstance.name,
 		)
 	}
 

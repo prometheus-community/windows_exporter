@@ -333,7 +333,7 @@ func (c *Collector) getMSSQLInstances() ([]mssqlInstance, error) {
 			return nil, fmt.Errorf("couldn't get instance info: %w", err)
 		}
 
-		instance, err := newMssqlInstance(instanceVersion)
+		instance, err := newMssqlInstance(instanceName, instanceVersion)
 		if err != nil {
 			return nil, err
 		}
@@ -348,14 +348,14 @@ func (c *Collector) getMSSQLInstances() ([]mssqlInstance, error) {
 
 // mssqlGetPerfObjectName returns the name of the Windows Performance
 // Counter object for the given SQL instance and Collector.
-func (c *Collector) mssqlGetPerfObjectName(sqlInstance string, collector string) string {
+func (c *Collector) mssqlGetPerfObjectName(sqlInstance mssqlInstance, collector string) string {
 	sb := strings.Builder{}
 
-	if sqlInstance == "MSSQLSERVER" {
+	if sqlInstance.isFirstInstance {
 		sb.WriteString("SQLServer:")
 	} else {
 		sb.WriteString("MSSQL$")
-		sb.WriteString(sqlInstance)
+		sb.WriteString(sqlInstance.name)
 		sb.WriteString(":")
 	}
 
@@ -369,8 +369,8 @@ func (c *Collector) mssqlGetPerfObjectName(sqlInstance string, collector string)
 func (c *Collector) collect(
 	ch chan<- prometheus.Metric,
 	collector string,
-	perfDataCollectors map[string]*pdh.Collector,
-	collectFn func(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *pdh.Collector) error,
+	perfDataCollectors map[mssqlInstance]*pdh.Collector,
+	collectFn func(ch chan<- prometheus.Metric, sqlInstance mssqlInstance, perfDataCollector *pdh.Collector) error,
 ) error {
 	errs := make([]error, 0, len(perfDataCollectors))
 
@@ -386,11 +386,11 @@ func (c *Collector) collect(
 			errs = append(errs, err)
 			success = 0.0
 
-			c.logger.LogAttrs(ctx, slog.LevelDebug, fmt.Sprintf("mssql class collector %s for instance %s failed after %s", collector, sqlInstance, duration),
+			c.logger.LogAttrs(ctx, slog.LevelDebug, fmt.Sprintf("mssql class collector %s for instance %s failed after %s", collector, sqlInstance.name, duration),
 				slog.Any("err", err),
 			)
 		} else {
-			c.logger.LogAttrs(ctx, slog.LevelDebug, fmt.Sprintf("mssql class collector %s for instance %s succeeded after %s", collector, sqlInstance, duration))
+			c.logger.LogAttrs(ctx, slog.LevelDebug, fmt.Sprintf("mssql class collector %s for instance %s succeeded after %s", collector, sqlInstance.name, duration))
 		}
 
 		if collector == "" {
@@ -401,13 +401,13 @@ func (c *Collector) collect(
 			c.mssqlScrapeDurationDesc,
 			prometheus.GaugeValue,
 			duration.Seconds(),
-			collector, sqlInstance,
+			collector, sqlInstance.name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.mssqlScrapeSuccessDesc,
 			prometheus.GaugeValue,
 			success,
-			collector, sqlInstance,
+			collector, sqlInstance.name,
 		)
 	}
 
