@@ -25,7 +25,7 @@ import (
 )
 
 type collectorTransactions struct {
-	transactionsPerfDataCollectors map[string]*pdh.Collector
+	transactionsPerfDataCollectors map[mssqlInstance]*pdh.Collector
 	transactionsPerfDataObject     []perfDataCounterValuesTransactions
 
 	transactionsTempDbFreeSpaceBytes             *prometheus.Desc
@@ -62,11 +62,11 @@ type perfDataCounterValuesTransactions struct {
 func (c *Collector) buildTransactions() error {
 	var err error
 
-	c.transactionsPerfDataCollectors = make(map[string]*pdh.Collector, len(c.mssqlInstances))
+	c.transactionsPerfDataCollectors = make(map[mssqlInstance]*pdh.Collector, len(c.mssqlInstances))
 	errs := make([]error, 0, len(c.mssqlInstances))
 
 	for _, sqlInstance := range c.mssqlInstances {
-		c.transactionsPerfDataCollectors[sqlInstance.name], err = pdh.NewCollector[perfDataCounterValuesTransactions](pdh.CounterTypeRaw, c.mssqlGetPerfObjectName(sqlInstance.name, "Transactions"), nil)
+		c.transactionsPerfDataCollectors[sqlInstance], err = pdh.NewCollector[perfDataCounterValuesTransactions](pdh.CounterTypeRaw, c.mssqlGetPerfObjectName(sqlInstance, "Transactions"), nil)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("failed to create Transactions collector for instance %s: %w", sqlInstance.name, err))
 		}
@@ -160,7 +160,7 @@ func (c *Collector) collectTransactions(ch chan<- prometheus.Metric) error {
 
 // Win32_PerfRawData_MSSQLSERVER_Transactions docs:
 // - https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-transactions-object
-func (c *Collector) collectTransactionsInstance(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *pdh.Collector) error {
+func (c *Collector) collectTransactionsInstance(ch chan<- prometheus.Metric, sqlInstance mssqlInstance, perfDataCollector *pdh.Collector) error {
 	err := perfDataCollector.Collect(&c.transactionsPerfDataObject)
 	if err != nil {
 		return fmt.Errorf("failed to collect %s metrics: %w", c.mssqlGetPerfObjectName(sqlInstance, "Transactions"), err)
@@ -170,91 +170,91 @@ func (c *Collector) collectTransactionsInstance(ch chan<- prometheus.Metric, sql
 		c.transactionsTempDbFreeSpaceBytes,
 		prometheus.GaugeValue,
 		c.transactionsPerfDataObject[0].TransactionsFreeSpaceintempdbKB*1024,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.transactionsLongestTransactionRunningSeconds,
 		prometheus.GaugeValue,
 		c.transactionsPerfDataObject[0].TransactionsLongestTransactionRunningTime,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.transactionsNonSnapshotVersionActiveTotal,
 		prometheus.CounterValue,
 		c.transactionsPerfDataObject[0].TransactionsNonSnapshotVersionTransactions,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.transactionsSnapshotActiveTotal,
 		prometheus.CounterValue,
 		c.transactionsPerfDataObject[0].TransactionsSnapshotTransactions,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.transactionsActive,
 		prometheus.GaugeValue,
 		c.transactionsPerfDataObject[0].TransactionsTransactions,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.transactionsUpdateConflictsTotal,
 		prometheus.CounterValue,
 		c.transactionsPerfDataObject[0].TransactionsUpdateconflictratio,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.transactionsUpdateSnapshotActiveTotal,
 		prometheus.CounterValue,
 		c.transactionsPerfDataObject[0].TransactionsUpdateSnapshotTransactions,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.transactionsVersionCleanupRateBytes,
 		prometheus.GaugeValue,
 		c.transactionsPerfDataObject[0].TransactionsVersionCleanuprateKBPers*1024,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.transactionsVersionGenerationRateBytes,
 		prometheus.GaugeValue,
 		c.transactionsPerfDataObject[0].TransactionsVersionGenerationrateKBPers*1024,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.transactionsVersionStoreSizeBytes,
 		prometheus.GaugeValue,
 		c.transactionsPerfDataObject[0].TransactionsVersionStoreSizeKB*1024,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.transactionsVersionStoreUnits,
 		prometheus.CounterValue,
 		c.transactionsPerfDataObject[0].TransactionsVersionStoreunitcount,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.transactionsVersionStoreCreationUnits,
 		prometheus.CounterValue,
 		c.transactionsPerfDataObject[0].TransactionsVersionStoreunitcreation,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.transactionsVersionStoreTruncationUnits,
 		prometheus.CounterValue,
 		c.transactionsPerfDataObject[0].TransactionsVersionStoreunittruncation,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	return nil
