@@ -84,13 +84,5 @@ if (-not ($null -eq $output_diff)) {
 
     (Get-Content "$($temp_dir)/e2e-output.txt") | Set-Content -Encoding utf8 "e2e-output.txt"
 
-    Write-Host "----------------------------------------"
-    Write-Host "expected"
-    Write-Host "$expected"
-    Write-Host "----------------------------------------"
-    Write-Host "actual"
-    Write-Host "$actual"
-    Write-Host "----------------------------------------"
-
     exit 1
 }
