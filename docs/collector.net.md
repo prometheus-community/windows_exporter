@@ -42,6 +42,7 @@ Comma-separated list of collectors to use. Defaults to all, if not specified.
 | `windows_net_current_bandwidth_bytes`          | Estimate of the interface's current bandwidth in bytes per second                                                       | gauge   | `nic`                          |
 | `windows_net_nic_address_info`                 | A metric with a constant '1' value labeled with the network interface's address information.                            | gauge   | `nic`, `address`, `family`     |
 | `windows_net_nic_info`                         | A metric with a constant '1' value labeled with the network interface's general information.                            | gauge   | `nic`, `friendly_name`, `mac`  |
+| `windows_net_nic_operation_status`             | The operational status for the interface as defined in RFC 2863 as IfOperStatus.                                        | gauge   | `nic`, `status`                |
 | `windows_net_route_info`                       | A metric with a constant '1' value labeled with the network interface's route information.                              | gauge   | `nic`, `src`, `dest`, `metric` |
 
 ### Example metric
