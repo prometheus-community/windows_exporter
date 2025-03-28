@@ -73,7 +73,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 	c.sessionLogoff = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "session_logon_timestamp_seconds"),
+		prometheus.BuildFQName(types.Namespace, Name, "session_logoff_timestamp_seconds"),
 		"timestamp of the logoff session in seconds.",
 		[]string{"id", "username", "domain", "type"},
 		nil,
