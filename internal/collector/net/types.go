@@ -15,6 +15,25 @@
 
 package net
 
+import "golang.org/x/sys/windows"
+
+//nolint:gochecknoglobals
+var (
+	addressFamily = map[uint16]string{
+		windows.AF_INET:  "ipv4",
+		windows.AF_INET6: "ipv6",
+	}
+	operStatus = map[uint32]string{
+		windows.IfOperStatusUp:             "up",
+		windows.IfOperStatusDown:           "down",
+		windows.IfOperStatusTesting:        "testing",
+		windows.IfOperStatusUnknown:        "unknown",
+		windows.IfOperStatusDormant:        "dormant",
+		windows.IfOperStatusNotPresent:     "not present",
+		windows.IfOperStatusLowerLayerDown: "lower layer down",
+	}
+)
+
 type perfDataCounterValues struct {
 	Name string
 

@@ -277,6 +277,8 @@ windows_exporter_collector_timeout{collector="udp"} 0
 # TYPE windows_net_nic_address_info gauge
 # HELP windows_net_nic_info A metric with a constant '1' value labeled with the network interface's general information.
 # TYPE windows_net_nic_info gauge
+# HELP windows_net_nic_operation_status The operational status for the interface as defined in RFC 2863 as IfOperStatus.
+# TYPE windows_net_nic_operation_status gauge
 # HELP windows_net_output_queue_length_packets (Network.OutputQueueLength)
 # TYPE windows_net_output_queue_length_packets gauge
 # HELP windows_net_packets_outbound_discarded_total (Network.PacketsOutboundDiscarded)

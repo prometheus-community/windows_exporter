@@ -36,8 +36,8 @@ import (
 const (
 	Name = "net"
 
-	subCollectorMetrics      = "metrics"
-	subCollectorNicAddresses = "nic_addresses"
+	subCollectorMetrics = "metrics"
+	subCollectorNicInfo = "nic_info"
 )
 
 type Config struct {
@@ -52,7 +52,7 @@ var ConfigDefaults = Config{
 	NicInclude: types.RegExpAny,
 	CollectorsEnabled: []string{
 		subCollectorMetrics,
-		subCollectorNicAddresses,
+		subCollectorNicInfo,
 	},
 }
 
@@ -78,6 +78,7 @@ type Collector struct {
 	currentBandwidth         *prometheus.Desc
 
 	nicIPAddressInfo *prometheus.Desc
+	nicOperStatus    *prometheus.Desc
 	nicInfo          *prometheus.Desc
 	routeInfo        *prometheus.Desc
 }
@@ -247,6 +248,12 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		[]string{"nic", "address", "family"},
 		nil,
 	)
+	c.nicOperStatus = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "nic_operation_status"),
+		"The operational status for the interface as defined in RFC 2863 as IfOperStatus.",
+		[]string{"nic", "status"},
+		nil,
+	)
 	c.nicInfo = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "nic_info"),
 		"A metric with a constant '1' value labeled with the network interface's general information.",
@@ -267,7 +274,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		return fmt.Errorf("failed to create Network Interface collector: %w", err)
 	}
 
-	if slices.Contains(c.config.CollectorsEnabled, subCollectorNicAddresses) {
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorNicInfo) {
 		logger.Info("nic/addresses collector is in an experimental state! The configuration and metrics may change in future. Please report any issues.",
 			slog.String("collector", Name),
 		)
@@ -287,8 +294,8 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		}
 	}
 
-	if slices.Contains(c.config.CollectorsEnabled, subCollectorNicAddresses) {
-		if err := c.collectNICAddresses(ch); err != nil {
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorNicInfo) {
+		if err := c.collectNICInfo(ch); err != nil {
 			errs = append(errs, fmt.Errorf("failed collecting net addresses: %w", err))
 		}
 	}
@@ -391,13 +398,7 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	return nil
 }
 
-//nolint:gochecknoglobals
-var addressFamily = map[uint16]string{
-	windows.AF_INET:  "ipv4",
-	windows.AF_INET6: "ipv6",
-}
-
-func (c *Collector) collectNICAddresses(ch chan<- prometheus.Metric) error {
+func (c *Collector) collectNICInfo(ch chan<- prometheus.Metric) error {
 	nicAdapterAddresses, err := adapterAddresses()
 	if err != nil {
 		return err
@@ -431,6 +432,21 @@ func (c *Collector) collectNICAddresses(ch chan<- prometheus.Metric) error {
 			friendlyName,
 			macAddress,
 		)
+
+		for operState, labelValue := range operStatus {
+			var metricStatus float64
+			if operState == nicAdapter.OperStatus {
+				metricStatus = 1
+			}
+
+			ch <- prometheus.MustNewConstMetric(
+				c.nicOperStatus,
+				prometheus.GaugeValue,
+				metricStatus,
+				nicName,
+				labelValue,
+			)
+		}
 
 		if nicAdapter.OperStatus != windows.IfOperStatusUp {
 			continue
