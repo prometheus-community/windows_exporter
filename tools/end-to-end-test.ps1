@@ -70,7 +70,7 @@ $output_diff = Compare-Object ((Get-Content 'e2e-output.txt' | Out-String).Trim(
 
 # Fail if differences in output are detected
 if (-not ($null -eq $output_diff)) {
-    $output_diff | Format-Table -AutoSize | Out-String -Width 10000
+    $output_diff | Format-Table -AutoSize | Out-String -Width 1000
 
     Write-Host "STDOUT"
     Get-Content "$($temp_dir)/windows_exporter.log"
