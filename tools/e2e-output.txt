@@ -457,4 +457,3 @@ windows_service_state{name="Themes",state="stopped"} 0
 # TYPE windows_udp_datagram_received_total gauge
 # HELP windows_udp_datagram_sent_total UDP datagrams are sent from the entity
 # TYPE windows_udp_datagram_sent_total counter
-
