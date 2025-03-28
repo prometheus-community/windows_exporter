@@ -66,21 +66,37 @@ try {
     throw $_
 }
 
-$output_diff = (Compare-Object -ReferenceObject ((Get-Content 'e2e-output.txt' | Out-String).Trim()) -DifferenceObject ((Get-Content "$($temp_dir)/e2e-output.txt" | Out-String).Trim()))
+$expected = (Get-Content 'e2e-output.txt' | Out-String).Trim()
+$actual = (Get-Content "$($temp_dir)/e2e-output.txt" | Out-String).Trim()
+
+# Compare the expected and actual output
+$output_diff = Compare-Object -ReferenceObject $expected -DifferenceObject $actual
 
 # Fail if differences in output are detected
-if (-not ($null -eq $output_diff)) {
-    $output_diff.InputObject
-    $output_diff.InputObject | Format-Table -AutoSize | Out-String -Width 1000
-    $output_diff | Format-Table
-    $output_diff | Format-Table -AutoSize | Out-String -Width 1000
+if ($output_diff) {
+    $output_diff | ForEach-Object {
+        if ($_.SideIndicator -eq "<=") {
+            Write-Host "Expected: $($_.InputObject)"
+        } elseif ($_.SideIndicator -eq "=>") {
+            Write-Host "Actual: $($_.InputObject)"
+        }
+    }
 
     Write-Host "STDOUT"
     Get-Content "$($temp_dir)/windows_exporter.log"
+    Write-Host "----------------------------------------"
     Write-Host "STDERR"
     Get-Content "$($temp_dir)/windows_exporter_error.log"
 
     (Get-Content "$($temp_dir)/e2e-output.txt") | Set-Content -Encoding utf8 "e2e-output.txt"
+
+    Write-Host "----------------------------------------"
+    Write-Host "expected"
+    Write-Host "$expected"
+    Write-Host "----------------------------------------"
+    Write-Host "actual"
+    Write-Host "$actual"
+    Write-Host "----------------------------------------"
 
     exit 1
 }
