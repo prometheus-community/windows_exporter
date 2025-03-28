@@ -66,10 +66,12 @@ try {
     throw $_
 }
 
-$output_diff = Compare-Object ((Get-Content 'e2e-output.txt' | Out-String).Trim()) ((Get-Content "$($temp_dir)/e2e-output.txt" | Out-String).Trim())
+$output_diff = (Compare-Object -ReferenceObject ((Get-Content 'e2e-output.txt' | Out-String).Trim()) -DifferenceObject ((Get-Content "$($temp_dir)/e2e-output.txt" | Out-String).Trim()))
 
 # Fail if differences in output are detected
 if (-not ($null -eq $output_diff)) {
+    $output_diff.InputObject
+    $output_diff.InputObject | Format-Table -AutoSize | Out-String -Width 1000
     $output_diff | Format-Table
     $output_diff | Format-Table -AutoSize | Out-String -Width 1000
 
