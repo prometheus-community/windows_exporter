@@ -240,7 +240,7 @@ func (c *Collector) Build(*slog.Logger, *mi.Session) error {
 		errs = append(errs, fmt.Errorf("failed to create RemoteFX Graphics collector: %w", err))
 	}
 
-	return nil
+	return errors.Join(errs...)
 }
 
 // Collect sends the metric values for each metric

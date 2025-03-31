@@ -124,6 +124,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		[]string{"share"},
 		nil,
 	)
+
 	var err error
 
 	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "SMB Server Shares", pdh.InstancesAll)

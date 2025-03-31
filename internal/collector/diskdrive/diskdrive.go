@@ -107,6 +107,7 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 		[]string{"name", "availability"},
 		nil,
 	)
+
 	if miSession == nil {
 		return errors.New("miSession is nil")
 	}
