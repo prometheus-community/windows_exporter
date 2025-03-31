@@ -25,7 +25,7 @@ import (
 )
 
 type collectorDatabaseReplica struct {
-	dbReplicaPerfDataCollectors map[string]*pdh.Collector
+	dbReplicaPerfDataCollectors map[mssqlInstance]*pdh.Collector
 	dbReplicaPerfDataObject     []perfDataCounterValuesDBReplica
 
 	dbReplicaDatabaseFlowControlDelay  *prometheus.Desc
@@ -86,11 +86,11 @@ type perfDataCounterValuesDBReplica struct {
 func (c *Collector) buildDatabaseReplica() error {
 	var err error
 
-	c.dbReplicaPerfDataCollectors = make(map[string]*pdh.Collector, len(c.mssqlInstances))
+	c.dbReplicaPerfDataCollectors = make(map[mssqlInstance]*pdh.Collector, len(c.mssqlInstances))
 	errs := make([]error, 0, len(c.mssqlInstances))
 
 	for _, sqlInstance := range c.mssqlInstances {
-		c.dbReplicaPerfDataCollectors[sqlInstance.name], err = pdh.NewCollector[perfDataCounterValuesDBReplica](pdh.CounterTypeRaw, c.mssqlGetPerfObjectName(sqlInstance.name, "Database Replica"), pdh.InstancesAll)
+		c.dbReplicaPerfDataCollectors[sqlInstance], err = pdh.NewCollector[perfDataCounterValuesDBReplica](pdh.CounterTypeRaw, c.mssqlGetPerfObjectName(sqlInstance, "Database Replica"), pdh.InstancesAll)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("failed to create Database Replica collector for instance %s: %w", sqlInstance.name, err))
 		}
@@ -249,7 +249,7 @@ func (c *Collector) collectDatabaseReplica(ch chan<- prometheus.Metric) error {
 	return c.collect(ch, subCollectorDatabaseReplica, c.dbReplicaPerfDataCollectors, c.collectDatabaseReplicaInstance)
 }
 
-func (c *Collector) collectDatabaseReplicaInstance(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *pdh.Collector) error {
+func (c *Collector) collectDatabaseReplicaInstance(ch chan<- prometheus.Metric, sqlInstance mssqlInstance, perfDataCollector *pdh.Collector) error {
 	err := perfDataCollector.Collect(&c.dbReplicaPerfDataObject)
 	if err != nil {
 		return fmt.Errorf("failed to collect %s metrics: %w", c.mssqlGetPerfObjectName(sqlInstance, "Database Replica"), err)
@@ -260,168 +260,168 @@ func (c *Collector) collectDatabaseReplicaInstance(ch chan<- prometheus.Metric, 
 			c.dbReplicaDatabaseFlowControlDelay,
 			prometheus.GaugeValue,
 			data.DbReplicaDatabaseFlowControlDelay,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dbReplicaDatabaseFlowControls,
 			prometheus.CounterValue,
 			data.DbReplicaDatabaseFlowControlsPerSec,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dbReplicaFileBytesReceived,
 			prometheus.CounterValue,
 			data.DbReplicaFileBytesReceivedPerSec,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dbReplicaGroupCommits,
 			prometheus.CounterValue,
 			data.DbReplicaGroupCommitsPerSec,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dbReplicaGroupCommitTime,
 			prometheus.GaugeValue,
 			data.DbReplicaGroupCommitTime,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dbReplicaLogApplyPendingQueue,
 			prometheus.GaugeValue,
 			data.DbReplicaLogApplyPendingQueue,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dbReplicaLogApplyReadyQueue,
 			prometheus.GaugeValue,
 			data.DbReplicaLogApplyReadyQueue,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dbReplicaLogBytesCompressed,
 			prometheus.CounterValue,
 			data.DbReplicaLogBytesCompressedPerSec,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dbReplicaLogBytesDecompressed,
 			prometheus.CounterValue,
 			data.DbReplicaLogBytesDecompressedPerSec,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dbReplicaLogBytesReceived,
 			prometheus.CounterValue,
 			data.DbReplicaLogBytesReceivedPerSec,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dbReplicaLogCompressionCachehits,
 			prometheus.CounterValue,
 			data.DbReplicaLogCompressionCacheHitsPerSec,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dbReplicaLogCompressionCachemisses,
 			prometheus.CounterValue,
 			data.DbReplicaLogCompressionCacheMissesPerSec,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dbReplicaLogCompressions,
 			prometheus.CounterValue,
 			data.DbReplicaLogCompressionsPerSec,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dbReplicaLogDecompressions,
 			prometheus.CounterValue,
 			data.DbReplicaLogDecompressionsPerSec,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dbReplicaLogremainingforundo,
 			prometheus.GaugeValue,
 			data.DbReplicaLogRemainingForUndo,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dbReplicaLogSendQueue,
 			prometheus.GaugeValue,
 			data.DbReplicaLogSendQueue,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dbReplicaMirroredWritetransactions,
 			prometheus.CounterValue,
 			data.DbReplicaMirroredWriteTransactionsPerSec,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dbReplicaRecoveryQueue,
 			prometheus.GaugeValue,
 			data.DbReplicaRecoveryQueue,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dbReplicaRedoblocked,
 			prometheus.CounterValue,
 			data.DbReplicaRedoBlockedPerSec,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dbReplicaRedoBytesRemaining,
 			prometheus.GaugeValue,
 			data.DbReplicaRedoBytesRemaining,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dbReplicaRedoneBytes,
 			prometheus.CounterValue,
 			data.DbReplicaRedoneBytesPerSec,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dbReplicaRedones,
 			prometheus.CounterValue,
 			data.DbReplicaRedonesPerSec,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dbReplicaTotalLogrequiringundo,
 			prometheus.GaugeValue,
 			data.DbReplicaTotalLogRequiringUndo,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.dbReplicaTransactionDelay,
 			prometheus.GaugeValue,
 			data.DbReplicaTransactionDelay/1000.0,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 	}
 
