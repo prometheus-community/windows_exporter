@@ -25,7 +25,7 @@ import (
 )
 
 type collectorWaitStats struct {
-	waitStatsPerfDataCollectors map[string]*pdh.Collector
+	waitStatsPerfDataCollectors map[mssqlInstance]*pdh.Collector
 	waitStatsPerfDataObject     []perfDataCounterValuesWaitStats
 
 	waitStatsLockWaits                     *prometheus.Desc
@@ -62,11 +62,11 @@ type perfDataCounterValuesWaitStats struct {
 func (c *Collector) buildWaitStats() error {
 	var err error
 
-	c.waitStatsPerfDataCollectors = make(map[string]*pdh.Collector, len(c.mssqlInstances))
+	c.waitStatsPerfDataCollectors = make(map[mssqlInstance]*pdh.Collector, len(c.mssqlInstances))
 	errs := make([]error, 0, len(c.mssqlInstances))
 
 	for _, sqlInstance := range c.mssqlInstances {
-		c.waitStatsPerfDataCollectors[sqlInstance.name], err = pdh.NewCollector[perfDataCounterValuesWaitStats](pdh.CounterTypeRaw, c.mssqlGetPerfObjectName(sqlInstance.name, "Wait Statistics"), pdh.InstancesAll)
+		c.waitStatsPerfDataCollectors[sqlInstance], err = pdh.NewCollector[perfDataCounterValuesWaitStats](pdh.CounterTypeRaw, c.mssqlGetPerfObjectName(sqlInstance, "Wait Statistics"), pdh.InstancesAll)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("failed to create Wait Statistics collector for instance %s: %w", sqlInstance.name, err))
 		}
@@ -153,7 +153,7 @@ func (c *Collector) collectWaitStats(ch chan<- prometheus.Metric) error {
 	return c.collect(ch, subCollectorWaitStats, c.waitStatsPerfDataCollectors, c.collectWaitStatsInstance)
 }
 
-func (c *Collector) collectWaitStatsInstance(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *pdh.Collector) error {
+func (c *Collector) collectWaitStatsInstance(ch chan<- prometheus.Metric, sqlInstance mssqlInstance, perfDataCollector *pdh.Collector) error {
 	err := perfDataCollector.Collect(&c.waitStatsPerfDataObject)
 	if err != nil {
 		return fmt.Errorf("failed to collect %s metrics: %w", c.mssqlGetPerfObjectName(sqlInstance, "Wait Statistics"), err)
@@ -164,84 +164,84 @@ func (c *Collector) collectWaitStatsInstance(ch chan<- prometheus.Metric, sqlIns
 			c.waitStatsLockWaits,
 			prometheus.CounterValue,
 			data.WaitStatsLockWaits,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.waitStatsMemoryGrantQueueWaits,
 			prometheus.CounterValue,
 			data.WaitStatsMemoryGrantQueueWaits,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.waitStatsThreadSafeMemoryObjectsWaits,
 			prometheus.CounterValue,
 			data.WaitStatsThreadSafeMemoryObjectsWaits,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.waitStatsLogWriteWaits,
 			prometheus.CounterValue,
 			data.WaitStatsLogWriteWaits,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.waitStatsLogBufferWaits,
 			prometheus.CounterValue,
 			data.WaitStatsLogBufferWaits,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.waitStatsNetworkIOWaits,
 			prometheus.CounterValue,
 			data.WaitStatsNetworkIOWaits,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.waitStatsPageIOLatchWaits,
 			prometheus.CounterValue,
 			data.WaitStatsPageIOLatchWaits,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.waitStatsPageLatchWaits,
 			prometheus.CounterValue,
 			data.WaitStatsPageLatchWaits,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.waitStatsNonPageLatchWaits,
 			prometheus.CounterValue,
 			data.WaitStatsNonpageLatchWaits,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.waitStatsWaitForTheWorkerWaits,
 			prometheus.CounterValue,
 			data.WaitStatsWaitForTheWorkerWaits,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.waitStatsWorkspaceSynchronizationWaits,
 			prometheus.CounterValue,
 			data.WaitStatsWorkspaceSynchronizationWaits,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.waitStatsTransactionOwnershipWaits,
 			prometheus.CounterValue,
 			data.WaitStatsTransactionOwnershipWaits,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 	}
 
