@@ -118,18 +118,6 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
-	var err error
-
-	c.perfDataCollector4, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "TCPv4", nil)
-	if err != nil {
-		return fmt.Errorf("failed to create TCPv4 collector: %w", err)
-	}
-
-	c.perfDataCollector6, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "TCPv6", nil)
-	if err != nil {
-		return fmt.Errorf("failed to create TCPv6 collector: %w", err)
-	}
-
 	c.connectionFailures = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "connection_failures_total"),
 		"(TCP.ConnectionFailures)",
@@ -189,6 +177,18 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		"Number of TCP connections by state and address family",
 		[]string{"af", "state"}, nil,
 	)
+
+	var err error
+
+	c.perfDataCollector4, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "TCPv4", nil)
+	if err != nil {
+		return fmt.Errorf("failed to create TCPv4 collector: %w", err)
+	}
+
+	c.perfDataCollector6, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "TCPv6", nil)
+	if err != nil {
+		return fmt.Errorf("failed to create TCPv6 collector: %w", err)
+	}
 
 	return nil
 }

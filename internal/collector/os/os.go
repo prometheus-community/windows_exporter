@@ -53,7 +53,7 @@ type Collector struct {
 	processesLimit *prometheus.Desc
 
 	// users
-	// Deprecated: Use count(windows_logon_logon_type) instead.
+	// Deprecated: Use count(windows_terminal_services_session_info) instead.
 	users *prometheus.Desc
 
 	// physicalMemoryFreeBytes
@@ -180,7 +180,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	)
 	c.users = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "users"),
-		"Deprecated: Use `count(windows_logon_logon_type)` instead.",
+		"Deprecated: Use `count(windows_terminal_services_session_info)` instead.",
 		nil,
 		nil,
 	)

@@ -102,18 +102,6 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build(*slog.Logger, *mi.Session) error {
-	var err error
-
-	c.perfDataCollectorNetwork, err = pdh.NewCollector[perfDataCounterValuesNetwork](pdh.CounterTypeRaw, "RemoteFX Network", pdh.InstancesAll)
-	if err != nil {
-		return fmt.Errorf("failed to create RemoteFX Network collector: %w", err)
-	}
-
-	c.perfDataCollectorGraphics, err = pdh.NewCollector[perfDataCounterValuesGraphics](pdh.CounterTypeRaw, "RemoteFX Graphics", pdh.InstancesAll)
-	if err != nil {
-		return fmt.Errorf("failed to create RemoteFX Graphics collector: %w", err)
-	}
-
 	// net
 	c.baseTCPRTT = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "net_base_tcp_rtt_seconds"),
@@ -237,6 +225,20 @@ func (c *Collector) Build(*slog.Logger, *mi.Session) error {
 		[]string{"session_name"},
 		nil,
 	)
+
+	var err error
+
+	errs := make([]error, 0, 2)
+
+	c.perfDataCollectorNetwork, err = pdh.NewCollector[perfDataCounterValuesNetwork](pdh.CounterTypeRaw, "RemoteFX Network", pdh.InstancesAll)
+	if err != nil {
+		errs = append(errs, fmt.Errorf("failed to create RemoteFX Network collector: %w", err))
+	}
+
+	c.perfDataCollectorGraphics, err = pdh.NewCollector[perfDataCounterValuesGraphics](pdh.CounterTypeRaw, "RemoteFX Graphics", pdh.InstancesAll)
+	if err != nil {
+		errs = append(errs, fmt.Errorf("failed to create RemoteFX Graphics collector: %w", err))
+	}
 
 	return nil
 }

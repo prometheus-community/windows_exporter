@@ -133,24 +133,7 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
-	if miSession == nil {
-		return errors.New("miSession is nil")
-	}
-
 	c.logger = logger.With(slog.String("collector", Name))
-
-	c.connectionBrokerEnabled = isConnectionBrokerServer(miSession)
-
-	if c.connectionBrokerEnabled {
-		var err error
-
-		c.perfDataCollectorBroker, err = pdh.NewCollector[perfDataCounterValuesBroker](pdh.CounterTypeRaw, "Remote Desktop Connection Broker Counterset", pdh.InstancesAll)
-		if err != nil {
-			return fmt.Errorf("failed to create Remote Desktop Connection Broker Counterset collector: %w", err)
-		}
-	} else {
-		logger.Debug("host is not a connection broker skipping Connection Broker performance metrics.")
-	}
 
 	c.sessionInfo = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "session_info"),
@@ -243,7 +226,22 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 		nil,
 	)
 
+	if miSession == nil {
+		return errors.New("miSession is nil")
+	}
+
 	var err error
+
+	c.connectionBrokerEnabled = isConnectionBrokerServer(miSession)
+
+	if c.connectionBrokerEnabled {
+		c.perfDataCollectorBroker, err = pdh.NewCollector[perfDataCounterValuesBroker](pdh.CounterTypeRaw, "Remote Desktop Connection Broker Counterset", pdh.InstancesAll)
+		if err != nil {
+			return fmt.Errorf("failed to create Remote Desktop Connection Broker Counterset collector: %w", err)
+		}
+	} else {
+		logger.Debug("host is not a connection broker skipping Connection Broker performance metrics.")
+	}
 
 	c.hServer, err = wtsapi32.WTSOpenServer("")
 	if err != nil {
