@@ -228,7 +228,7 @@ func (c *Collector) Build(*slog.Logger, *mi.Session) error {
 
 	var err error
 
-	errs := make([]error, 0, 2)
+	errs := make([]error, 0)
 
 	c.perfDataCollectorNetwork, err = pdh.NewCollector[perfDataCounterValuesNetwork](pdh.CounterTypeRaw, "RemoteFX Network", pdh.InstancesAll)
 	if err != nil {
@@ -246,7 +246,7 @@ func (c *Collector) Build(*slog.Logger, *mi.Session) error {
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
-	errs := make([]error, 0, 2)
+	errs := make([]error, 0)
 
 	if err := c.collectRemoteFXNetworkCount(ch); err != nil {
 		errs = append(errs, fmt.Errorf("failed collecting RemoteFX Network metrics: %w", err))

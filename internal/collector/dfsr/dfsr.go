@@ -479,7 +479,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 // Collect implements the Collector interface.
 // Sends metric values for each metric to the provided prometheus Metric channel.
 func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
-	errs := make([]error, 0, 3)
+	errs := make([]error, 0)
 
 	if slices.Contains(c.config.CollectorsEnabled, "connection") {
 		errs = append(errs, c.collectPDHConnection(ch))

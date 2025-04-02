@@ -259,7 +259,7 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
-	errs := make([]error, 0, 3)
+	errs := make([]error, 0)
 
 	if err := c.collectWTSSessions(ch); err != nil {
 		errs = append(errs, fmt.Errorf("failed collecting terminal services session infos: %w", err))
