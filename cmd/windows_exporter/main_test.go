@@ -61,8 +61,6 @@ func TestRun(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
 			ctx, cancel := context.WithCancel(t.Context())
 			defer cancel()
 
@@ -87,8 +85,10 @@ func TestRun(t *testing.T) {
 			exitCodeCh := make(chan int)
 
 			go func() {
-				// Simulate the service control manager signaling that we are done.
-				exitCodeCh <- run(ctx, tc.args)
+				captureOutput(t, func() {
+					// Simulate the service control manager signaling that we are done.
+					exitCodeCh <- run(ctx, tc.args)
+				})
 			}()
 
 			t.Cleanup(func() {
@@ -124,4 +124,22 @@ func TestRun(t *testing.T) {
 			cancel()
 		})
 	}
+}
+
+func captureOutput(tb testing.TB, f func()) string {
+	tb.Helper()
+
+	orig := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	f()
+
+	os.Stdout = orig
+
+	require.NoError(tb, w.Close())
+
+	out, _ := io.ReadAll(r)
+
+	return string(out)
 }
