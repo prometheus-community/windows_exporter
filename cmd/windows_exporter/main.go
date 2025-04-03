@@ -122,7 +122,6 @@ func run(ctx context.Context, args []string) int {
 	collectors := collector.NewWithFlags(app)
 
 	if err := config.Parse(app, args); err != nil {
-		//nolint:sloglint // we do not have an logger yet
 		slog.LogAttrs(ctx, slog.LevelError, "Failed to load configuration",
 			slog.Any("err", err),
 		)
@@ -166,7 +165,7 @@ func run(ctx context.Context, args []string) int {
 	}
 
 	// Initialize collectors before loading
-	if err = collectors.Build(logger); err != nil {
+	if err = collectors.Build(ctx, logger); err != nil {
 		for _, err := range utils.SplitError(err) {
 			logger.LogAttrs(ctx, slog.LevelError, "couldn't initialize collector",
 				slog.Any("err", err),
@@ -225,12 +224,12 @@ func run(ctx context.Context, args []string) int {
 
 	select {
 	case <-ctx.Done():
-		logger.Info("Shutting down windows_exporter via kill signal")
+		logger.LogAttrs(ctx, slog.LevelInfo, "Shutting down windows_exporter via kill signal")
 	case <-stopCh:
-		logger.Info("Shutting down windows_exporter via service control")
+		logger.LogAttrs(ctx, slog.LevelInfo, "Shutting down windows_exporter via service control")
 	case err := <-errCh:
 		if err != nil {
-			logger.ErrorContext(ctx, "Failed to start windows_exporter",
+			logger.LogAttrs(ctx, slog.LevelError, "Failed to start windows_exporter",
 				slog.Any("err", err),
 			)
 
