@@ -42,7 +42,6 @@ func TestRun(t *testing.T) {
 			metricsEndpoint: "http://localhost:9182/metrics",
 		},
 		{
-
 			name:            "web.listen-address",
 			args:            []string{"--web.listen-address=127.0.0.1:8080"},
 			metricsEndpoint: "http://localhost:8080/metrics",
@@ -64,7 +63,7 @@ func TestRun(t *testing.T) {
 					require.NoError(t, os.Remove(tmpfile.Name()))
 				})
 
-				_, err = tmpfile.Write([]byte(tc.config))
+				_, err = tmpfile.WriteString(tc.config)
 				require.NoError(t, err)
 
 				tc.args = append(tc.args, "--config.file", tmpfile.Name())
@@ -96,7 +95,8 @@ func TestRun(t *testing.T) {
 			resp, err := http.DefaultClient.Do(req)
 			require.NoError(t, err)
 
-			defer resp.Body.Close()
+			err = resp.Body.Close()
+			require.NoError(t, err)
 
 			require.Equal(t, http.StatusOK, resp.StatusCode)
 

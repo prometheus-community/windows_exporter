@@ -48,9 +48,10 @@ import (
 
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
-	defer stop()
 
 	exitCode := run(ctx, os.Args[1:])
+
+	stop()
 
 	// If we are running as a service, we need to signal the service control manager that we are done.
 	if !IsService {
@@ -122,7 +123,7 @@ func run(ctx context.Context, args []string) int {
 
 	if err := config.Parse(app, args); err != nil {
 		//nolint:sloglint // we do not have an logger yet
-		slog.Error("Failed to load configuration",
+		slog.LogAttrs(ctx, slog.LevelError, "Failed to load configuration",
 			slog.Any("err", err),
 		)
 
@@ -134,7 +135,7 @@ func run(ctx context.Context, args []string) int {
 	logger, err := log.New(logConfig)
 	if err != nil {
 		//nolint:sloglint // we do not have an logger yet
-		slog.Error("failed to create logger",
+		logger.LogAttrs(ctx, slog.LevelError, "failed to create logger",
 			slog.Any("err", err),
 		)
 
@@ -147,8 +148,8 @@ func run(ctx context.Context, args []string) int {
 		logger.InfoContext(ctx, "using configuration file: "+*configFile)
 	}
 
-	if err = setPriorityWindows(logger, os.Getpid(), *processPriority); err != nil {
-		logger.Error("failed to set process priority",
+	if err = setPriorityWindows(ctx, logger, os.Getpid(), *processPriority); err != nil {
+		logger.LogAttrs(ctx, slog.LevelError, "failed to set process priority",
 			slog.Any("err", err),
 		)
 
@@ -157,7 +158,7 @@ func run(ctx context.Context, args []string) int {
 
 	enabledCollectorList := expandEnabledCollectors(*enabledCollectors)
 	if err := collectors.Enable(enabledCollectorList); err != nil {
-		logger.Error("couldn't enable collectors",
+		logger.LogAttrs(ctx, slog.LevelError, "couldn't enable collectors",
 			slog.Any("err", err),
 		)
 
@@ -167,7 +168,7 @@ func run(ctx context.Context, args []string) int {
 	// Initialize collectors before loading
 	if err = collectors.Build(logger); err != nil {
 		for _, err := range utils.SplitError(err) {
-			logger.Error("couldn't initialize collector",
+			logger.LogAttrs(ctx, slog.LevelError, "couldn't initialize collector",
 				slog.Any("err", err),
 			)
 
@@ -240,9 +241,9 @@ func run(ctx context.Context, args []string) int {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	_ = server.Shutdown(ctx)
+	_ = server.Shutdown(ctx) //nolint:contextcheck // create a new context for server shutdown
 
-	logger.InfoContext(ctx, "windows_exporter has shut down")
+	logger.LogAttrs(ctx, slog.LevelInfo, "windows_exporter has shut down") //nolint:contextcheck
 
 	return 0
 }
@@ -265,7 +266,7 @@ func logCurrentUser(logger *slog.Logger) {
 }
 
 // setPriorityWindows sets the priority of the current process to the specified value.
-func setPriorityWindows(logger *slog.Logger, pid int, priority string) error {
+func setPriorityWindows(ctx context.Context, logger *slog.Logger, pid int, priority string) error {
 	// Mapping of priority names to uin32 values required by windows.SetPriorityClass.
 	priorityStringToInt := map[string]uint32{
 		"realtime":    windows.REALTIME_PRIORITY_CLASS,
@@ -283,7 +284,7 @@ func setPriorityWindows(logger *slog.Logger, pid int, priority string) error {
 		return nil
 	}
 
-	logger.LogAttrs(context.Background(), slog.LevelDebug, "setting process priority to "+priority)
+	logger.LogAttrs(ctx, slog.LevelDebug, "setting process priority to "+priority)
 
 	// https://learn.microsoft.com/en-us/windows/win32/procthread/process-security-and-access-rights
 	handle, err := windows.OpenProcess(
