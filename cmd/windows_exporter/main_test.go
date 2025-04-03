@@ -168,6 +168,9 @@ func retryableHTTPClientDo(tb testing.TB, req *http.Request) (*http.Response, er
 			return resp, nil
 		}
 
+		_, _ = io.ReadAll(resp.Body)
+		_ = resp.Body.Close()
+
 		if errors.Is(err, syscall.ECONNREFUSED) || errors.Is(err, syscall.Errno(10061)) {
 			time.Sleep(50 * time.Millisecond)
 
