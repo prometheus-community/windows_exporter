@@ -122,6 +122,7 @@ func run(ctx context.Context, args []string) int {
 	collectors := collector.NewWithFlags(app)
 
 	if err := config.Parse(app, args); err != nil {
+		//nolint:sloglint // we do not have an logger yet
 		slog.LogAttrs(ctx, slog.LevelError, "Failed to load configuration",
 			slog.Any("err", err),
 		)
@@ -133,7 +134,6 @@ func run(ctx context.Context, args []string) int {
 
 	logger, err := log.New(logConfig)
 	if err != nil {
-		//nolint:sloglint // we do not have an logger yet
 		logger.LogAttrs(ctx, slog.LevelError, "failed to create logger",
 			slog.Any("err", err),
 		)

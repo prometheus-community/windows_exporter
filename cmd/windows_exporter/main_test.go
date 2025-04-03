@@ -84,8 +84,10 @@ func TestRun(t *testing.T) {
 
 			exitCodeCh := make(chan int)
 
+			var stdout string
+
 			go func() {
-				captureOutput(t, func() {
+				stdout = captureOutput(t, func() {
 					// Simulate the service control manager signaling that we are done.
 					exitCodeCh <- run(ctx, tc.args)
 				})
@@ -108,7 +110,7 @@ func TestRun(t *testing.T) {
 			require.NoError(t, err)
 
 			resp, err := http.DefaultClient.Do(req)
-			require.NoError(t, err)
+			require.NoError(t, err, "LOGS:\n%s", stdout)
 
 			err = resp.Body.Close()
 			require.NoError(t, err)
@@ -137,7 +139,7 @@ func captureOutput(tb testing.TB, f func()) string {
 
 	os.Stdout = orig
 
-	require.NoError(tb, w.Close())
+	_ = w.Close()
 
 	out, _ := io.ReadAll(r)
 
