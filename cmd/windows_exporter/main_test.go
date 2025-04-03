@@ -40,24 +40,24 @@ func TestRun(t *testing.T) {
 		{
 			name:            "default",
 			args:            []string{},
-			metricsEndpoint: "http://localhost:9182/metrics",
+			metricsEndpoint: "http://127.0.0.1:9182/metrics",
 		},
 		{
 			name:            "web.listen-address",
 			args:            []string{"--web.listen-address=127.0.0.1:8080"},
-			metricsEndpoint: "http://localhost:8080/metrics",
+			metricsEndpoint: "http://127.0.0.1:8080/metrics",
 		},
 		{
 			name:            "config",
 			args:            []string{"--config.file=config.yaml"},
 			config:          `{"web":{"listen-address":"127.0.0.1:8081"}}`,
-			metricsEndpoint: "http://localhost:8081/metrics",
+			metricsEndpoint: "http://127.0.0.1:8081/metrics",
 		},
 		{
 			name:            "web.listen-address with config",
 			args:            []string{"--config.file=config.yaml", "--web.listen-address=127.0.0.1:8083"},
 			config:          `{"web":{"listen-address":"127.0.0.1:8082"}}`,
-			metricsEndpoint: "http://localhost:8083/metrics",
+			metricsEndpoint: "http://127.0.0.1:8083/metrics",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
