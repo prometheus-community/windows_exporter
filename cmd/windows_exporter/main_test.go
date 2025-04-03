@@ -20,6 +20,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -46,6 +47,18 @@ func TestRun(t *testing.T) {
 			args:            []string{"--web.listen-address=127.0.0.1:8080"},
 			metricsEndpoint: "http://localhost:8080/metrics",
 		},
+		{
+			name:            "config",
+			args:            []string{"--config.file=config.yaml"},
+			config:          `{"web":{"listen-address":"127.0.0.1:8081"}}`,
+			metricsEndpoint: "http://localhost:8081/metrics",
+		},
+		{
+			name:            "web.listen-address with config",
+			args:            []string{"--config.file=config.yaml", "--web.listen-address=127.0.0.1:8083"},
+			config:          `{"web":{"listen-address":"127.0.0.1:8082"}}`,
+			metricsEndpoint: "http://localhost:8083/metrics",
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
@@ -66,7 +79,9 @@ func TestRun(t *testing.T) {
 				_, err = tmpfile.WriteString(tc.config)
 				require.NoError(t, err)
 
-				tc.args = append(tc.args, "--config.file", tmpfile.Name())
+				for i, arg := range tc.args {
+					tc.args[i] = strings.ReplaceAll(arg, "config.yaml", tmpfile.Name())
+				}
 			}
 
 			exitCodeCh := make(chan int)
