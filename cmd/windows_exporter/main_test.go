@@ -20,7 +20,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"syscall"
@@ -114,10 +116,16 @@ func TestRun(t *testing.T) {
 				return
 			}
 
+			uri, err := url.Parse(tc.metricsEndpoint)
+			require.NoError(t, err)
+
+			err = waitUntilListening(t, "tcp", uri.Host)
+			require.NoError(t, err, "LOGS:\n%s", stdout)
+
 			req, err := http.NewRequestWithContext(ctx, http.MethodGet, tc.metricsEndpoint, nil)
 			require.NoError(t, err)
 
-			resp, err := retryableHTTPClientDo(t, req)
+			resp, err := http.DefaultClient.Do(req)
 			require.NoError(t, err, "LOGS:\n%s", stdout)
 
 			err = resp.Body.Close()
@@ -154,22 +162,21 @@ func captureOutput(tb testing.TB, f func()) string {
 	return string(out)
 }
 
-func retryableHTTPClientDo(tb testing.TB, req *http.Request) (*http.Response, error) {
+func waitUntilListening(tb testing.TB, network, address string) error {
 	tb.Helper()
 
 	var (
+		conn net.Conn
 		err  error
-		resp *http.Response
 	)
 
 	for range 10 {
-		resp, err = http.DefaultClient.Do(req)
+		conn, err = net.DialTimeout(network, address, 100*time.Millisecond)
 		if err == nil {
-			return resp, nil
-		}
+			_ = conn.Close()
 
-		_, _ = io.ReadAll(resp.Body)
-		_ = resp.Body.Close()
+			return nil
+		}
 
 		if errors.Is(err, syscall.ECONNREFUSED) || errors.Is(err, syscall.Errno(10061)) {
 			time.Sleep(50 * time.Millisecond)
@@ -178,5 +185,5 @@ func retryableHTTPClientDo(tb testing.TB, req *http.Request) (*http.Response, er
 		}
 	}
 
-	return nil, fmt.Errorf("listener not listening: %w", err)
+	return fmt.Errorf("listener not listening: %w", err)
 }
