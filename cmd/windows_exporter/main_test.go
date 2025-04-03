@@ -17,10 +17,13 @@ package main
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
@@ -114,7 +117,7 @@ func TestRun(t *testing.T) {
 			req, err := http.NewRequestWithContext(ctx, http.MethodGet, tc.metricsEndpoint, nil)
 			require.NoError(t, err)
 
-			resp, err := http.DefaultClient.Do(req)
+			resp, err := retryableHTTPClientDo(t, req)
 			require.NoError(t, err, "LOGS:\n%s", stdout)
 
 			err = resp.Body.Close()
@@ -149,4 +152,28 @@ func captureOutput(tb testing.TB, f func()) string {
 	out, _ := io.ReadAll(r)
 
 	return string(out)
+}
+
+func retryableHTTPClientDo(tb testing.TB, req *http.Request) (*http.Response, error) {
+	tb.Helper()
+
+	var (
+		err  error
+		resp *http.Response
+	)
+
+	for range 10 {
+		resp, err = http.DefaultClient.Do(req)
+		if err == nil {
+			return resp, nil
+		}
+
+		if errors.Is(err, syscall.ECONNREFUSED) || errors.Is(err, syscall.Errno(10061)) {
+			time.Sleep(50 * time.Millisecond)
+
+			continue
+		}
+	}
+
+	return nil, fmt.Errorf("listener not listening: %w", err)
 }
