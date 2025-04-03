@@ -48,16 +48,21 @@ func TestRun(t *testing.T) {
 			metricsEndpoint: "http://127.0.0.1:8080/metrics",
 		},
 		{
+			name:            "web.listen-address",
+			args:            []string{"--web.listen-address=127.0.0.1:8081", "--web.listen-address=::1:8081"},
+			metricsEndpoint: "http://[::1]:8081/metrics",
+		},
+		{
 			name:            "config",
 			args:            []string{"--config.file=config.yaml"},
-			config:          `{"web":{"listen-address":"127.0.0.1:8081"}}`,
-			metricsEndpoint: "http://127.0.0.1:8081/metrics",
+			config:          `{"web":{"listen-address":"127.0.0.1:8082"}}`,
+			metricsEndpoint: "http://127.0.0.1:8082/metrics",
 		},
 		{
 			name:            "web.listen-address with config",
-			args:            []string{"--config.file=config.yaml", "--web.listen-address=127.0.0.1:8083"},
-			config:          `{"web":{"listen-address":"127.0.0.1:8082"}}`,
-			metricsEndpoint: "http://127.0.0.1:8083/metrics",
+			args:            []string{"--config.file=config.yaml", "--web.listen-address=127.0.0.1:8084"},
+			config:          `{"web":{"listen-address":"127.0.0.1:8083"}}`,
+			metricsEndpoint: "http://127.0.0.1:8084/metrics",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
