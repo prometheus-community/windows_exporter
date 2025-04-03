@@ -47,7 +47,10 @@ import (
 )
 
 func main() {
-	exitCode := run()
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
+	defer stop()
+
+	exitCode := run(ctx, os.Args[1:])
 
 	// If we are running as a service, we need to signal the service control manager that we are done.
 	if !IsService {
@@ -60,9 +63,8 @@ func main() {
 	<-serviceManagerFinishedCh
 }
 
-func run() int {
+func run(ctx context.Context, args []string) int {
 	startTime := time.Now()
-	ctx := context.Background()
 
 	app := kingpin.New("windows_exporter", "A metrics collector for Windows.")
 
@@ -118,7 +120,7 @@ func run() int {
 	// Initialize collectors before loading and parsing CLI arguments
 	collectors := collector.NewWithFlags(app)
 
-	if err := config.Parse(app, os.Args[1:]); err != nil {
+	if err := config.Parse(app, args); err != nil {
 		//nolint:sloglint // we do not have an logger yet
 		slog.Error("Failed to load configuration",
 			slog.Any("err", err),
@@ -219,9 +221,6 @@ func run() int {
 
 		close(errCh)
 	}()
-
-	ctx, stop := signal.NotifyContext(ctx, os.Interrupt, os.Kill)
-	defer stop()
 
 	select {
 	case <-ctx.Done():

@@ -27,7 +27,7 @@
     ],
     "postUpdateOptions": [
         "gomodTidy"
-    ],  
+    ],
     "ignoreDeps": [
         "mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image"
     ],
@@ -43,7 +43,10 @@
         },
         {
             "customType": "regex",
-            "fileMatch": ["Makefile"],
+            "fileMatch": [
+                "Makefile",
+                "(^|/).+\\.go"
+            ],
             "matchStrings": [
                 "go run (?<depName>\\S+)@(?<currentValue>\\S+)"
             ],
