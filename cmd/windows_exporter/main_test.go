@@ -133,11 +133,11 @@ func captureOutput(tb testing.TB, f func()) string {
 
 	orig := os.Stdout
 	r, w, _ := os.Pipe()
-	os.Stdout = w
+	os.Stderr = w
 
 	f()
 
-	os.Stdout = orig
+	os.Stderr = orig
 
 	_ = w.Close()
 
