@@ -165,9 +165,9 @@ func (c *Collector) Close() error {
 
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	for _, collector := range c.config.CollectorsEnabled {
-		if !slices.Contains([]string{subCollectorMetrics, subCollectorMetrics}, collector) {
+		if !slices.Contains([]string{subCollectorMetrics, subCollectorNicInfo}, collector) {
 			return fmt.Errorf("unknown sub collector: %s. Possible values: %s", collector,
-				strings.Join([]string{subCollectorMetrics, subCollectorMetrics}, ", "),
+				strings.Join([]string{subCollectorMetrics, subCollectorNicInfo}, ", "),
 			)
 		}
 	}
