@@ -106,7 +106,7 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
-	logger.Warn("The os collecter holds a number of deprecated metrics and will be removed mid 2025. "+
+	logger.Warn("The os collector holds a number of deprecated metrics and will be removed mid 2025. "+
 		"See https://github.com/prometheus-community/windows_exporter/pull/1596 for more information.",
 		slog.String("collector", Name),
 	)
