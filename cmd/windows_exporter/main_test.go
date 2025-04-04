@@ -25,13 +25,14 @@ import (
 	"net/url"
 	"os"
 	"strings"
-	"syscall"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sys/windows"
 )
 
+//nolint:tparallel
 func TestRun(t *testing.T) {
 	t.Parallel()
 
@@ -54,7 +55,7 @@ func TestRun(t *testing.T) {
 		},
 		{
 			name:            "web.listen-address",
-			args:            []string{"--web.listen-address=127.0.0.1:8081", "--web.listen-address=::1:8081"},
+			args:            []string{"--web.listen-address=127.0.0.1:8081", "--web.listen-address=[::1]:8081"},
 			metricsEndpoint: "http://[::1]:8081/metrics",
 		},
 		{
@@ -81,7 +82,6 @@ func TestRun(t *testing.T) {
 
 				t.Cleanup(func() {
 					require.NoError(t, tmpfile.Close())
-					require.NoError(t, os.Remove(tmpfile.Name()))
 				})
 
 				_, err = tmpfile.WriteString(tc.config)
@@ -127,13 +127,12 @@ func TestRun(t *testing.T) {
 
 			resp, err := http.DefaultClient.Do(req)
 			require.NoError(t, err, "LOGS:\n%s", stdout)
-
-			err = resp.Body.Close()
-			require.NoError(t, err)
-
 			require.Equal(t, http.StatusOK, resp.StatusCode)
 
 			body, err := io.ReadAll(resp.Body)
+			require.NoError(t, err)
+
+			err = resp.Body.Close()
 			require.NoError(t, err)
 
 			require.NotEmpty(t, body)
@@ -149,11 +148,11 @@ func captureOutput(tb testing.TB, f func()) string {
 
 	orig := os.Stdout
 	r, w, _ := os.Pipe()
-	os.Stderr = w
+	os.Stdout = w
 
 	f()
 
-	os.Stderr = orig
+	os.Stdout = orig
 
 	_ = w.Close()
 
@@ -178,7 +177,7 @@ func waitUntilListening(tb testing.TB, network, address string) error {
 			return nil
 		}
 
-		if errors.Is(err, syscall.ECONNREFUSED) || errors.Is(err, syscall.Errno(10061)) {
+		if errors.Is(err, windows.Errno(10061)) {
 			time.Sleep(50 * time.Millisecond)
 
 			continue
