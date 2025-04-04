@@ -110,13 +110,6 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
-	var err error
-
-	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "Memory", pdh.InstancesAll)
-	if err != nil {
-		return fmt.Errorf("failed to create Memory collector: %w", err)
-	}
-
 	c.availableBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "available_bytes"),
 		"The amount of physical memory immediately available for allocation to a process or for system use. It is equal to the sum of memory assigned to"+
@@ -340,13 +333,20 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 
+	var err error
+
+	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "Memory", pdh.InstancesAll)
+	if err != nil {
+		return fmt.Errorf("failed to create Memory collector: %w", err)
+	}
+
 	return nil
 }
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
-	errs := make([]error, 0, 2)
+	errs := make([]error, 0)
 
 	if err := c.collectPDH(ch); err != nil {
 		errs = append(errs, fmt.Errorf("failed collecting memory metrics: %w", err))
@@ -390,6 +390,8 @@ func (c *Collector) collectPDH(ch chan<- prometheus.Metric) error {
 	err := c.perfDataCollector.Collect(&c.perfDataObject)
 	if err != nil {
 		return fmt.Errorf("failed to collect Memory metrics: %w", err)
+	} else if len(c.perfDataObject) == 0 {
+		return fmt.Errorf("failed to collect Memory metrics: %w", types.ErrNoDataUnexpected)
 	}
 
 	ch <- prometheus.MustNewConstMetric(

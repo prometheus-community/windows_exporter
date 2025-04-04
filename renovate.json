@@ -65,7 +65,10 @@
     },
     {
       "customType": "regex",
-      "fileMatch": ["Makefile"],
+      "fileMatch": [
+                "Makefile",
+                "(^|/).+\\.go"
+            ],
       "matchStrings": [
         "go run (?<depName>\\S+)@(?<currentValue>\\S+)"
       ],

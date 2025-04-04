@@ -80,18 +80,6 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
-	var err error
-
-	c.perfDataCollector4, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "UDPv4", nil)
-	if err != nil {
-		return fmt.Errorf("failed to create UDPv4 collector: %w", err)
-	}
-
-	c.perfDataCollector6, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "UDPv6", nil)
-	if err != nil {
-		return fmt.Errorf("failed to create UDPv6 collector: %w", err)
-	}
-
 	c.datagramsNoPortTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "datagram_no_port_total"),
 		"Number of received UDP datagrams for which there was no application at the destination port",
@@ -116,6 +104,18 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		[]string{"af"},
 		nil,
 	)
+
+	var err error
+
+	c.perfDataCollector4, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "UDPv4", nil)
+	if err != nil {
+		return fmt.Errorf("failed to create UDPv4 collector: %w", err)
+	}
+
+	c.perfDataCollector6, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "UDPv6", nil)
+	if err != nil {
+		return fmt.Errorf("failed to create UDPv6 collector: %w", err)
+	}
 
 	return nil
 }

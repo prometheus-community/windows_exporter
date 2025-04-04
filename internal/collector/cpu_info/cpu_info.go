@@ -75,18 +75,6 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
-	if miSession == nil {
-		return errors.New("miSession is nil")
-	}
-
-	miQuery, err := mi.NewQuery("SELECT Architecture, DeviceId, Description, Family, L2CacheSize, L3CacheSize, Name, ThreadCount, NumberOfCores, NumberOfEnabledCore, NumberOfLogicalProcessors FROM Win32_Processor")
-	if err != nil {
-		return fmt.Errorf("failed to create WMI query: %w", err)
-	}
-
-	c.miQuery = miQuery
-	c.miSession = miSession
-
 	c.cpuInfo = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, "", Name),
 		"Labelled CPU information as provided by Win32_Processor",
@@ -147,6 +135,18 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 		},
 		nil,
 	)
+
+	if miSession == nil {
+		return errors.New("miSession is nil")
+	}
+
+	miQuery, err := mi.NewQuery("SELECT Architecture, DeviceId, Description, Family, L2CacheSize, L3CacheSize, Name, ThreadCount, NumberOfCores, NumberOfEnabledCore, NumberOfLogicalProcessors FROM Win32_Processor")
+	if err != nil {
+		return fmt.Errorf("failed to create WMI query: %w", err)
+	}
+
+	c.miQuery = miQuery
+	c.miSession = miSession
 
 	var dst []miProcessor
 	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, c.miQuery); err != nil {
