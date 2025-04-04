@@ -25,7 +25,7 @@ import (
 )
 
 type collectorAccessMethods struct {
-	accessMethodsPerfDataCollectors map[string]*pdh.Collector
+	accessMethodsPerfDataCollectors map[mssqlInstance]*pdh.Collector
 	accessMethodsPerfDataObject     []perfDataCounterValuesAccessMethods
 
 	accessMethodsAUcleanupbatches             *prometheus.Desc
@@ -124,11 +124,11 @@ type perfDataCounterValuesAccessMethods struct {
 func (c *Collector) buildAccessMethods() error {
 	var err error
 
-	c.accessMethodsPerfDataCollectors = make(map[string]*pdh.Collector, len(c.mssqlInstances))
+	c.accessMethodsPerfDataCollectors = make(map[mssqlInstance]*pdh.Collector, len(c.mssqlInstances))
 	errs := make([]error, 0, len(c.mssqlInstances))
 
 	for _, sqlInstance := range c.mssqlInstances {
-		c.accessMethodsPerfDataCollectors[sqlInstance.name], err = pdh.NewCollector[perfDataCounterValuesAccessMethods](pdh.CounterTypeRaw, c.mssqlGetPerfObjectName(sqlInstance.name, "Access Methods"), nil)
+		c.accessMethodsPerfDataCollectors[sqlInstance], err = pdh.NewCollector[perfDataCounterValuesAccessMethods](pdh.CounterTypeRaw, c.mssqlGetPerfObjectName(sqlInstance, "Access Methods"), nil)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("failed to create AccessMethods collector for instance %s: %w", sqlInstance.name, err))
 		}
@@ -407,7 +407,7 @@ func (c *Collector) collectAccessMethods(ch chan<- prometheus.Metric) error {
 	return c.collect(ch, subCollectorAccessMethods, c.accessMethodsPerfDataCollectors, c.collectAccessMethodsInstance)
 }
 
-func (c *Collector) collectAccessMethodsInstance(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *pdh.Collector) error {
+func (c *Collector) collectAccessMethodsInstance(ch chan<- prometheus.Metric, sqlInstance mssqlInstance, perfDataCollector *pdh.Collector) error {
 	err := perfDataCollector.Collect(&c.accessMethodsPerfDataObject)
 	if err != nil {
 		return fmt.Errorf("failed to collect %s metrics: %w", c.mssqlGetPerfObjectName(sqlInstance, "AccessMethods"), err)
@@ -417,308 +417,308 @@ func (c *Collector) collectAccessMethodsInstance(ch chan<- prometheus.Metric, sq
 		c.accessMethodsAUcleanupbatches,
 		prometheus.CounterValue,
 		c.accessMethodsPerfDataObject[0].AccessMethodsAUCleanupbatchesPerSec,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessMethodsAUcleanups,
 		prometheus.CounterValue,
 		c.accessMethodsPerfDataObject[0].AccessMethodsAUCleanupsPerSec,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessMethodsByReferenceLobCreateCount,
 		prometheus.CounterValue,
 		c.accessMethodsPerfDataObject[0].AccessMethodsByReferenceLobCreateCount,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessMethodsByReferenceLobUseCount,
 		prometheus.CounterValue,
 		c.accessMethodsPerfDataObject[0].AccessMethodsByReferenceLobUseCount,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessMethodsCountLobReadahead,
 		prometheus.CounterValue,
 		c.accessMethodsPerfDataObject[0].AccessMethodsCountLobReadahead,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessMethodsCountPullInRow,
 		prometheus.CounterValue,
 		c.accessMethodsPerfDataObject[0].AccessMethodsCountPullInRow,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessMethodsCountPushOffRow,
 		prometheus.CounterValue,
 		c.accessMethodsPerfDataObject[0].AccessMethodsCountPushOffRow,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessMethodsDeferreddroppedAUs,
 		prometheus.GaugeValue,
 		c.accessMethodsPerfDataObject[0].AccessMethodsDeferredDroppedAUs,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessMethodsDeferredDroppedrowsets,
 		prometheus.GaugeValue,
 		c.accessMethodsPerfDataObject[0].AccessMethodsDeferredDroppedRowsets,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessMethodsDroppedrowsetcleanups,
 		prometheus.CounterValue,
 		c.accessMethodsPerfDataObject[0].AccessMethodsDroppedRowsetCleanupsPerSec,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessMethodsDroppedrowsetsskipped,
 		prometheus.CounterValue,
 		c.accessMethodsPerfDataObject[0].AccessMethodsDroppedRowsetsSkippedPerSec,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessMethodsExtentDeallocations,
 		prometheus.CounterValue,
 		c.accessMethodsPerfDataObject[0].AccessMethodsExtentDeallocationsPerSec,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessMethodsExtentsAllocated,
 		prometheus.CounterValue,
 		c.accessMethodsPerfDataObject[0].AccessMethodsExtentsAllocatedPerSec,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessMethodsFailedAUcleanupbatches,
 		prometheus.CounterValue,
 		c.accessMethodsPerfDataObject[0].AccessMethodsFailedAUCleanupBatchesPerSec,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessMethodsFailedleafpagecookie,
 		prometheus.CounterValue,
 		c.accessMethodsPerfDataObject[0].AccessMethodsFailedLeafPageCookie,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessMethodsFailedtreepagecookie,
 		prometheus.CounterValue,
 		c.accessMethodsPerfDataObject[0].AccessMethodsFailedTreePageCookie,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessMethodsForwardedRecords,
 		prometheus.CounterValue,
 		c.accessMethodsPerfDataObject[0].AccessMethodsForwardedRecordsPerSec,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessMethodsFreeSpacePageFetches,
 		prometheus.CounterValue,
 		c.accessMethodsPerfDataObject[0].AccessMethodsFreeSpacePageFetchesPerSec,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessMethodsFreeSpaceScans,
 		prometheus.CounterValue,
 		c.accessMethodsPerfDataObject[0].AccessMethodsFreeSpaceScansPerSec,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessMethodsFullScans,
 		prometheus.CounterValue,
 		c.accessMethodsPerfDataObject[0].AccessMethodsFullScansPerSec,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessMethodsIndexSearches,
 		prometheus.CounterValue,
 		c.accessMethodsPerfDataObject[0].AccessMethodsIndexSearchesPerSec,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessMethodsInSysXactwaits,
 		prometheus.CounterValue,
 		c.accessMethodsPerfDataObject[0].AccessMethodsInSysXactWaitsPerSec,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessMethodsLobHandleCreateCount,
 		prometheus.CounterValue,
 		c.accessMethodsPerfDataObject[0].AccessMethodsLobHandleCreateCount,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessMethodsLobHandleDestroyCount,
 		prometheus.CounterValue,
 		c.accessMethodsPerfDataObject[0].AccessMethodsLobHandleDestroyCount,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessMethodsLobSSProviderCreateCount,
 		prometheus.CounterValue,
 		c.accessMethodsPerfDataObject[0].AccessMethodsLobSSProviderCreateCount,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessMethodsLobSSProviderDestroyCount,
 		prometheus.CounterValue,
 		c.accessMethodsPerfDataObject[0].AccessMethodsLobSSProviderDestroyCount,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessMethodsLobSSProviderTruncationCount,
 		prometheus.CounterValue,
 		c.accessMethodsPerfDataObject[0].AccessMethodsLobSSProviderTruncationCount,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessMethodsMixedPageAllocations,
 		prometheus.CounterValue,
 		c.accessMethodsPerfDataObject[0].AccessMethodsMixedPageAllocationsPerSec,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessMethodsPageCompressionAttempts,
 		prometheus.CounterValue,
 		c.accessMethodsPerfDataObject[0].AccessMethodsPageCompressionAttemptsPerSec,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessMethodsPageDeallocations,
 		prometheus.CounterValue,
 		c.accessMethodsPerfDataObject[0].AccessMethodsPageDeallocationsPerSec,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessMethodsPagesAllocated,
 		prometheus.CounterValue,
 		c.accessMethodsPerfDataObject[0].AccessMethodsPagesAllocatedPerSec,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessMethodsPagesCompressed,
 		prometheus.CounterValue,
 		c.accessMethodsPerfDataObject[0].AccessMethodsPagesCompressedPerSec,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessMethodsPageSplits,
 		prometheus.CounterValue,
 		c.accessMethodsPerfDataObject[0].AccessMethodsPageSplitsPerSec,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessMethodsProbeScans,
 		prometheus.CounterValue,
 		c.accessMethodsPerfDataObject[0].AccessMethodsProbeScansPerSec,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessMethodsRangeScans,
 		prometheus.CounterValue,
 		c.accessMethodsPerfDataObject[0].AccessMethodsRangeScansPerSec,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessMethodsScanPointRevalidations,
 		prometheus.CounterValue,
 		c.accessMethodsPerfDataObject[0].AccessMethodsScanPointRevalidationsPerSec,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessMethodsSkippedGhostedRecords,
 		prometheus.CounterValue,
 		c.accessMethodsPerfDataObject[0].AccessMethodsSkippedGhostedRecordsPerSec,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessMethodsTableLockEscalations,
 		prometheus.CounterValue,
 		c.accessMethodsPerfDataObject[0].AccessMethodsTableLockEscalationsPerSec,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessMethodsUsedleafpagecookie,
 		prometheus.CounterValue,
 		c.accessMethodsPerfDataObject[0].AccessMethodsUsedLeafPageCookie,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessMethodsUsedtreepagecookie,
 		prometheus.CounterValue,
 		c.accessMethodsPerfDataObject[0].AccessMethodsUsedTreePageCookie,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessMethodsWorkfilesCreated,
 		prometheus.CounterValue,
 		c.accessMethodsPerfDataObject[0].AccessMethodsWorkfilesCreatedPerSec,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessMethodsWorktablesCreated,
 		prometheus.CounterValue,
 		c.accessMethodsPerfDataObject[0].AccessMethodsWorktablesCreatedPerSec,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessMethodsWorktablesFromCacheHits,
 		prometheus.CounterValue,
 		c.accessMethodsPerfDataObject[0].AccessMethodsWorktablesFromCacheRatio,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.accessMethodsWorktablesFromCacheLookups,
 		prometheus.CounterValue,
 		c.accessMethodsPerfDataObject[0].AccessMethodsWorktablesFromCacheRatioBase,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	return nil

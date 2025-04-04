@@ -25,7 +25,7 @@ import (
 )
 
 type collectorSQLErrors struct {
-	sqlErrorsPerfDataCollectors map[string]*pdh.Collector
+	sqlErrorsPerfDataCollectors map[mssqlInstance]*pdh.Collector
 	sqlErrorsPerfDataObject     []perfDataCounterValuesSqlErrors
 
 	// Win32_PerfRawData_{instance}_SQLServerSQLErrors
@@ -41,11 +41,11 @@ type perfDataCounterValuesSqlErrors struct {
 func (c *Collector) buildSQLErrors() error {
 	var err error
 
-	c.sqlErrorsPerfDataCollectors = make(map[string]*pdh.Collector, len(c.mssqlInstances))
+	c.sqlErrorsPerfDataCollectors = make(map[mssqlInstance]*pdh.Collector, len(c.mssqlInstances))
 	errs := make([]error, 0, len(c.mssqlInstances))
 
 	for _, sqlInstance := range c.mssqlInstances {
-		c.sqlErrorsPerfDataCollectors[sqlInstance.name], err = pdh.NewCollector[perfDataCounterValuesSqlErrors](pdh.CounterTypeRaw, c.mssqlGetPerfObjectName(sqlInstance.name, "SQL Errors"), pdh.InstancesAll)
+		c.sqlErrorsPerfDataCollectors[sqlInstance], err = pdh.NewCollector[perfDataCounterValuesSqlErrors](pdh.CounterTypeRaw, c.mssqlGetPerfObjectName(sqlInstance, "SQL Errors"), pdh.InstancesAll)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("failed to create SQL Errors collector for instance %s: %w", sqlInstance.name, err))
 		}
@@ -66,7 +66,7 @@ func (c *Collector) collectSQLErrors(ch chan<- prometheus.Metric) error {
 	return c.collect(ch, subCollectorSQLErrors, c.sqlErrorsPerfDataCollectors, c.collectSQLErrorsInstance)
 }
 
-func (c *Collector) collectSQLErrorsInstance(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *pdh.Collector) error {
+func (c *Collector) collectSQLErrorsInstance(ch chan<- prometheus.Metric, sqlInstance mssqlInstance, perfDataCollector *pdh.Collector) error {
 	err := perfDataCollector.Collect(&c.sqlErrorsPerfDataObject)
 	if err != nil {
 		return fmt.Errorf("failed to collect %s metrics: %w", c.mssqlGetPerfObjectName(sqlInstance, "SQL Errors"), err)
@@ -77,7 +77,7 @@ func (c *Collector) collectSQLErrorsInstance(ch chan<- prometheus.Metric, sqlIns
 			c.sqlErrorsTotal,
 			prometheus.CounterValue,
 			data.SqlErrorsErrorsPerSec,
-			sqlInstance, data.Name,
+			sqlInstance.name, data.Name,
 		)
 	}
 
