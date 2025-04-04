@@ -94,20 +94,6 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
-	var err error
-
-	errs := make([]error, 0, 2)
-
-	c.accessPerfDataCollector, err = pdh.NewCollector[perfDataCounterValuesAccess](pdh.CounterTypeRaw, "NPS Authentication Server", nil)
-	if err != nil {
-		errs = append(errs, fmt.Errorf("failed to create NPS Authentication Server collector: %w", err))
-	}
-
-	c.accountingPerfDataCollector, err = pdh.NewCollector[perfDataCounterValuesAccounting](pdh.CounterTypeRaw, "NPS Accounting Server", nil)
-	if err != nil {
-		errs = append(errs, fmt.Errorf("failed to create NPS Accounting Server collector: %w", err))
-	}
-
 	c.accessAccepts = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "access_accepts"),
 		"(AccessAccepts)",
@@ -260,13 +246,27 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 
+	var err error
+
+	errs := make([]error, 0)
+
+	c.accessPerfDataCollector, err = pdh.NewCollector[perfDataCounterValuesAccess](pdh.CounterTypeRaw, "NPS Authentication Server", nil)
+	if err != nil {
+		errs = append(errs, fmt.Errorf("failed to create NPS Authentication Server collector: %w", err))
+	}
+
+	c.accountingPerfDataCollector, err = pdh.NewCollector[perfDataCounterValuesAccounting](pdh.CounterTypeRaw, "NPS Accounting Server", nil)
+	if err != nil {
+		errs = append(errs, fmt.Errorf("failed to create NPS Accounting Server collector: %w", err))
+	}
+
 	return errors.Join(errs...)
 }
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
-	errs := make([]error, 0, 2)
+	errs := make([]error, 0)
 
 	if err := c.collectAccept(ch); err != nil {
 		errs = append(errs, fmt.Errorf("failed collecting NPS accept data: %w", err))

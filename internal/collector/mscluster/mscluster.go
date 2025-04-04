@@ -122,7 +122,7 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 
 	c.miSession = miSession
 
-	errs := make([]error, 0, 5)
+	errs := make([]error, 0)
 
 	if slices.Contains(c.config.CollectorsEnabled, subCollectorCluster) {
 		if err := c.buildCluster(); err != nil {
@@ -227,7 +227,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	wg.Wait()
 	close(errCh)
 
-	errs := make([]error, 0, 5)
+	errs := make([]error, 0)
 
 	for err := range errCh {
 		errs = append(errs, err)

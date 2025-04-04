@@ -82,13 +82,6 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
-	var err error
-
-	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "Certification Authority", pdh.InstancesAll)
-	if err != nil {
-		return fmt.Errorf("failed to create Certification Authority collector: %w", err)
-	}
-
 	c.requestsPerSecond = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "requests_total"),
 		"Total certificate requests processed",
@@ -167,6 +160,13 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		[]string{"cert_template"},
 		nil,
 	)
+
+	var err error
+
+	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "Certification Authority", pdh.InstancesAll)
+	if err != nil {
+		return fmt.Errorf("failed to create Certification Authority collector: %w", err)
+	}
 
 	return nil
 }

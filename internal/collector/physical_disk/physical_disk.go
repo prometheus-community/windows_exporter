@@ -127,13 +127,6 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
-	var err error
-
-	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "PhysicalDisk", pdh.InstancesAll)
-	if err != nil {
-		return fmt.Errorf("failed to create PhysicalDisk collector: %w", err)
-	}
-
 	c.requestsQueued = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "requests_queued"),
 		"The number of requests queued to the disk (PhysicalDisk.CurrentDiskQueueLength)",
@@ -217,6 +210,13 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		[]string{"disk"},
 		nil,
 	)
+
+	var err error
+
+	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "PhysicalDisk", pdh.InstancesAll)
+	if err != nil {
+		return fmt.Errorf("failed to create PhysicalDisk collector: %w", err)
+	}
 
 	return nil
 }

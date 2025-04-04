@@ -1,23 +1,2 @@
-# example configuration file for windows_exporter
-
-collectors:
-  enabled: cpu,cpu_info,exchange,iis,logical_disk,logon,memory,net,os,performancecounter,process,remote_fx,service,system,tcp,time,terminal_services,textfile
-collector:
-  service:
-    include: "windows_exporter"
-  performancecounter:
-    objects: |-
-      - name: photon_udp
-        object: "Photon Socket Server: UDP"
-        instances: ["*"]
-        counters:
-          - name: "UDP: Datagrams in"
-            metric: "photon_udp_datagrams"
-            labels:
-              direction: "in"
-          - name: "UDP: Datagrams out"
-            metric: "photon_udp_datagrams"
-            labels:
-              direction: "out"
-log:
-  level: warn
+web:
+  listen-address: ":9183"

@@ -126,25 +126,6 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
-	if miSession == nil {
-		return errors.New("miSession is nil")
-	}
-
-	miQuery, err := mi.NewQuery("SELECT Name, Default, PrinterStatus, JobCountSinceLastReset FROM win32_Printer")
-	if err != nil {
-		return fmt.Errorf("failed to create WMI query: %w", err)
-	}
-
-	c.miQueryPrinter = miQuery
-
-	miQuery, err = mi.NewQuery("SELECT Name, Status FROM win32_PrintJob")
-	if err != nil {
-		return fmt.Errorf("failed to create WMI query: %w", err)
-	}
-
-	c.miQueryPrinterJobs = miQuery
-	c.miSession = miSession
-
 	c.printerJobStatus = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "job_status"),
 		"A counter of printer jobs by status",
@@ -163,6 +144,25 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 		[]string{"printer"},
 		nil,
 	)
+
+	if miSession == nil {
+		return errors.New("miSession is nil")
+	}
+
+	miQuery, err := mi.NewQuery("SELECT Name, Default, PrinterStatus, JobCountSinceLastReset FROM win32_Printer")
+	if err != nil {
+		return fmt.Errorf("failed to create WMI query: %w", err)
+	}
+
+	c.miQueryPrinter = miQuery
+
+	miQuery, err = mi.NewQuery("SELECT Name, Status FROM win32_PrintJob")
+	if err != nil {
+		return fmt.Errorf("failed to create WMI query: %w", err)
+	}
+
+	c.miQueryPrinterJobs = miQuery
+	c.miSession = miSession
 
 	return nil
 }
