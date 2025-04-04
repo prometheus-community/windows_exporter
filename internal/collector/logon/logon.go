@@ -67,7 +67,7 @@ func (c *Collector) Close() error {
 
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	logger.Warn("The logon collecter will be removed mid 2025. "+
-		"See https://github.com/prometheus-community/windows_exporter/pull/1596 for more information.",
+		"See https://github.com/prometheus-community/windows_exporter/pull/1957 for more information.",
 		slog.String("collector", Name),
 	)
 
