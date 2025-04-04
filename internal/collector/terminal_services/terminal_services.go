@@ -133,24 +133,7 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
-	if miSession == nil {
-		return errors.New("miSession is nil")
-	}
-
 	c.logger = logger.With(slog.String("collector", Name))
-
-	c.connectionBrokerEnabled = isConnectionBrokerServer(miSession)
-
-	if c.connectionBrokerEnabled {
-		var err error
-
-		c.perfDataCollectorBroker, err = pdh.NewCollector[perfDataCounterValuesBroker](pdh.CounterTypeRaw, "Remote Desktop Connection Broker Counterset", pdh.InstancesAll)
-		if err != nil {
-			return fmt.Errorf("failed to create Remote Desktop Connection Broker Counterset collector: %w", err)
-		}
-	} else {
-		logger.Debug("host is not a connection broker skipping Connection Broker performance metrics.")
-	}
 
 	c.sessionInfo = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "session_info"),
@@ -243,7 +226,22 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 		nil,
 	)
 
+	if miSession == nil {
+		return errors.New("miSession is nil")
+	}
+
 	var err error
+
+	c.connectionBrokerEnabled = isConnectionBrokerServer(miSession)
+
+	if c.connectionBrokerEnabled {
+		c.perfDataCollectorBroker, err = pdh.NewCollector[perfDataCounterValuesBroker](pdh.CounterTypeRaw, "Remote Desktop Connection Broker Counterset", pdh.InstancesAll)
+		if err != nil {
+			return fmt.Errorf("failed to create Remote Desktop Connection Broker Counterset collector: %w", err)
+		}
+	} else {
+		logger.Debug("host is not a connection broker skipping Connection Broker performance metrics.")
+	}
 
 	c.hServer, err = wtsapi32.WTSOpenServer("")
 	if err != nil {
@@ -261,7 +259,7 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
-	errs := make([]error, 0, 3)
+	errs := make([]error, 0)
 
 	if err := c.collectWTSSessions(ch); err != nil {
 		errs = append(errs, fmt.Errorf("failed collecting terminal services session infos: %w", err))
@@ -439,7 +437,7 @@ func (c *Collector) collectWTSSessions(ch chan<- prometheus.Metric) error {
 	for _, session := range sessions {
 		// only connect metrics for remote named sessions
 		n := strings.ReplaceAll(session.SessionName, "#", " ")
-		if n == "" || n == "Services" || n == "Console" {
+		if n == "" || n == "Services" {
 			continue
 		}
 

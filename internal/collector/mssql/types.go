@@ -8,13 +8,14 @@ import (
 )
 
 type mssqlInstance struct {
-	name         string
-	majorVersion mssqlServerMajorVersion
-	patchVersion string
-	edition      string
+	name            string
+	majorVersion    mssqlServerMajorVersion
+	patchVersion    string
+	edition         string
+	isFirstInstance bool
 }
 
-func newMssqlInstance(name string) (mssqlInstance, error) {
+func newMssqlInstance(key, name string) (mssqlInstance, error) {
 	regKey := fmt.Sprintf(`Software\Microsoft\Microsoft SQL Server\%s\Setup`, name)
 
 	k, err := registry.OpenKey(registry.LOCAL_MACHINE, regKey, registry.QUERY_VALUE)
@@ -39,10 +40,11 @@ func newMssqlInstance(name string) (mssqlInstance, error) {
 	_, name, _ = strings.Cut(name, ".")
 
 	return mssqlInstance{
-		edition:      edition,
-		name:         name,
-		majorVersion: newMajorVersion(patchVersion),
-		patchVersion: patchVersion,
+		edition:         edition,
+		name:            name,
+		majorVersion:    newMajorVersion(patchVersion),
+		patchVersion:    patchVersion,
+		isFirstInstance: key == "MSSQLSERVER",
 	}, nil
 }
 

@@ -157,13 +157,6 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
-	var err error
-
-	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "SMTP Server", pdh.InstancesAll)
-	if err != nil {
-		return fmt.Errorf("failed to create SMTP Server collector: %w", err)
-	}
-
 	logger.Info("smtp collector is in an experimental state! Metrics for this collector have not been tested.",
 		slog.String("collector", Name),
 	)
@@ -420,6 +413,13 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		[]string{"site"},
 		nil,
 	)
+
+	var err error
+
+	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "SMTP Server", pdh.InstancesAll)
+	if err != nil {
+		return fmt.Errorf("failed to create SMTP Server collector: %w", err)
+	}
 
 	return nil
 }

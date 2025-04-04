@@ -83,13 +83,6 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
-	var err error
-
-	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "System", nil)
-	if err != nil {
-		return fmt.Errorf("failed to create System collector: %w", err)
-	}
-
 	c.bootTime = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "boot_time_timestamp"),
 		"Unix timestamp of system boot time",
@@ -147,6 +140,13 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 	)
 
 	c.bootTimeTimestamp = float64(time.Now().Unix() - int64(kernel32.GetTickCount64()/1000))
+	
+  var err error
+
+	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "System", nil)
+	if err != nil {
+		return fmt.Errorf("failed to create System collector: %w", err)
+	}
 
 	return nil
 }

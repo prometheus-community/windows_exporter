@@ -74,13 +74,6 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
-	var err error
-
-	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "MSMQ Queue", pdh.InstancesAll)
-	if err != nil {
-		return fmt.Errorf("failed to create MSMQ Queue collector: %w", err)
-	}
-
 	c.bytesInJournalQueue = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "bytes_in_journal_queue"),
 		"Size of queue journal in bytes",
@@ -105,6 +98,13 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		[]string{"name"},
 		nil,
 	)
+
+	var err error
+
+	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "MSMQ Queue", pdh.InstancesAll)
+	if err != nil {
+		return fmt.Errorf("failed to create MSMQ Queue collector: %w", err)
+	}
 
 	return nil
 }

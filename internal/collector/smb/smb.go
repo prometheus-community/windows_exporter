@@ -76,13 +76,6 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
-	var err error
-
-	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "SMB Server Shares", pdh.InstancesAll)
-	if err != nil {
-		return fmt.Errorf("failed to create SMB Server Shares collector: %w", err)
-	}
-
 	c.currentOpenFileCount = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "server_shares_current_open_file_count"),
 		"Current total count open files on the SMB Server Share",
@@ -131,6 +124,13 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		[]string{"share"},
 		nil,
 	)
+
+	var err error
+
+	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "SMB Server Shares", pdh.InstancesAll)
+	if err != nil {
+		return fmt.Errorf("failed to create SMB Server Shares collector: %w", err)
+	}
 
 	return nil
 }

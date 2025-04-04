@@ -167,7 +167,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		prometheus.Labels{"version": fmt.Sprintf("%d.%d", c.iisVersion.major, c.iisVersion.minor)},
 	)
 
-	errs := make([]error, 0, 4)
+	errs := make([]error, 0)
 
 	if err := c.buildWebService(); err != nil {
 		errs = append(errs, fmt.Errorf("failed to build Web Service collector: %w", err))
@@ -247,7 +247,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		1,
 	)
 
-	errs := make([]error, 0, 4)
+	errs := make([]error, 0)
 
 	if err := c.collectWebService(ch); err != nil {
 		errs = append(errs, fmt.Errorf("failed to collect Web Service metrics: %w", err))

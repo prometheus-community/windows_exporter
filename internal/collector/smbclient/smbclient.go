@@ -91,13 +91,6 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
-	var err error
-
-	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "SMB Client Shares", pdh.InstancesAll)
-	if err != nil {
-		return fmt.Errorf("failed to create SMB Client Shares collector: %w", err)
-	}
-
 	// desc creates a new prometheus description
 	desc := func(metricName string, description string, labels []string) *prometheus.Desc {
 		return prometheus.NewDesc(
@@ -192,6 +185,13 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		"Seconds waiting for write requests on this share",
 		[]string{"server", "share"},
 	)
+
+	var err error
+
+	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "SMB Client Shares", pdh.InstancesAll)
+	if err != nil {
+		return fmt.Errorf("failed to create SMB Client Shares collector: %w", err)
+	}
 
 	return nil
 }
