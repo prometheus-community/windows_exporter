@@ -80,5 +80,6 @@ func LocalFileTimeToFileTime(localFileTime, utcFileTime *windows.Filetime) uint3
 
 func GetTickCount64() uint64 {
 	ret, _, _ := procGetTickCount.Call()
+
 	return uint64(ret)
 }
