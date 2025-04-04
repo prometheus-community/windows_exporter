@@ -439,7 +439,7 @@ func (c *Collector) collectWTSSessions(ch chan<- prometheus.Metric) error {
 	for _, session := range sessions {
 		// only connect metrics for remote named sessions
 		n := strings.ReplaceAll(session.SessionName, "#", " ")
-		if n == "" || n == "Services" || n == "Console" {
+		if n == "" || n == "Services" {
 			continue
 		}
 
