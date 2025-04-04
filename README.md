@@ -33,7 +33,6 @@ Name     | Description | Enabled by default
 [iis](docs/collector.iis.md) | IIS sites and applications |
 [license](docs/collector.license.md) | Windows license status |
 [logical_disk](docs/collector.logical_disk.md) | Logical disks, disk I/O | &#10003;
-[logon](docs/collector.logon.md) | User logon sessions |
 [memory](docs/collector.memory.md) | Memory usage metrics | &#10003;
 [mscluster](docs/collector.mscluster.md) | MSCluster metrics |
 [msmq](docs/collector.msmq.md) | MSMQ queues |

@@ -193,7 +193,7 @@ windows_exporter_collector_timeout{collector="udp"} 0
 # TYPE windows_logical_disk_write_seconds_total counter
 # HELP windows_logical_disk_writes_total The number of write operations on the disk (LogicalDisk.DiskWritesPerSec)
 # TYPE windows_logical_disk_writes_total counter
-# HELP windows_logon_session_logon_timestamp_seconds timestamp of the logon session in seconds.
+# HELP windows_logon_session_logon_timestamp_seconds Deprecated. Use windows_terminal_services_session_info instead.
 # TYPE windows_logon_session_logon_timestamp_seconds gauge
 # HELP windows_memory_available_bytes The amount of physical memory immediately available for allocation to a process or for system use. It is equal to the sum of memory assigned to the standby (cached), free and zero page lists (AvailableBytes)
 # TYPE windows_memory_available_bytes gauge
@@ -307,7 +307,7 @@ windows_exporter_collector_timeout{collector="udp"} 0
 # TYPE windows_os_time gauge
 # HELP windows_os_timezone Deprecated: Use windows_time_timezone instead.
 # TYPE windows_os_timezone gauge
-# HELP windows_os_users Deprecated: Use `count(windows_logon_logon_type)` instead.
+# HELP windows_os_users Deprecated: Use `sum(windows_terminal_services_session_info{state="active"})` instead.
 # TYPE windows_os_users gauge
 # HELP windows_os_virtual_memory_bytes Deprecated: Use `windows_memory_commit_limit` instead.
 # TYPE windows_os_virtual_memory_bytes gauge
