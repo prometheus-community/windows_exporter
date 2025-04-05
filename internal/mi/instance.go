@@ -164,29 +164,3 @@ func (instance *Instance) GetClassName() (string, error) {
 
 	return windows.UTF16PtrToString(classNameUTF16), nil
 }
-
-func Instance_Print(instance *Instance) (string, error) {
-	elementMap := map[string]any{}
-
-	properties := instance.classDecl.Properties()
-
-	count, err := instance.GetElementCount()
-	if err != nil {
-		return "", err
-	}
-
-	if count == 0 {
-		return "", nil
-	}
-
-	for _, property := range properties {
-		name := windows.UTF16PtrToString(property.Name)
-
-		element, _ := instance.GetElement(name)
-		value, _ := element.GetValue()
-
-		elementMap[windows.UTF16PtrToString(property.Name)] = value
-	}
-
-	return fmt.Sprintf("%v", elementMap), nil
-}

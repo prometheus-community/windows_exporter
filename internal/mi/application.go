@@ -26,13 +26,12 @@ import (
 )
 
 const (
-	applicationID = "windows_exporter"
-
 	LocaleEnglish = "en-us"
 )
 
 //nolint:gochecknoglobals
 var (
+	applicationID = UTF16PtrFromString[*uint16]("windows_exporter")
 	// DestinationOptionsTimeout is the key for the timeout option.
 	//
 	// https://github.com/microsoft/win32metadata/blob/527806d20d83d3abd43d16cd3fa8795d8deba343/generation/WinSDK/RecompiledIdlHeaders/um/mi.h#L7830
@@ -99,21 +98,16 @@ type DestinationOptionsFT struct {
 	GetInterval              uintptr
 }
 
-// Application_Initialize initializes the MI [Application].
+// ApplicationInitialize initializes the MI [Application].
 // It is recommended to have only one Application per process.
 //
 // https://learn.microsoft.com/en-us/windows/win32/api/mi/nf-mi-mi_application_initializev1
-func Application_Initialize() (*Application, error) {
+func ApplicationInitialize() (*Application, error) {
 	application := &Application{}
-
-	applicationId, err := windows.UTF16PtrFromString(applicationID)
-	if err != nil {
-		return nil, err
-	}
 
 	r0, _, err := procMIApplicationInitialize.Call(
 		0,
-		uintptr(unsafe.Pointer(applicationId)),
+		uintptr(unsafe.Pointer(applicationID)),
 		0,
 		uintptr(unsafe.Pointer(application)),
 	)
@@ -129,7 +123,7 @@ func Application_Initialize() (*Application, error) {
 	return application, nil
 }
 
-// Close deinitializes the management infrastructure client API that was initialized through a call to Application_Initialize.
+// Close deinitializes the management infrastructure client API that was initialized through a call to ApplicationInitialize.
 //
 // https://learn.microsoft.com/en-us/windows/win32/api/mi/nf-mi-mi_application_close
 func (application *Application) Close() error {

@@ -23,7 +23,7 @@ import (
 )
 
 func Benchmark_MI_Query_Unmarshal(b *testing.B) {
-	application, err := mi.Application_Initialize()
+	application, err := mi.ApplicationInitialize()
 	require.NoError(b, err)
 	require.NotEmpty(b, application)
 
