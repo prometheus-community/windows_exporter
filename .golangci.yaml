@@ -69,9 +69,12 @@ linters:
       - linters:
           - revive
         text: '`?\w+`? should be `?\w+`?'
-      - text: don't use underscores in Go names
-      - text: don't use an underscore in package name
-      - text: exported type .+ should have comment or be unexported
+      - path: .+\.go$
+        text: don't use underscores in Go names
+      - path: .+\.go$
+        text: don't use an underscore in package name
+      - path: .+\.go$
+        text: exported type .+ should have comment or be unexported
       - linters:
         - staticcheck
         text: "ST1003:"
