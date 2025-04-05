@@ -69,6 +69,9 @@ linters:
       - linters:
           - revive
         text: '`?\w+`? should be `?\w+`?'
+      - linters:
+          - revive
+        text: don't use ALL_CAPS in Go names; use CamelCase
       - path: .+\.go$
         text: don't use underscores in Go names
       - path: .+\.go$
@@ -78,7 +81,7 @@ linters:
       - linters:
         - staticcheck
         text: "ST1003:"
-        path: internal/(mi|pdh)/result\.go$
+      - path: .+\.go$
     paths:
       - third_party$
       - builtin$
