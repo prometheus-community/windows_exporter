@@ -74,7 +74,7 @@ func TestCollector[C collector.Collector, V interface{}](t *testing.T, fn func(*
 	c := fn(conf)
 	ch := make(chan prometheus.Metric, 10000)
 
-	miApp, err := mi.Application_Initialize()
+	miApp, err := mi.ApplicationInitialize()
 	require.NoError(t, err)
 
 	miSession, err := miApp.NewSession(nil)

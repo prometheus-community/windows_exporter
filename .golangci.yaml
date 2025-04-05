@@ -69,15 +69,13 @@ linters:
       - linters:
           - revive
         text: '`?\w+`? should be `?\w+`?'
+      - text: don't use underscores in Go names
+      - text: don't use an underscore in package name
+      - text: exported type .+ should have comment or be unexported
       - linters:
-          - revive
-        text: don't use ALL_CAPS in Go names; use CamelCase
-      - path: (.+)\.go$
-        text: don't use underscores in Go names
-      - path: (.+)\.go$
-        text: don't use an underscore in package name
-      - path: (.+)\.go$
-        text: exported type .+ should have comment or be unexported
+        - staticcheck
+        text: "ST1003:"
+        path: internal/(mi|pdh)/result\.go$
     paths:
       - third_party$
       - builtin$

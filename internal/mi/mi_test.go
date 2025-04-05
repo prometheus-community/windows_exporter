@@ -28,7 +28,7 @@ type win32Process struct {
 }
 
 func Test_MI_Application_Initialize(t *testing.T) {
-	application, err := mi.Application_Initialize()
+	application, err := mi.ApplicationInitialize()
 	require.NoError(t, err)
 	require.NotEmpty(t, application)
 
@@ -37,7 +37,7 @@ func Test_MI_Application_Initialize(t *testing.T) {
 }
 
 func Test_MI_Application_TestConnection(t *testing.T) {
-	application, err := mi.Application_Initialize()
+	application, err := mi.ApplicationInitialize()
 	require.NoError(t, err)
 	require.NotEmpty(t, application)
 
@@ -67,7 +67,7 @@ func Test_MI_Application_TestConnection(t *testing.T) {
 }
 
 func Test_MI_Query(t *testing.T) {
-	application, err := mi.Application_Initialize()
+	application, err := mi.ApplicationInitialize()
 	require.NoError(t, err)
 	require.NotEmpty(t, application)
 
@@ -120,7 +120,7 @@ func Test_MI_Query(t *testing.T) {
 }
 
 func Test_MI_QueryUnmarshal(t *testing.T) {
-	application, err := mi.Application_Initialize()
+	application, err := mi.ApplicationInitialize()
 	require.NoError(t, err)
 	require.NotEmpty(t, application)
 
@@ -155,7 +155,7 @@ func Test_MI_QueryUnmarshal(t *testing.T) {
 }
 
 func Test_MI_EmptyQuery(t *testing.T) {
-	application, err := mi.Application_Initialize()
+	application, err := mi.ApplicationInitialize()
 	require.NoError(t, err)
 	require.NotEmpty(t, application)
 
@@ -194,7 +194,7 @@ func Test_MI_EmptyQuery(t *testing.T) {
 }
 
 func Test_MI_Query_Unmarshal(t *testing.T) {
-	application, err := mi.Application_Initialize()
+	application, err := mi.ApplicationInitialize()
 	require.NoError(t, err)
 	require.NotEmpty(t, application)
 

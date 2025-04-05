@@ -275,7 +275,7 @@ func (c *Collection) Close() error {
 
 // initMI To be called by the exporter for collector initialization.
 func (c *Collection) initMI() error {
-	app, err := mi.Application_Initialize()
+	app, err := mi.ApplicationInitialize()
 	if err != nil {
 		return fmt.Errorf("error from initialize MI application: %w", err)
 	}
