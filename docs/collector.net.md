@@ -21,7 +21,7 @@ If given, an interface name needs to *not* match the exclude regexp in order for
 
 ### `--collector.net.enabled`
 
-Comma-separated list of sub-collectors to use. Defaults to all, if not specified. Valid values: `metrics`, `nic_info`.
+Comma-separated list of collectors to use. Defaults to all, if not specified. Supported values are: `metrics`, `nic_info`.
 
 ## Metrics
 
