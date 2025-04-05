@@ -16,7 +16,7 @@ None
 
 | Name                                         | Description                                                                                                                                                                                                       | Type    | Labels |
 |----------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------|--------|
-| `windows_system_boot_time_timestamp_seconds` | Unix timestamp of last system boot                                                                                                                                                                                | gauge   | None   |
+| `windows_system_boot_time_timestamp`         | Unix timestamp of last system boot                                                                                                                                                                                | gauge   | None   |
 | `windows_system_context_switches_total`      | Total number of [context switches](https://en.wikipedia.org/wiki/Context_switch)                                                                                                                                  | counter | None   |
 | `windows_system_exception_dispatches_total`  | Total exceptions dispatched by the system                                                                                                                                                                         | counter | None   |
 | `windows_system_processes`                   | Number of process contexts currently loaded or running on the operating system                                                                                                                                    | gauge   | None   |
@@ -41,7 +41,7 @@ windows_system_processes{instance="localhost"}
 ## Useful queries
 Find hosts that have rebooted in the last 24 hours
 ```
-time() - windows_system_boot_time_timestamp_seconds < 86400
+time() - windows_system_boot_time_timestamp < 86400
 ```
 
 ## Alerting examples
