@@ -81,7 +81,6 @@ linters:
       - linters:
         - staticcheck
         text: "ST1003:"
-      - path: .+\.go$
     paths:
       - third_party$
       - builtin$
