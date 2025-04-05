@@ -93,7 +93,7 @@ func (c *MetricsHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		)
 
 		w.WriteHeader(http.StatusBadRequest)
-		_, _ = w.Write([]byte(fmt.Sprintf("Couldn't create filtered metrics handler: %s", err)))
+		_, _ = fmt.Fprintf(w, "Couldn't create filtered metrics handler: %s", err)
 
 		return
 	}

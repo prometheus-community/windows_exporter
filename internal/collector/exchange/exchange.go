@@ -40,7 +40,7 @@ const (
 	subCollectorAutoDiscover        = "Autodiscover"
 	subCollectorWorkloadManagement  = "WorkloadManagement"
 	subCollectorRpcClientAccess     = "RpcClientAccess"
-	subCollectorMapiHttpEmsmdb      = "MapiHttpEmsmdb"
+	subCollectorMapiHTTPEmsmdb      = "MapiHttpEmsmdb"
 )
 
 type Config struct {
@@ -59,7 +59,7 @@ var ConfigDefaults = Config{
 		subCollectorAutoDiscover,
 		subCollectorWorkloadManagement,
 		subCollectorRpcClientAccess,
-		subCollectorMapiHttpEmsmdb,
+		subCollectorMapiHTTPEmsmdb,
 	},
 }
 
@@ -74,7 +74,7 @@ type Collector struct {
 	collectorAutoDiscover
 	collectorAvailabilityService
 	collectorHTTPProxy
-	collectorMapiHttpEmsmdb
+	collectorMapiHTTPEmsMDB
 	collectorOWA
 	collectorRpcClientAccess
 	collectorTransportQueues
@@ -129,7 +129,7 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 				subCollectorAutoDiscover:        "[29240] MSExchange Autodiscover",
 				subCollectorWorkloadManagement:  "[19430] MSExchange WorkloadManagement Workloads",
 				subCollectorRpcClientAccess:     "[29336] MSExchange RpcClientAccess",
-				subCollectorMapiHttpEmsmdb:      "[26463] MSExchange MapiHttp Emsmdb",
+				subCollectorMapiHTTPEmsmdb:      "[26463] MSExchange MapiHttp Emsmdb",
 			}
 
 			sb := strings.Builder{}
@@ -219,10 +219,10 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 			collect: c.collectRpcClientAccess,
 			close:   c.perfDataCollectorRpcClientAccess.Close,
 		},
-		subCollectorMapiHttpEmsmdb: {
-			build:   c.buildMapiHttpEmsmdb,
-			collect: c.collectMapiHttpEmsmdb,
-			close:   c.perfDataCollectorMapiHttpEmsmdb.Close,
+		subCollectorMapiHTTPEmsmdb: {
+			build:   c.buildMapiHTTPEmsMDB,
+			collect: c.collectMapiHTTPEmsMDB,
+			close:   c.perfDataCollectorMapiHTTPEmsMDB.Close,
 		},
 	}
 

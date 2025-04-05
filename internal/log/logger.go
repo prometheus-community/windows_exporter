@@ -81,8 +81,8 @@ func New(config *Config) (*slog.Logger, error) {
 		return nil, errors.New("log file undefined")
 	}
 
-	config.Config.Writer = config.File.w
-	config.Config.Style = promslog.SlogStyle
+	config.Writer = config.File.w
+	config.Style = promslog.SlogStyle
 
 	return promslog.New(config.Config), nil
 }
