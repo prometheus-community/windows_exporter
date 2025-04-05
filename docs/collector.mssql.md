@@ -10,13 +10,10 @@ Enabled by default? | No
 
 ## Flags
 
-### `--collectors.mssql.classes-enabled`
+### `--collectors.mssql.enabled`
 
 Comma-separated list of MSSQL WMI classes to use. Supported values are `accessmethods`, `availreplica`, `bufman`, `databases`, `dbreplica`, `genstats`, `locks`, `memmgr`, `sqlstats`, `sqlerrors`, `transactions`, and `waitstats`.
 
-### `--collectors.mssql.class-print`
-
-If true, print available mssql WMI classes and exit.  Only displays if the mssql collector is enabled.fman`, `databases`, `dbreplica`, `genstats`, `locks`, `memmgr`, `sqlstats`, `sqlerrors`, `transactions`, and `waitstats`.
 
 ## Metrics
 
