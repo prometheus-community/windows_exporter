@@ -140,8 +140,8 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 	)
 
 	c.bootTimeTimestamp = float64(time.Now().Unix() - int64(kernel32.GetTickCount64()/1000))
-	
-  var err error
+
+	var err error
 
 	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "System", nil)
 	if err != nil {
