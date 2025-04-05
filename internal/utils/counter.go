@@ -31,6 +31,7 @@ func NewCounter(lastValue uint32) Counter {
 
 func (c *Counter) AddValue(value uint32) {
 	c.totalValue += float64(value - c.lastValue)
+	c.lastValue = value
 }
 
 func (c *Counter) Value() float64 {
