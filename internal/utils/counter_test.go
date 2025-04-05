@@ -20,20 +20,36 @@ import (
 	"testing"
 
 	"github.com/prometheus-community/windows_exporter/internal/utils"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCounter(t *testing.T) {
 	t.Parallel()
 
 	c := utils.NewCounter(0)
-	assert.Equal(t, 0.0, c.Value()) //nolint:testifylint
+	require.Equal(t, 0.0, c.Value()) //nolint:testifylint
 
-	c.AddValue(1)
+	c.AddValue(10)
 
-	assert.Equal(t, 1.0, c.Value()) //nolint:testifylint
+	require.Equal(t, 10.0, c.Value()) //nolint:testifylint
 
-	c.AddValue(math.MaxUint32)
+	c.AddValue(50)
 
-	assert.Equal(t, float64(math.MaxUint32)+1.0, c.Value()) //nolint:testifylint
+	require.Equal(t, 50.0, c.Value()) //nolint:testifylint
+
+	c.AddValue(math.MaxUint32 - 10)
+
+	require.Equal(t, float64(math.MaxUint32)-10, c.Value()) //nolint:testifylint
+
+	c.AddValue(20)
+
+	require.Equal(t, float64(math.MaxUint32)+21, c.Value()) //nolint:testifylint
+
+	c.AddValue(40)
+
+	require.Equal(t, float64(math.MaxUint32)+41, c.Value()) //nolint:testifylint
+
+	c.AddValue(math.MaxUint32 - 10)
+
+	require.Equal(t, float64(math.MaxUint32)*2-9, c.Value()) //nolint:testifylint
 }

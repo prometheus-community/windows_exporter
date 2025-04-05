@@ -37,7 +37,7 @@ jobs:
       - name: check
         run: |
           PR_TITLE_PREFIX=$(echo "$PR_TITLE" | cut -d':' -f1)
-          if [[ -d "internal/collector/$PR_TITLE_PREFIX" ]] || [[ -d "internal/$PR_TITLE_PREFIX" ]] || [[ -d "pkg/$PR_TITLE_PREFIX" ]] || [[ -d "$PR_TITLE_PREFIX" ]] || [[ "$PR_TITLE_PREFIX" == "docs" ]] || [[ "$PR_TITLE_PREFIX" == "ci" ]] || [[ "$PR_TITLE_PREFIX" == "revert" ]] || [[ "$PR_TITLE_PREFIX" == "fix" ]]  || [[ "$PR_TITLE_PREFIX" == "feat" ]] || [[ "$PR_TITLE_PREFIX" == "chore" ]] || [[ "$PR_TITLE_PREFIX" == "chore(docs)" ]] || [[ "$PR_TITLE_PREFIX" == "chore(deps)" ]] || [[ "$PR_TITLE_PREFIX" == "*" ]] || [[ "$PR_TITLE_PREFIX" == "Synchronize common files from prometheus/prometheus" ]]; then
+          if [[ -d "internal/collector/$PR_TITLE_PREFIX" ]] || [[ -d "internal/$PR_TITLE_PREFIX" ]] || [[ -d "pkg/$PR_TITLE_PREFIX" ]] || [[ -d "$PR_TITLE_PREFIX" ]] || [[ "$PR_TITLE_PREFIX" == "docs" ]] || [[ "$PR_TITLE_PREFIX" == "ci" ]] || [[ "$PR_TITLE_PREFIX" == "revert" ]] || [[ "$PR_TITLE_PREFIX" == "fix" ]] || [[ "$PR_TITLE_PREFIX" == "fix(deps)" ]] || [[ "$PR_TITLE_PREFIX" == "feat" ]] || [[ "$PR_TITLE_PREFIX" == "chore" ]] || [[ "$PR_TITLE_PREFIX" == "chore(docs)" ]] || [[ "$PR_TITLE_PREFIX" == "chore(deps)" ]] || [[ "$PR_TITLE_PREFIX" == "*" ]] || [[ "$PR_TITLE_PREFIX" == "Release"* ]] || [[ "$PR_TITLE_PREFIX" == "Synchronize common files from prometheus/prometheus" ]]; then
             exit 0
           fi
 

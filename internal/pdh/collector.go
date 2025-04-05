@@ -122,6 +122,11 @@ func NewCollectorWithReflection(resultType CounterType, object string, instances
 			continue
 		}
 
+		secondValue := strings.HasSuffix(counterName, ",secondvalue")
+		if secondValue {
+			counterName = strings.TrimSuffix(counterName, ",secondvalue")
+		}
+
 		var counter Counter
 		if counter, ok = collector.counters[counterName]; !ok {
 			counter = Counter{
@@ -132,9 +137,7 @@ func NewCollectorWithReflection(resultType CounterType, object string, instances
 			}
 		}
 
-		if strings.HasSuffix(counterName, ",secondvalue") {
-			counterName = strings.TrimSuffix(counterName, ",secondvalue")
-
+		if secondValue {
 			counter.FieldIndexSecondValue = f.Index[0]
 		} else {
 			counter.FieldIndexValue = f.Index[0]
@@ -198,11 +201,14 @@ func NewCollectorWithReflection(resultType CounterType, object string, instances
 				continue
 			}
 
-			ci := (*CounterInfo)(unsafe.Pointer(&buf[0]))
-			counter.Type = ci.DwType
-			counter.Desc = windows.UTF16PtrToString(ci.SzExplainText)
-			counter.Desc = windows.UTF16PtrToString(ci.SzExplainText)
+			counterInfo := (*CounterInfo)(unsafe.Pointer(&buf[0]))
+			if counterInfo == nil {
+				errs = append(errs, errors.New("GetCounterInfo: counter info is nil"))
 
+				continue
+			}
+
+			counter.Type = counterInfo.DwType
 			if val, ok := SupportedCounterTypes[counter.Type]; ok {
 				counter.MetricType = val
 			} else {
