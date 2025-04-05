@@ -93,7 +93,7 @@ Flags:
 	                               Regexp of NIC:s to include. NIC name must
 	                               both match include and not match exclude to be
 	                               included.
-	    --collector.net.enabled="metrics,nic_addresses"
+	    --collector.net.enabled="metrics,nic_info"
 	                               Comma-separated list of collectors to use.
 	                               Defaults to all, if not specified.
 	    --collector.mscluster.enabled="cluster,network,node,resource,resourcegroup"
