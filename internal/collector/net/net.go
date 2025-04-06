@@ -33,7 +33,12 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-const Name = "net"
+const (
+	Name = "net"
+
+	subCollectorMetrics = "metrics"
+	subCollectorNicInfo = "nic_addresses"
+)
 
 type Config struct {
 	NicExclude        *regexp.Regexp `yaml:"nic_exclude"`
@@ -46,8 +51,8 @@ var ConfigDefaults = Config{
 	NicExclude: types.RegExpEmpty,
 	NicInclude: types.RegExpAny,
 	CollectorsEnabled: []string{
-		"metrics",
-		"nic_addresses",
+		subCollectorMetrics,
+		subCollectorNicInfo,
 	},
 }
 
@@ -284,7 +289,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	}
 
 	if slices.Contains(c.config.CollectorsEnabled, subCollectorNicInfo) {
-		if err := c.collectNICInfo(ch); err != nil {
+		if err := c.collectNICAddresses(ch); err != nil {
 			errs = append(errs, fmt.Errorf("failed collecting net addresses: %w", err))
 		}
 	}
