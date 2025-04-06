@@ -32,15 +32,15 @@ const (
 //nolint:gochecknoglobals
 var (
 	applicationID = UTF16PtrFromString[*uint16]("windows_exporter")
-	// DestinationOptionsTimeout is the key for the timeout option.
+	// destinationOptionsTimeout is the key for the timeout option.
 	//
 	// https://github.com/microsoft/win32metadata/blob/527806d20d83d3abd43d16cd3fa8795d8deba343/generation/WinSDK/RecompiledIdlHeaders/um/mi.h#L7830
-	DestinationOptionsTimeout = UTF16PtrFromString[*uint16]("__MI_DESTINATIONOPTIONS_TIMEOUT")
+	destinationOptionsTimeout = UTF16PtrFromString[*uint16]("__MI_DESTINATIONOPTIONS_TIMEOUT")
 
-	// DestinationOptionsUILocale is the key for the UI locale option.
+	// destinationOptionsUILocale is the key for the UI locale option.
 	//
 	// https://github.com/microsoft/win32metadata/blob/527806d20d83d3abd43d16cd3fa8795d8deba343/generation/WinSDK/RecompiledIdlHeaders/um/mi.h#L8248
-	DestinationOptionsUILocale = UTF16PtrFromString[*uint16]("__MI_DESTINATIONOPTIONS_UI_LOCALE")
+	destinationOptionsUILocale = UTF16PtrFromString[*uint16]("__MI_DESTINATIONOPTIONS_UI_LOCALE")
 )
 
 //nolint:gochecknoglobals
@@ -238,7 +238,7 @@ func (do *DestinationOptions) SetTimeout(timeout time.Duration) error {
 	r0, _, _ := syscall.SyscallN(
 		do.ft.SetInterval,
 		uintptr(unsafe.Pointer(do)),
-		uintptr(unsafe.Pointer(DestinationOptionsTimeout)),
+		uintptr(unsafe.Pointer(destinationOptionsTimeout)),
 		uintptr(unsafe.Pointer(NewInterval(timeout))),
 		0,
 	)
@@ -266,7 +266,7 @@ func (do *DestinationOptions) SetLocale(locale string) error {
 	r0, _, _ := syscall.SyscallN(
 		do.ft.SetString,
 		uintptr(unsafe.Pointer(do)),
-		uintptr(unsafe.Pointer(DestinationOptionsUILocale)),
+		uintptr(unsafe.Pointer(destinationOptionsUILocale)),
 		uintptr(unsafe.Pointer(localeUTF16)),
 		0,
 	)
