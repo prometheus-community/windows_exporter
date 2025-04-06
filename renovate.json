@@ -7,7 +7,10 @@
   "labels": [
     "🛠️ dependencies"
   ],
-  "dependencyDashboardApproval": true,
+  "timezone": "Europe/Berlin",
+  "schedule": [
+    "* 14-17 * * 5"
+  ],
   "packageRules": [
     {
       "groupName": "golangci-lint",
@@ -49,7 +52,8 @@
     "gomodTidy"
   ],
   "ignoreDeps": [
-     "mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image"
+    "mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image",
+    "gopkg.in/yaml.v2"
   ],
   "customManagers": [
     {
@@ -66,9 +70,9 @@
     {
       "customType": "regex",
       "fileMatch": [
-                "Makefile",
-                "(^|/).+\\.go"
-            ],
+        "Makefile",
+        "(^|/).+\\.go"
+      ],
       "matchStrings": [
         "go run (?<depName>\\S+)@(?<currentValue>\\S+)"
       ],

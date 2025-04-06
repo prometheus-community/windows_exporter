@@ -1,4 +1,6 @@
-// Copyright 2024 The Prometheus Authors
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright 2025 The Prometheus Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -66,8 +68,8 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
-	logger.Warn("The logon collector will be removed mid 2025. "+
-		"See https://github.com/prometheus-community/windows_exporter/pull/1957 for more information. If you see values in this collector"+
+	logger.Warn("The logon collector will be removed mid 2025. Use terminal_service instead."+
+		" See https://github.com/prometheus-community/windows_exporter/pull/1957 for more information. If you see values in this collector"+
 		" that you need, please open an issue to discuss how to get them into the new collector.",
 		slog.String("collector", Name),
 	)
