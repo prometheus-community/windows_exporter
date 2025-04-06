@@ -16,6 +16,7 @@
 package config
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"io"
@@ -91,6 +92,7 @@ func NewConfigFileResolver(file string) (*Resolver, error) {
 	)
 
 	if strings.HasPrefix(file, "http://") || strings.HasPrefix(file, "https://") {
+		//nolint:sloglint // we do not have an logger yet
 		slog.Warn("Loading configuration file from URL is deprecated and will be removed in 0.31.0. Use a local file instead.")
 
 		fileBytes, err = readFromURL(file)
@@ -142,7 +144,7 @@ func readFromURL(file string) ([]byte, error) {
 
 	client := &http.Client{Transport: tr}
 
-	req, err := http.NewRequest(http.MethodGet, file, nil)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, file, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
 	}

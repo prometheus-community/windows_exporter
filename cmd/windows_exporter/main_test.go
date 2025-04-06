@@ -72,7 +72,7 @@ func TestRun(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx, cancel := context.WithCancel(t.Context())
+			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
 			if tc.config != "" {
