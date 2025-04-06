@@ -144,7 +144,7 @@ func run(ctx context.Context, args []string) int {
 	logger.LogAttrs(ctx, slog.LevelDebug, "logging has Started")
 
 	if configFile != nil && *configFile != "" {
-		logger.InfoContext(ctx, "using configuration file: "+*configFile)
+		logger.LogAttrs(ctx, slog.LevelInfo, "using configuration file: "+*configFile)
 	}
 
 	if err = setPriorityWindows(ctx, logger, os.Getpid(), *processPriority); err != nil {
@@ -175,7 +175,7 @@ func run(ctx context.Context, args []string) int {
 		}
 	}
 
-	logCurrentUser(logger)
+	logCurrentUser(ctx, logger)
 
 	logger.InfoContext(ctx, "Enabled collectors: "+strings.Join(enabledCollectorList, ", "))
 
@@ -240,27 +240,34 @@ func run(ctx context.Context, args []string) int {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	_ = server.Shutdown(ctx) //nolint:contextcheck // create a new context for server shutdown
-
-	logger.LogAttrs(ctx, slog.LevelInfo, "windows_exporter has shut down") //nolint:contextcheck
+	//nolint:contextcheck // create a new context for server shutdown
+	if err = server.Shutdown(ctx); err != nil {
+		//nolint:contextcheck
+		logger.LogAttrs(ctx, slog.LevelError, "Failed to shutdown windows_exporter",
+			slog.Any("err", err),
+		)
+	} else {
+		//nolint:contextcheck
+		logger.LogAttrs(ctx, slog.LevelInfo, "windows_exporter has shut down")
+	}
 
 	return 0
 }
 
-func logCurrentUser(logger *slog.Logger) {
+func logCurrentUser(ctx context.Context, logger *slog.Logger) {
 	u, err := user.Current()
 	if err != nil {
-		logger.Warn("Unable to determine which user is running this exporter. More info: https://github.com/golang/go/issues/37348",
+		logger.LogAttrs(ctx, slog.LevelWarn, "Unable to determine which user is running this exporter. More info: https://github.com/golang/go/issues/37348",
 			slog.Any("err", err),
 		)
 
 		return
 	}
 
-	logger.Info("Running as " + u.Username)
+	logger.LogAttrs(ctx, slog.LevelInfo, "Running as "+u.Username)
 
 	if strings.Contains(u.Username, "ContainerAdministrator") || strings.Contains(u.Username, "ContainerUser") {
-		logger.Warn("Running as a preconfigured Windows Container user. This may mean you do not have Windows HostProcess containers configured correctly and some functionality will not work as expected.")
+		logger.LogAttrs(ctx, slog.LevelWarn, "Running as a preconfigured Windows Container user. This may mean you do not have Windows HostProcess containers configured correctly and some functionality will not work as expected.")
 	}
 }
 
