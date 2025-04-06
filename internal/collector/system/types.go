@@ -20,7 +20,6 @@ type perfDataCounterValues struct {
 	ExceptionDispatchesPerSec float64 `perfdata:"Exception Dispatches/sec"`
 	ProcessorQueueLength      float64 `perfdata:"Processor Queue Length"`
 	SystemCallsPerSec         float64 `perfdata:"System Calls/sec"`
-	SystemUpTime              float64 `perfdata:"System Up Time"`
 	Processes                 float64 `perfdata:"Processes"`
 	Threads                   float64 `perfdata:"Threads"`
 }
