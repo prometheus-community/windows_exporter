@@ -16,6 +16,7 @@
 package textfile_test
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"log/slog"
@@ -44,7 +45,7 @@ func TestMultipleDirectories(t *testing.T) {
 	})
 
 	collectors := collector.New(map[string]collector.Collector{textfile.Name: textFileCollector})
-	require.NoError(t, collectors.Build(logger))
+	require.NoError(t, collectors.Build(context.Background(), logger))
 
 	metrics := make(chan prometheus.Metric)
 	got := ""
@@ -81,7 +82,7 @@ func TestDuplicateFileName(t *testing.T) {
 	})
 
 	collectors := collector.New(map[string]collector.Collector{textfile.Name: textFileCollector})
-	require.NoError(t, collectors.Build(logger))
+	require.NoError(t, collectors.Build(context.Background(), logger))
 
 	metrics := make(chan prometheus.Metric)
 	got := ""

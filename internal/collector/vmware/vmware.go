@@ -230,7 +230,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
-	errs := make([]error, 0, 2)
+	errs := make([]error, 0)
 
 	if err := c.collectCpu(ch); err != nil {
 		errs = append(errs, fmt.Errorf("failed collecting vmware cpu metrics: %w", err))

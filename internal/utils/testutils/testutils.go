@@ -16,6 +16,7 @@
 package testutils
 
 import (
+	"context"
 	"errors"
 	"io"
 	"log/slog"
@@ -47,7 +48,7 @@ func FuncBenchmarkCollector[C collector.Collector](b *testing.B, name string, co
 	}
 
 	collectors := collector.New(map[string]collector.Collector{name: c})
-	require.NoError(b, collectors.Build(logger))
+	require.NoError(b, collectors.Build(context.Background(), logger))
 
 	metrics := make(chan prometheus.Metric)
 

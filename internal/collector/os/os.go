@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
@@ -52,7 +53,7 @@ type Collector struct {
 	processesLimit *prometheus.Desc
 
 	// users
-	// Deprecated: Use count(windows_logon_logon_type) instead.
+	// Deprecated: Use `sum(windows_terminal_services_session_info{state="active"})` instead.
 	users *prometheus.Desc
 
 	// physicalMemoryFreeBytes
@@ -105,7 +106,7 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
-	logger.Warn("The os collect holds a number of deprecated metrics and will be removed mid 2025. "+
+	logger.Warn("The os collector holds a number of deprecated metrics and will be removed mid 2025. "+
 		"See https://github.com/prometheus-community/windows_exporter/pull/1596 for more information.",
 		slog.String("collector", Name),
 	)
@@ -116,6 +117,11 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	}
 
 	version := windows.RtlGetVersion()
+
+	// Microsoft has decided to keep the major version as "10" for Windows 11, including the product name.
+	if version.BuildNumber >= 22000 {
+		productName = strings.Replace(productName, " 10 ", " 11 ", 1)
+	}
 
 	c.osInformation = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "info"),
@@ -174,7 +180,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	)
 	c.users = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "users"),
-		"Deprecated: Use `count(windows_logon_logon_type)` instead.",
+		"Deprecated: Use `sum(windows_terminal_services_session_info{state=\"active\"})` instead.",
 		nil,
 		nil,
 	)
@@ -203,7 +209,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
-	errs := make([]error, 0, 4)
+	errs := make([]error, 0)
 
 	c.collect(ch)
 
@@ -371,5 +377,5 @@ func (c *Collector) getWindowsVersion() (string, string, error) {
 		return "", "", err
 	}
 
-	return productName, strconv.FormatUint(revision, 10), nil
+	return strings.TrimSpace(productName), strconv.FormatUint(revision, 10), nil
 }

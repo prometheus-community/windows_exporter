@@ -20,10 +20,12 @@ import (
 	"fmt"
 	"reflect"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"unsafe"
 
+	"github.com/Microsoft/hcsshim/osversion"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows"
@@ -120,6 +122,11 @@ func NewCollectorWithReflection(resultType CounterType, object string, instances
 			continue
 		}
 
+		secondValue := strings.HasSuffix(counterName, ",secondvalue")
+		if secondValue {
+			counterName = strings.TrimSuffix(counterName, ",secondvalue")
+		}
+
 		var counter Counter
 		if counter, ok = collector.counters[counterName]; !ok {
 			counter = Counter{
@@ -130,9 +137,7 @@ func NewCollectorWithReflection(resultType CounterType, object string, instances
 			}
 		}
 
-		if strings.HasSuffix(counterName, ",secondvalue") {
-			counterName = strings.TrimSuffix(counterName, ",secondvalue")
-
+		if secondValue {
 			counter.FieldIndexSecondValue = f.Index[0]
 		} else {
 			counter.FieldIndexValue = f.Index[0]
@@ -151,7 +156,18 @@ func NewCollectorWithReflection(resultType CounterType, object string, instances
 
 			var counterHandle pdhCounterHandle
 
+			//nolint:nestif
 			if ret := AddEnglishCounter(handle, counterPath, 0, &counterHandle); ret != ErrorSuccess {
+				if ret == CstatusNoCounter {
+					if minOSBuildTag, ok := f.Tag.Lookup("perfdata_min_build"); ok {
+						if minOSBuild, err := strconv.Atoi(minOSBuildTag); err == nil {
+							if uint16(minOSBuild) > osversion.Build() {
+								continue
+							}
+						}
+					}
+				}
+
 				errs = append(errs, fmt.Errorf("failed to add counter %s: %w", counterPath, NewPdhError(ret)))
 
 				continue
@@ -164,7 +180,7 @@ func NewCollectorWithReflection(resultType CounterType, object string, instances
 			}
 
 			// Get the info with the current buffer size
-			bufLen := uint32(0)
+			var bufLen uint32
 
 			if ret := GetCounterInfo(counterHandle, 0, &bufLen, nil); ret != MoreData {
 				errs = append(errs, fmt.Errorf("GetCounterInfo: %w", NewPdhError(ret)))
@@ -172,24 +188,27 @@ func NewCollectorWithReflection(resultType CounterType, object string, instances
 				continue
 			}
 
-			if bufLen == 0 {
+			buf := make([]byte, bufLen)
+			if len(buf) == 0 {
 				errs = append(errs, errors.New("GetCounterInfo: buffer length is zero"))
 
 				continue
 			}
 
-			buf := make([]byte, bufLen)
 			if ret := GetCounterInfo(counterHandle, 0, &bufLen, &buf[0]); ret != ErrorSuccess {
 				errs = append(errs, fmt.Errorf("GetCounterInfo: %w", NewPdhError(ret)))
 
 				continue
 			}
 
-			ci := (*CounterInfo)(unsafe.Pointer(&buf[0]))
-			counter.Type = ci.DwType
-			counter.Desc = windows.UTF16PtrToString(ci.SzExplainText)
-			counter.Desc = windows.UTF16PtrToString(ci.SzExplainText)
+			counterInfo := (*CounterInfo)(unsafe.Pointer(&buf[0]))
+			if counterInfo == nil {
+				errs = append(errs, errors.New("GetCounterInfo: counter info is nil"))
 
+				continue
+			}
+
+			counter.Type = counterInfo.DwType
 			if val, ok := SupportedCounterTypes[counter.Type]; ok {
 				counter.MetricType = val
 			} else {

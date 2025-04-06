@@ -47,7 +47,11 @@ import (
 )
 
 func main() {
-	exitCode := run()
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
+
+	exitCode := run(ctx, os.Args[1:])
+
+	stop()
 
 	// If we are running as a service, we need to signal the service control manager that we are done.
 	if !IsService {
@@ -60,9 +64,8 @@ func main() {
 	<-serviceManagerFinishedCh
 }
 
-func run() int {
+func run(ctx context.Context, args []string) int {
 	startTime := time.Now()
-	ctx := context.Background()
 
 	app := kingpin.New("windows_exporter", "A metrics collector for Windows.")
 
@@ -71,7 +74,7 @@ func run() int {
 			"config.file",
 			"YAML configuration file to use. Values set in this file will be overridden by CLI flags.",
 		).String()
-		insecureSkipVerify = app.Flag(
+		_ = app.Flag(
 			"config.file.insecure-skip-verify",
 			"Skip TLS verification in loading YAML configuration.",
 		).Default("false").Bool()
@@ -122,11 +125,10 @@ func run() int {
 	// Initialize collectors before loading and parsing CLI arguments
 	collectors := collector.NewWithFlags(app)
 
-	// Load values from configuration file(s). Executable flags must first be parsed, in order
-	// to load the specified file(s).
-	if _, err := app.Parse(os.Args[1:]); err != nil {
+	//nolint:contextcheck
+	if err := config.Parse(app, args); err != nil {
 		//nolint:sloglint // we do not have an logger yet
-		slog.Error("Failed to parse CLI args",
+		slog.LogAttrs(ctx, slog.LevelError, "Failed to load configuration",
 			slog.Any("err", err),
 		)
 
@@ -137,62 +139,21 @@ func run() int {
 
 	logger, err := log.New(logConfig)
 	if err != nil {
-		//nolint:sloglint // we do not have an logger yet
-		slog.Error("failed to create logger",
+		logger.LogAttrs(ctx, slog.LevelError, "failed to create logger",
 			slog.Any("err", err),
 		)
 
 		return 1
 	}
 
-	if *configFile != "" {
-		resolver, err := config.NewResolver(ctx, *configFile, logger, *insecureSkipVerify)
-		if err != nil {
-			logger.Error("could not load config file",
-				slog.Any("err", err),
-			)
-
-			return 1
-		}
-
-		if err = resolver.Bind(app, os.Args[1:]); err != nil {
-			logger.ErrorContext(ctx, "failed to bind configuration",
-				slog.Any("err", err),
-			)
-
-			return 1
-		}
-
-		// Parse flags once more to include those discovered in configuration file(s).
-		if _, err = app.Parse(os.Args[1:]); err != nil {
-			logger.ErrorContext(ctx, "failed to parse CLI args from YAML file",
-				slog.Any("err", err),
-			)
-
-			return 1
-		}
-
-		// NOTE: This is temporary fix for issue #1092, calling kingpin.Parse
-		// twice makes slices flags duplicate its value, this clean up
-		// the first parse before the second call.
-		slices.Sort(*webConfig.WebListenAddresses)
-		*webConfig.WebListenAddresses = slices.Clip(slices.Compact(*webConfig.WebListenAddresses))
-
-		logger, err = log.New(logConfig)
-		if err != nil {
-			//nolint:sloglint // we do not have an logger yet
-			slog.Error("failed to create logger",
-				slog.Any("err", err),
-			)
-
-			return 1
-		}
+	if configFile != nil && *configFile != "" {
+		logger.InfoContext(ctx, "using configuration file: "+*configFile)
 	}
 
 	logger.LogAttrs(ctx, slog.LevelDebug, "logging has Started")
 
-	if err = setPriorityWindows(logger, os.Getpid(), *processPriority); err != nil {
-		logger.Error("failed to set process priority",
+	if err = setPriorityWindows(ctx, logger, os.Getpid(), *processPriority); err != nil {
+		logger.LogAttrs(ctx, slog.LevelError, "failed to set process priority",
 			slog.Any("err", err),
 		)
 
@@ -201,7 +162,7 @@ func run() int {
 
 	enabledCollectorList := expandEnabledCollectors(*enabledCollectors)
 	if err := collectors.Enable(enabledCollectorList); err != nil {
-		logger.Error("couldn't enable collectors",
+		logger.LogAttrs(ctx, slog.LevelError, "couldn't enable collectors",
 			slog.Any("err", err),
 		)
 
@@ -209,9 +170,9 @@ func run() int {
 	}
 
 	// Initialize collectors before loading
-	if err = collectors.Build(logger); err != nil {
+	if err = collectors.Build(ctx, logger); err != nil {
 		for _, err := range utils.SplitError(err) {
-			logger.Error("couldn't initialize collector",
+			logger.LogAttrs(ctx, slog.LevelError, "couldn't initialize collector",
 				slog.Any("err", err),
 			)
 
@@ -266,17 +227,14 @@ func run() int {
 		close(errCh)
 	}()
 
-	ctx, stop := signal.NotifyContext(ctx, os.Interrupt, os.Kill)
-	defer stop()
-
 	select {
 	case <-ctx.Done():
-		logger.Info("Shutting down windows_exporter via kill signal")
+		logger.LogAttrs(ctx, slog.LevelInfo, "Shutting down windows_exporter via kill signal")
 	case <-stopCh:
-		logger.Info("Shutting down windows_exporter via service control")
+		logger.LogAttrs(ctx, slog.LevelInfo, "Shutting down windows_exporter via service control")
 	case err := <-errCh:
 		if err != nil {
-			logger.ErrorContext(ctx, "Failed to start windows_exporter",
+			logger.LogAttrs(ctx, slog.LevelError, "Failed to start windows_exporter",
 				slog.Any("err", err),
 			)
 
@@ -287,9 +245,9 @@ func run() int {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	_ = server.Shutdown(ctx)
+	_ = server.Shutdown(ctx) //nolint:contextcheck // create a new context for server shutdown
 
-	logger.InfoContext(ctx, "windows_exporter has shut down")
+	logger.LogAttrs(ctx, slog.LevelInfo, "windows_exporter has shut down") //nolint:contextcheck
 
 	return 0
 }
@@ -312,7 +270,7 @@ func logCurrentUser(logger *slog.Logger) {
 }
 
 // setPriorityWindows sets the priority of the current process to the specified value.
-func setPriorityWindows(logger *slog.Logger, pid int, priority string) error {
+func setPriorityWindows(ctx context.Context, logger *slog.Logger, pid int, priority string) error {
 	// Mapping of priority names to uin32 values required by windows.SetPriorityClass.
 	priorityStringToInt := map[string]uint32{
 		"realtime":    windows.REALTIME_PRIORITY_CLASS,
@@ -330,7 +288,7 @@ func setPriorityWindows(logger *slog.Logger, pid int, priority string) error {
 		return nil
 	}
 
-	logger.LogAttrs(context.Background(), slog.LevelDebug, "setting process priority to "+priority)
+	logger.LogAttrs(ctx, slog.LevelDebug, "setting process priority to "+priority)
 
 	// https://learn.microsoft.com/en-us/windows/win32/procthread/process-security-and-access-rights
 	handle, err := windows.OpenProcess(

@@ -23,6 +23,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Microsoft/hcsshim/osversion"
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/headers/kernel32"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
@@ -58,14 +59,17 @@ type Collector struct {
 	perfDataCollector *pdh.Collector
 	perfDataObject    []perfDataCounterValues
 
-	currentTime                      *prometheus.Desc
-	timezone                         *prometheus.Desc
-	clockFrequencyAdjustmentPPBTotal *prometheus.Desc
-	computedTimeOffset               *prometheus.Desc
-	ntpClientTimeSourceCount         *prometheus.Desc
-	ntpRoundTripDelay                *prometheus.Desc
-	ntpServerIncomingRequestsTotal   *prometheus.Desc
-	ntpServerOutgoingResponsesTotal  *prometheus.Desc
+	ppbCounterPresent bool
+
+	currentTime                     *prometheus.Desc
+	timezone                        *prometheus.Desc
+	clockFrequencyAdjustment        *prometheus.Desc
+	clockFrequencyAdjustmentPPB     *prometheus.Desc
+	computedTimeOffset              *prometheus.Desc
+	ntpClientTimeSourceCount        *prometheus.Desc
+	ntpRoundTripDelay               *prometheus.Desc
+	ntpServerIncomingRequestsTotal  *prometheus.Desc
+	ntpServerOutgoingResponsesTotal *prometheus.Desc
 }
 
 func New(config *Config) *Collector {
@@ -125,6 +129,9 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		}
 	}
 
+	// https://github.com/prometheus-community/windows_exporter/issues/1891
+	c.ppbCounterPresent = osversion.Build() >= osversion.LTSC2019
+
 	c.currentTime = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "current_timestamp_seconds"),
 		"OperatingSystem.LocalDateTime",
@@ -137,9 +144,15 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		[]string{"timezone"},
 		nil,
 	)
-	c.clockFrequencyAdjustmentPPBTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "clock_frequency_adjustment_ppb_total"),
-		"Total adjustment made to the local system clock frequency by W32Time in Parts Per Billion (PPB) units.",
+	c.clockFrequencyAdjustment = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "clock_frequency_adjustment"),
+		"This value reflects the adjustment made to the local system clock frequency by W32Time in nominal clock units. This counter helps visualize the finer adjustments being made by W32time to synchronize the local clock.",
+		nil,
+		nil,
+	)
+	c.clockFrequencyAdjustmentPPB = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "clock_frequency_adjustment_ppb"),
+		"This value reflects the adjustment made to the local system clock frequency by W32Time in Parts Per Billion (PPB) units. 1 PPB adjustment imples the system clock was adjusted at a rate of 1 nanosecond per second. The smallest possible adjustment can vary and can be expected to be in the order of 100&apos;s of PPB. This counter helps visualize the finer actions being taken by W32time to synchronize the local clock.",
 		nil,
 		nil,
 	)
@@ -187,7 +200,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
-	errs := make([]error, 0, 2)
+	errs := make([]error, 0)
 
 	if slices.Contains(c.config.CollectorsEnabled, collectorSystemTime) {
 		if err := c.collectTime(ch); err != nil {
@@ -232,14 +245,23 @@ func (c *Collector) collectTime(ch chan<- prometheus.Metric) error {
 func (c *Collector) collectNTP(ch chan<- prometheus.Metric) error {
 	err := c.perfDataCollector.Collect(&c.perfDataObject)
 	if err != nil {
-		return fmt.Errorf("failed to collect VM Memory metrics: %w", err)
+		return fmt.Errorf("failed to collect time metrics: %w", err)
 	}
 
 	ch <- prometheus.MustNewConstMetric(
-		c.clockFrequencyAdjustmentPPBTotal,
-		prometheus.CounterValue,
-		c.perfDataObject[0].ClockFrequencyAdjustmentPPBTotal,
+		c.clockFrequencyAdjustment,
+		prometheus.GaugeValue,
+		c.perfDataObject[0].ClockFrequencyAdjustment,
 	)
+
+	if c.ppbCounterPresent {
+		ch <- prometheus.MustNewConstMetric(
+			c.clockFrequencyAdjustmentPPB,
+			prometheus.GaugeValue,
+			c.perfDataObject[0].ClockFrequencyAdjustmentPPB,
+		)
+	}
+
 	ch <- prometheus.MustNewConstMetric(
 		c.computedTimeOffset,
 		prometheus.GaugeValue,
