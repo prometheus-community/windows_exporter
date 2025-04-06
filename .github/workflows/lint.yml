@@ -8,11 +8,9 @@ on:
       - master
       - next
       - main
+      - "0.*"
+      - "1.*"
   pull_request:
-    branches:
-      - master
-      - next
-      - main
 
 env:
   VERSION_PROMU: '0.14.0'
