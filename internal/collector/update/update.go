@@ -84,15 +84,57 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 		config: ConfigDefaults,
 	}
 
+	var (
+		online         bool
+		scrapeInterval time.Duration
+	)
+
 	app.Flag(
 		"collector.updates.online",
+		"Deprecated: Please use collector.update.online instead",
+	).Default(strconv.FormatBool(ConfigDefaults.online)).BoolVar(&online)
+
+	app.Flag(
+		"collector.updates.scrape-interval",
+		"Deprecated: Please use collector.update.scrape-interval instead",
+	).Default(ConfigDefaults.scrapeInterval.String()).DurationVar(&scrapeInterval)
+
+	app.Flag(
+		"collector.update.online",
 		"Whether to search for updates online.",
 	).Default(strconv.FormatBool(ConfigDefaults.online)).BoolVar(&c.config.online)
 
 	app.Flag(
-		"collector.updates.scrape-interval",
+		"collector.update.scrape-interval",
 		"Define the interval of scraping Windows Update information.",
 	).Default(ConfigDefaults.scrapeInterval.String()).DurationVar(&c.config.scrapeInterval)
+
+	app.Action(func(*kingpin.ParseContext) error {
+		// Use deprecated flags only if new ones weren't explicitly set
+		if online {
+			// If the new flag is set, ignore the old one
+			if !c.config.online {
+				c.config.online = online
+			}
+
+			slog.Warn("Warning: --collector.updates.online is deprecated, use --collector.update.online instead.",
+				slog.String("collector", Name),
+			)
+		}
+
+		if scrapeInterval != ConfigDefaults.scrapeInterval {
+			// If the new flag is set, ignore the old one
+			if c.config.scrapeInterval != scrapeInterval {
+				c.config.scrapeInterval = scrapeInterval
+			}
+
+			slog.Warn("Warning: --collector.updates.scrape-interval is deprecated, use --collector.update.scrape-interval instead.",
+				slog.String("collector", Name),
+			)
+		}
+
+		return nil
+	})
 
 	return c
 }
@@ -121,7 +163,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 	c.pendingUpdate = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "pending_info"),
-		"Pending Windows Updates",
+		"Expose information for a single pending update item",
 		[]string{"category", "severity", "title"},
 		nil,
 	)
