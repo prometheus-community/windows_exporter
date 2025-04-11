@@ -43,7 +43,7 @@ Comma-separated list of collectors to use, for example: `--collectors.exchange.e
 | `windows_exchange_transport_queues_messages_submitted_total`                | Messages Submitted Total                                                                                    |
 | `windows_exchange_transport_queues_messages_delayed_total`                  | Messages Delayed Total                                                                                      |
 | `windows_exchange_transport_queues_messages_completed_delivery_total`       | Messages Completed Delivery Total                                                                           |
-| `windows_exchange_transport_queues_shadow_queue_length`                     | Shadow Queue Length                                                                                         |
+| `windows_exchange_transport_queues_aggregate_shadow_queue_length`           | The current number of messages in shadow queues                                                             |
 | `windows_exchange_transport_queues_submission_queue_length`                 | Submission Queue Length                                                                                     |
 | `windows_exchange_transport_queues_delay_queue_length`                      | Delay Queue Length                                                                                          |
 | `windows_exchange_transport_queues_items_completed_delivery_total`          | Items Completed Delivery Total                                                                              |
@@ -54,7 +54,7 @@ Comma-separated list of collectors to use, for example: `--collectors.exchange.e
 | `windows_exchange_http_proxy_avg_auth_latency`                              | Average time spent authenticating CAS requests over the last 200 samples                                    |
 | `windows_exchange_http_proxy_outstanding_proxy_requests`                    | Number of concurrent outstanding proxy requests                                                             |
 | `windows_exchange_http_proxy_requests_total`                                | Number of proxy requests processed each second                                                              |
-| `windows_exchange_avail_service_requests_per_sec`                           | Number of requests serviced per second                                                                      |
+| `windows_exchange_availability_service_requests_per_sec`                    | Number of requests serviced per second                                                                      |
 | `windows_exchange_owa_current_unique_users`                                 | Number of unique users currently logged on to Outlook Web App                                               |
 | `windows_exchange_owa_requests_total`                                       | Number of requests handled by Outlook Web App per second                                                    |
 | `windows_exchange_autodiscover_requests_total`                              | Number of autodiscover service requests processed each second                                               |
@@ -77,4 +77,3 @@ _This collector does not yet have any useful queries added, we would appreciate 
 
 ## Alerting examples
 _This collector does not yet have alerting examples, we would appreciate your help adding them!_
-

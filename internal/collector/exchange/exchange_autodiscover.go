@@ -39,7 +39,7 @@ type perfDataCounterValuesAutoDiscover struct {
 func (c *Collector) buildAutoDiscover() error {
 	var err error
 
-	c.perfDataCollectorAutoDiscover, err = pdh.NewCollector[perfDataCounterValuesAutoDiscover](pdh.CounterTypeRaw, "MSExchange Autodiscover", pdh.InstancesAll)
+	c.perfDataCollectorAutoDiscover, err = pdh.NewCollector[perfDataCounterValuesAutoDiscover](pdh.CounterTypeRaw, "MSExchange Autodiscover", nil)
 	if err != nil {
 		return fmt.Errorf("failed to create MSExchange Autodiscover collector: %w", err)
 	}
