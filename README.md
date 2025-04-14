@@ -1,4 +1,4 @@
-# windows_exporter
+config.file# windows_exporter
 
 [![CI](https://github.com/prometheus-community/windows_exporter/actions/workflows/release.yml/badge.svg)](https://github.com/prometheus-community/windows_exporter)
 [![Linting](https://github.com/prometheus-community/windows_exporter/actions/workflows/lint.yml/badge.svg)](https://github.com/prometheus-community/windows_exporter)
@@ -92,7 +92,6 @@ windows_exporter accepts flags to configure certain behaviours. The ones configu
 | `--scrape.timeout-margin`            | Seconds to subtract from the timeout allowed by the client. Tune to allow for overhead or high loads.                                                                                            | `0.5`         |
 | `--web.config.file`                  | A [web config][web_config] for setting up TLS and Auth                                                                                                                                           | None          |
 | `--config.file`                      | [Using a config file](#using-a-configuration-file) from path or URL                                                                                                                              | None          |
-| `--config.file.insecure-skip-verify` | Skip TLS when loading config file from URL                                                                                                                                                       | false         |
 | `--log.file`                         | Output file of log messages. One of [stdout, stderr, eventlog, \<path to log file>]<br>**NOTE:** The MSI installer will add a default argument to the installed service setting this to eventlog | stderr        |
 
 ## Installation
