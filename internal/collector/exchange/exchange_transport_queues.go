@@ -39,7 +39,7 @@ type collectorTransportQueues struct {
 	messagesSubmittedTotal                  *prometheus.Desc
 	messagesDelayedTotal                    *prometheus.Desc
 	messagesCompletedDeliveryTotal          *prometheus.Desc
-	shadowQueueLength                       *prometheus.Desc
+	aggregateShadowQueueLength              *prometheus.Desc
 	submissionQueueLength                   *prometheus.Desc
 	delayQueueLength                        *prometheus.Desc
 	itemsCompletedDeliveryTotal             *prometheus.Desc
@@ -63,7 +63,7 @@ type perfDataCounterValuesTransportQueues struct {
 	MessagesSubmittedTotal                  float64 `perfdata:"Messages Submitted Total"`
 	MessagesDelayedTotal                    float64 `perfdata:"Messages Delayed Total"`
 	MessagesCompletedDeliveryTotal          float64 `perfdata:"Messages Completed Delivery Total"`
-	ShadowQueueLength                       float64 `perfdata:"Shadow Queue Length"`
+	AggregateShadowQueueLength              float64 `perfdata:"Aggregate Shadow Queue Length"`
 	SubmissionQueueLength                   float64 `perfdata:"Submission Queue Length"`
 	DelayQueueLength                        float64 `perfdata:"Delay Queue Length"`
 	ItemsCompletedDeliveryTotal             float64 `perfdata:"Items Completed Delivery Total"`
@@ -152,9 +152,9 @@ func (c *Collector) buildTransportQueues() error {
 		[]string{"name"},
 		nil,
 	)
-	c.shadowQueueLength = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "transport_queues_shadow_queue_length"),
-		"Shadow Queue Length",
+	c.aggregateShadowQueueLength = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "transport_queues_aggregate_shadow_queue_length"),
+		"The current number of messages in shadow queues.",
 		[]string{"name"},
 		nil,
 	)
@@ -280,9 +280,9 @@ func (c *Collector) collectTransportQueues(ch chan<- prometheus.Metric) error {
 			labelName,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.shadowQueueLength,
+			c.aggregateShadowQueueLength,
 			prometheus.GaugeValue,
-			data.ShadowQueueLength,
+			data.AggregateShadowQueueLength,
 			labelName,
 		)
 		ch <- prometheus.MustNewConstMetric(
