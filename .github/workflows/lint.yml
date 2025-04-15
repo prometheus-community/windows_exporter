@@ -1,7 +1,7 @@
 name: Linting
 
 # Trigger on pull requests and pushes to master branch where Go-related files
-# have been changed.
+# have been changed. Add line
 on:
   push:
     branches:
