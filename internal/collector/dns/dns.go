@@ -115,6 +115,7 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 
 	app.Action(func(*kingpin.ParseContext) error {
 		c.config.CollectorsEnabled = strings.Split(collectorsEnabled, ",")
+
 		return nil
 	})
 
@@ -160,6 +161,7 @@ func (c *Collector) isCollectorEnabled(collector string) bool {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -609,7 +611,7 @@ func (c *Collector) collectMetrics(ch chan<- prometheus.Metric) error {
 }
 
 func (c *Collector) collectErrorStats(ch chan<- prometheus.Metric) error {
-	var stats []DNSStatistic
+	var stats []Statistic
 	if err := c.miSession.Query(&stats, mi.NamespaceRootMicrosoftDNS, c.miQuery); err != nil {
 		return fmt.Errorf("failed to query DNS statistics: %w", err)
 	}

@@ -108,10 +108,10 @@ type perfDataCounterValues struct {
 	_                              float64 `perfdata:"Zone Transfer Success"`
 }
 
-// DNSStatistic represents the structure for DNS error statistics
-type DNSStatistic struct {
-	Name           string `mi:"Name"`
-	CollectionName string `mi:"CollectionName"`
-	Value          uint64 `mi:"Value"`
-	DnsServerName  string `mi:"DnsServerName"`
+// Statistic represents the structure for DNS error statistics
+type Statistic struct {
+	Name           string
+	CollectionName string
+	Value          uint64
+	DnsServerName  string
 }
