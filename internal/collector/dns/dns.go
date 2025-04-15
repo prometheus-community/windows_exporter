@@ -68,7 +68,7 @@ type Collector struct {
 	zoneTransferResponsesReceived *prometheus.Desc
 	zoneTransferSuccessReceived   *prometheus.Desc
 	zoneTransferSuccessSent       *prometheus.Desc
-	dnsEnhancedStats              *prometheus.Desc
+	dnsErrorStats                 *prometheus.Desc
 }
 
 func New(config *Config) *Collector {
@@ -235,9 +235,9 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 		nil,
 	)
 
-	c.dnsEnhancedStats = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "enhanced_stats_total"),
-		"Enhanced DNS statistics from MicrosoftDNS_Statistic",
+	c.dnsErrorStats = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "error_stats_total"),
+		"DNS error statistics from MicrosoftDNS_Statistic",
 		[]string{"name", "collection_name", "dns_server"},
 		nil,
 	)
@@ -249,7 +249,7 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 		return fmt.Errorf("failed to create DNS collector: %w", err)
 	}
 
-	query, err := mi.NewQuery("SELECT Name, CollectionName, Value, DnsServerName FROM MicrosoftDNS_Statistic")
+	query, err := mi.NewQuery("SELECT Name, CollectionName, Value, DnsServerName FROM MicrosoftDNS_Statistic WHERE CollectionName = 'Error Stats'")
 	if err != nil {
 		return fmt.Errorf("failed to create query: %w", err)
 	}
@@ -526,16 +526,11 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	// Collect DNS error statistics
 	seenStats := make(map[string]bool)
 	for _, stat := range stats {
-		// Only collect metrics from Error Stats collection
-		if stat.CollectionName != "Error Stats" {
-			continue
-		}
-
 		// Create a unique key for this combination of labels
 		key := fmt.Sprintf("%s_%s_%s", stat.Name, stat.CollectionName, stat.DnsServerName)
 		if !seenStats[key] {
 			ch <- prometheus.MustNewConstMetric(
-				c.dnsEnhancedStats,
+				c.dnsErrorStats,
 				prometheus.CounterValue,
 				float64(stat.Value),
 				stat.Name,
