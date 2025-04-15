@@ -18,6 +18,7 @@
 package dns
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 
@@ -41,6 +42,9 @@ type Collector struct {
 
 	perfDataCollector *pdh.Collector
 	perfDataObject    []perfDataCounterValues
+
+	miSession *mi.Session
+	miQuery   mi.Query
 
 	dynamicUpdatesFailures        *prometheus.Desc
 	dynamicUpdatesQueued          *prometheus.Desc
@@ -93,7 +97,11 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
+func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
+	if miSession == nil {
+		return errors.New("miSession is nil")
+	}
+
 	c.zoneTransferRequestsReceived = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "zone_transfer_requests_received_total"),
 		"Number of zone transfer requests (AXFR/IXFR) received by the master DNS server",
@@ -240,6 +248,14 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 	if err != nil {
 		return fmt.Errorf("failed to create DNS collector: %w", err)
 	}
+
+	query, err := mi.NewQuery("SELECT Name, CollectionName, Value, DnsServerName FROM MicrosoftDNS_Statistic")
+	if err != nil {
+		return fmt.Errorf("failed to create query: %w", err)
+	}
+
+	c.miQuery = query
+	c.miSession = miSession
 
 	return nil
 }
@@ -502,26 +518,8 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	)
 
 	// Query DNS error statistics
-	application, err := mi.ApplicationInitialize()
-	if err != nil {
-		return fmt.Errorf("failed to initialize MI application: %w", err)
-	}
-	defer application.Close()
-
-	session, err := application.NewSession(nil)
-	if err != nil {
-		return fmt.Errorf("failed to create MI session: %w", err)
-	}
-	defer session.Close()
-
 	var stats []DNSStatistic
-	query, err := mi.NewQuery("SELECT Name, CollectionName, Value, DnsServerName FROM MicrosoftDNS_Statistic")
-	if err != nil {
-		return fmt.Errorf("failed to create query: %w", err)
-	}
-
-	err = session.QueryUnmarshal(&stats, mi.OperationFlagsStandardRTTI, nil, mi.NamespaceRootMicrosoftDNS, mi.QueryDialectWQL, query)
-	if err != nil {
+	if err := c.miSession.Query(&stats, mi.NamespaceRootMicrosoftDNS, c.miQuery); err != nil {
 		return fmt.Errorf("failed to query DNS statistics: %w", err)
 	}
 
