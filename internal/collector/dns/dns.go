@@ -615,21 +615,15 @@ func (c *Collector) collectErrorStats(ch chan<- prometheus.Metric) error {
 	}
 
 	// Collect DNS error statistics
-	seenStats := make(map[string]bool)
 	for _, stat := range stats {
-		// Create a unique key for this combination of labels
-		key := fmt.Sprintf("%s_%s_%s", stat.Name, stat.CollectionName, stat.DnsServerName)
-		if !seenStats[key] {
-			ch <- prometheus.MustNewConstMetric(
-				c.dnsErrorStats,
-				prometheus.CounterValue,
-				float64(stat.Value),
-				stat.Name,
-				stat.CollectionName,
-				stat.DnsServerName,
-			)
-			seenStats[key] = true
-		}
+		ch <- prometheus.MustNewConstMetric(
+			c.dnsErrorStats,
+			prometheus.CounterValue,
+			float64(stat.Value),
+			stat.Name,
+			stat.CollectionName,
+			stat.DnsServerName,
+		)
 	}
 
 	return nil
