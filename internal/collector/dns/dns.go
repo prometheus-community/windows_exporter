@@ -528,7 +528,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		return fmt.Errorf("failed to create query: %w", err)
 	}
 
-	err = session.QueryUnmarshal(&stats, mi.OperationFlagsStandardRTTI, nil, mi.NamespaceRootCIMv2, mi.QueryDialectWQL, query)
+	err = session.QueryUnmarshal(&stats, mi.OperationFlagsStandardRTTI, nil, mi.NamespaceRootMicrosoftDNS, mi.QueryDialectWQL, query)
 	if err != nil {
 		return fmt.Errorf("failed to query DNS statistics: %w", err)
 	}
