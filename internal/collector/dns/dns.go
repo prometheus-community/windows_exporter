@@ -536,6 +536,11 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	// Collect DNS error statistics
 	seenStats := make(map[string]bool)
 	for _, stat := range stats {
+		// Only collect metrics from Error Stats collection
+		if stat.CollectionName != "Error Stats" {
+			continue
+		}
+
 		// Create a unique key for this combination of labels
 		key := fmt.Sprintf("%s_%s_%s", stat.Name, stat.CollectionName, stat.DnsServerName)
 		if !seenStats[key] {
