@@ -64,7 +64,7 @@ type Collector struct {
 	zoneTransferResponsesReceived *prometheus.Desc
 	zoneTransferSuccessReceived   *prometheus.Desc
 	zoneTransferSuccessSent       *prometheus.Desc
-	dnsErrorStats                 *prometheus.Desc
+	dnsEnhancedStats              *prometheus.Desc
 }
 
 // DNSStatistic represents the structure for DNS error statistics
@@ -235,9 +235,9 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 
-	c.dnsErrorStats = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "error_stats_total"),
-		"DNS error statistics from MicrosoftDNS_Statistic",
+	c.dnsEnhancedStats = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "enhanced_stats_total"),
+		"Enhanced DNS statistics from MicrosoftDNS_Statistic",
 		[]string{"name", "collection_name", "dns_server"},
 		nil,
 	)
@@ -534,15 +534,21 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	}
 
 	// Collect DNS error statistics
+	seenStats := make(map[string]bool)
 	for _, stat := range stats {
-		ch <- prometheus.MustNewConstMetric(
-			c.dnsErrorStats,
-			prometheus.CounterValue,
-			float64(stat.Value),
-			stat.Name,
-			stat.CollectionName,
-			stat.DnsServerName,
-		)
+		// Create a unique key for this combination of labels
+		key := fmt.Sprintf("%s_%s_%s", stat.Name, stat.CollectionName, stat.DnsServerName)
+		if !seenStats[key] {
+			ch <- prometheus.MustNewConstMetric(
+				c.dnsEnhancedStats,
+				prometheus.CounterValue,
+				float64(stat.Value),
+				stat.Name,
+				stat.CollectionName,
+				stat.DnsServerName,
+			)
+			seenStats[key] = true
+		}
 	}
 
 	return nil
