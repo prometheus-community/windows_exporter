@@ -67,14 +67,6 @@ type Collector struct {
 	dnsEnhancedStats              *prometheus.Desc
 }
 
-// DNSStatistic represents the structure for DNS error statistics
-type DNSStatistic struct {
-	Name           string `mi:"Name"`
-	CollectionName string `mi:"CollectionName"`
-	Value          uint64 `mi:"Value"`
-	DnsServerName  string `mi:"DnsServerName"`
-}
-
 func New(config *Config) *Collector {
 	if config == nil {
 		config = &ConfigDefaults
