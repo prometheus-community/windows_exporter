@@ -64,6 +64,15 @@ type Collector struct {
 	zoneTransferResponsesReceived *prometheus.Desc
 	zoneTransferSuccessReceived   *prometheus.Desc
 	zoneTransferSuccessSent       *prometheus.Desc
+	dnsErrorStats                 *prometheus.Desc
+}
+
+// DNSStatistic represents the structure for DNS error statistics
+type DNSStatistic struct {
+	Name           string `mi:"Name"`
+	CollectionName string `mi:"CollectionName"`
+	Value          uint64 `mi:"Value"`
+	DnsServerName  string `mi:"DnsServerName"`
 }
 
 func New(config *Config) *Collector {
@@ -223,6 +232,13 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		prometheus.BuildFQName(types.Namespace, Name, "unmatched_responses_total"),
 		"Number of response packets received by the DNS server that do not match any outstanding remote query",
 		nil,
+		nil,
+	)
+
+	c.dnsErrorStats = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "error_stats_total"),
+		"DNS error statistics from MicrosoftDNS_Statistic",
+		[]string{"name", "collection_name", "dns_server"},
 		nil,
 	)
 
@@ -492,6 +508,42 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		prometheus.CounterValue,
 		c.perfDataObject[0].SecureUpdateReceived,
 	)
+
+	// Query DNS error statistics
+	application, err := mi.ApplicationInitialize()
+	if err != nil {
+		return fmt.Errorf("failed to initialize MI application: %w", err)
+	}
+	defer application.Close()
+
+	session, err := application.NewSession(nil)
+	if err != nil {
+		return fmt.Errorf("failed to create MI session: %w", err)
+	}
+	defer session.Close()
+
+	var stats []DNSStatistic
+	query, err := mi.NewQuery("SELECT Name, CollectionName, Value, DnsServerName FROM MicrosoftDNS_Statistic")
+	if err != nil {
+		return fmt.Errorf("failed to create query: %w", err)
+	}
+
+	err = session.QueryUnmarshal(&stats, mi.OperationFlagsStandardRTTI, nil, mi.NamespaceRootCIMv2, mi.QueryDialectWQL, query)
+	if err != nil {
+		return fmt.Errorf("failed to query DNS statistics: %w", err)
+	}
+
+	// Collect DNS error statistics
+	for _, stat := range stats {
+		ch <- prometheus.MustNewConstMetric(
+			c.dnsErrorStats,
+			prometheus.CounterValue,
+			float64(stat.Value),
+			stat.Name,
+			stat.CollectionName,
+			stat.DnsServerName,
+		)
+	}
 
 	return nil
 }
