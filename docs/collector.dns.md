@@ -50,7 +50,7 @@ Name | Description | Type | Labels
 The DNS collector is split into two sub-collectors:
 
 1. `metrics` - Collects standard DNS performance metrics using PDH (Performance Data Helper)
-2. `error_stats` - Collects DNS error statistics from the MicrosoftDNS_Statistic WMI class
+2. `wmi_stats` - Collects DNS error statistics from the MicrosoftDNS_Statistic WMI class
 
 By default, both sub-collectors are enabled. You can enable specific sub-collectors using the `collector.dns.enabled` flag.
 
@@ -58,7 +58,7 @@ By default, both sub-collectors are enabled. You can enable specific sub-collect
 
 To enable only DNS error statistics collection:
 ```powershell
-windows_exporter.exe --collector.dns.enabled=error_stats
+windows_exporter.exe --collector.dns.enabled=wmi_stats
 ```
 
 To enable only standard DNS metrics:
@@ -68,11 +68,28 @@ windows_exporter.exe --collector.dns.enabled=metrics
 
 To enable both (default behavior):
 ```powershell
-windows_exporter.exe --collector.dns.enabled=metrics,error_stats
+windows_exporter.exe --collector.dns.enabled=metrics,wmi_stats
 ```
 
 ### Example metric
-_This collector does not yet have explained examples, we would appreciate your help adding them!_
+```
+windows_dns_wmi_stats_total{collection_name="Error Stats",dns_server="EC2AMAZ-5NNM8M1",name="BadKey"} 0
+windows_dns_wmi_stats_total{collection_name="Error Stats",dns_server="EC2AMAZ-5NNM8M1",name="BadSig"} 0
+windows_dns_wmi_stats_total{collection_name="Error Stats",dns_server="EC2AMAZ-5NNM8M1",name="BadTime"} 0
+windows_dns_wmi_stats_total{collection_name="Error Stats",dns_server="EC2AMAZ-5NNM8M1",name="FormError"} 0
+windows_dns_wmi_stats_total{collection_name="Error Stats",dns_server="EC2AMAZ-5NNM8M1",name="Max"} 0
+windows_dns_wmi_stats_total{collection_name="Error Stats",dns_server="EC2AMAZ-5NNM8M1",name="NoError"} 0
+windows_dns_wmi_stats_total{collection_name="Error Stats",dns_server="EC2AMAZ-5NNM8M1",name="NotAuth"} 0
+windows_dns_wmi_stats_total{collection_name="Error Stats",dns_server="EC2AMAZ-5NNM8M1",name="NotImpl"} 0
+windows_dns_wmi_stats_total{collection_name="Error Stats",dns_server="EC2AMAZ-5NNM8M1",name="NotZone"} 0
+windows_dns_wmi_stats_total{collection_name="Error Stats",dns_server="EC2AMAZ-5NNM8M1",name="NxDomain"} 0
+windows_dns_wmi_stats_total{collection_name="Error Stats",dns_server="EC2AMAZ-5NNM8M1",name="NxRRSet"} 0
+windows_dns_wmi_stats_total{collection_name="Error Stats",dns_server="EC2AMAZ-5NNM8M1",name="Refused"} 0
+windows_dns_wmi_stats_total{collection_name="Error Stats",dns_server="EC2AMAZ-5NNM8M1",name="ServFail"} 0
+windows_dns_wmi_stats_total{collection_name="Error Stats",dns_server="EC2AMAZ-5NNM8M1",name="UnknownError"} 0
+windows_dns_wmi_stats_total{collection_name="Error Stats",dns_server="EC2AMAZ-5NNM8M1",name="YxDomain"} 0
+windows_dns_wmi_stats_total{collection_name="Error Stats",dns_server="EC2AMAZ-5NNM8M1",name="YxRRSet"} 0
+```
 
 ## Useful queries
 _This collector does not yet have any useful queries added, we would appreciate your help adding them!_
