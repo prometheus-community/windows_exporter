@@ -141,29 +141,19 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 		}
 	}
 
-	if c.isCollectorEnabled(subCollectorMetrics) {
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorMetrics) {
 		if err := c.buildMetricsCollector(); err != nil {
 			return err
 		}
 	}
 
-	if c.isCollectorEnabled(subCollectorErrorStats) {
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorErrorStats) {
 		if err := c.buildErrorStatsCollector(miSession); err != nil {
 			return err
 		}
 	}
 
 	return nil
-}
-
-func (c *Collector) isCollectorEnabled(collector string) bool {
-	for _, enabled := range c.config.CollectorsEnabled {
-		if enabled == collector {
-			return true
-		}
-	}
-
-	return false
 }
 
 func (c *Collector) buildMetricsCollector() error {
@@ -338,13 +328,13 @@ func (c *Collector) buildErrorStatsCollector(miSession *mi.Session) error {
 func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	errs := make([]error, 0)
 
-	if c.isCollectorEnabled(subCollectorMetrics) {
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorMetrics) {
 		if err := c.collectMetrics(ch); err != nil {
 			errs = append(errs, fmt.Errorf("failed collecting metrics: %w", err))
 		}
 	}
 
-	if c.isCollectorEnabled(subCollectorErrorStats) {
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorErrorStats) {
 		if err := c.collectErrorStats(ch); err != nil {
 			errs = append(errs, fmt.Errorf("failed collecting error statistics: %w", err))
 		}
