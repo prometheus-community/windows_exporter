@@ -15,7 +15,7 @@
 
 //go:build windows
 
-//test
+// test
 
 package dns
 
@@ -129,6 +129,7 @@ func (c *Collector) GetName() string {
 
 func (c *Collector) Close() error {
 	c.perfDataCollector.Close()
+
 	return nil
 }
 
@@ -162,6 +163,7 @@ func (c *Collector) isCollectorEnabled(collector string) bool {
 			return true
 		}
 	}
+
 	return false
 }
 
