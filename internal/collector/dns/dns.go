@@ -32,7 +32,7 @@ import (
 )
 
 const (
-	Name                   = "wmi"
+	Name                   = "dns"
 	subCollectorMetrics    = "metrics"
 	subCollectorErrorStats = "error_stats"
 )
