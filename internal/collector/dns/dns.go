@@ -15,8 +15,6 @@
 
 //go:build windows
 
-// test
-
 package dns
 
 import (
@@ -117,6 +115,7 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 
 	app.Action(func(*kingpin.ParseContext) error {
 		c.config.CollectorsEnabled = strings.Split(collectorsEnabled, ",")
+
 		return nil
 	})
 
