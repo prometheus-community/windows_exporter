@@ -609,7 +609,7 @@ func (c *Collector) collectMetrics(ch chan<- prometheus.Metric) error {
 }
 
 func (c *Collector) collectErrorStats(ch chan<- prometheus.Metric) error {
-	var stats []DNSStatistic
+	var stats []Statistic
 	if err := c.miSession.Query(&stats, mi.NamespaceRootMicrosoftDNS, c.miQuery); err != nil {
 		return fmt.Errorf("failed to query DNS statistics: %w", err)
 	}
