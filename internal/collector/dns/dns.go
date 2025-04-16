@@ -32,9 +32,9 @@ import (
 )
 
 const (
-	Name                   = "dns"
-	subCollectorMetrics    = "metrics"
-	subCollectorErrorStats = "error_stats"
+	Name                 = "dns"
+	subCollectorMetrics  = "metrics"
+	subCollectorWMIStats = "wmi_stats"
 )
 
 type Config struct {
@@ -45,7 +45,7 @@ type Config struct {
 var ConfigDefaults = Config{
 	CollectorsEnabled: []string{
 		subCollectorMetrics,
-		subCollectorErrorStats,
+		subCollectorWMIStats,
 	},
 }
 
@@ -81,7 +81,7 @@ type Collector struct {
 	zoneTransferResponsesReceived *prometheus.Desc
 	zoneTransferSuccessReceived   *prometheus.Desc
 	zoneTransferSuccessSent       *prometheus.Desc
-	dnsErrorStats                 *prometheus.Desc
+	dnsWMIStats                   *prometheus.Desc
 }
 
 func New(config *Config) *Collector {
@@ -134,9 +134,9 @@ func (c *Collector) Close() error {
 
 func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 	for _, collector := range c.config.CollectorsEnabled {
-		if !slices.Contains([]string{subCollectorMetrics, subCollectorErrorStats}, collector) {
+		if !slices.Contains([]string{subCollectorMetrics, subCollectorWMIStats}, collector) {
 			return fmt.Errorf("unknown sub collector: %s. Possible values: %s", collector,
-				strings.Join([]string{subCollectorMetrics, subCollectorErrorStats}, ", "),
+				strings.Join([]string{subCollectorMetrics, subCollectorWMIStats}, ", "),
 			)
 		}
 	}
@@ -147,7 +147,7 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 		}
 	}
 
-	if slices.Contains(c.config.CollectorsEnabled, subCollectorErrorStats) {
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorWMIStats) {
 		if err := c.buildErrorStatsCollector(miSession); err != nil {
 			return err
 		}
@@ -290,9 +290,9 @@ func (c *Collector) buildMetricsCollector() error {
 		nil,
 	)
 
-	c.dnsErrorStats = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "error_stats_total"),
-		"DNS error statistics from MicrosoftDNS_Statistic",
+	c.dnsWMIStats = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "wmi_stats_total"),
+		"DNS WMI statistics from MicrosoftDNS_Statistic",
 		[]string{"name", "collection_name", "dns_server"},
 		nil,
 	)
@@ -334,9 +334,9 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		}
 	}
 
-	if slices.Contains(c.config.CollectorsEnabled, subCollectorErrorStats) {
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorWMIStats) {
 		if err := c.collectErrorStats(ch); err != nil {
-			errs = append(errs, fmt.Errorf("failed collecting error statistics: %w", err))
+			errs = append(errs, fmt.Errorf("failed collecting WMI statistics: %w", err))
 		}
 	}
 
@@ -610,7 +610,7 @@ func (c *Collector) collectErrorStats(ch chan<- prometheus.Metric) error {
 	// Collect DNS error statistics
 	for _, stat := range stats {
 		ch <- prometheus.MustNewConstMetric(
-			c.dnsErrorStats,
+			c.dnsWMIStats,
 			prometheus.CounterValue,
 			float64(stat.Value),
 			stat.Name,
