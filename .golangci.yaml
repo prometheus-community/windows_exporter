@@ -9,6 +9,7 @@ linters:
     - exhaustive
     - exhaustruct
     - fatcontext
+    - funcorder
     - funlen
     - gocognit
     - goconst
