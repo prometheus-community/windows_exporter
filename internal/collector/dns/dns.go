@@ -16,8 +16,11 @@
 package dns
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
+	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
@@ -26,12 +29,23 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-const Name = "dns"
+const (
+	Name                 = "dns"
+	subCollectorMetrics  = "metrics"
+	subCollectorWMIStats = "wmi_stats"
+)
 
-type Config struct{}
+type Config struct {
+	CollectorsEnabled []string `yaml:"collectors_enabled"`
+}
 
 //nolint:gochecknoglobals
-var ConfigDefaults = Config{}
+var ConfigDefaults = Config{
+	CollectorsEnabled: []string{
+		subCollectorMetrics,
+		subCollectorWMIStats,
+	},
+}
 
 // A Collector is a Prometheus Collector for WMI Win32_PerfRawData_DNS_DNS metrics.
 type Collector struct {
@@ -39,6 +53,9 @@ type Collector struct {
 
 	perfDataCollector *pdh.Collector
 	perfDataObject    []perfDataCounterValues
+
+	miSession *mi.Session
+	miQuery   mi.Query
 
 	dynamicUpdatesFailures        *prometheus.Desc
 	dynamicUpdatesQueued          *prometheus.Desc
@@ -62,11 +79,16 @@ type Collector struct {
 	zoneTransferResponsesReceived *prometheus.Desc
 	zoneTransferSuccessReceived   *prometheus.Desc
 	zoneTransferSuccessSent       *prometheus.Desc
+	dnsWMIStats                   *prometheus.Desc
 }
 
 func New(config *Config) *Collector {
 	if config == nil {
 		config = &ConfigDefaults
+	}
+
+	if config.CollectorsEnabled == nil {
+		config.CollectorsEnabled = ConfigDefaults.CollectorsEnabled
 	}
 
 	c := &Collector{
@@ -76,8 +98,26 @@ func New(config *Config) *Collector {
 	return c
 }
 
-func NewWithFlags(_ *kingpin.Application) *Collector {
-	return &Collector{}
+func NewWithFlags(app *kingpin.Application) *Collector {
+	c := &Collector{
+		config: ConfigDefaults,
+	}
+	c.config.CollectorsEnabled = make([]string, 0)
+
+	var collectorsEnabled string
+
+	app.Flag(
+		"collector.dns.enabled",
+		"Comma-separated list of collectors to use. Defaults to all, if not specified.",
+	).Default(strings.Join(ConfigDefaults.CollectorsEnabled, ",")).StringVar(&collectorsEnabled)
+
+	app.Action(func(*kingpin.ParseContext) error {
+		c.config.CollectorsEnabled = strings.Split(collectorsEnabled, ",")
+
+		return nil
+	})
+
+	return c
 }
 
 func (c *Collector) GetName() string {
@@ -90,7 +130,31 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
+func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
+	for _, collector := range c.config.CollectorsEnabled {
+		if !slices.Contains([]string{subCollectorMetrics, subCollectorWMIStats}, collector) {
+			return fmt.Errorf("unknown sub collector: %s. Possible values: %s", collector,
+				strings.Join([]string{subCollectorMetrics, subCollectorWMIStats}, ", "),
+			)
+		}
+	}
+
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorMetrics) {
+		if err := c.buildMetricsCollector(); err != nil {
+			return err
+		}
+	}
+
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorWMIStats) {
+		if err := c.buildErrorStatsCollector(miSession); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (c *Collector) buildMetricsCollector() error {
 	c.zoneTransferRequestsReceived = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "zone_transfer_requests_received_total"),
 		"Number of zone transfer requests (AXFR/IXFR) received by the master DNS server",
@@ -224,6 +288,13 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 
+	c.dnsWMIStats = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "wmi_stats_total"),
+		"DNS WMI statistics from MicrosoftDNS_Statistic",
+		[]string{"name", "collection_name", "dns_server"},
+		nil,
+	)
+
 	var err error
 
 	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "DNS", pdh.InstancesAll)
@@ -234,9 +305,43 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 	return nil
 }
 
+func (c *Collector) buildErrorStatsCollector(miSession *mi.Session) error {
+	if miSession == nil {
+		return errors.New("miSession is nil")
+	}
+
+	query, err := mi.NewQuery("SELECT Name, CollectionName, Value, DnsServerName FROM MicrosoftDNS_Statistic WHERE CollectionName = 'Error Stats'")
+	if err != nil {
+		return fmt.Errorf("failed to create query: %w", err)
+	}
+
+	c.miSession = miSession
+	c.miQuery = query
+
+	return nil
+}
+
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
+	errs := make([]error, 0)
+
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorMetrics) {
+		if err := c.collectMetrics(ch); err != nil {
+			errs = append(errs, fmt.Errorf("failed collecting metrics: %w", err))
+		}
+	}
+
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorWMIStats) {
+		if err := c.collectErrorStats(ch); err != nil {
+			errs = append(errs, fmt.Errorf("failed collecting WMI statistics: %w", err))
+		}
+	}
+
+	return errors.Join(errs...)
+}
+
+func (c *Collector) collectMetrics(ch chan<- prometheus.Metric) error {
 	err := c.perfDataCollector.Collect(&c.perfDataObject)
 	if err != nil {
 		return fmt.Errorf("failed to collect DNS metrics: %w", err)
@@ -490,6 +595,27 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		prometheus.CounterValue,
 		c.perfDataObject[0].SecureUpdateReceived,
 	)
+
+	return nil
+}
+
+func (c *Collector) collectErrorStats(ch chan<- prometheus.Metric) error {
+	var stats []Statistic
+	if err := c.miSession.Query(&stats, mi.NamespaceRootMicrosoftDNS, c.miQuery); err != nil {
+		return fmt.Errorf("failed to query DNS statistics: %w", err)
+	}
+
+	// Collect DNS error statistics
+	for _, stat := range stats {
+		ch <- prometheus.MustNewConstMetric(
+			c.dnsWMIStats,
+			prometheus.CounterValue,
+			float64(stat.Value),
+			stat.Name,
+			stat.CollectionName,
+			stat.DnsServerName,
+		)
+	}
 
 	return nil
 }
