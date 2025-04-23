@@ -479,7 +479,7 @@ func (c *Collector) getServiceConfig(service *mgr.Service) (mgr.Config, error) {
 		*buf = make([]byte, bytesNeeded)
 	}
 
-	c.serviceConfigPoolBytes.Put(buf)
+	defer c.serviceConfigPoolBytes.Put(buf)
 
 	return mgr.Config{
 		BinaryPathName:   windows.UTF16PtrToString(serviceConfig.BinaryPathName),
