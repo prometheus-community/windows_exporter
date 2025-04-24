@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
-// Copyright 2025 The Prometheus Authors
+// Copyright The Prometheus Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -21,7 +21,7 @@ import (
 	"encoding/binary"
 	"net"
 
-	"github.com/prometheus-community/windows_exporter/internal/headers/win32api"
+	"github.com/prometheus-community/windows_exporter/internal/headers/win32"
 	"golang.org/x/sys/windows"
 )
 
@@ -46,8 +46,8 @@ type DHCPV4Scope struct {
 }
 
 type (
-	DHCP_IP_ADDRESS win32api.DWORD
-	DHCP_IP_MASK    win32api.DWORD
+	DHCP_IP_ADDRESS win32.DWORD
+	DHCP_IP_MASK    win32.DWORD
 )
 
 func (ip DHCP_IP_ADDRESS) IPv4() net.IP {
@@ -67,31 +67,31 @@ func (ip DHCP_IP_MASK) IPv4Mask() net.IPMask {
 }
 
 type DHCP_SUPER_SCOPE_TABLE struct {
-	Count   win32api.DWORD
+	Count   win32.DWORD
 	Entries *DHCP_SUPER_SCOPE_TABLE_ENTRY
 }
 
 type DHCP_SUPER_SCOPE_TABLE_ENTRY struct {
 	SubnetAddress    DHCP_IP_ADDRESS
-	SuperScopeNumber win32api.DWORD
-	NextInSuperScope win32api.DWORD
-	SuperScopeName   win32api.LPWSTR
+	SuperScopeNumber win32.DWORD
+	NextInSuperScope win32.DWORD
+	SuperScopeName   win32.LPWSTR
 }
 
 // DHCP_SUBNET_INFO https://learn.microsoft.com/de-de/windows/win32/api/dhcpsapi/ns-dhcpsapi-dhcp_subnet_info
 type DHCP_SUBNET_INFO struct {
 	SubnetAddress DHCP_IP_ADDRESS
 	SubnetMask    DHCP_IP_MASK
-	SubnetName    win32api.LPWSTR
-	SubnetComment win32api.LPWSTR
+	SubnetName    win32.LPWSTR
+	SubnetComment win32.LPWSTR
 	PrimaryHost   DHCP_HOST_INFO
 	SubnetState   DHCP_SUBNET_STATE
 }
 
 type DHCP_HOST_INFO struct {
 	IpAddress   DHCP_IP_ADDRESS
-	NetBiosName win32api.LPWSTR
-	HostName    win32api.LPWSTR
+	NetBiosName win32.LPWSTR
+	HostName    win32.LPWSTR
 }
 
 // DHCP_SUBNET_STATE https://learn.microsoft.com/de-de/windows/win32/api/dhcpsapi/ne-dhcpsapi-dhcp_subnet_state
@@ -115,40 +115,40 @@ var DHCP_SUBNET_STATE_NAMES = map[DHCP_SUBNET_STATE]string{
 }
 
 type DHCP_FAILOVER_STATISTICS struct {
-	NumAddr          win32api.DWORD
-	AddrFree         win32api.DWORD
-	AddrInUse        win32api.DWORD
-	PartnerAddrFree  win32api.DWORD
-	ThisAddrFree     win32api.DWORD
-	PartnerAddrInUse win32api.DWORD
-	ThisAddrInUse    win32api.DWORD
+	NumAddr          win32.DWORD
+	AddrFree         win32.DWORD
+	AddrInUse        win32.DWORD
+	PartnerAddrFree  win32.DWORD
+	ThisAddrFree     win32.DWORD
+	PartnerAddrInUse win32.DWORD
+	ThisAddrInUse    win32.DWORD
 }
 
 type DHCP_MIB_INFO_V5 struct {
-	Discovers               win32api.DWORD
-	Offers                  win32api.DWORD
-	Requests                win32api.DWORD
-	Acks                    win32api.DWORD
-	Naks                    win32api.DWORD
-	Declines                win32api.DWORD
-	Releases                win32api.DWORD
-	ServerStartTime         win32api.DATE_TIME
-	QtnNumLeases            win32api.DWORD
-	QtnPctQtnLeases         win32api.DWORD
-	QtnProbationLeases      win32api.DWORD
-	QtnNonQtnLeases         win32api.DWORD
-	QtnExemptLeases         win32api.DWORD
-	QtnCapableClients       win32api.DWORD
-	QtnIASErrors            win32api.DWORD
-	DelayedOffers           win32api.DWORD
-	ScopesWithDelayedOffers win32api.DWORD
-	Scopes                  win32api.DWORD
+	Discovers               win32.DWORD
+	Offers                  win32.DWORD
+	Requests                win32.DWORD
+	Acks                    win32.DWORD
+	Naks                    win32.DWORD
+	Declines                win32.DWORD
+	Releases                win32.DWORD
+	ServerStartTime         win32.DATE_TIME
+	QtnNumLeases            win32.DWORD
+	QtnPctQtnLeases         win32.DWORD
+	QtnProbationLeases      win32.DWORD
+	QtnNonQtnLeases         win32.DWORD
+	QtnExemptLeases         win32.DWORD
+	QtnCapableClients       win32.DWORD
+	QtnIASErrors            win32.DWORD
+	DelayedOffers           win32.DWORD
+	ScopesWithDelayedOffers win32.DWORD
+	Scopes                  win32.DWORD
 	ScopeInfo               *DHCP_SUBNET_MIB_INFO_V5
 }
 
 type DHCP_SUBNET_MIB_INFO_V5 struct {
 	Subnet            DHCP_IP_ADDRESS
-	NumAddressesInUse win32api.DWORD
-	NumAddressesFree  win32api.DWORD
-	NumPendingOffers  win32api.DWORD
+	NumAddressesInUse win32.DWORD
+	NumAddressesFree  win32.DWORD
+	NumPendingOffers  win32.DWORD
 }

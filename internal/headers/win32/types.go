@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
-// Copyright 2025 The Prometheus Authors
+// Copyright The Prometheus Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -15,9 +15,12 @@
 
 //go:build windows
 
-package win32api
+package win32
 
-import "golang.org/x/sys/windows"
+import (
+	"golang.org/x/sys/windows"
+	"unsafe"
+)
 
 type (
 	DATE_TIME = windows.Filetime
@@ -27,6 +30,26 @@ type (
 	}
 )
 
-func (s LPWSTR) String() string {
+// NewLPWSTR creates a new LPWSTR from a string.
+// If the string is empty, it returns nil.
+// This function converts the string to a UTF-16 pointer.
+func NewLPWSTR(str string) *LPWSTR {
+	if str == "" {
+		return nil
+	}
+
+	// Convert the string to a UTF-16 pointer
+	ptr, _ := windows.UTF16PtrFromString(str)
+	return &LPWSTR{ptr}
+}
+
+// Pointer returns the uintptr representation of the LPWSTR.
+// This is useful for passing the pointer to Windows API functions.
+func (s *LPWSTR) Pointer() uintptr {
+	return uintptr(unsafe.Pointer(s.uint16))
+}
+
+// String converts the LPWSTR back to a string.
+func (s *LPWSTR) String() string {
 	return windows.UTF16PtrToString(s.uint16)
 }
