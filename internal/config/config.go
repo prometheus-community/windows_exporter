@@ -54,8 +54,8 @@ type configFile struct {
 		Path string `yaml:"path"`
 	} `yaml:"telemetry"`
 	Web struct {
-		DisableExporterMetrics bool     `yaml:"disable-exporter-metrics"`
-		ListenAddresses        []string `yaml:"listen-address"`
+		DisableExporterMetrics bool `yaml:"disable-exporter-metrics"`
+		ListenAddresses        any  `yaml:"listen-address"`
 		Config                 struct {
 			File string `yaml:"file"`
 		} `yaml:"config"`
