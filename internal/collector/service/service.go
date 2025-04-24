@@ -139,8 +139,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 	c.serviceConfigPoolBytes = sync.Pool{
 		New: func() any {
-			b := make([]byte, 8192)
-			return &b
+			return new([]byte)
 		},
 	}
 
@@ -451,9 +450,14 @@ func (c *Collector) getProcessStartTime(pid uint32) (uint64, error) {
 func (c *Collector) getServiceConfig(service *mgr.Service) (mgr.Config, error) {
 	var serviceConfig *windows.QUERY_SERVICE_CONFIG
 
-	buf := c.serviceConfigPoolBytes.Get().(*[]byte)
+	bytesNeeded := uint32(1024)
 
-	bytesNeeded := uint32(cap(*buf))
+	buf, ok := c.serviceConfigPoolBytes.Get().(*[]byte)
+	if !ok || len(*buf) == 0 {
+		*buf = make([]byte, bytesNeeded)
+	} else {
+		bytesNeeded = uint32(cap(*buf))
+	}
 
 	for {
 		serviceConfig = (*windows.QUERY_SERVICE_CONFIG)(unsafe.Pointer(&(*buf)[0]))
@@ -474,10 +478,7 @@ func (c *Collector) getServiceConfig(service *mgr.Service) (mgr.Config, error) {
 		*buf = make([]byte, bytesNeeded)
 	}
 
-	defer func() {
-		*buf = (*buf)[:0]
-		c.serviceConfigPoolBytes.Put(buf)
-	}()
+	defer c.serviceConfigPoolBytes.Put(buf)
 
 	return mgr.Config{
 		BinaryPathName:   windows.UTF16PtrToString(serviceConfig.BinaryPathName),
