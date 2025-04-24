@@ -38,8 +38,8 @@ import (
 const Name = "logical_disk"
 
 type Config struct {
-	VolumeInclude *regexp.Regexp `yaml:"volume_include"`
-	VolumeExclude *regexp.Regexp `yaml:"volume_exclude"`
+	VolumeInclude *regexp.Regexp `yaml:"volume-include"`
+	VolumeExclude *regexp.Regexp `yaml:"volume-exclude"`
 }
 
 //nolint:gochecknoglobals

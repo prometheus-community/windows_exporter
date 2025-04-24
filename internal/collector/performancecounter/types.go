@@ -19,6 +19,7 @@ package performancecounter
 
 import (
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
+	"gopkg.in/yaml.v3"
 )
 
 type Object struct {
@@ -41,3 +42,7 @@ type Counter struct {
 }
 
 // https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/54691ebe11bb9ec32b4e35cd31fcb94a352de134/receiver/windowsperfcountersreceiver/README.md?plain=1#L150
+
+func (*Config) UnmarshalYAML(*yaml.Node) error {
+	return nil
+}

@@ -38,8 +38,8 @@ import (
 const Name = "service"
 
 type Config struct {
-	ServiceInclude *regexp.Regexp `yaml:"service_include"`
-	ServiceExclude *regexp.Regexp `yaml:"service_exclude"`
+	ServiceInclude *regexp.Regexp `yaml:"include"`
+	ServiceExclude *regexp.Regexp `yaml:"exclude"`
 }
 
 //nolint:gochecknoglobals

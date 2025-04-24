@@ -19,6 +19,7 @@ linters:
     - maintidx
     - mnd
     - paralleltest
+    - tagliatelle
     - testpackage
     - varnamelen
     - wrapcheck

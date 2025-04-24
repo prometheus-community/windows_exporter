@@ -33,7 +33,7 @@ import (
 const Name = "netframework"
 
 type Config struct {
-	CollectorsEnabled []string `yaml:"collectors_enabled"`
+	CollectorsEnabled []string `yaml:"enabled"`
 }
 
 //nolint:gochecknoglobals

@@ -79,26 +79,26 @@ type Config struct {
 	Cs                 cs.Config                 `yaml:"cs"`
 	DFSR               dfsr.Config               `yaml:"dfsr"`
 	Dhcp               dhcp.Config               `yaml:"dhcp"`
-	DiskDrive          diskdrive.Config          `yaml:"disk_drive"`
+	DiskDrive          diskdrive.Config          `yaml:"diskdrive"`
 	DNS                dns.Config                `yaml:"dns"`
 	Exchange           exchange.Config           `yaml:"exchange"`
 	Filetime           filetime.Config           `yaml:"filetime"`
 	Fsrmquota          fsrmquota.Config          `yaml:"fsrmquota"`
-	HyperV             hyperv.Config             `yaml:"hyper_v"`
+	HyperV             hyperv.Config             `yaml:"hyperv"`
 	IIS                iis.Config                `yaml:"iis"`
 	License            license.Config            `yaml:"license"`
 	LogicalDisk        logical_disk.Config       `yaml:"logical_disk"`
 	Logon              logon.Config              `yaml:"logon"`
 	Memory             memory.Config             `yaml:"memory"`
-	MSCluster          mscluster.Config          `yaml:"ms_cluster"`
+	MSCluster          mscluster.Config          `yaml:"mscluster"`
 	Msmq               msmq.Config               `yaml:"msmq"`
 	Mssql              mssql.Config              `yaml:"mssql"`
 	Net                net.Config                `yaml:"net"`
-	NetFramework       netframework.Config       `yaml:"net_framework"`
+	NetFramework       netframework.Config       `yaml:"netframework"`
 	Nps                nps.Config                `yaml:"nps"`
 	OS                 os.Config                 `yaml:"os"`
 	Paging             pagefile.Config           `yaml:"paging"`
-	PerformanceCounter performancecounter.Config `yaml:"performance_counter"`
+	PerformanceCounter performancecounter.Config `yaml:"performancecounter"`
 	PhysicalDisk       physical_disk.Config      `yaml:"physical_disk"`
 	Printer            printer.Config            `yaml:"printer"`
 	Process            process.Config            `yaml:"process"`
@@ -112,7 +112,7 @@ type Config struct {
 	TCP                tcp.Config                `yaml:"tcp"`
 	TerminalServices   terminal_services.Config  `yaml:"terminal_services"`
 	Textfile           textfile.Config           `yaml:"textfile"`
-	ThermalZone        thermalzone.Config        `yaml:"thermal_zone"`
+	ThermalZone        thermalzone.Config        `yaml:"thermalzone"`
 	Time               time.Config               `yaml:"time"`
 	UDP                udp.Config                `yaml:"udp"`
 	Update             update.Config             `yaml:"update"`

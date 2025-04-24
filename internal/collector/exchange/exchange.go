@@ -46,7 +46,7 @@ const (
 )
 
 type Config struct {
-	CollectorsEnabled []string `yaml:"collectors_enabled"`
+	CollectorsEnabled []string `yaml:"enabled"`
 }
 
 //nolint:gochecknoglobals

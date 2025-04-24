@@ -43,9 +43,9 @@ const (
 )
 
 type Config struct {
-	NicExclude        *regexp.Regexp `yaml:"nic_exclude"`
-	NicInclude        *regexp.Regexp `yaml:"nic_include"`
-	CollectorsEnabled []string       `yaml:"collectors_enabled"`
+	NicExclude        *regexp.Regexp `yaml:"nic-exclude"`
+	NicInclude        *regexp.Regexp `yaml:"nic-include"`
+	CollectorsEnabled []string       `yaml:"enabled"`
 }
 
 //nolint:gochecknoglobals

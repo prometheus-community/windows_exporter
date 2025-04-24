@@ -34,7 +34,7 @@ import (
 const Name = "dfsr"
 
 type Config struct {
-	CollectorsEnabled []string `yaml:"collectors_enabled"`
+	CollectorsEnabled []string `yaml:"sources-enabled"`
 }
 
 //nolint:gochecknoglobals

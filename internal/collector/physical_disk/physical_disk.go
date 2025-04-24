@@ -33,8 +33,8 @@ import (
 const Name = "physical_disk"
 
 type Config struct {
-	DiskInclude *regexp.Regexp `yaml:"disk_include"`
-	DiskExclude *regexp.Regexp `yaml:"disk_exclude"`
+	DiskInclude *regexp.Regexp `yaml:"disk-include"`
+	DiskExclude *regexp.Regexp `yaml:"disk-exclude"`
 }
 
 //nolint:gochecknoglobals

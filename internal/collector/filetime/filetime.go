@@ -35,7 +35,7 @@ import (
 const Name = "filetime"
 
 type Config struct {
-	FilePatterns []string
+	FilePatterns []string `yaml:"file-patterns"`
 }
 
 //nolint:gochecknoglobals

@@ -41,7 +41,7 @@ import (
 const Name = "textfile"
 
 type Config struct {
-	TextFileDirectories []string `yaml:"text_file_directories"`
+	TextFileDirectories []string `yaml:"directories"`
 }
 
 //nolint:gochecknoglobals

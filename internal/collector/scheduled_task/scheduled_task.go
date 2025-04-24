@@ -36,8 +36,8 @@ import (
 const Name = "scheduled_task"
 
 type Config struct {
-	TaskExclude *regexp.Regexp `yaml:"task_exclude"`
-	TaskInclude *regexp.Regexp `yaml:"task_include"`
+	TaskExclude *regexp.Regexp `yaml:"exclude"`
+	TaskInclude *regexp.Regexp `yaml:"include"`
 }
 
 //nolint:gochecknoglobals

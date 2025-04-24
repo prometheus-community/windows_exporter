@@ -32,8 +32,8 @@ import (
 const Name = "smtp"
 
 type Config struct {
-	ServerInclude *regexp.Regexp `yaml:"server_include"`
-	ServerExclude *regexp.Regexp `yaml:"server_exclude"`
+	ServerInclude *regexp.Regexp `yaml:"server-include"`
+	ServerExclude *regexp.Regexp `yaml:"server-exclude"`
 }
 
 //nolint:gochecknoglobals
