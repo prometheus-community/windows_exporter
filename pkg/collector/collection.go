@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
-// Copyright 2025 The Prometheus Authors
+// Copyright The Prometheus Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -289,6 +289,10 @@ func (c *Collection) initMI() error {
 
 	if err = destinationOptions.SetLocale(mi.LocaleEnglish); err != nil {
 		return fmt.Errorf("error from set locale: %w", err)
+	}
+
+	if err = destinationOptions.SetTimeout(gotime.Second); err != nil {
+		return fmt.Errorf("error from set timeout: %w", err)
 	}
 
 	c.miSession, err = app.NewSession(destinationOptions)

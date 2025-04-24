@@ -12,7 +12,7 @@
 <!--
   ~ SPDX-License-Identifier: Apache-2.0
   ~
-  ~ Copyright 2025 The Prometheus Authors
+  ~ Copyright The Prometheus Authors
   ~ Licensed under the Apache License, Version 2.0 (the "License");
   ~ you may not use this file except in compliance with the License.
   ~ You may obtain a copy of the License at
@@ -79,7 +79,7 @@
         <!-- START CUSTOM ACTION FOR KILLING THE PROCESS -->
         <SetProperty
             Id="KillProcess"
-            Value="&quot;[WindowsFolder]\System32\taskkill.exe&quot; /T /F /IM windows_exporter.exe"
+            Value="&quot;[WindowsFolder]System32\taskkill.exe&quot; /T /F /IM windows_exporter.exe"
             Before="KillProcess"
             Sequence="execute"
         />
