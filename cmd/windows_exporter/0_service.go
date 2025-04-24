@@ -55,7 +55,7 @@ var (
 	stopCh = make(chan struct{})
 
 	// serviceManagerFinishedCh is a channel to send a signal to the main function that the service manager has stopped the service.
-	serviceManagerFinishedCh = make(chan struct{})
+	serviceManagerFinishedCh = make(chan struct{}, 1)
 )
 
 // IsService variable declaration allows initiating time-sensitive components like registering the Windows service
