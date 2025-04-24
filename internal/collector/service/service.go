@@ -423,15 +423,6 @@ func (c *Collector) getProcessStartTime(pid uint32) (uint64, error) {
 		return 0, fmt.Errorf("failed to open process %w", err)
 	}
 
-	defer func(handle windows.Handle) {
-		err := windows.CloseHandle(handle)
-		if err != nil {
-			c.logger.Warn("failed to close process handle",
-				slog.Any("err", err),
-			)
-		}
-	}(handle)
-
 	var (
 		creation windows.Filetime
 		exit     windows.Filetime
@@ -440,6 +431,14 @@ func (c *Collector) getProcessStartTime(pid uint32) (uint64, error) {
 	)
 
 	err = windows.GetProcessTimes(handle, &creation, &exit, &krn, &user)
+
+	if err := windows.CloseHandle(handle); err != nil {
+		c.logger.LogAttrs(context.Background(), slog.LevelWarn, "failed to close process handle",
+			slog.Any("err", err),
+			slog.Uint64("pid", uint64(pid)),
+		)
+	}
+
 	if err != nil {
 		return 0, fmt.Errorf("failed to get process times %w", err)
 	}
