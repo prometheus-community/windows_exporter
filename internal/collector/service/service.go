@@ -451,10 +451,7 @@ func (c *Collector) getProcessStartTime(pid uint32) (uint64, error) {
 func (c *Collector) getServiceConfig(service *mgr.Service) (mgr.Config, error) {
 	var serviceConfig *windows.QUERY_SERVICE_CONFIG
 
-	buf, ok := c.serviceConfigPoolBytes.Get().(*[]byte)
-	if !ok {
-		buf = new([]byte)
-	}
+	buf := c.serviceConfigPoolBytes.Get().(*[]byte)
 
 	bytesNeeded := uint32(cap(*buf))
 
