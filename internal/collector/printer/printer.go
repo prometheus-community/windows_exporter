@@ -46,8 +46,8 @@ var printerStatusMap = map[uint16]string{
 }
 
 type Config struct {
-	PrinterInclude *regexp.Regexp `yaml:"printer_include"`
-	PrinterExclude *regexp.Regexp `yaml:"printer_exclude"`
+	PrinterInclude *regexp.Regexp `yaml:"include"`
+	PrinterExclude *regexp.Regexp `yaml:"exclude"`
 }
 
 //nolint:gochecknoglobals

@@ -19,12 +19,48 @@ package config
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
+	"github.com/prometheus-community/windows_exporter/pkg/collector"
 	"gopkg.in/yaml.v3"
 )
+
+// configFile represents the structure of the windows_exporter configuration file,
+// including configuration from the collector and web packages.
+type configFile struct {
+	Debug struct {
+		Enabled bool `yaml:"enabled"`
+	} `yaml:"debug"`
+	Collectors struct {
+		Enabled string `yaml:"enabled"`
+	} `yaml:"collectors"`
+	Collector collector.Config `yaml:"collector"`
+	Log       struct {
+		Level  string `yaml:"level"`
+		Format string `yaml:"format"`
+		File   string `yaml:"file"`
+	} `yaml:"log"`
+	Process struct {
+		Priority    string `yaml:"priority"`
+		MemoryLimit string `yaml:"memory-limit"`
+	} `yaml:"process"`
+	Scrape struct {
+		TimeoutMargin string `yaml:"timeout-margin"`
+	} `yaml:"scrape"`
+	Telemetry struct {
+		Path string `yaml:"path"`
+	} `yaml:"telemetry"`
+	Web struct {
+		DisableExporterMetrics bool     `yaml:"disable-exporter-metrics"`
+		ListenAddresses        []string `yaml:"listen-addresses"`
+		Config                 struct {
+			File string `yaml:"file"`
+		} `yaml:"config"`
+	} `yaml:"web"`
+}
 
 type getFlagger interface {
 	GetFlag(name string) *kingpin.FlagClause
@@ -80,24 +116,37 @@ func ParseConfigFile(args []string) string {
 }
 
 // NewConfigFileResolver returns a Resolver structure.
-func NewConfigFileResolver(file string) (*Resolver, error) {
+func NewConfigFileResolver(filePath string) (*Resolver, error) {
 	flags := map[string]string{}
 
-	var (
-		err       error
-		fileBytes []byte
-	)
-
-	fileBytes, err = readFromFile(file)
+	file, err := os.Open(filePath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to open configuration file: %w", err)
+	}
+
+	defer func() {
+		_ = file.Close()
+	}()
+
+	var configFileStructure configFile
+
+	decoder := yaml.NewDecoder(file)
+	decoder.KnownFields(true)
+
+	if err = decoder.Decode(&configFileStructure); err != nil {
+		return nil, fmt.Errorf("configuration file validation error: %w", err)
+	}
+
+	_, err = file.Seek(0, io.SeekStart)
+	if err != nil {
+		return nil, fmt.Errorf("failed to rewind file: %w", err)
 	}
 
 	var rawValues map[string]interface{}
 
-	err = yaml.Unmarshal(fileBytes, &rawValues)
-	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal configuration file: %w", err)
+	decoder = yaml.NewDecoder(file)
+	if err = decoder.Decode(&rawValues); err != nil {
+		return nil, fmt.Errorf("failed to parse configuration file: %w", err)
 	}
 
 	// Flatten nested YAML values
@@ -111,23 +160,9 @@ func NewConfigFileResolver(file string) (*Resolver, error) {
 	return &Resolver{flags: flags}, nil
 }
 
-func readFromFile(file string) ([]byte, error) {
-	if _, err := os.Stat(file); err != nil {
-		return nil, fmt.Errorf("failed to read configuration file: %w", err)
-	}
-
-	fileBytes, err := os.ReadFile(file)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read configuration file: %w", err)
-	}
-
-	return fileBytes, nil
-}
-
 func (c *Resolver) setDefault(v getFlagger) {
 	for name, value := range c.flags {
-		f := v.GetFlag(name)
-		if f != nil {
+		if f := v.GetFlag(name); f != nil {
 			f.Default(value)
 		}
 	}

@@ -35,10 +35,10 @@ import (
 const Name = "iis"
 
 type Config struct {
-	SiteInclude *regexp.Regexp `yaml:"site_include"`
-	SiteExclude *regexp.Regexp `yaml:"site_exclude"`
-	AppInclude  *regexp.Regexp `yaml:"app_include"`
-	AppExclude  *regexp.Regexp `yaml:"app_exclude"`
+	SiteInclude *regexp.Regexp `yaml:"site-include"`
+	SiteExclude *regexp.Regexp `yaml:"site-exclude"`
+	AppInclude  *regexp.Regexp `yaml:"app-include"`
+	AppExclude  *regexp.Regexp `yaml:"app-exclude"`
 }
 
 //nolint:gochecknoglobals
