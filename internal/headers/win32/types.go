@@ -18,8 +18,9 @@
 package win32
 
 import (
-	"golang.org/x/sys/windows"
 	"unsafe"
+
+	"golang.org/x/sys/windows"
 )
 
 type (
@@ -40,6 +41,7 @@ func NewLPWSTR(str string) *LPWSTR {
 
 	// Convert the string to a UTF-16 pointer
 	ptr, _ := windows.UTF16PtrFromString(str)
+
 	return &LPWSTR{ptr}
 }
 
