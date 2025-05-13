@@ -21,8 +21,12 @@
       ]
     },
     {
-      "matchManagers": ["gomod"],
-      "matchDepTypes": ["indirect"],
+      "matchManagers": [
+        "gomod"
+      ],
+      "matchDepTypes": [
+        "indirect"
+      ],
       "enabled": true
     },
     {
@@ -58,7 +62,9 @@
   "customManagers": [
     {
       "customType": "regex",
-      "fileMatch": ["."],
+      "managerFilePatterns": [
+        "/./"
+      ],
       "matchStrings": [
         "[\\t ]*(?:#|//) ?renovate: (?<datasource>git-refs)=(?<depName>\\S+)(?: branch=(?<currentValue>\\S+))?[\\t ]*\\r?\\n.+?[:=][\\t ]*[\"']?(?<currentDigest>[a-f0-9]+)[\"']?",
         "[\\t ]*(?:#|//) ?renovate: (?<datasource>[^=]+)=(?<depName>\\S+)(?: registry=(?<registryUrl>\\S+))?(?: versioning=(?<versioning>\\S+))?[\\t ]*\\r?\\n.+?[:=][\\t ]*[\"']?(?<currentValue>[^@\\s\"'=]+)(?:@(?<currentDigest>sha256:[a-f0-9]+))?[\"']?"
@@ -69,9 +75,9 @@
     },
     {
       "customType": "regex",
-      "fileMatch": [
-        "Makefile",
-        "(^|/).+\\.go"
+      "managerFilePatterns": [
+        "/Makefile/",
+        "/(^|/).+\\.go/"
       ],
       "matchStrings": [
         "go run (?<depName>\\S+)@(?<currentValue>\\S+)"
@@ -80,8 +86,8 @@
     },
     {
       "customType": "regex",
-      "fileMatch": [
-        "(^|/).+\\.yaml$"
+      "managerFilePatterns": [
+        "/(^|/).+\\.yaml$/"
       ],
       "matchStrings": [
         "[\\t ]*image:[\\t ]*\\r?\\n[\\t ]*registry:[\\t ]*[\"']?(?<registry>.*?)[\"']?[\\t ]*\\r?\\n[\\t ]*(?:repository|name):[\\t ]*[\"']?(?<repository>.*?)[\"']?[\\t ]*\\r?\\n[\\t ]*tag:[\\t ]*[\"']?(?<currentValue>[\\w\\.+-]*)(?:@(?<currentDigest>sha256:[a-f0-9]+))?[\"']?",
