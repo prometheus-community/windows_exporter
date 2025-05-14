@@ -92,7 +92,12 @@ w3wp_Test
 _This collector does not yet have explained examples, we would appreciate your help adding them!_
 
 ## Useful queries
-_This collector does not yet have any useful queries added, we would appreciate your help adding them!_
+
+Add extended infomation like cmdline or owner to other process metrics.
+
+```
+windows_process_working_set_bytes * on(process_id) group_left(owner, cmdline) windows_process_info
+```
 
 ## Alerting examples
 _This collector does not yet have alerting examples, we would appreciate your help adding them!_
