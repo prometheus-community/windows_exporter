@@ -93,7 +93,7 @@ _This collector does not yet have explained examples, we would appreciate your h
 
 ## Useful queries
 
-Add extended infomation like cmdline or owner to other process metrics.
+Add extended information like cmdline or owner to other process metrics.
 
 ```
 windows_process_working_set_bytes * on(process_id) group_left(owner, cmdline) windows_process_info
