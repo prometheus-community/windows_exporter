@@ -31,7 +31,7 @@ type collectorAvailabilityService struct {
 }
 
 type perfDataCounterValuesAvailabilityService struct {
-	RequestsPerSec float64 `perfdata:"Requests/sec"`
+	AvailabilityRequestsPerSec float64 `perfdata:"Availability Requests (sec)"`
 }
 
 func (c *Collector) buildAvailabilityService() error {
@@ -43,7 +43,7 @@ func (c *Collector) buildAvailabilityService() error {
 	}
 
 	c.availabilityRequestsSec = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "avail_service_requests_per_sec"),
+		prometheus.BuildFQName(types.Namespace, Name, "availability_service_requests_per_sec"),
 		"Number of requests serviced per second",
 		nil,
 		nil,
@@ -62,7 +62,7 @@ func (c *Collector) collectAvailabilityService(ch chan<- prometheus.Metric) erro
 		ch <- prometheus.MustNewConstMetric(
 			c.availabilityRequestsSec,
 			prometheus.CounterValue,
-			data.RequestsPerSec,
+			data.AvailabilityRequestsPerSec,
 		)
 	}
 
