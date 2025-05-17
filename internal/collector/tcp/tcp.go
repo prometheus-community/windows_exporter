@@ -235,12 +235,16 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 
 	if err := c.perfDataCollector4.Collect(&c.perfDataObject4); err != nil {
 		errs = append(errs, fmt.Errorf("failed to collect TCPv4 metrics. %w", err))
+	} else if len(c.perfDataObject4) == 0 {
+		errs = append(errs, fmt.Errorf("failed to collect TCPv4 metrics: %w", types.ErrNoDataUnexpected))
 	} else {
 		c.writeTCPCounters(ch, c.perfDataObject4, ipAddressFamilyIPv4)
 	}
 
 	if err := c.perfDataCollector6.Collect(&c.perfDataObject6); err != nil {
 		errs = append(errs, fmt.Errorf("failed to collect TCPv6 metrics. %w", err))
+	} else if len(c.perfDataObject6) == 0 {
+		errs = append(errs, fmt.Errorf("failed to collect TCPv6 metrics: %w", types.ErrNoDataUnexpected))
 	} else {
 		c.writeTCPCounters(ch, c.perfDataObject6, ipAddressFamilyIPv6)
 	}
