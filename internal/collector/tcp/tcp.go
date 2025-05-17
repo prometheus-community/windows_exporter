@@ -324,7 +324,7 @@ func (c *Collector) collectConnectionsState(ch chan<- prometheus.Metric) error {
 		c.sendTCPStateMetrics(ch, stateCounts, ipAddressFamilyIPv6)
 	}
 
-	return nil
+	return errors.Join(errs...)
 }
 
 func (c *Collector) sendTCPStateMetrics(ch chan<- prometheus.Metric, stateCounts map[iphlpapi.MIB_TCP_STATE]uint32, af string) {

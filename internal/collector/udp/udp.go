@@ -18,6 +18,7 @@
 package udp
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 
@@ -149,7 +150,7 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 		c.writeUDPCounters(ch, c.perfDataObject6, "ipv6")
 	}
 
-	return nil
+	return errors.Join(errs...)
 }
 
 func (c *Collector) writeUDPCounters(ch chan<- prometheus.Metric, metrics []perfDataCounterValues, af string) {
