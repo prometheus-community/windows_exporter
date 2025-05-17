@@ -122,7 +122,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		errs = append(errs, fmt.Errorf("failed to create UDPv6 collector: %w", err))
 	}
 
-	return nil
+	return errors.Join(errs...)
 }
 
 // Collect sends the metric values for each metric
