@@ -38,7 +38,7 @@ func GetTCPConnectionStates(family uint32) (map[MIB_TCP_STATE]uint32, error) {
 	case windows.AF_INET:
 		table, err := getExtendedTcpTable[MIB_TCPROW_OWNER_PID](family, TCPTableOwnerPIDAll)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed getExtendedTcpTable: %w", err)
 		}
 
 		for _, row := range table {
@@ -49,7 +49,7 @@ func GetTCPConnectionStates(family uint32) (map[MIB_TCP_STATE]uint32, error) {
 	case windows.AF_INET6:
 		table, err := getExtendedTcpTable[MIB_TCP6ROW_OWNER_PID](family, TCPTableOwnerPIDAll)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed getExtendedTcpTable: %w", err)
 		}
 
 		for _, row := range table {
@@ -99,12 +99,12 @@ func getExtendedTcpTable[T any](ulAf uint32, tableClass uint32) ([]T, error) {
 	var size uint32
 
 	ret, _, _ := procGetExtendedTcpTable.Call(
-		uintptr(0),
+		0,
 		uintptr(unsafe.Pointer(&size)),
-		uintptr(0),
+		0,
 		uintptr(ulAf),
 		uintptr(tableClass),
-		uintptr(0),
+		0,
 	)
 
 	if ret != uintptr(windows.ERROR_INSUFFICIENT_BUFFER) {
@@ -116,10 +116,10 @@ func getExtendedTcpTable[T any](ulAf uint32, tableClass uint32) ([]T, error) {
 	ret, _, _ = procGetExtendedTcpTable.Call(
 		uintptr(unsafe.Pointer(&buf[0])),
 		uintptr(unsafe.Pointer(&size)),
-		uintptr(0),
+		0,
 		uintptr(ulAf),
 		uintptr(tableClass),
-		uintptr(0),
+		0,
 	)
 
 	if ret != 0 {
