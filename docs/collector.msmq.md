@@ -5,7 +5,7 @@ The msmq collector exposes metrics about the queues on a MSMQ server
 |                     |                      |
 |---------------------|----------------------|
 | Metric name prefix  | `msmq`               |
-| Spource             | Performance Counters |
+| Source             | Performance Counters |
 | Enabled by default? | No                   |
 
 ## Flags
