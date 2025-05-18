@@ -57,7 +57,7 @@
   ],
   "ignoreDeps": [
     "mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image",
-    "gopkg.in/yaml.v2"
+    "gopkg.in/yaml.v3"
   ],
   "customManagers": [
     {
