@@ -245,7 +245,7 @@ func (c *Collector) collectTime(ch chan<- prometheus.Metric) error {
 	ch <- prometheus.MustNewConstMetric(
 		c.currentTime,
 		prometheus.GaugeValue,
-		float64(time.Now().Unix()),
+		float64(time.Now().UnixMicro())/1e6,
 	)
 
 	timeZoneInfo, err := kernel32.GetDynamicTimeZoneInformation()
