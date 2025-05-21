@@ -26,11 +26,12 @@ Define the interval of scraping Windows Update information
 
 ## Metrics
 
-| Name                           | Description                                                 | Type  | Labels                        |
-|--------------------------------|-------------------------------------------------------------|-------|-------------------------------|
-| `windows_update_pending_info` | Expose information for a single pending update item         | gauge | `category`,`severity`,`title` |
-| `windows_update_scrape_query_duration_seconds` | Duration of the last scrape query to the Windows Update API | gauge |  |
-| `windows_update_scrape_timestamp_seconds` | Timestamp of the last scrape                                | gauge |  |
+| Name                                           | Description                                                      | Type  | Labels                        |
+|------------------------------------------------|------------------------------------------------------------------|-------|-------------------------------|
+| `windows_update_pending_info`                  | Expose information for a single pending update item              | gauge | `category`,`severity`,`title` |
+| `windows_update_pending_published_timestamp`   | Expose last published timestamp for a single pending update item | gauge | `title`                       |
+| `windows_update_scrape_query_duration_seconds` | Duration of the last scrape query to the Windows Update API      | gauge |                               |
+| `windows_update_scrape_timestamp_seconds`      | Timestamp of the last scrape                                     | gauge |                               |
 
 ### Example metrics
 ```

@@ -60,11 +60,14 @@ type Collector struct {
 	mu          sync.RWMutex
 	ctxCancelFn context.CancelFunc
 
+	logger *slog.Logger
+
 	metricsBuf []prometheus.Metric
 
-	pendingUpdate        *prometheus.Desc
-	queryDurationSeconds *prometheus.Desc
-	lastScrapeMetric     *prometheus.Desc
+	pendingUpdate              *prometheus.Desc
+	pendingUpdateLastPublished *prometheus.Desc
+	queryDurationSeconds       *prometheus.Desc
+	lastScrapeMetric           *prometheus.Desc
 }
 
 func New(config *Config) *Collector {
@@ -146,9 +149,9 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
-	logger = logger.With(slog.String("collector", Name))
+	c.logger = logger.With(slog.String("collector", Name))
 
-	logger.Info("update collector is in an experimental state! The configuration and metrics may change in future. Please report any issues.")
+	c.logger.Info("update collector is in an experimental state! The configuration and metrics may change in future. Please report any issues.")
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -165,6 +168,13 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		prometheus.BuildFQName(types.Namespace, Name, "pending_info"),
 		"Expose information for a single pending update item",
 		[]string{"category", "severity", "title"},
+		nil,
+	)
+
+	c.pendingUpdateLastPublished = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "pending_published_timestamp"),
+		"Expose last published timestamp for a single pending update item",
+		[]string{"title"},
 		nil,
 	)
 
@@ -320,7 +330,7 @@ func (c *Collector) scheduleUpdateStatus(ctx context.Context, logger *slog.Logge
 }
 
 func (c *Collector) fetchUpdates(logger *slog.Logger, usd *ole.IDispatch) ([]prometheus.Metric, error) {
-	metricsBuf := make([]prometheus.Metric, 0, len(c.metricsBuf))
+	metricsBuf := make([]prometheus.Metric, 0, len(c.metricsBuf)*2+1)
 
 	timeStart := time.Now()
 
@@ -371,6 +381,15 @@ func (c *Collector) fetchUpdates(logger *slog.Logger, usd *ole.IDispatch) ([]pro
 			update.severity,
 			update.title,
 		))
+
+		if update.lastPublished != (time.Time{}) {
+			metricsBuf = append(metricsBuf, prometheus.MustNewConstMetric(
+				c.pendingUpdateLastPublished,
+				prometheus.GaugeValue,
+				float64(update.lastPublished.Unix()),
+				update.title,
+			))
+		}
 	}
 
 	metricsBuf = append(metricsBuf, prometheus.MustNewConstMetric(
@@ -383,9 +402,10 @@ func (c *Collector) fetchUpdates(logger *slog.Logger, usd *ole.IDispatch) ([]pro
 }
 
 type windowsUpdate struct {
-	category string
-	severity string
-	title    string
+	category      string
+	severity      string
+	title         string
+	lastPublished time.Time
 }
 
 // getUpdateStatus retrieves the update status of the given item.
@@ -423,10 +443,24 @@ func (c *Collector) getUpdateStatus(updd *ole.IDispatch, item int) (windowsUpdat
 		return windowsUpdate{}, fmt.Errorf("get Title: %w", err)
 	}
 
+	lastPublished, err := oleutil.GetProperty(updateItem, "LastDeploymentChangeTime")
+	if err != nil {
+		return windowsUpdate{}, fmt.Errorf("get LastDeploymentChangeTime: %w", err)
+	}
+
+	lastPublishedDate, err := time.Parse(lastPublished.ToString(), "2006-01-02 15:04:05")
+	if err != nil {
+		c.logger.Debug("failed to parse LastDeploymentChangeTime",
+			slog.String("title", title.ToString()),
+			slog.Any("err", err),
+		)
+	}
+
 	return windowsUpdate{
-		category: categoryName,
-		severity: severity.ToString(),
-		title:    title.ToString(),
+		category:      categoryName,
+		severity:      severity.ToString(),
+		title:         title.ToString(),
+		lastPublished: lastPublishedDate,
 	}, nil
 }
 
