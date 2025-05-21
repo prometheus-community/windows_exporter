@@ -19,7 +19,6 @@ package registry
 
 import (
 	"bytes"
-	"fmt"
 	"strconv"
 	"sync"
 )
@@ -88,10 +87,6 @@ func (t *NameTable) initialize() {
 			desc, err := readUTF16String(r)
 			if err != nil {
 				break
-			}
-
-			if err != nil {
-				panic(fmt.Sprint("Invalid index ", index))
 			}
 
 			indexInt, _ := strconv.Atoi(index)
