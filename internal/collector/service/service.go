@@ -352,7 +352,9 @@ func (c *Collector) collectService(ch chan<- prometheus.Metric, serviceName stri
 
 	logLevel := slog.LevelWarn
 
-	if errors.Is(err, windows.ERROR_ACCESS_DENIED) {
+	// ERROR_INVALID_PARAMETER returns when the process is not running. This can be happened
+	// if the service terminated after query the service API.
+	if errors.Is(err, windows.ERROR_ACCESS_DENIED) || errors.Is(err, windows.ERROR_INVALID_PARAMETER) {
 		logLevel = slog.LevelDebug
 	}
 
