@@ -30,6 +30,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/headers/netapi32"
 	"github.com/prometheus-community/windows_exporter/internal/headers/sysinfoapi"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
+	"github.com/prometheus-community/windows_exporter/internal/osversion"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows"
@@ -118,10 +119,10 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		return fmt.Errorf("failed to get Windows version: %w", err)
 	}
 
-	version := windows.RtlGetVersion()
+	version := osversion.Get()
 
 	// Microsoft has decided to keep the major version as "10" for Windows 11, including the product name.
-	if version.BuildNumber >= 22000 {
+	if version.Build >= osversion.V21H2Win11 {
 		productName = strings.Replace(productName, " 10 ", " 11 ", 1)
 	}
 
@@ -131,10 +132,10 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		nil,
 		prometheus.Labels{
 			"product":       productName,
-			"version":       fmt.Sprintf("%d.%d.%d", version.MajorVersion, version.MinorVersion, version.BuildNumber),
+			"version":       version.String(),
 			"major_version": strconv.FormatUint(uint64(version.MajorVersion), 10),
 			"minor_version": strconv.FormatUint(uint64(version.MinorVersion), 10),
-			"build_number":  strconv.FormatUint(uint64(version.BuildNumber), 10),
+			"build_number":  strconv.FormatUint(uint64(version.Build), 10),
 			"revision":      revision,
 		},
 	)
@@ -365,7 +366,9 @@ func (c *Collector) getWindowsVersion() (string, string, error) {
 		return "", "", fmt.Errorf("failed to open registry key: %w", err)
 	}
 
-	defer ntKey.Close()
+	defer func(ntKey registry.Key) {
+		_ = ntKey.Close()
+	}(ntKey)
 
 	productName, _, err := ntKey.GetStringValue("ProductName")
 	if err != nil {

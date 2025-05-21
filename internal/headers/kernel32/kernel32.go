@@ -30,6 +30,8 @@ var (
 	procGetDynamicTimeZoneInformationSys = modkernel32.NewProc("GetDynamicTimeZoneInformation")
 	procKernelLocalFileTimeToFileTime    = modkernel32.NewProc("LocalFileTimeToFileTime")
 	procGetTickCount                     = modkernel32.NewProc("GetTickCount64")
+	procOpenJobObject                    = modkernel32.NewProc("OpenJobObjectW")
+	procIsProcessInJob                   = modkernel32.NewProc("IsProcessInJob")
 )
 
 // SYSTEMTIME contains a date and time.

@@ -4,6 +4,7 @@ linters:
   disable:
     - cyclop
     - depguard
+    - dogsled
     - dupl
     - err113
     - exhaustive
@@ -56,6 +57,11 @@ linters:
       excludes:
         - G101
         - G115
+    govet:
+      enable-all: true
+      disable:
+        - fieldalignment
+        - shadow
     sloglint:
       no-mixed-args: true
       kv-only: false

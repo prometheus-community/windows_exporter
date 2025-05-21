@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -66,7 +65,7 @@ func TestCollector(t *testing.T) {
 					continue
 				}
 
-				assert.NotZerof(t, instance.ThreadCount, "object: %s, instance: %s, counter: %s", tc.object, instance, instance.ThreadCount)
+				require.NotZerof(t, instance.ThreadCount, "object: %s, instance: %s, counter: %s", tc.object, instance, instance.ThreadCount)
 			}
 		})
 	}
