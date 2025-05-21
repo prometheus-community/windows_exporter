@@ -448,12 +448,16 @@ func (c *Collector) getUpdateStatus(updd *ole.IDispatch, item int) (windowsUpdat
 		return windowsUpdate{}, fmt.Errorf("get LastDeploymentChangeTime: %w", err)
 	}
 
-	lastPublishedDate, err := time.Parse(lastPublished.ToString(), "2006-01-02 15:04:05")
-	if err != nil {
-		c.logger.Debug("failed to parse LastDeploymentChangeTime",
-			slog.String("title", title.ToString()),
-			slog.Any("err", err),
-		)
+	lastPublishedDate := time.Time{}
+
+	if lastPublishedString := lastPublished.ToString(); lastPublishedString != "" {
+		lastPublishedDate, err = time.Parse("2006-01-02 15:04:05", lastPublishedString)
+		if err != nil {
+			c.logger.Debug("failed to parse LastDeploymentChangeTime",
+				slog.String("title", title.ToString()),
+				slog.Any("err", err),
+			)
+		}
 	}
 
 	return windowsUpdate{
