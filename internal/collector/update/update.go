@@ -39,14 +39,14 @@ import (
 const Name = "update"
 
 type Config struct {
-	online         bool          `yaml:"online"`
-	scrapeInterval time.Duration `yaml:"scrape_interval"`
+	Online         bool          `yaml:"online"`
+	ScrapeInterval time.Duration `yaml:"scrape_interval"`
 }
 
 //nolint:gochecknoglobals
 var ConfigDefaults = Config{
-	online:         false,
-	scrapeInterval: 6 * time.Hour,
+	Online:         false,
+	ScrapeInterval: 6 * time.Hour,
 }
 
 var (
@@ -92,29 +92,29 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 	app.Flag(
 		"collector.updates.online",
 		"Deprecated: Please use collector.update.online instead",
-	).Default(strconv.FormatBool(ConfigDefaults.online)).BoolVar(&online)
+	).Default(strconv.FormatBool(ConfigDefaults.Online)).BoolVar(&online)
 
 	app.Flag(
 		"collector.updates.scrape-interval",
 		"Deprecated: Please use collector.update.scrape-interval instead",
-	).Default(ConfigDefaults.scrapeInterval.String()).DurationVar(&scrapeInterval)
+	).Default(ConfigDefaults.ScrapeInterval.String()).DurationVar(&scrapeInterval)
 
 	app.Flag(
 		"collector.update.online",
 		"Whether to search for updates online.",
-	).Default(strconv.FormatBool(ConfigDefaults.online)).BoolVar(&c.config.online)
+	).Default(strconv.FormatBool(ConfigDefaults.Online)).BoolVar(&c.config.Online)
 
 	app.Flag(
 		"collector.update.scrape-interval",
 		"Define the interval of scraping Windows Update information.",
-	).Default(ConfigDefaults.scrapeInterval.String()).DurationVar(&c.config.scrapeInterval)
+	).Default(ConfigDefaults.ScrapeInterval.String()).DurationVar(&c.config.ScrapeInterval)
 
 	app.Action(func(*kingpin.ParseContext) error {
 		// Use deprecated flags only if new ones weren't explicitly set
 		if online {
 			// If the new flag is set, ignore the old one
-			if !c.config.online {
-				c.config.online = online
+			if !c.config.Online {
+				c.config.Online = online
 			}
 
 			slog.Warn("Warning: --collector.updates.online is deprecated, use --collector.update.online instead.",
@@ -122,10 +122,10 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 			)
 		}
 
-		if scrapeInterval != ConfigDefaults.scrapeInterval {
+		if scrapeInterval != ConfigDefaults.ScrapeInterval {
 			// If the new flag is set, ignore the old one
-			if c.config.scrapeInterval != scrapeInterval {
-				c.config.scrapeInterval = scrapeInterval
+			if c.config.ScrapeInterval != scrapeInterval {
+				c.config.ScrapeInterval = scrapeInterval
 			}
 
 			slog.Warn("Warning: --collector.updates.scrape-interval is deprecated, use --collector.update.scrape-interval instead.",
@@ -153,7 +153,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	initErrCh := make(chan error, 1)
-	go c.scheduleUpdateStatus(ctx, logger, initErrCh, c.config.online)
+	go c.scheduleUpdateStatus(ctx, logger, initErrCh, c.config.Online)
 
 	c.ctxCancelFn = cancel
 
@@ -312,7 +312,7 @@ func (c *Collector) scheduleUpdateStatus(ctx context.Context, logger *slog.Logge
 		c.mu.Unlock()
 
 		select {
-		case <-time.After(c.config.scrapeInterval):
+		case <-time.After(c.config.ScrapeInterval):
 		case <-ctx.Done():
 			return
 		}
