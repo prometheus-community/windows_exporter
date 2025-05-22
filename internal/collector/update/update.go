@@ -167,14 +167,14 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	c.pendingUpdate = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "pending_info"),
 		"Expose information for a single pending update item",
-		[]string{"category", "severity", "title"},
+		[]string{"id", "revision", "category", "severity", "title"},
 		nil,
 	)
 
 	c.pendingUpdateLastPublished = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "pending_published_timestamp"),
 		"Expose last published timestamp for a single pending update item",
-		[]string{"title"},
+		[]string{"id", "revision"},
 		nil,
 	)
 
@@ -251,9 +251,16 @@ func (c *Collector) scheduleUpdateStatus(ctx context.Context, logger *slog.Logge
 
 	defer musQueryInterface.Release()
 
+	_, err = oleutil.PutProperty(musQueryInterface, "UserLocale", 1033)
+	if err != nil {
+		initErrCh <- fmt.Errorf("failed to set ClientApplicationID: %w", err)
+
+		return
+	}
+
 	_, err = oleutil.PutProperty(musQueryInterface, "ClientApplicationID", "windows_exporter")
 	if err != nil {
-		initErrCh <- fmt.Errorf("put ClientApplicationID: %w", err)
+		initErrCh <- fmt.Errorf("failed to set ClientApplicationID: %w", err)
 
 		return
 	}
@@ -377,6 +384,8 @@ func (c *Collector) fetchUpdates(logger *slog.Logger, usd *ole.IDispatch) ([]pro
 			c.pendingUpdate,
 			prometheus.GaugeValue,
 			1,
+			update.identity,
+			update.revision,
 			update.category,
 			update.severity,
 			update.title,
@@ -387,7 +396,8 @@ func (c *Collector) fetchUpdates(logger *slog.Logger, usd *ole.IDispatch) ([]pro
 				c.pendingUpdateLastPublished,
 				prometheus.GaugeValue,
 				float64(update.lastPublished.Unix()),
-				update.title,
+				update.identity,
+				update.revision,
 			))
 		}
 	}
@@ -402,6 +412,8 @@ func (c *Collector) fetchUpdates(logger *slog.Logger, usd *ole.IDispatch) ([]pro
 }
 
 type windowsUpdate struct {
+	identity      string
+	revision      string
 	category      string
 	severity      string
 	title         string
@@ -443,6 +455,25 @@ func (c *Collector) getUpdateStatus(updd *ole.IDispatch, item int) (windowsUpdat
 		return windowsUpdate{}, fmt.Errorf("get Title: %w", err)
 	}
 
+	// Get the Identity object
+	identityVariant, err := oleutil.GetProperty(updateItem, "Identity")
+	if err != nil {
+		return windowsUpdate{}, fmt.Errorf("get Identity: %w", err)
+	}
+	identity := identityVariant.ToIDispatch()
+	defer identity.Release()
+
+	// Read the UpdateID
+	updateIDVariant, err := oleutil.GetProperty(identity, "UpdateID")
+	if err != nil {
+		return windowsUpdate{}, fmt.Errorf("get UpdateID: %w", err)
+	}
+
+	revisionVariant, err := oleutil.GetProperty(identity, "RevisionNumber")
+	if err != nil {
+		return windowsUpdate{}, fmt.Errorf("get RevisionNumber: %w", err)
+	}
+
 	lastPublished, err := oleutil.GetProperty(updateItem, "LastDeploymentChangeTime")
 	if err != nil {
 		return windowsUpdate{}, fmt.Errorf("get LastDeploymentChangeTime: %w", err)
@@ -454,9 +485,13 @@ func (c *Collector) getUpdateStatus(updd *ole.IDispatch, item int) (windowsUpdat
 			slog.String("title", title.ToString()),
 			slog.Any("err", err),
 		)
+
+		lastPublishedDate = time.Time{}
 	}
 
 	return windowsUpdate{
+		identity:      updateIDVariant.ToString(),
+		revision:      strconv.FormatInt(revisionVariant.Val, 10),
 		category:      categoryName,
 		severity:      severity.ToString(),
 		title:         title.ToString(),
