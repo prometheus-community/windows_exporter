@@ -451,9 +451,9 @@ func (c *Collector) getUpdateStatus(updd *ole.IDispatch, item int) (windowsUpdat
 	lastPublishedDate := time.Time{}
 
 	if lastPublishedString := lastPublished.ToString(); lastPublishedString != "" {
-		lastPublishedDate, err = time.Parse("2006-01-02 15:04:05", lastPublishedString)
+		lastPublishedDate, err = ole.GetVariantDate(uint64(lastPublished.Val))
 		if err != nil {
-			c.logger.Debug("failed to parse LastDeploymentChangeTime",
+			c.logger.Debug("failed to convert LastDeploymentChangeTime",
 				slog.String("title", title.ToString()),
 				slog.Any("err", err),
 			)
