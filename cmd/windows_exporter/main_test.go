@@ -184,6 +184,8 @@ func waitUntilListening(tb testing.TB, network, address string) error {
 
 			continue
 		}
+
+		break
 	}
 
 	var winErr windows.Errno
