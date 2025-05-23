@@ -171,7 +171,7 @@ func waitUntilListening(tb testing.TB, network, address string) error {
 		err  error
 	)
 
-	for range 10 {
+	for range 20 {
 		conn, err = net.DialTimeout(network, address, 100*time.Millisecond)
 		if err == nil {
 			_ = conn.Close()
@@ -184,6 +184,14 @@ func waitUntilListening(tb testing.TB, network, address string) error {
 
 			continue
 		}
+
+		break
+	}
+
+	var winErr windows.Errno
+
+	if errors.As(err, &winErr) {
+		return fmt.Errorf("listener not listening: %w (#%d)", winErr, uint32(winErr))
 	}
 
 	return fmt.Errorf("listener not listening: %w", err)
