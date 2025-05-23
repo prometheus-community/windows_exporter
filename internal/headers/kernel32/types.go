@@ -17,7 +17,10 @@
 
 package kernel32
 
-import "unsafe"
+import (
+	"golang.org/x/sys/windows"
+	"unsafe"
+)
 
 type JobObjectBasicAccountingInformation struct {
 	TotalUserTime             uint64
@@ -30,18 +33,18 @@ type JobObjectBasicAccountingInformation struct {
 	TotalTerminatedProcesses  uint32
 }
 
-type IOCounters struct {
-	ReadOperationCount  uint64
-	WriteOperationCount uint64
-	OtherOperationCount uint64
-	ReadTransferCount   uint64
-	WriteTransferCount  uint64
-	OtherTransferCount  uint64
+// JobObjectBasicAndIOAccountingInformation is a structure that contains
+// both basic accounting information and I/O accounting information
+// for a job object. It is used with the QueryInformationJobObject function.
+// The structure is defined in the Windows API documentation.
+// https://learn.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-jobobject_basic_and_io_accounting_information
+type JobObjectBasicAndIOAccountingInformation struct {
+	BasicInfo JobObjectBasicAccountingInformation
+	IoInfo    windows.IO_COUNTERS
 }
-
 type JobObjectExtendedLimitInformation struct {
-	BasicInfo             JobObjectBasicAccountingInformation
-	IoInfo                IOCounters
+	BasicLimitInformation windows.JOBOBJECT_BASIC_LIMIT_INFORMATION
+	IoInfo                windows.IO_COUNTERS
 	ProcessMemoryLimit    uint64
 	JobMemoryLimit        uint64
 	PeakProcessMemoryUsed uint64

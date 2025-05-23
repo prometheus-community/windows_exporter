@@ -31,7 +31,13 @@ const (
 )
 
 func OpenJobObject(name string) (windows.Handle, error) {
-	handle, _, err := procOpenJobObject.Call(JobObjectQuery, 0, uintptr(unsafe.Pointer(&name)))
+	ptr, _ := windows.UTF16PtrFromString(name)
+	handle, _, err := procOpenJobObject.Call(
+		JobObjectQuery,
+		0,
+		uintptr(unsafe.Pointer(ptr)),
+	)
+
 	if handle == 0 {
 		return 0, err
 	}
