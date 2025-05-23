@@ -460,6 +460,7 @@ func (c *Collector) getUpdateStatus(updd *ole.IDispatch, item int) (windowsUpdat
 	if err != nil {
 		return windowsUpdate{}, fmt.Errorf("get Identity: %w", err)
 	}
+
 	identity := identityVariant.ToIDispatch()
 	defer identity.Release()
 
