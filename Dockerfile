@@ -6,10 +6,12 @@
 # This image MUST be built with docker buildx build (buildx) command on a Linux system.
 # Ref: https://github.com/microsoft/windows-host-process-containers-base-image
 
-ARG BASE="mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v1.0.0"
-FROM $BASE
-
+ARG BUILDPLATFORM
 ARG TARGETARCH
 
-COPY windows_exporter*-$TARGETARCH.exe /windows_exporter.exe
+ARG BASE="mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v1.0.0"
+
+FROM --platform=${BUILDPLATFORM:-windows/amd64} $BASE
+
+COPY windows_exporter*-${TARGETARCH}.exe /windows_exporter.exe
 ENTRYPOINT ["windows_exporter.exe"]
