@@ -141,7 +141,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 
-	c.bootTimeTimestamp = float64(time.Now().Unix() - int64(kernel32.GetTickCount64()/1000))
+	c.bootTimeTimestamp = float64(uint64(time.Now().UnixMilli())-kernel32.GetTickCount64()) / 1000
 
 	var err error
 
