@@ -1,3 +1,20 @@
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+//go:build windows
+
 package mscluster
 
 import (
@@ -6,26 +23,35 @@ import (
 	"log/slog"
 	"slices"
 	"strings"
+	"sync"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
-	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-const Name = "mscluster"
+const (
+	Name = "mscluster"
+
+	subCollectorCluster       = "cluster"
+	subCollectorNetwork       = "network"
+	subCollectorNode          = "node"
+	subCollectorResource      = "resource"
+	subCollectorResourceGroup = "resourcegroup"
+)
 
 type Config struct {
-	CollectorsEnabled []string `yaml:"collectors_enabled"`
+	CollectorsEnabled []string `yaml:"enabled"`
 }
 
+//nolint:gochecknoglobals
 var ConfigDefaults = Config{
 	CollectorsEnabled: []string{
-		"cluster",
-		"network",
-		"node",
-		"resource",
-		"resourcegroup",
+		subCollectorCluster,
+		subCollectorNetwork,
+		subCollectorNode,
+		subCollectorResource,
+		subCollectorResourceGroup,
 	},
 }
 
@@ -34,141 +60,11 @@ type Collector struct {
 	config    Config
 	miSession *mi.Session
 
-	// cluster
-	clusterAddEvictDelay                           *prometheus.Desc
-	clusterAdminAccessPoint                        *prometheus.Desc
-	clusterAutoAssignNodeSite                      *prometheus.Desc
-	clusterAutoBalancerLevel                       *prometheus.Desc
-	clusterAutoBalancerMode                        *prometheus.Desc
-	clusterBackupInProgress                        *prometheus.Desc
-	clusterBlockCacheSize                          *prometheus.Desc
-	clusterClusSvcHangTimeout                      *prometheus.Desc
-	clusterClusSvcRegroupOpeningTimeout            *prometheus.Desc
-	clusterClusSvcRegroupPruningTimeout            *prometheus.Desc
-	clusterClusSvcRegroupStageTimeout              *prometheus.Desc
-	clusterClusSvcRegroupTickInMilliseconds        *prometheus.Desc
-	clusterClusterEnforcedAntiAffinity             *prometheus.Desc
-	clusterClusterFunctionalLevel                  *prometheus.Desc
-	clusterClusterGroupWaitDelay                   *prometheus.Desc
-	clusterClusterLogLevel                         *prometheus.Desc
-	clusterClusterLogSize                          *prometheus.Desc
-	clusterClusterUpgradeVersion                   *prometheus.Desc
-	clusterCrossSiteDelay                          *prometheus.Desc
-	clusterCrossSiteThreshold                      *prometheus.Desc
-	clusterCrossSubnetDelay                        *prometheus.Desc
-	clusterCrossSubnetThreshold                    *prometheus.Desc
-	clusterCsvBalancer                             *prometheus.Desc
-	clusterDatabaseReadWriteMode                   *prometheus.Desc
-	clusterDefaultNetworkRole                      *prometheus.Desc
-	clusterDetectedCloudPlatform                   *prometheus.Desc
-	clusterDetectManagedEvents                     *prometheus.Desc
-	clusterDetectManagedEventsThreshold            *prometheus.Desc
-	clusterDisableGroupPreferredOwnerRandomization *prometheus.Desc
-	clusterDrainOnShutdown                         *prometheus.Desc
-	clusterDynamicQuorumEnabled                    *prometheus.Desc
-	clusterEnableSharedVolumes                     *prometheus.Desc
-	clusterFixQuorum                               *prometheus.Desc
-	clusterGracePeriodEnabled                      *prometheus.Desc
-	clusterGracePeriodTimeout                      *prometheus.Desc
-	clusterGroupDependencyTimeout                  *prometheus.Desc
-	clusterHangRecoveryAction                      *prometheus.Desc
-	clusterIgnorePersistentStateOnStartup          *prometheus.Desc
-	clusterLogResourceControls                     *prometheus.Desc
-	clusterLowerQuorumPriorityNodeId               *prometheus.Desc
-	clusterMaxNumberOfNodes                        *prometheus.Desc
-	clusterMessageBufferLength                     *prometheus.Desc
-	clusterMinimumNeverPreemptPriority             *prometheus.Desc
-	clusterMinimumPreemptorPriority                *prometheus.Desc
-	clusterNetftIPSecEnabled                       *prometheus.Desc
-	clusterPlacementOptions                        *prometheus.Desc
-	clusterPlumbAllCrossSubnetRoutes               *prometheus.Desc
-	clusterPreventQuorum                           *prometheus.Desc
-	clusterQuarantineDuration                      *prometheus.Desc
-	clusterQuarantineThreshold                     *prometheus.Desc
-	clusterQuorumArbitrationTimeMax                *prometheus.Desc
-	clusterQuorumArbitrationTimeMin                *prometheus.Desc
-	clusterQuorumLogFileSize                       *prometheus.Desc
-	clusterQuorumTypeValue                         *prometheus.Desc
-	clusterRequestReplyTimeout                     *prometheus.Desc
-	clusterResiliencyDefaultPeriod                 *prometheus.Desc
-	clusterResiliencyLevel                         *prometheus.Desc
-	clusterResourceDllDeadlockPeriod               *prometheus.Desc
-	clusterRootMemoryReserved                      *prometheus.Desc
-	clusterRouteHistoryLength                      *prometheus.Desc
-	clusterS2DBusTypes                             *prometheus.Desc
-	clusterS2DCacheDesiredState                    *prometheus.Desc
-	clusterS2DCacheFlashReservePercent             *prometheus.Desc
-	clusterS2DCachePageSizeKBytes                  *prometheus.Desc
-	clusterS2DEnabled                              *prometheus.Desc
-	clusterS2DIOLatencyThreshold                   *prometheus.Desc
-	clusterS2DOptimizations                        *prometheus.Desc
-	clusterSameSubnetDelay                         *prometheus.Desc
-	clusterSameSubnetThreshold                     *prometheus.Desc
-	clusterSecurityLevel                           *prometheus.Desc
-	clusterSecurityLevelForStorage                 *prometheus.Desc
-	clusterSharedVolumeVssWriterOperationTimeout   *prometheus.Desc
-	clusterShutdownTimeoutInMinutes                *prometheus.Desc
-	clusterUseClientAccessNetworksForSharedVolumes *prometheus.Desc
-	clusterWitnessDatabaseWriteTimeout             *prometheus.Desc
-	clusterWitnessDynamicWeight                    *prometheus.Desc
-	clusterWitnessRestartInterval                  *prometheus.Desc
-
-	// network
-	networkCharacteristics *prometheus.Desc
-	networkFlags           *prometheus.Desc
-	networkMetric          *prometheus.Desc
-	networkRole            *prometheus.Desc
-	networkState           *prometheus.Desc
-
-	// node
-	nodeBuildNumber           *prometheus.Desc
-	nodeCharacteristics       *prometheus.Desc
-	nodeDetectedCloudPlatform *prometheus.Desc
-	nodeDynamicWeight         *prometheus.Desc
-	nodeFlags                 *prometheus.Desc
-	nodeMajorVersion          *prometheus.Desc
-	nodeMinorVersion          *prometheus.Desc
-	nodeNeedsPreventQuorum    *prometheus.Desc
-	nodeNodeDrainStatus       *prometheus.Desc
-	nodeNodeHighestVersion    *prometheus.Desc
-	nodeNodeLowestVersion     *prometheus.Desc
-	nodeNodeWeight            *prometheus.Desc
-	nodeState                 *prometheus.Desc
-	nodeStatusInformation     *prometheus.Desc
-
-	resourceCharacteristics        *prometheus.Desc
-	resourceDeadlockTimeout        *prometheus.Desc
-	resourceEmbeddedFailureAction  *prometheus.Desc
-	resourceFlags                  *prometheus.Desc
-	resourceIsAlivePollInterval    *prometheus.Desc
-	resourceLooksAlivePollInterval *prometheus.Desc
-	resourceMonitorProcessId       *prometheus.Desc
-	resourceOwnerNode              *prometheus.Desc
-	resourcePendingTimeout         *prometheus.Desc
-	resourceResourceClass          *prometheus.Desc
-	resourceRestartAction          *prometheus.Desc
-	resourceRestartDelay           *prometheus.Desc
-	resourceRestartPeriod          *prometheus.Desc
-	resourceRestartThreshold       *prometheus.Desc
-	resourceRetryPeriodOnFailure   *prometheus.Desc
-	resourceState                  *prometheus.Desc
-	resourceSubClass               *prometheus.Desc
-
-	// ResourceGroup
-	resourceGroupAutoFailbackType    *prometheus.Desc
-	resourceGroupCharacteristics     *prometheus.Desc
-	resourceGroupColdStartSetting    *prometheus.Desc
-	resourceGroupDefaultOwner        *prometheus.Desc
-	resourceGroupFailbackWindowEnd   *prometheus.Desc
-	resourceGroupFailbackWindowStart *prometheus.Desc
-	resourceGroupFailOverPeriod      *prometheus.Desc
-	resourceGroupFailOverThreshold   *prometheus.Desc
-	resourceGroupFlags               *prometheus.Desc
-	resourceGroupGroupType           *prometheus.Desc
-	resourceGroupOwnerNode           *prometheus.Desc
-	resourceGroupPriority            *prometheus.Desc
-	resourceGroupResiliencyPeriod    *prometheus.Desc
-	resourceGroupState               *prometheus.Desc
+	collectorCluster
+	collectorNetwork
+	collectorNode
+	collectorResource
+	collectorResourceGroup
 }
 
 func New(config *Config) *Collector {
@@ -213,11 +109,7 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
-	return []string{"Memory"}, nil
-}
-
-func (c *Collector) Close(_ *slog.Logger) error {
+func (c *Collector) Close() error {
 	return nil
 }
 
@@ -232,70 +124,115 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 
 	c.miSession = miSession
 
-	if slices.Contains(c.config.CollectorsEnabled, "cluster") {
-		c.buildCluster()
+	errs := make([]error, 0)
+
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorCluster) {
+		if err := c.buildCluster(); err != nil {
+			errs = append(errs, fmt.Errorf("failed to build cluster collector: %w", err))
+		}
 	}
 
-	if slices.Contains(c.config.CollectorsEnabled, "network") {
-		c.buildNetwork()
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorNetwork) {
+		if err := c.buildNetwork(); err != nil {
+			errs = append(errs, fmt.Errorf("failed to build network collector: %w", err))
+		}
 	}
 
-	if slices.Contains(c.config.CollectorsEnabled, "node") {
-		c.buildNode()
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorNode) {
+		if err := c.buildNode(); err != nil {
+			errs = append(errs, fmt.Errorf("failed to build node collector: %w", err))
+		}
 	}
 
-	if slices.Contains(c.config.CollectorsEnabled, "resource") {
-		c.buildResource()
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorResource) {
+		if err := c.buildResource(); err != nil {
+			errs = append(errs, fmt.Errorf("failed to build resource collector: %w", err))
+		}
 	}
 
-	if slices.Contains(c.config.CollectorsEnabled, "resourcegroup") {
-		c.buildResourceGroup()
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorResourceGroup) {
+		if err := c.buildResourceGroup(); err != nil {
+			errs = append(errs, fmt.Errorf("failed to build resource group collector: %w", err))
+		}
 	}
 
-	return nil
+	return errors.Join(errs...)
 }
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(_ *types.ScrapeContext, _ *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	if len(c.config.CollectorsEnabled) == 0 {
 		return nil
 	}
 
-	var (
-		err       error
-		errs      []error
-		nodeNames []string
-	)
+	errCh := make(chan error, 5)
 
-	if slices.Contains(c.config.CollectorsEnabled, "cluster") {
-		if err = c.collectCluster(ch); err != nil {
-			errs = append(errs, fmt.Errorf("failed to collect cluster metrics: %w", err))
-		}
-	}
+	wg := sync.WaitGroup{}
+	wg.Add(5)
 
-	if slices.Contains(c.config.CollectorsEnabled, "network") {
-		if err = c.collectNetwork(ch); err != nil {
-			errs = append(errs, fmt.Errorf("failed to collect network metrics: %w", err))
-		}
-	}
+	go func() {
+		defer wg.Done()
 
-	if slices.Contains(c.config.CollectorsEnabled, "node") {
-		if nodeNames, err = c.collectNode(ch); err != nil {
-			errs = append(errs, fmt.Errorf("failed to collect node metrics: %w", err))
+		if slices.Contains(c.config.CollectorsEnabled, subCollectorCluster) {
+			if err := c.collectCluster(ch); err != nil {
+				errCh <- fmt.Errorf("failed to collect cluster metrics: %w", err)
+			}
 		}
-	}
+	}()
 
-	if slices.Contains(c.config.CollectorsEnabled, "resource") {
-		if err = c.collectResource(ch, nodeNames); err != nil {
-			errs = append(errs, fmt.Errorf("failed to collect resource metrics: %w", err))
-		}
-	}
+	go func() {
+		defer wg.Done()
 
-	if slices.Contains(c.config.CollectorsEnabled, "resourcegroup") {
-		if err = c.collectResourceGroup(ch, nodeNames); err != nil {
-			errs = append(errs, fmt.Errorf("failed to collect resource group metrics: %w", err))
+		if slices.Contains(c.config.CollectorsEnabled, subCollectorNetwork) {
+			if err := c.collectNetwork(ch); err != nil {
+				errCh <- fmt.Errorf("failed to collect network metrics: %w", err)
+			}
 		}
+	}()
+
+	go func() {
+		defer wg.Done()
+
+		nodeNames := make([]string, 0)
+
+		if slices.Contains(c.config.CollectorsEnabled, subCollectorNode) {
+			var err error
+
+			nodeNames, err = c.collectNode(ch)
+			if err != nil {
+				errCh <- fmt.Errorf("failed to collect node metrics: %w", err)
+			}
+		}
+
+		go func() {
+			defer wg.Done()
+
+			if slices.Contains(c.config.CollectorsEnabled, subCollectorResource) {
+				if err := c.collectResource(ch, nodeNames); err != nil {
+					errCh <- fmt.Errorf("failed to collect resource metrics: %w", err)
+				}
+			}
+		}()
+
+		go func() {
+			defer wg.Done()
+
+			if slices.Contains(c.config.CollectorsEnabled, subCollectorResourceGroup) {
+				if err := c.collectResourceGroup(ch, nodeNames); err != nil {
+					errCh <- fmt.Errorf("failed to collect resource group metrics: %w", err)
+				}
+			}
+		}()
+	}()
+
+	wg.Wait()
+	close(errCh)
+
+	errs := make([]error, 0)
+
+	for err := range errCh {
+		errs = append(errs, err)
 	}
 
 	return errors.Join(errs...)

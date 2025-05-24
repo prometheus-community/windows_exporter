@@ -1,0 +1,30 @@
+<!--
+  ~ SPDX-License-Identifier: Apache-2.0
+  ~
+  ~ Copyright The Prometheus Authors
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~ http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="all" type="GoApplicationRunConfiguration" factoryName="Go Application" folderName="run">
+    <module name="windows_exporter" />
+    <working_directory value="$PROJECT_DIR$" />
+    <parameters value="--web.listen-address=127.0.0.1:9182 --log.level=info --collectors.enabled=ad,adcs,adfs,cache,container,cpu,cpu_info,cs,dfsr,dhcp,diskdrive,dns,exchange,filetime,fsrmquota,hyperv,iis,license,logical_disk,logon,memory,mscluster,msmq,mssql,net,netframework,nps,os,pagefile,performancecounter,physical_disk,printer,process,remote_fx,scheduled_task,service,smb,smbclient,smtp,system,tcp,terminal_services,thermalzone,time,udp,update,vmware,performancecounter --debug.enabled --collector.performancecounter.objects='[{ &quot;name&quot;: &quot;memory&quot;, &quot;type&quot;: &quot;formatted&quot;, &quot;object&quot;: &quot;Memory&quot;, &quot;counters&quot;: [{ &quot;name&quot;:&quot;Cache Faults/sec&quot;, &quot;type&quot;:&quot;counter&quot; }]}]'" />
+    <sudo value="true" />
+    <kind value="PACKAGE" />
+    <package value="github.com/prometheus-community/windows_exporter/cmd/windows_exporter" />
+    <directory value="$PROJECT_DIR$" />
+    <filePath value="$PROJECT_DIR$/exporter.go" />
+    <method v="2" />
+  </configuration>
+</component>

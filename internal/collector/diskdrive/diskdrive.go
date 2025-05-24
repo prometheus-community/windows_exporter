@@ -1,3 +1,18 @@
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 //go:build windows
 
 package diskdrive
@@ -18,6 +33,7 @@ const Name = "diskdrive"
 
 type Config struct{}
 
+//nolint:gochecknoglobals
 var ConfigDefaults = Config{}
 
 // A Collector is a Prometheus Collector for a few WMI metrics in Win32_DiskDrive.
@@ -53,27 +69,11 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
-	return []string{}, nil
-}
-
-func (c *Collector) Close(_ *slog.Logger) error {
+func (c *Collector) Close() error {
 	return nil
 }
 
 func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
-	if miSession == nil {
-		return errors.New("miSession is nil")
-	}
-
-	miQuery, err := mi.NewQuery("SELECT DeviceID, Model, Caption, Name, Partitions, Size, Status, Availability FROM WIN32_DiskDrive")
-	if err != nil {
-		return fmt.Errorf("failed to create WMI query: %w", err)
-	}
-
-	c.miQuery = miQuery
-	c.miSession = miSession
-
 	c.diskInfo = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "info"),
 		"General drive information",
@@ -110,10 +110,27 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 		nil,
 	)
 
+	if miSession == nil {
+		return errors.New("miSession is nil")
+	}
+
+	miQuery, err := mi.NewQuery("SELECT DeviceID, Model, Caption, Name, Partitions, Size, Status, Availability FROM WIN32_DiskDrive")
+	if err != nil {
+		return fmt.Errorf("failed to create WMI query: %w", err)
+	}
+
+	c.miQuery = miQuery
+	c.miSession = miSession
+
+	var dst []diskDrive
+	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, c.miQuery); err != nil {
+		return fmt.Errorf("WMI query failed: %w", err)
+	}
+
 	return nil
 }
 
-type win32_DiskDrive struct {
+type diskDrive struct {
 	DeviceID     string `mi:"DeviceID"`
 	Model        string `mi:"Model"`
 	Size         uint64 `mi:"Size"`
@@ -124,6 +141,7 @@ type win32_DiskDrive struct {
 	Availability uint16 `mi:"Availability"`
 }
 
+//nolint:gochecknoglobals
 var (
 	allDiskStatus = []string{
 		"OK",
@@ -166,21 +184,8 @@ var (
 )
 
 // Collect sends the metric values for each metric to the provided prometheus Metric channel.
-func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	logger = logger.With(slog.String("collector", Name))
-	if err := c.collect(ch); err != nil {
-		logger.Error("failed collecting disk_drive_info metrics",
-			slog.Any("err", err),
-		)
-
-		return err
-	}
-
-	return nil
-}
-
-func (c *Collector) collect(ch chan<- prometheus.Metric) error {
-	var dst []win32_DiskDrive
+func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
+	var dst []diskDrive
 	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, c.miQuery); err != nil {
 		return fmt.Errorf("WMI query failed: %w", err)
 	}
@@ -190,14 +195,16 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	}
 
 	for _, disk := range dst {
+		distName := strings.Trim(disk.Name, `\.`)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.diskInfo,
 			prometheus.GaugeValue,
 			1.0,
-			strings.Trim(disk.DeviceID, "\\.\\"), //nolint:staticcheck
+			strings.Trim(disk.DeviceID, `\.`),
 			strings.TrimRight(disk.Model, " "),
 			strings.TrimRight(disk.Caption, " "),
-			strings.TrimRight(disk.Name, "\\.\\"), //nolint:staticcheck
+			distName,
 		)
 
 		for _, status := range allDiskStatus {
@@ -210,7 +217,7 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 				c.status,
 				prometheus.GaugeValue,
 				isCurrentState,
-				strings.Trim(disk.Name, "\\.\\"), //nolint:staticcheck
+				distName,
 				status,
 			)
 		}
@@ -219,14 +226,14 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 			c.size,
 			prometheus.GaugeValue,
 			float64(disk.Size),
-			strings.Trim(disk.Name, "\\.\\"), //nolint:staticcheck
+			distName,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.partitions,
 			prometheus.GaugeValue,
 			float64(disk.Partitions),
-			strings.Trim(disk.Name, "\\.\\"), //nolint:staticcheck
+			distName,
 		)
 
 		for availNum, val := range availMap {
@@ -238,7 +245,7 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 				c.availability,
 				prometheus.GaugeValue,
 				isCurrentState,
-				strings.Trim(disk.Name, "\\.\\"), //nolint:staticcheck
+				distName,
 				val,
 			)
 		}

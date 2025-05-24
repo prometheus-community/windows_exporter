@@ -1,91 +1,135 @@
+version: "2"
 linters:
-  enable-all: true
+  default: all
   disable:
     - cyclop
     - depguard
+    - dogsled
     - dupl
     - err113
-    - execinquery
     - exhaustive
     - exhaustruct
-    - exportloopref
     - fatcontext
+    - funcorder
     - funlen
-    - gochecknoglobals
     - gocognit
     - goconst
     - gocyclo
     - godot
-    - gomnd
-    - paralleltest
     - lll
     - maintidx
     - mnd
+    - paralleltest
+    - tagliatelle
     - testpackage
     - varnamelen
     - wrapcheck
+  settings:
+    forbidigo:
+      forbid:
+        - pattern: ^(fmt\.Print(|f|ln)|print|println)$
+        - pattern: ^syscall\.(.{1,7}|.{7}[^N]|.{9,})$
+          msg: use golang.org/x/sys/windows instead of syscall
+        - pattern: ^windows\.NewLazyDLL$
+          msg: use NewLazySystemDLL instead NewLazyDLL
+    goheader:
+      values:
+        const:
+          COMPANY: The Prometheus Authors
+      template: |-
+        SPDX-License-Identifier: Apache-2.0
 
-run:
-  timeout: 5m
+        Copyright {{ COMPANY }}
+        Licensed under the Apache License, Version 2.0 (the "License");
+        you may not use this file except in compliance with the License.
+        You may obtain a copy of the License at
 
-linters-settings:
-  gosec:
-    excludes:
-      - G101 # Potential hardcoded credentials
-      - G115 # integer overflow conversion
+        http://www.apache.org/licenses/LICENSE-2.0
 
-  gci:
-    sections:
-      - prefix(github.com/prometheus-community/windows_exporter/internal/initiate)
-      - standard # Standard section: captures all standard packages.
-      - default # Default section: contains all imports that could not be matched to another section type.
-    custom-order: true
-  tagliatelle:
-    case:
-      use-field-name: true
-      rules:
-        # Any struct tag type can be used.
-        # Support string case: `camel`, `pascal`, `kebab`, `snake`, `upperSnake`, `goCamel`, `goPascal`, `goKebab`, `goSnake`, `upper`, `lower`, `header`
-        json: camel
-        yaml: snake
-  forbidigo:
-    forbid:
-      - "^(fmt\\.Print(|f|ln)|print|println)$"
-      - p: "^syscall\\.(.{1,7}|.{7}[^N]|.{9,})$"
-        msg: use golang.org/x/sys/windows instead of syscall
-      - p: "^windows\\.NewLazyDLL$"
-        msg: use NewLazySystemDLL instead NewLazyDLL
-  sloglint:
-    no-mixed-args: true
-    kv-only: false
-    attr-only: true
-    no-global: "all"
-    context: "scope"
-    static-msg: false
-    no-raw-keys: false
-    key-naming-case: snake
-    forbidden-keys:
-      - time
-      - level
-      - msg
-      - source
-    args-on-sep-lines: true
-  stylecheck:
-    checks: ["all", "-ST1003"]
-issues:
-  exclude:
-  - don't use underscores in Go names
-  - don't use an underscore in package name
-  - exported type .+ should have comment or be unexported
-  exclude-rules:
-  - # Golint has many capitalisation complaints on WMI class names
-    text: "`?\\w+`? should be `?\\w+`?"
-    linters:
-    - revive
-  - text: "don't use ALL_CAPS in Go names; use CamelCase"
-    linters:
-    - revive
-  - path: internal/perfdata/v1/
-    linters:
-      - godox
-      - stylecheck
+        Unless required by applicable law or agreed to in writing, software
+        distributed under the License is distributed on an "AS IS" BASIS,
+        WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+        See the License for the specific language governing permissions and
+        limitations under the License.
+    gomoddirectives:
+      toolchain-forbidden: true
+    gosec:
+      excludes:
+        - G101
+        - G115
+    govet:
+      enable-all: true
+      disable:
+        - fieldalignment
+        - shadow
+    sloglint:
+      no-mixed-args: true
+      kv-only: false
+      attr-only: true
+      no-global: all
+      context: scope
+      static-msg: false
+      no-raw-keys: false
+      key-naming-case: snake
+      forbidden-keys:
+        - time
+        - level
+        - msg
+        - source
+      args-on-sep-lines: true
+    staticcheck:
+      checks:
+        - -ST1003
+        - all
+    tagliatelle:
+      case:
+        rules:
+          json: camel
+          yaml: snake
+        use-field-name: true
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - revive
+        text: '`?\w+`? should be `?\w+`?'
+      - linters:
+          - revive
+        text: don't use ALL_CAPS in Go names; use CamelCase
+      - path: .+\.go$
+        text: don't use underscores in Go names
+      - path: .+\.go$
+        text: don't use an underscore in package name
+      - path: .+\.go$
+        text: exported type .+ should have comment or be unexported
+      - linters:
+        - staticcheck
+        text: "ST1003:"
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gci
+    - gofmt
+    - gofumpt
+    - goimports
+  settings:
+    gci:
+      sections:
+        - prefix(github.com/prometheus-community/windows_exporter/internal/windowsservice)
+        - standard
+        - default
+      custom-order: true
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

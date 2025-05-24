@@ -1,3 +1,18 @@
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 //go:build windows
 
 package net
@@ -14,28 +29,32 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	v1 "github.com/prometheus-community/windows_exporter/internal/perfdata/v1"
-	"github.com/prometheus-community/windows_exporter/internal/toggle"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows"
 )
 
-const Name = "net"
+const (
+	Name = "net"
+
+	subCollectorMetrics = "metrics"
+	subCollectorNicInfo = "nic_info"
+)
 
 type Config struct {
-	NicExclude        *regexp.Regexp `yaml:"nic_exclude"`
-	NicInclude        *regexp.Regexp `yaml:"nic_include"`
-	CollectorsEnabled []string       `yaml:"collectors_enabled"`
+	NicExclude        *regexp.Regexp `yaml:"nic-exclude"`
+	NicInclude        *regexp.Regexp `yaml:"nic-include"`
+	CollectorsEnabled []string       `yaml:"enabled"`
 }
 
+//nolint:gochecknoglobals
 var ConfigDefaults = Config{
 	NicExclude: types.RegExpEmpty,
 	NicInclude: types.RegExpAny,
 	CollectorsEnabled: []string{
-		"metrics",
-		"nic_addresses",
+		subCollectorMetrics,
+		subCollectorNicInfo,
 	},
 }
 
@@ -43,7 +62,8 @@ var ConfigDefaults = Config{
 type Collector struct {
 	config Config
 
-	perfDataCollector perfdata.Collector
+	perfDataCollector *pdh.Collector
+	perfDataObject    []perfDataCounterValues
 
 	bytesReceivedTotal       *prometheus.Desc
 	bytesSentTotal           *prometheus.Desc
@@ -59,8 +79,10 @@ type Collector struct {
 	packetsSentTotal         *prometheus.Desc
 	currentBandwidth         *prometheus.Desc
 
-	nicAddressInfo *prometheus.Desc
-	routeInfo      *prometheus.Desc
+	nicIPAddressInfo *prometheus.Desc
+	nicOperStatus    *prometheus.Desc
+	nicInfo          *prometheus.Desc
+	routeInfo        *prometheus.Desc
 }
 
 func New(config *Config) *Collector {
@@ -137,48 +159,19 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
-	if toggle.IsPDHEnabled() {
-		return []string{}, nil
-	}
+func (c *Collector) Close() error {
+	c.perfDataCollector.Close()
 
-	return []string{"Network Interface"}, nil
-}
-
-func (c *Collector) Close(_ *slog.Logger) error {
 	return nil
 }
 
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
-	if toggle.IsPDHEnabled() {
-		counters := []string{
-			BytesReceivedPerSec,
-			BytesSentPerSec,
-			BytesTotalPerSec,
-			OutputQueueLength,
-			PacketsOutboundDiscarded,
-			PacketsOutboundErrors,
-			PacketsPerSec,
-			PacketsReceivedDiscarded,
-			PacketsReceivedErrors,
-			PacketsReceivedPerSec,
-			PacketsReceivedUnknown,
-			PacketsSentPerSec,
-			CurrentBandwidth,
+	for _, collector := range c.config.CollectorsEnabled {
+		if !slices.Contains([]string{subCollectorMetrics, subCollectorNicInfo}, collector) {
+			return fmt.Errorf("unknown sub collector: %s. Possible values: %s", collector,
+				strings.Join([]string{subCollectorMetrics, subCollectorNicInfo}, ", "),
+			)
 		}
-
-		var err error
-
-		c.perfDataCollector, err = perfdata.NewCollector(perfdata.V1, "Network Interface", perfdata.AllInstances, counters)
-		if err != nil {
-			return fmt.Errorf("failed to create Processor Information collector: %w", err)
-		}
-	}
-
-	if slices.Contains(c.config.CollectorsEnabled, "addresses") {
-		logger.Info("nic/addresses collector is in an experimental state! The configuration and metrics may change in future. Please report any issues.",
-			slog.String("collector", Name),
-		)
 	}
 
 	c.bytesReceivedTotal = prometheus.NewDesc(
@@ -259,10 +252,22 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		[]string{"nic"},
 		nil,
 	)
-	c.nicAddressInfo = prometheus.NewDesc(
+	c.nicIPAddressInfo = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "nic_address_info"),
 		"A metric with a constant '1' value labeled with the network interface's address information.",
-		[]string{"nic", "friendly_name", "address", "family"},
+		[]string{"nic", "address", "family"},
+		nil,
+	)
+	c.nicOperStatus = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "nic_operation_status"),
+		"The operational status for the interface as defined in RFC 2863 as IfOperStatus.",
+		[]string{"nic", "status"},
+		nil,
+	)
+	c.nicInfo = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "nic_info"),
+		"A metric with a constant '1' value labeled with the network interface's general information.",
+		[]string{"nic", "friendly_name", "mac"},
 		nil,
 	)
 	c.routeInfo = prometheus.NewDesc(
@@ -272,143 +277,50 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 
+	var err error
+
+	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "Network Interface", pdh.InstancesAll)
+	if err != nil {
+		return fmt.Errorf("failed to create Network Interface collector: %w", err)
+	}
+
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorNicInfo) {
+		logger.Info("nic/addresses collector is in an experimental state! The configuration and metrics may change in future. Please report any issues.",
+			slog.String("collector", Name),
+		)
+	}
+
 	return nil
 }
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	logger = logger.With(slog.String("collector", Name))
+func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
+	errs := make([]error, 0)
 
-	if slices.Contains(c.config.CollectorsEnabled, "metrics") {
-		var err error
-
-		if toggle.IsPDHEnabled() {
-			err = c.collectPDH(ch)
-		} else {
-			err = c.collect(ctx, logger, ch)
-		}
-
-		if err != nil {
-			return fmt.Errorf("failed collecting net metrics: %w", err)
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorMetrics) {
+		if err := c.collect(ch); err != nil {
+			errs = append(errs, fmt.Errorf("failed collecting metrics: %w", err))
 		}
 	}
 
-	if slices.Contains(c.config.CollectorsEnabled, "nic_addresses") {
-		if err := c.collectNICAddresses(ch); err != nil {
-			return fmt.Errorf("failed collecting net addresses: %w", err)
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorNicInfo) {
+		if err := c.collectNICInfo(ch); err != nil {
+			errs = append(errs, fmt.Errorf("failed collecting net addresses: %w", err))
 		}
 	}
 
-	return nil
+	return errors.Join(errs...)
 }
 
-func (c *Collector) collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	var dst []perflibNetworkInterface
-
-	if err := v1.UnmarshalObject(ctx.PerfObjects["Network Interface"], &dst, logger); err != nil {
-		return err
-	}
-
-	for _, nic := range dst {
-		if c.config.NicExclude.MatchString(nic.Name) ||
-			!c.config.NicInclude.MatchString(nic.Name) {
-			continue
-		}
-
-		// Counters
-		ch <- prometheus.MustNewConstMetric(
-			c.bytesReceivedTotal,
-			prometheus.CounterValue,
-			nic.BytesReceivedPerSec,
-			nic.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.bytesSentTotal,
-			prometheus.CounterValue,
-			nic.BytesSentPerSec,
-			nic.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.bytesTotal,
-			prometheus.CounterValue,
-			nic.BytesTotalPerSec,
-			nic.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.outputQueueLength,
-			prometheus.GaugeValue,
-			nic.OutputQueueLength,
-			nic.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.packetsOutboundDiscarded,
-			prometheus.CounterValue,
-			nic.PacketsOutboundDiscarded,
-			nic.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.packetsOutboundErrors,
-			prometheus.CounterValue,
-			nic.PacketsOutboundErrors,
-			nic.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.packetsTotal,
-			prometheus.CounterValue,
-			nic.PacketsPerSec,
-			nic.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.packetsReceivedDiscarded,
-			prometheus.CounterValue,
-			nic.PacketsReceivedDiscarded,
-			nic.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.packetsReceivedErrors,
-			prometheus.CounterValue,
-			nic.PacketsReceivedErrors,
-			nic.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.packetsReceivedTotal,
-			prometheus.CounterValue,
-			nic.PacketsReceivedPerSec,
-			nic.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.packetsReceivedUnknown,
-			prometheus.CounterValue,
-			nic.PacketsReceivedUnknown,
-			nic.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.packetsSentTotal,
-			prometheus.CounterValue,
-			nic.PacketsSentPerSec,
-			nic.Name,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.currentBandwidth,
-			prometheus.GaugeValue,
-			nic.CurrentBandwidth/8,
-			nic.Name,
-		)
-	}
-
-	return nil
-}
-
-func (c *Collector) collectPDH(ch chan<- prometheus.Metric) error {
-	data, err := c.perfDataCollector.Collect()
+func (c *Collector) collect(ch chan<- prometheus.Metric) error {
+	err := c.perfDataCollector.Collect(&c.perfDataObject)
 	if err != nil {
 		return fmt.Errorf("failed to collect Network Information metrics: %w", err)
 	}
 
-	for nicName, nicData := range data {
-		if c.config.NicExclude.MatchString(nicName) ||
-			!c.config.NicInclude.MatchString(nicName) {
+	for _, data := range c.perfDataObject {
+		if c.config.NicExclude.MatchString(data.Name) || !c.config.NicInclude.MatchString(data.Name) {
 			continue
 		}
 
@@ -416,109 +328,141 @@ func (c *Collector) collectPDH(ch chan<- prometheus.Metric) error {
 		ch <- prometheus.MustNewConstMetric(
 			c.bytesReceivedTotal,
 			prometheus.CounterValue,
-			nicData[BytesReceivedPerSec].FirstValue,
-			nicName,
+			data.BytesReceivedPerSec,
+			data.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.bytesSentTotal,
 			prometheus.CounterValue,
-			nicData[BytesSentPerSec].FirstValue,
-			nicName,
+			data.BytesSentPerSec,
+			data.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.bytesTotal,
 			prometheus.CounterValue,
-			nicData[BytesTotalPerSec].FirstValue,
-			nicName,
+			data.BytesTotalPerSec,
+			data.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.outputQueueLength,
 			prometheus.GaugeValue,
-			nicData[OutputQueueLength].FirstValue,
-			nicName,
+			data.OutputQueueLength,
+			data.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.packetsOutboundDiscarded,
 			prometheus.CounterValue,
-			nicData[PacketsOutboundDiscarded].FirstValue,
-			nicName,
+			data.PacketsOutboundDiscarded,
+			data.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.packetsOutboundErrors,
 			prometheus.CounterValue,
-			nicData[PacketsOutboundErrors].FirstValue,
-			nicName,
+			data.PacketsOutboundErrors,
+			data.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.packetsTotal,
 			prometheus.CounterValue,
-			nicData[PacketsPerSec].FirstValue,
-			nicName,
+			data.PacketsPerSec,
+			data.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.packetsReceivedDiscarded,
 			prometheus.CounterValue,
-			nicData[PacketsReceivedDiscarded].FirstValue,
-			nicName,
+			data.PacketsReceivedDiscarded,
+			data.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.packetsReceivedErrors,
 			prometheus.CounterValue,
-			nicData[PacketsReceivedErrors].FirstValue,
-			nicName,
+			data.PacketsReceivedErrors,
+			data.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.packetsReceivedTotal,
 			prometheus.CounterValue,
-			nicData[PacketsReceivedPerSec].FirstValue,
-			nicName,
+			data.PacketsReceivedPerSec,
+			data.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.packetsReceivedUnknown,
 			prometheus.CounterValue,
-			nicData[PacketsReceivedUnknown].FirstValue,
-			nicName,
+			data.PacketsReceivedUnknown,
+			data.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.packetsSentTotal,
 			prometheus.CounterValue,
-			nicData[PacketsSentPerSec].FirstValue,
-			nicName,
+			data.PacketsSentPerSec,
+			data.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.currentBandwidth,
 			prometheus.GaugeValue,
-			nicData[CurrentBandwidth].FirstValue/8,
-			nicName,
+			data.CurrentBandwidth/8,
+			data.Name,
 		)
 	}
 
 	return nil
 }
 
-var addressFamily = map[uint16]string{
-	windows.AF_INET:  "ipv4",
-	windows.AF_INET6: "ipv6",
-}
-
-func (c *Collector) collectNICAddresses(ch chan<- prometheus.Metric) error {
+func (c *Collector) collectNICInfo(ch chan<- prometheus.Metric) error {
 	nicAdapterAddresses, err := adapterAddresses()
 	if err != nil {
 		return err
 	}
 
-	convertNicName := strings.NewReplacer("(", "[", ")", "]")
+	convertNicName := strings.NewReplacer("(", "[", ")", "]", "#", "_")
 
-	for _, nicAdapterAddress := range nicAdapterAddresses {
-		friendlyName := windows.UTF16PtrToString(nicAdapterAddress.FriendlyName)
-		nicName := windows.UTF16PtrToString(nicAdapterAddress.Description)
+	for _, nicAdapter := range nicAdapterAddresses {
+		friendlyName := windows.UTF16PtrToString(nicAdapter.FriendlyName)
+		nicName := convertNicName.Replace(windows.UTF16PtrToString(nicAdapter.Description))
 
 		if c.config.NicExclude.MatchString(nicName) ||
 			!c.config.NicInclude.MatchString(nicName) {
 			continue
 		}
 
-		for address := nicAdapterAddress.FirstUnicastAddress; address != nil; address = address.Next {
+		macAddress := fmt.Sprintf("%02X:%02X:%02X:%02X:%02X:%02X",
+			nicAdapter.PhysicalAddress[0],
+			nicAdapter.PhysicalAddress[1],
+			nicAdapter.PhysicalAddress[2],
+			nicAdapter.PhysicalAddress[3],
+			nicAdapter.PhysicalAddress[4],
+			nicAdapter.PhysicalAddress[5],
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.nicInfo,
+			prometheus.GaugeValue,
+			1,
+			nicName,
+			friendlyName,
+			macAddress,
+		)
+
+		for operState, labelValue := range operStatus {
+			var metricStatus float64
+			if operState == nicAdapter.OperStatus {
+				metricStatus = 1
+			}
+
+			ch <- prometheus.MustNewConstMetric(
+				c.nicOperStatus,
+				prometheus.GaugeValue,
+				metricStatus,
+				nicName,
+				labelValue,
+			)
+		}
+
+		if nicAdapter.OperStatus != windows.IfOperStatusUp {
+			continue
+		}
+
+		for address := nicAdapter.FirstUnicastAddress; address != nil; address = address.Next {
 			ipAddr := address.Address.IP()
 
 			if ipAddr == nil || !ipAddr.IsGlobalUnicast() {
@@ -526,17 +470,16 @@ func (c *Collector) collectNICAddresses(ch chan<- prometheus.Metric) error {
 			}
 
 			ch <- prometheus.MustNewConstMetric(
-				c.nicAddressInfo,
+				c.nicIPAddressInfo,
 				prometheus.GaugeValue,
 				1,
-				convertNicName.Replace(nicName),
-				friendlyName,
+				nicName,
 				ipAddr.String(),
 				addressFamily[address.Address.Sockaddr.Addr.Family],
 			)
 		}
 
-		for address := nicAdapterAddress.FirstAnycastAddress; address != nil; address = address.Next {
+		for address := nicAdapter.FirstAnycastAddress; address != nil; address = address.Next {
 			ipAddr := address.Address.IP()
 
 			if ipAddr == nil || !ipAddr.IsGlobalUnicast() {
@@ -544,11 +487,10 @@ func (c *Collector) collectNICAddresses(ch chan<- prometheus.Metric) error {
 			}
 
 			ch <- prometheus.MustNewConstMetric(
-				c.nicAddressInfo,
+				c.nicIPAddressInfo,
 				prometheus.GaugeValue,
 				1,
-				convertNicName.Replace(nicName),
-				friendlyName,
+				nicName,
 				ipAddr.String(),
 				addressFamily[address.Address.Sockaddr.Addr.Family],
 			)
@@ -591,6 +533,7 @@ func adapterAddresses() ([]*windows.IpAdapterAddresses, error) {
 	}
 
 	var addresses []*windows.IpAdapterAddresses
+
 	for address := (*windows.IpAdapterAddresses)(unsafe.Pointer(&b[0])); address != nil; address = address.Next {
 		addresses = append(addresses, address)
 	}

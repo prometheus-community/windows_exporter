@@ -1,143 +1,130 @@
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+//go:build windows
+
 package exchange
 
 import (
-	"errors"
 	"fmt"
-	"log/slog"
-	"strings"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	v1 "github.com/prometheus-community/windows_exporter/internal/perfdata/v1"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-const (
-	activeTasks    = "ActiveTasks"
-	completedTasks = "CompletedTasks"
-	queuedTasks    = "QueuedTasks"
-	yieldedTasks   = "YieldedTasks"
-	isActive       = "Active"
-)
+type collectorWorkloadManagementWorkloads struct {
+	perfDataCollectorWorkloadManagementWorkloads *pdh.Collector
+	perfDataObjectWorkloadManagementWorkloads    []perfDataCounterValuesWorkloadManagementWorkloads
 
-// Perflib: [19430] MSExchange WorkloadManagement Workloads.
-type perflibWorkloadManagementWorkloads struct {
+	activeTasks    *prometheus.Desc
+	isActive       *prometheus.Desc
+	completedTasks *prometheus.Desc
+	queuedTasks    *prometheus.Desc
+	yieldedTasks   *prometheus.Desc
+}
+
+type perfDataCounterValuesWorkloadManagementWorkloads struct {
 	Name string
 
-	ActiveTasks    float64 `perflib:"ActiveTasks"`
-	CompletedTasks float64 `perflib:"CompletedTasks"`
-	QueuedTasks    float64 `perflib:"QueuedTasks"`
-	YieldedTasks   float64 `perflib:"YieldedTasks"`
-	IsActive       float64 `perflib:"Active"`
+	ActiveTasks    float64 `perfdata:"ActiveTasks"`
+	CompletedTasks float64 `perfdata:"CompletedTasks"`
+	QueuedTasks    float64 `perfdata:"QueuedTasks"`
+	YieldedTasks   float64 `perfdata:"YieldedTasks"`
+	IsActive       float64 `perfdata:"Active"`
 }
 
 func (c *Collector) buildWorkloadManagementWorkloads() error {
-	counters := []string{
-		activeTasks,
-		completedTasks,
-		queuedTasks,
-		yieldedTasks,
-		isActive,
-	}
-
 	var err error
 
-	c.perfDataCollectorWorkloadManagementWorkloads, err = perfdata.NewCollector(perfdata.V1, "MSExchange WorkloadManagement Workloads", perfdata.AllInstances, counters)
+	c.perfDataCollectorWorkloadManagementWorkloads, err = pdh.NewCollector[perfDataCounterValuesWorkloadManagementWorkloads](pdh.CounterTypeRaw, "MSExchange WorkloadManagement Workloads", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create MSExchange WorkloadManagement Workloads collector: %w", err)
 	}
 
-	return nil
-}
-
-func (c *Collector) collectWorkloadManagementWorkloads(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	var data []perflibWorkloadManagementWorkloads
-
-	if err := v1.UnmarshalObject(ctx.PerfObjects["MSExchange WorkloadManagement Workloads"], &data, logger); err != nil {
-		return err
-	}
-
-	for _, instance := range data {
-		labelName := c.toLabelName(instance.Name)
-		if strings.HasSuffix(labelName, "_total") {
-			continue
-		}
-		ch <- prometheus.MustNewConstMetric(
-			c.activeTasks,
-			prometheus.GaugeValue,
-			instance.ActiveTasks,
-			labelName,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.completedTasks,
-			prometheus.CounterValue,
-			instance.CompletedTasks,
-			labelName,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.queuedTasks,
-			prometheus.CounterValue,
-			instance.QueuedTasks,
-			labelName,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.yieldedTasks,
-			prometheus.CounterValue,
-			instance.YieldedTasks,
-			labelName,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.isActive,
-			prometheus.GaugeValue,
-			instance.IsActive,
-			labelName,
-		)
-	}
+	c.activeTasks = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "workload_active_tasks"),
+		"Number of active tasks currently running in the background for workload management",
+		[]string{"name"},
+		nil,
+	)
+	c.completedTasks = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "workload_completed_tasks"),
+		"Number of workload management tasks that have been completed",
+		[]string{"name"},
+		nil,
+	)
+	c.queuedTasks = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "workload_queued_tasks"),
+		"Number of workload management tasks that are currently queued up waiting to be processed",
+		[]string{"name"},
+		nil,
+	)
+	c.yieldedTasks = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "workload_yielded_tasks"),
+		"The total number of tasks that have been yielded by a workload",
+		[]string{"name"},
+		nil,
+	)
+	c.isActive = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "workload_is_active"),
+		"Active indicates whether the workload is in an active (1) or paused (0) state",
+		[]string{"name"},
+		nil,
+	)
 
 	return nil
 }
 
-func (c *Collector) collectPDHWorkloadManagementWorkloads(ch chan<- prometheus.Metric) error {
-	perfData, err := c.perfDataCollectorWorkloadManagementWorkloads.Collect()
+func (c *Collector) collectWorkloadManagementWorkloads(ch chan<- prometheus.Metric) error {
+	err := c.perfDataCollectorWorkloadManagementWorkloads.Collect(&c.perfDataObjectWorkloadManagementWorkloads)
 	if err != nil {
 		return fmt.Errorf("failed to collect MSExchange WorkloadManagement Workloads: %w", err)
 	}
 
-	if len(perfData) == 0 {
-		return errors.New("perflib query for MSExchange WorkloadManagement Workloads returned empty result set")
-	}
-
-	for name, data := range perfData {
-		labelName := c.toLabelName(name)
+	for _, data := range c.perfDataObjectWorkloadManagementWorkloads {
+		labelName := c.toLabelName(data.Name)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.activeTasks,
 			prometheus.GaugeValue,
-			data[activeTasks].FirstValue,
+			data.ActiveTasks,
 			labelName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.completedTasks,
 			prometheus.CounterValue,
-			data[completedTasks].FirstValue,
+			data.CompletedTasks,
 			labelName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.queuedTasks,
 			prometheus.CounterValue,
-			data[queuedTasks].FirstValue,
+			data.QueuedTasks,
 			labelName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.yieldedTasks,
 			prometheus.CounterValue,
-			data[yieldedTasks].FirstValue,
+			data.YieldedTasks,
 			labelName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.isActive,
 			prometheus.GaugeValue,
-			data[isActive].FirstValue,
+			data.IsActive,
 			labelName,
 		)
 	}

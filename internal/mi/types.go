@@ -1,3 +1,18 @@
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 //go:build windows
 
 package mi
@@ -23,10 +38,8 @@ func NewQueryDialect(queryDialect string) (QueryDialect, error) {
 	return windows.UTF16PtrFromString(queryDialect)
 }
 
-var (
-	QueryDialectWQL = utils.Must(NewQueryDialect("WQL"))
-	QueryDialectCQL = utils.Must(NewQueryDialect("CQL"))
-)
+//nolint:gochecknoglobals
+var QueryDialectWQL = utils.Must(NewQueryDialect("WQL"))
 
 type Namespace *uint16
 
@@ -34,11 +47,13 @@ func NewNamespace(namespace string) (Namespace, error) {
 	return windows.UTF16PtrFromString(namespace)
 }
 
+//nolint:gochecknoglobals
 var (
 	NamespaceRootCIMv2             = utils.Must(NewNamespace("root/CIMv2"))
 	NamespaceRootWindowsFSRM       = utils.Must(NewNamespace("root/microsoft/windows/fsrm"))
 	NamespaceRootWebAdministration = utils.Must(NewNamespace("root/WebAdministration"))
 	NamespaceRootMSCluster         = utils.Must(NewNamespace("root/MSCluster"))
+	NamespaceRootMicrosoftDNS      = utils.Must(NewNamespace("root/MicrosoftDNS"))
 )
 
 type Query *uint16

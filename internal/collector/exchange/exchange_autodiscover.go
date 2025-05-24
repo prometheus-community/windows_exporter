@@ -1,69 +1,70 @@
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+//go:build windows
+
 package exchange
 
 import (
-	"errors"
 	"fmt"
-	"log/slog"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	v1 "github.com/prometheus-community/windows_exporter/internal/perfdata/v1"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-// [29240] MSExchangeAutodiscover.
-type perflibAutodiscover struct {
-	RequestsPerSec float64 `perflib:"Requests/sec"`
+type collectorAutoDiscover struct {
+	perfDataCollectorAutoDiscover *pdh.Collector
+	perfDataObjectAutoDiscover    []perfDataCounterValuesAutoDiscover
+
+	autoDiscoverRequestsPerSec *prometheus.Desc
+}
+
+type perfDataCounterValuesAutoDiscover struct {
+	RequestsPerSec float64 `perfdata:"Requests/sec"`
 }
 
 func (c *Collector) buildAutoDiscover() error {
-	counters := []string{
-		requestsPerSec,
-	}
-
 	var err error
 
-	c.perfDataCollectorAutoDiscover, err = perfdata.NewCollector(perfdata.V1, "MSExchange Autodiscover", perfdata.AllInstances, counters)
+	c.perfDataCollectorAutoDiscover, err = pdh.NewCollector[perfDataCounterValuesAutoDiscover](pdh.CounterTypeRaw, "MSExchangeAutodiscover", nil)
 	if err != nil {
 		return fmt.Errorf("failed to create MSExchange Autodiscover collector: %w", err)
 	}
 
-	return nil
-}
-
-func (c *Collector) collectAutoDiscover(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	var data []perflibAutodiscover
-
-	if err := v1.UnmarshalObject(ctx.PerfObjects["MSExchangeAutodiscover"], &data, logger); err != nil {
-		return err
-	}
-
-	for _, autodisc := range data {
-		ch <- prometheus.MustNewConstMetric(
-			c.autoDiscoverRequestsPerSec,
-			prometheus.CounterValue,
-			autodisc.RequestsPerSec,
-		)
-	}
+	c.autoDiscoverRequestsPerSec = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "autodiscover_requests_total"),
+		"Number of autodiscover service requests processed each second",
+		nil,
+		nil,
+	)
 
 	return nil
 }
 
-func (c *Collector) collectPDHAutoDiscover(ch chan<- prometheus.Metric) error {
-	perfData, err := c.perfDataCollectorAutoDiscover.Collect()
+func (c *Collector) collectAutoDiscover(ch chan<- prometheus.Metric) error {
+	err := c.perfDataCollectorAutoDiscover.Collect(&c.perfDataObjectAutoDiscover)
 	if err != nil {
 		return fmt.Errorf("failed to collect MSExchange Autodiscover metrics: %w", err)
 	}
 
-	if len(perfData) == 0 {
-		return errors.New("perflib query for MSExchange Autodiscover returned empty result set")
-	}
-
-	for _, data := range perfData {
+	for _, data := range c.perfDataObjectAutoDiscover {
 		ch <- prometheus.MustNewConstMetric(
 			c.autoDiscoverRequestsPerSec,
 			prometheus.CounterValue,
-			data[requestsPerSec].FirstValue,
+			data.RequestsPerSec,
 		)
 	}
 

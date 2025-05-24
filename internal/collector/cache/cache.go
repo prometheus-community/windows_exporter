@@ -1,18 +1,29 @@
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 //go:build windows
 
 package cache
 
 import (
-	"errors"
 	"fmt"
 	"log/slog"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata/perftypes"
-	v1 "github.com/prometheus-community/windows_exporter/internal/perfdata/v1"
-	"github.com/prometheus-community/windows_exporter/internal/toggle"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -21,13 +32,15 @@ const Name = "cache"
 
 type Config struct{}
 
+//nolint:gochecknoglobals
 var ConfigDefaults = Config{}
 
 // A Collector is a Prometheus Collector for Perflib Cache metrics.
 type Collector struct {
 	config Config
 
-	perfDataCollector perfdata.Collector
+	perfDataCollector *pdh.Collector
+	perfDataObject    []perfDataCounterValues
 
 	asyncCopyReadsTotal         *prometheus.Desc
 	asyncDataMapsTotal          *prometheus.Desc
@@ -80,60 +93,13 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
-	if toggle.IsPDHEnabled() {
-		return []string{}, nil
-	}
+func (c *Collector) Close() error {
+	c.perfDataCollector.Close()
 
-	return []string{"Cache"}, nil
-}
-
-func (c *Collector) Close(_ *slog.Logger) error {
 	return nil
 }
 
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
-	if toggle.IsPDHEnabled() {
-		counters := []string{
-			asyncCopyReadsTotal,
-			asyncDataMapsTotal,
-			asyncFastReadsTotal,
-			asyncMDLReadsTotal,
-			asyncPinReadsTotal,
-			copyReadHitsTotal,
-			copyReadsTotal,
-			dataFlushesTotal,
-			dataFlushPagesTotal,
-			dataMapHitsPercent,
-			dataMapPinsTotal,
-			dataMapsTotal,
-			dirtyPages,
-			dirtyPageThreshold,
-			fastReadNotPossiblesTotal,
-			fastReadResourceMissesTotal,
-			fastReadsTotal,
-			lazyWriteFlushesTotal,
-			lazyWritePagesTotal,
-			mdlReadHitsTotal,
-			mdlReadsTotal,
-			pinReadHitsTotal,
-			pinReadsTotal,
-			readAheadsTotal,
-			syncCopyReadsTotal,
-			syncDataMapsTotal,
-			syncFastReadsTotal,
-			syncMDLReadsTotal,
-			syncPinReadsTotal,
-		}
-
-		var err error
-
-		c.perfDataCollector, err = perfdata.NewCollector(perfdata.V1, "Cache", perfdata.AllInstances, counters)
-		if err != nil {
-			return fmt.Errorf("failed to create Cache collector: %w", err)
-		}
-	}
-
 	c.asyncCopyReadsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "async_copy_reads_total"),
 		"(AsyncCopyReadsTotal)",
@@ -309,399 +275,195 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 
+	var err error
+
+	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "Cache", pdh.InstancesAll)
+	if err != nil {
+		return fmt.Errorf("failed to create Cache collector: %w", err)
+	}
+
 	return nil
 }
 
 // Collect implements the Collector interface.
-func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	if toggle.IsPDHEnabled() {
-		return c.collectPDH(ch)
-	}
-
-	logger = logger.With(slog.String("collector", Name))
-	if err := c.collect(ctx, logger, ch); err != nil {
-		logger.Error("failed collecting cache metrics",
-			slog.Any("err", err),
-		)
-
-		return err
-	}
-
-	return nil
-}
-
-func (c *Collector) collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	var dst []perflibCache // Single-instance class, array is required but will have single entry.
-
-	if err := v1.UnmarshalObject(ctx.PerfObjects["Cache"], &dst, logger); err != nil {
-		return err
-	}
-
-	if len(dst) != 1 {
-		return errors.New("expected single instance of Cache")
-	}
-
-	ch <- prometheus.MustNewConstMetric(
-		c.asyncCopyReadsTotal,
-		prometheus.CounterValue,
-		dst[0].AsyncCopyReadsTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.asyncDataMapsTotal,
-		prometheus.CounterValue,
-		dst[0].AsyncDataMapsTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.asyncFastReadsTotal,
-		prometheus.CounterValue,
-		dst[0].AsyncFastReadsTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.asyncMDLReadsTotal,
-		prometheus.CounterValue,
-		dst[0].AsyncMDLReadsTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.asyncPinReadsTotal,
-		prometheus.CounterValue,
-		dst[0].AsyncPinReadsTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.copyReadHitsTotal,
-		prometheus.GaugeValue,
-		dst[0].CopyReadHitsTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.copyReadsTotal,
-		prometheus.CounterValue,
-		dst[0].CopyReadsTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.dataFlushesTotal,
-		prometheus.CounterValue,
-		dst[0].DataFlushesTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.dataFlushPagesTotal,
-		prometheus.CounterValue,
-		dst[0].DataFlushPagesTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.dataMapHitsPercent,
-		prometheus.GaugeValue,
-		dst[0].DataMapHitsPercent,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.dataMapPinsTotal,
-		prometheus.CounterValue,
-		dst[0].DataMapPinsTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.dataMapsTotal,
-		prometheus.CounterValue,
-		dst[0].DataMapsTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.dirtyPages,
-		prometheus.GaugeValue,
-		dst[0].DirtyPages,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.dirtyPageThreshold,
-		prometheus.GaugeValue,
-		dst[0].DirtyPageThreshold,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.fastReadNotPossiblesTotal,
-		prometheus.CounterValue,
-		dst[0].FastReadNotPossiblesTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.fastReadResourceMissesTotal,
-		prometheus.CounterValue,
-		dst[0].FastReadResourceMissesTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.fastReadsTotal,
-		prometheus.CounterValue,
-		dst[0].FastReadsTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.lazyWriteFlushesTotal,
-		prometheus.CounterValue,
-		dst[0].LazyWriteFlushesTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.lazyWritePagesTotal,
-		prometheus.CounterValue,
-		dst[0].LazyWritePagesTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.mdlReadHitsTotal,
-		prometheus.CounterValue,
-		dst[0].MDLReadHitsTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.mdlReadsTotal,
-		prometheus.CounterValue,
-		dst[0].MDLReadsTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.pinReadHitsTotal,
-		prometheus.CounterValue,
-		dst[0].PinReadHitsTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.pinReadsTotal,
-		prometheus.CounterValue,
-		dst[0].PinReadsTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.readAheadsTotal,
-		prometheus.CounterValue,
-		dst[0].ReadAheadsTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.syncCopyReadsTotal,
-		prometheus.CounterValue,
-		dst[0].SyncCopyReadsTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.syncDataMapsTotal,
-		prometheus.CounterValue,
-		dst[0].SyncDataMapsTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.syncFastReadsTotal,
-		prometheus.CounterValue,
-		dst[0].SyncFastReadsTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.syncMDLReadsTotal,
-		prometheus.CounterValue,
-		dst[0].SyncMDLReadsTotal,
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		c.syncPinReadsTotal,
-		prometheus.CounterValue,
-		dst[0].SyncPinReadsTotal,
-	)
-
-	return nil
-}
-
-func (c *Collector) collectPDH(ch chan<- prometheus.Metric) error {
-	data, err := c.perfDataCollector.Collect()
+func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
+	err := c.perfDataCollector.Collect(&c.perfDataObject)
 	if err != nil {
 		return fmt.Errorf("failed to collect Cache metrics: %w", err)
 	}
 
-	cacheData, ok := data[perftypes.EmptyInstance]
-
-	if !ok {
-		return errors.New("perflib query for Cache returned empty result set")
-	}
-
 	ch <- prometheus.MustNewConstMetric(
 		c.asyncCopyReadsTotal,
 		prometheus.CounterValue,
-		cacheData[asyncCopyReadsTotal].FirstValue,
+		c.perfDataObject[0].AsyncCopyReadsTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.asyncDataMapsTotal,
 		prometheus.CounterValue,
-		cacheData[asyncDataMapsTotal].FirstValue,
+		c.perfDataObject[0].AsyncDataMapsTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.asyncFastReadsTotal,
 		prometheus.CounterValue,
-		cacheData[asyncFastReadsTotal].FirstValue,
+		c.perfDataObject[0].AsyncFastReadsTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.asyncMDLReadsTotal,
 		prometheus.CounterValue,
-		cacheData[asyncMDLReadsTotal].FirstValue,
+		c.perfDataObject[0].AsyncMDLReadsTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.asyncPinReadsTotal,
 		prometheus.CounterValue,
-		cacheData[asyncPinReadsTotal].FirstValue,
+		c.perfDataObject[0].AsyncPinReadsTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.copyReadHitsTotal,
 		prometheus.GaugeValue,
-		cacheData[copyReadHitsTotal].FirstValue,
+		c.perfDataObject[0].CopyReadHitsTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.copyReadsTotal,
 		prometheus.CounterValue,
-		cacheData[copyReadsTotal].FirstValue,
+		c.perfDataObject[0].CopyReadsTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.dataFlushesTotal,
 		prometheus.CounterValue,
-		cacheData[dataFlushesTotal].FirstValue,
+		c.perfDataObject[0].DataFlushesTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.dataFlushPagesTotal,
 		prometheus.CounterValue,
-		cacheData[dataFlushPagesTotal].FirstValue,
+		c.perfDataObject[0].DataFlushPagesTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.dataMapHitsPercent,
 		prometheus.GaugeValue,
-		cacheData[dataMapHitsPercent].FirstValue,
+		c.perfDataObject[0].DataMapHitsPercent,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.dataMapPinsTotal,
 		prometheus.CounterValue,
-		cacheData[dataMapPinsTotal].FirstValue,
+		c.perfDataObject[0].DataMapPinsTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.dataMapsTotal,
 		prometheus.CounterValue,
-		cacheData[dataMapsTotal].FirstValue,
+		c.perfDataObject[0].DataMapsTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.dirtyPages,
 		prometheus.GaugeValue,
-		cacheData[dirtyPages].FirstValue,
+		c.perfDataObject[0].DirtyPages,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.dirtyPageThreshold,
 		prometheus.GaugeValue,
-		cacheData[dirtyPageThreshold].FirstValue,
+		c.perfDataObject[0].DirtyPageThreshold,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.fastReadNotPossiblesTotal,
 		prometheus.CounterValue,
-		cacheData[fastReadNotPossiblesTotal].FirstValue,
+		c.perfDataObject[0].FastReadNotPossiblesTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.fastReadResourceMissesTotal,
 		prometheus.CounterValue,
-		cacheData[fastReadResourceMissesTotal].FirstValue,
+		c.perfDataObject[0].FastReadResourceMissesTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.fastReadsTotal,
 		prometheus.CounterValue,
-		cacheData[fastReadsTotal].FirstValue,
+		c.perfDataObject[0].FastReadsTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.lazyWriteFlushesTotal,
 		prometheus.CounterValue,
-		cacheData[lazyWriteFlushesTotal].FirstValue,
+		c.perfDataObject[0].LazyWriteFlushesTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.lazyWritePagesTotal,
 		prometheus.CounterValue,
-		cacheData[lazyWritePagesTotal].FirstValue,
+		c.perfDataObject[0].LazyWritePagesTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.mdlReadHitsTotal,
 		prometheus.CounterValue,
-		cacheData[mdlReadHitsTotal].FirstValue,
+		c.perfDataObject[0].MdlReadHitsTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.mdlReadsTotal,
 		prometheus.CounterValue,
-		cacheData[mdlReadsTotal].FirstValue,
+		c.perfDataObject[0].MdlReadsTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.pinReadHitsTotal,
 		prometheus.CounterValue,
-		cacheData[pinReadHitsTotal].FirstValue,
+		c.perfDataObject[0].PinReadHitsTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.pinReadsTotal,
 		prometheus.CounterValue,
-		cacheData[pinReadsTotal].FirstValue,
+		c.perfDataObject[0].PinReadsTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.readAheadsTotal,
 		prometheus.CounterValue,
-		cacheData[readAheadsTotal].FirstValue,
+		c.perfDataObject[0].ReadAheadsTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.syncCopyReadsTotal,
 		prometheus.CounterValue,
-		cacheData[syncCopyReadsTotal].FirstValue,
+		c.perfDataObject[0].SyncCopyReadsTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.syncDataMapsTotal,
 		prometheus.CounterValue,
-		cacheData[syncDataMapsTotal].FirstValue,
+		c.perfDataObject[0].SyncDataMapsTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.syncFastReadsTotal,
 		prometheus.CounterValue,
-		cacheData[syncFastReadsTotal].FirstValue,
+		c.perfDataObject[0].SyncFastReadsTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.syncMDLReadsTotal,
 		prometheus.CounterValue,
-		cacheData[syncMDLReadsTotal].FirstValue,
+		c.perfDataObject[0].SyncMDLReadsTotal,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.syncPinReadsTotal,
 		prometheus.CounterValue,
-		cacheData[syncPinReadsTotal].FirstValue,
+		c.perfDataObject[0].SyncPinReadsTotal,
 	)
 
 	return nil

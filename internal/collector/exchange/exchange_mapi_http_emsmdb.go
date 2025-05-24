@@ -1,73 +1,70 @@
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+//go:build windows
+
 package exchange
 
 import (
-	"errors"
 	"fmt"
-	"log/slog"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	v1 "github.com/prometheus-community/windows_exporter/internal/perfdata/v1"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-const (
-	activeUserCount = "Active User Count"
-)
+type collectorMapiHTTPEmsMDB struct {
+	perfDataCollectorMapiHTTPEmsMDB *pdh.Collector
+	perfDataObjectMapiHTTPEmsMDB    []perfDataCounterValuesMapiHTTPEmsMDB
 
-// perflib [26463] MSExchange MapiHttp Emsmdb.
-type perflibMapiHttpEmsmdb struct {
-	ActiveUserCount float64 `perflib:"Active User Count"`
+	activeUserCountMapiHTTPEmsMDB *prometheus.Desc
 }
 
-func (c *Collector) buildMapiHttpEmsmdb() error {
-	counters := []string{
-		activeUserCount,
-	}
+type perfDataCounterValuesMapiHTTPEmsMDB struct {
+	ActiveUserCount float64 `perfdata:"Active User Count"`
+}
 
+func (c *Collector) buildMapiHTTPEmsMDB() error {
 	var err error
 
-	c.perfDataCollectorMapiHttpEmsmdb, err = perfdata.NewCollector(perfdata.V1, "MSExchange MapiHttp Emsmdb", perfdata.AllInstances, counters)
+	c.perfDataCollectorMapiHTTPEmsMDB, err = pdh.NewCollector[perfDataCounterValuesMapiHTTPEmsMDB](pdh.CounterTypeRaw, "MSExchange MapiHttp Emsmdb", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create MSExchange MapiHttp Emsmdb: %w", err)
 	}
 
-	return nil
-}
-
-func (c *Collector) collectMapiHttpEmsmdb(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	var data []perflibMapiHttpEmsmdb
-
-	if err := v1.UnmarshalObject(ctx.PerfObjects["MSExchange MapiHttp Emsmdb"], &data, logger); err != nil {
-		return err
-	}
-
-	for _, mapihttp := range data {
-		ch <- prometheus.MustNewConstMetric(
-			c.activeUserCountMapiHttpEmsMDB,
-			prometheus.GaugeValue,
-			mapihttp.ActiveUserCount,
-		)
-	}
+	c.activeUserCountMapiHTTPEmsMDB = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "mapihttp_emsmdb_active_user_count"),
+		"Number of unique outlook users that have shown some kind of activity in the last 2 minutes",
+		nil,
+		nil,
+	)
 
 	return nil
 }
 
-func (c *Collector) collectPDHMapiHttpEmsmdb(ch chan<- prometheus.Metric) error {
-	perfData, err := c.perfDataCollectorMapiHttpEmsmdb.Collect()
+func (c *Collector) collectMapiHTTPEmsMDB(ch chan<- prometheus.Metric) error {
+	err := c.perfDataCollectorMapiHTTPEmsMDB.Collect(&c.perfDataObjectMapiHTTPEmsMDB)
 	if err != nil {
 		return fmt.Errorf("failed to collect MSExchange MapiHttp Emsmdb metrics: %w", err)
 	}
 
-	if len(perfData) == 0 {
-		return errors.New("perflib query for MSExchange MapiHttp Emsmdb returned empty result set")
-	}
-
-	for _, data := range perfData {
+	for _, data := range c.perfDataObjectMapiHTTPEmsMDB {
 		ch <- prometheus.MustNewConstMetric(
-			c.activeUserCountMapiHttpEmsMDB,
+			c.activeUserCountMapiHTTPEmsMDB,
 			prometheus.GaugeValue,
-			data[activeUserCount].FirstValue,
+			data.ActiveUserCount,
 		)
 	}
 

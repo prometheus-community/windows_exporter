@@ -21,19 +21,21 @@ If given, a disk needs to *not* match the exclude regexp in order for the corres
 
 ## Metrics
 
-Name | Description | Type | Labels
------|-------------|------|-------
-`requests_queued` | Number of requests outstanding on the disk at the time the performance data is collected | gauge | `disk`
-`read_bytes_total` | Rate at which bytes are transferred from the disk during read operations | counter | `disk`
-`reads_total` | Rate of read operations on the disk | counter | `disk`
-`write_bytes_total` | Rate at which bytes are transferred to the disk during write operations  | counter | `disk`
-`writes_total` | Rate of write operations on the disk  | counter | `disk`
-`read_seconds_total` | Seconds the disk was busy servicing read requests | counter | `disk`
-`write_seconds_total` | Seconds the disk was busy servicing write requests | counter | `disk`
-`free_bytes` | Unused space of the disk in bytes (not real time, updates every 10-15 min) | gauge | `disk`
-`size_bytes` | Total size of the disk in bytes (not real time, updates every 10-15 min) | gauge | `disk`
-`idle_seconds_total` | Seconds the disk was idle (not servicing read/write requests) | counter | `disk`
-`split_ios_total` | Number of I/Os to the disk split into multiple I/Os | counter | `disk`
+| Name                                                   | Description                                                                                             | Type    | Labels |
+|--------------------------------------------------------|---------------------------------------------------------------------------------------------------------|---------|--------|
+| windows_physical_disk_requests_queued                  | The number of requests queued to the disk (PhysicalDisk.CurrentDiskQueueLength)                         | Gauge   | disk   |
+| windows_physical_disk_read_bytes_total                 | The number of bytes transferred from the disk during read operations (PhysicalDisk.DiskReadBytesPerSec) | Counter | disk   |
+| windows_physical_disk_reads_total                      | The number of read operations on the disk (PhysicalDisk.DiskReadsPerSec)                                | Counter | disk   |
+| windows_physical_disk_write_bytes_total                | The number of bytes transferred to the disk during write operations (PhysicalDisk.DiskWriteBytesPerSec) | Counter | disk   |
+| windows_physical_disk_writes_total                     | The number of write operations on the disk (PhysicalDisk.DiskWritesPerSec)                              | Counter | disk   |
+| windows_physical_disk_read_seconds_total               | Seconds that the disk was busy servicing read requests (PhysicalDisk.PercentDiskReadTime)               | Counter | disk   |
+| windows_physical_disk_write_seconds_total              | Seconds that the disk was busy servicing write requests (PhysicalDisk.PercentDiskWriteTime)             | Counter | disk   |
+| windows_physical_disk_idle_seconds_total               | Seconds that the disk was idle (PhysicalDisk.PercentIdleTime)                                           | Counter | disk   |
+| windows_physical_disk_split_ios_total                  | The number of I/Os to the disk that were split into multiple I/Os (PhysicalDisk.SplitIOPerSec)          | Counter | disk   |
+| windows_physical_disk_read_latency_seconds_total       | The average time, in seconds, of a read operation from the disk (PhysicalDisk.AvgDiskSecPerRead)        | Counter | disk   |
+| windows_physical_disk_write_latency_seconds_total      | The average time, in seconds, of a write operation to the disk (PhysicalDisk.AvgDiskSecPerWrite)        | Counter | disk   |
+| windows_physical_disk_read_write_latency_seconds_total | The time, in seconds, of the average disk transfer (PhysicalDisk.AvgDiskSecPerTransfer)                 | Counter | disk   |
+
 
 ### Warning about size metrics
 The `free_bytes` and `size_bytes` metrics are not updated in real time and might have a delay of 10-15min.
@@ -52,29 +54,4 @@ rate(windows_physical_disk_reads_total{instance="localhost", disk=~"0"}[2m]) + r
 ```
 
 ## Alerting examples
-**prometheus.rules**
-```yaml
-groups:
-- name: Windows Disk Alerts
-  rules:
-
-  # Sends an alert when disk space usage is above 95%
-  - alert: DiskSpaceUsage
-    expr: 100.0 - 100 * (windows_physical_disk_free_bytes / windows_physical_disk_size_bytes) > 95
-    for: 10m
-    labels:
-      severity: high
-    annotations:
-      summary: "Disk Space Usage (instance {{ $labels.instance }})"
-      description: "Disk Space on Drive is used more than 95%\n  VALUE = {{ $value }}\n  LABELS: {{ $labels }}"
-
-  # Alerts on disks with over 85% space usage predicted to fill within the next four days
-  - alert: DiskFilling
-    expr: 100 * (windows_physical_disk_free_bytes / windows_physical_disk_size_bytes) < 15 and predict_linear(windows_physical_disk_free_bytes[6h], 4 * 24 * 3600) < 0
-    for: 10m
-    labels:
-      severity: warning
-    annotations:
-      summary: "Disk full in four days (instance {{ $labels.instance }})"
-      description: "{{ $labels.disk }} is expected to fill up within four days. Currently {{ $value | humanize }}% is available.\n VALUE = {{ $value }}\n LABELS: {{ $labels }}"
-```
+_This collector does not yet have alerting examples, we would appreciate your help adding them!_

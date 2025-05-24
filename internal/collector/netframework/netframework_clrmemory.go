@@ -1,3 +1,18 @@
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 //go:build windows
 
 package netframework
@@ -13,73 +28,73 @@ import (
 
 func (c *Collector) buildClrMemory() {
 	c.allocatedBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "allocated_bytes_total"),
+		prometheus.BuildFQName(types.Namespace, Name, collectorClrMemory+"_allocated_bytes_total"),
 		"Displays the total number of bytes allocated on the garbage collection heap.",
 		[]string{"process"},
 		nil,
 	)
 	c.finalizationSurvivors = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "finalization_survivors"),
+		prometheus.BuildFQName(types.Namespace, Name, collectorClrMemory+"_finalization_survivors"),
 		"Displays the number of garbage-collected objects that survive a collection because they are waiting to be finalized.",
 		[]string{"process"},
 		nil,
 	)
 	c.heapSize = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "heap_size_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, collectorClrMemory+"_heap_size_bytes"),
 		"Displays the maximum bytes that can be allocated; it does not indicate the current number of bytes allocated.",
 		[]string{"process", "area"},
 		nil,
 	)
 	c.promotedBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "promoted_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, collectorClrMemory+"_promoted_bytes"),
 		"Displays the bytes that were promoted from the generation to the next one during the last GC. Memory is promoted when it survives a garbage collection.",
 		[]string{"process", "area"},
 		nil,
 	)
 	c.numberGCHandles = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "number_gc_handles"),
+		prometheus.BuildFQName(types.Namespace, Name, collectorClrMemory+"_number_gc_handles"),
 		"Displays the current number of garbage collection handles in use. Garbage collection handles are handles to resources external to the common language runtime and the managed environment.",
 		[]string{"process"},
 		nil,
 	)
 	c.numberCollections = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "collections_total"),
+		prometheus.BuildFQName(types.Namespace, Name, collectorClrMemory+"_collections_total"),
 		"Displays the number of times the generation objects are garbage collected since the application started.",
 		[]string{"process", "area"},
 		nil,
 	)
 	c.numberInducedGC = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "induced_gc_total"),
+		prometheus.BuildFQName(types.Namespace, Name, collectorClrMemory+"_induced_gc_total"),
 		"Displays the peak number of times garbage collection was performed because of an explicit call to GC.Collect.",
 		[]string{"process"},
 		nil,
 	)
 	c.numberOfPinnedObjects = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "number_pinned_objects"),
+		prometheus.BuildFQName(types.Namespace, Name, collectorClrMemory+"_number_pinned_objects"),
 		"Displays the number of pinned objects encountered in the last garbage collection.",
 		[]string{"process"},
 		nil,
 	)
 	c.numberOfSinkBlocksInUse = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "number_sink_blocksinuse"),
+		prometheus.BuildFQName(types.Namespace, Name, collectorClrMemory+"_number_sink_blocksinuse"),
 		"Displays the current number of synchronization blocks in use. Synchronization blocks are per-object data structures allocated for storing synchronization information. They hold weak references to managed objects and must be scanned by the garbage collector.",
 		[]string{"process"},
 		nil,
 	)
 	c.numberTotalCommittedBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "committed_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, collectorClrMemory+"_committed_bytes"),
 		"Displays the amount of virtual memory, in bytes, currently committed by the garbage collector. Committed memory is the physical memory for which space has been reserved in the disk paging file.",
 		[]string{"process"},
 		nil,
 	)
 	c.numberTotalReservedBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "reserved_bytes"),
+		prometheus.BuildFQName(types.Namespace, Name, collectorClrMemory+"_reserved_bytes"),
 		"Displays the amount of virtual memory, in bytes, currently reserved by the garbage collector. Reserved memory is the virtual memory space reserved for the application when no disk or main memory pages have been used.",
 		[]string{"process"},
 		nil,
 	)
 	c.timeInGC = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "gc_time_percent"),
+		prometheus.BuildFQName(types.Namespace, Name, collectorClrMemory+"_gc_time_percent"),
 		"Displays the percentage of time that was spent performing a garbage collection in the last sample.",
 		[]string{"process"},
 		nil,
@@ -122,7 +137,7 @@ type Win32_PerfRawData_NETFramework_NETCLRMemory struct {
 
 func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_NETFramework_NETCLRMemory
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * Win32_PerfRawData_NETFramework_NETCLRMemory"))); err != nil {
+	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * FROM Win32_PerfRawData_NETFramework_NETCLRMemory"))); err != nil {
 		return fmt.Errorf("WMI query failed: %w", err)
 	}
 

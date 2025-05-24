@@ -1,3 +1,20 @@
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+//go:build windows
+
 package mscluster
 
 import (
@@ -5,11 +22,32 @@ import (
 
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
-	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 const nameResource = Name + "_resource"
+
+type collectorResource struct {
+	resourceMIQuery mi.Query
+
+	resourceCharacteristics        *prometheus.Desc
+	resourceDeadlockTimeout        *prometheus.Desc
+	resourceEmbeddedFailureAction  *prometheus.Desc
+	resourceFlags                  *prometheus.Desc
+	resourceIsAlivePollInterval    *prometheus.Desc
+	resourceLooksAlivePollInterval *prometheus.Desc
+	resourceMonitorProcessId       *prometheus.Desc
+	resourceOwnerNode              *prometheus.Desc
+	resourcePendingTimeout         *prometheus.Desc
+	resourceResourceClass          *prometheus.Desc
+	resourceRestartAction          *prometheus.Desc
+	resourceRestartDelay           *prometheus.Desc
+	resourceRestartPeriod          *prometheus.Desc
+	resourceRestartThreshold       *prometheus.Desc
+	resourceRetryPeriodOnFailure   *prometheus.Desc
+	resourceState                  *prometheus.Desc
+	resourceSubClass               *prometheus.Desc
+}
 
 // msClusterResource represents the MSCluster_Resource WMI class
 // - https://docs.microsoft.com/en-us/previous-versions/windows/desktop/cluswmi/mscluster-resource
@@ -37,7 +75,14 @@ type msClusterResource struct {
 	Subclass               uint `mi:"Subclass"`
 }
 
-func (c *Collector) buildResource() {
+func (c *Collector) buildResource() error {
+	resourceMIQuery, err := mi.NewQuery("SELECT Name,Type,OwnerGroup,OwnerNode,Characteristics,DeadlockTimeout,EmbeddedFailureAction,Flags,IsAlivePollInterval,LooksAlivePollInterval,MonitorProcessId,PendingTimeout,ResourceClass,RestartAction,RestartDelay,RestartPeriod,RestartThreshold,RetryPeriodOnFailure,State,Subclass FROM MSCluster_Resource")
+	if err != nil {
+		return fmt.Errorf("failed to create WMI query: %w", err)
+	}
+
+	c.resourceMIQuery = resourceMIQuery
+
 	c.resourceCharacteristics = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameResource, "characteristics"),
 		"Provides the characteristics of the object.",
@@ -146,6 +191,14 @@ func (c *Collector) buildResource() {
 		[]string{"type", "owner_group", "name"},
 		nil,
 	)
+
+	var dst []msClusterResource
+
+	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, c.resourceMIQuery); err != nil {
+		return fmt.Errorf("WMI query failed: %w", err)
+	}
+
+	return nil
 }
 
 // Collect sends the metric values for each metric
@@ -153,7 +206,7 @@ func (c *Collector) buildResource() {
 func (c *Collector) collectResource(ch chan<- prometheus.Metric, nodeNames []string) error {
 	var dst []msClusterResource
 
-	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, utils.Must(mi.NewQuery("SELECT * FROM MSCluster_Resource"))); err != nil {
+	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, c.resourceMIQuery); err != nil {
 		return fmt.Errorf("WMI query failed: %w", err)
 	}
 

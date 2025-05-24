@@ -1,15 +1,51 @@
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+//go:build windows
+
 package mscluster
 
 import (
 	"fmt"
 
 	"github.com/prometheus-community/windows_exporter/internal/mi"
+	"github.com/prometheus-community/windows_exporter/internal/osversion"
 	"github.com/prometheus-community/windows_exporter/internal/types"
-	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 const nameNode = Name + "_node"
+
+type collectorNode struct {
+	nodeMIQuery mi.Query
+
+	nodeBuildNumber           *prometheus.Desc
+	nodeCharacteristics       *prometheus.Desc
+	nodeDetectedCloudPlatform *prometheus.Desc
+	nodeDynamicWeight         *prometheus.Desc
+	nodeFlags                 *prometheus.Desc
+	nodeMajorVersion          *prometheus.Desc
+	nodeMinorVersion          *prometheus.Desc
+	nodeNeedsPreventQuorum    *prometheus.Desc
+	nodeNodeDrainStatus       *prometheus.Desc
+	nodeNodeHighestVersion    *prometheus.Desc
+	nodeNodeLowestVersion     *prometheus.Desc
+	nodeNodeWeight            *prometheus.Desc
+	nodeState                 *prometheus.Desc
+	nodeStatusInformation     *prometheus.Desc
+}
 
 // msClusterNode represents the MSCluster_Node WMI class
 // - https://docs.microsoft.com/en-us/previous-versions/windows/desktop/cluswmi/mscluster-node
@@ -32,7 +68,21 @@ type msClusterNode struct {
 	StatusInformation     uint `mi:"StatusInformation"`
 }
 
-func (c *Collector) buildNode() {
+func (c *Collector) buildNode() error {
+	buildNumber := osversion.Build()
+
+	wmiSelect := "BuildNumber,Characteristics,DynamicWeight,Flags,MajorVersion,MinorVersion,NeedsPreventQuorum,NodeDrainStatus,NodeHighestVersion,NodeLowestVersion,NodeWeight,State,StatusInformation"
+	if buildNumber >= osversion.LTSC2022 {
+		wmiSelect += ",DetectedCloudPlatform"
+	}
+
+	nodeMIQuery, err := mi.NewQuery(fmt.Sprintf("SELECT %s FROM MSCluster_Node", wmiSelect))
+	if err != nil {
+		return fmt.Errorf("failed to create WMI query: %w", err)
+	}
+
+	c.nodeMIQuery = nodeMIQuery
+
 	c.nodeBuildNumber = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameNode, "build_number"),
 		"Provides access to the node's BuildNumber property.",
@@ -117,6 +167,14 @@ func (c *Collector) buildNode() {
 		[]string{"name"},
 		nil,
 	)
+
+	var dst []msClusterNode
+
+	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, c.nodeMIQuery); err != nil {
+		return fmt.Errorf("WMI query failed: %w", err)
+	}
+
+	return nil
 }
 
 // Collect sends the metric values for each metric
@@ -124,7 +182,7 @@ func (c *Collector) buildNode() {
 func (c *Collector) collectNode(ch chan<- prometheus.Metric) ([]string, error) {
 	var dst []msClusterNode
 
-	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, utils.Must(mi.NewQuery("SELECT * FROM MSCluster_Node"))); err != nil {
+	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, c.nodeMIQuery); err != nil {
 		return nil, fmt.Errorf("WMI query failed: %w", err)
 	}
 

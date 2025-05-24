@@ -1,3 +1,18 @@
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 //go:build windows
 
 package os
@@ -6,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -14,10 +28,9 @@ import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/headers/kernel32"
 	"github.com/prometheus-community/windows_exporter/internal/headers/netapi32"
-	"github.com/prometheus-community/windows_exporter/internal/headers/psapi"
 	"github.com/prometheus-community/windows_exporter/internal/headers/sysinfoapi"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
-	v1 "github.com/prometheus-community/windows_exporter/internal/perfdata/v1"
+	"github.com/prometheus-community/windows_exporter/internal/osversion"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows"
@@ -28,26 +41,22 @@ const Name = "os"
 
 type Config struct{}
 
+//nolint:gochecknoglobals
 var ConfigDefaults = Config{}
 
 // A Collector is a Prometheus Collector for WMI metrics.
 type Collector struct {
 	config Config
 
-	hostname         *prometheus.Desc
-	osInformation    *prometheus.Desc
-	pagingFreeBytes  *prometheus.Desc
-	pagingLimitBytes *prometheus.Desc
+	hostname      *prometheus.Desc
+	osInformation *prometheus.Desc
 
-	// users
-	// Deprecated: Use windows_system_processes instead.
-	processes *prometheus.Desc
 	// users
 	// Deprecated: Use windows_system_process_limit instead.
 	processesLimit *prometheus.Desc
 
 	// users
-	// Deprecated: Use count(windows_logon_logon_type) instead.
+	// Deprecated: Use `sum(windows_terminal_services_session_info{state="active"})` instead.
 	users *prometheus.Desc
 
 	// physicalMemoryFreeBytes
@@ -75,12 +84,6 @@ type Collector struct {
 	visibleMemoryBytes *prometheus.Desc
 }
 
-type pagingFileCounter struct {
-	Name      string
-	Usage     float64 `perflib:"% Usage"`
-	UsagePeak float64 `perflib:"% Usage Peak"`
-}
-
 func New(config *Config) *Collector {
 	if config == nil {
 		config = &ConfigDefaults
@@ -101,28 +104,26 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
-	return []string{"Paging File"}, nil
-}
-
-func (c *Collector) Close(_ *slog.Logger) error {
+func (c *Collector) Close() error {
 	return nil
 }
 
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
-	logger.Warn("The os collect holds a number of deprecated metrics and will be removed mid 2025. "+
+	logger.Warn("The os collector holds a number of deprecated metrics and will be removed mid 2025. "+
 		"See https://github.com/prometheus-community/windows_exporter/pull/1596 for more information.",
 		slog.String("collector", Name),
 	)
 
-	workstationInfo, err := netapi32.GetWorkstationInfo()
-	if err != nil {
-		return fmt.Errorf("failed to get workstation info: %w", err)
-	}
-
-	productName, buildNumber, revision, err := c.getWindowsVersion()
+	productName, revision, err := c.getWindowsVersion()
 	if err != nil {
 		return fmt.Errorf("failed to get Windows version: %w", err)
+	}
+
+	version := osversion.Get()
+
+	// Microsoft has decided to keep the major version as "10" for Windows 11, including the product name.
+	if version.Build >= osversion.V21H2Win11 {
+		productName = strings.Replace(productName, " 10 ", " 11 ", 1)
 	}
 
 	c.osInformation = prometheus.NewDesc(
@@ -131,10 +132,10 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		nil,
 		prometheus.Labels{
 			"product":       productName,
-			"version":       fmt.Sprintf("%d.%d.%s", workstationInfo.VersionMajor, workstationInfo.VersionMinor, buildNumber),
-			"major_version": strconv.FormatUint(uint64(workstationInfo.VersionMajor), 10),
-			"minor_version": strconv.FormatUint(uint64(workstationInfo.VersionMinor), 10),
-			"build_number":  buildNumber,
+			"version":       version.String(),
+			"major_version": strconv.FormatUint(uint64(version.MajorVersion), 10),
+			"minor_version": strconv.FormatUint(uint64(version.MinorVersion), 10),
+			"build_number":  strconv.FormatUint(uint64(version.Build), 10),
 			"revision":      revision,
 		},
 	)
@@ -147,18 +148,6 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 			"domain",
 			"fqdn",
 		},
-		nil,
-	)
-	c.pagingLimitBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "paging_limit_bytes"),
-		"OperatingSystem.SizeStoredInPagingFiles",
-		nil,
-		nil,
-	)
-	c.pagingFreeBytes = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "paging_free_bytes"),
-		"OperatingSystem.FreeSpaceInPagingFiles",
-		nil,
 		nil,
 	)
 	c.physicalMemoryFreeBytes = prometheus.NewDesc(
@@ -179,12 +168,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		[]string{"timezone"},
 		nil,
 	)
-	c.processes = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "processes"),
-		"Deprecated: Use `windows_system_processes` instead.",
-		nil,
-		nil,
-	)
+
 	c.processesLimit = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "processes_limit"),
 		"Deprecated: Use `windows_system_process_limit` instead.",
@@ -199,7 +183,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	)
 	c.users = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "users"),
-		"Deprecated: Use `count(windows_logon_logon_type)` instead.",
+		"Deprecated: Use `sum(windows_terminal_services_session_info{state=\"active\"})` instead.",
 		nil,
 		nil,
 	)
@@ -227,51 +211,25 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	logger = logger.With(slog.String("collector", Name))
-
-	errs := make([]error, 0, 5)
+func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
+	errs := make([]error, 0)
 
 	c.collect(ch)
 
 	if err := c.collectHostname(ch); err != nil {
-		logger.Error("failed collecting os metrics",
-			slog.Any("err", err),
-		)
-
-		errs = append(errs, err)
+		errs = append(errs, fmt.Errorf("failed to collect hostname metrics: %w", err))
 	}
 
 	if err := c.collectLoggedInUserCount(ch); err != nil {
-		logger.Error("failed collecting os user count metrics",
-			slog.Any("err", err),
-		)
-
-		errs = append(errs, err)
+		errs = append(errs, fmt.Errorf("failed to collect user count metrics: %w", err))
 	}
 
 	if err := c.collectMemory(ch); err != nil {
-		logger.Error("failed collecting os memory metrics",
-			slog.Any("err", err),
-		)
-
-		errs = append(errs, err)
+		errs = append(errs, fmt.Errorf("failed to collect memory metrics: %w", err))
 	}
 
 	if err := c.collectTime(ch); err != nil {
-		logger.Error("failed collecting os time metrics",
-			slog.Any("err", err),
-		)
-
-		errs = append(errs, err)
-	}
-
-	if err := c.collectPaging(ctx, logger, ch); err != nil {
-		logger.Error("failed collecting os paging metrics",
-			slog.Any("err", err),
-		)
-
-		errs = append(errs, err)
+		errs = append(errs, fmt.Errorf("failed to collect time metrics: %w", err))
 	}
 
 	return errors.Join(errs...)
@@ -384,79 +342,6 @@ func (c *Collector) collectMemory(ch chan<- prometheus.Metric) error {
 	return nil
 }
 
-func (c *Collector) collectPaging(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	// Get total allocation of paging files across all disks.
-	memManKey, err := registry.OpenKey(registry.LOCAL_MACHINE, `SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management`, registry.QUERY_VALUE)
-	if err != nil {
-		return err
-	}
-
-	defer memManKey.Close()
-
-	pagingFiles, _, pagingErr := memManKey.GetStringsValue("ExistingPageFiles")
-
-	var fsipf float64
-
-	for _, pagingFile := range pagingFiles {
-		fileString := strings.ReplaceAll(pagingFile, `\??\`, "")
-		file, err := os.Stat(fileString)
-		// For unknown reasons, Windows doesn't always create a page file. Continue collection rather than aborting.
-		if err != nil {
-			logger.Debug(fmt.Sprintf("Failed to read page file (reason: %s): %s\n", err, fileString))
-		} else {
-			fsipf += float64(file.Size())
-		}
-	}
-
-	gpi, err := psapi.GetPerformanceInfo()
-	if err != nil {
-		return err
-	}
-
-	pfc := make([]pagingFileCounter, 0)
-	if err = v1.UnmarshalObject(ctx.PerfObjects["Paging File"], &pfc, logger); err != nil {
-		return err
-	}
-
-	// Get current page file usage.
-	var pfbRaw float64
-
-	for _, pageFile := range pfc {
-		if strings.Contains(strings.ToLower(pageFile.Name), "_total") {
-			continue
-		}
-
-		pfbRaw += pageFile.Usage
-	}
-
-	if pagingErr == nil {
-		// Subtract from total page file allocation on disk.
-		pfb := fsipf - (pfbRaw * float64(gpi.PageSize))
-
-		ch <- prometheus.MustNewConstMetric(
-			c.pagingFreeBytes,
-			prometheus.GaugeValue,
-			pfb,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.pagingLimitBytes,
-			prometheus.GaugeValue,
-			fsipf,
-		)
-	} else {
-		logger.Debug("Could not find HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management key. windows_os_paging_free_bytes and windows_os_paging_limit_bytes will be omitted.")
-	}
-
-	ch <- prometheus.MustNewConstMetric(
-		c.processes,
-		prometheus.GaugeValue,
-		float64(gpi.ProcessCount),
-	)
-
-	return nil
-}
-
 func (c *Collector) collect(ch chan<- prometheus.Metric) {
 	ch <- prometheus.MustNewConstMetric(
 		c.osInformation,
@@ -474,31 +359,28 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) {
 	)
 }
 
-func (c *Collector) getWindowsVersion() (string, string, string, error) {
+func (c *Collector) getWindowsVersion() (string, string, error) {
 	// Get build number and product name from registry
 	ntKey, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\Microsoft\Windows NT\CurrentVersion`, registry.QUERY_VALUE)
 	if err != nil {
-		return "", "", "", fmt.Errorf("failed to open registry key: %w", err)
+		return "", "", fmt.Errorf("failed to open registry key: %w", err)
 	}
 
-	defer ntKey.Close()
+	defer func(ntKey registry.Key) {
+		_ = ntKey.Close()
+	}(ntKey)
 
 	productName, _, err := ntKey.GetStringValue("ProductName")
 	if err != nil {
-		return "", "", "", err
-	}
-
-	buildNumber, _, err := ntKey.GetStringValue("CurrentBuildNumber")
-	if err != nil {
-		return "", "", "", err
+		return "", "", err
 	}
 
 	revision, _, err := ntKey.GetIntegerValue("UBR")
 	if errors.Is(err, registry.ErrNotExist) {
 		revision = 0
 	} else if err != nil {
-		return "", "", "", err
+		return "", "", err
 	}
 
-	return productName, buildNumber, strconv.FormatUint(revision, 10), nil
+	return strings.TrimSpace(productName), strconv.FormatUint(revision, 10), nil
 }

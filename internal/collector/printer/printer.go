@@ -1,3 +1,18 @@
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 //go:build windows
 
 package printer
@@ -18,6 +33,8 @@ import (
 const Name = "printer"
 
 // printerStatusMap source: https://learn.microsoft.com/en-us/windows/win32/cimwin32prov/win32-printer#:~:text=Power%20Save-,PrinterStatus,Offline%20(7),-PrintJobDataType
+//
+//nolint:gochecknoglobals
 var printerStatusMap = map[uint16]string{
 	1: "Other",
 	2: "Unknown",
@@ -29,10 +46,11 @@ var printerStatusMap = map[uint16]string{
 }
 
 type Config struct {
-	PrinterInclude *regexp.Regexp `yaml:"printer_include"`
-	PrinterExclude *regexp.Regexp `yaml:"printer_exclude"`
+	PrinterInclude *regexp.Regexp `yaml:"include"`
+	PrinterExclude *regexp.Regexp `yaml:"exclude"`
 }
 
+//nolint:gochecknoglobals
 var ConfigDefaults = Config{
 	PrinterInclude: types.RegExpAny,
 	PrinterExclude: types.RegExpEmpty,
@@ -105,30 +123,11 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 	return c
 }
 
-func (c *Collector) Close(_ *slog.Logger) error {
+func (c *Collector) Close() error {
 	return nil
 }
 
 func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
-	if miSession == nil {
-		return errors.New("miSession is nil")
-	}
-
-	miQuery, err := mi.NewQuery("SELECT Name, Default, PrinterStatus, JobCountSinceLastReset FROM win32_Printer")
-	if err != nil {
-		return fmt.Errorf("failed to create WMI query: %w", err)
-	}
-
-	c.miQueryPrinter = miQuery
-
-	miQuery, err = mi.NewQuery("SELECT Name, Status FROM win32_PrintJob")
-	if err != nil {
-		return fmt.Errorf("failed to create WMI query: %w", err)
-	}
-
-	c.miQueryPrinterJobs = miQuery
-	c.miSession = miSession
-
 	c.printerJobStatus = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "job_status"),
 		"A counter of printer jobs by status",
@@ -148,14 +147,29 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 		nil,
 	)
 
+	if miSession == nil {
+		return errors.New("miSession is nil")
+	}
+
+	miQuery, err := mi.NewQuery("SELECT Name, Default, PrinterStatus, JobCountSinceLastReset FROM win32_Printer")
+	if err != nil {
+		return fmt.Errorf("failed to create WMI query: %w", err)
+	}
+
+	c.miQueryPrinter = miQuery
+
+	miQuery, err = mi.NewQuery("SELECT Name, Status FROM win32_PrintJob")
+	if err != nil {
+		return fmt.Errorf("failed to create WMI query: %w", err)
+	}
+
+	c.miQueryPrinterJobs = miQuery
+	c.miSession = miSession
+
 	return nil
 }
 
 func (c *Collector) GetName() string { return Name }
-
-func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
-	return []string{"Printer"}, nil
-}
 
 type wmiPrinter struct {
 	Name                   string `mi:"Name"`
@@ -169,7 +183,7 @@ type wmiPrintJob struct {
 	Status string `mi:"Status"`
 }
 
-func (c *Collector) Collect(_ *types.ScrapeContext, _ *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	var errs []error
 
 	if err := c.collectPrinterStatus(ch); err != nil {

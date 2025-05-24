@@ -1,3 +1,18 @@
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 //go:build windows
 
 package mi
@@ -16,6 +31,8 @@ import (
 // OperationOptionsTimeout is the key for the timeout option.
 //
 // https://github.com/microsoft/win32metadata/blob/527806d20d83d3abd43d16cd3fa8795d8deba343/generation/WinSDK/RecompiledIdlHeaders/um/mi.h#L9240
+//
+//nolint:gochecknoglobals
 var OperationOptionsTimeout = UTF16PtrFromString[*uint16]("__MI_OPERATIONOPTIONS_TIMEOUT")
 
 // OperationFlags represents the flags for an operation.
@@ -201,7 +218,7 @@ func (o *Operation) Unmarshal(dst any) error {
 
 			element, err := instance.GetElement(miTag)
 			if err != nil {
-				return fmt.Errorf("failed to get element: %w", err)
+				return fmt.Errorf("failed to get element %s: %w", miTag, err)
 			}
 
 			switch element.valueType {

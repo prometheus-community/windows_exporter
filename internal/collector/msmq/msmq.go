@@ -1,34 +1,45 @@
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 //go:build windows
 
 package msmq
 
 import (
-	"errors"
 	"fmt"
 	"log/slog"
-	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
-	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 const Name = "msmq"
 
-type Config struct {
-	QueryWhereClause *string `yaml:"query_where_clause"`
-}
+type Config struct{}
 
-var ConfigDefaults = Config{
-	QueryWhereClause: utils.ToPTR(""),
-}
+//nolint:gochecknoglobals
+var ConfigDefaults = Config{}
 
 // A Collector is a Prometheus Collector for WMI Win32_PerfRawData_MSMQ_MSMQQueue metrics.
 type Collector struct {
-	config    Config
-	miSession *mi.Session
+	config            Config
+	perfDataCollector *pdh.Collector
+	perfDataObject    []perfDataCounterValues
 
 	bytesInJournalQueue    *prometheus.Desc
 	bytesInQueue           *prometheus.Desc
@@ -41,10 +52,6 @@ func New(config *Config) *Collector {
 		config = &ConfigDefaults
 	}
 
-	if config.QueryWhereClause == nil {
-		config.QueryWhereClause = ConfigDefaults.QueryWhereClause
-	}
-
 	c := &Collector{
 		config: *config,
 	}
@@ -52,14 +59,10 @@ func New(config *Config) *Collector {
 	return c
 }
 
-func NewWithFlags(app *kingpin.Application) *Collector {
+func NewWithFlags(_ *kingpin.Application) *Collector {
 	c := &Collector{
 		config: ConfigDefaults,
 	}
-
-	app.Flag("collector.msmq.msmq-where", "WQL 'where' clause to use in WMI metrics query. "+
-		"Limits the response to the msmqs you specify and reduces the size of the response.").
-		Default(*c.config.QueryWhereClause).StringVar(c.config.QueryWhereClause)
 
 	return c
 }
@@ -68,27 +71,11 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
-	return []string{}, nil
-}
-
-func (c *Collector) Close(_ *slog.Logger) error {
+func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
-	logger = logger.With(slog.String("collector", Name))
-
-	if miSession == nil {
-		return errors.New("miSession is nil")
-	}
-
-	c.miSession = miSession
-
-	if *c.config.QueryWhereClause == "" {
-		logger.Warn("No where-clause specified for msmq collector. This will generate a very large number of metrics!")
-	}
-
+func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 	c.bytesInJournalQueue = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "bytes_in_journal_queue"),
 		"Size of queue journal in bytes",
@@ -114,77 +101,51 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 		nil,
 	)
 
+	var err error
+
+	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "MSMQ Queue", pdh.InstancesAll)
+	if err != nil {
+		return fmt.Errorf("failed to create MSMQ Queue collector: %w", err)
+	}
+
 	return nil
 }
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	logger = logger.With(slog.String("collector", Name))
-	if err := c.collect(ch); err != nil {
-		logger.Error("failed collecting msmq metrics",
-			slog.Any("err", err),
-		)
-
-		return err
-	}
-
-	return nil
-}
-
-type msmqQueue struct {
-	Name string `mi:"Name"`
-
-	BytesInJournalQueue    uint64 `mi:"BytesInJournalQueue"`
-	BytesInQueue           uint64 `mi:"BytesInQueue"`
-	MessagesInJournalQueue uint64 `mi:"MessagesInJournalQueue"`
-	MessagesInQueue        uint64 `mi:"MessagesInQueue"`
-}
-
-func (c *Collector) collect(ch chan<- prometheus.Metric) error {
-	var dst []msmqQueue
-
-	query := "SELECT * FROM Win32_PerfRawData_MSMQ_MSMQQueue"
-	if *c.config.QueryWhereClause != "" {
-		query += " WHERE " + *c.config.QueryWhereClause
-	}
-
-	queryExpression, err := mi.NewQuery(query)
+func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
+	err := c.perfDataCollector.Collect(&c.perfDataObject)
 	if err != nil {
-		return fmt.Errorf("failed to create WMI query: %w", err)
+		return fmt.Errorf("failed to collect MSMQ Queue metrics: %w", err)
 	}
 
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, queryExpression); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
-	}
-
-	for _, msmq := range dst {
+	for _, data := range c.perfDataObject {
 		ch <- prometheus.MustNewConstMetric(
 			c.bytesInJournalQueue,
 			prometheus.GaugeValue,
-			float64(msmq.BytesInJournalQueue),
-			strings.ToLower(msmq.Name),
+			data.BytesInJournalQueue,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.bytesInQueue,
 			prometheus.GaugeValue,
-			float64(msmq.BytesInQueue),
-			strings.ToLower(msmq.Name),
+			data.BytesInQueue,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.messagesInJournalQueue,
 			prometheus.GaugeValue,
-			float64(msmq.MessagesInJournalQueue),
-			strings.ToLower(msmq.Name),
+			data.MessagesInJournalQueue,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.messagesInQueue,
 			prometheus.GaugeValue,
-			float64(msmq.MessagesInQueue),
-			strings.ToLower(msmq.Name),
+			data.MessagesInQueue,
+			data.Name,
 		)
 	}
 

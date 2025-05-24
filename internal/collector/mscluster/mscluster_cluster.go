@@ -1,15 +1,114 @@
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+//go:build windows
+
 package mscluster
 
 import (
 	"fmt"
 
 	"github.com/prometheus-community/windows_exporter/internal/mi"
+	"github.com/prometheus-community/windows_exporter/internal/osversion"
 	"github.com/prometheus-community/windows_exporter/internal/types"
-	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 const nameCluster = Name + "_cluster"
+
+type collectorCluster struct {
+	clusterMIQuery mi.Query
+
+	clusterAddEvictDelay                           *prometheus.Desc
+	clusterAdminAccessPoint                        *prometheus.Desc
+	clusterAutoAssignNodeSite                      *prometheus.Desc
+	clusterAutoBalancerLevel                       *prometheus.Desc
+	clusterAutoBalancerMode                        *prometheus.Desc
+	clusterBackupInProgress                        *prometheus.Desc
+	clusterBlockCacheSize                          *prometheus.Desc
+	clusterClusSvcHangTimeout                      *prometheus.Desc
+	clusterClusSvcRegroupOpeningTimeout            *prometheus.Desc
+	clusterClusSvcRegroupPruningTimeout            *prometheus.Desc
+	clusterClusSvcRegroupStageTimeout              *prometheus.Desc
+	clusterClusSvcRegroupTickInMilliseconds        *prometheus.Desc
+	clusterClusterEnforcedAntiAffinity             *prometheus.Desc
+	clusterClusterFunctionalLevel                  *prometheus.Desc
+	clusterClusterGroupWaitDelay                   *prometheus.Desc
+	clusterClusterLogLevel                         *prometheus.Desc
+	clusterClusterLogSize                          *prometheus.Desc
+	clusterClusterUpgradeVersion                   *prometheus.Desc
+	clusterCrossSiteDelay                          *prometheus.Desc
+	clusterCrossSiteThreshold                      *prometheus.Desc
+	clusterCrossSubnetDelay                        *prometheus.Desc
+	clusterCrossSubnetThreshold                    *prometheus.Desc
+	clusterCsvBalancer                             *prometheus.Desc
+	clusterDatabaseReadWriteMode                   *prometheus.Desc
+	clusterDefaultNetworkRole                      *prometheus.Desc
+	clusterDetectedCloudPlatform                   *prometheus.Desc
+	clusterDetectManagedEvents                     *prometheus.Desc
+	clusterDetectManagedEventsThreshold            *prometheus.Desc
+	clusterDisableGroupPreferredOwnerRandomization *prometheus.Desc
+	clusterDrainOnShutdown                         *prometheus.Desc
+	clusterDynamicQuorumEnabled                    *prometheus.Desc
+	clusterEnableSharedVolumes                     *prometheus.Desc
+	clusterFixQuorum                               *prometheus.Desc
+	clusterGracePeriodEnabled                      *prometheus.Desc
+	clusterGracePeriodTimeout                      *prometheus.Desc
+	clusterGroupDependencyTimeout                  *prometheus.Desc
+	clusterHangRecoveryAction                      *prometheus.Desc
+	clusterIgnorePersistentStateOnStartup          *prometheus.Desc
+	clusterLogResourceControls                     *prometheus.Desc
+	clusterLowerQuorumPriorityNodeId               *prometheus.Desc
+	clusterMaxNumberOfNodes                        *prometheus.Desc
+	clusterMessageBufferLength                     *prometheus.Desc
+	clusterMinimumNeverPreemptPriority             *prometheus.Desc
+	clusterMinimumPreemptorPriority                *prometheus.Desc
+	clusterNetftIPSecEnabled                       *prometheus.Desc
+	clusterPlacementOptions                        *prometheus.Desc
+	clusterPlumbAllCrossSubnetRoutes               *prometheus.Desc
+	clusterPreventQuorum                           *prometheus.Desc
+	clusterQuarantineDuration                      *prometheus.Desc
+	clusterQuarantineThreshold                     *prometheus.Desc
+	clusterQuorumArbitrationTimeMax                *prometheus.Desc
+	clusterQuorumArbitrationTimeMin                *prometheus.Desc
+	clusterQuorumLogFileSize                       *prometheus.Desc
+	clusterQuorumTypeValue                         *prometheus.Desc
+	clusterRequestReplyTimeout                     *prometheus.Desc
+	clusterResiliencyDefaultPeriod                 *prometheus.Desc
+	clusterResiliencyLevel                         *prometheus.Desc
+	clusterResourceDllDeadlockPeriod               *prometheus.Desc
+	clusterRootMemoryReserved                      *prometheus.Desc
+	clusterRouteHistoryLength                      *prometheus.Desc
+	clusterS2DBusTypes                             *prometheus.Desc
+	clusterS2DCacheDesiredState                    *prometheus.Desc
+	clusterS2DCacheFlashReservePercent             *prometheus.Desc
+	clusterS2DCachePageSizeKBytes                  *prometheus.Desc
+	clusterS2DEnabled                              *prometheus.Desc
+	clusterS2DIOLatencyThreshold                   *prometheus.Desc
+	clusterS2DOptimizations                        *prometheus.Desc
+	clusterSameSubnetDelay                         *prometheus.Desc
+	clusterSameSubnetThreshold                     *prometheus.Desc
+	clusterSecurityLevel                           *prometheus.Desc
+	clusterSecurityLevelForStorage                 *prometheus.Desc
+	clusterSharedVolumeVssWriterOperationTimeout   *prometheus.Desc
+	clusterShutdownTimeoutInMinutes                *prometheus.Desc
+	clusterUseClientAccessNetworksForSharedVolumes *prometheus.Desc
+	clusterWitnessDatabaseWriteTimeout             *prometheus.Desc
+	clusterWitnessDynamicWeight                    *prometheus.Desc
+	clusterWitnessRestartInterval                  *prometheus.Desc
+}
 
 // msClusterCluster represents the MSCluster_Cluster WMI class
 // - https://docs.microsoft.com/en-us/previous-versions/windows/desktop/cluswmi/mscluster-cluster
@@ -95,7 +194,21 @@ type msClusterCluster struct {
 	WitnessRestartInterval                  uint `mi:"WitnessRestartInterval"`
 }
 
-func (c *Collector) buildCluster() {
+func (c *Collector) buildCluster() error {
+	buildNumber := osversion.Build()
+
+	wmiSelect := "AddEvictDelay,AdminAccessPoint,AutoAssignNodeSite,AutoBalancerLevel,AutoBalancerMode,BackupInProgress,BlockCacheSize,ClusSvcHangTimeout,ClusSvcRegroupOpeningTimeout,ClusSvcRegroupPruningTimeout,ClusSvcRegroupStageTimeout,ClusSvcRegroupTickInMilliseconds,ClusterEnforcedAntiAffinity,ClusterFunctionalLevel,ClusterGroupWaitDelay,ClusterLogLevel,ClusterLogSize,ClusterUpgradeVersion,CrossSiteDelay,CrossSiteThreshold,CrossSubnetDelay,CrossSubnetThreshold,CsvBalancer,DatabaseReadWriteMode,DefaultNetworkRole,DisableGroupPreferredOwnerRandomization,DrainOnShutdown,DynamicQuorumEnabled,EnableSharedVolumes,FixQuorum,GracePeriodEnabled,GracePeriodTimeout,GroupDependencyTimeout,HangRecoveryAction,IgnorePersistentStateOnStartup,LogResourceControls,LowerQuorumPriorityNodeId,MessageBufferLength,MinimumNeverPreemptPriority,MinimumPreemptorPriority,NetftIPSecEnabled,PlacementOptions,PlumbAllCrossSubnetRoutes,PreventQuorum,QuarantineDuration,QuarantineThreshold,QuorumArbitrationTimeMax,QuorumArbitrationTimeMin,QuorumLogFileSize,QuorumTypeValue,RequestReplyTimeout,ResiliencyDefaultPeriod,ResiliencyLevel,ResourceDllDeadlockPeriod,RootMemoryReserved,RouteHistoryLength,S2DBusTypes,S2DCacheDesiredState,S2DCacheFlashReservePercent,S2DCachePageSizeKBytes,S2DEnabled,S2DIOLatencyThreshold,S2DOptimizations,SameSubnetDelay,SameSubnetThreshold,SecurityLevel,SharedVolumeVssWriterOperationTimeout,ShutdownTimeoutInMinutes,UseClientAccessNetworksForSharedVolumes,WitnessDatabaseWriteTimeout,WitnessDynamicWeight,WitnessRestartInterval"
+	if buildNumber >= osversion.LTSC2022 {
+		wmiSelect += ",DetectManagedEvents,SecurityLevelForStorage,MaxNumberOfNodes,DetectManagedEventsThreshold,DetectedCloudPlatform"
+	}
+
+	clusterMIQuery, err := mi.NewQuery(fmt.Sprintf("SELECT %s FROM MSCluster_Cluster", wmiSelect))
+	if err != nil {
+		return fmt.Errorf("failed to create WMI query: %w", err)
+	}
+
+	c.clusterMIQuery = clusterMIQuery
+
 	c.clusterAddEvictDelay = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCluster, "add_evict_delay"),
 		"Provides access to the cluster's AddEvictDelay property, which is the number a seconds that a new node is delayed after an eviction of another node.",
@@ -558,11 +671,18 @@ func (c *Collector) buildCluster() {
 		[]string{"name"},
 		nil,
 	)
+
+	var dst []msClusterCluster
+	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, c.clusterMIQuery); err != nil {
+		return fmt.Errorf("WMI query failed: %w", err)
+	}
+
+	return nil
 }
 
 func (c *Collector) collectCluster(ch chan<- prometheus.Metric) error {
 	var dst []msClusterCluster
-	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, utils.Must(mi.NewQuery("SELECT * MSCluster_Cluster"))); err != nil {
+	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, c.clusterMIQuery); err != nil {
 		return fmt.Errorf("WMI query failed: %w", err)
 	}
 
@@ -743,27 +863,6 @@ func (c *Collector) collectCluster(ch chan<- prometheus.Metric) error {
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.clusterDetectedCloudPlatform,
-			prometheus.GaugeValue,
-			float64(v.DetectedCloudPlatform),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterDetectManagedEvents,
-			prometheus.GaugeValue,
-			float64(v.DetectManagedEvents),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterDetectManagedEventsThreshold,
-			prometheus.GaugeValue,
-			float64(v.DetectManagedEventsThreshold),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
 			c.clusterDisableGroupPreferredOwnerRandomization,
 			prometheus.GaugeValue,
 			float64(v.DisableGroupPreferredOwnerRandomization),
@@ -844,13 +943,6 @@ func (c *Collector) collectCluster(ch chan<- prometheus.Metric) error {
 			c.clusterLowerQuorumPriorityNodeId,
 			prometheus.GaugeValue,
 			float64(v.LowerQuorumPriorityNodeId),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.clusterMaxNumberOfNodes,
-			prometheus.GaugeValue,
-			float64(v.MaxNumberOfNodes),
 			v.Name,
 		)
 
@@ -1058,13 +1150,6 @@ func (c *Collector) collectCluster(ch chan<- prometheus.Metric) error {
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.clusterSecurityLevelForStorage,
-			prometheus.GaugeValue,
-			float64(v.SecurityLevelForStorage),
-			v.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
 			c.clusterSharedVolumeVssWriterOperationTimeout,
 			prometheus.GaugeValue,
 			float64(v.SharedVolumeVssWriterOperationTimeout),
@@ -1105,6 +1190,43 @@ func (c *Collector) collectCluster(ch chan<- prometheus.Metric) error {
 			float64(v.WitnessRestartInterval),
 			v.Name,
 		)
+
+		if osversion.Build() >= osversion.LTSC2022 {
+			ch <- prometheus.MustNewConstMetric(
+				c.clusterDetectManagedEvents,
+				prometheus.GaugeValue,
+				float64(v.DetectManagedEvents),
+				v.Name,
+			)
+
+			ch <- prometheus.MustNewConstMetric(
+				c.clusterDetectManagedEventsThreshold,
+				prometheus.GaugeValue,
+				float64(v.DetectManagedEventsThreshold),
+				v.Name,
+			)
+
+			ch <- prometheus.MustNewConstMetric(
+				c.clusterSecurityLevelForStorage,
+				prometheus.GaugeValue,
+				float64(v.SecurityLevelForStorage),
+				v.Name,
+			)
+
+			ch <- prometheus.MustNewConstMetric(
+				c.clusterMaxNumberOfNodes,
+				prometheus.GaugeValue,
+				float64(v.MaxNumberOfNodes),
+				v.Name,
+			)
+
+			ch <- prometheus.MustNewConstMetric(
+				c.clusterDetectedCloudPlatform,
+				prometheus.GaugeValue,
+				float64(v.DetectedCloudPlatform),
+				v.Name,
+			)
+		}
 	}
 
 	return nil

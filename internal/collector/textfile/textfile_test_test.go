@@ -1,3 +1,20 @@
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+//go:build windows
+
 package textfile_test
 
 import (
@@ -14,6 +31,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+//nolint:gochecknoglobals
 var baseDir = "../../../tools/textfile-test"
 
 //nolint:paralleltest
@@ -27,40 +45,31 @@ func TestMultipleDirectories(t *testing.T) {
 	})
 
 	collectors := collector.New(map[string]collector.Collector{textfile.Name: textFileCollector})
-	require.NoError(t, collectors.Build(logger))
-
-	scrapeContext, err := collectors.PrepareScrapeContext()
-	if err != nil {
-		t.Errorf("Unexpected error %s", err)
-	}
+	require.NoError(t, collectors.Build(t.Context(), logger))
 
 	metrics := make(chan prometheus.Metric)
 	got := ""
 
+	errCh := make(chan error, 1)
 	go func() {
-		for {
-			var metric dto.Metric
+		errCh <- textFileCollector.Collect(metrics)
 
-			val := <-metrics
-
-			err := val.Write(&metric)
-			if err != nil {
-				t.Errorf("Unexpected error %s", err)
-			}
-
-			got += metric.String()
-		}
+		close(metrics)
 	}()
 
-	err = textFileCollector.Collect(scrapeContext, logger, metrics)
-	if err != nil {
-		t.Errorf("Unexpected error %s", err)
+	for val := range metrics {
+		var metric dto.Metric
+
+		err := val.Write(&metric)
+		require.NoError(t, err)
+
+		got += metric.String()
 	}
 
+	require.NoError(t, <-errCh)
+
 	for _, f := range []string{"dir1", "dir2", "dir3", "dir3sub"} {
-		if !strings.Contains(got, f) {
-			t.Errorf("Unexpected output %s: %q", f, got)
-		}
+		require.Contains(t, got, f)
 	}
 }
 
@@ -73,41 +82,29 @@ func TestDuplicateFileName(t *testing.T) {
 	})
 
 	collectors := collector.New(map[string]collector.Collector{textfile.Name: textFileCollector})
-	require.NoError(t, collectors.Build(logger))
-
-	scrapeContext, err := collectors.PrepareScrapeContext()
-	if err != nil {
-		t.Errorf("Unexpected error %s", err)
-	}
+	require.NoError(t, collectors.Build(t.Context(), logger))
 
 	metrics := make(chan prometheus.Metric)
 	got := ""
 
+	errCh := make(chan error, 1)
 	go func() {
-		for {
-			var metric dto.Metric
+		errCh <- textFileCollector.Collect(metrics)
 
-			val := <-metrics
-
-			err := val.Write(&metric)
-			if err != nil {
-				t.Errorf("Unexpected error %s", err)
-			}
-
-			got += metric.String()
-		}
+		close(metrics)
 	}()
 
-	err = textFileCollector.Collect(scrapeContext, logger, metrics)
-	if err != nil {
-		t.Errorf("Unexpected error %s", err)
+	for val := range metrics {
+		var metric dto.Metric
+
+		err := val.Write(&metric)
+		require.NoError(t, err)
+
+		got += metric.String()
 	}
 
-	if !strings.Contains(got, "file") {
-		t.Errorf("Unexpected output  %q", got)
-	}
+	require.ErrorContains(t, <-errCh, "duplicate filename detected")
 
-	if strings.Contains(got, "sub_file") {
-		t.Errorf("Unexpected output  %q", got)
-	}
+	require.Contains(t, got, "file")
+	require.NotContains(t, got, "sub_file")
 }

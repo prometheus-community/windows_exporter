@@ -1,3 +1,18 @@
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 //go:build windows
 
 package mi
@@ -13,23 +28,24 @@ import (
 )
 
 const (
-	applicationID = "windows_exporter"
-
 	LocaleEnglish = "en-us"
 )
 
+//nolint:gochecknoglobals
 var (
-	// DestinationOptionsTimeout is the key for the timeout option.
+	applicationID = UTF16PtrFromString[*uint16]("windows_exporter")
+	// destinationOptionsTimeout is the key for the timeout option.
 	//
 	// https://github.com/microsoft/win32metadata/blob/527806d20d83d3abd43d16cd3fa8795d8deba343/generation/WinSDK/RecompiledIdlHeaders/um/mi.h#L7830
-	DestinationOptionsTimeout = UTF16PtrFromString[*uint16]("__MI_DESTINATIONOPTIONS_TIMEOUT")
+	destinationOptionsTimeout = UTF16PtrFromString[*uint16]("__MI_DESTINATIONOPTIONS_TIMEOUT")
 
-	// DestinationOptionsUILocale is the key for the UI locale option.
+	// destinationOptionsUILocale is the key for the UI locale option.
 	//
 	// https://github.com/microsoft/win32metadata/blob/527806d20d83d3abd43d16cd3fa8795d8deba343/generation/WinSDK/RecompiledIdlHeaders/um/mi.h#L8248
-	DestinationOptionsUILocale = UTF16PtrFromString[*uint16]("__MI_DESTINATIONOPTIONS_UI_LOCALE")
+	destinationOptionsUILocale = UTF16PtrFromString[*uint16]("__MI_DESTINATIONOPTIONS_UI_LOCALE")
 )
 
+//nolint:gochecknoglobals
 var (
 	modMi = windows.NewLazySystemDLL("mi.dll")
 
@@ -84,21 +100,16 @@ type DestinationOptionsFT struct {
 	GetInterval              uintptr
 }
 
-// Application_Initialize initializes the MI [Application].
+// ApplicationInitialize initializes the MI [Application].
 // It is recommended to have only one Application per process.
 //
 // https://learn.microsoft.com/en-us/windows/win32/api/mi/nf-mi-mi_application_initializev1
-func Application_Initialize() (*Application, error) {
+func ApplicationInitialize() (*Application, error) {
 	application := &Application{}
-
-	applicationId, err := windows.UTF16PtrFromString(applicationID)
-	if err != nil {
-		return nil, err
-	}
 
 	r0, _, err := procMIApplicationInitialize.Call(
 		0,
-		uintptr(unsafe.Pointer(applicationId)),
+		uintptr(unsafe.Pointer(applicationID)),
 		0,
 		uintptr(unsafe.Pointer(application)),
 	)
@@ -114,7 +125,7 @@ func Application_Initialize() (*Application, error) {
 	return application, nil
 }
 
-// Close deinitializes the management infrastructure client API that was initialized through a call to Application_Initialize.
+// Close deinitializes the management infrastructure client API that was initialized through a call to ApplicationInitialize.
 //
 // https://learn.microsoft.com/en-us/windows/win32/api/mi/nf-mi-mi_application_close
 func (application *Application) Close() error {
@@ -229,7 +240,7 @@ func (do *DestinationOptions) SetTimeout(timeout time.Duration) error {
 	r0, _, _ := syscall.SyscallN(
 		do.ft.SetInterval,
 		uintptr(unsafe.Pointer(do)),
-		uintptr(unsafe.Pointer(DestinationOptionsTimeout)),
+		uintptr(unsafe.Pointer(destinationOptionsTimeout)),
 		uintptr(unsafe.Pointer(NewInterval(timeout))),
 		0,
 	)
@@ -257,7 +268,7 @@ func (do *DestinationOptions) SetLocale(locale string) error {
 	r0, _, _ := syscall.SyscallN(
 		do.ft.SetString,
 		uintptr(unsafe.Pointer(do)),
-		uintptr(unsafe.Pointer(DestinationOptionsUILocale)),
+		uintptr(unsafe.Pointer(destinationOptionsUILocale)),
 		uintptr(unsafe.Pointer(localeUTF16)),
 		0,
 	)

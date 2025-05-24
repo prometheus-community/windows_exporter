@@ -1,3 +1,18 @@
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 //go:build windows
 
 package fsrmquota
@@ -18,6 +33,7 @@ const Name = "fsrmquota"
 
 type Config struct{}
 
+//nolint:gochecknoglobals
 var ConfigDefaults = Config{}
 
 type Collector struct {
@@ -57,11 +73,7 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
-	return []string{}, nil
-}
-
-func (c *Collector) Close(_ *slog.Logger) error {
+func (c *Collector) Close() error {
 	return nil
 }
 
@@ -133,19 +145,9 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 		nil,
 	)
 
-	return nil
-}
-
-// Collect sends the metric values for each metric
-// to the provided prometheus Metric channel.
-func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	logger = logger.With(slog.String("collector", Name))
-	if err := c.collect(ch); err != nil {
-		logger.Error("failed collecting fsrmquota metrics",
-			slog.Any("err", err),
-		)
-
-		return err
+	var dst []msftFSRMQuota
+	if err := c.miSession.Query(&dst, mi.NamespaceRootWindowsFSRM, c.miQuery); err != nil {
+		return fmt.Errorf("WMI query failed: %w", err)
 	}
 
 	return nil
@@ -153,23 +155,22 @@ func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan
 
 // MSFT_FSRMQuota docs:
 // https://docs.microsoft.com/en-us/previous-versions/windows/desktop/fsrm/msft-fsrmquota
-type MSFT_FSRMQuota struct {
-	Name string `mi:"Name"`
-
-	Path        string `mi:"Path"`
-	PeakUsage   uint64 `mi:"PeakUsage"`
-	Size        uint64 `mi:"Size"`
-	Usage       uint64 `mi:"Usage"`
-	Description string `mi:"Description"`
-	Template    string `mi:"Template"`
-	// Threshold string `mi:"Threshold"`
-	Disabled        bool `mi:"Disabled"`
-	MatchesTemplate bool `mi:"MatchesTemplate"`
-	SoftLimit       bool `mi:"SoftLimit"`
+type msftFSRMQuota struct {
+	Path            string `mi:"Path"`
+	PeakUsage       uint64 `mi:"PeakUsage"`
+	Size            uint64 `mi:"Size"`
+	Usage           uint64 `mi:"Usage"`
+	Description     string `mi:"Description"`
+	Template        string `mi:"Template"`
+	Disabled        bool   `mi:"Disabled"`
+	MatchesTemplate bool   `mi:"MatchesTemplate"`
+	SoftLimit       bool   `mi:"SoftLimit"`
 }
 
-func (c *Collector) collect(ch chan<- prometheus.Metric) error {
-	var dst []MSFT_FSRMQuota
+// Collect sends the metric values for each metric
+// to the provided prometheus Metric channel.
+func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
+	var dst []msftFSRMQuota
 	if err := c.miSession.Query(&dst, mi.NamespaceRootWindowsFSRM, c.miQuery); err != nil {
 		return fmt.Errorf("WMI query failed: %w", err)
 	}

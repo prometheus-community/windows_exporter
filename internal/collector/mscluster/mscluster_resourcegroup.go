@@ -1,3 +1,20 @@
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+//go:build windows
+
 package mscluster
 
 import (
@@ -5,11 +22,29 @@ import (
 
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
-	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 const nameResourceGroup = Name + "_resourcegroup"
+
+type collectorResourceGroup struct {
+	resourceGroupMIQuery mi.Query
+
+	resourceGroupAutoFailbackType    *prometheus.Desc
+	resourceGroupCharacteristics     *prometheus.Desc
+	resourceGroupColdStartSetting    *prometheus.Desc
+	resourceGroupDefaultOwner        *prometheus.Desc
+	resourceGroupFailbackWindowEnd   *prometheus.Desc
+	resourceGroupFailbackWindowStart *prometheus.Desc
+	resourceGroupFailOverPeriod      *prometheus.Desc
+	resourceGroupFailOverThreshold   *prometheus.Desc
+	resourceGroupFlags               *prometheus.Desc
+	resourceGroupGroupType           *prometheus.Desc
+	resourceGroupOwnerNode           *prometheus.Desc
+	resourceGroupPriority            *prometheus.Desc
+	resourceGroupResiliencyPeriod    *prometheus.Desc
+	resourceGroupState               *prometheus.Desc
+}
 
 // msClusterResourceGroup represents the MSCluster_ResourceGroup WMI class
 // - https://docs.microsoft.com/en-us/previous-versions/windows/desktop/cluswmi/mscluster-resourcegroup
@@ -32,7 +67,14 @@ type msClusterResourceGroup struct {
 	State               uint   `mi:"State"`
 }
 
-func (c *Collector) buildResourceGroup() {
+func (c *Collector) buildResourceGroup() error {
+	resourceGroupMIQuery, err := mi.NewQuery("SELECT AutoFailbackType,Characteristics,ColdStartSetting,DefaultOwner,FailbackWindowEnd,FailbackWindowStart,FailoverPeriod,FailoverThreshold,Flags,GroupType,OwnerNode,Priority,ResiliencyPeriod,State FROM MSCluster_ResourceGroup")
+	if err != nil {
+		return fmt.Errorf("failed to create WMI query: %w", err)
+	}
+
+	c.resourceGroupMIQuery = resourceGroupMIQuery
+
 	c.resourceGroupAutoFailbackType = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameResourceGroup, "auto_failback_type"),
 		"Provides access to the group's AutoFailbackType property.",
@@ -123,6 +165,14 @@ func (c *Collector) buildResourceGroup() {
 		[]string{"name"},
 		nil,
 	)
+
+	var dst []msClusterResourceGroup
+
+	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, c.resourceGroupMIQuery); err != nil {
+		return fmt.Errorf("WMI query failed: %w", err)
+	}
+
+	return nil
 }
 
 // Collect sends the metric values for each metric
@@ -130,7 +180,7 @@ func (c *Collector) buildResourceGroup() {
 func (c *Collector) collectResourceGroup(ch chan<- prometheus.Metric, nodeNames []string) error {
 	var dst []msClusterResourceGroup
 
-	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, utils.Must(mi.NewQuery("SELECT * FROM MSCluster_ResourceGroup"))); err != nil {
+	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, c.resourceGroupMIQuery); err != nil {
 		return fmt.Errorf("WMI query failed: %w", err)
 	}
 

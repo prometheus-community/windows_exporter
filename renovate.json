@@ -1,0 +1,100 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    "helpers:pinGitHubActionDigestsToSemver"
+  ],
+  "labels": [
+    "🛠️ dependencies"
+  ],
+  "timezone": "Europe/Berlin",
+  "schedule": [
+    "* 14-17 * * 5"
+  ],
+  "packageRules": [
+    {
+      "groupName": "golangci-lint",
+      "matchPackageNames": [
+        "github.com/golangci/golangci-lint/cmd/golangci-lint",
+        "golangci/golangci-lint",
+        "golangci/golangci-lint-action"
+      ]
+    },
+    {
+      "matchManagers": [
+        "gomod"
+      ],
+      "matchDepTypes": [
+        "indirect"
+      ],
+      "enabled": true
+    },
+    {
+      "groupName": "GitHub Actions",
+      "matchManagers": [
+        "github-actions"
+      ]
+    },
+    {
+      "groupName": "golang.org/x/",
+      "matchPackageNames": [
+        "golang.org/x/*"
+      ]
+    },
+    {
+      "groupName": "Go tools",
+      "matchFileNames": [
+        "tools/**",
+        "Makefile"
+      ],
+      "matchPackageNames": [
+        "*"
+      ]
+    }
+  ],
+  "postUpdateOptions": [
+    "gomodTidy"
+  ],
+  "ignoreDeps": [
+    "mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image",
+    "gopkg.in/yaml.v3"
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/./"
+      ],
+      "matchStrings": [
+        "[\\t ]*(?:#|//) ?renovate: (?<datasource>git-refs)=(?<depName>\\S+)(?: branch=(?<currentValue>\\S+))?[\\t ]*\\r?\\n.+?[:=][\\t ]*[\"']?(?<currentDigest>[a-f0-9]+)[\"']?",
+        "[\\t ]*(?:#|//) ?renovate: (?<datasource>[^=]+)=(?<depName>\\S+)(?: registry=(?<registryUrl>\\S+))?(?: versioning=(?<versioning>\\S+))?[\\t ]*\\r?\\n.+?[:=][\\t ]*[\"']?(?<currentValue>[^@\\s\"'=]+)(?:@(?<currentDigest>sha256:[a-f0-9]+))?[\"']?"
+      ],
+      "currentValueTemplate": "{{#if currentValue}}{{{currentValue}}}{{else if (equals datasource 'git-refs')}}main{{/if}}",
+      "datasourceTemplate": "{{#if (equals datasource 'github')}}github-tags{{else}}{{{datasource}}}{{/if}}",
+      "versioningTemplate": "{{#if (equals datasource 'docker')}}docker{{else if versioning}}{{{versioning}}}{{else}}semver{{/if}}"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/Makefile/",
+        "/(^|/).+\\.go/"
+      ],
+      "matchStrings": [
+        "go run (?<depName>\\S+)@(?<currentValue>\\S+)"
+      ],
+      "datasourceTemplate": "go"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/(^|/).+\\.yaml$/"
+      ],
+      "matchStrings": [
+        "[\\t ]*image:[\\t ]*\\r?\\n[\\t ]*registry:[\\t ]*[\"']?(?<registry>.*?)[\"']?[\\t ]*\\r?\\n[\\t ]*(?:repository|name):[\\t ]*[\"']?(?<repository>.*?)[\"']?[\\t ]*\\r?\\n[\\t ]*tag:[\\t ]*[\"']?(?<currentValue>[\\w\\.+-]*)(?:@(?<currentDigest>sha256:[a-f0-9]+))?[\"']?",
+        "[\\t ]*image:[\\t ]*[\"']?(?<registry>.+\\..+?)/(?<repository>.*?):(?<currentValue>[\\w\\.+-]*)(?:@(?<currentDigest>sha256:[a-f0-9]+))?[\"']?"
+      ],
+      "depNameTemplate": "{{{ registry }}}/{{{ repository }}}",
+      "datasourceTemplate": "docker"
+    }
+  ]
+}

@@ -1,3 +1,20 @@
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+//go:build windows
+
 package kernel32
 
 import (
@@ -6,11 +23,15 @@ import (
 	"golang.org/x/sys/windows"
 )
 
+//nolint:gochecknoglobals
 var (
-	kernel32 = windows.NewLazySystemDLL("kernel32.dll")
+	modkernel32 = windows.NewLazySystemDLL("kernel32.dll")
 
-	procGetDynamicTimeZoneInformationSys = kernel32.NewProc("GetDynamicTimeZoneInformation")
-	kernelLocalFileTimeToFileTime        = kernel32.NewProc("LocalFileTimeToFileTime")
+	procGetDynamicTimeZoneInformationSys = modkernel32.NewProc("GetDynamicTimeZoneInformation")
+	procKernelLocalFileTimeToFileTime    = modkernel32.NewProc("LocalFileTimeToFileTime")
+	procGetTickCount                     = modkernel32.NewProc("GetTickCount64")
+	procOpenJobObject                    = modkernel32.NewProc("OpenJobObjectW")
+	procIsProcessInJob                   = modkernel32.NewProc("IsProcessInJob")
 )
 
 // SYSTEMTIME contains a date and time.
@@ -54,9 +75,15 @@ func GetDynamicTimeZoneInformation() (DynamicTimezoneInformation, error) {
 }
 
 func LocalFileTimeToFileTime(localFileTime, utcFileTime *windows.Filetime) uint32 {
-	ret, _, _ := kernelLocalFileTimeToFileTime.Call(
+	ret, _, _ := procKernelLocalFileTimeToFileTime.Call(
 		uintptr(unsafe.Pointer(localFileTime)),
 		uintptr(unsafe.Pointer(utcFileTime)))
 
 	return uint32(ret)
+}
+
+func GetTickCount64() uint64 {
+	ret, _, _ := procGetTickCount.Call()
+
+	return uint64(ret)
 }

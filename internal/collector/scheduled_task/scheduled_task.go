@@ -1,3 +1,18 @@
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 //go:build windows
 
 package scheduled_task
@@ -21,10 +36,11 @@ import (
 const Name = "scheduled_task"
 
 type Config struct {
-	TaskExclude *regexp.Regexp `yaml:"task_exclude"`
-	TaskInclude *regexp.Regexp `yaml:"task_include"`
+	TaskExclude *regexp.Regexp `yaml:"exclude"`
+	TaskInclude *regexp.Regexp `yaml:"include"`
 }
 
+//nolint:gochecknoglobals
 var ConfigDefaults = Config{
 	TaskExclude: types.RegExpEmpty,
 	TaskInclude: types.RegExpAny,
@@ -32,9 +48,6 @@ var ConfigDefaults = Config{
 
 type Collector struct {
 	config Config
-
-	scheduledTasksReqCh chan struct{}
-	scheduledTasksCh    chan *scheduledTaskResults
 
 	lastResult *prometheus.Desc
 	missedRuns *prometheus.Desc
@@ -60,9 +73,7 @@ const (
 	SCHED_S_TASK_HAS_NOT_RUN TaskResult = 0x00041303
 )
 
-var taskStates = []string{"disabled", "queued", "ready", "running", "unknown"}
-
-type scheduledTask struct {
+type ScheduledTask struct {
 	Name            string
 	Path            string
 	Enabled         bool
@@ -71,10 +82,7 @@ type scheduledTask struct {
 	LastTaskResult  TaskResult
 }
 
-type scheduledTaskResults struct {
-	scheduledTasks []scheduledTask
-	err            error
-}
+type ScheduledTasks []ScheduledTask
 
 func New(config *Config) *Collector {
 	if config == nil {
@@ -136,29 +144,11 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
-	return []string{}, nil
-}
-
-func (c *Collector) Close(_ *slog.Logger) error {
-	close(c.scheduledTasksReqCh)
-
-	c.scheduledTasksReqCh = nil
-
+func (c *Collector) Close() error {
 	return nil
 }
 
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
-	initErrCh := make(chan error)
-	c.scheduledTasksReqCh = make(chan struct{})
-	c.scheduledTasksCh = make(chan *scheduledTaskResults)
-
-	go c.initializeScheduleService(initErrCh)
-
-	if err := <-initErrCh; err != nil {
-		return fmt.Errorf("initialize schedule service: %w", err)
-	}
-
 	c.lastResult = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "last_result"),
 		"The result that was returned the last time the registered task was run",
@@ -183,21 +173,15 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 	return nil
 }
 
-func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	logger = logger.With(slog.String("collector", Name))
-	if err := c.collect(ch); err != nil {
-		logger.Error("failed collecting user metrics",
-			slog.Any("err", err),
-		)
-
-		return err
-	}
-
-	return nil
+func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
+	return c.collect(ch)
 }
 
+//nolint:gochecknoglobals
+var TASK_STATES = []string{"disabled", "queued", "ready", "running", "unknown"}
+
 func (c *Collector) collect(ch chan<- prometheus.Metric) error {
-	scheduledTasks, err := c.getScheduledTasks()
+	scheduledTasks, err := getScheduledTasks()
 	if err != nil {
 		return fmt.Errorf("get scheduled tasks: %w", err)
 	}
@@ -208,7 +192,7 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 			continue
 		}
 
-		for _, state := range taskStates {
+		for _, state := range TASK_STATES {
 			var stateValue float64
 
 			if strings.ToLower(task.State.String()) == state {
@@ -251,27 +235,14 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	return nil
 }
 
-func (c *Collector) getScheduledTasks() ([]scheduledTask, error) {
-	c.scheduledTasksReqCh <- struct{}{}
+const SCHEDULED_TASK_PROGRAM_ID = "Schedule.Service.1"
 
-	scheduledTasks, ok := <-c.scheduledTasksCh
+// S_FALSE is returned by CoInitialize if it was already called on this thread.
+const S_FALSE = 0x00000001
 
-	if !ok {
-		return []scheduledTask{}, nil
-	}
+func getScheduledTasks() (ScheduledTasks, error) {
+	var scheduledTasks ScheduledTasks
 
-	if scheduledTasks == nil {
-		return nil, errors.New("scheduled tasks channel is nil")
-	}
-
-	if scheduledTasks.err != nil {
-		return nil, scheduledTasks.err
-	}
-
-	return scheduledTasks.scheduledTasks, scheduledTasks.err
-}
-
-func (c *Collector) initializeScheduleService(initErrCh chan<- error) {
 	// The only way to run WMI queries in parallel while being thread-safe is to
 	// ensure the CoInitialize[Ex]() call is bound to its current OS thread.
 	// Otherwise, attempting to initialize and run parallel queries across
@@ -281,99 +252,46 @@ func (c *Collector) initializeScheduleService(initErrCh chan<- error) {
 
 	if err := ole.CoInitializeEx(0, ole.COINIT_MULTITHREADED); err != nil {
 		var oleCode *ole.OleError
-		if errors.As(err, &oleCode) && oleCode.Code() != ole.S_OK && oleCode.Code() != 0x00000001 {
-			initErrCh <- err
-
-			return
+		if errors.As(err, &oleCode) && oleCode.Code() != ole.S_OK && oleCode.Code() != S_FALSE {
+			return nil, err
 		}
 	}
-
 	defer ole.CoUninitialize()
 
-	scheduleClassID, err := ole.ClassIDFrom("Schedule.Service.1")
+	schedClassID, err := ole.ClassIDFrom(SCHEDULED_TASK_PROGRAM_ID)
 	if err != nil {
-		initErrCh <- err
-
-		return
+		return scheduledTasks, err
 	}
 
-	taskSchedulerObj, err := ole.CreateInstance(scheduleClassID, nil)
+	taskSchedulerObj, err := ole.CreateInstance(schedClassID, nil)
 	if err != nil || taskSchedulerObj == nil {
-		initErrCh <- err
-
-		return
+		return scheduledTasks, err
 	}
 	defer taskSchedulerObj.Release()
 
 	taskServiceObj := taskSchedulerObj.MustQueryInterface(ole.IID_IDispatch)
+
+	_, err = oleutil.CallMethod(taskServiceObj, "Connect")
+	if err != nil {
+		return scheduledTasks, err
+	}
+
 	defer taskServiceObj.Release()
 
-	taskService, err := oleutil.CallMethod(taskServiceObj, "Connect")
+	res, err := oleutil.CallMethod(taskServiceObj, "GetFolder", `\`)
 	if err != nil {
-		initErrCh <- err
-
-		return
+		return scheduledTasks, err
 	}
 
-	defer func(taskService *ole.VARIANT) {
-		_ = taskService.Clear()
-	}(taskService)
+	rootFolderObj := res.ToIDispatch()
+	defer rootFolderObj.Release()
 
-	close(initErrCh)
+	err = fetchTasksRecursively(rootFolderObj, &scheduledTasks)
 
-	scheduledTasks := make([]scheduledTask, 0, 100)
-
-	for range c.scheduledTasksReqCh {
-		func() {
-			// Clear the slice to avoid memory leaks
-			clear(scheduledTasks)
-			scheduledTasks = scheduledTasks[:0]
-
-			res, err := oleutil.CallMethod(taskServiceObj, "GetFolder", `\`)
-			if err != nil {
-				c.scheduledTasksCh <- &scheduledTaskResults{err: err}
-
-				return
-			}
-
-			rootFolderObj := res.ToIDispatch()
-			defer rootFolderObj.Release()
-
-			err = fetchTasksRecursively(rootFolderObj, &scheduledTasks)
-
-			c.scheduledTasksCh <- &scheduledTaskResults{scheduledTasks: scheduledTasks, err: err}
-		}()
-	}
-
-	close(c.scheduledTasksCh)
-
-	c.scheduledTasksCh = nil
+	return scheduledTasks, err
 }
 
-func fetchTasksRecursively(folder *ole.IDispatch, scheduledTasks *[]scheduledTask) error {
-	if err := fetchTasksInFolder(folder, scheduledTasks); err != nil {
-		return err
-	}
-
-	res, err := oleutil.CallMethod(folder, "GetFolders", 1)
-	if err != nil {
-		return err
-	}
-
-	subFolders := res.ToIDispatch()
-	defer subFolders.Release()
-
-	err = oleutil.ForEach(subFolders, func(v *ole.VARIANT) error {
-		subFolder := v.ToIDispatch()
-		defer subFolder.Release()
-
-		return fetchTasksRecursively(subFolder, scheduledTasks)
-	})
-
-	return err
-}
-
-func fetchTasksInFolder(folder *ole.IDispatch, scheduledTasks *[]scheduledTask) error {
+func fetchTasksInFolder(folder *ole.IDispatch, scheduledTasks *ScheduledTasks) error {
 	res, err := oleutil.CallMethod(folder, "GetTasks", 1)
 	if err != nil {
 		return err
@@ -399,8 +317,31 @@ func fetchTasksInFolder(folder *ole.IDispatch, scheduledTasks *[]scheduledTask) 
 	return err
 }
 
-func parseTask(task *ole.IDispatch) (scheduledTask, error) {
-	var scheduledTask scheduledTask
+func fetchTasksRecursively(folder *ole.IDispatch, scheduledTasks *ScheduledTasks) error {
+	if err := fetchTasksInFolder(folder, scheduledTasks); err != nil {
+		return err
+	}
+
+	res, err := oleutil.CallMethod(folder, "GetFolders", 1)
+	if err != nil {
+		return err
+	}
+
+	subFolders := res.ToIDispatch()
+	defer subFolders.Release()
+
+	err = oleutil.ForEach(subFolders, func(v *ole.VARIANT) error {
+		subFolder := v.ToIDispatch()
+		defer subFolder.Release()
+
+		return fetchTasksRecursively(subFolder, scheduledTasks)
+	})
+
+	return err
+}
+
+func parseTask(task *ole.IDispatch) (ScheduledTask, error) {
+	var scheduledTask ScheduledTask
 
 	taskNameVar, err := oleutil.GetProperty(task, "Name")
 	if err != nil {

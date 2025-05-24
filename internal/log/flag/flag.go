@@ -1,4 +1,6 @@
-// Copyright 2017 The Prometheus Authors
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -10,6 +12,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
+//go:build windows
 
 package flag
 
@@ -32,6 +36,9 @@ func AddFlags(a *kingpin.Application, config *log.Config) {
 	config.Config = new(promslog.Config)
 	flag.AddFlags(a, config.Config)
 
-	config.File = &log.AllowedFile{}
-	a.Flag(FileFlagName, FileFlagHelp).Default("stderr").SetValue(config.File)
+	if config.File == nil {
+		config.File = &log.AllowedFile{}
+	}
+
+	a.Flag(FileFlagName, FileFlagHelp).Default(config.File.String()).SetValue(config.File)
 }

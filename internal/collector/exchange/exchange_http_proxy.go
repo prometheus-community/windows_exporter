@@ -1,153 +1,144 @@
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+//go:build windows
+
 package exchange
 
 import (
-	"errors"
 	"fmt"
-	"log/slog"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	v1 "github.com/prometheus-community/windows_exporter/internal/perfdata/v1"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-const (
-	mailboxServerLocatorAverageLatency = "MailboxServerLocator Average Latency (Moving Average)"
-	averageAuthenticationLatency       = "Average Authentication Latency"
-	averageCASProcessingLatency        = "Average ClientAccess Server Processing Latency"
-	mailboxServerProxyFailureRate      = "Mailbox Server Proxy Failure Rate"
-	outstandingProxyRequests           = "Outstanding Proxy Requests"
-	proxyRequestsPerSec                = "Proxy Requests/Sec"
-)
+type collectorHTTPProxy struct {
+	perfDataCollectorHTTPProxy *pdh.Collector
+	perfDataObjectHTTPProxy    []perfDataCounterValuesHTTPProxy
 
-// Perflib: [36934] MSExchange HttpProxy.
-type perflibHTTPProxy struct {
+	mailboxServerLocatorAverageLatency *prometheus.Desc
+	averageAuthenticationLatency       *prometheus.Desc
+	outstandingProxyRequests           *prometheus.Desc
+	proxyRequestsPerSec                *prometheus.Desc
+	averageCASProcessingLatency        *prometheus.Desc
+	mailboxServerProxyFailureRate      *prometheus.Desc
+}
+
+type perfDataCounterValuesHTTPProxy struct {
 	Name string
 
-	MailboxServerLocatorAverageLatency float64 `perflib:"MailboxServerLocator Average Latency (Moving Average)"`
-	AverageAuthenticationLatency       float64 `perflib:"Average Authentication Latency"`
-	AverageCASProcessingLatency        float64 `perflib:"Average ClientAccess Server Processing Latency"`
-	MailboxServerProxyFailureRate      float64 `perflib:"Mailbox Server Proxy Failure Rate"`
-	OutstandingProxyRequests           float64 `perflib:"Outstanding Proxy Requests"`
-	ProxyRequestsPerSec                float64 `perflib:"Proxy Requests/Sec"`
+	MailboxServerLocatorAverageLatency float64 `perfdata:"MailboxServerLocator Average Latency (Moving Average)"`
+	AverageAuthenticationLatency       float64 `perfdata:"Average Authentication Latency"`
+	AverageCASProcessingLatency        float64 `perfdata:"Average ClientAccess Server Processing Latency"`
+	MailboxServerProxyFailureRate      float64 `perfdata:"Mailbox Server Proxy Failure Rate"`
+	OutstandingProxyRequests           float64 `perfdata:"Outstanding Proxy Requests"`
+	ProxyRequestsPerSec                float64 `perfdata:"Proxy Requests/Sec"`
 }
 
 func (c *Collector) buildHTTPProxy() error {
-	counters := []string{
-		mailboxServerLocatorAverageLatency,
-		averageAuthenticationLatency,
-		averageCASProcessingLatency,
-		mailboxServerProxyFailureRate,
-		outstandingProxyRequests,
-		proxyRequestsPerSec,
-	}
-
 	var err error
 
-	c.perfDataCollectorHttpProxy, err = perfdata.NewCollector(perfdata.V1, "MSExchange HttpProxy", perfdata.AllInstances, counters)
+	c.perfDataCollectorHTTPProxy, err = pdh.NewCollector[perfDataCounterValuesHTTPProxy](pdh.CounterTypeRaw, "MSExchange HttpProxy", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create MSExchange HttpProxy collector: %w", err)
 	}
 
-	return nil
-}
-
-func (c *Collector) collectHTTPProxy(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	var data []perflibHTTPProxy
-
-	if err := v1.UnmarshalObject(ctx.PerfObjects["MSExchange HttpProxy"], &data, logger); err != nil {
-		return err
-	}
-
-	for _, instance := range data {
-		labelName := c.toLabelName(instance.Name)
-		ch <- prometheus.MustNewConstMetric(
-			c.mailboxServerLocatorAverageLatency,
-			prometheus.GaugeValue,
-			c.msToSec(instance.MailboxServerLocatorAverageLatency),
-			labelName,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.averageAuthenticationLatency,
-			prometheus.GaugeValue,
-			instance.AverageAuthenticationLatency,
-			labelName,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.averageCASProcessingLatency,
-			prometheus.GaugeValue,
-			c.msToSec(instance.AverageCASProcessingLatency),
-			labelName,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.mailboxServerProxyFailureRate,
-			prometheus.GaugeValue,
-			instance.MailboxServerProxyFailureRate,
-			labelName,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.outstandingProxyRequests,
-			prometheus.GaugeValue,
-			instance.OutstandingProxyRequests,
-			labelName,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			c.proxyRequestsPerSec,
-			prometheus.CounterValue,
-			instance.ProxyRequestsPerSec,
-			labelName,
-		)
-	}
+	c.mailboxServerLocatorAverageLatency = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "http_proxy_mailbox_server_locator_avg_latency_sec"),
+		"Average latency (sec) of MailboxServerLocator web service calls",
+		[]string{"name"},
+		nil,
+	)
+	c.averageAuthenticationLatency = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "http_proxy_avg_auth_latency"),
+		"Average time spent authenticating CAS requests over the last 200 samples",
+		[]string{"name"},
+		nil,
+	)
+	c.outstandingProxyRequests = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "http_proxy_outstanding_proxy_requests"),
+		"Number of concurrent outstanding proxy requests",
+		[]string{"name"},
+		nil,
+	)
+	c.proxyRequestsPerSec = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "http_proxy_requests_total"),
+		"Number of proxy requests processed each second",
+		[]string{"name"},
+		nil,
+	)
+	c.averageCASProcessingLatency = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "http_proxy_avg_cas_processing_latency_sec"),
+		"Average latency (sec) of CAS processing time over the last 200 reqs",
+		[]string{"name"},
+		nil,
+	)
+	c.mailboxServerProxyFailureRate = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "http_proxy_mailbox_proxy_failure_rate"),
+		"% of failures between this CAS and MBX servers over the last 200 samples",
+		[]string{"name"},
+		nil,
+	)
 
 	return nil
 }
 
-func (c *Collector) collectPDHHTTPProxy(ch chan<- prometheus.Metric) error {
-	perfData, err := c.perfDataCollectorHttpProxy.Collect()
+func (c *Collector) collectHTTPProxy(ch chan<- prometheus.Metric) error {
+	err := c.perfDataCollectorHTTPProxy.Collect(&c.perfDataObjectHTTPProxy)
 	if err != nil {
 		return fmt.Errorf("failed to collect MSExchange HttpProxy Service metrics: %w", err)
 	}
 
-	if len(perfData) == 0 {
-		return errors.New("perflib query for MSExchange HttpProxy Service returned empty result set")
-	}
-
-	for name, data := range perfData {
-		labelName := c.toLabelName(name)
+	for _, data := range c.perfDataObjectHTTPProxy {
+		labelName := c.toLabelName(data.Name)
 		ch <- prometheus.MustNewConstMetric(
 			c.mailboxServerLocatorAverageLatency,
 			prometheus.GaugeValue,
-			c.msToSec(data[mailboxServerLocatorAverageLatency].FirstValue),
+			utils.MilliSecToSec(data.MailboxServerLocatorAverageLatency),
 			labelName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.averageAuthenticationLatency,
 			prometheus.GaugeValue,
-			data[averageAuthenticationLatency].FirstValue,
+			data.AverageAuthenticationLatency,
 			labelName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.averageCASProcessingLatency,
 			prometheus.GaugeValue,
-			c.msToSec(data[averageCASProcessingLatency].FirstValue),
+			utils.MilliSecToSec(data.AverageCASProcessingLatency),
 			labelName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.mailboxServerProxyFailureRate,
 			prometheus.GaugeValue,
-			data[mailboxServerProxyFailureRate].FirstValue,
+			data.MailboxServerProxyFailureRate,
 			labelName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.outstandingProxyRequests,
 			prometheus.GaugeValue,
-			data[outstandingProxyRequests].FirstValue,
+			data.OutstandingProxyRequests,
 			labelName,
 		)
 		ch <- prometheus.MustNewConstMetric(
 			c.proxyRequestsPerSec,
 			prometheus.CounterValue,
-			data[proxyRequestsPerSec].FirstValue,
+			data.ProxyRequestsPerSec,
 			labelName,
 		)
 	}

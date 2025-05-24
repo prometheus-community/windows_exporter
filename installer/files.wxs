@@ -1,5 +1,22 @@
-<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
-     xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
+<!--
+  ~ SPDX-License-Identifier: Apache-2.0
+  ~
+  ~ Copyright The Prometheus Authors
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~ http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+
+<Wix xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util"
+     xmlns="http://wixtoolset.org/schemas/v4/wxs">
     <Fragment>
         <DirectoryRef Id="APPLICATIONFOLDER">
             <Component Transitive="yes">
@@ -12,10 +29,15 @@
                     ErrorControl="normal"
                     Start="auto"
                     Type="ownProcess"
+                    Interactive="no"
                     Vital="yes"
-                    Arguments="--log.file eventlog [ConfigFileFlag] [CollectorsFlag] [ListenFlag] [MetricsPathFlag] [TextfileDirsFlag] [ExtraFlags]">
+                    Arguments="[ConfigFileFlag] [CollectorsFlag] [ListenFlag] [MetricsPathFlag] [TextfileDirsFlag] [ExtraFlags]">
+                    <ServiceConfig
+                        DelayedAutoStart="yes"
+                        OnInstall="yes"
+                        OnReinstall="yes" />
                     <util:ServiceConfig
-                        ResetPeriodInDays="1"
+                        ResetPeriodInDays="0"
                         FirstFailureActionType="restart"
                         SecondFailureActionType="restart"
                         ThirdFailureActionType="restart"
@@ -24,6 +46,12 @@
                     <ServiceDependency Id="wmiApSrv" />
                 </ServiceInstall>
                 <ServiceControl Id="ServiceStateControl" Name="windows_exporter" Remove="uninstall" Start="install" Stop="both"/>
+                <!-- The "Name" field must match the argument to eventlog.Open() -->
+                <util:EventSource Log="Application" Name="windows_exporter"
+                                  EventMessageFile="%SystemRoot%\System32\EventCreate.exe"
+                                  SupportsErrors="yes"
+                                  SupportsInformationals="yes"
+                                  SupportsWarnings="yes"/>
             </Component>
             <Component Id="CreateTextfileDirectory" Directory="textfile_inputs" Guid="d03ef58a-9cbf-4165-ad39-d143e9b27e14">
                 <CreateFolder />

@@ -1,3 +1,20 @@
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+//go:build windows
+
 package mscluster
 
 import (
@@ -5,11 +22,20 @@ import (
 
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
-	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 const nameNetwork = Name + "_network"
+
+type collectorNetwork struct {
+	networkMIQuery mi.Query
+
+	networkCharacteristics *prometheus.Desc
+	networkFlags           *prometheus.Desc
+	networkMetric          *prometheus.Desc
+	networkRole            *prometheus.Desc
+	networkState           *prometheus.Desc
+}
 
 // msClusterNetwork represents the MSCluster_Network WMI class
 // - https://docs.microsoft.com/en-us/previous-versions/windows/desktop/cluswmi/mscluster-network
@@ -23,7 +49,14 @@ type msClusterNetwork struct {
 	State           uint `mi:"State"`
 }
 
-func (c *Collector) buildNetwork() {
+func (c *Collector) buildNetwork() error {
+	networkMIQuery, err := mi.NewQuery("SELECT Characteristics,Flags,Metric,Role,State FROM MSCluster_Network")
+	if err != nil {
+		return fmt.Errorf("failed to create WMI query: %w", err)
+	}
+
+	c.networkMIQuery = networkMIQuery
+
 	c.networkCharacteristics = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameNetwork, "characteristics"),
 		"Provides the characteristics of the network.",
@@ -54,6 +87,14 @@ func (c *Collector) buildNetwork() {
 		[]string{"name"},
 		nil,
 	)
+
+	var dst []msClusterNetwork
+
+	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, c.networkMIQuery); err != nil {
+		return fmt.Errorf("WMI query failed: %w", err)
+	}
+
+	return nil
 }
 
 // Collect sends the metric values for each metric
@@ -61,7 +102,7 @@ func (c *Collector) buildNetwork() {
 func (c *Collector) collectNetwork(ch chan<- prometheus.Metric) error {
 	var dst []msClusterNetwork
 
-	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, utils.Must(mi.NewQuery("SELECT * MSCluster_Node"))); err != nil {
+	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, c.networkMIQuery); err != nil {
 		return fmt.Errorf("WMI query failed: %w", err)
 	}
 

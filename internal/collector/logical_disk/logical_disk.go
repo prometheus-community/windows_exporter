@@ -1,3 +1,18 @@
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 //go:build windows
 
 package logical_disk
@@ -14,10 +29,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata/perftypes"
-	v1 "github.com/prometheus-community/windows_exporter/internal/perfdata/v1"
-	"github.com/prometheus-community/windows_exporter/internal/toggle"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows"
@@ -26,10 +38,11 @@ import (
 const Name = "logical_disk"
 
 type Config struct {
-	VolumeInclude *regexp.Regexp `yaml:"volume_include"`
-	VolumeExclude *regexp.Regexp `yaml:"volume_exclude"`
+	VolumeInclude *regexp.Regexp `yaml:"volume-include"`
+	VolumeExclude *regexp.Regexp `yaml:"volume-exclude"`
 }
 
+//nolint:gochecknoglobals
 var ConfigDefaults = Config{
 	VolumeInclude: types.RegExpAny,
 	VolumeExclude: types.RegExpEmpty,
@@ -38,8 +51,10 @@ var ConfigDefaults = Config{
 // A Collector is a Prometheus Collector for perflib logicalDisk metrics.
 type Collector struct {
 	config Config
+	logger *slog.Logger
 
-	perfDataCollector perfdata.Collector
+	perfDataCollector *pdh.Collector
+	perfDataObject    []perfDataCounterValues
 
 	avgReadQueue     *prometheus.Desc
 	avgWriteQueue    *prometheus.Desc
@@ -62,6 +77,7 @@ type Collector struct {
 }
 
 type volumeInfo struct {
+	diskIDs      string
 	filesystem   string
 	serialNumber string
 	label        string
@@ -129,46 +145,12 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
-	if toggle.IsPDHEnabled() {
-		return []string{}, nil
-	}
-
-	return []string{"LogicalDisk"}, nil
-}
-
-func (c *Collector) Close(_ *slog.Logger) error {
+func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
-	if toggle.IsPDHEnabled() {
-		counters := []string{
-			currentDiskQueueLength,
-			avgDiskReadQueueLength,
-			avgDiskWriteQueueLength,
-			diskReadBytesPerSec,
-			diskReadsPerSec,
-			diskWriteBytesPerSec,
-			diskWritesPerSec,
-			percentDiskReadTime,
-			percentDiskWriteTime,
-			percentFreeSpace,
-			freeSpace,
-			percentIdleTime,
-			SplitIOPerSec,
-			avgDiskSecPerRead,
-			avgDiskSecPerWrite,
-			avgDiskSecPerTransfer,
-		}
-
-		var err error
-
-		c.perfDataCollector, err = perfdata.NewCollector(perfdata.V1, "LogicalDisk", perfdata.AllInstances, counters)
-		if err != nil {
-			return fmt.Errorf("failed to create LogicalDisk collector: %w", err)
-		}
-	}
+func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
+	c.logger = logger.With(slog.String("collector", Name))
 
 	c.information = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "info"),
@@ -294,62 +276,39 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 
+	var err error
+
+	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "LogicalDisk", pdh.InstancesAll)
+	if err != nil {
+		return fmt.Errorf("failed to create LogicalDisk collector: %w", err)
+	}
+
 	return nil
 }
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	logger = logger.With(slog.String("collector", Name))
+func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
+	var info volumeInfo
 
-	if toggle.IsPDHEnabled() {
-		return c.collectPDH(logger, ch)
-	}
-
-	if err := c.collect(ctx, logger, ch); err != nil {
-		logger.Error("failed collecting logical_disk metrics",
-			slog.Any("err", err),
-		)
-
-		return err
-	}
-
-	return nil
-}
-
-func (c *Collector) collectPDH(logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	var (
-		err    error
-		diskID string
-		info   volumeInfo
-	)
-
-	perfData, err := c.perfDataCollector.Collect()
+	err := c.perfDataCollector.Collect(&c.perfDataObject)
 	if err != nil {
 		return fmt.Errorf("failed to collect LogicalDisk metrics: %w", err)
 	}
 
-	if len(perfData) == 0 {
-		return errors.New("perflib query for LogicalDisk returned empty result set")
+	volumes, err := getAllMountedVolumes()
+	if err != nil {
+		return fmt.Errorf("failed to get volumes: %w", err)
 	}
 
-	for name, volume := range perfData {
-		if name == "_Total" ||
-			c.config.VolumeExclude.MatchString(name) ||
-			!c.config.VolumeInclude.MatchString(name) {
+	for _, data := range c.perfDataObject {
+		if c.config.VolumeExclude.MatchString(data.Name) || !c.config.VolumeInclude.MatchString(data.Name) {
 			continue
 		}
 
-		diskID, err = getDiskIDByVolume(name)
+		info, err = getVolumeInfo(volumes, data.Name)
 		if err != nil {
-			logger.Warn("failed to get disk ID for "+name,
-				slog.Any("err", err),
-			)
-		}
-
-		info, err = getVolumeInfo(name)
-		if err != nil {
-			logger.Warn("failed to get volume information for "+name,
+			c.logger.Warn("failed to get volume information for "+data.Name,
 				slog.Any("err", err),
 			)
 		}
@@ -358,9 +317,9 @@ func (c *Collector) collectPDH(logger *slog.Logger, ch chan<- prometheus.Metric)
 			c.information,
 			prometheus.GaugeValue,
 			1,
-			diskID,
+			info.diskIDs,
 			info.volumeType,
-			name,
+			data.Name,
 			info.label,
 			info.filesystem,
 			info.serialNumber,
@@ -369,274 +328,113 @@ func (c *Collector) collectPDH(logger *slog.Logger, ch chan<- prometheus.Metric)
 		ch <- prometheus.MustNewConstMetric(
 			c.requestsQueued,
 			prometheus.GaugeValue,
-			volume[currentDiskQueueLength].FirstValue,
-			name,
+			data.CurrentDiskQueueLength,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.avgReadQueue,
 			prometheus.GaugeValue,
-			volume[avgDiskReadQueueLength].FirstValue*perftypes.TicksToSecondScaleFactor,
-			name,
+			data.AvgDiskReadQueueLength*pdh.TicksToSecondScaleFactor,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.avgWriteQueue,
 			prometheus.GaugeValue,
-			volume[avgDiskWriteQueueLength].FirstValue*perftypes.TicksToSecondScaleFactor,
-			name,
+			data.AvgDiskWriteQueueLength*pdh.TicksToSecondScaleFactor,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.readBytesTotal,
 			prometheus.CounterValue,
-			volume[diskReadBytesPerSec].FirstValue,
-			name,
+			data.DiskReadBytesPerSec,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.readsTotal,
 			prometheus.CounterValue,
-			volume[diskReadsPerSec].FirstValue,
-			name,
+			data.DiskReadsPerSec,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.writeBytesTotal,
 			prometheus.CounterValue,
-			volume[diskWriteBytesPerSec].FirstValue,
-			name,
+			data.DiskWriteBytesPerSec,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.writesTotal,
 			prometheus.CounterValue,
-			volume[diskWritesPerSec].FirstValue,
-			name,
+			data.DiskWritesPerSec,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.readTime,
 			prometheus.CounterValue,
-			volume[percentDiskReadTime].FirstValue,
-			name,
+			data.PercentDiskReadTime,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.writeTime,
 			prometheus.CounterValue,
-			volume[percentDiskWriteTime].FirstValue,
-			name,
+			data.PercentDiskWriteTime,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.freeSpace,
 			prometheus.GaugeValue,
-			volume[freeSpace].FirstValue*1024*1024,
-			name,
+			data.FreeSpace*1024*1024,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.totalSpace,
 			prometheus.GaugeValue,
-			volume[percentFreeSpace].FirstValue*1024*1024,
-			name,
+			data.PercentFreeSpace*1024*1024,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.idleTime,
 			prometheus.CounterValue,
-			volume[percentIdleTime].FirstValue,
-			name,
+			data.PercentIdleTime,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.splitIOs,
 			prometheus.CounterValue,
-			volume[SplitIOPerSec].FirstValue,
-			name,
+			data.SplitIOPerSec,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.readLatency,
 			prometheus.CounterValue,
-			volume[avgDiskSecPerRead].FirstValue*perftypes.TicksToSecondScaleFactor,
-			name,
+			data.AvgDiskSecPerRead*pdh.TicksToSecondScaleFactor,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.writeLatency,
 			prometheus.CounterValue,
-			volume[avgDiskSecPerWrite].FirstValue*perftypes.TicksToSecondScaleFactor,
-			name,
+			data.AvgDiskSecPerWrite*pdh.TicksToSecondScaleFactor,
+			data.Name,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.readWriteLatency,
 			prometheus.CounterValue,
-			volume[avgDiskSecPerTransfer].FirstValue*perftypes.TicksToSecondScaleFactor,
-			name,
-		)
-	}
-
-	return nil
-}
-
-func (c *Collector) collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	var (
-		err    error
-		diskID string
-		info   volumeInfo
-		dst    []logicalDisk
-	)
-
-	if err = v1.UnmarshalObject(ctx.PerfObjects["LogicalDisk"], &dst, logger); err != nil {
-		return err
-	}
-
-	for _, volume := range dst {
-		if volume.Name == "_Total" ||
-			c.config.VolumeExclude.MatchString(volume.Name) ||
-			!c.config.VolumeInclude.MatchString(volume.Name) {
-			continue
-		}
-
-		diskID, err = getDiskIDByVolume(volume.Name)
-		if err != nil {
-			logger.Warn("failed to get disk ID for "+volume.Name,
-				slog.Any("err", err),
-			)
-		}
-
-		info, err = getVolumeInfo(volume.Name)
-		if err != nil {
-			logger.Warn("failed to get volume information for %s"+volume.Name,
-				slog.Any("err", err),
-			)
-		}
-
-		ch <- prometheus.MustNewConstMetric(
-			c.information,
-			prometheus.GaugeValue,
-			1,
-			diskID,
-			info.volumeType,
-			volume.Name,
-			info.label,
-			info.filesystem,
-			info.serialNumber,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.requestsQueued,
-			prometheus.GaugeValue,
-			volume.CurrentDiskQueueLength,
-			volume.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.avgReadQueue,
-			prometheus.GaugeValue,
-			volume.AvgDiskReadQueueLength*perftypes.TicksToSecondScaleFactor,
-			volume.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.avgWriteQueue,
-			prometheus.GaugeValue,
-			volume.AvgDiskWriteQueueLength*perftypes.TicksToSecondScaleFactor,
-			volume.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.readBytesTotal,
-			prometheus.CounterValue,
-			volume.DiskReadBytesPerSec,
-			volume.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.readsTotal,
-			prometheus.CounterValue,
-			volume.DiskReadsPerSec,
-			volume.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.writeBytesTotal,
-			prometheus.CounterValue,
-			volume.DiskWriteBytesPerSec,
-			volume.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.writesTotal,
-			prometheus.CounterValue,
-			volume.DiskWritesPerSec,
-			volume.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.readTime,
-			prometheus.CounterValue,
-			volume.PercentDiskReadTime,
-			volume.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.writeTime,
-			prometheus.CounterValue,
-			volume.PercentDiskWriteTime,
-			volume.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.freeSpace,
-			prometheus.GaugeValue,
-			volume.PercentFreeSpace_Base*1024*1024,
-			volume.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.totalSpace,
-			prometheus.GaugeValue,
-			volume.PercentFreeSpace*1024*1024,
-			volume.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.idleTime,
-			prometheus.CounterValue,
-			volume.PercentIdleTime,
-			volume.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.splitIOs,
-			prometheus.CounterValue,
-			volume.SplitIOPerSec,
-			volume.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.readLatency,
-			prometheus.CounterValue,
-			volume.AvgDiskSecPerRead*perftypes.TicksToSecondScaleFactor,
-			volume.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.writeLatency,
-			prometheus.CounterValue,
-			volume.AvgDiskSecPerWrite*perftypes.TicksToSecondScaleFactor,
-			volume.Name,
-		)
-
-		ch <- prometheus.MustNewConstMetric(
-			c.readWriteLatency,
-			prometheus.CounterValue,
-			volume.AvgDiskSecPerTransfer*perftypes.TicksToSecondScaleFactor,
-			volume.Name,
+			data.AvgDiskSecPerTransfer*pdh.TicksToSecondScaleFactor,
+			data.Name,
 		)
 	}
 
@@ -668,38 +466,46 @@ func getDriveType(driveType uint32) string {
 const diskExtentSize = 24
 
 // getDiskIDByVolume returns the disk ID for a given volume.
-func getDiskIDByVolume(rootDrive string) (string, error) {
-	// Open a volume handle to the Disk Root.
-	var err error
+func getVolumeInfo(volumes map[string]string, rootDrive string) (volumeInfo, error) {
+	volumePath := rootDrive
 
-	var f windows.Handle
+	// If rootDrive is a NTFS directory, convert it to a volume GUID.
+	if volumeGUID, ok := volumes[rootDrive]; ok {
+		// GetVolumeNameForVolumeMountPoint returns the volume GUID path as \\?\Volume{GUID}\
+		// According https://learn.microsoft.com/en-us/windows/win32/api/ioapiset/nf-ioapiset-deviceiocontrol#remarks
+		// Win32 Drive Namespace is prefixed with \\.\, so we need to remove the \\?\ prefix.
+		volumePath, _ = strings.CutPrefix(volumeGUID, `\\?\`)
+	}
+
+	volumePathPtr := windows.StringToUTF16Ptr(`\\.\` + volumePath)
 
 	// mode has to include FILE_SHARE permission to allow concurrent access to the disk.
 	// use 0 as access mode to avoid admin permission.
 	mode := uint32(windows.FILE_SHARE_READ | windows.FILE_SHARE_WRITE | windows.FILE_SHARE_DELETE)
+	attr := uint32(windows.FILE_ATTRIBUTE_READONLY)
 
-	f, err = windows.CreateFile(
-		windows.StringToUTF16Ptr(`\\.\`+rootDrive),
-		0, mode, nil, windows.OPEN_EXISTING, uint32(windows.FILE_ATTRIBUTE_READONLY), 0)
+	volumeHandle, err := windows.CreateFile(volumePathPtr, 0, mode, nil, windows.OPEN_EXISTING, attr, 0)
 	if err != nil {
-		return "", err
+		return volumeInfo{}, fmt.Errorf("could not open volume for %s: %w", rootDrive, err)
 	}
 
-	defer windows.Close(f)
+	defer func(fd windows.Handle) {
+		_ = windows.Close(fd)
+	}(volumeHandle)
 
 	controlCode := uint32(5636096) // IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS
 	volumeDiskExtents := make([]byte, 16*1024)
 
 	var bytesReturned uint32
 
-	err = windows.DeviceIoControl(f, controlCode, nil, 0, &volumeDiskExtents[0], uint32(len(volumeDiskExtents)), &bytesReturned, nil)
+	err = windows.DeviceIoControl(volumeHandle, controlCode, nil, 0, &volumeDiskExtents[0], uint32(len(volumeDiskExtents)), &bytesReturned, nil)
 	if err != nil {
-		return "", fmt.Errorf("could not identify physical drive for %s: %w", rootDrive, err)
+		return volumeInfo{}, fmt.Errorf("could not identify physical drive for %s: %w", rootDrive, err)
 	}
 
 	numDiskIDs := uint(binary.LittleEndian.Uint32(volumeDiskExtents))
 	if numDiskIDs < 1 {
-		return "", fmt.Errorf("could not identify physical drive for %s: no disk IDs returned", rootDrive)
+		return volumeInfo{}, fmt.Errorf("could not identify physical drive for %s: no disk IDs returned", rootDrive)
 	}
 
 	diskIDs := make([]string, numDiskIDs)
@@ -711,38 +517,95 @@ func getDiskIDByVolume(rootDrive string) (string, error) {
 	slices.Sort(diskIDs)
 	diskIDs = slices.Compact(diskIDs)
 
-	return strings.Join(diskIDs, ";"), nil
-}
+	volumeInformationRootDrive := volumePath + `\`
 
-func getVolumeInfo(rootDrive string) (volumeInfo, error) {
-	if !strings.HasSuffix(rootDrive, ":") {
-		return volumeInfo{}, nil
+	if strings.Contains(volumePath, `Volume`) {
+		volumeInformationRootDrive = `\\?\` + volumeInformationRootDrive
 	}
 
-	volPath := windows.StringToUTF16Ptr(rootDrive + `\`)
-
+	volumeInformationRootDrivePtr := windows.StringToUTF16Ptr(volumeInformationRootDrive)
+	driveType := windows.GetDriveType(volumeInformationRootDrivePtr)
 	volBufLabel := make([]uint16, windows.MAX_PATH+1)
 	volSerialNum := uint32(0)
 	fsFlags := uint32(0)
 	volBufType := make([]uint16, windows.MAX_PATH+1)
 
-	driveType := windows.GetDriveType(volPath)
-
-	err := windows.GetVolumeInformation(volPath, &volBufLabel[0], uint32(len(volBufLabel)),
-		&volSerialNum, nil, &fsFlags, &volBufType[0], uint32(len(volBufType)))
+	err = windows.GetVolumeInformation(
+		volumeInformationRootDrivePtr,
+		&volBufLabel[0], uint32(len(volBufLabel)),
+		&volSerialNum, nil, &fsFlags,
+		&volBufType[0], uint32(len(volBufType)),
+	)
 	if err != nil {
-		if driveType != windows.DRIVE_CDROM && driveType != windows.DRIVE_REMOVABLE {
-			return volumeInfo{}, err
+		if driveType == windows.DRIVE_CDROM || driveType == windows.DRIVE_REMOVABLE {
+			return volumeInfo{}, nil
 		}
 
-		return volumeInfo{}, nil
+		return volumeInfo{}, fmt.Errorf("could not get volume information for %s: %w", volumeInformationRootDrive, err)
 	}
 
 	return volumeInfo{
+		diskIDs:      strings.Join(diskIDs, ";"),
 		volumeType:   getDriveType(driveType),
 		label:        windows.UTF16PtrToString(&volBufLabel[0]),
 		filesystem:   windows.UTF16PtrToString(&volBufType[0]),
 		serialNumber: fmt.Sprintf("%X", volSerialNum),
 		readonly:     float64(fsFlags & windows.FILE_READ_ONLY_VOLUME),
 	}, nil
+}
+
+func getAllMountedVolumes() (map[string]string, error) {
+	guidBuf := make([]uint16, windows.MAX_PATH+1)
+	guidBufLen := uint32(len(guidBuf) * 2)
+
+	hFindVolume, err := windows.FindFirstVolume(&guidBuf[0], guidBufLen)
+	if err != nil {
+		return nil, fmt.Errorf("FindFirstVolume: %w", err)
+	}
+
+	defer func() {
+		_ = windows.FindVolumeClose(hFindVolume)
+	}()
+
+	volumes := map[string]string{}
+
+	for ; ; err = windows.FindNextVolume(hFindVolume, &guidBuf[0], guidBufLen) {
+		if err != nil {
+			switch {
+			case errors.Is(err, windows.ERROR_NO_MORE_FILES):
+				return volumes, nil
+			default:
+				return nil, fmt.Errorf("FindNextVolume: %w", err)
+			}
+		}
+
+		var rootPathLen uint32
+
+		rootPathBuf := make([]uint16, windows.MAX_PATH+1)
+		rootPathBufLen := uint32(len(rootPathBuf) * 2)
+
+		for {
+			err = windows.GetVolumePathNamesForVolumeName(&guidBuf[0], &rootPathBuf[0], rootPathBufLen, &rootPathLen)
+			if err == nil {
+				break
+			}
+
+			if errors.Is(err, windows.ERROR_NO_MORE_FILES) {
+				rootPathBuf = make([]uint16, (rootPathLen+1)/2)
+
+				continue
+			}
+
+			return nil, fmt.Errorf("GetVolumePathNamesForVolumeName: %w", err)
+		}
+
+		mountPoint := windows.UTF16ToString(rootPathBuf)
+
+		// Skip unmounted volumes
+		if len(mountPoint) == 0 {
+			continue
+		}
+
+		volumes[strings.TrimSuffix(mountPoint, `\`)] = strings.TrimSuffix(windows.UTF16ToString(guidBuf), `\`)
+	}
 }

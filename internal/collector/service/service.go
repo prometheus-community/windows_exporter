@@ -1,13 +1,30 @@
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 //go:build windows
 
 package service
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
 	"regexp"
 	"strconv"
+	"sync"
 	"unsafe"
 
 	"github.com/alecthomas/kingpin/v2"
@@ -21,10 +38,11 @@ import (
 const Name = "service"
 
 type Config struct {
-	ServiceInclude *regexp.Regexp `yaml:"service_include"`
-	ServiceExclude *regexp.Regexp `yaml:"service_exclude"`
+	ServiceInclude *regexp.Regexp `yaml:"include"`
+	ServiceExclude *regexp.Regexp `yaml:"exclude"`
 }
 
+//nolint:gochecknoglobals
 var ConfigDefaults = Config{
 	ServiceInclude: types.RegExpAny,
 	ServiceExclude: types.RegExpEmpty,
@@ -34,12 +52,22 @@ var ConfigDefaults = Config{
 type Collector struct {
 	config Config
 
+	logger *slog.Logger
+
+	apiStateValues     map[uint32]string
+	apiStartModeValues map[uint32]string
+
 	state     *prometheus.Desc
 	processID *prometheus.Desc
 	info      *prometheus.Desc
 	startMode *prometheus.Desc
 
-	serviceManagerHandle *mgr.Mgr
+	// serviceConfigPoolBytes is a pool of byte slices used to avoid allocations
+	// ref: https://victoriametrics.com/blog/go-sync-pool/
+	serviceConfigPoolBytes sync.Pool
+
+	serviceManagerHandle   *mgr.Mgr
+	queryAllServicesBuffer []byte
 }
 
 func New(config *Config) *Collector {
@@ -102,16 +130,20 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
-	return []string{}, nil
-}
-
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
-	logger = logger.With(slog.String("collector", Name))
+	c.logger = logger.With(slog.String("collector", Name))
 
 	if c.config.ServiceInclude.String() == "^(?:.*)$" && c.config.ServiceExclude.String() == "^(?:)$" {
-		logger.Warn("No filters specified for service collector. This will generate a very large number of metrics!")
+		c.logger.Warn("No filters specified for service collector. This will generate a very large number of metrics!")
 	}
+
+	c.serviceConfigPoolBytes = sync.Pool{
+		New: func() any {
+			return new([]byte)
+		},
+	}
+
+	c.queryAllServicesBuffer = make([]byte, 1024*100)
 
 	c.info = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "info"),
@@ -138,6 +170,24 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 
+	c.apiStateValues = map[uint32]string{
+		windows.SERVICE_CONTINUE_PENDING: "continue pending",
+		windows.SERVICE_PAUSE_PENDING:    "pause pending",
+		windows.SERVICE_PAUSED:           "paused",
+		windows.SERVICE_RUNNING:          "running",
+		windows.SERVICE_START_PENDING:    "start pending",
+		windows.SERVICE_STOP_PENDING:     "stop pending",
+		windows.SERVICE_STOPPED:          "stopped",
+	}
+
+	c.apiStartModeValues = map[uint32]string{
+		windows.SERVICE_AUTO_START:   "auto",
+		windows.SERVICE_BOOT_START:   "boot",
+		windows.SERVICE_DEMAND_START: "manual",
+		windows.SERVICE_DISABLED:     "disabled",
+		windows.SERVICE_SYSTEM_START: "system",
+	}
+
 	// EnumServiceStatusEx requires only SC_MANAGER_ENUM_SERVICE.
 	handle, err := windows.OpenSCManager(nil, nil, windows.SC_MANAGER_ENUMERATE_SERVICE)
 	if err != nil {
@@ -149,9 +199,9 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	return nil
 }
 
-func (c *Collector) Close(logger *slog.Logger) error {
+func (c *Collector) Close() error {
 	if err := c.serviceManagerHandle.Disconnect(); err != nil {
-		logger.Warn("Failed to disconnect from scm",
+		c.logger.Warn("Failed to disconnect from scm",
 			slog.Any("err", err),
 		)
 	}
@@ -161,103 +211,79 @@ func (c *Collector) Close(logger *slog.Logger) error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(_ *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	logger = logger.With(slog.String("collector", Name))
-
-	if err := c.collect(logger, ch); err != nil {
-		logger.Error("failed collecting API service metrics:",
-			slog.Any("err", err),
-		)
-
-		return fmt.Errorf("failed collecting API service metrics: %w", err)
-	}
-
-	return nil
-}
-
-func (c *Collector) collect(logger *slog.Logger, ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	services, err := c.queryAllServices()
 	if err != nil {
-		logger.Warn("Failed to query services",
-			slog.Any("err", err),
-		)
-
-		return err
+		return fmt.Errorf("failed to query all services: %w", err)
 	}
 
-	if services == nil {
-		logger.Warn("No services queried")
+	servicesCh := make(chan windows.ENUM_SERVICE_STATUS_PROCESS, len(services))
+	wg := sync.WaitGroup{}
+	wg.Add(len(services))
 
-		return nil
+	for range 4 {
+		go func(ch chan<- prometheus.Metric, wg *sync.WaitGroup) {
+			for service := range servicesCh {
+				c.collectWorker(ch, service)
+				wg.Done()
+			}
+		}(ch, &wg)
 	}
 
-	// Iterate through the Services List.
 	for _, service := range services {
-		serviceName := windows.UTF16PtrToString(service.ServiceName)
-		if c.config.ServiceExclude.MatchString(serviceName) ||
-			!c.config.ServiceInclude.MatchString(serviceName) {
-			continue
-		}
-
-		if err := c.collectService(ch, logger, service); err != nil {
-			logger.Warn("failed collecting service info",
-				slog.Any("err", err),
-				slog.String("service", windows.UTF16PtrToString(service.ServiceName)),
-			)
-		}
+		servicesCh <- service
 	}
+
+	close(servicesCh)
+
+	wg.Wait()
 
 	return nil
 }
 
-var apiStateValues = map[uint32]string{
-	windows.SERVICE_CONTINUE_PENDING: "continue pending",
-	windows.SERVICE_PAUSE_PENDING:    "pause pending",
-	windows.SERVICE_PAUSED:           "paused",
-	windows.SERVICE_RUNNING:          "running",
-	windows.SERVICE_START_PENDING:    "start pending",
-	windows.SERVICE_STOP_PENDING:     "stop pending",
-	windows.SERVICE_STOPPED:          "stopped",
+func (c *Collector) collectWorker(ch chan<- prometheus.Metric, service windows.ENUM_SERVICE_STATUS_PROCESS) {
+	serviceName := windows.UTF16PtrToString(service.ServiceName)
+
+	if c.config.ServiceExclude.MatchString(serviceName) || !c.config.ServiceInclude.MatchString(serviceName) {
+		return
+	}
+
+	if err := c.collectService(ch, serviceName, service); err != nil {
+		c.logger.Log(context.Background(), slog.LevelWarn, "failed collecting service info",
+			slog.Any("err", err),
+			slog.String("service", serviceName),
+		)
+	}
 }
 
-var apiStartModeValues = map[uint32]string{
-	windows.SERVICE_AUTO_START:   "auto",
-	windows.SERVICE_BOOT_START:   "boot",
-	windows.SERVICE_DEMAND_START: "manual",
-	windows.SERVICE_DISABLED:     "disabled",
-	windows.SERVICE_SYSTEM_START: "system",
-}
-
-func (c *Collector) collectService(ch chan<- prometheus.Metric, logger *slog.Logger, service windows.ENUM_SERVICE_STATUS_PROCESS) error {
+func (c *Collector) collectService(ch chan<- prometheus.Metric, serviceName string, service windows.ENUM_SERVICE_STATUS_PROCESS) error {
 	// Open connection for service handler.
 	serviceHandle, err := windows.OpenService(c.serviceManagerHandle.Handle, service.ServiceName, windows.SERVICE_QUERY_CONFIG)
 	if err != nil {
 		return fmt.Errorf("failed to open service: %w", err)
 	}
 
-	serviceNameString := windows.UTF16PtrToString(service.ServiceName)
-
 	// Create handle for each service.
-	serviceManager := &mgr.Service{Name: serviceNameString, Handle: serviceHandle}
+	serviceManager := &mgr.Service{Name: serviceName, Handle: serviceHandle}
 	defer func(serviceManager *mgr.Service) {
 		if err := serviceManager.Close(); err != nil {
-			logger.Warn("failed to close service handle",
+			c.logger.Log(context.Background(), slog.LevelWarn, "failed to close service handle",
 				slog.Any("err", err),
-				slog.String("service", serviceNameString),
+				slog.String("service", serviceName),
 			)
 		}
 	}(serviceManager)
 
 	// Get Service Configuration.
-	serviceConfig, err := serviceManager.Config()
+	serviceConfig, err := c.getServiceConfig(serviceManager)
 	if err != nil {
 		if !errors.Is(err, windows.ERROR_FILE_NOT_FOUND) && !errors.Is(err, windows.ERROR_MUI_FILE_NOT_FOUND) {
 			return fmt.Errorf("failed to get service configuration: %w", err)
 		}
 
-		logger.Debug("failed collecting service",
+		c.logger.Log(context.Background(), slog.LevelDebug, "failed collecting service config",
 			slog.Any("err", err),
-			slog.String("service", serviceNameString),
+			slog.String("service", serviceName),
 		)
 	}
 
@@ -265,7 +291,7 @@ func (c *Collector) collectService(ch chan<- prometheus.Metric, logger *slog.Log
 		c.info,
 		prometheus.GaugeValue,
 		1.0,
-		serviceNameString,
+		serviceName,
 		serviceConfig.DisplayName,
 		serviceConfig.ServiceStartName,
 		serviceConfig.BinaryPathName,
@@ -276,21 +302,21 @@ func (c *Collector) collectService(ch chan<- prometheus.Metric, logger *slog.Log
 		isCurrentState     float64
 	)
 
-	for _, startMode := range apiStartModeValues {
+	for _, startMode := range c.apiStartModeValues {
 		isCurrentStartMode = 0.0
-		if startMode == apiStartModeValues[serviceConfig.StartType] {
+		if startMode == c.apiStartModeValues[serviceConfig.StartType] {
 			isCurrentStartMode = 1.0
 		}
 		ch <- prometheus.MustNewConstMetric(
 			c.startMode,
 			prometheus.GaugeValue,
 			isCurrentStartMode,
-			serviceNameString,
+			serviceName,
 			startMode,
 		)
 	}
 
-	for state, stateValue := range apiStateValues {
+	for state, stateValue := range c.apiStateValues {
 		isCurrentState = 0.0
 		if state == service.ServiceStatusProcess.CurrentState {
 			isCurrentState = 1.0
@@ -300,37 +326,42 @@ func (c *Collector) collectService(ch chan<- prometheus.Metric, logger *slog.Log
 			c.state,
 			prometheus.GaugeValue,
 			isCurrentState,
-			serviceNameString,
+			serviceName,
 			stateValue,
 		)
 	}
 
+	if service.ServiceStatusProcess.ProcessId == 0 {
+		return nil
+	}
+
 	processID := strconv.FormatUint(uint64(service.ServiceStatusProcess.ProcessId), 10)
 
-	if processID != "0" { //nolint: nestif
-		processStartTime, err := getProcessStartTime(logger, service.ServiceStatusProcess.ProcessId)
-		if err != nil {
-			if errors.Is(err, windows.ERROR_ACCESS_DENIED) {
-				logger.Debug("failed to get process start time",
-					slog.String("service", serviceNameString),
-					slog.Any("err", err),
-				)
-			} else {
-				logger.Warn("failed to get process start time",
-					slog.String("service", serviceNameString),
-					slog.Any("err", err),
-				)
-			}
-		} else {
-			ch <- prometheus.MustNewConstMetric(
-				c.processID,
-				prometheus.GaugeValue,
-				float64(processStartTime/1_000_000_000),
-				serviceNameString,
-				processID,
-			)
-		}
+	processStartTime, err := c.getProcessStartTime(service.ServiceStatusProcess.ProcessId)
+	if err == nil {
+		ch <- prometheus.MustNewConstMetric(
+			c.processID,
+			prometheus.GaugeValue,
+			float64(processStartTime/1_000_000_000),
+			serviceName,
+			processID,
+		)
+
+		return nil
 	}
+
+	logLevel := slog.LevelWarn
+
+	// ERROR_INVALID_PARAMETER returns when the process is not running. This can be happened
+	// if the service terminated after query the service API.
+	if errors.Is(err, windows.ERROR_ACCESS_DENIED) || errors.Is(err, windows.ERROR_INVALID_PARAMETER) {
+		logLevel = slog.LevelDebug
+	}
+
+	c.logger.Log(context.Background(), logLevel, "failed to get process start time",
+		slog.String("service", serviceName),
+		slog.Any("err", err),
+	)
 
 	return nil
 }
@@ -339,78 +370,122 @@ func (c *Collector) collectService(ch chan<- prometheus.Metric, logger *slog.Log
 // This is realized by ask Service Manager directly.
 func (c *Collector) queryAllServices() ([]windows.ENUM_SERVICE_STATUS_PROCESS, error) {
 	var (
-		bytesNeeded      uint32
-		servicesReturned uint32
-		resumeHandle     uint32
+		additionalBytesNeeded uint32
+		servicesReturned      uint32
+		err                   error
 	)
 
-	if err := windows.EnumServicesStatusEx(
-		c.serviceManagerHandle.Handle,
-		windows.SC_STATUS_PROCESS_INFO,
-		windows.SERVICE_WIN32,
-		windows.SERVICE_STATE_ALL,
-		nil,
-		0,
-		&bytesNeeded,
-		&servicesReturned,
-		&resumeHandle,
-		nil,
-	); !errors.Is(err, windows.ERROR_MORE_DATA) {
-		return nil, fmt.Errorf("could not fetch buffer size for EnumServicesStatusEx: %w", err)
-	}
+	for {
+		currentBufferSize := uint32(cap(c.queryAllServicesBuffer))
 
-	buf := make([]byte, bytesNeeded)
-	if err := windows.EnumServicesStatusEx(
-		c.serviceManagerHandle.Handle,
-		windows.SC_STATUS_PROCESS_INFO,
-		windows.SERVICE_WIN32,
-		windows.SERVICE_STATE_ALL,
-		&buf[0],
-		bytesNeeded,
-		&bytesNeeded,
-		&servicesReturned,
-		&resumeHandle,
-		nil,
-	); err != nil {
-		return nil, fmt.Errorf("could not query windows service list: %w", err)
+		err = windows.EnumServicesStatusEx(
+			c.serviceManagerHandle.Handle,
+			windows.SC_STATUS_PROCESS_INFO,
+			windows.SERVICE_WIN32,
+			windows.SERVICE_STATE_ALL,
+			&c.queryAllServicesBuffer[0],
+			currentBufferSize,
+			&additionalBytesNeeded,
+			&servicesReturned,
+			nil,
+			nil,
+		)
+
+		if err == nil {
+			break
+		}
+
+		if !errors.Is(err, windows.ERROR_MORE_DATA) {
+			return nil, err
+		}
+
+		/*
+			Unlike other WIN32 API calls, additionalBytesNeeded is not returning the absolute amount bytes needed,
+			but the additional bytes needed relative to the cbBufSize parameter.
+			ref:
+			https://stackoverflow.com/questions/14756347/when-calling-enumservicesstatusex-twice-i-still-get-eror-more-data-in-c
+		*/
+
+		c.queryAllServicesBuffer = make([]byte, currentBufferSize+additionalBytesNeeded)
 	}
 
 	if servicesReturned == 0 {
-		return nil, nil
+		return []windows.ENUM_SERVICE_STATUS_PROCESS{}, nil
 	}
 
-	services := unsafe.Slice((*windows.ENUM_SERVICE_STATUS_PROCESS)(unsafe.Pointer(&buf[0])), int(servicesReturned))
+	services := unsafe.Slice((*windows.ENUM_SERVICE_STATUS_PROCESS)(unsafe.Pointer(&c.queryAllServicesBuffer[0])), int(servicesReturned))
 
 	return services, nil
 }
 
-func getProcessStartTime(logger *slog.Logger, pid uint32) (uint64, error) {
+func (c *Collector) getProcessStartTime(pid uint32) (uint64, error) {
 	handle, err := windows.OpenProcess(windows.PROCESS_QUERY_LIMITED_INFORMATION, false, pid)
 	if err != nil {
 		return 0, fmt.Errorf("failed to open process %w", err)
 	}
 
-	defer func(handle windows.Handle) {
-		err := windows.CloseHandle(handle)
-		if err != nil {
-			logger.Warn("failed to close process handle",
-				slog.Any("err", err),
-			)
-		}
-	}(handle)
-
-	var creation windows.Filetime
-
-	var exit windows.Filetime
-
-	var krn windows.Filetime
-
-	var user windows.Filetime
+	var (
+		creation windows.Filetime
+		exit     windows.Filetime
+		krn      windows.Filetime
+		user     windows.Filetime
+	)
 
 	err = windows.GetProcessTimes(handle, &creation, &exit, &krn, &user)
+
+	if err := windows.CloseHandle(handle); err != nil {
+		c.logger.LogAttrs(context.Background(), slog.LevelWarn, "failed to close process handle",
+			slog.Any("err", err),
+			slog.Uint64("pid", uint64(pid)),
+		)
+	}
+
 	if err != nil {
 		return 0, fmt.Errorf("failed to get process times %w", err)
 	}
 
 	return uint64(creation.Nanoseconds()), nil
+}
+
+// getServiceConfig is an optimized variant of [mgr.Service] that only
+// retrieves the necessary information.
+func (c *Collector) getServiceConfig(service *mgr.Service) (mgr.Config, error) {
+	var serviceConfig *windows.QUERY_SERVICE_CONFIG
+
+	bytesNeeded := uint32(1024)
+
+	buf, ok := c.serviceConfigPoolBytes.Get().(*[]byte)
+	if !ok || len(*buf) == 0 {
+		*buf = make([]byte, bytesNeeded)
+	} else {
+		bytesNeeded = uint32(cap(*buf))
+	}
+
+	for {
+		serviceConfig = (*windows.QUERY_SERVICE_CONFIG)(unsafe.Pointer(&(*buf)[0]))
+
+		err := windows.QueryServiceConfig(service.Handle, serviceConfig, bytesNeeded, &bytesNeeded)
+		if err == nil {
+			break
+		}
+
+		if !errors.Is(err, windows.ERROR_INSUFFICIENT_BUFFER) && !errors.Is(err, windows.ERROR_MORE_DATA) {
+			return mgr.Config{}, err
+		}
+
+		if bytesNeeded <= uint32(len(*buf)) {
+			return mgr.Config{}, fmt.Errorf("win32 reports buffer too small (%d), but buffer is large enough (%d): %w", uint32(cap(*buf)), bytesNeeded, err)
+		}
+
+		*buf = make([]byte, bytesNeeded)
+	}
+
+	defer c.serviceConfigPoolBytes.Put(buf)
+
+	return mgr.Config{
+		BinaryPathName:   windows.UTF16PtrToString(serviceConfig.BinaryPathName),
+		DisplayName:      windows.UTF16PtrToString(serviceConfig.DisplayName),
+		StartType:        serviceConfig.StartType,
+		ServiceStartName: windows.UTF16PtrToString(serviceConfig.ServiceStartName),
+	}, nil
 }

@@ -1,3 +1,20 @@
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+//go:build windows
+
 package process_test
 
 import (
@@ -5,15 +22,16 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/collector/process"
-	"github.com/prometheus-community/windows_exporter/internal/testutils"
+	"github.com/prometheus-community/windows_exporter/internal/utils/testutils"
 )
 
 func BenchmarkProcessCollector(b *testing.B) {
 	// PrinterInclude is not set in testing context (kingpin flags not parsed), causing the collector to skip all processes.
 	localProcessInclude := ".+"
-	kingpin.CommandLine.GetArg("collector.process.include").StringVar(&localProcessInclude)
 	// No context name required as collector source is WMI
-	testutils.FuncBenchmarkCollector(b, process.Name, process.NewWithFlags)
+	testutils.FuncBenchmarkCollector(b, process.Name, process.NewWithFlags, func(app *kingpin.Application) {
+		app.GetFlag("collector.process.include").StringVar(&localProcessInclude)
+	})
 }
 
 func TestCollector(t *testing.T) {

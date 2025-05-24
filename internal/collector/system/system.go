@@ -1,16 +1,31 @@
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 //go:build windows
 
 package system
 
 import (
-	"errors"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/alecthomas/kingpin/v2"
+	"github.com/prometheus-community/windows_exporter/internal/headers/kernel32"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata/perftypes"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -19,13 +34,17 @@ const Name = "system"
 
 type Config struct{}
 
+//nolint:gochecknoglobals
 var ConfigDefaults = Config{}
 
 // A Collector is a Prometheus Collector for WMI metrics.
 type Collector struct {
 	config Config
 
-	perfDataCollector perfdata.Collector
+	bootTimeTimestamp float64
+
+	perfDataCollector *pdh.Collector
+	perfDataObject    []perfDataCounterValues
 
 	contextSwitchesTotal     *prometheus.Desc
 	exceptionDispatchesTotal *prometheus.Desc
@@ -33,8 +52,10 @@ type Collector struct {
 	processes                *prometheus.Desc
 	processesLimit           *prometheus.Desc
 	systemCallsTotal         *prometheus.Desc
-	systemUpTime             *prometheus.Desc
-	threads                  *prometheus.Desc
+	// Deprecated: Use windows_system_boot_time_timestamp instead
+	bootTimeSeconds *prometheus.Desc
+	bootTime        *prometheus.Desc
+	threads         *prometheus.Desc
 }
 
 func New(config *Config) *Collector {
@@ -57,32 +78,25 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
-	return []string{}, nil
-}
+func (c *Collector) Close() error {
+	c.perfDataCollector.Close()
 
-func (c *Collector) Close(_ *slog.Logger) error {
 	return nil
 }
 
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
-	counters := []string{
-		ContextSwitchesPersec,
-		ExceptionDispatchesPersec,
-		ProcessorQueueLength,
-		SystemCallsPersec,
-		SystemUpTime,
-		Processes,
-		Threads,
-	}
-
-	var err error
-
-	c.perfDataCollector, err = perfdata.NewCollector(perfdata.V2, "System", nil, counters)
-	if err != nil {
-		return fmt.Errorf("failed to create System collector: %w", err)
-	}
-
+	c.bootTime = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "boot_time_timestamp"),
+		"Unix timestamp of system boot time",
+		nil,
+		nil,
+	)
+	c.bootTimeSeconds = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "boot_time_timestamp_seconds"),
+		"Deprecated: Use windows_system_boot_time_timestamp instead",
+		nil,
+		nil,
+	)
 	c.contextSwitchesTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "context_switches_total"),
 		"Total number of context switches (WMI source: PerfOS_System.ContextSwitchesPersec)",
@@ -120,12 +134,6 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		nil,
 		nil,
 	)
-	c.systemUpTime = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "system_up_time"),
-		"System boot time (WMI source: PerfOS_System.SystemUpTime)",
-		nil,
-		nil,
-	)
 	c.threads = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "threads"),
 		"Current number of threads (WMI source: PerfOS_System.Threads)",
@@ -133,64 +141,67 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 
+	c.bootTimeTimestamp = float64(time.Now().Unix() - int64(kernel32.GetTickCount64()/1000))
+
+	var err error
+
+	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "System", nil)
+	if err != nil {
+		return fmt.Errorf("failed to create System collector: %w", err)
+	}
+
 	return nil
 }
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(_ *types.ScrapeContext, _ *slog.Logger, ch chan<- prometheus.Metric) error {
-	if err := c.collect(ch); err != nil {
-		return fmt.Errorf("failed collecting system metrics: %w", err)
-	}
-
-	return nil
-}
-
-func (c *Collector) collect(ch chan<- prometheus.Metric) error {
-	perfData, err := c.perfDataCollector.Collect()
+func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
+	err := c.perfDataCollector.Collect(&c.perfDataObject)
 	if err != nil {
 		return fmt.Errorf("failed to collect System metrics: %w", err)
-	}
-
-	data, ok := perfData[perftypes.EmptyInstance]
-	if !ok {
-		return errors.New("query for System returned empty result set")
 	}
 
 	ch <- prometheus.MustNewConstMetric(
 		c.contextSwitchesTotal,
 		prometheus.CounterValue,
-		data[ContextSwitchesPersec].FirstValue,
+		c.perfDataObject[0].ContextSwitchesPerSec,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.exceptionDispatchesTotal,
 		prometheus.CounterValue,
-		data[ExceptionDispatchesPersec].FirstValue,
+		c.perfDataObject[0].ExceptionDispatchesPerSec,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.processorQueueLength,
 		prometheus.GaugeValue,
-		data[ProcessorQueueLength].FirstValue,
+		c.perfDataObject[0].ProcessorQueueLength,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.processes,
 		prometheus.GaugeValue,
-		data[Processes].FirstValue,
+		c.perfDataObject[0].Processes,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.systemCallsTotal,
 		prometheus.CounterValue,
-		data[SystemCallsPersec].FirstValue,
-	)
-	ch <- prometheus.MustNewConstMetric(
-		c.systemUpTime,
-		prometheus.GaugeValue,
-		data[SystemUpTime].FirstValue,
+		c.perfDataObject[0].SystemCallsPerSec,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.threads,
 		prometheus.GaugeValue,
-		data[Threads].FirstValue,
+		c.perfDataObject[0].Threads,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.bootTimeSeconds,
+		prometheus.GaugeValue,
+		c.bootTimeTimestamp,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.bootTime,
+		prometheus.GaugeValue,
+		c.bootTimeTimestamp,
 	)
 
 	// Windows has no defined limit, and is based off available resources. This currently isn't calculated by WMI and is set to default value.

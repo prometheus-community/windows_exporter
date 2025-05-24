@@ -1,3 +1,18 @@
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 //go:build windows
 
 package physical_disk
@@ -10,8 +25,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata/perftypes"
-	v1 "github.com/prometheus-community/windows_exporter/internal/perfdata/v1"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -19,10 +33,11 @@ import (
 const Name = "physical_disk"
 
 type Config struct {
-	DiskInclude *regexp.Regexp `yaml:"disk_include"`
-	DiskExclude *regexp.Regexp `yaml:"disk_exclude"`
+	DiskInclude *regexp.Regexp `yaml:"disk-include"`
+	DiskExclude *regexp.Regexp `yaml:"disk-exclude"`
 }
 
+//nolint:gochecknoglobals
 var ConfigDefaults = Config{
 	DiskInclude: types.RegExpAny,
 	DiskExclude: types.RegExpEmpty,
@@ -31,6 +46,9 @@ var ConfigDefaults = Config{
 // A Collector is a Prometheus Collector for perflib PhysicalDisk metrics.
 type Collector struct {
 	config Config
+
+	perfDataCollector *pdh.Collector
+	perfDataObject    []perfDataCounterValues
 
 	idleTime         *prometheus.Desc
 	readBytesTotal   *prometheus.Desc
@@ -106,11 +124,7 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
-	return []string{"PhysicalDisk"}, nil
-}
-
-func (c *Collector) Close(_ *slog.Logger) error {
+func (c *Collector) Close() error {
 	return nil
 }
 
@@ -199,144 +213,115 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 
+	var err error
+
+	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "PhysicalDisk", pdh.InstancesAll)
+	if err != nil {
+		return fmt.Errorf("failed to create PhysicalDisk collector: %w", err)
+	}
+
 	return nil
 }
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	logger = logger.With(slog.String("collector", Name))
-	if err := c.collect(ctx, logger, ch); err != nil {
-		logger.Error("failed collecting physical_disk metrics",
-			slog.Any("err", err),
-		)
-
-		return err
+func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
+	err := c.perfDataCollector.Collect(&c.perfDataObject)
+	if err != nil {
+		return fmt.Errorf("failed to collect PhysicalDisk metrics: %w", err)
 	}
 
-	return nil
-}
-
-// PhysicalDisk
-// Win32_PerfRawData_PerfDisk_PhysicalDisk docs:
-// - https://docs.microsoft.com/en-us/previous-versions/aa394308(v=vs.85) - Win32_PerfRawData_PerfDisk_PhysicalDisk class.
-type PhysicalDisk struct {
-	Name                   string
-	CurrentDiskQueueLength float64 `perflib:"Current Disk Queue Length"`
-	DiskReadBytesPerSec    float64 `perflib:"Disk Read Bytes/sec"`
-	DiskReadsPerSec        float64 `perflib:"Disk Reads/sec"`
-	DiskWriteBytesPerSec   float64 `perflib:"Disk Write Bytes/sec"`
-	DiskWritesPerSec       float64 `perflib:"Disk Writes/sec"`
-	PercentDiskReadTime    float64 `perflib:"% Disk Read Time"`
-	PercentDiskWriteTime   float64 `perflib:"% Disk Write Time"`
-	PercentIdleTime        float64 `perflib:"% Idle Time"`
-	SplitIOPerSec          float64 `perflib:"Split IO/Sec"`
-	AvgDiskSecPerRead      float64 `perflib:"Avg. Disk sec/Read"`
-	AvgDiskSecPerWrite     float64 `perflib:"Avg. Disk sec/Write"`
-	AvgDiskSecPerTransfer  float64 `perflib:"Avg. Disk sec/Transfer"`
-}
-
-func (c *Collector) collect(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	logger = logger.With(slog.String("collector", Name))
-
-	var dst []PhysicalDisk
-
-	if err := v1.UnmarshalObject(ctx.PerfObjects["PhysicalDisk"], &dst, logger); err != nil {
-		return err
-	}
-
-	for _, disk := range dst {
-		if disk.Name == "_Total" ||
-			c.config.DiskExclude.MatchString(disk.Name) ||
-			!c.config.DiskInclude.MatchString(disk.Name) {
+	for _, data := range c.perfDataObject {
+		if c.config.DiskExclude.MatchString(data.Name) ||
+			!c.config.DiskInclude.MatchString(data.Name) {
 			continue
 		}
 
 		// Parse physical disk number from disk.Name. Mountpoint information is
 		// sometimes included, e.g. "1 C:".
-		disk_number, _, _ := strings.Cut(disk.Name, " ")
+		disk_number, _, _ := strings.Cut(data.Name, " ")
 
 		ch <- prometheus.MustNewConstMetric(
 			c.requestsQueued,
 			prometheus.GaugeValue,
-			disk.CurrentDiskQueueLength,
+			data.CurrentDiskQueueLength,
 			disk_number,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.readBytesTotal,
 			prometheus.CounterValue,
-			disk.DiskReadBytesPerSec,
+			data.DiskReadBytesPerSec,
 			disk_number,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.readsTotal,
 			prometheus.CounterValue,
-			disk.DiskReadsPerSec,
+			data.DiskReadsPerSec,
 			disk_number,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.writeBytesTotal,
 			prometheus.CounterValue,
-			disk.DiskWriteBytesPerSec,
+			data.DiskWriteBytesPerSec,
 			disk_number,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.writesTotal,
 			prometheus.CounterValue,
-			disk.DiskWritesPerSec,
+			data.DiskWritesPerSec,
 			disk_number,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.readTime,
 			prometheus.CounterValue,
-			disk.PercentDiskReadTime,
+			data.PercentDiskReadTime,
 			disk_number,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.writeTime,
 			prometheus.CounterValue,
-			disk.PercentDiskWriteTime,
+			data.PercentDiskWriteTime,
 			disk_number,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.idleTime,
 			prometheus.CounterValue,
-			disk.PercentIdleTime,
+			data.PercentIdleTime,
 			disk_number,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.splitIOs,
 			prometheus.CounterValue,
-			disk.SplitIOPerSec,
+			data.SplitIOPerSec,
 			disk_number,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.readLatency,
 			prometheus.CounterValue,
-			disk.AvgDiskSecPerRead*perftypes.TicksToSecondScaleFactor,
+			data.AvgDiskSecPerRead*pdh.TicksToSecondScaleFactor,
 			disk_number,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.writeLatency,
 			prometheus.CounterValue,
-			disk.AvgDiskSecPerWrite*perftypes.TicksToSecondScaleFactor,
+			data.AvgDiskSecPerWrite*pdh.TicksToSecondScaleFactor,
 			disk_number,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.readWriteLatency,
 			prometheus.CounterValue,
-			disk.AvgDiskSecPerTransfer*perftypes.TicksToSecondScaleFactor,
+			data.AvgDiskSecPerTransfer*pdh.TicksToSecondScaleFactor,
 			disk_number,
 		)
 	}

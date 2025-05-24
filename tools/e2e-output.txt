@@ -105,7 +105,7 @@ test_alpha_total 42
 # TYPE windows_cs_hostname gauge
 # HELP windows_cs_logical_processors Deprecated: Use windows_cpu_logical_processor instead
 # TYPE windows_cs_logical_processors gauge
-# HELP windows_cs_physical_memory_bytes Deprecated: Use windows_physical_memory_total_bytes instead
+# HELP windows_cs_physical_memory_bytes Deprecated: Use windows_memory_physical_total_bytes instead
 # TYPE windows_cs_physical_memory_bytes gauge
 # HELP windows_exporter_build_info A metric with a constant '1' value labeled by version, revision, branch, goversion from which windows_exporter was built, and the goos and goarch for the build.
 # TYPE windows_exporter_build_info gauge
@@ -122,7 +122,8 @@ windows_exporter_collector_success{collector="logon"} 1
 windows_exporter_collector_success{collector="memory"} 1
 windows_exporter_collector_success{collector="net"} 1
 windows_exporter_collector_success{collector="os"} 1
-windows_exporter_collector_success{collector="perfdata"} 1
+windows_exporter_collector_success{collector="pagefile"} 1
+windows_exporter_collector_success{collector="performancecounter"} 1
 windows_exporter_collector_success{collector="physical_disk"} 1
 windows_exporter_collector_success{collector="printer"} 1
 windows_exporter_collector_success{collector="process"} 1
@@ -144,7 +145,8 @@ windows_exporter_collector_timeout{collector="logon"} 0
 windows_exporter_collector_timeout{collector="memory"} 0
 windows_exporter_collector_timeout{collector="net"} 0
 windows_exporter_collector_timeout{collector="os"} 0
-windows_exporter_collector_timeout{collector="perfdata"} 0
+windows_exporter_collector_timeout{collector="pagefile"} 0
+windows_exporter_collector_timeout{collector="performancecounter"} 0
 windows_exporter_collector_timeout{collector="physical_disk"} 0
 windows_exporter_collector_timeout{collector="printer"} 0
 windows_exporter_collector_timeout{collector="process"} 0
@@ -155,8 +157,6 @@ windows_exporter_collector_timeout{collector="tcp"} 0
 windows_exporter_collector_timeout{collector="textfile"} 0
 windows_exporter_collector_timeout{collector="time"} 0
 windows_exporter_collector_timeout{collector="udp"} 0
-# HELP windows_exporter_perflib_snapshot_duration_seconds Duration of perflib snapshot capture
-# TYPE windows_exporter_perflib_snapshot_duration_seconds gauge
 # HELP windows_exporter_scrape_duration_seconds windows_exporter: Total scrape duration.
 # TYPE windows_exporter_scrape_duration_seconds gauge
 # HELP windows_logical_disk_avg_read_requests_queued Average number of read requests that were queued for the selected disk during the sample interval (LogicalDisk.AvgDiskReadQueueLength)
@@ -193,7 +193,7 @@ windows_exporter_collector_timeout{collector="udp"} 0
 # TYPE windows_logical_disk_write_seconds_total counter
 # HELP windows_logical_disk_writes_total The number of write operations on the disk (LogicalDisk.DiskWritesPerSec)
 # TYPE windows_logical_disk_writes_total counter
-# HELP windows_logon_session_logon_timestamp_seconds timestamp of the logon session in seconds.
+# HELP windows_logon_session_logon_timestamp_seconds Deprecated. Use windows_terminal_services_session_info instead.
 # TYPE windows_logon_session_logon_timestamp_seconds gauge
 # HELP windows_memory_available_bytes The amount of physical memory immediately available for allocation to a process or for system use. It is equal to the sum of memory assigned to the standby (cached), free and zero page lists (AvailableBytes)
 # TYPE windows_memory_available_bytes gauge
@@ -275,6 +275,10 @@ windows_exporter_collector_timeout{collector="udp"} 0
 # TYPE windows_net_current_bandwidth_bytes gauge
 # HELP windows_net_nic_address_info A metric with a constant '1' value labeled with the network interface's address information.
 # TYPE windows_net_nic_address_info gauge
+# HELP windows_net_nic_info A metric with a constant '1' value labeled with the network interface's general information.
+# TYPE windows_net_nic_info gauge
+# HELP windows_net_nic_operation_status The operational status for the interface as defined in RFC 2863 as IfOperStatus.
+# TYPE windows_net_nic_operation_status gauge
 # HELP windows_net_output_queue_length_packets (Network.OutputQueueLength)
 # TYPE windows_net_output_queue_length_packets gauge
 # HELP windows_net_packets_outbound_discarded_total (Network.PacketsOutboundDiscarded)
@@ -297,23 +301,17 @@ windows_exporter_collector_timeout{collector="udp"} 0
 # TYPE windows_os_hostname gauge
 # HELP windows_os_info Contains full product name & version in labels. Note that the "major_version" for Windows 11 is \\"10\\"; a build number greater than 22000 represents Windows 11.
 # TYPE windows_os_info gauge
-# HELP windows_os_paging_free_bytes OperatingSystem.FreeSpaceInPagingFiles
-# TYPE windows_os_paging_free_bytes gauge
-# HELP windows_os_paging_limit_bytes OperatingSystem.SizeStoredInPagingFiles
-# TYPE windows_os_paging_limit_bytes gauge
 # HELP windows_os_physical_memory_free_bytes Deprecated: Use `windows_memory_physical_free_bytes` instead.
 # TYPE windows_os_physical_memory_free_bytes gauge
 # HELP windows_os_process_memory_limit_bytes Deprecated: Use `windows_memory_process_memory_limit_bytes` instead.
 # TYPE windows_os_process_memory_limit_bytes gauge
-# HELP windows_os_processes Deprecated: Use `windows_system_processes` instead.
-# TYPE windows_os_processes gauge
 # HELP windows_os_processes_limit Deprecated: Use `windows_system_process_limit` instead.
 # TYPE windows_os_processes_limit gauge
 # HELP windows_os_time Deprecated: Use windows_time_current_timestamp_seconds instead.
 # TYPE windows_os_time gauge
 # HELP windows_os_timezone Deprecated: Use windows_time_timezone instead.
 # TYPE windows_os_timezone gauge
-# HELP windows_os_users Deprecated: Use `count(windows_logon_logon_type)` instead.
+# HELP windows_os_users Deprecated: Use `sum(windows_terminal_services_session_info{state="active"})` instead.
 # TYPE windows_os_users gauge
 # HELP windows_os_virtual_memory_bytes Deprecated: Use `windows_memory_commit_limit` instead.
 # TYPE windows_os_virtual_memory_bytes gauge
@@ -321,12 +319,18 @@ windows_exporter_collector_timeout{collector="udp"} 0
 # TYPE windows_os_virtual_memory_free_bytes gauge
 # HELP windows_os_visible_memory_bytes Deprecated: Use `windows_memory_physical_total_bytes` instead.
 # TYPE windows_os_visible_memory_bytes gauge
-# HELP windows_perfdata_memory_cache_faults_sec Performance data for \\Memory\\Cache Faults/sec
-# TYPE windows_perfdata_memory_cache_faults_sec counter
-# HELP windows_perfdata_processor_information__privileged_time Performance data for \\Processor Information\\% Privileged Time
-# TYPE windows_perfdata_processor_information__privileged_time counter
-# HELP windows_perfdata_processor_information__processor_time Performance data for \\Processor Information\\% Processor Time
-# TYPE windows_perfdata_processor_information__processor_time counter
+# HELP windows_pagefile_free_bytes Number of bytes that can be mapped into the operating system paging files without causing any other pages to be swapped out
+# TYPE windows_pagefile_free_bytes gauge
+# HELP windows_pagefile_limit_bytes Number of bytes that can be stored in the operating system paging files. 0 (zero) indicates that there are no paging files
+# TYPE windows_pagefile_limit_bytes gauge
+# HELP windows_performancecounter_collector_duration_seconds windows_exporter: Duration of an performancecounter child collection.
+# TYPE windows_performancecounter_collector_duration_seconds gauge
+# HELP windows_performancecounter_collector_success windows_exporter: Whether a performancecounter child collector was successful.
+# TYPE windows_performancecounter_collector_success gauge
+# HELP windows_performancecounter_memory_cache_faults_sec windows_exporter: custom Performance Counter metric
+# TYPE windows_performancecounter_memory_cache_faults_sec counter
+# HELP windows_performancecounter_processor_information_processor_time windows_exporter: custom Performance Counter metric
+# TYPE windows_performancecounter_processor_information_processor_time counter
 # HELP windows_physical_disk_idle_seconds_total Seconds that the disk was idle (PhysicalDisk.PercentIdleTime)
 # TYPE windows_physical_disk_idle_seconds_total counter
 # HELP windows_physical_disk_read_bytes_total The number of bytes transferred from the disk during read operations (PhysicalDisk.DiskReadBytesPerSec)
@@ -389,6 +393,10 @@ windows_service_state{name="Themes",state="running"} 1
 windows_service_state{name="Themes",state="start pending"} 0
 windows_service_state{name="Themes",state="stop pending"} 0
 windows_service_state{name="Themes",state="stopped"} 0
+# HELP windows_system_boot_time_timestamp Unix timestamp of system boot time
+# TYPE windows_system_boot_time_timestamp gauge
+# HELP windows_system_boot_time_timestamp_seconds Deprecated: Use windows_system_boot_time_timestamp instead
+# TYPE windows_system_boot_time_timestamp_seconds gauge
 # HELP windows_system_context_switches_total Total number of context switches (WMI source: PerfOS_System.ContextSwitchesPersec)
 # TYPE windows_system_context_switches_total counter
 # HELP windows_system_exception_dispatches_total Total number of exceptions dispatched (WMI source: PerfOS_System.ExceptionDispatchesPersec)
@@ -401,8 +409,6 @@ windows_service_state{name="Themes",state="stopped"} 0
 # TYPE windows_system_processor_queue_length gauge
 # HELP windows_system_system_calls_total Total number of system calls (WMI source: PerfOS_System.SystemCallsPersec)
 # TYPE windows_system_system_calls_total counter
-# HELP windows_system_system_up_time System boot time (WMI source: PerfOS_System.SystemUpTime)
-# TYPE windows_system_system_up_time gauge
 # HELP windows_system_threads Current number of threads (WMI source: PerfOS_System.Threads)
 # TYPE windows_system_threads gauge
 # HELP windows_tcp_connection_failures_total (TCP.ConnectionFailures)
@@ -427,11 +433,10 @@ windows_service_state{name="Themes",state="stopped"} 0
 # TYPE windows_tcp_segments_total counter
 # HELP windows_textfile_mtime_seconds Unixtime mtime of textfiles successfully read.
 # TYPE windows_textfile_mtime_seconds gauge
-# HELP windows_textfile_scrape_error 1 if there was an error opening or reading a file, 0 otherwise
-# TYPE windows_textfile_scrape_error gauge
-windows_textfile_scrape_error 0
-# HELP windows_time_clock_frequency_adjustment_ppb_total Total adjustment made to the local system clock frequency by W32Time in Parts Per Billion (PPB) units.
-# TYPE windows_time_clock_frequency_adjustment_ppb_total counter
+# HELP windows_time_clock_frequency_adjustment This value reflects the adjustment made to the local system clock frequency by W32Time in nominal clock units. This counter helps visualize the finer adjustments being made by W32time to synchronize the local clock.
+# TYPE windows_time_clock_frequency_adjustment gauge
+# HELP windows_time_clock_frequency_adjustment_ppb This value reflects the adjustment made to the local system clock frequency by W32Time in Parts Per Billion (PPB) units. 1 PPB adjustment imples the system clock was adjusted at a rate of 1 nanosecond per second. The smallest possible adjustment can vary and can be expected to be in the order of 100&apos;s of PPB. This counter helps visualize the finer actions being taken by W32time to synchronize the local clock.
+# TYPE windows_time_clock_frequency_adjustment_ppb gauge
 # HELP windows_time_computed_time_offset_seconds Absolute time offset between the system clock and the chosen time source, in seconds
 # TYPE windows_time_computed_time_offset_seconds gauge
 # HELP windows_time_current_timestamp_seconds OperatingSystem.LocalDateTime
@@ -454,4 +459,3 @@ windows_textfile_scrape_error 0
 # TYPE windows_udp_datagram_received_total gauge
 # HELP windows_udp_datagram_sent_total UDP datagrams are sent from the entity
 # TYPE windows_udp_datagram_sent_total counter
-

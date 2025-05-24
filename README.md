@@ -1,6 +1,12 @@
-# windows_exporter
+config.file# windows_exporter
 
-![Build Status](https://github.com/prometheus-community/windows_exporter/workflows/windows_exporter%20CI/CD/badge.svg)
+[![CI](https://github.com/prometheus-community/windows_exporter/actions/workflows/release.yml/badge.svg)](https://github.com/prometheus-community/windows_exporter)
+[![Linting](https://github.com/prometheus-community/windows_exporter/actions/workflows/lint.yml/badge.svg)](https://github.com/prometheus-community/windows_exporter)
+[![GitHub license](https://img.shields.io/github/license/prometheus-community/windows_exporter)](https://github.com/prometheus-community/windows_exporter/blob/master/LICENSE.txt)
+[![Current Release](https://img.shields.io/github/release/prometheus-community/windows_exporter.svg?logo=github)](https://github.com/prometheus-community/windows_exporter/releases/latest)
+[![GitHub Repo stars](https://img.shields.io/github/stars/prometheus-community/windows_exporter?style=flat&logo=github)](https://github.com/prometheus-community/windows_exporter/stargazers)
+[![GitHub all releases](https://img.shields.io/github/downloads/prometheus-community/windows_exporter/total?logo=github)](https://github.com/prometheus-community/windows_exporter/releases/latest)
+[![Go Report Card](https://goreportcard.com/badge/github.com/prometheus-community/windows_exporter)](https://goreportcard.com/report/github.com/prometheus-community/windows_exporter)
 
 A Prometheus exporter for Windows machines.
 
@@ -27,7 +33,6 @@ Name     | Description | Enabled by default
 [iis](docs/collector.iis.md) | IIS sites and applications |
 [license](docs/collector.license.md) | Windows license status |
 [logical_disk](docs/collector.logical_disk.md) | Logical disks, disk I/O | &#10003;
-[logon](docs/collector.logon.md) | User logon sessions |
 [memory](docs/collector.memory.md) | Memory usage metrics | &#10003;
 [mscluster](docs/collector.mscluster.md) | MSCluster metrics |
 [msmq](docs/collector.msmq.md) | MSMQ queues |
@@ -35,7 +40,8 @@ Name     | Description | Enabled by default
 [netframework](docs/collector.netframework.md) | .NET Framework metrics |
 [net](docs/collector.net.md) | Network interface I/O | &#10003;
 [os](docs/collector.os.md) | OS metrics (memory, processes, users) | &#10003;
-[perfdata](docs/collector.perfdata.md) | Custom perfdata metrics |
+[pagefile](docs/collector.pagefile.md) | pagefile metrics |
+[performancecounter](docs/collector.performancecounter.md) | Custom performance counter metrics |
 [physical_disk](docs/collector.physical_disk.md) | physical disk metrics | &#10003;
 [printer](docs/collector.printer.md) | Printer metrics |
 [process](docs/collector.process.md) | Per-process metrics |
@@ -80,18 +86,18 @@ windows_exporter accepts flags to configure certain behaviours. The ones configu
 |--------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------|
 | `--web.listen-address`               | host:port for exporter.                                                                                                                                                                          | `:9182`       |
 | `--telemetry.path`                   | URL path for surfacing collected metrics.                                                                                                                                                        | `/metrics`    |
-| `--telemetry.max-requests`           | Maximum number of concurrent requests. 0 to disable.                                                                                                                                             | `5`           |
-| `--collectors.enabled`               | Comma-separated list of collectors to use. Use `[defaults]` as a placeholder which gets expanded containing all the collectors enabled by default."                                              | `[defaults]`  |
-| `--collectors.print`                 | If true, print available collectors and exit.                                                                                                                                                    |               |
+| `--collectors.enabled`               | Comma-separated list of collectors to use. Use `[defaults]` as a placeholder which gets expanded containing all the collectors enabled by default.                                               | `[defaults]`  |
 | `--scrape.timeout-margin`            | Seconds to subtract from the timeout allowed by the client. Tune to allow for overhead or high loads.                                                                                            | `0.5`         |
 | `--web.config.file`                  | A [web config][web_config] for setting up TLS and Auth                                                                                                                                           | None          |
 | `--config.file`                      | [Using a config file](#using-a-configuration-file) from path or URL                                                                                                                              | None          |
-| `--config.file.insecure-skip-verify` | Skip TLS when loading config file from URL                                                                                                                                                       | false         |
 | `--log.file`                         | Output file of log messages. One of [stdout, stderr, eventlog, \<path to log file>]<br>**NOTE:** The MSI installer will add a default argument to the installed service setting this to eventlog | stderr        |
 
 ## Installation
 
 The latest release can be downloaded from the [releases page](https://github.com/prometheus-community/windows_exporter/releases).
+
+All binaries and installation packages are signed with an self-signed certificate. The public key can be found [here](https://github.com/prometheus-community/windows_exporter/blob/master/installer/codesign.cer).
+Once import into the trusted root certificate store, the binaries and installation packages will be trusted.
 
 Each release provides a .msi installer. The installer will setup the windows_exporter as a Windows service, as well as create an exception in the Windows Firewall.
 
@@ -118,6 +124,8 @@ The following parameters are available:
 | `EXTRA_FLAGS`        | Allows passing full CLI flags. Defaults to an empty string. For `--collectors.enabled` and `--config.file`, use the specialized properties  `ENABLED_COLLECTORS` and `CONFIG_FILE` |
 | `ADDLOCAL`           | Enables features within the windows_exporter installer. Supported values: `FirewallException`                                                                                      |
 | `REMOVE`             | Disables features within the windows_exporter installer. Supported values: `FirewallException`                                                                                     |
+| `APPLICATIONFOLDER`  | Directory to install windows_exporter. Defaults to `C:\Program Files\windows_exporter`                                                                                             |
+
 
 Parameters are sent to the installer via `msiexec`.
 On PowerShell, the `--%` should be passed before defining properties.
@@ -136,6 +144,11 @@ msiexec /i <path-to-msi-file> --% ENABLED_COLLECTORS=os,service EXTRA_FLAGS="--c
 Define a config file.
 ```powershell
 msiexec /i <path-to-msi-file> --% CONFIG_FILE="D:\config.yaml"
+```
+
+Alternative install directory
+```powershell
+msiexec /i <path-to-msi-file> --% ADDLOCAL=FirewallException APPLICATIONFOLDER="F:\Program Files\windows_exporter"
 ```
 
 On some older versions of Windows,
@@ -163,7 +176,7 @@ The windows_exporter can be run as a Docker container. The Docker image is avail
 
 * [Docker Hub](https://hub.docker.com/r/prometheuscommunity/windows-exporter): `docker.io/prometheuscommunity/windows-exporter`
 * [GitHub Container Registry](https://github.com/prometheus-community/windows_exporter/pkgs/container/windows-exporter): `ghcr.io/prometheus-community/windows-exporter`
-<!-- * [quay.io Registry](https://quay.io/repository/prometheuscommunity/windows-exporter): `quay.io/prometheuscommunity/windows-exporter` -->
+* [quay.io Registry](https://quay.io/repository/prometheuscommunity/windows-exporter): `quay.io/prometheuscommunity/windows-exporter`
 
 ### Tags
 
@@ -191,6 +204,14 @@ Windows Server 2012 and 2012R2 are supported as best-effort only, but not guaran
     .\windows_exporter.exe
 
 The prometheus metrics will be exposed on [localhost:9182](http://localhost:9182)
+
+### HTTP Endpoints
+
+windows_exporter provides the following HTTP endpoints:
+
+* `/metrics`: Exposes metrics in the [Prometheus text format](https://prometheus.io/docs/instrumenting/exposition_formats/).
+* `/health`: Returns 200 OK when the exporter is running.
+* `/debug/pprof/`: Exposes the [pprof](https://golang.org/pkg/net/http/pprof/) endpoints. Only, if `--debug.enabled` is set.
 
 ## Examples
 

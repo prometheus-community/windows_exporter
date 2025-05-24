@@ -1,67 +1,70 @@
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+//go:build windows
+
 package exchange
 
 import (
-	"errors"
 	"fmt"
-	"log/slog"
 
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	v1 "github.com/prometheus-community/windows_exporter/internal/perfdata/v1"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-// Perflib: [24914] MSExchange Availability Service.
-type perflibAvailabilityService struct {
-	RequestsSec float64 `perflib:"Availability Requests (sec)"`
+type collectorAvailabilityService struct {
+	perfDataCollectorAvailabilityService *pdh.Collector
+	perfDataObjectAvailabilityService    []perfDataCounterValuesAvailabilityService
+
+	availabilityRequestsSec *prometheus.Desc
+}
+
+type perfDataCounterValuesAvailabilityService struct {
+	AvailabilityRequestsPerSec float64 `perfdata:"Availability Requests (sec)"`
 }
 
 func (c *Collector) buildAvailabilityService() error {
-	counters := []string{}
-
 	var err error
 
-	c.perfDataCollectorAvailabilityService, err = perfdata.NewCollector(perfdata.V1, "MSExchange Availability Service", perfdata.AllInstances, counters)
+	c.perfDataCollectorAvailabilityService, err = pdh.NewCollector[perfDataCounterValuesAvailabilityService](pdh.CounterTypeRaw, "MSExchange Availability Service", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create MSExchange Availability Service collector: %w", err)
 	}
 
-	return nil
-}
-
-func (c *Collector) collectAvailabilityService(ctx *types.ScrapeContext, logger *slog.Logger, ch chan<- prometheus.Metric) error {
-	var data []perflibAvailabilityService
-
-	if err := v1.UnmarshalObject(ctx.PerfObjects["MSExchange Availability Service"], &data, logger); err != nil {
-		return err
-	}
-
-	for _, availservice := range data {
-		ch <- prometheus.MustNewConstMetric(
-			c.availabilityRequestsSec,
-			prometheus.CounterValue,
-			availservice.RequestsSec,
-		)
-	}
+	c.availabilityRequestsSec = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "availability_service_requests_per_sec"),
+		"Number of requests serviced per second",
+		nil,
+		nil,
+	)
 
 	return nil
 }
 
-func (c *Collector) collectPDHAvailabilityService(ch chan<- prometheus.Metric) error {
-	perfData, err := c.perfDataCollectorAvailabilityService.Collect()
+func (c *Collector) collectAvailabilityService(ch chan<- prometheus.Metric) error {
+	err := c.perfDataCollectorAvailabilityService.Collect(&c.perfDataObjectAvailabilityService)
 	if err != nil {
 		return fmt.Errorf("failed to collect MSExchange Availability Service metrics: %w", err)
 	}
 
-	if len(perfData) == 0 {
-		return errors.New("perflib query for MSExchange Availability Service returned empty result set")
-	}
-
-	for _, data := range perfData {
+	for _, data := range c.perfDataObjectAvailabilityService {
 		ch <- prometheus.MustNewConstMetric(
 			c.availabilityRequestsSec,
 			prometheus.CounterValue,
-			data[requestsPerSec].FirstValue,
+			data.AvailabilityRequestsPerSec,
 		)
 	}
 

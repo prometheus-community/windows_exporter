@@ -1,3 +1,18 @@
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 //go:build windows
 
 package time
@@ -13,8 +28,8 @@ import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/headers/kernel32"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata"
-	"github.com/prometheus-community/windows_exporter/internal/perfdata/perftypes"
+	"github.com/prometheus-community/windows_exporter/internal/osversion"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows"
@@ -28,9 +43,10 @@ const (
 )
 
 type Config struct {
-	CollectorsEnabled []string `yaml:"collectors_enabled"`
+	CollectorsEnabled []string `yaml:"enabled"`
 }
 
+//nolint:gochecknoglobals
 var ConfigDefaults = Config{
 	CollectorsEnabled: []string{
 		collectorSystemTime,
@@ -42,16 +58,20 @@ var ConfigDefaults = Config{
 type Collector struct {
 	config Config
 
-	perfDataCollector perfdata.Collector
+	perfDataCollector *pdh.Collector
+	perfDataObject    []perfDataCounterValues
 
-	currentTime                      *prometheus.Desc
-	timezone                         *prometheus.Desc
-	clockFrequencyAdjustmentPPBTotal *prometheus.Desc
-	computedTimeOffset               *prometheus.Desc
-	ntpClientTimeSourceCount         *prometheus.Desc
-	ntpRoundTripDelay                *prometheus.Desc
-	ntpServerIncomingRequestsTotal   *prometheus.Desc
-	ntpServerOutgoingResponsesTotal  *prometheus.Desc
+	ppbCounterPresent bool
+
+	currentTime                     *prometheus.Desc
+	timezone                        *prometheus.Desc
+	clockFrequencyAdjustment        *prometheus.Desc
+	clockFrequencyAdjustmentPPB     *prometheus.Desc
+	computedTimeOffset              *prometheus.Desc
+	ntpClientTimeSourceCount        *prometheus.Desc
+	ntpRoundTripDelay               *prometheus.Desc
+	ntpServerIncomingRequestsTotal  *prometheus.Desc
+	ntpServerOutgoingResponsesTotal *prometheus.Desc
 }
 
 func New(config *Config) *Collector {
@@ -96,11 +116,7 @@ func (c *Collector) GetName() string {
 	return Name
 }
 
-func (c *Collector) GetPerfCounter(_ *slog.Logger) ([]string, error) {
-	return []string{}, nil
-}
-
-func (c *Collector) Close(_ *slog.Logger) error {
+func (c *Collector) Close() error {
 	if slices.Contains(c.config.CollectorsEnabled, collectorNTP) {
 		c.perfDataCollector.Close()
 	}
@@ -115,21 +131,8 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		}
 	}
 
-	counters := []string{
-		ClockFrequencyAdjustmentPPBTotal,
-		ComputedTimeOffset,
-		NTPClientTimeSourceCount,
-		NTPRoundTripDelay,
-		NTPServerIncomingRequestsTotal,
-		NTPServerOutgoingResponsesTotal,
-	}
-
-	var err error
-
-	c.perfDataCollector, err = perfdata.NewCollector(perfdata.V2, "Windows Time Service", nil, counters)
-	if err != nil {
-		return fmt.Errorf("failed to create Windows Time Service collector: %w", err)
-	}
+	// https://github.com/prometheus-community/windows_exporter/issues/1891
+	c.ppbCounterPresent = osversion.Build() >= osversion.LTSC2019
 
 	c.currentTime = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "current_timestamp_seconds"),
@@ -143,9 +146,15 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		[]string{"timezone"},
 		nil,
 	)
-	c.clockFrequencyAdjustmentPPBTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "clock_frequency_adjustment_ppb_total"),
-		"Total adjustment made to the local system clock frequency by W32Time in Parts Per Billion (PPB) units.",
+	c.clockFrequencyAdjustment = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "clock_frequency_adjustment"),
+		"This value reflects the adjustment made to the local system clock frequency by W32Time in nominal clock units. This counter helps visualize the finer adjustments being made by W32time to synchronize the local clock.",
+		nil,
+		nil,
+	)
+	c.clockFrequencyAdjustmentPPB = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "clock_frequency_adjustment_ppb"),
+		"This value reflects the adjustment made to the local system clock frequency by W32Time in Parts Per Billion (PPB) units. 1 PPB adjustment imples the system clock was adjusted at a rate of 1 nanosecond per second. The smallest possible adjustment can vary and can be expected to be in the order of 100&apos;s of PPB. This counter helps visualize the finer actions being taken by W32time to synchronize the local clock.",
 		nil,
 		nil,
 	)
@@ -180,13 +189,20 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 
+	var err error
+
+	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "Windows Time Service", nil)
+	if err != nil {
+		return fmt.Errorf("failed to create Windows Time Service collector: %w", err)
+	}
+
 	return nil
 }
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(_ *types.ScrapeContext, _ *slog.Logger, ch chan<- prometheus.Metric) error {
-	errs := make([]error, 0, 2)
+func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
+	errs := make([]error, 0)
 
 	if slices.Contains(c.config.CollectorsEnabled, collectorSystemTime) {
 		if err := c.collectTime(ch); err != nil {
@@ -229,45 +245,49 @@ func (c *Collector) collectTime(ch chan<- prometheus.Metric) error {
 }
 
 func (c *Collector) collectNTP(ch chan<- prometheus.Metric) error {
-	perfData, err := c.perfDataCollector.Collect()
+	err := c.perfDataCollector.Collect(&c.perfDataObject)
 	if err != nil {
-		return fmt.Errorf("failed to collect VM Memory metrics: %w", err)
-	}
-
-	data, ok := perfData[perftypes.EmptyInstance]
-	if !ok {
-		return errors.New("query for Windows Time Service returned empty result set")
+		return fmt.Errorf("failed to collect time metrics: %w", err)
 	}
 
 	ch <- prometheus.MustNewConstMetric(
-		c.clockFrequencyAdjustmentPPBTotal,
-		prometheus.CounterValue,
-		data[ClockFrequencyAdjustmentPPBTotal].FirstValue,
+		c.clockFrequencyAdjustment,
+		prometheus.GaugeValue,
+		c.perfDataObject[0].ClockFrequencyAdjustment,
 	)
+
+	if c.ppbCounterPresent {
+		ch <- prometheus.MustNewConstMetric(
+			c.clockFrequencyAdjustmentPPB,
+			prometheus.GaugeValue,
+			c.perfDataObject[0].ClockFrequencyAdjustmentPPB,
+		)
+	}
+
 	ch <- prometheus.MustNewConstMetric(
 		c.computedTimeOffset,
 		prometheus.GaugeValue,
-		data[ComputedTimeOffset].FirstValue/1000000, // microseconds -> seconds
+		c.perfDataObject[0].ComputedTimeOffset/1000000, // microseconds -> seconds
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.ntpClientTimeSourceCount,
 		prometheus.GaugeValue,
-		data[NTPClientTimeSourceCount].FirstValue,
+		c.perfDataObject[0].NTPClientTimeSourceCount,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.ntpRoundTripDelay,
 		prometheus.GaugeValue,
-		data[NTPRoundTripDelay].FirstValue/1000000, // microseconds -> seconds
+		c.perfDataObject[0].NTPRoundTripDelay/1000000, // microseconds -> seconds
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.ntpServerIncomingRequestsTotal,
 		prometheus.CounterValue,
-		data[NTPServerIncomingRequestsTotal].FirstValue,
+		c.perfDataObject[0].NTPServerIncomingRequestsTotal,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.ntpServerOutgoingResponsesTotal,
 		prometheus.CounterValue,
-		data[NTPServerOutgoingResponsesTotal].FirstValue,
+		c.perfDataObject[0].NTPServerOutgoingResponsesTotal,
 	)
 
 	return nil

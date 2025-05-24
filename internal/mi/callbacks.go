@@ -1,3 +1,18 @@
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 //go:build windows
 
 package mi
@@ -14,7 +29,10 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-// We have to registry a global callback function, since the amount of callbacks is limited.
+// operationUnmarshalCallbacksInstanceResult registers a global callback function.
+// The amount of system callbacks is limited to 2000.
+//
+//nolint:gochecknoglobals
 var operationUnmarshalCallbacksInstanceResult = sync.OnceValue[uintptr](func() uintptr {
 	// Workaround for a deadlock issue in go.
 	// Ref: https://github.com/golang/go/issues/55015
@@ -122,7 +140,11 @@ func (o *OperationUnmarshalCallbacks) InstanceResult(
 
 		element, err := instance.GetElement(miTag)
 		if err != nil {
-			o.errCh <- fmt.Errorf("failed to get element: %w", err)
+			if errors.Is(err, MI_RESULT_NO_SUCH_PROPERTY) {
+				continue
+			}
+
+			o.errCh <- fmt.Errorf("failed to get element %s: %w", miTag, err)
 
 			return 0
 		}
@@ -136,9 +158,8 @@ func (o *OperationUnmarshalCallbacks) InstanceResult(
 			field.SetInt(int64(element.value))
 		case ValueTypeSTRING:
 			if element.value == 0 {
-				o.errCh <- fmt.Errorf("%s: invalid pointer: value is nil", miTag)
-
-				return 0
+				// value is null
+				continue
 			}
 
 			// Convert the UTF-16 string to a Go string
