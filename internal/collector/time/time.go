@@ -271,7 +271,6 @@ func (c *Collector) collectClockSource(ch chan<- prometheus.Metric) error {
 
 	key, err := registry.OpenKey(registry.LOCAL_MACHINE, keyPath, registry.READ)
 	if err != nil {
-
 		return fmt.Errorf("failed to open registry key: %w", err)
 	}
 
