@@ -19,15 +19,16 @@ package iis
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-type collectorHttpService struct {
-	perfDataCollectorHttpService *pdh.Collector
-	perfDataObjectHttpService    []perfDataCounterValuesHttpService
+type collectorHttpServiceRequestQueues struct {
+	perfDataCollectorHttpServiceRequestQueues *pdh.Collector
+	perfDataObjectHttpServiceRequestQueues    []perfDataCounterValuesHttpServiceRequestQueues
 
 	httpRequestQueuesCurrentQueueSize     *prometheus.Desc
 	httpRequestQueuesTotalRejectedRequest *prometheus.Desc
@@ -35,23 +36,25 @@ type collectorHttpService struct {
 	httpRequestQueuesArrivalRate          *prometheus.Desc
 }
 
-type perfDataCounterValuesHttpService struct {
+type perfDataCounterValuesHttpServiceRequestQueues struct {
 	Name string
 
-	HttpRequestQueuesCurrentQueueSize     float64 `perfdata:"CurrentQueueSize"`
-	HttpRequestQueuesTotalRejectedRequest float64 `perfdata:"RejectedRequest"`
-	HttpRequestQueuesMaxQueueItemAge      float64 `perfdata:"MaxQueueItemAge"`
-	HttpRequestQueuesArrivalRate          float64 `perfdata:"ArrivalRate"`
+	HttpRequestQueuesCurrentQueueSize      float64 `perfdata:"CurrentQueueSize"`
+	HttpRequestQueuesTotalRejectedRequests float64 `perfdata:"RejectedRequests"`
+	HttpRequestQueuesMaxQueueItemAge       float64 `perfdata:"MaxQueueItemAge"`
+	HttpRequestQueuesArrivalRate           float64 `perfdata:"ArrivalRate"`
 }
 
-func (p perfDataCounterValuesHttpService) GetName() string {
+func (p perfDataCounterValuesHttpServiceRequestQueues) GetName() string {
 	return p.Name
 }
 
-func (c *Collector) buildHttpService() error {
+func (c *Collector) buildHttpServiceRequestQueues() error {
 	var err error
 
-	c.perfDataCollectorHttpService, err = pdh.NewCollector[perfDataCounterValuesHttpService](pdh.CounterTypeRaw, "HTTP Service Request Queues", pdh.InstancesAll)
+	c.logger.Info("IIS/HttpServiceRequestQueues collector is in an experimental state! The configuration and metrics may change in future. Please report any issues.")
+
+	c.perfDataCollectorHttpServiceRequestQueues, err = pdh.NewCollector[perfDataCounterValuesHttpServiceRequestQueues](pdh.CounterTypeRaw, "HTTP Service Request Queues", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create Http Service collector: %w", err)
 	}
@@ -70,7 +73,7 @@ func (c *Collector) buildHttpService() error {
 	)
 	c.httpRequestQueuesMaxQueueItemAge = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "http_requests_max_queue_item_age"),
-		"Http Request Max Queue Item Age",
+		"Http Request Max Queue Item Age. The values might be bogus if the queue is empty.",
 		[]string{"site"},
 		nil,
 	)
@@ -84,15 +87,19 @@ func (c *Collector) buildHttpService() error {
 	return nil
 }
 
-func (c *Collector) collectHttpService(ch chan<- prometheus.Metric) error {
-	err := c.perfDataCollectorHttpService.Collect(&c.perfDataObjectHttpService)
+func (c *Collector) collectHttpServiceRequestQueues(ch chan<- prometheus.Metric) error {
+	err := c.perfDataCollectorHttpServiceRequestQueues.Collect(&c.perfDataObjectHttpServiceRequestQueues)
 	if err != nil {
-		return fmt.Errorf("failed to collect Http Service metrics: %w", err)
+		return fmt.Errorf("failed to collect Http Service Request Queues metrics: %w", err)
 	}
 
-	deduplicateIISNames(c.perfDataObjectHttpService)
+	deduplicateIISNames(c.perfDataObjectHttpServiceRequestQueues)
 
-	for _, data := range c.perfDataObjectHttpService {
+	for _, data := range c.perfDataObjectHttpServiceRequestQueues {
+		if strings.HasPrefix(data.Name, "---") {
+			continue
+		}
+
 		if c.config.SiteExclude.MatchString(data.Name) || !c.config.SiteInclude.MatchString(data.Name) {
 			continue
 		}
@@ -106,7 +113,7 @@ func (c *Collector) collectHttpService(ch chan<- prometheus.Metric) error {
 		ch <- prometheus.MustNewConstMetric(
 			c.httpRequestQueuesTotalRejectedRequest,
 			prometheus.GaugeValue,
-			data.HttpRequestQueuesTotalRejectedRequest,
+			data.HttpRequestQueuesTotalRejectedRequests,
 			data.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
