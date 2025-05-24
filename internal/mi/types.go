@@ -1,4 +1,6 @@
-// Copyright 2024 The Prometheus Authors
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -51,6 +53,7 @@ var (
 	NamespaceRootWindowsFSRM       = utils.Must(NewNamespace("root/microsoft/windows/fsrm"))
 	NamespaceRootWebAdministration = utils.Must(NewNamespace("root/WebAdministration"))
 	NamespaceRootMSCluster         = utils.Must(NewNamespace("root/MSCluster"))
+	NamespaceRootMicrosoftDNS      = utils.Must(NewNamespace("root/MicrosoftDNS"))
 )
 
 type Query *uint16

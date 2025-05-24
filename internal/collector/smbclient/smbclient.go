@@ -1,4 +1,6 @@
-// Copyright 2024 The Prometheus Authors
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -91,13 +93,6 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
-	var err error
-
-	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "SMB Client Shares", pdh.InstancesAll)
-	if err != nil {
-		return fmt.Errorf("failed to create SMB Client Shares collector: %w", err)
-	}
-
 	// desc creates a new prometheus description
 	desc := func(metricName string, description string, labels []string) *prometheus.Desc {
 		return prometheus.NewDesc(
@@ -192,6 +187,13 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		"Seconds waiting for write requests on this share",
 		[]string{"server", "share"},
 	)
+
+	var err error
+
+	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "SMB Client Shares", pdh.InstancesAll)
+	if err != nil {
+		return fmt.Errorf("failed to create SMB Client Shares collector: %w", err)
+	}
 
 	return nil
 }

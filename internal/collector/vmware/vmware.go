@@ -1,4 +1,6 @@
-// Copyright 2024 The Prometheus Authors
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -230,7 +232,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
-	errs := make([]error, 0, 2)
+	errs := make([]error, 0)
 
 	if err := c.collectCpu(ch); err != nil {
 		errs = append(errs, fmt.Errorf("failed collecting vmware cpu metrics: %w", err))

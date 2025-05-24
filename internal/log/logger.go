@@ -1,4 +1,6 @@
-// Copyright 2024 The Prometheus Authors
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -81,8 +83,8 @@ func New(config *Config) (*slog.Logger, error) {
 		return nil, errors.New("log file undefined")
 	}
 
-	config.Config.Writer = config.File.w
-	config.Config.Style = promslog.SlogStyle
+	config.Writer = config.File.w
+	config.Style = promslog.SlogStyle
 
 	return promslog.New(config.Config), nil
 }

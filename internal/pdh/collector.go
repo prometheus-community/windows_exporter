@@ -1,4 +1,6 @@
-// Copyright 2024 The Prometheus Authors
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -25,8 +27,8 @@ import (
 	"sync"
 	"unsafe"
 
-	"github.com/Microsoft/hcsshim/osversion"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
+	"github.com/prometheus-community/windows_exporter/internal/osversion"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows"
 )
@@ -122,6 +124,11 @@ func NewCollectorWithReflection(resultType CounterType, object string, instances
 			continue
 		}
 
+		secondValue := strings.HasSuffix(counterName, ",secondvalue")
+		if secondValue {
+			counterName = strings.TrimSuffix(counterName, ",secondvalue")
+		}
+
 		var counter Counter
 		if counter, ok = collector.counters[counterName]; !ok {
 			counter = Counter{
@@ -132,9 +139,7 @@ func NewCollectorWithReflection(resultType CounterType, object string, instances
 			}
 		}
 
-		if strings.HasSuffix(counterName, ",secondvalue") {
-			counterName = strings.TrimSuffix(counterName, ",secondvalue")
-
+		if secondValue {
 			counter.FieldIndexSecondValue = f.Index[0]
 		} else {
 			counter.FieldIndexValue = f.Index[0]
@@ -206,9 +211,6 @@ func NewCollectorWithReflection(resultType CounterType, object string, instances
 			}
 
 			counter.Type = counterInfo.DwType
-			counter.Desc = windows.UTF16PtrToString(counterInfo.SzExplainText)
-			counter.Desc = windows.UTF16PtrToString(counterInfo.SzExplainText)
-
 			if val, ok := SupportedCounterTypes[counter.Type]; ok {
 				counter.MetricType = val
 			} else {

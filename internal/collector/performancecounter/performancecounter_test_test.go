@@ -1,4 +1,6 @@
-// Copyright 2024 The Prometheus Authors
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -28,7 +30,6 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -206,9 +207,9 @@ windows_performancecounter_processor_information_processor_time\{core="0,0",stat
 			promhttp.HandlerFor(registry, promhttp.HandlerOpts{ErrorHandling: promhttp.ContinueOnError}).ServeHTTP(rw, &http.Request{})
 			got := rw.Body.String()
 
-			assert.NotEmpty(t, got)
+			require.NotEmpty(t, got)
 			require.NotEmpty(t, tc.expectedMetrics)
-			assert.Regexp(t, tc.expectedMetrics, got)
+			require.Regexp(t, tc.expectedMetrics, got)
 		})
 	}
 }

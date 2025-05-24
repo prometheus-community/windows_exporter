@@ -1,4 +1,6 @@
-// Copyright 2024 The Prometheus Authors
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -39,7 +41,7 @@ const (
 )
 
 type Config struct {
-	CollectorsEnabled []string `yaml:"collectors_enabled"`
+	CollectorsEnabled []string `yaml:"enabled"`
 }
 
 //nolint:gochecknoglobals
@@ -122,7 +124,7 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 
 	c.miSession = miSession
 
-	errs := make([]error, 0, 5)
+	errs := make([]error, 0)
 
 	if slices.Contains(c.config.CollectorsEnabled, subCollectorCluster) {
 		if err := c.buildCluster(); err != nil {
@@ -227,7 +229,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	wg.Wait()
 	close(errCh)
 
-	errs := make([]error, 0, 5)
+	errs := make([]error, 0)
 
 	for err := range errCh {
 		errs = append(errs, err)

@@ -1,4 +1,6 @@
-// Copyright 2024 The Prometheus Authors
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -17,6 +19,7 @@ package performancecounter
 
 import (
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
+	"gopkg.in/yaml.v3"
 )
 
 type Object struct {
@@ -25,7 +28,7 @@ type Object struct {
 	Type          pdh.CounterType `json:"type"           yaml:"type"`
 	Instances     []string        `json:"instances"      yaml:"instances"`
 	Counters      []Counter       `json:"counters"       yaml:"counters"`
-	InstanceLabel string          `json:"instance_label" yaml:"instance_label"` //nolint:tagliatelle
+	InstanceLabel string          `json:"instance_label" yaml:"instance_label"`
 
 	collector      *pdh.Collector
 	perfDataObject any
@@ -39,3 +42,7 @@ type Counter struct {
 }
 
 // https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/54691ebe11bb9ec32b4e35cd31fcb94a352de134/receiver/windowsperfcountersreceiver/README.md?plain=1#L150
+
+func (*Config) UnmarshalYAML(*yaml.Node) error {
+	return nil
+}

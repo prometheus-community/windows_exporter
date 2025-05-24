@@ -66,7 +66,8 @@ try {
     throw $_
 }
 
-$output_diff = Compare-Object ((Get-Content 'e2e-output.txt' | Out-String).Trim()) ((Get-Content "$($temp_dir)/e2e-output.txt" | Out-String).Trim())
+# Compare the expected and actual output
+$output_diff = Compare-Object (Get-Content 'e2e-output.txt' | Where-Object { $_ -ne "" }) (Get-Content "$($temp_dir)/e2e-output.txt" | Where-Object { $_ -ne "" })
 
 # Fail if differences in output are detected
 if (-not ($null -eq $output_diff)) {
@@ -74,6 +75,7 @@ if (-not ($null -eq $output_diff)) {
 
     Write-Host "STDOUT"
     Get-Content "$($temp_dir)/windows_exporter.log"
+    Write-Host "----------------------------------------"
     Write-Host "STDERR"
     Get-Content "$($temp_dir)/windows_exporter_error.log"
 

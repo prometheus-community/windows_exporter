@@ -1,4 +1,6 @@
-// Copyright 2024 The Prometheus Authors
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -25,7 +27,7 @@ import (
 )
 
 type collectorSQLStats struct {
-	sqlStatsPerfDataCollectors map[string]*pdh.Collector
+	sqlStatsPerfDataCollectors map[mssqlInstance]*pdh.Collector
 	sqlStatsPerfDataObject     []perfDataCounterValuesSqlStats
 
 	sqlStatsAutoParamAttempts       *prometheus.Desc
@@ -58,11 +60,11 @@ type perfDataCounterValuesSqlStats struct {
 func (c *Collector) buildSQLStats() error {
 	var err error
 
-	c.sqlStatsPerfDataCollectors = make(map[string]*pdh.Collector, len(c.mssqlInstances))
+	c.sqlStatsPerfDataCollectors = make(map[mssqlInstance]*pdh.Collector, len(c.mssqlInstances))
 	errs := make([]error, 0, len(c.mssqlInstances))
 
 	for _, sqlInstance := range c.mssqlInstances {
-		c.sqlStatsPerfDataCollectors[sqlInstance.name], err = pdh.NewCollector[perfDataCounterValuesSqlStats](pdh.CounterTypeRaw, c.mssqlGetPerfObjectName(sqlInstance.name, "SQL Statistics"), nil)
+		c.sqlStatsPerfDataCollectors[sqlInstance], err = pdh.NewCollector[perfDataCounterValuesSqlStats](pdh.CounterTypeRaw, c.mssqlGetPerfObjectName(sqlInstance, "SQL Statistics"), nil)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("failed to create SQL Statistics collector for instance %s: %w", sqlInstance.name, err))
 		}
@@ -142,7 +144,7 @@ func (c *Collector) collectSQLStats(ch chan<- prometheus.Metric) error {
 	return c.collect(ch, subCollectorSQLStats, c.sqlStatsPerfDataCollectors, c.collectSQLStatsInstance)
 }
 
-func (c *Collector) collectSQLStatsInstance(ch chan<- prometheus.Metric, sqlInstance string, perfDataCollector *pdh.Collector) error {
+func (c *Collector) collectSQLStatsInstance(ch chan<- prometheus.Metric, sqlInstance mssqlInstance, perfDataCollector *pdh.Collector) error {
 	err := perfDataCollector.Collect(&c.sqlStatsPerfDataObject)
 	if err != nil {
 		return fmt.Errorf("failed to collect %s metrics: %w", c.mssqlGetPerfObjectName(sqlInstance, "SQL Statistics"), err)
@@ -152,77 +154,77 @@ func (c *Collector) collectSQLStatsInstance(ch chan<- prometheus.Metric, sqlInst
 		c.sqlStatsAutoParamAttempts,
 		prometheus.CounterValue,
 		c.sqlStatsPerfDataObject[0].SqlStatsAutoParamAttemptsPerSec,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.sqlStatsBatchRequests,
 		prometheus.CounterValue,
 		c.sqlStatsPerfDataObject[0].SqlStatsBatchRequestsPerSec,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.sqlStatsFailedAutoParams,
 		prometheus.CounterValue,
 		c.sqlStatsPerfDataObject[0].SqlStatsFailedAutoParamsPerSec,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.sqlStatsForcedParameterizations,
 		prometheus.CounterValue,
 		c.sqlStatsPerfDataObject[0].SqlStatsForcedParameterizationsPerSec,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.sqlStatsGuidedplanexecutions,
 		prometheus.CounterValue,
 		c.sqlStatsPerfDataObject[0].SqlStatsGuidedplanexecutionsPerSec,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.sqlStatsMisguidedplanexecutions,
 		prometheus.CounterValue,
 		c.sqlStatsPerfDataObject[0].SqlStatsMisguidedplanexecutionsPerSec,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.sqlStatsSafeAutoParams,
 		prometheus.CounterValue,
 		c.sqlStatsPerfDataObject[0].SqlStatsSafeAutoParamsPerSec,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.sqlStatsSQLAttentionrate,
 		prometheus.CounterValue,
 		c.sqlStatsPerfDataObject[0].SqlStatsSQLAttentionrate,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.sqlStatsSQLCompilations,
 		prometheus.CounterValue,
 		c.sqlStatsPerfDataObject[0].SqlStatsSQLCompilationsPerSec,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.sqlStatsSQLReCompilations,
 		prometheus.CounterValue,
 		c.sqlStatsPerfDataObject[0].SqlStatsSQLReCompilationsPerSec,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.sqlStatsUnsafeAutoParams,
 		prometheus.CounterValue,
 		c.sqlStatsPerfDataObject[0].SqlStatsUnsafeAutoParamsPerSec,
-		sqlInstance,
+		sqlInstance.name,
 	)
 
 	return nil

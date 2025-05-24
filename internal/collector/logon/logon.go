@@ -1,4 +1,6 @@
-// Copyright 2024 The Prometheus Authors
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -34,6 +36,7 @@ type Config struct{}
 var ConfigDefaults = Config{}
 
 // A Collector is a Prometheus Collector for WMI metrics.
+// Deprecated: Use windows_terminal_services_session_info instead.
 type Collector struct {
 	config Config
 
@@ -64,10 +67,16 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
+func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
+	logger.Warn("The logon collector will be removed mid 2025. Use terminal_service instead."+
+		" See https://github.com/prometheus-community/windows_exporter/pull/1957 for more information. If you see values in this collector"+
+		" that you need, please open an issue to discuss how to get them into the new collector.",
+		slog.String("collector", Name),
+	)
+
 	c.sessionInfo = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "session_logon_timestamp_seconds"),
-		"timestamp of the logon session in seconds.",
+		"Deprecated. Use windows_terminal_services_session_info instead.",
 		[]string{"id", "username", "domain", "type"},
 		nil,
 	)

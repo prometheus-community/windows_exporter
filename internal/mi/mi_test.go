@@ -1,4 +1,6 @@
-// Copyright 2024 The Prometheus Authors
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -28,7 +30,7 @@ type win32Process struct {
 }
 
 func Test_MI_Application_Initialize(t *testing.T) {
-	application, err := mi.Application_Initialize()
+	application, err := mi.ApplicationInitialize()
 	require.NoError(t, err)
 	require.NotEmpty(t, application)
 
@@ -37,7 +39,7 @@ func Test_MI_Application_Initialize(t *testing.T) {
 }
 
 func Test_MI_Application_TestConnection(t *testing.T) {
-	application, err := mi.Application_Initialize()
+	application, err := mi.ApplicationInitialize()
 	require.NoError(t, err)
 	require.NotEmpty(t, application)
 
@@ -67,7 +69,7 @@ func Test_MI_Application_TestConnection(t *testing.T) {
 }
 
 func Test_MI_Query(t *testing.T) {
-	application, err := mi.Application_Initialize()
+	application, err := mi.ApplicationInitialize()
 	require.NoError(t, err)
 	require.NotEmpty(t, application)
 
@@ -120,7 +122,7 @@ func Test_MI_Query(t *testing.T) {
 }
 
 func Test_MI_QueryUnmarshal(t *testing.T) {
-	application, err := mi.Application_Initialize()
+	application, err := mi.ApplicationInitialize()
 	require.NoError(t, err)
 	require.NotEmpty(t, application)
 
@@ -155,7 +157,7 @@ func Test_MI_QueryUnmarshal(t *testing.T) {
 }
 
 func Test_MI_EmptyQuery(t *testing.T) {
-	application, err := mi.Application_Initialize()
+	application, err := mi.ApplicationInitialize()
 	require.NoError(t, err)
 	require.NotEmpty(t, application)
 
@@ -194,7 +196,7 @@ func Test_MI_EmptyQuery(t *testing.T) {
 }
 
 func Test_MI_Query_Unmarshal(t *testing.T) {
-	application, err := mi.Application_Initialize()
+	application, err := mi.ApplicationInitialize()
 	require.NoError(t, err)
 	require.NotEmpty(t, application)
 

@@ -1,4 +1,6 @@
-// Copyright 2024 The Prometheus Authors
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -163,30 +165,4 @@ func (instance *Instance) GetClassName() (string, error) {
 	}
 
 	return windows.UTF16PtrToString(classNameUTF16), nil
-}
-
-func Instance_Print(instance *Instance) (string, error) {
-	elementMap := map[string]any{}
-
-	properties := instance.classDecl.Properties()
-
-	count, err := instance.GetElementCount()
-	if err != nil {
-		return "", err
-	}
-
-	if count == 0 {
-		return "", nil
-	}
-
-	for _, property := range properties {
-		name := windows.UTF16PtrToString(property.Name)
-
-		element, _ := instance.GetElement(name)
-		value, _ := element.GetValue()
-
-		elementMap[windows.UTF16PtrToString(property.Name)] = value
-	}
-
-	return fmt.Sprintf("%v", elementMap), nil
 }

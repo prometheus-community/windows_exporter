@@ -1,4 +1,6 @@
-// Copyright 2024 The Prometheus Authors
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -201,7 +203,7 @@ func (c *Collection) Enable(enabledCollectors []string) error {
 // Build To be called by the exporter for collector initialization.
 // Instead, fail fast, it will try to build all collectors and return all errors.
 // errors are joined with errors.Join.
-func (c *Collection) Build(logger *slog.Logger) error {
+func (c *Collection) Build(ctx context.Context, logger *slog.Logger) error {
 	c.startTime = gotime.Now()
 
 	err := c.initMI()
@@ -236,7 +238,7 @@ func (c *Collection) Build(logger *slog.Logger) error {
 			errors.Is(err, pdh.NewPdhError(pdh.CstatusNoObject)) ||
 			errors.Is(err, pdh.NewPdhError(pdh.CstatusNoCounter)) ||
 			errors.Is(err, mi.MI_RESULT_INVALID_NAMESPACE) {
-			logger.LogAttrs(context.Background(), slog.LevelWarn, "couldn't initialize collector", slog.Any("err", err))
+			logger.LogAttrs(ctx, slog.LevelWarn, "couldn't initialize collector", slog.Any("err", err))
 
 			continue
 		}
@@ -275,7 +277,7 @@ func (c *Collection) Close() error {
 
 // initMI To be called by the exporter for collector initialization.
 func (c *Collection) initMI() error {
-	app, err := mi.Application_Initialize()
+	app, err := mi.ApplicationInitialize()
 	if err != nil {
 		return fmt.Errorf("error from initialize MI application: %w", err)
 	}
@@ -287,6 +289,10 @@ func (c *Collection) initMI() error {
 
 	if err = destinationOptions.SetLocale(mi.LocaleEnglish); err != nil {
 		return fmt.Errorf("error from set locale: %w", err)
+	}
+
+	if err = destinationOptions.SetTimeout(gotime.Second); err != nil {
+		return fmt.Errorf("error from set timeout: %w", err)
 	}
 
 	c.miSession, err = app.NewSession(destinationOptions)

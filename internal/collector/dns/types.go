@@ -1,4 +1,6 @@
-// Copyright 2024 The Prometheus Authors
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -104,4 +106,12 @@ type perfDataCounterValues struct {
 	ZoneTransferSOARequestSent     float64 `perfdata:"Zone Transfer Request Received"`
 	_                              float64 `perfdata:"Zone Transfer SOA Request Sent"`
 	_                              float64 `perfdata:"Zone Transfer Success"`
+}
+
+// Statistic represents the structure for DNS error statistics
+type Statistic struct {
+	Name           string `mi:"Name"`
+	CollectionName string `mi:"CollectionName"`
+	Value          uint64 `mi:"Value"`
+	DnsServerName  string `mi:"DnsServerName"`
 }

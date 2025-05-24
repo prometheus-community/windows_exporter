@@ -1,4 +1,6 @@
-// Copyright 2024 The Prometheus Authors
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -32,7 +34,7 @@ import (
 const Name = "dfsr"
 
 type Config struct {
-	CollectorsEnabled []string `yaml:"collectors_enabled"`
+	CollectorsEnabled []string `yaml:"sources-enabled"`
 }
 
 //nolint:gochecknoglobals
@@ -159,29 +161,6 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	logger = logger.With(slog.String("collector", Name))
 
 	logger.Info("dfsr collector is in an experimental state! Metrics for this collector have not been tested.")
-
-	var err error
-
-	if slices.Contains(c.config.CollectorsEnabled, "connection") {
-		c.perfDataCollectorConnection, err = pdh.NewCollector[perfDataCounterValuesConnection](pdh.CounterTypeRaw, "DFS Replication Connections", pdh.InstancesAll)
-		if err != nil {
-			return fmt.Errorf("failed to create DFS Replication Connections collector: %w", err)
-		}
-	}
-
-	if slices.Contains(c.config.CollectorsEnabled, "folder") {
-		c.perfDataCollectorFolder, err = pdh.NewCollector[perfDataCounterValuesFolder](pdh.CounterTypeRaw, "DFS Replicated Folders", pdh.InstancesAll)
-		if err != nil {
-			return fmt.Errorf("failed to create DFS Replicated Folders collector: %w", err)
-		}
-	}
-
-	if slices.Contains(c.config.CollectorsEnabled, "volume") {
-		c.perfDataCollectorVolume, err = pdh.NewCollector[perfDataCounterValuesVolume](pdh.CounterTypeRaw, "DFS Replication Service Volumes", pdh.InstancesAll)
-		if err != nil {
-			return fmt.Errorf("failed to create DFS Replication Service Volumes collector: %w", err)
-		}
-	}
 
 	// connection
 	c.connectionBandwidthSavingsUsingDFSReplicationTotal = prometheus.NewDesc(
@@ -473,13 +452,36 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 
+	var err error
+
+	if slices.Contains(c.config.CollectorsEnabled, "connection") {
+		c.perfDataCollectorConnection, err = pdh.NewCollector[perfDataCounterValuesConnection](pdh.CounterTypeRaw, "DFS Replication Connections", pdh.InstancesAll)
+		if err != nil {
+			return fmt.Errorf("failed to create DFS Replication Connections collector: %w", err)
+		}
+	}
+
+	if slices.Contains(c.config.CollectorsEnabled, "folder") {
+		c.perfDataCollectorFolder, err = pdh.NewCollector[perfDataCounterValuesFolder](pdh.CounterTypeRaw, "DFS Replicated Folders", pdh.InstancesAll)
+		if err != nil {
+			return fmt.Errorf("failed to create DFS Replicated Folders collector: %w", err)
+		}
+	}
+
+	if slices.Contains(c.config.CollectorsEnabled, "volume") {
+		c.perfDataCollectorVolume, err = pdh.NewCollector[perfDataCounterValuesVolume](pdh.CounterTypeRaw, "DFS Replication Service Volumes", pdh.InstancesAll)
+		if err != nil {
+			return fmt.Errorf("failed to create DFS Replication Service Volumes collector: %w", err)
+		}
+	}
+
 	return nil
 }
 
 // Collect implements the Collector interface.
 // Sends metric values for each metric to the provided prometheus Metric channel.
 func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
-	errs := make([]error, 0, 3)
+	errs := make([]error, 0)
 
 	if slices.Contains(c.config.CollectorsEnabled, "connection") {
 		errs = append(errs, c.collectPDHConnection(ch))

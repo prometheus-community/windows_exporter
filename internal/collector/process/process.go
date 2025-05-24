@@ -1,4 +1,6 @@
-// Copyright 2024 The Prometheus Authors
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -37,9 +39,9 @@ import (
 const Name = "process"
 
 type Config struct {
-	ProcessInclude      *regexp.Regexp `yaml:"process_include"`
-	ProcessExclude      *regexp.Regexp `yaml:"process_exclude"`
-	EnableWorkerProcess bool           `yaml:"enable_iis_worker_process"` //nolint:tagliatelle
+	ProcessInclude      *regexp.Regexp `yaml:"include"`
+	ProcessExclude      *regexp.Regexp `yaml:"exclude"`
+	EnableWorkerProcess bool           `yaml:"iis"`
 }
 
 //nolint:gochecknoglobals

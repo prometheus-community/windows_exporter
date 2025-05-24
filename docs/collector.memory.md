@@ -68,7 +68,7 @@ Show memory usage for instance (%)
 ```yaml
 # Alert on hosts that have exhausted all available physical memory
 - alert: MemoryExhausted
-  expr: windows_os_physical_memory_free_bytes == 0
+  expr: windows_memory_physical_free_bytes == 0
   for: 10m
   labels:
     severity: high

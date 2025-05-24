@@ -1,4 +1,6 @@
-// Copyright 2024 The Prometheus Authors
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -16,6 +18,7 @@
 package udp
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 
@@ -80,18 +83,6 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
-	var err error
-
-	c.perfDataCollector4, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "UDPv4", nil)
-	if err != nil {
-		return fmt.Errorf("failed to create UDPv4 collector: %w", err)
-	}
-
-	c.perfDataCollector6, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "UDPv6", nil)
-	if err != nil {
-		return fmt.Errorf("failed to create UDPv6 collector: %w", err)
-	}
-
 	c.datagramsNoPortTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "datagram_no_port_total"),
 		"Number of received UDP datagrams for which there was no application at the destination port",
@@ -117,7 +108,21 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 
-	return nil
+	errs := make([]error, 0)
+
+	var err error
+
+	c.perfDataCollector4, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "UDPv4", nil)
+	if err != nil {
+		errs = append(errs, fmt.Errorf("failed to create UDPv4 collector: %w", err))
+	}
+
+	c.perfDataCollector6, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "UDPv6", nil)
+	if err != nil {
+		errs = append(errs, fmt.Errorf("failed to create UDPv6 collector: %w", err))
+	}
+
+	return errors.Join(errs...)
 }
 
 // Collect sends the metric values for each metric
@@ -127,46 +132,50 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 }
 
 func (c *Collector) collect(ch chan<- prometheus.Metric) error {
-	err := c.perfDataCollector4.Collect(&c.perfDataObject4)
-	if err != nil {
-		return fmt.Errorf("failed to collect UDPv4 metrics: %w", err)
+	errs := make([]error, 0)
+
+	if err := c.perfDataCollector4.Collect(&c.perfDataObject4); err != nil {
+		errs = append(errs, fmt.Errorf("failed to collect UDPv4 metrics: %w", err))
+	} else if len(c.perfDataObject4) == 0 {
+		errs = append(errs, fmt.Errorf("failed to collect UDPv4 metrics: %w", types.ErrNoDataUnexpected))
+	} else {
+		c.writeUDPCounters(ch, c.perfDataObject4, "ipv4")
 	}
 
-	c.writeUDPCounters(ch, c.perfDataObject4, []string{"ipv4"})
-
-	err = c.perfDataCollector6.Collect(&c.perfDataObject6)
-	if err != nil {
-		return fmt.Errorf("failed to collect UDPv6 metrics: %w", err)
+	if err := c.perfDataCollector6.Collect(&c.perfDataObject6); err != nil {
+		errs = append(errs, fmt.Errorf("failed to collect UDPv6 metrics: %w", err))
+	} else if len(c.perfDataObject6) == 0 {
+		errs = append(errs, fmt.Errorf("failed to collect UDPv6 metrics: %w", types.ErrNoDataUnexpected))
+	} else {
+		c.writeUDPCounters(ch, c.perfDataObject6, "ipv6")
 	}
 
-	c.writeUDPCounters(ch, c.perfDataObject6, []string{"ipv6"})
-
-	return nil
+	return errors.Join(errs...)
 }
 
-func (c *Collector) writeUDPCounters(ch chan<- prometheus.Metric, metrics []perfDataCounterValues, labels []string) {
+func (c *Collector) writeUDPCounters(ch chan<- prometheus.Metric, metrics []perfDataCounterValues, af string) {
 	ch <- prometheus.MustNewConstMetric(
 		c.datagramsNoPortTotal,
 		prometheus.CounterValue,
 		metrics[0].DatagramsNoPortPerSec,
-		labels...,
+		af,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.datagramsReceivedErrorsTotal,
 		prometheus.CounterValue,
 		metrics[0].DatagramsReceivedErrors,
-		labels...,
+		af,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.datagramsReceivedTotal,
 		prometheus.GaugeValue,
 		metrics[0].DatagramsReceivedPerSec,
-		labels...,
+		af,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.datagramsSentTotal,
 		prometheus.CounterValue,
 		metrics[0].DatagramsSentPerSec,
-		labels...,
+		af,
 	)
 }

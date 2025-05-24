@@ -1,4 +1,6 @@
-// Copyright 2024 The Prometheus Authors
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -36,14 +38,14 @@ import (
 const (
 	Name = "net"
 
-	subCollectorMetrics      = "metrics"
-	subCollectorNicAddresses = "nic_addresses"
+	subCollectorMetrics = "metrics"
+	subCollectorNicInfo = "nic_info"
 )
 
 type Config struct {
-	NicExclude        *regexp.Regexp `yaml:"nic_exclude"`
-	NicInclude        *regexp.Regexp `yaml:"nic_include"`
-	CollectorsEnabled []string       `yaml:"collectors_enabled"`
+	NicExclude        *regexp.Regexp `yaml:"nic-exclude"`
+	NicInclude        *regexp.Regexp `yaml:"nic-include"`
+	CollectorsEnabled []string       `yaml:"enabled"`
 }
 
 //nolint:gochecknoglobals
@@ -52,7 +54,7 @@ var ConfigDefaults = Config{
 	NicInclude: types.RegExpAny,
 	CollectorsEnabled: []string{
 		subCollectorMetrics,
-		subCollectorNicAddresses,
+		subCollectorNicInfo,
 	},
 }
 
@@ -78,6 +80,7 @@ type Collector struct {
 	currentBandwidth         *prometheus.Desc
 
 	nicIPAddressInfo *prometheus.Desc
+	nicOperStatus    *prometheus.Desc
 	nicInfo          *prometheus.Desc
 	routeInfo        *prometheus.Desc
 }
@@ -163,6 +166,14 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
+	for _, collector := range c.config.CollectorsEnabled {
+		if !slices.Contains([]string{subCollectorMetrics, subCollectorNicInfo}, collector) {
+			return fmt.Errorf("unknown sub collector: %s. Possible values: %s", collector,
+				strings.Join([]string{subCollectorMetrics, subCollectorNicInfo}, ", "),
+			)
+		}
+	}
+
 	c.bytesReceivedTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "bytes_received_total"),
 		"(Network.BytesReceivedPerSec)",
@@ -247,6 +258,12 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		[]string{"nic", "address", "family"},
 		nil,
 	)
+	c.nicOperStatus = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "nic_operation_status"),
+		"The operational status for the interface as defined in RFC 2863 as IfOperStatus.",
+		[]string{"nic", "status"},
+		nil,
+	)
 	c.nicInfo = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "nic_info"),
 		"A metric with a constant '1' value labeled with the network interface's general information.",
@@ -267,7 +284,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		return fmt.Errorf("failed to create Network Interface collector: %w", err)
 	}
 
-	if slices.Contains(c.config.CollectorsEnabled, subCollectorNicAddresses) {
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorNicInfo) {
 		logger.Info("nic/addresses collector is in an experimental state! The configuration and metrics may change in future. Please report any issues.",
 			slog.String("collector", Name),
 		)
@@ -279,7 +296,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
-	errs := make([]error, 0, 2)
+	errs := make([]error, 0)
 
 	if slices.Contains(c.config.CollectorsEnabled, subCollectorMetrics) {
 		if err := c.collect(ch); err != nil {
@@ -287,8 +304,8 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		}
 	}
 
-	if slices.Contains(c.config.CollectorsEnabled, subCollectorNicAddresses) {
-		if err := c.collectNICAddresses(ch); err != nil {
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorNicInfo) {
+		if err := c.collectNICInfo(ch); err != nil {
 			errs = append(errs, fmt.Errorf("failed collecting net addresses: %w", err))
 		}
 	}
@@ -391,13 +408,7 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	return nil
 }
 
-//nolint:gochecknoglobals
-var addressFamily = map[uint16]string{
-	windows.AF_INET:  "ipv4",
-	windows.AF_INET6: "ipv6",
-}
-
-func (c *Collector) collectNICAddresses(ch chan<- prometheus.Metric) error {
+func (c *Collector) collectNICInfo(ch chan<- prometheus.Metric) error {
 	nicAdapterAddresses, err := adapterAddresses()
 	if err != nil {
 		return err
@@ -431,6 +442,21 @@ func (c *Collector) collectNICAddresses(ch chan<- prometheus.Metric) error {
 			friendlyName,
 			macAddress,
 		)
+
+		for operState, labelValue := range operStatus {
+			var metricStatus float64
+			if operState == nicAdapter.OperStatus {
+				metricStatus = 1
+			}
+
+			ch <- prometheus.MustNewConstMetric(
+				c.nicOperStatus,
+				prometheus.GaugeValue,
+				metricStatus,
+				nicName,
+				labelValue,
+			)
+		}
 
 		if nicAdapter.OperStatus != windows.IfOperStatusUp {
 			continue

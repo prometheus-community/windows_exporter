@@ -1,4 +1,6 @@
-// Copyright 2024 The Prometheus Authors
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -47,7 +49,11 @@ import (
 )
 
 func main() {
-	exitCode := run()
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
+
+	exitCode := run(ctx, os.Args[1:])
+
+	stop()
 
 	// If we are running as a service, we need to signal the service control manager that we are done.
 	if !IsService {
@@ -60,9 +66,8 @@ func main() {
 	<-serviceManagerFinishedCh
 }
 
-func run() int {
+func run(ctx context.Context, args []string) int {
 	startTime := time.Now()
-	ctx := context.Background()
 
 	app := kingpin.New("windows_exporter", "A metrics collector for Windows.")
 
@@ -118,9 +123,9 @@ func run() int {
 	// Initialize collectors before loading and parsing CLI arguments
 	collectors := collector.NewWithFlags(app)
 
-	if err := config.Parse(app, os.Args[1:]); err != nil {
+	if err := config.Parse(app, args); err != nil {
 		//nolint:sloglint // we do not have an logger yet
-		slog.Error("Failed to load configuration",
+		slog.LogAttrs(ctx, slog.LevelError, "Failed to load configuration",
 			slog.Any("err", err),
 		)
 
@@ -131,8 +136,7 @@ func run() int {
 
 	logger, err := log.New(logConfig)
 	if err != nil {
-		//nolint:sloglint // we do not have an logger yet
-		slog.Error("failed to create logger",
+		logger.LogAttrs(ctx, slog.LevelError, "failed to create logger",
 			slog.Any("err", err),
 		)
 
@@ -142,11 +146,11 @@ func run() int {
 	logger.LogAttrs(ctx, slog.LevelDebug, "logging has Started")
 
 	if configFile != nil && *configFile != "" {
-		logger.InfoContext(ctx, "using configuration file: "+*configFile)
+		logger.LogAttrs(ctx, slog.LevelInfo, "using configuration file: "+*configFile)
 	}
 
-	if err = setPriorityWindows(logger, os.Getpid(), *processPriority); err != nil {
-		logger.Error("failed to set process priority",
+	if err = setPriorityWindows(ctx, logger, os.Getpid(), *processPriority); err != nil {
+		logger.LogAttrs(ctx, slog.LevelError, "failed to set process priority",
 			slog.Any("err", err),
 		)
 
@@ -155,7 +159,7 @@ func run() int {
 
 	enabledCollectorList := expandEnabledCollectors(*enabledCollectors)
 	if err := collectors.Enable(enabledCollectorList); err != nil {
-		logger.Error("couldn't enable collectors",
+		logger.LogAttrs(ctx, slog.LevelError, "couldn't enable collectors",
 			slog.Any("err", err),
 		)
 
@@ -163,9 +167,9 @@ func run() int {
 	}
 
 	// Initialize collectors before loading
-	if err = collectors.Build(logger); err != nil {
+	if err = collectors.Build(ctx, logger); err != nil {
 		for _, err := range utils.SplitError(err) {
-			logger.Error("couldn't initialize collector",
+			logger.LogAttrs(ctx, slog.LevelError, "couldn't initialize collector",
 				slog.Any("err", err),
 			)
 
@@ -173,7 +177,7 @@ func run() int {
 		}
 	}
 
-	logCurrentUser(logger)
+	logCurrentUser(ctx, logger)
 
 	logger.InfoContext(ctx, "Enabled collectors: "+strings.Join(enabledCollectorList, ", "))
 
@@ -220,17 +224,14 @@ func run() int {
 		close(errCh)
 	}()
 
-	ctx, stop := signal.NotifyContext(ctx, os.Interrupt, os.Kill)
-	defer stop()
-
 	select {
 	case <-ctx.Done():
-		logger.Info("Shutting down windows_exporter via kill signal")
+		logger.LogAttrs(ctx, slog.LevelInfo, "Shutting down windows_exporter via kill signal")
 	case <-stopCh:
-		logger.Info("Shutting down windows_exporter via service control")
+		logger.LogAttrs(ctx, slog.LevelInfo, "Shutting down windows_exporter via service control")
 	case err := <-errCh:
 		if err != nil {
-			logger.ErrorContext(ctx, "Failed to start windows_exporter",
+			logger.LogAttrs(ctx, slog.LevelError, "Failed to start windows_exporter",
 				slog.Any("err", err),
 			)
 
@@ -241,32 +242,39 @@ func run() int {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	_ = server.Shutdown(ctx)
-
-	logger.InfoContext(ctx, "windows_exporter has shut down")
+	//nolint:contextcheck // create a new context for server shutdown
+	if err = server.Shutdown(ctx); err != nil {
+		//nolint:contextcheck
+		logger.LogAttrs(ctx, slog.LevelError, "Failed to shutdown windows_exporter",
+			slog.Any("err", err),
+		)
+	} else {
+		//nolint:contextcheck
+		logger.LogAttrs(ctx, slog.LevelInfo, "windows_exporter has shut down")
+	}
 
 	return 0
 }
 
-func logCurrentUser(logger *slog.Logger) {
+func logCurrentUser(ctx context.Context, logger *slog.Logger) {
 	u, err := user.Current()
 	if err != nil {
-		logger.Warn("Unable to determine which user is running this exporter. More info: https://github.com/golang/go/issues/37348",
+		logger.LogAttrs(ctx, slog.LevelWarn, "Unable to determine which user is running this exporter. More info: https://github.com/golang/go/issues/37348",
 			slog.Any("err", err),
 		)
 
 		return
 	}
 
-	logger.Info("Running as " + u.Username)
+	logger.LogAttrs(ctx, slog.LevelInfo, "Running as "+u.Username)
 
 	if strings.Contains(u.Username, "ContainerAdministrator") || strings.Contains(u.Username, "ContainerUser") {
-		logger.Warn("Running as a preconfigured Windows Container user. This may mean you do not have Windows HostProcess containers configured correctly and some functionality will not work as expected.")
+		logger.LogAttrs(ctx, slog.LevelWarn, "Running as a preconfigured Windows Container user. This may mean you do not have Windows HostProcess containers configured correctly and some functionality will not work as expected.")
 	}
 }
 
 // setPriorityWindows sets the priority of the current process to the specified value.
-func setPriorityWindows(logger *slog.Logger, pid int, priority string) error {
+func setPriorityWindows(ctx context.Context, logger *slog.Logger, pid int, priority string) error {
 	// Mapping of priority names to uin32 values required by windows.SetPriorityClass.
 	priorityStringToInt := map[string]uint32{
 		"realtime":    windows.REALTIME_PRIORITY_CLASS,
@@ -284,7 +292,7 @@ func setPriorityWindows(logger *slog.Logger, pid int, priority string) error {
 		return nil
 	}
 
-	logger.LogAttrs(context.Background(), slog.LevelDebug, "setting process priority to "+priority)
+	logger.LogAttrs(ctx, slog.LevelDebug, "setting process priority to "+priority)
 
 	// https://learn.microsoft.com/en-us/windows/win32/procthread/process-security-and-access-rights
 	handle, err := windows.OpenProcess(

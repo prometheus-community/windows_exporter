@@ -1,4 +1,6 @@
-// Copyright 2024 The Prometheus Authors
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -30,8 +32,8 @@ import (
 const Name = "smtp"
 
 type Config struct {
-	ServerInclude *regexp.Regexp `yaml:"server_include"`
-	ServerExclude *regexp.Regexp `yaml:"server_exclude"`
+	ServerInclude *regexp.Regexp `yaml:"server-include"`
+	ServerExclude *regexp.Regexp `yaml:"server-exclude"`
 }
 
 //nolint:gochecknoglobals
@@ -157,13 +159,6 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
-	var err error
-
-	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "SMTP Server", pdh.InstancesAll)
-	if err != nil {
-		return fmt.Errorf("failed to create SMTP Server collector: %w", err)
-	}
-
 	logger.Info("smtp collector is in an experimental state! Metrics for this collector have not been tested.",
 		slog.String("collector", Name),
 	)
@@ -420,6 +415,13 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		[]string{"site"},
 		nil,
 	)
+
+	var err error
+
+	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "SMTP Server", pdh.InstancesAll)
+	if err != nil {
+		return fmt.Errorf("failed to create SMTP Server collector: %w", err)
+	}
 
 	return nil
 }

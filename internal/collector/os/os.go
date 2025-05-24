@@ -1,4 +1,6 @@
-// Copyright 2024 The Prometheus Authors
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -20,6 +22,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
@@ -27,6 +30,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/headers/netapi32"
 	"github.com/prometheus-community/windows_exporter/internal/headers/sysinfoapi"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
+	"github.com/prometheus-community/windows_exporter/internal/osversion"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows"
@@ -52,7 +56,7 @@ type Collector struct {
 	processesLimit *prometheus.Desc
 
 	// users
-	// Deprecated: Use count(windows_logon_logon_type) instead.
+	// Deprecated: Use `sum(windows_terminal_services_session_info{state="active"})` instead.
 	users *prometheus.Desc
 
 	// physicalMemoryFreeBytes
@@ -105,7 +109,7 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
-	logger.Warn("The os collect holds a number of deprecated metrics and will be removed mid 2025. "+
+	logger.Warn("The os collector holds a number of deprecated metrics and will be removed mid 2025. "+
 		"See https://github.com/prometheus-community/windows_exporter/pull/1596 for more information.",
 		slog.String("collector", Name),
 	)
@@ -115,7 +119,12 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		return fmt.Errorf("failed to get Windows version: %w", err)
 	}
 
-	version := windows.RtlGetVersion()
+	version := osversion.Get()
+
+	// Microsoft has decided to keep the major version as "10" for Windows 11, including the product name.
+	if version.Build >= osversion.V21H2Win11 {
+		productName = strings.Replace(productName, " 10 ", " 11 ", 1)
+	}
 
 	c.osInformation = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "info"),
@@ -123,10 +132,10 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		nil,
 		prometheus.Labels{
 			"product":       productName,
-			"version":       fmt.Sprintf("%d.%d.%d", version.MajorVersion, version.MinorVersion, version.BuildNumber),
+			"version":       version.String(),
 			"major_version": strconv.FormatUint(uint64(version.MajorVersion), 10),
 			"minor_version": strconv.FormatUint(uint64(version.MinorVersion), 10),
-			"build_number":  strconv.FormatUint(uint64(version.BuildNumber), 10),
+			"build_number":  strconv.FormatUint(uint64(version.Build), 10),
 			"revision":      revision,
 		},
 	)
@@ -174,7 +183,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	)
 	c.users = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "users"),
-		"Deprecated: Use `count(windows_logon_logon_type)` instead.",
+		"Deprecated: Use `sum(windows_terminal_services_session_info{state=\"active\"})` instead.",
 		nil,
 		nil,
 	)
@@ -203,7 +212,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
-	errs := make([]error, 0, 4)
+	errs := make([]error, 0)
 
 	c.collect(ch)
 
@@ -357,7 +366,9 @@ func (c *Collector) getWindowsVersion() (string, string, error) {
 		return "", "", fmt.Errorf("failed to open registry key: %w", err)
 	}
 
-	defer ntKey.Close()
+	defer func(ntKey registry.Key) {
+		_ = ntKey.Close()
+	}(ntKey)
 
 	productName, _, err := ntKey.GetStringValue("ProductName")
 	if err != nil {
@@ -371,5 +382,5 @@ func (c *Collector) getWindowsVersion() (string, string, error) {
 		return "", "", err
 	}
 
-	return productName, strconv.FormatUint(revision, 10), nil
+	return strings.TrimSpace(productName), strconv.FormatUint(revision, 10), nil
 }

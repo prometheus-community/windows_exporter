@@ -1,4 +1,6 @@
-// Copyright 2024 The Prometheus Authors
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -36,8 +38,8 @@ import (
 const Name = "logical_disk"
 
 type Config struct {
-	VolumeInclude *regexp.Regexp `yaml:"volume_include"`
-	VolumeExclude *regexp.Regexp `yaml:"volume_exclude"`
+	VolumeInclude *regexp.Regexp `yaml:"volume-include"`
+	VolumeExclude *regexp.Regexp `yaml:"volume-exclude"`
 }
 
 //nolint:gochecknoglobals
@@ -149,13 +151,6 @@ func (c *Collector) Close() error {
 
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	c.logger = logger.With(slog.String("collector", Name))
-
-	var err error
-
-	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "LogicalDisk", pdh.InstancesAll)
-	if err != nil {
-		return fmt.Errorf("failed to create LogicalDisk collector: %w", err)
-	}
 
 	c.information = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "info"),
@@ -280,6 +275,13 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		[]string{"volume"},
 		nil,
 	)
+
+	var err error
+
+	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "LogicalDisk", pdh.InstancesAll)
+	if err != nil {
+		return fmt.Errorf("failed to create LogicalDisk collector: %w", err)
+	}
 
 	return nil
 }

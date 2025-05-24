@@ -1,4 +1,6 @@
-// Copyright 2024 The Prometheus Authors
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -70,13 +72,6 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
-	var err error
-
-	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "Thermal Zone Information", pdh.InstancesAll)
-	if err != nil {
-		return fmt.Errorf("failed to create Thermal Zone Information collector: %w", err)
-	}
-
 	c.temperature = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "temperature_celsius"),
 		"(Temperature)",
@@ -101,6 +96,13 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		},
 		nil,
 	)
+
+	var err error
+
+	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "Thermal Zone Information", pdh.InstancesAll)
+	if err != nil {
+		return fmt.Errorf("failed to create Thermal Zone Information collector: %w", err)
+	}
 
 	return nil
 }

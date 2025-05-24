@@ -1,4 +1,6 @@
-// Copyright 2024 The Prometheus Authors
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -23,26 +25,26 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-type collectorMapiHttpEmsmdb struct {
-	perfDataCollectorMapiHttpEmsmdb *pdh.Collector
-	perfDataObjectMapiHttpEmsmdb    []perfDataCounterValuesMapiHttpEmsmdb
+type collectorMapiHTTPEmsMDB struct {
+	perfDataCollectorMapiHTTPEmsMDB *pdh.Collector
+	perfDataObjectMapiHTTPEmsMDB    []perfDataCounterValuesMapiHTTPEmsMDB
 
-	activeUserCountMapiHttpEmsMDB *prometheus.Desc
+	activeUserCountMapiHTTPEmsMDB *prometheus.Desc
 }
 
-type perfDataCounterValuesMapiHttpEmsmdb struct {
+type perfDataCounterValuesMapiHTTPEmsMDB struct {
 	ActiveUserCount float64 `perfdata:"Active User Count"`
 }
 
-func (c *Collector) buildMapiHttpEmsmdb() error {
+func (c *Collector) buildMapiHTTPEmsMDB() error {
 	var err error
 
-	c.perfDataCollectorMapiHttpEmsmdb, err = pdh.NewCollector[perfDataCounterValuesMapiHttpEmsmdb](pdh.CounterTypeRaw, "MSExchange MapiHttp Emsmdb", pdh.InstancesAll)
+	c.perfDataCollectorMapiHTTPEmsMDB, err = pdh.NewCollector[perfDataCounterValuesMapiHTTPEmsMDB](pdh.CounterTypeRaw, "MSExchange MapiHttp Emsmdb", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create MSExchange MapiHttp Emsmdb: %w", err)
 	}
 
-	c.activeUserCountMapiHttpEmsMDB = prometheus.NewDesc(
+	c.activeUserCountMapiHTTPEmsMDB = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "mapihttp_emsmdb_active_user_count"),
 		"Number of unique outlook users that have shown some kind of activity in the last 2 minutes",
 		nil,
@@ -52,15 +54,15 @@ func (c *Collector) buildMapiHttpEmsmdb() error {
 	return nil
 }
 
-func (c *Collector) collectMapiHttpEmsmdb(ch chan<- prometheus.Metric) error {
-	err := c.perfDataCollectorMapiHttpEmsmdb.Collect(&c.perfDataObjectMapiHttpEmsmdb)
+func (c *Collector) collectMapiHTTPEmsMDB(ch chan<- prometheus.Metric) error {
+	err := c.perfDataCollectorMapiHTTPEmsMDB.Collect(&c.perfDataObjectMapiHTTPEmsMDB)
 	if err != nil {
 		return fmt.Errorf("failed to collect MSExchange MapiHttp Emsmdb metrics: %w", err)
 	}
 
-	for _, data := range c.perfDataObjectMapiHttpEmsmdb {
+	for _, data := range c.perfDataObjectMapiHTTPEmsMDB {
 		ch <- prometheus.MustNewConstMetric(
-			c.activeUserCountMapiHttpEmsMDB,
+			c.activeUserCountMapiHTTPEmsMDB,
 			prometheus.GaugeValue,
 			data.ActiveUserCount,
 		)

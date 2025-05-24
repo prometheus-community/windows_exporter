@@ -1,4 +1,6 @@
-// Copyright 2024 The Prometheus Authors
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -23,10 +25,13 @@ import (
 
 //nolint:gochecknoglobals
 var (
-	kernel32 = windows.NewLazySystemDLL("kernel32.dll")
+	modkernel32 = windows.NewLazySystemDLL("kernel32.dll")
 
-	procGetDynamicTimeZoneInformationSys = kernel32.NewProc("GetDynamicTimeZoneInformation")
-	kernelLocalFileTimeToFileTime        = kernel32.NewProc("LocalFileTimeToFileTime")
+	procGetDynamicTimeZoneInformationSys = modkernel32.NewProc("GetDynamicTimeZoneInformation")
+	procKernelLocalFileTimeToFileTime    = modkernel32.NewProc("LocalFileTimeToFileTime")
+	procGetTickCount                     = modkernel32.NewProc("GetTickCount64")
+	procOpenJobObject                    = modkernel32.NewProc("OpenJobObjectW")
+	procIsProcessInJob                   = modkernel32.NewProc("IsProcessInJob")
 )
 
 // SYSTEMTIME contains a date and time.
@@ -70,9 +75,15 @@ func GetDynamicTimeZoneInformation() (DynamicTimezoneInformation, error) {
 }
 
 func LocalFileTimeToFileTime(localFileTime, utcFileTime *windows.Filetime) uint32 {
-	ret, _, _ := kernelLocalFileTimeToFileTime.Call(
+	ret, _, _ := procKernelLocalFileTimeToFileTime.Call(
 		uintptr(unsafe.Pointer(localFileTime)),
 		uintptr(unsafe.Pointer(utcFileTime)))
 
 	return uint32(ret)
+}
+
+func GetTickCount64() uint64 {
+	ret, _, _ := procGetTickCount.Call()
+
+	return uint64(ret)
 }

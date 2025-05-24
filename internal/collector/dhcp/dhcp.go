@@ -1,4 +1,6 @@
-// Copyright 2024 The Prometheus Authors
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -39,7 +41,7 @@ const (
 )
 
 type Config struct {
-	CollectorsEnabled []string `yaml:"collectors_enabled"`
+	CollectorsEnabled []string `yaml:"enabled"`
 }
 
 //nolint:gochecknoglobals
@@ -148,12 +150,79 @@ func (c *Collector) Close() error {
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 	var err error
 
-	if slices.Contains(c.config.CollectorsEnabled, subCollectorServerMetrics) {
-		c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "DHCP Server", nil)
-		if err != nil {
-			return fmt.Errorf("failed to create DHCP Server collector: %w", err)
-		}
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorScopeMetrics) {
+		c.scopeInfo = prometheus.NewDesc(
+			prometheus.BuildFQName(types.Namespace, Name, "scope_info"),
+			"DHCP Scope information",
+			[]string{"name", "superscope_name", "superscope_id", "scope"},
+			nil,
+		)
 
+		c.scopeState = prometheus.NewDesc(
+			prometheus.BuildFQName(types.Namespace, Name, "scope_state"),
+			"DHCP Scope state",
+			[]string{"scope", "state"},
+			nil,
+		)
+
+		c.scopeAddressesFreeTotal = prometheus.NewDesc(
+			prometheus.BuildFQName(types.Namespace, Name, "scope_addresses_free"),
+			"DHCP Scope free addresses",
+			[]string{"scope"},
+			nil,
+		)
+
+		c.scopeAddressesFreeOnPartnerServerTotal = prometheus.NewDesc(
+			prometheus.BuildFQName(types.Namespace, Name, "scope_addresses_free_on_partner_server"),
+			"DHCP Scope free addresses on partner server",
+			[]string{"scope"},
+			nil,
+		)
+
+		c.scopeAddressesFreeOnThisServerTotal = prometheus.NewDesc(
+			prometheus.BuildFQName(types.Namespace, Name, "scope_addresses_free_on_this_server"),
+			"DHCP Scope free addresses on this server",
+			[]string{"scope"},
+			nil,
+		)
+
+		c.scopeAddressesInUseTotal = prometheus.NewDesc(
+			prometheus.BuildFQName(types.Namespace, Name, "scope_addresses_in_use"),
+			"DHCP Scope addresses in use",
+			[]string{"scope"},
+			nil,
+		)
+
+		c.scopeAddressesInUseOnPartnerServerTotal = prometheus.NewDesc(
+			prometheus.BuildFQName(types.Namespace, Name, "scope_addresses_in_use_on_partner_server"),
+			"DHCP Scope addresses in use on partner server",
+			[]string{"scope"},
+			nil,
+		)
+
+		c.scopeAddressesInUseOnThisServerTotal = prometheus.NewDesc(
+			prometheus.BuildFQName(types.Namespace, Name, "scope_addresses_in_use_on_this_server"),
+			"DHCP Scope addresses in use on this server",
+			[]string{"scope"},
+			nil,
+		)
+
+		c.scopePendingOffersTotal = prometheus.NewDesc(
+			prometheus.BuildFQName(types.Namespace, Name, "scope_pending_offers"),
+			"DHCP Scope pending offers",
+			[]string{"scope"},
+			nil,
+		)
+
+		c.scopeReservedAddressTotal = prometheus.NewDesc(
+			prometheus.BuildFQName(types.Namespace, Name, "scope_reserved_address"),
+			"DHCP Scope reserved addresses",
+			[]string{"scope"},
+			nil,
+		)
+	}
+
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorServerMetrics) {
 		c.packetsReceivedTotal = prometheus.NewDesc(
 			prometheus.BuildFQName(types.Namespace, Name, "packets_received_total"),
 			"Total number of packets received by the DHCP server (PacketsReceivedTotal)",
@@ -304,78 +373,11 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 			nil,
 			nil,
 		)
-	}
 
-	if slices.Contains(c.config.CollectorsEnabled, subCollectorScopeMetrics) {
-		c.scopeInfo = prometheus.NewDesc(
-			prometheus.BuildFQName(types.Namespace, Name, "scope_info"),
-			"DHCP Scope information",
-			[]string{"name", "superscope_name", "superscope_id", "scope"},
-			nil,
-		)
-
-		c.scopeState = prometheus.NewDesc(
-			prometheus.BuildFQName(types.Namespace, Name, "scope_state"),
-			"DHCP Scope state",
-			[]string{"scope", "state"},
-			nil,
-		)
-
-		c.scopeAddressesFreeTotal = prometheus.NewDesc(
-			prometheus.BuildFQName(types.Namespace, Name, "scope_addresses_free"),
-			"DHCP Scope free addresses",
-			[]string{"scope"},
-			nil,
-		)
-
-		c.scopeAddressesFreeOnPartnerServerTotal = prometheus.NewDesc(
-			prometheus.BuildFQName(types.Namespace, Name, "scope_addresses_free_on_partner_server"),
-			"DHCP Scope free addresses on partner server",
-			[]string{"scope"},
-			nil,
-		)
-
-		c.scopeAddressesFreeOnThisServerTotal = prometheus.NewDesc(
-			prometheus.BuildFQName(types.Namespace, Name, "scope_addresses_free_on_this_server"),
-			"DHCP Scope free addresses on this server",
-			[]string{"scope"},
-			nil,
-		)
-
-		c.scopeAddressesInUseTotal = prometheus.NewDesc(
-			prometheus.BuildFQName(types.Namespace, Name, "scope_addresses_in_use"),
-			"DHCP Scope addresses in use",
-			[]string{"scope"},
-			nil,
-		)
-
-		c.scopeAddressesInUseOnPartnerServerTotal = prometheus.NewDesc(
-			prometheus.BuildFQName(types.Namespace, Name, "scope_addresses_in_use_on_partner_server"),
-			"DHCP Scope addresses in use on partner server",
-			[]string{"scope"},
-			nil,
-		)
-
-		c.scopeAddressesInUseOnThisServerTotal = prometheus.NewDesc(
-			prometheus.BuildFQName(types.Namespace, Name, "scope_addresses_in_use_on_this_server"),
-			"DHCP Scope addresses in use on this server",
-			[]string{"scope"},
-			nil,
-		)
-
-		c.scopePendingOffersTotal = prometheus.NewDesc(
-			prometheus.BuildFQName(types.Namespace, Name, "scope_pending_offers"),
-			"DHCP Scope pending offers",
-			[]string{"scope"},
-			nil,
-		)
-
-		c.scopeReservedAddressTotal = prometheus.NewDesc(
-			prometheus.BuildFQName(types.Namespace, Name, "scope_reserved_address"),
-			"DHCP Scope reserved addresses",
-			[]string{"scope"},
-			nil,
-		)
+		c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "DHCP Server", nil)
+		if err != nil {
+			return fmt.Errorf("failed to create DHCP Server collector: %w", err)
+		}
 	}
 
 	return nil

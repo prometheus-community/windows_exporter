@@ -1,4 +1,6 @@
-// Copyright 2024 The Prometheus Authors
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -40,11 +42,11 @@ const (
 	subCollectorAutoDiscover        = "Autodiscover"
 	subCollectorWorkloadManagement  = "WorkloadManagement"
 	subCollectorRpcClientAccess     = "RpcClientAccess"
-	subCollectorMapiHttpEmsmdb      = "MapiHttpEmsmdb"
+	subCollectorMapiHTTPEmsmdb      = "MapiHttpEmsmdb"
 )
 
 type Config struct {
-	CollectorsEnabled []string `yaml:"collectors_enabled"`
+	CollectorsEnabled []string `yaml:"enabled"`
 }
 
 //nolint:gochecknoglobals
@@ -59,7 +61,7 @@ var ConfigDefaults = Config{
 		subCollectorAutoDiscover,
 		subCollectorWorkloadManagement,
 		subCollectorRpcClientAccess,
-		subCollectorMapiHttpEmsmdb,
+		subCollectorMapiHTTPEmsmdb,
 	},
 }
 
@@ -74,7 +76,7 @@ type Collector struct {
 	collectorAutoDiscover
 	collectorAvailabilityService
 	collectorHTTPProxy
-	collectorMapiHttpEmsmdb
+	collectorMapiHTTPEmsMDB
 	collectorOWA
 	collectorRpcClientAccess
 	collectorTransportQueues
@@ -129,7 +131,7 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 				subCollectorAutoDiscover:        "[29240] MSExchange Autodiscover",
 				subCollectorWorkloadManagement:  "[19430] MSExchange WorkloadManagement Workloads",
 				subCollectorRpcClientAccess:     "[29336] MSExchange RpcClientAccess",
-				subCollectorMapiHttpEmsmdb:      "[26463] MSExchange MapiHttp Emsmdb",
+				subCollectorMapiHTTPEmsmdb:      "[26463] MSExchange MapiHttp Emsmdb",
 			}
 
 			sb := strings.Builder{}
@@ -219,10 +221,10 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 			collect: c.collectRpcClientAccess,
 			close:   c.perfDataCollectorRpcClientAccess.Close,
 		},
-		subCollectorMapiHttpEmsmdb: {
-			build:   c.buildMapiHttpEmsmdb,
-			collect: c.collectMapiHttpEmsmdb,
-			close:   c.perfDataCollectorMapiHttpEmsmdb.Close,
+		subCollectorMapiHTTPEmsmdb: {
+			build:   c.buildMapiHTTPEmsMDB,
+			collect: c.collectMapiHTTPEmsMDB,
+			close:   c.perfDataCollectorMapiHTTPEmsMDB.Close,
 		},
 	}
 

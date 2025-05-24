@@ -1,4 +1,6 @@
-// Copyright 2024 The Prometheus Authors
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -20,13 +22,16 @@ import (
 	"fmt"
 	"unsafe"
 
+	"github.com/prometheus-community/windows_exporter/internal/headers/guid"
 	"golang.org/x/sys/windows"
 )
 
 //nolint:gochecknoglobals
 var (
-	modiphlpapi             = windows.NewLazySystemDLL("iphlpapi.dll")
-	procGetExtendedTcpTable = modiphlpapi.NewProc("GetExtendedTcpTable")
+	modiphlpapi                    = windows.NewLazySystemDLL("iphlpapi.dll")
+	procGetExtendedTcpTable        = modiphlpapi.NewProc("GetExtendedTcpTable")
+	procGetIfEntry2Ex              = modiphlpapi.NewProc("GetIfEntry2Ex")
+	procConvertInterfaceGuidToLuid = modiphlpapi.NewProc("ConvertInterfaceGuidToLuid")
 )
 
 func GetTCPConnectionStates(family uint32) (map[MIB_TCP_STATE]uint32, error) {
@@ -36,7 +41,7 @@ func GetTCPConnectionStates(family uint32) (map[MIB_TCP_STATE]uint32, error) {
 	case windows.AF_INET:
 		table, err := getExtendedTcpTable[MIB_TCPROW_OWNER_PID](family, TCPTableOwnerPIDAll)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed getExtendedTcpTable: %w", err)
 		}
 
 		for _, row := range table {
@@ -47,7 +52,7 @@ func GetTCPConnectionStates(family uint32) (map[MIB_TCP_STATE]uint32, error) {
 	case windows.AF_INET6:
 		table, err := getExtendedTcpTable[MIB_TCP6ROW_OWNER_PID](family, TCPTableOwnerPIDAll)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed getExtendedTcpTable: %w", err)
 		}
 
 		for _, row := range table {
@@ -97,12 +102,12 @@ func getExtendedTcpTable[T any](ulAf uint32, tableClass uint32) ([]T, error) {
 	var size uint32
 
 	ret, _, _ := procGetExtendedTcpTable.Call(
-		uintptr(0),
+		0,
 		uintptr(unsafe.Pointer(&size)),
-		uintptr(0),
+		0,
 		uintptr(ulAf),
 		uintptr(tableClass),
-		uintptr(0),
+		0,
 	)
 
 	if ret != uintptr(windows.ERROR_INSUFFICIENT_BUFFER) {
@@ -114,10 +119,10 @@ func getExtendedTcpTable[T any](ulAf uint32, tableClass uint32) ([]T, error) {
 	ret, _, _ = procGetExtendedTcpTable.Call(
 		uintptr(unsafe.Pointer(&buf[0])),
 		uintptr(unsafe.Pointer(&size)),
-		uintptr(0),
+		0,
 		uintptr(ulAf),
 		uintptr(tableClass),
-		uintptr(0),
+		0,
 	)
 
 	if ret != 0 {
@@ -125,4 +130,38 @@ func getExtendedTcpTable[T any](ulAf uint32, tableClass uint32) ([]T, error) {
 	}
 
 	return unsafe.Slice((*T)(unsafe.Pointer(&buf[4])), binary.LittleEndian.Uint32(buf)), nil
+}
+
+// GetIfEntry2Ex function retrieves the specified level of information for the specified interface on the local computer.
+//
+// https://learn.microsoft.com/en-us/windows/win32/api/netioapi/nf-netioapi-getifentry2ex
+func GetIfEntry2Ex(row *MIB_IF_ROW2) error {
+	ret, _, _ := procGetIfEntry2Ex.Call(
+		uintptr(0),
+		uintptr(unsafe.Pointer(row)),
+	)
+
+	if ret != 0 {
+		return fmt.Errorf("GetIfEntry2Ex failed with code %d: %w", ret, windows.Errno(ret))
+	}
+
+	return nil
+}
+
+// ConvertInterfaceGUIDToLUID function converts a globally unique identifier (GUID) for a network interface to the
+// locally unique identifier (LUID) for the interface.
+//
+// https://learn.microsoft.com/en-us/windows/win32/api/netioapi/nf-netioapi-convertinterfaceguidtoluid
+func ConvertInterfaceGUIDToLUID(guid guid.GUID) (uint64, error) {
+	var luid uint64
+	ret, _, _ := procConvertInterfaceGuidToLuid.Call(
+		uintptr(unsafe.Pointer(&guid)),
+		uintptr(unsafe.Pointer(&luid)),
+	)
+
+	if ret != 0 {
+		return 0, fmt.Errorf("ConvertInterfaceGUIDToLUID failed with code %d: %w", ret, windows.Errno(ret))
+	}
+
+	return luid, nil
 }

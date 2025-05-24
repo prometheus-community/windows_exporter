@@ -1,4 +1,6 @@
-// Copyright 2024 The Prometheus Authors
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -18,8 +20,10 @@ package system
 import (
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/alecthomas/kingpin/v2"
+	"github.com/prometheus-community/windows_exporter/internal/headers/kernel32"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
@@ -37,6 +41,8 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	config Config
 
+	bootTimeTimestamp float64
+
 	perfDataCollector *pdh.Collector
 	perfDataObject    []perfDataCounterValues
 
@@ -46,8 +52,10 @@ type Collector struct {
 	processes                *prometheus.Desc
 	processesLimit           *prometheus.Desc
 	systemCallsTotal         *prometheus.Desc
-	bootTime                 *prometheus.Desc
-	threads                  *prometheus.Desc
+	// Deprecated: Use windows_system_boot_time_timestamp instead
+	bootTimeSeconds *prometheus.Desc
+	bootTime        *prometheus.Desc
+	threads         *prometheus.Desc
 }
 
 func New(config *Config) *Collector {
@@ -77,16 +85,15 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
-	var err error
-
-	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "System", nil)
-	if err != nil {
-		return fmt.Errorf("failed to create System collector: %w", err)
-	}
-
 	c.bootTime = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "boot_time_timestamp_seconds"),
+		prometheus.BuildFQName(types.Namespace, Name, "boot_time_timestamp"),
 		"Unix timestamp of system boot time",
+		nil,
+		nil,
+	)
+	c.bootTimeSeconds = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "boot_time_timestamp_seconds"),
+		"Deprecated: Use windows_system_boot_time_timestamp instead",
 		nil,
 		nil,
 	)
@@ -134,6 +141,15 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 
+	c.bootTimeTimestamp = float64(time.Now().Unix() - int64(kernel32.GetTickCount64()/1000))
+
+	var err error
+
+	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "System", nil)
+	if err != nil {
+		return fmt.Errorf("failed to create System collector: %w", err)
+	}
+
 	return nil
 }
 
@@ -171,14 +187,21 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		c.perfDataObject[0].SystemCallsPerSec,
 	)
 	ch <- prometheus.MustNewConstMetric(
-		c.bootTime,
-		prometheus.GaugeValue,
-		c.perfDataObject[0].SystemUpTime,
-	)
-	ch <- prometheus.MustNewConstMetric(
 		c.threads,
 		prometheus.GaugeValue,
 		c.perfDataObject[0].Threads,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.bootTimeSeconds,
+		prometheus.GaugeValue,
+		c.bootTimeTimestamp,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.bootTime,
+		prometheus.GaugeValue,
+		c.bootTimeTimestamp,
 	)
 
 	// Windows has no defined limit, and is based off available resources. This currently isn't calculated by WMI and is set to default value.

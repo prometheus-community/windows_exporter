@@ -1,4 +1,6 @@
-// Copyright 2024 The Prometheus Authors
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -33,10 +35,10 @@ import (
 const Name = "iis"
 
 type Config struct {
-	SiteInclude *regexp.Regexp `yaml:"site_include"`
-	SiteExclude *regexp.Regexp `yaml:"site_exclude"`
-	AppInclude  *regexp.Regexp `yaml:"app_include"`
-	AppExclude  *regexp.Regexp `yaml:"app_exclude"`
+	SiteInclude *regexp.Regexp `yaml:"site-include"`
+	SiteExclude *regexp.Regexp `yaml:"site-exclude"`
+	AppInclude  *regexp.Regexp `yaml:"app-include"`
+	AppExclude  *regexp.Regexp `yaml:"app-exclude"`
 }
 
 //nolint:gochecknoglobals
@@ -169,7 +171,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		prometheus.Labels{"version": fmt.Sprintf("%d.%d", c.iisVersion.major, c.iisVersion.minor)},
 	)
 
-	errs := make([]error, 0, 4)
+	errs := make([]error, 0)
 
 	if err := c.buildWebService(); err != nil {
 		errs = append(errs, fmt.Errorf("failed to build Web Service collector: %w", err))
@@ -253,7 +255,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		1,
 	)
 
-	errs := make([]error, 0, 4)
+	errs := make([]error, 0)
 
 	if err := c.collectWebService(ch); err != nil {
 		errs = append(errs, fmt.Errorf("failed to collect Web Service metrics: %w", err))

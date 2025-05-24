@@ -1,3 +1,20 @@
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+//go:build windows
+
 package mssql
 
 import (
@@ -8,13 +25,14 @@ import (
 )
 
 type mssqlInstance struct {
-	name         string
-	majorVersion mssqlServerMajorVersion
-	patchVersion string
-	edition      string
+	name            string
+	majorVersion    mssqlServerMajorVersion
+	patchVersion    string
+	edition         string
+	isFirstInstance bool
 }
 
-func newMssqlInstance(name string) (mssqlInstance, error) {
+func newMssqlInstance(key, name string) (mssqlInstance, error) {
 	regKey := fmt.Sprintf(`Software\Microsoft\Microsoft SQL Server\%s\Setup`, name)
 
 	k, err := registry.OpenKey(registry.LOCAL_MACHINE, regKey, registry.QUERY_VALUE)
@@ -39,10 +57,11 @@ func newMssqlInstance(name string) (mssqlInstance, error) {
 	_, name, _ = strings.Cut(name, ".")
 
 	return mssqlInstance{
-		edition:      edition,
-		name:         name,
-		majorVersion: newMajorVersion(patchVersion),
-		patchVersion: patchVersion,
+		edition:         edition,
+		name:            name,
+		majorVersion:    newMajorVersion(patchVersion),
+		patchVersion:    patchVersion,
+		isFirstInstance: key == "MSSQLSERVER",
 	}, nil
 }
 

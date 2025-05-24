@@ -1,4 +1,6 @@
-// Copyright 2024 The Prometheus Authors
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -14,6 +16,25 @@
 //go:build windows
 
 package net
+
+import "golang.org/x/sys/windows"
+
+//nolint:gochecknoglobals
+var (
+	addressFamily = map[uint16]string{
+		windows.AF_INET:  "ipv4",
+		windows.AF_INET6: "ipv6",
+	}
+	operStatus = map[uint32]string{
+		windows.IfOperStatusUp:             "up",
+		windows.IfOperStatusDown:           "down",
+		windows.IfOperStatusTesting:        "testing",
+		windows.IfOperStatusUnknown:        "unknown",
+		windows.IfOperStatusDormant:        "dormant",
+		windows.IfOperStatusNotPresent:     "not present",
+		windows.IfOperStatusLowerLayerDown: "lower layer down",
+	}
+)
 
 type perfDataCounterValues struct {
 	Name string
