@@ -33,6 +33,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/exchange"
 	"github.com/prometheus-community/windows_exporter/internal/collector/filetime"
 	"github.com/prometheus-community/windows_exporter/internal/collector/fsrmquota"
+	"github.com/prometheus-community/windows_exporter/internal/collector/gpu"
 	"github.com/prometheus-community/windows_exporter/internal/collector/hyperv"
 	"github.com/prometheus-community/windows_exporter/internal/collector/iis"
 	"github.com/prometheus-community/windows_exporter/internal/collector/license"
@@ -84,6 +85,7 @@ type Config struct {
 	Exchange           exchange.Config           `yaml:"exchange"`
 	Filetime           filetime.Config           `yaml:"filetime"`
 	Fsrmquota          fsrmquota.Config          `yaml:"fsrmquota"`
+	GPU                gpu.Config                `yaml:"gpu"`
 	HyperV             hyperv.Config             `yaml:"hyperv"`
 	IIS                iis.Config                `yaml:"iis"`
 	License            license.Config            `yaml:"license"`
@@ -139,6 +141,7 @@ var ConfigDefaults = Config{
 	Exchange:           exchange.ConfigDefaults,
 	Filetime:           filetime.ConfigDefaults,
 	Fsrmquota:          fsrmquota.ConfigDefaults,
+	GPU:                gpu.ConfigDefaults,
 	HyperV:             hyperv.ConfigDefaults,
 	IIS:                iis.ConfigDefaults,
 	License:            license.ConfigDefaults,

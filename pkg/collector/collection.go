@@ -43,6 +43,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/exchange"
 	"github.com/prometheus-community/windows_exporter/internal/collector/filetime"
 	"github.com/prometheus-community/windows_exporter/internal/collector/fsrmquota"
+	"github.com/prometheus-community/windows_exporter/internal/collector/gpu"
 	"github.com/prometheus-community/windows_exporter/internal/collector/hyperv"
 	"github.com/prometheus-community/windows_exporter/internal/collector/iis"
 	"github.com/prometheus-community/windows_exporter/internal/collector/license"
@@ -114,6 +115,7 @@ func NewWithConfig(config Config) *Collection {
 	collectors[exchange.Name] = exchange.New(&config.Exchange)
 	collectors[filetime.Name] = filetime.New(&config.Filetime)
 	collectors[fsrmquota.Name] = fsrmquota.New(&config.Fsrmquota)
+	collectors[gpu.Name] = gpu.New(&config.GPU)
 	collectors[hyperv.Name] = hyperv.New(&config.HyperV)
 	collectors[iis.Name] = iis.New(&config.IIS)
 	collectors[license.Name] = license.New(&config.License)
