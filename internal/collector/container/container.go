@@ -732,28 +732,29 @@ func (c *Collector) collectJobContainer(ch chan<- prometheus.Metric, containerID
 
 	var jobInfo kernel32.JobObjectBasicAndIOAccountingInformation
 
-	if err := windows.QueryInformationJobObject(
+	if err = windows.QueryInformationJobObject(
 		jobObjectHandle,
 		windows.JobObjectBasicAndIoAccountingInformation,
 		uintptr(unsafe.Pointer(&jobInfo)),
 		uint32(unsafe.Sizeof(jobInfo)),
 		nil,
 	); err != nil {
-		return err
+		return fmt.Errorf("error in querying job object information: %w", err)
 	}
 
 	var jobMemoryInfo kernel32.JobObjectMemoryUsageInformation
 
 	// https://github.com/microsoft/hcsshim/blob/bfb2a106798d3765666f6e39ec6cf0117275eab4/internal/jobobject/jobobject.go#L410
-	if err := windows.QueryInformationJobObject(
+	if err = windows.QueryInformationJobObject(
 		jobObjectHandle,
 		JobObjectMemoryUsageInformation,
 		uintptr(unsafe.Pointer(&jobMemoryInfo)),
 		uint32(unsafe.Sizeof(jobMemoryInfo)),
 		nil,
 	); err != nil {
-		return err
+		return fmt.Errorf("error in querying job object memory usage information: %w", err)
 	}
+
 	privateWorkingSetBytes, err := calculatePrivateWorkingSetBytes(jobObjectHandle)
 	if err != nil {
 		c.logger.Debug("error in calculating private working set bytes", slog.Any("err", err))
