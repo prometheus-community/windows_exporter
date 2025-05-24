@@ -46,6 +46,8 @@ const (
 
 	subCollectorHCS         = "hcs"
 	subCollectorHostprocess = "hostprocess"
+
+	JobObjectMemoryUsageInformation = 28
 )
 
 type Config struct {
@@ -431,7 +433,7 @@ func (c *Collector) collectHCSContainer(ch chan<- prometheus.Metric, containerDe
 
 	ch <- prometheus.MustNewConstMetric(
 		c.containerAvailable,
-		prometheus.CounterValue,
+		prometheus.GaugeValue,
 		1,
 		containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container, "false",
 	)
@@ -740,13 +742,14 @@ func (c *Collector) collectJobContainer(ch chan<- prometheus.Metric, containerID
 		return err
 	}
 
-	var jobExtendedLimitInformation kernel32.JobObjectExtendedLimitInformation
+	var jobMemoryInfo kernel32.JobObjectMemoryUsageInformation
 
+	// https://github.com/microsoft/hcsshim/blob/bfb2a106798d3765666f6e39ec6cf0117275eab4/internal/jobobject/jobobject.go#L410
 	if err := windows.QueryInformationJobObject(
 		jobObjectHandle,
-		windows.JobObjectExtendedLimitInformation,
-		uintptr(unsafe.Pointer(&jobExtendedLimitInformation)),
-		uint32(unsafe.Sizeof(jobExtendedLimitInformation)),
+		JobObjectMemoryUsageInformation,
+		uintptr(unsafe.Pointer(&jobMemoryInfo)),
+		uint32(unsafe.Sizeof(jobMemoryInfo)),
 		nil,
 	); err != nil {
 		return err
@@ -760,21 +763,21 @@ func (c *Collector) collectJobContainer(ch chan<- prometheus.Metric, containerID
 
 	ch <- prometheus.MustNewConstMetric(
 		c.containerAvailable,
-		prometheus.CounterValue,
+		prometheus.GaugeValue,
 		1,
 		containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container, "true",
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.usageCommitBytes,
 		prometheus.GaugeValue,
-		float64(jobExtendedLimitInformation.JobMemoryLimit),
+		float64(jobMemoryInfo.JobMemory),
 
 		containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		c.usageCommitPeakBytes,
 		prometheus.GaugeValue,
-		float64(jobExtendedLimitInformation.PeakProcessMemoryUsed),
+		float64(jobMemoryInfo.PeakJobMemoryUsed),
 
 		containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container,
 	)
@@ -883,7 +886,7 @@ func calculatePrivateWorkingSetBytes(jobObjectHandle windows.Handle) (uint64, er
 
 	retLen = uint32(unsafe.Sizeof(vmCounters))
 
-	getPrivateWorkingSetBytes := func(pid uint32) (uint64, error) {
+	getMemoryStats := func(pid uint32) (uint64, error) {
 		processHandle, err := windows.OpenProcess(windows.PROCESS_QUERY_LIMITED_INFORMATION, false, pid)
 		if err != nil {
 			return 0, fmt.Errorf("error in opening process: %w", err)
@@ -917,7 +920,7 @@ func calculatePrivateWorkingSetBytes(jobObjectHandle windows.Handle) (uint64, er
 	}
 
 	for _, pid := range pidList.PIDs() {
-		privateWorkingSetSize, err := getPrivateWorkingSetBytes(pid)
+		privateWorkingSetSize, err := getMemoryStats(pid)
 		if err != nil {
 			return 0, fmt.Errorf("error in getting private working set bytes: %w", err)
 		}

@@ -18,8 +18,9 @@
 package kernel32
 
 import (
-	"golang.org/x/sys/windows"
 	"unsafe"
+
+	"golang.org/x/sys/windows"
 )
 
 type JobObjectBasicAccountingInformation struct {
@@ -42,13 +43,9 @@ type JobObjectBasicAndIOAccountingInformation struct {
 	BasicInfo JobObjectBasicAccountingInformation
 	IoInfo    windows.IO_COUNTERS
 }
-type JobObjectExtendedLimitInformation struct {
-	BasicLimitInformation windows.JOBOBJECT_BASIC_LIMIT_INFORMATION
-	IoInfo                windows.IO_COUNTERS
-	ProcessMemoryLimit    uint64
-	JobMemoryLimit        uint64
-	PeakProcessMemoryUsed uint64
-	PeakJobMemoryUsed     uint64
+type JobObjectMemoryUsageInformation struct {
+	JobMemory         uint64
+	PeakJobMemoryUsed uint64
 }
 
 type JobObjectBasicProcessIDList struct {
