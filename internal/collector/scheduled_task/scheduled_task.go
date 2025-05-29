@@ -250,7 +250,7 @@ func getScheduledTasks() (ScheduledTasks, error) {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 
-	if err := ole.CoInitializeEx(0, ole.COINIT_MULTITHREADED); err != nil {
+	if err := ole.CoInitializeEx(0, ole.COINIT_APARTMENTTHREADED|ole.COINIT_DISABLE_OLE1DDE); err != nil {
 		var oleCode *ole.OleError
 		if errors.As(err, &oleCode) && oleCode.Code() != ole.S_OK && oleCode.Code() != S_FALSE {
 			return nil, err
