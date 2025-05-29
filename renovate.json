@@ -13,6 +13,10 @@
   ],
   "packageRules": [
     {
+      "matchPackageNames": ["gopkg.in/yaml","gopkg.in/yaml.v2", "gopkg.in/yaml.v3"],
+      "enabled": false
+    },
+    {
       "groupName": "golangci-lint",
       "matchPackageNames": [
         "github.com/golangci/golangci-lint/cmd/golangci-lint",
