@@ -18,6 +18,7 @@
 package process
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -43,6 +44,7 @@ type Config struct {
 	ProcessInclude      *regexp.Regexp `yaml:"include"`
 	ProcessExclude      *regexp.Regexp `yaml:"exclude"`
 	EnableWorkerProcess bool           `yaml:"iis"`
+	CounterVersion      uint8          `yaml:"counter-version"`
 }
 
 //nolint:gochecknoglobals
@@ -50,6 +52,7 @@ var ConfigDefaults = Config{
 	ProcessInclude:      types.RegExpAny,
 	ProcessExclude:      types.RegExpEmpty,
 	EnableWorkerProcess: false,
+	CounterVersion:      0,
 }
 
 type Collector struct {
@@ -130,6 +133,11 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 		"Enable IIS collectWorker process name queries. May cause the collector to leak memory.",
 	).Default(strconv.FormatBool(c.config.EnableWorkerProcess)).BoolVar(&c.config.EnableWorkerProcess)
 
+	app.Flag(
+		"collector.process.counter-version",
+		"Version of the process collector to use. 1 for Process V1, 2 for Process V2. Defaults to 0 which will use the latest version available.",
+	).Default(strconv.FormatUint(uint64(c.config.CounterVersion), 10)).Uint8Var(&c.config.CounterVersion)
+
 	app.Action(func(*kingpin.ParseContext) error {
 		var err error
 
@@ -186,14 +194,25 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 		c.miSession = miSession
 	}
 
-	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "Process V2", pdh.InstancesAll)
-
-	if errors.Is(err, pdh.NewPdhError(pdh.CstatusNoObject)) {
+	switch c.config.CounterVersion {
+	case 2:
+		c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "Process V2", pdh.InstancesAll)
+	case 1:
 		c.perfDataCollector, err = registry.NewCollector[perfDataCounterValues]("Process", pdh.InstancesAll)
+	default:
+		c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "Process V2", pdh.InstancesAll)
+		c.config.CounterVersion = 2
+
+		if errors.Is(err, pdh.NewPdhError(pdh.CstatusNoObject)) {
+			c.perfDataCollector, err = registry.NewCollector[perfDataCounterValues]("Process", pdh.InstancesAll)
+			c.config.CounterVersion = 1
+		}
+
+		c.logger.LogAttrs(context.Background(), slog.LevelDebug, fmt.Sprintf("Using process collector V%d", c.config.CounterVersion))
 	}
 
 	if err != nil {
-		return fmt.Errorf("failed to create Process collector: %w", err)
+		return fmt.Errorf("failed to create Process V%d collector: %w", c.config.CounterVersion, err)
 	}
 
 	c.workerCh = make(chan processWorkerRequest, 32)
@@ -318,14 +337,7 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 }
 
 func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
-	var workerProcesses []WorkerProcess
-	if c.config.EnableWorkerProcess {
-		if err := c.miSession.Query(&workerProcesses, mi.NamespaceRootWebAdministration, c.workerProcessMIQueryQuery); err != nil {
-			return fmt.Errorf("WMI query failed: %w", err)
-		}
-	}
-
-	return c.collect(ch, workerProcesses)
+	return c.collect(ch)
 }
 
 // ref: https://github.com/microsoft/hcsshim/blob/8beabacfc2d21767a07c20f8dd5f9f3932dbf305/internal/uvm/stats.go#L25

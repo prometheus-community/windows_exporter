@@ -27,6 +27,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -38,10 +39,17 @@ type processWorkerRequest struct {
 	workerProcesses          []WorkerProcess
 }
 
-func (c *Collector) collect(ch chan<- prometheus.Metric, workerProcesses []WorkerProcess) error {
+func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	err := c.perfDataCollector.Collect(&c.perfDataObject)
 	if err != nil {
 		return fmt.Errorf("failed to collect metrics: %w", err)
+	}
+
+	var workerProcesses []WorkerProcess
+	if c.config.EnableWorkerProcess {
+		if err := c.miSession.Query(&workerProcesses, mi.NamespaceRootWebAdministration, c.workerProcessMIQueryQuery); err != nil {
+			return fmt.Errorf("WMI query failed: %w", err)
+		}
 	}
 
 	wg := &sync.WaitGroup{}
@@ -57,7 +65,7 @@ func (c *Collector) collect(ch chan<- prometheus.Metric, workerProcesses []Worke
 			continue
 		}
 
-		if process.ProcessID == 0 {
+		if process.ProcessID == 0 && name != "Idle" {
 			c.logger.LogAttrs(context.Background(), slog.LevelDebug, "Skipping process with PID 0",
 				slog.String("name", name),
 				slog.String("process_name", process.Name),
