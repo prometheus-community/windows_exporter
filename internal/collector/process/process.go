@@ -31,6 +31,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/pdh/registry"
+	pdhtypes "github.com/prometheus-community/windows_exporter/internal/pdh/types"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows"
@@ -59,10 +60,9 @@ type Collector struct {
 	miSession                 *mi.Session
 	workerProcessMIQueryQuery mi.Query
 
-	collectorVersion int
-
-	collectorV1
-	collectorV2
+	perfDataCollector pdhtypes.Collector
+	perfDataObject    []perfDataCounterValues
+	workerCh          chan processWorkerRequest
 
 	lookupCache sync.Map
 
@@ -157,8 +157,12 @@ func (c *Collector) Close() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	c.closeV1()
-	c.closeV2()
+	c.perfDataCollector.Close()
+
+	if c.workerCh != nil {
+		close(c.workerCh)
+		c.workerCh = nil
+	}
 
 	return nil
 }
@@ -166,42 +170,36 @@ func (c *Collector) Close() error {
 func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 	c.logger = logger.With(slog.String("collector", Name))
 
-	if miSession == nil {
-		return errors.New("miSession is nil")
+	var err error
+
+	if c.config.EnableWorkerProcess {
+		if miSession == nil {
+			return errors.New("miSession is nil")
+		}
+
+		miQuery, err := mi.NewQuery("SELECT AppPoolName, ProcessId FROM WorkerProcess")
+		if err != nil {
+			return fmt.Errorf("failed to create WMI query: %w", err)
+		}
+
+		c.workerProcessMIQueryQuery = miQuery
+		c.miSession = miSession
 	}
 
-	miQuery, err := mi.NewQuery("SELECT AppPoolName, ProcessId FROM WorkerProcess")
-	if err != nil {
-		return fmt.Errorf("failed to create WMI query: %w", err)
-	}
-
-	c.workerProcessMIQueryQuery = miQuery
-	c.miSession = miSession
-
-	c.collectorVersion = 2
-	c.perfDataCollectorV2, err = pdh.NewCollector[perfDataCounterValuesV2](pdh.CounterTypeRaw, "Process V2", pdh.InstancesAll)
+	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "Process V2", pdh.InstancesAll)
 
 	if errors.Is(err, pdh.NewPdhError(pdh.CstatusNoObject)) {
-		c.collectorVersion = 1
-		c.perfDataCollectorV1, err = registry.NewCollector[perfDataCounterValuesV1]("Process", pdh.InstancesAll)
+		c.perfDataCollector, err = registry.NewCollector[perfDataCounterValues]("Process", pdh.InstancesAll)
 	}
 
 	if err != nil {
 		return fmt.Errorf("failed to create Process collector: %w", err)
 	}
 
-	if c.collectorVersion == 1 {
-		c.workerChV1 = make(chan processWorkerRequestV1, 32)
+	c.workerCh = make(chan processWorkerRequest, 32)
 
-		for range 4 {
-			go c.collectWorkerV1()
-		}
-	} else {
-		c.workerChV2 = make(chan processWorkerRequestV2, 32)
-
-		for range 4 {
-			go c.collectWorkerV2()
-		}
+	for range 4 {
+		go c.collectWorker()
 	}
 
 	c.mu = sync.RWMutex{}
@@ -327,11 +325,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		}
 	}
 
-	if c.collectorVersion == 1 {
-		return c.collectV1(ch, workerProcesses)
-	}
-
-	return c.collectV2(ch, workerProcesses)
+	return c.collect(ch, workerProcesses)
 }
 
 // ref: https://github.com/microsoft/hcsshim/blob/8beabacfc2d21767a07c20f8dd5f9f3932dbf305/internal/uvm/stats.go#L25

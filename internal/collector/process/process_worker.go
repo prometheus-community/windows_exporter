@@ -25,53 +25,51 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
-	"github.com/prometheus-community/windows_exporter/internal/pdh/registry"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-type collectorV1 struct {
-	perfDataCollectorV1 *registry.Collector
-	perfDataObjectV1    []perfDataCounterValuesV1
-	workerChV1          chan processWorkerRequestV1
-}
-
-type processWorkerRequestV1 struct {
+type processWorkerRequest struct {
 	ch                       chan<- prometheus.Metric
 	name                     string
-	performanceCounterValues perfDataCounterValuesV1
+	performanceCounterValues perfDataCounterValues
 	waitGroup                *sync.WaitGroup
 	workerProcesses          []WorkerProcess
 }
 
-func (c *Collector) closeV1() {
-	c.perfDataCollectorV1.Close()
-
-	if c.workerChV1 != nil {
-		close(c.workerChV1)
-		c.workerChV1 = nil
-	}
-}
-
-func (c *Collector) collectV1(ch chan<- prometheus.Metric, workerProcesses []WorkerProcess) error {
-	err := c.perfDataCollectorV1.Collect(&c.perfDataObjectV1)
+func (c *Collector) collect(ch chan<- prometheus.Metric, workerProcesses []WorkerProcess) error {
+	err := c.perfDataCollector.Collect(&c.perfDataObject)
 	if err != nil {
 		return fmt.Errorf("failed to collect metrics: %w", err)
 	}
 
 	wg := &sync.WaitGroup{}
 
-	for _, process := range c.perfDataObjectV1 {
+	for _, process := range c.perfDataObject {
 		// Duplicate processes are suffixed #, and an index number. Remove those.
-		name, _, _ := strings.Cut(process.Name, ":") // Process V1
+		name, _, _ := strings.Cut(process.Name, ":") // Process V2
+
+		// Duplicate processes are suffixed #, and an index number. Remove those.
+		name, _, _ = strings.Cut(name, "#") // Process V1
 
 		if c.config.ProcessExclude.MatchString(name) || !c.config.ProcessInclude.MatchString(name) {
 			continue
 		}
 
+		if process.ProcessID == 0 {
+			c.logger.LogAttrs(context.Background(), slog.LevelDebug, "Skipping process with PID 0",
+				slog.String("name", name),
+				slog.String("process_name", process.Name),
+				slog.Any("process", fmt.Sprintf("%+v", process)),
+			)
+
+			continue
+		}
+
 		wg.Add(1)
 
-		c.workerChV1 <- processWorkerRequestV1{
+		c.workerCh <- processWorkerRequest{
 			ch:                       ch,
 			name:                     name,
 			performanceCounterValues: process,
@@ -85,7 +83,7 @@ func (c *Collector) collectV1(ch chan<- prometheus.Metric, workerProcesses []Wor
 	return nil
 }
 
-func (c *Collector) collectWorkerV1() {
+func (c *Collector) collectWorker() {
 	defer func() {
 		if r := recover(); r != nil {
 			c.logger.Error("Worker panic",
@@ -94,11 +92,11 @@ func (c *Collector) collectWorkerV1() {
 			)
 
 			// Restart the collectWorker
-			go c.collectWorkerV1()
+			go c.collectWorker()
 		}
 	}()
 
-	for req := range c.workerChV1 {
+	for req := range c.workerCh {
 		(func() {
 			defer req.waitGroup.Done()
 
@@ -106,7 +104,7 @@ func (c *Collector) collectWorkerV1() {
 			name := req.name
 			data := req.performanceCounterValues
 
-			pid := uint64(data.IdProcess)
+			pid := uint64(data.ProcessID)
 			parentPID := strconv.FormatUint(uint64(data.CreatingProcessID), 10)
 
 			if c.config.EnableWorkerProcess {
@@ -136,17 +134,19 @@ func (c *Collector) collectWorkerV1() {
 				name, pidString, parentPID, strconv.Itoa(int(processGroupID)), processOwner, cmdLine,
 			)
 
-			ch <- prometheus.MustNewConstMetric(
-				c.startTime,
-				prometheus.GaugeValue,
-				data.ElapsedTime,
-				name, pidString,
-			)
+			startTime := float64(time.Now().Unix() - int64(data.ElapsedTime))
 
 			ch <- prometheus.MustNewConstMetric(
 				c.startTimeOld,
 				prometheus.GaugeValue,
-				data.ElapsedTime,
+				startTime,
+				name, pidString,
+			)
+
+			ch <- prometheus.MustNewConstMetric(
+				c.startTime,
+				prometheus.GaugeValue,
+				startTime,
 				name, pidString,
 			)
 
