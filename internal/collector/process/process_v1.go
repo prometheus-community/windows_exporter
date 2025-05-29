@@ -69,6 +69,16 @@ func (c *Collector) collectV1(ch chan<- prometheus.Metric, workerProcesses []Wor
 			continue
 		}
 
+		if process.IdProcess == 0 {
+			c.logger.LogAttrs(context.Background(), slog.LevelDebug, "Skipping process with PID 0",
+				slog.String("name", name),
+				slog.String("process_name", process.Name),
+				slog.Any("process", fmt.Sprintf("%+v", process)),
+			)
+
+			continue
+		}
+
 		wg.Add(1)
 
 		c.workerChV1 <- processWorkerRequestV1{
