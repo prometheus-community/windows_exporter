@@ -31,6 +31,7 @@ import (
 	"os/user"
 	"runtime"
 	"runtime/debug"
+	runtimepprof "runtime/pprof"
 	"slices"
 	"strings"
 	"time"
@@ -49,11 +50,19 @@ import (
 )
 
 func main() {
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
+	go func() {
+		ch := make(chan os.Signal, 1)
+		signal.Notify(ch)
 
-	exitCode := run(ctx, os.Args[1:])
+		// Wait for a signal to stop the exporter.
+		<-ch
 
-	stop()
+		runtimepprof.Lookup("goroutine").WriteTo(os.Stdout, 2)
+		fmt.Println("-------------------------------------------------------------------")
+		os.Exit(0)
+	}()
+
+	exitCode := run(context.Background(), os.Args[1:])
 
 	// If we are running as a service, we need to signal the service control manager that we are done.
 	if !IsService {
