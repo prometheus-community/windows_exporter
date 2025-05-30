@@ -144,13 +144,13 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 	c.currentTime = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "current_timestamp_seconds"),
-		"OperatingSystem.LocalDateTime",
+		"Current time as reported by the operating system, in unix time.",
 		nil,
 		nil,
 	)
 	c.timezone = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "timezone"),
-		"OperatingSystem.LocalDateTime",
+		"Current timezone as reported by the operating system.",
 		[]string{"timezone"},
 		nil,
 	)
