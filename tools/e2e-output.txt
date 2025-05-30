@@ -355,10 +355,6 @@ windows_exporter_collector_timeout{collector="udp"} 0
 # TYPE windows_physical_disk_write_seconds_total counter
 # HELP windows_physical_disk_writes_total The number of write operations on the disk (PhysicalDisk.DiskWritesPerSec)
 # TYPE windows_physical_disk_writes_total counter
-# HELP windows_printer_job_count Number of jobs processed by the printer since the last reset
-# TYPE windows_printer_job_count counter
-# HELP windows_printer_status Printer status
-# TYPE windows_printer_status gauge
 # HELP windows_scheduled_task_last_result The result that was returned the last time the registered task was run
 # TYPE windows_scheduled_task_last_result gauge
 windows_scheduled_task_last_result{task="/Microsoft/Windows/PLA/GAEvents"} 0
