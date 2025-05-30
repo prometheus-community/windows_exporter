@@ -220,7 +220,7 @@ func (c *Collector) scheduleUpdateStatus(ctx context.Context, logger *slog.Logge
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 
-	if err := ole.CoInitializeEx(0, ole.COINIT_MULTITHREADED); err != nil {
+	if err := ole.CoInitializeEx(0, ole.COINIT_APARTMENTTHREADED|ole.COINIT_DISABLE_OLE1DDE); err != nil {
 		var oleCode *ole.OleError
 		if errors.As(err, &oleCode) && oleCode.Code() != ole.S_OK && oleCode.Code() != 0x00000001 {
 			initErrCh <- fmt.Errorf("CoInitializeEx: %w", err)
@@ -232,17 +232,17 @@ func (c *Collector) scheduleUpdateStatus(ctx context.Context, logger *slog.Logge
 	defer ole.CoUninitialize()
 
 	// Create a new instance of the WMI object
-	mus, err := oleutil.CreateObject("Microsoft.Update.Session")
+	sessionObj, err := oleutil.CreateObject("Microsoft.Update.Session")
 	if err != nil {
 		initErrCh <- fmt.Errorf("create Microsoft.Update.Session: %w", err)
 
 		return
 	}
 
-	defer mus.Release()
+	defer sessionObj.Release()
 
 	// Query the IDispatch interface of the object
-	musQueryInterface, err := mus.QueryInterface(ole.IID_IDispatch)
+	musQueryInterface, err := sessionObj.QueryInterface(ole.IID_IDispatch)
 	if err != nil {
 		initErrCh <- fmt.Errorf("IID_IDispatch: %w", err)
 
@@ -267,9 +267,9 @@ func (c *Collector) scheduleUpdateStatus(ctx context.Context, logger *slog.Logge
 
 	// https://learn.microsoft.com/en-us/windows/win32/api/wuapi/nf-wuapi-iupdatesession-createupdatesearcher
 	us, err := oleutil.CallMethod(musQueryInterface, "CreateUpdateSearcher")
-	defer func(hc *ole.VARIANT) {
+	defer func(us *ole.VARIANT) {
 		if us != nil {
-			_ = hc.Clear()
+			_ = us.Clear()
 		}
 	}(us)
 

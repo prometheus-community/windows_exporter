@@ -33,13 +33,15 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows"
+	"golang.org/x/sys/windows/registry"
 )
 
 const (
 	Name = "time"
 
-	collectorSystemTime = "system_time"
-	collectorNTP        = "ntp"
+	collectorSystemTime  = "system_time"
+	collectorClockSource = "clock_source"
+	collectorNTP         = "ntp"
 )
 
 type Config struct {
@@ -50,6 +52,7 @@ type Config struct {
 var ConfigDefaults = Config{
 	CollectorsEnabled: []string{
 		collectorSystemTime,
+		collectorClockSource,
 		collectorNTP,
 	},
 }
@@ -61,10 +64,13 @@ type Collector struct {
 	perfDataCollector *pdh.Collector
 	perfDataObject    []perfDataCounterValues
 
+	logger *slog.Logger
+
 	ppbCounterPresent bool
 
 	currentTime                     *prometheus.Desc
 	timezone                        *prometheus.Desc
+	clockSource                     *prometheus.Desc
 	clockFrequencyAdjustment        *prometheus.Desc
 	clockFrequencyAdjustmentPPB     *prometheus.Desc
 	computedTimeOffset              *prometheus.Desc
@@ -124,9 +130,11 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
+func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
+	c.logger = logger.With(slog.String("collector", Name))
+
 	for _, collector := range c.config.CollectorsEnabled {
-		if !slices.Contains([]string{collectorSystemTime, collectorNTP}, collector) {
+		if !slices.Contains([]string{collectorSystemTime, collectorClockSource, collectorNTP}, collector) {
 			return fmt.Errorf("unknown collector: %s", collector)
 		}
 	}
@@ -136,14 +144,20 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 
 	c.currentTime = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "current_timestamp_seconds"),
-		"OperatingSystem.LocalDateTime",
+		"Current time as reported by the operating system, in unix time.",
 		nil,
 		nil,
 	)
 	c.timezone = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "timezone"),
-		"OperatingSystem.LocalDateTime",
+		"Current timezone as reported by the operating system.",
 		[]string{"timezone"},
+		nil,
+	)
+	c.clockSource = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "clock_sync_source"),
+		"This value reflects the sync source of the system clock.",
+		[]string{"type"},
 		nil,
 	)
 	c.clockFrequencyAdjustment = prometheus.NewDesc(
@@ -189,11 +203,13 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 
-	var err error
+	if slices.Contains(c.config.CollectorsEnabled, collectorNTP) {
+		var err error
 
-	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "Windows Time Service", nil)
-	if err != nil {
-		return fmt.Errorf("failed to create Windows Time Service collector: %w", err)
+		c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "Windows Time Service", nil)
+		if err != nil {
+			return fmt.Errorf("failed to create Windows Time Service collector: %w", err)
+		}
 	}
 
 	return nil
@@ -206,7 +222,13 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 
 	if slices.Contains(c.config.CollectorsEnabled, collectorSystemTime) {
 		if err := c.collectTime(ch); err != nil {
-			errs = append(errs, fmt.Errorf("failed collecting time metrics: %w", err))
+			errs = append(errs, fmt.Errorf("failed collecting operating system time metrics: %w", err))
+		}
+	}
+
+	if slices.Contains(c.config.CollectorsEnabled, collectorClockSource) {
+		if err := c.collectClockSource(ch); err != nil {
+			errs = append(errs, fmt.Errorf("failed collecting clock source metrics: %w", err))
 		}
 	}
 
@@ -240,6 +262,42 @@ func (c *Collector) collectTime(ch chan<- prometheus.Metric) error {
 		1.0,
 		timezoneName,
 	)
+
+	return nil
+}
+
+func (c *Collector) collectClockSource(ch chan<- prometheus.Metric) error {
+	keyPath := `SYSTEM\CurrentControlSet\Services\W32Time\Parameters`
+
+	key, err := registry.OpenKey(registry.LOCAL_MACHINE, keyPath, registry.READ)
+	if err != nil {
+		return fmt.Errorf("failed to open registry key: %w", err)
+	}
+
+	val, _, err := key.GetStringValue("Type")
+	if err != nil {
+		return fmt.Errorf("failed to read 'Type' value: %w", err)
+	}
+
+	for _, validType := range []string{"NTP", "NT5DS", "AllSync", "NoSync", "Local CMOS Clock"} {
+		metricValue := 0.0
+		if val == validType {
+			metricValue = 1.0
+		}
+
+		ch <- prometheus.MustNewConstMetric(
+			c.clockSource,
+			prometheus.GaugeValue,
+			metricValue,
+			validType,
+		)
+	}
+
+	if err := key.Close(); err != nil {
+		c.logger.Debug("failed to close registry key",
+			slog.Any("err", err),
+		)
+	}
 
 	return nil
 }
