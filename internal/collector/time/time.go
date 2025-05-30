@@ -155,8 +155,8 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 	c.clockSource = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "cloud_source"),
-		"This value reflects the source of the system clock.",
+		prometheus.BuildFQName(types.Namespace, Name, "clock_sync_source"),
+		"This value reflects the sync source of the system clock.",
 		[]string{"type"},
 		nil,
 	)

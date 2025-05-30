@@ -208,20 +208,28 @@ func (c *Collection) collectCollector(ch chan<- prometheus.Metric, logger *slog.
 		return pending
 	}
 
-	if err != nil && !errors.Is(err, pdh.ErrNoData) && !errors.Is(err, types.ErrNoData) {
-		if errors.Is(err, pdh.ErrPerformanceCounterNotInitialized) || errors.Is(err, mi.MI_RESULT_INVALID_NAMESPACE) {
-			err = fmt.Errorf("%w. Check application logs from initialization pharse for more information", err)
+	slogAttrs := make([]slog.Attr, 0)
+
+	if err != nil {
+		if !errors.Is(err, pdh.ErrNoData) && !errors.Is(err, types.ErrNoData) {
+			if errors.Is(err, pdh.ErrPerformanceCounterNotInitialized) || errors.Is(err, mi.MI_RESULT_INVALID_NAMESPACE) {
+				err = fmt.Errorf("%w. Check application logs from initialization pharse for more information", err)
+			}
+
+			logger.LogAttrs(ctx, slog.LevelWarn,
+				fmt.Sprintf("collector %s failed after %s, resulting in %d metrics", name, duration, numMetrics),
+				slog.Any("err", err),
+			)
+
+			return failed
 		}
 
-		logger.LogAttrs(ctx, slog.LevelWarn,
-			fmt.Sprintf("collector %s failed after %s, resulting in %d metrics", name, duration, numMetrics),
-			slog.Any("err", err),
-		)
-
-		return failed
+		slogAttrs = append(slogAttrs, slog.Any("err", err))
 	}
 
-	logger.LogAttrs(ctx, slog.LevelDebug, fmt.Sprintf("collector %s succeeded after %s, resulting in %d metrics", name, duration, numMetrics))
+	logger.LogAttrs(ctx, slog.LevelDebug, fmt.Sprintf("collector %s succeeded after %s, resulting in %d metrics", name, duration, numMetrics),
+		slogAttrs...,
+	)
 
 	return success
 }
