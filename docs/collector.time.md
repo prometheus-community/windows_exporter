@@ -1,6 +1,6 @@
 # time collector
 
-The time collector exposes the Windows Time Service metrics. Note that the Windows Time Service must be running, else metric collection will fail.
+The time collector exposes the Windows Time Service and other time related metrics.
 If the Windows Time Service is stopped after collection has started, collector metric values will reset to 0.
 
 Please note the Time Service perflib counters are only available on [Windows Server 2016 or newer](https://docs.microsoft.com/en-us/windows-server/networking/windows-time-service/windows-server-2016-improvements).
@@ -32,9 +32,21 @@ Matching is case-sensitive.
 | `windows_time_ntp_server_incoming_requests_total`  | Total number of requests received by the NTP server.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | counter | None       |
 | `windows_time_current_timestamp_seconds`           | Current time as reported by the operating system, in [Unix time](https://en.wikipedia.org/wiki/Unix_time). See [time.Unix()](https://golang.org/pkg/time/#Unix) for details                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | gauge   | None       |
 | `windows_time_timezone`                            | Current timezone as reported by the operating system.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | gauge   | `timezone` |
+| `windows_time_clock_sync_source`                   | This value reflects the sync source of the system clock.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | gauge   | `type`     |
 
 ### Example metric
-_This collector does not yet have explained examples, we would appreciate your help adding them!_
+```
+# HELP windows_time_clock_sync_source This value reflects the sync source of the system clock.
+# TYPE windows_time_clock_sync_source gauge
+windows_time_clock_sync_source{type="AllSync"} 0
+windows_time_clock_sync_source{type="Local CMOS Clock"} 0
+windows_time_clock_sync_source{type="NT5DS"} 0
+windows_time_clock_sync_source{type="NTP"} 1
+windows_time_clock_sync_source{type="NoSync"} 0
+# HELP windows_time_current_timestamp_seconds OperatingSystem.LocalDateTime
+# TYPE windows_time_current_timestamp_seconds gauge
+windows_time_current_timestamp_seconds 1.74862554e+09
+```
 
 ## Useful queries
 _This collector does not yet have any useful queries added, we would appreciate your help adding them!_
