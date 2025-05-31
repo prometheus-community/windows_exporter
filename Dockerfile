@@ -11,7 +11,7 @@ ARG TARGETARCH
 
 ARG BASE="mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v1.0.0"
 
-FROM --platform=${BUILDPLATFORM:-windows/amd64} $BASE
+FROM --platform=windows/$BUILDARCH $BASE
 
 COPY windows_exporter*-${TARGETARCH}.exe /windows_exporter.exe
 ENTRYPOINT ["windows_exporter.exe"]
