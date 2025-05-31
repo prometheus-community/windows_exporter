@@ -37,6 +37,11 @@ Enables IIS process name queries. IIS process names are combined with their app 
 
 Disabled by default, and can be enabled with `--collector.process.iis`. NOTE: Just plain parameter without `true`.
 
+### `--collector.process.counter-version`
+
+Version of the process collector to use. 1 for Process V1, 2 for Process V2.
+Defaults to 0 which will use the latest version available.
+
 
 ### Example
 To match all firefox processes: `--collector.process.include="firefox.*"`.

@@ -63,9 +63,12 @@ func NewCollector[T any](object string, _ []string) (*Collector, error) {
 	}
 
 	for _, f := range reflect.VisibleFields(valueType) {
-		counterName, ok := f.Tag.Lookup("perfdata")
+		counterName, ok := f.Tag.Lookup("perfdata_v1")
 		if !ok {
-			continue
+			counterName, ok = f.Tag.Lookup("perfdata")
+			if !ok {
+				continue
+			}
 		}
 
 		var counter Counter
