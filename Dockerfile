@@ -6,7 +6,7 @@
 # This image MUST be built with docker buildx build (buildx) command on a Linux system.
 # Ref: https://github.com/microsoft/windows-host-process-containers-base-image
 
-ARG BUILDPLATFORM
+ARG BUILDARCH
 ARG TARGETARCH
 
 ARG BASE="mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v1.0.0"
