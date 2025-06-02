@@ -37,6 +37,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/exchange"
 	"github.com/prometheus-community/windows_exporter/internal/collector/filetime"
 	"github.com/prometheus-community/windows_exporter/internal/collector/fsrmquota"
+	"github.com/prometheus-community/windows_exporter/internal/collector/gpu"
 	"github.com/prometheus-community/windows_exporter/internal/collector/hyperv"
 	"github.com/prometheus-community/windows_exporter/internal/collector/iis"
 	"github.com/prometheus-community/windows_exporter/internal/collector/license"
@@ -95,6 +96,7 @@ var BuildersWithFlags = map[string]BuilderWithFlags[Collector]{
 	exchange.Name:           NewBuilderWithFlags(exchange.NewWithFlags),
 	filetime.Name:           NewBuilderWithFlags(filetime.NewWithFlags),
 	fsrmquota.Name:          NewBuilderWithFlags(fsrmquota.NewWithFlags),
+	gpu.Name:                NewBuilderWithFlags(gpu.NewWithFlags),
 	hyperv.Name:             NewBuilderWithFlags(hyperv.NewWithFlags),
 	iis.Name:                NewBuilderWithFlags(iis.NewWithFlags),
 	license.Name:            NewBuilderWithFlags(license.NewWithFlags),
