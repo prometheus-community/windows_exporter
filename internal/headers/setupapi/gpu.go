@@ -24,6 +24,7 @@ import (
 	"golang.org/x/sys/windows"
 )
 
+//nolint:gochecknoglobals
 var GUID_DISPLAY_ADAPTER = sync.OnceValue(func() *windows.GUID {
 	return &windows.GUID{
 		Data1: 0x4d36e968,

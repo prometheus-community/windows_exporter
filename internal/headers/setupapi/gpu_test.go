@@ -18,9 +18,10 @@
 package setupapi_test
 
 import (
+	"testing"
+
 	"github.com/prometheus-community/windows_exporter/internal/headers/setupapi"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func TestGetGPUDevices(t *testing.T) {

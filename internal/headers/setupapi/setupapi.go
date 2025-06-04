@@ -21,6 +21,7 @@ import (
 	"golang.org/x/sys/windows"
 )
 
+//nolint:gochecknoglobals
 var (
 	modSetupAPI                           = windows.NewLazySystemDLL("setupapi.dll")
 	procSetupDiGetClassDevsW              = modSetupAPI.NewProc("SetupDiGetClassDevsW")
