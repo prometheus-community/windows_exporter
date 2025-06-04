@@ -15,7 +15,7 @@ Enabled by default (error stats)? | Yes |
 
 Name | Description
 -----|------------
-`collector.dns.enabled` | Comma-separated list of collectors to use. Available collectors: `metrics`, `error_stats`. Defaults to all collectors if not specified.
+`collector.dns.enabled` | Comma-separated list of collectors to use. Available collectors: `metrics`, `wmi_stats`. Defaults to all collectors if not specified.
 
 ## Metrics
 
