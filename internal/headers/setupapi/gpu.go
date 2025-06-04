@@ -18,9 +18,10 @@
 package setupapi
 
 import (
-	"golang.org/x/sys/windows"
 	"sync"
 	"unsafe"
+
+	"golang.org/x/sys/windows"
 )
 
 var GUID_DISPLAY_ADAPTER = sync.OnceValue(func() *windows.GUID {
@@ -71,7 +72,7 @@ func GetGPUDevices() ([]GPUDevice, error) {
 		gpuDevice := GPUDevice{}
 
 		if ret == 0 {
-			gpuDevice.DeviceDesc = "unknown"
+			gpuDevice.DeviceDesc = ""
 		} else {
 			gpuDevice.DeviceDesc = windows.UTF16ToString(propertyBuffer[:])
 		}
@@ -87,7 +88,7 @@ func GetGPUDevices() ([]GPUDevice, error) {
 		)
 
 		if ret == 0 {
-			gpuDevice.FriendlyName = "unknown"
+			gpuDevice.FriendlyName = ""
 		} else {
 			gpuDevice.FriendlyName = windows.UTF16ToString(propertyBuffer[:])
 		}
