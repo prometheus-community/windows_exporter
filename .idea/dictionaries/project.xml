@@ -2,6 +2,7 @@
   <dictionary name="project">
     <words>
       <w>containerd</w>
+      <w>setupapi</w>
       <w>spdx</w>
     </words>
   </dictionary>

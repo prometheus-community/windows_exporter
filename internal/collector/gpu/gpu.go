@@ -21,8 +21,10 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strconv"
 
 	"github.com/alecthomas/kingpin/v2"
+	"github.com/prometheus-community/windows_exporter/internal/headers/setupapi"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
@@ -43,6 +45,7 @@ type Collector struct {
 	gpuEnginePerfDataCollector *pdh.Collector
 	gpuEnginePerfDataObject    []gpuEnginePerfDataCounterValues
 
+	gpuInfo              *prometheus.Desc
 	gpuEngineRunningTime *prometheus.Desc
 
 	// GPU Adapter Memory
@@ -108,6 +111,13 @@ func (c *Collector) Close() error {
 
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 	var err error
+
+	c.gpuInfo = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "info"),
+		"A metric with a constant '1' value labeled with gpu device information.",
+		[]string{"phys", "physical_device_object_name", "hardware_id", "friendly_name", "description"},
+		nil,
+	)
 
 	c.gpuEngineRunningTime = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "engine_time_seconds"),
@@ -213,6 +223,10 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	errs := make([]error, 0)
 
+	if err := c.collectGpuInfo(ch); err != nil {
+		errs = append(errs, err)
+	}
+
 	if err := c.collectGpuEngineMetrics(ch); err != nil {
 		errs = append(errs, err)
 	}
@@ -234,6 +248,28 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	}
 
 	return errors.Join(errs...)
+}
+
+func (c *Collector) collectGpuInfo(ch chan<- prometheus.Metric) error {
+	gpus, err := setupapi.GetGPUDevices()
+	if err != nil {
+		return fmt.Errorf("failed to get GPU devices: %w", err)
+	}
+
+	for i, gpu := range gpus {
+		ch <- prometheus.MustNewConstMetric(
+			c.gpuInfo,
+			prometheus.GaugeValue,
+			1.0,
+			strconv.Itoa(i),
+			gpu.PhysicalDeviceObjectName,
+			gpu.HardwareID,
+			gpu.FriendlyName,
+			gpu.DeviceDesc,
+		)
+	}
+
+	return nil
 }
 
 func (c *Collector) collectGpuEngineMetrics(ch chan<- prometheus.Metric) error {
