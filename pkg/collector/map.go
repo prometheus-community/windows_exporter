@@ -25,6 +25,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/ad"
 	"github.com/prometheus-community/windows_exporter/internal/collector/adcs"
 	"github.com/prometheus-community/windows_exporter/internal/collector/adfs"
+	"github.com/prometheus-community/windows_exporter/internal/collector/bitlocker"
 	"github.com/prometheus-community/windows_exporter/internal/collector/cache"
 	"github.com/prometheus-community/windows_exporter/internal/collector/container"
 	"github.com/prometheus-community/windows_exporter/internal/collector/cpu"
@@ -84,6 +85,7 @@ var BuildersWithFlags = map[string]BuilderWithFlags[Collector]{
 	ad.Name:                 NewBuilderWithFlags(ad.NewWithFlags),
 	adcs.Name:               NewBuilderWithFlags(adcs.NewWithFlags),
 	adfs.Name:               NewBuilderWithFlags(adfs.NewWithFlags),
+	bitlocker.Name:          NewBuilderWithFlags(bitlocker.NewWithFlags),
 	cache.Name:              NewBuilderWithFlags(cache.NewWithFlags),
 	container.Name:          NewBuilderWithFlags(container.NewWithFlags),
 	cpu.Name:                NewBuilderWithFlags(cpu.NewWithFlags),

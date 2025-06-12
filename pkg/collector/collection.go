@@ -31,6 +31,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/ad"
 	"github.com/prometheus-community/windows_exporter/internal/collector/adcs"
 	"github.com/prometheus-community/windows_exporter/internal/collector/adfs"
+	"github.com/prometheus-community/windows_exporter/internal/collector/bitlocker"
 	"github.com/prometheus-community/windows_exporter/internal/collector/cache"
 	"github.com/prometheus-community/windows_exporter/internal/collector/container"
 	"github.com/prometheus-community/windows_exporter/internal/collector/cpu"
@@ -103,6 +104,7 @@ func NewWithConfig(config Config) *Collection {
 	collectors[ad.Name] = ad.New(&config.AD)
 	collectors[adcs.Name] = adcs.New(&config.ADCS)
 	collectors[adfs.Name] = adfs.New(&config.ADFS)
+	collectors[bitlocker.Name] = bitlocker.New(&config.Bitlocker)
 	collectors[cache.Name] = cache.New(&config.Cache)
 	collectors[container.Name] = container.New(&config.Container)
 	collectors[cpu.Name] = cpu.New(&config.CPU)

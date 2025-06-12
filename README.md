@@ -17,7 +17,8 @@ A Prometheus exporter for Windows machines.
  [ad](docs/collector.ad.md)                                 | Active Directory Domain Services                                                                                                                            |
  [adcs](docs/collector.adcs.md)                             | Active Directory Certificate Services                                                                                                                       |
  [adfs](docs/collector.adfs.md)                             | Active Directory Federation Services                                                                                                                        |
- [cache](docs/collector.cache.md)                           | Cache metrics                                                                                                                                               |
+ [bitlocker](docs/collector.bitlocker.md) | Bitlocker metrics |
+[cache](docs/collector.cache.md)                           | Cache metrics                                                                                                                                               |
  [cpu](docs/collector.cpu.md)                               | CPU usage                                                                                                                                                   | &#10003;
  [cpu_info](docs/collector.cpu_info.md)                     | CPU Information                                                                                                                                             |
  [cs](docs/collector.cs.md)                                 | "Computer System" metrics (system properties, num cpus/total memory)                                                                                        |

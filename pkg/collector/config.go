@@ -21,6 +21,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/ad"
 	"github.com/prometheus-community/windows_exporter/internal/collector/adcs"
 	"github.com/prometheus-community/windows_exporter/internal/collector/adfs"
+	"github.com/prometheus-community/windows_exporter/internal/collector/bitlocker"
 	"github.com/prometheus-community/windows_exporter/internal/collector/cache"
 	"github.com/prometheus-community/windows_exporter/internal/collector/container"
 	"github.com/prometheus-community/windows_exporter/internal/collector/cpu"
@@ -73,6 +74,7 @@ type Config struct {
 	AD                 ad.Config                 `yaml:"ad"`
 	ADCS               adcs.Config               `yaml:"adcs"`
 	ADFS               adfs.Config               `yaml:"adfs"`
+	Bitlocker          bitlocker.Config          `yaml:"bitlocker"`
 	Cache              cache.Config              `yaml:"cache"`
 	Container          container.Config          `yaml:"container"`
 	CPU                cpu.Config                `yaml:"cpu"`
@@ -129,6 +131,7 @@ var ConfigDefaults = Config{
 	AD:                 ad.ConfigDefaults,
 	ADCS:               adcs.ConfigDefaults,
 	ADFS:               adfs.ConfigDefaults,
+	Bitlocker:          bitlocker.ConfigDefaults,
 	Cache:              cache.ConfigDefaults,
 	Container:          container.ConfigDefaults,
 	CPU:                cpu.ConfigDefaults,

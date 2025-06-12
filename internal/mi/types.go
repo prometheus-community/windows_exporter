@@ -49,11 +49,12 @@ func NewNamespace(namespace string) (Namespace, error) {
 
 //nolint:gochecknoglobals
 var (
-	NamespaceRootCIMv2             = utils.Must(NewNamespace("root/CIMv2"))
-	NamespaceRootWindowsFSRM       = utils.Must(NewNamespace("root/microsoft/windows/fsrm"))
-	NamespaceRootWebAdministration = utils.Must(NewNamespace("root/WebAdministration"))
-	NamespaceRootMSCluster         = utils.Must(NewNamespace("root/MSCluster"))
-	NamespaceRootMicrosoftDNS      = utils.Must(NewNamespace("root/MicrosoftDNS"))
+	NamespaceRootCIMv2                     = utils.Must(NewNamespace("root/CIMv2"))
+	NamespaceRootWindowsFSRM               = utils.Must(NewNamespace("root/microsoft/windows/fsrm"))
+	NamespaceRootWebAdministration         = utils.Must(NewNamespace("root/WebAdministration"))
+	NamespaceRootMSCluster                 = utils.Must(NewNamespace("root/MSCluster"))
+	NamespaceRootMicrosoftDNS              = utils.Must(NewNamespace("root/MicrosoftDNS"))
+	NamespaceRootMicrosoftVolumeEncryption = utils.Must(NewNamespace("root/CIMv2/Security/MicrosoftVolumeEncryption"))
 )
 
 type Query *uint16
