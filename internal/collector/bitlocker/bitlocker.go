@@ -24,6 +24,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
+	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -82,7 +83,7 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 		return errors.New("miSession is nil")
 	}
 
-	query, err := mi.NewQuery("SELECT ConversionStatus, DeviceID, DriveLetter, EncryptionMethod, ProtectionStatus, VolumeType FROM Win32_EncryptableVolume WHERE CollectionName = 'Error Stats'")
+	query, err := mi.NewQuery("SELECT ConversionStatus, DeviceID, DriveLetter, EncryptionMethod, ProtectionStatus, VolumeType FROM Win32_EncryptableVolume")
 	if err != nil {
 		return fmt.Errorf("failed to create query: %w", err)
 	}
@@ -91,30 +92,30 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 	c.miQuery = query
 
 	c.volumeInfo = prometheus.NewDesc(
-		prometheus.BuildFQName(Name, "volume", "info"),
+		prometheus.BuildFQName(types.Namespace, Name, "volume_info"),
 		"Information about the encryptable volume.",
-		[]string{"drive_letter", "device_id", "volume_type"},
+		[]string{"volume", "volume_path", "type"},
 		nil,
 	)
 
 	c.conversionStatus = prometheus.NewDesc(
-		prometheus.BuildFQName(Name, "conversion", "status"),
+		prometheus.BuildFQName(types.Namespace, Name, "conversion_status"),
 		"Encryption state of the volume.",
-		[]string{"drive_letter", "status"},
+		[]string{"volume", "status"},
 		nil,
 	)
 
 	c.encryptionMethod = prometheus.NewDesc(
-		prometheus.BuildFQName(Name, "encryption", "method"),
+		prometheus.BuildFQName(types.Namespace, Name, "encryption_method"),
 		"Algorithm used to encrypt the volume.",
-		[]string{"drive_letter", "method"},
+		[]string{"volume", "method"},
 		nil,
 	)
 
 	c.protectionStatus = prometheus.NewDesc(
-		prometheus.BuildFQName(Name, "protection", "status"),
+		prometheus.BuildFQName(types.Namespace, Name, "protection_status"),
 		"Status of the volume, whether or not BitLocker is protecting the volume.",
-		[]string{"drive_letter", "status"},
+		[]string{"volume", "status"},
 		nil,
 	)
 

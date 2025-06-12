@@ -83,6 +83,7 @@ type volumeInfo struct {
 	label        string
 	volumeType   string
 	readonly     float64
+	volumePath   string
 }
 
 func New(config *Config) *Collector {
@@ -155,7 +156,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	c.information = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "info"),
 		"A metric with a constant '1' value labeled with logical disk information",
-		[]string{"disk", "type", "volume", "volume_name", "filesystem", "serial_number"},
+		[]string{"disk", "type", "volume", "volume_name", "filesystem", "volume_path", "serial_number"},
 		nil,
 	)
 	c.readOnly = prometheus.NewDesc(
@@ -322,6 +323,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 			data.Name,
 			info.label,
 			info.filesystem,
+			info.volumePath,
 			info.serialNumber,
 		)
 
@@ -551,6 +553,7 @@ func getVolumeInfo(volumes map[string]string, rootDrive string) (volumeInfo, err
 		filesystem:   windows.UTF16PtrToString(&volBufType[0]),
 		serialNumber: fmt.Sprintf("%X", volSerialNum),
 		readonly:     float64(fsFlags & windows.FILE_READ_ONLY_VOLUME),
+		volumePath:   volumeInformationRootDrive,
 	}, nil
 }
 
