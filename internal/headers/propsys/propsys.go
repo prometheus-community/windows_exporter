@@ -19,13 +19,13 @@ package propsys
 
 import (
 	"fmt"
-	"syscall"
 	"unsafe"
 
 	"github.com/go-ole/go-ole"
 	"golang.org/x/sys/windows"
 )
 
+//nolint:gochecknoglobals
 var (
 	modPropsys                   = windows.NewLazySystemDLL("propsys.dll")
 	procPSGetPropertyKeyFromName = modPropsys.NewProc("PSGetPropertyKeyFromName")
@@ -38,7 +38,8 @@ type PROPERTYKEY struct {
 
 func GetPropertyKeyFromName(name string) (*PROPERTYKEY, error) {
 	var key PROPERTYKEY
-	namePtr, err := syscall.UTF16PtrFromString(name)
+
+	namePtr, err := windows.UTF16PtrFromString(name)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert name to UTF16: %w", err)
 	}

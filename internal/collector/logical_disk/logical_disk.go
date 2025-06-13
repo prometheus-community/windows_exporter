@@ -516,6 +516,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		if slices.Contains(c.config.CollectorsEnabled, subCollectorBitlocker) {
 			c.bitlockerReqCh <- data.Name
 			bitlockerStatus := <-c.bitlockerResCh
+
 			if bitlockerStatus.err != nil {
 				c.logger.Warn("failed to get BitLocker status for "+data.Name,
 					slog.Any("err", bitlockerStatus.err),

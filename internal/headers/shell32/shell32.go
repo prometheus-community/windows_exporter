@@ -18,6 +18,7 @@
 package shell32
 
 import (
+	"errors"
 	"fmt"
 	"unsafe"
 
@@ -25,6 +26,7 @@ import (
 	"golang.org/x/sys/windows"
 )
 
+//nolint:gochecknoglobals
 var (
 	modShell32                      = windows.NewLazySystemDLL("shell32.dll")
 	procSHCreateItemFromParsingName = modShell32.NewProc("SHCreateItemFromParsingName")
@@ -49,7 +51,7 @@ func SHCreateItemFromParsingName(path string, iid *ole.GUID) (*ole.IDispatch, er
 	}
 
 	if result == nil {
-		return nil, fmt.Errorf("SHCreateItemFromParsingName returned nil")
+		return nil, errors.New("SHCreateItemFromParsingName returned nil")
 	}
 
 	return result, nil
