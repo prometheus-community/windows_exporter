@@ -525,9 +525,17 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 				continue
 			}
 
-			for i, status := range []string{"on", "off", "encrypting", "decrypting", "suspended", "locked", "unknown", "waiting_for_activation"} {
+			if bitlockerStatus.status == -1 {
+				c.logger.Debug("BitLocker status for "+data.Name+" is unknown",
+					slog.Int("status", bitlockerStatus.status),
+				)
+
+				continue
+			}
+
+			for i, status := range []string{"disabled", "on", "off", "encrypting", "decrypting", "suspended", "locked", "unknown", "waiting_for_activation"} {
 				val := 0.0
-				if bitlockerStatus.status == i+1 {
+				if bitlockerStatus.status == i {
 					val = 1.0
 				}
 
@@ -777,9 +785,10 @@ func (c *Collector) workerBitlocker(ctx context.Context, initErrCh chan<- error)
 
 	iidIShellItem2 := ole.NewGUID("{7E9FB0D3-919F-4307-AB2E-9B1860310C93}")
 
-	pkey, err := propsys.GetPropertyKeyFromName("System.Volume.BitLockerProtection")
-	if err != nil {
-		initErrCh <- fmt.Errorf("GetPropertyKeyFromName failed: %w", err)
+	var pkey propsys.PROPERTYKEY
+
+	if err := propsys.PSGetPropertyKeyFromName("System.Volume.BitLockerProtection", &pkey); err != nil {
+		initErrCh <- fmt.Errorf("PSGetPropertyKeyFromName failed: %w", err)
 
 		return
 	}
@@ -795,7 +804,12 @@ func (c *Collector) workerBitlocker(ctx context.Context, initErrCh chan<- error)
 				return
 			}
 
-			if path == "" {
+			if !strings.Contains(path, `:`) {
+				c.bitlockerResCh <- struct {
+					err    error
+					status int
+				}{err: nil, status: -1}
+
 				continue
 			}
 
@@ -807,7 +821,7 @@ func (c *Collector) workerBitlocker(ctx context.Context, initErrCh chan<- error)
 
 				defer item.Release()
 
-				v, err := oleutil.GetProperty(item, "GetProperty", pkey.Fmtid, pkey.Pid)
+				v, err := oleutil.GetProperty(item, "GetProperty", pkey.Fmtid.String(), pkey.Pid)
 				if err != nil {
 					return -1, fmt.Errorf("GetProperty failed: %w", err)
 				}

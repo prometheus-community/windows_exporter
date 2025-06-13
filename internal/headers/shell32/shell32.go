@@ -40,14 +40,14 @@ func SHCreateItemFromParsingName(path string, iid *ole.GUID) (*ole.IDispatch, er
 
 	var result *ole.IDispatch
 
-	hr, _, _ := procSHCreateItemFromParsingName.Call(
+	hr, _, err := procSHCreateItemFromParsingName.Call(
 		uintptr(unsafe.Pointer(ptrPath)),
 		0,
 		uintptr(unsafe.Pointer(iid)),
 		uintptr(unsafe.Pointer(&result)),
 	)
 	if hr != 0 {
-		return nil, fmt.Errorf("SHCreateItemFromParsingName failed: HRESULT %#x", hr)
+		return nil, fmt.Errorf("syscall failed: %w", err)
 	}
 
 	if result == nil {

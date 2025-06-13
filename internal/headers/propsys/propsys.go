@@ -32,16 +32,14 @@ var (
 )
 
 type PROPERTYKEY struct {
-	Fmtid ole.GUID
+	Fmtid *ole.GUID
 	Pid   uint32
 }
 
-func GetPropertyKeyFromName(name string) (*PROPERTYKEY, error) {
-	var key PROPERTYKEY
-
+func PSGetPropertyKeyFromName(name string, key *PROPERTYKEY) error {
 	namePtr, err := windows.UTF16PtrFromString(name)
 	if err != nil {
-		return nil, fmt.Errorf("failed to convert name to UTF16: %w", err)
+		return fmt.Errorf("failed to convert name to UTF16: %w", err)
 	}
 
 	hr, _, _ := procPSGetPropertyKeyFromName.Call(
@@ -49,8 +47,8 @@ func GetPropertyKeyFromName(name string) (*PROPERTYKEY, error) {
 		uintptr(unsafe.Pointer(&key)),
 	)
 	if hr != 0 {
-		return nil, fmt.Errorf("PSGetPropertyKeyFromName failed: HRESULT %#x", hr)
+		return fmt.Errorf("PSGetPropertyKeyFromName failed: HRESULT %#x", hr)
 	}
 
-	return &key, nil
+	return nil
 }

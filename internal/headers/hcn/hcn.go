@@ -20,7 +20,7 @@ package hcn
 import (
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/headers/guid"
+	"github.com/go-ole/go-ole"
 	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"golang.org/x/sys/windows"
 )
@@ -30,7 +30,7 @@ var (
 	defaultQuery = utils.Must(windows.UTF16PtrFromString(`{"SchemaVersion":{"Major": 2,"Minor": 0},"Flags":"None"}`))
 )
 
-func GetEndpointProperties(endpointID guid.GUID) (EndpointProperties, error) {
+func GetEndpointProperties(endpointID ole.GUID) (EndpointProperties, error) {
 	endpoint, err := OpenEndpoint(endpointID)
 	if err != nil {
 		return EndpointProperties{}, fmt.Errorf("failed to open endpoint: %w", err)
