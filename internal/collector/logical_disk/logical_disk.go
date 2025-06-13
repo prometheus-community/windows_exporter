@@ -32,7 +32,6 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/go-ole/go-ole"
-	"github.com/go-ole/go-ole/oleutil"
 	"github.com/prometheus-community/windows_exporter/internal/headers/propsys"
 	"github.com/prometheus-community/windows_exporter/internal/headers/shell32"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
@@ -783,8 +782,6 @@ func (c *Collector) workerBitlocker(ctx context.Context, initErrCh chan<- error)
 
 	defer ole.CoUninitialize()
 
-	iidIShellItem2 := ole.NewGUID("{7E9FB0D3-919F-4307-AB2E-9B1860310C93}")
-
 	var pkey propsys.PROPERTYKEY
 
 	if err := propsys.PSGetPropertyKeyFromName("System.Volume.BitLockerProtection", &pkey); err != nil {
@@ -814,21 +811,20 @@ func (c *Collector) workerBitlocker(ctx context.Context, initErrCh chan<- error)
 			}
 
 			status, err := func(path string) (int, error) {
-				item, err := shell32.SHCreateItemFromParsingName(path, iidIShellItem2)
+				item, err := shell32.SHCreateItemFromParsingName(path)
 				if err != nil {
 					return -1, fmt.Errorf("SHCreateItemFromParsingName failed: %w", err)
 				}
 
 				defer item.Release()
 
-				v, err := oleutil.GetProperty(item, "GetProperty", pkey.Fmtid.String(), pkey.Pid)
-				if err != nil {
+				var v ole.VARIANT
+
+				if err := item.GetProperty(&pkey, &v); err != nil {
 					return -1, fmt.Errorf("GetProperty failed: %w", err)
 				}
 
-				status := v.Val
-
-				return int(status), v.Clear()
+				return int(v.Val), v.Clear()
 			}(path)
 
 			c.bitlockerResCh <- struct {

@@ -20,9 +20,11 @@ package shell32
 import (
 	"errors"
 	"fmt"
+	"syscall"
 	"unsafe"
 
 	"github.com/go-ole/go-ole"
+	"github.com/prometheus-community/windows_exporter/internal/headers/propsys"
 	"golang.org/x/sys/windows"
 )
 
@@ -30,20 +32,22 @@ import (
 var (
 	modShell32                      = windows.NewLazySystemDLL("shell32.dll")
 	procSHCreateItemFromParsingName = modShell32.NewProc("SHCreateItemFromParsingName")
+
+	iidIShellItem2 = ole.NewGUID("{7E9FB0D3-919F-4307-AB2E-9B1860310C93}")
 )
 
-func SHCreateItemFromParsingName(path string, iid *ole.GUID) (*ole.IDispatch, error) {
+func SHCreateItemFromParsingName(path string) (*IShellItem2, error) {
 	ptrPath, err := windows.UTF16PtrFromString(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert path to UTF16: %w", err)
 	}
 
-	var result *ole.IDispatch
+	var result *IShellItem2
 
 	hr, _, err := procSHCreateItemFromParsingName.Call(
 		uintptr(unsafe.Pointer(ptrPath)),
 		0,
-		uintptr(unsafe.Pointer(iid)),
+		uintptr(unsafe.Pointer(iidIShellItem2)),
 		uintptr(unsafe.Pointer(&result)),
 	)
 	if hr != 0 {
@@ -55,4 +59,28 @@ func SHCreateItemFromParsingName(path string, iid *ole.GUID) (*ole.IDispatch, er
 	}
 
 	return result, nil
+}
+
+func (item *IShellItem2) GetProperty(key *propsys.PROPERTYKEY, v *ole.VARIANT) error {
+	hr, _, err := syscall.SyscallN(
+		item.lpVtbl.GetProperty,
+		uintptr(unsafe.Pointer(item)),
+		uintptr(unsafe.Pointer(key)),
+		uintptr(unsafe.Pointer(v)),
+	)
+
+	if hr != 0 {
+		return fmt.Errorf("GetProperty failed: %w", err)
+	}
+
+	return nil
+}
+
+func (item *IShellItem2) Release() {
+	_, _, _ = syscall.SyscallN(
+		item.lpVtbl.Release,
+		uintptr(unsafe.Pointer(item)),
+	)
+
+	return
 }
