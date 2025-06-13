@@ -81,6 +81,4 @@ func (item *IShellItem2) Release() {
 		item.lpVtbl.Release,
 		uintptr(unsafe.Pointer(item)),
 	)
-
-	return
 }

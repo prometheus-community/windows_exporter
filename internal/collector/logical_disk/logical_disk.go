@@ -784,6 +784,22 @@ func (c *Collector) workerBitlocker(ctx context.Context, initErrCh chan<- error)
 
 	var pkey propsys.PROPERTYKEY
 
+	// The ideal solution to check the disk encryption (BitLocker) status is to
+	// use the WMI APIs (Win32_EncryptableVolume). However, only programs running
+	// with elevated priledges can access those APIs.
+	//
+	// Our alternative solution is based on the value of the undocumented (shell)
+	// property: "System.Volume.BitLockerProtection". That property is essentially
+	// an enum containing the current BitLocker status for a given volume. This
+	// approached was suggested here:
+	// https://stackoverflow.com/questions/41308245/detect-bitlocker-programmatically-from-c-sharp-without-admin/41310139
+	//
+	// Note that the link above doesn't give any explanation / meaning for the
+	// enum values, it simply says that 1, 3 or 5 means the disk is encrypted.
+	//
+	// I directly tested and validated this strategy on a Windows 10 machine.
+	// The values given in the BitLockerStatus enum contain the relevant values
+	// for the shell property. I also directly validated them.
 	if err := propsys.PSGetPropertyKeyFromName("System.Volume.BitLockerProtection", &pkey); err != nil {
 		initErrCh <- fmt.Errorf("PSGetPropertyKeyFromName failed: %w", err)
 
