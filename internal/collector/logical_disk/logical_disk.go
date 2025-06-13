@@ -775,7 +775,7 @@ func (c *Collector) workerBitlocker(ctx context.Context, initErrCh chan<- error)
 
 	defer ole.CoUninitialize()
 
-	var iidIShellItem2 = ole.NewGUID("{7E9FB0D3-919F-4307-AB2E-9B1860310C93}")
+	iidIShellItem2 := ole.NewGUID("{7E9FB0D3-919F-4307-AB2E-9B1860310C93}")
 
 	pkey, err := propsys.GetPropertyKeyFromName("System.Volume.BitLockerProtection")
 	if err != nil {
