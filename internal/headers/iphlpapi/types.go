@@ -21,7 +21,7 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	"github.com/prometheus-community/windows_exporter/internal/headers/guid"
+	"github.com/go-ole/go-ole"
 )
 
 // MIB_TCPROW_OWNER_PID structure for IPv4.
@@ -120,7 +120,7 @@ const (
 type MIB_IF_ROW2 struct {
 	InterfaceLuid               uint64
 	InterfaceIndex              uint32
-	InterfaceGuid               guid.GUID
+	InterfaceGuid               ole.GUID
 	Alias                       [IF_MAX_STRING_SIZE + 1]uint16
 	Description                 [IF_MAX_STRING_SIZE + 1]uint16
 	PhysicalAddressLength       uint32

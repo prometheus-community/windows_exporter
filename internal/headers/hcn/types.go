@@ -18,7 +18,7 @@
 package hcn
 
 import (
-	"github.com/prometheus-community/windows_exporter/internal/headers/guid"
+	"github.com/go-ole/go-ole"
 	"golang.org/x/sys/windows"
 )
 
@@ -38,7 +38,7 @@ type EndpointPropertiesResources struct {
 	Allocators []EndpointPropertiesAllocators `json:"Allocators"`
 }
 type EndpointPropertiesAllocators struct {
-	AdapterNetCfgInstanceId *guid.GUID `json:"AdapterNetCfgInstanceId"`
+	AdapterNetCfgInstanceId *ole.GUID `json:"AdapterNetCfgInstanceId"`
 }
 
 type EndpointStats struct {

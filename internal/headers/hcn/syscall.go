@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"unsafe"
 
-	"github.com/prometheus-community/windows_exporter/internal/headers/guid"
+	"github.com/go-ole/go-ole"
 	"github.com/prometheus-community/windows_exporter/internal/headers/hcs"
 	"golang.org/x/sys/windows"
 )
@@ -40,7 +40,7 @@ var (
 // EnumerateEndpoints enumerates the endpoints.
 //
 // https://learn.microsoft.com/en-us/virtualization/api/hcn/reference/hcnenumerateendpoints
-func EnumerateEndpoints() ([]guid.GUID, error) {
+func EnumerateEndpoints() ([]ole.GUID, error) {
 	var (
 		endpointsJSON *uint16
 		errorRecord   *uint16
@@ -59,7 +59,7 @@ func EnumerateEndpoints() ([]guid.GUID, error) {
 		return nil, fmt.Errorf("HcnEnumerateEndpoints failed: HRESULT 0x%X: %w", r1, hcs.Win32FromHResult(r1))
 	}
 
-	var endpoints []guid.GUID
+	var endpoints []ole.GUID
 
 	if err := json.Unmarshal([]byte(result), &endpoints); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal JSON: %w", err)
@@ -71,7 +71,7 @@ func EnumerateEndpoints() ([]guid.GUID, error) {
 // OpenEndpoint opens an endpoint.
 //
 // https://learn.microsoft.com/en-us/virtualization/api/hcn/reference/hcnopenendpoint
-func OpenEndpoint(id guid.GUID) (Endpoint, error) {
+func OpenEndpoint(id ole.GUID) (Endpoint, error) {
 	var (
 		endpoint    Endpoint
 		errorRecord *uint16

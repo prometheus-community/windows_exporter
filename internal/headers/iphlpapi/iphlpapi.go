@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"unsafe"
 
-	"github.com/prometheus-community/windows_exporter/internal/headers/guid"
+	"github.com/go-ole/go-ole"
 	"golang.org/x/sys/windows"
 )
 
@@ -152,7 +152,7 @@ func GetIfEntry2Ex(row *MIB_IF_ROW2) error {
 // locally unique identifier (LUID) for the interface.
 //
 // https://learn.microsoft.com/en-us/windows/win32/api/netioapi/nf-netioapi-convertinterfaceguidtoluid
-func ConvertInterfaceGUIDToLUID(guid guid.GUID) (uint64, error) {
+func ConvertInterfaceGUIDToLUID(guid ole.GUID) (uint64, error) {
 	var luid uint64
 	ret, _, _ := procConvertInterfaceGuidToLuid.Call(
 		uintptr(unsafe.Pointer(&guid)),

@@ -15,33 +15,41 @@
 
 //go:build windows
 
-package hcn
+package propsys
 
 import (
 	"fmt"
+	"unsafe"
 
 	"github.com/go-ole/go-ole"
-	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"golang.org/x/sys/windows"
 )
 
 //nolint:gochecknoglobals
 var (
-	defaultQuery = utils.Must(windows.UTF16PtrFromString(`{"SchemaVersion":{"Major": 2,"Minor": 0},"Flags":"None"}`))
+	modPropsys                   = windows.NewLazySystemDLL("propsys.dll")
+	procPSGetPropertyKeyFromName = modPropsys.NewProc("PSGetPropertyKeyFromName")
 )
 
-func GetEndpointProperties(endpointID ole.GUID) (EndpointProperties, error) {
-	endpoint, err := OpenEndpoint(endpointID)
+type PROPERTYKEY struct {
+	Fmtid ole.GUID
+	Pid   uint32
+}
+
+func PSGetPropertyKeyFromName(name string, key *PROPERTYKEY) error {
+	namePtr, err := windows.UTF16PtrFromString(name)
 	if err != nil {
-		return EndpointProperties{}, fmt.Errorf("failed to open endpoint: %w", err)
+		return fmt.Errorf("failed to convert name to UTF16: %w", err)
 	}
 
-	defer CloseEndpoint(endpoint)
+	hr, _, err := procPSGetPropertyKeyFromName.Call(
+		uintptr(unsafe.Pointer(namePtr)),
+		uintptr(unsafe.Pointer(key)),
+	)
 
-	result, err := QueryEndpointProperties(endpoint, defaultQuery)
-	if err != nil {
-		return EndpointProperties{}, fmt.Errorf("failed to query endpoint properties: %w", err)
+	if hr != 0 {
+		return fmt.Errorf("PSGetPropertyKeyFromName failed: %w", err)
 	}
 
-	return result, nil
+	return nil
 }
