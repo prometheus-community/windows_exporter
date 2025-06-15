@@ -2,12 +2,12 @@
 
 The logical_disk collector exposes metrics about logical disks (in contrast to physical disks)
 
-|||
--|-
-Metric name prefix  | `logical_disk`
-Data source         | Perflib
-Counters             | `LogicalDisk` ([`Win32_PerfRawData_PerfDisk_LogicalDisk`](https://msdn.microsoft.com/en-us/windows/hardware/aa394307(v=vs.71)))
-Enabled by default? | Yes
+|                     |                  |
+|---------------------|------------------|
+| Metric name prefix  | `logical_disk`   |
+| Data source         | Performance Data |
+| Counters            | `LogicalDisk`    |
+| Enabled by default? | Yes              |
 
 ## Flags
 
@@ -19,25 +19,30 @@ If given, a disk needs to match the include regexp in order for the correspondin
 
 If given, a disk needs to *not* match the exclude regexp in order for the corresponding disk metrics to be reported
 
+### `--collector.logical_disk.enabled`
+
+Comma-separated list of collectors to use. Available collectors: metrics, bitlocker_status. Defaults to metrics, if not specified.
+
 ## Metrics
 
-Name | Description | Type | Labels
------|-------------|------|-------
-`windows_logical_disk_info` | A metric with a constant '1' value labeled with logical disk information | gauge | `disk`,`filesystem`,`serial_number`,`volume`,`volume_name`,`type`
-`windows_logical_disk_requests_queued` | Number of requests outstanding on the disk at the time the performance data is collected | gauge | `volume`
-`windows_logical_disk_avg_read_requests_queued` | Average number of read requests that were queued for the selected disk during the sample interval | gauge | `volume`
-`windows_logical_disk_avg_write_requests_queued` | Average number of write requests that were queued for the selected disk during the sample interval | gauge | `volume`
-`windows_logical_disk_read_bytes_total` | Rate at which bytes are transferred from the disk during read operations | counter | `volume`
-`windows_logical_disk_reads_total` | Rate of read operations on the disk | counter | `volume`
-`windows_logical_disk_write_bytes_total` | Rate at which bytes are transferred to the disk during write operations  | counter | `volume`
-`windows_logical_disk_writes_total` | Rate of write operations on the disk  | counter | `volume`
-`windows_logical_disk_read_seconds_total` | Seconds the disk was busy servicing read requests | counter | `volume`
-`windows_logical_disk_write_seconds_total` | Seconds the disk was busy servicing write requests | counter | `volume`
-`windows_logical_disk_free_bytes` | Unused space of the disk in bytes (not real time, updates every 10-15 min) | gauge | `volume`
-`windows_logical_disk_size_bytes` | Total size of the disk in bytes (not real time, updates every 10-15 min) | gauge | `volume`
-`windows_logical_disk_idle_seconds_total` | Seconds the disk was idle (not servicing read/write requests) | counter | `volume`
-`windows_logical_disk_split_ios_total` | Number of I/Os to the disk split into multiple I/Os | counter | `volume`
-`windows_logical_disk_readonly` | Whether the logical disk is read-only | gauge | `volume`
+| Name                                             | Description                                                                                        | Type    | Labels                                                            |
+|--------------------------------------------------|----------------------------------------------------------------------------------------------------|---------|-------------------------------------------------------------------|
+| `windows_logical_disk_info`                      | A metric with a constant '1' value labeled with logical disk information                           | gauge   | `disk`,`filesystem`,`serial_number`,`volume`,`volume_name`,`type` |
+| `windows_logical_disk_requests_queued`           | Number of requests outstanding on the disk at the time the performance data is collected           | gauge   | `volume`                                                          |
+| `windows_logical_disk_avg_read_requests_queued`  | Average number of read requests that were queued for the selected disk during the sample interval  | gauge   | `volume`                                                          |
+| `windows_logical_disk_avg_write_requests_queued` | Average number of write requests that were queued for the selected disk during the sample interval | gauge   | `volume`                                                          |
+| `windows_logical_disk_read_bytes_total`          | Rate at which bytes are transferred from the disk during read operations                           | counter | `volume`                                                          |
+| `windows_logical_disk_reads_total`               | Rate of read operations on the disk                                                                | counter | `volume`                                                          |
+| `windows_logical_disk_write_bytes_total`         | Rate at which bytes are transferred to the disk during write operations                            | counter | `volume`                                                          |
+| `windows_logical_disk_writes_total`              | Rate of write operations on the disk                                                               | counter | `volume`                                                          |
+| `windows_logical_disk_read_seconds_total`        | Seconds the disk was busy servicing read requests                                                  | counter | `volume`                                                          |
+| `windows_logical_disk_write_seconds_total`       | Seconds the disk was busy servicing write requests                                                 | counter | `volume`                                                          |
+| `windows_logical_disk_free_bytes`                | Unused space of the disk in bytes (not real time, updates every 10-15 min)                         | gauge   | `volume`                                                          |
+| `windows_logical_disk_size_bytes`                | Total size of the disk in bytes (not real time, updates every 10-15 min)                           | gauge   | `volume`                                                          |
+| `windows_logical_disk_idle_seconds_total`        | Seconds the disk was idle (not servicing read/write requests)                                      | counter | `volume`                                                          |
+| `windows_logical_disk_split_ios_total`           | Number of I/Os to the disk split into multiple I/Os                                                | counter | `volume`                                                          |
+| `windows_logical_disk_readonly`                  | Whether the logical disk is read-only                                                              | gauge   | `volume`                                                          |
+| `windows_logical_disk_bitlocker_status`          | BitLocker status for the logical disk                                                              | gauge   | `volume`,`status`                                                 |
 
 ### Warning about size metrics
 The `free_bytes` and `size_bytes` metrics are not updated in real time and might have a delay of 10-15min.
