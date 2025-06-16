@@ -29,7 +29,7 @@ import (
 	"unsafe"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/prometheus-community/windows_exporter/internal/headers/guid"
+	"github.com/go-ole/go-ole"
 	"github.com/prometheus-community/windows_exporter/internal/headers/hcn"
 	"github.com/prometheus-community/windows_exporter/internal/headers/hcs"
 	"github.com/prometheus-community/windows_exporter/internal/headers/iphlpapi"
@@ -536,7 +536,7 @@ func (c *Collector) collectNetworkMetrics(ch chan<- prometheus.Metric) error {
 			continue
 		}
 
-		var nicGUID *guid.GUID
+		var nicGUID *ole.GUID
 
 		for _, allocator := range properties.Resources.Allocators {
 			if allocator.AdapterNetCfgInstanceId != nil {

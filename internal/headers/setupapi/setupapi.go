@@ -15,33 +15,17 @@
 
 //go:build windows
 
-package hcn
+package setupapi
 
 import (
-	"fmt"
-
-	"github.com/go-ole/go-ole"
-	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"golang.org/x/sys/windows"
 )
 
 //nolint:gochecknoglobals
 var (
-	defaultQuery = utils.Must(windows.UTF16PtrFromString(`{"SchemaVersion":{"Major": 2,"Minor": 0},"Flags":"None"}`))
+	modSetupAPI                           = windows.NewLazySystemDLL("setupapi.dll")
+	procSetupDiGetClassDevsW              = modSetupAPI.NewProc("SetupDiGetClassDevsW")
+	procSetupDiEnumDeviceInfo             = modSetupAPI.NewProc("SetupDiEnumDeviceInfo")
+	procSetupDiGetDeviceRegistryPropertyW = modSetupAPI.NewProc("SetupDiGetDeviceRegistryPropertyW")
+	procSetupDiDestroyDeviceInfoList      = modSetupAPI.NewProc("SetupDiDestroyDeviceInfoList")
 )
-
-func GetEndpointProperties(endpointID ole.GUID) (EndpointProperties, error) {
-	endpoint, err := OpenEndpoint(endpointID)
-	if err != nil {
-		return EndpointProperties{}, fmt.Errorf("failed to open endpoint: %w", err)
-	}
-
-	defer CloseEndpoint(endpoint)
-
-	result, err := QueryEndpointProperties(endpoint, defaultQuery)
-	if err != nil {
-		return EndpointProperties{}, fmt.Errorf("failed to query endpoint properties: %w", err)
-	}
-
-	return result, nil
-}
