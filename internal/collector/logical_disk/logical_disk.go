@@ -588,6 +588,11 @@ func getAllMountedVolumes() (map[string]string, error) {
 				break
 			}
 
+			if errors.Is(err, windows.ERROR_FILE_NOT_FOUND) {
+				// the volume is not mounted
+				break
+			}
+
 			if errors.Is(err, windows.ERROR_NO_MORE_FILES) {
 				rootPathBuf = make([]uint16, (rootPathLen+1)/2)
 
