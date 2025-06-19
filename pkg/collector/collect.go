@@ -31,6 +31,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
+	"golang.org/x/sys/windows"
 )
 
 type collectorStatus struct {
@@ -210,8 +211,10 @@ func (c *Collection) collectCollector(ch chan<- prometheus.Metric, logger *slog.
 
 	slogAttrs := make([]slog.Attr, 0)
 
+	result := "succeeded"
+
 	if err != nil {
-		if !errors.Is(err, pdh.ErrNoData) && !errors.Is(err, types.ErrNoData) {
+		if !errors.Is(err, pdh.ErrNoData) && !errors.Is(err, types.ErrNoData) && !errors.Is(err, windows.EPT_S_NOT_REGISTERED) {
 			if errors.Is(err, pdh.ErrPerformanceCounterNotInitialized) || errors.Is(err, mi.MI_RESULT_INVALID_NAMESPACE) {
 				err = fmt.Errorf("%w. Check application logs from initialization pharse for more information", err)
 			}
@@ -225,9 +228,13 @@ func (c *Collection) collectCollector(ch chan<- prometheus.Metric, logger *slog.
 		}
 
 		slogAttrs = append(slogAttrs, slog.Any("err", err))
+
+		result = "succeeded with warnings"
 	}
 
-	logger.LogAttrs(ctx, slog.LevelDebug, fmt.Sprintf("collector %s succeeded after %s, resulting in %d metrics", name, duration, numMetrics),
+	logger.LogAttrs(ctx, slog.LevelDebug, fmt.Sprintf(
+		"collector %s %s after %s, resulting in %d metrics", name, result, duration, numMetrics,
+	),
 		slogAttrs...,
 	)
 

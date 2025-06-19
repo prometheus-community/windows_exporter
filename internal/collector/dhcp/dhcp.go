@@ -56,6 +56,8 @@ var ConfigDefaults = Config{
 type Collector struct {
 	config Config
 
+	logger *slog.Logger
+
 	perfDataCollector *pdh.Collector
 	perfDataObject    []perfDataCounterValues
 
@@ -147,7 +149,9 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
+func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
+	c.logger = logger.With(slog.String("collector", Name))
+
 	var err error
 
 	if slices.Contains(c.config.CollectorsEnabled, subCollectorScopeMetrics) {
