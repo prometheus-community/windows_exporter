@@ -45,10 +45,12 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 		return fmt.Errorf("failed to collect metrics: %w", err)
 	}
 
+	err = nil
+
 	var workerProcesses []WorkerProcess
 	if c.config.EnableWorkerProcess {
-		if err := c.miSession.Query(&workerProcesses, mi.NamespaceRootWebAdministration, c.workerProcessMIQueryQuery); err != nil {
-			return fmt.Errorf("WMI query failed: %w", err)
+		if err = c.miSession.Query(&workerProcesses, mi.NamespaceRootWebAdministration, c.workerProcessMIQueryQuery); err != nil {
+			err = fmt.Errorf("WMI query for collector.process.iis failed: %w", err)
 		}
 	}
 
@@ -88,7 +90,7 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 
 	wg.Wait()
 
-	return nil
+	return err
 }
 
 func (c *Collector) collectWorker() {
