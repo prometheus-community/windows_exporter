@@ -290,7 +290,7 @@ func (c *Collector) collectTime(ch chan<- prometheus.Metric) error {
 	ch <- prometheus.MustNewConstMetric(
 		c.time,
 		prometheus.GaugeValue,
-		float64(time.Now().Unix()),
+		float64(time.Now().UnixMicro())/1e6,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
