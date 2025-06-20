@@ -194,7 +194,7 @@ See detailed steps to install on Windows Kubernetes [here](./kubernetes/kubernet
 
 `windows_exporter` supports Windows Server versions 2016 and later, and desktop Windows version 10 and 11 (21H2 or later).
 
-Windows Server 2012 and 2012R2 are supported as best-effort only, but not guaranteed to work.
+There are known compatibility issues with Windows Server 2012 R2 and earlier versions. 
 
 ## Usage
 
