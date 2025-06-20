@@ -405,7 +405,7 @@ func (c *Collector) fetchUpdates(logger *slog.Logger, usd *ole.IDispatch) ([]pro
 	metricsBuf = append(metricsBuf, prometheus.MustNewConstMetric(
 		c.lastScrapeMetric,
 		prometheus.GaugeValue,
-		float64(time.Now().Unix()),
+		float64(time.Now().UnixMicro())/1e6,
 	))
 
 	return metricsBuf, nil
