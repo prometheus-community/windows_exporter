@@ -95,7 +95,7 @@ type perfDataCounterValuesDatabases struct {
 	DatabasesGroupCommitTimePerSec            float64 `perfdata:"Group Commit Time/sec"`
 	DatabasesLogBytesFlushedPerSec            float64 `perfdata:"Log Bytes Flushed/sec"`
 	DatabasesLogCacheHitRatio                 float64 `perfdata:"Log Cache Hit Ratio"`
-	DatabasesLogCacheHitRatioBase             float64 `perfdata:"Log Cache Hit Ratio Base,secondvalue"`
+	DatabasesLogCacheHitRatioBase             float64 `perfdata:"Log Cache Hit Ratio,secondvalue"`
 	DatabasesLogCacheReadsPerSec              float64 `perfdata:"Log Cache Reads/sec"`
 	DatabasesLogFilesSizeKB                   float64 `perfdata:"Log File(s) Size (KB)"`
 	DatabasesLogFilesUsedSizeKB               float64 `perfdata:"Log File(s) Used Size (KB)"`
