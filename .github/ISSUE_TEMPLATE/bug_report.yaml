@@ -4,8 +4,12 @@ labels: [ 🐞 bug ]
 body:
   - type: markdown
     attributes:
-      value: Thanks for taking the time to fill out this bug report!
-  
+      value: |-
+        > [!NOTE]
+        > Windows Server 2012 and Windows Server 2012 R2 are no longer supported by the windows_exporter project.
+
+        Thanks for taking the time to fill out this bug report!
+
   - type: markdown
     attributes:
       value: |-
@@ -15,18 +19,18 @@ body:
         ```
         PS C:\WINDOWS\system32> cd c:\windows\system32
         PS C:\windows\system32> lodctr /R
-        
+
         Error: Unable to rebuild performance counter setting from system backup store, error code is 2
         PS C:\windows\system32> cd ..
         PS C:\windows> cd syswow64
         PS C:\windows\syswow64> lodctr /R
-        
+
         Info: Successfully rebuilt performance counter setting from system backup store
         PS C:\windows\syswow64> winmgmt.exe /RESYNCPERF
         ```
-        
+
         ----
-  
+
   - type: textarea
     attributes:
       label: Current Behavior
@@ -36,7 +40,7 @@ body:
         ```...```
     validations:
       required: true
-  
+
   - type: textarea
     attributes:
       label: Expected Behavior
@@ -44,7 +48,7 @@ body:
       placeholder: When I do <X>, <Z> should happen instead.
     validations:
       required: true
-  
+
   - type: textarea
     attributes:
       label: Steps To Reproduce
@@ -57,7 +61,7 @@ body:
       render: Markdown
     validations:
       required: false
-  
+
   - type: textarea
     attributes:
       label: Environment
@@ -70,7 +74,7 @@ body:
         - Windows Server Version:
     validations:
       required: true
-  
+
   - type: textarea
     attributes:
       label: windows_exporter logs
@@ -80,7 +84,7 @@ body:
       render: shell
     validations:
       required: true
-      
+
   - type: textarea
     attributes:
       label: Anything else?
