@@ -27,7 +27,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
@@ -215,7 +214,7 @@ func (c *Collection) collectCollector(ch chan<- prometheus.Metric, logger *slog.
 
 	if err != nil {
 		if !errors.Is(err, pdh.ErrNoData) && !errors.Is(err, types.ErrNoData) && !errors.Is(err, windows.EPT_S_NOT_REGISTERED) {
-			if errors.Is(err, pdh.ErrPerformanceCounterNotInitialized) || errors.Is(err, mi.MI_RESULT_INVALID_NAMESPACE) {
+			if errors.Is(err, pdh.ErrPerformanceCounterNotInitialized) {
 				err = fmt.Errorf("%w. Check application logs from initialization pharse for more information", err)
 			}
 

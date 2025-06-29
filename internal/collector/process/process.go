@@ -180,20 +180,6 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 
 	var err error
 
-	if c.config.EnableWorkerProcess {
-		if miSession == nil {
-			return errors.New("miSession is nil")
-		}
-
-		miQuery, err := mi.NewQuery("SELECT AppPoolName, ProcessId FROM WorkerProcess")
-		if err != nil {
-			return fmt.Errorf("failed to create WMI query: %w", err)
-		}
-
-		c.workerProcessMIQueryQuery = miQuery
-		c.miSession = miSession
-	}
-
 	switch c.config.CounterVersion {
 	case 2:
 		c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "Process V2", pdh.InstancesAll)
@@ -332,6 +318,28 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 		[]string{"process", "process_id"},
 		nil,
 	)
+
+	if c.config.EnableWorkerProcess {
+		if miSession == nil {
+			return errors.New("miSession is nil")
+		}
+
+		miQuery, err := mi.NewQuery("SELECT AppPoolName, ProcessId FROM WorkerProcess")
+		if err != nil {
+			return fmt.Errorf("failed to create WMI query: %w", err)
+		}
+
+		c.workerProcessMIQueryQuery = miQuery
+		c.miSession = miSession
+
+		var workerProcesses []WorkerProcess
+
+		if err = c.miSession.Query(&workerProcesses, mi.NamespaceRootWebAdministration, c.workerProcessMIQueryQuery); err != nil {
+			c.config.EnableWorkerProcess = false
+
+			return fmt.Errorf("WMI query for collector.process.iis failed: %w", err)
+		}
+	}
 
 	return nil
 }
