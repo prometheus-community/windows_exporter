@@ -172,7 +172,7 @@ func (c *Collector) collectGlobFilePath(ch chan<- prometheus.Metric, filePattern
 		ch <- prometheus.MustNewConstMetric(
 			c.fileMTime,
 			prometheus.GaugeValue,
-			float64(fileInfo.ModTime().UTC().Unix()),
+			float64(fileInfo.ModTime().UTC().UnixMicro())/1e6,
 			filePath,
 		)
 	}

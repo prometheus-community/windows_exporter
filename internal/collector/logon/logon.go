@@ -96,7 +96,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		ch <- prometheus.MustNewConstMetric(
 			c.sessionInfo,
 			prometheus.GaugeValue,
-			float64(session.LogonTime.Unix()),
+			float64(session.LogonTime.UnixMicro())/1e6,
 			session.LogonId.String(), session.UserName, session.LogonDomain, session.LogonType.String(),
 		)
 	}

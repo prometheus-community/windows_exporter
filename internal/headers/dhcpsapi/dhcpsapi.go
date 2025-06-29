@@ -41,7 +41,7 @@ func GetDHCPV4ScopeStatistics() ([]DHCPV4Scope, error) {
 	var mibInfo *DHCP_MIB_INFO_V5
 
 	if err := dhcpGetMibInfoV5(&mibInfo); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("dhcpGetMibInfoV5: %w", err)
 	}
 
 	defer dhcpRpcFreeMemory(unsafe.Pointer(mibInfo))
@@ -56,7 +56,7 @@ func GetDHCPV4ScopeStatistics() ([]DHCPV4Scope, error) {
 	var superScopeTable *DHCP_SUPER_SCOPE_TABLE
 
 	if err := dhcpGetSuperScopeInfoV4(&superScopeTable); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("dhcpGetSuperScopeInfoV4: %w", err)
 	} else if superScopeTable == nil {
 		return nil, errors.New("dhcpGetSuperScopeInfoV4 returned nil")
 	}

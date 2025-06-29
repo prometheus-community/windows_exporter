@@ -18,6 +18,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -134,6 +135,11 @@ func NewConfigFileResolver(filePath string) (*Resolver, error) {
 	decoder.KnownFields(true)
 
 	if err = decoder.Decode(&configFileStructure); err != nil {
+		// Handle EOF error gracefully, indicating no configuration was found.
+		if errors.Is(err, io.EOF) {
+			return &Resolver{flags: flags}, nil
+		}
+
 		return nil, fmt.Errorf("configuration file validation error: %w", err)
 	}
 

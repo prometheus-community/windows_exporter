@@ -20,24 +20,25 @@ These metrics are available on supported versions of Windows with compatible GPU
 
 ### Adapter-level Metrics
 
-| Name                                         | Description                                              | Type  | Labels |
-|----------------------------------------------|----------------------------------------------------------|-------|--------|
-| `windows_gpu_adapter_memory_committed_bytes` | Total committed GPU memory in bytes per physical GPU     | gauge | `phys` |
-| `windows_gpu_adapter_memory_dedicated_bytes` | Dedicated GPU memory usage in bytes per physical GPU     | gauge | `phys` |
-| `windows_gpu_adapter_memory_shared_bytes`    | Shared GPU memory usage in bytes per physical GPU        | gauge | `phys` |
-| `windows_gpu_local_adapter_memory_bytes`     | Local adapter memory usage in bytes per physical GPU     | gauge | `phys` |
-| `windows_gpu_non_local_adapter_memory_bytes` | Non-local adapter memory usage in bytes per physical GPU | gauge | `phys` |
+| Name                                         | Description                                                             | Type  | Labels                                                                               |
+|----------------------------------------------|-------------------------------------------------------------------------|-------|--------------------------------------------------------------------------------------|
+| `windows_gpu_adapter_memory_committed_bytes` | Total committed GPU memory in bytes per physical GPU                    | gauge | `phys`                                                                               |
+| `windows_gpu_adapter_memory_dedicated_bytes` | Dedicated GPU memory usage in bytes per physical GPU                    | gauge | `phys`                                                                               |
+| `windows_gpu_adapter_memory_shared_bytes`    | Shared GPU memory usage in bytes per physical GPU                       | gauge | `phys`                                                                               |
+| `windows_gpu_info`                           | A metric with a constant '1' value labeled with gpu device information. | gauge | `phys`, `physical_device_object_name`, `hardware_id`, `friendly_name`, `description` |
+| `windows_gpu_local_adapter_memory_bytes`     | Local adapter memory usage in bytes per physical GPU                    | gauge | `phys`                                                                               |
+| `windows_gpu_non_local_adapter_memory_bytes` | Non-local adapter memory usage in bytes per physical GPU                | gauge | `phys`                                                                               |
 
 ### Per-process Metrics
 
-| Name                                         | Description                                     | Type    | Labels                                 |
-|----------------------------------------------|-------------------------------------------------|---------|----------------------------------------|
-| `windows_gpu_engine_time_seconds`            | Total running time of the GPU engine in seconds | counter | `phys`, `eng`, `engtype`, `process_id` |
-| `windows_gpu_process_memory_committed_bytes` | Total committed GPU memory in bytes per process | gauge   | `phys`,`process_id`                    |
-| `windows_gpu_process_memory_dedicated_bytes` | Dedicated GPU memory usage in bytes per process | gauge   | `phys`,`process_id`                    |
-| `windows_gpu_process_memory_local_bytes`     | Local GPU memory usage in bytes per process     | gauge   | `phys`,`process_id`                    |
-| `windows_gpu_process_memory_non_local_bytes` | Non-local GPU memory usage in bytes per process | gauge   | `phys`,`process_id`                    |
-| `windows_gpu_process_memory_shared_bytes`    | Shared GPU memory usage in bytes per process    | gauge   | `phys`,`process_id`                    |
+| Name                                         | Description                                                             | Type    | Labels                                                                               |
+|----------------------------------------------|-------------------------------------------------------------------------|---------|--------------------------------------------------------------------------------------|
+| `windows_gpu_engine_time_seconds`            | Total running time of the GPU engine in seconds                         | counter | `phys`, `eng`, `engtype`, `process_id`                                               |
+| `windows_gpu_process_memory_committed_bytes` | Total committed GPU memory in bytes per process                         | gauge   | `phys`,`process_id`                                                                  |
+| `windows_gpu_process_memory_dedicated_bytes` | Dedicated GPU memory usage in bytes per process                         | gauge   | `phys`,`process_id`                                                                  |
+| `windows_gpu_process_memory_local_bytes`     | Local GPU memory usage in bytes per process                             | gauge   | `phys`,`process_id`                                                                  |
+| `windows_gpu_process_memory_non_local_bytes` | Non-local GPU memory usage in bytes per process                         | gauge   | `phys`,`process_id`                                                                  |
+| `windows_gpu_process_memory_shared_bytes`    | Shared GPU memory usage in bytes per process                            | gauge   | `phys`,`process_id`                                                                  |
 
 ## Metric Labels
 
@@ -49,6 +50,12 @@ These metrics are available on supported versions of Windows with compatible GPU
 ## Example Metric
 
 These are basic queries to help you get started with GPU monitoring on Windows using Prometheus.
+
+**Show GPU information for a specific physical GPU (0):**
+
+```promql
+windows_gpu_info{description="NVIDIA GeForce GTX 1070",friendly_name="",hardware_id="PCI\\VEN_10DE&DEV_1B81&SUBSYS_61733842&REV_A1",phys="0",physical_device_object_name="\\Device\\NTPNP_PCI0027"} 1
+```
 
 **Show total dedicated GPU memory (in bytes) usage on GPU 0:**
 

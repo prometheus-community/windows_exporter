@@ -245,7 +245,7 @@ func (c *Collector) collectTime(ch chan<- prometheus.Metric) error {
 	ch <- prometheus.MustNewConstMetric(
 		c.currentTime,
 		prometheus.GaugeValue,
-		float64(time.Now().Unix()),
+		float64(time.Now().UnixMicro())/1e6,
 	)
 
 	timeZoneInfo, err := kernel32.GetDynamicTimeZoneInformation()
@@ -305,7 +305,9 @@ func (c *Collector) collectClockSource(ch chan<- prometheus.Metric) error {
 func (c *Collector) collectNTP(ch chan<- prometheus.Metric) error {
 	err := c.perfDataCollector.Collect(&c.perfDataObject)
 	if err != nil {
-		return fmt.Errorf("failed to collect time metrics: %w", err)
+		return fmt.Errorf("failed to collect Windows Time Service metrics: %w", err)
+	} else if len(c.perfDataObject) == 0 {
+		return fmt.Errorf("failed to collect Windows Time Service metrics: %w", types.ErrNoDataUnexpected)
 	}
 
 	ch <- prometheus.MustNewConstMetric(

@@ -141,7 +141,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 
-	c.bootTimeTimestamp = float64(time.Now().Unix() - int64(kernel32.GetTickCount64()/1000))
+	c.bootTimeTimestamp = float64(uint64(time.Now().UnixMilli())-kernel32.GetTickCount64()) / 1000
 
 	var err error
 
@@ -159,6 +159,8 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	err := c.perfDataCollector.Collect(&c.perfDataObject)
 	if err != nil {
 		return fmt.Errorf("failed to collect System metrics: %w", err)
+	} else if len(c.perfDataObject) == 0 {
+		return fmt.Errorf("failed to collect System metrics: %w", types.ErrNoDataUnexpected)
 	}
 
 	ch <- prometheus.MustNewConstMetric(
