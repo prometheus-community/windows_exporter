@@ -242,6 +242,15 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 }
 
 func (c *Collector) collectWorker(ch chan<- prometheus.Metric, service windows.ENUM_SERVICE_STATUS_PROCESS) {
+	if service.ServiceName == nil {
+		c.logger.Log(context.Background(), slog.LevelWarn, "failed collecting service info",
+			slog.String("err", "ServiceName is nil"),
+			slog.String("service", fmt.Sprintf("%+v", service)),
+		)
+
+		return
+	}
+
 	serviceName := windows.UTF16PtrToString(service.ServiceName)
 
 	if c.config.ServiceExclude.MatchString(serviceName) || !c.config.ServiceInclude.MatchString(serviceName) {
