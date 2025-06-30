@@ -109,7 +109,7 @@ Matching is case-sensitive.
 | `mscluster_network_Role`            | Provides access to the network's Role property. The Role property describes the role of the network in the cluster. 0: None; 1: Cluster; 2: Client; 3: Both                                                                                                             | gauge | `name` |
 | `mscluster_network_State`           | Provides the current state of the network. 1-1: Unknown; 0: Unavailable; 1: Down; 2: Partitioned; 3: Up                                                                                                                                                                 | gauge | `name` |
 
-### Network
+### Node
 
 | Name                                   | Description                                                                                                                                                                                                                                        | Type  | Labels |
 |----------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------|--------|
