@@ -76,7 +76,7 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
-	c.logger = logger.With("collector", Name)
+	c.logger = logger.With(slog.String("collector", Name))
 
 	c.diskInfo = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "info"),
