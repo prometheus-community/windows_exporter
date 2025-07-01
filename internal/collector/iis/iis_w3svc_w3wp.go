@@ -507,10 +507,6 @@ func (c *Collector) collectW3SVCW3WPv7(ch chan<- prometheus.Metric) error {
 	deduplicateIISNames(c.perfDataObjectW3SVCW3WP)
 
 	for _, data := range c.perfDataObjectW3SVCW3WP {
-		if c.config.AppExclude.MatchString(data.Name) || !c.config.AppInclude.MatchString(data.Name) {
-			continue
-		}
-
 		// Extract the apppool name from the format <PID>_<NAME>
 		pid := workerProcessNameExtractor.ReplaceAllString(data.Name, "$1")
 
