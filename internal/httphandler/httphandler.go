@@ -42,9 +42,8 @@ type MetricsHTTPHandler struct {
 	// the exporter itself.
 	exporterMetricsRegistry *prometheus.Registry
 
-	logger        *slog.Logger
-	options       Options
-	concurrencyCh chan struct{}
+	logger  *slog.Logger
+	options Options
 }
 
 type Options struct {
@@ -64,9 +63,6 @@ func New(logger *slog.Logger, metricCollectors *collector.Collection, options *O
 		metricCollectors: metricCollectors,
 		logger:           logger,
 		options:          *options,
-
-		// We are expose metrics directly from the memory region of the Win32 API. We should not allow more than one request at a time.
-		concurrencyCh: make(chan struct{}, 1),
 	}
 
 	if !options.DisableExporterMetrics {
