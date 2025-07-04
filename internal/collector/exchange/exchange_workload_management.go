@@ -103,24 +103,28 @@ func (c *Collector) collectWorkloadManagementWorkloads(ch chan<- prometheus.Metr
 			data.ActiveTasks,
 			labelName,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.completedTasks,
 			prometheus.CounterValue,
 			data.CompletedTasks,
 			labelName,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.queuedTasks,
 			prometheus.CounterValue,
 			data.QueuedTasks,
 			labelName,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.yieldedTasks,
 			prometheus.CounterValue,
 			data.YieldedTasks,
 			labelName,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.isActive,
 			prometheus.GaugeValue,

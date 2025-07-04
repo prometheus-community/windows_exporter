@@ -262,126 +262,147 @@ func (c *Collector) collectWebService(ch chan<- prometheus.Metric) error {
 			data.WebServiceCurrentAnonymousUsers,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceCurrentBlockedAsyncIORequests,
 			prometheus.GaugeValue,
 			data.WebServiceCurrentBlockedAsyncIORequests,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceCurrentCGIRequests,
 			prometheus.GaugeValue,
 			data.WebServiceCurrentCGIRequests,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceCurrentConnections,
 			prometheus.GaugeValue,
 			data.WebServiceCurrentConnections,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceCurrentISAPIExtensionRequests,
 			prometheus.GaugeValue,
 			data.WebServiceCurrentISAPIExtensionRequests,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceCurrentNonAnonymousUsers,
 			prometheus.GaugeValue,
 			data.WebServiceCurrentNonAnonymousUsers,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceServiceUptime,
 			prometheus.GaugeValue,
 			data.WebServiceServiceUptime,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalBytesReceived,
 			prometheus.CounterValue,
 			data.WebServiceTotalBytesReceived,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalBytesSent,
 			prometheus.CounterValue,
 			data.WebServiceTotalBytesSent,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalAnonymousUsers,
 			prometheus.CounterValue,
 			data.WebServiceTotalAnonymousUsers,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalBlockedAsyncIORequests,
 			prometheus.CounterValue,
 			data.WebServiceTotalBlockedAsyncIORequests,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalCGIRequests,
 			prometheus.CounterValue,
 			data.WebServiceTotalCGIRequests,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalConnectionAttemptsAllInstances,
 			prometheus.CounterValue,
 			data.WebServiceTotalConnectionAttemptsAllInstances,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalFilesReceived,
 			prometheus.CounterValue,
 			data.WebServiceTotalFilesReceived,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalFilesSent,
 			prometheus.CounterValue,
 			data.WebServiceTotalFilesSent,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalISAPIExtensionRequests,
 			prometheus.CounterValue,
 			data.WebServiceTotalISAPIExtensionRequests,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalLockedErrors,
 			prometheus.CounterValue,
 			data.WebServiceTotalLockedErrors,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalLogonAttempts,
 			prometheus.CounterValue,
 			data.WebServiceTotalLogonAttempts,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalNonAnonymousUsers,
 			prometheus.CounterValue,
 			data.WebServiceTotalNonAnonymousUsers,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalNotFoundErrors,
 			prometheus.CounterValue,
 			data.WebServiceTotalNotFoundErrors,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalRejectedAsyncIORequests,
 			prometheus.CounterValue,
 			data.WebServiceTotalRejectedAsyncIORequests,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalRequests,
 			prometheus.CounterValue,
@@ -389,6 +410,7 @@ func (c *Collector) collectWebService(ch chan<- prometheus.Metric) error {
 			data.Name,
 			"other",
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalRequests,
 			prometheus.CounterValue,
@@ -396,6 +418,7 @@ func (c *Collector) collectWebService(ch chan<- prometheus.Metric) error {
 			data.Name,
 			"COPY",
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalRequests,
 			prometheus.CounterValue,
@@ -403,6 +426,7 @@ func (c *Collector) collectWebService(ch chan<- prometheus.Metric) error {
 			data.Name,
 			"DELETE",
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalRequests,
 			prometheus.CounterValue,
@@ -410,6 +434,7 @@ func (c *Collector) collectWebService(ch chan<- prometheus.Metric) error {
 			data.Name,
 			"GET",
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalRequests,
 			prometheus.CounterValue,
@@ -417,6 +442,7 @@ func (c *Collector) collectWebService(ch chan<- prometheus.Metric) error {
 			data.Name,
 			"HEAD",
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalRequests,
 			prometheus.CounterValue,
@@ -424,6 +450,7 @@ func (c *Collector) collectWebService(ch chan<- prometheus.Metric) error {
 			data.Name,
 			"LOCK",
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalRequests,
 			prometheus.CounterValue,
@@ -431,6 +458,7 @@ func (c *Collector) collectWebService(ch chan<- prometheus.Metric) error {
 			data.Name,
 			"MKCOL",
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalRequests,
 			prometheus.CounterValue,
@@ -438,6 +466,7 @@ func (c *Collector) collectWebService(ch chan<- prometheus.Metric) error {
 			data.Name,
 			"MOVE",
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalRequests,
 			prometheus.CounterValue,
@@ -445,6 +474,7 @@ func (c *Collector) collectWebService(ch chan<- prometheus.Metric) error {
 			data.Name,
 			"OPTIONS",
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalRequests,
 			prometheus.CounterValue,
@@ -452,6 +482,7 @@ func (c *Collector) collectWebService(ch chan<- prometheus.Metric) error {
 			data.Name,
 			"POST",
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalRequests,
 			prometheus.CounterValue,
@@ -459,6 +490,7 @@ func (c *Collector) collectWebService(ch chan<- prometheus.Metric) error {
 			data.Name,
 			"PROPFIND",
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalRequests,
 			prometheus.CounterValue,
@@ -466,6 +498,7 @@ func (c *Collector) collectWebService(ch chan<- prometheus.Metric) error {
 			data.Name,
 			"PROPPATCH",
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalRequests,
 			prometheus.CounterValue,
@@ -473,6 +506,7 @@ func (c *Collector) collectWebService(ch chan<- prometheus.Metric) error {
 			data.Name,
 			"PUT",
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalRequests,
 			prometheus.CounterValue,
@@ -480,6 +514,7 @@ func (c *Collector) collectWebService(ch chan<- prometheus.Metric) error {
 			data.Name,
 			"SEARCH",
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalRequests,
 			prometheus.CounterValue,
@@ -487,6 +522,7 @@ func (c *Collector) collectWebService(ch chan<- prometheus.Metric) error {
 			data.Name,
 			"TRACE",
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.webServiceTotalRequests,
 			prometheus.CounterValue,

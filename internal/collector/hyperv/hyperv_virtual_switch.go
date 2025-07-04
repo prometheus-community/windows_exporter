@@ -265,6 +265,7 @@ func (c *Collector) collectVirtualSwitch(ch chan<- prometheus.Metric) error {
 			data.VirtualSwitchDirectedPacketsReceived,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualSwitchDirectedPacketsSent,
 			prometheus.CounterValue,
@@ -278,18 +279,21 @@ func (c *Collector) collectVirtualSwitch(ch chan<- prometheus.Metric) error {
 			data.VirtualSwitchDroppedPacketsIncoming,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualSwitchDroppedPacketsOutgoing,
 			prometheus.CounterValue,
 			data.VirtualSwitchDroppedPacketsOutgoing,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualSwitchExtensionsDroppedPacketsIncoming,
 			prometheus.CounterValue,
 			data.VirtualSwitchExtensionsDroppedPacketsIncoming,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualSwitchExtensionsDroppedPacketsOutgoing,
 			prometheus.CounterValue,
@@ -303,24 +307,28 @@ func (c *Collector) collectVirtualSwitch(ch chan<- prometheus.Metric) error {
 			data.VirtualSwitchLearnedMacAddresses,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualSwitchMulticastPacketsReceived,
 			prometheus.CounterValue,
 			data.VirtualSwitchMulticastPacketsReceived,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualSwitchMulticastPacketsSent,
 			prometheus.CounterValue,
 			data.VirtualSwitchMulticastPacketsSent,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualSwitchNumberOfSendChannelMoves,
 			prometheus.CounterValue,
 			data.VirtualSwitchNumberOfSendChannelMoves,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualSwitchNumberOfVMQMoves,
 			prometheus.CounterValue,
@@ -348,12 +356,14 @@ func (c *Collector) collectVirtualSwitch(ch chan<- prometheus.Metric) error {
 			data.VirtualSwitchPacketsReceived,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualSwitchPacketsSent,
 			prometheus.CounterValue,
 			data.VirtualSwitchPacketsSent,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualSwitchPurgedMacAddresses,
 			prometheus.CounterValue,

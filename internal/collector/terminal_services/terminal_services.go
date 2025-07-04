@@ -308,24 +308,28 @@ func (c *Collector) collectTSSessionCounters(ch chan<- prometheus.Metric) error 
 			data.HandleCount,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.pageFaultsPerSec,
 			prometheus.CounterValue,
 			data.PageFaultsPersec,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.pageFileBytes,
 			prometheus.GaugeValue,
 			data.PageFileBytes,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.pageFileBytesPeak,
 			prometheus.GaugeValue,
 			data.PageFileBytesPeak,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.percentCPUTime,
 			prometheus.CounterValue,
@@ -333,6 +337,7 @@ func (c *Collector) collectTSSessionCounters(ch chan<- prometheus.Metric) error 
 			data.Name,
 			"privileged",
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.percentCPUTime,
 			prometheus.CounterValue,
@@ -340,6 +345,7 @@ func (c *Collector) collectTSSessionCounters(ch chan<- prometheus.Metric) error 
 			data.Name,
 			"processor",
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.percentCPUTime,
 			prometheus.CounterValue,
@@ -347,48 +353,56 @@ func (c *Collector) collectTSSessionCounters(ch chan<- prometheus.Metric) error 
 			data.Name,
 			"user",
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.poolNonPagedBytes,
 			prometheus.GaugeValue,
 			data.PoolNonpagedBytes,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.poolPagedBytes,
 			prometheus.GaugeValue,
 			data.PoolPagedBytes,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.privateBytes,
 			prometheus.GaugeValue,
 			data.PrivateBytes,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.threadCount,
 			prometheus.GaugeValue,
 			data.ThreadCount,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualBytes,
 			prometheus.GaugeValue,
 			data.VirtualBytes,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualBytesPeak,
 			prometheus.GaugeValue,
 			data.VirtualBytesPeak,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.workingSet,
 			prometheus.GaugeValue,
 			data.WorkingSet,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.workingSetPeak,
 			prometheus.GaugeValue,
@@ -453,6 +467,7 @@ func (c *Collector) collectWTSSessions(ch chan<- prometheus.Metric) error {
 			if session.State == stateID {
 				isState = 1.0
 			}
+
 			ch <- prometheus.MustNewConstMetric(
 				c.sessionInfo,
 				prometheus.GaugeValue,

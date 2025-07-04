@@ -57,14 +57,14 @@ var ConfigDefaults = Config{
 
 // A Collector is a Prometheus Collector for WMI MSCluster_Cluster metrics.
 type Collector struct {
-	config    Config
-	miSession *mi.Session
-
 	collectorCluster
 	collectorNetwork
 	collectorNode
 	collectorResource
 	collectorResourceGroup
+
+	config    Config
+	miSession *mi.Session
 }
 
 func New(config *Config) *Collector {

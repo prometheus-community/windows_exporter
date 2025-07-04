@@ -19,11 +19,13 @@ linters:
     - lll
     - maintidx
     - mnd
+    - noinlineerr
     - paralleltest
     - tagliatelle
     - testpackage
     - varnamelen
     - wrapcheck
+    - wsl
   settings:
     forbidigo:
       forbid:
@@ -62,6 +64,13 @@ linters:
       disable:
         - fieldalignment
         - shadow
+    revive:
+      rules:
+        - name: var-naming
+          arguments:
+            - [ ] # AllowList - do not remove as args for the rule are positional and won't work without lists first
+            - [ ] # DenyList
+            - - skip-package-name-checks: true
     sloglint:
       no-mixed-args: true
       kv-only: false

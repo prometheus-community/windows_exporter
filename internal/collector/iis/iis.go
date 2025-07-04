@@ -50,17 +50,18 @@ var ConfigDefaults = Config{
 }
 
 type Collector struct {
+	collectorWebService
+	collectorHttpServiceRequestQueues
+	collectorAppPoolWAS
+	collectorW3SVCW3WP
+	collectorWebServiceCache
+
 	config     Config
 	iisVersion simpleVersion
 
 	logger *slog.Logger
 
 	info *prometheus.Desc
-	collectorWebService
-	collectorHttpServiceRequestQueues
-	collectorAppPoolWAS
-	collectorW3SVCW3WP
-	collectorWebServiceCache
 }
 
 func New(config *Config) *Collector {

@@ -265,6 +265,7 @@ func (c *Collector) collectResource(ch chan<- prometheus.Metric, nodeNames []str
 			if v.OwnerNode == nodeName {
 				isCurrentState = 1.0
 			}
+
 			ch <- prometheus.MustNewConstMetric(
 				c.resourceOwnerNode,
 				prometheus.GaugeValue,

@@ -437,6 +437,7 @@ func (c *Collector) collectHCSContainer(ch chan<- prometheus.Metric, containerDe
 		1,
 		containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container, "false",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.usageCommitBytes,
 		prometheus.GaugeValue,
@@ -444,6 +445,7 @@ func (c *Collector) collectHCSContainer(ch chan<- prometheus.Metric, containerDe
 
 		containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.usageCommitPeakBytes,
 		prometheus.GaugeValue,
@@ -451,6 +453,7 @@ func (c *Collector) collectHCSContainer(ch chan<- prometheus.Metric, containerDe
 
 		containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.usagePrivateWorkingSetBytes,
 		prometheus.GaugeValue,
@@ -458,6 +461,7 @@ func (c *Collector) collectHCSContainer(ch chan<- prometheus.Metric, containerDe
 
 		containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.runtimeTotal,
 		prometheus.CounterValue,
@@ -465,6 +469,7 @@ func (c *Collector) collectHCSContainer(ch chan<- prometheus.Metric, containerDe
 
 		containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.runtimeUser,
 		prometheus.CounterValue,
@@ -472,6 +477,7 @@ func (c *Collector) collectHCSContainer(ch chan<- prometheus.Metric, containerDe
 
 		containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.runtimeKernel,
 		prometheus.CounterValue,
@@ -479,6 +485,7 @@ func (c *Collector) collectHCSContainer(ch chan<- prometheus.Metric, containerDe
 
 		containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.readCountNormalized,
 		prometheus.CounterValue,
@@ -486,6 +493,7 @@ func (c *Collector) collectHCSContainer(ch chan<- prometheus.Metric, containerDe
 
 		containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.readSizeBytes,
 		prometheus.CounterValue,
@@ -493,6 +501,7 @@ func (c *Collector) collectHCSContainer(ch chan<- prometheus.Metric, containerDe
 
 		containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.writeCountNormalized,
 		prometheus.CounterValue,
@@ -500,6 +509,7 @@ func (c *Collector) collectHCSContainer(ch chan<- prometheus.Metric, containerDe
 
 		containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.writeSizeBytes,
 		prometheus.CounterValue,
@@ -558,6 +568,7 @@ func (c *Collector) collectNetworkMetrics(ch chan<- prometheus.Metric) error {
 		}
 
 		var endpointStats iphlpapi.MIB_IF_ROW2
+
 		endpointStats.InterfaceLuid = luid
 
 		if err := iphlpapi.GetIfEntry2Ex(&endpointStats); err != nil {
@@ -597,24 +608,28 @@ func (c *Collector) collectNetworkMetrics(ch chan<- prometheus.Metric) error {
 				float64(endpointStats.OutOctets),
 				containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container, endpointId,
 			)
+
 			ch <- prometheus.MustNewConstMetric(
 				c.packetsReceived,
 				prometheus.CounterValue,
 				float64(endpointStats.InUcastPkts+endpointStats.InNUcastPkts),
 				containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container, endpointId,
 			)
+
 			ch <- prometheus.MustNewConstMetric(
 				c.packetsSent,
 				prometheus.CounterValue,
 				float64(endpointStats.OutUcastPkts+endpointStats.OutNUcastPkts),
 				containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container, endpointId,
 			)
+
 			ch <- prometheus.MustNewConstMetric(
 				c.droppedPacketsIncoming,
 				prometheus.CounterValue,
 				float64(endpointStats.InDiscards+endpointStats.InErrors),
 				containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container, endpointId,
 			)
+
 			ch <- prometheus.MustNewConstMetric(
 				c.droppedPacketsOutgoing,
 				prometheus.CounterValue,
@@ -768,6 +783,7 @@ func (c *Collector) collectJobContainer(ch chan<- prometheus.Metric, containerID
 		1,
 		containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container, "true",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.usageCommitBytes,
 		prometheus.GaugeValue,
@@ -775,6 +791,7 @@ func (c *Collector) collectJobContainer(ch chan<- prometheus.Metric, containerID
 
 		containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.usageCommitPeakBytes,
 		prometheus.GaugeValue,
@@ -782,6 +799,7 @@ func (c *Collector) collectJobContainer(ch chan<- prometheus.Metric, containerID
 
 		containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.usagePrivateWorkingSetBytes,
 		prometheus.GaugeValue,
@@ -789,6 +807,7 @@ func (c *Collector) collectJobContainer(ch chan<- prometheus.Metric, containerID
 
 		containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.runtimeTotal,
 		prometheus.CounterValue,
@@ -796,6 +815,7 @@ func (c *Collector) collectJobContainer(ch chan<- prometheus.Metric, containerID
 
 		containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.runtimeUser,
 		prometheus.CounterValue,
@@ -803,6 +823,7 @@ func (c *Collector) collectJobContainer(ch chan<- prometheus.Metric, containerID
 
 		containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.runtimeKernel,
 		prometheus.CounterValue,
@@ -810,6 +831,7 @@ func (c *Collector) collectJobContainer(ch chan<- prometheus.Metric, containerID
 
 		containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.readCountNormalized,
 		prometheus.CounterValue,
@@ -817,6 +839,7 @@ func (c *Collector) collectJobContainer(ch chan<- prometheus.Metric, containerID
 
 		containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.readSizeBytes,
 		prometheus.CounterValue,
@@ -824,6 +847,7 @@ func (c *Collector) collectJobContainer(ch chan<- prometheus.Metric, containerID
 
 		containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.writeCountNormalized,
 		prometheus.CounterValue,
@@ -831,6 +855,7 @@ func (c *Collector) collectJobContainer(ch chan<- prometheus.Metric, containerID
 
 		containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.writeSizeBytes,
 		prometheus.CounterValue,

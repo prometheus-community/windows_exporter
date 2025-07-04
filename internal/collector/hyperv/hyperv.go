@@ -78,11 +78,6 @@ var ConfigDefaults = Config{
 
 // Collector is a Prometheus Collector for hyper-v.
 type Collector struct {
-	config Config
-
-	collectorFns []func(ch chan<- prometheus.Metric) error
-	closeFns     []func()
-
 	collectorDataStore
 	collectorDynamicMemoryBalancer
 	collectorDynamicMemoryVM
@@ -98,6 +93,11 @@ type Collector struct {
 	collectorVirtualSMB
 	collectorVirtualStorageDevice
 	collectorVirtualSwitch
+
+	config Config
+
+	collectorFns []func(ch chan<- prometheus.Metric) error
+	closeFns     []func()
 }
 
 func New(config *Config) *Collector {

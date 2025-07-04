@@ -245,6 +245,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 			if availNum == int(disk.Availability) {
 				isCurrentState = 1.0
 			}
+
 			ch <- prometheus.MustNewConstMetric(
 				c.availability,
 				prometheus.GaugeValue,
