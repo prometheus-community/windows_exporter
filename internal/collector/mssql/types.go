@@ -44,9 +44,12 @@ func newMssqlInstance(key, name string) (mssqlInstance, error) {
 		_ = key.Close()
 	}(k)
 
-	patchVersion, _, err := k.GetStringValue("Version")
+	patchVersion, _, err := k.GetStringValue("PatchLevel")
 	if err != nil {
-		return mssqlInstance{}, fmt.Errorf("couldn't get version from registry: %w", err)
+		patchVersion, _, err = k.GetStringValue("Version")
+		if err != nil {
+			return mssqlInstance{}, fmt.Errorf("couldn't get version from registry: %w", err)
+		}
 	}
 
 	edition, _, err := k.GetStringValue("Edition")
