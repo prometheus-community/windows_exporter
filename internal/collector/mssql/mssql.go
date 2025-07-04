@@ -78,18 +78,6 @@ var ConfigDefaults = Config{
 
 // A Collector is a Prometheus Collector for various WMI Win32_PerfRawData_MSSQLSERVER_* metrics.
 type Collector struct {
-	config Config
-
-	logger *slog.Logger
-
-	mssqlInstances []mssqlInstance
-	collectorFns   []func(ch chan<- prometheus.Metric) error
-	closeFns       []func()
-
-	// meta
-	mssqlScrapeDurationDesc *prometheus.Desc
-	mssqlScrapeSuccessDesc  *prometheus.Desc
-
 	collectorAccessMethods
 	collectorAvailabilityReplica
 	collectorBufferManager
@@ -103,6 +91,18 @@ type Collector struct {
 	collectorSQLStats
 	collectorTransactions
 	collectorWaitStats
+
+	config Config
+
+	logger *slog.Logger
+
+	mssqlInstances []mssqlInstance
+	collectorFns   []func(ch chan<- prometheus.Metric) error
+	closeFns       []func()
+
+	// meta
+	mssqlScrapeDurationDesc *prometheus.Desc
+	mssqlScrapeSuccessDesc  *prometheus.Desc
 }
 
 func New(config *Config) *Collector {

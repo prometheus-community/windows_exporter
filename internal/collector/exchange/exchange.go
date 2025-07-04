@@ -66,11 +66,6 @@ var ConfigDefaults = Config{
 }
 
 type Collector struct {
-	config Config
-
-	collectorFns []func(ch chan<- prometheus.Metric) error
-	closeFns     []func()
-
 	collectorADAccessProcesses
 	collectorActiveSync
 	collectorAutoDiscover
@@ -81,6 +76,11 @@ type Collector struct {
 	collectorRpcClientAccess
 	collectorTransportQueues
 	collectorWorkloadManagementWorkloads
+
+	config Config
+
+	collectorFns []func(ch chan<- prometheus.Metric) error
+	closeFns     []func()
 }
 
 func New(config *Config) *Collector {
