@@ -58,7 +58,7 @@ type collectorBufferManager struct {
 type perfDataCounterValuesBufMan struct {
 	BufManBackgroundWriterPagesPerSec   float64 `perfdata:"Background writer pages/sec"`
 	BufManBufferCacheHitRatio           float64 `perfdata:"Buffer cache hit ratio"`
-	BufManBufferCacheHitRatioBase       float64 `perfdata:"Buffer cache hit ratio base,secondvalue"`
+	BufManBufferCacheHitRatioBase       float64 `perfdata:"Buffer cache hit ratio,secondvalue"`
 	BufManCheckpointPagesPerSec         float64 `perfdata:"Checkpoint pages/sec"`
 	BufManDatabasePages                 float64 `perfdata:"Database pages"`
 	BufManExtensionAllocatedPages       float64 `perfdata:"Extension allocated pages"`
