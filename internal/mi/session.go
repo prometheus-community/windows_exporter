@@ -109,13 +109,11 @@ func (s *Session) TestConnection() error {
 		return result
 	}
 
-	var err error
-
-	if _, _, err = operation.GetInstance(); err != nil {
+	if _, _, err := operation.GetInstance(); err != nil {
 		return fmt.Errorf("failed to get instance: %w", err)
 	}
 
-	if err = operation.Close(); err != nil {
+	if err := operation.Close(); err != nil {
 		return fmt.Errorf("failed to close operation: %w", err)
 	}
 

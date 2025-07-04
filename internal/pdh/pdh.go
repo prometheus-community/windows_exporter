@@ -550,7 +550,6 @@ func FormatError(msgID uint32) string {
 
 	buf := make([]uint16, 300)
 	_, err := windows.FormatMessage(flags, libPdhDll.Handle(), msgID, 0, buf, nil)
-
 	if err == nil {
 		return windows.UTF16PtrToString(&buf[0])
 	}
