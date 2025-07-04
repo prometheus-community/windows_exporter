@@ -113,7 +113,6 @@ func ApplicationInitialize() (*Application, error) {
 		0,
 		uintptr(unsafe.Pointer(application)),
 	)
-
 	if !errors.Is(err, windows.NOERROR) {
 		return nil, fmt.Errorf("syscall returned: %w", err)
 	}

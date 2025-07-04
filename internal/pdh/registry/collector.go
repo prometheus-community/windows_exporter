@@ -54,6 +54,7 @@ func NewCollector[T any](object string, _ []string) (*Collector, error) {
 	}
 
 	var values [0]T
+
 	valueType := reflect.TypeOf(values).Elem()
 
 	if f, ok := valueType.FieldByName("Name"); ok {

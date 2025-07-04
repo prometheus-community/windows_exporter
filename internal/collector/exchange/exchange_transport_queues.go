@@ -215,108 +215,126 @@ func (c *Collector) collectTransportQueues(ch chan<- prometheus.Metric) error {
 			data.ExternalActiveRemoteDeliveryQueueLength,
 			labelName,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.internalActiveRemoteDeliveryQueueLength,
 			prometheus.GaugeValue,
 			data.InternalActiveRemoteDeliveryQueueLength,
 			labelName,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.activeMailboxDeliveryQueueLength,
 			prometheus.GaugeValue,
 			data.ActiveMailboxDeliveryQueueLength,
 			labelName,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.retryMailboxDeliveryQueueLength,
 			prometheus.GaugeValue,
 			data.RetryMailboxDeliveryQueueLength,
 			labelName,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.unreachableQueueLength,
 			prometheus.GaugeValue,
 			data.UnreachableQueueLength,
 			labelName,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.externalLargestDeliveryQueueLength,
 			prometheus.GaugeValue,
 			data.ExternalLargestDeliveryQueueLength,
 			labelName,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.internalLargestDeliveryQueueLength,
 			prometheus.GaugeValue,
 			data.InternalLargestDeliveryQueueLength,
 			labelName,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.poisonQueueLength,
 			prometheus.GaugeValue,
 			data.PoisonQueueLength,
 			labelName,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.messagesQueuedForDeliveryTotal,
 			prometheus.CounterValue,
 			data.MessagesQueuedForDeliveryTotal,
 			labelName,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.messagesSubmittedTotal,
 			prometheus.CounterValue,
 			data.MessagesSubmittedTotal,
 			labelName,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.messagesDelayedTotal,
 			prometheus.CounterValue,
 			data.MessagesDelayedTotal,
 			labelName,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.messagesCompletedDeliveryTotal,
 			prometheus.CounterValue,
 			data.MessagesCompletedDeliveryTotal,
 			labelName,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.aggregateShadowQueueLength,
 			prometheus.GaugeValue,
 			data.AggregateShadowQueueLength,
 			labelName,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.submissionQueueLength,
 			prometheus.GaugeValue,
 			data.SubmissionQueueLength,
 			labelName,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.delayQueueLength,
 			prometheus.GaugeValue,
 			data.DelayQueueLength,
 			labelName,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.itemsCompletedDeliveryTotal,
 			prometheus.CounterValue,
 			data.ItemsCompletedDeliveryTotal,
 			labelName,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.itemsQueuedForDeliveryExpiredTotal,
 			prometheus.CounterValue,
 			data.ItemsQueuedForDeliveryExpiredTotal,
 			labelName,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.itemsQueuedForDeliveryTotal,
 			prometheus.CounterValue,
 			data.ItemsQueuedForDeliveryTotal,
 			labelName,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.itemsResubmittedTotal,
 			prometheus.CounterValue,

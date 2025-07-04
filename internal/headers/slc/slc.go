@@ -50,7 +50,6 @@ func SLIsWindowsGenuineLocal() (SL_GENUINE_STATE, error) {
 	_, _, err := procSLIsWindowsGenuineLocal.Call(
 		uintptr(unsafe.Pointer(&genuineState)),
 	)
-
 	if !errors.Is(err, windows.NTE_OP_OK) {
 		return 0, err
 	}

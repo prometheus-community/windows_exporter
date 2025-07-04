@@ -259,48 +259,56 @@ func (c *Collector) writeTCPCounters(ch chan<- prometheus.Metric, metrics []perf
 		metrics[0].ConnectionFailures,
 		af,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.connectionsActive,
 		prometheus.CounterValue,
 		metrics[0].ConnectionsActive,
 		af,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.connectionsEstablished,
 		prometheus.GaugeValue,
 		metrics[0].ConnectionsEstablished,
 		af,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.connectionsPassive,
 		prometheus.CounterValue,
 		metrics[0].ConnectionsPassive,
 		af,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.connectionsReset,
 		prometheus.CounterValue,
 		metrics[0].ConnectionsReset,
 		af,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.segmentsTotal,
 		prometheus.CounterValue,
 		metrics[0].SegmentsPerSec,
 		af,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.segmentsReceivedTotal,
 		prometheus.CounterValue,
 		metrics[0].SegmentsReceivedPerSec,
 		af,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.segmentsRetransmittedTotal,
 		prometheus.CounterValue,
 		metrics[0].SegmentsRetransmittedPerSec,
 		af,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.segmentsSentTotal,
 		prometheus.CounterValue,

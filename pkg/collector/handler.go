@@ -20,6 +20,7 @@ package collector
 import (
 	"fmt"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -27,6 +28,12 @@ import (
 
 // Interface guard.
 var _ prometheus.Collector = (*Handler)(nil)
+
+// We are expose metrics directly from the memory region of the Win32 API.
+// We should not allow more than one request at a time.
+//
+//nolint:gochecknoglobals
+var concurrencyMu sync.Mutex
 
 // Handler implements [prometheus.Collector] for a set of Windows Collection.
 type Handler struct {
@@ -60,5 +67,7 @@ func (p *Handler) Describe(_ chan<- *prometheus.Desc) {}
 // Collect sends the collected metrics from each of the Collection to
 // prometheus.
 func (p *Handler) Collect(ch chan<- prometheus.Metric) {
+	concurrencyMu.Lock()
 	p.collection.collectAll(ch, p.logger, p.maxScrapeDuration)
+	concurrencyMu.Unlock()
 }

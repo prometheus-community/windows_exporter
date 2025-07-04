@@ -201,66 +201,77 @@ func (c *Collector) collectAppPoolWAS(ch chan<- prometheus.Metric) error {
 			data.CurrentApplicationPoolUptime,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.currentWorkerProcesses,
 			prometheus.GaugeValue,
 			data.CurrentWorkerProcesses,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.maximumWorkerProcesses,
 			prometheus.GaugeValue,
 			data.MaximumWorkerProcesses,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.recentWorkerProcessFailures,
 			prometheus.GaugeValue,
 			data.RecentWorkerProcessFailures,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.timeSinceLastWorkerProcessFailure,
 			prometheus.GaugeValue,
 			data.TimeSinceLastWorkerProcessFailure,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.totalApplicationPoolRecycles,
 			prometheus.CounterValue,
 			data.TotalApplicationPoolRecycles,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.totalApplicationPoolUptime,
 			prometheus.CounterValue,
 			data.TotalApplicationPoolUptime,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.totalWorkerProcessesCreated,
 			prometheus.CounterValue,
 			data.TotalWorkerProcessesCreated,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.totalWorkerProcessFailures,
 			prometheus.CounterValue,
 			data.TotalWorkerProcessFailures,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.totalWorkerProcessPingFailures,
 			prometheus.CounterValue,
 			data.TotalWorkerProcessPingFailures,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.totalWorkerProcessShutdownFailures,
 			prometheus.CounterValue,
 			data.TotalWorkerProcessShutdownFailures,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.totalWorkerProcessStartupFailures,
 			prometheus.CounterValue,

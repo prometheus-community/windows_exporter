@@ -28,6 +28,7 @@ import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/headers/kernel32"
 	"github.com/prometheus-community/windows_exporter/internal/headers/netapi32"
+	"github.com/prometheus-community/windows_exporter/internal/headers/psapi"
 	"github.com/prometheus-community/windows_exporter/internal/headers/sysinfoapi"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/osversion"
@@ -51,7 +52,9 @@ type Collector struct {
 	hostname      *prometheus.Desc
 	osInformation *prometheus.Desc
 
-	// users
+	// Deprecated: Use windows_system_processes instead.
+	processes *prometheus.Desc
+
 	// Deprecated: Use windows_system_process_limit instead.
 	processesLimit *prometheus.Desc
 
@@ -169,6 +172,12 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 
+	c.processes = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "processes"),
+		"Deprecated: Use `windows_system_processes` instead.",
+		nil,
+		nil,
+	)
 	c.processesLimit = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "processes_limit"),
 		"Deprecated: Use `windows_system_process_limit` instead.",
@@ -215,6 +224,10 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	errs := make([]error, 0)
 
 	c.collect(ch)
+
+	if err := c.collectProcessCount(ch); err != nil {
+		errs = append(errs, fmt.Errorf("failed to collect process count metrics: %w", err))
+	}
 
 	if err := c.collectHostname(ch); err != nil {
 		errs = append(errs, fmt.Errorf("failed to collect hostname metrics: %w", err))
@@ -273,6 +286,20 @@ func (c *Collector) collectHostname(ch chan<- prometheus.Metric) error {
 		hostname,
 		domain,
 		fqdn,
+	)
+
+	return nil
+}
+
+func (c *Collector) collectProcessCount(ch chan<- prometheus.Metric) error {
+	gpi, err := psapi.GetPerformanceInfo()
+	if err != nil {
+		return err
+	}
+
+	ch <- prometheus.MustNewConstMetric(c.processes,
+		prometheus.GaugeValue,
+		float64(gpi.ProcessCount),
 	)
 
 	return nil

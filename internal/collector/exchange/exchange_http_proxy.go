@@ -111,30 +111,35 @@ func (c *Collector) collectHTTPProxy(ch chan<- prometheus.Metric) error {
 			utils.MilliSecToSec(data.MailboxServerLocatorAverageLatency),
 			labelName,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.averageAuthenticationLatency,
 			prometheus.GaugeValue,
 			data.AverageAuthenticationLatency,
 			labelName,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.averageCASProcessingLatency,
 			prometheus.GaugeValue,
 			utils.MilliSecToSec(data.AverageCASProcessingLatency),
 			labelName,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.mailboxServerProxyFailureRate,
 			prometheus.GaugeValue,
 			data.MailboxServerProxyFailureRate,
 			labelName,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.outstandingProxyRequests,
 			prometheus.GaugeValue,
 			data.OutstandingProxyRequests,
 			labelName,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.proxyRequestsPerSec,
 			prometheus.CounterValue,

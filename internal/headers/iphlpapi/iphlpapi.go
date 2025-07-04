@@ -154,6 +154,7 @@ func GetIfEntry2Ex(row *MIB_IF_ROW2) error {
 // https://learn.microsoft.com/en-us/windows/win32/api/netioapi/nf-netioapi-convertinterfaceguidtoluid
 func ConvertInterfaceGUIDToLUID(guid ole.GUID) (uint64, error) {
 	var luid uint64
+
 	ret, _, _ := procConvertInterfaceGuidToLuid.Call(
 		uintptr(unsafe.Pointer(&guid)),
 		uintptr(unsafe.Pointer(&luid)),

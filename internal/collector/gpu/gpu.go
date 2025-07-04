@@ -335,12 +335,14 @@ func (c *Collector) collectGpuAdapterMemoryMetrics(ch chan<- prometheus.Metric) 
 			dedicatedUsage,
 			key.Phys,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.gpuAdapterMemorySharedUsage,
 			prometheus.GaugeValue,
 			sharedUsageMap[key],
 			key.Phys,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.gpuAdapterMemoryTotalCommitted,
 			prometheus.GaugeValue,
@@ -437,24 +439,28 @@ func (c *Collector) collectGpuProcessMemoryMetrics(ch chan<- prometheus.Metric) 
 			dedicatedUsage,
 			key.Pid, key.Phys,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.gpuProcessMemoryLocalUsage,
 			prometheus.GaugeValue,
 			processLocalUsageMap[key],
 			key.Pid, key.Phys,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.gpuProcessMemoryNonLocalUsage,
 			prometheus.GaugeValue,
 			processNonLocalUsageMap[key],
 			key.Pid, key.Phys,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.gpuProcessMemorySharedUsage,
 			prometheus.GaugeValue,
 			processSharedUsageMap[key],
 			key.Pid, key.Phys,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.gpuProcessMemoryTotalCommitted,
 			prometheus.GaugeValue,
