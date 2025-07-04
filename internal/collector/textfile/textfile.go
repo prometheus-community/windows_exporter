@@ -217,6 +217,7 @@ func (c *Collector) convertMetricFamily(logger *slog.Logger, metricFamily *dto.M
 			for _, q := range metric.GetSummary().GetQuantile() {
 				quantiles[q.GetQuantile()] = q.GetValue()
 			}
+
 			ch <- prometheus.MustNewConstSummary(
 				prometheus.NewDesc(
 					metricFamily.GetName(),
@@ -232,6 +233,7 @@ func (c *Collector) convertMetricFamily(logger *slog.Logger, metricFamily *dto.M
 			for _, b := range metric.GetHistogram().GetBucket() {
 				buckets[b.GetUpperBound()] = b.GetCumulativeCount()
 			}
+
 			ch <- prometheus.MustNewConstHistogram(
 				prometheus.NewDesc(
 					metricFamily.GetName(),
@@ -291,7 +293,6 @@ type carriageReturnFilteringReader struct {
 func (cr carriageReturnFilteringReader) Read(p []byte) (int, error) {
 	buf := make([]byte, len(p))
 	n, err := cr.r.Read(buf)
-
 	if err != nil && err != io.EOF {
 		return n, err
 	}
@@ -356,7 +357,6 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 
 			return nil
 		})
-
 		if err != nil && directory != "" {
 			errs = append(errs, fmt.Errorf("error reading textfile directory %q: %w", directory, err))
 		}

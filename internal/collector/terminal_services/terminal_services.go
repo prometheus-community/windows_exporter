@@ -467,6 +467,7 @@ func (c *Collector) collectWTSSessions(ch chan<- prometheus.Metric) error {
 			if session.State == stateID {
 				isState = 1.0
 			}
+
 			ch <- prometheus.MustNewConstMetric(
 				c.sessionInfo,
 				prometheus.GaugeValue,

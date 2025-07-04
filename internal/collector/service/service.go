@@ -316,6 +316,7 @@ func (c *Collector) collectService(ch chan<- prometheus.Metric, serviceName stri
 		if startMode == c.apiStartModeValues[serviceConfig.StartType] {
 			isCurrentStartMode = 1.0
 		}
+
 		ch <- prometheus.MustNewConstMetric(
 			c.startMode,
 			prometheus.GaugeValue,

@@ -147,7 +147,6 @@ func WTSOpenServer(server string) (windows.Handle, error) {
 
 func WTSCloseServer(server windows.Handle) error {
 	r1, _, err := procWTSCloseServer.Call(uintptr(server))
-
 	if r1 != 1 && !errors.Is(err, windows.ERROR_SUCCESS) {
 		return fmt.Errorf("failed to close server: %w", err)
 	}
