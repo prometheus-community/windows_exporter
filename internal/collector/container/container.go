@@ -568,6 +568,7 @@ func (c *Collector) collectNetworkMetrics(ch chan<- prometheus.Metric) error {
 		}
 
 		var endpointStats iphlpapi.MIB_IF_ROW2
+
 		endpointStats.InterfaceLuid = luid
 
 		if err := iphlpapi.GetIfEntry2Ex(&endpointStats); err != nil {
@@ -607,24 +608,28 @@ func (c *Collector) collectNetworkMetrics(ch chan<- prometheus.Metric) error {
 				float64(endpointStats.OutOctets),
 				containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container, endpointId,
 			)
+
 			ch <- prometheus.MustNewConstMetric(
 				c.packetsReceived,
 				prometheus.CounterValue,
 				float64(endpointStats.InUcastPkts+endpointStats.InNUcastPkts),
 				containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container, endpointId,
 			)
+
 			ch <- prometheus.MustNewConstMetric(
 				c.packetsSent,
 				prometheus.CounterValue,
 				float64(endpointStats.OutUcastPkts+endpointStats.OutNUcastPkts),
 				containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container, endpointId,
 			)
+
 			ch <- prometheus.MustNewConstMetric(
 				c.droppedPacketsIncoming,
 				prometheus.CounterValue,
 				float64(endpointStats.InDiscards+endpointStats.InErrors),
 				containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container, endpointId,
 			)
+
 			ch <- prometheus.MustNewConstMetric(
 				c.droppedPacketsOutgoing,
 				prometheus.CounterValue,

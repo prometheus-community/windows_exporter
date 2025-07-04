@@ -196,6 +196,7 @@ func WTSEnumerateSessionsEx(server windows.Handle, logger *slog.Logger) ([]WTSSe
 	}
 
 	var sizeTest wtsSessionInfo1
+
 	sessionSize := unsafe.Sizeof(sizeTest)
 
 	sessions := make([]WTSSession, 0, count)
