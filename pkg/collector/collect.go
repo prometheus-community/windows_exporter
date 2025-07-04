@@ -200,7 +200,6 @@ func (c *Collection) collectCollector(ch chan<- prometheus.Metric, logger *slog.
 
 		go func() {
 			// Drain channel in case of premature return to not leak a goroutine.
-			//nolint:revive
 			for range bufCh {
 			}
 		}()
