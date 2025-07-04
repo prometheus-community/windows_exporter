@@ -168,26 +168,31 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		prometheus.CounterValue,
 		c.perfDataObject[0].ContextSwitchesPerSec,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.exceptionDispatchesTotal,
 		prometheus.CounterValue,
 		c.perfDataObject[0].ExceptionDispatchesPerSec,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.processorQueueLength,
 		prometheus.GaugeValue,
 		c.perfDataObject[0].ProcessorQueueLength,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.processes,
 		prometheus.GaugeValue,
 		c.perfDataObject[0].Processes,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.systemCallsTotal,
 		prometheus.CounterValue,
 		c.perfDataObject[0].SystemCallsPerSec,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.threads,
 		prometheus.GaugeValue,

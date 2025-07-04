@@ -329,21 +329,25 @@ func (c *Collector) collectNTP(ch chan<- prometheus.Metric) error {
 		prometheus.GaugeValue,
 		c.perfDataObject[0].ComputedTimeOffset/1000000, // microseconds -> seconds
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.ntpClientTimeSourceCount,
 		prometheus.GaugeValue,
 		c.perfDataObject[0].NTPClientTimeSourceCount,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.ntpRoundTripDelay,
 		prometheus.GaugeValue,
 		c.perfDataObject[0].NTPRoundTripDelay/1000000, // microseconds -> seconds
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.ntpServerIncomingRequestsTotal,
 		prometheus.CounterValue,
 		c.perfDataObject[0].NTPServerIncomingRequestsTotal,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.ntpServerOutgoingResponsesTotal,
 		prometheus.CounterValue,

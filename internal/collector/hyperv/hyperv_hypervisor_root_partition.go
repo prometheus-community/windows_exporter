@@ -310,26 +310,31 @@ func (c *Collector) collectHypervisorRootPartition(ch chan<- prometheus.Metric) 
 		prometheus.GaugeValue,
 		c.perfDataObjectHypervisorRootPartition[0].HypervisorRootPartition2MDevicePages,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.hypervisorRootPartition2MGPAPages,
 		prometheus.GaugeValue,
 		c.perfDataObjectHypervisorRootPartition[0].HypervisorRootPartition2MGPAPages,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.hypervisorRootPartition4KDevicePages,
 		prometheus.GaugeValue,
 		c.perfDataObjectHypervisorRootPartition[0].HypervisorRootPartition4KDevicePages,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.hypervisorRootPartition4KGPAPages,
 		prometheus.GaugeValue,
 		c.perfDataObjectHypervisorRootPartition[0].HypervisorRootPartition4KGPAPages,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.hypervisorRootPartitionVirtualTLBFlushEntries,
 		prometheus.CounterValue,
 		c.perfDataObjectHypervisorRootPartition[0].HypervisorRootPartitionVirtualTLBFlushEntries,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.hypervisorRootPartitionVirtualTLBPages,
 		prometheus.GaugeValue,

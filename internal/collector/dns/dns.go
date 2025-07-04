@@ -357,6 +357,7 @@ func (c *Collector) collectMetrics(ch chan<- prometheus.Metric) error {
 		c.perfDataObject[0].AxfrRequestReceived,
 		"full",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.zoneTransferRequestsReceived,
 		prometheus.CounterValue,
@@ -370,12 +371,14 @@ func (c *Collector) collectMetrics(ch chan<- prometheus.Metric) error {
 		c.perfDataObject[0].AxfrRequestSent,
 		"full",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.zoneTransferRequestsSent,
 		prometheus.CounterValue,
 		c.perfDataObject[0].IxfrRequestSent,
 		"incremental",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.zoneTransferRequestsSent,
 		prometheus.CounterValue,
@@ -389,6 +392,7 @@ func (c *Collector) collectMetrics(ch chan<- prometheus.Metric) error {
 		c.perfDataObject[0].AxfrResponseReceived,
 		"full",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.zoneTransferResponsesReceived,
 		prometheus.CounterValue,
@@ -403,6 +407,7 @@ func (c *Collector) collectMetrics(ch chan<- prometheus.Metric) error {
 		"full",
 		"tcp",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.zoneTransferSuccessReceived,
 		prometheus.CounterValue,
@@ -410,6 +415,7 @@ func (c *Collector) collectMetrics(ch chan<- prometheus.Metric) error {
 		"incremental",
 		"tcp",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.zoneTransferSuccessReceived,
 		prometheus.CounterValue,
@@ -424,6 +430,7 @@ func (c *Collector) collectMetrics(ch chan<- prometheus.Metric) error {
 		c.perfDataObject[0].AxfrSuccessSent,
 		"full",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.zoneTransferSuccessSent,
 		prometheus.CounterValue,
@@ -443,30 +450,35 @@ func (c *Collector) collectMetrics(ch chan<- prometheus.Metric) error {
 		c.perfDataObject[0].CachingMemory,
 		"caching",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.memoryUsedBytes,
 		prometheus.GaugeValue,
 		c.perfDataObject[0].DatabaseNodeMemory,
 		"database_node",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.memoryUsedBytes,
 		prometheus.GaugeValue,
 		c.perfDataObject[0].NbStatMemory,
 		"nbstat",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.memoryUsedBytes,
 		prometheus.GaugeValue,
 		c.perfDataObject[0].RecordFlowMemory,
 		"record_flow",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.memoryUsedBytes,
 		prometheus.GaugeValue,
 		c.perfDataObject[0].TcpMessageMemory,
 		"tcp_message",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.memoryUsedBytes,
 		prometheus.GaugeValue,
@@ -480,23 +492,27 @@ func (c *Collector) collectMetrics(ch chan<- prometheus.Metric) error {
 		c.perfDataObject[0].DynamicUpdateNoOperation,
 		"noop",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.dynamicUpdatesReceived,
 		prometheus.CounterValue,
 		c.perfDataObject[0].DynamicUpdateWrittenToDatabase,
 		"written",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.dynamicUpdatesQueued,
 		prometheus.GaugeValue,
 		c.perfDataObject[0].DynamicUpdateQueued,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.dynamicUpdatesFailures,
 		prometheus.CounterValue,
 		c.perfDataObject[0].DynamicUpdateRejected,
 		"rejected",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.dynamicUpdatesFailures,
 		prometheus.CounterValue,
@@ -509,6 +525,7 @@ func (c *Collector) collectMetrics(ch chan<- prometheus.Metric) error {
 		prometheus.CounterValue,
 		c.perfDataObject[0].NotifyReceived,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.notifySent,
 		prometheus.CounterValue,
@@ -520,11 +537,13 @@ func (c *Collector) collectMetrics(ch chan<- prometheus.Metric) error {
 		prometheus.CounterValue,
 		c.perfDataObject[0].RecursiveQueries,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.recursiveQueryFailures,
 		prometheus.CounterValue,
 		c.perfDataObject[0].RecursiveQueryFailure,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.recursiveQuerySendTimeouts,
 		prometheus.CounterValue,
@@ -537,6 +556,7 @@ func (c *Collector) collectMetrics(ch chan<- prometheus.Metric) error {
 		c.perfDataObject[0].TcpQueryReceived,
 		"tcp",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.queries,
 		prometheus.CounterValue,
@@ -550,6 +570,7 @@ func (c *Collector) collectMetrics(ch chan<- prometheus.Metric) error {
 		c.perfDataObject[0].TcpResponseSent,
 		"tcp",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.responses,
 		prometheus.CounterValue,
@@ -569,6 +590,7 @@ func (c *Collector) collectMetrics(ch chan<- prometheus.Metric) error {
 		c.perfDataObject[0].WinsLookupReceived,
 		"forward",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.winsQueries,
 		prometheus.CounterValue,
@@ -582,6 +604,7 @@ func (c *Collector) collectMetrics(ch chan<- prometheus.Metric) error {
 		c.perfDataObject[0].WinsResponseSent,
 		"forward",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.winsResponses,
 		prometheus.CounterValue,
@@ -594,6 +617,7 @@ func (c *Collector) collectMetrics(ch chan<- prometheus.Metric) error {
 		prometheus.CounterValue,
 		c.perfDataObject[0].SecureUpdateFailure,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.secureUpdateReceived,
 		prometheus.CounterValue,
