@@ -402,7 +402,6 @@ func (c *Collector) queryAllServices() ([]windows.ENUM_SERVICE_STATUS_PROCESS, e
 			nil,
 			nil,
 		)
-
 		if err == nil {
 			break
 		}
@@ -444,7 +443,6 @@ func (c *Collector) getProcessStartTime(pid uint32) (uint64, error) {
 	)
 
 	err = windows.GetProcessTimes(handle, &creation, &exit, &krn, &user)
-
 	if err := windows.CloseHandle(handle); err != nil {
 		c.logger.LogAttrs(context.Background(), slog.LevelWarn, "failed to close process handle",
 			slog.Any("err", err),

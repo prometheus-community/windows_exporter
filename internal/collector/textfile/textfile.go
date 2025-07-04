@@ -292,6 +292,7 @@ type carriageReturnFilteringReader struct {
 // Read returns data from the underlying io.Reader, but with \r filtered out.
 func (cr carriageReturnFilteringReader) Read(p []byte) (int, error) {
 	buf := make([]byte, len(p))
+
 	n, err := cr.r.Read(buf)
 	if err != nil && err != io.EOF {
 		return n, err
