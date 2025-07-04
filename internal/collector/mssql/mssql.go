@@ -405,6 +405,7 @@ func (c *Collector) collect(
 			duration.Seconds(),
 			collector, sqlInstance.name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.mssqlScrapeSuccessDesc,
 			prometheus.GaugeValue,

@@ -107,26 +107,31 @@ func (c *Collector) collectRpcClientAccess(ch chan<- prometheus.Metric) error {
 			prometheus.GaugeValue,
 			utils.MilliSecToSec(data.RpcAveragedLatency),
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.rpcRequests,
 			prometheus.GaugeValue,
 			data.RpcRequests,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.activeUserCount,
 			prometheus.GaugeValue,
 			data.ActiveUserCount,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.connectionCount,
 			prometheus.GaugeValue,
 			data.ConnectionCount,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.rpcOperationsPerSec,
 			prometheus.CounterValue,
 			data.RpcOperationsPerSec,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.userCount,
 			prometheus.GaugeValue,

@@ -194,36 +194,42 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 			strconv.Itoa(int(processor.Family)),
 			strings.TrimRight(processor.Name, " "),
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.cpuCoreCount,
 			prometheus.GaugeValue,
 			float64(processor.NumberOfCores),
 			strings.TrimRight(processor.DeviceID, " "),
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.cpuEnabledCoreCount,
 			prometheus.GaugeValue,
 			float64(processor.NumberOfEnabledCore),
 			strings.TrimRight(processor.DeviceID, " "),
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.cpuLogicalProcessorsCount,
 			prometheus.GaugeValue,
 			float64(processor.NumberOfLogicalProcessors),
 			strings.TrimRight(processor.DeviceID, " "),
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.cpuThreadCount,
 			prometheus.GaugeValue,
 			float64(processor.ThreadCount),
 			strings.TrimRight(processor.DeviceID, " "),
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.cpuL2CacheSize,
 			prometheus.GaugeValue,
 			float64(processor.L2CacheSize),
 			strings.TrimRight(processor.DeviceID, " "),
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.cpuL3CacheSize,
 			prometheus.GaugeValue,

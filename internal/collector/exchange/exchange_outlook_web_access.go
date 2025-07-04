@@ -74,6 +74,7 @@ func (c *Collector) collectOWA(ch chan<- prometheus.Metric) error {
 			prometheus.GaugeValue,
 			data.CurrentUniqueUsers,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.owaRequestsPerSec,
 			prometheus.CounterValue,

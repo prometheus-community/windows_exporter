@@ -110,18 +110,21 @@ func (c *Collector) collectHttpServiceRequestQueues(ch chan<- prometheus.Metric)
 			data.HttpRequestQueuesCurrentQueueSize,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.httpRequestQueuesTotalRejectedRequest,
 			prometheus.GaugeValue,
 			data.HttpRequestQueuesTotalRejectedRequests,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.httpRequestQueuesMaxQueueItemAge,
 			prometheus.GaugeValue,
 			data.HttpRequestQueuesMaxQueueItemAge,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.httpRequestQueuesArrivalRate,
 			prometheus.GaugeValue,

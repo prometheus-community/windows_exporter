@@ -190,6 +190,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 			path,
 			template,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.size,
 			prometheus.GaugeValue,
@@ -197,6 +198,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 			path,
 			template,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.usage,
 			prometheus.GaugeValue,
@@ -204,12 +206,14 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 			path,
 			template,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.description,
 			prometheus.GaugeValue,
 			1.0,
 			path, template, Description,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.disabled,
 			prometheus.GaugeValue,
@@ -217,6 +221,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 			path,
 			template,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.matchesTemplate,
 			prometheus.GaugeValue,
@@ -224,6 +229,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 			path,
 			template,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.softLimit,
 			prometheus.GaugeValue,
