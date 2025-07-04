@@ -143,7 +143,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		},
 	}
 
-	c.queryAllServicesBuffer = make([]byte, 1024*100)
+	c.queryAllServicesBuffer = make([]byte, 1024*200)
 
 	c.info = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "info"),
@@ -242,6 +242,15 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 }
 
 func (c *Collector) collectWorker(ch chan<- prometheus.Metric, service windows.ENUM_SERVICE_STATUS_PROCESS) {
+	if uintptr(unsafe.Pointer(service.ServiceName)) == uintptr(windows.InvalidHandle) {
+		c.logger.Log(context.Background(), slog.LevelWarn, "failed collecting service info",
+			slog.String("err", "ServiceName is 0xffffffffffffffff"),
+			slog.String("service", fmt.Sprintf("%+v", service)),
+		)
+
+		return
+	}
+
 	serviceName := windows.UTF16PtrToString(service.ServiceName)
 
 	if c.config.ServiceExclude.MatchString(serviceName) || !c.config.ServiceInclude.MatchString(serviceName) {
@@ -374,6 +383,8 @@ func (c *Collector) queryAllServices() ([]windows.ENUM_SERVICE_STATUS_PROCESS, e
 		servicesReturned      uint32
 		err                   error
 	)
+
+	clear(c.queryAllServicesBuffer)
 
 	for {
 		currentBufferSize := uint32(cap(c.queryAllServicesBuffer))
