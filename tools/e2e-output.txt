@@ -101,12 +101,6 @@ test_alpha_total 42
 # TYPE windows_cpu_processor_utility_total counter
 # HELP windows_cpu_time_total Time that processor spent in different modes (dpc, idle, interrupt, privileged, user)
 # TYPE windows_cpu_time_total counter
-# HELP windows_cs_hostname Deprecated: Use windows_os_hostname instead
-# TYPE windows_cs_hostname gauge
-# HELP windows_cs_logical_processors Deprecated: Use windows_cpu_logical_processor instead
-# TYPE windows_cs_logical_processors gauge
-# HELP windows_cs_physical_memory_bytes Deprecated: Use windows_memory_physical_total_bytes instead
-# TYPE windows_cs_physical_memory_bytes gauge
 # HELP windows_exporter_build_info A metric with a constant '1' value labeled by version, revision, branch, goversion from which windows_exporter was built, and the goos and goarch for the build.
 # TYPE windows_exporter_build_info gauge
 # HELP windows_exporter_collector_duration_seconds windows_exporter: Duration of a collection.
@@ -116,7 +110,6 @@ test_alpha_total 42
 windows_exporter_collector_success{collector="cache"} 1
 windows_exporter_collector_success{collector="cpu"} 1
 windows_exporter_collector_success{collector="cpu_info"} 1
-windows_exporter_collector_success{collector="cs"} 1
 windows_exporter_collector_success{collector="logical_disk"} 1
 windows_exporter_collector_success{collector="memory"} 1
 windows_exporter_collector_success{collector="net"} 1
@@ -137,7 +130,6 @@ windows_exporter_collector_success{collector="udp"} 1
 windows_exporter_collector_timeout{collector="cache"} 0
 windows_exporter_collector_timeout{collector="cpu"} 0
 windows_exporter_collector_timeout{collector="cpu_info"} 0
-windows_exporter_collector_timeout{collector="cs"} 0
 windows_exporter_collector_timeout{collector="logical_disk"} 0
 windows_exporter_collector_timeout{collector="memory"} 0
 windows_exporter_collector_timeout{collector="net"} 0

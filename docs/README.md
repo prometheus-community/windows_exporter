@@ -9,7 +9,6 @@ This directory contains documentation of the collectors in the windows_exporter,
 - [`container`](collector.container.md)
 - [`cpu`](collector.cpu.md)
 - [`cpu_info`](collector.cpu_info.md)
-- [`cs`](collector.cs.md)
 - [`dfsr`](collector.dfsr.md)
 - [`dhcp`](collector.dhcp.md)
 - [`diskdrive`](collector.diskdrive.md)

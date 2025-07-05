@@ -178,7 +178,7 @@
                 <Control Id="Title" Type="Text" X="15" Y="6" Width="210" Height="15" Transparent="yes" NoPrefix="yes" Text="{\WixUI_Font_Title}windows_exporter configuration" />
 
                 <!-- Edit box for property input -->
-                <!-- cpu,cs,logical_disk,physical_disk,net,os,service,system -->
+                <!-- cpu,logical_disk,physical_disk,net,os,service,system -->
                 <Control Id="PropertyEdit_ENABLED_COLLECTORS_Title1" Type="Text" X="25" Y="55" Width="300" Height="15" Transparent="yes" NoPrefix="yes" Text="Comma-separated list of collectors to use. Use '[\[]defaults[\]]' as a placeholder for all" />
                 <Control Id="PropertyEdit_ENABLED_COLLECTORS_Title2" Type="Text" X="25" Y="65" Width="300" Height="15" Transparent="yes" NoPrefix="yes" Text="the collectors enabled by default. If value is empty, the exporter default will be used." />
                 <Control Id="PropertyEdit_ENABLED_COLLECTORS" Type="Edit" X="24" Y="77" Width="300" Height="18" Property="ENABLED_COLLECTORS" Text="[ENABLED_COLLECTORS]" Indirect="no" />
