@@ -20,7 +20,6 @@ A Prometheus exporter for Windows machines.
 | [cache](docs/collector.cache.md)                           | Cache metrics                                                                                                                                               |                    |
 | [cpu](docs/collector.cpu.md)                               | CPU usage                                                                                                                                                   | &#10003;           |
 | [cpu_info](docs/collector.cpu_info.md)                     | CPU Information                                                                                                                                             |                    |
-| [cs](docs/collector.cs.md)                                 | "Computer System" metrics (system properties, num cpus/total memory)                                                                                        |                    |
 | [container](docs/collector.container.md)                   | Container metrics                                                                                                                                           |                    |
 | [diskdrive](docs/collector.diskdrive.md)                   | Diskdrive metrics                                                                                                                                           |                    |
 | [dfsr](docs/collector.dfsr.md)                             | DFSR metrics                                                                                                                                                |                    |
@@ -194,7 +193,7 @@ See detailed steps to install on Windows Kubernetes [here](./kubernetes/kubernet
 
 `windows_exporter` supports Windows Server versions 2016 and later, and desktop Windows version 10 and 11 (21H2 or later).
 
-There are known compatibility issues with Windows Server 2012 R2 and earlier versions. 
+There are known compatibility issues with Windows Server 2012 R2 and earlier versions.
 
 ## Usage
 
