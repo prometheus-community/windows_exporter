@@ -87,21 +87,6 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 		config: ConfigDefaults,
 	}
 
-	var (
-		online         bool
-		scrapeInterval time.Duration
-	)
-
-	app.Flag(
-		"collector.updates.online",
-		"Deprecated: Please use collector.update.online instead",
-	).Default(strconv.FormatBool(ConfigDefaults.Online)).BoolVar(&online)
-
-	app.Flag(
-		"collector.updates.scrape-interval",
-		"Deprecated: Please use collector.update.scrape-interval instead",
-	).Default(ConfigDefaults.ScrapeInterval.String()).DurationVar(&scrapeInterval)
-
 	app.Flag(
 		"collector.update.online",
 		"Whether to search for updates online.",
@@ -111,33 +96,6 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 		"collector.update.scrape-interval",
 		"Define the interval of scraping Windows Update information.",
 	).Default(ConfigDefaults.ScrapeInterval.String()).DurationVar(&c.config.ScrapeInterval)
-
-	app.Action(func(*kingpin.ParseContext) error {
-		// Use deprecated flags only if new ones weren't explicitly set
-		if online {
-			// If the new flag is set, ignore the old one
-			if !c.config.Online {
-				c.config.Online = online
-			}
-
-			slog.Warn("Warning: --collector.updates.online is deprecated, use --collector.update.online instead.",
-				slog.String("collector", Name),
-			)
-		}
-
-		if scrapeInterval != ConfigDefaults.ScrapeInterval {
-			// If the new flag is set, ignore the old one
-			if c.config.ScrapeInterval != scrapeInterval {
-				c.config.ScrapeInterval = scrapeInterval
-			}
-
-			slog.Warn("Warning: --collector.updates.scrape-interval is deprecated, use --collector.update.scrape-interval instead.",
-				slog.String("collector", Name),
-			)
-		}
-
-		return nil
-	})
 
 	return c
 }
