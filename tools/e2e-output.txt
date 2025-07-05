@@ -110,7 +110,6 @@ test_alpha_total 42
 windows_exporter_collector_success{collector="cache"} 1
 windows_exporter_collector_success{collector="cpu"} 1
 windows_exporter_collector_success{collector="cpu_info"} 1
-windows_exporter_collector_success{collector="cs"} 1
 windows_exporter_collector_success{collector="logical_disk"} 1
 windows_exporter_collector_success{collector="memory"} 1
 windows_exporter_collector_success{collector="net"} 1
@@ -131,7 +130,6 @@ windows_exporter_collector_success{collector="udp"} 1
 windows_exporter_collector_timeout{collector="cache"} 0
 windows_exporter_collector_timeout{collector="cpu"} 0
 windows_exporter_collector_timeout{collector="cpu_info"} 0
-windows_exporter_collector_timeout{collector="cs"} 0
 windows_exporter_collector_timeout{collector="logical_disk"} 0
 windows_exporter_collector_timeout{collector="memory"} 0
 windows_exporter_collector_timeout{collector="net"} 0
