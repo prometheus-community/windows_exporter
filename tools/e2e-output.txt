@@ -118,7 +118,6 @@ windows_exporter_collector_success{collector="cpu"} 1
 windows_exporter_collector_success{collector="cpu_info"} 1
 windows_exporter_collector_success{collector="cs"} 1
 windows_exporter_collector_success{collector="logical_disk"} 1
-windows_exporter_collector_success{collector="logon"} 1
 windows_exporter_collector_success{collector="memory"} 1
 windows_exporter_collector_success{collector="net"} 1
 windows_exporter_collector_success{collector="os"} 1
@@ -140,7 +139,6 @@ windows_exporter_collector_timeout{collector="cpu"} 0
 windows_exporter_collector_timeout{collector="cpu_info"} 0
 windows_exporter_collector_timeout{collector="cs"} 0
 windows_exporter_collector_timeout{collector="logical_disk"} 0
-windows_exporter_collector_timeout{collector="logon"} 0
 windows_exporter_collector_timeout{collector="memory"} 0
 windows_exporter_collector_timeout{collector="net"} 0
 windows_exporter_collector_timeout{collector="os"} 0
@@ -191,8 +189,6 @@ windows_exporter_collector_timeout{collector="udp"} 0
 # TYPE windows_logical_disk_write_seconds_total counter
 # HELP windows_logical_disk_writes_total The number of write operations on the disk (LogicalDisk.DiskWritesPerSec)
 # TYPE windows_logical_disk_writes_total counter
-# HELP windows_logon_session_logon_timestamp_seconds Deprecated. Use windows_terminal_services_session_info instead.
-# TYPE windows_logon_session_logon_timestamp_seconds gauge
 # HELP windows_memory_available_bytes The amount of physical memory immediately available for allocation to a process or for system use. It is equal to the sum of memory assigned to the standby (cached), free and zero page lists (AvailableBytes)
 # TYPE windows_memory_available_bytes gauge
 # HELP windows_memory_cache_bytes (CacheBytes)
