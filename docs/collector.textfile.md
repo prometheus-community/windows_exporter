@@ -10,13 +10,8 @@ Enabled by default? | No
 
 ## Flags
 
-### `--collector.textfile.directory` 
-:warning: DEPRECATED Use `--collector.textfile.directories`
-
-<br>
-
 ### `--collector.textfile.directories`
-One or multiple directories containing the files to be ingested. 
+One or multiple directories containing the files to be ingested.
 
 E.G. `--collector.textfile.directories="C:\MyDir1,C:\MyDir2"`
 
