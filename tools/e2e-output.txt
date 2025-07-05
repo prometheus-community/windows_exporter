@@ -391,8 +391,6 @@ windows_service_state{name="Themes",state="stop pending"} 0
 windows_service_state{name="Themes",state="stopped"} 0
 # HELP windows_system_boot_time_timestamp Unix timestamp of system boot time
 # TYPE windows_system_boot_time_timestamp gauge
-# HELP windows_system_boot_time_timestamp_seconds Deprecated: Use windows_system_boot_time_timestamp instead
-# TYPE windows_system_boot_time_timestamp_seconds gauge
 # HELP windows_system_context_switches_total Total number of context switches (WMI source: PerfOS_System.ContextSwitchesPersec)
 # TYPE windows_system_context_switches_total counter
 # HELP windows_system_exception_dispatches_total Total number of exceptions dispatched (WMI source: PerfOS_System.ExceptionDispatchesPersec)
