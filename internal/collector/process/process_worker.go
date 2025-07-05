@@ -147,13 +147,6 @@ func (c *Collector) collectWorker() {
 			startTime := float64(time.Now().UnixMicro())/1e6 - data.ElapsedTime
 
 			ch <- prometheus.MustNewConstMetric(
-				c.startTimeOld,
-				prometheus.GaugeValue,
-				startTime,
-				name, pidString,
-			)
-
-			ch <- prometheus.MustNewConstMetric(
 				c.startTime,
 				prometheus.GaugeValue,
 				startTime,
