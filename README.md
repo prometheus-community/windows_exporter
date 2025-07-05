@@ -155,7 +155,7 @@ msiexec /i <path-to-msi-file> --% ADDLOCAL=FirewallException APPLICATIONFOLDER="
 On some older versions of Windows,
 you may need to surround parameter values with double quotes to get the installation command parsing properly:
 ```powershell
-msiexec /i C:\Users\Administrator\Downloads\windows_exporter.msi --% ENABLED_COLLECTORS="ad,iis,logon,memory,process,tcp,textfile,thermalzone" TEXTFILE_DIRS="C:\custom_metrics\"
+msiexec /i C:\Users\Administrator\Downloads\windows_exporter.msi --% ENABLED_COLLECTORS="ad,iis,memory,process,tcp,textfile,thermalzone" TEXTFILE_DIRS="C:\custom_metrics\"
 ```
 
 To install the exporter with creating a firewall exception, use the following command:
@@ -194,7 +194,7 @@ See detailed steps to install on Windows Kubernetes [here](./kubernetes/kubernet
 
 `windows_exporter` supports Windows Server versions 2016 and later, and desktop Windows version 10 and 11 (21H2 or later).
 
-There are known compatibility issues with Windows Server 2012 R2 and earlier versions. 
+There are known compatibility issues with Windows Server 2012 R2 and earlier versions.
 
 ## Usage
 
@@ -258,7 +258,7 @@ An example configuration file can be found [here](docs/example_config.yml).
 
 Configuration file values can be mixed with CLI flags. E.G.
 
-`.\windows_exporter.exe --collectors.enabled=cpu,logon`
+`.\windows_exporter.exe --collectors.enabled=cpu`
 
 ```yaml
 log:
