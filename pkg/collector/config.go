@@ -37,7 +37,6 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/iis"
 	"github.com/prometheus-community/windows_exporter/internal/collector/license"
 	"github.com/prometheus-community/windows_exporter/internal/collector/logical_disk"
-	"github.com/prometheus-community/windows_exporter/internal/collector/logon"
 	"github.com/prometheus-community/windows_exporter/internal/collector/memory"
 	"github.com/prometheus-community/windows_exporter/internal/collector/mscluster"
 	"github.com/prometheus-community/windows_exporter/internal/collector/msmq"
@@ -88,7 +87,6 @@ type Config struct {
 	IIS                iis.Config                `yaml:"iis"`
 	License            license.Config            `yaml:"license"`
 	LogicalDisk        logical_disk.Config       `yaml:"logical_disk"`
-	Logon              logon.Config              `yaml:"logon"`
 	Memory             memory.Config             `yaml:"memory"`
 	MSCluster          mscluster.Config          `yaml:"mscluster"`
 	Msmq               msmq.Config               `yaml:"msmq"`
@@ -143,7 +141,6 @@ var ConfigDefaults = Config{
 	IIS:                iis.ConfigDefaults,
 	License:            license.ConfigDefaults,
 	LogicalDisk:        logical_disk.ConfigDefaults,
-	Logon:              logon.ConfigDefaults,
 	Memory:             memory.ConfigDefaults,
 	MSCluster:          mscluster.ConfigDefaults,
 	Msmq:               msmq.ConfigDefaults,

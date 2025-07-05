@@ -154,7 +154,7 @@ msiexec /i <path-to-msi-file> --% ADDLOCAL=FirewallException APPLICATIONFOLDER="
 On some older versions of Windows,
 you may need to surround parameter values with double quotes to get the installation command parsing properly:
 ```powershell
-msiexec /i C:\Users\Administrator\Downloads\windows_exporter.msi --% ENABLED_COLLECTORS="ad,iis,logon,memory,process,tcp,textfile,thermalzone" TEXTFILE_DIRS="C:\custom_metrics\"
+msiexec /i C:\Users\Administrator\Downloads\windows_exporter.msi --% ENABLED_COLLECTORS="ad,iis,memory,process,tcp,textfile,thermalzone" TEXTFILE_DIRS="C:\custom_metrics\"
 ```
 
 To install the exporter with creating a firewall exception, use the following command:
@@ -257,7 +257,7 @@ An example configuration file can be found [here](docs/example_config.yml).
 
 Configuration file values can be mixed with CLI flags. E.G.
 
-`.\windows_exporter.exe --collectors.enabled=cpu,logon`
+`.\windows_exporter.exe --collectors.enabled=cpu`
 
 ```yaml
 log:

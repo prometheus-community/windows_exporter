@@ -41,7 +41,6 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/iis"
 	"github.com/prometheus-community/windows_exporter/internal/collector/license"
 	"github.com/prometheus-community/windows_exporter/internal/collector/logical_disk"
-	"github.com/prometheus-community/windows_exporter/internal/collector/logon"
 	"github.com/prometheus-community/windows_exporter/internal/collector/memory"
 	"github.com/prometheus-community/windows_exporter/internal/collector/mscluster"
 	"github.com/prometheus-community/windows_exporter/internal/collector/msmq"
@@ -99,7 +98,6 @@ var BuildersWithFlags = map[string]BuilderWithFlags[Collector]{
 	iis.Name:                NewBuilderWithFlags(iis.NewWithFlags),
 	license.Name:            NewBuilderWithFlags(license.NewWithFlags),
 	logical_disk.Name:       NewBuilderWithFlags(logical_disk.NewWithFlags),
-	logon.Name:              NewBuilderWithFlags(logon.NewWithFlags),
 	memory.Name:             NewBuilderWithFlags(memory.NewWithFlags),
 	mscluster.Name:          NewBuilderWithFlags(mscluster.NewWithFlags),
 	msmq.Name:               NewBuilderWithFlags(msmq.NewWithFlags),

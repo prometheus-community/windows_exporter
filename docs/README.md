@@ -19,7 +19,6 @@ This directory contains documentation of the collectors in the windows_exporter,
 - [`iis`](collector.iis.md)
 - [`license`](collector.license.md)
 - [`logical_disk`](collector.logical_disk.md)
-- [`logon`](collector.logon.md)
 - [`memory`](collector.memory.md)
 - [`mscluster`](collector.mscluster.md)
 - [`msmq`](collector.msmq.md)

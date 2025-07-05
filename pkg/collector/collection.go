@@ -47,7 +47,6 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/iis"
 	"github.com/prometheus-community/windows_exporter/internal/collector/license"
 	"github.com/prometheus-community/windows_exporter/internal/collector/logical_disk"
-	"github.com/prometheus-community/windows_exporter/internal/collector/logon"
 	"github.com/prometheus-community/windows_exporter/internal/collector/memory"
 	"github.com/prometheus-community/windows_exporter/internal/collector/mscluster"
 	"github.com/prometheus-community/windows_exporter/internal/collector/msmq"
@@ -118,7 +117,6 @@ func NewWithConfig(config Config) *Collection {
 	collectors[iis.Name] = iis.New(&config.IIS)
 	collectors[license.Name] = license.New(&config.License)
 	collectors[logical_disk.Name] = logical_disk.New(&config.LogicalDisk)
-	collectors[logon.Name] = logon.New(&config.Logon)
 	collectors[memory.Name] = memory.New(&config.Memory)
 	collectors[mscluster.Name] = mscluster.New(&config.MSCluster)
 	collectors[msmq.Name] = msmq.New(&config.Msmq)
