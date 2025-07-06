@@ -155,6 +155,8 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		return fmt.Errorf("failed to collect System metrics: %w", types.ErrNoDataUnexpected)
 	}
 
+	fmt.Printf("%s %f\n", time.Now(), c.perfDataObject[0].ProcessorQueueLength)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.contextSwitchesTotal,
 		prometheus.CounterValue,
