@@ -182,9 +182,6 @@ The windows_exporter can be run as a Docker container. The Docker image is avail
 
 The Docker image is tagged with the version of the exporter. The `latest` tag is also available and points to the latest release.
 
-Additionally, a flavor `hostprocess` with `-hostprocess` as suffix is based on the https://github.com/microsoft/windows-host-process-containers-base-image
-which is designed to run as a Windows host process container. The size of that images is smaller than the default one.
-
 ## Kubernetes Implementation
 
 See detailed steps to install on Windows Kubernetes [here](./kubernetes/kubernetes.md).
@@ -195,16 +192,6 @@ See detailed steps to install on Windows Kubernetes [here](./kubernetes/kubernet
 
 There are known compatibility issues with Windows Server 2012 R2 and earlier versions.
 
-## Usage
-
-    go get -u github.com/prometheus/promu
-    go get -u github.com/prometheus-community/windows_exporter
-    cd $env:GOPATH/src/github.com/prometheus-community/windows_exporter
-    promu build -v
-    .\windows_exporter.exe
-
-The prometheus metrics will be exposed on [localhost:9182](http://localhost:9182)
-
 ### HTTP Endpoints
 
 windows_exporter provides the following HTTP endpoints:
@@ -212,18 +199,6 @@ windows_exporter provides the following HTTP endpoints:
 * `/metrics`: Exposes metrics in the [Prometheus text format](https://prometheus.io/docs/instrumenting/exposition_formats/).
 * `/health`: Returns 200 OK when the exporter is running.
 * `/debug/pprof/`: Exposes the [pprof](https://golang.org/pkg/net/http/pprof/) endpoints. Only, if `--debug.enabled` is set.
-
-## Examples
-
-### Enable only service collector and specify a custom query
-
-    .\windows_exporter.exe --collectors.enabled "service" --collector.service.include="windows_exporter"
-
-### Enable only process collector and specify a custom query
-
-    .\windows_exporter.exe --collectors.enabled "process" --collector.process.include="firefox.+"
-
-When there are multiple processes with the same name, WMI represents those after the first instance as `process-name#index`. So to get them all, rather than just the first one, the [regular expression](https://en.wikipedia.org/wiki/Regular_expression) must use `.+`. See [process](docs/collector.process.md) for more information.
 
 ### Using [defaults] with `--collectors.enabled` argument
 
