@@ -50,6 +50,7 @@ func flattenHelper(prefix string, data map[string]any, result map[string]string)
 		if prefix != "" {
 			fullKey = prefix + "." + k
 		}
+
 		switch val := v.(type) {
 		case map[any]any:
 			flattenHelper(fullKey, convertMap(val), result)
@@ -60,6 +61,7 @@ func flattenHelper(prefix string, data map[string]any, result map[string]string)
 			for i, elem := range val {
 				strSlice[i] = fmt.Sprint(elem)
 			}
+
 			result[fullKey] = strings.Join(strSlice, ",")
 		default:
 			result[fullKey] = fmt.Sprint(val)
