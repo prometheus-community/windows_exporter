@@ -18,12 +18,13 @@
 package gpu
 
 import (
+	"fmt"
 	"strings"
 )
 
 type Instance struct {
 	Pid     string
-	Luid    [2]string
+	Luid    string
 	Phys    string
 	Eng     string
 	Engtype string
@@ -32,11 +33,13 @@ type Instance struct {
 
 type PidPhys struct {
 	Pid  string
+	Luid string
 	Phys string
 }
 
 type PidPhysEngEngType struct {
 	Pid     string
+	Luid    string
 	Phys    string
 	Eng     string
 	Engtype string
@@ -58,8 +61,7 @@ func parseGPUCounterInstanceString(s string) Instance {
 			}
 		case "luid":
 			if i+2 < len(parts) {
-				instance.Luid[0] = parts[i+1]
-				instance.Luid[1] = parts[i+2]
+				instance.Luid = fmt.Sprintf("%s_%s", parts[i+1], parts[i+2])
 			}
 		case "phys":
 			if i+1 < len(parts) {

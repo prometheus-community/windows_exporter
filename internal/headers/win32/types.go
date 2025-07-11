@@ -23,12 +23,17 @@ import (
 	"golang.org/x/sys/windows"
 )
 
+const MAX_PATH = 260
+
 type (
+	BOOL      = int32 // BOOL is a 32-bit signed int in Win32
 	DATE_TIME = windows.Filetime
 	DWORD     = uint32
 	LPWSTR    struct {
 		*uint16
 	}
+	ULONG = uint32 // ULONG is a 32-bit unsigned int in Win32
+	UINT  = uint32 // UINT is a 32-bit unsigned int in Win32
 )
 
 // NewLPWSTR creates a new LPWSTR from a string.
