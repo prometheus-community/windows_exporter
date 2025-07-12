@@ -142,7 +142,7 @@ func (c *Collector) collectGlobFilePath(ch chan<- prometheus.Metric, filePattern
 	basePath, pattern := doublestar.SplitPattern(filePattern)
 	basePathFS := os.DirFS(basePath)
 
-	matches, err := doublestar.Glob(basePathFS, pattern, doublestar.WithFilesOnly())
+	matches, err := doublestar.Glob(basePathFS, pattern, doublestar.WithFilesOnly(), doublestar.WithCaseInsensitive())
 	if err != nil {
 		return fmt.Errorf("failed to glob: %w", err)
 	}
