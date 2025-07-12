@@ -15,18 +15,23 @@
 
 //go:build windows
 
-package setupapi_test
+package ntdll
 
 import (
-	"testing"
-
-	"github.com/prometheus-community/windows_exporter/internal/headers/setupapi"
-	"github.com/stretchr/testify/require"
+	"golang.org/x/sys/windows"
 )
 
-func TestGetGPUDevices(t *testing.T) {
-	devices, err := setupapi.GetGPUDevices()
-	require.NoError(t, err, "Failed to get GPU devices")
+//nolint:gochecknoglobals
+var (
+	modNtdll                  = windows.NewLazySystemDLL("ntdll.dll")
+	procRtlNtStatusToDosError = modNtdll.NewProc("RtlNtStatusToDosError")
+)
 
-	require.NotNil(t, devices)
+func RtlNtStatusToDosError(status uintptr) error {
+	ret, _, _ := procRtlNtStatusToDosError.Call(status)
+	if ret == 0 {
+		return nil
+	}
+
+	return windows.Errno(ret)
 }
