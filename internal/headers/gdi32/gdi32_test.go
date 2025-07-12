@@ -13,19 +13,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build windows
-
-package setupapi
+package gdi32_test
 
 import (
-	"golang.org/x/sys/windows"
+	"testing"
+
+	"github.com/prometheus-community/windows_exporter/internal/headers/gdi32"
+	"github.com/stretchr/testify/require"
 )
 
-//nolint:gochecknoglobals
-var (
-	modSetupAPI                           = windows.NewLazySystemDLL("setupapi.dll")
-	procSetupDiGetClassDevsW              = modSetupAPI.NewProc("SetupDiGetClassDevsW")
-	procSetupDiEnumDeviceInfo             = modSetupAPI.NewProc("SetupDiEnumDeviceInfo")
-	procSetupDiGetDeviceRegistryPropertyW = modSetupAPI.NewProc("SetupDiGetDeviceRegistryPropertyW")
-	procSetupDiDestroyDeviceInfoList      = modSetupAPI.NewProc("SetupDiDestroyDeviceInfoList")
-)
+func TestGetGPUDevices(t *testing.T) {
+	devices, err := gdi32.GetGPUDevices()
+	require.NoError(t, err, "Failed to get GPU devices")
+
+	require.NotNil(t, devices)
+}

@@ -74,19 +74,10 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 	}
 	c.config.FilePatterns = make([]string, 0)
 
-	var filePatterns string
-
 	app.Flag(
 		"collector.filetime.file-patterns",
 		"Comma-separated list of file patterns. Each pattern is a glob pattern that can contain `*`, `?`, and `**` (recursive). See https://github.com/bmatcuk/doublestar#patterns",
-	).Default(strings.Join(ConfigDefaults.FilePatterns, ",")).StringVar(&filePatterns)
-
-	app.Action(func(*kingpin.ParseContext) error {
-		// doublestar.Glob() requires forward slashes
-		c.config.FilePatterns = strings.Split(filepath.ToSlash(filePatterns), ",")
-
-		return nil
-	})
+	).Default(strings.Join(ConfigDefaults.FilePatterns, ",")).StringsVar(&c.config.FilePatterns)
 
 	return c
 }
@@ -173,7 +164,7 @@ func (c *Collector) collectGlobFilePath(ch chan<- prometheus.Metric, filePattern
 		)
 
 		return nil
-	}, doublestar.WithFilesOnly())
+	}, doublestar.WithFilesOnly(), doublestar.WithCaseInsensitive())
 	if err != nil {
 		return fmt.Errorf("failed to glob: %w", err)
 	}

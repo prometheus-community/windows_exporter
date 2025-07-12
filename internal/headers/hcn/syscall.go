@@ -52,8 +52,9 @@ func EnumerateEndpoints() ([]ole.GUID, error) {
 		uintptr(unsafe.Pointer(&errorRecord)),
 	)
 
-	windows.CoTaskMemFree(unsafe.Pointer(errorRecord))
 	result := windows.UTF16PtrToString(endpointsJSON)
+	windows.CoTaskMemFree(unsafe.Pointer(endpointsJSON))
+	windows.CoTaskMemFree(unsafe.Pointer(errorRecord))
 
 	if r1 != 0 {
 		return nil, fmt.Errorf("HcnEnumerateEndpoints failed: HRESULT 0x%X: %w", r1, hcs.Win32FromHResult(r1))
@@ -62,7 +63,7 @@ func EnumerateEndpoints() ([]ole.GUID, error) {
 	var endpoints []ole.GUID
 
 	if err := json.Unmarshal([]byte(result), &endpoints); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal JSON: %w", err)
+		return nil, fmt.Errorf("failed to unmarshal JSON %s: %w", result, err)
 	}
 
 	return endpoints, nil
@@ -108,10 +109,9 @@ func QueryEndpointProperties(endpoint Endpoint, propertyQuery *uint16) (Endpoint
 		uintptr(unsafe.Pointer(&errorRecord)),
 	)
 
-	windows.CoTaskMemFree(unsafe.Pointer(errorRecord))
-
 	result := windows.UTF16PtrToString(resultDocument)
 	windows.CoTaskMemFree(unsafe.Pointer(resultDocument))
+	windows.CoTaskMemFree(unsafe.Pointer(errorRecord))
 
 	if r1 != 0 {
 		return EndpointProperties{}, fmt.Errorf("HcsGetComputeSystemProperties failed: HRESULT 0x%X: %w", r1, hcs.Win32FromHResult(r1))

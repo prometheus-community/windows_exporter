@@ -20,29 +20,32 @@ These metrics are available on supported versions of Windows with compatible GPU
 
 ### Adapter-level Metrics
 
-| Name                                         | Description                                                             | Type  | Labels                                                                               |
-|----------------------------------------------|-------------------------------------------------------------------------|-------|--------------------------------------------------------------------------------------|
-| `windows_gpu_adapter_memory_committed_bytes` | Total committed GPU memory in bytes per physical GPU                    | gauge | `phys`                                                                               |
-| `windows_gpu_adapter_memory_dedicated_bytes` | Dedicated GPU memory usage in bytes per physical GPU                    | gauge | `phys`                                                                               |
-| `windows_gpu_adapter_memory_shared_bytes`    | Shared GPU memory usage in bytes per physical GPU                       | gauge | `phys`                                                                               |
-| `windows_gpu_info`                           | A metric with a constant '1' value labeled with gpu device information. | gauge | `phys`, `physical_device_object_name`, `hardware_id`, `friendly_name`, `description` |
-| `windows_gpu_local_adapter_memory_bytes`     | Local adapter memory usage in bytes per physical GPU                    | gauge | `phys`                                                                               |
-| `windows_gpu_non_local_adapter_memory_bytes` | Non-local adapter memory usage in bytes per physical GPU                | gauge | `phys`                                                                               |
+| Name                                             | Description                                                                        | Type  | Labels        |
+|--------------------------------------------------|------------------------------------------------------------------------------------|-------|---------------|
+| `windows_gpu_info`                               | A metric with a constant '1' value labeled with gpu device information.            | gauge | `luid`,`name`,`bus_number`,`phys`,`function_number` |
+| `windows_gpu_dedicated_system_memory_size_bytes` | The size, in bytes, of memory that is dedicated from system memory.                | gauge | `luid`        |
+| `windows_gpu_dedicated_video_memory_size_bytes`  | The size, in bytes, of memory that is dedicated from video memory.                 | gauge | `luid`        |
+| `windows_gpu_shared_system_memory_size_bytes`    | The size, in bytes, of memory from system memory that can be shared by many users. | gauge | `luid`        |
+| `windows_gpu_adapter_memory_committed_bytes`     | Total committed GPU memory in bytes per physical GPU                               | gauge | `luid`,`phys` |
+| `windows_gpu_adapter_memory_dedicated_bytes`     | Dedicated GPU memory usage in bytes per physical GPU                               | gauge | `luid`,`phys` |
+| `windows_gpu_adapter_memory_shared_bytes`        | Shared GPU memory usage in bytes per physical GPU                                  | gauge | `luid`,`phys` |
+| `windows_gpu_local_adapter_memory_bytes`         | Local adapter memory usage in bytes per physical GPU                               | gauge | `luid`,`phys` |
+| `windows_gpu_non_local_adapter_memory_bytes`     | Non-local adapter memory usage in bytes per physical GPU                           | gauge | `luid`,`phys` |
 
 ### Per-process Metrics
 
-| Name                                         | Description                                                             | Type    | Labels                                                                               |
-|----------------------------------------------|-------------------------------------------------------------------------|---------|--------------------------------------------------------------------------------------|
-| `windows_gpu_engine_time_seconds`            | Total running time of the GPU engine in seconds                         | counter | `phys`, `eng`, `engtype`, `process_id`                                               |
-| `windows_gpu_process_memory_committed_bytes` | Total committed GPU memory in bytes per process                         | gauge   | `phys`,`process_id`                                                                  |
-| `windows_gpu_process_memory_dedicated_bytes` | Dedicated GPU memory usage in bytes per process                         | gauge   | `phys`,`process_id`                                                                  |
-| `windows_gpu_process_memory_local_bytes`     | Local GPU memory usage in bytes per process                             | gauge   | `phys`,`process_id`                                                                  |
-| `windows_gpu_process_memory_non_local_bytes` | Non-local GPU memory usage in bytes per process                         | gauge   | `phys`,`process_id`                                                                  |
-| `windows_gpu_process_memory_shared_bytes`    | Shared GPU memory usage in bytes per process                            | gauge   | `phys`,`process_id`                                                                  |
+| Name                                         | Description                                     | Type    | Labels                                        |
+|----------------------------------------------|-------------------------------------------------|---------|-----------------------------------------------|
+| `windows_gpu_engine_time_seconds`            | Total running time of the GPU engine in seconds | counter | `luid`,`phys`, `eng`, `engtype`, `process_id` |
+| `windows_gpu_process_memory_committed_bytes` | Total committed GPU memory in bytes per process | gauge   | `luid`,`phys`,`process_id`                    |
+| `windows_gpu_process_memory_dedicated_bytes` | Dedicated GPU memory usage in bytes per process | gauge   | `luid`,`phys`,`process_id`                    |
+| `windows_gpu_process_memory_local_bytes`     | Local GPU memory usage in bytes per process     | gauge   | `luid`,`phys`,`process_id`                    |
+| `windows_gpu_process_memory_non_local_bytes` | Non-local GPU memory usage in bytes per process | gauge   | `luid`,`phys`,`process_id`                    |
+| `windows_gpu_process_memory_shared_bytes`    | Shared GPU memory usage in bytes per process    | gauge   | `luid`,`phys`,`process_id`                    |
 
 ## Metric Labels
 
-* `phys`: Physical GPU index (e.g., "0")
+* `luid`,`phys`: Physical GPU index (e.g., "0")
 * `eng`: GPU engine index (e.g., "0", "1", ...)
 * `engtype`: GPU engine type (e.g., "3D", "Copy", "VideoDecode", etc.)
 * `process_id`: Process ID
