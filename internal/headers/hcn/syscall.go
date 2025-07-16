@@ -40,7 +40,7 @@ var (
 // EnumerateEndpoints enumerates the endpoints.
 //
 // https://learn.microsoft.com/en-us/virtualization/api/hcn/reference/hcnenumerateendpoints
-func EnumerateEndpoints() ([]ole.GUID, error) {
+func EnumerateEndpoints() ([]*ole.GUID, error) {
 	var (
 		endpointsJSON *uint16
 		errorRecord   *uint16
@@ -60,10 +60,17 @@ func EnumerateEndpoints() ([]ole.GUID, error) {
 		return nil, fmt.Errorf("HcnEnumerateEndpoints failed: HRESULT 0x%X: %w", r1, hcs.Win32FromHResult(r1))
 	}
 
-	var endpoints []ole.GUID
+	var endpointStringIDs []string
 
-	if err := json.Unmarshal([]byte(result), &endpoints); err != nil {
+	if err := json.Unmarshal([]byte(result), &endpointStringIDs); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal JSON %s: %w", result, err)
+	}
+
+	var endpoints []*ole.GUID
+
+	for _, id := range endpointStringIDs {
+		guid := ole.NewGUID(id)
+		endpoints = append(endpoints, guid)
 	}
 
 	return endpoints, nil
@@ -72,14 +79,14 @@ func EnumerateEndpoints() ([]ole.GUID, error) {
 // OpenEndpoint opens an endpoint.
 //
 // https://learn.microsoft.com/en-us/virtualization/api/hcn/reference/hcnopenendpoint
-func OpenEndpoint(id ole.GUID) (Endpoint, error) {
+func OpenEndpoint(endpointID *ole.GUID) (Endpoint, error) {
 	var (
 		endpoint    Endpoint
 		errorRecord *uint16
 	)
 
 	r1, _, _ := procHcnOpenEndpoint.Call(
-		uintptr(unsafe.Pointer(&id)),
+		uintptr(unsafe.Pointer(endpointID)),
 		uintptr(unsafe.Pointer(&endpoint)),
 		uintptr(unsafe.Pointer(&errorRecord)),
 	)

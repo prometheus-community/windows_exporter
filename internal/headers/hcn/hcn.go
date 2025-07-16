@@ -30,7 +30,7 @@ var (
 	defaultQuery = utils.Must(windows.UTF16PtrFromString(`{"SchemaVersion":{"Major": 2,"Minor": 0},"Flags":"None"}`))
 )
 
-func GetEndpointProperties(endpointID ole.GUID) (EndpointProperties, error) {
+func GetEndpointProperties(endpointID *ole.GUID) (EndpointProperties, error) {
 	endpoint, err := OpenEndpoint(endpointID)
 	if err != nil {
 		return EndpointProperties{}, fmt.Errorf("failed to open endpoint: %w", err)
