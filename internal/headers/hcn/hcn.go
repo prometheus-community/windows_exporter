@@ -18,30 +18,88 @@
 package hcn
 
 import (
+	"encoding/json"
 	"fmt"
+	"unsafe"
 
-	"github.com/go-ole/go-ole"
+	"github.com/prometheus-community/windows_exporter/internal/headers/hcs"
 	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"golang.org/x/sys/windows"
 )
 
 //nolint:gochecknoglobals
 var (
-	defaultQuery = utils.Must(windows.UTF16PtrFromString(`{"SchemaVersion":{"Major": 2,"Minor": 0},"Flags":"None"}`))
+	modvmcompute = windows.NewLazySystemDLL("vmcompute.dll")
+	procHNSCall  = modvmcompute.NewProc("HNSCall")
+
+	hcnBodyEmpty         = utils.Must(windows.UTF16PtrFromString(""))
+	hcnMethodGet         = utils.Must(windows.UTF16PtrFromString("GET"))
+	hcnPathEndpoints     = utils.Must(windows.UTF16PtrFromString("/endpoints/"))
+	hcnPathEndpointStats = utils.Must(windows.UTF16FromString("/endpointstats/"))
 )
 
-func GetEndpointProperties(endpointID ole.GUID) (EndpointProperties, error) {
-	endpoint, err := OpenEndpoint(endpointID)
+func ListEndpoints() ([]EndpointProperties, error) {
+	result, err := hnsCall(hcnMethodGet, hcnPathEndpoints, hcnBodyEmpty)
 	if err != nil {
-		return EndpointProperties{}, fmt.Errorf("failed to open endpoint: %w", err)
+		return nil, err
 	}
 
-	defer CloseEndpoint(endpoint)
-
-	result, err := QueryEndpointProperties(endpoint, defaultQuery)
-	if err != nil {
-		return EndpointProperties{}, fmt.Errorf("failed to query endpoint properties: %w", err)
+	var endpoints struct {
+		Success bool                 `json:"success"`
+		Error   string               `json:"error"`
+		Output  []EndpointProperties `json:"output"`
 	}
 
-	return result, nil
+	if err := json.Unmarshal([]byte(result), &endpoints); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal JSON %s: %w", result, err)
+	}
+
+	if !endpoints.Success {
+		return nil, fmt.Errorf("HNSCall failed: %s", endpoints.Error)
+	}
+
+	return endpoints.Output, nil
+}
+
+func GetHNSEndpointStats(endpointID string) (EndpointStats, error) {
+	endpointIDUTF16, err := windows.UTF16FromString(endpointID)
+	if err != nil {
+		return EndpointStats{}, fmt.Errorf("failed to convert endpoint ID to UTF16: %w", err)
+	}
+
+	path := hcnPathEndpointStats[:len(hcnPathEndpointStats)-1]
+	path = append(path, endpointIDUTF16...)
+
+	result, err := hnsCall(hcnMethodGet, &path[0], hcnBodyEmpty)
+	if err != nil {
+		return EndpointStats{}, err
+	}
+
+	var stats EndpointStats
+
+	if err := json.Unmarshal([]byte(result), &stats); err != nil {
+		return EndpointStats{}, fmt.Errorf("failed to unmarshal JSON %s: %w", result, err)
+	}
+
+	return stats, nil
+}
+
+func hnsCall(method, path, body *uint16) (string, error) {
+	var responseJSON *uint16
+
+	r1, _, _ := procHNSCall.Call(
+		uintptr(unsafe.Pointer(method)),
+		uintptr(unsafe.Pointer(path)),
+		uintptr(unsafe.Pointer(body)),
+		uintptr(unsafe.Pointer(&responseJSON)),
+	)
+
+	response := windows.UTF16PtrToString(responseJSON)
+	windows.CoTaskMemFree(unsafe.Pointer(responseJSON))
+
+	if r1 != 0 {
+		return "", fmt.Errorf("HNSCall failed: HRESULT 0x%X: %w", r1, hcs.Win32FromHResult(r1))
+	}
+
+	return response, nil
 }
