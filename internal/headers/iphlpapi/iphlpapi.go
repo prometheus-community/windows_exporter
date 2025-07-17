@@ -27,10 +27,8 @@ import (
 
 //nolint:gochecknoglobals
 var (
-	modiphlpapi                    = windows.NewLazySystemDLL("iphlpapi.dll")
-	procGetExtendedTcpTable        = modiphlpapi.NewProc("GetExtendedTcpTable")
-	procGetIfEntry2Ex              = modiphlpapi.NewProc("GetIfEntry2Ex")
-	procConvertInterfaceGuidToLuid = modiphlpapi.NewProc("ConvertInterfaceGuidToLuid")
+	modiphlpapi             = windows.NewLazySystemDLL("iphlpapi.dll")
+	procGetExtendedTcpTable = modiphlpapi.NewProc("GetExtendedTcpTable")
 )
 
 func GetTCPConnectionStates(family uint32) (map[MIB_TCP_STATE]uint32, error) {

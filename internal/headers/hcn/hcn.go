@@ -45,9 +45,9 @@ func ListEndpoints() ([]EndpointProperties, error) {
 	}
 
 	var endpoints struct {
-		Success bool
-		Error   string
-		Output  []EndpointProperties
+		Success bool                 `json:"success"`
+		Error   string               `json:"error"`
+		Output  []EndpointProperties `json:"output"`
 	}
 
 	if err := json.Unmarshal([]byte(result), &endpoints); err != nil {
@@ -67,7 +67,9 @@ func GetHNSEndpointStats(endpointID string) (EndpointStats, error) {
 		return EndpointStats{}, fmt.Errorf("failed to convert endpoint ID to UTF16: %w", err)
 	}
 
-	path := append(hcnPathEndpointStats[:len(hcnPathEndpointStats)-1], endpointIDUTF16...)
+	path := hcnPathEndpointStats[:len(hcnPathEndpointStats)-1]
+	path = append(path, endpointIDUTF16...)
+
 	result, err := hnsCall(hcnMethodGet, &path[0], hcnBodyEmpty)
 	if err != nil {
 		return EndpointStats{}, err
