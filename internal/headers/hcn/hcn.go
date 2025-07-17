@@ -31,11 +31,6 @@ import (
 var (
 	modvmcompute = windows.NewLazySystemDLL("vmcompute.dll")
 	procHNSCall  = modvmcompute.NewProc("HNSCall")
-)
-
-//nolint:gochecknoglobals
-var (
-	defaultQuery = utils.Must(windows.UTF16PtrFromString(`{"SchemaVersion":{"Major": 2,"Minor": 0},"Flags":"None"}`))
 
 	hcnBodyEmpty         = utils.Must(windows.UTF16PtrFromString(""))
 	hcnMethodGet         = utils.Must(windows.UTF16PtrFromString("GET"))
@@ -44,20 +39,9 @@ var (
 )
 
 func ListEndpoints() ([]EndpointProperties, error) {
-	var responseJSON *uint16
-
-	r1, _, _ := procHNSCall.Call(
-		uintptr(unsafe.Pointer(hcnMethodGet)),
-		uintptr(unsafe.Pointer(hcnPathEndpoints)),
-		uintptr(unsafe.Pointer(hcnBodyEmpty)),
-		uintptr(unsafe.Pointer(&responseJSON)),
-	)
-
-	result := windows.UTF16PtrToString(responseJSON)
-	windows.CoTaskMemFree(unsafe.Pointer(responseJSON))
-
-	if r1 != 0 {
-		return nil, fmt.Errorf("HNSCall failed: HRESULT 0x%X: %w", r1, hcs.Win32FromHResult(r1))
+	result, err := hnsCall(hcnMethodGet, hcnPathEndpoints, hcnBodyEmpty)
+	if err != nil {
+		return nil, err
 	}
 
 	var endpoints struct {
@@ -78,28 +62,16 @@ func ListEndpoints() ([]EndpointProperties, error) {
 }
 
 func GetHNSEndpointStats(endpointID string) (EndpointStats, error) {
-	var responseJSON *uint16
-
 	endpointIDUTF16, err := windows.UTF16FromString(endpointID)
 	if err != nil {
 		return EndpointStats{}, fmt.Errorf("failed to convert endpoint ID to UTF16: %w", err)
 	}
 
 	path := append(hcnPathEndpointStats[:len(hcnPathEndpointStats)-1], endpointIDUTF16...)
-
-	r1, _, _ := procHNSCall.Call(
-		uintptr(unsafe.Pointer(hcnMethodGet)),
-		uintptr(unsafe.Pointer(&path[0])),
-		uintptr(unsafe.Pointer(hcnBodyEmpty)),
-		uintptr(unsafe.Pointer(&responseJSON)),
-	)
-
-	if r1 != 0 {
-		return EndpointStats{}, fmt.Errorf("HNSCall failed: HRESULT 0x%X: %w", r1, hcs.Win32FromHResult(r1))
+	result, err := hnsCall(hcnMethodGet, &path[0], hcnBodyEmpty)
+	if err != nil {
+		return EndpointStats{}, err
 	}
-
-	result := windows.UTF16PtrToString(responseJSON)
-	windows.CoTaskMemFree(unsafe.Pointer(responseJSON))
 
 	var stats EndpointStats
 
@@ -108,4 +80,24 @@ func GetHNSEndpointStats(endpointID string) (EndpointStats, error) {
 	}
 
 	return stats, nil
+}
+
+func hnsCall(method, path, body *uint16) (string, error) {
+	var responseJSON *uint16
+
+	r1, _, _ := procHNSCall.Call(
+		uintptr(unsafe.Pointer(method)),
+		uintptr(unsafe.Pointer(path)),
+		uintptr(unsafe.Pointer(body)),
+		uintptr(unsafe.Pointer(&responseJSON)),
+	)
+
+	response := windows.UTF16PtrToString(responseJSON)
+	windows.CoTaskMemFree(unsafe.Pointer(responseJSON))
+
+	if r1 != 0 {
+		return "", fmt.Errorf("HNSCall failed: HRESULT 0x%X: %w", r1, hcs.Win32FromHResult(r1))
+	}
+
+	return response, nil
 }
