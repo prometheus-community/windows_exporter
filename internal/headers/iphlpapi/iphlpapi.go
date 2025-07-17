@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"unsafe"
 
-	"github.com/go-ole/go-ole"
 	"golang.org/x/sys/windows"
 )
 
@@ -130,39 +129,4 @@ func getExtendedTcpTable[T any](ulAf uint32, tableClass uint32) ([]T, error) {
 	}
 
 	return unsafe.Slice((*T)(unsafe.Pointer(&buf[4])), binary.LittleEndian.Uint32(buf)), nil
-}
-
-// GetIfEntry2Ex function retrieves the specified level of information for the specified interface on the local computer.
-//
-// https://learn.microsoft.com/en-us/windows/win32/api/netioapi/nf-netioapi-getifentry2ex
-func GetIfEntry2Ex(row *MIB_IF_ROW2) error {
-	ret, _, _ := procGetIfEntry2Ex.Call(
-		uintptr(0),
-		uintptr(unsafe.Pointer(row)),
-	)
-
-	if ret != 0 {
-		return fmt.Errorf("GetIfEntry2Ex failed with code %d: %w", ret, windows.Errno(ret))
-	}
-
-	return nil
-}
-
-// ConvertInterfaceGUIDToLUID function converts a globally unique identifier (GUID) for a network interface to the
-// locally unique identifier (LUID) for the interface.
-//
-// https://learn.microsoft.com/en-us/windows/win32/api/netioapi/nf-netioapi-convertinterfaceguidtoluid
-func ConvertInterfaceGUIDToLUID(guid ole.GUID) (uint64, error) {
-	var luid uint64
-
-	ret, _, _ := procConvertInterfaceGuidToLuid.Call(
-		uintptr(unsafe.Pointer(&guid)),
-		uintptr(unsafe.Pointer(&luid)),
-	)
-
-	if ret != 0 {
-		return 0, fmt.Errorf("ConvertInterfaceGUIDToLUID failed with code %d: %w", ret, windows.Errno(ret))
-	}
-
-	return luid, nil
 }
