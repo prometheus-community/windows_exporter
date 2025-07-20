@@ -144,7 +144,12 @@ func (c *Collector) collectWorker() {
 				name, pidString, parentPID, strconv.Itoa(int(processGroupID)), processOwner, cmdLine,
 			)
 
-			startTime := float64(time.Now().UnixMicro())/1e6 - data.ElapsedTime
+			startTime := data.ElapsedTime
+			if c.config.CounterVersion == 2 {
+				// For V2, the ElapsedTime is in seconds, so we need to convert it to a timestamp.
+				// The start time is the current time minus the elapsed time.
+				startTime = float64(time.Now().UnixMicro())/1e6 - data.ElapsedTime
+			}
 
 			ch <- prometheus.MustNewConstMetric(
 				c.startTime,
