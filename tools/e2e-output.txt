@@ -301,6 +301,8 @@ windows_exporter_collector_timeout{collector="udp"} 0
 # TYPE windows_os_physical_memory_free_bytes gauge
 # HELP windows_os_process_memory_limit_bytes Deprecated: Use `windows_memory_process_memory_limit_bytes` instead.
 # TYPE windows_os_process_memory_limit_bytes gauge
+# HELP windows_os_processes Deprecated: Use `windows_system_processes` instead.
+# TYPE windows_os_processes gauge
 # HELP windows_os_processes_limit Deprecated: Use `windows_system_process_limit` instead.
 # TYPE windows_os_processes_limit gauge
 # HELP windows_os_time Deprecated: Use windows_time_current_timestamp_seconds instead.
