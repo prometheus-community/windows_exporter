@@ -62,8 +62,6 @@ type collectorWebServiceCache struct {
 }
 
 type perfDataCounterServiceCache struct {
-	Name string
-
 	ServiceCacheActiveFlushedEntries          float64 `perfdata:"Active Flushed Entries"`
 	ServiceCacheCurrentFileCacheMemoryUsage   float64 `perfdata:"Current File Cache Memory Usage"`
 	ServiceCacheMaximumFileCacheMemoryUsage   float64 `perfdata:"Maximum File Cache Memory Usage"`
@@ -98,10 +96,6 @@ type perfDataCounterServiceCache struct {
 	ServiceCacheOutputCacheMissesTotal        float64 `perfdata:"Output Cache Total Misses"`
 	ServiceCacheOutputCacheFlushedItemsTotal  float64 `perfdata:"Output Cache Total Flushed Items"`
 	ServiceCacheOutputCacheFlushesTotal       float64 `perfdata:"Output Cache Total Flushes"`
-}
-
-func (p perfDataCounterServiceCache) GetName() string {
-	return p.Name
 }
 
 func (c *Collector) buildWebServiceCache() error {
@@ -291,13 +285,7 @@ func (c *Collector) collectWebServiceCache(ch chan<- prometheus.Metric) error {
 		return fmt.Errorf("failed to collect Web Service Cache metrics: %w", err)
 	}
 
-	deduplicateIISNames(c.perfDataObjectServiceCache)
-
 	for _, data := range c.perfDataObjectServiceCache {
-		if c.config.SiteExclude.MatchString(data.Name) || !c.config.SiteInclude.MatchString(data.Name) {
-			continue
-		}
-
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheActiveFlushedEntries,
 			prometheus.GaugeValue,
