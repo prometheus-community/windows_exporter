@@ -43,7 +43,7 @@ type perfDataCounterValuesLocks struct {
 	Name string
 
 	LocksAverageWaitTimeMS          float64 `perfdata:"Average Wait Time (ms)"`
-	LocksAverageWaitTimeMSBase      float64 `perfdata:"Average Wait Time Base,secondvalue"`
+	LocksAverageWaitTimeMSBase      float64 `perfdata:"Average Wait Time (ms),secondvalue"`
 	LocksLockRequestsPerSec         float64 `perfdata:"Lock Requests/sec"`
 	LocksLockTimeoutsPerSec         float64 `perfdata:"Lock Timeouts/sec"`
 	LocksLockTimeoutsTimeout0PerSec float64 `perfdata:"Lock Timeouts (timeout > 0)/sec"`

@@ -118,7 +118,7 @@ type perfDataCounterValuesAccessMethods struct {
 	AccessMethodsWorkfilesCreatedPerSec        float64 `perfdata:"Workfiles Created/sec"`
 	AccessMethodsWorktablesCreatedPerSec       float64 `perfdata:"Worktables Created/sec"`
 	AccessMethodsWorktablesFromCacheRatio      float64 `perfdata:"Worktables From Cache Ratio"`
-	AccessMethodsWorktablesFromCacheRatioBase  float64 `perfdata:"Worktables From Cache Base,secondvalue"`
+	AccessMethodsWorktablesFromCacheRatioBase  float64 `perfdata:"Worktables From Cache Ratio,secondvalue"`
 }
 
 func (c *Collector) buildAccessMethods() error {
