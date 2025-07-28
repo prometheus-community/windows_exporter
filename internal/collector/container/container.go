@@ -29,10 +29,8 @@ import (
 	"unsafe"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-ole/go-ole"
 	"github.com/prometheus-community/windows_exporter/internal/headers/hcn"
 	"github.com/prometheus-community/windows_exporter/internal/headers/hcs"
-	"github.com/prometheus-community/windows_exporter/internal/headers/iphlpapi"
 	"github.com/prometheus-community/windows_exporter/internal/headers/kernel32"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
@@ -523,7 +521,7 @@ func (c *Collector) collectHCSContainer(ch chan<- prometheus.Metric, containerDe
 
 // collectNetworkMetrics collects network metrics for containers.
 func (c *Collector) collectNetworkMetrics(ch chan<- prometheus.Metric) error {
-	endpoints, err := hcn.EnumerateEndpoints()
+	endpoints, err := hcn.ListEndpoints()
 	if err != nil {
 		return fmt.Errorf("error in fetching HCN endpoints: %w", err)
 	}
@@ -533,57 +531,24 @@ func (c *Collector) collectNetworkMetrics(ch chan<- prometheus.Metric) error {
 	}
 
 	for _, endpoint := range endpoints {
-		properties, err := hcn.GetEndpointProperties(endpoint)
+		if len(endpoint.SharedContainers) == 0 {
+			continue
+		}
+
+		endpointStats, err := hcn.GetHNSEndpointStats(endpoint.ID)
 		if err != nil {
-			c.logger.Warn("Failed to collect properties for interface "+endpoint.String(),
+			c.logger.Warn("Failed to collect network stats for interface "+endpoint.ID,
 				slog.Any("err", err),
 			)
 
 			continue
 		}
 
-		if len(properties.SharedContainers) == 0 {
-			continue
-		}
-
-		var nicGUID *ole.GUID
-
-		for _, allocator := range properties.Resources.Allocators {
-			if allocator.AdapterNetCfgInstanceId != nil {
-				nicGUID = allocator.AdapterNetCfgInstanceId
-
-				break
-			}
-		}
-
-		if nicGUID == nil {
-			c.logger.Warn("Failed to get nic GUID for endpoint " + endpoint.String())
-
-			continue
-		}
-
-		luid, err := iphlpapi.ConvertInterfaceGUIDToLUID(*nicGUID)
-		if err != nil {
-			return fmt.Errorf("error in converting interface GUID to LUID: %w", err)
-		}
-
-		var endpointStats iphlpapi.MIB_IF_ROW2
-
-		endpointStats.InterfaceLuid = luid
-
-		if err := iphlpapi.GetIfEntry2Ex(&endpointStats); err != nil {
-			c.logger.Warn("Failed to get interface entry for endpoint "+endpoint.String(),
-				slog.Any("err", err),
-			)
-
-			continue
-		}
-
-		for _, containerId := range properties.SharedContainers {
+		for _, containerId := range endpoint.SharedContainers {
 			containerInfo, ok := c.annotationsCacheHCS[containerId]
 
 			if !ok {
-				c.logger.Debug("Unknown container " + containerId + " for endpoint " + endpoint.String())
+				c.logger.Debug("Unknown container " + containerId + " for endpoint " + endpoint.ID)
 
 				continue
 			}
@@ -593,47 +558,47 @@ func (c *Collector) collectNetworkMetrics(ch chan<- prometheus.Metric) error {
 				continue
 			}
 
-			endpointId := strings.ToUpper(endpoint.String())
+			endpointId := strings.ToUpper(endpoint.ID)
 
 			ch <- prometheus.MustNewConstMetric(
 				c.bytesReceived,
 				prometheus.CounterValue,
-				float64(endpointStats.InOctets),
+				float64(endpointStats.BytesReceived),
 				containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container, endpointId,
 			)
 
 			ch <- prometheus.MustNewConstMetric(
 				c.bytesSent,
 				prometheus.CounterValue,
-				float64(endpointStats.OutOctets),
+				float64(endpointStats.BytesSent),
 				containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container, endpointId,
 			)
 
 			ch <- prometheus.MustNewConstMetric(
 				c.packetsReceived,
 				prometheus.CounterValue,
-				float64(endpointStats.InUcastPkts+endpointStats.InNUcastPkts),
+				float64(endpointStats.PacketsReceived),
 				containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container, endpointId,
 			)
 
 			ch <- prometheus.MustNewConstMetric(
 				c.packetsSent,
 				prometheus.CounterValue,
-				float64(endpointStats.OutUcastPkts+endpointStats.OutNUcastPkts),
+				float64(endpointStats.PacketsSent),
 				containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container, endpointId,
 			)
 
 			ch <- prometheus.MustNewConstMetric(
 				c.droppedPacketsIncoming,
 				prometheus.CounterValue,
-				float64(endpointStats.InDiscards+endpointStats.InErrors),
+				float64(endpointStats.DroppedPacketsIncoming),
 				containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container, endpointId,
 			)
 
 			ch <- prometheus.MustNewConstMetric(
 				c.droppedPacketsOutgoing,
 				prometheus.CounterValue,
-				float64(endpointStats.OutDiscards+endpointStats.OutErrors),
+				float64(endpointStats.DroppedPacketsOutgoing),
 				containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container, endpointId,
 			)
 		}
