@@ -126,6 +126,8 @@ The following parameters are available:
 | `REMOVE`             | Disables features within the windows_exporter installer. Supported values: `FirewallException`                                                                                     |
 | `APPLICATIONFOLDER`  | Directory to install windows_exporter. Defaults to `C:\Program Files\windows_exporter`                                                                                             |
 
+> [!NOTE]
+> The installer properties are always preferred over the values defined in the config file. If you prefer to configure via the config file, avoid using any of the properties listed above.
 
 Parameters are sent to the installer via `msiexec`.
 On PowerShell, the `--%` should be passed before defining properties.
