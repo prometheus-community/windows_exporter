@@ -136,7 +136,7 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 	app.Flag(
 		"collector.process.cmdline",
 		"If enabled, the full cmdline is exposed to the windows_process_info metrics.",
-	).Default(strconv.FormatBool(c.config.EnableWorkerProcess)).BoolVar(&c.config.EnableWorkerProcess)
+	).Default(strconv.FormatBool(c.config.EnableCMDLine)).BoolVar(&c.config.EnableCMDLine)
 
 	app.Flag(
 		"collector.process.counter-version",
