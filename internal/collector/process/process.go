@@ -44,6 +44,7 @@ type Config struct {
 	ProcessInclude      *regexp.Regexp `yaml:"include"`
 	ProcessExclude      *regexp.Regexp `yaml:"exclude"`
 	EnableWorkerProcess bool           `yaml:"iis"`
+	EnableCMDLine       bool           `yaml:"cmdline"`
 	CounterVersion      uint8          `yaml:"counter-version"`
 }
 
@@ -52,6 +53,7 @@ var ConfigDefaults = Config{
 	ProcessInclude:      types.RegExpAny,
 	ProcessExclude:      types.RegExpEmpty,
 	EnableWorkerProcess: false,
+	EnableCMDLine:       true,
 	CounterVersion:      0,
 }
 
@@ -130,6 +132,11 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 		"collector.process.iis",
 		"Enable IIS collectWorker process name queries. May cause the collector to leak memory.",
 	).Default(strconv.FormatBool(c.config.EnableWorkerProcess)).BoolVar(&c.config.EnableWorkerProcess)
+
+	app.Flag(
+		"collector.process.cmdline",
+		"If enabled, the full cmdline is exposed to the windows_process_info metrics.",
+	).Default(strconv.FormatBool(c.config.EnableCMDLine)).BoolVar(&c.config.EnableCMDLine)
 
 	app.Flag(
 		"collector.process.counter-version",
@@ -415,19 +422,25 @@ func (c *Collector) getExtendedProcessInformation(hProcess windows.Handle) (stri
 		return "", 0, fmt.Errorf("failed to read process memory: %w", err)
 	}
 
-	cmdLineUTF16 := make([]uint16, processParameters.CommandLine.Length)
+	var cmdLine string
 
-	err = windows.ReadProcessMemory(hProcess,
-		uintptr(unsafe.Pointer(processParameters.CommandLine.Buffer)),
-		(*byte)(unsafe.Pointer(&cmdLineUTF16[0])),
-		uintptr(processParameters.CommandLine.Length),
-		nil,
-	)
-	if err != nil {
-		return "", processParameters.ProcessGroupId, fmt.Errorf("failed to read process memory: %w", err)
+	if c.config.EnableCMDLine {
+		cmdLineUTF16 := make([]uint16, processParameters.CommandLine.Length)
+
+		err = windows.ReadProcessMemory(hProcess,
+			uintptr(unsafe.Pointer(processParameters.CommandLine.Buffer)),
+			(*byte)(unsafe.Pointer(&cmdLineUTF16[0])),
+			uintptr(processParameters.CommandLine.Length),
+			nil,
+		)
+		if err != nil {
+			return "", processParameters.ProcessGroupId, fmt.Errorf("failed to read process memory: %w", err)
+		}
+
+		cmdLine = strings.TrimSpace(windows.UTF16ToString(cmdLineUTF16))
 	}
 
-	return strings.TrimSpace(windows.UTF16ToString(cmdLineUTF16)), processParameters.ProcessGroupId, nil
+	return cmdLine, processParameters.ProcessGroupId, nil
 }
 
 func (c *Collector) getProcessOwner(logger *slog.Logger, hProcess windows.Handle) (string, error) {

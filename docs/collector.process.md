@@ -42,6 +42,11 @@ Disabled by default, and can be enabled with `--collector.process.iis`. NOTE: Ju
 Version of the process collector to use. 1 for Process V1, 2 for Process V2.
 Defaults to 0 which will use the latest version available.
 
+### `--collector.process.cmdline`
+
+Enables the `cmdline` label for the process metrics.
+This label contains the command line used to start the process.
+Enabled by default, and can be turned off with `--no-collector.process.cmdline`.
 
 ### Example
 To match all firefox processes: `--collector.process.include="firefox.*"`.
