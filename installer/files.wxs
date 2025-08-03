@@ -53,8 +53,8 @@
                     />
                     <ServiceDependency Id="wmiApSrv" />
                 </ServiceInstall>
-                <ServiceControl Id="ServiceStateControlStart" Name="windows_exporter" Start="install" Wait="no" />
-                <ServiceControl Id="ServiceStateControlStop" Name="windows_exporter" Remove="uninstall" Stop="both" Wait="yes" />
+                <ServiceControl Id="StartService" Name="windows_exporter" Start="install" Wait="no" />
+                <ServiceControl Id="StopService" Name="windows_exporter" Remove="uninstall" Stop="both" Wait="yes" />
             </Component>
             <Component Id="CreateTextfileDirectory" Directory="textfile_inputs" Guid="d03ef58a-9cbf-4165-ad39-d143e9b27e14">
                 <CreateFolder />
