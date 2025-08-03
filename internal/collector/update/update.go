@@ -87,21 +87,6 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 		config: ConfigDefaults,
 	}
 
-	var (
-		online         bool
-		scrapeInterval time.Duration
-	)
-
-	app.Flag(
-		"collector.updates.online",
-		"Deprecated: Please use collector.update.online instead",
-	).Default(strconv.FormatBool(ConfigDefaults.Online)).BoolVar(&online)
-
-	app.Flag(
-		"collector.updates.scrape-interval",
-		"Deprecated: Please use collector.update.scrape-interval instead",
-	).Default(ConfigDefaults.ScrapeInterval.String()).DurationVar(&scrapeInterval)
-
 	app.Flag(
 		"collector.update.online",
 		"Whether to search for updates online.",
@@ -111,33 +96,6 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 		"collector.update.scrape-interval",
 		"Define the interval of scraping Windows Update information.",
 	).Default(ConfigDefaults.ScrapeInterval.String()).DurationVar(&c.config.ScrapeInterval)
-
-	app.Action(func(*kingpin.ParseContext) error {
-		// Use deprecated flags only if new ones weren't explicitly set
-		if online {
-			// If the new flag is set, ignore the old one
-			if !c.config.Online {
-				c.config.Online = online
-			}
-
-			slog.Warn("Warning: --collector.updates.online is deprecated, use --collector.update.online instead.",
-				slog.String("collector", Name),
-			)
-		}
-
-		if scrapeInterval != ConfigDefaults.ScrapeInterval {
-			// If the new flag is set, ignore the old one
-			if c.config.ScrapeInterval != scrapeInterval {
-				c.config.ScrapeInterval = scrapeInterval
-			}
-
-			slog.Warn("Warning: --collector.updates.scrape-interval is deprecated, use --collector.update.scrape-interval instead.",
-				slog.String("collector", Name),
-			)
-		}
-
-		return nil
-	})
 
 	return c
 }
@@ -220,7 +178,7 @@ func (c *Collector) scheduleUpdateStatus(ctx context.Context, logger *slog.Logge
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 
-	if err := ole.CoInitializeEx(0, ole.COINIT_MULTITHREADED); err != nil {
+	if err := ole.CoInitializeEx(0, ole.COINIT_APARTMENTTHREADED|ole.COINIT_DISABLE_OLE1DDE); err != nil {
 		var oleCode *ole.OleError
 		if errors.As(err, &oleCode) && oleCode.Code() != ole.S_OK && oleCode.Code() != 0x00000001 {
 			initErrCh <- fmt.Errorf("CoInitializeEx: %w", err)
@@ -232,17 +190,17 @@ func (c *Collector) scheduleUpdateStatus(ctx context.Context, logger *slog.Logge
 	defer ole.CoUninitialize()
 
 	// Create a new instance of the WMI object
-	mus, err := oleutil.CreateObject("Microsoft.Update.Session")
+	sessionObj, err := oleutil.CreateObject("Microsoft.Update.Session")
 	if err != nil {
 		initErrCh <- fmt.Errorf("create Microsoft.Update.Session: %w", err)
 
 		return
 	}
 
-	defer mus.Release()
+	defer sessionObj.Release()
 
 	// Query the IDispatch interface of the object
-	musQueryInterface, err := mus.QueryInterface(ole.IID_IDispatch)
+	musQueryInterface, err := sessionObj.QueryInterface(ole.IID_IDispatch)
 	if err != nil {
 		initErrCh <- fmt.Errorf("IID_IDispatch: %w", err)
 
@@ -267,9 +225,9 @@ func (c *Collector) scheduleUpdateStatus(ctx context.Context, logger *slog.Logge
 
 	// https://learn.microsoft.com/en-us/windows/win32/api/wuapi/nf-wuapi-iupdatesession-createupdatesearcher
 	us, err := oleutil.CallMethod(musQueryInterface, "CreateUpdateSearcher")
-	defer func(hc *ole.VARIANT) {
+	defer func(us *ole.VARIANT) {
 		if us != nil {
-			_ = hc.Clear()
+			_ = us.Clear()
 		}
 	}(us)
 
@@ -405,7 +363,7 @@ func (c *Collector) fetchUpdates(logger *slog.Logger, usd *ole.IDispatch) ([]pro
 	metricsBuf = append(metricsBuf, prometheus.MustNewConstMetric(
 		c.lastScrapeMetric,
 		prometheus.GaugeValue,
-		float64(time.Now().Unix()),
+		float64(time.Now().UnixMicro())/1e6,
 	))
 
 	return metricsBuf, nil

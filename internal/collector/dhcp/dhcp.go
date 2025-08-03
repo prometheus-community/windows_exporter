@@ -56,6 +56,8 @@ var ConfigDefaults = Config{
 type Collector struct {
 	config Config
 
+	logger *slog.Logger
+
 	perfDataCollector *pdh.Collector
 	perfDataObject    []perfDataCounterValues
 
@@ -147,7 +149,9 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
+func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
+	c.logger = logger.With(slog.String("collector", Name))
+
 	var err error
 
 	if slices.Contains(c.config.CollectorsEnabled, subCollectorScopeMetrics) {
@@ -405,6 +409,8 @@ func (c *Collector) collectServerMetrics(ch chan<- prometheus.Metric) error {
 	err := c.perfDataCollector.Collect(&c.perfDataObject)
 	if err != nil {
 		return fmt.Errorf("failed to collect DHCP Server metrics: %w", err)
+	} else if len(c.perfDataObject) == 0 {
+		return fmt.Errorf("failed to collect DHCP Server metrics: %w", types.ErrNoDataUnexpected)
 	}
 
 	ch <- prometheus.MustNewConstMetric(

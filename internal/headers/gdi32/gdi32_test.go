@@ -13,21 +13,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build windows
-
-package cs_test
+package gdi32_test
 
 import (
 	"testing"
 
-	"github.com/prometheus-community/windows_exporter/internal/collector/cs"
-	"github.com/prometheus-community/windows_exporter/internal/utils/testutils"
+	"github.com/prometheus-community/windows_exporter/internal/headers/gdi32"
+	"github.com/stretchr/testify/require"
 )
 
-func BenchmarkCollector(b *testing.B) {
-	testutils.FuncBenchmarkCollector(b, cs.Name, cs.NewWithFlags)
-}
+func TestGetGPUDevices(t *testing.T) {
+	devices, err := gdi32.GetGPUDevices()
+	require.NoError(t, err, "Failed to get GPU devices")
 
-func TestCollector(t *testing.T) {
-	testutils.TestCollector(t, cs.New, nil)
+	require.NotNil(t, devices)
 }

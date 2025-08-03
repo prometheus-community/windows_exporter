@@ -154,7 +154,6 @@ func (o *Operation) GetInstance() (*Instance, bool, error) {
 		uintptr(unsafe.Pointer(&errorMessageUTF16)),
 		uintptr(unsafe.Pointer(&errorDetails)),
 	)
-
 	if !errors.Is(instanceResult, MI_RESULT_OK) {
 		return nil, false, fmt.Errorf("instance result: %w (%s)", instanceResult, windows.UTF16PtrToString(errorMessageUTF16))
 	}

@@ -15,33 +15,23 @@
 
 //go:build windows
 
-package hcn_test
+package ntdll
 
 import (
-	"testing"
-
-	"github.com/prometheus-community/windows_exporter/internal/headers/hcn"
-	"github.com/stretchr/testify/require"
+	"golang.org/x/sys/windows"
 )
 
-func TestEnumerateEndpoints(t *testing.T) {
-	t.Parallel()
+//nolint:gochecknoglobals
+var (
+	modNtdll                  = windows.NewLazySystemDLL("ntdll.dll")
+	procRtlNtStatusToDosError = modNtdll.NewProc("RtlNtStatusToDosError")
+)
 
-	endpoints, err := hcn.EnumerateEndpoints()
-	require.NoError(t, err)
-	require.NotNil(t, endpoints)
-}
-
-func TestQueryEndpointProperties(t *testing.T) {
-	t.Parallel()
-
-	endpoints, err := hcn.EnumerateEndpoints()
-	require.NoError(t, err)
-
-	if len(endpoints) == 0 {
-		t.Skip("No endpoints found")
+func RtlNtStatusToDosError(status uintptr) error {
+	ret, _, _ := procRtlNtStatusToDosError.Call(status)
+	if ret == 0 {
+		return nil
 	}
 
-	_, err = hcn.GetEndpointProperties(endpoints[0])
-	require.NoError(t, err)
+	return windows.Errno(ret)
 }

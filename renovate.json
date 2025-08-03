@@ -13,6 +13,10 @@
   ],
   "packageRules": [
     {
+      "matchPackageNames": ["go-yaml/yaml"],
+      "enabled": false
+    },
+    {
       "groupName": "golangci-lint",
       "matchPackageNames": [
         "github.com/golangci/golangci-lint/cmd/golangci-lint",

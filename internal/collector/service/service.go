@@ -143,7 +143,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		},
 	}
 
-	c.queryAllServicesBuffer = make([]byte, 1024*100)
+	c.queryAllServicesBuffer = make([]byte, 1024*200)
 
 	c.info = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "info"),
@@ -242,6 +242,15 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 }
 
 func (c *Collector) collectWorker(ch chan<- prometheus.Metric, service windows.ENUM_SERVICE_STATUS_PROCESS) {
+	if uintptr(unsafe.Pointer(service.ServiceName)) == uintptr(windows.InvalidHandle) {
+		c.logger.Log(context.Background(), slog.LevelWarn, "failed collecting service info",
+			slog.String("err", "ServiceName is 0xffffffffffffffff"),
+			slog.String("service", fmt.Sprintf("%+v", service)),
+		)
+
+		return
+	}
+
 	serviceName := windows.UTF16PtrToString(service.ServiceName)
 
 	if c.config.ServiceExclude.MatchString(serviceName) || !c.config.ServiceInclude.MatchString(serviceName) {
@@ -307,6 +316,7 @@ func (c *Collector) collectService(ch chan<- prometheus.Metric, serviceName stri
 		if startMode == c.apiStartModeValues[serviceConfig.StartType] {
 			isCurrentStartMode = 1.0
 		}
+
 		ch <- prometheus.MustNewConstMetric(
 			c.startMode,
 			prometheus.GaugeValue,
@@ -375,6 +385,8 @@ func (c *Collector) queryAllServices() ([]windows.ENUM_SERVICE_STATUS_PROCESS, e
 		err                   error
 	)
 
+	clear(c.queryAllServicesBuffer)
+
 	for {
 		currentBufferSize := uint32(cap(c.queryAllServicesBuffer))
 
@@ -390,7 +402,6 @@ func (c *Collector) queryAllServices() ([]windows.ENUM_SERVICE_STATUS_PROCESS, e
 			nil,
 			nil,
 		)
-
 		if err == nil {
 			break
 		}
@@ -432,7 +443,6 @@ func (c *Collector) getProcessStartTime(pid uint32) (uint64, error) {
 	)
 
 	err = windows.GetProcessTimes(handle, &creation, &exit, &krn, &user)
-
 	if err := windows.CloseHandle(handle); err != nil {
 		c.logger.LogAttrs(context.Background(), slog.LevelWarn, "failed to close process handle",
 			slog.Any("err", err),

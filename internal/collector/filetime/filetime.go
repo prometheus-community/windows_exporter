@@ -19,6 +19,7 @@ package filetime
 
 import (
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -73,19 +74,10 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 	}
 	c.config.FilePatterns = make([]string, 0)
 
-	var filePatterns string
-
 	app.Flag(
 		"collector.filetime.file-patterns",
 		"Comma-separated list of file patterns. Each pattern is a glob pattern that can contain `*`, `?`, and `**` (recursive). See https://github.com/bmatcuk/doublestar#patterns",
-	).Default(strings.Join(ConfigDefaults.FilePatterns, ",")).StringVar(&filePatterns)
-
-	app.Action(func(*kingpin.ParseContext) error {
-		// doublestar.Glob() requires forward slashes
-		c.config.FilePatterns = strings.Split(filepath.ToSlash(filePatterns), ",")
-
-		return nil
-	})
+	).Default(strings.Join(ConfigDefaults.FilePatterns, ",")).StringsVar(&c.config.FilePatterns)
 
 	return c
 }
@@ -148,16 +140,11 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 }
 
 func (c *Collector) collectGlobFilePath(ch chan<- prometheus.Metric, filePattern string) error {
-	basePath, pattern := doublestar.SplitPattern(filePattern)
+	basePath, pattern := doublestar.SplitPattern(filepath.ToSlash(filePattern))
 	basePathFS := os.DirFS(basePath)
 
-	matches, err := doublestar.Glob(basePathFS, pattern, doublestar.WithFilesOnly())
-	if err != nil {
-		return fmt.Errorf("failed to glob: %w", err)
-	}
-
-	for _, match := range matches {
-		filePath := filepath.Join(basePath, match)
+	err := doublestar.GlobWalk(basePathFS, pattern, func(path string, d fs.DirEntry) error {
+		filePath := filepath.Join(basePath, path)
 
 		fileInfo, err := os.Stat(filePath)
 		if err != nil {
@@ -166,15 +153,20 @@ func (c *Collector) collectGlobFilePath(ch chan<- prometheus.Metric, filePattern
 				slog.Any("err", err),
 			)
 
-			continue
+			return nil
 		}
 
 		ch <- prometheus.MustNewConstMetric(
 			c.fileMTime,
 			prometheus.GaugeValue,
-			float64(fileInfo.ModTime().UTC().Unix()),
+			float64(fileInfo.ModTime().UTC().UnixMicro())/1e6,
 			filePath,
 		)
+
+		return nil
+	}, doublestar.WithFilesOnly(), doublestar.WithCaseInsensitive())
+	if err != nil {
+		return fmt.Errorf("failed to glob: %w", err)
 	}
 
 	return nil

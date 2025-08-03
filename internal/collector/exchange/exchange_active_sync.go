@@ -82,11 +82,13 @@ func (c *Collector) collectActiveSync(ch chan<- prometheus.Metric) error {
 			prometheus.CounterValue,
 			data.RequestsPerSec,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.pingCommandsPending,
 			prometheus.GaugeValue,
 			data.PingCommandsPending,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.syncCommandsPerSec,
 			prometheus.CounterValue,

@@ -102,6 +102,7 @@ type windowsExporterService struct{}
 // Execute is the entry point for the Windows service manager.
 func (s *windowsExporterService) Execute(_ []string, r <-chan svc.ChangeRequest, changes chan<- svc.Status) (bool, uint32) {
 	changes <- svc.Status{State: svc.StartPending}
+	// Send a signal to the main function that the service is running.
 	changes <- svc.Status{State: svc.Running, Accepts: svc.AcceptStop | svc.AcceptShutdown}
 
 	for {
@@ -179,6 +180,7 @@ func logToFile(msg string) {
 // https://github.com/DataDog/datadog-agent/blob/46740e82ef40a04c4be545ed8c16a4b0d1f046cf/pkg/util/winutil/servicemain/servicemain.go#L128
 func isWindowsService() (bool, error) {
 	var currentProcess windows.PROCESS_BASIC_INFORMATION
+
 	infoSize := uint32(unsafe.Sizeof(currentProcess))
 
 	err := windows.NtQueryInformationProcess(windows.CurrentProcess(), windows.ProcessBasicInformation, unsafe.Pointer(&currentProcess), infoSize, &infoSize)

@@ -4,6 +4,7 @@
     <option name="excludedPackages">
       <array>
         <option value="github.com/pkg/errors" />
+        <option value="golang.org/x/net/context" />
       </array>
     </option>
   </component>

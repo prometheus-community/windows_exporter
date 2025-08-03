@@ -29,7 +29,6 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/container"
 	"github.com/prometheus-community/windows_exporter/internal/collector/cpu"
 	"github.com/prometheus-community/windows_exporter/internal/collector/cpu_info"
-	"github.com/prometheus-community/windows_exporter/internal/collector/cs"
 	"github.com/prometheus-community/windows_exporter/internal/collector/dfsr"
 	"github.com/prometheus-community/windows_exporter/internal/collector/dhcp"
 	"github.com/prometheus-community/windows_exporter/internal/collector/diskdrive"
@@ -37,11 +36,11 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/exchange"
 	"github.com/prometheus-community/windows_exporter/internal/collector/filetime"
 	"github.com/prometheus-community/windows_exporter/internal/collector/fsrmquota"
+	"github.com/prometheus-community/windows_exporter/internal/collector/gpu"
 	"github.com/prometheus-community/windows_exporter/internal/collector/hyperv"
 	"github.com/prometheus-community/windows_exporter/internal/collector/iis"
 	"github.com/prometheus-community/windows_exporter/internal/collector/license"
 	"github.com/prometheus-community/windows_exporter/internal/collector/logical_disk"
-	"github.com/prometheus-community/windows_exporter/internal/collector/logon"
 	"github.com/prometheus-community/windows_exporter/internal/collector/memory"
 	"github.com/prometheus-community/windows_exporter/internal/collector/mscluster"
 	"github.com/prometheus-community/windows_exporter/internal/collector/msmq"
@@ -87,7 +86,6 @@ var BuildersWithFlags = map[string]BuilderWithFlags[Collector]{
 	container.Name:          NewBuilderWithFlags(container.NewWithFlags),
 	cpu.Name:                NewBuilderWithFlags(cpu.NewWithFlags),
 	cpu_info.Name:           NewBuilderWithFlags(cpu_info.NewWithFlags),
-	cs.Name:                 NewBuilderWithFlags(cs.NewWithFlags),
 	dfsr.Name:               NewBuilderWithFlags(dfsr.NewWithFlags),
 	dhcp.Name:               NewBuilderWithFlags(dhcp.NewWithFlags),
 	diskdrive.Name:          NewBuilderWithFlags(diskdrive.NewWithFlags),
@@ -95,11 +93,11 @@ var BuildersWithFlags = map[string]BuilderWithFlags[Collector]{
 	exchange.Name:           NewBuilderWithFlags(exchange.NewWithFlags),
 	filetime.Name:           NewBuilderWithFlags(filetime.NewWithFlags),
 	fsrmquota.Name:          NewBuilderWithFlags(fsrmquota.NewWithFlags),
+	gpu.Name:                NewBuilderWithFlags(gpu.NewWithFlags),
 	hyperv.Name:             NewBuilderWithFlags(hyperv.NewWithFlags),
 	iis.Name:                NewBuilderWithFlags(iis.NewWithFlags),
 	license.Name:            NewBuilderWithFlags(license.NewWithFlags),
 	logical_disk.Name:       NewBuilderWithFlags(logical_disk.NewWithFlags),
-	logon.Name:              NewBuilderWithFlags(logon.NewWithFlags),
 	memory.Name:             NewBuilderWithFlags(memory.NewWithFlags),
 	mscluster.Name:          NewBuilderWithFlags(mscluster.NewWithFlags),
 	msmq.Name:               NewBuilderWithFlags(msmq.NewWithFlags),

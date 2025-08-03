@@ -64,8 +64,6 @@ type collectorWebServiceCache struct {
 }
 
 type perfDataCounterServiceCache struct {
-	Name string
-
 	ServiceCacheActiveFlushedEntries          float64 `perfdata:"Active Flushed Entries"`
 	ServiceCacheCurrentFileCacheMemoryUsage   float64 `perfdata:"Current File Cache Memory Usage"`
 	ServiceCacheMaximumFileCacheMemoryUsage   float64 `perfdata:"Maximum File Cache Memory Usage"`
@@ -100,10 +98,6 @@ type perfDataCounterServiceCache struct {
 	ServiceCacheOutputCacheMissesTotal        float64 `perfdata:"Output Cache Total Misses"`
 	ServiceCacheOutputCacheFlushedItemsTotal  float64 `perfdata:"Output Cache Total Flushed Items"`
 	ServiceCacheOutputCacheFlushesTotal       float64 `perfdata:"Output Cache Total Flushes"`
-}
-
-func (p perfDataCounterServiceCache) GetName() string {
-	return p.Name
 }
 
 func (c *Collector) buildWebServiceCache() error {
@@ -293,190 +287,217 @@ func (c *Collector) collectWebServiceCache(ch chan<- prometheus.Metric) error {
 		return fmt.Errorf("failed to collect Web Service Cache metrics: %w", err)
 	}
 
-	deduplicateIISNames(c.perfDataObjectServiceCache)
-
 	for _, data := range c.perfDataObjectServiceCache {
-		if c.config.SiteExclude.MatchString(data.Name) || !c.config.SiteInclude.MatchString(data.Name) {
-			continue
-		}
-
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheActiveFlushedEntries,
 			prometheus.GaugeValue,
 			data.ServiceCacheActiveFlushedEntries,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheCurrentFileCacheMemoryUsage,
 			prometheus.GaugeValue,
 			data.ServiceCacheCurrentFileCacheMemoryUsage,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheMaximumFileCacheMemoryUsage,
 			prometheus.CounterValue,
 			data.ServiceCacheMaximumFileCacheMemoryUsage,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheFileCacheFlushesTotal,
 			prometheus.CounterValue,
 			data.ServiceCacheFileCacheFlushesTotal,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheFileCacheQueriesTotal,
 			prometheus.CounterValue,
 			data.ServiceCacheFileCacheHitsTotal+data.ServiceCacheFileCacheMissesTotal,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheFileCacheHitsTotal,
 			prometheus.CounterValue,
 			data.ServiceCacheFileCacheHitsTotal,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheFilesCached,
 			prometheus.GaugeValue,
 			data.ServiceCacheFilesCached,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheFilesCachedTotal,
 			prometheus.CounterValue,
 			data.ServiceCacheFilesCachedTotal,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheFilesFlushedTotal,
 			prometheus.CounterValue,
 			data.ServiceCacheFilesFlushedTotal,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheURICacheFlushesTotal,
 			prometheus.CounterValue,
 			data.ServiceCacheURICacheFlushesTotal,
 			"user",
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheURICacheFlushesTotal,
 			prometheus.CounterValue,
 			data.ServiceCacheURICacheFlushesTotalKernel,
 			"kernel",
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheURICacheQueriesTotal,
 			prometheus.CounterValue,
 			data.ServiceCacheURICacheHitsTotal+data.ServiceCacheURICacheMissesTotal,
 			"user",
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheURICacheQueriesTotal,
 			prometheus.CounterValue,
 			data.ServiceCacheURICacheHitsTotalKernel+data.ServiceCacheURICacheMissesTotalKernel,
 			"kernel",
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheURICacheHitsTotal,
 			prometheus.CounterValue,
 			data.ServiceCacheURICacheHitsTotal,
 			"user",
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheURICacheHitsTotal,
 			prometheus.CounterValue,
 			data.ServiceCacheURICacheHitsTotalKernel,
 			"kernel",
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheURIsCached,
 			prometheus.GaugeValue,
 			data.ServiceCacheURIsCached,
 			"user",
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheURIsCached,
 			prometheus.GaugeValue,
 			data.ServiceCacheURIsCachedKernel,
 			"kernel",
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheURIsCachedTotal,
 			prometheus.CounterValue,
 			data.ServiceCacheURIsCachedTotal,
 			"user",
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheURIsCachedTotal,
 			prometheus.CounterValue,
 			data.ServiceCacheURIsCachedTotalKernel,
 			"kernel",
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheURIsFlushedTotal,
 			prometheus.CounterValue,
 			data.ServiceCacheURIsFlushedTotal,
 			"user",
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheURIsFlushedTotal,
 			prometheus.CounterValue,
 			data.ServiceCacheURIsFlushedTotalKernel,
 			"kernel",
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheMetadataCached,
 			prometheus.GaugeValue,
 			data.ServiceCacheMetadataCached,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheMetadataCacheFlushes,
 			prometheus.CounterValue,
 			data.ServiceCacheMetadataCacheFlushes,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheMetadataCacheQueriesTotal,
 			prometheus.CounterValue,
 			data.ServiceCacheMetaDataCacheHits+data.ServiceCacheMetaDataCacheMisses,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheMetadataCacheHitsTotal,
 			prometheus.CounterValue,
 			0, // data.ServiceCacheMetadataCacheHitsTotal,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheMetadataCachedTotal,
 			prometheus.CounterValue,
 			data.ServiceCacheMetadataCachedTotal,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheMetadataFlushedTotal,
 			prometheus.CounterValue,
 			data.ServiceCacheMetadataFlushedTotal,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheOutputCacheActiveFlushedItems,
 			prometheus.CounterValue,
 			data.ServiceCacheOutputCacheActiveFlushedItems,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheOutputCacheItems,
 			prometheus.CounterValue,
 			data.ServiceCacheOutputCacheItems,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheOutputCacheMemoryUsage,
 			prometheus.CounterValue,
 			data.ServiceCacheOutputCacheMemoryUsage,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheOutputCacheQueriesTotal,
 			prometheus.CounterValue,
 			data.ServiceCacheOutputCacheHitsTotal+data.ServiceCacheOutputCacheMissesTotal,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheOutputCacheHitsTotal,
 			prometheus.CounterValue,
 			data.ServiceCacheOutputCacheHitsTotal,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheOutputCacheFlushedItemsTotal,
 			prometheus.CounterValue,
 			data.ServiceCacheOutputCacheFlushedItemsTotal,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheOutputCacheFlushesTotal,
 			prometheus.CounterValue,

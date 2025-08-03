@@ -331,72 +331,84 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 			data.BytesReceivedPerSec,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.bytesSentTotal,
 			prometheus.CounterValue,
 			data.BytesSentPerSec,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.bytesTotal,
 			prometheus.CounterValue,
 			data.BytesTotalPerSec,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.outputQueueLength,
 			prometheus.GaugeValue,
 			data.OutputQueueLength,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.packetsOutboundDiscarded,
 			prometheus.CounterValue,
 			data.PacketsOutboundDiscarded,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.packetsOutboundErrors,
 			prometheus.CounterValue,
 			data.PacketsOutboundErrors,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.packetsTotal,
 			prometheus.CounterValue,
 			data.PacketsPerSec,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.packetsReceivedDiscarded,
 			prometheus.CounterValue,
 			data.PacketsReceivedDiscarded,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.packetsReceivedErrors,
 			prometheus.CounterValue,
 			data.PacketsReceivedErrors,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.packetsReceivedTotal,
 			prometheus.CounterValue,
 			data.PacketsReceivedPerSec,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.packetsReceivedUnknown,
 			prometheus.CounterValue,
 			data.PacketsReceivedUnknown,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.packetsSentTotal,
 			prometheus.CounterValue,
 			data.PacketsSentPerSec,
 			data.Name,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.currentBandwidth,
 			prometheus.GaugeValue,

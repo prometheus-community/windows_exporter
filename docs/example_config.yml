@@ -1,7 +1,7 @@
 ---
 # Note this is not an exhaustive list of all configuration values
 collectors:
-  enabled: cpu,cs,logical_disk,net,os,service,system
+  enabled: cpu,logical_disk,net,os,service,system
 collector:
   service:
     include: "windows_exporter"
@@ -13,6 +13,5 @@ scrape:
   timeout-margin: 0.5
 telemetry:
   path: /metrics
-  max-requests: 5
 web:
   listen-address: ":9182"

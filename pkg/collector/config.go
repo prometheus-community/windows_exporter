@@ -25,7 +25,6 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/container"
 	"github.com/prometheus-community/windows_exporter/internal/collector/cpu"
 	"github.com/prometheus-community/windows_exporter/internal/collector/cpu_info"
-	"github.com/prometheus-community/windows_exporter/internal/collector/cs"
 	"github.com/prometheus-community/windows_exporter/internal/collector/dfsr"
 	"github.com/prometheus-community/windows_exporter/internal/collector/dhcp"
 	"github.com/prometheus-community/windows_exporter/internal/collector/diskdrive"
@@ -33,11 +32,11 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/exchange"
 	"github.com/prometheus-community/windows_exporter/internal/collector/filetime"
 	"github.com/prometheus-community/windows_exporter/internal/collector/fsrmquota"
+	"github.com/prometheus-community/windows_exporter/internal/collector/gpu"
 	"github.com/prometheus-community/windows_exporter/internal/collector/hyperv"
 	"github.com/prometheus-community/windows_exporter/internal/collector/iis"
 	"github.com/prometheus-community/windows_exporter/internal/collector/license"
 	"github.com/prometheus-community/windows_exporter/internal/collector/logical_disk"
-	"github.com/prometheus-community/windows_exporter/internal/collector/logon"
 	"github.com/prometheus-community/windows_exporter/internal/collector/memory"
 	"github.com/prometheus-community/windows_exporter/internal/collector/mscluster"
 	"github.com/prometheus-community/windows_exporter/internal/collector/msmq"
@@ -76,7 +75,6 @@ type Config struct {
 	Container          container.Config          `yaml:"container"`
 	CPU                cpu.Config                `yaml:"cpu"`
 	CPUInfo            cpu_info.Config           `yaml:"cpu_info"`
-	Cs                 cs.Config                 `yaml:"cs"`
 	DFSR               dfsr.Config               `yaml:"dfsr"`
 	Dhcp               dhcp.Config               `yaml:"dhcp"`
 	DiskDrive          diskdrive.Config          `yaml:"diskdrive"`
@@ -84,11 +82,11 @@ type Config struct {
 	Exchange           exchange.Config           `yaml:"exchange"`
 	Filetime           filetime.Config           `yaml:"filetime"`
 	Fsrmquota          fsrmquota.Config          `yaml:"fsrmquota"`
+	GPU                gpu.Config                `yaml:"gpu"`
 	HyperV             hyperv.Config             `yaml:"hyperv"`
 	IIS                iis.Config                `yaml:"iis"`
 	License            license.Config            `yaml:"license"`
 	LogicalDisk        logical_disk.Config       `yaml:"logical_disk"`
-	Logon              logon.Config              `yaml:"logon"`
 	Memory             memory.Config             `yaml:"memory"`
 	MSCluster          mscluster.Config          `yaml:"mscluster"`
 	Msmq               msmq.Config               `yaml:"msmq"`
@@ -131,7 +129,6 @@ var ConfigDefaults = Config{
 	Container:          container.ConfigDefaults,
 	CPU:                cpu.ConfigDefaults,
 	CPUInfo:            cpu_info.ConfigDefaults,
-	Cs:                 cs.ConfigDefaults,
 	DFSR:               dfsr.ConfigDefaults,
 	Dhcp:               dhcp.ConfigDefaults,
 	DiskDrive:          diskdrive.ConfigDefaults,
@@ -139,11 +136,11 @@ var ConfigDefaults = Config{
 	Exchange:           exchange.ConfigDefaults,
 	Filetime:           filetime.ConfigDefaults,
 	Fsrmquota:          fsrmquota.ConfigDefaults,
+	GPU:                gpu.ConfigDefaults,
 	HyperV:             hyperv.ConfigDefaults,
 	IIS:                iis.ConfigDefaults,
 	License:            license.ConfigDefaults,
 	LogicalDisk:        logical_disk.ConfigDefaults,
-	Logon:              logon.ConfigDefaults,
 	Memory:             memory.ConfigDefaults,
 	MSCluster:          mscluster.ConfigDefaults,
 	Msmq:               msmq.ConfigDefaults,

@@ -127,6 +127,7 @@ var (
 // https://docs.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-globalmemorystatusex
 func GlobalMemoryStatusEx() (MemoryStatus, error) {
 	var mse memoryStatusEx
+
 	mse.dwLength = (uint32)(unsafe.Sizeof(mse))
 	r1, _, err := procGlobalMemoryStatusEx.Call(uintptr(unsafe.Pointer(&mse)))
 

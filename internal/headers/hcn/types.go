@@ -18,7 +18,6 @@
 package hcn
 
 import (
-	"github.com/prometheus-community/windows_exporter/internal/headers/guid"
 	"golang.org/x/sys/windows"
 )
 
@@ -28,17 +27,9 @@ type Endpoint = windows.Handle
 //
 // https://learn.microsoft.com/en-us/virtualization/api/hcn/hns_schema#HostComputeEndpoint
 type EndpointProperties struct {
-	ID               string                      `json:"ID"`
-	State            int                         `json:"State"`
-	SharedContainers []string                    `json:"SharedContainers"`
-	Resources        EndpointPropertiesResources `json:"Resources"`
-}
-
-type EndpointPropertiesResources struct {
-	Allocators []EndpointPropertiesAllocators `json:"Allocators"`
-}
-type EndpointPropertiesAllocators struct {
-	AdapterNetCfgInstanceId *guid.GUID `json:"AdapterNetCfgInstanceId"`
+	ID               string   `json:"ID"`
+	State            int      `json:"State"`
+	SharedContainers []string `json:"SharedContainers"`
 }
 
 type EndpointStats struct {

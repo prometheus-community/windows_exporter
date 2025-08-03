@@ -160,18 +160,21 @@ func (c *Collector) writeUDPCounters(ch chan<- prometheus.Metric, metrics []perf
 		metrics[0].DatagramsNoPortPerSec,
 		af,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.datagramsReceivedErrorsTotal,
 		prometheus.CounterValue,
 		metrics[0].DatagramsReceivedErrors,
 		af,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.datagramsReceivedTotal,
 		prometheus.GaugeValue,
 		metrics[0].DatagramsReceivedPerSec,
 		af,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.datagramsSentTotal,
 		prometheus.CounterValue,

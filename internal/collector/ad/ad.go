@@ -522,6 +522,8 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	err := c.perfDataCollector.Collect(&c.perfDataObject)
 	if err != nil {
 		return fmt.Errorf("failed to collect DirectoryServices (AD) metrics: %w", err)
+	} else if len(c.perfDataObject) == 0 {
+		return fmt.Errorf("failed to collect DirectoryServices (AD) metrics: %w", types.ErrNoDataUnexpected)
 	}
 
 	ch <- prometheus.MustNewConstMetric(
@@ -530,30 +532,35 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		c.perfDataObject[0].AbANRPerSec,
 		"ambiguous_name_resolution",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.addressBookOperationsTotal,
 		prometheus.CounterValue,
 		c.perfDataObject[0].AbBrowsesPerSec,
 		"browse",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.addressBookOperationsTotal,
 		prometheus.CounterValue,
 		c.perfDataObject[0].AbMatchesPerSec,
 		"find",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.addressBookOperationsTotal,
 		prometheus.CounterValue,
 		c.perfDataObject[0].AbPropertyReadsPerSec,
 		"property_read",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.addressBookOperationsTotal,
 		prometheus.CounterValue,
 		c.perfDataObject[0].AbSearchesPerSec,
 		"search",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.addressBookOperationsTotal,
 		prometheus.CounterValue,
@@ -578,22 +585,26 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		prometheus.GaugeValue,
 		c.perfDataObject[0].AtqEstimatedQueueDelay/1000,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.atqOutstandingRequests,
 		prometheus.GaugeValue,
 		c.perfDataObject[0].AtqOutstandingQueuedRequests,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.atqAverageRequestLatency,
 		prometheus.GaugeValue,
 		c.perfDataObject[0].AtqRequestLatency,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.atqCurrentThreads,
 		prometheus.GaugeValue,
 		c.perfDataObject[0].AtqThreadsLDAP,
 		"ldap",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.atqCurrentThreads,
 		prometheus.GaugeValue,
@@ -607,12 +618,14 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		c.perfDataObject[0].BaseSearchesPerSec,
 		"base",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.searchesTotal,
 		prometheus.CounterValue,
 		c.perfDataObject[0].SubtreeSearchesPerSec,
 		"subtree",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.searchesTotal,
 		prometheus.CounterValue,
@@ -626,18 +639,21 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		c.perfDataObject[0].DatabaseAddsPerSec,
 		"add",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.databaseOperationsTotal,
 		prometheus.CounterValue,
 		c.perfDataObject[0].DatabaseDeletesPerSec,
 		"delete",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.databaseOperationsTotal,
 		prometheus.CounterValue,
 		c.perfDataObject[0].DatabaseModifiesPerSec,
 		"modify",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.databaseOperationsTotal,
 		prometheus.CounterValue,
@@ -651,48 +667,56 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		c.perfDataObject[0].DigestBindsPerSec,
 		"digest",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.bindsTotal,
 		prometheus.CounterValue,
 		c.perfDataObject[0].DsClientBindsPerSec,
 		"ds_client",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.bindsTotal,
 		prometheus.CounterValue,
 		c.perfDataObject[0].DsServerBindsPerSec,
 		"ds_server",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.bindsTotal,
 		prometheus.CounterValue,
 		c.perfDataObject[0].ExternalBindsPerSec,
 		"external",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.bindsTotal,
 		prometheus.CounterValue,
 		c.perfDataObject[0].FastBindsPerSec,
 		"fast",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.bindsTotal,
 		prometheus.CounterValue,
 		c.perfDataObject[0].NegotiatedBindsPerSec,
 		"negotiate",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.bindsTotal,
 		prometheus.CounterValue,
 		c.perfDataObject[0].NTLMBindsPerSec,
 		"ntlm",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.bindsTotal,
 		prometheus.CounterValue,
 		c.perfDataObject[0].SimpleBindsPerSec,
 		"simple",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.bindsTotal,
 		prometheus.CounterValue,
@@ -706,6 +730,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		float64(uint64(c.perfDataObject[0].DRAHighestUSNCommittedHighPart)<<32)+c.perfDataObject[0].DRAHighestUSNCommittedLowPart,
 		"committed",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.replicationHighestUsn,
 		prometheus.CounterValue,
@@ -744,6 +769,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		c.perfDataObject[0].DRAInboundBytesNotCompressedWithinSitePerSec,
 		"inbound",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.intraSiteReplicationDataBytesTotal,
 		prometheus.CounterValue,
@@ -768,6 +794,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		prometheus.CounterValue,
 		c.perfDataObject[0].DRAInboundObjectsAppliedPerSec,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.replicationInboundObjectsFilteredTotal,
 		prometheus.CounterValue,
@@ -779,6 +806,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		prometheus.CounterValue,
 		c.perfDataObject[0].DRAInboundPropertiesAppliedPerSec,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.replicationInboundPropertiesFilteredTotal,
 		prometheus.CounterValue,
@@ -790,6 +818,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		prometheus.GaugeValue,
 		c.perfDataObject[0].DRAPendingReplicationOperations,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.replicationPendingSynchronizations,
 		prometheus.GaugeValue,
@@ -801,11 +830,13 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		prometheus.CounterValue,
 		c.perfDataObject[0].DRASyncRequestsMade,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.replicationSyncRequestsSuccessTotal,
 		prometheus.CounterValue,
 		c.perfDataObject[0].DRASyncRequestsSuccessful,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.replicationSyncRequestsSchemaMismatchFailureTotal,
 		prometheus.CounterValue,
@@ -818,6 +849,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		c.perfDataObject[0].DsClientNameTranslationsPerSec,
 		"client",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.nameTranslationsTotal,
 		prometheus.CounterValue,
@@ -830,6 +862,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		prometheus.GaugeValue,
 		c.perfDataObject[0].DsMonitorListSize,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.changeMonitorUpdatesPending,
 		prometheus.GaugeValue,
@@ -841,6 +874,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		prometheus.CounterValue,
 		c.perfDataObject[0].DsNameCacheHitRate,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.nameCacheLookupsTotal,
 		prometheus.CounterValue,
@@ -854,6 +888,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		"read",
 		"replication_agent",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.directoryOperationsTotal,
 		prometheus.CounterValue,
@@ -861,6 +896,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		"read",
 		"knowledge_consistency_checker",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.directoryOperationsTotal,
 		prometheus.CounterValue,
@@ -868,6 +904,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		"read",
 		"local_security_authority",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.directoryOperationsTotal,
 		prometheus.CounterValue,
@@ -875,6 +912,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		"read",
 		"name_service_provider_interface",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.directoryOperationsTotal,
 		prometheus.CounterValue,
@@ -882,6 +920,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		"read",
 		"directory_service_api",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.directoryOperationsTotal,
 		prometheus.CounterValue,
@@ -889,6 +928,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		"read",
 		"security_account_manager",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.directoryOperationsTotal,
 		prometheus.CounterValue,
@@ -896,6 +936,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		"read",
 		"other",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.directoryOperationsTotal,
 		prometheus.CounterValue,
@@ -903,6 +944,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		"search",
 		"replication_agent",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.directoryOperationsTotal,
 		prometheus.CounterValue,
@@ -910,6 +952,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		"search",
 		"knowledge_consistency_checker",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.directoryOperationsTotal,
 		prometheus.CounterValue,
@@ -917,6 +960,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		"search",
 		"ldap",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.directoryOperationsTotal,
 		prometheus.CounterValue,
@@ -924,6 +968,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		"search",
 		"local_security_authority",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.directoryOperationsTotal,
 		prometheus.CounterValue,
@@ -931,6 +976,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		"search",
 		"name_service_provider_interface",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.directoryOperationsTotal,
 		prometheus.CounterValue,
@@ -938,6 +984,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		"search",
 		"directory_service_api",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.directoryOperationsTotal,
 		prometheus.CounterValue,
@@ -945,6 +992,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		"search",
 		"security_account_manager",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.directoryOperationsTotal,
 		prometheus.CounterValue,
@@ -952,6 +1000,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		"search",
 		"other",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.directoryOperationsTotal,
 		prometheus.CounterValue,
@@ -959,6 +1008,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		"write",
 		"replication_agent",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.directoryOperationsTotal,
 		prometheus.CounterValue,
@@ -966,6 +1016,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		"write",
 		"knowledge_consistency_checker",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.directoryOperationsTotal,
 		prometheus.CounterValue,
@@ -973,6 +1024,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		"write",
 		"ldap",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.directoryOperationsTotal,
 		prometheus.CounterValue,
@@ -980,6 +1032,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		"write",
 		"local_security_authority",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.directoryOperationsTotal,
 		prometheus.CounterValue,
@@ -987,6 +1040,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		"write",
 		"name_service_provider_interface",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.directoryOperationsTotal,
 		prometheus.CounterValue,
@@ -994,6 +1048,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		"write",
 		"directory_service_api",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.directoryOperationsTotal,
 		prometheus.CounterValue,
@@ -1001,6 +1056,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		"write",
 		"security_account_manager",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.directoryOperationsTotal,
 		prometheus.CounterValue,
@@ -1020,16 +1076,19 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		prometheus.CounterValue,
 		c.perfDataObject[0].DsSecurityDescriptorSubOperationsPerSec,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.securityDescriptorPropagationEventsQueued,
 		prometheus.GaugeValue,
 		c.perfDataObject[0].DsSecurityDescriptorPropagationsEvents,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.securityDescriptorPropagationAccessWaitTotalSeconds,
 		prometheus.GaugeValue,
 		c.perfDataObject[0].DsSecurityDescriptorPropagatorAverageExclusionTime,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.securityDescriptorPropagationItemsQueuedTotal,
 		prometheus.CounterValue,
@@ -1047,12 +1106,14 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		prometheus.CounterValue,
 		c.perfDataObject[0].LdapClosedConnectionsPerSec,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.ldapOpenedConnectionsTotal,
 		prometheus.CounterValue,
 		c.perfDataObject[0].LdapNewConnectionsPerSec,
 		"ldap",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.ldapOpenedConnectionsTotal,
 		prometheus.CounterValue,
@@ -1083,11 +1144,13 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		prometheus.CounterValue,
 		c.perfDataObject[0].LdapUDPOperationsPerSec,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.ldapWritesTotal,
 		prometheus.CounterValue,
 		c.perfDataObject[0].LdapWritesPerSec,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.ldapClientSessions,
 		prometheus.GaugeValue,
@@ -1105,6 +1168,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		prometheus.CounterValue,
 		c.perfDataObject[0].PhantomsCleanedPerSec,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.phantomObjectsVisitedTotal,
 		prometheus.CounterValue,
@@ -1117,18 +1181,21 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		c.perfDataObject[0].SamGlobalGroupMembershipEvaluationsPerSec,
 		"global",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.samGroupMembershipEvaluationsTotal,
 		prometheus.CounterValue,
 		c.perfDataObject[0].SamDomainLocalGroupMembershipEvaluationsPerSec,
 		"domain_local",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.samGroupMembershipEvaluationsTotal,
 		prometheus.CounterValue,
 		c.perfDataObject[0].SamUniversalGroupMembershipEvaluationsPerSec,
 		"universal",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.samGroupMembershipGlobalCatalogEvaluationsTotal,
 		prometheus.CounterValue,
@@ -1140,6 +1207,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		prometheus.CounterValue,
 		c.perfDataObject[0].SamNonTransitiveMembershipEvaluationsPerSec,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.samGroupMembershipEvaluationsTransitiveTotal,
 		prometheus.CounterValue,
@@ -1152,6 +1220,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		c.perfDataObject[0].SamAccountGroupEvaluationLatency,
 		"account_group",
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.samGroupEvaluationLatency,
 		prometheus.GaugeValue,
@@ -1164,6 +1233,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		prometheus.CounterValue,
 		c.perfDataObject[0].SamSuccessfulComputerCreationsPerSecIncludesAllRequests,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.samComputerCreationSuccessfulRequestsTotal,
 		prometheus.CounterValue,
@@ -1175,6 +1245,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		prometheus.CounterValue,
 		c.perfDataObject[0].SamUserCreationAttemptsPerSec,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.samUserCreationSuccessfulRequestsTotal,
 		prometheus.CounterValue,
@@ -1186,6 +1257,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		prometheus.CounterValue,
 		c.perfDataObject[0].SamDisplayInformationQueriesPerSec,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.samEnumerationsTotal,
 		prometheus.CounterValue,
@@ -1209,6 +1281,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		prometheus.CounterValue,
 		c.perfDataObject[0].TombstonesGarbageCollectedPerSec,
 	)
+
 	ch <- prometheus.MustNewConstMetric(
 		c.tombstonesObjectsVisitedTotal,
 		prometheus.CounterValue,

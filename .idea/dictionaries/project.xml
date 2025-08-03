@@ -2,7 +2,12 @@
   <dictionary name="project">
     <words>
       <w>containerd</w>
+      <w>endpointstats</w>
+      <w>gochecknoglobals</w>
+      <w>luid</w>
+      <w>setupapi</w>
       <w>spdx</w>
+      <w>vmcompute</w>
     </words>
   </dictionary>
 </component>
