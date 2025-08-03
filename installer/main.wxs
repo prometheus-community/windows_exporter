@@ -122,16 +122,16 @@
         <SetProperty Id="ConfigFileFlag" After="InstallFiles" Sequence="execute" Value="--config.file=&quot;[ConfigFile_NonDefault][ConfigFile_Default]&quot;" Condition="ConfigFile_NonDefault OR ConfigFile_Default" />
 
         <Property Id="LISTEN_PORT" Secure="yes" Value="9182" />
-        <SetProperty Id="ListenFlag" After="InstallFiles" Sequence="execute" Value="--web.listen-address [LISTEN_ADDR]:[LISTEN_PORT]" Condition="LISTEN_ADDR&lt;&gt;&quot;&quot; OR LISTEN_PORT&lt;&gt;9182" />
+        <SetProperty Id="ListenFlag" After="InstallFiles" Sequence="execute" Value="--web.listen-address=&quot;[LISTEN_ADDR]:[LISTEN_PORT]&quot;" Condition="LISTEN_ADDR&lt;&gt;&quot;&quot; OR LISTEN_PORT&lt;&gt;9182" />
 
         <Property Id="METRICS_PATH" Secure="yes" />
-        <SetProperty Id="MetricsPathFlag" After="InstallFiles" Sequence="execute" Value="--telemetry.path [METRICS_PATH]" Condition="METRICS_PATH" />
+        <SetProperty Id="MetricsPathFlag" After="InstallFiles" Sequence="execute" Value="--telemetry.path=&quot;[METRICS_PATH]&quot;" Condition="METRICS_PATH" />
 
         <Property Id="REMOTE_ADDR" Secure="yes" />
         <SetProperty Id="RemoteAddressFlag" After="InstallFiles" Sequence="execute" Value="[REMOTE_ADDR]" Condition="REMOTE_ADDR" />
 
         <Property Id="TEXTFILE_DIRS" Secure="yes" />
-        <SetProperty Id="TextfileDirsFlag" After="InstallFiles" Sequence="execute" Value="--collector.textfile.directories [TEXTFILE_DIRS]" Condition="TEXTFILE_DIRS" />
+        <SetProperty Id="TextfileDirsFlag" After="InstallFiles" Sequence="execute" Value="--collector.textfile.directories=&quot;[TEXTFILE_DIRS]&quot;" Condition="TEXTFILE_DIRS" />
 
         <Property Id="ARPHELPLINK" Value="https://github.com/prometheus-community/windows_exporter/issues" />
         <Property Id="ARPSIZE" Value="9000" />
