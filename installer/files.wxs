@@ -21,6 +21,14 @@
         <DirectoryRef Id="APPLICATIONFOLDER">
             <Component Transitive="yes">
                 <File Id="windows_exporter.exe" Name="windows_exporter.exe" Source="Work\windows_exporter.exe" KeyPath="yes" Vital="yes" Checksum="yes"/>
+
+                <!-- The "Name" field must match the argument to eventlog.Open() -->
+                <util:EventSource Log="Application" Name="windows_exporter"
+                                  EventMessageFile="%SystemRoot%\System32\EventCreate.exe"
+                                  SupportsErrors="yes"
+                                  SupportsInformationals="yes"
+                                  SupportsWarnings="yes"/>
+
                 <ServiceInstall
                     Id="InstallExporterService"
                     Name="windows_exporter"
@@ -45,13 +53,8 @@
                     />
                     <ServiceDependency Id="wmiApSrv" />
                 </ServiceInstall>
-                <ServiceControl Id="ServiceStateControl" Name="windows_exporter" Remove="uninstall" Start="install" Stop="both"/>
-                <!-- The "Name" field must match the argument to eventlog.Open() -->
-                <util:EventSource Log="Application" Name="windows_exporter"
-                                  EventMessageFile="%SystemRoot%\System32\EventCreate.exe"
-                                  SupportsErrors="yes"
-                                  SupportsInformationals="yes"
-                                  SupportsWarnings="yes"/>
+                <ServiceControl Id="StartService" Name="windows_exporter" Start="install" Wait="no" />
+                <ServiceControl Id="StopService" Name="windows_exporter" Remove="uninstall" Stop="both" Wait="yes" />
             </Component>
             <Component Id="CreateTextfileDirectory" Directory="textfile_inputs" Guid="d03ef58a-9cbf-4165-ad39-d143e9b27e14">
                 <CreateFolder />
