@@ -82,15 +82,15 @@ This can be useful for having different Prometheus servers collect specific metr
 
 windows_exporter accepts flags to configure certain behaviours. The ones configuring the global behaviour of the exporter are listed below, while collector-specific ones are documented in the respective collector documentation above.
 
-| Flag                                 | Description                                                                                                                                                                                      | Default value |
-|--------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------|
-| `--web.listen-address`               | host:port for exporter.                                                                                                                                                                          | `:9182`       |
-| `--telemetry.path`                   | URL path for surfacing collected metrics.                                                                                                                                                        | `/metrics`    |
-| `--collectors.enabled`               | Comma-separated list of collectors to use. Use `[defaults]` as a placeholder which gets expanded containing all the collectors enabled by default.                                               | `[defaults]`  |
-| `--scrape.timeout-margin`            | Seconds to subtract from the timeout allowed by the client. Tune to allow for overhead or high loads.                                                                                            | `0.5`         |
-| `--web.config.file`                  | A [web config][web_config] for setting up TLS and Auth                                                                                                                                           | None          |
-| `--config.file`                      | [Using a config file](#using-a-configuration-file) from path or URL                                                                                                                              | None          |
-| `--log.file`                         | Output file of log messages. One of [stdout, stderr, eventlog, \<path to log file>]<br>**NOTE:** The MSI installer will add a default argument to the installed service setting this to eventlog | stderr        |
+| Flag                      | Description                                                                                                                                                                                      | Default value |
+|---------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------|
+| `--web.listen-address`    | host:port for exporter.                                                                                                                                                                          | `:9182`       |
+| `--telemetry.path`        | URL path for surfacing collected metrics.                                                                                                                                                        | `/metrics`    |
+| `--collectors.enabled`    | Comma-separated list of collectors to use. Use `[defaults]` as a placeholder which gets expanded containing all the collectors enabled by default.                                               | `[defaults]`  |
+| `--scrape.timeout-margin` | Seconds to subtract from the timeout allowed by the client. Tune to allow for overhead or high loads.                                                                                            | `0.5`         |
+| `--web.config.file`       | A [web config][web_config] for setting up TLS and Auth                                                                                                                                           | None          |
+| `--config.file`           | [Using a config file](#using-a-configuration-file) from path                                                                                                                                     | None          |
+| `--log.file`              | Output file of log messages. One of [stdout, stderr, eventlog, \<path to log file>]<br>**NOTE:** The MSI installer will add a default argument to the installed service setting this to eventlog | stderr        |
 
 ## Installation
 
@@ -112,19 +112,19 @@ The configuration file
 
 The following parameters are available:
 
-| Name                 | Description                                                                                                                                                                        |
-|----------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `ENABLED_COLLECTORS` | As the `--collectors.enabled` flag, provide a comma-separated list of enabled collectors                                                                                           |
-| `CONFIG_FILE`        | Use the `--config.file` flag to specify a config file. If empty, no config file will be set. The special value `config.yaml` set the path to the config.yaml at install dir        |                                                                                     |
-| `LISTEN_ADDR`        | The IP address to bind to. Defaults to an empty string. (any local address)                                                                                                        |
-| `LISTEN_PORT`        | The port to bind to. Defaults to `9182`.                                                                                                                                           |
-| `METRICS_PATH`       | The path at which to serve metrics. Defaults to `/metrics`                                                                                                                         |
-| `TEXTFILE_DIRS`      | Use the `--collector.textfile.directories` flag to specify one or more directories, separated by commas, where the collector should read text files containing metrics             |
-| `REMOTE_ADDR`        | Allows setting comma separated remote IP addresses for the Windows Firewall exception (allow list). Defaults to an empty string (any remote address).                              |
-| `EXTRA_FLAGS`        | Allows passing full CLI flags. Defaults to an empty string. For `--collectors.enabled` and `--config.file`, use the specialized properties  `ENABLED_COLLECTORS` and `CONFIG_FILE` |
-| `ADDLOCAL`           | Enables features within the windows_exporter installer. Supported values: `FirewallException`                                                                                      |
-| `REMOVE`             | Disables features within the windows_exporter installer. Supported values: `FirewallException`                                                                                     |
-| `APPLICATIONFOLDER`  | Directory to install windows_exporter. Defaults to `C:\Program Files\windows_exporter`                                                                                             |
+| Name                 | Description                                                                                                                                                                                 |
+|----------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `ENABLED_COLLECTORS` | As the `--collectors.enabled` flag, provide a comma-separated list of enabled collectors                                                                                                    |
+| `CONFIG_FILE`        | Use the `--config.file` flag to specify a config file. If empty, default config file at install dir will be used. If set, the config file must be exist before the installation is started. |                                                                                     |
+| `LISTEN_ADDR`        | The IP address to bind to. Defaults to an empty string. (any local address)                                                                                                                 |
+| `LISTEN_PORT`        | The port to bind to. Defaults to `9182`.                                                                                                                                                    |
+| `METRICS_PATH`       | The path at which to serve metrics. Defaults to `/metrics`                                                                                                                                  |
+| `TEXTFILE_DIRS`      | Use the `--collector.textfile.directories` flag to specify one or more directories, separated by commas, where the collector should read text files containing metrics                      |
+| `REMOTE_ADDR`        | Allows setting comma separated remote IP addresses for the Windows Firewall exception (allow list). Defaults to an empty string (any remote address).                                       |
+| `EXTRA_FLAGS`        | Allows passing full CLI flags. Defaults to an empty string. For `--collectors.enabled` and `--config.file`, use the specialized properties  `ENABLED_COLLECTORS` and `CONFIG_FILE`          |
+| `ADDLOCAL`           | Enables features within the windows_exporter installer. Supported values: `FirewallException`                                                                                               |
+| `REMOVE`             | Disables features within the windows_exporter installer. Supported values: `FirewallException`                                                                                              |
+| `APPLICATIONFOLDER`  | Directory to install windows_exporter. Defaults to `C:\Program Files\windows_exporter`                                                                                                      |
 
 > [!NOTE]
 > The installer properties are always preferred over the values defined in the config file. If you prefer to configure via the config file, avoid using any of the properties listed above.

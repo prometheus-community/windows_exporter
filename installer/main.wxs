@@ -45,6 +45,40 @@
                             Property="OLDERVERSIONBEINGUPGRADED" />
         </Upgrade>
 
+        <Media Id="1" Cabinet="windows_exporter.cab" EmbedCab="yes"  />
+        <MajorUpgrade Schedule="afterInstallInitialize" DowngradeErrorMessage="A later version of [ProductName] is already installed. Setup will now exit." AllowSameVersionUpgrades="yes" />
+
+        <Property Id="ENABLED_COLLECTORS" Secure="yes" />
+        <SetProperty Id="CollectorsFlag" After="InstallFiles" Sequence="execute" Value="--collectors.enabled [ENABLED_COLLECTORS]" Condition="ENABLED_COLLECTORS" />
+
+        <Property Id="EXTRA_FLAGS" Secure="yes" />
+        <SetProperty Id="ExtraFlags" After="InstallFiles" Sequence="execute" Value="[EXTRA_FLAGS]" Condition="EXTRA_FLAGS" />
+
+        <Property Id="CONFIG_FILE" Secure="yes" Value="config.yaml" />
+        <SetProperty Id="ConfigFile_NonDefault" After="InstallFiles" Sequence="execute" Value="[CONFIG_FILE]" Condition="CONFIG_FILE AND CONFIG_FILE&lt;&gt;&quot;config.yaml&quot;" />
+        <SetProperty Id="ConfigFile_Default" After="InstallFiles" Sequence="execute" Value="[APPLICATIONFOLDER]config.yaml" Condition="CONFIG_FILE=&quot;config.yaml&quot;" />
+        <SetProperty Id="ConfigFileFlag" After="InstallFiles" Sequence="execute" Value="--config.file=&quot;[ConfigFile_NonDefault][ConfigFile_Default]&quot;" Condition="ConfigFile_NonDefault OR ConfigFile_Default" />
+
+        <Property Id="LISTEN_PORT" Secure="yes" Value="9182" />
+        <SetProperty Id="ListenFlag" After="InstallFiles" Sequence="execute" Value="--web.listen-address=&quot;[LISTEN_ADDR]:[LISTEN_PORT]&quot;" Condition="LISTEN_ADDR&lt;&gt;&quot;&quot; OR LISTEN_PORT&lt;&gt;9182" />
+
+        <Property Id="METRICS_PATH" Secure="yes" />
+        <SetProperty Id="MetricsPathFlag" After="InstallFiles" Sequence="execute" Value="--telemetry.path=&quot;[METRICS_PATH]&quot;" Condition="METRICS_PATH" />
+
+        <Property Id="REMOTE_ADDR" Secure="yes" />
+        <SetProperty Id="RemoteAddressFlag" After="InstallFiles" Sequence="execute" Value="[REMOTE_ADDR]" Condition="REMOTE_ADDR" />
+
+        <Property Id="TEXTFILE_DIRS" Secure="yes" />
+        <SetProperty Id="TextfileDirsFlag" After="InstallFiles" Sequence="execute" Value="--collector.textfile.directories=&quot;[TEXTFILE_DIRS]&quot;" Condition="TEXTFILE_DIRS" />
+
+        <Property Id="ARPHELPLINK" Value="https://github.com/prometheus-community/windows_exporter/issues" />
+        <Property Id="ARPSIZE" Value="9000" />
+        <Property Id="ARPURLINFOABOUT" Value="https://github.com/prometheus-community/windows_exporter" />
+        <!--<Property Id="ARPNOMODIFY" Value="0" />-->
+        <!--<Property Id="ARPNOREPAIR" Value="1" />-->
+        <Property Id="START_MENU_FOLDER" Value="0" />
+        <Property Id="NOSTART" Value="0" />
+
         <CustomAction Id="CheckExtraFlags"
                       Error="The parameter '--config.file' must not be included in EXTRA_FLAGS. Use CONFIG_FILE instead. Please remove it and try again." />
 
@@ -100,46 +134,12 @@
                     Condition="Installed AND (NOT REMOVE) AND (NOT UPGRADINGPRODUCTCODE)"/>
             <Custom Action="set_reinstall_all_property" Before="set_reinstallmode_property" Condition="MAINTENANCE"/>
             <Custom Action="set_reinstallmode_property" Before="LaunchConditions" Condition="MAINTENANCE"/>
-            <Custom Action="CreateConfigFile" Before="InstallServices" Condition="ConfigFile_NonDefault OR ConfigFile_Default" />
+            <Custom Action="CreateConfigFile" Before="InstallServices" Condition="ConfigFile_Default" />
             <Custom Action="KillProcess" Before="RemoveFiles" />
 
             <Custom Action="CheckExtraFlags" Before="InstallInitialize"
                     Condition="EXTRA_FLAGS AND (EXTRA_FLAGS&gt;&lt;&quot;--config.file&quot;)" />
         </InstallExecuteSequence>
-
-        <Media Id="1" Cabinet="windows_exporter.cab" EmbedCab="yes"  />
-        <MajorUpgrade Schedule="afterInstallInitialize" DowngradeErrorMessage="A later version of [ProductName] is already installed. Setup will now exit." AllowSameVersionUpgrades="yes" />
-
-        <Property Id="ENABLED_COLLECTORS" Secure="yes" />
-        <SetProperty Id="CollectorsFlag" After="InstallFiles" Sequence="execute" Value="--collectors.enabled [ENABLED_COLLECTORS]" Condition="ENABLED_COLLECTORS" />
-
-        <Property Id="EXTRA_FLAGS" Secure="yes" />
-        <SetProperty Id="ExtraFlags" After="InstallFiles" Sequence="execute" Value="[EXTRA_FLAGS]" Condition="EXTRA_FLAGS" />
-
-        <Property Id="CONFIG_FILE" Secure="yes" Value="config.yaml" />
-        <SetProperty Id="ConfigFile_NonDefault" After="InstallFiles" Sequence="execute" Value="[CONFIG_FILE]" Condition="CONFIG_FILE AND CONFIG_FILE&lt;&gt;&quot;config.yaml&quot;" />
-        <SetProperty Id="ConfigFile_Default" After="InstallFiles" Sequence="execute" Value="[APPLICATIONFOLDER]config.yaml" Condition="CONFIG_FILE=&quot;config.yaml&quot;" />
-        <SetProperty Id="ConfigFileFlag" After="InstallFiles" Sequence="execute" Value="--config.file=&quot;[ConfigFile_NonDefault][ConfigFile_Default]&quot;" Condition="ConfigFile_NonDefault OR ConfigFile_Default" />
-
-        <Property Id="LISTEN_PORT" Secure="yes" Value="9182" />
-        <SetProperty Id="ListenFlag" After="InstallFiles" Sequence="execute" Value="--web.listen-address=&quot;[LISTEN_ADDR]:[LISTEN_PORT]&quot;" Condition="LISTEN_ADDR&lt;&gt;&quot;&quot; OR LISTEN_PORT&lt;&gt;9182" />
-
-        <Property Id="METRICS_PATH" Secure="yes" />
-        <SetProperty Id="MetricsPathFlag" After="InstallFiles" Sequence="execute" Value="--telemetry.path=&quot;[METRICS_PATH]&quot;" Condition="METRICS_PATH" />
-
-        <Property Id="REMOTE_ADDR" Secure="yes" />
-        <SetProperty Id="RemoteAddressFlag" After="InstallFiles" Sequence="execute" Value="[REMOTE_ADDR]" Condition="REMOTE_ADDR" />
-
-        <Property Id="TEXTFILE_DIRS" Secure="yes" />
-        <SetProperty Id="TextfileDirsFlag" After="InstallFiles" Sequence="execute" Value="--collector.textfile.directories=&quot;[TEXTFILE_DIRS]&quot;" Condition="TEXTFILE_DIRS" />
-
-        <Property Id="ARPHELPLINK" Value="https://github.com/prometheus-community/windows_exporter/issues" />
-        <Property Id="ARPSIZE" Value="9000" />
-        <Property Id="ARPURLINFOABOUT" Value="https://github.com/prometheus-community/windows_exporter" />
-        <!--<Property Id="ARPNOMODIFY" Value="0" />-->
-        <!--<Property Id="ARPNOREPAIR" Value="1" />-->
-        <Property Id="START_MENU_FOLDER" Value="0" />
-        <Property Id="NOSTART" Value="0" />
 
         <Feature
             Id="DefaultFeature"
