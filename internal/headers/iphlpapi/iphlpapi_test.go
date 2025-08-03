@@ -38,7 +38,9 @@ func TestGetTCPConnectionStates(t *testing.T) {
 func TestGetOwnerPIDOfTCPPort(t *testing.T) {
 	t.Parallel()
 
-	lister, err := net.Listen("tcp", "127.0.0.1:0")
+	var listenConf net.ListenConfig
+
+	lister, err := listenConf.Listen(t.Context(), "tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 
 	t.Cleanup(func() {

@@ -171,8 +171,10 @@ func waitUntilListening(tb testing.TB, network, address string) error {
 		err  error
 	)
 
+	dialer := &net.Dialer{Timeout: 100 * time.Millisecond}
+
 	for range 20 {
-		conn, err = net.DialTimeout(network, address, 100*time.Millisecond)
+		conn, err = dialer.DialContext(tb.Context(), network, address)
 		if err == nil {
 			_ = conn.Close()
 
