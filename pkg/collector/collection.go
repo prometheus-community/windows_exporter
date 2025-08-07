@@ -198,7 +198,7 @@ func (c *Collection) Enable(enabledCollectors []string) error {
 	return nil
 }
 
-// Disable removes all collectors that disabledCollectors.
+// Disable removes all collectors that are listed in disabledCollectors.
 func (c *Collection) Disable(disabledCollectors []string) {
 	for name := range c.collectors {
 		if slices.Contains(disabledCollectors, name) {
