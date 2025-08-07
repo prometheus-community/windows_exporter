@@ -198,6 +198,15 @@ func (c *Collection) Enable(enabledCollectors []string) error {
 	return nil
 }
 
+// Disable removes all collectors that are listed in disabledCollectors.
+func (c *Collection) Disable(disabledCollectors []string) {
+	for name := range c.collectors {
+		if slices.Contains(disabledCollectors, name) {
+			delete(c.collectors, name)
+		}
+	}
+}
+
 // Build To be called by the exporter for collector initialization.
 // Instead, fail fast, it will try to build all collectors and return all errors.
 // errors are joined with errors.Join.
