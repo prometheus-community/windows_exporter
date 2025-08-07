@@ -170,7 +170,7 @@ func run(ctx context.Context, args []string) int {
 		return 1
 	}
 
-	if disabledCollectors != nil && *disabledCollectors != "" {
+	if *disabledCollectors != "" {
 		collectors.Disable(slices.Compact(strings.Split(*disabledCollectors, ",")))
 	}
 
