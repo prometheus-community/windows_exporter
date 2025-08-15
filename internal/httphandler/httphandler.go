@@ -117,7 +117,7 @@ func (c *MetricsHTTPHandler) getScrapeTimeout(logger *slog.Logger, r *http.Reque
 
 	timeoutSeconds -= c.options.TimeoutMargin
 
-	return time.Duration(timeoutSeconds) * time.Second
+	return time.Duration(timeoutSeconds*1e9) * time.Nanosecond
 }
 
 func (c *MetricsHTTPHandler) handlerFactory(logger *slog.Logger, scrapeTimeout time.Duration, requestedCollectors []string) (http.Handler, error) {
