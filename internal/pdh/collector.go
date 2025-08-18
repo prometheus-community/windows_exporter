@@ -338,29 +338,25 @@ func (c *Collector) collectWorkerRaw() {
 
 			for _, counter := range c.counters {
 				for _, instance := range counter.Instances {
+					bytesNeeded = 0
+
 					// Get the info with the current buffer size
-					bytesNeeded = uint32(cap(buf))
-
-					for {
-						ret := GetRawCounterArray(instance, &bytesNeeded, &itemCount, &buf[0])
-
-						if ret == ErrorSuccess {
+					ret := GetRawCounterArray(instance, &bytesNeeded, &itemCount, nil)
+					if err := NewPdhError(ret); ret != MoreData {
+						if isKnownCounterDataError(err) {
 							break
 						}
 
-						if err := NewPdhError(ret); ret != MoreData {
-							if isKnownCounterDataError(err) {
-								break
-							}
+						return fmt.Errorf("GetRawCounterArray: %w", err)
+					}
 
-							return fmt.Errorf("GetRawCounterArray: %w", err)
-						}
-
-						if bytesNeeded <= uint32(cap(buf)) {
-							return fmt.Errorf("GetRawCounterArray reports buffer too small (%d), but buffer is large enough (%d): %w", uint32(cap(buf)), bytesNeeded, NewPdhError(ret))
-						}
-
+					if bytesNeeded > uint32(cap(buf)) {
 						buf = make([]byte, bytesNeeded)
+					}
+
+					ret = GetRawCounterArray(instance, &bytesNeeded, &itemCount, &buf[0])
+					if ret != ErrorSuccess {
+						return fmt.Errorf("GetRawCounterArray: %w", err)
 					}
 
 					items = unsafe.Slice((*RawCounterItem)(unsafe.Pointer(&buf[0])), itemCount)
