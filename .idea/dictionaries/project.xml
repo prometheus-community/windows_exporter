@@ -6,8 +6,8 @@
       <w>gochecknoglobals</w>
       <w>lpwstr</w>
       <w>luid</w>
-      <w>perfdata</w>
       <w>operationoptions</w>
+      <w>perfdata</w>
       <w>setupapi</w>
       <w>spdx</w>
       <w>textfile</w>

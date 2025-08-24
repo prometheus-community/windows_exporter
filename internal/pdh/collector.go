@@ -348,8 +348,15 @@ func (c *Collector) collectWorkerRaw() {
 					ret := GetRawCounterArray(instance, &bytesNeeded, &itemCount, nil)
 					if ret != MoreData {
 						if err := NewPdhError(ret); isKnownCounterDataError(err) {
+							c.logger.Debug("no data for counter instance",
+								slog.String("counter", counter.Name),
+								slog.String("object", c.object),
+								slog.Any("err", err),
+							)
+
 							break
 						}
+
 						return fmt.Errorf("GetRawCounterArray size query: %w", NewPdhError(ret))
 					}
 
@@ -370,8 +377,15 @@ func (c *Collector) collectWorkerRaw() {
 					ret = GetRawCounterArray(instance, &actualBytesNeeded, &itemCount, &buf[0])
 					if ret != ErrorSuccess {
 						if err := NewPdhError(ret); isKnownCounterDataError(err) {
+							c.logger.Debug("no data for counter instance",
+								slog.String("counter", counter.Name),
+								slog.String("object", c.object),
+								slog.Any("err", err),
+							)
+
 							break
 						}
+
 						return fmt.Errorf("GetRawCounterArray data retrieval: %w", NewPdhError(ret))
 					}
 
@@ -525,6 +539,7 @@ func (c *Collector) collectWorkerFormatted() {
 						if err := NewPdhError(ret); isKnownCounterDataError(err) {
 							break
 						}
+
 						return fmt.Errorf("GetFormattedCounterArrayDouble size query: %w", NewPdhError(ret))
 					}
 
@@ -547,6 +562,7 @@ func (c *Collector) collectWorkerFormatted() {
 						if err := NewPdhError(ret); isKnownCounterDataError(err) {
 							break
 						}
+
 						return fmt.Errorf("GetFormattedCounterArrayDouble data retrieval: %w", NewPdhError(ret))
 					}
 
