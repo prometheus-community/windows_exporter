@@ -27,7 +27,6 @@ import (
 type mssqlInstance struct {
 	name            string
 	majorVersion    mssqlServerMajorVersion
-	patchVersion    string
 	edition         string
 	isFirstInstance bool
 }
@@ -60,7 +59,6 @@ func newMssqlInstance(key, name string) (mssqlInstance, error) {
 		edition:         edition,
 		name:            name,
 		majorVersion:    newMajorVersion(patchVersion),
-		patchVersion:    patchVersion,
 		isFirstInstance: key == "MSSQLSERVER",
 	}, nil
 }
