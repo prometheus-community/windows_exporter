@@ -22,7 +22,9 @@ import (
 	"time"
 
 	"github.com/prometheus-community/windows_exporter/internal/mi"
+	"github.com/prometheus-community/windows_exporter/internal/utils/testutils"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sys/windows"
 )
 
 type win32Process struct {
@@ -233,4 +235,54 @@ func Test_MI_Query_Unmarshal(t *testing.T) {
 
 	err = application.Close()
 	require.NoError(t, err)
+}
+
+func Test_MI_FD_Leak(t *testing.T) {
+	application, err := mi.ApplicationInitialize()
+	require.NoError(t, err)
+	require.NotEmpty(t, application)
+
+	session, err := application.NewSession(nil)
+	require.NoError(t, err)
+	require.NotEmpty(t, session)
+
+	currentFileHandle, err := testutils.GetProcessHandleCount(windows.CurrentProcess())
+	require.NoError(t, err)
+
+	t.Log("Current File Handle Count: ", currentFileHandle)
+
+	queryPrinter, err := mi.NewQuery("SELECT Name FROM Win32_Process")
+	require.NoError(t, err)
+
+	for range 300 {
+		var processes []win32Process
+		err := session.Query(&processes, mi.NamespaceRootCIMv2, queryPrinter)
+		require.NoError(t, err)
+
+		currentFileHandle, err = testutils.GetProcessHandleCount(windows.CurrentProcess())
+		require.NoError(t, err)
+
+		t.Log("Current File Handle Count: ", currentFileHandle)
+	}
+
+	currentFileHandle, err = testutils.GetProcessHandleCount(windows.CurrentProcess())
+	require.NoError(t, err)
+
+	t.Log("Current File Handle Count: ", currentFileHandle)
+
+	err = session.Close()
+	require.NoError(t, err)
+
+	currentFileHandle, err = testutils.GetProcessHandleCount(windows.CurrentProcess())
+	require.NoError(t, err)
+
+	t.Log("Current File Handle Count: ", currentFileHandle)
+
+	err = application.Close()
+	require.NoError(t, err)
+
+	currentFileHandle, err = testutils.GetProcessHandleCount(windows.CurrentProcess())
+	require.NoError(t, err)
+
+	t.Log("Current File Handle Count: ", currentFileHandle)
 }

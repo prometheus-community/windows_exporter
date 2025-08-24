@@ -20,7 +20,7 @@ package mi
 import (
 	"errors"
 	"fmt"
-	"runtime"
+	"reflect"
 	"syscall"
 	"unsafe"
 
@@ -200,12 +200,21 @@ func (s *Session) QueryUnmarshal(dst any,
 		operationOptions = s.defaultOperationOptions
 	}
 
-	errCh := make(chan error, 1)
-
-	operationCallbacks, err := NewUnmarshalOperationsCallbacks(dst, errCh)
-	if err != nil {
-		return err
+	dv := reflect.ValueOf(dst)
+	if dv.Kind() != reflect.Ptr || dv.IsNil() {
+		return ErrInvalidEntityType
 	}
+
+	dv = dv.Elem()
+
+	elemType := dv.Type().Elem()
+	elemValue := reflect.ValueOf(reflect.New(elemType).Interface()).Elem()
+
+	if dv.Kind() != reflect.Slice || elemType.Kind() != reflect.Struct {
+		return ErrInvalidEntityType
+	}
+
+	dv.Set(reflect.MakeSlice(dv.Type(), 0, 0))
 
 	r0, _, _ := syscall.SyscallN(
 		s.ft.QueryInstances,
@@ -215,7 +224,7 @@ func (s *Session) QueryUnmarshal(dst any,
 		uintptr(unsafe.Pointer(namespaceName)),
 		uintptr(unsafe.Pointer(queryDialect)),
 		uintptr(unsafe.Pointer(queryExpression)),
-		uintptr(unsafe.Pointer(operationCallbacks)),
+		0,
 		uintptr(unsafe.Pointer(operation)),
 	)
 
@@ -223,25 +232,79 @@ func (s *Session) QueryUnmarshal(dst any,
 		return result
 	}
 
-	errs := make([]error, 0)
-
-	// We need an active go routine to prevent a
-	// fatal error: all goroutines are asleep - deadlock!
-	// ref: https://github.com/golang/go/issues/55015
-	// go time.Sleep(5 * time.Second)
+	defer func() {
+		_ = operation.Close()
+	}()
 
 	for {
-		if err, ok := <-errCh; err != nil {
-			errs = append(errs, err)
-		} else if !ok {
+		instance, moreResults, err := operation.GetInstance()
+		if err != nil {
+			return fmt.Errorf("failed to get instance: %w", err)
+		}
+
+		if instance == nil {
+			break
+		}
+
+		counter, err := instance.GetElementCount()
+		if err != nil {
+			return fmt.Errorf("failed to get element count: %w", err)
+		}
+
+		if counter == 0 {
+			break
+		}
+
+		for i := range elemType.NumField() {
+			field := elemValue.Field(i)
+
+			// Check if the field has an `mi` tag
+			miTag := elemType.Field(i).Tag.Get("mi")
+			if miTag == "" {
+				continue
+			}
+
+			element, err := instance.GetElement(miTag)
+			if err != nil {
+				if errors.Is(err, MI_RESULT_NO_SUCH_PROPERTY) {
+					continue
+				}
+
+				return fmt.Errorf("failed to get element %s: %w", miTag, err)
+			}
+
+			switch element.valueType {
+			case ValueTypeBOOLEAN:
+				field.SetBool(element.value == 1)
+			case ValueTypeUINT8, ValueTypeUINT16, ValueTypeUINT32, ValueTypeUINT64:
+				field.SetUint(uint64(element.value))
+			case ValueTypeSINT8, ValueTypeSINT16, ValueTypeSINT32, ValueTypeSINT64:
+				field.SetInt(int64(element.value))
+			case ValueTypeSTRING:
+				if element.value == 0 {
+					// value is null
+					continue
+				}
+
+				// Convert the UTF-16 string to a Go string
+				stringValue := windows.UTF16PtrToString((*uint16)(unsafe.Pointer(element.value)))
+
+				field.SetString(stringValue)
+			case ValueTypeREAL32, ValueTypeREAL64:
+				field.SetFloat(float64(element.value))
+			default:
+				return fmt.Errorf("unsupported value type: %d", element.valueType)
+			}
+		}
+
+		dv.Set(reflect.Append(dv, elemValue))
+
+		if !moreResults {
 			break
 		}
 	}
 
-	// KeepAlive is used to ensure that the callbacks are not garbage collected before the operation is closed.
-	runtime.KeepAlive(operationCallbacks.CallbackContext)
-
-	return errors.Join(errs...)
+	return nil
 }
 
 // Query queries for a set of instances based on a query expression.
