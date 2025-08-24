@@ -298,6 +298,8 @@ func (c *Collector) collectWorkerRaw() {
 	)
 
 	buf := make([]byte, 1)
+	// Reuse string cache across collection cycles to reduce allocations
+	stringCache := make(map[*uint16]string, 64)
 
 	for data := range c.collectCh {
 		err = (func() error {
@@ -331,7 +333,10 @@ func (c *Collector) collectWorkerRaw() {
 			elemValue := reflect.ValueOf(reflect.New(elemType).Interface()).Elem()
 
 			indexMap := map[string]int{}
-			stringMap := map[*uint16]string{}
+			// Clear and reuse string cache instead of creating new one each time
+			for k := range stringCache {
+				delete(stringCache, k)
+			}
 
 			for _, counter := range c.counters {
 				for _, instance := range counter.Instances {
@@ -369,19 +374,19 @@ func (c *Collector) collectWorkerRaw() {
 
 					items = unsafe.Slice((*RawCounterItem)(unsafe.Pointer(&buf[0])), itemCount)
 
-					var (
-						instanceName string
-						ok           bool
-					)
-
 					for _, item := range items {
 						if item.RawValue.CStatus != CstatusValidData && item.RawValue.CStatus != CstatusNewData {
 							continue
 						}
 
-						if instanceName, ok = stringMap[item.SzName]; !ok {
+						var (
+							instanceName string
+							ok           bool
+						)
+
+						if instanceName, ok = stringCache[item.SzName]; !ok {
 							instanceName = windows.UTF16PtrToString(item.SzName)
-							stringMap[item.SzName] = instanceName
+							stringCache[item.SzName] = instanceName
 						}
 
 						if strings.HasSuffix(instanceName, InstanceTotal) && !c.totalCounterRequested {
@@ -392,12 +397,8 @@ func (c *Collector) collectWorkerRaw() {
 							instanceName = InstanceEmpty
 						}
 
-						var (
-							index int
-							ok    bool
-						)
-
-						if index, ok = indexMap[instanceName]; !ok {
+						index, indexExists := indexMap[instanceName]
+						if !indexExists {
 							index = dv.Len()
 							indexMap[instanceName] = index
 
@@ -466,6 +467,8 @@ func (c *Collector) collectWorkerFormatted() {
 	)
 
 	buf := make([]byte, 1)
+	// Reuse string cache across collection cycles to reduce allocations
+	stringCache := make(map[*uint16]string, 64)
 
 	for data := range c.collectCh {
 		err = (func() error {
@@ -499,7 +502,10 @@ func (c *Collector) collectWorkerFormatted() {
 			elemValue := reflect.ValueOf(reflect.New(elemType).Interface()).Elem()
 
 			indexMap := map[string]int{}
-			stringMap := map[*uint16]string{}
+			// Clear and reuse string cache instead of creating new one each time
+			for k := range stringCache {
+				delete(stringCache, k)
+			}
 
 			for _, counter := range c.counters {
 				for _, instance := range counter.Instances {
@@ -547,9 +553,9 @@ func (c *Collector) collectWorkerFormatted() {
 							continue
 						}
 
-						if instanceName, ok = stringMap[item.SzName]; !ok {
+						if instanceName, ok = stringCache[item.SzName]; !ok {
 							instanceName = windows.UTF16PtrToString(item.SzName)
-							stringMap[item.SzName] = instanceName
+							stringCache[item.SzName] = instanceName
 						}
 
 						if strings.HasSuffix(instanceName, InstanceTotal) && !c.totalCounterRequested {
@@ -560,12 +566,8 @@ func (c *Collector) collectWorkerFormatted() {
 							instanceName = InstanceEmpty
 						}
 
-						var (
-							index int
-							ok    bool
-						)
-
-						if index, ok = indexMap[instanceName]; !ok {
+						index, indexExists := indexMap[instanceName]
+						if !indexExists {
 							index = dv.Len()
 							indexMap[instanceName] = index
 
