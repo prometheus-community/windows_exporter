@@ -347,6 +347,7 @@ func (c *Collector) collectWorkerRaw() {
 						if err := NewPdhError(ret); isKnownCounterDataError(err) {
 							break
 						}
+
 						return fmt.Errorf("GetRawCounterArray size query: %w", NewPdhError(ret))
 					}
 
@@ -369,6 +370,7 @@ func (c *Collector) collectWorkerRaw() {
 						if err := NewPdhError(ret); isKnownCounterDataError(err) {
 							break
 						}
+
 						return fmt.Errorf("GetRawCounterArray data retrieval: %w", NewPdhError(ret))
 					}
 
@@ -516,6 +518,7 @@ func (c *Collector) collectWorkerFormatted() {
 						if err := NewPdhError(ret); isKnownCounterDataError(err) {
 							break
 						}
+
 						return fmt.Errorf("GetFormattedCounterArrayDouble size query: %w", NewPdhError(ret))
 					}
 
@@ -538,6 +541,7 @@ func (c *Collector) collectWorkerFormatted() {
 						if err := NewPdhError(ret); isKnownCounterDataError(err) {
 							break
 						}
+
 						return fmt.Errorf("GetFormattedCounterArrayDouble data retrieval: %w", NewPdhError(ret))
 					}
 
