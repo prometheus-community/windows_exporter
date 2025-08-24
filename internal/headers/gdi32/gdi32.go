@@ -34,42 +34,11 @@ const (
 	KMTQAITYPE_ADAPTERADDRESS = 6
 	// KMTQAITYPE_ADAPTERREGISTRYINFO pPrivateDriverData points to a D3DKMT_ADAPTERREGISTRYINFO structure that contains registry information about the graphics adapter.
 	KMTQAITYPE_ADAPTERREGISTRYINFO = 8
-	// KMTQAITYPE_ADAPTERGUID pPrivateDriverData points to a D3DKMT_QUERY_DEVICE_IDS structure that specifies the device ID(s) of the physical adapters. Supported starting with Windows 10 (WDDM 2.0).
+	// KMTQAITYPE_PHYSICALADAPTERDEVICEIDS pPrivateDriverData points to a D3DKMT_QUERY_DEVICE_IDS structure that specifies the device ID(s) of the physical adapters. Supported starting with Windows 10 (WDDM 2.0).
 	KMTQAITYPE_PHYSICALADAPTERDEVICEIDS = 31
 )
 
 var ErrNoGPUDevices = errors.New("no GPU devices found")
-
-func GetGPUDeviceByLUID(adapterLUID windows.LUID) (GPUDevice, error) {
-	open := D3DKMT_OPENADAPTERFROMLUID{
-		AdapterLUID: adapterLUID,
-	}
-
-	if err := D3DKMTOpenAdapterFromLuid(&open); err != nil {
-		return GPUDevice{}, fmt.Errorf("D3DKMTOpenAdapterFromLuid failed: %w", err)
-	}
-
-	errs := make([]error, 0)
-
-	gpuDevice, err := GetGPUDevice(open.HAdapter)
-	if err != nil {
-		errs = append(errs, fmt.Errorf("GetGPUDevice failed: %w", err))
-	}
-
-	if err := D3DKMTCloseAdapter(&D3DKMT_CLOSEADAPTER{
-		HAdapter: open.HAdapter,
-	}); err != nil {
-		errs = append(errs, fmt.Errorf("D3DKMTCloseAdapter failed: %w", err))
-	}
-
-	if len(errs) > 0 {
-		return gpuDevice, fmt.Errorf("errors occurred while getting GPU device: %w", errors.Join(errs...))
-	}
-
-	gpuDevice.LUID = adapterLUID
-
-	return gpuDevice, nil
-}
 
 func GetGPUDevice(hAdapter D3DKMT_HANDLE) (GPUDevice, error) {
 	var gpuDevice GPUDevice
@@ -165,7 +134,7 @@ func GetGPUDevices() ([]GPUDevice, error) {
 	// Process each adapter
 	for i := range enumAdapters.NumAdapters {
 		adapter := pAdapters[i]
-		// Validate handle before using it
+		// Validate the handle before using it.
 		if adapter.HAdapter == 0 {
 			errs = append(errs, fmt.Errorf("adapter %d has null handle", i))
 
