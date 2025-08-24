@@ -34,6 +34,8 @@ const (
 	KMTQAITYPE_ADAPTERADDRESS = 6
 	// KMTQAITYPE_ADAPTERREGISTRYINFO pPrivateDriverData points to a D3DKMT_ADAPTERREGISTRYINFO structure that contains registry information about the graphics adapter.
 	KMTQAITYPE_ADAPTERREGISTRYINFO = 8
+	// KMTQAITYPE_ADAPTERGUID pPrivateDriverData points to a D3DKMT_QUERY_DEVICE_IDS structure that specifies the device ID(s) of the physical adapters. Supported starting with Windows 10 (WDDM 2.0).
+	KMTQAITYPE_PHYSICALADAPTERDEVICEIDS = 31
 )
 
 var ErrNoGPUDevices = errors.New("no GPU devices found")
@@ -118,6 +120,18 @@ func GetGPUDevice(hAdapter D3DKMT_HANDLE) (GPUDevice, error) {
 
 	gpuDevice.AdapterString = windows.UTF16ToString(info.AdapterString[:])
 
+	var deviceIDs D3DKMT_QUERY_DEVICE_IDS
+
+	query.queryType = KMTQAITYPE_PHYSICALADAPTERDEVICEIDS
+	query.pPrivateDriverData = unsafe.Pointer(&deviceIDs)
+	query.privateDriverDataSize = uint32(unsafe.Sizeof(deviceIDs))
+
+	if err := D3DKMTQueryAdapterInfo(&query); err != nil && !errors.Is(err, windows.ERROR_FILE_NOT_FOUND) {
+		return gpuDevice, fmt.Errorf("D3DKMTQueryAdapterInfo (Device IDs) failed: %w", err)
+	}
+
+	gpuDevice.DeviceID = formatPNPDeviceID(deviceIDs, address)
+
 	return gpuDevice, nil
 }
 
@@ -189,4 +203,14 @@ func GetGPUDevices() ([]GPUDevice, error) {
 	}
 
 	return gpuDevices, nil
+}
+
+func formatPNPDeviceID(deviceIDs D3DKMT_QUERY_DEVICE_IDS, address D3DKMT_ADAPTERADDRESS) string {
+	return fmt.Sprintf("PCI\\VEN_%04X&DEV_%04X&SUBSYS_%04X%04X&REV_%02X",
+		uint16(deviceIDs.DeviceIds.VendorID),
+		uint16(deviceIDs.DeviceIds.DeviceID),
+		uint16(deviceIDs.DeviceIds.SubSystemID),
+		uint16(deviceIDs.DeviceIds.SubVendorID),
+		uint8(deviceIDs.DeviceIds.RevisionID),
+	)
 }

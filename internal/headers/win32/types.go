@@ -18,6 +18,7 @@
 package win32
 
 import (
+	"strconv"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
@@ -32,8 +33,8 @@ type (
 	LPWSTR    struct {
 		*uint16
 	}
-	ULONG = uint32 // ULONG is a 32-bit unsigned int in Win32
-	UINT  = uint32 // UINT is a 32-bit unsigned int in Win32
+	ULONG uint32 // ULONG is a 32-bit unsigned int in Win32
+	UINT  uint32 // UINT is a 32-bit unsigned int in Win32
 )
 
 // NewLPWSTR creates a new LPWSTR from a string.
@@ -59,4 +60,8 @@ func (s *LPWSTR) Pointer() uintptr {
 // String converts the LPWSTR back to a string.
 func (s *LPWSTR) String() string {
 	return windows.UTF16PtrToString(s.uint16)
+}
+
+func (uint UINT) String() string {
+	return strconv.FormatUint(uint64(uint), 10)
 }
