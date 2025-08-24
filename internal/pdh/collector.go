@@ -338,25 +338,36 @@ func (c *Collector) collectWorkerRaw() {
 
 			for _, counter := range c.counters {
 				for _, instance := range counter.Instances {
+					// First call: get required buffer size (as per PDH documentation)
 					bytesNeeded = 0
-
-					// Get the info with the current buffer size
 					ret := GetRawCounterArray(instance, &bytesNeeded, &itemCount, nil)
-					if err := NewPdhError(ret); ret != MoreData {
-						if isKnownCounterDataError(err) {
+					if ret != MoreData {
+						if err := NewPdhError(ret); isKnownCounterDataError(err) {
 							break
 						}
-
-						return fmt.Errorf("GetRawCounterArray: %w", err)
+						return fmt.Errorf("GetRawCounterArray size query: %w", NewPdhError(ret))
 					}
 
+					// Optimize buffer allocation: grow with headroom to reduce future reallocations
 					if bytesNeeded > uint32(cap(buf)) {
-						buf = make([]byte, bytesNeeded)
+						// Grow buffer with some headroom (minimum 1KB, or 50% larger than needed)
+						newSize := bytesNeeded
+						if newSize < 1024 {
+							newSize = 1024
+						} else if newSize < 8192 { // For buffers under 8KB, add 50% headroom
+							newSize = (newSize * 3) / 2
+						}
+						buf = make([]byte, newSize)
 					}
 
-					ret = GetRawCounterArray(instance, &bytesNeeded, &itemCount, &buf[0])
+					// Second call: get the actual data (as per PDH documentation)
+					actualBytesNeeded := bytesNeeded
+					ret = GetRawCounterArray(instance, &actualBytesNeeded, &itemCount, &buf[0])
 					if ret != ErrorSuccess {
-						return fmt.Errorf("GetRawCounterArray: %w", err)
+						if err := NewPdhError(ret); isKnownCounterDataError(err) {
+							break
+						}
+						return fmt.Errorf("GetRawCounterArray data retrieval: %w", NewPdhError(ret))
 					}
 
 					items = unsafe.Slice((*RawCounterItem)(unsafe.Pointer(&buf[0])), itemCount)
@@ -501,29 +512,36 @@ func (c *Collector) collectWorkerFormatted() {
 
 			for _, counter := range c.counters {
 				for _, instance := range counter.Instances {
-					// Get the info with the current buffer size
-					bytesNeeded = uint32(cap(buf))
-
-					for {
-						ret := GetFormattedCounterArrayDouble(instance, &bytesNeeded, &itemCount, &buf[0])
-
-						if ret == ErrorSuccess {
+					// First call: get required buffer size (as per PDH documentation)
+					bytesNeeded = 0
+					ret := GetFormattedCounterArrayDouble(instance, &bytesNeeded, &itemCount, nil)
+					if ret != MoreData {
+						if err := NewPdhError(ret); isKnownCounterDataError(err) {
 							break
 						}
+						return fmt.Errorf("GetFormattedCounterArrayDouble size query: %w", NewPdhError(ret))
+					}
 
-						if err := NewPdhError(ret); ret != MoreData {
-							if isKnownCounterDataError(err) {
-								break
-							}
-
-							return fmt.Errorf("GetFormattedCounterArrayDouble: %w", err)
+					// Optimize buffer allocation: grow with headroom to reduce future reallocations
+					if bytesNeeded > uint32(cap(buf)) {
+						// Grow buffer with some headroom (minimum 1KB, or 50% larger than needed)
+						newSize := bytesNeeded
+						if newSize < 1024 {
+							newSize = 1024
+						} else if newSize < 8192 { // For buffers under 8KB, add 50% headroom
+							newSize = (newSize * 3) / 2
 						}
+						buf = make([]byte, newSize)
+					}
 
-						if bytesNeeded <= uint32(cap(buf)) {
-							return fmt.Errorf("GetFormattedCounterArrayDouble reports buffer too small (%d), but buffer is large enough (%d): %w", uint32(cap(buf)), bytesNeeded, NewPdhError(ret))
+					// Second call: get the actual data (as per PDH documentation)
+					actualBytesNeeded := bytesNeeded
+					ret = GetFormattedCounterArrayDouble(instance, &actualBytesNeeded, &itemCount, &buf[0])
+					if ret != ErrorSuccess {
+						if err := NewPdhError(ret); isKnownCounterDataError(err) {
+							break
 						}
-
-						buf = make([]byte, bytesNeeded)
+						return fmt.Errorf("GetFormattedCounterArrayDouble data retrieval: %w", NewPdhError(ret))
 					}
 
 					items = unsafe.Slice((*FmtCounterValueItemDouble)(unsafe.Pointer(&buf[0])), itemCount)
