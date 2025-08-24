@@ -130,7 +130,7 @@ func GetGPUDevice(hAdapter D3DKMT_HANDLE) (GPUDevice, error) {
 		return gpuDevice, fmt.Errorf("D3DKMTQueryAdapterInfo (Device IDs) failed: %w", err)
 	}
 
-	gpuDevice.DeviceID = formatPNPDeviceID(deviceIDs, address)
+	gpuDevice.DeviceID = formatPNPDeviceID(deviceIDs)
 
 	return gpuDevice, nil
 }
@@ -205,7 +205,7 @@ func GetGPUDevices() ([]GPUDevice, error) {
 	return gpuDevices, nil
 }
 
-func formatPNPDeviceID(deviceIDs D3DKMT_QUERY_DEVICE_IDS, address D3DKMT_ADAPTERADDRESS) string {
+func formatPNPDeviceID(deviceIDs D3DKMT_QUERY_DEVICE_IDS) string {
 	return fmt.Sprintf("PCI\\VEN_%04X&DEV_%04X&SUBSYS_%04X%04X&REV_%02X",
 		uint16(deviceIDs.DeviceIds.VendorID),
 		uint16(deviceIDs.DeviceIds.DeviceID),

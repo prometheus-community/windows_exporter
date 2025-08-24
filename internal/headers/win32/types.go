@@ -62,6 +62,6 @@ func (s *LPWSTR) String() string {
 	return windows.UTF16PtrToString(s.uint16)
 }
 
-func (uint UINT) String() string {
-	return strconv.FormatUint(uint64(uint), 10)
+func (u *UINT) String() string {
+	return strconv.FormatUint(uint64(*u), 10)
 }
