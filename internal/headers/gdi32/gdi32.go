@@ -34,40 +34,11 @@ const (
 	KMTQAITYPE_ADAPTERADDRESS = 6
 	// KMTQAITYPE_ADAPTERREGISTRYINFO pPrivateDriverData points to a D3DKMT_ADAPTERREGISTRYINFO structure that contains registry information about the graphics adapter.
 	KMTQAITYPE_ADAPTERREGISTRYINFO = 8
+	// KMTQAITYPE_PHYSICALADAPTERDEVICEIDS pPrivateDriverData points to a D3DKMT_QUERY_DEVICE_IDS structure that specifies the device ID(s) of the physical adapters. Supported starting with Windows 10 (WDDM 2.0).
+	KMTQAITYPE_PHYSICALADAPTERDEVICEIDS = 31
 )
 
 var ErrNoGPUDevices = errors.New("no GPU devices found")
-
-func GetGPUDeviceByLUID(adapterLUID windows.LUID) (GPUDevice, error) {
-	open := D3DKMT_OPENADAPTERFROMLUID{
-		AdapterLUID: adapterLUID,
-	}
-
-	if err := D3DKMTOpenAdapterFromLuid(&open); err != nil {
-		return GPUDevice{}, fmt.Errorf("D3DKMTOpenAdapterFromLuid failed: %w", err)
-	}
-
-	errs := make([]error, 0)
-
-	gpuDevice, err := GetGPUDevice(open.HAdapter)
-	if err != nil {
-		errs = append(errs, fmt.Errorf("GetGPUDevice failed: %w", err))
-	}
-
-	if err := D3DKMTCloseAdapter(&D3DKMT_CLOSEADAPTER{
-		HAdapter: open.HAdapter,
-	}); err != nil {
-		errs = append(errs, fmt.Errorf("D3DKMTCloseAdapter failed: %w", err))
-	}
-
-	if len(errs) > 0 {
-		return gpuDevice, fmt.Errorf("errors occurred while getting GPU device: %w", errors.Join(errs...))
-	}
-
-	gpuDevice.LUID = adapterLUID
-
-	return gpuDevice, nil
-}
 
 func GetGPUDevice(hAdapter D3DKMT_HANDLE) (GPUDevice, error) {
 	var gpuDevice GPUDevice
@@ -118,6 +89,18 @@ func GetGPUDevice(hAdapter D3DKMT_HANDLE) (GPUDevice, error) {
 
 	gpuDevice.AdapterString = windows.UTF16ToString(info.AdapterString[:])
 
+	var deviceIDs D3DKMT_QUERY_DEVICE_IDS
+
+	query.queryType = KMTQAITYPE_PHYSICALADAPTERDEVICEIDS
+	query.pPrivateDriverData = unsafe.Pointer(&deviceIDs)
+	query.privateDriverDataSize = uint32(unsafe.Sizeof(deviceIDs))
+
+	if err := D3DKMTQueryAdapterInfo(&query); err != nil && !errors.Is(err, windows.ERROR_FILE_NOT_FOUND) {
+		return gpuDevice, fmt.Errorf("D3DKMTQueryAdapterInfo (Device IDs) failed: %w", err)
+	}
+
+	gpuDevice.DeviceID = formatPNPDeviceID(deviceIDs)
+
 	return gpuDevice, nil
 }
 
@@ -151,7 +134,7 @@ func GetGPUDevices() ([]GPUDevice, error) {
 	// Process each adapter
 	for i := range enumAdapters.NumAdapters {
 		adapter := pAdapters[i]
-		// Validate handle before using it
+		// Validate the handle before using it.
 		if adapter.HAdapter == 0 {
 			errs = append(errs, fmt.Errorf("adapter %d has null handle", i))
 
@@ -189,4 +172,14 @@ func GetGPUDevices() ([]GPUDevice, error) {
 	}
 
 	return gpuDevices, nil
+}
+
+func formatPNPDeviceID(deviceIDs D3DKMT_QUERY_DEVICE_IDS) string {
+	return fmt.Sprintf("PCI\\VEN_%04X&DEV_%04X&SUBSYS_%04X%04X&REV_%02X",
+		uint16(deviceIDs.DeviceIds.VendorID),
+		uint16(deviceIDs.DeviceIds.DeviceID),
+		uint16(deviceIDs.DeviceIds.SubSystemID),
+		uint16(deviceIDs.DeviceIds.SubVendorID),
+		uint8(deviceIDs.DeviceIds.RevisionID),
+	)
 }

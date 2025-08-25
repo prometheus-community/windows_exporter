@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"strconv"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/headers/gdi32"
@@ -121,97 +120,97 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 	c.gpuInfo = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "info"),
 		"A metric with a constant '1' value labeled with gpu device information.",
-		[]string{"luid", "name", "bus_number", "phys", "function_number"},
+		[]string{"luid", "device_id", "name", "bus_number", "phys", "function_number"},
 		nil,
 	)
 
 	c.gpuSharedSystemMemorySize = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "shared_system_memory_size_bytes"),
 		"The size, in bytes, of memory from system memory that can be shared by many users.",
-		[]string{"luid"},
+		[]string{"luid", "device_id"},
 		nil,
 	)
 	c.gpuDedicatedSystemMemorySize = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "dedicated_system_memory_size_bytes"),
 		"The size, in bytes, of memory that is dedicated from system memory.",
-		[]string{"luid"},
+		[]string{"luid", "device_id"},
 		nil,
 	)
 	c.gpuDedicatedVideoMemorySize = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "dedicated_video_memory_size_bytes"),
 		"The size, in bytes, of memory that is dedicated from video memory.",
-		[]string{"luid"},
+		[]string{"luid", "device_id"},
 		nil,
 	)
 
 	c.gpuEngineRunningTime = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "engine_time_seconds"),
 		"Total running time of the GPU in seconds.",
-		[]string{"process_id", "luid", "phys", "eng", "engtype"},
+		[]string{"process_id", "luid", "device_id", "phys", "eng", "engtype"},
 		nil,
 	)
 
 	c.gpuAdapterMemoryDedicatedUsage = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "adapter_memory_dedicated_bytes"),
 		"Dedicated GPU memory usage in bytes.",
-		[]string{"luid", "phys"},
+		[]string{"luid", "device_id", "phys"},
 		nil,
 	)
 	c.gpuAdapterMemorySharedUsage = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "adapter_memory_shared_bytes"),
 		"Shared GPU memory usage in bytes.",
-		[]string{"luid", "phys"},
+		[]string{"luid", "device_id", "phys"},
 		nil,
 	)
 	c.gpuAdapterMemoryTotalCommitted = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "adapter_memory_committed_bytes"),
 		"Total committed GPU memory in bytes.",
-		[]string{"luid", "phys"},
+		[]string{"luid", "device_id", "phys"},
 		nil,
 	)
 
 	c.gpuLocalAdapterMemoryUsage = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "local_adapter_memory_bytes"),
 		"Local adapter memory usage in bytes.",
-		[]string{"luid", "phys"},
+		[]string{"luid", "device_id", "phys", "part"},
 		nil,
 	)
 
 	c.gpuNonLocalAdapterMemoryUsage = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "non_local_adapter_memory_bytes"),
 		"Non-local adapter memory usage in bytes.",
-		[]string{"luid", "phys"},
+		[]string{"luid", "device_id", "phys", "part"},
 		nil,
 	)
 
 	c.gpuProcessMemoryDedicatedUsage = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "process_memory_dedicated_bytes"),
 		"Dedicated process memory usage in bytes.",
-		[]string{"process_id", "luid", "phys"},
+		[]string{"process_id", "luid", "device_id", "phys"},
 		nil,
 	)
 	c.gpuProcessMemoryLocalUsage = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "process_memory_local_bytes"),
 		"Local process memory usage in bytes.",
-		[]string{"process_id", "luid", "phys"},
+		[]string{"process_id", "luid", "device_id", "phys"},
 		nil,
 	)
 	c.gpuProcessMemoryNonLocalUsage = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "process_memory_non_local_bytes"),
 		"Non-local process memory usage in bytes.",
-		[]string{"process_id", "luid", "phys"},
+		[]string{"process_id", "luid", "device_id", "phys"},
 		nil,
 	)
 	c.gpuProcessMemorySharedUsage = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "process_memory_shared_bytes"),
 		"Shared process memory usage in bytes.",
-		[]string{"process_id", "luid", "phys"},
+		[]string{"process_id", "luid", "device_id", "phys"},
 		nil,
 	)
 	c.gpuProcessMemoryTotalCommitted = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "process_memory_committed_bytes"),
 		"Total committed process memory in bytes.",
-		[]string{"process_id", "luid", "phys"},
+		[]string{"process_id", "luid", "device_id", "phys"},
 		nil,
 	)
 
@@ -298,31 +297,32 @@ func (c *Collector) collectGpuInfo(ch chan<- prometheus.Metric) {
 			prometheus.GaugeValue,
 			1.0,
 			luid,
+			gpu.DeviceID,
 			gpu.AdapterString,
-			strconv.FormatInt(int64(gpu.BusNumber), 10),
-			strconv.FormatInt(int64(gpu.DeviceNumber), 10),
-			strconv.FormatInt(int64(gpu.FunctionNumber), 10),
+			gpu.BusNumber.String(),
+			gpu.DeviceNumber.String(),
+			gpu.FunctionNumber.String(),
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.gpuSharedSystemMemorySize,
 			prometheus.GaugeValue,
 			float64(gpu.SharedSystemMemorySize),
-			luid,
+			luid, gpu.DeviceID,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.gpuDedicatedSystemMemorySize,
 			prometheus.GaugeValue,
 			float64(gpu.DedicatedSystemMemorySize),
-			luid,
+			luid, gpu.DeviceID,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.gpuDedicatedVideoMemorySize,
 			prometheus.GaugeValue,
 			float64(gpu.DedicatedVideoMemorySize),
-			luid,
+			luid, gpu.DeviceID,
 		)
 	}
 }
@@ -333,31 +333,20 @@ func (c *Collector) collectGpuEngineMetrics(ch chan<- prometheus.Metric) error {
 		return fmt.Errorf("failed to collect GPU Engine perf data: %w", err)
 	}
 
-	runningTimeMap := make(map[PidPhysEngEngType]float64)
 	// Iterate over the GPU Engine perf data and aggregate the values.
 	for _, data := range c.gpuEnginePerfDataObject {
 		instance := parseGPUCounterInstanceString(data.Name)
 
-		if _, ok := c.gpuDeviceCache[instance.Luid]; !ok {
+		device, ok := c.gpuDeviceCache[instance.Luid]
+		if !ok {
 			continue
 		}
 
-		key := PidPhysEngEngType{
-			Pid:     instance.Pid,
-			Phys:    instance.Phys,
-			Luid:    instance.Luid,
-			Eng:     instance.Eng,
-			Engtype: instance.Engtype,
-		}
-		runningTimeMap[key] += data.RunningTime / 10_000_000 // RunningTime is in 100ns units, convert to seconds.
-	}
-
-	for key, runningTime := range runningTimeMap {
 		ch <- prometheus.MustNewConstMetric(
 			c.gpuEngineRunningTime,
 			prometheus.CounterValue,
-			runningTime,
-			key.Pid, key.Luid, key.Phys, key.Eng, key.Engtype,
+			data.RunningTime/10_000_000,
+			instance.Pid, instance.Luid, device.DeviceID, instance.Phys, instance.Eng, instance.Engtype,
 		)
 	}
 
@@ -370,49 +359,33 @@ func (c *Collector) collectGpuAdapterMemoryMetrics(ch chan<- prometheus.Metric) 
 		return fmt.Errorf("failed to collect GPU Adapter Memory perf data: %w", err)
 	}
 
-	dedicatedUsageMap := make(map[PidPhysEngEngType]float64)
-	sharedUsageMap := make(map[PidPhysEngEngType]float64)
-	totalCommittedMap := make(map[PidPhysEngEngType]float64)
-
 	for _, data := range c.gpuAdapterMemoryPerfDataObject {
 		instance := parseGPUCounterInstanceString(data.Name)
 
-		if _, ok := c.gpuDeviceCache[instance.Luid]; !ok {
+		device, ok := c.gpuDeviceCache[instance.Luid]
+		if !ok {
 			continue
 		}
 
-		key := PidPhysEngEngType{
-			Pid:     instance.Pid,
-			Luid:    instance.Luid,
-			Phys:    instance.Phys,
-			Eng:     instance.Eng,
-			Engtype: instance.Engtype,
-		}
-		dedicatedUsageMap[key] += data.DedicatedUsage
-		sharedUsageMap[key] += data.SharedUsage
-		totalCommittedMap[key] += data.TotalCommitted
-	}
-
-	for key, dedicatedUsage := range dedicatedUsageMap {
 		ch <- prometheus.MustNewConstMetric(
 			c.gpuAdapterMemoryDedicatedUsage,
 			prometheus.GaugeValue,
-			dedicatedUsage,
-			key.Luid, key.Phys,
+			data.DedicatedUsage,
+			instance.Luid, device.DeviceID, instance.Phys,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.gpuAdapterMemorySharedUsage,
 			prometheus.GaugeValue,
-			sharedUsageMap[key],
-			key.Luid, key.Phys,
+			data.SharedUsage,
+			instance.Luid, device.DeviceID, instance.Phys,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.gpuAdapterMemoryTotalCommitted,
 			prometheus.GaugeValue,
-			totalCommittedMap[key],
-			key.Luid, key.Phys,
+			data.TotalCommitted,
+			instance.Luid, device.DeviceID, instance.Phys,
 		)
 	}
 
@@ -425,29 +398,19 @@ func (c *Collector) collectGpuLocalAdapterMemoryMetrics(ch chan<- prometheus.Met
 		return fmt.Errorf("failed to collect GPU Local Adapter Memory perf data: %w", err)
 	}
 
-	localAdapterMemoryMap := make(map[PidPhysEngEngType]float64)
-
 	for _, data := range c.gpuLocalAdapterMemoryPerfDataObject {
 		instance := parseGPUCounterInstanceString(data.Name)
 
-		if _, ok := c.gpuDeviceCache[instance.Luid]; !ok {
+		device, ok := c.gpuDeviceCache[instance.Luid]
+		if !ok {
 			continue
 		}
 
-		key := PidPhysEngEngType{
-			Luid: instance.Luid,
-			Phys: instance.Phys,
-		}
-
-		localAdapterMemoryMap[key] += data.LocalUsage
-	}
-
-	for key, localUsage := range localAdapterMemoryMap {
 		ch <- prometheus.MustNewConstMetric(
 			c.gpuLocalAdapterMemoryUsage,
 			prometheus.GaugeValue,
-			localUsage,
-			key.Luid, key.Phys,
+			data.LocalUsage,
+			instance.Luid, device.DeviceID, instance.Phys, instance.Part,
 		)
 	}
 
@@ -460,28 +423,19 @@ func (c *Collector) collectGpuNonLocalAdapterMemoryMetrics(ch chan<- prometheus.
 		return fmt.Errorf("failed to collect GPU Non Local Adapter Memory perf data: %w", err)
 	}
 
-	nonLocalAdapterMemoryMap := make(map[PidPhysEngEngType]float64)
-
 	for _, data := range c.gpuNonLocalAdapterMemoryPerfDataObject {
 		instance := parseGPUCounterInstanceString(data.Name)
 
-		if _, ok := c.gpuDeviceCache[instance.Luid]; !ok {
+		device, ok := c.gpuDeviceCache[instance.Luid]
+		if !ok {
 			continue
 		}
 
-		key := PidPhysEngEngType{
-			Luid: instance.Luid,
-			Phys: instance.Phys,
-		}
-		nonLocalAdapterMemoryMap[key] += data.NonLocalUsage
-	}
-
-	for key, nonLocalUsage := range nonLocalAdapterMemoryMap {
 		ch <- prometheus.MustNewConstMetric(
 			c.gpuNonLocalAdapterMemoryUsage,
 			prometheus.GaugeValue,
-			nonLocalUsage,
-			key.Luid, key.Phys,
+			data.NonLocalUsage,
+			instance.Luid, device.DeviceID, instance.Phys, instance.Part,
 		)
 	}
 
@@ -494,65 +448,47 @@ func (c *Collector) collectGpuProcessMemoryMetrics(ch chan<- prometheus.Metric) 
 		return fmt.Errorf("failed to collect GPU Process Memory perf data: %w", err)
 	}
 
-	processDedicatedUsageMap := make(map[PidPhys]float64)
-	processLocalUsageMap := make(map[PidPhys]float64)
-	processNonLocalUsageMap := make(map[PidPhys]float64)
-	processSharedUsageMap := make(map[PidPhys]float64)
-	processTotalCommittedMap := make(map[PidPhys]float64)
-
 	for _, data := range c.gpuProcessMemoryPerfDataObject {
 		instance := parseGPUCounterInstanceString(data.Name)
 
-		if _, ok := c.gpuDeviceCache[instance.Luid]; !ok {
+		device, ok := c.gpuDeviceCache[instance.Luid]
+		if !ok {
 			continue
 		}
 
-		key := PidPhys{
-			Pid:  instance.Pid,
-			Luid: instance.Luid,
-			Phys: instance.Phys,
-		}
-		processDedicatedUsageMap[key] += data.DedicatedUsage
-		processLocalUsageMap[key] += data.LocalUsage
-		processNonLocalUsageMap[key] += data.NonLocalUsage
-		processSharedUsageMap[key] += data.SharedUsage
-		processTotalCommittedMap[key] += data.TotalCommitted
-	}
-
-	for key, dedicatedUsage := range processDedicatedUsageMap {
 		ch <- prometheus.MustNewConstMetric(
 			c.gpuProcessMemoryDedicatedUsage,
 			prometheus.GaugeValue,
-			dedicatedUsage,
-			key.Pid, key.Luid, key.Phys,
+			data.DedicatedUsage,
+			instance.Pid, instance.Luid, device.DeviceID, instance.Phys,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.gpuProcessMemoryLocalUsage,
 			prometheus.GaugeValue,
-			processLocalUsageMap[key],
-			key.Pid, key.Luid, key.Phys,
+			data.LocalUsage,
+			instance.Pid, instance.Luid, device.DeviceID, instance.Phys,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.gpuProcessMemoryNonLocalUsage,
 			prometheus.GaugeValue,
-			processNonLocalUsageMap[key],
-			key.Pid, key.Luid, key.Phys,
+			data.NonLocalUsage,
+			instance.Pid, instance.Luid, device.DeviceID, instance.Phys,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.gpuProcessMemorySharedUsage,
 			prometheus.GaugeValue,
-			processSharedUsageMap[key],
-			key.Pid, key.Luid, key.Phys,
+			data.SharedUsage,
+			instance.Pid, instance.Luid, device.DeviceID, instance.Phys,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.gpuProcessMemoryTotalCommitted,
 			prometheus.GaugeValue,
-			processTotalCommittedMap[key],
-			key.Pid, key.Luid, key.Phys,
+			data.TotalCommitted,
+			instance.Pid, instance.Luid, device.DeviceID, instance.Phys,
 		)
 	}
 

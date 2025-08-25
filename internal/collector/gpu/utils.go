@@ -23,26 +23,29 @@ import (
 )
 
 type Instance struct {
-	Pid     string
-	Luid    string
-	Phys    string
-	Eng     string
-	Engtype string
-	Part    string
+	Pid      string
+	Luid     string
+	DeviceID string
+	Phys     string
+	Eng      string
+	Engtype  string
+	Part     string
 }
 
 type PidPhys struct {
-	Pid  string
-	Luid string
-	Phys string
+	Pid      string
+	Luid     string
+	DeviceID string
+	Phys     string
 }
 
 type PidPhysEngEngType struct {
-	Pid     string
-	Luid    string
-	Phys    string
-	Eng     string
-	Engtype string
+	Pid      string
+	Luid     string
+	DeviceID string
+	Phys     string
+	Eng      string
+	Engtype  string
 }
 
 func parseGPUCounterInstanceString(s string) Instance {
