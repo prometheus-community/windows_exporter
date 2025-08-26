@@ -31,16 +31,19 @@ package win32
 //
 // The returned slices reference the original buffer (no copying).
 func ParseMultiSz(buf []uint16) [][]uint16 {
-	var result [][]uint16
-	start := 0
+	var (
+		result [][]uint16
+		start  int
+	)
 
-	for i := 0; i < len(buf); i++ {
+	for i := range buf {
 		if buf[i] == 0 {
 			// Found a null terminator.
 			if i == start {
 				// Two consecutive nulls → end of list.
 				break
 			}
+
 			// Append current string slice (excluding null).
 			result = append(result, buf[start:i])
 			// Move start to next character after null.

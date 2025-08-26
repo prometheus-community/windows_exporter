@@ -23,6 +23,7 @@ import (
 	"golang.org/x/sys/windows"
 )
 
+//nolint:gochecknoglobals
 var (
 	cfgmgr32 = windows.NewLazySystemDLL("cfgmgr32.dll")
 

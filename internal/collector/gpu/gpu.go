@@ -276,6 +276,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		for _, dev := range cfgmgr32Devs {
 			if dev.BusNumber == gpu.BusNumber && dev.DeviceNumber == gpu.DeviceNumber && dev.FunctionNumber == gpu.FunctionNumber {
 				cfgmgr32Dev = dev
+
 				break
 			}
 		}
