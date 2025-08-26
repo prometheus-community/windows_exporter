@@ -18,34 +18,63 @@
 package mssql
 
 import (
+	"fmt"
+	"log/slog"
+
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
+	"golang.org/x/sys/windows/registry"
 )
 
 type collectorInstance struct {
-	instances *prometheus.GaugeVec
+	instances *prometheus.Desc
 }
 
 func (c *Collector) buildInstance() error {
-	c.instances = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Namespace: types.Namespace,
-			Subsystem: Name,
-			Name:      "instance_info",
-			Help:      "A metric with a constant '1' value labeled with mssql instance information",
-		},
+	c.instances = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "instance_info"),
+		"A metric with a constant '1' value labeled with mssql instance information",
 		[]string{"edition", "mssql_instance", "patch", "version"},
+		nil,
 	)
-
-	for _, instance := range c.mssqlInstances {
-		c.instances.WithLabelValues(instance.edition, instance.name, instance.patchVersion, instance.majorVersion.String()).Set(1)
-	}
 
 	return nil
 }
 
 func (c *Collector) collectInstance(ch chan<- prometheus.Metric) error {
-	c.instances.Collect(ch)
+	for _, instance := range c.mssqlInstances {
+		regKeyName := fmt.Sprintf(`Software\Microsoft\Microsoft SQL Server\%s\Setup`, instance.instanceName)
+
+		regKey, err := registry.OpenKey(registry.LOCAL_MACHINE, regKeyName, registry.QUERY_VALUE)
+		if err != nil {
+			c.logger.Debug(fmt.Sprintf("couldn't open registry %s:", regKeyName),
+				slog.Any("err", err),
+			)
+
+			continue
+		}
+
+		patchVersion, _, err := regKey.GetStringValue("PatchLevel")
+		_ = regKey.Close()
+
+		if err != nil {
+			c.logger.Debug("couldn't get version from registry",
+				slog.Any("err", err),
+			)
+
+			continue
+		}
+
+		ch <- prometheus.MustNewConstMetric(
+			c.instances,
+			prometheus.GaugeValue,
+			1,
+			instance.edition,
+			instance.name,
+			patchVersion,
+			instance.majorVersion.String(),
+		)
+	}
 
 	return nil
 }
