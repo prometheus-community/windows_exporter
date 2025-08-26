@@ -43,7 +43,7 @@ func (c *Collector) buildInstance() error {
 
 func (c *Collector) collectInstance(ch chan<- prometheus.Metric) error {
 	for _, instance := range c.mssqlInstances {
-		regKeyName := fmt.Sprintf(`Software\Microsoft\Microsoft SQL Server\%s\Setup`, instance.name)
+		regKeyName := fmt.Sprintf(`Software\Microsoft\Microsoft SQL Server\%s\Setup`, instance.instanceName)
 
 		regKey, err := registry.OpenKey(registry.LOCAL_MACHINE, regKeyName, registry.QUERY_VALUE)
 		if err != nil {
