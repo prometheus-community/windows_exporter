@@ -23,6 +23,7 @@ import (
 	"log/slog"
 
 	"github.com/alecthomas/kingpin/v2"
+	"github.com/prometheus-community/windows_exporter/internal/headers/cfgmgr32"
 	"github.com/prometheus-community/windows_exporter/internal/headers/gdi32"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
@@ -40,7 +41,7 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	config Config
 
-	gpuDeviceCache map[string]gdi32.GPUDevice
+	gpuDeviceCache map[string]gpuDevice
 
 	// GPU Engine
 	gpuEnginePerfDataCollector *pdh.Collector
@@ -82,6 +83,12 @@ type Collector struct {
 	gpuProcessMemoryNonLocalUsage  *prometheus.Desc
 	gpuProcessMemorySharedUsage    *prometheus.Desc
 	gpuProcessMemoryTotalCommitted *prometheus.Desc
+}
+
+type gpuDevice struct {
+	gdi32    gdi32.GPUDevice
+	cfgmgr32 cfgmgr32.Device
+	ID       string
 }
 
 func New(config *Config) *Collector {
@@ -252,11 +259,38 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		}
 
 		if c.gpuDeviceCache == nil {
-			c.gpuDeviceCache = make(map[string]gdi32.GPUDevice)
+			c.gpuDeviceCache = make(map[string]gpuDevice)
 		}
 
 		luidKey := fmt.Sprintf("0x%08X_0x%08X", gpu.LUID.HighPart, gpu.LUID.LowPart)
-		c.gpuDeviceCache[luidKey] = gpu
+
+		deviceID := gpu.DeviceID
+
+		cfgmgr32Devs, err := cfgmgr32.GetDevicesInstanceIDs(gpu.DeviceID)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("failed to get device instance IDs for device ID %s: %w", gpu.DeviceID, err))
+		}
+
+		var cfgmgr32Dev cfgmgr32.Device
+
+		for _, dev := range cfgmgr32Devs {
+			if dev.BusNumber == gpu.BusNumber && dev.DeviceNumber == gpu.DeviceNumber && dev.FunctionNumber == gpu.FunctionNumber {
+				cfgmgr32Dev = dev
+				break
+			}
+		}
+
+		if cfgmgr32Dev.InstanceID == "" {
+			errs = append(errs, fmt.Errorf("failed to find matching device for device ID %s", gpu.DeviceID))
+		} else {
+			deviceID = cfgmgr32Dev.InstanceID
+		}
+
+		c.gpuDeviceCache[luidKey] = gpuDevice{
+			gdi32:    gpu,
+			cfgmgr32: cfgmgr32Dev,
+			ID:       deviceID,
+		}
 	}
 
 	return errors.Join(errs...)
@@ -297,32 +331,32 @@ func (c *Collector) collectGpuInfo(ch chan<- prometheus.Metric) {
 			prometheus.GaugeValue,
 			1.0,
 			luid,
-			gpu.DeviceID,
-			gpu.AdapterString,
-			gpu.BusNumber.String(),
-			gpu.DeviceNumber.String(),
-			gpu.FunctionNumber.String(),
+			gpu.ID,
+			gpu.gdi32.AdapterString,
+			gpu.gdi32.BusNumber.String(),
+			gpu.gdi32.DeviceNumber.String(),
+			gpu.gdi32.FunctionNumber.String(),
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.gpuSharedSystemMemorySize,
 			prometheus.GaugeValue,
-			float64(gpu.SharedSystemMemorySize),
-			luid, gpu.DeviceID,
+			float64(gpu.gdi32.SharedSystemMemorySize),
+			luid, gpu.ID,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.gpuDedicatedSystemMemorySize,
 			prometheus.GaugeValue,
-			float64(gpu.DedicatedSystemMemorySize),
-			luid, gpu.DeviceID,
+			float64(gpu.gdi32.DedicatedSystemMemorySize),
+			luid, gpu.ID,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.gpuDedicatedVideoMemorySize,
 			prometheus.GaugeValue,
-			float64(gpu.DedicatedVideoMemorySize),
-			luid, gpu.DeviceID,
+			float64(gpu.gdi32.DedicatedVideoMemorySize),
+			luid, gpu.ID,
 		)
 	}
 }
@@ -346,7 +380,7 @@ func (c *Collector) collectGpuEngineMetrics(ch chan<- prometheus.Metric) error {
 			c.gpuEngineRunningTime,
 			prometheus.CounterValue,
 			data.RunningTime/10_000_000,
-			instance.Pid, instance.Luid, device.DeviceID, instance.Phys, instance.Eng, instance.Engtype,
+			instance.Pid, instance.Luid, device.ID, instance.Phys, instance.Eng, instance.Engtype,
 		)
 	}
 
@@ -371,21 +405,21 @@ func (c *Collector) collectGpuAdapterMemoryMetrics(ch chan<- prometheus.Metric) 
 			c.gpuAdapterMemoryDedicatedUsage,
 			prometheus.GaugeValue,
 			data.DedicatedUsage,
-			instance.Luid, device.DeviceID, instance.Phys,
+			instance.Luid, device.ID, instance.Phys,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.gpuAdapterMemorySharedUsage,
 			prometheus.GaugeValue,
 			data.SharedUsage,
-			instance.Luid, device.DeviceID, instance.Phys,
+			instance.Luid, device.ID, instance.Phys,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.gpuAdapterMemoryTotalCommitted,
 			prometheus.GaugeValue,
 			data.TotalCommitted,
-			instance.Luid, device.DeviceID, instance.Phys,
+			instance.Luid, device.ID, instance.Phys,
 		)
 	}
 
@@ -410,7 +444,7 @@ func (c *Collector) collectGpuLocalAdapterMemoryMetrics(ch chan<- prometheus.Met
 			c.gpuLocalAdapterMemoryUsage,
 			prometheus.GaugeValue,
 			data.LocalUsage,
-			instance.Luid, device.DeviceID, instance.Phys, instance.Part,
+			instance.Luid, device.ID, instance.Phys, instance.Part,
 		)
 	}
 
@@ -435,7 +469,7 @@ func (c *Collector) collectGpuNonLocalAdapterMemoryMetrics(ch chan<- prometheus.
 			c.gpuNonLocalAdapterMemoryUsage,
 			prometheus.GaugeValue,
 			data.NonLocalUsage,
-			instance.Luid, device.DeviceID, instance.Phys, instance.Part,
+			instance.Luid, device.ID, instance.Phys, instance.Part,
 		)
 	}
 
@@ -460,35 +494,35 @@ func (c *Collector) collectGpuProcessMemoryMetrics(ch chan<- prometheus.Metric) 
 			c.gpuProcessMemoryDedicatedUsage,
 			prometheus.GaugeValue,
 			data.DedicatedUsage,
-			instance.Pid, instance.Luid, device.DeviceID, instance.Phys,
+			instance.Pid, instance.Luid, device.ID, instance.Phys,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.gpuProcessMemoryLocalUsage,
 			prometheus.GaugeValue,
 			data.LocalUsage,
-			instance.Pid, instance.Luid, device.DeviceID, instance.Phys,
+			instance.Pid, instance.Luid, device.ID, instance.Phys,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.gpuProcessMemoryNonLocalUsage,
 			prometheus.GaugeValue,
 			data.NonLocalUsage,
-			instance.Pid, instance.Luid, device.DeviceID, instance.Phys,
+			instance.Pid, instance.Luid, device.ID, instance.Phys,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.gpuProcessMemorySharedUsage,
 			prometheus.GaugeValue,
 			data.SharedUsage,
-			instance.Pid, instance.Luid, device.DeviceID, instance.Phys,
+			instance.Pid, instance.Luid, device.ID, instance.Phys,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.gpuProcessMemoryTotalCommitted,
 			prometheus.GaugeValue,
 			data.TotalCommitted,
-			instance.Pid, instance.Luid, device.DeviceID, instance.Phys,
+			instance.Pid, instance.Luid, device.ID, instance.Phys,
 		)
 	}
 
