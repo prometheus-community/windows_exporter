@@ -1,0 +1,44 @@
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright The Prometheus Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package testutils
+
+import (
+	"unsafe"
+
+	"golang.org/x/sys/windows"
+)
+
+//nolint:gochecknoglobals
+var (
+	modkernel32 = windows.NewLazySystemDLL("kernel32.dll")
+
+	procGetProcessHandleCount = modkernel32.NewProc("GetProcessHandleCount")
+)
+
+func GetProcessHandleCount(handle windows.Handle) (uint32, error) {
+	var count uint32
+
+	r1, _, err := procGetProcessHandleCount.Call(
+		uintptr(handle),
+		uintptr(unsafe.Pointer(&count)),
+	)
+
+	if r1 != 1 {
+		return 0, err
+	}
+
+	return count, nil
+}
