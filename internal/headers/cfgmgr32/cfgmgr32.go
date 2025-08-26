@@ -49,7 +49,7 @@ func GetDevicesInstanceIDs(deviceID string) ([]Device, error) {
 	for _, deviceInstanceID := range deviceInstanceIDs {
 		var devNode *windows.Handle
 
-		err = CMLocateDevNode(devNode, deviceInstanceID)
+		err = CMLocateDevNode(&devNode, deviceInstanceID)
 		if err != nil {
 			return nil, err
 		}

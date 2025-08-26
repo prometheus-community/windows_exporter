@@ -62,9 +62,9 @@ func CMGetDeviceIDList(filter *win32.LPWSTR, buf []uint16) error {
 	return nil
 }
 
-func CMLocateDevNode(devInst *windows.Handle, deviceID []uint16) error {
+func CMLocateDevNode(devInst **windows.Handle, deviceID []uint16) error {
 	ret, _, _ := procCMLocateDevNodeW.Call(
-		uintptr(unsafe.Pointer(&devInst)),
+		uintptr(unsafe.Pointer(devInst)),
 		uintptr(unsafe.Pointer(&deviceID[0])),
 		0,
 	)
