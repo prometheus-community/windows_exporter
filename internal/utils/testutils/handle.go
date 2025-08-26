@@ -21,6 +21,7 @@ import (
 	"golang.org/x/sys/windows"
 )
 
+//nolint:gochecknoglobals
 var (
 	modkernel32 = windows.NewLazySystemDLL("kernel32.dll")
 

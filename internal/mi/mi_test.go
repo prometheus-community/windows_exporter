@@ -256,6 +256,7 @@ func Test_MI_FD_Leak(t *testing.T) {
 
 	for range 300 {
 		var processes []win32Process
+
 		err := session.Query(&processes, mi.NamespaceRootCIMv2, queryPrinter)
 		require.NoError(t, err)
 

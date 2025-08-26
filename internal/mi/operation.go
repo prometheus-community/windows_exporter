@@ -226,6 +226,7 @@ func (o *Operation) Unmarshal(dst any) error {
 			case ValueTypeSTRING:
 				if element.value == 0 {
 					field.SetString("") // Set empty string for nil values
+
 					continue
 				}
 
