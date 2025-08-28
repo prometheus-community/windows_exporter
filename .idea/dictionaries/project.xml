@@ -4,6 +4,7 @@
       <w>containerd</w>
       <w>endpointstats</w>
       <w>gochecknoglobals</w>
+      <w>lpwstr</w>
       <w>luid</w>
       <w>operationoptions</w>
       <w>setupapi</w>
