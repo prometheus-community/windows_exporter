@@ -21,7 +21,7 @@ import (
 	"reflect"
 	"testing"
 
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v3"
 )
 
 // Unmarshal good configuration file and confirm data is flattened correctly.

@@ -12,8 +12,8 @@ require (
 	github.com/prometheus/common v0.65.0
 	github.com/prometheus/exporter-toolkit v0.14.0
 	github.com/stretchr/testify v1.10.0
+	go.yaml.in/yaml/v3 v3.0.4
 	golang.org/x/sys v0.35.0
-	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -37,4 +37,5 @@ require (
 	golang.org/x/text v0.28.0 // indirect
 	google.golang.org/protobuf v1.36.7 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
