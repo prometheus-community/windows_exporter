@@ -19,7 +19,7 @@ package performancecounter
 
 import (
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v3"
 )
 
 type Object struct {
