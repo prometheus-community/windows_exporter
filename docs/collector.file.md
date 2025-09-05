@@ -1,6 +1,6 @@
 # file collector
 
-The file collector exposes modified timestamps and file size of files in the filesystem. It will replace filetime collector.
+The file collector exposes modified timestamps and file size of files in the filesystem. It  can replace filetime collector.
 
 The collector
 
