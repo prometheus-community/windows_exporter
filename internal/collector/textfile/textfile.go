@@ -36,6 +36,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
+	"github.com/prometheus/common/model"
 )
 
 const Name = "textfile"
@@ -383,7 +384,7 @@ func scrapeFile(path string, logger *slog.Logger) ([]*dto.MetricFamily, error) {
 		return nil, err
 	}
 
-	var parser expfmt.TextParser
+	parser := expfmt.NewTextParser(model.UTF8Validation)
 
 	r, encoding := utfbom.Skip(carriageReturnFilteringReader{r: file})
 	if err = checkBOM(encoding); err != nil {
