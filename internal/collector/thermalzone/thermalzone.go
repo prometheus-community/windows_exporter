@@ -71,7 +71,11 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
+func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
+	logger.Warn("The thermalzone collector is deprecated and will be removed in a future release. Please use the 'performancecounter' collector instead.",
+		slog.String("collector", c.GetName()),
+	)
+
 	c.temperature = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "temperature_celsius"),
 		"(Temperature)",

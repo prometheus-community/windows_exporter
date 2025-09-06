@@ -260,3 +260,27 @@ collector:
 The perfdata collector returns metrics based on the user configuration.
 The metrics are named based on the object name and the counter name.
 The instance name is added as a label to the metric.
+
+# Examples
+
+## thermalzone collector
+
+```yaml
+collector:
+  performancecounter:
+    objects: |-
+      - name: thermalzone
+        object: "Thermal Zone Information"
+        instances: ["*"]
+        type: formatted
+        counters:
+          - name: "Temperature"
+            type: "gauge"
+            metric: windows_thermalzone_percent_passive_limit
+          - name: "% Passive Limit"
+            type: "gauge"
+            metric: windows_thermalzone_temperature_celsius
+          - name: "Throttle Reasons"
+            type: "gauge"
+            metric: windows_thermalzone_throttle_reasons
+```
