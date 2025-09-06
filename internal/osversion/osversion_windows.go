@@ -21,28 +21,56 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/prometheus-community/windows_exporter/internal/headers/sysinfoapi"
 	"golang.org/x/sys/windows"
 )
 
 // OSVersion is a wrapper for Windows version information
 // https://msdn.microsoft.com/en-us/library/windows/desktop/ms724439(v=vs.85).aspx
 type OSVersion struct {
-	Version      uint32
-	MajorVersion uint8
-	MinorVersion uint8
-	Build        uint16
+	Version            uint32
+	MajorVersion       uint8
+	MinorVersion       uint8
+	Build              uint16
+	OperatingSystemSKU sysinfoapi.OperatingSystemSKU
+	ProductType        ProductType
+}
+
+type ProductType uint8
+
+func (pt ProductType) String() string {
+	switch pt {
+	case 1:
+		return "Workstation"
+	case 2:
+		return "Domain Controller"
+	case 3:
+		return "Server"
+	default:
+		return "Unknown"
+	}
 }
 
 //nolint:gochecknoglobals
 var osv = sync.OnceValue(func() OSVersion {
 	v := *windows.RtlGetVersion()
 
+	var operatingSystemSKU sysinfoapi.OperatingSystemSKU
+
+	_ = sysinfoapi.GetProductInfo(
+		v.MajorVersion, v.MinorVersion,
+		uint32(v.ServicePackMajor), uint32(v.ServicePackMinor),
+		&operatingSystemSKU,
+	)
+
 	return OSVersion{
 		MajorVersion: uint8(v.MajorVersion),
 		MinorVersion: uint8(v.MinorVersion),
 		Build:        uint16(v.BuildNumber),
 		// Fill version value so that existing clients don't break
-		Version: v.BuildNumber<<16 | (v.MinorVersion << 8) | v.MajorVersion,
+		Version:            v.BuildNumber<<16 | (v.MinorVersion << 8) | v.MajorVersion,
+		OperatingSystemSKU: operatingSystemSKU,
+		ProductType:        ProductType(v.ProductType),
 	}
 })
 

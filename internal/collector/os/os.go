@@ -87,7 +87,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 
 	c.osInformation = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "info"),
-		`Contains full product name & version in labels. Note that the "major_version" for Windows 11 is \"10\"; a build number greater than 22000 represents Windows 11.`,
+		`Contains full product name & version in labels.`,
 		nil,
 		prometheus.Labels{
 			"product":       productName,
@@ -96,6 +96,8 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 			"minor_version": strconv.FormatUint(uint64(version.MinorVersion), 10),
 			"build_number":  strconv.FormatUint(uint64(version.Build), 10),
 			"revision":      revision,
+			"type":          version.ProductType.String(),
+			"sku":           version.OperatingSystemSKU.String(),
 		},
 	)
 

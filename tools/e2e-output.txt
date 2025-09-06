@@ -285,7 +285,7 @@ windows_exporter_collector_timeout{collector="udp"} 0
 # TYPE windows_net_packets_total counter
 # HELP windows_os_hostname Labelled system hostname information as provided by ComputerSystem.DNSHostName and ComputerSystem.Domain
 # TYPE windows_os_hostname gauge
-# HELP windows_os_info Contains full product name & version in labels. Note that the "major_version" for Windows 11 is \\"10\\"; a build number greater than 22000 represents Windows 11.
+# HELP windows_os_info Contains full product name & version in labels.
 # TYPE windows_os_info gauge
 # HELP windows_pagefile_free_bytes Number of bytes that can be mapped into the operating system paging files without causing any other pages to be swapped out
 # TYPE windows_pagefile_free_bytes gauge
