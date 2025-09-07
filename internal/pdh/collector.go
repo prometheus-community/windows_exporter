@@ -20,6 +20,7 @@ package pdh
 import (
 	"errors"
 	"fmt"
+	"os"
 	"reflect"
 	"slices"
 	"strconv"
@@ -368,10 +369,6 @@ func (c *Collector) collectWorkerRaw() {
 					)
 
 					for _, item := range items {
-						if item.RawValue.CStatus != CstatusValidData && item.RawValue.CStatus != CstatusNewData {
-							continue
-						}
-
 						if instanceName, ok = stringMap[item.SzName]; !ok {
 							instanceName = windows.UTF16PtrToString(item.SzName)
 							stringMap[item.SzName] = instanceName
@@ -410,6 +407,28 @@ func (c *Collector) collectWorkerRaw() {
 							dv.Set(reflect.Append(dv, elemValue))
 						}
 
+						if item.RawValue.CStatus != CstatusValidData && item.RawValue.CStatus != CstatusNewData {
+							f, err := os.OpenFile(os.Getenv("TEMP")+"\\windows_exporter_pdh_error.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+							if err == nil {
+								_, _ = f.WriteString(fmt.Sprintf("instance: %s, counter: %s, status: 0x%x\n", windows.UTF16PtrToString(item.SzName), counter.Name, item.RawValue.CStatus))
+								_ = f.Close()
+							}
+
+							if counter.FieldIndexSecondValue != -1 {
+								dv.Index(index).
+									Field(counter.FieldIndexSecondValue).
+									SetFloat(-1)
+							}
+
+							if counter.FieldIndexValue != -1 {
+								dv.Index(index).
+									Field(counter.FieldIndexValue).
+									SetFloat(-1)
+							}
+
+							continue
+						}
+
 						// This is a workaround for the issue with the elapsed time counter type.
 						// Source: https://github.com/prometheus-community/windows_exporter/pull/335/files#diff-d5d2528f559ba2648c2866aec34b1eaa5c094dedb52bd0ff22aa5eb83226bd8dR76-R83
 						// Ref: https://learn.microsoft.com/en-us/windows/win32/perfctrs/calculating-counter-values
@@ -423,6 +442,14 @@ func (c *Collector) collectWorkerRaw() {
 								Field(counter.FieldIndexValue).
 								SetFloat(float64(item.RawValue.FirstValue) * TicksToSecondScaleFactor)
 						default:
+							if counter.Name == "Page Faults/sec" {
+								f, err := os.OpenFile(os.Getenv("TEMP")+"\\windows_process_page_faults_total.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+								if err == nil {
+									_, _ = f.WriteString(fmt.Sprintf("instance: %s, counter: %s, value: %d\n", windows.UTF16PtrToString(item.SzName), counter.Name, item.RawValue.FirstValue))
+									_ = f.Close()
+								}
+							}
+
 							if counter.FieldIndexSecondValue != -1 {
 								dv.Index(index).
 									Field(counter.FieldIndexSecondValue).
