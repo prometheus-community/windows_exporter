@@ -215,7 +215,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 			object.Type = pdh.CounterTypeRaw
 		}
 
-		collector, err := pdh.NewCollectorWithReflection(object.Type, object.Object, object.Instances, valueType)
+		collector, err := pdh.NewCollectorWithReflection(c.logger, object.Type, object.Object, object.Instances, valueType)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("failed collector for %s: %w", object.Name, err))
 		}

@@ -94,18 +94,18 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
+func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	var (
 		err  error
 		errs []error
 	)
 
-	c.perfDataCollectorCPU, err = pdh.NewCollector[perfDataCounterValuesCPU](pdh.CounterTypeRaw, "VM Processor", pdh.InstancesTotal)
+	c.perfDataCollectorCPU, err = pdh.NewCollector[perfDataCounterValuesCPU](logger.With(slog.String("collector", Name)), pdh.CounterTypeRaw, "VM Processor", pdh.InstancesTotal)
 	if err != nil {
 		errs = append(errs, fmt.Errorf("failed to create VM Processor collector: %w", err))
 	}
 
-	c.perfDataCollectorMemory, err = pdh.NewCollector[perfDataCounterValuesMemory](pdh.CounterTypeRaw, "VM Memory", nil)
+	c.perfDataCollectorMemory, err = pdh.NewCollector[perfDataCounterValuesMemory](logger.With(slog.String("collector", Name)), pdh.CounterTypeRaw, "VM Memory", nil)
 	if err != nil {
 		errs = append(errs, fmt.Errorf("failed to create VM Memory collector: %w", err))
 	}

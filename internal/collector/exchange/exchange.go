@@ -78,6 +78,7 @@ type Collector struct {
 	collectorWorkloadManagementWorkloads
 
 	config Config
+	logger *slog.Logger
 
 	collectorFns []func(ch chan<- prometheus.Metric) error
 	closeFns     []func()
@@ -170,7 +171,9 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
+func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
+	c.logger = logger.With(slog.String("collector", Name))
+
 	subCollectors := map[string]struct {
 		build   func() error
 		collect func(ch chan<- prometheus.Metric) error

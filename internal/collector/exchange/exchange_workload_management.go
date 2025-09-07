@@ -49,7 +49,7 @@ type perfDataCounterValuesWorkloadManagementWorkloads struct {
 func (c *Collector) buildWorkloadManagementWorkloads() error {
 	var err error
 
-	c.perfDataCollectorWorkloadManagementWorkloads, err = pdh.NewCollector[perfDataCounterValuesWorkloadManagementWorkloads](pdh.CounterTypeRaw, "MSExchange WorkloadManagement Workloads", pdh.InstancesAll)
+	c.perfDataCollectorWorkloadManagementWorkloads, err = pdh.NewCollector[perfDataCounterValuesWorkloadManagementWorkloads](c.logger, pdh.CounterTypeRaw, "MSExchange WorkloadManagement Workloads", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create MSExchange WorkloadManagement Workloads collector: %w", err)
 	}

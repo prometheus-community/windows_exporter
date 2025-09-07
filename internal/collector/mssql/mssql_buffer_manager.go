@@ -88,7 +88,7 @@ func (c *Collector) buildBufferManager() error {
 	errs := make([]error, 0, len(c.mssqlInstances))
 
 	for _, sqlInstance := range c.mssqlInstances {
-		c.bufManPerfDataCollectors[sqlInstance], err = pdh.NewCollector[perfDataCounterValuesBufMan](pdh.CounterTypeRaw, c.mssqlGetPerfObjectName(sqlInstance, "Buffer Manager"), nil)
+		c.bufManPerfDataCollectors[sqlInstance], err = pdh.NewCollector[perfDataCounterValuesBufMan](c.logger, pdh.CounterTypeRaw, c.mssqlGetPerfObjectName(sqlInstance, "Buffer Manager"), nil)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("failed to create Buffer Manager collector for instance %s: %w", sqlInstance.name, err))
 		}

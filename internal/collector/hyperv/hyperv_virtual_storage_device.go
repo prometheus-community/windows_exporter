@@ -64,7 +64,7 @@ type perfDataCounterValuesVirtualStorageDevice struct {
 func (c *Collector) buildVirtualStorageDevice() error {
 	var err error
 
-	c.perfDataCollectorVirtualStorageDevice, err = pdh.NewCollector[perfDataCounterValuesVirtualStorageDevice](pdh.CounterTypeRaw, "Hyper-V Virtual Storage Device", pdh.InstancesAll)
+	c.perfDataCollectorVirtualStorageDevice, err = pdh.NewCollector[perfDataCounterValuesVirtualStorageDevice](c.logger, pdh.CounterTypeRaw, "Hyper-V Virtual Storage Device", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create Hyper-V Virtual Storage Device collector: %w", err)
 	}
