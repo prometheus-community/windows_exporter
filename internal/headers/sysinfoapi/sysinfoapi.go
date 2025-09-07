@@ -121,6 +121,7 @@ var (
 	procGetSystemInfo        = kernel32.NewProc("GetSystemInfo")
 	procGlobalMemoryStatusEx = kernel32.NewProc("GlobalMemoryStatusEx")
 	procGetComputerNameExW   = kernel32.NewProc("GetComputerNameExW")
+	procGetProductInfo       = kernel32.NewProc("GetProductInfo")
 )
 
 // GlobalMemoryStatusEx retrieves information about the system's current usage of both physical and virtual memory.
@@ -186,4 +187,22 @@ func GetComputerName(f WinComputerNameFormat) (string, error) {
 	out := utf16.Decode(bytes)
 
 	return string(out), nil
+}
+
+// GetProductInfo retrieves the product type for the operating system on the local computer, and maps the type to the product types supported by the specified operating system.
+// https://learn.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getproductinfo
+func GetProductInfo(major, minor, spMajor, spMinor uint32, productType *OperatingSystemSKU) error {
+	ret, _, err := procGetProductInfo.Call(
+		uintptr(major),
+		uintptr(minor),
+		uintptr(spMajor),
+		uintptr(spMinor),
+		uintptr(unsafe.Pointer(productType)),
+	)
+
+	if ret == 0 {
+		return err
+	}
+
+	return nil
 }

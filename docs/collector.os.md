@@ -14,10 +14,10 @@ None
 
 ## Metrics
 
-| Name                  | Description                                                                                                                                                    | Type  | Labels                                                                 |
-|-----------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------|-------|------------------------------------------------------------------------|
-| `windows_os_hostname` | Labelled system hostname information as provided by ComputerSystem.DNSHostName and ComputerSystem.Domain                                                       | gauge | `domain`, `fqdn`, `hostname`                                           |
-| `windows_os_info`     | Contains full product name & version in labels. Note that the `major_version` for Windows 11 is "10"; a build number greater than 22000 represents Windows 11. | gauge | `product`, `version`, `major_version`, `minor_version`, `build_number` |
+| Name                  | Description                                                                                              | Type  | Labels                                                                                 |
+|-----------------------|----------------------------------------------------------------------------------------------------------|-------|----------------------------------------------------------------------------------------|
+| `windows_os_hostname` | Labelled system hostname information as provided by ComputerSystem.DNSHostName and ComputerSystem.Domain | gauge | `domain`, `fqdn`, `hostname`                                                           |
+| `windows_os_info`     | Contains full product name & version in labels.                                                          | gauge | `product`, `version`, `major_version`, `minor_version`, `build_number` , `sku`, `type` |
 
 ### Example metric
 
@@ -27,7 +27,7 @@ None
 windows_os_hostname{domain="",fqdn="PC",hostname="PC"} 1
 # HELP windows_os_info Contains full product name & version in labels. Note that the "major_version" for Windows 11 is \\"10\\"; a build number greater than 22000 represents Windows 11.
 # TYPE windows_os_info gauge
-windows_os_info{build_number="19045",major_version="10",minor_version="0",product="Windows 10 Pro",revision="4842",version="10.0.19045"} 1
+windows_os_info{build_number="26100",major_version="10",minor_version="0",product="Windows 11 Pro",revision="4946",sku="Professional",type="Workstation",version="10.0.26100"} 1
 ```
 
 ## Useful queries
