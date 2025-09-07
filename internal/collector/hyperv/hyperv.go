@@ -95,6 +95,7 @@ type Collector struct {
 	collectorVirtualSwitch
 
 	config Config
+	logger *slog.Logger
 
 	collectorFns []func(ch chan<- prometheus.Metric) error
 	closeFns     []func()
@@ -151,6 +152,7 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
+	c.logger = logger.With(slog.String("collector", Name))
 	c.collectorFns = make([]func(ch chan<- prometheus.Metric) error, 0, len(c.config.CollectorsEnabled))
 	c.closeFns = make([]func(), 0, len(c.config.CollectorsEnabled))
 
@@ -256,10 +258,10 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		}
 
 		if buildNumber < subCollectors[name].minBuildNumber {
-			logger.Warn(fmt.Sprintf(
+			c.logger.Warn(fmt.Sprintf(
 				"collector %s requires windows build version %d. Current build version: %d",
 				name, subCollectors[name].minBuildNumber, buildNumber,
-			), slog.String("collector", name))
+			))
 
 			continue
 		}

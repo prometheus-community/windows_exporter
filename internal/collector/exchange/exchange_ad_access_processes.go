@@ -50,7 +50,7 @@ type perfDataCounterValuesADAccessProcesses struct {
 func (c *Collector) buildADAccessProcesses() error {
 	var err error
 
-	c.perfDataCollectorADAccessProcesses, err = pdh.NewCollector[perfDataCounterValuesADAccessProcesses](pdh.CounterTypeRaw, "MSExchange ADAccess Processes", pdh.InstancesAll)
+	c.perfDataCollectorADAccessProcesses, err = pdh.NewCollector[perfDataCounterValuesADAccessProcesses](c.logger, pdh.CounterTypeRaw, "MSExchange ADAccess Processes", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create MSExchange ADAccess Processes collector: %w", err)
 	}

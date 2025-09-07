@@ -46,7 +46,7 @@ type perfDataCounterValuesVirtualMachineVidPartition struct {
 func (c *Collector) buildVirtualMachineVidPartition() error {
 	var err error
 
-	c.perfDataCollectorVirtualMachineVidPartition, err = pdh.NewCollector[perfDataCounterValuesVirtualMachineVidPartition](pdh.CounterTypeRaw, "Hyper-V VM Vid Partition", pdh.InstancesAll)
+	c.perfDataCollectorVirtualMachineVidPartition, err = pdh.NewCollector[perfDataCounterValuesVirtualMachineVidPartition](c.logger, pdh.CounterTypeRaw, "Hyper-V VM Vid Partition", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create Hyper-V VM Vid Partition collector: %w", err)
 	}

@@ -378,7 +378,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 			nil,
 		)
 
-		c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "DHCP Server", nil)
+		c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](c.logger, pdh.CounterTypeRaw, "DHCP Server", nil)
 		if err != nil {
 			return fmt.Errorf("failed to create DHCP Server collector: %w", err)
 		}

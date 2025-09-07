@@ -152,13 +152,13 @@ func (p perfDataCounterValuesW3SVCW3WPV8) GetName() string {
 func (c *Collector) buildW3SVCW3WP() error {
 	var err error
 
-	c.w3SVCW3WPPerfDataCollector, err = pdh.NewCollector[perfDataCounterValuesW3SVCW3WP](pdh.CounterTypeRaw, "W3SVC_W3WP", pdh.InstancesAll)
+	c.w3SVCW3WPPerfDataCollector, err = pdh.NewCollector[perfDataCounterValuesW3SVCW3WP](c.logger, pdh.CounterTypeRaw, "W3SVC_W3WP", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create W3SVC_W3WP collector: %w", err)
 	}
 
 	if c.iisVersion.major >= 8 {
-		c.w3SVCW3WPPerfDataCollectorV8, err = pdh.NewCollector[perfDataCounterValuesW3SVCW3WPV8](pdh.CounterTypeRaw, "W3SVC_W3WP", pdh.InstancesAll)
+		c.w3SVCW3WPPerfDataCollectorV8, err = pdh.NewCollector[perfDataCounterValuesW3SVCW3WPV8](c.logger, pdh.CounterTypeRaw, "W3SVC_W3WP", pdh.InstancesAll)
 		if err != nil {
 			return fmt.Errorf("failed to create W3SVC_W3WP collector: %w", err)
 		}

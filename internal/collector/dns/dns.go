@@ -132,7 +132,7 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
+func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 	for _, collector := range c.config.CollectorsEnabled {
 		if !slices.Contains([]string{subCollectorMetrics, subCollectorWMIStats}, collector) {
 			return fmt.Errorf("unknown sub collector: %s. Possible values: %s", collector,
@@ -142,7 +142,7 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 	}
 
 	if slices.Contains(c.config.CollectorsEnabled, subCollectorMetrics) {
-		if err := c.buildMetricsCollector(); err != nil {
+		if err := c.buildMetricsCollector(logger); err != nil {
 			return err
 		}
 	}
@@ -156,7 +156,7 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 	return nil
 }
 
-func (c *Collector) buildMetricsCollector() error {
+func (c *Collector) buildMetricsCollector(logger *slog.Logger) error {
 	c.zoneTransferRequestsReceived = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "zone_transfer_requests_received_total"),
 		"Number of zone transfer requests (AXFR/IXFR) received by the master DNS server",
@@ -299,7 +299,7 @@ func (c *Collector) buildMetricsCollector() error {
 
 	var err error
 
-	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "DNS", pdh.InstancesAll)
+	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](logger.With(slog.String("collector", Name)), pdh.CounterTypeRaw, "DNS", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create DNS collector: %w", err)
 	}

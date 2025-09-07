@@ -68,7 +68,7 @@ func (c *Collector) buildWaitStats() error {
 	errs := make([]error, 0, len(c.mssqlInstances))
 
 	for _, sqlInstance := range c.mssqlInstances {
-		c.waitStatsPerfDataCollectors[sqlInstance], err = pdh.NewCollector[perfDataCounterValuesWaitStats](pdh.CounterTypeRaw, c.mssqlGetPerfObjectName(sqlInstance, "Wait Statistics"), pdh.InstancesAll)
+		c.waitStatsPerfDataCollectors[sqlInstance], err = pdh.NewCollector[perfDataCounterValuesWaitStats](c.logger, pdh.CounterTypeRaw, c.mssqlGetPerfObjectName(sqlInstance, "Wait Statistics"), pdh.InstancesAll)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("failed to create Wait Statistics collector for instance %s: %w", sqlInstance.name, err))
 		}

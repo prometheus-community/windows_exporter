@@ -148,13 +148,13 @@ func (c *Collector) buildDatabases() error {
 	errs := make([]error, 0, len(c.mssqlInstances))
 
 	for _, sqlInstance := range c.mssqlInstances {
-		c.databasesPerfDataCollectors[sqlInstance], err = pdh.NewCollector[perfDataCounterValuesDatabases](pdh.CounterTypeRaw, c.mssqlGetPerfObjectName(sqlInstance, "Databases"), pdh.InstancesAll)
+		c.databasesPerfDataCollectors[sqlInstance], err = pdh.NewCollector[perfDataCounterValuesDatabases](c.logger, pdh.CounterTypeRaw, c.mssqlGetPerfObjectName(sqlInstance, "Databases"), pdh.InstancesAll)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("failed to create Databases collector for instance %s: %w", sqlInstance.name, err))
 		}
 
 		if sqlInstance.isVersionGreaterOrEqualThan(serverVersion2019) {
-			c.databasesPerfDataCollectors2019[sqlInstance], err = pdh.NewCollector[perfDataCounterValuesDatabases2019](pdh.CounterTypeRaw, c.mssqlGetPerfObjectName(sqlInstance, "Databases"), pdh.InstancesAll)
+			c.databasesPerfDataCollectors2019[sqlInstance], err = pdh.NewCollector[perfDataCounterValuesDatabases2019](c.logger, pdh.CounterTypeRaw, c.mssqlGetPerfObjectName(sqlInstance, "Databases"), pdh.InstancesAll)
 			if err != nil {
 				errs = append(errs, fmt.Errorf("failed to create Databases 2019 collector for instance %s: %w", sqlInstance.name, err))
 			}

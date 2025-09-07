@@ -237,7 +237,7 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 	c.connectionBrokerEnabled = isConnectionBrokerServer(miSession)
 
 	if c.connectionBrokerEnabled {
-		c.perfDataCollectorBroker, err = pdh.NewCollector[perfDataCounterValuesBroker](pdh.CounterTypeRaw, "Remote Desktop Connection Broker Counterset", pdh.InstancesAll)
+		c.perfDataCollectorBroker, err = pdh.NewCollector[perfDataCounterValuesBroker](c.logger, pdh.CounterTypeRaw, "Remote Desktop Connection Broker Counterset", pdh.InstancesAll)
 		if err != nil {
 			return fmt.Errorf("failed to create Remote Desktop Connection Broker Counterset collector: %w", err)
 		}
@@ -250,7 +250,7 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 		return fmt.Errorf("failed to open WTS server: %w", err)
 	}
 
-	c.perfDataCollectorTerminalServicesSession, err = pdh.NewCollector[perfDataCounterValuesTerminalServicesSession](pdh.CounterTypeRaw, "Terminal Services Session", pdh.InstancesAll)
+	c.perfDataCollectorTerminalServicesSession, err = pdh.NewCollector[perfDataCounterValuesTerminalServicesSession](c.logger, pdh.CounterTypeRaw, "Terminal Services Session", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create Terminal Services Session collector: %w", err)
 	}
