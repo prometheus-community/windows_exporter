@@ -52,7 +52,7 @@ type perfDataCounterValuesLegacyNetworkAdapter struct {
 func (c *Collector) buildLegacyNetworkAdapter() error {
 	var err error
 
-	c.perfDataCollectorLegacyNetworkAdapter, err = pdh.NewCollector[perfDataCounterValuesLegacyNetworkAdapter](pdh.CounterTypeRaw, "Hyper-V Legacy Network Adapter", pdh.InstancesAll)
+	c.perfDataCollectorLegacyNetworkAdapter, err = pdh.NewCollector[perfDataCounterValuesLegacyNetworkAdapter](c.logger, pdh.CounterTypeRaw, "Hyper-V Legacy Network Adapter", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create Hyper-V Legacy Network Adapter collector: %w", err)
 	}

@@ -74,7 +74,7 @@ type perfDataCounterValuesVirtualSMB struct {
 func (c *Collector) buildVirtualSMB() error {
 	var err error
 
-	c.perfDataCollectorVirtualSMB, err = pdh.NewCollector[perfDataCounterValuesVirtualSMB](pdh.CounterTypeRaw, "Hyper-V Virtual SMB", pdh.InstancesAll)
+	c.perfDataCollectorVirtualSMB, err = pdh.NewCollector[perfDataCounterValuesVirtualSMB](c.logger, pdh.CounterTypeRaw, "Hyper-V Virtual SMB", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create Hyper-V Virtual SMB collector: %w", err)
 	}

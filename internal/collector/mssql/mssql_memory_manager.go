@@ -82,7 +82,7 @@ func (c *Collector) buildMemoryManager() error {
 	errs := make([]error, 0, len(c.mssqlInstances))
 
 	for _, sqlInstance := range c.mssqlInstances {
-		c.memMgrPerfDataCollectors[sqlInstance], err = pdh.NewCollector[perfDataCounterValuesMemMgr](pdh.CounterTypeRaw, c.mssqlGetPerfObjectName(sqlInstance, "Memory Manager"), pdh.InstancesAll)
+		c.memMgrPerfDataCollectors[sqlInstance], err = pdh.NewCollector[perfDataCounterValuesMemMgr](c.logger, pdh.CounterTypeRaw, c.mssqlGetPerfObjectName(sqlInstance, "Memory Manager"), pdh.InstancesAll)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("failed to create Memory Manager collector for instance %s: %w", sqlInstance.name, err))
 		}

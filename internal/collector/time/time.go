@@ -206,7 +206,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	if slices.Contains(c.config.CollectorsEnabled, collectorNTP) {
 		var err error
 
-		c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "Windows Time Service", nil)
+		c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](c.logger, pdh.CounterTypeRaw, "Windows Time Service", nil)
 		if err != nil {
 			return fmt.Errorf("failed to create Windows Time Service collector: %w", err)
 		}

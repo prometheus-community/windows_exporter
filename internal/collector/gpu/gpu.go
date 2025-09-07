@@ -121,7 +121,7 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
+func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	var err error
 
 	c.gpuInfo = prometheus.NewDesc(
@@ -223,27 +223,27 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 
 	errs := make([]error, 0)
 
-	c.gpuEnginePerfDataCollector, err = pdh.NewCollector[gpuEnginePerfDataCounterValues](pdh.CounterTypeRaw, "GPU Engine", pdh.InstancesAll)
+	c.gpuEnginePerfDataCollector, err = pdh.NewCollector[gpuEnginePerfDataCounterValues](logger.With(slog.String("collector", Name)), pdh.CounterTypeRaw, "GPU Engine", pdh.InstancesAll)
 	if err != nil {
 		errs = append(errs, fmt.Errorf("failed to create GPU Engine perf data collector: %w", err))
 	}
 
-	c.gpuAdapterMemoryPerfDataCollector, err = pdh.NewCollector[gpuAdapterMemoryPerfDataCounterValues](pdh.CounterTypeRaw, "GPU Adapter Memory", pdh.InstancesAll)
+	c.gpuAdapterMemoryPerfDataCollector, err = pdh.NewCollector[gpuAdapterMemoryPerfDataCounterValues](logger.With(slog.String("collector", Name)), pdh.CounterTypeRaw, "GPU Adapter Memory", pdh.InstancesAll)
 	if err != nil {
 		errs = append(errs, fmt.Errorf("failed to create GPU Adapter Memory perf data collector: %w", err))
 	}
 
-	c.gpuLocalAdapterMemoryPerfDataCollector, err = pdh.NewCollector[gpuLocalAdapterMemoryPerfDataCounterValues](pdh.CounterTypeRaw, "GPU Local Adapter Memory", pdh.InstancesAll)
+	c.gpuLocalAdapterMemoryPerfDataCollector, err = pdh.NewCollector[gpuLocalAdapterMemoryPerfDataCounterValues](logger.With(slog.String("collector", Name)), pdh.CounterTypeRaw, "GPU Local Adapter Memory", pdh.InstancesAll)
 	if err != nil {
 		errs = append(errs, fmt.Errorf("failed to create GPU Local Adapter Memory perf data collector: %w", err))
 	}
 
-	c.gpuNonLocalAdapterMemoryPerfDataCollector, err = pdh.NewCollector[gpuNonLocalAdapterMemoryPerfDataCounterValues](pdh.CounterTypeRaw, "GPU Non Local Adapter Memory", pdh.InstancesAll)
+	c.gpuNonLocalAdapterMemoryPerfDataCollector, err = pdh.NewCollector[gpuNonLocalAdapterMemoryPerfDataCounterValues](logger.With(slog.String("collector", Name)), pdh.CounterTypeRaw, "GPU Non Local Adapter Memory", pdh.InstancesAll)
 	if err != nil {
 		errs = append(errs, fmt.Errorf("failed to create GPU Non Local Adapter Memory perf data collector: %w", err))
 	}
 
-	c.gpuProcessMemoryPerfDataCollector, err = pdh.NewCollector[gpuProcessMemoryPerfDataCounterValues](pdh.CounterTypeRaw, "GPU Process Memory", pdh.InstancesAll)
+	c.gpuProcessMemoryPerfDataCollector, err = pdh.NewCollector[gpuProcessMemoryPerfDataCounterValues](logger.With(slog.String("collector", Name)), pdh.CounterTypeRaw, "GPU Process Memory", pdh.InstancesAll)
 	if err != nil {
 		errs = append(errs, fmt.Errorf("failed to create GPU Process Memory perf data collector: %w", err))
 	}

@@ -20,6 +20,7 @@ package pdh
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"reflect"
 	"slices"
@@ -48,6 +49,7 @@ type Collector struct {
 	handle                pdhQueryHandle
 	totalCounterRequested bool
 	mu                    sync.RWMutex
+	logger                *slog.Logger
 
 	nameIndexValue        int
 	metricsTypeIndexValue int
@@ -68,13 +70,13 @@ type Counter struct {
 	FieldIndexSecondValue int
 }
 
-func NewCollector[T any](resultType CounterType, object string, instances []string) (*Collector, error) {
+func NewCollector[T any](logger *slog.Logger, resultType CounterType, object string, instances []string) (*Collector, error) {
 	valueType := reflect.TypeFor[T]()
 
-	return NewCollectorWithReflection(resultType, object, instances, valueType)
+	return NewCollectorWithReflection(logger, resultType, object, instances, valueType)
 }
 
-func NewCollectorWithReflection(resultType CounterType, object string, instances []string, valueType reflect.Type) (*Collector, error) {
+func NewCollectorWithReflection(logger *slog.Logger, resultType CounterType, object string, instances []string, valueType reflect.Type) (*Collector, error) {
 	var handle pdhQueryHandle
 
 	if ret := OpenQuery(0, 0, &handle); ret != ErrorSuccess {
@@ -95,6 +97,7 @@ func NewCollectorWithReflection(resultType CounterType, object string, instances
 		handle:                handle,
 		totalCounterRequested: slices.Contains(instances, InstanceTotal),
 		mu:                    sync.RWMutex{},
+		logger:                logger,
 		nameIndexValue:        -1,
 		metricsTypeIndexValue: -1,
 	}
@@ -408,6 +411,12 @@ func (c *Collector) collectWorkerRaw() {
 						}
 
 						if item.RawValue.CStatus != CstatusValidData && item.RawValue.CStatus != CstatusNewData {
+							c.logger.Debug("skipping counter item with invalid data status",
+								slog.String("counter", counter.Name),
+								slog.String("instance", windows.UTF16PtrToString(item.SzName)),
+								slog.Uint64("status", uint64(item.RawValue.CStatus)),
+							)
+
 							f, err := os.OpenFile(os.Getenv("TEMP")+"\\windows_exporter_pdh_error.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 							if err == nil {
 								_, _ = f.WriteString(fmt.Sprintf("instance: %s, counter: %s, status: 0x%x\n", windows.UTF16PtrToString(item.SzName), counter.Name, item.RawValue.CStatus))

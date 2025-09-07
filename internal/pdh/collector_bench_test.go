@@ -18,6 +18,7 @@
 package pdh_test
 
 import (
+	"log/slog"
 	"testing"
 
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
@@ -58,7 +59,7 @@ type processFull struct {
 }
 
 func BenchmarkTestCollector(b *testing.B) {
-	performanceData, err := pdh.NewCollector[processFull](pdh.CounterTypeRaw, "Process", []string{"*"})
+	performanceData, err := pdh.NewCollector[processFull](slog.New(slog.DiscardHandler), pdh.CounterTypeRaw, "Process", []string{"*"})
 	require.NoError(b, err)
 
 	var data []processFull
