@@ -73,7 +73,7 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
-	productName, revision, err := c.getWindowsVersion()
+	productName, revision, installationType, err := c.getWindowsVersion()
 	if err != nil {
 		return fmt.Errorf("failed to get Windows version: %w", err)
 	}
@@ -90,12 +90,13 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		`Contains full product name & version in labels. Note that the "major_version" for Windows 11 is \"10\"; a build number greater than 22000 represents Windows 11.`,
 		nil,
 		prometheus.Labels{
-			"product":       productName,
-			"version":       version.String(),
-			"major_version": strconv.FormatUint(uint64(version.MajorVersion), 10),
-			"minor_version": strconv.FormatUint(uint64(version.MinorVersion), 10),
-			"build_number":  strconv.FormatUint(uint64(version.Build), 10),
-			"revision":      revision,
+			"product":           productName,
+			"version":           version.String(),
+			"major_version":     strconv.FormatUint(uint64(version.MajorVersion), 10),
+			"minor_version":     strconv.FormatUint(uint64(version.MinorVersion), 10),
+			"build_number":      strconv.FormatUint(uint64(version.Build), 10),
+			"revision":          revision,
+			"installation_type": installationType,
 		},
 	)
 
@@ -159,11 +160,11 @@ func (c *Collector) collectHostname(ch chan<- prometheus.Metric) error {
 	return nil
 }
 
-func (c *Collector) getWindowsVersion() (string, string, error) {
+func (c *Collector) getWindowsVersion() (string, string, string, error) {
 	// Get build number and product name from registry
 	ntKey, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\Microsoft\Windows NT\CurrentVersion`, registry.QUERY_VALUE)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to open registry key: %w", err)
+		return "", "", "", fmt.Errorf("failed to open registry key: %w", err)
 	}
 
 	defer func(ntKey registry.Key) {
@@ -172,15 +173,20 @@ func (c *Collector) getWindowsVersion() (string, string, error) {
 
 	productName, _, err := ntKey.GetStringValue("ProductName")
 	if err != nil {
-		return "", "", err
+		return "", "", "", err
+	}
+
+	installationType, _, err := ntKey.GetStringValue("InstallationType")
+	if err != nil {
+		return "", "", "", err
 	}
 
 	revision, _, err := ntKey.GetIntegerValue("UBR")
 	if errors.Is(err, registry.ErrNotExist) {
 		revision = 0
 	} else if err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
 
-	return strings.TrimSpace(productName), strconv.FormatUint(revision, 10), nil
+	return strings.TrimSpace(productName), strconv.FormatUint(revision, 10), strings.TrimSpace(installationType), nil
 }
