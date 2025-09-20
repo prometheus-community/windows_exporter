@@ -11,7 +11,7 @@
   "schedule": [
     "* 14-17 * * 5"
   ],
-  "ignorePaths": ["**/workflows/container_description.yml"],
+  "ignorePaths": ["**/workflows/container_description.yml","**/workflows/stale.yml"],
   "packageRules": [
     {
       "matchPackageNames": ["go-yaml/yaml"],
