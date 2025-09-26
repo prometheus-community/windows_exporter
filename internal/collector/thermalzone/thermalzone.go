@@ -103,7 +103,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 	var err error
 
-	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "Thermal Zone Information", pdh.InstancesAll)
+	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](logger.With(slog.String("collector", Name)), pdh.CounterTypeRaw, "Thermal Zone Information", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create Thermal Zone Information collector: %w", err)
 	}

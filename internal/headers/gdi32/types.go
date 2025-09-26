@@ -73,9 +73,22 @@ type D3DKMT_ADAPTERADDRESS struct {
 	FunctionNumber win32.UINT
 }
 
+type D3DKMT_QUERY_DEVICE_IDS struct {
+	PhysicalAdapterIndex win32.UINT
+	DeviceIds            struct {
+		VendorID    win32.UINT
+		DeviceID    win32.UINT
+		SubVendorID win32.UINT
+		SubSystemID win32.UINT
+		RevisionID  win32.UINT
+		BusType     win32.UINT
+	}
+}
+
 type GPUDevice struct {
 	AdapterString             string
 	LUID                      windows.LUID
+	DeviceID                  string
 	DedicatedVideoMemorySize  uint64
 	DedicatedSystemMemorySize uint64
 	SharedSystemMemorySize    uint64

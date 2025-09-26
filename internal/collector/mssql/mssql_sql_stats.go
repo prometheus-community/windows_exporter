@@ -64,7 +64,7 @@ func (c *Collector) buildSQLStats() error {
 	errs := make([]error, 0, len(c.mssqlInstances))
 
 	for _, sqlInstance := range c.mssqlInstances {
-		c.sqlStatsPerfDataCollectors[sqlInstance], err = pdh.NewCollector[perfDataCounterValuesSqlStats](pdh.CounterTypeRaw, c.mssqlGetPerfObjectName(sqlInstance, "SQL Statistics"), nil)
+		c.sqlStatsPerfDataCollectors[sqlInstance], err = pdh.NewCollector[perfDataCounterValuesSqlStats](c.logger, pdh.CounterTypeRaw, c.mssqlGetPerfObjectName(sqlInstance, "SQL Statistics"), nil)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("failed to create SQL Statistics collector for instance %s: %w", sqlInstance.name, err))
 		}

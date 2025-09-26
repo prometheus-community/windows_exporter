@@ -187,11 +187,11 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 
 	switch c.config.CounterVersion {
 	case 2:
-		c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "Process V2", pdh.InstancesAll)
+		c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](c.logger, pdh.CounterTypeRaw, "Process V2", pdh.InstancesAll)
 	case 1:
 		c.perfDataCollector, err = registry.NewCollector[perfDataCounterValues]("Process", pdh.InstancesAll)
 	default:
-		c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "Process V2", pdh.InstancesAll)
+		c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](c.logger, pdh.CounterTypeRaw, "Process V2", pdh.InstancesAll)
 		c.config.CounterVersion = 2
 
 		if errors.Is(err, pdh.NewPdhError(pdh.CstatusNoObject)) {

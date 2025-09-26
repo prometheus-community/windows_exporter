@@ -41,7 +41,7 @@ type perfDataCounterValuesOWA struct {
 func (c *Collector) buildOWA() error {
 	var err error
 
-	c.perfDataCollectorOWA, err = pdh.NewCollector[perfDataCounterValuesOWA](pdh.CounterTypeRaw, "MSExchange OWA", pdh.InstancesAll)
+	c.perfDataCollectorOWA, err = pdh.NewCollector[perfDataCounterValuesOWA](c.logger, pdh.CounterTypeRaw, "MSExchange OWA", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create MSExchange OWA collector: %w", err)
 	}

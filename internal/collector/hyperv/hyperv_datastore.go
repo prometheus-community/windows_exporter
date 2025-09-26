@@ -132,7 +132,7 @@ type perfDataCounterValuesDataStore struct {
 func (c *Collector) buildDataStore() error {
 	var err error
 
-	c.perfDataCollectorDataStore, err = pdh.NewCollector[perfDataCounterValuesDataStore](pdh.CounterTypeRaw, "Hyper-V DataStore", pdh.InstancesAll)
+	c.perfDataCollectorDataStore, err = pdh.NewCollector[perfDataCounterValuesDataStore](c.logger, pdh.CounterTypeRaw, "Hyper-V DataStore", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create Hyper-V DataStore collector: %w", err)
 	}

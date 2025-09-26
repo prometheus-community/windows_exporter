@@ -52,7 +52,7 @@ type perfDataCounterValuesHypervisorLogicalProcessor struct {
 func (c *Collector) buildHypervisorLogicalProcessor() error {
 	var err error
 
-	c.perfDataCollectorHypervisorLogicalProcessor, err = pdh.NewCollector[perfDataCounterValuesHypervisorLogicalProcessor](pdh.CounterTypeRaw, "Hyper-V Hypervisor Logical Processor", pdh.InstancesAll)
+	c.perfDataCollectorHypervisorLogicalProcessor, err = pdh.NewCollector[perfDataCounterValuesHypervisorLogicalProcessor](c.logger, pdh.CounterTypeRaw, "Hyper-V Hypervisor Logical Processor", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create Hyper-V Hypervisor Logical Processor collector: %w", err)
 	}
