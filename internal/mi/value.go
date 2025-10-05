@@ -27,6 +27,7 @@ import (
 
 type ValueType int
 
+//nolint:iotamixing
 const (
 	ValueTypeBOOLEAN ValueType = iota
 	ValueTypeUINT8
