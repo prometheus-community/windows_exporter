@@ -15,6 +15,7 @@ linters:
     - gocognit
     - goconst
     - gocyclo
+    - godoclint
     - godot
     - lll
     - maintidx
@@ -23,6 +24,7 @@ linters:
     - paralleltest
     - tagliatelle
     - testpackage
+    - unqueryvet
     - varnamelen
     - wrapcheck
     - wsl
