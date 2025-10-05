@@ -34,6 +34,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/diskdrive"
 	"github.com/prometheus-community/windows_exporter/internal/collector/dns"
 	"github.com/prometheus-community/windows_exporter/internal/collector/exchange"
+	"github.com/prometheus-community/windows_exporter/internal/collector/file"
 	"github.com/prometheus-community/windows_exporter/internal/collector/filetime"
 	"github.com/prometheus-community/windows_exporter/internal/collector/fsrmquota"
 	"github.com/prometheus-community/windows_exporter/internal/collector/gpu"
@@ -92,6 +93,7 @@ var BuildersWithFlags = map[string]BuilderWithFlags[Collector]{
 	dns.Name:                NewBuilderWithFlags(dns.NewWithFlags),
 	exchange.Name:           NewBuilderWithFlags(exchange.NewWithFlags),
 	filetime.Name:           NewBuilderWithFlags(filetime.NewWithFlags),
+	file.Name:               NewBuilderWithFlags(file.NewWithFlags),
 	fsrmquota.Name:          NewBuilderWithFlags(fsrmquota.NewWithFlags),
 	gpu.Name:                NewBuilderWithFlags(gpu.NewWithFlags),
 	hyperv.Name:             NewBuilderWithFlags(hyperv.NewWithFlags),
