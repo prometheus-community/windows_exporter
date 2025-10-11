@@ -1,6 +1,6 @@
 # file collector
 
-The file collector exposes modified timestamps and file size of files in the filesystem. It will replace filetime collector.
+The file collector exposes modified timestamps and file size of files in the filesystem.
 
 The collector
 
@@ -11,16 +11,16 @@ Enabled by default? | No
 
 ## Flags
 
-### `--collectors.file.file-patterns`
+### `--collector.file.file-patterns`
 Comma-separated list of file patterns. Each pattern is a glob pattern that can contain `*`, `?`, and `**` (recursive).
 See https://github.com/bmatcuk/doublestar#patterns for an extended description of the pattern syntax.
 
 ## Metrics
 
-Name | Description | Type | Labels
------|-------------|------|-------
-`windows_file_mtime_timestamp_seconds` | File modification time | gauge | `file`
-`windows_file_size_bytes` | File size | gauge | `file`
+| Name                                   | Description            | Type  | Labels |
+|----------------------------------------|------------------------|-------|--------|
+| `windows_file_mtime_timestamp_seconds` | File modification time | gauge | `file` |
+| `windows_file_size_bytes`              | File size              | gauge | `file` |
 
 ### Example metric
 
