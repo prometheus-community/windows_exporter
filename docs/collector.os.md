@@ -17,7 +17,7 @@ None
 | Name                  | Description                                                                                                                                                    | Type  | Labels                                                                 |
 |-----------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------|-------|------------------------------------------------------------------------|
 | `windows_os_hostname` | Labelled system hostname information as provided by ComputerSystem.DNSHostName and ComputerSystem.Domain                                                       | gauge | `domain`, `fqdn`, `hostname`                                           |
-| `windows_os_info`     | Contains full product name & version in labels. Note that the `major_version` for Windows 11 is "10"; a build number greater than 22000 represents Windows 11. | gauge | `product`, `version`, `major_version`, `minor_version`, `build_number` |
+| `windows_os_info`     | Contains full product name & version in labels. Note that the `major_version` for Windows 11 is "10"; a build number greater than 22000 represents Windows 11. | gauge | `product`, `version`, `major_version`, `minor_version`, `build_number`, `installation_type`|
 
 ### Example metric
 
