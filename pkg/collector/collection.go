@@ -40,6 +40,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/diskdrive"
 	"github.com/prometheus-community/windows_exporter/internal/collector/dns"
 	"github.com/prometheus-community/windows_exporter/internal/collector/exchange"
+	"github.com/prometheus-community/windows_exporter/internal/collector/file"
 	"github.com/prometheus-community/windows_exporter/internal/collector/filetime"
 	"github.com/prometheus-community/windows_exporter/internal/collector/fsrmquota"
 	"github.com/prometheus-community/windows_exporter/internal/collector/gpu"
@@ -111,6 +112,7 @@ func NewWithConfig(config Config) *Collection {
 	collectors[dns.Name] = dns.New(&config.DNS)
 	collectors[exchange.Name] = exchange.New(&config.Exchange)
 	collectors[filetime.Name] = filetime.New(&config.Filetime)
+	collectors[file.Name] = file.New(&config.File)
 	collectors[fsrmquota.Name] = fsrmquota.New(&config.Fsrmquota)
 	collectors[gpu.Name] = gpu.New(&config.GPU)
 	collectors[hyperv.Name] = hyperv.New(&config.HyperV)
