@@ -15,8 +15,8 @@ The Windows Update service is responsible for managing the installation of updat
 ## Flags
 
 ### `--collector.update.online`
-Whether to search for updates online. If set to `false`, the collector will only list updates that are already found by the Windows Update service.
-Set to `true` to search for updates online, which will take longer to complete.
+Whether to search for updates online. If set to `false` via `--no-collector.update.online`, the collector will only list updates that are already found by the Windows Update service.
+Set to `true` via `--collector.update.online` to search for updates online, which will take longer to complete.
 
 ### `--collector.update.scrape-interval`
 Define the interval of scraping Windows Update information
