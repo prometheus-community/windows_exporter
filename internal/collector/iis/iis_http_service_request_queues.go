@@ -88,6 +88,10 @@ func (c *Collector) buildHttpServiceRequestQueues() error {
 }
 
 func (c *Collector) collectHttpServiceRequestQueues(ch chan<- prometheus.Metric) error {
+	if c.perfDataCollectorHttpServiceRequestQueues == nil {
+		return nil
+	}
+
 	err := c.perfDataCollectorHttpServiceRequestQueues.Collect(&c.perfDataObjectHttpServiceRequestQueues)
 	if err != nil {
 		return fmt.Errorf("failed to collect Http Service Request Queues metrics: %w", err)
@@ -113,7 +117,7 @@ func (c *Collector) collectHttpServiceRequestQueues(ch chan<- prometheus.Metric)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.httpRequestQueuesTotalRejectedRequest,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			data.HttpRequestQueuesTotalRejectedRequests,
 			data.Name,
 		)

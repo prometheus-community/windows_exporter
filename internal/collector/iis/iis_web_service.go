@@ -244,6 +244,10 @@ func (c *Collector) buildWebService() error {
 }
 
 func (c *Collector) collectWebService(ch chan<- prometheus.Metric) error {
+	if c.perfDataCollectorWebService == nil {
+		return nil
+	}
+
 	err := c.perfDataCollectorWebService.Collect(&c.perfDataObjectWebService)
 	if err != nil {
 		return fmt.Errorf("failed to collect Web Service metrics: %w", err)

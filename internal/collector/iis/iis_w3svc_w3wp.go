@@ -366,25 +366,25 @@ func (c *Collector) buildW3SVCW3WP() error {
 	)
 	c.w3SVCW3WPWebSocketRequestsActive = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "worker_current_websocket_requests"),
-		"",
+		"Current number of active WebSocket requests in the worker process",
 		[]string{"app", "pid"},
 		nil,
 	)
 	c.w3SVCW3WPWebSocketConnectionAttempts = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "worker_websocket_connection_attempts_total"),
-		"",
+		prometheus.BuildFQName(types.Namespace, Name, "worker_websocket_connection_attempts_per_sec"),
+		"WebSocket connection attempts per second",
 		[]string{"app", "pid"},
 		nil,
 	)
 	c.w3SVCW3WPWebSocketConnectionsAccepted = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "worker_websocket_connection_accepted_total"),
-		"",
+		prometheus.BuildFQName(types.Namespace, Name, "worker_websocket_connection_accepted_per_sec"),
+		"WebSocket connections accepted per second",
 		[]string{"app", "pid"},
 		nil,
 	)
 	c.w3SVCW3WPWebSocketConnectionsRejected = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "worker_websocket_connection_rejected_total"),
-		"",
+		prometheus.BuildFQName(types.Namespace, Name, "worker_websocket_connection_rejected_per_sec"),
+		"WebSocket connections rejected per second",
 		[]string{"app", "pid"},
 		nil,
 	)
@@ -407,6 +407,10 @@ func (c *Collector) collectW3SVCW3WP(ch chan<- prometheus.Metric) error {
 }
 
 func (c *Collector) collectW3SVCW3WPv8(ch chan<- prometheus.Metric) error {
+	if c.w3SVCW3WPPerfDataCollectorV8 == nil {
+		return nil
+	}
+
 	err := c.w3SVCW3WPPerfDataCollectorV8.Collect(&c.perfDataObjectW3SVCW3WPV8)
 	if err != nil {
 		return fmt.Errorf("failed to collect APP_POOL_WAS metrics: %w", err)
@@ -471,7 +475,7 @@ func (c *Collector) collectW3SVCW3WPv8(ch chan<- prometheus.Metric) error {
 
 		ch <- prometheus.MustNewConstMetric(
 			c.w3SVCW3WPWebSocketRequestsActive,
-			prometheus.CounterValue,
+			prometheus.GaugeValue,
 			data.W3SVCW3WPWebSocketRequestsActive,
 			name,
 			pid,
@@ -479,7 +483,7 @@ func (c *Collector) collectW3SVCW3WPv8(ch chan<- prometheus.Metric) error {
 
 		ch <- prometheus.MustNewConstMetric(
 			c.w3SVCW3WPWebSocketConnectionAttempts,
-			prometheus.CounterValue,
+			prometheus.GaugeValue,
 			data.W3SVCW3WPWebSocketConnectionAttempts,
 			name,
 			pid,
@@ -487,7 +491,7 @@ func (c *Collector) collectW3SVCW3WPv8(ch chan<- prometheus.Metric) error {
 
 		ch <- prometheus.MustNewConstMetric(
 			c.w3SVCW3WPWebSocketConnectionsAccepted,
-			prometheus.CounterValue,
+			prometheus.GaugeValue,
 			data.W3SVCW3WPWebSocketConnectionsAccepted,
 			name,
 			pid,
@@ -495,7 +499,7 @@ func (c *Collector) collectW3SVCW3WPv8(ch chan<- prometheus.Metric) error {
 
 		ch <- prometheus.MustNewConstMetric(
 			c.w3SVCW3WPWebSocketConnectionsRejected,
-			prometheus.CounterValue,
+			prometheus.GaugeValue,
 			data.W3SVCW3WPWebSocketConnectionsRejected,
 			name,
 			pid,
@@ -506,6 +510,10 @@ func (c *Collector) collectW3SVCW3WPv8(ch chan<- prometheus.Metric) error {
 }
 
 func (c *Collector) collectW3SVCW3WPv7(ch chan<- prometheus.Metric) error {
+	if c.w3SVCW3WPPerfDataCollector == nil {
+		return nil
+	}
+
 	err := c.w3SVCW3WPPerfDataCollector.Collect(&c.perfDataObjectW3SVCW3WP)
 	if err != nil {
 		return fmt.Errorf("failed to collect APP_POOL_WAS metrics: %w", err)
@@ -539,7 +547,7 @@ func (c *Collector) collectW3SVCW3WPv7(ch chan<- prometheus.Metric) error {
 
 		ch <- prometheus.MustNewConstMetric(
 			c.w3SVCW3WPMaximumThreads,
-			prometheus.CounterValue,
+			prometheus.GaugeValue,
 			data.W3SVCW3WPMaximumThreads,
 			name,
 			pid,
@@ -555,7 +563,7 @@ func (c *Collector) collectW3SVCW3WPv7(ch chan<- prometheus.Metric) error {
 
 		ch <- prometheus.MustNewConstMetric(
 			c.w3SVCW3WPRequestsActive,
-			prometheus.CounterValue,
+			prometheus.GaugeValue,
 			data.W3SVCW3WPRequestsActive,
 			name,
 			pid,
@@ -579,7 +587,7 @@ func (c *Collector) collectW3SVCW3WPv7(ch chan<- prometheus.Metric) error {
 
 		ch <- prometheus.MustNewConstMetric(
 			c.w3SVCW3WPMaximumFileCacheMemoryUsage,
-			prometheus.CounterValue,
+			prometheus.GaugeValue,
 			data.W3SVCW3WPMaximumFileCacheMemoryUsage,
 			name,
 			pid,

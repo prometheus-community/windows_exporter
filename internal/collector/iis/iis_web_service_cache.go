@@ -282,6 +282,10 @@ func (c *Collector) buildWebServiceCache() error {
 }
 
 func (c *Collector) collectWebServiceCache(ch chan<- prometheus.Metric) error {
+	if c.serviceCachePerfDataCollector == nil {
+		return nil
+	}
+
 	err := c.serviceCachePerfDataCollector.Collect(&c.perfDataObjectServiceCache)
 	if err != nil {
 		return fmt.Errorf("failed to collect Web Service Cache metrics: %w", err)
