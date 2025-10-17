@@ -168,6 +168,10 @@ func (c *Collector) buildAppPoolWAS() error {
 }
 
 func (c *Collector) collectAppPoolWAS(ch chan<- prometheus.Metric) error {
+	if c.perfDataCollectorAppPoolWAS == nil {
+		return nil
+	}
+
 	err := c.perfDataCollectorAppPoolWAS.Collect(&c.perfDataObjectAppPoolWAS)
 	if err != nil {
 		return fmt.Errorf("failed to collect APP_POOL_WAS metrics: %w", err)
@@ -239,7 +243,7 @@ func (c *Collector) collectAppPoolWAS(ch chan<- prometheus.Metric) error {
 
 		ch <- prometheus.MustNewConstMetric(
 			c.totalApplicationPoolUptime,
-			prometheus.CounterValue,
+			prometheus.GaugeValue,
 			data.TotalApplicationPoolUptime,
 			data.Name,
 		)
