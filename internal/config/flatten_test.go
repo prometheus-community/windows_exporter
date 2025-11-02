@@ -36,7 +36,7 @@ func TestConfigFlattening(t *testing.T) {
     log:
       level: debug`)
 
-	var data map[string]interface{}
+	var data map[string]any
 
 	err := yaml.Unmarshal(goodYamlConfig, &data)
 	if err != nil {

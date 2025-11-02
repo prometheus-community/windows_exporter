@@ -107,7 +107,7 @@ func NewCollectorWithReflection(resultType CounterType, object string, instances
 	}
 
 	if f, ok := valueType.FieldByName("MetricType"); ok {
-		if f.Type.Kind() == reflect.TypeOf(prometheus.ValueType(0)).Kind() {
+		if f.Type.Kind() == reflect.TypeFor[prometheus.ValueType]().Kind() {
 			collector.metricsTypeIndexValue = f.Index[0]
 		}
 	}

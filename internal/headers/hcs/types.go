@@ -46,7 +46,7 @@ type Properties struct {
 type ProcessDetails struct {
 	ProcessId                    int32     `json:"ProcessId,omitempty"`
 	ImageName                    string    `json:"ImageName,omitempty"`
-	CreateTimestamp              time.Time `json:"CreateTimestamp,omitempty"`
+	CreateTimestamp              time.Time `json:"CreateTimestamp"`
 	UserTime100ns                int32     `json:"UserTime100ns,omitempty"`
 	KernelTime100ns              int32     `json:"KernelTime100ns,omitempty"`
 	MemoryCommitBytes            int32     `json:"MemoryCommitBytes,omitempty"`
@@ -55,8 +55,8 @@ type ProcessDetails struct {
 }
 
 type Statistics struct {
-	Timestamp          time.Time       `json:"Timestamp,omitempty"`
-	ContainerStartTime time.Time       `json:"ContainerStartTime,omitempty"`
+	Timestamp          time.Time       `json:"Timestamp"`
+	ContainerStartTime time.Time       `json:"ContainerStartTime"`
 	Uptime100ns        uint64          `json:"Uptime100ns,omitempty"`
 	Processor          *ProcessorStats `json:"Processor,omitempty"`
 	Memory             *MemoryStats    `json:"Memory,omitempty"`

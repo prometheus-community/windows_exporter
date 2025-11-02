@@ -64,7 +64,7 @@ func FuncBenchmarkCollector[C collector.Collector](b *testing.B, name string, co
 	}
 }
 
-func TestCollector[C collector.Collector, V interface{}](t *testing.T, fn func(*V) C, conf *V) {
+func TestCollector[C collector.Collector, V any](t *testing.T, fn func(*V) C, conf *V) {
 	t.Helper()
 
 	var (
@@ -89,15 +89,11 @@ func TestCollector[C collector.Collector, V interface{}](t *testing.T, fn func(*
 	})
 
 	wg := sync.WaitGroup{}
-	wg.Add(1)
-
-	go func() {
-		defer wg.Done()
-
+	wg.Go(func() {
 		for metric := range ch {
 			metrics = append(metrics, metric)
 		}
-	}()
+	})
 
 	err = c.Build(logger, miSession)
 
