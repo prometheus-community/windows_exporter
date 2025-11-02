@@ -25,6 +25,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -183,17 +184,7 @@ func (c *Collector) convertMetricFamily(logger *slog.Logger, metricFamily *dto.M
 		}
 
 		for k := range allLabelNames {
-			present := false
-
-			for _, name := range names {
-				if k == name {
-					present = true
-
-					break
-				}
-			}
-
-			if !present {
+			if !slices.Contains(names, k) {
 				names = append(names, k)
 				values = append(values, "")
 			}

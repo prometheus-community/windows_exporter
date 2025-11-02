@@ -102,6 +102,7 @@ func TestDuplicateFileName(t *testing.T) {
 		err := val.Write(&metric)
 		require.NoError(t, err)
 
+		//nolint:perfsprint
 		got += metric.String()
 	}
 

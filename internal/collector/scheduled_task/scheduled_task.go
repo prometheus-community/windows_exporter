@@ -248,6 +248,7 @@ func getScheduledTasks() (ScheduledTasks, error) {
 	// Otherwise, attempting to initialize and run parallel queries across
 	// goroutines will result in protected memory errors.
 	runtime.LockOSThread()
+
 	defer runtime.UnlockOSThread()
 
 	if err := ole.CoInitializeEx(0, ole.COINIT_APARTMENTTHREADED|ole.COINIT_DISABLE_OLE1DDE); err != nil {
@@ -256,6 +257,7 @@ func getScheduledTasks() (ScheduledTasks, error) {
 			return nil, err
 		}
 	}
+
 	defer ole.CoUninitialize()
 
 	schedClassID, err := ole.ClassIDFrom(SCHEDULED_TASK_PROGRAM_ID)

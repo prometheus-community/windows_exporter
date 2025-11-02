@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"reflect"
 	"regexp"
 	"slices"
@@ -184,7 +185,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 				return reflect.StructField{
 					Name: strings.ToUpper(sanitizeMetricName(name)),
-					Type: reflect.TypeOf(float64(0)),
+					Type: reflect.TypeFor[float64](),
 					Tag:  reflect.StructTag(fmt.Sprintf(`perfdata:"%s"`, name)),
 				}, nil
 			}(counter.Name)
@@ -200,13 +201,13 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		if object.Instances != nil {
 			fields = append(fields, reflect.StructField{
 				Name: "Name",
-				Type: reflect.TypeOf(""),
+				Type: reflect.TypeFor[string](),
 			})
 		}
 
 		fields = append(fields, reflect.StructField{
 			Name: "MetricType",
-			Type: reflect.TypeOf(prometheus.ValueType(0)),
+			Type: reflect.TypeFor[prometheus.ValueType](),
 		})
 
 		valueType := reflect.StructOf(fields)
@@ -321,7 +322,7 @@ func (c *Collector) collectObject(ch chan<- prometheus.Metric, perfDataObject Ob
 				continue
 			}
 
-			if field.Kind() != reflect.TypeOf(prometheus.ValueType(0)).Kind() {
+			if field.Kind() != reflect.TypeFor[prometheus.ValueType]().Kind() {
 				errs = append(errs, fmt.Errorf("failed to cast MetricType for %s to prometheus.ValueType", counter.Name))
 
 				continue
@@ -351,9 +352,7 @@ func (c *Collector) collectObject(ch chan<- prometheus.Metric, perfDataObject Ob
 				}
 			}
 
-			for key, value := range counter.Labels {
-				labels[key] = value
-			}
+			maps.Copy(labels, counter.Labels)
 
 			switch counter.Type {
 			case "counter":
