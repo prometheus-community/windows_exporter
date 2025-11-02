@@ -99,6 +99,7 @@ func ParseConfigFile(args []string) string {
 		if configFile, ok := strings.CutPrefix(cliFlag, "--config.file="); ok {
 			return configFile
 		}
+
 		if configFile, ok := strings.CutPrefix(cliFlag, "-config.file="); ok {
 			return configFile
 		}

@@ -64,6 +64,7 @@ func TestMultipleDirectories(t *testing.T) {
 		err := val.Write(&metric)
 		require.NoError(t, err)
 
+		//nolint:modernize
 		got += metric.String()
 	}
 
