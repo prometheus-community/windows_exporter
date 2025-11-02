@@ -19,6 +19,7 @@ package netframework
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
@@ -30,73 +31,73 @@ func (c *Collector) buildClrMemory() {
 	c.allocatedBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, collectorClrMemory+"_allocated_bytes_total"),
 		"Displays the total number of bytes allocated on the garbage collection heap.",
-		[]string{"process"},
+		[]string{"process", "process_id"},
 		nil,
 	)
 	c.finalizationSurvivors = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, collectorClrMemory+"_finalization_survivors"),
 		"Displays the number of garbage-collected objects that survive a collection because they are waiting to be finalized.",
-		[]string{"process"},
+		[]string{"process", "process_id"},
 		nil,
 	)
 	c.heapSize = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, collectorClrMemory+"_heap_size_bytes"),
 		"Displays the maximum bytes that can be allocated; it does not indicate the current number of bytes allocated.",
-		[]string{"process", "area"},
+		[]string{"process", "process_id", "area"},
 		nil,
 	)
 	c.promotedBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, collectorClrMemory+"_promoted_bytes"),
 		"Displays the bytes that were promoted from the generation to the next one during the last GC. Memory is promoted when it survives a garbage collection.",
-		[]string{"process", "area"},
+		[]string{"process", "process_id", "area"},
 		nil,
 	)
 	c.numberGCHandles = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, collectorClrMemory+"_number_gc_handles"),
 		"Displays the current number of garbage collection handles in use. Garbage collection handles are handles to resources external to the common language runtime and the managed environment.",
-		[]string{"process"},
+		[]string{"process", "process_id"},
 		nil,
 	)
 	c.numberCollections = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, collectorClrMemory+"_collections_total"),
 		"Displays the number of times the generation objects are garbage collected since the application started.",
-		[]string{"process", "area"},
+		[]string{"process", "process_id", "area"},
 		nil,
 	)
 	c.numberInducedGC = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, collectorClrMemory+"_induced_gc_total"),
 		"Displays the peak number of times garbage collection was performed because of an explicit call to GC.Collect.",
-		[]string{"process"},
+		[]string{"process", "process_id"},
 		nil,
 	)
 	c.numberOfPinnedObjects = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, collectorClrMemory+"_number_pinned_objects"),
 		"Displays the number of pinned objects encountered in the last garbage collection.",
-		[]string{"process"},
+		[]string{"process", "process_id"},
 		nil,
 	)
 	c.numberOfSinkBlocksInUse = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, collectorClrMemory+"_number_sink_blocksinuse"),
 		"Displays the current number of synchronization blocks in use. Synchronization blocks are per-object data structures allocated for storing synchronization information. They hold weak references to managed objects and must be scanned by the garbage collector.",
-		[]string{"process"},
+		[]string{"process", "process_id"},
 		nil,
 	)
 	c.numberTotalCommittedBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, collectorClrMemory+"_committed_bytes"),
 		"Displays the amount of virtual memory, in bytes, currently committed by the garbage collector. Committed memory is the physical memory for which space has been reserved in the disk paging file.",
-		[]string{"process"},
+		[]string{"process", "process_id"},
 		nil,
 	)
 	c.numberTotalReservedBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, collectorClrMemory+"_reserved_bytes"),
 		"Displays the amount of virtual memory, in bytes, currently reserved by the garbage collector. Reserved memory is the virtual memory space reserved for the application when no disk or main memory pages have been used.",
-		[]string{"process"},
+		[]string{"process", "process_id"},
 		nil,
 	)
 	c.timeInGC = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, collectorClrMemory+"_gc_time_percent"),
 		"Displays the percentage of time that was spent performing a garbage collection in the last sample.",
-		[]string{"process"},
+		[]string{"process", "process_id"},
 		nil,
 	)
 }
@@ -151,6 +152,7 @@ func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric) error {
 			prometheus.CounterValue,
 			float64(process.AllocatedBytesPersec),
 			process.Name,
+			strconv.FormatUint(process.ProcessID, 10),
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -158,6 +160,7 @@ func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric) error {
 			prometheus.GaugeValue,
 			float64(process.FinalizationSurvivors),
 			process.Name,
+			strconv.FormatUint(process.ProcessID, 10),
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -165,6 +168,7 @@ func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric) error {
 			prometheus.GaugeValue,
 			float64(process.Gen0heapsize),
 			process.Name,
+			strconv.FormatUint(process.ProcessID, 10),
 			"Gen0",
 		)
 
@@ -173,6 +177,7 @@ func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric) error {
 			prometheus.GaugeValue,
 			float64(process.Gen0PromotedBytesPerSec),
 			process.Name,
+			strconv.FormatUint(process.ProcessID, 10),
 			"Gen0",
 		)
 
@@ -181,6 +186,7 @@ func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric) error {
 			prometheus.GaugeValue,
 			float64(process.Gen1heapsize),
 			process.Name,
+			strconv.FormatUint(process.ProcessID, 10),
 			"Gen1",
 		)
 
@@ -189,6 +195,7 @@ func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric) error {
 			prometheus.GaugeValue,
 			float64(process.Gen1PromotedBytesPerSec),
 			process.Name,
+			strconv.FormatUint(process.ProcessID, 10),
 			"Gen1",
 		)
 
@@ -197,6 +204,7 @@ func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric) error {
 			prometheus.GaugeValue,
 			float64(process.Gen2heapsize),
 			process.Name,
+			strconv.FormatUint(process.ProcessID, 10),
 			"Gen2",
 		)
 
@@ -205,6 +213,7 @@ func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric) error {
 			prometheus.GaugeValue,
 			float64(process.LargeObjectHeapsize),
 			process.Name,
+			strconv.FormatUint(process.ProcessID, 10),
 			"LOH",
 		)
 
@@ -213,6 +222,7 @@ func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric) error {
 			prometheus.GaugeValue,
 			float64(process.NumberGCHandles),
 			process.Name,
+			strconv.FormatUint(process.ProcessID, 10),
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -220,6 +230,7 @@ func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric) error {
 			prometheus.CounterValue,
 			float64(process.NumberGen0Collections),
 			process.Name,
+			strconv.FormatUint(process.ProcessID, 10),
 			"Gen0",
 		)
 
@@ -228,6 +239,7 @@ func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric) error {
 			prometheus.CounterValue,
 			float64(process.NumberGen1Collections),
 			process.Name,
+			strconv.FormatUint(process.ProcessID, 10),
 			"Gen1",
 		)
 
@@ -236,6 +248,7 @@ func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric) error {
 			prometheus.CounterValue,
 			float64(process.NumberGen2Collections),
 			process.Name,
+			strconv.FormatUint(process.ProcessID, 10),
 			"Gen2",
 		)
 
@@ -244,6 +257,7 @@ func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric) error {
 			prometheus.CounterValue,
 			float64(process.NumberInducedGC),
 			process.Name,
+			strconv.FormatUint(process.ProcessID, 10),
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -251,6 +265,7 @@ func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric) error {
 			prometheus.GaugeValue,
 			float64(process.NumberofPinnedObjects),
 			process.Name,
+			strconv.FormatUint(process.ProcessID, 10),
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -258,6 +273,7 @@ func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric) error {
 			prometheus.GaugeValue,
 			float64(process.NumberofSinkBlocksinuse),
 			process.Name,
+			strconv.FormatUint(process.ProcessID, 10),
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -265,6 +281,7 @@ func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric) error {
 			prometheus.GaugeValue,
 			float64(process.NumberTotalcommittedBytes),
 			process.Name,
+			strconv.FormatUint(process.ProcessID, 10),
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -272,6 +289,7 @@ func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric) error {
 			prometheus.GaugeValue,
 			float64(process.NumberTotalreservedBytes),
 			process.Name,
+			strconv.FormatUint(process.ProcessID, 10),
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -279,6 +297,7 @@ func (c *Collector) collectClrMemory(ch chan<- prometheus.Metric) error {
 			prometheus.GaugeValue,
 			float64(100*process.PercentTimeinGC)/float64(process.PercentTimeinGC_base),
 			process.Name,
+			strconv.FormatUint(process.ProcessID, 10),
 		)
 	}
 
