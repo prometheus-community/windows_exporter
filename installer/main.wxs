@@ -71,11 +71,16 @@
         <Property Id="TEXTFILE_DIRS" Secure="yes" />
         <SetProperty Id="TextfileDirsFlag" After="InstallFiles" Sequence="execute" Value="--collector.textfile.directories=&quot;[TEXTFILE_DIRS]&quot;" Condition="TEXTFILE_DIRS" />
 
+        <!-- Configuration for how the installer shows in Add/Remove Programs. -->
+        <Icon Id="icon.ico" SourceFile=".\icon.ico"/>
+        <Property Id="ARPPRODUCTICON" Value="icon.ico" />
         <Property Id="ARPHELPLINK" Value="https://github.com/prometheus-community/windows_exporter/issues" />
-        <Property Id="ARPSIZE" Value="9000" />
         <Property Id="ARPURLINFOABOUT" Value="https://github.com/prometheus-community/windows_exporter" />
-        <!--<Property Id="ARPNOMODIFY" Value="0" />-->
-        <!--<Property Id="ARPNOREPAIR" Value="1" />-->
+        <Property Id="ARPCOMMENTS" Value="Prometheus exporter for Windows machines" />
+        <!-- Disable the repair option; the functionality is available through Change instead. -->
+        <Property Id="ARPNOREPAIR" Value="1" />
+        <Property Id="ARPSIZE" Value="10000" />
+
         <Property Id="START_MENU_FOLDER" Value="0" />
         <Property Id="NOSTART" Value="0" />
 
