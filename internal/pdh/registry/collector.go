@@ -53,9 +53,7 @@ func NewCollector[T any](object string, _ []string) (*Collector, error) {
 		counters:       make(map[string]Counter),
 	}
 
-	var values [0]T
-
-	valueType := reflect.TypeOf(values).Elem()
+	valueType := reflect.TypeFor[T]().Elem()
 
 	if f, ok := valueType.FieldByName("Name"); ok {
 		if f.Type.Kind() == reflect.String {
@@ -81,9 +79,7 @@ func NewCollector[T any](object string, _ []string) (*Collector, error) {
 			}
 		}
 
-		if strings.HasSuffix(counterName, ",secondvalue") {
-			counterName = strings.TrimSuffix(counterName, ",secondvalue")
-
+		if counterName, ok = strings.CutSuffix(counterName, ",secondvalue"); ok {
 			counter.FieldIndexSecondValue = f.Index[0]
 		} else {
 			counter.FieldIndexValue = f.Index[0]
