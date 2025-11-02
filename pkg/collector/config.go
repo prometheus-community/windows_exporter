@@ -30,6 +30,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/diskdrive"
 	"github.com/prometheus-community/windows_exporter/internal/collector/dns"
 	"github.com/prometheus-community/windows_exporter/internal/collector/exchange"
+	"github.com/prometheus-community/windows_exporter/internal/collector/file"
 	"github.com/prometheus-community/windows_exporter/internal/collector/filetime"
 	"github.com/prometheus-community/windows_exporter/internal/collector/fsrmquota"
 	"github.com/prometheus-community/windows_exporter/internal/collector/gpu"
@@ -81,6 +82,7 @@ type Config struct {
 	DNS                dns.Config                `yaml:"dns"`
 	Exchange           exchange.Config           `yaml:"exchange"`
 	Filetime           filetime.Config           `yaml:"filetime"`
+	File               file.Config               `yaml:"file"`
 	Fsrmquota          fsrmquota.Config          `yaml:"fsrmquota"`
 	GPU                gpu.Config                `yaml:"gpu"`
 	HyperV             hyperv.Config             `yaml:"hyperv"`
