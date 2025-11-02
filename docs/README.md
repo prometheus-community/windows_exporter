@@ -14,6 +14,7 @@ This directory contains documentation of the collectors in the windows_exporter,
 - [`diskdrive`](collector.diskdrive.md)
 - [`dns`](collector.dns.md)
 - [`exchange`](collector.exchange.md)
+- [`file`](collector.file.md)
 - [`fsrmquota`](collector.fsrmquota.md)
 - [`hyperv`](collector.hyperv.md)
 - [`iis`](collector.iis.md)
