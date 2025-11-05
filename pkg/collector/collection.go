@@ -218,7 +218,7 @@ func (c *Collection) Build(ctx context.Context, logger *slog.Logger) error {
 		go func() {
 			defer wg.Done()
 
-			if err = collector.Build(logger, c.miSession); err != nil {
+			if err := collector.Build(logger, c.miSession); err != nil {
 				errCh <- fmt.Errorf("error build collector %s: %w", collector.GetName(), err)
 			}
 		}()
