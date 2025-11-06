@@ -21,7 +21,7 @@ import (
 	"reflect"
 	"testing"
 
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v3"
 )
 
 // Unmarshal good configuration file and confirm data is flattened correctly.
@@ -36,7 +36,7 @@ func TestConfigFlattening(t *testing.T) {
     log:
       level: debug`)
 
-	var data map[string]interface{}
+	var data map[string]any
 
 	err := yaml.Unmarshal(goodYamlConfig, &data)
 	if err != nil {

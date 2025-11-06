@@ -95,7 +95,7 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
+func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	c.accessAccepts = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "access_accepts"),
 		"(AccessAccepts)",
@@ -252,12 +252,12 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 
 	errs := make([]error, 0)
 
-	c.accessPerfDataCollector, err = pdh.NewCollector[perfDataCounterValuesAccess](pdh.CounterTypeRaw, "NPS Authentication Server", nil)
+	c.accessPerfDataCollector, err = pdh.NewCollector[perfDataCounterValuesAccess](logger.With(slog.String("collector", Name)), pdh.CounterTypeRaw, "NPS Authentication Server", nil)
 	if err != nil {
 		errs = append(errs, fmt.Errorf("failed to create NPS Authentication Server collector: %w", err))
 	}
 
-	c.accountingPerfDataCollector, err = pdh.NewCollector[perfDataCounterValuesAccounting](pdh.CounterTypeRaw, "NPS Accounting Server", nil)
+	c.accountingPerfDataCollector, err = pdh.NewCollector[perfDataCounterValuesAccounting](logger.With(slog.String("collector", Name)), pdh.CounterTypeRaw, "NPS Accounting Server", nil)
 	if err != nil {
 		errs = append(errs, fmt.Errorf("failed to create NPS Accounting Server collector: %w", err))
 	}

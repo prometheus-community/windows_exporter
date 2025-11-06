@@ -15,7 +15,7 @@
 
 //go:build windows
 
-package filetime
+package file
 
 import (
 	"fmt"
@@ -33,7 +33,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-const Name = "filetime"
+const Name = "file"
 
 type Config struct {
 	FilePatterns []string `yaml:"file-patterns"`
@@ -50,6 +50,7 @@ type Collector struct {
 
 	logger    *slog.Logger
 	fileMTime *prometheus.Desc
+	fileSize  *prometheus.Desc
 }
 
 func New(config *Config) *Collector {
@@ -75,7 +76,7 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 	c.config.FilePatterns = make([]string, 0)
 
 	app.Flag(
-		"collector.filetime.file-patterns",
+		"collector.file.file-patterns",
 		"Comma-separated list of file patterns. Each pattern is a glob pattern that can contain `*`, `?`, and `**` (recursive). See https://github.com/bmatcuk/doublestar#patterns",
 	).Default(strings.Join(ConfigDefaults.FilePatterns, ",")).StringsVar(&c.config.FilePatterns)
 
@@ -93,11 +94,18 @@ func (c *Collector) Close() error {
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	c.logger = logger.With(slog.String("collector", Name))
 
-	c.logger.Info("filetime collector is in an experimental state! It may subject to change.")
+	c.logger.Info("file collector is in an experimental state! It may subject to change.")
 
 	c.fileMTime = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "mtime_timestamp_seconds"),
 		"File modification time",
+		[]string{"file"},
+		nil,
+	)
+
+	c.fileSize = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "size_bytes"),
+		"File size",
 		[]string{"file"},
 		nil,
 	)
@@ -160,6 +168,13 @@ func (c *Collector) collectGlobFilePath(ch chan<- prometheus.Metric, filePattern
 			c.fileMTime,
 			prometheus.GaugeValue,
 			float64(fileInfo.ModTime().UTC().UnixMicro())/1e6,
+			filePath,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.fileSize,
+			prometheus.GaugeValue,
+			float64(fileInfo.Size()),
 			filePath,
 		)
 

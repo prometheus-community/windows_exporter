@@ -103,7 +103,7 @@ type perfDataCounterServiceCache struct {
 func (c *Collector) buildWebServiceCache() error {
 	var err error
 
-	c.serviceCachePerfDataCollector, err = pdh.NewCollector[perfDataCounterServiceCache](pdh.CounterTypeRaw, "Web Service Cache", pdh.InstancesAll)
+	c.serviceCachePerfDataCollector, err = pdh.NewCollector[perfDataCounterServiceCache](c.logger, pdh.CounterTypeRaw, "Web Service Cache", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create Web Service Cache collector: %w", err)
 	}

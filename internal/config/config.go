@@ -26,7 +26,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/pkg/collector"
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v3"
 )
 
 // configFile represents the structure of the windows_exporter configuration file,
@@ -96,12 +96,12 @@ func Parse(app *kingpin.Application, args []string) error {
 // ParseConfigFile manually parses the configuration file from the command line arguments.
 func ParseConfigFile(args []string) string {
 	for i, cliFlag := range args {
-		if strings.HasPrefix(cliFlag, "--config.file=") {
-			return strings.TrimPrefix(cliFlag, "--config.file=")
+		if configFile, ok := strings.CutPrefix(cliFlag, "--config.file="); ok {
+			return configFile
 		}
 
-		if strings.HasPrefix(cliFlag, "-config.file=") {
-			return strings.TrimPrefix(cliFlag, "-config.file=")
+		if configFile, ok := strings.CutPrefix(cliFlag, "-config.file="); ok {
+			return configFile
 		}
 
 		if strings.HasSuffix(cliFlag, "-config.file") {
@@ -148,7 +148,7 @@ func NewConfigFileResolver(filePath string) (*Resolver, error) {
 		return nil, fmt.Errorf("failed to rewind file: %w", err)
 	}
 
-	var rawValues map[string]interface{}
+	var rawValues map[string]any
 
 	decoder = yaml.NewDecoder(file)
 	if err = decoder.Decode(&rawValues); err != nil {

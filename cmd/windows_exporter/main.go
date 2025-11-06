@@ -89,6 +89,10 @@ func run(ctx context.Context, args []string) int {
 			"collectors.enabled",
 			"Comma-separated list of collectors to use. Use '[defaults]' as a placeholder for all the collectors enabled by default.").
 			Default(collector.DefaultCollectors).String()
+		disabledCollectors = app.Flag(
+			"collectors.disabled",
+			"Comma-separated list of collectors to exclude. Can be used to disable collector from the defaults.").
+			Default("").String()
 		timeoutMargin = app.Flag(
 			"scrape.timeout-margin",
 			"Seconds to subtract from the timeout allowed by the client. Tune to allow for overhead or high loads.",
@@ -164,6 +168,10 @@ func run(ctx context.Context, args []string) int {
 		)
 
 		return 1
+	}
+
+	if *disabledCollectors != "" {
+		collectors.Disable(slices.Compact(strings.Split(*disabledCollectors, ",")))
 	}
 
 	// Initialize collectors before loading

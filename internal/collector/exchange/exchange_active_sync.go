@@ -43,7 +43,7 @@ type perfDataCounterValuesActiveSync struct {
 func (c *Collector) buildActiveSync() error {
 	var err error
 
-	c.perfDataCollectorActiveSync, err = pdh.NewCollector[perfDataCounterValuesActiveSync](pdh.CounterTypeRaw, "MSExchange ActiveSync", pdh.InstancesAll)
+	c.perfDataCollectorActiveSync, err = pdh.NewCollector[perfDataCounterValuesActiveSync](c.logger, pdh.CounterTypeRaw, "MSExchange ActiveSync", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create MSExchange ActiveSync collector: %w", err)
 	}

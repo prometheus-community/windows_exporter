@@ -75,7 +75,7 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
+func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	c.pagingLimitBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "limit_bytes"),
 		"Number of bytes that can be stored in the operating system paging files. 0 (zero) indicates that there are no paging files",
@@ -92,7 +92,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 
 	var err error
 
-	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "Paging File", pdh.InstancesAll)
+	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](logger.With(slog.String("collector", Name)), pdh.CounterTypeRaw, "Paging File", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create Paging File collector: %w", err)
 	}

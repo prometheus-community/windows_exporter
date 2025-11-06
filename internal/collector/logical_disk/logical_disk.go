@@ -332,7 +332,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 	var err error
 
-	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "LogicalDisk", pdh.InstancesAll)
+	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](logger.With(slog.String("collector", Name)), pdh.CounterTypeRaw, "LogicalDisk", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create LogicalDisk collector: %w", err)
 	}
@@ -775,6 +775,7 @@ func (c *Collector) workerBitlocker(ctx context.Context, initErrCh chan<- error)
 	// Otherwise, attempting to initialize and run parallel queries across
 	// goroutines will result in protected memory errors.
 	runtime.LockOSThread()
+
 	defer runtime.UnlockOSThread()
 
 	if err := ole.CoInitializeEx(0, ole.COINIT_APARTMENTTHREADED|ole.COINIT_DISABLE_OLE1DDE); err != nil {

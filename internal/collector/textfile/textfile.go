@@ -25,6 +25,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -36,6 +37,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
+	"github.com/prometheus/common/model"
 )
 
 const Name = "textfile"
@@ -182,17 +184,7 @@ func (c *Collector) convertMetricFamily(logger *slog.Logger, metricFamily *dto.M
 		}
 
 		for k := range allLabelNames {
-			present := false
-
-			for _, name := range names {
-				if k == name {
-					present = true
-
-					break
-				}
-			}
-
-			if !present {
+			if !slices.Contains(names, k) {
 				names = append(names, k)
 				values = append(values, "")
 			}
@@ -383,7 +375,7 @@ func scrapeFile(path string, logger *slog.Logger) ([]*dto.MetricFamily, error) {
 		return nil, err
 	}
 
-	var parser expfmt.TextParser
+	parser := expfmt.NewTextParser(model.UTF8Validation)
 
 	r, encoding := utfbom.Skip(carriageReturnFilteringReader{r: file})
 	if err = checkBOM(encoding); err != nil {

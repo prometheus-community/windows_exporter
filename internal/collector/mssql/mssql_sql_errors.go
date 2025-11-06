@@ -47,7 +47,7 @@ func (c *Collector) buildSQLErrors() error {
 	errs := make([]error, 0, len(c.mssqlInstances))
 
 	for _, sqlInstance := range c.mssqlInstances {
-		c.sqlErrorsPerfDataCollectors[sqlInstance], err = pdh.NewCollector[perfDataCounterValuesSqlErrors](pdh.CounterTypeRaw, c.mssqlGetPerfObjectName(sqlInstance, "SQL Errors"), pdh.InstancesAll)
+		c.sqlErrorsPerfDataCollectors[sqlInstance], err = pdh.NewCollector[perfDataCounterValuesSqlErrors](c.logger, pdh.CounterTypeRaw, c.mssqlGetPerfObjectName(sqlInstance, "SQL Errors"), pdh.InstancesAll)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("failed to create SQL Errors collector for instance %s: %w", sqlInstance.name, err))
 		}

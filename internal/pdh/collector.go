@@ -20,6 +20,7 @@ package pdh
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"reflect"
 	"slices"
 	"strconv"
@@ -47,6 +48,7 @@ type Collector struct {
 	handle                pdhQueryHandle
 	totalCounterRequested bool
 	mu                    sync.RWMutex
+	logger                *slog.Logger
 
 	nameIndexValue        int
 	metricsTypeIndexValue int
@@ -67,13 +69,13 @@ type Counter struct {
 	FieldIndexSecondValue int
 }
 
-func NewCollector[T any](resultType CounterType, object string, instances []string) (*Collector, error) {
+func NewCollector[T any](logger *slog.Logger, resultType CounterType, object string, instances []string) (*Collector, error) {
 	valueType := reflect.TypeFor[T]()
 
-	return NewCollectorWithReflection(resultType, object, instances, valueType)
+	return NewCollectorWithReflection(logger, resultType, object, instances, valueType)
 }
 
-func NewCollectorWithReflection(resultType CounterType, object string, instances []string, valueType reflect.Type) (*Collector, error) {
+func NewCollectorWithReflection(logger *slog.Logger, resultType CounterType, object string, instances []string, valueType reflect.Type) (*Collector, error) {
 	var handle pdhQueryHandle
 
 	if ret := OpenQuery(0, 0, &handle); ret != ErrorSuccess {
@@ -94,6 +96,7 @@ func NewCollectorWithReflection(resultType CounterType, object string, instances
 		handle:                handle,
 		totalCounterRequested: slices.Contains(instances, InstanceTotal),
 		mu:                    sync.RWMutex{},
+		logger:                logger,
 		nameIndexValue:        -1,
 		metricsTypeIndexValue: -1,
 	}
@@ -107,7 +110,7 @@ func NewCollectorWithReflection(resultType CounterType, object string, instances
 	}
 
 	if f, ok := valueType.FieldByName("MetricType"); ok {
-		if f.Type.Kind() == reflect.TypeOf(prometheus.ValueType(0)).Kind() {
+		if f.Type.Kind() == reflect.TypeFor[prometheus.ValueType]().Kind() {
 			collector.metricsTypeIndexValue = f.Index[0]
 		}
 	}
@@ -369,6 +372,12 @@ func (c *Collector) collectWorkerRaw() {
 
 					for _, item := range items {
 						if item.RawValue.CStatus != CstatusValidData && item.RawValue.CStatus != CstatusNewData {
+							c.logger.Debug("skipping counter item with invalid data status",
+								slog.String("counter", counter.Name),
+								slog.String("instance", windows.UTF16PtrToString(item.SzName)),
+								slog.Uint64("status", uint64(item.RawValue.CStatus)),
+							)
+
 							continue
 						}
 

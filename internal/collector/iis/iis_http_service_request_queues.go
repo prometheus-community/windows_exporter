@@ -54,7 +54,7 @@ func (c *Collector) buildHttpServiceRequestQueues() error {
 
 	c.logger.Info("IIS/HttpServiceRequestQueues collector is in an experimental state! The configuration and metrics may change in future. Please report any issues.")
 
-	c.perfDataCollectorHttpServiceRequestQueues, err = pdh.NewCollector[perfDataCounterValuesHttpServiceRequestQueues](pdh.CounterTypeRaw, "HTTP Service Request Queues", pdh.InstancesAll)
+	c.perfDataCollectorHttpServiceRequestQueues, err = pdh.NewCollector[perfDataCounterValuesHttpServiceRequestQueues](c.logger, pdh.CounterTypeRaw, "HTTP Service Request Queues", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create Http Service collector: %w", err)
 	}

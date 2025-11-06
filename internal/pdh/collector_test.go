@@ -18,6 +18,7 @@
 package pdh_test
 
 import (
+	"log/slog"
 	"testing"
 	"time"
 
@@ -45,7 +46,7 @@ func TestCollector(t *testing.T) {
 		t.Run(tc.object, func(t *testing.T) {
 			t.Parallel()
 
-			performanceData, err := pdh.NewCollector[process](pdh.CounterTypeRaw, tc.object, tc.instances)
+			performanceData, err := pdh.NewCollector[process](slog.New(slog.DiscardHandler), pdh.CounterTypeRaw, tc.object, tc.instances)
 			require.NoError(t, err)
 
 			time.Sleep(100 * time.Millisecond)

@@ -6,6 +6,7 @@ output/
 .vscode
 *.syso
 installer/*.msi
+installer/*.log
 installer/*.wixpdb
 local/
 

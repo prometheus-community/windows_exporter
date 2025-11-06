@@ -71,11 +71,16 @@
         <Property Id="TEXTFILE_DIRS" Secure="yes" />
         <SetProperty Id="TextfileDirsFlag" After="InstallFiles" Sequence="execute" Value="--collector.textfile.directories=&quot;[TEXTFILE_DIRS]&quot;" Condition="TEXTFILE_DIRS" />
 
+        <!-- Configuration for how the installer shows in Add/Remove Programs. -->
+        <Icon Id="icon.ico" SourceFile=".\icon.ico"/>
+        <Property Id="ARPPRODUCTICON" Value="icon.ico" />
         <Property Id="ARPHELPLINK" Value="https://github.com/prometheus-community/windows_exporter/issues" />
-        <Property Id="ARPSIZE" Value="9000" />
         <Property Id="ARPURLINFOABOUT" Value="https://github.com/prometheus-community/windows_exporter" />
-        <!--<Property Id="ARPNOMODIFY" Value="0" />-->
-        <!--<Property Id="ARPNOREPAIR" Value="1" />-->
+        <Property Id="ARPCOMMENTS" Value="Prometheus exporter for Windows machines" />
+        <!-- Disable the repair option; the functionality is available through Change instead. -->
+        <Property Id="ARPNOREPAIR" Value="1" />
+        <Property Id="ARPSIZE" Value="10000" />
+
         <Property Id="START_MENU_FOLDER" Value="0" />
         <Property Id="NOSTART" Value="0" />
 
@@ -127,6 +132,23 @@
         />
         <!-- END CUSTOM ACTION FOR KILLING THE PROCESS -->
 
+        <!-- START CUSTOM ACTION FOR SET SERVICE FAILUREFLAG -->
+        <SetProperty
+            Id="ConfigureServiceRecovery"
+            Value="&quot;[WindowsFolder]System32\sc.exe&quot; failureflag &quot;windows_exporter&quot; 1"
+            Before="ConfigureServiceRecovery"
+            Sequence="execute"
+        />
+        <CustomAction
+            Id="ConfigureServiceRecovery"
+            BinaryRef="Wix4UtilCA_$(sys.BUILDARCHSHORT)"
+            DllEntry="WixQuietExec"
+            Execute="deferred"
+            Return="ignore"
+            Impersonate="no"
+        />
+        <!-- END CUSTOM ACTION FFOR SET SERVICE FAILUREFLAG -->
+
         <InstallExecuteSequence>
             <!-- Set REINSTALL=all and REINSTALLMODE=amus if the user reruns the
                  MSI, which will force reinstalling all files and services.  -->
@@ -135,6 +157,7 @@
             <Custom Action="set_reinstall_all_property" Before="set_reinstallmode_property" Condition="MAINTENANCE"/>
             <Custom Action="set_reinstallmode_property" Before="LaunchConditions" Condition="MAINTENANCE"/>
             <Custom Action="CreateConfigFile" Before="InstallServices" Condition="ConfigFile_Default" />
+            <Custom Action="ConfigureServiceRecovery" After="InstallServices" Condition="NOT REMOVE" />
             <Custom Action="KillProcess" Before="RemoveFiles" />
 
             <Custom Action="CheckExtraFlags" Before="InstallInitialize"

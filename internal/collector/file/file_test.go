@@ -15,21 +15,21 @@
 
 //go:build windows
 
-package filetime_test
+package file_test
 
 import (
 	"testing"
 
-	"github.com/prometheus-community/windows_exporter/internal/collector/filetime"
+	"github.com/prometheus-community/windows_exporter/internal/collector/file"
 	"github.com/prometheus-community/windows_exporter/internal/utils/testutils"
 )
 
 func BenchmarkCollector(b *testing.B) {
-	testutils.FuncBenchmarkCollector(b, filetime.Name, filetime.NewWithFlags)
+	testutils.FuncBenchmarkCollector(b, file.Name, file.NewWithFlags)
 }
 
 func TestCollector(t *testing.T) {
-	testutils.TestCollector(t, filetime.New, &filetime.Config{
+	testutils.TestCollector(t, file.New, &file.Config{
 		FilePatterns: []string{"*.*"},
 	})
 }

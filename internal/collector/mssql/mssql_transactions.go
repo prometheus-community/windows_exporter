@@ -68,7 +68,7 @@ func (c *Collector) buildTransactions() error {
 	errs := make([]error, 0, len(c.mssqlInstances))
 
 	for _, sqlInstance := range c.mssqlInstances {
-		c.transactionsPerfDataCollectors[sqlInstance], err = pdh.NewCollector[perfDataCounterValuesTransactions](pdh.CounterTypeRaw, c.mssqlGetPerfObjectName(sqlInstance, "Transactions"), nil)
+		c.transactionsPerfDataCollectors[sqlInstance], err = pdh.NewCollector[perfDataCounterValuesTransactions](c.logger, pdh.CounterTypeRaw, c.mssqlGetPerfObjectName(sqlInstance, "Transactions"), nil)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("failed to create Transactions collector for instance %s: %w", sqlInstance.name, err))
 		}

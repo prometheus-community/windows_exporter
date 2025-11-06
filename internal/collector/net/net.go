@@ -279,7 +279,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 	var err error
 
-	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](pdh.CounterTypeRaw, "Network Interface", pdh.InstancesAll)
+	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](logger.With(slog.String("collector", Name)), pdh.CounterTypeRaw, "Network Interface", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create Network Interface collector: %w", err)
 	}

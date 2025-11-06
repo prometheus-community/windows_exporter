@@ -26,8 +26,8 @@ import (
 
 type mssqlInstance struct {
 	name            string
+	instanceName    string
 	majorVersion    mssqlServerMajorVersion
-	patchVersion    string
 	edition         string
 	isFirstInstance bool
 }
@@ -54,14 +54,15 @@ func newMssqlInstance(key, name string) (mssqlInstance, error) {
 		return mssqlInstance{}, fmt.Errorf("couldn't get version from registry: %w", err)
 	}
 
+	instanceName := name
 	_, name, _ = strings.Cut(name, ".")
 
 	return mssqlInstance{
 		edition:         edition,
 		name:            name,
 		majorVersion:    newMajorVersion(patchVersion),
-		patchVersion:    patchVersion,
 		isFirstInstance: key == "MSSQLSERVER",
+		instanceName:    instanceName,
 	}, nil
 }
 

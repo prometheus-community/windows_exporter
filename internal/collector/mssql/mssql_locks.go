@@ -61,7 +61,7 @@ func (c *Collector) buildLocks() error {
 	errs := make([]error, 0, len(c.mssqlInstances))
 
 	for _, sqlInstance := range c.mssqlInstances {
-		c.locksPerfDataCollectors[sqlInstance], err = pdh.NewCollector[perfDataCounterValuesLocks](pdh.CounterTypeRaw, c.mssqlGetPerfObjectName(sqlInstance, "Locks"), pdh.InstancesAll)
+		c.locksPerfDataCollectors[sqlInstance], err = pdh.NewCollector[perfDataCounterValuesLocks](c.logger, pdh.CounterTypeRaw, c.mssqlGetPerfObjectName(sqlInstance, "Locks"), pdh.InstancesAll)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("failed to create Locks collector for instance %s: %w", sqlInstance.name, err))
 		}
