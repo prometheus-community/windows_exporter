@@ -30,7 +30,7 @@ groups:
   rules:
 
   - alert: Drive_Status
-    expr: windows_disk_drive_status{status="OK"} != 1
+    expr: windows_diskdrive_status{status="OK"} != 1
     for: 10m
     labels:
       severity: high
