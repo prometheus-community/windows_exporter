@@ -77,8 +77,7 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 		"CSV volume information",
 		[]string{
 			"path",
-			"volume_label",
-			"file_system",
+			"volume",
 		},
 		nil,
 	)
@@ -88,7 +87,7 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 		"Total size of the CSV volume in bytes",
 		[]string{
 			"path",
-			"volume_label",
+			"volume",
 		},
 		nil,
 	)
@@ -98,7 +97,7 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 		"Free space on the CSV volume in bytes",
 		[]string{
 			"path",
-			"volume_label",
+			"volume",
 		},
 		nil,
 	)
@@ -124,11 +123,10 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 }
 
 type miDiskPartition struct {
-	Path        string `mi:"Path"`
-	TotalSize   uint64 `mi:"TotalSize"`
-	FreeSpace   uint64 `mi:"FreeSpace"`
-	FileSystem  string `mi:"FileSystem"`
-	VolumeLabel string `mi:"VolumeLabel"`
+	Path      string `mi:"Path"`
+	TotalSize uint64 `mi:"TotalSize"`
+	FreeSpace uint64 `mi:"FreeSpace"`
+	Volume    string `mi:"VolumeLabel"`
 }
 
 // Collect sends the metric values for each metric
@@ -141,16 +139,14 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 
 	for _, partition := range dst {
 		path := strings.TrimRight(partition.Path, " ")
-		volumeLabel := strings.TrimRight(partition.VolumeLabel, " ")
-		fileSystem := strings.TrimRight(partition.FileSystem, " ")
+		volume := strings.TrimRight(partition.volume, " ")
 
 		ch <- prometheus.MustNewConstMetric(
 			c.csvvInfo,
 			prometheus.GaugeValue,
 			1.0,
 			path,
-			volumeLabel,
-			fileSystem,
+			volume,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -158,7 +154,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 			prometheus.GaugeValue,
 			float64(partition.TotalSize)*1024, // Convert from KB to bytes
 			path,
-			volumeLabel,
+			volume,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -166,7 +162,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 			prometheus.GaugeValue,
 			float64(partition.FreeSpace)*1024, // Convert from KB to bytes
 			path,
-			volumeLabel,
+			volume,
 		)
 	}
 
