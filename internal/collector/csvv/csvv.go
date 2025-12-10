@@ -84,7 +84,7 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 
 	c.csvvTotalSize = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "total_bytes"),
-		"Total size of the CSV volume in bytes",
+		"Total size of the CSV Volume in bytes",
 		[]string{
 			"path",
 			"volume",
@@ -94,7 +94,7 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 
 	c.csvvFreeSpace = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "free_bytes"),
-		"Free space on the CSV volume in bytes",
+		"Free space on the CSV Volume in bytes",
 		[]string{
 			"path",
 			"volume",
@@ -139,14 +139,14 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 
 	for _, partition := range dst {
 		path := strings.TrimRight(partition.Path, " ")
-		volume := strings.TrimRight(partition.volume, " ")
+		Volume := strings.TrimRight(partition.Volume, " ")
 
 		ch <- prometheus.MustNewConstMetric(
 			c.csvvInfo,
 			prometheus.GaugeValue,
 			1.0,
 			path,
-			volume,
+			Volume,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -154,7 +154,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 			prometheus.GaugeValue,
 			float64(partition.TotalSize)*1024, // Convert from KB to bytes
 			path,
-			volume,
+			Volume,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -162,7 +162,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 			prometheus.GaugeValue,
 			float64(partition.FreeSpace)*1024, // Convert from KB to bytes
 			path,
-			volume,
+			Volume,
 		)
 	}
 
