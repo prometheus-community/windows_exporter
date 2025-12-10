@@ -35,6 +35,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/container"
 	"github.com/prometheus-community/windows_exporter/internal/collector/cpu"
 	"github.com/prometheus-community/windows_exporter/internal/collector/cpu_info"
+	"github.com/prometheus-community/windows_exporter/internal/collector/csv"
 	"github.com/prometheus-community/windows_exporter/internal/collector/dfsr"
 	"github.com/prometheus-community/windows_exporter/internal/collector/dhcp"
 	"github.com/prometheus-community/windows_exporter/internal/collector/diskdrive"
@@ -105,6 +106,7 @@ func NewWithConfig(config Config) *Collection {
 	collectors[container.Name] = container.New(&config.Container)
 	collectors[cpu.Name] = cpu.New(&config.CPU)
 	collectors[cpu_info.Name] = cpu_info.New(&config.CPUInfo)
+	collectors[csv.Name] = csv.New(&config.CSV)
 	collectors[dfsr.Name] = dfsr.New(&config.DFSR)
 	collectors[dhcp.Name] = dhcp.New(&config.Dhcp)
 	collectors[diskdrive.Name] = diskdrive.New(&config.DiskDrive)
