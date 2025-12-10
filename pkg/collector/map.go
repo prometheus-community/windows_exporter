@@ -30,6 +30,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/cpu"
 	"github.com/prometheus-community/windows_exporter/internal/collector/cpu_info"
 	"github.com/prometheus-community/windows_exporter/internal/collector/csv"
+	"github.com/prometheus-community/windows_exporter/internal/collector/csvv"
 	"github.com/prometheus-community/windows_exporter/internal/collector/dfsr"
 	"github.com/prometheus-community/windows_exporter/internal/collector/dhcp"
 	"github.com/prometheus-community/windows_exporter/internal/collector/diskdrive"
@@ -88,6 +89,7 @@ var BuildersWithFlags = map[string]BuilderWithFlags[Collector]{
 	cpu.Name:                NewBuilderWithFlags(cpu.NewWithFlags),
 	cpu_info.Name:           NewBuilderWithFlags(cpu_info.NewWithFlags),
 	csv.Name:                NewBuilderWithFlags(csv.NewWithFlags),
+	csvv.Name:               NewBuilderWithFlags(csvv.NewWithFlags),
 	dfsr.Name:               NewBuilderWithFlags(dfsr.NewWithFlags),
 	dhcp.Name:               NewBuilderWithFlags(dhcp.NewWithFlags),
 	diskdrive.Name:          NewBuilderWithFlags(diskdrive.NewWithFlags),
