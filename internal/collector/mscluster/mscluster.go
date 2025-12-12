@@ -38,7 +38,7 @@ const (
 	subCollectorNode          = "node"
 	subCollectorResource      = "resource"
 	subCollectorResourceGroup = "resourcegroup"
-	subCollectorS2D           = "s2d"
+	subCollectorCSV           = "csv"
 )
 
 type Config struct {
@@ -53,7 +53,7 @@ var ConfigDefaults = Config{
 		subCollectorNode,
 		subCollectorResource,
 		subCollectorResourceGroup,
-		subCollectorS2D,
+		subCollectorCSV,
 	},
 }
 
@@ -64,7 +64,7 @@ type Collector struct {
 	collectorNode
 	collectorResource
 	collectorResourceGroup
-	collectorS2D
+	collectorCSV
 
 	config    Config
 	miSession *mi.Session
@@ -159,9 +159,9 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 		}
 	}
 
-	if slices.Contains(c.config.CollectorsEnabled, subCollectorS2D) {
-		if err := c.buildS2D(); err != nil {
-			errs = append(errs, fmt.Errorf("failed to build s2d collector: %w", err))
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorCSV) {
+		if err := c.buildCSV(); err != nil {
+			errs = append(errs, fmt.Errorf("failed to build csv collector: %w", err))
 		}
 	}
 
@@ -238,9 +238,9 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	go func() {
 		defer wg.Done()
 
-		if slices.Contains(c.config.CollectorsEnabled, subCollectorS2D) {
-			if err := c.collectS2D(ch); err != nil {
-				errCh <- fmt.Errorf("failed to collect s2d metrics: %w", err)
+		if slices.Contains(c.config.CollectorsEnabled, subCollectorCSV) {
+			if err := c.collectCSV(ch); err != nil {
+				errCh <- fmt.Errorf("failed to collect csv metrics: %w", err)
 			}
 		}
 	}()
