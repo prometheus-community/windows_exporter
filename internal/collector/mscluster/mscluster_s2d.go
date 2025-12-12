@@ -26,7 +26,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-const nameS2D = Name + "_s2d"
+const nameS2D = Name + "_csv"
 
 type collectorS2D struct {
 	s2dMIQuery mi.Query
@@ -55,21 +55,21 @@ func (c *Collector) buildS2D() error {
 
 	c.s2dInfo = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameS2D, "info"),
-		"Storage Spaces Direct volume information",
+		"Cluster Shared Volumes information",
 		[]string{"name", "path", "volume"},
 		nil,
 	)
 
 	c.s2dTotalSize = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameS2D, "total_bytes"),
-		"Total size of the Storage Spaces Direct volume in bytes",
+		"Total size of the Cluster Shared Volume in bytes",
 		[]string{"name", "path", "volume"},
 		nil,
 	)
 
 	c.s2dFreeSpace = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameS2D, "free_bytes"),
-		"Free space on the Storage Spaces Direct volume in bytes",
+		"Free space on the Cluster Shared Volume in bytes",
 		[]string{"name", "path", "volume"},
 		nil,
 	)
