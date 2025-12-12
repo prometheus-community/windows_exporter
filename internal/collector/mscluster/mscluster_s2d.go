@@ -38,6 +38,7 @@ type collectorS2D struct {
 
 // msClusterDiskPartition represents the MSCluster_DiskPartition WMI class
 type msClusterDiskPartition struct {
+	Name      string `mi:"Name"`
 	Path      string `mi:"Path"`
 	TotalSize uint64 `mi:"TotalSize"`
 	FreeSpace uint64 `mi:"FreeSpace"`
@@ -45,7 +46,7 @@ type msClusterDiskPartition struct {
 }
 
 func (c *Collector) buildS2D() error {
-	s2dMIQuery, err := mi.NewQuery("SELECT Path, TotalSize, FreeSpace, VolumeLabel FROM MSCluster_DiskPartition")
+	s2dMIQuery, err := mi.NewQuery("SELECT Name, Path, TotalSize, FreeSpace, VolumeLabel FROM MSCluster_DiskPartition")
 	if err != nil {
 		return fmt.Errorf("failed to create WMI query: %w", err)
 	}
@@ -55,21 +56,21 @@ func (c *Collector) buildS2D() error {
 	c.s2dInfo = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameS2D, "info"),
 		"Storage Spaces Direct volume information",
-		[]string{"path", "volume"},
+		[]string{"name", "path", "volume"},
 		nil,
 	)
 
 	c.s2dTotalSize = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameS2D, "total_bytes"),
 		"Total size of the Storage Spaces Direct volume in bytes",
-		[]string{"path", "volume"},
+		[]string{"name", "path", "volume"},
 		nil,
 	)
 
 	c.s2dFreeSpace = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameS2D, "free_bytes"),
 		"Free space on the Storage Spaces Direct volume in bytes",
-		[]string{"path", "volume"},
+		[]string{"name", "path", "volume"},
 		nil,
 	)
 
@@ -88,6 +89,7 @@ func (c *Collector) collectS2D(ch chan<- prometheus.Metric) error {
 	}
 
 	for _, partition := range dst {
+		name := strings.TrimRight(partition.Name, " ")
 		path := strings.TrimRight(partition.Path, " ")
 		volume := strings.TrimRight(partition.Volume, " ")
 
@@ -95,6 +97,7 @@ func (c *Collector) collectS2D(ch chan<- prometheus.Metric) error {
 			c.s2dInfo,
 			prometheus.GaugeValue,
 			1.0,
+			name,
 			path,
 			volume,
 		)
@@ -103,6 +106,7 @@ func (c *Collector) collectS2D(ch chan<- prometheus.Metric) error {
 			c.s2dTotalSize,
 			prometheus.GaugeValue,
 			float64(partition.TotalSize)*1024, // Convert from KB to bytes
+			name,
 			path,
 			volume,
 		)
@@ -111,6 +115,7 @@ func (c *Collector) collectS2D(ch chan<- prometheus.Metric) error {
 			c.s2dFreeSpace,
 			prometheus.GaugeValue,
 			float64(partition.FreeSpace)*1024, // Convert from KB to bytes
+			name,
 			path,
 			volume,
 		)
