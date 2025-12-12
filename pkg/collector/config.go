@@ -25,8 +25,6 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/container"
 	"github.com/prometheus-community/windows_exporter/internal/collector/cpu"
 	"github.com/prometheus-community/windows_exporter/internal/collector/cpu_info"
-	"github.com/prometheus-community/windows_exporter/internal/collector/csv"
-	"github.com/prometheus-community/windows_exporter/internal/collector/csvv"
 	"github.com/prometheus-community/windows_exporter/internal/collector/dfsr"
 	"github.com/prometheus-community/windows_exporter/internal/collector/dhcp"
 	"github.com/prometheus-community/windows_exporter/internal/collector/diskdrive"
@@ -77,8 +75,6 @@ type Config struct {
 	Container          container.Config          `yaml:"container"`
 	CPU                cpu.Config                `yaml:"cpu"`
 	CPUInfo            cpu_info.Config           `yaml:"cpu_info"`
-	CSV                csv.Config                `yaml:"csv"`
-	CSVV               csvv.Config               `yaml:"csvv"`
 	DFSR               dfsr.Config               `yaml:"dfsr"`
 	Dhcp               dhcp.Config               `yaml:"dhcp"`
 	DiskDrive          diskdrive.Config          `yaml:"diskdrive"`
@@ -133,8 +129,6 @@ var ConfigDefaults = Config{
 	Container:          container.ConfigDefaults,
 	CPU:                cpu.ConfigDefaults,
 	CPUInfo:            cpu_info.ConfigDefaults,
-	CSV:                csv.ConfigDefaults,
-	CSVV:               csvv.ConfigDefaults,
 	DFSR:               dfsr.ConfigDefaults,
 	Dhcp:               dhcp.ConfigDefaults,
 	DiskDrive:          diskdrive.ConfigDefaults,
