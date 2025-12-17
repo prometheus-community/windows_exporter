@@ -292,6 +292,17 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 			cfgmgr32: cfgmgr32Dev,
 			ID:       deviceID,
 		}
+
+		logger.Debug("Found GPU device",
+			slog.String("collector", Name),
+			slog.String("name", gpu.AdapterString),
+			slog.String("luid", luidKey),
+			slog.String("device_id", deviceID),
+			slog.String("name", gpu.AdapterString),
+			slog.Uint64("bus_number", uint64(gpu.BusNumber)),
+			slog.Uint64("device_number", uint64(gpu.DeviceNumber)),
+			slog.Uint64("function_number", uint64(gpu.FunctionNumber)),
+		)
 	}
 
 	return errors.Join(errs...)
