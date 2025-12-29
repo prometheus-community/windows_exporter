@@ -1,0 +1,998 @@
+========================================
+Counter Set: Hyper-V VM Virtual Device Pipe IO
+========================================
+\Hyper-V VM Virtual Device Pipe IO(*)\Receive Message Quota Exceeded
+\Hyper-V VM Virtual Device Pipe IO(*)\Receive QoS - Conformant Messages/sec
+\Hyper-V VM Virtual Device Pipe IO(*)\Receive QoS - Exempt Messages/sec
+\Hyper-V VM Virtual Device Pipe IO(*)\Receive QoS - Non-Conformant Messages/sec
+\Hyper-V VM Virtual Device Pipe IO(*)\Receive QoS - Total Message Delay Time (100ns)
+
+========================================
+Counter Set: Hyper-V Virtual Machine Health Summary
+========================================
+\Hyper-V Virtual Machine Health Summary\Health Critical
+\Hyper-V Virtual Machine Health Summary\Health Ok
+
+========================================
+Counter Set: Hyper-V Shared VHDX
+========================================
+\Hyper-V Shared VHDX(*)\Average bytes per read
+\Hyper-V Shared VHDX(*)\Average bytes per request
+\Hyper-V Shared VHDX(*)\Average bytes per write
+\Hyper-V Shared VHDX(*)\Average queue length
+\Hyper-V Shared VHDX(*)\Average read queue length
+\Hyper-V Shared VHDX(*)\Average Shared VHDX disk log size
+\Hyper-V Shared VHDX(*)\Average Shared VHDX disk total size
+\Hyper-V Shared VHDX(*)\Average Shared VHDX mount time
+\Hyper-V Shared VHDX(*)\Average time per read
+\Hyper-V Shared VHDX(*)\Average time per request
+\Hyper-V Shared VHDX(*)\Average time per write
+\Hyper-V Shared VHDX(*)\Average write queue length
+\Hyper-V Shared VHDX(*)\Current queue length
+\Hyper-V Shared VHDX(*)\Current read queue length
+\Hyper-V Shared VHDX(*)\Current write queue length
+\Hyper-V Shared VHDX(*)\Errors per second
+\Hyper-V Shared VHDX(*)\Initiator Handle Opens per second
+\Hyper-V Shared VHDX(*)\Read Bytes/sec
+\Hyper-V Shared VHDX(*)\Read Requests/sec
+\Hyper-V Shared VHDX(*)\Shared VHDX Mounts per second
+\Hyper-V Shared VHDX(*)\Total Bytes/sec
+\Hyper-V Shared VHDX(*)\Total Requests/sec
+\Hyper-V Shared VHDX(*)\Write Requests/sec
+\Hyper-V Shared VHDX(*)\Written Bytes/sec
+
+========================================
+Counter Set: Hyper-V VM Vid Partition
+========================================
+\Hyper-V VM Vid Partition(*)\Physical Pages Allocated
+\Hyper-V VM Vid Partition(*)\Preferred NUMA Node Index
+\Hyper-V VM Vid Partition(*)\Remote Physical Pages
+
+========================================
+Counter Set: Hyper-V VM Vid Driver
+========================================
+\Hyper-V VM Vid Driver\VidPartitions
+
+========================================
+Counter Set: Hyper-V VM Vid Numa Node
+========================================
+\Hyper-V VM Vid Numa Node(*)\PageCount
+\Hyper-V VM Vid Numa Node(*)\ProcessorCount
+
+========================================
+Counter Set: Hyper-V Virtual Switch
+========================================
+\Hyper-V Virtual Switch(*)\Broadcast Packets Received/sec
+\Hyper-V Virtual Switch(*)\Broadcast Packets Sent/sec
+\Hyper-V Virtual Switch(*)\Bytes Received/sec
+\Hyper-V Virtual Switch(*)\Bytes Sent/sec
+\Hyper-V Virtual Switch(*)\Bytes/sec
+\Hyper-V Virtual Switch(*)\Directed Packets Received/sec
+\Hyper-V Virtual Switch(*)\Directed Packets Sent/sec
+\Hyper-V Virtual Switch(*)\Dropped Packets Incoming/sec
+\Hyper-V Virtual Switch(*)\Dropped Packets Outgoing/sec
+\Hyper-V Virtual Switch(*)\Extensions Dropped Packets Incoming/sec
+\Hyper-V Virtual Switch(*)\Extensions Dropped Packets Outgoing/sec
+\Hyper-V Virtual Switch(*)\Learned Mac Addresses
+\Hyper-V Virtual Switch(*)\Learned Mac Addresses/sec
+\Hyper-V Virtual Switch(*)\Multicast Packets Received/sec
+\Hyper-V Virtual Switch(*)\Multicast Packets Sent/sec
+\Hyper-V Virtual Switch(*)\Number of Send Channel Moves/sec
+\Hyper-V Virtual Switch(*)\Number of VMQ Moves/sec
+\Hyper-V Virtual Switch(*)\Packets Flooded
+\Hyper-V Virtual Switch(*)\Packets Flooded/sec
+\Hyper-V Virtual Switch(*)\Packets Received/sec
+\Hyper-V Virtual Switch(*)\Packets Sent/sec
+\Hyper-V Virtual Switch(*)\Packets/sec
+\Hyper-V Virtual Switch(*)\Purged Mac Addresses
+\Hyper-V Virtual Switch(*)\Purged Mac Addresses/sec
+\Hyper-V Virtual Switch(*)\RSC Coalesce Events
+\Hyper-V Virtual Switch(*)\RSC Coalesced Bytes
+\Hyper-V Virtual Switch(*)\RSC Coalesced Event Bucket 1 (0To1)
+\Hyper-V Virtual Switch(*)\RSC Coalesced Event Bucket 2 (2To3)
+\Hyper-V Virtual Switch(*)\RSC Coalesced Event Bucket 3 (4To7)
+\Hyper-V Virtual Switch(*)\RSC Coalesced Event Bucket 4 (8To15)
+\Hyper-V Virtual Switch(*)\RSC Coalesced Event Bucket 5 (16To31)
+\Hyper-V Virtual Switch(*)\RSC Coalesced Event Bucket 6 (32To63)
+\Hyper-V Virtual Switch(*)\RSC Coalesced Packet Bucket 1 (0To1)
+\Hyper-V Virtual Switch(*)\RSC Coalesced Packet Bucket 2 (2To3)
+\Hyper-V Virtual Switch(*)\RSC Coalesced Packet Bucket 3 (4To7)
+\Hyper-V Virtual Switch(*)\RSC Coalesced Packet Bucket 4 (8To15)
+\Hyper-V Virtual Switch(*)\RSC Coalesced Packet Bucket 5 (16To31)
+\Hyper-V Virtual Switch(*)\RSC Coalesced Packet Bucket 6 (32To63)
+\Hyper-V Virtual Switch(*)\RSC Coalesced Packets
+\Hyper-V Virtual Switch(*)\RSC Packets Processed
+
+========================================
+Counter Set: Hyper-V Virtual Machine Bus Provider Pipes
+========================================
+\Hyper-V Virtual Machine Bus Provider Pipes(*)\Bytes Read/sec
+\Hyper-V Virtual Machine Bus Provider Pipes(*)\Bytes Written/sec
+\Hyper-V Virtual Machine Bus Provider Pipes(*)\Reads/sec
+\Hyper-V Virtual Machine Bus Provider Pipes(*)\Writes/sec
+
+========================================
+Counter Set: Hyper-V Virtual Storage Device
+========================================
+\Hyper-V Virtual Storage Device(*)\Adapter Open Channel Count
+\Hyper-V Virtual Storage Device(*)\Byte Quota Replenishment Rate
+\Hyper-V Virtual Storage Device(*)\Error Count
+\Hyper-V Virtual Storage Device(*)\Flush Count
+\Hyper-V Virtual Storage Device(*)\Io Quota Replenishment Rate
+\Hyper-V Virtual Storage Device(*)\Latency
+\Hyper-V Virtual Storage Device(*)\Lower Latency
+\Hyper-V Virtual Storage Device(*)\Lower Queue Length
+\Hyper-V Virtual Storage Device(*)\Maximum Adapter Worker Count
+\Hyper-V Virtual Storage Device(*)\Maximum Bandwidth
+\Hyper-V Virtual Storage Device(*)\Maximum IO Rate
+\Hyper-V Virtual Storage Device(*)\Minimum IO Rate
+\Hyper-V Virtual Storage Device(*)\Normalized Throughput
+\Hyper-V Virtual Storage Device(*)\Queue Length
+\Hyper-V Virtual Storage Device(*)\Read Bytes/sec
+\Hyper-V Virtual Storage Device(*)\Read Count
+\Hyper-V Virtual Storage Device(*)\Read Operations/Sec
+\Hyper-V Virtual Storage Device(*)\Throughput
+\Hyper-V Virtual Storage Device(*)\Write Bytes/sec
+\Hyper-V Virtual Storage Device(*)\Write Count
+\Hyper-V Virtual Storage Device(*)\Write Operations/Sec
+
+========================================
+Counter Set: Hyper-V VM Save, Snapshot, and Restore
+========================================
+\Hyper-V VM Save, Snapshot, and Restore(*)\Operation Time
+\Hyper-V VM Save, Snapshot, and Restore(*)\Requests Active
+\Hyper-V VM Save, Snapshot, and Restore(*)\Requests Dispatched
+\Hyper-V VM Save, Snapshot, and Restore(*)\Requests High Priority
+\Hyper-V VM Save, Snapshot, and Restore(*)\Requests Processed
+\Hyper-V VM Save, Snapshot, and Restore(*)\Threads Spawned
+
+========================================
+Counter Set: Hyper-V Dynamic Memory Balancer
+========================================
+\Hyper-V Dynamic Memory Balancer(*)\Available Memory
+\Hyper-V Dynamic Memory Balancer(*)\Available Memory For Balancing
+\Hyper-V Dynamic Memory Balancer(*)\Average Pressure
+\Hyper-V Dynamic Memory Balancer(*)\System Current Pressure
+
+========================================
+Counter Set: Hyper-V Dynamic Memory VM
+========================================
+\Hyper-V Dynamic Memory VM(*)\Added Memory
+\Hyper-V Dynamic Memory VM(*)\Average Pressure
+\Hyper-V Dynamic Memory VM(*)\Current Pressure
+\Hyper-V Dynamic Memory VM(*)\Guest Available Memory
+\Hyper-V Dynamic Memory VM(*)\Guest Visible Physical Memory
+\Hyper-V Dynamic Memory VM(*)\Maximum Pressure
+\Hyper-V Dynamic Memory VM(*)\Memory Add Operations
+\Hyper-V Dynamic Memory VM(*)\Memory Remove Operations
+\Hyper-V Dynamic Memory VM(*)\Minimum Pressure
+\Hyper-V Dynamic Memory VM(*)\Physical Memory
+\Hyper-V Dynamic Memory VM(*)\Removed Memory
+\Hyper-V Dynamic Memory VM(*)\Smart Paging Working Set Size
+
+========================================
+Counter Set: Hyper-V Virtual SMB
+========================================
+\Hyper-V Virtual SMB(*)\Avg. sec/Request
+\Hyper-V Virtual SMB(*)\Current Open File Count
+\Hyper-V Virtual SMB(*)\Current Pending Requests
+\Hyper-V Virtual SMB(*)\Direct-Mapped Pages
+\Hyper-V Virtual SMB(*)\Direct-Mapped Sections
+\Hyper-V Virtual SMB(*)\Flush Requests/sec
+\Hyper-V Virtual SMB(*)\Read Bytes/sec
+\Hyper-V Virtual SMB(*)\Read Bytes/sec (RDMA)
+\Hyper-V Virtual SMB(*)\Read Requests/sec
+\Hyper-V Virtual SMB(*)\Read Requests/sec (RDMA)
+\Hyper-V Virtual SMB(*)\Received Bytes/sec
+\Hyper-V Virtual SMB(*)\Requests/sec
+\Hyper-V Virtual SMB(*)\Sent Bytes/sec
+\Hyper-V Virtual SMB(*)\Tree Connect Count
+\Hyper-V Virtual SMB(*)\Write Bytes/sec
+\Hyper-V Virtual SMB(*)\Write Bytes/sec (RDMA)
+\Hyper-V Virtual SMB(*)\Write Requests/sec
+\Hyper-V Virtual SMB(*)\Write Requests/sec (RDMA)
+
+========================================
+Counter Set: Hyper-V Virtual Machine Bus
+========================================
+\Hyper-V Virtual Machine Bus\Interrupts Received/sec
+\Hyper-V Virtual Machine Bus\Interrupts Sent/sec
+\Hyper-V Virtual Machine Bus\Throttle Events
+
+========================================
+Counter Set: Hyper-V VM Live Migration
+========================================
+\Hyper-V VM Live Migration(*)\Compressor: Bytes to be Compressed
+\Hyper-V VM Live Migration(*)\Compressor: Compressed Bytes Sent
+\Hyper-V VM Live Migration(*)\Compressor: Compressed Bytes Sent/sec
+\Hyper-V VM Live Migration(*)\Compressor: Enabled Threads
+\Hyper-V VM Live Migration(*)\Compressor: Maximum Threads
+\Hyper-V VM Live Migration(*)\Memory Walker: Bytes Read/sec
+\Hyper-V VM Live Migration(*)\Memory Walker: Bytes Sent for Compression
+\Hyper-V VM Live Migration(*)\Memory Walker: Bytes Sent for Compression/sec
+\Hyper-V VM Live Migration(*)\Memory Walker: Maximum Threads
+\Hyper-V VM Live Migration(*)\Memory Walker: Uncompressed Bytes Sent
+\Hyper-V VM Live Migration(*)\Memory Walker: Uncompressed Bytes Sent/sec
+\Hyper-V VM Live Migration(*)\Receiver: Bytes Pending Decompression
+\Hyper-V VM Live Migration(*)\Receiver: Bytes Pending Write
+\Hyper-V VM Live Migration(*)\Receiver: Bytes Written/sec
+\Hyper-V VM Live Migration(*)\Receiver: Compressed Bytes Received/sec
+\Hyper-V VM Live Migration(*)\Receiver: Decompressed Bytes/sec
+\Hyper-V VM Live Migration(*)\Receiver: Maximum Threadpool Thread Count
+\Hyper-V VM Live Migration(*)\Receiver: Uncompressed Bytes Received/sec
+\Hyper-V VM Live Migration(*)\SMB Transport: Bytes Sent
+\Hyper-V VM Live Migration(*)\SMB Transport: Bytes Sent/sec
+\Hyper-V VM Live Migration(*)\SMB Transport: Pending Send Bytes
+\Hyper-V VM Live Migration(*)\SMB Transport: Pending Send Count
+\Hyper-V VM Live Migration(*)\TCP Transport: Bytes Pending Processing
+\Hyper-V VM Live Migration(*)\TCP Transport: Bytes Pending Send
+\Hyper-V VM Live Migration(*)\TCP Transport: Bytes Received/sec
+\Hyper-V VM Live Migration(*)\TCP Transport: Bytes Sent/sec
+\Hyper-V VM Live Migration(*)\TCP Transport: Pending Send Count
+\Hyper-V VM Live Migration(*)\TCP Transport: Posted Receive Buffer Count
+\Hyper-V VM Live Migration(*)\TCP Transport: Total buffer count
+\Hyper-V VM Live Migration(*)\Transfer pass: CPU Cap
+\Hyper-V VM Live Migration(*)\Transfer pass: Dirty Page Count
+\Hyper-V VM Live Migration(*)\Transfer Pass: Is blackout
+\Hyper-V VM Live Migration(*)\Transfer Pass: Number
+
+========================================
+Counter Set: Hyper-V Legacy Network Adapter
+========================================
+\Hyper-V Legacy Network Adapter(*)\Bytes Dropped
+\Hyper-V Legacy Network Adapter(*)\Bytes Received/sec
+\Hyper-V Legacy Network Adapter(*)\Bytes Sent/sec
+\Hyper-V Legacy Network Adapter(*)\Frames Dropped
+\Hyper-V Legacy Network Adapter(*)\Frames Received/sec
+\Hyper-V Legacy Network Adapter(*)\Frames Sent/sec
+
+========================================
+Counter Set: Hyper-V Worker Virtual Processor
+========================================
+\Hyper-V Worker Virtual Processor(*)\Initial APIC ID
+\Hyper-V Worker Virtual Processor(*)\Intercept Delay Time (ms)
+\Hyper-V Worker Virtual Processor(*)\Intercepts Delayed
+\Hyper-V Worker Virtual Processor(*)\Target Subnode
+
+========================================
+Counter Set: Hyper-V Dynamic Memory Integration Service
+========================================
+\Hyper-V Dynamic Memory Integration Service\Maximum Memory, Mbytes
+
+========================================
+Counter Set: Hyper-V Virtual Network Adapter VRSS
+========================================
+\Hyper-V Virtual Network Adapter VRSS(*)\Post-move Receive Packets Per Second
+\Hyper-V Virtual Network Adapter VRSS(*)\Post-move Receive Packets Total
+\Hyper-V Virtual Network Adapter VRSS(*)\Post-move Send Packet Completions Per Second
+\Hyper-V Virtual Network Adapter VRSS(*)\Post-move Send Packet Completions Total
+\Hyper-V Virtual Network Adapter VRSS(*)\Post-move Send Packets Per Second
+\Hyper-V Virtual Network Adapter VRSS(*)\Post-move Send Packets Total
+\Hyper-V Virtual Network Adapter VRSS(*)\ReceivePacketPerSecond
+\Hyper-V Virtual Network Adapter VRSS(*)\ReceivePacketTotal
+\Hyper-V Virtual Network Adapter VRSS(*)\ReceiveProcessor
+\Hyper-V Virtual Network Adapter VRSS(*)\ReceiveProcessorGroup
+\Hyper-V Virtual Network Adapter VRSS(*)\SendPacketCompletionsPerSecond
+\Hyper-V Virtual Network Adapter VRSS(*)\SendPacketCompletionsTotal
+\Hyper-V Virtual Network Adapter VRSS(*)\SendPacketPerSecond
+\Hyper-V Virtual Network Adapter VRSS(*)\SendPacketTotal
+\Hyper-V Virtual Network Adapter VRSS(*)\SendProcessor
+\Hyper-V Virtual Network Adapter VRSS(*)\SendProcessorGroup
+
+========================================
+Counter Set: Hyper-V Virtual IDE Controller (Emulated)
+========================================
+\Hyper-V Virtual IDE Controller (Emulated)(*)\Read Bytes/sec
+\Hyper-V Virtual IDE Controller (Emulated)(*)\Read Sectors/sec
+\Hyper-V Virtual IDE Controller (Emulated)(*)\Write Bytes/sec
+\Hyper-V Virtual IDE Controller (Emulated)(*)\Written Sectors/sec
+
+========================================
+Counter Set: Hyper-V DataStore
+========================================
+\Hyper-V DataStore(*)\Cache update operation count
+\Hyper-V DataStore(*)\Cache update operation latency microseconds
+\Hyper-V DataStore(*)\Commit byte count
+\Hyper-V DataStore(*)\Commit byte latency microseconds
+\Hyper-V DataStore(*)\Commit count
+\Hyper-V DataStore(*)\Commit operation count
+\Hyper-V DataStore(*)\Commit operation latency microseconds
+\Hyper-V DataStore(*)\Compact operation count
+\Hyper-V DataStore(*)\Compact operation latency microseconds
+\Hyper-V DataStore(*)\Current replay logSize
+\Hyper-V DataStore(*)\Data alignment
+\Hyper-V DataStore(*)\Data end
+\Hyper-V DataStore(*)\Disconnect count
+\Hyper-V DataStore(*)\File data size in bytes
+\Hyper-V DataStore(*)\File lock acquire latency microseconds
+\Hyper-V DataStore(*)\File lock count
+\Hyper-V DataStore(*)\File lock release latency microseconds
+\Hyper-V DataStore(*)\Fragmentation ratio
+\Hyper-V DataStore(*)\Get operation count
+\Hyper-V DataStore(*)\Get operation latency microseconds
+\Hyper-V DataStore(*)\Load file operation count
+\Hyper-V DataStore(*)\Load file operation latency microseconds
+\Hyper-V DataStore(*)\Names size in bytes
+\Hyper-V DataStore(*)\Number of available entries inside object tables
+\Hyper-V DataStore(*)\Number of empty entries inside object tables
+\Hyper-V DataStore(*)\Number of file objects
+\Hyper-V DataStore(*)\Number of free bytes inside key tables
+\Hyper-V DataStore(*)\Number of key tables
+\Hyper-V DataStore(*)\Number of keys
+\Hyper-V DataStore(*)\Number of object tables
+\Hyper-V DataStore(*)\Query size operation count
+\Hyper-V DataStore(*)\Query size operation latency microseconds
+\Hyper-V DataStore(*)\Read from file byte count
+\Hyper-V DataStore(*)\Read from file byte latency microseconds
+\Hyper-V DataStore(*)\Read from file count
+\Hyper-V DataStore(*)\Read from storage byte count
+\Hyper-V DataStore(*)\Read from storage byte latency microseconds
+\Hyper-V DataStore(*)\Read from storage count
+\Hyper-V DataStore(*)\Reconnect latency microseconds
+\Hyper-V DataStore(*)\Remove operation count
+\Hyper-V DataStore(*)\Remove operation latency microseconds
+\Hyper-V DataStore(*)\Sector size
+\Hyper-V DataStore(*)\Set operation count
+\Hyper-V DataStore(*)\Set operation latency microseconds
+\Hyper-V DataStore(*)\Storage lock acquire latency microseconds
+\Hyper-V DataStore(*)\Storage lock count
+\Hyper-V DataStore(*)\Storage lock release latency microseconds
+\Hyper-V DataStore(*)\Table data size in bytes
+\Hyper-V DataStore(*)\Write to file byte count
+\Hyper-V DataStore(*)\Write to file byte latency microseconds
+\Hyper-V DataStore(*)\Write to file count
+\Hyper-V DataStore(*)\Write to storage byte count
+\Hyper-V DataStore(*)\Write to storage byte latency microseconds
+\Hyper-V DataStore(*)\Write to storage count
+
+========================================
+Counter Set: Hyper-V Virtual Network Adapter
+========================================
+\Hyper-V Virtual Network Adapter(*)\Broadcast Packets Received/sec
+\Hyper-V Virtual Network Adapter(*)\Broadcast Packets Sent/sec
+\Hyper-V Virtual Network Adapter(*)\Bytes Received/sec
+\Hyper-V Virtual Network Adapter(*)\Bytes Sent/sec
+\Hyper-V Virtual Network Adapter(*)\Bytes/sec
+\Hyper-V Virtual Network Adapter(*)\Directed Packets Received/sec
+\Hyper-V Virtual Network Adapter(*)\Directed Packets Sent/sec
+\Hyper-V Virtual Network Adapter(*)\Dropped Packets Incoming/sec
+\Hyper-V Virtual Network Adapter(*)\Dropped Packets Outgoing/sec
+\Hyper-V Virtual Network Adapter(*)\Extensions Dropped Packets Incoming/sec
+\Hyper-V Virtual Network Adapter(*)\Extensions Dropped Packets Outgoing/sec
+\Hyper-V Virtual Network Adapter(*)\IPsec offload Bytes Receive/sec
+\Hyper-V Virtual Network Adapter(*)\IPsec offload Bytes Sent/sec
+\Hyper-V Virtual Network Adapter(*)\Multicast Packets Received/sec
+\Hyper-V Virtual Network Adapter(*)\Multicast Packets Sent/sec
+\Hyper-V Virtual Network Adapter(*)\Packets Failed Software IP Rx CSO
+\Hyper-V Virtual Network Adapter(*)\Packets Failed Software IP Rx CSO/sec
+\Hyper-V Virtual Network Adapter(*)\Packets Failed Software Rx CSO Parsing/sec
+\Hyper-V Virtual Network Adapter(*)\Packets Failed Software TCP Rx CSO
+\Hyper-V Virtual Network Adapter(*)\Packets Failed Software TCP Rx CSO/sec
+\Hyper-V Virtual Network Adapter(*)\Packets Failed Software UDP Rx CSO
+\Hyper-V Virtual Network Adapter(*)\Packets Failed Software UDP Rx CSO/sec
+\Hyper-V Virtual Network Adapter(*)\Packets Passed Software IP Rx CSO/sec
+\Hyper-V Virtual Network Adapter(*)\Packets Passed Software TCP Rx CSO/sec
+\Hyper-V Virtual Network Adapter(*)\Packets Passed Software UDP Rx CSO/sec
+\Hyper-V Virtual Network Adapter(*)\Packets Received/sec
+\Hyper-V Virtual Network Adapter(*)\Packets Sent/sec
+\Hyper-V Virtual Network Adapter(*)\Packets With Software IP Tx CSO/sec
+\Hyper-V Virtual Network Adapter(*)\Packets With Software TCP Tx CSO/sec
+\Hyper-V Virtual Network Adapter(*)\Packets With Software UDP Tx CSO/sec
+\Hyper-V Virtual Network Adapter(*)\Packets/sec
+\Hyper-V Virtual Network Adapter(*)\RSC Coalesce Events
+\Hyper-V Virtual Network Adapter(*)\RSC Coalesced Bytes
+\Hyper-V Virtual Network Adapter(*)\RSC Coalesced Event Bucket 1 (0To1)
+\Hyper-V Virtual Network Adapter(*)\RSC Coalesced Event Bucket 2 (2To3)
+\Hyper-V Virtual Network Adapter(*)\RSC Coalesced Event Bucket 3 (4To7)
+\Hyper-V Virtual Network Adapter(*)\RSC Coalesced Event Bucket 4 (8To15)
+\Hyper-V Virtual Network Adapter(*)\RSC Coalesced Event Bucket 5 (16To31)
+\Hyper-V Virtual Network Adapter(*)\RSC Coalesced Event Bucket 6 (32To63)
+\Hyper-V Virtual Network Adapter(*)\RSC Coalesced Packet Bucket 1 (0To1)
+\Hyper-V Virtual Network Adapter(*)\RSC Coalesced Packet Bucket 2 (2To3)
+\Hyper-V Virtual Network Adapter(*)\RSC Coalesced Packet Bucket 3 (4To7)
+\Hyper-V Virtual Network Adapter(*)\RSC Coalesced Packet Bucket 4 (8To15)
+\Hyper-V Virtual Network Adapter(*)\RSC Coalesced Packet Bucket 5 (16To31)
+\Hyper-V Virtual Network Adapter(*)\RSC Coalesced Packet Bucket 6 (32To63)
+\Hyper-V Virtual Network Adapter(*)\RSC Coalesced Packets
+\Hyper-V Virtual Network Adapter(*)\RSC Packets Processed
+
+========================================
+Counter Set: Hyper-V Virtual Machine Bus Pipes
+========================================
+\Hyper-V Virtual Machine Bus Pipes(*)\Bytes Read/sec
+\Hyper-V Virtual Machine Bus Pipes(*)\Bytes Written/sec
+\Hyper-V Virtual Machine Bus Pipes(*)\Reads/sec
+\Hyper-V Virtual Machine Bus Pipes(*)\Writes/sec
+
+========================================
+Counter Set: Hyper-V VM Worker Process Memory Manager
+========================================
+\Hyper-V VM Worker Process Memory Manager(*)\Memory Block Count
+
+========================================
+Counter Set: Hyper-V Replica VM
+========================================
+\Hyper-V Replica VM(*)\Average Replication Latency
+\Hyper-V Replica VM(*)\Average Replication Size
+\Hyper-V Replica VM(*)\Compression Efficiency
+\Hyper-V Replica VM(*)\Last Replication Size
+\Hyper-V Replica VM(*)\Network Bytes Recv
+\Hyper-V Replica VM(*)\Network Bytes Sent
+\Hyper-V Replica VM(*)\Replication Count
+\Hyper-V Replica VM(*)\Replication Latency
+\Hyper-V Replica VM(*)\Resynchronized Bytes
+
+========================================
+Counter Set: Hyper-V VM Remoting
+========================================
+\Hyper-V VM Remoting(*)\Connected Clients
+\Hyper-V VM Remoting(*)\Updated Pixels/sec
+
+========================================
+Counter Set: Hyper-V Hypervisor Virtual Processor
+========================================
+\Hyper-V Hypervisor Virtual Processor(*)\% Guest Idle Time
+\Hyper-V Hypervisor Virtual Processor(*)\% Guest Run Time
+\Hyper-V Hypervisor Virtual Processor(*)\% Hypervisor Run Time
+\Hyper-V Hypervisor Virtual Processor(*)\% Remote Run Time
+\Hyper-V Hypervisor Virtual Processor(*)\% Total Core Run Time
+\Hyper-V Hypervisor Virtual Processor(*)\% Total Run Time
+\Hyper-V Hypervisor Virtual Processor(*)\Address Domain Flushes/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Address Space Evictions/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Address Space Flushes/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Address Space Switches/sec
+\Hyper-V Hypervisor Virtual Processor(*)\APIC EOI Accesses/sec
+\Hyper-V Hypervisor Virtual Processor(*)\APIC IPIs Sent/sec
+\Hyper-V Hypervisor Virtual Processor(*)\APIC MMIO Accesses/sec
+\Hyper-V Hypervisor Virtual Processor(*)\APIC Self IPIs Sent/sec
+\Hyper-V Hypervisor Virtual Processor(*)\APIC TPR Accesses/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Control Register Accesses Cost
+\Hyper-V Hypervisor Virtual Processor(*)\Control Register Accesses Forwarded/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Control Register Accesses Forwarding Cost
+\Hyper-V Hypervisor Virtual Processor(*)\Control Register Accesses/sec
+\Hyper-V Hypervisor Virtual Processor(*)\CPU Wait Time Per Dispatch
+\Hyper-V Hypervisor Virtual Processor(*)\CPUID Instructions Cost
+\Hyper-V Hypervisor Virtual Processor(*)\CPUID Instructions Forwarded/sec
+\Hyper-V Hypervisor Virtual Processor(*)\CPUID Instructions Forwarding Cost
+\Hyper-V Hypervisor Virtual Processor(*)\CPUID Instructions/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Debug Register Accesses Cost
+\Hyper-V Hypervisor Virtual Processor(*)\Debug Register Accesses Forwarded/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Debug Register Accesses Forwarding Cost
+\Hyper-V Hypervisor Virtual Processor(*)\Debug Register Accesses/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Emulated Instructions Cost
+\Hyper-V Hypervisor Virtual Processor(*)\Emulated Instructions Forwarded/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Emulated Instructions Forwarding Cost
+\Hyper-V Hypervisor Virtual Processor(*)\Emulated Instructions/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Extended Hypercall Intercept Messages/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Extended Hypercalls/sec
+\Hyper-V Hypervisor Virtual Processor(*)\External Interrupts Cost
+\Hyper-V Hypervisor Virtual Processor(*)\External Interrupts Forwarded/sec
+\Hyper-V Hypervisor Virtual Processor(*)\External Interrupts/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Flush Physical Address List Hypercalls/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Flush Physical Address Space Hypercalls/sec
+\Hyper-V Hypervisor Virtual Processor(*)\GIF Instruction Emulation Cost
+\Hyper-V Hypervisor Virtual Processor(*)\GIF Instruction Emulation Intercepts/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Global GVA Range Flushes/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Global I/O TLB Flush Cost
+\Hyper-V Hypervisor Virtual Processor(*)\Global I/O TLB Flushes/sec
+\Hyper-V Hypervisor Virtual Processor(*)\GPA Space Hypercalls/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Guest Page Table Maps/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Hardware Interrupts/sec
+\Hyper-V Hypervisor Virtual Processor(*)\HLT Instructions Cost
+\Hyper-V Hypervisor Virtual Processor(*)\HLT Instructions Forwarded/sec
+\Hyper-V Hypervisor Virtual Processor(*)\HLT Instructions Forwarding Cost
+\Hyper-V Hypervisor Virtual Processor(*)\HLT Instructions/sec
+\Hyper-V Hypervisor Virtual Processor(*)\HWP Request MSR Context Switches/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Hypercalls Cost
+\Hyper-V Hypervisor Virtual Processor(*)\Hypercalls Forwarded/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Hypercalls Forwarding Cost
+\Hyper-V Hypervisor Virtual Processor(*)\Hypercalls/sec
+\Hyper-V Hypervisor Virtual Processor(*)\InvEpt All Context Emulation Intercepts/sec
+\Hyper-V Hypervisor Virtual Processor(*)\InvEpt All Context Instruction Emulation Cost
+\Hyper-V Hypervisor Virtual Processor(*)\InvEpt Single Context Emulation Intercepts/sec
+\Hyper-V Hypervisor Virtual Processor(*)\InvEpt Single Context Instruction Emulation Cost
+\Hyper-V Hypervisor Virtual Processor(*)\InvVpid All Context Emulation Intercepts/sec
+\Hyper-V Hypervisor Virtual Processor(*)\InvVpid All Context Instruction Emulation Cost
+\Hyper-V Hypervisor Virtual Processor(*)\InvVpid Single Address Emulation Intercepts/sec
+\Hyper-V Hypervisor Virtual Processor(*)\InvVpid Single Address Instruction Emulation Cost
+\Hyper-V Hypervisor Virtual Processor(*)\InvVpid Single Context Emulation Intercepts/sec
+\Hyper-V Hypervisor Virtual Processor(*)\InvVpid Single Context Instruction Emulation Cost
+\Hyper-V Hypervisor Virtual Processor(*)\IO Instructions Cost
+\Hyper-V Hypervisor Virtual Processor(*)\IO Instructions Forwarded/sec
+\Hyper-V Hypervisor Virtual Processor(*)\IO Instructions Forwarding Cost
+\Hyper-V Hypervisor Virtual Processor(*)\IO Instructions/sec
+\Hyper-V Hypervisor Virtual Processor(*)\IO Intercept Messages/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Large Page TLB Fills/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Local Flushed GVA Ranges/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Local I/O TLB Flush Cost
+\Hyper-V Hypervisor Virtual Processor(*)\Local I/O TLB Flushes/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Logical Processor Dispatches/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Logical Processor Hypercalls/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Logical Processor Migrations/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Long Spin Wait Hypercalls/sec
+\Hyper-V Hypervisor Virtual Processor(*)\MBEC Nested Page Table Switches/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Memory Intercept Messages/sec
+\Hyper-V Hypervisor Virtual Processor(*)\MSR Accesses Cost
+\Hyper-V Hypervisor Virtual Processor(*)\MSR Accesses Forwarded/sec
+\Hyper-V Hypervisor Virtual Processor(*)\MSR Accesses Forwarding Cost
+\Hyper-V Hypervisor Virtual Processor(*)\MSR Accesses/sec
+\Hyper-V Hypervisor Virtual Processor(*)\MWAIT Instructions Cost
+\Hyper-V Hypervisor Virtual Processor(*)\MWAIT Instructions Forwarded/sec
+\Hyper-V Hypervisor Virtual Processor(*)\MWAIT Instructions Forwarding Cost
+\Hyper-V Hypervisor Virtual Processor(*)\MWAIT Instructions/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Nested Page Fault Intercepts Cost
+\Hyper-V Hypervisor Virtual Processor(*)\Nested Page Fault Intercepts/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Nested SLAT Hard Page Faults Cost
+\Hyper-V Hypervisor Virtual Processor(*)\Nested SLAT Hard Page Faults/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Nested SLAT Soft Page Faults Cost
+\Hyper-V Hypervisor Virtual Processor(*)\Nested SLAT Soft Page Faults/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Nested TLB Page Table Evictions/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Nested TLB Page Table Reclamations/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Nested VM Entries Cost
+\Hyper-V Hypervisor Virtual Processor(*)\Nested VM Entries/sec
+\Hyper-V Hypervisor Virtual Processor(*)\NMI Interrupts Cost
+\Hyper-V Hypervisor Virtual Processor(*)\NMI Interrupts/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Other Hypercalls/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Other Intercepts Cost
+\Hyper-V Hypervisor Virtual Processor(*)\Other Intercepts Forwarded/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Other Intercepts Forwarding Cost
+\Hyper-V Hypervisor Virtual Processor(*)\Other Intercepts/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Other Messages/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Other Reflected Guest Exceptions/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Page Fault Intercepts Cost
+\Hyper-V Hypervisor Virtual Processor(*)\Page Fault Intercepts Forwarded/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Page Fault Intercepts Forwarding Cost
+\Hyper-V Hypervisor Virtual Processor(*)\Page Fault Intercepts/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Page Invalidations Cost
+\Hyper-V Hypervisor Virtual Processor(*)\Page Invalidations Forwarded/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Page Invalidations Forwarding Cost
+\Hyper-V Hypervisor Virtual Processor(*)\Page Invalidations/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Page Scans/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Page Table Allocations/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Page Table Evictions/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Page Table Reclamations/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Page Table Resets/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Page Table Validations/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Page Table Write Intercepts/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Pending Interrupts Cost
+\Hyper-V Hypervisor Virtual Processor(*)\Pending Interrupts Forwarded/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Pending Interrupts Forwarding Cost
+\Hyper-V Hypervisor Virtual Processor(*)\Pending Interrupts/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Performance Monitoring Interrupts/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Performance Monitoring IPT MSR Accesses/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Performance Monitoring LBR MSR Accesses/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Performance Monitoring vPMU MSR Accesses/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Posted Interrupt Notifications/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Posted Interrupt Scans/sec
+\Hyper-V Hypervisor Virtual Processor(*)\RDPMC Instructions Cost
+\Hyper-V Hypervisor Virtual Processor(*)\RDPMC Instructions/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Reflected Guest Page Faults/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Scheduling Priority
+\Hyper-V Hypervisor Virtual Processor(*)\Small Page TLB Fills/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Synthetic Interrupt Hypercalls/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Synthetic Interrupts/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Total Intercepts Cost
+\Hyper-V Hypervisor Virtual Processor(*)\Total Intercepts/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Total Messages/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Total Virtualization Instructions Emulated/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Total Virtualization Instructions Emulation Cost
+\Hyper-V Hypervisor Virtual Processor(*)\Virtual Interrupt Hypercalls/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Virtual Interrupts/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Virtual MMU Hypercalls/sec
+\Hyper-V Hypervisor Virtual Processor(*)\Virtual Processor Hypercalls/sec
+\Hyper-V Hypervisor Virtual Processor(*)\VMCLEAR Emulation Intercepts/sec
+\Hyper-V Hypervisor Virtual Processor(*)\VMCLEAR Instruction Emulation Cost
+\Hyper-V Hypervisor Virtual Processor(*)\VMLOAD Emulation Intercepts/sec
+\Hyper-V Hypervisor Virtual Processor(*)\VMLOAD Instruction Emulation Cost
+\Hyper-V Hypervisor Virtual Processor(*)\VMPTRLD Emulation Intercepts/sec
+\Hyper-V Hypervisor Virtual Processor(*)\VMPTRLD Instruction Emulation Cost
+\Hyper-V Hypervisor Virtual Processor(*)\VMPTRST Emulation Intercepts/sec
+\Hyper-V Hypervisor Virtual Processor(*)\VMPTRST Instruction Emulation Cost
+\Hyper-V Hypervisor Virtual Processor(*)\VMREAD Emulation Intercepts/sec
+\Hyper-V Hypervisor Virtual Processor(*)\VMREAD Instruction Emulation Cost
+\Hyper-V Hypervisor Virtual Processor(*)\VMSAVE Emulation Intercepts/sec
+\Hyper-V Hypervisor Virtual Processor(*)\VMSAVE Instruction Emulation Cost
+\Hyper-V Hypervisor Virtual Processor(*)\VMWRITE Emulation Intercepts/sec
+\Hyper-V Hypervisor Virtual Processor(*)\VMWRITE Instruction Emulation Cost
+\Hyper-V Hypervisor Virtual Processor(*)\VMXOFF Emulation Intercepts/sec
+\Hyper-V Hypervisor Virtual Processor(*)\VMXOFF Instruction Emulation Cost
+\Hyper-V Hypervisor Virtual Processor(*)\VMXON Emulation Intercepts/sec
+\Hyper-V Hypervisor Virtual Processor(*)\VMXON Instruction Emulation Cost
+
+========================================
+Counter Set: Hyper-V Hypervisor Partition
+========================================
+\Hyper-V Hypervisor Partition(*)\1G device pages
+\Hyper-V Hypervisor Partition(*)\1G GPA pages
+\Hyper-V Hypervisor Partition(*)\2M device pages
+\Hyper-V Hypervisor Partition(*)\2M GPA pages
+\Hyper-V Hypervisor Partition(*)\4K device pages
+\Hyper-V Hypervisor Partition(*)\4K GPA pages
+\Hyper-V Hypervisor Partition(*)\Address Spaces
+\Hyper-V Hypervisor Partition(*)\Attached Devices
+\Hyper-V Hypervisor Partition(*)\Deposited Pages
+\Hyper-V Hypervisor Partition(*)\Device DMA Errors
+\Hyper-V Hypervisor Partition(*)\Device Interrupt Errors
+\Hyper-V Hypervisor Partition(*)\Device Interrupt Mappings
+\Hyper-V Hypervisor Partition(*)\Device Interrupt Throttle Events
+\Hyper-V Hypervisor Partition(*)\GPA Pages
+\Hyper-V Hypervisor Partition(*)\GPA Space Modifications/sec
+\Hyper-V Hypervisor Partition(*)\HWP Requested Performance Level
+\Hyper-V Hypervisor Partition(*)\I/O TLB Flush Cost
+\Hyper-V Hypervisor Partition(*)\I/O TLB Flushes/sec
+\Hyper-V Hypervisor Partition(*)\Nested TLB Free List Size
+\Hyper-V Hypervisor Partition(*)\Nested TLB Size
+\Hyper-V Hypervisor Partition(*)\Nested TLB Trimmed Pages/sec
+\Hyper-V Hypervisor Partition(*)\Pages Recombined/sec
+\Hyper-V Hypervisor Partition(*)\Pages Shattered/sec
+\Hyper-V Hypervisor Partition(*)\Recommended Nested TLB Size
+\Hyper-V Hypervisor Partition(*)\Recommended Virtual TLB Size
+\Hyper-V Hypervisor Partition(*)\Skipped Timer Ticks
+\Hyper-V Hypervisor Partition(*)\Virtual Processors
+\Hyper-V Hypervisor Partition(*)\Virtual TLB Flush Entires/sec
+\Hyper-V Hypervisor Partition(*)\Virtual TLB Pages
+
+========================================
+Counter Set: Hyper-V Virtual Network Adapter Drop Reasons
+========================================
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming BridgeReserved
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming Busy
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming DhcpGuard
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming Disconnected
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming FailedDestinationListUpdate
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming FailedPacketFilter
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming FailedPvlanSetting
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming FailedSecurityPolicy
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming Filtered
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming FilteredIsolationUntagged
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming FilteredVLAN
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming InjectedIcmp
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming InvalidConfig
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming InvalidData
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming InvalidDestMac
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming InvalidFirstNBTooSmall
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming InvalidPacket
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming InvalidPDQueue
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming InvalidSourceMac
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming InvalidVlanFormat
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming Ipsec
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming LowPowerPacketFilter
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming MacSpoofing
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming MTUMismatch
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming NativeFwdingReq
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming NicDisabled
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming NotAccepted
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming NotReady
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming Qos
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming RequiredExtensionMissing
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming Resources
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming RouterGuard
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming StormLimit
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming SwitchDataFlowDisabled
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming UnauthorizedMAC
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming UnauthorizedVLAN
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming Unknown
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Incoming VirtualSubnetId
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing BridgeReserved
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing Busy
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing DhcpGuard
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing Disconnected
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing FailedDestinationListUpdate
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing FailedPacketFilter
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing FailedPvlanSetting
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing FailedSecurityPolicy
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing Filtered
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing FilteredIsolationUntagged
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing FilteredVLAN
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing InjectedIcmp
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing InvalidConfig
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing InvalidData
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing InvalidDestMac
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing InvalidFirstNBTooSmall
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing InvalidPacket
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing InvalidPDQueue
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing InvalidSourceMac
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing InvalidVlanFormat
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing Ipsec
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing LowPowerPacketFilter
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing MacSpoofing
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing MTUMismatch
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing NativeFwdingReq
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing NicDisabled
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing NotAccepted
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing NotReady
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing Qos
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing RequiredExtensionMissing
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing Resources
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing RouterGuard
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing StormLimit
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing SwitchDataFlowDisabled
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing UnauthorizedMAC
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing UnauthorizedVLAN
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing Unknown
+\Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing VirtualSubnetId
+
+========================================
+Counter Set: Hyper-V Hypervisor Root Virtual Processor
+========================================
+\Hyper-V Hypervisor Root Virtual Processor(*)\% Guest Idle Time
+\Hyper-V Hypervisor Root Virtual Processor(*)\% Guest Run Time
+\Hyper-V Hypervisor Root Virtual Processor(*)\% Hypervisor Run Time
+\Hyper-V Hypervisor Root Virtual Processor(*)\% Remote Run Time
+\Hyper-V Hypervisor Root Virtual Processor(*)\% Total Core Run Time
+\Hyper-V Hypervisor Root Virtual Processor(*)\% Total Run Time
+\Hyper-V Hypervisor Root Virtual Processor(*)\Address Domain Flushes/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Address Space Evictions/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Address Space Flushes/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Address Space Switches/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\APIC EOI Accesses/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\APIC IPIs Sent/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\APIC MMIO Accesses/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\APIC Self IPIs Sent/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\APIC TPR Accesses/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Control Register Accesses Cost
+\Hyper-V Hypervisor Root Virtual Processor(*)\Control Register Accesses Forwarded/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Control Register Accesses Forwarding Cost
+\Hyper-V Hypervisor Root Virtual Processor(*)\Control Register Accesses/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\CPU Wait Time Per Dispatch
+\Hyper-V Hypervisor Root Virtual Processor(*)\CPUID Instructions Cost
+\Hyper-V Hypervisor Root Virtual Processor(*)\CPUID Instructions Forwarded/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\CPUID Instructions Forwarding Cost
+\Hyper-V Hypervisor Root Virtual Processor(*)\CPUID Instructions/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Debug Register Accesses Cost
+\Hyper-V Hypervisor Root Virtual Processor(*)\Debug Register Accesses Forwarded/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Debug Register Accesses Forwarding Cost
+\Hyper-V Hypervisor Root Virtual Processor(*)\Debug Register Accesses/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Emulated Instructions Cost
+\Hyper-V Hypervisor Root Virtual Processor(*)\Emulated Instructions Forwarded/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Emulated Instructions Forwarding Cost
+\Hyper-V Hypervisor Root Virtual Processor(*)\Emulated Instructions/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Extended Hypercall Intercept Messages/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Extended Hypercalls/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\External Interrupts Cost
+\Hyper-V Hypervisor Root Virtual Processor(*)\External Interrupts Forwarded/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\External Interrupts/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Flush Physical Address List Hypercalls/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Flush Physical Address Space Hypercalls/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\GIF Instruction Emulation Cost
+\Hyper-V Hypervisor Root Virtual Processor(*)\GIF Instruction Emulation Intercepts/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Global GVA Range Flushes/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Global I/O TLB Flush Cost
+\Hyper-V Hypervisor Root Virtual Processor(*)\Global I/O TLB Flushes/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\GPA Space Hypercalls/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Guest Page Table Maps/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Hardware Interrupts/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\HLT Instructions Cost
+\Hyper-V Hypervisor Root Virtual Processor(*)\HLT Instructions Forwarded/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\HLT Instructions Forwarding Cost
+\Hyper-V Hypervisor Root Virtual Processor(*)\HLT Instructions/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\HWP Request MSR Context Switches/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Hypercalls Cost
+\Hyper-V Hypervisor Root Virtual Processor(*)\Hypercalls Forwarded/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Hypercalls Forwarding Cost
+\Hyper-V Hypervisor Root Virtual Processor(*)\Hypercalls/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\InvEpt All Context Emulation Intercepts/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\InvEpt All Context Instruction Emulation Cost
+\Hyper-V Hypervisor Root Virtual Processor(*)\InvEpt Single Context Emulation Intercepts/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\InvEpt Single Context Instruction Emulation Cost
+\Hyper-V Hypervisor Root Virtual Processor(*)\InvVpid All Context Emulation Intercepts/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\InvVpid All Context Instruction Emulation Cost
+\Hyper-V Hypervisor Root Virtual Processor(*)\InvVpid Single Address Emulation Intercepts/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\InvVpid Single Address Instruction Emulation Cost
+\Hyper-V Hypervisor Root Virtual Processor(*)\InvVpid Single Context Emulation Intercepts/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\InvVpid Single Context Instruction Emulation Cost
+\Hyper-V Hypervisor Root Virtual Processor(*)\IO Instructions Cost
+\Hyper-V Hypervisor Root Virtual Processor(*)\IO Instructions Forwarded/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\IO Instructions Forwarding Cost
+\Hyper-V Hypervisor Root Virtual Processor(*)\IO Instructions/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\IO Intercept Messages/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Large Page TLB Fills/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Local Flushed GVA Ranges/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Local I/O TLB Flush Cost
+\Hyper-V Hypervisor Root Virtual Processor(*)\Local I/O TLB Flushes/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Logical Processor Dispatches/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Logical Processor Hypercalls/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Logical Processor Migrations/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Long Spin Wait Hypercalls/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\MBEC Nested Page Table Switches/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Memory Intercept Messages/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\MSR Accesses Cost
+\Hyper-V Hypervisor Root Virtual Processor(*)\MSR Accesses Forwarded/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\MSR Accesses Forwarding Cost
+\Hyper-V Hypervisor Root Virtual Processor(*)\MSR Accesses/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\MWAIT Instructions Cost
+\Hyper-V Hypervisor Root Virtual Processor(*)\MWAIT Instructions Forwarded/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\MWAIT Instructions Forwarding Cost
+\Hyper-V Hypervisor Root Virtual Processor(*)\MWAIT Instructions/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Nested Page Fault Intercepts Cost
+\Hyper-V Hypervisor Root Virtual Processor(*)\Nested Page Fault Intercepts/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Nested SLAT Hard Page Faults Cost
+\Hyper-V Hypervisor Root Virtual Processor(*)\Nested SLAT Hard Page Faults/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Nested SLAT Soft Page Faults Cost
+\Hyper-V Hypervisor Root Virtual Processor(*)\Nested SLAT Soft Page Faults/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Nested TLB Page Table Evictions/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Nested TLB Page Table Reclamations/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Nested VM Entries Cost
+\Hyper-V Hypervisor Root Virtual Processor(*)\Nested VM Entries/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\NMI Interrupts Cost
+\Hyper-V Hypervisor Root Virtual Processor(*)\NMI Interrupts/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Other Hypercalls/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Other Intercepts Cost
+\Hyper-V Hypervisor Root Virtual Processor(*)\Other Intercepts Forwarded/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Other Intercepts Forwarding Cost
+\Hyper-V Hypervisor Root Virtual Processor(*)\Other Intercepts/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Other Messages/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Other Reflected Guest Exceptions/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Page Fault Intercepts Cost
+\Hyper-V Hypervisor Root Virtual Processor(*)\Page Fault Intercepts Forwarded/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Page Fault Intercepts Forwarding Cost
+\Hyper-V Hypervisor Root Virtual Processor(*)\Page Fault Intercepts/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Page Invalidations Cost
+\Hyper-V Hypervisor Root Virtual Processor(*)\Page Invalidations Forwarded/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Page Invalidations Forwarding Cost
+\Hyper-V Hypervisor Root Virtual Processor(*)\Page Invalidations/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Page Scans/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Page Table Allocations/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Page Table Evictions/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Page Table Reclamations/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Page Table Resets/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Page Table Validations/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Page Table Write Intercepts/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Pending Interrupts Cost
+\Hyper-V Hypervisor Root Virtual Processor(*)\Pending Interrupts Forwarded/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Pending Interrupts Forwarding Cost
+\Hyper-V Hypervisor Root Virtual Processor(*)\Pending Interrupts/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Performance Monitoring Interrupts/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Performance Monitoring IPT MSR Accesses/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Performance Monitoring LBR MSR Accesses/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Performance Monitoring vPMU MSR Accesses/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Posted Interrupt Notifications/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Posted Interrupt Scans/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\RDPMC Instructions Cost
+\Hyper-V Hypervisor Root Virtual Processor(*)\RDPMC Instructions/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Reflected Guest Page Faults/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Scheduling Priority
+\Hyper-V Hypervisor Root Virtual Processor(*)\Small Page TLB Fills/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Synthetic Interrupt Hypercalls/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Synthetic Interrupts/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Total Intercepts Cost
+\Hyper-V Hypervisor Root Virtual Processor(*)\Total Intercepts/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Total Messages/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Total Virtualization Instructions Emulated/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Total Virtualization Instructions Emulation Cost
+\Hyper-V Hypervisor Root Virtual Processor(*)\Virtual Interrupt Hypercalls/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Virtual Interrupts/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Virtual MMU Hypercalls/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\Virtual Processor Hypercalls/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\VMCLEAR Emulation Intercepts/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\VMCLEAR Instruction Emulation Cost
+\Hyper-V Hypervisor Root Virtual Processor(*)\VMLOAD Emulation Intercepts/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\VMLOAD Instruction Emulation Cost
+\Hyper-V Hypervisor Root Virtual Processor(*)\VMPTRLD Emulation Intercepts/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\VMPTRLD Instruction Emulation Cost
+\Hyper-V Hypervisor Root Virtual Processor(*)\VMPTRST Emulation Intercepts/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\VMPTRST Instruction Emulation Cost
+\Hyper-V Hypervisor Root Virtual Processor(*)\VMREAD Emulation Intercepts/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\VMREAD Instruction Emulation Cost
+\Hyper-V Hypervisor Root Virtual Processor(*)\VMSAVE Emulation Intercepts/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\VMSAVE Instruction Emulation Cost
+\Hyper-V Hypervisor Root Virtual Processor(*)\VMWRITE Emulation Intercepts/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\VMWRITE Instruction Emulation Cost
+\Hyper-V Hypervisor Root Virtual Processor(*)\VMXOFF Emulation Intercepts/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\VMXOFF Instruction Emulation Cost
+\Hyper-V Hypervisor Root Virtual Processor(*)\VMXON Emulation Intercepts/sec
+\Hyper-V Hypervisor Root Virtual Processor(*)\VMXON Instruction Emulation Cost
+
+========================================
+Counter Set: Hyper-V Hypervisor Root Partition
+========================================
+\Hyper-V Hypervisor Root Partition(*)\1G device pages
+\Hyper-V Hypervisor Root Partition(*)\1G GPA pages
+\Hyper-V Hypervisor Root Partition(*)\2M device pages
+\Hyper-V Hypervisor Root Partition(*)\2M GPA pages
+\Hyper-V Hypervisor Root Partition(*)\4K device pages
+\Hyper-V Hypervisor Root Partition(*)\4K GPA pages
+\Hyper-V Hypervisor Root Partition(*)\Address Spaces
+\Hyper-V Hypervisor Root Partition(*)\Attached Devices
+\Hyper-V Hypervisor Root Partition(*)\Deposited Pages
+\Hyper-V Hypervisor Root Partition(*)\Device DMA Errors
+\Hyper-V Hypervisor Root Partition(*)\Device Interrupt Errors
+\Hyper-V Hypervisor Root Partition(*)\Device Interrupt Mappings
+\Hyper-V Hypervisor Root Partition(*)\Device Interrupt Throttle Events
+\Hyper-V Hypervisor Root Partition(*)\GPA Pages
+\Hyper-V Hypervisor Root Partition(*)\GPA Space Modifications/sec
+\Hyper-V Hypervisor Root Partition(*)\HWP Requested Performance Level
+\Hyper-V Hypervisor Root Partition(*)\I/O TLB Flush Cost
+\Hyper-V Hypervisor Root Partition(*)\I/O TLB Flushes/sec
+\Hyper-V Hypervisor Root Partition(*)\Nested TLB Free List Size
+\Hyper-V Hypervisor Root Partition(*)\Nested TLB Size
+\Hyper-V Hypervisor Root Partition(*)\Nested TLB Trimmed Pages/sec
+\Hyper-V Hypervisor Root Partition(*)\Pages Recombined/sec
+\Hyper-V Hypervisor Root Partition(*)\Pages Shattered/sec
+\Hyper-V Hypervisor Root Partition(*)\Recommended Nested TLB Size
+\Hyper-V Hypervisor Root Partition(*)\Recommended Virtual TLB Size
+\Hyper-V Hypervisor Root Partition(*)\Skipped Timer Ticks
+\Hyper-V Hypervisor Root Partition(*)\Virtual Processors
+\Hyper-V Hypervisor Root Partition(*)\Virtual TLB Flush Entires/sec
+\Hyper-V Hypervisor Root Partition(*)\Virtual TLB Pages
+
+========================================
+Counter Set: Hyper-V Hypervisor
+========================================
+\Hyper-V Hypervisor\HypervisorStartupCost
+\Hyper-V Hypervisor\Logical Processors
+\Hyper-V Hypervisor\Modern Standby Entries
+\Hyper-V Hypervisor\Monitored Notifications
+\Hyper-V Hypervisor\Partitions
+\Hyper-V Hypervisor\Platform Idle Transitions
+\Hyper-V Hypervisor\Total Pages
+\Hyper-V Hypervisor\Virtual Processors
+
+========================================
+Counter Set: Hyper-V Hypervisor Logical Processor
+========================================
+\Hyper-V Hypervisor Logical Processor(*)\% C1 Time
+\Hyper-V Hypervisor Logical Processor(*)\% C2 Time
+\Hyper-V Hypervisor Logical Processor(*)\% C3 Time
+\Hyper-V Hypervisor Logical Processor(*)\% Guest Run Time
+\Hyper-V Hypervisor Logical Processor(*)\% Hypervisor Run Time
+\Hyper-V Hypervisor Logical Processor(*)\% Idle Time
+\Hyper-V Hypervisor Logical Processor(*)\% of Max Frequency
+\Hyper-V Hypervisor Logical Processor(*)\% Total Run Time
+\Hyper-V Hypervisor Logical Processor(*)\C1 Transitions/sec
+\Hyper-V Hypervisor Logical Processor(*)\C2 Transitions/sec
+\Hyper-V Hypervisor Logical Processor(*)\C3 Transitions/sec
+\Hyper-V Hypervisor Logical Processor(*)\Context Switches/sec
+\Hyper-V Hypervisor Logical Processor(*)\Frequency
+\Hyper-V Hypervisor Logical Processor(*)\Hardware Interrupts/sec
+\Hyper-V Hypervisor Logical Processor(*)\HWP Request MSR Context Switches/sec
+\Hyper-V Hypervisor Logical Processor(*)\Hypervisor Branch Predictor Flushes/sec
+\Hyper-V Hypervisor Logical Processor(*)\Hypervisor Immediate L1 Data Cache Flushes/sec
+\Hyper-V Hypervisor Logical Processor(*)\Hypervisor L1 Data Cache Flushes/sec
+\Hyper-V Hypervisor Logical Processor(*)\Hypervisor Microarchitectural Buffer Flushes/sec
+\Hyper-V Hypervisor Logical Processor(*)\Inter-Processor Interrupts Sent/sec
+\Hyper-V Hypervisor Logical Processor(*)\Inter-Processor Interrupts/sec
+\Hyper-V Hypervisor Logical Processor(*)\Monitor Transition Cost
+\Hyper-V Hypervisor Logical Processor(*)\Parking Status
+\Hyper-V Hypervisor Logical Processor(*)\Performance Monitoring Interrupts/sec
+\Hyper-V Hypervisor Logical Processor(*)\Posted Interrupt Notifications/sec
+\Hyper-V Hypervisor Logical Processor(*)\Processor State Flags
+\Hyper-V Hypervisor Logical Processor(*)\Reserve Group Id
+\Hyper-V Hypervisor Logical Processor(*)\Root Vp Index
+\Hyper-V Hypervisor Logical Processor(*)\Running Priority
+\Hyper-V Hypervisor Logical Processor(*)\Scheduler Interrupts/sec
+\Hyper-V Hypervisor Logical Processor(*)\Timer Interrupts/sec
+\Hyper-V Hypervisor Logical Processor(*)\Total Interrupts/sec
+
+========================================
+Counter Set: Hyper-V Virtual Switch Processor
+========================================
+\Hyper-V Virtual Switch Processor(*)\Number of Transmit Completes/sec
+\Hyper-V Virtual Switch Processor(*)\Number of VMQs
+\Hyper-V Virtual Switch Processor(*)\Packets from External/sec
+\Hyper-V Virtual Switch Processor(*)\Packets from Internal/sec
+
+========================================
+Counter Set: Hyper-V Virtual Switch Port
+========================================
+\Hyper-V Virtual Switch Port(*)\Broadcast Packets Received/sec
+\Hyper-V Virtual Switch Port(*)\Broadcast Packets Sent/sec
+\Hyper-V Virtual Switch Port(*)\Bytes Received/sec
+\Hyper-V Virtual Switch Port(*)\Bytes Sent/sec
+\Hyper-V Virtual Switch Port(*)\Bytes/sec
+\Hyper-V Virtual Switch Port(*)\Directed Packets Received/sec
+\Hyper-V Virtual Switch Port(*)\Directed Packets Sent/sec
+\Hyper-V Virtual Switch Port(*)\Dropped Packets Incoming/sec
+\Hyper-V Virtual Switch Port(*)\Dropped Packets Outgoing/sec
+\Hyper-V Virtual Switch Port(*)\Extensions Dropped Packets Incoming/sec
+\Hyper-V Virtual Switch Port(*)\Extensions Dropped Packets Outgoing/sec
+\Hyper-V Virtual Switch Port(*)\IPsec offload Bytes Receive/sec
+\Hyper-V Virtual Switch Port(*)\IPsec offload Bytes Sent/sec
+\Hyper-V Virtual Switch Port(*)\IPsec SAs Offloaded
+\Hyper-V Virtual Switch Port(*)\Multicast Packets Received/sec
+\Hyper-V Virtual Switch Port(*)\Multicast Packets Sent/sec
+\Hyper-V Virtual Switch Port(*)\Packets Received/sec
+\Hyper-V Virtual Switch Port(*)\Packets Sent/sec
+\Hyper-V Virtual Switch Port(*)\Packets/sec
+\Hyper-V Virtual Switch Port(*)\Unhashed Packets Received/sec
+\Hyper-V Virtual Switch Port(*)\Unhashed Packets Send Completed/sec
