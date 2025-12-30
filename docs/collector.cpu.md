@@ -48,6 +48,27 @@ Show per-cpu utilisation using the processor utility metrics
 ```
 rate(windows_cpu_processor_utility_total{instance="localhost"}[5m]) / rate(windows_cpu_processor_rtc_total{instance="localhost"}[5m])
 ```
+Show average CPU utilization percentage (like Windows Task Manager)
+```
+sum by (instance) (
+  clamp_max(
+    (
+      rate(windows_cpu_processor_utility_total{
+        job=~"$job",
+      }[1m])
+      /
+      rate(windows_cpu_processor_rtc_total{
+        job=~"$job",
+      }[1m])
+    ), 100
+  )
+) /
+count by (instance) (
+  windows_cpu_processor_utility_total{
+    job=~"$job"
+  }
+)
+```
 Show actual average CPU frequency in Hz
 ```
 avg by(instance) (
