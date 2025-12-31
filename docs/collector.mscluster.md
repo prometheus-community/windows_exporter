@@ -12,7 +12,7 @@ Enabled by default? | No
 
 ### `--collectors.mscluster.enabled`
 Comma-separated list of collectors to use, for example:
-`--collectors.mscluster.enabled=cluster,network,node,resource,resouregroup`. 
+`--collectors.mscluster.enabled=cluster,network,node,resource,resouregroup`.
 Matching is case-sensitive.
 
 ## Metrics
@@ -169,6 +169,14 @@ Matching is case-sensitive.
 | `mscluster_resourcegroup_ResiliencyPeriod`    | The resiliency period for this group, in seconds.                                                                                                                                                                                                                                                        | gauge | `name`              |
 | `mscluster_resourcegroup_State`               | The current state of the resource group. -1: Unknown; 0: Online; 1: Offline; 2: Failed; 3: Partial Online; 4: Pending                                                                                                                                                                                    | gauge | `name`              |
 | `mscluster_resourcegroup_UpdateDomain`        |                                                                                                                                                                                                                                                                                                          | gauge | `name`              |
+
+### CSV
+
+| Name                           | Description                                              | Type  | Labels |
+|--------------------------------|----------------------------------------------------------|-------|--------|
+| `mscluster_csv_info`           | Cluster Shared Volumes information                       | gauge | `name` |
+| `mscluster_csv_total_bytes`    | Total size of the Cluster Shared Volume in bytes         | gauge | `name` |
+| `mscluster_csv_free_bytes`     | Free space on the Cluster Shared Volume in bytes         | gauge | `name` |
 
 ### Example metric
 Query the state of all cluster resource owned by node1
