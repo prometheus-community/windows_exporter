@@ -188,10 +188,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		subCollectorHost: {
 			build:   c.buildHost,
 			collect: c.collectHost,
-			close: func() {
-				c.perfDataCollectorLogicalProcessor.Close()
-				c.perfDataCollectorVirtualProcessor.Close()
-			},
+			close:   c.perfDataCollectorLogicalProcessor.Close,
 		},
 		subCollectorHypervisorLogicalProcessor: {
 			build:   c.buildHypervisorLogicalProcessor,
