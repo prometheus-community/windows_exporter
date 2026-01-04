@@ -101,14 +101,14 @@ func (c *Collector) collectCSV(ch chan<- prometheus.Metric) error {
 		ch <- prometheus.MustNewConstMetric(
 			c.csvTotalSize,
 			prometheus.GaugeValue,
-			float64(partition.TotalSize)*1024, // Convert from KB to bytes
+			float64(partition.TotalSize)*1024*1024, // Convert from KB to bytes
 			volume,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.csvFreeSpace,
 			prometheus.GaugeValue,
-			float64(partition.FreeSpace)*1024, // Convert from KB to bytes
+			float64(partition.FreeSpace)*1024*1024, // Convert from KB to bytes
 			volume,
 		)
 	}
