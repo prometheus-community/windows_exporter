@@ -55,22 +55,22 @@ func (c *Collector) buildCSV() error {
 
 	c.csvInfo = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCSV, "info"),
-		"Cluster Shared Volumes information",
-		[]string{"name"},
+		"Cluster Shared Volumes information (value is always 1)",
+		[]string{"name", "path", "volume"},
 		nil,
 	)
 
 	c.csvTotalSize = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCSV, "total_bytes"),
 		"Total size of the Cluster Shared Volume in bytes",
-		[]string{"name"},
+		[]string{"name", "volume"},
 		nil,
 	)
 
 	c.csvFreeSpace = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCSV, "free_bytes"),
 		"Free space on the Cluster Shared Volume in bytes",
-		[]string{"name"},
+		[]string{"name", "volume"},
 		nil,
 	)
 
@@ -89,26 +89,33 @@ func (c *Collector) collectCSV(ch chan<- prometheus.Metric) error {
 	}
 
 	for _, partition := range dst {
-		volume := strings.TrimRight(partition.Volume, " ")
+		volume := strings.TrimSpace(partition.Volume)
+		if volume == "" {
+			volume = partition.Name // Fallback to name if volume label is empty
+		}
 
 		ch <- prometheus.MustNewConstMetric(
 			c.csvInfo,
 			prometheus.GaugeValue,
 			1.0,
+			partition.Name,
+			partition.Path,
 			volume,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.csvTotalSize,
 			prometheus.GaugeValue,
-			float64(partition.TotalSize)*1024*1024, // Convert from KB to bytes
+			float64(partition.TotalSize)*1024*1024, // Convert MB to Bytes
+			partition.Name,
 			volume,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.csvFreeSpace,
 			prometheus.GaugeValue,
-			float64(partition.FreeSpace)*1024*1024, // Convert from KB to bytes
+			float64(partition.FreeSpace)*1024*1024, // Convert MB to Bytes
+			partition.Name,
 			volume,
 		)
 	}
