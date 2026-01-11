@@ -178,7 +178,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	errCh := make(chan error, 6)
 
 	wg := sync.WaitGroup{}
-	wg.Add(4)
+	wg.Add(6)
 
 	go func() {
 		defer wg.Done()
@@ -213,8 +213,6 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 				errCh <- fmt.Errorf("failed to collect node metrics: %w", err)
 			}
 		}
-
-		wg.Add(2)
 
 		go func() {
 			defer wg.Done()

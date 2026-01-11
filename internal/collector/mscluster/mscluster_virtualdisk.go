@@ -40,15 +40,17 @@ type collectorVirtualDisk struct {
 
 // msftVirtualDisk represents the MSFT_VirtualDisk WMI class
 type msftVirtualDisk struct {
-	FriendlyName      string `mi:"FriendlyName"`
-	OperationalStatus string `mi:"OperationalStatus"`
-	HealthStatus      string `mi:"HealthStatus"`
-	Size              uint64 `mi:"Size"`
-	FootprintOnPool   uint64 `mi:"FootprintOnPool"`
+	FriendlyName    string `mi:"FriendlyName"`
+	HealthStatus    uint16 `mi:"HealthStatus"`
+	Size            uint64 `mi:"Size"`
+	FootprintOnPool uint64 `mi:"FootprintOnPool"`
 }
 
 func (c *Collector) buildVirtualDisk() error {
-	virtualDiskMIQuery, err := mi.NewQuery("SELECT FriendlyName, OperationalStatus, HealthStatus, Size, FootprintOnPool FROM MSFT_VirtualDisk")
+
+	wmiSelect := "FriendlyName,HealthStatus,Size,FootprintOnPool"
+
+	virtualDiskMIQuery, err := mi.NewQuery(fmt.Sprintf("SELECT %s FROM MSFT_VirtualDisk", wmiSelect))
 	if err != nil {
 		return fmt.Errorf("failed to create WMI query: %w", err)
 	}
@@ -62,30 +64,23 @@ func (c *Collector) buildVirtualDisk() error {
 		nil,
 	)
 
-	c.virtualDiskOperationalStatus = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, nameVirtualDisk, "operational_status"),
-		"Operational status of the Virtual Disk. 1: OK, 2: Detached",
-		[]string{"name", "status"},
-		nil,
-	)
-
 	c.virtualDiskHealthStatus = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameVirtualDisk, "health_status"),
-		"Health status of the Virtual Disk. 1: Healthy, 2: Warning, 3: Unknown",
-		[]string{"name", "status"},
+		"Health status of the virtual disk. 0: Healthy, 1: Warning, 2: Unhealthy, 5: Unknown",
+		[]string{"name"},
 		nil,
 	)
 
 	c.virtualDiskSize = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameVirtualDisk, "size_bytes"),
-		"Total size of the Virtual Disk in bytes",
+		"Total size of the virtual disk in bytes",
 		[]string{"name"},
 		nil,
 	)
 
 	c.virtualDiskFootprintOnPool = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameVirtualDisk, "footprint_on_pool_bytes"),
-		"Physical space used by the Virtual Disk on the storage pool in bytes",
+		"Physical storage consumed by the virtual disk on the storage pool in bytes",
 		[]string{"name"},
 		nil,
 	)
@@ -102,6 +97,7 @@ func (c *Collector) buildVirtualDisk() error {
 
 func (c *Collector) collectVirtualDisk(ch chan<- prometheus.Metric) error {
 	var dst []msftVirtualDisk
+
 	if err := c.miSession.Query(&dst, mi.NamespaceRootStorage, c.virtualDiskMIQuery); err != nil {
 		return fmt.Errorf("WMI query failed: %w", err)
 	}
@@ -114,44 +110,11 @@ func (c *Collector) collectVirtualDisk(ch chan<- prometheus.Metric) error {
 			vdisk.FriendlyName,
 		)
 
-		// Map OperationalStatus to numeric value
-		var opStatusValue float64
-		switch vdisk.OperationalStatus {
-		case "OK":
-			opStatusValue = 1
-		case "Detached":
-			opStatusValue = 2
-		default:
-			opStatusValue = 0 // Unknown
-		}
-
-		ch <- prometheus.MustNewConstMetric(
-			c.virtualDiskOperationalStatus,
-			prometheus.GaugeValue,
-			opStatusValue,
-			vdisk.FriendlyName,
-			vdisk.OperationalStatus,
-		)
-
-		// Map HealthStatus to numeric value
-		var healthStatusValue float64
-		switch vdisk.HealthStatus {
-		case "Healthy":
-			healthStatusValue = 1
-		case "Warning":
-			healthStatusValue = 2
-		case "Unknown":
-			healthStatusValue = 3
-		default:
-			healthStatusValue = 3 // Treat anything else as Unknown
-		}
-
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualDiskHealthStatus,
 			prometheus.GaugeValue,
-			healthStatusValue,
+			float64(vdisk.HealthStatus),
 			vdisk.FriendlyName,
-			vdisk.HealthStatus,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -168,18 +131,16 @@ func (c *Collector) collectVirtualDisk(ch chan<- prometheus.Metric) error {
 			vdisk.FriendlyName,
 		)
 
-		// Calculate storage efficiency: Size / FootprintOnPool * 100
-		var storageEfficiency float64
+		// Calculate storage efficiency (avoid division by zero)
 		if vdisk.FootprintOnPool > 0 {
-			storageEfficiency = (float64(vdisk.Size) / float64(vdisk.FootprintOnPool)) * 100
+			storageEfficiency := float64(vdisk.Size) / float64(vdisk.FootprintOnPool) * 100
+			ch <- prometheus.MustNewConstMetric(
+				c.virtualDiskStorageEfficiency,
+				prometheus.GaugeValue,
+				storageEfficiency,
+				vdisk.FriendlyName,
+			)
 		}
-
-		ch <- prometheus.MustNewConstMetric(
-			c.virtualDiskStorageEfficiency,
-			prometheus.GaugeValue,
-			storageEfficiency,
-			vdisk.FriendlyName,
-		)
 	}
 
 	return nil
