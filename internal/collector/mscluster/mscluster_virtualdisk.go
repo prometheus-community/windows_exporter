@@ -31,7 +31,6 @@ type collectorVirtualDisk struct {
 	virtualDiskMIQuery mi.Query
 
 	virtualDiskInfo              *prometheus.Desc
-	virtualDiskOperationalStatus *prometheus.Desc
 	virtualDiskHealthStatus      *prometheus.Desc
 	virtualDiskSize              *prometheus.Desc
 	virtualDiskFootprintOnPool   *prometheus.Desc
@@ -47,7 +46,6 @@ type msftVirtualDisk struct {
 }
 
 func (c *Collector) buildVirtualDisk() error {
-
 	wmiSelect := "FriendlyName,HealthStatus,Size,FootprintOnPool"
 
 	virtualDiskMIQuery, err := mi.NewQuery(fmt.Sprintf("SELECT %s FROM MSFT_VirtualDisk", wmiSelect))
