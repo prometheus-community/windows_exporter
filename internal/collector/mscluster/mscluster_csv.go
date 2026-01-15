@@ -89,7 +89,7 @@ func (c *Collector) collectCSV(ch chan<- prometheus.Metric) error {
 	}
 
 	for _, partition := range dst {
-		volume := strings.TrimSpace(partition.Volume)
+		volume := strings.TrimRight(partition.Volume, " ")
 		if volume == "" {
 			volume = partition.Name // Fallback to name if volume label is empty
 		}
