@@ -39,6 +39,7 @@ const (
 	subCollectorResource      = "resource"
 	subCollectorResourceGroup = "resourcegroup"
 	subCollectorVirtualDisk   = "virtualdisk"
+	subCollectorCSV           = "csv"
 )
 
 type Config struct {
@@ -54,6 +55,7 @@ var ConfigDefaults = Config{
 		subCollectorResource,
 		subCollectorResourceGroup,
 		subCollectorVirtualDisk,
+		subCollectorCSV,
 	},
 }
 
@@ -65,6 +67,7 @@ type Collector struct {
 	collectorResource
 	collectorResourceGroup
 	collectorVirtualDisk
+	collectorCSV
 
 	config    Config
 	miSession *mi.Session
@@ -164,6 +167,12 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 			errs = append(errs, fmt.Errorf("failed to build virtualdisk collector: %w", err))
 		}
 	}
+  
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorCSV) {
+		if err := c.buildCSV(); err != nil {
+			errs = append(errs, fmt.Errorf("failed to build csv collector: %w", err))
+		}
+	}
 
 	return errors.Join(errs...)
 }
@@ -178,7 +187,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	errCh := make(chan error, 6)
 
 	wg := sync.WaitGroup{}
-	wg.Add(6)
+	wg.Add(7)
 
 	go func() {
 		defer wg.Done()
@@ -241,6 +250,17 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		if slices.Contains(c.config.CollectorsEnabled, subCollectorVirtualDisk) {
 			if err := c.collectVirtualDisk(ch); err != nil {
 				errCh <- fmt.Errorf("failed to collect virtualdisk metrics: %w", err)
+			}
+		}
+	}()
+  
+	go func() {
+		defer wg.Done()
+
+		if slices.Contains(c.config.CollectorsEnabled, subCollectorCSV) {
+			if err := c.collectCSV(ch); err != nil {
+				errCh <- fmt.Errorf("failed to collect csv metrics: %w", err)
+
 			}
 		}
 	}()
