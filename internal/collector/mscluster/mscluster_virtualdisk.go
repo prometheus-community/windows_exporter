@@ -39,14 +39,15 @@ type collectorVirtualDisk struct {
 
 // msftVirtualDisk represents the MSFT_VirtualDisk WMI class
 type msftVirtualDisk struct {
-	FriendlyName    string `mi:"FriendlyName"`
-	HealthStatus    uint16 `mi:"HealthStatus"`
-	Size            uint64 `mi:"Size"`
-	FootprintOnPool uint64 `mi:"FootprintOnPool"`
+	FriendlyName      string   `mi:"FriendlyName"`
+	HealthStatus      uint16   `mi:"HealthStatus"`
+	OperationalStatus []string `mi:"OperationalStatus"`
+	Size              uint64   `mi:"Size"`
+	FootprintOnPool   uint64   `mi:"FootprintOnPool"`
 }
 
 func (c *Collector) buildVirtualDisk() error {
-	wmiSelect := "FriendlyName,HealthStatus,Size,FootprintOnPool"
+	wmiSelect := "FriendlyName,HealthStatus,OperationalStatus,Size,FootprintOnPool"
 
 	virtualDiskMIQuery, err := mi.NewQuery(fmt.Sprintf("SELECT %s FROM MSFT_VirtualDisk", wmiSelect))
 	if err != nil {
