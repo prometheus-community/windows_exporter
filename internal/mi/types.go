@@ -54,6 +54,7 @@ var (
 	NamespaceRootWebAdministration = utils.Must(NewNamespace("root/WebAdministration"))
 	NamespaceRootMSCluster         = utils.Must(NewNamespace("root/MSCluster"))
 	NamespaceRootMicrosoftDNS      = utils.Must(NewNamespace("root/MicrosoftDNS"))
+	NamespaceRootStorage           = utils.Must(NewNamespace("root/Microsoft/Windows/Storage"))
 )
 
 type Query *uint16

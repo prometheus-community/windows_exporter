@@ -5,14 +5,14 @@ The MSCluster_Cluster class is a dynamic WMI class that represents a cluster.
 |||
 -|-
 Metric name prefix  | `mscluster`
-Classes             | `MSCluster_Cluster`,`MSCluster_Network`,`MSCluster_Node`,`MSCluster_Resource`,`MSCluster_ResourceGroup`
+Classes             | `MSCluster_Cluster`,`MSCluster_Network`,`MSCluster_Node`,`MSCluster_Resource`,`MSCluster_ResourceGroup`,`MSFT_VirtualDisk`
 Enabled by default? | No
 
 ## Flags
 
 ### `--collectors.mscluster.enabled`
 Comma-separated list of collectors to use, for example:
-`--collectors.mscluster.enabled=cluster,network,node,resource,resouregroup`.
+`--collectors.mscluster.enabled=cluster,network,node,resource,resouregroup,virtualdisk`.
 Matching is case-sensitive.
 
 ## Metrics
@@ -170,6 +170,16 @@ Matching is case-sensitive.
 | `mscluster_resourcegroup_State`               | The current state of the resource group. -1: Unknown; 0: Online; 1: Offline; 2: Failed; 3: Partial Online; 4: Pending                                                                                                                                                                                    | gauge | `name`              |
 | `mscluster_resourcegroup_UpdateDomain`        |                                                                                                                                                                                                                                                                                                          | gauge | `name`              |
 
+### Virtual Disk
+
+| Name                                                      | Description                                                                                    | Type  | Labels |
+|-----------------------------------------------------------|------------------------------------------------------------------------------------------------|-------|--------|
+| `mscluster_virtualdisk_info`                              | Virtual disk information (value is always 1)                                                   | gauge | `name` |
+| `mscluster_virtualdisk_health_status`                     | Health status of the virtual disk. 0: Healthy, 1: Warning, 2: Unhealthy, 5: Unknown            | gauge | `name` |
+| `mscluster_virtualdisk_size_bytes`                        | Total size of the virtual disk in bytes                                                        | gauge | `name` |
+| `mscluster_virtualdisk_footprint_on_pool_bytes`           | Physical storage consumed by the virtual disk on the storage pool in bytes                     | gauge | `name` |
+| `mscluster_virtualdisk_storage_efficiency_percent`        | Storage efficiency percentage (Size / FootprintOnPool * 100)                                   | gauge | `name` |
+
 ### CSV
 
 | Name                           | Description                                              | Type  | Labels |
@@ -184,11 +194,31 @@ Query the state of all cluster resource owned by node1
 windows_mscluster_resource_owner_node{node_name="node1"}
 ```
 
+Query virtual disk storage efficiency for thin provisioned disks
+```
+windows_mscluster_virtualdisk_storage_efficiency_percent
+```
+
 ## Useful queries
 Counts the number of Network Name cluster resource
 ```
 count(windows_mscluster_resource_state{type="Network Name"})
 ```
 
+Find virtual disks with low storage efficiency (over-provisioned)
+```
+windows_mscluster_virtualdisk_storage_efficiency_percent < 50
+```
+
+Calculate total virtual disk capacity vs physical usage
+```
+sum(windows_mscluster_virtualdisk_size_bytes) / sum(windows_mscluster_virtualdisk_footprint_on_pool_bytes) * 100
+```
+
 ## Alerting examples
-_This collector does not yet have alerting examples, we would appreciate your help adding them!_
+**Virtual disk unhealthy**
+```
+windows_mscluster_virtualdisk_health_status >= 2
+```
+
+_This collector does not yet have additional alerting examples, we would appreciate your help adding them!_
