@@ -19,7 +19,6 @@ package mscluster
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
@@ -42,11 +41,10 @@ type msClusterDiskPartition struct {
 	Path      string `mi:"Path"`
 	TotalSize uint64 `mi:"TotalSize"`
 	FreeSpace uint64 `mi:"FreeSpace"`
-	Volume    string `mi:"VolumeLabel"`
 }
 
 func (c *Collector) buildCSV() error {
-	csvMIQuery, err := mi.NewQuery("SELECT Name, Path, TotalSize, FreeSpace, VolumeLabel FROM MSCluster_DiskPartition")
+	csvMIQuery, err := mi.NewQuery("SELECT Name, Path, TotalSize, FreeSpace FROM MSCluster_DiskPartition")
 	if err != nil {
 		return fmt.Errorf("failed to create WMI query: %w", err)
 	}
@@ -56,21 +54,21 @@ func (c *Collector) buildCSV() error {
 	c.csvInfo = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCSV, "info"),
 		"Cluster Shared Volumes information (value is always 1)",
-		[]string{"name", "path", "volume"},
+		[]string{"name", "path"},
 		nil,
 	)
 
 	c.csvTotalSize = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCSV, "total_bytes"),
 		"Total size of the Cluster Shared Volume in bytes",
-		[]string{"name", "volume"},
+		[]string{"name"},
 		nil,
 	)
 
 	c.csvFreeSpace = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameCSV, "free_bytes"),
 		"Free space on the Cluster Shared Volume in bytes",
-		[]string{"name", "volume"},
+		[]string{"name"},
 		nil,
 	)
 
@@ -89,18 +87,12 @@ func (c *Collector) collectCSV(ch chan<- prometheus.Metric) error {
 	}
 
 	for _, partition := range dst {
-		volume := strings.TrimRight(partition.Volume, " ")
-		if volume == "" {
-			volume = partition.Name // Fallback to name if volume label is empty
-		}
-
 		ch <- prometheus.MustNewConstMetric(
 			c.csvInfo,
 			prometheus.GaugeValue,
 			1.0,
 			partition.Name,
 			partition.Path,
-			volume,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -108,7 +100,6 @@ func (c *Collector) collectCSV(ch chan<- prometheus.Metric) error {
 			prometheus.GaugeValue,
 			float64(partition.TotalSize)*1024*1024, // Convert MB to Bytes
 			partition.Name,
-			volume,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -116,7 +107,6 @@ func (c *Collector) collectCSV(ch chan<- prometheus.Metric) error {
 			prometheus.GaugeValue,
 			float64(partition.FreeSpace)*1024*1024, // Convert MB to Bytes
 			partition.Name,
-			volume,
 		)
 	}
 
