@@ -19,6 +19,7 @@ package mscluster
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
@@ -41,10 +42,11 @@ type msClusterDiskPartition struct {
 	Path      string `mi:"Path"`
 	TotalSize uint64 `mi:"TotalSize"`
 	FreeSpace uint64 `mi:"FreeSpace"`
+	Volume    string `mi:"VolumeLabel"`
 }
 
 func (c *Collector) buildCSV() error {
-	csvMIQuery, err := mi.NewQuery("SELECT Name, Path, TotalSize, FreeSpace FROM MSCluster_DiskPartition")
+	csvMIQuery, err := mi.NewQuery("SELECT Name, Path, TotalSize, FreeSpace, VolumeLabel FROM MSCluster_DiskPartition")
 	if err != nil {
 		return fmt.Errorf("failed to create WMI query: %w", err)
 	}
@@ -87,26 +89,28 @@ func (c *Collector) collectCSV(ch chan<- prometheus.Metric) error {
 	}
 
 	for _, partition := range dst {
+		volume := strings.TrimRight(partition.Volume, " ")
+
 		ch <- prometheus.MustNewConstMetric(
 			c.csvInfo,
 			prometheus.GaugeValue,
 			1.0,
-			partition.Name,
+			volume,
 			partition.Path,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.csvTotalSize,
 			prometheus.GaugeValue,
-			float64(partition.TotalSize)*1024*1024, // Convert MB to Bytes
-			partition.Name,
+			float64(partition.TotalSize)*1024*1024, // Convert from KB to bytes
+			volume,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.csvFreeSpace,
 			prometheus.GaugeValue,
-			float64(partition.FreeSpace)*1024*1024, // Convert MB to Bytes
-			partition.Name,
+			float64(partition.FreeSpace)*1024*1024, // Convert from KB to bytes
+			volume,
 		)
 	}
 
