@@ -260,7 +260,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 		// Skip Microsoft Basic Render Driver
 		// https://devicehunt.com/view/type/pci/vendor/1414/device/008C
-		if gpu.DeviceID == `PCI\EN_1414&DEV_008C&SUBSYS_00000000&REV_00` {
+        if gpu.DeviceID == `PCI\VEN_1414&DEV_008C&SUBSYS_00000000&REV_00` {
 			continue
 		}
 
