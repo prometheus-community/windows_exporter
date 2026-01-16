@@ -44,8 +44,11 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	config Config
 
+	installTimeTimestamp float64
+
 	hostname      *prometheus.Desc
 	osInformation *prometheus.Desc
+	installTime   *prometheus.Desc
 }
 
 func New(config *Config) *Collector {
@@ -77,6 +80,13 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 	if err != nil {
 		return fmt.Errorf("failed to get Windows version: %w", err)
 	}
+
+	installTimeTimestamp, err := c.getInstallTime()
+	if err != nil {
+		return fmt.Errorf("failed to get install time: %w", err)
+	}
+
+	c.installTimeTimestamp = installTimeTimestamp
 
 	version := osversion.Get()
 
@@ -111,6 +121,13 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 
+	c.installTime = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "install_time_timestamp"),
+		"Unix timestamp of OS installation time",
+		nil,
+		nil,
+	)
+
 	return nil
 }
 
@@ -123,6 +140,12 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		c.osInformation,
 		prometheus.GaugeValue,
 		1.0,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.installTime,
+		prometheus.GaugeValue,
+		c.installTimeTimestamp,
 	)
 
 	if err := c.collectHostname(ch); err != nil {
@@ -189,4 +212,24 @@ func (c *Collector) getWindowsVersion() (string, string, string, error) {
 	}
 
 	return strings.TrimSpace(productName), strconv.FormatUint(revision, 10), strings.TrimSpace(installationType), nil
+}
+
+func (c *Collector) getInstallTime() (float64, error) {
+	ntKey, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\Microsoft\Windows NT\CurrentVersion`, registry.QUERY_VALUE)
+	if err != nil {
+		return 0, fmt.Errorf("failed to open registry key: %w", err)
+	}
+
+	defer func(ntKey registry.Key) {
+		_ = ntKey.Close()
+	}(ntKey)
+
+	installDate, _, err := ntKey.GetIntegerValue("InstallDate")
+	if errors.Is(err, registry.ErrNotExist) {
+		return 0, nil
+	} else if err != nil {
+		return 0, err
+	}
+
+	return float64(installDate), nil
 }
