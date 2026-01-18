@@ -26,14 +26,14 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-const nameCSV = Name + "_csv"
+const nameSharedVolumes = Name + "_shared_volumes"
 
-type collectorCSV struct {
-	csvMIQuery mi.Query
+type collectorSharedVolumes struct {
+	sharedVolumesMIQuery mi.Query
 
-	csvInfo      *prometheus.Desc
-	csvTotalSize *prometheus.Desc
-	csvFreeSpace *prometheus.Desc
+	sharedVolumesInfo      *prometheus.Desc
+	sharedVolumesTotalSize *prometheus.Desc
+	sharedVolumesFreeSpace *prometheus.Desc
 }
 
 // msClusterDiskPartition represents the MSCluster_DiskPartition WMI class
@@ -45,46 +45,46 @@ type msClusterDiskPartition struct {
 	Volume    string `mi:"VolumeLabel"`
 }
 
-func (c *Collector) buildCSV() error {
-	csvMIQuery, err := mi.NewQuery("SELECT Name, Path, TotalSize, FreeSpace, VolumeLabel FROM MSCluster_DiskPartition")
+func (c *Collector) buildSharedVolumes() error {
+	sharedVolumesMIQuery, err := mi.NewQuery("SELECT Name, Path, TotalSize, FreeSpace, VolumeLabel FROM MSCluster_DiskPartition")
 	if err != nil {
 		return fmt.Errorf("failed to create WMI query: %w", err)
 	}
 
-	c.csvMIQuery = csvMIQuery
+	c.sharedVolumesMIQuery = sharedVolumesMIQuery
 
-	c.csvInfo = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, nameCSV, "info"),
+	c.sharedVolumesInfo = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, nameSharedVolumes, "info"),
 		"Cluster Shared Volumes information (value is always 1)",
 		[]string{"name", "path"},
 		nil,
 	)
 
-	c.csvTotalSize = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, nameCSV, "total_bytes"),
+	c.sharedVolumesTotalSize = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, nameSharedVolumes, "total_bytes"),
 		"Total size of the Cluster Shared Volume in bytes",
 		[]string{"name"},
 		nil,
 	)
 
-	c.csvFreeSpace = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, nameCSV, "free_bytes"),
+	c.sharedVolumesFreeSpace = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, nameSharedVolumes, "free_bytes"),
 		"Free space on the Cluster Shared Volume in bytes",
 		[]string{"name"},
 		nil,
 	)
 
 	var dst []msClusterDiskPartition
-	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, c.csvMIQuery); err != nil {
+	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, c.sharedVolumesMIQuery); err != nil {
 		return fmt.Errorf("WMI query failed: %w", err)
 	}
 
 	return nil
 }
 
-func (c *Collector) collectCSV(ch chan<- prometheus.Metric) error {
+func (c *Collector) collectSharedVolumes(ch chan<- prometheus.Metric) error {
 	var dst []msClusterDiskPartition
-	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, c.csvMIQuery); err != nil {
+	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, c.sharedVolumesMIQuery); err != nil {
 		return fmt.Errorf("WMI query failed: %w", err)
 	}
 
@@ -92,7 +92,7 @@ func (c *Collector) collectCSV(ch chan<- prometheus.Metric) error {
 		volume := strings.TrimRight(partition.Volume, " ")
 
 		ch <- prometheus.MustNewConstMetric(
-			c.csvInfo,
+			c.sharedVolumesInfo,
 			prometheus.GaugeValue,
 			1.0,
 			volume,
@@ -100,14 +100,14 @@ func (c *Collector) collectCSV(ch chan<- prometheus.Metric) error {
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.csvTotalSize,
+			c.sharedVolumesTotalSize,
 			prometheus.GaugeValue,
 			float64(partition.TotalSize)*1024*1024, // Convert from KB to bytes
 			volume,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
-			c.csvFreeSpace,
+			c.sharedVolumesFreeSpace,
 			prometheus.GaugeValue,
 			float64(partition.FreeSpace)*1024*1024, // Convert from KB to bytes
 			volume,

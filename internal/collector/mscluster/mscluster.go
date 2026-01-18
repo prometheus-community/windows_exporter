@@ -39,7 +39,7 @@ const (
 	subCollectorResource      = "resource"
 	subCollectorResourceGroup = "resourcegroup"
 	subCollectorVirtualDisk   = "virtualdisk"
-	subCollectorCSV           = "csv"
+	subCollectorSharedVolumes = "shared_volumes"
 )
 
 type Config struct {
@@ -55,7 +55,7 @@ var ConfigDefaults = Config{
 		subCollectorResource,
 		subCollectorResourceGroup,
 		subCollectorVirtualDisk,
-		subCollectorCSV,
+		subCollectorSharedVolumes,
 	},
 }
 
@@ -67,7 +67,7 @@ type Collector struct {
 	collectorResource
 	collectorResourceGroup
 	collectorVirtualDisk
-	collectorCSV
+	collectorSharedVolumes
 
 	config    Config
 	miSession *mi.Session
@@ -168,9 +168,9 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 		}
 	}
 
-	if slices.Contains(c.config.CollectorsEnabled, subCollectorCSV) {
-		if err := c.buildCSV(); err != nil {
-			errs = append(errs, fmt.Errorf("failed to build csv collector: %w", err))
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorSharedVolumes) {
+		if err := c.buildSharedVolumes(); err != nil {
+			errs = append(errs, fmt.Errorf("failed to build shared_volumes collector: %w", err))
 		}
 	}
 
@@ -257,9 +257,9 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	go func() {
 		defer wg.Done()
 
-		if slices.Contains(c.config.CollectorsEnabled, subCollectorCSV) {
-			if err := c.collectCSV(ch); err != nil {
-				errCh <- fmt.Errorf("failed to collect csv metrics: %w", err)
+		if slices.Contains(c.config.CollectorsEnabled, subCollectorSharedVolumes) {
+			if err := c.collectSharedVolumes(ch); err != nil {
+				errCh <- fmt.Errorf("failed to collect shared_volumes metrics: %w", err)
 			}
 		}
 	}()
