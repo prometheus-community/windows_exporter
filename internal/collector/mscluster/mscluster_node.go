@@ -31,6 +31,7 @@ const nameNode = Name + "_node"
 type collectorNode struct {
 	nodeMIQuery mi.Query
 
+	nodeInfo                  *prometheus.Desc
 	nodeBuildNumber           *prometheus.Desc
 	nodeCharacteristics       *prometheus.Desc
 	nodeDetectedCloudPlatform *prometheus.Desc
@@ -71,7 +72,7 @@ type msClusterNode struct {
 func (c *Collector) buildNode() error {
 	buildNumber := osversion.Build()
 
-	wmiSelect := "BuildNumber,Characteristics,DynamicWeight,Flags,MajorVersion,MinorVersion,NeedsPreventQuorum,NodeDrainStatus,NodeHighestVersion,NodeLowestVersion,NodeWeight,State,StatusInformation"
+	wmiSelect := "BuildNumber,Characteristics,DynamicWeight,Flags,MajorVersion,MinorVersion,Name,NeedsPreventQuorum,NodeDrainStatus,NodeHighestVersion,NodeLowestVersion,NodeWeight,State,StatusInformation"
 	if buildNumber >= osversion.LTSC2022 {
 		wmiSelect += ",DetectedCloudPlatform"
 	}
@@ -83,6 +84,12 @@ func (c *Collector) buildNode() error {
 
 	c.nodeMIQuery = nodeMIQuery
 
+	c.nodeInfo = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, nameNode, "info"),
+		"Node information",
+		[]string{"name"},
+		nil,
+	)
 	c.nodeBuildNumber = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameNode, "build_number"),
 		"Provides access to the node's BuildNumber property.",
@@ -189,6 +196,13 @@ func (c *Collector) collectNode(ch chan<- prometheus.Metric) ([]string, error) {
 	nodeNames := make([]string, 0, len(dst))
 
 	for _, v := range dst {
+		ch <- prometheus.MustNewConstMetric(
+			c.nodeInfo,
+			prometheus.GaugeValue,
+			1.0,
+			v.Name,
+		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.nodeBuildNumber,
 			prometheus.GaugeValue,

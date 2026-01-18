@@ -38,6 +38,8 @@ const (
 	subCollectorNode          = "node"
 	subCollectorResource      = "resource"
 	subCollectorResourceGroup = "resourcegroup"
+	subCollectorVirtualDisk   = "virtualdisk"
+	subCollectorSharedVolumes = "shared_volumes"
 )
 
 type Config struct {
@@ -52,6 +54,8 @@ var ConfigDefaults = Config{
 		subCollectorNode,
 		subCollectorResource,
 		subCollectorResourceGroup,
+		subCollectorVirtualDisk,
+		subCollectorSharedVolumes,
 	},
 }
 
@@ -62,6 +66,8 @@ type Collector struct {
 	collectorNode
 	collectorResource
 	collectorResourceGroup
+	collectorVirtualDisk
+	collectorSharedVolumes
 
 	config    Config
 	miSession *mi.Session
@@ -156,6 +162,18 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 		}
 	}
 
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorVirtualDisk) {
+		if err := c.buildVirtualDisk(); err != nil {
+			errs = append(errs, fmt.Errorf("failed to build virtualdisk collector: %w", err))
+		}
+	}
+
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorSharedVolumes) {
+		if err := c.buildSharedVolumes(); err != nil {
+			errs = append(errs, fmt.Errorf("failed to build shared_volumes collector: %w", err))
+		}
+	}
+
 	return errors.Join(errs...)
 }
 
@@ -166,10 +184,10 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		return nil
 	}
 
-	errCh := make(chan error, 5)
+	errCh := make(chan error, 6)
 
 	wg := sync.WaitGroup{}
-	wg.Add(5)
+	wg.Add(7)
 
 	go func() {
 		defer wg.Done()
@@ -224,6 +242,26 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 				}
 			}
 		}()
+	}()
+
+	go func() {
+		defer wg.Done()
+
+		if slices.Contains(c.config.CollectorsEnabled, subCollectorVirtualDisk) {
+			if err := c.collectVirtualDisk(ch); err != nil {
+				errCh <- fmt.Errorf("failed to collect virtualdisk metrics: %w", err)
+			}
+		}
+	}()
+
+	go func() {
+		defer wg.Done()
+
+		if slices.Contains(c.config.CollectorsEnabled, subCollectorSharedVolumes) {
+			if err := c.collectSharedVolumes(ch); err != nil {
+				errCh <- fmt.Errorf("failed to collect shared_volumes metrics: %w", err)
+			}
+		}
 	}()
 
 	wg.Wait()
