@@ -5,14 +5,14 @@ The MSCluster_Cluster class is a dynamic WMI class that represents a cluster.
 |||
 -|-
 Metric name prefix  | `mscluster`
-Classes             | `MSCluster_Cluster`,`MSCluster_Network`,`MSCluster_Node`,`MSCluster_Resource`,`MSCluster_ResourceGroup`
+Classes             | `MSCluster_Cluster`,`MSCluster_Network`,`MSCluster_Node`,`MSCluster_Resource`,`MSCluster_ResourceGroup`,`MSCluster_DiskPartition`
 Enabled by default? | No
 
 ## Flags
 
 ### `--collectors.mscluster.enabled`
 Comma-separated list of collectors to use, for example:
-`--collectors.mscluster.enabled=cluster,network,node,resource,resouregroup`. 
+`--collectors.mscluster.enabled=cluster,network,node,resource,resourcegroup,shared_volumes`.
 Matching is case-sensitive.
 
 ## Metrics
@@ -169,6 +169,14 @@ Matching is case-sensitive.
 | `mscluster_resourcegroup_ResiliencyPeriod`    | The resiliency period for this group, in seconds.                                                                                                                                                                                                                                                        | gauge | `name`              |
 | `mscluster_resourcegroup_State`               | The current state of the resource group. -1: Unknown; 0: Online; 1: Offline; 2: Failed; 3: Partial Online; 4: Pending                                                                                                                                                                                    | gauge | `name`              |
 | `mscluster_resourcegroup_UpdateDomain`        |                                                                                                                                                                                                                                                                                                          | gauge | `name`              |
+
+### Shared Volumes
+
+| Name                                     | Description                                                    | Type  | Labels       |
+|------------------------------------------|----------------------------------------------------------------|-------|--------------|
+| `mscluster_shared_volumes_info`          | Cluster Shared Volumes information (value is always 1)         | gauge | `name`,`path`|
+| `mscluster_shared_volumes_total_bytes`   | Total size of the Cluster Shared Volume in bytes               | gauge | `name`       |
+| `mscluster_shared_volumes_free_bytes`    | Free space on the Cluster Shared Volume in bytes               | gauge | `name`       |
 
 ### Example metric
 Query the state of all cluster resource owned by node1
