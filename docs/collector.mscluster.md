@@ -180,13 +180,13 @@ Matching is case-sensitive.
 | `mscluster_virtualdisk_footprint_on_pool_bytes`           | Physical storage consumed by the virtual disk on the storage pool in bytes                     | gauge | `name` |
 | `mscluster_virtualdisk_storage_efficiency_percent`        | Storage efficiency percentage (Size / FootprintOnPool * 100)                                   | gauge | `name` |
 
-### CSV
+### Shared Volumes
 
-| Name                           | Description                                              | Type  | Labels |
-|--------------------------------|----------------------------------------------------------|-------|--------|
-| `mscluster_csv_info`           | Cluster Shared Volumes information                       | gauge | `name` |
-| `mscluster_csv_total_bytes`    | Total size of the Cluster Shared Volume in bytes         | gauge | `name` |
-| `mscluster_csv_free_bytes`     | Free space on the Cluster Shared Volume in bytes         | gauge | `name` |
+| Name                                     | Description                                                    | Type  | Labels       |
+|------------------------------------------|----------------------------------------------------------------|-------|--------------|
+| `mscluster_shared_volumes_info`          | Cluster Shared Volumes information (value is always 1)         | gauge | `name`,`path`|
+| `mscluster_shared_volumes_total_bytes`   | Total size of the Cluster Shared Volume in bytes               | gauge | `name`       |
+| `mscluster_shared_volumes_free_bytes`    | Free space on the Cluster Shared Volume in bytes               | gauge | `name`       |
 
 ### Example metric
 Query the state of all cluster resource owned by node1
