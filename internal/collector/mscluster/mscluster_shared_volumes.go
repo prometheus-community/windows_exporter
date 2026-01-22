@@ -38,16 +38,16 @@ type collectorSharedVolumes struct {
 
 // msClusterDiskPartition represents the MSCluster_DiskPartition WMI class
 type msClusterDiskPartition struct {
-	Name      string `mi:"Name"`
-	Path      string `mi:"Path"`
-	TotalSize uint64 `mi:"TotalSize"`
-	FreeSpace uint64 `mi:"FreeSpace"`
-	Volume    string `mi:"VolumeLabel"`
-	UniqueId  string `mi:"UniqueId"`
+	Name       string `mi:"Name"`
+	Path       string `mi:"Path"`
+	TotalSize  uint64 `mi:"TotalSize"`
+	FreeSpace  uint64 `mi:"FreeSpace"`
+	Volume     string `mi:"VolumeLabel"`
+	VolumeGuid string `mi:"VolumeGuid"`
 }
 
 func (c *Collector) buildSharedVolumes() error {
-	sharedVolumesMIQuery, err := mi.NewQuery("SELECT Name, Path, TotalSize, FreeSpace, VolumeLabel, UniqueId FROM MSCluster_DiskPartition")
+	sharedVolumesMIQuery, err := mi.NewQuery("SELECT Name, Path, TotalSize, FreeSpace, VolumeLabel, VolumeGuid FROM MSCluster_DiskPartition")
 	if err != nil {
 		return fmt.Errorf("failed to create WMI query: %w", err)
 	}
@@ -57,21 +57,21 @@ func (c *Collector) buildSharedVolumes() error {
 	c.sharedVolumesInfo = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameSharedVolumes, "info"),
 		"Cluster Shared Volumes information (value is always 1)",
-		[]string{"name", "path", "unique_id"},
+		[]string{"name", "path", "volume_guid"},
 		nil,
 	)
 
 	c.sharedVolumesTotalSize = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameSharedVolumes, "total_bytes"),
 		"Total size of the Cluster Shared Volume in bytes",
-		[]string{"name", "unique_id"},
+		[]string{"name", "volume_guid"},
 		nil,
 	)
 
 	c.sharedVolumesFreeSpace = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, nameSharedVolumes, "free_bytes"),
 		"Free space on the Cluster Shared Volume in bytes",
-		[]string{"name", "unique_id"},
+		[]string{"name", "volume_guid"},
 		nil,
 	)
 
@@ -98,7 +98,7 @@ func (c *Collector) collectSharedVolumes(ch chan<- prometheus.Metric) error {
 			1.0,
 			volume,
 			partition.Path,
-			partition.UniqueId,
+			partition.VolumeGuid,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -106,7 +106,7 @@ func (c *Collector) collectSharedVolumes(ch chan<- prometheus.Metric) error {
 			prometheus.GaugeValue,
 			float64(partition.TotalSize)*1024*1024, // Convert from KB to bytes
 			volume,
-			partition.UniqueId,
+			partition.VolumeGuid,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -114,7 +114,7 @@ func (c *Collector) collectSharedVolumes(ch chan<- prometheus.Metric) error {
 			prometheus.GaugeValue,
 			float64(partition.FreeSpace)*1024*1024, // Convert from KB to bytes
 			volume,
-			partition.UniqueId,
+			partition.VolumeGuid,
 		)
 	}
 

@@ -172,11 +172,11 @@ Matching is case-sensitive.
 
 ### Shared Volumes
 
-| Name                                     | Description                                                    | Type  | Labels       |
-|------------------------------------------|----------------------------------------------------------------|-------|--------------|
-| `mscluster_shared_volumes_info`          | Cluster Shared Volumes information (value is always 1)         | gauge | `name`,`path`,`unique_id` |
-| `mscluster_shared_volumes_total_bytes`   | Total size of the Cluster Shared Volume in bytes               | gauge | `name`,`unique_id`      |
-| `mscluster_shared_volumes_free_bytes`    | Free space on the Cluster Shared Volume in bytes               | gauge | `name`,`unique_id`      |
+| Name                                     | Description                                                    | Type  | Labels                      |
+|------------------------------------------|----------------------------------------------------------------|-------|-----------------------------|
+| `mscluster_shared_volumes_info`          | Cluster Shared Volumes information (value is always 1)         | gauge | `name`,`path`,`volume_guid` |
+| `mscluster_shared_volumes_total_bytes`   | Total size of the Cluster Shared Volume in bytes               | gauge | `name`,`volume_guid`        |
+| `mscluster_shared_volumes_free_bytes`    | Free space on the Cluster Shared Volume in bytes               | gauge | `name`,`volume_guid`        |
 
 ### Example metric
 Query the state of all cluster resource owned by node1
