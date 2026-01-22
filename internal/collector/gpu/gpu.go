@@ -258,6 +258,12 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 			continue
 		}
 
+		// Skip Microsoft Basic Render Driver
+		// https://devicehunt.com/view/type/pci/vendor/1414/device/008C
+		if gpu.DeviceID == `PCI\VEN_1414&DEV_008C&SUBSYS_00000000&REV_00` {
+			continue
+		}
+
 		if c.gpuDeviceCache == nil {
 			c.gpuDeviceCache = make(map[string]gpuDevice)
 		}
@@ -292,6 +298,17 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 			cfgmgr32: cfgmgr32Dev,
 			ID:       deviceID,
 		}
+
+		logger.Debug("Found GPU device",
+			slog.String("collector", Name),
+			slog.String("name", gpu.AdapterString),
+			slog.String("luid", luidKey),
+			slog.String("device_id", deviceID),
+			slog.String("name", gpu.AdapterString),
+			slog.Uint64("bus_number", uint64(gpu.BusNumber)),
+			slog.Uint64("device_number", uint64(gpu.DeviceNumber)),
+			slog.Uint64("function_number", uint64(gpu.FunctionNumber)),
+		)
 	}
 
 	return errors.Join(errs...)
