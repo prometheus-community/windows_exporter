@@ -44,6 +44,8 @@ type collectorHost struct {
 
 type perfDataCounterValuesHost struct {
 	Name string
+
+	HypervisorLogicalProcessorTotalRunTimePercent float64 `perfdata:"% Total Run Time"`
 }
 
 type vmTopology struct {
