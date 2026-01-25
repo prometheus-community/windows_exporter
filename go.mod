@@ -4,13 +4,13 @@ go 1.25
 
 require (
 	github.com/alecthomas/kingpin/v2 v2.4.0
-	github.com/bmatcuk/doublestar/v4 v4.9.1
+	github.com/bmatcuk/doublestar/v4 v4.9.2
 	github.com/dimchansky/utfbom v1.1.1
 	github.com/go-ole/go-ole v1.3.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/client_model v0.6.2
-	github.com/prometheus/common v0.67.4
-	github.com/prometheus/exporter-toolkit v0.15.0
+	github.com/prometheus/common v0.67.5
+	github.com/prometheus/exporter-toolkit v0.15.1
 	github.com/stretchr/testify v1.11.1
 	go.yaml.in/yaml/v3 v3.0.4
 	golang.org/x/sys v0.39.0
