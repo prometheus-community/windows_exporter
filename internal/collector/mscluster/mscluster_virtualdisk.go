@@ -44,7 +44,7 @@ type msftVirtualDisk struct {
 	HealthStatus    uint16 `mi:"HealthStatus"`
 	Size            uint64 `mi:"Size"`
 	FootprintOnPool uint64 `mi:"FootprintOnPool"`
-	//OperationalStatus []uint16 `mi:"OperationalStatus"`  Not supported my mi query: https://github.com/prometheus-community/windows_exporter/pull/2296#issuecomment-3736584632
+	// OperationalStatus []uint16 `mi:"OperationalStatus"`  Not supported my mi query: https://github.com/prometheus-community/windows_exporter/pull/2296#issuecomment-3736584632
 }
 
 func (c *Collector) buildVirtualDisk() error {
