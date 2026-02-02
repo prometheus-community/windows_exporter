@@ -16,6 +16,7 @@ This directory contains documentation of the collectors in the windows_exporter,
 - [`exchange`](collector.exchange.md)
 - [`file`](collector.file.md)
 - [`fsrmquota`](collector.fsrmquota.md)
+- [`horizon_blast`](collector.horizon_blast.md)
 - [`hyperv`](collector.hyperv.md)
 - [`iis`](collector.iis.md)
 - [`license`](collector.license.md)
