@@ -122,7 +122,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 	)
 
 	c.installTime = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "install_time_timestamp"),
+		prometheus.BuildFQName(types.Namespace, Name, "install_time_timestamp_seconds"),
 		"Unix timestamp of OS installation time",
 		nil,
 		nil,
