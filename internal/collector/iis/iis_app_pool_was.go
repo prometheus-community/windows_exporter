@@ -239,7 +239,7 @@ func (c *Collector) collectAppPoolWAS(ch chan<- prometheus.Metric) error {
 
 		ch <- prometheus.MustNewConstMetric(
 			c.totalApplicationPoolUptime,
-			prometheus.CounterValue,
+			prometheus.GaugeValue,
 			data.TotalApplicationPoolUptime,
 			data.Name,
 		)
