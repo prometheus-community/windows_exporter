@@ -38,6 +38,7 @@ const (
 	subCollectorNode          = "node"
 	subCollectorResource      = "resource"
 	subCollectorResourceGroup = "resourcegroup"
+	subCollectorSharedVolumes = "shared_volumes"
 )
 
 type Config struct {
@@ -52,6 +53,7 @@ var ConfigDefaults = Config{
 		subCollectorNode,
 		subCollectorResource,
 		subCollectorResourceGroup,
+		subCollectorSharedVolumes,
 	},
 }
 
@@ -62,6 +64,7 @@ type Collector struct {
 	collectorNode
 	collectorResource
 	collectorResourceGroup
+	collectorSharedVolumes
 
 	config    Config
 	miSession *mi.Session
@@ -156,6 +159,12 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 		}
 	}
 
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorSharedVolumes) {
+		if err := c.buildSharedVolumes(); err != nil {
+			errs = append(errs, fmt.Errorf("failed to build shared_volumes collector: %w", err))
+		}
+	}
+
 	return errors.Join(errs...)
 }
 
@@ -166,10 +175,10 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		return nil
 	}
 
-	errCh := make(chan error, 5)
+	errCh := make(chan error, 6)
 
 	wg := sync.WaitGroup{}
-	wg.Add(5)
+	wg.Add(6)
 
 	go func() {
 		defer wg.Done()
@@ -224,6 +233,16 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 				}
 			}
 		}()
+	}()
+
+	go func() {
+		defer wg.Done()
+
+		if slices.Contains(c.config.CollectorsEnabled, subCollectorSharedVolumes) {
+			if err := c.collectSharedVolumes(ch); err != nil {
+				errCh <- fmt.Errorf("failed to collect shared_volumes metrics: %w", err)
+			}
+		}
 	}()
 
 	wg.Wait()
