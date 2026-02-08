@@ -38,4 +38,19 @@ windows_os_install_time_timestamp_seconds 1.6725312e+09
 _This collector does not yet have useful queries, we would appreciate your help adding them!_
 
 ## Alerting examples
-_This collector does not yet have alerting examples, we would appreciate your help adding them!_
+
+#### Average CPU utilization over 1 hour exceeds 80% (New CPU metric)
+```yaml
+# Alerts if Agent/Host is down for 5min
+- alert: HypervHostDown
+    expr: up{app="hyper-v"} == 0
+    for: 5m
+    labels:
+        severity: critical
+    annotations:
+        summary: Hyper-V host {{ $labels.instance }} is down
+        description: |
+        Hyper-V host {{ $labels.instance }} has been unreachable for more than 5 minutes.
+        Job: {{ $labels.job }}
+```
+
