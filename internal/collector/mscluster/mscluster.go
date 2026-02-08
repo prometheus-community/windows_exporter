@@ -161,7 +161,7 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 			errs = append(errs, fmt.Errorf("failed to build resource group collector: %w", err))
 		}
 	}
-  
+
 	if slices.Contains(c.config.CollectorsEnabled, subCollectorSharedVolumes) {
 		if err := c.buildSharedVolumes(); err != nil {
 			errs = append(errs, fmt.Errorf("failed to build shared_volumes collector: %w", err))
@@ -246,7 +246,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 
 	go func() {
 		defer wg.Done()
-    
+
 		if slices.Contains(c.config.CollectorsEnabled, subCollectorSharedVolumes) {
 			if err := c.collectSharedVolumes(ch); err != nil {
 				errCh <- fmt.Errorf("failed to collect shared_volumes metrics: %w", err)
