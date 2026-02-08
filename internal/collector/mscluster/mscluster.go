@@ -38,6 +38,7 @@ const (
 	subCollectorNode          = "node"
 	subCollectorResource      = "resource"
 	subCollectorResourceGroup = "resourcegroup"
+	subCollectorSharedVolumes = "shared_volumes"
 	subCollectorVirtualDisk   = "virtualdisk"
 )
 
@@ -53,6 +54,7 @@ var ConfigDefaults = Config{
 		subCollectorNode,
 		subCollectorResource,
 		subCollectorResourceGroup,
+		subCollectorSharedVolumes,
 		subCollectorVirtualDisk,
 	},
 }
@@ -64,6 +66,7 @@ type Collector struct {
 	collectorNode
 	collectorResource
 	collectorResourceGroup
+	collectorSharedVolumes
 	collectorVirtualDisk
 
 	config    Config
@@ -158,6 +161,12 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 			errs = append(errs, fmt.Errorf("failed to build resource group collector: %w", err))
 		}
 	}
+  
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorSharedVolumes) {
+		if err := c.buildSharedVolumes(); err != nil {
+			errs = append(errs, fmt.Errorf("failed to build shared_volumes collector: %w", err))
+		}
+	}
 
 	if slices.Contains(c.config.CollectorsEnabled, subCollectorVirtualDisk) {
 		if err := c.buildVirtualDisk(); err != nil {
@@ -237,6 +246,12 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 
 	go func() {
 		defer wg.Done()
+    
+		if slices.Contains(c.config.CollectorsEnabled, subCollectorSharedVolumes) {
+			if err := c.collectSharedVolumes(ch); err != nil {
+				errCh <- fmt.Errorf("failed to collect shared_volumes metrics: %w", err)
+			}
+		}
 
 		if slices.Contains(c.config.CollectorsEnabled, subCollectorVirtualDisk) {
 			if err := c.collectVirtualDisk(ch); err != nil {

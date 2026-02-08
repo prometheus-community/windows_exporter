@@ -5,14 +5,14 @@ The MSCluster_Cluster class is a dynamic WMI class that represents a cluster.
 |||
 -|-
 Metric name prefix  | `mscluster`
-Classes             | `MSCluster_Cluster`,`MSCluster_Network`,`MSCluster_Node`,`MSCluster_Resource`,`MSCluster_ResourceGroup`,`MSFT_VirtualDisk`
+Classes             | `MSCluster_Cluster`,`MSCluster_Network`,`MSCluster_Node`,`MSCluster_Resource`,`MSCluster_ResourceGroup`,`MSCluster_DiskPartition`,`MSFT_VirtualDisk`
 Enabled by default? | No
 
 ## Flags
 
 ### `--collectors.mscluster.enabled`
 Comma-separated list of collectors to use, for example:
-`--collectors.mscluster.enabled=cluster,network,node,resource,resouregroup,virtualdisk`.
+`--collectors.mscluster.enabled=cluster,network,node,resource,resouregroup,shared_volumes,virtualdisk`.
 Matching is case-sensitive.
 
 ## Metrics
@@ -170,6 +170,14 @@ Matching is case-sensitive.
 | `mscluster_resourcegroup_State`               | The current state of the resource group. -1: Unknown; 0: Online; 1: Offline; 2: Failed; 3: Partial Online; 4: Pending                                                                                                                                                                                    | gauge | `name`              |
 | `mscluster_resourcegroup_UpdateDomain`        |                                                                                                                                                                                                                                                                                                          | gauge | `name`              |
 
+### Shared Volumes
+
+| Name                                     | Description                                                    | Type  | Labels                      |
+|------------------------------------------|----------------------------------------------------------------|-------|-----------------------------|
+| `mscluster_shared_volumes_info`          | Cluster Shared Volumes information (value is always 1)         | gauge | `name`,`path`,`volume_guid` |
+| `mscluster_shared_volumes_total_bytes`   | Total size of the Cluster Shared Volume in bytes               | gauge | `name`,`volume_guid`        |
+| `mscluster_shared_volumes_free_bytes`    | Free space on the Cluster Shared Volume in bytes               | gauge | `name`,`volume_guid`        |
+
 ### Virtual Disk
 
 | Name                                                      | Description                                                                                    | Type  | Labels |
@@ -179,7 +187,6 @@ Matching is case-sensitive.
 | `mscluster_virtualdisk_size_bytes`                        | Total size of the virtual disk in bytes                                                        | gauge | `name`, `unique_id` |
 | `mscluster_virtualdisk_footprint_on_pool_bytes`           | Physical storage consumed by the virtual disk on the storage pool in bytes                     | gauge | `name`, `unique_id` |
 | `mscluster_virtualdisk_storage_efficiency_percent`        | Storage efficiency percentage (Size / FootprintOnPool * 100)                                   | gauge | `name`, `unique_id` |
-
 
 ### Example metric
 Query the state of all cluster resource owned by node1
@@ -209,7 +216,22 @@ sum(windows_mscluster_virtualdisk_size_bytes) / sum(windows_mscluster_virtualdis
 ```
 
 ## Alerting examples
-**Virtual disk unhealthy**
-```
-windows_mscluster_virtualdisk_health_status >= 2
+
+#### Low free space on cluster shared volume
+```yaml
+# Alerts if volume has less then 20% free space
+- alert: LowCSVFreeSpace
+    expr: |
+        (
+        max by (name, cluster) (windows_mscluster_shared_volumes_free_bytes{name!="ClusterPerformanceHistory"})
+        /
+        max by (name, cluster) (windows_mscluster_shared_volumes_total_bytes{name!="ClusterPerformanceHistory"})
+        ) * 100 < 20
+    for: 10m
+    labels:
+        severity: warning
+    annotations:
+        summary: "Low CSV free space on {{ $labels.name }}"
+        description: |
+        Cluster Shared Volume {{ $labels.name }} on cluster {{ $labels.cluster }} has less than 20% free space (current: {{ printf "%.2f" $value }}%)
 ```
