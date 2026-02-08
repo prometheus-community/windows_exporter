@@ -12,7 +12,7 @@ Enabled by default? | No
 
 ### `--collectors.mscluster.enabled`
 Comma-separated list of collectors to use, for example:
-`--collectors.mscluster.enabled=cluster,network,node,resource,resouregroup`. 
+`--collectors.mscluster.enabled=cluster,network,node,resource,resouregroup`.
 Matching is case-sensitive.
 
 ## Metrics
@@ -183,4 +183,21 @@ count(windows_mscluster_resource_state{type="Network Name"})
 ```
 
 ## Alerting examples
-_This collector does not yet have alerting examples, we would appreciate your help adding them!_
+#### Low free space on cluster shared volume
+```yaml
+# Alerts if volume has less then 20% free space
+- alert: LowCSVFreeSpace
+    expr: |
+        (
+        max by (name, cluster) (windows_mscluster_shared_volumes_free_bytes{name!="ClusterPerformanceHistory"})
+        /
+        max by (name, cluster) (windows_mscluster_shared_volumes_total_bytes{name!="ClusterPerformanceHistory"})
+        ) * 100 < 20
+    for: 10m
+    labels:
+        severity: warning
+    annotations:
+        summary: "Low CSV free space on {{ $labels.name }}"
+        description: |
+        Cluster Shared Volume {{ $labels.name }} on cluster {{ $labels.cluster }} has less than 20% free space (current: {{ printf "%.2f" $value }}%)
+```
