@@ -287,8 +287,8 @@ windows_exporter_collector_timeout{collector="udp"} 0
 # TYPE windows_os_hostname gauge
 # HELP windows_os_info Contains full product name & version in labels. Note that the "major_version" for Windows 11 is \\"10\\"; a build number greater than 22000 represents Windows 11.
 # TYPE windows_os_info gauge
-# HELP windows_os_install_time_timestamp Unix timestamp of OS installation time
-# TYPE windows_os_install_time_timestamp gauge
+# HELP windows_os_install_time_timestamp_seconds Unix timestamp of OS installation time
+# TYPE windows_os_install_time_timestamp_seconds gauge
 # HELP windows_pagefile_free_bytes Number of bytes that can be mapped into the operating system paging files without causing any other pages to be swapped out
 # TYPE windows_pagefile_free_bytes gauge
 # HELP windows_pagefile_limit_bytes Number of bytes that can be stored in the operating system paging files. 0 (zero) indicates that there are no paging files
