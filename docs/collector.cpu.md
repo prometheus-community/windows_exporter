@@ -80,7 +80,36 @@ avg by(instance) (
 
 
 ## Alerting examples
-**prometheus.rules**
+#### Average CPU utilization over 1 hour exceeds 80% (New CPU metric)
+```yaml
+# Alert on hosts with 1h avg CPU more than 80%
+- alert: HighCPUUtilization
+  expr: |
+    avg_over_time(
+      (
+        sum by (instance) (
+          (
+            rate(windows_cpu_processor_utility_total{}[1m])
+            /
+            rate(windows_cpu_processor_rtc_total{}[1m])
+          )
+        ) /
+        count by (instance) (
+          windows_cpu_processor_utility_total{}
+        )
+      )[1h:]
+    ) > 80
+  for: 1m
+  labels:
+    severity: warning
+    metric_name: CPUUtilization
+  annotations:
+    summary: "High CPU utilization on {{ $labels.instance }}"
+    description: |
+      CPU utilization on {{ $labels.instance }} has averaged more than 80% over the last hour (current value: {{ printf "%.2f" $value }})
+```
+
+#### Average CPU utilization over 1 hour exceeds 80% (Old CPU metric)
 ```yaml
 # Alert on hosts with more than 80% CPU usage over a 10 minute period
 - alert: CpuUsage
@@ -91,6 +120,10 @@ avg by(instance) (
   annotations:
     summary: "CPU Usage (instance {{ $labels.instance }})"
     description: "CPU Usage is more than 80%\n  VALUE = {{ $value }}\n  LABELS: {{ $labels }}"
+```
+
+#### CPU not using boost frequencies
+```yaml
 # Alert on hosts which are not boosting their CPU frequencies
 - alert: NoCpuTurbo
   expr: |
