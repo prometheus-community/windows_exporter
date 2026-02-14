@@ -112,8 +112,8 @@ func (c *Collector) buildVirtualStorageDevice() error {
 		nil,
 	)
 	c.virtualStorageDeviceThroughput = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "virtual_storage_device_throughput"),
-		"Represents the average number of 8KB IO transfers completed by this virtual device.",
+		prometheus.BuildFQName(types.Namespace, Name, "virtual_storage_device_throughput_total"),
+		"Represents the total number of 8KB IO transfers completed by this virtual device.",
 		[]string{"device"},
 		nil,
 	)
@@ -203,7 +203,7 @@ func (c *Collector) collectVirtualStorageDevice(ch chan<- prometheus.Metric) err
 
 		ch <- prometheus.MustNewConstMetric(
 			c.virtualStorageDeviceThroughput,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			data.VirtualStorageDeviceThroughput,
 			data.Name,
 		)
