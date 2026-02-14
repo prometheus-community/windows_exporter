@@ -10,7 +10,17 @@ Enabled by default? | Yes
 
 ## Flags
 
-None
+### `--collector.service.include`
+
+Regexp of service to exclude. Service name (not the display name!) must both
+match `include` and not match `exclude` to be included.
+Recommended to keep down number of returned metrics.
+
+### `--collector.service.exclude`
+
+Regexp of service to include. Process name (not the display name!) must both
+match `include` and not match `exclude` to be included.
+Recommended to keep down number of returned metrics.
 
 ## Metrics
 
