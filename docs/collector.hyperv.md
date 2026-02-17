@@ -154,10 +154,12 @@ Some metrics explained: https://learn.microsoft.com/en-us/archive/blogs/chrisavi
 
 ### Hyper-V Hypervisor Virtual Processor
 
-| Name                                                                           | Description                                                                                                        | Type    | Labels       |
-|--------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------|---------|--------------|
-| `windows_hyperv_hypervisor_virtual_processor_time_total`                       | Time that processor spent in different modes (hypervisor, guest_run, guest_idle, remote)                           | counter | `vm`, `core` |
+| Name                                                                           | Description                                                                                                        | Type    | Labels              |
+|--------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------|---------|---------------------|
+| `windows_hyperv_hypervisor_virtual_processor_time_total`                       | Time that processor spent in different modes (hypervisor, guest_run, guest_idle, remote)                           | counter | `vm`, `core`, `state` |
+| `windows_hyperv_hypervisor_virtual_processor_mode_time_total`                  | Time that processor spent in different modes (hypervisor, guest_run, guest_idle, remote) **(new name)**            | counter | `vm`, `core`, `state` |
 | `windows_hyperv_hypervisor_virtual_processor_total_run_time_total`             | Time that processor spent                                                                                          | counter | `vm`, `core` |
+| `windows_hyperv_hypervisor_virtual_processor_run_time_total`                   | Time that processor spent **(new name)**                                                                           | counter | `vm`, `core` |
 | `windows_hyperv_hypervisor_virtual_processor_cpu_wait_time_per_dispatch_total` | The average time (in nanoseconds) spent waiting for a virtual processor to be dispatched onto a logical processor. | counter | `vm`, `core` |
 
 ### Hyper-V Virtual Network Adapter
@@ -265,19 +267,19 @@ _This collector does not yet have explained examples, we would appreciate your h
 ## Useful queries
 Percent of physical CPU resources used per VM (on instance "localhost")
 ```
-(sum (rate(windows_hyperv_hypervisor_virtual_processor_time_total{state="hypervisor",instance="localhost"}[1m]))) / ignoring(state,vm) group_left max (windows_cpu_logical_processor{instance="localhost"}) / 100000
+(sum (rate(windows_hyperv_hypervisor_virtual_processor_mode_time_total{state="hypervisor",instance="localhost"}[1m]))) / ignoring(state,vm) group_left max (windows_cpu_logical_processor{instance="localhost"}) / 100000
 ```
 Percent of physical CPU resources used by all VMs (on all monitored hosts)
 ```
-(sum by (instance)(rate(windows_hyperv_hypervisor_virtual_processor_total_run_time_total{}[1m]))) / max by (instance)(windows_cpu_logical_processor{}) / 100000
+(sum by (instance)(rate(windows_hyperv_hypervisor_virtual_processor_run_time_total{}[1m]))) / max by (instance)(windows_cpu_logical_processor{}) / 100000
 ```
 Percent of physical CPU resources by the hosts themselves (on all monitored hosts)
 ```
-(sum by (instance)(rate(windows_hyperv_hypervisor_root_virtual_processor_total_run_time_total{state="total"}[1m]))) / sum by (instance)(windows_cpu_logical_processor{}) / 100000
+(sum by (instance)(rate(windows_hyperv_hypervisor_root_virtual_processor_time_total{state="total"}[1m]))) / sum by (instance)(windows_cpu_logical_processor{}) / 100000
 ```
 Percent of physical CPU resources by the hypervisor (on all monitored hosts)
 ```
-(sum by (instance)(rate(windows_hyperv_hypervisor_logical_processor_total_run_time_total{}[1m]))) / sum by (instance)(windows_cpu_logical_processor{}) / 100000
+(sum by (instance)(rate(windows_hyperv_hypervisor_logical_processor_time_total{}[1m]))) / sum by (instance)(windows_cpu_logical_processor{}) / 100000
 ```
 
 ## Alerting examples
