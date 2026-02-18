@@ -154,13 +154,11 @@ Some metrics explained: https://learn.microsoft.com/en-us/archive/blogs/chrisavi
 
 ### Hyper-V Hypervisor Virtual Processor
 
-| Name                                                                           | Description                                                                                                        | Type    | Labels              |
-|--------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------|---------|---------------------|
-| `windows_hyperv_hypervisor_virtual_processor_time_total`                       | Time that processor spent in different modes (hypervisor, guest_run, guest_idle, remote)                           | counter | `vm`, `core`, `state` |
-| `windows_hyperv_hypervisor_virtual_processor_mode_time_total`                  | Time that processor spent in different modes (hypervisor, guest_run, guest_idle, remote) **(new name)**            | counter | `vm`, `core`, `state` |
-| `windows_hyperv_hypervisor_virtual_processor_total_run_time_total`             | Time that processor spent                                                                                          | counter | `vm`, `core` |
-| `windows_hyperv_hypervisor_virtual_processor_run_time_total`                   | Time that processor spent **(new name)**                                                                           | counter | `vm`, `core` |
-| `windows_hyperv_hypervisor_virtual_processor_cpu_wait_time_per_dispatch_total` | The average time (in nanoseconds) spent waiting for a virtual processor to be dispatched onto a logical processor. | counter | `vm`, `core` |
+| Name                                                                           | Description                                                                                                        | Type    | Labels                |
+|--------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------|---------|-----------------------|
+| `windows_hyperv_hypervisor_virtual_processor_mode_time_total`                  | Time that processor spent in different modes (hypervisor, guest_run, guest_idle, remote)                           | counter | `vm`, `core`, `state` |
+| `windows_hyperv_hypervisor_virtual_processor_run_time_total`                   | Time that processor spent                                                                                          | counter | `vm`, `core`          |
+| `windows_hyperv_hypervisor_virtual_processor_cpu_wait_time_per_dispatch_total` | The average time (in nanoseconds) spent waiting for a virtual processor to be dispatched onto a logical processor. | counter | `vm`, `core`          |
 
 ### Hyper-V Virtual Network Adapter
 

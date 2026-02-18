@@ -61,7 +61,7 @@ func (c *Collector) buildHypervisorVirtualProcessor() error {
 
 	c.hypervisorVirtualProcessorTimeTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "hypervisor_virtual_processor_time_total"),
-		"Time that processor spent in different modes (hypervisor, guest_run, guest_idle, remote)",
+		"DEPRECATED: use hypervisor_virtual_processor_mode_time_total. Time that processor spent in different modes (hypervisor, guest_run, guest_idle, remote)",
 		[]string{"vm", "core", "state"},
 		nil,
 	)
@@ -75,7 +75,7 @@ func (c *Collector) buildHypervisorVirtualProcessor() error {
 	// end same metric
 	c.hypervisorVirtualProcessorTotalRunTimeTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "hypervisor_virtual_processor_total_run_time_total"),
-		"Time that processor spent",
+		"DEPRECATED: use hypervisor_virtual_processor_run_time_total. Time that processor spent",
 		[]string{"vm", "core"},
 		nil,
 	)
