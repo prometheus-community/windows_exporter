@@ -35,7 +35,9 @@ type collectorHypervisorVirtualProcessor struct {
 	// \Hyper-V Hypervisor Virtual Processor(*)\% Hypervisor Run Time
 	// \Hyper-V Hypervisor Virtual Processor(*)\% Remote Run Time
 	hypervisorVirtualProcessorTimeTotal         *prometheus.Desc
+	hypervisorVirtualProcessorModeTimeTotal     *prometheus.Desc // New name for better clarity
 	hypervisorVirtualProcessorTotalRunTimeTotal *prometheus.Desc // \Hyper-V Hypervisor Virtual Processor(*)\% Total Run Time
+	hypervisorVirtualProcessorRunTimeTotal      *prometheus.Desc // New name for better clarity
 	hypervisorVirtualProcessorContextSwitches   *prometheus.Desc // \Hyper-V Hypervisor Virtual Processor(*)\CPU Wait Time Per Dispatch
 }
 
@@ -59,16 +61,32 @@ func (c *Collector) buildHypervisorVirtualProcessor() error {
 
 	c.hypervisorVirtualProcessorTimeTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "hypervisor_virtual_processor_time_total"),
+		"DEPRECATED: use hypervisor_virtual_processor_mode_time_total. Time that processor spent in different modes (hypervisor, guest_run, guest_idle, remote)",
+		[]string{"vm", "core", "state"},
+		nil,
+	)
+	// New metric with better name for clarity, old one is kept for backward compatibility
+	c.hypervisorVirtualProcessorModeTimeTotal = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "hypervisor_virtual_processor_mode_time_total"),
 		"Time that processor spent in different modes (hypervisor, guest_run, guest_idle, remote)",
 		[]string{"vm", "core", "state"},
 		nil,
 	)
+	// end same metric
 	c.hypervisorVirtualProcessorTotalRunTimeTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "hypervisor_virtual_processor_total_run_time_total"),
+		"DEPRECATED: use hypervisor_virtual_processor_run_time_total. Time that processor spent",
+		[]string{"vm", "core"},
+		nil,
+	)
+	// New metric with better name for clarity, old one is kept for backward compatibility
+	c.hypervisorVirtualProcessorRunTimeTotal = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "hypervisor_virtual_processor_run_time_total"),
 		"Time that processor spent",
 		[]string{"vm", "core"},
 		nil,
 	)
+	// end same metric
 	c.hypervisorVirtualProcessorContextSwitches = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "hypervisor_virtual_processor_cpu_wait_time_per_dispatch_total"),
 		"The average time (in nanoseconds) spent waiting for a virtual processor to be dispatched onto a logical processor.",
@@ -120,14 +138,42 @@ func (c *Collector) collectHypervisorVirtualProcessor(ch chan<- prometheus.Metri
 			data.HypervisorVirtualProcessorRemoteRunTimePercent,
 			vmName, coreID, "remote",
 		)
+		// Same metric with new name for better clarity, old one is kept for backward compatibility
+		ch <- prometheus.MustNewConstMetric(
+			c.hypervisorVirtualProcessorModeTimeTotal,
+			prometheus.CounterValue,
+			data.HypervisorVirtualProcessorHypervisorRunTimePercent,
+			vmName, coreID, "hypervisor",
+		)
 
+		ch <- prometheus.MustNewConstMetric(
+			c.hypervisorVirtualProcessorModeTimeTotal,
+			prometheus.CounterValue,
+			data.HypervisorVirtualProcessorGuestRunTimePercent,
+			vmName, coreID, "guest",
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.hypervisorVirtualProcessorModeTimeTotal,
+			prometheus.CounterValue,
+			data.HypervisorVirtualProcessorRemoteRunTimePercent,
+			vmName, coreID, "remote",
+		)
+		// end same metric
 		ch <- prometheus.MustNewConstMetric(
 			c.hypervisorVirtualProcessorTotalRunTimeTotal,
 			prometheus.CounterValue,
 			data.HypervisorVirtualProcessorTotalRunTimePercent,
 			vmName, coreID,
 		)
-
+		// Same metric with new name for better clarity, old one is kept for backward compatibility
+		ch <- prometheus.MustNewConstMetric(
+			c.hypervisorVirtualProcessorRunTimeTotal,
+			prometheus.CounterValue,
+			data.HypervisorVirtualProcessorTotalRunTimePercent,
+			vmName, coreID,
+		)
+		// end same metric
 		ch <- prometheus.MustNewConstMetric(
 			c.hypervisorVirtualProcessorContextSwitches,
 			prometheus.CounterValue,
