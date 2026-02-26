@@ -301,6 +301,8 @@ func (c *Collector) collectWorkerRaw() {
 	)
 
 	buf := make([]byte, 1)
+	// Reuse string cache across collection cycles to reduce allocations
+	stringCache := make(map[*uint16]string, 64)
 
 	for data := range c.collectCh {
 		err = (func() error {
@@ -334,41 +336,60 @@ func (c *Collector) collectWorkerRaw() {
 			elemValue := reflect.ValueOf(reflect.New(elemType).Interface()).Elem()
 
 			indexMap := map[string]int{}
-			stringMap := map[*uint16]string{}
+			// Clear and reuse string cache instead of creating new one each time
+			for k := range stringCache {
+				delete(stringCache, k)
+			}
 
 			for _, counter := range c.counters {
 				for _, instance := range counter.Instances {
-					// Get the info with the current buffer size
-					bytesNeeded = uint32(cap(buf))
+					// First call: get required buffer size (as per PDH documentation)
+					bytesNeeded = 0
+					ret := GetRawCounterArray(instance, &bytesNeeded, &itemCount, nil)
+					if ret != MoreData {
+						if err := NewPdhError(ret); isKnownCounterDataError(err) {
+							c.logger.Debug("no data for counter instance",
+								slog.String("counter", counter.Name),
+								slog.String("object", c.object),
+								slog.Any("err", err),
+							)
 
-					for {
-						ret := GetRawCounterArray(instance, &bytesNeeded, &itemCount, &buf[0])
-
-						if ret == ErrorSuccess {
 							break
 						}
 
-						if err := NewPdhError(ret); ret != MoreData {
-							if isKnownCounterDataError(err) {
-								break
-							}
+						return fmt.Errorf("GetRawCounterArray size query: %w", NewPdhError(ret))
+					}
 
-							return fmt.Errorf("GetRawCounterArray: %w", err)
+					// Optimize buffer allocation: grow with headroom to reduce future reallocations
+					if bytesNeeded > uint32(cap(buf)) {
+						// Grow buffer with some headroom (minimum 1KB, or 50% larger than needed)
+						newSize := bytesNeeded
+						if newSize < 1024 {
+							newSize = 1024
+						} else if newSize < 8192 { // For buffers under 8KB, add 50% headroom
+							newSize = (newSize * 3) / 2
+						}
+						buf = make([]byte, newSize)
+					}
+
+					// Second call: get the actual data (as per PDH documentation)
+					actualBytesNeeded := bytesNeeded
+					ret = GetRawCounterArray(instance, &actualBytesNeeded, &itemCount, &buf[0])
+					if ret != ErrorSuccess {
+						if err := NewPdhError(ret); isKnownCounterDataError(err) {
+							c.logger.Debug("no data for counter instance",
+								slog.String("counter", counter.Name),
+								slog.String("object", c.object),
+								slog.Any("err", err),
+							)
+
+							break
 						}
 
-						if bytesNeeded <= uint32(cap(buf)) {
-							return fmt.Errorf("GetRawCounterArray reports buffer too small (%d), but buffer is large enough (%d): %w", uint32(cap(buf)), bytesNeeded, NewPdhError(ret))
-						}
-
-						buf = make([]byte, bytesNeeded)
+						return fmt.Errorf("GetRawCounterArray data retrieval: %w", NewPdhError(ret))
 					}
 
 					items = unsafe.Slice((*RawCounterItem)(unsafe.Pointer(&buf[0])), itemCount)
-
-					var (
-						instanceName string
-						ok           bool
-					)
 
 					for _, item := range items {
 						if item.RawValue.CStatus != CstatusValidData && item.RawValue.CStatus != CstatusNewData {
@@ -381,9 +402,14 @@ func (c *Collector) collectWorkerRaw() {
 							continue
 						}
 
-						if instanceName, ok = stringMap[item.SzName]; !ok {
+						var (
+							instanceName string
+							ok           bool
+						)
+
+						if instanceName, ok = stringCache[item.SzName]; !ok {
 							instanceName = windows.UTF16PtrToString(item.SzName)
-							stringMap[item.SzName] = instanceName
+							stringCache[item.SzName] = instanceName
 						}
 
 						if strings.HasSuffix(instanceName, InstanceTotal) && !c.totalCounterRequested {
@@ -394,12 +420,8 @@ func (c *Collector) collectWorkerRaw() {
 							instanceName = InstanceEmpty
 						}
 
-						var (
-							index int
-							ok    bool
-						)
-
-						if index, ok = indexMap[instanceName]; !ok {
+						index, indexExists := indexMap[instanceName]
+						if !indexExists {
 							index = dv.Len()
 							indexMap[instanceName] = index
 
@@ -468,6 +490,8 @@ func (c *Collector) collectWorkerFormatted() {
 	)
 
 	buf := make([]byte, 1)
+	// Reuse string cache across collection cycles to reduce allocations
+	stringCache := make(map[*uint16]string, 64)
 
 	for data := range c.collectCh {
 		err = (func() error {
@@ -501,33 +525,45 @@ func (c *Collector) collectWorkerFormatted() {
 			elemValue := reflect.ValueOf(reflect.New(elemType).Interface()).Elem()
 
 			indexMap := map[string]int{}
-			stringMap := map[*uint16]string{}
+			// Clear and reuse string cache instead of creating new one each time
+			for k := range stringCache {
+				delete(stringCache, k)
+			}
 
 			for _, counter := range c.counters {
 				for _, instance := range counter.Instances {
-					// Get the info with the current buffer size
-					bytesNeeded = uint32(cap(buf))
-
-					for {
-						ret := GetFormattedCounterArrayDouble(instance, &bytesNeeded, &itemCount, &buf[0])
-
-						if ret == ErrorSuccess {
+					// First call: get required buffer size (as per PDH documentation)
+					bytesNeeded = 0
+					ret := GetFormattedCounterArrayDouble(instance, &bytesNeeded, &itemCount, nil)
+					if ret != MoreData {
+						if err := NewPdhError(ret); isKnownCounterDataError(err) {
 							break
 						}
 
-						if err := NewPdhError(ret); ret != MoreData {
-							if isKnownCounterDataError(err) {
-								break
-							}
+						return fmt.Errorf("GetFormattedCounterArrayDouble size query: %w", NewPdhError(ret))
+					}
 
-							return fmt.Errorf("GetFormattedCounterArrayDouble: %w", err)
+					// Optimize buffer allocation: grow with headroom to reduce future reallocations
+					if bytesNeeded > uint32(cap(buf)) {
+						// Grow buffer with some headroom (minimum 1KB, or 50% larger than needed)
+						newSize := bytesNeeded
+						if newSize < 1024 {
+							newSize = 1024
+						} else if newSize < 8192 { // For buffers under 8KB, add 50% headroom
+							newSize = (newSize * 3) / 2
+						}
+						buf = make([]byte, newSize)
+					}
+
+					// Second call: get the actual data (as per PDH documentation)
+					actualBytesNeeded := bytesNeeded
+					ret = GetFormattedCounterArrayDouble(instance, &actualBytesNeeded, &itemCount, &buf[0])
+					if ret != ErrorSuccess {
+						if err := NewPdhError(ret); isKnownCounterDataError(err) {
+							break
 						}
 
-						if bytesNeeded <= uint32(cap(buf)) {
-							return fmt.Errorf("GetFormattedCounterArrayDouble reports buffer too small (%d), but buffer is large enough (%d): %w", uint32(cap(buf)), bytesNeeded, NewPdhError(ret))
-						}
-
-						buf = make([]byte, bytesNeeded)
+						return fmt.Errorf("GetFormattedCounterArrayDouble data retrieval: %w", NewPdhError(ret))
 					}
 
 					items = unsafe.Slice((*FmtCounterValueItemDouble)(unsafe.Pointer(&buf[0])), itemCount)
@@ -542,9 +578,9 @@ func (c *Collector) collectWorkerFormatted() {
 							continue
 						}
 
-						if instanceName, ok = stringMap[item.SzName]; !ok {
+						if instanceName, ok = stringCache[item.SzName]; !ok {
 							instanceName = windows.UTF16PtrToString(item.SzName)
-							stringMap[item.SzName] = instanceName
+							stringCache[item.SzName] = instanceName
 						}
 
 						if strings.HasSuffix(instanceName, InstanceTotal) && !c.totalCounterRequested {
@@ -555,12 +591,8 @@ func (c *Collector) collectWorkerFormatted() {
 							instanceName = InstanceEmpty
 						}
 
-						var (
-							index int
-							ok    bool
-						)
-
-						if index, ok = indexMap[instanceName]; !ok {
+						index, indexExists := indexMap[instanceName]
+						if !indexExists {
 							index = dv.Len()
 							indexMap[instanceName] = index
 

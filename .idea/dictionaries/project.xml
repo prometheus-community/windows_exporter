@@ -7,6 +7,7 @@
       <w>lpwstr</w>
       <w>luid</w>
       <w>operationoptions</w>
+      <w>perfdata</w>
       <w>setupapi</w>
       <w>spdx</w>
       <w>textfile</w>
