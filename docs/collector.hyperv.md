@@ -237,7 +237,7 @@ Some metrics explained: https://learn.microsoft.com/en-us/archive/blogs/chrisavi
 | `windows_hyperv_virtual_storage_device_bytes_written`               | Represents the total number of bytes that have been written on this virtual device.                     | counter | `device` |
 | `windows_hyperv_virtual_storage_device_operations_written_total`    | Represents the total number of write operations that have occurred on this virtual device.              | counter | `device` |
 | `windows_hyperv_virtual_storage_device_latency_seconds`             | Represents the average IO transfer latency for this virtual device.                                     | gauge   | `device` |
-| `windows_hyperv_virtual_storage_device_throughput`                  | Represents the average number of 8KB IO transfers completed by this virtual device.                     | gauge   | `device` |
+| `windows_hyperv_virtual_storage_device_throughput_total`            | Represents the total number of 8KB IO transfers completed by this virtual device.                       | counter | `device` |
 | `windows_hyperv_virtual_storage_device_normalized_throughput`       | Represents the average number of IO transfers completed by this virtual device.                         | gauge   | `device` |
 | `windows_hyperv_virtual_storage_device_lower_queue_length`          | Represents the average queue length on the underlying storage subsystem for this device.                | gauge   | `device` |
 | `windows_hyperv_virtual_storage_device_lower_latency_seconds`       | Represents the average IO transfer latency on the underlying storage subsystem for this virtual device. | gauge   | `device` |
