@@ -136,10 +136,10 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 			}
 
 			sb := strings.Builder{}
-			sb.WriteString(fmt.Sprintf("%-32s %-32s\n", "Collector Name", "[PerfID] Perflib Object"))
+			_, _ = fmt.Fprintf(&sb, "%-32s %-32s\n", "Collector Name", "[PerfID] Perflib Object")
 
 			for _, cname := range ConfigDefaults.CollectorsEnabled {
-				sb.WriteString(fmt.Sprintf("%-32s %-32s\n", cname, collectorDesc[cname]))
+				_, _ = fmt.Fprintf(&sb, "%-32s %-32s\n", cname, collectorDesc[cname])
 			}
 
 			app.UsageTemplate(sb.String()).Usage(nil)

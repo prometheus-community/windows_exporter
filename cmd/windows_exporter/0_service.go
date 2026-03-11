@@ -201,7 +201,7 @@ func isWindowsService() (bool, error) {
 		}
 	}
 
-	for ; ; parentProcess = (*windows.SYSTEM_PROCESS_INFORMATION)(unsafe.Pointer(uintptr(unsafe.Pointer(parentProcess)) + uintptr(parentProcess.NextEntryOffset))) {
+	for ; ; parentProcess = (*windows.SYSTEM_PROCESS_INFORMATION)(unsafe.Add(unsafe.Pointer(parentProcess), uintptr(parentProcess.NextEntryOffset))) {
 		if parentProcess.UniqueProcessID == currentProcess.InheritedFromUniqueProcessId {
 			return strings.EqualFold("services.exe", parentProcess.ImageName.String()), nil
 		}

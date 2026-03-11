@@ -71,6 +71,7 @@ func GetDHCPV4ScopeStatistics() ([]DHCPV4Scope, error) {
 	for _, subnet := range subnets {
 		if err := (func() error {
 			var subnetInfo *DHCP_SUBNET_INFO
+
 			err := dhcpGetSubnetInfo(subnet.SubnetAddress, &subnetInfo)
 			if err != nil {
 				return fmt.Errorf("failed to get subnet info: %w", err)
@@ -109,6 +110,7 @@ func GetDHCPV4ScopeStatistics() ([]DHCPV4Scope, error) {
 			}
 
 			var subnetStatistics *DHCP_FAILOVER_STATISTICS
+
 			err = dhcpV4FailoverGetScopeStatistics(subnet.SubnetAddress, &subnetStatistics)
 
 			defer dhcpRpcFreeMemory(unsafe.Pointer(subnetStatistics))
