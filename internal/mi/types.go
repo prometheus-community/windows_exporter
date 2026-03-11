@@ -142,7 +142,7 @@ func (c *ClassDecl) Properties() []*PropertyDecl {
 	// Iterate over the number of properties and fetch each property
 	for i := range c.NumProperties {
 		// Get the property pointer at index i
-		propertyPtr := *(**PropertyDecl)(unsafe.Pointer(uintptr(unsafe.Pointer(propertiesArray)) + uintptr(i)*unsafe.Sizeof(uintptr(0))))
+		propertyPtr := *(**PropertyDecl)(unsafe.Add(unsafe.Pointer(propertiesArray), uintptr(i)*unsafe.Sizeof(uintptr(0))))
 
 		// Append the property to the slice
 		properties[i] = propertyPtr
