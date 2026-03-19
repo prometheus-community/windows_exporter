@@ -33,10 +33,6 @@ func BoolToFloat(b bool) float64 {
 	return 0.0
 }
 
-func ToPTR[t any](v t) *t {
-	return &v
-}
-
 func PercentageToRatio(percentage float64) float64 {
 	return percentage / 100
 }
