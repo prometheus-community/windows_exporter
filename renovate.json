@@ -11,7 +11,7 @@
   "schedule": [
     "* 14-17 * * 5"
   ],
-  "baseBranchPatterns": ["main", "/^[0-9]\\.[0-9][0-9]$/"],
+  "baseBranchPatterns": ["master", "/^[0-9]\\.[0-9][0-9]$/"],
   "ignorePaths": ["**/workflows/container_description.yml","**/workflows/stale.yml"],
   "packageRules": [
     {
