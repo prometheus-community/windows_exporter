@@ -16,6 +16,7 @@
   "packageRules": [
     {
       "matchPackageNames": ["https://github.com/yaml/go-yaml"],
+      "matchUpdateTypes": ["major"],
       "enabled": false
     },
     {
