@@ -15,8 +15,7 @@
   "ignorePaths": ["**/workflows/container_description.yml","**/workflows/stale.yml"],
   "packageRules": [
     {
-      "matchPackageNames": ["go-yaml/yaml","yaml/go-yaml"],
-      "matchUpdateTypes": ["major"],
+      "matchPackageNames": ["https://github.com/yaml/go-yaml"],
       "enabled": false
     },
     {
