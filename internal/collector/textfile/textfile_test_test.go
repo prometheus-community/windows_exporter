@@ -64,7 +64,7 @@ func TestMultipleDirectories(t *testing.T) {
 		err := val.Write(&metric)
 		require.NoError(t, err)
 
-		//nolint:modernize,perfsprint
+		//nolint:modernize
 		got += metric.String()
 	}
 
@@ -103,7 +103,6 @@ func TestDuplicateFileName(t *testing.T) {
 		err := val.Write(&metric)
 		require.NoError(t, err)
 
-		//nolint:perfsprint
 		got += metric.String()
 	}
 
