@@ -21,6 +21,22 @@ import (
 	"testing"
 )
 
+// TestNewCollectorStructTypeParam guards against a regression where
+// reflect.TypeFor[T]().Elem() panicked when T is a plain struct (not a pointer).
+// See https://github.com/prometheus-community/windows_exporter/issues/2365
+func TestNewCollectorStructTypeParam(t *testing.T) {
+	type systemCounterValues struct {
+		Name string
+
+		ProcessorQueueLength float64 `perfdata:"Processor Queue Length"`
+	}
+
+	_, err := NewCollector[systemCounterValues]("System", nil)
+	if err != nil {
+		t.Skipf("skipping: failed to create collector: %v", err)
+	}
+}
+
 func BenchmarkQueryPerformanceData(b *testing.B) {
 	for b.Loop() {
 		_, _ = QueryPerformanceData("Global", "")
