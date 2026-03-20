@@ -53,7 +53,7 @@ func NewCollector[T any](object string, _ []string) (*Collector, error) {
 		counters:       make(map[string]Counter),
 	}
 
-	valueType := reflect.TypeFor[T]().Elem()
+	valueType := reflect.TypeFor[T]()
 
 	if f, ok := valueType.FieldByName("Name"); ok {
 		if f.Type.Kind() == reflect.String {
