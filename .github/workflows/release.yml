@@ -10,7 +10,6 @@ on:
   release:
     types:
       - published
-      - edited
 
 permissions:
   contents: write
