@@ -54,7 +54,7 @@ var ConfigDefaults = Config{
 	ProcessExclude:      types.RegExpEmpty,
 	EnableWorkerProcess: false,
 	EnableCMDLine:       true,
-	CounterVersion:      0,
+	CounterVersion:      1,
 }
 
 type Collector struct {
