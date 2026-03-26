@@ -51,6 +51,7 @@ type Collector struct {
 	logger    *slog.Logger
 	fileMTime *prometheus.Desc
 	fileSize  *prometheus.Desc
+	fileCount *prometheus.Desc
 }
 
 func New(config *Config) *Collector {
@@ -73,12 +74,23 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 	c := &Collector{
 		config: ConfigDefaults,
 	}
-	c.config.FilePatterns = make([]string, 0)
+
+	var filePatterns string
 
 	app.Flag(
 		"collector.file.file-patterns",
 		"Comma-separated list of file patterns. Each pattern is a glob pattern that can contain `*`, `?`, and `**` (recursive). See https://github.com/bmatcuk/doublestar#patterns",
-	).Default(strings.Join(ConfigDefaults.FilePatterns, ",")).StringsVar(&c.config.FilePatterns)
+	).Default(strings.Join(ConfigDefaults.FilePatterns, ",")).StringVar(&filePatterns)
+
+	app.Action(func(*kingpin.ParseContext) error {
+		for _, p := range strings.Split(filePatterns, ",") {
+			if p != "" {
+				c.config.FilePatterns = append(c.config.FilePatterns, p)
+			}
+		}
+
+		return nil
+	})
 
 	return c
 }
@@ -110,12 +122,20 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 
-	for _, filePattern := range c.config.FilePatterns {
-		basePath, pattern := doublestar.SplitPattern(filePattern)
+	c.fileCount = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "count"),
+		"Number of files matching the pattern",
+		[]string{"pattern"},
+		nil,
+	)
 
-		_, err := doublestar.Glob(os.DirFS(basePath), pattern, doublestar.WithFilesOnly())
-		if err != nil {
-			return fmt.Errorf("invalid glob pattern: %w", err)
+	for _, filePattern := range c.config.FilePatterns {
+		if filePattern == "" {
+			continue
+		}
+
+		if !doublestar.ValidatePattern(filepath.ToSlash(filePattern)) {
+			return fmt.Errorf("invalid glob pattern: %s", filePattern)
 		}
 	}
 
@@ -127,18 +147,32 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	wg := sync.WaitGroup{}
 
+	var mu sync.Mutex
+
+	seenFiles := make(map[string]struct{})
+
 	for _, filePattern := range c.config.FilePatterns {
 		wg.Add(1)
 
 		go func(filePattern string) {
 			defer wg.Done()
 
-			if err := c.collectGlobFilePath(ch, filePattern); err != nil {
+			count, err := c.collectGlobFilePath(ch, filePattern, &mu, seenFiles)
+			if err != nil {
 				c.logger.Error("failed collecting metrics for filepath",
 					slog.String("filepath", filePattern),
 					slog.Any("err", err),
 				)
+
+				return
 			}
+
+			ch <- prometheus.MustNewConstMetric(
+				c.fileCount,
+				prometheus.GaugeValue,
+				float64(count),
+				filePattern,
+			)
 		}(filePattern)
 	}
 
@@ -147,9 +181,11 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	return nil
 }
 
-func (c *Collector) collectGlobFilePath(ch chan<- prometheus.Metric, filePattern string) error {
+func (c *Collector) collectGlobFilePath(ch chan<- prometheus.Metric, filePattern string, mu *sync.Mutex, seenFiles map[string]struct{}) (int, error) {
 	basePath, pattern := doublestar.SplitPattern(filepath.ToSlash(filePattern))
 	basePathFS := os.DirFS(basePath)
+
+	var count int
 
 	err := doublestar.GlobWalk(basePathFS, pattern, func(path string, d fs.DirEntry) error {
 		filePath := filepath.Join(basePath, path)
@@ -163,6 +199,19 @@ func (c *Collector) collectGlobFilePath(ch chan<- prometheus.Metric, filePattern
 
 			return nil
 		}
+
+		mu.Lock()
+		_, alreadySeen := seenFiles[filePath]
+		if !alreadySeen {
+			seenFiles[filePath] = struct{}{}
+		}
+		mu.Unlock()
+
+		if alreadySeen {
+			return nil
+		}
+
+		count++
 
 		ch <- prometheus.MustNewConstMetric(
 			c.fileMTime,
@@ -181,8 +230,8 @@ func (c *Collector) collectGlobFilePath(ch chan<- prometheus.Metric, filePattern
 		return nil
 	}, doublestar.WithFilesOnly(), doublestar.WithCaseInsensitive())
 	if err != nil {
-		return fmt.Errorf("failed to glob: %w", err)
+		return count, fmt.Errorf("failed to glob: %w", err)
 	}
 
-	return nil
+	return count, nil
 }
