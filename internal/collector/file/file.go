@@ -83,7 +83,7 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 	).Default(strings.Join(ConfigDefaults.FilePatterns, ",")).StringVar(&filePatterns)
 
 	app.Action(func(*kingpin.ParseContext) error {
-		for _, p := range strings.Split(filePatterns, ",") {
+		for p := range strings.SplitSeq(filePatterns, ",") {
 			if p != "" {
 				c.config.FilePatterns = append(c.config.FilePatterns, p)
 			}
@@ -201,6 +201,7 @@ func (c *Collector) collectGlobFilePath(ch chan<- prometheus.Metric, filePattern
 		}
 
 		mu.Lock()
+
 		_, alreadySeen := seenFiles[filePath]
 		if !alreadySeen {
 			seenFiles[filePath] = struct{}{}
