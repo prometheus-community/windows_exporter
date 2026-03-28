@@ -134,6 +134,7 @@ var ConfigDefaults = Config{
 	DiskDrive:          diskdrive.ConfigDefaults,
 	DNS:                dns.ConfigDefaults,
 	Exchange:           exchange.ConfigDefaults,
+	File:               file.ConfigDefaults,
 	Fsrmquota:          fsrmquota.ConfigDefaults,
 	GPU:                gpu.ConfigDefaults,
 	HyperV:             hyperv.ConfigDefaults,

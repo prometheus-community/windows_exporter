@@ -17,10 +17,11 @@ See https://github.com/bmatcuk/doublestar#patterns for an extended description o
 
 ## Metrics
 
-| Name                                   | Description            | Type  | Labels |
-|----------------------------------------|------------------------|-------|--------|
-| `windows_file_mtime_timestamp_seconds` | File modification time | gauge | `file` |
-| `windows_file_size_bytes`              | File size              | gauge | `file` |
+| Name                                   | Description                                  | Type  | Labels    |
+|----------------------------------------|----------------------------------------------|-------|-----------|
+| `windows_file_mtime_timestamp_seconds` | File modification time                       | gauge | `file`    |
+| `windows_file_size_bytes`              | File size                                    | gauge | `file`    |
+| `windows_file_count`                   | Number of files matching the pattern         | gauge | `pattern` |
 
 ### Example metric
 
