@@ -203,6 +203,7 @@ func (c *Collector) collectGlobFilePath(ch chan<- prometheus.Metric, filePattern
 		count++
 
 		mu.Lock()
+
 		_, alreadySeen := seenFiles[filePath]
 		if !alreadySeen {
 			seenFiles[filePath] = struct{}{}
