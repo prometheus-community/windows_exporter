@@ -200,19 +200,18 @@ func (c *Collector) collectGlobFilePath(ch chan<- prometheus.Metric, filePattern
 			return nil
 		}
 
-		mu.Lock()
+		count++
 
+		mu.Lock()
 		_, alreadySeen := seenFiles[filePath]
 		if !alreadySeen {
-			seenFiles[filePath] = struct{}{}
+			seenFil‚es[filePath] = struct{}{}
 		}
 		mu.Unlock()
 
 		if alreadySeen {
 			return nil
 		}
-
-		count++
 
 		ch <- prometheus.MustNewConstMetric(
 			c.fileMTime,
