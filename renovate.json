@@ -30,7 +30,7 @@
       "matchBaseBranches": ["/^[0-9]\\.[0-9][0-9]$/"],
       "matchManagers": [
         "github-actions"
-      ]
+      ],
       "enabled": false
     },
     {
