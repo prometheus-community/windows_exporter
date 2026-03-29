@@ -48,7 +48,7 @@ func TestMultipleDirectories(t *testing.T) {
 	require.NoError(t, collectors.Build(t.Context(), logger))
 
 	metrics := make(chan prometheus.Metric)
-	got := ""
+	got := strings.Builder{}
 
 	errCh := make(chan error, 1)
 
@@ -64,14 +64,13 @@ func TestMultipleDirectories(t *testing.T) {
 		err := val.Write(&metric)
 		require.NoError(t, err)
 
-		//nolint:modernize,perfsprint
-		got += metric.String()
+		got.WriteString(metric.String())
 	}
 
 	require.NoError(t, <-errCh)
 
 	for _, f := range []string{"dir1", "dir2", "dir3", "dir3sub"} {
-		require.Contains(t, got, f)
+		require.Contains(t, got.String(), f)
 	}
 }
 
@@ -87,7 +86,7 @@ func TestDuplicateFileName(t *testing.T) {
 	require.NoError(t, collectors.Build(t.Context(), logger))
 
 	metrics := make(chan prometheus.Metric)
-	got := ""
+	got := strings.Builder{}
 
 	errCh := make(chan error, 1)
 
@@ -103,12 +102,11 @@ func TestDuplicateFileName(t *testing.T) {
 		err := val.Write(&metric)
 		require.NoError(t, err)
 
-		//nolint:perfsprint
-		got += metric.String()
+		got.WriteString(metric.String())
 	}
 
 	require.ErrorContains(t, <-errCh, "duplicate filename detected")
 
-	require.Contains(t, got, "file")
-	require.NotContains(t, got, "sub_file")
+	require.Contains(t, got.String(), "file")
+	require.NotContains(t, got.String(), "sub_file")
 }
