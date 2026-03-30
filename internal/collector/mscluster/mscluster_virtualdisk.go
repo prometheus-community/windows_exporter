@@ -92,13 +92,19 @@ func (c *Collector) buildVirtualDisk() error {
 		nil,
 	)
 
+	var dst []msftVirtualDisk
+
+	if err := c.miSession.Query(&dst, mi.NamespaceRootStorage, c.virtualDiskMIQuery, 0); err != nil {
+		return fmt.Errorf("WMI query failed: %w", err)
+	}
+
 	return nil
 }
 
 func (c *Collector) collectVirtualDisk(ch chan<- prometheus.Metric) error {
 	var dst []msftVirtualDisk
 
-	if err := c.miSession.Query(&dst, mi.NamespaceRootStorage, c.virtualDiskMIQuery); err != nil {
+	if err := c.miSession.Query(&dst, mi.NamespaceRootStorage, c.virtualDiskMIQuery, -1); err != nil {
 		return fmt.Errorf("WMI query failed: %w", err)
 	}
 

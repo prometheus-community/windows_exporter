@@ -320,6 +320,11 @@ func (c *Collector) buildErrorStatsCollector(miSession *mi.Session) error {
 	c.miSession = miSession
 	c.miQuery = query
 
+	var stats []Statistic
+	if err := c.miSession.Query(&stats, mi.NamespaceRootMicrosoftDNS, c.miQuery, 0); err != nil {
+		return fmt.Errorf("failed to query DNS statistics: %w", err)
+	}
+
 	return nil
 }
 
@@ -629,7 +634,7 @@ func (c *Collector) collectMetrics(ch chan<- prometheus.Metric) error {
 
 func (c *Collector) collectErrorStats(ch chan<- prometheus.Metric) error {
 	var stats []Statistic
-	if err := c.miSession.Query(&stats, mi.NamespaceRootMicrosoftDNS, c.miQuery); err != nil {
+	if err := c.miSession.Query(&stats, mi.NamespaceRootMicrosoftDNS, c.miQuery, -1); err != nil {
 		return fmt.Errorf("failed to query DNS statistics: %w", err)
 	}
 

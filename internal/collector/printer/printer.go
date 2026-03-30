@@ -199,7 +199,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 
 func (c *Collector) collectPrinterStatus(ch chan<- prometheus.Metric) error {
 	var printers []wmiPrinter
-	if err := c.miSession.Query(&printers, mi.NamespaceRootCIMv2, c.miQueryPrinter); err != nil {
+	if err := c.miSession.Query(&printers, mi.NamespaceRootCIMv2, c.miQueryPrinter, 0); err != nil {
 		return fmt.Errorf("WMI query failed: %w", err)
 	}
 
@@ -237,7 +237,7 @@ func (c *Collector) collectPrinterStatus(ch chan<- prometheus.Metric) error {
 
 func (c *Collector) collectPrinterJobStatus(ch chan<- prometheus.Metric) error {
 	var printJobs []wmiPrintJob
-	if err := c.miSession.Query(&printJobs, mi.NamespaceRootCIMv2, c.miQueryPrinterJobs); err != nil {
+	if err := c.miSession.Query(&printJobs, mi.NamespaceRootCIMv2, c.miQueryPrinterJobs, -1); err != nil {
 		return fmt.Errorf("WMI query failed: %w", err)
 	}
 

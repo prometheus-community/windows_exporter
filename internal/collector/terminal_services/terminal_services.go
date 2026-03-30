@@ -50,7 +50,7 @@ type Win32_ServerFeature struct {
 
 func isConnectionBrokerServer(miSession *mi.Session) bool {
 	var dst []Win32_ServerFeature
-	if err := miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * FROM Win32_ServerFeature"))); err != nil {
+	if err := miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * FROM Win32_ServerFeature")), 0); err != nil {
 		return false
 	}
 

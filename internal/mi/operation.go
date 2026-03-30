@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 	"syscall"
 	"time"
 	"unsafe"
@@ -150,8 +151,35 @@ func (o *Operation) GetInstance() (*Instance, bool, error) {
 		uintptr(unsafe.Pointer(&errorMessageUTF16)),
 		uintptr(unsafe.Pointer(&errorDetails)),
 	)
+
+	//nolint:nestif
 	if !errors.Is(instanceResult, MI_RESULT_OK) {
-		return nil, false, fmt.Errorf("instance result: %w (%s)", instanceResult, windows.UTF16PtrToString(errorMessageUTF16))
+		errorMessage := strings.TrimSpace(windows.UTF16PtrToString(errorMessageUTF16))
+
+		// We need a language neutral way to detect an operation timeout, because MI_RESULT_OPERATION_TIMED_OUT
+		// is not returned by the API, but instead we get MI_RESULT_INVALID_OPERATION_TIMEOUT with a specific error code
+		// in the error details.
+		if errorDetails != nil {
+			count, _ := errorDetails.GetElementCount()
+			if count != 0 {
+				errorCodeRaw, err := errorDetails.GetElement("error_Code")
+				if err == nil {
+					errorCodeValue, _ := errorCodeRaw.GetValue()
+
+					errorCode, ok := errorCodeValue.(uint32)
+					if ok && errorCode == 262148 {
+						instanceResult = MI_RESULT_INVALID_OPERATION_TIMEOUT
+						errorMessage = ""
+					}
+				}
+			}
+		}
+
+		if errorMessage != "" {
+			errorMessage = fmt.Sprintf(" (%s)", errorMessage)
+		}
+
+		return nil, false, fmt.Errorf("instance result: %w%s", instanceResult, errorMessage)
 	}
 
 	if result := ResultError(r0); !errors.Is(result, MI_RESULT_OK) {
@@ -265,6 +293,20 @@ func (o *OperationOptions) SetTimeout(timeout time.Duration) error {
 		uintptr(unsafe.Pointer(NewInterval(timeout))),
 		0,
 	)
+
+	if result := ResultError(r0); !errors.Is(result, MI_RESULT_OK) {
+		return result
+	}
+
+	return nil
+}
+
+func (o *OperationOptions) Close() error {
+	if o == nil || o.ft == nil {
+		return ErrNotInitialized
+	}
+
+	r0, _, _ := syscall.SyscallN(o.ft.Clone, uintptr(unsafe.Pointer(o)))
 
 	if result := ResultError(r0); !errors.Is(result, MI_RESULT_OK) {
 		return result

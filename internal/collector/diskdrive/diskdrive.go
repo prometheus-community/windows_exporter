@@ -127,7 +127,7 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 	c.miSession = miSession
 
 	var dst []diskDrive
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, c.miQuery); err != nil {
+	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, c.miQuery, 0); err != nil {
 		return fmt.Errorf("WMI query failed: %w", err)
 	}
 
@@ -190,7 +190,7 @@ var (
 // Collect sends the metric values for each metric to the provided prometheus Metric channel.
 func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	var dst []diskDrive
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, c.miQuery); err != nil {
+	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, c.miQuery, -1); err != nil {
 		return fmt.Errorf("WMI query failed: %w", err)
 	}
 

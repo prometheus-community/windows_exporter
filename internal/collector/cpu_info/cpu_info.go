@@ -151,7 +151,7 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 	c.miSession = miSession
 
 	var dst []miProcessor
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, c.miQuery); err != nil {
+	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, c.miQuery, 0); err != nil {
 		return fmt.Errorf("WMI query failed: %w", err)
 	}
 
@@ -178,7 +178,7 @@ type miProcessor struct {
 // to the provided prometheus Metric channel.
 func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	var dst []miProcessor
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, c.miQuery); err != nil {
+	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, c.miQuery, -1); err != nil {
 		return fmt.Errorf("WMI query failed: %w", err)
 	}
 

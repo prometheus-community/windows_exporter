@@ -146,7 +146,7 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 	)
 
 	var dst []msftFSRMQuota
-	if err := c.miSession.Query(&dst, mi.NamespaceRootWindowsFSRM, c.miQuery); err != nil {
+	if err := c.miSession.Query(&dst, mi.NamespaceRootWindowsFSRM, c.miQuery, 0); err != nil {
 		return fmt.Errorf("WMI query failed: %w", err)
 	}
 
@@ -171,7 +171,7 @@ type msftFSRMQuota struct {
 // to the provided prometheus Metric channel.
 func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	var dst []msftFSRMQuota
-	if err := c.miSession.Query(&dst, mi.NamespaceRootWindowsFSRM, c.miQuery); err != nil {
+	if err := c.miSession.Query(&dst, mi.NamespaceRootWindowsFSRM, c.miQuery, -1); err != nil {
 		return fmt.Errorf("WMI query failed: %w", err)
 	}
 

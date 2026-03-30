@@ -170,7 +170,7 @@ func (c *Collector) buildNode() error {
 
 	var dst []msClusterNode
 
-	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, c.nodeMIQuery); err != nil {
+	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, c.nodeMIQuery, 0); err != nil {
 		return fmt.Errorf("WMI query failed: %w", err)
 	}
 
@@ -182,7 +182,7 @@ func (c *Collector) buildNode() error {
 func (c *Collector) collectNode(ch chan<- prometheus.Metric) ([]string, error) {
 	var dst []msClusterNode
 
-	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, c.nodeMIQuery); err != nil {
+	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, c.nodeMIQuery, -1); err != nil {
 		return nil, fmt.Errorf("WMI query failed: %w", err)
 	}
 

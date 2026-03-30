@@ -194,7 +194,7 @@ func (c *Collector) buildResource() error {
 
 	var dst []msClusterResource
 
-	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, c.resourceMIQuery); err != nil {
+	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, c.resourceMIQuery, 0); err != nil {
 		return fmt.Errorf("WMI query failed: %w", err)
 	}
 
@@ -206,7 +206,7 @@ func (c *Collector) buildResource() error {
 func (c *Collector) collectResource(ch chan<- prometheus.Metric, nodeNames []string) error {
 	var dst []msClusterResource
 
-	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, c.resourceMIQuery); err != nil {
+	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, c.resourceMIQuery, -1); err != nil {
 		return fmt.Errorf("WMI query failed: %w", err)
 	}
 

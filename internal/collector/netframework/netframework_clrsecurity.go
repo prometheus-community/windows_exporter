@@ -66,7 +66,7 @@ type Win32_PerfRawData_NETFramework_NETCLRSecurity struct {
 
 func (c *Collector) collectClrSecurity(ch chan<- prometheus.Metric) error {
 	var dst []Win32_PerfRawData_NETFramework_NETCLRSecurity
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * FROM Win32_PerfRawData_NETFramework_NETCLRSecurity"))); err != nil {
+	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * FROM Win32_PerfRawData_NETFramework_NETCLRSecurity")), -1); err != nil {
 		return fmt.Errorf("WMI query failed: %w", err)
 	}
 

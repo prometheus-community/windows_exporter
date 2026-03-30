@@ -49,7 +49,7 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 
 	var workerProcesses []WorkerProcess
 	if c.config.EnableWorkerProcess {
-		if err = c.miSession.Query(&workerProcesses, mi.NamespaceRootWebAdministration, c.workerProcessMIQueryQuery); err != nil {
+		if err = c.miSession.Query(&workerProcesses, mi.NamespaceRootWebAdministration, c.workerProcessMIQueryQuery, -1); err != nil {
 			err = fmt.Errorf("WMI query for collector.process.iis failed: %w", err)
 		}
 	}

@@ -332,7 +332,7 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 
 		var workerProcesses []WorkerProcess
 
-		if err = c.miSession.Query(&workerProcesses, mi.NamespaceRootWebAdministration, c.workerProcessMIQueryQuery); err != nil {
+		if err = c.miSession.Query(&workerProcesses, mi.NamespaceRootWebAdministration, c.workerProcessMIQueryQuery, 0); err != nil {
 			c.config.EnableWorkerProcess = false
 
 			return fmt.Errorf("WMI query for collector.process.iis failed: %w", err)

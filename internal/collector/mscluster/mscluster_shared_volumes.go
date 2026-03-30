@@ -76,7 +76,7 @@ func (c *Collector) buildSharedVolumes() error {
 	)
 
 	var dst []msClusterDiskPartition
-	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, c.sharedVolumesMIQuery); err != nil {
+	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, c.sharedVolumesMIQuery, 0); err != nil {
 		return fmt.Errorf("WMI query failed: %w", err)
 	}
 
@@ -85,7 +85,7 @@ func (c *Collector) buildSharedVolumes() error {
 
 func (c *Collector) collectSharedVolumes(ch chan<- prometheus.Metric) error {
 	var dst []msClusterDiskPartition
-	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, c.sharedVolumesMIQuery); err != nil {
+	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, c.sharedVolumesMIQuery, -1); err != nil {
 		return fmt.Errorf("WMI query failed: %w", err)
 	}
 
