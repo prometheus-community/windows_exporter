@@ -205,6 +205,16 @@ func (application *Application) NewOperationOptions() (*OperationOptions, error)
 	return operationOptions, nil
 }
 
+// MustNewOperationOptions is the panicking version of NewOperationOptions.
+func (application *Application) MustNewOperationOptions() *OperationOptions {
+	operationOptions, err := application.NewOperationOptions()
+	if err != nil {
+		panic(fmt.Sprintf("failed to create operation options: %v", err))
+	}
+
+	return operationOptions
+}
+
 // NewDestinationOptions creates an DestinationOptions object that can be used with the Application.NewSession function.
 //
 // https://learn.microsoft.com/en-us/windows/win32/api/mi/nf-mi-mi_application_newdestinationoptions

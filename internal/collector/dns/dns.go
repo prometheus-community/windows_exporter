@@ -23,6 +23,7 @@ import (
 	"log/slog"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
@@ -320,12 +321,17 @@ func (c *Collector) buildErrorStatsCollector(miSession *mi.Session) error {
 	c.miSession = miSession
 	c.miQuery = query
 
+	var stats []Statistic
+	if err := c.miSession.Query(&stats, mi.NamespaceRootMicrosoftDNS, c.miQuery, 0); err != nil {
+		return fmt.Errorf("failed to query DNS statistics: %w", err)
+	}
+
 	return nil
 }
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) error {
 	errs := make([]error, 0)
 
 	if slices.Contains(c.config.CollectorsEnabled, subCollectorMetrics) {
@@ -335,7 +341,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	}
 
 	if slices.Contains(c.config.CollectorsEnabled, subCollectorWMIStats) {
-		if err := c.collectErrorStats(ch); err != nil {
+		if err := c.collectErrorStats(ch, maxScrapeDuration); err != nil {
 			errs = append(errs, fmt.Errorf("failed collecting WMI statistics: %w", err))
 		}
 	}
@@ -627,9 +633,9 @@ func (c *Collector) collectMetrics(ch chan<- prometheus.Metric) error {
 	return nil
 }
 
-func (c *Collector) collectErrorStats(ch chan<- prometheus.Metric) error {
+func (c *Collector) collectErrorStats(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) error {
 	var stats []Statistic
-	if err := c.miSession.Query(&stats, mi.NamespaceRootMicrosoftDNS, c.miQuery); err != nil {
+	if err := c.miSession.Query(&stats, mi.NamespaceRootMicrosoftDNS, c.miQuery, maxScrapeDuration); err != nil {
 		return fmt.Errorf("failed to query DNS statistics: %w", err)
 	}
 

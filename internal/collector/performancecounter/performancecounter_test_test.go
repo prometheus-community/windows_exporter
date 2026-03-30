@@ -42,7 +42,7 @@ func (a collectorAdapter) Describe(_ chan<- *prometheus.Desc) {}
 
 // Collect implements the prometheus.Collector interface.
 func (a collectorAdapter) Collect(ch chan<- prometheus.Metric) {
-	if err := a.Collector.Collect(ch); err != nil {
+	if err := a.Collector.Collect(ch, 0); err != nil {
 		panic(fmt.Sprintf("failed to update collector: %v", err))
 	}
 }

@@ -19,6 +19,7 @@ package mscluster
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
@@ -90,7 +91,7 @@ func (c *Collector) buildNetwork() error {
 
 	var dst []msClusterNetwork
 
-	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, c.networkMIQuery); err != nil {
+	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, c.networkMIQuery, 0); err != nil {
 		return fmt.Errorf("WMI query failed: %w", err)
 	}
 
@@ -99,10 +100,10 @@ func (c *Collector) buildNetwork() error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus metric channel.
-func (c *Collector) collectNetwork(ch chan<- prometheus.Metric) error {
+func (c *Collector) collectNetwork(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) error {
 	var dst []msClusterNetwork
 
-	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, c.networkMIQuery); err != nil {
+	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, c.networkMIQuery, maxScrapeDuration); err != nil {
 		return fmt.Errorf("WMI query failed: %w", err)
 	}
 

@@ -26,6 +26,7 @@ import (
 	"os"
 	"slices"
 	"strings"
+	"time"
 	"unsafe"
 
 	"github.com/alecthomas/kingpin/v2"
@@ -291,7 +292,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error {
 	errs := make([]error, 0)
 
 	if slices.Contains(c.config.CollectorsEnabled, subCollectorHCS) {

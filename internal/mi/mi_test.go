@@ -257,7 +257,7 @@ func Test_MI_FD_Leak(t *testing.T) {
 	for range 300 {
 		var processes []win32Process
 
-		err := session.Query(&processes, mi.NamespaceRootCIMv2, queryPrinter)
+		err := session.Query(&processes, mi.NamespaceRootCIMv2, queryPrinter, -1)
 		require.NoError(t, err)
 
 		currentFileHandle, err = testutils.GetProcessHandleCount(windows.CurrentProcess())
@@ -286,4 +286,49 @@ func Test_MI_FD_Leak(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("Current File Handle Count: ", currentFileHandle)
+}
+
+func Test_MI_QueryTimeout(t *testing.T) {
+	application, err := mi.ApplicationInitialize()
+	require.NoError(t, err)
+	require.NotEmpty(t, application)
+
+	destinationOptions, err := application.NewDestinationOptions()
+	require.NoError(t, err)
+	require.NotEmpty(t, destinationOptions)
+
+	err = destinationOptions.SetTimeout(1 * time.Second)
+	require.NoError(t, err)
+
+	err = destinationOptions.SetLocale(mi.LocaleEnglish)
+	require.NoError(t, err)
+
+	session, err := application.NewSession(destinationOptions)
+	require.NoError(t, err)
+	require.NotEmpty(t, session)
+
+	operationOptions, err := application.NewOperationOptions()
+	require.NoError(t, err)
+	require.NotEmpty(t, operationOptions)
+
+	err = operationOptions.SetTimeout(1 * time.Millisecond)
+	require.NoError(t, err)
+
+	operation, err := session.QueryInstances(mi.OperationFlagsStandardRTTI, operationOptions, mi.NamespaceRootCIMv2, mi.QueryDialectWQL, "select Name from win32_process where handle = 0")
+	require.NoError(t, err)
+	require.NotEmpty(t, operation)
+
+	instance, moreResults, err := operation.GetInstance()
+	require.ErrorIs(t, err, mi.MI_RESULT_INVALID_OPERATION_TIMEOUT)
+	require.False(t, moreResults)
+	require.Empty(t, instance)
+
+	err = operation.Close()
+	require.NoError(t, err)
+
+	err = session.Close()
+	require.NoError(t, err)
+
+	err = application.Close()
+	require.NoError(t, err)
 }

@@ -23,6 +23,7 @@ import (
 	"log/slog"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
@@ -151,7 +152,7 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 	c.miSession = miSession
 
 	var dst []miProcessor
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, c.miQuery); err != nil {
+	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, c.miQuery, 0); err != nil {
 		return fmt.Errorf("WMI query failed: %w", err)
 	}
 
@@ -176,9 +177,9 @@ type miProcessor struct {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) error {
 	var dst []miProcessor
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, c.miQuery); err != nil {
+	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, c.miQuery, maxScrapeDuration); err != nil {
 		return fmt.Errorf("WMI query failed: %w", err)
 	}
 

@@ -136,7 +136,7 @@ func (c *Collection) collectCollector(ch chan<- prometheus.Metric, logger *slog.
 			close(bufCh)
 		}()
 
-		errCh <- collector.Collect(bufCh)
+		errCh <- collector.Collect(bufCh, maxScrapeDuration)
 	}()
 
 	wg := sync.WaitGroup{}

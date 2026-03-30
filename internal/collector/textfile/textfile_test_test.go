@@ -53,7 +53,7 @@ func TestMultipleDirectories(t *testing.T) {
 	errCh := make(chan error, 1)
 
 	go func() {
-		errCh <- textFileCollector.Collect(metrics)
+		errCh <- textFileCollector.Collect(metrics, 0)
 
 		close(metrics)
 	}()
@@ -91,7 +91,7 @@ func TestDuplicateFileName(t *testing.T) {
 	errCh := make(chan error, 1)
 
 	go func() {
-		errCh <- textFileCollector.Collect(metrics)
+		errCh <- textFileCollector.Collect(metrics, 0)
 
 		close(metrics)
 	}()

@@ -39,7 +39,7 @@ type processWorkerRequest struct {
 	workerProcesses          []WorkerProcess
 }
 
-func (c *Collector) collect(ch chan<- prometheus.Metric) error {
+func (c *Collector) collect(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) error {
 	err := c.perfDataCollector.Collect(&c.perfDataObject)
 	if err != nil {
 		return fmt.Errorf("failed to collect metrics: %w", err)
@@ -49,7 +49,7 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 
 	var workerProcesses []WorkerProcess
 	if c.config.EnableWorkerProcess {
-		if err = c.miSession.Query(&workerProcesses, mi.NamespaceRootWebAdministration, c.workerProcessMIQueryQuery); err != nil {
+		if err = c.miSession.Query(&workerProcesses, mi.NamespaceRootWebAdministration, c.workerProcessMIQueryQuery, maxScrapeDuration); err != nil {
 			err = fmt.Errorf("WMI query for collector.process.iis failed: %w", err)
 		}
 	}

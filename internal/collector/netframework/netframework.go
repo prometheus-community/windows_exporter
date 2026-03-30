@@ -24,6 +24,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
@@ -66,7 +67,7 @@ type Collector struct {
 	config    Config
 	miSession *mi.Session
 
-	collectorFns []func(ch chan<- prometheus.Metric) error
+	collectorFns []func(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) error
 
 	// clrexceptions
 	numberOfExceptionsThrown *prometheus.Desc
@@ -187,11 +188,11 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 
 	c.miSession = miSession
 
-	c.collectorFns = make([]func(ch chan<- prometheus.Metric) error, 0, len(c.config.CollectorsEnabled))
+	c.collectorFns = make([]func(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) error, 0, len(c.config.CollectorsEnabled))
 
 	subCollectors := map[string]struct {
 		build   func()
-		collect func(ch chan<- prometheus.Metric) error
+		collect func(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) error
 		close   func()
 	}{
 		collectorClrExceptions: {
@@ -246,7 +247,7 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) error {
 	errCh := make(chan error, len(c.collectorFns))
 	errs := make([]error, 0, len(c.collectorFns))
 
@@ -255,10 +256,10 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 	for _, fn := range c.collectorFns {
 		wg.Add(1)
 
-		go func(fn func(ch chan<- prometheus.Metric) error) {
+		go func(fn func(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) error) {
 			defer wg.Done()
 
-			if err := fn(ch); err != nil {
+			if err := fn(ch, maxScrapeDuration); err != nil {
 				errCh <- err
 			}
 		}(fn)

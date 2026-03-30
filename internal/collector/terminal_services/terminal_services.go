@@ -23,6 +23,7 @@ import (
 	"log/slog"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/headers/wtsapi32"
@@ -50,7 +51,7 @@ type Win32_ServerFeature struct {
 
 func isConnectionBrokerServer(miSession *mi.Session) bool {
 	var dst []Win32_ServerFeature
-	if err := miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * FROM Win32_ServerFeature"))); err != nil {
+	if err := miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * FROM Win32_ServerFeature")), 0); err != nil {
 		return false
 	}
 
@@ -260,7 +261,7 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error {
 	errs := make([]error, 0)
 
 	if err := c.collectWTSSessions(ch); err != nil {

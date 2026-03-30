@@ -20,6 +20,7 @@ package adcs
 import (
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
@@ -173,7 +174,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	return nil
 }
 
-func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error {
 	err := c.perfDataCollector.Collect(&c.perfDataObject)
 	if err != nil {
 		return fmt.Errorf("failed to collect Certification Authority (ADCS) metrics: %w", err)
