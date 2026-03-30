@@ -185,10 +185,10 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, maxScrapeDuration time.
 		return nil
 	}
 
-	errCh := make(chan error, 6)
+	errCh := make(chan error, 7)
 
 	wg := sync.WaitGroup{}
-	wg.Add(6)
+	wg.Add(7)
 
 	go func() {
 		defer wg.Done()
