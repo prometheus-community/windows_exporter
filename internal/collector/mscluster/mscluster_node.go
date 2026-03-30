@@ -19,6 +19,7 @@ package mscluster
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/osversion"
@@ -179,10 +180,10 @@ func (c *Collector) buildNode() error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) collectNode(ch chan<- prometheus.Metric) ([]string, error) {
+func (c *Collector) collectNode(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) ([]string, error) {
 	var dst []msClusterNode
 
-	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, c.nodeMIQuery, -1); err != nil {
+	if err := c.miSession.Query(&dst, mi.NamespaceRootMSCluster, c.nodeMIQuery, maxScrapeDuration); err != nil {
 		return nil, fmt.Errorf("WMI query failed: %w", err)
 	}
 

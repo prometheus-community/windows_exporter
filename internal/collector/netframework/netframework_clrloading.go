@@ -19,6 +19,7 @@ package netframework
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
@@ -104,9 +105,9 @@ type Win32_PerfRawData_NETFramework_NETCLRLoading struct {
 	TotalNumberofLoadFailures uint32 `mi:"TotalNumberofLoadFailures"`
 }
 
-func (c *Collector) collectClrLoading(ch chan<- prometheus.Metric) error {
+func (c *Collector) collectClrLoading(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) error {
 	var dst []Win32_PerfRawData_NETFramework_NETCLRLoading
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * FROM Win32_PerfRawData_NETFramework_NETCLRLoading")), -1); err != nil {
+	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * FROM Win32_PerfRawData_NETFramework_NETCLRLoading")), maxScrapeDuration); err != nil {
 		return fmt.Errorf("WMI query failed: %w", err)
 	}
 

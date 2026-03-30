@@ -217,7 +217,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error {
 	errs := make([]error, 0)
 
 	if slices.Contains(c.config.CollectorsEnabled, collectorSystemTime) {
@@ -274,6 +274,8 @@ func (c *Collector) collectClockSource(ch chan<- prometheus.Metric) error {
 		return fmt.Errorf("failed to open registry key: %w", err)
 	}
 
+	defer key.Close()
+
 	val, _, err := key.GetStringValue("Type")
 	if err != nil {
 		return fmt.Errorf("failed to read 'Type' value: %w", err)
@@ -290,12 +292,6 @@ func (c *Collector) collectClockSource(ch chan<- prometheus.Metric) error {
 			prometheus.GaugeValue,
 			metricValue,
 			validType,
-		)
-	}
-
-	if err := key.Close(); err != nil {
-		c.logger.Debug("failed to close registry key",
-			slog.Any("err", err),
 		)
 	}
 

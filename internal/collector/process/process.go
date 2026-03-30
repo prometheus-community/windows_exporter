@@ -26,6 +26,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 	"unsafe"
 
 	"github.com/alecthomas/kingpin/v2"
@@ -342,8 +343,8 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 	return nil
 }
 
-func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
-	return c.collect(ch)
+func (c *Collector) Collect(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) error {
+	return c.collect(ch, maxScrapeDuration)
 }
 
 // ref: https://github.com/microsoft/hcsshim/blob/8beabacfc2d21767a07c20f8dd5f9f3932dbf305/internal/uvm/stats.go#L25

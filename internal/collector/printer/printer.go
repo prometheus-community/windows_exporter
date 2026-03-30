@@ -23,6 +23,7 @@ import (
 	"log/slog"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
@@ -183,14 +184,14 @@ type wmiPrintJob struct {
 	Status string `mi:"Status"`
 }
 
-func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) error {
 	var errs []error
 
 	if err := c.collectPrinterStatus(ch); err != nil {
 		errs = append(errs, fmt.Errorf("failed to collect printer status metrics: %w", err))
 	}
 
-	if err := c.collectPrinterJobStatus(ch); err != nil {
+	if err := c.collectPrinterJobStatus(ch, maxScrapeDuration); err != nil {
 		errs = append(errs, fmt.Errorf("failed to collect printer job status metrics: %w", err))
 	}
 
@@ -235,9 +236,9 @@ func (c *Collector) collectPrinterStatus(ch chan<- prometheus.Metric) error {
 	return nil
 }
 
-func (c *Collector) collectPrinterJobStatus(ch chan<- prometheus.Metric) error {
+func (c *Collector) collectPrinterJobStatus(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) error {
 	var printJobs []wmiPrintJob
-	if err := c.miSession.Query(&printJobs, mi.NamespaceRootCIMv2, c.miQueryPrinterJobs, -1); err != nil {
+	if err := c.miSession.Query(&printJobs, mi.NamespaceRootCIMv2, c.miQueryPrinterJobs, maxScrapeDuration); err != nil {
 		return fmt.Errorf("WMI query failed: %w", err)
 	}
 

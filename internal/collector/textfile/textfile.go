@@ -303,7 +303,7 @@ func (cr carriageReturnFilteringReader) Read(p []byte) (int, error) {
 }
 
 // Collect implements the Collector interface.
-func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error {
 	mTimes := map[string]time.Time{}
 
 	// Create empty metricFamily slice here and append parsedFamilies to it inside the loop.

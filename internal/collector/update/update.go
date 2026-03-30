@@ -155,7 +155,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 func (c *Collector) GetName() string { return Name }
 
-func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
