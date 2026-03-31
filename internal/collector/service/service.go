@@ -25,6 +25,7 @@ import (
 	"regexp"
 	"strconv"
 	"sync"
+	"time"
 	"unsafe"
 
 	"github.com/alecthomas/kingpin/v2"
@@ -211,7 +212,7 @@ func (c *Collector) Close() error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error {
 	services, err := c.queryAllServices()
 	if err != nil {
 		return fmt.Errorf("failed to query all services: %w", err)

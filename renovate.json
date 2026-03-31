@@ -20,6 +20,20 @@
       "enabled": false
     },
     {
+      "matchBaseBranches": ["/^[0-9]\\.[0-9][0-9]$/"],
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "enabled": false
+    },
+    {
+      "matchBaseBranches": ["/^[0-9]\\.[0-9][0-9]$/"],
+      "matchManagers": [
+        "github-actions"
+      ],
+      "enabled": false
+    },
+    {
       "groupName": "golangci-lint",
       "matchPackageNames": [
         "github.com/golangci/golangci-lint/cmd/golangci-lint",

@@ -24,6 +24,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
@@ -179,21 +180,21 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
+func (c *Collector) Collect(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) error {
 	if len(c.config.CollectorsEnabled) == 0 {
 		return nil
 	}
 
-	errCh := make(chan error, 6)
+	errCh := make(chan error, 7)
 
 	wg := sync.WaitGroup{}
-	wg.Add(6)
+	wg.Add(7)
 
 	go func() {
 		defer wg.Done()
 
 		if slices.Contains(c.config.CollectorsEnabled, subCollectorCluster) {
-			if err := c.collectCluster(ch); err != nil {
+			if err := c.collectCluster(ch, maxScrapeDuration); err != nil {
 				errCh <- fmt.Errorf("failed to collect cluster metrics: %w", err)
 			}
 		}
@@ -203,7 +204,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		defer wg.Done()
 
 		if slices.Contains(c.config.CollectorsEnabled, subCollectorNetwork) {
-			if err := c.collectNetwork(ch); err != nil {
+			if err := c.collectNetwork(ch, maxScrapeDuration); err != nil {
 				errCh <- fmt.Errorf("failed to collect network metrics: %w", err)
 			}
 		}
@@ -217,7 +218,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		if slices.Contains(c.config.CollectorsEnabled, subCollectorNode) {
 			var err error
 
-			nodeNames, err = c.collectNode(ch)
+			nodeNames, err = c.collectNode(ch, maxScrapeDuration)
 			if err != nil {
 				errCh <- fmt.Errorf("failed to collect node metrics: %w", err)
 			}
@@ -227,7 +228,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 			defer wg.Done()
 
 			if slices.Contains(c.config.CollectorsEnabled, subCollectorResource) {
-				if err := c.collectResource(ch, nodeNames); err != nil {
+				if err := c.collectResource(ch, maxScrapeDuration, nodeNames); err != nil {
 					errCh <- fmt.Errorf("failed to collect resource metrics: %w", err)
 				}
 			}
@@ -237,7 +238,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 			defer wg.Done()
 
 			if slices.Contains(c.config.CollectorsEnabled, subCollectorResourceGroup) {
-				if err := c.collectResourceGroup(ch, nodeNames); err != nil {
+				if err := c.collectResourceGroup(ch, maxScrapeDuration, nodeNames); err != nil {
 					errCh <- fmt.Errorf("failed to collect resource group metrics: %w", err)
 				}
 			}
@@ -248,13 +249,17 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) error {
 		defer wg.Done()
 
 		if slices.Contains(c.config.CollectorsEnabled, subCollectorSharedVolumes) {
-			if err := c.collectSharedVolumes(ch); err != nil {
+			if err := c.collectSharedVolumes(ch, maxScrapeDuration); err != nil {
 				errCh <- fmt.Errorf("failed to collect shared_volumes metrics: %w", err)
 			}
 		}
+	}()
+
+	go func() {
+		defer wg.Done()
 
 		if slices.Contains(c.config.CollectorsEnabled, subCollectorVirtualDisk) {
-			if err := c.collectVirtualDisk(ch); err != nil {
+			if err := c.collectVirtualDisk(ch, maxScrapeDuration); err != nil {
 				errCh <- fmt.Errorf("failed to collect virtualdisk metrics: %w", err)
 			}
 		}

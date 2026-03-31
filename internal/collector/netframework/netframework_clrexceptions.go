@@ -19,6 +19,7 @@ package netframework
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
@@ -63,9 +64,9 @@ type Win32_PerfRawData_NETFramework_NETCLRExceptions struct {
 	ThrowToCatchDepthPersec    uint32 `mi:"ThrowToCatchDepthPersec"`
 }
 
-func (c *Collector) collectClrExceptions(ch chan<- prometheus.Metric) error {
+func (c *Collector) collectClrExceptions(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) error {
 	var dst []Win32_PerfRawData_NETFramework_NETCLRExceptions
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * FROM Win32_PerfRawData_NETFramework_NETCLRExceptions"))); err != nil {
+	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * FROM Win32_PerfRawData_NETFramework_NETCLRExceptions")), maxScrapeDuration); err != nil {
 		return fmt.Errorf("WMI query failed: %w", err)
 	}
 

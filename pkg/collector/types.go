@@ -52,7 +52,7 @@ type Collector interface {
 	// Build build the collector
 	Build(logger *slog.Logger, miSession *mi.Session) error
 	// Collect Get new metrics and expose them via prometheus registry.
-	Collect(ch chan<- prometheus.Metric) (err error)
+	Collect(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) (err error)
 	// Close closes the collector
 	Close() error
 }

@@ -19,6 +19,7 @@ package mscluster
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
@@ -92,13 +93,19 @@ func (c *Collector) buildVirtualDisk() error {
 		nil,
 	)
 
+	var dst []msftVirtualDisk
+
+	if err := c.miSession.Query(&dst, mi.NamespaceRootStorage, c.virtualDiskMIQuery, 0); err != nil {
+		return fmt.Errorf("WMI query failed: %w", err)
+	}
+
 	return nil
 }
 
-func (c *Collector) collectVirtualDisk(ch chan<- prometheus.Metric) error {
+func (c *Collector) collectVirtualDisk(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) error {
 	var dst []msftVirtualDisk
 
-	if err := c.miSession.Query(&dst, mi.NamespaceRootStorage, c.virtualDiskMIQuery); err != nil {
+	if err := c.miSession.Query(&dst, mi.NamespaceRootStorage, c.virtualDiskMIQuery, maxScrapeDuration); err != nil {
 		return fmt.Errorf("WMI query failed: %w", err)
 	}
 

@@ -19,6 +19,7 @@ package netframework
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
@@ -65,9 +66,9 @@ type Win32_PerfRawData_NETFramework_NETCLRJit struct {
 	TotalNumberofILBytesJitted uint32 `mi:"TotalNumberofILBytesJitted"`
 }
 
-func (c *Collector) collectClrJIT(ch chan<- prometheus.Metric) error {
+func (c *Collector) collectClrJIT(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) error {
 	var dst []Win32_PerfRawData_NETFramework_NETCLRJit
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * FROM Win32_PerfRawData_NETFramework_NETCLRJit"))); err != nil {
+	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * FROM Win32_PerfRawData_NETFramework_NETCLRJit")), maxScrapeDuration); err != nil {
 		return fmt.Errorf("WMI query failed: %w", err)
 	}
 

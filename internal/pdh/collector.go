@@ -221,7 +221,7 @@ func NewCollectorWithReflection(logger *slog.Logger, resultType CounterType, obj
 			}
 
 			if counter.Type == PERF_ELAPSED_TIME {
-				if ret := GetCounterTimeBase(counterHandle, &counter.Frequency); ret != ErrorSuccess {
+				if ret := GetCounterTimeBase(counterHandle, &counter.Frequency); ret != ErrorSuccess && ret != NoData {
 					errs = append(errs, fmt.Errorf("GetCounterTimeBase: %w", NewPdhError(ret)))
 
 					continue

@@ -60,8 +60,10 @@ func FuncBenchmarkCollector[C collector.Collector](b *testing.B, name string, co
 	}()
 
 	for b.Loop() {
-		require.NoError(b, c.Collect(metrics))
+		require.NoError(b, c.Collect(metrics, 0))
 	}
+
+	require.NoError(b, collectors.Close())
 }
 
 func TestCollector[C collector.Collector, V any](t *testing.T, fn func(*V) C, conf *V) {
@@ -110,7 +112,7 @@ func TestCollector[C collector.Collector, V any](t *testing.T, fn func(*V) C, co
 
 	time.Sleep(1 * time.Second)
 
-	err = c.Collect(ch)
+	err = c.Collect(ch, 0)
 
 	switch {
 	// container collector
