@@ -52,7 +52,6 @@ type Collector struct {
 	logger    *slog.Logger
 	fileMTime *prometheus.Desc
 	fileSize  *prometheus.Desc
-	fileCount *prometheus.Desc
 }
 
 func New(config *Config) *Collector {
@@ -112,21 +111,14 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	c.fileMTime = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "mtime_timestamp_seconds"),
 		"File modification time",
-		[]string{"file"},
+		[]string{"file", "pattern"},
 		nil,
 	)
 
 	c.fileSize = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "size_bytes"),
 		"File size",
-		[]string{"file"},
-		nil,
-	)
-
-	c.fileCount = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "count"),
-		"Number of files matching the pattern",
-		[]string{"pattern"},
+		[]string{"file", "pattern"},
 		nil,
 	)
 
@@ -148,32 +140,18 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error {
 	wg := sync.WaitGroup{}
 
-	var mu sync.Mutex
-
-	seenFiles := make(map[string]struct{})
-
 	for _, filePattern := range c.config.FilePatterns {
 		wg.Add(1)
 
 		go func(filePattern string) {
 			defer wg.Done()
 
-			count, err := c.collectGlobFilePath(ch, filePattern, &mu, seenFiles)
-			if err != nil {
+			if err := c.collectGlobFilePath(ch, filePattern); err != nil {
 				c.logger.Error("failed collecting metrics for filepath",
 					slog.String("filepath", filePattern),
 					slog.Any("err", err),
 				)
-
-				return
 			}
-
-			ch <- prometheus.MustNewConstMetric(
-				c.fileCount,
-				prometheus.GaugeValue,
-				float64(count),
-				filePattern,
-			)
 		}(filePattern)
 	}
 
@@ -182,11 +160,9 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 	return nil
 }
 
-func (c *Collector) collectGlobFilePath(ch chan<- prometheus.Metric, filePattern string, mu *sync.Mutex, seenFiles map[string]struct{}) (int, error) {
+func (c *Collector) collectGlobFilePath(ch chan<- prometheus.Metric, filePattern string) error {
 	basePath, pattern := doublestar.SplitPattern(filepath.ToSlash(filePattern))
 	basePathFS := os.DirFS(basePath)
-
-	var count int
 
 	err := doublestar.GlobWalk(basePathFS, pattern, func(path string, d fs.DirEntry) error {
 		filePath := filepath.Join(basePath, path)
@@ -201,25 +177,12 @@ func (c *Collector) collectGlobFilePath(ch chan<- prometheus.Metric, filePattern
 			return nil
 		}
 
-		count++
-
-		mu.Lock()
-
-		_, alreadySeen := seenFiles[filePath]
-		if !alreadySeen {
-			seenFiles[filePath] = struct{}{}
-		}
-		mu.Unlock()
-
-		if alreadySeen {
-			return nil
-		}
-
 		ch <- prometheus.MustNewConstMetric(
 			c.fileMTime,
 			prometheus.GaugeValue,
 			float64(fileInfo.ModTime().UTC().UnixMicro())/1e6,
 			filePath,
+			filePattern,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -227,13 +190,14 @@ func (c *Collector) collectGlobFilePath(ch chan<- prometheus.Metric, filePattern
 			prometheus.GaugeValue,
 			float64(fileInfo.Size()),
 			filePath,
+			filePattern,
 		)
 
 		return nil
 	}, doublestar.WithFilesOnly(), doublestar.WithCaseInsensitive())
 	if err != nil {
-		return count, fmt.Errorf("failed to glob: %w", err)
+		return fmt.Errorf("failed to glob: %w", err)
 	}
 
-	return count, nil
+	return nil
 }
