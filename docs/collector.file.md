@@ -17,20 +17,20 @@ See https://github.com/bmatcuk/doublestar#patterns for an extended description o
 
 ## Metrics
 
-| Name                                   | Description            | Type  | Labels |
-|----------------------------------------|------------------------|-------|--------|
-| `windows_file_mtime_timestamp_seconds` | File modification time | gauge | `file` |
-| `windows_file_size_bytes`              | File size              | gauge | `file` |
+| Name                                   | Description            | Type  | Labels             |
+|----------------------------------------|------------------------|-------|--------------------|
+| `windows_file_mtime_timestamp_seconds` | File modification time | gauge | `file`, `pattern`  |
+| `windows_file_size_bytes`              | File size              | gauge | `file`, `pattern`  |
 
 ### Example metric
 
 ```
 # HELP windows_file_mtime_timestamp_seconds File modification time
 # TYPE windows_file_mtime_timestamp_seconds gauge
-windows_file_mtime_timestamp_seconds{file="C:\\Users\\admin\\Desktop\\Dashboard.lnk"} 1.726434517e+09
+windows_file_mtime_timestamp_seconds{file="C:\\Users\\admin\\Desktop\\Dashboard.lnk",pattern="C:\\Users\\admin\\Desktop\\*.lnk"} 1.726434517e+09
 # HELP windows_file_size_bytes File size
 # TYPE windows_file_size_bytes gauge
-windows_file_size_bytes{file="C:\\Users\\admin\\Desktop\\Dashboard.lnk"} 123
+windows_file_size_bytes{file="C:\\Users\\admin\\Desktop\\Dashboard.lnk",pattern="C:\\Users\\admin\\Desktop\\*.lnk"} 123
 ```
 
 ## Useful queries

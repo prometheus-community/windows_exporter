@@ -74,12 +74,23 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 	c := &Collector{
 		config: ConfigDefaults,
 	}
-	c.config.FilePatterns = make([]string, 0)
+
+	var filePatterns string
 
 	app.Flag(
 		"collector.file.file-patterns",
 		"Comma-separated list of file patterns. Each pattern is a glob pattern that can contain `*`, `?`, and `**` (recursive). See https://github.com/bmatcuk/doublestar#patterns",
-	).Default(strings.Join(ConfigDefaults.FilePatterns, ",")).StringsVar(&c.config.FilePatterns)
+	).Default(strings.Join(ConfigDefaults.FilePatterns, ",")).StringVar(&filePatterns)
+
+	app.Action(func(*kingpin.ParseContext) error {
+		for p := range strings.SplitSeq(filePatterns, ",") {
+			if p != "" {
+				c.config.FilePatterns = append(c.config.FilePatterns, p)
+			}
+		}
+
+		return nil
+	})
 
 	return c
 }
@@ -100,23 +111,24 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	c.fileMTime = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "mtime_timestamp_seconds"),
 		"File modification time",
-		[]string{"file"},
+		[]string{"file", "pattern"},
 		nil,
 	)
 
 	c.fileSize = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "size_bytes"),
 		"File size",
-		[]string{"file"},
+		[]string{"file", "pattern"},
 		nil,
 	)
 
 	for _, filePattern := range c.config.FilePatterns {
-		basePath, pattern := doublestar.SplitPattern(filePattern)
+		if filePattern == "" {
+			continue
+		}
 
-		_, err := doublestar.Glob(os.DirFS(basePath), pattern, doublestar.WithFilesOnly())
-		if err != nil {
-			return fmt.Errorf("invalid glob pattern: %w", err)
+		if !doublestar.ValidatePattern(filepath.ToSlash(filePattern)) {
+			return fmt.Errorf("invalid glob pattern: %s", filePattern)
 		}
 	}
 
@@ -170,6 +182,7 @@ func (c *Collector) collectGlobFilePath(ch chan<- prometheus.Metric, filePattern
 			prometheus.GaugeValue,
 			float64(fileInfo.ModTime().UTC().UnixMicro())/1e6,
 			filePath,
+			filePattern,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -177,6 +190,7 @@ func (c *Collector) collectGlobFilePath(ch chan<- prometheus.Metric, filePattern
 			prometheus.GaugeValue,
 			float64(fileInfo.Size()),
 			filePath,
+			filePattern,
 		)
 
 		return nil
