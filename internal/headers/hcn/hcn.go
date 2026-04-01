@@ -75,13 +75,21 @@ func GetHNSEndpointStats(endpointID string) (EndpointStats, error) {
 		return EndpointStats{}, err
 	}
 
-	var stats EndpointStats
+	var response struct {
+		Success bool          `json:"Success"`
+		Error   string        `json:"Error"`
+		Output  EndpointStats `json:"Output"`
+	}
 
-	if err := json.Unmarshal([]byte(result), &stats); err != nil {
+	if err := json.Unmarshal([]byte(result), &response); err != nil {
 		return EndpointStats{}, fmt.Errorf("failed to unmarshal JSON %s: %w", result, err)
 	}
 
-	return stats, nil
+	if !response.Success {
+		return EndpointStats{}, fmt.Errorf("HNSCall failed: %s", response.Error)
+	}
+
+	return response.Output, nil
 }
 
 func hnsCall(method, path, body *uint16) (string, error) {
