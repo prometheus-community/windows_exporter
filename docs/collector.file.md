@@ -22,6 +22,8 @@ See https://github.com/bmatcuk/doublestar#patterns for an extended description o
 | `windows_file_mtime_timestamp_seconds` | File modification time | gauge | `file`, `pattern`  |
 | `windows_file_size_bytes`              | File size              | gauge | `file`, `pattern`  |
 
+> Warning: if a very large number of files are matched, the combination of `file` and `pattern` labels can increase cardinality significantly. Use narrow patterns where possible.
+
 ### Example metric
 
 ```
@@ -34,7 +36,12 @@ windows_file_size_bytes{file="C:\\Users\\admin\\Desktop\\Dashboard.lnk",pattern=
 ```
 
 ## Useful queries
-_This collector does not yet have any useful queries added, we would appreciate your help adding them!_
+When the same file matches multiple patterns, the `pattern` label makes each sample unique. This also allows aggregation by pattern instead of introducing a separate count metric.
+
+```promql
+sum(windows_file_size_bytes) by (pattern)
+count(windows_file_size_bytes) by (pattern)
+```
 
 ## Alerting examples
 _This collector does not yet have alerting examples, we would appreciate your help adding them!_
