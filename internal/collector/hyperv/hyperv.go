@@ -38,6 +38,7 @@ const (
 	subCollectorDataStore                        = "datastore"
 	subCollectorDynamicMemoryBalancer            = "dynamic_memory_balancer"
 	subCollectorDynamicMemoryVM                  = "dynamic_memory_vm"
+	subCollectorHost                             = "host"
 	subCollectorHypervisorLogicalProcessor       = "hypervisor_logical_processor"
 	subCollectorHypervisorRootPartition          = "hypervisor_root_partition"
 	subCollectorHypervisorRootVirtualProcessor   = "hypervisor_root_virtual_processor"
@@ -62,6 +63,7 @@ var ConfigDefaults = Config{
 		subCollectorDataStore,
 		subCollectorDynamicMemoryBalancer,
 		subCollectorDynamicMemoryVM,
+		subCollectorHost,
 		subCollectorHypervisorLogicalProcessor,
 		subCollectorHypervisorRootPartition,
 		subCollectorHypervisorRootVirtualProcessor,
@@ -82,6 +84,7 @@ type Collector struct {
 	collectorDataStore
 	collectorDynamicMemoryBalancer
 	collectorDynamicMemoryVM
+	collectorHost
 	collectorHypervisorLogicalProcessor
 	collectorHypervisorRootPartition
 	collectorHypervisorRootVirtualProcessor
@@ -182,6 +185,11 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 			build:   c.buildDynamicMemoryVM,
 			collect: c.collectDynamicMemoryVM,
 			close:   c.perfDataCollectorDynamicMemoryVM.Close,
+		},
+		subCollectorHost: {
+			build:   c.buildHost,
+			collect: c.collectHost,
+			close:   c.perfDataCollectorLogicalProcessor.Close,
 		},
 		subCollectorHypervisorLogicalProcessor: {
 			build:   c.buildHypervisorLogicalProcessor,
