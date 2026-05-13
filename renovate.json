@@ -34,6 +34,12 @@
       "enabled": true
     },
     {
+      "matchManagers": ["gomod"],
+      "matchDepNames": ["go"],
+      "matchDepTypes": ["golang"],
+      "rangeStrategy": "bump"
+    },
+    {
       "groupName": "GitHub Actions",
       "matchManagers": [
         "github-actions"
