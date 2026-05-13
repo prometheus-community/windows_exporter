@@ -129,7 +129,7 @@ func (c *Collector) collectWorker() {
 
 			cmdLine, processOwner, processGroupID, err := c.getProcessInformation(uint32(pid))
 			if err != nil {
-				slog.LogAttrs(context.Background(), slog.LevelDebug, "Failed to get process information",
+				c.logger.LogAttrs(context.Background(), slog.LevelDebug, "Failed to get process information",
 					slog.Uint64("pid", pid),
 					slog.Any("err", err),
 				)

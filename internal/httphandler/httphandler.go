@@ -86,7 +86,7 @@ func (c *MetricsHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	handler, err := c.handlerFactory(logger, scrapeTimeout, r.URL.Query()["collect[]"])
 	if err != nil {
-		logger.Warn("Couldn't create filtered metrics handler",
+		logger.WarnContext(r.Context(), "Couldn't create filtered metrics handler",
 			slog.Any("err", err),
 		)
 
@@ -107,7 +107,7 @@ func (c *MetricsHTTPHandler) getScrapeTimeout(logger *slog.Logger, r *http.Reque
 
 		timeoutSeconds, err = strconv.ParseFloat(v, 64)
 		if err != nil {
-			logger.Warn(fmt.Sprintf("Couldn't parse X-Prometheus-Scrape-Timeout-Seconds: %q. Defaulting timeout to %f", v, defaultScrapeTimeout))
+			logger.WarnContext(r.Context(), fmt.Sprintf("Couldn't parse X-Prometheus-Scrape-Timeout-Seconds: %q. Defaulting timeout to %f", v, defaultScrapeTimeout))
 		}
 	}
 

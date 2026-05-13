@@ -19,7 +19,6 @@ package performancecounter_test
 
 import (
 	"fmt"
-	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -189,7 +188,7 @@ windows_performancecounter_processor_information_processor_time\{core="0,0",stat
 				},
 			})
 
-			logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+			logger := slog.New(slog.DiscardHandler)
 			err := perfDataCollector.Build(logger, nil)
 
 			if tc.buildErr != "" {

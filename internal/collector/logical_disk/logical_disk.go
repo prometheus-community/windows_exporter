@@ -753,7 +753,7 @@ func getAllMountedVolumes() (map[string]string, error) {
 func (c *Collector) workerBitlocker(ctx context.Context, initErrCh chan<- error) {
 	defer func() {
 		if r := recover(); r != nil {
-			c.logger.Error("workerBitlocker panic",
+			c.logger.ErrorContext(ctx, "workerBitlocker panic",
 				slog.Any("panic", r),
 				slog.String("stack", string(debug.Stack())),
 			)
@@ -764,7 +764,7 @@ func (c *Collector) workerBitlocker(ctx context.Context, initErrCh chan<- error)
 			go c.workerBitlocker(ctx, initErrCh)
 
 			if err := <-initErrCh; err != nil {
-				c.logger.Error("workerBitlocker restart failed",
+				c.logger.ErrorContext(ctx, "workerBitlocker restart failed",
 					slog.Any("err", err),
 				)
 			}

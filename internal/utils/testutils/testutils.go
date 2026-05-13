@@ -19,7 +19,6 @@ package testutils
 
 import (
 	"errors"
-	"io"
 	"log/slog"
 	"os"
 	"sync"
@@ -39,7 +38,7 @@ import (
 func FuncBenchmarkCollector[C collector.Collector](b *testing.B, name string, collectFunc collector.BuilderWithFlags[C], fn ...func(app *kingpin.Application)) {
 	b.Helper()
 
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	logger := slog.New(slog.DiscardHandler)
 
 	app := kingpin.New("windows_exporter", "Windows metrics exporter.")
 	c := collectFunc(app)
@@ -74,7 +73,7 @@ func TestCollector[C collector.Collector, V any](t *testing.T, fn func(*V) C, co
 		err     error
 	)
 
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	logger := slog.New(slog.DiscardHandler)
 	c := fn(conf)
 	ch := make(chan prometheus.Metric, 10000)
 
