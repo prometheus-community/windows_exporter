@@ -34,6 +34,22 @@
       "enabled": false
     },
     {
+      "enabled": false,
+      "matchBaseBranches": ["/^[0-9]\\.[0-9][0-9]$/"],
+      "matchPackageNames": [
+        "github.com/golangci/golangci-lint/cmd/golangci-lint",
+        "golangci/golangci-lint",
+        "golangci/golangci-lint-action"
+      ]
+    },
+    {
+      "enabled": true,
+      "matchManagers": ["gomod"],
+      "matchDepNames": ["go"],
+      "matchDepTypes": ["golang"],
+      "rangeStrategy": "bump"
+    },
+    {
       "groupName": "golangci-lint",
       "matchPackageNames": [
         "github.com/golangci/golangci-lint/cmd/golangci-lint",
