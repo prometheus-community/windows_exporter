@@ -202,7 +202,7 @@ func (s *Session) QueryUnmarshal(dst any,
 	}
 
 	dv := reflect.ValueOf(dst)
-	if dv.Kind() != reflect.Ptr || dv.IsNil() {
+	if dv.Kind() != reflect.Pointer || dv.IsNil() {
 		return ErrInvalidEntityType
 	}
 

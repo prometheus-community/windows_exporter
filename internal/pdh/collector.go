@@ -309,7 +309,7 @@ func (c *Collector) collectWorkerRaw() {
 			}
 
 			dv := reflect.ValueOf(data)
-			if dv.Kind() != reflect.Ptr || dv.IsNil() {
+			if dv.Kind() != reflect.Pointer || dv.IsNil() {
 				return fmt.Errorf("expected a pointer, got %s: %w", dv.Kind(), mi.ErrInvalidEntityType)
 			}
 
@@ -476,7 +476,7 @@ func (c *Collector) collectWorkerFormatted() {
 			}
 
 			dv := reflect.ValueOf(data)
-			if dv.Kind() != reflect.Ptr || dv.IsNil() {
+			if dv.Kind() != reflect.Pointer || dv.IsNil() {
 				return fmt.Errorf("expected a pointer, got %s: %w", dv.Kind(), mi.ErrInvalidEntityType)
 			}
 

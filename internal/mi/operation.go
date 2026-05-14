@@ -195,7 +195,7 @@ func (o *Operation) Unmarshal(dst any) error {
 	}
 
 	dv := reflect.ValueOf(dst)
-	if dv.Kind() != reflect.Ptr || dv.IsNil() {
+	if dv.Kind() != reflect.Pointer || dv.IsNil() {
 		return ErrInvalidEntityType
 	}
 

@@ -103,7 +103,7 @@ func (c *Collector) Describe() map[string]string {
 
 func (c *Collector) Collect(data any) error {
 	dv := reflect.ValueOf(data)
-	if dv.Kind() != reflect.Ptr || dv.IsNil() {
+	if dv.Kind() != reflect.Pointer || dv.IsNil() {
 		return mi.ErrInvalidEntityType
 	}
 
