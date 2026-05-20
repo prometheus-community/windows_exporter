@@ -835,6 +835,15 @@ func (c *Collector) workerBitlocker(ctx context.Context, initErrCh chan<- error)
 			}
 
 			status, err := func(path string) (int, error) {
+				// SHCreateItemFromParsingName requires a trailing backslash to correctly
+				// identify volume roots (e.g. "C:\" instead of "C:") and mount point
+				// directories (e.g. "D:\MOUNT1\" instead of "D:\MOUNT1"). Without it,
+				// drive-root paths silently fail and mount-point paths return a default
+				// property value of 0 (reported as "disabled").
+				if !strings.HasSuffix(path, `\`) {
+					path += `\`
+				}
+
 				item, err := shell32.SHCreateItemFromParsingName(path)
 				if err != nil {
 					return -1, fmt.Errorf("SHCreateItemFromParsingName failed: %w", err)
