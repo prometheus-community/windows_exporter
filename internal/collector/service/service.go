@@ -22,8 +22,11 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"regexp"
+	"slices"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 	"unsafe"
@@ -39,14 +42,16 @@ import (
 const Name = "service"
 
 type Config struct {
-	ServiceInclude *regexp.Regexp `yaml:"include"`
-	ServiceExclude *regexp.Regexp `yaml:"exclude"`
+	ServiceInclude          *regexp.Regexp `yaml:"include"`
+	ServiceExclude          *regexp.Regexp `yaml:"exclude"`
+	ServiceStartModeInclude []string       `yaml:"start-mode-include"`
 }
 
 //nolint:gochecknoglobals
 var ConfigDefaults = Config{
-	ServiceInclude: types.RegExpAny,
-	ServiceExclude: types.RegExpEmpty,
+	ServiceInclude:          types.RegExpAny,
+	ServiceExclude:          types.RegExpEmpty,
+	ServiceStartModeInclude: []string{"auto", "boot", "manual", "disabled", "system"},
 }
 
 // A Collector is a Prometheus Collector for service metrics.
@@ -84,6 +89,10 @@ func New(config *Config) *Collector {
 		config.ServiceInclude = ConfigDefaults.ServiceInclude
 	}
 
+	if config.ServiceStartModeInclude == nil {
+		config.ServiceStartModeInclude = ConfigDefaults.ServiceStartModeInclude
+	}
+
 	c := &Collector{
 		config: *config,
 	}
@@ -95,8 +104,9 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 	c := &Collector{
 		config: ConfigDefaults,
 	}
+	c.config.ServiceStartModeInclude = make([]string, 0)
 
-	var serviceExclude, serviceInclude string
+	var serviceExclude, serviceInclude, serviceStartModeInclude string
 
 	app.Flag(
 		"collector.service.exclude",
@@ -107,6 +117,11 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 		"collector.service.include",
 		"Regexp of service to include. Process name (not the display name!) must both match include and not match exclude to be included.",
 	).Default(".+").StringVar(&serviceInclude)
+
+	app.Flag(
+		"collector.service.start-mode-include",
+		"Comma separated list of service start modes to include. Possible values: auto, boot, manual, disabled, system.",
+	).Default(strings.Join(ConfigDefaults.ServiceStartModeInclude, ",")).StringVar(&serviceStartModeInclude)
 
 	app.Action(func(*kingpin.ParseContext) error {
 		var err error
@@ -121,6 +136,8 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 			return fmt.Errorf("collector.process.include: %w", err)
 		}
 
+		c.config.ServiceStartModeInclude = strings.Split(serviceStartModeInclude, ",")
+
 		return nil
 	})
 
@@ -133,10 +150,6 @@ func (c *Collector) GetName() string {
 
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	c.logger = logger.With(slog.String("collector", Name))
-
-	if c.config.ServiceInclude.String() == "^(?:.*)$" && c.config.ServiceExclude.String() == "^(?:)$" {
-		c.logger.Warn("No filters specified for service collector. This will generate a very large number of metrics!")
-	}
 
 	c.serviceConfigPoolBytes = sync.Pool{
 		New: func() any {
@@ -193,6 +206,14 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	handle, err := windows.OpenSCManager(nil, nil, windows.SC_MANAGER_ENUMERATE_SERVICE)
 	if err != nil {
 		return fmt.Errorf("failed to open scm: %w", err)
+	}
+
+	for _, startMode := range c.config.ServiceStartModeInclude {
+		if !slices.Contains(slices.Collect(maps.Values(c.apiStartModeValues)), startMode) {
+			return fmt.Errorf("unknown start mode: %s. Possible values: %s", startMode,
+				strings.Join(slices.Collect(maps.Values(c.apiStartModeValues)), ", "),
+			)
+		}
 	}
 
 	c.serviceManagerHandle = &mgr.Mgr{Handle: handle}
@@ -297,6 +318,25 @@ func (c *Collector) collectService(ch chan<- prometheus.Metric, serviceName stri
 		)
 	}
 
+	serviceStartMode, ok := c.apiStartModeValues[serviceConfig.StartType]
+	if !ok {
+		c.logger.Log(context.Background(), slog.LevelWarn, "unknown service start mode",
+			slog.String("service", serviceName),
+			slog.Uint64("start_mode", uint64(serviceConfig.StartType)),
+		)
+
+		return nil
+	}
+
+	if !slices.Contains(c.config.ServiceStartModeInclude, serviceStartMode) {
+		c.logger.Log(context.Background(), slog.LevelDebug, "service start mode excluded by config",
+			slog.String("service", serviceName),
+			slog.String("start_mode", serviceStartMode),
+		)
+
+		return nil
+	}
+
 	ch <- prometheus.MustNewConstMetric(
 		c.info,
 		prometheus.GaugeValue,
@@ -314,7 +354,7 @@ func (c *Collector) collectService(ch chan<- prometheus.Metric, serviceName stri
 
 	for _, startMode := range c.apiStartModeValues {
 		isCurrentStartMode = 0.0
-		if startMode == c.apiStartModeValues[serviceConfig.StartType] {
+		if startMode == serviceStartMode {
 			isCurrentStartMode = 1.0
 		}
 

@@ -36,6 +36,8 @@ var (
 	iidIShellItem2 = ole.NewGUID("{7E9FB0D3-919F-4307-AB2E-9B1860310C93}")
 )
 
+// SHCreateItemFromParsingName creates and initializes a Shell item object from a parsing name.
+// https://learn.microsoft.com/en-us/windows/win32/api/shobjidl_core/nf-shobjidl_core-shcreateitemfromparsingname
 func SHCreateItemFromParsingName(path string) (*IShellItem2, error) {
 	ptrPath, err := windows.UTF16PtrFromString(path)
 	if err != nil {
@@ -44,7 +46,7 @@ func SHCreateItemFromParsingName(path string) (*IShellItem2, error) {
 
 	var result *IShellItem2
 
-	hr, _, err := procSHCreateItemFromParsingName.Call(
+	hr, _, _ := procSHCreateItemFromParsingName.Call(
 		uintptr(unsafe.Pointer(ptrPath)),
 		0,
 		uintptr(unsafe.Pointer(iidIShellItem2)),

@@ -2,11 +2,11 @@
 
 The service collector exposes metrics about Windows Services
 
-|||
--|-
-Metric name prefix  | `service`
-Classes             | none
-Enabled by default? | Yes
+|                     |           |
+|---------------------|-----------|
+| Metric name prefix  | `service` |
+| Classes             | none      |
+| Enabled by default? | Yes       |
 
 ## Flags
 
@@ -20,6 +20,12 @@ Recommended to keep down number of returned metrics.
 
 Regexp of service to include. Process name (not the display name!) must both
 match `include` and not match `exclude` to be included.
+Recommended to keep down number of returned metrics.
+
+### `--collector.service.start-mode-include`
+
+Comma separated list of service start modes to include.
+Possible values: auto, manual, disabled, system.
 Recommended to keep down number of returned metrics.
 
 ## Metrics
