@@ -17,8 +17,8 @@ jobs:
     name: Check for spelling errors
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: codespell-project/actions-codespell@4848b4c0f038a77b5a64504a5e93b8fae962bc66 # master
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: codespell-project/actions-codespell@3b7da264292a727fcdc4acdc9eaf9a5abb92ba10 # master
         with:
           check_filenames: true
           # When using this Action in other repos, the --skip option below can be removed
