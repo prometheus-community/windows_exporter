@@ -60,6 +60,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/physical_disk"
 	"github.com/prometheus-community/windows_exporter/internal/collector/printer"
 	"github.com/prometheus-community/windows_exporter/internal/collector/process"
+	"github.com/prometheus-community/windows_exporter/internal/collector/registry"
 	"github.com/prometheus-community/windows_exporter/internal/collector/remote_fx"
 	"github.com/prometheus-community/windows_exporter/internal/collector/scheduled_task"
 	"github.com/prometheus-community/windows_exporter/internal/collector/service"
@@ -79,7 +80,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
-	"golang.org/x/sys/windows/registry"
+	winregistry "golang.org/x/sys/windows/registry"
 )
 
 // NewWithFlags To be called by the exporter for collector initialization before running kingpin.Parse.
@@ -130,6 +131,7 @@ func NewWithConfig(config Config) *Collection {
 	collectors[physical_disk.Name] = physical_disk.New(&config.PhysicalDisk)
 	collectors[printer.Name] = printer.New(&config.Printer)
 	collectors[process.Name] = process.New(&config.Process)
+	collectors[registry.Name] = registry.New(&config.Registry)
 	collectors[remote_fx.Name] = remote_fx.New(&config.RemoteFx)
 	collectors[scheduled_task.Name] = scheduled_task.New(&config.ScheduledTask)
 	collectors[service.Name] = service.New(&config.Service)
@@ -241,7 +243,7 @@ func (c *Collection) Build(ctx context.Context, logger *slog.Logger) error {
 
 	for err := range errCh {
 		if errors.Is(err, pdh.ErrNoData) ||
-			errors.Is(err, registry.ErrNotExist) ||
+			errors.Is(err, winregistry.ErrNotExist) ||
 			errors.Is(err, pdh.NewPdhError(pdh.CstatusNoObject)) ||
 			errors.Is(err, pdh.NewPdhError(pdh.CstatusNoCounter)) ||
 			errors.Is(err, mi.MI_RESULT_INVALID_OPERATION_TIMEOUT) ||
