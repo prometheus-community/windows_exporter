@@ -21,6 +21,6 @@ jobs:
     name: Run govulncheck
     steps:
       - id: govulncheck
-        uses: golang/govulncheck-action@b625fbe08f3bccbe446d94fbf87fcc875a4f50ee # v1.0.4
+        uses: golang/govulncheck-action@3fa7bd9cee2cfdf3499a8803b226e43de7b7cdb4 # master
         env:
           GOOS: ${{ contains(github.repository, 'windows_exporter') && 'windows' || '' }}
