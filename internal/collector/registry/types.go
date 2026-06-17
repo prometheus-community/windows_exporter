@@ -18,18 +18,31 @@
 package registry
 
 import (
+	"github.com/prometheus/client_golang/prometheus"
 	"go.yaml.in/yaml/v3"
 	winregistry "golang.org/x/sys/windows/registry"
 )
 
 type Key struct {
-	Key    string   `json:"key"    yaml:"key"`
-	Values []string `json:"values" yaml:"values"`
+	Name   string  `json:"name"   yaml:"name"`
+	Key    string  `json:"key"    yaml:"key"`
+	Values []Value `json:"values" yaml:"values"`
 
 	// resolved at Build time
 	hive    winregistry.Key
 	subPath string
 	label   string
+}
+
+type Value struct {
+	Name   string            `json:"name"   yaml:"name"`
+	Metric string            `json:"metric" yaml:"metric"`
+	Type   string            `json:"type"   yaml:"type"`
+	Labels map[string]string `json:"labels" yaml:"labels"`
+
+	// resolved at Build time
+	desc       *prometheus.Desc
+	metricType prometheus.ValueType
 }
 
 // UnmarshalYAML is a no-op, so the strict config file validation accepts the

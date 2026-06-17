@@ -28,7 +28,7 @@ import (
 )
 
 func BenchmarkCollector(b *testing.B) {
-	keys := `[{"key":"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion"}]`
+	keys := `[{"key":"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion","values":[{"name":"CurrentMajorVersionNumber"}]}]`
 
 	testutils.FuncBenchmarkCollector(b, registry.Name, registry.NewWithFlags, func(app *kingpin.Application) {
 		app.GetFlag("collector.registry.keys").StringVar(&keys)
@@ -40,10 +40,12 @@ func TestCollector(t *testing.T) {
 		Keys: []registry.Key{
 			{
 				Key:    `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion`,
-				Values: []string{"CurrentMajorVersionNumber"},
+				Values: []registry.Value{{Name: "CurrentMajorVersionNumber"}},
 			},
 			{
-				Key: `HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management`,
+				Name:   "memory_management",
+				Key:    `HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management`,
+				Values: []registry.Value{{Name: "ClearPageFileAtShutdown", Type: "gauge"}},
 			},
 		},
 	})
@@ -81,7 +83,25 @@ func TestCollectorBuildErrors(t *testing.T) {
 			config: registry.Config{Keys: []registry.Key{
 				{
 					Key:    `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion`,
-					Values: []string{"CurrentMajorVersionNumber", "currentmajorversionnumber"},
+					Values: []registry.Value{{Name: "CurrentMajorVersionNumber"}, {Name: "currentmajorversionnumber"}},
+				},
+			}},
+		},
+		{
+			name: "missing value name",
+			config: registry.Config{Keys: []registry.Key{
+				{
+					Key:    `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion`,
+					Values: []registry.Value{{Name: ""}},
+				},
+			}},
+		},
+		{
+			name: "invalid value type",
+			config: registry.Config{Keys: []registry.Key{
+				{
+					Key:    `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion`,
+					Values: []registry.Value{{Name: "CurrentMajorVersionNumber", Type: "histogram"}},
 				},
 			}},
 		},

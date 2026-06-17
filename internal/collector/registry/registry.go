@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"regexp"
 	"slices"
 	"strings"
 	"time"
@@ -34,6 +35,9 @@ import (
 )
 
 const Name = "registry"
+
+//nolint:gochecknoglobals
+var reNonAlphaNum = regexp.MustCompile(`[^a-zA-Z0-9]`)
 
 type Config struct {
 	Keys []Key `yaml:"keys"`
@@ -52,7 +56,6 @@ type Collector struct {
 
 	keys []Key
 
-	valueDesc      *prometheus.Desc
 	keySuccessDesc *prometheus.Desc
 }
 
@@ -110,12 +113,6 @@ func (c *Collector) Close() error {
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	c.logger = logger.With(slog.String("collector", Name))
 
-	c.valueDesc = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "value"),
-		"Numeric value of a REG_DWORD or REG_QWORD registry value.",
-		[]string{"key", "name"},
-		nil,
-	)
 	c.keySuccessDesc = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "key_success"),
 		"Whether the registry key could be read successfully.",
@@ -150,20 +147,62 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 		labels = append(labels, label)
 
-		values := make([]string, 0, len(key.Values))
+		// group identifies the key in logs and seeds auto-generated metric names.
+		// It defaults to the normalized key path when no explicit name is given.
+		group := key.Name
+		if group == "" {
+			group = label
+		}
 
-		for _, name := range key.Values {
-			// Registry value names are matched case-insensitively, so lowercase
-			// them to keep the exported label consistent across systems.
-			name = strings.ToLower(name)
+		values := make([]Value, 0, len(key.Values))
+		valueNames := make([]string, 0, len(key.Values))
 
-			if slices.Contains(values, name) {
-				errs = append(errs, fmt.Errorf("value name %q of key %s is duplicated", name, label))
+		for _, value := range key.Values {
+			if value.Name == "" {
+				errs = append(errs, fmt.Errorf("value name is required for key %s", label))
 
 				continue
 			}
 
-			values = append(values, name)
+			// Registry value names are matched case-insensitively, so lowercase
+			// them to keep reads consistent across systems.
+			value.Name = strings.ToLower(value.Name)
+
+			if slices.Contains(valueNames, value.Name) {
+				errs = append(errs, fmt.Errorf("value name %q of key %s is duplicated", value.Name, label))
+
+				continue
+			}
+
+			valueNames = append(valueNames, value.Name)
+
+			// If no metric name is given, derive one from the key group and value
+			// name, mirroring the performancecounter collector.
+			if value.Metric == "" {
+				value.Metric = sanitizeMetricName(
+					fmt.Sprintf("%s_%s_%s_%s", types.Namespace, Name, group, value.Name),
+				)
+			}
+
+			switch value.Type {
+			case "", "gauge":
+				value.metricType = prometheus.GaugeValue
+			case "counter":
+				value.metricType = prometheus.CounterValue
+			default:
+				errs = append(errs, fmt.Errorf("value %q of key %s has invalid type %q, must be \"gauge\" or \"counter\"", value.Name, label, value.Type))
+
+				continue
+			}
+
+			value.desc = prometheus.NewDesc(
+				value.Metric,
+				"windows_exporter: custom registry metric",
+				nil,
+				value.Labels,
+			)
+
+			values = append(values, value)
 		}
 
 		// Build only resolves and validates the static configuration; it does not
@@ -223,38 +262,20 @@ func (c *Collector) collectKey(ch chan<- prometheus.Metric, key Key) error {
 		_ = rk.Close()
 	}()
 
-	names := key.Values
-	enumerate := len(names) == 0
-
-	if enumerate {
-		if names, err = rk.ReadValueNames(0); err != nil {
-			return fmt.Errorf("failed to enumerate values of registry key %s: %w", key.label, err)
-		}
-	}
-
 	var errs []error
 
-	for _, name := range names {
-		val, _, err := rk.GetIntegerValue(name)
+	for _, value := range key.Values {
+		val, _, err := rk.GetIntegerValue(value.Name)
 		if err != nil {
-			// In enumerate mode, values that aren't REG_DWORD or REG_QWORD are filtered out by design.
-			if enumerate && errors.Is(err, winregistry.ErrUnexpectedType) {
-				continue
-			}
-
-			errs = append(errs, fmt.Errorf("failed to read value %q of registry key %s: %w", name, key.label, err))
+			errs = append(errs, fmt.Errorf("failed to read value %q of registry key %s: %w", value.Name, key.label, err))
 
 			continue
 		}
 
 		ch <- prometheus.MustNewConstMetric(
-			c.valueDesc,
-			prometheus.GaugeValue,
+			value.desc,
+			value.metricType,
 			float64(val),
-			key.label,
-			// Lowercase the name so enumerated values (whose casing comes from
-			// the registry) match explicitly configured ones across systems.
-			strings.ToLower(name),
 		)
 	}
 
@@ -298,4 +319,11 @@ func parseKeyPath(path string) (winregistry.Key, string, string, error) {
 	}
 
 	return hive, subPath, label, nil
+}
+
+// sanitizeMetricName turns an arbitrary string into a valid Prometheus metric
+// name by lowercasing it, replacing every non-alphanumeric character with an
+// underscore, and trimming leading and trailing underscores.
+func sanitizeMetricName(name string) string {
+	return strings.Trim(reNonAlphaNum.ReplaceAllString(strings.ToLower(name), "_"), "_")
 }
