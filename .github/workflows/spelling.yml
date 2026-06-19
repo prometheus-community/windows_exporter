@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-      - uses: codespell-project/actions-codespell@3b7da264292a727fcdc4acdc9eaf9a5abb92ba10 # master
+      - uses: codespell-project/actions-codespell@3abb875e3aa9713e40eed5aea082672a42f7f95c # master
         with:
           check_filenames: true
           # When using this Action in other repos, the --skip option below can be removed
