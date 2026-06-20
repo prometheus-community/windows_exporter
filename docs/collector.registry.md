@@ -7,8 +7,8 @@ Like the [performancecounter](collector.performancecounter.md) collector, each
 registry value is mapped to its own metric: the key is a grouping container, and
 every value under it declares the metric name, type, and labels it is exported as.
 
-|  |  |
-| --- | --- |
+
+
 | Metric name prefix | `registry` |
 | Data source | Windows Registry |
 | Enabled by default? | No |

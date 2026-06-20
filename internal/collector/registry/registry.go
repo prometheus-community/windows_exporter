@@ -36,7 +36,6 @@ import (
 
 const Name = "registry"
 
-//nolint:gochecknoglobals
 var reNonAlphaNum = regexp.MustCompile(`[^a-zA-Z0-9]`)
 
 type Config struct {
