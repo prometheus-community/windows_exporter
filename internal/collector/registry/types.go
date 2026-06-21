@@ -37,6 +37,7 @@ type Key struct {
 type Value struct {
 	Name   string            `json:"name"   yaml:"name"`
 	Metric string            `json:"metric" yaml:"metric"`
+	Help   string            `json:"help"   yaml:"help"`
 	Type   string            `json:"type"   yaml:"type"`
 	Labels map[string]string `json:"labels" yaml:"labels"`
 

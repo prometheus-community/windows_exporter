@@ -146,6 +146,12 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 		labels = append(labels, label)
 
+		if len(key.Values) == 0 {
+			errs = append(errs, fmt.Errorf("key %s has no values configured", label))
+
+			continue
+		}
+
 		// group identifies the key in logs and seeds auto-generated metric names.
 		// It defaults to the normalized key path when no explicit name is given.
 		group := key.Name
@@ -194,9 +200,14 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 				continue
 			}
 
+			help := value.Help
+			if help == "" {
+				help = "windows_exporter: custom registry metric"
+			}
+
 			value.desc = prometheus.NewDesc(
 				value.Metric,
-				"windows_exporter: custom registry metric",
+				help,
 				nil,
 				value.Labels,
 			)

@@ -64,6 +64,8 @@ func (a collectorAdapter) Collect(ch chan<- prometheus.Metric) {
 // patterns the performancecounter test must use. Using HKCU keeps it admin-free
 // and reliable in CI.
 func TestCollectorMetrics(t *testing.T) {
+	t.Parallel()
+
 	suffix := time.Now().UnixNano()
 
 	sub := fmt.Sprintf(`Software\windows_exporter_registry_test_%d`, suffix)
@@ -99,13 +101,15 @@ func TestCollectorMetrics(t *testing.T) {
 					{
 						Name:   "TestQword",
 						Metric: "windows_registry_test_custom_metric",
+						Help:   "custom registry help text",
 						Type:   "counter",
 						Labels: map[string]string{"foo": "bar"},
 					},
 				},
 			},
 			{
-				Key: missingPath,
+				Key:    missingPath,
+				Values: []registry.Value{{Name: "AnyValue"}},
 			},
 		},
 	})
@@ -133,7 +137,7 @@ func TestCollectorMetrics(t *testing.T) {
 # TYPE windows_registry_key_success gauge
 windows_registry_key_success{key="%s"} 0
 windows_registry_key_success{key="%s"} 1
-# HELP windows_registry_test_custom_metric windows_exporter: custom registry metric
+# HELP windows_registry_test_custom_metric custom registry help text
 # TYPE windows_registry_test_custom_metric counter
 windows_registry_test_custom_metric{foo="bar"} 5e+09
 # HELP windows_registry_testgroup_testdword windows_exporter: custom registry metric
@@ -144,4 +148,51 @@ windows_registry_testgroup_testdword 1234
 	// QuoteMeta escapes the backslashes/braces in the exposition so the exact
 	// values, types, labels, and names are matched literally.
 	require.Regexp(t, "^"+regexp.QuoteMeta(expected), got)
+}
+
+// TestCollectorSharedMetricName proves the supported aggregation pattern from the
+// docs: two values may share one metric name as long as their labels differ. The
+// collector deliberately does not reject this; only a true duplicate (same name and
+// identical labels) would be dropped and logged by the registry at scrape time.
+func TestCollectorSharedMetricName(t *testing.T) {
+	t.Parallel()
+
+	sub := fmt.Sprintf(`Software\windows_exporter_registry_shared_%d`, time.Now().UnixNano())
+
+	k, _, err := winregistry.CreateKey(winregistry.CURRENT_USER, sub, winregistry.SET_VALUE)
+	require.NoError(t, err)
+
+	require.NoError(t, k.SetDWordValue("Alpha", 1))
+	require.NoError(t, k.SetDWordValue("Beta", 2))
+	require.NoError(t, k.Close())
+
+	t.Cleanup(func() {
+		_ = winregistry.DeleteKey(winregistry.CURRENT_USER, sub)
+	})
+
+	c := registry.New(&registry.Config{
+		Keys: []registry.Key{
+			{
+				Key: `HKCU\` + sub,
+				Values: []registry.Value{
+					{Name: "Alpha", Metric: "windows_registry_shared", Labels: map[string]string{"slot": "a"}},
+					{Name: "Beta", Metric: "windows_registry_shared", Labels: map[string]string{"slot": "b"}},
+				},
+			},
+		},
+	})
+
+	require.NoError(t, c.Build(slog.New(slog.DiscardHandler), nil))
+
+	reg := prometheus.NewRegistry()
+	reg.MustRegister(collectorAdapter{*c})
+
+	rw := httptest.NewRecorder()
+	promhttp.HandlerFor(reg, promhttp.HandlerOpts{ErrorHandling: promhttp.ContinueOnError}).ServeHTTP(rw, &http.Request{})
+	got := rw.Body.String()
+
+	// Both series share the metric name and differ only by label, so both are
+	// exported rather than one being dropped as a duplicate.
+	require.Contains(t, got, `windows_registry_shared{slot="a"} 1`)
+	require.Contains(t, got, `windows_registry_shared{slot="b"} 2`)
 }

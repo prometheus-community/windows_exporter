@@ -8,10 +8,11 @@ registry value is mapped to its own metric: the key is a grouping container, and
 every value under it declares the metric name, type, and labels it is exported as.
 
 
-
-| Metric name prefix | `registry` |
-| Data source | Windows Registry |
-| Enabled by default? | No |
+|||
+-|-
+Metric name prefix  | `registry`
+Data source         | Windows Registry
+Enabled by default? | No
 
 ## Flags
 
@@ -22,7 +23,7 @@ of a JSON array of objects. YAML is supported.
 
 > [!CAUTION]
 > If you are using a configuration file, the value must be kept as a string.
->
+> 
 > Use a `|-` to keep the value as a string.
 
 #### Example
@@ -50,6 +51,7 @@ YAML:
   values:
     - name: CurrentMajorVersionNumber # registry value name
       metric: windows_registry_windows_major_version # optional
+      help: Windows major version number # optional
       type: gauge # optional
       labels: # optional
         product: windows
@@ -69,6 +71,7 @@ JSON:
       {
         "name": "CurrentMajorVersionNumber",
         "metric": "windows_registry_windows_major_version",
+        "help": "Windows major version number",
         "type": "gauge",
         "labels": { "product": "windows" }
       }
@@ -130,6 +133,17 @@ The name of the metric to expose. Optional — if omitted, a name is generated
 automatically. See [Metric naming](#metric-naming) for the exact rules and
 examples.
 
+The combination of metric name and labels must be unique across all configured
+keys and values. Two values may deliberately share a `metric` name when their
+labels differ (a common way to aggregate the same measurement from several keys).
+A true duplicate — the same name *and* identical labels — is dropped and logged at
+scrape time.
+
+##### help
+
+The metric `# HELP` text. Optional — if omitted, it defaults to
+`windows_exporter: custom registry metric`.
+
 ##### type
 
 The metric type. The value can be `gauge` or `counter`. If not specified, it
@@ -151,10 +165,14 @@ This key is optional.
 The registry collector returns one metric per configured value, named and typed
 according to the configuration, plus a per-key success metric.
 
-| *user defined* | Numeric value of a configured REG_DWORD or REG_QWORD value | gauge / counter | *user defined* |
-| Name | Description | Type | Labels |
-| --- | --- | --- | --- |
-| `windows_registry_key_success` | Whether the registry key could be read successfully (0, 1) | gauge | `key` |
+| Name                           | Description                                                                  | Type           | Labels |
+|--------------------------------|------------------------------------------------------------------------------|----------------|--------|
+| *user defined*                 | Numeric value of a configured REG_DWORD or REG_QWORD value | gauge / counter | *user defined* |        |
+| `windows_registry_key_success` | Whether the key could be opened and all of its configured values read (0, 1) | gauge          | `key`  |
+
+A `windows_registry_key_success` value of `0` means the key could not be opened
+*or* at least one configured value was missing or not a `REG_DWORD`/`REG_QWORD`;
+values that did read successfully are still exported.
 
 The `key` label on `windows_registry_key_success` is normalized to the short hive
 name and backslashes, and is lowercased, regardless of how the key is written in

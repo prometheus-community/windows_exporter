@@ -36,6 +36,8 @@ func BenchmarkCollector(b *testing.B) {
 }
 
 func TestCollector(t *testing.T) {
+	t.Parallel()
+
 	testutils.TestCollector(t, registry.New, &registry.Config{
 		Keys: []registry.Key{
 			{
@@ -52,6 +54,8 @@ func TestCollector(t *testing.T) {
 }
 
 func TestCollectorBuildErrors(t *testing.T) {
+	t.Parallel()
+
 	for _, tc := range []struct {
 		name   string
 		config registry.Config
@@ -63,6 +67,12 @@ func TestCollectorBuildErrors(t *testing.T) {
 		{
 			name:   "empty key",
 			config: registry.Config{Keys: []registry.Key{{Key: ""}}},
+		},
+		{
+			name: "key with no values",
+			config: registry.Config{Keys: []registry.Key{
+				{Key: `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion`},
+			}},
 		},
 		{
 			name: "duplicate key",
@@ -107,6 +117,8 @@ func TestCollectorBuildErrors(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			c := registry.New(&tc.config)
 			require.Error(t, c.Build(slog.New(slog.DiscardHandler), nil))
 		})
