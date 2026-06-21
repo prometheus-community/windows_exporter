@@ -115,6 +115,30 @@ func TestCollectorBuildErrors(t *testing.T) {
 				},
 			}},
 		},
+		{
+			name: "shared metric name with inconsistent help text",
+			config: registry.Config{Keys: []registry.Key{
+				{
+					Key: `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion`,
+					Values: []registry.Value{
+						{Name: "CurrentMajorVersionNumber", Metric: "windows_version", Help: "version help a"},
+						{Name: "CurrentMinorVersionNumber", Metric: "windows_version", Help: "version help b"},
+					},
+				},
+			}},
+		},
+		{
+			name: "shared metric name with inconsistent type",
+			config: registry.Config{Keys: []registry.Key{
+				{
+					Key: `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion`,
+					Values: []registry.Value{
+						{Name: "CurrentMajorVersionNumber", Metric: "windows_version", Type: "gauge"},
+						{Name: "CurrentMinorVersionNumber", Metric: "windows_version", Type: "counter"},
+					},
+				},
+			}},
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()

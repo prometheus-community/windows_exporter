@@ -124,6 +124,14 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 	var errs []error
 
+	// seenMetricHelps and seenMetricTypes track the first-seen help text and
+	// value type for each metric name. Prometheus requires all metrics sharing
+	// a name to carry identical help text and type; mismatches cause silent
+	// metric drops at scrape time. Catching them here turns that into a loud
+	// build-time error.
+	seenMetricHelps := make(map[string]string)
+	seenMetricTypes := make(map[string]prometheus.ValueType)
+
 	for _, key := range c.config.Keys {
 		if key.Key == "" {
 			errs = append(errs, errors.New("key is required"))
@@ -203,6 +211,29 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 			help := value.Help
 			if help == "" {
 				help = "windows_exporter: custom registry metric"
+			}
+
+			if prevHelp, seen := seenMetricHelps[value.Metric]; seen {
+				if prevHelp != help {
+					errs = append(errs, fmt.Errorf(
+						"value %q of key %s: metric %q must have the same help text as other values sharing this metric name (got %q, want %q)",
+						value.Name, label, value.Metric, help, prevHelp,
+					))
+
+					continue
+				}
+
+				if seenMetricTypes[value.Metric] != value.metricType {
+					errs = append(errs, fmt.Errorf(
+						"value %q of key %s: metric %q must have the same type as other values sharing this metric name",
+						value.Name, label, value.Metric,
+					))
+
+					continue
+				}
+			} else {
+				seenMetricHelps[value.Metric] = help
+				seenMetricTypes[value.Metric] = value.metricType
 			}
 
 			value.desc = prometheus.NewDesc(
