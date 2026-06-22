@@ -28,7 +28,7 @@ import (
 )
 
 func BenchmarkCollector(b *testing.B) {
-	keys := `[{"key":"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion","values":[{"name":"CurrentMajorVersionNumber"}]}]`
+	keys := `[{"name":"windows_nt","key":"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion","values":[{"name":"CurrentMajorVersionNumber"}]}]`
 
 	testutils.FuncBenchmarkCollector(b, registry.Name, registry.NewWithFlags, func(app *kingpin.Application) {
 		app.GetFlag("collector.registry.keys").StringVar(&keys)
@@ -41,6 +41,7 @@ func TestCollector(t *testing.T) {
 	testutils.TestCollector(t, registry.New, &registry.Config{
 		Keys: []registry.Key{
 			{
+				Name:   "windows_nt",
 				Key:    `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion`,
 				Values: []registry.Value{{Name: "CurrentMajorVersionNumber"}},
 			},
@@ -71,27 +72,28 @@ func TestCollectorBuildErrors(t *testing.T) {
 		{
 			name: "key with no values",
 			config: registry.Config{Keys: []registry.Key{
-				{Key: `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion`},
+				{Name: "windows_nt", Key: `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion`},
 			}},
 		},
 		{
 			name: "duplicate key",
 			config: registry.Config{Keys: []registry.Key{
-				{Key: `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion`},
-				{Key: `HKEY_LOCAL_MACHINE/SOFTWARE/Microsoft/Windows NT/CurrentVersion`},
+				{Name: "nt_a", Key: `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion`},
+				{Name: "nt_b", Key: `HKEY_LOCAL_MACHINE/SOFTWARE/Microsoft/Windows NT/CurrentVersion`},
 			}},
 		},
 		{
 			name: "duplicate key differing only by case",
 			config: registry.Config{Keys: []registry.Key{
-				{Key: `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion`},
-				{Key: `hklm\software\microsoft\windows nt\currentversion`},
+				{Name: "nt_a", Key: `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion`},
+				{Name: "nt_b", Key: `hklm\software\microsoft\windows nt\currentversion`},
 			}},
 		},
 		{
 			name: "duplicate value differing only by case",
 			config: registry.Config{Keys: []registry.Key{
 				{
+					Name:   "windows_nt",
 					Key:    `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion`,
 					Values: []registry.Value{{Name: "CurrentMajorVersionNumber"}, {Name: "currentmajorversionnumber"}},
 				},
@@ -101,6 +103,7 @@ func TestCollectorBuildErrors(t *testing.T) {
 			name: "missing value name",
 			config: registry.Config{Keys: []registry.Key{
 				{
+					Name:   "windows_nt",
 					Key:    `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion`,
 					Values: []registry.Value{{Name: ""}},
 				},
@@ -110,6 +113,7 @@ func TestCollectorBuildErrors(t *testing.T) {
 			name: "invalid value type",
 			config: registry.Config{Keys: []registry.Key{
 				{
+					Name:   "windows_nt",
 					Key:    `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion`,
 					Values: []registry.Value{{Name: "CurrentMajorVersionNumber", Type: "histogram"}},
 				},
@@ -119,7 +123,8 @@ func TestCollectorBuildErrors(t *testing.T) {
 			name: "shared metric name with inconsistent help text",
 			config: registry.Config{Keys: []registry.Key{
 				{
-					Key: `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion`,
+					Name: "windows_nt",
+					Key:  `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion`,
 					Values: []registry.Value{
 						{Name: "CurrentMajorVersionNumber", Metric: "windows_version", Help: "version help a"},
 						{Name: "CurrentMinorVersionNumber", Metric: "windows_version", Help: "version help b"},
@@ -131,11 +136,21 @@ func TestCollectorBuildErrors(t *testing.T) {
 			name: "shared metric name with inconsistent type",
 			config: registry.Config{Keys: []registry.Key{
 				{
-					Key: `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion`,
+					Name: "windows_nt",
+					Key:  `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion`,
 					Values: []registry.Value{
 						{Name: "CurrentMajorVersionNumber", Metric: "windows_version", Type: "gauge"},
 						{Name: "CurrentMinorVersionNumber", Metric: "windows_version", Type: "counter"},
 					},
+				},
+			}},
+		},
+		{
+			name: "missing name",
+			config: registry.Config{Keys: []registry.Key{
+				{
+					Key:    `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion`,
+					Values: []registry.Value{{Name: "CurrentMajorVersionNumber"}},
 				},
 			}},
 		},

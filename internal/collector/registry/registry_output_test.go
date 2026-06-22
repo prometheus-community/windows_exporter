@@ -23,7 +23,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"regexp"
-	"strings"
 	"testing"
 	"time"
 
@@ -108,6 +107,7 @@ func TestCollectorMetrics(t *testing.T) {
 				},
 			},
 			{
+				Name:   "missing_group",
 				Key:    missingPath,
 				Values: []registry.Value{{Name: "AnyValue"}},
 			},
@@ -125,25 +125,21 @@ func TestCollectorMetrics(t *testing.T) {
 
 	require.NotEmpty(t, got)
 
-	// key_success labels are the normalized, lowercased path (short hive +
-	// backslashes); in the text exposition format the backslashes are escaped.
+	// key_success labels are the configured key name (not the path).
 	// Metric families are emitted sorted by name, and metrics within the
-	// key_success family sorted by label value, so "missing" (0) precedes
-	// "registry_test" (1).
-	successLabel := strings.ReplaceAll(strings.ToLower(keyPath), `\`, `\\`)
-	missingLabel := strings.ReplaceAll(strings.ToLower(missingPath), `\`, `\\`)
-
-	expected := fmt.Sprintf(`# HELP windows_registry_key_success Whether the registry key could be read successfully.
+	// key_success family sorted by label value, so "missing_group" (0)
+	// precedes "testgroup" (1).
+	expected := `# HELP windows_registry_key_success Whether the registry key could be read successfully.
 # TYPE windows_registry_key_success gauge
-windows_registry_key_success{key="%s"} 0
-windows_registry_key_success{key="%s"} 1
+windows_registry_key_success{name="missing_group"} 0
+windows_registry_key_success{name="testgroup"} 1
 # HELP windows_registry_test_custom_metric custom registry help text
 # TYPE windows_registry_test_custom_metric counter
 windows_registry_test_custom_metric{foo="bar"} 5e+09
 # HELP windows_registry_testgroup_testdword windows_exporter: custom registry metric
 # TYPE windows_registry_testgroup_testdword gauge
 windows_registry_testgroup_testdword 1234
-`, missingLabel, successLabel)
+`
 
 	// QuoteMeta escapes the backslashes/braces in the exposition so the exact
 	// values, types, labels, and names are matched literally.
@@ -173,7 +169,8 @@ func TestCollectorSharedMetricName(t *testing.T) {
 	c := registry.New(&registry.Config{
 		Keys: []registry.Key{
 			{
-				Key: `HKCU\` + sub,
+				Name: "shared_test",
+				Key:  `HKCU\` + sub,
 				Values: []registry.Value{
 					{Name: "Alpha", Metric: "windows_registry_shared", Labels: map[string]string{"slot": "a"}},
 					{Name: "Beta", Metric: "windows_registry_shared", Labels: map[string]string{"slot": "b"}},

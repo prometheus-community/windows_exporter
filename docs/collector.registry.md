@@ -8,7 +8,7 @@ registry value is mapped to its own metric: the key is a grouping container, and
 every value under it declares the metric name, type, and labels it is exported as.
 
 
-|||
+
 -|-
 Metric name prefix  | `registry`
 Data source         | Windows Registry
@@ -32,11 +32,13 @@ of a JSON array of objects. YAML is supported.
 collector:
   registry:
     keys: |-
-      - key: HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion
+      - name: windows_nt
+        key: HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion
         values:
           - name: CurrentMajorVersionNumber
             metric: windows_registry_windows_major_version
-      - key: HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management
+      - name: memory_management
+        key: HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management
         values:
           - name: ClearPageFileAtShutdown
 ```
@@ -46,7 +48,7 @@ collector:
 YAML:
 
 ```yaml
-- name: windows_nt # optional, free text id for the key group
+- name: windows_nt # required, unique id for the key group
   key: HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion
   values:
     - name: CurrentMajorVersionNumber # registry value name
@@ -55,7 +57,8 @@ YAML:
       type: gauge # optional
       labels: # optional
         product: windows
-- key: HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management
+- name: memory_management # required
+  key: HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management
   values:
     - name: ClearPageFileAtShutdown
 ```
@@ -78,6 +81,7 @@ JSON:
     ]
   },
   {
+    "name": "memory_management",
     "key": "HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management",
     "values": [
       { "name": "ClearPageFileAtShutdown" }
@@ -88,10 +92,10 @@ JSON:
 
 #### name
 
-Optional, free text id for the key group. It is used to identify the key in logs
-and to seed auto-generated metric names (see [Metric naming](#metric-naming)). It
-does not change the `key` label on the `windows_registry_key_success` metric. If
-omitted, the normalized key path is used instead.
+Required, unique id for the key group. It is used as the `name` label on
+`windows_registry_key_success`, to identify the key in logs, and to seed
+auto-generated metric names (see [Metric naming](#metric-naming)). Each key must
+have a distinct `name`; duplicates are rejected at build time.
 
 #### key
 
@@ -165,20 +169,18 @@ This key is optional.
 The registry collector returns one metric per configured value, named and typed
 according to the configuration, plus a per-key success metric.
 
-| Name                           | Description                                                                  | Type           | Labels |
-|--------------------------------|------------------------------------------------------------------------------|----------------|--------|
-| *user defined*                 | Numeric value of a configured REG_DWORD or REG_QWORD value | gauge / counter | *user defined* |        |
-| `windows_registry_key_success` | Whether the key could be opened and all of its configured values read (0, 1) | gauge          | `key`  |
+| Name | Description | Type | Labels |
+| --- | --- | --- | --- |
+| *user defined* | Numeric value of a configured REG_DWORD or REG_QWORD value | gauge / counter | *user defined* |  |
+| `windows_registry_key_success` | Whether the key could be opened and all of its configured values read (0, 1) | gauge | `name` |
 
 A `windows_registry_key_success` value of `0` means the key could not be opened
 *or* at least one configured value was missing or not a `REG_DWORD`/`REG_QWORD`;
 values that did read successfully are still exported.
 
-The `key` label on `windows_registry_key_success` is normalized to the short hive
-name and backslashes, and is lowercased, regardless of how the key is written in
-the configuration. Because the registry matches keys case-insensitively, this
-makes the same key produce an identical label on every system, so queries
-aggregate cleanly across a fleet.
+The `name` label on `windows_registry_key_success` is the configured key
+[`name`](#name), used verbatim. Because each key must have a unique `name`, the
+success metric can never emit duplicate series.
 
 ### Metric naming
 
@@ -204,12 +206,11 @@ values:
 windows_registry_<group>_<value>
 ```
 
-where `<group>` is the key's [`name`](#name) if set, otherwise the normalized key
-path (short hive + backslashes), and `<value>` is the registry value name. The
-whole string is then lowercased, every character that is not a letter or digit is
-replaced with `_`, and leading/trailing `_` are trimmed.
+where `<group>` is the key's [`name`](#name) and `<value>` is the registry value
+name. The whole string is then lowercased, every character that is not a letter or
+digit is replaced with `_`, and leading/trailing `_` are trimmed.
 
-With a group `name` — short and readable:
+Example:
 
 ```yaml
 - name: windows_nt
@@ -219,16 +220,6 @@ With a group `name` — short and readable:
 ```
 
 → `windows_registry_windows_nt_currentmajorversionnumber`
-
-Without a group `name` — the full key path is folded into the metric name:
-
-```yaml
-- key: HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion
-  values:
-    - name: CurrentMajorVersionNumber
-```
-
-→ `windows_registry_hklm_software_microsoft_windows_nt_currentversion_currentmajorversionnumber`
 
 Each special character is replaced individually rather than collapsed, so a value
 named `Foo (Bar)` becomes `foo__bar` (note the double underscore). Prefer an
@@ -252,12 +243,9 @@ windows_registry_windows_major_version{product="windows"} 10
 windows_registry_memory_management_clearpagefileatshutdown 0
 # HELP windows_registry_key_success Whether the registry key could be read successfully.
 # TYPE windows_registry_key_success gauge
-windows_registry_key_success{key="hklm\\software\\microsoft\\windows nt\\currentversion"} 1
-windows_registry_key_success{key="hklm\\system\\currentcontrolset\\control\\session manager\\memory management"} 1
+windows_registry_key_success{name="windows_nt"} 1
+windows_registry_key_success{name="memory_management"} 1
 ```
-
-Note that backslashes in label values are escaped (`\\`) in the Prometheus
-exposition format.
 
 ### Notes
 
@@ -286,5 +274,5 @@ windows_registry_memory_management_clearpagefileatshutdown != 0
       severity: warning
     annotations:
       summary: "Registry key could not be read (instance {{ $labels.instance }})"
-      description: "The registry key {{ $labels.key }} could not be read for 15 minutes."
+      description: "The registry key {{ $labels.name }} could not be read for 15 minutes."
 ```

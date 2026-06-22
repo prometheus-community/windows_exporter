@@ -115,12 +115,13 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	c.keySuccessDesc = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "key_success"),
 		"Whether the registry key could be read successfully.",
-		[]string{"key"},
+		[]string{"name"},
 		nil,
 	)
 
 	c.keys = make([]Key, 0, len(c.config.Keys))
 	labels := make([]string, 0, len(c.config.Keys))
+	groups := make([]string, 0, len(c.config.Keys))
 
 	var errs []error
 
@@ -160,12 +161,21 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 			continue
 		}
 
-		// group identifies the key in logs and seeds auto-generated metric names.
-		// It defaults to the normalized key path when no explicit name is given.
-		group := key.Name
-		if group == "" {
-			group = label
+		if key.Name == "" {
+			errs = append(errs, fmt.Errorf("name is required for key %s", label))
+
+			continue
 		}
+
+		if slices.Contains(groups, key.Name) {
+			errs = append(errs, fmt.Errorf("key name %q is duplicated", key.Name))
+
+			continue
+		}
+
+		groups = append(groups, key.Name)
+
+		group := key.Name
 
 		values := make([]Value, 0, len(key.Values))
 		valueNames := make([]string, 0, len(key.Values))
@@ -286,7 +296,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 			c.keySuccessDesc,
 			prometheus.GaugeValue,
 			success,
-			key.label,
+			key.Name,
 		)
 	}
 
