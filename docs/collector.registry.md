@@ -9,10 +9,11 @@ every value under it declares the metric name, type, and labels it is exported a
 
 
 
--|-
-Metric name prefix  | `registry`
-Data source         | Windows Registry
-Enabled by default? | No
+ |                     |                  |
+ |---------------------|------------------|
+ | Metric name prefix  | `registry`       |
+ | Data source         | Windows Registry |
+ | Enabled by default? | No               |
 
 ## Flags
 
@@ -171,7 +172,7 @@ according to the configuration, plus a per-key success metric.
 
 | Name | Description | Type | Labels |
 | --- | --- | --- | --- |
-| *user defined* | Numeric value of a configured REG_DWORD or REG_QWORD value | gauge / counter | *user defined* |  |
+| *user defined* | Numeric value of a configured REG_DWORD or REG_QWORD value | gauge / counter | *user defined* |
 | `windows_registry_key_success` | Whether the key could be opened and all of its configured values read (0, 1) | gauge | `name` |
 
 A `windows_registry_key_success` value of `0` means the key could not be opened
