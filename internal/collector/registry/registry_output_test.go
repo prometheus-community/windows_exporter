@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/prometheus-community/windows_exporter/internal/collector/registry"
+	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/stretchr/testify/require"
@@ -144,6 +145,65 @@ windows_registry_testgroup_testdword 1234
 	// QuoteMeta escapes the backslashes/braces in the exposition so the exact
 	// values, types, labels, and names are matched literally.
 	require.Regexp(t, "^"+regexp.QuoteMeta(expected), got)
+}
+
+// TestCollectMissingKeyReturnsErrNoData verifies that a key that does not exist
+// returns an error wrapping types.ErrNoData, so the framework marks the
+// collector "succeeded with warnings" rather than failed.
+func TestCollectMissingKeyReturnsErrNoData(t *testing.T) {
+	t.Parallel()
+
+	c := registry.New(&registry.Config{
+		Keys: []registry.Key{
+			{
+				Name:   "missing",
+				Key:    fmt.Sprintf(`HKCU\Software\windows_exporter_does_not_exist_%d`, time.Now().UnixNano()),
+				Values: []registry.Value{{Name: "AnyValue"}},
+			},
+		},
+	})
+
+	require.NoError(t, c.Build(slog.New(slog.DiscardHandler), nil))
+
+	ch := make(chan prometheus.Metric, 10)
+	err := c.Collect(ch, 0)
+	close(ch)
+
+	require.Error(t, err)
+	require.ErrorIs(t, err, types.ErrNoData)
+}
+
+// TestCollectMissingValueReturnsErrNoData verifies that a value that does not
+// exist within an otherwise-openable key also returns types.ErrNoData.
+func TestCollectMissingValueReturnsErrNoData(t *testing.T) {
+	t.Parallel()
+
+	sub := fmt.Sprintf(`Software\windows_exporter_registry_missing_val_%d`, time.Now().UnixNano())
+
+	k, _, err := winregistry.CreateKey(winregistry.CURRENT_USER, sub, winregistry.SET_VALUE)
+	require.NoError(t, err)
+	require.NoError(t, k.Close())
+
+	t.Cleanup(func() { _ = winregistry.DeleteKey(winregistry.CURRENT_USER, sub) })
+
+	c := registry.New(&registry.Config{
+		Keys: []registry.Key{
+			{
+				Name:   "test",
+				Key:    `HKCU\` + sub,
+				Values: []registry.Value{{Name: "DoesNotExist"}},
+			},
+		},
+	})
+
+	require.NoError(t, c.Build(slog.New(slog.DiscardHandler), nil))
+
+	ch := make(chan prometheus.Metric, 10)
+	err = c.Collect(ch, 0)
+	close(ch)
+
+	require.Error(t, err)
+	require.ErrorIs(t, err, types.ErrNoData)
 }
 
 // TestCollectorSharedMetricName proves the supported aggregation pattern from the
