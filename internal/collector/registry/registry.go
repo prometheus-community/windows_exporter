@@ -112,6 +112,8 @@ func (c *Collector) Close() error {
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	c.logger = logger.With(slog.String("collector", Name))
 
+    c.logger.Info("file collector is in an experimental state! It may subject to change.")
+
 	c.keySuccessDesc = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "key_success"),
 		"Whether the registry key could be read successfully.",
