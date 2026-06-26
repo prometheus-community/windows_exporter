@@ -834,6 +834,11 @@ func (c *Collector) workerBitlocker(ctx context.Context, initErrCh chan<- error)
 				continue
 			}
 
+			// TEMP DIAGNOSTIC: query both the bare path and the backslashed path
+			// to determine whether the trailing backslash actually changes the
+			// result of SHCreateItemFromParsingName/GetProperty. REMOVE BEFORE MERGE.
+			c.bitlockerProbe(&pkey, path)
+
 			status, err := func(path string) (int, error) {
 				// SHCreateItemFromParsingName requires a trailing backslash to correctly
 				// identify volume roots (e.g. "C:\" instead of "C:") and mount point
@@ -866,4 +871,44 @@ func (c *Collector) workerBitlocker(ctx context.Context, initErrCh chan<- error)
 			}{err: err, status: status}
 		}
 	}
+}
+
+// bitlockerProbe is a TEMPORARY diagnostic helper. It queries the BitLocker
+// property for both the raw path and the path with a trailing backslash and
+// logs both results, so we can determine whether the trailing backslash
+// actually affects SHCreateItemFromParsingName/GetProperty. REMOVE BEFORE MERGE.
+func (c *Collector) bitlockerProbe(pkey *propsys.PROPERTYKEY, path string) {
+	query := func(p string) (int, error) {
+		item, err := shell32.SHCreateItemFromParsingName(p)
+		if err != nil {
+			return -1, err
+		}
+
+		defer item.Release()
+
+		var v ole.VARIANT
+
+		if err := item.GetProperty(pkey, &v); err != nil {
+			return -1, err
+		}
+
+		val := int(v.Val)
+
+		return val, v.Clear()
+	}
+
+	bare := strings.TrimSuffix(path, `\`)
+	withSlash := bare + `\`
+
+	bareVal, bareErr := query(bare)
+	slashVal, slashErr := query(withSlash)
+
+	c.logger.Info("bitlocker backslash probe",
+		slog.String("bare_path", bare),
+		slog.Int("bare_status", bareVal),
+		slog.Any("bare_err", bareErr),
+		slog.String("slash_path", withSlash),
+		slog.Int("slash_status", slashVal),
+		slog.Any("slash_err", slashErr),
+	)
 }
