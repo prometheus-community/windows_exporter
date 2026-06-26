@@ -52,8 +52,13 @@ func SHCreateItemFromParsingName(path string) (*IShellItem2, error) {
 		uintptr(unsafe.Pointer(iidIShellItem2)),
 		uintptr(unsafe.Pointer(&result)),
 	)
-	if hr != 0 {
-		return nil, fmt.Errorf("syscall failed: %w", err)
+
+	// procSHCreateItemFromParsingName.Call returns an HRESULT as its first value.
+	// Only the sign bit indicates failure (the FAILED macro); success codes such
+	// as S_OK (0) and S_FALSE (1) must not be treated as errors. The HRESULT, not
+	// GetLastError, carries the COM error information.
+	if int32(hr) < 0 {
+		return nil, fmt.Errorf("SHCreateItemFromParsingName failed: %w", ole.NewError(hr))
 	}
 
 	if result == nil {
@@ -64,15 +69,20 @@ func SHCreateItemFromParsingName(path string) (*IShellItem2, error) {
 }
 
 func (item *IShellItem2) GetProperty(key *propsys.PROPERTYKEY, v *ole.VARIANT) error {
-	hr, _, err := syscall.SyscallN(
+	hr, _, _ := syscall.SyscallN(
 		item.lpVtbl.GetProperty,
 		uintptr(unsafe.Pointer(item)),
 		uintptr(unsafe.Pointer(key)),
 		uintptr(unsafe.Pointer(v)),
 	)
 
-	if hr != 0 {
-		return fmt.Errorf("GetProperty failed: %w", err)
+	// GetProperty is a COM method whose return value is an HRESULT. Only the sign
+	// bit indicates failure (the FAILED macro); success codes such as S_OK (0)
+	// and S_FALSE (1) must not be treated as errors. The third return value of
+	// SyscallN is GetLastError, which COM methods do not set, so it would report
+	// stale, unrelated errors (e.g. "Too many posts were made to a semaphore").
+	if int32(hr) < 0 {
+		return fmt.Errorf("GetProperty failed: %w", ole.NewError(hr))
 	}
 
 	return nil
