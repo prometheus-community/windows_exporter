@@ -243,9 +243,10 @@ func queryRawData(query string) ([]byte, error) {
 
 		switch {
 		case errors.Is(err, error(windows.ERROR_MORE_DATA)):
-			newBuffer := make([]byte, len(buffer)+16384)
-			copy(newBuffer, buffer)
-			buffer = newBuffer
+			// Exponential buffer growth prevents O(N) allocation spin-loops under heavy load.
+			// The previous copy() was removed because the buffer contents are
+			// incomplete/invalid and will be overwritten on the next API call.
+			buffer = make([]byte, len(buffer)*2)
 
 			continue
 		case errors.Is(err, error(windows.ERROR_BUSY)):
