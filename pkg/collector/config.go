@@ -50,6 +50,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/physical_disk"
 	"github.com/prometheus-community/windows_exporter/internal/collector/printer"
 	"github.com/prometheus-community/windows_exporter/internal/collector/process"
+	"github.com/prometheus-community/windows_exporter/internal/collector/registry"
 	"github.com/prometheus-community/windows_exporter/internal/collector/remote_fx"
 	"github.com/prometheus-community/windows_exporter/internal/collector/scheduled_task"
 	"github.com/prometheus-community/windows_exporter/internal/collector/service"
@@ -100,6 +101,7 @@ type Config struct {
 	PhysicalDisk       physical_disk.Config      `yaml:"physical_disk"`
 	Printer            printer.Config            `yaml:"printer"`
 	Process            process.Config            `yaml:"process"`
+	Registry           registry.Config           `yaml:"registry"`
 	RemoteFx           remote_fx.Config          `yaml:"remote_fx"`
 	ScheduledTask      scheduled_task.Config     `yaml:"scheduled_task"`
 	Service            service.Config            `yaml:"service"`
@@ -154,6 +156,7 @@ var ConfigDefaults = Config{
 	PhysicalDisk:       physical_disk.ConfigDefaults,
 	Printer:            printer.ConfigDefaults,
 	Process:            process.ConfigDefaults,
+	Registry:           registry.ConfigDefaults,
 	RemoteFx:           remote_fx.ConfigDefaults,
 	ScheduledTask:      scheduled_task.ConfigDefaults,
 	Service:            service.ConfigDefaults,
