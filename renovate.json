@@ -9,9 +9,19 @@
   ],
   "timezone": "Europe/Berlin",
   "schedule": [
-    "* 14-17 * * 5"
+    "* * * * 5"
   ],
   "packageRules": [
+    {
+      "enabled": true,
+      "matchDatasources": ["golang-version"],
+      "rangeStrategy": "bump"
+    },
+    {
+      "enabled": true,
+      "matchDepNames": ["go", "golang"],
+      "groupName": "go version"
+    },
     {
       "matchPackageNames": ["go-yaml/yaml"],
       "enabled": false
