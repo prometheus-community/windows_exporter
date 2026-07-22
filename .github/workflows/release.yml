@@ -240,5 +240,4 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          platforms: windows/amd64
-          annotations: ${{ steps.meta.outputs.labels }}
+          platforms: windows/amd64,windows/arm64
