@@ -93,7 +93,7 @@ func (c *Collector) collectHttpServiceRequestQueues(ch chan<- prometheus.Metric)
 		return fmt.Errorf("failed to collect Http Service Request Queues metrics: %w", err)
 	}
 
-	deduplicateIISNames(c.perfDataObjectHttpServiceRequestQueues)
+	c.perfDataObjectHttpServiceRequestQueues = deduplicateIISNames(c.perfDataObjectHttpServiceRequestQueues)
 
 	for _, data := range c.perfDataObjectHttpServiceRequestQueues {
 		if strings.HasPrefix(data.Name, "---") {

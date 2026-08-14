@@ -23,6 +23,7 @@ import (
 	"log/slog"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -290,30 +291,75 @@ type collectorName interface {
 
 // deduplicateIISNames deduplicate IIS site names from various IIS perflib objects.
 //
-// E.G. Given the following list of site names, "Site_B" would be
-// discarded, and "Site_B#2" would be kept and presented as "Site_B" in the
-// Collector metrics.
-// [ "Site_A", "Site_B", "Site_C", "Site_B#2" ].
-func deduplicateIISNames[T collectorName](counterValues []T) {
-	indexes := make(map[string]int)
+// IIS perflib may report duplicate entries for the same site/app-pool when
+// instances are recycled; the duplicate carries a numeric suffix separated by
+// "#" (e.g. "Site_B#2"). In that case "Site_B" should be discarded and
+// "Site_B#2" kept – it will be presented as "Site_B" in the metrics.
+//
+// Application Pool names may legitimately contain a "#" character, so only a
+// trailing "#<digits>" pattern is treated as an IIS counter suffix.
+//
+// Example input:  [ "Site_A", "Site_B", "Site_C", "Site_B#2" ]
+// Example output: [ "Site_A", "Site_B#2", "Site_C" ]  (presented as "Site_B")
+func deduplicateIISNames[T collectorName](counterValues []T) []T {
+	type dedupeEntry struct {
+		resultIdx     int // index into result slice
+		numericSuffix int // -1 for base (no suffix), ≥0 for "#N" variants
+	}
 
-	// Ensure IIS entry with the highest suffix occurs last
+	// Sort by base name for a deterministic output order.
 	slices.SortFunc(counterValues, func(a, b T) int {
-		return strings.Compare(a.GetName(), b.GetName())
+		return strings.Compare(iisCounterBaseName(a.GetName()), iisCounterBaseName(b.GetName()))
 	})
 
-	// Use map to deduplicate IIS entries
-	for index, counterValue := range counterValues {
-		name := strings.Split(counterValue.GetName(), "#")[0]
-		if name == counterValue.GetName() {
-			continue
+	seen := make(map[string]dedupeEntry, len(counterValues))
+	result := make([]T, 0, len(counterValues))
+
+	for _, counterValue := range counterValues {
+		name := counterValue.GetName()
+		baseName := iisCounterBaseName(name)
+
+		// Determine the numeric suffix for this entry (-1 means "no suffix").
+		suffix := -1
+		if baseName != name {
+			// iisCounterBaseName guarantees the remainder after '#' is numeric.
+			if n, err := strconv.Atoi(name[len(baseName)+1:]); err == nil {
+				suffix = n
+			}
 		}
 
-		if originalIndex, ok := indexes[name]; !ok {
-			counterValues[originalIndex] = counterValue
-			counterValues = slices.Delete(counterValues, index, 1)
+		if e, ok := seen[baseName]; ok {
+			// Keep whichever entry carries the higher numeric suffix.
+			if suffix > e.numericSuffix {
+				result[e.resultIdx] = counterValue
+				seen[baseName] = dedupeEntry{e.resultIdx, suffix}
+			}
 		} else {
-			indexes[name] = index
+			seen[baseName] = dedupeEntry{len(result), suffix}
+			result = append(result, counterValue)
 		}
 	}
+
+	return result
+}
+
+// iisCounterBaseName strips a trailing IIS perflib numeric suffix ("#<digits>")
+// from name and returns the base name. If no such suffix is present, name is
+// returned unchanged.
+//
+// Only a trailing "#" followed exclusively by ASCII digits is treated as a
+// counter suffix, so "#" characters that are part of a legitimate application
+// name (e.g. "App#Pool") are left intact.
+func iisCounterBaseName(name string) string {
+	idx := strings.LastIndex(name, "#")
+	if idx < 0 {
+		return name
+	}
+
+	suffix := name[idx+1:]
+	if _, err := strconv.Atoi(suffix); err != nil || suffix == "" {
+		return name
+	}
+
+	return name[:idx]
 }
