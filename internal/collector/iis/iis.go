@@ -322,10 +322,9 @@ func deduplicateIISNames[T collectorName](counterValues []T) []T {
 		// Determine the numeric suffix for this entry (-1 means "no suffix").
 		suffix := -1
 		if baseName != name {
-			// iisCounterBaseName guarantees the remainder after '#' is numeric.
-			if n, err := strconv.Atoi(name[len(baseName)+1:]); err == nil {
-				suffix = n
-			}
+			// iisCounterBaseName guarantees the remainder after '#' is numeric,
+			// so the error can be safely ignored here.
+			suffix, _ = strconv.Atoi(name[len(baseName)+1:])
 		}
 
 		if e, ok := seen[baseName]; ok {
