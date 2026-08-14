@@ -173,7 +173,7 @@ func (c *Collector) collectAppPoolWAS(ch chan<- prometheus.Metric) error {
 		return fmt.Errorf("failed to collect APP_POOL_WAS metrics: %w", err)
 	}
 
-	deduplicateIISNames(c.perfDataObjectAppPoolWAS)
+	c.perfDataObjectAppPoolWAS = deduplicateIISNames(c.perfDataObjectAppPoolWAS)
 
 	for _, data := range c.perfDataObjectAppPoolWAS {
 		if c.config.AppExclude.MatchString(data.Name) || !c.config.AppInclude.MatchString(data.Name) {
