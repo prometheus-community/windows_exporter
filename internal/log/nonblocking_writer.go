@@ -26,7 +26,6 @@ const defaultNonBlockingWriterBufferSize = 1024
 type nonBlockingWriter struct {
 	writer     io.Writer
 	queue      chan []byte
-	stop       chan struct{}
 	workerDone chan struct{}
 	mu         sync.RWMutex
 	closed     bool
@@ -40,27 +39,14 @@ func newNonBlockingWriter(writer io.Writer, queueSize int) *nonBlockingWriter {
 	w := &nonBlockingWriter{
 		writer:     writer,
 		queue:      make(chan []byte, queueSize),
-		stop:       make(chan struct{}),
 		workerDone: make(chan struct{}),
 	}
 
 	go func() {
 		defer close(w.workerDone)
 
-		for {
-			select {
-			case p := <-w.queue:
-				_, _ = w.writer.Write(p)
-			case <-w.stop:
-				for {
-					select {
-					case p := <-w.queue:
-						_, _ = w.writer.Write(p)
-					default:
-						return
-					}
-				}
-			}
+		for p := range w.queue {
+			_, _ = w.writer.Write(p)
 		}
 	}()
 
@@ -89,7 +75,7 @@ func (w *nonBlockingWriter) Close() error {
 	w.mu.Lock()
 	if !w.closed {
 		w.closed = true
-		close(w.stop)
+		close(w.queue)
 	}
 	w.mu.Unlock()
 
