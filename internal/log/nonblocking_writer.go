@@ -19,17 +19,16 @@ import (
 	"bytes"
 	"io"
 	"sync"
-	"sync/atomic"
 )
 
 const defaultNonBlockingWriterBufferSize = 1024
 
 type nonBlockingWriter struct {
-	writer io.Writer
-	queue  chan []byte
-	done   chan struct{}
-	closed atomic.Bool
-	once   sync.Once
+	writer     io.Writer
+	queue      chan []byte
+	stop       chan struct{}
+	workerDone chan struct{}
+	once       sync.Once
 }
 
 func newNonBlockingWriter(writer io.Writer, queueSize int) *nonBlockingWriter {
@@ -38,16 +37,29 @@ func newNonBlockingWriter(writer io.Writer, queueSize int) *nonBlockingWriter {
 	}
 
 	w := &nonBlockingWriter{
-		writer: writer,
-		queue:  make(chan []byte, queueSize),
-		done:   make(chan struct{}),
+		writer:     writer,
+		queue:      make(chan []byte, queueSize),
+		stop:       make(chan struct{}),
+		workerDone: make(chan struct{}),
 	}
 
 	go func() {
-		defer close(w.done)
+		defer close(w.workerDone)
 
-		for p := range w.queue {
-			_, _ = w.writer.Write(p)
+		for {
+			select {
+			case p := <-w.queue:
+				_, _ = w.writer.Write(p)
+			case <-w.stop:
+				for {
+					select {
+					case p := <-w.queue:
+						_, _ = w.writer.Write(p)
+					default:
+						return
+					}
+				}
+			}
 		}
 	}()
 
@@ -55,13 +67,11 @@ func newNonBlockingWriter(writer io.Writer, queueSize int) *nonBlockingWriter {
 }
 
 func (w *nonBlockingWriter) Write(p []byte) (int, error) {
-	if w.closed.Load() {
-		return 0, io.ErrClosedPipe
-	}
-
 	msg := bytes.Clone(p)
 
 	select {
+	case <-w.stop:
+		return 0, io.ErrClosedPipe
 	case w.queue <- msg:
 	default:
 	}
@@ -71,11 +81,10 @@ func (w *nonBlockingWriter) Write(p []byte) (int, error) {
 
 func (w *nonBlockingWriter) Close() error {
 	w.once.Do(func() {
-		w.closed.Store(true)
-		close(w.queue)
+		close(w.stop)
 	})
 
-	<-w.done
+	<-w.workerDone
 
 	return nil
 }
