@@ -26,6 +26,7 @@ import (
 
 	"github.com/prometheus-community/windows_exporter/internal/log/eventlog"
 	"github.com/prometheus/common/promslog"
+	"golang.org/x/sys/windows"
 	wineventlog "golang.org/x/sys/windows/svc/eventlog"
 )
 
@@ -49,9 +50,9 @@ func (f *AllowedFile) Set(s string) error {
 
 	switch s {
 	case "stdout":
-		f.w = os.Stdout
+		f.w = maybeNonBlockingConsoleWriter(os.Stdout)
 	case "stderr":
-		f.w = os.Stderr
+		f.w = maybeNonBlockingConsoleWriter(os.Stderr)
 	case "eventlog":
 		eventLog, err := wineventlog.Open("windows_exporter")
 		if err != nil {
@@ -69,6 +70,16 @@ func (f *AllowedFile) Set(s string) error {
 	}
 
 	return nil
+}
+
+func maybeNonBlockingConsoleWriter(file *os.File) io.Writer {
+	var mode uint32
+
+	if err := windows.GetConsoleMode(windows.Handle(file.Fd()), &mode); err == nil {
+		return newNonBlockingWriter(file, defaultNonBlockingWriterBufferSize)
+	}
+
+	return file
 }
 
 // Config is a struct containing configurable settings for the logger.
