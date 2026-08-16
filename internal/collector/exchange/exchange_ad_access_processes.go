@@ -44,11 +44,11 @@ type perfDataCounterValuesADAccessProcesses struct {
 	Name string
 
 	LdapReadTime                    float64 `perfdata:"LDAP Read Time"`
-	LdapReadTimeBase                float64 `perfdata:"LDAP Read Time,secondvalue"`
+	LdapReadOperationsTotal         float64 `perfdata:"LDAP Read Time,secondvalue"`
 	LdapSearchTime                  float64 `perfdata:"LDAP Search Time"`
-	LdapSearchTimeBase              float64 `perfdata:"LDAP Search Time,secondvalue"`
+	LdapSearchOperationsTotal       float64 `perfdata:"LDAP Search Time,secondvalue"`
 	LdapWriteTime                   float64 `perfdata:"LDAP Write Time"`
-	LdapWriteTimeBase               float64 `perfdata:"LDAP Write Time,secondvalue"`
+	LdapWriteOperationsTotal        float64 `perfdata:"LDAP Write Time,secondvalue"`
 	LdapTimeoutErrorsPerSec         float64 `perfdata:"LDAP Timeout Errors/sec"`
 	LongRunningLDAPOperationsPerMin float64 `perfdata:"Long Running LDAP Operations/min"`
 }
@@ -140,7 +140,7 @@ func (c *Collector) collectADAccessProcesses(ch chan<- prometheus.Metric) error 
 		ch <- prometheus.MustNewConstMetric(
 			c.ldapReadOperations,
 			prometheus.CounterValue,
-			data.LdapReadTimeBase,
+			data.LdapReadOperationsTotal,
 			labelName,
 		)
 
@@ -153,7 +153,7 @@ func (c *Collector) collectADAccessProcesses(ch chan<- prometheus.Metric) error 
 		ch <- prometheus.MustNewConstMetric(
 			c.ldapSearchOperations,
 			prometheus.CounterValue,
-			data.LdapSearchTimeBase,
+			data.LdapSearchOperationsTotal,
 			labelName,
 		)
 
@@ -166,7 +166,7 @@ func (c *Collector) collectADAccessProcesses(ch chan<- prometheus.Metric) error 
 		ch <- prometheus.MustNewConstMetric(
 			c.ldapWriteOperations,
 			prometheus.CounterValue,
-			data.LdapWriteTimeBase,
+			data.LdapWriteOperationsTotal,
 			labelName,
 		)
 
