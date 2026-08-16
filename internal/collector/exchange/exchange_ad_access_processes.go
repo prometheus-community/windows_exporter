@@ -30,9 +30,12 @@ type collectorADAccessProcesses struct {
 	perfDataCollectorADAccessProcesses *pdh.Collector
 	perfDataObjectADAccessProcesses    []perfDataCounterValuesADAccessProcesses
 
+	ldapReadOperations              *prometheus.Desc
 	ldapReadTime                    *prometheus.Desc
+	ldapSearchOperations            *prometheus.Desc
 	ldapSearchTime                  *prometheus.Desc
 	ldapTimeoutErrorsPerSec         *prometheus.Desc
+	ldapWriteOperations             *prometheus.Desc
 	ldapWriteTime                   *prometheus.Desc
 	longRunningLDAPOperationsPerMin *prometheus.Desc
 }
@@ -41,8 +44,11 @@ type perfDataCounterValuesADAccessProcesses struct {
 	Name string
 
 	LdapReadTime                    float64 `perfdata:"LDAP Read Time"`
+	LdapReadTimeBase                float64 `perfdata:"LDAP Read Time,secondvalue"`
 	LdapSearchTime                  float64 `perfdata:"LDAP Search Time"`
+	LdapSearchTimeBase              float64 `perfdata:"LDAP Search Time,secondvalue"`
 	LdapWriteTime                   float64 `perfdata:"LDAP Write Time"`
+	LdapWriteTimeBase               float64 `perfdata:"LDAP Write Time,secondvalue"`
 	LdapTimeoutErrorsPerSec         float64 `perfdata:"LDAP Timeout Errors/sec"`
 	LongRunningLDAPOperationsPerMin float64 `perfdata:"Long Running LDAP Operations/min"`
 }
@@ -61,15 +67,33 @@ func (c *Collector) buildADAccessProcesses() error {
 		[]string{"name"},
 		nil,
 	)
+	c.ldapReadOperations = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "ldap_read_operations_total"),
+		"Total number of LDAP read operations",
+		[]string{"name"},
+		nil,
+	)
 	c.ldapSearchTime = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "ldap_search_time_sec"),
 		"Time (sec) to send an LDAP search request and receive a response",
 		[]string{"name"},
 		nil,
 	)
+	c.ldapSearchOperations = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "ldap_search_operations_total"),
+		"Total number of LDAP search operations",
+		[]string{"name"},
+		nil,
+	)
 	c.ldapWriteTime = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "ldap_write_time_sec"),
 		"Time (sec) to send an LDAP Add/Modify/Delete request and receive a response",
+		[]string{"name"},
+		nil,
+	)
+	c.ldapWriteOperations = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "ldap_write_operations_total"),
+		"Total number of LDAP Add/Modify/Delete operations",
 		[]string{"name"},
 		nil,
 	)
@@ -113,6 +137,12 @@ func (c *Collector) collectADAccessProcesses(ch chan<- prometheus.Metric) error 
 			utils.MilliSecToSec(data.LdapReadTime),
 			labelName,
 		)
+		ch <- prometheus.MustNewConstMetric(
+			c.ldapReadOperations,
+			prometheus.CounterValue,
+			data.LdapReadTimeBase,
+			labelName,
+		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.ldapSearchTime,
@@ -120,11 +150,23 @@ func (c *Collector) collectADAccessProcesses(ch chan<- prometheus.Metric) error 
 			utils.MilliSecToSec(data.LdapSearchTime),
 			labelName,
 		)
+		ch <- prometheus.MustNewConstMetric(
+			c.ldapSearchOperations,
+			prometheus.CounterValue,
+			data.LdapSearchTimeBase,
+			labelName,
+		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.ldapWriteTime,
 			prometheus.CounterValue,
 			utils.MilliSecToSec(data.LdapWriteTime),
+			labelName,
+		)
+		ch <- prometheus.MustNewConstMetric(
+			c.ldapWriteOperations,
+			prometheus.CounterValue,
+			data.LdapWriteTimeBase,
 			labelName,
 		)
 
