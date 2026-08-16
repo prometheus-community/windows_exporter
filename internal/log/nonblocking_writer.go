@@ -28,7 +28,8 @@ type nonBlockingWriter struct {
 	queue      chan []byte
 	stop       chan struct{}
 	workerDone chan struct{}
-	once       sync.Once
+	mu         sync.RWMutex
+	closed     bool
 }
 
 func newNonBlockingWriter(writer io.Writer, queueSize int) *nonBlockingWriter {
@@ -69,9 +70,14 @@ func newNonBlockingWriter(writer io.Writer, queueSize int) *nonBlockingWriter {
 func (w *nonBlockingWriter) Write(p []byte) (int, error) {
 	msg := bytes.Clone(p)
 
-	select {
-	case <-w.stop:
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+
+	if w.closed {
 		return 0, io.ErrClosedPipe
+	}
+
+	select {
 	case w.queue <- msg:
 	default:
 	}
@@ -80,9 +86,12 @@ func (w *nonBlockingWriter) Write(p []byte) (int, error) {
 }
 
 func (w *nonBlockingWriter) Close() error {
-	w.once.Do(func() {
+	w.mu.Lock()
+	if !w.closed {
+		w.closed = true
 		close(w.stop)
-	})
+	}
+	w.mu.Unlock()
 
 	<-w.workerDone
 
