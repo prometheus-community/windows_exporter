@@ -111,6 +111,8 @@ func TestNonBlockingWriterDropsInsteadOfBlocking(t *testing.T) {
 	require.Len(t, writes, 2)
 	require.Equal(t, []byte("first"), writes[0])
 	require.Equal(t, []byte("second"), writes[1])
-	require.NotEqual(t, []byte("third"), writes[0])
-	require.NotEqual(t, []byte("third"), writes[1])
+
+	for _, write := range writes {
+		require.NotEqual(t, []byte("third"), write)
+	}
 }

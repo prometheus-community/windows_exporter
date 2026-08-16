@@ -54,14 +54,14 @@ func newNonBlockingWriter(writer io.Writer, queueSize int) *nonBlockingWriter {
 }
 
 func (w *nonBlockingWriter) Write(p []byte) (int, error) {
-	msg := bytes.Clone(p)
-
 	w.mu.RLock()
 	defer w.mu.RUnlock()
 
 	if w.closed {
 		return 0, io.ErrClosedPipe
 	}
+
+	msg := bytes.Clone(p)
 
 	select {
 	case w.queue <- msg:
