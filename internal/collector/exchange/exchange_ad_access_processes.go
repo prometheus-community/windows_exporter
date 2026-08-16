@@ -137,6 +137,7 @@ func (c *Collector) collectADAccessProcesses(ch chan<- prometheus.Metric) error 
 			utils.MilliSecToSec(data.LdapReadTime),
 			labelName,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.ldapReadOperations,
 			prometheus.CounterValue,
@@ -150,6 +151,7 @@ func (c *Collector) collectADAccessProcesses(ch chan<- prometheus.Metric) error 
 			utils.MilliSecToSec(data.LdapSearchTime),
 			labelName,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.ldapSearchOperations,
 			prometheus.CounterValue,
@@ -163,6 +165,7 @@ func (c *Collector) collectADAccessProcesses(ch chan<- prometheus.Metric) error 
 			utils.MilliSecToSec(data.LdapWriteTime),
 			labelName,
 		)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.ldapWriteOperations,
 			prometheus.CounterValue,
