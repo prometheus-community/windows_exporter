@@ -304,7 +304,7 @@ func deduplicateIISNames[T collectorName](counterValues []T) {
 
 	// Use map to deduplicate IIS entries
 	for index, counterValue := range counterValues {
-		name := strings.Split(counterValue.GetName(), "#")[0]
+		name, _, _ := strings.Cut(counterValue.GetName(), "#")
 		if name == counterValue.GetName() {
 			continue
 		}

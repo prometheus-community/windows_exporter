@@ -35,8 +35,7 @@ func (m *Error) Is(err error) bool {
 		return false
 	}
 
-	var e *Error
-	if errors.As(err, &e) {
+	if e, ok := errors.AsType[*Error](err); ok {
 		return m.ErrorCode == e.ErrorCode
 	}
 

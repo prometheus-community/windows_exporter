@@ -190,8 +190,7 @@ func waitUntilListening(tb testing.TB, network, address string) error {
 		break
 	}
 
-	var winErr windows.Errno
-	if errors.As(err, &winErr) {
+	if winErr, ok := errors.AsType[windows.Errno](err); ok {
 		return fmt.Errorf("listener not listening: %w (#%d)", winErr, uint32(winErr))
 	}
 

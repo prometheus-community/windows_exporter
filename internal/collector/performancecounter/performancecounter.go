@@ -328,7 +328,7 @@ func (c *Collector) collectObject(ch chan<- prometheus.Metric, perfDataObject Ob
 				continue
 			}
 
-			metricType, _ := field.Interface().(prometheus.ValueType)
+			metricType, _ := reflect.TypeAssert[prometheus.ValueType](field)
 
 			labels := make(prometheus.Labels, len(counter.Labels)+1)
 
