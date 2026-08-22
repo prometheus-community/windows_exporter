@@ -254,8 +254,7 @@ func queryRawData(query string) ([]byte, error) {
 
 			continue
 		case err != nil:
-			var errNo windows.Errno
-			if errors.As(err, &errNo) {
+			if errNo, ok := errors.AsType[windows.Errno](err); ok {
 				return nil, fmt.Errorf("ReqQueryValueEx failed: %w errno %d", err, uint(errNo))
 			}
 

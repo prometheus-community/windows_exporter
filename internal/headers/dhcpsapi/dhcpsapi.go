@@ -69,7 +69,7 @@ func GetDHCPV4ScopeStatistics() ([]DHCPV4Scope, error) {
 	var errs []error
 
 	for _, subnet := range subnets {
-		if err := (func() error {
+		if err := func() error {
 			var subnetInfo *DHCP_SUBNET_INFO
 
 			err := dhcpGetSubnetInfo(subnet.SubnetAddress, &subnetInfo)
@@ -129,7 +129,7 @@ func GetDHCPV4ScopeStatistics() ([]DHCPV4Scope, error) {
 			scopes = append(scopes, scope)
 
 			return nil
-		})(); err != nil {
+		}(); err != nil {
 			errs = append(errs, err)
 		}
 	}

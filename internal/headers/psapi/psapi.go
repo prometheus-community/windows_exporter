@@ -52,7 +52,7 @@ var (
 func GetPerformanceInfo() (PerformanceInformation, error) {
 	var lppi PerformanceInformation
 
-	size := (uint32)(unsafe.Sizeof(lppi))
+	size := uint32(unsafe.Sizeof(lppi))
 	lppi.cb = size
 	r1, _, err := procGetPerformanceInfo.Call(uintptr(unsafe.Pointer(&lppi)), uintptr(size))
 
