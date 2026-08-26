@@ -169,7 +169,7 @@ func (c *Collector) collectGlobFilePath(ch chan<- prometheus.Metric, filePattern
 
 		fileInfo, err := os.Stat(filePath)
 		if err != nil {
-			c.logger.Warn("failed to state file",
+			c.logger.Warn("failed to stat file",
 				slog.String("file", filePath),
 				slog.Any("err", err),
 			)

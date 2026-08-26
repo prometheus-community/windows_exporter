@@ -185,8 +185,9 @@ Matching is case-sensitive.
 | `mscluster_virtualdisk_info`                              | Virtual disk information (value is always 1)                                                   | gauge | `name`, `unique_id` |
 | `mscluster_virtualdisk_health_status`                     | Health status of the virtual disk. 0: Healthy, 1: Warning, 2: Unhealthy, 5: Unknown            | gauge | `name`, `unique_id` |
 | `mscluster_virtualdisk_size_bytes`                        | Total size of the virtual disk in bytes                                                        | gauge | `name`, `unique_id` |
+| `mscluster_virtualdisk_allocated_size_bytes`              | Allocated size of the virtual disk in bytes (capacity actually provisioned, excludes thin-provisioned unused capacity) | gauge | `name`, `unique_id` |
 | `mscluster_virtualdisk_footprint_on_pool_bytes`           | Physical storage consumed by the virtual disk on the storage pool in bytes                     | gauge | `name`, `unique_id` |
-| `mscluster_virtualdisk_storage_efficiency_percent`        | Storage efficiency percentage (Size / FootprintOnPool * 100)                                   | gauge | `name`, `unique_id` |
+| `mscluster_virtualdisk_storage_efficiency_percent`        | Storage efficiency percentage (AllocatedSize / FootprintOnPool * 100)                          | gauge | `name`, `unique_id` |
 
 ### Example metric
 Query the state of all cluster resource owned by node1

@@ -50,7 +50,7 @@ type perfDataCounterValuesDynamicMemoryVM struct {
 	// Hyper-V Dynamic Memory VM metrics
 	VmMemoryAddedMemory                float64 `perfdata:"Added Memory"`
 	VmMemoryCurrentPressure            float64 `perfdata:"Current Pressure"`
-	VmMemoryGuestAvailableMemory       float64 `perfdata:"Guest Available Memory"        perfdata_min_build:"17763"`
+	VmMemoryGuestAvailableMemory       float64 `perfdata:"Guest Available Memory"        perfdata_min_build:"20348"`
 	VmMemoryGuestVisiblePhysicalMemory float64 `perfdata:"Guest Visible Physical Memory"`
 	VmMemoryMaximumPressure            float64 `perfdata:"Maximum Pressure"`
 	VmMemoryMemoryAddOperations        float64 `perfdata:"Memory Add Operations"`
@@ -153,7 +153,7 @@ func (c *Collector) collectDynamicMemoryVM(ch chan<- prometheus.Metric) error {
 			data.Name,
 		)
 
-		if osversion.Build() >= osversion.LTSC2019 {
+		if osversion.Build() >= osversion.LTSC2022 {
 			ch <- prometheus.MustNewConstMetric(
 				c.vmMemoryGuestAvailableMemory,
 				prometheus.GaugeValue,

@@ -27,8 +27,11 @@ Comma-separated list of collectors to use, for example: `--collectors.exchange.e
 | `windows_exchange_rpc_operations_total`                                     | The rate at which RPC operations occur                                                                      |
 | `windows_exchange_rpc_user_count`                                           | Number of users                                                                                             |
 | `windows_exchange_ldap_read_time_sec`                                       | Time (sec) to send an LDAP read request and receive a response                                              |
+| `windows_exchange_ldap_read_operations_total`                               | Total number of LDAP read operations                                                                        |
 | `windows_exchange_ldap_search_time_sec`                                     | Time (sec) to send an LDAP search request and receive a response                                            |
+| `windows_exchange_ldap_search_operations_total`                             | Total number of LDAP search operations                                                                      |
 | `windows_exchange_ldap_write_time_sec`                                      | Time (sec) to send an LDAP Add/Modify/Delete request and receive a response                                 |
+| `windows_exchange_ldap_write_operations_total`                              | Total number of LDAP Add/Modify/Delete operations                                                           |
 | `windows_exchange_ldap_timeout_errors_total`                                | Total number of LDAP timeout errors                                                                         |
 | `windows_exchange_ldap_long_running_ops_per_sec`                            | Long Running LDAP operations per second                                                                     |
 | `windows_exchange_transport_queues_external_active_remote_delivery`         | External Active Remote Delivery Queue length                                                                |

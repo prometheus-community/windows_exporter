@@ -265,7 +265,7 @@ func (c *Collector) groupPrintJobs(printJobs []wmiPrintJob) map[PrintJobStatusGr
 	groupedPrintJobs := make(map[PrintJobStatusGroup]int)
 
 	for _, printJob := range printJobs {
-		printerName := strings.Split(printJob.Name, ",")[0]
+		printerName, _, _ := strings.Cut(printJob.Name, ",")
 
 		if c.config.PrinterExclude.MatchString(printerName) ||
 			!c.config.PrinterInclude.MatchString(printerName) {
