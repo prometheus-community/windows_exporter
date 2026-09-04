@@ -50,6 +50,7 @@ const (
 	subCollectorVirtualSMB                       = "virtual_smb"
 	subCollectorVirtualStorageDevice             = "virtual_storage_device"
 	subCollectorVirtualSwitch                    = "virtual_switch"
+	subCollectorReplica                          = "replica"
 )
 
 type Config struct {
@@ -74,6 +75,7 @@ var ConfigDefaults = Config{
 		subCollectorVirtualSMB,
 		subCollectorVirtualStorageDevice,
 		subCollectorVirtualSwitch,
+		subCollectorReplica,
 	},
 }
 
@@ -94,6 +96,7 @@ type Collector struct {
 	collectorVirtualSMB
 	collectorVirtualStorageDevice
 	collectorVirtualSwitch
+	collectorReplica
 
 	config Config
 	logger *slog.Logger
@@ -152,7 +155,7 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
+func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 	c.logger = logger.With(slog.String("collector", Name))
 	c.collectorFns = make([]func(ch chan<- prometheus.Metric) error, 0, len(c.config.CollectorsEnabled))
 	c.closeFns = make([]func(), 0, len(c.config.CollectorsEnabled))
@@ -243,6 +246,13 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 			build:   c.buildVirtualSwitch,
 			collect: c.collectVirtualSwitch,
 			close:   c.perfDataCollectorVirtualSwitch.Close,
+		},
+		subCollectorReplica: {
+			build: func() error {
+				return c.buildReplica(miSession)
+			},
+			collect: c.collectReplica,
+			close:   c.perfDataCollectorReplica.Close,
 		},
 	}
 
