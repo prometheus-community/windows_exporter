@@ -113,7 +113,7 @@ func (c *Collector) collectHttpServiceRequestQueues(ch chan<- prometheus.Metric)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.httpRequestQueuesTotalRejectedRequest,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			data.HttpRequestQueuesTotalRejectedRequests,
 			data.Name,
 		)
