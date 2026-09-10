@@ -36,6 +36,7 @@ type (
 
 type Properties struct {
 	ID          string           `json:"Id,omitempty"`
+	Name        string           `json:"Name,omitempty"`
 	SystemType  string           `json:"SystemType,omitempty"`
 	Owner       string           `json:"Owner,omitempty"`
 	State       string           `json:"State,omitempty"`
