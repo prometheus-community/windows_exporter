@@ -19,6 +19,7 @@ package mscluster
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/prometheus-community/windows_exporter/internal/mi"
@@ -31,10 +32,12 @@ const nameStoragePool = Name + "_storagepool"
 type collectorStoragePool struct {
 	storagePoolMIQuery mi.Query
 
-	storagePoolInfo          *prometheus.Desc
-	storagePoolHealthStatus  *prometheus.Desc
-	storagePoolSize          *prometheus.Desc
-	storagePoolAllocatedSize *prometheus.Desc
+	storagePoolInfo                            *prometheus.Desc
+	storagePoolHealthStatus                    *prometheus.Desc
+	storagePoolSize                            *prometheus.Desc
+	storagePoolAllocatedSize                   *prometheus.Desc
+	storagePoolOperationalStatus               *prometheus.Desc
+	storagePoolThinProvisioningAlertThresholds *prometheus.Desc
 }
 
 // msftStoragePool represents the MSFT_StoragePool WMI class
@@ -44,12 +47,13 @@ type msftStoragePool struct {
 	HealthStatus  uint16 `mi:"HealthStatus"`
 	Size          uint64 `mi:"Size"`
 	AllocatedSize uint64 `mi:"AllocatedSize"`
-	// OperationalStatus []uint16 `mi:"OperationalStatus"`  Not supported by mi query: https://github.com/prometheus-community/windows_exporter/pull/2296#issuecomment-3736584632
-	// ThinProvisioningAlertThresholds []uint16 `mi:"ThinProvisioningAlertThresholds"`  Not supported by mi query (array), see OperationalStatus above.
+	// OperationalStatus and ThinProvisioningAlertThresholds are uint16 arrays and require the mi UINT16A support from #2490.
+	OperationalStatus               []uint16 `mi:"OperationalStatus"`
+	ThinProvisioningAlertThresholds []uint16 `mi:"ThinProvisioningAlertThresholds"`
 }
 
 func (c *Collector) buildStoragePool() error {
-	wmiSelect := "FriendlyName,UniqueId,HealthStatus,Size,AllocatedSize"
+	wmiSelect := "FriendlyName,UniqueId,HealthStatus,Size,AllocatedSize,OperationalStatus,ThinProvisioningAlertThresholds"
 
 	storagePoolMIQuery, err := mi.NewQuery(fmt.Sprintf("SELECT %s FROM MSFT_StoragePool", wmiSelect))
 	if err != nil {
@@ -83,6 +87,20 @@ func (c *Collector) buildStoragePool() error {
 		prometheus.BuildFQName(types.Namespace, nameStoragePool, "allocated_size_bytes"),
 		"Allocated size of the storage pool in bytes",
 		[]string{"name", "unique_id"},
+		nil,
+	)
+
+	c.storagePoolOperationalStatus = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, nameStoragePool, "operational_status"),
+		"Operational status codes reported for the storage pool (one series per status value).",
+		[]string{"name", "unique_id", "status"},
+		nil,
+	)
+
+	c.storagePoolThinProvisioningAlertThresholds = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, nameStoragePool, "thin_provisioning_alert_thresholds"),
+		"Thin provisioning alert thresholds configured for the storage pool, in percent (one series per configured threshold).",
+		[]string{"name", "unique_id", "threshold"},
 		nil,
 	)
 
@@ -134,6 +152,28 @@ func (c *Collector) collectStoragePool(ch chan<- prometheus.Metric, maxScrapeDur
 			pool.FriendlyName,
 			pool.UniqueId,
 		)
+
+		for _, status := range pool.OperationalStatus {
+			ch <- prometheus.MustNewConstMetric(
+				c.storagePoolOperationalStatus,
+				prometheus.GaugeValue,
+				1.0,
+				pool.FriendlyName,
+				pool.UniqueId,
+				strconv.Itoa(int(status)),
+			)
+		}
+
+		for _, threshold := range pool.ThinProvisioningAlertThresholds {
+			ch <- prometheus.MustNewConstMetric(
+				c.storagePoolThinProvisioningAlertThresholds,
+				prometheus.GaugeValue,
+				1.0,
+				pool.FriendlyName,
+				pool.UniqueId,
+				strconv.Itoa(int(threshold)),
+			)
+		}
 	}
 
 	return nil

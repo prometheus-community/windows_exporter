@@ -197,6 +197,8 @@ Matching is case-sensitive.
 | `mscluster_storagepool_health_status`         | Health status of the storage pool. 0: Healthy, 1: Warning, 2: Unhealthy, 5: Unknown | gauge | `name`, `unique_id` |
 | `mscluster_storagepool_size_bytes`            | Total size of the storage pool in bytes                                             | gauge | `name`, `unique_id` |
 | `mscluster_storagepool_allocated_size_bytes`  | Allocated size of the storage pool in bytes                                         | gauge | `name`, `unique_id` |
+| `mscluster_storagepool_operational_status`    | Operational status codes reported for the storage pool (one series per status value) | gauge | `name`, `unique_id`, `status` |
+| `mscluster_storagepool_thin_provisioning_alert_thresholds` | Thin provisioning alert thresholds configured for the storage pool, in percent (one series per configured threshold) | gauge | `name`, `unique_id`, `threshold` |
 
 ### Example metric
 Query the state of all cluster resource owned by node1
