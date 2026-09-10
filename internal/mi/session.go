@@ -293,6 +293,10 @@ func (s *Session) QueryUnmarshal(dst any,
 				field.SetString(stringValue)
 			case ValueTypeREAL32, ValueTypeREAL64:
 				field.SetFloat(float64(element.value))
+			case ValueTypeUINT16A:
+				if field.Kind() == reflect.Slice {
+					field.Set(reflect.ValueOf(element.getUint16Array()))
+				}
 			default:
 				return fmt.Errorf("unsupported value type: %d", element.valueType)
 			}
