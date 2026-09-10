@@ -41,6 +41,7 @@ const (
 	subCollectorResourceGroup = "resourcegroup"
 	subCollectorSharedVolumes = "shared_volumes"
 	subCollectorVirtualDisk   = "virtualdisk"
+	subCollectorStoragePool   = "storagepool"
 )
 
 type Config struct {
@@ -57,6 +58,7 @@ var ConfigDefaults = Config{
 		subCollectorResourceGroup,
 		subCollectorSharedVolumes,
 		subCollectorVirtualDisk,
+		subCollectorStoragePool,
 	},
 }
 
@@ -69,6 +71,7 @@ type Collector struct {
 	collectorResourceGroup
 	collectorSharedVolumes
 	collectorVirtualDisk
+	collectorStoragePool
 
 	config    Config
 	miSession *mi.Session
@@ -175,6 +178,12 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 		}
 	}
 
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorStoragePool) {
+		if err := c.buildStoragePool(); err != nil {
+			errs = append(errs, fmt.Errorf("failed to build storagepool collector: %w", err))
+		}
+	}
+
 	return errors.Join(errs...)
 }
 
@@ -185,10 +194,10 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, maxScrapeDuration time.
 		return nil
 	}
 
-	errCh := make(chan error, 7)
+	errCh := make(chan error, 8)
 
 	wg := sync.WaitGroup{}
-	wg.Add(7)
+	wg.Add(8)
 
 	go func() {
 		defer wg.Done()
@@ -261,6 +270,16 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, maxScrapeDuration time.
 		if slices.Contains(c.config.CollectorsEnabled, subCollectorVirtualDisk) {
 			if err := c.collectVirtualDisk(ch, maxScrapeDuration); err != nil {
 				errCh <- fmt.Errorf("failed to collect virtualdisk metrics: %w", err)
+			}
+		}
+	}()
+
+	go func() {
+		defer wg.Done()
+
+		if slices.Contains(c.config.CollectorsEnabled, subCollectorStoragePool) {
+			if err := c.collectStoragePool(ch, maxScrapeDuration); err != nil {
+				errCh <- fmt.Errorf("failed to collect storagepool metrics: %w", err)
 			}
 		}
 	}()
