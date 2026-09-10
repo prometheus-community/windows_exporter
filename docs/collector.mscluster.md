@@ -5,14 +5,14 @@ The MSCluster_Cluster class is a dynamic WMI class that represents a cluster.
 |||
 -|-
 Metric name prefix  | `mscluster`
-Classes             | `MSCluster_Cluster`,`MSCluster_Network`,`MSCluster_Node`,`MSCluster_Resource`,`MSCluster_ResourceGroup`,`MSCluster_DiskPartition`,`MSFT_VirtualDisk`
+Classes             | `MSCluster_Cluster`,`MSCluster_Network`,`MSCluster_Node`,`MSCluster_Resource`,`MSCluster_ResourceGroup`,`MSCluster_DiskPartition`,`MSFT_VirtualDisk`,`MSFT_StoragePool`
 Enabled by default? | No
 
 ## Flags
 
 ### `--collectors.mscluster.enabled`
 Comma-separated list of collectors to use, for example:
-`--collectors.mscluster.enabled=cluster,network,node,resource,resouregroup,shared_volumes,virtualdisk`.
+`--collectors.mscluster.enabled=cluster,network,node,resource,resouregroup,shared_volumes,virtualdisk,storagepool`.
 Matching is case-sensitive.
 
 ## Metrics
@@ -188,6 +188,15 @@ Matching is case-sensitive.
 | `mscluster_virtualdisk_allocated_size_bytes`              | Allocated size of the virtual disk in bytes (capacity actually provisioned, excludes thin-provisioned unused capacity) | gauge | `name`, `unique_id` |
 | `mscluster_virtualdisk_footprint_on_pool_bytes`           | Physical storage consumed by the virtual disk on the storage pool in bytes                     | gauge | `name`, `unique_id` |
 | `mscluster_virtualdisk_storage_efficiency_percent`        | Storage efficiency percentage (AllocatedSize / FootprintOnPool * 100)                          | gauge | `name`, `unique_id` |
+
+### Storage Pool
+
+| Name                                          | Description                                                                         | Type  | Labels              |
+|-----------------------------------------------|-------------------------------------------------------------------------------------|-------|---------------------|
+| `mscluster_storagepool_info`                  | Storage pool information (value is always 1)                                        | gauge | `name`, `unique_id` |
+| `mscluster_storagepool_health_status`         | Health status of the storage pool. 0: Healthy, 1: Warning, 2: Unhealthy, 5: Unknown | gauge | `name`, `unique_id` |
+| `mscluster_storagepool_size_bytes`            | Total size of the storage pool in bytes                                             | gauge | `name`, `unique_id` |
+| `mscluster_storagepool_allocated_size_bytes`  | Allocated size of the storage pool in bytes                                         | gauge | `name`, `unique_id` |
 
 ### Example metric
 Query the state of all cluster resource owned by node1
