@@ -37,6 +37,12 @@ type win32DiskDrive struct {
 	Capabilities []uint16 `mi:"Capabilities"`
 }
 
+// win32DiskDriveWrongType maps the uint16[] Capabilities property onto an
+// incompatible Go type to exercise the UINT16A type guard.
+type win32DiskDriveWrongType struct {
+	Capabilities []string `mi:"Capabilities"`
+}
+
 func Test_MI_Application_Initialize(t *testing.T) {
 	application, err := mi.ApplicationInitialize()
 	require.NoError(t, err)
@@ -407,6 +413,31 @@ func Test_MI_QueryUnmarshal_Uint16Array(t *testing.T) {
 	}
 
 	require.True(t, found, "expected at least one disk with a non-empty uint16[] Capabilities")
+
+	err = session.Close()
+	require.NoError(t, err)
+
+	err = application.Close()
+	require.NoError(t, err)
+}
+
+func Test_MI_QueryUnmarshal_Uint16Array_WrongType(t *testing.T) {
+	application, err := mi.ApplicationInitialize()
+	require.NoError(t, err)
+	require.NotEmpty(t, application)
+
+	session, err := application.NewSession(nil)
+	require.NoError(t, err)
+	require.NotEmpty(t, session)
+
+	query, err := mi.NewQuery("SELECT Capabilities FROM Win32_DiskDrive")
+	require.NoError(t, err)
+
+	var disks []win32DiskDriveWrongType
+
+	// Unmarshalling a uint16[] into a []string field must error, not panic.
+	err = session.Query(&disks, mi.NamespaceRootCIMv2, query, -1)
+	require.Error(t, err)
 
 	err = session.Close()
 	require.NoError(t, err)
