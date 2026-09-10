@@ -98,8 +98,14 @@ func (instance *Instance) GetElement(elementName string) (*Element, error) {
 		return nil, fmt.Errorf("failed to convert element name %s to UTF-16: %w", elementName, err)
 	}
 
+	// MI_Value is a union sized to its largest member. On 64-bit MI_Datetime is
+	// 36 bytes and the union rounds up to 40 bytes for 8-byte alignment, so a
+	// full MI_Value must be provided; the previous single-word buffer let the
+	// provider write past it and corrupt the stack for array or datetime
+	// elements. Word 0 holds the scalar/pointer/array-data; word 1 holds the
+	// array element count for array types.
 	var (
-		value     uintptr
+		valueBuf  [5]uint64
 		valueType ValueType
 	)
 
@@ -107,7 +113,7 @@ func (instance *Instance) GetElement(elementName string) (*Element, error) {
 		instance.ft.GetElement,
 		uintptr(unsafe.Pointer(instance)),
 		uintptr(unsafe.Pointer(elementNameUTF16)),
-		uintptr(unsafe.Pointer(&value)),
+		uintptr(unsafe.Pointer(&valueBuf)),
 		uintptr(unsafe.Pointer(&valueType)),
 		0,
 		0,
@@ -118,7 +124,8 @@ func (instance *Instance) GetElement(elementName string) (*Element, error) {
 	}
 
 	return &Element{
-		value:     value,
+		value:     uintptr(valueBuf[0]),
+		arrayLen:  uint32(valueBuf[1]),
 		valueType: valueType,
 	}, nil
 }

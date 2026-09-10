@@ -31,6 +31,18 @@ type win32Process struct {
 	Name string `mi:"Name"`
 }
 
+// win32DiskDrive is used to exercise UINT16A (uint16[]) unmarshalling.
+// Win32_DiskDrive.Capabilities is a reliably-populated uint16[] on any host.
+type win32DiskDrive struct {
+	Capabilities []uint16 `mi:"Capabilities"`
+}
+
+// win32DiskDriveWrongType maps the uint16[] Capabilities property onto an
+// incompatible Go type to exercise the UINT16A type guard.
+type win32DiskDriveWrongType struct {
+	Capabilities []string `mi:"Capabilities"`
+}
+
 func Test_MI_Application_Initialize(t *testing.T) {
 	application, err := mi.ApplicationInitialize()
 	require.NoError(t, err)
@@ -325,6 +337,107 @@ func Test_MI_QueryTimeout(t *testing.T) {
 
 	err = operation.Close()
 	require.NoError(t, err)
+
+	err = session.Close()
+	require.NoError(t, err)
+
+	err = application.Close()
+	require.NoError(t, err)
+}
+
+func Test_MI_Query_Uint16Array(t *testing.T) {
+	application, err := mi.ApplicationInitialize()
+	require.NoError(t, err)
+	require.NotEmpty(t, application)
+
+	session, err := application.NewSession(nil)
+	require.NoError(t, err)
+	require.NotEmpty(t, session)
+
+	operation, err := session.QueryInstances(mi.OperationFlagsStandardRTTI, nil, mi.NamespaceRootCIMv2, mi.QueryDialectWQL, "SELECT Capabilities FROM Win32_DiskDrive")
+	require.NoError(t, err)
+	require.NotEmpty(t, operation)
+
+	instance, _, err := operation.GetInstance()
+	require.NoError(t, err)
+	require.NotEmpty(t, instance)
+
+	element, err := instance.GetElement("Capabilities")
+	require.NoError(t, err)
+	require.NotEmpty(t, element)
+
+	value, err := element.GetValue()
+	require.NoError(t, err)
+
+	capabilities, ok := value.([]uint16)
+	require.True(t, ok, "Capabilities should unmarshal to []uint16")
+	require.NotEmpty(t, capabilities)
+
+	err = operation.Close()
+	require.NoError(t, err)
+
+	err = session.Close()
+	require.NoError(t, err)
+
+	err = application.Close()
+	require.NoError(t, err)
+}
+
+func Test_MI_QueryUnmarshal_Uint16Array(t *testing.T) {
+	application, err := mi.ApplicationInitialize()
+	require.NoError(t, err)
+	require.NotEmpty(t, application)
+
+	session, err := application.NewSession(nil)
+	require.NoError(t, err)
+	require.NotEmpty(t, session)
+
+	query, err := mi.NewQuery("SELECT Capabilities FROM Win32_DiskDrive")
+	require.NoError(t, err)
+
+	var disks []win32DiskDrive
+
+	err = session.Query(&disks, mi.NamespaceRootCIMv2, query, -1)
+	require.NoError(t, err)
+	require.NotEmpty(t, disks)
+
+	// At least one disk drive should report non-empty capabilities.
+	found := false
+
+	for _, disk := range disks {
+		if len(disk.Capabilities) > 0 {
+			found = true
+
+			break
+		}
+	}
+
+	require.True(t, found, "expected at least one disk with a non-empty uint16[] Capabilities")
+
+	err = session.Close()
+	require.NoError(t, err)
+
+	err = application.Close()
+	require.NoError(t, err)
+}
+
+func Test_MI_QueryUnmarshal_Uint16Array_WrongType(t *testing.T) {
+	application, err := mi.ApplicationInitialize()
+	require.NoError(t, err)
+	require.NotEmpty(t, application)
+
+	session, err := application.NewSession(nil)
+	require.NoError(t, err)
+	require.NotEmpty(t, session)
+
+	query, err := mi.NewQuery("SELECT Capabilities FROM Win32_DiskDrive")
+	require.NoError(t, err)
+
+	var disks []win32DiskDriveWrongType
+
+	// Unmarshalling a uint16[] into a []string field must error, not panic.
+	err = session.Query(&disks, mi.NamespaceRootCIMv2, query, -1)
+	require.Error(t, err)
 
 	err = session.Close()
 	require.NoError(t, err)
