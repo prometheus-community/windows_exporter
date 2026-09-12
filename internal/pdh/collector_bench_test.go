@@ -28,34 +28,34 @@ import (
 type processFull struct {
 	Name string
 
-	ProcessorTime        float64 `pdh:"% Processor Time"`
-	PrivilegedTime       float64 `pdh:"% Privileged Time"`
-	UserTime             float64 `pdh:"% User Time"`
-	CreatingProcessID    float64 `pdh:"Creating Process ID"`
-	ElapsedTime          float64 `pdh:"Elapsed Time"`
-	HandleCount          float64 `pdh:"Handle Count"`
-	IDProcess            float64 `pdh:"ID Process"`
-	IODataBytesSec       float64 `pdh:"IO Data Bytes/sec"`
-	IODataOperationsSec  float64 `pdh:"IO Data Operations/sec"`
-	IOOtherBytesSec      float64 `pdh:"IO Other Bytes/sec"`
-	IOOtherOperationsSec float64 `pdh:"IO Other Operations/sec"`
-	IOReadBytesSec       float64 `pdh:"IO Read Bytes/sec"`
-	IOReadOperationsSec  float64 `pdh:"IO Read Operations/sec"`
-	IOWriteBytesSec      float64 `pdh:"IO Write Bytes/sec"`
-	IOWriteOperationsSec float64 `pdh:"IO Write Operations/sec"`
-	PageFaultsSec        float64 `pdh:"Page Faults/sec"`
-	PageFileBytesPeak    float64 `pdh:"Page File Bytes Peak"`
-	PageFileBytes        float64 `pdh:"Page File Bytes"`
-	PoolNonpagedBytes    float64 `pdh:"Pool Nonpaged Bytes"`
-	PoolPagedBytes       float64 `pdh:"Pool Paged Bytes"`
-	PriorityBase         float64 `pdh:"Priority Base"`
-	PrivateBytes         float64 `pdh:"Private Bytes"`
-	ThreadCount          float64 `pdh:"Thread Count"`
-	VirtualBytesPeak     float64 `pdh:"Virtual Bytes Peak"`
-	VirtualBytes         float64 `pdh:"Virtual Bytes"`
-	WorkingSetPrivate    float64 `pdh:"Working Set - Private"`
-	WorkingSetPeak       float64 `pdh:"Working Set Peak"`
-	WorkingSet           float64 `pdh:"Working Set"`
+	ProcessorTime        float64 `perfdata:"% Processor Time"`
+	PrivilegedTime       float64 `perfdata:"% Privileged Time"`
+	UserTime             float64 `perfdata:"% User Time"`
+	CreatingProcessID    float64 `perfdata:"Creating Process ID"`
+	ElapsedTime          float64 `perfdata:"Elapsed Time"`
+	HandleCount          float64 `perfdata:"Handle Count"`
+	IDProcess            float64 `perfdata:"ID Process"`
+	IODataBytesSec       float64 `perfdata:"IO Data Bytes/sec"`
+	IODataOperationsSec  float64 `perfdata:"IO Data Operations/sec"`
+	IOOtherBytesSec      float64 `perfdata:"IO Other Bytes/sec"`
+	IOOtherOperationsSec float64 `perfdata:"IO Other Operations/sec"`
+	IOReadBytesSec       float64 `perfdata:"IO Read Bytes/sec"`
+	IOReadOperationsSec  float64 `perfdata:"IO Read Operations/sec"`
+	IOWriteBytesSec      float64 `perfdata:"IO Write Bytes/sec"`
+	IOWriteOperationsSec float64 `perfdata:"IO Write Operations/sec"`
+	PageFaultsSec        float64 `perfdata:"Page Faults/sec"`
+	PageFileBytesPeak    float64 `perfdata:"Page File Bytes Peak"`
+	PageFileBytes        float64 `perfdata:"Page File Bytes"`
+	PoolNonpagedBytes    float64 `perfdata:"Pool Nonpaged Bytes"`
+	PoolPagedBytes       float64 `perfdata:"Pool Paged Bytes"`
+	PriorityBase         float64 `perfdata:"Priority Base"`
+	PrivateBytes         float64 `perfdata:"Private Bytes"`
+	ThreadCount          float64 `perfdata:"Thread Count"`
+	VirtualBytesPeak     float64 `perfdata:"Virtual Bytes Peak"`
+	VirtualBytes         float64 `perfdata:"Virtual Bytes"`
+	WorkingSetPrivate    float64 `perfdata:"Working Set - Private"`
+	WorkingSetPeak       float64 `perfdata:"Working Set Peak"`
+	WorkingSet           float64 `perfdata:"Working Set"`
 }
 
 func BenchmarkTestCollector(b *testing.B) {
