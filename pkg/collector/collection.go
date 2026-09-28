@@ -53,6 +53,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/mssql"
 	"github.com/prometheus-community/windows_exporter/internal/collector/net"
 	"github.com/prometheus-community/windows_exporter/internal/collector/netframework"
+	"github.com/prometheus-community/windows_exporter/internal/collector/netkvm"
 	"github.com/prometheus-community/windows_exporter/internal/collector/nps"
 	"github.com/prometheus-community/windows_exporter/internal/collector/os"
 	"github.com/prometheus-community/windows_exporter/internal/collector/pagefile"
@@ -74,6 +75,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/time"
 	"github.com/prometheus-community/windows_exporter/internal/collector/udp"
 	"github.com/prometheus-community/windows_exporter/internal/collector/update"
+	"github.com/prometheus-community/windows_exporter/internal/collector/vioscsi"
 	"github.com/prometheus-community/windows_exporter/internal/collector/vmware"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
@@ -123,6 +125,7 @@ func NewWithConfig(config Config) *Collection {
 	collectors[mssql.Name] = mssql.New(&config.Mssql)
 	collectors[net.Name] = net.New(&config.Net)
 	collectors[netframework.Name] = netframework.New(&config.NetFramework)
+	collectors[netkvm.Name] = netkvm.New(&config.NetKVM)
 	collectors[nps.Name] = nps.New(&config.Nps)
 	collectors[os.Name] = os.New(&config.OS)
 	collectors[pagefile.Name] = pagefile.New(&config.Paging)
@@ -144,6 +147,7 @@ func NewWithConfig(config Config) *Collection {
 	collectors[time.Name] = time.New(&config.Time)
 	collectors[udp.Name] = udp.New(&config.UDP)
 	collectors[update.Name] = update.New(&config.Update)
+	collectors[vioscsi.Name] = vioscsi.New(&config.VioSCSI)
 	collectors[vmware.Name] = vmware.New(&config.Vmware)
 
 	return New(collectors)
@@ -245,7 +249,8 @@ func (c *Collection) Build(ctx context.Context, logger *slog.Logger) error {
 			errors.Is(err, pdh.NewPdhError(pdh.CstatusNoObject)) ||
 			errors.Is(err, pdh.NewPdhError(pdh.CstatusNoCounter)) ||
 			errors.Is(err, mi.MI_RESULT_INVALID_OPERATION_TIMEOUT) ||
-			errors.Is(err, mi.MI_RESULT_INVALID_NAMESPACE) {
+			errors.Is(err, mi.MI_RESULT_INVALID_NAMESPACE) ||
+			errors.Is(err, mi.MI_RESULT_INVALID_CLASS) {
 			logger.LogAttrs(ctx, slog.LevelWarn, "couldn't initialize collector", slog.Any("err", err))
 
 			continue

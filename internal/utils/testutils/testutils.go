@@ -95,11 +95,17 @@ func TestCollector[C collector.Collector, V any](t *testing.T, fn func(*V) C, co
 			metrics = append(metrics, metric)
 		}
 	})
+	defer func() {
+		close(ch)
+		wg.Wait()
+	}()
 
 	err = c.Build(logger, miSession)
 
 	switch {
 	case err == nil:
+	case errors.Is(err, mi.MI_RESULT_INVALID_CLASS):
+		t.Skip("collector not supported on this system")
 	case errors.Is(err, mi.MI_RESULT_INVALID_NAMESPACE),
 		errors.Is(err, pdh.NewPdhError(pdh.CstatusNoCounter)),
 		errors.Is(err, pdh.NewPdhError(pdh.CstatusNoObject)),
@@ -119,6 +125,7 @@ func TestCollector[C collector.Collector, V any](t *testing.T, fn func(*V) C, co
 	case errors.Is(err, windows.Errno(2151088411)),
 		errors.Is(err, pdh.ErrPerformanceCounterNotInitialized),
 		errors.Is(err, pdh.ErrNoData),
+		errors.Is(err, mi.MI_RESULT_INVALID_CLASS),
 		errors.Is(err, mi.MI_RESULT_INVALID_NAMESPACE),
 		errors.Is(err, mi.MI_RESULT_INVALID_QUERY),
 		errors.Is(err, update.ErrNoUpdates):
@@ -126,8 +133,4 @@ func TestCollector[C collector.Collector, V any](t *testing.T, fn func(*V) C, co
 	default:
 		require.NoError(t, err)
 	}
-
-	close(ch)
-
-	wg.Wait()
 }

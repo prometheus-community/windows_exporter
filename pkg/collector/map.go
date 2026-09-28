@@ -47,6 +47,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/mssql"
 	"github.com/prometheus-community/windows_exporter/internal/collector/net"
 	"github.com/prometheus-community/windows_exporter/internal/collector/netframework"
+	"github.com/prometheus-community/windows_exporter/internal/collector/netkvm"
 	"github.com/prometheus-community/windows_exporter/internal/collector/nps"
 	"github.com/prometheus-community/windows_exporter/internal/collector/os"
 	"github.com/prometheus-community/windows_exporter/internal/collector/pagefile"
@@ -68,6 +69,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/time"
 	"github.com/prometheus-community/windows_exporter/internal/collector/udp"
 	"github.com/prometheus-community/windows_exporter/internal/collector/update"
+	"github.com/prometheus-community/windows_exporter/internal/collector/vioscsi"
 	"github.com/prometheus-community/windows_exporter/internal/collector/vmware"
 )
 
@@ -104,6 +106,7 @@ var BuildersWithFlags = map[string]BuilderWithFlags[Collector]{
 	mssql.Name:              NewBuilderWithFlags(mssql.NewWithFlags),
 	net.Name:                NewBuilderWithFlags(net.NewWithFlags),
 	netframework.Name:       NewBuilderWithFlags(netframework.NewWithFlags),
+	netkvm.Name:             NewBuilderWithFlags(netkvm.NewWithFlags),
 	nps.Name:                NewBuilderWithFlags(nps.NewWithFlags),
 	os.Name:                 NewBuilderWithFlags(os.NewWithFlags),
 	pagefile.Name:           NewBuilderWithFlags(pagefile.NewWithFlags),
@@ -125,6 +128,7 @@ var BuildersWithFlags = map[string]BuilderWithFlags[Collector]{
 	time.Name:               NewBuilderWithFlags(time.NewWithFlags),
 	udp.Name:                NewBuilderWithFlags(udp.NewWithFlags),
 	update.Name:             NewBuilderWithFlags(update.NewWithFlags),
+	vioscsi.Name:            NewBuilderWithFlags(vioscsi.NewWithFlags),
 	vmware.Name:             NewBuilderWithFlags(vmware.NewWithFlags),
 }
 

@@ -43,6 +43,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/mssql"
 	"github.com/prometheus-community/windows_exporter/internal/collector/net"
 	"github.com/prometheus-community/windows_exporter/internal/collector/netframework"
+	"github.com/prometheus-community/windows_exporter/internal/collector/netkvm"
 	"github.com/prometheus-community/windows_exporter/internal/collector/nps"
 	"github.com/prometheus-community/windows_exporter/internal/collector/os"
 	"github.com/prometheus-community/windows_exporter/internal/collector/pagefile"
@@ -64,6 +65,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/time"
 	"github.com/prometheus-community/windows_exporter/internal/collector/udp"
 	"github.com/prometheus-community/windows_exporter/internal/collector/update"
+	"github.com/prometheus-community/windows_exporter/internal/collector/vioscsi"
 	"github.com/prometheus-community/windows_exporter/internal/collector/vmware"
 )
 
@@ -93,6 +95,7 @@ type Config struct {
 	Mssql              mssql.Config              `yaml:"mssql"`
 	Net                net.Config                `yaml:"net"`
 	NetFramework       netframework.Config       `yaml:"netframework"`
+	NetKVM             netkvm.Config             `yaml:"netkvm"`
 	Nps                nps.Config                `yaml:"nps"`
 	OS                 os.Config                 `yaml:"os"`
 	Paging             pagefile.Config           `yaml:"paging"`
@@ -114,6 +117,7 @@ type Config struct {
 	Time               time.Config               `yaml:"time"`
 	UDP                udp.Config                `yaml:"udp"`
 	Update             update.Config             `yaml:"update"`
+	VioSCSI            vioscsi.Config            `yaml:"vioscsi"`
 	Vmware             vmware.Config             `yaml:"vmware"`
 }
 
@@ -147,6 +151,7 @@ var ConfigDefaults = Config{
 	Mssql:              mssql.ConfigDefaults,
 	Net:                net.ConfigDefaults,
 	NetFramework:       netframework.ConfigDefaults,
+	NetKVM:             netkvm.ConfigDefaults,
 	Nps:                nps.ConfigDefaults,
 	OS:                 os.ConfigDefaults,
 	Paging:             pagefile.ConfigDefaults,
@@ -168,5 +173,6 @@ var ConfigDefaults = Config{
 	Time:               time.ConfigDefaults,
 	UDP:                udp.ConfigDefaults,
 	Update:             update.ConfigDefaults,
+	VioSCSI:            vioscsi.ConfigDefaults,
 	Vmware:             vmware.ConfigDefaults,
 }

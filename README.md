@@ -39,6 +39,7 @@ A Prometheus exporter for Windows machines.
 | [mssql](docs/collector.mssql.md)                           | [SQL Server Performance Objects](https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/use-sql-server-objects#SQLServerPOs) metrics |                    |
 | [netframework](docs/collector.netframework.md)             | .NET Framework metrics                                                                                                                                      |                    |
 | [net](docs/collector.net.md)                               | Network interface I/O                                                                                                                                       | &#10003;           |
+| [netkvm](docs/collector.netkvm.md)                         | VirtIO network adapter (NetKVM) driver metrics                                                                                                              |                    |
 | [os](docs/collector.os.md)                                 | OS information (hostname, product/version, install time)                                                                                                   | &#10003;           |
 | [pagefile](docs/collector.pagefile.md)                     | pagefile metrics                                                                                                                                            |                    |
 | [performancecounter](docs/collector.performancecounter.md) | Custom performance counter metrics                                                                                                                          |                    |
@@ -58,6 +59,7 @@ A Prometheus exporter for Windows machines.
 | [time](docs/collector.time.md)                             | Windows Time Service                                                                                                                                        |                    |
 | [udp](docs/collector.udp.md)                               | UDP connections                                                                                                                                             |                    |
 | [update](docs/collector.update.md)                         | Windows Update Service                                                                                                                                      |                    |
+| [vioscsi](docs/collector.vioscsi.md)                       | VirtIO SCSI adapter (VioSCSI) driver metrics                                                                                                                |                    |
 | [vmware](docs/collector.vmware.md)                         | Performance counters installed by the Vmware Guest agent                                                                                                    |                    |
 
 See the linked documentation on each collector for more information on reported metrics, configuration settings and usage examples.

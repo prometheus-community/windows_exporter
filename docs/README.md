@@ -26,6 +26,7 @@ This directory contains documentation of the collectors in the windows_exporter,
 - [`mssql`](collector.mssql.md)
 - [`net`](collector.net.md)
 - [`netframework`](collector.netframework.md)
+- [`netkvm`](collector.netkvm.md)
 - [`nps`](collector.nps.md)
 - [`os`](collector.os.md)
 - [`pagefile`](collector.pagefile.md)
@@ -46,4 +47,5 @@ This directory contains documentation of the collectors in the windows_exporter,
 - [`time`](collector.time.md)
 - [`udp`](collector.udp.md)
 - [`update`](collector.update.md)
+- [`vioscsi`](collector.vioscsi.md)
 - [`vmware`](collector.vmware.md)
