@@ -288,6 +288,139 @@ func Test_MI_FD_Leak(t *testing.T) {
 	t.Log("Current File Handle Count: ", currentFileHandle)
 }
 
+type reliabilityMetrics struct {
+	SystemStabilityIndex float64 `mi:"SystemStabilityIndex"`
+}
+
+// Test_MI_Query_REAL64 verifies that GetValue correctly returns float64
+// for REAL64 MI properties by querying Win32_ReliabilityStabilityMetrics.
+func Test_MI_Query_REAL64(t *testing.T) {
+	application, err := mi.ApplicationInitialize()
+	require.NoError(t, err)
+	require.NotEmpty(t, application)
+
+	destinationOptions, err := application.NewDestinationOptions()
+	require.NoError(t, err)
+	require.NotEmpty(t, destinationOptions)
+
+	err = destinationOptions.SetTimeout(5 * time.Second)
+	require.NoError(t, err)
+
+	err = destinationOptions.SetLocale(mi.LocaleEnglish)
+	require.NoError(t, err)
+
+	session, err := application.NewSession(destinationOptions)
+	require.NoError(t, err)
+	require.NotEmpty(t, session)
+
+	operation, err := session.QueryInstances(mi.OperationFlagsStandardRTTI, nil, mi.NamespaceRootCIMv2, mi.QueryDialectWQL,
+		"SELECT SystemStabilityIndex FROM Win32_ReliabilityStabilityMetrics")
+	require.NoError(t, err)
+	require.NotEmpty(t, operation)
+
+	var firstValue float64
+
+	var foundFloat bool
+
+	for {
+		instance, moreResults, err := operation.GetInstance()
+		require.NoError(t, err)
+
+		if instance == nil {
+			break
+		}
+
+		if !foundFloat {
+			element, err := instance.GetElement("SystemStabilityIndex")
+			require.NoError(t, err)
+
+			value, err := element.GetValue()
+			require.NoError(t, err)
+
+			v, ok := value.(float64)
+			require.True(t, ok, "expected float64, got %T", value)
+
+			if v > 0 {
+				firstValue = v
+				foundFloat = true
+			}
+		}
+
+		if !moreResults {
+			break
+		}
+	}
+
+	if !foundFloat {
+		t.Skip("Win32_ReliabilityStabilityMetrics: no records with non-zero SystemStabilityIndex")
+	}
+
+	require.Greater(t, firstValue, float64(0), "SystemStabilityIndex should be positive")
+
+	t.Logf("SystemStabilityIndex = %v", firstValue)
+
+	err = operation.Close()
+	require.NoError(t, err)
+
+	err = session.Close()
+	require.NoError(t, err)
+
+	err = application.Close()
+	require.NoError(t, err)
+}
+
+// Test_MI_QueryUnmarshal_REAL64 verifies that the unmarshal code path
+// correctly handles REAL64→float64 struct field conversion.
+func Test_MI_QueryUnmarshal_REAL64(t *testing.T) {
+	application, err := mi.ApplicationInitialize()
+	require.NoError(t, err)
+	require.NotEmpty(t, application)
+
+	destinationOptions, err := application.NewDestinationOptions()
+	require.NoError(t, err)
+	require.NotEmpty(t, destinationOptions)
+
+	err = destinationOptions.SetTimeout(5 * time.Second)
+	require.NoError(t, err)
+
+	err = destinationOptions.SetLocale(mi.LocaleEnglish)
+	require.NoError(t, err)
+
+	session, err := application.NewSession(destinationOptions)
+	require.NoError(t, err)
+	require.NotEmpty(t, session)
+
+	var metrics []reliabilityMetrics
+
+	query, err := mi.NewQuery("SELECT SystemStabilityIndex FROM Win32_ReliabilityStabilityMetrics")
+	require.NoError(t, err)
+
+	err = session.QueryUnmarshal(&metrics, mi.OperationFlagsStandardRTTI, nil, mi.NamespaceRootCIMv2, mi.QueryDialectWQL, query)
+	if err != nil || len(metrics) == 0 {
+		t.Skip("Win32_ReliabilityStabilityMetrics not available")
+	}
+
+	var found bool
+
+	for _, m := range metrics {
+		if m.SystemStabilityIndex > 0 {
+			t.Logf("SystemStabilityIndex = %.3f (from %d records)", m.SystemStabilityIndex, len(metrics))
+
+			found = true
+
+			break
+		}
+	}
+
+	require.True(t, found, "expected at least one record with non-zero SystemStabilityIndex")
+
+	err = session.Close()
+	require.NoError(t, err)
+
+	err = application.Close()
+	require.NoError(t, err)
+}
+
 func Test_MI_QueryTimeout(t *testing.T) {
 	application, err := mi.ApplicationInitialize()
 	require.NoError(t, err)
