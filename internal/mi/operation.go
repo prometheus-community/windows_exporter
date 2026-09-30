@@ -201,6 +201,12 @@ func (o *Operation) GetInstance() (*Instance, bool, error) {
 }
 
 func (o *Operation) Unmarshal(dst any) error {
+	return o.unmarshal(dst, false)
+}
+
+// unmarshal iterates over the operation's instances and populates dst.
+// skipMissing controls how missing elements are handled (see unmarshalInstance).
+func (o *Operation) unmarshal(dst any, skipMissing bool) error {
 	if o == nil || o.ft == nil {
 		return ErrNotInitialized
 	}
@@ -213,7 +219,6 @@ func (o *Operation) Unmarshal(dst any) error {
 	dv = dv.Elem()
 
 	elemType := dv.Type().Elem()
-	elemValue := reflect.ValueOf(reflect.New(elemType).Interface()).Elem()
 
 	if dv.Kind() != reflect.Slice || elemType.Kind() != reflect.Struct {
 		return ErrInvalidEntityType
@@ -241,45 +246,10 @@ func (o *Operation) Unmarshal(dst any) error {
 			break
 		}
 
-		for i := range elemType.NumField() {
-			field := elemValue.Field(i)
+		elemValue := reflect.New(elemType).Elem()
 
-			// Check if the field has an `mi` tag
-			miTag := elemType.Field(i).Tag.Get("mi")
-			if miTag == "" {
-				continue
-			}
-
-			element, err := instance.GetElement(miTag)
-			if err != nil {
-				return fmt.Errorf("failed to get element %s: %w", miTag, err)
-			}
-
-			switch element.valueType {
-			case ValueTypeBOOLEAN:
-				field.SetBool(element.value == 1)
-			case ValueTypeUINT8, ValueTypeUINT16, ValueTypeUINT32, ValueTypeUINT64:
-				field.SetUint(uint64(element.value))
-			case ValueTypeSINT8, ValueTypeSINT16, ValueTypeSINT32, ValueTypeSINT64:
-				field.SetInt(int64(element.value))
-			case ValueTypeSTRING:
-				if element.value == 0 {
-					field.SetString("") // Set empty string for nil values
-
-					continue
-				}
-
-				// Convert uintptr to *uint16 for Windows UTF-16 string
-				// This is safe because element.value comes directly from Windows MI API
-				//goland:noinspection GoVetUnsafePointer
-				stringValue := windows.UTF16PtrToString((*uint16)(unsafe.Pointer(element.value)))
-
-				field.SetString(stringValue)
-			case ValueTypeREAL32, ValueTypeREAL64:
-				field.SetFloat(float64(element.value))
-			default:
-				return fmt.Errorf("unsupported value type: %d", element.valueType)
-			}
+		if err := unmarshalInstance(instance, elemType, elemValue, skipMissing); err != nil {
+			return err
 		}
 
 		dv.Set(reflect.Append(dv, elemValue))
