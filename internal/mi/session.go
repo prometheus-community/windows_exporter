@@ -277,26 +277,28 @@ func (s *Session) QueryUnmarshal(dst any,
 }
 
 // Query queries for a set of instances based on a query expression.
-//
-//nolint:nestif
 func (s *Session) Query(dst any, namespaceName Namespace, queryExpression Query, queryTimeout time.Duration) error {
-	var operationOptions *OperationOptions
+	if queryTimeout < 0 {
+		return s.QueryUnmarshal(dst, OperationFlagsStandardRTTI, nil, namespaceName, QueryDialectWQL, queryExpression)
+	}
 
-	if queryTimeout >= 0 {
-		app, err := s.GetApplication()
-		if err != nil {
-			return fmt.Errorf("failed to get application: %w", err)
-		}
+	app, err := s.GetApplication()
+	if err != nil {
+		return fmt.Errorf("failed to get application: %w", err)
+	}
 
-		operationOptions, err = app.NewOperationOptions()
-		if err != nil {
-			return fmt.Errorf("failed to create operation options: %w", err)
-		}
+	operationOptions, err := app.NewOperationOptions()
+	if err != nil {
+		return fmt.Errorf("failed to create operation options: %w", err)
+	}
 
-		if queryTimeout > 0 {
-			if err = operationOptions.SetTimeout(queryTimeout); err != nil {
-				return fmt.Errorf("failed to set timeout: %w", err)
-			}
+	defer func() {
+		_ = operationOptions.Delete()
+	}()
+
+	if queryTimeout > 0 {
+		if err = operationOptions.SetTimeout(queryTimeout); err != nil {
+			return fmt.Errorf("failed to set timeout: %w", err)
 		}
 	}
 
