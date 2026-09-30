@@ -20,6 +20,7 @@ package mi
 import (
 	"errors"
 	"fmt"
+	"math"
 	"reflect"
 	"syscall"
 	"time"
@@ -184,6 +185,51 @@ func (s *Session) QueryInstances(flags OperationFlags, operationOptions *Operati
 	return operation, nil
 }
 
+func unmarshalInstance(instance *Instance, structType reflect.Type, structValue reflect.Value, skipMissing bool) error {
+	for i := range structType.NumField() {
+		field := structValue.Field(i)
+
+		miTag := structType.Field(i).Tag.Get("mi")
+		if miTag == "" {
+			continue
+		}
+
+		element, err := instance.GetElement(miTag)
+		if err != nil {
+			if skipMissing && errors.Is(err, MI_RESULT_NO_SUCH_PROPERTY) {
+				continue
+			}
+
+			return fmt.Errorf("failed to get element %s: %w", miTag, err)
+		}
+
+		switch element.valueType {
+		case ValueTypeBOOLEAN:
+			field.SetBool(element.value == 1)
+		case ValueTypeUINT8, ValueTypeUINT16, ValueTypeUINT32, ValueTypeUINT64:
+			field.SetUint(uint64(element.value))
+		case ValueTypeSINT8, ValueTypeSINT16, ValueTypeSINT32, ValueTypeSINT64:
+			field.SetInt(int64(element.value))
+		case ValueTypeSTRING:
+			if element.value == 0 {
+				continue
+			}
+
+			stringValue := windows.UTF16PtrToString((*uint16)(unsafe.Pointer(element.value)))
+
+			field.SetString(stringValue)
+		case ValueTypeREAL32:
+			field.SetFloat(float64(math.Float32frombits(uint32(element.value))))
+		case ValueTypeREAL64:
+			field.SetFloat(math.Float64frombits(uint64(element.value)))
+		default:
+			return fmt.Errorf("unsupported value type: %d", element.valueType)
+		}
+	}
+
+	return nil
+}
+
 // QueryUnmarshal queries for a set of instances based on a query expression.
 //
 // https://learn.microsoft.com/en-us/windows/win32/api/mi/nf-mi-mi_session_queryinstances
@@ -209,7 +255,7 @@ func (s *Session) QueryUnmarshal(dst any,
 	dv = dv.Elem()
 
 	elemType := dv.Type().Elem()
-	elemValue := reflect.ValueOf(reflect.New(elemType).Interface()).Elem()
+	var elemValue reflect.Value
 
 	if dv.Kind() != reflect.Slice || elemType.Kind() != reflect.Struct {
 		return ErrInvalidEntityType
@@ -256,46 +302,10 @@ func (s *Session) QueryUnmarshal(dst any,
 			break
 		}
 
-		for i := range elemType.NumField() {
-			field := elemValue.Field(i)
+		elemValue = reflect.New(elemType).Elem()
 
-			// Check if the field has an `mi` tag
-			miTag := elemType.Field(i).Tag.Get("mi")
-			if miTag == "" {
-				continue
-			}
-
-			element, err := instance.GetElement(miTag)
-			if err != nil {
-				if errors.Is(err, MI_RESULT_NO_SUCH_PROPERTY) {
-					continue
-				}
-
-				return fmt.Errorf("failed to get element %s: %w", miTag, err)
-			}
-
-			switch element.valueType {
-			case ValueTypeBOOLEAN:
-				field.SetBool(element.value == 1)
-			case ValueTypeUINT8, ValueTypeUINT16, ValueTypeUINT32, ValueTypeUINT64:
-				field.SetUint(uint64(element.value))
-			case ValueTypeSINT8, ValueTypeSINT16, ValueTypeSINT32, ValueTypeSINT64:
-				field.SetInt(int64(element.value))
-			case ValueTypeSTRING:
-				if element.value == 0 {
-					// value is null
-					continue
-				}
-
-				// Convert the UTF-16 string to a Go string
-				stringValue := windows.UTF16PtrToString((*uint16)(unsafe.Pointer(element.value)))
-
-				field.SetString(stringValue)
-			case ValueTypeREAL32, ValueTypeREAL64:
-				field.SetFloat(float64(element.value))
-			default:
-				return fmt.Errorf("unsupported value type: %d", element.valueType)
-			}
+		if err := unmarshalInstance(instance, elemType, elemValue, true); err != nil {
+			return err
 		}
 
 		dv.Set(reflect.Append(dv, elemValue))
