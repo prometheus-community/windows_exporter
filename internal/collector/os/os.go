@@ -34,6 +34,14 @@ import (
 	"golang.org/x/sys/windows/registry"
 )
 
+type miComputerSystemProduct struct {
+	UUID              string `mi:"UUID"`
+	Vendor            string `mi:"Vendor"`
+	Name              string `mi:"Name"`
+	IdentifyingNumber string `mi:"IdentifyingNumber"`
+	Version           string `mi:"Version"`
+}
+
 const Name = "os"
 
 type Config struct{}
@@ -49,6 +57,7 @@ type Collector struct {
 
 	hostname      *prometheus.Desc
 	osInformation *prometheus.Desc
+	smbiosInfo    *prometheus.Desc
 	installTime   *prometheus.Desc
 }
 
@@ -76,7 +85,7 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
+func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 	productName, revision, installationType, err := c.getWindowsVersion()
 	if err != nil {
 		return fmt.Errorf("failed to get Windows version: %w", err)
@@ -129,6 +138,12 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 
+	if miSession != nil {
+		if err := c.buildSMBIOSInfo(miSession); err != nil {
+			return fmt.Errorf("failed to build SMBIOS info: %w", err)
+		}
+	}
+
 	return nil
 }
 
@@ -149,11 +164,52 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 		c.installTimeTimestamp,
 	)
 
+	if c.smbiosInfo != nil {
+		ch <- prometheus.MustNewConstMetric(
+			c.smbiosInfo,
+			prometheus.GaugeValue,
+			1.0,
+		)
+	}
+
 	if err := c.collectHostname(ch); err != nil {
 		errs = append(errs, fmt.Errorf("failed to collect hostname metrics: %w", err))
 	}
 
 	return errors.Join(errs...)
+}
+
+func (c *Collector) buildSMBIOSInfo(miSession *mi.Session) error {
+	miQuery, err := mi.NewQuery("SELECT UUID, Vendor, Name, IdentifyingNumber, Version FROM Win32_ComputerSystemProduct")
+	if err != nil {
+		return fmt.Errorf("failed to create Win32_ComputerSystemProduct query: %w", err)
+	}
+
+	var dst []miComputerSystemProduct
+	if err := miSession.Query(&dst, mi.NamespaceRootCIMv2, miQuery, 0); err != nil {
+		return fmt.Errorf("failed to query Win32_ComputerSystemProduct: %w", err)
+	}
+
+	if len(dst) == 0 {
+		return errors.New("no Win32_ComputerSystemProduct instances found")
+	}
+
+	data := dst[0]
+
+	c.smbiosInfo = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "smbios_info"),
+		"System product information from SMBIOS via Win32_ComputerSystemProduct.",
+		nil,
+		prometheus.Labels{
+			"uuid":               strings.ToLower(strings.TrimSpace(data.UUID)),
+			"vendor":             strings.TrimSpace(data.Vendor),
+			"name":               strings.TrimSpace(data.Name),
+			"identifying_number": strings.TrimSpace(data.IdentifyingNumber),
+			"version":            strings.TrimSpace(data.Version),
+		},
+	)
+
+	return nil
 }
 
 func (c *Collector) collectHostname(ch chan<- prometheus.Metric) error {
