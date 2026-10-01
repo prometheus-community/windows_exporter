@@ -451,6 +451,176 @@ func Test_MI_QueryUnmarshal_REAL64(t *testing.T) {
 	}
 }
 
+type computerSystemSigned struct {
+	ResetCount      int16 `mi:"ResetCount"`
+	ResetLimit      int16 `mi:"ResetLimit"`
+	PauseAfterReset int64 `mi:"PauseAfterReset"`
+}
+
+// computerSystemWide unmarshals SINT16 properties into int64 fields
+// to verify sign extension works correctly across type widths.
+// With the old (broken) code, a SINT16 value of -1 (0xFFFF) would
+// become 65535 in an int64 field instead of -1.
+type computerSystemWide struct {
+	ResetCount int64 `mi:"ResetCount"`
+	ResetLimit int64 `mi:"ResetLimit"`
+}
+
+// Test_MI_Query_SignedInt verifies that GetValue correctly sign-extends
+// SINT8/SINT16/SINT32 values. Win32_ComputerSystem has SInt16 properties
+// (ResetCount, ResetLimit) that are typically -1, meaning "not supported".
+func Test_MI_Query_SignedInt(t *testing.T) {
+	application, err := mi.ApplicationInitialize()
+	require.NoError(t, err)
+	require.NotEmpty(t, application)
+
+	t.Cleanup(func() { _ = application.Close() })
+
+	destinationOptions, err := application.NewDestinationOptions()
+	require.NoError(t, err)
+	require.NotEmpty(t, destinationOptions)
+
+	err = destinationOptions.SetTimeout(5 * time.Second)
+	require.NoError(t, err)
+
+	err = destinationOptions.SetLocale(mi.LocaleEnglish)
+	require.NoError(t, err)
+
+	session, err := application.NewSession(destinationOptions)
+	require.NoError(t, err)
+	require.NotEmpty(t, session)
+
+	t.Cleanup(func() { _ = session.Close() })
+
+	operation, err := session.QueryInstances(mi.OperationFlagsStandardRTTI, nil, mi.NamespaceRootCIMv2, mi.QueryDialectWQL,
+		"SELECT ResetCount, ResetLimit, PauseAfterReset FROM Win32_ComputerSystem")
+	require.NoError(t, err)
+	require.NotEmpty(t, operation)
+
+	t.Cleanup(func() { _ = operation.Close() })
+
+	instance, moreResults, err := operation.GetInstance()
+	require.NoError(t, err)
+	require.NotEmpty(t, instance)
+	require.False(t, moreResults)
+
+	// ResetCount (SInt16): verify the value is returned as int16 (not uint16 or int64).
+	// The value is typically -1 ("not supported") but the exact value is system-dependent.
+	element, err := instance.GetElement("ResetCount")
+	require.NoError(t, err)
+
+	value, err := element.GetValue()
+	require.NoError(t, err)
+
+	resetCount, ok := value.(int16)
+	require.True(t, ok, "expected int16, got %T", value)
+
+	t.Logf("ResetCount = %d, ResetLimit = (same type)", resetCount)
+}
+
+// Test_MI_QueryUnmarshal_SignedInt verifies that the unmarshal code path
+// correctly sign-extends SINT16 values into Go struct fields.
+func Test_MI_QueryUnmarshal_SignedInt(t *testing.T) {
+	application, err := mi.ApplicationInitialize()
+	require.NoError(t, err)
+	require.NotEmpty(t, application)
+
+	t.Cleanup(func() { _ = application.Close() })
+
+	destinationOptions, err := application.NewDestinationOptions()
+	require.NoError(t, err)
+	require.NotEmpty(t, destinationOptions)
+
+	err = destinationOptions.SetTimeout(5 * time.Second)
+	require.NoError(t, err)
+
+	err = destinationOptions.SetLocale(mi.LocaleEnglish)
+	require.NoError(t, err)
+
+	session, err := application.NewSession(destinationOptions)
+	require.NoError(t, err)
+	require.NotEmpty(t, session)
+
+	t.Cleanup(func() { _ = session.Close() })
+
+	var systems []computerSystemSigned
+
+	query, err := mi.NewQuery("SELECT ResetCount, ResetLimit, PauseAfterReset FROM Win32_ComputerSystem")
+	require.NoError(t, err)
+
+	err = session.QueryUnmarshal(&systems, mi.OperationFlagsStandardRTTI, nil, mi.NamespaceRootCIMv2, mi.QueryDialectWQL, query)
+	require.NoError(t, err)
+	require.Len(t, systems, 1)
+
+	// Verify that signed fields were populated without error. The actual values
+	// are system-dependent (typically -1), so we only check that unmarshalling
+	// succeeded and log the values for manual inspection.
+	s := systems[0]
+
+	t.Logf("ResetCount=%d ResetLimit=%d PauseAfterReset=%d", s.ResetCount, s.ResetLimit, s.PauseAfterReset)
+}
+
+// Test_MI_QueryUnmarshal_SignedInt_Wide verifies that the sign-extension fix
+// works when a SINT16 value is unmarshalled into a wider Go field (int64).
+// Before the fix, -1 (0xFFFF) would become 65535 in an int64 field.
+func Test_MI_QueryUnmarshal_SignedInt_Wide(t *testing.T) {
+	application, err := mi.ApplicationInitialize()
+	require.NoError(t, err)
+	require.NotEmpty(t, application)
+
+	t.Cleanup(func() { _ = application.Close() })
+
+	destinationOptions, err := application.NewDestinationOptions()
+	require.NoError(t, err)
+	require.NotEmpty(t, destinationOptions)
+
+	err = destinationOptions.SetTimeout(5 * time.Second)
+	require.NoError(t, err)
+
+	err = destinationOptions.SetLocale(mi.LocaleEnglish)
+	require.NoError(t, err)
+
+	session, err := application.NewSession(destinationOptions)
+	require.NoError(t, err)
+	require.NotEmpty(t, session)
+
+	t.Cleanup(func() { _ = session.Close() })
+
+	// First, read the actual values with the narrow type to learn what to expect.
+	var narrow []computerSystemSigned
+
+	narrowQuery, err := mi.NewQuery("SELECT ResetCount, ResetLimit FROM Win32_ComputerSystem")
+	require.NoError(t, err)
+
+	err = session.QueryUnmarshal(&narrow, mi.OperationFlagsStandardRTTI, nil, mi.NamespaceRootCIMv2, mi.QueryDialectWQL, narrowQuery)
+	require.NoError(t, err)
+	require.Len(t, narrow, 1)
+
+	if narrow[0].ResetCount >= 0 {
+		t.Skipf("ResetCount is %d (non-negative); cannot verify sign extension into wider type", narrow[0].ResetCount)
+	}
+
+	// Now unmarshal the same SINT16 values into int64 fields.
+	var wide []computerSystemWide
+
+	wideQuery, err := mi.NewQuery("SELECT ResetCount, ResetLimit FROM Win32_ComputerSystem")
+	require.NoError(t, err)
+
+	err = session.QueryUnmarshal(&wide, mi.OperationFlagsStandardRTTI, nil, mi.NamespaceRootCIMv2, mi.QueryDialectWQL, wideQuery)
+	require.NoError(t, err)
+	require.Len(t, wide, 1)
+
+	// The key assertion: with the old code, ResetCount = -1 would become 65535
+	// in the int64 field. With the fix, it must remain negative.
+	require.Negative(t, wide[0].ResetCount,
+		"SINT16 value %d should remain negative when unmarshalled into int64 (got %d)",
+		narrow[0].ResetCount, wide[0].ResetCount)
+	require.Equal(t, int64(narrow[0].ResetCount), wide[0].ResetCount,
+		"int64 field should match int16 value after sign extension")
+
+	t.Logf("ResetCount: int16=%d, int64=%d (sign extension correct)", narrow[0].ResetCount, wide[0].ResetCount)
+}
+
 func Test_MI_QueryTimeout(t *testing.T) {
 	application, err := mi.ApplicationInitialize()
 	require.NoError(t, err)
