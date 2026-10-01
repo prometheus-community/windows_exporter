@@ -208,7 +208,13 @@ func unmarshalInstance(instance *Instance, structType reflect.Type, structValue 
 			field.SetBool(element.value == 1)
 		case ValueTypeUINT8, ValueTypeUINT16, ValueTypeUINT32, ValueTypeUINT64:
 			field.SetUint(uint64(element.value))
-		case ValueTypeSINT8, ValueTypeSINT16, ValueTypeSINT32, ValueTypeSINT64:
+		case ValueTypeSINT8:
+			field.SetInt(int64(int8(element.value)))
+		case ValueTypeSINT16:
+			field.SetInt(int64(int16(element.value)))
+		case ValueTypeSINT32:
+			field.SetInt(int64(int32(element.value)))
+		case ValueTypeSINT64:
 			field.SetInt(int64(element.value))
 		case ValueTypeSTRING:
 			if element.value == 0 {

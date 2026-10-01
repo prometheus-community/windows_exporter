@@ -421,6 +421,111 @@ func Test_MI_QueryUnmarshal_REAL64(t *testing.T) {
 	require.NoError(t, err)
 }
 
+type computerSystemSigned struct {
+	ResetCount     int16 `mi:"ResetCount"`
+	ResetLimit     int16 `mi:"ResetLimit"`
+	PauseAfterReset int64 `mi:"PauseAfterReset"`
+}
+
+// Test_MI_Query_SignedInt verifies that GetValue correctly sign-extends
+// SINT8/SINT16/SINT32 values. Win32_ComputerSystem has SInt16 properties
+// (ResetCount, ResetLimit) that are -1 on most systems.
+func Test_MI_Query_SignedInt(t *testing.T) {
+	application, err := mi.ApplicationInitialize()
+	require.NoError(t, err)
+	require.NotEmpty(t, application)
+
+	destinationOptions, err := application.NewDestinationOptions()
+	require.NoError(t, err)
+	require.NotEmpty(t, destinationOptions)
+
+	err = destinationOptions.SetTimeout(5 * time.Second)
+	require.NoError(t, err)
+
+	err = destinationOptions.SetLocale(mi.LocaleEnglish)
+	require.NoError(t, err)
+
+	session, err := application.NewSession(destinationOptions)
+	require.NoError(t, err)
+	require.NotEmpty(t, session)
+
+	operation, err := session.QueryInstances(mi.OperationFlagsStandardRTTI, nil, mi.NamespaceRootCIMv2, mi.QueryDialectWQL,
+		"SELECT ResetCount, ResetLimit, PauseAfterReset FROM Win32_ComputerSystem")
+	require.NoError(t, err)
+	require.NotEmpty(t, operation)
+
+	instance, moreResults, err := operation.GetInstance()
+	require.NoError(t, err)
+	require.NotEmpty(t, instance)
+	require.False(t, moreResults)
+
+	// ResetCount (SInt16): verify sign-extension produces a negative int16.
+	element, err := instance.GetElement("ResetCount")
+	require.NoError(t, err)
+
+	value, err := element.GetValue()
+	require.NoError(t, err)
+
+	resetCount, ok := value.(int16)
+	require.True(t, ok, "expected int16, got %T", value)
+	require.Equal(t, int16(-1), resetCount, "ResetCount should be -1")
+
+	t.Logf("ResetCount = %d, ResetLimit = %d", resetCount, resetCount)
+
+	err = operation.Close()
+	require.NoError(t, err)
+
+	err = session.Close()
+	require.NoError(t, err)
+
+	err = application.Close()
+	require.NoError(t, err)
+}
+
+// Test_MI_QueryUnmarshal_SignedInt verifies that the unmarshal code path
+// correctly sign-extends SINT16 values into Go struct fields.
+func Test_MI_QueryUnmarshal_SignedInt(t *testing.T) {
+	application, err := mi.ApplicationInitialize()
+	require.NoError(t, err)
+	require.NotEmpty(t, application)
+
+	destinationOptions, err := application.NewDestinationOptions()
+	require.NoError(t, err)
+	require.NotEmpty(t, destinationOptions)
+
+	err = destinationOptions.SetTimeout(5 * time.Second)
+	require.NoError(t, err)
+
+	err = destinationOptions.SetLocale(mi.LocaleEnglish)
+	require.NoError(t, err)
+
+	session, err := application.NewSession(destinationOptions)
+	require.NoError(t, err)
+	require.NotEmpty(t, session)
+
+	var systems []computerSystemSigned
+
+	query, err := mi.NewQuery("SELECT ResetCount, ResetLimit, PauseAfterReset FROM Win32_ComputerSystem")
+	require.NoError(t, err)
+
+	err = session.QueryUnmarshal(&systems, mi.OperationFlagsStandardRTTI, nil, mi.NamespaceRootCIMv2, mi.QueryDialectWQL, query)
+	require.NoError(t, err)
+	require.Len(t, systems, 1)
+
+	s := systems[0]
+	require.Equal(t, int16(-1), s.ResetCount, "ResetCount should be -1 (sign-extended from SInt16)")
+	require.Equal(t, int16(-1), s.ResetLimit, "ResetLimit should be -1 (sign-extended from SInt16)")
+	require.Equal(t, int64(-1), s.PauseAfterReset, "PauseAfterReset should be -1")
+
+	t.Logf("ResetCount=%d ResetLimit=%d PauseAfterReset=%d", s.ResetCount, s.ResetLimit, s.PauseAfterReset)
+
+	err = session.Close()
+	require.NoError(t, err)
+
+	err = application.Close()
+	require.NoError(t, err)
+}
+
 func Test_MI_QueryTimeout(t *testing.T) {
 	application, err := mi.ApplicationInitialize()
 	require.NoError(t, err)
