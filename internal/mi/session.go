@@ -185,6 +185,12 @@ func (s *Session) QueryInstances(flags OperationFlags, operationOptions *Operati
 	return operation, nil
 }
 
+// unmarshalInstance populates structValue from instance using the `mi` struct tags.
+//
+// skipMissing controls what happens when the instance has no element for a tagged field.
+// QueryUnmarshal passes true, tolerating classes whose MOF gained fields the query did not
+// select. Operation.Unmarshal passes false, so a missing element is reported as an error
+// instead of being silently left at its zero value.
 func unmarshalInstance(instance *Instance, structType reflect.Type, structValue reflect.Value, skipMissing bool) error {
 	for i := range structType.NumField() {
 		field := structValue.Field(i)
@@ -205,18 +211,36 @@ func unmarshalInstance(instance *Instance, structType reflect.Type, structValue 
 
 		switch element.valueType {
 		case ValueTypeBOOLEAN:
+			if field.Kind() != reflect.Bool {
+				return fieldTypeError(miTag, field, "boolean")
+			}
+
 			field.SetBool(element.value == 1)
 		case ValueTypeUINT8, ValueTypeUINT16, ValueTypeUINT32, ValueTypeUINT64:
-			field.SetUint(uint64(element.value))
+			if err := setUintField(miTag, field, uint64(element.value)); err != nil {
+				return err
+			}
 		case ValueTypeSINT8:
-			field.SetInt(int64(int8(element.value)))
+			if err := setIntField(miTag, field, int64(int8(element.value))); err != nil {
+				return err
+			}
 		case ValueTypeSINT16:
-			field.SetInt(int64(int16(element.value)))
+			if err := setIntField(miTag, field, int64(int16(element.value))); err != nil {
+				return err
+			}
 		case ValueTypeSINT32:
-			field.SetInt(int64(int32(element.value)))
+			if err := setIntField(miTag, field, int64(int32(element.value))); err != nil {
+				return err
+			}
 		case ValueTypeSINT64:
-			field.SetInt(int64(element.value))
-		case ValueTypeSTRING:
+			if err := setIntField(miTag, field, int64(element.value)); err != nil {
+				return err
+			}
+		case ValueTypeSTRING, ValueTypeCHAR16:
+			if field.Kind() != reflect.String {
+				return fieldTypeError(miTag, field, "string")
+			}
+
 			if element.value == 0 {
 				continue
 			}
@@ -225,8 +249,16 @@ func unmarshalInstance(instance *Instance, structType reflect.Type, structValue 
 
 			field.SetString(stringValue)
 		case ValueTypeREAL32:
+			if field.Kind() != reflect.Float32 && field.Kind() != reflect.Float64 {
+				return fieldTypeError(miTag, field, "float")
+			}
+
 			field.SetFloat(float64(math.Float32frombits(uint32(element.value))))
 		case ValueTypeREAL64:
+			if field.Kind() != reflect.Float64 {
+				return fieldTypeError(miTag, field, "float")
+			}
+
 			field.SetFloat(math.Float64frombits(uint64(element.value)))
 		default:
 			return fmt.Errorf("unsupported value type: %d", element.valueType)
@@ -234,6 +266,59 @@ func unmarshalInstance(instance *Instance, structType reflect.Type, structValue 
 	}
 
 	return nil
+}
+
+// setUintField assigns value to a numeric field, rejecting fields that cannot hold it
+// instead of letting the reflect package panic or silently wrap.
+func setUintField(miTag string, field reflect.Value, value uint64) error {
+	if !isUnsignedKind(field.Kind()) {
+		return fieldTypeError(miTag, field, "unsigned integer")
+	}
+
+	if field.OverflowUint(value) {
+		return fmt.Errorf("field %s of Go type %s cannot hold the MI unsigned value %d", miTag, field.Type(), value)
+	}
+
+	field.SetUint(value)
+
+	return nil
+}
+
+// setIntField assigns value to a numeric field, rejecting fields that cannot hold it.
+func setIntField(miTag string, field reflect.Value, value int64) error {
+	if !isNumericKind(field.Kind()) {
+		return fieldTypeError(miTag, field, "signed integer")
+	}
+
+	if isUnsignedKind(field.Kind()) {
+		if value < 0 || field.OverflowUint(uint64(value)) {
+			return fmt.Errorf("field %s of Go type %s cannot hold the MI signed value %d", miTag, field.Type(), value)
+		}
+
+		field.SetUint(uint64(value))
+
+		return nil
+	}
+
+	if field.OverflowInt(value) {
+		return fmt.Errorf("field %s of Go type %s cannot hold the MI signed value %d", miTag, field.Type(), value)
+	}
+
+	field.SetInt(value)
+
+	return nil
+}
+
+func isNumericKind(k reflect.Kind) bool {
+	return k >= reflect.Int && k <= reflect.Uint64
+}
+
+func isUnsignedKind(k reflect.Kind) bool {
+	return k >= reflect.Uint && k <= reflect.Uint64
+}
+
+func fieldTypeError(miTag string, field reflect.Value, miType string) error {
+	return fmt.Errorf("field %s is of Go type %s but the MI value is a %s", miTag, field.Type(), miType)
 }
 
 // QueryUnmarshal queries for a set of instances based on a query expression.

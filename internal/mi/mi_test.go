@@ -526,6 +526,76 @@ func Test_MI_QueryUnmarshal_SignedInt(t *testing.T) {
 	require.NoError(t, err)
 }
 
+// Test_MI_Unmarshal_TypeMismatch verifies that unmarshalInstance rejects
+// Go struct fields whose kind does not match the MI value type.
+func Test_MI_Unmarshal_TypeMismatch(t *testing.T) {
+	application, err := mi.ApplicationInitialize()
+	require.NoError(t, err)
+
+	session, err := application.NewSession(nil)
+	require.NoError(t, err)
+
+	// Map a string MI property (Name) to an int Go field → type error.
+	t.Run("string_to_int", func(t *testing.T) {
+		type bad struct {
+			Name int `mi:"Name"`
+		}
+
+		var dst []bad
+
+		query, err := mi.NewQuery("SELECT Name FROM Win32_Process WHERE Handle = 0")
+		require.NoError(t, err)
+
+		err = session.QueryUnmarshal(&dst, mi.OperationFlagsStandardRTTI, nil, mi.NamespaceRootCIMv2, mi.QueryDialectWQL, query)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "Name")
+
+		t.Logf("got expected error: %v", err)
+	})
+
+	// Map a uint32 MI property (Handle) to a bool Go field → type error.
+	t.Run("uint_to_bool", func(t *testing.T) {
+		type bad struct {
+			ProcessId bool `mi:"ProcessId"`
+		}
+
+		var dst []bad
+
+		query, err := mi.NewQuery("SELECT ProcessId FROM Win32_Process WHERE Handle = 0")
+		require.NoError(t, err)
+
+		err = session.QueryUnmarshal(&dst, mi.OperationFlagsStandardRTTI, nil, mi.NamespaceRootCIMv2, mi.QueryDialectWQL, query)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "ProcessId")
+
+		t.Logf("got expected error: %v", err)
+	})
+
+	// Map a negative SInt16 MI property to an unsigned Go field → error.
+	t.Run("negative_sint_to_uint", func(t *testing.T) {
+		type bad struct {
+			ResetCount uint16 `mi:"ResetCount"`
+		}
+
+		var dst []bad
+
+		query, err := mi.NewQuery("SELECT ResetCount FROM Win32_ComputerSystem")
+		require.NoError(t, err)
+
+		err = session.QueryUnmarshal(&dst, mi.OperationFlagsStandardRTTI, nil, mi.NamespaceRootCIMv2, mi.QueryDialectWQL, query)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "ResetCount")
+
+		t.Logf("got expected error: %v", err)
+	})
+
+	err = session.Close()
+	require.NoError(t, err)
+
+	err = application.Close()
+	require.NoError(t, err)
+}
+
 func Test_MI_QueryTimeout(t *testing.T) {
 	application, err := mi.ApplicationInitialize()
 	require.NoError(t, err)
