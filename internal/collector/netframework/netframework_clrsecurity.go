@@ -57,7 +57,7 @@ func (c *Collector) buildClrSecurity() {
 type Win32_PerfRawData_NETFramework_NETCLRSecurity struct {
 	Name string `mi:"Name"`
 
-	Frequency_PerfTime           uint32 `mi:"Frequency_PerfTime"`
+	Frequency_PerfTime           uint64 `mi:"Frequency_PerfTime"`
 	NumberLinkTimeChecks         uint32 `mi:"NumberLinkTimeChecks"`
 	PercentTimeinRTchecks        uint32 `mi:"PercentTimeinRTchecks"`
 	PercentTimeSigAuthenticating uint64 `mi:"PercentTimeSigAuthenticating"`

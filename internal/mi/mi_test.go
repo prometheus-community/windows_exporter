@@ -621,6 +621,90 @@ func Test_MI_QueryUnmarshal_SignedInt_Wide(t *testing.T) {
 	t.Logf("ResetCount: int16=%d, int64=%d (sign extension correct)", narrow[0].ResetCount, wide[0].ResetCount)
 }
 
+// Test_MI_Unmarshal_TypeMismatch verifies that unmarshalInstance rejects
+// Go struct fields whose kind does not match the MI value type.
+func Test_MI_Unmarshal_TypeMismatch(t *testing.T) {
+	application, err := mi.ApplicationInitialize()
+	require.NoError(t, err)
+
+	t.Cleanup(func() { _ = application.Close() })
+
+	session, err := application.NewSession(nil)
+	require.NoError(t, err)
+
+	t.Cleanup(func() { _ = session.Close() })
+
+	// Map a string MI property (Name) to an int Go field → type error.
+	t.Run("string_to_int", func(t *testing.T) {
+		type bad struct {
+			Name int `mi:"Name"`
+		}
+
+		var dst []bad
+
+		query, err := mi.NewQuery("SELECT Name FROM Win32_Process WHERE Handle = 0")
+		require.NoError(t, err)
+
+		err = session.QueryUnmarshal(&dst, mi.OperationFlagsStandardRTTI, nil, mi.NamespaceRootCIMv2, mi.QueryDialectWQL, query)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "Name")
+
+		t.Logf("got expected error: %v", err)
+	})
+
+	// Map a uint32 MI property (ProcessId) to a bool Go field → type error.
+	t.Run("uint_to_bool", func(t *testing.T) {
+		type bad struct {
+			ProcessId bool `mi:"ProcessId"`
+		}
+
+		var dst []bad
+
+		query, err := mi.NewQuery("SELECT ProcessId FROM Win32_Process WHERE Handle = 0")
+		require.NoError(t, err)
+
+		err = session.QueryUnmarshal(&dst, mi.OperationFlagsStandardRTTI, nil, mi.NamespaceRootCIMv2, mi.QueryDialectWQL, query)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "ProcessId")
+
+		t.Logf("got expected error: %v", err)
+	})
+
+	// Map a SInt16 MI property to an unsigned Go field. If the value is
+	// negative (e.g. -1 = "not supported") this must error; if it is
+	// non-negative and fits uint16 it is accepted. Skip when non-negative.
+	t.Run("negative_sint_to_uint", func(t *testing.T) {
+		// First, read the actual value to decide whether to test or skip.
+		var probe []computerSystemSigned
+
+		probeQuery, err := mi.NewQuery("SELECT ResetCount FROM Win32_ComputerSystem")
+		require.NoError(t, err)
+
+		err = session.QueryUnmarshal(&probe, mi.OperationFlagsStandardRTTI, nil, mi.NamespaceRootCIMv2, mi.QueryDialectWQL, probeQuery)
+		require.NoError(t, err)
+		require.Len(t, probe, 1)
+
+		if probe[0].ResetCount >= 0 {
+			t.Skipf("ResetCount is %d (non-negative); cannot test negative→uint rejection", probe[0].ResetCount)
+		}
+
+		type bad struct {
+			ResetCount uint16 `mi:"ResetCount"`
+		}
+
+		var dst []bad
+
+		query, err := mi.NewQuery("SELECT ResetCount FROM Win32_ComputerSystem")
+		require.NoError(t, err)
+
+		err = session.QueryUnmarshal(&dst, mi.OperationFlagsStandardRTTI, nil, mi.NamespaceRootCIMv2, mi.QueryDialectWQL, query)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "ResetCount")
+
+		t.Logf("got expected error: %v", err)
+	})
+}
+
 func Test_MI_QueryTimeout(t *testing.T) {
 	application, err := mi.ApplicationInitialize()
 	require.NoError(t, err)
