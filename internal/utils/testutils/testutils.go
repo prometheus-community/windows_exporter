@@ -104,13 +104,8 @@ func TestCollector[C collector.Collector, V any](t *testing.T, fn func(*V) C, co
 
 	switch {
 	case err == nil:
-	case errors.Is(err, mi.MI_RESULT_INVALID_CLASS):
-		t.Skip("collector not supported on this system")
-	case errors.Is(err, mi.MI_RESULT_INVALID_NAMESPACE),
-		errors.Is(err, pdh.NewPdhError(pdh.CstatusNoCounter)),
-		errors.Is(err, pdh.NewPdhError(pdh.CstatusNoObject)),
-		errors.Is(err, update.ErrUpdateServiceDisabled),
-		errors.Is(err, os.ErrNotExist):
+		// Nothing to do.
+	case isUnsupportedOnThisSystem(err, unsupportedDuringBuild...):
 		t.Skip("collector not supported on this system")
 	default:
 		require.NoError(t, err)
@@ -121,16 +116,46 @@ func TestCollector[C collector.Collector, V any](t *testing.T, fn func(*V) C, co
 	err = c.Collect(ch, 0)
 
 	switch {
-	// container collector
-	case errors.Is(err, windows.Errno(2151088411)),
-		errors.Is(err, pdh.ErrPerformanceCounterNotInitialized),
-		errors.Is(err, pdh.ErrNoData),
-		errors.Is(err, mi.MI_RESULT_INVALID_CLASS),
-		errors.Is(err, mi.MI_RESULT_INVALID_NAMESPACE),
-		errors.Is(err, mi.MI_RESULT_INVALID_QUERY),
-		errors.Is(err, update.ErrNoUpdates):
+	case isUnsupportedOnThisSystem(err, unsupportedDuringCollect...):
 		t.Skip("collector not supported on this system")
 	default:
 		require.NoError(t, err)
 	}
+}
+
+//nolint:gochecknoglobals
+var (
+	// unsupportedDuringBuild lists the errors that mean the collector's backing class or
+	// counter does not exist on the machine running the tests.
+	unsupportedDuringBuild = []error{
+		mi.MI_RESULT_INVALID_CLASS,
+		mi.MI_RESULT_INVALID_NAMESPACE,
+		pdh.NewPdhError(pdh.CstatusNoCounter),
+		pdh.NewPdhError(pdh.CstatusNoObject),
+		update.ErrUpdateServiceDisabled,
+		os.ErrNotExist,
+	}
+
+	// unsupportedDuringCollect lists the errors that mean the collector was built but has
+	// nothing to report on the machine running the tests.
+	unsupportedDuringCollect = []error{
+		// container collector
+		windows.Errno(2151088411),
+		pdh.ErrPerformanceCounterNotInitialized,
+		pdh.ErrNoData,
+		mi.MI_RESULT_INVALID_CLASS,
+		mi.MI_RESULT_INVALID_NAMESPACE,
+		mi.MI_RESULT_INVALID_QUERY,
+		update.ErrNoUpdates,
+	}
+)
+
+func isUnsupportedOnThisSystem(err error, candidates ...error) bool {
+	for _, candidate := range candidates {
+		if errors.Is(err, candidate) {
+			return true
+		}
+	}
+
+	return false
 }
