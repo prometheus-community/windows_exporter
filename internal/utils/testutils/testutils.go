@@ -105,6 +105,7 @@ func TestCollector[C collector.Collector, V any](t *testing.T, fn func(*V) C, co
 		errors.Is(err, pdh.NewPdhError(pdh.CstatusNoObject)),
 		errors.Is(err, update.ErrUpdateServiceDisabled),
 		errors.Is(err, os.ErrNotExist):
+		t.Skip("collector not supported on this system")
 	default:
 		require.NoError(t, err)
 	}
