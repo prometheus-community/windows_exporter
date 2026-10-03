@@ -54,6 +54,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/physical_disk"
 	"github.com/prometheus-community/windows_exporter/internal/collector/printer"
 	"github.com/prometheus-community/windows_exporter/internal/collector/process"
+	"github.com/prometheus-community/windows_exporter/internal/collector/registry"
 	"github.com/prometheus-community/windows_exporter/internal/collector/remote_fx"
 	"github.com/prometheus-community/windows_exporter/internal/collector/scheduled_task"
 	"github.com/prometheus-community/windows_exporter/internal/collector/service"
@@ -111,6 +112,7 @@ var BuildersWithFlags = map[string]BuilderWithFlags[Collector]{
 	physical_disk.Name:      NewBuilderWithFlags(physical_disk.NewWithFlags),
 	printer.Name:            NewBuilderWithFlags(printer.NewWithFlags),
 	process.Name:            NewBuilderWithFlags(process.NewWithFlags),
+	registry.Name:           NewBuilderWithFlags(registry.NewWithFlags),
 	remote_fx.Name:          NewBuilderWithFlags(remote_fx.NewWithFlags),
 	scheduled_task.Name:     NewBuilderWithFlags(scheduled_task.NewWithFlags),
 	service.Name:            NewBuilderWithFlags(service.NewWithFlags),
