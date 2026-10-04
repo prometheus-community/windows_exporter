@@ -236,7 +236,7 @@ func unmarshalInstance(instance *Instance, structType reflect.Type, structValue 
 			if err := setIntField(miTag, field, int64(element.value)); err != nil {
 				return err
 			}
-		case ValueTypeSTRING, ValueTypeCHAR16:
+		case ValueTypeSTRING:
 			if field.Kind() != reflect.String {
 				return fieldTypeError(miTag, field, "string")
 			}
@@ -248,6 +248,17 @@ func unmarshalInstance(instance *Instance, structType reflect.Type, structValue 
 			stringValue := windows.UTF16PtrToString((*uint16)(unsafe.Pointer(element.value)))
 
 			field.SetString(stringValue)
+		case ValueTypeCHAR16:
+			// A CHAR16 is a single UTF-16 code unit, not a pointer to a string.
+			if field.Kind() == reflect.String {
+				field.SetString(string(rune(element.value)))
+
+				continue
+			}
+
+			if err := setUintField(miTag, field, uint64(element.value)); err != nil {
+				return err
+			}
 		case ValueTypeREAL32:
 			if field.Kind() != reflect.Float32 && field.Kind() != reflect.Float64 {
 				return fieldTypeError(miTag, field, "float")
