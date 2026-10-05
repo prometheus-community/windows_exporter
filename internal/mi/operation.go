@@ -108,8 +108,10 @@ func (o *Operation) Close() error {
 
     moreResults := true
 
+    var err error
+
     for moreResults {
-        _, moreResults, err := o.GetInstance()
+        _, moreResults, err = o.GetInstance()
         if err != nil {
             break
         }
