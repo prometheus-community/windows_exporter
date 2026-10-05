@@ -109,22 +109,15 @@ read from the Host Compute Service API; the logical processor count comes from t
 | `windows_hyperv_host_logical_processor_count`   | Number of logical processors on the host                               | gauge | None               |
 | `windows_hyperv_vm_processor_count`             | Number of virtual processors assigned to the VM                        | gauge | `vm_id`, `vm`      |
 | `windows_hyperv_total_vm_processor_count`       | Total number of virtual processors assigned to all VMs                 | gauge | None               |
-| `windows_hyperv_host_cpu_ratio`                 | Virtual cores assigned to all VMs per logical host core                | gauge | None               |
 
-> **Note on hyper-threading**
->
-> `windows_hyperv_host_cpu_ratio` counts virtual cores per **logical** host core. A value of
-> `3` means three virtual cores are assigned for every logical core on the host.
->
-> Where hyper-threading (SMT) is enabled, the host reports two logical cores per physical
-> core, so the ratio per **physical** core is twice the exported value. Multiply by the number
-> of threads per core, which is `2` on current x86 processors:
->
-> ```
-> windows_hyperv_host_cpu_ratio * 2
-> ```
->
-> Values below `1` indicate the host is undersubscribed.
+The CPU allocation ratio can be computed in PromQL. Virtual cores per **logical** host core:
+
+```
+windows_hyperv_total_vm_processor_count / windows_hyperv_host_logical_processor_count
+```
+
+Where hyper-threading (SMT) is enabled, the host reports two logical cores per physical core.
+Multiply by the number of threads per core to get the ratio per **physical** core.
 
 
 ### Hyper-V Hypervisor Logical Processor

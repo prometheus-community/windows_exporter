@@ -35,7 +35,6 @@ type collectorHost struct {
 	perfDataCollectorLogicalProcessor *pdh.Collector
 	perfDataObjectLogicalProcessor    []perfDataCounterValuesHost
 
-	hostCPURatio              *prometheus.Desc
 	vmProcessorCount          *prometheus.Desc
 	hostLogicalProcessorCount *prometheus.Desc
 	totalVMProcessorCount     *prometheus.Desc
@@ -81,13 +80,6 @@ func (c *Collector) buildHost() error {
 	if err != nil {
 		return fmt.Errorf("failed to create memory property query: %w", err)
 	}
-
-	c.hostCPURatio = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "host_cpu_ratio"),
-		"Virtual cores assigned to all VMs per logical host core. On a hyper-threaded host, multiply by the number of threads per core to get the ratio per physical core.",
-		nil,
-		nil,
-	)
 
 	c.vmProcessorCount = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "vm_processor_count"),
@@ -152,17 +144,6 @@ func (c *Collector) collectHost(ch chan<- prometheus.Metric) error {
 		c.totalVMProcessorCount,
 		prometheus.GaugeValue,
 		totalVirtualCoreCount,
-	)
-
-	var ratio float64
-	if logicalCoreCount > 0 {
-		ratio = totalVirtualCoreCount / logicalCoreCount
-	}
-
-	ch <- prometheus.MustNewConstMetric(
-		c.hostCPURatio,
-		prometheus.GaugeValue,
-		ratio,
 	)
 
 	return nil
