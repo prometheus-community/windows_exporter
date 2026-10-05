@@ -102,17 +102,26 @@ type OperationCallbacks[T any] struct {
 //
 // https://learn.microsoft.com/en-us/windows/win32/api/mi/nf-mi-mi_operation_close
 func (o *Operation) Close() error {
-	if o == nil || o.ft == nil {
-		return ErrNotInitialized
-	}
+    if o == nil || o.ft == nil {
+        return ErrNotInitialized
+    }
 
-	r0, _, _ := syscall.SyscallN(o.ft.Close, uintptr(unsafe.Pointer(o)))
+    moreResults := true
 
-	if result := ResultError(r0); !errors.Is(result, MI_RESULT_OK) {
-		return result
-	}
+    for moreResults {
+        _, moreResults, err := o.GetInstance()
+        if err != nil {
+            break
+        }
+    }
 
-	return nil
+    r0, _, _ := syscall.SyscallN(o.ft.Close, uintptr(unsafe.Pointer(o)))
+
+    if result := ResultError(r0); !errors.Is(result, MI_RESULT_OK) {
+        return result
+    }
+
+    return nil
 }
 
 func (o *Operation) Cancel() error {
