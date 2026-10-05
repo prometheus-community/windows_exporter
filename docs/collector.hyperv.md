@@ -12,7 +12,7 @@ The hyperv collector exposes metrics about the Hyper-V hypervisor
 
 ### `--collectors.hyperv.enabled`
 Comma-separated list of collectors to use, for example:
-`--collectors.hyperv.enabled=dynamic_memory_balancer,dynamic_memory_vm,hypervisor_logical_processor,hypervisor_root_partition,hypervisor_root_virtual_processor,hypervisor_virtual_processor,legacy_network_adapter,virtual_machine_health_summary,virtual_machine_vid_partition,virtual_network_adapter,virtual_storage_device,virtual_switch`.
+`--collectors.hyperv.enabled=dynamic_memory_balancer,dynamic_memory_vm,host,hypervisor_logical_processor,hypervisor_root_partition,hypervisor_root_virtual_processor,hypervisor_virtual_processor,legacy_network_adapter,virtual_machine_health_summary,virtual_machine_vid_partition,virtual_network_adapter,virtual_storage_device,virtual_switch`.
 Matching is case-sensitive.
 
 ## Metrics
@@ -97,6 +97,28 @@ Some metrics explained: https://learn.microsoft.com/en-us/archive/blogs/chrisavi
 | `windows_hyperv_dynamic_memory_vm_pressure_minimum_ratio`              | Represents the minimum pressure band in the VM.                                   | gauge   | `vm`   |
 | `windows_hyperv_dynamic_memory_vm_physical`                            | Represents the current amount of memory in the VM.                                | gauge   | `vm`   |
 | `windows_hyperv_dynamic_memory_vm_removed_bytes_total`                 | Represents the cumulative amount of memory removed from the VM.                   | counter | `vm`   |
+
+### Hyper-V Host
+
+Metrics about the host's CPU allocation. Processor counts per virtual machine are
+read from the Host Compute Service API; the logical processor count comes from the
+`Hyper-V Hypervisor Logical Processor` performance counter object.
+
+| Metric Name                                     | Description                                                            | Type  | Labels             |
+|-------------------------------------------------|------------------------------------------------------------------------|-------|--------------------|
+| `windows_hyperv_host_logical_processor_count`   | Number of logical processors on the host                               | gauge | None               |
+| `windows_hyperv_vm_processor_count`             | Number of virtual processors assigned to the VM                        | gauge | `vm_id`, `vm`      |
+| `windows_hyperv_total_vm_processor_count`       | Total number of virtual processors assigned to all VMs                 | gauge | None               |
+
+The CPU allocation ratio can be computed in PromQL. Virtual cores per **logical** host core:
+
+```
+windows_hyperv_total_vm_processor_count / windows_hyperv_host_logical_processor_count
+```
+
+Where hyper-threading (SMT) is enabled, the host reports two logical cores per physical core.
+Multiply by the number of threads per core to get the ratio per **physical** core.
+
 
 ### Hyper-V Hypervisor Logical Processor
 
