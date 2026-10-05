@@ -130,6 +130,15 @@ jobs:
           Get-WindowsFeature DNS,DHCP |
               Format-Table DisplayName, Name, InstallState
 
+          Start-Service DNS
+          Start-Service DHCPServer
+
+          (Get-Service DNS).WaitForStatus("Running", [TimeSpan]::FromSeconds(30))
+          (Get-Service DHCPServer).WaitForStatus("Running", [TimeSpan]::FromSeconds(30))
+
+          Get-Service DNS,DHCPServer |
+              Format-Table Name, Status, StartType
+
           Add-DnsServerPrimaryZone `
               -Name "ci.example" `
               -ZoneFile "ci.example.dns"
