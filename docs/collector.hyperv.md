@@ -13,6 +13,7 @@ The hyperv collector exposes metrics about the Hyper-V hypervisor
 ### `--collectors.hyperv.enabled`
 Comma-separated list of collectors to use, for example:
 `--collectors.hyperv.enabled=dynamic_memory_balancer,dynamic_memory_vm,hypervisor_logical_processor,hypervisor_root_partition,hypervisor_root_virtual_processor,hypervisor_virtual_processor,legacy_network_adapter,virtual_machine_health_summary,virtual_machine_vid_partition,virtual_network_adapter,virtual_storage_device,virtual_switch`.
+The `wmi_health` sub-collector is not enabled by default and must be listed explicitly.
 Matching is case-sensitive.
 
 ## Metrics
@@ -250,6 +251,33 @@ Some metrics explained: https://learn.microsoft.com/en-us/archive/blogs/chrisavi
 | `windows_hyperv_vid_physical_pages_allocated`  | The number of physical pages allocated                                  | gauge | `vm`   |
 | `windows_hyperv_vid_preferred_numa_node_index` | The preferred NUMA node index associated with this partition            | gauge | `vm`   |
 | `windows_hyperv_vid_remote_physical_pages`     | The number of physical pages not allocated from the preferred NUMA node | gauge | `vm`   |
+
+
+### Hyper-V WMI Health
+
+Opt-in sub-collector (`wmi_health`, not enabled by default). It runs a minimal WQL query
+(`SELECT Name FROM Msvm_ComputerSystem WHERE Caption = 'Hosting Computer System'`) against the
+`root/virtualization/v2` namespace on every scrape, so enable it only where Hyper-V WMI health matters.
+
+| Name                       | Description                                                                                                  | Type  | Labels |
+|----------------------------|--------------------------------------------------------------------------------------------------------------|-------|--------|
+| `windows_hyperv_wmi_health` | Hyper-V WMI health status. 1 if the Hyper-V WMI namespace is responding, 0 if it is broken or not responding | gauge | None   |
+
+WMI can stop responding while the host and the exporter otherwise keep running. On a Hyper-V
+cluster node, Failover Cluster Manager generally cannot connect to the host in that state, and
+recovery often requires a reboot. The query times out after 5 seconds and is then reported as `0`.
+
+Example alert:
+
+```yaml
+- alert: HyperVWMIUnhealthy
+  expr: windows_hyperv_wmi_health == 0
+  for: 5m
+  labels:
+    severity: critical
+  annotations:
+    summary: Hyper-V WMI is not responding on {{ $labels.instance }}
+```
 
 
 ### Hyper-V Virtual Machine Health Summary
