@@ -34,28 +34,74 @@ Name | Description | Type | Labels
 `windows_textfile_mtime_seconds` | Unix epoch-formatted mtime (modified time) of textfiles successfully read | gauge | file
 
 ### Example metric
-_This collector does not yet have explained examples, we would appreciate your help adding them!_
+A scheduled collector should expose a completion timestamp that is updated only after a successful collection. For example:
+
+```prometheus
+# HELP example_collection_timestamp_seconds Unix time when the scheduled collection last completed successfully.
+# TYPE example_collection_timestamp_seconds gauge
+example_collection_timestamp_seconds 1789891200
+```
+
+If collection fails before publication, the previous value remains visible and becomes stale instead of falsely reporting a fresh success.
 
 ## Useful queries
-_This collector does not yet have any useful queries added, we would appreciate your help adding them!_
+Use `time() - example_collection_timestamp_seconds` to measure the age of the last successful collection. `time() - windows_textfile_mtime_seconds` measures the age of each successfully read file, but should only be used for files that are expected to be rewritten; intentionally static files would appear stale by design. `windows_textfile_scrape_error` detects files that cannot be opened or parsed, not successfully parsed files whose producer stopped updating them.
 
 ## Alerting examples
-_This collector does not yet have alerting examples, we would appreciate your help adding them!_
+Add one alerting-rule group:
 
-# Example use
+```yaml
+groups:
+  - name: windows-textfile-freshness
+    rules:
+      - alert: WindowsTextfileScrapeError
+        expr: windows_textfile_scrape_error == 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          description: A textfile cannot be opened or parsed.
+      - alert: WindowsTextfileCollectionStale
+        expr: time() - example_collection_timestamp_seconds > 300
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          description: The scheduled collection has not completed for more than five minutes and the producer or publication step may have failed.
+      - alert: WindowsTextfileCollectionMissing
+        expr: up{job="windows-exporter"} == 1 unless on (job, instance) example_collection_timestamp_seconds
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          description: The exporter is reachable but the expected completion metric is missing.
+```
+
+Exporter-down alerting (`up == 0`) remains separate; metric names, job labels and thresholds must be adapted to the deployment.
+
+## Example use
 This Powershell script, when run in the `--collector.textfile.directories` (default `C:\Program Files\windows_exporter\textfile_inputs`), generates a valid `.prom` file that should successfully ingested by windows_exporter.
 
 ```Powershell
 $alpha = 42
 $beta = @{ left=3.1415; right=2.718281828; }
 
-Set-Content -Path test1.prom -Encoding Ascii -NoNewline -Value ""
-Add-Content -Path test1.prom -Encoding Ascii -NoNewline -Value "# HELP test_alpha_total Some random metric.`n"
-Add-Content -Path test1.prom -Encoding Ascii -NoNewline -Value "# TYPE test_alpha_total counter`n"
-Add-Content -Path test1.prom -Encoding Ascii -NoNewline -Value "test_alpha_total ${alpha}`n"
-Add-Content -Path test1.prom -Encoding Ascii -NoNewline -Value "# HELP test_beta_bytes Some other metric.`n"
-Add-Content -Path test1.prom -Encoding Ascii -NoNewline -Value "# TYPE test_beta_bytes gauge`n"
+$timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+
+$lines = @(
+  "# HELP test_alpha_total Some random metric."
+  "# TYPE test_alpha_total counter"
+  "test_alpha_total ${alpha}"
+  "# HELP test_beta_bytes Some other metric."
+  "# TYPE test_beta_bytes gauge"
+)
 foreach ($k in $beta.Keys) {
-  Add-Content -Path test1.prom -Encoding Ascii -NoNewline -Value "test_beta_bytes{spin=""${k}""} $( $beta[$k] )`n"
+  $lines += "test_beta_bytes{spin=""${k}""} $( $beta[$k] )"
 }
+$lines += "# HELP example_collection_timestamp_seconds Unix time when the scheduled collection last completed successfully."
+$lines += "# TYPE example_collection_timestamp_seconds gauge"
+$lines += "example_collection_timestamp_seconds $timestamp"
+
+Set-Content -Path test1.prom.tmp -Encoding Ascii -NoNewline -Value (($lines -join "`n") + "`n")
+Move-Item -LiteralPath test1.prom.tmp -Destination test1.prom -Force
 ```
