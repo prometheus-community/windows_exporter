@@ -86,6 +86,48 @@ jobs:
               throw "Expected a concrete storage pool"
           }
 
+  hyper-v-integration-tests:
+    name: hyper-v integration tests
+    runs-on: windows-2025
+    steps:
+      - name: Enable Hyper-V
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          systeminfo | Select-String "Hyper-V Requirements" -Context 0,4
+
+          $result = Install-WindowsFeature Hyper-V -IncludeManagementTools
+          $result | Format-List Success, RestartNeeded, ExitCode, FeatureResult
+
+          Get-WindowsFeature Hyper-V* |
+              Format-Table DisplayName, Name, InstallState
+
+      - name: Start Hyper-V VM
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          Import-Module Hyper-V
+
+          Get-Service vmms | Format-List Name, Status, StartType
+          Start-Service vmms
+
+          New-VM `
+              -Name "GitHubActions" `
+              -Generation 2 `
+              -MemoryStartupBytes 256MB `
+              -NoVHD
+
+          Start-VM -Name "GitHubActions"
+
+          $vm = Get-VM -Name "GitHubActions"
+          $vm | Format-List Name, State, Status, Generation, Uptime
+
+          if ($vm.State -ne "Running") {
+              throw "Expected Hyper-V VM to be running, got $($vm.State)"
+          }
+
   promtool:
     runs-on: windows-2025
     steps:
