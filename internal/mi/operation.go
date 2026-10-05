@@ -106,6 +106,17 @@ func (o *Operation) Close() error {
 		return ErrNotInitialized
 	}
 
+	moreResults := true
+
+	var err error
+
+	for moreResults {
+		_, moreResults, err = o.GetInstance()
+		if err != nil {
+			break
+		}
+	}
+
 	r0, _, _ := syscall.SyscallN(o.ft.Close, uintptr(unsafe.Pointer(o)))
 
 	if result := ResultError(r0); !errors.Is(result, MI_RESULT_OK) {
