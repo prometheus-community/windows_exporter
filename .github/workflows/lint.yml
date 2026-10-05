@@ -41,6 +41,51 @@ jobs:
       - name: e2e Test
         run: make e2e-test
 
+  integration-tests:
+    name: integration tests
+    runs-on: windows-2025
+    steps:
+      - name: Setup storage pool
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          $existingDiskIds = @(Get-PhysicalDisk | ForEach-Object ObjectId)
+          $disk1 = Join-Path $env:RUNNER_TEMP "storage-pool-1.vhdx"
+          $disk2 = Join-Path $env:RUNNER_TEMP "storage-pool-2.vhdx"
+          $diskpartScript = Join-Path $env:RUNNER_TEMP "storage-pool-diskpart.txt"
+
+          @"
+          create vdisk file="$disk1" maximum=10240 type=expandable
+          attach vdisk
+          create vdisk file="$disk2" maximum=10240 type=expandable
+          attach vdisk
+          "@ | Set-Content -Path $diskpartScript -Encoding ascii
+
+          diskpart /s $diskpartScript
+          Update-HostStorageCache
+
+          $newDisks = @(Get-PhysicalDisk | Where-Object { $_.ObjectId -notin $existingDiskIds })
+          $newDisks | Format-Table FriendlyName, DeviceId, MediaType, BusType, Size, CanPool, CannotPoolReason
+
+          $poolableDisks = @($newDisks | Where-Object CanPool)
+
+          if ($poolableDisks.Count -ne 2) {
+              throw "Expected two poolable VHDX disks, found $($poolableDisks.Count)"
+          }
+
+          New-StoragePool `
+              -FriendlyName "GitHubActions" `
+              -StorageSubsystemFriendlyName "Windows Storage*" `
+              -PhysicalDisks $poolableDisks
+
+          $pool = Get-StoragePool -FriendlyName "GitHubActions" -ErrorAction Stop
+          $pool | Format-List FriendlyName, HealthStatus, OperationalStatus, Size, AllocatedSize
+
+          if ($pool.IsPrimordial) {
+              throw "Expected a concrete storage pool"
+          }
+
   promtool:
     runs-on: windows-2025
     steps:
