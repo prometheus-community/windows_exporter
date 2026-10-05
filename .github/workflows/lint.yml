@@ -86,10 +86,6 @@ jobs:
               throw "Expected a concrete storage pool"
           }
 
-  hyper-v-integration-tests:
-    name: hyper-v integration tests
-    runs-on: windows-2025
-    steps:
       - name: Start Hyper-V VM
         shell: pwsh
         run: |
@@ -123,10 +119,6 @@ jobs:
               throw "Expected Hyper-V VM to be running, got $($vm.State)"
           }
 
-  dns-dhcp-integration-tests:
-    name: dns/dhcp integration tests
-    runs-on: windows-2025
-    steps:
       - name: Setup DNS and DHCP
         shell: pwsh
         run: |
