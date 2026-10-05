@@ -123,6 +123,59 @@ jobs:
               throw "Expected Hyper-V VM to be running, got $($vm.State)"
           }
 
+  dns-dhcp-integration-tests:
+    name: dns/dhcp integration tests
+    runs-on: windows-2025
+    steps:
+      - name: Setup DNS and DHCP
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          $result = Install-WindowsFeature DNS,DHCP -IncludeManagementTools
+          $result | Format-List Success, RestartNeeded, ExitCode, FeatureResult
+
+          Get-WindowsFeature DNS,DHCP |
+              Format-Table DisplayName, Name, InstallState
+
+          Add-DnsServerPrimaryZone `
+              -Name "ci.example" `
+              -ZoneFile "ci.example.dns"
+
+          Add-DnsServerResourceRecordA `
+              -Name "test" `
+              -ZoneName "ci.example" `
+              -IPv4Address "192.0.2.10"
+
+          $zone = Get-DnsServerZone -Name "ci.example" -ErrorAction Stop
+          $zone | Format-List ZoneName, ZoneType, IsDsIntegrated
+
+          Get-DnsServerResourceRecord `
+              -ZoneName "ci.example" `
+              -Name "test" `
+              -RRType A
+
+          Add-DhcpServerv4Scope `
+              -Name "GitHubActions" `
+              -StartRange "192.0.2.100" `
+              -EndRange "192.0.2.200" `
+              -SubnetMask "255.255.255.0" `
+              -State Active
+
+          $scope = Get-DhcpServerv4Scope `
+              -ScopeId "192.0.2.0" `
+              -ErrorAction Stop
+
+          $scope | Format-List ScopeId, Name, State, StartRange, EndRange, SubnetMask
+
+          if ($zone.ZoneType -ne "Primary") {
+              throw "Expected a primary DNS zone"
+          }
+
+          if ($scope.State -ne "Active") {
+              throw "Expected an active DHCP scope"
+          }
+
   promtool:
     runs-on: windows-2025
     steps:
