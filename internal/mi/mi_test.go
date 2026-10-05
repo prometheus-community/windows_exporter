@@ -354,24 +354,46 @@ func Test_MI_Query_Uint16Array(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, session)
 
-	operation, err := session.QueryInstances(mi.OperationFlagsStandardRTTI, nil, mi.NamespaceRootCIMv2, mi.QueryDialectWQL, "SELECT Capabilities FROM Win32_DiskDrive")
+	operation, err := session.QueryInstances(
+		mi.OperationFlagsStandardRTTI,
+		nil,
+		mi.NamespaceRootCIMv2,
+		mi.QueryDialectWQL,
+		"SELECT Capabilities FROM Win32_DiskDrive",
+	)
 	require.NoError(t, err)
 	require.NotEmpty(t, operation)
 
-	instance, _, err := operation.GetInstance()
-	require.NoError(t, err)
-	require.NotEmpty(t, instance)
+	found := false
 
-	element, err := instance.GetElement("Capabilities")
-	require.NoError(t, err)
-	require.NotEmpty(t, element)
+	for {
+		instance, moreResults, err := operation.GetInstance()
+		require.NoError(t, err)
 
-	value, err := element.GetValue()
-	require.NoError(t, err)
+		if instance == nil {
+			break
+		}
 
-	capabilities, ok := value.([]uint16)
-	require.True(t, ok, "Capabilities should unmarshal to []uint16")
-	require.NotEmpty(t, capabilities)
+		element, err := instance.GetElement("Capabilities")
+		require.NoError(t, err)
+		require.NotEmpty(t, element)
+
+		value, err := element.GetValue()
+		require.NoError(t, err)
+
+		capabilities, ok := value.([]uint16)
+		require.True(t, ok, "Capabilities should unmarshal to []uint16")
+
+		if len(capabilities) > 0 {
+			found = true
+		}
+
+		if !moreResults {
+			break
+		}
+	}
+
+	require.True(t, found, "expected at least one disk with a non-empty uint16[] Capabilities")
 
 	err = operation.Close()
 	require.NoError(t, err)
@@ -401,7 +423,6 @@ func Test_MI_QueryUnmarshal_Uint16Array(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, disks)
 
-	// At least one disk drive should report non-empty capabilities.
 	found := false
 
 	for _, disk := range disks {

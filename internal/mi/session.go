@@ -294,7 +294,7 @@ func (s *Session) QueryUnmarshal(dst any,
 			case ValueTypeREAL32, ValueTypeREAL64:
 				field.SetFloat(float64(element.value))
 			case ValueTypeUINT16A:
-				if field.Type() != reflect.TypeOf([]uint16(nil)) {
+				if field.Type() != reflect.TypeFor[[]uint16]() {
 					return fmt.Errorf("cannot unmarshal UINT16A into field of type %s, expected []uint16", field.Type())
 				}
 
