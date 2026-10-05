@@ -139,9 +139,10 @@ jobs:
           Get-Service DNS,DHCPServer |
               Format-Table Name, Status, StartType
 
-          Add-DnsServerPrimaryZone `
-              -Name "ci.example" `
-              -ZoneFile "ci.example.dns"
+          & dnscmd.exe localhost /zoneadd ci.example /primary /file ci.example.dns
+          if ($LASTEXITCODE -ne 0) {
+              throw "Failed to create DNS zone with dnscmd.exe (exit code $LASTEXITCODE)"
+          }
 
           Add-DnsServerResourceRecordA `
               -Name "test" `
