@@ -90,23 +90,18 @@ jobs:
     name: hyper-v integration tests
     runs-on: windows-2025
     steps:
-      - name: Enable Hyper-V
+      - name: Start Hyper-V VM
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
 
           systeminfo | Select-String "Hyper-V Requirements" -Context 0,4
 
-          $result = Install-WindowsFeature Hyper-V -IncludeManagementTools
-          $result | Format-List Success, RestartNeeded, ExitCode, FeatureResult
-
           Get-WindowsFeature Hyper-V* |
               Format-Table DisplayName, Name, InstallState
 
-      - name: Start Hyper-V VM
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = "Stop"
+          Get-Module -ListAvailable Hyper-V |
+              Format-Table Name, Version, Path
 
           Import-Module Hyper-V
 
