@@ -12,8 +12,7 @@ The hyperv collector exposes metrics about the Hyper-V hypervisor
 
 ### `--collectors.hyperv.enabled`
 Comma-separated list of collectors to use, for example:
-`--collectors.hyperv.enabled=dynamic_memory_balancer,dynamic_memory_vm,hypervisor_logical_processor,hypervisor_root_partition,hypervisor_root_virtual_processor,hypervisor_virtual_processor,legacy_network_adapter,virtual_machine_health_summary,virtual_machine_vid_partition,virtual_network_adapter,virtual_storage_device,virtual_switch`.
-The `wmi_health` sub-collector is not enabled by default and must be listed explicitly.
+`--collectors.hyperv.enabled=dynamic_memory_balancer,dynamic_memory_vm,hypervisor_logical_processor,hypervisor_root_partition,hypervisor_root_virtual_processor,hypervisor_virtual_processor,legacy_network_adapter,virtual_machine_health_summary,virtual_machine_vid_partition,virtual_network_adapter,virtual_storage_device,virtual_switch,wmi_health`.
 Matching is case-sensitive.
 
 ## Metrics
@@ -255,9 +254,9 @@ Some metrics explained: https://learn.microsoft.com/en-us/archive/blogs/chrisavi
 
 ### Hyper-V WMI Health
 
-Opt-in sub-collector (`wmi_health`, not enabled by default). It runs a minimal WQL query
+Sub-collector `wmi_health`, enabled by default. It runs a minimal WQL query
 (`SELECT Name FROM Msvm_ComputerSystem WHERE Caption = 'Hosting Computer System'`) against the
-`root/virtualization/v2` namespace on every scrape, so enable it only where Hyper-V WMI health matters.
+`root/virtualization/v2` namespace on every scrape, so remove it from `--collectors.hyperv.enabled` if you don't need it.
 
 | Name                       | Description                                                                                                  | Type  | Labels |
 |----------------------------|--------------------------------------------------------------------------------------------------------------|-------|--------|

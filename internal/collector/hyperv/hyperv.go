@@ -75,6 +75,7 @@ var ConfigDefaults = Config{
 		subCollectorVirtualSMB,
 		subCollectorVirtualStorageDevice,
 		subCollectorVirtualSwitch,
+		subCollectorWMIHealth,
 	},
 }
 
