@@ -247,7 +247,8 @@ func (c *Collection) Build(ctx context.Context, logger *slog.Logger) error {
 			errors.Is(err, pdh.NewPdhError(pdh.CstatusNoObject)) ||
 			errors.Is(err, pdh.NewPdhError(pdh.CstatusNoCounter)) ||
 			errors.Is(err, mi.MI_RESULT_INVALID_OPERATION_TIMEOUT) ||
-			errors.Is(err, mi.MI_RESULT_INVALID_NAMESPACE) {
+			errors.Is(err, mi.MI_RESULT_INVALID_NAMESPACE) ||
+			errors.Is(err, mi.MI_RESULT_INVALID_CLASS) {
 			logger.LogAttrs(ctx, slog.LevelWarn, "couldn't initialize collector", slog.Any("err", err))
 
 			continue

@@ -92,7 +92,7 @@ func TestCollector[C collector.Collector, V any](t *testing.T, fn func(*V) C, co
 	t.Cleanup(func() { assert.NoError(t, c.Close()) })
 
 	if err := c.Build(logger, miSession); err != nil {
-		if !required && unsupportedCollector(err) {
+		if !required && unsupportedBuild(err) {
 			t.Skipf("collector %s is not supported: %v", c.GetName(), err)
 		}
 
@@ -111,7 +111,27 @@ func TestCollector[C collector.Collector, V any](t *testing.T, fn func(*V) C, co
 	return families
 }
 
-func unsupportedCollector(err error) bool {
+// unsupportedBuild returns true for errors that indicate a collector's WMI
+// class or PDH counter is not present on this system. MI_RESULT_INVALID_CLASS
+// is only accepted here (Build path) so that a mistyped class in production
+// code still fails Collect.
+func unsupportedBuild(err error) bool {
+	return errors.Is(err, mi.MI_RESULT_INVALID_CLASS) ||
+		errors.Is(err, mi.MI_RESULT_INVALID_NAMESPACE) ||
+		errors.Is(err, mi.MI_RESULT_INVALID_QUERY) ||
+		errors.Is(err, pdh.NewPdhError(pdh.CstatusNoCounter)) ||
+		errors.Is(err, pdh.NewPdhError(pdh.CstatusNoObject)) ||
+		errors.Is(err, pdh.ErrPerformanceCounterNotInitialized) ||
+		errors.Is(err, pdh.ErrNoData) ||
+		errors.Is(err, update.ErrUpdateServiceDisabled) ||
+		errors.Is(err, os.ErrNotExist) ||
+		errors.Is(err, windows.Errno(2151088411))
+}
+
+// unsupportedCollect returns true for Collect-path errors that indicate a
+// collector cannot run on this system. MI_RESULT_INVALID_CLASS is deliberately
+// excluded: a class missing at collect time is a real bug, not an expected skip.
+func unsupportedCollect(err error) bool {
 	return errors.Is(err, mi.MI_RESULT_INVALID_NAMESPACE) ||
 		errors.Is(err, mi.MI_RESULT_INVALID_QUERY) ||
 		errors.Is(err, pdh.NewPdhError(pdh.CstatusNoCounter)) ||
@@ -167,7 +187,7 @@ func collectMetrics(t *testing.T, c collector.Collector, required bool) map[stri
 		collectErr = nil
 	}
 
-	if !required && (unsupportedCollector(collectErr) || errors.Is(collectErr, update.ErrNoUpdates)) {
+	if !required && (unsupportedCollect(collectErr) || errors.Is(collectErr, update.ErrNoUpdates)) {
 		t.Skipf("collector %s is not supported: %v", c.GetName(), collectErr)
 	}
 
