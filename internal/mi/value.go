@@ -66,6 +66,7 @@ const (
 
 type Element struct {
 	value     uintptr
+	arrayLen  uint32
 	valueType ValueType
 }
 
@@ -122,7 +123,24 @@ func (e *Element) GetValue() (any, error) {
 		}
 
 		return strArray, nil
+	case ValueTypeUINT16A:
+		return e.getUint16Array(), nil
 	default:
 		return nil, fmt.Errorf("unsupported value type: %d", e.valueType)
 	}
+}
+
+// getUint16Array reads a UINT16A element into a Go []uint16. The element's
+// value holds the pointer to the MI_Uint16 array and arrayLen its length.
+func (e *Element) getUint16Array() []uint16 {
+	if e.value == 0 || e.arrayLen == 0 {
+		return nil
+	}
+
+	src := unsafe.Slice((*uint16)(unsafe.Pointer(e.value)), e.arrayLen)
+
+	out := make([]uint16, e.arrayLen)
+	copy(out, src)
+
+	return out
 }
