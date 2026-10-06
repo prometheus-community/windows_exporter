@@ -411,12 +411,14 @@ jobs:
               New-VMSwitch -Name "CISwitch" -SwitchType Internal
               New-VM `
                   -Name "GitHubActions" `
-                  -Generation 2 `
+                  -Generation 1 `
                   -MemoryStartupBytes 256MB `
                   -NewVHDPath (Join-Path $env:RUNNER_TEMP "hyperv-ci.vhdx") `
                   -NewVHDSizeBytes 1GB `
                   -SwitchName "CISwitch"
 
+              Add-VMNetworkAdapter -VMName "GitHubActions" -Name "CILegacy" `
+                  -IsLegacy $true -SwitchName "CISwitch"
               Start-VM -Name "GitHubActions"
 
               $vm = Get-VM -Name "GitHubActions"
@@ -639,8 +641,31 @@ jobs:
               Install-AdcsCertificationAuthority -CAType StandaloneRootCA `
                   -CACommonName "CIRootCA" -CryptoProviderName "RSA#Microsoft Software Key Storage Provider" `
                   -KeyLength 2048 -HashAlgorithmName SHA256 -Force
-              Start-Service CertSvc
+              Restart-Service CertSvc
               (Get-Service CertSvc).WaitForStatus("Running", [TimeSpan]::FromSeconds(30))
+
+              $requestInf = Join-Path $env:RUNNER_TEMP "certificate.inf"
+              $request = Join-Path $env:RUNNER_TEMP "certificate.req"
+              $certificate = Join-Path $env:RUNNER_TEMP "certificate.cer"
+              @'
+              [Version]
+              Signature="$Windows NT$"
+              [NewRequest]
+              Subject="CN=windows-exporter-ci"
+              KeyLength=2048
+              RequestType=PKCS10
+              HashAlgorithm=sha256
+              '@ | Set-Content $requestInf -Encoding ascii
+              certreq.exe -new -q $requestInf $request
+              if ($LASTEXITCODE -ne 0) { throw "Failed to create certificate request" }
+              # Standalone CAs may leave this request pending; it still exercises request counters.
+              certreq.exe -submit -q -config "$env:COMPUTERNAME\CIRootCA" $request $certificate
+              Get-Counter -ListSet "Certification Authority" |
+                  Select-Object -ExpandProperty PathsWithInstances
+              Get-WinEvent -FilterHashtable @{LogName='Application'; ProviderName='Microsoft-Windows-CertificationAuthority'; Id=110} `
+                  -ErrorAction SilentlyContinue | Select-Object TimeCreated, Message
+              # certreq can return a nonzero status for a pending request.
+              exit 0
 
           - name: Setup IIS
             shell: pwsh
@@ -872,12 +897,11 @@ jobs:
 
           $cluster = Get-Cluster -ErrorAction SilentlyContinue
           if ($null -eq $cluster) {
-              New-WorkgroupCluster `
+              New-Cluster `
                   -Name "CICluster" `
                   -Node $env:COMPUTERNAME `
                   -NoStorage `
                   -AdministrativeAccessPoint None `
-                  -AuthenticationMethod NoCertificates `
                   -Force | Out-Null
           }
 
@@ -1018,16 +1042,25 @@ jobs:
               throw "Static pods did not reach Running state"
           }
 
-      - name: Start .NET Framework workload
+      - name: Start .NET Framework and SMB workloads
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
           $workload = Join-Path $env:RUNNER_TEMP "netframework-workload.ps1"
           @'
           $data = New-Object byte[] 1MB
-          while ($true) {
-              [System.GC]::KeepAlive($data)
-              Start-Sleep -Seconds 1
+          $path = "\\$env:COMPUTERNAME\CIShare\test.txt"
+          $stream = [System.IO.File]::Open($path, [System.IO.FileMode]::Open, [System.IO.FileAccess]::ReadWrite, [System.IO.FileShare]::ReadWrite)
+          try {
+              while ($true) {
+                  $stream.Position = 0
+                  $stream.WriteByte(65)
+                  $stream.Flush()
+                  [System.GC]::KeepAlive($data)
+                  Start-Sleep -Seconds 1
+              }
+          } finally {
+              $stream.Dispose()
           }
           '@ | Set-Content $workload
           $process = Start-Process powershell.exe -PassThru `
@@ -1039,10 +1072,10 @@ jobs:
       - name: Go tests
         shell: pwsh
         run: |
-          go test -v -count=1 -race -timeout=10m -coverpkg=./... -coverprofile=coverage.out ./... 2>&1 | Tee-Object test-output.txt
+          go test -v -count=1 -race -timeout=10m '-coverpkg=./...' '-coverprofile=coverage.out' ./... 2>&1 | Tee-Object test-output.txt
           $testExitCode = $LASTEXITCODE
           if (Test-Path coverage.out) {
-              go tool cover -func=coverage.out | Tee-Object coverage-summary.txt
+              go tool cover '-func=coverage.out' | Tee-Object coverage-summary.txt
               if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
               Select-String -Path coverage-summary.txt -Pattern "^total:" |
                   ForEach-Object Line | Add-Content $env:GITHUB_STEP_SUMMARY

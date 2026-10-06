@@ -141,6 +141,10 @@ func TestMetricsHTTPHandlerScrapeTimeout(t *testing.T) {
 				if tc.timeout {
 					require.Contains(t, response.Body.String(), `windows_exporter_collector_timeout{collector="test"} 1`)
 					require.NotContains(t, response.Body.String(), "windows_test_test 42")
+
+					// Finish the delayed collector and its drain goroutine before leaving the bubble.
+					time.Sleep(time.Second)
+					synctest.Wait()
 				} else {
 					require.Contains(t, response.Body.String(), `windows_exporter_collector_timeout{collector="test"} 0`)
 					require.Contains(t, response.Body.String(), "windows_test_test 42")

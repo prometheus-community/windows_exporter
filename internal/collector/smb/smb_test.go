@@ -31,5 +31,5 @@ func BenchmarkCollector(b *testing.B) {
 
 func TestCollector(t *testing.T) {
 	metrics := testutils.TestCollector(t, smb.New, nil)
-	testutils.RequireFixtureMetric(t, metrics, smb.Name, "windows_smb_server_shares_received_bytes_total", prometheus.Labels{"share": "CIShare"})
+	testutils.RequireFixtureMetric(t, metrics, smb.Name, "windows_smb_server_shares_received_bytes_total", prometheus.Labels{"share": `\\*\CIShare`})
 }

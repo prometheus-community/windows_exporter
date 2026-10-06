@@ -31,6 +31,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/update"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
+	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus-community/windows_exporter/pkg/collector"
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
@@ -125,7 +126,10 @@ func unsupportedCollector(err error) bool {
 func collectMetrics(t *testing.T, c collector.Collector, required bool) map[string]*dto.MetricFamily {
 	t.Helper()
 
-	var metrics collectedMetrics
+	var (
+		metrics    collectedMetrics
+		collectErr error
+	)
 
 	ch := make(chan prometheus.Metric)
 
@@ -153,12 +157,21 @@ func collectMetrics(t *testing.T, c collector.Collector, required bool) map[stri
 			}
 		}
 
-		if !required && (unsupportedCollector(err) || errors.Is(err, update.ErrNoUpdates)) {
-			t.Skipf("collector %s is not supported: %v", c.GetName(), err)
-		}
-
-		require.NoError(t, err, "collect %s", c.GetName())
+		collectErr = err
 	}()
+
+	// Empty optional instance groups may report no data alongside valid metrics.
+	// Inspect every joined error so an unrelated failure cannot be hidden.
+	if noDataOnly(collectErr) && len(metrics) > 0 {
+		t.Logf("collector %s has empty optional instance groups: %v", c.GetName(), collectErr)
+		collectErr = nil
+	}
+
+	if !required && (unsupportedCollector(collectErr) || errors.Is(collectErr, update.ErrNoUpdates)) {
+		t.Skipf("collector %s is not supported: %v", c.GetName(), collectErr)
+	}
+
+	require.NoError(t, collectErr, "collect %s", c.GetName())
 
 	if required {
 		require.NotEmpty(t, metrics, "provisioned collector %s emitted no metrics", c.GetName())
@@ -228,4 +241,22 @@ func RequireFixtureMetric(t *testing.T, families map[string]*dto.MetricFamily, c
 	}
 
 	t.Fatalf("metric %s with fixture labels %v was not emitted; got %s", metricName, labels, families[metricName])
+}
+
+func noDataOnly(err error) bool {
+	if joined, ok := err.(interface{ Unwrap() []error }); ok {
+		for _, cause := range joined.Unwrap() {
+			if !noDataOnly(cause) {
+				return false
+			}
+		}
+
+		return true
+	}
+
+	if wrapped, ok := err.(interface{ Unwrap() error }); ok {
+		return noDataOnly(wrapped.Unwrap())
+	}
+
+	return errors.Is(err, pdh.ErrNoData) || errors.Is(err, types.ErrNoData)
 }

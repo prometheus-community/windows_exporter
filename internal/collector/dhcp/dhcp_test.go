@@ -31,5 +31,5 @@ func BenchmarkCollector(b *testing.B) {
 
 func TestCollector(t *testing.T) {
 	metrics := testutils.TestCollector(t, dhcp.New, nil)
-	testutils.RequireFixtureMetric(t, metrics, dhcp.Name, "windows_dhcp_scope_info", prometheus.Labels{"name": "GitHubActions", "scope": "192.0.2.0"})
+	testutils.RequireFixtureMetric(t, metrics, dhcp.Name, "windows_dhcp_scope_info", prometheus.Labels{"name": "GitHubActions", "scope": "192.0.2.0/24"})
 }
