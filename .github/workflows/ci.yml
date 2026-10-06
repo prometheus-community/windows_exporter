@@ -351,6 +351,8 @@ jobs:
       KUBERNETES_VERSION: "v1.37.1"
       NANOSERVER_IMAGE: mcr.microsoft.com/windows/nanoserver:${{ matrix.nanoserver }}
       SMTP_ENABLED: ${{ matrix.smtp }}
+      WINDOWS_EXPORTER_TEST_RDP_USER: rdp-ci
+      WINDOWS_TEST_OS: ${{ matrix.os }}
       # These collectors must work on the fixtures below; missing features are failures.
       WINDOWS_EXPORTER_TEST_COLLECTORS: "cache,container,cpu,cpu_info,dhcp,diskdrive,dns,fsrmquota,hyperv,iis,license,logical_disk,memory,mscluster,msmq,mssql,net,netframework,nps,os,pagefile,physical_disk,printer,process,scheduled_task,service,smb,smbclient,system,tcp,terminal_services,time,udp,update${{ matrix.smtp && ',smtp' || '' }}"
     steps:
@@ -536,6 +538,8 @@ jobs:
           }
 
           $wfreerdp = (Get-Command wfreerdp.exe -ErrorAction Stop).Source
+          $stdout = Join-Path $env:RUNNER_TEMP "rdp-client.stdout.log"
+          $stderr = Join-Path $env:RUNNER_TEMP "rdp-client.stderr.log"
           $freeRdp = Start-Process `
               -FilePath $wfreerdp `
               -ArgumentList @(
@@ -544,12 +548,16 @@ jobs:
                   "/p:$password"
                   "/cert:ignore"
                   "/size:800x600"
+                  "/log-level:INFO"
               ) `
+              -RedirectStandardOutput $stdout `
+              -RedirectStandardError $stderr `
               -PassThru
+          $freeRdp.Id | Set-Content (Join-Path $env:RUNNER_TEMP "rdp-client.pid")
 
           Write-Host "Started wfreerdp.exe with PID $($freeRdp.Id)"
 
-          $deadline = (Get-Date).AddSeconds(60)
+          $deadline = (Get-Date).AddSeconds(120)
           $rdpSession = $null
 
           do {
@@ -557,7 +565,7 @@ jobs:
               $sessions | ForEach-Object { Write-Host $_ }
 
               $rdpSession = $sessions |
-                  Where-Object { $_ -match "RDP-Tcp#" } |
+                  Where-Object { $_ -match "^\s*>?\s*rdp-tcp#\d+\s+$userName\s+\d+\s+Active\b" } |
                   Select-Object -First 1
 
               if ($null -ne $rdpSession) {
@@ -565,25 +573,29 @@ jobs:
               }
 
               if ($freeRdp.HasExited) {
-                  throw "wfreerdp.exe exited before an RDP session was created"
+                  Get-Content $stdout,$stderr -ErrorAction SilentlyContinue
+                  throw "wfreerdp.exe exited before the RDP user became active"
               }
 
               Start-Sleep -Seconds 2
           } while ((Get-Date) -lt $deadline)
 
           if ($null -eq $rdpSession) {
-              throw "No RDP-Tcp session was created by FreeRDP"
+              Get-Content $stdout,$stderr -ErrorAction SilentlyContinue
+              throw "No authenticated active RDP session was created by FreeRDP"
           }
 
-          Write-Host "RDP session created: $rdpSession"
+          Write-Host "Active RDP session: $rdpSession"
+          $sessionName = [regex]::Match($rdpSession, 'rdp-tcp#\d+', 'IgnoreCase').Value.Replace('#', ' ')
+          "WINDOWS_EXPORTER_TEST_RDP_SESSION=$sessionName" | Add-Content $env:GITHUB_ENV
 
           $remoteFxNetwork = Get-Counter -ListSet "RemoteFX Network" -ErrorAction Stop
           $remoteFxGraphics = Get-Counter -ListSet "RemoteFX Graphics" -ErrorAction Stop
 
           $networkInstances = @($remoteFxNetwork.PathsWithInstances |
-              Where-Object { $_ -match "RDP-Tcp#" })
+              Where-Object { $_ -match "RDP-Tcp[# ]\d+" })
           $graphicsInstances = @($remoteFxGraphics.PathsWithInstances |
-              Where-Object { $_ -match "RDP-Tcp#" })
+              Where-Object { $_ -match "RDP-Tcp[# ]\d+" })
 
           Write-Host "RemoteFX Network instances:"
           $networkInstances | ForEach-Object { Write-Host $_ }
@@ -597,6 +609,10 @@ jobs:
 
           if ($graphicsInstances.Count -eq 0) {
               Write-Warning "No RemoteFX Graphics RDP-Tcp instance was created"
+          }
+          if ($networkInstances.Count -gt 0 -and $graphicsInstances.Count -gt 0) {
+              "WINDOWS_EXPORTER_TEST_COLLECTORS=$env:WINDOWS_EXPORTER_TEST_COLLECTORS,remote_fx" |
+                  Add-Content $env:GITHUB_ENV
           }
 
       - name: Setup MSCluster
@@ -1283,10 +1299,18 @@ jobs:
       - name: Go tests
         shell: pwsh
         run: |
-          go test -v -count=1 -race -timeout=10m ./... 2>&1 | Tee-Object test-output.txt
+          go test -json -count=1 -race -timeout=10m ./... 2>&1 | Tee-Object test-results.jsonl |
+              ForEach-Object {
+                  $line = $_.ToString()
+                  try {
+                      $event = $line | ConvertFrom-Json -ErrorAction Stop
+                      if ($event.Output) { [Console]::Write($event.Output) }
+                  } catch {
+                      Write-Host $line
+                  }
+              }
           $testExitCode = $LASTEXITCODE
-          Select-String -Path test-output.txt -Pattern '^--- SKIP:' |
-              ForEach-Object Line | Add-Content $env:GITHUB_STEP_SUMMARY
+          ./tools/test-summary.ps1 -TestExitCode $testExitCode
           exit $testExitCode
 
       - name: Build and smoke test exporter
@@ -1303,9 +1327,12 @@ jobs:
           name: windows-test-results-${{ matrix.os }}
           path: |
             test-output.txt
+            test-results.jsonl
+            feature-summary.md
             ${{ runner.temp }}/windows_exporter.*.log
             ${{ runner.temp }}/kubelet.*.log
             ${{ runner.temp }}/sql-server-summary.txt
+            ${{ runner.temp }}/rdp-client.*.log
           if-no-files-found: ignore
 
       - name: Stop test workloads
@@ -1315,6 +1342,10 @@ jobs:
           $pidFile = Join-Path $env:RUNNER_TEMP "netframework.pid"
           if (Test-Path $pidFile) {
               Stop-Process -Id (Get-Content $pidFile) -ErrorAction SilentlyContinue
+          }
+          $rdpPidFile = Join-Path $env:RUNNER_TEMP "rdp-client.pid"
+          if (Test-Path $rdpPidFile) {
+              Stop-Process -Id (Get-Content $rdpPidFile) -ErrorAction SilentlyContinue
           }
           Get-Process kubelet -ErrorAction SilentlyContinue | Stop-Process -ErrorAction SilentlyContinue
           Get-VM -Name GitHubActions -ErrorAction SilentlyContinue | Stop-VM -TurnOff -Force -ErrorAction SilentlyContinue

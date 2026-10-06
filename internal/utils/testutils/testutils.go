@@ -209,11 +209,11 @@ func (m collectedMetrics) Collect(ch chan<- prometheus.Metric) {
 
 // RequireFixtureMetric checks a known CI fixture without requiring it on a
 // developer's machine. Labels match exactly, ignoring case for Windows names.
-func RequireFixtureMetric(t *testing.T, families map[string]*dto.MetricFamily, collectorName, metricName string, labels prometheus.Labels) {
+func RequireFixtureMetric(t *testing.T, families map[string]*dto.MetricFamily, collectorName, metricName string, labels prometheus.Labels) *dto.Metric {
 	t.Helper()
 
 	if !slices.Contains(strings.Split(os.Getenv("WINDOWS_EXPORTER_TEST_COLLECTORS"), ","), collectorName) {
-		return
+		return nil
 	}
 
 	require.Contains(t, families, metricName)
@@ -236,11 +236,13 @@ func RequireFixtureMetric(t *testing.T, families map[string]*dto.MetricFamily, c
 		}
 
 		if matched {
-			return
+			return metric
 		}
 	}
 
 	t.Fatalf("metric %s with fixture labels %v was not emitted; got %s", metricName, labels, families[metricName])
+
+	return nil
 }
 
 func noDataOnly(err error) bool {
