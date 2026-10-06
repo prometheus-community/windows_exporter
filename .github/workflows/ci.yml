@@ -14,11 +14,6 @@ on:
       - "v*"
   pull_request:
   workflow_dispatch:
-    inputs:
-      domain_lab:
-        description: Run the isolated AD and enterprise CA pilot instead of regular CI
-        type: boolean
-        default: false
   release:
     types:
       - published
@@ -27,7 +22,6 @@ permissions: {}
 
 jobs:
   build:
-    if: ${{ !inputs.domain_lab }}
     name: Build Windows binaries
     runs-on: ubuntu-24.04
     permissions:
@@ -324,7 +318,7 @@ jobs:
             sha256sums.txt
 
   test:
-    if: ${{ always() && !inputs.domain_lab }}
+    if: ${{ always() }}
     needs: windows-test
     runs-on: ubuntu-24.04
     steps:
@@ -334,7 +328,6 @@ jobs:
         run: test "$TEST_RESULT" = success
 
   windows-test:
-    if: ${{ !inputs.domain_lab }}
     name: Windows tests (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 25
@@ -1416,7 +1409,6 @@ jobs:
           Get-VM -Name GitHubActions -ErrorAction SilentlyContinue | Stop-VM -TurnOff -Force -ErrorAction SilentlyContinue
 
   lint:
-    if: ${{ !inputs.domain_lab }}
     runs-on: windows-2025
     permissions:
       contents: read
@@ -1444,7 +1436,6 @@ jobs:
           args: "--max-same-issues=0"
 
   super-linter:
-    if: ${{ !inputs.domain_lab }}
     name: Super Linter
     runs-on: ubuntu-24.04
     permissions:
@@ -1486,9 +1477,3 @@ jobs:
           VALIDATE_SPELL_CODESPELL: true
           # VALIDATE_XML: true
           # VALIDATE_YAML: true
-
-  domain-lab:
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.domain_lab }}
-    uses: $/.github/workflows/domain-lab.yml
-    permissions:
-      contents: read

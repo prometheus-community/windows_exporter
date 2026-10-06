@@ -20,34 +20,3 @@ Each Windows job publishes a feature table in its Actions summary and a
 Go test events, readable test output, and setup diagnostics. The table distinguishes
 required fixtures, unavailable collectors, and empty optional instance groups.
 This records Windows feature availability rather than Go statement coverage.
-
-## Optional domain lab
-
-Dispatch the CI workflow with `domain_lab=true` to run only the domain pilot:
-
-```sh
-gh workflow run ci.yml --repo prometheus-community/windows_exporter \
-  --ref master -f domain_lab=true
-```
-
-For an unmerged branch, use its repository and branch instead. Actions must be
-enabled in that repository.
-
-The pilot applies versioned Microsoft Windows Server 2025 evaluation media to a
-disposable Hyper-V guest, promotes it to a domain controller, installs an
-enterprise root CA, and enrolls a computer certificate. Promotion and reboot
-happen inside the guest. PowerShell Direct controls the guest through an isolated
-private switch, so it needs no external VM or cloud account.
-
-The host compiles the AD and ADCS Go tests with the race detector and runs them
-inside the guest with both collectors required. It then performs the same single
-exporter smoke request. The ADCS test requires a positive issued certificate
-counter for the enrolled `Machine` template. The `domain-lab-results` artifact includes a feature table,
-test output, provisioning diagnostics, and `timings.json` with each setup phase's
-duration.
-
-The pilot downloads an approximately 8 GB ISO and boots a 4 GB RAM guest. It is
-manual so its download, image deployment, and reboot costs do not slow every PR.
-The measured phase durations inform whether to reuse this approach for routine
-CI or a scheduled lab. Multi-server scenarios such as DFS replication need a
-second guest and remain a follow-up.

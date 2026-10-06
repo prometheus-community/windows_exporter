@@ -18,13 +18,10 @@
 package adcs_test
 
 import (
-	"os"
 	"testing"
 
 	"github.com/prometheus-community/windows_exporter/internal/collector/adcs"
 	"github.com/prometheus-community/windows_exporter/internal/utils/testutils"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/stretchr/testify/require"
 )
 
 func BenchmarkCollector(b *testing.B) {
@@ -32,14 +29,5 @@ func BenchmarkCollector(b *testing.B) {
 }
 
 func TestCollector(t *testing.T) {
-	metrics := testutils.TestCollector(t, adcs.New, nil)
-
-	template := os.Getenv("WINDOWS_EXPORTER_TEST_ADCS_TEMPLATE")
-	if template == "" {
-		return
-	}
-
-	issued := testutils.RequireFixtureMetric(t, metrics, adcs.Name, "windows_adcs_issued_requests_total", prometheus.Labels{"cert_template": template})
-	require.NotNil(t, issued)
-	require.Positive(t, issued.GetCounter().GetValue(), "domain fixture certificate was not issued")
+	testutils.TestCollector(t, adcs.New, nil)
 }
