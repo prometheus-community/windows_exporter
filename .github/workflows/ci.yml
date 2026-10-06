@@ -910,7 +910,7 @@ jobs:
           fetch-tags: 'false'
 
       - name: Lint Code Base
-        uses: super-linter/super-linter/slim@4ce20838b8ab83717e78138c5b3a1407148e0918 # v8.7.0
+        uses: super-linter/super-linter/slim@2da136927bd4a73596db63044b504547c62cb854 # v9.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           MULTI_STATUS: false
@@ -925,7 +925,7 @@ jobs:
           VALIDATE_EDITORCONFIG: true
           VALIDATE_ENV: true
           VALIDATE_GITHUB_ACTIONS: true
-          VALIDATE_GITHUB_ACTIONS_ZIZMOR: false
+          VALIDATE_GITHUB_ACTIONS_ZIZMOR: true
           VALIDATE_GITLEAKS: true
           VALIDATE_GO_RELEASER: true
           VALIDATE_HTML: true
@@ -939,11 +939,3 @@ jobs:
           # VALIDATE_XML: true
           # VALIDATE_YAML: true
 
-
-      - name: zizmor
-        uses: zizmorcore/zizmor-action@cc914d7f3750a2d13d75c7f184a1060aa0e9d482 # v0.6.4
-        with:
-          advanced-security: false
-          config: .github/linters/zizmor.yml
-          inputs: .github/
-          version: v1.30.1
