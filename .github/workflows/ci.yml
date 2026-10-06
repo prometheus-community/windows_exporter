@@ -625,10 +625,13 @@ jobs:
               "MSMQ-Server"
               "NPAS"
               "Print-Server"
+              "RSAT-DHCP"
+              "RSAT-DNS-Server"
+              "RSAT-Print-Services"
               "Web-Server"
           )
 
-          $result = Install-WindowsFeature -Name $features -IncludeManagementTools
+          $result = Install-WindowsFeature -Name $features
           $result | Format-List Success, RestartNeeded, ExitCode, FeatureResult
 
           if (-not $result.Success -or $result.RestartNeeded -ne "No") {
@@ -937,7 +940,6 @@ jobs:
                   throw "Expected IIS to return HTTP 200, got $($response.StatusCode)"
               }
 
-              & "$env:SystemRoot\System32\inetsrv\appcmd.exe" list site
               Get-Service W3SVC,WAS | Format-Table Name, Status, StartType
 
           - name: Setup MSMQ
@@ -1238,7 +1240,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           ./tools/end-to-end-test.ps1
 
-      - name: Upload test coverage and logs
+      - name: Upload test logs
         if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
