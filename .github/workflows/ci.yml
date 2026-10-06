@@ -346,14 +346,15 @@ jobs:
             run: |
               $ErrorActionPreference = "Stop"
 
-              $result = Install-WindowsFeature -Name Containers
+              $features = @("Containers", "Failover-Clustering")
+              $result = Install-WindowsFeature -Name $features
               $result | Format-List Success, RestartNeeded, ExitCode, FeatureResult
 
               if (-not $result.Success -or $result.RestartNeeded -ne "No") {
                   throw "Containers feature could not be installed without a restart"
               }
 
-              Get-WindowsFeature -Name Containers |
+              Get-WindowsFeature -Name $features |
                   Format-Table DisplayName, Name, InstallState
 
           - name: Setup storage pool
@@ -437,7 +438,6 @@ jobs:
               $features = @(
                   "DHCP"
                   "DNS"
-                  "Failover-Clustering"
                   "FS-FileServer"
                   "FS-Resource-Manager"
                   "MSMQ-Server"
@@ -599,6 +599,28 @@ jobs:
                   throw "containerd CRI endpoint is not ready"
               }
 
+          - name: Setup MSCluster
+            # The Go test requires the cluster and virtual disk.
+            continue-on-error: true
+            shell: powershell
+            run: |
+              $ErrorActionPreference = "Stop"
+
+              Import-Module FailoverClusters
+
+              $cluster = Get-Cluster -ErrorAction SilentlyContinue
+              if ($null -eq $cluster) {
+                  New-Cluster `
+                      -Name "CICluster" `
+                      -Node $env:COMPUTERNAME `
+                      -NoStorage `
+                      -AdministrativeAccessPoint None `
+                      -Force | Out-Null
+              }
+
+              Get-Cluster | Format-List Name, AdministrativeAccessPoint
+              Get-ClusterNode | Format-Table Name, State, NodeWeight, DynamicWeight
+              Get-ClusterNetwork | Format-Table Name, State, Role, Address
 
       - name: Pull HostProcess image
         id: pull-hostprocess
@@ -851,101 +873,77 @@ jobs:
 
               Get-SmbShare -Name "CIShare"
               Get-SmbConnection | Format-Table ServerName, ShareName, Dialect, NumOpens
+          - name: Setup DNS and DHCP
+            shell: pwsh
+            run: |
+              $ErrorActionPreference = "Stop"
 
-      - name: Setup MSCluster
-        # The Go test requires the cluster and virtual disk.
-        continue-on-error: true
-        shell: powershell
-        run: |
-          $ErrorActionPreference = "Stop"
+              Start-Service DNS
+              Start-Service DHCPServer
 
-          Import-Module FailoverClusters
+              (Get-Service DNS).WaitForStatus("Running", [TimeSpan]::FromSeconds(30))
+              (Get-Service DHCPServer).WaitForStatus("Running", [TimeSpan]::FromSeconds(30))
 
-          $cluster = Get-Cluster -ErrorAction SilentlyContinue
-          if ($null -eq $cluster) {
-              New-Cluster `
-                  -Name "CICluster" `
-                  -Node $env:COMPUTERNAME `
-                  -NoStorage `
-                  -AdministrativeAccessPoint None `
-                  -Force | Out-Null
-          }
+              Get-Service DNS,DHCPServer |
+                  Format-Table Name, Status, StartType
 
-          Get-Cluster | Format-List Name, AdministrativeAccessPoint
-          Get-ClusterNode | Format-Table Name, State, NodeWeight, DynamicWeight
-          Get-ClusterNetwork | Format-Table Name, State, Role, Address
+              Add-DnsServerPrimaryZone `
+                  -Name "ci.contoso.com" `
+                  -ZoneFile "ci.contoso.com.dns"
 
-      - name: Setup DNS and DHCP
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = "Stop"
+              Add-DnsServerResourceRecordA `
+                  -Name "test" `
+                  -ZoneName "ci.contoso.com" `
+                  -IPv4Address "192.0.2.10"
 
-          Start-Service DNS
-          Start-Service DHCPServer
+              $zone = Get-DnsServerZone -Name "ci.contoso.com" -ErrorAction Stop
+              $zone | Format-List ZoneName, ZoneType, IsDsIntegrated
 
-          (Get-Service DNS).WaitForStatus("Running", [TimeSpan]::FromSeconds(30))
-          (Get-Service DHCPServer).WaitForStatus("Running", [TimeSpan]::FromSeconds(30))
+              Get-DnsServerResourceRecord `
+                  -ZoneName "ci.contoso.com" `
+                  -Name "test" `
+                  -RRType A
 
-          Get-Service DNS,DHCPServer |
-              Format-Table Name, Status, StartType
+              Add-DhcpServerv4Scope `
+                  -Name "GitHubActions" `
+                  -StartRange "192.0.2.100" `
+                  -EndRange "192.0.2.200" `
+                  -SubnetMask "255.255.255.0" `
+                  -State Active
 
-          Add-DnsServerPrimaryZone `
-              -Name "ci.contoso.com" `
-              -ZoneFile "ci.contoso.com.dns"
+              $scope = Get-DhcpServerv4Scope `
+                  -ScopeId "192.0.2.0" `
+                  -ErrorAction Stop
 
-          Add-DnsServerResourceRecordA `
-              -Name "test" `
-              -ZoneName "ci.contoso.com" `
-              -IPv4Address "192.0.2.10"
+              $scope | Format-List ScopeId, Name, State, StartRange, EndRange, SubnetMask
 
-          $zone = Get-DnsServerZone -Name "ci.contoso.com" -ErrorAction Stop
-          $zone | Format-List ZoneName, ZoneType, IsDsIntegrated
+              if ($zone.ZoneType -ne "Primary") {
+                  throw "Expected a primary DNS zone"
+              }
 
-          Get-DnsServerResourceRecord `
-              -ZoneName "ci.contoso.com" `
-              -Name "test" `
-              -RRType A
+              if ($scope.State -ne "Active") {
+                  throw "Expected an active DHCP scope"
+              }
 
-          Add-DhcpServerv4Scope `
-              -Name "GitHubActions" `
-              -StartRange "192.0.2.100" `
-              -EndRange "192.0.2.200" `
-              -SubnetMask "255.255.255.0" `
-              -State Active
+          - name: Setup container network
+            shell: pwsh
+            run: |
+              $ErrorActionPreference = "Stop"
 
-          $scope = Get-DhcpServerv4Scope `
-              -ScopeId "192.0.2.0" `
-              -ErrorAction Stop
+              $hnsModule = Join-Path $env:RUNNER_TEMP "hns.psm1"
+              Import-Module $hnsModule -Force
 
-          $scope | Format-List ScopeId, Name, State, StartRange, EndRange, SubnetMask
+              $hnsNetwork = Get-HNSNetwork | Where-Object Name -EQ "ci"
+              if ($null -eq $hnsNetwork) {
+                  $hnsNetwork = New-HNSNetwork `
+                      -Type L2Bridge `
+                      -AddressPrefix "192.168.255.0/24" `
+                      -Gateway "192.168.255.2" `
+                      -Name "ci" `
+                      -Verbose
+              }
 
-          if ($zone.ZoneType -ne "Primary") {
-              throw "Expected a primary DNS zone"
-          }
-
-          if ($scope.State -ne "Active") {
-              throw "Expected an active DHCP scope"
-          }
-
-      - name: Setup container network
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = "Stop"
-
-          $hnsModule = Join-Path $env:RUNNER_TEMP "hns.psm1"
-          Import-Module $hnsModule -Force
-
-          $hnsNetwork = Get-HNSNetwork | Where-Object Name -EQ "ci"
-          if ($null -eq $hnsNetwork) {
-              $hnsNetwork = New-HNSNetwork `
-                  -Type L2Bridge `
-                  -AddressPrefix "192.168.255.0/24" `
-                  -Gateway "192.168.255.2" `
-                  -Name "ci" `
-                  -Verbose
-          }
-
-          $hnsNetwork | Format-List Name, Type, Id, Subnets
+              $hnsNetwork | Format-List Name, Type, Id, Subnets
 
       - name: Wait for container images
         wait: [pull-hostprocess, pull-nanoserver]
