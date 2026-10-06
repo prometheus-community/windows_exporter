@@ -318,8 +318,29 @@ jobs:
             sha256sums.txt
 
   test:
-    runs-on: windows-2025
+    if: ${{ always() }}
+    needs: windows-test
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require all Windows test jobs to pass
+        env:
+          TEST_RESULT: ${{ needs.windows-test.result }}
+        run: test "$TEST_RESULT" = success
+
+  windows-test:
+    name: Windows tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-2022
+            nanoserver: ltsc2022
+            smtp: true
+          - os: windows-2025
+            nanoserver: ltsc2025
+            smtp: false
     permissions:
       contents: read
     env:
@@ -328,8 +349,10 @@ jobs:
       CRI_ENDPOINT: "npipe:////./pipe/containerd-containerd"
       CRITOOLS_VERSION: "1.37.0"
       KUBERNETES_VERSION: "v1.37.1"
+      NANOSERVER_IMAGE: mcr.microsoft.com/windows/nanoserver:${{ matrix.nanoserver }}
+      SMTP_ENABLED: ${{ matrix.smtp }}
       # These collectors must work on the fixtures below; missing features are failures.
-      WINDOWS_EXPORTER_TEST_COLLECTORS: "cache,container,cpu,cpu_info,dhcp,diskdrive,dns,fsrmquota,hyperv,iis,license,logical_disk,memory,mscluster,msmq,net,netframework,nps,os,pagefile,physical_disk,printer,process,scheduled_task,service,smb,smbclient,system,tcp,terminal_services,time,udp,update"
+      WINDOWS_EXPORTER_TEST_COLLECTORS: "cache,container,cpu,cpu_info,dhcp,diskdrive,dns,fsrmquota,hyperv,iis,license,logical_disk,memory,mscluster,msmq,mssql,net,netframework,nps,os,pagefile,physical_disk,printer,process,scheduled_task,service,smb,smbclient,system,tcp,terminal_services,time,udp,update${{ matrix.smtp && ',smtp' || '' }}"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -463,6 +486,12 @@ jobs:
               if ($vm.State -ne "Running") {
                   throw "Expected Hyper-V VM to be running, got $($vm.State)"
               }
+
+      - name: Setup SQL Server Express
+        id: setup-mssql
+        background: true
+        shell: powershell
+        run: ./tools/setup-sql-server.ps1
 
       - name: Setup local RDP session
         id: setup-rdp
@@ -631,6 +660,11 @@ jobs:
               "Web-Server"
           )
 
+          # SMTP was removed from Windows Server 2025.
+          if ($env:SMTP_ENABLED -eq 'true') {
+              $features += "SMTP-Server"
+          }
+
           $result = Install-WindowsFeature -Name $features
           $result | Format-List Success, RestartNeeded, ExitCode, FeatureResult
 
@@ -763,13 +797,13 @@ jobs:
           spec:
             containers:
               - name: nanoserver
-                image: mcr.microsoft.com/windows/nanoserver:ltsc2025
+                image: __NANOSERVER_IMAGE__
                 imagePullPolicy: IfNotPresent
                 command:
                   - ping.exe
                   - -t
                   - 127.0.0.1
-          '@ | Set-Content `
+          '@.Replace('__NANOSERVER_IMAGE__', $env:NANOSERVER_IMAGE) | Set-Content `
               -Path (Join-Path $manifestDir "process-isolated.yaml") `
               -Encoding ascii
 
@@ -807,10 +841,10 @@ jobs:
           $crictl = Join-Path $env:ProgramFiles "containerd\crictl.exe"
           & $crictl `
               --runtime-endpoint $env:CRI_ENDPOINT `
-              pull mcr.microsoft.com/windows/nanoserver:ltsc2025
+              pull $env:NANOSERVER_IMAGE
 
           if ($LASTEXITCODE -ne 0) {
-              throw "Failed to pull Windows Server 2025 Nano Server image"
+              throw "Failed to pull Nano Server image $env:NANOSERVER_IMAGE"
           }
 
       - name: Setup container network
@@ -858,7 +892,7 @@ jobs:
               $imageNames = @($images.images.repoTags)
 
               $hostProcessReady = $imageNames -contains "mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v1.0.0"
-              $nanoServerReady = $imageNames -contains "mcr.microsoft.com/windows/nanoserver:ltsc2025"
+              $nanoServerReady = $imageNames -contains $env:NANOSERVER_IMAGE
 
               if ($networkReady -and $hostProcessReady -and $nanoServerReady) {
                   break
@@ -1195,7 +1229,15 @@ jobs:
 
 
       - name: Wait for background setup
-        wait: [pull-hostprocess, pull-nanoserver, setup-mscluster, setup-rdp]
+        wait: [pull-hostprocess, pull-nanoserver, setup-mscluster, setup-rdp, setup-mssql]
+
+      - name: Start SMTP server
+        if: ${{ matrix.smtp }}
+        shell: powershell
+        run: |
+          $ErrorActionPreference = "Stop"
+          Start-Service SMTPSVC
+          (Get-Service SMTPSVC).WaitForStatus("Running", [TimeSpan]::FromSeconds(30))
 
       - name: Start .NET Framework and SMB workloads
         shell: pwsh
@@ -1244,11 +1286,12 @@ jobs:
         if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: windows-test-results
+          name: windows-test-results-${{ matrix.os }}
           path: |
             test-output.txt
             ${{ runner.temp }}/windows_exporter.*.log
             ${{ runner.temp }}/kubelet.*.log
+            C:/Program Files/Microsoft SQL Server/170/Setup Bootstrap/Log/Summary.txt
           if-no-files-found: ignore
 
       - name: Stop test workloads
@@ -1331,4 +1374,3 @@ jobs:
           VALIDATE_SPELL_CODESPELL: true
           # VALIDATE_XML: true
           # VALIDATE_YAML: true
-
