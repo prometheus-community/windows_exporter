@@ -14,6 +14,11 @@ on:
       - "v*"
   pull_request:
   workflow_dispatch:
+    inputs:
+      domain_lab:
+        description: Run the isolated AD and enterprise CA pilot instead of regular CI
+        type: boolean
+        default: false
   release:
     types:
       - published
@@ -22,6 +27,7 @@ permissions: {}
 
 jobs:
   build:
+    if: ${{ !inputs.domain_lab }}
     name: Build Windows binaries
     runs-on: ubuntu-24.04
     permissions:
@@ -318,7 +324,7 @@ jobs:
             sha256sums.txt
 
   test:
-    if: ${{ always() }}
+    if: ${{ always() && !inputs.domain_lab }}
     needs: windows-test
     runs-on: ubuntu-24.04
     steps:
@@ -328,6 +334,7 @@ jobs:
         run: test "$TEST_RESULT" = success
 
   windows-test:
+    if: ${{ !inputs.domain_lab }}
     name: Windows tests (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 25
@@ -587,7 +594,6 @@ jobs:
 
           Write-Host "Active RDP session: $rdpSession"
           $sessionName = [regex]::Match($rdpSession, 'rdp-tcp#\d+', 'IgnoreCase').Value.Replace('#', ' ')
-          "WINDOWS_EXPORTER_TEST_RDP_SESSION=$sessionName" | Add-Content $env:GITHUB_ENV
 
           $remoteFxNetwork = Get-Counter -ListSet "RemoteFX Network" -ErrorAction Stop
           $remoteFxGraphics = Get-Counter -ListSet "RemoteFX Graphics" -ErrorAction Stop
@@ -610,10 +616,24 @@ jobs:
           if ($graphicsInstances.Count -eq 0) {
               Write-Warning "No RemoteFX Graphics RDP-Tcp instance was created"
           }
-          if ($networkInstances.Count -gt 0 -and $graphicsInstances.Count -gt 0) {
-              "WINDOWS_EXPORTER_TEST_COLLECTORS=$env:WINDOWS_EXPORTER_TEST_COLLECTORS,remote_fx" |
-                  Add-Content $env:GITHUB_ENV
+          $readyFile = Join-Path $env:RUNNER_TEMP "rdp-ready.json"
+          @{
+              SessionName = $sessionName
+              RemoteFX = ($networkInstances.Count -gt 0 -and $graphicsInstances.Count -gt 0)
+          } | ConvertTo-Json | Set-Content "$readyFile.tmp"
+          Move-Item "$readyFile.tmp" $readyFile
+
+          # Ending a background step also ends its child processes. Keep the
+          # authenticated client alive until the Go tests and smoke check finish.
+          $stopFile = Join-Path $env:RUNNER_TEMP "rdp-stop"
+          while (-not (Test-Path $stopFile)) {
+              if ($freeRdp.HasExited) {
+                  Get-Content $stdout,$stderr -ErrorAction SilentlyContinue
+                  throw "RDP client exited while the fixture was in use"
+              }
+              Start-Sleep -Seconds 2
           }
+          Stop-Process -Id $freeRdp.Id -ErrorAction SilentlyContinue
 
       - name: Setup MSCluster
         id: setup-mscluster
@@ -1259,7 +1279,27 @@ jobs:
 
 
       - name: Wait for background setup
-        wait: [pull-hostprocess, pull-nanoserver, setup-mscluster, setup-rdp, setup-mssql]
+        wait: [pull-hostprocess, pull-nanoserver, setup-mscluster, setup-mssql]
+
+      - name: Wait for active RDP fixture
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $readyFile = Join-Path $env:RUNNER_TEMP "rdp-ready.json"
+          $deadline = (Get-Date).AddMinutes(3)
+          while (-not (Test-Path $readyFile)) {
+              if ((Get-Date) -ge $deadline) {
+                  Get-Content (Join-Path $env:RUNNER_TEMP "rdp-client.*.log") -ErrorAction SilentlyContinue
+                  throw "RDP fixture did not become ready"
+              }
+              Start-Sleep -Seconds 2
+          }
+          $fixture = Get-Content $readyFile -Raw | ConvertFrom-Json
+          "WINDOWS_EXPORTER_TEST_RDP_SESSION=$($fixture.SessionName)" | Add-Content $env:GITHUB_ENV
+          if ($fixture.RemoteFX) {
+              "WINDOWS_EXPORTER_TEST_COLLECTORS=$env:WINDOWS_EXPORTER_TEST_COLLECTORS,remote_fx" |
+                  Add-Content $env:GITHUB_ENV
+          }
 
       - name: Start SMTP server
         if: ${{ matrix.smtp }}
@@ -1297,6 +1337,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Failed to synchronize WMI performance counters" }
 
       - name: Go tests
+        id: go-tests
         shell: pwsh
         run: |
           go test -json -count=1 -race -timeout=10m ./... 2>&1 | Tee-Object test-results.jsonl |
@@ -1310,8 +1351,15 @@ jobs:
                   }
               }
           $testExitCode = $LASTEXITCODE
-          ./tools/test-summary.ps1 -TestExitCode $testExitCode
+          "exit_code=$testExitCode" | Add-Content $env:GITHUB_OUTPUT
           exit $testExitCode
+
+      - name: Summarize Windows feature tests
+        if: ${{ always() }}
+        shell: pwsh
+        env:
+          TEST_EXIT_CODE: ${{ steps.go-tests.outputs.exit_code || '1' }}
+        run: ./tools/test-summary.ps1 -TestExitCode ([int]$env:TEST_EXIT_CODE)
 
       - name: Build and smoke test exporter
         shell: pwsh
@@ -1319,6 +1367,15 @@ jobs:
           go build -trimpath -o windows_exporter.exe ./cmd/windows_exporter
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           ./tools/end-to-end-test.ps1
+
+      - name: Signal RDP workload to stop
+        if: ${{ always() }}
+        shell: pwsh
+        run: New-Item -ItemType File -Force (Join-Path $env:RUNNER_TEMP "rdp-stop") | Out-Null
+
+      - name: Wait for RDP workload cleanup
+        if: ${{ always() }}
+        wait: [setup-rdp]
 
       - name: Upload test logs
         if: ${{ always() }}
@@ -1351,6 +1408,7 @@ jobs:
           Get-VM -Name GitHubActions -ErrorAction SilentlyContinue | Stop-VM -TurnOff -Force -ErrorAction SilentlyContinue
 
   lint:
+    if: ${{ !inputs.domain_lab }}
     runs-on: windows-2025
     permissions:
       contents: read
@@ -1378,6 +1436,7 @@ jobs:
           args: "--max-same-issues=0"
 
   super-linter:
+    if: ${{ !inputs.domain_lab }}
     name: Super Linter
     runs-on: ubuntu-24.04
     permissions:
@@ -1419,3 +1478,9 @@ jobs:
           VALIDATE_SPELL_CODESPELL: true
           # VALIDATE_XML: true
           # VALIDATE_YAML: true
+
+  domain-lab:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.domain_lab }}
+    uses: ./.github/workflows/domain-lab.yml
+    permissions:
+      contents: read

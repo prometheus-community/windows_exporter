@@ -6,7 +6,8 @@ $required = @($env:WINDOWS_EXPORTER_TEST_COLLECTORS.Split(','))
 $results = @{}
 $text = [System.Text.StringBuilder]::new()
 
-foreach ($line in Get-Content test-results.jsonl) {
+$lines = if (Test-Path test-results.jsonl) { Get-Content test-results.jsonl } else { @() }
+foreach ($line in $lines) {
     try {
         $event = $line | ConvertFrom-Json -ErrorAction Stop
     } catch {
@@ -36,7 +37,7 @@ foreach ($name in $required) {
         $results[$name] = @{ State = "not run"; Notes = @() }
     }
 }
-$testState = if ($TestExitCode -eq 0) { "passed" } else { "failed" }
+$testState = if (-not $lines) { "not run" } elseif ($TestExitCode -eq 0) { "passed" } else { "failed" }
 $summary = @(
     "### Windows feature tests: $env:WINDOWS_TEST_OS"
     ""
