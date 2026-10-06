@@ -516,7 +516,13 @@ jobs:
 
           Write-Host "Started mstsc.exe with PID $($mstsc.Id)"
 
-          $deadline = (Get-Date).AddSeconds(60)
+          function Get-RdpSession {
+              qwinsta.exe |
+                  Where-Object { $_ -match "RDP-Tcp#" } |
+                  Select-Object -First 1
+          }
+
+          $deadline = (Get-Date).AddSeconds(15)
           $rdpSession = $null
 
           do {
@@ -532,15 +538,68 @@ jobs:
               }
 
               if ($mstsc.HasExited) {
-                  throw "mstsc.exe exited before an RDP session was created"
+                  break
               }
 
               Start-Sleep -Seconds 2
           } while ((Get-Date) -lt $deadline)
 
           if ($null -eq $rdpSession) {
-              throw "No RDP-Tcp session was created"
+              Write-Host "MSTSC did not create an RDP session; trying FreeRDP"
+
+              if (-not $mstsc.HasExited) {
+                  Stop-Process -Id $mstsc.Id -Force -ErrorAction SilentlyContinue
+              }
+
+              choco install freerdp.portable `
+                  --version=3.28.0 `
+                  --yes `
+                  --no-progress
+
+              if ($LASTEXITCODE -ne 0) {
+                  throw "Failed to install FreeRDP"
+              }
+
+              $wfreerdp = (Get-Command wfreerdp.exe -ErrorAction Stop).Source
+              $freeRdp = Start-Process `
+                  -FilePath $wfreerdp `
+                  -ArgumentList @(
+                      "/v:127.0.0.1"
+                      "/u:$env:COMPUTERNAME\$userName"
+                      "/p:$password"
+                      "/cert:ignore"
+                      "/size:800x600"
+                  ) `
+                  -PassThru
+
+              Write-Host "Started wfreerdp.exe with PID $($freeRdp.Id)"
+
+              $deadline = (Get-Date).AddSeconds(60)
+              do {
+                  $sessions = qwinsta.exe
+                  $sessions | ForEach-Object { Write-Host $_ }
+
+                  $rdpSession = $sessions |
+                      Where-Object { $_ -match "RDP-Tcp#" } |
+                      Select-Object -First 1
+
+                  if ($null -ne $rdpSession) {
+                      break
+                  }
+
+                  if ($freeRdp.HasExited) {
+                      throw "wfreerdp.exe exited before an RDP session was created"
+                  }
+
+                  Start-Sleep -Seconds 2
+              } while ((Get-Date) -lt $deadline)
           }
+
+          if ($null -eq $rdpSession) {
+              throw "No RDP-Tcp session was created by MSTSC or FreeRDP"
+          }
+
+          Write-Host "RDP session created: $rdpSession"
 
           $remoteFxNetwork = Get-Counter -ListSet "RemoteFX Network" -ErrorAction Stop
           $remoteFxGraphics = Get-Counter -ListSet "RemoteFX Graphics" -ErrorAction Stop
