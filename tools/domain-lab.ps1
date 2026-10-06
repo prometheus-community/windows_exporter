@@ -48,9 +48,10 @@ try {
     $isoUri = "https://software-static.download.prss.microsoft.com/dbazure/998969d5-f34g-4e03-ac9d-1f9786c66749/26100.32230.260111-0550.lt_release_svc_refresh_SERVER_EVAL_x64FRE_en-us.iso"
     curl.exe --fail --location --retry 3 --silent --show-error --output $iso $isoUri
     if ($LASTEXITCODE -ne 0) { throw "Evaluation ISO download failed" }
-    Write-Host "Evaluation ISO SHA256: $((Get-FileHash $iso -Algorithm SHA256).Hash)"
+    $isoHash = (Get-FileHash $iso -Algorithm SHA256).Hash
+    Write-Host "Evaluation ISO SHA256: $isoHash"
     $expectedHash = "7b052573ba7894c9924e3e87ba732ccd354d18cb75a883efa9b900ea125bfd51"
-    if ((Get-FileHash $iso -Algorithm SHA256).Hash -ne $expectedHash) {
+    if ($isoHash -ne $expectedHash) {
         throw "Evaluation ISO SHA256 mismatch"
     }
     Record-LabTime "Download ISO"

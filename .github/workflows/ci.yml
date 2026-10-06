@@ -514,130 +514,6 @@ jobs:
         shell: powershell
         run: ./tools/setup-sql-server.ps1
 
-      - name: Setup local RDP session
-        id: setup-rdp
-        continue-on-error: true
-        background: true
-        shell: powershell
-        run: |
-          $ErrorActionPreference = "Stop"
-
-          $userName = "rdp-ci"
-          $password = "WindowsExporter-CI-2026!"
-          $securePassword = ConvertTo-SecureString $password -AsPlainText -Force
-
-          if ($null -eq (Get-LocalUser -Name $userName -ErrorAction SilentlyContinue)) {
-              New-LocalUser `
-                  -Name $userName `
-                  -Password $securePassword `
-                  -PasswordNeverExpires `
-                  -AccountNeverExpires | Out-Null
-          }
-
-          Add-LocalGroupMember `
-              -Group "Remote Desktop Users" `
-              -Member $userName `
-              -ErrorAction SilentlyContinue
-
-          Set-ItemProperty `
-              -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server" `
-              -Name fDenyTSConnections `
-              -Value 0
-
-          Start-Service TermService
-          (Get-Service TermService).WaitForStatus("Running", [TimeSpan]::FromSeconds(30))
-
-          $wfreerdp = (Get-Command wfreerdp.exe -ErrorAction Stop).Source
-          $stdout = Join-Path $env:RUNNER_TEMP "rdp-client.stdout.log"
-          $stderr = Join-Path $env:RUNNER_TEMP "rdp-client.stderr.log"
-          $freeRdp = Start-Process `
-              -FilePath $wfreerdp `
-              -ArgumentList @(
-                  "/v:127.0.0.1"
-                  "/u:$env:COMPUTERNAME\$userName"
-                  "/p:$password"
-                  "/cert:ignore"
-                  "/size:800x600"
-                  "/log-level:INFO"
-              ) `
-              -RedirectStandardOutput $stdout `
-              -RedirectStandardError $stderr `
-              -PassThru
-          $freeRdp.Id | Set-Content (Join-Path $env:RUNNER_TEMP "rdp-client.pid")
-
-          Write-Host "Started wfreerdp.exe with PID $($freeRdp.Id)"
-
-          $deadline = (Get-Date).AddSeconds(120)
-          $rdpSession = $null
-
-          do {
-              $sessions = qwinsta.exe
-              $sessions | ForEach-Object { Write-Host $_ }
-
-              $rdpSession = $sessions |
-                  Where-Object { $_ -match "^\s*>?\s*rdp-tcp#\d+\s+$userName\s+\d+\s+Active\b" } |
-                  Select-Object -First 1
-
-              if ($null -ne $rdpSession) {
-                  break
-              }
-
-              if ($freeRdp.HasExited) {
-                  Get-Content $stdout,$stderr -ErrorAction SilentlyContinue
-                  throw "wfreerdp.exe exited before the RDP user became active"
-              }
-
-              Start-Sleep -Seconds 2
-          } while ((Get-Date) -lt $deadline)
-
-          if ($null -eq $rdpSession) {
-              Get-Content $stdout,$stderr -ErrorAction SilentlyContinue
-              throw "No authenticated active RDP session was created by FreeRDP"
-          }
-
-          Write-Host "Active RDP session: $rdpSession"
-          $sessionName = [regex]::Match($rdpSession, 'rdp-tcp#\d+', 'IgnoreCase').Value.Replace('#', ' ')
-
-          $remoteFxNetwork = Get-Counter -ListSet "RemoteFX Network" -ErrorAction Stop
-          $remoteFxGraphics = Get-Counter -ListSet "RemoteFX Graphics" -ErrorAction Stop
-
-          $networkInstances = @($remoteFxNetwork.PathsWithInstances |
-              Where-Object { $_ -match "RDP-Tcp[# ]\d+" })
-          $graphicsInstances = @($remoteFxGraphics.PathsWithInstances |
-              Where-Object { $_ -match "RDP-Tcp[# ]\d+" })
-
-          Write-Host "RemoteFX Network instances:"
-          $networkInstances | ForEach-Object { Write-Host $_ }
-
-          Write-Host "RemoteFX Graphics instances:"
-          $graphicsInstances | ForEach-Object { Write-Host $_ }
-
-          if ($networkInstances.Count -eq 0) {
-              Write-Warning "No RemoteFX Network RDP-Tcp instance was created"
-          }
-
-          if ($graphicsInstances.Count -eq 0) {
-              Write-Warning "No RemoteFX Graphics RDP-Tcp instance was created"
-          }
-          $readyFile = Join-Path $env:RUNNER_TEMP "rdp-ready.json"
-          @{
-              SessionName = $sessionName
-              RemoteFX = ($networkInstances.Count -gt 0 -and $graphicsInstances.Count -gt 0)
-          } | ConvertTo-Json | Set-Content "$readyFile.tmp"
-          Move-Item "$readyFile.tmp" $readyFile
-
-          # Ending a background step also ends its child processes. Keep the
-          # authenticated client alive until the Go tests and smoke check finish.
-          $stopFile = Join-Path $env:RUNNER_TEMP "rdp-stop"
-          while (-not (Test-Path $stopFile)) {
-              if ($freeRdp.HasExited) {
-                  Get-Content $stdout,$stderr -ErrorAction SilentlyContinue
-                  throw "RDP client exited while the fixture was in use"
-              }
-              Start-Sleep -Seconds 2
-          }
-          Stop-Process -Id $freeRdp.Id -ErrorAction SilentlyContinue
-
       - name: Setup MSCluster
         id: setup-mscluster
         # The Go test requires the cluster and virtual disk.
@@ -708,6 +584,8 @@ jobs:
           $result | Format-List Success, RestartNeeded, ExitCode, FeatureResult
 
           if (-not $result.Success -or $result.RestartNeeded -ne "No") {
+              Get-WindowsPackage -Online | Where-Object PackageState -eq InstallPending |
+                  Format-Table PackageName, PackageState
               throw "Required Windows roles could not be installed without a restart"
           }
 
@@ -1284,6 +1162,131 @@ jobs:
       - name: Wait for background setup
         wait: [pull-hostprocess, pull-nanoserver, setup-mscluster, setup-mssql]
 
+      # Start user session processes after Windows servicing finishes.
+      - name: Setup local RDP session
+        id: setup-rdp
+        continue-on-error: true
+        background: true
+        shell: powershell
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          $userName = "rdp-ci"
+          $password = "WindowsExporter-CI-2026!"
+          $securePassword = ConvertTo-SecureString $password -AsPlainText -Force
+
+          if ($null -eq (Get-LocalUser -Name $userName -ErrorAction SilentlyContinue)) {
+              New-LocalUser `
+                  -Name $userName `
+                  -Password $securePassword `
+                  -PasswordNeverExpires `
+                  -AccountNeverExpires | Out-Null
+          }
+
+          Add-LocalGroupMember `
+              -Group "Remote Desktop Users" `
+              -Member $userName `
+              -ErrorAction SilentlyContinue
+
+          Set-ItemProperty `
+              -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server" `
+              -Name fDenyTSConnections `
+              -Value 0
+
+          Start-Service TermService
+          (Get-Service TermService).WaitForStatus("Running", [TimeSpan]::FromSeconds(30))
+
+          $wfreerdp = (Get-Command wfreerdp.exe -ErrorAction Stop).Source
+          $stdout = Join-Path $env:RUNNER_TEMP "rdp-client.stdout.log"
+          $stderr = Join-Path $env:RUNNER_TEMP "rdp-client.stderr.log"
+          $freeRdp = Start-Process `
+              -FilePath $wfreerdp `
+              -ArgumentList @(
+                  "/v:127.0.0.1"
+                  "/u:$env:COMPUTERNAME\$userName"
+                  "/p:$password"
+                  "/cert:ignore"
+                  "/size:800x600"
+                  "/log-level:INFO"
+              ) `
+              -RedirectStandardOutput $stdout `
+              -RedirectStandardError $stderr `
+              -PassThru
+          $freeRdp.Id | Set-Content (Join-Path $env:RUNNER_TEMP "rdp-client.pid")
+
+          Write-Host "Started wfreerdp.exe with PID $($freeRdp.Id)"
+
+          $deadline = (Get-Date).AddSeconds(120)
+          $rdpSession = $null
+
+          do {
+              $sessions = qwinsta.exe
+              $sessions | ForEach-Object { Write-Host $_ }
+
+              $rdpSession = $sessions |
+                  Where-Object { $_ -match "^\s*>?\s*rdp-tcp#\d+\s+$userName\s+\d+\s+Active\b" } |
+                  Select-Object -First 1
+
+              if ($null -ne $rdpSession) {
+                  break
+              }
+
+              if ($freeRdp.HasExited) {
+                  Get-Content $stdout,$stderr -ErrorAction SilentlyContinue
+                  throw "wfreerdp.exe exited before the RDP user became active"
+              }
+
+              Start-Sleep -Seconds 2
+          } while ((Get-Date) -lt $deadline)
+
+          if ($null -eq $rdpSession) {
+              Get-Content $stdout,$stderr -ErrorAction SilentlyContinue
+              throw "No authenticated active RDP session was created by FreeRDP"
+          }
+
+          Write-Host "Active RDP session: $rdpSession"
+          $sessionName = [regex]::Match($rdpSession, 'rdp-tcp#\d+', 'IgnoreCase').Value.Replace('#', ' ')
+
+          $remoteFxNetwork = Get-Counter -ListSet "RemoteFX Network" -ErrorAction Stop
+          $remoteFxGraphics = Get-Counter -ListSet "RemoteFX Graphics" -ErrorAction Stop
+
+          $networkInstances = @($remoteFxNetwork.PathsWithInstances |
+              Where-Object { $_ -match "RDP-Tcp[# ]\d+" })
+          $graphicsInstances = @($remoteFxGraphics.PathsWithInstances |
+              Where-Object { $_ -match "RDP-Tcp[# ]\d+" })
+
+          Write-Host "RemoteFX Network instances:"
+          $networkInstances | ForEach-Object { Write-Host $_ }
+
+          Write-Host "RemoteFX Graphics instances:"
+          $graphicsInstances | ForEach-Object { Write-Host $_ }
+
+          if ($networkInstances.Count -eq 0) {
+              Write-Warning "No RemoteFX Network RDP-Tcp instance was created"
+          }
+
+          if ($graphicsInstances.Count -eq 0) {
+              Write-Warning "No RemoteFX Graphics RDP-Tcp instance was created"
+          }
+          $readyFile = Join-Path $env:RUNNER_TEMP "rdp-ready.json"
+          @{
+              SessionName = $sessionName
+              RemoteFX = ($networkInstances.Count -gt 0 -and $graphicsInstances.Count -gt 0)
+          } | ConvertTo-Json | Set-Content "$readyFile.tmp"
+          Move-Item "$readyFile.tmp" $readyFile
+
+          # Ending a background step also ends its child processes. Keep the
+          # authenticated client alive until the Go tests and smoke check finish.
+          $stopFile = Join-Path $env:RUNNER_TEMP "rdp-stop"
+          while (-not (Test-Path $stopFile)) {
+              if ($freeRdp.HasExited) {
+                  Get-Content $stdout,$stderr -ErrorAction SilentlyContinue
+                  throw "RDP client exited while the fixture was in use"
+              }
+              Start-Sleep -Seconds 2
+          }
+          Stop-Process -Id $freeRdp.Id -ErrorAction SilentlyContinue
+
       - name: Wait for active RDP fixture
         shell: pwsh
         run: |
@@ -1362,7 +1365,9 @@ jobs:
         shell: pwsh
         env:
           TEST_EXIT_CODE: ${{ steps.go-tests.outputs.exit_code || '1' }}
-        run: ./tools/test-summary.ps1 -TestExitCode ([int]$env:TEST_EXIT_CODE)
+        run: |
+          Copy-Item "$env:windir/Logs/DISM/dism.log" (Join-Path $env:RUNNER_TEMP "dism.log") -ErrorAction SilentlyContinue
+          ./tools/test-summary.ps1 -TestExitCode ([int]$env:TEST_EXIT_CODE)
 
       - name: Build and smoke test exporter
         shell: pwsh
@@ -1392,6 +1397,7 @@ jobs:
             ${{ runner.temp }}/kubelet.*.log
             ${{ runner.temp }}/sql-server-summary.txt
             ${{ runner.temp }}/rdp-client.*.log
+            ${{ runner.temp }}/dism.log
           if-no-files-found: ignore
 
       - name: Stop test workloads
