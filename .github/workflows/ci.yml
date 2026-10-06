@@ -342,91 +342,280 @@ jobs:
     runs-on: windows-2025
     permissions:
       contents: read
+    env:
+      CNI_VERSION: "1.9.1"
+      CONTAINERD_VERSION: "2.4.1"
+      CRI_ENDPOINT: "npipe:////./pipe/containerd-containerd"
+      CRITOOLS_VERSION: "1.37.0"
+      KUBERNETES_VERSION: "v1.37.1"
     steps:
-      - name: Setup storage pool
+      - name: Ensure Containers feature
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
 
-          $existingDiskIds = @(Get-PhysicalDisk | ForEach-Object ObjectId)
-          $disk1 = Join-Path $env:RUNNER_TEMP "storage-pool-1.vhdx"
-          $disk2 = Join-Path $env:RUNNER_TEMP "storage-pool-2.vhdx"
-          $diskpartScript = Join-Path $env:RUNNER_TEMP "storage-pool-diskpart.txt"
+          $feature = Get-WindowsFeature Containers
+          if ($feature.InstallState -ne "Installed") {
+              $result = Install-WindowsFeature Containers
+              $result | Format-List Success, RestartNeeded, ExitCode, FeatureResult
 
-          @"
-          create vdisk file="$disk1" maximum=10240 type=expandable
-          attach vdisk
-          create vdisk file="$disk2" maximum=10240 type=expandable
-          attach vdisk
-          "@ | Set-Content -Path $diskpartScript -Encoding ascii
-
-          diskpart /s $diskpartScript
-          Update-HostStorageCache
-
-          $newDisks = @(Get-PhysicalDisk | Where-Object { $_.ObjectId -notin $existingDiskIds })
-          $newDisks | Format-Table FriendlyName, DeviceId, MediaType, BusType, Size, CanPool, CannotPoolReason
-
-          $poolableDisks = @($newDisks | Where-Object CanPool)
-
-          if ($poolableDisks.Count -ne 2) {
-              throw "Expected two poolable VHDX disks, found $($poolableDisks.Count)"
+              if (-not $result.Success -or $result.RestartNeeded -ne "No") {
+                  throw "Containers feature could not be enabled without a restart"
+              }
           }
 
-          New-StoragePool `
-              -FriendlyName "GitHubActions" `
-              -StorageSubsystemFriendlyName "Windows Storage*" `
-              -PhysicalDisks $poolableDisks
-
-          $pool = Get-StoragePool -FriendlyName "GitHubActions" -ErrorAction Stop
-          $pool | Format-List FriendlyName, HealthStatus, OperationalStatus, Size, AllocatedSize
-
-          if ($pool.IsPrimordial) {
-              throw "Expected a concrete storage pool"
-          }
-
-      - name: Start Hyper-V VM
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = "Stop"
-
-          systeminfo | Select-String "Hyper-V Requirements" -Context 0,4
-
-          Get-WindowsFeature Hyper-V* |
+          Get-WindowsFeature Containers |
               Format-Table DisplayName, Name, InstallState
 
-          Get-Module -ListAvailable Hyper-V |
-              Format-Table Name, Version, Path
+      - parallel:
+          - name: Setup storage pool
+            shell: pwsh
+            run: |
+              $ErrorActionPreference = "Stop"
 
-          Import-Module Hyper-V
+              $existingDiskIds = @(Get-PhysicalDisk | ForEach-Object ObjectId)
+              $disk1 = Join-Path $env:RUNNER_TEMP "storage-pool-1.vhdx"
+              $disk2 = Join-Path $env:RUNNER_TEMP "storage-pool-2.vhdx"
+              $diskpartScript = Join-Path $env:RUNNER_TEMP "storage-pool-diskpart.txt"
 
-          Get-Service vmms | Format-List Name, Status, StartType
-          Start-Service vmms
+              @"
+              create vdisk file="$disk1" maximum=10240 type=expandable
+              attach vdisk
+              create vdisk file="$disk2" maximum=10240 type=expandable
+              attach vdisk
+              "@ | Set-Content -Path $diskpartScript -Encoding ascii
 
-          New-VM `
-              -Name "GitHubActions" `
-              -Generation 2 `
-              -MemoryStartupBytes 256MB `
-              -NoVHD
+              diskpart /s $diskpartScript
+              Update-HostStorageCache
 
-          Start-VM -Name "GitHubActions"
+              $newDisks = @(Get-PhysicalDisk | Where-Object { $_.ObjectId -notin $existingDiskIds })
+              $newDisks | Format-Table FriendlyName, DeviceId, MediaType, BusType, Size, CanPool, CannotPoolReason
 
-          $vm = Get-VM -Name "GitHubActions"
-          $vm | Format-List Name, State, Status, Generation, Uptime
+              $poolableDisks = @($newDisks | Where-Object CanPool)
 
-          if ($vm.State -ne "Running") {
-              throw "Expected Hyper-V VM to be running, got $($vm.State)"
+              if ($poolableDisks.Count -ne 2) {
+                  throw "Expected two poolable VHDX disks, found $($poolableDisks.Count)"
+              }
+
+              New-StoragePool `
+                  -FriendlyName "GitHubActions" `
+                  -StorageSubsystemFriendlyName "Windows Storage*" `
+                  -PhysicalDisks $poolableDisks
+
+              $pool = Get-StoragePool -FriendlyName "GitHubActions" -ErrorAction Stop
+              $pool | Format-List FriendlyName, HealthStatus, OperationalStatus, Size, AllocatedSize
+
+              if ($pool.IsPrimordial) {
+                  throw "Expected a concrete storage pool"
+              }
+
+          - name: Start Hyper-V VM
+            shell: pwsh
+            run: |
+              $ErrorActionPreference = "Stop"
+
+              Import-Module Hyper-V
+              Start-Service vmms
+
+              New-VM `
+                  -Name "GitHubActions" `
+                  -Generation 2 `
+                  -MemoryStartupBytes 256MB `
+                  -NoVHD
+
+              Start-VM -Name "GitHubActions"
+
+              $vm = Get-VM -Name "GitHubActions"
+              $vm | Format-List Name, State, Status, Generation, Uptime
+
+              if ($vm.State -ne "Running") {
+                  throw "Expected Hyper-V VM to be running, got $($vm.State)"
+              }
+
+          - name: Install Windows roles
+            shell: pwsh
+            run: |
+              $ErrorActionPreference = "Stop"
+
+              $result = Install-WindowsFeature DNS,DHCP -IncludeManagementTools
+              $result | Format-List Success, RestartNeeded, ExitCode, FeatureResult
+
+              if (-not $result.Success -or $result.RestartNeeded -ne "No") {
+                  throw "DNS/DHCP roles could not be installed without a restart"
+              }
+
+              Get-WindowsFeature DNS,DHCP |
+                  Format-Table DisplayName, Name, InstallState
+
+          - name: Prepare container runtime
+            shell: pwsh
+            run: |
+              $ErrorActionPreference = "Stop"
+
+              $containerdInstaller = Join-Path $env:RUNNER_TEMP "Install-Containerd.ps1"
+              Invoke-WebRequest `
+                  -Uri "https://raw.githubusercontent.com/kubernetes-sigs/sig-windows-tools/877cfb9ae91749ab9d73314337504ac962d6f90e/hostprocess/Install-Containerd.ps1" `
+                  -OutFile $containerdInstaller
+
+              & $containerdInstaller `
+                  -ContainerDVersion $env:CONTAINERD_VERSION `
+                  -crictlVersion $env:CRITOOLS_VERSION
+
+              $containerdPath = Join-Path $env:ProgramFiles "containerd"
+              $containerd = Join-Path $containerdPath "containerd.exe"
+              $crictl = Join-Path $containerdPath "crictl.exe"
+
+              if (-not (Test-Path $containerd)) {
+                  throw "containerd was not installed"
+              }
+
+              $cniBinPath = "C:\opt\cni\bin"
+              $cniConfigPath = "C:\etc\cni\net.d"
+              New-Item -ItemType Directory -Force -Path $cniBinPath,$cniConfigPath | Out-Null
+
+              $cniArchive = Join-Path $env:RUNNER_TEMP "cni-plugins-windows-amd64-v$($env:CNI_VERSION).tgz"
+              Invoke-WebRequest `
+                  -Uri "https://github.com/containernetworking/plugins/releases/download/v$($env:CNI_VERSION)/cni-plugins-windows-amd64-v$($env:CNI_VERSION).tgz" `
+                  -OutFile $cniArchive
+
+              tar.exe -xzf $cniArchive -C $cniBinPath
+
+              @'
+              {
+                "cniVersion": "0.3.1",
+                "name": "ci",
+                "type": "win-bridge"
+              }
+              '@ | Set-Content `
+                  -Path (Join-Path $cniConfigPath "10-ci.conf") `
+                  -Encoding ascii
+
+              $hnsModule = Join-Path $env:RUNNER_TEMP "hns.psm1"
+              Invoke-WebRequest `
+                  -Uri "https://raw.githubusercontent.com/microsoft/SDN/32df9732ef6dfab07dba205440e30bdfbd8e579a/Kubernetes/windows/hns.psm1" `
+                  -OutFile $hnsModule
+
+              $kubeDir = "C:\k"
+              $manifestDir = Join-Path $kubeDir "manifests"
+              New-Item -ItemType Directory -Force -Path $kubeDir,$manifestDir | Out-Null
+
+              $kubelet = Join-Path $kubeDir "kubelet.exe"
+              $kubeletUri = "https://dl.k8s.io/release/$($env:KUBERNETES_VERSION)/bin/windows/amd64/kubelet.exe"
+              Invoke-WebRequest -Uri $kubeletUri -OutFile $kubelet
+              Invoke-WebRequest -Uri "$kubeletUri.sha256" -OutFile "$kubelet.sha256"
+
+              $expectedHash = (Get-Content "$kubelet.sha256").Trim().Split()[0].ToLowerInvariant()
+              $actualHash = (Get-FileHash -Algorithm SHA256 $kubelet).Hash.ToLowerInvariant()
+
+              if ($actualHash -ne $expectedHash) {
+                  throw "kubelet SHA256 mismatch"
+              }
+
+              @'
+              apiVersion: kubelet.config.k8s.io/v1beta1
+              kind: KubeletConfiguration
+              authentication:
+                webhook:
+                  enabled: false
+              authorization:
+                mode: AlwaysAllow
+              enableServer: false
+              address: 127.0.0.1
+              readOnlyPort: 10255
+              resolvConf: ""
+              staticPodPath: C:/k/manifests
+              containerRuntimeEndpoint: npipe:////./pipe/containerd-containerd
+              '@ | Set-Content `
+                  -Path (Join-Path $kubeDir "kubelet.yaml") `
+                  -Encoding ascii
+
+              @'
+              apiVersion: v1
+              kind: Pod
+              metadata:
+                name: hostprocess
+              spec:
+                hostNetwork: true
+                securityContext:
+                  windowsOptions:
+                    hostProcess: true
+                    runAsUserName: 'NT AUTHORITY\SYSTEM'
+                containers:
+                  - name: hostprocess
+                    image: mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v1.0.0
+                    imagePullPolicy: IfNotPresent
+                    command:
+                      - 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe'
+                      - -NoLogo
+                      - -NonInteractive
+                      - -Command
+                      - 'while ($true) { Start-Sleep -Seconds 3600 }'
+              '@ | Set-Content `
+                  -Path (Join-Path $manifestDir "hostprocess.yaml") `
+                  -Encoding ascii
+
+              @'
+              apiVersion: v1
+              kind: Pod
+              metadata:
+                name: process-isolated
+              spec:
+                containers:
+                  - name: nanoserver
+                    image: mcr.microsoft.com/windows/nanoserver:ltsc2025
+                    imagePullPolicy: IfNotPresent
+                    command:
+                      - ping.exe
+                      - -t
+                      - 127.0.0.1
+              '@ | Set-Content `
+                  -Path (Join-Path $manifestDir "process-isolated.yaml") `
+                  -Encoding ascii
+
+              Restart-Service containerd
+              (Get-Service containerd).WaitForStatus("Running", [TimeSpan]::FromSeconds(30))
+
+              & $crictl --runtime-endpoint $env:CRI_ENDPOINT info
+              if ($LASTEXITCODE -ne 0) {
+                  throw "containerd CRI endpoint is not ready"
+              }
+
+      - name: Pull HostProcess image
+        id: pull-hostprocess
+        shell: pwsh
+        background: true
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          $crictl = Join-Path $env:ProgramFiles "containerd\crictl.exe"
+          & $crictl `
+              --runtime-endpoint $env:CRI_ENDPOINT `
+              pull mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v1.0.0
+
+          if ($LASTEXITCODE -ne 0) {
+              throw "Failed to pull HostProcess base image"
+          }
+
+      - name: Pull Nano Server image
+        id: pull-nanoserver
+        shell: pwsh
+        background: true
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          $crictl = Join-Path $env:ProgramFiles "containerd\crictl.exe"
+          & $crictl `
+              --runtime-endpoint $env:CRI_ENDPOINT `
+              pull mcr.microsoft.com/windows/nanoserver:ltsc2025
+
+          if ($LASTEXITCODE -ne 0) {
+              throw "Failed to pull Windows Server 2025 Nano Server image"
           }
 
       - name: Setup DNS and DHCP
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
-
-          $result = Install-WindowsFeature DNS,DHCP,Containers -IncludeManagementTools
-          $result | Format-List Success, RestartNeeded, ExitCode, FeatureResult
-
-          Get-WindowsFeature DNS,DHCP,Containers |
-              Format-Table DisplayName, Name, InstallState
 
           Start-Service DNS
           Start-Service DHCPServer
@@ -475,60 +664,12 @@ jobs:
               throw "Expected an active DHCP scope"
           }
 
-      - name: Setup containerd and static pods
+      - name: Setup container network
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
 
-          $containerdVersion = "2.4.1"
-          $criToolsVersion = "1.37.0"
-          $cniVersion = "1.9.1"
-          $kubernetesVersion = "v1.37.1"
-          $criEndpoint = "npipe:////./pipe/containerd-containerd"
-
-          $containerdInstaller = Join-Path $env:RUNNER_TEMP "Install-Containerd.ps1"
-          Invoke-WebRequest `
-              -Uri "https://raw.githubusercontent.com/kubernetes-sigs/sig-windows-tools/877cfb9ae91749ab9d73314337504ac962d6f90e/hostprocess/Install-Containerd.ps1" `
-              -OutFile $containerdInstaller
-
-          & $containerdInstaller `
-              -ContainerDVersion $containerdVersion `
-              -crictlVersion $criToolsVersion
-
-          $containerdPath = Join-Path $env:ProgramFiles "containerd"
-          $containerd = Join-Path $containerdPath "containerd.exe"
-          $crictl = Join-Path $containerdPath "crictl.exe"
-
-          if (-not (Test-Path $containerd)) {
-              throw "containerd was not installed; the Containers feature may require a reboot"
-          }
-
-          $cniBinPath = "C:\opt\cni\bin"
-          $cniConfigPath = "C:\etc\cni\net.d"
-          New-Item -ItemType Directory -Force -Path $cniBinPath,$cniConfigPath | Out-Null
-
-          $cniArchive = Join-Path $env:RUNNER_TEMP "cni-plugins-windows-amd64-v$($cniVersion).tgz"
-          Invoke-WebRequest `
-              -Uri "https://github.com/containernetworking/plugins/releases/download/v$($cniVersion)/cni-plugins-windows-amd64-v$($cniVersion).tgz" `
-              -OutFile $cniArchive
-
-          tar.exe -xzf $cniArchive -C $cniBinPath
-
-          @'
-          {
-            "cniVersion": "0.3.1",
-            "name": "ci",
-            "type": "win-bridge"
-          }
-          '@ | Set-Content `
-              -Path (Join-Path $cniConfigPath "10-ci.conf") `
-              -Encoding ascii
-
           $hnsModule = Join-Path $env:RUNNER_TEMP "hns.psm1"
-          Invoke-WebRequest `
-              -Uri "https://raw.githubusercontent.com/microsoft/SDN/32df9732ef6dfab07dba205440e30bdfbd8e579a/Kubernetes/windows/hns.psm1" `
-              -OutFile $hnsModule
-
           Import-Module $hnsModule -Force
 
           $hnsNetwork = Get-HNSNetwork | Where-Object Name -EQ "ci"
@@ -543,103 +684,16 @@ jobs:
 
           $hnsNetwork | Format-List Name, Type, Id, Subnets
 
-          Restart-Service containerd
-          (Get-Service containerd).WaitForStatus("Running", [TimeSpan]::FromSeconds(30))
+      - name: Wait for container images
+        wait: [pull-hostprocess, pull-nanoserver]
 
-          & $crictl --runtime-endpoint $criEndpoint info
-          if ($LASTEXITCODE -ne 0) {
-              throw "containerd CRI endpoint is not ready"
-          }
+      - name: Start static pods
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
 
-          $kubeDir = "C:\k"
-          $manifestDir = Join-Path $kubeDir "manifests"
-          New-Item -ItemType Directory -Force -Path $kubeDir,$manifestDir | Out-Null
-
-          $kubelet = Join-Path $kubeDir "kubelet.exe"
-          $kubeletUri = "https://dl.k8s.io/release/$kubernetesVersion/bin/windows/amd64/kubelet.exe"
-          Invoke-WebRequest -Uri $kubeletUri -OutFile $kubelet
-          Invoke-WebRequest -Uri "$kubeletUri.sha256" -OutFile "$kubelet.sha256"
-
-          $expectedHash = (Get-Content "$kubelet.sha256").Trim().Split()[0].ToLowerInvariant()
-          $actualHash = (Get-FileHash -Algorithm SHA256 $kubelet).Hash.ToLowerInvariant()
-
-          if ($actualHash -ne $expectedHash) {
-              throw "kubelet SHA256 mismatch"
-          }
-
-          @'
-          apiVersion: kubelet.config.k8s.io/v1beta1
-          kind: KubeletConfiguration
-          authentication:
-            webhook:
-              enabled: false
-          authorization:
-            mode: AlwaysAllow
-          enableServer: false
-          address: 127.0.0.1
-          readOnlyPort: 10255
-          resolvConf: ""
-          staticPodPath: C:/k/manifests
-          containerRuntimeEndpoint: npipe:////./pipe/containerd-containerd
-          '@ | Set-Content `
-              -Path (Join-Path $kubeDir "kubelet.yaml") `
-              -Encoding ascii
-
-          @'
-          apiVersion: v1
-          kind: Pod
-          metadata:
-            name: hostprocess
-          spec:
-            hostNetwork: true
-            securityContext:
-              windowsOptions:
-                hostProcess: true
-                runAsUserName: 'NT AUTHORITY\SYSTEM'
-            containers:
-              - name: hostprocess
-                image: mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v1.0.0
-                imagePullPolicy: IfNotPresent
-                command:
-                  - 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe'
-                  - -NoLogo
-                  - -NonInteractive
-                  - -Command
-                  - 'while ($true) { Start-Sleep -Seconds 3600 }'
-          '@ | Set-Content `
-              -Path (Join-Path $manifestDir "hostprocess.yaml") `
-              -Encoding ascii
-
-          @'
-          apiVersion: v1
-          kind: Pod
-          metadata:
-            name: process-isolated
-          spec:
-            containers:
-              - name: servercore
-                image: mcr.microsoft.com/windows/servercore:ltsc2025
-                imagePullPolicy: IfNotPresent
-                command:
-                  - powershell.exe
-                  - -NoLogo
-                  - -NonInteractive
-                  - -Command
-                  - 'while ($true) { Start-Sleep -Seconds 3600 }'
-          '@ | Set-Content `
-              -Path (Join-Path $manifestDir "process-isolated.yaml") `
-              -Encoding ascii
-
-          & $crictl --runtime-endpoint $criEndpoint pull mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v1.0.0
-          if ($LASTEXITCODE -ne 0) {
-              throw "Failed to pull HostProcess base image"
-          }
-
-          & $crictl --runtime-endpoint $criEndpoint pull mcr.microsoft.com/windows/servercore:ltsc2025
-          if ($LASTEXITCODE -ne 0) {
-              throw "Failed to pull Windows Server 2025 base image"
-          }
-
+          $crictl = Join-Path $env:ProgramFiles "containerd\crictl.exe"
+          $kubelet = "C:\k\kubelet.exe"
           $kubeletStdout = Join-Path $env:RUNNER_TEMP "kubelet.stdout.log"
           $kubeletStderr = Join-Path $env:RUNNER_TEMP "kubelet.stderr.log"
 
@@ -650,7 +704,7 @@ jobs:
               -RedirectStandardError $kubeletStderr `
               -PassThru
 
-          $deadline = (Get-Date).AddMinutes(10)
+          $deadline = (Get-Date).AddMinutes(5)
           $running = $false
 
           do {
@@ -662,8 +716,14 @@ jobs:
 
               try {
                   $pods = Invoke-RestMethod -Uri "http://127.0.0.1:10255/pods" -TimeoutSec 5
-                  $hostProcessPod = $pods.items | Where-Object { $_.metadata.name -eq "hostprocess-$env:COMPUTERNAME".ToLowerInvariant() -or $_.metadata.name -eq "hostprocess" }
-                  $processPod = $pods.items | Where-Object { $_.metadata.name -eq "process-isolated-$env:COMPUTERNAME".ToLowerInvariant() -or $_.metadata.name -eq "process-isolated" }
+                  $hostProcessPod = $pods.items | Where-Object {
+                      $_.metadata.name -eq "hostprocess-$env:COMPUTERNAME".ToLowerInvariant() -or
+                      $_.metadata.name -eq "hostprocess"
+                  }
+                  $processPod = $pods.items | Where-Object {
+                      $_.metadata.name -eq "process-isolated-$env:COMPUTERNAME".ToLowerInvariant() -or
+                      $_.metadata.name -eq "process-isolated"
+                  }
 
                   if ($hostProcessPod.status.phase -eq "Running" -and $processPod.status.phase -eq "Running") {
                       $running = $true
@@ -677,8 +737,8 @@ jobs:
               Start-Sleep -Seconds 5
           } while ((Get-Date) -lt $deadline)
 
-          & $crictl --runtime-endpoint $criEndpoint pods
-          & $crictl --runtime-endpoint $criEndpoint ps -a
+          & $crictl --runtime-endpoint $env:CRI_ENDPOINT pods
+          & $crictl --runtime-endpoint $env:CRI_ENDPOINT ps -a
 
           if (-not $running) {
               Get-Content $kubeletStdout -ErrorAction SilentlyContinue
