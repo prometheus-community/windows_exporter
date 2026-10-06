@@ -774,7 +774,23 @@ jobs:
 
           Import-Module FailoverClusters
 
-          Get-Command New-WorkgroupCluster -Syntax
+          $command = Get-Command New-WorkgroupCluster
+          $command | Select-Object -ExpandProperty Syntax
+
+          $authenticationType = $command.Parameters["AuthenticationMethod"].ParameterType
+          $authenticationMethods = [Enum]::GetNames($authenticationType)
+          Write-Host "Supported workgroup cluster authentication methods: $($authenticationMethods -join ', ')"
+
+          $authenticationMethod = @(
+              "None"
+              "LocalAccount"
+              "LocalAccounts"
+              "PKU2U"
+          ) | Where-Object { $authenticationMethods -contains $_ } | Select-Object -First 1
+
+          if ($null -eq $authenticationMethod) {
+              throw "No suitable workgroup cluster authentication method found. Supported values: $($authenticationMethods -join ', ')"
+          }
 
           $cluster = Get-Cluster -ErrorAction SilentlyContinue
           if ($null -eq $cluster) {
@@ -783,6 +799,7 @@ jobs:
                   -Node $env:COMPUTERNAME `
                   -NoStorage `
                   -AdministrativeAccessPoint None `
+                  -AuthenticationMethod $authenticationMethod `
                   -Force | Out-Null
           }
 
