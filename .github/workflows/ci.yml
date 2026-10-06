@@ -1374,7 +1374,6 @@ jobs:
         run: New-Item -ItemType File -Force (Join-Path $env:RUNNER_TEMP "rdp-stop") | Out-Null
 
       - name: Wait for RDP workload cleanup
-        if: ${{ always() }}
         wait: [setup-rdp]
 
       - name: Upload test logs
