@@ -731,11 +731,13 @@ jobs:
               Get-SmbConnection | Format-Table ServerName, ShareName, Dialect, NumOpens
 
       - name: Setup MSCluster
-        shell: pwsh
+        shell: powershell
         run: |
           $ErrorActionPreference = "Stop"
 
           Import-Module FailoverClusters
+
+          Get-Command New-WorkgroupCluster -Syntax
 
           $cluster = Get-Cluster -ErrorAction SilentlyContinue
           if ($null -eq $cluster) {
