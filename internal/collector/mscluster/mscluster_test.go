@@ -20,10 +20,9 @@ package mscluster_test
 import (
 	"testing"
 
-	"github.com/prometheus/client_golang/prometheus"
-
 	"github.com/prometheus-community/windows_exporter/internal/collector/mscluster"
 	"github.com/prometheus-community/windows_exporter/internal/utils/testutils"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 func BenchmarkCollector(b *testing.B) {

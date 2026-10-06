@@ -20,11 +20,10 @@ package printer_test
 import (
 	"testing"
 
-	"github.com/prometheus/client_golang/prometheus"
-
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/collector/printer"
 	"github.com/prometheus-community/windows_exporter/internal/utils/testutils"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 func BenchmarkCollector(b *testing.B) {

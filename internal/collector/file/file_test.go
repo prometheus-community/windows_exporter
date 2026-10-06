@@ -22,10 +22,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/prometheus-community/windows_exporter/internal/collector/file"
 	"github.com/prometheus-community/windows_exporter/internal/utils/testutils"
+	"github.com/stretchr/testify/require"
 )
 
 func BenchmarkCollector(b *testing.B) {
@@ -42,7 +41,7 @@ func TestCollector(t *testing.T) {
 	})
 	require.Contains(t, metrics, "windows_file_size_bytes")
 	require.Len(t, metrics["windows_file_size_bytes"].GetMetric(), 1)
-	require.Equal(t, float64(len(content)), metrics["windows_file_size_bytes"].GetMetric()[0].GetGauge().GetValue())
+	require.InDelta(t, len(content), metrics["windows_file_size_bytes"].GetMetric()[0].GetGauge().GetValue(), 0)
 	require.Contains(t, metrics, "windows_file_mtime_timestamp_seconds")
 	require.Positive(t, metrics["windows_file_mtime_timestamp_seconds"].GetMetric()[0].GetGauge().GetValue())
 }

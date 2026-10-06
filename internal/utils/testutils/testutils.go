@@ -127,7 +127,9 @@ func collectMetrics(t *testing.T, c collector.Collector, required bool) map[stri
 	t.Helper()
 
 	var metrics collectedMetrics
+
 	ch := make(chan prometheus.Metric)
+
 	var wg sync.WaitGroup
 	wg.Go(func() {
 		for metric := range ch {
@@ -147,6 +149,7 @@ func collectMetrics(t *testing.T, c collector.Collector, required bool) map[stri
 			deadline := time.Now().Add(time.Minute)
 			for errors.Is(err, update.ErrNoUpdates) && time.Now().Before(deadline) {
 				time.Sleep(100 * time.Millisecond)
+
 				err = c.Collect(ch, 30*time.Second)
 			}
 		}
@@ -172,7 +175,7 @@ func collectMetrics(t *testing.T, c collector.Collector, required bool) map[stri
 		families[family.GetName()] = family
 		if strings.HasSuffix(family.GetName(), "_collector_success") {
 			for _, metric := range family.GetMetric() {
-				require.Equal(t, float64(1), metric.GetGauge().GetValue(), "failed child collector: %s", metric)
+				require.InDelta(t, 1, metric.GetGauge().GetValue(), 0, "failed child collector: %s", metric)
 			}
 		}
 	}
@@ -202,10 +205,13 @@ func RequireFixtureMetric(t *testing.T, families map[string]*dto.MetricFamily, c
 	}
 
 	require.Contains(t, families, metricName)
+
 	for _, metric := range families[metricName].GetMetric() {
 		matched := true
+
 		for name, value := range labels {
 			found := false
+
 			for _, label := range metric.GetLabel() {
 				if label.GetName() == name && strings.EqualFold(label.GetValue(), value) {
 					found = true

@@ -1032,11 +1032,16 @@ jobs:
       - name: Go tests
         shell: pwsh
         run: |
-          go test -v -count=1 -race -timeout=10m -coverprofile=coverage.out ./...
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          go tool cover -func=coverage.out | Tee-Object coverage-summary.txt
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          Get-Content coverage-summary.txt | Add-Content $env:GITHUB_STEP_SUMMARY
+          go test -v -count=1 -race -timeout=10m -coverprofile=coverage.out ./... 2>&1 | Tee-Object test-output.txt
+          $testExitCode = $LASTEXITCODE
+          if (Test-Path coverage.out) {
+              go tool cover -func=coverage.out | Tee-Object coverage-summary.txt
+              if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+              Get-Content coverage-summary.txt | Add-Content $env:GITHUB_STEP_SUMMARY
+          }
+          Select-String -Path test-output.txt -Pattern '^--- SKIP:' |
+              ForEach-Object Line | Add-Content $env:GITHUB_STEP_SUMMARY
+          exit $testExitCode
 
       - name: Build and smoke test exporter
         shell: pwsh
@@ -1053,6 +1058,7 @@ jobs:
           path: |
             coverage.out
             coverage-summary.txt
+            test-output.txt
             ${{ runner.temp }}/windows_exporter.*.log
             ${{ runner.temp }}/kubelet.*.log
           if-no-files-found: ignore
