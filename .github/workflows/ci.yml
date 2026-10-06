@@ -1480,6 +1480,6 @@ jobs:
 
   domain-lab:
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.domain_lab }}
-    uses: ./.github/workflows/domain-lab.yml
+    uses: $/.github/workflows/domain-lab.yml
     permissions:
       contents: read
