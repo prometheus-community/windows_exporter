@@ -227,5 +227,5 @@ func RequireFixtureMetric(t *testing.T, families map[string]*dto.MetricFamily, c
 		}
 	}
 
-	t.Fatalf("metric %s with fixture labels %v was not emitted", metricName, labels)
+	t.Fatalf("metric %s with fixture labels %v was not emitted; got %s", metricName, labels, families[metricName])
 }

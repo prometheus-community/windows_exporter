@@ -215,3 +215,23 @@ windows_performancecounter_processor_information_processor_time\{core="0,0",stat
 		})
 	}
 }
+
+func TestCollectorClose(t *testing.T) {
+	t.Parallel()
+
+	c := performancecounter.New(&performancecounter.Config{
+		Objects: []performancecounter.Object{{
+			Name: "memory", Object: "Memory",
+			Counters: []performancecounter.Counter{{Name: "Available Bytes", Type: "gauge"}},
+		}},
+	})
+	require.NoError(t, c.Build(slog.New(slog.DiscardHandler), nil))
+	t.Cleanup(func() { require.NoError(t, c.Close()) })
+
+	metrics := make(chan prometheus.Metric, 10)
+	require.NoError(t, c.Collect(metrics, 0))
+	require.NoError(t, c.Close())
+
+	// A closed collector must no longer hold usable native counter queries.
+	require.ErrorIs(t, c.Collect(metrics, 0), pdh.ErrPerformanceCounterNotInitialized)
+}

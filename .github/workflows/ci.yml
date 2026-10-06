@@ -493,7 +493,15 @@ jobs:
                 "cniVersion": "0.3.1",
                 "name": "ci",
                 "type": "win-bridge",
-                "apiVersion": 2
+                "apiVersion": 2,
+                "ipam": {
+                  "type": "host-local",
+                  "subnet": "192.168.255.0/24",
+                  "rangeStart": "192.168.255.10",
+                  "rangeEnd": "192.168.255.250",
+                  "gateway": "192.168.255.2",
+                  "dataDir": "C:/etc/cni/net.d/ipam"
+                }
               }
               '@ | Set-Content `
                   -Path (Join-Path $cniConfigPath "10-ci.conf") `
@@ -942,7 +950,7 @@ jobs:
               $hnsNetwork = New-HNSNetwork `
                   -Type L2Bridge `
                   -AddressPrefix "192.168.255.0/24" `
-                  -Gateway "192.168.255.1" `
+                  -Gateway "192.168.255.2" `
                   -Name "ci" `
                   -Verbose
           }
@@ -972,7 +980,7 @@ jobs:
               -RedirectStandardError $kubeletStderr `
               -PassThru
 
-          $deadline = (Get-Date).AddMinutes(5)
+          $deadline = (Get-Date).AddMinutes(2)
           $running = $false
 
           do {
