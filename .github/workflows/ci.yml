@@ -1018,6 +1018,7 @@ jobs:
                   Select-Object -ExpandProperty Paths
 
           - name: Enable Windows Update
+            timeout-minutes: 5
             shell: powershell
             run: |
               $ErrorActionPreference = "Stop"
@@ -1033,6 +1034,19 @@ jobs:
 
               $historyCount = $searcher.GetTotalHistoryCount()
               Write-Host "Windows Update history count: $historyCount"
+
+              # Some runner images have no usable cached catalog. Search online
+              # once to populate it; the Go collector still searches offline.
+              # Searching only retrieves metadata, without installing updates.
+              try {
+                  $result = $searcher.Search("IsInstalled=0 and IsHidden=0")
+              }
+              catch {
+                  Write-Warning "Offline catalog search failed: $($_.Exception.ToString())"
+                  $searcher.Online = $true
+                  $result = $searcher.Search("IsInstalled=0 and IsHidden=0")
+              }
+              Write-Host "Windows Update catalog contains $($result.Updates.Count) pending updates"
 
               Get-Service wuauserv |
                   Format-Table Name, Status, StartType

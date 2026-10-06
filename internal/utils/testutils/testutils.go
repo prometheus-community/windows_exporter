@@ -149,7 +149,7 @@ func collectMetrics(t *testing.T, c collector.Collector, required bool) map[stri
 
 		err := c.Collect(ch, 30*time.Second)
 		if errors.Is(err, update.ErrNoUpdates) && required {
-			deadline := time.Now().Add(3 * time.Minute)
+			deadline := time.Now().Add(time.Minute)
 			for errors.Is(err, update.ErrNoUpdates) && time.Now().Before(deadline) {
 				time.Sleep(100 * time.Millisecond)
 
