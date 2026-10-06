@@ -429,6 +429,31 @@ jobs:
                   throw "Expected Hyper-V VM to be running, got $($vm.State)"
               }
 
+      - name: Setup MSCluster
+        id: setup-mscluster
+        # The Go test requires the cluster and virtual disk.
+        continue-on-error: true
+        background: true
+        shell: powershell
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          Import-Module FailoverClusters
+
+          $cluster = Get-Cluster -ErrorAction SilentlyContinue
+          if ($null -eq $cluster) {
+              New-Cluster `
+                  -Name "CICluster" `
+                  -Node $env:COMPUTERNAME `
+                  -NoStorage `
+                  -AdministrativeAccessPoint None `
+                  -Force | Out-Null
+          }
+
+          Get-Cluster | Format-List Name, AdministrativeAccessPoint
+          Get-ClusterNode | Format-Table Name, State, NodeWeight, DynamicWeight
+          Get-ClusterNetwork | Format-Table Name, State, Role, Address
+
       - parallel:
           - name: Install Windows roles
             shell: pwsh
@@ -598,29 +623,6 @@ jobs:
               if ($LASTEXITCODE -ne 0) {
                   throw "containerd CRI endpoint is not ready"
               }
-
-          - name: Setup MSCluster
-            # The Go test requires the cluster and virtual disk.
-            continue-on-error: true
-            shell: powershell
-            run: |
-              $ErrorActionPreference = "Stop"
-
-              Import-Module FailoverClusters
-
-              $cluster = Get-Cluster -ErrorAction SilentlyContinue
-              if ($null -eq $cluster) {
-                  New-Cluster `
-                      -Name "CICluster" `
-                      -Node $env:COMPUTERNAME `
-                      -NoStorage `
-                      -AdministrativeAccessPoint None `
-                      -Force | Out-Null
-              }
-
-              Get-Cluster | Format-List Name, AdministrativeAccessPoint
-              Get-ClusterNode | Format-Table Name, State, NodeWeight, DynamicWeight
-              Get-ClusterNetwork | Format-Table Name, State, Role, Address
 
       - name: Pull HostProcess image
         id: pull-hostprocess
@@ -945,9 +947,6 @@ jobs:
 
               $hnsNetwork | Format-List Name, Type, Id, Subnets
 
-      - name: Wait for container images
-        wait: [pull-hostprocess, pull-nanoserver]
-
       - name: Start static pods
         # Collector tests require both container types and report any missing fixture.
         continue-on-error: true
@@ -956,6 +955,33 @@ jobs:
           $ErrorActionPreference = "Stop"
 
           $crictl = Join-Path $env:ProgramFiles "containerd\crictl.exe"
+
+          $deadline = (Get-Date).AddMinutes(2)
+          do {
+              $networkReady = $false
+              try {
+                  $networkReady = $null -ne (Get-HnsNetwork | Where-Object Name -EQ "ci")
+              }
+              catch {
+                  $networkReady = $false
+              }
+
+              $images = & $crictl --runtime-endpoint $env:CRI_ENDPOINT images -o json | ConvertFrom-Json
+              $imageNames = @($images.images.repoTags)
+
+              $hostProcessReady = $imageNames -contains "mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v1.0.0"
+              $nanoServerReady = $imageNames -contains "mcr.microsoft.com/windows/nanoserver:ltsc2025"
+
+              if ($networkReady -and $hostProcessReady -and $nanoServerReady) {
+                  break
+              }
+
+              if ((Get-Date) -ge $deadline) {
+                  throw "Timed out waiting for HNS network and container images"
+              }
+
+              Start-Sleep -Seconds 2
+          } while ($true)
           $kubelet = "C:\k\kubelet.exe"
           $kubeletStdout = Join-Path $env:RUNNER_TEMP "kubelet.stdout.log"
           $kubeletStderr = Join-Path $env:RUNNER_TEMP "kubelet.stderr.log"
@@ -1005,6 +1031,9 @@ jobs:
               Get-Content $kubeletStderr -ErrorAction SilentlyContinue
               throw "Static pods did not reach Running state"
           }
+
+      - name: Wait for background setup
+        wait: [pull-hostprocess, pull-nanoserver, setup-mscluster]
 
       - name: Start .NET Framework and SMB workloads
         shell: pwsh
