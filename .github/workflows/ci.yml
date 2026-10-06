@@ -349,32 +349,22 @@ jobs:
       CRITOOLS_VERSION: "1.37.0"
       KUBERNETES_VERSION: "v1.37.1"
     steps:
-      - name: Install Windows features
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = "Stop"
-
-          $features = @(
-              "Containers"
-              "DHCP"
-              "DNS"
-              "Failover-Clustering"
-              "MSMQ-Server"
-              "Print-Server"
-              "Web-Server"
-          )
-
-          $result = Install-WindowsFeature -Name $features -IncludeManagementTools
-          $result | Format-List Success, RestartNeeded, ExitCode, FeatureResult
-
-          if (-not $result.Success -or $result.RestartNeeded -ne "No") {
-              throw "Required Windows features could not be installed without a restart"
-          }
-
-          Get-WindowsFeature -Name $features |
-              Format-Table DisplayName, Name, InstallState
-
       - parallel:
+          - name: Install Containers feature
+            shell: pwsh
+            run: |
+              $ErrorActionPreference = "Stop"
+
+              $result = Install-WindowsFeature -Name Containers
+              $result | Format-List Success, RestartNeeded, ExitCode, FeatureResult
+
+              if (-not $result.Success -or $result.RestartNeeded -ne "No") {
+                  throw "Containers feature could not be installed without a restart"
+              }
+
+              Get-WindowsFeature -Name Containers |
+                  Format-Table DisplayName, Name, InstallState
+
           - name: Setup storage pool
             shell: pwsh
             run: |
@@ -438,6 +428,31 @@ jobs:
               if ($vm.State -ne "Running") {
                   throw "Expected Hyper-V VM to be running, got $($vm.State)"
               }
+
+      - parallel:
+          - name: Install Windows roles
+            shell: pwsh
+            run: |
+              $ErrorActionPreference = "Stop"
+
+              $features = @(
+                  "DHCP"
+                  "DNS"
+                  "Failover-Clustering"
+                  "MSMQ-Server"
+                  "Print-Server"
+                  "Web-Server"
+              )
+
+              $result = Install-WindowsFeature -Name $features -IncludeManagementTools
+              $result | Format-List Success, RestartNeeded, ExitCode, FeatureResult
+
+              if (-not $result.Success -or $result.RestartNeeded -ne "No") {
+                  throw "Required Windows roles could not be installed without a restart"
+              }
+
+              Get-WindowsFeature -Name $features |
+                  Format-Table DisplayName, Name, InstallState
 
           - name: Prepare container runtime
             shell: pwsh
@@ -571,6 +586,7 @@ jobs:
               if ($LASTEXITCODE -ne 0) {
                   throw "containerd CRI endpoint is not ready"
               }
+
 
       - parallel:
           - name: Setup IIS
