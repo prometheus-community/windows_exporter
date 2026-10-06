@@ -401,6 +401,37 @@ jobs:
               New-VirtualDisk -StoragePoolFriendlyName "GitHubActions" `
                   -FriendlyName "CIVirtualDisk" -Size 1GB -ResiliencySettingName Simple
 
+          - name: Download container prerequisites
+            shell: pwsh
+            run: |
+              $ErrorActionPreference = "Stop"
+
+              $cacheDir = Join-Path $env:RUNNER_TEMP "container-prereqs"
+              New-Item -ItemType Directory -Force -Path $cacheDir | Out-Null
+
+              $downloads = @{
+                  "Install-Containerd.ps1" = "https://raw.githubusercontent.com/kubernetes-sigs/sig-windows-tools/877cfb9ae91749ab9d73314337504ac962d6f90e/hostprocess/Install-Containerd.ps1"
+                  "containerd.tar.gz" = "https://github.com/containerd/containerd/releases/download/v$($env:CONTAINERD_VERSION)/containerd-$($env:CONTAINERD_VERSION)-windows-amd64.tar.gz"
+                  "crictl.tar.gz" = "https://github.com/kubernetes-sigs/cri-tools/releases/download/v$($env:CRITOOLS_VERSION)/crictl-v$($env:CRITOOLS_VERSION)-windows-amd64.tar.gz"
+                  "cni-plugins.tgz" = "https://github.com/containernetworking/plugins/releases/download/v$($env:CNI_VERSION)/cni-plugins-windows-amd64-v$($env:CNI_VERSION).tgz"
+                  "kubelet.exe" = "https://dl.k8s.io/release/$($env:KUBERNETES_VERSION)/bin/windows/amd64/kubelet.exe"
+                  "kubelet.exe.sha256" = "https://dl.k8s.io/release/$($env:KUBERNETES_VERSION)/bin/windows/amd64/kubelet.exe.sha256"
+                  "hns.psm1" = "https://raw.githubusercontent.com/microsoft/SDN/32df9732ef6dfab07dba205440e30bdfbd8e579a/Kubernetes/windows/hns.psm1"
+              }
+
+              foreach ($download in $downloads.GetEnumerator()) {
+                  Invoke-WebRequest `
+                      -Uri $download.Value `
+                      -OutFile (Join-Path $cacheDir $download.Key)
+              }
+
+              $installer = Join-Path $cacheDir "Install-Containerd.ps1"
+              $installerContent = Get-Content -Raw $installer
+              $installerContent = $installerContent.Replace(
+                  '    curl.exe --silent --fail -Lo $destination $source',
+                  '    if (Test-Path $destination) { Write-Host "Using pre-downloaded $destination"; return }' + "`r`n" + '    curl.exe --silent --fail -Lo $destination $source'
+              )
+              Set-Content -Path $installer -Value $installerContent -Encoding utf8
           - name: Start Hyper-V VM
             shell: pwsh
             run: |
@@ -487,16 +518,20 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
 
-          $containerdInstaller = Join-Path $env:RUNNER_TEMP "Install-Containerd.ps1"
-          Invoke-WebRequest `
-              -Uri "https://raw.githubusercontent.com/kubernetes-sigs/sig-windows-tools/877cfb9ae91749ab9d73314337504ac962d6f90e/hostprocess/Install-Containerd.ps1" `
-              -OutFile $containerdInstaller
+          $cacheDir = Join-Path $env:RUNNER_TEMP "container-prereqs"
+          $containerdInstaller = Join-Path $cacheDir "Install-Containerd.ps1"
+          $containerdPath = Join-Path $env:ProgramFiles "containerd"
+          New-Item -ItemType Directory -Force -Path $containerdPath | Out-Null
+
+          Copy-Item (Join-Path $cacheDir "containerd.tar.gz") `
+              (Join-Path $containerdPath "containerd.tar.gz")
+          Copy-Item (Join-Path $cacheDir "crictl.tar.gz") `
+              (Join-Path $containerdPath "crictl.tar.gz")
 
           & $containerdInstaller `
               -ContainerDVersion $env:CONTAINERD_VERSION `
               -crictlVersion $env:CRITOOLS_VERSION
 
-          $containerdPath = Join-Path $env:ProgramFiles "containerd"
           $containerd = Join-Path $containerdPath "containerd.exe"
           $crictl = Join-Path $containerdPath "crictl.exe"
 
@@ -508,11 +543,7 @@ jobs:
           $cniConfigPath = "C:\etc\cni\net.d"
           New-Item -ItemType Directory -Force -Path $cniBinPath,$cniConfigPath | Out-Null
 
-          $cniArchive = Join-Path $env:RUNNER_TEMP "cni-plugins-windows-amd64-v$($env:CNI_VERSION).tgz"
-          Invoke-WebRequest `
-              -Uri "https://github.com/containernetworking/plugins/releases/download/v$($env:CNI_VERSION)/cni-plugins-windows-amd64-v$($env:CNI_VERSION).tgz" `
-              -OutFile $cniArchive
-
+          $cniArchive = Join-Path $cacheDir "cni-plugins.tgz"
           tar.exe -xzf $cniArchive -C $cniBinPath
 
           @'
@@ -535,18 +566,15 @@ jobs:
               -Encoding ascii
 
           $hnsModule = Join-Path $env:RUNNER_TEMP "hns.psm1"
-          Invoke-WebRequest `
-              -Uri "https://raw.githubusercontent.com/microsoft/SDN/32df9732ef6dfab07dba205440e30bdfbd8e579a/Kubernetes/windows/hns.psm1" `
-              -OutFile $hnsModule
+          Copy-Item (Join-Path $cacheDir "hns.psm1") $hnsModule
 
           $kubeDir = "C:\k"
           $manifestDir = Join-Path $kubeDir "manifests"
           New-Item -ItemType Directory -Force -Path $kubeDir,$manifestDir | Out-Null
 
           $kubelet = Join-Path $kubeDir "kubelet.exe"
-          $kubeletUri = "https://dl.k8s.io/release/$($env:KUBERNETES_VERSION)/bin/windows/amd64/kubelet.exe"
-          Invoke-WebRequest -Uri $kubeletUri -OutFile $kubelet
-          Invoke-WebRequest -Uri "$kubeletUri.sha256" -OutFile "$kubelet.sha256"
+          Copy-Item (Join-Path $cacheDir "kubelet.exe") $kubelet
+          Copy-Item (Join-Path $cacheDir "kubelet.exe.sha256") "$kubelet.sha256"
 
           $expectedHash = (Get-Content "$kubelet.sha256").Trim().Split()[0].ToLowerInvariant()
           $actualHash = (Get-FileHash -Algorithm SHA256 $kubelet).Hash.ToLowerInvariant()
