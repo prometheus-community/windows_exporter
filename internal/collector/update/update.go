@@ -111,17 +111,6 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 	c.logger.Info("update collector is in an experimental state! The configuration and metrics may change in future. Please report any issues.")
 
-	ctx, cancel := context.WithCancel(context.Background())
-
-	initErrCh := make(chan error, 1)
-	go c.scheduleUpdateStatus(ctx, logger, initErrCh, c.config.Online)
-
-	c.ctxCancelFn = cancel
-
-	if err := <-initErrCh; err != nil {
-		return fmt.Errorf("failed to initialize Windows Update collector: %w", err)
-	}
-
 	c.pendingUpdate = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "pending_info"),
 		"Expose information for a single pending update item",
@@ -149,6 +138,17 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		nil,
 		nil,
 	)
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	initErrCh := make(chan error, 1)
+	go c.scheduleUpdateStatus(ctx, logger, initErrCh, c.config.Online)
+
+	c.ctxCancelFn = cancel
+
+	if err := <-initErrCh; err != nil {
+		return fmt.Errorf("failed to initialize Windows Update collector: %w", err)
+	}
 
 	return nil
 }
@@ -279,14 +279,13 @@ func (c *Collector) scheduleUpdateStatus(ctx context.Context, logger *slog.Logge
 			c.mu.Lock()
 			c.metricsBuf = nil
 			c.mu.Unlock()
-
-			continue
+		} else {
+			c.mu.Lock()
+			c.metricsBuf = metricsBuf
+			c.mu.Unlock()
 		}
 
-		c.mu.Lock()
-		c.metricsBuf = metricsBuf
-		c.mu.Unlock()
-
+		// Failed searches also observe the interval and cancellation.
 		select {
 		case <-time.After(c.config.ScrapeInterval):
 		case <-ctx.Done():

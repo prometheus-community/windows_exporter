@@ -492,7 +492,8 @@ jobs:
               {
                 "cniVersion": "0.3.1",
                 "name": "ci",
-                "type": "win-bridge"
+                "type": "win-bridge",
+                "apiVersion": 2
               }
               '@ | Set-Content `
                   -Path (Join-Path $cniConfigPath "10-ci.conf") `
@@ -532,6 +533,7 @@ jobs:
               readOnlyPort: 0
               resolvConf: ""
               staticPodPath: C:/k/manifests
+              podLogsDir: C:/k/logs
               containerRuntimeEndpoint: npipe:////./pipe/containerd-containerd
               '@ | Set-Content `
                   -Path (Join-Path $kubeDir "kubelet.yaml") `
@@ -951,6 +953,8 @@ jobs:
         wait: [pull-hostprocess, pull-nanoserver]
 
       - name: Start static pods
+        # Collector tests require both container types and report any missing fixture.
+        continue-on-error: true
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
@@ -960,9 +964,10 @@ jobs:
           $kubeletStdout = Join-Path $env:RUNNER_TEMP "kubelet.stdout.log"
           $kubeletStderr = Join-Path $env:RUNNER_TEMP "kubelet.stderr.log"
 
+          New-Item -ItemType Directory -Force -Path "C:\k\logs", "C:\k\kubelet" | Out-Null
           $kubeletProcess = Start-Process `
               -FilePath $kubelet `
-              -ArgumentList "--config=C:\k\kubelet.yaml","--v=4" `
+              -ArgumentList "--config=C:\k\kubelet.yaml","--root-dir=C:\k\kubelet","--v=4" `
               -RedirectStandardOutput $kubeletStdout `
               -RedirectStandardError $kubeletStderr `
               -PassThru

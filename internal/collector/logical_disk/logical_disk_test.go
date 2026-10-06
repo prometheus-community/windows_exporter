@@ -40,7 +40,8 @@ func BenchmarkCollector(b *testing.B) {
 
 func TestCollector(t *testing.T) {
 	testutils.TestCollector(t, logical_disk.New, &logical_disk.Config{
-		VolumeInclude: types.RegExpAny,
+		CollectorsEnabled: logical_disk.ConfigDefaults.CollectorsEnabled,
+		VolumeInclude:     types.RegExpAny,
 	})
 }
 
@@ -56,8 +57,8 @@ func TestCollectorVolumeFilters(t *testing.T) {
 		config   logical_disk.Config
 		included bool
 	}{
-		{name: "include system drive", config: logical_disk.Config{VolumeInclude: matchDrive}, included: true},
-		{name: "exclude system drive", config: logical_disk.Config{VolumeInclude: types.RegExpAny, VolumeExclude: matchDrive}},
+		{name: "include system drive", config: logical_disk.Config{CollectorsEnabled: logical_disk.ConfigDefaults.CollectorsEnabled, VolumeInclude: matchDrive}, included: true},
+		{name: "exclude system drive", config: logical_disk.Config{CollectorsEnabled: logical_disk.ConfigDefaults.CollectorsEnabled, VolumeInclude: types.RegExpAny, VolumeExclude: matchDrive}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
