@@ -41,7 +41,8 @@ private switch, so it needs no external VM or cloud account.
 
 The host compiles the AD and ADCS Go tests with the race detector and runs them
 inside the guest with both collectors required. It then performs the same single
-exporter smoke request. The `domain-lab-results` artifact includes a feature table,
+exporter smoke request. The ADCS test requires a positive issued certificate
+counter for the enrolled `Machine` template. The `domain-lab-results` artifact includes a feature table,
 test output, provisioning diagnostics, and `timings.json` with each setup phase's
 duration.
 

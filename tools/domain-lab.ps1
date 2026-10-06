@@ -2,6 +2,7 @@
 $ErrorActionPreference = "Stop"
 Import-Module Hyper-V
 Import-Module Dism
+Start-Service vmms
 $labDir = Join-Path $env:RUNNER_TEMP "domain-lab"
 New-Item -ItemType Directory -Force -Path $labDir | Out-Null
 $clock = [Diagnostics.Stopwatch]::StartNew()
@@ -152,6 +153,7 @@ try {
         $result = Invoke-Command -Session $session -ArgumentList $collector -ScriptBlock {
             param($Name)
             $env:WINDOWS_EXPORTER_TEST_COLLECTORS = "ad,adcs"
+            $env:WINDOWS_EXPORTER_TEST_ADCS_TEMPLATE = "Machine"
             $output = & "C:\lab\$Name.test.exe" -test.v=test2json -test.timeout=5m 2>&1
             [PSCustomObject]@{ ExitCode = $LASTEXITCODE; Output = ($output -join "`n") }
         }
