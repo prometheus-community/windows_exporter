@@ -441,6 +441,7 @@ jobs:
                   "Failover-Clustering"
                   "FS-Resource-Manager"
                   "MSMQ-Server"
+                  "NPAS"
                   "Print-Server"
                   "Web-Server"
               )
@@ -657,6 +658,43 @@ jobs:
               }
 
               $queue | Format-List QueueName, QueueType, MessageCount
+
+          - name: Setup NPS
+            shell: powershell
+            run: |
+              $ErrorActionPreference = "Stop"
+
+              Start-Service IAS
+              (Get-Service IAS).WaitForStatus("Running", [TimeSpan]::FromSeconds(30))
+
+              Get-Service IAS |
+                  Format-Table Name, Status, StartType
+
+              Get-Counter -ListSet "NPS Authentication Server" -ErrorAction Stop |
+                  Select-Object -ExpandProperty Paths
+
+              Get-Counter -ListSet "NPS Accounting Server" -ErrorAction Stop |
+                  Select-Object -ExpandProperty Paths
+
+          - name: Enable Windows Update
+            shell: powershell
+            run: |
+              $ErrorActionPreference = "Stop"
+
+              Set-Service wuauserv -StartupType Manual
+              Start-Service wuauserv
+              (Get-Service wuauserv).WaitForStatus("Running", [TimeSpan]::FromSeconds(30))
+
+              $session = New-Object -ComObject Microsoft.Update.Session
+              $session.ClientApplicationID = "windows_exporter-ci"
+              $searcher = $session.CreateUpdateSearcher()
+              $searcher.Online = $false
+
+              $historyCount = $searcher.GetTotalHistoryCount()
+              Write-Host "Windows Update history count: $historyCount"
+
+              Get-Service wuauserv |
+                  Format-Table Name, Status, StartType
 
           - name: Setup printer
             shell: pwsh
