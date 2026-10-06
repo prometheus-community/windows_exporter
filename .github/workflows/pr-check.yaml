@@ -11,7 +11,7 @@ on:
 jobs:
   required-labels-missing:
     name: required labels missing
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     steps:
       - name: check
         if: >-
@@ -31,7 +31,7 @@ jobs:
           && exit 1
   title:
     name: check title prefix
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: check
