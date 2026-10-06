@@ -1037,7 +1037,8 @@ jobs:
           if (Test-Path coverage.out) {
               go tool cover -func=coverage.out | Tee-Object coverage-summary.txt
               if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-              Get-Content coverage-summary.txt | Add-Content $env:GITHUB_STEP_SUMMARY
+              Select-String -Path coverage-summary.txt -Pattern "^total:" |
+                  ForEach-Object Line | Add-Content $env:GITHUB_STEP_SUMMARY
           }
           Select-String -Path test-output.txt -Pattern '^--- SKIP:' |
               ForEach-Object Line | Add-Content $env:GITHUB_STEP_SUMMARY
