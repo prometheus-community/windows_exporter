@@ -202,6 +202,12 @@ try {
     if ($vm -and -not $session) {
         $vm | Format-List Name, State, Status, Uptime
         Get-VMIntegrationService -VMName CIADDC | Format-Table Name, Enabled, PrimaryStatusDescription
+        # The host records guest resets, triple faults, and bugcheck codes.
+        foreach ($log in "Microsoft-Windows-Hyper-V-Worker-Admin", "Microsoft-Windows-Hyper-V-VMMS-Admin") {
+            Get-WinEvent -LogName $log -MaxEvents 50 -ErrorAction SilentlyContinue |
+                Format-List TimeCreated, Id, LevelDisplayName, Message | Out-String -Width 400 |
+                Set-Content (Join-Path $labDir "host-$($log.Split('-')[-2]).log")
+        }
         try {
             $namespace = 'root/virtualization/v2'
             $settings = Get-CimInstance -Namespace $namespace -ClassName Msvm_VirtualSystemSettingData |
