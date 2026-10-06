@@ -3,6 +3,7 @@ VERSION
 *.swp
 *.un~
 output/
+dist/
 .vscode
 *.syso
 installer/*.msi
