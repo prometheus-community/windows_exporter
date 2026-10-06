@@ -70,7 +70,6 @@ func FuncBenchmarkCollector[C collector.Collector](b *testing.B, name string, co
 	for b.Loop() {
 		require.NoError(b, c.Collect(metrics, 0))
 	}
-
 }
 
 // TestCollector validates real Windows collector output. CI lists provisioned

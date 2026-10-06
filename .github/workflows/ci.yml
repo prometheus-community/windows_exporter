@@ -796,20 +796,32 @@ jobs:
               "windows_exporter integration test" |
                   Set-Content -Path (Join-Path $quotaPath "test.txt") -Encoding ascii
 
-              Get-FsrmQuota -Path $quotaPath |
-                  Format-List Path, Size, Usage, PeakUsage, SoftLimit, Disabled, Description
+              $manager = New-Object -ComObject Fsrm.FsrmQuotaManager
+              $manager.GetQuota($quotaPath) | Format-List Path, QuotaLimit, QuotaUsed, Description
 
-              $cimQuota = Get-CimInstance `
-                  -Namespace "root/Microsoft/Windows/FSRM" `
-                  -ClassName "MSFT_FSRMQuota" |
-                  Where-Object Path -EQ $quotaPath
+              Restart-Service SrmSvc
+              (Get-Service SrmSvc).WaitForStatus("Running", [TimeSpan]::FromSeconds(30))
 
-              if ($null -eq $cimQuota) {
-                  throw "MSFT_FSRMQuota instance for $quotaPath was not found"
-              }
+              $deadline = (Get-Date).AddSeconds(60)
+              do {
+                  $quotas = @(Get-CimInstance `
+                      -Namespace "root/Microsoft/Windows/FSRM" `
+                      -ClassName "MSFT_FSRMQuota" -ErrorAction Stop)
+                  $quotas | Format-List Path, Size, Usage, Description
+                  $cimQuota = $quotas | Where-Object { $_.Path.TrimEnd('\') -eq $quotaPath }
+                  if ($null -ne $cimQuota) { break }
+                  if ((Get-Date) -ge $deadline) {
+                      fltmc.exe filters
+                      fltmc.exe instances
+                      Get-WinEvent -FilterHashtable @{LogName='Application'; StartTime=(Get-Date).AddMinutes(-10)} `
+                          -ErrorAction SilentlyContinue | Where-Object ProviderName -Match 'SRM|FSRM' |
+                          Select-Object TimeCreated, ProviderName, Message
+                      throw "MSFT_FSRMQuota instance for $quotaPath was not found"
+                  }
+                  Start-Sleep -Seconds 2
+              } while ($true)
 
-              $cimQuota |
-                  Format-List Path, Size, Usage, PeakUsage, SoftLimit, Disabled, Description
+              $cimQuota | Format-List Path, Size, Usage, PeakUsage, SoftLimit, Disabled, Description
 
           - name: Setup SMB
             shell: pwsh
@@ -845,7 +857,7 @@ jobs:
           Import-Module FailoverClusters
 
           $command = Get-Command New-WorkgroupCluster
-          $command | Select-Object -ExpandProperty Syntax
+          Get-Command New-WorkgroupCluster -Syntax
 
           $authenticationType = $command.Parameters["AuthenticationMethod"].ParameterType
           $authenticationMethods = [Enum]::GetNames($authenticationType)
