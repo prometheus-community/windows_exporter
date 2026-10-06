@@ -1291,7 +1291,7 @@ jobs:
             test-output.txt
             ${{ runner.temp }}/windows_exporter.*.log
             ${{ runner.temp }}/kubelet.*.log
-            C:/Program Files/Microsoft SQL Server/170/Setup Bootstrap/Log/Summary.txt
+            ${{ runner.temp }}/sql-server-summary.txt
           if-no-files-found: ignore
 
       - name: Stop test workloads

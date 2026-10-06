@@ -36,9 +36,11 @@ $setup = Start-Process (Join-Path $setupDir "setup.exe") -Wait -PassThru -Argume
     "/TCPENABLED=0"
     "/NPENABLED=0"
 )
+$summaryLog = Join-Path $env:RUNNER_TEMP "sql-server-summary.txt"
+Copy-Item "C:\Program Files\Microsoft SQL Server\170\Setup Bootstrap\Log\Summary.txt" `
+    $summaryLog -ErrorAction SilentlyContinue
 if ($setup.ExitCode -ne 0) {
-    Get-Content "C:\Program Files\Microsoft SQL Server\170\Setup Bootstrap\Log\Summary.txt" `
-        -ErrorAction SilentlyContinue
+    Get-Content $summaryLog -ErrorAction SilentlyContinue
     throw "SQL Server setup failed or requires a restart: $($setup.ExitCode)"
 }
 
@@ -47,9 +49,10 @@ $connection.ConnectionString = "Data Source=lpc:.\CISQL;Integrated Security=True
 try {
     $connection.Open()
     $command = $connection.CreateCommand()
+    $command.CommandText = "CREATE DATABASE CIWindowsExporter"
+    $command.ExecuteNonQuery() | Out-Null
+    $connection.ChangeDatabase("CIWindowsExporter")
     $command.CommandText = @'
-CREATE DATABASE CIWindowsExporter;
-USE CIWindowsExporter;
 CREATE TABLE dbo.Fixture (ID int NOT NULL, Data char(8000) NOT NULL);
 INSERT INTO dbo.Fixture SELECT TOP (1000) ROW_NUMBER() OVER (ORDER BY (SELECT NULL)), 'fixture' FROM sys.all_objects;
 CHECKPOINT;
