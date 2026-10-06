@@ -346,7 +346,11 @@ jobs:
             run: |
               $ErrorActionPreference = "Stop"
 
-              $features = @("Containers", "Failover-Clustering")
+              $features = @(
+                  "Containers"
+                  "Failover-Clustering"
+                  "RSAT-Clustering-PowerShell"
+              )
               $result = Install-WindowsFeature -Name $features
               $result | Format-List Success, RestartNeeded, ExitCode, FeatureResult
 
@@ -626,7 +630,6 @@ jobs:
       - name: Setup MSCluster
         id: setup-mscluster
         # The Go test requires the cluster and virtual disk.
-        continue-on-error: true
         background: true
         shell: powershell
         run: |
