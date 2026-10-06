@@ -120,7 +120,7 @@ jobs:
           }
 
           Move-Item installer\*.msi output\
-          Get-ChildItem -Path output\ g
+          Get-ChildItem -Path output\
 
       - name: Sign installer artifacts
         if: ${{ (github.event_name != 'pull_request' && github.repository == 'prometheus-community/windows_exporter') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == 'prometheus-community/windows_exporter') }}
@@ -184,7 +184,7 @@ jobs:
       - build
     permissions:
       contents: read
-      packages: ${{ github.event_name != 'pull_request' && 'write' || 'read' }}
+      packages: write
     env:
       DOCKER_BUILD_SUMMARY: false
       DOCKER_BUILD_RECORD_UPLOAD: false
