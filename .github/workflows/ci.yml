@@ -354,14 +354,24 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
 
-          $result = Install-WindowsFeature DNS,DHCP,Containers -IncludeManagementTools
+          $features = @(
+              "Containers"
+              "DHCP"
+              "DNS"
+              "Failover-Clustering"
+              "MSMQ-Server"
+              "Print-Server"
+              "Web-Server"
+          )
+
+          $result = Install-WindowsFeature -Name $features -IncludeManagementTools
           $result | Format-List Success, RestartNeeded, ExitCode, FeatureResult
 
           if (-not $result.Success -or $result.RestartNeeded -ne "No") {
               throw "Required Windows features could not be installed without a restart"
           }
 
-          Get-WindowsFeature DNS,DHCP,Containers |
+          Get-WindowsFeature -Name $features |
               Format-Table DisplayName, Name, InstallState
 
       - parallel:
@@ -561,6 +571,137 @@ jobs:
               if ($LASTEXITCODE -ne 0) {
                   throw "containerd CRI endpoint is not ready"
               }
+
+      - parallel:
+          - name: Setup IIS
+            shell: pwsh
+            run: |
+              $ErrorActionPreference = "Stop"
+
+              Start-Service W3SVC
+              (Get-Service W3SVC).WaitForStatus("Running", [TimeSpan]::FromSeconds(30))
+
+              "windows_exporter integration test" |
+                  Set-Content -Path "C:\inetpub\wwwroot\index.html" -Encoding ascii
+
+              $response = Invoke-WebRequest -Uri "http://127.0.0.1/" -UseBasicParsing
+              if ($response.StatusCode -ne 200) {
+                  throw "Expected IIS to return HTTP 200, got $($response.StatusCode)"
+              }
+
+              & "$env:SystemRoot\System32\inetsrv\appcmd.exe" list site
+              Get-Service W3SVC,WAS | Format-Table Name, Status, StartType
+
+          - name: Setup MSMQ
+            shell: pwsh
+            run: |
+              $ErrorActionPreference = "Stop"
+
+              Start-Service MSMQ
+              (Get-Service MSMQ).WaitForStatus("Running", [TimeSpan]::FromSeconds(30))
+
+              Import-Module MSMQ
+
+              $queue = Get-MsmqQueue -Name "CIQueue" -QueueType Private -ErrorAction SilentlyContinue
+              if ($null -eq $queue) {
+                  $queue = New-MsmqQueue -Name "CIQueue" -QueueType Private
+              }
+
+              $queue | Format-List QueueName, QueueType, MessageCount
+
+          - name: Setup printer
+            shell: pwsh
+            run: |
+              $ErrorActionPreference = "Stop"
+
+              Start-Service Spooler
+              (Get-Service Spooler).WaitForStatus("Running", [TimeSpan]::FromSeconds(30))
+
+              $driver = Get-PrinterDriver -ErrorAction SilentlyContinue |
+                  Where-Object Name -EQ "Generic / Text Only" |
+                  Select-Object -First 1
+
+              if ($null -eq $driver) {
+                  try {
+                      Add-PrinterDriver -Name "Generic / Text Only" -ErrorAction Stop
+                  }
+                  catch {
+                      Write-Host "Generic / Text Only driver is not staged; using an installed driver"
+                  }
+
+                  $driver = Get-PrinterDriver -ErrorAction SilentlyContinue |
+                      Where-Object Name -EQ "Generic / Text Only" |
+                      Select-Object -First 1
+              }
+
+              if ($null -eq $driver) {
+                  $driver = Get-PrinterDriver -ErrorAction Stop | Select-Object -First 1
+              }
+
+              if ($null -eq $driver) {
+                  throw "No printer driver is available"
+              }
+
+              if ($null -eq (Get-PrinterPort -Name "CIPrinterPort:" -ErrorAction SilentlyContinue)) {
+                  Add-PrinterPort -Name "CIPrinterPort:"
+              }
+
+              if ($null -eq (Get-Printer -Name "CIPrinter" -ErrorAction SilentlyContinue)) {
+                  Add-Printer `
+                      -Name "CIPrinter" `
+                      -DriverName $driver.Name `
+                      -PortName "CIPrinterPort:"
+              }
+
+              Get-Printer -Name "CIPrinter" |
+                  Format-List Name, DriverName, PortName, PrinterStatus
+
+          - name: Setup SMB
+            shell: pwsh
+            run: |
+              $ErrorActionPreference = "Stop"
+
+              $sharePath = Join-Path $env:RUNNER_TEMP "smb"
+              New-Item -ItemType Directory -Force -Path $sharePath | Out-Null
+
+              if ($null -eq (Get-SmbShare -Name "CIShare" -ErrorAction SilentlyContinue)) {
+                  New-SmbShare `
+                      -Name "CIShare" `
+                      -Path $sharePath `
+                      -FullAccess "Everyone"
+              }
+
+              $unc = "\\$env:COMPUTERNAME\CIShare"
+              "windows_exporter integration test" | Set-Content "$unc\test.txt" -Encoding ascii
+              $content = Get-Content "$unc\test.txt"
+
+              if ($content -ne "windows_exporter integration test") {
+                  throw "Unexpected content read back over SMB"
+              }
+
+              Get-SmbShare -Name "CIShare"
+              Get-SmbConnection | Format-Table ServerName, ShareName, Dialect, NumOpens
+
+      - name: Setup MSCluster
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          Import-Module FailoverClusters
+
+          $cluster = Get-Cluster -ErrorAction SilentlyContinue
+          if ($null -eq $cluster) {
+              New-WorkgroupCluster `
+                  -Name "CICluster" `
+                  -Node $env:COMPUTERNAME `
+                  -NoStorage `
+                  -AdministrativeAccessPoint None `
+                  -Force | Out-Null
+          }
+
+          Get-Cluster | Format-List Name, AdministrativeAccessPoint
+          Get-ClusterNode | Format-Table Name, State, NodeWeight, DynamicWeight
+          Get-ClusterNetwork | Format-Table Name, State, Role, Address
 
       - name: Pull HostProcess image
         id: pull-hostprocess
