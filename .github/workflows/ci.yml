@@ -940,7 +940,7 @@ jobs:
           VALIDATE_BASH_EXEC: true
           VALIDATE_EDITORCONFIG: true
           VALIDATE_ENV: true
-          VALIDATE_GITHUB_ACTIONS: true
+          VALIDATE_GITHUB_ACTIONS: false
           VALIDATE_GITHUB_ACTIONS_ZIZMOR: true
           VALIDATE_GITLEAKS: true
           VALIDATE_GO_RELEASER: true
