@@ -4,13 +4,13 @@ Import-Module Hyper-V
 Import-Module Dism
 $labDir = Join-Path $env:RUNNER_TEMP "domain-lab"
 New-Item -ItemType Directory -Force -Path $labDir | Out-Null
-Start-Transcript -Path (Join-Path $labDir "domain-lab.log")
 $clock = [Diagnostics.Stopwatch]::StartNew()
 $timings = [ordered]@{}
 $lastMilestone = 0
 $session = $null
 $password = "CI-" + [Guid]::NewGuid().ToString('N') + "!a"
 Write-Host "::add-mask::$password"
+Start-Transcript -Path (Join-Path $labDir "domain-lab.log")
 $securePassword = ConvertTo-SecureString $password -AsPlainText -Force
 $credential = [PSCredential]::new('CIADDC\Administrator', $securePassword)
 

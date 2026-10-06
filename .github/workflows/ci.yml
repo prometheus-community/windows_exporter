@@ -468,6 +468,18 @@ jobs:
                   '    if (Test-Path $destination) { Write-Host "Using pre-downloaded $destination"; return }' + "`r`n" + '    curl.exe --silent --fail -Lo $destination $source'
               )
               Set-Content -Path $installer -Value $installerContent -Encoding utf8
+          # Finish external downloads before the DNS role can start.
+          - name: Install FreeRDP client
+            shell: powershell
+            run: |
+              choco install freerdp.portable --version=3.28.0 --yes --no-progress
+              if ($LASTEXITCODE -ne 0) { throw "Failed to install FreeRDP" }
+              Get-Command wfreerdp.exe -ErrorAction Stop
+
+          - name: Download SQL Server media
+            shell: powershell
+            run: ./tools/setup-sql-server.ps1 -DownloadOnly
+
           - name: Start Hyper-V VM
             shell: pwsh
             run: |
@@ -534,15 +546,6 @@ jobs:
 
           Start-Service TermService
           (Get-Service TermService).WaitForStatus("Running", [TimeSpan]::FromSeconds(30))
-
-          choco install freerdp.portable `
-              --version=3.28.0 `
-              --yes `
-              --no-progress
-
-          if ($LASTEXITCODE -ne 0) {
-              throw "Failed to install FreeRDP"
-          }
 
           $wfreerdp = (Get-Command wfreerdp.exe -ErrorAction Stop).Source
           $stdout = Join-Path $env:RUNNER_TEMP "rdp-client.stdout.log"
