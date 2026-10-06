@@ -657,6 +657,113 @@ jobs:
               throw "Failed to pull Windows Server 2025 Nano Server image"
           }
 
+      - name: Setup container network
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          $hnsModule = Join-Path $env:RUNNER_TEMP "hns.psm1"
+          Import-Module $hnsModule -Force
+
+          $hnsNetwork = Get-HNSNetwork | Where-Object Name -EQ "ci"
+          if ($null -eq $hnsNetwork) {
+              $hnsNetwork = New-HNSNetwork `
+                  -Type L2Bridge `
+                  -AddressPrefix "192.168.255.0/24" `
+                  -Gateway "192.168.255.2" `
+                  -Name "ci" `
+                  -Verbose
+          }
+
+          $hnsNetwork | Format-List Name, Type, Id, Subnets
+
+      - name: Start static pods
+        # Collector tests require both container types and report any missing fixture.
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          $crictl = Join-Path $env:ProgramFiles "containerd\crictl.exe"
+          $hnsModule = Join-Path $env:RUNNER_TEMP "hns.psm1"
+          Import-Module $hnsModule -Force
+
+          $deadline = (Get-Date).AddMinutes(2)
+          do {
+              $networkReady = $false
+              try {
+                  $networkReady = $null -ne (Get-HnsNetwork | Where-Object Name -EQ "ci")
+              }
+              catch {
+                  $networkReady = $false
+              }
+
+              $images = & $crictl --runtime-endpoint $env:CRI_ENDPOINT images -o json | ConvertFrom-Json
+              $imageNames = @($images.images.repoTags)
+
+              $hostProcessReady = $imageNames -contains "mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v1.0.0"
+              $nanoServerReady = $imageNames -contains "mcr.microsoft.com/windows/nanoserver:ltsc2025"
+
+              if ($networkReady -and $hostProcessReady -and $nanoServerReady) {
+                  break
+              }
+
+              if ((Get-Date) -ge $deadline) {
+                  throw "Timed out waiting for HNS network and container images"
+              }
+
+              Start-Sleep -Seconds 2
+          } while ($true)
+          $kubelet = "C:\k\kubelet.exe"
+          $kubeletStdout = Join-Path $env:RUNNER_TEMP "kubelet.stdout.log"
+          $kubeletStderr = Join-Path $env:RUNNER_TEMP "kubelet.stderr.log"
+
+          New-Item -ItemType Directory -Force -Path "C:\k\logs", "C:\k\kubelet" | Out-Null
+          $kubeletProcess = Start-Process `
+              -FilePath $kubelet `
+              -ArgumentList "--config=C:\k\kubelet.yaml","--root-dir=C:\k\kubelet","--v=4" `
+              -RedirectStandardOutput $kubeletStdout `
+              -RedirectStandardError $kubeletStderr `
+              -PassThru
+
+          $deadline = (Get-Date).AddMinutes(2)
+          $running = $false
+
+          do {
+              if ($kubeletProcess.HasExited) {
+                  Get-Content $kubeletStdout -ErrorAction SilentlyContinue
+                  Get-Content $kubeletStderr -ErrorAction SilentlyContinue
+                  throw "kubelet exited with code $($kubeletProcess.ExitCode)"
+              }
+
+              try {
+                  $json = & $crictl --runtime-endpoint $env:CRI_ENDPOINT ps -o json
+                  if ($LASTEXITCODE -ne 0) { throw "Failed to query container runtime" }
+                  $containers = ($json -join "`n") | ConvertFrom-Json
+                  $hostProcess = $containers.containers | Where-Object { $_.metadata.name -eq "hostprocess" }
+                  $processIsolated = $containers.containers | Where-Object { $_.metadata.name -eq "nanoserver" }
+
+                  if ($hostProcess.state -eq "CONTAINER_RUNNING" -and $processIsolated.state -eq "CONTAINER_RUNNING") {
+                      $running = $true
+                      break
+                  }
+              }
+              catch {
+                  Write-Host "Waiting for static pod containers..."
+              }
+
+              Start-Sleep -Seconds 5
+          } while ((Get-Date) -lt $deadline)
+
+          & $crictl --runtime-endpoint $env:CRI_ENDPOINT pods
+          & $crictl --runtime-endpoint $env:CRI_ENDPOINT ps -a
+
+          if (-not $running) {
+              Get-Content $kubeletStdout -ErrorAction SilentlyContinue
+              Get-Content $kubeletStderr -ErrorAction SilentlyContinue
+              throw "Static pods did not reach Running state"
+          }
+
       - name: Wait for Windows roles
         wait: [install-windows-roles]
 
@@ -931,113 +1038,6 @@ jobs:
                   throw "Expected an active DHCP scope"
               }
 
-
-      - name: Setup container network
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = "Stop"
-
-          $hnsModule = Join-Path $env:RUNNER_TEMP "hns.psm1"
-          Import-Module $hnsModule -Force
-
-          $hnsNetwork = Get-HNSNetwork | Where-Object Name -EQ "ci"
-          if ($null -eq $hnsNetwork) {
-              $hnsNetwork = New-HNSNetwork `
-                  -Type L2Bridge `
-                  -AddressPrefix "192.168.255.0/24" `
-                  -Gateway "192.168.255.2" `
-                  -Name "ci" `
-                  -Verbose
-          }
-
-          $hnsNetwork | Format-List Name, Type, Id, Subnets
-
-      - name: Start static pods
-        # Collector tests require both container types and report any missing fixture.
-        continue-on-error: true
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = "Stop"
-
-          $crictl = Join-Path $env:ProgramFiles "containerd\crictl.exe"
-          $hnsModule = Join-Path $env:RUNNER_TEMP "hns.psm1"
-          Import-Module $hnsModule -Force
-
-          $deadline = (Get-Date).AddMinutes(2)
-          do {
-              $networkReady = $false
-              try {
-                  $networkReady = $null -ne (Get-HnsNetwork | Where-Object Name -EQ "ci")
-              }
-              catch {
-                  $networkReady = $false
-              }
-
-              $images = & $crictl --runtime-endpoint $env:CRI_ENDPOINT images -o json | ConvertFrom-Json
-              $imageNames = @($images.images.repoTags)
-
-              $hostProcessReady = $imageNames -contains "mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v1.0.0"
-              $nanoServerReady = $imageNames -contains "mcr.microsoft.com/windows/nanoserver:ltsc2025"
-
-              if ($networkReady -and $hostProcessReady -and $nanoServerReady) {
-                  break
-              }
-
-              if ((Get-Date) -ge $deadline) {
-                  throw "Timed out waiting for HNS network and container images"
-              }
-
-              Start-Sleep -Seconds 2
-          } while ($true)
-          $kubelet = "C:\k\kubelet.exe"
-          $kubeletStdout = Join-Path $env:RUNNER_TEMP "kubelet.stdout.log"
-          $kubeletStderr = Join-Path $env:RUNNER_TEMP "kubelet.stderr.log"
-
-          New-Item -ItemType Directory -Force -Path "C:\k\logs", "C:\k\kubelet" | Out-Null
-          $kubeletProcess = Start-Process `
-              -FilePath $kubelet `
-              -ArgumentList "--config=C:\k\kubelet.yaml","--root-dir=C:\k\kubelet","--v=4" `
-              -RedirectStandardOutput $kubeletStdout `
-              -RedirectStandardError $kubeletStderr `
-              -PassThru
-
-          $deadline = (Get-Date).AddMinutes(2)
-          $running = $false
-
-          do {
-              if ($kubeletProcess.HasExited) {
-                  Get-Content $kubeletStdout -ErrorAction SilentlyContinue
-                  Get-Content $kubeletStderr -ErrorAction SilentlyContinue
-                  throw "kubelet exited with code $($kubeletProcess.ExitCode)"
-              }
-
-              try {
-                  $json = & $crictl --runtime-endpoint $env:CRI_ENDPOINT ps -o json
-                  if ($LASTEXITCODE -ne 0) { throw "Failed to query container runtime" }
-                  $containers = ($json -join "`n") | ConvertFrom-Json
-                  $hostProcess = $containers.containers | Where-Object { $_.metadata.name -eq "hostprocess" }
-                  $processIsolated = $containers.containers | Where-Object { $_.metadata.name -eq "nanoserver" }
-
-                  if ($hostProcess.state -eq "CONTAINER_RUNNING" -and $processIsolated.state -eq "CONTAINER_RUNNING") {
-                      $running = $true
-                      break
-                  }
-              }
-              catch {
-                  Write-Host "Waiting for static pod containers..."
-              }
-
-              Start-Sleep -Seconds 5
-          } while ((Get-Date) -lt $deadline)
-
-          & $crictl --runtime-endpoint $env:CRI_ENDPOINT pods
-          & $crictl --runtime-endpoint $env:CRI_ENDPOINT ps -a
-
-          if (-not $running) {
-              Get-Content $kubeletStdout -ErrorAction SilentlyContinue
-              Get-Content $kubeletStderr -ErrorAction SilentlyContinue
-              throw "Static pods did not reach Running state"
-          }
 
       - name: Wait for background setup
         wait: [pull-hostprocess, pull-nanoserver, setup-mscluster]
