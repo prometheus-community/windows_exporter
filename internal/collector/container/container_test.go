@@ -20,6 +20,8 @@ package container_test
 import (
 	"testing"
 
+	"github.com/prometheus/client_golang/prometheus"
+
 	"github.com/prometheus-community/windows_exporter/internal/collector/container"
 	"github.com/prometheus-community/windows_exporter/internal/utils/testutils"
 )
@@ -29,5 +31,7 @@ func BenchmarkCollector(b *testing.B) {
 }
 
 func TestCollector(t *testing.T) {
-	testutils.TestCollector(t, container.New, nil)
+	metrics := testutils.TestCollector(t, container.New, nil)
+	testutils.RequireFixtureMetric(t, metrics, container.Name, "windows_container_available", prometheus.Labels{"container": "hostprocess", "hostprocess": "true"})
+	testutils.RequireFixtureMetric(t, metrics, container.Name, "windows_container_available", prometheus.Labels{"container": "nanoserver", "hostprocess": "false"})
 }

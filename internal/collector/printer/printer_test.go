@@ -20,6 +20,8 @@ package printer_test
 import (
 	"testing"
 
+	"github.com/prometheus/client_golang/prometheus"
+
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/collector/printer"
 	"github.com/prometheus-community/windows_exporter/internal/utils/testutils"
@@ -35,5 +37,6 @@ func BenchmarkCollector(b *testing.B) {
 }
 
 func TestCollector(t *testing.T) {
-	testutils.TestCollector(t, printer.New, nil)
+	metrics := testutils.TestCollector(t, printer.New, nil)
+	testutils.RequireFixtureMetric(t, metrics, printer.Name, "windows_printer_job_count", prometheus.Labels{"printer": "CIPrinter"})
 }

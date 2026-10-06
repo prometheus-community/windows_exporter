@@ -30,7 +30,5 @@ func BenchmarkCollector(b *testing.B) {
 }
 
 func TestCollector(t *testing.T) {
-	t.Skip("Skipping test as it requires WMI data")
-
 	testutils.TestCollector(t, netframework.New, nil)
 }

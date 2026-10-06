@@ -319,8 +319,17 @@ jobs:
 
   test:
     runs-on: windows-2025
+    timeout-minutes: 25
     permissions:
       contents: read
+    env:
+      CNI_VERSION: "1.9.1"
+      CONTAINERD_VERSION: "2.4.1"
+      CRI_ENDPOINT: "npipe:////./pipe/containerd-containerd"
+      CRITOOLS_VERSION: "1.37.0"
+      KUBERNETES_VERSION: "v1.37.1"
+      # These collectors must work on the fixtures below; missing features are failures.
+      WINDOWS_EXPORTER_TEST_COLLECTORS: "adcs,cache,container,cpu,cpu_info,dhcp,diskdrive,dns,fsrmquota,hyperv,iis,license,logical_disk,memory,mscluster,msmq,net,netframework,nps,os,pagefile,physical_disk,printer,process,scheduled_task,service,smb,smbclient,system,tcp,terminal_services,time,udp,update"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -331,24 +340,6 @@ jobs:
           # renovate: golang=go
           go-version: '1.27.1'
 
-      - name: Test
-        run: make test
-
-      - name: e2e Test
-        run: make e2e-test
-
-  integration-tests:
-    name: integration tests
-    runs-on: windows-2025
-    permissions:
-      contents: read
-    env:
-      CNI_VERSION: "1.9.1"
-      CONTAINERD_VERSION: "2.4.1"
-      CRI_ENDPOINT: "npipe:////./pipe/containerd-containerd"
-      CRITOOLS_VERSION: "1.37.0"
-      KUBERNETES_VERSION: "v1.37.1"
-    steps:
       - parallel:
           - name: Install Containers feature
             shell: pwsh
@@ -406,6 +397,9 @@ jobs:
                   throw "Expected a concrete storage pool"
               }
 
+              New-VirtualDisk -StoragePoolFriendlyName "GitHubActions" `
+                  -FriendlyName "CIVirtualDisk" -Size 1GB -ResiliencySettingName Simple
+
           - name: Start Hyper-V VM
             shell: pwsh
             run: |
@@ -414,11 +408,14 @@ jobs:
               Import-Module Hyper-V
               Start-Service vmms
 
+              New-VMSwitch -Name "CISwitch" -SwitchType Internal
               New-VM `
                   -Name "GitHubActions" `
                   -Generation 2 `
                   -MemoryStartupBytes 256MB `
-                  -NoVHD
+                  -NewVHDPath (Join-Path $env:RUNNER_TEMP "hyperv-ci.vhdx") `
+                  -NewVHDSizeBytes 1GB `
+                  -SwitchName "CISwitch"
 
               Start-VM -Name "GitHubActions"
 
@@ -436,6 +433,7 @@ jobs:
               $ErrorActionPreference = "Stop"
 
               $features = @(
+                  "ADCS-Cert-Authority"
                   "DHCP"
                   "DNS"
                   "Failover-Clustering"
@@ -624,6 +622,16 @@ jobs:
           }
 
       - parallel:
+          - name: Setup certificate authority
+            shell: powershell
+            run: |
+              $ErrorActionPreference = "Stop"
+              Install-AdcsCertificationAuthority -CAType StandaloneRootCA `
+                  -CACommonName "CIRootCA" -CryptoProviderName "RSA#Microsoft Software Key Storage Provider" `
+                  -KeyLength 2048 -HashAlgorithmName SHA256 -Force
+              Start-Service CertSvc
+              (Get-Service CertSvc).WaitForStatus("Running", [TimeSpan]::FromSeconds(30))
+
           - name: Setup IIS
             shell: pwsh
             run: |
@@ -772,15 +780,17 @@ jobs:
                   }
               } while ($true)
 
+              # Initialize the quota provider through its native COM API.
               $quotaPath = "C:\fsrm-ci"
               New-Item -ItemType Directory -Force -Path $quotaPath | Out-Null
 
               $quota = Get-FsrmQuota -Path $quotaPath -ErrorAction SilentlyContinue
               if ($null -eq $quota) {
-                  $quota = New-FsrmQuota `
-                      -Path $quotaPath `
-                      -Size 100MB `
-                      -Description "windows_exporter integration test"
+                  $manager = New-Object -ComObject Fsrm.FsrmQuotaManager
+                  $quota = $manager.CreateQuota($quotaPath)
+                  $quota.QuotaLimit = 100MB
+                  $quota.Description = "windows_exporter integration test"
+                  $quota.Commit()
               }
 
               "windows_exporter integration test" |
@@ -1000,6 +1010,63 @@ jobs:
               Get-Content $kubeletStderr -ErrorAction SilentlyContinue
               throw "Static pods did not reach Running state"
           }
+
+      - name: Start .NET Framework workload
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $workload = Join-Path $env:RUNNER_TEMP "netframework-workload.ps1"
+          @'
+          $data = New-Object byte[] 1MB
+          while ($true) {
+              [System.GC]::KeepAlive($data)
+              Start-Sleep -Seconds 1
+          }
+          '@ | Set-Content $workload
+          $process = Start-Process powershell.exe -PassThru `
+              -ArgumentList "-NoProfile", "-File", $workload
+          $process.Id | Set-Content (Join-Path $env:RUNNER_TEMP "netframework.pid")
+          winmgmt.exe /resyncperf
+          if ($LASTEXITCODE -ne 0) { throw "Failed to synchronize WMI performance counters" }
+
+      - name: Go tests
+        shell: pwsh
+        run: |
+          go test -v -count=1 -race -timeout=10m -coverprofile=coverage.out ./...
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          go tool cover -func=coverage.out | Tee-Object coverage-summary.txt
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Get-Content coverage-summary.txt | Add-Content $env:GITHUB_STEP_SUMMARY
+
+      - name: Build and smoke test exporter
+        shell: pwsh
+        run: |
+          go build -trimpath -o windows_exporter.exe ./cmd/windows_exporter
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          ./tools/end-to-end-test.ps1
+
+      - name: Upload test coverage and logs
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: windows-test-results
+          path: |
+            coverage.out
+            coverage-summary.txt
+            ${{ runner.temp }}/windows_exporter.*.log
+            ${{ runner.temp }}/kubelet.*.log
+          if-no-files-found: ignore
+
+      - name: Stop test workloads
+        if: ${{ always() }}
+        shell: pwsh
+        run: |
+          $pidFile = Join-Path $env:RUNNER_TEMP "netframework.pid"
+          if (Test-Path $pidFile) {
+              Stop-Process -Id (Get-Content $pidFile) -ErrorAction SilentlyContinue
+          }
+          Get-Process kubelet -ErrorAction SilentlyContinue | Stop-Process -ErrorAction SilentlyContinue
+          Get-VM -Name GitHubActions -ErrorAction SilentlyContinue | Stop-VM -TurnOff -Force -ErrorAction SilentlyContinue
 
   lint:
     runs-on: windows-2025

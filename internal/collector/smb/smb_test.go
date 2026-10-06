@@ -20,6 +20,8 @@ package smb_test
 import (
 	"testing"
 
+	"github.com/prometheus/client_golang/prometheus"
+
 	"github.com/prometheus-community/windows_exporter/internal/collector/smb"
 	"github.com/prometheus-community/windows_exporter/internal/utils/testutils"
 )
@@ -29,5 +31,6 @@ func BenchmarkCollector(b *testing.B) {
 }
 
 func TestCollector(t *testing.T) {
-	testutils.TestCollector(t, smb.New, nil)
+	metrics := testutils.TestCollector(t, smb.New, nil)
+	testutils.RequireFixtureMetric(t, metrics, smb.Name, "windows_smb_server_shares_received_bytes_total", prometheus.Labels{"share": "CIShare"})
 }

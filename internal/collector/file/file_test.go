@@ -18,7 +18,11 @@
 package file_test
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/prometheus-community/windows_exporter/internal/collector/file"
 	"github.com/prometheus-community/windows_exporter/internal/utils/testutils"
@@ -29,7 +33,16 @@ func BenchmarkCollector(b *testing.B) {
 }
 
 func TestCollector(t *testing.T) {
-	testutils.TestCollector(t, file.New, &file.Config{
-		FilePatterns: []string{"*.*"},
+	path := filepath.Join(t.TempDir(), "test.txt")
+	content := []byte("windows_exporter test")
+	require.NoError(t, os.WriteFile(path, content, 0o600))
+
+	metrics := testutils.TestCollector(t, file.New, &file.Config{
+		FilePatterns: []string{path},
 	})
+	require.Contains(t, metrics, "windows_file_size_bytes")
+	require.Len(t, metrics["windows_file_size_bytes"].GetMetric(), 1)
+	require.Equal(t, float64(len(content)), metrics["windows_file_size_bytes"].GetMetric()[0].GetGauge().GetValue())
+	require.Contains(t, metrics, "windows_file_mtime_timestamp_seconds")
+	require.Positive(t, metrics["windows_file_mtime_timestamp_seconds"].GetMetric()[0].GetGauge().GetValue())
 }
