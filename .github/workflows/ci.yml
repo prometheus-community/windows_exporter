@@ -460,6 +460,110 @@ jobs:
                   throw "Expected Hyper-V VM to be running, got $($vm.State)"
               }
 
+      - name: Setup local RDP session
+        id: setup-rdp
+        continue-on-error: true
+        background: true
+        shell: powershell
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          $userName = "rdp-ci"
+          $password = "WindowsExporter-CI-2026!"
+          $securePassword = ConvertTo-SecureString $password -AsPlainText -Force
+
+          if ($null -eq (Get-LocalUser -Name $userName -ErrorAction SilentlyContinue)) {
+              New-LocalUser `
+                  -Name $userName `
+                  -Password $securePassword `
+                  -PasswordNeverExpires `
+                  -AccountNeverExpires | Out-Null
+          }
+
+          Add-LocalGroupMember `
+              -Group "Remote Desktop Users" `
+              -Member $userName `
+              -ErrorAction SilentlyContinue
+
+          Set-ItemProperty `
+              -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server" `
+              -Name fDenyTSConnections `
+              -Value 0
+
+          Start-Service TermService
+          (Get-Service TermService).WaitForStatus("Running", [TimeSpan]::FromSeconds(30))
+
+          cmdkey.exe `
+              /generic:TERMSRV/127.0.0.1 `
+              /user:"$env:COMPUTERNAME\$userName" `
+              /pass:$password
+
+          $rdpFile = Join-Path $env:RUNNER_TEMP "localhost.rdp"
+          @"
+          full address:s:127.0.0.1
+          username:s:$env:COMPUTERNAME\$userName
+          prompt for credentials:i:0
+          authentication level:i:0
+          screen mode id:i:1
+          desktopwidth:i:800
+          desktopheight:i:600
+          "@ | Set-Content -Path $rdpFile -Encoding ascii
+
+          $mstsc = Start-Process `
+              -FilePath "$env:SystemRoot\System32\mstsc.exe" `
+              -ArgumentList $rdpFile `
+              -PassThru
+
+          Write-Host "Started mstsc.exe with PID $($mstsc.Id)"
+
+          $deadline = (Get-Date).AddSeconds(60)
+          $rdpSession = $null
+
+          do {
+              $sessions = qwinsta.exe
+              $sessions | ForEach-Object { Write-Host $_ }
+
+              $rdpSession = $sessions |
+                  Where-Object { $_ -match "RDP-Tcp#" } |
+                  Select-Object -First 1
+
+              if ($null -ne $rdpSession) {
+                  break
+              }
+
+              if ($mstsc.HasExited) {
+                  throw "mstsc.exe exited before an RDP session was created"
+              }
+
+              Start-Sleep -Seconds 2
+          } while ((Get-Date) -lt $deadline)
+
+          if ($null -eq $rdpSession) {
+              throw "No RDP-Tcp session was created"
+          }
+
+          $remoteFxNetwork = Get-Counter -ListSet "RemoteFX Network" -ErrorAction Stop
+          $remoteFxGraphics = Get-Counter -ListSet "RemoteFX Graphics" -ErrorAction Stop
+
+          $networkInstances = @($remoteFxNetwork.PathsWithInstances |
+              Where-Object { $_ -match "RDP-Tcp#" })
+          $graphicsInstances = @($remoteFxGraphics.PathsWithInstances |
+              Where-Object { $_ -match "RDP-Tcp#" })
+
+          Write-Host "RemoteFX Network instances:"
+          $networkInstances | ForEach-Object { Write-Host $_ }
+
+          Write-Host "RemoteFX Graphics instances:"
+          $graphicsInstances | ForEach-Object { Write-Host $_ }
+
+          if ($networkInstances.Count -eq 0) {
+              throw "No RemoteFX Network RDP-Tcp instance was created"
+          }
+
+          if ($graphicsInstances.Count -eq 0) {
+              throw "No RemoteFX Graphics RDP-Tcp instance was created"
+          }
+
       - name: Setup MSCluster
         id: setup-mscluster
         # The Go test requires the cluster and virtual disk.
@@ -1068,7 +1172,7 @@ jobs:
 
 
       - name: Wait for background setup
-        wait: [pull-hostprocess, pull-nanoserver, setup-mscluster]
+        wait: [pull-hostprocess, pull-nanoserver, setup-mscluster, setup-rdp]
 
       - name: Start .NET Framework and SMB workloads
         shell: pwsh
