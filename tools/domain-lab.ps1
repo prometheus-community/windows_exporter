@@ -24,7 +24,7 @@ function Record-LabTime([string]$Phase) {
 }
 
 function Connect-LabGuest([PSCredential]$GuestCredential, [datetime]$AfterBoot = [datetime]::MinValue) {
-    $deadline = (Get-Date).AddMinutes(10)
+    $deadline = (Get-Date).AddMinutes(5)
     do {
         $candidate = $null
         try {
@@ -102,6 +102,17 @@ try {
     Copy-Item $unattend "$osRoot\Windows\Panther\Unattend.xml"
     bcdboot.exe "$osRoot\Windows" /s "$($efi.DriveLetter):" /f UEFI
     if ($LASTEXITCODE -ne 0) { throw "Guest boot files could not be created" }
+    $bcd = "$($efi.DriveLetter):\EFI\Microsoft\Boot\BCD"
+    foreach ($entry in "device", "osdevice") {
+        bcdedit.exe /store $bcd /set '{default}' $entry "partition=$($os.DriveLetter):"
+        if ($LASTEXITCODE -ne 0) { throw "Guest boot partition could not be configured" }
+    }
+    reg.exe load HKLM\CILabSystem "$osRoot\Windows\System32\Config\SYSTEM"
+    if ($LASTEXITCODE -ne 0) { throw "Guest registry could not be opened" }
+    try {
+        reg.exe add HKLM\CILabSystem\ControlSet001\Control\CrashControl /v AutoReboot /t REG_DWORD /d 0 /f
+        if ($LASTEXITCODE -ne 0) { throw "Guest crash diagnostics could not be configured" }
+    } finally { reg.exe unload HKLM\CILabSystem }
     Dismount-VHD $vhd
     Dismount-DiskImage -ImagePath $iso
     Remove-Item $unattend
@@ -205,7 +216,11 @@ try {
                 $bitmap = [Drawing.Bitmap]::new(1024, 768, [Drawing.Imaging.PixelFormat]::Format16bppRgb565)
                 try {
                     $bits = $bitmap.LockBits($rectangle, [Drawing.Imaging.ImageLockMode]::WriteOnly, $bitmap.PixelFormat)
-                    [Runtime.InteropServices.Marshal]::Copy($thumbnail.ImageData, 0, $bits.Scan0, $thumbnail.ImageData.Length)
+                    [byte[]]$pixels = $thumbnail.ImageData
+                    if ($pixels.Length -ne [math]::Abs($bits.Stride) * $bits.Height) {
+                        throw "Guest thumbnail size does not match its bitmap buffer"
+                    }
+                    [Runtime.InteropServices.Marshal]::Copy($pixels, 0, $bits.Scan0, $pixels.Length)
                     $bitmap.UnlockBits($bits)
                     $bitmap.Save((Join-Path $labDir "guest-console.png"), [Drawing.Imaging.ImageFormat]::Png)
                 } finally { $bitmap.Dispose() }
