@@ -529,7 +529,7 @@ jobs:
                 mode: AlwaysAllow
               enableServer: false
               address: 127.0.0.1
-              readOnlyPort: 10255
+              readOnlyPort: 0
               resolvConf: ""
               staticPodPath: C:/k/manifests
               containerRuntimeEndpoint: npipe:////./pipe/containerd-containerd
@@ -978,23 +978,19 @@ jobs:
               }
 
               try {
-                  $pods = Invoke-RestMethod -Uri "http://127.0.0.1:10255/pods" -TimeoutSec 5
-                  $hostProcessPod = $pods.items | Where-Object {
-                      $_.metadata.name -eq "hostprocess-$env:COMPUTERNAME".ToLowerInvariant() -or
-                      $_.metadata.name -eq "hostprocess"
-                  }
-                  $processPod = $pods.items | Where-Object {
-                      $_.metadata.name -eq "process-isolated-$env:COMPUTERNAME".ToLowerInvariant() -or
-                      $_.metadata.name -eq "process-isolated"
-                  }
+                  $json = & $crictl --runtime-endpoint $env:CRI_ENDPOINT ps -o json
+                  if ($LASTEXITCODE -ne 0) { throw "Failed to query container runtime" }
+                  $containers = ($json -join "`n") | ConvertFrom-Json
+                  $hostProcess = $containers.containers | Where-Object { $_.metadata.name -eq "hostprocess" }
+                  $processIsolated = $containers.containers | Where-Object { $_.metadata.name -eq "nanoserver" }
 
-                  if ($hostProcessPod.status.phase -eq "Running" -and $processPod.status.phase -eq "Running") {
+                  if ($hostProcess.state -eq "CONTAINER_RUNNING" -and $processIsolated.state -eq "CONTAINER_RUNNING") {
                       $running = $true
                       break
                   }
               }
               catch {
-                  Write-Host "Waiting for kubelet API and static pods..."
+                  Write-Host "Waiting for static pod containers..."
               }
 
               Start-Sleep -Seconds 5
@@ -1030,7 +1026,7 @@ jobs:
       - name: Go tests
         shell: pwsh
         run: |
-          go test -v -count=1 -race -timeout=10m -coverprofile=coverage.out ./... 2>&1 | Tee-Object test-output.txt
+          go test -v -count=1 -race -timeout=10m -coverpkg=./... -coverprofile=coverage.out ./... 2>&1 | Tee-Object test-output.txt
           $testExitCode = $LASTEXITCODE
           if (Test-Path coverage.out) {
               go tool cover -func=coverage.out | Tee-Object coverage-summary.txt

@@ -45,3 +45,38 @@ func TestCollector(t *testing.T) {
 	require.Contains(t, metrics, "windows_file_mtime_timestamp_seconds")
 	require.Positive(t, metrics["windows_file_mtime_timestamp_seconds"].GetMetric()[0].GetGauge().GetValue())
 }
+
+func TestCollectorPatterns(t *testing.T) {
+	t.Parallel()
+
+	directory := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(directory, "first.txt"), []byte("first"), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(directory, "second.log"), []byte("second"), 0o600))
+
+	for _, tc := range []struct {
+		name    string
+		pattern string
+		count   int
+	}{
+		{name: "all files", pattern: "*", count: 2},
+		{name: "extension", pattern: "*.txt", count: 1},
+		{name: "case insensitive", pattern: "FIRST.TXT", count: 1},
+		{name: "missing file", pattern: "missing.txt", count: 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			metrics := testutils.TestCollector(t, file.New, &file.Config{
+				FilePatterns: []string{filepath.Join(directory, tc.pattern)},
+			})
+			if tc.count == 0 {
+				require.Empty(t, metrics)
+
+				return
+			}
+
+			require.Contains(t, metrics, "windows_file_size_bytes")
+			require.Len(t, metrics["windows_file_size_bytes"].GetMetric(), tc.count)
+		})
+	}
+}
