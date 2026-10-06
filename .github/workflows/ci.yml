@@ -753,6 +753,8 @@ jobs:
                   Format-List Name, DriverName, PortName, PrinterStatus
 
           - name: Setup FSRM quota
+            # The Go test requires the quota, so still run other collector tests on setup failure.
+            continue-on-error: true
             shell: powershell
             run: |
               $ErrorActionPreference = "Stop"
@@ -850,6 +852,8 @@ jobs:
               Get-SmbConnection | Format-Table ServerName, ShareName, Dialect, NumOpens
 
       - name: Setup MSCluster
+        # The Go test requires the cluster and virtual disk.
+        continue-on-error: true
         shell: powershell
         run: |
           $ErrorActionPreference = "Stop"
