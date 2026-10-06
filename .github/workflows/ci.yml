@@ -282,10 +282,10 @@ jobs:
             org.opencontainers.image.licenses=MIT
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
       - name: Build and push
-        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           push: ${{ github.repository == 'prometheus-community/windows_exporter' && github.event_name != 'pull_request' }}
@@ -1286,7 +1286,7 @@ jobs:
         uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
         with:
           # renovate: github=golangci/golangci-lint
-          version: v2.13.2
+          version: v2.14.0
           args: "--max-same-issues=0"
 
   super-linter:
