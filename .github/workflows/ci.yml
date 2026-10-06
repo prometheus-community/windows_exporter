@@ -454,175 +454,176 @@ jobs:
           Get-ClusterNode | Format-Table Name, State, NodeWeight, DynamicWeight
           Get-ClusterNetwork | Format-Table Name, State, Role, Address
 
-      - parallel:
-          - name: Install Windows roles
-            shell: pwsh
-            run: |
-              $ErrorActionPreference = "Stop"
+      - name: Install Windows roles
+        id: install-windows-roles
+        background: true
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
 
-              $features = @(
-                  "DHCP"
-                  "DNS"
-                  "FS-FileServer"
-                  "FS-Resource-Manager"
-                  "MSMQ-Server"
-                  "NPAS"
-                  "Print-Server"
-                  "Web-Server"
-              )
+          $features = @(
+              "DHCP"
+              "DNS"
+              "FS-FileServer"
+              "FS-Resource-Manager"
+              "MSMQ-Server"
+              "NPAS"
+              "Print-Server"
+              "Web-Server"
+          )
 
-              $result = Install-WindowsFeature -Name $features -IncludeManagementTools
-              $result | Format-List Success, RestartNeeded, ExitCode, FeatureResult
+          $result = Install-WindowsFeature -Name $features -IncludeManagementTools
+          $result | Format-List Success, RestartNeeded, ExitCode, FeatureResult
 
-              if (-not $result.Success -or $result.RestartNeeded -ne "No") {
-                  throw "Required Windows roles could not be installed without a restart"
-              }
+          if (-not $result.Success -or $result.RestartNeeded -ne "No") {
+              throw "Required Windows roles could not be installed without a restart"
+          }
 
-              Get-WindowsFeature -Name $features |
-                  Format-Table DisplayName, Name, InstallState
+          Get-WindowsFeature -Name $features |
+              Format-Table DisplayName, Name, InstallState
 
-          - name: Prepare container runtime
-            shell: pwsh
-            run: |
-              $ErrorActionPreference = "Stop"
+      - name: Prepare container runtime
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
 
-              $containerdInstaller = Join-Path $env:RUNNER_TEMP "Install-Containerd.ps1"
-              Invoke-WebRequest `
-                  -Uri "https://raw.githubusercontent.com/kubernetes-sigs/sig-windows-tools/877cfb9ae91749ab9d73314337504ac962d6f90e/hostprocess/Install-Containerd.ps1" `
-                  -OutFile $containerdInstaller
+          $containerdInstaller = Join-Path $env:RUNNER_TEMP "Install-Containerd.ps1"
+          Invoke-WebRequest `
+              -Uri "https://raw.githubusercontent.com/kubernetes-sigs/sig-windows-tools/877cfb9ae91749ab9d73314337504ac962d6f90e/hostprocess/Install-Containerd.ps1" `
+              -OutFile $containerdInstaller
 
-              & $containerdInstaller `
-                  -ContainerDVersion $env:CONTAINERD_VERSION `
-                  -crictlVersion $env:CRITOOLS_VERSION
+          & $containerdInstaller `
+              -ContainerDVersion $env:CONTAINERD_VERSION `
+              -crictlVersion $env:CRITOOLS_VERSION
 
-              $containerdPath = Join-Path $env:ProgramFiles "containerd"
-              $containerd = Join-Path $containerdPath "containerd.exe"
-              $crictl = Join-Path $containerdPath "crictl.exe"
+          $containerdPath = Join-Path $env:ProgramFiles "containerd"
+          $containerd = Join-Path $containerdPath "containerd.exe"
+          $crictl = Join-Path $containerdPath "crictl.exe"
 
-              if (-not (Test-Path $containerd)) {
-                  throw "containerd was not installed"
-              }
+          if (-not (Test-Path $containerd)) {
+              throw "containerd was not installed"
+          }
 
-              $cniBinPath = "C:\opt\cni\bin"
-              $cniConfigPath = "C:\etc\cni\net.d"
-              New-Item -ItemType Directory -Force -Path $cniBinPath,$cniConfigPath | Out-Null
+          $cniBinPath = "C:\opt\cni\bin"
+          $cniConfigPath = "C:\etc\cni\net.d"
+          New-Item -ItemType Directory -Force -Path $cniBinPath,$cniConfigPath | Out-Null
 
-              $cniArchive = Join-Path $env:RUNNER_TEMP "cni-plugins-windows-amd64-v$($env:CNI_VERSION).tgz"
-              Invoke-WebRequest `
-                  -Uri "https://github.com/containernetworking/plugins/releases/download/v$($env:CNI_VERSION)/cni-plugins-windows-amd64-v$($env:CNI_VERSION).tgz" `
-                  -OutFile $cniArchive
+          $cniArchive = Join-Path $env:RUNNER_TEMP "cni-plugins-windows-amd64-v$($env:CNI_VERSION).tgz"
+          Invoke-WebRequest `
+              -Uri "https://github.com/containernetworking/plugins/releases/download/v$($env:CNI_VERSION)/cni-plugins-windows-amd64-v$($env:CNI_VERSION).tgz" `
+              -OutFile $cniArchive
 
-              tar.exe -xzf $cniArchive -C $cniBinPath
+          tar.exe -xzf $cniArchive -C $cniBinPath
 
-              @'
-              {
-                "cniVersion": "0.3.1",
-                "name": "ci",
-                "type": "win-bridge",
-                "apiVersion": 2,
-                "ipam": {
-                  "type": "host-local",
-                  "subnet": "192.168.255.0/24",
-                  "rangeStart": "192.168.255.10",
-                  "rangeEnd": "192.168.255.250",
-                  "gateway": "192.168.255.2",
-                  "dataDir": "C:/etc/cni/net.d/ipam"
-                }
-              }
-              '@ | Set-Content `
-                  -Path (Join-Path $cniConfigPath "10-ci.conf") `
-                  -Encoding ascii
+          @'
+          {
+            "cniVersion": "0.3.1",
+            "name": "ci",
+            "type": "win-bridge",
+            "apiVersion": 2,
+            "ipam": {
+              "type": "host-local",
+              "subnet": "192.168.255.0/24",
+              "rangeStart": "192.168.255.10",
+              "rangeEnd": "192.168.255.250",
+              "gateway": "192.168.255.2",
+              "dataDir": "C:/etc/cni/net.d/ipam"
+            }
+          }
+          '@ | Set-Content `
+              -Path (Join-Path $cniConfigPath "10-ci.conf") `
+              -Encoding ascii
 
-              $hnsModule = Join-Path $env:RUNNER_TEMP "hns.psm1"
-              Invoke-WebRequest `
-                  -Uri "https://raw.githubusercontent.com/microsoft/SDN/32df9732ef6dfab07dba205440e30bdfbd8e579a/Kubernetes/windows/hns.psm1" `
-                  -OutFile $hnsModule
+          $hnsModule = Join-Path $env:RUNNER_TEMP "hns.psm1"
+          Invoke-WebRequest `
+              -Uri "https://raw.githubusercontent.com/microsoft/SDN/32df9732ef6dfab07dba205440e30bdfbd8e579a/Kubernetes/windows/hns.psm1" `
+              -OutFile $hnsModule
 
-              $kubeDir = "C:\k"
-              $manifestDir = Join-Path $kubeDir "manifests"
-              New-Item -ItemType Directory -Force -Path $kubeDir,$manifestDir | Out-Null
+          $kubeDir = "C:\k"
+          $manifestDir = Join-Path $kubeDir "manifests"
+          New-Item -ItemType Directory -Force -Path $kubeDir,$manifestDir | Out-Null
 
-              $kubelet = Join-Path $kubeDir "kubelet.exe"
-              $kubeletUri = "https://dl.k8s.io/release/$($env:KUBERNETES_VERSION)/bin/windows/amd64/kubelet.exe"
-              Invoke-WebRequest -Uri $kubeletUri -OutFile $kubelet
-              Invoke-WebRequest -Uri "$kubeletUri.sha256" -OutFile "$kubelet.sha256"
+          $kubelet = Join-Path $kubeDir "kubelet.exe"
+          $kubeletUri = "https://dl.k8s.io/release/$($env:KUBERNETES_VERSION)/bin/windows/amd64/kubelet.exe"
+          Invoke-WebRequest -Uri $kubeletUri -OutFile $kubelet
+          Invoke-WebRequest -Uri "$kubeletUri.sha256" -OutFile "$kubelet.sha256"
 
-              $expectedHash = (Get-Content "$kubelet.sha256").Trim().Split()[0].ToLowerInvariant()
-              $actualHash = (Get-FileHash -Algorithm SHA256 $kubelet).Hash.ToLowerInvariant()
+          $expectedHash = (Get-Content "$kubelet.sha256").Trim().Split()[0].ToLowerInvariant()
+          $actualHash = (Get-FileHash -Algorithm SHA256 $kubelet).Hash.ToLowerInvariant()
 
-              if ($actualHash -ne $expectedHash) {
-                  throw "kubelet SHA256 mismatch"
-              }
+          if ($actualHash -ne $expectedHash) {
+              throw "kubelet SHA256 mismatch"
+          }
 
-              @'
-              apiVersion: kubelet.config.k8s.io/v1beta1
-              kind: KubeletConfiguration
-              authentication:
-                webhook:
-                  enabled: false
-              authorization:
-                mode: AlwaysAllow
-              enableServer: false
-              address: 127.0.0.1
-              readOnlyPort: 0
-              resolvConf: ""
-              staticPodPath: C:/k/manifests
-              podLogsDir: C:/k/logs
-              containerRuntimeEndpoint: npipe:////./pipe/containerd-containerd
-              '@ | Set-Content `
-                  -Path (Join-Path $kubeDir "kubelet.yaml") `
-                  -Encoding ascii
+          @'
+          apiVersion: kubelet.config.k8s.io/v1beta1
+          kind: KubeletConfiguration
+          authentication:
+            webhook:
+              enabled: false
+          authorization:
+            mode: AlwaysAllow
+          enableServer: false
+          address: 127.0.0.1
+          readOnlyPort: 0
+          resolvConf: ""
+          staticPodPath: C:/k/manifests
+          podLogsDir: C:/k/logs
+          containerRuntimeEndpoint: npipe:////./pipe/containerd-containerd
+          '@ | Set-Content `
+              -Path (Join-Path $kubeDir "kubelet.yaml") `
+              -Encoding ascii
 
-              @'
-              apiVersion: v1
-              kind: Pod
-              metadata:
-                name: hostprocess
-              spec:
-                hostNetwork: true
-                securityContext:
-                  windowsOptions:
-                    hostProcess: true
-                    runAsUserName: 'NT AUTHORITY\SYSTEM'
-                containers:
-                  - name: hostprocess
-                    image: mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v1.0.0
-                    imagePullPolicy: IfNotPresent
-                    command:
-                      - 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe'
-                      - -NoLogo
-                      - -NonInteractive
-                      - -Command
-                      - 'while ($true) { Start-Sleep -Seconds 3600 }'
-              '@ | Set-Content `
-                  -Path (Join-Path $manifestDir "hostprocess.yaml") `
-                  -Encoding ascii
+          @'
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: hostprocess
+          spec:
+            hostNetwork: true
+            securityContext:
+              windowsOptions:
+                hostProcess: true
+                runAsUserName: 'NT AUTHORITY\SYSTEM'
+            containers:
+              - name: hostprocess
+                image: mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v1.0.0
+                imagePullPolicy: IfNotPresent
+                command:
+                  - 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe'
+                  - -NoLogo
+                  - -NonInteractive
+                  - -Command
+                  - 'while ($true) { Start-Sleep -Seconds 3600 }'
+          '@ | Set-Content `
+              -Path (Join-Path $manifestDir "hostprocess.yaml") `
+              -Encoding ascii
 
-              @'
-              apiVersion: v1
-              kind: Pod
-              metadata:
-                name: process-isolated
-              spec:
-                containers:
-                  - name: nanoserver
-                    image: mcr.microsoft.com/windows/nanoserver:ltsc2025
-                    imagePullPolicy: IfNotPresent
-                    command:
-                      - ping.exe
-                      - -t
-                      - 127.0.0.1
-              '@ | Set-Content `
-                  -Path (Join-Path $manifestDir "process-isolated.yaml") `
-                  -Encoding ascii
+          @'
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: process-isolated
+          spec:
+            containers:
+              - name: nanoserver
+                image: mcr.microsoft.com/windows/nanoserver:ltsc2025
+                imagePullPolicy: IfNotPresent
+                command:
+                  - ping.exe
+                  - -t
+                  - 127.0.0.1
+          '@ | Set-Content `
+              -Path (Join-Path $manifestDir "process-isolated.yaml") `
+              -Encoding ascii
 
-              Restart-Service containerd
-              (Get-Service containerd).WaitForStatus("Running", [TimeSpan]::FromSeconds(30))
+          Restart-Service containerd
+          (Get-Service containerd).WaitForStatus("Running", [TimeSpan]::FromSeconds(30))
 
-              & $crictl --runtime-endpoint $env:CRI_ENDPOINT info
-              if ($LASTEXITCODE -ne 0) {
-                  throw "containerd CRI endpoint is not ready"
-              }
+          & $crictl --runtime-endpoint $env:CRI_ENDPOINT info
+          if ($LASTEXITCODE -ne 0) {
+              throw "containerd CRI endpoint is not ready"
+          }
 
       - name: Pull HostProcess image
         id: pull-hostprocess
@@ -655,6 +656,9 @@ jobs:
           if ($LASTEXITCODE -ne 0) {
               throw "Failed to pull Windows Server 2025 Nano Server image"
           }
+
+      - name: Wait for Windows roles
+        wait: [install-windows-roles]
 
       - parallel:
           - name: Setup IIS
@@ -927,25 +931,26 @@ jobs:
                   throw "Expected an active DHCP scope"
               }
 
-          - name: Setup container network
-            shell: pwsh
-            run: |
-              $ErrorActionPreference = "Stop"
 
-              $hnsModule = Join-Path $env:RUNNER_TEMP "hns.psm1"
-              Import-Module $hnsModule -Force
+      - name: Setup container network
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
 
-              $hnsNetwork = Get-HNSNetwork | Where-Object Name -EQ "ci"
-              if ($null -eq $hnsNetwork) {
-                  $hnsNetwork = New-HNSNetwork `
-                      -Type L2Bridge `
-                      -AddressPrefix "192.168.255.0/24" `
-                      -Gateway "192.168.255.2" `
-                      -Name "ci" `
-                      -Verbose
-              }
+          $hnsModule = Join-Path $env:RUNNER_TEMP "hns.psm1"
+          Import-Module $hnsModule -Force
 
-              $hnsNetwork | Format-List Name, Type, Id, Subnets
+          $hnsNetwork = Get-HNSNetwork | Where-Object Name -EQ "ci"
+          if ($null -eq $hnsNetwork) {
+              $hnsNetwork = New-HNSNetwork `
+                  -Type L2Bridge `
+                  -AddressPrefix "192.168.255.0/24" `
+                  -Gateway "192.168.255.2" `
+                  -Name "ci" `
+                  -Verbose
+          }
+
+          $hnsNetwork | Format-List Name, Type, Id, Subnets
 
       - name: Start static pods
         # Collector tests require both container types and report any missing fixture.
@@ -955,6 +960,8 @@ jobs:
           $ErrorActionPreference = "Stop"
 
           $crictl = Join-Path $env:ProgramFiles "containerd\crictl.exe"
+          $hnsModule = Join-Path $env:RUNNER_TEMP "hns.psm1"
+          Import-Module $hnsModule -Force
 
           $deadline = (Get-Date).AddMinutes(2)
           do {
