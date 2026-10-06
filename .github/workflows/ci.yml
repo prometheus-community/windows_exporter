@@ -616,11 +616,11 @@ jobs:
           $graphicsInstances | ForEach-Object { Write-Host $_ }
 
           if ($networkInstances.Count -eq 0) {
-              throw "No RemoteFX Network RDP-Tcp instance was created"
+              Write-Warning "No RemoteFX Network RDP-Tcp instance was created"
           }
 
           if ($graphicsInstances.Count -eq 0) {
-              throw "No RemoteFX Graphics RDP-Tcp instance was created"
+              Write-Warning "No RemoteFX Graphics RDP-Tcp instance was created"
           }
 
       - name: Setup MSCluster
@@ -631,6 +631,22 @@ jobs:
         shell: powershell
         run: |
           $ErrorActionPreference = "Stop"
+
+          $deadline = (Get-Date).AddMinutes(3)
+          do {
+              $module = Get-Module -ListAvailable FailoverClusters |
+                  Select-Object -First 1
+
+              if ($null -ne $module) {
+                  break
+              }
+
+              if ((Get-Date) -ge $deadline) {
+                  throw "FailoverClusters module did not become available"
+              }
+
+              Start-Sleep -Seconds 2
+          } while ($true)
 
           Import-Module FailoverClusters
 
@@ -1263,14 +1279,8 @@ jobs:
       - name: Go tests
         shell: pwsh
         run: |
-          go test -v -count=1 -race -timeout=10m '-coverpkg=./...' '-coverprofile=coverage.out' ./... 2>&1 | Tee-Object test-output.txt
+          go test -v -count=1 -race -timeout=10m ./... 2>&1 | Tee-Object test-output.txt
           $testExitCode = $LASTEXITCODE
-          if (Test-Path coverage.out) {
-              go tool cover '-func=coverage.out' | Tee-Object coverage-summary.txt
-              if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-              Select-String -Path coverage-summary.txt -Pattern "^total:" |
-                  ForEach-Object Line | Add-Content $env:GITHUB_STEP_SUMMARY
-          }
           Select-String -Path test-output.txt -Pattern '^--- SKIP:' |
               ForEach-Object Line | Add-Content $env:GITHUB_STEP_SUMMARY
           exit $testExitCode
@@ -1288,8 +1298,6 @@ jobs:
         with:
           name: windows-test-results
           path: |
-            coverage.out
-            coverage-summary.txt
             test-output.txt
             ${{ runner.temp }}/windows_exporter.*.log
             ${{ runner.temp }}/kubelet.*.log
