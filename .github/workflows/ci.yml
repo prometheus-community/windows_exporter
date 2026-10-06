@@ -588,6 +588,38 @@ jobs:
               }
 
 
+      - name: Pull HostProcess image
+        id: pull-hostprocess
+        shell: pwsh
+        background: true
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          $crictl = Join-Path $env:ProgramFiles "containerd\crictl.exe"
+          & $crictl `
+              --runtime-endpoint $env:CRI_ENDPOINT `
+              pull mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v1.0.0
+
+          if ($LASTEXITCODE -ne 0) {
+              throw "Failed to pull HostProcess base image"
+          }
+
+      - name: Pull Nano Server image
+        id: pull-nanoserver
+        shell: pwsh
+        background: true
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          $crictl = Join-Path $env:ProgramFiles "containerd\crictl.exe"
+          & $crictl `
+              --runtime-endpoint $env:CRI_ENDPOINT `
+              pull mcr.microsoft.com/windows/nanoserver:ltsc2025
+
+          if ($LASTEXITCODE -ne 0) {
+              throw "Failed to pull Windows Server 2025 Nano Server image"
+          }
+
       - parallel:
           - name: Setup IIS
             shell: pwsh
@@ -718,38 +750,6 @@ jobs:
           Get-Cluster | Format-List Name, AdministrativeAccessPoint
           Get-ClusterNode | Format-Table Name, State, NodeWeight, DynamicWeight
           Get-ClusterNetwork | Format-Table Name, State, Role, Address
-
-      - name: Pull HostProcess image
-        id: pull-hostprocess
-        shell: pwsh
-        background: true
-        run: |
-          $ErrorActionPreference = "Stop"
-
-          $crictl = Join-Path $env:ProgramFiles "containerd\crictl.exe"
-          & $crictl `
-              --runtime-endpoint $env:CRI_ENDPOINT `
-              pull mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v1.0.0
-
-          if ($LASTEXITCODE -ne 0) {
-              throw "Failed to pull HostProcess base image"
-          }
-
-      - name: Pull Nano Server image
-        id: pull-nanoserver
-        shell: pwsh
-        background: true
-        run: |
-          $ErrorActionPreference = "Stop"
-
-          $crictl = Join-Path $env:ProgramFiles "containerd\crictl.exe"
-          & $crictl `
-              --runtime-endpoint $env:CRI_ENDPOINT `
-              pull mcr.microsoft.com/windows/nanoserver:ltsc2025
-
-          if ($LASTEXITCODE -ne 0) {
-              throw "Failed to pull Windows Server 2025 Nano Server image"
-          }
 
       - name: Setup DNS and DHCP
         shell: pwsh
