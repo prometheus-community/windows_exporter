@@ -78,7 +78,7 @@ func FuncBenchmarkCollector[C collector.Collector](b *testing.B, name string, co
 func TestCollector[C collector.Collector, V any](t *testing.T, fn func(*V) C, conf *V) map[string]*dto.MetricFamily {
 	t.Helper()
 
-	logger := slog.New(slog.DiscardHandler)
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelWarn}))
 	c := fn(conf)
 	required := slices.Contains(strings.Split(os.Getenv("WINDOWS_EXPORTER_TEST_COLLECTORS"), ","), c.GetName())
 
@@ -149,7 +149,7 @@ func collectMetrics(t *testing.T, c collector.Collector, required bool) map[stri
 
 		err := c.Collect(ch, 30*time.Second)
 		if errors.Is(err, update.ErrNoUpdates) && required {
-			deadline := time.Now().Add(time.Minute)
+			deadline := time.Now().Add(3 * time.Minute)
 			for errors.Is(err, update.ErrNoUpdates) && time.Now().Before(deadline) {
 				time.Sleep(100 * time.Millisecond)
 

@@ -51,6 +51,9 @@ try {
     $command = $connection.CreateCommand()
     $command.CommandText = "CREATE DATABASE CIWindowsExporter"
     $command.ExecuteNonQuery() | Out-Null
+    # Express can close idle databases and remove their performance counter instances.
+    $command.CommandText = "ALTER DATABASE CIWindowsExporter SET AUTO_CLOSE OFF"
+    $command.ExecuteNonQuery() | Out-Null
     $connection.ChangeDatabase("CIWindowsExporter")
     $command.CommandText = @'
 CREATE TABLE dbo.Fixture (ID int NOT NULL, Data char(8000) NOT NULL);
