@@ -139,21 +139,20 @@ jobs:
           Get-Service DNS,DHCPServer |
               Format-Table Name, Status, StartType
 
-          & dnscmd.exe localhost /zoneadd ci.example /primary /file ci.example.dns
-          if ($LASTEXITCODE -ne 0) {
-              throw "Failed to create DNS zone with dnscmd.exe (exit code $LASTEXITCODE)"
-          }
+          Add-DnsServerPrimaryZone `
+              -Name "ci.contoso.com" `
+              -ZoneFile "ci.contoso.com.dns"
 
           Add-DnsServerResourceRecordA `
               -Name "test" `
-              -ZoneName "ci.example" `
+              -ZoneName "ci.contoso.com" `
               -IPv4Address "192.0.2.10"
 
-          $zone = Get-DnsServerZone -Name "ci.example" -ErrorAction Stop
+          $zone = Get-DnsServerZone -Name "ci.contoso.com" -ErrorAction Stop
           $zone | Format-List ZoneName, ZoneType, IsDsIntegrated
 
           Get-DnsServerResourceRecord `
-              -ZoneName "ci.example" `
+              -ZoneName "ci.contoso.com" `
               -Name "test" `
               -RRType A
 
