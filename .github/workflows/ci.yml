@@ -439,6 +439,7 @@ jobs:
                   "DHCP"
                   "DNS"
                   "Failover-Clustering"
+                  "FS-FileServer"
                   "FS-Resource-Manager"
                   "MSMQ-Server"
                   "NPAS"
@@ -643,7 +644,7 @@ jobs:
               Get-Service W3SVC,WAS | Format-Table Name, Status, StartType
 
           - name: Setup MSMQ
-            shell: pwsh
+            shell: powershell
             run: |
               $ErrorActionPreference = "Stop"
 
@@ -748,7 +749,28 @@ jobs:
             run: |
               $ErrorActionPreference = "Stop"
 
+              Start-Service SrmSvc
+              (Get-Service SrmSvc).WaitForStatus("Running", [TimeSpan]::FromSeconds(30))
+
               Import-Module FileServerResourceManager
+
+              $deadline = (Get-Date).AddSeconds(30)
+              do {
+                  try {
+                      Get-CimClass `
+                          -Namespace "root/Microsoft/Windows/FSRM" `
+                          -ClassName "MSFT_FSRMQuota" `
+                          -ErrorAction Stop | Out-Null
+                      break
+                  }
+                  catch {
+                      if ((Get-Date) -ge $deadline) {
+                          throw
+                      }
+
+                      Start-Sleep -Seconds 2
+                  }
+              } while ($true)
 
               $quotaPath = "C:\fsrm-ci"
               New-Item -ItemType Directory -Force -Path $quotaPath | Out-Null
