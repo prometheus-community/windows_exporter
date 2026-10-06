@@ -104,12 +104,12 @@ func ParseConfigFile(args []string) string {
 			return configFile
 		}
 
-		if strings.HasSuffix(cliFlag, "-config.file") {
-			if len(os.Args) <= i+1 {
+		if cliFlag == "--config.file" || cliFlag == "-config.file" {
+			if len(args) <= i+1 {
 				return ""
 			}
 
-			return os.Args[i+1]
+			return args[i+1]
 		}
 	}
 
