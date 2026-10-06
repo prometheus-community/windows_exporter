@@ -49,6 +49,10 @@ try {
     curl.exe --fail --location --retry 3 --silent --show-error --output $iso $isoUri
     if ($LASTEXITCODE -ne 0) { throw "Evaluation ISO download failed" }
     Write-Host "Evaluation ISO SHA256: $((Get-FileHash $iso -Algorithm SHA256).Hash)"
+    $expectedHash = "7b052573ba7894c9924e3e87ba732ccd354d18cb75a883efa9b900ea125bfd51"
+    if ((Get-FileHash $iso -Algorithm SHA256).Hash -ne $expectedHash) {
+        throw "Evaluation ISO SHA256 mismatch"
+    }
     Record-LabTime "Download ISO"
 
     $isoMount = Mount-DiskImage -ImagePath $iso -PassThru
@@ -82,6 +86,9 @@ try {
     </component>
   </settings>
   <settings pass="oobeSystem">
+    <component name="Microsoft-Windows-International-Core" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+      <InputLocale>en-US</InputLocale><SystemLocale>en-US</SystemLocale><UILanguage>en-US</UILanguage><UserLocale>en-US</UserLocale>
+    </component>
     <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
       <UserAccounts><AdministratorPassword><Value>$password</Value><PlainText>true</PlainText></AdministratorPassword></UserAccounts>
       <AutoLogon><Enabled>true</Enabled><LogonCount>1</LogonCount><Username>Administrator</Username><Domain>CIADDC</Domain><Password><Value>$password</Value><PlainText>true</PlainText></Password></AutoLogon>
@@ -103,6 +110,7 @@ try {
     New-VM -Name CIADDC -Generation 2 -MemoryStartupBytes 4GB -VHDPath $vhd -SwitchName CILabPrivate | Out-Null
     Set-VMProcessor -VMName CIADDC -Count 2
     Set-VM -Name CIADDC -AutomaticStopAction TurnOff
+    Set-VMFirmware -VMName CIADDC -FirstBootDevice (Get-VMHardDiskDrive -VMName CIADDC)
     Start-VM CIADDC
     $session = Connect-LabGuest $credential
     Record-LabTime "Guest first boot"
@@ -178,7 +186,44 @@ try {
         Copy-Item C:\lab\logs\* -FromSession $session -Destination $labDir -ErrorAction SilentlyContinue
         Remove-PSSession $session -ErrorAction SilentlyContinue
     }
+    $vm = Get-VM -Name CIADDC -ErrorAction SilentlyContinue
+    if ($vm -and -not $session) {
+        $vm | Format-List Name, State, Status, Uptime
+        Get-VMIntegrationService -VMName CIADDC | Format-Table Name, Enabled, PrimaryStatusDescription
+        try {
+            $namespace = 'root/virtualization/v2'
+            $settings = Get-CimInstance -Namespace $namespace -ClassName Msvm_VirtualSystemSettingData |
+                Where-Object { $_.ElementName -eq 'CIADDC' -and $_.VirtualSystemType -eq 'Microsoft:Hyper-V:System:Realized' }
+            $service = Get-CimInstance -Namespace $namespace -ClassName Msvm_VirtualSystemManagementService
+            $thumbnail = Invoke-CimMethod -InputObject $service -MethodName GetVirtualSystemThumbnailImage -Arguments @{
+                TargetSystem = $settings; WidthPixels = [uint16]1024; HeightPixels = [uint16]768
+            }
+            if ($thumbnail.ReturnValue -eq 0) {
+                Add-Type -AssemblyName System.Drawing
+                $rectangle = [Drawing.Rectangle]::new(0, 0, 1024, 768)
+                $bitmap = [Drawing.Bitmap]::new(1024, 768, [Drawing.Imaging.PixelFormat]::Format16bppRgb565)
+                try {
+                    $bits = $bitmap.LockBits($rectangle, [Drawing.Imaging.ImageLockMode]::WriteOnly, $bitmap.PixelFormat)
+                    [Runtime.InteropServices.Marshal]::Copy($thumbnail.ImageData, 0, $bits.Scan0, $thumbnail.ImageData.Length)
+                    $bitmap.UnlockBits($bits)
+                    $bitmap.Save((Join-Path $labDir "guest-console.png"), [Drawing.Imaging.ImageFormat]::Png)
+                } finally { $bitmap.Dispose() }
+            }
+        } catch { Write-Warning "Guest console capture failed: $($_.Exception.Message)" }
+    }
     Get-VM -Name CIADDC -ErrorAction SilentlyContinue |
         Stop-VM -TurnOff -Force -ErrorAction SilentlyContinue
+    if ($vm -and -not $session) {
+        try {
+            $guestDisk = Mount-VHD $vhd -ReadOnly -PassThru | Get-Disk
+            $guestVolume = $guestDisk | Get-Partition | Get-Volume | Where-Object FileSystemLabel -eq CILabOS
+            $panther = "$($guestVolume.DriveLetter):\Windows\Panther"
+            foreach ($log in Get-ChildItem $panther -Filter *.log -Recurse -ErrorAction SilentlyContinue) {
+                $safeLog = (Get-Content $log.FullName -Raw).Replace($password, '***')
+                $safeLog | Set-Content (Join-Path $labDir "guest-$($log.Directory.Name)-$($log.Name)")
+            }
+            Dismount-VHD $vhd
+        } catch { Write-Warning "Guest setup log collection failed: $($_.Exception.Message)" }
+    }
     Stop-Transcript
 }

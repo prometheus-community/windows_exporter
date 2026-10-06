@@ -45,10 +45,11 @@ jobs:
           WINDOWS_EXPORTER_TEST_COLLECTORS: ad,adcs
           WINDOWS_TEST_OS: Windows Server 2025 domain guest
         run: |
-          if (Test-Path test-results.jsonl) {
+          $testExitCode = 1
+          if (Test-Path domain-test-exit-code.txt) {
               $testExitCode = [int](Get-Content domain-test-exit-code.txt)
-              ./tools/test-summary.ps1 -TestExitCode $testExitCode
           }
+          ./tools/test-summary.ps1 -TestExitCode $testExitCode
 
       - name: Upload domain lab diagnostics
         if: ${{ always() }}
@@ -60,6 +61,7 @@ jobs:
             test-results.jsonl
             feature-summary.md
             ${{ runner.temp }}/domain-lab/*.log
+            ${{ runner.temp }}/domain-lab/*.png
             ${{ runner.temp }}/domain-lab/timings.json
           if-no-files-found: ignore
 
