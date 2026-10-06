@@ -124,7 +124,9 @@ try {
     New-VM -Name CIADDC -Generation 2 -MemoryStartupBytes 4GB -VHDPath $vhd -SwitchName CILabPrivate | Out-Null
     Set-VMProcessor -VMName CIADDC -Count 2
     Set-VM -Name CIADDC -AutomaticStopAction TurnOff
-    Set-VMFirmware -VMName CIADDC -FirstBootDevice (Get-VMHardDiskDrive -VMName CIADDC)
+    # Refreshed media may use a boot manager the host Secure Boot template does not trust.
+    Set-VMFirmware -VMName CIADDC -EnableSecureBoot Off -FirstBootDevice (Get-VMHardDiskDrive -VMName CIADDC)
+    Get-VMFirmware -VMName CIADDC | Format-List SecureBoot, SecureBootTemplate, BootOrder
     Start-VM CIADDC
     $session = Connect-LabGuest $credential -Minutes 30
     Record-LabTime "Guest first boot"
@@ -221,19 +223,16 @@ try {
             if ($thumbnail.ReturnValue -eq 0) {
                 Add-Type -AssemblyName System.Drawing
                 [byte[]]$pixels = $thumbnail.ImageData
-                # The thumbnail is RGB565; its height follows the guest aspect ratio.
-                $height = [math]::Floor($pixels.Length / 2048)
-                if ($height -lt 1 -or $pixels.Length % 2048) {
-                    throw "Guest thumbnail has unexpected size of $($pixels.Length) bytes"
-                }
-                $rectangle = [Drawing.Rectangle]::new(0, 0, 1024, $height)
-                $bitmap = [Drawing.Bitmap]::new(1024, $height, [Drawing.Imaging.PixelFormat]::Format16bppRgb565)
+                $rectangle = [Drawing.Rectangle]::new(0, 0, 1024, 768)
+                $bitmap = [Drawing.Bitmap]::new(1024, 768, [Drawing.Imaging.PixelFormat]::Format16bppRgb565)
                 try {
                     $bits = $bitmap.LockBits($rectangle, [Drawing.Imaging.ImageLockMode]::WriteOnly, $bitmap.PixelFormat)
-                    if ($pixels.Length -ne [math]::Abs($bits.Stride) * $bits.Height) {
-                        throw "Guest thumbnail size $($pixels.Length) does not match its bitmap buffer"
+                    # The RGB565 thumbnail carries a few trailing bytes beyond its pixels.
+                    $size = [math]::Abs($bits.Stride) * $bits.Height
+                    if ($pixels.Length -lt $size) {
+                        throw "Guest thumbnail has $($pixels.Length) bytes; expected at least $size"
                     }
-                    [Runtime.InteropServices.Marshal]::Copy($pixels, 0, $bits.Scan0, $pixels.Length)
+                    [Runtime.InteropServices.Marshal]::Copy($pixels, 0, $bits.Scan0, $size)
                     $bitmap.UnlockBits($bits)
                     $bitmap.Save((Join-Path $labDir "guest-console.png"), [Drawing.Imaging.ImageFormat]::Png)
                 } finally { $bitmap.Dispose() }
