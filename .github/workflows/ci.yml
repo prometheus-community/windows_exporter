@@ -1,0 +1,1334 @@
+name: CI
+
+# Trigger on pull requests and pushes to master branch where Go-related files
+# have been changed.
+on:
+  push:
+    branches:
+      - master
+      - next
+      - main
+      - "0.*"
+      - "1.*"
+    tags:
+      - "v*"
+  pull_request:
+  workflow_dispatch:
+  release:
+    types:
+      - published
+
+permissions: {}
+
+jobs:
+  build:
+    name: Build Windows binaries
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: 'false'
+          fetch-depth: '0'
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          # renovate: golang=go
+          go-version: '1.27.1'
+
+      - name: Generate Windows resources
+        working-directory: cmd/windows_exporter
+        run: go run github.com/tc-hib/go-winres@v0.3.3 make --product-version=git-tag --file-version=git-tag --arch=amd64,arm64
+
+      - name: Build snapshot
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7.2.3
+        with:
+          # renovate: github=goreleaser/goreleaser
+          version: v2.18.2
+          args: build --snapshot --clean
+
+      - name: Build release
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7.2.3
+        with:
+          # renovate: github=goreleaser/goreleaser
+          version: v2.18.2
+          args: build --clean
+
+      - name: Stage build artifacts
+        run: |
+          mkdir -p output
+
+          version="$(git describe --tags --always)"
+          version="${version#v}"
+          version="${version//+/_}"
+          printf '%s\n' "$version" | tee output/VERSION
+
+          cp dist/windows_exporter-amd64.exe output/
+          cp dist/windows_exporter-arm64.exe output/
+
+      - name: Upload unsigned binaries
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: windows_exporter_unsigned
+          path: output/
+
+  package:
+    name: Package Windows artifacts
+    runs-on: windows-2025
+    needs:
+      - build
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: 'false'
+
+      - name: Download unsigned binaries
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: windows_exporter_unsigned
+          path: output
+
+      - name: Add version to binary names
+        run: |
+          $ErrorActionPreference = "Stop"
+          $Version = Get-Content output\VERSION
+
+          foreach($Arch in "amd64", "arm64") {
+            Move-Item output\windows_exporter-$Arch.exe output\windows_exporter-$Version-$Arch.exe
+          }
+
+          Get-ChildItem -Path output
+
+      - name: Sign build artifacts
+        if: ${{ (github.event_name != 'pull_request' && github.repository == 'prometheus-community/windows_exporter') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == 'prometheus-community/windows_exporter') }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $Version = Get-Content output\VERSION
+
+          $b64      = $env:CODE_SIGN_KEY
+          $filename = 'windows_exporter_CodeSign.pfx'
+
+          $bytes = [Convert]::FromBase64String($b64)
+          [IO.File]::WriteAllBytes($filename, $bytes)
+
+          $basePath = "C:\Program Files (x86)\Windows Kits\10\bin"
+          $latestSigntool = Get-ChildItem -Path $basePath -Directory |
+          Where-Object { $_.Name -match "^\d+\.\d+\.\d+\.\d+$" } |
+          Sort-Object { [Version]$_.Name } -Descending |
+          Select-Object -First 1 |
+          ForEach-Object { Join-Path $_.FullName "x64\signtool.exe" }
+
+          if (Test-Path $latestSigntool) {
+            Write-Output $latestSigntool
+          } else {
+            throw "signtool.exe not found"
+          }
+
+          foreach($Arch in "amd64", "arm64") {
+            & $latestSigntool sign /v /tr "http://timestamp.digicert.com" /d "Prometheus exporter for Windows machines" /td SHA256 /fd SHA256 /a /f "windows_exporter_CodeSign.pfx" /p $env:CODE_SIGN_PASSWORD "output\windows_exporter-$Version-$Arch.exe"
+          }
+
+          Remove-Item windows_exporter_CodeSign.pfx
+        env:
+          CODE_SIGN_KEY: ${{ secrets.CODE_SIGN_KEY }}
+          CODE_SIGN_PASSWORD: ${{ secrets.CODE_SIGN_PASSWORD }}
+
+      - name: Install WiX
+        run: dotnet tool install --global wix --version 5.0.2
+
+      - name: Install WiX extensions
+        run: |
+          wix extension add -g WixToolset.Util.wixext/5.0.2
+          wix extension add -g WixToolset.Ui.wixext/5.0.2
+          wix extension add -g WixToolset.Firewall.wixext/5.0.2
+
+      - name: Build installer artifacts
+        run: |
+          $ErrorActionPreference = "Stop"
+          $Version = Get-Content output\VERSION
+
+          foreach($Arch in "amd64", "arm64") {
+            Write-Host "Building windows_exporter $Version msi for $Arch"
+            .\installer\build.ps1 -PathToExecutable .\output\windows_exporter-$Version-$Arch.exe -Version $Version -Arch "$Arch"
+          }
+
+          Move-Item installer\*.msi output\
+          Get-ChildItem -Path output\
+
+      - name: Sign installer artifacts
+        if: ${{ (github.event_name != 'pull_request' && github.repository == 'prometheus-community/windows_exporter') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == 'prometheus-community/windows_exporter') }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $Version = Get-Content output\VERSION
+
+          $b64      = $env:CODE_SIGN_KEY
+          $filename = 'windows_exporter_CodeSign.pfx'
+
+          $bytes = [Convert]::FromBase64String($b64)
+          [IO.File]::WriteAllBytes($filename, $bytes)
+
+          $basePath = "C:\Program Files (x86)\Windows Kits\10\bin"
+          $latestSigntool = Get-ChildItem -Path $basePath -Directory |
+          Where-Object { $_.Name -match "^\d+\.\d+\.\d+\.\d+$" } |
+          Sort-Object { [Version]$_.Name } -Descending |
+          Select-Object -First 1 |
+          ForEach-Object { Join-Path $_.FullName "x64\signtool.exe" }
+
+          if (Test-Path $latestSigntool) {
+            Write-Output $latestSigntool
+          } else {
+            throw "signtool.exe not found"
+          }
+
+          foreach($Arch in "amd64", "arm64") {
+            & $latestSigntool sign /v /tr "http://timestamp.digicert.com" /d "Prometheus exporter for Windows machines" /td SHA256 /fd SHA256 /a /f "windows_exporter_CodeSign.pfx" /p $env:CODE_SIGN_PASSWORD "output\windows_exporter-$Version-$Arch.msi"
+          }
+
+          Remove-Item windows_exporter_CodeSign.pfx
+        env:
+          CODE_SIGN_KEY: ${{ secrets.CODE_SIGN_KEY }}
+          CODE_SIGN_PASSWORD: ${{ secrets.CODE_SIGN_PASSWORD }}
+
+      - name: Generate checksums
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          $checksums = Get-ChildItem -Path output -File |
+            Where-Object { $_.Name -match '^windows_exporter-.*\.(exe|msi)$' } |
+            Sort-Object Name |
+            ForEach-Object {
+              $hash = (Get-FileHash -Algorithm SHA256 $_.FullName).Hash.ToLowerInvariant()
+              "$hash  $($_.Name)"
+            }
+
+          $checksums | Set-Content output\sha256sums.txt -Encoding ascii
+          Get-Content output\sha256sums.txt
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: windows_exporter_binaries
+          path: |
+            output\windows_exporter-*.exe
+            output\windows_exporter-*.msi
+            output\sha256sums.txt
+
+  docker:
+    name: Build docker images
+    runs-on: ubuntu-24.04
+    needs:
+      - package
+    permissions:
+      contents: read
+      packages: write
+    env:
+      DOCKER_BUILD_SUMMARY: false
+      DOCKER_BUILD_RECORD_UPLOAD: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: 'false'
+          fetch-depth: '0'
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: windows_exporter_binaries
+
+      - name: Login to Docker Hub
+        if: ${{ github.repository == 'prometheus-community/windows_exporter' && github.event_name != 'pull_request' }}
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          username: ${{ secrets.DOCKER_HUB_LOGIN }}
+          password: ${{ secrets.DOCKER_HUB_PASSWORD }}
+
+      - name: Login to quay.io
+        if: ${{ github.repository == 'prometheus-community/windows_exporter' && github.event_name != 'pull_request' }}
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: quay.io
+          username: ${{ secrets.QUAY_IO_LOGIN }}
+          password: ${{ secrets.QUAY_IO_PASSWORD }}
+
+      - name: Login to GitHub container registry
+        if: ${{ github.repository == 'prometheus-community/windows_exporter' && github.event_name != 'pull_request' }}
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: |
+            ghcr.io/prometheus-community/windows-exporter
+            docker.io/prometheuscommunity/windows-exporter
+            quay.io/prometheuscommunity/windows-exporter
+          tags: |
+            type=semver,pattern={{version}}
+            type=ref,event=branch
+            type=ref,event=pr
+          labels: |
+            org.opencontainers.image.title=windows_exporter
+            org.opencontainers.image.description=A Prometheus exporter for Windows machines.
+            org.opencontainers.image.vendor=The Prometheus Community
+            org.opencontainers.image.licenses=MIT
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
+
+      - name: Build and push
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: .
+          push: ${{ github.repository == 'prometheus-community/windows_exporter' && github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: windows/amd64
+          annotations: ${{ steps.meta.outputs.labels }}
+
+  publish:
+    if: github.repository == 'prometheus-community/windows_exporter' && startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-24.04
+    needs:
+      - package
+      - test
+    permissions:
+      contents: write
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: windows_exporter_binaries
+
+      - name: Publish Artifacts
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "$GITHUB_REF_NAME" \
+            windows_exporter-*.exe \
+            windows_exporter-*.msi \
+            sha256sums.txt
+
+  test:
+    runs-on: windows-2025
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    env:
+      CNI_VERSION: "1.9.1"
+      CONTAINERD_VERSION: "2.4.1"
+      CRI_ENDPOINT: "npipe:////./pipe/containerd-containerd"
+      CRITOOLS_VERSION: "1.37.0"
+      KUBERNETES_VERSION: "v1.37.1"
+      # These collectors must work on the fixtures below; missing features are failures.
+      WINDOWS_EXPORTER_TEST_COLLECTORS: "cache,container,cpu,cpu_info,dhcp,diskdrive,dns,fsrmquota,hyperv,iis,license,logical_disk,memory,mscluster,msmq,net,netframework,nps,os,pagefile,physical_disk,printer,process,scheduled_task,service,smb,smbclient,system,tcp,terminal_services,time,udp,update"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: 'false'
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          # renovate: golang=go
+          go-version: '1.27.1'
+
+      - parallel:
+          - name: Install Containers feature
+            shell: pwsh
+            run: |
+              $ErrorActionPreference = "Stop"
+
+              $features = @(
+                  "Containers"
+                  "Failover-Clustering"
+                  "RSAT-Clustering-PowerShell"
+              )
+              $result = Install-WindowsFeature -Name $features
+              $result | Format-List Success, RestartNeeded, ExitCode, FeatureResult
+
+              if (-not $result.Success -or $result.RestartNeeded -ne "No") {
+                  throw "Containers feature could not be installed without a restart"
+              }
+
+              Get-WindowsFeature -Name $features |
+                  Format-Table DisplayName, Name, InstallState
+
+          - name: Setup storage pool
+            shell: pwsh
+            run: |
+              $ErrorActionPreference = "Stop"
+
+              $existingDiskIds = @(Get-PhysicalDisk | ForEach-Object ObjectId)
+              $disk1 = Join-Path $env:RUNNER_TEMP "storage-pool-1.vhdx"
+              $disk2 = Join-Path $env:RUNNER_TEMP "storage-pool-2.vhdx"
+              $diskpartScript = Join-Path $env:RUNNER_TEMP "storage-pool-diskpart.txt"
+
+              @"
+              create vdisk file="$disk1" maximum=10240 type=expandable
+              attach vdisk
+              create vdisk file="$disk2" maximum=10240 type=expandable
+              attach vdisk
+              "@ | Set-Content -Path $diskpartScript -Encoding ascii
+
+              diskpart /s $diskpartScript
+              Update-HostStorageCache
+
+              $newDisks = @(Get-PhysicalDisk | Where-Object { $_.ObjectId -notin $existingDiskIds })
+              $newDisks | Format-Table FriendlyName, DeviceId, MediaType, BusType, Size, CanPool, CannotPoolReason
+
+              $poolableDisks = @($newDisks | Where-Object CanPool)
+
+              if ($poolableDisks.Count -ne 2) {
+                  throw "Expected two poolable VHDX disks, found $($poolableDisks.Count)"
+              }
+
+              New-StoragePool `
+                  -FriendlyName "GitHubActions" `
+                  -StorageSubsystemFriendlyName "Windows Storage*" `
+                  -PhysicalDisks $poolableDisks
+
+              $pool = Get-StoragePool -FriendlyName "GitHubActions" -ErrorAction Stop
+              $pool | Format-List FriendlyName, HealthStatus, OperationalStatus, Size, AllocatedSize
+
+              if ($pool.IsPrimordial) {
+                  throw "Expected a concrete storage pool"
+              }
+
+              New-VirtualDisk -StoragePoolFriendlyName "GitHubActions" `
+                  -FriendlyName "CIVirtualDisk" -Size 1GB -ResiliencySettingName Simple
+
+          - name: Download container prerequisites
+            shell: pwsh
+            run: |
+              $ErrorActionPreference = "Stop"
+
+              $cacheDir = Join-Path $env:RUNNER_TEMP "container-prereqs"
+              New-Item -ItemType Directory -Force -Path $cacheDir | Out-Null
+
+              $downloads = @{
+                  "Install-Containerd.ps1" = "https://raw.githubusercontent.com/kubernetes-sigs/sig-windows-tools/877cfb9ae91749ab9d73314337504ac962d6f90e/hostprocess/Install-Containerd.ps1"
+                  "containerd.tar.gz" = "https://github.com/containerd/containerd/releases/download/v$($env:CONTAINERD_VERSION)/containerd-$($env:CONTAINERD_VERSION)-windows-amd64.tar.gz"
+                  "crictl.tar.gz" = "https://github.com/kubernetes-sigs/cri-tools/releases/download/v$($env:CRITOOLS_VERSION)/crictl-v$($env:CRITOOLS_VERSION)-windows-amd64.tar.gz"
+                  "cni-plugins.tgz" = "https://github.com/containernetworking/plugins/releases/download/v$($env:CNI_VERSION)/cni-plugins-windows-amd64-v$($env:CNI_VERSION).tgz"
+                  "kubelet.exe" = "https://dl.k8s.io/release/$($env:KUBERNETES_VERSION)/bin/windows/amd64/kubelet.exe"
+                  "kubelet.exe.sha256" = "https://dl.k8s.io/release/$($env:KUBERNETES_VERSION)/bin/windows/amd64/kubelet.exe.sha256"
+                  "hns.psm1" = "https://raw.githubusercontent.com/microsoft/SDN/32df9732ef6dfab07dba205440e30bdfbd8e579a/Kubernetes/windows/hns.psm1"
+              }
+
+              foreach ($download in $downloads.GetEnumerator()) {
+                  Invoke-WebRequest `
+                      -Uri $download.Value `
+                      -OutFile (Join-Path $cacheDir $download.Key)
+              }
+
+              $installer = Join-Path $cacheDir "Install-Containerd.ps1"
+              $installerContent = Get-Content -Raw $installer
+              $installerContent = $installerContent.Replace(
+                  '    curl.exe --silent --fail -Lo $destination $source',
+                  '    if (Test-Path $destination) { Write-Host "Using pre-downloaded $destination"; return }' + "`r`n" + '    curl.exe --silent --fail -Lo $destination $source'
+              )
+              Set-Content -Path $installer -Value $installerContent -Encoding utf8
+          - name: Start Hyper-V VM
+            shell: pwsh
+            run: |
+              $ErrorActionPreference = "Stop"
+
+              Import-Module Hyper-V
+              Start-Service vmms
+
+              New-VMSwitch -Name "CISwitch" -SwitchType Internal
+              New-VM `
+                  -Name "GitHubActions" `
+                  -Generation 1 `
+                  -MemoryStartupBytes 256MB `
+                  -NewVHDPath (Join-Path $env:RUNNER_TEMP "hyperv-ci.vhdx") `
+                  -NewVHDSizeBytes 1GB `
+                  -SwitchName "CISwitch"
+
+              Add-VMNetworkAdapter -VMName "GitHubActions" -Name "CILegacy" `
+                  -IsLegacy $true -SwitchName "CISwitch"
+              Start-VM -Name "GitHubActions"
+
+              $vm = Get-VM -Name "GitHubActions"
+              $vm | Format-List Name, State, Status, Generation, Uptime
+
+              if ($vm.State -ne "Running") {
+                  throw "Expected Hyper-V VM to be running, got $($vm.State)"
+              }
+
+      - name: Setup local RDP session
+        id: setup-rdp
+        continue-on-error: true
+        background: true
+        shell: powershell
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          $userName = "rdp-ci"
+          $password = "WindowsExporter-CI-2026!"
+          $securePassword = ConvertTo-SecureString $password -AsPlainText -Force
+
+          if ($null -eq (Get-LocalUser -Name $userName -ErrorAction SilentlyContinue)) {
+              New-LocalUser `
+                  -Name $userName `
+                  -Password $securePassword `
+                  -PasswordNeverExpires `
+                  -AccountNeverExpires | Out-Null
+          }
+
+          Add-LocalGroupMember `
+              -Group "Remote Desktop Users" `
+              -Member $userName `
+              -ErrorAction SilentlyContinue
+
+          Set-ItemProperty `
+              -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server" `
+              -Name fDenyTSConnections `
+              -Value 0
+
+          Start-Service TermService
+          (Get-Service TermService).WaitForStatus("Running", [TimeSpan]::FromSeconds(30))
+
+          choco install freerdp.portable `
+              --version=3.28.0 `
+              --yes `
+              --no-progress
+
+          if ($LASTEXITCODE -ne 0) {
+              throw "Failed to install FreeRDP"
+          }
+
+          $wfreerdp = (Get-Command wfreerdp.exe -ErrorAction Stop).Source
+          $freeRdp = Start-Process `
+              -FilePath $wfreerdp `
+              -ArgumentList @(
+                  "/v:127.0.0.1"
+                  "/u:$env:COMPUTERNAME\$userName"
+                  "/p:$password"
+                  "/cert:ignore"
+                  "/size:800x600"
+              ) `
+              -PassThru
+
+          Write-Host "Started wfreerdp.exe with PID $($freeRdp.Id)"
+
+          $deadline = (Get-Date).AddSeconds(60)
+          $rdpSession = $null
+
+          do {
+              $sessions = qwinsta.exe
+              $sessions | ForEach-Object { Write-Host $_ }
+
+              $rdpSession = $sessions |
+                  Where-Object { $_ -match "RDP-Tcp#" } |
+                  Select-Object -First 1
+
+              if ($null -ne $rdpSession) {
+                  break
+              }
+
+              if ($freeRdp.HasExited) {
+                  throw "wfreerdp.exe exited before an RDP session was created"
+              }
+
+              Start-Sleep -Seconds 2
+          } while ((Get-Date) -lt $deadline)
+
+          if ($null -eq $rdpSession) {
+              throw "No RDP-Tcp session was created by FreeRDP"
+          }
+
+          Write-Host "RDP session created: $rdpSession"
+
+          $remoteFxNetwork = Get-Counter -ListSet "RemoteFX Network" -ErrorAction Stop
+          $remoteFxGraphics = Get-Counter -ListSet "RemoteFX Graphics" -ErrorAction Stop
+
+          $networkInstances = @($remoteFxNetwork.PathsWithInstances |
+              Where-Object { $_ -match "RDP-Tcp#" })
+          $graphicsInstances = @($remoteFxGraphics.PathsWithInstances |
+              Where-Object { $_ -match "RDP-Tcp#" })
+
+          Write-Host "RemoteFX Network instances:"
+          $networkInstances | ForEach-Object { Write-Host $_ }
+
+          Write-Host "RemoteFX Graphics instances:"
+          $graphicsInstances | ForEach-Object { Write-Host $_ }
+
+          if ($networkInstances.Count -eq 0) {
+              Write-Warning "No RemoteFX Network RDP-Tcp instance was created"
+          }
+
+          if ($graphicsInstances.Count -eq 0) {
+              Write-Warning "No RemoteFX Graphics RDP-Tcp instance was created"
+          }
+
+      - name: Setup MSCluster
+        id: setup-mscluster
+        # The Go test requires the cluster and virtual disk.
+        background: true
+        shell: powershell
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          $deadline = (Get-Date).AddMinutes(3)
+          do {
+              $module = Get-Module -ListAvailable FailoverClusters |
+                  Select-Object -First 1
+
+              if ($null -ne $module) {
+                  break
+              }
+
+              if ((Get-Date) -ge $deadline) {
+                  throw "FailoverClusters module did not become available"
+              }
+
+              Start-Sleep -Seconds 2
+          } while ($true)
+
+          Import-Module FailoverClusters
+
+          $cluster = Get-Cluster -ErrorAction SilentlyContinue
+          if ($null -eq $cluster) {
+              New-Cluster `
+                  -Name "CICluster" `
+                  -Node $env:COMPUTERNAME `
+                  -NoStorage `
+                  -AdministrativeAccessPoint None `
+                  -Force | Out-Null
+          }
+
+          Get-Cluster | Format-List Name, AdministrativeAccessPoint
+          Get-ClusterNode | Format-Table Name, State, NodeWeight, DynamicWeight
+          Get-ClusterNetwork | Format-Table Name, State, Role, Address
+
+      - name: Install Windows roles
+        id: install-windows-roles
+        background: true
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          $features = @(
+              "DHCP"
+              "DNS"
+              "FS-FileServer"
+              "FS-Resource-Manager"
+              "MSMQ-Server"
+              "NPAS"
+              "Print-Server"
+              "RSAT-DHCP"
+              "RSAT-DNS-Server"
+              "RSAT-Print-Services"
+              "Web-Server"
+          )
+
+          $result = Install-WindowsFeature -Name $features
+          $result | Format-List Success, RestartNeeded, ExitCode, FeatureResult
+
+          if (-not $result.Success -or $result.RestartNeeded -ne "No") {
+              throw "Required Windows roles could not be installed without a restart"
+          }
+
+          Get-WindowsFeature -Name $features |
+              Format-Table DisplayName, Name, InstallState
+
+      - name: Prepare container runtime
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          $cacheDir = Join-Path $env:RUNNER_TEMP "container-prereqs"
+          $containerdInstaller = Join-Path $cacheDir "Install-Containerd.ps1"
+          $containerdPath = Join-Path $env:ProgramFiles "containerd"
+          New-Item -ItemType Directory -Force -Path $containerdPath | Out-Null
+
+          Copy-Item (Join-Path $cacheDir "containerd.tar.gz") `
+              (Join-Path $containerdPath "containerd.tar.gz")
+          Copy-Item (Join-Path $cacheDir "crictl.tar.gz") `
+              (Join-Path $containerdPath "crictl.tar.gz")
+
+          & $containerdInstaller `
+              -ContainerDVersion $env:CONTAINERD_VERSION `
+              -crictlVersion $env:CRITOOLS_VERSION
+
+          $containerd = Join-Path $containerdPath "containerd.exe"
+          $crictl = Join-Path $containerdPath "crictl.exe"
+
+          if (-not (Test-Path $containerd)) {
+              throw "containerd was not installed"
+          }
+
+          $cniBinPath = "C:\opt\cni\bin"
+          $cniConfigPath = "C:\etc\cni\net.d"
+          New-Item -ItemType Directory -Force -Path $cniBinPath,$cniConfigPath | Out-Null
+
+          $cniArchive = Join-Path $cacheDir "cni-plugins.tgz"
+          tar.exe -xzf $cniArchive -C $cniBinPath
+
+          @'
+          {
+            "cniVersion": "0.3.1",
+            "name": "ci",
+            "type": "win-bridge",
+            "apiVersion": 2,
+            "ipam": {
+              "type": "host-local",
+              "subnet": "192.168.255.0/24",
+              "rangeStart": "192.168.255.10",
+              "rangeEnd": "192.168.255.250",
+              "gateway": "192.168.255.2",
+              "dataDir": "C:/etc/cni/net.d/ipam"
+            }
+          }
+          '@ | Set-Content `
+              -Path (Join-Path $cniConfigPath "10-ci.conf") `
+              -Encoding ascii
+
+          $hnsModule = Join-Path $env:RUNNER_TEMP "hns.psm1"
+          Copy-Item (Join-Path $cacheDir "hns.psm1") $hnsModule
+
+          $kubeDir = "C:\k"
+          $manifestDir = Join-Path $kubeDir "manifests"
+          New-Item -ItemType Directory -Force -Path $kubeDir,$manifestDir | Out-Null
+
+          $kubelet = Join-Path $kubeDir "kubelet.exe"
+          Copy-Item (Join-Path $cacheDir "kubelet.exe") $kubelet
+          Copy-Item (Join-Path $cacheDir "kubelet.exe.sha256") "$kubelet.sha256"
+
+          $expectedHash = (Get-Content "$kubelet.sha256").Trim().Split()[0].ToLowerInvariant()
+          $actualHash = (Get-FileHash -Algorithm SHA256 $kubelet).Hash.ToLowerInvariant()
+
+          if ($actualHash -ne $expectedHash) {
+              throw "kubelet SHA256 mismatch"
+          }
+
+          @'
+          apiVersion: kubelet.config.k8s.io/v1beta1
+          kind: KubeletConfiguration
+          authentication:
+            webhook:
+              enabled: false
+          authorization:
+            mode: AlwaysAllow
+          enableServer: false
+          address: 127.0.0.1
+          readOnlyPort: 0
+          resolvConf: ""
+          staticPodPath: C:/k/manifests
+          podLogsDir: C:/k/logs
+          containerRuntimeEndpoint: npipe:////./pipe/containerd-containerd
+          '@ | Set-Content `
+              -Path (Join-Path $kubeDir "kubelet.yaml") `
+              -Encoding ascii
+
+          @'
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: hostprocess
+          spec:
+            hostNetwork: true
+            securityContext:
+              windowsOptions:
+                hostProcess: true
+                runAsUserName: 'NT AUTHORITY\SYSTEM'
+            containers:
+              - name: hostprocess
+                image: mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v1.0.0
+                imagePullPolicy: IfNotPresent
+                command:
+                  - 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe'
+                  - -NoLogo
+                  - -NonInteractive
+                  - -Command
+                  - 'while ($true) { Start-Sleep -Seconds 3600 }'
+          '@ | Set-Content `
+              -Path (Join-Path $manifestDir "hostprocess.yaml") `
+              -Encoding ascii
+
+          @'
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: process-isolated
+          spec:
+            containers:
+              - name: nanoserver
+                image: mcr.microsoft.com/windows/nanoserver:ltsc2025
+                imagePullPolicy: IfNotPresent
+                command:
+                  - ping.exe
+                  - -t
+                  - 127.0.0.1
+          '@ | Set-Content `
+              -Path (Join-Path $manifestDir "process-isolated.yaml") `
+              -Encoding ascii
+
+          Restart-Service containerd
+          (Get-Service containerd).WaitForStatus("Running", [TimeSpan]::FromSeconds(30))
+
+          & $crictl --runtime-endpoint $env:CRI_ENDPOINT info
+          if ($LASTEXITCODE -ne 0) {
+              throw "containerd CRI endpoint is not ready"
+          }
+
+      - name: Pull HostProcess image
+        id: pull-hostprocess
+        shell: pwsh
+        background: true
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          $crictl = Join-Path $env:ProgramFiles "containerd\crictl.exe"
+          & $crictl `
+              --runtime-endpoint $env:CRI_ENDPOINT `
+              pull mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v1.0.0
+
+          if ($LASTEXITCODE -ne 0) {
+              throw "Failed to pull HostProcess base image"
+          }
+
+      - name: Pull Nano Server image
+        id: pull-nanoserver
+        shell: pwsh
+        background: true
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          $crictl = Join-Path $env:ProgramFiles "containerd\crictl.exe"
+          & $crictl `
+              --runtime-endpoint $env:CRI_ENDPOINT `
+              pull mcr.microsoft.com/windows/nanoserver:ltsc2025
+
+          if ($LASTEXITCODE -ne 0) {
+              throw "Failed to pull Windows Server 2025 Nano Server image"
+          }
+
+      - name: Setup container network
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          $hnsModule = Join-Path $env:RUNNER_TEMP "hns.psm1"
+          Import-Module $hnsModule -Force
+
+          $hnsNetwork = Get-HNSNetwork | Where-Object Name -EQ "ci"
+          if ($null -eq $hnsNetwork) {
+              $hnsNetwork = New-HNSNetwork `
+                  -Type L2Bridge `
+                  -AddressPrefix "192.168.255.0/24" `
+                  -Gateway "192.168.255.2" `
+                  -Name "ci" `
+                  -Verbose
+          }
+
+          $hnsNetwork | Format-List Name, Type, Id, Subnets
+
+      - name: Start static pods
+        # Collector tests require both container types and report any missing fixture.
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          $crictl = Join-Path $env:ProgramFiles "containerd\crictl.exe"
+          $hnsModule = Join-Path $env:RUNNER_TEMP "hns.psm1"
+          Import-Module $hnsModule -Force
+
+          $deadline = (Get-Date).AddMinutes(2)
+          do {
+              $networkReady = $false
+              try {
+                  $networkReady = $null -ne (Get-HnsNetwork | Where-Object Name -EQ "ci")
+              }
+              catch {
+                  $networkReady = $false
+              }
+
+              $images = & $crictl --runtime-endpoint $env:CRI_ENDPOINT images -o json | ConvertFrom-Json
+              $imageNames = @($images.images.repoTags)
+
+              $hostProcessReady = $imageNames -contains "mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v1.0.0"
+              $nanoServerReady = $imageNames -contains "mcr.microsoft.com/windows/nanoserver:ltsc2025"
+
+              if ($networkReady -and $hostProcessReady -and $nanoServerReady) {
+                  break
+              }
+
+              if ((Get-Date) -ge $deadline) {
+                  throw "Timed out waiting for HNS network and container images"
+              }
+
+              Start-Sleep -Seconds 2
+          } while ($true)
+          $kubelet = "C:\k\kubelet.exe"
+          $kubeletStdout = Join-Path $env:RUNNER_TEMP "kubelet.stdout.log"
+          $kubeletStderr = Join-Path $env:RUNNER_TEMP "kubelet.stderr.log"
+
+          New-Item -ItemType Directory -Force -Path "C:\k\logs", "C:\k\kubelet" | Out-Null
+          $kubeletProcess = Start-Process `
+              -FilePath $kubelet `
+              -ArgumentList "--config=C:\k\kubelet.yaml","--root-dir=C:\k\kubelet","--v=4" `
+              -RedirectStandardOutput $kubeletStdout `
+              -RedirectStandardError $kubeletStderr `
+              -PassThru
+
+          $deadline = (Get-Date).AddMinutes(2)
+          $running = $false
+
+          do {
+              if ($kubeletProcess.HasExited) {
+                  Get-Content $kubeletStdout -ErrorAction SilentlyContinue
+                  Get-Content $kubeletStderr -ErrorAction SilentlyContinue
+                  throw "kubelet exited with code $($kubeletProcess.ExitCode)"
+              }
+
+              try {
+                  $json = & $crictl --runtime-endpoint $env:CRI_ENDPOINT ps -o json
+                  if ($LASTEXITCODE -ne 0) { throw "Failed to query container runtime" }
+                  $containers = ($json -join "`n") | ConvertFrom-Json
+                  $hostProcess = $containers.containers | Where-Object { $_.metadata.name -eq "hostprocess" }
+                  $processIsolated = $containers.containers | Where-Object { $_.metadata.name -eq "nanoserver" }
+
+                  if ($hostProcess.state -eq "CONTAINER_RUNNING" -and $processIsolated.state -eq "CONTAINER_RUNNING") {
+                      $running = $true
+                      break
+                  }
+              }
+              catch {
+                  Write-Host "Waiting for static pod containers..."
+              }
+
+              Start-Sleep -Seconds 5
+          } while ((Get-Date) -lt $deadline)
+
+          & $crictl --runtime-endpoint $env:CRI_ENDPOINT pods
+          & $crictl --runtime-endpoint $env:CRI_ENDPOINT ps -a
+
+          if (-not $running) {
+              Get-Content $kubeletStdout -ErrorAction SilentlyContinue
+              Get-Content $kubeletStderr -ErrorAction SilentlyContinue
+              throw "Static pods did not reach Running state"
+          }
+
+      - name: Wait for Windows roles
+        wait: [install-windows-roles]
+
+      - parallel:
+          - name: Setup IIS
+            shell: pwsh
+            run: |
+              $ErrorActionPreference = "Stop"
+
+              Start-Service W3SVC
+              (Get-Service W3SVC).WaitForStatus("Running", [TimeSpan]::FromSeconds(30))
+
+              "windows_exporter integration test" |
+                  Set-Content -Path "C:\inetpub\wwwroot\index.html" -Encoding ascii
+
+              $response = Invoke-WebRequest -Uri "http://127.0.0.1/" -UseBasicParsing
+              if ($response.StatusCode -ne 200) {
+                  throw "Expected IIS to return HTTP 200, got $($response.StatusCode)"
+              }
+
+              Get-Service W3SVC,WAS | Format-Table Name, Status, StartType
+
+          - name: Setup MSMQ
+            shell: powershell
+            run: |
+              $ErrorActionPreference = "Stop"
+
+              Start-Service MSMQ
+              (Get-Service MSMQ).WaitForStatus("Running", [TimeSpan]::FromSeconds(30))
+
+              Import-Module MSMQ
+
+              $queue = Get-MsmqQueue -Name "CIQueue" -QueueType Private -ErrorAction SilentlyContinue
+              if ($null -eq $queue) {
+                  $queue = New-MsmqQueue -Name "CIQueue" -QueueType Private
+              }
+
+              $queue | Format-List QueueName, QueueType, MessageCount
+
+          - name: Setup NPS
+            shell: powershell
+            run: |
+              $ErrorActionPreference = "Stop"
+
+              Start-Service IAS
+              (Get-Service IAS).WaitForStatus("Running", [TimeSpan]::FromSeconds(30))
+
+              Get-Service IAS |
+                  Format-Table Name, Status, StartType
+
+              Get-Counter -ListSet "NPS Authentication Server" -ErrorAction Stop |
+                  Select-Object -ExpandProperty Paths
+
+              Get-Counter -ListSet "NPS Accounting Server" -ErrorAction Stop |
+                  Select-Object -ExpandProperty Paths
+
+          - name: Enable Windows Update
+            shell: powershell
+            run: |
+              $ErrorActionPreference = "Stop"
+
+              Set-Service wuauserv -StartupType Manual
+              Start-Service wuauserv
+              (Get-Service wuauserv).WaitForStatus("Running", [TimeSpan]::FromSeconds(30))
+
+              $session = New-Object -ComObject Microsoft.Update.Session
+              $session.ClientApplicationID = "windows_exporter-ci"
+              $searcher = $session.CreateUpdateSearcher()
+              $searcher.Online = $false
+
+              $historyCount = $searcher.GetTotalHistoryCount()
+              Write-Host "Windows Update history count: $historyCount"
+
+              Get-Service wuauserv |
+                  Format-Table Name, Status, StartType
+
+          - name: Setup printer
+            shell: pwsh
+            run: |
+              $ErrorActionPreference = "Stop"
+
+              Start-Service Spooler
+              (Get-Service Spooler).WaitForStatus("Running", [TimeSpan]::FromSeconds(30))
+
+              $driver = Get-PrinterDriver -ErrorAction SilentlyContinue |
+                  Where-Object Name -EQ "Generic / Text Only" |
+                  Select-Object -First 1
+
+              if ($null -eq $driver) {
+                  try {
+                      Add-PrinterDriver -Name "Generic / Text Only" -ErrorAction Stop
+                  }
+                  catch {
+                      Write-Host "Generic / Text Only driver is not staged; using an installed driver"
+                  }
+
+                  $driver = Get-PrinterDriver -ErrorAction SilentlyContinue |
+                      Where-Object Name -EQ "Generic / Text Only" |
+                      Select-Object -First 1
+              }
+
+              if ($null -eq $driver) {
+                  $driver = Get-PrinterDriver -ErrorAction Stop | Select-Object -First 1
+              }
+
+              if ($null -eq $driver) {
+                  throw "No printer driver is available"
+              }
+
+              if ($null -eq (Get-PrinterPort -Name "CIPrinterPort:" -ErrorAction SilentlyContinue)) {
+                  Add-PrinterPort -Name "CIPrinterPort:"
+              }
+
+              if ($null -eq (Get-Printer -Name "CIPrinter" -ErrorAction SilentlyContinue)) {
+                  Add-Printer `
+                      -Name "CIPrinter" `
+                      -DriverName $driver.Name `
+                      -PortName "CIPrinterPort:"
+              }
+
+              Get-Printer -Name "CIPrinter" |
+                  Format-List Name, DriverName, PortName, PrinterStatus
+
+          - name: Setup FSRM quota
+            # The Go test requires the quota, so still run other collector tests on setup failure.
+            continue-on-error: true
+            shell: powershell
+            run: |
+              $ErrorActionPreference = "Stop"
+
+              Start-Service SrmSvc
+              (Get-Service SrmSvc).WaitForStatus("Running", [TimeSpan]::FromSeconds(30))
+
+              Import-Module FileServerResourceManager
+
+              $deadline = (Get-Date).AddSeconds(30)
+              do {
+                  try {
+                      Get-CimClass `
+                          -Namespace "root/Microsoft/Windows/FSRM" `
+                          -ClassName "MSFT_FSRMQuota" `
+                          -ErrorAction Stop | Out-Null
+                      break
+                  }
+                  catch {
+                      if ((Get-Date) -ge $deadline) {
+                          throw
+                      }
+
+                      Start-Sleep -Seconds 2
+                  }
+              } while ($true)
+
+              # Initialize the quota provider through its native COM API.
+              $quotaPath = "C:\fsrm-ci"
+              New-Item -ItemType Directory -Force -Path $quotaPath | Out-Null
+
+              $quota = Get-FsrmQuota -Path $quotaPath -ErrorAction SilentlyContinue
+              if ($null -eq $quota) {
+                  $manager = New-Object -ComObject Fsrm.FsrmQuotaManager
+                  $quota = $manager.CreateQuota($quotaPath)
+                  $quota.QuotaLimit = 100MB
+                  $quota.Description = "windows_exporter integration test"
+                  $quota.Commit()
+              }
+
+              "windows_exporter integration test" |
+                  Set-Content -Path (Join-Path $quotaPath "test.txt") -Encoding ascii
+
+              $manager = New-Object -ComObject Fsrm.FsrmQuotaManager
+              $manager.GetQuota($quotaPath) | Format-List Path, QuotaLimit, QuotaUsed, Description
+
+              Restart-Service SrmSvc
+              (Get-Service SrmSvc).WaitForStatus("Running", [TimeSpan]::FromSeconds(30))
+
+              $deadline = (Get-Date).AddSeconds(60)
+              do {
+                  $quotas = @(Get-CimInstance `
+                      -Namespace "root/Microsoft/Windows/FSRM" `
+                      -ClassName "MSFT_FSRMQuota" -ErrorAction Stop)
+                  $quotas | Format-List Path, Size, Usage, Description
+                  $cimQuota = $quotas | Where-Object { $_.Path.TrimEnd('\') -eq $quotaPath }
+                  if ($null -ne $cimQuota) { break }
+                  if ((Get-Date) -ge $deadline) {
+                      fltmc.exe filters
+                      fltmc.exe instances
+                      Get-WinEvent -FilterHashtable @{LogName='Application'; StartTime=(Get-Date).AddMinutes(-10)} `
+                          -ErrorAction SilentlyContinue | Where-Object ProviderName -Match 'SRM|FSRM' |
+                          Select-Object TimeCreated, ProviderName, Message
+                      throw "MSFT_FSRMQuota instance for $quotaPath was not found"
+                  }
+                  Start-Sleep -Seconds 2
+              } while ($true)
+
+              $cimQuota | Format-List Path, Size, Usage, PeakUsage, SoftLimit, Disabled, Description
+
+          - name: Setup SMB
+            shell: pwsh
+            run: |
+              $ErrorActionPreference = "Stop"
+
+              $sharePath = Join-Path $env:RUNNER_TEMP "smb"
+              New-Item -ItemType Directory -Force -Path $sharePath | Out-Null
+
+              if ($null -eq (Get-SmbShare -Name "CIShare" -ErrorAction SilentlyContinue)) {
+                  New-SmbShare `
+                      -Name "CIShare" `
+                      -Path $sharePath `
+                      -FullAccess "Everyone"
+              }
+
+              $unc = "\\$env:COMPUTERNAME\CIShare"
+              "windows_exporter integration test" | Set-Content "$unc\test.txt" -Encoding ascii
+              $content = Get-Content "$unc\test.txt"
+
+              if ($content -ne "windows_exporter integration test") {
+                  throw "Unexpected content read back over SMB"
+              }
+
+              Get-SmbShare -Name "CIShare"
+              Get-SmbConnection | Format-Table ServerName, ShareName, Dialect, NumOpens
+          - name: Setup DNS and DHCP
+            shell: pwsh
+            run: |
+              $ErrorActionPreference = "Stop"
+
+              Start-Service DNS
+              Start-Service DHCPServer
+
+              (Get-Service DNS).WaitForStatus("Running", [TimeSpan]::FromSeconds(30))
+              (Get-Service DHCPServer).WaitForStatus("Running", [TimeSpan]::FromSeconds(30))
+
+              Get-Service DNS,DHCPServer |
+                  Format-Table Name, Status, StartType
+
+              Add-DnsServerPrimaryZone `
+                  -Name "ci.contoso.com" `
+                  -ZoneFile "ci.contoso.com.dns"
+
+              Add-DnsServerResourceRecordA `
+                  -Name "test" `
+                  -ZoneName "ci.contoso.com" `
+                  -IPv4Address "192.0.2.10"
+
+              $zone = Get-DnsServerZone -Name "ci.contoso.com" -ErrorAction Stop
+              $zone | Format-List ZoneName, ZoneType, IsDsIntegrated
+
+              Get-DnsServerResourceRecord `
+                  -ZoneName "ci.contoso.com" `
+                  -Name "test" `
+                  -RRType A
+
+              Add-DhcpServerv4Scope `
+                  -Name "GitHubActions" `
+                  -StartRange "192.0.2.100" `
+                  -EndRange "192.0.2.200" `
+                  -SubnetMask "255.255.255.0" `
+                  -State Active
+
+              $scope = Get-DhcpServerv4Scope `
+                  -ScopeId "192.0.2.0" `
+                  -ErrorAction Stop
+
+              $scope | Format-List ScopeId, Name, State, StartRange, EndRange, SubnetMask
+
+              if ($zone.ZoneType -ne "Primary") {
+                  throw "Expected a primary DNS zone"
+              }
+
+              if ($scope.State -ne "Active") {
+                  throw "Expected an active DHCP scope"
+              }
+
+
+      - name: Wait for background setup
+        wait: [pull-hostprocess, pull-nanoserver, setup-mscluster, setup-rdp]
+
+      - name: Start .NET Framework and SMB workloads
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $workload = Join-Path $env:RUNNER_TEMP "netframework-workload.ps1"
+          @'
+          $data = New-Object byte[] 1MB
+          $path = "\\$env:COMPUTERNAME\CIShare\test.txt"
+          $stream = [System.IO.File]::Open($path, [System.IO.FileMode]::Open, [System.IO.FileAccess]::ReadWrite, [System.IO.FileShare]::ReadWrite)
+          try {
+              while ($true) {
+                  $stream.Position = 0
+                  $stream.WriteByte(65)
+                  $stream.Flush()
+                  [System.GC]::KeepAlive($data)
+                  Start-Sleep -Seconds 1
+              }
+          } finally {
+              $stream.Dispose()
+          }
+          '@ | Set-Content $workload
+          $process = Start-Process powershell.exe -PassThru `
+              -ArgumentList "-NoProfile", "-File", $workload
+          $process.Id | Set-Content (Join-Path $env:RUNNER_TEMP "netframework.pid")
+          winmgmt.exe /resyncperf
+          if ($LASTEXITCODE -ne 0) { throw "Failed to synchronize WMI performance counters" }
+
+      - name: Go tests
+        shell: pwsh
+        run: |
+          go test -v -count=1 -race -timeout=10m ./... 2>&1 | Tee-Object test-output.txt
+          $testExitCode = $LASTEXITCODE
+          Select-String -Path test-output.txt -Pattern '^--- SKIP:' |
+              ForEach-Object Line | Add-Content $env:GITHUB_STEP_SUMMARY
+          exit $testExitCode
+
+      - name: Build and smoke test exporter
+        shell: pwsh
+        run: |
+          go build -trimpath -o windows_exporter.exe ./cmd/windows_exporter
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          ./tools/end-to-end-test.ps1
+
+      - name: Upload test logs
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: windows-test-results
+          path: |
+            test-output.txt
+            ${{ runner.temp }}/windows_exporter.*.log
+            ${{ runner.temp }}/kubelet.*.log
+          if-no-files-found: ignore
+
+      - name: Stop test workloads
+        if: ${{ always() }}
+        shell: pwsh
+        run: |
+          $pidFile = Join-Path $env:RUNNER_TEMP "netframework.pid"
+          if (Test-Path $pidFile) {
+              Stop-Process -Id (Get-Content $pidFile) -ErrorAction SilentlyContinue
+          }
+          Get-Process kubelet -ErrorAction SilentlyContinue | Stop-Process -ErrorAction SilentlyContinue
+          Get-VM -Name GitHubActions -ErrorAction SilentlyContinue | Stop-VM -TurnOff -Force -ErrorAction SilentlyContinue
+
+  lint:
+    runs-on: windows-2025
+    permissions:
+      contents: read
+    steps:
+      # `gofmt` linter run by golangci-lint fails on CRLF line endings (the default for Windows)
+      - name: Set git to use LF
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: 'false'
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          # renovate: golang=go
+          go-version: '1.27.1'
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+        with:
+          # renovate: github=golangci/golangci-lint
+          version: v2.13.2
+          args: "--max-same-issues=0"
+
+  super-linter:
+    name: Super Linter
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          fetch-tags: 'false'
+
+      - name: Lint Code Base
+        uses: super-linter/super-linter/slim@2da136927bd4a73596db63044b504547c62cb854 # v9.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MULTI_STATUS: false
+          LINTER_RULES_PATH: .github/linters
+          GITHUB_ACTIONS_ZIZMOR_CONFIG_FILE: ../../../github/workspace/.github/linters/zizmor.yml
+          ENABLE_GITHUB_ACTIONS_STEP_SUMMARY: true
+          ENABLE_GITHUB_PULL_REQUEST_SUMMARY_COMMENT: false
+          SAVE_SUPER_LINTER_SUMMARY: true
+          VALIDATE_ALL_CODEBASE: false
+          VALIDATE_BASH: true
+          VALIDATE_BASH_EXEC: true
+          VALIDATE_EDITORCONFIG: true
+          VALIDATE_ENV: true
+          # VALIDATE_GITHUB_ACTIONS: true
+          VALIDATE_GITHUB_ACTIONS_ZIZMOR: true
+          VALIDATE_GITLEAKS: true
+          VALIDATE_GO_RELEASER: true
+          VALIDATE_HTML: true
+          VALIDATE_JSON: true
+          # VALIDATE_MARKDOWN: true
+          VALIDATE_NATURAL_LANGUAGE: true
+          VALIDATE_PYTHON: true
+          VALIDATE_RENOVATE: true
+          VALIDATE_SHELL_SHFMT: true
+          VALIDATE_SPELL_CODESPELL: true
+          # VALIDATE_XML: true
+          # VALIDATE_YAML: true
+

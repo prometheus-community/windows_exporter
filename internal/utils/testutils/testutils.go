@@ -21,6 +21,8 @@ import (
 	"errors"
 	"log/slog"
 	"os"
+	"slices"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -29,8 +31,11 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/update"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
+	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus-community/windows_exporter/pkg/collector"
 	"github.com/prometheus/client_golang/prometheus"
+	dto "github.com/prometheus/client_model/go"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sys/windows"
 )
@@ -52,81 +57,206 @@ func FuncBenchmarkCollector[C collector.Collector](b *testing.B, name string, co
 
 	metrics := make(chan prometheus.Metric)
 
-	go func() {
-		for {
-			<-metrics
+	var wg sync.WaitGroup
+	wg.Go(func() {
+		for range metrics {
 		}
-	}()
+	})
+	b.Cleanup(func() {
+		close(metrics)
+		wg.Wait()
+		assert.NoError(b, collectors.Close())
+	})
 
 	for b.Loop() {
 		require.NoError(b, c.Collect(metrics, 0))
 	}
-
-	require.NoError(b, collectors.Close())
 }
 
-func TestCollector[C collector.Collector, V any](t *testing.T, fn func(*V) C, conf *V) {
+// TestCollector validates real Windows collector output. CI lists provisioned
+// collectors in WINDOWS_EXPORTER_TEST_COLLECTORS so setup failures cannot skip.
+func TestCollector[C collector.Collector, V any](t *testing.T, fn func(*V) C, conf *V) map[string]*dto.MetricFamily {
 	t.Helper()
-
-	var (
-		metrics []prometheus.Metric
-		err     error
-	)
 
 	logger := slog.New(slog.DiscardHandler)
 	c := fn(conf)
-	ch := make(chan prometheus.Metric, 10000)
+	required := slices.Contains(strings.Split(os.Getenv("WINDOWS_EXPORTER_TEST_COLLECTORS"), ","), c.GetName())
 
 	miApp, err := mi.ApplicationInitialize()
 	require.NoError(t, err)
+	t.Cleanup(func() { assert.NoError(t, miApp.Close()) })
 
 	miSession, err := miApp.NewSession(nil)
 	require.NoError(t, err)
+	t.Cleanup(func() { assert.NoError(t, miSession.Close()) })
+	t.Cleanup(func() { assert.NoError(t, c.Close()) })
 
-	t.Cleanup(func() {
-		require.NoError(t, c.Close())
-		require.NoError(t, miSession.Close())
-		require.NoError(t, miApp.Close())
-	})
+	if err := c.Build(logger, miSession); err != nil {
+		if !required && unsupportedCollector(err) {
+			t.Skipf("collector %s is not supported: %v", c.GetName(), err)
+		}
 
-	wg := sync.WaitGroup{}
+		require.NoError(t, err, "build %s", c.GetName())
+	}
+
+	// PDH rate counters need a second sample after initialization.
+	time.Sleep(time.Second)
+
+	var families map[string]*dto.MetricFamily
+	for scrape := range 2 {
+		families = collectMetrics(t, c, required)
+		t.Logf("%s scrape %d: %d metric families", c.GetName(), scrape+1, len(families))
+	}
+
+	return families
+}
+
+func unsupportedCollector(err error) bool {
+	return errors.Is(err, mi.MI_RESULT_INVALID_NAMESPACE) ||
+		errors.Is(err, mi.MI_RESULT_INVALID_QUERY) ||
+		errors.Is(err, pdh.NewPdhError(pdh.CstatusNoCounter)) ||
+		errors.Is(err, pdh.NewPdhError(pdh.CstatusNoObject)) ||
+		errors.Is(err, pdh.ErrPerformanceCounterNotInitialized) ||
+		errors.Is(err, pdh.ErrNoData) ||
+		errors.Is(err, update.ErrUpdateServiceDisabled) ||
+		errors.Is(err, os.ErrNotExist) ||
+		errors.Is(err, windows.Errno(2151088411))
+}
+
+func collectMetrics(t *testing.T, c collector.Collector, required bool) map[string]*dto.MetricFamily {
+	t.Helper()
+
+	var (
+		metrics    collectedMetrics
+		collectErr error
+	)
+
+	ch := make(chan prometheus.Metric)
+
+	var wg sync.WaitGroup
 	wg.Go(func() {
 		for metric := range ch {
 			metrics = append(metrics, metric)
 		}
 	})
 
-	err = c.Build(logger, miSession)
+	// Stop the receiver even if Collect panics or an assertion ends the test.
+	func() {
+		defer func() {
+			close(ch)
+			wg.Wait()
+		}()
 
-	switch {
-	case err == nil:
-	case errors.Is(err, mi.MI_RESULT_INVALID_NAMESPACE),
-		errors.Is(err, pdh.NewPdhError(pdh.CstatusNoCounter)),
-		errors.Is(err, pdh.NewPdhError(pdh.CstatusNoObject)),
-		errors.Is(err, update.ErrUpdateServiceDisabled),
-		errors.Is(err, os.ErrNotExist):
-	default:
-		require.NoError(t, err)
+		err := c.Collect(ch, 30*time.Second)
+		if errors.Is(err, update.ErrNoUpdates) && required {
+			deadline := time.Now().Add(time.Minute)
+			for errors.Is(err, update.ErrNoUpdates) && time.Now().Before(deadline) {
+				time.Sleep(100 * time.Millisecond)
+
+				err = c.Collect(ch, 30*time.Second)
+			}
+		}
+
+		collectErr = err
+	}()
+
+	// Empty optional instance groups may report no data alongside valid metrics.
+	// Inspect every joined error so an unrelated failure cannot be hidden.
+	if noDataOnly(collectErr) && len(metrics) > 0 {
+		t.Logf("collector %s has empty optional instance groups: %v", c.GetName(), collectErr)
+		collectErr = nil
 	}
 
-	time.Sleep(1 * time.Second)
-
-	err = c.Collect(ch, 0)
-
-	switch {
-	// container collector
-	case errors.Is(err, windows.Errno(2151088411)),
-		errors.Is(err, pdh.ErrPerformanceCounterNotInitialized),
-		errors.Is(err, pdh.ErrNoData),
-		errors.Is(err, mi.MI_RESULT_INVALID_NAMESPACE),
-		errors.Is(err, mi.MI_RESULT_INVALID_QUERY),
-		errors.Is(err, update.ErrNoUpdates):
-		t.Skip("collector not supported on this system")
-	default:
-		require.NoError(t, err)
+	if !required && (unsupportedCollector(collectErr) || errors.Is(collectErr, update.ErrNoUpdates)) {
+		t.Skipf("collector %s is not supported: %v", c.GetName(), collectErr)
 	}
 
-	close(ch)
+	require.NoError(t, collectErr, "collect %s", c.GetName())
 
-	wg.Wait()
+	if required {
+		require.NotEmpty(t, metrics, "provisioned collector %s emitted no metrics", c.GetName())
+	}
+
+	registry := prometheus.NewPedanticRegistry()
+	require.NoError(t, registry.Register(metrics))
+	gathered, err := registry.Gather()
+	require.NoError(t, err, "invalid metrics from %s", c.GetName())
+
+	families := make(map[string]*dto.MetricFamily, len(gathered))
+	for _, family := range gathered {
+		families[family.GetName()] = family
+		if strings.HasSuffix(family.GetName(), "_collector_success") {
+			for _, metric := range family.GetMetric() {
+				require.InDelta(t, 1, metric.GetGauge().GetValue(), 0, "failed child collector: %s", metric)
+			}
+		}
+	}
+
+	return families
+}
+
+type collectedMetrics []prometheus.Metric
+
+func (m collectedMetrics) Describe(ch chan<- *prometheus.Desc) {
+	prometheus.DescribeByCollect(m, ch)
+}
+
+func (m collectedMetrics) Collect(ch chan<- prometheus.Metric) {
+	for _, metric := range m {
+		ch <- metric
+	}
+}
+
+// RequireFixtureMetric checks a known CI fixture without requiring it on a
+// developer's machine. Labels match exactly, ignoring case for Windows names.
+func RequireFixtureMetric(t *testing.T, families map[string]*dto.MetricFamily, collectorName, metricName string, labels prometheus.Labels) {
+	t.Helper()
+
+	if !slices.Contains(strings.Split(os.Getenv("WINDOWS_EXPORTER_TEST_COLLECTORS"), ","), collectorName) {
+		return
+	}
+
+	require.Contains(t, families, metricName)
+
+	for _, metric := range families[metricName].GetMetric() {
+		matched := true
+
+		for name, value := range labels {
+			found := false
+
+			for _, label := range metric.GetLabel() {
+				if label.GetName() == name && strings.EqualFold(label.GetValue(), value) {
+					found = true
+
+					break
+				}
+			}
+
+			matched = matched && found
+		}
+
+		if matched {
+			return
+		}
+	}
+
+	t.Fatalf("metric %s with fixture labels %v was not emitted; got %s", metricName, labels, families[metricName])
+}
+
+func noDataOnly(err error) bool {
+	if joined, ok := err.(interface{ Unwrap() []error }); ok {
+		for _, cause := range joined.Unwrap() {
+			if !noDataOnly(cause) {
+				return false
+			}
+		}
+
+		return true
+	}
+
+	if wrapped, ok := err.(interface{ Unwrap() error }); ok {
+		return noDataOnly(wrapped.Unwrap())
+	}
+
+	return errors.Is(err, pdh.ErrNoData) || errors.Is(err, types.ErrNoData)
 }

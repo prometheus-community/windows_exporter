@@ -22,6 +22,7 @@ import (
 
 	"github.com/prometheus-community/windows_exporter/internal/collector/mscluster"
 	"github.com/prometheus-community/windows_exporter/internal/utils/testutils"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 func BenchmarkCollector(b *testing.B) {
@@ -29,5 +30,6 @@ func BenchmarkCollector(b *testing.B) {
 }
 
 func TestCollector(t *testing.T) {
-	testutils.TestCollector(t, mscluster.New, nil)
+	metrics := testutils.TestCollector(t, mscluster.New, nil)
+	testutils.RequireFixtureMetric(t, metrics, mscluster.Name, "windows_mscluster_virtualdisk_size_bytes", prometheus.Labels{"name": "CIVirtualDisk"})
 }

@@ -16,10 +16,10 @@ ALL_OS            ?= ltsc2019 ltsc2022
 BASE_IMAGE        ?= mcr.microsoft.com/windows/nanoserver
 
 .PHONY: build
-build: generate windows_exporter.exe
+build: windows_exporter.exe
 
-windows_exporter.exe: pkg/**/*.go
-	promu build -v
+windows_exporter.exe: generate
+	CGO_ENABLED=0 go build -trimpath -tags=trimpath -o $@ ./cmd/windows_exporter
 
 .PHONY: generate
 generate:
@@ -38,18 +38,13 @@ lint:
 e2e-test: windows_exporter.exe
 	powershell -NonInteractive -ExecutionPolicy Bypass -File .\tools\end-to-end-test.ps1
 
-.PHONY: promtool
-promtool: windows_exporter.exe
-	pwsh -NonInteractive -ExecutionPolicy Bypass -File .\tools\promtool.ps1
-
 fmt:
 	gofmt -l -w -s .
 
 crossbuild: generate
-	# The prometheus/golang-builder image for promu crossbuild doesn't exist
-	# on Windows, so for now, we'll just build twice
-	GOARCH=amd64 promu build --prefix=output/amd64
-	GOARCH=arm64 promu build --prefix=output/arm64
+	mkdir -p output/amd64 output/arm64
+	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath -tags=trimpath -o output/amd64/windows_exporter.exe ./cmd/windows_exporter
+	CGO_ENABLED=0 GOOS=windows GOARCH=arm64 go build -trimpath -tags=trimpath -o output/arm64/windows_exporter.exe ./cmd/windows_exporter
 
 .PHONY: package
 package: crossbuild

@@ -18,12 +18,15 @@
 package logical_disk_test
 
 import (
+	"os"
+	"regexp"
 	"testing"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/collector/logical_disk"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus-community/windows_exporter/internal/utils/testutils"
+	"github.com/stretchr/testify/require"
 )
 
 func BenchmarkCollector(b *testing.B) {
@@ -37,6 +40,46 @@ func BenchmarkCollector(b *testing.B) {
 
 func TestCollector(t *testing.T) {
 	testutils.TestCollector(t, logical_disk.New, &logical_disk.Config{
-		VolumeInclude: types.RegExpAny,
+		CollectorsEnabled: logical_disk.ConfigDefaults.CollectorsEnabled,
+		VolumeInclude:     types.RegExpAny,
 	})
+}
+
+func TestCollectorVolumeFilters(t *testing.T) {
+	t.Parallel()
+
+	systemDrive := os.Getenv("SystemDrive")
+	require.NotEmpty(t, systemDrive)
+	matchDrive := regexp.MustCompile("^" + regexp.QuoteMeta(systemDrive) + "$")
+
+	for _, tc := range []struct {
+		name     string
+		config   logical_disk.Config
+		included bool
+	}{
+		{name: "include system drive", config: logical_disk.Config{CollectorsEnabled: logical_disk.ConfigDefaults.CollectorsEnabled, VolumeInclude: matchDrive}, included: true},
+		{name: "exclude system drive", config: logical_disk.Config{CollectorsEnabled: logical_disk.ConfigDefaults.CollectorsEnabled, VolumeInclude: types.RegExpAny, VolumeExclude: matchDrive}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			metrics := testutils.TestCollector(t, logical_disk.New, &tc.config)
+			if tc.included {
+				require.Contains(t, metrics, "windows_logical_disk_size_bytes")
+				require.Len(t, metrics["windows_logical_disk_size_bytes"].GetMetric(), 1)
+			}
+
+			for _, metric := range metrics["windows_logical_disk_size_bytes"].GetMetric() {
+				for _, label := range metric.GetLabel() {
+					if label.GetName() == "volume" {
+						if tc.included {
+							require.Equal(t, systemDrive, label.GetValue())
+						} else {
+							require.NotEqual(t, systemDrive, label.GetValue())
+						}
+					}
+				}
+			}
+		})
+	}
 }

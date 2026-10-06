@@ -188,6 +188,8 @@ windows_performancecounter_processor_information_processor_time\{core="0,0",stat
 				},
 			})
 
+			t.Cleanup(func() { require.NoError(t, perfDataCollector.Close()) })
+
 			logger := slog.New(slog.DiscardHandler)
 			err := perfDataCollector.Build(logger, nil)
 
@@ -203,7 +205,8 @@ windows_performancecounter_processor_information_processor_time\{core="0,0",stat
 			registry.MustRegister(collectorAdapter{*perfDataCollector})
 
 			rw := httptest.NewRecorder()
-			promhttp.HandlerFor(registry, promhttp.HandlerOpts{ErrorHandling: promhttp.ContinueOnError}).ServeHTTP(rw, &http.Request{})
+			promhttp.HandlerFor(registry, promhttp.HandlerOpts{}).ServeHTTP(rw, &http.Request{})
+			require.Equal(t, http.StatusOK, rw.Code)
 			got := rw.Body.String()
 
 			require.NotEmpty(t, got)
@@ -211,4 +214,24 @@ windows_performancecounter_processor_information_processor_time\{core="0,0",stat
 			require.Regexp(t, tc.expectedMetrics, got)
 		})
 	}
+}
+
+func TestCollectorClose(t *testing.T) {
+	t.Parallel()
+
+	c := performancecounter.New(&performancecounter.Config{
+		Objects: []performancecounter.Object{{
+			Name: "memory", Object: "Memory",
+			Counters: []performancecounter.Counter{{Name: "Available Bytes", Type: "gauge"}},
+		}},
+	})
+	require.NoError(t, c.Build(slog.New(slog.DiscardHandler), nil))
+	t.Cleanup(func() { require.NoError(t, c.Close()) })
+
+	metrics := make(chan prometheus.Metric, 10)
+	require.NoError(t, c.Collect(metrics, 0))
+	require.NoError(t, c.Close())
+
+	// A closed collector must no longer hold usable native counter queries.
+	require.ErrorIs(t, c.Collect(metrics, 0), pdh.ErrPerformanceCounterNotInitialized)
 }

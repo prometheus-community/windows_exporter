@@ -15,23 +15,108 @@
   "ignorePaths": ["**/workflows/container_description.yml","**/workflows/stale.yml","**/workflows/govulncheck.yml"],
   "packageRules": [
     {
-      "matchPackageNames": ["https://github.com/yaml/go-yaml"],
-      "matchUpdateTypes": ["major"],
+      "enabled": true,
+      "matchDatasources": ["golang-version"],
+      "rangeStrategy": "bump"
+    },
+    {
+      "enabled": true,
+      "matchDepNames": ["go", "golang"],
+      "groupName": "go version"
+    },
+    {
+      "enabled": true,
+      "matchCategories": ["go"],
+      "matchUpdateTypes": ["digest"]
+    },
+    {
+      "groupName": "golangci-lint",
+      "matchPackageNames": [
+        "github.com/golangci/golangci-lint/cmd/golangci-lint",
+        "golangci/golangci-lint",
+        "golangci/golangci-lint-action"
+      ],
+      "addLabels": ["chore"]
+    },
+    {
+      "matchPackageNames": ["gopkg.in/yaml"],
       "enabled": false
     },
     {
+      "matchManagers": ["gomod"],
+      "matchDepTypes": ["indirect"],
+      "major": {"enabled": false},
+      "enabled": true
+    },
+    {
+      "groupName": "GitHub Actions",
+      "matchManagers": ["github-actions"],
+      "matchDatasources": ["!/github-runners$/"],
+      "semanticCommitScope": "github-actions",
+      "separateMajorMinor": false,
+      "addLabels": ["chore"]
+    },
+    {
+      "groupName": "GitHub Runners",
+      "matchManagers": ["github-actions"],
+      "matchDatasources": ["github-runners"],
+      "semanticCommitScope": "github-actions",
+      "separateMajorMinor": false,
+      "addLabels": ["chore"]
+    },
+    {
+      "groupName": "moby monorepo",
+      "matchManagers": ["gomod"],
+      "matchPackageNames": ["github.com/moby/moby", "github.com/moby/moby/**"]
+    },
+    {
+      "groupName": "golang.org/x",
+      "matchPackageNames": ["golang.org/x/**"]
+    },
+    {
+      "groupName": "googleapis",
+      "matchPackageNames": ["google.golang.org/genproto/googleapis/**"]
+    },
+    {
+      "groupName": "Go tools",
+      "matchFileNames": ["tools/**", "Makefile"],
+      "matchPackageNames": ["*"],
+      "addLabels": ["chore"]
+    },
+    {
+      "matchPackageNames": ["golang.org/x/net"],
+      "sourceUrl": "https://github.com/golang/net"
+    },
+    {
+      "matchPackageNames": ["golang.org/x/oauth2"],
+      "sourceUrl": "https://github.com/golang/oauth2"
+    },
+    {
+      "matchPackageNames": ["golang.org/x/sys"],
+      "sourceUrl": "https://github.com/golang/sys"
+    },
+    {
+      "matchPackageNames": ["golang.org/x/text"],
+      "sourceUrl": "https://github.com/golang/text"
+    },
+    {
+      "enabled": false,
+      "matchPackageNames": ["https://github.com/yaml/go-yaml"],
+      "matchUpdateTypes": ["major"]
+    },
+    {
+      "enabled": false,
       "matchBaseBranches": ["/^[0-9]\\.[0-9][0-9]$/"],
       "matchUpdateTypes": [
         "major"
-      ],
-      "enabled": false
+      ]
     },
     {
+      "enabled": false,
       "matchBaseBranches": ["/^[0-9]\\.[0-9][0-9]$/"],
       "matchManagers": [
         "github-actions"
-      ],
-      "enabled": false
+      ]
     },
     {
       "enabled": false,
@@ -40,45 +125,6 @@
         "github.com/golangci/golangci-lint/cmd/golangci-lint",
         "golangci/golangci-lint",
         "golangci/golangci-lint-action"
-      ]
-    },
-    {
-      "groupName": "golangci-lint",
-      "matchPackageNames": [
-        "github.com/golangci/golangci-lint/cmd/golangci-lint",
-        "golangci/golangci-lint",
-        "golangci/golangci-lint-action"
-      ]
-    },
-    {
-      "matchManagers": [
-        "gomod"
-      ],
-      "matchDepTypes": [
-        "indirect"
-      ],
-      "enabled": true
-    },
-    {
-      "groupName": "GitHub Actions",
-      "matchManagers": [
-        "github-actions"
-      ]
-    },
-    {
-      "groupName": "golang.org/x/",
-      "matchPackageNames": [
-        "golang.org/x/*"
-      ]
-    },
-    {
-      "groupName": "Go tools",
-      "matchFileNames": [
-        "tools/**",
-        "Makefile"
-      ],
-      "matchPackageNames": [
-        "*"
       ]
     }
   ],
