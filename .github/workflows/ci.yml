@@ -439,6 +439,7 @@ jobs:
                   "DHCP"
                   "DNS"
                   "Failover-Clustering"
+                  "FS-Resource-Manager"
                   "MSMQ-Server"
                   "Print-Server"
                   "Web-Server"
@@ -703,6 +704,42 @@ jobs:
 
               Get-Printer -Name "CIPrinter" |
                   Format-List Name, DriverName, PortName, PrinterStatus
+
+          - name: Setup FSRM quota
+            shell: powershell
+            run: |
+              $ErrorActionPreference = "Stop"
+
+              Import-Module FileServerResourceManager
+
+              $quotaPath = "C:\fsrm-ci"
+              New-Item -ItemType Directory -Force -Path $quotaPath | Out-Null
+
+              $quota = Get-FsrmQuota -Path $quotaPath -ErrorAction SilentlyContinue
+              if ($null -eq $quota) {
+                  $quota = New-FsrmQuota `
+                      -Path $quotaPath `
+                      -Size 100MB `
+                      -Description "windows_exporter integration test"
+              }
+
+              "windows_exporter integration test" |
+                  Set-Content -Path (Join-Path $quotaPath "test.txt") -Encoding ascii
+
+              Get-FsrmQuota -Path $quotaPath |
+                  Format-List Path, Size, Usage, PeakUsage, SoftLimit, Disabled, Description
+
+              $cimQuota = Get-CimInstance `
+                  -Namespace "root/Microsoft/Windows/FSRM" `
+                  -ClassName "MSFT_FSRMQuota" |
+                  Where-Object Path -EQ $quotaPath
+
+              if ($null -eq $cimQuota) {
+                  throw "MSFT_FSRMQuota instance for $quotaPath was not found"
+              }
+
+              $cimQuota |
+                  Format-List Path, Size, Usage, PeakUsage, SoftLimit, Disabled, Description
 
           - name: Setup SMB
             shell: pwsh
