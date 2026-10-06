@@ -338,11 +338,9 @@ jobs:
           - os: windows-2022
             nanoserver: ltsc2022
             smtp: true
-            mssql: true
           - os: windows-2025
             nanoserver: ltsc2025
             smtp: false
-            mssql: false
     permissions:
       contents: read
     env:
@@ -353,9 +351,8 @@ jobs:
       KUBERNETES_VERSION: "v1.37.1"
       NANOSERVER_IMAGE: mcr.microsoft.com/windows/nanoserver:${{ matrix.nanoserver }}
       SMTP_ENABLED: ${{ matrix.smtp }}
-      MSSQL_ENABLED: ${{ matrix.mssql }}
       # These collectors must work on the fixtures below; missing features are failures.
-      WINDOWS_EXPORTER_TEST_COLLECTORS: "cache,container,cpu,cpu_info,dhcp,diskdrive,dns,fsrmquota,hyperv,iis,license,logical_disk,memory,mscluster,msmq,net,netframework,nps,os,pagefile,physical_disk,printer,process,scheduled_task,service,smb,smbclient,system,tcp,terminal_services,time,udp,update${{ matrix.mssql && ',mssql' || '' }}${{ matrix.smtp && ',smtp' || '' }}"
+      WINDOWS_EXPORTER_TEST_COLLECTORS: "cache,container,cpu,cpu_info,dhcp,diskdrive,dns,fsrmquota,hyperv,iis,license,logical_disk,memory,mscluster,msmq,mssql,net,netframework,nps,os,pagefile,physical_disk,printer,process,scheduled_task,service,smb,smbclient,system,tcp,terminal_services,time,udp,update${{ matrix.smtp && ',smtp' || '' }}"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -494,11 +491,7 @@ jobs:
         id: setup-mssql
         background: true
         shell: powershell
-        run: |
-          # Cover SQL Server on one OS to keep installation off the 2025 job's critical path.
-          if ($env:MSSQL_ENABLED -eq 'true') {
-              ./tools/setup-sql-server.ps1
-          }
+        run: ./tools/setup-sql-server.ps1
 
       - name: Setup local RDP session
         id: setup-rdp

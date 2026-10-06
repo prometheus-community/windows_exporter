@@ -1,6 +1,22 @@
 # Install a real Database Engine instance; LocalDB does not expose server counters.
 $ErrorActionPreference = "Stop"
 
+# Azure runners can expose sectors larger than SQL Server's supported 4 KB.
+# Keep every instance file on a disk with a known, compatible sector size.
+Import-Module Hyper-V
+$diskPath = Join-Path $env:RUNNER_TEMP "sql-server.vhdx"
+New-VHD -Path $diskPath -Dynamic -SizeBytes 8GB `
+    -LogicalSectorSizeBytes 512 -PhysicalSectorSizeBytes 4096 | Out-Null
+$disk = Mount-VHD -Path $diskPath -PassThru | Get-Disk
+if ($disk.PhysicalSectorSize -gt 4096) {
+    throw "SQL Server fixture disk exposes unsupported physical sectors"
+}
+$volume = $disk | Initialize-Disk -PartitionStyle GPT -PassThru |
+    New-Partition -UseMaximumSize -AssignDriveLetter |
+    Format-Volume -FileSystem NTFS -NewFileSystemLabel CISQL -Confirm:$false
+$instanceDir = "$($volume.DriveLetter):\SQLServer"
+fsutil.exe fsinfo sectorinfo "$($volume.DriveLetter):"
+
 $mediaDir = Join-Path $env:RUNNER_TEMP "sql-server"
 New-Item -ItemType Directory -Force -Path $mediaDir | Out-Null
 $installer = Join-Path $mediaDir "SQL2025-SSEI-Expr.exe"
@@ -31,6 +47,8 @@ $setup = Start-Process (Join-Path $setupDir "setup.exe") -Wait -PassThru -Argume
     "/ACTION=Install"
     "/FEATURES=SQLEngine"
     "/INSTANCENAME=CISQL"
+    "/INSTANCEDIR=$instanceDir"
+    "/INSTALLSQLDATADIR=$instanceDir"
     '/SQLSYSADMINACCOUNTS="BUILTIN\Administrators"'
     "/UPDATEENABLED=False"
     "/TCPENABLED=0"
