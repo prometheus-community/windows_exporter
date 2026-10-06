@@ -349,22 +349,19 @@ jobs:
       CRITOOLS_VERSION: "1.37.0"
       KUBERNETES_VERSION: "v1.37.1"
     steps:
-      - name: Ensure Containers feature
+      - name: Install Windows features
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
 
-          $feature = Get-WindowsFeature Containers
-          if ($feature.InstallState -ne "Installed") {
-              $result = Install-WindowsFeature Containers
-              $result | Format-List Success, RestartNeeded, ExitCode, FeatureResult
+          $result = Install-WindowsFeature DNS,DHCP,Containers -IncludeManagementTools
+          $result | Format-List Success, RestartNeeded, ExitCode, FeatureResult
 
-              if (-not $result.Success -or $result.RestartNeeded -ne "No") {
-                  throw "Containers feature could not be enabled without a restart"
-              }
+          if (-not $result.Success -or $result.RestartNeeded -ne "No") {
+              throw "Required Windows features could not be installed without a restart"
           }
 
-          Get-WindowsFeature Containers |
+          Get-WindowsFeature DNS,DHCP,Containers |
               Format-Table DisplayName, Name, InstallState
 
       - parallel:
@@ -431,21 +428,6 @@ jobs:
               if ($vm.State -ne "Running") {
                   throw "Expected Hyper-V VM to be running, got $($vm.State)"
               }
-
-          - name: Install Windows roles
-            shell: pwsh
-            run: |
-              $ErrorActionPreference = "Stop"
-
-              $result = Install-WindowsFeature DNS,DHCP -IncludeManagementTools
-              $result | Format-List Success, RestartNeeded, ExitCode, FeatureResult
-
-              if (-not $result.Success -or $result.RestartNeeded -ne "No") {
-                  throw "DNS/DHCP roles could not be installed without a restart"
-              }
-
-              Get-WindowsFeature DNS,DHCP |
-                  Format-Table DisplayName, Name, InstallState
 
           - name: Prepare container runtime
             shell: pwsh
