@@ -23,8 +23,9 @@ function Record-LabTime([string]$Phase) {
     Write-Host "$Phase completed in $($timings[$Phase]) seconds"
 }
 
-function Connect-LabGuest([PSCredential]$GuestCredential, [datetime]$AfterBoot = [datetime]::MinValue) {
-    $deadline = (Get-Date).AddMinutes(5)
+# Nested first boot runs specialize and OOBE, which can take over 10 minutes.
+function Connect-LabGuest([PSCredential]$GuestCredential, [datetime]$AfterBoot = [datetime]::MinValue, [int]$Minutes = 15) {
+    $deadline = (Get-Date).AddMinutes($Minutes)
     do {
         $candidate = $null
         try {
@@ -34,7 +35,8 @@ function Connect-LabGuest([PSCredential]$GuestCredential, [datetime]$AfterBoot =
             }
             if ($bootTime -gt $AfterBoot) { return $candidate }
         } catch {
-            Write-Host "Waiting for PowerShell Direct: $($_.Exception.Message)"
+            $guest = Get-VM -Name CIADDC
+            Write-Host "Waiting for PowerShell Direct (uptime $($guest.Uptime), heartbeat $($guest.Heartbeat)): $($_.Exception.Message)"
         }
         if ($candidate) { Remove-PSSession $candidate -ErrorAction SilentlyContinue }
         Start-Sleep -Seconds 5
@@ -124,7 +126,7 @@ try {
     Set-VM -Name CIADDC -AutomaticStopAction TurnOff
     Set-VMFirmware -VMName CIADDC -FirstBootDevice (Get-VMHardDiskDrive -VMName CIADDC)
     Start-VM CIADDC
-    $session = Connect-LabGuest $credential
+    $session = Connect-LabGuest $credential -Minutes 30
     Record-LabTime "Guest first boot"
 
     $bootBeforePromotion = Invoke-Command -Session $session -ArgumentList $securePassword -ScriptBlock {
@@ -218,31 +220,53 @@ try {
             }
             if ($thumbnail.ReturnValue -eq 0) {
                 Add-Type -AssemblyName System.Drawing
-                $rectangle = [Drawing.Rectangle]::new(0, 0, 1024, 768)
-                $bitmap = [Drawing.Bitmap]::new(1024, 768, [Drawing.Imaging.PixelFormat]::Format16bppRgb565)
+                [byte[]]$pixels = $thumbnail.ImageData
+                # The thumbnail is RGB565; its height follows the guest aspect ratio.
+                $height = [math]::Floor($pixels.Length / 2048)
+                if ($height -lt 1 -or $pixels.Length % 2048) {
+                    throw "Guest thumbnail has unexpected size of $($pixels.Length) bytes"
+                }
+                $rectangle = [Drawing.Rectangle]::new(0, 0, 1024, $height)
+                $bitmap = [Drawing.Bitmap]::new(1024, $height, [Drawing.Imaging.PixelFormat]::Format16bppRgb565)
                 try {
                     $bits = $bitmap.LockBits($rectangle, [Drawing.Imaging.ImageLockMode]::WriteOnly, $bitmap.PixelFormat)
-                    [byte[]]$pixels = $thumbnail.ImageData
                     if ($pixels.Length -ne [math]::Abs($bits.Stride) * $bits.Height) {
-                        throw "Guest thumbnail size does not match its bitmap buffer"
+                        throw "Guest thumbnail size $($pixels.Length) does not match its bitmap buffer"
                     }
                     [Runtime.InteropServices.Marshal]::Copy($pixels, 0, $bits.Scan0, $pixels.Length)
                     $bitmap.UnlockBits($bits)
                     $bitmap.Save((Join-Path $labDir "guest-console.png"), [Drawing.Imaging.ImageFormat]::Png)
                 } finally { $bitmap.Dispose() }
-            }
+            } else { Write-Warning "Guest console capture returned $($thumbnail.ReturnValue)" }
         } catch { Write-Warning "Guest console capture failed: $($_.Exception.Message)" }
     }
     Get-VM -Name CIADDC -ErrorAction SilentlyContinue |
         Stop-VM -TurnOff -Force -ErrorAction SilentlyContinue
     if ($vm -and -not $session) {
         try {
-            $guestDisk = Mount-VHD $vhd -ReadOnly -PassThru | Get-Disk
-            $guestVolume = $guestDisk | Get-Partition | Get-Volume | Where-Object FileSystemLabel -eq CILabOS
-            $panther = "$($guestVolume.DriveLetter):\Windows\Panther"
-            foreach ($log in Get-ChildItem $panther -Filter *.log -Recurse -ErrorAction SilentlyContinue) {
+            # The guest is off, so a writable mount can assign a drive letter.
+            $guestDisk = Mount-VHD $vhd -PassThru | Get-Disk
+            $guestPartition = $guestDisk | Get-Partition | Where-Object { ($_ | Get-Volume).FileSystemLabel -eq 'CILabOS' }
+            if (-not $guestPartition.DriveLetter) {
+                $guestPartition | Add-PartitionAccessPath -AssignDriveLetter
+                $guestPartition = $guestPartition | Get-Partition
+            }
+            $guestRoot = "$($guestPartition.DriveLetter):\Windows"
+            Write-Host "Collecting guest logs from $guestRoot"
+            $guestLogs = @(Get-ChildItem "$guestRoot\Panther", "$guestRoot\System32\LogFiles\Srt" -Include *.log, *.txt -Recurse -ErrorAction SilentlyContinue)
+            Write-Host "Found $($guestLogs.Count) guest setup logs"
+            foreach ($log in $guestLogs) {
                 $safeLog = (Get-Content $log.FullName -Raw).Replace($password, '***')
                 $safeLog | Set-Content (Join-Path $labDir "guest-$($log.Directory.Name)-$($log.Name)")
+            }
+            # Boot and setup events show how far the guest got before the deadline.
+            foreach ($log in "System", "Setup", "Application") {
+                $eventLog = "$guestRoot\System32\winevt\Logs\$log.evtx"
+                if (-not (Test-Path $eventLog)) { Write-Host "Guest $log event log is missing"; continue }
+                Get-WinEvent -Path $eventLog -MaxEvents 300 -ErrorAction SilentlyContinue |
+                    Sort-Object TimeCreated |
+                    Format-Table TimeCreated, Id, LevelDisplayName, ProviderName, Message -Wrap | Out-String -Width 400 |
+                    Set-Content (Join-Path $labDir "guest-events-$log.log")
             }
             Dismount-VHD $vhd
         } catch { Write-Warning "Guest setup log collection failed: $($_.Exception.Message)" }
