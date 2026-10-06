@@ -85,6 +85,19 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
+	c.buildDescriptors()
+
+	var err error
+
+	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](logger.With(slog.String("collector", Name)), pdh.CounterTypeRaw, "Certification Authority", pdh.InstancesAll)
+	if err != nil {
+		return fmt.Errorf("failed to create Certification Authority collector: %w", err)
+	}
+
+	return nil
+}
+
+func (c *Collector) buildDescriptors() {
 	c.requestsPerSecond = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "requests_total"),
 		"Total certificate requests processed",
@@ -163,15 +176,6 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		[]string{"cert_template"},
 		nil,
 	)
-
-	var err error
-
-	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](logger.With(slog.String("collector", Name)), pdh.CounterTypeRaw, "Certification Authority", pdh.InstancesAll)
-	if err != nil {
-		return fmt.Errorf("failed to create Certification Authority collector: %w", err)
-	}
-
-	return nil
 }
 
 func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error {
@@ -180,7 +184,13 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 		return fmt.Errorf("failed to collect Certification Authority (ADCS) metrics: %w", err)
 	}
 
-	for _, data := range c.perfDataObject {
+	c.collectMetrics(ch, c.perfDataObject)
+
+	return nil
+}
+
+func (c *Collector) collectMetrics(ch chan<- prometheus.Metric, rows []perfDataCounterValues) {
+	for _, data := range rows {
 		ch <- prometheus.MustNewConstMetric(
 			c.requestsPerSecond,
 			prometheus.CounterValue,
@@ -272,6 +282,4 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 			data.Name,
 		)
 	}
-
-	return nil
 }

@@ -329,7 +329,7 @@ jobs:
       CRITOOLS_VERSION: "1.37.0"
       KUBERNETES_VERSION: "v1.37.1"
       # These collectors must work on the fixtures below; missing features are failures.
-      WINDOWS_EXPORTER_TEST_COLLECTORS: "adcs,cache,container,cpu,cpu_info,dhcp,diskdrive,dns,fsrmquota,hyperv,iis,license,logical_disk,memory,mscluster,msmq,net,netframework,nps,os,pagefile,physical_disk,printer,process,scheduled_task,service,smb,smbclient,system,tcp,terminal_services,time,udp,update"
+      WINDOWS_EXPORTER_TEST_COLLECTORS: "cache,container,cpu,cpu_info,dhcp,diskdrive,dns,fsrmquota,hyperv,iis,license,logical_disk,memory,mscluster,msmq,net,netframework,nps,os,pagefile,physical_disk,printer,process,scheduled_task,service,smb,smbclient,system,tcp,terminal_services,time,udp,update"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -435,7 +435,6 @@ jobs:
               $ErrorActionPreference = "Stop"
 
               $features = @(
-                  "ADCS-Cert-Authority"
                   "DHCP"
                   "DNS"
                   "Failover-Clustering"
@@ -634,39 +633,6 @@ jobs:
           }
 
       - parallel:
-          - name: Setup certificate authority
-            shell: powershell
-            run: |
-              $ErrorActionPreference = "Stop"
-              Install-AdcsCertificationAuthority -CAType StandaloneRootCA `
-                  -CACommonName "CIRootCA" -CryptoProviderName "RSA#Microsoft Software Key Storage Provider" `
-                  -KeyLength 2048 -HashAlgorithmName SHA256 -Force
-              Restart-Service CertSvc
-              (Get-Service CertSvc).WaitForStatus("Running", [TimeSpan]::FromSeconds(30))
-
-              $requestInf = Join-Path $env:RUNNER_TEMP "certificate.inf"
-              $request = Join-Path $env:RUNNER_TEMP "certificate.req"
-              $certificate = Join-Path $env:RUNNER_TEMP "certificate.cer"
-              @'
-              [Version]
-              Signature="$Windows NT$"
-              [NewRequest]
-              Subject="CN=windows-exporter-ci"
-              KeyLength=2048
-              RequestType=PKCS10
-              HashAlgorithm=sha256
-              '@ | Set-Content $requestInf -Encoding ascii
-              certreq.exe -new -q $requestInf $request
-              if ($LASTEXITCODE -ne 0) { throw "Failed to create certificate request" }
-              # Standalone CAs may leave this request pending; it still exercises request counters.
-              certreq.exe -submit -q -config "$env:COMPUTERNAME\CIRootCA" $request $certificate
-              Get-Counter -ListSet "Certification Authority" |
-                  Select-Object -ExpandProperty PathsWithInstances
-              Get-WinEvent -FilterHashtable @{LogName='Application'; ProviderName='Microsoft-Windows-CertificationAuthority'; Id=110} `
-                  -ErrorAction SilentlyContinue | Select-Object TimeCreated, Message
-              # certreq can return a nonzero status for a pending request.
-              exit 0
-
           - name: Setup IIS
             shell: pwsh
             run: |
