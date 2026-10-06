@@ -483,16 +483,30 @@ jobs:
           {
             "cniVersion": "0.3.1",
             "name": "ci",
-            "type": "win-bridge",
-            "ipam": {
-              "type": "host-local",
-              "subnet": "192.168.255.0/24",
-              "gateway": "192.168.255.1"
-            }
+            "type": "win-bridge"
           }
           '@ | Set-Content `
               -Path (Join-Path $cniConfigPath "10-ci.conf") `
               -Encoding ascii
+
+          $hnsModule = Join-Path $env:RUNNER_TEMP "hns.psm1"
+          Invoke-WebRequest `
+              -Uri "https://raw.githubusercontent.com/microsoft/SDN/32df9732ef6dfab07dba205440e30bdfbd8e579a/Kubernetes/windows/hns.psm1" `
+              -OutFile $hnsModule
+
+          Import-Module $hnsModule -Force
+
+          $hnsNetwork = Get-HNSNetwork | Where-Object Name -EQ "ci"
+          if ($null -eq $hnsNetwork) {
+              $hnsNetwork = New-HNSNetwork `
+                  -Type L2Bridge `
+                  -AddressPrefix "192.168.255.0/24" `
+                  -Gateway "192.168.255.1" `
+                  -Name "ci" `
+                  -Verbose
+          }
+
+          $hnsNetwork | Format-List Name, Type, Id, Subnets
 
           Restart-Service containerd
           (Get-Service containerd).WaitForStatus("Running", [TimeSpan]::FromSeconds(30))
