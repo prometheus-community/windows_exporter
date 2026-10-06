@@ -145,7 +145,7 @@ try {
     Record-LabTime "Enterprise CA and template enrollment"
 
     Invoke-Command -Session $session -ScriptBlock { New-Item -ItemType Directory -Force C:\lab\logs | Out-Null }
-    Copy-Item domain-tests\* -Destination C:\lab -ToSession $session
+    Copy-Item domain-tests\* -Destination C:\lab -Recurse -ToSession $session
     "1" | Set-Content domain-test-exit-code.txt
     $testExitCode = 0
     foreach ($collector in "ad", "adcs") {
@@ -168,7 +168,7 @@ try {
         $ErrorActionPreference = "Stop"
         Set-Location C:\lab
         $env:RUNNER_TEMP = "C:\lab\logs"
-        .\end-to-end-test.ps1
+        .\tools\end-to-end-test.ps1
     }
     Record-LabTime "Exporter metrics smoke request"
 } finally {

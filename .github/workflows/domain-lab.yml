@@ -25,14 +25,14 @@ jobs:
       - name: Compile Go tests and exporter for the guest
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force domain-tests | Out-Null
+          New-Item -ItemType Directory -Force domain-tests/tools | Out-Null
           foreach ($collector in "ad", "adcs") {
               go test -c -race -o "domain-tests/$collector.test.exe" "./internal/collector/$collector"
               if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
           go build -trimpath -o domain-tests/windows_exporter.exe ./cmd/windows_exporter
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          Copy-Item tools/end-to-end-test.ps1 domain-tests/
+          Copy-Item tools/end-to-end-test.ps1 domain-tests/tools/
 
       - name: Provision domain guest and run Go tests
         shell: powershell
