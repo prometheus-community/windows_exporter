@@ -381,14 +381,18 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
 
+          . ./tools/vhd-lock.ps1
+
           # Hosted images ship the BitLocker feature; data volumes need no reboot.
           function New-BitLockerVolume([string]$Name) {
               $vhd = Join-Path $env:RUNNER_TEMP "$Name.vhdx"
               New-VHD -Path $vhd -Dynamic -SizeBytes 512MB | Out-Null
-              $volume = Mount-VHD $vhd -PassThru | Get-Disk |
-                  Initialize-Disk -PartitionStyle GPT -PassThru |
-                  New-Partition -UseMaximumSize -AssignDriveLetter |
-                  Format-Volume -FileSystem NTFS -NewFileSystemLabel $Name -Confirm:$false
+              $volume = Invoke-WithVhdLock {
+                  Mount-VHD $vhd -PassThru | Get-Disk |
+                      Initialize-Disk -PartitionStyle GPT -PassThru |
+                      New-Partition -UseMaximumSize -AssignDriveLetter |
+                      Format-Volume -FileSystem NTFS -NewFileSystemLabel $Name -Confirm:$false
+              }
               $mountPoint = "$($volume.DriveLetter):"
 
               $password = ConvertTo-SecureString ("CI-" + [Guid]::NewGuid().ToString('N')) -AsPlainText -Force
@@ -431,8 +435,12 @@ jobs:
           attach vdisk
           "@ | Set-Content -Path $diskpartScript -Encoding ascii
 
-          diskpart /s $diskpartScript
-          Update-HostStorageCache
+          . ./tools/vhd-lock.ps1
+          Invoke-WithVhdLock {
+              diskpart /s $diskpartScript
+              if ($LASTEXITCODE -ne 0) { throw "diskpart failed to attach the storage pool disks" }
+              Update-HostStorageCache
+          }
 
           # Background steps attach their own VHDX files concurrently.
           $diskNumbers = @($disk1, $disk2 | ForEach-Object { (Get-DiskImage -ImagePath $_).Number })
