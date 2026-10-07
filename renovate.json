@@ -11,7 +11,7 @@
   "schedule": [
     "* 14-17 * * 5"
   ],
-  "baseBranchPatterns": ["master", "/^[0-9]\\.[0-9][0-9]$/"],
+  "baseBranchPatterns": ["main","/^[0-9]\\.[0-9][0-9]$/"],
   "ignorePaths": ["**/workflows/container_description.yml","**/workflows/stale.yml","**/workflows/govulncheck.yml"],
   "packageRules": [
     {
@@ -121,6 +121,15 @@
     {
       "enabled": false,
       "matchBaseBranches": ["/^[0-9]\\.[0-9][0-9]$/"],
+      "matchDepNames": ["go", "golang"],
+      "matchUpdateTypes": [
+        "major",
+        "minor"
+      ]
+    },
+    {
+      "enabled": false,
+      "matchBaseBranches": ["/^[0-9]\\.[0-9][0-9]$/"],
       "matchPackageNames": [
         "github.com/golangci/golangci-lint/cmd/golangci-lint",
         "golangci/golangci-lint",
@@ -146,7 +155,7 @@
         "[\\t ]*(?:#|//) ?renovate: (?<datasource>[^=]+)=(?<depName>\\S+)(?: registry=(?<registryUrl>\\S+))?(?: versioning=(?<versioning>\\S+))?[\\t ]*\\r?\\n.+?[:=][\\t ]*[\"']?(?<currentValue>[^@\\s\"'=]+)(?:@(?<currentDigest>sha256:[a-f0-9]+))?[\"']?"
       ],
       "currentValueTemplate": "{{#if currentValue}}{{{currentValue}}}{{else if (equals datasource 'git-refs')}}main{{/if}}",
-      "datasourceTemplate": "{{#if (equals datasource 'github')}}github-tags{{else}}{{{datasource}}}{{/if}}",
+      "datasourceTemplate": "{{#if (equals datasource 'github')}}github-tags{{else if (equals datasource 'golang')}}golang-version{{else}}{{{datasource}}}{{/if}}",
       "versioningTemplate": "{{#if (equals datasource 'docker')}}docker{{else if versioning}}{{{versioning}}}{{else}}semver{{/if}}"
     },
     {
