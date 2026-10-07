@@ -22,6 +22,7 @@ import (
 
 	"github.com/prometheus-community/windows_exporter/internal/collector/dmi"
 	"github.com/prometheus-community/windows_exporter/internal/utils/testutils"
+	"github.com/stretchr/testify/require"
 )
 
 func BenchmarkCollector(b *testing.B) {
@@ -29,5 +30,20 @@ func BenchmarkCollector(b *testing.B) {
 }
 
 func TestCollector(t *testing.T) {
-	testutils.TestCollector(t, dmi.New, nil)
+	metrics := testutils.TestCollector(t, dmi.New, nil)
+
+	metric := testutils.RequireFixtureMetric(t, metrics, dmi.Name, "windows_dmi_info", nil)
+	if metric == nil {
+		return
+	}
+
+	for _, label := range metric.GetLabel() {
+		if label.GetName() == "product_uuid" {
+			require.NotEmpty(t, label.GetValue(), "SMBIOS system UUID is empty")
+
+			return
+		}
+	}
+
+	t.Fatalf("windows_dmi_info has no product_uuid label: %s", metric)
 }
