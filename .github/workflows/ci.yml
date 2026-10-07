@@ -388,10 +388,7 @@ jobs:
               $vhd = Join-Path $env:RUNNER_TEMP "$Name.vhdx"
               New-VHD -Path $vhd -Dynamic -SizeBytes 512MB | Out-Null
               $volume = Invoke-WithVhdLock {
-                  Mount-VHD $vhd -PassThru | Get-Disk |
-                      Initialize-Disk -PartitionStyle GPT -PassThru |
-                      New-Partition -UseMaximumSize -AssignDriveLetter |
-                      Format-Volume -FileSystem NTFS -NewFileSystemLabel $Name -Confirm:$false
+                  Format-NewDisk (Mount-VHD $vhd -PassThru | Get-Disk) $Name
               }
               $mountPoint = "$($volume.DriveLetter):"
 
