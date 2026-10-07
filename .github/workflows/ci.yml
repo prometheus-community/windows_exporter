@@ -1422,6 +1422,8 @@ jobs:
           TEST_EXIT_CODE: ${{ steps.go-tests.outputs.exit_code || '1' }}
         run: |
           Copy-Item "$env:windir/Logs/DISM/dism.log" (Join-Path $env:RUNNER_TEMP "dism.log") -ErrorAction SilentlyContinue
+          # CBS.log names the files that make role installation request a restart.
+          Copy-Item "$env:windir/Logs/CBS/CBS.log" (Join-Path $env:RUNNER_TEMP "cbs.log") -ErrorAction SilentlyContinue
           ./tools/test-summary.ps1 -TestExitCode ([int]$env:TEST_EXIT_CODE)
 
       - name: Build and smoke test exporter
@@ -1445,6 +1447,7 @@ jobs:
             ${{ runner.temp }}/sql-server-summary.txt
             ${{ runner.temp }}/rdp-client.*.log
             ${{ runner.temp }}/dism.log
+            ${{ runner.temp }}/cbs.log
           if-no-files-found: ignore
 
       - name: Stop test workloads
