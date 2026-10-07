@@ -26,6 +26,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/logical_disk"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus-community/windows_exporter/internal/utils/testutils"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/require"
 )
 
@@ -43,6 +44,31 @@ func TestCollector(t *testing.T) {
 		CollectorsEnabled: logical_disk.ConfigDefaults.CollectorsEnabled,
 		VolumeInclude:     types.RegExpAny,
 	})
+}
+
+func TestCollectorBitlocker(t *testing.T) {
+	metrics := testutils.TestCollector(t, logical_disk.New, &logical_disk.Config{
+		CollectorsEnabled: []string{"metrics", "bitlocker_status"},
+		VolumeInclude:     types.RegExpAny,
+		VolumeExclude:     types.RegExpEmpty,
+	})
+
+	for env, want := range map[string]string{
+		"WINDOWS_EXPORTER_TEST_BITLOCKER_VOLUME":        "on",
+		"WINDOWS_EXPORTER_TEST_BITLOCKER_LOCKED_VOLUME": "locked",
+	} {
+		volume := os.Getenv(env)
+		if volume == "" {
+			continue
+		}
+
+		status := testutils.RequireFixtureMetric(t, metrics, logical_disk.Name, "windows_logical_disk_bitlocker_status", prometheus.Labels{
+			"volume": volume,
+			"status": want,
+		})
+		require.NotNil(t, status)
+		require.InDelta(t, 1, status.GetGauge().GetValue(), 0, "BitLocker fixture volume %s is not reported as %s", volume, want)
+	}
 }
 
 func TestCollectorVolumeFilters(t *testing.T) {

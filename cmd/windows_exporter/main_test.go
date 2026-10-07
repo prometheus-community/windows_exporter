@@ -152,6 +152,8 @@ func waitUntilListening(tb testing.TB, network, address string) error {
 
 	deadline := time.Now().Add(30 * time.Second)
 
+	// Before the listener starts, dials fail with connection refused or, on a
+	// busy Windows host, with a dial timeout. Retry both until the deadline.
 	for time.Now().Before(deadline) {
 		conn, err = dialer.DialContext(tb.Context(), network, address)
 		if err == nil {
@@ -160,13 +162,11 @@ func waitUntilListening(tb testing.TB, network, address string) error {
 			return nil
 		}
 
-		if errors.Is(err, windows.Errno(10061)) {
-			time.Sleep(50 * time.Millisecond)
-
-			continue
+		if tb.Context().Err() != nil {
+			break
 		}
 
-		break
+		time.Sleep(50 * time.Millisecond)
 	}
 
 	if winErr, ok := errors.AsType[windows.Errno](err); ok {
