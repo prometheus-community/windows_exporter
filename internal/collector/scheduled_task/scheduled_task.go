@@ -204,7 +204,7 @@ var TASK_STATES = []string{"disabled", "queued", "ready", "running", "unknown"}
 //nolint:gochecknoglobals
 var TASK_RESULT_STATUSES = []string{
 	"success", "ready", "running", "disabled", "has_not_run", "no_more_runs",
-	"not_scheduled", "terminated", "no_valid_triggers", "event_trigger", "queued", "error",
+	"not_scheduled", "terminated", "no_valid_triggers", "event_trigger", "queued", "unknown",
 }
 
 func (c *Collector) collect(ch chan<- prometheus.Metric) error {
@@ -515,6 +515,6 @@ func (t TaskResult) String() string {
 	case SCHED_S_TASK_QUEUED:
 		return "queued"
 	default:
-		return "error"
+		return "unknown"
 	}
 }

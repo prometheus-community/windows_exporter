@@ -53,20 +53,21 @@ Status | Result code (decimal) | Result code (hexadecimal) | Meaning
 `no_valid_triggers` | 267015 | `0x00041307` | No triggers exist or all triggers are disabled
 `event_trigger` | 267016 | `0x00041308` | Event triggers do not have set run times
 `queued` | 267045 | `0x00041325` | The task has been queued to run
-`error` | Any other code | Any other code | An application exit code, scheduler error, or unrecognized result
+`unknown` | Any other code | Any other code | The result code has no named status mapping
 
 Application exit codes, scheduler errors, and unrecognized results are grouped
-under `error`.
+under `unknown`. This status means the result code has no named mapping; it does
+not establish whether the task succeeded or failed.
 See [Microsoft's Task Scheduler result codes](https://learn.microsoft.com/en-us/windows/win32/taskschd/task-scheduler-error-and-success-constants)
 for details.
 
 ### Deprecated metric
 
 `windows_scheduled_task_last_result` is deprecated. Use
-`windows_scheduled_task_last_result_status` to distinguish successful, running,
-and failed results, as well as tasks that have never run. For example, use
+`windows_scheduled_task_last_result_status` to distinguish success, running,
+tasks that have never run, and other scheduler statuses. For example, use
 `windows_scheduled_task_last_result_status{status="success"} == 1` to select
-successful results, or the alert below to select failures.
+successful results.
 
 The deprecated metric remains available with its existing labels and values for
 compatibility. A running result code still produces 0, which does not necessarily
@@ -98,7 +99,7 @@ windows_scheduled_task_last_result_status{status="terminated",task="/Microsoft/W
 windows_scheduled_task_last_result_status{status="no_valid_triggers",task="/Microsoft/Windows/Chkdsk/SyspartRepair"} 0
 windows_scheduled_task_last_result_status{status="event_trigger",task="/Microsoft/Windows/Chkdsk/SyspartRepair"} 0
 windows_scheduled_task_last_result_status{status="queued",task="/Microsoft/Windows/Chkdsk/SyspartRepair"} 0
-windows_scheduled_task_last_result_status{status="error",task="/Microsoft/Windows/Chkdsk/SyspartRepair"} 0
+windows_scheduled_task_last_result_status{status="unknown",task="/Microsoft/Windows/Chkdsk/SyspartRepair"} 0
 windows_scheduled_task_missed_runs{task="/Microsoft/Windows/Chkdsk/SyspartRepair"} 0
 windows_scheduled_task_state{state="disabled",task="/Microsoft/Windows/Chkdsk/SyspartRepair"} 1
 windows_scheduled_task_state{state="queued",task="/Microsoft/Windows/Chkdsk/SyspartRepair"} 0
@@ -130,11 +131,16 @@ unless on (job, instance, task)
 ```
 
 ## Alerting examples
+
+This example treats unknown or terminated results as failures. An `unknown`
+status only means that the result code has no named mapping; adjust the alert
+selection for your task's exit-code conventions.
+
 **prometheus.rules**
 ```yaml
   - alert: "WindowsScheduledTaskFailure"
     expr: |
-      (windows_scheduled_task_last_result_status{status=~"error|terminated"} == 1)
+      (windows_scheduled_task_last_result_status{status=~"unknown|terminated"} == 1)
       unless on (job, instance, task)
       (windows_scheduled_task_state{state="running"} == 1)
     for: "1d"

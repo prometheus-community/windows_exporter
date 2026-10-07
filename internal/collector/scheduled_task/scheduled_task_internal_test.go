@@ -42,7 +42,7 @@ func TestCollectMetrics(t *testing.T) {
 		},
 		{
 			name: "application error", result: 1,
-			state: TASK_STATE_READY, stateLabel: "ready", status: "error",
+			state: TASK_STATE_READY, stateLabel: "ready", status: "unknown",
 		},
 		{
 			name: "ready", result: 0x41300,
@@ -86,19 +86,19 @@ func TestCollectMetrics(t *testing.T) {
 		},
 		{
 			name: "signed HRESULT", result: -2147216629,
-			state: TASK_STATE_READY, stateLabel: "ready", status: "error",
+			state: TASK_STATE_READY, stateLabel: "ready", status: "unknown",
 		},
 		{
 			name: "unsigned HRESULT", result: 0x8004130B,
-			state: TASK_STATE_READY, stateLabel: "ready", status: "error",
+			state: TASK_STATE_READY, stateLabel: "ready", status: "unknown",
 		},
 		{
 			name: "unrecognized result", result: -559038737,
-			state: TASK_STATE_READY, stateLabel: "ready", status: "error",
+			state: TASK_STATE_READY, stateLabel: "ready", status: "unknown",
 		},
 		{
 			name: "maximum code", result: -1,
-			state: TASK_STATE_READY, stateLabel: "ready", status: "error",
+			state: TASK_STATE_READY, stateLabel: "ready", status: "unknown",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -142,7 +142,7 @@ func TestCollectMetrics(t *testing.T) {
 			expectedStatuses := map[string]float64{
 				"success": 0, "ready": 0, "running": 0, "disabled": 0,
 				"has_not_run": 0, "no_more_runs": 0, "not_scheduled": 0, "terminated": 0,
-				"no_valid_triggers": 0, "event_trigger": 0, "queued": 0, "error": 0,
+				"no_valid_triggers": 0, "event_trigger": 0, "queued": 0, "unknown": 0,
 			}
 			expectedStatuses[tc.status] = 1
 
