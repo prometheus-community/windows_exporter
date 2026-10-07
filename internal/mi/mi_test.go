@@ -19,6 +19,7 @@ package mi_test
 
 import (
 	"errors"
+	"math"
 	"testing"
 	"time"
 
@@ -254,7 +255,8 @@ func Test_MI_FD_Leak(t *testing.T) {
 	// A leak of one handle per query grows far beyond this; MI and the Go
 	// runtime may still open a few handles for worker threads.
 	const (
-		warmupQueries     = 20
+		warmupQueries     = 100
+		sampleQueries     = 25
 		queries           = 300
 		maxHandleIncrease = 50
 	)
@@ -276,21 +278,39 @@ func Test_MI_FD_Leak(t *testing.T) {
 		require.NoError(t, session.Query(&processes, mi.NamespaceRootCIMv2, queryPrinter, -1))
 	}
 
-	// The first queries initialize MI caches and thread pools.
+	// minHandleCount runs n queries and returns the lowest handle count seen
+	// after each of them. MI worker threads come and go, so a single sample
+	// swings by about 20 handles; the minimum filters that out, while a leak
+	// still raises it.
+	minHandleCount := func(n int) int64 {
+		lowest := int64(math.MaxInt64)
+
+		for range n {
+			query()
+
+			count, err := testutils.GetProcessHandleCount(windows.CurrentProcess())
+			require.NoError(t, err)
+
+			lowest = min(lowest, int64(count))
+		}
+
+		return lowest
+	}
+
+	// The first queries initialize MI caches and thread pools, which takes
+	// more than 100 handles over roughly the first 50 queries.
 	for range warmupQueries {
 		query()
 	}
 
-	baseline, err := testutils.GetProcessHandleCount(windows.CurrentProcess())
-	require.NoError(t, err)
+	baseline := minHandleCount(sampleQueries)
 
 	for range queries {
 		query()
 	}
 
-	current, err := testutils.GetProcessHandleCount(windows.CurrentProcess())
-	require.NoError(t, err)
-	require.LessOrEqual(t, int64(current), int64(baseline)+maxHandleIncrease,
+	current := minHandleCount(sampleQueries)
+	require.LessOrEqual(t, current, baseline+maxHandleIncrease,
 		"handle count grew from %d to %d after %d queries", baseline, current, queries)
 
 	require.NoError(t, session.Close())
