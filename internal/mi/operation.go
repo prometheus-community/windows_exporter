@@ -201,30 +201,43 @@ func (o *Operation) GetInstance() (*Instance, bool, error) {
 }
 
 func (o *Operation) Unmarshal(dst any) error {
-	return o.unmarshal(dst, false)
-}
-
-// unmarshal iterates over the operation's instances and populates dst.
-// skipMissing controls how missing elements are handled (see unmarshalInstance).
-func (o *Operation) unmarshal(dst any, skipMissing bool) error {
 	if o == nil || o.ft == nil {
 		return ErrNotInitialized
 	}
 
+	dv, err := structSlice(dst)
+	if err != nil {
+		return err
+	}
+
+	return o.unmarshal(dv, false)
+}
+
+// structSlice checks that dst is a non-nil pointer to a slice of structs and resets
+// that slice to empty. Callers run it before starting a query, so invalid input is
+// rejected without a WMI round trip.
+func structSlice(dst any) (reflect.Value, error) {
 	dv := reflect.ValueOf(dst)
 	if dv.Kind() != reflect.Pointer || dv.IsNil() {
-		return ErrInvalidEntityType
+		return reflect.Value{}, ErrInvalidEntityType
 	}
 
 	dv = dv.Elem()
 
-	elemType := dv.Type().Elem()
-
-	if dv.Kind() != reflect.Slice || elemType.Kind() != reflect.Struct {
-		return ErrInvalidEntityType
+	if dv.Kind() != reflect.Slice || dv.Type().Elem().Kind() != reflect.Struct {
+		return reflect.Value{}, ErrInvalidEntityType
 	}
 
 	dv.Set(reflect.MakeSlice(dv.Type(), 0, 0))
+
+	return dv, nil
+}
+
+// unmarshal iterates over the operation's instances and appends them to dv,
+// which must come from structSlice.
+// skipMissing controls how missing elements are handled (see unmarshalInstance).
+func (o *Operation) unmarshal(dv reflect.Value, skipMissing bool) error {
+	elemType := dv.Type().Elem()
 
 	for {
 		instance, moreResults, err := o.GetInstance()

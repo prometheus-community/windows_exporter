@@ -65,9 +65,3 @@ func TestGetValue_CHAR16(t *testing.T) {
 		})
 	}
 }
-
-// Note: The CHAR16 unmarshal branch in unmarshalInstance (session.go) handles
-// string and uint fields. Integration testing of this path requires a WMI class
-// with a CHAR16 property, which is extremely rare. The setUintField and
-// setIntField helpers used by the branch are covered by the signed/unsigned
-// integer tests (Test_MI_QueryUnmarshal_SignedInt, Test_MI_Unmarshal_TypeMismatch).
