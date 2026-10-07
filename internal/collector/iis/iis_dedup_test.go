@@ -63,8 +63,10 @@ func TestIISCounterBaseName(t *testing.T) {
 		{"DefaultAppPool", "DefaultAppPool"},
 		// Edge-cases.
 		{"#2", ""},
-		{"Site#", "Site#"},   // empty suffix → not treated as counter
-		{"Site##2", "Site#"}, // double '#', last segment is numeric
+		{"Site#", "Site#"},     // empty suffix → not treated as counter
+		{"Site##2", "Site#"},   // double '#', last segment is numeric
+		{"Site#+2", "Site#+2"}, // sign is not a counter suffix
+		{"Site#-1", "Site#-1"},
 	}
 
 	for _, tt := range tests {

@@ -252,6 +252,9 @@ func (c *Collector) collectWebService(ch chan<- prometheus.Metric) error {
 	c.perfDataObjectWebService = deduplicateIISNames(c.perfDataObjectWebService)
 
 	for _, data := range c.perfDataObjectWebService {
+		// Present recycled instances ("Site_B#2") under their base name ("Site_B").
+		data.Name = iisCounterBaseName(data.Name)
+
 		if c.config.SiteExclude.MatchString(data.Name) || !c.config.SiteInclude.MatchString(data.Name) {
 			continue
 		}

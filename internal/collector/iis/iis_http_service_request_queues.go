@@ -96,6 +96,9 @@ func (c *Collector) collectHttpServiceRequestQueues(ch chan<- prometheus.Metric)
 	c.perfDataObjectHttpServiceRequestQueues = deduplicateIISNames(c.perfDataObjectHttpServiceRequestQueues)
 
 	for _, data := range c.perfDataObjectHttpServiceRequestQueues {
+		// Present recycled instances ("Site_B#2") under their base name ("Site_B").
+		data.Name = iisCounterBaseName(data.Name)
+
 		if strings.HasPrefix(data.Name, "---") {
 			continue
 		}
