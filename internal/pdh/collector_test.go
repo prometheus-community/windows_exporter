@@ -71,3 +71,67 @@ func TestCollector(t *testing.T) {
 		})
 	}
 }
+
+type processorInformation struct {
+	Name          string
+	ProcessorTime float64 `perfdata:"% Processor Time"`
+	IdleTime      float64 `perfdata:"% Idle Time"`
+}
+
+// TestCollectorExplicitInstances verifies that a collector built with an explicit
+// list of instances returns one row per requested instance. Each instance has its
+// own counter handle, and PDH writes every single-item result into the same buffer,
+// so the instance names must not be resolved through a cache keyed by buffer address.
+func TestCollectorExplicitInstances(t *testing.T) {
+	t.Parallel()
+
+	logger := slog.New(slog.DiscardHandler)
+
+	discovery, err := pdh.NewCollector[processorInformation](logger, pdh.CounterTypeRaw, "Processor Information", pdh.InstancesAll)
+	require.NoError(t, err)
+
+	t.Cleanup(discovery.Close)
+
+	var all []processorInformation
+
+	require.NoError(t, discovery.Collect(&all))
+
+	instances := make([]string, 0, 3)
+
+	for _, row := range all {
+		if len(instances) == cap(instances) {
+			break
+		}
+
+		instances = append(instances, row.Name)
+	}
+
+	if len(instances) < 2 {
+		t.Skipf("need at least 2 Processor Information instances, got %v", instances)
+	}
+
+	for _, counterType := range []pdh.CounterType{pdh.CounterTypeRaw, pdh.CounterTypeFormatted} {
+		t.Run(string(counterType), func(t *testing.T) {
+			t.Parallel()
+
+			collector, err := pdh.NewCollector[processorInformation](logger, counterType, "Processor Information", instances)
+			require.NoError(t, err)
+
+			t.Cleanup(collector.Close)
+
+			// Formatted rate counters need two samples before they report a value.
+			time.Sleep(100 * time.Millisecond)
+
+			var data []processorInformation
+
+			require.NoError(t, collector.Collect(&data))
+
+			names := make([]string, 0, len(data))
+			for _, row := range data {
+				names = append(names, row.Name)
+			}
+
+			require.ElementsMatch(t, instances, names)
+		})
+	}
+}

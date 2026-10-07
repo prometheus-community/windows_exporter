@@ -31,7 +31,9 @@ func BenchmarkCollector(b *testing.B) {
 	keys := `[{"name":"windows_nt","key":"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion","values":[{"name":"CurrentMajorVersionNumber"}]}]`
 
 	testutils.FuncBenchmarkCollector(b, registry.Name, registry.NewWithFlags, func(app *kingpin.Application) {
-		app.GetFlag("collector.registry.keys").StringVar(&keys)
+		// The keys are only read by the application action, which runs on parse.
+		_, err := app.Parse([]string{"--collector.registry.keys", keys})
+		require.NoError(b, err)
 	})
 }
 

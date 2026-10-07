@@ -334,7 +334,7 @@ func (c *Collector) collectWorkerRaw() {
 			elemValue := reflect.ValueOf(reflect.New(elemType).Interface()).Elem()
 
 			indexMap := map[string]int{}
-			stringMap := map[*uint16]string{}
+			nameCache := map[string]string{}
 
 			for _, counter := range c.counters {
 				for _, instance := range counter.Instances {
@@ -365,11 +365,6 @@ func (c *Collector) collectWorkerRaw() {
 
 					items = unsafe.Slice((*RawCounterItem)(unsafe.Pointer(&buf[0])), itemCount)
 
-					var (
-						instanceName string
-						ok           bool
-					)
-
 					for _, item := range items {
 						if item.RawValue.CStatus != CstatusValidData && item.RawValue.CStatus != CstatusNewData {
 							c.logger.Debug("skipping counter item with invalid data status",
@@ -381,10 +376,7 @@ func (c *Collector) collectWorkerRaw() {
 							continue
 						}
 
-						if instanceName, ok = stringMap[item.SzName]; !ok {
-							instanceName = windows.UTF16PtrToString(item.SzName)
-							stringMap[item.SzName] = instanceName
-						}
+						instanceName := decodeInstanceName(nameCache, item.SzName)
 
 						if strings.HasSuffix(instanceName, InstanceTotal) && !c.totalCounterRequested {
 							continue
@@ -501,7 +493,7 @@ func (c *Collector) collectWorkerFormatted() {
 			elemValue := reflect.ValueOf(reflect.New(elemType).Interface()).Elem()
 
 			indexMap := map[string]int{}
-			stringMap := map[*uint16]string{}
+			nameCache := map[string]string{}
 
 			for _, counter := range c.counters {
 				for _, instance := range counter.Instances {
@@ -532,20 +524,12 @@ func (c *Collector) collectWorkerFormatted() {
 
 					items = unsafe.Slice((*FmtCounterValueItemDouble)(unsafe.Pointer(&buf[0])), itemCount)
 
-					var (
-						instanceName string
-						ok           bool
-					)
-
 					for _, item := range items {
 						if item.FmtValue.CStatus != CstatusValidData && item.FmtValue.CStatus != CstatusNewData {
 							continue
 						}
 
-						if instanceName, ok = stringMap[item.SzName]; !ok {
-							instanceName = windows.UTF16PtrToString(item.SzName)
-							stringMap[item.SzName] = instanceName
-						}
+						instanceName := decodeInstanceName(nameCache, item.SzName)
 
 						if strings.HasSuffix(instanceName, InstanceTotal) && !c.totalCounterRequested {
 							continue
@@ -629,6 +613,33 @@ func formatCounterPath(object, instance, counterName string) string {
 	}
 
 	return counterPath
+}
+
+// decodeInstanceName returns the instance name p points to.
+// Decoded names are cached by their raw UTF-16 content and not by p, because p points
+// into the item buffer, which is overwritten by every Get*CounterArray call. With explicit
+// instances, every call writes its single name at the same address.
+func decodeInstanceName(cache map[string]string, p *uint16) string {
+	if p == nil {
+		return ""
+	}
+
+	n := 0
+	for *(*uint16)(unsafe.Add(unsafe.Pointer(p), n*2)) != 0 {
+		n++
+	}
+
+	raw := unsafe.Slice((*byte)(unsafe.Pointer(p)), n*2)
+
+	// The compiler does not allocate for the string conversion in a map lookup.
+	if name, ok := cache[string(raw)]; ok {
+		return name
+	}
+
+	name := windows.UTF16ToString(unsafe.Slice(p, n))
+	cache[string(raw)] = name
+
+	return name
 }
 
 func isKnownCounterDataError(err error) bool {

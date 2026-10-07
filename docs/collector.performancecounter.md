@@ -186,6 +186,9 @@ This key is optional.
 
 Labels is a map of key-value pairs that will be added as labels to the metric.
 
+Counters of the same object that share a metric name must differ in their labels, like `state` in the schema example above.
+Otherwise, they would produce identical series and the collector fails to start.
+
 ### Example
 
 ```
