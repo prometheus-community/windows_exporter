@@ -221,8 +221,11 @@ jobs:
   docker:
     name: Build docker images
     runs-on: ubuntu-24.04
+    # Images are pushed on branch and tag events, so gate them on the same
+    # validation as the release binaries in the publish job.
     needs:
       - package
+      - windows-test
     permissions:
       contents: read
       packages: write
