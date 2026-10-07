@@ -24,17 +24,13 @@ import (
 	"fmt"
 	"log/slog"
 	"regexp"
-	"runtime"
-	"runtime/debug"
 	"slices"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-ole/go-ole"
-	"github.com/prometheus-community/windows_exporter/internal/headers/propsys"
-	"github.com/prometheus-community/windows_exporter/internal/headers/shell32"
+	"github.com/prometheus-community/windows_exporter/internal/headers/fveapi"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
@@ -46,9 +42,28 @@ const (
 	Name                  = "logical_disk"
 	subCollectorMetrics   = "metrics"
 	subCollectorBitlocker = "bitlocker_status"
-
-	bitlockerStatusLocked = 6
 )
+
+// bitlockerStatusLabels lists the values of the status label of the bitlocker_status metric.
+// The order and the values originate from the Shell property System.Volume.BitLockerProtection,
+// which was used before fveapi.dll. The labels are kept to not break existing queries.
+// "disabled" is never reported by fveapi.dll and always 0.
+//
+//nolint:gochecknoglobals
+var bitlockerStatusLabels = []struct {
+	state fveapi.State
+	label string
+}{
+	{-1, "disabled"},
+	{fveapi.StateOn, "on"},
+	{fveapi.StateOff, "off"},
+	{fveapi.StateEncrypting, "encrypting"},
+	{fveapi.StateDecrypting, "decrypting"},
+	{fveapi.StateSuspended, "suspended"},
+	{fveapi.StateLocked, "locked"},
+	{fveapi.StateUnknown, "unknown"},
+	{fveapi.StateWaitingForActivation, "waiting_for_activation"},
+}
 
 type Config struct {
 	CollectorsEnabled []string       `yaml:"enabled"`
@@ -72,14 +87,6 @@ type Collector struct {
 
 	perfDataCollector *pdh.Collector
 	perfDataObject    []perfDataCounterValues
-
-	bitlockerReqCh chan string
-	bitlockerResCh chan struct {
-		err    error
-		status int
-	}
-
-	ctxCancelFunc context.CancelFunc
 
 	avgReadQueue     *prometheus.Desc
 	avgWriteQueue    *prometheus.Desc
@@ -184,10 +191,6 @@ func (c *Collector) GetName() string {
 }
 
 func (c *Collector) Close() error {
-	if slices.Contains(c.config.CollectorsEnabled, subCollectorBitlocker) {
-		c.ctxCancelFunc()
-	}
-
 	return nil
 }
 
@@ -338,25 +341,6 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	c.perfDataCollector, err = pdh.NewCollector[perfDataCounterValues](logger.With(slog.String("collector", Name)), pdh.CounterTypeRaw, "LogicalDisk", pdh.InstancesAll)
 	if err != nil {
 		return fmt.Errorf("failed to create LogicalDisk collector: %w", err)
-	}
-
-	if slices.Contains(c.config.CollectorsEnabled, subCollectorBitlocker) {
-		initErrCh := make(chan error)
-		c.bitlockerReqCh = make(chan string, 1)
-		c.bitlockerResCh = make(chan struct {
-			err    error
-			status int
-		}, 1)
-
-		ctx, cancel := context.WithCancel(context.Background())
-
-		c.ctxCancelFunc = cancel
-
-		go c.workerBitlocker(ctx, initErrCh)
-
-		if err = <-initErrCh; err != nil {
-			return fmt.Errorf("failed to initialize BitLocker worker: %w", err)
-		}
 	}
 
 	return nil
@@ -516,7 +500,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 		}
 
 		if slices.Contains(c.config.CollectorsEnabled, subCollectorBitlocker) {
-			c.collectBitlocker(ch, data.Name, false)
+			c.collectBitlocker(ch, volumes, data.Name, false)
 		}
 	}
 
@@ -540,7 +524,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 				continue
 			}
 
-			c.collectBitlocker(ch, mountPoint, true)
+			c.collectBitlocker(ch, volumes, mountPoint, true)
 		}
 	}
 
@@ -549,12 +533,9 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 
 // collectBitlocker emits the BitLocker status of a volume. With lockedOnly,
 // volumes in any other state are skipped.
-func (c *Collector) collectBitlocker(ch chan<- prometheus.Metric, volume string, lockedOnly bool) {
-	c.bitlockerReqCh <- volume
-
-	bitlockerStatus := <-c.bitlockerResCh
-
-	if bitlockerStatus.err != nil {
+func (c *Collector) collectBitlocker(ch chan<- prometheus.Metric, volumes map[string]string, volume string, lockedOnly bool) {
+	status, err := fveapi.GetStatus(getFveVolumeName(volumes, volume))
+	if err != nil {
 		level := slog.LevelWarn
 		if lockedOnly {
 			// Drive letters without performance data include empty media drives.
@@ -562,27 +543,27 @@ func (c *Collector) collectBitlocker(ch chan<- prometheus.Metric, volume string,
 		}
 
 		c.logger.Log(context.Background(), level, "failed to get BitLocker status for "+volume,
-			slog.Any("err", bitlockerStatus.err),
+			slog.Any("err", err),
 		)
 
 		return
 	}
 
-	if bitlockerStatus.status == -1 {
+	state := status.State()
+
+	if lockedOnly && state != fveapi.StateLocked {
+		return
+	}
+
+	if state == fveapi.StateUnknown {
 		c.logger.Debug("BitLocker status for "+volume+" is unknown",
-			slog.Int("status", bitlockerStatus.status),
+			slog.String("flags", fmt.Sprintf("0x%08X", status.Flags)),
 		)
-
-		return
 	}
 
-	if lockedOnly && bitlockerStatus.status != bitlockerStatusLocked {
-		return
-	}
-
-	for i, status := range []string{"disabled", "on", "off", "encrypting", "decrypting", "suspended", "locked", "unknown", "waiting_for_activation"} {
+	for _, statusLabel := range bitlockerStatusLabels {
 		val := 0.0
-		if bitlockerStatus.status == i {
+		if state == statusLabel.state {
 			val = 1.0
 		}
 
@@ -591,9 +572,25 @@ func (c *Collector) collectBitlocker(ch chan<- prometheus.Metric, volume string,
 			prometheus.GaugeValue,
 			val,
 			volume,
-			status,
+			statusLabel.label,
 		)
 	}
+}
+
+// getFveVolumeName returns the name of a volume in the Win32 device namespace,
+// as required by fveapi.dll.
+func getFveVolumeName(volumes map[string]string, volume string) string {
+	// The volume GUID path (\\?\Volume{GUID}) is known for every mounted volume, including mount points.
+	if volumeGUID, ok := volumes[volume]; ok {
+		return `\\.\` + strings.TrimPrefix(volumeGUID, `\\?\`)
+	}
+
+	// Volumes without a mount point are reported by their device name, e.g. HarddiskVolume1.
+	if strings.HasPrefix(volume, "HarddiskVolume") {
+		return `\\.\GLOBALROOT\Device\` + volume
+	}
+
+	return `\\.\` + volume
 }
 
 func getDriveType(driveType uint32) string {
@@ -767,136 +764,5 @@ func getAllMountedVolumes() (map[string]string, error) {
 		}
 
 		volumes[strings.TrimSuffix(mountPoint, `\`)] = strings.TrimSuffix(windows.UTF16ToString(guidBuf), `\`)
-	}
-}
-
-/*
-++ References
-
-| System.Volume.      | Control Panel                    | manage-bde conversion     | manage-bde     | Get-BitlockerVolume          | Get-BitlockerVolume |
-| BitLockerProtection |                                  |                           | protection     | VolumeStatus                 | ProtectionStatus    |
-| ------------------- | -------------------------------- | ------------------------- | -------------- | ---------------------------- | ------------------- |
-|                   1 | BitLocker on                     | Used Space Only Encrypted | Protection On  | FullyEncrypted               | On                  |
-|                   1 | BitLocker on                     | Fully Encrypted           | Protection On  | FullyEncrypted               | On                  |
-|                   1 | BitLocker on                     | Fully Encrypted           | Protection On  | FullyEncryptedWipeInProgress | On                  |
-|                   2 | BitLocker off                    | Fully Decrypted           | Protection Off | FullyDecrypted               | Off                 |
-|                   3 | BitLocker Encrypting             | Encryption In Progress    | Protection Off | EncryptionInProgress         | Off                 |
-|                   3 | BitLocker Encryption Paused      | Encryption Paused         | Protection Off | EncryptionSuspended          | Off                 |
-|                   4 | BitLocker Decrypting             | Decryption in progress    | Protection Off | DecyptionInProgress          | Off                 |
-|                   4 | BitLocker Decryption Paused      | Decryption Paused         | Protection Off | DecryptionSuspended          | Off                 |
-|                   5 | BitLocker suspended              | Used Space Only Encrypted | Protection Off | FullyEncrypted               | Off                 |
-|                   5 | BitLocker suspended              | Fully Encrypted           | Protection Off | FullyEncrypted               | Off                 |
-|                   6 | BitLocker on (Locked)            | Unknown                   | Unknown        | $null                        | Unknown             |
-|                   7 |                                  |                           |                |                              |                     |
-|                   8 | BitLocker waiting for activation | Used Space Only Encrypted | Protection Off | FullyEncrypted               | Off                 |
-
---
-*/
-func (c *Collector) workerBitlocker(ctx context.Context, initErrCh chan<- error) {
-	defer func() {
-		if r := recover(); r != nil {
-			c.logger.ErrorContext(ctx, "workerBitlocker panic",
-				slog.Any("panic", r),
-				slog.String("stack", string(debug.Stack())),
-			)
-
-			// Restart the workerBitlocker
-			initErrCh := make(chan error)
-
-			go c.workerBitlocker(ctx, initErrCh)
-
-			if err := <-initErrCh; err != nil {
-				c.logger.ErrorContext(ctx, "workerBitlocker restart failed",
-					slog.Any("err", err),
-				)
-			}
-		}
-	}()
-
-	// The only way to run WMI queries in parallel while being thread-safe is to
-	// ensure the CoInitialize[Ex]() call is bound to its current OS thread.
-	// Otherwise, attempting to initialize and run parallel queries across
-	// goroutines will result in protected memory errors.
-	runtime.LockOSThread()
-
-	defer runtime.UnlockOSThread()
-
-	if err := ole.CoInitializeEx(0, ole.COINIT_APARTMENTTHREADED|ole.COINIT_DISABLE_OLE1DDE); err != nil {
-		var oleCode *ole.OleError
-		if errors.As(err, &oleCode) && oleCode.Code() != ole.S_OK && oleCode.Code() != 0x00000001 {
-			initErrCh <- fmt.Errorf("CoInitializeEx: %w", err)
-
-			return
-		}
-	}
-
-	defer ole.CoUninitialize()
-
-	var pkey propsys.PROPERTYKEY
-
-	// The ideal solution to check the disk encryption (BitLocker) status is to
-	// use the WMI APIs (Win32_EncryptableVolume). However, only programs running
-	// with elevated priledges can access those APIs.
-	//
-	// Our alternative solution is based on the value of the undocumented (shell)
-	// property: "System.Volume.BitLockerProtection". That property is essentially
-	// an enum containing the current BitLocker status for a given volume. This
-	// approached was suggested here:
-	// https://stackoverflow.com/questions/41308245/detect-bitlocker-programmatically-from-c-sharp-without-admin/41310139
-	//
-	// Note that the link above doesn't give any explanation / meaning for the
-	// enum values, it simply says that 1, 3 or 5 means the disk is encrypted.
-	//
-	// I directly tested and validated this strategy on a Windows 10 machine.
-	// The values given in the BitLockerStatus enum contain the relevant values
-	// for the shell property. I also directly validated them.
-	if err := propsys.PSGetPropertyKeyFromName("System.Volume.BitLockerProtection", &pkey); err != nil {
-		initErrCh <- fmt.Errorf("PSGetPropertyKeyFromName failed: %w", err)
-
-		return
-	}
-
-	close(initErrCh)
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case path, ok := <-c.bitlockerReqCh:
-			if !ok {
-				return
-			}
-
-			if !strings.Contains(path, `:`) {
-				c.bitlockerResCh <- struct {
-					err    error
-					status int
-				}{err: nil, status: -1}
-
-				continue
-			}
-
-			status, err := func(path string) (int, error) {
-				item, err := shell32.SHCreateItemFromParsingName(path)
-				if err != nil {
-					return -1, fmt.Errorf("SHCreateItemFromParsingName failed: %w", err)
-				}
-
-				defer item.Release()
-
-				var v ole.VARIANT
-
-				if err := item.GetProperty(&pkey, &v); err != nil {
-					return -1, fmt.Errorf("GetProperty failed: %w", err)
-				}
-
-				return int(v.Val), v.Clear()
-			}(path)
-
-			c.bitlockerResCh <- struct {
-				err    error
-				status int
-			}{err: err, status: status}
-		}
 	}
 }
