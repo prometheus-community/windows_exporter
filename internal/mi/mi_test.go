@@ -322,7 +322,9 @@ func Test_MI_QueryTimeout(t *testing.T) {
 	err = operationOptions.SetTimeout(1 * time.Millisecond)
 	require.NoError(t, err)
 
-	operation, err := session.QueryInstances(mi.OperationFlagsStandardRTTI, operationOptions, mi.NamespaceRootCIMv2, mi.QueryDialectWQL, "select Name from win32_process where handle = 0")
+	// A query for a single process can finish within the timeout; reading every
+	// property of every process cannot.
+	operation, err := session.QueryInstances(mi.OperationFlagsStandardRTTI, operationOptions, mi.NamespaceRootCIMv2, mi.QueryDialectWQL, "select * from win32_process")
 	require.NoError(t, err)
 	require.NotEmpty(t, operation)
 
