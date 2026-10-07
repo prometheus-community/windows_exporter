@@ -98,17 +98,15 @@ type Interval struct {
 	Padding3     uint32
 }
 
+// NewInterval converts a duration into an MI_Interval. MI sums the fields,
+// so each field holds only the remainder after the next larger unit.
 func NewInterval(interval time.Duration) *Interval {
-	// Convert the duration to a number of microseconds
-	microseconds := interval.Microseconds()
-
-	// Create a new interval with the microseconds
 	return &Interval{
-		Days:         uint32(microseconds / (24 * 60 * 60 * 1000000)),
-		Hours:        uint32(microseconds / (60 * 60 * 1000000)),
-		Minutes:      uint32(microseconds / (60 * 1000000)),
-		Seconds:      uint32(microseconds / 1000000),
-		Microseconds: uint32(microseconds % 1000000),
+		Days:         uint32(interval / (24 * time.Hour)),
+		Hours:        uint32(interval / time.Hour % 24),
+		Minutes:      uint32(interval / time.Minute % 60),
+		Seconds:      uint32(interval / time.Second % 60),
+		Microseconds: uint32(interval / time.Microsecond % 1000000),
 	}
 }
 
