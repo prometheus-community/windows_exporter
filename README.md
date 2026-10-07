@@ -1,7 +1,6 @@
 # windows_exporter
 
-[![CI](https://github.com/prometheus-community/windows_exporter/actions/workflows/release.yml/badge.svg)](https://github.com/prometheus-community/windows_exporter)
-[![Linting](https://github.com/prometheus-community/windows_exporter/actions/workflows/lint.yml/badge.svg)](https://github.com/prometheus-community/windows_exporter)
+[![CI](https://github.com/prometheus-community/windows_exporter/actions/workflows/ci.yml/badge.svg)](https://github.com/prometheus-community/windows_exporter)
 [![GitHub license](https://img.shields.io/github/license/prometheus-community/windows_exporter)](https://github.com/prometheus-community/windows_exporter/blob/master/LICENSE.txt)
 [![Current Release](https://img.shields.io/github/release/prometheus-community/windows_exporter.svg?logo=github)](https://github.com/prometheus-community/windows_exporter/releases/latest)
 [![GitHub Repo stars](https://img.shields.io/github/stars/prometheus-community/windows_exporter?style=flat&logo=github)](https://github.com/prometheus-community/windows_exporter/stargazers)
