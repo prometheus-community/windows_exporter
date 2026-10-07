@@ -109,12 +109,12 @@ func (c *Collector) Collect(data any) error {
 
 	dv = dv.Elem()
 
-	elemType := dv.Type().Elem()
-	elemValue := reflect.ValueOf(reflect.New(elemType).Interface()).Elem()
-
-	if dv.Kind() != reflect.Slice || elemType.Kind() != reflect.Struct {
+	if dv.Kind() != reflect.Slice || dv.Type().Elem().Kind() != reflect.Struct {
 		return mi.ErrInvalidEntityType
 	}
+
+	elemType := dv.Type().Elem()
+	elemValue := reflect.ValueOf(reflect.New(elemType).Interface()).Elem()
 
 	perfObjects, err := QueryPerformanceData(c.query, c.object)
 	if err != nil {

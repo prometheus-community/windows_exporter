@@ -110,7 +110,7 @@ func NewCollectorWithReflection(logger *slog.Logger, resultType CounterType, obj
 	}
 
 	if f, ok := valueType.FieldByName("MetricType"); ok {
-		if f.Type.Kind() == reflect.TypeFor[prometheus.ValueType]().Kind() {
+		if f.Type == reflect.TypeFor[prometheus.ValueType]() {
 			collector.metricsTypeIndexValue = f.Index[0]
 		}
 	}
