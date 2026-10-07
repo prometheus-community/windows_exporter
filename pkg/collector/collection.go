@@ -38,6 +38,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/dfsr"
 	"github.com/prometheus-community/windows_exporter/internal/collector/dhcp"
 	"github.com/prometheus-community/windows_exporter/internal/collector/diskdrive"
+	"github.com/prometheus-community/windows_exporter/internal/collector/dmi"
 	"github.com/prometheus-community/windows_exporter/internal/collector/dns"
 	"github.com/prometheus-community/windows_exporter/internal/collector/exchange"
 	"github.com/prometheus-community/windows_exporter/internal/collector/file"
@@ -109,6 +110,7 @@ func NewWithConfig(config Config) *Collection {
 	collectors[dfsr.Name] = dfsr.New(&config.DFSR)
 	collectors[dhcp.Name] = dhcp.New(&config.Dhcp)
 	collectors[diskdrive.Name] = diskdrive.New(&config.DiskDrive)
+	collectors[dmi.Name] = dmi.New(&config.DMI)
 	collectors[dns.Name] = dns.New(&config.DNS)
 	collectors[exchange.Name] = exchange.New(&config.Exchange)
 	collectors[file.Name] = file.New(&config.File)

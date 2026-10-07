@@ -28,6 +28,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/dfsr"
 	"github.com/prometheus-community/windows_exporter/internal/collector/dhcp"
 	"github.com/prometheus-community/windows_exporter/internal/collector/diskdrive"
+	"github.com/prometheus-community/windows_exporter/internal/collector/dmi"
 	"github.com/prometheus-community/windows_exporter/internal/collector/dns"
 	"github.com/prometheus-community/windows_exporter/internal/collector/exchange"
 	"github.com/prometheus-community/windows_exporter/internal/collector/file"
@@ -79,6 +80,7 @@ type Config struct {
 	DFSR               dfsr.Config               `yaml:"dfsr"`
 	Dhcp               dhcp.Config               `yaml:"dhcp"`
 	DiskDrive          diskdrive.Config          `yaml:"diskdrive"`
+	DMI                dmi.Config                `yaml:"dmi"`
 	DNS                dns.Config                `yaml:"dns"`
 	Exchange           exchange.Config           `yaml:"exchange"`
 	File               file.Config               `yaml:"file"`
@@ -134,6 +136,7 @@ var ConfigDefaults = Config{
 	DFSR:               dfsr.ConfigDefaults,
 	Dhcp:               dhcp.ConfigDefaults,
 	DiskDrive:          diskdrive.ConfigDefaults,
+	DMI:                dmi.ConfigDefaults,
 	DNS:                dns.ConfigDefaults,
 	Exchange:           exchange.ConfigDefaults,
 	File:               file.ConfigDefaults,
