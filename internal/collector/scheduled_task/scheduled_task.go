@@ -165,7 +165,7 @@ func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 	c.lastResult = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "last_result"),
 		"DEPRECATED: use windows_scheduled_task_last_result_status. "+
-			"The result that was returned the last time the registered task was run",
+			"1 if the last result code of the registered task is zero, 0 otherwise",
 		[]string{"task"},
 		nil,
 	)

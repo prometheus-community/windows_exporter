@@ -325,9 +325,23 @@ windows_exporter_collector_timeout{collector="udp"} 0
 # TYPE windows_physical_disk_write_seconds_total counter
 # HELP windows_physical_disk_writes_total The number of write operations on the disk (PhysicalDisk.DiskWritesPerSec)
 # TYPE windows_physical_disk_writes_total counter
-# HELP windows_scheduled_task_last_result The result that was returned the last time the registered task was run
+# HELP windows_scheduled_task_last_result DEPRECATED: use windows_scheduled_task_last_result_status. 1 if the last result code of the registered task is zero, 0 otherwise
 # TYPE windows_scheduled_task_last_result gauge
 windows_scheduled_task_last_result{task="/Microsoft/Windows/PLA/GAEvents"} 0
+# HELP windows_scheduled_task_last_result_status The last result status of a scheduled task, 1 if the current status, 0 otherwise
+# TYPE windows_scheduled_task_last_result_status gauge
+windows_scheduled_task_last_result_status{status="disabled",task="/Microsoft/Windows/PLA/GAEvents"} 0
+windows_scheduled_task_last_result_status{status="event_trigger",task="/Microsoft/Windows/PLA/GAEvents"} 0
+windows_scheduled_task_last_result_status{status="has_not_run",task="/Microsoft/Windows/PLA/GAEvents"} 0
+windows_scheduled_task_last_result_status{status="no_more_runs",task="/Microsoft/Windows/PLA/GAEvents"} 0
+windows_scheduled_task_last_result_status{status="no_valid_triggers",task="/Microsoft/Windows/PLA/GAEvents"} 0
+windows_scheduled_task_last_result_status{status="not_scheduled",task="/Microsoft/Windows/PLA/GAEvents"} 0
+windows_scheduled_task_last_result_status{status="queued",task="/Microsoft/Windows/PLA/GAEvents"} 0
+windows_scheduled_task_last_result_status{status="ready",task="/Microsoft/Windows/PLA/GAEvents"} 0
+windows_scheduled_task_last_result_status{status="running",task="/Microsoft/Windows/PLA/GAEvents"} 1
+windows_scheduled_task_last_result_status{status="success",task="/Microsoft/Windows/PLA/GAEvents"} 0
+windows_scheduled_task_last_result_status{status="terminated",task="/Microsoft/Windows/PLA/GAEvents"} 0
+windows_scheduled_task_last_result_status{status="unknown",task="/Microsoft/Windows/PLA/GAEvents"} 0
 # HELP windows_scheduled_task_missed_runs The number of times the registered task missed a scheduled run
 # TYPE windows_scheduled_task_missed_runs gauge
 windows_scheduled_task_missed_runs{task="/Microsoft/Windows/PLA/GAEvents"} 0

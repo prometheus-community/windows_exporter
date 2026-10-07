@@ -27,7 +27,7 @@ E.G. `--collector.scheduled_task.exclude="/Microsoft/.+"`
 Name | Description | Type | Labels
 -----|-------------|------|-------
 `windows_scheduled_task_last_result` | **Deprecated:** use `windows_scheduled_task_last_result_status`. 1 if the last result code is zero, 0 otherwise; omitted for tasks that have never run | gauge | task
-`windows_scheduled_task_last_result_status` | The last result status, 1 if the current status, 0 otherwise | gauge | task, status
+`windows_scheduled_task_last_result_status` | The last result status of a scheduled task, 1 if the current status, 0 otherwise | gauge | task, status
 `windows_scheduled_task_missed_runs` | The number of times the registered task missed a scheduled run | gauge | task
 `windows_scheduled_task_state` | The current state of a scheduled task | gauge | task, state
 
@@ -134,15 +134,13 @@ unless on (job, instance, task)
 
 This example treats unknown or terminated results as failures. An `unknown`
 status only means that the result code has no named mapping; adjust the alert
-selection for your task's exit-code conventions.
+selection for your task's exit-code conventions. Running tasks report the
+`running` status, so they do not match this alert.
 
 **prometheus.rules**
 ```yaml
   - alert: "WindowsScheduledTaskFailure"
-    expr: |
-      (windows_scheduled_task_last_result_status{status=~"unknown|terminated"} == 1)
-      unless on (job, instance, task)
-      (windows_scheduled_task_state{state="running"} == 1)
+    expr: 'windows_scheduled_task_last_result_status{status=~"unknown|terminated"} == 1'
     for: "1d"
     labels:
       severity: "high"
