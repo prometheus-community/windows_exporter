@@ -11,6 +11,8 @@ A Prometheus exporter for Windows machines.
 
 ## Collectors
 
+<!-- textlint-disable terminology -->
+
 | Name                                                       | Description                                                                                                                                                 | Enabled by default |
 |------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------|
 | [ad](docs/collector.ad.md)                                 | Active Directory Domain Services                                                                                                                            |                    |
@@ -59,6 +61,7 @@ A Prometheus exporter for Windows machines.
 | [udp](docs/collector.udp.md)                               | UDP connections                                                                                                                                             |                    |
 | [update](docs/collector.update.md)                         | Windows Update Service                                                                                                                                      |                    |
 | [vmware](docs/collector.vmware.md)                         | Performance counters installed by the Vmware Guest agent                                                                                                    |                    |
+<!-- textlint-enable terminology -->
 
 See the linked documentation on each collector for more information on reported metrics, configuration settings and usage examples.
 
@@ -139,7 +142,7 @@ msiexec /i <path-to-msi-file> --% ENABLED_COLLECTORS=os,iis LISTEN_PORT=5000
 
 Example service collector with a custom query.
 ```powershell
-msiexec /i <path-to-msi-file> --% ENABLED_COLLECTORS=os,service EXTRA_FLAGS="--collectors.exchange.enabled=""ADAccessProcesses"""
+msiexec /i <path-to-msi-file> --% ENABLED_COLLECTORS=os,service EXTRA_FLAGS="--collector.exchange.enabled=""ADAccessProcesses"""
 ```
 
 Define a config file.
@@ -168,7 +171,7 @@ PowerShell versions 7.3 and above require [PSNativeCommandArgumentPassing](https
 
 ```powershell
 $PSNativeCommandArgumentPassing = 'Legacy'
-msiexec /i <path-to-msi-file> ENABLED_COLLECTORS=os,service --% EXTRA_FLAGS="--collectors.exchange.enabled=""ADAccessProcesses"""
+msiexec /i <path-to-msi-file> ENABLED_COLLECTORS=os,service --% EXTRA_FLAGS="--collector.exchange.enabled=""ADAccessProcesses"""
 ```
 
 ## Docker Implementation

@@ -3,16 +3,12 @@ The smbclient collector collects metrics from MS SmbClient hosts through perflib
 |||
 -|-
 Metric name prefix  | `windows_smbclient`
-Classes 			| [Win32_PerfRawData_SMB](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-smb/)<br/> 
+Classes 			| [Win32_PerfRawData_SMB](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-smb/)<br/>
 Enabled by default? | No
 
 ## Flags
 
-### `--collectors.smbclient.list`
-Lists the Perflib Objects that are queried for data along with the perlfib object id
-
-### `--collectors.smbclient.enabled`
-Comma-separated list of collectors to use, for example: `--collectors.smbclient.enabled=ServerShares`. Matching is case-sensitive. Depending on the smb protocol version not all performance counters may be available. Use `--collectors.smbclient.list` to obtain a list of supported collectors.
+None
 
 ## Metrics
 Name | Description | Type | Labels

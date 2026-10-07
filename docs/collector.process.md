@@ -21,13 +21,13 @@ lodctr.exe /R
 
 ### `--collector.process.include`
 
-Regexp of processes to include. Process name must both match `include` and not
+Regular expression of processes to include. Process name must both match `include` and not
 match `exclude` to be included. Recommended to keep down number of returned
 metrics.
 
 ### `--collector.process.exclude`
 
-Regexp of processes to exclude. Process name must both match `include` and not
+Regular expression of processes to exclude. Process name must both match `include` and not
 match `exclude` to be included. Recommended to keep down number of returned
 metrics.
 
@@ -40,7 +40,8 @@ Disabled by default, and can be enabled with `--collector.process.iis`. NOTE: Ju
 ### `--collector.process.counter-version`
 
 Version of the process collector to use. 1 for Process V1, 2 for Process V2.
-Defaults to 0 which will use the latest version available.
+0 uses Process V2 if it is available and falls back to Process V1 otherwise.
+Defaults to 1 (Process V1).
 
 ### `--collector.process.cmdline`
 
@@ -51,10 +52,10 @@ Enabled by default, and can be turned off with `--no-collector.process.cmdline`.
 ### Example
 To match all firefox processes: `--collector.process.include="firefox.*"`.
 Note that multiple processes with the same name will be disambiguated by
-Windows by adding a number suffix, such as `firefox#2`. Your [regexp](https://en.wikipedia.org/wiki/Regular_expression) must take
+Windows by adding a number suffix, such as `firefox#2`. Your [regular expression](https://en.wikipedia.org/wiki/Regular_expression) must take
 these suffixes into consideration.
 
-:warning: The regexp is case-sensitive, so `--collector.process.include="FIREFOX.*"` will **NOT** match a process named `firefox` .
+:warning: The regular expression is case-sensitive, so `--collector.process.include="FIREFOX.*"` will **NOT** match a process named `firefox` .
 
 To specify multiple names, use the pipe `|` character:
 ```
@@ -70,10 +71,10 @@ Note that this specific feature **only works** if the [IIS Management Scripts an
 
 ### Example
 
-Given an IIS server with two websites called "Prometheus.io" and "Example.com" running under the application pools "Public website" and "Test", the process names returned will look as follows:
+Given an IIS server with two sites called "Prometheus.io" and "Example.com" running under the application pools "Public site" and "Test", the process names returned will look as follows:
 
 ```
-w3wp_Public website
+w3wp_Public site
 w3wp_Test
 ```
 

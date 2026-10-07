@@ -13,8 +13,8 @@ Please note the Time Service perflib counters are only available on [Windows Ser
 
 ## Flags
 
-### `--collectors.time.enabled`
-Comma-separated list of collectors to use, for example: `--collectors.time.enabled=ntp,system_time`.
+### `--collector.time.enabled`
+Comma-separated list of collectors to use, for example: `--collector.time.enabled=ntp,system_time`.
 Matching is case-sensitive.
 
 

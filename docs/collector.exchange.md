@@ -11,11 +11,11 @@ The exchange collector collects metrics from MS Exchange hosts through Performan
 
 ## Flags
 
-### `--collectors.exchange.list`
-Lists the Perflib Objects that are queried for data along with the perlfib object id
+### `--collector.exchange.list`
+Lists the Perflib Objects that are queried for data along with the perflib object ID
 
-### `--collectors.exchange.enabled`
-Comma-separated list of collectors to use, for example: `--collectors.exchange.enabled=AvailabilityService,OutlookWebAccess`. Matching is case-sensitive. Depending on the exchange installation not all performance counters are available. Use `--collectors.exchange.list` to obtain a list of supported collectors.
+### `--collector.exchange.enabled`
+Comma-separated list of collectors to use, for example: `--collector.exchange.enabled=AvailabilityService,OutlookWebAccess`. Matching is case-sensitive. Depending on the exchange installation not all performance counters are available. Use `--collector.exchange.list` to obtain a list of supported collectors.
 
 ## Metrics
 | Name                                                                        | Description                                                                                                 |

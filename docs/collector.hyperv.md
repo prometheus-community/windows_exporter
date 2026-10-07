@@ -10,9 +10,9 @@ The hyperv collector exposes metrics about the Hyper-V hypervisor
 
 ## Flags
 
-### `--collectors.hyperv.enabled`
+### `--collector.hyperv.enabled`
 Comma-separated list of collectors to use, for example:
-`--collectors.hyperv.enabled=dynamic_memory_balancer,dynamic_memory_vm,host,hypervisor_logical_processor,hypervisor_root_partition,hypervisor_root_virtual_processor,hypervisor_virtual_processor,legacy_network_adapter,virtual_machine_health_summary,virtual_machine_vid_partition,virtual_network_adapter,virtual_storage_device,virtual_switch,wmi_health`
+`--collector.hyperv.enabled=dynamic_memory_balancer,dynamic_memory_vm,host,hypervisor_logical_processor,hypervisor_root_partition,hypervisor_root_virtual_processor,hypervisor_virtual_processor,legacy_network_adapter,virtual_machine_health_summary,virtual_machine_vid_partition,virtual_network_adapter,virtual_storage_device,virtual_switch,wmi_health`
 
 ## Metrics
 
@@ -277,7 +277,7 @@ Multiply by the number of threads per core to get the ratio per **physical** cor
 
 Sub-collector `wmi_health`, enabled by default. It runs a minimal WQL query
 (`SELECT Name FROM Msvm_ComputerSystem WHERE Name = '<computer name>'`) against the
-`root/virtualization/v2` namespace on every scrape, so remove it from `--collectors.hyperv.enabled` if you don't need it.
+`root/virtualization/v2` namespace on every scrape, so remove it from `--collector.hyperv.enabled` if you don't need it.
 
 | Name                       | Description                                                                                                  | Type  | Labels |
 |----------------------------|--------------------------------------------------------------------------------------------------------------|-------|--------|
