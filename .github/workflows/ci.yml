@@ -917,127 +917,132 @@ jobs:
       - name: Wait for Windows roles
         wait: [install-windows-roles, install-freerdp]
 
-      # Start user session processes after Windows servicing finishes.
-      - name: Setup local RDP session
-        id: setup-rdp
-        background: true
-        shell: powershell
-        run: |
-          $ErrorActionPreference = "Stop"
-
-          $userName = "rdp-ci"
-          $password = "WindowsExporter-CI-2026!"
-          $securePassword = ConvertTo-SecureString $password -AsPlainText -Force
-
-          if ($null -eq (Get-LocalUser -Name $userName -ErrorAction SilentlyContinue)) {
-              New-LocalUser `
-                  -Name $userName `
-                  -Password $securePassword `
-                  -PasswordNeverExpires `
-                  -AccountNeverExpires | Out-Null
-          }
-
-          Add-LocalGroupMember `
-              -Group "Remote Desktop Users" `
-              -Member $userName `
-              -ErrorAction SilentlyContinue
-
-          Set-ItemProperty `
-              -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server" `
-              -Name fDenyTSConnections `
-              -Value 0
-
-          Start-Service TermService
-          (Get-Service TermService).WaitForStatus("Running", [TimeSpan]::FromSeconds(30))
-
-          $wfreerdp = (Get-Command wfreerdp.exe -ErrorAction Stop).Source
-          $stdout = Join-Path $env:RUNNER_TEMP "rdp-client.stdout.log"
-          $stderr = Join-Path $env:RUNNER_TEMP "rdp-client.stderr.log"
-          # Ending a background step kills its process tree. Task Scheduler starts
-          # the client in the runner user's console session instead, so it keeps
-          # the RDP session active after this step. Runners are disposable, so
-          # nothing stops it.
-          $clientArguments = @(
-              "/v:127.0.0.1"
-              "/u:$env:COMPUTERNAME\$userName"
-              "/p:$password"
-              "/cert:ignore"
-              "/size:800x600"
-              "/log-level:INFO"
-          ) -join " "
-          $action = New-ScheduledTaskAction -Execute "cmd.exe" `
-              -Argument "/c $wfreerdp $clientArguments > $stdout 2> $stderr"
-          $principal = New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\$env:USERNAME" `
-              -LogonType Interactive -RunLevel Highest
-          $settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Hours 2)
-          Register-ScheduledTask -TaskName "CIFreeRDP" -Action $action -Principal $principal `
-              -Settings $settings -Force | Out-Null
-          Start-ScheduledTask -TaskName "CIFreeRDP"
-          $deadline = (Get-Date).AddSeconds(15)
-          while ((Get-ScheduledTask -TaskName "CIFreeRDP").State -ne "Running") {
-              if ((Get-Date) -ge $deadline) { throw "Scheduled task CIFreeRDP did not start" }
-              Start-Sleep -Milliseconds 500
-          }
-          Write-Host "Started wfreerdp.exe through scheduled task CIFreeRDP"
-
-          $deadline = (Get-Date).AddSeconds(120)
-          $rdpSession = $null
-
-          do {
-              $sessions = qwinsta.exe
-              $sessions | ForEach-Object { Write-Host $_ }
-
-              $rdpSession = $sessions |
-                  Where-Object { $_ -match "^\s*>?\s*rdp-tcp#\d+\s+$userName\s+\d+\s+Active\b" } |
-                  Select-Object -First 1
-
-              if ($null -ne $rdpSession) {
-                  break
-              }
-
-              if ((Get-ScheduledTask -TaskName "CIFreeRDP").State -ne "Running") {
-                  Get-Content $stdout,$stderr -ErrorAction SilentlyContinue
-                  throw "wfreerdp.exe exited before the RDP user became active"
-              }
-
-              Start-Sleep -Seconds 2
-          } while ((Get-Date) -lt $deadline)
-
-          if ($null -eq $rdpSession) {
-              Get-Content $stdout,$stderr -ErrorAction SilentlyContinue
-              throw "No authenticated active RDP session was created by FreeRDP"
-          }
-
-          Write-Host "Active RDP session: $rdpSession"
-          $sessionName = [regex]::Match($rdpSession, 'rdp-tcp#\d+', 'IgnoreCase').Value.Replace('#', ' ')
-
-          $remoteFxNetwork = Get-Counter -ListSet "RemoteFX Network" -ErrorAction Stop
-          $remoteFxGraphics = Get-Counter -ListSet "RemoteFX Graphics" -ErrorAction Stop
-
-          $networkInstances = @($remoteFxNetwork.PathsWithInstances |
-              Where-Object { $_ -match "RDP-Tcp[# ]\d+" })
-          $graphicsInstances = @($remoteFxGraphics.PathsWithInstances |
-              Where-Object { $_ -match "RDP-Tcp[# ]\d+" })
-
-          Write-Host "RemoteFX Network instances:"
-          $networkInstances | ForEach-Object { Write-Host $_ }
-
-          Write-Host "RemoteFX Graphics instances:"
-          $graphicsInstances | ForEach-Object { Write-Host $_ }
-
-          if ($networkInstances.Count -eq 0) {
-              Write-Warning "No RemoteFX Network RDP-Tcp instance was created"
-          }
-
-          if ($graphicsInstances.Count -eq 0) {
-              Write-Warning "No RemoteFX Graphics RDP-Tcp instance was created"
-          }
-          @{
-              SessionName = $sessionName
-              RemoteFX = ($networkInstances.Count -gt 0 -and $graphicsInstances.Count -gt 0)
-          } | ConvertTo-Json | Set-Content (Join-Path $env:RUNNER_TEMP "rdp-ready.json")
-
       - parallel:
+          - name: Setup local RDP session
+            shell: powershell
+            run: |
+              $ErrorActionPreference = "Stop"
+
+              $userName = "rdp-ci"
+              $password = "WindowsExporter-CI-2026!"
+              $securePassword = ConvertTo-SecureString $password -AsPlainText -Force
+
+              if ($null -eq (Get-LocalUser -Name $userName -ErrorAction SilentlyContinue)) {
+                  New-LocalUser `
+                      -Name $userName `
+                      -Password $securePassword `
+                      -PasswordNeverExpires `
+                      -AccountNeverExpires | Out-Null
+              }
+
+              Add-LocalGroupMember `
+                  -Group "Remote Desktop Users" `
+                  -Member $userName `
+                  -ErrorAction SilentlyContinue
+
+              Set-ItemProperty `
+                  -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server" `
+                  -Name fDenyTSConnections `
+                  -Value 0
+
+              Start-Service TermService
+              (Get-Service TermService).WaitForStatus("Running", [TimeSpan]::FromSeconds(30))
+
+              $wfreerdp = (Get-Command wfreerdp.exe -ErrorAction Stop).Source
+              $stdout = Join-Path $env:RUNNER_TEMP "rdp-client.stdout.log"
+              $stderr = Join-Path $env:RUNNER_TEMP "rdp-client.stderr.log"
+              # Ending a step can kill its process tree. Task Scheduler starts the
+              # client in the runner user's console session instead, so it keeps the
+              # RDP session active after this step. Runners are disposable, so
+              # nothing stops it.
+              $clientArguments = @(
+                  "/v:127.0.0.1"
+                  "/u:$env:COMPUTERNAME\$userName"
+                  "/p:$password"
+                  "/cert:ignore"
+                  "/size:800x600"
+                  "/log-level:INFO"
+              ) -join " "
+              $action = New-ScheduledTaskAction -Execute "cmd.exe" `
+                  -Argument "/c $wfreerdp $clientArguments > $stdout 2> $stderr"
+              $principal = New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\$env:USERNAME" `
+                  -LogonType Interactive -RunLevel Highest
+              $settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Hours 2)
+              Register-ScheduledTask -TaskName "CIFreeRDP" -Action $action -Principal $principal `
+                  -Settings $settings -Force | Out-Null
+              Start-ScheduledTask -TaskName "CIFreeRDP"
+              $deadline = (Get-Date).AddSeconds(15)
+              while ((Get-ScheduledTask -TaskName "CIFreeRDP").State -ne "Running") {
+                  if ((Get-Date) -ge $deadline) { throw "Scheduled task CIFreeRDP did not start" }
+                  Start-Sleep -Milliseconds 500
+              }
+              Write-Host "Started wfreerdp.exe through scheduled task CIFreeRDP"
+
+              $deadline = (Get-Date).AddSeconds(120)
+              $rdpSession = $null
+
+              do {
+                  $sessions = qwinsta.exe
+                  $sessions | ForEach-Object { Write-Host $_ }
+
+                  $rdpSession = $sessions |
+                      Where-Object { $_ -match "^\s*>?\s*rdp-tcp#\d+\s+$userName\s+\d+\s+Active\b" } |
+                      Select-Object -First 1
+
+                  if ($null -ne $rdpSession) {
+                      break
+                  }
+
+                  if ((Get-ScheduledTask -TaskName "CIFreeRDP").State -ne "Running") {
+                      Get-Content $stdout,$stderr -ErrorAction SilentlyContinue
+                      throw "wfreerdp.exe exited before the RDP user became active"
+                  }
+
+                  Start-Sleep -Seconds 2
+              } while ((Get-Date) -lt $deadline)
+
+              if ($null -eq $rdpSession) {
+                  Get-Content $stdout,$stderr -ErrorAction SilentlyContinue
+                  throw "No authenticated active RDP session was created by FreeRDP"
+              }
+
+              Write-Host "Active RDP session: $rdpSession"
+              $sessionName = [regex]::Match($rdpSession, 'rdp-tcp#\d+', 'IgnoreCase').Value.Replace('#', ' ')
+
+              $remoteFxNetwork = Get-Counter -ListSet "RemoteFX Network" -ErrorAction Stop
+              $remoteFxGraphics = Get-Counter -ListSet "RemoteFX Graphics" -ErrorAction Stop
+
+              $networkInstances = @($remoteFxNetwork.PathsWithInstances |
+                  Where-Object { $_ -match "RDP-Tcp[# ]\d+" })
+              $graphicsInstances = @($remoteFxGraphics.PathsWithInstances |
+                  Where-Object { $_ -match "RDP-Tcp[# ]\d+" })
+
+              Write-Host "RemoteFX Network instances:"
+              $networkInstances | ForEach-Object { Write-Host $_ }
+
+              Write-Host "RemoteFX Graphics instances:"
+              $graphicsInstances | ForEach-Object { Write-Host $_ }
+
+              if ($networkInstances.Count -eq 0) {
+                  Write-Warning "No RemoteFX Network RDP-Tcp instance was created"
+              }
+
+              if ($graphicsInstances.Count -eq 0) {
+                  Write-Warning "No RemoteFX Graphics RDP-Tcp instance was created"
+              }
+              @{
+                  SessionName = $sessionName
+                  RemoteFX = ($networkInstances.Count -gt 0 -and $graphicsInstances.Count -gt 0)
+              } | ConvertTo-Json | Set-Content (Join-Path $env:RUNNER_TEMP "rdp-ready.json")
+
+          - name: Start SMTP server
+            if: ${{ matrix.smtp }}
+            shell: powershell
+            run: |
+              $ErrorActionPreference = "Stop"
+              Start-Service SMTPSVC
+              (Get-Service SMTPSVC).WaitForStatus("Running", [TimeSpan]::FromSeconds(30))
+
           - name: Setup IIS
             shell: pwsh
             run: |
@@ -1269,6 +1274,33 @@ jobs:
 
               Get-SmbShare -Name "CIShare"
               Get-SmbConnection | Format-Table ServerName, ShareName, Dialect, NumOpens
+
+              # Keep an SMB file open and the .NET runtime loaded during the Go tests.
+              # Task Scheduler keeps the workload alive after this step.
+              $workload = Join-Path $env:RUNNER_TEMP "netframework-workload.ps1"
+              @'
+              $data = New-Object byte[] 1MB
+              $path = "\\$env:COMPUTERNAME\CIShare\test.txt"
+              $stream = [System.IO.File]::Open($path, [System.IO.FileMode]::Open, [System.IO.FileAccess]::ReadWrite, [System.IO.FileShare]::ReadWrite)
+              try {
+                  while ($true) {
+                      $stream.Position = 0
+                      $stream.WriteByte(65)
+                      $stream.Flush()
+                      [System.GC]::KeepAlive($data)
+                      Start-Sleep -Seconds 1
+                  }
+              } finally {
+                  $stream.Dispose()
+              }
+              '@ | Set-Content $workload
+              $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-NoProfile -File $workload"
+              $principal = New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\$env:USERNAME" `
+                  -LogonType Interactive -RunLevel Highest
+              $settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Hours 2)
+              Register-ScheduledTask -TaskName "CIWorkload" -Action $action -Principal $principal `
+                  -Settings $settings -Force | Out-Null
+              Start-ScheduledTask -TaskName "CIWorkload"
           - name: Setup DNS and DHCP
             shell: pwsh
             run: |
@@ -1335,7 +1367,6 @@ jobs:
           - setup-bitlocker
           - setup-mscluster
           - setup-mssql
-          - setup-rdp
           - setup-storage-pool
           - start-hyperv-vm
 
@@ -1359,38 +1390,9 @@ jobs:
           "WINDOWS_EXPORTER_TEST_BITLOCKER_VOLUME=$($bitlocker.Unlocked)" | Add-Content $env:GITHUB_ENV
           "WINDOWS_EXPORTER_TEST_BITLOCKER_LOCKED_VOLUME=$($bitlocker.Locked)" | Add-Content $env:GITHUB_ENV
 
-      - name: Start SMTP server
-        if: ${{ matrix.smtp }}
-        shell: powershell
-        run: |
-          $ErrorActionPreference = "Stop"
-          Start-Service SMTPSVC
-          (Get-Service SMTPSVC).WaitForStatus("Running", [TimeSpan]::FromSeconds(30))
-
-      - name: Start .NET Framework and SMB workloads
+      - name: Resync WMI performance counters
         shell: pwsh
         run: |
-          $ErrorActionPreference = "Stop"
-          $workload = Join-Path $env:RUNNER_TEMP "netframework-workload.ps1"
-          @'
-          $data = New-Object byte[] 1MB
-          $path = "\\$env:COMPUTERNAME\CIShare\test.txt"
-          $stream = [System.IO.File]::Open($path, [System.IO.FileMode]::Open, [System.IO.FileAccess]::ReadWrite, [System.IO.FileShare]::ReadWrite)
-          try {
-              while ($true) {
-                  $stream.Position = 0
-                  $stream.WriteByte(65)
-                  $stream.Flush()
-                  [System.GC]::KeepAlive($data)
-                  Start-Sleep -Seconds 1
-              }
-          } finally {
-              $stream.Dispose()
-          }
-          '@ | Set-Content $workload
-          $process = Start-Process powershell.exe -PassThru `
-              -ArgumentList "-NoProfile", "-File", $workload
-          $process.Id | Set-Content (Join-Path $env:RUNNER_TEMP "netframework.pid")
           winmgmt.exe /resyncperf
           if ($LASTEXITCODE -ne 0) { throw "Failed to synchronize WMI performance counters" }
 
@@ -1446,17 +1448,6 @@ jobs:
             ${{ runner.temp }}/dism.log
             ${{ runner.temp }}/cbs.log
           if-no-files-found: ignore
-
-      - name: Stop test workloads
-        if: ${{ always() }}
-        shell: pwsh
-        run: |
-          $pidFile = Join-Path $env:RUNNER_TEMP "netframework.pid"
-          if (Test-Path $pidFile) {
-              Stop-Process -Id (Get-Content $pidFile) -ErrorAction SilentlyContinue
-          }
-          Get-Process kubelet -ErrorAction SilentlyContinue | Stop-Process -ErrorAction SilentlyContinue
-          Get-VM -Name GitHubActions -ErrorAction SilentlyContinue | Stop-VM -TurnOff -Force -ErrorAction SilentlyContinue
 
   lint:
     runs-on: windows-2025
