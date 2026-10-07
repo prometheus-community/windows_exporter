@@ -388,10 +388,7 @@ jobs:
               $vhd = Join-Path $env:RUNNER_TEMP "$Name.vhdx"
               New-VHD -Path $vhd -Dynamic -SizeBytes 512MB | Out-Null
               $volume = Invoke-WithVhdLock {
-                  Mount-VHD $vhd -PassThru | Get-Disk |
-                      Initialize-Disk -PartitionStyle GPT -PassThru |
-                      New-Partition -UseMaximumSize -AssignDriveLetter |
-                      Format-Volume -FileSystem NTFS -NewFileSystemLabel $Name -Confirm:$false
+                  Format-NewDisk (Mount-VHD $vhd -PassThru | Get-Disk) $Name
               }
               $mountPoint = "$($volume.DriveLetter):"
 
@@ -1085,7 +1082,7 @@ jobs:
                   Select-Object -ExpandProperty Paths
 
           - name: Enable Windows Update
-            timeout-minutes: 5
+            timeout-minutes: 8
             shell: powershell
             run: |
               $ErrorActionPreference = "Stop"
@@ -1107,13 +1104,49 @@ jobs:
               # Searching only retrieves metadata, without installing updates.
               try {
                   $result = $searcher.Search("IsInstalled=0 and IsHidden=0")
+                  $pendingCount = $result.Updates.Count
               }
               catch {
                   Write-Warning "Offline catalog search failed: $($_.Exception.ToString())"
-                  $searcher.Online = $true
-                  $result = $searcher.Search("IsInstalled=0 and IsHidden=0")
+
+                  # The online search usually finishes in under 30 seconds but
+                  # occasionally stalls for minutes. The COM call cannot be
+                  # cancelled, so run it in a job and restart the service on stall.
+                  $onlineSearch = {
+                      $ErrorActionPreference = "Stop"
+                      $session = New-Object -ComObject Microsoft.Update.Session
+                      $session.ClientApplicationID = "windows_exporter-ci"
+                      $searcher = $session.CreateUpdateSearcher()
+                      $searcher.Online = $true
+                      $searcher.Search("IsInstalled=0 and IsHidden=0").Updates.Count
+                  }
+
+                  $pendingCount = $null
+                  for ($attempt = 1; $attempt -le 3; $attempt++) {
+                      $job = Start-Job -ScriptBlock $onlineSearch
+                      if (Wait-Job $job -Timeout 90) {
+                          try {
+                              $pendingCount = Receive-Job $job
+                              break
+                          }
+                          catch {
+                              Write-Warning "Online catalog search attempt $attempt failed: $($_.Exception.Message)"
+                          }
+                      }
+                      else {
+                          Write-Warning "Online catalog search attempt $attempt timed out"
+                          Stop-Job $job
+                          Restart-Service wuauserv -Force
+                          (Get-Service wuauserv).WaitForStatus("Running", [TimeSpan]::FromSeconds(30))
+                      }
+                      Remove-Job $job -Force
+                  }
+
+                  if ($null -eq $pendingCount) {
+                      throw "Online catalog search failed after $($attempt - 1) attempts"
+                  }
               }
-              Write-Host "Windows Update catalog contains $($result.Updates.Count) pending updates"
+              Write-Host "Windows Update catalog contains $pendingCount pending updates"
 
               Get-Service wuauserv |
                   Format-Table Name, Status, StartType
