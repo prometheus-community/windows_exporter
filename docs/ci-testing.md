@@ -7,8 +7,9 @@ binary, requests `/metrics` once, and checks for a nonempty HTTP 200 response.
 
 The job runs on Windows Server 2022 and 2025. It provisions Containers, Hyper-V,
 SQL Server Express, IIS, MSMQ, NPS, FSRM, SMB, DNS, DHCP, a workgroup failover
-cluster, printer and storage fixtures, and an authenticated RDP session. SMTP is
-also tested on Server 2022; the role was removed from Server 2025.
+cluster, printer and storage fixtures, a BitLocker-encrypted volume, and an
+authenticated RDP session. SMTP is also tested on Server 2022; the role was
+removed from Server 2025.
 
 `WINDOWS_EXPORTER_TEST_COLLECTORS` lists required collectors. Their tests fail
 when setup is missing or collection fails instead of skipping. Fixture assertions

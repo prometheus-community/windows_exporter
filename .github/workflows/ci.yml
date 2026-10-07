@@ -501,6 +501,34 @@ jobs:
                   throw "Expected Hyper-V VM to be running, got $($vm.State)"
               }
 
+      - name: Setup BitLocker volume
+        shell: powershell
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          # Hosted images ship the BitLocker feature; data volumes need no reboot.
+          $vhd = Join-Path $env:RUNNER_TEMP "bitlocker.vhdx"
+          New-VHD -Path $vhd -Dynamic -SizeBytes 512MB | Out-Null
+          $volume = Mount-VHD $vhd -PassThru | Get-Disk |
+              Initialize-Disk -PartitionStyle GPT -PassThru |
+              New-Partition -UseMaximumSize -AssignDriveLetter |
+              Format-Volume -FileSystem NTFS -NewFileSystemLabel CIBitLocker -Confirm:$false
+          $mountPoint = "$($volume.DriveLetter):"
+
+          $password = ConvertTo-SecureString ("CI-" + [Guid]::NewGuid().ToString('N')) -AsPlainText -Force
+          Enable-BitLocker -MountPoint $mountPoint -PasswordProtector -Password $password -UsedSpaceOnly | Out-Null
+
+          $deadline = (Get-Date).AddMinutes(2)
+          do {
+              $status = Get-BitLockerVolume -MountPoint $mountPoint
+              if ($status.VolumeStatus -eq "FullyEncrypted") { break }
+              if ((Get-Date) -ge $deadline) { throw "BitLocker fixture did not finish encryption" }
+              Start-Sleep -Seconds 2
+          } while ($true)
+          $status | Format-List MountPoint, VolumeStatus, ProtectionStatus, LockStatus
+
+          "WINDOWS_EXPORTER_TEST_BITLOCKER_VOLUME=$mountPoint" | Add-Content $env:GITHUB_ENV
+
       - name: Setup SQL Server Express
         id: setup-mssql
         background: true
