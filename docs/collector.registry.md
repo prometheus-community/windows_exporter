@@ -141,8 +141,8 @@ examples.
 The combination of metric name and labels must be unique across all configured
 keys and values. Two values may deliberately share a `metric` name when their
 labels differ (a common way to aggregate the same measurement from several keys).
-A true duplicate — the same name *and* identical labels — is dropped and logged at
-scrape time.
+A true duplicate — the same name *and* identical labels — is rejected at build
+time.
 
 ##### help
 

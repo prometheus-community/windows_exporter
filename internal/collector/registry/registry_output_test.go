@@ -209,7 +209,7 @@ func TestCollectMissingValueReturnsErrNoData(t *testing.T) {
 // TestCollectorSharedMetricName proves the supported aggregation pattern from the
 // docs: two values may share one metric name as long as their labels differ. The
 // collector deliberately does not reject this; only a true duplicate (same name and
-// identical labels) would be dropped and logged by the registry at scrape time.
+// identical labels) is rejected at build time.
 func TestCollectorSharedMetricName(t *testing.T) {
 	t.Parallel()
 

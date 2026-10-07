@@ -146,6 +146,34 @@ func TestCollectorBuildErrors(t *testing.T) {
 			}},
 		},
 		{
+			name: "shared metric name without labels",
+			config: registry.Config{Keys: []registry.Key{
+				{
+					Name: "crash_control",
+					Key:  `HKLM\SYSTEM\CurrentControlSet\Control\CrashControl`,
+					Values: []registry.Value{
+						{Name: "AutoReboot", Metric: "dup"},
+						{Name: "CrashDumpEnabled", Metric: "dup"},
+					},
+				},
+			}},
+		},
+		{
+			name: "shared metric name with identical labels across keys",
+			config: registry.Config{Keys: []registry.Key{
+				{
+					Name:   "crash_control",
+					Key:    `HKLM\SYSTEM\CurrentControlSet\Control\CrashControl`,
+					Values: []registry.Value{{Name: "AutoReboot", Metric: "dup", Labels: map[string]string{"a": "1", "b": "2"}}},
+				},
+				{
+					Name:   "windows_nt",
+					Key:    `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion`,
+					Values: []registry.Value{{Name: "CurrentMajorVersionNumber", Metric: "dup", Labels: map[string]string{"b": "2", "a": "1"}}},
+				},
+			}},
+		},
+		{
 			name: "missing name",
 			config: registry.Config{Keys: []registry.Key{
 				{
