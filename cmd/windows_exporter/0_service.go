@@ -18,8 +18,10 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"strings"
 	"unsafe"
@@ -159,6 +161,22 @@ func logToEventToLog(eType uint16, msg string) error {
 	}
 
 	return nil
+}
+
+// logStartupError logs an error that occurs before the configured logger exists.
+// A service has no console to receive the default stderr output,
+// so the error is written to the event log as well.
+func logStartupError(ctx context.Context, msg string, err error) {
+	if IsService {
+		if logErr := logToEventToLog(windows.EVENTLOG_ERROR_TYPE, fmt.Sprintf("%s: %v", msg, err)); logErr != nil {
+			logToFile(fmt.Sprintf("%s: %v", msg, err))
+		}
+	}
+
+	//nolint:sloglint // We do not have a logger yet.
+	slog.LogAttrs(ctx, slog.LevelError, msg,
+		slog.Any("err", err),
+	)
 }
 
 func logToFile(msg string) {
