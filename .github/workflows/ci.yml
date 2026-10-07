@@ -354,7 +354,7 @@ jobs:
           path: ${{ runner.temp }}/sql-server/setup
           key: sql-server-2025-express-fa7e1fabc9a2-${{ runner.os }}
 
-      # Steps unrelated to Windows role installation start immediately in the background.
+      # Steps that do not register services run in the background while Windows features install.
       - name: Install FreeRDP client
         id: install-freerdp
         background: true
@@ -367,12 +367,6 @@ jobs:
               Start-Sleep -Seconds 10
           }
           Get-Command wfreerdp.exe -ErrorAction Stop
-
-      - name: Setup SQL Server Express
-        id: setup-mssql
-        background: true
-        shell: powershell
-        run: ./tools/setup-sql-server.ps1
 
       - name: Setup BitLocker volumes
         id: setup-bitlocker
@@ -534,25 +528,54 @@ jobs:
           )
           Set-Content -Path $installer -Value $installerContent -Encoding utf8
 
-      - name: Install Containers feature
+      # Install every Windows feature in one foreground step. Steps that register
+      # services, such as SQL Server setup, New-Cluster, and containerd, start only
+      # afterwards: changing service configuration during the install aborts its
+      # registry transaction, and the rollback then requires a restart.
+      - name: Install Windows features
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
 
           $features = @(
               "Containers"
+              "DHCP"
+              "DNS"
               "Failover-Clustering"
+              "FS-FileServer"
+              "FS-Resource-Manager"
+              "MSMQ-Server"
+              "NPAS"
+              "Print-Server"
               "RSAT-Clustering-PowerShell"
+              "RSAT-DHCP"
+              "RSAT-DNS-Server"
+              "RSAT-Print-Services"
+              "Web-Server"
           )
+
+          # SMTP was removed from Windows Server 2025.
+          if ($env:SMTP_ENABLED -eq 'true') {
+              $features += "SMTP-Server"
+          }
+
           $result = Install-WindowsFeature -Name $features
           $result | Format-List Success, RestartNeeded, ExitCode, FeatureResult
 
           if (-not $result.Success -or $result.RestartNeeded -ne "No") {
-              throw "Containers feature could not be installed without a restart"
+              Get-WindowsPackage -Online | Where-Object PackageState -eq InstallPending |
+                  Format-Table PackageName, PackageState
+              throw "Required Windows features could not be installed without a restart"
           }
 
           Get-WindowsFeature -Name $features |
               Format-Table DisplayName, Name, InstallState
+
+      - name: Setup SQL Server Express
+        id: setup-mssql
+        background: true
+        shell: powershell
+        run: ./tools/setup-sql-server.ps1
 
       - name: Setup MSCluster
         id: setup-mscluster
@@ -593,44 +616,6 @@ jobs:
           Get-Cluster | Format-List Name, AdministrativeAccessPoint
           Get-ClusterNode | Format-Table Name, State, NodeWeight, DynamicWeight
           Get-ClusterNetwork | Format-Table Name, State, Role, Address
-
-      - name: Install Windows roles
-        id: install-windows-roles
-        background: true
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = "Stop"
-
-          $features = @(
-              "DHCP"
-              "DNS"
-              "FS-FileServer"
-              "FS-Resource-Manager"
-              "MSMQ-Server"
-              "NPAS"
-              "Print-Server"
-              "RSAT-DHCP"
-              "RSAT-DNS-Server"
-              "RSAT-Print-Services"
-              "Web-Server"
-          )
-
-          # SMTP was removed from Windows Server 2025.
-          if ($env:SMTP_ENABLED -eq 'true') {
-              $features += "SMTP-Server"
-          }
-
-          $result = Install-WindowsFeature -Name $features
-          $result | Format-List Success, RestartNeeded, ExitCode, FeatureResult
-
-          if (-not $result.Success -or $result.RestartNeeded -ne "No") {
-              Get-WindowsPackage -Online | Where-Object PackageState -eq InstallPending |
-                  Format-Table PackageName, PackageState
-              throw "Required Windows roles could not be installed without a restart"
-          }
-
-          Get-WindowsFeature -Name $features |
-              Format-Table DisplayName, Name, InstallState
 
       - name: Wait for container prerequisites
         wait: [download-container-prereqs]
@@ -914,8 +899,8 @@ jobs:
               throw "Static pods did not reach Running state"
           }
 
-      - name: Wait for Windows roles
-        wait: [install-windows-roles, install-freerdp]
+      - name: Wait for FreeRDP client
+        wait: [install-freerdp]
 
       - parallel:
           - name: Setup local RDP session
