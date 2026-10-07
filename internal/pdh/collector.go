@@ -300,7 +300,10 @@ func (c *Collector) collectWorkerRaw() {
 		bytesNeeded uint32
 	)
 
-	buf := make([]byte, 1)
+	// buf starts empty so that the first call only queries the required size with a nil buffer.
+	// PdhGetRawCounterArrayW writes 8 bytes into a non-nil buffer, even if lpdwBufferSize is smaller,
+	// which corrupts the neighboring heap memory of a tiny allocation.
+	var buf []byte
 
 	for data := range c.collectCh {
 		err = (func() error {
@@ -337,12 +340,13 @@ func (c *Collector) collectWorkerRaw() {
 			nameCache := map[string]string{}
 
 			for _, counter := range c.counters {
+			instances:
 				for _, instance := range counter.Instances {
 					// Get the info with the current buffer size
-					bytesNeeded = uint32(cap(buf))
+					bytesNeeded = uint32(len(buf))
 
 					for {
-						ret := GetRawCounterArray(instance, &bytesNeeded, &itemCount, &buf[0])
+						ret := GetRawCounterArray(instance, &bytesNeeded, &itemCount, unsafe.SliceData(buf))
 
 						if ret == ErrorSuccess {
 							break
@@ -350,20 +354,20 @@ func (c *Collector) collectWorkerRaw() {
 
 						if err := NewPdhError(ret); ret != MoreData {
 							if isKnownCounterDataError(err) {
-								break
+								continue instances
 							}
 
 							return fmt.Errorf("GetRawCounterArray: %w", err)
 						}
 
-						if bytesNeeded <= uint32(cap(buf)) {
-							return fmt.Errorf("GetRawCounterArray reports buffer too small (%d), but buffer is large enough (%d): %w", uint32(cap(buf)), bytesNeeded, NewPdhError(ret))
+						if bytesNeeded <= uint32(len(buf)) {
+							return fmt.Errorf("GetRawCounterArray reports buffer too small (%d), but buffer is large enough (%d): %w", uint32(len(buf)), bytesNeeded, NewPdhError(ret))
 						}
 
 						buf = make([]byte, bytesNeeded)
 					}
 
-					items = unsafe.Slice((*RawCounterItem)(unsafe.Pointer(&buf[0])), itemCount)
+					items = unsafe.Slice((*RawCounterItem)(unsafe.Pointer(unsafe.SliceData(buf))), itemCount)
 
 					for _, item := range items {
 						if item.RawValue.CStatus != CstatusValidData && item.RawValue.CStatus != CstatusNewData {
@@ -459,7 +463,9 @@ func (c *Collector) collectWorkerFormatted() {
 		bytesNeeded uint32
 	)
 
-	buf := make([]byte, 1)
+	// buf starts empty so that the first call only queries the required size with a nil buffer.
+	// See collectWorkerRaw.
+	var buf []byte
 
 	for data := range c.collectCh {
 		err = (func() error {
@@ -496,12 +502,13 @@ func (c *Collector) collectWorkerFormatted() {
 			nameCache := map[string]string{}
 
 			for _, counter := range c.counters {
+			instances:
 				for _, instance := range counter.Instances {
 					// Get the info with the current buffer size
-					bytesNeeded = uint32(cap(buf))
+					bytesNeeded = uint32(len(buf))
 
 					for {
-						ret := GetFormattedCounterArrayDouble(instance, &bytesNeeded, &itemCount, &buf[0])
+						ret := GetFormattedCounterArrayDouble(instance, &bytesNeeded, &itemCount, unsafe.SliceData(buf))
 
 						if ret == ErrorSuccess {
 							break
@@ -509,20 +516,20 @@ func (c *Collector) collectWorkerFormatted() {
 
 						if err := NewPdhError(ret); ret != MoreData {
 							if isKnownCounterDataError(err) {
-								break
+								continue instances
 							}
 
 							return fmt.Errorf("GetFormattedCounterArrayDouble: %w", err)
 						}
 
-						if bytesNeeded <= uint32(cap(buf)) {
-							return fmt.Errorf("GetFormattedCounterArrayDouble reports buffer too small (%d), but buffer is large enough (%d): %w", uint32(cap(buf)), bytesNeeded, NewPdhError(ret))
+						if bytesNeeded <= uint32(len(buf)) {
+							return fmt.Errorf("GetFormattedCounterArrayDouble reports buffer too small (%d), but buffer is large enough (%d): %w", uint32(len(buf)), bytesNeeded, NewPdhError(ret))
 						}
 
 						buf = make([]byte, bytesNeeded)
 					}
 
-					items = unsafe.Slice((*FmtCounterValueItemDouble)(unsafe.Pointer(&buf[0])), itemCount)
+					items = unsafe.Slice((*FmtCounterValueItemDouble)(unsafe.Pointer(unsafe.SliceData(buf))), itemCount)
 
 					for _, item := range items {
 						if item.FmtValue.CStatus != CstatusValidData && item.FmtValue.CStatus != CstatusNewData {
