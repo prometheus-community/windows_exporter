@@ -873,3 +873,76 @@ func Test_MI_QueryUnmarshal_Uint16Array_WrongType(t *testing.T) {
 	err = application.Close()
 	require.NoError(t, err)
 }
+
+func Test_MI_QueryFunc(t *testing.T) {
+	application, err := mi.ApplicationInitialize()
+	require.NoError(t, err)
+
+	t.Cleanup(func() { require.NoError(t, application.Close()) })
+
+	session, err := application.NewSession(nil)
+	require.NoError(t, err)
+
+	t.Cleanup(func() { require.NoError(t, session.Close()) })
+
+	query, err := mi.NewQuery("SELECT LocalDateTime, NumberOfProcesses, Caption FROM Win32_OperatingSystem")
+	require.NoError(t, err)
+
+	var calls int
+
+	err = session.QueryFunc(mi.NamespaceRootCIMv2, query, 5*time.Second, func(instance *mi.Instance) error {
+		calls++
+
+		// LocalDateTime is a DATETIME timestamp carrying the local UTC offset;
+		// decoding it must land close to the current wall clock.
+		element, err := instance.GetElement("LocalDateTime")
+		require.NoError(t, err)
+		require.False(t, element.IsNull())
+
+		localDateTime, err := element.Float64()
+		require.NoError(t, err)
+		require.InDelta(t, float64(time.Now().Unix()), localDateTime, 60)
+
+		element, err = instance.GetElement("NumberOfProcesses")
+		require.NoError(t, err)
+
+		processes, err := element.Float64()
+		require.NoError(t, err)
+		require.Positive(t, processes)
+
+		element, err = instance.GetElement("Caption")
+		require.NoError(t, err)
+
+		caption, err := element.String()
+		require.NoError(t, err)
+		require.Contains(t, caption, "Windows")
+
+		return nil
+	})
+	require.NoError(t, err)
+	require.Equal(t, 1, calls)
+
+	// An error returned by the callback aborts the query and is passed through.
+	errStop := errors.New("stop")
+
+	query, err = mi.NewQuery("SELECT Name FROM Win32_Process")
+	require.NoError(t, err)
+
+	calls = 0
+	err = session.QueryFunc(mi.NamespaceRootCIMv2, query, 5*time.Second, func(*mi.Instance) error {
+		calls++
+
+		return errStop
+	})
+	require.ErrorIs(t, err, errStop)
+	require.Equal(t, 1, calls)
+
+	// Invalid classes surface as an error rather than an empty result.
+	query, err = mi.NewQuery("SELECT Name FROM Win32_DoesNotExist")
+	require.NoError(t, err)
+
+	err = session.QueryFunc(mi.NamespaceRootCIMv2, query, 5*time.Second, func(*mi.Instance) error {
+		return nil
+	})
+	require.Error(t, err)
+}

@@ -60,6 +60,7 @@ A Prometheus exporter for Windows machines.
 | [udp](docs/collector.udp.md)                               | UDP connections                                                                                                                                             |                    |
 | [update](docs/collector.update.md)                         | Windows Update Service                                                                                                                                      |                    |
 | [vmware](docs/collector.vmware.md)                         | Performance counters installed by the Vmware Guest agent                                                                                                    |                    |
+| [wmi](docs/collector.wmi.md)                               | Custom WMI query metrics                                                                                                                                    |                    |
 <!-- textlint-enable terminology -->
 
 See the linked documentation on each collector for more information on reported metrics, configuration settings and usage examples.

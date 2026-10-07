@@ -77,6 +77,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/udp"
 	"github.com/prometheus-community/windows_exporter/internal/collector/update"
 	"github.com/prometheus-community/windows_exporter/internal/collector/vmware"
+	"github.com/prometheus-community/windows_exporter/internal/collector/wmi"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
@@ -149,6 +150,7 @@ func NewWithConfig(config Config) *Collection {
 	collectors[udp.Name] = udp.New(&config.UDP)
 	collectors[update.Name] = update.New(&config.Update)
 	collectors[vmware.Name] = vmware.New(&config.Vmware)
+	collectors[wmi.Name] = wmi.New(&config.WMI)
 
 	return New(collectors)
 }

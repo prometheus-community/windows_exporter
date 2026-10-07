@@ -71,6 +71,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/udp"
 	"github.com/prometheus-community/windows_exporter/internal/collector/update"
 	"github.com/prometheus-community/windows_exporter/internal/collector/vmware"
+	"github.com/prometheus-community/windows_exporter/internal/collector/wmi"
 )
 
 func NewBuilderWithFlags[C Collector](fn BuilderWithFlags[C]) BuilderWithFlags[Collector] {
@@ -130,6 +131,7 @@ var BuildersWithFlags = map[string]BuilderWithFlags[Collector]{
 	udp.Name:                NewBuilderWithFlags(udp.NewWithFlags),
 	update.Name:             NewBuilderWithFlags(update.NewWithFlags),
 	vmware.Name:             NewBuilderWithFlags(vmware.NewWithFlags),
+	wmi.Name:                NewBuilderWithFlags(wmi.NewWithFlags),
 }
 
 // Available returns a sorted list of available collectors.

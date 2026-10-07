@@ -398,29 +398,114 @@ func (s *Session) QueryUnmarshal(dst any,
 
 // Query queries for a set of instances based on a query expression.
 func (s *Session) Query(dst any, namespaceName Namespace, queryExpression Query, queryTimeout time.Duration) error {
+	operationOptions, err := s.newOperationOptions(queryTimeout)
+	if err != nil {
+		return err
+	}
+
+	if operationOptions != nil {
+		defer func() {
+			_ = operationOptions.Delete()
+		}()
+	}
+
+	return s.QueryUnmarshal(dst, OperationFlagsStandardRTTI, operationOptions, namespaceName, QueryDialectWQL, queryExpression)
+}
+
+// QueryFunc runs a WQL query and calls fn for every returned instance, in
+// order. It is meant for queries whose result shape is only known at runtime,
+// where [Session.Query] cannot unmarshal into a struct.
+//
+// The instance, and every element read from it, is owned by the operation and
+// only valid until fn returns. If fn returns an error, the query is aborted
+// and that error is returned.
+func (s *Session) QueryFunc(namespaceName Namespace, queryExpression Query, queryTimeout time.Duration, fn func(*Instance) error) error {
+	if s == nil || s.ft == nil {
+		return ErrNotInitialized
+	}
+
+	operationOptions, err := s.newOperationOptions(queryTimeout)
+	if err != nil {
+		return err
+	}
+
+	if operationOptions != nil {
+		// Deferred first so the options outlive the operation that uses them.
+		defer func() {
+			_ = operationOptions.Delete()
+		}()
+	} else {
+		operationOptions = s.defaultOperationOptions
+	}
+
+	operation := &Operation{}
+
+	r0, _, _ := syscall.SyscallN(
+		s.ft.QueryInstances,
+		uintptr(unsafe.Pointer(s)),
+		uintptr(OperationFlagsStandardRTTI),
+		uintptr(unsafe.Pointer(operationOptions)),
+		uintptr(unsafe.Pointer(namespaceName)),
+		uintptr(unsafe.Pointer(QueryDialectWQL)),
+		uintptr(unsafe.Pointer(queryExpression)),
+		0,
+		uintptr(unsafe.Pointer(operation)),
+	)
+
+	if result := ResultError(r0); !errors.Is(result, MI_RESULT_OK) {
+		return fmt.Errorf("failed to query instances: %w", result)
+	}
+
+	defer func() {
+		_ = operation.Close()
+	}()
+
+	for {
+		instance, moreResults, err := operation.GetInstance()
+		if err != nil {
+			return fmt.Errorf("failed to get instance: %w", err)
+		}
+
+		if instance == nil {
+			return nil
+		}
+
+		if err := fn(instance); err != nil {
+			return err
+		}
+
+		if !moreResults {
+			return nil
+		}
+	}
+}
+
+// newOperationOptions creates operation options carrying queryTimeout. A zero
+// timeout leaves the MI default in place; a negative timeout returns nil
+// options, so the session defaults are used. The caller must delete non-nil
+// options once the operation is closed.
+func (s *Session) newOperationOptions(queryTimeout time.Duration) (*OperationOptions, error) {
 	if queryTimeout < 0 {
-		return s.QueryUnmarshal(dst, OperationFlagsStandardRTTI, nil, namespaceName, QueryDialectWQL, queryExpression)
+		return nil, nil //nolint:nilnil
 	}
 
 	app, err := s.GetApplication()
 	if err != nil {
-		return fmt.Errorf("failed to get application: %w", err)
+		return nil, fmt.Errorf("failed to get application: %w", err)
 	}
 
 	operationOptions, err := app.NewOperationOptions()
 	if err != nil {
-		return fmt.Errorf("failed to create operation options: %w", err)
+		return nil, fmt.Errorf("failed to create operation options: %w", err)
 	}
-
-	defer func() {
-		_ = operationOptions.Delete()
-	}()
 
 	if queryTimeout > 0 {
 		if err = operationOptions.SetTimeout(queryTimeout); err != nil {
-			return fmt.Errorf("failed to set timeout: %w", err)
+			_ = operationOptions.Delete()
+
+			return nil, fmt.Errorf("failed to set timeout: %w", err)
 		}
 	}
 
-	return s.QueryUnmarshal(dst, OperationFlagsStandardRTTI, operationOptions, namespaceName, QueryDialectWQL, queryExpression)
+	return operationOptions, nil
 }

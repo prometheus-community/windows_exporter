@@ -47,3 +47,4 @@ This directory contains documentation of the collectors in the windows_exporter,
 - [`udp`](collector.udp.md)
 - [`update`](collector.update.md)
 - [`vmware`](collector.vmware.md)
+- [`wmi`](collector.wmi.md)
