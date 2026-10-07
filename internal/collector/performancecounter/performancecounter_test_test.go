@@ -154,6 +154,30 @@ windows_performancecounter_processor_information_processor_time\{core="0,0",stat
 			expectedMetrics: nil,
 		},
 		{
+			// PDH counter names are case-insensitive, but both names sanitize to the same Go identifier.
+			name:        "counter names with the same sanitized name",
+			object:      "Memory",
+			counterType: pdh.CounterTypeRaw,
+			instances:   nil,
+			buildErr:    "",
+			counters: []performancecounter.Counter{
+				{Name: "Available Bytes", Type: "gauge", Metric: "windows_performancecounter_memory_available_bytes"},
+				{Name: "available bytes", Type: "gauge", Metric: "windows_performancecounter_memory_available_bytes_lowercase"},
+			},
+			expectedMetrics: regexp.MustCompile(`^# HELP windows_performancecounter_collector_duration_seconds windows_exporter: Duration of an performancecounter child collection.
+# TYPE windows_performancecounter_collector_duration_seconds gauge
+windows_performancecounter_collector_duration_seconds\{collector="counter names with the same sanitized name"} [0-9.e+-]+
+# HELP windows_performancecounter_collector_success windows_exporter: Whether a performancecounter child collector was successful.
+# TYPE windows_performancecounter_collector_success gauge
+windows_performancecounter_collector_success\{collector="counter names with the same sanitized name"} 1
+# HELP windows_performancecounter_memory_available_bytes windows_exporter: custom Performance Counter metric
+# TYPE windows_performancecounter_memory_available_bytes gauge
+windows_performancecounter_memory_available_bytes [0-9.e+-]+
+# HELP windows_performancecounter_memory_available_bytes_lowercase windows_exporter: custom Performance Counter metric
+# TYPE windows_performancecounter_memory_available_bytes_lowercase gauge
+windows_performancecounter_memory_available_bytes_lowercase [0-9.e+-]+`),
+		},
+		{
 			name:            "counter with spaces and brackets",
 			object:          "invalid",
 			counterType:     pdh.CounterTypeRaw,
@@ -212,6 +236,101 @@ windows_performancecounter_processor_information_processor_time\{core="0,0",stat
 			require.NotEmpty(t, got)
 			require.NotEmpty(t, tc.expectedMetrics)
 			require.Regexp(t, tc.expectedMetrics, got)
+		})
+	}
+}
+
+// TestBuildInvalidConfig verifies that invalid configurations are reported as
+// errors. Build runs in a goroutine without recover during exporter startup,
+// so a panic here would crash the exporter.
+func TestBuildInvalidConfig(t *testing.T) {
+	t.Parallel()
+
+	// Build writes default metric names into the config, so every case needs its own objects.
+	availableBytes := func() performancecounter.Object {
+		return performancecounter.Object{
+			Name:     "available_bytes",
+			Object:   "Memory",
+			Counters: []performancecounter.Counter{{Name: "Available Bytes"}},
+		}
+	}
+	committedBytes := func() performancecounter.Object {
+		return performancecounter.Object{
+			Name:     "committed_bytes",
+			Object:   "Memory",
+			Counters: []performancecounter.Counter{{Name: "Committed Bytes"}},
+		}
+	}
+
+	for _, tc := range []struct {
+		name     string
+		objects  []performancecounter.Object
+		buildErr string
+	}{
+		{
+			name: "empty counter name in first object",
+			objects: []performancecounter.Object{
+				{Name: "memory", Object: "Memory", Counters: []performancecounter.Counter{{Name: ""}, {Name: "Available Bytes"}}},
+				committedBytes(),
+			},
+			buildErr: "object memory: counter name is required",
+		},
+		{
+			name: "empty counter name in third object",
+			objects: []performancecounter.Object{
+				availableBytes(),
+				committedBytes(),
+				{Name: "memory", Object: "Memory", Counters: []performancecounter.Counter{{Name: ""}}},
+			},
+			buildErr: "object memory: counter name is required",
+		},
+		{
+			name: "counter name starting with a digit",
+			objects: []performancecounter.Object{
+				{Name: "memory", Object: "Memory", Counters: []performancecounter.Counter{{Name: "1 Available Bytes"}}},
+			},
+			buildErr: pdh.NewPdhError(pdh.CstatusNoCounter).Error(),
+		},
+		{
+			name: "counter names with the same default metric name",
+			objects: []performancecounter.Object{
+				{Name: "memory", Object: "Memory", Counters: []performancecounter.Counter{{Name: "Available Bytes"}, {Name: "available bytes"}}},
+			},
+			buildErr: "object memory: counters Available Bytes and available bytes produce identical series windows_performancecounter_memory_available_bytes",
+		},
+		{
+			name: "counters with the same metric name",
+			objects: []performancecounter.Object{
+				{Name: "memory", Object: "Memory", Counters: []performancecounter.Counter{
+					{Name: "Available Bytes", Metric: "windows_memory_bytes"},
+					{Name: "Committed Bytes", Metric: "windows_memory_bytes"},
+				}},
+			},
+			buildErr: "object memory: counters Available Bytes and Committed Bytes produce identical series windows_memory_bytes",
+		},
+		{
+			name: "counters with the same metric name and labels",
+			objects: []performancecounter.Object{
+				{Name: "processor", Object: "Processor Information", Instances: pdh.InstancesAll, Counters: []performancecounter.Counter{
+					{Name: "% Processor Time", Metric: "windows_processor_time", Labels: map[string]string{"state": "active"}},
+					{Name: "% Idle Time", Metric: "windows_processor_time", Labels: map[string]string{"state": "idle"}},
+					{Name: "% User Time", Metric: "windows_processor_time", Labels: map[string]string{"state": "active"}},
+				}},
+			},
+			buildErr: "object processor: counters % Processor Time and % User Time produce identical series windows_processor_time",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			c := performancecounter.New(&performancecounter.Config{Objects: tc.objects})
+
+			t.Cleanup(func() { require.NoError(t, c.Close()) })
+
+			var err error
+
+			require.NotPanics(t, func() { err = c.Build(slog.New(slog.DiscardHandler), nil) })
+			require.ErrorContains(t, err, tc.buildErr)
 		})
 	}
 }

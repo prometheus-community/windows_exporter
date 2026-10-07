@@ -25,6 +25,7 @@ import (
 	"reflect"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -151,51 +152,50 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		}
 
 		names = append(names, object.Name)
-		counters := make([]string, 0, len(object.Counters))
+		counters := make([]Counter, 0, len(object.Counters))
 		fields := make([]reflect.StructField, 0, len(object.Counters)+2)
+		object.fieldIndex = make(map[string]int, len(object.Counters))
 
 		for j, counter := range object.Counters {
 			if counter.Metric == "" {
-				c.config.Objects[i].Counters[j].Metric = sanitizeMetricName(
+				counter.Metric = sanitizeMetricName(
 					fmt.Sprintf("%s_%s_%s_%s", types.Namespace, Name, object.Object, counter.Name),
 				)
+				c.config.Objects[i].Counters[j].Metric = counter.Metric
 			}
 
 			if counter.Name == "" {
-				errs = append(errs, errors.New("counter name is required"))
-				c.config.Objects = slices.Delete(c.config.Objects, i, 1)
+				errs = append(errs, fmt.Errorf("object %s: counter name is required", object.Name))
 
 				continue
 			}
 
-			if slices.Contains(counters, counter.Name) {
-				errs = append(errs, fmt.Errorf("counter name %s is duplicated", counter.Name))
+			if _, ok := object.fieldIndex[counter.Name]; ok {
+				errs = append(errs, fmt.Errorf("object %s: counter name %s is duplicated", object.Name, counter.Name))
 
 				continue
 			}
 
-			counters = append(counters, counter.Name)
-
-			field, err := func(name string) (_ reflect.StructField, err error) {
-				defer func() {
-					if r := recover(); r != nil {
-						err = fmt.Errorf("failed to create field for %s: %v", name, r)
-					}
-				}()
-
-				return reflect.StructField{
-					Name: strings.ToUpper(sanitizeMetricName(name)),
-					Type: reflect.TypeFor[float64](),
-					Tag:  reflect.StructTag(fmt.Sprintf(`perfdata:"%s"`, name)),
-				}, nil
-			}(counter.Name)
-			if err != nil {
-				errs = append(errs, err)
+			if k := slices.IndexFunc(counters, func(other Counter) bool {
+				return other.Metric == counter.Metric && maps.Equal(other.Labels, counter.Labels)
+			}); k != -1 {
+				errs = append(errs, fmt.Errorf("object %s: counters %s and %s produce identical series %s, set a different metric name or labels",
+					object.Name, counters[k].Name, counter.Name, counter.Metric,
+				))
 
 				continue
 			}
 
-			fields = append(fields, field)
+			counters = append(counters, counter)
+
+			// Counter names are free text and may produce invalid or colliding Go identifiers,
+			// so the struct fields get synthetic names and are looked up by index instead.
+			object.fieldIndex[counter.Name] = len(fields)
+			fields = append(fields, reflect.StructField{
+				Name: "F" + strconv.Itoa(len(fields)),
+				Type: reflect.TypeFor[float64](),
+				Tag:  reflect.StructTag(`perfdata:` + strconv.Quote(counter.Name)),
+			})
 		}
 
 		if object.Instances != nil {
@@ -300,13 +300,14 @@ func (c *Collector) collectObject(ch chan<- prometheus.Metric, perfDataObject Ob
 		for _, counter := range perfDataObject.Counters {
 			val := reflect.ValueOf(sliceValue).Index(i)
 
-			field := val.FieldByName(strings.ToUpper(sanitizeMetricName(counter.Name)))
-			if !field.IsValid() {
+			fieldIndex, ok := perfDataObject.fieldIndex[counter.Name]
+			if !ok {
 				errs = append(errs, fmt.Errorf("%s not found in collected data", counter.Name))
 
 				continue
 			}
 
+			field := val.Field(fieldIndex)
 			if field.Kind() != reflect.Float64 {
 				errs = append(errs, fmt.Errorf("failed to cast %s to float64", counter.Name))
 

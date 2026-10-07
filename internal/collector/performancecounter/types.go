@@ -32,6 +32,8 @@ type Object struct {
 
 	collector      *pdh.Collector
 	perfDataObject any
+	// fieldIndex maps a counter name to its field index in the element type of perfDataObject.
+	fieldIndex map[string]int
 }
 
 type Counter struct {
