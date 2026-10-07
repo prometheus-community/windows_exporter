@@ -90,11 +90,13 @@ func TestSetField(t *testing.T) {
 	}
 }
 
-func TestStructSlice(t *testing.T) {
+func TestPrepareUnmarshal(t *testing.T) {
 	t.Parallel()
 
 	type row struct {
-		Name string `mi:"Name"`
+		Name     string `mi:"Name"`
+		Internal int
+		ID       uint32 `mi:"ProcessId"`
 	}
 
 	t.Run("resets_valid_slice", func(t *testing.T) {
@@ -102,30 +104,30 @@ func TestStructSlice(t *testing.T) {
 
 		dst := []row{{Name: "stale"}}
 
-		dv, err := structSlice(&dst)
+		fields, err := prepareUnmarshal(&dst)
 		require.NoError(t, err)
-		require.Equal(t, 0, dv.Len())
 		require.Empty(t, dst)
+		require.Equal(t, []miField{{index: 0, tag: "Name"}, {index: 2, tag: "ProcessId"}}, fields)
 	})
 
-	invalid := []struct {
-		name string
-		dst  any
-	}{
-		{"nil", nil},
-		{"slice_not_pointer", []row{}},
-		{"nil_pointer", (*[]row)(nil)},
-		{"pointer_to_int", new(int)},
-		{"pointer_to_struct", new(row)},
-		{"pointer_to_slice_of_int", new([]int)},
-	}
+	t.Run("nil_pointer", func(t *testing.T) {
+		t.Parallel()
 
-	for _, tt := range invalid {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+		_, err := prepareUnmarshal((*[]row)(nil))
+		require.ErrorIs(t, err, ErrInvalidEntityType)
+	})
 
-			_, err := structSlice(tt.dst)
-			require.ErrorIs(t, err, ErrInvalidEntityType)
-		})
-	}
+	t.Run("slice_of_int", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := prepareUnmarshal(new([]int))
+		require.ErrorIs(t, err, ErrInvalidEntityType)
+	})
+
+	t.Run("slice_of_struct_pointer", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := prepareUnmarshal(new([]*row))
+		require.ErrorIs(t, err, ErrInvalidEntityType)
+	})
 }

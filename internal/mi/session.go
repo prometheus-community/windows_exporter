@@ -160,6 +160,14 @@ func (s *Session) QueryInstances(flags OperationFlags, operationOptions *Operati
 		return nil, err
 	}
 
+	return s.queryInstances(flags, operationOptions, namespaceName, queryDialect, queryExpressionUTF16)
+}
+
+// queryInstances starts an MI_Session_QueryInstances operation. Nil operationOptions
+// fall back to the session defaults. The caller must close the returned operation.
+func (s *Session) queryInstances(flags OperationFlags, operationOptions *OperationOptions, namespaceName Namespace,
+	queryDialect QueryDialect, queryExpression Query,
+) (*Operation, error) {
 	operation := &Operation{}
 
 	if operationOptions == nil {
@@ -173,7 +181,7 @@ func (s *Session) QueryInstances(flags OperationFlags, operationOptions *Operati
 		uintptr(unsafe.Pointer(operationOptions)),
 		uintptr(unsafe.Pointer(namespaceName)),
 		uintptr(unsafe.Pointer(queryDialect)),
-		uintptr(unsafe.Pointer(queryExpressionUTF16)),
+		uintptr(unsafe.Pointer(queryExpression)),
 		0,
 		uintptr(unsafe.Pointer(operation)),
 	)
@@ -191,25 +199,18 @@ func (s *Session) QueryInstances(flags OperationFlags, operationOptions *Operati
 // QueryUnmarshal passes true, tolerating classes whose MOF gained fields the query did not
 // select. Operation.Unmarshal passes false, so a missing element is reported as an error
 // instead of being silently left at its zero value.
-func unmarshalInstance(instance *Instance, structType reflect.Type, structValue reflect.Value, skipMissing bool) error {
-	for i := range structType.NumField() {
-		field := structValue.Field(i)
-
-		miTag := structType.Field(i).Tag.Get("mi")
-		if miTag == "" {
-			continue
-		}
-
-		element, err := instance.GetElement(miTag)
+func unmarshalInstance(instance *Instance, fields []miField, structValue reflect.Value, skipMissing bool) error {
+	for _, f := range fields {
+		element, err := instance.GetElement(f.tag)
 		if err != nil {
 			if skipMissing && errors.Is(err, MI_RESULT_NO_SUCH_PROPERTY) {
 				continue
 			}
 
-			return fmt.Errorf("failed to get element %s: %w", miTag, err)
+			return fmt.Errorf("failed to get element %s: %w", f.tag, err)
 		}
 
-		if err := setField(miTag, field, element); err != nil {
+		if err := setField(f.tag, structValue.Field(f.index), element); err != nil {
 			return err
 		}
 	}
@@ -354,7 +355,7 @@ func fieldTypeError(miTag string, field reflect.Value, miType string) error {
 // QueryUnmarshal queries for a set of instances based on a query expression.
 //
 // https://learn.microsoft.com/en-us/windows/win32/api/mi/nf-mi-mi_session_queryinstances
-func (s *Session) QueryUnmarshal(dst any,
+func (s *Session) QueryUnmarshal[T any](dst *[]T,
 	flags OperationFlags, operationOptions *OperationOptions,
 	namespaceName Namespace, queryDialect QueryDialect, queryExpression Query,
 ) error {
@@ -362,42 +363,25 @@ func (s *Session) QueryUnmarshal(dst any,
 		return ErrNotInitialized
 	}
 
-	dv, err := structSlice(dst)
+	fields, err := prepareUnmarshal(dst)
 	if err != nil {
 		return err
 	}
 
-	operation := &Operation{}
-
-	if operationOptions == nil {
-		operationOptions = s.defaultOperationOptions
-	}
-
-	r0, _, _ := syscall.SyscallN(
-		s.ft.QueryInstances,
-		uintptr(unsafe.Pointer(s)),
-		uintptr(flags),
-		uintptr(unsafe.Pointer(operationOptions)),
-		uintptr(unsafe.Pointer(namespaceName)),
-		uintptr(unsafe.Pointer(queryDialect)),
-		uintptr(unsafe.Pointer(queryExpression)),
-		0,
-		uintptr(unsafe.Pointer(operation)),
-	)
-
-	if result := ResultError(r0); !errors.Is(result, MI_RESULT_OK) {
-		return fmt.Errorf("failed to query instances: %w", result)
+	operation, err := s.queryInstances(flags, operationOptions, namespaceName, queryDialect, queryExpression)
+	if err != nil {
+		return fmt.Errorf("failed to query instances: %w", err)
 	}
 
 	defer func() {
 		_ = operation.Close()
 	}()
 
-	return operation.unmarshal(dv, true)
+	return operation.unmarshal(dst, fields, true)
 }
 
 // Query queries for a set of instances based on a query expression.
-func (s *Session) Query(dst any, namespaceName Namespace, queryExpression Query, queryTimeout time.Duration) error {
+func (s *Session) Query[T any](dst *[]T, namespaceName Namespace, queryExpression Query, queryTimeout time.Duration) error {
 	operationOptions, err := s.newOperationOptions(queryTimeout)
 	if err != nil {
 		return err
@@ -434,26 +418,11 @@ func (s *Session) QueryFunc(namespaceName Namespace, queryExpression Query, quer
 		defer func() {
 			_ = operationOptions.Delete()
 		}()
-	} else {
-		operationOptions = s.defaultOperationOptions
 	}
 
-	operation := &Operation{}
-
-	r0, _, _ := syscall.SyscallN(
-		s.ft.QueryInstances,
-		uintptr(unsafe.Pointer(s)),
-		uintptr(OperationFlagsStandardRTTI),
-		uintptr(unsafe.Pointer(operationOptions)),
-		uintptr(unsafe.Pointer(namespaceName)),
-		uintptr(unsafe.Pointer(QueryDialectWQL)),
-		uintptr(unsafe.Pointer(queryExpression)),
-		0,
-		uintptr(unsafe.Pointer(operation)),
-	)
-
-	if result := ResultError(r0); !errors.Is(result, MI_RESULT_OK) {
-		return fmt.Errorf("failed to query instances: %w", result)
+	operation, err := s.queryInstances(OperationFlagsStandardRTTI, operationOptions, namespaceName, QueryDialectWQL, queryExpression)
+	if err != nil {
+		return fmt.Errorf("failed to query instances: %w", err)
 	}
 
 	// Close cancels the operation if fn aborted it early.

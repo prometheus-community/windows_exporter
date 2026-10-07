@@ -215,45 +215,66 @@ func (o *Operation) GetInstance() (*Instance, bool, error) {
 	return instance, moreResults == True, nil
 }
 
-func (o *Operation) Unmarshal(dst any) error {
+func (o *Operation) Unmarshal[T any](dst *[]T) error {
 	if o == nil || o.ft == nil {
 		return ErrNotInitialized
 	}
 
-	dv, err := structSlice(dst)
+	fields, err := prepareUnmarshal(dst)
 	if err != nil {
 		return err
 	}
 
-	return o.unmarshal(dv, false)
+	return o.unmarshal(dst, fields, false)
 }
 
-// structSlice checks that dst is a non-nil pointer to a slice of structs and resets
-// that slice to empty. Callers run it before starting a query, so invalid input is
-// rejected without a WMI round trip.
-func structSlice(dst any) (reflect.Value, error) {
-	dv := reflect.ValueOf(dst)
-	if dv.Kind() != reflect.Pointer || dv.IsNil() {
-		return reflect.Value{}, ErrInvalidEntityType
-	}
-
-	dv = dv.Elem()
-
-	if dv.Kind() != reflect.Slice || dv.Type().Elem().Kind() != reflect.Struct {
-		return reflect.Value{}, ErrInvalidEntityType
-	}
-
-	dv.Set(reflect.MakeSlice(dv.Type(), 0, 0))
-
-	return dv, nil
+// miField is a struct field that is populated from the MI element named by its `mi` tag.
+type miField struct {
+	index int
+	tag   string
 }
 
-// unmarshal iterates over the operation's instances and appends them to dv,
-// which must come from structSlice.
+// prepareUnmarshal checks that dst is non-nil and T is a struct, resets *dst to empty
+// and returns the `mi`-tagged fields of T. Callers run it before starting a query,
+// so invalid input is rejected without a WMI round trip.
+func prepareUnmarshal[T any](dst *[]T) ([]miField, error) {
+	if dst == nil {
+		return nil, ErrInvalidEntityType
+	}
+
+	fields, err := miFieldsOf[T]()
+	if err != nil {
+		return nil, err
+	}
+
+	*dst = (*dst)[:0]
+
+	return fields, nil
+}
+
+// miFieldsOf returns the fields of T that carry an `mi` tag.
+// It returns ErrInvalidEntityType if T is not a struct.
+func miFieldsOf[T any]() ([]miField, error) {
+	structType := reflect.TypeFor[T]()
+	if structType.Kind() != reflect.Struct {
+		return nil, ErrInvalidEntityType
+	}
+
+	fields := make([]miField, 0, structType.NumField())
+
+	for i := range structType.NumField() {
+		if miTag := structType.Field(i).Tag.Get("mi"); miTag != "" {
+			fields = append(fields, miField{index: i, tag: miTag})
+		}
+	}
+
+	return fields, nil
+}
+
+// unmarshal iterates over the operation's instances and appends them to dst.
+// fields must come from prepareUnmarshal.
 // skipMissing controls how missing elements are handled (see unmarshalInstance).
-func (o *Operation) unmarshal(dv reflect.Value, skipMissing bool) error {
-	elemType := dv.Type().Elem()
-
+func (o *Operation) unmarshal[T any](dst *[]T, fields []miField, skipMissing bool) error {
 	for {
 		instance, moreResults, err := o.GetInstance()
 		if err != nil {
@@ -274,13 +295,13 @@ func (o *Operation) unmarshal(dv reflect.Value, skipMissing bool) error {
 			break
 		}
 
-		elemValue := reflect.New(elemType).Elem()
+		var elem T
 
-		if err := unmarshalInstance(instance, elemType, elemValue, skipMissing); err != nil {
+		if err := unmarshalInstance(instance, fields, reflect.ValueOf(&elem).Elem(), skipMissing); err != nil {
 			return err
 		}
 
-		dv.Set(reflect.Append(dv, elemValue))
+		*dst = append(*dst, elem)
 
 		if !moreResults {
 			break
