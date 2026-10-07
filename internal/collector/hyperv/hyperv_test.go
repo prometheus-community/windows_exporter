@@ -23,6 +23,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/hyperv"
 	"github.com/prometheus-community/windows_exporter/internal/utils/testutils"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/stretchr/testify/require"
 )
 
 func BenchmarkCollector(b *testing.B) {
@@ -33,4 +34,9 @@ func TestCollector(t *testing.T) {
 	metrics := testutils.TestCollector(t, hyperv.New, nil)
 	testutils.RequireFixtureMetric(t, metrics, hyperv.Name, "windows_hyperv_dynamic_memory_vm_physical_bytes", prometheus.Labels{"vm": "GitHubActions"})
 	testutils.RequireFixtureMetric(t, metrics, hyperv.Name, "windows_hyperv_vm_processor_count", prometheus.Labels{"vm": "GitHubActions"})
+
+	// The health query reports failures as 0 instead of an error, so check the value.
+	if metric := testutils.RequireFixtureMetric(t, metrics, hyperv.Name, "windows_hyperv_wmi_health", nil); metric != nil {
+		require.InDelta(t, 1, metric.GetGauge().GetValue(), 0, "Hyper-V WMI health query failed")
+	}
 }

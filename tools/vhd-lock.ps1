@@ -18,3 +18,22 @@ function Invoke-WithVhdLock([scriptblock]$ScriptBlock) {
         $mutex.Dispose()
     }
 }
+
+# New-Partition can return before the storage provider exposes the new volume,
+# which makes Format-Volume fail with CmdletizationQuery_NotFound. Retry until
+# the volume appears.
+function Format-NewDisk($Disk, [string]$Label) {
+    $partition = $Disk | Initialize-Disk -PartitionStyle GPT -PassThru |
+        New-Partition -UseMaximumSize -AssignDriveLetter
+    $deadline = (Get-Date).AddSeconds(30)
+    while ($true) {
+        try {
+            return $partition | Format-Volume -FileSystem NTFS -NewFileSystemLabel $Label -Confirm:$false
+        } catch {
+            if ($_.FullyQualifiedErrorId -notlike "CmdletizationQuery_NotFound*" -or (Get-Date) -ge $deadline) {
+                throw
+            }
+            Start-Sleep -Seconds 1
+        }
+    }
+}

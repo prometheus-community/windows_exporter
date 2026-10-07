@@ -61,9 +61,7 @@ $volume = Invoke-WithVhdLock {
     if ($disk.PhysicalSectorSize -gt 4096) {
         throw "SQL Server fixture disk exposes unsupported physical sectors"
     }
-    $disk | Initialize-Disk -PartitionStyle GPT -PassThru |
-        New-Partition -UseMaximumSize -AssignDriveLetter |
-        Format-Volume -FileSystem NTFS -NewFileSystemLabel CISQL -Confirm:$false
+    Format-NewDisk $disk CISQL
 }
 $instanceDir = "$($volume.DriveLetter):\SQLServer"
 fsutil.exe fsinfo sectorinfo "$($volume.DriveLetter):"
