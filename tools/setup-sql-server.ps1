@@ -1,5 +1,21 @@
 # Install a real Database Engine instance; LocalDB does not expose server counters.
+# CI runs -DownloadOnly before installing the DNS Server role, which breaks
+# downloads, and the installation after all Windows features are installed.
+param([switch]$DownloadOnly)
+
 $ErrorActionPreference = "Stop"
+
+# Run an installer and fail instead of hanging when it does not finish in time.
+function Invoke-Installer([string]$FilePath, [string[]]$ArgumentList, [int]$TimeoutMinutes) {
+    $process = Start-Process $FilePath -ArgumentList $ArgumentList -PassThru
+    # Windows PowerShell only reports ExitCode if the handle was read before exit.
+    $null = $process.Handle
+    if (-not $process.WaitForExit($TimeoutMinutes * 60 * 1000)) {
+        Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+        throw "$(Split-Path $FilePath -Leaf) did not finish within $TimeoutMinutes minutes"
+    }
+    return $process.ExitCode
+}
 
 $mediaDir = Join-Path $env:RUNNER_TEMP "sql-server"
 New-Item -ItemType Directory -Force -Path $mediaDir | Out-Null
@@ -18,20 +34,20 @@ if (-not (Test-Path (Join-Path $setupDir "setup.exe"))) {
 
     $media = Join-Path $mediaDir "SQLEXPR_x64_ENU.exe"
     foreach ($attempt in 1..3) {
-        $download = Start-Process $installer -Wait -PassThru `
+        $exitCode = Invoke-Installer $installer -TimeoutMinutes 10 `
             -ArgumentList "/ACTION=Download", "/MEDIATYPE=Core", "/QUIET", "/MEDIAPATH=$mediaDir"
-        if ($download.ExitCode -eq 0 -and (Test-Path $media)) { break }
-        if ($attempt -eq 3) { throw "SQL Server media download failed: $($download.ExitCode)" }
-        Write-Warning "SQL Server media download attempt $attempt failed: $($download.ExitCode)"
+        if ($exitCode -eq 0 -and (Test-Path $media)) { break }
+        if ($attempt -eq 3) { throw "SQL Server media download failed: $exitCode" }
+        Write-Warning "SQL Server media download attempt $attempt failed: $exitCode"
         Start-Sleep -Seconds 10
     }
 
-    $extract = Start-Process $media -Wait -PassThru `
-        -ArgumentList "/Q", "/X:$setupDir"
-    if ($extract.ExitCode -ne 0) {
-        throw "SQL Server media extraction failed: $($extract.ExitCode)"
+    $exitCode = Invoke-Installer $media -ArgumentList "/Q", "/X:$setupDir" -TimeoutMinutes 10
+    if ($exitCode -ne 0) {
+        throw "SQL Server media extraction failed: $exitCode"
     }
 }
+if ($DownloadOnly) { return }
 
 # Azure runners can expose sectors larger than SQL Server's supported 4 KB.
 # Keep every instance file on a disk with a known, compatible sector size.
