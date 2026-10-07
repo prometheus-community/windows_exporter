@@ -348,10 +348,11 @@ jobs:
         with:
           persist-credentials: 'false'
 
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      # Skip the SQL Server download and extraction when the setup files are cached.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          # renovate: golang=go
-          go-version: '1.27.1'
+          path: ${{ runner.temp }}/sql-server/setup
+          key: sql-server-2025-express-fa7e1fabc9a2-${{ runner.os }}
 
       # Steps unrelated to Windows role installation start immediately in the background.
       - name: Install FreeRDP client
@@ -412,132 +413,154 @@ jobs:
           @{ Unlocked = $unlocked; Locked = $locked } | ConvertTo-Json |
               Set-Content (Join-Path $env:RUNNER_TEMP "bitlocker-fixture.json")
 
-      - parallel:
-          - name: Install Containers feature
-            shell: pwsh
-            run: |
-              $ErrorActionPreference = "Stop"
+      - name: Setup storage pool
+        id: setup-storage-pool
+        background: true
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
 
-              $features = @(
-                  "Containers"
-                  "Failover-Clustering"
-                  "RSAT-Clustering-PowerShell"
-              )
-              $result = Install-WindowsFeature -Name $features
-              $result | Format-List Success, RestartNeeded, ExitCode, FeatureResult
+          $disk1 = Join-Path $env:RUNNER_TEMP "storage-pool-1.vhdx"
+          $disk2 = Join-Path $env:RUNNER_TEMP "storage-pool-2.vhdx"
+          $diskpartScript = Join-Path $env:RUNNER_TEMP "storage-pool-diskpart.txt"
 
-              if (-not $result.Success -or $result.RestartNeeded -ne "No") {
-                  throw "Containers feature could not be installed without a restart"
-              }
+          @"
+          create vdisk file="$disk1" maximum=10240 type=expandable
+          attach vdisk
+          create vdisk file="$disk2" maximum=10240 type=expandable
+          attach vdisk
+          "@ | Set-Content -Path $diskpartScript -Encoding ascii
 
-              Get-WindowsFeature -Name $features |
-                  Format-Table DisplayName, Name, InstallState
+          diskpart /s $diskpartScript
+          Update-HostStorageCache
 
-          - name: Setup storage pool
-            shell: pwsh
-            run: |
-              $ErrorActionPreference = "Stop"
+          # Background steps attach their own VHDX files concurrently.
+          $diskNumbers = @($disk1, $disk2 | ForEach-Object { (Get-DiskImage -ImagePath $_).Number })
+          $newDisks = @(Get-PhysicalDisk | Where-Object { [int]$_.DeviceId -in $diskNumbers })
+          $newDisks | Format-Table FriendlyName, DeviceId, MediaType, BusType, Size, CanPool, CannotPoolReason
 
-              $disk1 = Join-Path $env:RUNNER_TEMP "storage-pool-1.vhdx"
-              $disk2 = Join-Path $env:RUNNER_TEMP "storage-pool-2.vhdx"
-              $diskpartScript = Join-Path $env:RUNNER_TEMP "storage-pool-diskpart.txt"
+          $poolableDisks = @($newDisks | Where-Object CanPool)
 
-              @"
-              create vdisk file="$disk1" maximum=10240 type=expandable
-              attach vdisk
-              create vdisk file="$disk2" maximum=10240 type=expandable
-              attach vdisk
-              "@ | Set-Content -Path $diskpartScript -Encoding ascii
+          if ($poolableDisks.Count -ne 2) {
+              throw "Expected two poolable VHDX disks, found $($poolableDisks.Count)"
+          }
 
-              diskpart /s $diskpartScript
-              Update-HostStorageCache
+          New-StoragePool `
+              -FriendlyName "GitHubActions" `
+              -StorageSubsystemFriendlyName "Windows Storage*" `
+              -PhysicalDisks $poolableDisks
 
-              # Background steps attach their own VHDX files concurrently.
-              $diskNumbers = @($disk1, $disk2 | ForEach-Object { (Get-DiskImage -ImagePath $_).Number })
-              $newDisks = @(Get-PhysicalDisk | Where-Object { [int]$_.DeviceId -in $diskNumbers })
-              $newDisks | Format-Table FriendlyName, DeviceId, MediaType, BusType, Size, CanPool, CannotPoolReason
+          $pool = Get-StoragePool -FriendlyName "GitHubActions" -ErrorAction Stop
+          $pool | Format-List FriendlyName, HealthStatus, OperationalStatus, Size, AllocatedSize
 
-              $poolableDisks = @($newDisks | Where-Object CanPool)
+          if ($pool.IsPrimordial) {
+              throw "Expected a concrete storage pool"
+          }
 
-              if ($poolableDisks.Count -ne 2) {
-                  throw "Expected two poolable VHDX disks, found $($poolableDisks.Count)"
-              }
+          New-VirtualDisk -StoragePoolFriendlyName "GitHubActions" `
+              -FriendlyName "CIVirtualDisk" -Size 1GB -ResiliencySettingName Simple
 
-              New-StoragePool `
-                  -FriendlyName "GitHubActions" `
-                  -StorageSubsystemFriendlyName "Windows Storage*" `
-                  -PhysicalDisks $poolableDisks
+      - name: Start Hyper-V VM
+        id: start-hyperv-vm
+        background: true
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
 
-              $pool = Get-StoragePool -FriendlyName "GitHubActions" -ErrorAction Stop
-              $pool | Format-List FriendlyName, HealthStatus, OperationalStatus, Size, AllocatedSize
+          Import-Module Hyper-V
+          Start-Service vmms
 
-              if ($pool.IsPrimordial) {
-                  throw "Expected a concrete storage pool"
-              }
+          New-VMSwitch -Name "CISwitch" -SwitchType Internal
+          New-VM `
+              -Name "GitHubActions" `
+              -Generation 1 `
+              -MemoryStartupBytes 256MB `
+              -NewVHDPath (Join-Path $env:RUNNER_TEMP "hyperv-ci.vhdx") `
+              -NewVHDSizeBytes 1GB `
+              -SwitchName "CISwitch"
 
-              New-VirtualDisk -StoragePoolFriendlyName "GitHubActions" `
-                  -FriendlyName "CIVirtualDisk" -Size 1GB -ResiliencySettingName Simple
+          Add-VMNetworkAdapter -VMName "GitHubActions" -Name "CILegacy" `
+              -IsLegacy $true -SwitchName "CISwitch"
+          Start-VM -Name "GitHubActions"
 
-          - name: Download container prerequisites
-            shell: pwsh
-            run: |
-              $ErrorActionPreference = "Stop"
+          $vm = Get-VM -Name "GitHubActions"
+          $vm | Format-List Name, State, Status, Generation, Uptime
 
-              $cacheDir = Join-Path $env:RUNNER_TEMP "container-prereqs"
-              New-Item -ItemType Directory -Force -Path $cacheDir | Out-Null
+          if ($vm.State -ne "Running") {
+              throw "Expected Hyper-V VM to be running, got $($vm.State)"
+          }
 
-              $downloads = @{
-                  "Install-Containerd.ps1" = "https://raw.githubusercontent.com/kubernetes-sigs/sig-windows-tools/877cfb9ae91749ab9d73314337504ac962d6f90e/hostprocess/Install-Containerd.ps1"
-                  "containerd.tar.gz" = "https://github.com/containerd/containerd/releases/download/v$($env:CONTAINERD_VERSION)/containerd-$($env:CONTAINERD_VERSION)-windows-amd64.tar.gz"
-                  "crictl.tar.gz" = "https://github.com/kubernetes-sigs/cri-tools/releases/download/v$($env:CRITOOLS_VERSION)/crictl-v$($env:CRITOOLS_VERSION)-windows-amd64.tar.gz"
-                  "cni-plugins.tgz" = "https://github.com/containernetworking/plugins/releases/download/v$($env:CNI_VERSION)/cni-plugins-windows-amd64-v$($env:CNI_VERSION).tgz"
-                  "kubelet.exe" = "https://dl.k8s.io/release/$($env:KUBERNETES_VERSION)/bin/windows/amd64/kubelet.exe"
-                  "kubelet.exe.sha256" = "https://dl.k8s.io/release/$($env:KUBERNETES_VERSION)/bin/windows/amd64/kubelet.exe.sha256"
-                  "hns.psm1" = "https://raw.githubusercontent.com/microsoft/SDN/32df9732ef6dfab07dba205440e30bdfbd8e579a/Kubernetes/windows/hns.psm1"
-              }
+      - name: Download container prerequisites
+        id: download-container-prereqs
+        background: true
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
 
-              foreach ($download in $downloads.GetEnumerator()) {
-                  Invoke-WebRequest `
-                      -Uri $download.Value `
-                      -OutFile (Join-Path $cacheDir $download.Key) `
-                      -MaximumRetryCount 5 `
-                      -RetryIntervalSec 5
-              }
+          $cacheDir = Join-Path $env:RUNNER_TEMP "container-prereqs"
+          New-Item -ItemType Directory -Force -Path $cacheDir | Out-Null
 
-              $installer = Join-Path $cacheDir "Install-Containerd.ps1"
-              $installerContent = Get-Content -Raw $installer
-              $installerContent = $installerContent.Replace(
-                  '    curl.exe --silent --fail -Lo $destination $source',
-                  '    if (Test-Path $destination) { Write-Host "Using pre-downloaded $destination"; return }' + "`r`n" + '    curl.exe --silent --fail -Lo $destination $source'
-              )
-              Set-Content -Path $installer -Value $installerContent -Encoding utf8
-          - name: Start Hyper-V VM
-            shell: pwsh
-            run: |
-              $ErrorActionPreference = "Stop"
+          $downloads = @{
+              "Install-Containerd.ps1" = "https://raw.githubusercontent.com/kubernetes-sigs/sig-windows-tools/877cfb9ae91749ab9d73314337504ac962d6f90e/hostprocess/Install-Containerd.ps1"
+              "containerd.tar.gz" = "https://github.com/containerd/containerd/releases/download/v$($env:CONTAINERD_VERSION)/containerd-$($env:CONTAINERD_VERSION)-windows-amd64.tar.gz"
+              "crictl.tar.gz" = "https://github.com/kubernetes-sigs/cri-tools/releases/download/v$($env:CRITOOLS_VERSION)/crictl-v$($env:CRITOOLS_VERSION)-windows-amd64.tar.gz"
+              "cni-plugins.tgz" = "https://github.com/containernetworking/plugins/releases/download/v$($env:CNI_VERSION)/cni-plugins-windows-amd64-v$($env:CNI_VERSION).tgz"
+              "kubelet.exe" = "https://dl.k8s.io/release/$($env:KUBERNETES_VERSION)/bin/windows/amd64/kubelet.exe"
+              "kubelet.exe.sha256" = "https://dl.k8s.io/release/$($env:KUBERNETES_VERSION)/bin/windows/amd64/kubelet.exe.sha256"
+              "hns.psm1" = "https://raw.githubusercontent.com/microsoft/SDN/32df9732ef6dfab07dba205440e30bdfbd8e579a/Kubernetes/windows/hns.psm1"
+          }
 
-              Import-Module Hyper-V
-              Start-Service vmms
+          foreach ($download in $downloads.GetEnumerator()) {
+              Invoke-WebRequest `
+                  -Uri $download.Value `
+                  -OutFile (Join-Path $cacheDir $download.Key) `
+                  -MaximumRetryCount 5 `
+                  -RetryIntervalSec 5
+          }
 
-              New-VMSwitch -Name "CISwitch" -SwitchType Internal
-              New-VM `
-                  -Name "GitHubActions" `
-                  -Generation 1 `
-                  -MemoryStartupBytes 256MB `
-                  -NewVHDPath (Join-Path $env:RUNNER_TEMP "hyperv-ci.vhdx") `
-                  -NewVHDSizeBytes 1GB `
-                  -SwitchName "CISwitch"
+          $installer = Join-Path $cacheDir "Install-Containerd.ps1"
+          $installerContent = Get-Content -Raw $installer
+          $installerContent = $installerContent.Replace(
+              '    curl.exe --silent --fail -Lo $destination $source',
+              '    if (Test-Path $destination) { Write-Host "Using pre-downloaded $destination"; return }' + "`r`n" + '    curl.exe --silent --fail -Lo $destination $source'
+          )
+          Set-Content -Path $installer -Value $installerContent -Encoding utf8
 
-              Add-VMNetworkAdapter -VMName "GitHubActions" -Name "CILegacy" `
-                  -IsLegacy $true -SwitchName "CISwitch"
-              Start-VM -Name "GitHubActions"
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          # renovate: golang=go
+          go-version: '1.27.1'
 
-              $vm = Get-VM -Name "GitHubActions"
-              $vm | Format-List Name, State, Status, Generation, Uptime
+      - name: Build Go tests
+        id: build-go-tests
+        background: true
+        shell: pwsh
+        run: |
+          # Compile the race-enabled test binaries while fixtures are provisioned;
+          # the Go tests step reuses the build cache.
+          go test -race -count=1 -run '^$' ./...
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          go build -trimpath -o windows_exporter.exe ./cmd/windows_exporter
 
-              if ($vm.State -ne "Running") {
-                  throw "Expected Hyper-V VM to be running, got $($vm.State)"
-              }
+      - name: Install Containers feature
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          $features = @(
+              "Containers"
+              "Failover-Clustering"
+              "RSAT-Clustering-PowerShell"
+          )
+          $result = Install-WindowsFeature -Name $features
+          $result | Format-List Success, RestartNeeded, ExitCode, FeatureResult
+
+          if (-not $result.Success -or $result.RestartNeeded -ne "No") {
+              throw "Containers feature could not be installed without a restart"
+          }
+
+          Get-WindowsFeature -Name $features |
+              Format-Table DisplayName, Name, InstallState
 
       - name: Setup MSCluster
         id: setup-mscluster
@@ -616,6 +639,9 @@ jobs:
 
           Get-WindowsFeature -Name $features |
               Format-Table DisplayName, Name, InstallState
+
+      - name: Wait for container prerequisites
+        wait: [download-container-prereqs]
 
       - name: Prepare container runtime
         shell: pwsh
@@ -1305,7 +1331,16 @@ jobs:
 
 
       - name: Wait for background setup
-        wait: [pull-hostprocess, pull-nanoserver, setup-mscluster, setup-mssql, setup-bitlocker, setup-rdp]
+        wait:
+          - build-go-tests
+          - pull-hostprocess
+          - pull-nanoserver
+          - setup-bitlocker
+          - setup-mscluster
+          - setup-mssql
+          - setup-rdp
+          - setup-storage-pool
+          - start-hyperv-vm
 
       - name: Export background fixtures
         shell: pwsh
