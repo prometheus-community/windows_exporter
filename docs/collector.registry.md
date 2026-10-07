@@ -24,7 +24,7 @@ of a JSON array of objects. YAML is supported.
 
 > [!CAUTION]
 > If you are using a configuration file, the value must be kept as a string.
-> 
+>
 > Use a `|-` to keep the value as a string.
 
 #### Example
@@ -93,7 +93,7 @@ JSON:
 
 #### name
 
-Required, unique id for the key group. It is used as the `name` label on
+Required, unique ID for the key group. It is used as the `name` label on
 `windows_registry_key_success`, to identify the key in logs, and to seed
 auto-generated metric names (see [Metric naming](#metric-naming)). Each key must
 have a distinct `name`; duplicates are rejected at build time.
