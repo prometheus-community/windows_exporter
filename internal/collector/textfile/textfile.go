@@ -22,9 +22,9 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"maps"
 	"os"
 	"path/filepath"
-	"reflect"
 	"slices"
 	"sort"
 	"strings"
@@ -140,7 +140,7 @@ func duplicateMetricEntry(metricFamilies []*dto.MetricFamily) bool {
 			_, mapContainsKey := uniqueMetrics[metricName]
 
 			// Duplicate metric found with identical labels & label values
-			if mapContainsKey && reflect.DeepEqual(uniqueMetrics[metricName], labels) {
+			if mapContainsKey && maps.Equal(uniqueMetrics[metricName], labels) {
 				return true
 			}
 

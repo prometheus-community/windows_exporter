@@ -18,7 +18,7 @@
 package config
 
 import (
-	"reflect"
+	"maps"
 	"testing"
 
 	"go.yaml.in/yaml/v3"
@@ -49,7 +49,7 @@ func TestConfigFlattening(t *testing.T) {
 	}
 	flattenedValues := flatten(data)
 
-	if !reflect.DeepEqual(expectedResult, flattenedValues) {
+	if !maps.Equal(expectedResult, flattenedValues) {
 		t.Errorf("Flattened values do not match!\nExpected result: %s\nActual result: %s", expectedResult, flattenedValues)
 	}
 }

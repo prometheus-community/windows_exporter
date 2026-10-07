@@ -323,7 +323,7 @@ func (c *Collector) collectObject(ch chan<- prometheus.Metric, perfDataObject Ob
 				continue
 			}
 
-			if field.Kind() != reflect.TypeFor[prometheus.ValueType]().Kind() {
+			if field.Type() != reflect.TypeFor[prometheus.ValueType]() {
 				errs = append(errs, fmt.Errorf("failed to cast MetricType for %s to prometheus.ValueType", counter.Name))
 
 				continue
