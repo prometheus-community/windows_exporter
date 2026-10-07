@@ -41,7 +41,7 @@ type Config struct{}
 //nolint:gochecknoglobals
 var ConfigDefaults = Config{}
 
-// A Collector is a Prometheus Collector for WMI metrics.
+// A Collector is a Prometheus Collector for OS metrics.
 type Collector struct {
 	config Config
 

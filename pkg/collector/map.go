@@ -32,6 +32,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/dfsr"
 	"github.com/prometheus-community/windows_exporter/internal/collector/dhcp"
 	"github.com/prometheus-community/windows_exporter/internal/collector/diskdrive"
+	"github.com/prometheus-community/windows_exporter/internal/collector/dmi"
 	"github.com/prometheus-community/windows_exporter/internal/collector/dns"
 	"github.com/prometheus-community/windows_exporter/internal/collector/exchange"
 	"github.com/prometheus-community/windows_exporter/internal/collector/file"
@@ -90,6 +91,7 @@ var BuildersWithFlags = map[string]BuilderWithFlags[Collector]{
 	dfsr.Name:               NewBuilderWithFlags(dfsr.NewWithFlags),
 	dhcp.Name:               NewBuilderWithFlags(dhcp.NewWithFlags),
 	diskdrive.Name:          NewBuilderWithFlags(diskdrive.NewWithFlags),
+	dmi.Name:                NewBuilderWithFlags(dmi.NewWithFlags),
 	dns.Name:                NewBuilderWithFlags(dns.NewWithFlags),
 	exchange.Name:           NewBuilderWithFlags(exchange.NewWithFlags),
 	file.Name:               NewBuilderWithFlags(file.NewWithFlags),
