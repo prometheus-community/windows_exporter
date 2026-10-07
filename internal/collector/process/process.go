@@ -483,7 +483,7 @@ func (c *Collector) getProcessOwner(logger *slog.Logger, hProcess windows.Handle
 		if err != nil {
 			owner = sid
 		} else {
-			owner = fmt.Sprintf(`%s\%s`, account, domain)
+			owner = fmt.Sprintf(`%s\%s`, domain, account)
 		}
 
 		c.lookupCache.Store(sid, owner)
