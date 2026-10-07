@@ -1,30 +1,27 @@
 # Install a real Database Engine instance; LocalDB does not expose server counters.
-param([switch]$DownloadOnly)
-
 $ErrorActionPreference = "Stop"
 
 $mediaDir = Join-Path $env:RUNNER_TEMP "sql-server"
 New-Item -ItemType Directory -Force -Path $mediaDir | Out-Null
 $installer = Join-Path $mediaDir "SQL2025-SSEI-Expr.exe"
-if (-not (Test-Path $installer)) {
-    Invoke-WebRequest `
-        -Uri "https://download.microsoft.com/download/ffd82b4c-9955-47c0-8efe-6290f7795cf6/SQL2025-SSEI-Expr.exe" `
-        -OutFile $installer
-}
+# Microsoft download endpoints occasionally reset hosted runner connections.
+curl.exe --fail --location --retry 5 --retry-all-errors --silent --show-error --output $installer `
+    "https://download.microsoft.com/download/ffd82b4c-9955-47c0-8efe-6290f7795cf6/SQL2025-SSEI-Expr.exe"
+if ($LASTEXITCODE -ne 0) { throw "SQL Server bootstrapper download failed" }
 $expectedHash = "fa7e1fabc9a2e9c9cdab0d1512bcb30d2949133147db057ac530f510e5270680"
 if ((Get-FileHash $installer -Algorithm SHA256).Hash -ne $expectedHash) {
     throw "SQL Server bootstrapper SHA256 mismatch"
 }
 
 $media = Join-Path $mediaDir "SQLEXPR_x64_ENU.exe"
-if (-not (Test-Path $media)) {
+foreach ($attempt in 1..3) {
     $download = Start-Process $installer -Wait -PassThru `
         -ArgumentList "/ACTION=Download", "/MEDIATYPE=Core", "/QUIET", "/MEDIAPATH=$mediaDir"
-    if ($download.ExitCode -ne 0) {
-        throw "SQL Server media download failed: $($download.ExitCode)"
-    }
+    if ($download.ExitCode -eq 0 -and (Test-Path $media)) { break }
+    if ($attempt -eq 3) { throw "SQL Server media download failed: $($download.ExitCode)" }
+    Write-Warning "SQL Server media download attempt $attempt failed: $($download.ExitCode)"
+    Start-Sleep -Seconds 10
 }
-if ($DownloadOnly) { return }
 
 # Azure runners can expose sectors larger than SQL Server's supported 4 KB.
 # Keep every instance file on a disk with a known, compatible sector size.

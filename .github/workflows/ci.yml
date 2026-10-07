@@ -365,6 +365,65 @@ jobs:
           # renovate: golang=go
           go-version: '1.27.1'
 
+      # Steps unrelated to Windows role installation start immediately in the background.
+      - name: Install FreeRDP client
+        id: install-freerdp
+        background: true
+        shell: powershell
+        run: |
+          foreach ($attempt in 1..3) {
+              choco install freerdp.portable --version=3.28.0 --yes --no-progress
+              if ($LASTEXITCODE -eq 0) { break }
+              if ($attempt -eq 3) { throw "Failed to install FreeRDP" }
+              Start-Sleep -Seconds 10
+          }
+          Get-Command wfreerdp.exe -ErrorAction Stop
+
+      - name: Setup SQL Server Express
+        id: setup-mssql
+        background: true
+        shell: powershell
+        run: ./tools/setup-sql-server.ps1
+
+      - name: Setup BitLocker volumes
+        id: setup-bitlocker
+        background: true
+        shell: powershell
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          # Hosted images ship the BitLocker feature; data volumes need no reboot.
+          function New-BitLockerVolume([string]$Name) {
+              $vhd = Join-Path $env:RUNNER_TEMP "$Name.vhdx"
+              New-VHD -Path $vhd -Dynamic -SizeBytes 512MB | Out-Null
+              $volume = Mount-VHD $vhd -PassThru | Get-Disk |
+                  Initialize-Disk -PartitionStyle GPT -PassThru |
+                  New-Partition -UseMaximumSize -AssignDriveLetter |
+                  Format-Volume -FileSystem NTFS -NewFileSystemLabel $Name -Confirm:$false
+              $mountPoint = "$($volume.DriveLetter):"
+
+              $password = ConvertTo-SecureString ("CI-" + [Guid]::NewGuid().ToString('N')) -AsPlainText -Force
+              Enable-BitLocker -MountPoint $mountPoint -PasswordProtector -Password $password -UsedSpaceOnly | Out-Null
+
+              $deadline = (Get-Date).AddMinutes(2)
+              while ((Get-BitLockerVolume -MountPoint $mountPoint).VolumeStatus -ne "FullyEncrypted") {
+                  if ((Get-Date) -ge $deadline) { throw "BitLocker volume $Name did not finish encryption" }
+                  Start-Sleep -Seconds 2
+              }
+
+              return $mountPoint
+          }
+
+          $unlocked = New-BitLockerVolume CIBitLocker
+          $locked = New-BitLockerVolume CIBitLockerLocked
+          Lock-BitLocker -MountPoint $locked -ForceDismount | Out-Null
+
+          Get-BitLockerVolume -MountPoint $unlocked, $locked |
+              Format-Table MountPoint, VolumeStatus, ProtectionStatus, LockStatus
+
+          @{ Unlocked = $unlocked; Locked = $locked } | ConvertTo-Json |
+              Set-Content (Join-Path $env:RUNNER_TEMP "bitlocker-fixture.json")
+
       - parallel:
           - name: Install Containers feature
             shell: pwsh
@@ -391,7 +450,6 @@ jobs:
             run: |
               $ErrorActionPreference = "Stop"
 
-              $existingDiskIds = @(Get-PhysicalDisk | ForEach-Object ObjectId)
               $disk1 = Join-Path $env:RUNNER_TEMP "storage-pool-1.vhdx"
               $disk2 = Join-Path $env:RUNNER_TEMP "storage-pool-2.vhdx"
               $diskpartScript = Join-Path $env:RUNNER_TEMP "storage-pool-diskpart.txt"
@@ -406,7 +464,9 @@ jobs:
               diskpart /s $diskpartScript
               Update-HostStorageCache
 
-              $newDisks = @(Get-PhysicalDisk | Where-Object { $_.ObjectId -notin $existingDiskIds })
+              # Background steps attach their own VHDX files concurrently.
+              $diskNumbers = @($disk1, $disk2 | ForEach-Object { (Get-DiskImage -ImagePath $_).Number })
+              $newDisks = @(Get-PhysicalDisk | Where-Object { [int]$_.DeviceId -in $diskNumbers })
               $newDisks | Format-Table FriendlyName, DeviceId, MediaType, BusType, Size, CanPool, CannotPoolReason
 
               $poolableDisks = @($newDisks | Where-Object CanPool)
@@ -451,7 +511,9 @@ jobs:
               foreach ($download in $downloads.GetEnumerator()) {
                   Invoke-WebRequest `
                       -Uri $download.Value `
-                      -OutFile (Join-Path $cacheDir $download.Key)
+                      -OutFile (Join-Path $cacheDir $download.Key) `
+                      -MaximumRetryCount 5 `
+                      -RetryIntervalSec 5
               }
 
               $installer = Join-Path $cacheDir "Install-Containerd.ps1"
@@ -461,18 +523,6 @@ jobs:
                   '    if (Test-Path $destination) { Write-Host "Using pre-downloaded $destination"; return }' + "`r`n" + '    curl.exe --silent --fail -Lo $destination $source'
               )
               Set-Content -Path $installer -Value $installerContent -Encoding utf8
-          # Finish external downloads before the DNS role can start.
-          - name: Install FreeRDP client
-            shell: powershell
-            run: |
-              choco install freerdp.portable --version=3.28.0 --yes --no-progress
-              if ($LASTEXITCODE -ne 0) { throw "Failed to install FreeRDP" }
-              Get-Command wfreerdp.exe -ErrorAction Stop
-
-          - name: Download SQL Server media
-            shell: powershell
-            run: ./tools/setup-sql-server.ps1 -DownloadOnly
-
           - name: Start Hyper-V VM
             shell: pwsh
             run: |
@@ -500,51 +550,6 @@ jobs:
               if ($vm.State -ne "Running") {
                   throw "Expected Hyper-V VM to be running, got $($vm.State)"
               }
-
-      - name: Setup BitLocker volumes
-        shell: powershell
-        run: |
-          $ErrorActionPreference = "Stop"
-
-          # Hosted images ship the BitLocker feature; data volumes need no reboot.
-          function New-BitLockerVolume([string]$Name) {
-              $vhd = Join-Path $env:RUNNER_TEMP "$Name.vhdx"
-              New-VHD -Path $vhd -Dynamic -SizeBytes 512MB | Out-Null
-              $volume = Mount-VHD $vhd -PassThru | Get-Disk |
-                  Initialize-Disk -PartitionStyle GPT -PassThru |
-                  New-Partition -UseMaximumSize -AssignDriveLetter |
-                  Format-Volume -FileSystem NTFS -NewFileSystemLabel $Name -Confirm:$false
-              $mountPoint = "$($volume.DriveLetter):"
-
-              $password = ConvertTo-SecureString ("CI-" + [Guid]::NewGuid().ToString('N')) -AsPlainText -Force
-              Enable-BitLocker -MountPoint $mountPoint -PasswordProtector -Password $password -UsedSpaceOnly | Out-Null
-
-              $deadline = (Get-Date).AddMinutes(2)
-              while ((Get-BitLockerVolume -MountPoint $mountPoint).VolumeStatus -ne "FullyEncrypted") {
-                  if ((Get-Date) -ge $deadline) { throw "BitLocker volume $Name did not finish encryption" }
-                  Start-Sleep -Seconds 2
-              }
-
-              return $mountPoint
-          }
-
-          $unlocked = New-BitLockerVolume CIBitLocker
-          $locked = New-BitLockerVolume CIBitLockerLocked
-          Lock-BitLocker -MountPoint $locked -ForceDismount | Out-Null
-
-          Get-BitLockerVolume -MountPoint $unlocked, $locked |
-              Format-Table MountPoint, VolumeStatus, ProtectionStatus, LockStatus
-
-          @(
-              "WINDOWS_EXPORTER_TEST_BITLOCKER_VOLUME=$unlocked"
-              "WINDOWS_EXPORTER_TEST_BITLOCKER_LOCKED_VOLUME=$locked"
-          ) | Add-Content $env:GITHUB_ENV
-
-      - name: Setup SQL Server Express
-        id: setup-mssql
-        background: true
-        shell: powershell
-        run: ./tools/setup-sql-server.ps1
 
       - name: Setup MSCluster
         id: setup-mscluster
@@ -904,7 +909,118 @@ jobs:
           }
 
       - name: Wait for Windows roles
-        wait: [install-windows-roles]
+        wait: [install-windows-roles, install-freerdp]
+
+      # Start user session processes after Windows servicing finishes.
+      - name: Setup local RDP session
+        id: setup-rdp
+        background: true
+        shell: powershell
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          $userName = "rdp-ci"
+          $password = "WindowsExporter-CI-2026!"
+          $securePassword = ConvertTo-SecureString $password -AsPlainText -Force
+
+          if ($null -eq (Get-LocalUser -Name $userName -ErrorAction SilentlyContinue)) {
+              New-LocalUser `
+                  -Name $userName `
+                  -Password $securePassword `
+                  -PasswordNeverExpires `
+                  -AccountNeverExpires | Out-Null
+          }
+
+          Add-LocalGroupMember `
+              -Group "Remote Desktop Users" `
+              -Member $userName `
+              -ErrorAction SilentlyContinue
+
+          Set-ItemProperty `
+              -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server" `
+              -Name fDenyTSConnections `
+              -Value 0
+
+          Start-Service TermService
+          (Get-Service TermService).WaitForStatus("Running", [TimeSpan]::FromSeconds(30))
+
+          $wfreerdp = (Get-Command wfreerdp.exe -ErrorAction Stop).Source
+          $stdout = Join-Path $env:RUNNER_TEMP "rdp-client.stdout.log"
+          $stderr = Join-Path $env:RUNNER_TEMP "rdp-client.stderr.log"
+          # Runners are disposable. Without the tracking ID, the client and its
+          # session outlive this background step without any cleanup.
+          $env:RUNNER_TRACKING_ID = ""
+          $freeRdp = Start-Process `
+              -FilePath $wfreerdp `
+              -ArgumentList @(
+                  "/v:127.0.0.1"
+                  "/u:$env:COMPUTERNAME\$userName"
+                  "/p:$password"
+                  "/cert:ignore"
+                  "/size:800x600"
+                  "/log-level:INFO"
+              ) `
+              -RedirectStandardOutput $stdout `
+              -RedirectStandardError $stderr `
+              -PassThru
+          Write-Host "Started wfreerdp.exe with PID $($freeRdp.Id)"
+
+          $deadline = (Get-Date).AddSeconds(120)
+          $rdpSession = $null
+
+          do {
+              $sessions = qwinsta.exe
+              $sessions | ForEach-Object { Write-Host $_ }
+
+              $rdpSession = $sessions |
+                  Where-Object { $_ -match "^\s*>?\s*rdp-tcp#\d+\s+$userName\s+\d+\s+Active\b" } |
+                  Select-Object -First 1
+
+              if ($null -ne $rdpSession) {
+                  break
+              }
+
+              if ($freeRdp.HasExited) {
+                  Get-Content $stdout,$stderr -ErrorAction SilentlyContinue
+                  throw "wfreerdp.exe exited before the RDP user became active"
+              }
+
+              Start-Sleep -Seconds 2
+          } while ((Get-Date) -lt $deadline)
+
+          if ($null -eq $rdpSession) {
+              Get-Content $stdout,$stderr -ErrorAction SilentlyContinue
+              throw "No authenticated active RDP session was created by FreeRDP"
+          }
+
+          Write-Host "Active RDP session: $rdpSession"
+          $sessionName = [regex]::Match($rdpSession, 'rdp-tcp#\d+', 'IgnoreCase').Value.Replace('#', ' ')
+
+          $remoteFxNetwork = Get-Counter -ListSet "RemoteFX Network" -ErrorAction Stop
+          $remoteFxGraphics = Get-Counter -ListSet "RemoteFX Graphics" -ErrorAction Stop
+
+          $networkInstances = @($remoteFxNetwork.PathsWithInstances |
+              Where-Object { $_ -match "RDP-Tcp[# ]\d+" })
+          $graphicsInstances = @($remoteFxGraphics.PathsWithInstances |
+              Where-Object { $_ -match "RDP-Tcp[# ]\d+" })
+
+          Write-Host "RemoteFX Network instances:"
+          $networkInstances | ForEach-Object { Write-Host $_ }
+
+          Write-Host "RemoteFX Graphics instances:"
+          $graphicsInstances | ForEach-Object { Write-Host $_ }
+
+          if ($networkInstances.Count -eq 0) {
+              Write-Warning "No RemoteFX Network RDP-Tcp instance was created"
+          }
+
+          if ($graphicsInstances.Count -eq 0) {
+              Write-Warning "No RemoteFX Graphics RDP-Tcp instance was created"
+          }
+          @{
+              SessionName = $sessionName
+              RemoteFX = ($networkInstances.Count -gt 0 -and $graphicsInstances.Count -gt 0)
+          } | ConvertTo-Json | Set-Content (Join-Path $env:RUNNER_TEMP "rdp-ready.json")
 
       - parallel:
           - name: Setup IIS
@@ -1192,145 +1308,16 @@ jobs:
 
 
       - name: Wait for background setup
-        wait: [pull-hostprocess, pull-nanoserver, setup-mscluster, setup-mssql]
+        wait: [pull-hostprocess, pull-nanoserver, setup-mscluster, setup-mssql, setup-bitlocker, setup-rdp]
 
-      # Start user session processes after Windows servicing finishes.
-      - name: Setup local RDP session
-        id: setup-rdp
-        continue-on-error: true
-        background: true
-        shell: powershell
-        run: |
-          $ErrorActionPreference = "Stop"
-
-          $userName = "rdp-ci"
-          $password = "WindowsExporter-CI-2026!"
-          $securePassword = ConvertTo-SecureString $password -AsPlainText -Force
-
-          if ($null -eq (Get-LocalUser -Name $userName -ErrorAction SilentlyContinue)) {
-              New-LocalUser `
-                  -Name $userName `
-                  -Password $securePassword `
-                  -PasswordNeverExpires `
-                  -AccountNeverExpires | Out-Null
-          }
-
-          Add-LocalGroupMember `
-              -Group "Remote Desktop Users" `
-              -Member $userName `
-              -ErrorAction SilentlyContinue
-
-          Set-ItemProperty `
-              -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server" `
-              -Name fDenyTSConnections `
-              -Value 0
-
-          Start-Service TermService
-          (Get-Service TermService).WaitForStatus("Running", [TimeSpan]::FromSeconds(30))
-
-          $wfreerdp = (Get-Command wfreerdp.exe -ErrorAction Stop).Source
-          $stdout = Join-Path $env:RUNNER_TEMP "rdp-client.stdout.log"
-          $stderr = Join-Path $env:RUNNER_TEMP "rdp-client.stderr.log"
-          $freeRdp = Start-Process `
-              -FilePath $wfreerdp `
-              -ArgumentList @(
-                  "/v:127.0.0.1"
-                  "/u:$env:COMPUTERNAME\$userName"
-                  "/p:$password"
-                  "/cert:ignore"
-                  "/size:800x600"
-                  "/log-level:INFO"
-              ) `
-              -RedirectStandardOutput $stdout `
-              -RedirectStandardError $stderr `
-              -PassThru
-          $freeRdp.Id | Set-Content (Join-Path $env:RUNNER_TEMP "rdp-client.pid")
-
-          Write-Host "Started wfreerdp.exe with PID $($freeRdp.Id)"
-
-          $deadline = (Get-Date).AddSeconds(120)
-          $rdpSession = $null
-
-          do {
-              $sessions = qwinsta.exe
-              $sessions | ForEach-Object { Write-Host $_ }
-
-              $rdpSession = $sessions |
-                  Where-Object { $_ -match "^\s*>?\s*rdp-tcp#\d+\s+$userName\s+\d+\s+Active\b" } |
-                  Select-Object -First 1
-
-              if ($null -ne $rdpSession) {
-                  break
-              }
-
-              if ($freeRdp.HasExited) {
-                  Get-Content $stdout,$stderr -ErrorAction SilentlyContinue
-                  throw "wfreerdp.exe exited before the RDP user became active"
-              }
-
-              Start-Sleep -Seconds 2
-          } while ((Get-Date) -lt $deadline)
-
-          if ($null -eq $rdpSession) {
-              Get-Content $stdout,$stderr -ErrorAction SilentlyContinue
-              throw "No authenticated active RDP session was created by FreeRDP"
-          }
-
-          Write-Host "Active RDP session: $rdpSession"
-          $sessionName = [regex]::Match($rdpSession, 'rdp-tcp#\d+', 'IgnoreCase').Value.Replace('#', ' ')
-
-          $remoteFxNetwork = Get-Counter -ListSet "RemoteFX Network" -ErrorAction Stop
-          $remoteFxGraphics = Get-Counter -ListSet "RemoteFX Graphics" -ErrorAction Stop
-
-          $networkInstances = @($remoteFxNetwork.PathsWithInstances |
-              Where-Object { $_ -match "RDP-Tcp[# ]\d+" })
-          $graphicsInstances = @($remoteFxGraphics.PathsWithInstances |
-              Where-Object { $_ -match "RDP-Tcp[# ]\d+" })
-
-          Write-Host "RemoteFX Network instances:"
-          $networkInstances | ForEach-Object { Write-Host $_ }
-
-          Write-Host "RemoteFX Graphics instances:"
-          $graphicsInstances | ForEach-Object { Write-Host $_ }
-
-          if ($networkInstances.Count -eq 0) {
-              Write-Warning "No RemoteFX Network RDP-Tcp instance was created"
-          }
-
-          if ($graphicsInstances.Count -eq 0) {
-              Write-Warning "No RemoteFX Graphics RDP-Tcp instance was created"
-          }
-          $readyFile = Join-Path $env:RUNNER_TEMP "rdp-ready.json"
-          @{
-              SessionName = $sessionName
-              RemoteFX = ($networkInstances.Count -gt 0 -and $graphicsInstances.Count -gt 0)
-          } | ConvertTo-Json | Set-Content "$readyFile.tmp"
-          Move-Item "$readyFile.tmp" $readyFile
-
-          # Ending a background step also ends its child processes. Keep the
-          # authenticated client alive until the Go tests and smoke check finish.
-          $stopFile = Join-Path $env:RUNNER_TEMP "rdp-stop"
-          while (-not (Test-Path $stopFile)) {
-              if ($freeRdp.HasExited) {
-                  Get-Content $stdout,$stderr -ErrorAction SilentlyContinue
-                  throw "RDP client exited while the fixture was in use"
-              }
-              Start-Sleep -Seconds 2
-          }
-          Stop-Process -Id $freeRdp.Id -ErrorAction SilentlyContinue
-
-      - name: Wait for active RDP fixture
+      - name: Export background fixtures
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
           $readyFile = Join-Path $env:RUNNER_TEMP "rdp-ready.json"
-          $deadline = (Get-Date).AddMinutes(3)
-          while (-not (Test-Path $readyFile)) {
-              if ((Get-Date) -ge $deadline) {
-                  Get-Content (Join-Path $env:RUNNER_TEMP "rdp-client.*.log") -ErrorAction SilentlyContinue
-                  throw "RDP fixture did not become ready"
-              }
-              Start-Sleep -Seconds 2
+          if (-not (Test-Path $readyFile)) {
+              Get-Content (Join-Path $env:RUNNER_TEMP "rdp-client.*.log") -ErrorAction SilentlyContinue
+              throw "RDP fixture did not become ready"
           }
           $fixture = Get-Content $readyFile -Raw | ConvertFrom-Json
           "WINDOWS_EXPORTER_TEST_RDP_SESSION=$($fixture.SessionName)" | Add-Content $env:GITHUB_ENV
@@ -1338,6 +1325,10 @@ jobs:
               "WINDOWS_EXPORTER_TEST_COLLECTORS=$env:WINDOWS_EXPORTER_TEST_COLLECTORS,remote_fx" |
                   Add-Content $env:GITHUB_ENV
           }
+
+          $bitlocker = Get-Content (Join-Path $env:RUNNER_TEMP "bitlocker-fixture.json") -Raw | ConvertFrom-Json
+          "WINDOWS_EXPORTER_TEST_BITLOCKER_VOLUME=$($bitlocker.Unlocked)" | Add-Content $env:GITHUB_ENV
+          "WINDOWS_EXPORTER_TEST_BITLOCKER_LOCKED_VOLUME=$($bitlocker.Locked)" | Add-Content $env:GITHUB_ENV
 
       - name: Start SMTP server
         if: ${{ matrix.smtp }}
@@ -1408,14 +1399,6 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           ./tools/end-to-end-test.ps1
 
-      - name: Signal RDP workload to stop
-        if: ${{ always() }}
-        shell: pwsh
-        run: New-Item -ItemType File -Force (Join-Path $env:RUNNER_TEMP "rdp-stop") | Out-Null
-
-      - name: Wait for RDP workload cleanup
-        wait: [setup-rdp]
-
       - name: Upload test logs
         if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -1439,10 +1422,6 @@ jobs:
           $pidFile = Join-Path $env:RUNNER_TEMP "netframework.pid"
           if (Test-Path $pidFile) {
               Stop-Process -Id (Get-Content $pidFile) -ErrorAction SilentlyContinue
-          }
-          $rdpPidFile = Join-Path $env:RUNNER_TEMP "rdp-client.pid"
-          if (Test-Path $rdpPidFile) {
-              Stop-Process -Id (Get-Content $rdpPidFile) -ErrorAction SilentlyContinue
           }
           Get-Process kubelet -ErrorAction SilentlyContinue | Stop-Process -ErrorAction SilentlyContinue
           Get-VM -Name GitHubActions -ErrorAction SilentlyContinue | Stop-VM -TurnOff -Force -ErrorAction SilentlyContinue
