@@ -20,8 +20,10 @@ package hyperv
 import (
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
+	"github.com/prometheus-community/windows_exporter/internal/headers/sysinfoapi"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
@@ -49,7 +51,16 @@ func (c *Collector) buildWMIHealth() error {
 		return mi.ErrNotInitialized
 	}
 
-	miQuery, err := mi.NewQuery("SELECT Name FROM Msvm_ComputerSystem WHERE Caption = 'Hosting Computer System'")
+	// The host's Msvm_ComputerSystem is named after the physical NetBIOS name.
+	// Caption is localized, so it can't be used to select the host.
+	hostname, err := sysinfoapi.GetComputerName(sysinfoapi.ComputerNamePhysicalNetBIOS)
+	if err != nil {
+		return fmt.Errorf("failed to get computer name: %w", err)
+	}
+
+	hostname = strings.NewReplacer(`\`, `\\`, `'`, `\'`).Replace(hostname)
+
+	miQuery, err := mi.NewQuery("SELECT Name FROM Msvm_ComputerSystem WHERE Name = '" + hostname + "'")
 	if err != nil {
 		return fmt.Errorf("failed to create WMI query: %w", err)
 	}

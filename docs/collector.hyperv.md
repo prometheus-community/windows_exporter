@@ -276,7 +276,7 @@ Multiply by the number of threads per core to get the ratio per **physical** cor
 ### Hyper-V WMI Health
 
 Sub-collector `wmi_health`, enabled by default. It runs a minimal WQL query
-(`SELECT Name FROM Msvm_ComputerSystem WHERE Caption = 'Hosting Computer System'`) against the
+(`SELECT Name FROM Msvm_ComputerSystem WHERE Name = '<computer name>'`) against the
 `root/virtualization/v2` namespace on every scrape, so remove it from `--collectors.hyperv.enabled` if you don't need it.
 
 | Name                       | Description                                                                                                  | Type  | Labels |
