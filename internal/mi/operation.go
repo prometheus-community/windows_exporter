@@ -51,6 +51,11 @@ type Operation struct {
 	reserved1 uint64
 	reserved2 uintptr
 	ft        *OperationFT
+
+	// completed is set once GetInstance has returned the final result. It is
+	// Go-only state after the MI_Operation fields, which MI never writes past;
+	// every Operation is allocated in Go.
+	completed bool
 }
 
 // OperationFT represents the function table for Operation.
@@ -106,14 +111,17 @@ func (o *Operation) Close() error {
 		return ErrNotInitialized
 	}
 
-	moreResults := true
+	// MI_Operation_Close blocks until the final result has been delivered, so
+	// pending results must be read first. Reading them would cost the full
+	// remaining result set, so the operation is cancelled, which makes the
+	// final result arrive right away. A fully read operation needs neither.
+	if !o.completed {
+		_ = o.Cancel()
 
-	var err error
-
-	for moreResults {
-		_, moreResults, err = o.GetInstance()
-		if err != nil {
-			break
+		for !o.completed {
+			if _, _, err := o.GetInstance(); err != nil {
+				break
+			}
 		}
 	}
 
@@ -190,11 +198,18 @@ func (o *Operation) GetInstance() (*Instance, bool, error) {
 			errorMessage = fmt.Sprintf(" (%s)", errorMessage)
 		}
 
+		// A failed result is always the final one.
+		o.completed = true
+
 		return nil, false, fmt.Errorf("instance result: %w%s", instanceResult, errorMessage)
 	}
 
 	if result := ResultError(r0); !errors.Is(result, MI_RESULT_OK) {
 		return nil, false, result
+	}
+
+	if moreResults != True {
+		o.completed = true
 	}
 
 	return instance, moreResults == True, nil

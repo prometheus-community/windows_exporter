@@ -107,6 +107,7 @@ func (instance *Instance) GetElement(elementName string) (*Element, error) {
 	var (
 		valueBuf  [5]uint64
 		valueType ValueType
+		flags     uint32
 	)
 
 	r0, _, _ := syscall.SyscallN(
@@ -115,7 +116,7 @@ func (instance *Instance) GetElement(elementName string) (*Element, error) {
 		uintptr(unsafe.Pointer(elementNameUTF16)),
 		uintptr(unsafe.Pointer(&valueBuf)),
 		uintptr(unsafe.Pointer(&valueType)),
-		0,
+		uintptr(unsafe.Pointer(&flags)),
 		0,
 	)
 
@@ -127,6 +128,8 @@ func (instance *Instance) GetElement(elementName string) (*Element, error) {
 		value:     uintptr(valueBuf[0]),
 		arrayLen:  uint32(valueBuf[1]),
 		valueType: valueType,
+		flags:     flags,
+		raw:       valueBuf,
 	}, nil
 }
 

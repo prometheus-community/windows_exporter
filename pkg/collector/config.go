@@ -67,6 +67,7 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/collector/udp"
 	"github.com/prometheus-community/windows_exporter/internal/collector/update"
 	"github.com/prometheus-community/windows_exporter/internal/collector/vmware"
+	"github.com/prometheus-community/windows_exporter/internal/collector/wmi"
 )
 
 type Config struct {
@@ -119,6 +120,7 @@ type Config struct {
 	UDP                udp.Config                `yaml:"udp"`
 	Update             update.Config             `yaml:"update"`
 	Vmware             vmware.Config             `yaml:"vmware"`
+	WMI                wmi.Config                `yaml:"wmi"`
 }
 
 // ConfigDefaults Is an interface to be used by the external libraries. It holds all ConfigDefaults form all collectors
@@ -175,4 +177,5 @@ var ConfigDefaults = Config{
 	UDP:                udp.ConfigDefaults,
 	Update:             update.ConfigDefaults,
 	Vmware:             vmware.ConfigDefaults,
+	WMI:                wmi.ConfigDefaults,
 }
