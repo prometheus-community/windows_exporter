@@ -13,11 +13,11 @@ The logical_disk collector exposes metrics about logical disks (in contrast to p
 
 ### `--collector.logical_disk.volume-include`
 
-If given, a disk needs to match the include regexp in order for the corresponding disk metrics to be reported
+If given, a disk needs to match the include regular expression in order for the corresponding disk metrics to be reported
 
 ### `--collector.logical_disk.volume-exclude`
 
-If given, a disk needs to *not* match the exclude regexp in order for the corresponding disk metrics to be reported
+If given, a disk needs to *not* match the exclude regular expression in order for the corresponding disk metrics to be reported
 
 ### `--collector.logical_disk.enabled`
 
@@ -46,7 +46,28 @@ Comma-separated list of collectors to use. Available collectors: metrics, bitloc
 
 ### Warning about size metrics
 The `free_bytes` and `size_bytes` metrics are not updated in real time and might have a delay of 10-15min.
-This is the same behavior as the windows performance counters.
+This is the same behavior as the Windows performance counters.
+
+### BitLocker status
+The `bitlocker_status` sub-collector reads the BitLocker status through `fveapi.dll`, the BitLocker API of Windows.
+It works when windows_exporter runs as a service (`LocalSystem`) and as a non-elevated user.
+The API is undocumented, so the status is derived from reverse-engineered flags.
+
+The `status` label has one of these values:
+
+| Status                   | Meaning                                                                   |
+|--------------------------|---------------------------------------------------------------------------|
+| `on`                     | The volume is fully encrypted and protection is active                    |
+| `off`                    | The volume is not encrypted                                               |
+| `encrypting`             | Encryption is in progress or paused                                       |
+| `decrypting`             | Decryption is in progress or paused                                       |
+| `suspended`              | The volume is fully encrypted, but protection is suspended                |
+| `locked`                 | The volume is locked                                                      |
+| `waiting_for_activation` | The volume is encrypted with a clear key, but no key protector exists yet |
+| `unknown`                | The status flags do not match a known state                               |
+| `disabled`               | Not reported anymore, always 0. Kept for compatibility                    |
+
+A fully encrypted volume is only reported as `on` if protection is active.
 
 ### Example metric
 Query the rate of write operations to a disk
