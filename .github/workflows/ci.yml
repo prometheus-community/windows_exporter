@@ -299,7 +299,7 @@ jobs:
     runs-on: ubuntu-24.04
     needs:
       - package
-      - test
+      - windows-test
     permissions:
       contents: write
     steps:
@@ -316,16 +316,6 @@ jobs:
             windows_exporter-*.exe \
             windows_exporter-*.msi \
             sha256sums.txt
-
-  test:
-    if: ${{ always() }}
-    needs: windows-test
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Require all Windows test jobs to pass
-        env:
-          TEST_RESULT: ${{ needs.windows-test.result }}
-        run: test "$TEST_RESULT" = success
 
   windows-test:
     name: Windows tests (${{ matrix.os }})
@@ -1502,3 +1492,21 @@ jobs:
           VALIDATE_SPELL_CODESPELL: true
           # VALIDATE_XML: true
           # VALIDATE_YAML: true
+
+  # Require this job in the merge rules. It is skipped, which counts as passing,
+  # unless a needed job failed or was cancelled.
+  fail:
+    if: ${{ cancelled() || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'failure') }}
+    needs:
+      - build
+      - package
+      - docker
+      - windows-test
+      - lint
+      - super-linter
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Verify checks passed
+        run: |
+          echo "Some checks have failed!"
+          exit 1
