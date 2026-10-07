@@ -40,7 +40,7 @@ const Name = "update"
 
 type Config struct {
 	Online         bool          `yaml:"online"`
-	ScrapeInterval time.Duration `yaml:"scrape_interval"`
+	ScrapeInterval time.Duration `yaml:"scrape-interval"`
 }
 
 //nolint:gochecknoglobals
