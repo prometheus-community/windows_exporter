@@ -456,15 +456,8 @@ func (s *Session) QueryFunc(namespaceName Namespace, queryExpression Query, quer
 		return fmt.Errorf("failed to query instances: %w", result)
 	}
 
-	completed := false
-
+	// Close cancels the operation if fn aborted it early.
 	defer func() {
-		// Close drains every remaining instance, so an aborted query is
-		// cancelled first. Otherwise it still costs the full result set.
-		if !completed {
-			_ = operation.Cancel()
-		}
-
 		_ = operation.Close()
 	}()
 
@@ -475,8 +468,6 @@ func (s *Session) QueryFunc(namespaceName Namespace, queryExpression Query, quer
 		}
 
 		if instance == nil {
-			completed = true
-
 			return nil
 		}
 
@@ -485,8 +476,6 @@ func (s *Session) QueryFunc(namespaceName Namespace, queryExpression Query, quer
 		}
 
 		if !moreResults {
-			completed = true
-
 			return nil
 		}
 	}

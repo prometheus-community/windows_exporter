@@ -956,3 +956,36 @@ func Test_MI_QueryFunc(t *testing.T) {
 	})
 	require.Error(t, err)
 }
+
+func Test_MI_Operation_CloseEarly(t *testing.T) {
+	application, err := mi.ApplicationInitialize()
+	require.NoError(t, err)
+
+	t.Cleanup(func() { require.NoError(t, application.Close()) })
+
+	session, err := application.NewSession(nil)
+	require.NoError(t, err)
+
+	t.Cleanup(func() { require.NoError(t, session.Close()) })
+
+	// Closing an operation with pending results cancels it instead of reading
+	// them, and must leave the session usable.
+	for range 3 {
+		operation, err := session.QueryInstances(mi.OperationFlagsStandardRTTI, nil, mi.NamespaceRootCIMv2, mi.QueryDialectWQL, "SELECT Name FROM Win32_Process")
+		require.NoError(t, err)
+
+		instance, moreResults, err := operation.GetInstance()
+		require.NoError(t, err)
+		require.NotNil(t, instance)
+		require.True(t, moreResults)
+
+		require.NoError(t, operation.Close())
+	}
+
+	var processes []win32Process
+
+	query, err := mi.NewQuery("SELECT Name FROM Win32_Process WHERE Handle = 0")
+	require.NoError(t, err)
+	require.NoError(t, session.Query(&processes, mi.NamespaceRootCIMv2, query, 5*time.Second))
+	require.Equal(t, []win32Process{{Name: "System Idle Process"}}, processes)
+}
