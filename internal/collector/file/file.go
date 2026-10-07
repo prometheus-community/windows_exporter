@@ -18,6 +18,7 @@
 package file
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"log/slog"
@@ -139,6 +140,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 // to the provided prometheus Metric channel.
 func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error {
 	wg := sync.WaitGroup{}
+	errCh := make(chan error, len(c.config.FilePatterns))
 
 	for _, filePattern := range c.config.FilePatterns {
 		wg.Add(1)
@@ -147,23 +149,31 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 			defer wg.Done()
 
 			if err := c.collectGlobFilePath(ch, filePattern); err != nil {
-				c.logger.Error("failed collecting metrics for filepath",
-					slog.String("filepath", filePattern),
-					slog.Any("err", err),
-				)
+				errCh <- fmt.Errorf("failed collecting metrics for file pattern %s: %w", filePattern, err)
 			}
 		}(filePattern)
 	}
 
 	wg.Wait()
 
-	return nil
+	close(errCh)
+
+	errs := make([]error, 0, len(c.config.FilePatterns))
+
+	for err := range errCh {
+		errs = append(errs, err)
+	}
+
+	return errors.Join(errs...)
 }
 
 func (c *Collector) collectGlobFilePath(ch chan<- prometheus.Metric, filePattern string) error {
 	basePath, pattern := doublestar.SplitPattern(filepath.ToSlash(filePattern))
 	basePathFS := os.DirFS(basePath)
 
+	// WithFailOnIOErrors reports unreadable directories instead of silently
+	// skipping them, so the collector is marked as failed. Paths that do not
+	// exist still count as patterns without matches.
 	err := doublestar.GlobWalk(basePathFS, pattern, func(path string, d fs.DirEntry) error {
 		filePath := filepath.Join(basePath, path)
 
@@ -194,7 +204,7 @@ func (c *Collector) collectGlobFilePath(ch chan<- prometheus.Metric, filePattern
 		)
 
 		return nil
-	}, doublestar.WithFilesOnly(), doublestar.WithCaseInsensitive())
+	}, doublestar.WithFilesOnly(), doublestar.WithCaseInsensitive(), doublestar.WithFailOnIOErrors())
 	if err != nil {
 		return fmt.Errorf("failed to glob: %w", err)
 	}
