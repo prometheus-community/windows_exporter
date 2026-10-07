@@ -43,17 +43,19 @@ func TestStatusState(t *testing.T) {
 		flags uint32
 		want  State
 	}{
-		// Flags observed on Windows 11 and compared with Win32_EncryptableVolume.
-		{name: "on, observed", flags: 0x00045309, want: StateOn},
-		{name: "off, observed", flags: 0x00000004, want: StateOff},
+		// Flags observed on Windows 11 and compared with Win32_EncryptableVolume and manage-bde.
+		{name: "fully decrypted", flags: 0x00000004, want: StateOff},
+		{name: "encryption paused", flags: 0x000401A1, want: StateEncrypting},
+		{name: "encryption running", flags: 0x00042121, want: StateEncrypting},
+		{name: "protection on", flags: 0x00041109, want: StateOn},
+		{name: "protection on, OS volume with TPM", flags: 0x00045309, want: StateOn},
+		{name: "protection suspended", flags: 0x00040509, want: StateSuspended},
+		{name: "locked", flags: 0x00041909, want: StateLocked},
+		{name: "decryption paused", flags: 0x00040191, want: StateDecrypting},
+		{name: "decryption running", flags: 0x00042111, want: StateDecrypting},
 
-		// Flags derived from the flag names, not observed yet.
-		{name: "suspended", flags: 0x00044709, want: StateSuspended},
+		// Derived from the flag names, not observed yet.
 		{name: "waiting for activation", flags: 0x00000409, want: StateWaitingForActivation},
-		{name: "encrypting", flags: 0x00040321, want: StateEncrypting},
-		{name: "encryption paused", flags: 0x00040361, want: StateEncrypting},
-		{name: "decrypting", flags: 0x00040311, want: StateDecrypting},
-		{name: "locked", flags: 0x00040909, want: StateLocked},
 
 		// Unexpected combinations must not be reported as off.
 		{name: "no flags", flags: 0, want: StateUnknown},

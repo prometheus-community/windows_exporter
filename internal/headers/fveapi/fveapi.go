@@ -37,17 +37,29 @@
 // The flag values come from the reverse-engineered header of KNSoft.NDK (MIT):
 // https://github.com/KNSoft/KNSoft.NDK/blob/main/Source/Include/KNSoft/NDK/Win32/FVE/FveApi.h
 //
-// Verified on Windows 11 (build 26300) against Win32_EncryptableVolume and
-// Get-BitLockerVolume, as LocalSystem and as a non-elevated user:
+// Verified on Windows 11 (build 26300), as LocalSystem and as a non-elevated user,
+// against Win32_EncryptableVolume GetProtectionStatus/GetConversionStatus/GetLockStatus
+// and manage-bde -status. Flags per state:
 //
-//	Protection On, FullyEncrypted  -> 0x00045309 (INITIALIZED|FULLY_ENCRYPTED|PROTECTION_ACTIVE|...)
-//	Protection Off, FullyDecrypted -> 0x00000004 (FULLY_DECRYPTED)
-//	EFI and recovery partitions    -> 0x00000004 (FULLY_DECRYPTED)
-//	Non-existent volume            -> HRESULT 0x80070002
+//	State                  Flags       WMI Protection/Conversion/Lock
+//	fully decrypted        0x00000004  0/0/0
+//	encryption paused      0x000401A1  0/4/0
+//	encryption running     0x00042121  0/2/0
+//	protection on          0x00041109  1/1/0  (OS volume with TPM: 0x00045309)
+//	protection suspended   0x00040509  0/1/0
+//	locked                 0x00041909  2/-/1
+//	decryption paused      0x00040191  0/5/0
+//	decryption running     0x00042111  0/3/0
+//	EFI and recovery       0x00000004  -
+//	non-existent volume    HRESULT 0x80070002
 //
-// The remaining states (suspended, encryption/decryption in progress or paused,
-// locked, waiting for activation) are mapped from the flag names, but not
-// verified yet.
+// A suspended volume stays FULLY_ENCRYPTED; only PROTECTION_ACTIVE is cleared.
+// A locked volume still reports FULLY_ENCRYPTED and PROTECTION_ACTIVE, so LOCKED
+// has to be checked first. 0x80 marks a paused conversion and 0x2000 a running one;
+// both are not needed for the state. During decryption, ConvertedPercent is the
+// decrypted share of the volume.
+//
+// Not verified: waiting for activation (clear key without key protectors).
 package fveapi
 
 import (
