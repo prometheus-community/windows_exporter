@@ -148,6 +148,19 @@ func run(ctx context.Context, args []string) int {
 		logger.LogAttrs(ctx, slog.LevelInfo, "using configuration file: "+*configFile)
 	}
 
+	// Log the build and the account before the collectors are built,
+	// so that this information is available if a collector fails to initialize.
+	logger.LogAttrs(ctx, slog.LevelInfo, "starting windows_exporter",
+		slog.String("version", version.Version),
+		slog.String("branch", version.Branch),
+		slog.String("revision", version.GetRevision()),
+		slog.String("goversion", version.GoVersion),
+		slog.String("builddate", version.BuildDate),
+		slog.Int("maxprocs", runtime.GOMAXPROCS(0)),
+	)
+
+	logCurrentUser(ctx, logger)
+
 	if err = setPriorityWindows(ctx, logger, os.Getpid(), *processPriority); err != nil {
 		logger.LogAttrs(ctx, slog.LevelError, "failed to set process priority",
 			slog.Any("err", err),
@@ -175,12 +188,10 @@ func run(ctx context.Context, args []string) int {
 			logger.LogAttrs(ctx, slog.LevelError, "couldn't initialize collector",
 				slog.Any("err", err),
 			)
-
-			return 1
 		}
-	}
 
-	logCurrentUser(ctx, logger)
+		return 1
+	}
 
 	logger.InfoContext(ctx, "Enabled collectors: "+strings.Join(enabledCollectorList, ", "))
 
@@ -200,14 +211,7 @@ func run(ctx context.Context, args []string) int {
 		mux.HandleFunc("GET /debug/pprof/trace", pprof.Trace)
 	}
 
-	logger.LogAttrs(ctx, slog.LevelInfo, fmt.Sprintf("starting windows_exporter in %s", time.Since(startTime)),
-		slog.String("version", version.Version),
-		slog.String("branch", version.Branch),
-		slog.String("revision", version.GetRevision()),
-		slog.String("goversion", version.GoVersion),
-		slog.String("builddate", version.BuildDate),
-		slog.Int("maxprocs", runtime.GOMAXPROCS(0)),
-	)
+	logger.LogAttrs(ctx, slog.LevelInfo, fmt.Sprintf("started windows_exporter in %s", time.Since(startTime)))
 
 	server := &http.Server{
 		ReadHeaderTimeout: 5 * time.Second,
