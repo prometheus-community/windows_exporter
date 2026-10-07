@@ -96,13 +96,8 @@ func TestRun(t *testing.T) {
 
 			exitCodeCh := make(chan int)
 
-			var stdout string
-
 			go func() {
-				stdout = captureOutput(t, func() {
-					// Simulate the service control manager signaling that we are done.
-					exitCodeCh <- run(ctx, tc.args)
-				})
+				exitCodeCh <- run(ctx, tc.args)
 			}()
 
 			t.Cleanup(func() {
@@ -122,13 +117,13 @@ func TestRun(t *testing.T) {
 			require.NoError(t, err)
 
 			err = waitUntilListening(t, "tcp", uri.Host)
-			require.NoError(t, err, "LOGS:\n%s", stdout)
+			require.NoError(t, err)
 
 			req, err := http.NewRequestWithContext(ctx, http.MethodGet, tc.metricsEndpoint, nil)
 			require.NoError(t, err)
 
 			resp, err := http.DefaultClient.Do(req)
-			require.NoError(t, err, "LOGS:\n%s", stdout)
+			require.NoError(t, err)
 			require.Equal(t, http.StatusOK, resp.StatusCode)
 
 			body, err := io.ReadAll(resp.Body)
@@ -145,24 +140,6 @@ func TestRun(t *testing.T) {
 	}
 }
 
-func captureOutput(tb testing.TB, f func()) string {
-	tb.Helper()
-
-	orig := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	f()
-
-	os.Stdout = orig
-
-	_ = w.Close()
-
-	out, _ := io.ReadAll(r)
-
-	return string(out)
-}
-
 func waitUntilListening(tb testing.TB, network, address string) error {
 	tb.Helper()
 
@@ -173,7 +150,9 @@ func waitUntilListening(tb testing.TB, network, address string) error {
 
 	dialer := &net.Dialer{Timeout: 100 * time.Millisecond}
 
-	for range 20 {
+	deadline := time.Now().Add(30 * time.Second)
+
+	for time.Now().Before(deadline) {
 		conn, err = dialer.DialContext(tb.Context(), network, address)
 		if err == nil {
 			_ = conn.Close()

@@ -119,7 +119,7 @@ func (c *Collector) GetName() string {
 }
 
 func (c *Collector) Close() error {
-	for _, object := range c.config.Objects {
+	for _, object := range c.objects {
 		object.collector.Close()
 	}
 

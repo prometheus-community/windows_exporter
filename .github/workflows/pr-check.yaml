@@ -8,10 +8,12 @@ on:
       - labeled
       - unlabeled
 
+permissions: {}
+
 jobs:
   required-labels-missing:
     name: required labels missing
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     steps:
       - name: check
         if: >-
@@ -31,9 +33,14 @@ jobs:
           && exit 1
   title:
     name: check title prefix
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: 'false'
+
       - name: check
         run: |
           PR_TITLE_PREFIX=$(echo "$PR_TITLE" | cut -d':' -f1)

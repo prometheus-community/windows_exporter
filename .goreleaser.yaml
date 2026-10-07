@@ -1,0 +1,28 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+
+version: 2
+
+builds:
+  - id: windows_exporter
+    main: ./cmd/windows_exporter
+    binary: windows_exporter-{{ .Arch }}
+    no_unique_dist_dir: true
+    goos:
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    tags:
+      - trimpath
+    ldflags:
+      - >-
+        -X github.com/prometheus/common/version.Version={{ .Version }}
+        -X github.com/prometheus/common/version.Revision={{ .FullCommit }}
+        -X github.com/prometheus/common/version.Branch={{ .Branch }}
+        -X github.com/prometheus/common/version.BuildUser=github-actions
+        -X github.com/prometheus/common/version.BuildDate={{ .Now.Format "20060102-15:04:05" }}
+    mod_timestamp: '{{ .CommitTimestamp }}'

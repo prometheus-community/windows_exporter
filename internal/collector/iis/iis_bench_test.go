@@ -22,6 +22,7 @@ import (
 
 	"github.com/prometheus-community/windows_exporter/internal/collector/iis"
 	"github.com/prometheus-community/windows_exporter/internal/utils/testutils"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 func BenchmarkCollector(b *testing.B) {
@@ -29,5 +30,6 @@ func BenchmarkCollector(b *testing.B) {
 }
 
 func TestCollector(t *testing.T) {
-	testutils.TestCollector(t, iis.New, nil)
+	metrics := testutils.TestCollector(t, iis.New, nil)
+	testutils.RequireFixtureMetric(t, metrics, iis.Name, "windows_iis_requests_total", prometheus.Labels{"site": "Default Web Site", "method": "get"})
 }

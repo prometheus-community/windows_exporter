@@ -22,6 +22,7 @@ import (
 
 	"github.com/prometheus-community/windows_exporter/internal/collector/smbclient"
 	"github.com/prometheus-community/windows_exporter/internal/utils/testutils"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 func BenchmarkCollector(b *testing.B) {
@@ -29,5 +30,6 @@ func BenchmarkCollector(b *testing.B) {
 }
 
 func TestCollector(t *testing.T) {
-	testutils.TestCollector(t, smbclient.New, nil)
+	metrics := testutils.TestCollector(t, smbclient.New, nil)
+	testutils.RequireFixtureMetric(t, metrics, smbclient.Name, "windows_smbclient_data_queue_seconds_total", prometheus.Labels{"share": "CIShare"})
 }

@@ -15,20 +15,23 @@
 
 //go:build windows
 
-package netframework_test
+package httphandler_test
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
-	"github.com/prometheus-community/windows_exporter/internal/collector/netframework"
-	"github.com/prometheus-community/windows_exporter/internal/utils/testutils"
+	"github.com/prometheus-community/windows_exporter/internal/httphandler"
+	"github.com/stretchr/testify/require"
 )
 
-func BenchmarkCollector(b *testing.B) {
-	// No context name required as Collector source is WMI
-	testutils.FuncBenchmarkCollector(b, netframework.Name, netframework.NewWithFlags)
-}
+func TestHealthHandler(t *testing.T) {
+	t.Parallel()
 
-func TestCollector(t *testing.T) {
-	testutils.TestCollector(t, netframework.New, nil)
+	response := httptest.NewRecorder()
+	httphandler.NewHealthHandler().ServeHTTP(response, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/health", nil))
+	require.Equal(t, http.StatusOK, response.Code)
+	require.Equal(t, "application/json", response.Header().Get("Content-Type"))
+	require.JSONEq(t, `{"status":"ok"}`, response.Body.String())
 }

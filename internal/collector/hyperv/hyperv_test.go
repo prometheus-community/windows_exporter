@@ -22,6 +22,7 @@ import (
 
 	"github.com/prometheus-community/windows_exporter/internal/collector/hyperv"
 	"github.com/prometheus-community/windows_exporter/internal/utils/testutils"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 func BenchmarkCollector(b *testing.B) {
@@ -29,5 +30,6 @@ func BenchmarkCollector(b *testing.B) {
 }
 
 func TestCollector(t *testing.T) {
-	testutils.TestCollector(t, hyperv.New, nil)
+	metrics := testutils.TestCollector(t, hyperv.New, nil)
+	testutils.RequireFixtureMetric(t, metrics, hyperv.Name, "windows_hyperv_dynamic_memory_vm_physical_bytes", prometheus.Labels{"vm": "GitHubActions"})
 }

@@ -22,6 +22,7 @@ import (
 
 	"github.com/prometheus-community/windows_exporter/internal/collector/dhcp"
 	"github.com/prometheus-community/windows_exporter/internal/utils/testutils"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 func BenchmarkCollector(b *testing.B) {
@@ -29,5 +30,6 @@ func BenchmarkCollector(b *testing.B) {
 }
 
 func TestCollector(t *testing.T) {
-	testutils.TestCollector(t, dhcp.New, nil)
+	metrics := testutils.TestCollector(t, dhcp.New, nil)
+	testutils.RequireFixtureMetric(t, metrics, dhcp.Name, "windows_dhcp_scope_info", prometheus.Labels{"name": "GitHubActions", "scope": "192.0.2.0/24"})
 }
