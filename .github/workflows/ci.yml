@@ -947,23 +947,32 @@ jobs:
           $wfreerdp = (Get-Command wfreerdp.exe -ErrorAction Stop).Source
           $stdout = Join-Path $env:RUNNER_TEMP "rdp-client.stdout.log"
           $stderr = Join-Path $env:RUNNER_TEMP "rdp-client.stderr.log"
-          # Runners are disposable. Without the tracking ID, the client and its
-          # session outlive this background step without any cleanup.
-          $env:RUNNER_TRACKING_ID = ""
-          $freeRdp = Start-Process `
-              -FilePath $wfreerdp `
-              -ArgumentList @(
-                  "/v:127.0.0.1"
-                  "/u:$env:COMPUTERNAME\$userName"
-                  "/p:$password"
-                  "/cert:ignore"
-                  "/size:800x600"
-                  "/log-level:INFO"
-              ) `
-              -RedirectStandardOutput $stdout `
-              -RedirectStandardError $stderr `
-              -PassThru
-          Write-Host "Started wfreerdp.exe with PID $($freeRdp.Id)"
+          # Ending a background step kills its process tree. Task Scheduler starts
+          # the client in the runner user's console session instead, so it keeps
+          # the RDP session active after this step. Runners are disposable, so
+          # nothing stops it.
+          $clientArguments = @(
+              "/v:127.0.0.1"
+              "/u:$env:COMPUTERNAME\$userName"
+              "/p:$password"
+              "/cert:ignore"
+              "/size:800x600"
+              "/log-level:INFO"
+          ) -join " "
+          $action = New-ScheduledTaskAction -Execute "cmd.exe" `
+              -Argument "/c $wfreerdp $clientArguments > $stdout 2> $stderr"
+          $principal = New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\$env:USERNAME" `
+              -LogonType Interactive -RunLevel Highest
+          $settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Hours 2)
+          Register-ScheduledTask -TaskName "CIFreeRDP" -Action $action -Principal $principal `
+              -Settings $settings -Force | Out-Null
+          Start-ScheduledTask -TaskName "CIFreeRDP"
+          $deadline = (Get-Date).AddSeconds(15)
+          while ((Get-ScheduledTask -TaskName "CIFreeRDP").State -ne "Running") {
+              if ((Get-Date) -ge $deadline) { throw "Scheduled task CIFreeRDP did not start" }
+              Start-Sleep -Milliseconds 500
+          }
+          Write-Host "Started wfreerdp.exe through scheduled task CIFreeRDP"
 
           $deadline = (Get-Date).AddSeconds(120)
           $rdpSession = $null
@@ -980,7 +989,7 @@ jobs:
                   break
               }
 
-              if ($freeRdp.HasExited) {
+              if ((Get-ScheduledTask -TaskName "CIFreeRDP").State -ne "Running") {
                   Get-Content $stdout,$stderr -ErrorAction SilentlyContinue
                   throw "wfreerdp.exe exited before the RDP user became active"
               }
