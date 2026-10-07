@@ -335,12 +335,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # Server 2025 runners are much slower to provision the same fixtures.
           - os: windows-2022
             nanoserver: ltsc2022
             smtp: true
-          - os: windows-2025
-            nanoserver: ltsc2025
-            smtp: false
     permissions:
       contents: read
     env:
