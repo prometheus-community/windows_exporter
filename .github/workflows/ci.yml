@@ -534,22 +534,6 @@ jobs:
           )
           Set-Content -Path $installer -Value $installerContent -Encoding utf8
 
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          # renovate: golang=go
-          go-version: '1.27.1'
-
-      - name: Build Go tests
-        id: build-go-tests
-        background: true
-        shell: pwsh
-        run: |
-          # Compile the race-enabled test binaries while fixtures are provisioned;
-          # the Go tests step reuses the build cache.
-          go test -race -count=1 -run '^$' ./...
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          go build -trimpath -o windows_exporter.exe ./cmd/windows_exporter
-
       - name: Install Containers feature
         shell: pwsh
         run: |
@@ -1338,9 +1322,14 @@ jobs:
               }
 
 
+      # The foreground waits for SQL Server here anyway, so Go setup costs nothing.
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          # renovate: golang=go
+          go-version: '1.27.1'
+
       - name: Wait for background setup
         wait:
-          - build-go-tests
           - pull-hostprocess
           - pull-nanoserver
           - setup-bitlocker
