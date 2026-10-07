@@ -209,79 +209,75 @@ func unmarshalInstance(instance *Instance, structType reflect.Type, structValue 
 			return fmt.Errorf("failed to get element %s: %w", miTag, err)
 		}
 
-		switch element.valueType {
-		case ValueTypeBOOLEAN:
-			if field.Kind() != reflect.Bool {
-				return fieldTypeError(miTag, field, "boolean")
-			}
-
-			field.SetBool(element.value == 1)
-		case ValueTypeUINT8, ValueTypeUINT16, ValueTypeUINT32, ValueTypeUINT64:
-			if err := setUintField(miTag, field, uint64(element.value)); err != nil {
-				return err
-			}
-		case ValueTypeSINT8:
-			if err := setIntField(miTag, field, int64(int8(element.value))); err != nil {
-				return err
-			}
-		case ValueTypeSINT16:
-			if err := setIntField(miTag, field, int64(int16(element.value))); err != nil {
-				return err
-			}
-		case ValueTypeSINT32:
-			if err := setIntField(miTag, field, int64(int32(element.value))); err != nil {
-				return err
-			}
-		case ValueTypeSINT64:
-			if err := setIntField(miTag, field, int64(element.value)); err != nil {
-				return err
-			}
-		case ValueTypeSTRING:
-			if field.Kind() != reflect.String {
-				return fieldTypeError(miTag, field, "string")
-			}
-
-			if element.value == 0 {
-				continue
-			}
-
-			stringValue := windows.UTF16PtrToString((*uint16)(unsafe.Pointer(element.value)))
-
-			field.SetString(stringValue)
-		case ValueTypeCHAR16:
-			// A CHAR16 is a single UTF-16 code unit, not a pointer to a string.
-			// Note: lone UTF-16 surrogates (0xD800–0xDFFF) are replaced with U+FFFD
-			// by string(rune(...)). Use a uint16 Go field when the raw code unit is needed.
-			if field.Kind() == reflect.String {
-				field.SetString(string(rune(element.value)))
-
-				continue
-			}
-
-			if err := setUintField(miTag, field, uint64(element.value)); err != nil {
-				return err
-			}
-		case ValueTypeREAL32:
-			if field.Kind() != reflect.Float32 && field.Kind() != reflect.Float64 {
-				return fieldTypeError(miTag, field, "float")
-			}
-
-			field.SetFloat(float64(math.Float32frombits(uint32(element.value))))
-		case ValueTypeREAL64:
-			if field.Kind() != reflect.Float64 {
-				return fieldTypeError(miTag, field, "float")
-			}
-
-			field.SetFloat(math.Float64frombits(uint64(element.value)))
-		case ValueTypeUINT16A:
-			if field.Type() != reflect.TypeFor[[]uint16]() {
-				return fmt.Errorf("cannot unmarshal UINT16A into field of type %s, expected []uint16", field.Type())
-			}
-
-			field.Set(reflect.ValueOf(element.getUint16Array()))
-		default:
-			return fmt.Errorf("unsupported value type: %d", element.valueType)
+		if err := setField(miTag, field, element); err != nil {
+			return err
 		}
+	}
+
+	return nil
+}
+
+// setField assigns the value of element to field, rejecting Go field types that
+// cannot hold the MI value instead of letting the reflect package panic.
+func setField(miTag string, field reflect.Value, element *Element) error {
+	switch element.valueType {
+	case ValueTypeBOOLEAN:
+		if field.Kind() != reflect.Bool {
+			return fieldTypeError(miTag, field, "boolean")
+		}
+
+		field.SetBool(element.value == 1)
+	case ValueTypeUINT8, ValueTypeUINT16, ValueTypeUINT32, ValueTypeUINT64:
+		return setUintField(miTag, field, uint64(element.value))
+	case ValueTypeSINT8:
+		return setIntField(miTag, field, int64(int8(element.value)))
+	case ValueTypeSINT16:
+		return setIntField(miTag, field, int64(int16(element.value)))
+	case ValueTypeSINT32:
+		return setIntField(miTag, field, int64(int32(element.value)))
+	case ValueTypeSINT64:
+		return setIntField(miTag, field, int64(element.value))
+	case ValueTypeSTRING:
+		if field.Kind() != reflect.String {
+			return fieldTypeError(miTag, field, "string")
+		}
+
+		if element.value == 0 {
+			return nil
+		}
+
+		field.SetString(windows.UTF16PtrToString((*uint16)(unsafe.Pointer(element.value))))
+	case ValueTypeCHAR16:
+		// A CHAR16 is a single UTF-16 code unit, not a pointer to a string.
+		// Note: lone UTF-16 surrogates (0xD800–0xDFFF) are replaced with U+FFFD
+		// by string(rune(...)). Use a uint16 Go field when the raw code unit is needed.
+		if field.Kind() == reflect.String {
+			field.SetString(string(rune(uint16(element.value))))
+
+			return nil
+		}
+
+		return setUintField(miTag, field, uint64(uint16(element.value)))
+	case ValueTypeREAL32:
+		if field.Kind() != reflect.Float32 && field.Kind() != reflect.Float64 {
+			return fieldTypeError(miTag, field, "float")
+		}
+
+		field.SetFloat(float64(math.Float32frombits(uint32(element.value))))
+	case ValueTypeREAL64:
+		if field.Kind() != reflect.Float64 {
+			return fieldTypeError(miTag, field, "float")
+		}
+
+		field.SetFloat(math.Float64frombits(uint64(element.value)))
+	case ValueTypeUINT16A:
+		if field.Type() != reflect.TypeFor[[]uint16]() {
+			return fmt.Errorf("cannot unmarshal UINT16A into field of type %s, expected []uint16", field.Type())
+		}
+
+		field.Set(reflect.ValueOf(element.getUint16Array()))
+	default:
+		return fmt.Errorf("unsupported value type: %d", element.valueType)
 	}
 
 	return nil
@@ -366,6 +362,11 @@ func (s *Session) QueryUnmarshal(dst any,
 		return ErrNotInitialized
 	}
 
+	dv, err := structSlice(dst)
+	if err != nil {
+		return err
+	}
+
 	operation := &Operation{}
 
 	if operationOptions == nil {
@@ -392,7 +393,7 @@ func (s *Session) QueryUnmarshal(dst any,
 		_ = operation.Close()
 	}()
 
-	return operation.unmarshal(dst, true)
+	return operation.unmarshal(dv, true)
 }
 
 // Query queries for a set of instances based on a query expression.

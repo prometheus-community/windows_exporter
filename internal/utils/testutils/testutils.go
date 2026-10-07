@@ -116,16 +116,7 @@ func TestCollector[C collector.Collector, V any](t *testing.T, fn func(*V) C, co
 // is only accepted here (Build path) so that a mistyped class in production
 // code still fails Collect.
 func unsupportedBuild(err error) bool {
-	return errors.Is(err, mi.MI_RESULT_INVALID_CLASS) ||
-		errors.Is(err, mi.MI_RESULT_INVALID_NAMESPACE) ||
-		errors.Is(err, mi.MI_RESULT_INVALID_QUERY) ||
-		errors.Is(err, pdh.NewPdhError(pdh.CstatusNoCounter)) ||
-		errors.Is(err, pdh.NewPdhError(pdh.CstatusNoObject)) ||
-		errors.Is(err, pdh.ErrPerformanceCounterNotInitialized) ||
-		errors.Is(err, pdh.ErrNoData) ||
-		errors.Is(err, update.ErrUpdateServiceDisabled) ||
-		errors.Is(err, os.ErrNotExist) ||
-		errors.Is(err, windows.Errno(2151088411))
+	return errors.Is(err, mi.MI_RESULT_INVALID_CLASS) || unsupportedCollect(err)
 }
 
 // unsupportedCollect returns true for Collect-path errors that indicate a
