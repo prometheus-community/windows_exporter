@@ -11,6 +11,8 @@ A Prometheus exporter for Windows machines.
 
 ## Collectors
 
+<!-- textlint-disable terminology -->
+
 | Name                                                       | Description                                                                                                                                                 | Enabled by default |
 |------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------|
 | [ad](docs/collector.ad.md)                                 | Active Directory Domain Services                                                                                                                            |                    |
@@ -59,6 +61,7 @@ A Prometheus exporter for Windows machines.
 | [udp](docs/collector.udp.md)                               | UDP connections                                                                                                                                             |                    |
 | [update](docs/collector.update.md)                         | Windows Update Service                                                                                                                                      |                    |
 | [vmware](docs/collector.vmware.md)                         | Performance counters installed by the Vmware Guest agent                                                                                                    |                    |
+<!-- textlint-enable terminology -->
 
 See the linked documentation on each collector for more information on reported metrics, configuration settings and usage examples.
 

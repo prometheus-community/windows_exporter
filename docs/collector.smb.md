@@ -7,7 +7,7 @@ The smb collector collects metrics from MS Smb hosts through perflib
 |||
 -|-
 Metric name prefix  | `smb`
-Classes 			| [Win32_PerfRawData_SMB](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-smb/)<br/> 
+Classes 			| [Win32_PerfRawData_SMB](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-smb/)<br/>
 Enabled by default? | No
 
 ## Flags
