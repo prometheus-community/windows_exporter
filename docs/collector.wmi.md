@@ -67,7 +67,7 @@ collector:
 YAML:
 
 ```yaml
-- name: logical_disk # required, unique id for the query
+- name: logical_disk # required, unique ID for the query
   namespace: root/CIMv2 # optional
   class: Win32_LogicalDisk # required
   where: DriveType = 3 # optional
@@ -116,7 +116,7 @@ SELECT <label_properties>, <properties> FROM <class> [WHERE <where>]
 
 #### name
 
-Required, unique id for the query. It is used as the `name` label on
+Required, unique ID for the query. It is used as the `name` label on
 `windows_wmi_query_success` and `windows_wmi_query_duration_seconds`, to identify
 the query in logs, and to seed auto-generated metric names (see
 [Metric naming](#metric-naming)). Duplicates are rejected at build time.
