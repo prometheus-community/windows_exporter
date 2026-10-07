@@ -1,6 +1,6 @@
 module github.com/prometheus-community/windows_exporter
 
-go 1.26.0
+go 1.27.1
 
 require (
 	github.com/alecthomas/kingpin/v2 v2.4.0
