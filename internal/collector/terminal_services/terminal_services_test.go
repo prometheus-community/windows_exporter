@@ -18,10 +18,13 @@
 package terminal_services_test
 
 import (
+	"os"
 	"testing"
 
 	"github.com/prometheus-community/windows_exporter/internal/collector/terminal_services"
 	"github.com/prometheus-community/windows_exporter/internal/utils/testutils"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/stretchr/testify/require"
 )
 
 func BenchmarkCollector(b *testing.B) {
@@ -29,5 +32,23 @@ func BenchmarkCollector(b *testing.B) {
 }
 
 func TestCollector(t *testing.T) {
-	testutils.TestCollector(t, terminal_services.New, nil)
+	metrics := testutils.TestCollector(t, terminal_services.New, nil)
+
+	userName := os.Getenv("WINDOWS_EXPORTER_TEST_RDP_USER")
+	if userName == "" {
+		return
+	}
+
+	sessionName := os.Getenv("WINDOWS_EXPORTER_TEST_RDP_SESSION")
+	require.NotEmpty(t, sessionName, "RDP fixture did not reach an authenticated active session")
+	info := testutils.RequireFixtureMetric(t, metrics, terminal_services.Name, "windows_terminal_services_session_info", prometheus.Labels{
+		"user":         os.Getenv("COMPUTERNAME") + `\` + userName,
+		"session_name": sessionName,
+		"state":        "active",
+	})
+	require.NotNil(t, info)
+	require.InDelta(t, 1, info.GetGauge().GetValue(), 0, "RDP fixture is no longer active")
+	handles := testutils.RequireFixtureMetric(t, metrics, terminal_services.Name, "windows_terminal_services_handles", prometheus.Labels{"session_name": sessionName})
+	require.NotNil(t, handles)
+	require.Positive(t, handles.GetGauge().GetValue(), "RDP fixture has no session processes")
 }

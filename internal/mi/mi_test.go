@@ -250,6 +250,14 @@ func Test_MI_Query_Unmarshal(t *testing.T) {
 }
 
 func Test_MI_FD_Leak(t *testing.T) {
+	// A leak of one handle per query grows far beyond this; MI and the Go
+	// runtime may still open a few handles for worker threads.
+	const (
+		warmupQueries     = 20
+		queries           = 300
+		maxHandleIncrease = 50
+	)
+
 	application, err := mi.ApplicationInitialize()
 	require.NoError(t, err)
 	require.NotEmpty(t, application)
@@ -258,46 +266,34 @@ func Test_MI_FD_Leak(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, session)
 
-	currentFileHandle, err := testutils.GetProcessHandleCount(windows.CurrentProcess())
-	require.NoError(t, err)
-
-	t.Log("Current File Handle Count: ", currentFileHandle)
-
 	queryPrinter, err := mi.NewQuery("SELECT Name FROM Win32_Process")
 	require.NoError(t, err)
 
-	for range 300 {
+	query := func() {
 		var processes []win32Process
 
-		err := session.Query(&processes, mi.NamespaceRootCIMv2, queryPrinter, -1)
-		require.NoError(t, err)
-
-		currentFileHandle, err = testutils.GetProcessHandleCount(windows.CurrentProcess())
-		require.NoError(t, err)
-
-		t.Log("Current File Handle Count: ", currentFileHandle)
+		require.NoError(t, session.Query(&processes, mi.NamespaceRootCIMv2, queryPrinter, -1))
 	}
 
-	currentFileHandle, err = testutils.GetProcessHandleCount(windows.CurrentProcess())
+	// The first queries initialize MI caches and thread pools.
+	for range warmupQueries {
+		query()
+	}
+
+	baseline, err := testutils.GetProcessHandleCount(windows.CurrentProcess())
 	require.NoError(t, err)
 
-	t.Log("Current File Handle Count: ", currentFileHandle)
+	for range queries {
+		query()
+	}
 
-	err = session.Close()
+	current, err := testutils.GetProcessHandleCount(windows.CurrentProcess())
 	require.NoError(t, err)
+	require.LessOrEqual(t, int64(current), int64(baseline)+maxHandleIncrease,
+		"handle count grew from %d to %d after %d queries", baseline, current, queries)
 
-	currentFileHandle, err = testutils.GetProcessHandleCount(windows.CurrentProcess())
-	require.NoError(t, err)
-
-	t.Log("Current File Handle Count: ", currentFileHandle)
-
-	err = application.Close()
-	require.NoError(t, err)
-
-	currentFileHandle, err = testutils.GetProcessHandleCount(windows.CurrentProcess())
-	require.NoError(t, err)
-
-	t.Log("Current File Handle Count: ", currentFileHandle)
+	require.NoError(t, session.Close())
+	require.NoError(t, application.Close())
 }
 
 func Test_MI_QueryTimeout(t *testing.T) {
@@ -326,7 +322,9 @@ func Test_MI_QueryTimeout(t *testing.T) {
 	err = operationOptions.SetTimeout(1 * time.Millisecond)
 	require.NoError(t, err)
 
-	operation, err := session.QueryInstances(mi.OperationFlagsStandardRTTI, operationOptions, mi.NamespaceRootCIMv2, mi.QueryDialectWQL, "select Name from win32_process where handle = 0")
+	// A query for a single process can finish within the timeout; reading every
+	// property of every process cannot.
+	operation, err := session.QueryInstances(mi.OperationFlagsStandardRTTI, operationOptions, mi.NamespaceRootCIMv2, mi.QueryDialectWQL, "select * from win32_process")
 	require.NoError(t, err)
 	require.NotEmpty(t, operation)
 
