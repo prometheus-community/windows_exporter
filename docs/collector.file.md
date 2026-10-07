@@ -15,6 +15,10 @@ Enabled by default? | No
 Comma-separated list of file patterns. Each pattern is a glob pattern that can contain `*`, `?`, and `**` (recursive).
 See https://github.com/bmatcuk/doublestar#patterns for an extended description of the pattern syntax.
 
+A pattern that matches nothing, including one whose directory does not exist, is not an error. If a directory
+cannot be read, for example because access is denied, the walk of that pattern stops and the collector is reported
+as failed (`windows_exporter_collector_success{collector="file"} 0`). Metrics of the other patterns are still exported.
+
 ## Metrics
 
 | Name                                   | Description            | Type  | Labels             |

@@ -21,8 +21,10 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -134,6 +136,11 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	// build-time error.
 	seenMetricHelps := make(map[string]string)
 	seenMetricTypes := make(map[string]prometheus.ValueType)
+
+	// seenSeries maps each metric name plus constant label set to the value
+	// that first produced it. Two values resolving to the same series would make
+	// every scrape fail to gather, so duplicates are rejected here as well.
+	seenSeries := make(map[string]string)
 
 	for _, key := range c.config.Keys {
 		if key.Key == "" {
@@ -247,6 +254,18 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 				seenMetricHelps[value.Metric] = help
 				seenMetricTypes[value.Metric] = value.metricType
 			}
+
+			series := seriesKey(value.Metric, value.Labels)
+			if prevValue, seen := seenSeries[series]; seen {
+				errs = append(errs, fmt.Errorf(
+					"value %q of key %s: metric %q with labels %v duplicates the series of %s; values sharing a metric name must have distinct labels",
+					value.Name, label, value.Metric, value.Labels, prevValue,
+				))
+
+				continue
+			}
+
+			seenSeries[series] = fmt.Sprintf("value %q of key %s", value.Name, label)
 
 			value.desc = prometheus.NewDesc(
 				value.Metric,
@@ -376,6 +395,24 @@ func parseKeyPath(path string) (winregistry.Key, string, string, error) {
 	}
 
 	return hive, subPath, label, nil
+}
+
+// seriesKey returns a string identifying the series a value is exported as: its
+// metric name plus its constant labels sorted by name. Names and values are
+// quoted, so distinct label sets can never produce the same key.
+func seriesKey(metric string, labels map[string]string) string {
+	var sb strings.Builder
+
+	sb.WriteString(strconv.Quote(metric))
+
+	for _, name := range slices.Sorted(maps.Keys(labels)) {
+		sb.WriteString(",")
+		sb.WriteString(strconv.Quote(name))
+		sb.WriteString("=")
+		sb.WriteString(strconv.Quote(labels[name]))
+	}
+
+	return sb.String()
 }
 
 // sanitizeMetricName turns an arbitrary string into a valid Prometheus metric
