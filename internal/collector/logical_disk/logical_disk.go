@@ -46,6 +46,8 @@ const (
 	Name                  = "logical_disk"
 	subCollectorMetrics   = "metrics"
 	subCollectorBitlocker = "bitlocker_status"
+
+	bitlockerStatusLocked = 6
 )
 
 type Config struct {
@@ -514,44 +516,84 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 		}
 
 		if slices.Contains(c.config.CollectorsEnabled, subCollectorBitlocker) {
-			c.bitlockerReqCh <- data.Name
+			c.collectBitlocker(ch, data.Name, false)
+		}
+	}
 
-			bitlockerStatus := <-c.bitlockerResCh
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorBitlocker) {
+		// Locked BitLocker volumes have no LogicalDisk performance instance.
+		seen := make(map[string]struct{}, len(c.perfDataObject))
+		for _, data := range c.perfDataObject {
+			seen[strings.ToUpper(data.Name)] = struct{}{}
+		}
 
-			if bitlockerStatus.err != nil {
-				c.logger.Warn("failed to get BitLocker status for "+data.Name,
-					slog.Any("err", bitlockerStatus.err),
-				)
-
+		for mountPoint := range volumes {
+			if len(mountPoint) != 2 || mountPoint[1] != ':' {
 				continue
 			}
 
-			if bitlockerStatus.status == -1 {
-				c.logger.Debug("BitLocker status for "+data.Name+" is unknown",
-					slog.Int("status", bitlockerStatus.status),
-				)
-
+			if _, ok := seen[strings.ToUpper(mountPoint)]; ok {
 				continue
 			}
 
-			for i, status := range []string{"disabled", "on", "off", "encrypting", "decrypting", "suspended", "locked", "unknown", "waiting_for_activation"} {
-				val := 0.0
-				if bitlockerStatus.status == i {
-					val = 1.0
-				}
-
-				ch <- prometheus.MustNewConstMetric(
-					c.bitlockerStatus,
-					prometheus.GaugeValue,
-					val,
-					data.Name,
-					status,
-				)
+			if c.config.VolumeExclude.MatchString(mountPoint) || !c.config.VolumeInclude.MatchString(mountPoint) {
+				continue
 			}
+
+			c.collectBitlocker(ch, mountPoint, true)
 		}
 	}
 
 	return nil
+}
+
+// collectBitlocker emits the BitLocker status of a volume. With lockedOnly,
+// volumes in any other state are skipped.
+func (c *Collector) collectBitlocker(ch chan<- prometheus.Metric, volume string, lockedOnly bool) {
+	c.bitlockerReqCh <- volume
+
+	bitlockerStatus := <-c.bitlockerResCh
+
+	if bitlockerStatus.err != nil {
+		level := slog.LevelWarn
+		if lockedOnly {
+			// Drive letters without performance data include empty media drives.
+			level = slog.LevelDebug
+		}
+
+		c.logger.Log(context.Background(), level, "failed to get BitLocker status for "+volume,
+			slog.Any("err", bitlockerStatus.err),
+		)
+
+		return
+	}
+
+	if bitlockerStatus.status == -1 {
+		c.logger.Debug("BitLocker status for "+volume+" is unknown",
+			slog.Int("status", bitlockerStatus.status),
+		)
+
+		return
+	}
+
+	if lockedOnly && bitlockerStatus.status != bitlockerStatusLocked {
+		return
+	}
+
+	for i, status := range []string{"disabled", "on", "off", "encrypting", "decrypting", "suspended", "locked", "unknown", "waiting_for_activation"} {
+		val := 0.0
+		if bitlockerStatus.status == i {
+			val = 1.0
+		}
+
+		ch <- prometheus.MustNewConstMetric(
+			c.bitlockerStatus,
+			prometheus.GaugeValue,
+			val,
+			volume,
+			status,
+		)
+	}
 }
 
 func getDriveType(driveType uint32) string {

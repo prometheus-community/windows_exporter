@@ -299,7 +299,7 @@ jobs:
     runs-on: ubuntu-24.04
     needs:
       - package
-      - test
+      - windows-test
     permissions:
       contents: write
     steps:
@@ -317,9 +317,18 @@ jobs:
             windows_exporter-*.msi \
             sha256sums.txt
 
-  test:
-    runs-on: windows-2025
+  windows-test:
+    name: Windows tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Server 2025 runners are much slower to provision the same fixtures.
+          - os: windows-2022
+            nanoserver: ltsc2022
+            smtp: true
     permissions:
       contents: read
     env:
@@ -328,247 +337,245 @@ jobs:
       CRI_ENDPOINT: "npipe:////./pipe/containerd-containerd"
       CRITOOLS_VERSION: "1.37.0"
       KUBERNETES_VERSION: "v1.37.1"
+      NANOSERVER_IMAGE: mcr.microsoft.com/windows/nanoserver:${{ matrix.nanoserver }}
+      SMTP_ENABLED: ${{ matrix.smtp }}
+      WINDOWS_EXPORTER_TEST_RDP_USER: rdp-ci
+      WINDOWS_TEST_OS: ${{ matrix.os }}
       # These collectors must work on the fixtures below; missing features are failures.
-      WINDOWS_EXPORTER_TEST_COLLECTORS: "cache,container,cpu,cpu_info,dhcp,diskdrive,dns,fsrmquota,hyperv,iis,license,logical_disk,memory,mscluster,msmq,net,netframework,nps,os,pagefile,physical_disk,printer,process,scheduled_task,service,smb,smbclient,system,tcp,terminal_services,time,udp,update"
+      WINDOWS_EXPORTER_TEST_COLLECTORS: "cache,container,cpu,cpu_info,dhcp,diskdrive,dns,fsrmquota,hyperv,iis,license,logical_disk,memory,mscluster,msmq,mssql,net,netframework,nps,os,pagefile,physical_disk,printer,process,scheduled_task,service,smb,smbclient,system,tcp,terminal_services,time,udp,update${{ matrix.smtp && ',smtp' || '' }}"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: 'false'
 
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      # Skip the SQL Server download and extraction when the setup files are cached.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          # renovate: golang=go
-          go-version: '1.27.1'
+          path: ${{ runner.temp }}/sql-server/setup
+          key: sql-server-2025-express-fa7e1fabc9a2-${{ runner.os }}
 
-      - parallel:
-          - name: Install Containers feature
-            shell: pwsh
-            run: |
-              $ErrorActionPreference = "Stop"
+      # Steps that do not register services run in the background while Windows features install.
+      - name: Install FreeRDP client
+        id: install-freerdp
+        background: true
+        shell: powershell
+        run: |
+          foreach ($attempt in 1..3) {
+              choco install freerdp.portable --version=3.28.0 --yes --no-progress
+              if ($LASTEXITCODE -eq 0) { break }
+              if ($attempt -eq 3) { throw "Failed to install FreeRDP" }
+              Start-Sleep -Seconds 10
+          }
+          Get-Command wfreerdp.exe -ErrorAction Stop
 
-              $features = @(
-                  "Containers"
-                  "Failover-Clustering"
-                  "RSAT-Clustering-PowerShell"
-              )
-              $result = Install-WindowsFeature -Name $features
-              $result | Format-List Success, RestartNeeded, ExitCode, FeatureResult
-
-              if (-not $result.Success -or $result.RestartNeeded -ne "No") {
-                  throw "Containers feature could not be installed without a restart"
-              }
-
-              Get-WindowsFeature -Name $features |
-                  Format-Table DisplayName, Name, InstallState
-
-          - name: Setup storage pool
-            shell: pwsh
-            run: |
-              $ErrorActionPreference = "Stop"
-
-              $existingDiskIds = @(Get-PhysicalDisk | ForEach-Object ObjectId)
-              $disk1 = Join-Path $env:RUNNER_TEMP "storage-pool-1.vhdx"
-              $disk2 = Join-Path $env:RUNNER_TEMP "storage-pool-2.vhdx"
-              $diskpartScript = Join-Path $env:RUNNER_TEMP "storage-pool-diskpart.txt"
-
-              @"
-              create vdisk file="$disk1" maximum=10240 type=expandable
-              attach vdisk
-              create vdisk file="$disk2" maximum=10240 type=expandable
-              attach vdisk
-              "@ | Set-Content -Path $diskpartScript -Encoding ascii
-
-              diskpart /s $diskpartScript
-              Update-HostStorageCache
-
-              $newDisks = @(Get-PhysicalDisk | Where-Object { $_.ObjectId -notin $existingDiskIds })
-              $newDisks | Format-Table FriendlyName, DeviceId, MediaType, BusType, Size, CanPool, CannotPoolReason
-
-              $poolableDisks = @($newDisks | Where-Object CanPool)
-
-              if ($poolableDisks.Count -ne 2) {
-                  throw "Expected two poolable VHDX disks, found $($poolableDisks.Count)"
-              }
-
-              New-StoragePool `
-                  -FriendlyName "GitHubActions" `
-                  -StorageSubsystemFriendlyName "Windows Storage*" `
-                  -PhysicalDisks $poolableDisks
-
-              $pool = Get-StoragePool -FriendlyName "GitHubActions" -ErrorAction Stop
-              $pool | Format-List FriendlyName, HealthStatus, OperationalStatus, Size, AllocatedSize
-
-              if ($pool.IsPrimordial) {
-                  throw "Expected a concrete storage pool"
-              }
-
-              New-VirtualDisk -StoragePoolFriendlyName "GitHubActions" `
-                  -FriendlyName "CIVirtualDisk" -Size 1GB -ResiliencySettingName Simple
-
-          - name: Download container prerequisites
-            shell: pwsh
-            run: |
-              $ErrorActionPreference = "Stop"
-
-              $cacheDir = Join-Path $env:RUNNER_TEMP "container-prereqs"
-              New-Item -ItemType Directory -Force -Path $cacheDir | Out-Null
-
-              $downloads = @{
-                  "Install-Containerd.ps1" = "https://raw.githubusercontent.com/kubernetes-sigs/sig-windows-tools/877cfb9ae91749ab9d73314337504ac962d6f90e/hostprocess/Install-Containerd.ps1"
-                  "containerd.tar.gz" = "https://github.com/containerd/containerd/releases/download/v$($env:CONTAINERD_VERSION)/containerd-$($env:CONTAINERD_VERSION)-windows-amd64.tar.gz"
-                  "crictl.tar.gz" = "https://github.com/kubernetes-sigs/cri-tools/releases/download/v$($env:CRITOOLS_VERSION)/crictl-v$($env:CRITOOLS_VERSION)-windows-amd64.tar.gz"
-                  "cni-plugins.tgz" = "https://github.com/containernetworking/plugins/releases/download/v$($env:CNI_VERSION)/cni-plugins-windows-amd64-v$($env:CNI_VERSION).tgz"
-                  "kubelet.exe" = "https://dl.k8s.io/release/$($env:KUBERNETES_VERSION)/bin/windows/amd64/kubelet.exe"
-                  "kubelet.exe.sha256" = "https://dl.k8s.io/release/$($env:KUBERNETES_VERSION)/bin/windows/amd64/kubelet.exe.sha256"
-                  "hns.psm1" = "https://raw.githubusercontent.com/microsoft/SDN/32df9732ef6dfab07dba205440e30bdfbd8e579a/Kubernetes/windows/hns.psm1"
-              }
-
-              foreach ($download in $downloads.GetEnumerator()) {
-                  Invoke-WebRequest `
-                      -Uri $download.Value `
-                      -OutFile (Join-Path $cacheDir $download.Key)
-              }
-
-              $installer = Join-Path $cacheDir "Install-Containerd.ps1"
-              $installerContent = Get-Content -Raw $installer
-              $installerContent = $installerContent.Replace(
-                  '    curl.exe --silent --fail -Lo $destination $source',
-                  '    if (Test-Path $destination) { Write-Host "Using pre-downloaded $destination"; return }' + "`r`n" + '    curl.exe --silent --fail -Lo $destination $source'
-              )
-              Set-Content -Path $installer -Value $installerContent -Encoding utf8
-          - name: Start Hyper-V VM
-            shell: pwsh
-            run: |
-              $ErrorActionPreference = "Stop"
-
-              Import-Module Hyper-V
-              Start-Service vmms
-
-              New-VMSwitch -Name "CISwitch" -SwitchType Internal
-              New-VM `
-                  -Name "GitHubActions" `
-                  -Generation 1 `
-                  -MemoryStartupBytes 256MB `
-                  -NewVHDPath (Join-Path $env:RUNNER_TEMP "hyperv-ci.vhdx") `
-                  -NewVHDSizeBytes 1GB `
-                  -SwitchName "CISwitch"
-
-              Add-VMNetworkAdapter -VMName "GitHubActions" -Name "CILegacy" `
-                  -IsLegacy $true -SwitchName "CISwitch"
-              Start-VM -Name "GitHubActions"
-
-              $vm = Get-VM -Name "GitHubActions"
-              $vm | Format-List Name, State, Status, Generation, Uptime
-
-              if ($vm.State -ne "Running") {
-                  throw "Expected Hyper-V VM to be running, got $($vm.State)"
-              }
-
-      - name: Setup local RDP session
-        id: setup-rdp
-        continue-on-error: true
+      - name: Setup BitLocker volumes
+        id: setup-bitlocker
         background: true
         shell: powershell
         run: |
           $ErrorActionPreference = "Stop"
 
-          $userName = "rdp-ci"
-          $password = "WindowsExporter-CI-2026!"
-          $securePassword = ConvertTo-SecureString $password -AsPlainText -Force
+          . ./tools/vhd-lock.ps1
 
-          if ($null -eq (Get-LocalUser -Name $userName -ErrorAction SilentlyContinue)) {
-              New-LocalUser `
-                  -Name $userName `
-                  -Password $securePassword `
-                  -PasswordNeverExpires `
-                  -AccountNeverExpires | Out-Null
-          }
+          # Hosted images ship the BitLocker feature; data volumes need no reboot.
+          function New-BitLockerVolume([string]$Name) {
+              $vhd = Join-Path $env:RUNNER_TEMP "$Name.vhdx"
+              New-VHD -Path $vhd -Dynamic -SizeBytes 512MB | Out-Null
+              $volume = Invoke-WithVhdLock {
+                  Mount-VHD $vhd -PassThru | Get-Disk |
+                      Initialize-Disk -PartitionStyle GPT -PassThru |
+                      New-Partition -UseMaximumSize -AssignDriveLetter |
+                      Format-Volume -FileSystem NTFS -NewFileSystemLabel $Name -Confirm:$false
+              }
+              $mountPoint = "$($volume.DriveLetter):"
 
-          Add-LocalGroupMember `
-              -Group "Remote Desktop Users" `
-              -Member $userName `
-              -ErrorAction SilentlyContinue
+              $password = ConvertTo-SecureString ("CI-" + [Guid]::NewGuid().ToString('N')) -AsPlainText -Force
+              Enable-BitLocker -MountPoint $mountPoint -PasswordProtector -Password $password -UsedSpaceOnly | Out-Null
 
-          Set-ItemProperty `
-              -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server" `
-              -Name fDenyTSConnections `
-              -Value 0
-
-          Start-Service TermService
-          (Get-Service TermService).WaitForStatus("Running", [TimeSpan]::FromSeconds(30))
-
-          choco install freerdp.portable `
-              --version=3.28.0 `
-              --yes `
-              --no-progress
-
-          if ($LASTEXITCODE -ne 0) {
-              throw "Failed to install FreeRDP"
-          }
-
-          $wfreerdp = (Get-Command wfreerdp.exe -ErrorAction Stop).Source
-          $freeRdp = Start-Process `
-              -FilePath $wfreerdp `
-              -ArgumentList @(
-                  "/v:127.0.0.1"
-                  "/u:$env:COMPUTERNAME\$userName"
-                  "/p:$password"
-                  "/cert:ignore"
-                  "/size:800x600"
-              ) `
-              -PassThru
-
-          Write-Host "Started wfreerdp.exe with PID $($freeRdp.Id)"
-
-          $deadline = (Get-Date).AddSeconds(60)
-          $rdpSession = $null
-
-          do {
-              $sessions = qwinsta.exe
-              $sessions | ForEach-Object { Write-Host $_ }
-
-              $rdpSession = $sessions |
-                  Where-Object { $_ -match "RDP-Tcp#" } |
-                  Select-Object -First 1
-
-              if ($null -ne $rdpSession) {
-                  break
+              $deadline = (Get-Date).AddMinutes(2)
+              while ((Get-BitLockerVolume -MountPoint $mountPoint).VolumeStatus -ne "FullyEncrypted") {
+                  if ((Get-Date) -ge $deadline) { throw "BitLocker volume $Name did not finish encryption" }
+                  Start-Sleep -Seconds 2
               }
 
-              if ($freeRdp.HasExited) {
-                  throw "wfreerdp.exe exited before an RDP session was created"
-              }
-
-              Start-Sleep -Seconds 2
-          } while ((Get-Date) -lt $deadline)
-
-          if ($null -eq $rdpSession) {
-              throw "No RDP-Tcp session was created by FreeRDP"
+              return $mountPoint
           }
 
-          Write-Host "RDP session created: $rdpSession"
+          $unlocked = New-BitLockerVolume CIBitLocker
+          $locked = New-BitLockerVolume CIBitLockerLocked
+          Lock-BitLocker -MountPoint $locked -ForceDismount | Out-Null
 
-          $remoteFxNetwork = Get-Counter -ListSet "RemoteFX Network" -ErrorAction Stop
-          $remoteFxGraphics = Get-Counter -ListSet "RemoteFX Graphics" -ErrorAction Stop
+          Get-BitLockerVolume -MountPoint $unlocked, $locked |
+              Format-Table MountPoint, VolumeStatus, ProtectionStatus, LockStatus
 
-          $networkInstances = @($remoteFxNetwork.PathsWithInstances |
-              Where-Object { $_ -match "RDP-Tcp#" })
-          $graphicsInstances = @($remoteFxGraphics.PathsWithInstances |
-              Where-Object { $_ -match "RDP-Tcp#" })
+          @{ Unlocked = $unlocked; Locked = $locked } | ConvertTo-Json |
+              Set-Content (Join-Path $env:RUNNER_TEMP "bitlocker-fixture.json")
 
-          Write-Host "RemoteFX Network instances:"
-          $networkInstances | ForEach-Object { Write-Host $_ }
+      - name: Setup storage pool
+        id: setup-storage-pool
+        background: true
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
 
-          Write-Host "RemoteFX Graphics instances:"
-          $graphicsInstances | ForEach-Object { Write-Host $_ }
+          $disk1 = Join-Path $env:RUNNER_TEMP "storage-pool-1.vhdx"
+          $disk2 = Join-Path $env:RUNNER_TEMP "storage-pool-2.vhdx"
+          $diskpartScript = Join-Path $env:RUNNER_TEMP "storage-pool-diskpart.txt"
 
-          if ($networkInstances.Count -eq 0) {
-              Write-Warning "No RemoteFX Network RDP-Tcp instance was created"
+          @"
+          create vdisk file="$disk1" maximum=10240 type=expandable
+          attach vdisk
+          create vdisk file="$disk2" maximum=10240 type=expandable
+          attach vdisk
+          "@ | Set-Content -Path $diskpartScript -Encoding ascii
+
+          . ./tools/vhd-lock.ps1
+          Invoke-WithVhdLock {
+              diskpart /s $diskpartScript
+              if ($LASTEXITCODE -ne 0) { throw "diskpart failed to attach the storage pool disks" }
+              Update-HostStorageCache
           }
 
-          if ($graphicsInstances.Count -eq 0) {
-              Write-Warning "No RemoteFX Graphics RDP-Tcp instance was created"
+          # Background steps attach their own VHDX files concurrently.
+          $diskNumbers = @($disk1, $disk2 | ForEach-Object { (Get-DiskImage -ImagePath $_).Number })
+          $newDisks = @(Get-PhysicalDisk | Where-Object { [int]$_.DeviceId -in $diskNumbers })
+          $newDisks | Format-Table FriendlyName, DeviceId, MediaType, BusType, Size, CanPool, CannotPoolReason
+
+          $poolableDisks = @($newDisks | Where-Object CanPool)
+
+          if ($poolableDisks.Count -ne 2) {
+              throw "Expected two poolable VHDX disks, found $($poolableDisks.Count)"
           }
+
+          New-StoragePool `
+              -FriendlyName "GitHubActions" `
+              -StorageSubsystemFriendlyName "Windows Storage*" `
+              -PhysicalDisks $poolableDisks
+
+          $pool = Get-StoragePool -FriendlyName "GitHubActions" -ErrorAction Stop
+          $pool | Format-List FriendlyName, HealthStatus, OperationalStatus, Size, AllocatedSize
+
+          if ($pool.IsPrimordial) {
+              throw "Expected a concrete storage pool"
+          }
+
+          New-VirtualDisk -StoragePoolFriendlyName "GitHubActions" `
+              -FriendlyName "CIVirtualDisk" -Size 1GB -ResiliencySettingName Simple
+
+      - name: Start Hyper-V VM
+        id: start-hyperv-vm
+        background: true
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          Import-Module Hyper-V
+          Start-Service vmms
+
+          New-VMSwitch -Name "CISwitch" -SwitchType Internal
+          New-VM `
+              -Name "GitHubActions" `
+              -Generation 1 `
+              -MemoryStartupBytes 256MB `
+              -NewVHDPath (Join-Path $env:RUNNER_TEMP "hyperv-ci.vhdx") `
+              -NewVHDSizeBytes 1GB `
+              -SwitchName "CISwitch"
+
+          Add-VMNetworkAdapter -VMName "GitHubActions" -Name "CILegacy" `
+              -IsLegacy $true -SwitchName "CISwitch"
+          Start-VM -Name "GitHubActions"
+
+          $vm = Get-VM -Name "GitHubActions"
+          $vm | Format-List Name, State, Status, Generation, Uptime
+
+          if ($vm.State -ne "Running") {
+              throw "Expected Hyper-V VM to be running, got $($vm.State)"
+          }
+
+      - name: Download container prerequisites
+        id: download-container-prereqs
+        background: true
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          $cacheDir = Join-Path $env:RUNNER_TEMP "container-prereqs"
+          New-Item -ItemType Directory -Force -Path $cacheDir | Out-Null
+
+          $downloads = @{
+              "Install-Containerd.ps1" = "https://raw.githubusercontent.com/kubernetes-sigs/sig-windows-tools/877cfb9ae91749ab9d73314337504ac962d6f90e/hostprocess/Install-Containerd.ps1"
+              "containerd.tar.gz" = "https://github.com/containerd/containerd/releases/download/v$($env:CONTAINERD_VERSION)/containerd-$($env:CONTAINERD_VERSION)-windows-amd64.tar.gz"
+              "crictl.tar.gz" = "https://github.com/kubernetes-sigs/cri-tools/releases/download/v$($env:CRITOOLS_VERSION)/crictl-v$($env:CRITOOLS_VERSION)-windows-amd64.tar.gz"
+              "cni-plugins.tgz" = "https://github.com/containernetworking/plugins/releases/download/v$($env:CNI_VERSION)/cni-plugins-windows-amd64-v$($env:CNI_VERSION).tgz"
+              "kubelet.exe" = "https://dl.k8s.io/release/$($env:KUBERNETES_VERSION)/bin/windows/amd64/kubelet.exe"
+              "kubelet.exe.sha256" = "https://dl.k8s.io/release/$($env:KUBERNETES_VERSION)/bin/windows/amd64/kubelet.exe.sha256"
+              "hns.psm1" = "https://raw.githubusercontent.com/microsoft/SDN/32df9732ef6dfab07dba205440e30bdfbd8e579a/Kubernetes/windows/hns.psm1"
+          }
+
+          foreach ($download in $downloads.GetEnumerator()) {
+              Invoke-WebRequest `
+                  -Uri $download.Value `
+                  -OutFile (Join-Path $cacheDir $download.Key) `
+                  -MaximumRetryCount 5 `
+                  -RetryIntervalSec 5
+          }
+
+          $installer = Join-Path $cacheDir "Install-Containerd.ps1"
+          $installerContent = Get-Content -Raw $installer
+          $installerContent = $installerContent.Replace(
+              '    curl.exe --silent --fail -Lo $destination $source',
+              '    if (Test-Path $destination) { Write-Host "Using pre-downloaded $destination"; return }' + "`r`n" + '    curl.exe --silent --fail -Lo $destination $source'
+          )
+          Set-Content -Path $installer -Value $installerContent -Encoding utf8
+
+      # Install every Windows feature in one foreground step. Steps that register
+      # services, such as SQL Server setup, New-Cluster, and containerd, start only
+      # afterwards: changing service configuration during the install aborts its
+      # registry transaction, and the rollback then requires a restart.
+      - name: Install Windows features
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          $features = @(
+              "Containers"
+              "DHCP"
+              "DNS"
+              "Failover-Clustering"
+              "FS-FileServer"
+              "FS-Resource-Manager"
+              "MSMQ-Server"
+              "NPAS"
+              "Print-Server"
+              "RSAT-Clustering-PowerShell"
+              "RSAT-DHCP"
+              "RSAT-DNS-Server"
+              "RSAT-Print-Services"
+              "Web-Server"
+          )
+
+          # SMTP was removed from Windows Server 2025.
+          if ($env:SMTP_ENABLED -eq 'true') {
+              $features += "SMTP-Server"
+          }
+
+          $result = Install-WindowsFeature -Name $features
+          $result | Format-List Success, RestartNeeded, ExitCode, FeatureResult
+
+          if (-not $result.Success -or $result.RestartNeeded -ne "No") {
+              Get-WindowsPackage -Online | Where-Object PackageState -eq InstallPending |
+                  Format-Table PackageName, PackageState
+              throw "Required Windows features could not be installed without a restart"
+          }
+
+          Get-WindowsFeature -Name $features |
+              Format-Table DisplayName, Name, InstallState
+
+      - name: Setup SQL Server Express
+        id: setup-mssql
+        background: true
+        shell: powershell
+        run: ./tools/setup-sql-server.ps1
 
       - name: Setup MSCluster
         id: setup-mscluster
@@ -610,36 +617,8 @@ jobs:
           Get-ClusterNode | Format-Table Name, State, NodeWeight, DynamicWeight
           Get-ClusterNetwork | Format-Table Name, State, Role, Address
 
-      - name: Install Windows roles
-        id: install-windows-roles
-        background: true
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = "Stop"
-
-          $features = @(
-              "DHCP"
-              "DNS"
-              "FS-FileServer"
-              "FS-Resource-Manager"
-              "MSMQ-Server"
-              "NPAS"
-              "Print-Server"
-              "RSAT-DHCP"
-              "RSAT-DNS-Server"
-              "RSAT-Print-Services"
-              "Web-Server"
-          )
-
-          $result = Install-WindowsFeature -Name $features
-          $result | Format-List Success, RestartNeeded, ExitCode, FeatureResult
-
-          if (-not $result.Success -or $result.RestartNeeded -ne "No") {
-              throw "Required Windows roles could not be installed without a restart"
-          }
-
-          Get-WindowsFeature -Name $features |
-              Format-Table DisplayName, Name, InstallState
+      - name: Wait for container prerequisites
+        wait: [download-container-prereqs]
 
       - name: Prepare container runtime
         shell: pwsh
@@ -763,13 +742,13 @@ jobs:
           spec:
             containers:
               - name: nanoserver
-                image: mcr.microsoft.com/windows/nanoserver:ltsc2025
+                image: __NANOSERVER_IMAGE__
                 imagePullPolicy: IfNotPresent
                 command:
                   - ping.exe
                   - -t
                   - 127.0.0.1
-          '@ | Set-Content `
+          '@.Replace('__NANOSERVER_IMAGE__', $env:NANOSERVER_IMAGE) | Set-Content `
               -Path (Join-Path $manifestDir "process-isolated.yaml") `
               -Encoding ascii
 
@@ -807,10 +786,10 @@ jobs:
           $crictl = Join-Path $env:ProgramFiles "containerd\crictl.exe"
           & $crictl `
               --runtime-endpoint $env:CRI_ENDPOINT `
-              pull mcr.microsoft.com/windows/nanoserver:ltsc2025
+              pull $env:NANOSERVER_IMAGE
 
           if ($LASTEXITCODE -ne 0) {
-              throw "Failed to pull Windows Server 2025 Nano Server image"
+              throw "Failed to pull Nano Server image $env:NANOSERVER_IMAGE"
           }
 
       - name: Setup container network
@@ -858,7 +837,7 @@ jobs:
               $imageNames = @($images.images.repoTags)
 
               $hostProcessReady = $imageNames -contains "mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v1.0.0"
-              $nanoServerReady = $imageNames -contains "mcr.microsoft.com/windows/nanoserver:ltsc2025"
+              $nanoServerReady = $imageNames -contains $env:NANOSERVER_IMAGE
 
               if ($networkReady -and $hostProcessReady -and $nanoServerReady) {
                   break
@@ -920,10 +899,135 @@ jobs:
               throw "Static pods did not reach Running state"
           }
 
-      - name: Wait for Windows roles
-        wait: [install-windows-roles]
+      - name: Wait for FreeRDP client
+        wait: [install-freerdp]
 
       - parallel:
+          - name: Setup local RDP session
+            shell: powershell
+            run: |
+              $ErrorActionPreference = "Stop"
+
+              $userName = "rdp-ci"
+              $password = "WindowsExporter-CI-2026!"
+              $securePassword = ConvertTo-SecureString $password -AsPlainText -Force
+
+              if ($null -eq (Get-LocalUser -Name $userName -ErrorAction SilentlyContinue)) {
+                  New-LocalUser `
+                      -Name $userName `
+                      -Password $securePassword `
+                      -PasswordNeverExpires `
+                      -AccountNeverExpires | Out-Null
+              }
+
+              Add-LocalGroupMember `
+                  -Group "Remote Desktop Users" `
+                  -Member $userName `
+                  -ErrorAction SilentlyContinue
+
+              Set-ItemProperty `
+                  -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server" `
+                  -Name fDenyTSConnections `
+                  -Value 0
+
+              Start-Service TermService
+              (Get-Service TermService).WaitForStatus("Running", [TimeSpan]::FromSeconds(30))
+
+              $wfreerdp = (Get-Command wfreerdp.exe -ErrorAction Stop).Source
+              $stdout = Join-Path $env:RUNNER_TEMP "rdp-client.stdout.log"
+              $stderr = Join-Path $env:RUNNER_TEMP "rdp-client.stderr.log"
+              # Ending a step can kill its process tree. Task Scheduler starts the
+              # client in the runner user's console session instead, so it keeps the
+              # RDP session active after this step. Runners are disposable, so
+              # nothing stops it.
+              $clientArguments = @(
+                  "/v:127.0.0.1"
+                  "/u:$env:COMPUTERNAME\$userName"
+                  "/p:$password"
+                  "/cert:ignore"
+                  "/size:800x600"
+                  "/log-level:INFO"
+              ) -join " "
+              $action = New-ScheduledTaskAction -Execute "cmd.exe" `
+                  -Argument "/c $wfreerdp $clientArguments > $stdout 2> $stderr"
+              $principal = New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\$env:USERNAME" `
+                  -LogonType Interactive -RunLevel Highest
+              $settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Hours 2)
+              Register-ScheduledTask -TaskName "CIFreeRDP" -Action $action -Principal $principal `
+                  -Settings $settings -Force | Out-Null
+              Start-ScheduledTask -TaskName "CIFreeRDP"
+              $deadline = (Get-Date).AddSeconds(15)
+              while ((Get-ScheduledTask -TaskName "CIFreeRDP").State -ne "Running") {
+                  if ((Get-Date) -ge $deadline) { throw "Scheduled task CIFreeRDP did not start" }
+                  Start-Sleep -Milliseconds 500
+              }
+              Write-Host "Started wfreerdp.exe through scheduled task CIFreeRDP"
+
+              $deadline = (Get-Date).AddSeconds(120)
+              $rdpSession = $null
+
+              do {
+                  $sessions = qwinsta.exe
+                  $sessions | ForEach-Object { Write-Host $_ }
+
+                  $rdpSession = $sessions |
+                      Where-Object { $_ -match "^\s*>?\s*rdp-tcp#\d+\s+$userName\s+\d+\s+Active\b" } |
+                      Select-Object -First 1
+
+                  if ($null -ne $rdpSession) {
+                      break
+                  }
+
+                  if ((Get-ScheduledTask -TaskName "CIFreeRDP").State -ne "Running") {
+                      Get-Content $stdout,$stderr -ErrorAction SilentlyContinue
+                      throw "wfreerdp.exe exited before the RDP user became active"
+                  }
+
+                  Start-Sleep -Seconds 2
+              } while ((Get-Date) -lt $deadline)
+
+              if ($null -eq $rdpSession) {
+                  Get-Content $stdout,$stderr -ErrorAction SilentlyContinue
+                  throw "No authenticated active RDP session was created by FreeRDP"
+              }
+
+              Write-Host "Active RDP session: $rdpSession"
+              $sessionName = [regex]::Match($rdpSession, 'rdp-tcp#\d+', 'IgnoreCase').Value.Replace('#', ' ')
+
+              $remoteFxNetwork = Get-Counter -ListSet "RemoteFX Network" -ErrorAction Stop
+              $remoteFxGraphics = Get-Counter -ListSet "RemoteFX Graphics" -ErrorAction Stop
+
+              $networkInstances = @($remoteFxNetwork.PathsWithInstances |
+                  Where-Object { $_ -match "RDP-Tcp[# ]\d+" })
+              $graphicsInstances = @($remoteFxGraphics.PathsWithInstances |
+                  Where-Object { $_ -match "RDP-Tcp[# ]\d+" })
+
+              Write-Host "RemoteFX Network instances:"
+              $networkInstances | ForEach-Object { Write-Host $_ }
+
+              Write-Host "RemoteFX Graphics instances:"
+              $graphicsInstances | ForEach-Object { Write-Host $_ }
+
+              if ($networkInstances.Count -eq 0) {
+                  Write-Warning "No RemoteFX Network RDP-Tcp instance was created"
+              }
+
+              if ($graphicsInstances.Count -eq 0) {
+                  Write-Warning "No RemoteFX Graphics RDP-Tcp instance was created"
+              }
+              @{
+                  SessionName = $sessionName
+                  RemoteFX = ($networkInstances.Count -gt 0 -and $graphicsInstances.Count -gt 0)
+              } | ConvertTo-Json | Set-Content (Join-Path $env:RUNNER_TEMP "rdp-ready.json")
+
+          - name: Start SMTP server
+            if: ${{ matrix.smtp }}
+            shell: powershell
+            run: |
+              $ErrorActionPreference = "Stop"
+              Start-Service SMTPSVC
+              (Get-Service SMTPSVC).WaitForStatus("Running", [TimeSpan]::FromSeconds(30))
+
           - name: Setup IIS
             shell: pwsh
             run: |
@@ -977,6 +1081,7 @@ jobs:
                   Select-Object -ExpandProperty Paths
 
           - name: Enable Windows Update
+            timeout-minutes: 5
             shell: powershell
             run: |
               $ErrorActionPreference = "Stop"
@@ -992,6 +1097,19 @@ jobs:
 
               $historyCount = $searcher.GetTotalHistoryCount()
               Write-Host "Windows Update history count: $historyCount"
+
+              # Some runner images have no usable cached catalog. Search online
+              # once to populate it; the Go collector still searches offline.
+              # Searching only retrieves metadata, without installing updates.
+              try {
+                  $result = $searcher.Search("IsInstalled=0 and IsHidden=0")
+              }
+              catch {
+                  Write-Warning "Offline catalog search failed: $($_.Exception.ToString())"
+                  $searcher.Online = $true
+                  $result = $searcher.Search("IsInstalled=0 and IsHidden=0")
+              }
+              Write-Host "Windows Update catalog contains $($result.Updates.Count) pending updates"
 
               Get-Service wuauserv |
                   Format-Table Name, Status, StartType
@@ -1141,6 +1259,33 @@ jobs:
 
               Get-SmbShare -Name "CIShare"
               Get-SmbConnection | Format-Table ServerName, ShareName, Dialect, NumOpens
+
+              # Keep an SMB file open and the .NET runtime loaded during the Go tests.
+              # Task Scheduler keeps the workload alive after this step.
+              $workload = Join-Path $env:RUNNER_TEMP "netframework-workload.ps1"
+              @'
+              $data = New-Object byte[] 1MB
+              $path = "\\$env:COMPUTERNAME\CIShare\test.txt"
+              $stream = [System.IO.File]::Open($path, [System.IO.FileMode]::Open, [System.IO.FileAccess]::ReadWrite, [System.IO.FileShare]::ReadWrite)
+              try {
+                  while ($true) {
+                      $stream.Position = 0
+                      $stream.WriteByte(65)
+                      $stream.Flush()
+                      [System.GC]::KeepAlive($data)
+                      Start-Sleep -Seconds 1
+                  }
+              } finally {
+                  $stream.Dispose()
+              }
+              '@ | Set-Content $workload
+              $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-NoProfile -File $workload"
+              $principal = New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\$env:USERNAME" `
+                  -LogonType Interactive -RunLevel Highest
+              $settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Hours 2)
+              Register-ScheduledTask -TaskName "CIWorkload" -Action $action -Principal $principal `
+                  -Settings $settings -Force | Out-Null
+              Start-ScheduledTask -TaskName "CIWorkload"
           - name: Setup DNS and DHCP
             shell: pwsh
             run: |
@@ -1194,44 +1339,76 @@ jobs:
               }
 
 
-      - name: Wait for background setup
-        wait: [pull-hostprocess, pull-nanoserver, setup-mscluster, setup-rdp]
+      # The foreground waits for SQL Server here anyway, so Go setup costs nothing.
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          # renovate: golang=go
+          go-version: '1.27.1'
 
-      - name: Start .NET Framework and SMB workloads
+      - name: Wait for background setup
+        wait:
+          - pull-hostprocess
+          - pull-nanoserver
+          - setup-bitlocker
+          - setup-mscluster
+          - setup-mssql
+          - setup-storage-pool
+          - start-hyperv-vm
+
+      - name: Export background fixtures
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
-          $workload = Join-Path $env:RUNNER_TEMP "netframework-workload.ps1"
-          @'
-          $data = New-Object byte[] 1MB
-          $path = "\\$env:COMPUTERNAME\CIShare\test.txt"
-          $stream = [System.IO.File]::Open($path, [System.IO.FileMode]::Open, [System.IO.FileAccess]::ReadWrite, [System.IO.FileShare]::ReadWrite)
-          try {
-              while ($true) {
-                  $stream.Position = 0
-                  $stream.WriteByte(65)
-                  $stream.Flush()
-                  [System.GC]::KeepAlive($data)
-                  Start-Sleep -Seconds 1
-              }
-          } finally {
-              $stream.Dispose()
+          $readyFile = Join-Path $env:RUNNER_TEMP "rdp-ready.json"
+          if (-not (Test-Path $readyFile)) {
+              Get-Content (Join-Path $env:RUNNER_TEMP "rdp-client.*.log") -ErrorAction SilentlyContinue
+              throw "RDP fixture did not become ready"
           }
-          '@ | Set-Content $workload
-          $process = Start-Process powershell.exe -PassThru `
-              -ArgumentList "-NoProfile", "-File", $workload
-          $process.Id | Set-Content (Join-Path $env:RUNNER_TEMP "netframework.pid")
+          $fixture = Get-Content $readyFile -Raw | ConvertFrom-Json
+          "WINDOWS_EXPORTER_TEST_RDP_SESSION=$($fixture.SessionName)" | Add-Content $env:GITHUB_ENV
+          if ($fixture.RemoteFX) {
+              "WINDOWS_EXPORTER_TEST_COLLECTORS=$env:WINDOWS_EXPORTER_TEST_COLLECTORS,remote_fx" |
+                  Add-Content $env:GITHUB_ENV
+          }
+
+          $bitlocker = Get-Content (Join-Path $env:RUNNER_TEMP "bitlocker-fixture.json") -Raw | ConvertFrom-Json
+          "WINDOWS_EXPORTER_TEST_BITLOCKER_VOLUME=$($bitlocker.Unlocked)" | Add-Content $env:GITHUB_ENV
+          "WINDOWS_EXPORTER_TEST_BITLOCKER_LOCKED_VOLUME=$($bitlocker.Locked)" | Add-Content $env:GITHUB_ENV
+
+      - name: Resync WMI performance counters
+        shell: pwsh
+        run: |
           winmgmt.exe /resyncperf
           if ($LASTEXITCODE -ne 0) { throw "Failed to synchronize WMI performance counters" }
 
       - name: Go tests
+        id: go-tests
         shell: pwsh
         run: |
-          go test -v -count=1 -race -timeout=10m ./... 2>&1 | Tee-Object test-output.txt
+          go test -json -count=1 -race -timeout=10m ./... 2>&1 | Tee-Object test-results.jsonl |
+              ForEach-Object {
+                  $line = $_.ToString()
+                  try {
+                      $event = $line | ConvertFrom-Json -ErrorAction Stop
+                      if ($event.Output) { [Console]::Write($event.Output) }
+                  } catch {
+                      Write-Host $line
+                  }
+              }
           $testExitCode = $LASTEXITCODE
-          Select-String -Path test-output.txt -Pattern '^--- SKIP:' |
-              ForEach-Object Line | Add-Content $env:GITHUB_STEP_SUMMARY
+          "exit_code=$testExitCode" | Add-Content $env:GITHUB_OUTPUT
           exit $testExitCode
+
+      - name: Summarize Windows feature tests
+        if: ${{ always() }}
+        shell: pwsh
+        env:
+          TEST_EXIT_CODE: ${{ steps.go-tests.outputs.exit_code || '1' }}
+        run: |
+          Copy-Item "$env:windir/Logs/DISM/dism.log" (Join-Path $env:RUNNER_TEMP "dism.log") -ErrorAction SilentlyContinue
+          # CBS.log names the files that make role installation request a restart.
+          Copy-Item "$env:windir/Logs/CBS/CBS.log" (Join-Path $env:RUNNER_TEMP "cbs.log") -ErrorAction SilentlyContinue
+          ./tools/test-summary.ps1 -TestExitCode ([int]$env:TEST_EXIT_CODE)
 
       - name: Build and smoke test exporter
         shell: pwsh
@@ -1244,23 +1421,18 @@ jobs:
         if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: windows-test-results
+          name: windows-test-results-${{ matrix.os }}
           path: |
             test-output.txt
+            test-results.jsonl
+            feature-summary.md
             ${{ runner.temp }}/windows_exporter.*.log
             ${{ runner.temp }}/kubelet.*.log
+            ${{ runner.temp }}/sql-server-summary.txt
+            ${{ runner.temp }}/rdp-client.*.log
+            ${{ runner.temp }}/dism.log
+            ${{ runner.temp }}/cbs.log
           if-no-files-found: ignore
-
-      - name: Stop test workloads
-        if: ${{ always() }}
-        shell: pwsh
-        run: |
-          $pidFile = Join-Path $env:RUNNER_TEMP "netframework.pid"
-          if (Test-Path $pidFile) {
-              Stop-Process -Id (Get-Content $pidFile) -ErrorAction SilentlyContinue
-          }
-          Get-Process kubelet -ErrorAction SilentlyContinue | Stop-Process -ErrorAction SilentlyContinue
-          Get-VM -Name GitHubActions -ErrorAction SilentlyContinue | Stop-VM -TurnOff -Force -ErrorAction SilentlyContinue
 
   lint:
     runs-on: windows-2025
@@ -1332,3 +1504,20 @@ jobs:
           # VALIDATE_XML: true
           # VALIDATE_YAML: true
 
+  # Require this job in the merge rules. It is skipped, which counts as passing,
+  # unless a needed job failed or was cancelled.
+  fail:
+    if: ${{ cancelled() || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'failure') }}
+    needs:
+      - build
+      - package
+      - docker
+      - windows-test
+      - lint
+      - super-linter
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Verify checks passed
+        run: |
+          echo "Some checks have failed!"
+          exit 1
