@@ -20,6 +20,7 @@ package mi
 import (
 	"errors"
 	"fmt"
+	"math"
 	"reflect"
 	"syscall"
 	"time"
@@ -184,6 +185,176 @@ func (s *Session) QueryInstances(flags OperationFlags, operationOptions *Operati
 	return operation, nil
 }
 
+// unmarshalInstance populates structValue from instance using the `mi` struct tags.
+//
+// skipMissing controls what happens when the instance has no element for a tagged field.
+// QueryUnmarshal passes true, tolerating classes whose MOF gained fields the query did not
+// select. Operation.Unmarshal passes false, so a missing element is reported as an error
+// instead of being silently left at its zero value.
+func unmarshalInstance(instance *Instance, structType reflect.Type, structValue reflect.Value, skipMissing bool) error {
+	for i := range structType.NumField() {
+		field := structValue.Field(i)
+
+		miTag := structType.Field(i).Tag.Get("mi")
+		if miTag == "" {
+			continue
+		}
+
+		element, err := instance.GetElement(miTag)
+		if err != nil {
+			if skipMissing && errors.Is(err, MI_RESULT_NO_SUCH_PROPERTY) {
+				continue
+			}
+
+			return fmt.Errorf("failed to get element %s: %w", miTag, err)
+		}
+
+		switch element.valueType {
+		case ValueTypeBOOLEAN:
+			if field.Kind() != reflect.Bool {
+				return fieldTypeError(miTag, field, "boolean")
+			}
+
+			field.SetBool(element.value == 1)
+		case ValueTypeUINT8, ValueTypeUINT16, ValueTypeUINT32, ValueTypeUINT64:
+			if err := setUintField(miTag, field, uint64(element.value)); err != nil {
+				return err
+			}
+		case ValueTypeSINT8:
+			if err := setIntField(miTag, field, int64(int8(element.value))); err != nil {
+				return err
+			}
+		case ValueTypeSINT16:
+			if err := setIntField(miTag, field, int64(int16(element.value))); err != nil {
+				return err
+			}
+		case ValueTypeSINT32:
+			if err := setIntField(miTag, field, int64(int32(element.value))); err != nil {
+				return err
+			}
+		case ValueTypeSINT64:
+			if err := setIntField(miTag, field, int64(element.value)); err != nil {
+				return err
+			}
+		case ValueTypeSTRING:
+			if field.Kind() != reflect.String {
+				return fieldTypeError(miTag, field, "string")
+			}
+
+			if element.value == 0 {
+				continue
+			}
+
+			stringValue := windows.UTF16PtrToString((*uint16)(unsafe.Pointer(element.value)))
+
+			field.SetString(stringValue)
+		case ValueTypeCHAR16:
+			// A CHAR16 is a single UTF-16 code unit, not a pointer to a string.
+			// Note: lone UTF-16 surrogates (0xD800–0xDFFF) are replaced with U+FFFD
+			// by string(rune(...)). Use a uint16 Go field when the raw code unit is needed.
+			if field.Kind() == reflect.String {
+				field.SetString(string(rune(element.value)))
+
+				continue
+			}
+
+			if err := setUintField(miTag, field, uint64(element.value)); err != nil {
+				return err
+			}
+		case ValueTypeREAL32:
+			if field.Kind() != reflect.Float32 && field.Kind() != reflect.Float64 {
+				return fieldTypeError(miTag, field, "float")
+			}
+
+			field.SetFloat(float64(math.Float32frombits(uint32(element.value))))
+		case ValueTypeREAL64:
+			if field.Kind() != reflect.Float64 {
+				return fieldTypeError(miTag, field, "float")
+			}
+
+			field.SetFloat(math.Float64frombits(uint64(element.value)))
+		case ValueTypeUINT16A:
+			if field.Type() != reflect.TypeFor[[]uint16]() {
+				return fmt.Errorf("cannot unmarshal UINT16A into field of type %s, expected []uint16", field.Type())
+			}
+
+			field.Set(reflect.ValueOf(element.getUint16Array()))
+		default:
+			return fmt.Errorf("unsupported value type: %d", element.valueType)
+		}
+	}
+
+	return nil
+}
+
+// setUintField assigns value to a numeric field, rejecting fields that cannot hold it
+// instead of letting the reflect package panic or silently wrap.
+func setUintField(miTag string, field reflect.Value, value uint64) error {
+	if !isUnsignedKind(field.Kind()) {
+		return fieldTypeError(miTag, field, "unsigned integer")
+	}
+
+	if field.OverflowUint(value) {
+		return fmt.Errorf("field %s of Go type %s cannot hold the MI unsigned value %d", miTag, field.Type(), value)
+	}
+
+	field.SetUint(value)
+
+	return nil
+}
+
+// setIntField assigns value to a numeric field, rejecting fields that cannot hold it.
+// If the Go field is unsigned, non-negative values that fit are accepted; negative
+// values are rejected with an error rather than silently wrapping.
+func setIntField(miTag string, field reflect.Value, value int64) error {
+	if !isNumericKind(field.Kind()) {
+		return fieldTypeError(miTag, field, "signed integer")
+	}
+
+	if isUnsignedKind(field.Kind()) {
+		if value < 0 || field.OverflowUint(uint64(value)) {
+			return fmt.Errorf("field %s of Go type %s cannot hold the MI signed value %d", miTag, field.Type(), value)
+		}
+
+		field.SetUint(uint64(value))
+
+		return nil
+	}
+
+	if field.OverflowInt(value) {
+		return fmt.Errorf("field %s of Go type %s cannot hold the MI signed value %d", miTag, field.Type(), value)
+	}
+
+	field.SetInt(value)
+
+	return nil
+}
+
+func isNumericKind(k reflect.Kind) bool {
+	//nolint:exhaustive // We only care about fixed-width integer kinds.
+	switch k {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return true
+	default:
+		return false
+	}
+}
+
+func isUnsignedKind(k reflect.Kind) bool {
+	//nolint:exhaustive // We only care about unsigned integer kinds.
+	switch k {
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return true
+	default:
+		return false
+	}
+}
+
+func fieldTypeError(miTag string, field reflect.Value, miType string) error {
+	return fmt.Errorf("field %s is of Go type %s but the MI value is a %s", miTag, field.Type(), miType)
+}
+
 // QueryUnmarshal queries for a set of instances based on a query expression.
 //
 // https://learn.microsoft.com/en-us/windows/win32/api/mi/nf-mi-mi_session_queryinstances
@@ -200,22 +371,6 @@ func (s *Session) QueryUnmarshal(dst any,
 	if operationOptions == nil {
 		operationOptions = s.defaultOperationOptions
 	}
-
-	dv := reflect.ValueOf(dst)
-	if dv.Kind() != reflect.Pointer || dv.IsNil() {
-		return ErrInvalidEntityType
-	}
-
-	dv = dv.Elem()
-
-	elemType := dv.Type().Elem()
-	elemValue := reflect.ValueOf(reflect.New(elemType).Interface()).Elem()
-
-	if dv.Kind() != reflect.Slice || elemType.Kind() != reflect.Struct {
-		return ErrInvalidEntityType
-	}
-
-	dv.Set(reflect.MakeSlice(dv.Type(), 0, 0))
 
 	r0, _, _ := syscall.SyscallN(
 		s.ft.QueryInstances,
@@ -237,104 +392,32 @@ func (s *Session) QueryUnmarshal(dst any,
 		_ = operation.Close()
 	}()
 
-	for {
-		instance, moreResults, err := operation.GetInstance()
-		if err != nil {
-			return fmt.Errorf("failed to get instance: %w", err)
-		}
-
-		if instance == nil {
-			break
-		}
-
-		counter, err := instance.GetElementCount()
-		if err != nil {
-			return fmt.Errorf("failed to get element count: %w", err)
-		}
-
-		if counter == 0 {
-			break
-		}
-
-		for i := range elemType.NumField() {
-			field := elemValue.Field(i)
-
-			// Check if the field has an `mi` tag
-			miTag := elemType.Field(i).Tag.Get("mi")
-			if miTag == "" {
-				continue
-			}
-
-			element, err := instance.GetElement(miTag)
-			if err != nil {
-				if errors.Is(err, MI_RESULT_NO_SUCH_PROPERTY) {
-					continue
-				}
-
-				return fmt.Errorf("failed to get element %s: %w", miTag, err)
-			}
-
-			switch element.valueType {
-			case ValueTypeBOOLEAN:
-				field.SetBool(element.value == 1)
-			case ValueTypeUINT8, ValueTypeUINT16, ValueTypeUINT32, ValueTypeUINT64:
-				field.SetUint(uint64(element.value))
-			case ValueTypeSINT8, ValueTypeSINT16, ValueTypeSINT32, ValueTypeSINT64:
-				field.SetInt(int64(element.value))
-			case ValueTypeSTRING:
-				if element.value == 0 {
-					// value is null
-					continue
-				}
-
-				// Convert the UTF-16 string to a Go string
-				stringValue := windows.UTF16PtrToString((*uint16)(unsafe.Pointer(element.value)))
-
-				field.SetString(stringValue)
-			case ValueTypeREAL32, ValueTypeREAL64:
-				field.SetFloat(float64(element.value))
-			case ValueTypeUINT16A:
-				if field.Type() != reflect.TypeFor[[]uint16]() {
-					return fmt.Errorf("cannot unmarshal UINT16A into field of type %s, expected []uint16", field.Type())
-				}
-
-				field.Set(reflect.ValueOf(element.getUint16Array()))
-			default:
-				return fmt.Errorf("unsupported value type: %d", element.valueType)
-			}
-		}
-
-		dv.Set(reflect.Append(dv, elemValue))
-
-		if !moreResults {
-			break
-		}
-	}
-
-	return nil
+	return operation.unmarshal(dst, true)
 }
 
 // Query queries for a set of instances based on a query expression.
-//
-//nolint:nestif
 func (s *Session) Query(dst any, namespaceName Namespace, queryExpression Query, queryTimeout time.Duration) error {
-	var operationOptions *OperationOptions
+	if queryTimeout < 0 {
+		return s.QueryUnmarshal(dst, OperationFlagsStandardRTTI, nil, namespaceName, QueryDialectWQL, queryExpression)
+	}
 
-	if queryTimeout >= 0 {
-		app, err := s.GetApplication()
-		if err != nil {
-			return fmt.Errorf("failed to get application: %w", err)
-		}
+	app, err := s.GetApplication()
+	if err != nil {
+		return fmt.Errorf("failed to get application: %w", err)
+	}
 
-		operationOptions, err = app.NewOperationOptions()
-		if err != nil {
-			return fmt.Errorf("failed to create operation options: %w", err)
-		}
+	operationOptions, err := app.NewOperationOptions()
+	if err != nil {
+		return fmt.Errorf("failed to create operation options: %w", err)
+	}
 
-		if queryTimeout > 0 {
-			if err = operationOptions.SetTimeout(queryTimeout); err != nil {
-				return fmt.Errorf("failed to set timeout: %w", err)
-			}
+	defer func() {
+		_ = operationOptions.Delete()
+	}()
+
+	if queryTimeout > 0 {
+		if err = operationOptions.SetTimeout(queryTimeout); err != nil {
+			return fmt.Errorf("failed to set timeout: %w", err)
 		}
 	}
 

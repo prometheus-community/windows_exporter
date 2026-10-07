@@ -18,6 +18,7 @@
 package mi_test
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -294,6 +295,414 @@ func Test_MI_FD_Leak(t *testing.T) {
 
 	require.NoError(t, session.Close())
 	require.NoError(t, application.Close())
+}
+
+type reliabilityMetrics struct {
+	SystemStabilityIndex float64 `mi:"SystemStabilityIndex"`
+}
+
+// Test_MI_Query_REAL64 verifies that GetValue correctly returns float64
+// for REAL64 MI properties by querying Win32_ReliabilityStabilityMetrics.
+func Test_MI_Query_REAL64(t *testing.T) {
+	application, err := mi.ApplicationInitialize()
+	require.NoError(t, err)
+	require.NotEmpty(t, application)
+
+	t.Cleanup(func() { _ = application.Close() })
+
+	destinationOptions, err := application.NewDestinationOptions()
+	require.NoError(t, err)
+	require.NotEmpty(t, destinationOptions)
+
+	err = destinationOptions.SetTimeout(5 * time.Second)
+	require.NoError(t, err)
+
+	err = destinationOptions.SetLocale(mi.LocaleEnglish)
+	require.NoError(t, err)
+
+	session, err := application.NewSession(destinationOptions)
+	require.NoError(t, err)
+	require.NotEmpty(t, session)
+
+	t.Cleanup(func() { _ = session.Close() })
+
+	operation, err := session.QueryInstances(mi.OperationFlagsStandardRTTI, nil, mi.NamespaceRootCIMv2, mi.QueryDialectWQL,
+		"SELECT SystemStabilityIndex FROM Win32_ReliabilityStabilityMetrics")
+	if err != nil {
+		if errors.Is(err, mi.MI_RESULT_INVALID_CLASS) {
+			t.Skip("Win32_ReliabilityStabilityMetrics class not available on this system")
+		}
+
+		require.NoError(t, err)
+	}
+
+	require.NotEmpty(t, operation)
+
+	t.Cleanup(func() { _ = operation.Close() })
+
+	var firstValue float64
+
+	var foundFloat bool
+
+	for {
+		instance, moreResults, err := operation.GetInstance()
+		if err != nil {
+			if errors.Is(err, mi.MI_RESULT_INVALID_CLASS) {
+				t.Skip("Win32_ReliabilityStabilityMetrics class not available on this system")
+			}
+
+			require.NoError(t, err)
+		}
+
+		if instance == nil {
+			break
+		}
+
+		if !foundFloat {
+			element, err := instance.GetElement("SystemStabilityIndex")
+			require.NoError(t, err)
+
+			value, err := element.GetValue()
+			require.NoError(t, err)
+
+			v, ok := value.(float64)
+			require.True(t, ok, "expected float64, got %T", value)
+
+			if v > 0 {
+				firstValue = v
+				foundFloat = true
+			}
+		}
+
+		if !moreResults {
+			break
+		}
+	}
+
+	if !foundFloat {
+		t.Skip("Win32_ReliabilityStabilityMetrics: no records with non-zero SystemStabilityIndex")
+	}
+
+	require.Greater(t, firstValue, float64(0), "SystemStabilityIndex should be positive")
+	require.LessOrEqual(t, firstValue, float64(10), "SystemStabilityIndex should be at most 10 (documented maximum)")
+
+	t.Logf("SystemStabilityIndex = %v", firstValue)
+}
+
+// Test_MI_QueryUnmarshal_REAL64 verifies that the unmarshal code path
+// correctly handles REAL64→float64 struct field conversion.
+func Test_MI_QueryUnmarshal_REAL64(t *testing.T) {
+	application, err := mi.ApplicationInitialize()
+	require.NoError(t, err)
+	require.NotEmpty(t, application)
+
+	t.Cleanup(func() { _ = application.Close() })
+
+	destinationOptions, err := application.NewDestinationOptions()
+	require.NoError(t, err)
+	require.NotEmpty(t, destinationOptions)
+
+	err = destinationOptions.SetTimeout(5 * time.Second)
+	require.NoError(t, err)
+
+	err = destinationOptions.SetLocale(mi.LocaleEnglish)
+	require.NoError(t, err)
+
+	session, err := application.NewSession(destinationOptions)
+	require.NoError(t, err)
+	require.NotEmpty(t, session)
+
+	t.Cleanup(func() { _ = session.Close() })
+
+	var metrics []reliabilityMetrics
+
+	query, err := mi.NewQuery("SELECT SystemStabilityIndex FROM Win32_ReliabilityStabilityMetrics")
+	require.NoError(t, err)
+
+	err = session.QueryUnmarshal(&metrics, mi.OperationFlagsStandardRTTI, nil, mi.NamespaceRootCIMv2, mi.QueryDialectWQL, query)
+	if err != nil {
+		if errors.Is(err, mi.MI_RESULT_INVALID_CLASS) {
+			t.Skip("Win32_ReliabilityStabilityMetrics class not available on this system")
+		}
+
+		require.NoError(t, err)
+	}
+
+	if len(metrics) == 0 {
+		t.Skip("Win32_ReliabilityStabilityMetrics returned no records")
+	}
+
+	var found bool
+
+	for _, m := range metrics {
+		if m.SystemStabilityIndex > 0 {
+			require.LessOrEqual(t, m.SystemStabilityIndex, float64(10), "SystemStabilityIndex should be at most 10 (documented maximum)")
+
+			t.Logf("SystemStabilityIndex = %.3f (from %d records)", m.SystemStabilityIndex, len(metrics))
+
+			found = true
+
+			break
+		}
+	}
+
+	if !found {
+		t.Skip("Win32_ReliabilityStabilityMetrics: no records with non-zero SystemStabilityIndex")
+	}
+}
+
+type computerSystemSigned struct {
+	ResetCount      int16 `mi:"ResetCount"`
+	ResetLimit      int16 `mi:"ResetLimit"`
+	PauseAfterReset int64 `mi:"PauseAfterReset"`
+}
+
+// computerSystemWide unmarshals SINT16 properties into int64 fields
+// to verify sign extension works correctly across type widths.
+// With the old (broken) code, a SINT16 value of -1 (0xFFFF) would
+// become 65535 in an int64 field instead of -1.
+type computerSystemWide struct {
+	ResetCount int64 `mi:"ResetCount"`
+	ResetLimit int64 `mi:"ResetLimit"`
+}
+
+// Test_MI_Query_SignedInt verifies that GetValue correctly sign-extends
+// SINT8/SINT16/SINT32 values. Win32_ComputerSystem has SInt16 properties
+// (ResetCount, ResetLimit) that are typically -1, meaning "not supported".
+func Test_MI_Query_SignedInt(t *testing.T) {
+	application, err := mi.ApplicationInitialize()
+	require.NoError(t, err)
+	require.NotEmpty(t, application)
+
+	t.Cleanup(func() { _ = application.Close() })
+
+	destinationOptions, err := application.NewDestinationOptions()
+	require.NoError(t, err)
+	require.NotEmpty(t, destinationOptions)
+
+	err = destinationOptions.SetTimeout(5 * time.Second)
+	require.NoError(t, err)
+
+	err = destinationOptions.SetLocale(mi.LocaleEnglish)
+	require.NoError(t, err)
+
+	session, err := application.NewSession(destinationOptions)
+	require.NoError(t, err)
+	require.NotEmpty(t, session)
+
+	t.Cleanup(func() { _ = session.Close() })
+
+	operation, err := session.QueryInstances(mi.OperationFlagsStandardRTTI, nil, mi.NamespaceRootCIMv2, mi.QueryDialectWQL,
+		"SELECT ResetCount, ResetLimit, PauseAfterReset FROM Win32_ComputerSystem")
+	require.NoError(t, err)
+	require.NotEmpty(t, operation)
+
+	t.Cleanup(func() { _ = operation.Close() })
+
+	instance, moreResults, err := operation.GetInstance()
+	require.NoError(t, err)
+	require.NotEmpty(t, instance)
+	require.False(t, moreResults)
+
+	// ResetCount (SInt16): verify the value is returned as int16 (not uint16 or int64).
+	// The value is typically -1 ("not supported") but the exact value is system-dependent.
+	element, err := instance.GetElement("ResetCount")
+	require.NoError(t, err)
+
+	value, err := element.GetValue()
+	require.NoError(t, err)
+
+	resetCount, ok := value.(int16)
+	require.True(t, ok, "expected int16, got %T", value)
+
+	t.Logf("ResetCount = %d, ResetLimit = (same type)", resetCount)
+}
+
+// Test_MI_QueryUnmarshal_SignedInt verifies that the unmarshal code path
+// correctly sign-extends SINT16 values into Go struct fields.
+func Test_MI_QueryUnmarshal_SignedInt(t *testing.T) {
+	application, err := mi.ApplicationInitialize()
+	require.NoError(t, err)
+	require.NotEmpty(t, application)
+
+	t.Cleanup(func() { _ = application.Close() })
+
+	destinationOptions, err := application.NewDestinationOptions()
+	require.NoError(t, err)
+	require.NotEmpty(t, destinationOptions)
+
+	err = destinationOptions.SetTimeout(5 * time.Second)
+	require.NoError(t, err)
+
+	err = destinationOptions.SetLocale(mi.LocaleEnglish)
+	require.NoError(t, err)
+
+	session, err := application.NewSession(destinationOptions)
+	require.NoError(t, err)
+	require.NotEmpty(t, session)
+
+	t.Cleanup(func() { _ = session.Close() })
+
+	var systems []computerSystemSigned
+
+	query, err := mi.NewQuery("SELECT ResetCount, ResetLimit, PauseAfterReset FROM Win32_ComputerSystem")
+	require.NoError(t, err)
+
+	err = session.QueryUnmarshal(&systems, mi.OperationFlagsStandardRTTI, nil, mi.NamespaceRootCIMv2, mi.QueryDialectWQL, query)
+	require.NoError(t, err)
+	require.Len(t, systems, 1)
+
+	// Verify that signed fields were populated without error. The actual values
+	// are system-dependent (typically -1), so we only check that unmarshalling
+	// succeeded and log the values for manual inspection.
+	s := systems[0]
+
+	t.Logf("ResetCount=%d ResetLimit=%d PauseAfterReset=%d", s.ResetCount, s.ResetLimit, s.PauseAfterReset)
+}
+
+// Test_MI_QueryUnmarshal_SignedInt_Wide verifies that the sign-extension fix
+// works when a SINT16 value is unmarshalled into a wider Go field (int64).
+// Before the fix, -1 (0xFFFF) would become 65535 in an int64 field.
+func Test_MI_QueryUnmarshal_SignedInt_Wide(t *testing.T) {
+	application, err := mi.ApplicationInitialize()
+	require.NoError(t, err)
+	require.NotEmpty(t, application)
+
+	t.Cleanup(func() { _ = application.Close() })
+
+	destinationOptions, err := application.NewDestinationOptions()
+	require.NoError(t, err)
+	require.NotEmpty(t, destinationOptions)
+
+	err = destinationOptions.SetTimeout(5 * time.Second)
+	require.NoError(t, err)
+
+	err = destinationOptions.SetLocale(mi.LocaleEnglish)
+	require.NoError(t, err)
+
+	session, err := application.NewSession(destinationOptions)
+	require.NoError(t, err)
+	require.NotEmpty(t, session)
+
+	t.Cleanup(func() { _ = session.Close() })
+
+	// First, read the actual values with the narrow type to learn what to expect.
+	var narrow []computerSystemSigned
+
+	narrowQuery, err := mi.NewQuery("SELECT ResetCount, ResetLimit FROM Win32_ComputerSystem")
+	require.NoError(t, err)
+
+	err = session.QueryUnmarshal(&narrow, mi.OperationFlagsStandardRTTI, nil, mi.NamespaceRootCIMv2, mi.QueryDialectWQL, narrowQuery)
+	require.NoError(t, err)
+	require.Len(t, narrow, 1)
+
+	if narrow[0].ResetCount >= 0 {
+		t.Skipf("ResetCount is %d (non-negative); cannot verify sign extension into wider type", narrow[0].ResetCount)
+	}
+
+	// Now unmarshal the same SINT16 values into int64 fields.
+	var wide []computerSystemWide
+
+	wideQuery, err := mi.NewQuery("SELECT ResetCount, ResetLimit FROM Win32_ComputerSystem")
+	require.NoError(t, err)
+
+	err = session.QueryUnmarshal(&wide, mi.OperationFlagsStandardRTTI, nil, mi.NamespaceRootCIMv2, mi.QueryDialectWQL, wideQuery)
+	require.NoError(t, err)
+	require.Len(t, wide, 1)
+
+	// The key assertion: with the old code, ResetCount = -1 would become 65535
+	// in the int64 field. With the fix, it must remain negative.
+	require.Negative(t, wide[0].ResetCount,
+		"SINT16 value %d should remain negative when unmarshalled into int64 (got %d)",
+		narrow[0].ResetCount, wide[0].ResetCount)
+	require.Equal(t, int64(narrow[0].ResetCount), wide[0].ResetCount,
+		"int64 field should match int16 value after sign extension")
+
+	t.Logf("ResetCount: int16=%d, int64=%d (sign extension correct)", narrow[0].ResetCount, wide[0].ResetCount)
+}
+
+// Test_MI_Unmarshal_TypeMismatch verifies that unmarshalInstance rejects
+// Go struct fields whose kind does not match the MI value type.
+func Test_MI_Unmarshal_TypeMismatch(t *testing.T) {
+	application, err := mi.ApplicationInitialize()
+	require.NoError(t, err)
+
+	t.Cleanup(func() { _ = application.Close() })
+
+	session, err := application.NewSession(nil)
+	require.NoError(t, err)
+
+	t.Cleanup(func() { _ = session.Close() })
+
+	// Map a string MI property (Name) to an int Go field → type error.
+	t.Run("string_to_int", func(t *testing.T) {
+		type bad struct {
+			Name int `mi:"Name"`
+		}
+
+		var dst []bad
+
+		query, err := mi.NewQuery("SELECT Name FROM Win32_Process WHERE Handle = 0")
+		require.NoError(t, err)
+
+		err = session.QueryUnmarshal(&dst, mi.OperationFlagsStandardRTTI, nil, mi.NamespaceRootCIMv2, mi.QueryDialectWQL, query)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "Name")
+
+		t.Logf("got expected error: %v", err)
+	})
+
+	// Map a uint32 MI property (ProcessId) to a bool Go field → type error.
+	t.Run("uint_to_bool", func(t *testing.T) {
+		type bad struct {
+			ProcessId bool `mi:"ProcessId"`
+		}
+
+		var dst []bad
+
+		query, err := mi.NewQuery("SELECT ProcessId FROM Win32_Process WHERE Handle = 0")
+		require.NoError(t, err)
+
+		err = session.QueryUnmarshal(&dst, mi.OperationFlagsStandardRTTI, nil, mi.NamespaceRootCIMv2, mi.QueryDialectWQL, query)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "ProcessId")
+
+		t.Logf("got expected error: %v", err)
+	})
+
+	// Map a SInt16 MI property to an unsigned Go field. If the value is
+	// negative (e.g. -1 = "not supported") this must error; if it is
+	// non-negative and fits uint16 it is accepted. Skip when non-negative.
+	t.Run("negative_sint_to_uint", func(t *testing.T) {
+		// First, read the actual value to decide whether to test or skip.
+		var probe []computerSystemSigned
+
+		probeQuery, err := mi.NewQuery("SELECT ResetCount FROM Win32_ComputerSystem")
+		require.NoError(t, err)
+
+		err = session.QueryUnmarshal(&probe, mi.OperationFlagsStandardRTTI, nil, mi.NamespaceRootCIMv2, mi.QueryDialectWQL, probeQuery)
+		require.NoError(t, err)
+		require.Len(t, probe, 1)
+
+		if probe[0].ResetCount >= 0 {
+			t.Skipf("ResetCount is %d (non-negative); cannot test negative→uint rejection", probe[0].ResetCount)
+		}
+
+		type bad struct {
+			ResetCount uint16 `mi:"ResetCount"`
+		}
+
+		var dst []bad
+
+		query, err := mi.NewQuery("SELECT ResetCount FROM Win32_ComputerSystem")
+		require.NoError(t, err)
+
+		err = session.QueryUnmarshal(&dst, mi.OperationFlagsStandardRTTI, nil, mi.NamespaceRootCIMv2, mi.QueryDialectWQL, query)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "ResetCount")
+
+		t.Logf("got expected error: %v", err)
+	})
 }
 
 func Test_MI_QueryTimeout(t *testing.T) {

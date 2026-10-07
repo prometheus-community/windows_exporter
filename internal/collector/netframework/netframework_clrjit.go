@@ -57,7 +57,7 @@ func (c *Collector) buildClrJIT() {
 type Win32_PerfRawData_NETFramework_NETCLRJit struct {
 	Name string `mi:"Name"`
 
-	Frequency_PerfTime         uint32 `mi:"Frequency_PerfTime"`
+	Frequency_PerfTime         uint64 `mi:"Frequency_PerfTime"`
 	ILBytesJittedPersec        uint32 `mi:"ILBytesJittedPersec"`
 	NumberofILBytesJitted      uint32 `mi:"NumberofILBytesJitted"`
 	NumberofMethodsJitted      uint32 `mi:"NumberofMethodsJitted"`

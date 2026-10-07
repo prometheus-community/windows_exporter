@@ -20,6 +20,7 @@ package mi
 import (
 	"errors"
 	"fmt"
+	"math"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
@@ -91,9 +92,9 @@ func (e *Element) GetValue() (any, error) {
 	case ValueTypeSINT64:
 		return int64(e.value), nil
 	case ValueTypeREAL32:
-		return float32(e.value), nil
+		return math.Float32frombits(uint32(e.value)), nil
 	case ValueTypeREAL64:
-		return float64(e.value), nil
+		return math.Float64frombits(uint64(e.value)), nil
 	case ValueTypeCHAR16:
 		return uint16(e.value), nil
 	case ValueTypeDATETIME:
