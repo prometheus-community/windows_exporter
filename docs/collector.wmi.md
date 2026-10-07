@@ -119,7 +119,9 @@ SELECT <label_properties>, <properties> FROM <class> [WHERE <where>]
 Required, unique ID for the query. It is used as the `name` label on
 `windows_wmi_query_success` and `windows_wmi_query_duration_seconds`, to identify
 the query in logs, and to seed auto-generated metric names (see
-[Metric naming](#metric-naming)). Duplicates are rejected at build time.
+[Metric naming](#metric-naming)). Duplicates are rejected at build time, and so
+are names that only differ in case or special characters (`os` and `OS`, or
+`my_disk` and `my-disk`), because they produce the same metric names.
 
 #### namespace
 
@@ -143,7 +145,9 @@ to tell the returned instances apart, typically with the key property of the
 class (`DeviceID`, `Name`, …). Optional.
 
 String, boolean and integer properties are supported. A property without a value
-(`null`) becomes an empty label value.
+(`null`) becomes an empty label value. A label property of any other type, for
+example a datetime, fails the whole query at scrape time, and none of its
+metrics are exported.
 
 The label properties must uniquely identify every returned instance. Two
 instances with identical label values produce duplicate series, which are
@@ -158,8 +162,8 @@ The name of the WMI property. Required.
 ##### label
 
 The name of the label. Optional — defaults to the property name, lowercased, with
-every character that is not a letter or digit replaced by `_`. Each label must be
-unique within a query.
+every character that is not a letter or digit replaced by `_` and leading and
+trailing `_` trimmed. Each label must be unique within a query.
 
 #### properties
 
@@ -194,8 +198,14 @@ automatically. See [Metric naming](#metric-naming) for the exact rules and
 examples.
 
 Properties may deliberately share a `metric` name, also across queries, as long
-as they agree on help text, type and label names, and their constant labels keep
-the series apart.
+as they agree on help text, type and label names, and their labels keep the
+series apart. Build rejects identical series within a query, and across queries
+without label properties. For queries with label properties, the series depend
+on the instances returned at runtime; duplicates are dropped and logged at scrape
+time.
+
+The names `windows_wmi_query_success` and `windows_wmi_query_duration_seconds`
+are reserved for the collector's own metrics.
 
 ##### help
 
@@ -228,11 +238,20 @@ duration metric per query.
 | `windows_wmi_query_success` | Whether the query ran and all of its configured properties could be read (0, 1) | gauge | `name` |
 | `windows_wmi_query_duration_seconds` | Duration of the query | gauge | `name` |
 
-A `windows_wmi_query_success` value of `0` means the query failed — for example
-because the namespace, class or a property does not exist, the `where` clause is
-invalid or the query timed out — *or* at least one configured property could not
-be converted to a number. Properties that did convert successfully are still
-exported.
+A `windows_wmi_query_success` value of `0` means one of:
+
+- The query failed, for example because the namespace, class or a property does
+  not exist, the `where` clause is invalid, or a label property has an
+  unsupported type. Nothing is exported for the query.
+- The scrape timeout ran out (see [Notes](#notes)). Instances read before that are
+  exported.
+- At least one configured property could not be converted to a number. All other
+  properties are still exported.
+
+Failing queries are logged as warnings, but do not mark the whole collector as
+failed: `windows_exporter_collector_success{collector="wmi"}` stays `1`, like for
+the [registry](collector.registry.md) collector. Alert on
+`windows_wmi_query_success` instead.
 
 Build only validates the configuration; it does not run the queries. A class that
 is missing on a host is therefore reported via `windows_wmi_query_success` rather
@@ -301,8 +320,11 @@ windows_wmi_query_success{name="os"} 1
 
 ### Notes
 
-- Each query is bounded by the scrape timeout. Keep queries narrow with `where`
-  and avoid slow providers; check `windows_wmi_query_duration_seconds`.
+- The queries run one after another and share the scrape timeout. A query that
+  is still running when it runs out is cancelled, and the remaining queries are
+  skipped; all of them report `windows_wmi_query_success` `0`. Keep queries
+  narrow with `where`, avoid slow providers, and check
+  `windows_wmi_query_duration_seconds`.
 - `uint64` and `sint64` values larger than 2^53 lose precision when converted to
   the 64-bit float used by Prometheus.
 - WQL `ASSOCIATORS OF` and `REFERENCES OF` queries are not supported.

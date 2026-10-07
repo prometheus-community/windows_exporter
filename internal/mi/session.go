@@ -417,7 +417,7 @@ func (s *Session) Query(dst any, namespaceName Namespace, queryExpression Query,
 // where [Session.Query] cannot unmarshal into a struct.
 //
 // The instance, and every element read from it, is owned by the operation and
-// only valid until fn returns. If fn returns an error, the query is aborted
+// only valid until fn returns. If fn returns an error, the query is cancelled
 // and that error is returned.
 func (s *Session) QueryFunc(namespaceName Namespace, queryExpression Query, queryTimeout time.Duration, fn func(*Instance) error) error {
 	if s == nil || s.ft == nil {
@@ -456,7 +456,15 @@ func (s *Session) QueryFunc(namespaceName Namespace, queryExpression Query, quer
 		return fmt.Errorf("failed to query instances: %w", result)
 	}
 
+	completed := false
+
 	defer func() {
+		// Close drains every remaining instance, so an aborted query is
+		// cancelled first. Otherwise it still costs the full result set.
+		if !completed {
+			_ = operation.Cancel()
+		}
+
 		_ = operation.Close()
 	}()
 
@@ -467,6 +475,8 @@ func (s *Session) QueryFunc(namespaceName Namespace, queryExpression Query, quer
 		}
 
 		if instance == nil {
+			completed = true
+
 			return nil
 		}
 
@@ -475,6 +485,8 @@ func (s *Session) QueryFunc(namespaceName Namespace, queryExpression Query, quer
 		}
 
 		if !moreResults {
+			completed = true
+
 			return nil
 		}
 	}

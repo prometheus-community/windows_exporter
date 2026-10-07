@@ -30,6 +30,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/collector/wmi"
+	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/stretchr/testify/require"
@@ -41,6 +42,8 @@ import (
 // reported via query_success=0 while every other metric is still emitted.
 type collectorAdapter struct {
 	*wmi.Collector
+
+	maxScrapeDuration time.Duration
 }
 
 // Describe implements the prometheus.Collector interface.
@@ -48,17 +51,24 @@ func (collectorAdapter) Describe(chan<- *prometheus.Desc) {}
 
 // Collect implements the prometheus.Collector interface.
 func (a collectorAdapter) Collect(ch chan<- prometheus.Metric) {
-	_ = a.Collector.Collect(ch, 5*time.Second)
+	_ = a.Collector.Collect(ch, a.maxScrapeDuration)
 }
 
 // scrape builds c against a live MI session and returns its exposition.
 func scrape(t *testing.T, c *wmi.Collector) string {
 	t.Helper()
 
+	return scrapeWithTimeout(t, c, 5*time.Second)
+}
+
+// scrapeWithTimeout is scrape with a custom scrape timeout.
+func scrapeWithTimeout(t *testing.T, c *wmi.Collector, maxScrapeDuration time.Duration) string {
+	t.Helper()
+
 	require.NoError(t, c.Build(slog.New(slog.DiscardHandler), newSession(t)))
 
 	reg := prometheus.NewRegistry()
-	reg.MustRegister(collectorAdapter{c})
+	reg.MustRegister(collectorAdapter{c, maxScrapeDuration})
 
 	rw := httptest.NewRecorder()
 	promhttp.HandlerFor(reg, promhttp.HandlerOpts{ErrorHandling: promhttp.ContinueOnError}).ServeHTTP(rw, &http.Request{})
@@ -126,8 +136,10 @@ func TestCollectorMetrics(t *testing.T) {
 				},
 			},
 			{
-				Name:       "os",
-				Class:      "Win32_OperatingSystem",
+				Name:  "os",
+				Class: "Win32_OperatingSystem",
+				// Whitespace only, so no WHERE clause is generated.
+				Where:      " \t ",
 				Properties: []wmi.Property{{Name: "Primary"}},
 			},
 			{
@@ -248,11 +260,40 @@ func TestCollectPropertyErrorReportedOnce(t *testing.T) {
 		},
 	}))
 
-	require.Error(t, err)
+	// Like the registry collector, a failing query is reported via
+	// query_success and does not fail the whole collector.
+	require.ErrorIs(t, err, types.ErrNoData)
 	require.Equal(t, 1, strings.Count(err.Error(), "failed to read property Name"), err.Error())
 
 	// Two ProcessId samples plus query_success and query_duration_seconds.
 	require.Equal(t, 4, metrics)
+}
+
+// TestCollectScrapeTimeout verifies that queries are not started once the
+// scrape timeout is used up, and are reported as failed.
+func TestCollectScrapeTimeout(t *testing.T) {
+	t.Parallel()
+
+	c := wmi.New(&wmi.Config{
+		Queries: []wmi.Query{
+			{Name: "a", Class: "Win32_OperatingSystem", Properties: []wmi.Property{{Name: "Primary"}}},
+			{Name: "b", Class: "Win32_OperatingSystem", Properties: []wmi.Property{{Name: "Primary"}}, LabelProperties: []wmi.LabelProperty{{Name: "Caption"}}},
+		},
+	})
+
+	got := scrapeWithTimeout(t, c, time.Nanosecond)
+
+	require.Contains(t, got, `windows_wmi_query_success{name="a"} 0`)
+	require.Contains(t, got, `windows_wmi_query_success{name="b"} 0`)
+	require.NotContains(t, got, "windows_wmi_a_primary")
+	require.NotContains(t, got, "windows_wmi_b_primary")
+
+	ch := make(chan prometheus.Metric, 10)
+	err := c.Collect(ch, time.Nanosecond)
+	close(ch)
+
+	require.ErrorIs(t, err, types.ErrNoData)
+	require.Equal(t, 2, strings.Count(err.Error(), "scrape timeout exceeded"), err.Error())
 }
 
 // TestNewWithFlags verifies that the queries flag is parsed as YAML and JSON,

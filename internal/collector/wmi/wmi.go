@@ -38,7 +38,13 @@ const (
 	Name = "wmi"
 
 	defaultNamespace = "root/CIMv2"
+
+	// minQueryTimeout is the least time left in the scrape for which a query
+	// is still started.
+	minQueryTimeout = time.Millisecond
 )
+
+var errScrapeTimeout = errors.New("scrape timeout exceeded")
 
 var (
 	reNonAlphaNum = regexp.MustCompile(`[^a-zA-Z0-9]`)
@@ -161,8 +167,23 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 
 	c.miSession = miSession
 
-	names := make([]string, 0, len(c.config.Queries))
+	// names maps the sanitized query name, which seeds auto-generated metric
+	// names, to the configured one. Names that only differ in case or special
+	// characters would produce the same metrics.
+	names := make(map[string]string, len(c.config.Queries))
 	signatures := make(map[string]metricSignature)
+
+	// seriesQueries maps the series of queries without label properties to
+	// the query producing it. Such a query emits exactly one series per
+	// property, so a collision with another query is certain. Series of
+	// queries with label properties depend on the instances returned at
+	// runtime and cannot be checked here.
+	seriesQueries := make(map[string]string)
+
+	reservedMetrics := []string{
+		prometheus.BuildFQName(types.Namespace, Name, "query_success"),
+		prometheus.BuildFQName(types.Namespace, Name, "query_duration_seconds"),
+	}
 
 	var errs []error
 
@@ -173,13 +194,17 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 			continue
 		}
 
-		if slices.Contains(names, query.Name) {
-			errs = append(errs, fmt.Errorf("query %s: name is duplicated", query.Name))
+		if prev, ok := names[sanitizeMetricName(query.Name)]; ok {
+			if prev == query.Name {
+				errs = append(errs, fmt.Errorf("query %s: name is duplicated", query.Name))
+			} else {
+				errs = append(errs, fmt.Errorf("query %s: name produces the same metric names as query %s", query.Name, prev))
+			}
 
 			continue
 		}
 
-		names = append(names, query.Name)
+		names[sanitizeMetricName(query.Name)] = query.Name
 
 		if !reIdentifier.MatchString(query.Class) {
 			errs = append(errs, fmt.Errorf("query %s: class %q must be a valid WMI class name", query.Name, query.Class))
@@ -274,6 +299,12 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 				)
 			}
 
+			if slices.Contains(reservedMetrics, property.Metric) {
+				errs = append(errs, fmt.Errorf("query %s: property %q: metric %q is reserved by the wmi collector", query.Name, property.Name, property.Metric))
+
+				continue
+			}
+
 			switch property.Type {
 			case "", "gauge":
 				property.metricType = prometheus.GaugeValue
@@ -296,6 +327,16 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 			}); k != -1 {
 				errs = append(errs, fmt.Errorf("query %s: properties %q and %q produce identical series %s, set a different metric name or labels",
 					query.Name, properties[k].Name, property.Name, property.Metric,
+				))
+
+				continue
+			}
+
+			series := seriesKey(property.Metric, property.Labels)
+
+			if prev, ok := seriesQueries[series]; ok && len(query.labelNames) == 0 {
+				errs = append(errs, fmt.Errorf("query %s: property %q produces the same series %s as query %s, set a different metric name or labels",
+					query.Name, property.Name, property.Metric, prev,
 				))
 
 				continue
@@ -340,6 +381,11 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 			}
 
 			signatures[property.Metric] = signature
+
+			if len(query.labelNames) == 0 {
+				seriesQueries[series] = query.Name
+			}
+
 			properties = append(properties, property)
 
 			addSelected(property.Name)
@@ -351,6 +397,8 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 
 		query.LabelProperties = labelProperties
 		query.Properties = properties
+
+		query.Where = strings.TrimSpace(query.Where)
 
 		query.wql = fmt.Sprintf("SELECT %s FROM %s", strings.Join(selected, ", "), query.Class)
 		if query.Where != "" {
@@ -376,20 +424,33 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 // Collect sends the metric values for each configured WMI query
 // to the provided prometheus Metric channel.
 func (c *Collector) Collect(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) error {
+	// The queries run one after another and share the scrape timeout, so each
+	// query only gets the time that is left. A non-positive timeout means no
+	// deadline.
+	var deadline time.Time
+
+	if maxScrapeDuration > 0 {
+		deadline = time.Now().Add(maxScrapeDuration)
+	}
+
 	var errs []error
 
 	for _, query := range c.queries {
 		startTime := time.Now()
-		err := c.collectQuery(ch, query, maxScrapeDuration)
+		err := c.collectQuery(ch, query, deadline)
 		duration := time.Since(startTime)
 		success := 1.0
 
 		if err != nil {
-			errs = append(errs, fmt.Errorf("failed to collect query %s: %w", query.Name, err))
+			// A failing query is reported via query_success. Like the registry
+			// collector, it does not fail the whole collector.
+			errs = append(errs, fmt.Errorf("failed to collect query %s: %w", query.Name, errors.Join(err, types.ErrNoData)))
 			success = 0.0
 
-			c.logger.Debug(fmt.Sprintf("wmi query %s failed after %s", query.Name, duration),
-				slog.String("query", query.wql),
+			c.logger.Warn("wmi query failed",
+				slog.String("query", query.Name),
+				slog.String("wql", query.wql),
+				slog.Duration("duration", duration),
 				slog.Any("err", err),
 			)
 		} else {
@@ -414,14 +475,33 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, maxScrapeDuration time.
 	return errors.Join(errs...)
 }
 
-func (c *Collector) collectQuery(ch chan<- prometheus.Metric, query Query, maxScrapeDuration time.Duration) error {
+func (c *Collector) collectQuery(ch chan<- prometheus.Metric, query Query, deadline time.Time) error {
+	// Zero means no timeout, which leaves the MI default in place.
+	var timeout time.Duration
+
+	if !deadline.IsZero() {
+		timeout = time.Until(deadline)
+
+		// MI timeouts have microsecond resolution and treat zero as unset,
+		// so a query is not started without a usable amount of time left.
+		if timeout < minQueryTimeout {
+			return errScrapeTimeout
+		}
+	}
+
 	labelValues := make([]string, len(query.LabelProperties))
 
 	// A property that cannot be read usually fails for every instance, so
 	// each property reports at most one error per scrape.
 	propertyErrs := make(map[string]error)
 
-	err := c.miSession.QueryFunc(query.namespace, query.query, maxScrapeDuration, func(instance *mi.Instance) error {
+	err := c.miSession.QueryFunc(query.namespace, query.query, timeout, func(instance *mi.Instance) error {
+		// The MI timeout does not stop a query that keeps returning
+		// instances, so the deadline is also checked per instance.
+		if !deadline.IsZero() && time.Now().After(deadline) {
+			return errScrapeTimeout
+		}
+
 		for i, labelProperty := range query.LabelProperties {
 			element, err := instance.GetElement(labelProperty.Name)
 			if err != nil {
@@ -507,4 +587,18 @@ func firstCommonLabel(labelNames []string, labels map[string]string) (string, bo
 // with an underscore, and trimming leading and trailing underscores.
 func sanitizeMetricName(name string) string {
 	return strings.Trim(reNonAlphaNum.ReplaceAllString(strings.ToLower(name), "_"), "_")
+}
+
+// seriesKey identifies the series of a property without label properties: its
+// metric name and constant labels.
+func seriesKey(metric string, labels map[string]string) string {
+	var sb strings.Builder
+
+	sb.WriteString(metric)
+
+	for _, name := range slices.Sorted(maps.Keys(labels)) {
+		sb.WriteString("\xff" + name + "=" + labels[name])
+	}
+
+	return sb.String()
 }

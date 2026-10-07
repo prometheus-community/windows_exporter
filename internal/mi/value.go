@@ -124,7 +124,7 @@ func (e *Element) Float64() (float64, error) {
 			return float64(dt.Timestamp.Time().UnixMicro()) / 1e6, nil
 		}
 
-		return dt.Interval.Duration().Seconds(), nil
+		return dt.Interval.TotalSeconds(), nil
 	default:
 		return 0, fmt.Errorf("unsupported value type for numeric conversion: %d", e.valueType)
 	}
@@ -204,8 +204,24 @@ func (t *Timestamp) Time() time.Time {
 	)
 }
 
-// Duration converts the interval to a time.Duration.
+// TotalSeconds returns the length of the interval in seconds. Unlike
+// [Interval.Duration], it covers the full range of an MI_Interval, including
+// the CIM "infinite" interval of 99999999 days.
+func (i *Interval) TotalSeconds() float64 {
+	return float64(i.Days)*86400 +
+		float64(i.Hours)*3600 +
+		float64(i.Minutes)*60 +
+		float64(i.Seconds) +
+		float64(i.Microseconds)/1e6
+}
+
+// Duration converts the interval to a time.Duration. Intervals longer than
+// about 292 years exceed time.Duration and are capped at its maximum.
 func (i *Interval) Duration() time.Duration {
+	if i.TotalSeconds() >= float64(math.MaxInt64)/float64(time.Second) {
+		return time.Duration(math.MaxInt64)
+	}
+
 	return time.Duration(i.Days)*24*time.Hour +
 		time.Duration(i.Hours)*time.Hour +
 		time.Duration(i.Minutes)*time.Minute +

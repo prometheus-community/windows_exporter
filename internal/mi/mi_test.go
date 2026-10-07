@@ -937,6 +937,16 @@ func Test_MI_QueryFunc(t *testing.T) {
 	require.ErrorIs(t, err, errStop)
 	require.Equal(t, 1, calls)
 
+	// The cancelled query must leave the session usable.
+	calls = 0
+	err = session.QueryFunc(mi.NamespaceRootCIMv2, query, 5*time.Second, func(*mi.Instance) error {
+		calls++
+
+		return nil
+	})
+	require.NoError(t, err)
+	require.Greater(t, calls, 1)
+
 	// Invalid classes surface as an error rather than an empty result.
 	query, err = mi.NewQuery("SELECT Name FROM Win32_DoesNotExist")
 	require.NoError(t, err)

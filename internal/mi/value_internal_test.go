@@ -103,6 +103,42 @@ func TestElementFloat64Datetime(t *testing.T) {
 		require.NoError(t, err)
 		require.InDelta(t, (26*time.Hour + 3*time.Minute + 4500*time.Millisecond).Seconds(), got, 1e-9)
 	})
+
+	t.Run("timestamp west of UTC", func(t *testing.T) {
+		t.Parallel()
+
+		var raw [5]uint64
+
+		// The CIM_DATETIME 20231015123000.000000-420 is 12:30 at UTC-7,
+		// which is 19:30 UTC. GitHub runners use UTC, so this sign is only
+		// covered here.
+		words := (*[10]uint32)(unsafe.Pointer(&raw))
+		utcOffset := int32(-420)
+		*words = [10]uint32{1, 2023, 10, 15, 12, 30, 0, 0, uint32(utcOffset)}
+
+		got, err := newElement(ValueTypeDATETIME, raw, 0).Float64()
+		require.NoError(t, err)
+		require.InDelta(t, float64(time.Date(2023, 10, 15, 19, 30, 0, 0, time.UTC).Unix()), got, 1e-6)
+	})
+
+	t.Run("infinite interval", func(t *testing.T) {
+		t.Parallel()
+
+		var raw [5]uint64
+
+		// The CIM "infinite" interval 99999999235959.000000:000 overflows
+		// time.Duration, which must not wrap around.
+		words := (*[10]uint32)(unsafe.Pointer(&raw))
+		*words = [10]uint32{0, 99999999, 23, 59, 59, 0}
+
+		element := newElement(ValueTypeDATETIME, raw, 0)
+
+		got, err := element.Float64()
+		require.NoError(t, err)
+		require.InDelta(t, 99999999*86400.0+86399, got, 1)
+
+		require.Equal(t, time.Duration(math.MaxInt64), element.datetime().Interval.Duration())
+	})
 }
 
 func TestElementString(t *testing.T) {
