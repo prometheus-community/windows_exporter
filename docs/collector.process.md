@@ -40,7 +40,8 @@ Disabled by default, and can be enabled with `--collector.process.iis`. NOTE: Ju
 ### `--collector.process.counter-version`
 
 Version of the process collector to use. 1 for Process V1, 2 for Process V2.
-Defaults to 0 which will use the latest version available.
+0 uses Process V2 if it is available and falls back to Process V1 otherwise.
+Defaults to 1 (Process V1).
 
 ### `--collector.process.cmdline`
 

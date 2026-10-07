@@ -139,7 +139,7 @@ msiexec /i <path-to-msi-file> --% ENABLED_COLLECTORS=os,iis LISTEN_PORT=5000
 
 Example service collector with a custom query.
 ```powershell
-msiexec /i <path-to-msi-file> --% ENABLED_COLLECTORS=os,service EXTRA_FLAGS="--collectors.exchange.enabled=""ADAccessProcesses"""
+msiexec /i <path-to-msi-file> --% ENABLED_COLLECTORS=os,service EXTRA_FLAGS="--collector.exchange.enabled=""ADAccessProcesses"""
 ```
 
 Define a config file.
@@ -168,7 +168,7 @@ PowerShell versions 7.3 and above require [PSNativeCommandArgumentPassing](https
 
 ```powershell
 $PSNativeCommandArgumentPassing = 'Legacy'
-msiexec /i <path-to-msi-file> ENABLED_COLLECTORS=os,service --% EXTRA_FLAGS="--collectors.exchange.enabled=""ADAccessProcesses"""
+msiexec /i <path-to-msi-file> ENABLED_COLLECTORS=os,service --% EXTRA_FLAGS="--collector.exchange.enabled=""ADAccessProcesses"""
 ```
 
 ## Docker Implementation

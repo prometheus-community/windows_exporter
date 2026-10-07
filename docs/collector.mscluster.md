@@ -10,9 +10,9 @@ Enabled by default? | No
 
 ## Flags
 
-### `--collectors.mscluster.enabled`
+### `--collector.mscluster.enabled`
 Comma-separated list of collectors to use, for example:
-`--collectors.mscluster.enabled=cluster,network,node,resource,resouregroup,shared_volumes,virtualdisk,storagepool`.
+`--collector.mscluster.enabled=cluster,network,node,resource,resourcegroup,shared_volumes,virtualdisk,storagepool`.
 Matching is case-sensitive.
 
 ## Metrics

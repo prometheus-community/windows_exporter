@@ -12,7 +12,7 @@ Enabled by default? | No
 
 ## Flags
 
-### `--collectors.dfsr.sources-enabled`
+### `--collector.dfsr.sources-enabled`
 
 Comma-separated list of DFSR Perflib sources to use. Supported values are `connection`, `folder` and `volume`.
 All sources are enabled by default

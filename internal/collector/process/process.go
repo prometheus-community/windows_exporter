@@ -141,7 +141,7 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 
 	app.Flag(
 		"collector.process.counter-version",
-		"Version of the process collector to use. 1 for Process V1, 2 for Process V2. Defaults to 0 which will use the latest version available.",
+		"Version of the process collector to use. 1 for Process V1, 2 for Process V2, 0 for Process V2 with fallback to Process V1 if V2 is not available. Defaults to 1.",
 	).Default(strconv.FormatUint(uint64(c.config.CounterVersion), 10)).Uint8Var(&c.config.CounterVersion)
 
 	app.Action(func(*kingpin.ParseContext) error {

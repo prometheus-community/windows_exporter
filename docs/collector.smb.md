@@ -12,11 +12,7 @@ Enabled by default? | No
 
 ## Flags
 
-### `--collectors.smb.list`
-Lists the Perflib Objects that are queried for data along with the perlfib object id
-
-### `--collectors.smb.enabled`
-Comma-separated list of collectors to use, for example: `--collectors.smb.enabled=ServerShares`. Matching is case-sensitive. Depending on the smb installation not all performance counters are available. Use `--collectors.smb.list` to obtain a list of supported collectors.
+None
 
 ## Metrics
 Name          | Description

@@ -276,10 +276,10 @@ collector:
         counters:
           - name: "Temperature"
             type: "gauge"
-            metric: windows_thermalzone_percent_passive_limit
+            metric: windows_thermalzone_temperature_kelvin
           - name: "% Passive Limit"
             type: "gauge"
-            metric: windows_thermalzone_temperature_celsius
+            metric: windows_thermalzone_percent_passive_limit
           - name: "Throttle Reasons"
             type: "gauge"
             metric: windows_thermalzone_throttle_reasons
