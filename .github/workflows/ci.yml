@@ -355,6 +355,12 @@ jobs:
           key: sql-server-2025-express-fa7e1fabc9a2-${{ runner.os }}
 
       # Steps that do not register services run in the background while Windows features install.
+      - name: Download SQL Server media
+        id: download-mssql
+        background: true
+        shell: powershell
+        run: ./tools/setup-sql-server.ps1 -DownloadOnly
+
       - name: Install FreeRDP client
         id: install-freerdp
         background: true
@@ -528,6 +534,10 @@ jobs:
           )
           Set-Content -Path $installer -Value $installerContent -Encoding utf8
 
+      # Downloads stall once the DNS Server role is installed, so finish them first.
+      - name: Wait for downloads
+        wait: [download-mssql, install-freerdp, download-container-prereqs]
+
       # Install every Windows feature in one foreground step. Steps that register
       # services, such as SQL Server setup, New-Cluster, and containerd, start only
       # afterwards: changing service configuration during the install aborts its
@@ -616,9 +626,6 @@ jobs:
           Get-Cluster | Format-List Name, AdministrativeAccessPoint
           Get-ClusterNode | Format-Table Name, State, NodeWeight, DynamicWeight
           Get-ClusterNetwork | Format-Table Name, State, Role, Address
-
-      - name: Wait for container prerequisites
-        wait: [download-container-prereqs]
 
       - name: Prepare container runtime
         shell: pwsh
@@ -898,9 +905,6 @@ jobs:
               Get-Content $kubeletStderr -ErrorAction SilentlyContinue
               throw "Static pods did not reach Running state"
           }
-
-      - name: Wait for FreeRDP client
-        wait: [install-freerdp]
 
       - parallel:
           - name: Setup local RDP session
