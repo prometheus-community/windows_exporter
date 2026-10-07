@@ -53,17 +53,22 @@ func TestCollectorBitlocker(t *testing.T) {
 		VolumeExclude:     types.RegExpEmpty,
 	})
 
-	volume := os.Getenv("WINDOWS_EXPORTER_TEST_BITLOCKER_VOLUME")
-	if volume == "" {
-		return
-	}
+	for env, want := range map[string]string{
+		"WINDOWS_EXPORTER_TEST_BITLOCKER_VOLUME":        "on",
+		"WINDOWS_EXPORTER_TEST_BITLOCKER_LOCKED_VOLUME": "locked",
+	} {
+		volume := os.Getenv(env)
+		if volume == "" {
+			continue
+		}
 
-	status := testutils.RequireFixtureMetric(t, metrics, logical_disk.Name, "windows_logical_disk_bitlocker_status", prometheus.Labels{
-		"volume": volume,
-		"status": "on",
-	})
-	require.NotNil(t, status)
-	require.InDelta(t, 1, status.GetGauge().GetValue(), 0, "BitLocker fixture volume is not reported as protected")
+		status := testutils.RequireFixtureMetric(t, metrics, logical_disk.Name, "windows_logical_disk_bitlocker_status", prometheus.Labels{
+			"volume": volume,
+			"status": want,
+		})
+		require.NotNil(t, status)
+		require.InDelta(t, 1, status.GetGauge().GetValue(), 0, "BitLocker fixture volume %s is not reported as %s", volume, want)
+	}
 }
 
 func TestCollectorVolumeFilters(t *testing.T) {
