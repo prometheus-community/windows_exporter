@@ -51,7 +51,6 @@ type Collector struct {
 	config Config
 
 	lastResult       *prometheus.Desc
-	lastResultCode   *prometheus.Desc
 	lastResultStatus *prometheus.Desc
 	missedRuns       *prometheus.Desc
 	state            *prometheus.Desc
@@ -165,14 +164,8 @@ func (c *Collector) Close() error {
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 	c.lastResult = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "last_result"),
-		"The result that was returned the last time the registered task was run",
-		[]string{"task"},
-		nil,
-	)
-
-	c.lastResultCode = prometheus.NewDesc(
-		prometheus.BuildFQName(types.Namespace, Name, "last_result_code"),
-		"The raw Task Scheduler LastTaskResult code as an unsigned 32-bit value",
+		"DEPRECATED: use windows_scheduled_task_last_result_status. "+
+			"The result that was returned the last time the registered task was run",
 		[]string{"task"},
 		nil,
 	)
@@ -247,13 +240,6 @@ func (c *Collector) collectMetrics(ch chan<- prometheus.Metric, scheduledTasks S
 				state,
 			)
 		}
-
-		ch <- prometheus.MustNewConstMetric(
-			c.lastResultCode,
-			prometheus.GaugeValue,
-			float64(task.LastTaskResult),
-			task.Path,
-		)
 
 		resultStatus := task.LastTaskResult.String()
 

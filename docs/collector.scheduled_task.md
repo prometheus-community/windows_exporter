@@ -12,13 +12,13 @@ Enabled by default? | No
 
 ### `--collector.scheduled_task.include`
 
-If given, the path of the task needs to match the include regexp in order for the corresponding metrics to be reported.
+If given, the path of the task needs to match the include regular expression in order for the corresponding metrics to be reported.
 
 E.G. `--collector.scheduled_task.include="Firefox.*"`
 
 ### `--collector.scheduled_task.exclude`
 
-If given, the path of the task needs to *not* match the exclude regexp in order for the corresponding metrics to be reported.
+If given, the path of the task needs to *not* match the exclude regular expression in order for the corresponding metrics to be reported.
 
 E.G. `--collector.scheduled_task.exclude="/Microsoft/.+"`
 
@@ -26,8 +26,7 @@ E.G. `--collector.scheduled_task.exclude="/Microsoft/.+"`
 
 Name | Description | Type | Labels
 -----|-------------|------|-------
-`windows_scheduled_task_last_result` | 1 if the last result code is zero, 0 otherwise; omitted for tasks that have never run | gauge | task
-`windows_scheduled_task_last_result_code` | The raw Task Scheduler LastTaskResult code as an unsigned 32-bit value | gauge | task
+`windows_scheduled_task_last_result` | **Deprecated:** use `windows_scheduled_task_last_result_status`. 1 if the last result code is zero, 0 otherwise; omitted for tasks that have never run | gauge | task
 `windows_scheduled_task_last_result_status` | The last result status, 1 if the current status, 0 otherwise | gauge | task, status
 `windows_scheduled_task_missed_runs` | The number of times the registered task missed a scheduled run | gauge | task
 `windows_scheduled_task_state` | The current state of a scheduled task | gauge | task, state
@@ -38,8 +37,8 @@ For the values of the `state` and `status` labels, see below.
 
 `windows_scheduled_task_last_result_status` uses the same enum convention as
 `windows_service_state`: every status is exported for each task, with exactly one
-status set to 1 and all others set to 0. Both new result metrics are exported even
-when a task has never run.
+status set to 1 and all others set to 0. The status metric is exported even when a
+task has never run.
 
 Status | Result code (decimal) | Result code (hexadecimal) | Meaning
 -------|-----------------------|---------------------------|--------
@@ -56,17 +55,23 @@ Status | Result code (decimal) | Result code (hexadecimal) | Meaning
 `queued` | 267045 | `0x00041325` | The task has been queued to run
 `error` | Any other code | Any other code | An application exit code, scheduler error, or unrecognized result
 
-The raw code remains available in `windows_scheduled_task_last_result_code` to
-distinguish results grouped under `error`. Codes are exported as decimal values;
-Task Scheduler may display them in hexadecimal. For example, `0x8004130B` is
-exported as `2147750667`, even when Windows returns it as a signed value.
+Application exit codes, scheduler errors, and unrecognized results are grouped
+under `error`.
 See [Microsoft's Task Scheduler result codes](https://learn.microsoft.com/en-us/windows/win32/taskschd/task-scheduler-error-and-success-constants)
 for details.
 
-The existing `windows_scheduled_task_last_result` retains its behavior: a running
-result code produces 0, which does not necessarily mean the task failed.
-`windows_scheduled_task_last_result` and `windows_scheduled_task_missed_runs` are
-omitted when the result is `has_not_run`.
+### Deprecated metric
+
+`windows_scheduled_task_last_result` is deprecated. Use
+`windows_scheduled_task_last_result_status` to distinguish successful, running,
+and failed results, as well as tasks that have never run. For example, use
+`windows_scheduled_task_last_result_status{status="success"} == 1` to select
+successful results, or the alert below to select failures.
+
+The deprecated metric remains available with its existing labels and values for
+compatibility. A running result code still produces 0, which does not necessarily
+mean the task failed. `windows_scheduled_task_last_result` and
+`windows_scheduled_task_missed_runs` are omitted when the result is `has_not_run`.
 
 ### State
 
@@ -82,7 +87,6 @@ A task can be in the following states:
 
 ```
 windows_scheduled_task_last_result{task="/Microsoft/Windows/Chkdsk/SyspartRepair"} 1
-windows_scheduled_task_last_result_code{task="/Microsoft/Windows/Chkdsk/SyspartRepair"} 0
 windows_scheduled_task_last_result_status{status="success",task="/Microsoft/Windows/Chkdsk/SyspartRepair"} 1
 windows_scheduled_task_last_result_status{status="ready",task="/Microsoft/Windows/Chkdsk/SyspartRepair"} 0
 windows_scheduled_task_last_result_status{status="running",task="/Microsoft/Windows/Chkdsk/SyspartRepair"} 0
@@ -117,7 +121,7 @@ Tasks that have never run:
 windows_scheduled_task_last_result_status{status="has_not_run"} == 1
 ```
 
-When using the existing success/failure metric, exclude running tasks:
+For dashboards still using the deprecated success/failure metric, exclude running tasks:
 
 ```promql
 (windows_scheduled_task_last_result == 0)

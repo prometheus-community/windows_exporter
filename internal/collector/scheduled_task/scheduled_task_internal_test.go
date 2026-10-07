@@ -32,73 +32,72 @@ func TestCollectMetrics(t *testing.T) {
 	for _, tc := range []struct {
 		name       string
 		result     int64
-		code       float64
 		state      TaskState
 		stateLabel string
 		status     string
 	}{
 		{
-			name: "success", result: 0, code: 0,
+			name: "success", result: 0,
 			state: TASK_STATE_READY, stateLabel: "ready", status: "success",
 		},
 		{
-			name: "application error", result: 1, code: 1,
+			name: "application error", result: 1,
 			state: TASK_STATE_READY, stateLabel: "ready", status: "error",
 		},
 		{
-			name: "ready", result: 0x41300, code: 267008,
+			name: "ready", result: 0x41300,
 			state: TASK_STATE_READY, stateLabel: "ready", status: "ready",
 		},
 		{
-			name: "running", result: 0x41301, code: 267009,
+			name: "running", result: 0x41301,
 			state: TASK_STATE_RUNNING, stateLabel: "running", status: "running",
 		},
 		{
-			name: "disabled", result: 0x41302, code: 267010,
+			name: "disabled", result: 0x41302,
 			state: TASK_STATE_DISABLED, stateLabel: "disabled", status: "disabled",
 		},
 		{
-			name: "never run", result: 0x41303, code: 267011,
+			name: "never run", result: 0x41303,
 			state: TASK_STATE_UNKNOWN, stateLabel: "unknown", status: "has_not_run",
 		},
 		{
-			name: "no more runs", result: 0x41304, code: 267012,
+			name: "no more runs", result: 0x41304,
 			state: TASK_STATE_READY, stateLabel: "ready", status: "no_more_runs",
 		},
 		{
-			name: "not scheduled", result: 0x41305, code: 267013,
+			name: "not scheduled", result: 0x41305,
 			state: TASK_STATE_READY, stateLabel: "ready", status: "not_scheduled",
 		},
 		{
-			name: "terminated", result: 0x41306, code: 267014,
+			name: "terminated", result: 0x41306,
 			state: TASK_STATE_DISABLED, stateLabel: "disabled", status: "terminated",
 		},
 		{
-			name: "no valid triggers", result: 0x41307, code: 267015,
+			name: "no valid triggers", result: 0x41307,
 			state: TASK_STATE_READY, stateLabel: "ready", status: "no_valid_triggers",
 		},
 		{
-			name: "event trigger", result: 0x41308, code: 267016,
+			name: "event trigger", result: 0x41308,
 			state: TASK_STATE_READY, stateLabel: "ready", status: "event_trigger",
 		},
 		{
-			name: "queued", result: 0x41325, code: 267045,
+			name: "queued", result: 0x41325,
 			state: TASK_STATE_QUEUED, stateLabel: "queued", status: "queued",
 		},
 		{
-			name: "signed HRESULT", result: -2147216629, code: 2147750667,
+			name: "signed HRESULT", result: -2147216629,
 			state: TASK_STATE_READY, stateLabel: "ready", status: "error",
 		},
 		{
-			name: "unsigned HRESULT", result: 0x8004130B, code: 2147750667,
+			name: "unsigned HRESULT", result: 0x8004130B,
 			state: TASK_STATE_READY, stateLabel: "ready", status: "error",
 		},
 		{
-			name: "unrecognized result", result: -559038737, code: 3735928559,
+			name: "unrecognized result", result: -559038737,
 			state: TASK_STATE_READY, stateLabel: "ready", status: "error",
 		},
 		{
-			name: "maximum code", result: -1, code: 4294967295,
+			name: "maximum code", result: -1,
 			state: TASK_STATE_READY, stateLabel: "ready", status: "error",
 		},
 	} {
@@ -112,15 +111,6 @@ func TestCollectMetrics(t *testing.T) {
 				LastTaskResult:  TaskResult(tc.result),
 			}
 			families := gatherTaskMetrics(t, nil, ScheduledTasks{task})
-
-			code := families["windows_scheduled_task_last_result_code"]
-			require.NotNil(t, code)
-			require.Equal(t, dto.MetricType_GAUGE, code.GetType())
-			require.Len(t, code.GetMetric(), 1)
-			require.InDelta(t, tc.code, code.GetMetric()[0].GetGauge().GetValue(), 0)
-			require.Len(t, code.GetMetric()[0].GetLabel(), 1)
-			require.Equal(t, "task", code.GetMetric()[0].GetLabel()[0].GetName())
-			require.Equal(t, task.Path, code.GetMetric()[0].GetLabel()[0].GetValue())
 
 			states := families["windows_scheduled_task_state"]
 			require.NotNil(t, states)
@@ -171,14 +161,14 @@ func TestCollectMetrics(t *testing.T) {
 			require.Empty(t, expectedStatuses)
 
 			if tc.result == 0x41303 {
-				require.Len(t, families, 3)
+				require.Len(t, families, 2)
 				require.NotContains(t, families, "windows_scheduled_task_last_result")
 				require.NotContains(t, families, "windows_scheduled_task_missed_runs")
 
 				return
 			}
 
-			require.Len(t, families, 5)
+			require.Len(t, families, 4)
 			lastResult := families["windows_scheduled_task_last_result"]
 			require.NotNil(t, lastResult)
 			require.Len(t, lastResult.GetMetric(), 1)
@@ -247,7 +237,7 @@ func TestCollectMetricsFilters(t *testing.T) {
 				return
 			}
 
-			require.Len(t, families, 5)
+			require.Len(t, families, 4)
 
 			for _, family := range families {
 				paths := make([]string, 0, len(family.GetMetric()))
