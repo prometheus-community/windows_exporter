@@ -50,16 +50,19 @@ var ConfigDefaults = Config{
 type Collector struct {
 	config Config
 
-	lastResult *prometheus.Desc
-	missedRuns *prometheus.Desc
-	state      *prometheus.Desc
+	lastResult       *prometheus.Desc
+	lastResultStatus *prometheus.Desc
+	missedRuns       *prometheus.Desc
+	state            *prometheus.Desc
 }
 
 // TaskState ...
 // https://docs.microsoft.com/en-us/windows/desktop/api/taskschd/ne-taskschd-task_state
 type TaskState uint
 
-type TaskResult uint
+// TaskResult preserves the unsigned 32-bit representation of a result code,
+// including HRESULTs returned as signed LONG values by Task Scheduler.
+type TaskResult uint32
 
 const (
 	TASK_STATE_UNKNOWN TaskState = iota
@@ -70,8 +73,17 @@ const (
 )
 
 const (
-	SCHED_S_SUCCESS          TaskResult = 0x0
-	SCHED_S_TASK_HAS_NOT_RUN TaskResult = 0x00041303
+	SCHED_S_SUCCESS                TaskResult = 0x0
+	SCHED_S_TASK_READY             TaskResult = 0x00041300
+	SCHED_S_TASK_RUNNING           TaskResult = 0x00041301
+	SCHED_S_TASK_DISABLED          TaskResult = 0x00041302
+	SCHED_S_TASK_HAS_NOT_RUN       TaskResult = 0x00041303
+	SCHED_S_TASK_NO_MORE_RUNS      TaskResult = 0x00041304
+	SCHED_S_TASK_NOT_SCHEDULED     TaskResult = 0x00041305
+	SCHED_S_TASK_TERMINATED        TaskResult = 0x00041306
+	SCHED_S_TASK_NO_VALID_TRIGGERS TaskResult = 0x00041307
+	SCHED_S_EVENT_TRIGGER          TaskResult = 0x00041308
+	SCHED_S_TASK_QUEUED            TaskResult = 0x00041325
 )
 
 type ScheduledTask struct {
@@ -152,8 +164,16 @@ func (c *Collector) Close() error {
 func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
 	c.lastResult = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "last_result"),
-		"The result that was returned the last time the registered task was run",
+		"DEPRECATED: use windows_scheduled_task_last_result_status. "+
+			"1 if the last result code of the registered task is zero, 0 otherwise",
 		[]string{"task"},
+		nil,
+	)
+
+	c.lastResultStatus = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "last_result_status"),
+		"The last result status of a scheduled task, 1 if the current status, 0 otherwise",
+		[]string{"task", "status"},
 		nil,
 	)
 
@@ -181,12 +201,24 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 //nolint:gochecknoglobals
 var TASK_STATES = []string{"disabled", "queued", "ready", "running", "unknown"}
 
+//nolint:gochecknoglobals
+var TASK_RESULT_STATUSES = []string{
+	"success", "ready", "running", "disabled", "has_not_run", "no_more_runs",
+	"not_scheduled", "terminated", "no_valid_triggers", "event_trigger", "queued", "unknown",
+}
+
 func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	scheduledTasks, err := getScheduledTasks()
 	if err != nil {
 		return fmt.Errorf("get scheduled tasks: %w", err)
 	}
 
+	c.collectMetrics(ch, scheduledTasks)
+
+	return nil
+}
+
+func (c *Collector) collectMetrics(ch chan<- prometheus.Metric, scheduledTasks ScheduledTasks) {
 	for _, task := range scheduledTasks {
 		if c.config.TaskExclude.MatchString(task.Path) ||
 			!c.config.TaskInclude.MatchString(task.Path) {
@@ -206,6 +238,24 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 				stateValue,
 				task.Path,
 				state,
+			)
+		}
+
+		resultStatus := task.LastTaskResult.String()
+
+		for _, status := range TASK_RESULT_STATUSES {
+			var statusValue float64
+
+			if resultStatus == status {
+				statusValue = 1
+			}
+
+			ch <- prometheus.MustNewConstMetric(
+				c.lastResultStatus,
+				prometheus.GaugeValue,
+				statusValue,
+				task.Path,
+				status,
 			)
 		}
 
@@ -232,8 +282,6 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 			task.Path,
 		)
 	}
-
-	return nil
 }
 
 const SCHEDULED_TASK_PROGRAM_ID = "Schedule.Service.1"
@@ -253,8 +301,7 @@ func getScheduledTasks() (ScheduledTasks, error) {
 	defer runtime.UnlockOSThread()
 
 	if err := ole.CoInitializeEx(0, ole.COINIT_APARTMENTTHREADED|ole.COINIT_DISABLE_OLE1DDE); err != nil {
-		var oleCode *ole.OleError
-		if errors.As(err, &oleCode) && oleCode.Code() != ole.S_OK && oleCode.Code() != S_FALSE {
+		if oleCode, ok := errors.AsType[*ole.OleError](err); ok && oleCode.Code() != ole.S_OK && oleCode.Code() != S_FALSE {
 			return nil, err
 		}
 	}
@@ -440,5 +487,34 @@ func (t TaskState) String() string {
 		return "Running"
 	default:
 		return ""
+	}
+}
+
+func (t TaskResult) String() string {
+	switch t {
+	case SCHED_S_SUCCESS:
+		return "success"
+	case SCHED_S_TASK_READY:
+		return "ready"
+	case SCHED_S_TASK_RUNNING:
+		return "running"
+	case SCHED_S_TASK_DISABLED:
+		return "disabled"
+	case SCHED_S_TASK_HAS_NOT_RUN:
+		return "has_not_run"
+	case SCHED_S_TASK_NO_MORE_RUNS:
+		return "no_more_runs"
+	case SCHED_S_TASK_NOT_SCHEDULED:
+		return "not_scheduled"
+	case SCHED_S_TASK_TERMINATED:
+		return "terminated"
+	case SCHED_S_TASK_NO_VALID_TRIGGERS:
+		return "no_valid_triggers"
+	case SCHED_S_EVENT_TRIGGER:
+		return "event_trigger"
+	case SCHED_S_TASK_QUEUED:
+		return "queued"
+	default:
+		return "unknown"
 	}
 }
