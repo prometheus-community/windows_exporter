@@ -20,7 +20,6 @@ package iis
 import (
 	"fmt"
 	"regexp"
-	"strings"
 
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
@@ -412,7 +411,7 @@ func (c *Collector) collectW3SVCW3WPv8(ch chan<- prometheus.Metric) error {
 		return fmt.Errorf("failed to collect APP_POOL_WAS metrics: %w", err)
 	}
 
-	deduplicateIISNames(c.perfDataObjectW3SVCW3WPV8)
+	c.perfDataObjectW3SVCW3WPV8 = deduplicateIISNames(c.perfDataObjectW3SVCW3WPV8)
 
 	for _, data := range c.perfDataObjectW3SVCW3WPV8 {
 		if c.config.AppExclude.MatchString(data.Name) || !c.config.AppInclude.MatchString(data.Name) {
@@ -422,14 +421,9 @@ func (c *Collector) collectW3SVCW3WPv8(ch chan<- prometheus.Metric) error {
 		// Extract the apppool name from the format <PID>_<NAME>
 		pid := workerProcessNameExtractor.ReplaceAllString(data.Name, "$1")
 
-		name := workerProcessNameExtractor.ReplaceAllString(data.Name, "$2")
+		name := iisCounterBaseName(workerProcessNameExtractor.ReplaceAllString(data.Name, "$2"))
 		if name == "" || c.config.AppExclude.MatchString(name) ||
 			!c.config.AppInclude.MatchString(name) {
-			continue
-		}
-
-		// Duplicate instances are suffixed # with an index number. These should be ignored
-		if strings.Contains(name, "#") {
 			continue
 		}
 
@@ -511,20 +505,15 @@ func (c *Collector) collectW3SVCW3WPv7(ch chan<- prometheus.Metric) error {
 		return fmt.Errorf("failed to collect APP_POOL_WAS metrics: %w", err)
 	}
 
-	deduplicateIISNames(c.perfDataObjectW3SVCW3WP)
+	c.perfDataObjectW3SVCW3WP = deduplicateIISNames(c.perfDataObjectW3SVCW3WP)
 
 	for _, data := range c.perfDataObjectW3SVCW3WP {
 		// Extract the apppool name from the format <PID>_<NAME>
 		pid := workerProcessNameExtractor.ReplaceAllString(data.Name, "$1")
 
-		name := workerProcessNameExtractor.ReplaceAllString(data.Name, "$2")
+		name := iisCounterBaseName(workerProcessNameExtractor.ReplaceAllString(data.Name, "$2"))
 		if name == "" || c.config.AppExclude.MatchString(name) ||
 			!c.config.AppInclude.MatchString(name) {
-			continue
-		}
-
-		// Duplicate instances are suffixed # with an index number. These should be ignored
-		if strings.Contains(name, "#") {
 			continue
 		}
 

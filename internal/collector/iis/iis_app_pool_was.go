@@ -173,9 +173,12 @@ func (c *Collector) collectAppPoolWAS(ch chan<- prometheus.Metric) error {
 		return fmt.Errorf("failed to collect APP_POOL_WAS metrics: %w", err)
 	}
 
-	deduplicateIISNames(c.perfDataObjectAppPoolWAS)
+	c.perfDataObjectAppPoolWAS = deduplicateIISNames(c.perfDataObjectAppPoolWAS)
 
 	for _, data := range c.perfDataObjectAppPoolWAS {
+		// Present recycled instances ("Site_B#2") under their base name ("Site_B").
+		data.Name = iisCounterBaseName(data.Name)
+
 		if c.config.AppExclude.MatchString(data.Name) || !c.config.AppInclude.MatchString(data.Name) {
 			continue
 		}
