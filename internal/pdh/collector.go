@@ -70,10 +70,11 @@ type Row struct {
 	Values []float64
 }
 
-// rowAccessor creates rows of type T and sets their counter values.
+// rowAccessor creates rows of type T and sets their names and counter values.
 // field is the index the counterField of the counter was created with.
 type rowAccessor[T any] struct {
 	newRow   func(instance string) T
+	setName  func(row *T, instance string)
 	setValue func(row *T, field int, value float64)
 }
 
@@ -101,8 +102,11 @@ type Counter struct {
 
 // NewCollector creates a collector for the counters declared by the perfdata tags of the struct T.
 //
-// The optional field Name (string) of T receives the instance name. An
-// instance is only collected if every counter has a valid value for it in that
+// The optional field Name (string) of T receives the instance name. Occurrence
+// suffixes distinguish duplicate names without colliding with literal names.
+// These suffixes are not stable identities across samples.
+//
+// An instance is only collected if every counter has a valid value for it in that
 // sample. Use [Collector.MetricType] for the metric type of a counter.
 //
 // If an error is returned together with a non-nil Collector, some counters
@@ -153,6 +157,11 @@ func NewCollector[T any](logger *slog.Logger, resultType CounterType, object str
 
 			return row
 		},
+		setName: func(row *T, instance string) {
+			if nameIndex != -1 {
+				reflect.ValueOf(row).Elem().Field(nameIndex).SetString(instance)
+			}
+		},
 		setValue: func(row *T, field int, value float64) {
 			reflect.ValueOf(row).Elem().Field(field).SetFloat(value)
 		},
@@ -174,6 +183,9 @@ func NewDynamicCollector(logger *slog.Logger, resultType CounterType, object str
 	rows := rowAccessor[Row]{
 		newRow: func(instance string) Row {
 			return Row{Name: instance, Values: make([]float64, len(counters))}
+		},
+		setName: func(row *Row, instance string) {
+			row.Name = instance
 		},
 		setValue: func(row *Row, field int, value float64) {
 			row.Values[field] = value
@@ -432,11 +444,13 @@ func (c *Collector[T]) collect(dst *[]T, state *collectState) (err error) {
 	*dst = (*dst)[:0:0]
 
 	rows := rowSet[T]{
-		c:         c,
-		dst:       dst,
-		index:     map[string]int{},
-		nameCache: map[string]string{},
-		valid:     state.valid[:0],
+		c:           c,
+		dst:         dst,
+		index:       map[instanceKey]int{},
+		nameCache:   map[string]string{},
+		occurrences: map[string]int{},
+		seen:        map[string]int{},
+		valid:       state.valid[:0],
 	}
 
 	for counterIndex := range c.counters {
@@ -538,13 +552,23 @@ func (c *Collector[T]) setRawValue(row *T, counter *Counter, value RawCounter) b
 	return true
 }
 
+// instanceKey matches the nth occurrence of an instance name across counter arrays.
+type instanceKey struct {
+	name       string
+	occurrence int
+}
+
 // rowSet appends one row per instance to dst and tracks which counters have
 // a valid value for each row.
 type rowSet[T any] struct {
 	c         *Collector[T]
 	dst       *[]T
-	index     map[string]int
+	index     map[instanceKey]int
 	nameCache map[string]string
+	// occurrences includes invalid items to reserve all literal names and keep occurrence positions.
+	occurrences map[string]int
+	// seen counts names in the current counter array and is cleared between arrays.
+	seen map[string]int
 	// valid has len(c.counters) entries per row.
 	valid []bool
 }
@@ -553,32 +577,37 @@ type rowSet[T any] struct {
 // appending the row if needed. ok is false if the item has no valid data or
 // its instance is not collected.
 func (r *rowSet[T]) row(counter *Counter, szName *uint16, status uint32) (int, bool) {
+	instanceName := decodeInstanceName(r.nameCache, szName)
+	if instanceName == "" || instanceName == "*" {
+		instanceName = InstanceEmpty
+	}
+
+	// Count before checking status so invalid items do not shift subsequent duplicates.
+	occurrence := r.seen[instanceName]
+	r.seen[instanceName]++
+	r.occurrences[instanceName] = max(r.occurrences[instanceName], occurrence+1)
+
 	if status != CstatusValidData && status != CstatusNewData {
 		r.c.logger.Debug("skipping counter item with invalid data status",
 			slog.String("counter", counter.Name),
-			slog.String("instance", windows.UTF16PtrToString(szName)),
+			slog.String("instance", instanceName),
 			slog.Uint64("status", uint64(status)),
 		)
 
 		return 0, false
 	}
 
-	instanceName := decodeInstanceName(r.nameCache, szName)
-
 	if strings.HasSuffix(instanceName, InstanceTotal) && !r.c.totalCounterRequested {
 		return 0, false
 	}
 
-	if instanceName == "" || instanceName == "*" {
-		instanceName = InstanceEmpty
-	}
-
-	if index, ok := r.index[instanceName]; ok {
+	key := instanceKey{name: instanceName, occurrence: occurrence}
+	if index, ok := r.index[key]; ok {
 		return index, true
 	}
 
 	index := len(*r.dst)
-	r.index[instanceName] = index
+	r.index[key] = index
 
 	*r.dst = append(*r.dst, r.c.rows.newRow(instanceName))
 
@@ -598,6 +627,8 @@ func (r *rowSet[T]) addRawItems(counterIndex int, buf []byte, itemCount uint32) 
 	counter := &r.c.counters[counterIndex]
 	items := unsafe.Slice((*RawCounterItem)(unsafe.Pointer(unsafe.SliceData(buf))), itemCount)
 
+	clear(r.seen)
+
 	for _, item := range items {
 		row, ok := r.row(counter, item.SzName, item.RawValue.CStatus)
 		if ok && r.c.setRawValue(&(*r.dst)[row], counter, item.RawValue) {
@@ -610,6 +641,8 @@ func (r *rowSet[T]) addRawItems(counterIndex int, buf []byte, itemCount uint32) 
 func (r *rowSet[T]) addFormattedItems(counterIndex int, buf []byte, itemCount uint32) {
 	counter := &r.c.counters[counterIndex]
 	items := unsafe.Slice((*FmtCounterValueItemDouble)(unsafe.Pointer(unsafe.SliceData(buf))), itemCount)
+
+	clear(r.seen)
 
 	for _, item := range items {
 		row, ok := r.row(counter, item.SzName, item.FmtValue.CStatus)
@@ -625,11 +658,37 @@ func (r *rowSet[T]) addFormattedItems(counterIndex int, buf []byte, itemCount ui
 	}
 }
 
+// nameDuplicates assigns suffixes after all literal names in the sample are known.
+func (r *rowSet[T]) nameDuplicates() {
+	for name, count := range r.occurrences {
+		suffix := 0
+
+		for occurrence := 1; occurrence < count; occurrence++ {
+			var instanceName string
+
+			for {
+				suffix++
+				instanceName = name + "#" + strconv.Itoa(suffix)
+
+				if _, literalName := r.occurrences[instanceName]; !literalName {
+					break
+				}
+			}
+
+			if row, ok := r.index[instanceKey{name: name, occurrence: occurrence}]; ok {
+				r.c.rows.setName(&(*r.dst)[row], instanceName)
+			}
+		}
+	}
+}
+
 // finish handles rows that lack a valid value for some counter. Counters
 // without any instance, e.g. those skipped by perfdata_min_build, are not
 // required. Without partial rows, such rows are removed. Otherwise, the
 // missing values are set to NaN.
 func (r *rowSet[T]) finish() {
+	r.nameDuplicates()
+
 	rows := *r.dst
 	n := len(r.c.counters)
 	kept := 0
