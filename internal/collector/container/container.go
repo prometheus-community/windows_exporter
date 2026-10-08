@@ -24,6 +24,7 @@ import (
 	"io/fs"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"sync"
@@ -76,7 +77,11 @@ type Collector struct {
 
 	// The annotation caches are keyed by the container ID without the runtime prefix.
 	annotationsCacheHCS map[string]containerInfo
-	annotationsCacheJob map[string]containerInfo
+	// annotationsCacheJob holds every containerd bundle, so that each config.json is parsed only once.
+	annotationsCacheJob map[string]jobContainer
+
+	// stateDirMissingLogged avoids logging a missing containerd state directory on every scrape.
+	stateDirMissingLogged bool
 
 	// Presence
 	containerAvailable *prometheus.Desc
@@ -116,8 +121,23 @@ type containerInfo struct {
 	container string
 }
 
+type jobContainer struct {
+	info        containerInfo
+	hostProcess bool
+}
+
 type ociSpec struct {
 	Annotations map[string]string `json:"annotations"`
+}
+
+// containerInfo returns the Kubernetes metadata of the container.
+func (s ociSpec) containerInfo(id string) containerInfo {
+	return containerInfo{
+		id:        id,
+		namespace: s.Annotations["io.kubernetes.cri.sandbox-namespace"],
+		pod:       s.Annotations["io.kubernetes.cri.sandbox-name"],
+		container: s.Annotations["io.kubernetes.cri.container-name"],
+	}
 }
 
 // New constructs a new Collector.
@@ -182,7 +202,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	}
 
 	c.annotationsCacheHCS = make(map[string]containerInfo)
-	c.annotationsCacheJob = make(map[string]containerInfo)
+	c.annotationsCacheJob = make(map[string]jobContainer)
 
 	// Without the Containers feature, the Host Compute Service is missing and
 	// every scrape would fail. Report the collector as unsupported instead, so
@@ -351,7 +371,7 @@ func (c *Collector) collectHCS(ch chan<- prometheus.Metric) error {
 
 	var countersCount float64
 
-	containerIDs := make([]string, 0, len(containers))
+	containerIDs := make(map[string]struct{}, len(containers))
 	collectErrors := make([]error, 0)
 
 	for _, container := range containers {
@@ -359,46 +379,33 @@ func (c *Collector) collectHCS(ch chan<- prometheus.Metric) error {
 			continue
 		}
 
-		containerIDs = append(containerIDs, container.ID)
+		containerIDs[container.ID] = struct{}{}
 
 		countersCount++
 
-		var (
-			namespace     string
-			podName       string
-			containerName string
-		)
-
-		if _, ok := c.annotationsCacheHCS[container.ID]; !ok {
-			if spec, err := c.getContainerAnnotations(container.ID); err == nil {
-				namespace = spec.Annotations["io.kubernetes.cri.sandbox-namespace"]
-				podName = spec.Annotations["io.kubernetes.cri.sandbox-name"]
-				containerName = spec.Annotations["io.kubernetes.cri.container-name"]
-			}
-
-			c.annotationsCacheHCS[container.ID] = containerInfo{
-				id:        getContainerIdWithPrefix(container),
-				namespace: namespace,
-				pod:       podName,
-				container: containerName,
-			}
+		info, ok := c.annotationsCacheHCS[container.ID]
+		if !ok {
+			// Docker containers have no containerd bundle, so they keep empty Kubernetes labels.
+			spec, _ := c.getContainerAnnotations(container.ID)
+			info = spec.containerInfo(getContainerIdWithPrefix(container))
+			c.annotationsCacheHCS[container.ID] = info
 		}
 
-		if err = c.collectHCSContainer(ch, container, c.annotationsCacheHCS[container.ID]); err != nil {
+		if err = c.collectHCSContainer(ch, container, info); err != nil {
 			if errors.Is(err, hcs.ErrIDNotFound) {
 				c.logger.Debug("err in fetching container statistics",
 					slog.String("container_id", container.ID),
-					slog.String("container_name", c.annotationsCacheHCS[container.ID].container),
-					slog.String("container_pod_name", c.annotationsCacheHCS[container.ID].pod),
-					slog.String("container_namespace", c.annotationsCacheHCS[container.ID].namespace),
+					slog.String("container_name", info.container),
+					slog.String("container_pod_name", info.pod),
+					slog.String("container_namespace", info.namespace),
 					slog.Any("err", err),
 				)
 			} else {
 				c.logger.Error("err in fetching container statistics",
 					slog.String("container_id", container.ID),
-					slog.String("container_name", c.annotationsCacheHCS[container.ID].container),
-					slog.String("container_pod_name", c.annotationsCacheHCS[container.ID].pod),
-					slog.String("container_namespace", c.annotationsCacheHCS[container.ID].namespace),
+					slog.String("container_name", info.container),
+					slog.String("container_pod_name", info.pod),
+					slog.String("container_namespace", info.namespace),
 					slog.Any("err", err),
 				)
 
@@ -419,7 +426,7 @@ func (c *Collector) collectHCS(ch chan<- prometheus.Metric) error {
 
 	// Remove containers that are no longer running
 	for containerID := range c.annotationsCacheHCS {
-		if !slices.Contains(containerIDs, containerID) {
+		if _, ok := containerIDs[containerID]; !ok {
 			delete(c.annotationsCacheHCS, containerID)
 		}
 	}
@@ -637,82 +644,73 @@ func (c *Collector) collectNetworkMetrics(ch chan<- prometheus.Metric) error {
 //
 // Job containers are containers that aren't managed by HCS, e.g host process containers.
 func (c *Collector) collectJobContainers(ch chan<- prometheus.Metric) error {
-	containerDStateFS := os.DirFS(c.config.ContainerDStateDir)
+	// Each directory in the containerd state directory is the OCI bundle of a running task.
+	entries, err := os.ReadDir(c.config.ContainerDStateDir)
+	if err != nil {
+		if !errors.Is(err, fs.ErrNotExist) {
+			return fmt.Errorf("error in reading containerd state directory: %w", err)
+		}
 
-	allContainerIDs := make([]string, 0, len(c.annotationsCacheJob)+len(c.annotationsCacheHCS))
-	jobContainerIDs := make([]string, 0, len(allContainerIDs))
+		if !c.stateDirMissingLogged {
+			c.logger.Warn("containerd state directory does not exist",
+				slog.String("path", c.config.ContainerDStateDir),
+				slog.Any("err", err),
+			)
 
-	if err := fs.WalkDir(containerDStateFS, ".", func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			if errors.Is(err, fs.ErrNotExist) {
-				c.logger.Warn("containerd state directory does not exist",
-					slog.String("path", c.config.ContainerDStateDir),
+			c.stateDirMissingLogged = true
+		}
+
+		clear(c.annotationsCacheJob)
+
+		return nil
+	}
+
+	c.stateDirMissingLogged = false
+
+	bundles := make(map[string]struct{}, len(entries))
+	errs := make([]error, 0)
+
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+
+		containerID := entry.Name()
+		bundles[containerID] = struct{}{}
+
+		container, ok := c.annotationsCacheJob[containerID]
+		if !ok {
+			spec, err := c.getContainerAnnotations(containerID)
+			if err != nil {
+				// containerd may still be writing the bundle, so retry on the next scrape.
+				c.logger.Debug("error in reading container annotations",
+					slog.String("container_id", containerID),
 					slog.Any("err", err),
 				)
 
-				return nil
+				continue
 			}
 
-			return err
-		}
-
-		if path == "." {
-			return nil
-		}
-
-		if !d.IsDir() {
-			return nil
-		}
-
-		if _, err := os.Stat(path + "\\config.json"); err != nil {
-			containerID := strings.TrimPrefix(strings.Replace(path, c.config.ContainerDStateDir, "", 1), `\`)
-
-			if spec, err := c.getContainerAnnotations(containerID); err == nil {
-				isHostProcess, ok := spec.Annotations["microsoft.com/hostprocess-container"]
-				if ok && isHostProcess == "true" {
-					allContainerIDs = append(allContainerIDs, containerID)
-
-					if _, ok := c.annotationsCacheJob[containerID]; !ok {
-						var (
-							namespace     string
-							podName       string
-							containerName string
-						)
-
-						namespace = spec.Annotations["io.kubernetes.cri.sandbox-namespace"]
-						podName = spec.Annotations["io.kubernetes.cri.sandbox-name"]
-						containerName = spec.Annotations["io.kubernetes.cri.container-name"]
-
-						c.annotationsCacheJob[containerID] = containerInfo{
-							id:        "containerd://" + containerID,
-							namespace: namespace,
-							pod:       podName,
-							container: containerName,
-						}
-					}
-				}
+			container = jobContainer{
+				info:        spec.containerInfo("containerd://" + containerID),
+				hostProcess: spec.Annotations["microsoft.com/hostprocess-container"] == "true",
 			}
+
+			c.annotationsCacheJob[containerID] = container
 		}
 
-		// Skip the directory content
-		return fs.SkipDir
-	}); err != nil {
-		return fmt.Errorf("error in walking containerd state directory: %w", err)
-	}
+		if !container.hostProcess {
+			continue
+		}
 
-	errs := make([]error, 0)
-
-	for _, containerID := range allContainerIDs {
-		if err := c.collectJobContainer(ch, containerID); err != nil {
+		if err := c.collectJobContainer(ch, containerID, container.info); err != nil {
 			errs = append(errs, err)
-		} else {
-			jobContainerIDs = append(jobContainerIDs, containerID)
 		}
 	}
 
 	// Remove containers that are no longer running
 	for containerID := range c.annotationsCacheJob {
-		if !slices.Contains(jobContainerIDs, containerID) {
+		if _, ok := bundles[containerID]; !ok {
 			delete(c.annotationsCacheJob, containerID)
 		}
 	}
@@ -720,7 +718,7 @@ func (c *Collector) collectJobContainers(ch chan<- prometheus.Metric) error {
 	return errors.Join(errs...)
 }
 
-func (c *Collector) collectJobContainer(ch chan<- prometheus.Metric, containerID string) error {
+func (c *Collector) collectJobContainer(ch chan<- prometheus.Metric, containerID string, containerInfo containerInfo) error {
 	jobObjectHandle, err := kernel32.OpenJobObject("Global\\JobContainer_" + containerID)
 	if err != nil {
 		if errors.Is(err, windows.ERROR_FILE_NOT_FOUND) {
@@ -759,13 +757,6 @@ func (c *Collector) collectJobContainer(ch chan<- prometheus.Metric, containerID
 		return fmt.Errorf("error in querying job object memory usage information: %w", err)
 	}
 
-	privateWorkingSetBytes, err := calculatePrivateWorkingSetBytes(jobObjectHandle)
-	if err != nil {
-		c.logger.Debug("error in calculating private working set bytes", slog.Any("err", err))
-	}
-
-	containerInfo := c.annotationsCacheJob[containerID]
-
 	ch <- prometheus.MustNewConstMetric(
 		c.containerAvailable,
 		prometheus.GaugeValue,
@@ -789,18 +780,26 @@ func (c *Collector) collectJobContainer(ch chan<- prometheus.Metric, containerID
 		containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container,
 	)
 
-	ch <- prometheus.MustNewConstMetric(
-		c.usagePrivateWorkingSetBytes,
-		prometheus.GaugeValue,
-		float64(privateWorkingSetBytes),
+	if privateWorkingSetBytes, err := calculatePrivateWorkingSetBytes(jobObjectHandle); err != nil {
+		c.logger.Debug("error in calculating private working set bytes",
+			slog.String("container_id", containerID),
+			slog.Any("err", err),
+		)
+	} else {
+		ch <- prometheus.MustNewConstMetric(
+			c.usagePrivateWorkingSetBytes,
+			prometheus.GaugeValue,
+			float64(privateWorkingSetBytes),
 
-		containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container,
-	)
+			containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container,
+		)
+	}
 
+	// The ThisPeriod* times reset when a job time limit is set, so they are not monotonic.
 	ch <- prometheus.MustNewConstMetric(
 		c.runtimeTotal,
 		prometheus.CounterValue,
-		(float64(jobInfo.BasicInfo.ThisPeriodTotalKernelTime)+float64(jobInfo.BasicInfo.ThisPeriodTotalUserTime))*pdh.TicksToSecondScaleFactor,
+		(float64(jobInfo.BasicInfo.TotalKernelTime)+float64(jobInfo.BasicInfo.TotalUserTime))*pdh.TicksToSecondScaleFactor,
 
 		containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container,
 	)
@@ -808,7 +807,7 @@ func (c *Collector) collectJobContainer(ch chan<- prometheus.Metric, containerID
 	ch <- prometheus.MustNewConstMetric(
 		c.runtimeUser,
 		prometheus.CounterValue,
-		float64(jobInfo.BasicInfo.ThisPeriodTotalUserTime)*pdh.TicksToSecondScaleFactor,
+		float64(jobInfo.BasicInfo.TotalUserTime)*pdh.TicksToSecondScaleFactor,
 
 		containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container,
 	)
@@ -816,7 +815,7 @@ func (c *Collector) collectJobContainer(ch chan<- prometheus.Metric, containerID
 	ch <- prometheus.MustNewConstMetric(
 		c.runtimeKernel,
 		prometheus.CounterValue,
-		float64(jobInfo.BasicInfo.ThisPeriodTotalKernelTime)*pdh.TicksToSecondScaleFactor,
+		float64(jobInfo.BasicInfo.TotalKernelTime)*pdh.TicksToSecondScaleFactor,
 
 		containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container,
 	)
@@ -867,14 +866,16 @@ func getContainerIdWithPrefix(container hcs.Properties) string {
 }
 
 func (c *Collector) getContainerAnnotations(containerID string) (ociSpec, error) {
-	configJSON, err := os.OpenFile(fmt.Sprintf(`%s%s\config.json`, c.config.ContainerDStateDir, containerID), os.O_RDONLY, 0)
+	// Close the file right away: the handle lacks FILE_SHARE_DELETE and would
+	// block containerd from removing the bundle of a stopped container.
+	configJSON, err := os.ReadFile(filepath.Join(c.config.ContainerDStateDir, containerID, "config.json"))
 	if err != nil {
-		return ociSpec{}, fmt.Errorf("error in opening config.json file: %w", err)
+		return ociSpec{}, fmt.Errorf("error in reading config.json file: %w", err)
 	}
 
 	var annotations ociSpec
 
-	if err = json.NewDecoder(configJSON).Decode(&annotations); err != nil {
+	if err = json.Unmarshal(configJSON, &annotations); err != nil {
 		return ociSpec{}, fmt.Errorf("error in decoding config.json file: %w", err)
 	}
 
@@ -882,28 +883,21 @@ func (c *Collector) getContainerAnnotations(containerID string) (ociSpec, error)
 }
 
 func calculatePrivateWorkingSetBytes(jobObjectHandle windows.Handle) (uint64, error) {
-	var pidList kernel32.JobObjectBasicProcessIDList
-
-	retLen := uint32(unsafe.Sizeof(pidList))
-
-	if err := windows.QueryInformationJobObject(
-		jobObjectHandle,
-		windows.JobObjectBasicProcessIdList,
-		uintptr(unsafe.Pointer(&pidList)),
-		retLen, &retLen); err != nil {
-		return 0, err
+	pids, err := kernel32.QueryJobObjectProcessIDs(jobObjectHandle)
+	if err != nil {
+		return 0, fmt.Errorf("error in querying job object process list: %w", err)
 	}
 
-	var (
-		privateWorkingSetBytes uint64
-		vmCounters             kernel32.PROCESS_VM_COUNTERS
-	)
-
-	retLen = uint32(unsafe.Sizeof(vmCounters))
+	var privateWorkingSetBytes uint64
 
 	getMemoryStats := func(pid uint32) (uint64, error) {
 		processHandle, err := windows.OpenProcess(windows.PROCESS_QUERY_LIMITED_INFORMATION, false, pid)
 		if err != nil {
+			// The process exited after the process list was queried.
+			if errors.Is(err, windows.ERROR_INVALID_PARAMETER) {
+				return 0, nil
+			}
+
 			return 0, fmt.Errorf("error in opening process: %w", err)
 		}
 
@@ -911,15 +905,19 @@ func calculatePrivateWorkingSetBytes(jobObjectHandle windows.Handle) (uint64, er
 			_ = windows.Close(fd)
 		}(processHandle)
 
-		var isInJob bool
-
-		if err := kernel32.IsProcessInJob(processHandle, jobObjectHandle, &isInJob); err != nil {
+		// Guard against PID reuse between querying the list and opening the process.
+		isInJob, err := kernel32.IsProcessInJob(processHandle, jobObjectHandle)
+		if err != nil {
 			return 0, fmt.Errorf("error in checking if process is in job: %w", err)
 		}
 
 		if !isInJob {
 			return 0, nil
 		}
+
+		var vmCounters kernel32.PROCESS_VM_COUNTERS
+
+		retLen := uint32(unsafe.Sizeof(vmCounters))
 
 		if err := windows.NtQueryInformationProcess(
 			processHandle,
@@ -934,7 +932,7 @@ func calculatePrivateWorkingSetBytes(jobObjectHandle windows.Handle) (uint64, er
 		return uint64(vmCounters.PrivateWorkingSetSize), nil
 	}
 
-	for _, pid := range pidList.PIDs() {
+	for _, pid := range pids {
 		privateWorkingSetSize, err := getMemoryStats(pid)
 		if err != nil {
 			return 0, fmt.Errorf("error in getting private working set bytes: %w", err)

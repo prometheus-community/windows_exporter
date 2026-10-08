@@ -18,8 +18,6 @@
 package kernel32
 
 import (
-	"unsafe"
-
 	"golang.org/x/sys/windows"
 )
 
@@ -48,15 +46,14 @@ type JobObjectMemoryUsageInformation struct {
 	PeakJobMemoryUsed uint64
 }
 
+// JobObjectBasicProcessIDList is the fixed-size head of JOBOBJECT_BASIC_PROCESS_ID_LIST.
+// The ProcessIdList entries are ULONG_PTR and continue past the declared array;
+// use QueryJobObjectProcessIDs to read them.
+// https://learn.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-jobobject_basic_process_id_list
 type JobObjectBasicProcessIDList struct {
 	NumberOfAssignedProcesses uint32
 	NumberOfProcessIdsInList  uint32
 	ProcessIdList             [1]uintptr
-}
-
-// PIDs returns all the process Ids in the job object.
-func (p *JobObjectBasicProcessIDList) PIDs() []uint32 {
-	return unsafe.Slice((*uint32)(unsafe.Pointer(&p.ProcessIdList[0])), int(p.NumberOfProcessIdsInList))
 }
 
 type PROCESS_VM_COUNTERS struct {
