@@ -86,13 +86,13 @@ func TestNewConfigFileResolver(t *testing.T) {
 		{name: "objects without value", contents: "collector:\n  performancecounter:\n    objects:\n"},
 		{
 			name:      "unknown performancecounter option",
-			contents:  "collector:\n  performancecounter:\n    obects: |-\n      - name: memory\n        object: Memory\n",
-			errorText: "line 3: field obects not found",
+			contents:  "collector:\n  performancecounter:\n    invalid: |-\n      - name: memory\n        object: Memory\n",
+			errorText: "line 3: field invalid not found",
 		},
 		{
 			name:      "unknown performancecounter object field",
-			contents:  "collector:\n  performancecounter:\n    objects: |-\n      - name: memory\n        obect: Memory\n",
-			errorText: "field obect not found in type performancecounter.Object",
+			contents:  "collector:\n  performancecounter:\n    objects: |-\n      - name: memory\n        invalid: Memory\n",
+			errorText: "field invalid not found in type performancecounter.Object",
 		},
 		{
 			name:      "performancecounter objects as list",
