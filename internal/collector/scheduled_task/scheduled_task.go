@@ -345,7 +345,7 @@ func fetchTasksInFolder(folder *taskschd.TaskFolder, scheduledTasks *ScheduledTa
 		if err != nil {
 			errs = append(errs, fmt.Errorf("enumerate tasks: %w", err))
 
-			break
+			continue
 		}
 
 		parsedTask, err := parseTask(task)
@@ -378,7 +378,7 @@ func fetchTasksRecursively(folder *taskschd.TaskFolder, folderPath string, sched
 		if err != nil {
 			errs = append(errs, fmt.Errorf("folder %s: enumerate sub folders: %w", folderPath, err))
 
-			break
+			continue
 		}
 
 		subfolderPath := folderPath
