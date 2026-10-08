@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"log/slog"
 	"runtime/debug"
+	"runtime/pprof"
 	"sync"
 	"time"
 
@@ -85,10 +86,12 @@ func (c *Collection) collectAll(ctx context.Context, ch chan<- prometheus.Metric
 	// timeout handling is done in the execute function
 	for name, metricsCollector := range c.collectors {
 		wg.Go(func() {
-			collectorStatusCh <- collectorStatus{
-				name:       name,
-				statusCode: c.collectCollector(ctx, ch, logger, name, metricsCollector),
-			}
+			pprof.Do(ctx, pprof.Labels("collector", name), func(ctx context.Context) {
+				collectorStatusCh <- collectorStatus{
+					name:       name,
+					statusCode: c.collectCollector(ctx, ch, logger, name, metricsCollector),
+				}
+			})
 		})
 	}
 

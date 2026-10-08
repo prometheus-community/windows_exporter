@@ -210,6 +210,9 @@ windows_exporter provides the following HTTP endpoints:
 * `/health`: Returns 200 OK when the exporter is running.
 * `/debug/pprof/`: Exposes the [pprof](https://golang.org/pkg/net/http/pprof/) endpoints. Only, if `--debug.enabled` is set.
 
+CPU and goroutine profiles include a `collector` label with the collector name, so profiles can be filtered by collector.
+Workers started during collector initialization inherit this label.
+
 ### Using [defaults] with `--collectors.enabled` argument
 
 Using `[defaults]`  with `--collectors.enabled` argument which gets expanded with all default collectors.

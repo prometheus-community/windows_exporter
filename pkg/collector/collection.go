@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"log/slog"
 	"maps"
+	"runtime/pprof"
 	"slices"
 	gotime "time"
 
@@ -248,10 +249,13 @@ func (c *Collection) Build(ctx context.Context, logger *slog.Logger) error {
 		state := c.state.collector(name)
 
 		go func() {
-			resultCh <- buildResult{
-				name: collector.GetName(),
-				err:  state.build(ctx, logger, miSession, collector),
-			}
+			// Workers started by Build inherit the collector's profiling label.
+			pprof.Do(ctx, pprof.Labels("collector", name), func(ctx context.Context) {
+				resultCh <- buildResult{
+					name: collector.GetName(),
+					err:  state.build(ctx, logger, miSession, collector),
+				}
+			})
 		}()
 	}
 
