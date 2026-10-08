@@ -29,25 +29,15 @@ import (
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/go-ole/go-ole"
-	"github.com/go-ole/go-ole/oleutil"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
+	"github.com/prometheus-community/windows_exporter/internal/ole"
+	"github.com/prometheus-community/windows_exporter/internal/ole/wuapi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus-community/windows_exporter/internal/utils/recovery"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 const Name = "update"
-
-// CLSID_UpdateSession {4CB43D7F-7EEE-4906-8698-60DA1C38F2FE}: https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-uamg/e839e7e0-1795-451b-94ef-abacd6cbecac
-//
-//nolint:gochecknoglobals // CLSID, not ProgID: go-ole's CLSIDFromProgID can free the ProgID buffer mid-call
-var updateSessionCLSID = ole.GUID{
-	Data1: 0x4CB43D7F,
-	Data2: 0x7EEE,
-	Data3: 0x4906,
-	Data4: [8]byte{0x86, 0x98, 0x60, 0xDA, 0x1C, 0x38, 0xF2, 0xFE},
-}
 
 type Config struct {
 	Online         bool          `yaml:"online"`
@@ -204,93 +194,56 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 }
 
 func (c *Collector) scheduleUpdateStatus(ctx context.Context, logger *slog.Logger, initErrCh chan<- error, online bool) {
-	// The only way to run WMI queries in parallel while being thread-safe is to
-	// ensure the CoInitialize[Ex]() call is bound to its current OS thread.
-	// Otherwise, attempting to initialize and run parallel queries across
-	// goroutines will result in protected memory errors.
+	// COM initialization and every interface call stay on the same OS thread.
 	runtime.LockOSThread()
 
 	defer runtime.UnlockOSThread()
 
-	if err := ole.CoInitializeEx(0, ole.COINIT_APARTMENTTHREADED|ole.COINIT_DISABLE_OLE1DDE); err != nil {
-		var oleCode *ole.OleError
-		if errors.As(err, &oleCode) && oleCode.Code() != ole.S_OK && oleCode.Code() != 0x00000001 {
-			initErrCh <- fmt.Errorf("CoInitializeEx: %w", err)
+	if err := ole.Initialize(); err != nil {
+		initErrCh <- err
 
-			return
-		}
+		return
 	}
 
-	defer ole.CoUninitialize()
+	defer ole.Uninitialize()
 
-	// Create a new instance of the WMI object
-	sessionObj, err := ole.CreateInstance(&updateSessionCLSID, ole.IID_IUnknown)
+	session, err := wuapi.NewUpdateSession()
 	if err != nil {
 		initErrCh <- fmt.Errorf("create Microsoft.Update.Session: %w", err)
 
 		return
 	}
+	defer session.Release()
 
-	defer sessionObj.Release()
-
-	// Query the IDispatch interface of the object
-	musQueryInterface, err := sessionObj.QueryInterface(ole.IID_IDispatch)
-	if err != nil {
-		initErrCh <- fmt.Errorf("IID_IDispatch: %w", err)
+	if err := session.SetUserLocale(1033); err != nil {
+		initErrCh <- fmt.Errorf("set UserLocale: %w", err)
 
 		return
 	}
 
-	defer musQueryInterface.Release()
-
-	_, err = oleutil.PutProperty(musQueryInterface, "UserLocale", 1033)
-	if err != nil {
-		initErrCh <- fmt.Errorf("failed to set ClientApplicationID: %w", err)
+	if err := session.SetClientApplicationID("windows_exporter"); err != nil {
+		initErrCh <- fmt.Errorf("set ClientApplicationID: %w", err)
 
 		return
 	}
 
-	_, err = oleutil.PutProperty(musQueryInterface, "ClientApplicationID", "windows_exporter")
-	if err != nil {
-		initErrCh <- fmt.Errorf("failed to set ClientApplicationID: %w", err)
-
-		return
-	}
-
-	// https://learn.microsoft.com/en-us/windows/win32/api/wuapi/nf-wuapi-iupdatesession-createupdatesearcher
-	us, err := oleutil.CallMethod(musQueryInterface, "CreateUpdateSearcher")
-	defer func(us *ole.VARIANT) {
-		if us != nil {
-			_ = us.Clear()
-		}
-	}(us)
-
+	searcher, err := session.CreateUpdateSearcher()
 	if err != nil {
 		initErrCh <- fmt.Errorf("create update searcher: %w", err)
 
 		return
 	}
+	defer searcher.Release()
 
-	// ush shares the reference of us, which is released by us.Clear().
-	ush := us.ToIDispatch()
-
-	_, err = oleutil.PutProperty(ush, "Online", online)
-	if err != nil {
-		initErrCh <- fmt.Errorf("put Online: %w", err)
+	if err := searcher.SetOnline(online); err != nil {
+		initErrCh <- fmt.Errorf("set Online: %w", err)
 
 		return
 	}
 
-	// lets use the fast local-only query to check if WindowsUpdates service is enabled on the host
-	hc, err := oleutil.CallMethod(ush, "GetTotalHistoryCount")
-	defer func(hc *ole.VARIANT) {
-		if hc != nil {
-			_ = hc.Clear()
-		}
-	}(hc)
-
-	if err != nil {
-		initErrCh <- ErrUpdateServiceDisabled
+	// A local history query checks that the Windows Update service is enabled.
+	if _, err := searcher.GetTotalHistoryCount(); err != nil {
+		initErrCh <- fmt.Errorf("get update history count: %w", errors.Join(ErrUpdateServiceDisabled, err))
 
 		return
 	}
@@ -304,7 +257,7 @@ func (c *Collector) scheduleUpdateStatus(ctx context.Context, logger *slog.Logge
 		err = recovery.Run(func() error {
 			var err error
 
-			metricsBuf, err = c.fetchUpdates(logger, ush)
+			metricsBuf, err = c.fetchUpdates(logger, searcher)
 
 			return err
 		})
@@ -331,15 +284,17 @@ func (c *Collector) scheduleUpdateStatus(ctx context.Context, logger *slog.Logge
 	}
 }
 
-func (c *Collector) fetchUpdates(logger *slog.Logger, usd *ole.IDispatch) ([]prometheus.Metric, error) {
+func (c *Collector) fetchUpdates(logger *slog.Logger, searcher *wuapi.UpdateSearcher) ([]prometheus.Metric, error) {
 	metricsBuf := make([]prometheus.Metric, 0, len(c.metricsBuf)*2+1)
 
 	timeStart := time.Now()
 
-	usr, err := oleutil.CallMethod(usd, "Search", "IsInstalled=0 and IsHidden=0")
+	result, err := searcher.Search("IsInstalled=0 and IsHidden=0")
 	if err != nil {
 		return nil, fmt.Errorf("search for updates: %w", err)
 	}
+
+	defer result.Release()
 
 	logger.Debug(fmt.Sprintf("search for updates took %s", time.Since(timeStart)))
 
@@ -349,24 +304,24 @@ func (c *Collector) fetchUpdates(logger *slog.Logger, usd *ole.IDispatch) ([]pro
 		time.Since(timeStart).Seconds(),
 	))
 
-	usrd := usr.ToIDispatch()
-	defer usrd.Release()
-
-	upd, err := oleutil.GetProperty(usrd, "Updates")
+	updates, err := result.Updates()
 	if err != nil {
 		return nil, fmt.Errorf("get updates: %w", err)
 	}
+	defer updates.Release()
 
-	updd := upd.ToIDispatch()
-	defer updd.Release()
+	for item, err := range updates.All() {
+		if err != nil {
+			if _, ok := errors.AsType[*ole.CollectionItemError](err); !ok {
+				return nil, fmt.Errorf("enumerate updates: %w", err)
+			}
 
-	countUpdd, err := oleutil.GetProperty(updd, "Count")
-	if err != nil {
-		return nil, fmt.Errorf("get updates count: %w", err)
-	}
+			logger.Error("failed to fetch Windows Update history item", slog.Any("err", err))
 
-	for i := range int(countUpdd.Val) {
-		update, err := c.getUpdateStatus(updd, i)
+			continue
+		}
+
+		update, err := c.getUpdateStatus(item)
 		if err != nil {
 			logger.Error("failed to fetch Windows Update history item",
 				slog.Any("err", err),
@@ -418,73 +373,47 @@ type windowsUpdate struct {
 // getUpdateStatus retrieves the update status of the given item.
 // other available properties can be found here:
 // https://learn.microsoft.com/en-us/previous-versions/windows/desktop/aa386114(v=vs.85)
-func (c *Collector) getUpdateStatus(updd *ole.IDispatch, item int) (windowsUpdate, error) {
-	itemRaw, err := oleutil.GetProperty(updd, "Item", item)
-	if err != nil {
-		return windowsUpdate{}, fmt.Errorf("get update item: %w", err)
-	}
-
-	updateItem := itemRaw.ToIDispatch()
-	defer updateItem.Release()
-
-	severity, err := oleutil.GetProperty(updateItem, "MsrcSeverity")
+func (c *Collector) getUpdateStatus(item *wuapi.Update) (windowsUpdate, error) {
+	severity, err := item.MsrcSeverity()
 	if err != nil {
 		return windowsUpdate{}, fmt.Errorf("get MsrcSeverity: %w", err)
 	}
 
-	defer clearVariant(severity)
-
-	categoriesRaw, err := oleutil.GetProperty(updateItem, "Categories")
+	categoryName, err := getUpdateCategory(item)
 	if err != nil {
-		return windowsUpdate{}, fmt.Errorf("get Categories: %w", err)
+		return windowsUpdate{}, fmt.Errorf("get category: %w", err)
 	}
 
-	categories := categoriesRaw.ToIDispatch()
-	defer categories.Release()
-
-	categoryName, err := getUpdateCategory(categories)
-	if err != nil {
-		return windowsUpdate{}, fmt.Errorf("get Category: %w", err)
-	}
-
-	title, err := oleutil.GetProperty(updateItem, "Title")
+	title, err := item.Title()
 	if err != nil {
 		return windowsUpdate{}, fmt.Errorf("get Title: %w", err)
 	}
 
-	defer clearVariant(title)
-
-	// Get the Identity object
-	identityVariant, err := oleutil.GetProperty(updateItem, "Identity")
+	identity, err := item.Identity()
 	if err != nil {
 		return windowsUpdate{}, fmt.Errorf("get Identity: %w", err)
 	}
-
-	identity := identityVariant.ToIDispatch()
 	defer identity.Release()
 
-	// Read the UpdateID
-	updateIDVariant, err := oleutil.GetProperty(identity, "UpdateID")
+	updateID, err := identity.UpdateID()
 	if err != nil {
 		return windowsUpdate{}, fmt.Errorf("get UpdateID: %w", err)
 	}
 
-	defer clearVariant(updateIDVariant)
-
-	revisionVariant, err := oleutil.GetProperty(identity, "RevisionNumber")
+	revision, err := identity.RevisionNumber()
 	if err != nil {
 		return windowsUpdate{}, fmt.Errorf("get RevisionNumber: %w", err)
 	}
 
-	lastPublished, err := oleutil.GetProperty(updateItem, "LastDeploymentChangeTime")
+	lastPublished, err := item.LastDeploymentChangeTime()
 	if err != nil {
 		return windowsUpdate{}, fmt.Errorf("get LastDeploymentChangeTime: %w", err)
 	}
 
-	lastPublishedDate, err := ole.GetVariantDate(uint64(lastPublished.Val))
+	lastPublishedDate, err := lastPublished.Time()
 	if err != nil {
 		c.logger.Debug("failed to convert LastDeploymentChangeTime",
-			slog.String("title", title.ToString()),
+			slog.String("title", title),
 			slog.Any("err", err),
 		)
 
@@ -492,66 +421,46 @@ func (c *Collector) getUpdateStatus(updd *ole.IDispatch, item int) (windowsUpdat
 	}
 
 	return windowsUpdate{
-		identity:      updateIDVariant.ToString(),
-		revision:      strconv.FormatInt(revisionVariant.Val, 10),
+		identity:      updateID,
+		revision:      strconv.FormatInt(int64(revision), 10),
 		category:      categoryName,
-		severity:      severity.ToString(),
-		title:         title.ToString(),
+		severity:      severity,
+		title:         title,
 		lastPublished: lastPublishedDate,
 	}, nil
 }
 
-func getUpdateCategory(categories *ole.IDispatch) (string, error) {
-	var categoryName string
-
-	categoryCount, err := oleutil.GetProperty(categories, "Count")
+func getUpdateCategory(update *wuapi.Update) (string, error) {
+	categories, err := update.Categories()
 	if err != nil {
-		return categoryName, fmt.Errorf("get Categories count: %w", err)
+		return "", fmt.Errorf("get Categories: %w", err)
 	}
+	defer categories.Release()
+
+	var categoryName string
 
 	order := int64(math.MaxInt64)
 
-	for i := range categoryCount.Val {
-		err = func(i int64) error {
-			categoryRaw, err := oleutil.GetProperty(categories, "Item", i)
-			if err != nil {
-				return fmt.Errorf("get Category item: %w", err)
-			}
-
-			category := categoryRaw.ToIDispatch()
-			defer category.Release()
-
-			categoryNameRaw, err := oleutil.GetProperty(category, "Name")
-			if err != nil {
-				return fmt.Errorf("get Category item Name: %w", err)
-			}
-
-			defer clearVariant(categoryNameRaw)
-
-			orderRaw, err := oleutil.GetProperty(category, "Order")
-			if err != nil {
-				return fmt.Errorf("get Category item Order: %w", err)
-			}
-
-			if orderRaw.Val < order {
-				order = orderRaw.Val
-				categoryName = categoryNameRaw.ToString()
-			}
-
-			return nil
-		}(i)
+	for category, err := range categories.All() {
 		if err != nil {
-			return "", fmt.Errorf("get Category item: %w", err)
+			return "", fmt.Errorf("enumerate categories: %w", err)
+		}
+
+		name, err := category.Name()
+		if err != nil {
+			return "", fmt.Errorf("get category Name: %w", err)
+		}
+
+		categoryOrder, err := category.Order()
+		if err != nil {
+			return "", fmt.Errorf("get category Order: %w", err)
+		}
+
+		if int64(categoryOrder) < order {
+			order = int64(categoryOrder)
+			categoryName = name
 		}
 	}
 
 	return categoryName, nil
-}
-
-// clearVariant frees the value of a VARIANT, for example a BSTR.
-// Values must be copied, e.g. with [ole.VARIANT.ToString], before.
-func clearVariant(v *ole.VARIANT) {
-	if v != nil {
-		_ = v.Clear()
-	}
 }
