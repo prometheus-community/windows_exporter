@@ -24,10 +24,6 @@ Kubernetes Container Runtime Interface (CRI) endpoint. Defaults to `npipe:////./
 The collector reads the running containers and pod sandboxes from this endpoint to add the `namespace`, `pod` and `container` labels, to skip pause containers and to find HostProcess containers.
 If the endpoint is not available, for example on hosts without Kubernetes, the HCS containers are exported without Kubernetes labels and HostProcess containers aren't collected.
 
-### `--collector.container.containerd-state-dir`
-
-Deprecated and ignored. Kubernetes metadata is read from `--collector.container.cri-endpoint`.
-
 ## Metrics
 
 | Name                                                       | Description                            | Type    | Labels                                                     |

@@ -60,8 +60,6 @@ type Config struct {
 	// CRIEndpoint is the Kubernetes Container Runtime Interface (CRI) endpoint.
 	// It provides the Kubernetes metadata and the HostProcess containers.
 	CRIEndpoint string `yaml:"cri-endpoint"`
-	// Deprecated: ContainerDStateDir is ignored. Kubernetes metadata is read from CRIEndpoint.
-	ContainerDStateDir string `yaml:"containerd-state-dir"`
 }
 
 //nolint:gochecknoglobals
@@ -206,11 +204,6 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 		"Kubernetes CRI endpoint, used for Kubernetes labels and HostProcess containers.",
 	).Default(ConfigDefaults.CRIEndpoint).StringVar(&c.config.CRIEndpoint)
 
-	app.Flag(
-		"collector.container.containerd-state-dir",
-		"Deprecated and ignored. Kubernetes metadata is read from --collector.container.cri-endpoint.",
-	).Hidden().StringVar(&c.config.ContainerDStateDir)
-
 	app.Action(func(*kingpin.ParseContext) error {
 		c.config.CollectorsEnabled = strings.Split(collectorsEnabled, ",")
 
@@ -240,12 +233,6 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		if !slices.Contains([]string{subCollectorHCS, subCollectorHostprocess}, collector) {
 			return fmt.Errorf("unknown collector: %s", collector)
 		}
-	}
-
-	if c.config.ContainerDStateDir != "" {
-		c.logger.Warn("containerd-state-dir is deprecated and ignored, Kubernetes metadata is read from the CRI endpoint",
-			slog.String("cri_endpoint", c.config.CRIEndpoint),
-		)
 	}
 
 	// Without the Containers feature, the Host Compute Service is missing and
