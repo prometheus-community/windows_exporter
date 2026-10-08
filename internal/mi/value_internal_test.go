@@ -19,11 +19,13 @@ package mi
 
 import (
 	"math"
+	"runtime"
 	"testing"
 	"time"
 	"unsafe"
 
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sys/windows"
 )
 
 // newElement builds an Element the way Instance.GetElement does, from a raw
@@ -173,4 +175,28 @@ func TestElementIsNull(t *testing.T) {
 
 	require.True(t, newElement(ValueTypeUINT32, [5]uint64{}, flagNull).IsNull())
 	require.False(t, newElement(ValueTypeUINT32, [5]uint64{}, 0).IsNull())
+}
+
+func TestElementGetValueStringArray(t *testing.T) {
+	t.Parallel()
+
+	strs := []*uint16{
+		windows.StringToUTF16Ptr("en-US"),
+		nil,
+		windows.StringToUTF16Ptr("de-DE"),
+	}
+
+	// An MI_StringA is the pointer to the MI_Char* array in word 0 and the
+	// element count in word 1.
+	raw := [5]uint64{uint64(uintptr(unsafe.Pointer(unsafe.SliceData(strs)))), uint64(len(strs))}
+
+	got, err := newElement(ValueTypeSTRINGA, raw, 0).GetValue()
+	require.NoError(t, err)
+	require.Equal(t, []string{"en-US", "", "de-DE"}, got)
+
+	got, err = newElement(ValueTypeSTRINGA, [5]uint64{}, flagNull).GetValue()
+	require.NoError(t, err)
+	require.Nil(t, got)
+
+	runtime.KeepAlive(strs)
 }
