@@ -21,13 +21,15 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"os"
+	"slices"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
+	"github.com/prometheus-community/windows_exporter/internal/utils/recovery"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -169,6 +171,8 @@ func (c *Collector) Close() error {
 		fn()
 	}
 
+	c.closeFns = nil
+
 	return nil
 }
 
@@ -232,12 +236,24 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		},
 	}
 
-	errs := make([]error, 0, len(c.config.CollectorsEnabled))
+	collectorsEnabled := slices.Compact(slices.Sorted(slices.Values(c.config.CollectorsEnabled)))
 
-	for _, name := range c.config.CollectorsEnabled {
+	for _, name := range collectorsEnabled {
 		if _, ok := subCollectors[name]; !ok {
-			return fmt.Errorf("unknown collector: %s", name)
+			return fmt.Errorf("unknown sub collector: %s. Possible values: %s", name,
+				strings.Join(slices.Sorted(maps.Keys(subCollectors)), ", "),
+			)
 		}
+	}
+
+	c.collectorFns = make([]func(ch chan<- prometheus.Metric) error, 0, len(collectorsEnabled))
+	c.closeFns = make([]func(), 0, len(collectorsEnabled))
+
+	errs := make([]error, 0, len(collectorsEnabled))
+
+	for _, name := range collectorsEnabled {
+		// Register close before build, so that Close also releases a partially built sub collector.
+		c.closeFns = append(c.closeFns, subCollectors[name].close)
 
 		if err := subCollectors[name].build(); err != nil {
 			errs = append(errs, fmt.Errorf("failed to build %s collector: %w", name, err))
@@ -246,7 +262,6 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		}
 
 		c.collectorFns = append(c.collectorFns, subCollectors[name].collect)
-		c.closeFns = append(c.closeFns, subCollectors[name].close)
 	}
 
 	return errors.Join(errs...)
@@ -254,32 +269,15 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 // Collect collects exchange metrics and sends them to prometheus.
 func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error {
-	errCh := make(chan error, len(c.collectorFns))
-	errs := make([]error, 0, len(c.collectorFns))
-
-	wg := sync.WaitGroup{}
+	var g recovery.Group
 
 	for _, fn := range c.collectorFns {
-		wg.Add(1)
-
-		go func(fn func(ch chan<- prometheus.Metric) error) {
-			defer wg.Done()
-
-			if err := fn(ch); err != nil {
-				errCh <- err
-			}
-		}(fn)
+		g.Go(func() error {
+			return fn(ch)
+		})
 	}
 
-	wg.Wait()
-
-	close(errCh)
-
-	for err := range errCh {
-		errs = append(errs, err)
-	}
-
-	return errors.Join(errs...)
+	return g.Wait()
 }
 
 // toLabelName converts strings to lowercase and replaces all whitespaces and dots with underscores.

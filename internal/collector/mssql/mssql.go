@@ -22,15 +22,16 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"sort"
+	"maps"
+	"slices"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/utils/recovery"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows/registry"
 )
@@ -151,18 +152,13 @@ func (c *Collector) Close() error {
 		fn()
 	}
 
+	c.closeFns = nil
+
 	return nil
 }
 
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	c.logger = logger.With(slog.String("collector", Name))
-
-	instances, err := c.getMSSQLInstances()
-	if err != nil {
-		return fmt.Errorf("couldn't get SQL instances: %w", err)
-	}
-
-	c.mssqlInstances = instances
 
 	subCollectors := map[string]struct {
 		build   func() error
@@ -236,24 +232,38 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		},
 	}
 
-	c.collectorFns = make([]func(ch chan<- prometheus.Metric) error, 0, len(c.config.CollectorsEnabled))
-	c.closeFns = make([]func(), 0, len(c.config.CollectorsEnabled))
+	// Sort a copy, to not modify the slice of the caller or ConfigDefaults.
 	// Result must order, to prevent test failures.
-	sort.Strings(c.config.CollectorsEnabled)
+	collectorsEnabled := slices.Compact(slices.Sorted(slices.Values(c.config.CollectorsEnabled)))
 
-	errs := make([]error, 0, len(c.config.CollectorsEnabled))
-
-	for _, name := range c.config.CollectorsEnabled {
+	for _, name := range collectorsEnabled {
 		if _, ok := subCollectors[name]; !ok {
-			return fmt.Errorf("unknown collector: %s", name)
+			return fmt.Errorf("unknown sub collector: %s. Possible values: %s", name,
+				strings.Join(slices.Sorted(maps.Keys(subCollectors)), ", "),
+			)
 		}
+	}
+
+	instances, err := c.getMSSQLInstances()
+	if err != nil {
+		return fmt.Errorf("couldn't get SQL instances: %w", err)
+	}
+
+	c.mssqlInstances = instances
+	c.collectorFns = make([]func(ch chan<- prometheus.Metric) error, 0, len(collectorsEnabled))
+	c.closeFns = make([]func(), 0, len(collectorsEnabled))
+
+	errs := make([]error, 0, len(collectorsEnabled))
+
+	for _, name := range collectorsEnabled {
+		// Register close before build, so that Close also releases a partially built sub collector.
+		c.closeFns = append(c.closeFns, subCollectors[name].close)
 
 		if err := subCollectors[name].build(); err != nil {
 			errs = append(errs, fmt.Errorf("failed to build %s collector: %w", name, err))
 		}
 
 		c.collectorFns = append(c.collectorFns, subCollectors[name].collect)
-		c.closeFns = append(c.closeFns, subCollectors[name].close)
 	}
 
 	c.mssqlScrapeDurationDesc = prometheus.NewDesc(
@@ -279,31 +289,15 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 		return fmt.Errorf("no SQL instances found: %w", pdh.ErrNoData)
 	}
 
-	errCh := make(chan error, len(c.collectorFns))
-	errs := make([]error, 0, len(c.collectorFns))
+	var g recovery.Group
 
-	wg := sync.WaitGroup{}
 	for _, fn := range c.collectorFns {
-		wg.Add(1)
-
-		go func(fn func(ch chan<- prometheus.Metric) error) {
-			defer wg.Done()
-
-			if err := fn(ch); err != nil {
-				errCh <- err
-			}
-		}(fn)
+		g.Go(func() error {
+			return fn(ch)
+		})
 	}
 
-	wg.Wait()
-
-	close(errCh)
-
-	for err := range errCh {
-		errs = append(errs, err)
-	}
-
-	return errors.Join(errs...)
+	return g.Wait()
 }
 
 func (c *Collector) getMSSQLInstances() ([]mssqlInstance, error) {
