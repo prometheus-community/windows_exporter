@@ -24,7 +24,6 @@ import (
 	"log/slog"
 	"maps"
 	"slices"
-	"sync"
 	gotime "time"
 
 	"github.com/alecthomas/kingpin/v2"
@@ -158,8 +157,8 @@ func NewWithConfig(config Config) *Collection {
 // New To be called by the external libraries for collector initialization.
 func New(collectors Map) *Collection {
 	return &Collection{
-		collectors:    collectors,
-		concurrencyCh: make(chan struct{}, 1),
+		collectors: collectors,
+		state:      newCollectionState(),
 		scrapeDurationDesc: prometheus.NewDesc(
 			prometheus.BuildFQName(types.Namespace, "exporter", "scrape_duration_seconds"),
 			"windows_exporter: Total scrape duration.",
@@ -213,39 +212,68 @@ func (c *Collection) Disable(disabledCollectors []string) {
 	}
 }
 
+// closeTimeout bounds how long Close waits for running Build and Collect calls to return.
+const closeTimeout = 5 * gotime.Second
+
 // Build To be called by the exporter for collector initialization.
 // Instead, fail fast, it will try to build all collectors and return all errors.
 // errors are joined with errors.Join.
+//
+// A collector whose Build fails is not collected. Scrapes report it with
+// windows_exporter_collector_success 0. A panic in a collector's Build is returned as an error.
+//
+// If ctx is done before all collectors are built, Build returns without waiting for them.
+// Collectors that are still building finish in the background, and Close waits for them.
 func (c *Collection) Build(ctx context.Context, logger *slog.Logger) error {
 	c.startTime = gotime.Now()
 
-	err := c.initMI()
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("collector initialization aborted: %w", context.Cause(ctx))
+	}
+
+	miSession, err := c.initMI()
 	if err != nil {
 		return fmt.Errorf("error from initialize MI: %w", err)
 	}
 
-	wg := sync.WaitGroup{}
-	wg.Add(len(c.collectors))
+	type buildResult struct {
+		name string
+		err  error
+	}
 
-	errCh := make(chan error, len(c.collectors))
+	// The channel is buffered, so that builds abandoned by a done ctx don't block.
+	resultCh := make(chan buildResult, len(c.collectors))
 
-	for _, collector := range c.collectors {
+	for name, collector := range c.collectors {
+		state := c.state.collector(name)
+
 		go func() {
-			defer wg.Done()
-
-			if err := collector.Build(logger, c.miSession); err != nil {
-				errCh <- fmt.Errorf("error build collector %s: %w", collector.GetName(), err)
+			resultCh <- buildResult{
+				name: collector.GetName(),
+				err:  state.build(ctx, logger, miSession, collector),
 			}
 		}()
 	}
 
-	wg.Wait()
-
-	close(errCh)
-
 	errs := make([]error, 0, len(c.collectors))
 
-	for err := range errCh {
+	for range len(c.collectors) {
+		var result buildResult
+
+		select {
+		case result = <-resultCh:
+		case <-ctx.Done():
+			errs = append(errs, fmt.Errorf("collector initialization aborted: %w", context.Cause(ctx)))
+
+			return errors.Join(errs...)
+		}
+
+		if result.err == nil {
+			continue
+		}
+
+		err := fmt.Errorf("error build collector %s: %w", result.name, result.err)
+
 		if errors.Is(err, pdh.ErrNoData) ||
 			errors.Is(err, winregistry.ErrNotExist) ||
 			errors.Is(err, pdh.NewPdhError(pdh.CstatusNoObject)) ||
@@ -253,7 +281,9 @@ func (c *Collection) Build(ctx context.Context, logger *slog.Logger) error {
 			errors.Is(err, mi.MI_RESULT_INVALID_OPERATION_TIMEOUT) ||
 			errors.Is(err, mi.MI_RESULT_INVALID_NAMESPACE) ||
 			errors.Is(err, mi.MI_RESULT_INVALID_CLASS) {
-			logger.LogAttrs(ctx, slog.LevelWarn, "couldn't initialize collector", slog.Any("err", err))
+			logger.LogAttrs(ctx, slog.LevelWarn, "couldn't initialize collector",
+				slog.Any("err", err),
+			)
 
 			continue
 		}
@@ -265,65 +295,98 @@ func (c *Collection) Build(ctx context.Context, logger *slog.Logger) error {
 }
 
 // Close To be called by the exporter for collector cleanup.
+//
+// Close waits up to 5 seconds for running Build and Collect calls to return.
+// A collector that is still running after that is left open and reported in the returned error,
+// because closing it would release resources that are still in use.
+// The MI session is then left open as well.
+//
+// Close is safe to call after a failed or partial Build and more than once.
+// Collectors that were never built are not closed. A closed collector is never built or collected again.
 func (c *Collection) Close() error {
-	errs := make([]error, 0, len(c.collectors))
+	c.state.closeMu.Lock()
+	defer c.state.closeMu.Unlock()
 
-	for _, collector := range c.collectors {
-		if err := collector.Close(); err != nil {
+	ctx, cancel := context.WithTimeout(context.Background(), closeTimeout)
+	defer cancel()
+
+	errs := make([]error, 0, len(c.collectors))
+	collectorBusy := false
+
+	for name, collector := range c.collectors {
+		if err := c.state.collector(name).close(ctx, collector); err != nil {
+			collectorBusy = collectorBusy || errors.Is(err, errCollectorBusy)
+
 			errs = append(errs, fmt.Errorf("error from close collector %s: %w", collector.GetName(), err))
 		}
 	}
 
-	app, err := c.miSession.GetApplication()
-	if err != nil && !errors.Is(err, mi.ErrNotInitialized) {
-		errs = append(errs, fmt.Errorf("error from get MI application: %w", err))
-	}
-
-	if err := c.miSession.Close(); err != nil && !errors.Is(err, mi.ErrNotInitialized) {
-		errs = append(errs, fmt.Errorf("error from close MI session: %w", err))
-	}
-
-	if err := app.Close(); err != nil && !errors.Is(err, mi.ErrNotInitialized) {
-		errs = append(errs, fmt.Errorf("error from close MI application: %w", err))
+	if collectorBusy {
+		// Closing the MI session would block on, or break, the operations of running collectors.
+		errs = append(errs, errors.New("MI session left open, because collectors are still running"))
+	} else {
+		errs = append(errs, c.state.closeMI()...)
 	}
 
 	return errors.Join(errs...)
 }
 
 // initMI To be called by the exporter for collector initialization.
-func (c *Collection) initMI() error {
+// It returns the session of an earlier call, if there is one.
+func (c *Collection) initMI() (*mi.Session, error) {
+	if session := c.state.session(); session != nil {
+		return session, nil
+	}
+
 	app, err := mi.ApplicationInitialize()
 	if err != nil {
-		return fmt.Errorf("error from initialize MI application: %w", err)
+		return nil, fmt.Errorf("error from initialize MI application: %w", err)
 	}
 
 	destinationOptions, err := app.NewDestinationOptions()
 	if err != nil {
-		return fmt.Errorf("error from create NewDestinationOptions: %w", err)
+		_ = app.Close()
+
+		return nil, fmt.Errorf("error from create NewDestinationOptions: %w", err)
 	}
 
-	if err = destinationOptions.SetLocale(mi.LocaleEnglish); err != nil {
-		return fmt.Errorf("error from set locale: %w", err)
-	}
-
-	if err = destinationOptions.SetTimeout(gotime.Second); err != nil {
-		return fmt.Errorf("error from set timeout: %w", err)
-	}
-
-	c.miSession, err = app.NewSession(destinationOptions)
+	session, err := newMISession(app, destinationOptions)
 	if err != nil {
-		return fmt.Errorf("error from create NewSession: %w", err)
+		_ = destinationOptions.Delete()
+		_ = app.Close()
+
+		return nil, err
 	}
 
-	return nil
+	c.state.setMI(app, session)
+
+	return session, nil
+}
+
+func newMISession(app *mi.Application, destinationOptions *mi.DestinationOptions) (*mi.Session, error) {
+	if err := destinationOptions.SetLocale(mi.LocaleEnglish); err != nil {
+		return nil, fmt.Errorf("error from set locale: %w", err)
+	}
+
+	if err := destinationOptions.SetTimeout(gotime.Second); err != nil {
+		return nil, fmt.Errorf("error from set timeout: %w", err)
+	}
+
+	session, err := app.NewSession(destinationOptions)
+	if err != nil {
+		return nil, fmt.Errorf("error from create NewSession: %w", err)
+	}
+
+	return session, nil
 }
 
 // WithCollectors To be called by the exporter for collector initialization.
+// The returned Collection shares the collector instances and their state with c,
+// so a collector never runs twice at the same time, whichever Collection scrapes it.
 func (c *Collection) WithCollectors(collectors []string) (*Collection, error) {
 	metricCollectors := &Collection{
-		miSession:                   c.miSession,
 		startTime:                   c.startTime,
-		concurrencyCh:               c.concurrencyCh,
+		state:                       c.state,
 		scrapeDurationDesc:          c.scrapeDurationDesc,
 		collectorScrapeDurationDesc: c.collectorScrapeDurationDesc,
 		collectorScrapeSuccessDesc:  c.collectorScrapeSuccessDesc,
