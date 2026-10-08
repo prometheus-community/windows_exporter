@@ -12,7 +12,7 @@ The hyperv collector exposes metrics about the Hyper-V hypervisor
 
 ### `--collector.hyperv.enabled`
 Comma-separated list of collectors to use, for example:
-`--collector.hyperv.enabled=dynamic_memory_balancer,dynamic_memory_vm,host,hypervisor_logical_processor,hypervisor_root_partition,hypervisor_root_virtual_processor,hypervisor_virtual_processor,legacy_network_adapter,virtual_machine_health_summary,virtual_machine_vid_partition,virtual_network_adapter,virtual_storage_device,virtual_switch,wmi_health`
+`--collector.hyperv.enabled=dynamic_memory_balancer,dynamic_memory_vm,host,hypervisor_logical_processor,hypervisor_root_partition,hypervisor_root_virtual_processor,hypervisor_virtual_processor,legacy_network_adapter,replica_vm,virtual_machine_health_summary,virtual_machine_vid_partition,virtual_network_adapter,virtual_storage_device,virtual_switch,wmi_health`
 
 ## Metrics
 
@@ -171,6 +171,78 @@ Multiply by the number of threads per core to get the ratio per **physical** cor
 | `windows_hyperv_legacy_network_adapter_frames_dropped_total`  | Frames Dropped is the number of frames dropped on the network adapter   | counter | `adapter` |
 | `windows_hyperv_legacy_network_adapter_frames_received_total` | Frames received is the number of frames received on the network adapter | counter | `adapter` |
 | `windows_hyperv_legacy_network_adapter_frames_sent_total`     | Frames sent is the number of frames sent over the network adapter       | counter | `adapter` |
+
+### Hyper-V Replica VM
+
+Sub-collector `replica_vm`, enabled by default. The performance counter metrics come from the
+`Hyper-V Replica VM` counter set and only exist for virtual machines with Hyper-V Replica enabled.
+The `health` and `state` metrics come from the `Msvm_ReplicationRelationship` WMI class in the
+`root/virtualization/v2` namespace and exist for every virtual machine, including those without replication.
+
+| Name                                                            | Description                                                         | Type    | Labels               |
+|-----------------------------------------------------------------|---------------------------------------------------------------------|---------|----------------------|
+| `windows_hyperv_replica_vm_average_replication_latency_seconds` | The average time taken to replicate the virtual machine             | gauge   | `vm`                 |
+| `windows_hyperv_replica_vm_average_replication_size_bytes`      | The average size of the replicated data                             | gauge   | `vm`                 |
+| `windows_hyperv_replica_vm_compression_efficiency`              | The compression efficiency of the replicated data                   | gauge   | `vm`                 |
+| `windows_hyperv_replica_vm_last_replication_size_bytes`         | The size of the last replicated data                                | gauge   | `vm`                 |
+| `windows_hyperv_replica_vm_network_received_bytes_total`        | The total number of bytes received over the network for replication | counter | `vm`                 |
+| `windows_hyperv_replica_vm_network_sent_bytes_total`            | The total number of bytes sent over the network for replication     | counter | `vm`                 |
+| `windows_hyperv_replica_vm_replications_total`                  | The total number of replication cycles                              | counter | `vm`                 |
+| `windows_hyperv_replica_vm_replication_latency_seconds`         | The time taken by the last replication of the virtual machine       | gauge   | `vm`                 |
+| `windows_hyperv_replica_vm_resynchronized_bytes_total`          | The total number of bytes sent during resynchronization             | counter | `vm`                 |
+| `windows_hyperv_replica_vm_health`                              | The replication health of the virtual machine, see below            | gauge   | `vm`, `relationship` |
+| `windows_hyperv_replica_vm_state`                               | The replication state of the virtual machine, see below             | gauge   | `vm`, `relationship` |
+
+The `relationship` label is `primary` for the primary replication relationship and `extended` for
+[extended replication](https://learn.microsoft.com/en-us/windows/win32/hyperv_v2/msvm-replicationrelationship).
+
+Values of `windows_hyperv_replica_vm_health`:
+
+| Value | Health         |
+|-------|----------------|
+| 0     | Not applicable |
+| 1     | OK             |
+| 2     | Warning        |
+| 3     | Critical       |
+
+Values of `windows_hyperv_replica_vm_state`:
+
+| Value | State                                   |
+|-------|-----------------------------------------|
+| 0     | Disabled                                |
+| 1     | Ready for replication                   |
+| 2     | Waiting to complete initial replication |
+| 3     | Replicating                             |
+| 4     | Synced replication complete             |
+| 5     | Recovered                               |
+| 6     | Committed                               |
+| 7     | Suspended                               |
+| 8     | Critical                                |
+| 9     | Waiting to start resynchronization      |
+| 10    | Resynchronizing                         |
+| 11    | Resynchronization suspended             |
+| 12    | Failover in progress                    |
+| 13    | Failback in progress                    |
+| 14    | Failback complete                       |
+| 15    | Disk update in progress                 |
+| 16    | Disk update critical                    |
+| 17    | Unknown                                 |
+| 18    | Repurpose replication in progress       |
+| 19    | Prepared for sync replication           |
+| 20    | Prepared for group reverse replication  |
+| 21    | Fire drill in progress                  |
+
+Example alert:
+
+```yaml
+- alert: HyperVReplicationCritical
+  expr: windows_hyperv_replica_vm_health == 3
+  for: 15m
+  labels:
+    severity: critical
+  annotations:
+    summary: Hyper-V replication of {{ $labels.vm }} is critical on {{ $labels.instance }}
+```
 
 
 ### Hyper-V Hypervisor Virtual Processor
