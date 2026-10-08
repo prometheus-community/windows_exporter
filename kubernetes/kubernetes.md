@@ -12,31 +12,22 @@ Requirements:
 
 ## Container Image
 
-The image is multi arch image (WS 2019, WS 2022) built on Windows. To build the images:
+The image is a HostProcess container image based on [`mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image`](https://github.com/microsoft/windows-host-process-containers-base-image). One image works on every Windows version that supports HostProcess containers. The released images are listed in the [Docker section](../README.md#docker-implementation) of the readme.
 
-```
-DOCKER_REPO=<your repo> make push-all
-```
+To build your own image, use `docker buildx` on Linux, for example in WSL. The image only copies the binary, so it builds on Linux although it's a Windows image. Put the amd64 binary into an otherwise empty directory as `windows_exporter-<version>-amd64.exe`, the name the CI build uses, and build the image from that directory:
 
-If you don't have a version of `make` on your Windows machine, You can use WSL to build the image with Windows Containers by creating a symbolic link to the docker cli and then override the docker command in the `Makefile`: 
-
-On Windows Powershell prompt:
-```
-New-Item -ItemType SymbolicLink -Path "c:\docker" -Target "C:\Program Files\Docker\Docker\resources\bin\docker.exe"
-```
-
-In WSL:
-```
-DOCKER_REPO=<your repo> DOCKER=/mnt/c/docker make push-all 
+```bash
+GOOS=windows GOARCH=amd64 go build -o output/windows_exporter-dev-amd64.exe ./cmd/windows_exporter
+docker buildx build --platform windows/amd64 -f Dockerfile -t <your repository>/windows-exporter:dev --push output
 ```
 
 ## Kubernetes Quick Start
 
-Before beginning you need to deploy the [prometheus operator](https://github.com/prometheus-operator/prometheus-operator) to your cluster. As a quick start, you can use a project like https://github.com/prometheus-operator/kube-prometheus. The export itself doesn't have any dependency on prometheus operator and the exporter image can be used in manual configurations.
+Before beginning you need to deploy the [Prometheus Operator](https://github.com/prometheus-operator/prometheus-operator) to your cluster. As a quick start, you can use a project like https://github.com/prometheus-operator/kube-prometheus. The export itself doesn't have any dependency on the Prometheus Operator and the exporter image can be used in manual configurations.
 
 ### Windows Exporter DaemonSet
 
-This create a deployment on every node. A config map is created for to handle the configuration of the Windows exporter with [configuration file](../README.md#using-a-configuration-file).  Adjust the configuration file for the collectors you are interested in.
+This creates a pod on every Windows node. A ConfigMap holds the configuration of the Windows exporter with [configuration file](../README.md#using-a-configuration-file).  Adjust the configuration file for the collectors you are interested in.
 
 ```bash
 kubectl apply -f kubernetes/windows-exporter-daemonset.yaml
@@ -45,7 +36,7 @@ kubectl apply -f kubernetes/windows-exporter-daemonset.yaml
 > Note: This example manifest deploys the latest bleeding edge image `ghcr.io/prometheus-community/windows-exporter:latest` built from the main branch.  You should update this to use a released version which you can find at https://github.com/prometheus-community/windows_exporter/releases
 
 #### Configuring the firewall
-The firewall on the node needs to be configured  to allow connections on the node: `New-NetFirewallRule -DisplayName 'windows-exporter' -Direction inbound -Profile Any -Action Allow -LocalPort 9182 -Protocol TCP` 
+The firewall on the node needs to be configured to allow connections on the node: `New-NetFirewallRule -DisplayName 'windows-exporter' -Direction inbound -Profile Any -Action Allow -LocalPort 9182 -Protocol TCP`
 
 You could do this by adding an init container but if you remove the deployment at a later date you will need to remove the firewall rule manually. The following could be added to the `windows-exporter-daemonset.yaml`:
 
@@ -67,18 +58,18 @@ spec:
 Create the [Pod Monitor](https://prometheus-operator.dev/docs/operator/design/#podmonitor) to configure the scraping:
 
 ```bash
-kubectl apply -f windows-exporter-podmonitor.yaml
+kubectl apply -f kubernetes/windows-exporter-podmonitor.yaml
 ```
 
 ### View Metrics
 
-Open Prometheus with 
+Open Prometheus with
 
 ```
 kubectl --namespace monitoring port-forward svc/prometheus-k8s 9091:9090
 ```
 
-Navigate to prometheus UI and add a query to see node cpu (replacing with your ip address)
+Navigate to the Prometheus UI and add a query to see the node CPU (replace the IP address with yours)
 
 ```
 sum by (mode) (irate(windows_cpu_time_total{instance="10.1.0.5:9182"}[5m]))

@@ -1,77 +1,49 @@
-GOOS    ?= windows
-VERSION ?= $(shell cat VERSION)
-DOCKER  ?= docker
+##
+# Console Colors
+##
+GREEN  := $(shell printf "\033[0;32m")
+YELLOW := $(shell printf "\033[0;33m")
+CYAN   := $(shell printf "\033[0;36m")
+RESET  := $(shell printf "\033[0m")
 
 # DOCKER_REPO is the official image repository name at docker.io, quay.io.
 DOCKER_REPO       ?= prometheuscommunity
 DOCKER_IMAGE_NAME ?= windows-exporter
 
-# ALL_DOCKER_REPOS is the list of repositories to push the image to. ghcr.io requires that org name be the same as the image repo name.
-ALL_DOCKER_REPOS  ?= docker.io/$(DOCKER_REPO) ghcr.io/prometheus-community # quay.io/$(DOCKER_REPO)
+##
+# Targets
+##
+.PHONY: help
+help: ## show this help.
+	@echo 'Usage:'
+	@echo "  ${GREEN}make${RESET} ${YELLOW}<target>${RESET}"
+	@echo ''
+	@echo 'Targets:'
+	@awk 'BEGIN {FS = ":.*?## "} { \
+		if (/^[a-zA-Z_-]+:.*?##.*$$/) {printf "  ${GREEN}%-21s${YELLOW}%s${RESET}\n", $$1, $$2} \
+		else if (/^## .*$$/) {printf "  ${CYAN}%s${RESET}\n", substr($$1,4)} \
+		}' $(MAKEFILE_LIST) | sort
 
-# Image Variables for host process Container
-# Windows image build is heavily influenced by https://github.com/kubernetes/kubernetes/blob/master/cluster/images/etcd/Makefile
-OS                ?= ltsc2019
-ALL_OS            ?= ltsc2019 ltsc2022
-BASE_IMAGE        ?= mcr.microsoft.com/windows/nanoserver
+.PHONY: clean
+clean: ## clean build output
+	@rm -rf windows_exporter.exe dist/ output/
 
 .PHONY: build
-build: windows_exporter.exe
+build: export GOOS := windows
+build: ## build windows_exporter.exe
+	@go build -o windows_exporter.exe ./cmd/windows_exporter
 
-windows_exporter.exe: generate
-	CGO_ENABLED=0 go build -trimpath -tags=trimpath -o $@ ./cmd/windows_exporter
+.PHONY: test
+test: ## run the tests
+	@go test ./...
 
-.PHONY: generate
-generate:
-	go generate ./...
+.PHONY: lint
+lint: ## run golangci-lint
+	@go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0 run ./...
 
-test:
-	go test -v ./...
-
-bench:
-	go test -v -bench='benchmarkcollector' ./internal/collectors/{cpu,logical_disk,physical_disk,memory,net,printer,process,service,system,tcp,time}
-
-lint:
-	golangci-lint -c .golangci.yaml run
-
-.PHONY: e2e-test
-e2e-test: windows_exporter.exe
-	powershell -NonInteractive -ExecutionPolicy Bypass -File .\tools\end-to-end-test.ps1
-
-fmt:
-	gofmt -l -w -s .
-
-crossbuild: generate
-	mkdir -p output/amd64 output/arm64
-	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath -tags=trimpath -o output/amd64/windows_exporter.exe ./cmd/windows_exporter
-	CGO_ENABLED=0 GOOS=windows GOARCH=arm64 go build -trimpath -tags=trimpath -o output/arm64/windows_exporter.exe ./cmd/windows_exporter
-
-.PHONY: package
-package: crossbuild
-	powershell -NonInteractive -ExecutionPolicy Bypass -File .\installer\build.ps1 -PathToExecutable .\output\amd64\windows_exporter.exe -Version $(shell git describe --tags --abbrev=0)
-
-build-image: crossbuild
-	$(DOCKER) build --build-arg=BASE=$(BASE_IMAGE):$(OS) -f Dockerfile -t local/$(DOCKER_IMAGE_NAME):$(VERSION)-$(OS) .
-
-build-hostprocess:
-	$(DOCKER) buildx build --build-arg=BASE=mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v1.0.0 -f Dockerfile -t local/$(DOCKER_IMAGE_NAME):$(VERSION)-hostprocess .
-
-sub-build-%:
-	$(MAKE) OS=$* build-image
-
-build-all: crossbuild
-	@for docker_repo in ${DOCKER_REPO}; do \
-		echo $(DOCKER) buildx build -f Dockerfile -t $${docker_repo}/$(DOCKER_IMAGE_NAME):$(VERSION) .; \
-	done
-
-push:
-	@for docker_repo in ${DOCKER_REPO}; do \
-		echo $(DOCKER) buildx build --push -f Dockerfile -t $${docker_repo}/$(DOCKER_IMAGE_NAME):$(VERSION) .; \
-	done
-
-.PHONY: push-all
-push-all: build-all
-	$(MAKE) DOCKER_REPO="$(ALL_DOCKER_REPOS)" push
+.PHONY: fmt
+fmt: ## format the code
+	@go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0 fmt
 
 # Mandatory target for container description sync action
 .PHONY: docker-repo-name

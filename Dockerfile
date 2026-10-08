@@ -6,6 +6,9 @@
 # This image MUST be built with docker buildx build (buildx) command on a Linux system.
 # Ref: https://github.com/microsoft/windows-host-process-containers-base-image
 
+# The build context must contain the amd64 binary, named windows_exporter-<version>-amd64.exe
+# like the CI build stages it.
+
 ARG BASE="mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v1.0.0"
 FROM $BASE
 
