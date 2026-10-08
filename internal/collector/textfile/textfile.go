@@ -18,6 +18,7 @@
 package textfile
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"io"
@@ -31,7 +32,6 @@ import (
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/dimchansky/utfbom"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
@@ -393,22 +393,22 @@ func scrapeFile(path string, logger *slog.Logger) ([]*dto.MetricFamily, error) {
 		return nil, err
 	}
 
+	defer func() {
+		if err := file.Close(); err != nil {
+			logger.Warn("error closing file "+path,
+				slog.Any("err", err),
+			)
+		}
+	}()
+
 	parser := expfmt.NewTextParser(model.UTF8Validation)
 
-	r, encoding := utfbom.Skip(carriageReturnFilteringReader{r: file})
-	if err = checkBOM(encoding); err != nil {
+	r := bufio.NewReader(carriageReturnFilteringReader{r: file})
+	if err := skipUTF8BOM(r); err != nil {
 		return nil, err
 	}
 
 	parsedFamilies, err := parser.TextToMetricFamilies(r)
-
-	closeErr := file.Close()
-	if closeErr != nil {
-		logger.Warn("error closing file "+path,
-			slog.Any("err", closeErr),
-		)
-	}
-
 	if err != nil {
 		return nil, err
 	}
@@ -437,14 +437,6 @@ func scrapeFile(path string, logger *slog.Logger) ([]*dto.MetricFamily, error) {
 	}
 
 	return families_array, nil
-}
-
-func checkBOM(encoding utfbom.Encoding) error {
-	if encoding == utfbom.Unknown || encoding == utfbom.UTF8 {
-		return nil
-	}
-
-	return errors.New(encoding.String())
 }
 
 func getDefaultPath() string {
