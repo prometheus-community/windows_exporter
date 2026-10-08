@@ -38,6 +38,16 @@ import (
 
 const Name = "update"
 
+// CLSID_UpdateSession {4CB43D7F-7EEE-4906-8698-60DA1C38F2FE}: https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-uamg/e839e7e0-1795-451b-94ef-abacd6cbecac
+//
+//nolint:gochecknoglobals // CLSID, not ProgID: go-ole's CLSIDFromProgID can free the ProgID buffer mid-call
+var updateSessionCLSID = ole.GUID{
+	Data1: 0x4CB43D7F,
+	Data2: 0x7EEE,
+	Data3: 0x4906,
+	Data4: [8]byte{0x86, 0x98, 0x60, 0xDA, 0x1C, 0x38, 0xF2, 0xFE},
+}
+
 type Config struct {
 	Online         bool          `yaml:"online"`
 	ScrapeInterval time.Duration `yaml:"scrape-interval"`
@@ -191,7 +201,7 @@ func (c *Collector) scheduleUpdateStatus(ctx context.Context, logger *slog.Logge
 	defer ole.CoUninitialize()
 
 	// Create a new instance of the WMI object
-	sessionObj, err := oleutil.CreateObject("Microsoft.Update.Session")
+	sessionObj, err := ole.CreateInstance(&updateSessionCLSID, ole.IID_IUnknown)
 	if err != nil {
 		initErrCh <- fmt.Errorf("create Microsoft.Update.Session: %w", err)
 

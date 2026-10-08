@@ -284,7 +284,15 @@ func (c *Collector) collectMetrics(ch chan<- prometheus.Metric, scheduledTasks S
 	}
 }
 
-const SCHEDULED_TASK_PROGRAM_ID = "Schedule.Service.1"
+// CLSID_TaskScheduler {0F87369F-A4E5-4CFC-BD3E-73E6154572DD}: https://github.com/microsoft/win32metadata/blob/76c04c2021ef4a831a6f1e06d9566002d746139b/generation/WinSDK/RecompiledIdlHeaders/um/taskschd.h#L10359
+//
+//nolint:gochecknoglobals // CLSID, not ProgID: go-ole's CLSIDFromProgID can free the ProgID buffer mid-call
+var taskSchedulerCLSID = ole.GUID{
+	Data1: 0x0F87369F,
+	Data2: 0xA4E5,
+	Data3: 0x4CFC,
+	Data4: [8]byte{0xBD, 0x3E, 0x73, 0xE6, 0x15, 0x45, 0x72, 0xDD},
+}
 
 // S_FALSE is returned by CoInitialize if it was already called on this thread.
 const S_FALSE = 0x00000001
@@ -308,12 +316,7 @@ func getScheduledTasks() (ScheduledTasks, error) {
 
 	defer ole.CoUninitialize()
 
-	schedClassID, err := ole.ClassIDFrom(SCHEDULED_TASK_PROGRAM_ID)
-	if err != nil {
-		return scheduledTasks, err
-	}
-
-	taskSchedulerObj, err := ole.CreateInstance(schedClassID, nil)
+	taskSchedulerObj, err := ole.CreateInstance(&taskSchedulerCLSID, nil)
 	if err != nil || taskSchedulerObj == nil {
 		return scheduledTasks, err
 	}
