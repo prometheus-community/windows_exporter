@@ -204,10 +204,12 @@ var (
 
 // queryRawData Queries the performance counter buffer using RegQueryValueEx, returning raw bytes. See:
 // https://msdn.microsoft.com/de-de/library/windows/desktop/aa373219(v=vs.85).aspx
-func queryRawData(query string) ([]byte, error) {
+//
+// If buffer has enough capacity for the initial size guess, it is reused instead
+// of allocating a new one. The returned slice may share memory with buffer.
+func queryRawData(query string, buffer []byte) ([]byte, error) {
 	var (
 		valType uint32
-		buffer  []byte
 		bufLen  uint32
 	)
 
@@ -223,7 +225,13 @@ func queryRawData(query string) ([]byte, error) {
 		bufLen = uint32(150000 * numCounters)
 	}
 
-	buffer = make([]byte, bufLen)
+	// A buffer from a previous call keeps any growth from ERROR_MORE_DATA, so
+	// using its full capacity avoids growing it again.
+	if uint32(cap(buffer)) >= bufLen {
+		buffer = buffer[:cap(buffer)]
+	} else {
+		buffer = make([]byte, bufLen)
+	}
 
 	name, err := windows.UTF16PtrFromString(query)
 	if err != nil {
@@ -293,22 +301,31 @@ Many objects have dependencies - if you query one of them, you often get back
 more than you asked for.
 */
 func QueryPerformanceData(query string, counterName string) ([]*PerfObject, error) {
+	objects, _, err := queryPerformanceData(query, counterName, nil)
+
+	return objects, err
+}
+
+// queryPerformanceData is QueryPerformanceData with a reusable raw data buffer.
+// It returns the buffer for the next call. The parsed objects copy everything
+// they need out of the buffer, so the buffer can be reused once this returns.
+func queryPerformanceData(query string, counterName string, buffer []byte) ([]*PerfObject, []byte, error) {
 	// Object and counter names are resolved through the name table.
 	if err := CounterNameTable.load(); err != nil {
-		return nil, err
+		return nil, buffer, err
 	}
 
-	buffer, err := queryRawData(query)
+	buffer, err := queryRawData(query, buffer)
 	if err != nil {
-		return nil, err
+		return nil, buffer, err
 	}
 
 	objects, err := parsePerformanceData(buffer, counterName)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse performance data for %q: %w", query, err)
+		return nil, buffer, fmt.Errorf("failed to parse performance data for %q: %w", query, err)
 	}
 
-	return objects, nil
+	return objects, buffer, nil
 }
 
 //nolint:gochecknoglobals

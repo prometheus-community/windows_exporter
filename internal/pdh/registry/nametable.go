@@ -86,7 +86,7 @@ func (t *NameTable) load() error {
 		return nil
 	}
 
-	buffer, err := queryRawData(t.name)
+	buffer, err := queryRawData(t.name, nil)
 	if err != nil {
 		return fmt.Errorf("failed to query perflib name table %q: %w", t.name, err)
 	}
