@@ -13,9 +13,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package ole implements the subset of COM used to read scheduled tasks and
-// Windows Update information. Native interfaces and strings have explicit
-// ownership; no IDispatch name lookup or generic Automation marshalling is used.
+// Package ole provides native COM initialization, interface calls, strings,
+// variants, and iteration shared by the taskschd and wuapi bindings. Native
+// interfaces and strings have explicit ownership.
 package ole
 
 import (
@@ -30,7 +30,8 @@ type HRESULT uint32
 
 func (h HRESULT) Error() string { return fmt.Sprintf("COM HRESULT 0x%08X", uint32(h)) }
 
-func resultError(result uintptr) error {
+// ResultError returns an error only for failed HRESULTs.
+func ResultError(result uintptr) error {
 	if int32(result) < 0 {
 		return HRESULT(uint32(result))
 	}
@@ -60,9 +61,9 @@ func (d DATE) Time() (time.Time, error) {
 	return date, nil
 }
 
-// borrowedItems releases each item even when yield stops early or panics. Items
+// BorrowedItems releases each item even when yield stops early or panics. Items
 // are valid only during yield; callers must not retain them or release them.
-func borrowedItems[T any](count func() (int32, error), item func(int32) (T, error), release func(T)) iter.Seq2[T, error] {
+func BorrowedItems[T any](count func() (int32, error), item func(int32) (T, error), release func(T)) iter.Seq2[T, error] {
 	return func(yield func(T, error) bool) {
 		var zero T
 

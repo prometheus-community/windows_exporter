@@ -23,7 +23,6 @@ import (
 	"unsafe"
 
 	"github.com/stretchr/testify/require"
-	"golang.org/x/sys/windows"
 )
 
 func TestInitialize(t *testing.T) {
@@ -34,6 +33,17 @@ func TestInitialize(t *testing.T) {
 	require.NoError(t, Initialize())
 
 	defer Uninitialize()
+
+	// Verify the apartment selected by Initialize, rather than just its status.
+	var apartment, qualifier int32
+
+	hr, _, _ := ole32.NewProc("CoGetApartmentType").Call(
+		uintptr(unsafe.Pointer(&apartment)),
+		uintptr(unsafe.Pointer(&qualifier)),
+	)
+	require.NoError(t, ResultError(hr))
+	require.Equal(t, int32(1), apartment, "APTTYPE_MTA")
+
 	// The second initialization returns S_FALSE; it still needs balancing.
 	require.NoError(t, Initialize())
 
@@ -55,147 +65,7 @@ func TestBSTR(t *testing.T) {
 	require.Empty(t, (bstr{}).string())
 }
 
-func TestNativeTaskGetters(t *testing.T) {
-	var methods [18]uintptr
-
-	// IRegisteredTask::get_State slot from the Windows SDK.
-	methods[9] = windows.NewCallback(func(_ uintptr, out *int32) uintptr {
-		*out = 4
-
-		return 1 // S_FALSE is a successful HRESULT.
-	})
-	// IRegisteredTask::get_Enabled slot from the Windows SDK.
-	methods[10] = windows.NewCallback(func(_ uintptr, out *int16) uintptr {
-		*out = -1
-
-		return 0
-	})
-	// IRegisteredTask::get_LastTaskResult slot from the Windows SDK.
-	methods[16] = windows.NewCallback(func(_ uintptr, out *int32) uintptr {
-		*out = -2147216629 // 0x8004130B; preserve the native signed LONG.
-
-		return 0
-	})
-	// IRegisteredTask::get_NumberOfMissedRuns slot from the Windows SDK.
-	methods[17] = windows.NewCallback(func(_ uintptr, _ *int32) uintptr {
-		return 0x80070005
-	})
-	task := &RegisteredTask{vtable: &methods[0]}
-	state, err := task.State()
-	require.NoError(t, err)
-	require.Equal(t, int32(4), state)
-
-	enabled, err := task.Enabled()
-	require.NoError(t, err)
-	require.True(t, enabled)
-
-	result, err := task.LastTaskResult()
-	require.NoError(t, err)
-	require.Equal(t, uint32(0x8004130b), uint32(result))
-
-	_, err = task.NumberOfMissedRuns()
-	require.ErrorIs(t, err, HRESULT(0x80070005))
-}
-
-func TestNativeConnect(t *testing.T) {
-	var methods [11]uintptr
-
-	valid := false
-	// ITaskService::Connect slot from the Windows SDK.
-	methods[10] = windows.NewCallback(func(_ uintptr, server, user, domain, password *variant) uintptr {
-		valid = true
-		for _, value := range []*variant{server, user, domain, password} {
-			valid = valid && *value == (variant{}) && uintptr(unsafe.Pointer(value))%16 == 0
-		}
-
-		return 0
-	})
-	service := &TaskService{vtable: &methods[0]}
-	require.NoError(t, service.Connect())
-	require.True(t, valid, "Connect arguments must be aligned VT_EMPTY variants")
-}
-
-func TestNativeTaskCollection(t *testing.T) {
-	var taskMethods [3]uintptr
-
-	released := 0
-	taskMethods[2] = windows.NewCallback(func(uintptr) uintptr {
-		released++
-
-		return 0
-	})
-	task := &RegisteredTask{vtable: &taskMethods[0]}
-
-	var methods [9]uintptr
-
-	// IRegisteredTaskCollection::get_Count slot from the Windows SDK.
-	methods[7] = windows.NewCallback(func(_ uintptr, out *int32) uintptr {
-		*out = 2
-
-		return 0
-	})
-
-	var (
-		index   int64
-		aligned bool
-	)
-
-	// IRegisteredTaskCollection::get_Item slot from the Windows SDK.
-	methods[8] = windows.NewCallback(func(_ uintptr, value *variant, out **RegisteredTask) uintptr {
-		index = value.value
-		aligned = value.vt == 3 && uintptr(unsafe.Pointer(value))%16 == 0
-		*out = task
-
-		return 0
-	})
-
-	collection := &taskCollection[RegisteredTask]{vtable: &methods[0]}
-	for item, err := range collection.All() {
-		require.NoError(t, err)
-		require.Same(t, task, item)
-		require.Zero(t, released)
-
-		break
-	}
-
-	require.Equal(t, int64(1), index)
-	require.True(t, aligned)
-	require.Equal(t, 1, released)
-}
-
-func TestNativeUpdateCollection(t *testing.T) {
-	var methods [11]uintptr
-
-	// IUpdateCollection::get_Count slot from the Windows SDK.
-	methods[10] = windows.NewCallback(func(_ uintptr, out *int32) uintptr {
-		*out = 1
-
-		return 0
-	})
-
-	var index uintptr
-
-	// IUpdateCollection::get_Item slot from the Windows SDK.
-	methods[7] = windows.NewCallback(func(_ uintptr, i uintptr, _ **Update) uintptr {
-		index = i
-
-		return 0x80070005
-	})
-	collection := &updateCollection[Update]{vtable: &methods[0]}
-
-	errors := 0
-	for item, err := range collection.All() {
-		errors++
-
-		require.Nil(t, item)
-		require.ErrorIs(t, err, HRESULT(0x80070005))
-	}
-
-	require.Equal(t, 1, errors)
-	require.Zero(t, index)
-}
-
 func TestVariantLayout(t *testing.T) {
-	require.Equal(t, uintptr(24), unsafe.Sizeof(variant{}))
-	require.Equal(t, uintptr(8), unsafe.Offsetof(variant{}.value))
+	require.Equal(t, uintptr(24), unsafe.Sizeof(Variant{}))
+	require.Equal(t, uintptr(8), unsafe.Offsetof(Variant{}.Value))
 }

@@ -31,6 +31,7 @@ import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/ole"
+	"github.com/prometheus-community/windows_exporter/internal/ole/wuapi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus-community/windows_exporter/internal/utils/recovery"
 	"github.com/prometheus/client_golang/prometheus"
@@ -206,7 +207,7 @@ func (c *Collector) scheduleUpdateStatus(ctx context.Context, logger *slog.Logge
 
 	defer ole.Uninitialize()
 
-	session, err := ole.NewUpdateSession()
+	session, err := wuapi.NewUpdateSession()
 	if err != nil {
 		initErrCh <- fmt.Errorf("create Microsoft.Update.Session: %w", err)
 
@@ -283,7 +284,7 @@ func (c *Collector) scheduleUpdateStatus(ctx context.Context, logger *slog.Logge
 	}
 }
 
-func (c *Collector) fetchUpdates(logger *slog.Logger, searcher *ole.UpdateSearcher) ([]prometheus.Metric, error) {
+func (c *Collector) fetchUpdates(logger *slog.Logger, searcher *wuapi.UpdateSearcher) ([]prometheus.Metric, error) {
 	metricsBuf := make([]prometheus.Metric, 0, len(c.metricsBuf)*2+1)
 
 	timeStart := time.Now()
@@ -366,7 +367,7 @@ type windowsUpdate struct {
 // getUpdateStatus retrieves the update status of the given item.
 // other available properties can be found here:
 // https://learn.microsoft.com/en-us/previous-versions/windows/desktop/aa386114(v=vs.85)
-func (c *Collector) getUpdateStatus(item *ole.Update) (windowsUpdate, error) {
+func (c *Collector) getUpdateStatus(item *wuapi.Update) (windowsUpdate, error) {
 	severity, err := item.MsrcSeverity()
 	if err != nil {
 		return windowsUpdate{}, fmt.Errorf("get MsrcSeverity: %w", err)
@@ -423,7 +424,7 @@ func (c *Collector) getUpdateStatus(item *ole.Update) (windowsUpdate, error) {
 	}, nil
 }
 
-func getUpdateCategory(update *ole.Update) (string, error) {
+func getUpdateCategory(update *wuapi.Update) (string, error) {
 	categories, err := update.Categories()
 	if err != nil {
 		return "", fmt.Errorf("get Categories: %w", err)

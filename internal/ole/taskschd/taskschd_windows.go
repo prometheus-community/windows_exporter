@@ -15,7 +15,8 @@
 
 //go:build windows && (amd64 || arm64)
 
-package ole
+// Package taskschd provides the Task Scheduler COM interfaces needed for task enumeration.
+package taskschd
 
 import (
 	"iter"
@@ -23,6 +24,7 @@ import (
 	"syscall"
 	"unsafe"
 
+	"github.com/prometheus-community/windows_exporter/internal/ole"
 	"golang.org/x/sys/windows"
 )
 
@@ -45,13 +47,13 @@ const (
 )
 
 type (
-	TaskService    struct{ object }
-	TaskFolder     struct{ object }
-	RegisteredTask struct{ object }
+	TaskService    struct{ ole.Object }
+	TaskFolder     struct{ ole.Object }
+	RegisteredTask struct{ ole.Object }
 )
 
 func NewTaskService() (*TaskService, error) {
-	return create[TaskService](
+	return ole.Create[TaskService](
 		windows.GUID{Data1: 0x0f87369f, Data2: 0xa4e5, Data3: 0x4cfc, Data4: [8]byte{0xbd, 0x3e, 0x73, 0xe6, 0x15, 0x45, 0x72, 0xdd}},
 		windows.GUID{Data1: 0x2faba4c7, Data2: 0x4da9, Data3: 0x4013, Data4: [8]byte{0x96, 0x97, 0x20, 0xcc, 0x3f, 0xd4, 0x0f, 0x85}},
 	)
@@ -61,86 +63,80 @@ func NewTaskService() (*TaskService, error) {
 // supply the four optional arguments. The 24-byte values are passed indirectly
 // on Windows amd64 and arm64, each using distinct caller-owned storage.
 func (s *TaskService) Connect() error {
-	var server, user, domain, password variantStorage
+	server := ole.NewEmptyVariant()
+	user := ole.NewEmptyVariant()
+	domain := ole.NewEmptyVariant()
+	password := ole.NewEmptyVariant()
 
 	hr, _, _ := syscall.SyscallN(
-		s.method(taskServiceConnect),
+		s.Method(taskServiceConnect),
 		uintptr(unsafe.Pointer(s)),
-		uintptr(unsafe.Pointer(server.variant())),
-		uintptr(unsafe.Pointer(user.variant())),
-		uintptr(unsafe.Pointer(domain.variant())),
-		uintptr(unsafe.Pointer(password.variant())),
+		uintptr(unsafe.Pointer(server)),
+		uintptr(unsafe.Pointer(user)),
+		uintptr(unsafe.Pointer(domain)),
+		uintptr(unsafe.Pointer(password)),
 	)
 	runtime.KeepAlive(s)
 
-	return resultError(hr)
+	return ole.ResultError(hr)
 }
 
 func (s *TaskService) Folder(path string) (*TaskFolder, error) {
-	value, err := newBSTR(path)
-	if err != nil {
-		return nil, err
-	}
-	defer value.free()
-
-	return s.getArg[*TaskFolder](taskServiceGetFolder, uintptr(unsafe.Pointer(value.ptr)))
+	return s.GetStringArg[*TaskFolder](taskServiceGetFolder, path)
 }
 
 // Folders includes all subfolders. Its reserved flags argument must be zero.
 func (f *TaskFolder) Folders() (*taskCollection[TaskFolder], error) {
-	return f.getArg[*taskCollection[TaskFolder]](taskFolderGetFolders, 0)
+	return f.GetArg[*taskCollection[TaskFolder]](taskFolderGetFolders, 0)
 }
 
 // Tasks includes hidden tasks (TASK_ENUM_HIDDEN).
 func (f *TaskFolder) Tasks() (*taskCollection[RegisteredTask], error) {
-	return f.getArg[*taskCollection[RegisteredTask]](taskFolderGetTasks, 1)
+	return f.GetArg[*taskCollection[RegisteredTask]](taskFolderGetTasks, 1)
 }
 
-func (f *TaskFolder) Path() (string, error) { return f.string(taskFolderPath) }
+func (f *TaskFolder) Path() (string, error) { return f.String(taskFolderPath) }
 
-func (t *RegisteredTask) Name() (string, error) { return t.string(registeredTaskName) }
-func (t *RegisteredTask) Path() (string, error) { return t.string(registeredTaskPath) }
-func (t *RegisteredTask) State() (int32, error) { return t.get[int32](registeredTaskState) }
+func (t *RegisteredTask) Name() (string, error) { return t.String(registeredTaskName) }
+func (t *RegisteredTask) Path() (string, error) { return t.String(registeredTaskPath) }
+func (t *RegisteredTask) State() (int32, error) { return t.Get[int32](registeredTaskState) }
 func (t *RegisteredTask) Enabled() (bool, error) {
-	value, err := t.get[int16](registeredTaskEnabled)
+	value, err := t.Get[int16](registeredTaskEnabled)
 
 	return value != 0, err
 }
 
 func (t *RegisteredTask) LastTaskResult() (int32, error) {
-	return t.get[int32](registeredTaskLastResult)
+	return t.Get[int32](registeredTaskLastResult)
 }
 
 func (t *RegisteredTask) NumberOfMissedRuns() (int32, error) {
-	return t.get[int32](registeredTaskMissedRuns)
+	return t.Get[int32](registeredTaskMissedRuns)
 }
 
-type taskCollection[T TaskFolder | RegisteredTask] struct{ object }
+type taskCollection[T TaskFolder | RegisteredTask] struct{ ole.Object }
 
-func (c *taskCollection[T]) count() (int32, error) { return c.get[int32](taskCollectionCount) }
+func (c *taskCollection[T]) count() (int32, error) { return c.Get[int32](taskCollectionCount) }
 
 func (c *taskCollection[T]) item(index int32) (*T, error) {
-	var storage variantStorage
-
-	value := storage.variant()
-	*value = variant{vt: 3, value: int64(index) + 1} // VT_I4, one-based indices
+	value := ole.NewInt32Variant(index + 1) // Task Scheduler uses one-based indices.
 
 	var item *T
 
 	hr, _, _ := syscall.SyscallN(
-		c.method(taskCollectionItem),
+		c.Method(taskCollectionItem),
 		uintptr(unsafe.Pointer(c)),
 		uintptr(unsafe.Pointer(value)),
 		uintptr(unsafe.Pointer(&item)),
 	)
 	runtime.KeepAlive(c)
 
-	return item, resultError(hr)
+	return item, ole.ResultError(hr)
 }
 
 // All yields borrowed interfaces, valid only in the loop body. It releases each
 // item on advance, early exit, or panic; callers must not release the items.
 // The collection remains owned by the caller and must be released separately.
 func (c *taskCollection[T]) All() iter.Seq2[*T, error] {
-	return borrowedItems(c.count, c.item, func(item *T) { (*object)(unsafe.Pointer(item)).Release() })
+	return ole.BorrowedItems(c.count, c.item, func(item *T) { (*ole.Object)(unsafe.Pointer(item)).Release() })
 }

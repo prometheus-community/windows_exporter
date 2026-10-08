@@ -38,7 +38,7 @@ func TestResultError(t *testing.T) {
 		{name: "changed apartment", code: 0x80010106, failed: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			err := resultError(uintptr(tc.code))
+			err := ResultError(uintptr(tc.code))
 			if !tc.failed {
 				require.NoError(t, err)
 
@@ -108,7 +108,7 @@ func TestBorrowedItems(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			seen := []int32{}
 			released := []int32{}
-			seq := borrowedItems(
+			seq := BorrowedItems(
 				func() (int32, error) { return tc.count, tc.countErr },
 				func(index int32) (int32, error) {
 					if index == tc.itemErrAt {
@@ -151,7 +151,7 @@ func TestBorrowedItems(t *testing.T) {
 
 func TestBorrowedItemsPanic(t *testing.T) {
 	released := 0
-	seq := borrowedItems(
+	seq := BorrowedItems(
 		func() (int32, error) { return 2, nil },
 		func(index int32) (int32, error) { return index, nil },
 		func(int32) { released++ },

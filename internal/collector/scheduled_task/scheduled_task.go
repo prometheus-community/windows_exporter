@@ -29,6 +29,7 @@ import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/ole"
+	"github.com/prometheus-community/windows_exporter/internal/ole/taskschd"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -306,7 +307,7 @@ func getScheduledTasks() (ScheduledTasks, error) {
 
 	defer ole.Uninitialize()
 
-	service, err := ole.NewTaskService()
+	service, err := taskschd.NewTaskService()
 	if err != nil {
 		return nil, fmt.Errorf("create Task Scheduler service: %w", err)
 	}
@@ -331,7 +332,7 @@ func getScheduledTasks() (ScheduledTasks, error) {
 }
 
 // fetchTasksInFolder appends readable tasks and reports errors after reading the remaining tasks.
-func fetchTasksInFolder(folder *ole.TaskFolder, scheduledTasks *ScheduledTasks) error {
+func fetchTasksInFolder(folder *taskschd.TaskFolder, scheduledTasks *ScheduledTasks) error {
 	tasks, err := folder.Tasks()
 	if err != nil {
 		return fmt.Errorf("get tasks: %w", err)
@@ -361,7 +362,7 @@ func fetchTasksInFolder(folder *ole.TaskFolder, scheduledTasks *ScheduledTasks) 
 }
 
 // fetchTasksRecursively appends readable tasks, retaining errors from skipped folders or tasks.
-func fetchTasksRecursively(folder *ole.TaskFolder, folderPath string, scheduledTasks *ScheduledTasks) error {
+func fetchTasksRecursively(folder *taskschd.TaskFolder, folderPath string, scheduledTasks *ScheduledTasks) error {
 	errs := []error{}
 	if err := fetchTasksInFolder(folder, scheduledTasks); err != nil {
 		errs = append(errs, fmt.Errorf("folder %s: %w", folderPath, err))
@@ -393,7 +394,7 @@ func fetchTasksRecursively(folder *ole.TaskFolder, folderPath string, scheduledT
 	return errors.Join(errs...)
 }
 
-func parseTask(task *ole.RegisteredTask) (ScheduledTask, error) {
+func parseTask(task *taskschd.RegisteredTask) (ScheduledTask, error) {
 	name, err := task.Name()
 	if err != nil {
 		return ScheduledTask{}, fmt.Errorf("get task name: %w", err)

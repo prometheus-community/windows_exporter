@@ -15,12 +15,14 @@
 
 //go:build windows && (amd64 || arm64)
 
-package ole
+// Package wuapi provides the Windows Update COM interfaces needed for update searches and metadata.
+package wuapi
 
 import (
 	"iter"
 	"unsafe"
 
+	"github.com/prometheus-community/windows_exporter/internal/ole"
 	"golang.org/x/sys/windows"
 )
 
@@ -49,37 +51,31 @@ const (
 )
 
 type (
-	UpdateSession  struct{ object } // IUpdateSession2
-	UpdateSearcher struct{ object }
-	SearchResult   struct{ object }
-	Update         struct{ object }
-	UpdateIdentity struct{ object }
-	Category       struct{ object }
+	UpdateSession  struct{ ole.Object } // IUpdateSession2
+	UpdateSearcher struct{ ole.Object }
+	SearchResult   struct{ ole.Object }
+	Update         struct{ ole.Object }
+	UpdateIdentity struct{ ole.Object }
+	Category       struct{ ole.Object }
 )
 
 func NewUpdateSession() (*UpdateSession, error) {
-	return create[UpdateSession](
+	return ole.Create[UpdateSession](
 		windows.GUID{Data1: 0x4cb43d7f, Data2: 0x7eee, Data3: 0x4906, Data4: [8]byte{0x86, 0x98, 0x60, 0xda, 0x1c, 0x38, 0xf2, 0xfe}},
 		windows.GUID{Data1: 0x91caf7b0, Data2: 0xeb23, Data3: 0x49ed, Data4: [8]byte{0x99, 0x37, 0xc5, 0x2d, 0x81, 0x7f, 0x46, 0xf7}},
 	)
 }
 
 func (s *UpdateSession) SetUserLocale(locale uint32) error {
-	return s.put(updateSessionPutLocale, uintptr(locale))
+	return s.Put(updateSessionPutLocale, uintptr(locale))
 }
 
 func (s *UpdateSession) SetClientApplicationID(id string) error {
-	value, err := newBSTR(id)
-	if err != nil {
-		return err
-	}
-	defer value.free()
-
-	return s.put(updateSessionPutApplicationID, uintptr(unsafe.Pointer(value.ptr)))
+	return s.PutString(updateSessionPutApplicationID, id)
 }
 
 func (s *UpdateSession) CreateUpdateSearcher() (*UpdateSearcher, error) {
-	return s.get[*UpdateSearcher](updateSessionCreateSearcher)
+	return s.Get[*UpdateSearcher](updateSessionCreateSearcher)
 }
 
 func (s *UpdateSearcher) SetOnline(online bool) error {
@@ -88,42 +84,38 @@ func (s *UpdateSearcher) SetOnline(online bool) error {
 		value = 0xffff
 	} // VARIANT_TRUE is a signed 16-bit -1.
 
-	return s.put(updateSearcherPutOnline, value)
+	return s.Put(updateSearcherPutOnline, value)
 }
 
 func (s *UpdateSearcher) GetTotalHistoryCount() (int32, error) {
-	return s.get[int32](updateSearcherHistoryCount)
+	return s.Get[int32](updateSearcherHistoryCount)
 }
 
 func (s *UpdateSearcher) Search(criteria string) (*SearchResult, error) {
-	value, err := newBSTR(criteria)
-	if err != nil {
-		return nil, err
-	}
-	defer value.free()
-
-	return s.getArg[*SearchResult](updateSearcherSearch, uintptr(unsafe.Pointer(value.ptr)))
+	return s.GetStringArg[*SearchResult](updateSearcherSearch, criteria)
 }
 
 func (s *SearchResult) Updates() (*updateCollection[Update], error) {
-	return s.get[*updateCollection[Update]](searchResultUpdates)
+	return s.Get[*updateCollection[Update]](searchResultUpdates)
 }
 
-func (u *Update) Title() (string, error)        { return u.string(updateTitle) }
-func (u *Update) MsrcSeverity() (string, error) { return u.string(updateSeverity) }
+func (u *Update) Title() (string, error)        { return u.String(updateTitle) }
+func (u *Update) MsrcSeverity() (string, error) { return u.String(updateSeverity) }
 func (u *Update) Categories() (*updateCollection[Category], error) {
-	return u.get[*updateCollection[Category]](updateCategories)
+	return u.Get[*updateCollection[Category]](updateCategories)
 }
 
-func (u *Update) Identity() (*UpdateIdentity, error) { return u.get[*UpdateIdentity](updateIdentity) }
+func (u *Update) Identity() (*UpdateIdentity, error) { return u.Get[*UpdateIdentity](updateIdentity) }
 
-func (u *Update) LastDeploymentChangeTime() (DATE, error) { return u.get[DATE](updateDeploymentTime) }
-func (i *UpdateIdentity) UpdateID() (string, error)       { return i.string(identityUpdateID) }
-func (i *UpdateIdentity) RevisionNumber() (int32, error)  { return i.get[int32](identityRevision) }
-func (c *Category) Name() (string, error)                 { return c.string(categoryName) }
-func (c *Category) Order() (int32, error)                 { return c.get[int32](categoryOrder) }
+func (u *Update) LastDeploymentChangeTime() (ole.DATE, error) {
+	return u.Get[ole.DATE](updateDeploymentTime)
+}
+func (i *UpdateIdentity) UpdateID() (string, error)      { return i.String(identityUpdateID) }
+func (i *UpdateIdentity) RevisionNumber() (int32, error) { return i.Get[int32](identityRevision) }
+func (c *Category) Name() (string, error)                { return c.String(categoryName) }
+func (c *Category) Order() (int32, error)                { return c.Get[int32](categoryOrder) }
 
-type updateCollection[T Update | Category] struct{ object }
+type updateCollection[T Update | Category] struct{ ole.Object }
 
 func (c *updateCollection[T]) count() (int32, error) {
 	slot := uintptr(updateCollectionCount)
@@ -131,17 +123,17 @@ func (c *updateCollection[T]) count() (int32, error) {
 		slot = categoryCollectionCount
 	}
 
-	return c.get[int32](slot)
+	return c.Get[int32](slot)
 }
 
 func (c *updateCollection[T]) item(index int32) (*T, error) {
 	// Both WUA collections use a LONG zero-based index and get_Item at slot 7.
-	return c.getArg[*T](updateCollectionItem, uintptr(index))
+	return c.GetArg[*T](updateCollectionItem, uintptr(index))
 }
 
 // All yields borrowed interfaces, valid only in the loop body. It releases each
 // item on advance, early exit, or panic; callers must not release the items.
 // The collection remains owned by the caller and must be released separately.
 func (c *updateCollection[T]) All() iter.Seq2[*T, error] {
-	return borrowedItems(c.count, c.item, func(item *T) { (*object)(unsafe.Pointer(item)).Release() })
+	return ole.BorrowedItems(c.count, c.item, func(item *T) { (*ole.Object)(unsafe.Pointer(item)).Release() })
 }

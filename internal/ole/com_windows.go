@@ -40,12 +40,12 @@ var (
 	sysStringLen      = oleaut32.NewProc("SysStringLen")
 )
 
-// Initialize initializes an STA and disables legacy OLE 1.0 DDE. The caller
+// Initialize initializes the MTA and disables legacy OLE 1.0 DDE. The caller
 // must lock its OS thread before calling and release all objects before
 // Uninitialize on that same thread. S_FALSE is successful initialization.
 func Initialize() error {
-	hr, _, _ := coInitializeEx.Call(0, 0x2|0x4)
-	if err := resultError(hr); err != nil {
+	hr, _, _ := coInitializeEx.Call(0, windows.COINIT_MULTITHREADED|windows.COINIT_DISABLE_OLE1DDE)
+	if err := ResultError(hr); err != nil {
 		return fmt.Errorf("initialize COM: %w", err)
 	}
 
@@ -57,58 +57,66 @@ func Uninitialize() {
 	_, _, _ = coUninitialize.Call()
 }
 
-// object is the common native COM interface layout. It must stay the first
-// field of every interface wrapper; never copy it or move it between apartments.
-type object struct{ vtable *uintptr }
+// Object is the common native COM interface layout. VTable points to the native
+// function table and is owned by COM. Object must be the first field of every
+// interface wrapper; never copy it or move it between apartments.
+type Object struct{ VTable *uintptr }
 
-func (o *object) method(slot uintptr) uintptr {
-	return *(*uintptr)(unsafe.Add(unsafe.Pointer(o.vtable), slot*unsafe.Sizeof(uintptr(0))))
+// Method returns the address of the zero-based native vtable slot.
+func (o *Object) Method(slot uintptr) uintptr {
+	return *(*uintptr)(unsafe.Add(unsafe.Pointer(o.VTable), slot*unsafe.Sizeof(uintptr(0))))
 }
 
 // Release relinquishes an owned interface reference. Do not call it on borrowed
 // iterator items. Like IUnknown::Release, it does not return an HRESULT.
-func (o *object) Release() {
-	_, _, _ = syscall.SyscallN(o.method(2), uintptr(unsafe.Pointer(o)))
+func (o *Object) Release() {
+	_, _, _ = syscall.SyscallN(o.Method(2), uintptr(unsafe.Pointer(o)))
 	runtime.KeepAlive(o)
 }
 
-// get and getArg use generic methods for scalar and interface output values.
-// All pointer conversions stay in the syscall expression so the Go runtime
-// keeps their storage alive and stable during the call.
+// Get calls a native getter. T must exactly match its scalar or interface
+// output type. Pointer conversions stay in the syscall expression so the Go
+// runtime keeps their storage alive and stable during the call.
 //
 //nolint:ireturn // T is a native scalar or interface output, not a Go interface.
-func (o *object) get[T any](slot uintptr) (T, error) {
+func (o *Object) Get[T any](slot uintptr) (T, error) {
 	var value T
 
-	hr, _, _ := syscall.SyscallN(o.method(slot), uintptr(unsafe.Pointer(o)), uintptr(unsafe.Pointer(&value)))
+	hr, _, _ := syscall.SyscallN(o.Method(slot), uintptr(unsafe.Pointer(o)), uintptr(unsafe.Pointer(&value)))
 	runtime.KeepAlive(o)
 
-	return value, resultError(hr)
+	return value, ResultError(hr)
 }
 
+// GetArg calls a native getter with one input argument. T must exactly match
+// its native output type; arg must use the native argument representation.
+//
 //nolint:ireturn // T is a native scalar or interface output, not a Go interface.
-func (o *object) getArg[T any](slot, arg uintptr) (T, error) {
+func (o *Object) GetArg[T any](slot, arg uintptr) (T, error) {
 	var value T
 
 	hr, _, _ := syscall.SyscallN(
-		o.method(slot),
+		o.Method(slot),
 		uintptr(unsafe.Pointer(o)),
 		arg,
 		uintptr(unsafe.Pointer(&value)),
 	)
 	runtime.KeepAlive(o)
 
-	return value, resultError(hr)
+	return value, ResultError(hr)
 }
 
-func (o *object) put(slot, arg uintptr) error {
-	hr, _, _ := syscall.SyscallN(o.method(slot), uintptr(unsafe.Pointer(o)), arg)
+// Put calls a native setter with a scalar argument.
+func (o *Object) Put(slot, arg uintptr) error {
+	hr, _, _ := syscall.SyscallN(o.Method(slot), uintptr(unsafe.Pointer(o)), arg)
 	runtime.KeepAlive(o)
 
-	return resultError(hr)
+	return ResultError(hr)
 }
 
-func create[T any](class, iid windows.GUID) (*T, error) {
+// Create activates class and returns an owned interface reference for iid.
+// T must be the matching native interface wrapper, with Object as its first field.
+func Create[T any](class, iid windows.GUID) (*T, error) {
 	var value *T
 
 	hr, _, _ := coCreateInstance.Call(
@@ -118,7 +126,7 @@ func create[T any](class, iid windows.GUID) (*T, error) {
 		uintptr(unsafe.Pointer(&iid)),
 		uintptr(unsafe.Pointer(&value)),
 	)
-	if err := resultError(hr); err != nil {
+	if err := ResultError(hr); err != nil {
 		return nil, fmt.Errorf("create COM instance: %w", err)
 	}
 
@@ -159,8 +167,9 @@ func (b bstr) string() string {
 	return string(utf16.Decode(unsafe.Slice(b.ptr, int(n))))
 }
 
-func (o *object) string(slot uintptr) (string, error) {
-	value, err := o.get[bstr](slot)
+// String calls a BSTR getter, copies its value, and frees the native string.
+func (o *Object) String(slot uintptr) (string, error) {
+	value, err := o.Get[bstr](slot)
 	defer value.free()
 
 	if err != nil {
@@ -170,13 +179,13 @@ func (o *object) string(slot uintptr) (string, error) {
 	return value.string(), nil
 }
 
-// variant is the 24-byte VARIANT layout on both supported Windows architectures.
+// Variant is the 24-byte VARIANT layout on both supported Windows architectures.
 // Native 64-bit ABIs pass this aggregate by address. Only VT_EMPTY and VT_I4
 // are needed for local Connect and one-based Task Scheduler collection indices.
-type variant struct {
-	vt       uint16
+type Variant struct {
+	Type     uint16
 	reserved [3]uint16
-	value    int64
+	Value    int64
 	padding  [8]byte
 }
 
@@ -185,8 +194,49 @@ type variant struct {
 // align explicitly. The same storage is also valid on arm64.
 type variantStorage [39]byte
 
-func (s *variantStorage) variant() *variant {
+func (s *variantStorage) variant() *Variant {
 	offset := -uintptr(unsafe.Pointer(s)) & 15
 
-	return (*variant)(unsafe.Add(unsafe.Pointer(s), offset))
+	return (*Variant)(unsafe.Add(unsafe.Pointer(s), offset))
+}
+
+// GetStringArg calls a method with one BSTR input and a native output value.
+// The temporary BSTR is freed before returning.
+//
+//nolint:ireturn // T is a native scalar or interface output, not a Go interface.
+func (o *Object) GetStringArg[T any](slot uintptr, input string) (T, error) {
+	value, err := newBSTR(input)
+	if err != nil {
+		var zero T
+
+		return zero, err
+	}
+	defer value.free()
+
+	return o.GetArg[T](slot, uintptr(unsafe.Pointer(value.ptr)))
+}
+
+// PutString calls a setter with a BSTR input, freeing the temporary string.
+func (o *Object) PutString(slot uintptr, input string) error {
+	value, err := newBSTR(input)
+	if err != nil {
+		return err
+	}
+	defer value.free()
+
+	return o.Put(slot, uintptr(unsafe.Pointer(value.ptr)))
+}
+
+// NewEmptyVariant returns caller-owned, 16-byte-aligned VT_EMPTY storage.
+// It contains no resources requiring VariantClear.
+func NewEmptyVariant() *Variant { return new(variantStorage).variant() }
+
+// NewInt32Variant returns caller-owned, 16-byte-aligned VT_I4 storage.
+// It contains no resources requiring VariantClear.
+func NewInt32Variant(value int32) *Variant {
+	v := NewEmptyVariant()
+	v.Type = 3
+	v.Value = int64(value)
+
+	return v
 }
