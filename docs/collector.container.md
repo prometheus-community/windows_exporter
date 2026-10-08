@@ -27,9 +27,9 @@ Path to the containerd state directory of the `k8s.io` namespace. Kubernetes lab
 |------------------------------------------------------------|----------------------------------------|---------|------------------------------------------------------------|
 | `windows_container_available`                              | Available                              | gauge   | `container_id`,`namespace`,`pod`,`container`,`hostprocess` |
 | `windows_container_count`                                  | Number of running HCS containers       | gauge   | None                                                       |
-| `windows_container_cpu_usage_seconds_kernelmode`           | Run time in Kernel mode in Seconds     | counter | `container_id`,`namespace`,`pod`,`container`               |
-| `windows_container_cpu_usage_seconds_usermode`             | Run Time in User mode in Seconds       | counter | `container_id`,`namespace`,`pod`,`container`               |
-| `windows_container_cpu_usage_seconds_total`                | Total Run time in Seconds              | counter | `container_id`,`namespace`,`pod`,`container`               |
+| `windows_container_cpu_usage_seconds_kernelmode`           | Runtime in Kernel mode in Seconds      | counter | `container_id`,`namespace`,`pod`,`container`               |
+| `windows_container_cpu_usage_seconds_usermode`             | Runtime in User mode in Seconds        | counter | `container_id`,`namespace`,`pod`,`container`               |
+| `windows_container_cpu_usage_seconds_total`                | Total Runtime in Seconds               | counter | `container_id`,`namespace`,`pod`,`container`               |
 | `windows_container_memory_usage_commit_bytes`              | Memory Usage Commit Bytes              | gauge   | `container_id`,`namespace`,`pod`,`container`               |
 | `windows_container_memory_usage_commit_peak_bytes`         | Memory Usage Commit Peak Bytes         | gauge   | `container_id`,`namespace`,`pod`,`container`               |
 | `windows_container_memory_usage_private_working_set_bytes` | Memory Usage Private Working Set Bytes | gauge   | `container_id`,`namespace`,`pod`,`container`               |
