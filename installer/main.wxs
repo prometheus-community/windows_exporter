@@ -116,9 +116,13 @@
         <!-- END CUSTOM ACTION FOR CONFIG FILE CREATION -->
 
         <!-- START CUSTOM ACTION FOR KILLING THE PROCESS -->
+        <!-- ServiceControl stops the service. A service process can keep running for a while after it
+             reported STOPPED, and then blocks replacing the binary and re-creating the service. Kill only
+             processes that run the binary of this installation, so other windows_exporter.exe instances,
+             like a copy in another directory or a Kubernetes HostProcess container, keep running. -->
         <SetProperty
             Id="KillProcess"
-            Value="&quot;[WindowsFolder]System32\taskkill.exe&quot; /T /F /IM windows_exporter.exe"
+            Value="&quot;[WindowsFolder]System32\WindowsPowerShell\v1.0\powershell.exe&quot; -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command &quot;Get-Process -Name windows_exporter -ErrorAction SilentlyContinue | Where-Object Path -EQ '[APPLICATIONFOLDER]windows_exporter.exe' | Stop-Process -Force&quot;"
             Before="KillProcess"
             Sequence="execute"
         />
