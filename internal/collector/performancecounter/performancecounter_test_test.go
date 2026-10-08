@@ -24,11 +24,13 @@ import (
 	"net/http/httptest"
 	"regexp"
 	"testing"
+	"time"
 
 	"github.com/prometheus-community/windows_exporter/internal/collector/performancecounter"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	dto "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/require"
 )
 
@@ -130,8 +132,8 @@ windows_performancecounter_collector_duration_seconds\{collector="processor_info
 windows_performancecounter_collector_success\{collector="processor_information_formatted"} 1
 # HELP windows_performancecounter_processor_information_processor_time windows_exporter: custom Performance Counter metric
 # TYPE windows_performancecounter_processor_information_processor_time gauge
-windows_performancecounter_processor_information_processor_time\{core="0,0",state="active"} [0-9]+
-windows_performancecounter_processor_information_processor_time\{core="0,0",state="idle"} [0-9]+
+windows_performancecounter_processor_information_processor_time\{core="0,0",state="active"} [0-9.e+-]+
+windows_performancecounter_processor_information_processor_time\{core="0,0",state="idle"} [0-9.e+-]+
 .*`),
 		},
 		{
@@ -224,6 +226,13 @@ windows_performancecounter_memory_available_bytes_lowercase [0-9.e+-]+`),
 			}
 
 			require.NoError(t, err)
+
+			if tc.counterType == pdh.CounterTypeFormatted {
+				// Formatted rate counters are computed from the last two samples. Right
+				// after Build, the interval can be too short for a valid value, and
+				// invalid values are omitted instead of being reported as zero.
+				time.Sleep(time.Second)
+			}
 
 			registry := prometheus.NewRegistry()
 			registry.MustRegister(collectorAdapter{*perfDataCollector})
@@ -353,4 +362,41 @@ func TestCollectorClose(t *testing.T) {
 
 	// A closed collector must no longer hold usable native counter queries.
 	require.ErrorIs(t, c.Collect(metrics, 0), pdh.ErrPerformanceCounterNotInitialized)
+}
+
+// TestCollectorMetricTypePerCounter checks that each counter keeps its own
+// metric type on every scrape. The type used to be taken from whichever
+// counter created the instance row first, in random map order.
+func TestCollectorMetricTypePerCounter(t *testing.T) {
+	t.Parallel()
+
+	c := performancecounter.New(&performancecounter.Config{
+		Objects: []performancecounter.Object{{
+			Name:      "process",
+			Object:    "Process",
+			Instances: []string{"*"},
+			Counters: []performancecounter.Counter{
+				{Name: "Thread Count"},
+				{Name: "IO Read Bytes/sec"},
+			},
+		}},
+	})
+	require.NoError(t, c.Build(slog.New(slog.DiscardHandler), nil))
+	t.Cleanup(func() { require.NoError(t, c.Close()) })
+
+	registry := prometheus.NewRegistry()
+	registry.MustRegister(collectorAdapter{*c})
+
+	for range 20 {
+		families, err := registry.Gather()
+		require.NoError(t, err)
+
+		types := make(map[string]dto.MetricType, len(families))
+		for _, family := range families {
+			types[family.GetName()] = family.GetType()
+		}
+
+		require.Equal(t, dto.MetricType_GAUGE, types["windows_performancecounter_process_thread_count"])
+		require.Equal(t, dto.MetricType_COUNTER, types["windows_performancecounter_process_io_read_bytes_sec"])
+	}
 }

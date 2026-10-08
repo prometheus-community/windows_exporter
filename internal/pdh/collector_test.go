@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/require"
 )
 
@@ -184,4 +185,45 @@ func TestNewCollectorInvalidInput(t *testing.T) {
 	collector2, err := pdh.NewCollector[struct{ Name string }](logger, pdh.CounterTypeRaw, "Process", pdh.InstancesAll)
 	require.ErrorContains(t, err, "no counters configured")
 	require.Nil(t, collector2)
+}
+
+type processIO struct {
+	Name          string
+	ThreadCount   float64 `perfdata:"Thread Count"`
+	IOReadBytesPS float64 `perfdata:"IO Read Bytes/sec"`
+}
+
+// TestCollectorMetricType checks that every counter carries its own metric
+// type, independent of the other counters of the object.
+func TestCollectorMetricType(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		resultType  pdh.CounterType
+		threadCount prometheus.ValueType
+		ioReadBytes prometheus.ValueType
+	}{
+		{pdh.CounterTypeRaw, prometheus.GaugeValue, prometheus.CounterValue},
+		{pdh.CounterTypeFormatted, prometheus.GaugeValue, prometheus.GaugeValue},
+	} {
+		t.Run(string(tc.resultType), func(t *testing.T) {
+			t.Parallel()
+
+			collector, err := pdh.NewCollector[processIO](slog.New(slog.DiscardHandler), tc.resultType, "Process", pdh.InstancesAll)
+			require.NoError(t, err)
+
+			t.Cleanup(collector.Close)
+
+			metricType, ok := collector.MetricType("Thread Count")
+			require.True(t, ok)
+			require.Equal(t, tc.threadCount, metricType)
+
+			metricType, ok = collector.MetricType("IO Read Bytes/sec")
+			require.True(t, ok)
+			require.Equal(t, tc.ioReadBytes, metricType)
+
+			_, ok = collector.MetricType("unknown")
+			require.False(t, ok)
+		})
+	}
 }
