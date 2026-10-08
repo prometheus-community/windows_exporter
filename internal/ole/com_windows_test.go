@@ -110,6 +110,140 @@ func TestNativeGetterCallbackStackGrowth(t *testing.T) {
 	}
 }
 
+type nativeTestObject struct{ Object }
+
+func TestNativeObjectGetters(t *testing.T) {
+	tests := []struct {
+		name   string
+		status uintptr
+		value  *nativeTestObject
+	}{
+		{name: "success", value: &nativeTestObject{}},
+		{name: "S_FALSE", status: 1, value: &nativeTestObject{}},
+		{name: "null success"},
+		{name: "null S_FALSE", status: 1},
+		{name: "HRESULT failure", status: 0x80070005},
+	}
+
+	for _, getter := range []string{"GetObject", "GetObjectArg", "GetObjectStringArg"} {
+		t.Run(getter, func(t *testing.T) {
+			for _, test := range tests {
+				t.Run(test.name, func(t *testing.T) {
+					var methods [8]uintptr
+
+					if getter == "GetObject" {
+						methods[7] = windows.NewCallback(func(_ uintptr, out **nativeTestObject) uintptr {
+							*out = test.value
+
+							return test.status
+						})
+					} else {
+						methods[7] = windows.NewCallback(func(_ uintptr, _ uintptr, out **nativeTestObject) uintptr {
+							*out = test.value
+
+							return test.status
+						})
+					}
+
+					object := &Object{VTable: &methods[0]}
+
+					var (
+						value *nativeTestObject
+						err   error
+					)
+
+					switch getter {
+					case "GetObject":
+						value, err = object.GetObject[nativeTestObject](7)
+					case "GetObjectArg":
+						value, err = object.GetObjectArg[nativeTestObject](7, 1)
+					case "GetObjectStringArg":
+						value, err = object.GetObjectStringArg[nativeTestObject](7, "criteria")
+					}
+
+					if int32(test.status) < 0 {
+						require.Nil(t, value)
+						require.ErrorIs(t, err, HRESULT(test.status))
+
+						return
+					}
+
+					if test.value == nil {
+						require.Nil(t, value)
+						require.ErrorContains(t, err, "returned a nil interface")
+
+						return
+					}
+
+					require.NoError(t, err)
+					require.Same(t, test.value, value)
+				})
+			}
+		})
+	}
+}
+
+func TestNativeObjectGetterCallbackStackGrowth(t *testing.T) {
+	for _, getter := range []string{"GetObject", "GetObjectArg", "GetObjectStringArg"} {
+		t.Run(getter, func(t *testing.T) {
+			var methods [8]uintptr
+
+			expected := &nativeTestObject{}
+			inputValid := true
+
+			switch getter {
+			case "GetObject":
+				methods[7] = windows.NewCallback(func(_ uintptr, out **nativeTestObject) uintptr {
+					growCallbackStack(64)
+
+					*out = expected
+
+					return 0
+				})
+			case "GetObjectArg":
+				methods[7] = windows.NewCallback(func(_ uintptr, input *int32, out **nativeTestObject) uintptr {
+					growCallbackStack(64)
+
+					inputValid = *input == 1234
+					*out = expected
+
+					return 0
+				})
+			case "GetObjectStringArg":
+				methods[7] = windows.NewCallback(func(_ uintptr, input *uint16, out **nativeTestObject) uintptr {
+					growCallbackStack(64)
+
+					inputValid = (bstr{ptr: input}).string() == "before\x00after"
+					*out = expected
+
+					return 0
+				})
+			}
+
+			object := &Object{VTable: &methods[0]}
+
+			var (
+				value *nativeTestObject
+				err   error
+			)
+
+			switch getter {
+			case "GetObject":
+				value, err = object.GetObject[nativeTestObject](7)
+			case "GetObjectArg":
+				input := int32(1234)
+				value, err = object.GetObjectArg[nativeTestObject](7, uintptr(unsafe.Pointer(&input)))
+			case "GetObjectStringArg":
+				value, err = object.GetObjectStringArg[nativeTestObject](7, "before\x00after")
+			}
+
+			require.NoError(t, err)
+			require.Same(t, expected, value)
+			require.True(t, inputValid)
+		})
+	}
+}
+
 //go:noinline
 func growCallbackStack(depth int) byte {
 	var padding [4096]byte

@@ -43,7 +43,7 @@ func TestNativeUpdateCollection(t *testing.T) {
 
 		return 0x80070005
 	})
-	collection := &updateCollection[Update]{VTable: &methods[0]}
+	collection := &UpdateCollection{VTable: &methods[0]}
 
 	errors := 0
 	for item, err := range collection.All() {

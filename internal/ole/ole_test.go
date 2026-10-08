@@ -164,3 +164,38 @@ func TestBorrowedItemsPanic(t *testing.T) {
 	})
 	require.Equal(t, 1, released)
 }
+
+func TestBorrowedItemsContinuesAfterItemError(t *testing.T) {
+	seen := []int32{}
+	released := []int32{}
+	itemErrors := []int32{}
+	seq := BorrowedItems(
+		func() (int32, error) { return 3, nil },
+		func(index int32) (int32, error) {
+			if index == 1 {
+				return 0, HRESULT(0x80070005)
+			}
+
+			return index, nil
+		},
+		func(value int32) { released = append(released, value) },
+	)
+
+	for value, err := range seq {
+		if err != nil {
+			itemError, ok := errors.AsType[*CollectionItemError](err)
+			require.True(t, ok)
+			require.ErrorIs(t, err, HRESULT(0x80070005))
+
+			itemErrors = append(itemErrors, itemError.Index)
+
+			continue
+		}
+
+		seen = append(seen, value)
+	}
+
+	require.Equal(t, []int32{0, 2}, seen)
+	require.Equal(t, []int32{0, 2}, released)
+	require.Equal(t, []int32{1}, itemErrors)
+}

@@ -81,17 +81,17 @@ func (s *TaskService) Connect() error {
 }
 
 func (s *TaskService) Folder(path string) (*TaskFolder, error) {
-	return s.GetStringArg[*TaskFolder](taskServiceGetFolder, path)
+	return s.GetObjectStringArg[TaskFolder](taskServiceGetFolder, path)
 }
 
-// Folders includes all subfolders. Its reserved flags argument must be zero.
+// Folders returns the direct subfolders. Its reserved flags argument must be zero.
 func (f *TaskFolder) Folders() (*taskCollection[TaskFolder], error) {
-	return f.GetArg[*taskCollection[TaskFolder]](taskFolderGetFolders, 0)
+	return f.GetObjectArg[taskCollection[TaskFolder]](taskFolderGetFolders, 0)
 }
 
 // Tasks includes hidden tasks (TASK_ENUM_HIDDEN).
 func (f *TaskFolder) Tasks() (*taskCollection[RegisteredTask], error) {
-	return f.GetArg[*taskCollection[RegisteredTask]](taskFolderGetTasks, 1)
+	return f.GetObjectArg[taskCollection[RegisteredTask]](taskFolderGetTasks, 1)
 }
 
 func (f *TaskFolder) Path() (string, error) { return f.String(taskFolderPath) }
@@ -120,17 +120,10 @@ func (c *taskCollection[T]) count() (int32, error) { return c.Get[int32](taskCol
 func (c *taskCollection[T]) item(index int32) (*T, error) {
 	value := ole.NewInt32Variant(index + 1) // Task Scheduler uses one-based indices.
 
-	var item *T
+	item, err := c.GetObjectArg[T](taskCollectionItem, uintptr(unsafe.Pointer(value)))
+	runtime.KeepAlive(value)
 
-	hr := ole.Call(
-		c.Method(taskCollectionItem),
-		uintptr(unsafe.Pointer(c)),
-		uintptr(unsafe.Pointer(value)),
-		uintptr(unsafe.Pointer(&item)),
-	)
-	runtime.KeepAlive(c)
-
-	return item, ole.ResultError(hr)
+	return item, err
 }
 
 // All yields borrowed interfaces, valid only in the loop body. It releases each

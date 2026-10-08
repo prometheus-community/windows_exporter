@@ -20,7 +20,6 @@ package wuapi
 
 import (
 	"iter"
-	"unsafe"
 
 	"github.com/prometheus-community/windows_exporter/internal/ole"
 	"golang.org/x/sys/windows"
@@ -45,6 +44,7 @@ const (
 	updateSeverity                = 34
 	identityRevision              = 7
 	identityUpdateID              = 8
+	categoryCollectionItem        = 7
 	categoryCollectionCount       = 9
 	categoryName                  = 7
 	categoryOrder                 = 12
@@ -75,14 +75,15 @@ func (s *UpdateSession) SetClientApplicationID(id string) error {
 }
 
 func (s *UpdateSession) CreateUpdateSearcher() (*UpdateSearcher, error) {
-	return s.Get[*UpdateSearcher](updateSessionCreateSearcher)
+	return s.GetObject[UpdateSearcher](updateSessionCreateSearcher)
 }
 
 func (s *UpdateSearcher) SetOnline(online bool) error {
 	var value uintptr
+	// VARIANT_TRUE is a signed 16-bit -1.
 	if online {
 		value = 0xffff
-	} // VARIANT_TRUE is a signed 16-bit -1.
+	}
 
 	return s.Put(updateSearcherPutOnline, value)
 }
@@ -92,20 +93,22 @@ func (s *UpdateSearcher) GetTotalHistoryCount() (int32, error) {
 }
 
 func (s *UpdateSearcher) Search(criteria string) (*SearchResult, error) {
-	return s.GetStringArg[*SearchResult](updateSearcherSearch, criteria)
+	return s.GetObjectStringArg[SearchResult](updateSearcherSearch, criteria)
 }
 
-func (s *SearchResult) Updates() (*updateCollection[Update], error) {
-	return s.Get[*updateCollection[Update]](searchResultUpdates)
+func (s *SearchResult) Updates() (*UpdateCollection, error) {
+	return s.GetObject[UpdateCollection](searchResultUpdates)
 }
 
 func (u *Update) Title() (string, error)        { return u.String(updateTitle) }
 func (u *Update) MsrcSeverity() (string, error) { return u.String(updateSeverity) }
-func (u *Update) Categories() (*updateCollection[Category], error) {
-	return u.Get[*updateCollection[Category]](updateCategories)
+func (u *Update) Categories() (*CategoryCollection, error) {
+	return u.GetObject[CategoryCollection](updateCategories)
 }
 
-func (u *Update) Identity() (*UpdateIdentity, error) { return u.Get[*UpdateIdentity](updateIdentity) }
+func (u *Update) Identity() (*UpdateIdentity, error) {
+	return u.GetObject[UpdateIdentity](updateIdentity)
+}
 
 func (u *Update) LastDeploymentChangeTime() (ole.DATE, error) {
 	return u.Get[ole.DATE](updateDeploymentTime)
@@ -115,25 +118,38 @@ func (i *UpdateIdentity) RevisionNumber() (int32, error) { return i.Get[int32](i
 func (c *Category) Name() (string, error)                { return c.String(categoryName) }
 func (c *Category) Order() (int32, error)                { return c.Get[int32](categoryOrder) }
 
-type updateCollection[T Update | Category] struct{ ole.Object }
+// UpdateCollection uses IUpdateCollection's native layout and zero-based indices.
+type UpdateCollection struct{ ole.Object }
 
-func (c *updateCollection[T]) count() (int32, error) {
-	slot := uintptr(updateCollectionCount)
-	if _, ok := any((*T)(nil)).(*Category); ok {
-		slot = categoryCollectionCount
-	}
-
-	return c.Get[int32](slot)
+func (c *UpdateCollection) count() (int32, error) {
+	return c.Get[int32](updateCollectionCount)
 }
 
-func (c *updateCollection[T]) item(index int32) (*T, error) {
-	// Both WUA collections use a LONG zero-based index and get_Item at slot 7.
-	return c.GetArg[*T](updateCollectionItem, uintptr(index))
+func (c *UpdateCollection) item(index int32) (*Update, error) {
+	return c.GetObjectArg[Update](updateCollectionItem, uintptr(index))
 }
 
-// All yields borrowed interfaces, valid only in the loop body. It releases each
-// item on advance, early exit, or panic; callers must not release the items.
-// The collection remains owned by the caller and must be released separately.
-func (c *updateCollection[T]) All() iter.Seq2[*T, error] {
-	return ole.BorrowedItems(c.count, c.item, func(item *T) { (*ole.Object)(unsafe.Pointer(item)).Release() })
+// All yields borrowed updates, valid only in the loop body. Callers must not
+// release or retain them. Item errors can be skipped by continuing the loop.
+// The collection itself remains owned by the caller and must be released.
+func (c *UpdateCollection) All() iter.Seq2[*Update, error] {
+	return ole.BorrowedItems(c.count, c.item, func(item *Update) { item.Release() })
+}
+
+// CategoryCollection uses ICategoryCollection's distinct native count slot.
+type CategoryCollection struct{ ole.Object }
+
+func (c *CategoryCollection) count() (int32, error) {
+	return c.Get[int32](categoryCollectionCount)
+}
+
+func (c *CategoryCollection) item(index int32) (*Category, error) {
+	return c.GetObjectArg[Category](categoryCollectionItem, uintptr(index))
+}
+
+// All yields borrowed categories, valid only in the loop body. Callers must not
+// release or retain them. Item errors can be skipped by continuing the loop.
+// The collection itself remains owned by the caller and must be released.
+func (c *CategoryCollection) All() iter.Seq2[*Category, error] {
+	return ole.BorrowedItems(c.count, c.item, func(item *Category) { item.Release() })
 }

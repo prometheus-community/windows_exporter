@@ -312,7 +312,13 @@ func (c *Collector) fetchUpdates(logger *slog.Logger, searcher *wuapi.UpdateSear
 
 	for item, err := range updates.All() {
 		if err != nil {
-			return nil, fmt.Errorf("enumerate updates: %w", err)
+			if _, ok := errors.AsType[*ole.CollectionItemError](err); !ok {
+				return nil, fmt.Errorf("enumerate updates: %w", err)
+			}
+
+			logger.Error("failed to fetch Windows Update history item", slog.Any("err", err))
+
+			continue
 		}
 
 		update, err := c.getUpdateStatus(item)

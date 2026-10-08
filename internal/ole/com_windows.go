@@ -52,6 +52,8 @@ func Initialize() error {
 	return nil
 }
 
+// Uninitialize balances a successful Initialize on the same locked OS thread.
+// Release all owned COM interfaces before calling it.
 func Uninitialize() {
 	// CoUninitialize returns void; GetLastError is irrelevant.
 	_, _, _ = coUninitialize.Call()
@@ -75,6 +77,15 @@ func Call(fn uintptr, args ...uintptr) uintptr {
 // interface wrapper; never copy it or move it between apartments.
 type Object struct{ VTable *uintptr }
 
+// nativeScalar includes only output layouts used by these COM bindings. A Go
+// bool is deliberately excluded: COM VARIANT_BOOL uses a signed 16-bit integer.
+type nativeScalar interface {
+	~int16 | ~int32 | ~uint32 | ~float64 | bstr
+}
+
+// nativeObject requires the common COM interface layout without extra Go data.
+type nativeObject interface{ ~struct{ Object } }
+
 // Method returns the address of the zero-based native vtable slot.
 func (o *Object) Method(slot uintptr) uintptr {
 	return *(*uintptr)(unsafe.Add(unsafe.Pointer(o.VTable), slot*unsafe.Sizeof(uintptr(0))))
@@ -87,12 +98,12 @@ func (o *Object) Release() {
 	runtime.KeepAlive(o)
 }
 
-// Get calls a native getter. T must exactly match its scalar or interface
+// Get calls a native scalar getter. T must exactly match its native
 // output type. Pointer conversions stay in the Call expression so their storage
 // remains alive and stable during native calls and reentrant Go callbacks.
 //
-//nolint:ireturn // T is a native scalar or interface output, not a Go interface.
-func (o *Object) Get[T any](slot uintptr) (T, error) {
+//nolint:ireturn // T is a native scalar output, not a Go interface.
+func (o *Object) Get[T nativeScalar](slot uintptr) (T, error) {
 	var value T
 
 	hr := Call(o.Method(slot), uintptr(unsafe.Pointer(o)), uintptr(unsafe.Pointer(&value)))
@@ -104,8 +115,9 @@ func (o *Object) Get[T any](slot uintptr) (T, error) {
 // GetArg calls a native getter with one input argument. T must exactly match
 // its native output type; arg must use the native argument representation.
 //
-//nolint:ireturn // T is a native scalar or interface output, not a Go interface.
-func (o *Object) GetArg[T any](slot, arg uintptr) (T, error) {
+//nolint:ireturn // T is a native scalar output, not a Go interface.
+//go:uintptrescapes
+func (o *Object) GetArg[T nativeScalar](slot, arg uintptr) (T, error) {
 	var value T
 
 	hr := Call(
@@ -119,6 +131,52 @@ func (o *Object) GetArg[T any](slot, arg uintptr) (T, error) {
 	return value, ResultError(hr)
 }
 
+// GetObject calls a native interface getter and returns an owned reference.
+// Successful calls must return a non-nil interface pointer.
+func (o *Object) GetObject[T nativeObject](slot uintptr) (*T, error) {
+	var value *T
+
+	hr := Call(o.Method(slot), uintptr(unsafe.Pointer(o)), uintptr(unsafe.Pointer(&value)))
+	runtime.KeepAlive(o)
+
+	if err := ResultError(hr); err != nil {
+		return nil, err
+	}
+
+	if value == nil {
+		return nil, fmt.Errorf("COM getter at slot %d returned a nil interface", slot)
+	}
+
+	return value, nil
+}
+
+// GetObjectArg calls a native interface getter with one input argument and
+// returns an owned reference. The argument must use its native representation.
+// Convert pointer arguments to uintptr in the call expression.
+//
+//go:uintptrescapes
+func (o *Object) GetObjectArg[T nativeObject](slot, arg uintptr) (*T, error) {
+	var value *T
+
+	hr := Call(
+		o.Method(slot),
+		uintptr(unsafe.Pointer(o)),
+		arg,
+		uintptr(unsafe.Pointer(&value)),
+	)
+	runtime.KeepAlive(o)
+
+	if err := ResultError(hr); err != nil {
+		return nil, err
+	}
+
+	if value == nil {
+		return nil, fmt.Errorf("COM getter at slot %d returned a nil interface", slot)
+	}
+
+	return value, nil
+}
+
 // Put calls a native setter with a scalar argument.
 func (o *Object) Put(slot, arg uintptr) error {
 	hr := Call(o.Method(slot), uintptr(unsafe.Pointer(o)), arg)
@@ -129,7 +187,7 @@ func (o *Object) Put(slot, arg uintptr) error {
 
 // Create activates class and returns an owned interface reference for iid.
 // T must be the matching native interface wrapper, with Object as its first field.
-func Create[T any](class, iid windows.GUID) (*T, error) {
+func Create[T nativeObject](class, iid windows.GUID) (*T, error) {
 	var value *T
 
 	hr, _, _ := coCreateInstance.Call(
@@ -213,20 +271,16 @@ func (s *variantStorage) variant() *Variant {
 	return (*Variant)(unsafe.Add(unsafe.Pointer(s), offset))
 }
 
-// GetStringArg calls a method with one BSTR input and a native output value.
-// The temporary BSTR is freed before returning.
-//
-//nolint:ireturn // T is a native scalar or interface output, not a Go interface.
-func (o *Object) GetStringArg[T any](slot uintptr, input string) (T, error) {
+// GetObjectStringArg calls a native interface getter with one BSTR input and
+// returns an owned reference. The temporary BSTR is freed before returning.
+func (o *Object) GetObjectStringArg[T nativeObject](slot uintptr, input string) (*T, error) {
 	value, err := newBSTR(input)
 	if err != nil {
-		var zero T
-
-		return zero, err
+		return nil, err
 	}
 	defer value.free()
 
-	return o.GetArg[T](slot, uintptr(unsafe.Pointer(value.ptr)))
+	return o.GetObjectArg[T](slot, uintptr(unsafe.Pointer(value.ptr)))
 }
 
 // PutString calls a setter with a BSTR input, freeing the temporary string.

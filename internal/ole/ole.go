@@ -28,7 +28,7 @@ import (
 // HRESULT preserves the 32-bit COM status code, including when wrapped.
 type HRESULT uint32
 
-func (h HRESULT) Error() string { return fmt.Sprintf("COM HRESULT 0x%08X", uint32(h)) }
+func (h HRESULT) Error() string { return formatHRESULT(h) }
 
 // ResultError returns an error only for failed HRESULTs.
 func ResultError(result uintptr) error {
@@ -61,8 +61,23 @@ func (d DATE) Time() (time.Time, error) {
 	return date, nil
 }
 
+// CollectionItemError identifies an unreadable index within a COM collection.
+// The iterator can still read later indices; a count failure is not an item error.
+type CollectionItemError struct {
+	Index int32
+	Err   error
+}
+
+func (e *CollectionItemError) Error() string {
+	return fmt.Sprintf("get collection item %d: %v", e.Index, e.Err)
+}
+
+func (e *CollectionItemError) Unwrap() error { return e.Err }
+
 // BorrowedItems releases each item even when yield stops early or panics. Items
 // are valid only during yield; callers must not retain them or release them.
+// Item errors are yielded as CollectionItemError, and iteration continues if
+// yield returns true. Count errors stop iteration because there are no indices.
 func BorrowedItems[T any](count func() (int32, error), item func(int32) (T, error), release func(T)) iter.Seq2[T, error] {
 	return func(yield func(T, error) bool) {
 		var zero T
@@ -83,9 +98,11 @@ func BorrowedItems[T any](count func() (int32, error), item func(int32) (T, erro
 		for i := range n {
 			value, err := item(i)
 			if err != nil {
-				yield(zero, fmt.Errorf("get collection item %d: %w", i, err))
+				if !yield(zero, &CollectionItemError{Index: i, Err: err}) {
+					return
+				}
 
-				return
+				continue
 			}
 
 			if !func() bool {
