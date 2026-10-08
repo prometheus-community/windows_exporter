@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"log/slog"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -171,7 +172,9 @@ func (c *Collector) Close() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	c.perfDataCollector.Close()
+	if c.perfDataCollector != nil {
+		c.perfDataCollector.Close()
+	}
 
 	if c.workerCh != nil {
 		close(c.workerCh)
@@ -196,6 +199,9 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 		c.config.CounterVersion = 2
 
 		if errors.Is(err, pdh.NewPdhError(pdh.CstatusNoObject)) {
+			// NewCollector returns a partially built collector on errors. Release it before falling back to V1.
+			c.perfDataCollector.Close()
+
 			c.perfDataCollector, err = registry.NewCollector[perfDataCounterValues]("Process", pdh.InstancesAll)
 			c.config.CounterVersion = 1
 		}
@@ -216,7 +222,9 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 	c.mu = sync.RWMutex{}
 	c.lookupCache = sync.Map{}
 
-	if c.config.ProcessInclude.String() == "^(?:.*)$" && c.config.ProcessExclude.String() == "^(?:)$" {
+	// The flags wrap the expressions in ^(?:...)$, the defaults of [New] are [types.RegExpAny] and [types.RegExpEmpty].
+	if slices.Contains([]string{"^(?:.+)$", "^(?:.*)$", types.RegExpAny.String()}, c.config.ProcessInclude.String()) &&
+		slices.Contains([]string{"^(?:)$", types.RegExpEmpty.String()}, c.config.ProcessExclude.String()) {
 		logger.Warn("No filters specified for process collector. This will generate a very large number of metrics!")
 	}
 
