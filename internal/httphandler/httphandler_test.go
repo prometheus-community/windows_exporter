@@ -18,8 +18,10 @@
 package httphandler_test
 
 import (
+	"context"
 	"errors"
 	"log/slog"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -152,6 +154,87 @@ func TestMetricsHTTPHandlerScrapeTimeout(t *testing.T) {
 			})
 		})
 	}
+}
+
+func TestMetricsHTTPHandlerScrapeBudget(t *testing.T) {
+	const maxScrapeTimeout = 5 * time.Minute
+
+	for _, tc := range []struct {
+		name   string
+		header string
+		margin float64
+		want   time.Duration
+	}{
+		{name: "missing header", margin: 0.5, want: 9500 * time.Millisecond},
+		{name: "invalid header", header: "invalid", margin: 0.5, want: 9500 * time.Millisecond},
+		{name: "zero", header: "0", margin: 0.5, want: 9500 * time.Millisecond},
+		{name: "negative", header: "-1", margin: 0.5, want: 9500 * time.Millisecond},
+		{name: "negative infinity", header: "-Inf", margin: 0.5, want: 9500 * time.Millisecond},
+		{name: "NaN", header: "NaN", margin: 0.5, want: 9500 * time.Millisecond},
+		{name: "infinity", header: "+Inf", margin: 0.5, want: maxScrapeTimeout - 500*time.Millisecond},
+		{name: "out of float range", header: "1e400", margin: 0.5, want: maxScrapeTimeout - 500*time.Millisecond},
+		{name: "huge", header: "1e12", margin: 0.5, want: maxScrapeTimeout - 500*time.Millisecond},
+		{name: "long", header: "120", margin: 0.5, want: 119500 * time.Millisecond},
+		{name: "regular", header: "2", margin: 0.5, want: 1500 * time.Millisecond},
+		{name: "margin larger than timeout", header: "0.3", margin: 0.5, want: 150 * time.Millisecond},
+		{name: "margin takes at most half", header: "0.8", margin: 0.5, want: 400 * time.Millisecond},
+		{name: "tiny", header: "0.000001", margin: 0.5, want: 10 * time.Millisecond},
+		{name: "no margin", header: "2", want: 2 * time.Second},
+		{name: "negative margin", header: "2", margin: -1, want: 2 * time.Second},
+		{name: "NaN margin", header: "2", margin: math.NaN(), want: 2 * time.Second},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			// Synthetic time doesn't pass between the request and the collector's call.
+			synctest.Test(t, func(t *testing.T) {
+				test := &budgetCollector{}
+				collection := collector.New(collector.Map{"test": test})
+				handler := httphandler.New(slog.New(slog.DiscardHandler), collection, &httphandler.Options{DisableExporterMetrics: true, TimeoutMargin: tc.margin})
+				request := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/metrics", nil)
+
+				if tc.header != "" {
+					request.Header.Set("X-Prometheus-Scrape-Timeout-Seconds", tc.header)
+				}
+
+				response := httptest.NewRecorder()
+				handler.ServeHTTP(response, request)
+
+				require.Equal(t, http.StatusOK, response.Code)
+				require.Contains(t, response.Body.String(), `windows_exporter_collector_success{collector="test"} 1`)
+				require.Equal(t, tc.want, test.budget)
+			})
+		})
+	}
+}
+
+func TestMetricsHTTPHandlerCanceledRequest(t *testing.T) {
+	test := &budgetCollector{}
+	collection := collector.New(collector.Map{"test": test})
+	handler := httphandler.New(slog.New(slog.DiscardHandler), collection, &httphandler.Options{DisableExporterMetrics: true})
+
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, httptest.NewRequestWithContext(ctx, http.MethodGet, "/metrics", nil))
+
+	// The client is gone, so the collectors don't run.
+	require.False(t, test.called)
+}
+
+// budgetCollector records the time it is given.
+type budgetCollector struct {
+	called bool
+	budget time.Duration
+}
+
+func (c *budgetCollector) GetName() string                           { return "test" }
+func (c *budgetCollector) Build(_ *slog.Logger, _ *mi.Session) error { return nil }
+func (c *budgetCollector) Close() error                              { return nil }
+func (c *budgetCollector) Collect(_ chan<- prometheus.Metric, maxScrapeDuration time.Duration) error {
+	c.called = true
+	c.budget = maxScrapeDuration
+
+	return nil
 }
 
 type testCollector struct {

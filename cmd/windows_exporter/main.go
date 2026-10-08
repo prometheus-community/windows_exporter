@@ -48,11 +48,27 @@ import (
 	"golang.org/x/sys/windows"
 )
 
+// collectionCloseTimeout bounds how long the exporter waits for the collectors to close on shutdown.
+const collectionCloseTimeout = 10 * time.Second
+
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
 
+	// A stop request from the service manager cancels the root context,
+	// so that it aborts the startup as well as the running exporter.
+	ctx, cancel := context.WithCancelCause(ctx)
+
+	go func() {
+		select {
+		case <-serviceStop.Done():
+			cancel(errServiceStop)
+		case <-ctx.Done():
+		}
+	}()
+
 	exitCode := run(ctx, os.Args[1:])
 
+	cancel(nil)
 	stop()
 
 	// If we are running as a service, we need to signal the service control manager that we are done.
@@ -178,12 +194,25 @@ func run(ctx context.Context, args []string) int {
 		return 1
 	}
 
+	var disabledCollectorList []string
 	if *disabledCollectors != "" {
-		collectors.Disable(slices.Compact(strings.Split(*disabledCollectors, ",")))
+		disabledCollectorList = slices.Compact(strings.Split(*disabledCollectors, ","))
+		collectors.Disable(disabledCollectorList)
 	}
+
+	// Close the collectors on every return from here on. On a regular shutdown, this runs after the HTTP server has shut down.
+	defer closeCollection(ctx, logger, collectors)
 
 	// Initialize collectors before loading
 	if err = collectors.Build(ctx, logger); err != nil {
+		if ctx.Err() != nil {
+			logger.LogAttrs(ctx, slog.LevelInfo, "windows_exporter startup aborted",
+				slog.Any("reason", context.Cause(ctx)),
+			)
+
+			return 0
+		}
+
 		for _, err := range utils.SplitError(err) {
 			logger.LogAttrs(ctx, slog.LevelError, "couldn't initialize collector",
 				slog.Any("err", err),
@@ -193,7 +222,7 @@ func run(ctx context.Context, args []string) int {
 		return 1
 	}
 
-	logger.InfoContext(ctx, "Enabled collectors: "+strings.Join(enabledCollectorList, ", "))
+	logger.InfoContext(ctx, "Enabled collectors: "+strings.Join(effectiveCollectors(enabledCollectorList, disabledCollectorList), ", "))
 
 	mux := http.NewServeMux()
 	mux.Handle("GET /health", httphandler.NewHealthHandler())
@@ -233,9 +262,11 @@ func run(ctx context.Context, args []string) int {
 
 	select {
 	case <-ctx.Done():
-		logger.LogAttrs(ctx, slog.LevelInfo, "Shutting down windows_exporter via kill signal")
-	case <-stopCh:
-		logger.LogAttrs(ctx, slog.LevelInfo, "Shutting down windows_exporter via service control")
+		if errors.Is(context.Cause(ctx), errServiceStop) {
+			logger.LogAttrs(ctx, slog.LevelInfo, "Shutting down windows_exporter via service control")
+		} else {
+			logger.LogAttrs(ctx, slog.LevelInfo, "Shutting down windows_exporter via kill signal")
+		}
 	case err := <-errCh:
 		if err != nil {
 			logger.LogAttrs(ctx, slog.LevelError, "Failed to start windows_exporter",
@@ -319,6 +350,42 @@ func setPriorityWindows(ctx context.Context, logger *slog.Logger, pid int, prior
 	}
 
 	return nil
+}
+
+// closeCollection closes the collectors. It waits at most collectionCloseTimeout,
+// so that a collector that doesn't return can't block the shutdown.
+func closeCollection(ctx context.Context, logger *slog.Logger, collection *collector.Collection) {
+	errCh := make(chan error, 1)
+
+	//nolint:contextcheck // Close has no context parameter. The select below bounds the wait instead.
+	go func() {
+		errCh <- collection.Close()
+	}()
+
+	timer := time.NewTimer(collectionCloseTimeout)
+	defer timer.Stop()
+
+	select {
+	case err := <-errCh:
+		if err == nil {
+			return
+		}
+
+		for _, err := range utils.SplitError(err) {
+			logger.LogAttrs(ctx, slog.LevelWarn, "couldn't close collector",
+				slog.Any("err", err),
+			)
+		}
+	case <-timer.C:
+		logger.LogAttrs(ctx, slog.LevelWarn, fmt.Sprintf("collectors didn't close within %s", collectionCloseTimeout))
+	}
+}
+
+// effectiveCollectors returns the sorted list of enabled collectors without the disabled ones.
+func effectiveCollectors(enabled, disabled []string) []string {
+	return slices.DeleteFunc(slices.Compact(slices.Sorted(slices.Values(enabled))), func(name string) bool {
+		return slices.Contains(disabled, name)
+	})
 }
 
 func expandEnabledCollectors(enabled string) []string {

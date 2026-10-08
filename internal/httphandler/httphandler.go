@@ -18,8 +18,10 @@
 package httphandler
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
+	"math"
 	"net/http"
 	"strconv"
 	"time"
@@ -34,7 +36,15 @@ import (
 // Interface guard.
 var _ http.Handler = (*MetricsHTTPHandler)(nil)
 
-const defaultScrapeTimeout = 10.0
+const (
+	// defaultScrapeTimeout applies if the request has no valid X-Prometheus-Scrape-Timeout-Seconds header.
+	defaultScrapeTimeout = 10 * time.Second
+	// minScrapeTimeout is the smallest time given to the collectors.
+	minScrapeTimeout = 10 * time.Millisecond
+	// maxScrapeTimeout is the largest time given to the collectors.
+	// The exporter's HTTP server ends responses after 5 minutes anyway.
+	maxScrapeTimeout = 5 * time.Minute
+)
 
 type MetricsHTTPHandler struct {
 	metricCollectors *collector.Collection
@@ -42,8 +52,8 @@ type MetricsHTTPHandler struct {
 	// the exporter itself.
 	exporterMetricsRegistry *prometheus.Registry
 
-	logger  *slog.Logger
-	options Options
+	logger        *slog.Logger
+	timeoutMargin time.Duration
 }
 
 type Options struct {
@@ -62,7 +72,7 @@ func New(logger *slog.Logger, metricCollectors *collector.Collection, options *O
 	handler := &MetricsHTTPHandler{
 		metricCollectors: metricCollectors,
 		logger:           logger,
-		options:          *options,
+		timeoutMargin:    toDuration(options.TimeoutMargin),
 	}
 
 	if !options.DisableExporterMetrics {
@@ -82,9 +92,10 @@ func (c *MetricsHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		slog.String("remote", r.RemoteAddr),
 	)
 
+	// The scrape's deadline starts now, so time spent waiting for an earlier scrape counts against it.
 	scrapeTimeout := c.getScrapeTimeout(logger, r)
 
-	handler, err := c.handlerFactory(logger, scrapeTimeout, r.URL.Query()["collect[]"])
+	handler, err := c.handlerFactory(r.Context(), logger, scrapeTimeout, r.URL.Query()["collect[]"])
 	if err != nil {
 		logger.WarnContext(r.Context(), "Couldn't create filtered metrics handler",
 			slog.Any("err", err),
@@ -99,32 +110,51 @@ func (c *MetricsHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	handler.ServeHTTP(w, r)
 }
 
+// getScrapeTimeout returns the time the collectors get for this request.
+// It is the client's X-Prometheus-Scrape-Timeout-Seconds minus the timeout margin,
+// but the margin takes at most half of the client's timeout.
+// The result is between minScrapeTimeout and maxScrapeTimeout.
 func (c *MetricsHTTPHandler) getScrapeTimeout(logger *slog.Logger, r *http.Request) time.Duration {
-	var timeoutSeconds float64
+	timeout := defaultScrapeTimeout
 
 	if v := r.Header.Get("X-Prometheus-Scrape-Timeout-Seconds"); v != "" {
-		var err error
+		seconds, err := strconv.ParseFloat(v, 64)
 
-		timeoutSeconds, err = strconv.ParseFloat(v, 64)
-		if err != nil {
-			logger.WarnContext(r.Context(), fmt.Sprintf("Couldn't parse X-Prometheus-Scrape-Timeout-Seconds: %q. Defaulting timeout to %f", v, defaultScrapeTimeout))
+		switch {
+		case math.IsInf(seconds, 1):
+			// Includes values too large for a float64, which ParseFloat reports as an error.
+			timeout = maxScrapeTimeout
+		case err != nil, math.IsNaN(seconds), seconds <= 0:
+			logger.WarnContext(r.Context(), fmt.Sprintf("Invalid X-Prometheus-Scrape-Timeout-Seconds: %q. Defaulting timeout to %s", v, defaultScrapeTimeout))
+		default:
+			timeout = toDuration(seconds)
 		}
 	}
 
-	if timeoutSeconds == 0 {
-		timeoutSeconds = defaultScrapeTimeout
-	}
+	timeout = max(timeout-c.timeoutMargin, timeout/2)
 
-	timeoutSeconds -= c.options.TimeoutMargin
-
-	return time.Duration(timeoutSeconds*1e9) * time.Nanosecond
+	return min(max(timeout, minScrapeTimeout), maxScrapeTimeout)
 }
 
-func (c *MetricsHTTPHandler) handlerFactory(logger *slog.Logger, scrapeTimeout time.Duration, requestedCollectors []string) (http.Handler, error) {
+// toDuration converts seconds to a duration between 0 and maxScrapeTimeout.
+// NaN and negative values become 0.
+func toDuration(seconds float64) time.Duration {
+	if math.IsNaN(seconds) || seconds <= 0 {
+		return 0
+	}
+
+	if seconds >= maxScrapeTimeout.Seconds() {
+		return maxScrapeTimeout
+	}
+
+	return time.Duration(seconds * float64(time.Second))
+}
+
+func (c *MetricsHTTPHandler) handlerFactory(ctx context.Context, logger *slog.Logger, scrapeTimeout time.Duration, requestedCollectors []string) (http.Handler, error) {
 	reg := prometheus.NewRegistry()
 	reg.MustRegister(version.NewCollector("windows_exporter"))
 
-	collectionHandler, err := c.metricCollectors.NewHandler(scrapeTimeout, c.logger, requestedCollectors)
+	collectionHandler, err := c.metricCollectors.NewHandlerWithContext(ctx, scrapeTimeout, logger, requestedCollectors)
 	if err != nil {
 		return nil, fmt.Errorf("couldn't create collector handler: %w", err)
 	}
@@ -133,17 +163,17 @@ func (c *MetricsHTTPHandler) handlerFactory(logger *slog.Logger, scrapeTimeout t
 		return nil, fmt.Errorf("couldn't register Prometheus collector: %w", err)
 	}
 
+	// Scrapes are serialized by the collection, so the handler doesn't limit requests in flight.
 	var regHandler http.Handler
 	if c.exporterMetricsRegistry != nil {
 		regHandler = promhttp.HandlerFor(
 			prometheus.Gatherers{c.exporterMetricsRegistry, reg},
 			promhttp.HandlerOpts{
-				ErrorLog:            slog.NewLogLogger(logger.Handler(), slog.LevelError),
-				ErrorHandling:       promhttp.ContinueOnError,
-				MaxRequestsInFlight: 1,
-				Registry:            c.exporterMetricsRegistry,
-				EnableOpenMetrics:   true,
-				ProcessStartTime:    c.metricCollectors.GetStartTime(),
+				ErrorLog:          slog.NewLogLogger(logger.Handler(), slog.LevelError),
+				ErrorHandling:     promhttp.ContinueOnError,
+				Registry:          c.exporterMetricsRegistry,
+				EnableOpenMetrics: true,
+				ProcessStartTime:  c.metricCollectors.GetStartTime(),
 			},
 		)
 
@@ -156,11 +186,10 @@ func (c *MetricsHTTPHandler) handlerFactory(logger *slog.Logger, scrapeTimeout t
 		regHandler = promhttp.HandlerFor(
 			reg,
 			promhttp.HandlerOpts{
-				ErrorLog:            slog.NewLogLogger(logger.Handler(), slog.LevelError),
-				ErrorHandling:       promhttp.ContinueOnError,
-				MaxRequestsInFlight: 1,
-				EnableOpenMetrics:   true,
-				ProcessStartTime:    c.metricCollectors.GetStartTime(),
+				ErrorLog:          slog.NewLogLogger(logger.Handler(), slog.LevelError),
+				ErrorHandling:     promhttp.ContinueOnError,
+				EnableOpenMetrics: true,
+				ProcessStartTime:  c.metricCollectors.GetStartTime(),
 			},
 		)
 	}

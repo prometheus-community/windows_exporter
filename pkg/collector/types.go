@@ -29,10 +29,11 @@ import (
 const DefaultCollectors = "cpu,memory,logical_disk,physical_disk,net,os,service,system"
 
 type Collection struct {
-	collectors    Map
-	miSession     *mi.Session
-	startTime     time.Time
-	concurrencyCh chan struct{}
+	collectors Map
+	startTime  time.Time
+
+	// state is shared with every Collection derived from this one by WithCollectors.
+	state *collectionState
 
 	scrapeDurationDesc          *prometheus.Desc
 	collectorScrapeDurationDesc *prometheus.Desc

@@ -24,6 +24,7 @@ import (
 	"log/slog"
 	"os"
 	"strings"
+	"sync"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
@@ -40,8 +41,9 @@ var (
 	// the exit code is sent to the service manager as well.
 	exitCodeCh = make(chan int, 1)
 
-	// stopCh is a channel to send a signal to the service manager that the service is stopping.
-	stopCh = make(chan struct{})
+	// serviceStop is closed when the service manager asks the service to stop.
+	// main cancels the root context then, so startup and the running exporter both observe it.
+	serviceStop = newBroadcast()
 
 	// serviceManagerFinishedCh is a channel to send a signal to the main function that the service manager has stopped the service.
 	serviceManagerFinishedCh = make(chan struct{}, 1)
@@ -76,7 +78,11 @@ var IsService = func() bool {
 
 	defer func() {
 		go func() {
-			err := svc.Run(serviceName, &windowsExporterService{})
+			err := svc.Run(serviceName, &windowsExporterService{
+				stop:       serviceStop,
+				exitCodeCh: exitCodeCh,
+				logEvent:   logToEventToLog,
+			})
 			if err != nil {
 				// https://github.com/open-telemetry/opentelemetry-collector/pull/9042
 				if !errors.Is(err, windows.ERROR_FAILED_SERVICE_CONTROLLER_CONNECT) {
@@ -99,7 +105,37 @@ var IsService = func() bool {
 	return true
 }()
 
-type windowsExporterService struct{}
+// errServiceStop is the cause of the root context's cancellation when the service manager stops the service.
+var errServiceStop = errors.New("service stop requested")
+
+// broadcast is a channel that is closed once to signal all receivers.
+type broadcast struct {
+	once sync.Once
+	ch   chan struct{}
+}
+
+func newBroadcast() *broadcast {
+	return &broadcast{ch: make(chan struct{})}
+}
+
+// Close closes the channel. Later calls do nothing.
+func (b *broadcast) Close() {
+	b.once.Do(func() { close(b.ch) })
+}
+
+// Done returns the channel that Close closes.
+func (b *broadcast) Done() <-chan struct{} {
+	return b.ch
+}
+
+type windowsExporterService struct {
+	// stop is closed when a stop or shutdown request is received.
+	stop *broadcast
+	// exitCodeCh receives the exit code of the main function.
+	exitCodeCh <-chan int
+	// logEvent writes to the event log.
+	logEvent func(eType uint16, msg string) error
+}
 
 // Execute is the entry point for the Windows service manager.
 func (s *windowsExporterService) Execute(_ []string, r <-chan svc.ChangeRequest, changes chan<- svc.Status) (bool, uint32) {
@@ -109,11 +145,11 @@ func (s *windowsExporterService) Execute(_ []string, r <-chan svc.ChangeRequest,
 
 	for {
 		select {
-		case exitCodeCh := <-exitCodeCh:
+		case exitCode := <-s.exitCodeCh:
 			// Stop the service if an exit code from the main function is received.
 			changes <- svc.Status{State: svc.StopPending}
 
-			return true, uint32(exitCodeCh)
+			return serviceExitCode(exitCode)
 		case c := <-r:
 			// Handle the service control request.
 			switch c.Cmd {
@@ -121,20 +157,27 @@ func (s *windowsExporterService) Execute(_ []string, r <-chan svc.ChangeRequest,
 				changes <- c.CurrentStatus
 			case svc.Stop, svc.Shutdown:
 				// Stop the service if a stop or shutdown request is received.
-				_ = logToEventToLog(windows.EVENTLOG_INFORMATION_TYPE, "service stop received")
+				_ = s.logEvent(windows.EVENTLOG_INFORMATION_TYPE, "service stop received")
 
 				changes <- svc.Status{State: svc.StopPending}
 
-				// Send a signal to the main function to stop the service.
-				stopCh <- struct{}{}
+				// Signal the main function to stop. This never blocks,
+				// even if the main function is still starting or has already returned.
+				s.stop.Close()
 
 				// Wait for the main function to stop the service.
-				return false, uint32(<-exitCodeCh)
+				return serviceExitCode(<-s.exitCodeCh)
 			default:
-				_ = logToEventToLog(windows.EVENTLOG_ERROR_TYPE, fmt.Sprintf("unexpected control request #%d", c))
+				_ = s.logEvent(windows.EVENTLOG_ERROR_TYPE, fmt.Sprintf("unexpected control request #%d", c))
 			}
 		}
 	}
+}
+
+// serviceExitCode converts an exit code of the main function into the return values of [svc.Handler.Execute].
+// A non-zero exit code is reported as a service-specific exit code.
+func serviceExitCode(exitCode int) (bool, uint32) {
+	return exitCode != 0, uint32(exitCode)
 }
 
 // logToEventToLog logs a message to the Windows event log.
