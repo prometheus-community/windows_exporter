@@ -822,4 +822,8 @@ func (c *Collector) closeDatabases() {
 	for _, collector := range c.databasesPerfDataCollectors {
 		collector.Close()
 	}
+
+	for _, collector := range c.databasesPerfDataCollectors2019 {
+		collector.Close()
+	}
 }
