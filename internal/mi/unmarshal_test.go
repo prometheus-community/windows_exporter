@@ -69,6 +69,11 @@ func TestSetField(t *testing.T) {
 		{"char16_overflows_uint8", Element{value: 0x20AC, valueType: ValueTypeCHAR16}, newField[uint8](), nil, true},
 		{"char16_into_bool", Element{value: 'A', valueType: ValueTypeCHAR16}, newField[bool](), nil, true},
 
+		{"null_uint32_keeps_zero_value", Element{value: 42, valueType: ValueTypeUINT32, flags: flagNull}, newField[uint32](), uint32(0), false},
+		{"null_real64_keeps_zero_value", Element{value: uintptr(math.Float64bits(9.875)), valueType: ValueTypeREAL64, flags: flagNull}, newField[float64](), float64(0), false},
+		{"null_char16_into_string_keeps_zero_value", Element{value: 'A', valueType: ValueTypeCHAR16, flags: flagNull}, newField[string](), "", false},
+		{"null_still_rejects_wrong_type", Element{value: 42, valueType: ValueTypeUINT32, flags: flagNull}, newField[string](), nil, true},
+
 		{"uint16a_into_wrong_slice", Element{value: 0, valueType: ValueTypeUINT16A}, newField[[]uint32](), nil, true},
 		{"unsupported_type", Element{value: 0, valueType: ValueTypeDATETIME}, newField[string](), nil, true},
 	}
