@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"log/slog"
 	"maps"
+	"math"
 	"regexp"
 	"slices"
 	"strings"
@@ -272,10 +273,12 @@ func (c *Collector) collectObject(ch chan<- prometheus.Metric, perfDataObject Ob
 		return fmt.Errorf("failed to collect data: %w", err)
 	}
 
+	metricTypes := counterMetricTypes(perfDataObject)
+
 	var errs []error
 
 	for _, row := range rows {
-		for _, counter := range perfDataObject.Counters {
+		for j, counter := range perfDataObject.Counters {
 			valueIndex, ok := perfDataObject.valueIndex[counter.Name]
 			if !ok {
 				errs = append(errs, fmt.Errorf("%s not found in collected data", counter.Name))
@@ -284,7 +287,12 @@ func (c *Collector) collectObject(ch chan<- prometheus.Metric, perfDataObject Ob
 			}
 
 			collectedCounterValue := row.Values[valueIndex]
-			metricType := row.MetricType
+
+			// The counter has no valid value for this instance in this sample.
+			// Omit it instead of reporting zero, which looks like a counter reset.
+			if math.IsNaN(collectedCounterValue) {
+				continue
+			}
 
 			labels := make(prometheus.Labels, len(counter.Labels)+1)
 
@@ -294,13 +302,6 @@ func (c *Collector) collectObject(ch chan<- prometheus.Metric, perfDataObject Ob
 
 			maps.Copy(labels, counter.Labels)
 
-			switch counter.Type {
-			case "counter":
-				metricType = prometheus.CounterValue
-			case "gauge":
-				metricType = prometheus.GaugeValue
-			}
-
 			ch <- prometheus.MustNewConstMetric(
 				prometheus.NewDesc(
 					counter.Metric,
@@ -308,13 +309,38 @@ func (c *Collector) collectObject(ch chan<- prometheus.Metric, perfDataObject Ob
 					nil,
 					labels,
 				),
-				metricType,
+				metricTypes[j],
 				collectedCounterValue,
 			)
 		}
 	}
 
 	return errors.Join(errs...)
+}
+
+// counterMetricTypes returns the metric type of every counter of the object.
+// An explicit type in the configuration takes precedence over the type that
+// PDH reports for the counter.
+func counterMetricTypes(perfDataObject Object) []prometheus.ValueType {
+	metricTypes := make([]prometheus.ValueType, len(perfDataObject.Counters))
+
+	for i, counter := range perfDataObject.Counters {
+		switch counter.Type {
+		case "counter":
+			metricTypes[i] = prometheus.CounterValue
+		case "gauge":
+			metricTypes[i] = prometheus.GaugeValue
+		default:
+			metricType, ok := perfDataObject.collector.MetricType(counter.Name)
+			if !ok {
+				metricType = prometheus.GaugeValue
+			}
+
+			metricTypes[i] = metricType
+		}
+	}
+
+	return metricTypes
 }
 
 func sanitizeMetricName(name string) string {

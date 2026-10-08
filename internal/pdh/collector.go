@@ -21,7 +21,9 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math"
 	"reflect"
+	"runtime/debug"
 	"slices"
 	"strconv"
 	"strings"
@@ -43,7 +45,8 @@ type CounterValues = map[string]map[string]CounterValue
 
 type Collector[T any] struct {
 	object                string
-	counters              map[string]Counter
+	resultType            CounterType
+	counters              []Counter
 	handle                pdhQueryHandle
 	totalCounterRequested bool
 	mu                    sync.RWMutex
@@ -51,22 +54,27 @@ type Collector[T any] struct {
 
 	rows rowAccessor[T]
 
+	// partialRows keeps instances for which some counters have no valid value
+	// in a sample and sets those values to NaN. Otherwise, such instances are
+	// left out of the sample, so a missing value is never reported as zero.
+	partialRows bool
+
 	collectCh chan *[]T
 	errorCh   chan error
 }
 
 // Row holds the values of one instance collected by a collector from [NewDynamicCollector].
 type Row struct {
-	Name       string
-	MetricType prometheus.ValueType
+	Name string
 	// Values holds one value per counter, in the order the counters were passed to [NewDynamicCollector].
+	// A value is NaN if the counter has no valid value for the instance in this sample.
 	Values []float64
 }
 
 // rowAccessor creates rows of type T and sets their counter values.
 // field is the index the counterField of the counter was created with.
 type rowAccessor[T any] struct {
-	newRow   func(instance string, metricType prometheus.ValueType) T
+	newRow   func(instance string) T
 	setValue func(row *T, field int, value float64)
 }
 
@@ -79,8 +87,10 @@ type counterField struct {
 }
 
 type Counter struct {
-	Name       string
-	Desc       string
+	Name string
+	Desc string
+	// MetricType is the Prometheus metric type of the counter. It is zero
+	// until the counter info of one of its instances has been read.
 	MetricType prometheus.ValueType
 	Instances  map[string]pdhCounterHandle
 	Type       uint32
@@ -92,22 +102,23 @@ type Counter struct {
 
 // NewCollector creates a collector for the counters declared by the perfdata tags of the struct T.
 //
-// The optional fields Name (string) and MetricType (prometheus.ValueType) of T
-// receive the instance name and the metric type of the counter.
+// The optional field Name (string) of T receives the instance name. An
+// instance is only collected if every counter has a valid value for it in that
+// sample. Use [Collector.MetricType] for the metric type of a counter.
+//
+// If an error is returned together with a non-nil Collector, some counters
+// could not be added or the initial collection failed. The caller owns that
+// Collector and must Close it. If the Collector is nil, no resources are held.
 func NewCollector[T any](logger *slog.Logger, resultType CounterType, object string, instances []string) (*Collector[T], error) {
 	valueType := reflect.TypeFor[T]()
 	if valueType.Kind() != reflect.Struct {
 		return nil, fmt.Errorf("expected a struct, got %s", valueType)
 	}
 
-	nameIndex, metricTypeIndex := -1, -1
+	nameIndex := -1
 
 	if f, ok := valueType.FieldByName("Name"); ok && f.Type.Kind() == reflect.String {
 		nameIndex = f.Index[0]
-	}
-
-	if f, ok := valueType.FieldByName("MetricType"); ok && f.Type == reflect.TypeFor[prometheus.ValueType]() {
-		metricTypeIndex = f.Index[0]
 	}
 
 	var errs []error
@@ -134,17 +145,11 @@ func NewCollector[T any](logger *slog.Logger, resultType CounterType, object str
 	}
 
 	rows := rowAccessor[T]{
-		newRow: func(instance string, metricType prometheus.ValueType) T {
+		newRow: func(instance string) T {
 			var row T
 
-			rv := reflect.ValueOf(&row).Elem()
-
 			if nameIndex != -1 {
-				rv.Field(nameIndex).SetString(instance)
-			}
-
-			if metricTypeIndex != -1 {
-				rv.Field(metricTypeIndex).SetInt(int64(metricType))
+				reflect.ValueOf(&row).Elem().Field(nameIndex).SetString(instance)
 			}
 
 			return row
@@ -154,11 +159,13 @@ func NewCollector[T any](logger *slog.Logger, resultType CounterType, object str
 		},
 	}
 
-	return newCollector(logger, resultType, object, instances, fields, rows, errs)
+	return newCollector(logger, resultType, object, instances, fields, rows, false, errs)
 }
 
 // NewDynamicCollector creates a collector for counters that are only known at runtime.
 // Row.Values of the collected rows holds one value per entry of counters, in the same order.
+// Unlike [NewCollector], an instance is kept if only some of its counters have
+// a valid value; the others are NaN. Errors are returned as described for [NewCollector].
 func NewDynamicCollector(logger *slog.Logger, resultType CounterType, object string, instances []string, counters []string) (*Collector[Row], error) {
 	fields := make([]counterField, len(counters))
 	for i, counter := range counters {
@@ -166,20 +173,24 @@ func NewDynamicCollector(logger *slog.Logger, resultType CounterType, object str
 	}
 
 	rows := rowAccessor[Row]{
-		newRow: func(instance string, metricType prometheus.ValueType) Row {
-			return Row{Name: instance, MetricType: metricType, Values: make([]float64, len(counters))}
+		newRow: func(instance string) Row {
+			return Row{Name: instance, Values: make([]float64, len(counters))}
 		},
 		setValue: func(row *Row, field int, value float64) {
 			row.Values[field] = value
 		},
 	}
 
-	return newCollector(logger, resultType, object, instances, fields, rows, nil)
+	return newCollector(logger, resultType, object, instances, fields, rows, true, nil)
 }
 
 func newCollector[T any](logger *slog.Logger, resultType CounterType, object string, instances []string,
-	fields []counterField, rows rowAccessor[T], errs []error,
+	fields []counterField, rows rowAccessor[T], partialRows bool, errs []error,
 ) (*Collector[T], error) {
+	if resultType != CounterTypeRaw && resultType != CounterTypeFormatted {
+		return nil, fmt.Errorf("invalid result type: %v", resultType)
+	}
+
 	var handle pdhQueryHandle
 
 	if ret := OpenQuery(0, 0, &handle); ret != ErrorSuccess {
@@ -190,32 +201,36 @@ func newCollector[T any](logger *slog.Logger, resultType CounterType, object str
 		instances = []string{InstanceEmpty}
 	}
 
-	if resultType != CounterTypeRaw && resultType != CounterTypeFormatted {
-		return nil, fmt.Errorf("invalid result type: %v", resultType)
-	}
-
 	collector := &Collector[T]{
 		object:                object,
-		counters:              make(map[string]Counter, len(fields)),
+		resultType:            resultType,
+		counters:              make([]Counter, 0, len(fields)),
 		handle:                handle,
 		totalCounterRequested: slices.Contains(instances, InstanceTotal),
 		mu:                    sync.RWMutex{},
 		logger:                logger,
 		rows:                  rows,
+		partialRows:           partialRows,
 	}
+
+	counterIndex := make(map[string]int, len(fields))
 
 	for _, f := range fields {
 		counterName, secondValue := strings.CutSuffix(f.tag, ",secondvalue")
 
-		counter, ok := collector.counters[counterName]
+		i, ok := counterIndex[counterName]
 		if !ok {
-			counter = Counter{
+			i = len(collector.counters)
+			counterIndex[counterName] = i
+			collector.counters = append(collector.counters, Counter{
 				Name:                  counterName,
 				Instances:             make(map[string]pdhCounterHandle, len(instances)),
 				FieldIndexSecondValue: -1,
 				FieldIndexValue:       -1,
-			}
+			})
 		}
+
+		counter := &collector.counters[i]
 
 		if secondValue {
 			counter.FieldIndexSecondValue = f.index
@@ -224,8 +239,6 @@ func newCollector[T any](logger *slog.Logger, resultType CounterType, object str
 		}
 
 		if len(counter.Instances) != 0 {
-			collector.counters[counterName] = counter
-
 			continue
 		}
 
@@ -255,7 +268,7 @@ func newCollector[T any](logger *slog.Logger, resultType CounterType, object str
 
 			counter.Instances[instance] = counterHandle
 
-			if counter.Type != 0 {
+			if counter.MetricType != 0 {
 				continue
 			}
 
@@ -289,11 +302,7 @@ func newCollector[T any](logger *slog.Logger, resultType CounterType, object str
 			}
 
 			counter.Type = counterInfo.DwType
-			if val, ok := SupportedCounterTypes[counter.Type]; ok {
-				counter.MetricType = val
-			} else {
-				counter.MetricType = prometheus.GaugeValue
-			}
+			counter.MetricType = metricType(resultType, counter.Type)
 
 			if counter.Type == PERF_ELAPSED_TIME {
 				if ret := GetCounterTimeBase(counterHandle, &counter.Frequency); ret != ErrorSuccess && ret != NoData {
@@ -303,26 +312,24 @@ func newCollector[T any](logger *slog.Logger, resultType CounterType, object str
 				}
 			}
 		}
+	}
 
-		collector.counters[counterName] = counter
+	if len(collector.counters) == 0 {
+		collector.Close()
+
+		errs = append(errs, errors.New("no counters configured"))
+
+		return nil, errors.Join(errs...)
 	}
 
 	if err := errors.Join(errs...); err != nil {
 		return collector, fmt.Errorf("failed to initialize collector: %w", err)
 	}
 
-	if len(collector.counters) == 0 {
-		return nil, errors.New("no counters configured")
-	}
-
 	collector.collectCh = make(chan *[]T)
 	collector.errorCh = make(chan error)
 
-	if resultType == CounterTypeRaw {
-		go collector.collectWorkerRaw()
-	} else {
-		go collector.collectWorkerFormatted()
-	}
+	go collector.collectWorker()
 
 	// Collect initial data because some counters need to be read twice to get the correct value.
 	var collectValues []T
@@ -331,6 +338,18 @@ func newCollector[T any](logger *slog.Logger, resultType CounterType, object str
 	}
 
 	return collector, nil
+}
+
+// metricType returns the Prometheus metric type for a PDH counter type.
+// Formatted values are already rates or ratios, so they are always gauges.
+func metricType(resultType CounterType, counterType uint32) prometheus.ValueType {
+	if resultType == CounterTypeRaw {
+		if val, ok := SupportedCounterTypes[counterType]; ok {
+			return val
+		}
+	}
+
+	return prometheus.GaugeValue
 }
 
 func (c *Collector[T]) Describe() map[string]string {
@@ -348,6 +367,27 @@ func (c *Collector[T]) Describe() map[string]string {
 	}
 
 	return desc
+}
+
+// MetricType returns the Prometheus metric type of the counter named
+// counterName, derived from its PDH counter type. Formatted values are always
+// gauges. It returns false if the counter is unknown or none of its instances
+// could be added.
+func (c *Collector[T]) MetricType(counterName string) (prometheus.ValueType, bool) {
+	if c == nil {
+		return 0, false
+	}
+
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	for _, counter := range c.counters {
+		if counter.Name == counterName {
+			return counter.MetricType, counter.MetricType != 0
+		}
+	}
+
+	return 0, false
 }
 
 // Collect replaces the content of dst with one row per collected instance.
@@ -372,228 +412,294 @@ func (c *Collector[T]) Collect(dst *[]T) error {
 	return <-c.errorCh
 }
 
-func (c *Collector[T]) collectWorkerRaw() {
-	var (
-		err         error
-		itemCount   uint32
-		items       []RawCounterItem
-		bytesNeeded uint32
-	)
-
-	// buf starts empty so that the first call only queries the required size with a nil buffer.
-	// PdhGetRawCounterArrayW writes 8 bytes into a non-nil buffer, even if lpdwBufferSize is smaller,
-	// which corrupts the neighboring heap memory of a tiny allocation.
-	var buf []byte
+func (c *Collector[T]) collectWorker() {
+	var state collectState
 
 	for dst := range c.collectCh {
-		err = (func() error {
-			if ret := CollectQueryData(c.handle); ret != ErrorSuccess {
-				return fmt.Errorf("failed to collect query data: %w", NewPdhError(ret))
-			}
-
-			*dst = (*dst)[:0:0]
-
-			indexMap := map[string]int{}
-			nameCache := map[string]string{}
-
-			for _, counter := range c.counters {
-			instances:
-				for _, instance := range counter.Instances {
-					// Get the info with the current buffer size
-					bytesNeeded = uint32(len(buf))
-
-					for {
-						ret := GetRawCounterArray(instance, &bytesNeeded, &itemCount, unsafe.SliceData(buf))
-
-						if ret == ErrorSuccess {
-							break
-						}
-
-						if err := NewPdhError(ret); ret != MoreData {
-							if isKnownCounterDataError(err) {
-								continue instances
-							}
-
-							return fmt.Errorf("GetRawCounterArray: %w", err)
-						}
-
-						if bytesNeeded <= uint32(len(buf)) {
-							return fmt.Errorf("GetRawCounterArray reports buffer too small (%d), but buffer is large enough (%d): %w", uint32(len(buf)), bytesNeeded, NewPdhError(ret))
-						}
-
-						buf = make([]byte, bytesNeeded)
-					}
-
-					items = unsafe.Slice((*RawCounterItem)(unsafe.Pointer(unsafe.SliceData(buf))), itemCount)
-
-					for _, item := range items {
-						if item.RawValue.CStatus != CstatusValidData && item.RawValue.CStatus != CstatusNewData {
-							c.logger.Debug("skipping counter item with invalid data status",
-								slog.String("counter", counter.Name),
-								slog.String("instance", windows.UTF16PtrToString(item.SzName)),
-								slog.Uint64("status", uint64(item.RawValue.CStatus)),
-							)
-
-							continue
-						}
-
-						instanceName := decodeInstanceName(nameCache, item.SzName)
-
-						if strings.HasSuffix(instanceName, InstanceTotal) && !c.totalCounterRequested {
-							continue
-						}
-
-						if instanceName == "" || instanceName == "*" {
-							instanceName = InstanceEmpty
-						}
-
-						var (
-							index int
-							ok    bool
-						)
-
-						if index, ok = indexMap[instanceName]; !ok {
-							index = len(*dst)
-							indexMap[instanceName] = index
-
-							var metricsType prometheus.ValueType
-							if metricsType, ok = SupportedCounterTypes[counter.Type]; !ok {
-								metricsType = prometheus.GaugeValue
-							}
-
-							*dst = append(*dst, c.rows.newRow(instanceName, metricsType))
-						}
-
-						row := &(*dst)[index]
-
-						// This is a workaround for the issue with the elapsed time counter type.
-						// Source: https://github.com/prometheus-community/windows_exporter/pull/335/files#diff-d5d2528f559ba2648c2866aec34b1eaa5c094dedb52bd0ff22aa5eb83226bd8dR76-R83
-						// Ref: https://learn.microsoft.com/en-us/windows/win32/perfctrs/calculating-counter-values
-						switch counter.Type {
-						case PERF_ELAPSED_TIME:
-							c.rows.setValue(row, counter.FieldIndexValue, float64((item.RawValue.SecondValue-item.RawValue.FirstValue)/counter.Frequency))
-						case PERF_100NSEC_TIMER, PERF_PRECISION_100NS_TIMER:
-							c.rows.setValue(row, counter.FieldIndexValue, float64(item.RawValue.FirstValue)*TicksToSecondScaleFactor)
-						default:
-							if counter.FieldIndexSecondValue != -1 {
-								c.rows.setValue(row, counter.FieldIndexSecondValue, float64(item.RawValue.SecondValue))
-							}
-
-							if counter.FieldIndexValue != -1 {
-								c.rows.setValue(row, counter.FieldIndexValue, float64(item.RawValue.FirstValue))
-							}
-						}
-					}
-				}
-			}
-
-			if len(*dst) == 0 {
-				return ErrNoData
-			}
-
-			return nil
-		})()
-
-		c.errorCh <- err
+		c.errorCh <- c.collect(dst, &state)
 	}
 }
 
-func (c *Collector[T]) collectWorkerFormatted() {
-	var (
-		err         error
-		itemCount   uint32
-		items       []FmtCounterValueItemDouble
-		bytesNeeded uint32
-	)
-
+// collectState holds the buffers that the collect worker reuses between samples.
+type collectState struct {
 	// buf starts empty so that the first call only queries the required size with a nil buffer.
-	// See collectWorkerRaw.
-	var buf []byte
+	// PdhGetRawCounterArrayW writes 8 bytes into a non-nil buffer, even if lpdwBufferSize is smaller,
+	// which corrupts the neighboring heap memory of a tiny allocation.
+	buf []byte
 
-	for dst := range c.collectCh {
-		err = (func() error {
-			if ret := CollectQueryData(c.handle); ret != ErrorSuccess {
-				return fmt.Errorf("failed to collect query data: %w", NewPdhError(ret))
+	// valid records for every row and counter whether the counter had a valid value.
+	valid []bool
+}
+
+// collect replaces the content of dst with one sample.
+func (c *Collector[T]) collect(dst *[]T, state *collectState) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = c.panicError(r)
+		}
+	}()
+
+	if ret := CollectQueryData(c.handle); ret != ErrorSuccess {
+		return fmt.Errorf("failed to collect query data: %w", NewPdhError(ret))
+	}
+
+	*dst = (*dst)[:0:0]
+
+	rows := rowSet[T]{
+		c:         c,
+		dst:       dst,
+		index:     map[string]int{},
+		nameCache: map[string]string{},
+		valid:     state.valid[:0],
+	}
+
+	for counterIndex := range c.counters {
+		for _, instance := range c.counters[counterIndex].Instances {
+			itemCount, ok, err := c.getCounterArray(instance, &state.buf)
+			if err != nil {
+				return err
 			}
 
-			*dst = (*dst)[:0:0]
+			if !ok {
+				continue
+			}
 
-			indexMap := map[string]int{}
-			nameCache := map[string]string{}
+			if c.resultType == CounterTypeRaw {
+				rows.addRawItems(counterIndex, state.buf, itemCount)
+			} else {
+				rows.addFormattedItems(counterIndex, state.buf, itemCount)
+			}
+		}
+	}
 
-			for _, counter := range c.counters {
-			instances:
-				for _, instance := range counter.Instances {
-					// Get the info with the current buffer size
-					bytesNeeded = uint32(len(buf))
+	rows.finish()
 
-					for {
-						ret := GetFormattedCounterArrayDouble(instance, &bytesNeeded, &itemCount, unsafe.SliceData(buf))
+	state.valid = rows.valid
 
-						if ret == ErrorSuccess {
-							break
-						}
+	if len(*dst) == 0 {
+		return ErrNoData
+	}
 
-						if err := NewPdhError(ret); ret != MoreData {
-							if isKnownCounterDataError(err) {
-								continue instances
-							}
+	return nil
+}
 
-							return fmt.Errorf("GetFormattedCounterArrayDouble: %w", err)
-						}
+// getCounterArray reads the counter array of instance into buf and returns the number of items.
+// ok is false if the counter has no data in this sample.
+func (c *Collector[T]) getCounterArray(instance pdhCounterHandle, buf *[]byte) (uint32, bool, error) {
+	getArray, name := GetRawCounterArray, "GetRawCounterArray"
+	if c.resultType == CounterTypeFormatted {
+		getArray, name = GetFormattedCounterArrayDouble, "GetFormattedCounterArrayDouble"
+	}
 
-						if bytesNeeded <= uint32(len(buf)) {
-							return fmt.Errorf("GetFormattedCounterArrayDouble reports buffer too small (%d), but buffer is large enough (%d): %w", uint32(len(buf)), bytesNeeded, NewPdhError(ret))
-						}
+	var itemCount uint32
 
-						buf = make([]byte, bytesNeeded)
-					}
+	// Get the info with the current buffer size
+	bytesNeeded := uint32(len(*buf))
 
-					items = unsafe.Slice((*FmtCounterValueItemDouble)(unsafe.Pointer(unsafe.SliceData(buf))), itemCount)
+	for {
+		ret := getArray(instance, &bytesNeeded, &itemCount, unsafe.SliceData(*buf))
 
-					for _, item := range items {
-						if item.FmtValue.CStatus != CstatusValidData && item.FmtValue.CStatus != CstatusNewData {
-							continue
-						}
+		if ret == ErrorSuccess {
+			return itemCount, true, nil
+		}
 
-						instanceName := decodeInstanceName(nameCache, item.SzName)
+		if err := NewPdhError(ret); ret != MoreData {
+			if isKnownCounterDataError(err) {
+				return 0, false, nil
+			}
 
-						if strings.HasSuffix(instanceName, InstanceTotal) && !c.totalCounterRequested {
-							continue
-						}
+			return 0, false, fmt.Errorf("%s: %w", name, err)
+		}
 
-						if instanceName == "" || instanceName == "*" {
-							instanceName = InstanceEmpty
-						}
+		if bytesNeeded <= uint32(len(*buf)) {
+			return 0, false, fmt.Errorf("%s reports buffer too small (%d), but buffer is large enough (%d): %w", name, uint32(len(*buf)), bytesNeeded, NewPdhError(ret))
+		}
 
-						var (
-							index int
-							ok    bool
-						)
+		*buf = make([]byte, bytesNeeded)
+	}
+}
 
-						if index, ok = indexMap[instanceName]; !ok {
-							index = len(*dst)
-							indexMap[instanceName] = index
+// setRawValue stores the value of a raw counter item in row. It returns false
+// if the value cannot be computed.
+func (c *Collector[T]) setRawValue(row *T, counter *Counter, value RawCounter) bool {
+	// This is a workaround for the issue with the elapsed time counter type.
+	// Source: https://github.com/prometheus-community/windows_exporter/pull/335/files#diff-d5d2528f559ba2648c2866aec34b1eaa5c094dedb52bd0ff22aa5eb83226bd8dR76-R83
+	// Ref: https://learn.microsoft.com/en-us/windows/win32/perfctrs/calculating-counter-values
+	switch counter.Type {
+	case PERF_ELAPSED_TIME:
+		// A zero frequency would divide by zero.
+		if counter.Frequency <= 0 {
+			return false
+		}
 
-							*dst = append(*dst, c.rows.newRow(instanceName, prometheus.GaugeValue))
-						}
+		if counter.FieldIndexValue != -1 {
+			c.rows.setValue(row, counter.FieldIndexValue, float64(value.SecondValue-value.FirstValue)/float64(counter.Frequency))
+		}
+	case PERF_100NSEC_TIMER, PERF_PRECISION_100NS_TIMER:
+		if counter.FieldIndexValue != -1 {
+			c.rows.setValue(row, counter.FieldIndexValue, float64(value.FirstValue)*TicksToSecondScaleFactor)
+		}
+	default:
+		if counter.FieldIndexSecondValue != -1 {
+			c.rows.setValue(row, counter.FieldIndexSecondValue, float64(value.SecondValue))
+		}
 
-						if counter.FieldIndexValue != -1 {
-							c.rows.setValue(&(*dst)[index], counter.FieldIndexValue, item.FmtValue.DoubleValue)
-						}
-					}
+		if counter.FieldIndexValue != -1 {
+			c.rows.setValue(row, counter.FieldIndexValue, float64(value.FirstValue))
+		}
+	}
+
+	return true
+}
+
+// rowSet appends one row per instance to dst and tracks which counters have
+// a valid value for each row.
+type rowSet[T any] struct {
+	c         *Collector[T]
+	dst       *[]T
+	index     map[string]int
+	nameCache map[string]string
+	// valid has len(c.counters) entries per row.
+	valid []bool
+}
+
+// row returns the index of the row for the instance named by szName,
+// appending the row if needed. ok is false if the item has no valid data or
+// its instance is not collected.
+func (r *rowSet[T]) row(counter *Counter, szName *uint16, status uint32) (int, bool) {
+	if status != CstatusValidData && status != CstatusNewData {
+		r.c.logger.Debug("skipping counter item with invalid data status",
+			slog.String("counter", counter.Name),
+			slog.String("instance", windows.UTF16PtrToString(szName)),
+			slog.Uint64("status", uint64(status)),
+		)
+
+		return 0, false
+	}
+
+	instanceName := decodeInstanceName(r.nameCache, szName)
+
+	if strings.HasSuffix(instanceName, InstanceTotal) && !r.c.totalCounterRequested {
+		return 0, false
+	}
+
+	if instanceName == "" || instanceName == "*" {
+		instanceName = InstanceEmpty
+	}
+
+	if index, ok := r.index[instanceName]; ok {
+		return index, true
+	}
+
+	index := len(*r.dst)
+	r.index[instanceName] = index
+
+	*r.dst = append(*r.dst, r.c.rows.newRow(instanceName))
+
+	n := len(r.c.counters)
+	r.valid = slices.Grow(r.valid, n)[:len(r.valid)+n]
+	clear(r.valid[len(r.valid)-n:])
+
+	return index, true
+}
+
+func (r *rowSet[T]) setValid(row, counterIndex int) {
+	r.valid[row*len(r.c.counters)+counterIndex] = true
+}
+
+// addRawItems stores the values of the raw counter items in buf.
+func (r *rowSet[T]) addRawItems(counterIndex int, buf []byte, itemCount uint32) {
+	counter := &r.c.counters[counterIndex]
+	items := unsafe.Slice((*RawCounterItem)(unsafe.Pointer(unsafe.SliceData(buf))), itemCount)
+
+	for _, item := range items {
+		row, ok := r.row(counter, item.SzName, item.RawValue.CStatus)
+		if ok && r.c.setRawValue(&(*r.dst)[row], counter, item.RawValue) {
+			r.setValid(row, counterIndex)
+		}
+	}
+}
+
+// addFormattedItems stores the values of the formatted counter items in buf.
+func (r *rowSet[T]) addFormattedItems(counterIndex int, buf []byte, itemCount uint32) {
+	counter := &r.c.counters[counterIndex]
+	items := unsafe.Slice((*FmtCounterValueItemDouble)(unsafe.Pointer(unsafe.SliceData(buf))), itemCount)
+
+	for _, item := range items {
+		row, ok := r.row(counter, item.SzName, item.FmtValue.CStatus)
+		if !ok {
+			continue
+		}
+
+		if counter.FieldIndexValue != -1 {
+			r.c.rows.setValue(&(*r.dst)[row], counter.FieldIndexValue, item.FmtValue.DoubleValue)
+		}
+
+		r.setValid(row, counterIndex)
+	}
+}
+
+// finish handles rows that lack a valid value for some counter. Counters
+// without any instance, e.g. those skipped by perfdata_min_build, are not
+// required. Without partial rows, such rows are removed. Otherwise, the
+// missing values are set to NaN.
+func (r *rowSet[T]) finish() {
+	rows := *r.dst
+	n := len(r.c.counters)
+	kept := 0
+
+	for row := range rows {
+		complete := true
+
+		for counterIndex := range r.c.counters {
+			counter := &r.c.counters[counterIndex]
+
+			if len(counter.Instances) == 0 || r.valid[row*n+counterIndex] {
+				continue
+			}
+
+			complete = false
+
+			if !r.c.partialRows {
+				break
+			}
+
+			for _, field := range []int{counter.FieldIndexValue, counter.FieldIndexSecondValue} {
+				if field != -1 {
+					r.c.rows.setValue(&rows[row], field, math.NaN())
 				}
 			}
+		}
 
-			if len(*dst) == 0 {
-				return ErrNoData
-			}
+		if !complete && !r.c.partialRows {
+			continue
+		}
 
-			return nil
-		})()
-
-		c.errorCh <- err
+		rows[kept] = rows[row]
+		kept++
 	}
+
+	if dropped := len(rows) - kept; dropped > 0 {
+		r.c.logger.Debug("omitting instances without a valid value for every counter",
+			slog.String("object", r.c.object),
+			slog.Int("instances", dropped),
+		)
+
+		clear(rows[kept:])
+		*r.dst = rows[:kept]
+	}
+}
+
+// panicError logs a panic recovered in the collect worker and returns it as an
+// error. The worker goroutine has no other recovery, so a panic would end the process.
+func (c *Collector[T]) panicError(r any) error {
+	c.logger.Error("recovered from panic while collecting performance counters",
+		slog.String("object", c.object),
+		slog.Any("panic", r),
+		slog.String("stack", string(debug.Stack())),
+	)
+
+	return fmt.Errorf("panic while collecting performance counters of %s: %v", c.object, r)
 }
 
 func (c *Collector[T]) Close() {
@@ -604,7 +710,9 @@ func (c *Collector[T]) Close() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	CloseQuery(c.handle)
+	if c.handle != 0 {
+		CloseQuery(c.handle)
+	}
 
 	c.handle = 0
 
