@@ -18,10 +18,14 @@
 package pdh
 
 import (
+	"fmt"
 	"log/slog"
 	"math"
 	"reflect"
+	"runtime"
+	"slices"
 	"testing"
+	"unsafe"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/require"
@@ -117,6 +121,229 @@ func TestRowSetPartialRows(t *testing.T) {
 	require.True(t, math.IsNaN(rows[1].B), "B: %v", rows[1].B)
 	require.True(t, math.IsNaN(rows[1].BSecond), "BSecond: %v", rows[1].BSecond)
 	require.Zero(t, rows[1].Optional)
+}
+
+func TestRowSetDuplicateInstances(t *testing.T) {
+	t.Parallel()
+
+	nan := math.NaN()
+
+	for _, tc := range []struct {
+		name        string
+		names       []string
+		secondNames []string
+		a           []float64
+		b           []float64
+		repeatArray bool
+		want        []rowSetValues
+	}{
+		{
+			name:  "duplicates",
+			names: []string{"A", "A", "A"},
+			a:     []float64{1, 2, 3},
+			b:     []float64{10, 20, 30},
+			want: []rowSetValues{
+				{Name: "A", A: 1, B: 10},
+				{Name: "A#1", A: 2, B: 20},
+				{Name: "A#2", A: 3, B: 30},
+			},
+		},
+		{
+			name:        "interleaved_names",
+			names:       []string{"A", "B", "A"},
+			secondNames: []string{"B", "A", "A"},
+			a:           []float64{1, 2, 3},
+			b:           []float64{20, 10, 30},
+			want: []rowSetValues{
+				{Name: "A", A: 1, B: 10},
+				{Name: "B", A: 2, B: 20},
+				{Name: "A#1", A: 3, B: 30},
+			},
+		},
+		{
+			name:        "literal_suffix",
+			names:       []string{"A", "A", "A#1"},
+			secondNames: []string{"A#1", "A", "A"},
+			a:           []float64{1, 2, 3},
+			b:           []float64{30, 10, 20},
+			want: []rowSetValues{
+				{Name: "A", A: 1, B: 10},
+				{Name: "A#2", A: 2, B: 20},
+				{Name: "A#1", A: 3, B: 30},
+			},
+		},
+		{
+			name:  "invalid_middle_item",
+			names: []string{"A", "A", "A"},
+			a:     []float64{1, nan, 3},
+			b:     []float64{10, 20, 30},
+			want: []rowSetValues{
+				{Name: "A", A: 1, B: 10},
+				{Name: "A#1", A: nan, B: 20},
+				{Name: "A#2", A: 3, B: 30},
+			},
+		},
+		{
+			name:  "invalid_first_item",
+			names: []string{"A", "A", "A"},
+			a:     []float64{1, 2, 3},
+			b:     []float64{nan, 20, 30},
+			want: []rowSetValues{
+				{Name: "A", A: 1, B: nan},
+				{Name: "A#1", A: 2, B: 20},
+				{Name: "A#2", A: 3, B: 30},
+			},
+		},
+		{
+			name:  "invalid_literal_suffix",
+			names: []string{"A", "A", "A#1"},
+			a:     []float64{1, 2, nan},
+			b:     []float64{10, 20, nan},
+			want: []rowSetValues{
+				{Name: "A", A: 1, B: 10},
+				{Name: "A#2", A: 2, B: 20},
+			},
+		},
+		{
+			name:        "overlapping_counter_arrays",
+			names:       []string{"A", "A"},
+			a:           []float64{1, 2},
+			b:           []float64{10, 20},
+			repeatArray: true,
+			want: []rowSetValues{
+				{Name: "A", A: 1, B: 10},
+				{Name: "A#1", A: 2, B: 20},
+			},
+		},
+	} {
+		for _, resultType := range []CounterType{CounterTypeRaw, CounterTypeFormatted} {
+			for _, partialRows := range []bool{false, true} {
+				t.Run(fmt.Sprintf("%s/%s/partial=%t", tc.name, resultType, partialRows), func(t *testing.T) {
+					t.Parallel()
+
+					c := newRowSetTestCollector(partialRows)
+					c.counters[1].FieldIndexSecondValue = -1
+
+					var dst []rowSetValues
+
+					rows := rowSet[rowSetValues]{
+						c:         c,
+						dst:       &dst,
+						index:     map[string]int{},
+						nameCache: map[string]string{},
+					}
+
+					addDuplicateTestItems(
+						&rows,
+						resultType,
+						0,
+						tc.names,
+						tc.a,
+					)
+
+					if tc.repeatArray {
+						addDuplicateTestItems(
+							&rows,
+							resultType,
+							0,
+							tc.names,
+							tc.a,
+						)
+					}
+
+					secondNames := tc.secondNames
+					if secondNames == nil {
+						secondNames = tc.names
+					}
+
+					addDuplicateTestItems(
+						&rows,
+						resultType,
+						1,
+						secondNames,
+						tc.b,
+					)
+					rows.finish()
+
+					want := slices.DeleteFunc(slices.Clone(tc.want), func(row rowSetValues) bool {
+						return !partialRows && (math.IsNaN(row.A) || math.IsNaN(row.B))
+					})
+					require.Len(t, dst, len(want))
+
+					for _, expected := range want {
+						i := slices.IndexFunc(dst, func(row rowSetValues) bool { return row.Name == expected.Name })
+						require.NotEqual(t, -1, i, "missing instance %s", expected.Name)
+
+						for field, value := range map[string]float64{"A": expected.A, "B": expected.B} {
+							got := reflect.ValueOf(dst[i]).FieldByName(field).Float()
+							if math.IsNaN(value) {
+								require.True(t, math.IsNaN(got), "%s/%s: %v", expected.Name, field, got)
+
+								continue
+							}
+
+							require.InDelta(t, value, got, 0, "%s/%s", expected.Name, field)
+						}
+					}
+				})
+			}
+		}
+	}
+}
+
+// addDuplicateTestItems supplies counter arrays without querying PDH. NaN marks an invalid item.
+func addDuplicateTestItems(
+	rows *rowSet[rowSetValues],
+	resultType CounterType,
+	counterIndex int,
+	names []string,
+	values []float64,
+) {
+	if resultType == CounterTypeRaw {
+		items := make([]RawCounterItem, len(names))
+		for i, name := range names {
+			status := CstatusValidData
+			if math.IsNaN(values[i]) {
+				status = CstatusInvalidData
+			}
+
+			items[i] = RawCounterItem{
+				SzName: windows.StringToUTF16Ptr(name),
+				RawValue: RawCounter{
+					CStatus:    status,
+					FirstValue: int64(values[i]),
+				},
+			}
+		}
+
+		itemSize := int(unsafe.Sizeof(RawCounterItem{}))
+		buf := unsafe.Slice((*byte)(unsafe.Pointer(unsafe.SliceData(items))), len(items)*itemSize)
+		rows.addRawItems(counterIndex, buf, uint32(len(items)))
+		runtime.KeepAlive(items)
+
+		return
+	}
+
+	items := make([]FmtCounterValueItemDouble, len(names))
+	for i, name := range names {
+		status := CstatusNewData
+		if math.IsNaN(values[i]) {
+			status = CstatusInvalidData
+		}
+
+		items[i] = FmtCounterValueItemDouble{
+			SzName: windows.StringToUTF16Ptr(name),
+			FmtValue: FmtCounterValueDouble{
+				CStatus:     status,
+				DoubleValue: values[i],
+			},
+		}
+	}
+
+	itemSize := int(unsafe.Sizeof(FmtCounterValueItemDouble{}))
+	buf := unsafe.Slice((*byte)(unsafe.Pointer(unsafe.SliceData(items))), len(items)*itemSize)
+	rows.addFormattedItems(counterIndex, buf, uint32(len(items)))
+	runtime.KeepAlive(items)
 }
 
 func TestSetRawValueElapsedTime(t *testing.T) {
