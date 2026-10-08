@@ -18,20 +18,19 @@
 package file
 
 import (
-	"errors"
 	"fmt"
 	"io/fs"
 	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/bmatcuk/doublestar/v4"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/utils/recovery"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -139,32 +138,19 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error {
-	wg := sync.WaitGroup{}
-	errCh := make(chan error, len(c.config.FilePatterns))
+	var g recovery.Group
 
 	for _, filePattern := range c.config.FilePatterns {
-		wg.Add(1)
-
-		go func(filePattern string) {
-			defer wg.Done()
-
+		g.Go(func() error {
 			if err := c.collectGlobFilePath(ch, filePattern); err != nil {
-				errCh <- fmt.Errorf("failed collecting metrics for file pattern %s: %w", filePattern, err)
+				return fmt.Errorf("failed collecting metrics for file pattern %s: %w", filePattern, err)
 			}
-		}(filePattern)
+
+			return nil
+		})
 	}
 
-	wg.Wait()
-
-	close(errCh)
-
-	errs := make([]error, 0, len(c.config.FilePatterns))
-
-	for err := range errCh {
-		errs = append(errs, err)
-	}
-
-	return errors.Join(errs...)
+	return g.Wait()
 }
 
 func (c *Collector) collectGlobFilePath(ch chan<- prometheus.Metric, filePattern string) error {

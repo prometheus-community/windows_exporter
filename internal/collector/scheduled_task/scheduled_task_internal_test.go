@@ -18,6 +18,7 @@
 package scheduled_task
 
 import (
+	"log/slog"
 	"regexp"
 	"testing"
 
@@ -274,7 +275,7 @@ func gatherTaskMetrics(t *testing.T, config *Config, tasks ScheduledTasks) map[s
 	t.Helper()
 
 	c := New(config)
-	require.NoError(t, c.Build(nil, nil))
+	require.NoError(t, c.Build(slog.New(slog.DiscardHandler), nil))
 
 	registry := prometheus.NewPedanticRegistry()
 	require.NoError(t, registry.Register(taskMetricCollector{collector: c, tasks: tasks}))

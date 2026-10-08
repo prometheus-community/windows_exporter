@@ -153,6 +153,16 @@ func (c *Collector) Close() error {
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	c.logger = logger.With(slog.String("collector", Name))
 
+	subCollectors := []string{subCollectorServerMetrics, subCollectorScopeMetrics}
+
+	for _, collector := range c.config.CollectorsEnabled {
+		if !slices.Contains(subCollectors, collector) {
+			return fmt.Errorf("unknown sub collector: %s. Possible values: %s", collector,
+				strings.Join(subCollectors, ", "),
+			)
+		}
+	}
+
 	var err error
 
 	if slices.Contains(c.config.CollectorsEnabled, subCollectorScopeMetrics) {

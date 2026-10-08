@@ -121,15 +121,19 @@ func (c *Collector) GetName() string {
 }
 
 func (c *Collector) Close() error {
-	err := wtsapi32.WTSCloseServer(c.hServer)
-	if err != nil {
-		return fmt.Errorf("failed to close WTS server: %w", err)
+	c.perfDataCollectorTerminalServicesSession.Close()
+	c.perfDataCollectorBroker.Close()
+
+	// hServer is 0 if Build failed before opening the server.
+	if c.hServer == 0 || c.hServer == windows.InvalidHandle {
+		return nil
 	}
 
-	c.perfDataCollectorTerminalServicesSession.Close()
+	err := wtsapi32.WTSCloseServer(c.hServer)
+	c.hServer = 0
 
-	if c.connectionBrokerEnabled {
-		c.perfDataCollectorBroker.Close()
+	if err != nil {
+		return fmt.Errorf("failed to close WTS server: %w", err)
 	}
 
 	return nil

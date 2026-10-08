@@ -49,6 +49,7 @@ var ConfigDefaults = Config{
 
 type Collector struct {
 	config Config
+	logger *slog.Logger
 
 	lastResult       *prometheus.Desc
 	lastResultStatus *prometheus.Desc
@@ -161,7 +162,9 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(_ *slog.Logger, _ *mi.Session) error {
+func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
+	c.logger = logger.With(slog.String("collector", Name))
+
 	c.lastResult = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "last_result"),
 		"DEPRECATED: use windows_scheduled_task_last_result_status. "+
@@ -209,7 +212,12 @@ var TASK_RESULT_STATUSES = []string{
 
 func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	scheduledTasks, err := getScheduledTasks()
-	if err != nil {
+	if errors.Is(err, errTasksSkipped) {
+		// Tasks and folders that can't be read are skipped, the other tasks are still collected.
+		c.logger.Warn("failed to read some scheduled tasks",
+			slog.Any("err", err),
+		)
+	} else if err != nil {
 		return fmt.Errorf("get scheduled tasks: %w", err)
 	}
 
@@ -297,6 +305,9 @@ var taskSchedulerCLSID = ole.GUID{
 // S_FALSE is returned by CoInitialize if it was already called on this thread.
 const S_FALSE = 0x00000001
 
+// errTasksSkipped is returned with the readable tasks if some tasks or folders could not be read.
+var errTasksSkipped = errors.New("tasks skipped")
+
 func getScheduledTasks() (ScheduledTasks, error) {
 	var scheduledTasks ScheduledTasks
 
@@ -322,14 +333,17 @@ func getScheduledTasks() (ScheduledTasks, error) {
 	}
 	defer taskSchedulerObj.Release()
 
-	taskServiceObj := taskSchedulerObj.MustQueryInterface(ole.IID_IDispatch)
+	taskServiceObj, err := taskSchedulerObj.QueryInterface(ole.IID_IDispatch)
+	if err != nil {
+		return scheduledTasks, fmt.Errorf("IID_IDispatch: %w", err)
+	}
+
+	defer taskServiceObj.Release()
 
 	_, err = oleutil.CallMethod(taskServiceObj, "Connect")
 	if err != nil {
 		return scheduledTasks, err
 	}
-
-	defer taskServiceObj.Release()
 
 	res, err := oleutil.CallMethod(taskServiceObj, "GetFolder", `\`)
 	if err != nil {
@@ -339,19 +353,25 @@ func getScheduledTasks() (ScheduledTasks, error) {
 	rootFolderObj := res.ToIDispatch()
 	defer rootFolderObj.Release()
 
-	err = fetchTasksRecursively(rootFolderObj, &scheduledTasks)
+	if err = fetchTasksRecursively(rootFolderObj, `\`, &scheduledTasks); err != nil {
+		return scheduledTasks, fmt.Errorf("%w: %w", errTasksSkipped, err)
+	}
 
-	return scheduledTasks, err
+	return scheduledTasks, nil
 }
 
+// fetchTasksInFolder appends the tasks of folder to scheduledTasks.
+// A task that can't be read is skipped and its error is returned after all other tasks are read.
 func fetchTasksInFolder(folder *ole.IDispatch, scheduledTasks *ScheduledTasks) error {
 	res, err := oleutil.CallMethod(folder, "GetTasks", 1)
 	if err != nil {
-		return err
+		return fmt.Errorf("get tasks: %w", err)
 	}
 
 	tasks := res.ToIDispatch()
 	defer tasks.Release()
+
+	errs := make([]error, 0)
 
 	err = oleutil.ForEach(tasks, func(v *ole.VARIANT) error {
 		task := v.ToIDispatch()
@@ -359,25 +379,35 @@ func fetchTasksInFolder(folder *ole.IDispatch, scheduledTasks *ScheduledTasks) e
 
 		parsedTask, err := parseTask(task)
 		if err != nil {
-			return err
+			errs = append(errs, fmt.Errorf("parse task: %w", err))
+
+			return nil
 		}
 
 		*scheduledTasks = append(*scheduledTasks, parsedTask)
 
 		return nil
 	})
+	if err != nil {
+		errs = append(errs, fmt.Errorf("enumerate tasks: %w", err))
+	}
 
-	return err
+	return errors.Join(errs...)
 }
 
-func fetchTasksRecursively(folder *ole.IDispatch, scheduledTasks *ScheduledTasks) error {
+// fetchTasksRecursively appends the tasks of folder and its sub folders to scheduledTasks.
+// A folder or task that can't be read is skipped and its error is returned after all other
+// folders are read.
+func fetchTasksRecursively(folder *ole.IDispatch, folderPath string, scheduledTasks *ScheduledTasks) error {
+	errs := make([]error, 0)
+
 	if err := fetchTasksInFolder(folder, scheduledTasks); err != nil {
-		return err
+		errs = append(errs, fmt.Errorf("folder %s: %w", folderPath, err))
 	}
 
 	res, err := oleutil.CallMethod(folder, "GetFolders", 1)
 	if err != nil {
-		return err
+		return errors.Join(append(errs, fmt.Errorf("folder %s: get sub folders: %w", folderPath, err))...)
 	}
 
 	subFolders := res.ToIDispatch()
@@ -387,10 +417,24 @@ func fetchTasksRecursively(folder *ole.IDispatch, scheduledTasks *ScheduledTasks
 		subFolder := v.ToIDispatch()
 		defer subFolder.Release()
 
-		return fetchTasksRecursively(subFolder, scheduledTasks)
-	})
+		subFolderPath := folderPath
 
-	return err
+		if pathVar, err := oleutil.GetProperty(subFolder, "Path"); err == nil {
+			subFolderPath = pathVar.ToString()
+			_ = pathVar.Clear()
+		}
+
+		if err := fetchTasksRecursively(subFolder, subFolderPath, scheduledTasks); err != nil {
+			errs = append(errs, err)
+		}
+
+		return nil
+	})
+	if err != nil {
+		errs = append(errs, fmt.Errorf("folder %s: enumerate sub folders: %w", folderPath, err))
+	}
+
+	return errors.Join(errs...)
 }
 
 func parseTask(task *ole.IDispatch) (ScheduledTask, error) {

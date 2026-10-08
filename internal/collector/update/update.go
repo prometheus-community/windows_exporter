@@ -33,6 +33,7 @@ import (
 	"github.com/go-ole/go-ole/oleutil"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
+	"github.com/prometheus-community/windows_exporter/internal/utils/recovery"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -111,7 +112,10 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 }
 
 func (c *Collector) Close() error {
-	c.ctxCancelFn()
+	if c.ctxCancelFn != nil {
+		c.ctxCancelFn()
+		c.ctxCancelFn = nil
+	}
 
 	return nil
 }
@@ -151,8 +155,27 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
+	// scheduleUpdateStatus sends exactly one value to initErrCh, nil after a successful initialization.
 	initErrCh := make(chan error, 1)
-	go c.scheduleUpdateStatus(ctx, logger, initErrCh, c.config.Online)
+
+	go func() {
+		err := recovery.Run(func() error {
+			c.scheduleUpdateStatus(ctx, logger, initErrCh, c.config.Online)
+
+			return nil
+		})
+		if err != nil {
+			logger.Error("Windows Update worker stopped",
+				slog.Any("err", err),
+			)
+
+			// Unblock Build if the panic happened during the initialization.
+			select {
+			case initErrCh <- err:
+			default:
+			}
+		}
+	}()
 
 	c.ctxCancelFn = cancel
 
@@ -248,8 +271,8 @@ func (c *Collector) scheduleUpdateStatus(ctx context.Context, logger *slog.Logge
 		return
 	}
 
+	// ush shares the reference of us, which is released by us.Clear().
 	ush := us.ToIDispatch()
-	defer ush.Release()
 
 	_, err = oleutil.PutProperty(ush, "Online", online)
 	if err != nil {
@@ -272,15 +295,19 @@ func (c *Collector) scheduleUpdateStatus(ctx context.Context, logger *slog.Logge
 		return
 	}
 
-	close(initErrCh)
-
-	usd := us.ToIDispatch()
-	defer usd.Release()
+	initErrCh <- nil
 
 	var metricsBuf []prometheus.Metric
 
 	for {
-		metricsBuf, err = c.fetchUpdates(logger, usd)
+		// A panic in a single search must not stop the worker.
+		err = recovery.Run(func() error {
+			var err error
+
+			metricsBuf, err = c.fetchUpdates(logger, ush)
+
+			return err
+		})
 		if err != nil {
 			logger.ErrorContext(ctx, "failed to fetch updates",
 				slog.Any("err", err),
@@ -405,6 +432,8 @@ func (c *Collector) getUpdateStatus(updd *ole.IDispatch, item int) (windowsUpdat
 		return windowsUpdate{}, fmt.Errorf("get MsrcSeverity: %w", err)
 	}
 
+	defer clearVariant(severity)
+
 	categoriesRaw, err := oleutil.GetProperty(updateItem, "Categories")
 	if err != nil {
 		return windowsUpdate{}, fmt.Errorf("get Categories: %w", err)
@@ -423,6 +452,8 @@ func (c *Collector) getUpdateStatus(updd *ole.IDispatch, item int) (windowsUpdat
 		return windowsUpdate{}, fmt.Errorf("get Title: %w", err)
 	}
 
+	defer clearVariant(title)
+
 	// Get the Identity object
 	identityVariant, err := oleutil.GetProperty(updateItem, "Identity")
 	if err != nil {
@@ -437,6 +468,8 @@ func (c *Collector) getUpdateStatus(updd *ole.IDispatch, item int) (windowsUpdat
 	if err != nil {
 		return windowsUpdate{}, fmt.Errorf("get UpdateID: %w", err)
 	}
+
+	defer clearVariant(updateIDVariant)
 
 	revisionVariant, err := oleutil.GetProperty(identity, "RevisionNumber")
 	if err != nil {
@@ -493,6 +526,8 @@ func getUpdateCategory(categories *ole.IDispatch) (string, error) {
 				return fmt.Errorf("get Category item Name: %w", err)
 			}
 
+			defer clearVariant(categoryNameRaw)
+
 			orderRaw, err := oleutil.GetProperty(category, "Order")
 			if err != nil {
 				return fmt.Errorf("get Category item Order: %w", err)
@@ -511,4 +546,12 @@ func getUpdateCategory(categories *ole.IDispatch) (string, error) {
 	}
 
 	return categoryName, nil
+}
+
+// clearVariant frees the value of a VARIANT, for example a BSTR.
+// Values must be copied, e.g. with [ole.VARIANT.ToString], before.
+func clearVariant(v *ole.VARIANT) {
+	if v != nil {
+		_ = v.Clear()
+	}
 }

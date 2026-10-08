@@ -21,13 +21,14 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"sort"
+	"maps"
+	"slices"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
+	"github.com/prometheus-community/windows_exporter/internal/utils/recovery"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -140,6 +141,10 @@ func New(config *Config) *Collector {
 		config = &ConfigDefaults
 	}
 
+	if config.CollectorsEnabled == nil {
+		config.CollectorsEnabled = ConfigDefaults.CollectorsEnabled
+	}
+
 	c := &Collector{
 		config: *config,
 	}
@@ -229,14 +234,19 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 		},
 	}
 
+	// Sort a copy, to not modify the slice of the caller or ConfigDefaults.
 	// Result must order, to prevent test failures.
-	sort.Strings(c.config.CollectorsEnabled)
+	collectorsEnabled := slices.Compact(slices.Sorted(slices.Values(c.config.CollectorsEnabled)))
 
-	for _, name := range c.config.CollectorsEnabled {
+	for _, name := range collectorsEnabled {
 		if _, ok := subCollectors[name]; !ok {
-			return fmt.Errorf("unknown collector: %s", name)
+			return fmt.Errorf("unknown sub collector: %s. Possible values: %s", name,
+				strings.Join(slices.Sorted(maps.Keys(subCollectors)), ", "),
+			)
 		}
+	}
 
+	for _, name := range collectorsEnabled {
 		subCollectors[name].build()
 
 		c.collectorFns = append(c.collectorFns, subCollectors[name].collect)
@@ -248,30 +258,13 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *Collector) Collect(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) error {
-	errCh := make(chan error, len(c.collectorFns))
-	errs := make([]error, 0, len(c.collectorFns))
-
-	wg := sync.WaitGroup{}
+	var g recovery.Group
 
 	for _, fn := range c.collectorFns {
-		wg.Add(1)
-
-		go func(fn func(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) error) {
-			defer wg.Done()
-
-			if err := fn(ch, maxScrapeDuration); err != nil {
-				errCh <- err
-			}
-		}(fn)
+		g.Go(func() error {
+			return fn(ch, maxScrapeDuration)
+		})
 	}
 
-	wg.Wait()
-
-	close(errCh)
-
-	for err := range errCh {
-		errs = append(errs, err)
-	}
-
-	return errors.Join(errs...)
+	return g.Wait()
 }

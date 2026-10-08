@@ -123,32 +123,50 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 // Given a slice of metric families, determine if any two entries are duplicates.
 // Duplicates will be detected where the metric name, labels and label values are identical.
+// Labels with an empty value are ignored, because convertMetricFamily adds missing labels
+// with an empty value, and Prometheus treats them as absent.
 func duplicateMetricEntry(metricFamilies []*dto.MetricFamily) bool {
-	uniqueMetrics := make(map[string]map[string]string)
+	seen := make(map[string]struct{})
 
 	for _, metricFamily := range metricFamilies {
-		metricName := metricFamily.GetName()
-
 		for _, metric := range metricFamily.GetMetric() {
-			metricLabels := metric.GetLabel()
-			labels := make(map[string]string)
+			key := seriesKey(metricFamily.GetName(), metric.GetLabel())
 
-			for _, label := range metricLabels {
-				labels[label.GetName()] = label.GetValue()
-			}
-			// Check if key is present before appending
-			_, mapContainsKey := uniqueMetrics[metricName]
-
-			// Duplicate metric found with identical labels & label values
-			if mapContainsKey && maps.Equal(uniqueMetrics[metricName], labels) {
+			if _, ok := seen[key]; ok {
 				return true
 			}
 
-			uniqueMetrics[metricName] = labels
+			seen[key] = struct{}{}
 		}
 	}
 
 	return false
+}
+
+// seriesKey returns a key that identifies a series by its metric name and its non-empty labels,
+// independent of the label order.
+func seriesKey(metricName string, labelPairs []*dto.LabelPair) string {
+	labels := make(map[string]string, len(labelPairs))
+
+	for _, label := range labelPairs {
+		if label.GetValue() != "" {
+			labels[label.GetName()] = label.GetValue()
+		}
+	}
+
+	var sb strings.Builder
+
+	sb.WriteString(metricName)
+
+	// The separator byte is not valid UTF-8, so it can't be part of a label name or value.
+	for _, name := range slices.Sorted(maps.Keys(labels)) {
+		sb.WriteByte(model.SeparatorByte)
+		sb.WriteString(name)
+		sb.WriteByte(model.SeparatorByte)
+		sb.WriteString(labels[name])
+	}
+
+	return sb.String()
 }
 
 func (c *Collector) convertMetricFamily(logger *slog.Logger, metricFamily *dto.MetricFamily, ch chan<- prometheus.Metric) {

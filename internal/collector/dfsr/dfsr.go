@@ -163,6 +163,16 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 	logger.Info("dfsr collector is in an experimental state! Metrics for this collector have not been tested.")
 
+	subCollectors := []string{"connection", "folder", "volume"}
+
+	for _, collector := range c.config.CollectorsEnabled {
+		if !slices.Contains(subCollectors, collector) {
+			return fmt.Errorf("unknown sub collector: %s. Possible values: %s", collector,
+				strings.Join(subCollectors, ", "),
+			)
+		}
+	}
+
 	// connection
 	c.connectionBandwidthSavingsUsingDFSReplicationTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "connection_bandwidth_savings_using_dfs_replication_bytes_total"),

@@ -129,6 +129,16 @@ func (c *Collector) Close() error {
 }
 
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
+	subCollectors := []string{subCollectorMetrics, subCollectorConnectionsState}
+
+	for _, collector := range c.config.CollectorsEnabled {
+		if !slices.Contains(subCollectors, collector) {
+			return fmt.Errorf("unknown sub collector: %s. Possible values: %s", collector,
+				strings.Join(subCollectors, ", "),
+			)
+		}
+	}
+
 	labels := []string{"af"}
 
 	c.connectionFailures = prometheus.NewDesc(

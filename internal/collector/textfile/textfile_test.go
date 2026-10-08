@@ -179,3 +179,66 @@ func TestDuplicateMetricEntry(t *testing.T) {
 		t.Errorf("Unexpected duplicate found in differentValues")
 	}
 }
+
+func TestDuplicateMetricEntryAnyPosition(t *testing.T) {
+	t.Parallel()
+
+	type pair [2]string
+
+	metric := func(labels ...pair) *dto.Metric {
+		m := &dto.Metric{}
+
+		for _, label := range labels {
+			m.Label = append(m.Label, &dto.LabelPair{Name: &label[0], Value: &label[1]})
+		}
+
+		return m
+	}
+
+	family := func(name string, metrics ...*dto.Metric) *dto.MetricFamily {
+		return &dto.MetricFamily{Name: &name, Metric: metrics}
+	}
+
+	for _, tc := range []struct {
+		name      string
+		families  []*dto.MetricFamily
+		duplicate bool
+	}{
+		{
+			name:      "duplicate is not adjacent",
+			families:  []*dto.MetricFamily{family("m", metric(pair{"a", "1"}), metric(pair{"a", "2"}), metric(pair{"a", "1"}))},
+			duplicate: true,
+		},
+		{
+			name:      "duplicate in another family of the same name",
+			families:  []*dto.MetricFamily{family("m", metric(pair{"a", "1"}), metric(pair{"a", "2"})), family("m", metric(pair{"a", "1"}))},
+			duplicate: true,
+		},
+		{
+			name:      "different label order",
+			families:  []*dto.MetricFamily{family("m", metric(pair{"a", "1"}, pair{"b", "2"}), metric(pair{"b", "2"}, pair{"a", "1"}))},
+			duplicate: true,
+		},
+		{
+			name:      "empty label value is absent",
+			families:  []*dto.MetricFamily{family("m", metric(pair{"a", "1"}), metric(pair{"a", "1"}, pair{"b", ""}))},
+			duplicate: true,
+		},
+		{
+			name:     "same labels in different metrics",
+			families: []*dto.MetricFamily{family("m", metric(pair{"a", "1"})), family("n", metric(pair{"a", "1"}))},
+		},
+		{
+			name:     "label value shifted between labels",
+			families: []*dto.MetricFamily{family("m", metric(pair{"a", "1"}, pair{"b", "2"}), metric(pair{"a", "12"}, pair{"b", ""}))},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			if got := duplicateMetricEntry(tc.families); got != tc.duplicate {
+				t.Errorf("duplicateMetricEntry() = %t, want %t", got, tc.duplicate)
+			}
+		})
+	}
+}
