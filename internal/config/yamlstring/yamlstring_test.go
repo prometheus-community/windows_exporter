@@ -51,7 +51,7 @@ func TestDecodeBlock(t *testing.T) {
 		{name: "empty string", contents: `items: ""`},
 		{name: "null", contents: "items:\n"},
 		{name: "unknown key", contents: "itemz: |-\n  - name: a\n", errorText: "line 1: field itemz not found, the only field is items"},
-		{name: "unknown field", contents: "items: |-\n  - nam: a\n", errorText: "line 1: in items, line 1: field nam not found in type yamlstring_test.item"},
+		{name: "unknown field", contents: "items: |-\n  - invalid: a\n", errorText: "line 1: in items, line 1: field invalid not found in type yamlstring_test.item"},
 		{name: "list", contents: "items:\n  - name: a\n", errorText: "line 2: items must be a string"},
 		{name: "not a list", contents: "items: |-\n  name: a\n", errorText: "cannot unmarshal !!map into []yamlstring_test.item"},
 		{name: "not a mapping", contents: "[items]", errorText: "line 1: cannot unmarshal !!seq into a block with the key items"},
