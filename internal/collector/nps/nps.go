@@ -93,6 +93,9 @@ func (c *Collector) GetName() string {
 }
 
 func (c *Collector) Close() error {
+	c.accessPerfDataCollector.Close()
+	c.accountingPerfDataCollector.Close()
+
 	return nil
 }
 
