@@ -17,10 +17,7 @@
 
 package config
 
-import (
-	"fmt"
-	"strings"
-)
+import "fmt"
 
 // convertMap converts a map with any comparable key type to a map with string keys.
 func convertMap[K comparable, V any](originalMap map[K]V) map[string]V {
@@ -34,17 +31,18 @@ func convertMap[K comparable, V any](originalMap map[K]V) map[string]V {
 	return convertedMap
 }
 
-// flatten flattens a nested map, joining keys with dots.
-// e.g. {"a": {"b":"c"}} => {"a.b":"c"}
-func flatten(data map[string]any) map[string]string {
-	result := make(map[string]string)
+// flatten flattens a nested map, joining keys with dots. Each key maps to its
+// value, or to the elements of a list. Keys without a value are left out.
+// e.g. {"a": {"b":"c", "d":["e","f"]}} => {"a.b":["c"], "a.d":["e","f"]}
+func flatten(data map[string]any) map[string][]string {
+	result := make(map[string][]string)
 
 	flattenHelper("", data, result)
 
 	return result
 }
 
-func flattenHelper(prefix string, data map[string]any, result map[string]string) {
+func flattenHelper(prefix string, data map[string]any, result map[string][]string) {
 	for k, v := range data {
 		fullKey := k
 		if prefix != "" {
@@ -62,9 +60,11 @@ func flattenHelper(prefix string, data map[string]any, result map[string]string)
 				strSlice[i] = fmt.Sprint(elem)
 			}
 
-			result[fullKey] = strings.Join(strSlice, ",")
+			result[fullKey] = strSlice
+		case nil:
+			// A key without a value, like "file:", leaves the flag unchanged.
 		default:
-			result[fullKey] = fmt.Sprint(val)
+			result[fullKey] = []string{fmt.Sprint(val)}
 		}
 	}
 }
