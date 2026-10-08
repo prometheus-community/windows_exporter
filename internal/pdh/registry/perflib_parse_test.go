@@ -21,6 +21,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"testing"
+	"unsafe"
 
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/stretchr/testify/require"
@@ -202,12 +203,57 @@ func TestParsePerformanceDataLive(t *testing.T) {
 	require.NotEmpty(t, objects[0].CounterDefs)
 }
 
+// TestParsePerformanceDataNoAlias checks that the parsed objects do not
+// reference the buffer, which Collector.Collect reuses for the next query.
+func TestParsePerformanceDataNoAlias(t *testing.T) {
+	t.Parallel()
+
+	for _, buffer := range [][]byte{
+		newSyntheticPerfData(true).bytes(t),
+		livePerformanceData(t, "Process"),
+	} {
+		objects, err := parsePerformanceData(buffer, "")
+		require.NoError(t, err)
+
+		expected, err := parsePerformanceData(bytes.Clone(buffer), "")
+		require.NoError(t, err)
+
+		for i := range buffer {
+			buffer[i] = 0xFF
+		}
+
+		require.Equal(t, expected, objects)
+	}
+}
+
+func TestQueryRawDataReusesBuffer(t *testing.T) {
+	t.Parallel()
+
+	require.NoError(t, CounterNameTable.load())
+
+	query := MapCounterToIndex("Process")
+
+	buffer, err := queryRawData(query, nil)
+	require.NoError(t, err)
+
+	reused, err := queryRawData(query, buffer)
+	require.NoError(t, err)
+	require.Same(t, unsafe.SliceData(buffer), unsafe.SliceData(reused))
+
+	// A buffer below the initial size guess is not used.
+	small := make([]byte, 16)
+
+	buffer, err = queryRawData(query, small)
+	require.NoError(t, err)
+	require.NotSame(t, unsafe.SliceData(small), unsafe.SliceData(buffer))
+}
+
 func livePerformanceData(tb testing.TB, object string) []byte {
 	tb.Helper()
 
 	require.NoError(tb, CounterNameTable.load())
 
-	buffer, err := queryRawData(MapCounterToIndex(object))
+	buffer, err := queryRawData(MapCounterToIndex(object), nil)
 	require.NoError(tb, err)
 
 	return buffer

@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"sync"
 
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 )
@@ -32,6 +33,12 @@ type Collector[T any] struct {
 
 	counters       map[string]Counter
 	nameIndexValue int
+
+	// bufferMu guards buffer, the raw data buffer of the last query. A Collect
+	// takes it out for the duration of the query, so concurrent calls never
+	// share it; they allocate their own buffer instead.
+	bufferMu sync.Mutex
+	buffer   []byte
 }
 
 type Counter struct {
@@ -126,7 +133,20 @@ func (c *Collector[T]) Collect(dst *[]T) error {
 		return errors.New("dst must not be nil")
 	}
 
-	perfObjects, err := QueryPerformanceData(c.query, c.object)
+	c.bufferMu.Lock()
+	buffer := c.buffer
+	c.buffer = nil
+	c.bufferMu.Unlock()
+
+	perfObjects, buffer, err := queryPerformanceData(c.query, c.object, buffer)
+
+	// Keep the larger buffer if a concurrent call put one back in the meantime.
+	c.bufferMu.Lock()
+	if cap(buffer) > cap(c.buffer) {
+		c.buffer = buffer
+	}
+	c.bufferMu.Unlock()
+
 	if err != nil {
 		return fmt.Errorf("QueryPerformanceData: %w", err)
 	}
