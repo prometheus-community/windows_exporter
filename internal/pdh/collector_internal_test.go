@@ -50,6 +50,9 @@ func newRowSetTestCollector(partialRows bool) *Collector[rowSetValues] {
 			newRow: func(instance string) rowSetValues {
 				return rowSetValues{Name: instance}
 			},
+			setName: func(row *rowSetValues, instance string) {
+				row.Name = instance
+			},
 			setValue: func(row *rowSetValues, field int, value float64) {
 				reflect.ValueOf(row).Elem().Field(field).SetFloat(value)
 			},
@@ -71,10 +74,12 @@ func fillRows(t *testing.T, c *Collector[rowSetValues]) []rowSetValues {
 	var dst []rowSetValues
 
 	rows := rowSet[rowSetValues]{
-		c:         c,
-		dst:       &dst,
-		index:     map[string]int{},
-		nameCache: map[string]string{},
+		c:           c,
+		dst:         &dst,
+		index:       map[instanceKey]int{},
+		nameCache:   map[string]string{},
+		occurrences: map[string]int{},
+		seen:        map[string]int{},
 	}
 
 	for _, name := range []string{"complete", "partial"} {
@@ -83,6 +88,8 @@ func fillRows(t *testing.T, c *Collector[rowSetValues]) []rowSetValues {
 		require.True(t, c.setRawValue(&dst[row], &c.counters[0], RawCounter{FirstValue: 1}))
 		rows.setValid(row, 0)
 	}
+
+	clear(rows.seen)
 
 	_, ok := rows.row(&c.counters[1], windows.StringToUTF16Ptr("partial"), CstatusInvalidData)
 	require.False(t, ok)
@@ -227,10 +234,12 @@ func TestRowSetDuplicateInstances(t *testing.T) {
 					var dst []rowSetValues
 
 					rows := rowSet[rowSetValues]{
-						c:         c,
-						dst:       &dst,
-						index:     map[string]int{},
-						nameCache: map[string]string{},
+						c:           c,
+						dst:         &dst,
+						index:       map[instanceKey]int{},
+						nameCache:   map[string]string{},
+						occurrences: map[string]int{},
+						seen:        map[string]int{},
 					}
 
 					addDuplicateTestItems(
