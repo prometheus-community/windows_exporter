@@ -98,8 +98,11 @@ func (s *Session) TestConnection() error {
 
 	operation := &Operation{}
 
+	// MI_Session_TestConnection returns void. The outcome is reported through
+	// the operation, which must be closed whether or not the test succeeded.
+	//
 	// ref: https://github.com/KurtDeGreeff/omi/blob/9caa55032a1070a665e14fd282a091f6247d13c3/Unix/scriptext/py/PMI_Session.c#L92-L105
-	r0, _, _ := syscall.SyscallN(
+	_, _, _ = syscall.SyscallN(
 		s.ft.TestConnection,
 		uintptr(unsafe.Pointer(s)),
 		0,
@@ -107,16 +110,18 @@ func (s *Session) TestConnection() error {
 		uintptr(unsafe.Pointer(operation)),
 	)
 
-	if result := ResultError(r0); !errors.Is(result, MI_RESULT_OK) {
-		return result
+	if operation.ft == nil {
+		return fmt.Errorf("failed to test connection: %w", MI_RESULT_FAILED)
 	}
 
-	if _, _, err := operation.GetInstance(); err != nil {
+	_, _, err := operation.GetInstance()
+
+	if closeErr := operation.Close(); err == nil && closeErr != nil {
+		return fmt.Errorf("failed to close operation: %w", closeErr)
+	}
+
+	if err != nil {
 		return fmt.Errorf("failed to get instance: %w", err)
-	}
-
-	if err := operation.Close(); err != nil {
-		return fmt.Errorf("failed to close operation: %w", err)
 	}
 
 	return nil
@@ -165,6 +170,10 @@ func (s *Session) QueryInstances(flags OperationFlags, operationOptions *Operati
 
 // queryInstances starts an MI_Session_QueryInstances operation. Nil operationOptions
 // fall back to the session defaults. The caller must close the returned operation.
+//
+// MI_Session_QueryInstances returns void: a failed query still yields an
+// operation, and its status is reported by [Operation.GetInstance]. An error
+// is only returned if MI did not initialize the operation at all.
 func (s *Session) queryInstances(flags OperationFlags, operationOptions *OperationOptions, namespaceName Namespace,
 	queryDialect QueryDialect, queryExpression Query,
 ) (*Operation, error) {
@@ -174,7 +183,7 @@ func (s *Session) queryInstances(flags OperationFlags, operationOptions *Operati
 		operationOptions = s.defaultOperationOptions
 	}
 
-	r0, _, _ := syscall.SyscallN(
+	_, _, _ = syscall.SyscallN(
 		s.ft.QueryInstances,
 		uintptr(unsafe.Pointer(s)),
 		uintptr(flags),
@@ -186,8 +195,8 @@ func (s *Session) queryInstances(flags OperationFlags, operationOptions *Operati
 		uintptr(unsafe.Pointer(operation)),
 	)
 
-	if result := ResultError(r0); !errors.Is(result, MI_RESULT_OK) {
-		return nil, result
+	if operation.ft == nil {
+		return nil, MI_RESULT_FAILED
 	}
 
 	return operation, nil
