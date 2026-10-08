@@ -47,8 +47,8 @@ func TestMetricsHTTPHandler(t *testing.T) {
 		included []string
 		excluded []string
 	}{
-		{name: "default", status: http.StatusOK, included: []string{"windows_test_first 42", "windows_test_second 42", "go_goroutines", "windows_exporter_build_info"}},
-		{name: "disable exporter metrics", options: &httphandler.Options{DisableExporterMetrics: true, TimeoutMargin: 0.5}, status: http.StatusOK, included: []string{"windows_test_first 42", "windows_exporter_build_info"}, excluded: []string{"go_goroutines", "process_cpu_seconds_total"}},
+		{name: "default", status: http.StatusOK, included: []string{"windows_test_first 42", "windows_test_second 42", "go_goroutines", "windows_exporter_build_info", "go_sched_goroutines_running_goroutines", "go_sched_goroutines_waiting_goroutines", "go_sched_goroutines_created_goroutines_total", "go_sched_threads_total_threads", "go_sched_latencies_seconds_bucket"}},
+		{name: "disable exporter metrics", options: &httphandler.Options{DisableExporterMetrics: true, TimeoutMargin: 0.5}, status: http.StatusOK, included: []string{"windows_test_first 42", "windows_exporter_build_info"}, excluded: []string{"go_goroutines", "process_cpu_seconds_total", "go_sched_goroutines_running_goroutines"}},
 		{name: "filter", query: "?collect[]=first", status: http.StatusOK, included: []string{"windows_test_first 42"}, excluded: []string{"windows_test_second"}},
 		{name: "multiple collectors", query: "?collect[]=first&collect[]=second", status: http.StatusOK, included: []string{"windows_test_first 42", "windows_test_second 42"}},
 		{name: "unknown collector", query: "?collect[]=missing", status: http.StatusBadRequest, included: []string{"unknown collector missing"}},
