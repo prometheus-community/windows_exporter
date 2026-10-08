@@ -132,6 +132,10 @@ func New(config *Config) *Collector {
 		config.VolumeInclude = ConfigDefaults.VolumeInclude
 	}
 
+	if config.CollectorsEnabled == nil {
+		config.CollectorsEnabled = ConfigDefaults.CollectorsEnabled
+	}
+
 	c := &Collector{
 		config: *config,
 	}
@@ -191,6 +195,8 @@ func (c *Collector) GetName() string {
 }
 
 func (c *Collector) Close() error {
+	c.perfDataCollector.Close()
+
 	return nil
 }
 
