@@ -45,6 +45,22 @@
                 "iconColor": "rgba(0, 211, 255, 1)",
                 "name": "Annotations & Alerts",
                 "type": "dashboard"
+            },
+            {
+                "datasource": {
+                    "type": "prometheus",
+                    "uid": "${datasource}"
+                },
+                "enable": true,
+                "expr": "windows_system_boot_time_timestamp{job=~\"$job\", instance=\"$instance\"} * 1000 > $__from < $__to",
+                "hide": false,
+                "iconColor": "orange",
+                "name": "Reboots",
+                "step": "1m",
+                "tagKeys": "instance",
+                "textFormat": "",
+                "titleFormat": "Reboot",
+                "useValueForTime": "on"
             }
         ]
     },
@@ -128,6 +144,10 @@
                                     {
                                         "id": "custom.width",
                                         "value": 180
+                                    },
+                                    {
+                                        "id": "custom.filterable",
+                                        "value": true
                                     }
                                 ]
                             },
@@ -168,6 +188,26 @@
                                     {
                                         "id": "custom.width",
                                         "value": 160
+                                    },
+                                    {
+                                        "id": "custom.filterable",
+                                        "value": true
+                                    }
+                                ]
+                            },
+                            {
+                                "matcher": {
+                                    "id": "byName",
+                                    "options": "version"
+                                },
+                                "properties": [
+                                    {
+                                        "id": "custom.width",
+                                        "value": 100
+                                    },
+                                    {
+                                        "id": "custom.filterable",
+                                        "value": true
                                     }
                                 ]
                             },
@@ -515,11 +555,15 @@
                         "enablePagination": false,
                         "footer": {
                             "countRows": false,
-                            "fields": "",
+                            "fields": [
+                                "CPUs",
+                                "Memory",
+                                "Processes"
+                            ],
                             "reducer": [
                                 "sum"
                             ],
-                            "show": false
+                            "show": true
                         },
                         "showHeader": true,
                         "sortBy": [
@@ -549,7 +593,7 @@
                                 "uid": "${datasource}"
                             },
                             "editorMode": "code",
-                            "expr": "(max by (instance, product) (windows_os_info{job=~\"$job\"})) and on (instance) windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}",
+                            "expr": "(max by (instance, product, version) (windows_os_info{job=~\"$job\"})) and on (instance) windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}",
                             "format": "table",
                             "instant": true,
                             "legendFormat": "__auto",
@@ -718,19 +762,20 @@
                                 },
                                 "includeByName": {},
                                 "indexByName": {
-                                    "Value #C": 3,
-                                    "Value #D": 4,
-                                    "Value #E": 5,
-                                    "Value #F": 6,
-                                    "Value #G": 7,
-                                    "Value #H": 8,
-                                    "Value #I": 9,
-                                    "Value #J": 10,
-                                    "Value #K": 11,
-                                    "Value #L": 12,
+                                    "Value #C": 4,
+                                    "Value #D": 5,
+                                    "Value #E": 6,
+                                    "Value #F": 7,
+                                    "Value #G": 8,
+                                    "Value #H": 9,
+                                    "Value #I": 10,
+                                    "Value #J": 11,
+                                    "Value #K": 12,
+                                    "Value #L": 13,
                                     "hostname": 0,
                                     "instance": 1,
-                                    "product": 2
+                                    "product": 2,
+                                    "version": 3
                                 },
                                 "renameByName": {
                                     "Value #C": "Uptime",
@@ -745,7 +790,8 @@
                                     "Value #L": "Processes",
                                     "hostname": "Hostname",
                                     "instance": "Instance",
-                                    "product": "OS"
+                                    "product": "OS",
+                                    "version": "Version"
                                 }
                             }
                         }
@@ -757,7 +803,7 @@
                         "type": "prometheus",
                         "uid": "${datasource}"
                     },
-                    "description": "",
+                    "description": "Shows the 25 highest hosts at each point in time.",
                     "fieldConfig": {
                         "defaults": {
                             "color": {
@@ -838,7 +884,7 @@
                                 "uid": "${datasource}"
                             },
                             "editorMode": "code",
-                            "expr": "(100 * (1 - avg by (instance) (rate(windows_cpu_time_total{job=~\"$job\", mode=\"idle\"}[$__rate_interval])))) * on (instance) group_left (hostname) max by (instance, hostname) (windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"})",
+                            "expr": "topk(25, (100 * (1 - avg by (instance) (rate(windows_cpu_time_total{job=~\"$job\", mode=\"idle\"}[$__rate_interval])))) * on (instance) group_left (hostname) max by (instance, hostname) (windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}))",
                             "instant": false,
                             "legendFormat": "{{hostname}}",
                             "range": true,
@@ -853,7 +899,7 @@
                         "type": "prometheus",
                         "uid": "${datasource}"
                     },
-                    "description": "",
+                    "description": "Shows the 25 highest hosts at each point in time.",
                     "fieldConfig": {
                         "defaults": {
                             "color": {
@@ -934,7 +980,7 @@
                                 "uid": "${datasource}"
                             },
                             "editorMode": "code",
-                            "expr": "(max by (instance) (100 * (1 - windows_memory_physical_free_bytes{job=~\"$job\"} / windows_memory_physical_total_bytes{job=~\"$job\"}))) * on (instance) group_left (hostname) max by (instance, hostname) (windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"})",
+                            "expr": "topk(25, (max by (instance) (100 * (1 - windows_memory_physical_free_bytes{job=~\"$job\"} / windows_memory_physical_total_bytes{job=~\"$job\"}))) * on (instance) group_left (hostname) max by (instance, hostname) (windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}))",
                             "instant": false,
                             "legendFormat": "{{hostname}}",
                             "range": true,
@@ -949,7 +995,7 @@
                         "type": "prometheus",
                         "uid": "${datasource}"
                     },
-                    "description": "Sum over all interfaces. Received is drawn below the axis.",
+                    "description": "Sum over all interfaces. Received is drawn below the axis. Shows the 25 highest hosts at each point in time.",
                     "fieldConfig": {
                         "defaults": {
                             "color": {
@@ -1041,7 +1087,7 @@
                                 "uid": "${datasource}"
                             },
                             "editorMode": "code",
-                            "expr": "(sum by (instance) (rate(windows_net_bytes_sent_total{job=~\"$job\"}[$__rate_interval]) * 8)) * on (instance) group_left (hostname) max by (instance, hostname) (windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"})",
+                            "expr": "topk(25, (sum by (instance) (rate(windows_net_bytes_sent_total{job=~\"$job\"}[$__rate_interval]) * 8)) * on (instance) group_left (hostname) max by (instance, hostname) (windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}))",
                             "instant": false,
                             "legendFormat": "{{hostname}} sent",
                             "range": true,
@@ -1053,7 +1099,7 @@
                                 "uid": "${datasource}"
                             },
                             "editorMode": "code",
-                            "expr": "(sum by (instance) (rate(windows_net_bytes_received_total{job=~\"$job\"}[$__rate_interval]) * 8)) * on (instance) group_left (hostname) max by (instance, hostname) (windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"})",
+                            "expr": "topk(25, (sum by (instance) (rate(windows_net_bytes_received_total{job=~\"$job\"}[$__rate_interval]) * 8)) * on (instance) group_left (hostname) max by (instance, hostname) (windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}))",
                             "instant": false,
                             "legendFormat": "{{hostname}} received",
                             "range": true,
@@ -1068,7 +1114,7 @@
                         "type": "prometheus",
                         "uid": "${datasource}"
                     },
-                    "description": "Sum over all volumes. Read is drawn below the axis.",
+                    "description": "Sum over all volumes. Read is drawn below the axis. Shows the 25 highest hosts at each point in time.",
                     "fieldConfig": {
                         "defaults": {
                             "color": {
@@ -1160,7 +1206,7 @@
                                 "uid": "${datasource}"
                             },
                             "editorMode": "code",
-                            "expr": "(sum by (instance) (rate(windows_logical_disk_write_bytes_total{job=~\"$job\", volume!~\"HarddiskVolume.*\"}[$__rate_interval]))) * on (instance) group_left (hostname) max by (instance, hostname) (windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"})",
+                            "expr": "topk(25, (sum by (instance) (rate(windows_logical_disk_write_bytes_total{job=~\"$job\", volume!~\"HarddiskVolume.*\"}[$__rate_interval]))) * on (instance) group_left (hostname) max by (instance, hostname) (windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}))",
                             "instant": false,
                             "legendFormat": "{{hostname}} write",
                             "range": true,
@@ -1172,7 +1218,7 @@
                                 "uid": "${datasource}"
                             },
                             "editorMode": "code",
-                            "expr": "(sum by (instance) (rate(windows_logical_disk_read_bytes_total{job=~\"$job\", volume!~\"HarddiskVolume.*\"}[$__rate_interval]))) * on (instance) group_left (hostname) max by (instance, hostname) (windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"})",
+                            "expr": "topk(25, (sum by (instance) (rate(windows_logical_disk_read_bytes_total{job=~\"$job\", volume!~\"HarddiskVolume.*\"}[$__rate_interval]))) * on (instance) group_left (hostname) max by (instance, hostname) (windows_os_hostname{job=~\"$job\", hostname=~\"$hostname\"}))",
                             "instant": false,
                             "legendFormat": "{{hostname}} read",
                             "range": true,
@@ -1984,7 +2030,7 @@
                 "type": "prometheus",
                 "uid": "${datasource}"
             },
-            "description": "Processor queue length counts threads ready to run but waiting for a CPU. A sustained value above 2 per core indicates CPU contention.",
+            "description": "Processor queue length counts threads ready to run but waiting for a CPU. A sustained value above 2 per core indicates CPU contention. Context switches and interrupts use the right axis.",
             "fieldConfig": {
                 "defaults": {
                     "color": {
@@ -2038,8 +2084,8 @@
                 "overrides": [
                     {
                         "matcher": {
-                            "id": "byName",
-                            "options": "context switches"
+                            "id": "byRegexp",
+                            "options": "context switches|interrupts"
                         },
                         "properties": [
                             {
@@ -2102,9 +2148,21 @@
                     "legendFormat": "context switches",
                     "range": true,
                     "refId": "B"
+                },
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "editorMode": "code",
+                    "expr": "sum(rate(windows_cpu_interrupts_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]))",
+                    "instant": false,
+                    "legendFormat": "interrupts",
+                    "range": true,
+                    "refId": "C"
                 }
             ],
-            "title": "Processor queue and context switches",
+            "title": "Processor queue, context switches and interrupts",
             "type": "timeseries"
         },
         {
@@ -3039,7 +3097,7 @@
             },
             "gridPos": {
                 "h": 8,
-                "w": 8,
+                "w": 6,
                 "x": 0,
                 "y": 33
             },
@@ -3162,8 +3220,8 @@
             },
             "gridPos": {
                 "h": 8,
-                "w": 8,
-                "x": 8,
+                "w": 6,
+                "x": 6,
                 "y": 33
             },
             "id": 29,
@@ -3273,8 +3331,8 @@
             },
             "gridPos": {
                 "h": 8,
-                "w": 8,
-                "x": 16,
+                "w": 6,
+                "x": 12,
                 "y": 33
             },
             "id": 30,
@@ -3325,6 +3383,117 @@
             "type": "timeseries"
         },
         {
+            "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+            },
+            "description": "Average number of read and write requests queued for the volume. A queue that stays high while latency rises indicates a disk bottleneck. The avg_*_requests_queued metrics grow like counters, so the panel takes their rate.",
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "palette-classic"
+                    },
+                    "custom": {
+                        "axisBorderShow": false,
+                        "axisCenteredZero": false,
+                        "axisColorMode": "text",
+                        "axisLabel": "",
+                        "axisPlacement": "auto",
+                        "barAlignment": 0,
+                        "drawStyle": "line",
+                        "fillOpacity": 10,
+                        "gradientMode": "opacity",
+                        "hideFrom": {
+                            "legend": false,
+                            "tooltip": false,
+                            "viz": false
+                        },
+                        "insertNulls": false,
+                        "lineInterpolation": "linear",
+                        "lineWidth": 1,
+                        "pointSize": 4,
+                        "scaleDistribution": {
+                            "type": "linear"
+                        },
+                        "showPoints": "never",
+                        "spanNulls": false,
+                        "stacking": {
+                            "group": "A",
+                            "mode": "none"
+                        },
+                        "thresholdsStyle": {
+                            "mode": "off"
+                        }
+                    },
+                    "mappings": [],
+                    "min": 0,
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    },
+                    "unit": "short"
+                },
+                "overrides": []
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 6,
+                "x": 18,
+                "y": 33
+            },
+            "id": 31,
+            "options": {
+                "legend": {
+                    "calcs": [
+                        "mean",
+                        "max",
+                        "lastNotNull"
+                    ],
+                    "displayMode": "table",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "hideZeros": false,
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "editorMode": "code",
+                    "expr": "rate(windows_logical_disk_avg_read_requests_queued{job=~\"$job\", instance=\"$instance\", volume=~\"$volume\"}[$__rate_interval])",
+                    "instant": false,
+                    "legendFormat": "{{volume}} read",
+                    "range": true,
+                    "refId": "A"
+                },
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "editorMode": "code",
+                    "expr": "rate(windows_logical_disk_avg_write_requests_queued{job=~\"$job\", instance=\"$instance\", volume=~\"$volume\"}[$__rate_interval])",
+                    "instant": false,
+                    "legendFormat": "{{volume}} write",
+                    "range": true,
+                    "refId": "B"
+                }
+            ],
+            "title": "Disk queue length",
+            "type": "timeseries"
+        },
+        {
             "collapsed": false,
             "gridPos": {
                 "h": 1,
@@ -3332,7 +3501,7 @@
                 "x": 0,
                 "y": 41
             },
-            "id": 31,
+            "id": 32,
             "panels": [],
             "title": "Network",
             "type": "row"
@@ -3413,7 +3582,7 @@
                 "x": 0,
                 "y": 42
             },
-            "id": 32,
+            "id": 33,
             "options": {
                 "legend": {
                     "calcs": [
@@ -3532,7 +3701,7 @@
                 "x": 8,
                 "y": 42
             },
-            "id": 33,
+            "id": 34,
             "options": {
                 "legend": {
                     "calcs": [
@@ -3631,7 +3800,7 @@
                 "x": 16,
                 "y": 42
             },
-            "id": 34,
+            "id": 35,
             "options": {
                 "legend": {
                     "calcs": [
@@ -3697,6 +3866,18 @@
                     "legendFormat": "{{nic}} outbound discarded",
                     "range": true,
                     "refId": "D"
+                },
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "editorMode": "code",
+                    "expr": "rate(windows_net_packets_received_unknown_total{job=~\"$job\", instance=\"$instance\", nic=~\"$nic\"}[$__rate_interval])",
+                    "instant": false,
+                    "legendFormat": "{{nic}} received unknown protocol",
+                    "range": true,
+                    "refId": "E"
                 }
             ],
             "title": "Network errors and discards",
@@ -3710,7 +3891,7 @@
                 "x": 0,
                 "y": 50
             },
-            "id": 35,
+            "id": 36,
             "panels": [],
             "title": "System and services",
             "type": "row"
@@ -3792,7 +3973,7 @@
                 "x": 0,
                 "y": 51
             },
-            "id": 36,
+            "id": 37,
             "options": {
                 "legend": {
                     "calcs": [
@@ -3916,7 +4097,7 @@
                 "x": 8,
                 "y": 51
             },
-            "id": 37,
+            "id": 38,
             "options": {
                 "legend": {
                     "calcs": [
@@ -4002,7 +4183,7 @@
                 "x": 16,
                 "y": 51
             },
-            "id": 38,
+            "id": 39,
             "options": {
                 "cellHeight": "sm",
                 "enablePagination": false,
@@ -4069,7 +4250,409 @@
                 "x": 0,
                 "y": 59
             },
-            "id": 41,
+            "id": 45,
+            "panels": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "description": "",
+                    "fieldConfig": {
+                        "defaults": {
+                            "color": {
+                                "mode": "thresholds"
+                            },
+                            "mappings": [],
+                            "thresholds": {
+                                "mode": "absolute",
+                                "steps": [
+                                    {
+                                        "color": "text",
+                                        "value": null
+                                    }
+                                ]
+                            },
+                            "unit": ""
+                        },
+                        "overrides": []
+                    },
+                    "gridPos": {
+                        "h": 4,
+                        "w": 6,
+                        "x": 0,
+                        "y": 60
+                    },
+                    "id": 40,
+                    "options": {
+                        "colorMode": "none",
+                        "graphMode": "none",
+                        "justifyMode": "auto",
+                        "orientation": "auto",
+                        "percentChangeColorMode": "standard",
+                        "reduceOptions": {
+                            "calcs": [
+                                "lastNotNull"
+                            ],
+                            "fields": "/^timezone$/",
+                            "values": false
+                        },
+                        "showPercentChange": false,
+                        "textMode": "value",
+                        "wideLayout": true
+                    },
+                    "targets": [
+                        {
+                            "datasource": {
+                                "type": "prometheus",
+                                "uid": "${datasource}"
+                            },
+                            "editorMode": "code",
+                            "expr": "windows_time_timezone{job=~\"$job\", instance=\"$instance\"}",
+                            "format": "table",
+                            "instant": true,
+                            "legendFormat": "__auto",
+                            "range": false,
+                            "refId": "A"
+                        }
+                    ],
+                    "title": "Time zone",
+                    "type": "stat"
+                },
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "description": "",
+                    "fieldConfig": {
+                        "defaults": {
+                            "color": {
+                                "mode": "thresholds"
+                            },
+                            "mappings": [],
+                            "thresholds": {
+                                "mode": "absolute",
+                                "steps": [
+                                    {
+                                        "color": "text",
+                                        "value": null
+                                    }
+                                ]
+                            },
+                            "unit": ""
+                        },
+                        "overrides": []
+                    },
+                    "gridPos": {
+                        "h": 4,
+                        "w": 6,
+                        "x": 6,
+                        "y": 60
+                    },
+                    "id": 41,
+                    "options": {
+                        "colorMode": "none",
+                        "graphMode": "none",
+                        "justifyMode": "auto",
+                        "orientation": "auto",
+                        "percentChangeColorMode": "standard",
+                        "reduceOptions": {
+                            "calcs": [
+                                "lastNotNull"
+                            ],
+                            "fields": "/^type$/",
+                            "values": false
+                        },
+                        "showPercentChange": false,
+                        "textMode": "value",
+                        "wideLayout": true
+                    },
+                    "targets": [
+                        {
+                            "datasource": {
+                                "type": "prometheus",
+                                "uid": "${datasource}"
+                            },
+                            "editorMode": "code",
+                            "expr": "windows_time_clock_sync_source{job=~\"$job\", instance=\"$instance\"} == 1",
+                            "format": "table",
+                            "instant": true,
+                            "legendFormat": "__auto",
+                            "range": false,
+                            "refId": "A"
+                        }
+                    ],
+                    "title": "Clock sync source",
+                    "type": "stat"
+                },
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "description": "Number of time sources the NTP client uses. 0 means the clock is not synchronized.",
+                    "fieldConfig": {
+                        "defaults": {
+                            "color": {
+                                "mode": "thresholds"
+                            },
+                            "mappings": [],
+                            "thresholds": {
+                                "mode": "absolute",
+                                "steps": [
+                                    {
+                                        "color": "red",
+                                        "value": null
+                                    },
+                                    {
+                                        "color": "green",
+                                        "value": 1
+                                    }
+                                ]
+                            },
+                            "unit": "none"
+                        },
+                        "overrides": []
+                    },
+                    "gridPos": {
+                        "h": 4,
+                        "w": 6,
+                        "x": 12,
+                        "y": 60
+                    },
+                    "id": 42,
+                    "options": {
+                        "colorMode": "value",
+                        "graphMode": "none",
+                        "justifyMode": "auto",
+                        "orientation": "auto",
+                        "percentChangeColorMode": "standard",
+                        "reduceOptions": {
+                            "calcs": [
+                                "lastNotNull"
+                            ],
+                            "fields": "",
+                            "values": false
+                        },
+                        "showPercentChange": false,
+                        "textMode": "auto",
+                        "wideLayout": true
+                    },
+                    "targets": [
+                        {
+                            "datasource": {
+                                "type": "prometheus",
+                                "uid": "${datasource}"
+                            },
+                            "editorMode": "code",
+                            "expr": "windows_time_ntp_client_time_sources{job=~\"$job\", instance=\"$instance\"}",
+                            "instant": true,
+                            "legendFormat": "__auto",
+                            "range": false,
+                            "refId": "A"
+                        }
+                    ],
+                    "title": "NTP time sources",
+                    "type": "stat"
+                },
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "description": "Absolute offset between the system clock and the selected time source.",
+                    "fieldConfig": {
+                        "defaults": {
+                            "color": {
+                                "mode": "thresholds"
+                            },
+                            "mappings": [],
+                            "thresholds": {
+                                "mode": "absolute",
+                                "steps": [
+                                    {
+                                        "color": "green",
+                                        "value": null
+                                    },
+                                    {
+                                        "color": "orange",
+                                        "value": 0.5
+                                    },
+                                    {
+                                        "color": "red",
+                                        "value": 1
+                                    }
+                                ]
+                            },
+                            "unit": "s"
+                        },
+                        "overrides": []
+                    },
+                    "gridPos": {
+                        "h": 4,
+                        "w": 6,
+                        "x": 18,
+                        "y": 60
+                    },
+                    "id": 43,
+                    "options": {
+                        "colorMode": "value",
+                        "graphMode": "area",
+                        "justifyMode": "auto",
+                        "orientation": "auto",
+                        "percentChangeColorMode": "standard",
+                        "reduceOptions": {
+                            "calcs": [
+                                "lastNotNull"
+                            ],
+                            "fields": "",
+                            "values": false
+                        },
+                        "showPercentChange": false,
+                        "textMode": "auto",
+                        "wideLayout": true
+                    },
+                    "targets": [
+                        {
+                            "datasource": {
+                                "type": "prometheus",
+                                "uid": "${datasource}"
+                            },
+                            "editorMode": "code",
+                            "expr": "abs(windows_time_computed_time_offset_seconds{job=~\"$job\", instance=\"$instance\"})",
+                            "instant": false,
+                            "legendFormat": "__auto",
+                            "range": true,
+                            "refId": "A"
+                        }
+                    ],
+                    "title": "Clock offset",
+                    "type": "stat"
+                },
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "description": "",
+                    "fieldConfig": {
+                        "defaults": {
+                            "color": {
+                                "mode": "palette-classic"
+                            },
+                            "custom": {
+                                "axisBorderShow": false,
+                                "axisCenteredZero": false,
+                                "axisColorMode": "text",
+                                "axisLabel": "",
+                                "axisPlacement": "auto",
+                                "barAlignment": 0,
+                                "drawStyle": "line",
+                                "fillOpacity": 10,
+                                "gradientMode": "opacity",
+                                "hideFrom": {
+                                    "legend": false,
+                                    "tooltip": false,
+                                    "viz": false
+                                },
+                                "insertNulls": false,
+                                "lineInterpolation": "linear",
+                                "lineWidth": 1,
+                                "pointSize": 4,
+                                "scaleDistribution": {
+                                    "type": "linear"
+                                },
+                                "showPoints": "never",
+                                "spanNulls": false,
+                                "stacking": {
+                                    "group": "A",
+                                    "mode": "none"
+                                },
+                                "thresholdsStyle": {
+                                    "mode": "off"
+                                }
+                            },
+                            "mappings": [],
+                            "thresholds": {
+                                "mode": "absolute",
+                                "steps": [
+                                    {
+                                        "color": "green",
+                                        "value": null
+                                    }
+                                ]
+                            },
+                            "unit": "s"
+                        },
+                        "overrides": []
+                    },
+                    "gridPos": {
+                        "h": 8,
+                        "w": 24,
+                        "x": 0,
+                        "y": 64
+                    },
+                    "id": 44,
+                    "options": {
+                        "legend": {
+                            "calcs": [
+                                "mean",
+                                "max",
+                                "lastNotNull"
+                            ],
+                            "displayMode": "table",
+                            "placement": "bottom",
+                            "showLegend": true
+                        },
+                        "tooltip": {
+                            "hideZeros": false,
+                            "mode": "multi",
+                            "sort": "desc"
+                        }
+                    },
+                    "targets": [
+                        {
+                            "datasource": {
+                                "type": "prometheus",
+                                "uid": "${datasource}"
+                            },
+                            "editorMode": "code",
+                            "expr": "windows_time_computed_time_offset_seconds{job=~\"$job\", instance=\"$instance\"}",
+                            "instant": false,
+                            "legendFormat": "clock offset",
+                            "range": true,
+                            "refId": "A"
+                        },
+                        {
+                            "datasource": {
+                                "type": "prometheus",
+                                "uid": "${datasource}"
+                            },
+                            "editorMode": "code",
+                            "expr": "windows_time_ntp_round_trip_delay_seconds{job=~\"$job\", instance=\"$instance\"}",
+                            "instant": false,
+                            "legendFormat": "NTP round-trip delay",
+                            "range": true,
+                            "refId": "B"
+                        }
+                    ],
+                    "title": "Clock offset and NTP round-trip delay",
+                    "type": "timeseries"
+                }
+            ],
+            "title": "Time (requires the time collector)",
+            "type": "row"
+        },
+        {
+            "collapsed": true,
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 60
+            },
+            "id": 48,
             "panels": [
                 {
                     "datasource": {
@@ -4155,9 +4738,9 @@
                         "h": 8,
                         "w": 8,
                         "x": 0,
-                        "y": 60
+                        "y": 61
                     },
-                    "id": 39,
+                    "id": 46,
                     "options": {
                         "cellHeight": "sm",
                         "enablePagination": false,
@@ -4312,9 +4895,9 @@
                         "h": 8,
                         "w": 16,
                         "x": 8,
-                        "y": 60
+                        "y": 61
                     },
-                    "id": 40,
+                    "id": 47,
                     "options": {
                         "legend": {
                             "calcs": [
