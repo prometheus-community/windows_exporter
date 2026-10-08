@@ -293,35 +293,70 @@ Many objects have dependencies - if you query one of them, you often get back
 more than you asked for.
 */
 func QueryPerformanceData(query string, counterName string) ([]*PerfObject, error) {
+	// Object and counter names are resolved through the name table.
+	if err := CounterNameTable.load(); err != nil {
+		return nil, err
+	}
+
 	buffer, err := queryRawData(query)
 	if err != nil {
 		return nil, err
 	}
 
+	objects, err := parsePerformanceData(buffer, counterName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse performance data for %q: %w", query, err)
+	}
+
+	return objects, nil
+}
+
+//nolint:gochecknoglobals
+var (
+	perfDataBlockSize          = int64(binary.Size(perfDataBlock{}))
+	perfObjectTypeSize         = int64(binary.Size(perfObjectType{}))
+	perfCounterDefinitionSize  = int64(binary.Size(perfCounterDefinition{}))
+	perfInstanceDefinitionSize = int64(binary.Size(perfInstanceDefinition{}))
+	perfCounterBlockSize       = int64(binary.Size(perfCounterBlock{}))
+)
+
+// errMalformedPerformanceData is returned when the performance data contradicts
+// itself, e.g. it declares more objects than fit into the buffer. Counts,
+// offsets and lengths are checked before they size an allocation or index into
+// the buffer.
+var errMalformedPerformanceData = errors.New("malformed performance data")
+
+// parsePerformanceData parses a PERF_DATA_BLOCK as returned by queryRawData.
+// If counterName is set, only the first object with that name is returned.
+func parsePerformanceData(buffer []byte, counterName string) ([]*PerfObject, error) {
+	bufLen := int64(len(buffer))
 	r := bytes.NewReader(buffer)
 
 	// Read global header
 
 	header := new(perfDataBlock)
 
-	err = header.BinaryReadFrom(r)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read performance data block for %q with: %w", query, err)
+	if err := header.BinaryReadFrom(r); err != nil {
+		return nil, fmt.Errorf("failed to read performance data block: %w", err)
 	}
 
 	// Check for "PERF" signature
 	if header.Signature != [4]uint16{80, 69, 82, 70} {
-		panic("Invalid performance block header")
+		return nil, fmt.Errorf("%w: invalid performance block signature %v", errMalformedPerformanceData, header.Signature)
 	}
 
 	// Parse the performance data
 
-	numObjects := int(header.NumObjectTypes)
+	numObjects := int64(header.NumObjectTypes)
+	objOffset := int64(header.HeaderLength)
+
+	if objOffset < perfDataBlockSize || numObjects*perfObjectTypeSize > bufLen-objOffset {
+		return nil, fmt.Errorf("%w: %d objects at offset %d do not fit into %d bytes", errMalformedPerformanceData, numObjects, objOffset, bufLen)
+	}
+
 	numFilteredObjects := 0
 
 	objects := make([]*PerfObject, numObjects)
-
-	objOffset := int64(header.HeaderLength)
 
 	for i := range numObjects {
 		_, err := r.Seek(objOffset, io.SeekStart)
@@ -344,8 +379,17 @@ func QueryPerformanceData(query string, counterName string) ([]*PerfObject, erro
 			continue
 		}
 
-		numCounterDefs := int(obj.NumCounters)
-		numInstances := int(obj.NumInstances)
+		numCounterDefs := int64(obj.NumCounters)
+		numInstances := int64(obj.NumInstances)
+
+		if numCounterDefs*perfCounterDefinitionSize > bufLen-objOffset-perfObjectTypeSize {
+			return nil, fmt.Errorf("%w: %d counter definitions do not fit into the buffer", errMalformedPerformanceData, numCounterDefs)
+		}
+
+		// Every instance has at least an instance definition and a counter block.
+		if numInstances*(perfInstanceDefinitionSize+perfCounterBlockSize) > bufLen-objOffset {
+			return nil, fmt.Errorf("%w: %d instances do not fit into the buffer", errMalformedPerformanceData, numInstances)
+		}
 
 		// Perf objects can have no instances. The perflib differentiates
 		// between objects with instances and without, but we just create
@@ -420,7 +464,12 @@ func QueryPerformanceData(query string, counterName string) ([]*PerfObject, erro
 					return nil, err
 				}
 
-				name, _ := readUTF16StringAtPos(r, instOffset+int64(inst.NameOffset), inst.NameLength)
+				namePos := instOffset + int64(inst.NameOffset)
+				if namePos+int64(inst.NameLength) > bufLen {
+					return nil, fmt.Errorf("%w: instance name at offset %d with length %d exceeds the buffer", errMalformedPerformanceData, namePos, inst.NameLength)
+				}
+
+				name, _ := readUTF16StringAtPos(r, namePos, inst.NameLength)
 				pos := instOffset + int64(inst.ByteLength)
 
 				offset, counters, err := parseCounterBlock(buffer, r, pos, counterDefs)
@@ -463,10 +512,27 @@ func parseCounterBlock(b []byte, r io.ReadSeeker, pos int64, defs []*PerfCounter
 		return 0, nil, err
 	}
 
+	// The block length includes the length field itself. A shorter block would
+	// make the next instance overlap this one.
+	if int64(block.ByteLength) < perfCounterBlockSize {
+		return 0, nil, fmt.Errorf("%w: counter block at offset %d has length %d", errMalformedPerformanceData, pos, block.ByteLength)
+	}
+
 	counters := make([]*PerfCounter, len(defs))
 
 	for i, def := range defs {
 		valueOffset := pos + int64(def.rawData.CounterOffset)
+		size := counterValueSize(def.rawData)
+
+		end := valueOffset + size
+		if def.HasSecondValue {
+			end = valueOffset + 8 + size
+		}
+
+		if end > int64(len(b)) {
+			return 0, nil, fmt.Errorf("%w: value of counter %s at offset %d exceeds the buffer", errMalformedPerformanceData, def.Name, valueOffset)
+		}
+
 		value := convertCounterValue(def.rawData, b, valueOffset)
 		secondValue := int64(0)
 
@@ -482,6 +548,15 @@ func parseCounterBlock(b []byte, r io.ReadSeeker, pos int64, defs []*PerfCounter
 	}
 
 	return int64(block.ByteLength), counters, nil
+}
+
+// counterValueSize returns the number of bytes convertCounterValue reads.
+func counterValueSize(counterDef *perfCounterDefinition) int64 {
+	if counterDef.CounterSize == 8 {
+		return 8
+	}
+
+	return 4
 }
 
 func convertCounterValue(counterDef *perfCounterDefinition, buffer []byte, valueOffset int64) int64 {
