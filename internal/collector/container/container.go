@@ -184,6 +184,16 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	c.annotationsCacheHCS = make(map[string]containerInfo)
 	c.annotationsCacheJob = make(map[string]containerInfo)
 
+	// Without the Containers feature, the Host Compute Service is missing and
+	// every scrape would fail. Report the collector as unsupported instead, so
+	// it is skipped once at startup rather than logging a warning per scrape.
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorHCS) {
+		if _, err := hcs.GetContainers(); errors.Is(err, hcs.ErrServiceNotAvailable) {
+			return fmt.Errorf("host compute service not available, is the Containers feature installed? %w: %w",
+				errors.ErrUnsupported, err)
+		}
+	}
+
 	c.containerAvailable = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "available"),
 		"Available",

@@ -274,7 +274,10 @@ func (c *Collection) Build(ctx context.Context, logger *slog.Logger) error {
 
 		err := fmt.Errorf("error build collector %s: %w", result.name, result.err)
 
-		if errors.Is(err, pdh.ErrNoData) ||
+		// errors.ErrUnsupported marks a collector whose subsystem is not
+		// available on this host, e.g. a Windows feature that is not installed.
+		if errors.Is(err, errors.ErrUnsupported) ||
+			errors.Is(err, pdh.ErrNoData) ||
 			errors.Is(err, winregistry.ErrNotExist) ||
 			errors.Is(err, pdh.NewPdhError(pdh.CstatusNoObject)) ||
 			errors.Is(err, pdh.NewPdhError(pdh.CstatusNoCounter)) ||
