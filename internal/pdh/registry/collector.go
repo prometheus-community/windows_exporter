@@ -52,9 +52,18 @@ func NewCollector[T any](object string, _ []string) (*Collector[T], error) {
 		return nil, fmt.Errorf("expected a struct, got %s", valueType)
 	}
 
+	if err := CounterNameTable.load(); err != nil {
+		return nil, err
+	}
+
+	query := MapCounterToIndex(object)
+	if query == "0" {
+		return nil, fmt.Errorf("perflib object %q not found in the counter name table", object)
+	}
+
 	collector := &Collector[T]{
 		object:         object,
-		query:          MapCounterToIndex(object),
+		query:          query,
 		nameIndexValue: -1,
 		counters:       make(map[string]Counter),
 	}
@@ -163,9 +172,18 @@ func (c *Collector[T]) Collect(dst *[]T) error {
 
 				switch perfCounter.Def.CounterType {
 				case pdh.PERF_ELAPSED_TIME:
+					// A zero frequency would divide by zero. The value is left unset.
+					if perfObject.Frequency <= 0 || counter.FieldIndexValue == -1 {
+						continue
+					}
+
 					rv.Field(counter.FieldIndexValue).
 						SetFloat(float64((perfCounter.Value - pdh.WindowsEpoch) / perfObject.Frequency))
 				case pdh.PERF_100NSEC_TIMER, pdh.PERF_PRECISION_100NS_TIMER:
+					if counter.FieldIndexValue == -1 {
+						continue
+					}
+
 					rv.Field(counter.FieldIndexValue).
 						SetFloat(float64(perfCounter.Value) * pdh.TicksToSecondScaleFactor)
 				default:

@@ -43,24 +43,19 @@ func readUTF16StringAtPos(r io.ReadSeeker, absPos int64, length uint32) (string,
 
 // readUTF16String Reads a null-terminated UTF16 string at the current offset.
 func readUTF16String(r io.Reader) (string, error) {
-	var err error
-
 	b := make([]byte, 2)
 	out := make([]uint16, 0, 100)
 
-	for i := 0; err == nil; i += 2 {
-		_, err = r.Read(b)
+	for {
+		// A short read at the end of the buffer is an error, not a code unit.
+		if _, err := io.ReadFull(r, b); err != nil {
+			return "", err
+		}
 
 		if b[0] == 0 && b[1] == 0 {
-			break
+			return windows.UTF16ToString(out), nil
 		}
 
 		out = append(out, bo.Uint16(b))
 	}
-
-	if err != nil {
-		return "", err
-	}
-
-	return windows.UTF16ToString(out), nil
 }
