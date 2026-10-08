@@ -19,10 +19,12 @@ package textfile
 
 import (
 	"io"
+	"log/slog"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
-	"github.com/dimchansky/utfbom"
 	dto "github.com/prometheus/client_model/go"
 )
 
@@ -42,33 +44,53 @@ func TestCRFilter(t *testing.T) {
 	}
 }
 
-func TestCheckBOM(t *testing.T) {
+func TestScrapeFileBOM(t *testing.T) {
 	t.Parallel()
 
-	testdata := []struct {
-		encoding utfbom.Encoding
-		err      string
+	for _, tc := range []struct {
+		name   string
+		prefix string
+		err    string
 	}{
-		{utfbom.Unknown, ""},
-		{utfbom.UTF8, ""},
-		{utfbom.UTF16BigEndian, "UTF16BigEndian"},
-		{utfbom.UTF16LittleEndian, "UTF16LittleEndian"},
-		{utfbom.UTF32BigEndian, "UTF32BigEndian"},
-		{utfbom.UTF32LittleEndian, "UTF32LittleEndian"},
-	}
-	for _, d := range testdata {
-		err := checkBOM(d.encoding)
-		if d.err == "" && err != nil {
-			t.Error(err)
-		}
+		{name: "plain UTF-8"},
+		{name: "UTF-8 BOM", prefix: "\xef\xbb\xbf"},
+		{name: "UTF-16 BE", prefix: "\xfe\xff", err: "UTF16BigEndian"},
+		{name: "UTF-16 LE", prefix: "\xff\xfe", err: "UTF16LittleEndian"},
+		{name: "UTF-32 BE", prefix: "\x00\x00\xfe\xff", err: "UTF32BigEndian"},
+		{name: "UTF-32 LE", prefix: "\xff\xfe\x00\x00", err: "UTF32LittleEndian"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 
-		if d.err != "" && err == nil {
-			t.Errorf("Missing expected error %s", d.err)
-		}
+			path := filepath.Join(t.TempDir(), "metric.prom")
+			content := tc.prefix + "# TYPE metric gauge\r\nmetric 1\r\n"
 
-		if err != nil && !strings.Contains(err.Error(), d.err) {
-			t.Error(err)
-		}
+			if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+				t.Fatal(err)
+			}
+
+			families, err := scrapeFile(path, slog.New(slog.DiscardHandler))
+			if tc.err != "" {
+				if err == nil || err.Error() != tc.err {
+					t.Fatalf("got error %v, want %s", err, tc.err)
+				}
+
+				return
+			}
+
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if len(families) != 1 || families[0].GetName() != "metric" {
+				t.Fatalf("unexpected metric families: %v", families)
+			}
+
+			metrics := families[0].GetMetric()
+			if len(metrics) != 1 || metrics[0].GetGauge().GetValue() != 1 {
+				t.Errorf("unexpected metrics: %v", metrics)
+			}
+		})
 	}
 }
 
