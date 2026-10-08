@@ -18,9 +18,12 @@
 package hyperv_test
 
 import (
+	"log/slog"
 	"testing"
+	"time"
 
 	"github.com/prometheus-community/windows_exporter/internal/collector/hyperv"
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/utils/testutils"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/require"
@@ -44,4 +47,18 @@ func TestCollector(t *testing.T) {
 	if metric := testutils.RequireFixtureMetric(t, metrics, hyperv.Name, "windows_hyperv_wmi_health", nil); metric != nil {
 		require.InDelta(t, 1, metric.GetGauge().GetValue(), 0, "Hyper-V WMI health query failed")
 	}
+}
+
+// TestCloseReleasesQuery ensures Close releases the PDH queries of the sub-collectors.
+func TestCloseReleasesQuery(t *testing.T) {
+	t.Parallel()
+
+	c := hyperv.New(&hyperv.Config{CollectorsEnabled: []string{"dynamic_memory_balancer"}})
+
+	require.NoError(t, c.Build(slog.New(slog.DiscardHandler), nil))
+	require.NoError(t, c.Close())
+
+	ch := make(chan prometheus.Metric, 100)
+
+	require.ErrorIs(t, c.Collect(ch, time.Second), pdh.ErrPerformanceCounterNotInitialized)
 }
