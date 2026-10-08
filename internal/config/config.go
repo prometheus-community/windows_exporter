@@ -36,7 +36,8 @@ type configFile struct {
 		Enabled bool `yaml:"enabled"`
 	} `yaml:"debug"`
 	Collectors struct {
-		Enabled string `yaml:"enabled"`
+		Enabled  string `yaml:"enabled"`
+		Disabled string `yaml:"disabled"`
 	} `yaml:"collectors"`
 	Collector collector.Config `yaml:"collector"`
 	Log       struct {
@@ -69,7 +70,7 @@ type getFlagger interface {
 
 // Resolver represents a configuration file resolver for kingpin.
 type Resolver struct {
-	flags map[string]string
+	flags map[string][]string
 }
 
 // Parse parses the command line arguments and configuration files.
@@ -118,7 +119,7 @@ func ParseConfigFile(args []string) string {
 
 // NewConfigFileResolver returns a Resolver structure.
 func NewConfigFileResolver(filePath string) (*Resolver, error) {
-	flags := map[string]string{}
+	flags := map[string][]string{}
 
 	file, err := os.Open(filePath)
 	if err != nil {
@@ -167,9 +168,18 @@ func NewConfigFileResolver(filePath string) (*Resolver, error) {
 }
 
 func (c *Resolver) setDefault(v getFlagger) {
-	for name, value := range c.flags {
-		if f := v.GetFlag(name); f != nil {
-			f.Default(value)
+	for name, values := range c.flags {
+		f := v.GetFlag(name)
+		if f == nil {
+			continue
+		}
+
+		// A list sets a repeatable flag, like web.listen-address, once per element.
+		// Other flags take the list as a comma-separated value.
+		if repeatable, ok := f.Model().Value.(interface{ IsCumulative() bool }); ok && repeatable.IsCumulative() {
+			f.Default(values...)
+		} else {
+			f.Default(strings.Join(values, ","))
 		}
 	}
 }

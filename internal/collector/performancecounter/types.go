@@ -18,6 +18,7 @@
 package performancecounter
 
 import (
+	"github.com/prometheus-community/windows_exporter/internal/config/yamlstring"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"go.yaml.in/yaml/v3"
 )
@@ -44,6 +45,8 @@ type Counter struct {
 
 // https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/54691ebe11bb9ec32b4e35cd31fcb94a352de134/receiver/windowsperfcountersreceiver/README.md?plain=1#L150
 
-func (*Config) UnmarshalYAML(*yaml.Node) error {
-	return nil
+// UnmarshalYAML decodes the performancecounter block of the configuration file,
+// where the objects are kept as a string. See [yamlstring.DecodeBlock].
+func (c *Config) UnmarshalYAML(node *yaml.Node) error {
+	return yamlstring.DecodeBlock(node, "objects", &c.Objects)
 }

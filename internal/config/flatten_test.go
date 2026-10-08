@@ -19,6 +19,7 @@ package config
 
 import (
 	"maps"
+	"slices"
 	"testing"
 
 	"go.yaml.in/yaml/v3"
@@ -33,6 +34,12 @@ func TestConfigFlattening(t *testing.T) {
     collectors:
       enabled: cpu,net,service
 
+    collector:
+      textfile:
+        directories: [C:\a, C:\b]
+      service:
+        include:
+
     log:
       level: debug`)
 
@@ -43,13 +50,14 @@ func TestConfigFlattening(t *testing.T) {
 		t.Error(err)
 	}
 
-	expectedResult := map[string]string{
-		"collectors.enabled": "cpu,net,service",
-		"log.level":          "debug",
+	expectedResult := map[string][]string{
+		"collectors.enabled":             {"cpu,net,service"},
+		"collector.textfile.directories": {`C:\a`, `C:\b`},
+		"log.level":                      {"debug"},
 	}
 	flattenedValues := flatten(data)
 
-	if !maps.Equal(expectedResult, flattenedValues) {
+	if !maps.EqualFunc(expectedResult, flattenedValues, slices.Equal) {
 		t.Errorf("Flattened values do not match!\nExpected result: %s\nActual result: %s", expectedResult, flattenedValues)
 	}
 }

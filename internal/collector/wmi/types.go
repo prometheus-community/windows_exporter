@@ -18,6 +18,7 @@
 package wmi
 
 import (
+	"github.com/prometheus-community/windows_exporter/internal/config/yamlstring"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.yaml.in/yaml/v3"
@@ -55,8 +56,8 @@ type Property struct {
 	metricType prometheus.ValueType
 }
 
-// UnmarshalYAML is a no-op, so the strict config file validation accepts the
-// queries being provided as a string. See the performancecounter collector.
-func (*Config) UnmarshalYAML(*yaml.Node) error {
-	return nil
+// UnmarshalYAML decodes the wmi block of the configuration file, where the
+// queries are kept as a string. See [yamlstring.DecodeBlock].
+func (c *Config) UnmarshalYAML(node *yaml.Node) error {
+	return yamlstring.DecodeBlock(node, "queries", &c.Queries)
 }

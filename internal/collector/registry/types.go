@@ -18,6 +18,7 @@
 package registry
 
 import (
+	"github.com/prometheus-community/windows_exporter/internal/config/yamlstring"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.yaml.in/yaml/v3"
 	winregistry "golang.org/x/sys/windows/registry"
@@ -46,8 +47,8 @@ type Value struct {
 	metricType prometheus.ValueType
 }
 
-// UnmarshalYAML is a no-op, so the strict config file validation accepts the
-// keys being provided as a string. See the performancecounter collector.
-func (*Config) UnmarshalYAML(*yaml.Node) error {
-	return nil
+// UnmarshalYAML decodes the registry block of the configuration file, where
+// the keys are kept as a string. See [yamlstring.DecodeBlock].
+func (c *Config) UnmarshalYAML(node *yaml.Node) error {
+	return yamlstring.DecodeBlock(node, "keys", &c.Keys)
 }
