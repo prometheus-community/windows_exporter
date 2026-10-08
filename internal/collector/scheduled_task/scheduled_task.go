@@ -284,7 +284,8 @@ func (c *Collector) collectMetrics(ch chan<- prometheus.Metric, scheduledTasks S
 	}
 }
 
-const SCHEDULED_TASK_PROGRAM_ID = "Schedule.Service.1"
+// CLSID of Schedule.Service, used directly because go-ole's CLSIDFromProgID can free the ProgID buffer mid-call.
+const SCHEDULED_TASK_CLASS_ID = "{0F87369F-A4E5-4CFC-BD3E-73E6154572DD}"
 
 // S_FALSE is returned by CoInitialize if it was already called on this thread.
 const S_FALSE = 0x00000001
@@ -308,10 +309,7 @@ func getScheduledTasks() (ScheduledTasks, error) {
 
 	defer ole.CoUninitialize()
 
-	schedClassID, err := ole.ClassIDFrom(SCHEDULED_TASK_PROGRAM_ID)
-	if err != nil {
-		return scheduledTasks, err
-	}
+	schedClassID := ole.NewGUID(SCHEDULED_TASK_CLASS_ID)
 
 	taskSchedulerObj, err := ole.CreateInstance(schedClassID, nil)
 	if err != nil || taskSchedulerObj == nil {

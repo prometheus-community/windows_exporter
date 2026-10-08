@@ -38,6 +38,9 @@ import (
 
 const Name = "update"
 
+// CLSID of Microsoft.Update.Session, used because go-ole's CLSIDFromProgID can free the ProgID buffer mid-call.
+const UPDATE_SESSION_CLASS_ID = "{4CB43D7F-7EEE-4906-8698-60DA1C38F2FE}"
+
 type Config struct {
 	Online         bool          `yaml:"online"`
 	ScrapeInterval time.Duration `yaml:"scrape-interval"`
@@ -191,7 +194,9 @@ func (c *Collector) scheduleUpdateStatus(ctx context.Context, logger *slog.Logge
 	defer ole.CoUninitialize()
 
 	// Create a new instance of the WMI object
-	sessionObj, err := oleutil.CreateObject("Microsoft.Update.Session")
+	sessionClassID := ole.NewGUID(UPDATE_SESSION_CLASS_ID)
+
+	sessionObj, err := ole.CreateInstance(sessionClassID, ole.IID_IUnknown)
 	if err != nil {
 		initErrCh <- fmt.Errorf("create Microsoft.Update.Session: %w", err)
 
