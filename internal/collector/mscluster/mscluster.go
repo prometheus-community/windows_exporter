@@ -23,11 +23,11 @@ import (
 	"log/slog"
 	"slices"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
+	"github.com/prometheus-community/windows_exporter/internal/utils/recovery"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -128,6 +128,25 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 		return nil
 	}
 
+	subCollectors := []string{
+		subCollectorCluster,
+		subCollectorNetwork,
+		subCollectorNode,
+		subCollectorResource,
+		subCollectorResourceGroup,
+		subCollectorSharedVolumes,
+		subCollectorVirtualDisk,
+		subCollectorStoragePool,
+	}
+
+	for _, name := range c.config.CollectorsEnabled {
+		if !slices.Contains(subCollectors, name) {
+			return fmt.Errorf("unknown sub collector: %s. Possible values: %s", name,
+				strings.Join(subCollectors, ", "),
+			)
+		}
+	}
+
 	if miSession == nil {
 		return errors.New("miSession is nil")
 	}
@@ -194,104 +213,94 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, maxScrapeDuration time.
 		return nil
 	}
 
-	errCh := make(chan error, 8)
+	var g recovery.Group
 
-	wg := sync.WaitGroup{}
-	wg.Add(8)
-
-	go func() {
-		defer wg.Done()
-
-		if slices.Contains(c.config.CollectorsEnabled, subCollectorCluster) {
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorCluster) {
+		g.Go(func() error {
 			if err := c.collectCluster(ch, maxScrapeDuration); err != nil {
-				errCh <- fmt.Errorf("failed to collect cluster metrics: %w", err)
+				return fmt.Errorf("failed to collect cluster metrics: %w", err)
 			}
-		}
-	}()
 
-	go func() {
-		defer wg.Done()
-
-		if slices.Contains(c.config.CollectorsEnabled, subCollectorNetwork) {
-			if err := c.collectNetwork(ch, maxScrapeDuration); err != nil {
-				errCh <- fmt.Errorf("failed to collect network metrics: %w", err)
-			}
-		}
-	}()
-
-	go func() {
-		defer wg.Done()
-
-		nodeNames := make([]string, 0)
-
-		if slices.Contains(c.config.CollectorsEnabled, subCollectorNode) {
-			var err error
-
-			nodeNames, err = c.collectNode(ch, maxScrapeDuration)
-			if err != nil {
-				errCh <- fmt.Errorf("failed to collect node metrics: %w", err)
-			}
-		}
-
-		go func() {
-			defer wg.Done()
-
-			if slices.Contains(c.config.CollectorsEnabled, subCollectorResource) {
-				if err := c.collectResource(ch, maxScrapeDuration, nodeNames); err != nil {
-					errCh <- fmt.Errorf("failed to collect resource metrics: %w", err)
-				}
-			}
-		}()
-
-		go func() {
-			defer wg.Done()
-
-			if slices.Contains(c.config.CollectorsEnabled, subCollectorResourceGroup) {
-				if err := c.collectResourceGroup(ch, maxScrapeDuration, nodeNames); err != nil {
-					errCh <- fmt.Errorf("failed to collect resource group metrics: %w", err)
-				}
-			}
-		}()
-	}()
-
-	go func() {
-		defer wg.Done()
-
-		if slices.Contains(c.config.CollectorsEnabled, subCollectorSharedVolumes) {
-			if err := c.collectSharedVolumes(ch, maxScrapeDuration); err != nil {
-				errCh <- fmt.Errorf("failed to collect shared_volumes metrics: %w", err)
-			}
-		}
-	}()
-
-	go func() {
-		defer wg.Done()
-
-		if slices.Contains(c.config.CollectorsEnabled, subCollectorVirtualDisk) {
-			if err := c.collectVirtualDisk(ch, maxScrapeDuration); err != nil {
-				errCh <- fmt.Errorf("failed to collect virtualdisk metrics: %w", err)
-			}
-		}
-	}()
-
-	go func() {
-		defer wg.Done()
-
-		if slices.Contains(c.config.CollectorsEnabled, subCollectorStoragePool) {
-			if err := c.collectStoragePool(ch, maxScrapeDuration); err != nil {
-				errCh <- fmt.Errorf("failed to collect storagepool metrics: %w", err)
-			}
-		}
-	}()
-
-	wg.Wait()
-	close(errCh)
-
-	errs := make([]error, 0)
-
-	for err := range errCh {
-		errs = append(errs, err)
+			return nil
+		})
 	}
 
-	return errors.Join(errs...)
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorNetwork) {
+		g.Go(func() error {
+			if err := c.collectNetwork(ch, maxScrapeDuration); err != nil {
+				return fmt.Errorf("failed to collect network metrics: %w", err)
+			}
+
+			return nil
+		})
+	}
+
+	// The resource and resource group collectors need the node names.
+	g.Go(func() error {
+		var (
+			nodeNames []string
+			err       error
+		)
+
+		if slices.Contains(c.config.CollectorsEnabled, subCollectorNode) {
+			nodeNames, err = c.collectNode(ch, maxScrapeDuration)
+			if err != nil {
+				err = fmt.Errorf("failed to collect node metrics: %w", err)
+			}
+		}
+
+		if slices.Contains(c.config.CollectorsEnabled, subCollectorResource) {
+			g.Go(func() error {
+				if err := c.collectResource(ch, maxScrapeDuration, nodeNames); err != nil {
+					return fmt.Errorf("failed to collect resource metrics: %w", err)
+				}
+
+				return nil
+			})
+		}
+
+		if slices.Contains(c.config.CollectorsEnabled, subCollectorResourceGroup) {
+			g.Go(func() error {
+				if err := c.collectResourceGroup(ch, maxScrapeDuration, nodeNames); err != nil {
+					return fmt.Errorf("failed to collect resource group metrics: %w", err)
+				}
+
+				return nil
+			})
+		}
+
+		return err
+	})
+
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorSharedVolumes) {
+		g.Go(func() error {
+			if err := c.collectSharedVolumes(ch, maxScrapeDuration); err != nil {
+				return fmt.Errorf("failed to collect shared_volumes metrics: %w", err)
+			}
+
+			return nil
+		})
+	}
+
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorVirtualDisk) {
+		g.Go(func() error {
+			if err := c.collectVirtualDisk(ch, maxScrapeDuration); err != nil {
+				return fmt.Errorf("failed to collect virtualdisk metrics: %w", err)
+			}
+
+			return nil
+		})
+	}
+
+	if slices.Contains(c.config.CollectorsEnabled, subCollectorStoragePool) {
+		g.Go(func() error {
+			if err := c.collectStoragePool(ch, maxScrapeDuration); err != nil {
+				return fmt.Errorf("failed to collect storagepool metrics: %w", err)
+			}
+
+			return nil
+		})
+	}
+
+	return g.Wait()
 }
