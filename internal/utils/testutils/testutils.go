@@ -256,6 +256,28 @@ func RequireFixtureMetric(t *testing.T, families map[string]*dto.MetricFamily, c
 	return nil
 }
 
+// MetricValuesByLabel returns the gauge or counter values of metricName,
+// keyed by the value of the label labelName.
+func MetricValuesByLabel(families map[string]*dto.MetricFamily, metricName, labelName string) map[string]float64 {
+	values := make(map[string]float64)
+
+	for _, metric := range families[metricName].GetMetric() {
+		for _, label := range metric.GetLabel() {
+			if label.GetName() != labelName {
+				continue
+			}
+
+			if metric.GetCounter() != nil {
+				values[label.GetValue()] = metric.GetCounter().GetValue()
+			} else {
+				values[label.GetValue()] = metric.GetGauge().GetValue()
+			}
+		}
+	}
+
+	return values
+}
+
 func noDataOnly(err error) bool {
 	if joined, ok := err.(interface{ Unwrap() []error }); ok {
 		for _, cause := range joined.Unwrap() {

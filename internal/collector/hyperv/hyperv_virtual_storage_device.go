@@ -42,6 +42,8 @@ type collectorVirtualStorageDevice struct {
 	virtualStorageDeviceLowerQueueLength         *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\Lower Queue Length
 	virtualStorageDeviceLowerLatency             *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\Lower Latency
 	virtualStorageDeviceIOQuotaReplenishmentRate *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\IO Quota Replenishment Rate
+	virtualStorageDeviceIOLatency                *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\Latency
+	virtualStorageDeviceLowerIOLatency           *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\Lower Latency
 }
 
 type perfDataCounterValuesVirtualStorageDevice struct {
@@ -77,7 +79,8 @@ func (c *Collector) buildVirtualStorageDevice() error {
 	)
 	c.virtualStorageDeviceQueueLength = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "virtual_storage_device_queue_length"),
-		"Represents the average queue length on this virtual device.",
+		"DEPRECATED: use rate(windows_hyperv_virtual_storage_device_io_latency_seconds_total). "+
+			"Cumulative queue length in 100ns ticks, identical to the raw latency.",
 		[]string{"device"},
 		nil,
 	)
@@ -107,7 +110,8 @@ func (c *Collector) buildVirtualStorageDevice() error {
 	)
 	c.virtualStorageDeviceLatency = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "virtual_storage_device_latency_seconds"),
-		"Represents the average IO transfer latency for this virtual device.",
+		"DEPRECATED: use windows_hyperv_virtual_storage_device_io_latency_seconds_total. "+
+			"Cumulative IO transfer latency in 100ns ticks for this virtual device.",
 		[]string{"device"},
 		nil,
 	)
@@ -125,13 +129,29 @@ func (c *Collector) buildVirtualStorageDevice() error {
 	)
 	c.virtualStorageDeviceLowerQueueLength = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "virtual_storage_device_lower_queue_length"),
-		"Represents the average queue length on the underlying storage subsystem for this device.",
+		"DEPRECATED: use rate(windows_hyperv_virtual_storage_device_lower_io_latency_seconds_total). "+
+			"Cumulative queue length in 100ns ticks on the underlying storage subsystem, identical to the raw lower latency.",
 		[]string{"device"},
 		nil,
 	)
 	c.virtualStorageDeviceLowerLatency = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "virtual_storage_device_lower_latency_seconds"),
-		"Represents the average IO transfer latency on the underlying storage subsystem for this virtual device.",
+		"DEPRECATED: use windows_hyperv_virtual_storage_device_lower_io_latency_seconds_total. "+
+			"Cumulative IO transfer latency in 100ns ticks on the underlying storage subsystem for this virtual device.",
+		[]string{"device"},
+		nil,
+	)
+	c.virtualStorageDeviceIOLatency = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "virtual_storage_device_io_latency_seconds_total"),
+		"Represents the total IO transfer latency for this virtual device. "+
+			"Divide its rate by the rate of windows_hyperv_virtual_storage_device_throughput_total for the average latency.",
+		[]string{"device"},
+		nil,
+	)
+	c.virtualStorageDeviceLowerIOLatency = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "virtual_storage_device_lower_io_latency_seconds_total"),
+		"Represents the total IO transfer latency on the underlying storage subsystem for this virtual device. "+
+			"Divide its rate by the rate of windows_hyperv_virtual_storage_device_throughput_total for the average latency.",
 		[]string{"device"},
 		nil,
 	)
@@ -233,6 +253,22 @@ func (c *Collector) collectVirtualStorageDevice(ch chan<- prometheus.Metric) err
 			c.virtualStorageDeviceIOQuotaReplenishmentRate,
 			prometheus.GaugeValue,
 			data.VirtualStorageDeviceIOQuotaReplenishmentRate,
+			data.Name,
+		)
+
+		// The raw value of a PERF_AVERAGE_TIMER counter is the sum of all IO latencies in
+		// 100ns ticks; the operation count it is averaged over is Throughput.
+		ch <- prometheus.MustNewConstMetric(
+			c.virtualStorageDeviceIOLatency,
+			prometheus.CounterValue,
+			data.VirtualStorageDeviceLatency*pdh.TicksToSecondScaleFactor,
+			data.Name,
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.virtualStorageDeviceLowerIOLatency,
+			prometheus.CounterValue,
+			data.VirtualStorageDeviceLowerLatency*pdh.TicksToSecondScaleFactor,
 			data.Name,
 		)
 	}

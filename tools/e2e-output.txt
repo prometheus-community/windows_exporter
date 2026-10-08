@@ -147,9 +147,9 @@ windows_exporter_collector_timeout{collector="time"} 0
 windows_exporter_collector_timeout{collector="udp"} 0
 # HELP windows_exporter_scrape_duration_seconds windows_exporter: Total scrape duration.
 # TYPE windows_exporter_scrape_duration_seconds gauge
-# HELP windows_logical_disk_avg_read_requests_queued Average number of read requests that were queued for the selected disk during the sample interval (LogicalDisk.AvgDiskReadQueueLength)
+# HELP windows_logical_disk_avg_read_requests_queued DEPRECATED: use rate(windows_logical_disk_read_seconds_total). Cumulative read queue length in seconds, identical to windows_logical_disk_read_seconds_total (LogicalDisk.AvgDiskReadQueueLength)
 # TYPE windows_logical_disk_avg_read_requests_queued gauge
-# HELP windows_logical_disk_avg_write_requests_queued Average number of write requests that were queued for the selected disk during the sample interval (LogicalDisk.AvgDiskWriteQueueLength)
+# HELP windows_logical_disk_avg_write_requests_queued DEPRECATED: use rate(windows_logical_disk_write_seconds_total). Cumulative write queue length in seconds, identical to windows_logical_disk_write_seconds_total (LogicalDisk.AvgDiskWriteQueueLength)
 # TYPE windows_logical_disk_avg_write_requests_queued gauge
 # HELP windows_logical_disk_free_bytes Free space in bytes, updates every 10-15 min (LogicalDisk.PercentFreeSpace)
 # TYPE windows_logical_disk_free_bytes gauge
