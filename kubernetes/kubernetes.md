@@ -14,17 +14,12 @@ Requirements:
 
 The image is a HostProcess container image based on [`mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image`](https://github.com/microsoft/windows-host-process-containers-base-image). One image works on every Windows version that supports HostProcess containers. The released images are listed in the [Docker section](../README.md#docker-implementation) of the readme.
 
-To build your own image, use `make` and `docker buildx` on Linux, for example in WSL. The image only copies the binary, so it builds on Linux although it's a Windows image. The binaries are cross-compiled to `output/windows_exporter-<version>-<arch>.exe`, the same layout the CI build uses.
+To build your own image, use `docker buildx` on Linux, for example in WSL. The image only copies the binary, so it builds on Linux although it's a Windows image. Put the amd64 binary into an otherwise empty directory as `windows_exporter-<version>-amd64.exe`, the name the CI build uses, and build the image from that directory:
 
 ```bash
-# Build the image <repository>/windows-exporter:<version>
-DOCKER_REPO=<your repository> make build-image
-
-# Build the image and push it
-DOCKER_REPO=<your repository> make push
+GOOS=windows GOARCH=amd64 go build -o output/windows_exporter-dev-amd64.exe ./cmd/windows_exporter
+docker buildx build --platform windows/amd64 -f Dockerfile -t <your repository>/windows-exporter:dev --push output
 ```
-
-The version is taken from `git describe`. Set `VERSION` to override it. The default buildx builder can only keep a Windows image locally if the Docker engine uses the containerd image store, so use `make push` to get the image into a registry.
 
 ## Kubernetes Quick Start
 
