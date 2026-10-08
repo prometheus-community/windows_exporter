@@ -1,0 +1,128 @@
+rule_files:
+  - custom_rules.yaml
+  - custom_alerts.yaml
+evaluation_interval: 1m
+group_eval_order:
+  - windows-exporter-recording
+  - windows-exporter-alerts
+  - windows-active-directory
+
+tests:
+  - name: Custom selectors, thresholds and critical severity propagate to alerts
+    interval: 1m
+    input_series:
+      - series: 'up{job="windows-custom", instance="host:9182", cluster="test"}'
+        values: '0x20'
+      - series: 'up{job="windows-custom", instance="host:9182", cluster="prod"}'
+        values: '0x20'
+      - series: 'windows_cpu_time_total{job="windows-custom", instance="host:9182", cluster="test", core="0", mode="idle"}'
+        values: '0+9x20'
+      - series: 'windows_memory_available_bytes{job="windows-custom", instance="host:9182", cluster="test"}'
+        values: '12x20'
+      - series: 'windows_memory_physical_total_bytes{job="windows-custom", instance="host:9182", cluster="test"}'
+        values: '100x20'
+      - series: 'windows_logical_disk_free_bytes{job="windows-custom", instance="host:9182", cluster="test", volume="C:"}'
+        values: '8x20'
+      - series: 'windows_logical_disk_size_bytes{job="windows-custom", instance="host:9182", cluster="test", volume="C:"}'
+        values: '100x20'
+      - series: 'windows_logical_disk_free_bytes{job="windows-custom", instance="host:9182", cluster="test", volume="HarddiskVolume1"}'
+        values: '1x20'
+      - series: 'windows_logical_disk_size_bytes{job="windows-custom", instance="host:9182", cluster="test", volume="HarddiskVolume1"}'
+        values: '100x20'
+      - series: 'windows_net_bytes_received_total{job="windows-custom", instance="host:9182", cluster="test", nic="Ethernet"}'
+        values: '0+600x20'
+      - series: 'windows_net_bytes_received_total{job="windows-custom", instance="host:9182", cluster="test", nic="Loopback"}'
+        values: '0+600x20'
+    promql_expr_test:
+      - expr: windows:net_received_bytes:rate
+        eval_time: 20m
+        exp_samples:
+          - labels: 'windows:net_received_bytes:rate{job="windows-custom", instance="host:9182", cluster="test", nic="Ethernet"}'
+            value: 10
+      - expr: windows:logical_disk_free:ratio
+        eval_time: 20m
+        exp_samples:
+          - labels: 'windows:logical_disk_free:ratio{job="windows-custom", instance="host:9182", cluster="test", volume="C:"}'
+            value: 0.08
+    alert_rule_test:
+      - alertname: WindowsExporterDown
+        eval_time: 5m
+        exp_alerts:
+          - exp_labels: {job: windows-custom, instance: 'host:9182', cluster: test, severity: page}
+            exp_annotations:
+              summary: Windows exporter is unreachable
+              description: 'Prometheus cannot scrape Windows exporter on host:9182 (job windows-custom).'
+      - alertname: WindowsCPUHighUsage
+        eval_time: 16m
+        exp_alerts:
+          - exp_labels: {job: windows-custom, instance: 'host:9182', cluster: test, severity: warning}
+            exp_annotations:
+              summary: Windows CPU usage is high
+              description: 'CPU usage on host:9182 has exceeded 80% for 15 minutes.'
+      - alertname: WindowsMemoryHighUsage
+        eval_time: 15m
+        exp_alerts:
+          - exp_labels: {job: windows-custom, instance: 'host:9182', cluster: test, severity: warning}
+            exp_annotations:
+              summary: Windows memory usage is high
+              description: 'Physical memory usage on host:9182 has exceeded 85% for 15 minutes.'
+      - alertname: WindowsDiskAlmostFull
+        eval_time: 15m
+        exp_alerts:
+          - exp_labels: {job: windows-custom, instance: 'host:9182', cluster: test, volume: 'C:', severity: warning}
+            exp_annotations:
+              summary: Windows disk space is low
+              description: 'Volume C: on host:9182 has less than 20% free space. Windows may delay space metrics by 10–15 minutes.'
+          - exp_labels: {job: windows-custom, instance: 'host:9182', cluster: test, volume: 'C:', severity: page}
+            exp_annotations:
+              summary: Windows disk space is low
+              description: 'Volume C: on host:9182 has less than 10% free space. Windows may delay space metrics by 10–15 minutes.'
+
+  - name: Active Directory opt-in honors thresholds, selectors and recovery
+    interval: 1m
+    input_series:
+      - series: 'windows_ad_replication_pending_operations{job="windows-custom", instance="host:9182", cluster="test"}'
+        values: '20x20 0x5'
+      - series: 'windows_ad_replication_pending_operations{job="windows-custom", instance="healthy:9182", cluster="test"}'
+        values: '10x26'
+      - series: 'windows_ad_replication_pending_operations{job="windows-custom", instance="host:9182", cluster="prod"}'
+        values: '20x26'
+      - series: 'windows_ad_replication_sync_requests_total{job="windows-custom", instance="host:9182", cluster="test"}'
+        values: '0+120x26'
+      - series: 'windows_ad_replication_sync_requests_success_total{job="windows-custom", instance="host:9182", cluster="test"}'
+        values: '0+60x20 1320+120x5'
+      - series: 'windows_ad_replication_sync_requests_total{job="windows-custom", instance="healthy:9182", cluster="test"}'
+        values: '0+120x26'
+      - series: 'windows_ad_replication_sync_requests_success_total{job="windows-custom", instance="healthy:9182", cluster="test"}'
+        values: '0+120x26'
+      - series: 'windows_ad_replication_sync_requests_total{job="windows-custom", instance="host:9182", cluster="prod"}'
+        values: '0+120x26'
+      - series: 'windows_ad_replication_sync_requests_success_total{job="windows-custom", instance="host:9182", cluster="prod"}'
+        values: '0+60x26'
+    alert_rule_test:
+      - alertname: WindowsADPendingReplication
+        eval_time: 14m
+        exp_alerts: []
+      - alertname: WindowsADPendingReplication
+        eval_time: 15m
+        exp_alerts:
+          - exp_labels: {job: windows-custom, instance: 'host:9182', cluster: test, severity: warning}
+            exp_annotations:
+              summary: Active Directory replication queue is high
+              description: 'Pending replication operations on host:9182 have exceeded 10 for 15 minutes.'
+      - alertname: WindowsADPendingReplication
+        eval_time: 21m
+        exp_alerts: []
+      - alertname: WindowsADReplicationFailures
+        eval_time: 16m
+        exp_alerts: []
+      - alertname: WindowsADReplicationFailures
+        eval_time: 17m
+        exp_alerts:
+          - exp_labels: {job: windows-custom, instance: 'host:9182', cluster: test, severity: warning}
+            exp_annotations:
+              summary: Active Directory replication requests are failing
+              description: 'Replication synchronization requests on host:9182 have been failing for 15 minutes.'
+      - alertname: WindowsADReplicationFailures
+        eval_time: 23m
+        exp_alerts: []

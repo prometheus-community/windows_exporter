@@ -1,0 +1,89 @@
+rule_files:
+  - ../windows_rules.yaml
+evaluation_interval: 1m
+fuzzy_compare: true
+
+tests:
+  - name: CPU is averaged across cores and preserves target labels
+    interval: 1m
+    input_series:
+      - series: 'windows_cpu_time_total{job="windows_exporter", instance="host:9182", cluster="a", core="0", mode="idle"}'
+        values: '0+12x10'
+      - series: 'windows_cpu_time_total{job="windows_exporter", instance="host:9182", cluster="a", core="1", mode="idle"}'
+        values: '0+36x10'
+      - series: 'windows_cpu_time_total{job="windows_exporter", instance="host:9182", cluster="a", core="0", mode="user"}'
+        values: '0+48x10'
+      - series: 'windows_cpu_time_total{job="windows_exporter", instance="host:9182", cluster="b", core="0", mode="idle"}'
+        values: '0+30x10'
+      - series: 'windows_cpu_time_total{job="other", instance="host:9182", core="0", mode="idle"}'
+        values: '0+6x10'
+    promql_expr_test:
+      - expr: windows:cpu_usage:ratio
+        eval_time: 10m
+        exp_samples:
+          - labels: 'windows:cpu_usage:ratio{job="windows_exporter", instance="host:9182", cluster="a"}'
+            value: 0.6
+          - labels: 'windows:cpu_usage:ratio{job="windows_exporter", instance="host:9182", cluster="b"}'
+            value: 0.5
+
+  - name: Memory availability and disk free space are ratios, not percentages
+    interval: 1m
+    input_series:
+      - series: 'windows_memory_available_bytes{job="windows_exporter", instance="host:9182", cluster="a"}'
+        values: '25x5'
+      - series: 'windows_memory_physical_total_bytes{job="windows_exporter", instance="host:9182", cluster="a"}'
+        values: '100x5'
+      - series: 'windows_logical_disk_free_bytes{job="windows_exporter", instance="host:9182", cluster="a", volume="C:"}'
+        values: '20x5'
+      - series: 'windows_logical_disk_size_bytes{job="windows_exporter", instance="host:9182", cluster="a", volume="C:"}'
+        values: '100x5'
+      - series: 'windows_logical_disk_free_bytes{job="windows_exporter", instance="host:9182", volume=""}'
+        values: '1x5'
+      - series: 'windows_logical_disk_size_bytes{job="windows_exporter", instance="host:9182", volume=""}'
+        values: '100x5'
+    promql_expr_test:
+      - expr: windows:memory_usage:ratio
+        eval_time: 5m
+        exp_samples:
+          - labels: 'windows:memory_usage:ratio{job="windows_exporter", instance="host:9182", cluster="a"}'
+            value: 0.75
+      - expr: windows:logical_disk_free:ratio
+        eval_time: 5m
+        exp_samples:
+          - labels: 'windows:logical_disk_free:ratio{job="windows_exporter", instance="host:9182", cluster="a", volume="C:"}'
+            value: 0.2
+
+  - name: Disk and network rates retain device labels and handle counter resets
+    interval: 1m
+    input_series:
+      - series: 'windows_logical_disk_read_bytes_total{job="windows_exporter", instance="host:9182", volume="C:"}'
+        values: '0+600x10'
+      - series: 'windows_logical_disk_write_bytes_total{job="windows_exporter", instance="host:9182", volume="C:"}'
+        values: '0+1200x10'
+      - series: 'windows_net_bytes_received_total{job="windows_exporter", instance="host:9182", nic="Ethernet"}'
+        values: '0+600x5 600+600x4'
+      - series: 'windows_net_bytes_sent_total{job="windows_exporter", instance="host:9182", nic="Ethernet"}'
+        values: '0+1800x10'
+      - series: 'windows_net_bytes_sent_total{job="windows_exporter", instance="host:9182", nic=""}'
+        values: '0+1800x10'
+    promql_expr_test:
+      - expr: windows:logical_disk_read_bytes:rate
+        eval_time: 10m
+        exp_samples:
+          - labels: 'windows:logical_disk_read_bytes:rate{job="windows_exporter", instance="host:9182", volume="C:"}'
+            value: 10
+      - expr: windows:logical_disk_write_bytes:rate
+        eval_time: 10m
+        exp_samples:
+          - labels: 'windows:logical_disk_write_bytes:rate{job="windows_exporter", instance="host:9182", volume="C:"}'
+            value: 20
+      - expr: windows:net_received_bytes:rate
+        eval_time: 8m
+        exp_samples:
+          - labels: 'windows:net_received_bytes:rate{job="windows_exporter", instance="host:9182", nic="Ethernet"}'
+            value: 10
+      - expr: windows:net_sent_bytes:rate
+        eval_time: 10m
+        exp_samples:
+          - labels: 'windows:net_sent_bytes:rate{job="windows_exporter", instance="host:9182", nic="Ethernet"}'
+            value: 30

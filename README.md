@@ -190,6 +190,12 @@ The Docker image is tagged with the version of the exporter. The `latest` tag is
 
 See detailed steps to install on Windows Kubernetes [here](./kubernetes/kubernetes.md).
 
+## Prometheus rules
+
+The [Windows exporter mixin](contrib/mixin/README.md) provides configurable
+recording rules and alerts for Prometheus, with Jsonnet generation, pint linting,
+and promtool tests.
+
 ## Supported versions
 
 `windows_exporter` supports Windows Server versions 2016 and later, and desktop Windows version 10 and 11 (21H2 or later).

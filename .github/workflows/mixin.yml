@@ -1,0 +1,44 @@
+name: Mixin
+
+on:
+  pull_request:
+    paths:
+      - contrib/mixin/**
+      - .github/workflows/mixin.yml
+  push:
+    branches:
+      - master
+      - next
+      - main
+    paths:
+      - contrib/mixin/**
+      - .github/workflows/mixin.yml
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  rules:
+    name: Validate Prometheus rules
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: contrib/mixin
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: 'false'
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: '1.27.1'
+
+      - name: Install pinned tools
+        run: make tools
+
+      - name: Lint and test rules
+        run: |
+          make test PROMTOOL="docker run --rm --entrypoint promtool -v \"$PWD:/mixin:ro\" -w /mixin prom/prometheus:v3.15.0"
