@@ -36,7 +36,7 @@ const replicaVMQueryTimeout = 5 * time.Second
 
 // collectorReplicaVM Hyper-V Replica VM metrics
 type collectorReplicaVM struct {
-	perfDataCollectorReplicaVM *pdh.Collector
+	perfDataCollectorReplicaVM *pdh.Collector[perfDataCounterValuesReplicaVM]
 	perfDataObjectReplicaVM    []perfDataCounterValuesReplicaVM
 
 	miQueryReplicaVM mi.Query
