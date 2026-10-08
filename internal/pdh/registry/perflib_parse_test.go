@@ -20,6 +20,7 @@ package registry
 import (
 	"bytes"
 	"encoding/binary"
+	"io"
 	"testing"
 	"unsafe"
 
@@ -308,4 +309,50 @@ func TestNewCollectorUnknownObject(t *testing.T) {
 
 	_, err := NewCollector[counterValues]("Object That Does Not Exist", nil)
 	require.ErrorContains(t, err, "not found in the counter name table")
+}
+
+// BenchmarkParsePerformanceData measures the parser alone, without the
+// RegQueryValueEx call that dominates BenchmarkCollectorCollect.
+func BenchmarkParsePerformanceData(b *testing.B) {
+	buffer := livePerformanceData(b, "Process")
+
+	b.ReportAllocs()
+
+	for b.Loop() {
+		if _, err := parsePerformanceData(buffer, "Process"); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+// TestDecodeMatchesBinaryRead checks the hand-written decoders of the raw
+// structures against binary.Read.
+func TestDecodeMatchesBinaryRead(t *testing.T) {
+	t.Parallel()
+
+	type decoder interface {
+		decode(b []byte) error
+	}
+
+	for _, tc := range []struct {
+		decoded, expected decoder
+	}{
+		{new(perfDataBlock), new(perfDataBlock)},
+		{new(perfObjectType), new(perfObjectType)},
+		{new(perfCounterDefinition), new(perfCounterDefinition)},
+		{new(perfCounterBlock), new(perfCounterBlock)},
+		{new(perfInstanceDefinition), new(perfInstanceDefinition)},
+	} {
+		// Distinct bytes, so a field read from the wrong offset gets a different value.
+		buffer := make([]byte, binary.Size(tc.expected))
+		for i := range buffer {
+			buffer[i] = byte(i + 1)
+		}
+
+		require.NoError(t, binary.Read(bytes.NewReader(buffer), bo, tc.expected))
+		require.NoError(t, tc.decoded.decode(buffer))
+		require.Equal(t, tc.expected, tc.decoded)
+
+		require.ErrorIs(t, tc.decoded.decode(buffer[:len(buffer)-1]), io.ErrUnexpectedEOF)
+	}
 }

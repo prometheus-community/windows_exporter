@@ -18,7 +18,6 @@
 package registry
 
 import (
-	"encoding/binary"
 	"io"
 
 	"golang.org/x/sys/windows"
@@ -63,8 +62,40 @@ type perfDataBlock struct {
 	SystemNameOffset uint32
 }
 
-func (p *perfDataBlock) BinaryReadFrom(r io.Reader) error {
-	return binary.Read(r, bo, p)
+// decode reads p from the start of b. The fields are decoded directly, since
+// binary.Read allocates and walks the struct by reflection on every call.
+func (p *perfDataBlock) decode(b []byte) error {
+	if int64(len(b)) < perfDataBlockSize {
+		return io.ErrUnexpectedEOF
+	}
+
+	*p = perfDataBlock{
+		Signature:       [4]uint16{bo.Uint16(b[0:]), bo.Uint16(b[2:]), bo.Uint16(b[4:]), bo.Uint16(b[6:])},
+		LittleEndian:    bo.Uint32(b[8:]),
+		Version:         bo.Uint32(b[12:]),
+		Revision:        bo.Uint32(b[16:]),
+		TotalByteLength: bo.Uint32(b[20:]),
+		HeaderLength:    bo.Uint32(b[24:]),
+		NumObjectTypes:  bo.Uint32(b[28:]),
+		DefaultObject:   int32(bo.Uint32(b[32:])),
+		SystemTime: windows.Systemtime{
+			Year:         bo.Uint16(b[36:]),
+			Month:        bo.Uint16(b[38:]),
+			DayOfWeek:    bo.Uint16(b[40:]),
+			Day:          bo.Uint16(b[42:]),
+			Hour:         bo.Uint16(b[44:]),
+			Minute:       bo.Uint16(b[46:]),
+			Second:       bo.Uint16(b[48:]),
+			Milliseconds: bo.Uint16(b[50:]),
+		},
+		PerfTime:         int64(bo.Uint64(b[56:])),
+		PerfFreq:         int64(bo.Uint64(b[64:])),
+		PerfTime100nSec:  int64(bo.Uint64(b[72:])),
+		SystemNameLength: bo.Uint32(b[80:]),
+		SystemNameOffset: bo.Uint32(b[84:]),
+	}
+
+	return nil
 }
 
 /*
@@ -105,8 +136,30 @@ type perfObjectType struct {
 	PerfFreq             int64
 }
 
-func (p *perfObjectType) BinaryReadFrom(r io.Reader) error {
-	return binary.Read(r, bo, p)
+// decode reads p from the start of b.
+func (p *perfObjectType) decode(b []byte) error {
+	if int64(len(b)) < perfObjectTypeSize {
+		return io.ErrUnexpectedEOF
+	}
+
+	*p = perfObjectType{
+		TotalByteLength:      bo.Uint32(b[0:]),
+		DefinitionLength:     bo.Uint32(b[4:]),
+		HeaderLength:         bo.Uint32(b[8:]),
+		ObjectNameTitleIndex: bo.Uint32(b[12:]),
+		ObjectNameTitle:      bo.Uint32(b[16:]),
+		ObjectHelpTitleIndex: bo.Uint32(b[20:]),
+		ObjectHelpTitle:      bo.Uint32(b[24:]),
+		DetailLevel:          bo.Uint32(b[28:]),
+		NumCounters:          bo.Uint32(b[32:]),
+		DefaultCounter:       int32(bo.Uint32(b[36:])),
+		NumInstances:         int32(bo.Uint32(b[40:])),
+		CodePage:             bo.Uint32(b[44:]),
+		PerfTime:             int64(bo.Uint64(b[48:])),
+		PerfFreq:             int64(bo.Uint64(b[56:])),
+	}
+
+	return nil
 }
 
 /*
@@ -139,8 +192,26 @@ type perfCounterDefinition struct {
 	CounterOffset         uint32
 }
 
-func (p *perfCounterDefinition) BinaryReadFrom(r io.Reader) error {
-	return binary.Read(r, bo, p)
+// decode reads p from the start of b.
+func (p *perfCounterDefinition) decode(b []byte) error {
+	if int64(len(b)) < perfCounterDefinitionSize {
+		return io.ErrUnexpectedEOF
+	}
+
+	*p = perfCounterDefinition{
+		ByteLength:            bo.Uint32(b[0:]),
+		CounterNameTitleIndex: bo.Uint32(b[4:]),
+		CounterNameTitle:      bo.Uint32(b[8:]),
+		CounterHelpTitleIndex: bo.Uint32(b[12:]),
+		CounterHelpTitle:      bo.Uint32(b[16:]),
+		DefaultScale:          int32(bo.Uint32(b[20:])),
+		DetailLevel:           bo.Uint32(b[24:]),
+		CounterType:           bo.Uint32(b[28:]),
+		CounterSize:           bo.Uint32(b[32:]),
+		CounterOffset:         bo.Uint32(b[36:]),
+	}
+
+	return nil
 }
 
 func (p *perfCounterDefinition) LookupName() string {
@@ -159,8 +230,15 @@ type perfCounterBlock struct {
 	ByteLength uint32
 }
 
-func (p *perfCounterBlock) BinaryReadFrom(r io.Reader) error {
-	return binary.Read(r, bo, p)
+// decode reads p from the start of b.
+func (p *perfCounterBlock) decode(b []byte) error {
+	if int64(len(b)) < perfCounterBlockSize {
+		return io.ErrUnexpectedEOF
+	}
+
+	p.ByteLength = bo.Uint32(b)
+
+	return nil
 }
 
 /*
@@ -185,6 +263,20 @@ type perfInstanceDefinition struct {
 	NameLength             uint32
 }
 
-func (p *perfInstanceDefinition) BinaryReadFrom(r io.Reader) error {
-	return binary.Read(r, bo, p)
+// decode reads p from the start of b.
+func (p *perfInstanceDefinition) decode(b []byte) error {
+	if int64(len(b)) < perfInstanceDefinitionSize {
+		return io.ErrUnexpectedEOF
+	}
+
+	*p = perfInstanceDefinition{
+		ByteLength:             bo.Uint32(b[0:]),
+		ParentObjectTitleIndex: bo.Uint32(b[4:]),
+		ParentObjectInstance:   bo.Uint32(b[8:]),
+		UniqueID:               bo.Uint32(b[12:]),
+		NameOffset:             bo.Uint32(b[16:]),
+		NameLength:             bo.Uint32(b[20:]),
+	}
+
+	return nil
 }
