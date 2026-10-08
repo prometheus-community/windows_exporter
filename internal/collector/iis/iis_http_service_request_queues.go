@@ -27,7 +27,7 @@ import (
 )
 
 type collectorHttpServiceRequestQueues struct {
-	perfDataCollectorHttpServiceRequestQueues *pdh.Collector
+	perfDataCollectorHttpServiceRequestQueues *pdh.Collector[perfDataCounterValuesHttpServiceRequestQueues]
 	perfDataObjectHttpServiceRequestQueues    []perfDataCounterValuesHttpServiceRequestQueues
 
 	httpRequestQueuesCurrentQueueSize     *prometheus.Desc

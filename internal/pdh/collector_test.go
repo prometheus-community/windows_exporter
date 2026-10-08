@@ -135,3 +135,37 @@ func TestCollectorExplicitInstances(t *testing.T) {
 		})
 	}
 }
+
+func TestNewCollectorNonStruct(t *testing.T) {
+	t.Parallel()
+
+	_, err := pdh.NewCollector[int](slog.New(slog.DiscardHandler), pdh.CounterTypeRaw, "Process", pdh.InstancesAll)
+	require.Error(t, err)
+}
+
+func TestDynamicCollector(t *testing.T) {
+	t.Parallel()
+
+	counters := []string{"Thread Count", "Handle Count"}
+
+	collector, err := pdh.NewDynamicCollector(slog.New(slog.DiscardHandler), pdh.CounterTypeRaw, "Process", pdh.InstancesAll, counters)
+	require.NoError(t, err)
+
+	t.Cleanup(collector.Close)
+
+	var data []pdh.Row
+
+	require.NoError(t, collector.Collect(&data))
+	require.NotEmpty(t, data)
+
+	for _, row := range data {
+		require.NotEmpty(t, row.Name)
+		require.Len(t, row.Values, len(counters))
+
+		if row.Name == "Idle" || row.Name == "Secure System" {
+			continue
+		}
+
+		require.NotZerof(t, row.Values[0], "instance: %s, counter: %s", row.Name, counters[0])
+	}
+}

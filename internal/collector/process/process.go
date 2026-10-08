@@ -66,7 +66,7 @@ type Collector struct {
 	miSession                 *mi.Session
 	workerProcessMIQueryQuery mi.Query
 
-	perfDataCollector pdhtypes.Collector
+	perfDataCollector pdhtypes.Collector[perfDataCounterValues]
 	perfDataObject    []perfDataCounterValues
 	workerCh          chan processWorkerRequest
 

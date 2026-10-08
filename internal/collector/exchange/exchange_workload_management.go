@@ -26,7 +26,7 @@ import (
 )
 
 type collectorWorkloadManagementWorkloads struct {
-	perfDataCollectorWorkloadManagementWorkloads *pdh.Collector
+	perfDataCollectorWorkloadManagementWorkloads *pdh.Collector[perfDataCounterValuesWorkloadManagementWorkloads]
 	perfDataObjectWorkloadManagementWorkloads    []perfDataCounterValuesWorkloadManagementWorkloads
 
 	activeTasks    *prometheus.Desc

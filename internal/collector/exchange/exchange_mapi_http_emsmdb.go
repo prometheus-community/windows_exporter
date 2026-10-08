@@ -26,7 +26,7 @@ import (
 )
 
 type collectorMapiHTTPEmsMDB struct {
-	perfDataCollectorMapiHTTPEmsMDB *pdh.Collector
+	perfDataCollectorMapiHTTPEmsMDB *pdh.Collector[perfDataCounterValuesMapiHTTPEmsMDB]
 	perfDataObjectMapiHTTPEmsMDB    []perfDataCounterValuesMapiHTTPEmsMDB
 
 	activeUserCountMapiHTTPEmsMDB *prometheus.Desc

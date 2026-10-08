@@ -27,7 +27,7 @@ import (
 )
 
 type collectorDatabaseReplica struct {
-	dbReplicaPerfDataCollectors map[mssqlInstance]*pdh.Collector
+	dbReplicaPerfDataCollectors map[mssqlInstance]*pdh.Collector[perfDataCounterValuesDBReplica]
 	dbReplicaPerfDataObject     []perfDataCounterValuesDBReplica
 
 	dbReplicaDatabaseFlowControlDelay  *prometheus.Desc
@@ -88,7 +88,7 @@ type perfDataCounterValuesDBReplica struct {
 func (c *Collector) buildDatabaseReplica() error {
 	var err error
 
-	c.dbReplicaPerfDataCollectors = make(map[mssqlInstance]*pdh.Collector, len(c.mssqlInstances))
+	c.dbReplicaPerfDataCollectors = make(map[mssqlInstance]*pdh.Collector[perfDataCounterValuesDBReplica], len(c.mssqlInstances))
 	errs := make([]error, 0, len(c.mssqlInstances))
 
 	for _, sqlInstance := range c.mssqlInstances {
@@ -251,7 +251,7 @@ func (c *Collector) collectDatabaseReplica(ch chan<- prometheus.Metric) error {
 	return c.collect(ch, subCollectorDatabaseReplica, c.dbReplicaPerfDataCollectors, c.collectDatabaseReplicaInstance)
 }
 
-func (c *Collector) collectDatabaseReplicaInstance(ch chan<- prometheus.Metric, sqlInstance mssqlInstance, perfDataCollector *pdh.Collector) error {
+func (c *Collector) collectDatabaseReplicaInstance(ch chan<- prometheus.Metric, sqlInstance mssqlInstance, perfDataCollector *pdh.Collector[perfDataCounterValuesDBReplica]) error {
 	err := perfDataCollector.Collect(&c.dbReplicaPerfDataObject)
 	if err != nil {
 		return fmt.Errorf("failed to collect %s metrics: %w", c.mssqlGetPerfObjectName(sqlInstance, "Database Replica"), err)

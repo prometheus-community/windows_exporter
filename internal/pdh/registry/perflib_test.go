@@ -18,10 +18,7 @@
 package registry
 
 import (
-	"errors"
 	"testing"
-
-	"github.com/prometheus-community/windows_exporter/internal/mi"
 )
 
 // TestNewCollectorStructTypeParam guards against a regression where
@@ -40,32 +37,25 @@ func TestNewCollectorStructTypeParam(t *testing.T) {
 	}
 }
 
-// TestCollectInvalidEntityType guards against a regression where Collect
-// called reflect.Type.Elem() on a non-slice destination and panicked instead
-// of returning mi.ErrInvalidEntityType.
-func TestCollectInvalidEntityType(t *testing.T) {
+// TestNewCollectorNonStruct guards against a regression where NewCollector
+// panicked instead of returning an error for a type parameter that is not a struct.
+func TestNewCollectorNonStruct(t *testing.T) {
+	t.Parallel()
+
+	if _, err := NewCollector[int]("System", nil); err == nil {
+		t.Error("expected an error, got nil")
+	}
+}
+
+func TestCollectNilDestination(t *testing.T) {
 	t.Parallel()
 
 	type counterValues struct {
 		Name string
 	}
 
-	c := &Collector{}
-
-	for name, dst := range map[string]any{
-		"nil":                nil,
-		"non-pointer":        []counterValues{},
-		"pointer to struct":  &counterValues{},
-		"pointer to []int":   &[]int{},
-		"pointer to integer": new(int),
-	} {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			if err := c.Collect(dst); !errors.Is(err, mi.ErrInvalidEntityType) {
-				t.Errorf("expected %v, got %v", mi.ErrInvalidEntityType, err)
-			}
-		})
+	if err := (&Collector[counterValues]{}).Collect(nil); err == nil {
+		t.Error("expected an error, got nil")
 	}
 }
 

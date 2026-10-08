@@ -26,7 +26,7 @@ import (
 )
 
 type collectorTransportQueues struct {
-	perfDataCollectorTransportQueues *pdh.Collector
+	perfDataCollectorTransportQueues *pdh.Collector[perfDataCounterValuesTransportQueues]
 	perfDataObjectTransportQueues    []perfDataCounterValuesTransportQueues
 
 	activeMailboxDeliveryQueueLength        *prometheus.Desc
