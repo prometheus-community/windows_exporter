@@ -27,7 +27,7 @@ import (
 
 // collectorVirtualNetworkAdapterDropReasons Hyper-V Virtual Network Adapter Drop Reasons metrics
 type collectorVirtualNetworkAdapterDropReasons struct {
-	perfDataCollectorVirtualNetworkAdapterDropReasons *pdh.Collector
+	perfDataCollectorVirtualNetworkAdapterDropReasons *pdh.Collector[perfDataCounterValuesVirtualNetworkAdapterDropReasons]
 	perfDataObjectVirtualNetworkAdapterDropReasons    []perfDataCounterValuesVirtualNetworkAdapterDropReasons
 
 	// \Hyper-V Virtual Network Adapter Drop Reasons(*)\Outgoing LowPowerPacketFilter

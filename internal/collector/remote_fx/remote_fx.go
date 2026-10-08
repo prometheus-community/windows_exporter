@@ -47,9 +47,9 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	config Config
 
-	perfDataCollectorNetwork  *pdh.Collector
+	perfDataCollectorNetwork  *pdh.Collector[perfDataCounterValuesNetwork]
 	perfDataObjectNetwork     []perfDataCounterValuesNetwork
-	perfDataCollectorGraphics *pdh.Collector
+	perfDataCollectorGraphics *pdh.Collector[perfDataCounterValuesGraphics]
 	perfDataObjectGraphics    []perfDataCounterValuesGraphics
 
 	// net

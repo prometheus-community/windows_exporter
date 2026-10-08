@@ -41,8 +41,8 @@ var ConfigDefaults = Config{}
 // A Collector is a Prometheus Collector for WMI Win32_PerfRawData_vmGuestLib_VMem/Win32_PerfRawData_vmGuestLib_VCPU metrics.
 type Collector struct {
 	config                  Config
-	perfDataCollectorCPU    *pdh.Collector
-	perfDataCollectorMemory *pdh.Collector
+	perfDataCollectorCPU    *pdh.Collector[perfDataCounterValuesCPU]
+	perfDataCollectorMemory *pdh.Collector[perfDataCounterValuesMemory]
 	perfDataObjectCPU       []perfDataCounterValuesCPU
 	perfDataObjectMemory    []perfDataCounterValuesMemory
 

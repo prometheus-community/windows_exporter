@@ -27,7 +27,7 @@ import (
 )
 
 type collectorGeneralStatistics struct {
-	genStatsPerfDataCollectors map[mssqlInstance]*pdh.Collector
+	genStatsPerfDataCollectors map[mssqlInstance]*pdh.Collector[perfDataCounterValuesGenStats]
 	genStatsPerfDataObject     []perfDataCounterValuesGenStats
 
 	genStatsActiveTempTables              *prometheus.Desc
@@ -86,7 +86,7 @@ type perfDataCounterValuesGenStats struct {
 func (c *Collector) buildGeneralStatistics() error {
 	var err error
 
-	c.genStatsPerfDataCollectors = make(map[mssqlInstance]*pdh.Collector, len(c.mssqlInstances))
+	c.genStatsPerfDataCollectors = make(map[mssqlInstance]*pdh.Collector[perfDataCounterValuesGenStats], len(c.mssqlInstances))
 	errs := make([]error, 0, len(c.mssqlInstances))
 
 	for _, sqlInstance := range c.mssqlInstances {
@@ -249,7 +249,7 @@ func (c *Collector) collectGeneralStatistics(ch chan<- prometheus.Metric) error 
 	return c.collect(ch, subCollectorGeneralStatistics, c.genStatsPerfDataCollectors, c.collectGeneralStatisticsInstance)
 }
 
-func (c *Collector) collectGeneralStatisticsInstance(ch chan<- prometheus.Metric, sqlInstance mssqlInstance, perfDataCollector *pdh.Collector) error {
+func (c *Collector) collectGeneralStatisticsInstance(ch chan<- prometheus.Metric, sqlInstance mssqlInstance, perfDataCollector *pdh.Collector[perfDataCounterValuesGenStats]) error {
 	err := perfDataCollector.Collect(&c.genStatsPerfDataObject)
 	if err != nil {
 		return fmt.Errorf("failed to collect %s metrics: %w", c.mssqlGetPerfObjectName(sqlInstance, "General Statistics"), err)

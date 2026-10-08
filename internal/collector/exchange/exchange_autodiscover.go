@@ -26,7 +26,7 @@ import (
 )
 
 type collectorAutoDiscover struct {
-	perfDataCollectorAutoDiscover *pdh.Collector
+	perfDataCollectorAutoDiscover *pdh.Collector[perfDataCounterValuesAutoDiscover]
 	perfDataObjectAutoDiscover    []perfDataCounterValuesAutoDiscover
 
 	autoDiscoverRequestsPerSec *prometheus.Desc

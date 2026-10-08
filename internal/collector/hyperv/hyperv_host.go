@@ -32,7 +32,7 @@ import (
 
 // collectorHost Hyper-V Host metrics
 type collectorHost struct {
-	perfDataCollectorLogicalProcessor *pdh.Collector
+	perfDataCollectorLogicalProcessor *pdh.Collector[perfDataCounterValuesHost]
 	perfDataObjectLogicalProcessor    []perfDataCounterValuesHost
 
 	vmProcessorCount          *prometheus.Desc

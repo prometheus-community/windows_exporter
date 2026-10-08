@@ -17,7 +17,7 @@
 
 package types
 
-type Collector interface {
-	Collect(dst any) error
+type Collector[T any] interface {
+	Collect(dst *[]T) error
 	Close()
 }

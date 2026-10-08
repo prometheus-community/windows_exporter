@@ -27,7 +27,7 @@ import (
 
 // collectorDataStore Hyper-V DataStore metrics
 type collectorDataStore struct {
-	perfDataCollectorDataStore *pdh.Collector
+	perfDataCollectorDataStore *pdh.Collector[perfDataCounterValuesDataStore]
 	perfDataObjectDataStore    []perfDataCounterValuesDataStore
 
 	dataStoreFragmentationRatio          *prometheus.Desc // \Hyper-V DataStore(*)\Fragmentation ratio

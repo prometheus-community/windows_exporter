@@ -22,10 +22,8 @@ import (
 	"fmt"
 	"log/slog"
 	"maps"
-	"reflect"
 	"regexp"
 	"slices"
-	"strconv"
 	"strings"
 	"time"
 
@@ -153,8 +151,8 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 		names = append(names, object.Name)
 		counters := make([]Counter, 0, len(object.Counters))
-		fields := make([]reflect.StructField, 0, len(object.Counters)+2)
-		object.fieldIndex = make(map[string]int, len(object.Counters))
+		counterNames := make([]string, 0, len(object.Counters))
+		object.valueIndex = make(map[string]int, len(object.Counters))
 
 		for j, counter := range object.Counters {
 			if counter.Metric == "" {
@@ -170,7 +168,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 				continue
 			}
 
-			if _, ok := object.fieldIndex[counter.Name]; ok {
+			if _, ok := object.valueIndex[counter.Name]; ok {
 				errs = append(errs, fmt.Errorf("object %s: counter name %s is duplicated", object.Name, counter.Name))
 
 				continue
@@ -188,35 +186,15 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 			counters = append(counters, counter)
 
-			// Counter names are free text and may produce invalid or colliding Go identifiers,
-			// so the struct fields get synthetic names and are looked up by index instead.
-			object.fieldIndex[counter.Name] = len(fields)
-			fields = append(fields, reflect.StructField{
-				Name: "F" + strconv.Itoa(len(fields)),
-				Type: reflect.TypeFor[float64](),
-				Tag:  reflect.StructTag(`perfdata:` + strconv.Quote(counter.Name)),
-			})
+			object.valueIndex[counter.Name] = len(counterNames)
+			counterNames = append(counterNames, counter.Name)
 		}
-
-		if object.Instances != nil {
-			fields = append(fields, reflect.StructField{
-				Name: "Name",
-				Type: reflect.TypeFor[string](),
-			})
-		}
-
-		fields = append(fields, reflect.StructField{
-			Name: "MetricType",
-			Type: reflect.TypeFor[prometheus.ValueType](),
-		})
-
-		valueType := reflect.StructOf(fields)
 
 		if object.Type == "" {
 			object.Type = pdh.CounterTypeRaw
 		}
 
-		collector, err := pdh.NewCollectorWithReflection(c.logger, object.Type, object.Object, object.Instances, valueType)
+		collector, err := pdh.NewDynamicCollector(c.logger, object.Type, object.Object, object.Instances, counterNames)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("failed collector for %s: %w", object.Name, err))
 		}
@@ -226,7 +204,6 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		}
 
 		object.collector = collector
-		object.perfDataObject = reflect.New(reflect.SliceOf(valueType)).Interface()
 
 		c.objects = append(c.objects, object)
 	}
@@ -288,69 +265,31 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 }
 
 func (c *Collector) collectObject(ch chan<- prometheus.Metric, perfDataObject Object) error {
-	err := perfDataObject.collector.Collect(perfDataObject.perfDataObject)
+	var rows []pdh.Row
+
+	err := perfDataObject.collector.Collect(&rows)
 	if err != nil {
 		return fmt.Errorf("failed to collect data: %w", err)
 	}
 
 	var errs []error
 
-	sliceValue := reflect.ValueOf(perfDataObject.perfDataObject).Elem().Interface()
-	for i := range reflect.ValueOf(sliceValue).Len() {
+	for _, row := range rows {
 		for _, counter := range perfDataObject.Counters {
-			val := reflect.ValueOf(sliceValue).Index(i)
-
-			fieldIndex, ok := perfDataObject.fieldIndex[counter.Name]
+			valueIndex, ok := perfDataObject.valueIndex[counter.Name]
 			if !ok {
 				errs = append(errs, fmt.Errorf("%s not found in collected data", counter.Name))
 
 				continue
 			}
 
-			field := val.Field(fieldIndex)
-			if field.Kind() != reflect.Float64 {
-				errs = append(errs, fmt.Errorf("failed to cast %s to float64", counter.Name))
-
-				continue
-			}
-
-			collectedCounterValue := field.Float()
-
-			field = val.FieldByName("MetricType")
-			if !field.IsValid() {
-				errs = append(errs, errors.New("field MetricType not found in collected data"))
-
-				continue
-			}
-
-			if field.Type() != reflect.TypeFor[prometheus.ValueType]() {
-				errs = append(errs, fmt.Errorf("failed to cast MetricType for %s to prometheus.ValueType", counter.Name))
-
-				continue
-			}
-
-			metricType, _ := reflect.TypeAssert[prometheus.ValueType](field)
+			collectedCounterValue := row.Values[valueIndex]
+			metricType := row.MetricType
 
 			labels := make(prometheus.Labels, len(counter.Labels)+1)
 
-			if perfDataObject.Instances != nil {
-				field := val.FieldByName("Name")
-				if !field.IsValid() {
-					errs = append(errs, errors.New("field Name not found in collected data"))
-
-					continue
-				}
-
-				if field.Kind() != reflect.String {
-					errs = append(errs, fmt.Errorf("failed to cast Name for %s to string", counter.Name))
-
-					continue
-				}
-
-				collectedInstance := field.String()
-				if collectedInstance != pdh.InstanceEmpty {
-					labels[perfDataObject.InstanceLabel] = collectedInstance
-				}
+			if perfDataObject.Instances != nil && row.Name != pdh.InstanceEmpty {
+				labels[perfDataObject.InstanceLabel] = row.Name
 			}
 
 			maps.Copy(labels, counter.Labels)

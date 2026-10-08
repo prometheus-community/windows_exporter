@@ -27,7 +27,7 @@ import (
 
 // collectorVirtualMachineHealthSummary Hyper-V Virtual Machine Health Summary metrics
 type collectorVirtualMachineHealthSummary struct {
-	perfDataCollectorVirtualMachineHealthSummary *pdh.Collector
+	perfDataCollectorVirtualMachineHealthSummary *pdh.Collector[perfDataCounterValuesVirtualMachineHealthSummary]
 	perfDataObjectVirtualMachineHealthSummary    []perfDataCounterValuesVirtualMachineHealthSummary
 
 	// \Hyper-V Virtual Machine Health Summary\Health Critical

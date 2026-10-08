@@ -27,7 +27,7 @@ import (
 )
 
 type collectorBufferManager struct {
-	bufManPerfDataCollectors map[mssqlInstance]*pdh.Collector
+	bufManPerfDataCollectors map[mssqlInstance]*pdh.Collector[perfDataCounterValuesBufMan]
 	bufManPerfDataObject     []perfDataCounterValuesBufMan
 
 	bufManBackgroundwriterpages         *prometheus.Desc
@@ -84,7 +84,7 @@ type perfDataCounterValuesBufMan struct {
 func (c *Collector) buildBufferManager() error {
 	var err error
 
-	c.bufManPerfDataCollectors = make(map[mssqlInstance]*pdh.Collector, len(c.mssqlInstances))
+	c.bufManPerfDataCollectors = make(map[mssqlInstance]*pdh.Collector[perfDataCounterValuesBufMan], len(c.mssqlInstances))
 	errs := make([]error, 0, len(c.mssqlInstances))
 
 	for _, sqlInstance := range c.mssqlInstances {
@@ -240,7 +240,7 @@ func (c *Collector) collectBufferManager(ch chan<- prometheus.Metric) error {
 	return c.collect(ch, subCollectorBufferManager, c.bufManPerfDataCollectors, c.collectBufferManagerInstance)
 }
 
-func (c *Collector) collectBufferManagerInstance(ch chan<- prometheus.Metric, sqlInstance mssqlInstance, perfDataCollector *pdh.Collector) error {
+func (c *Collector) collectBufferManagerInstance(ch chan<- prometheus.Metric, sqlInstance mssqlInstance, perfDataCollector *pdh.Collector[perfDataCounterValuesBufMan]) error {
 	err := perfDataCollector.Collect(&c.bufManPerfDataObject)
 	if err != nil {
 		return fmt.Errorf("failed to collect %s metrics: %w", c.mssqlGetPerfObjectName(sqlInstance, "Buffer Manager"), err)

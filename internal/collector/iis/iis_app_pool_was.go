@@ -26,7 +26,7 @@ import (
 )
 
 type collectorAppPoolWAS struct {
-	perfDataCollectorAppPoolWAS *pdh.Collector
+	perfDataCollectorAppPoolWAS *pdh.Collector[perfDataCounterValuesAppPoolWAS]
 	perfDataObjectAppPoolWAS    []perfDataCounterValuesAppPoolWAS
 
 	currentApplicationPoolState        *prometheus.Desc

@@ -27,7 +27,7 @@ import (
 )
 
 type collectorTransactions struct {
-	transactionsPerfDataCollectors map[mssqlInstance]*pdh.Collector
+	transactionsPerfDataCollectors map[mssqlInstance]*pdh.Collector[perfDataCounterValuesTransactions]
 	transactionsPerfDataObject     []perfDataCounterValuesTransactions
 
 	transactionsTempDbFreeSpaceBytes             *prometheus.Desc
@@ -64,7 +64,7 @@ type perfDataCounterValuesTransactions struct {
 func (c *Collector) buildTransactions() error {
 	var err error
 
-	c.transactionsPerfDataCollectors = make(map[mssqlInstance]*pdh.Collector, len(c.mssqlInstances))
+	c.transactionsPerfDataCollectors = make(map[mssqlInstance]*pdh.Collector[perfDataCounterValuesTransactions], len(c.mssqlInstances))
 	errs := make([]error, 0, len(c.mssqlInstances))
 
 	for _, sqlInstance := range c.mssqlInstances {
@@ -162,7 +162,7 @@ func (c *Collector) collectTransactions(ch chan<- prometheus.Metric) error {
 
 // Win32_PerfRawData_MSSQLSERVER_Transactions docs:
 // - https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-transactions-object
-func (c *Collector) collectTransactionsInstance(ch chan<- prometheus.Metric, sqlInstance mssqlInstance, perfDataCollector *pdh.Collector) error {
+func (c *Collector) collectTransactionsInstance(ch chan<- prometheus.Metric, sqlInstance mssqlInstance, perfDataCollector *pdh.Collector[perfDataCounterValuesTransactions]) error {
 	err := perfDataCollector.Collect(&c.transactionsPerfDataObject)
 	if err != nil {
 		return fmt.Errorf("failed to collect %s metrics: %w", c.mssqlGetPerfObjectName(sqlInstance, "Transactions"), err)

@@ -27,7 +27,7 @@ import (
 )
 
 type collectorAccessMethods struct {
-	accessMethodsPerfDataCollectors map[mssqlInstance]*pdh.Collector
+	accessMethodsPerfDataCollectors map[mssqlInstance]*pdh.Collector[perfDataCounterValuesAccessMethods]
 	accessMethodsPerfDataObject     []perfDataCounterValuesAccessMethods
 
 	accessMethodsAUcleanupbatches             *prometheus.Desc
@@ -126,7 +126,7 @@ type perfDataCounterValuesAccessMethods struct {
 func (c *Collector) buildAccessMethods() error {
 	var err error
 
-	c.accessMethodsPerfDataCollectors = make(map[mssqlInstance]*pdh.Collector, len(c.mssqlInstances))
+	c.accessMethodsPerfDataCollectors = make(map[mssqlInstance]*pdh.Collector[perfDataCounterValuesAccessMethods], len(c.mssqlInstances))
 	errs := make([]error, 0, len(c.mssqlInstances))
 
 	for _, sqlInstance := range c.mssqlInstances {
@@ -409,7 +409,7 @@ func (c *Collector) collectAccessMethods(ch chan<- prometheus.Metric) error {
 	return c.collect(ch, subCollectorAccessMethods, c.accessMethodsPerfDataCollectors, c.collectAccessMethodsInstance)
 }
 
-func (c *Collector) collectAccessMethodsInstance(ch chan<- prometheus.Metric, sqlInstance mssqlInstance, perfDataCollector *pdh.Collector) error {
+func (c *Collector) collectAccessMethodsInstance(ch chan<- prometheus.Metric, sqlInstance mssqlInstance, perfDataCollector *pdh.Collector[perfDataCounterValuesAccessMethods]) error {
 	err := perfDataCollector.Collect(&c.accessMethodsPerfDataObject)
 	if err != nil {
 		return fmt.Errorf("failed to collect %s metrics: %w", c.mssqlGetPerfObjectName(sqlInstance, "AccessMethods"), err)
