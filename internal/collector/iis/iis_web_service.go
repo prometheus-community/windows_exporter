@@ -26,7 +26,7 @@ import (
 )
 
 type collectorWebService struct {
-	perfDataCollectorWebService *pdh.Collector
+	perfDataCollectorWebService *pdh.Collector[perfDataCounterValuesWebService]
 	perfDataObjectWebService    []perfDataCounterValuesWebService
 
 	webServiceCurrentAnonymousUsers               *prometheus.Desc

@@ -28,7 +28,6 @@ import (
 	"sync"
 	"unsafe"
 
-	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/osversion"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/windows"
@@ -42,7 +41,7 @@ var (
 
 type CounterValues = map[string]map[string]CounterValue
 
-type Collector struct {
+type Collector[T any] struct {
 	object                string
 	counters              map[string]Counter
 	handle                pdhQueryHandle
@@ -50,11 +49,33 @@ type Collector struct {
 	mu                    sync.RWMutex
 	logger                *slog.Logger
 
-	nameIndexValue        int
-	metricsTypeIndexValue int
+	rows rowAccessor[T]
 
-	collectCh chan any
+	collectCh chan *[]T
 	errorCh   chan error
+}
+
+// Row holds the values of one instance collected by a collector from [NewDynamicCollector].
+type Row struct {
+	Name       string
+	MetricType prometheus.ValueType
+	// Values holds one value per counter, in the order the counters were passed to [NewDynamicCollector].
+	Values []float64
+}
+
+// rowAccessor creates rows of type T and sets their counter values.
+// field is the index the counterField of the counter was created with.
+type rowAccessor[T any] struct {
+	newRow   func(instance string, metricType prometheus.ValueType) T
+	setValue func(row *T, field int, value float64)
+}
+
+// counterField maps a counter to the field index passed to rowAccessor.setValue.
+type counterField struct {
+	// tag is the counter name, optionally suffixed with ",secondvalue".
+	tag        string
+	index      int
+	minOSBuild string
 }
 
 type Counter struct {
@@ -69,13 +90,96 @@ type Counter struct {
 	FieldIndexSecondValue int
 }
 
-func NewCollector[T any](logger *slog.Logger, resultType CounterType, object string, instances []string) (*Collector, error) {
+// NewCollector creates a collector for the counters declared by the perfdata tags of the struct T.
+//
+// The optional fields Name (string) and MetricType (prometheus.ValueType) of T
+// receive the instance name and the metric type of the counter.
+func NewCollector[T any](logger *slog.Logger, resultType CounterType, object string, instances []string) (*Collector[T], error) {
 	valueType := reflect.TypeFor[T]()
+	if valueType.Kind() != reflect.Struct {
+		return nil, fmt.Errorf("expected a struct, got %s", valueType)
+	}
 
-	return NewCollectorWithReflection(logger, resultType, object, instances, valueType)
+	nameIndex, metricTypeIndex := -1, -1
+
+	if f, ok := valueType.FieldByName("Name"); ok && f.Type.Kind() == reflect.String {
+		nameIndex = f.Index[0]
+	}
+
+	if f, ok := valueType.FieldByName("MetricType"); ok && f.Type == reflect.TypeFor[prometheus.ValueType]() {
+		metricTypeIndex = f.Index[0]
+	}
+
+	var errs []error
+
+	fields := make([]counterField, 0, valueType.NumField())
+
+	for _, f := range reflect.VisibleFields(valueType) {
+		counterName, ok := f.Tag.Lookup("perfdata")
+		if !ok {
+			continue
+		}
+
+		if f.Type.Kind() != reflect.Float64 {
+			errs = append(errs, fmt.Errorf("field %s must be a float64", f.Name))
+
+			continue
+		}
+
+		fields = append(fields, counterField{
+			tag:        counterName,
+			index:      f.Index[0],
+			minOSBuild: f.Tag.Get("perfdata_min_build"),
+		})
+	}
+
+	rows := rowAccessor[T]{
+		newRow: func(instance string, metricType prometheus.ValueType) T {
+			var row T
+
+			rv := reflect.ValueOf(&row).Elem()
+
+			if nameIndex != -1 {
+				rv.Field(nameIndex).SetString(instance)
+			}
+
+			if metricTypeIndex != -1 {
+				rv.Field(metricTypeIndex).SetInt(int64(metricType))
+			}
+
+			return row
+		},
+		setValue: func(row *T, field int, value float64) {
+			reflect.ValueOf(row).Elem().Field(field).SetFloat(value)
+		},
+	}
+
+	return newCollector(logger, resultType, object, instances, fields, rows, errs)
 }
 
-func NewCollectorWithReflection(logger *slog.Logger, resultType CounterType, object string, instances []string, valueType reflect.Type) (*Collector, error) {
+// NewDynamicCollector creates a collector for counters that are only known at runtime.
+// Row.Values of the collected rows holds one value per entry of counters, in the same order.
+func NewDynamicCollector(logger *slog.Logger, resultType CounterType, object string, instances []string, counters []string) (*Collector[Row], error) {
+	fields := make([]counterField, len(counters))
+	for i, counter := range counters {
+		fields[i] = counterField{tag: counter, index: i}
+	}
+
+	rows := rowAccessor[Row]{
+		newRow: func(instance string, metricType prometheus.ValueType) Row {
+			return Row{Name: instance, MetricType: metricType, Values: make([]float64, len(counters))}
+		},
+		setValue: func(row *Row, field int, value float64) {
+			row.Values[field] = value
+		},
+	}
+
+	return newCollector(logger, resultType, object, instances, fields, rows, nil)
+}
+
+func newCollector[T any](logger *slog.Logger, resultType CounterType, object string, instances []string,
+	fields []counterField, rows rowAccessor[T], errs []error,
+) (*Collector[T], error) {
 	var handle pdhQueryHandle
 
 	if ret := OpenQuery(0, 0, &handle); ret != ErrorSuccess {
@@ -90,50 +194,21 @@ func NewCollectorWithReflection(logger *slog.Logger, resultType CounterType, obj
 		return nil, fmt.Errorf("invalid result type: %v", resultType)
 	}
 
-	collector := &Collector{
+	collector := &Collector[T]{
 		object:                object,
-		counters:              make(map[string]Counter, valueType.NumField()),
+		counters:              make(map[string]Counter, len(fields)),
 		handle:                handle,
 		totalCounterRequested: slices.Contains(instances, InstanceTotal),
 		mu:                    sync.RWMutex{},
 		logger:                logger,
-		nameIndexValue:        -1,
-		metricsTypeIndexValue: -1,
+		rows:                  rows,
 	}
 
-	errs := make([]error, 0, valueType.NumField())
+	for _, f := range fields {
+		counterName, secondValue := strings.CutSuffix(f.tag, ",secondvalue")
 
-	if f, ok := valueType.FieldByName("Name"); ok {
-		if f.Type.Kind() == reflect.String {
-			collector.nameIndexValue = f.Index[0]
-		}
-	}
-
-	if f, ok := valueType.FieldByName("MetricType"); ok {
-		if f.Type == reflect.TypeFor[prometheus.ValueType]() {
-			collector.metricsTypeIndexValue = f.Index[0]
-		}
-	}
-
-	for _, f := range reflect.VisibleFields(valueType) {
-		counterName, ok := f.Tag.Lookup("perfdata")
+		counter, ok := collector.counters[counterName]
 		if !ok {
-			continue
-		}
-
-		if f.Type.Kind() != reflect.Float64 {
-			errs = append(errs, fmt.Errorf("field %s must be a float64", f.Name))
-
-			continue
-		}
-
-		secondValue := strings.HasSuffix(counterName, ",secondvalue")
-		if secondValue {
-			counterName = strings.TrimSuffix(counterName, ",secondvalue")
-		}
-
-		var counter Counter
-		if counter, ok = collector.counters[counterName]; !ok {
 			counter = Counter{
 				Name:                  counterName,
 				Instances:             make(map[string]pdhCounterHandle, len(instances)),
@@ -143,9 +218,9 @@ func NewCollectorWithReflection(logger *slog.Logger, resultType CounterType, obj
 		}
 
 		if secondValue {
-			counter.FieldIndexSecondValue = f.Index[0]
+			counter.FieldIndexSecondValue = f.index
 		} else {
-			counter.FieldIndexValue = f.Index[0]
+			counter.FieldIndexValue = f.index
 		}
 
 		if len(counter.Instances) != 0 {
@@ -164,8 +239,8 @@ func NewCollectorWithReflection(logger *slog.Logger, resultType CounterType, obj
 			//nolint:nestif
 			if ret := AddEnglishCounter(handle, counterPath, 0, &counterHandle); ret != ErrorSuccess {
 				if ret == CstatusNoCounter {
-					if minOSBuildTag, ok := f.Tag.Lookup("perfdata_min_build"); ok {
-						if minOSBuild, err := strconv.Atoi(minOSBuildTag); err == nil {
+					if f.minOSBuild != "" {
+						if minOSBuild, err := strconv.Atoi(f.minOSBuild); err == nil {
 							if uint16(minOSBuild) > osversion.Build() {
 								continue
 							}
@@ -240,7 +315,7 @@ func NewCollectorWithReflection(logger *slog.Logger, resultType CounterType, obj
 		return nil, errors.New("no counters configured")
 	}
 
-	collector.collectCh = make(chan any)
+	collector.collectCh = make(chan *[]T)
 	collector.errorCh = make(chan error)
 
 	if resultType == CounterTypeRaw {
@@ -250,15 +325,15 @@ func NewCollectorWithReflection(logger *slog.Logger, resultType CounterType, obj
 	}
 
 	// Collect initial data because some counters need to be read twice to get the correct value.
-	collectValues := reflect.New(reflect.SliceOf(valueType)).Elem()
-	if err := collector.Collect(collectValues.Addr().Interface()); err != nil && !errors.Is(err, ErrNoData) {
+	var collectValues []T
+	if err := collector.Collect(&collectValues); err != nil && !errors.Is(err, ErrNoData) {
 		return collector, fmt.Errorf("failed to collect initial data: %w", err)
 	}
 
 	return collector, nil
 }
 
-func (c *Collector) Describe() map[string]string {
+func (c *Collector[T]) Describe() map[string]string {
 	if c == nil {
 		return map[string]string{}
 	}
@@ -275,9 +350,14 @@ func (c *Collector) Describe() map[string]string {
 	return desc
 }
 
-func (c *Collector) Collect(dst any) error {
+// Collect replaces the content of dst with one row per collected instance.
+func (c *Collector[T]) Collect(dst *[]T) error {
 	if c == nil {
 		return ErrPerformanceCounterNotInitialized
+	}
+
+	if dst == nil {
+		return errors.New("dst must not be nil")
 	}
 
 	c.mu.RLock()
@@ -292,7 +372,7 @@ func (c *Collector) Collect(dst any) error {
 	return <-c.errorCh
 }
 
-func (c *Collector) collectWorkerRaw() {
+func (c *Collector[T]) collectWorkerRaw() {
 	var (
 		err         error
 		itemCount   uint32
@@ -305,36 +385,13 @@ func (c *Collector) collectWorkerRaw() {
 	// which corrupts the neighboring heap memory of a tiny allocation.
 	var buf []byte
 
-	for data := range c.collectCh {
+	for dst := range c.collectCh {
 		err = (func() error {
 			if ret := CollectQueryData(c.handle); ret != ErrorSuccess {
 				return fmt.Errorf("failed to collect query data: %w", NewPdhError(ret))
 			}
 
-			dv := reflect.ValueOf(data)
-			if dv.Kind() != reflect.Pointer || dv.IsNil() {
-				return fmt.Errorf("expected a pointer, got %s: %w", dv.Kind(), mi.ErrInvalidEntityType)
-			}
-
-			dv = dv.Elem()
-
-			if dv.Kind() != reflect.Slice {
-				return fmt.Errorf("expected a pointer to a slice, got %s: %w", dv.Kind(), mi.ErrInvalidEntityType)
-			}
-
-			elemType := dv.Type().Elem()
-
-			if elemType.Kind() != reflect.Struct {
-				return fmt.Errorf("expected a pointer to a slice of structs, got a slice of %s: %w", elemType.Kind(), mi.ErrInvalidEntityType)
-			}
-
-			if dv.Len() != 0 {
-				dv.Set(reflect.MakeSlice(dv.Type(), 0, 0))
-			}
-
-			dv.Clear()
-
-			elemValue := reflect.ValueOf(reflect.New(elemType).Interface()).Elem()
+			*dst = (*dst)[:0:0]
 
 			indexMap := map[string]int{}
 			nameCache := map[string]string{}
@@ -396,55 +453,41 @@ func (c *Collector) collectWorkerRaw() {
 						)
 
 						if index, ok = indexMap[instanceName]; !ok {
-							index = dv.Len()
+							index = len(*dst)
 							indexMap[instanceName] = index
 
-							if c.nameIndexValue != -1 {
-								elemValue.Field(c.nameIndexValue).SetString(instanceName)
+							var metricsType prometheus.ValueType
+							if metricsType, ok = SupportedCounterTypes[counter.Type]; !ok {
+								metricsType = prometheus.GaugeValue
 							}
 
-							if c.metricsTypeIndexValue != -1 {
-								var metricsType prometheus.ValueType
-								if metricsType, ok = SupportedCounterTypes[counter.Type]; !ok {
-									metricsType = prometheus.GaugeValue
-								}
-
-								elemValue.Field(c.metricsTypeIndexValue).Set(reflect.ValueOf(metricsType))
-							}
-
-							dv.Set(reflect.Append(dv, elemValue))
+							*dst = append(*dst, c.rows.newRow(instanceName, metricsType))
 						}
+
+						row := &(*dst)[index]
 
 						// This is a workaround for the issue with the elapsed time counter type.
 						// Source: https://github.com/prometheus-community/windows_exporter/pull/335/files#diff-d5d2528f559ba2648c2866aec34b1eaa5c094dedb52bd0ff22aa5eb83226bd8dR76-R83
 						// Ref: https://learn.microsoft.com/en-us/windows/win32/perfctrs/calculating-counter-values
 						switch counter.Type {
 						case PERF_ELAPSED_TIME:
-							dv.Index(index).
-								Field(counter.FieldIndexValue).
-								SetFloat(float64((item.RawValue.SecondValue - item.RawValue.FirstValue) / counter.Frequency))
+							c.rows.setValue(row, counter.FieldIndexValue, float64((item.RawValue.SecondValue-item.RawValue.FirstValue)/counter.Frequency))
 						case PERF_100NSEC_TIMER, PERF_PRECISION_100NS_TIMER:
-							dv.Index(index).
-								Field(counter.FieldIndexValue).
-								SetFloat(float64(item.RawValue.FirstValue) * TicksToSecondScaleFactor)
+							c.rows.setValue(row, counter.FieldIndexValue, float64(item.RawValue.FirstValue)*TicksToSecondScaleFactor)
 						default:
 							if counter.FieldIndexSecondValue != -1 {
-								dv.Index(index).
-									Field(counter.FieldIndexSecondValue).
-									SetFloat(float64(item.RawValue.SecondValue))
+								c.rows.setValue(row, counter.FieldIndexSecondValue, float64(item.RawValue.SecondValue))
 							}
 
 							if counter.FieldIndexValue != -1 {
-								dv.Index(index).
-									Field(counter.FieldIndexValue).
-									SetFloat(float64(item.RawValue.FirstValue))
+								c.rows.setValue(row, counter.FieldIndexValue, float64(item.RawValue.FirstValue))
 							}
 						}
 					}
 				}
 			}
 
-			if dv.Len() == 0 {
+			if len(*dst) == 0 {
 				return ErrNoData
 			}
 
@@ -455,7 +498,7 @@ func (c *Collector) collectWorkerRaw() {
 	}
 }
 
-func (c *Collector) collectWorkerFormatted() {
+func (c *Collector[T]) collectWorkerFormatted() {
 	var (
 		err         error
 		itemCount   uint32
@@ -467,36 +510,13 @@ func (c *Collector) collectWorkerFormatted() {
 	// See collectWorkerRaw.
 	var buf []byte
 
-	for data := range c.collectCh {
+	for dst := range c.collectCh {
 		err = (func() error {
 			if ret := CollectQueryData(c.handle); ret != ErrorSuccess {
 				return fmt.Errorf("failed to collect query data: %w", NewPdhError(ret))
 			}
 
-			dv := reflect.ValueOf(data)
-			if dv.Kind() != reflect.Pointer || dv.IsNil() {
-				return fmt.Errorf("expected a pointer, got %s: %w", dv.Kind(), mi.ErrInvalidEntityType)
-			}
-
-			dv = dv.Elem()
-
-			if dv.Kind() != reflect.Slice {
-				return fmt.Errorf("expected a pointer to a slice, got %s: %w", dv.Kind(), mi.ErrInvalidEntityType)
-			}
-
-			elemType := dv.Type().Elem()
-
-			if elemType.Kind() != reflect.Struct {
-				return fmt.Errorf("expected a pointer to a slice of structs, got a slice of %s: %w", elemType.Kind(), mi.ErrInvalidEntityType)
-			}
-
-			if dv.Len() != 0 {
-				dv.Set(reflect.MakeSlice(dv.Type(), 0, 0))
-			}
-
-			dv.Clear()
-
-			elemValue := reflect.ValueOf(reflect.New(elemType).Interface()).Elem()
+			*dst = (*dst)[:0:0]
 
 			indexMap := map[string]int{}
 			nameCache := map[string]string{}
@@ -552,30 +572,20 @@ func (c *Collector) collectWorkerFormatted() {
 						)
 
 						if index, ok = indexMap[instanceName]; !ok {
-							index = dv.Len()
+							index = len(*dst)
 							indexMap[instanceName] = index
 
-							if c.nameIndexValue != -1 {
-								elemValue.Field(c.nameIndexValue).SetString(instanceName)
-							}
-
-							if c.metricsTypeIndexValue != -1 {
-								elemValue.Field(c.metricsTypeIndexValue).Set(reflect.ValueOf(prometheus.GaugeValue))
-							}
-
-							dv.Set(reflect.Append(dv, elemValue))
+							*dst = append(*dst, c.rows.newRow(instanceName, prometheus.GaugeValue))
 						}
 
 						if counter.FieldIndexValue != -1 {
-							dv.Index(index).
-								Field(counter.FieldIndexValue).
-								SetFloat(item.FmtValue.DoubleValue)
+							c.rows.setValue(&(*dst)[index], counter.FieldIndexValue, item.FmtValue.DoubleValue)
 						}
 					}
 				}
 			}
 
-			if dv.Len() == 0 {
+			if len(*dst) == 0 {
 				return ErrNoData
 			}
 
@@ -586,7 +596,7 @@ func (c *Collector) collectWorkerFormatted() {
 	}
 }
 
-func (c *Collector) Close() {
+func (c *Collector[T]) Close() {
 	if c == nil {
 		return
 	}

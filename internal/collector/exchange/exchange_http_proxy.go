@@ -27,7 +27,7 @@ import (
 )
 
 type collectorHTTPProxy struct {
-	perfDataCollectorHTTPProxy *pdh.Collector
+	perfDataCollectorHTTPProxy *pdh.Collector[perfDataCounterValuesHTTPProxy]
 	perfDataObjectHTTPProxy    []perfDataCounterValuesHTTPProxy
 
 	mailboxServerLocatorAverageLatency *prometheus.Desc

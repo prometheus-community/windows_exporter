@@ -43,7 +43,7 @@ type Collector struct {
 
 	bootTimeTimestamp float64
 
-	perfDataCollector *pdh.Collector
+	perfDataCollector *pdh.Collector[perfDataCounterValues]
 	perfDataObject    []perfDataCounterValues
 
 	contextSwitchesTotal     *prometheus.Desc

@@ -28,7 +28,7 @@ import (
 
 // collectorHypervisorLogicalProcessor Hyper-V Hypervisor Logical Processor metrics
 type collectorHypervisorLogicalProcessor struct {
-	perfDataCollectorHypervisorLogicalProcessor *pdh.Collector
+	perfDataCollectorHypervisorLogicalProcessor *pdh.Collector[perfDataCounterValuesHypervisorLogicalProcessor]
 	perfDataObjectHypervisorLogicalProcessor    []perfDataCounterValuesHypervisorLogicalProcessor
 
 	// \Hyper-V Hypervisor Logical Processor(*)\% Guest Run Time

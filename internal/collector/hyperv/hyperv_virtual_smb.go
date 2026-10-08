@@ -27,7 +27,7 @@ import (
 
 // collectorVirtualSMB Hyper-V Virtual SMB metrics
 type collectorVirtualSMB struct {
-	perfDataCollectorVirtualSMB *pdh.Collector
+	perfDataCollectorVirtualSMB *pdh.Collector[perfDataCounterValuesVirtualSMB]
 	perfDataObjectVirtualSMB    []perfDataCounterValuesVirtualSMB
 
 	virtualSMBDirectMappedSections   *prometheus.Desc // \Hyper-V Virtual SMB(*)\Direct-Mapped Sections

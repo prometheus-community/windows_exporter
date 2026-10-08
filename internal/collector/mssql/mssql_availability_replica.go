@@ -28,7 +28,7 @@ import (
 )
 
 type collectorAvailabilityReplica struct {
-	availabilityReplicaPerfDataCollectors map[mssqlInstance]*pdh.Collector
+	availabilityReplicaPerfDataCollectors map[mssqlInstance]*pdh.Collector[perfDataCounterValuesAvailabilityReplica]
 	availabilityReplicaPerfDataObject     []perfDataCounterValuesAvailabilityReplica
 
 	availReplicaBytesReceivedFromReplica *prometheus.Desc
@@ -59,7 +59,7 @@ type perfDataCounterValuesAvailabilityReplica struct {
 func (c *Collector) buildAvailabilityReplica() error {
 	var err error
 
-	c.availabilityReplicaPerfDataCollectors = make(map[mssqlInstance]*pdh.Collector, len(c.mssqlInstances))
+	c.availabilityReplicaPerfDataCollectors = make(map[mssqlInstance]*pdh.Collector[perfDataCounterValuesAvailabilityReplica], len(c.mssqlInstances))
 	errs := make([]error, 0, len(c.mssqlInstances))
 
 	for _, sqlInstance := range c.mssqlInstances {
@@ -132,7 +132,7 @@ func (c *Collector) collectAvailabilityReplica(ch chan<- prometheus.Metric) erro
 	return c.collect(ch, subCollectorAvailabilityReplica, c.availabilityReplicaPerfDataCollectors, c.collectAvailabilityReplicaInstance)
 }
 
-func (c *Collector) collectAvailabilityReplicaInstance(ch chan<- prometheus.Metric, sqlInstance mssqlInstance, perfDataCollector *pdh.Collector) error {
+func (c *Collector) collectAvailabilityReplicaInstance(ch chan<- prometheus.Metric, sqlInstance mssqlInstance, perfDataCollector *pdh.Collector[perfDataCounterValuesAvailabilityReplica]) error {
 	err := perfDataCollector.Collect(&c.availabilityReplicaPerfDataObject)
 	if err != nil {
 		return fmt.Errorf("failed to collect %s metrics: %w", c.mssqlGetPerfObjectName(sqlInstance, "Availability Replica"), err)

@@ -27,7 +27,7 @@ import (
 
 // Hyper-V Virtual Storage Device metrics
 type collectorVirtualStorageDevice struct {
-	perfDataCollectorVirtualStorageDevice *pdh.Collector
+	perfDataCollectorVirtualStorageDevice *pdh.Collector[perfDataCounterValuesVirtualStorageDevice]
 	perfDataObjectVirtualStorageDevice    []perfDataCounterValuesVirtualStorageDevice
 
 	virtualStorageDeviceErrorCount               *prometheus.Desc // \Hyper-V Virtual Storage Device(*)\Error Count

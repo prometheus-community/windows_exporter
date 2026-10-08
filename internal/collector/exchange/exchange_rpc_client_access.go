@@ -27,7 +27,7 @@ import (
 )
 
 type collectorRpcClientAccess struct {
-	perfDataCollectorRpcClientAccess *pdh.Collector
+	perfDataCollectorRpcClientAccess *pdh.Collector[perfDataCounterValuesRpcClientAccess]
 	perfDataObjectRpcClientAccess    []perfDataCounterValuesRpcClientAccess
 
 	activeUserCount     *prometheus.Desc
