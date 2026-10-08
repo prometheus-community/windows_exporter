@@ -20,6 +20,7 @@ package performancecounter
 import (
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"maps"
 	"math"
@@ -104,7 +105,12 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 			return nil
 		}
 
-		if err := yaml.Unmarshal([]byte(objects), &c.config.Objects); err != nil {
+		// Reject unknown keys like the configuration file does, so that a typo
+		// fails instead of silently dropping the setting.
+		decoder := yaml.NewDecoder(strings.NewReader(objects))
+		decoder.KnownFields(true)
+
+		if err := decoder.Decode(&c.config.Objects); err != nil && !errors.Is(err, io.EOF) {
 			return fmt.Errorf("failed to parse objects %s: %w", objects, err)
 		}
 
