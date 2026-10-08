@@ -10,27 +10,27 @@
 <?endif?>
 
 <!--
-  ~ SPDX-License-Identifier: Apache-2.0
-  ~
-  ~ Copyright The Prometheus Authors
-  ~ Licensed under the Apache License, Version 2.0 (the "License");
-  ~ you may not use this file except in compliance with the License.
-  ~ You may obtain a copy of the License at
-  ~
-  ~ http://www.apache.org/licenses/LICENSE-2.0
-  ~
-  ~ Unless required by applicable law or agreed to in writing, software
-  ~ distributed under the License is distributed on an "AS IS" BASIS,
-  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  ~ See the License for the specific language governing permissions and
-  ~ limitations under the License.
-  -->
+    ~ SPDX-License-Identifier: Apache-2.0
+    ~
+    ~ Copyright The Prometheus Authors
+    ~ Licensed under the Apache License, Version 2.0 (the "License");
+    ~ you may not use this file except in compliance with the License.
+    ~ You may obtain a copy of the License at
+    ~
+    ~ http://www.apache.org/licenses/LICENSE-2.0
+    ~
+    ~ Unless required by applicable law or agreed to in writing, software
+    ~ distributed under the License is distributed on an "AS IS" BASIS,
+    ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    ~ See the License for the specific language governing permissions and
+    ~ limitations under the License.
+    -->
 
 <Wix xmlns:fw="http://wixtoolset.org/schemas/v4/wxs/firewall"
-     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui"
-     xmlns="http://wixtoolset.org/schemas/v4/wxs">
+    xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui"
+    xmlns="http://wixtoolset.org/schemas/v4/wxs">
     <Package UpgradeCode="66a6eb5b-1fc2-4b14-a362-5ceec6413308" Name="$(var.ProductName)" Version="$(var.Version)"
-             Manufacturer="prometheus-community" Language="1033" Scope="perMachine">
+            Manufacturer="prometheus-community" Language="1033" Scope="perMachine">
         <SummaryInformation Manufacturer="prometheus-community" Description="$(var.ProductName) $(var.Version) installer" />
 
         <Upgrade Id="66a6eb5b-1fc2-4b14-a362-5ceec6413308">
@@ -85,19 +85,19 @@
         <Property Id="NOSTART" Value="0" />
 
         <CustomAction Id="CheckExtraFlags"
-                      Error="The parameter '--config.file' must not be included in EXTRA_FLAGS. Use CONFIG_FILE instead. Please remove it and try again." />
+            Error="The parameter '--config.file' must not be included in EXTRA_FLAGS. Use CONFIG_FILE instead. Please remove it and try again." />
 
         <CustomAction Id="set_maintenance" Property="MAINTENANCE" Value="true" />
 
         <!-- Set to reinstall all features. -->
         <CustomAction Id="set_reinstall_all_property"
-                      Property="REINSTALL"
-                      Value="ALL" />
+            Property="REINSTALL"
+            Value="ALL" />
         <!-- "amus" will force reinstall all files.
-             See https://docs.microsoft.com/en-us/windows/desktop/Msi/reinstallmode -->
+            See https://docs.microsoft.com/en-us/windows/desktop/Msi/reinstallmode -->
         <CustomAction Id="set_reinstallmode_property"
-                      Property="REINSTALLMODE"
-                      Value="amus" />
+            Property="REINSTALLMODE"
+            Value="amus" />
         <!-- START CUSTOM ACTION FOR CONFIG FILE CREATION -->
         <SetProperty
             Id="CreateConfigFile"
@@ -117,9 +117,9 @@
 
         <!-- START CUSTOM ACTION FOR KILLING THE PROCESS -->
         <!-- ServiceControl stops the service. A service process can keep running for a while after it
-             reported STOPPED, and then blocks replacing the binary and re-creating the service. Kill only
-             processes that run the binary of this installation, so other windows_exporter.exe instances,
-             like a copy in another directory or a Kubernetes HostProcess container, keep running. -->
+            reported STOPPED, and then blocks replacing the binary and re-creating the service. Kill only
+            processes that run the binary of this installation, so other windows_exporter.exe instances,
+            like a copy in another directory or a Kubernetes HostProcess container, keep running. -->
         <SetProperty
             Id="KillProcess"
             Value="&quot;[WindowsFolder]System32\WindowsPowerShell\v1.0\powershell.exe&quot; -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command &quot;Get-Process -Name windows_exporter -ErrorAction SilentlyContinue | Where-Object Path -EQ '[APPLICATIONFOLDER]windows_exporter.exe' | Stop-Process -Force&quot;"
@@ -155,7 +155,7 @@
 
         <InstallExecuteSequence>
             <!-- Set REINSTALL=all and REINSTALLMODE=amus if the user reruns the
-                 MSI, which will force reinstalling all files and services.  -->
+                MSI, which will force reinstalling all files and services.  -->
             <Custom Action="set_maintenance" Before="set_reinstall_all_property"
                     Condition="Installed AND (NOT REMOVE) AND (NOT UPGRADINGPRODUCTCODE)"/>
             <Custom Action="set_reinstall_all_property" Before="set_reinstallmode_property" Condition="MAINTENANCE"/>
