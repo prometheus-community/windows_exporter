@@ -18,109 +18,132 @@
 package container
 
 import (
+	"errors"
+	"fmt"
 	"log/slog"
-	"os"
-	"path/filepath"
 	"testing"
 
+	"github.com/prometheus-community/windows_exporter/internal/headers/cri"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sys/windows"
 )
 
-func newTestCollector(stateDir string) *Collector {
-	return &Collector{
-		config:              Config{ContainerDStateDir: stateDir},
-		logger:              slog.New(slog.DiscardHandler),
-		annotationsCacheHCS: map[string]containerInfo{},
-		annotationsCacheJob: map[string]jobContainer{},
+func TestNewKubernetesContainers(t *testing.T) {
+	t.Parallel()
+
+	k := newKubernetesContainers("containerd",
+		[]cri.PodSandbox{
+			{ID: "sandbox-1", Name: "pod", Namespace: "default"},
+			{ID: "sandbox-2", Name: "stopped", Namespace: "kube-system", State: cri.SandboxNotReady},
+		},
+		[]cri.Container{
+			{ID: "abc", PodSandboxID: "sandbox-1", Name: "nanoserver", State: cri.ContainerRunning},
+			{ID: "orphan", PodSandboxID: "unknown", Name: "orphan", State: cri.ContainerRunning},
+			{ID: "exited", PodSandboxID: "sandbox-1", Name: "init", State: cri.ContainerExited},
+		},
+	)
+
+	require.Equal(t, map[string]containerInfo{
+		"abc": {
+			id:        "containerd://abc",
+			namespace: "default",
+			pod:       "pod",
+			container: "nanoserver",
+		},
+		"orphan": {
+			id:        "containerd://orphan",
+			container: "orphan",
+		},
+	}, k.containers)
+	require.Equal(t, map[string]struct{}{"sandbox-1": {}, "sandbox-2": {}}, k.sandboxes)
+}
+
+func TestHandleCRIError(t *testing.T) {
+	t.Parallel()
+
+	for name, tc := range map[string]struct {
+		err         error
+		unavailable bool
+	}{
+		"pipe not found": {
+			err:         fmt.Errorf("dial: %w", windows.ERROR_FILE_NOT_FOUND),
+			unavailable: true,
+		},
+		"CRI plugin disabled": {
+			err:         fmt.Errorf("CRI Version: %w", &cri.StatusError{Code: grpcUnimplemented}),
+			unavailable: true,
+		},
+		"other gRPC status": {
+			err: fmt.Errorf("CRI Version: %w", &cri.StatusError{Code: 14}),
+		},
+		"other error": {
+			err: errors.New("timeout"),
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			c := &Collector{
+				config:         Config{CRIEndpoint: ConfigDefaults.CRIEndpoint},
+				logger:         slog.New(slog.DiscardHandler),
+				criRuntimeName: "containerd",
+			}
+
+			err := c.handleCRIError(tc.err)
+			require.Empty(t, c.criRuntimeName)
+			require.Equal(t, tc.unavailable, c.criUnavailableLogged)
+
+			if tc.unavailable {
+				require.NoError(t, err)
+			} else {
+				require.ErrorIs(t, err, tc.err)
+			}
+		})
 	}
 }
 
-func writeBundle(t *testing.T, stateDir, containerID, config string) {
-	t.Helper()
+// A missing CRI endpoint is expected on hosts without Kubernetes.
+func TestGetKubernetesContainersWithoutCRI(t *testing.T) {
+	t.Parallel()
 
-	bundleDir := filepath.Join(stateDir, containerID)
+	c := New(&Config{
+		CollectorsEnabled: []string{subCollectorHostprocess},
+		CRIEndpoint:       "npipe:////./pipe/windows_exporter-container-test-does-not-exist",
+	})
+	require.NoError(t, c.Build(slog.New(slog.DiscardHandler), nil))
 
-	require.NoError(t, os.MkdirAll(bundleDir, 0o755))
+	t.Cleanup(func() { _ = c.Close() })
 
-	if config != "" {
-		require.NoError(t, os.WriteFile(filepath.Join(bundleDir, "config.json"), []byte(config), 0o600))
+	for range 2 {
+		k, err := c.getKubernetesContainers(t.Context())
+		require.NoError(t, err)
+		require.Empty(t, k.containers)
+		require.True(t, c.criUnavailableLogged)
 	}
 }
 
-// The annotation cache is keyed by the raw container ID, but was pruned by the
-// prefixed ID, so entries of removed containers were never deleted.
-func TestCollectJobContainersPrunesAnnotationsCache(t *testing.T) {
+// Containers without a job object are not job containers and are skipped.
+func TestCollectJobContainersSkipsHCSContainers(t *testing.T) {
 	t.Parallel()
 
-	c := newTestCollector(t.TempDir() + `\`)
-	c.annotationsCacheJob["removed"] = jobContainer{info: containerInfo{id: "containerd://removed"}}
-
+	c := &Collector{logger: slog.New(slog.DiscardHandler)}
 	ch := make(chan prometheus.Metric, 100)
 
-	require.NoError(t, c.collectJobContainers(ch))
-	require.Empty(t, c.annotationsCacheJob)
+	require.NoError(t, c.collectJobContainers(ch, kubernetesContainers{
+		containers: map[string]containerInfo{
+			"windows-exporter-test-no-job-object": {id: "containerd://windows-exporter-test-no-job-object"},
+		},
+	}))
+	require.Empty(t, ch)
 }
 
-// Every bundle is parsed once and cached, and a bundle without config.json
-// is retried later instead of being cached.
-func TestCollectJobContainersCachesBundles(t *testing.T) {
+func TestBuildInvalidCRIEndpoint(t *testing.T) {
 	t.Parallel()
 
-	// No trailing separator: the path used to be concatenated without one.
-	stateDir := t.TempDir()
-
-	writeBundle(t, stateDir, "hostprocess", `{"annotations":{
-		"microsoft.com/hostprocess-container":"true",
-		"io.kubernetes.cri.sandbox-namespace":"kube-system",
-		"io.kubernetes.cri.sandbox-name":"pod",
-		"io.kubernetes.cri.container-name":"container"
-	}}`)
-	writeBundle(t, stateDir, "process", `{"annotations":{"io.kubernetes.cri.container-name":"other"}}`)
-	writeBundle(t, stateDir, "creating", "")
-
-	c := newTestCollector(stateDir)
-	ch := make(chan prometheus.Metric, 100)
-
-	// The job objects do not exist, so no metrics are collected.
-	require.NoError(t, c.collectJobContainers(ch))
-	require.Equal(t, map[string]jobContainer{
-		"hostprocess": {
-			info: containerInfo{
-				id:        "containerd://hostprocess",
-				namespace: "kube-system",
-				pod:       "pod",
-				container: "container",
-			},
-			hostProcess: true,
-		},
-		"process": {
-			info: containerInfo{
-				id:        "containerd://process",
-				container: "other",
-			},
-		},
-	}, c.annotationsCacheJob)
-
-	// config.json must be closed, or containerd cannot remove the bundle.
-	require.NoError(t, os.RemoveAll(filepath.Join(stateDir, "process")))
-
-	writeBundle(t, stateDir, "creating", `{"annotations":{}}`)
-
-	require.NoError(t, c.collectJobContainers(ch))
-	require.Contains(t, c.annotationsCacheJob, "creating")
-	require.NotContains(t, c.annotationsCacheJob, "process")
-}
-
-func TestCollectJobContainersMissingStateDir(t *testing.T) {
-	t.Parallel()
-
-	c := newTestCollector(filepath.Join(t.TempDir(), "missing"))
-	c.annotationsCacheJob["removed"] = jobContainer{}
-
-	ch := make(chan prometheus.Metric, 100)
-
-	require.NoError(t, c.collectJobContainers(ch))
-	require.True(t, c.stateDirMissingLogged)
-	require.Empty(t, c.annotationsCacheJob)
+	c := New(&Config{
+		CollectorsEnabled: []string{subCollectorHostprocess},
+		CRIEndpoint:       "unix:///run/containerd/containerd.sock",
+	})
+	require.Error(t, c.Build(slog.New(slog.DiscardHandler), nil))
 }

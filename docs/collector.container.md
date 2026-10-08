@@ -5,7 +5,7 @@ The container collector exposes metrics about containers running on a Hyper-V sy
 |||
 -|-
 Metric name prefix  | `container`
-Data source         | [HCS](https://learn.microsoft.com/en-us/virtualization/api/hcs/overview)
+Data source         | [HCS](https://learn.microsoft.com/en-us/virtualization/api/hcs/overview), [Kubernetes CRI](https://kubernetes.io/docs/concepts/architecture/cri/)
 Enabled by default? | No
 
 ## Flags
@@ -17,9 +17,12 @@ Comma-separated list of collectors to use. Defaults to all, if not specified. Av
 - `hcs` collects containers managed by the Host Compute Service, for example Docker or process-isolated containerd containers.
 - `hostprocess` collects Kubernetes HostProcess containers, which run in Win32 job objects instead of HCS.
 
-### `--collector.container.containerd-state-dir`
+### `--collector.container.cri-endpoint`
 
-Path to the containerd state directory of the `k8s.io` namespace. Kubernetes labels and HostProcess containers are read from the OCI bundles in this directory. Defaults to `C:\ProgramData\containerd\state\io.containerd.runtime.v2.task\k8s.io\`.
+Kubernetes Container Runtime Interface (CRI) endpoint. Defaults to `npipe:////./pipe/containerd-containerd`, the endpoint of containerd.
+
+The collector reads the running containers and pod sandboxes from this endpoint to add the `namespace`, `pod` and `container` labels, to skip pause containers and to find HostProcess containers.
+If the endpoint is not available, for example on hosts without Kubernetes, the HCS containers are exported without Kubernetes labels and HostProcess containers aren't collected.
 
 ## Metrics
 
