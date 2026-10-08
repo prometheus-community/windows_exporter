@@ -331,30 +331,16 @@ func (o *OperationOptions) SetTimeout(timeout time.Duration) error {
 	return nil
 }
 
-func (o *OperationOptions) Close() error {
-	if o == nil || o.ft == nil {
-		return ErrNotInitialized
-	}
-
-	r0, _, _ := syscall.SyscallN(o.ft.Clone, uintptr(unsafe.Pointer(o)))
-
-	if result := ResultError(r0); !errors.Is(result, MI_RESULT_OK) {
-		return result
-	}
-
-	return nil
-}
-
+// Delete deletes the operation options. MI_OperationOptions_Delete returns
+// void, so the only error is ErrNotInitialized.
+//
+// https://learn.microsoft.com/en-us/windows/win32/api/mi/nf-mi-mi_operationoptions_delete
 func (o *OperationOptions) Delete() error {
 	if o == nil || o.ft == nil {
 		return ErrNotInitialized
 	}
 
-	r0, _, _ := syscall.SyscallN(o.ft.Delete, uintptr(unsafe.Pointer(o)))
-
-	if result := ResultError(r0); !errors.Is(result, MI_RESULT_OK) {
-		return result
-	}
+	_, _, _ = syscall.SyscallN(o.ft.Delete, uintptr(unsafe.Pointer(o)))
 
 	return nil
 }

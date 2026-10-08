@@ -105,17 +105,20 @@ type DestinationOptionsFT struct {
 //
 // https://learn.microsoft.com/en-us/windows/win32/api/mi/nf-mi-mi_application_initializev1
 func ApplicationInitialize() (*Application, error) {
+	if err := procMIApplicationInitialize.Find(); err != nil {
+		return nil, err
+	}
+
 	application := &Application{}
 
-	r0, _, err := procMIApplicationInitialize.Call(
+	// The status is the MI_Result return value. The thread's last error is
+	// unrelated and may be set even on success.
+	r0, _, _ := procMIApplicationInitialize.Call(
 		0,
 		uintptr(unsafe.Pointer(applicationID)),
 		0,
 		uintptr(unsafe.Pointer(application)),
 	)
-	if !errors.Is(err, windows.NOERROR) {
-		return nil, fmt.Errorf("syscall returned: %w", err)
-	}
 
 	if result := ResultError(r0); !errors.Is(result, MI_RESULT_OK) {
 		return nil, result
@@ -168,10 +171,15 @@ func (application *Application) NewSession(options *DestinationOptions) (*Sessio
 
 	defaultOperationOptions, err := application.NewOperationOptions()
 	if err != nil {
+		_ = session.Close()
+
 		return nil, fmt.Errorf("failed to create default operation options: %w", err)
 	}
 
 	if err = defaultOperationOptions.SetTimeout(5 * time.Second); err != nil {
+		_ = defaultOperationOptions.Delete()
+		_ = session.Close()
+
 		return nil, fmt.Errorf("failed to set timeout: %w", err)
 	}
 
@@ -289,15 +297,19 @@ func (do *DestinationOptions) SetLocale(locale string) error {
 	return nil
 }
 
+// Delete deletes the destination options. MI_DestinationOptions_Delete
+// returns void, so the only error is ErrNotInitialized.
+//
+// https://learn.microsoft.com/en-us/windows/win32/api/mi/nf-mi-mi_destinationoptions_delete
 func (do *DestinationOptions) Delete() error {
-	r0, _, _ := syscall.SyscallN(
+	if do == nil || do.ft == nil {
+		return ErrNotInitialized
+	}
+
+	_, _, _ = syscall.SyscallN(
 		do.ft.Delete,
 		uintptr(unsafe.Pointer(do)),
 	)
-
-	if result := ResultError(r0); !errors.Is(result, MI_RESULT_OK) {
-		return result
-	}
 
 	return nil
 }

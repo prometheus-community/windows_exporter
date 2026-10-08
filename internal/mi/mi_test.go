@@ -1009,3 +1009,73 @@ func Test_MI_Operation_CloseEarly(t *testing.T) {
 	require.NoError(t, session.Query(&processes, mi.NamespaceRootCIMv2, query, 5*time.Second))
 	require.Equal(t, []win32Process{{Name: "System Idle Process"}}, processes)
 }
+
+// Test_MI_Query_StringArray reads a STRINGA element. Win32_OperatingSystem.MUILanguages
+// is a string[] with at least the installed UI language.
+func Test_MI_Query_StringArray(t *testing.T) {
+	application, err := mi.ApplicationInitialize()
+	require.NoError(t, err)
+
+	t.Cleanup(func() { require.NoError(t, application.Close()) })
+
+	session, err := application.NewSession(nil)
+	require.NoError(t, err)
+
+	t.Cleanup(func() { require.NoError(t, session.Close()) })
+
+	operation, err := session.QueryInstances(mi.OperationFlagsStandardRTTI, nil, mi.NamespaceRootCIMv2, mi.QueryDialectWQL,
+		"SELECT MUILanguages FROM Win32_OperatingSystem")
+	require.NoError(t, err)
+
+	t.Cleanup(func() { require.NoError(t, operation.Close()) })
+
+	instance, _, err := operation.GetInstance()
+	require.NoError(t, err)
+	require.NotNil(t, instance)
+
+	element, err := instance.GetElement("MUILanguages")
+	require.NoError(t, err)
+
+	value, err := element.GetValue()
+	require.NoError(t, err)
+
+	languages, ok := value.([]string)
+	require.True(t, ok, "expected []string, got %T", value)
+	require.NotEmpty(t, languages)
+
+	for _, language := range languages {
+		require.Contains(t, language, "-", "unexpected language tag %q", language)
+	}
+}
+
+// Test_MI_QueryUnmarshal_InvalidClass checks that a failing query is reported
+// through the operation result, not the return value of the void
+// MI_Session_QueryInstances, and that the session stays usable afterwards.
+func Test_MI_QueryUnmarshal_InvalidClass(t *testing.T) {
+	application, err := mi.ApplicationInitialize()
+	require.NoError(t, err)
+
+	t.Cleanup(func() { require.NoError(t, application.Close()) })
+
+	session, err := application.NewSession(nil)
+	require.NoError(t, err)
+
+	t.Cleanup(func() { require.NoError(t, session.Close()) })
+
+	invalidQuery, err := mi.NewQuery("SELECT Name FROM Win32_DoesNotExist")
+	require.NoError(t, err)
+
+	validQuery, err := mi.NewQuery("SELECT Name FROM Win32_Process WHERE Handle = 0")
+	require.NoError(t, err)
+
+	for range 3 {
+		var processes []win32Process
+
+		err = session.Query(&processes, mi.NamespaceRootCIMv2, invalidQuery, 5*time.Second)
+		require.ErrorIs(t, err, mi.MI_RESULT_INVALID_CLASS)
+		require.Empty(t, processes)
+
+		require.NoError(t, session.Query(&processes, mi.NamespaceRootCIMv2, validQuery, 5*time.Second))
+		require.Equal(t, []win32Process{{Name: "System Idle Process"}}, processes)
+	}
+}

@@ -26,7 +26,11 @@ import (
 
 var (
 	ErrEmptyResultDocument = errors.New("empty result document")
+	ErrInvalidHandle       = errors.New("invalid handle")
 	ErrIDNotFound          = windows.Errno(2151088398)
+	// ErrServiceNotAvailable is HCS_E_SERVICE_NOT_AVAILABLE, returned when the
+	// Host Compute Service is not installed, e.g. without the Containers feature.
+	ErrServiceNotAvailable = windows.Errno(2151088411)
 )
 
 type (

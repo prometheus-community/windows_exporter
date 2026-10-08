@@ -265,19 +265,7 @@ func (e *Element) GetValue() (any, error) {
 		// Convert the UTF-16 string to a Go string
 		return windows.UTF16PtrToString((*uint16)(unsafe.Pointer(e.value))), nil
 	case ValueTypeSTRINGA:
-		if e.value == 0 {
-			return nil, errors.New("invalid pointer: value is nil")
-		}
-
-		// Assuming array of pointers to UTF-16 strings
-		ptrArray := *(*[]*uint16)(unsafe.Pointer(e.value))
-		strArray := make([]string, len(ptrArray))
-
-		for i, ptr := range ptrArray {
-			strArray[i] = windows.UTF16PtrToString(ptr)
-		}
-
-		return strArray, nil
+		return e.getStringArray(), nil
 	case ValueTypeUINT16A:
 		return e.getUint16Array(), nil
 	default:
@@ -296,6 +284,24 @@ func (e *Element) getUint16Array() []uint16 {
 
 	out := make([]uint16, e.arrayLen)
 	copy(out, src)
+
+	return out
+}
+
+// getStringArray reads a STRINGA element into a Go []string. The element's
+// value holds the pointer to the array of MI_Char pointers and arrayLen its
+// length. NULL entries become empty strings.
+func (e *Element) getStringArray() []string {
+	if e.value == 0 || e.arrayLen == 0 {
+		return nil
+	}
+
+	src := unsafe.Slice((**uint16)(unsafe.Pointer(e.value)), e.arrayLen)
+
+	out := make([]string, e.arrayLen)
+	for i, ptr := range src {
+		out[i] = windows.UTF16PtrToString(ptr)
+	}
 
 	return out
 }

@@ -24,6 +24,7 @@ import (
 	"unsafe"
 
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sys/windows"
 )
 
 // newElement builds an Element the way Instance.GetElement does, from a raw
@@ -173,4 +174,50 @@ func TestElementIsNull(t *testing.T) {
 
 	require.True(t, newElement(ValueTypeUINT32, [5]uint64{}, flagNull).IsNull())
 	require.False(t, newElement(ValueTypeUINT32, [5]uint64{}, 0).IsNull())
+}
+
+// nativeAlloc returns zeroed memory outside the Go heap, like the buffers MI
+// returns. The checkptr instrumentation enabled by -race rejects Go heap
+// pointers that are passed through a uintptr, as the MI_Value buffer does.
+func nativeAlloc(t *testing.T, size int) uintptr {
+	t.Helper()
+
+	p, err := windows.LocalAlloc(windows.LPTR, uint32(size))
+	require.NoError(t, err)
+
+	t.Cleanup(func() { _, _ = windows.LocalFree(windows.Handle(p)) })
+
+	return p
+}
+
+// nativeUTF16 copies s as a NUL-terminated UTF-16 string into native memory.
+func nativeUTF16(t *testing.T, s string) uintptr {
+	t.Helper()
+
+	u := windows.StringToUTF16(s)
+	p := nativeAlloc(t, len(u)*2)
+	copy(unsafe.Slice((*uint16)(unsafe.Pointer(p)), len(u)), u)
+
+	return p
+}
+
+func TestElementGetValueStringArray(t *testing.T) {
+	t.Parallel()
+
+	strs := []uintptr{nativeUTF16(t, "en-US"), 0, nativeUTF16(t, "de-DE")}
+
+	array := nativeAlloc(t, len(strs)*int(unsafe.Sizeof(uintptr(0))))
+	copy(unsafe.Slice((*uintptr)(unsafe.Pointer(array)), len(strs)), strs)
+
+	// An MI_StringA is the pointer to the MI_Char* array in word 0 and the
+	// element count in word 1.
+	raw := [5]uint64{uint64(array), uint64(len(strs))}
+
+	got, err := newElement(ValueTypeSTRINGA, raw, 0).GetValue()
+	require.NoError(t, err)
+	require.Equal(t, []string{"en-US", "", "de-DE"}, got)
+
+	got, err = newElement(ValueTypeSTRINGA, [5]uint64{}, flagNull).GetValue()
+	require.NoError(t, err)
+	require.Nil(t, got)
 }

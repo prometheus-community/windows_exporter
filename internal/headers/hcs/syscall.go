@@ -18,6 +18,7 @@
 package hcs
 
 import (
+	"errors"
 	"fmt"
 	"unsafe"
 
@@ -38,10 +39,18 @@ var (
 )
 
 // CreateOperation creates a new operation.
+//
+// HcsCreateOperation returns the operation handle, or NULL on failure.
+//
+// https://learn.microsoft.com/en-us/virtualization/api/hcs/reference/hcscreateoperation
 func CreateOperation() (Operation, error) {
-	r1, r2, _ := procHcsCreateOperation.Call(0, 0)
-	if r2 != 0 {
-		return 0, fmt.Errorf("HcsCreateOperation failed: HRESULT 0x%X: %w", r2, Win32FromHResult(r2))
+	r1, _, err := procHcsCreateOperation.Call(0, 0)
+	if r1 == 0 {
+		if errors.Is(err, windows.ERROR_SUCCESS) {
+			err = ErrInvalidHandle
+		}
+
+		return 0, fmt.Errorf("HcsCreateOperation failed: %w", err)
 	}
 
 	return Operation(r1), nil
@@ -102,13 +111,13 @@ func OpenComputeSystem(id string) (ComputeSystem, error) {
 }
 
 func GetComputeSystemProperties(system ComputeSystem, operation Operation, propertyQuery *uint16) error {
-	r1, _, err := procHcsGetComputeSystemProperties.Call(
+	r1, _, _ := procHcsGetComputeSystemProperties.Call(
 		uintptr(system),
 		uintptr(operation),
 		uintptr(unsafe.Pointer(propertyQuery)),
 	)
 	if r1 != 0 {
-		return fmt.Errorf("HcsGetComputeSystemProperties failed: HRESULT 0x%X: %w", r1, err)
+		return fmt.Errorf("HcsGetComputeSystemProperties failed: HRESULT 0x%X: %w", r1, Win32FromHResult(r1))
 	}
 
 	return nil
