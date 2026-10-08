@@ -59,8 +59,7 @@ type Collector[T any] struct {
 	// left out of the sample, so a missing value is never reported as zero.
 	partialRows bool
 
-	collectCh chan *[]T
-	errorCh   chan error
+	state *collectState
 }
 
 // Row holds the values of one instance collected by a collector from [NewDynamicCollector].
@@ -326,10 +325,7 @@ func newCollector[T any](logger *slog.Logger, resultType CounterType, object str
 		return collector, fmt.Errorf("failed to initialize collector: %w", err)
 	}
 
-	collector.collectCh = make(chan *[]T)
-	collector.errorCh = make(chan error)
-
-	go collector.collectWorker()
+	collector.state = &collectState{}
 
 	// Collect initial data because some counters need to be read twice to get the correct value.
 	var collectValues []T
@@ -400,27 +396,17 @@ func (c *Collector[T]) Collect(dst *[]T) error {
 		return errors.New("dst must not be nil")
 	}
 
-	c.mu.RLock()
-	defer c.mu.RUnlock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
-	if len(c.counters) == 0 || c.handle == 0 || c.collectCh == nil || c.errorCh == nil {
+	if len(c.counters) == 0 || c.handle == 0 || c.state == nil {
 		return ErrPerformanceCounterNotInitialized
 	}
 
-	c.collectCh <- dst
-
-	return <-c.errorCh
+	return c.collect(dst, c.state)
 }
 
-func (c *Collector[T]) collectWorker() {
-	var state collectState
-
-	for dst := range c.collectCh {
-		c.errorCh <- c.collect(dst, &state)
-	}
-}
-
-// collectState holds the buffers that the collect worker reuses between samples.
+// collectState holds the buffers that the collector reuses between samples.
 type collectState struct {
 	// buf starts empty so that the first call only queries the required size with a nil buffer.
 	// PdhGetRawCounterArrayW writes 8 bytes into a non-nil buffer, even if lpdwBufferSize is smaller,
@@ -690,8 +676,7 @@ func (r *rowSet[T]) finish() {
 	}
 }
 
-// panicError logs a panic recovered in the collect worker and returns it as an
-// error. The worker goroutine has no other recovery, so a panic would end the process.
+// panicError logs a panic recovered while collecting and returns it as an error.
 func (c *Collector[T]) panicError(r any) error {
 	c.logger.Error("recovered from panic while collecting performance counters",
 		slog.String("object", c.object),
@@ -715,17 +700,7 @@ func (c *Collector[T]) Close() {
 	}
 
 	c.handle = 0
-
-	if c.collectCh != nil {
-		close(c.collectCh)
-	}
-
-	if c.errorCh != nil {
-		close(c.errorCh)
-	}
-
-	c.collectCh = nil
-	c.errorCh = nil
+	c.state = nil
 }
 
 func formatCounterPath(object, instance, counterName string) string {
