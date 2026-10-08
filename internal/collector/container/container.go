@@ -26,6 +26,7 @@ import (
 	"os"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 	"unsafe"
 
@@ -69,6 +70,11 @@ type Collector struct {
 
 	logger *slog.Logger
 
+	// mu serializes Collect, because the annotation caches are not safe for concurrent use.
+	// Overlapping Collect calls, e.g. after a scrape timeout, would otherwise write them concurrently.
+	mu sync.Mutex
+
+	// The annotation caches are keyed by the container ID without the runtime prefix.
 	annotationsCacheHCS map[string]containerInfo
 	annotationsCacheJob map[string]containerInfo
 
@@ -293,6 +299,9 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	errs := make([]error, 0)
 
 	if slices.Contains(c.config.CollectorsEnabled, subCollectorHCS) {
@@ -319,6 +328,8 @@ func (c *Collector) collectHCS(ch chan<- prometheus.Metric) error {
 
 	count := len(containers)
 	if count == 0 {
+		clear(c.annotationsCacheHCS)
+
 		ch <- prometheus.MustNewConstMetric(
 			c.containersCount,
 			prometheus.GaugeValue,
@@ -394,15 +405,17 @@ func (c *Collector) collectHCS(ch chan<- prometheus.Metric) error {
 		countersCount,
 	)
 
-	if err = c.collectNetworkMetrics(ch); err != nil {
-		return fmt.Errorf("error in fetching container network statistics: %w", err)
-	}
+	networkErr := c.collectNetworkMetrics(ch)
 
 	// Remove containers that are no longer running
-	for _, containerID := range c.annotationsCacheHCS {
-		if !slices.Contains(containerIDs, containerID.id) {
-			delete(c.annotationsCacheHCS, containerID.id)
+	for containerID := range c.annotationsCacheHCS {
+		if !slices.Contains(containerIDs, containerID) {
+			delete(c.annotationsCacheHCS, containerID)
 		}
+	}
+
+	if networkErr != nil {
+		return fmt.Errorf("error in fetching container network statistics: %w", networkErr)
 	}
 
 	if len(collectErrors) > 0 {
@@ -688,9 +701,9 @@ func (c *Collector) collectJobContainers(ch chan<- prometheus.Metric) error {
 	}
 
 	// Remove containers that are no longer running
-	for _, containerID := range c.annotationsCacheJob {
-		if !slices.Contains(jobContainerIDs, containerID.id) {
-			delete(c.annotationsCacheJob, containerID.id)
+	for containerID := range c.annotationsCacheJob {
+		if !slices.Contains(jobContainerIDs, containerID) {
+			delete(c.annotationsCacheJob, containerID)
 		}
 	}
 
