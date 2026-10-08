@@ -29,7 +29,7 @@ import (
 )
 
 var (
-	errCollectorBusy   = errors.New("collector is still running")
+	errCollectorBusy    = errors.New("collector is still running")
 	errCollectionClosed = errors.New("collection is closed")
 )
 
