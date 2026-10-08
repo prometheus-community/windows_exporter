@@ -30,10 +30,9 @@ type Object struct {
 	Counters      []Counter       `json:"counters"       yaml:"counters"`
 	InstanceLabel string          `json:"instance_label" yaml:"instance_label"`
 
-	collector      *pdh.Collector
-	perfDataObject any
-	// fieldIndex maps a counter name to its field index in the element type of perfDataObject.
-	fieldIndex map[string]int
+	collector *pdh.Collector[pdh.Row]
+	// valueIndex maps a counter name to its index in pdh.Row.Values.
+	valueIndex map[string]int
 }
 
 type Counter struct {

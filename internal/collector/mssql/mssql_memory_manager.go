@@ -27,7 +27,7 @@ import (
 )
 
 type collectorMemoryManager struct {
-	memMgrPerfDataCollectors map[mssqlInstance]*pdh.Collector
+	memMgrPerfDataCollectors map[mssqlInstance]*pdh.Collector[perfDataCounterValuesMemMgr]
 	memMgrPerfDataObject     []perfDataCounterValuesMemMgr
 
 	memMgrConnectionMemoryKB       *prometheus.Desc
@@ -78,7 +78,7 @@ type perfDataCounterValuesMemMgr struct {
 func (c *Collector) buildMemoryManager() error {
 	var err error
 
-	c.memMgrPerfDataCollectors = make(map[mssqlInstance]*pdh.Collector, len(c.mssqlInstances))
+	c.memMgrPerfDataCollectors = make(map[mssqlInstance]*pdh.Collector[perfDataCounterValuesMemMgr], len(c.mssqlInstances))
 	errs := make([]error, 0, len(c.mssqlInstances))
 
 	for _, sqlInstance := range c.mssqlInstances {
@@ -216,7 +216,7 @@ func (c *Collector) collectMemoryManager(ch chan<- prometheus.Metric) error {
 	return c.collect(ch, subCollectorMemoryManager, c.memMgrPerfDataCollectors, c.collectMemoryManagerInstance)
 }
 
-func (c *Collector) collectMemoryManagerInstance(ch chan<- prometheus.Metric, sqlInstance mssqlInstance, perfDataCollector *pdh.Collector) error {
+func (c *Collector) collectMemoryManagerInstance(ch chan<- prometheus.Metric, sqlInstance mssqlInstance, perfDataCollector *pdh.Collector[perfDataCounterValuesMemMgr]) error {
 	err := perfDataCollector.Collect(&c.memMgrPerfDataObject)
 	if err != nil {
 		return fmt.Errorf("failed to collect %s metrics: %w", c.mssqlGetPerfObjectName(sqlInstance, "Memory Manager"), err)

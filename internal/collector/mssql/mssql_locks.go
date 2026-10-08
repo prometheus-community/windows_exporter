@@ -27,7 +27,7 @@ import (
 )
 
 type collectorLocks struct {
-	locksPerfDataCollectors map[mssqlInstance]*pdh.Collector
+	locksPerfDataCollectors map[mssqlInstance]*pdh.Collector[perfDataCounterValuesLocks]
 	locksPerfDataObject     []perfDataCounterValuesLocks
 
 	// Win32_PerfRawData_{instance}_SQLServerLocks
@@ -57,7 +57,7 @@ type perfDataCounterValuesLocks struct {
 func (c *Collector) buildLocks() error {
 	var err error
 
-	c.locksPerfDataCollectors = make(map[mssqlInstance]*pdh.Collector, len(c.mssqlInstances))
+	c.locksPerfDataCollectors = make(map[mssqlInstance]*pdh.Collector[perfDataCounterValuesLocks], len(c.mssqlInstances))
 	errs := make([]error, 0, len(c.mssqlInstances))
 
 	for _, sqlInstance := range c.mssqlInstances {
@@ -123,7 +123,7 @@ func (c *Collector) collectLocks(ch chan<- prometheus.Metric) error {
 	return c.collect(ch, subCollectorLocks, c.locksPerfDataCollectors, c.collectLocksInstance)
 }
 
-func (c *Collector) collectLocksInstance(ch chan<- prometheus.Metric, sqlInstance mssqlInstance, perfDataCollector *pdh.Collector) error {
+func (c *Collector) collectLocksInstance(ch chan<- prometheus.Metric, sqlInstance mssqlInstance, perfDataCollector *pdh.Collector[perfDataCounterValuesLocks]) error {
 	err := perfDataCollector.Collect(&c.locksPerfDataObject)
 	if err != nil {
 		return fmt.Errorf("failed to collect %s metrics: %w", c.mssqlGetPerfObjectName(sqlInstance, "Locks"), err)

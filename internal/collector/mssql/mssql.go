@@ -368,11 +368,11 @@ func (c *Collector) mssqlGetPerfObjectName(sqlInstance mssqlInstance, collector 
 
 // mssqlGetPerfObjectName returns the name of the Windows Performance
 // Counter object for the given SQL instance and Collector.
-func (c *Collector) collect(
+func (c *Collector) collect[T any](
 	ch chan<- prometheus.Metric,
 	collector string,
-	perfDataCollectors map[mssqlInstance]*pdh.Collector,
-	collectFn func(ch chan<- prometheus.Metric, sqlInstance mssqlInstance, perfDataCollector *pdh.Collector) error,
+	perfDataCollectors map[mssqlInstance]*pdh.Collector[T],
+	collectFn func(ch chan<- prometheus.Metric, sqlInstance mssqlInstance, perfDataCollector *pdh.Collector[T]) error,
 ) error {
 	errs := make([]error, 0, len(perfDataCollectors))
 

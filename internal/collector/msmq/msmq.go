@@ -39,7 +39,7 @@ var ConfigDefaults = Config{}
 // A Collector is a Prometheus Collector for WMI Win32_PerfRawData_MSMQ_MSMQQueue metrics.
 type Collector struct {
 	config            Config
-	perfDataCollector *pdh.Collector
+	perfDataCollector *pdh.Collector[perfDataCounterValues]
 	perfDataObject    []perfDataCounterValues
 
 	bytesInJournalQueue    *prometheus.Desc

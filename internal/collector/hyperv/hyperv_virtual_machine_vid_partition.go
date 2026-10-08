@@ -27,7 +27,7 @@ import (
 
 // collectorVirtualMachineVidPartition Hyper-V VM Vid Partition metrics
 type collectorVirtualMachineVidPartition struct {
-	perfDataCollectorVirtualMachineVidPartition *pdh.Collector
+	perfDataCollectorVirtualMachineVidPartition *pdh.Collector[perfDataCounterValuesVirtualMachineVidPartition]
 	perfDataObjectVirtualMachineVidPartition    []perfDataCounterValuesVirtualMachineVidPartition
 
 	physicalPagesAllocated *prometheus.Desc // \Hyper-V VM Vid Partition(*)\Physical Pages Allocated

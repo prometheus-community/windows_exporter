@@ -26,7 +26,7 @@ import (
 )
 
 type collectorWebServiceCache struct {
-	serviceCachePerfDataCollector *pdh.Collector
+	serviceCachePerfDataCollector *pdh.Collector[perfDataCounterServiceCache]
 	perfDataObjectServiceCache    []perfDataCounterServiceCache
 
 	serviceCacheActiveFlushedEntries *prometheus.Desc

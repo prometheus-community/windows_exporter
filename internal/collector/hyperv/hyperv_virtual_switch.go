@@ -27,7 +27,7 @@ import (
 
 // collectorVirtualMachineHealthSummary Hyper-V Virtual Switch Summary metrics
 type collectorVirtualSwitch struct {
-	perfDataCollectorVirtualSwitch *pdh.Collector
+	perfDataCollectorVirtualSwitch *pdh.Collector[perfDataCounterValuesVirtualSwitch]
 	perfDataObjectVirtualSwitch    []perfDataCounterValuesVirtualSwitch
 
 	virtualSwitchBroadcastPacketsReceived         *prometheus.Desc // \Hyper-V Virtual Switch(*)\Broadcast Packets Received/sec

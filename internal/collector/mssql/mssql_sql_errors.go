@@ -27,7 +27,7 @@ import (
 )
 
 type collectorSQLErrors struct {
-	sqlErrorsPerfDataCollectors map[mssqlInstance]*pdh.Collector
+	sqlErrorsPerfDataCollectors map[mssqlInstance]*pdh.Collector[perfDataCounterValuesSqlErrors]
 	sqlErrorsPerfDataObject     []perfDataCounterValuesSqlErrors
 
 	// Win32_PerfRawData_{instance}_SQLServerSQLErrors
@@ -43,7 +43,7 @@ type perfDataCounterValuesSqlErrors struct {
 func (c *Collector) buildSQLErrors() error {
 	var err error
 
-	c.sqlErrorsPerfDataCollectors = make(map[mssqlInstance]*pdh.Collector, len(c.mssqlInstances))
+	c.sqlErrorsPerfDataCollectors = make(map[mssqlInstance]*pdh.Collector[perfDataCounterValuesSqlErrors], len(c.mssqlInstances))
 	errs := make([]error, 0, len(c.mssqlInstances))
 
 	for _, sqlInstance := range c.mssqlInstances {
@@ -68,7 +68,7 @@ func (c *Collector) collectSQLErrors(ch chan<- prometheus.Metric) error {
 	return c.collect(ch, subCollectorSQLErrors, c.sqlErrorsPerfDataCollectors, c.collectSQLErrorsInstance)
 }
 
-func (c *Collector) collectSQLErrorsInstance(ch chan<- prometheus.Metric, sqlInstance mssqlInstance, perfDataCollector *pdh.Collector) error {
+func (c *Collector) collectSQLErrorsInstance(ch chan<- prometheus.Metric, sqlInstance mssqlInstance, perfDataCollector *pdh.Collector[perfDataCounterValuesSqlErrors]) error {
 	err := perfDataCollector.Collect(&c.sqlErrorsPerfDataObject)
 	if err != nil {
 		return fmt.Errorf("failed to collect %s metrics: %w", c.mssqlGetPerfObjectName(sqlInstance, "SQL Errors"), err)

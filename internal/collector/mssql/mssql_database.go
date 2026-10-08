@@ -27,8 +27,8 @@ import (
 )
 
 type collectorDatabases struct {
-	databasesPerfDataCollectors     map[mssqlInstance]*pdh.Collector
-	databasesPerfDataCollectors2019 map[mssqlInstance]*pdh.Collector
+	databasesPerfDataCollectors     map[mssqlInstance]*pdh.Collector[perfDataCounterValuesDatabases]
+	databasesPerfDataCollectors2019 map[mssqlInstance]*pdh.Collector[perfDataCounterValuesDatabases2019]
 	databasesPerfDataObject         []perfDataCounterValuesDatabases
 	databasesPerfDataObject2019     []perfDataCounterValuesDatabases2019
 
@@ -143,8 +143,8 @@ type perfDataCounterValuesDatabases2019 struct {
 func (c *Collector) buildDatabases() error {
 	var err error
 
-	c.databasesPerfDataCollectors = make(map[mssqlInstance]*pdh.Collector, len(c.mssqlInstances))
-	c.databasesPerfDataCollectors2019 = make(map[mssqlInstance]*pdh.Collector, len(c.mssqlInstances))
+	c.databasesPerfDataCollectors = make(map[mssqlInstance]*pdh.Collector[perfDataCounterValuesDatabases], len(c.mssqlInstances))
+	c.databasesPerfDataCollectors2019 = make(map[mssqlInstance]*pdh.Collector[perfDataCounterValuesDatabases2019], len(c.mssqlInstances))
 	errs := make([]error, 0, len(c.mssqlInstances))
 
 	for _, sqlInstance := range c.mssqlInstances {
@@ -460,7 +460,7 @@ func (c *Collector) collectDatabases(ch chan<- prometheus.Metric) error {
 	)
 }
 
-func (c *Collector) collectDatabasesInstance(ch chan<- prometheus.Metric, sqlInstance mssqlInstance, perfDataCollector *pdh.Collector) error {
+func (c *Collector) collectDatabasesInstance(ch chan<- prometheus.Metric, sqlInstance mssqlInstance, perfDataCollector *pdh.Collector[perfDataCounterValuesDatabases]) error {
 	err := perfDataCollector.Collect(&c.databasesPerfDataObject)
 	if err != nil {
 		return fmt.Errorf("failed to collect %s metrics: %w", c.mssqlGetPerfObjectName(sqlInstance, "Databases"), err)
@@ -800,7 +800,7 @@ func (c *Collector) collectDatabasesInstance(ch chan<- prometheus.Metric, sqlIns
 	return nil
 }
 
-func (c *Collector) collectDatabasesInstance2019(ch chan<- prometheus.Metric, sqlInstance mssqlInstance, perfDataCollector *pdh.Collector) error {
+func (c *Collector) collectDatabasesInstance2019(ch chan<- prometheus.Metric, sqlInstance mssqlInstance, perfDataCollector *pdh.Collector[perfDataCounterValuesDatabases2019]) error {
 	err := perfDataCollector.Collect(&c.databasesPerfDataObject2019)
 	if err != nil {
 		return fmt.Errorf("failed to collect %s metrics: %w", c.mssqlGetPerfObjectName(sqlInstance, "Databases"), err)

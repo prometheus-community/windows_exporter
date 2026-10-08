@@ -54,7 +54,7 @@ var ConfigDefaults = Config{
 type Collector struct {
 	config Config
 
-	perfDataCollector *pdh.Collector
+	perfDataCollector *pdh.Collector[perfDataCounterValues]
 	perfDataObject    []perfDataCounterValues
 
 	miSession *mi.Session
