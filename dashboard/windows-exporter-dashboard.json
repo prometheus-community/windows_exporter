@@ -6642,9 +6642,9 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "rate(windows_logical_disk_read_seconds_total{job=~\"$job\", instance=\"$instance\", volume=~\"$volume\"}[$__rate_interval]) / rate(windows_logical_disk_reads_total{job=~\"$job\", instance=\"$instance\", volume=~\"$volume\"}[$__rate_interval])",
+                                                "expr": "rate(windows_logical_disk_write_seconds_total{job=~\"$job\", instance=\"$instance\", volume=~\"$volume\"}[$__rate_interval]) / rate(windows_logical_disk_writes_total{job=~\"$job\", instance=\"$instance\", volume=~\"$volume\"}[$__rate_interval])",
                                                 "instant": false,
-                                                "legendFormat": "{{volume}} read",
+                                                "legendFormat": "{{volume}} write",
                                                 "range": true
                                             },
                                             "version": "v0"
@@ -6664,9 +6664,9 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "rate(windows_logical_disk_write_seconds_total{job=~\"$job\", instance=\"$instance\", volume=~\"$volume\"}[$__rate_interval]) / rate(windows_logical_disk_writes_total{job=~\"$job\", instance=\"$instance\", volume=~\"$volume\"}[$__rate_interval])",
+                                                "expr": "rate(windows_logical_disk_read_seconds_total{job=~\"$job\", instance=\"$instance\", volume=~\"$volume\"}[$__rate_interval]) / rate(windows_logical_disk_reads_total{job=~\"$job\", instance=\"$instance\", volume=~\"$volume\"}[$__rate_interval])",
                                                 "instant": false,
-                                                "legendFormat": "{{volume}} write",
+                                                "legendFormat": "{{volume}} read",
                                                 "range": true
                                             },
                                             "version": "v0"
@@ -6679,7 +6679,7 @@
                             "transformations": []
                         }
                     },
-                    "description": "Average time per read and write operation.",
+                    "description": "Average time per read and write operation. Reads are drawn below the axis.",
                     "id": 42,
                     "links": [],
                     "title": "Disk latency",
@@ -6724,7 +6724,6 @@
                                             "mode": "off"
                                         }
                                     },
-                                    "min": 0,
                                     "thresholds": {
                                         "mode": "absolute",
                                         "steps": [
@@ -6736,7 +6735,20 @@
                                     },
                                     "unit": "s"
                                 },
-                                "overrides": []
+                                "overrides": [
+                                    {
+                                        "matcher": {
+                                            "id": "byRegexp",
+                                            "options": ".* read$"
+                                        },
+                                        "properties": [
+                                            {
+                                                "id": "custom.transform",
+                                                "value": "negative-Y"
+                                            }
+                                        ]
+                                    }
+                                ]
                             },
                             "options": {
                                 "legend": {
@@ -6779,9 +6791,9 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "rate(windows_logical_disk_avg_read_requests_queued{job=~\"$job\", instance=\"$instance\", volume=~\"$volume\"}[$__rate_interval])",
+                                                "expr": "rate(windows_logical_disk_avg_write_requests_queued{job=~\"$job\", instance=\"$instance\", volume=~\"$volume\"}[$__rate_interval])",
                                                 "instant": false,
-                                                "legendFormat": "{{volume}} read",
+                                                "legendFormat": "{{volume}} write",
                                                 "range": true
                                             },
                                             "version": "v0"
@@ -6801,9 +6813,9 @@
                                             "kind": "DataQuery",
                                             "spec": {
                                                 "editorMode": "code",
-                                                "expr": "rate(windows_logical_disk_avg_write_requests_queued{job=~\"$job\", instance=\"$instance\", volume=~\"$volume\"}[$__rate_interval])",
+                                                "expr": "rate(windows_logical_disk_avg_read_requests_queued{job=~\"$job\", instance=\"$instance\", volume=~\"$volume\"}[$__rate_interval])",
                                                 "instant": false,
-                                                "legendFormat": "{{volume}} write",
+                                                "legendFormat": "{{volume}} read",
                                                 "range": true
                                             },
                                             "version": "v0"
@@ -6816,7 +6828,7 @@
                             "transformations": []
                         }
                     },
-                    "description": "Average number of read and write requests queued for the volume. A queue that stays high while latency rises indicates a disk bottleneck. The avg_*_requests_queued metrics grow like counters, so the panel takes their rate.",
+                    "description": "Average number of read and write requests queued for the volume. Reads are drawn below the axis. A queue that stays high while latency rises indicates a disk bottleneck. The avg_*_requests_queued metrics grow like counters, so the panel takes their rate.",
                     "id": 43,
                     "links": [],
                     "title": "Disk queue length",
@@ -6861,7 +6873,6 @@
                                             "mode": "off"
                                         }
                                     },
-                                    "min": 0,
                                     "thresholds": {
                                         "mode": "absolute",
                                         "steps": [
@@ -6873,7 +6884,20 @@
                                     },
                                     "unit": "short"
                                 },
-                                "overrides": []
+                                "overrides": [
+                                    {
+                                        "matcher": {
+                                            "id": "byRegexp",
+                                            "options": ".* read$"
+                                        },
+                                        "properties": [
+                                            {
+                                                "id": "custom.transform",
+                                                "value": "negative-Y"
+                                            }
+                                        ]
+                                    }
+                                ]
                             },
                             "options": {
                                 "legend": {
