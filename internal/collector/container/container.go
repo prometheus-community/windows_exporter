@@ -94,10 +94,15 @@ type Collector struct {
 	// Number of containers
 	containersCount *prometheus.Desc
 
+	// Lifecycle
+	startTime *prometheus.Desc
+	processes *prometheus.Desc
+
 	// Memory
 	usageCommitBytes            *prometheus.Desc
 	usageCommitPeakBytes        *prometheus.Desc
 	usagePrivateWorkingSetBytes *prometheus.Desc
+	pageFaults                  *prometheus.Desc
 
 	// CPU
 	runtimeTotal  *prometheus.Desc
@@ -124,6 +129,8 @@ type containerInfo struct {
 	namespace string
 	pod       string
 	container string
+	// createdAt is the creation time reported by the CRI endpoint. It is zero for containers not managed by Kubernetes.
+	createdAt time.Time
 }
 
 // kubernetesContainers holds the Kubernetes metadata of the running containers, read from the CRI endpoint.
@@ -159,6 +166,7 @@ func newKubernetesContainers(runtimeName string, sandboxes []cri.PodSandbox, con
 			namespace: pod.Namespace,
 			pod:       pod.Name,
 			container: container.Name,
+			createdAt: container.CreatedAt,
 		}
 	}
 
@@ -268,6 +276,18 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		nil,
 		nil,
 	)
+	c.startTime = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "start_time_seconds"),
+		"Start time of the container since Unix epoch in seconds. HostProcess containers report their creation time.",
+		[]string{"container_id", "namespace", "pod", "container"},
+		nil,
+	)
+	c.processes = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "processes"),
+		"Number of processes running in the container",
+		[]string{"container_id", "namespace", "pod", "container"},
+		nil,
+	)
 	c.usageCommitBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "memory_usage_commit_bytes"),
 		"Memory Usage Commit Bytes",
@@ -283,6 +303,12 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	c.usagePrivateWorkingSetBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "memory_usage_private_working_set_bytes"),
 		"Memory Usage Private Working Set Bytes",
+		[]string{"container_id", "namespace", "pod", "container"},
+		nil,
+	)
+	c.pageFaults = prometheus.NewDesc(
+		prometheus.BuildFQName(types.Namespace, Name, "memory_page_faults_total"),
+		"Total number of page faults of the container processes. Only available for HostProcess containers.",
 		[]string{"container_id", "namespace", "pod", "container"},
 		nil,
 	)
@@ -547,16 +573,41 @@ func (c *Collector) collectHCS(ch chan<- prometheus.Metric, kubernetes kubernete
 }
 
 func (c *Collector) collectHCSContainer(ch chan<- prometheus.Metric, containerDetails hcs.Properties, containerInfo containerInfo) error {
-	containerStats, err := hcs.GetContainerStatistics(containerDetails.ID)
+	properties, err := hcs.GetContainerStatistics(containerDetails.ID)
 	if err != nil {
 		return fmt.Errorf("error fetching container statistics: %w", err)
 	}
+
+	containerStats := properties.Statistics
 
 	ch <- prometheus.MustNewConstMetric(
 		c.containerAvailable,
 		prometheus.GaugeValue,
 		1,
 		containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container, "false",
+	)
+
+	startTime := containerStats.ContainerStartTime
+	if startTime.IsZero() {
+		startTime = containerInfo.createdAt
+	}
+
+	if !startTime.IsZero() {
+		ch <- prometheus.MustNewConstMetric(
+			c.startTime,
+			prometheus.GaugeValue,
+			float64(startTime.UnixNano())/1e9,
+
+			containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container,
+		)
+	}
+
+	ch <- prometheus.MustNewConstMetric(
+		c.processes,
+		prometheus.GaugeValue,
+		float64(len(properties.ProcessList)),
+
+		containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
@@ -791,6 +842,33 @@ func (c *Collector) collectJobContainer(ch chan<- prometheus.Metric, containerID
 		prometheus.GaugeValue,
 		1,
 		containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container, "true",
+	)
+
+	// Job objects have no start time, so the creation time reported by the CRI endpoint is used.
+	if !containerInfo.createdAt.IsZero() {
+		ch <- prometheus.MustNewConstMetric(
+			c.startTime,
+			prometheus.GaugeValue,
+			float64(containerInfo.createdAt.UnixNano())/1e9,
+
+			containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container,
+		)
+	}
+
+	ch <- prometheus.MustNewConstMetric(
+		c.processes,
+		prometheus.GaugeValue,
+		float64(jobInfo.BasicInfo.ActiveProcesses),
+
+		containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container,
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		c.pageFaults,
+		prometheus.CounterValue,
+		float64(jobInfo.BasicInfo.TotalPageFaultCount),
+
+		containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container,
 	)
 
 	ch <- prometheus.MustNewConstMetric(

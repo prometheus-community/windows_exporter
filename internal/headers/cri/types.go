@@ -18,6 +18,8 @@
 package cri
 
 import (
+	"time"
+
 	"google.golang.org/protobuf/encoding/protowire"
 )
 
@@ -54,6 +56,8 @@ type Container struct {
 	// Name is the container name from the Kubernetes pod spec.
 	Name  string
 	State ContainerState
+	// CreatedAt is the creation time of the container. It is zero if the runtime did not set it.
+	CreatedAt time.Time
 }
 
 // PodSandbox is the subset of runtime.v1.PodSandbox used by the exporter.
@@ -170,6 +174,10 @@ func decodeContainer(b []byte) (Container, error) {
 			})
 		case f.is(6, protowire.VarintType):
 			container.State = ContainerState(f.value)
+		case f.is(7, protowire.VarintType): // created_at, int64 in nanoseconds since the Unix epoch
+			if f.value != 0 {
+				container.CreatedAt = time.Unix(0, int64(f.value))
+			}
 		}
 
 		return nil
