@@ -21,11 +21,14 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
+	"slices"
 	"testing"
 	"time"
 
 	"github.com/prometheus-community/windows_exporter/internal/headers/cri"
 	"github.com/prometheus/client_golang/prometheus"
+	dto "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sys/windows"
 )
@@ -132,12 +135,164 @@ func TestCollectJobContainersSkipsHCSContainers(t *testing.T) {
 	c := &Collector{logger: slog.New(slog.DiscardHandler)}
 	ch := make(chan prometheus.Metric, 100)
 
-	require.NoError(t, c.collectJobContainers(ch, kubernetesContainers{
+	jobContainers, err := c.collectJobContainers(ch, kubernetesContainers{
 		containers: map[string]containerInfo{
 			"windows-exporter-test-no-job-object": {id: "containerd://windows-exporter-test-no-job-object"},
 		},
-	}))
+	})
+	require.NoError(t, err)
+	require.Empty(t, jobContainers)
 	require.Empty(t, ch)
+}
+
+func TestSelectCRIStatsContainers(t *testing.T) {
+	t.Parallel()
+
+	kubernetes := kubernetesContainers{
+		containers: map[string]containerInfo{
+			"process-isolated": {},
+			"hostprocess":      {},
+			"hyperv":           {},
+		},
+	}
+	hcsContainers := map[string]containerInfo{"process-isolated": {}, "docker": {}}
+	jobContainers := map[string]struct{}{"hostprocess": {}}
+
+	for name, tc := range map[string]struct {
+		hcsContainers map[string]containerInfo
+		jobContainers map[string]struct{}
+		exported      []string
+		hyperv        []string
+	}{
+		"all collectors": {
+			hcsContainers: hcsContainers,
+			jobContainers: jobContainers,
+			exported:      []string{"process-isolated", "hostprocess", "hyperv"},
+			hyperv:        []string{"hyperv"},
+		},
+		// Hyper-V isolated containers belong to the hcs collector.
+		"hostprocess only": {
+			jobContainers: jobContainers,
+			exported:      []string{"hostprocess"},
+		},
+		// The test containers have no job object, so they are taken as Hyper-V isolated.
+		"hcs only": {
+			hcsContainers: hcsContainers,
+			exported:      []string{"process-isolated", "hostprocess", "hyperv"},
+			hyperv:        []string{"hostprocess", "hyperv"},
+		},
+		// Without HCS, Hyper-V isolated containers can't be told apart from process-isolated ones.
+		"HCS not available": {
+			jobContainers: jobContainers,
+			exported:      []string{"hostprocess"},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			exported, hyperv := selectCRIStatsContainers(kubernetes, tc.hcsContainers, tc.jobContainers)
+			require.ElementsMatch(t, tc.exported, slices.Collect(maps.Keys(exported)))
+			require.ElementsMatch(t, tc.hyperv, slices.Collect(maps.Keys(hyperv)))
+		})
+	}
+}
+
+func TestCollectCRIContainers(t *testing.T) {
+	t.Parallel()
+
+	c := New(&Config{
+		CollectorsEnabled: []string{subCollectorHostprocess},
+		CRIEndpoint:       "npipe:////./pipe/windows_exporter-container-test-does-not-exist",
+	})
+	require.NoError(t, c.Build(slog.New(slog.DiscardHandler), nil))
+
+	t.Cleanup(func() { _ = c.Close() })
+
+	ptr := func(v uint64) *uint64 { return &v }
+
+	kubernetes := kubernetesContainers{
+		containers: map[string]containerInfo{
+			"hyperv":           {id: "containerd://hyperv", namespace: "default", pod: "pod", container: "hyperv", createdAt: time.Unix(1700000000, 0)},
+			"process-isolated": {id: "containerd://process-isolated", namespace: "default", pod: "pod", container: "app"},
+			"no-stats":         {id: "containerd://no-stats"},
+		},
+	}
+
+	stats := []cri.ContainerStats{
+		{
+			ID:            "hyperv",
+			CPU:           &cri.CPUUsage{Timestamp: 1, UsageCoreNanoSeconds: ptr(1500000000)},
+			Memory:        &cri.MemoryUsage{Timestamp: 1, WorkingSetBytes: ptr(4096), UsageBytes: ptr(8192)},
+			WritableLayer: &cri.FilesystemUsage{Timestamp: 1, UsedBytes: ptr(1024)},
+		},
+		{
+			// HCS provides the CPU and memory usage of process-isolated containers.
+			ID:            "process-isolated",
+			CPU:           &cri.CPUUsage{Timestamp: 1, UsageCoreNanoSeconds: ptr(1)},
+			WritableLayer: &cri.FilesystemUsage{Timestamp: 1, UsedBytes: ptr(2048)},
+		},
+		{
+			// containerd has not measured the writable layer yet.
+			ID:            "no-stats",
+			WritableLayer: &cri.FilesystemUsage{UsedBytes: ptr(0)},
+		},
+		{
+			// Containers not exported, e.g. pause containers, are skipped.
+			ID:            "sandbox",
+			WritableLayer: &cri.FilesystemUsage{Timestamp: 1, UsedBytes: ptr(1)},
+		},
+	}
+
+	ch := make(chan prometheus.Metric, 100)
+
+	c.collectCRIContainers(ch, stats, kubernetes,
+		map[string]struct{}{"hyperv": {}, "process-isolated": {}, "no-stats": {}},
+		map[string]struct{}{"hyperv": {}, "no-stats": {}},
+	)
+	close(ch)
+
+	type sample struct {
+		desc        *prometheus.Desc
+		containerID string
+		value       float64
+	}
+
+	var samples []sample
+
+	for m := range ch {
+		var metric dto.Metric
+
+		require.NoError(t, m.Write(&metric))
+
+		s := sample{desc: m.Desc()}
+
+		for _, label := range metric.GetLabel() {
+			if label.GetName() == "container_id" {
+				s.containerID = label.GetValue()
+			}
+		}
+
+		switch {
+		case metric.GetGauge() != nil:
+			s.value = metric.GetGauge().GetValue()
+		case metric.GetCounter() != nil:
+			s.value = metric.GetCounter().GetValue()
+		}
+
+		samples = append(samples, s)
+	}
+
+	require.ElementsMatch(t, []sample{
+		{c.containerAvailable, "containerd://hyperv", 1},
+		{c.startTime, "containerd://hyperv", 1700000000},
+		{c.runtimeTotal, "containerd://hyperv", 1.5},
+		{c.usagePrivateWorkingSetBytes, "containerd://hyperv", 4096},
+		{c.usageCommitBytes, "containerd://hyperv", 8192},
+		{c.writableLayerUsageBytes, "containerd://hyperv", 1024},
+		{c.writableLayerUsageBytes, "containerd://process-isolated", 2048},
+		// Missing stats are not exported.
+		{c.containerAvailable, "containerd://no-stats", 1},
+	}, samples)
 }
 
 func TestBuildInvalidCRIEndpoint(t *testing.T) {

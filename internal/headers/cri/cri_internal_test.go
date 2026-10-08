@@ -95,6 +95,63 @@ func sandboxesResponse() message {
 			varint(3, uint64(SandboxNotReady)))
 }
 
+func uint64Value(v uint64) message {
+	return message{}.varint(1, v)
+}
+
+// A ListContainerStatsResponse as containerd sends it on Windows, including fields the client skips.
+func containerStatsResponse() message {
+	attributes := message{}.
+		string(1, "abc").
+		message(2, message{}.string(1, "nanoserver"))
+	attributes = append(attributes, labels(3, "io.kubernetes.pod.name", "pod")...)
+
+	running := message{}.
+		message(1, attributes).
+		message(2, message{}.
+			varint(1, 1700000000000000000).
+			message(2, uint64Value(1500000000)).
+			message(3, uint64Value(20000000))).
+		message(3, message{}.
+			varint(1, 1700000000000000000).
+			message(2, uint64Value(4096)).
+			message(4, uint64Value(8192))).
+		message(4, message{}.
+			varint(1, 1700000000000000001).
+			message(2, message{}.string(1, `C:\ProgramData\containerd\root`)).
+			message(3, uint64Value(1024)).
+			message(4, uint64Value(0)))
+
+	// A container without task metrics, e.g. a created container, only has attributes and a
+	// writable layer which containerd has not measured yet. The value 0 is sent as empty message.
+	created := message{}.
+		message(1, message{}.string(1, "def")).
+		message(4, message{}.message(3, message{}))
+
+	return message{}.message(1, running).message(1, created)
+}
+
+func TestDecodeListContainerStatsResponse(t *testing.T) {
+	t.Parallel()
+
+	ptr := func(v uint64) *uint64 { return &v }
+
+	stats, err := decodeListContainerStatsResponse(containerStatsResponse())
+	require.NoError(t, err)
+	require.Equal(t, []ContainerStats{
+		{
+			ID:            "abc",
+			CPU:           &CPUUsage{Timestamp: 1700000000000000000, UsageCoreNanoSeconds: ptr(1500000000)},
+			Memory:        &MemoryUsage{Timestamp: 1700000000000000000, WorkingSetBytes: ptr(4096), UsageBytes: ptr(8192)},
+			WritableLayer: &FilesystemUsage{Timestamp: 1700000000000000001, UsedBytes: ptr(1024)},
+		},
+		{
+			ID:            "def",
+			WritableLayer: &FilesystemUsage{UsedBytes: ptr(0)},
+		},
+	}, stats)
+}
+
 func TestDecodeListContainersResponse(t *testing.T) {
 	t.Parallel()
 
@@ -132,6 +189,10 @@ func TestDecodeInvalidMessage(t *testing.T) {
 
 	// A nested message with an invalid length.
 	_, err = decodeListPodSandboxResponse(message{}.message(1, message{0x12, 0x7f}))
+	require.Error(t, err)
+
+	// A UInt64Value with an invalid length.
+	_, err = decodeListContainerStatsResponse(message{}.message(1, message{}.message(2, message{}.message(2, message{0x08}))))
 	require.Error(t, err)
 }
 
@@ -200,6 +261,7 @@ func TestClient(t *testing.T) {
 		message{}.string(1, "0.1.0").string(2, "containerd").string(3, "v2.1.4").string(4, "v1")))
 	mux.Handle(runtimeService+"ListContainers", grpcHandler(t, encodeListRunningContainersRequest(), containersResponse()))
 	mux.Handle(runtimeService+"ListPodSandbox", grpcHandler(t, nil, sandboxesResponse()))
+	mux.Handle(runtimeService+"ListContainerStats", grpcHandler(t, nil, containerStatsResponse()))
 
 	client, err := NewClient(startServer(t, mux))
 	require.NoError(t, err)
@@ -221,6 +283,13 @@ func TestClient(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, sandboxes, 2)
 		require.Equal(t, "default", sandboxes[0].Namespace)
+
+		stats, err := client.ListContainerStats(t.Context())
+		require.NoError(t, err)
+		require.Len(t, stats, 2)
+		require.Equal(t, "abc", stats[0].ID)
+		require.NotNil(t, stats[0].CPU)
+		require.Equal(t, uint64(1500000000), *stats[0].CPU.UsageCoreNanoSeconds)
 	}
 }
 

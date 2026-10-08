@@ -69,6 +69,45 @@ type PodSandbox struct {
 	State     PodSandboxState
 }
 
+// ContainerStats is the subset of runtime.v1.ContainerStats used by the exporter.
+// Nil fields were not reported by the runtime.
+//
+// On Windows, containerd fills them from the HCS statistics of the container,
+// which the shim also reads for Hyper-V isolated containers.
+// https://github.com/containerd/containerd/blob/v2.4.1/internal/cri/server/container_stats_list.go
+type ContainerStats struct {
+	ID            string
+	CPU           *CPUUsage
+	Memory        *MemoryUsage
+	WritableLayer *FilesystemUsage
+}
+
+// CPUUsage is the subset of runtime.v1.CpuUsage used by the exporter.
+type CPUUsage struct {
+	// Timestamp is the time of the sample in nanoseconds since the Unix epoch.
+	Timestamp int64
+	// UsageCoreNanoSeconds is the cumulative CPU time of the container.
+	UsageCoreNanoSeconds *uint64
+}
+
+// MemoryUsage is the subset of runtime.v1.MemoryUsage used by the exporter.
+type MemoryUsage struct {
+	// Timestamp is the time of the sample in nanoseconds since the Unix epoch.
+	Timestamp int64
+	// WorkingSetBytes is the private working set on Windows.
+	WorkingSetBytes *uint64
+	// UsageBytes is the commit size on Windows.
+	UsageBytes *uint64
+}
+
+// FilesystemUsage is the subset of runtime.v1.FilesystemUsage used by the exporter.
+type FilesystemUsage struct {
+	// Timestamp is the time of the sample in nanoseconds since the Unix epoch.
+	// containerd sends 0 if it has not measured the usage yet.
+	Timestamp int64
+	UsedBytes *uint64
+}
+
 // field is a decoded protobuf field. value holds varints, bytes length-delimited values.
 type field struct {
 	num   protowire.Number
@@ -235,6 +274,112 @@ func decodePodSandbox(b []byte) (PodSandbox, error) {
 	})
 
 	return sandbox, err
+}
+
+func decodeListContainerStatsResponse(b []byte) ([]ContainerStats, error) {
+	var stats []ContainerStats
+
+	err := eachField(b, func(f field) error {
+		if !f.is(1, protowire.BytesType) {
+			return nil
+		}
+
+		s, err := decodeContainerStats(f.bytes)
+		if err != nil {
+			return err
+		}
+
+		stats = append(stats, s)
+
+		return nil
+	})
+
+	return stats, err
+}
+
+func decodeContainerStats(b []byte) (ContainerStats, error) {
+	var stats ContainerStats
+
+	err := eachField(b, func(f field) error {
+		var err error
+
+		switch {
+		case f.is(1, protowire.BytesType): // ContainerAttributes
+			err = eachField(f.bytes, func(f field) error {
+				if f.is(1, protowire.BytesType) {
+					stats.ID = string(f.bytes)
+				}
+
+				return nil
+			})
+		case f.is(2, protowire.BytesType):
+			stats.CPU = &CPUUsage{}
+			err = eachField(f.bytes, func(f field) error {
+				var err error
+
+				switch {
+				case f.is(1, protowire.VarintType):
+					stats.CPU.Timestamp = int64(f.value)
+				case f.is(2, protowire.BytesType):
+					stats.CPU.UsageCoreNanoSeconds, err = decodeUInt64Value(f.bytes)
+				}
+
+				return err
+			})
+		case f.is(3, protowire.BytesType):
+			stats.Memory = &MemoryUsage{}
+			err = eachField(f.bytes, func(f field) error {
+				var err error
+
+				switch {
+				case f.is(1, protowire.VarintType):
+					stats.Memory.Timestamp = int64(f.value)
+				case f.is(2, protowire.BytesType):
+					stats.Memory.WorkingSetBytes, err = decodeUInt64Value(f.bytes)
+				case f.is(4, protowire.BytesType):
+					stats.Memory.UsageBytes, err = decodeUInt64Value(f.bytes)
+				}
+
+				return err
+			})
+		case f.is(4, protowire.BytesType):
+			stats.WritableLayer = &FilesystemUsage{}
+			err = eachField(f.bytes, func(f field) error {
+				var err error
+
+				switch {
+				case f.is(1, protowire.VarintType):
+					stats.WritableLayer.Timestamp = int64(f.value)
+				case f.is(3, protowire.BytesType):
+					stats.WritableLayer.UsedBytes, err = decodeUInt64Value(f.bytes)
+				}
+
+				return err
+			})
+		}
+
+		return err
+	})
+
+	return stats, err
+}
+
+// decodeUInt64Value decodes a runtime.v1.UInt64Value. An empty message is the value 0.
+func decodeUInt64Value(b []byte) (*uint64, error) {
+	var value uint64
+
+	err := eachField(b, func(f field) error {
+		if f.is(1, protowire.VarintType) {
+			value = f.value
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &value, nil
 }
 
 // encodeListRunningContainersRequest encodes a ListContainersRequest

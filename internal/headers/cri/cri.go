@@ -121,6 +121,16 @@ func (c *Client) ListPodSandboxes(ctx context.Context) ([]PodSandbox, error) {
 	return decodeListPodSandboxResponse(resp)
 }
 
+// ListContainerStats returns the stats of all containers.
+func (c *Client) ListContainerStats(ctx context.Context) ([]ContainerStats, error) {
+	resp, err := c.call(ctx, "ListContainerStats", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return decodeListContainerStatsResponse(resp)
+}
+
 // call performs a unary gRPC call and returns the response message.
 func (c *Client) call(ctx context.Context, method string, msg []byte) ([]byte, error) {
 	// A gRPC message is prefixed by a compression flag and its length.
