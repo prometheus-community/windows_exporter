@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sys/windows"
@@ -69,7 +70,7 @@ func containersResponse() message {
 		message(4, message{}.string(1, "mcr.microsoft.com/windows/nanoserver")).
 		string(5, "sha256:1234").
 		varint(6, uint64(ContainerRunning)).
-		varint(7, 1700000000000000000)
+		varint(7, 1700000000123456789)
 	nanoserver = append(nanoserver, labels(8, "io.kubernetes.pod.name", "pod")...)
 	nanoserver = append(nanoserver, labels(9, "io.kubernetes.container.restartCount", "2")...)
 
@@ -100,9 +101,12 @@ func TestDecodeListContainersResponse(t *testing.T) {
 	containers, err := decodeListContainersResponse(containersResponse())
 	require.NoError(t, err)
 	require.Equal(t, []Container{
-		{ID: "abc", PodSandboxID: "sandbox-1", Name: "nanoserver", State: ContainerRunning},
+		{ID: "abc", PodSandboxID: "sandbox-1", Name: "nanoserver", State: ContainerRunning, CreatedAt: time.Unix(0, 1700000000123456789)},
 		{ID: "def", Name: "other", State: ContainerCreated},
 	}, containers)
+
+	require.Equal(t, int64(1700000000123456789), containers[0].CreatedAt.UnixNano())
+	require.True(t, containers[1].CreatedAt.IsZero())
 }
 
 func TestDecodeListPodSandboxResponse(t *testing.T) {

@@ -48,15 +48,17 @@ type Properties struct {
 	ProcessList []ProcessDetails `json:"ProcessList,omitempty"`
 }
 
+// ProcessDetails is an entry of the ProcessList property, see ProcessListItem in hcsshim's schema1.
+// The times and sizes are 64-bit, e.g. a process using more than 2 GiB of memory would overflow an int32.
 type ProcessDetails struct {
-	ProcessId                    int32     `json:"ProcessId,omitempty"`
+	ProcessId                    uint32    `json:"ProcessId,omitempty"`
 	ImageName                    string    `json:"ImageName,omitempty"`
 	CreateTimestamp              time.Time `json:"CreateTimestamp"`
-	UserTime100ns                int32     `json:"UserTime100ns,omitempty"`
-	KernelTime100ns              int32     `json:"KernelTime100ns,omitempty"`
-	MemoryCommitBytes            int32     `json:"MemoryCommitBytes,omitempty"`
-	MemoryWorkingSetPrivateBytes int32     `json:"MemoryWorkingSetPrivateBytes,omitempty"`
-	MemoryWorkingSetSharedBytes  int32     `json:"MemoryWorkingSetSharedBytes,omitempty"`
+	UserTime100ns                uint64    `json:"UserTime100ns,omitempty"`
+	KernelTime100ns              uint64    `json:"KernelTime100ns,omitempty"`
+	MemoryCommitBytes            uint64    `json:"MemoryCommitBytes,omitempty"`
+	MemoryWorkingSetPrivateBytes uint64    `json:"MemoryWorkingSetPrivateBytes,omitempty"`
+	MemoryWorkingSetSharedBytes  uint64    `json:"MemoryWorkingSetSharedBytes,omitempty"`
 }
 
 type Statistics struct {

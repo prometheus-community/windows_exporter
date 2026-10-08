@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"log/slog"
 	"testing"
+	"time"
 
 	"github.com/prometheus-community/windows_exporter/internal/headers/cri"
 	"github.com/prometheus/client_golang/prometheus"
@@ -38,7 +39,7 @@ func TestNewKubernetesContainers(t *testing.T) {
 			{ID: "sandbox-2", Name: "stopped", Namespace: "kube-system", State: cri.SandboxNotReady},
 		},
 		[]cri.Container{
-			{ID: "abc", PodSandboxID: "sandbox-1", Name: "nanoserver", State: cri.ContainerRunning},
+			{ID: "abc", PodSandboxID: "sandbox-1", Name: "nanoserver", State: cri.ContainerRunning, CreatedAt: time.Unix(1700000000, 0)},
 			{ID: "orphan", PodSandboxID: "unknown", Name: "orphan", State: cri.ContainerRunning},
 			{ID: "exited", PodSandboxID: "sandbox-1", Name: "init", State: cri.ContainerExited},
 		},
@@ -50,6 +51,7 @@ func TestNewKubernetesContainers(t *testing.T) {
 			namespace: "default",
 			pod:       "pod",
 			container: "nanoserver",
+			createdAt: time.Unix(1700000000, 0),
 		},
 		"orphan": {
 			id:        "containerd://orphan",

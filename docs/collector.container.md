@@ -26,26 +26,33 @@ If the endpoint is not available, for example on hosts without Kubernetes, the H
 
 ## Metrics
 
-| Name                                                       | Description                            | Type    | Labels                                                     |
-|------------------------------------------------------------|----------------------------------------|---------|------------------------------------------------------------|
-| `windows_container_available`                              | Available                              | gauge   | `container_id`,`namespace`,`pod`,`container`,`hostprocess` |
-| `windows_container_count`                                  | Number of running HCS containers       | gauge   | None                                                       |
-| `windows_container_cpu_usage_seconds_kernelmode`           | Runtime in Kernel mode in Seconds      | counter | `container_id`,`namespace`,`pod`,`container`               |
-| `windows_container_cpu_usage_seconds_usermode`             | Runtime in User mode in Seconds        | counter | `container_id`,`namespace`,`pod`,`container`               |
-| `windows_container_cpu_usage_seconds_total`                | Total Runtime in Seconds               | counter | `container_id`,`namespace`,`pod`,`container`               |
-| `windows_container_memory_usage_commit_bytes`              | Memory Usage Commit Bytes              | gauge   | `container_id`,`namespace`,`pod`,`container`               |
-| `windows_container_memory_usage_commit_peak_bytes`         | Memory Usage Commit Peak Bytes         | gauge   | `container_id`,`namespace`,`pod`,`container`               |
-| `windows_container_memory_usage_private_working_set_bytes` | Memory Usage Private Working Set Bytes | gauge   | `container_id`,`namespace`,`pod`,`container`               |
-| `windows_container_network_receive_bytes_total`            | Bytes Received on Interface            | counter | `container_id`,`namespace`,`pod`,`container`,`interface`   |
-| `windows_container_network_receive_packets_total`          | Packets Received on Interface          | counter | `container_id`,`namespace`,`pod`,`container`,`interface`   |
-| `windows_container_network_receive_packets_dropped_total`  | Dropped Incoming Packets on Interface  | counter | `container_id`,`namespace`,`pod`,`container`,`interface`   |
-| `windows_container_network_transmit_bytes_total`           | Bytes Sent on Interface                | counter | `container_id`,`namespace`,`pod`,`container`,`interface`   |
-| `windows_container_network_transmit_packets_total`         | Packets Sent on Interface              | counter | `container_id`,`namespace`,`pod`,`container`,`interface`   |
-| `windows_container_network_transmit_packets_dropped_total` | Dropped Outgoing Packets on Interface  | counter | `container_id`,`namespace`,`pod`,`container`,`interface`   |
-| `windows_container_storage_read_count_normalized_total`    | Read Count Normalized                  | counter | `container_id`,`namespace`,`pod`,`container`               |
-| `windows_container_storage_read_size_bytes_total`          | Read Size Bytes                        | counter | `container_id`,`namespace`,`pod`,`container`               |
-| `windows_container_storage_write_count_normalized_total`   | Write Count Normalized                 | counter | `container_id`,`namespace`,`pod`,`container`               |
-| `windows_container_storage_write_size_bytes_total`         | Write Size Bytes                       | counter | `container_id`,`namespace`,`pod`,`container`               |
+| Name                                                       | Description                                         | Type    | Labels                                                     |
+|------------------------------------------------------------|-----------------------------------------------------|---------|------------------------------------------------------------|
+| `windows_container_available`                              | Available                                           | gauge   | `container_id`,`namespace`,`pod`,`container`,`hostprocess` |
+| `windows_container_count`                                  | Number of running HCS containers                    | gauge   | None                                                       |
+| `windows_container_cpu_usage_seconds_kernelmode`           | Runtime in Kernel mode in Seconds                   | counter | `container_id`,`namespace`,`pod`,`container`               |
+| `windows_container_cpu_usage_seconds_usermode`             | Runtime in User mode in Seconds                     | counter | `container_id`,`namespace`,`pod`,`container`               |
+| `windows_container_cpu_usage_seconds_total`                | Total Runtime in Seconds                            | counter | `container_id`,`namespace`,`pod`,`container`               |
+| `windows_container_memory_page_faults_total`               | Total number of page faults (HostProcess only)      | counter | `container_id`,`namespace`,`pod`,`container`               |
+| `windows_container_memory_usage_commit_bytes`              | Memory Usage Commit Bytes                           | gauge   | `container_id`,`namespace`,`pod`,`container`               |
+| `windows_container_memory_usage_commit_peak_bytes`         | Memory Usage Commit Peak Bytes                      | gauge   | `container_id`,`namespace`,`pod`,`container`               |
+| `windows_container_memory_usage_private_working_set_bytes` | Memory Usage Private Working Set Bytes              | gauge   | `container_id`,`namespace`,`pod`,`container`               |
+| `windows_container_network_receive_bytes_total`            | Bytes Received on Interface                         | counter | `container_id`,`namespace`,`pod`,`container`,`interface`   |
+| `windows_container_network_receive_packets_total`          | Packets Received on Interface                       | counter | `container_id`,`namespace`,`pod`,`container`,`interface`   |
+| `windows_container_network_receive_packets_dropped_total`  | Dropped Incoming Packets on Interface               | counter | `container_id`,`namespace`,`pod`,`container`,`interface`   |
+| `windows_container_network_transmit_bytes_total`           | Bytes Sent on Interface                             | counter | `container_id`,`namespace`,`pod`,`container`,`interface`   |
+| `windows_container_network_transmit_packets_total`         | Packets Sent on Interface                           | counter | `container_id`,`namespace`,`pod`,`container`,`interface`   |
+| `windows_container_network_transmit_packets_dropped_total` | Dropped Outgoing Packets on Interface               | counter | `container_id`,`namespace`,`pod`,`container`,`interface`   |
+| `windows_container_processes`                              | Number of processes running in the container        | gauge   | `container_id`,`namespace`,`pod`,`container`               |
+| `windows_container_start_time_seconds`                     | Start time of the container since Unix epoch        | gauge   | `container_id`,`namespace`,`pod`,`container`               |
+| `windows_container_storage_read_count_normalized_total`    | Read Count Normalized                               | counter | `container_id`,`namespace`,`pod`,`container`               |
+| `windows_container_storage_read_size_bytes_total`          | Read Size Bytes                                     | counter | `container_id`,`namespace`,`pod`,`container`               |
+| `windows_container_storage_write_count_normalized_total`   | Write Count Normalized                              | counter | `container_id`,`namespace`,`pod`,`container`               |
+| `windows_container_storage_write_size_bytes_total`         | Write Size Bytes                                    | counter | `container_id`,`namespace`,`pod`,`container`               |
+
+`windows_container_start_time_seconds` is the start time reported by HCS. HostProcess containers have no start time, they report their creation time from the CRI endpoint instead.
+
+`windows_container_memory_page_faults_total` is only available for HostProcess containers, because HCS doesn't report page faults. The job object counts page faults in 32 bits, so the counter wraps around after 2^32 page faults.
 
 ### Example metric
 _windows_container_network_receive_bytes_total{container_id="docker://1bd30e8b8ac28cbd76a9b697b4d7bb9d760267b0733d1bc55c60024e98d1e43e",interface="822179E7-002C-4280-ABBA-28BCFE401826"} 9.3305343e+07_

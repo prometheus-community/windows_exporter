@@ -27,8 +27,9 @@ import (
 
 //nolint:gochecknoglobals
 var (
-	ContainerQuery  = utils.Must(windows.UTF16PtrFromString(`{"Types":["Container"]}`))
-	StatisticsQuery = utils.Must(windows.UTF16PtrFromString(`{"PropertyTypes":["Statistics"]}`))
+	ContainerQuery = utils.Must(windows.UTF16PtrFromString(`{"Types":["Container"]}`))
+	// StatisticsQuery queries the statistics and the process list in one call.
+	StatisticsQuery = utils.Must(windows.UTF16PtrFromString(`{"PropertyTypes":["Statistics","ProcessList"]}`))
 )
 
 func GetContainers() ([]Properties, error) {
@@ -58,40 +59,46 @@ func GetContainers() ([]Properties, error) {
 	return computeSystems, nil
 }
 
-func GetContainerStatistics(containerID string) (Statistics, error) {
+// GetContainerStatistics returns the statistics and the process list of a container.
+// The Statistics field is never nil if no error is returned.
+func GetContainerStatistics(containerID string) (Properties, error) {
 	computeSystem, err := OpenComputeSystem(containerID)
 	if err != nil {
-		return Statistics{}, fmt.Errorf("failed to open compute system: %w", err)
+		return Properties{}, fmt.Errorf("failed to open compute system: %w", err)
 	}
 
 	defer CloseComputeSystem(computeSystem)
 
 	operation, err := CreateOperation()
 	if err != nil {
-		return Statistics{}, fmt.Errorf("failed to create operation: %w", err)
+		return Properties{}, fmt.Errorf("failed to create operation: %w", err)
 	}
 
 	defer CloseOperation(operation)
 
 	if err := GetComputeSystemProperties(computeSystem, operation, StatisticsQuery); err != nil {
-		return Statistics{}, fmt.Errorf("failed to enumerate compute systems: %w", err)
+		return Properties{}, fmt.Errorf("failed to enumerate compute systems: %w", err)
 	}
 
 	resultDocument, err := WaitForOperationResult(operation, 1000)
 	if err != nil {
-		return Statistics{}, fmt.Errorf("failed to get compute system properties: %w", err)
+		return Properties{}, fmt.Errorf("failed to get compute system properties: %w", err)
 	} else if resultDocument == "" {
-		return Statistics{}, ErrEmptyResultDocument
+		return Properties{}, ErrEmptyResultDocument
 	}
 
+	return parseStatistics(containerID, resultDocument)
+}
+
+func parseStatistics(containerID, resultDocument string) (Properties, error) {
 	var properties Properties
 	if err := json.Unmarshal([]byte(resultDocument), &properties); err != nil {
-		return Statistics{}, fmt.Errorf("failed to unmarshal system properties: %w", err)
+		return Properties{}, fmt.Errorf("failed to unmarshal system properties: %w", err)
 	}
 
 	if properties.Statistics == nil {
-		return Statistics{}, fmt.Errorf("no statistics found for container %s", containerID)
+		return Properties{}, fmt.Errorf("no statistics found for container %s", containerID)
 	}
 
-	return *properties.Statistics, nil
+	return properties, nil
 }
