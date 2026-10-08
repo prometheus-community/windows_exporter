@@ -20,6 +20,7 @@ package registry
 import (
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"maps"
 	"regexp"
@@ -93,7 +94,12 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 			return nil
 		}
 
-		if err := yaml.Unmarshal([]byte(keys), &c.config.Keys); err != nil {
+		// Reject unknown keys like the configuration file does, so that a typo
+		// fails instead of silently dropping the setting.
+		decoder := yaml.NewDecoder(strings.NewReader(keys))
+		decoder.KnownFields(true)
+
+		if err := decoder.Decode(&c.config.Keys); err != nil && !errors.Is(err, io.EOF) {
 			return fmt.Errorf("failed to parse keys %s: %w", keys, err)
 		}
 

@@ -19,6 +19,7 @@ package collector_test
 
 import (
 	"errors"
+	"fmt"
 	"log/slog"
 	"testing"
 	"time"
@@ -69,6 +70,7 @@ func TestCollectionBuildAndClose(t *testing.T) {
 		{name: "success"},
 		{name: "build failure", buildErr: buildFailure, wantBuildErr: buildFailure},
 		{name: "optional counter missing", buildErr: pdh.ErrNoData},
+		{name: "unsupported on this host", buildErr: fmt.Errorf("feature missing: %w", errors.ErrUnsupported)},
 		{name: "close failure", closeErr: closeFailure},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

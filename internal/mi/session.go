@@ -222,6 +222,13 @@ func unmarshalInstance(instance *Instance, fields []miField, structValue reflect
 // setField assigns the value of element to field, rejecting Go field types that
 // cannot hold the MI value instead of letting the reflect package panic.
 func setField(miTag string, field reflect.Value, element *Element) error {
+	if element.IsNull() {
+		// MI makes no promise about the contents of a NULL element's union.
+		// Check the Go type against a zeroed copy, so a mismatched field fails
+		// whether or not the property is NULL, but leave the field untouched.
+		return setField(miTag, reflect.New(field.Type()).Elem(), &Element{valueType: element.valueType})
+	}
+
 	switch element.valueType {
 	case ValueTypeBOOLEAN:
 		if field.Kind() != reflect.Bool {
