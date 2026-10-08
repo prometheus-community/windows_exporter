@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"log/slog"
 	"reflect"
+	"runtime/debug"
 	"slices"
 	"strconv"
 	"strings"
@@ -94,6 +95,10 @@ type Counter struct {
 //
 // The optional fields Name (string) and MetricType (prometheus.ValueType) of T
 // receive the instance name and the metric type of the counter.
+//
+// If an error is returned together with a non-nil Collector, some counters
+// could not be added or the initial collection failed. The caller owns that
+// Collector and must Close it. If the Collector is nil, no resources are held.
 func NewCollector[T any](logger *slog.Logger, resultType CounterType, object string, instances []string) (*Collector[T], error) {
 	valueType := reflect.TypeFor[T]()
 	if valueType.Kind() != reflect.Struct {
@@ -159,6 +164,7 @@ func NewCollector[T any](logger *slog.Logger, resultType CounterType, object str
 
 // NewDynamicCollector creates a collector for counters that are only known at runtime.
 // Row.Values of the collected rows holds one value per entry of counters, in the same order.
+// Errors are returned as described for [NewCollector].
 func NewDynamicCollector(logger *slog.Logger, resultType CounterType, object string, instances []string, counters []string) (*Collector[Row], error) {
 	fields := make([]counterField, len(counters))
 	for i, counter := range counters {
@@ -180,6 +186,10 @@ func NewDynamicCollector(logger *slog.Logger, resultType CounterType, object str
 func newCollector[T any](logger *slog.Logger, resultType CounterType, object string, instances []string,
 	fields []counterField, rows rowAccessor[T], errs []error,
 ) (*Collector[T], error) {
+	if resultType != CounterTypeRaw && resultType != CounterTypeFormatted {
+		return nil, fmt.Errorf("invalid result type: %v", resultType)
+	}
+
 	var handle pdhQueryHandle
 
 	if ret := OpenQuery(0, 0, &handle); ret != ErrorSuccess {
@@ -188,10 +198,6 @@ func newCollector[T any](logger *slog.Logger, resultType CounterType, object str
 
 	if len(instances) == 0 {
 		instances = []string{InstanceEmpty}
-	}
-
-	if resultType != CounterTypeRaw && resultType != CounterTypeFormatted {
-		return nil, fmt.Errorf("invalid result type: %v", resultType)
 	}
 
 	collector := &Collector[T]{
@@ -307,12 +313,16 @@ func newCollector[T any](logger *slog.Logger, resultType CounterType, object str
 		collector.counters[counterName] = counter
 	}
 
-	if err := errors.Join(errs...); err != nil {
-		return collector, fmt.Errorf("failed to initialize collector: %w", err)
+	if len(collector.counters) == 0 {
+		collector.Close()
+
+		errs = append(errs, errors.New("no counters configured"))
+
+		return nil, errors.Join(errs...)
 	}
 
-	if len(collector.counters) == 0 {
-		return nil, errors.New("no counters configured")
+	if err := errors.Join(errs...); err != nil {
+		return collector, fmt.Errorf("failed to initialize collector: %w", err)
 	}
 
 	collector.collectCh = make(chan *[]T)
@@ -386,7 +396,13 @@ func (c *Collector[T]) collectWorkerRaw() {
 	var buf []byte
 
 	for dst := range c.collectCh {
-		err = (func() error {
+		err = (func() (err error) {
+			defer func() {
+				if r := recover(); r != nil {
+					err = c.panicError(r)
+				}
+			}()
+
 			if ret := CollectQueryData(c.handle); ret != ErrorSuccess {
 				return fmt.Errorf("failed to collect query data: %w", NewPdhError(ret))
 			}
@@ -471,7 +487,12 @@ func (c *Collector[T]) collectWorkerRaw() {
 						// Ref: https://learn.microsoft.com/en-us/windows/win32/perfctrs/calculating-counter-values
 						switch counter.Type {
 						case PERF_ELAPSED_TIME:
-							c.rows.setValue(row, counter.FieldIndexValue, float64((item.RawValue.SecondValue-item.RawValue.FirstValue)/counter.Frequency))
+							// A zero frequency would divide by zero. The value is left unset.
+							if counter.Frequency <= 0 || counter.FieldIndexValue == -1 {
+								continue
+							}
+
+							c.rows.setValue(row, counter.FieldIndexValue, float64(item.RawValue.SecondValue-item.RawValue.FirstValue)/float64(counter.Frequency))
 						case PERF_100NSEC_TIMER, PERF_PRECISION_100NS_TIMER:
 							c.rows.setValue(row, counter.FieldIndexValue, float64(item.RawValue.FirstValue)*TicksToSecondScaleFactor)
 						default:
@@ -511,7 +532,13 @@ func (c *Collector[T]) collectWorkerFormatted() {
 	var buf []byte
 
 	for dst := range c.collectCh {
-		err = (func() error {
+		err = (func() (err error) {
+			defer func() {
+				if r := recover(); r != nil {
+					err = c.panicError(r)
+				}
+			}()
+
 			if ret := CollectQueryData(c.handle); ret != ErrorSuccess {
 				return fmt.Errorf("failed to collect query data: %w", NewPdhError(ret))
 			}
@@ -596,6 +623,18 @@ func (c *Collector[T]) collectWorkerFormatted() {
 	}
 }
 
+// panicError logs a panic recovered in the collect worker and returns it as an
+// error. The worker goroutine has no other recovery, so a panic would end the process.
+func (c *Collector[T]) panicError(r any) error {
+	c.logger.Error("recovered from panic while collecting performance counters",
+		slog.String("object", c.object),
+		slog.Any("panic", r),
+		slog.String("stack", string(debug.Stack())),
+	)
+
+	return fmt.Errorf("panic while collecting performance counters of %s: %v", c.object, r)
+}
+
 func (c *Collector[T]) Close() {
 	if c == nil {
 		return
@@ -604,7 +643,9 @@ func (c *Collector[T]) Close() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	CloseQuery(c.handle)
+	if c.handle != 0 {
+		CloseQuery(c.handle)
+	}
 
 	c.handle = 0
 

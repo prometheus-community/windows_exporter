@@ -169,3 +169,19 @@ func TestDynamicCollector(t *testing.T) {
 		require.NotZerof(t, row.Values[0], "instance: %s, counter: %s", row.Name, counters[0])
 	}
 }
+
+// TestNewCollectorInvalidInput checks that invalid input returns no collector,
+// so there is nothing for the caller to close.
+func TestNewCollectorInvalidInput(t *testing.T) {
+	t.Parallel()
+
+	logger := slog.New(slog.DiscardHandler)
+
+	collector, err := pdh.NewCollector[process](logger, "invalid", "Process", pdh.InstancesAll)
+	require.ErrorContains(t, err, "invalid result type")
+	require.Nil(t, collector)
+
+	collector2, err := pdh.NewCollector[struct{ Name string }](logger, pdh.CounterTypeRaw, "Process", pdh.InstancesAll)
+	require.ErrorContains(t, err, "no counters configured")
+	require.Nil(t, collector2)
+}
