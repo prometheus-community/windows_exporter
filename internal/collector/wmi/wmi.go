@@ -20,6 +20,7 @@ package wmi
 import (
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"maps"
 	"regexp"
@@ -114,16 +115,17 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 	).Default("").StringVar(&queries)
 
 	app.Action(func(*kingpin.ParseContext) error {
-		if strings.TrimSpace(queries) == "" {
+		if queries == "" {
 			return nil
 		}
 
 		// Reject unknown keys, so that a typo like "propertys" fails instead
-		// of silently dropping the setting.
+		// of silently dropping the setting. A value without a document, e.g. only
+		// comments, means no queries, like in the configuration file.
 		decoder := yaml.NewDecoder(strings.NewReader(queries))
 		decoder.KnownFields(true)
 
-		if err := decoder.Decode(&c.config.Queries); err != nil {
+		if err := decoder.Decode(&c.config.Queries); err != nil && !errors.Is(err, io.EOF) {
 			return fmt.Errorf("failed to parse queries %s: %w", queries, err)
 		}
 
