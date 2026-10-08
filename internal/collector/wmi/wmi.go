@@ -119,7 +119,7 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 			return nil
 		}
 
-		// Reject unknown keys, so that a typo like "propertys" fails instead
+		// Reject unknown keys, so that a typo like "label_property" fails instead
 		// of silently dropping the setting. A value without a document, e.g. only
 		// comments, means no queries, like in the configuration file.
 		decoder := yaml.NewDecoder(strings.NewReader(queries))

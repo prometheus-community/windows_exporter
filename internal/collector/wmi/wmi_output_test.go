@@ -352,8 +352,8 @@ func TestNewWithFlags(t *testing.T) {
 		app := kingpin.New("test", "")
 		_ = wmi.NewWithFlags(app)
 
-		_, err := app.Parse([]string{"--collector.wmi.queries", `[{"name":"os","class":"Win32_OperatingSystem","propertys":[{"name":"Primary"}]}]`})
-		require.ErrorContains(t, err, "propertys")
+		_, err := app.Parse([]string{"--collector.wmi.queries", `[{"name":"os","class":"Win32_OperatingSystem","label_property":[{"name":"Name"}],"properties":[{"name":"Primary"}]}]`})
+		require.ErrorContains(t, err, "label_property")
 	})
 }
 
