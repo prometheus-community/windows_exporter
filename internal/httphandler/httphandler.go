@@ -23,6 +23,7 @@ import (
 	"log/slog"
 	"math"
 	"net/http"
+	"regexp"
 	"strconv"
 	"time"
 
@@ -80,7 +81,13 @@ func New(logger *slog.Logger, metricCollectors *collector.Collection, options *O
 		handler.exporterMetricsRegistry.MustRegister(
 			collectors.NewBuildInfoCollector(),
 			collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
-			collectors.NewGoCollector(),
+			collectors.NewGoCollector(
+				// Goroutine states, goroutines created, runtime threads and scheduler latency
+				// help to spot goroutine leaks and CPU starvation of the exporter.
+				collectors.WithGoCollectorRuntimeMetrics(collectors.GoRuntimeMetricsRule{
+					Matcher: regexp.MustCompile(`^/sched/(goroutines(-created)?|goroutines/[a-z-]+|threads/total|latencies):`),
+				}),
+			),
 		)
 	}
 
