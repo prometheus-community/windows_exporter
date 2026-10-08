@@ -46,7 +46,7 @@ var ConfigDefaults = Config{
 type Collector struct {
 	config Config
 
-	perfDataCollector *pdh.Collector
+	perfDataCollector *pdh.Collector[perfDataCounterValues]
 	perfDataObject    []perfDataCounterValues
 
 	badMailedMessagesBadPickupFileTotal     *prometheus.Desc

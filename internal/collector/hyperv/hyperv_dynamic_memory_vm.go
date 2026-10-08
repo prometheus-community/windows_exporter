@@ -29,7 +29,7 @@ import (
 
 // collectorDynamicMemoryVM Hyper-V Dynamic Memory VM metrics
 type collectorDynamicMemoryVM struct {
-	perfDataCollectorDynamicMemoryVM *pdh.Collector
+	perfDataCollectorDynamicMemoryVM *pdh.Collector[perfDataCounterValuesDynamicMemoryVM]
 	perfDataObjectDynamicMemoryVM    []perfDataCounterValuesDynamicMemoryVM
 
 	vmMemoryAddedMemory                *prometheus.Desc // \Hyper-V Dynamic Memory VM(*)\Added Memory

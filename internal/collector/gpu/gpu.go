@@ -45,7 +45,7 @@ type Collector struct {
 	gpuDeviceCache map[string]gpuDevice
 
 	// GPU Engine
-	gpuEnginePerfDataCollector *pdh.Collector
+	gpuEnginePerfDataCollector *pdh.Collector[gpuEnginePerfDataCounterValues]
 	gpuEnginePerfDataObject    []gpuEnginePerfDataCounterValues
 
 	gpuInfo              *prometheus.Desc
@@ -56,7 +56,7 @@ type Collector struct {
 	gpuDedicatedVideoMemorySize  *prometheus.Desc
 
 	// GPU Adapter Memory
-	gpuAdapterMemoryPerfDataCollector *pdh.Collector
+	gpuAdapterMemoryPerfDataCollector *pdh.Collector[gpuAdapterMemoryPerfDataCounterValues]
 	gpuAdapterMemoryPerfDataObject    []gpuAdapterMemoryPerfDataCounterValues
 
 	gpuAdapterMemoryDedicatedUsage *prometheus.Desc
@@ -64,19 +64,19 @@ type Collector struct {
 	gpuAdapterMemoryTotalCommitted *prometheus.Desc
 
 	// GPU Local Adapter Memory
-	gpuLocalAdapterMemoryPerfDataCollector *pdh.Collector
+	gpuLocalAdapterMemoryPerfDataCollector *pdh.Collector[gpuLocalAdapterMemoryPerfDataCounterValues]
 	gpuLocalAdapterMemoryPerfDataObject    []gpuLocalAdapterMemoryPerfDataCounterValues
 
 	gpuLocalAdapterMemoryUsage *prometheus.Desc
 
 	// GPU Non Local Adapter Memory
-	gpuNonLocalAdapterMemoryPerfDataCollector *pdh.Collector
+	gpuNonLocalAdapterMemoryPerfDataCollector *pdh.Collector[gpuNonLocalAdapterMemoryPerfDataCounterValues]
 	gpuNonLocalAdapterMemoryPerfDataObject    []gpuNonLocalAdapterMemoryPerfDataCounterValues
 
 	gpuNonLocalAdapterMemoryUsage *prometheus.Desc
 
 	// GPU Process Memory
-	gpuProcessMemoryPerfDataCollector *pdh.Collector
+	gpuProcessMemoryPerfDataCollector *pdh.Collector[gpuProcessMemoryPerfDataCounterValues]
 	gpuProcessMemoryPerfDataObject    []gpuProcessMemoryPerfDataCounterValues
 
 	gpuProcessMemoryDedicatedUsage *prometheus.Desc

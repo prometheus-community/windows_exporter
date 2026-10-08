@@ -29,7 +29,7 @@ import (
 
 // collectorDynamicMemoryBalancer Hyper-V Dynamic Memory Balancer metrics
 type collectorDynamicMemoryBalancer struct {
-	perfDataCollectorDynamicMemoryBalancer *pdh.Collector
+	perfDataCollectorDynamicMemoryBalancer *pdh.Collector[perfDataCounterValuesDynamicMemoryBalancer]
 	perfDataObjectDynamicMemoryBalancer    []perfDataCounterValuesDynamicMemoryBalancer
 
 	vmDynamicMemoryBalancerAvailableMemoryForBalancing *prometheus.Desc // \Hyper-V Dynamic Memory Balancer(*)\Available Memory For Balancing

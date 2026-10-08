@@ -27,7 +27,7 @@ import (
 
 // collectorLegacyNetworkAdapter Hyper-V Legacy Network Adapter metrics
 type collectorLegacyNetworkAdapter struct {
-	perfDataCollectorLegacyNetworkAdapter *pdh.Collector
+	perfDataCollectorLegacyNetworkAdapter *pdh.Collector[perfDataCounterValuesLegacyNetworkAdapter]
 	perfDataObjectLegacyNetworkAdapter    []perfDataCounterValuesLegacyNetworkAdapter
 
 	legacyNetworkAdapterBytesDropped   *prometheus.Desc // \Hyper-V Legacy Network Adapter(*)\Bytes Dropped

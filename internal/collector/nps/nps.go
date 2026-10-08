@@ -40,7 +40,7 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	config Config
 
-	accessPerfDataCollector *pdh.Collector
+	accessPerfDataCollector *pdh.Collector[perfDataCounterValuesAccess]
 	accessPerfDataObject    []perfDataCounterValuesAccess
 	accessAccepts           *prometheus.Desc
 	accessChallenges        *prometheus.Desc
@@ -56,7 +56,7 @@ type Collector struct {
 	accessServerUpTime      *prometheus.Desc
 	accessUnknownType       *prometheus.Desc
 
-	accountingPerfDataCollector *pdh.Collector
+	accountingPerfDataCollector *pdh.Collector[perfDataCounterValuesAccounting]
 	accountingPerfDataObject    []perfDataCounterValuesAccounting
 	accountingRequests          *prometheus.Desc
 	accountingResponses         *prometheus.Desc
