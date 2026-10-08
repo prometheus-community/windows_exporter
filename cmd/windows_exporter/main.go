@@ -24,6 +24,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"net/http"
 	"net/http/pprof"
 	"os"
@@ -33,6 +34,7 @@ import (
 	"runtime/debug"
 	"slices"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
@@ -52,7 +54,9 @@ import (
 const collectionCloseTimeout = 10 * time.Second
 
 func main() {
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
+	// os.Kill can't be caught. On Windows, Go delivers console close, logoff and shutdown events as SIGTERM.
+	//nolint:forbidigo // os/signal only accepts syscall.Signal values, not windows.Signal.
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 
 	// A stop request from the service manager cancels the root context,
 	// so that it aborts the startup as well as the running exporter.
@@ -111,7 +115,7 @@ func run(ctx context.Context, args []string) int {
 			Default("").String()
 		timeoutMargin = app.Flag(
 			"scrape.timeout-margin",
-			"Seconds to subtract from the timeout allowed by the client. Tune to allow for overhead or high loads.",
+			"Seconds to subtract from the timeout allowed by the client. The margin takes at most half of the client's timeout. Tune to allow for overhead or high loads.",
 		).Default("0.5").Float64()
 		debugEnabled = app.Flag(
 			"debug.enabled",
@@ -324,9 +328,12 @@ func setPriorityWindows(ctx context.Context, logger *slog.Logger, pid int, prior
 	}
 
 	winPriority, ok := priorityStringToInt[priority]
+	if !ok {
+		return fmt.Errorf("unknown process priority %q, must be one of %s", priority, strings.Join(slices.Sorted(maps.Keys(priorityStringToInt)), ", "))
+	}
 
-	// Only set process priority if a non-default and valid value has been set
-	if !ok || winPriority == windows.NORMAL_PRIORITY_CLASS {
+	// Only set process priority if a non-default value has been set
+	if winPriority == windows.NORMAL_PRIORITY_CLASS {
 		return nil
 	}
 

@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net"
 	"net/http"
 	"net/url"
@@ -174,4 +175,13 @@ func waitUntilListening(tb testing.TB, network, address string) error {
 	}
 
 	return fmt.Errorf("listener not listening: %w", err)
+}
+
+func TestSetPriorityWindows(t *testing.T) {
+	t.Parallel()
+
+	logger := slog.New(slog.DiscardHandler)
+
+	require.NoError(t, setPriorityWindows(t.Context(), logger, os.Getpid(), "normal"))
+	require.ErrorContains(t, setPriorityWindows(t.Context(), logger, os.Getpid(), "highest"), `unknown process priority "highest"`)
 }
