@@ -18,13 +18,10 @@
 package container
 
 import (
-	"encoding/json"
+	"context"
 	"errors"
 	"fmt"
-	"io/fs"
 	"log/slog"
-	"os"
-	"path/filepath"
 	"slices"
 	"strings"
 	"sync"
@@ -32,6 +29,7 @@ import (
 	"unsafe"
 
 	"github.com/alecthomas/kingpin/v2"
+	"github.com/prometheus-community/windows_exporter/internal/headers/cri"
 	"github.com/prometheus-community/windows_exporter/internal/headers/hcn"
 	"github.com/prometheus-community/windows_exporter/internal/headers/hcs"
 	"github.com/prometheus-community/windows_exporter/internal/headers/kernel32"
@@ -49,11 +47,21 @@ const (
 	subCollectorHostprocess = "hostprocess"
 
 	JobObjectMemoryUsageInformation = 28
+
+	// defaultCRITimeout limits the CRI calls if the scrape has no timeout.
+	defaultCRITimeout = 10 * time.Second
+
+	// grpcUnimplemented is returned by containerd if its CRI plugin is disabled.
+	grpcUnimplemented = 12
 )
 
 type Config struct {
-	CollectorsEnabled  []string `yaml:"enabled"`
-	ContainerDStateDir string   `yaml:"containerd-state-dir"`
+	CollectorsEnabled []string `yaml:"enabled"`
+	// CRIEndpoint is the Kubernetes Container Runtime Interface (CRI) endpoint.
+	// It provides the Kubernetes metadata and the HostProcess containers.
+	CRIEndpoint string `yaml:"cri-endpoint"`
+	// Deprecated: ContainerDStateDir is ignored. Kubernetes metadata is read from CRIEndpoint.
+	ContainerDStateDir string `yaml:"containerd-state-dir"`
 }
 
 //nolint:gochecknoglobals
@@ -62,7 +70,7 @@ var ConfigDefaults = Config{
 		subCollectorHCS,
 		subCollectorHostprocess,
 	},
-	ContainerDStateDir: `C:\ProgramData\containerd\state\io.containerd.runtime.v2.task\k8s.io\`,
+	CRIEndpoint: "npipe:////./pipe/containerd-containerd",
 }
 
 // A Collector is a Prometheus Collector for containers metrics.
@@ -71,17 +79,16 @@ type Collector struct {
 
 	logger *slog.Logger
 
-	// mu serializes Collect, because the annotation caches are not safe for concurrent use.
-	// Overlapping Collect calls, e.g. after a scrape timeout, would otherwise write them concurrently.
+	criClient *cri.Client
+
+	// mu serializes Collect, because the CRI state below is not safe for concurrent use.
+	// Overlapping Collect calls, e.g. after a scrape timeout, would otherwise write it concurrently.
 	mu sync.Mutex
 
-	// The annotation caches are keyed by the container ID without the runtime prefix.
-	annotationsCacheHCS map[string]containerInfo
-	// annotationsCacheJob holds every containerd bundle, so that each config.json is parsed only once.
-	annotationsCacheJob map[string]jobContainer
-
-	// stateDirMissingLogged avoids logging a missing containerd state directory on every scrape.
-	stateDirMissingLogged bool
+	// criRuntimeName is the runtime name, e.g. containerd. Kubernetes uses it as container ID prefix.
+	criRuntimeName string
+	// criUnavailableLogged avoids logging an unavailable CRI endpoint on every scrape.
+	criUnavailableLogged bool
 
 	// Presence
 	containerAvailable *prometheus.Desc
@@ -121,23 +128,43 @@ type containerInfo struct {
 	container string
 }
 
-type jobContainer struct {
-	info        containerInfo
-	hostProcess bool
+// kubernetesContainers holds the Kubernetes metadata of the running containers, read from the CRI endpoint.
+type kubernetesContainers struct {
+	// containers maps the container IDs without runtime prefix to their metadata.
+	containers map[string]containerInfo
+	// sandboxes holds the IDs of all pod sandboxes. Their pause containers are not exported.
+	sandboxes map[string]struct{}
 }
 
-type ociSpec struct {
-	Annotations map[string]string `json:"annotations"`
-}
-
-// containerInfo returns the Kubernetes metadata of the container.
-func (s ociSpec) containerInfo(id string) containerInfo {
-	return containerInfo{
-		id:        id,
-		namespace: s.Annotations["io.kubernetes.cri.sandbox-namespace"],
-		pod:       s.Annotations["io.kubernetes.cri.sandbox-name"],
-		container: s.Annotations["io.kubernetes.cri.container-name"],
+func newKubernetesContainers(runtimeName string, sandboxes []cri.PodSandbox, containers []cri.Container) kubernetesContainers {
+	k := kubernetesContainers{
+		containers: make(map[string]containerInfo, len(containers)),
+		sandboxes:  make(map[string]struct{}, len(sandboxes)),
 	}
+
+	pods := make(map[string]cri.PodSandbox, len(sandboxes))
+
+	for _, sandbox := range sandboxes {
+		k.sandboxes[sandbox.ID] = struct{}{}
+		pods[sandbox.ID] = sandbox
+	}
+
+	for _, container := range containers {
+		if container.State != cri.ContainerRunning {
+			continue
+		}
+
+		pod := pods[container.PodSandboxID]
+
+		k.containers[container.ID] = containerInfo{
+			id:        runtimeName + "://" + container.ID,
+			namespace: pod.Namespace,
+			pod:       pod.Name,
+			container: container.Name,
+		}
+	}
+
+	return k
 }
 
 // New constructs a new Collector.
@@ -148,6 +175,10 @@ func New(config *Config) *Collector {
 
 	if config.CollectorsEnabled == nil {
 		config.CollectorsEnabled = ConfigDefaults.CollectorsEnabled
+	}
+
+	if config.CRIEndpoint == "" {
+		config.CRIEndpoint = ConfigDefaults.CRIEndpoint
 	}
 
 	c := &Collector{
@@ -171,9 +202,14 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 	).Default(strings.Join(ConfigDefaults.CollectorsEnabled, ",")).StringVar(&collectorsEnabled)
 
 	app.Flag(
+		"collector.container.cri-endpoint",
+		"Kubernetes CRI endpoint, used for Kubernetes labels and HostProcess containers.",
+	).Default(ConfigDefaults.CRIEndpoint).StringVar(&c.config.CRIEndpoint)
+
+	app.Flag(
 		"collector.container.containerd-state-dir",
-		"Path to the containerd state directory. Defaults to C:\\ProgramData\\containerd\\state\\io.containerd.runtime.v2.task\\k8s.io\\",
-	).Default(ConfigDefaults.ContainerDStateDir).StringVar(&c.config.ContainerDStateDir)
+		"Deprecated and ignored. Kubernetes metadata is read from --collector.container.cri-endpoint.",
+	).Hidden().StringVar(&c.config.ContainerDStateDir)
 
 	app.Action(func(*kingpin.ParseContext) error {
 		c.config.CollectorsEnabled = strings.Split(collectorsEnabled, ",")
@@ -189,6 +225,11 @@ func (c *Collector) GetName() string {
 }
 
 func (c *Collector) Close() error {
+	if c.criClient != nil {
+		c.criClient.Close()
+		c.criClient = nil
+	}
+
 	return nil
 }
 
@@ -201,8 +242,11 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		}
 	}
 
-	c.annotationsCacheHCS = make(map[string]containerInfo)
-	c.annotationsCacheJob = make(map[string]jobContainer)
+	if c.config.ContainerDStateDir != "" {
+		c.logger.Warn("containerd-state-dir is deprecated and ignored, Kubernetes metadata is read from the CRI endpoint",
+			slog.String("cri_endpoint", c.config.CRIEndpoint),
+		)
+	}
 
 	// Without the Containers feature, the Host Compute Service is missing and
 	// every scrape would fail. Report the collector as unsupported instead, so
@@ -213,6 +257,17 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 				errors.ErrUnsupported, err)
 		}
 	}
+
+	_ = c.Close()
+
+	criClient, err := cri.NewClient(c.config.CRIEndpoint)
+	if err != nil {
+		return fmt.Errorf("invalid CRI endpoint: %w", err)
+	}
+
+	c.criClient = criClient
+	c.criRuntimeName = ""
+	c.criUnavailableLogged = false
 
 	c.containerAvailable = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "available"),
@@ -328,20 +383,33 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
-func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error {
+func (c *Collector) Collect(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
+	if maxScrapeDuration <= 0 {
+		maxScrapeDuration = defaultCRITimeout
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), maxScrapeDuration)
+	defer cancel()
+
 	errs := make([]error, 0)
 
+	// Without Kubernetes metadata, HCS containers are still exported, but without Kubernetes labels.
+	kubernetes, err := c.getKubernetesContainers(ctx)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
 	if slices.Contains(c.config.CollectorsEnabled, subCollectorHCS) {
-		if err := c.collectHCS(ch); err != nil {
+		if err := c.collectHCS(ch, kubernetes); err != nil {
 			errs = append(errs, err)
 		}
 	}
 
 	if slices.Contains(c.config.CollectorsEnabled, subCollectorHostprocess) {
-		if err := c.collectJobContainers(ch); err != nil {
+		if err := c.collectJobContainers(ch, kubernetes); err != nil {
 			errs = append(errs, err)
 		}
 	}
@@ -349,7 +417,64 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 	return errors.Join(errs...)
 }
 
-func (c *Collector) collectHCS(ch chan<- prometheus.Metric) error {
+// getKubernetesContainers reads the running containers and pod sandboxes from the CRI endpoint.
+// If the endpoint is not available, e.g. on hosts without Kubernetes, it returns no containers.
+func (c *Collector) getKubernetesContainers(ctx context.Context) (kubernetesContainers, error) {
+	if c.criRuntimeName == "" {
+		version, err := c.criClient.Version(ctx)
+		if err != nil {
+			return kubernetesContainers{}, c.handleCRIError(err)
+		}
+
+		c.criRuntimeName = version.RuntimeName
+		if c.criRuntimeName == "" {
+			c.criRuntimeName = "containerd"
+		}
+	}
+
+	sandboxes, err := c.criClient.ListPodSandboxes(ctx)
+	if err != nil {
+		return kubernetesContainers{}, c.handleCRIError(err)
+	}
+
+	containers, err := c.criClient.ListRunningContainers(ctx)
+	if err != nil {
+		return kubernetesContainers{}, c.handleCRIError(err)
+	}
+
+	if c.criUnavailableLogged {
+		c.logger.InfoContext(ctx, "CRI endpoint is available", slog.String("cri_endpoint", c.config.CRIEndpoint))
+
+		c.criUnavailableLogged = false
+	}
+
+	return newKubernetesContainers(c.criRuntimeName, sandboxes, containers), nil
+}
+
+// handleCRIError ignores errors of a missing CRI endpoint, which is expected on hosts without Kubernetes.
+func (c *Collector) handleCRIError(err error) error {
+	// The runtime may be replaced, so query its name again.
+	c.criRuntimeName = ""
+
+	var statusErr *cri.StatusError
+
+	if !errors.Is(err, windows.ERROR_FILE_NOT_FOUND) && (!errors.As(err, &statusErr) || statusErr.Code != grpcUnimplemented) {
+		return fmt.Errorf("error in fetching Kubernetes metadata from CRI endpoint %s: %w", c.config.CRIEndpoint, err)
+	}
+
+	if !c.criUnavailableLogged {
+		c.logger.Info("CRI endpoint is not available, Kubernetes labels and HostProcess containers are not collected",
+			slog.String("cri_endpoint", c.config.CRIEndpoint),
+			slog.Any("err", err),
+		)
+
+		c.criUnavailableLogged = true
+	}
+
+	return nil
+}
+
+func (c *Collector) collectHCS(ch chan<- prometheus.Metric, kubernetes kubernetesContainers) error {
 	// Types Container is passed to get the containers compute systems only
 	containers, err := hcs.GetContainers()
 	if err != nil {
@@ -358,8 +483,6 @@ func (c *Collector) collectHCS(ch chan<- prometheus.Metric) error {
 
 	count := len(containers)
 	if count == 0 {
-		clear(c.annotationsCacheHCS)
-
 		ch <- prometheus.MustNewConstMetric(
 			c.containersCount,
 			prometheus.GaugeValue,
@@ -371,7 +494,7 @@ func (c *Collector) collectHCS(ch chan<- prometheus.Metric) error {
 
 	var countersCount float64
 
-	containerIDs := make(map[string]struct{}, len(containers))
+	hcsContainers := make(map[string]containerInfo, len(containers))
 	collectErrors := make([]error, 0)
 
 	for _, container := range containers {
@@ -379,17 +502,20 @@ func (c *Collector) collectHCS(ch chan<- prometheus.Metric) error {
 			continue
 		}
 
-		containerIDs[container.ID] = struct{}{}
-
 		countersCount++
 
-		info, ok := c.annotationsCacheHCS[container.ID]
-		if !ok {
-			// Docker containers have no containerd bundle, so they keep empty Kubernetes labels.
-			spec, _ := c.getContainerAnnotations(container.ID)
-			info = spec.containerInfo(getContainerIdWithPrefix(container))
-			c.annotationsCacheHCS[container.ID] = info
+		// Skip pause containers
+		if _, ok := kubernetes.sandboxes[container.ID]; ok {
+			continue
 		}
+
+		info, ok := kubernetes.containers[container.ID]
+		if !ok {
+			// Containers not managed by Kubernetes, e.g. Docker containers, have no Kubernetes labels.
+			info = containerInfo{id: getContainerIdWithPrefix(container)}
+		}
+
+		hcsContainers[container.ID] = info
 
 		if err = c.collectHCSContainer(ch, container, info); err != nil {
 			if errors.Is(err, hcs.ErrIDNotFound) {
@@ -422,17 +548,8 @@ func (c *Collector) collectHCS(ch chan<- prometheus.Metric) error {
 		countersCount,
 	)
 
-	networkErr := c.collectNetworkMetrics(ch)
-
-	// Remove containers that are no longer running
-	for containerID := range c.annotationsCacheHCS {
-		if _, ok := containerIDs[containerID]; !ok {
-			delete(c.annotationsCacheHCS, containerID)
-		}
-	}
-
-	if networkErr != nil {
-		return fmt.Errorf("error in fetching container network statistics: %w", networkErr)
+	if err := c.collectNetworkMetrics(ch, hcsContainers, kubernetes.sandboxes); err != nil {
+		return fmt.Errorf("error in fetching container network statistics: %w", err)
 	}
 
 	if len(collectErrors) > 0 {
@@ -443,18 +560,6 @@ func (c *Collector) collectHCS(ch chan<- prometheus.Metric) error {
 }
 
 func (c *Collector) collectHCSContainer(ch chan<- prometheus.Metric, containerDetails hcs.Properties, containerInfo containerInfo) error {
-	// Skip if the container is a pause container
-	if containerInfo.pod != "" && containerInfo.container == "" {
-		c.logger.Debug("skipping pause container",
-			slog.String("container_id", containerDetails.ID),
-			slog.String("container_name", containerInfo.container),
-			slog.String("pod_name", containerInfo.pod),
-			slog.String("namespace", containerInfo.namespace),
-		)
-
-		return nil
-	}
-
 	containerStats, err := hcs.GetContainerStatistics(containerDetails.ID)
 	if err != nil {
 		return fmt.Errorf("error fetching container statistics: %w", err)
@@ -550,8 +655,8 @@ func (c *Collector) collectHCSContainer(ch chan<- prometheus.Metric, containerDe
 	return nil
 }
 
-// collectNetworkMetrics collects network metrics for containers.
-func (c *Collector) collectNetworkMetrics(ch chan<- prometheus.Metric) error {
+// collectNetworkMetrics collects network metrics for the HCS containers.
+func (c *Collector) collectNetworkMetrics(ch chan<- prometheus.Metric, containers map[string]containerInfo, sandboxes map[string]struct{}) error {
 	endpoints, err := hcn.ListEndpoints()
 	if err != nil {
 		return fmt.Errorf("error in fetching HCN endpoints: %w", err)
@@ -576,16 +681,13 @@ func (c *Collector) collectNetworkMetrics(ch chan<- prometheus.Metric) error {
 		}
 
 		for _, containerId := range endpoint.SharedContainers {
-			containerInfo, ok := c.annotationsCacheHCS[containerId]
-
+			containerInfo, ok := containers[containerId]
 			if !ok {
-				c.logger.Debug("Unknown container " + containerId + " for endpoint " + endpoint.ID)
+				// Pause containers share the endpoint of their pod.
+				if _, ok := sandboxes[containerId]; !ok {
+					c.logger.Debug("Unknown container " + containerId + " for endpoint " + endpoint.ID)
+				}
 
-				continue
-			}
-
-			// Skip if the container is a pause container
-			if containerInfo.pod != "" && containerInfo.container == "" {
 				continue
 			}
 
@@ -643,81 +745,21 @@ func (c *Collector) collectNetworkMetrics(ch chan<- prometheus.Metric) error {
 // https://learn.microsoft.com/en-us/windows/win32/procthread/job-objects
 //
 // Job containers are containers that aren't managed by HCS, e.g host process containers.
-func (c *Collector) collectJobContainers(ch chan<- prometheus.Metric) error {
-	// Each directory in the containerd state directory is the OCI bundle of a running task.
-	entries, err := os.ReadDir(c.config.ContainerDStateDir)
-	if err != nil {
-		if !errors.Is(err, fs.ErrNotExist) {
-			return fmt.Errorf("error in reading containerd state directory: %w", err)
-		}
-
-		if !c.stateDirMissingLogged {
-			c.logger.Warn("containerd state directory does not exist",
-				slog.String("path", c.config.ContainerDStateDir),
-				slog.Any("err", err),
-			)
-
-			c.stateDirMissingLogged = true
-		}
-
-		clear(c.annotationsCacheJob)
-
-		return nil
-	}
-
-	c.stateDirMissingLogged = false
-
-	bundles := make(map[string]struct{}, len(entries))
+// They are found by the job object, which hcsshim names after the container ID.
+func (c *Collector) collectJobContainers(ch chan<- prometheus.Metric, kubernetes kubernetesContainers) error {
 	errs := make([]error, 0)
 
-	for _, entry := range entries {
-		if !entry.IsDir() {
-			continue
-		}
-
-		containerID := entry.Name()
-		bundles[containerID] = struct{}{}
-
-		container, ok := c.annotationsCacheJob[containerID]
-		if !ok {
-			spec, err := c.getContainerAnnotations(containerID)
-			if err != nil {
-				// containerd may still be writing the bundle, so retry on the next scrape.
-				c.logger.Debug("error in reading container annotations",
-					slog.String("container_id", containerID),
-					slog.Any("err", err),
-				)
-
-				continue
-			}
-
-			container = jobContainer{
-				info:        spec.containerInfo("containerd://" + containerID),
-				hostProcess: spec.Annotations["microsoft.com/hostprocess-container"] == "true",
-			}
-
-			c.annotationsCacheJob[containerID] = container
-		}
-
-		if !container.hostProcess {
-			continue
-		}
-
-		if err := c.collectJobContainer(ch, containerID, container.info); err != nil {
+	for containerID, info := range kubernetes.containers {
+		if err := c.collectJobContainer(ch, containerID, info); err != nil {
 			errs = append(errs, err)
-		}
-	}
-
-	// Remove containers that are no longer running
-	for containerID := range c.annotationsCacheJob {
-		if _, ok := bundles[containerID]; !ok {
-			delete(c.annotationsCacheJob, containerID)
 		}
 	}
 
 	return errors.Join(errs...)
 }
 
+// collectJobContainer collects the metrics of a job container.
+// It does nothing if the container has no job object, i.e. it is not a job container.
 func (c *Collector) collectJobContainer(ch chan<- prometheus.Metric, containerID string, containerInfo containerInfo) error {
 	jobObjectHandle, err := kernel32.OpenJobObject("Global\\JobContainer_" + containerID)
 	if err != nil {
@@ -863,23 +905,6 @@ func getContainerIdWithPrefix(container hcs.Properties) string {
 		// default to docker or if owner is not set
 		return "docker://" + container.ID
 	}
-}
-
-func (c *Collector) getContainerAnnotations(containerID string) (ociSpec, error) {
-	// Close the file right away: the handle lacks FILE_SHARE_DELETE and would
-	// block containerd from removing the bundle of a stopped container.
-	configJSON, err := os.ReadFile(filepath.Join(c.config.ContainerDStateDir, containerID, "config.json"))
-	if err != nil {
-		return ociSpec{}, fmt.Errorf("error in reading config.json file: %w", err)
-	}
-
-	var annotations ociSpec
-
-	if err = json.Unmarshal(configJSON, &annotations); err != nil {
-		return ociSpec{}, fmt.Errorf("error in decoding config.json file: %w", err)
-	}
-
-	return annotations, nil
 }
 
 func calculatePrivateWorkingSetBytes(jobObjectHandle windows.Handle) (uint64, error) {
