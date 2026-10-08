@@ -26,6 +26,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/stretchr/testify/require"
@@ -280,6 +281,11 @@ func TestPipeConnClose(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		t.Fatal("Close did not release the pipe handle")
 	}
+
+	// A read started after Close must return the same error as a canceled read.
+	n, err := server.Read(make([]byte, 1))
+	require.Zero(t, n)
+	require.ErrorIs(t, err, os.ErrClosed)
 }
 
 // Both peers write first. On a pipe without buffer, this blocks both writes
@@ -393,4 +399,65 @@ func TestReadAheadConnClose(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		t.Fatal("pending read was not unblocked by Close")
 	}
+}
+
+// delayedReadConn keeps a canceled read active until the test releases it.
+type delayedReadConn struct {
+	net.Conn
+
+	started  chan struct{}
+	canceled chan struct{}
+	finish   <-chan struct{}
+}
+
+func (c *delayedReadConn) Read(p []byte) (int, error) {
+	close(c.started)
+
+	n, err := c.Conn.Read(p)
+	close(c.canceled)
+	<-c.finish
+
+	return n, err
+}
+
+func TestReadAheadConnCloseWaitsForReader(t *testing.T) {
+	t.Parallel()
+
+	synctest.Test(t, func(t *testing.T) {
+		client, server := net.Pipe()
+		defer server.Close()
+
+		finish := make(chan struct{})
+
+		release := sync.OnceFunc(func() { close(finish) })
+		defer release()
+
+		reader := &delayedReadConn{
+			Conn:     client,
+			started:  make(chan struct{}),
+			canceled: make(chan struct{}),
+			finish:   finish,
+		}
+		conn := newReadAheadConn(reader)
+		<-reader.started
+
+		closed := make(chan error, 1)
+
+		go func() { closed <- conn.Close() }()
+
+		<-reader.canceled
+		synctest.Wait()
+
+		select {
+		case <-closed:
+			t.Fatal("Close returned before the background read finished")
+		default:
+		}
+
+		release()
+		require.NoError(t, <-closed)
+
+		_, err := conn.Read(make([]byte, 1))
+		require.ErrorIs(t, err, io.ErrClosedPipe)
+	})
 }

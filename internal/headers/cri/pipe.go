@@ -159,6 +159,15 @@ func (c *pipeConn) Read(p []byte) (int, error) {
 		}
 	})
 	if err != nil {
+		// Control can reject a closed file before invoking the callback.
+		c.mu.Lock()
+		closed := c.closed
+		c.mu.Unlock()
+
+		if closed {
+			err = os.ErrClosed
+		}
+
 		return 0, err
 	}
 
@@ -200,6 +209,8 @@ func (c *pipeConn) SetDeadline(t time.Time) error { return c.SetWriteDeadline(t)
 type readAheadConn struct {
 	net.Conn
 
+	readWG sync.WaitGroup
+
 	mu   sync.Mutex
 	cond *sync.Cond
 	buf  []byte
@@ -210,7 +221,7 @@ func newReadAheadConn(conn net.Conn) *readAheadConn {
 	c := &readAheadConn{Conn: conn}
 	c.cond = sync.NewCond(&c.mu)
 
-	go c.readLoop()
+	c.readWG.Go(c.readLoop)
 
 	return c
 }
@@ -253,6 +264,14 @@ func (c *readAheadConn) Read(p []byte) (int, error) {
 	}
 
 	return n, nil
+}
+
+// Close cancels the read and waits for the background reader to exit.
+func (c *readAheadConn) Close() error {
+	err := c.Conn.Close()
+	c.readWG.Wait()
+
+	return err
 }
 
 // SetDeadline only applies to writes. A read deadline would stop the background reader for good.
