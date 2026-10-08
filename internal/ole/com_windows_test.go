@@ -23,6 +23,7 @@ import (
 	"unsafe"
 
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sys/windows"
 )
 
 func TestInitialize(t *testing.T) {
@@ -63,6 +64,66 @@ func TestBSTR(t *testing.T) {
 	}
 
 	require.Empty(t, (bstr{}).string())
+}
+
+func TestNativeGetterCallbackStackGrowth(t *testing.T) {
+	for _, name := range []string{"Get", "GetArg"} {
+		t.Run(name, func(t *testing.T) {
+			var methods [8]uintptr
+
+			if name == "Get" {
+				methods[7] = windows.NewCallback(func(_ uintptr, out *int32) uintptr {
+					// A native caller retains the original address even when the
+					// callback grows and relocates the caller's Go stack.
+					growCallbackStack(64)
+
+					*out = 1234
+
+					return 0
+				})
+			} else {
+				methods[7] = windows.NewCallback(func(_ uintptr, arg uintptr, out *int32) uintptr {
+					growCallbackStack(64)
+
+					*out = int32(arg)
+
+					return 0
+				})
+			}
+
+			object := &Object{VTable: &methods[0]}
+
+			var (
+				value int32
+				err   error
+			)
+
+			if name == "Get" {
+				value, err = object.Get[int32](7)
+			} else {
+				value, err = object.GetArg[int32](7, 1234)
+			}
+
+			require.NoError(t, err)
+			require.Equal(t, int32(1234), value)
+		})
+	}
+}
+
+//go:noinline
+func growCallbackStack(depth int) byte {
+	var padding [4096]byte
+	for i := range padding {
+		padding[i] = byte(i + depth)
+	}
+
+	if depth > 0 {
+		padding[0] = growCallbackStack(depth - 1)
+	}
+
+	runtime.KeepAlive(&padding)
+
+	return padding[0] + padding[len(padding)-1]
 }
 
 func TestVariantLayout(t *testing.T) {

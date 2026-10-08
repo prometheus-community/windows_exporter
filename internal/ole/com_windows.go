@@ -57,6 +57,19 @@ func Uninitialize() {
 	_, _, _ = coUninitialize.Call()
 }
 
+// Call invokes a native COM method and returns its primary result. COM methods
+// report HRESULTs or reference counts directly; GetLastError is irrelevant.
+// Convert pointers to uintptr in the call expression so uintptrescapes moves
+// their storage to the heap, where reentrant Go callbacks cannot invalidate
+// native pointers by growing and moving the goroutine stack.
+//
+//go:uintptrescapes
+func Call(fn uintptr, args ...uintptr) uintptr {
+	result, _, _ := syscall.SyscallN(fn, args...)
+
+	return result
+}
+
 // Object is the common native COM interface layout. VTable points to the native
 // function table and is owned by COM. Object must be the first field of every
 // interface wrapper; never copy it or move it between apartments.
@@ -70,19 +83,19 @@ func (o *Object) Method(slot uintptr) uintptr {
 // Release relinquishes an owned interface reference. Do not call it on borrowed
 // iterator items. Like IUnknown::Release, it does not return an HRESULT.
 func (o *Object) Release() {
-	_, _, _ = syscall.SyscallN(o.Method(2), uintptr(unsafe.Pointer(o)))
+	_ = Call(o.Method(2), uintptr(unsafe.Pointer(o)))
 	runtime.KeepAlive(o)
 }
 
 // Get calls a native getter. T must exactly match its scalar or interface
-// output type. Pointer conversions stay in the syscall expression so the Go
-// runtime keeps their storage alive and stable during the call.
+// output type. Pointer conversions stay in the Call expression so their storage
+// remains alive and stable during native calls and reentrant Go callbacks.
 //
 //nolint:ireturn // T is a native scalar or interface output, not a Go interface.
 func (o *Object) Get[T any](slot uintptr) (T, error) {
 	var value T
 
-	hr, _, _ := syscall.SyscallN(o.Method(slot), uintptr(unsafe.Pointer(o)), uintptr(unsafe.Pointer(&value)))
+	hr := Call(o.Method(slot), uintptr(unsafe.Pointer(o)), uintptr(unsafe.Pointer(&value)))
 	runtime.KeepAlive(o)
 
 	return value, ResultError(hr)
@@ -95,7 +108,7 @@ func (o *Object) Get[T any](slot uintptr) (T, error) {
 func (o *Object) GetArg[T any](slot, arg uintptr) (T, error) {
 	var value T
 
-	hr, _, _ := syscall.SyscallN(
+	hr := Call(
 		o.Method(slot),
 		uintptr(unsafe.Pointer(o)),
 		arg,
@@ -108,7 +121,7 @@ func (o *Object) GetArg[T any](slot, arg uintptr) (T, error) {
 
 // Put calls a native setter with a scalar argument.
 func (o *Object) Put(slot, arg uintptr) error {
-	hr, _, _ := syscall.SyscallN(o.Method(slot), uintptr(unsafe.Pointer(o)), arg)
+	hr := Call(o.Method(slot), uintptr(unsafe.Pointer(o)), arg)
 	runtime.KeepAlive(o)
 
 	return ResultError(hr)

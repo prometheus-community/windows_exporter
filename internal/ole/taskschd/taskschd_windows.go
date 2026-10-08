@@ -21,7 +21,6 @@ package taskschd
 import (
 	"iter"
 	"runtime"
-	"syscall"
 	"unsafe"
 
 	"github.com/prometheus-community/windows_exporter/internal/ole"
@@ -68,7 +67,7 @@ func (s *TaskService) Connect() error {
 	domain := ole.NewEmptyVariant()
 	password := ole.NewEmptyVariant()
 
-	hr, _, _ := syscall.SyscallN(
+	hr := ole.Call(
 		s.Method(taskServiceConnect),
 		uintptr(unsafe.Pointer(s)),
 		uintptr(unsafe.Pointer(server)),
@@ -123,7 +122,7 @@ func (c *taskCollection[T]) item(index int32) (*T, error) {
 
 	var item *T
 
-	hr, _, _ := syscall.SyscallN(
+	hr := ole.Call(
 		c.Method(taskCollectionItem),
 		uintptr(unsafe.Pointer(c)),
 		uintptr(unsafe.Pointer(value)),
