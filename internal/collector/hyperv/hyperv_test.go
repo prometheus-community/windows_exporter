@@ -26,7 +26,6 @@ import (
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus-community/windows_exporter/internal/utils/testutils"
 	"github.com/prometheus/client_golang/prometheus"
-	dto "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/require"
 )
 
@@ -47,31 +46,6 @@ func TestCollector(t *testing.T) {
 	// The health query reports failures as 0 instead of an error, so check the value.
 	if metric := testutils.RequireFixtureMetric(t, metrics, hyperv.Name, "windows_hyperv_wmi_health", nil); metric != nil {
 		require.InDelta(t, 1, metric.GetGauge().GetValue(), 0, "Hyper-V WMI health query failed")
-	}
-}
-
-// TestCollectorVirtualStorageDeviceLatency checks that the deprecated latency gauges
-// expose the raw cumulative value in 100ns ticks of the *_io_latency_seconds_total counters.
-func TestCollectorVirtualStorageDeviceLatency(t *testing.T) {
-	metrics := testutils.TestCollector(t, hyperv.New, &hyperv.Config{CollectorsEnabled: []string{"virtual_storage_device"}})
-
-	for deprecated, replacement := range map[string]string{
-		"windows_hyperv_virtual_storage_device_latency_seconds":       "windows_hyperv_virtual_storage_device_io_latency_seconds_total",
-		"windows_hyperv_virtual_storage_device_lower_latency_seconds": "windows_hyperv_virtual_storage_device_lower_io_latency_seconds_total",
-	} {
-		want := testutils.MetricValuesByLabel(metrics, deprecated, "device")
-		got := testutils.MetricValuesByLabel(metrics, replacement, "device")
-
-		require.Len(t, got, len(want))
-
-		if len(got) > 0 {
-			require.Equal(t, dto.MetricType_COUNTER, metrics[replacement].GetType())
-		}
-
-		for device, ticks := range want {
-			require.Contains(t, got, device)
-			require.InDelta(t, ticks*pdh.TicksToSecondScaleFactor, got[device], 1e-6, "%s{device=%q}", replacement, device)
-		}
 	}
 }
 

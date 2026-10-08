@@ -321,43 +321,20 @@ Example alert:
 
 ### Hyper-V Virtual Storage Device
 
-| Name                                                                   | Description                                                                                                                                           | Type    | Labels   |
-|------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|---------|----------|
-| `windows_hyperv_virtual_storage_device_error_count_total`              | Represents the total number of errors that have occurred on this virtual device.                                                                      | counter | `device` |
-| `windows_hyperv_virtual_storage_device_queue_length`                   | **Deprecated:** use `rate(windows_hyperv_virtual_storage_device_io_latency_seconds_total)`. Cumulative queue length in 100ns ticks, see below.        | gauge   | `device` |
-| `windows_hyperv_virtual_storage_device_bytes_read`                     | Represents the total number of bytes that have been read on this virtual device.                                                                      | counter | `device` |
-| `windows_hyperv_virtual_storage_device_operations_read_total`          | Represents the total number of read operations that have occurred on this virtual device.                                                             | counter | `device` |
-| `windows_hyperv_virtual_storage_device_bytes_written`                  | Represents the total number of bytes that have been written on this virtual device.                                                                   | counter | `device` |
-| `windows_hyperv_virtual_storage_device_operations_written_total`       | Represents the total number of write operations that have occurred on this virtual device.                                                            | counter | `device` |
-| `windows_hyperv_virtual_storage_device_io_latency_seconds_total`       | Represents the total IO transfer latency for this virtual device.                                                                                     | counter | `device` |
-| `windows_hyperv_virtual_storage_device_latency_seconds`                | **Deprecated:** use `windows_hyperv_virtual_storage_device_io_latency_seconds_total`. Cumulative IO transfer latency in 100ns ticks, see below.       | gauge   | `device` |
-| `windows_hyperv_virtual_storage_device_throughput_total`               | Represents the total number of 8KB IO transfers completed by this virtual device.                                                                     | counter | `device` |
-| `windows_hyperv_virtual_storage_device_normalized_throughput`          | Represents the average number of IO transfers completed by this virtual device.                                                                       | gauge   | `device` |
-| `windows_hyperv_virtual_storage_device_lower_io_latency_seconds_total` | Represents the total IO transfer latency on the underlying storage subsystem for this virtual device.                                                 | counter | `device` |
-| `windows_hyperv_virtual_storage_device_lower_queue_length`             | **Deprecated:** use `rate(windows_hyperv_virtual_storage_device_lower_io_latency_seconds_total)`. Cumulative queue length in 100ns ticks, see below.  | gauge   | `device` |
-| `windows_hyperv_virtual_storage_device_lower_latency_seconds`          | **Deprecated:** use `windows_hyperv_virtual_storage_device_lower_io_latency_seconds_total`. Cumulative IO transfer latency in 100ns ticks, see below. | gauge   | `device` |
-| `windows_hyperv_virtual_storage_device_io_quota_replenishment_rate`    | Represents the IO quota replenishment rate for this virtual device.                                                                                   | gauge   | `device` |
-
-#### Deprecated latency and queue length metrics
-
-The `Latency`, `Lower Latency`, `Queue Length` and `Lower Queue Length` performance counters
-are averages that Windows computes from two samples. windows_exporter reads their raw values,
-which only grow: the sum of all IO latencies in 100ns ticks. The raw queue length values are
-the same as the raw latency values.
-
-`windows_hyperv_virtual_storage_device_latency_seconds`, `windows_hyperv_virtual_storage_device_lower_latency_seconds`,
-`windows_hyperv_virtual_storage_device_queue_length` and `windows_hyperv_virtual_storage_device_lower_queue_length`
-keep exposing these raw values as gauges for compatibility. They are deprecated and will be removed in a future release.
-Use the `*_io_latency_seconds_total` counters instead:
-
-```promql
-# Average IO latency in seconds
-rate(windows_hyperv_virtual_storage_device_io_latency_seconds_total[5m])
-  / rate(windows_hyperv_virtual_storage_device_throughput_total[5m])
-
-# Average queue length
-rate(windows_hyperv_virtual_storage_device_io_latency_seconds_total[5m])
-```
+| Name                                                                | Description                                                                                             | Type    | Labels   |
+|---------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------|---------|----------|
+| `windows_hyperv_virtual_storage_device_error_count_total`           | Represents the total number of errors that have occurred on this virtual device.                        | counter | `device` |
+| `windows_hyperv_virtual_storage_device_queue_length`                | Represents the average queue length on this virtual device.                                             | gauge   | `device` |
+| `windows_hyperv_virtual_storage_device_bytes_read`                  | Represents the total number of bytes that have been read on this virtual device.                        | counter | `device` |
+| `windows_hyperv_virtual_storage_device_operations_read_total`       | Represents the total number of read operations that have occurred on this virtual device.               | counter | `device` |
+| `windows_hyperv_virtual_storage_device_bytes_written`               | Represents the total number of bytes that have been written on this virtual device.                     | counter | `device` |
+| `windows_hyperv_virtual_storage_device_operations_written_total`    | Represents the total number of write operations that have occurred on this virtual device.              | counter | `device` |
+| `windows_hyperv_virtual_storage_device_latency_seconds`             | Represents the average IO transfer latency for this virtual device.                                     | gauge   | `device` |
+| `windows_hyperv_virtual_storage_device_throughput_total`            | Represents the total number of 8KB IO transfers completed by this virtual device.                       | counter | `device` |
+| `windows_hyperv_virtual_storage_device_normalized_throughput`       | Represents the average number of IO transfers completed by this virtual device.                         | gauge   | `device` |
+| `windows_hyperv_virtual_storage_device_lower_queue_length`          | Represents the average queue length on the underlying storage subsystem for this device.                | gauge   | `device` |
+| `windows_hyperv_virtual_storage_device_lower_latency_seconds`       | Represents the average IO transfer latency on the underlying storage subsystem for this virtual device. | gauge   | `device` |
+| `windows_hyperv_virtual_storage_device_io_quota_replenishment_rate` | Represents the IO quota replenishment rate for this virtual device.                                     | gauge   | `device` |
 
 ### Hyper-V VM Vid Partition
 
