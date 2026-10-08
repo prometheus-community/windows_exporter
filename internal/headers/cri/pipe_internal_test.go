@@ -280,6 +280,11 @@ func TestPipeConnClose(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		t.Fatal("Close did not release the pipe handle")
 	}
+
+	// A read started after Close must return the same error as a canceled read.
+	n, err := server.Read(make([]byte, 1))
+	require.Zero(t, n)
+	require.ErrorIs(t, err, os.ErrClosed)
 }
 
 // Both peers write first. On a pipe without buffer, this blocks both writes

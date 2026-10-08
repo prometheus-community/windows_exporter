@@ -159,6 +159,15 @@ func (c *pipeConn) Read(p []byte) (int, error) {
 		}
 	})
 	if err != nil {
+		// Control can reject a closed file before invoking the callback.
+		c.mu.Lock()
+		closed := c.closed
+		c.mu.Unlock()
+
+		if closed {
+			err = os.ErrClosed
+		}
+
 		return 0, err
 	}
 
