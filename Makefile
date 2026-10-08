@@ -1,19 +1,18 @@
 GOOS    ?= windows
-VERSION ?= $(shell cat VERSION)
+# VERSION is the version the binaries are staged with, like in CI: the content of the
+# VERSION file if it exists, else git describe without the leading v.
+VERSION ?= $(patsubst v%,%,$(subst +,_,$(if $(wildcard VERSION),$(shell cat VERSION),$(shell git describe --tags --always))))
 DOCKER  ?= docker
 
-# DOCKER_REPO is the official image repository name at docker.io, quay.io.
+# DOCKER_REPO is the list of repositories the image is tagged and pushed with.
+# The official image repository name at docker.io, quay.io is prometheuscommunity.
 DOCKER_REPO       ?= prometheuscommunity
 DOCKER_IMAGE_NAME ?= windows-exporter
 
 # ALL_DOCKER_REPOS is the list of repositories to push the image to. ghcr.io requires that org name be the same as the image repo name.
-ALL_DOCKER_REPOS  ?= docker.io/$(DOCKER_REPO) ghcr.io/prometheus-community # quay.io/$(DOCKER_REPO)
+ALL_DOCKER_REPOS  ?= docker.io/$(DOCKER_REPO) ghcr.io/prometheus-community quay.io/$(DOCKER_REPO)
 
-# Image Variables for host process Container
-# Windows image build is heavily influenced by https://github.com/kubernetes/kubernetes/blob/master/cluster/images/etcd/Makefile
-OS                ?= ltsc2019
-ALL_OS            ?= ltsc2019 ltsc2022
-BASE_IMAGE        ?= mcr.microsoft.com/windows/nanoserver
+COLLECTOR_BENCHMARKS ?= cpu logical_disk physical_disk memory net printer process service system tcp time
 
 .PHONY: build
 build: windows_exporter.exe
@@ -29,48 +28,50 @@ test:
 	go test -v ./...
 
 bench:
-	go test -v -bench='benchmarkcollector' ./internal/collectors/{cpu,logical_disk,physical_disk,memory,net,printer,process,service,system,tcp,time}
+	go test -v -run='^$$' -bench='Collector' $(addprefix ./internal/collector/,$(COLLECTOR_BENCHMARKS))
 
 lint:
 	golangci-lint -c .golangci.yaml run
 
 .PHONY: e2e-test
 e2e-test: windows_exporter.exe
-	powershell -NonInteractive -ExecutionPolicy Bypass -File .\tools\end-to-end-test.ps1
+	powershell -NonInteractive -ExecutionPolicy Bypass -File ./tools/end-to-end-test.ps1
 
 fmt:
 	gofmt -l -w -s .
 
+# crossbuild stages the binaries like the CI build job:
+# output/windows_exporter-$(VERSION)-<arch>.exe
+.PHONY: crossbuild
 crossbuild: generate
-	mkdir -p output/amd64 output/arm64
-	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath -tags=trimpath -o output/amd64/windows_exporter.exe ./cmd/windows_exporter
-	CGO_ENABLED=0 GOOS=windows GOARCH=arm64 go build -trimpath -tags=trimpath -o output/arm64/windows_exporter.exe ./cmd/windows_exporter
+	mkdir -p output
+	rm -f output/windows_exporter-*.exe
+	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath -tags=trimpath -o output/windows_exporter-$(VERSION)-amd64.exe ./cmd/windows_exporter
+	CGO_ENABLED=0 GOOS=windows GOARCH=arm64 go build -trimpath -tags=trimpath -o output/windows_exporter-$(VERSION)-arm64.exe ./cmd/windows_exporter
 
+# package builds the MSI installers into output/. It runs on Windows and needs WiX.
 .PHONY: package
 package: crossbuild
-	powershell -NonInteractive -ExecutionPolicy Bypass -File .\installer\build.ps1 -PathToExecutable .\output\amd64\windows_exporter.exe -Version $(shell git describe --tags --abbrev=0)
+	powershell -NonInteractive -ExecutionPolicy Bypass -File ./installer/build.ps1 -PathToExecutable ./output/windows_exporter-$(VERSION)-amd64.exe -Version $(VERSION) -Arch amd64
+	powershell -NonInteractive -ExecutionPolicy Bypass -File ./installer/build.ps1 -PathToExecutable ./output/windows_exporter-$(VERSION)-arm64.exe -Version $(VERSION) -Arch arm64
+	mv installer/*.msi output/
 
+# The container image is a HostProcess image for windows/amd64. Like the CI docker job,
+# it is built with docker buildx from the staged amd64 binary, so it can be built on Linux.
+# build-image builds it with the current buildx builder. The default builder of a Linux
+# Docker engine can only load it with the containerd image store. push builds and pushes it.
+DOCKER_BUILD = $(DOCKER) buildx build --platform windows/amd64 -f Dockerfile $(foreach repo,$(DOCKER_REPO),-t $(repo)/$(DOCKER_IMAGE_NAME):$(VERSION))
+
+.PHONY: build-image
 build-image: crossbuild
-	$(DOCKER) build --build-arg=BASE=$(BASE_IMAGE):$(OS) -f Dockerfile -t local/$(DOCKER_IMAGE_NAME):$(VERSION)-$(OS) .
+	$(DOCKER_BUILD) output
 
-build-hostprocess:
-	$(DOCKER) buildx build --build-arg=BASE=mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v1.0.0 -f Dockerfile -t local/$(DOCKER_IMAGE_NAME):$(VERSION)-hostprocess .
-
-sub-build-%:
-	$(MAKE) OS=$* build-image
-
-build-all: crossbuild
-	@for docker_repo in ${DOCKER_REPO}; do \
-		echo $(DOCKER) buildx build -f Dockerfile -t $${docker_repo}/$(DOCKER_IMAGE_NAME):$(VERSION) .; \
-	done
-
-push:
-	@for docker_repo in ${DOCKER_REPO}; do \
-		echo $(DOCKER) buildx build --push -f Dockerfile -t $${docker_repo}/$(DOCKER_IMAGE_NAME):$(VERSION) .; \
-	done
+.PHONY: push
+push: crossbuild
+	$(DOCKER_BUILD) --push output
 
 .PHONY: push-all
-push-all: build-all
+push-all:
 	$(MAKE) DOCKER_REPO="$(ALL_DOCKER_REPOS)" push
 
 # Mandatory target for container description sync action
