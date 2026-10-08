@@ -182,48 +182,48 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 		subCollectorDataStore: {
 			build:          c.buildDataStore,
 			collect:        c.collectDataStore,
-			close:          c.perfDataCollectorDataStore.Close,
+			close:          func() { c.perfDataCollectorDataStore.Close() },
 			minBuildNumber: osversion.LTSC2022,
 		},
 		subCollectorDynamicMemoryBalancer: {
 			build:   c.buildDynamicMemoryBalancer,
 			collect: c.collectDynamicMemoryBalancer,
-			close:   c.perfDataCollectorDynamicMemoryBalancer.Close,
+			close:   func() { c.perfDataCollectorDynamicMemoryBalancer.Close() },
 		},
 		subCollectorDynamicMemoryVM: {
 			build:   c.buildDynamicMemoryVM,
 			collect: c.collectDynamicMemoryVM,
-			close:   c.perfDataCollectorDynamicMemoryVM.Close,
+			close:   func() { c.perfDataCollectorDynamicMemoryVM.Close() },
 		},
 		subCollectorHost: {
 			build:   c.buildHost,
 			collect: c.collectHost,
-			close:   c.perfDataCollectorLogicalProcessor.Close,
+			close:   func() { c.perfDataCollectorLogicalProcessor.Close() },
 		},
 		subCollectorHypervisorLogicalProcessor: {
 			build:   c.buildHypervisorLogicalProcessor,
 			collect: c.collectHypervisorLogicalProcessor,
-			close:   c.perfDataCollectorHypervisorLogicalProcessor.Close,
+			close:   func() { c.perfDataCollectorHypervisorLogicalProcessor.Close() },
 		},
 		subCollectorHypervisorRootPartition: {
 			build:   c.buildHypervisorRootPartition,
 			collect: c.collectHypervisorRootPartition,
-			close:   c.perfDataCollectorHypervisorRootPartition.Close,
+			close:   func() { c.perfDataCollectorHypervisorRootPartition.Close() },
 		},
 		subCollectorHypervisorRootVirtualProcessor: {
 			build:   c.buildHypervisorRootVirtualProcessor,
 			collect: c.collectHypervisorRootVirtualProcessor,
-			close:   c.perfDataCollectorHypervisorRootVirtualProcessor.Close,
+			close:   func() { c.perfDataCollectorHypervisorRootVirtualProcessor.Close() },
 		},
 		subCollectorHypervisorVirtualProcessor: {
 			build:   c.buildHypervisorVirtualProcessor,
 			collect: c.collectHypervisorVirtualProcessor,
-			close:   c.perfDataCollectorHypervisorVirtualProcessor.Close,
+			close:   func() { c.perfDataCollectorHypervisorVirtualProcessor.Close() },
 		},
 		subCollectorLegacyNetworkAdapter: {
 			build:   c.buildLegacyNetworkAdapter,
 			collect: c.collectLegacyNetworkAdapter,
-			close:   c.perfDataCollectorLegacyNetworkAdapter.Close,
+			close:   func() { c.perfDataCollectorLegacyNetworkAdapter.Close() },
 		},
 		subCollectorReplicaVM: {
 			build:   c.buildReplicaVM,
@@ -234,38 +234,38 @@ func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
 		subCollectorVirtualMachineHealthSummary: {
 			build:   c.buildVirtualMachineHealthSummary,
 			collect: c.collectVirtualMachineHealthSummary,
-			close:   c.perfDataCollectorVirtualMachineHealthSummary.Close,
+			close:   func() { c.perfDataCollectorVirtualMachineHealthSummary.Close() },
 		},
 		subCollectorVirtualMachineVidPartition: {
 			build:   c.buildVirtualMachineVidPartition,
 			collect: c.collectVirtualMachineVidPartition,
-			close:   c.perfDataCollectorVirtualMachineVidPartition.Close,
+			close:   func() { c.perfDataCollectorVirtualMachineVidPartition.Close() },
 		},
 		subCollectorVirtualNetworkAdapter: {
 			build:   c.buildVirtualNetworkAdapter,
 			collect: c.collectVirtualNetworkAdapter,
-			close:   c.perfDataCollectorVirtualNetworkAdapter.Close,
+			close:   func() { c.perfDataCollectorVirtualNetworkAdapter.Close() },
 		},
 		subCollectorVirtualNetworkAdapterDropReasons: {
 			build:   c.buildVirtualNetworkAdapterDropReasons,
 			collect: c.collectVirtualNetworkAdapterDropReasons,
-			close:   c.perfDataCollectorVirtualNetworkAdapterDropReasons.Close,
+			close:   func() { c.perfDataCollectorVirtualNetworkAdapterDropReasons.Close() },
 		},
 		subCollectorVirtualSMB: {
 			build:          c.buildVirtualSMB,
 			collect:        c.collectVirtualSMB,
-			close:          c.perfDataCollectorVirtualSMB.Close,
+			close:          func() { c.perfDataCollectorVirtualSMB.Close() },
 			minBuildNumber: osversion.LTSC2022,
 		},
 		subCollectorVirtualStorageDevice: {
 			build:   c.buildVirtualStorageDevice,
 			collect: c.collectVirtualStorageDevice,
-			close:   c.perfDataCollectorVirtualStorageDevice.Close,
+			close:   func() { c.perfDataCollectorVirtualStorageDevice.Close() },
 		},
 		subCollectorVirtualSwitch: {
 			build:   c.buildVirtualSwitch,
 			collect: c.collectVirtualSwitch,
-			close:   c.perfDataCollectorVirtualSwitch.Close,
+			close:   func() { c.perfDataCollectorVirtualSwitch.Close() },
 		},
 		subCollectorWMIHealth: {
 			build:   c.buildWMIHealth,

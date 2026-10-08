@@ -183,52 +183,52 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		subCollectorADAccessProcesses: {
 			build:   c.buildADAccessProcesses,
 			collect: c.collectADAccessProcesses,
-			close:   c.perfDataCollectorADAccessProcesses.Close,
+			close:   func() { c.perfDataCollectorADAccessProcesses.Close() },
 		},
 		subCollectorTransportQueues: {
 			build:   c.buildTransportQueues,
 			collect: c.collectTransportQueues,
-			close:   c.perfDataCollectorTransportQueues.Close,
+			close:   func() { c.perfDataCollectorTransportQueues.Close() },
 		},
 		subCollectorHttpProxy: {
 			build:   c.buildHTTPProxy,
 			collect: c.collectHTTPProxy,
-			close:   c.perfDataCollectorHTTPProxy.Close,
+			close:   func() { c.perfDataCollectorHTTPProxy.Close() },
 		},
 		subCollectorActiveSync: {
 			build:   c.buildActiveSync,
 			collect: c.collectActiveSync,
-			close:   c.perfDataCollectorActiveSync.Close,
+			close:   func() { c.perfDataCollectorActiveSync.Close() },
 		},
 		subCollectorAvailabilityService: {
 			build:   c.buildAvailabilityService,
 			collect: c.collectAvailabilityService,
-			close:   c.perfDataCollectorAvailabilityService.Close,
+			close:   func() { c.perfDataCollectorAvailabilityService.Close() },
 		},
 		subCollectorOutlookWebAccess: {
 			build:   c.buildOWA,
 			collect: c.collectOWA,
-			close:   c.perfDataCollectorOWA.Close,
+			close:   func() { c.perfDataCollectorOWA.Close() },
 		},
 		subCollectorAutoDiscover: {
 			build:   c.buildAutoDiscover,
 			collect: c.collectAutoDiscover,
-			close:   c.perfDataCollectorAutoDiscover.Close,
+			close:   func() { c.perfDataCollectorAutoDiscover.Close() },
 		},
 		subCollectorWorkloadManagement: {
 			build:   c.buildWorkloadManagementWorkloads,
 			collect: c.collectWorkloadManagementWorkloads,
-			close:   c.perfDataCollectorWorkloadManagementWorkloads.Close,
+			close:   func() { c.perfDataCollectorWorkloadManagementWorkloads.Close() },
 		},
 		subCollectorRpcClientAccess: {
 			build:   c.buildRpcClientAccess,
 			collect: c.collectRpcClientAccess,
-			close:   c.perfDataCollectorRpcClientAccess.Close,
+			close:   func() { c.perfDataCollectorRpcClientAccess.Close() },
 		},
 		subCollectorMapiHTTPEmsmdb: {
 			build:   c.buildMapiHTTPEmsMDB,
 			collect: c.collectMapiHTTPEmsMDB,
-			close:   c.perfDataCollectorMapiHTTPEmsMDB.Close,
+			close:   func() { c.perfDataCollectorMapiHTTPEmsMDB.Close() },
 		},
 	}
 
