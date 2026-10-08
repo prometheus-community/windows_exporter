@@ -98,8 +98,8 @@ func (s *Session) TestConnection() error {
 
 	operation := &Operation{}
 
-	// MI_Session_TestConnection returns void. The outcome is reported through
-	// the operation, which must be closed whether or not the test succeeded.
+	// MI_Session_TestConnection returns void. The outcome, e.g. a timeout, is
+	// reported by GetInstance, and the operation must be closed either way.
 	//
 	// ref: https://github.com/KurtDeGreeff/omi/blob/9caa55032a1070a665e14fd282a091f6247d13c3/Unix/scriptext/py/PMI_Session.c#L92-L105
 	_, _, _ = syscall.SyscallN(
@@ -109,10 +109,6 @@ func (s *Session) TestConnection() error {
 		0,
 		uintptr(unsafe.Pointer(operation)),
 	)
-
-	if operation.ft == nil {
-		return fmt.Errorf("failed to test connection: %w", MI_RESULT_FAILED)
-	}
 
 	_, _, err := operation.GetInstance()
 
@@ -165,18 +161,18 @@ func (s *Session) QueryInstances(flags OperationFlags, operationOptions *Operati
 		return nil, err
 	}
 
-	return s.queryInstances(flags, operationOptions, namespaceName, queryDialect, queryExpressionUTF16)
+	return s.queryInstances(flags, operationOptions, namespaceName, queryDialect, queryExpressionUTF16), nil
 }
 
 // queryInstances starts an MI_Session_QueryInstances operation. Nil operationOptions
 // fall back to the session defaults. The caller must close the returned operation.
 //
 // MI_Session_QueryInstances returns void: a failed query still yields an
-// operation, and its status is reported by [Operation.GetInstance]. An error
-// is only returned if MI did not initialize the operation at all.
+// operation, and its status, e.g. a timeout or an invalid class, is reported
+// by [Operation.GetInstance].
 func (s *Session) queryInstances(flags OperationFlags, operationOptions *OperationOptions, namespaceName Namespace,
 	queryDialect QueryDialect, queryExpression Query,
-) (*Operation, error) {
+) *Operation {
 	operation := &Operation{}
 
 	if operationOptions == nil {
@@ -195,11 +191,7 @@ func (s *Session) queryInstances(flags OperationFlags, operationOptions *Operati
 		uintptr(unsafe.Pointer(operation)),
 	)
 
-	if operation.ft == nil {
-		return nil, MI_RESULT_FAILED
-	}
-
-	return operation, nil
+	return operation
 }
 
 // unmarshalInstance populates structValue from instance using the `mi` struct tags.
@@ -377,10 +369,7 @@ func (s *Session) QueryUnmarshal[T any](dst *[]T,
 		return err
 	}
 
-	operation, err := s.queryInstances(flags, operationOptions, namespaceName, queryDialect, queryExpression)
-	if err != nil {
-		return fmt.Errorf("failed to query instances: %w", err)
-	}
+	operation := s.queryInstances(flags, operationOptions, namespaceName, queryDialect, queryExpression)
 
 	defer func() {
 		_ = operation.Close()
@@ -429,10 +418,7 @@ func (s *Session) QueryFunc(namespaceName Namespace, queryExpression Query, quer
 		}()
 	}
 
-	operation, err := s.queryInstances(OperationFlagsStandardRTTI, operationOptions, namespaceName, QueryDialectWQL, queryExpression)
-	if err != nil {
-		return fmt.Errorf("failed to query instances: %w", err)
-	}
+	operation := s.queryInstances(OperationFlagsStandardRTTI, operationOptions, namespaceName, QueryDialectWQL, queryExpression)
 
 	// Close cancels the operation if fn aborted it early.
 	defer func() {
