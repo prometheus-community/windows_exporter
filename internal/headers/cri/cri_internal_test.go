@@ -249,6 +249,56 @@ func TestClientStatusError(t *testing.T) {
 	require.ErrorIs(t, err, ErrInvalidResponse)
 }
 
+func TestClientMessageSize(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		name         string
+		payloadSize  int
+		declaredSize int
+		invalid      bool
+	}{
+		{name: "at limit", payloadSize: maxMessageSize, declaredSize: maxMessageSize},
+		{name: "one byte over limit", payloadSize: maxMessageSize + 1, declaredSize: maxMessageSize + 1, invalid: true},
+		{
+			name:         "truncated oversized response",
+			payloadSize:  maxMessageSize + 2,
+			declaredSize: maxMessageSize + 1,
+			invalid:      true,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set("Content-Type", "application/grpc")
+				w.Header().Set("Grpc-Status", "0")
+
+				frame := make([]byte, 5+tc.payloadSize)
+				binary.BigEndian.PutUint32(frame[1:5], uint32(tc.declaredSize))
+
+				_, _ = w.Write(frame)
+			})
+
+			client, err := NewClient(startServer(t, handler))
+			require.NoError(t, err)
+
+			t.Cleanup(client.Close)
+
+			data, err := client.call(t.Context(), "Version", nil)
+			if tc.invalid {
+				require.ErrorIs(t, err, ErrInvalidResponse)
+				require.Nil(t, data)
+
+				return
+			}
+
+			require.NoError(t, err)
+			require.Len(t, data, tc.payloadSize)
+		})
+	}
+}
+
 func TestClientPipeNotFound(t *testing.T) {
 	t.Parallel()
 

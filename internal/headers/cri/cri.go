@@ -150,6 +150,10 @@ func (c *Client) call(ctx context.Context, method string, msg []byte) ([]byte, e
 		return nil, fmt.Errorf("CRI %s: %w", method, err)
 	}
 
+	if len(data) > 5+maxMessageSize {
+		return nil, fmt.Errorf("CRI %s: %w: message exceeds %d bytes", method, ErrInvalidResponse, maxMessageSize)
+	}
+
 	if err := grpcStatus(resp); err != nil {
 		return nil, fmt.Errorf("CRI %s: %w", method, err)
 	}

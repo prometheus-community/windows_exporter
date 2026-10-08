@@ -21,8 +21,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"os"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -67,7 +69,7 @@ func dialPipe(ctx context.Context, path string) (net.Conn, error) {
 			0,
 		)
 		if err == nil {
-			return newReadAheadConn(pipeConn{File: os.NewFile(uintptr(handle), path)}), nil
+			return newReadAheadConn(&pipeConn{File: os.NewFile(uintptr(handle), path)}), nil
 		}
 
 		// All pipe instances are busy until the server creates the next one.
@@ -91,10 +93,104 @@ func (a pipeAddr) String() string  { return string(a) }
 // pipeConn adapts a named pipe file to net.Conn.
 type pipeConn struct {
 	*os.File
+
+	readMu sync.Mutex
+	mu     sync.Mutex
+	closed bool
 }
 
-func (c pipeConn) LocalAddr() net.Addr  { return pipeAddr(c.Name()) }
-func (c pipeConn) RemoteAddr() net.Addr { return pipeAddr(c.Name()) }
+func (c *pipeConn) LocalAddr() net.Addr  { return pipeAddr(c.Name()) }
+func (c *pipeConn) RemoteAddr() net.Addr { return pipeAddr(c.Name()) }
+
+// Read uses event-based overlapped I/O because os.File.Read and os.File.Write
+// update a shared file offset concurrently on Windows pipes. Serializing both
+// directions would deadlock HTTP/2. Control keeps the handle alive until the
+// read completes; File.Close cancels pending pipe I/O, including this read.
+func (c *pipeConn) Read(p []byte) (int, error) {
+	c.readMu.Lock()
+	defer c.readMu.Unlock()
+
+	if len(p) == 0 {
+		return 0, nil
+	}
+
+	raw, err := c.SyscallConn()
+	if err != nil {
+		return 0, err
+	}
+
+	event, err := windows.CreateEvent(nil, 1, 0, nil)
+	if err != nil {
+		return 0, err
+	}
+
+	defer func() { _ = windows.CloseHandle(event) }()
+
+	// The low bit suppresses notifications to the Go runtime's completion port,
+	// which only accepts OVERLAPPED structures created by its own poller.
+	overlapped := windows.Overlapped{HEvent: event | 1}
+
+	var pinner runtime.Pinner
+	pinner.Pin(&overlapped)
+	pinner.Pin(&p[0])
+
+	defer pinner.Unpin()
+
+	var (
+		n       uint32
+		readErr error
+	)
+
+	err = raw.Control(func(handle uintptr) {
+		c.mu.Lock()
+		if c.closed {
+			c.mu.Unlock()
+
+			readErr = os.ErrClosed
+
+			return
+		}
+
+		readErr = windows.ReadFile(windows.Handle(handle), p, &n, &overlapped)
+		c.mu.Unlock()
+
+		if errors.Is(readErr, windows.ERROR_IO_PENDING) {
+			readErr = windows.GetOverlappedResult(windows.Handle(handle), &overlapped, &n, true)
+		}
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	switch {
+	case errors.Is(readErr, windows.ERROR_BROKEN_PIPE), readErr == nil && n == 0:
+		readErr = io.EOF
+	case errors.Is(readErr, windows.ERROR_OPERATION_ABORTED):
+		readErr = os.ErrClosed
+	}
+
+	return int(n), readErr
+}
+
+func (c *pipeConn) Close() error {
+	c.mu.Lock()
+	if c.closed {
+		c.mu.Unlock()
+
+		return os.ErrClosed
+	}
+
+	// Prevent a new read from starting after File.Close cancels pending I/O.
+	c.closed = true
+	c.mu.Unlock()
+
+	return c.File.Close()
+}
+
+// Read deadlines are unsupported by the event-based reader. Close cancels it.
+func (c *pipeConn) SetReadDeadline(time.Time) error { return nil }
+
+func (c *pipeConn) SetDeadline(t time.Time) error { return c.SetWriteDeadline(t) }
 
 // readAheadConn reads the connection eagerly in the background.
 //

@@ -113,7 +113,7 @@ func (l *pipeListener) Accept() (net.Conn, error) {
 	}
 	l.mu.Unlock()
 
-	return pipeConn{File: os.NewFile(uintptr(handle), l.path)}, nil
+	return &pipeConn{File: os.NewFile(uintptr(handle), l.path)}, nil
 }
 
 // connect waits for a client to connect, or for the listener to be closed.
@@ -199,6 +199,86 @@ func TestPipePath(t *testing.T) {
 
 		require.NoError(t, err, endpoint)
 		require.Equal(t, want, got, endpoint)
+	}
+}
+
+// Closing a pipe must cancel an event-based read while Control holds the handle.
+func TestPipeConnClose(t *testing.T) {
+	t.Parallel()
+
+	l := listenPipe(t)
+	accepted := make(chan net.Conn, 1)
+	acceptErr := make(chan error, 1)
+
+	go func() {
+		conn, err := l.Accept()
+		if err != nil {
+			acceptErr <- err
+
+			return
+		}
+
+		accepted <- conn
+	}()
+
+	client, err := dialPipe(t.Context(), l.path)
+	require.NoError(t, err)
+
+	t.Cleanup(func() { _ = client.Close() })
+
+	var server net.Conn
+
+	select {
+	case server = <-accepted:
+	case err := <-acceptErr:
+		t.Fatal(err)
+	case <-time.After(5 * time.Second):
+		t.Fatal("pipe was not accepted")
+	}
+
+	t.Cleanup(func() { _ = server.Close() })
+
+	readErr := make(chan error, 1)
+
+	go func() {
+		_, err := server.Read(make([]byte, 1))
+		readErr <- err
+	}()
+
+	// Sending a byte proves the reader can complete an overlapped operation.
+	require.NoError(t, client.SetWriteDeadline(time.Now().Add(5*time.Second)))
+
+	_, err = client.Write([]byte{1})
+	require.NoError(t, err)
+
+	select {
+	case err := <-readErr:
+		require.NoError(t, err)
+	case <-time.After(5 * time.Second):
+		t.Fatal("pipe read did not complete")
+	}
+
+	go func() {
+		_, err := server.Read(make([]byte, 1))
+		readErr <- err
+	}()
+
+	closed := make(chan error, 1)
+
+	go func() { closed <- server.Close() }()
+
+	select {
+	case err := <-readErr:
+		require.ErrorIs(t, err, os.ErrClosed)
+	case <-time.After(5 * time.Second):
+		t.Fatal("pending pipe read was not canceled by Close")
+	}
+
+	select {
+	case err := <-closed:
+		require.NoError(t, err)
+	case <-time.After(5 * time.Second):
+		t.Fatal("Close did not release the pipe handle")
 	}
 }
 
