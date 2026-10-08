@@ -517,13 +517,35 @@
                                         },
                                         "refId": "A"
                                     }
+                                },
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "rate(process_cpu_seconds_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]) / on (instance) sum by (instance) (rate(promhttp_metric_handler_requests_total{job=~\"$job\", instance=\"$instance\"}[$__rate_interval]))",
+                                                "instant": false,
+                                                "legendFormat": "CPU per scrape",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "B"
+                                    }
                                 }
                             ],
                             "queryOptions": {},
                             "transformations": []
                         }
                     },
-                    "description": "CPU time used by the exporter process, as a share of one core.",
+                    "description": "CPU time used by the exporter process, as a share of one core. CPU usage grows with the number of scrapes, for example when two Prometheus jobs scrape the same exporter; CPU per scrape (right axis) does not.",
                     "id": 104,
                     "links": [],
                     "title": "Exporter CPU usage",
@@ -580,7 +602,24 @@
                                     },
                                     "unit": "percentunit"
                                 },
-                                "overrides": []
+                                "overrides": [
+                                    {
+                                        "matcher": {
+                                            "id": "byName",
+                                            "options": "CPU per scrape"
+                                        },
+                                        "properties": [
+                                            {
+                                                "id": "unit",
+                                                "value": "s"
+                                            },
+                                            {
+                                                "id": "custom.axisPlacement",
+                                                "value": "right"
+                                            }
+                                        ]
+                                    }
+                                ]
                             },
                             "options": {
                                 "legend": {
@@ -12665,7 +12704,7 @@
                             "transformations": []
                         }
                     },
-                    "description": "Scrape requests by HTTP status code, and errors while gathering or encoding metrics.",
+                    "description": "Scrape requests by HTTP status code, and errors while gathering or encoding metrics. More requests than one per scrape interval mean several jobs or Prometheus servers scrape this exporter.",
                     "id": 97,
                     "links": [],
                     "title": "HTTP requests to /metrics",
