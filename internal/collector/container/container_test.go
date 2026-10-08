@@ -31,6 +31,6 @@ func BenchmarkCollector(b *testing.B) {
 
 func TestCollector(t *testing.T) {
 	metrics := testutils.TestCollector(t, container.New, nil)
-	testutils.RequireFixtureMetric(t, metrics, container.Name, "windows_container_available", prometheus.Labels{"container": "hostprocess", "hostprocess": "true"})
-	testutils.RequireFixtureMetric(t, metrics, container.Name, "windows_container_available", prometheus.Labels{"container": "nanoserver", "hostprocess": "false"})
+	testutils.RequireFixtureMetric(t, metrics, container.Name, "windows_container_available", prometheus.Labels{"container": "hostprocess", "namespace": "default", "hostprocess": "true"})
+	testutils.RequireFixtureMetric(t, metrics, container.Name, "windows_container_available", prometheus.Labels{"container": "nanoserver", "namespace": "default", "hostprocess": "false"})
 }
