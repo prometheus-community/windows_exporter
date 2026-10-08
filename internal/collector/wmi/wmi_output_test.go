@@ -345,6 +345,16 @@ func TestNewWithFlags(t *testing.T) {
 		_, err := app.Parse([]string{"--collector.wmi.queries", `[{"name": `})
 		require.Error(t, err)
 	})
+
+	t.Run("unknown field", func(t *testing.T) {
+		t.Parallel()
+
+		app := kingpin.New("test", "")
+		_ = wmi.NewWithFlags(app)
+
+		_, err := app.Parse([]string{"--collector.wmi.queries", `[{"name":"os","class":"Win32_OperatingSystem","propertys":[{"name":"Primary"}]}]`})
+		require.ErrorContains(t, err, "propertys")
+	})
 }
 
 // TestCollectConcurrent runs overlapping scrapes, as concurrent HTTP requests

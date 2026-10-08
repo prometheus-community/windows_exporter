@@ -114,11 +114,16 @@ func NewWithFlags(app *kingpin.Application) *Collector {
 	).Default("").StringVar(&queries)
 
 	app.Action(func(*kingpin.ParseContext) error {
-		if queries == "" {
+		if strings.TrimSpace(queries) == "" {
 			return nil
 		}
 
-		if err := yaml.Unmarshal([]byte(queries), &c.config.Queries); err != nil {
+		// Reject unknown keys, so that a typo like "propertys" fails instead
+		// of silently dropping the setting.
+		decoder := yaml.NewDecoder(strings.NewReader(queries))
+		decoder.KnownFields(true)
+
+		if err := decoder.Decode(&c.config.Queries); err != nil {
 			return fmt.Errorf("failed to parse queries %s: %w", queries, err)
 		}
 
