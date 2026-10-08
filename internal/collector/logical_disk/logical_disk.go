@@ -85,7 +85,7 @@ type Collector struct {
 	config Config
 	logger *slog.Logger
 
-	perfDataCollector *pdh.Collector
+	perfDataCollector *pdh.Collector[perfDataCounterValues]
 	perfDataObject    []perfDataCounterValues
 
 	avgReadQueue     *prometheus.Desc

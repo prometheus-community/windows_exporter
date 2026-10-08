@@ -27,7 +27,7 @@ import (
 )
 
 type collectorWaitStats struct {
-	waitStatsPerfDataCollectors map[mssqlInstance]*pdh.Collector
+	waitStatsPerfDataCollectors map[mssqlInstance]*pdh.Collector[perfDataCounterValuesWaitStats]
 	waitStatsPerfDataObject     []perfDataCounterValuesWaitStats
 
 	waitStatsLockWaits                     *prometheus.Desc
@@ -64,7 +64,7 @@ type perfDataCounterValuesWaitStats struct {
 func (c *Collector) buildWaitStats() error {
 	var err error
 
-	c.waitStatsPerfDataCollectors = make(map[mssqlInstance]*pdh.Collector, len(c.mssqlInstances))
+	c.waitStatsPerfDataCollectors = make(map[mssqlInstance]*pdh.Collector[perfDataCounterValuesWaitStats], len(c.mssqlInstances))
 	errs := make([]error, 0, len(c.mssqlInstances))
 
 	for _, sqlInstance := range c.mssqlInstances {
@@ -155,7 +155,7 @@ func (c *Collector) collectWaitStats(ch chan<- prometheus.Metric) error {
 	return c.collect(ch, subCollectorWaitStats, c.waitStatsPerfDataCollectors, c.collectWaitStatsInstance)
 }
 
-func (c *Collector) collectWaitStatsInstance(ch chan<- prometheus.Metric, sqlInstance mssqlInstance, perfDataCollector *pdh.Collector) error {
+func (c *Collector) collectWaitStatsInstance(ch chan<- prometheus.Metric, sqlInstance mssqlInstance, perfDataCollector *pdh.Collector[perfDataCounterValuesWaitStats]) error {
 	err := perfDataCollector.Collect(&c.waitStatsPerfDataObject)
 	if err != nil {
 		return fmt.Errorf("failed to collect %s metrics: %w", c.mssqlGetPerfObjectName(sqlInstance, "Wait Statistics"), err)

@@ -27,7 +27,7 @@ import (
 )
 
 type collectorADAccessProcesses struct {
-	perfDataCollectorADAccessProcesses *pdh.Collector
+	perfDataCollectorADAccessProcesses *pdh.Collector[perfDataCounterValuesADAccessProcesses]
 	perfDataObjectADAccessProcesses    []perfDataCounterValuesADAccessProcesses
 
 	ldapReadOperations              *prometheus.Desc

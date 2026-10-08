@@ -59,7 +59,7 @@ type Collector struct {
 
 	logger *slog.Logger
 
-	perfDataCollector *pdh.Collector
+	perfDataCollector *pdh.Collector[perfDataCounterValues]
 	perfDataObject    []perfDataCounterValues
 
 	acksTotal                                        *prometheus.Desc

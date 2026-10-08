@@ -18,15 +18,15 @@
 package registry
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"strings"
 
-	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
 )
 
-type Collector struct {
+type Collector[T any] struct {
 	object string
 	query  string
 
@@ -45,15 +45,19 @@ type Counter struct {
 	FieldIndexSecondValue int
 }
 
-func NewCollector[T any](object string, _ []string) (*Collector, error) {
-	collector := &Collector{
+// NewCollector creates a collector for the counters declared by the perfdata_v1 or perfdata tags of the struct T.
+func NewCollector[T any](object string, _ []string) (*Collector[T], error) {
+	valueType := reflect.TypeFor[T]()
+	if valueType.Kind() != reflect.Struct {
+		return nil, fmt.Errorf("expected a struct, got %s", valueType)
+	}
+
+	collector := &Collector[T]{
 		object:         object,
 		query:          MapCounterToIndex(object),
 		nameIndexValue: -1,
 		counters:       make(map[string]Counter),
 	}
-
-	valueType := reflect.TypeFor[T]()
 
 	if f, ok := valueType.FieldByName("Name"); ok {
 		if f.Type.Kind() == reflect.String {
@@ -62,16 +66,22 @@ func NewCollector[T any](object string, _ []string) (*Collector, error) {
 	}
 
 	for _, f := range reflect.VisibleFields(valueType) {
-		counterName, ok := f.Tag.Lookup("perfdata_v1")
+		tag, ok := f.Tag.Lookup("perfdata_v1")
 		if !ok {
-			counterName, ok = f.Tag.Lookup("perfdata")
+			tag, ok = f.Tag.Lookup("perfdata")
 			if !ok {
 				continue
 			}
 		}
 
-		var counter Counter
-		if counter, ok = collector.counters[counterName]; !ok {
+		if f.Type.Kind() != reflect.Float64 {
+			return nil, fmt.Errorf("field %s must be a float64", f.Name)
+		}
+
+		counterName, secondValue := strings.CutSuffix(tag, ",secondvalue")
+
+		counter, ok := collector.counters[counterName]
+		if !ok {
 			counter = Counter{
 				Name:                  counterName,
 				FieldIndexSecondValue: -1,
@@ -79,7 +89,7 @@ func NewCollector[T any](object string, _ []string) (*Collector, error) {
 			}
 		}
 
-		if counterName, ok = strings.CutSuffix(counterName, ",secondvalue"); ok {
+		if secondValue {
 			counter.FieldIndexSecondValue = f.Index[0]
 		} else {
 			counter.FieldIndexValue = f.Index[0]
@@ -97,24 +107,15 @@ func NewCollector[T any](object string, _ []string) (*Collector, error) {
 	return collector, nil
 }
 
-func (c *Collector) Describe() map[string]string {
+func (c *Collector[T]) Describe() map[string]string {
 	return map[string]string{}
 }
 
-func (c *Collector) Collect(data any) error {
-	dv := reflect.ValueOf(data)
-	if dv.Kind() != reflect.Pointer || dv.IsNil() {
-		return mi.ErrInvalidEntityType
+// Collect replaces the content of dst with one row per collected instance.
+func (c *Collector[T]) Collect(dst *[]T) error {
+	if dst == nil {
+		return errors.New("dst must not be nil")
 	}
-
-	dv = dv.Elem()
-
-	if dv.Kind() != reflect.Slice || dv.Type().Elem().Kind() != reflect.Struct {
-		return mi.ErrInvalidEntityType
-	}
-
-	elemType := dv.Type().Elem()
-	elemValue := reflect.ValueOf(reflect.New(elemType).Interface()).Elem()
 
 	perfObjects, err := QueryPerformanceData(c.query, c.object)
 	if err != nil {
@@ -125,11 +126,7 @@ func (c *Collector) Collect(data any) error {
 		return nil
 	}
 
-	if dv.Len() != 0 {
-		dv.Set(reflect.MakeSlice(dv.Type(), 0, len(perfObjects[0].Instances)))
-	}
-
-	dv.Clear()
+	*dst = make([]T, 0, len(perfObjects[0].Instances))
 
 	for _, perfObject := range perfObjects {
 		if perfObject.Name != c.object {
@@ -146,12 +143,13 @@ func (c *Collector) Collect(data any) error {
 				instanceName = pdh.InstanceEmpty
 			}
 
-			if c.nameIndexValue != -1 {
-				elemValue.Field(c.nameIndexValue).SetString(instanceName)
-			}
+			var row T
 
-			dv.Set(reflect.Append(dv, elemValue))
-			index := dv.Len() - 1
+			rv := reflect.ValueOf(&row).Elem()
+
+			if c.nameIndexValue != -1 {
+				rv.Field(c.nameIndexValue).SetString(instanceName)
+			}
 
 			for _, perfCounter := range perfInstance.Counters {
 				if perfCounter.Def.IsBaseValue && !perfCounter.Def.IsNanosecondCounter {
@@ -165,31 +163,29 @@ func (c *Collector) Collect(data any) error {
 
 				switch perfCounter.Def.CounterType {
 				case pdh.PERF_ELAPSED_TIME:
-					dv.Index(index).
-						Field(counter.FieldIndexValue).
+					rv.Field(counter.FieldIndexValue).
 						SetFloat(float64((perfCounter.Value - pdh.WindowsEpoch) / perfObject.Frequency))
 				case pdh.PERF_100NSEC_TIMER, pdh.PERF_PRECISION_100NS_TIMER:
-					dv.Index(index).
-						Field(counter.FieldIndexValue).
+					rv.Field(counter.FieldIndexValue).
 						SetFloat(float64(perfCounter.Value) * pdh.TicksToSecondScaleFactor)
 				default:
 					if counter.FieldIndexSecondValue != -1 {
-						dv.Index(index).
-							Field(counter.FieldIndexSecondValue).
+						rv.Field(counter.FieldIndexSecondValue).
 							SetFloat(float64(perfCounter.SecondValue))
 					}
 
 					if counter.FieldIndexValue != -1 {
-						dv.Index(index).
-							Field(counter.FieldIndexValue).
+						rv.Field(counter.FieldIndexValue).
 							SetFloat(float64(perfCounter.Value))
 					}
 				}
 			}
+
+			*dst = append(*dst, row)
 		}
 	}
 
 	return nil
 }
 
-func (c *Collector) Close() {}
+func (c *Collector[T]) Close() {}

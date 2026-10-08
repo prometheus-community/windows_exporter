@@ -27,7 +27,7 @@ import (
 
 // collectorVirtualNetworkAdapter Hyper-V Virtual Network Adapter metrics
 type collectorVirtualNetworkAdapter struct {
-	perfDataCollectorVirtualNetworkAdapter *pdh.Collector
+	perfDataCollectorVirtualNetworkAdapter *pdh.Collector[perfDataCounterValuesVirtualNetworkAdapter]
 	perfDataObjectVirtualNetworkAdapter    []perfDataCounterValuesVirtualNetworkAdapter
 
 	virtualNetworkAdapterBytesReceived          *prometheus.Desc // \Hyper-V Virtual Network Adapter(*)\Bytes Received/sec

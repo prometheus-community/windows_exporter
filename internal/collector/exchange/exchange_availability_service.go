@@ -26,7 +26,7 @@ import (
 )
 
 type collectorAvailabilityService struct {
-	perfDataCollectorAvailabilityService *pdh.Collector
+	perfDataCollectorAvailabilityService *pdh.Collector[perfDataCounterValuesAvailabilityService]
 	perfDataObjectAvailabilityService    []perfDataCounterValuesAvailabilityService
 
 	availabilityRequestsSec *prometheus.Desc

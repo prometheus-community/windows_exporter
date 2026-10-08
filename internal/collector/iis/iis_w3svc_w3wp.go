@@ -27,8 +27,8 @@ import (
 )
 
 type collectorW3SVCW3WP struct {
-	w3SVCW3WPPerfDataCollector   *pdh.Collector
-	w3SVCW3WPPerfDataCollectorV8 *pdh.Collector
+	w3SVCW3WPPerfDataCollector   *pdh.Collector[perfDataCounterValuesW3SVCW3WP]
+	w3SVCW3WPPerfDataCollectorV8 *pdh.Collector[perfDataCounterValuesW3SVCW3WPV8]
 	perfDataObjectW3SVCW3WP      []perfDataCounterValuesW3SVCW3WP
 	perfDataObjectW3SVCW3WPV8    []perfDataCounterValuesW3SVCW3WPV8
 

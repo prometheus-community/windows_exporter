@@ -26,7 +26,7 @@ import (
 )
 
 type collectorActiveSync struct {
-	perfDataCollectorActiveSync *pdh.Collector
+	perfDataCollectorActiveSync *pdh.Collector[perfDataCounterValuesActiveSync]
 	perfDataObjectActiveSync    []perfDataCounterValuesActiveSync
 
 	activeSyncRequestsPerSec *prometheus.Desc

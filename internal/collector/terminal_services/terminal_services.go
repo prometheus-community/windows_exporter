@@ -75,8 +75,8 @@ type Collector struct {
 
 	connectionBrokerEnabled bool
 
-	perfDataCollectorTerminalServicesSession *pdh.Collector
-	perfDataCollectorBroker                  *pdh.Collector
+	perfDataCollectorTerminalServicesSession *pdh.Collector[perfDataCounterValuesTerminalServicesSession]
+	perfDataCollectorBroker                  *pdh.Collector[perfDataCounterValuesBroker]
 
 	perfDataObjectTerminalServicesSession []perfDataCounterValuesTerminalServicesSession
 	perfDataObjectBroker                  []perfDataCounterValuesBroker

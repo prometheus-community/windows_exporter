@@ -27,7 +27,7 @@ import (
 
 // collectorHypervisorRootPartition Hyper-V Hypervisor Root Partition metrics
 type collectorHypervisorRootPartition struct {
-	perfDataCollectorHypervisorRootPartition *pdh.Collector
+	perfDataCollectorHypervisorRootPartition *pdh.Collector[perfDataCounterValuesHypervisorRootPartition]
 	perfDataObjectHypervisorRootPartition    []perfDataCounterValuesHypervisorRootPartition
 
 	hypervisorRootPartitionAddressSpaces                 *prometheus.Desc // \Hyper-V Hypervisor Root Partition(*)\Address Spaces

@@ -26,7 +26,7 @@ import (
 )
 
 type collectorOWA struct {
-	perfDataCollectorOWA *pdh.Collector
+	perfDataCollectorOWA *pdh.Collector[perfDataCounterValuesOWA]
 	perfDataObjectOWA    []perfDataCounterValuesOWA
 
 	currentUniqueUsers *prometheus.Desc
