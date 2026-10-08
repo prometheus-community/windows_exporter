@@ -34,6 +34,8 @@ const (
 	KMTQAITYPE_ADAPTERADDRESS = 6
 	// KMTQAITYPE_ADAPTERREGISTRYINFO pPrivateDriverData points to a D3DKMT_ADAPTERREGISTRYINFO structure that contains registry information about the graphics adapter.
 	KMTQAITYPE_ADAPTERREGISTRYINFO = 8
+	// KMTQAITYPE_ADAPTERTYPE pPrivateDriverData points to a D3DKMT_ADAPTERTYPE structure that specifies the type of graphics adapter. Supported starting with Windows 8 (WDDM 1.2).
+	KMTQAITYPE_ADAPTERTYPE = 15
 	// KMTQAITYPE_PHYSICALADAPTERDEVICEIDS pPrivateDriverData points to a D3DKMT_QUERY_DEVICE_IDS structure that specifies the device ID(s) of the physical adapters. Supported starting with Windows 10 (WDDM 2.0).
 	KMTQAITYPE_PHYSICALADAPTERDEVICEIDS = 31
 	// KMTQAITYPE_DRIVERVERSION pPrivateDriverData points to a D3DKMT_DRIVERVERSION value that indicates the WDDM version of the display miniport driver.
@@ -103,6 +105,18 @@ func GetGPUDevice(hAdapter D3DKMT_HANDLE) (GPUDevice, error) {
 
 	gpuDevice.AdapterString = windows.UTF16ToString(info.AdapterString[:])
 
+	var adapterType D3DKMT_ADAPTERTYPE
+
+	query.queryType = KMTQAITYPE_ADAPTERTYPE
+	query.pPrivateDriverData = unsafe.Pointer(&adapterType)
+	query.privateDriverDataSize = uint32(unsafe.Sizeof(adapterType))
+
+	if err := D3DKMTQueryAdapterInfo(&query); err != nil {
+		return gpuDevice, fmt.Errorf("D3DKMTQueryAdapterInfo (adapter type) failed: %w", err)
+	}
+
+	gpuDevice.AdapterType = adapterType
+
 	var deviceIDs D3DKMT_QUERY_DEVICE_IDS
 
 	query.queryType = KMTQAITYPE_PHYSICALADAPTERDEVICEIDS
@@ -118,6 +132,9 @@ func GetGPUDevice(hAdapter D3DKMT_HANDLE) (GPUDevice, error) {
 	return gpuDevice, nil
 }
 
+// GetGPUDevices returns all GPU adapters known to the graphics kernel.
+// If a single adapter can't be queried, the remaining adapters are still
+// returned, together with an error describing the failed adapters.
 func GetGPUDevices() ([]GPUDevice, error) {
 	gpuDevices := make([]GPUDevice, 0, 2)
 
@@ -177,15 +194,11 @@ func GetGPUDevices() ([]GPUDevice, error) {
 		}()
 	}
 
-	if len(errs) > 0 {
-		return gpuDevices, errors.Join(errs...)
-	}
-
 	if len(gpuDevices) == 0 {
-		return gpuDevices, ErrNoGPUDevices
+		errs = append(errs, ErrNoGPUDevices)
 	}
 
-	return gpuDevices, nil
+	return gpuDevices, errors.Join(errs...)
 }
 
 func formatPNPDeviceID(deviceIDs D3DKMT_QUERY_DEVICE_IDS) string {

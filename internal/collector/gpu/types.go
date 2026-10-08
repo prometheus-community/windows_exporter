@@ -20,8 +20,7 @@ package gpu
 type gpuEnginePerfDataCounterValues struct {
 	Name string
 
-	RunningTime           float64 `perfdata:"Running Time"`
-	UtilizationPercentage float64 `perfdata:"Utilization Percentage"`
+	RunningTime float64 `perfdata:"Running Time"`
 }
 
 type gpuAdapterMemoryPerfDataCounterValues struct {

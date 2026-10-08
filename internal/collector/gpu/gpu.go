@@ -39,11 +39,19 @@ type Config struct{}
 //nolint:gochecknoglobals
 var ConfigDefaults = Config{}
 
+// deviceCacheRefreshInterval limits how often the GPU device cache is
+// rebuilt when a performance counter instance references an unknown LUID.
+const deviceCacheRefreshInterval = 30 * time.Second
+
 type Collector struct {
 	config Config
 	logger *slog.Logger
 
-	gpuDeviceCache map[string]gpuDevice
+	// gpuDeviceCache maps the LUID ("0x%08X_0x%08X") of each adapter to its device information.
+	// LUIDs change if a driver is updated or a device is restarted, so the cache is
+	// refreshed whenever a performance counter instance references an unknown LUID.
+	gpuDeviceCache            map[string]gpuDevice
+	gpuDeviceCacheLastRefresh time.Time
 
 	// GPU Engine
 	gpuEnginePerfDataCollector *pdh.Collector[gpuEnginePerfDataCounterValues]
@@ -95,6 +103,11 @@ type gpuDevice struct {
 	cfgmgr32 cfgmgr32.Device
 	sensors  gpuSensors
 	ID       string
+
+	// skip marks adapters that are known, but not exposed, e.g. software devices
+	// like the Microsoft Basic Render Driver. Keeping them in the cache prevents
+	// their performance counter instances from triggering a cache refresh.
+	skip bool
 }
 
 func New(config *Config) *Collector {
@@ -134,8 +147,8 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 	c.gpuInfo = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "info"),
-		"A metric with a constant '1' value labeled with gpu device information.",
-		[]string{"luid", "device_id", "name", "bus_number", "phys", "function_number", "driver_version", "wddm_version", "architecture"},
+		"A metric with a constant '1' value labeled with GPU device information.",
+		[]string{"luid", "device_id", "name", "bus_number", "device_number", "function_number", "driver_version", "wddm_version", "architecture"},
 		nil,
 	)
 
@@ -160,7 +173,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 
 	c.gpuEngineRunningTime = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "engine_time_seconds"),
-		"Total running time of the GPU in seconds.",
+		"Total running time of the GPU engine in seconds.",
 		[]string{"process_id", "luid", "device_id", "phys", "eng", "engtype"},
 		nil,
 	)
@@ -258,78 +271,125 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		errs = append(errs, fmt.Errorf("failed to create GPU Process Memory perf data collector: %w", err))
 	}
 
+	// GPU discovery problems are not fatal. The collector keeps working with the
+	// adapters that could be discovered and retries on unknown LUIDs during Collect.
+	c.refreshGPUDevices()
+
+	return errors.Join(errs...)
+}
+
+// refreshGPUDevices rebuilds the GPU device cache.
+// Problems with single adapters are logged and do not stop the discovery of the remaining adapters.
+func (c *Collector) refreshGPUDevices() {
+	c.gpuDeviceCacheLastRefresh = time.Now()
+
 	gpus, err := gdi32.GetGPUDevices()
 	if err != nil {
-		errs = append(errs, fmt.Errorf("failed to get GPU devices: %w", err))
+		c.logger.Warn("failed to discover some GPU devices",
+			slog.Any("err", err),
+		)
+
+		// Keep the previous cache, if the discovery failed completely.
+		if len(gpus) == 0 {
+			return
+		}
 	}
 
+	gpuDeviceCache := make(map[string]gpuDevice, len(gpus))
+
 	for _, gpu := range gpus {
-		if gpu.AdapterString == "" {
-			continue
-		}
-
-		// Skip Microsoft Basic Render Driver
-		// https://devicehunt.com/view/type/pci/vendor/1414/device/008C
-		if gpu.DeviceID == `PCI\VEN_1414&DEV_008C&SUBSYS_00000000&REV_00` {
-			continue
-		}
-
-		if c.gpuDeviceCache == nil {
-			c.gpuDeviceCache = make(map[string]gpuDevice)
-		}
-
 		luidKey := fmt.Sprintf("0x%08X_0x%08X", gpu.LUID.HighPart, gpu.LUID.LowPart)
 
-		deviceID := gpu.DeviceID
+		// Skip software devices like the Microsoft Basic Render Driver.
+		if gpu.AdapterString == "" || gpu.IsSoftwareDevice() {
+			gpuDeviceCache[luidKey] = gpuDevice{gdi32: gpu, ID: gpu.DeviceID, skip: true}
 
-		cfgmgr32Devs, err := cfgmgr32.GetDevicesInstanceIDs(gpu.DeviceID)
-		if err != nil {
-			errs = append(errs, fmt.Errorf("failed to get device instance IDs for device ID %s: %w", gpu.DeviceID, err))
+			c.logger.Debug("Skipping GPU device",
+				slog.String("name", gpu.AdapterString),
+				slog.String("luid", luidKey),
+				slog.String("device_id", gpu.DeviceID),
+				slog.Uint64("adapter_type", uint64(gpu.AdapterType)),
+			)
+
+			continue
 		}
 
-		var cfgmgr32Dev cfgmgr32.Device
+		device := c.newGPUDevice(gpu, luidKey)
+		device.sensors = discoverSensors(c.logger.With(slog.String("luid", luidKey)), gpu)
+		gpuDeviceCache[luidKey] = device
 
-		for _, dev := range cfgmgr32Devs {
-			if dev.BusNumber == gpu.BusNumber && dev.DeviceNumber == gpu.DeviceNumber && dev.FunctionNumber == gpu.FunctionNumber {
-				cfgmgr32Dev = dev
-
-				break
-			}
-		}
-
-		if cfgmgr32Dev.InstanceID == "" {
-			errs = append(errs, fmt.Errorf("failed to find matching device for device ID %s", gpu.DeviceID))
-		} else {
-			deviceID = cfgmgr32Dev.InstanceID
-		}
-
-		c.gpuDeviceCache[luidKey] = gpuDevice{
-			gdi32:    gpu,
-			cfgmgr32: cfgmgr32Dev,
-			sensors:  discoverSensors(c.logger.With(slog.String("luid", luidKey)), gpu),
-			ID:       deviceID,
-		}
-
-		logger.Debug("Found GPU device",
-			slog.String("collector", Name),
+		c.logger.Debug("Found GPU device",
 			slog.String("name", gpu.AdapterString),
 			slog.String("luid", luidKey),
-			slog.String("device_id", deviceID),
-			slog.String("name", gpu.AdapterString),
+			slog.String("device_id", device.ID),
 			slog.Uint64("bus_number", uint64(gpu.BusNumber)),
 			slog.Uint64("device_number", uint64(gpu.DeviceNumber)),
 			slog.Uint64("function_number", uint64(gpu.FunctionNumber)),
 		)
 	}
 
-	return errors.Join(errs...)
+	c.gpuDeviceCache = gpuDeviceCache
+}
+
+// newGPUDevice resolves the PnP device instance ID of the adapter.
+// If the device instance can't be found, the PnP device ID reported by gdi32 is used as ID.
+func (c *Collector) newGPUDevice(gpu gdi32.GPUDevice, luidKey string) gpuDevice {
+	device := gpuDevice{
+		gdi32: gpu,
+		ID:    gpu.DeviceID,
+	}
+
+	cfgmgr32Devs, err := cfgmgr32.GetDevicesInstanceIDs(gpu.DeviceID)
+
+	for _, dev := range cfgmgr32Devs {
+		if dev.BusNumber == gpu.BusNumber && dev.DeviceNumber == gpu.DeviceNumber && dev.FunctionNumber == gpu.FunctionNumber {
+			device.cfgmgr32 = dev
+			device.ID = dev.InstanceID
+
+			return device
+		}
+	}
+
+	attrs := []any{
+		slog.String("name", gpu.AdapterString),
+		slog.String("luid", luidKey),
+		slog.String("device_id", gpu.DeviceID),
+	}
+
+	if err != nil {
+		attrs = append(attrs, slog.Any("err", err))
+	}
+
+	c.logger.Warn("failed to find matching PnP device instance for GPU device, using the PnP device ID as device_id", attrs...)
+
+	return device
+}
+
+// getGPUDevice returns the cached device for the given LUID.
+// If the LUID is unknown, e.g. because a driver was updated, a device was restarted
+// or a device was hot-plugged, the cache is refreshed at most once per deviceCacheRefreshInterval.
+// Devices marked as skip are not returned.
+func (c *Collector) getGPUDevice(luid string) (gpuDevice, bool) {
+	if luid == "" {
+		return gpuDevice{}, false
+	}
+
+	device, ok := c.gpuDeviceCache[luid]
+	if !ok && time.Since(c.gpuDeviceCacheLastRefresh) >= deviceCacheRefreshInterval {
+		c.logger.Debug("unknown GPU LUID, refreshing GPU device cache",
+			slog.String("luid", luid),
+		)
+
+		c.refreshGPUDevices()
+
+		device, ok = c.gpuDeviceCache[luid]
+	}
+
+	return device, ok && !device.skip
 }
 
 func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error {
 	errs := make([]error, 0)
-
-	c.collectGpuInfo(ch)
-	c.collectGpuSensorMetrics(ch)
 
 	if err := c.collectGpuEngineMetrics(ch); err != nil {
 		errs = append(errs, err)
@@ -351,11 +411,19 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 		errs = append(errs, err)
 	}
 
+	// Collected last, since the metrics above may refresh the GPU device cache.
+	c.collectGpuInfo(ch)
+	c.collectGpuSensorMetrics(ch)
+
 	return errors.Join(errs...)
 }
 
 func (c *Collector) collectGpuInfo(ch chan<- prometheus.Metric) {
 	for luid, gpu := range c.gpuDeviceCache {
+		if gpu.skip {
+			continue
+		}
+
 		ch <- prometheus.MustNewConstMetric(
 			c.gpuInfo,
 			prometheus.GaugeValue,
@@ -404,7 +472,7 @@ func (c *Collector) collectGpuEngineMetrics(ch chan<- prometheus.Metric) error {
 	for _, data := range c.gpuEnginePerfDataObject {
 		instance := parseGPUCounterInstanceString(data.Name)
 
-		device, ok := c.gpuDeviceCache[instance.Luid]
+		device, ok := c.getGPUDevice(instance.Luid)
 		if !ok {
 			continue
 		}
@@ -429,7 +497,7 @@ func (c *Collector) collectGpuAdapterMemoryMetrics(ch chan<- prometheus.Metric) 
 	for _, data := range c.gpuAdapterMemoryPerfDataObject {
 		instance := parseGPUCounterInstanceString(data.Name)
 
-		device, ok := c.gpuDeviceCache[instance.Luid]
+		device, ok := c.getGPUDevice(instance.Luid)
 		if !ok {
 			continue
 		}
@@ -468,7 +536,7 @@ func (c *Collector) collectGpuLocalAdapterMemoryMetrics(ch chan<- prometheus.Met
 	for _, data := range c.gpuLocalAdapterMemoryPerfDataObject {
 		instance := parseGPUCounterInstanceString(data.Name)
 
-		device, ok := c.gpuDeviceCache[instance.Luid]
+		device, ok := c.getGPUDevice(instance.Luid)
 		if !ok {
 			continue
 		}
@@ -493,7 +561,7 @@ func (c *Collector) collectGpuNonLocalAdapterMemoryMetrics(ch chan<- prometheus.
 	for _, data := range c.gpuNonLocalAdapterMemoryPerfDataObject {
 		instance := parseGPUCounterInstanceString(data.Name)
 
-		device, ok := c.gpuDeviceCache[instance.Luid]
+		device, ok := c.getGPUDevice(instance.Luid)
 		if !ok {
 			continue
 		}
@@ -518,7 +586,7 @@ func (c *Collector) collectGpuProcessMemoryMetrics(ch chan<- prometheus.Metric) 
 	for _, data := range c.gpuProcessMemoryPerfDataObject {
 		instance := parseGPUCounterInstanceString(data.Name)
 
-		device, ok := c.gpuDeviceCache[instance.Luid]
+		device, ok := c.getGPUDevice(instance.Luid)
 		if !ok {
 			continue
 		}

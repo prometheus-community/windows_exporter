@@ -62,7 +62,8 @@ func CMGetDeviceIDList(filter *win32.LPWSTR, buf []uint16) error {
 	return nil
 }
 
-func CMLocateDevNode(devInst **windows.Handle, deviceID []uint16) error {
+// CMLocateDevNode stores the DEVINST (a DWORD) of the device node in devInst.
+func CMLocateDevNode(devInst *uint32, deviceID []uint16) error {
 	ret, _, _ := procCMLocateDevNodeW.Call(
 		uintptr(unsafe.Pointer(devInst)),
 		uintptr(unsafe.Pointer(&deviceID[0])),
@@ -76,9 +77,9 @@ func CMLocateDevNode(devInst **windows.Handle, deviceID []uint16) error {
 	return nil
 }
 
-func CMGetDevNodeProperty(devInst *windows.Handle, propKey *DEVPROPKEY, propType *uint32, buf unsafe.Pointer, bufLen *uint32) error {
+func CMGetDevNodeProperty(devInst uint32, propKey *DEVPROPKEY, propType *uint32, buf unsafe.Pointer, bufLen *uint32) error {
 	ret, _, _ := procCMGetDevNodePropertyW.Call(
-		uintptr(unsafe.Pointer(devInst)),
+		uintptr(devInst),
 		uintptr(unsafe.Pointer(propKey)),
 		uintptr(unsafe.Pointer(propType)),
 		uintptr(buf),

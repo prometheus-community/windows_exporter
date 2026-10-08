@@ -23,35 +23,19 @@ import (
 )
 
 type Instance struct {
-	Pid      string
-	Luid     string
-	DeviceID string
-	Phys     string
-	Eng      string
-	Engtype  string
-	Part     string
-}
-
-type PidPhys struct {
-	Pid      string
-	Luid     string
-	DeviceID string
-	Phys     string
-}
-
-type PidPhysEngEngType struct {
-	Pid      string
-	Luid     string
-	DeviceID string
-	Phys     string
-	Eng      string
-	Engtype  string
+	Pid     string
+	Luid    string
+	Phys    string
+	Eng     string
+	Engtype string
+	Part    string
 }
 
 func parseGPUCounterInstanceString(s string) Instance {
 	// Example: "pid_1234_luid_0x00000000_0x00005678_phys_0_eng_0_engtype_3D"
 	// Example: "luid_0x00000000_0x00005678_phys_0"
 	// Example: "luid_0x00000000_0x00005678_phys_0_part_0"
+	// Example: "pid_1234_luid_0x00000000_0x00005678_phys_0_eng_1_engtype_Compute_0"
 	parts := strings.Split(s, "_")
 
 	var instance Instance
@@ -75,9 +59,12 @@ func parseGPUCounterInstanceString(s string) Instance {
 				instance.Eng = parts[i+1]
 			}
 		case "engtype":
+			// The engine type is always the last element and may contain underscores, e.g. "Compute_0".
 			if i+1 < len(parts) {
-				instance.Engtype = parts[i+1]
+				instance.Engtype = strings.Join(parts[i+1:], "_")
 			}
+
+			return instance
 		case "part":
 			if i+1 < len(parts) {
 				instance.Part = parts[i+1]

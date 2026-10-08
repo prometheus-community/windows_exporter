@@ -1,14 +1,19 @@
 # GPU collector
 
-The GPU collector exposes metrics about GPU usage and memory consumption, both at the adapter (physical GPU) and
+The `gpu` collector exposes metrics about GPU usage and memory consumption, both at the adapter (physical GPU) and
 per-process level.
 
-|                     |                                      |
-|---------------------|--------------------------------------|
-| Metric name prefix  | `gpu`                                |
-| Data source         | Perflib, D3DKMT (dxgkrnl)            |
-| Counters            | GPU Engine, GPU Adapter, GPU Process |
-| Enabled by default? | No                                   |
+|                     |                                                                                                                  |
+|---------------------|------------------------------------------------------------------------------------------------------------------|
+| Metric name prefix  | `gpu`                                                                                                            |
+| Data source         | Perflib, D3DKMT (gdi32.dll), Configuration Manager (cfgmgr32.dll)                                                |
+| Counters            | GPU Engine, GPU Adapter Memory, GPU Local Adapter Memory, GPU Non Local Adapter Memory, GPU Process Memory       |
+| Enabled by default? | No                                                                                                               |
+
+GPU adapters are discovered through the D3DKMT API. Software adapters like the Microsoft Basic Render Driver are not
+exposed. If an adapter can't be fully discovered, a warning is logged and the collector keeps working with the
+remaining adapters. The list of adapters is refreshed when a performance counter references an unknown adapter, e.g.
+after a driver update, a device restart or when an external GPU is attached (at most once every 30 seconds).
 
 ## Flags
 
@@ -20,17 +25,17 @@ These metrics are available on supported versions of Windows with compatible GPU
 
 ### Adapter-level Metrics
 
-| Name                                             | Description                                                                        | Type  | Labels                                                                                                         |
-|--------------------------------------------------|------------------------------------------------------------------------------------|-------|----------------------------------------------------------------------------------------------------------------|
-| `windows_gpu_info`                               | A metric with a constant '1' value labeled with GPU device information.            | gauge | `architecture`,`bus_number`,`device_id`,`driver_version`,`function_number`,`luid`,`name`,`phys`,`wddm_version` |
-| `windows_gpu_dedicated_system_memory_size_bytes` | The size, in bytes, of memory that is dedicated from system memory.                | gauge | `device_id`,`luid`                                                                                             |
-| `windows_gpu_dedicated_video_memory_size_bytes`  | The size, in bytes, of memory that is dedicated from video memory.                 | gauge | `device_id`,`luid`                                                                                             |
-| `windows_gpu_shared_system_memory_size_bytes`    | The size, in bytes, of memory from system memory that can be shared by many users. | gauge | `device_id`,`luid`                                                                                             |
-| `windows_gpu_adapter_memory_committed_bytes`     | Total committed GPU memory in bytes per physical GPU                               | gauge | `device_id`,`luid`,`phys`                                                                                      |
-| `windows_gpu_adapter_memory_dedicated_bytes`     | Dedicated GPU memory usage in bytes per physical GPU                               | gauge | `device_id`,`luid`,`phys`                                                                                      |
-| `windows_gpu_adapter_memory_shared_bytes`        | Shared GPU memory usage in bytes per physical GPU                                  | gauge | `device_id`,`luid`,`phys`                                                                                      |
-| `windows_gpu_local_adapter_memory_bytes`         | Local adapter memory usage in bytes per physical GPU                               | gauge | `device_id`,`luid`,`phys`,`part`                                                                               |
-| `windows_gpu_non_local_adapter_memory_bytes`     | Non-local adapter memory usage in bytes per physical GPU                           | gauge | `device_id`,`luid`,`phys`,`part`                                                                               |
+| Name                                             | Description                                                                        | Type  | Labels                                                                                                                  |
+|--------------------------------------------------|------------------------------------------------------------------------------------|-------|-------------------------------------------------------------------------------------------------------------------------|
+| `windows_gpu_info`                               | A metric with a constant '1' value labeled with GPU device information.            | gauge | `architecture`,`bus_number`,`device_id`,`device_number`,`driver_version`,`function_number`,`luid`,`name`,`wddm_version` |
+| `windows_gpu_dedicated_system_memory_size_bytes` | The size, in bytes, of memory that is dedicated from system memory.                | gauge | `device_id`,`luid`                                                                                                      |
+| `windows_gpu_dedicated_video_memory_size_bytes`  | The size, in bytes, of memory that is dedicated from video memory.                 | gauge | `device_id`,`luid`                                                                                                      |
+| `windows_gpu_shared_system_memory_size_bytes`    | The size, in bytes, of memory from system memory that can be shared by many users. | gauge | `device_id`,`luid`                                                                                                      |
+| `windows_gpu_adapter_memory_committed_bytes`     | Total committed GPU memory in bytes per physical GPU                               | gauge | `device_id`,`luid`,`phys`                                                                                               |
+| `windows_gpu_adapter_memory_dedicated_bytes`     | Dedicated GPU memory usage in bytes per physical GPU                               | gauge | `device_id`,`luid`,`phys`                                                                                               |
+| `windows_gpu_adapter_memory_shared_bytes`        | Shared GPU memory usage in bytes per physical GPU                                  | gauge | `device_id`,`luid`,`phys`                                                                                               |
+| `windows_gpu_local_adapter_memory_bytes`         | Local adapter memory usage in bytes per physical GPU                               | gauge | `device_id`,`luid`,`phys`,`part`                                                                                        |
+| `windows_gpu_non_local_adapter_memory_bytes`     | Non-local adapter memory usage in bytes per physical GPU                           | gauge | `device_id`,`luid`,`phys`,`part`                                                                                        |
 
 The `driver_version`, `wddm_version` and `architecture` labels of `windows_gpu_info` are empty if the driver does not report them.
 
@@ -38,9 +43,9 @@ The `driver_version`, `wddm_version` and `architecture` labels of `windows_gpu_i
 
 The sensor metrics are read from the graphics kernel (dxgkrnl) with `D3DKMTQueryAdapterInfo`, the same source Task Manager
 uses. They are vendor-neutral, but depend on WDDM 2.4 or newer and on driver support. Drivers report 0 for values they do
-not support, so a metric is only exposed if the driver reported a non-zero value or capability for it at startup. Microsoft
-software adapters, like the Microsoft Basic Render Driver, are skipped and never queried. Query failures are logged at debug
-level and never fail the scrape.
+not support, so a metric is only exposed if the driver reported a non-zero value or capability for it when the adapter was
+discovered. Software adapters, like the Microsoft Basic Render Driver, are skipped and never queried. Query failures are
+logged at debug level and never fail the scrape.
 
 | Name                                       | Description                                                                           | Type    | Labels                          |
 |--------------------------------------------|---------------------------------------------------------------------------------------|---------|---------------------------------|
@@ -71,7 +76,15 @@ The engine frequency metrics are only exposed for engines that report a maximum 
 
 ## Metric Labels
 
-* `luid`,`phys`: Physical GPU index (e.g., "0")
+* `luid`: Locally unique identifier of the GPU adapter (e.g., "0x00000000_0x0001136A"), formatted as
+  `<HighPart>_<LowPart>`. It is assigned by Windows and identifies the adapter in all metrics of this collector. Use it
+  to join metrics with `windows_gpu_info`. The LUID is not stable: it changes when the driver is updated, the device is
+  restarted or the system reboots.
+* `device_id`: PnP device instance ID of the GPU adapter (e.g., "PCI\VEN_10DE&DEV_1B81&SUBSYS_61733842&REV_A1\4&1d81e16&0&0019").
+  If the device instance can't be resolved, the PnP device ID without the instance part is used.
+* `phys`: Physical adapter index within a (linked) logical adapter (e.g., "0")
+* `bus_number`,`device_number`,`function_number`: PCI address of the GPU adapter (`windows_gpu_info` only)
+* `part`: Memory segment index (e.g., "0")
 * `eng`: GPU engine index (e.g., "0", "1", ...)
 * `engtype`: GPU engine type (e.g., "3D", "Copy", "VideoDecode", etc.)
 * `process_id`: Process ID
@@ -83,10 +96,16 @@ The engine frequency metrics are only exposed for engines that report a maximum 
 
 These are basic queries to help you get started with GPU monitoring on Windows using Prometheus.
 
-**Show GPU information for a specific physical GPU (0):**
+**Show GPU information:**
 
 ```promql
-windows_gpu_info{bus_number="8",device_id="PCI\\VEN_10DE&DEV_1B81&SUBSYS_61733842&REV_A1",function_number="0",luid="0x00000000_0x00010F8A",name="NVIDIA GeForce GTX 1070",phys="0"} 1
+windows_gpu_info{architecture="Pascal",bus_number="8",device_id="PCI\\VEN_10DE&DEV_1B81&SUBSYS_61733842&REV_A1\\4&1d81e16&0&0019",device_number="0",driver_version="32.0.15.8266",function_number="0",luid="0x00000000_0x0001136A",name="NVIDIA GeForce GTX 1070",wddm_version="3.2"} 1
+```
+
+**Add the GPU name to a metric:**
+
+```promql
+windows_gpu_adapter_memory_dedicated_bytes * on(luid) group_left(name) windows_gpu_info
 ```
 
 **Show total dedicated GPU memory (in bytes) usage on GPU 0:**
@@ -114,7 +133,9 @@ sum by (phys, process_id) (
 **Show dedicated GPU memory per process:**
 
 ```promql
-windows_gpu_adapter_memory_dedicated_bytes
+sum by (luid, process_id) (
+  windows_gpu_process_memory_dedicated_bytes
+)
 ```
 
 ## Useful Queries

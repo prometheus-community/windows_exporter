@@ -16,6 +16,7 @@
 package gdi32_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/prometheus-community/windows_exporter/internal/headers/gdi32"
@@ -27,4 +28,11 @@ func TestGetGPUDevices(t *testing.T) {
 	require.NoError(t, err, "Failed to get GPU devices")
 
 	require.NotNil(t, devices)
+
+	for _, device := range devices {
+		// Microsoft Basic Render Driver
+		if strings.HasPrefix(device.DeviceID, `PCI\VEN_1414&DEV_008C&`) {
+			require.True(t, device.IsSoftwareDevice(), "Microsoft Basic Render Driver must be a software device")
+		}
+	}
 }
