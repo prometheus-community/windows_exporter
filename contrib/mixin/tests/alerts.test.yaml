@@ -1,0 +1,175 @@
+rule_files:
+  - ../windows_rules.yaml
+  - ../windows_alerts.yaml
+evaluation_interval: 1m
+group_eval_order:
+  - windows-exporter-recording
+  - windows-exporter-alerts
+
+tests:
+  - name: Exporter and collector failures wait five minutes and recover
+    interval: 1m
+    input_series:
+      - series: 'up{job="windows_exporter", instance="host:9182"}'
+        values: '0x5 1x5'
+      - series: 'up{job="other", instance="other:9182"}'
+        values: '0x10'
+      - series: 'windows_exporter_collector_success{job="windows_exporter", instance="host:9182", collector="cpu"}'
+        values: '0x5 1x5'
+    alert_rule_test:
+      - alertname: WindowsExporterDown
+        eval_time: 4m
+        exp_alerts: []
+      - alertname: WindowsExporterDown
+        eval_time: 5m
+        exp_alerts:
+          - exp_labels: {job: windows_exporter, instance: 'host:9182', severity: critical}
+            exp_annotations:
+              summary: Windows exporter is unreachable
+              description: 'Prometheus cannot scrape Windows exporter on host:9182 (job windows_exporter).'
+      - alertname: WindowsExporterDown
+        eval_time: 6m
+        exp_alerts: []
+      - alertname: WindowsCollectorFailed
+        eval_time: 4m
+        exp_alerts: []
+      - alertname: WindowsCollectorFailed
+        eval_time: 5m
+        exp_alerts:
+          - exp_labels: {job: windows_exporter, instance: 'host:9182', collector: cpu, severity: warning}
+            exp_annotations:
+              summary: Windows collector failed
+              description: 'Collector cpu on host:9182 has failed for at least 5 minutes.'
+      - alertname: WindowsCollectorFailed
+        eval_time: 6m
+        exp_alerts: []
+
+  - name: Resource alerts use recording rules and wait fifteen minutes
+    interval: 1m
+    input_series:
+      - series: 'windows_cpu_time_total{job="windows_exporter", instance="host:9182", cluster="a", core="0", mode="idle"}'
+        values: '0+3x20 120+60x10'
+      - series: 'windows_memory_available_bytes{job="windows_exporter", instance="host:9182", cluster="a"}'
+        values: '5x20 50x10'
+      - series: 'windows_memory_physical_total_bytes{job="windows_exporter", instance="host:9182", cluster="a"}'
+        values: '100x31'
+    alert_rule_test:
+      - alertname: WindowsCPUHighUsage
+        eval_time: 15m
+        exp_alerts: []
+      - alertname: WindowsCPUHighUsage
+        eval_time: 16m
+        exp_alerts:
+          - exp_labels: {job: windows_exporter, instance: 'host:9182', cluster: a, severity: warning}
+            exp_annotations:
+              summary: Windows CPU usage is high
+              description: 'CPU usage on host:9182 has exceeded 90% for 15 minutes.'
+      - alertname: WindowsCPUHighUsage
+        eval_time: 25m
+        exp_alerts: []
+      - alertname: WindowsMemoryHighUsage
+        eval_time: 14m
+        exp_alerts: []
+      - alertname: WindowsMemoryHighUsage
+        eval_time: 15m
+        exp_alerts:
+          - exp_labels: {job: windows_exporter, instance: 'host:9182', cluster: a, severity: warning}
+            exp_annotations:
+              summary: Windows memory usage is high
+              description: 'Physical memory usage on host:9182 has exceeded 90% for 15 minutes.'
+      - alertname: WindowsMemoryHighUsage
+        eval_time: 21m
+        exp_alerts: []
+
+  - name: Disk alerts retain volume labels and fire at both severity levels
+    interval: 1m
+    input_series:
+      - series: 'windows_logical_disk_free_bytes{job="windows_exporter", instance="host:9182", volume="C:"}'
+        values: '3x15 30x5'
+      - series: 'windows_logical_disk_size_bytes{job="windows_exporter", instance="host:9182", volume="C:"}'
+        values: '100x21'
+    alert_rule_test:
+      - alertname: WindowsDiskAlmostFull
+        eval_time: 14m
+        exp_alerts: []
+      - alertname: WindowsDiskAlmostFull
+        eval_time: 15m
+        exp_alerts:
+          - exp_labels: {job: windows_exporter, instance: 'host:9182', volume: 'C:', severity: warning}
+            exp_annotations:
+              summary: Windows disk space is low
+              description: 'Volume C: on host:9182 has less than 10% free space. Windows may delay space metrics by 10–15 minutes.'
+          - exp_labels: {job: windows_exporter, instance: 'host:9182', volume: 'C:', severity: critical}
+            exp_annotations:
+              summary: Windows disk space is low
+              description: 'Volume C: on host:9182 has less than 5% free space. Windows may delay space metrics by 10–15 minutes.'
+      - alertname: WindowsDiskAlmostFull
+        eval_time: 16m
+        exp_alerts: []
+
+  - name: Healthy resources at the exact thresholds do not fire
+    interval: 1m
+    input_series:
+      - series: 'windows_cpu_time_total{job="windows_exporter", instance="host:9182", core="0", mode="idle"}'
+        values: '0+6x20'
+      - series: 'windows_memory_available_bytes{job="windows_exporter", instance="host:9182"}'
+        values: '10x20'
+      - series: 'windows_memory_physical_total_bytes{job="windows_exporter", instance="host:9182"}'
+        values: '100x20'
+      - series: 'windows_logical_disk_free_bytes{job="windows_exporter", instance="host:9182", volume="C:"}'
+        values: '10x20'
+      - series: 'windows_logical_disk_size_bytes{job="windows_exporter", instance="host:9182", volume="C:"}'
+        values: '100x20'
+    alert_rule_test:
+      - {alertname: WindowsCPUHighUsage, eval_time: 20m, exp_alerts: []}
+      - {alertname: WindowsMemoryHighUsage, eval_time: 20m, exp_alerts: []}
+      - {alertname: WindowsDiskAlmostFull, eval_time: 20m, exp_alerts: []}
+
+  - name: Prediction fires only for low and declining disk space
+    interval: 1m
+    input_series:
+      - series: 'windows_logical_disk_free_bytes{job="windows_exporter", instance="host:9182", cluster="a", volume="C:"}'
+        values: '1000-1x420'
+      - series: 'windows_logical_disk_size_bytes{job="windows_exporter", instance="host:9182", cluster="a", volume="C:"}'
+        values: '20000x420'
+      - series: 'windows_logical_disk_free_bytes{job="windows_exporter", instance="host:9182", cluster="a", volume="D:"}'
+        values: '1000x420'
+      - series: 'windows_logical_disk_size_bytes{job="windows_exporter", instance="host:9182", cluster="a", volume="D:"}'
+        values: '20000x420'
+      - series: 'windows_logical_disk_free_bytes{job="windows_exporter", instance="host:9182", cluster="a", volume="E:"}'
+        values: '500+1x420'
+      - series: 'windows_logical_disk_size_bytes{job="windows_exporter", instance="host:9182", cluster="a", volume="E:"}'
+        values: '20000x420'
+      - series: 'windows_logical_disk_free_bytes{job="windows_exporter", instance="host:9182", cluster="b", volume="C:"}'
+        values: '1000x420'
+      - series: 'windows_logical_disk_size_bytes{job="windows_exporter", instance="host:9182", cluster="b", volume="C:"}'
+        values: '20000x420'
+    alert_rule_test:
+      - alertname: WindowsDiskFillingUp
+        eval_time: 60m
+        exp_alerts: []
+      - alertname: WindowsDiskFillingUp
+        eval_time: 61m
+        exp_alerts:
+          - exp_labels: {job: windows_exporter, instance: 'host:9182', cluster: a, volume: 'C:', severity: warning}
+            exp_annotations:
+              summary: Windows disk is predicted to fill up
+              description: 'Volume C: on host:9182 is predicted to fill within 24 hours.'
+      - alertname: WindowsDiskFillingUp
+        eval_time: 7h
+        exp_alerts:
+          - exp_labels: {job: windows_exporter, instance: 'host:9182', cluster: a, volume: 'C:', severity: warning}
+            exp_annotations:
+              summary: Windows disk is predicted to fill up
+              description: 'Volume C: on host:9182 is predicted to fill within 24 hours.'
+
+  - name: Missing collector metrics do not produce resource alerts
+    interval: 1m
+    input_series:
+      - series: 'up{job="windows_exporter", instance="host:9182"}'
+        values: '1x70'
+    alert_rule_test:
+      - {alertname: WindowsCPUHighUsage, eval_time: 70m, exp_alerts: []}
+      - {alertname: WindowsMemoryHighUsage, eval_time: 70m, exp_alerts: []}
+      - {alertname: WindowsDiskAlmostFull, eval_time: 70m, exp_alerts: []}
+      - {alertname: WindowsDiskFillingUp, eval_time: 70m, exp_alerts: []}

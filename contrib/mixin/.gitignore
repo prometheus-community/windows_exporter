@@ -1,0 +1,5 @@
+/vendor/
+/windows_alerts.yaml
+/windows_rules.yaml
+/tests/*_alerts.yaml
+/tests/*_rules.yaml
