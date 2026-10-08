@@ -19,6 +19,7 @@ package pdh_test
 
 import (
 	"log/slog"
+	"sync"
 	"testing"
 	"time"
 
@@ -71,6 +72,113 @@ func TestCollector(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestCollectorConcurrentCollect(t *testing.T) {
+	t.Parallel()
+
+	for _, counterType := range []pdh.CounterType{pdh.CounterTypeRaw, pdh.CounterTypeFormatted} {
+		t.Run(string(counterType), func(t *testing.T) {
+			t.Parallel()
+
+			collector, err := pdh.NewCollector[process](slog.New(slog.DiscardHandler), counterType, "Process", pdh.InstancesAll)
+			require.NoError(t, err)
+
+			t.Cleanup(collector.Close)
+
+			const callers = 8
+
+			data := make([][]process, callers)
+			errs := make([]error, callers)
+			start := make(chan struct{})
+
+			var wg sync.WaitGroup
+
+			for i := range callers {
+				wg.Go(func() {
+					<-start
+
+					for range 4 {
+						if errs[i] = collector.Collect(&data[i]); errs[i] != nil {
+							return
+						}
+					}
+				})
+			}
+
+			close(start)
+			wg.Wait()
+
+			for i := range callers {
+				require.NoError(t, errs[i])
+				require.NotEmpty(t, data[i])
+			}
+		})
+	}
+}
+
+func TestCollectorConcurrentClose(t *testing.T) {
+	t.Parallel()
+
+	collector, err := pdh.NewCollector[process](slog.New(slog.DiscardHandler), pdh.CounterTypeRaw, "Process", pdh.InstancesAll)
+	require.NoError(t, err)
+
+	t.Cleanup(collector.Close)
+
+	const callers = 8
+
+	errs := make([]error, callers)
+	start := make(chan struct{})
+
+	var wg sync.WaitGroup
+
+	for i := range callers {
+		wg.Go(func() {
+			<-start
+
+			var data []process
+
+			errs[i] = collector.Collect(&data)
+		})
+	}
+
+	wg.Go(func() {
+		<-start
+		collector.Close()
+	})
+
+	close(start)
+	wg.Wait()
+
+	for _, err := range errs {
+		if err != nil {
+			require.ErrorIs(t, err, pdh.ErrPerformanceCounterNotInitialized)
+		}
+	}
+
+	var data []process
+
+	require.ErrorIs(t, collector.Collect(&data), pdh.ErrPerformanceCounterNotInitialized)
+	collector.Close()
+}
+
+func TestCollectorInitializationError(t *testing.T) {
+	t.Parallel()
+
+	type invalidProcess struct {
+		ThreadCount float64 `perfdata:"Thread Count"`
+		HandleCount string  `perfdata:"Handle Count"`
+	}
+
+	collector, err := pdh.NewCollector[invalidProcess](slog.New(slog.DiscardHandler), pdh.CounterTypeRaw, "Process", pdh.InstancesAll)
+	require.ErrorContains(t, err, "field HandleCount must be a float64")
+	require.NotNil(t, collector)
+
+	t.Cleanup(collector.Close)
+
+	var data []invalidProcess
+
+	require.ErrorIs(t, collector.Collect(&data), pdh.ErrPerformanceCounterNotInitialized)
 }
 
 type processorInformation struct {

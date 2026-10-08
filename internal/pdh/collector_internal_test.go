@@ -155,8 +155,7 @@ type processThreads struct {
 	ThreadCount float64 `perfdata:"Thread Count"`
 }
 
-// TestCollectRecoversPanic checks that a panic in the worker goroutine is
-// returned as an error instead of terminating the process.
+// TestCollectRecoversPanic checks that a panic while collecting is returned as an error.
 func TestCollectRecoversPanic(t *testing.T) {
 	t.Parallel()
 
@@ -177,7 +176,7 @@ func TestCollectRecoversPanic(t *testing.T) {
 	err = c.Collect(&dst)
 	require.ErrorContains(t, err, "panic while collecting performance counters of Process")
 
-	// The worker survives and serves the next request.
+	// Collection still works after the panic.
 	c.mu.Lock()
 	c.counters[0].FieldIndexValue = 1
 	c.mu.Unlock()
