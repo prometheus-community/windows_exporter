@@ -35,6 +35,11 @@ func TestCollector(t *testing.T) {
 	testutils.RequireFixtureMetric(t, metrics, hyperv.Name, "windows_hyperv_dynamic_memory_vm_physical_bytes", prometheus.Labels{"vm": "GitHubActions"})
 	testutils.RequireFixtureMetric(t, metrics, hyperv.Name, "windows_hyperv_vm_processor_count", prometheus.Labels{"vm": "GitHubActions"})
 
+	// The fixture VM is not replicated, but every VM has a primary replication relationship.
+	if metric := testutils.RequireFixtureMetric(t, metrics, hyperv.Name, "windows_hyperv_replica_vm_state", prometheus.Labels{"vm": "GitHubActions", "relationship": "primary"}); metric != nil {
+		require.InDelta(t, 0, metric.GetGauge().GetValue(), 0, "expected replication to be disabled")
+	}
+
 	// The health query reports failures as 0 instead of an error, so check the value.
 	if metric := testutils.RequireFixtureMetric(t, metrics, hyperv.Name, "windows_hyperv_wmi_health", nil); metric != nil {
 		require.InDelta(t, 1, metric.GetGauge().GetValue(), 0, "Hyper-V WMI health query failed")
