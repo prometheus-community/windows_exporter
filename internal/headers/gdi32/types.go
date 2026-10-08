@@ -96,3 +96,70 @@ type GPUDevice struct {
 	DeviceNumber              win32.UINT
 	FunctionNumber            win32.UINT
 }
+
+// D3DKMT_NODE_PERFDATA is the output of KMTQAITYPE_NODEPERFDATA.
+// https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/d3dkmthk/ns-d3dkmthk-_d3dkmt_node_perfdata
+type D3DKMT_NODE_PERFDATA struct {
+	NodeOrdinal          uint32
+	PhysicalAdapterIndex uint32
+	// Frequency is the current clock frequency of the engine in hertz.
+	Frequency uint64
+	// MaxFrequency is the maximum clock frequency of the engine in hertz, while not overclocked.
+	MaxFrequency uint64
+	// MaxFrequencyOC is the maximum clock frequency of the engine in hertz, while overclocked.
+	MaxFrequencyOC uint64
+	// Voltage is the current voltage of the engine in milli volts.
+	Voltage      win32.ULONG
+	VoltageMax   win32.ULONG
+	VoltageMaxOC win32.ULONG
+	// MaxTransitionLatency is the maximum transition latency to change the frequency in 100 nanoseconds.
+	MaxTransitionLatency uint64
+}
+
+// D3DKMT_ADAPTER_PERFDATA is the output of KMTQAITYPE_ADAPTERPERFDATA.
+// https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/d3dkmthk/ns-d3dkmthk-_d3dkmt_adapter_perfdata
+type D3DKMT_ADAPTER_PERFDATA struct {
+	PhysicalAdapterIndex uint32
+	// MemoryFrequency is the clock frequency of the memory in hertz.
+	MemoryFrequency uint64
+	// MaxMemoryFrequency is the max clock frequency of the memory in hertz, while not overclocked.
+	MaxMemoryFrequency uint64
+	// MaxMemoryFrequencyOC is the max clock frequency of the memory in hertz, while overclocked.
+	MaxMemoryFrequencyOC uint64
+	// MemoryBandwidth is the total amount of memory transferred in bytes.
+	MemoryBandwidth uint64
+	// PCIEBandwidth is the total amount of memory transferred over PCIe in bytes.
+	PCIEBandwidth uint64
+	// FanRPM is the current rpm of the main fan.
+	FanRPM win32.ULONG
+	// Power is the current power draw of the adapter in tenths of a percent (1 = 0.1%).
+	Power win32.ULONG
+	// Temperature is the main temperature sensor reading in tenths of a degree Celsius (1 = 0.1 °C).
+	Temperature win32.ULONG
+	// PowerStateOverride is 1 if the GPU is powered on, otherwise 0.
+	PowerStateOverride uint8
+}
+
+// D3DKMT_ADAPTER_PERFDATACAPS is the output of KMTQAITYPE_ADAPTERPERFDATA_CAPS.
+// https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/d3dkmthk/ns-d3dkmthk-_d3dkmt_adapter_perfdatacaps
+type D3DKMT_ADAPTER_PERFDATACAPS struct {
+	PhysicalAdapterIndex uint32
+	// MaxMemoryBandwidth is the max memory bandwidth in bytes for 1 second.
+	MaxMemoryBandwidth uint64
+	// MaxPCIEBandwidth is the max PCIe bandwidth in bytes for 1 second.
+	MaxPCIEBandwidth uint64
+	// MaxFanRPM is the max fan rpm.
+	MaxFanRPM win32.ULONG
+	// TemperatureMax is the max temperature before damage, in tenths of a degree Celsius.
+	TemperatureMax win32.ULONG
+	// TemperatureWarning is the temperature at which the GPU starts throttling, in tenths of a degree Celsius.
+	TemperatureWarning win32.ULONG
+}
+
+// D3DKMT_GPUVERSION is the output of KMTQAITYPE_GPUVERSION.
+// https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/d3dkmthk/ns-d3dkmthk-_d3dkmt_gpuversion
+type D3DKMT_GPUVERSION struct {
+	PhysicalAdapterIndex uint32
+	BiosVersion          [32]uint16
+	GpuArchitecture      [32]uint16
+}
