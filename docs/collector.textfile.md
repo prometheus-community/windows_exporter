@@ -79,9 +79,9 @@ groups:
 Exporter-down alerting (`up == 0`) remains separate; metric names, job labels and thresholds must be adapted to the deployment.
 
 ## Example use
-This Powershell script, when run in the `--collector.textfile.directories` (default `C:\Program Files\windows_exporter\textfile_inputs`), generates a valid `.prom` file that should successfully ingested by windows_exporter.
+This PowerShell script, when run in the `--collector.textfile.directories` (default `C:\Program Files\windows_exporter\textfile_inputs`), generates a valid `.prom` file that should successfully ingested by windows_exporter.
 
-```Powershell
+```PowerShell
 $alpha = 42
 $beta = @{ left=3.1415; right=2.718281828; }
 
