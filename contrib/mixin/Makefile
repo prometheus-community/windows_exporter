@@ -17,9 +17,11 @@ DASHBOARD := ../../dashboard/windows-exporter-dashboard.json
 
 .DEFAULT_GOAL := generate
 .DELETE_ON_ERROR:
-.PHONY: generate dashboard tools jsonnet-tools fmt lint test check-runbooks clean
+.PHONY: generate rules dashboard dashboards check-dashboards tools jsonnet-tools fmt lint test check-runbooks clean
 
-generate: windows_rules.yaml windows_alerts.yaml
+generate: rules dashboard
+
+rules: windows_rules.yaml windows_alerts.yaml
 
 tools: jsonnet-tools
 	go install github.com/cloudflare/pint/cmd/pint@$(PINT_VERSION)
@@ -50,10 +52,15 @@ dashboard: vendor
 	$(JSONNET) -J vendor -S dashboard.jsonnet > $(DASHBOARD).tmp
 	mv $(DASHBOARD).tmp $(DASHBOARD)
 
+dashboards: dashboard
+
+check-dashboards: dashboard
+	git diff --exit-code -- $(DASHBOARD)
+
 fmt:
 	$(JSONNETFMT) $(FMT_FLAGS) -i $(SOURCES)
 
-lint: generate tests/custom_rules.yaml tests/custom_alerts.yaml vendor
+lint: rules tests/custom_rules.yaml tests/custom_alerts.yaml vendor
 	@set -e; for file in $(SOURCES); do \
 		$(JSONNETFMT) $(FMT_FLAGS) "$$file" | diff -u "$$file" -; \
 	done
