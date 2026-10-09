@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"log/slog"
 	"maps"
+	"math"
 	"net/http"
 	"net/http/pprof"
 	"os"
@@ -127,7 +128,7 @@ func run(ctx context.Context, args []string) int {
 		).Default("normal").String()
 		memoryLimit = app.Flag(
 			"process.memory-limit",
-			"Limit memory usage in bytes. This is a soft-limit and not guaranteed. 0 means no limit. Read more at https://pkg.go.dev/runtime/debug#SetMemoryLimit .",
+			"Limit memory usage in bytes. This is a soft-limit and not guaranteed. 0 means no limit. Negative values are invalid. Read more at https://pkg.go.dev/runtime/debug#SetMemoryLimit .",
 		).Default("200000000").Int64()
 	)
 
@@ -153,7 +154,11 @@ func run(ctx context.Context, args []string) int {
 		return 1
 	}
 
-	debug.SetMemoryLimit(*memoryLimit)
+	if err := setProcessMemoryLimit(*memoryLimit); err != nil {
+		logStartupError(ctx, "Invalid process memory limit", err)
+
+		return 1
+	}
 
 	logger, err := log.New(logConfig)
 	if err != nil {
@@ -399,4 +404,19 @@ func expandEnabledCollectors(enabled string) []string {
 	expanded := strings.ReplaceAll(enabled, "[defaults]", collector.DefaultCollectors)
 
 	return slices.Compact(strings.Split(expanded, ","))
+}
+
+// setProcessMemoryLimit applies the CLI contract: zero disables the soft limit.
+func setProcessMemoryLimit(limit int64) error {
+	if limit < 0 {
+		return errors.New("process.memory-limit must be non-negative")
+	}
+
+	if limit == 0 {
+		limit = math.MaxInt64
+	}
+
+	debug.SetMemoryLimit(limit)
+
+	return nil
 }
