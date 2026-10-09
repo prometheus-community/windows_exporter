@@ -21,12 +21,13 @@ import (
 	"fmt"
 
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
+	pdhtypes "github.com/prometheus-community/windows_exporter/internal/pdh/types"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 type collectorWebServiceCache struct {
-	serviceCachePerfDataCollector *pdh.Collector[perfDataCounterServiceCache]
+	serviceCachePerfDataCollector pdhtypes.Collector[perfDataCounterServiceCache]
 	perfDataObjectServiceCache    []perfDataCounterServiceCache
 
 	serviceCacheActiveFlushedEntries *prometheus.Desc
@@ -73,8 +74,8 @@ type perfDataCounterServiceCache struct {
 	ServiceCacheFilesCached                   float64 `perfdata:"Current Files Cached"`
 	ServiceCacheFilesCachedTotal              float64 `perfdata:"Total Files Cached"`
 	ServiceCacheFilesFlushedTotal             float64 `perfdata:"Total Flushed Files"`
-	ServiceCacheURICacheFlushesTotal          float64 `perfdata:"Total Flushed URIs"`
-	ServiceCacheURICacheFlushesTotalKernel    float64 `perfdata:"Total Flushed URIs"`
+	ServiceCacheURICacheFlushesTotal          float64 `perfdata:"URI Cache Flushes"`
+	ServiceCacheURICacheFlushesTotalKernel    float64 `perfdata:"Kernel: URI Cache Flushes"`
 	ServiceCacheURIsFlushedTotalKernel        float64 `perfdata:"Kernel: Total Flushed URIs"`
 	ServiceCacheURICacheHitsTotal             float64 `perfdata:"URI Cache Hits"`
 	ServiceCacheURICacheHitsTotalKernel       float64 `perfdata:"Kernel: URI Cache Hits"`
@@ -83,7 +84,7 @@ type perfDataCounterServiceCache struct {
 	ServiceCacheURIsCached                    float64 `perfdata:"Current URIs Cached"`
 	ServiceCacheURIsCachedKernel              float64 `perfdata:"Kernel: Current URIs Cached"`
 	ServiceCacheURIsCachedTotal               float64 `perfdata:"Total URIs Cached"`
-	ServiceCacheURIsCachedTotalKernel         float64 `perfdata:"Total URIs Cached"`
+	ServiceCacheURIsCachedTotalKernel         float64 `perfdata:"Kernel: Total URIs Cached"`
 	ServiceCacheURIsFlushedTotal              float64 `perfdata:"Total Flushed URIs"`
 	ServiceCacheMetaDataCacheHits             float64 `perfdata:"Metadata Cache Hits"`
 	ServiceCacheMetaDataCacheMisses           float64 `perfdata:"Metadata Cache Misses"`
@@ -108,6 +109,12 @@ func (c *Collector) buildWebServiceCache() error {
 		return fmt.Errorf("failed to create Web Service Cache collector: %w", err)
 	}
 
+	c.buildWebServiceCacheDescriptors()
+
+	return nil
+}
+
+func (c *Collector) buildWebServiceCacheDescriptors() {
 	// Web Service Cache
 	c.serviceCacheActiveFlushedEntries = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "server_cache_active_flushed_entries"),
@@ -277,8 +284,6 @@ func (c *Collector) buildWebServiceCache() error {
 		nil,
 		nil,
 	)
-
-	return nil
 }
 
 func (c *Collector) collectWebServiceCache(ch chan<- prometheus.Metric) error {
@@ -447,7 +452,7 @@ func (c *Collector) collectWebServiceCache(ch chan<- prometheus.Metric) error {
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheMetadataCacheHitsTotal,
 			prometheus.CounterValue,
-			0, // data.ServiceCacheMetadataCacheHitsTotal,
+			data.ServiceCacheMetaDataCacheHits,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -464,19 +469,19 @@ func (c *Collector) collectWebServiceCache(ch chan<- prometheus.Metric) error {
 
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheOutputCacheActiveFlushedItems,
-			prometheus.CounterValue,
+			prometheus.GaugeValue,
 			data.ServiceCacheOutputCacheActiveFlushedItems,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheOutputCacheItems,
-			prometheus.CounterValue,
+			prometheus.GaugeValue,
 			data.ServiceCacheOutputCacheItems,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.serviceCacheOutputCacheMemoryUsage,
-			prometheus.CounterValue,
+			prometheus.GaugeValue,
 			data.ServiceCacheOutputCacheMemoryUsage,
 		)
 
