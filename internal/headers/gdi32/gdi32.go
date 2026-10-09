@@ -36,6 +36,20 @@ const (
 	KMTQAITYPE_ADAPTERREGISTRYINFO = 8
 	// KMTQAITYPE_PHYSICALADAPTERDEVICEIDS pPrivateDriverData points to a D3DKMT_QUERY_DEVICE_IDS structure that specifies the device ID(s) of the physical adapters. Supported starting with Windows 10 (WDDM 2.0).
 	KMTQAITYPE_PHYSICALADAPTERDEVICEIDS = 31
+	// KMTQAITYPE_DRIVERVERSION pPrivateDriverData points to a D3DKMT_DRIVERVERSION value that indicates the WDDM version of the display miniport driver.
+	KMTQAITYPE_DRIVERVERSION = 13
+	// KMTQAITYPE_PHYSICALADAPTERCOUNT pPrivateDriverData points to a UINT that receives the number of physical adapters in the LDA chain. Supported starting with Windows 10 (WDDM 2.0).
+	KMTQAITYPE_PHYSICALADAPTERCOUNT = 30
+	// KMTQAITYPE_KMD_DRIVER_VERSION pPrivateDriverData points to a LARGE_INTEGER that receives the kernel mode driver version. Supported starting with WDDM 2.2.
+	KMTQAITYPE_KMD_DRIVER_VERSION = 49
+	// KMTQAITYPE_NODEPERFDATA pPrivateDriverData points to a D3DKMT_NODE_PERFDATA structure. Supported starting with WDDM 2.4.
+	KMTQAITYPE_NODEPERFDATA = 61
+	// KMTQAITYPE_ADAPTERPERFDATA pPrivateDriverData points to a D3DKMT_ADAPTER_PERFDATA structure. Supported starting with WDDM 2.4.
+	KMTQAITYPE_ADAPTERPERFDATA = 62
+	// KMTQAITYPE_ADAPTERPERFDATA_CAPS pPrivateDriverData points to a D3DKMT_ADAPTER_PERFDATACAPS structure. Supported starting with WDDM 2.4.
+	KMTQAITYPE_ADAPTERPERFDATA_CAPS = 63
+	// KMTQUITYPE_GPUVERSION pPrivateDriverData points to a D3DKMT_GPUVERSION structure. Supported starting with WDDM 2.4.
+	KMTQUITYPE_GPUVERSION = 64
 )
 
 var ErrNoGPUDevices = errors.New("no GPU devices found")

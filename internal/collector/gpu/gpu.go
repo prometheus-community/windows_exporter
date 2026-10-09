@@ -41,6 +41,7 @@ var ConfigDefaults = Config{}
 
 type Collector struct {
 	config Config
+	logger *slog.Logger
 
 	gpuDeviceCache map[string]gpuDevice
 
@@ -84,11 +85,15 @@ type Collector struct {
 	gpuProcessMemoryNonLocalUsage  *prometheus.Desc
 	gpuProcessMemorySharedUsage    *prometheus.Desc
 	gpuProcessMemoryTotalCommitted *prometheus.Desc
+
+	// GPU sensors
+	sensorMetrics sensorMetrics
 }
 
 type gpuDevice struct {
 	gdi32    gdi32.GPUDevice
 	cfgmgr32 cfgmgr32.Device
+	sensors  gpuSensors
 	ID       string
 }
 
@@ -125,10 +130,12 @@ func (c *Collector) Close() error {
 func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 	var err error
 
+	c.logger = logger.With(slog.String("collector", Name))
+
 	c.gpuInfo = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, "info"),
 		"A metric with a constant '1' value labeled with gpu device information.",
-		[]string{"luid", "device_id", "name", "bus_number", "phys", "function_number"},
+		[]string{"luid", "device_id", "name", "bus_number", "phys", "function_number", "driver_version", "wddm_version", "architecture"},
 		nil,
 	)
 
@@ -222,6 +229,8 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		nil,
 	)
 
+	c.sensorMetrics = newSensorMetrics()
+
 	errs := make([]error, 0)
 
 	c.gpuEnginePerfDataCollector, err = pdh.NewCollector[gpuEnginePerfDataCounterValues](logger.With(slog.String("collector", Name)), pdh.CounterTypeRaw, "GPU Engine", pdh.InstancesAll)
@@ -297,6 +306,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		c.gpuDeviceCache[luidKey] = gpuDevice{
 			gdi32:    gpu,
 			cfgmgr32: cfgmgr32Dev,
+			sensors:  discoverSensors(c.logger.With(slog.String("luid", luidKey)), gpu),
 			ID:       deviceID,
 		}
 
@@ -319,6 +329,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 	errs := make([]error, 0)
 
 	c.collectGpuInfo(ch)
+	c.collectGpuSensorMetrics(ch)
 
 	if err := c.collectGpuEngineMetrics(ch); err != nil {
 		errs = append(errs, err)
@@ -355,6 +366,9 @@ func (c *Collector) collectGpuInfo(ch chan<- prometheus.Metric) {
 			gpu.gdi32.BusNumber.String(),
 			gpu.gdi32.DeviceNumber.String(),
 			gpu.gdi32.FunctionNumber.String(),
+			gpu.sensors.driverVersion,
+			gpu.sensors.wddmVersion,
+			gpu.sensors.architecture,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
