@@ -60,14 +60,22 @@ func WaitForOperationResult(operation Operation, timeout uint32) (string, error)
 	var resultDocument *uint16
 
 	r1, _, _ := procHcsWaitForOperationResult.Call(uintptr(operation), uintptr(timeout), uintptr(unsafe.Pointer(&resultDocument)))
-	if r1 != 0 {
-		return "", fmt.Errorf("HcsWaitForOperationResult failed: HRESULT 0x%X: %w", r1, Win32FromHResult(r1))
+
+	return consumeOperationResult(r1, resultDocument, windows.CoTaskMemFree)
+}
+
+// consumeOperationResult releases every caller-owned result document, including
+// the diagnostic documents returned by failed operations.
+func consumeOperationResult(resultCode uintptr, resultDocument *uint16, release func(unsafe.Pointer)) (string, error) {
+	if resultDocument != nil {
+		defer release(unsafe.Pointer(resultDocument))
 	}
 
-	result := windows.UTF16PtrToString(resultDocument)
-	windows.CoTaskMemFree(unsafe.Pointer(resultDocument))
+	if resultCode != 0 {
+		return "", fmt.Errorf("HcsWaitForOperationResult failed: HRESULT 0x%X: %w", resultCode, Win32FromHResult(resultCode))
+	}
 
-	return result, nil
+	return windows.UTF16PtrToString(resultDocument), nil
 }
 
 // CloseOperation closes an operation.
