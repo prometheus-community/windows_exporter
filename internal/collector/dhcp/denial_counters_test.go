@@ -18,10 +18,12 @@
 package dhcp
 
 import (
+	"errors"
 	"log/slog"
 	"reflect"
 	"testing"
 
+	"github.com/prometheus-community/windows_exporter/internal/pdh"
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/require"
@@ -38,8 +40,8 @@ func TestDenialCounterValues(t *testing.T) {
 	}
 
 	c.perfDataCollector = denialFixture{
-		"Denied due to match.":     7,
-		"Denied due to non-match.": 11,
+		"Denied due to match.":    7,
+		"Denied due to nonmatch.": 11,
 	}
 	metrics := make(chan prometheus.Metric, 100)
 	require.NoError(t, c.collectServerMetrics(metrics))
@@ -73,3 +75,36 @@ func (f denialFixture) Collect(dst *[]perfDataCounterValues) error {
 }
 
 func (f denialFixture) Close() {}
+
+func TestNativeDenialCounterNames(t *testing.T) {
+	t.Parallel()
+
+	logger := slog.New(slog.DiscardHandler)
+	// Probe a known counter first so absence of the DHCP role can be skipped.
+	probe, err := pdh.NewDynamicCollector(logger, pdh.CounterTypeRaw, "DHCP Server", nil, []string{"Acks/sec"})
+	if probe != nil {
+		t.Cleanup(probe.Close)
+	}
+
+	if errors.Is(err, pdh.NewPdhError(pdh.CstatusNoObject)) || errors.Is(err, pdh.NewPdhError(pdh.CstatusNoCounter)) {
+		t.Skip("DHCP Server performance counters are unavailable")
+	}
+
+	require.NoError(t, err)
+
+	names := make([]string, 0, 2)
+
+	for _, fieldName := range []string{"DeniedDueToMatch", "DeniedDueToNonMatch"} {
+		field, ok := reflect.TypeFor[perfDataCounterValues]().FieldByName(fieldName)
+		require.True(t, ok)
+
+		names = append(names, field.Tag.Get("perfdata"))
+	}
+
+	native, err := pdh.NewDynamicCollector(logger, pdh.CounterTypeRaw, "DHCP Server", nil, names)
+	if native != nil {
+		t.Cleanup(native.Close)
+	}
+
+	require.NoError(t, err, "the production denial counter names must exist on the native provider")
+}
