@@ -164,7 +164,7 @@ func (c *Collector[T]) Collect(dst *[]T) error {
 
 		for _, perfInstance := range perfObject.Instances {
 			instanceName := perfInstance.Name
-			if strings.HasSuffix(instanceName, "_Total") {
+			if pdh.IsTotalInstance(c.object, instanceName) {
 				continue
 			}
 

@@ -217,7 +217,7 @@ func newCollector[T any](logger *slog.Logger, resultType CounterType, object str
 		resultType:            resultType,
 		counters:              make([]Counter, 0, len(fields)),
 		handle:                handle,
-		totalCounterRequested: slices.Contains(instances, InstanceTotal),
+		totalCounterRequested: slices.ContainsFunc(instances, func(instance string) bool { return IsTotalInstance(object, instance) }),
 		mu:                    sync.RWMutex{},
 		logger:                logger,
 		rows:                  rows,
@@ -597,7 +597,7 @@ func (r *rowSet[T]) row(counter *Counter, szName *uint16, status uint32) (int, b
 		return 0, false
 	}
 
-	if strings.HasSuffix(instanceName, InstanceTotal) && !r.c.totalCounterRequested {
+	if IsTotalInstance(r.c.object, instanceName) && !r.c.totalCounterRequested {
 		return 0, false
 	}
 
