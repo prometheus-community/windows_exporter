@@ -1,7 +1,6 @@
 name: CI
 
-# Trigger on pull requests and pushes to master branch where Go-related files
-# have been changed.
+# Windows tests are gated on Go and workflow changes for pull requests and branch pushes.
 on:
   push:
     branches:
@@ -21,6 +20,49 @@ on:
 permissions: {}
 
 jobs:
+  detect-changes:
+    name: Detect Windows test changes
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    outputs:
+      changed: ${{ steps.detect.outputs.changed }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: 'false'
+          fetch-depth: '0'
+
+      - name: Detect changes
+        id: detect
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          # Manual, tag, release, and new-branch runs have no previous revision to compare.
+          if [[ "$EVENT_NAME" != "pull_request" && "$EVENT_NAME" != "push" ]] ||
+            [[ "$GITHUB_REF" == refs/tags/* || -z "$BASE_SHA" || "$BASE_SHA" =~ ^0+$ ]]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            BASE_SHA=$(git merge-base "$BASE_SHA" "$HEAD_SHA")
+          elif ! git cat-file -e "$BASE_SHA^{commit}"; then
+            # A force push may remove the previous commit from the fetched history.
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          changed_files=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" -- '*.go' '.github/workflows/ci.yml')
+          if [[ -n "$changed_files" ]]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
   build:
     name: Build Windows binaries
     runs-on: ubuntu-24.04
@@ -221,9 +263,11 @@ jobs:
   docker:
     name: Build docker images
     runs-on: ubuntu-24.04
+    if: ${{ !cancelled() && needs.detect-changes.result == 'success' && needs.package.result == 'success' && (needs.windows-test.result == 'success' || needs.windows-test.result == 'skipped') }}
     # Images are pushed on branch and tag events, so gate them on the same
     # validation as the release binaries in the publish job.
     needs:
+      - detect-changes
       - package
       - windows-test
     permissions:
@@ -322,6 +366,8 @@ jobs:
 
   windows-test:
     name: Windows tests (${{ matrix.os }})
+    needs: detect-changes
+    if: ${{ needs.detect-changes.outputs.changed == 'true' }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 25
     strategy:
@@ -1573,6 +1619,7 @@ jobs:
   fail:
     if: ${{ cancelled() || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'failure') }}
     needs:
+      - detect-changes
       - build
       - package
       - docker
