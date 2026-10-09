@@ -7,7 +7,8 @@ source of the sample dashboard. The source uses Jsonnet and exposes the standard
 ## Generate rules
 
 Install the pinned Jsonnet, [jsonnet-bundler](https://github.com/jsonnet-bundler/jsonnet-bundler)
-and [pint](https://github.com/cloudflare/pint) tools:
+and [pint](https://github.com/cloudflare/pint) tools, plus
+[dashboard-linter](https://github.com/grafana/dashboard-linter) (Linux/WSL):
 
 ```sh
 cd contrib/mixin
@@ -15,6 +16,12 @@ make tools
 export PATH="$(go env GOPATH)/bin:$PATH"
 make rules
 ```
+
+The dashboard linter is installed from a pinned release and verified against its
+published SHA-256 checksum. On other platforms, install the matching release
+binary manually and use `make jsonnet-tools` to install the Jsonnet tools.
+Install pint with `go install github.com/cloudflare/pint/cmd/pint@<PINT_VERSION>`,
+using the version pinned in the Makefile.
 
 Only the dashboard depends on Jsonnet libraries, so `jb install` is not required
 to generate rules. Generated rule files are ignored by Git:
@@ -257,8 +264,9 @@ make test
 ```
 
 This checks Jsonnet formatting, checks that the committed dashboard is up to
-date, validates generated rules with `promtool`, runs
-`pint --offline lint`, and evaluates the rules against synthetic time series.
+date, runs `dashboard-linter lint --strict`, validates generated rules with
+`promtool`, runs `pint --offline lint`, and evaluates the rules against synthetic
+time series.
 Tests cover all 25 recordings, alert timing and recovery, threshold
 boundaries, counter resets, zero denominators, disk forecasts, target-label
 preservation, and custom selectors/thresholds with Active Directory and clock
@@ -276,6 +284,13 @@ The dedicated `Mixin` workflow runs on changes to `contrib/mixin/**`, the
 committed dashboard JSON or its own workflow file, and can also be started
 manually. It caches pinned tool binaries and runs the same `make test` checks
 used locally.
+
+Run `make lint-dashboards` to lint just the committed dashboard. Override
+`DASHBOARD_LINTER` to use a binary at a custom path. `.dashboard-lint.yaml`
+documents exceptions for the sample dashboard's single-host selection, fleet
+queries, editable state, and existing panels without descriptions or numeric
+units. Other findings fail validation, including warnings. Remove panel
+exceptions when adding the missing descriptions.
 
 `.pint.hcl` requires a non-empty severity label, summary/description annotations,
 and an HTTP(S) runbook URL on alerts, in addition to pint's built-in checks.

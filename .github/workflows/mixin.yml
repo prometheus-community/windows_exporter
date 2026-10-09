@@ -25,7 +25,7 @@ concurrency:
 
 jobs:
   rules:
-    name: Validate Prometheus rules
+    name: Validate mixin rules and dashboard
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
@@ -56,6 +56,6 @@ jobs:
       - name: Build dashboard and check generated changes
         run: make check-dashboards
 
-      - name: Lint and test rules
+      - name: Lint dashboard and test rules
         run: |
           make test PROMTOOL="docker run --rm --entrypoint promtool -v \"$PWD:/mixin:ro\" -w /mixin prom/prometheus:v3.15.0"

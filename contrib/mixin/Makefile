@@ -3,6 +3,7 @@ JSONNETFMT ?= jsonnetfmt
 JB ?= jb
 PROMTOOL ?= promtool
 PINT ?= pint
+DASHBOARD_LINTER ?= dashboard-linter
 PYTHON ?= python3
 
 # renovate: go=github.com/google/go-jsonnet
@@ -11,20 +12,36 @@ JSONNET_VERSION := v0.22.0
 JB_VERSION := v0.6.0
 # renovate: go=github.com/cloudflare/pint
 PINT_VERSION := v0.89.2
+# renovate: github-releases=grafana/dashboard-linter
+DASHBOARD_LINTER_VERSION := v0.3.0
 SOURCES := $(wildcard *.libsonnet *.jsonnet lib/*.libsonnet rules/*.libsonnet alerts/*.libsonnet dashboards/*.libsonnet tests/*.libsonnet tests/*.jsonnet)
 FMT_FLAGS := -n 2 --max-blank-lines 2 --string-style s --comment-style s
 DASHBOARD := ../../dashboard/windows-exporter-dashboard.json
 
 .DEFAULT_GOAL := generate
 .DELETE_ON_ERROR:
-.PHONY: generate rules dashboard dashboards check-dashboards tools jsonnet-tools fmt lint test check-runbooks clean
+.PHONY: generate rules dashboard dashboards check-dashboards lint-dashboards tools jsonnet-tools dashboard-linter-tools fmt lint test check-runbooks clean
 
 generate: rules dashboard
 
 rules: windows_rules.yaml windows_alerts.yaml
 
-tools: jsonnet-tools
+tools: jsonnet-tools dashboard-linter-tools
 	go install github.com/cloudflare/pint/cmd/pint@$(PINT_VERSION)
+
+# Install the Linux release binary; upstream's replace directive prevents go install.
+dashboard-linter-tools:
+	@set -eu; \
+	tmp=$$(mktemp -d); \
+	trap 'rm -rf "$$tmp"' EXIT; \
+	archive="dashboard-linter_$(patsubst v%,%,$(DASHBOARD_LINTER_VERSION))_linux_$$(go env GOARCH).tar.gz"; \
+	url="https://github.com/grafana/dashboard-linter/releases/download/$(DASHBOARD_LINTER_VERSION)"; \
+	curl -fsSL "$$url/$$archive" -o "$$tmp/$$archive"; \
+	curl -fsSL "$$url/checksums.txt" -o "$$tmp/checksums.txt"; \
+	(cd "$$tmp" && grep "  $$archive\$$" checksums.txt | sha256sum --check --strict -); \
+	tar -xzf "$$tmp/$$archive" -C "$$tmp" dashboard-linter; \
+	mkdir -p "$$(go env GOPATH)/bin"; \
+	install -m 0755 "$$tmp/dashboard-linter" "$$(go env GOPATH)/bin/dashboard-linter"
 
 jsonnet-tools:
 	go install github.com/google/go-jsonnet/cmd/jsonnet@$(JSONNET_VERSION)
@@ -57,10 +74,13 @@ dashboards: dashboard
 check-dashboards: dashboard
 	git diff --exit-code -- $(DASHBOARD)
 
+lint-dashboards:
+	$(DASHBOARD_LINTER) lint --strict --config .dashboard-lint.yaml $(DASHBOARD)
+
 fmt:
 	$(JSONNETFMT) $(FMT_FLAGS) -i $(SOURCES)
 
-lint: rules tests/custom_rules.yaml tests/custom_alerts.yaml vendor
+lint: rules tests/custom_rules.yaml tests/custom_alerts.yaml vendor lint-dashboards
 	@set -e; for file in $(SOURCES); do \
 		$(JSONNETFMT) $(FMT_FLAGS) "$$file" | diff -u "$$file" -; \
 	done
