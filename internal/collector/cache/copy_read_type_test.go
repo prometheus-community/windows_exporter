@@ -91,3 +91,8 @@ func (c *copyReadTestCollector) Describe(_ chan<- *prometheus.Desc) {}
 func (c *copyReadTestCollector) Collect(ch chan<- prometheus.Metric) {
 	c.err = c.collector.Collect(ch, 0)
 }
+
+func TestCopyReadCollectorCloseBeforeInitialization(t *testing.T) {
+	t.Parallel()
+	require.NoError(t, New(nil).Close())
+}
