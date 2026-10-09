@@ -774,13 +774,25 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
 
+          # Registry connections can be reset while downloading image layers.
+          $PSNativeCommandUseErrorActionPreference = $false
           $crictl = Join-Path $env:ProgramFiles "containerd\crictl.exe"
-          & $crictl `
-              --runtime-endpoint $env:CRI_ENDPOINT `
-              pull mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v1.0.0
+          $maxAttempts = 3
+          for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+              & $crictl `
+                  --runtime-endpoint $env:CRI_ENDPOINT `
+                  pull mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v1.0.0
 
-          if ($LASTEXITCODE -ne 0) {
-              throw "Failed to pull HostProcess base image"
+              if ($LASTEXITCODE -eq 0) {
+                  break
+              }
+              if ($attempt -eq $maxAttempts) {
+                  throw "Failed to pull HostProcess base image after $maxAttempts attempts"
+              }
+
+              $delay = 5 * $attempt
+              Write-Warning "Failed to pull HostProcess base image (attempt $attempt/$maxAttempts); retrying in $delay seconds"
+              Start-Sleep -Seconds $delay
           }
 
       - name: Pull Nano Server image
@@ -790,13 +802,25 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
 
+          # Registry connections can be reset while downloading image layers.
+          $PSNativeCommandUseErrorActionPreference = $false
           $crictl = Join-Path $env:ProgramFiles "containerd\crictl.exe"
-          & $crictl `
-              --runtime-endpoint $env:CRI_ENDPOINT `
-              pull $env:NANOSERVER_IMAGE
+          $maxAttempts = 3
+          for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+              & $crictl `
+                  --runtime-endpoint $env:CRI_ENDPOINT `
+                  pull $env:NANOSERVER_IMAGE
 
-          if ($LASTEXITCODE -ne 0) {
-              throw "Failed to pull Nano Server image $env:NANOSERVER_IMAGE"
+              if ($LASTEXITCODE -eq 0) {
+                  break
+              }
+              if ($attempt -eq $maxAttempts) {
+                  throw "Failed to pull Nano Server image $env:NANOSERVER_IMAGE after $maxAttempts attempts"
+              }
+
+              $delay = 5 * $attempt
+              Write-Warning "Failed to pull Nano Server image $env:NANOSERVER_IMAGE (attempt $attempt/$maxAttempts); retrying in $delay seconds"
+              Start-Sleep -Seconds $delay
           }
 
       - name: Setup container network
