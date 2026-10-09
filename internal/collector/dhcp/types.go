@@ -23,7 +23,7 @@ type perfDataCounterValues struct {
 	ConflictCheckQueueLength                         float64 `perfdata:"Conflict Check Queue Length"`
 	DeclinesTotal                                    float64 `perfdata:"Declines/sec"`
 	DeniedDueToMatch                                 float64 `perfdata:"Denied due to match."`
-	DeniedDueToNonMatch                              float64 `perfdata:"Denied due to match."`
+	DeniedDueToNonMatch                              float64 `perfdata:"Denied due to non-match."`
 	DiscoversTotal                                   float64 `perfdata:"Discovers/sec"`
 	DuplicatesDroppedTotal                           float64 `perfdata:"Duplicates Dropped/sec"`
 	FailoverBndAckReceivedTotal                      float64 `perfdata:"Failover: BndAck received/sec."`
