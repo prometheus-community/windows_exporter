@@ -184,23 +184,38 @@ type wmiPrintJob struct {
 	Status string `mi:"Status"`
 }
 
+// minQueryTimeout keeps the job query bounded once the scrape budget is spent.
+// MI counts timeouts in whole milliseconds, and a zero timeout means no timeout at all.
+const minQueryTimeout = time.Millisecond
+
 func (c *Collector) Collect(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) error {
 	var errs []error
 
-	if err := c.collectPrinterStatus(ch); err != nil {
+	deadline := time.Now().Add(maxScrapeDuration)
+
+	// Win32_Printer calls DeviceCapabilities for every printer, whichever properties are selected.
+	// For an IPP printer that is offline, this blocks until the network requests time out,
+	// which can take close to a minute. Bound the query by the scrape timeout, so that a hung call
+	// fails with the native MI timeout instead of blocking the collector for later scrapes.
+	if err := c.collectPrinterStatus(ch, maxScrapeDuration); err != nil {
 		errs = append(errs, fmt.Errorf("failed to collect printer status metrics: %w", err))
 	}
 
-	if err := c.collectPrinterJobStatus(ch, maxScrapeDuration); err != nil {
+	jobQueryTimeout := maxScrapeDuration
+	if maxScrapeDuration > 0 {
+		jobQueryTimeout = max(time.Until(deadline), minQueryTimeout)
+	}
+
+	if err := c.collectPrinterJobStatus(ch, jobQueryTimeout); err != nil {
 		errs = append(errs, fmt.Errorf("failed to collect printer job status metrics: %w", err))
 	}
 
 	return errors.Join(errs...)
 }
 
-func (c *Collector) collectPrinterStatus(ch chan<- prometheus.Metric) error {
+func (c *Collector) collectPrinterStatus(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) error {
 	var printers []wmiPrinter
-	if err := c.miSession.Query(&printers, mi.NamespaceRootCIMv2, c.miQueryPrinter, 0); err != nil {
+	if err := c.miSession.Query(&printers, mi.NamespaceRootCIMv2, c.miQueryPrinter, maxScrapeDuration); err != nil {
 		return fmt.Errorf("WMI query failed: %w", err)
 	}
 

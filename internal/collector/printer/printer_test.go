@@ -18,12 +18,17 @@
 package printer_test
 
 import (
+	"log/slog"
 	"testing"
+	"time"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/collector/printer"
+	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/utils/testutils"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func BenchmarkCollector(b *testing.B) {
@@ -38,4 +43,30 @@ func BenchmarkCollector(b *testing.B) {
 func TestCollector(t *testing.T) {
 	metrics := testutils.TestCollector(t, printer.New, nil)
 	testutils.RequireFixtureMetric(t, metrics, printer.Name, "windows_printer_job_count", prometheus.Labels{"printer": "CIPrinter"})
+}
+
+// TestCollectorScrapeTimeout checks that the Win32_Printer query is bounded by the scrape timeout.
+// Win32_Printer can block for close to a minute on an offline IPP printer; without a timeout,
+// that call keeps the collector busy across scrapes.
+func TestCollectorScrapeTimeout(t *testing.T) {
+	miApp, err := mi.ApplicationInitialize()
+	require.NoError(t, err)
+	t.Cleanup(func() { assert.NoError(t, miApp.Close()) })
+
+	miSession, err := miApp.NewSession(nil)
+	require.NoError(t, err)
+	t.Cleanup(func() { assert.NoError(t, miSession.Close()) })
+
+	c := printer.New(nil)
+
+	t.Cleanup(func() { assert.NoError(t, c.Close()) })
+
+	require.NoError(t, c.Build(slog.New(slog.DiscardHandler), miSession))
+
+	ch := make(chan prometheus.Metric, 1000)
+
+	// 1ms is the smallest timeout MI enforces, and well below the time Win32_Printer needs.
+	err = c.Collect(ch, time.Millisecond)
+	require.ErrorIs(t, err, mi.MI_RESULT_INVALID_OPERATION_TIMEOUT)
+	require.ErrorContains(t, err, "failed to collect printer status metrics")
 }
