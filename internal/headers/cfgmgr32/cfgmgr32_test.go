@@ -18,6 +18,7 @@
 package cfgmgr32_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/prometheus-community/windows_exporter/internal/headers/cfgmgr32"
@@ -35,7 +36,10 @@ func TestGetDevicesInstanceIDs(t *testing.T) {
 
 	for _, gpu := range gpus {
 		// Only test physical render adapters, which are enumerated on the PCI bus.
+		// Microsoft adapters (VEN_1414), like the Microsoft Basic Render Driver, are virtual
+		// and not always flagged as software device.
 		if gpu.IsSoftwareDevice() ||
+			strings.HasPrefix(gpu.DeviceID, `PCI\VEN_1414&`) ||
 			gpu.AdapterType&gdi32.D3DKMT_ADAPTERTYPE_RENDER_SUPPORTED == 0 ||
 			gpu.AdapterType&gdi32.D3DKMT_ADAPTERTYPE_PARAVIRTUALIZED != 0 {
 			continue

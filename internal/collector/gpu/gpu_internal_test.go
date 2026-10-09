@@ -31,8 +31,8 @@ import (
 // Device IDs of the test adapters. No real device instance matches them,
 // so the hardware adapter keeps its PnP device ID as ID.
 const (
-	testHardwareDeviceID = `PCI\VEN_FFFF&DEV_FFFF&SUBSYS_00000000&REV_00`
-	testSoftwareDeviceID = `PCI\VEN_1414&DEV_008C&SUBSYS_00000000&REV_00`
+	testHardwareDeviceID    = `PCI\VEN_FFFF&DEV_FFFF&SUBSYS_00000000&REV_00`
+	testBasicRenderDeviceID = `PCI\VEN_1414&DEV_008C&SUBSYS_00000000&REV_00`
 )
 
 //nolint:gochecknoglobals
@@ -44,9 +44,18 @@ var (
 		AdapterType:   gdi32.D3DKMT_ADAPTERTYPE_RENDER_SUPPORTED | gdi32.D3DKMT_ADAPTERTYPE_DISPLAY_SUPPORTED,
 	}
 	testSoftwareDevice = gdi32.GPUDevice{
-		LUID:        windows.LUID{LowPart: 0x10},
-		DeviceID:    testSoftwareDeviceID,
-		AdapterType: gdi32.D3DKMT_ADAPTERTYPE_RENDER_SUPPORTED | gdi32.D3DKMT_ADAPTERTYPE_SOFTWARE_DEVICE,
+		AdapterString: "Test Software Adapter",
+		LUID:          windows.LUID{LowPart: 0x10},
+		DeviceID:      `PCI\VEN_FFFF&DEV_0001&SUBSYS_00000000&REV_00`,
+		AdapterType:   gdi32.D3DKMT_ADAPTERTYPE_RENDER_SUPPORTED | gdi32.D3DKMT_ADAPTERTYPE_SOFTWARE_DEVICE,
+	}
+	// The Microsoft Basic Render Driver is not flagged as software device on every system,
+	// e.g. Windows Server 2022.
+	testBasicRenderDevice = gdi32.GPUDevice{
+		AdapterString: "Microsoft Basic Render Driver",
+		LUID:          windows.LUID{LowPart: 0x30},
+		DeviceID:      testBasicRenderDeviceID,
+		AdapterType:   gdi32.D3DKMT_ADAPTERTYPE_RENDER_SUPPORTED,
 	}
 )
 
@@ -120,7 +129,7 @@ func TestGetGPUDevice(t *testing.T) {
 		t.Parallel()
 
 		c := newTestCollector(map[string]gpuDevice{"stale": {ID: "stale"}}, expired, func() ([]gdi32.GPUDevice, error) {
-			return []gdi32.GPUDevice{testHardwareDevice, testSoftwareDevice}, nil
+			return []gdi32.GPUDevice{testHardwareDevice, testSoftwareDevice, testBasicRenderDevice}, nil
 		})
 
 		device, ok := c.getGPUDevice("0x00000000_0x00000020")
@@ -130,11 +139,13 @@ func TestGetGPUDevice(t *testing.T) {
 		require.True(t, c.gpuDeviceCacheLastRefresh.After(expired))
 		require.NotContains(t, c.gpuDeviceCache, "stale")
 
-		// The software device is cached, but not exposed.
-		require.Contains(t, c.gpuDeviceCache, "0x00000000_0x00000010")
+		// Software devices are cached, but not exposed.
+		for _, luid := range []string{"0x00000000_0x00000010", "0x00000000_0x00000030"} {
+			require.Contains(t, c.gpuDeviceCache, luid)
 
-		_, ok = c.getGPUDevice("0x00000000_0x00000010")
-		require.False(t, ok)
+			_, ok = c.getGPUDevice(luid)
+			require.False(t, ok, luid)
+		}
 	})
 
 	t.Run("partial discovery failure", func(t *testing.T) {

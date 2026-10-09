@@ -16,7 +16,6 @@
 package gdi32_test
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/prometheus-community/windows_exporter/internal/headers/gdi32"
@@ -29,10 +28,10 @@ func TestGetGPUDevices(t *testing.T) {
 
 	require.NotNil(t, devices)
 
+	// The adapter type flags differ between systems, e.g. the Microsoft Basic Render Driver
+	// is not flagged as software device on Windows Server 2022. Log them for diagnostics.
 	for _, device := range devices {
-		// Microsoft Basic Render Driver
-		if strings.HasPrefix(device.DeviceID, `PCI\VEN_1414&DEV_008C&`) {
-			require.True(t, device.IsSoftwareDevice(), "Microsoft Basic Render Driver must be a software device")
-		}
+		t.Logf("adapter %q: device ID %s, adapter type 0b%b, software device %t",
+			device.AdapterString, device.DeviceID, uint32(device.AdapterType), device.IsSoftwareDevice())
 	}
 }

@@ -20,7 +20,17 @@ package gpu
 import (
 	"fmt"
 	"strings"
+
+	"github.com/prometheus-community/windows_exporter/internal/headers/gdi32"
 )
+
+// isBasicRenderDriver reports whether the adapter is the Microsoft Basic Render Driver.
+// https://devicehunt.com/view/type/pci/vendor/1414/device/008C
+// The D3DKMT_ADAPTERTYPE SoftwareDevice flag is not set for it on every system,
+// e.g. Windows Server 2022, so the device ID is checked as well.
+func isBasicRenderDriver(device gdi32.GPUDevice) bool {
+	return strings.HasPrefix(device.DeviceID, `PCI\VEN_1414&DEV_008C&`)
+}
 
 type Instance struct {
 	Pid     string

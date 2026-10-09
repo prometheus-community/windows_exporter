@@ -310,7 +310,7 @@ func (c *Collector) refreshGPUDevices() {
 		luidKey := fmt.Sprintf("0x%08X_0x%08X", gpu.LUID.HighPart, gpu.LUID.LowPart)
 
 		// Skip software devices like the Microsoft Basic Render Driver.
-		if gpu.AdapterString == "" || gpu.IsSoftwareDevice() {
+		if gpu.AdapterString == "" || gpu.IsSoftwareDevice() || isBasicRenderDriver(gpu) {
 			gpuDeviceCache[luidKey] = gpuDevice{gdi32: gpu, ID: gpu.DeviceID, skip: true}
 
 			c.logger.Debug("Skipping GPU device",
