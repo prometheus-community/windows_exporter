@@ -20,17 +20,16 @@ Default value: `C:\Program Files\windows_exporter\textfile_inputs`
 Required: No
 
 > **Note:**
-> - If there are duplicated filenames among the directories, only the first one found will be read. For any other files with the same name, the `windows_textfile_scrape_error` metric will be set to 1 and a error message will be logged.
+> - If there are duplicated filenames among the directories, only the first one found will be read. For any other files with the same name, the `windows_exporter_collector_success{collector="textfile"}` metric will be 0 and an error message will be logged.
 > - Only files with the extension `.prom` are read. The `.prom` file must end with an empty line feed to work properly.
 
 
 
 Metrics will primarily come from the files on disk. The below listed metrics
-are collected to give information about the reading of the metrics themselves.
+are collected to give information about the reading of the metrics themselves. Errors are reported through the exporter metric `windows_exporter_collector_success{collector="textfile"}`: 0 indicates failure and 1 indicates success.
 
 Name | Description | Type | Labels
 -----|-------------|------|-------
-`windows_textfile_scrape_error` | 1 if there was an error opening or reading a file, 0 otherwise | gauge | None
 `windows_textfile_mtime_seconds` | Unix epoch-formatted mtime (modified time) of textfiles successfully read | gauge | file
 
 ### Example metric
@@ -45,7 +44,7 @@ example_collection_timestamp_seconds 1789891200
 If collection fails before publication, the previous value remains visible and becomes stale instead of falsely reporting a fresh success.
 
 ## Useful queries
-Use `time() - example_collection_timestamp_seconds` to measure the age of the last successful collection. `time() - windows_textfile_mtime_seconds` measures the age of each successfully read file, but should only be used for files that are expected to be rewritten; intentionally static files would appear stale by design. `windows_textfile_scrape_error` detects files that cannot be opened or parsed, not successfully parsed files whose producer stopped updating them.
+Use `time() - example_collection_timestamp_seconds` to measure the age of the last successful collection. `time() - windows_textfile_mtime_seconds` measures the age of each successfully read file, but should only be used for files that are expected to be rewritten; intentionally static files would appear stale by design. `windows_exporter_collector_success{collector="textfile"} == 0` detects errors reading or publishing textfile metrics, not successfully parsed files whose producer stopped updating them.
 
 ## Alerting examples
 Add one alerting-rule group:
@@ -55,12 +54,12 @@ groups:
   - name: windows-textfile-freshness
     rules:
       - alert: WindowsTextfileScrapeError
-        expr: windows_textfile_scrape_error == 1
+        expr: windows_exporter_collector_success{collector="textfile"} == 0
         for: 5m
         labels:
           severity: warning
         annotations:
-          description: A textfile cannot be opened or parsed.
+          description: The textfile collector failed to read or publish metrics.
       - alert: WindowsTextfileCollectionStale
         expr: time() - example_collection_timestamp_seconds > 300
         for: 2m
