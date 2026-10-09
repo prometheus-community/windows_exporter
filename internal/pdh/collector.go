@@ -483,6 +483,13 @@ func (c *Collector[T]) collect(dst *[]T, state *collectState) (err error) {
 	return nil
 }
 
+// pdhBufferSlack is extra space allocated beyond the buffer size reported by PDH.
+// On Windows Server 2012 R2, PdhGetRawCounterArrayW reports the size of the item array of a single-instance
+// object (e.g. System) without the terminator of the empty instance name, and writes that terminator right after
+// the array: 48 bytes reported, 2 bytes written past them. Without the slack, the write corrupts the neighboring
+// heap object and SzName points into it, which the GC reports as "found pointer to free object".
+const pdhBufferSlack = 8
+
 // getCounterArray reads the counter array of instance into buf and returns the number of items.
 // ok is false if the counter has no data in this sample.
 func (c *Collector[T]) getCounterArray(instance pdhCounterHandle, buf *[]byte) (uint32, bool, error) {
@@ -515,7 +522,7 @@ func (c *Collector[T]) getCounterArray(instance pdhCounterHandle, buf *[]byte) (
 			return 0, false, fmt.Errorf("%s reports buffer too small (%d), but buffer is large enough (%d): %w", name, uint32(len(*buf)), bytesNeeded, NewPdhError(ret))
 		}
 
-		*buf = make([]byte, bytesNeeded)
+		*buf = make([]byte, bytesNeeded+pdhBufferSlack)
 	}
 }
 
