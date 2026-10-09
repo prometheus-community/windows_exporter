@@ -18,6 +18,7 @@
 package cpu_info
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -38,11 +39,14 @@ type Config struct{}
 //nolint:gochecknoglobals
 var ConfigDefaults = Config{}
 
-// A Collector is a Prometheus Collector for a few WMI metrics in Win32_Processor.
+// A Collector publishes Win32_Processor-compatible CPU information.
 type Collector struct {
-	config    Config
-	miSession *mi.Session
-	miQuery   mi.Query
+	config         Config
+	miSession      *mi.Session
+	miQuery        mi.Query
+	nativeBaseline []miProcessor
+	nativeRead     func() ([]miProcessor, error)
+	wmiRead        func(time.Duration) ([]miProcessor, error)
 
 	cpuInfo                   *prometheus.Desc
 	cpuCoreCount              *prometheus.Desc
@@ -77,7 +81,7 @@ func (c *Collector) Close() error {
 	return nil
 }
 
-func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
+func (c *Collector) buildDescriptors() {
 	c.cpuInfo = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, "", Name),
 		"Labelled CPU information as provided by Win32_Processor",
@@ -138,6 +142,11 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 		},
 		nil,
 	)
+}
+
+func (c *Collector) Build(logger *slog.Logger, miSession *mi.Session) error {
+	c.nativeBaseline = nil
+	c.buildDescriptors()
 
 	if miSession == nil {
 		return errors.New("miSession is nil")
@@ -154,6 +163,16 @@ func (c *Collector) Build(_ *slog.Logger, miSession *mi.Session) error {
 	var dst []miProcessor
 	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, c.miQuery, 0); err != nil {
 		return fmt.Errorf("WMI query failed: %w", err)
+	}
+
+	c.wmiRead = c.readWMI
+	c.nativeRead = readNativeProcessors
+
+	native, nativeErr := c.nativeRead()
+	if nativeErr == nil && compatibleProcessors(native, dst) {
+		c.nativeBaseline = dst
+	} else if logger != nil {
+		logger.Debug("cpu_info retained WMI compatibility path", slog.Any("err", nativeErr))
 	}
 
 	return nil
@@ -178,9 +197,9 @@ type miProcessor struct {
 // Collect sends the metric values for each metric
 // to the provided prometheus Metric channel.
 func (c *Collector) Collect(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) error {
-	var dst []miProcessor
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, c.miQuery, maxScrapeDuration); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
+	dst, err := c.readProcessors(maxScrapeDuration)
+	if err != nil {
+		return err
 	}
 
 	// Some CPUs end up exposing trailing spaces for certain strings, so clean them up
@@ -240,4 +259,35 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, maxScrapeDuration time.
 	}
 
 	return nil
+}
+
+func (c *Collector) readWMI(maxScrapeDuration time.Duration) ([]miProcessor, error) {
+	var dst []miProcessor
+	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, c.miQuery, maxScrapeDuration); err != nil {
+		return nil, fmt.Errorf("WMI query failed: %w", err)
+	}
+
+	return dst, nil
+}
+
+func (c *Collector) readProcessors(maxScrapeDuration time.Duration) ([]miProcessor, error) {
+	started := time.Now()
+
+	if len(c.nativeBaseline) != 0 {
+		native, err := c.nativeRead()
+		if err == nil && compatibleProcessors(native, c.nativeBaseline) {
+			return native, nil
+		}
+	}
+
+	if maxScrapeDuration > 0 {
+		remaining := maxScrapeDuration - time.Since(started)
+		if remaining <= 0 {
+			return nil, context.DeadlineExceeded
+		}
+
+		maxScrapeDuration = remaining
+	}
+
+	return c.wmiRead(maxScrapeDuration)
 }

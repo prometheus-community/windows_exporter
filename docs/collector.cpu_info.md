@@ -5,10 +5,28 @@ The cpu_info collector exposes metrics detailing a per-socket breakdown of the P
 |||
 -|-
 Metric name prefix  | `cpu_info`
-Data source         | wmi
+Data source         | Win32 and SMBIOS, with WMI compatibility fallback
 Classes             | [`Win32_Processor`](https://docs.microsoft.com/en-us/windows/win32/cimwin32prov/win32-processor)
 Enabled by default? | No
 
+
+On 64-bit Windows with one processor package and one populated SMBIOS processor
+record, the collector can use native APIs for scrapes. At startup it queries
+`Win32_Processor` and verifies every published value and label against the native
+candidate before selecting that path. Startup therefore still requires WMI.
+Hosts with multiple processor packages, incomplete firmware, or a comparison
+mismatch continue using WMI for the entire host. A native API failure or a changed
+native value during a later scrape also uses the complete WMI result.
+
+Native logical processor counts come from package group affinity masks returned
+by `GetLogicalProcessorInformationEx`, including packages spanning processor
+groups. Architecture comes from `GetNativeSystemInfo`; description comes from the
+processor registry identifier. Family, name, core counts, enabled core counts,
+and thread capacity come from SMBIOS Type 4. L2 and L3 cache sizes come from the
+referenced SMBIOS Type 7 installed cache sizes and remain in KiB. Thread capacity
+is not replaced by the count of active logical processors. Firmware records are
+not associated with OS packages by enumeration order on hosts with multiple
+sockets; that correspondence and WMI device IDs remain unproven.
 ## Flags
 
 None
