@@ -424,7 +424,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, maxScrapeDuration time.
 
 	// hcsContainers and jobContainers stay nil if their collector is disabled.
 	var (
-		hcsContainers map[string]containerInfo
+		hcsContainers map[string]struct{}
 		jobContainers map[string]struct{}
 	)
 
@@ -507,8 +507,8 @@ func (c *Collector) handleCRIError(err error) error {
 }
 
 // collectHCS collects the metrics of the containers managed by HCS.
-// It returns the running HCS containers, or nil if HCS could not be queried.
-func (c *Collector) collectHCS(ch chan<- prometheus.Metric, kubernetes kubernetesContainers) (map[string]containerInfo, error) {
+// It returns the IDs of all HCS containers in any state, or nil if HCS could not be queried.
+func (c *Collector) collectHCS(ch chan<- prometheus.Metric, kubernetes kubernetesContainers) (map[string]struct{}, error) {
 	// Types Container is passed to get the containers compute systems only
 	containers, err := hcs.GetContainers()
 	if err != nil {
@@ -523,15 +523,19 @@ func (c *Collector) collectHCS(ch chan<- prometheus.Metric, kubernetes kubernete
 			0,
 		)
 
-		return map[string]containerInfo{}, nil
+		return map[string]struct{}{}, nil
 	}
 
 	var countersCount float64
 
+	hcsIDs := make(map[string]struct{}, len(containers))
 	hcsContainers := make(map[string]containerInfo, len(containers))
 	collectErrors := make([]error, 0)
 
 	for _, container := range containers {
+		// Stopping or paused containers are still HCS containers, not Hyper-V isolated ones.
+		hcsIDs[container.ID] = struct{}{}
+
 		if container.State != "Running" {
 			continue
 		}
@@ -583,14 +587,14 @@ func (c *Collector) collectHCS(ch chan<- prometheus.Metric, kubernetes kubernete
 	)
 
 	if err := c.collectNetworkMetrics(ch, hcsContainers, kubernetes.sandboxes); err != nil {
-		return hcsContainers, fmt.Errorf("error in fetching container network statistics: %w", err)
+		return hcsIDs, fmt.Errorf("error in fetching container network statistics: %w", err)
 	}
 
 	if len(collectErrors) > 0 {
-		return hcsContainers, fmt.Errorf("errors while fetching container statistics: %w", errors.Join(collectErrors...))
+		return hcsIDs, fmt.Errorf("errors while fetching container statistics: %w", errors.Join(collectErrors...))
 	}
 
-	return hcsContainers, nil
+	return hcsIDs, nil
 }
 
 func (c *Collector) collectHCSContainer(ch chan<- prometheus.Metric, containerDetails hcs.Properties, containerInfo containerInfo) error {
@@ -872,16 +876,8 @@ func (c *Collector) collectJobContainer(ch chan<- prometheus.Metric, containerID
 		containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container, "true",
 	)
 
-	// Job objects have no start time, so the creation time reported by the CRI endpoint is used.
-	if !containerInfo.createdAt.IsZero() {
-		ch <- prometheus.MustNewConstMetric(
-			c.startTime,
-			prometheus.GaugeValue,
-			float64(containerInfo.createdAt.UnixNano())/1e9,
-
-			containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container,
-		)
-	}
+	// Job objects have no start time.
+	c.collectCreationTime(ch, containerInfo)
 
 	ch <- prometheus.MustNewConstMetric(
 		c.processes,
@@ -990,6 +986,22 @@ func (c *Collector) collectJobContainer(ch chan<- prometheus.Metric, containerID
 	return true, nil
 }
 
+// collectCreationTime collects the creation time reported by the CRI endpoint as start time,
+// for containers whose start time HCS doesn't report.
+func (c *Collector) collectCreationTime(ch chan<- prometheus.Metric, containerInfo containerInfo) {
+	if containerInfo.createdAt.IsZero() {
+		return
+	}
+
+	ch <- prometheus.MustNewConstMetric(
+		c.startTime,
+		prometheus.GaugeValue,
+		float64(containerInfo.createdAt.UnixNano())/1e9,
+
+		containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container,
+	)
+}
+
 // openJobObject opens the job object of a job container, which hcsshim names after the container ID.
 func openJobObject(containerID string) (windows.Handle, error) {
 	return kernel32.OpenJobObject("Global\\JobContainer_" + containerID)
@@ -1019,7 +1031,7 @@ func (c *Collector) collectCRIStats(
 	ctx context.Context,
 	ch chan<- prometheus.Metric,
 	kubernetes kubernetesContainers,
-	hcsContainers map[string]containerInfo,
+	hcsContainers map[string]struct{},
 	jobContainers map[string]struct{},
 ) error {
 	exported, hypervContainers := selectCRIStatsContainers(kubernetes, hcsContainers, jobContainers)
@@ -1029,7 +1041,16 @@ func (c *Collector) collectCRIStats(
 
 	stats, err := c.criClient.ListContainerStats(ctx)
 	if err != nil {
-		return fmt.Errorf("error in fetching container stats from CRI endpoint %s: %w", c.config.CRIEndpoint, err)
+		err = fmt.Errorf("error in fetching container stats from CRI endpoint %s: %w", c.config.CRIEndpoint, err)
+
+		// Without Hyper-V isolated containers, only the writable layer usage is missing.
+		if len(hypervContainers) == 0 {
+			c.logger.WarnContext(ctx, "writable layer usage is not collected", slog.Any("err", err))
+
+			return nil
+		}
+
+		return err
 	}
 
 	c.collectCRIContainers(ch, stats, kubernetes, exported, hypervContainers)
@@ -1042,7 +1063,7 @@ func (c *Collector) collectCRIStats(
 // hcsContainers and jobContainers are nil if their collector is disabled.
 func selectCRIStatsContainers(
 	kubernetes kubernetesContainers,
-	hcsContainers map[string]containerInfo,
+	hcsContainers map[string]struct{},
 	jobContainers map[string]struct{},
 ) (map[string]struct{}, map[string]struct{}) {
 	exported := make(map[string]struct{}, len(kubernetes.containers))
@@ -1083,7 +1104,8 @@ func (c *Collector) collectCRIContainers(
 
 		containerInfo := kubernetes.containers[stat.ID]
 
-		if _, ok := hypervContainers[stat.ID]; ok {
+		// Containers without task metrics aren't running, e.g. they exited after they were listed.
+		if _, ok := hypervContainers[stat.ID]; ok && (stat.CPU != nil || stat.Memory != nil) {
 			c.collectCRIContainer(ch, stat, containerInfo)
 		}
 
@@ -1110,22 +1132,14 @@ func (c *Collector) collectCRIContainer(ch chan<- prometheus.Metric, stat cri.Co
 		containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container, "false",
 	)
 
-	// HCS on the host doesn't report the start time, so the creation time reported by the CRI endpoint is used.
-	if !containerInfo.createdAt.IsZero() {
-		ch <- prometheus.MustNewConstMetric(
-			c.startTime,
-			prometheus.GaugeValue,
-			float64(containerInfo.createdAt.UnixNano())/1e9,
-
-			containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container,
-		)
-	}
+	// HCS on the host doesn't report the start time.
+	c.collectCreationTime(ch, containerInfo)
 
 	if stat.CPU != nil && stat.CPU.UsageCoreNanoSeconds != nil {
 		ch <- prometheus.MustNewConstMetric(
 			c.runtimeTotal,
 			prometheus.CounterValue,
-			float64(*stat.CPU.UsageCoreNanoSeconds)/float64(time.Second),
+			float64(*stat.CPU.UsageCoreNanoSeconds)/1e9,
 
 			containerInfo.id, containerInfo.namespace, containerInfo.pod, containerInfo.container,
 		)

@@ -155,11 +155,11 @@ func TestSelectCRIStatsContainers(t *testing.T) {
 			"hyperv":           {},
 		},
 	}
-	hcsContainers := map[string]containerInfo{"process-isolated": {}, "docker": {}}
+	hcsContainers := map[string]struct{}{"process-isolated": {}, "docker": {}}
 	jobContainers := map[string]struct{}{"hostprocess": {}}
 
 	for name, tc := range map[string]struct {
-		hcsContainers map[string]containerInfo
+		hcsContainers map[string]struct{}
 		jobContainers map[string]struct{}
 		exported      []string
 		hyperv        []string
@@ -232,7 +232,8 @@ func TestCollectCRIContainers(t *testing.T) {
 			WritableLayer: &cri.FilesystemUsage{Timestamp: 1, UsedBytes: ptr(2048)},
 		},
 		{
-			// containerd has not measured the writable layer yet.
+			// A container without task metrics, e.g. exited after listing, whose writable layer containerd
+			// has not measured yet. Nothing is exported for it.
 			ID:            "no-stats",
 			WritableLayer: &cri.FilesystemUsage{UsedBytes: ptr(0)},
 		},
@@ -290,8 +291,6 @@ func TestCollectCRIContainers(t *testing.T) {
 		{c.usageCommitBytes, "containerd://hyperv", 8192},
 		{c.writableLayerUsageBytes, "containerd://hyperv", 1024},
 		{c.writableLayerUsageBytes, "containerd://process-isolated", 2048},
-		// Missing stats are not exported.
-		{c.containerAvailable, "containerd://no-stats", 1},
 	}, samples)
 }
 
