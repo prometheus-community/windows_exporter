@@ -1213,7 +1213,7 @@ func calculatePrivateWorkingSetBytes(jobObjectHandle windows.Handle) (uint64, er
 			return 0, nil
 		}
 
-		var vmCounters kernel32.PROCESS_VM_COUNTERS
+		var vmCounters kernel32.VM_COUNTERS_EX2
 
 		retLen := uint32(unsafe.Sizeof(vmCounters))
 
