@@ -90,3 +90,8 @@ func (c *dataMapTestCollector) Describe(_ chan<- *prometheus.Desc) {}
 func (c *dataMapTestCollector) Collect(ch chan<- prometheus.Metric) {
 	c.err = c.collector.Collect(ch, 0)
 }
+
+func TestDataMapCollectorCloseBeforeInitialization(t *testing.T) {
+	t.Parallel()
+	require.NoError(t, New(nil).Close())
+}

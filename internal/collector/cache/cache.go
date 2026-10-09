@@ -97,7 +97,9 @@ func (c *Collector) GetName() string {
 }
 
 func (c *Collector) Close() error {
-	c.perfDataCollector.Close()
+	if c.perfDataCollector != nil {
+		c.perfDataCollector.Close()
+	}
 
 	return nil
 }
