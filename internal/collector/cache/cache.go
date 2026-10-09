@@ -25,6 +25,7 @@ import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/pdh"
+	pdhtypes "github.com/prometheus-community/windows_exporter/internal/pdh/types"
 	"github.com/prometheus-community/windows_exporter/internal/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -40,7 +41,7 @@ var ConfigDefaults = Config{}
 type Collector struct {
 	config Config
 
-	perfDataCollector *pdh.Collector[perfDataCounterValues]
+	perfDataCollector pdhtypes.Collector[perfDataCounterValues]
 	perfDataObject    []perfDataCounterValues
 
 	asyncCopyReadsTotal         *prometheus.Desc
@@ -327,7 +328,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 
 	ch <- prometheus.MustNewConstMetric(
 		c.copyReadHitsTotal,
-		prometheus.GaugeValue,
+		prometheus.CounterValue,
 		c.perfDataObject[0].CopyReadHitsTotal,
 	)
 
