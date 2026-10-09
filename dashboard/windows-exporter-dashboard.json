@@ -13328,7 +13328,7 @@
                             "transformations": []
                         }
                     },
-                    "description": "Average I/O latency of each virtual disk. Errors use the right axis.",
+                    "description": "Average I/O latency of each virtual disk: the total I/O latency divided by the number of completed I/O transfers. Errors use the right axis.",
                     "id": 78,
                     "links": [],
                     "title": "Virtual disk latency and errors",

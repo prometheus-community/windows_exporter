@@ -278,7 +278,7 @@ b.tab(
     ]),
 
     b.panel.new(78, 'Virtual disk latency and errors', 'timeseries')
-    + b.panel.withDescription('Average I/O latency of each virtual disk. Errors use the right axis.')
+    + b.panel.withDescription('Average I/O latency of each virtual disk: the total I/O latency divided by the number of completed I/O transfers. Errors use the right axis.')
     + b.panel.withQueries([
       b.query.new('rate(windows_hyperv_virtual_storage_device_io_latency_seconds_total{job=~"$job", instance="$instance"}[$__rate_interval]) / rate(windows_hyperv_virtual_storage_device_throughput_total{job=~"$job", instance="$instance"}[$__rate_interval])', 'A')
       + b.query.withLegendFormat('{{device}} latency'),
