@@ -1,5 +1,6 @@
+{{/* The base template declares the doctype. <!-- htmlhint-disable doctype-first --> */}}
 {{ define "main" }}
-<nav aria-label="Breadcrumb"><a href="{{ "runbooks/" | relURL }}">All runbooks</a></nav>
+<nav aria-label="Breadcrumb"><a href="{{ site.Home.RelPermalink }}runbooks/">All runbooks</a></nav>
 <article>
   <h1>{{ .Title }}</h1>
   {{ .Content }}
