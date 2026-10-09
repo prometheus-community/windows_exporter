@@ -18,24 +18,66 @@
 package gpu
 
 import (
+	"errors"
 	"log/slog"
 	"testing"
 	"time"
 
+	"github.com/prometheus-community/windows_exporter/internal/headers/gdi32"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sys/windows"
 )
+
+// Device IDs of the test adapters. No real device instance matches them,
+// so the hardware adapter keeps its PnP device ID as ID.
+const (
+	testHardwareDeviceID = `PCI\VEN_FFFF&DEV_FFFF&SUBSYS_00000000&REV_00`
+	testSoftwareDeviceID = `PCI\VEN_1414&DEV_008C&SUBSYS_00000000&REV_00`
+)
+
+//nolint:gochecknoglobals
+var (
+	testHardwareDevice = gdi32.GPUDevice{
+		AdapterString: "Test GPU",
+		LUID:          windows.LUID{LowPart: 0x20},
+		DeviceID:      testHardwareDeviceID,
+		AdapterType:   gdi32.D3DKMT_ADAPTERTYPE_RENDER_SUPPORTED | gdi32.D3DKMT_ADAPTERTYPE_DISPLAY_SUPPORTED,
+	}
+	testSoftwareDevice = gdi32.GPUDevice{
+		LUID:        windows.LUID{LowPart: 0x10},
+		DeviceID:    testSoftwareDeviceID,
+		AdapterType: gdi32.D3DKMT_ADAPTERTYPE_RENDER_SUPPORTED | gdi32.D3DKMT_ADAPTERTYPE_SOFTWARE_DEVICE,
+	}
+)
+
+func newTestCollector(cache map[string]gpuDevice, lastRefresh time.Time, discover func() ([]gdi32.GPUDevice, error)) *Collector {
+	return &Collector{
+		logger:                    slog.New(slog.DiscardHandler),
+		gpuDeviceCache:            cache,
+		gpuDeviceCacheLastRefresh: lastRefresh,
+		discoverGPUDevices:        discover,
+	}
+}
+
+func noDiscovery(t *testing.T) func() ([]gdi32.GPUDevice, error) {
+	t.Helper()
+
+	return func() ([]gdi32.GPUDevice, error) {
+		t.Error("unexpected GPU device discovery")
+
+		return nil, nil
+	}
+}
 
 func TestGetGPUDevice(t *testing.T) {
 	t.Parallel()
 
+	expired := time.Now().Add(-2 * deviceCacheRefreshInterval)
+
 	t.Run("known device", func(t *testing.T) {
 		t.Parallel()
 
-		c := &Collector{
-			logger:                    slog.New(slog.DiscardHandler),
-			gpuDeviceCache:            map[string]gpuDevice{"known": {ID: "known"}},
-			gpuDeviceCacheLastRefresh: time.Now(),
-		}
+		c := newTestCollector(map[string]gpuDevice{"known": {ID: "known"}}, time.Now(), noDiscovery(t))
 
 		device, ok := c.getGPUDevice("known")
 		require.True(t, ok)
@@ -45,27 +87,18 @@ func TestGetGPUDevice(t *testing.T) {
 	t.Run("skipped device does not trigger refresh", func(t *testing.T) {
 		t.Parallel()
 
-		lastRefresh := time.Now().Add(-2 * deviceCacheRefreshInterval)
-		c := &Collector{
-			logger:                    slog.New(slog.DiscardHandler),
-			gpuDeviceCache:            map[string]gpuDevice{"software": {skip: true}},
-			gpuDeviceCacheLastRefresh: lastRefresh,
-		}
+		c := newTestCollector(map[string]gpuDevice{"software": {skip: true}}, expired, noDiscovery(t))
 
 		_, ok := c.getGPUDevice("software")
 		require.False(t, ok)
-		require.Equal(t, lastRefresh, c.gpuDeviceCacheLastRefresh)
+		require.Equal(t, expired, c.gpuDeviceCacheLastRefresh)
 	})
 
 	t.Run("unknown device within refresh interval", func(t *testing.T) {
 		t.Parallel()
 
 		lastRefresh := time.Now()
-		c := &Collector{
-			logger:                    slog.New(slog.DiscardHandler),
-			gpuDeviceCache:            map[string]gpuDevice{"stale": {ID: "stale"}},
-			gpuDeviceCacheLastRefresh: lastRefresh,
-		}
+		c := newTestCollector(map[string]gpuDevice{"stale": {ID: "stale"}}, lastRefresh, noDiscovery(t))
 
 		_, ok := c.getGPUDevice("unknown")
 		require.False(t, ok)
@@ -73,33 +106,59 @@ func TestGetGPUDevice(t *testing.T) {
 		require.Contains(t, c.gpuDeviceCache, "stale")
 	})
 
-	t.Run("unknown device after refresh interval", func(t *testing.T) {
-		t.Parallel()
-
-		lastRefresh := time.Now().Add(-2 * deviceCacheRefreshInterval)
-		c := &Collector{
-			logger:                    slog.New(slog.DiscardHandler),
-			gpuDeviceCache:            map[string]gpuDevice{"stale": {ID: "stale"}},
-			gpuDeviceCacheLastRefresh: lastRefresh,
-		}
-
-		_, ok := c.getGPUDevice("unknown")
-		require.False(t, ok)
-		require.True(t, c.gpuDeviceCacheLastRefresh.After(lastRefresh))
-		require.NotContains(t, c.gpuDeviceCache, "stale")
-	})
-
 	t.Run("empty LUID", func(t *testing.T) {
 		t.Parallel()
 
-		lastRefresh := time.Now().Add(-2 * deviceCacheRefreshInterval)
-		c := &Collector{
-			logger:                    slog.New(slog.DiscardHandler),
-			gpuDeviceCacheLastRefresh: lastRefresh,
-		}
+		c := newTestCollector(nil, expired, noDiscovery(t))
 
 		_, ok := c.getGPUDevice("")
 		require.False(t, ok)
-		require.Equal(t, lastRefresh, c.gpuDeviceCacheLastRefresh)
+		require.Equal(t, expired, c.gpuDeviceCacheLastRefresh)
+	})
+
+	t.Run("unknown device after refresh interval", func(t *testing.T) {
+		t.Parallel()
+
+		c := newTestCollector(map[string]gpuDevice{"stale": {ID: "stale"}}, expired, func() ([]gdi32.GPUDevice, error) {
+			return []gdi32.GPUDevice{testHardwareDevice, testSoftwareDevice}, nil
+		})
+
+		device, ok := c.getGPUDevice("0x00000000_0x00000020")
+		require.True(t, ok)
+		require.Equal(t, testHardwareDeviceID, device.ID)
+		require.Equal(t, "Test GPU", device.gdi32.AdapterString)
+		require.True(t, c.gpuDeviceCacheLastRefresh.After(expired))
+		require.NotContains(t, c.gpuDeviceCache, "stale")
+
+		// The software device is cached, but not exposed.
+		require.Contains(t, c.gpuDeviceCache, "0x00000000_0x00000010")
+
+		_, ok = c.getGPUDevice("0x00000000_0x00000010")
+		require.False(t, ok)
+	})
+
+	t.Run("partial discovery failure", func(t *testing.T) {
+		t.Parallel()
+
+		c := newTestCollector(map[string]gpuDevice{"stale": {ID: "stale"}}, expired, func() ([]gdi32.GPUDevice, error) {
+			return []gdi32.GPUDevice{testHardwareDevice}, errors.New("failed to get GPU device for adapter")
+		})
+
+		_, ok := c.getGPUDevice("0x00000000_0x00000020")
+		require.True(t, ok)
+		require.NotContains(t, c.gpuDeviceCache, "stale")
+	})
+
+	t.Run("complete discovery failure keeps the previous cache", func(t *testing.T) {
+		t.Parallel()
+
+		c := newTestCollector(map[string]gpuDevice{"stale": {ID: "stale"}}, expired, func() ([]gdi32.GPUDevice, error) {
+			return nil, gdi32.ErrNoGPUDevices
+		})
+
+		_, ok := c.getGPUDevice("unknown")
+		require.False(t, ok)
+		require.True(t, c.gpuDeviceCacheLastRefresh.After(expired))
+		require.Contains(t, c.gpuDeviceCache, "stale")
 	})
 }

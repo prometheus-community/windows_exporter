@@ -53,6 +53,10 @@ type Collector struct {
 	gpuDeviceCache            map[string]gpuDevice
 	gpuDeviceCacheLastRefresh time.Time
 
+	// discoverGPUDevices enumerates the GPU adapters. If nil, gdi32.GetGPUDevices is used.
+	// It is replaced in tests to make the discovery deterministic.
+	discoverGPUDevices func() ([]gdi32.GPUDevice, error)
+
 	// GPU Engine
 	gpuEnginePerfDataCollector *pdh.Collector[gpuEnginePerfDataCounterValues]
 	gpuEnginePerfDataObject    []gpuEnginePerfDataCounterValues
@@ -283,7 +287,12 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 func (c *Collector) refreshGPUDevices() {
 	c.gpuDeviceCacheLastRefresh = time.Now()
 
-	gpus, err := gdi32.GetGPUDevices()
+	discoverGPUDevices := c.discoverGPUDevices
+	if discoverGPUDevices == nil {
+		discoverGPUDevices = gdi32.GetGPUDevices
+	}
+
+	gpus, err := discoverGPUDevices()
 	if err != nil {
 		c.logger.Warn("failed to discover some GPU devices",
 			slog.Any("err", err),
