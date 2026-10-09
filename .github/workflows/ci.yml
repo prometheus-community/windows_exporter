@@ -46,7 +46,7 @@ jobs:
         uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7.2.3
         with:
           # renovate: github=goreleaser/goreleaser
-          version: v2.18.2
+          version: v2.18.3
           args: build --snapshot --clean
 
       - name: Build release
@@ -54,7 +54,7 @@ jobs:
         uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7.2.3
         with:
           # renovate: github=goreleaser/goreleaser
-          version: v2.18.2
+          version: v2.18.3
           args: build --clean
 
       - name: Stage build artifacts
