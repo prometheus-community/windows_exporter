@@ -29,6 +29,7 @@ b.tab(
     }),
 
     b.panel.new(85, 'Clock sync source', 'stat')
+    + b.panel.withDescription('Active Windows Time synchronization provider. A non-NTP provider can be expected on virtual machines; this requires the optional time collector.')
     + b.panel.withQueries([
       b.query.new('windows_time_clock_sync_source{job=~"$job", instance="$instance"} == 1', 'A')
       + b.query.withInstant()
@@ -95,6 +96,7 @@ b.tab(
     }),
 
     b.panel.new(88, 'Clock offset and NTP round-trip delay', 'timeseries')
+    + b.panel.withDescription('Signed offset from the selected time source and the NTP request round-trip delay, in seconds. Persistent offset or increased delay can affect time-sensitive applications; this compares the host to its chosen source and does not independently verify that source.')
     + b.panel.withQueries([
       b.query.new('windows_time_computed_time_offset_seconds{job=~"$job", instance="$instance"}', 'A')
       + b.query.withLegendFormat('clock offset'),

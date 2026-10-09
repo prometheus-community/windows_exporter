@@ -14,6 +14,9 @@ local tabs = [
   import 'exporter.libsonnet',
 ];
 
+local panelNames = std.flattenArrays([std.objectFields(tab.elements) for tab in tabs]);
+assert std.length(panelNames) == std.length(std.set(panelNames)) : 'Panel IDs must be unique across tabs';
+
 dashboard.new('Kdaassddw', 'Windows Exporter')
 + dashboard.spec.withCursorSync('Crosshair')
 + dashboard.spec.withDescription('Fleet overview and per-host details for Windows hosts monitored by windows_exporter.')

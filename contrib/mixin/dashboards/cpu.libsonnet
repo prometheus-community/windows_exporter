@@ -68,6 +68,7 @@ b.tab(
     }),
 
     b.panel.new(27, 'Context switches and interrupts', 'timeseries')
+    + b.panel.withDescription('Context switches, hardware interrupts and deferred procedure calls per second across the host. High rates can reflect scheduling or driver activity; correlate changes with CPU usage and workload rather than assuming they are faults.')
     + b.panel.withQueries([
       b.query.new('rate(windows_system_context_switches_total{job=~"$job", instance="$instance"}[$__rate_interval])', 'A')
       + b.query.withLegendFormat('context switches'),
@@ -82,6 +83,7 @@ b.tab(
     }),
 
     b.panel.new(28, 'Processes and threads', 'timeseries')
+    + b.panel.withDescription('Current process and thread counts on the host. Sustained growth can help identify runaway process creation or thread leaks; thread counts use the right-hand axis.')
     + b.panel.withQueries([
       b.query.new('windows_system_processes{job=~"$job", instance="$instance"}', 'A')
       + b.query.withLegendFormat('processes'),
@@ -108,6 +110,7 @@ b.tab(
     ]),
 
     b.panel.new(29, 'System calls and exceptions', 'timeseries')
+    + b.panel.withDescription('System calls and exception dispatches per second. Exception dispatches include handled exceptions and do not directly count application crashes; compare with application logs. Exceptions use the right-hand axis.')
     + b.panel.withQueries([
       b.query.new('rate(windows_system_system_calls_total{job=~"$job", instance="$instance"}[$__rate_interval])', 'A')
       + b.query.withLegendFormat('system calls'),

@@ -8,8 +8,9 @@ and takes several ideas from Grafana's [windows-observ-lib](https://github.com/g
 
 - Grafana 13 or later with a Prometheus data source. The file uses the v2 dashboard schema, which Grafana needs for tabs.
 - windows_exporter with the default collectors (`cpu`, `logical_disk`, `memory`, `net`, `os`, `physical_disk`, `service`, `system`).
-  The GPU, Hyper-V and Time tabs need the `gpu`, `hyperv` and `time` collectors, which are not enabled by default.
+  The GPU, Hyper-V and Time tabs and the TCP and UDP rows of the Network tab need the `gpu`, `hyperv`, `time`, `tcp` and `udp` collectors, which are not enabled by default.
   The process names in the GPU tab need the `process` collector.
+  GPU temperature, fan, power and clock panels require WDDM 2.4 or newer and driver support; unsupported sensors are absent.
 
 Import the JSON file through **Dashboards > New > Import** and pick the Prometheus data source in the **Data source** variable.
 
@@ -35,9 +36,9 @@ The **Reboots** annotation marks each reboot of the selected host on all graphs.
 | CPU      | Utilization by mode and per core, processor queue length, context switches, interrupts, processes, threads, system calls and the effective CPU frequency.           |
 | Memory   | Used and available physical memory, commit charge, hard page faults, kernel pools and the system cache.                                                             |
 | Disk     | Volume size and free space, usage, busy time, throughput, IOPS, latency and queue length.                                                                           |
-| Network  | Throughput, utilization against the link speed, packets, errors and discards per interface.                                                                         |
+| Network  | Throughput, utilization, packets, errors and discards per interface; TCP connection states and rates, segments and retransmissions; UDP datagrams and errors.       |
 | Services | Running, pending and disabled services, automatic services that are not running, and services that started or stopped in the time range.                            |
-| GPU      | Utilization by engine type, dedicated and shared memory, and the processes that use the GPU most.                                                                   |
+| GPU      | Utilization by engine type, memory capacity, commitment and locality, temperature, fans, power, clocks, and top processes by GPU utilization and memory.                                                                   |
 | Hyper-V  | VM count and health, Hyper-V WMI health, host CPU time, CPU and memory per VM, virtual disks, virtual switches and VM network adapters.                             |
 | Time     | Time zone, clock sync source, NTP time sources, clock offset and NTP round-trip delay.                                                                              |
 | Exporter | Scrape status and duration, exporter version and uptime, collector status, duration, failures and timeouts, and the exporter's CPU, memory, handles and Go runtime. |

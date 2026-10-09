@@ -38,6 +38,7 @@ b.tab(
     ]),
 
     b.panel.new(64, 'VMs in critical health', 'stat')
+    + b.panel.withDescription('Number of Hyper-V virtual machines reporting critical health. Inspect the affected VM and Hyper-V event logs; this requires the optional hyperv collector.')
     + b.panel.withQueries([
       b.query.new('sum(windows_hyperv_virtual_machine_health_total_count{job=~"$job", instance="$instance", state="critical"})', 'A')
       + b.query.withInstant(),
@@ -95,6 +96,7 @@ b.tab(
     }),
 
     b.panel.new(66, 'Logical processors', 'stat')
+    + b.panel.withDescription('Number of host logical processors reported by Hyper-V. Use this as capacity context for host and virtual processor load; this requires the optional hyperv collector.')
     + b.panel.withQueries([
       b.query.new('windows_hyperv_host_logical_processor_count{job=~"$job", instance="$instance"}', 'A')
       + b.query.withInstant(),
@@ -340,6 +342,7 @@ b.tab(
     ]),
 
     b.panel.new(81, 'Virtual switch dropped packets', 'timeseries')
+    + b.panel.withDescription('Incoming and outgoing packets dropped per second by each Hyper-V virtual switch. Correlate sustained drops with network load, resource pressure and switch policies; this requires the optional hyperv collector.')
     + b.panel.withQueries([
       b.query.new('rate(windows_hyperv_vswitch_dropped_packets_incoming_total{job=~"$job", instance="$instance"}[$__rate_interval])', 'A')
       + b.query.withLegendFormat('{{vswitch}} incoming'),

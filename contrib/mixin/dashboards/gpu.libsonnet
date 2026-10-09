@@ -8,6 +8,18 @@ b.tab(
     b.place(59, 12, 5, 12, 8),
     b.place(60, 0, 13, 12, 8),
     b.place(61, 12, 13, 12, 8),
+    b.place(120, 0, 21, 12, 8),
+    b.place(121, 12, 21, 12, 8),
+    b.place(122, 0, 29, 12, 8),
+    b.place(123, 12, 29, 12, 8),
+    b.place(124, 0, 37, 12, 8),
+    b.place(125, 12, 37, 12, 8),
+    b.place(126, 0, 45, 12, 8),
+    b.place(127, 12, 45, 12, 8),
+    b.place(128, 0, 53, 12, 8),
+    b.place(129, 12, 53, 12, 8),
+    b.place(130, 0, 61, 12, 8),
+    b.place(131, 12, 61, 12, 8),
   ]),
   [
     b.panel.new(57, 'GPUs', 'table')
@@ -275,5 +287,113 @@ b.tab(
         sortDesc: true,
       },
     }),
+
+    b.panel.new(120, 'GPU temperature', 'timeseries')
+    + b.panel.withDescription('Current GPU temperature, driver-reported throttling threshold and maximum temperature in degrees Celsius. Sustained readings near the warning threshold can indicate insufficient cooling. Requires the gpu collector, WDDM 2.4 or newer and driver support. Unsupported sensor values are absent, rather than zero.')
+    + b.panel.withQueries([
+      b.query.new('max by (luid, phys) (windows_gpu_temperature_celsius{job=~"$job", instance="$instance"}) * on (luid, phys) group_left (name) max by (luid, phys, name) (windows_gpu_info{job=~"$job", instance="$instance"})', 'A')
+      + b.query.withLegendFormat('{{name}} GPU {{phys}} temperature'),
+      b.query.new('max by (luid, phys) (windows_gpu_temperature_warning_celsius{job=~"$job", instance="$instance"}) * on (luid, phys) group_left (name) max by (luid, phys, name) (windows_gpu_info{job=~"$job", instance="$instance"})', 'B')
+      + b.query.withLegendFormat('{{name}} GPU {{phys}} throttling threshold'),
+      b.query.new('max by (luid, phys) (windows_gpu_temperature_max_celsius{job=~"$job", instance="$instance"}) * on (luid, phys) group_left (name) max by (luid, phys, name) (windows_gpu_info{job=~"$job", instance="$instance"})', 'C')
+      + b.query.withLegendFormat('{{name}} GPU {{phys}} maximum'),
+    ])
+    + b.panel.withDefaults({ min: 0, unit: 'celsius' }),
+
+    b.panel.new(121, 'GPU fan speed', 'timeseries')
+    + b.panel.withDescription('Current and maximum main-fan speed in revolutions per minute. A supported fan can report zero when stopped under light load. Requires the gpu collector, WDDM 2.4 or newer and driver support. Unsupported sensor values are absent, rather than zero.')
+    + b.panel.withQueries([
+      b.query.new('max by (luid, phys) (windows_gpu_fan_speed_rpm{job=~"$job", instance="$instance"}) * on (luid, phys) group_left (name) max by (luid, phys, name) (windows_gpu_info{job=~"$job", instance="$instance"})', 'A')
+      + b.query.withLegendFormat('{{name}} GPU {{phys}} fan'),
+      b.query.new('max by (luid, phys) (windows_gpu_fan_speed_max_rpm{job=~"$job", instance="$instance"}) * on (luid, phys) group_left (name) max by (luid, phys, name) (windows_gpu_info{job=~"$job", instance="$instance"})', 'B')
+      + b.query.withLegendFormat('{{name}} GPU {{phys}} maximum'),
+    ])
+    + b.panel.withDefaults({ min: 0, unit: 'rotrpm' }),
+
+    b.panel.new(122, 'GPU power usage', 'timeseries')
+    + b.panel.withDescription('Current GPU power draw as a fraction of the driver-reported maximum power (TDP). This is a ratio, not an absolute measurement in watts. Requires the gpu collector, WDDM 2.4 or newer and driver support. Unsupported sensor values are absent, rather than zero.')
+    + b.panel.withQueries([
+      b.query.new('max by (luid, phys) (windows_gpu_power_usage_ratio{job=~"$job", instance="$instance"}) * on (luid, phys) group_left (name) max by (luid, phys, name) (windows_gpu_info{job=~"$job", instance="$instance"})', 'A')
+      + b.query.withLegendFormat('{{name}} GPU {{phys}} power'),
+    ])
+    + b.panel.withDefaults({ min: 0, unit: 'percentunit' }),
+
+    b.panel.new(123, 'GPU memory clock', 'timeseries')
+    + b.panel.withDescription('Current and maximum non-overclocked GPU memory clock in hertz. Clocks can fall at idle; correlate drops under load with temperature and power. Requires the gpu collector, WDDM 2.4 or newer and driver support. Unsupported sensor values are absent, rather than zero.')
+    + b.panel.withQueries([
+      b.query.new('max by (luid, phys) (windows_gpu_memory_frequency_hertz{job=~"$job", instance="$instance"}) * on (luid, phys) group_left (name) max by (luid, phys, name) (windows_gpu_info{job=~"$job", instance="$instance"})', 'A')
+      + b.query.withLegendFormat('{{name}} GPU {{phys}} memory clock'),
+      b.query.new('max by (luid, phys) (windows_gpu_memory_frequency_max_hertz{job=~"$job", instance="$instance"}) * on (luid, phys) group_left (name) max by (luid, phys, name) (windows_gpu_info{job=~"$job", instance="$instance"})', 'B')
+      + b.query.withLegendFormat('{{name}} GPU {{phys}} maximum'),
+    ])
+    + b.panel.withDefaults({ min: 0, unit: 'hertz' }),
+
+    b.panel.new(124, 'GPU engine clock', 'timeseries')
+    + b.panel.withDescription('Current and maximum non-overclocked frequency per GPU engine in hertz. Only engines with a reported maximum clock are exposed, typically the 3D engine. Requires the gpu collector, WDDM 2.4 or newer and driver support. Unsupported sensor values are absent, rather than zero.')
+    + b.panel.withQueries([
+      b.query.new('max by (luid, phys, eng) (windows_gpu_engine_frequency_hertz{job=~"$job", instance="$instance"}) * on (luid, phys) group_left (name) max by (luid, phys, name) (windows_gpu_info{job=~"$job", instance="$instance"})', 'A')
+      + b.query.withLegendFormat('{{name}} GPU {{phys}} engine {{eng}} clock'),
+      b.query.new('max by (luid, phys, eng) (windows_gpu_engine_frequency_max_hertz{job=~"$job", instance="$instance"}) * on (luid, phys) group_left (name) max by (luid, phys, name) (windows_gpu_info{job=~"$job", instance="$instance"})', 'B')
+      + b.query.withLegendFormat('{{name}} GPU {{phys}} engine {{eng}} maximum'),
+    ])
+    + b.panel.withDefaults({ min: 0, unit: 'hertz' }),
+
+    b.panel.new(125, 'GPU committed memory', 'timeseries')
+    + b.panel.withDescription('Total committed GPU memory per physical GPU in bytes. Commitment is a separate accounting measure from dedicated or shared memory residency; do not add these series together.')
+    + b.panel.withQueries([
+      b.query.new('max by (luid, phys) (windows_gpu_adapter_memory_committed_bytes{job=~"$job", instance="$instance"}) * on (luid, phys) group_left (name) max by (luid, phys, name) (windows_gpu_info{job=~"$job", instance="$instance"})', 'A')
+      + b.query.withLegendFormat('{{name}} GPU {{phys}} committed'),
+    ])
+    + b.panel.withDefaults({ min: 0, unit: 'bytes' }),
+
+    b.panel.new(126, 'GPU local and non-local memory', 'timeseries')
+    + b.panel.withDescription('Local and non-local adapter memory usage in bytes, summed across memory partitions for each physical GPU. These describe memory locality and overlap the dedicated/shared accounting views.')
+    + b.panel.withQueries([
+      b.query.new('sum by (luid, phys) (windows_gpu_local_adapter_memory_bytes{job=~"$job", instance="$instance"}) * on (luid, phys) group_left (name) max by (luid, phys, name) (windows_gpu_info{job=~"$job", instance="$instance"})', 'A')
+      + b.query.withLegendFormat('{{name}} GPU {{phys}} local'),
+      b.query.new('sum by (luid, phys) (windows_gpu_non_local_adapter_memory_bytes{job=~"$job", instance="$instance"}) * on (luid, phys) group_left (name) max by (luid, phys, name) (windows_gpu_info{job=~"$job", instance="$instance"})', 'B')
+      + b.query.withLegendFormat('{{name}} GPU {{phys}} non-local'),
+    ])
+    + b.panel.withDefaults({ min: 0, unit: 'bytes' }),
+
+    b.panel.new(127, 'GPU dedicated system memory capacity', 'timeseries')
+    + b.panel.withDescription('System memory dedicated to each GPU in bytes. This capacity is distinct from dedicated video memory and the shared system memory pool; it can be zero on discrete adapters.')
+    + b.panel.withQueries([
+      b.query.new('max by (luid) (windows_gpu_dedicated_system_memory_size_bytes{job=~"$job", instance="$instance"}) * on (luid) group_left (name) max by (luid, name) (windows_gpu_info{job=~"$job", instance="$instance"})', 'A')
+      + b.query.withLegendFormat('{{name}} dedicated system capacity'),
+    ])
+    + b.panel.withDefaults({ min: 0, unit: 'bytes' }),
+
+    b.panel.new(128, 'Top 10 processes by shared GPU memory', 'timeseries')
+    + b.panel.withDescription('Top ten processes at each point in time by shared GPU memory in bytes, summed across GPUs. Membership can change over time. Process names require the process collector; otherwise the PID is shown. Memory accounting views overlap and should not be added together.')
+    + b.panel.withQueries([
+      b.query.new('topk(10, (sum by (process_id) (windows_gpu_process_memory_shared_bytes{job=~"$job", instance="$instance"}) * on (process_id) group_left (process) max by (process_id, process) (windows_process_info{job=~"$job", instance="$instance"})) or on (process_id) sum by (process_id) (windows_gpu_process_memory_shared_bytes{job=~"$job", instance="$instance"}))', 'A')
+      + b.query.withLegendFormat('{{process}} ({{process_id}})'),
+    ])
+    + b.panel.withDefaults({ min: 0, unit: 'bytes' }),
+
+    b.panel.new(129, 'Top 10 processes by committed GPU memory', 'timeseries')
+    + b.panel.withDescription('Top ten processes at each point in time by committed GPU memory in bytes, summed across GPUs. Membership can change over time. Process names require the process collector; otherwise the PID is shown. Memory accounting views overlap and should not be added together.')
+    + b.panel.withQueries([
+      b.query.new('topk(10, (sum by (process_id) (windows_gpu_process_memory_committed_bytes{job=~"$job", instance="$instance"}) * on (process_id) group_left (process) max by (process_id, process) (windows_process_info{job=~"$job", instance="$instance"})) or on (process_id) sum by (process_id) (windows_gpu_process_memory_committed_bytes{job=~"$job", instance="$instance"}))', 'A')
+      + b.query.withLegendFormat('{{process}} ({{process_id}})'),
+    ])
+    + b.panel.withDefaults({ min: 0, unit: 'bytes' }),
+
+    b.panel.new(130, 'Top 10 processes by local GPU memory', 'timeseries')
+    + b.panel.withDescription('Top ten processes at each point in time by local GPU memory in bytes, summed across GPUs. Membership can change over time. Process names require the process collector; otherwise the PID is shown. Memory accounting views overlap and should not be added together.')
+    + b.panel.withQueries([
+      b.query.new('topk(10, (sum by (process_id) (windows_gpu_process_memory_local_bytes{job=~"$job", instance="$instance"}) * on (process_id) group_left (process) max by (process_id, process) (windows_process_info{job=~"$job", instance="$instance"})) or on (process_id) sum by (process_id) (windows_gpu_process_memory_local_bytes{job=~"$job", instance="$instance"}))', 'A')
+      + b.query.withLegendFormat('{{process}} ({{process_id}})'),
+    ])
+    + b.panel.withDefaults({ min: 0, unit: 'bytes' }),
+
+    b.panel.new(131, 'Top 10 processes by non-local GPU memory', 'timeseries')
+    + b.panel.withDescription('Top ten processes at each point in time by non-local GPU memory in bytes, summed across GPUs. Membership can change over time. Process names require the process collector; otherwise the PID is shown. Memory accounting views overlap and should not be added together.')
+    + b.panel.withQueries([
+      b.query.new('topk(10, (sum by (process_id) (windows_gpu_process_memory_non_local_bytes{job=~"$job", instance="$instance"}) * on (process_id) group_left (process) max by (process_id, process) (windows_process_info{job=~"$job", instance="$instance"})) or on (process_id) sum by (process_id) (windows_gpu_process_memory_non_local_bytes{job=~"$job", instance="$instance"}))', 'A')
+      + b.query.withLegendFormat('{{process}} ({{process_id}})'),
+    ])
+    + b.panel.withDefaults({ min: 0, unit: 'bytes' }),
   ]
 )

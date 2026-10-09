@@ -13,6 +13,7 @@ b.tab(
   ]),
   [
     b.panel.new(37, 'Volumes', 'table')
+    + b.panel.withDescription('Size, available space and used percentage of each selected logical volume. Windows free-space counters can lag by 10 to 15 minutes; use trends rather than treating a single sample as immediate confirmation of reclaimed space.')
     + b.panel.withQueries([
       b.query.new('windows_logical_disk_size_bytes{job=~"$job", instance="$instance", volume=~"$volume"}', 'A')
       + b.query.withInstant()
@@ -161,6 +162,7 @@ b.tab(
     ]),
 
     b.panel.new(38, 'Volume usage', 'timeseries')
+    + b.panel.withDescription('Used space as a percentage of each selected logical volume. Sustained growth toward full capacity can prevent writes and disrupt applications; Windows free-space counters can lag by 10 to 15 minutes.')
     + b.panel.withQueries([
       b.query.new('100 * (1 - windows_logical_disk_free_bytes{job=~"$job", instance="$instance", volume=~"$volume"} / windows_logical_disk_size_bytes{job=~"$job", instance="$instance", volume=~"$volume"})', 'A')
       + b.query.withLegendFormat('{{volume}}'),
