@@ -1,0 +1,112 @@
+name: Runbooks
+
+on:
+  pull_request:
+    paths:
+      - docs/runbooks/**
+      - docs/layouts/**
+      - docs/static/**
+      - docs/hugo.toml
+      - docs/check_links.py
+      - contrib/mixin/**
+      - .github/workflows/runbooks.yml
+  push:
+    branches:
+      - master
+      - main
+      - next
+    paths:
+      - docs/runbooks/**
+      - docs/layouts/**
+      - docs/static/**
+      - docs/hugo.toml
+      - docs/check_links.py
+      - contrib/mixin/**
+      - .github/workflows/runbooks.yml
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: runbooks-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # renovate: github=gohugoio/hugo
+  HUGO_VERSION: '0.167.0'
+
+jobs:
+  build:
+    name: Build runbooks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pages: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: 'false'
+
+      - name: Install Hugo
+        run: |
+          curl --fail --location --silent --show-error \
+            "https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/hugo_${HUGO_VERSION}_linux-amd64.tar.gz" \
+            -o "$RUNNER_TEMP/hugo.tar.gz"
+          tar -xzf "$RUNNER_TEMP/hugo.tar.gz" -C "$RUNNER_TEMP" hugo
+          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      - name: Cache Jsonnet tools
+        id: jsonnet-cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/go/bin/jsonnet
+            ~/go/bin/jsonnetfmt
+          key: ${{ runner.os }}-${{ runner.arch }}-runbooks-jsonnet-${{ hashFiles('contrib/mixin/Makefile', 'go.mod') }}
+
+      - name: Install Jsonnet tools
+        if: steps.jsonnet-cache.outputs.cache-hit != 'true'
+        run: make -C contrib/mixin jsonnet-tools
+
+      - name: Check alert runbook coverage
+        run: make -C contrib/mixin check-runbooks
+
+      - name: Set up Pages
+        id: pages
+        if: github.event_name != 'pull_request' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+
+      - name: Build site
+        env:
+          PAGES_BASE_URL: ${{ steps.pages.outputs.base_url || 'https://prometheus-community.github.io/windows_exporter' }}
+        run: |
+          hugo --source docs --minify --baseURL "${PAGES_BASE_URL%/}/" --panicOnWarning
+          python3 docs/check_links.py docs/public "${PAGES_BASE_URL%/}/"
+
+      - name: Upload Pages artifact
+        if: github.event_name != 'pull_request' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: docs/public
+
+  deploy:
+    name: Publish runbooks
+    if: github.event_name != 'pull_request' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

@@ -1,0 +1,13 @@
+{{/* The base template declares the doctype. <!-- htmlhint-disable doctype-first --> */}}
+{{ define "main" }}
+<h1>{{ .Title }}</h1>
+{{ .Content }}
+{{ if .IsHome }}
+<p>Diagnosis and mitigation for alerts from the Windows exporter mixin.</p>
+{{ end }}
+<ul class="runbooks">
+  {{ range (site.GetPage "/runbooks").RegularPages.ByTitle }}
+  <li><a href="{{ .RelPermalink }}">{{ .Title }}</a></li>
+  {{ end }}
+</ul>
+{{ end }}

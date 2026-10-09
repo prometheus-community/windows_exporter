@@ -1,0 +1,15 @@
+baseURL = "https://prometheus-community.github.io/windows_exporter/"
+title = "Windows exporter runbooks"
+locale = "en"
+disableKinds = ["taxonomy", "term", "RSS", "sitemap"]
+
+[module]
+  [[module.mounts]]
+    source = "runbooks"
+    target = "content/runbooks"
+  [[module.mounts]]
+    source = "layouts"
+    target = "layouts"
+  [[module.mounts]]
+    source = "static"
+    target = "static"

@@ -194,7 +194,8 @@ See detailed steps to install on Windows Kubernetes [here](./kubernetes/kubernet
 
 The [Windows exporter mixin](contrib/mixin/README.md) provides configurable
 recording rules and alerts for Prometheus, with Jsonnet generation, pint linting,
-and promtool tests.
+and promtool tests. Dedicated [alert runbooks](docs/runbooks) provide Windows
+diagnosis and mitigation steps and are published through GitHub Pages.
 
 ## Supported versions
 

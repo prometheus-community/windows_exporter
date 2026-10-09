@@ -21,4 +21,10 @@ rule {
     value    = ".+"
     severity = "bug"
   }
+
+  annotation "runbook_url" {
+    required = true
+    value    = "https?://.+"
+    severity = "bug"
+  }
 }

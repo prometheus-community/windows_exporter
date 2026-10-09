@@ -1,6 +1,11 @@
 # Documentation
 This directory contains documentation of the collectors in the windows_exporter, with information such as what metrics are exported, any flags for additional configuration, and some example usage in alerts and queries.
 
+The [alert runbooks](runbooks) describe how to diagnose and mitigate alerts from
+the [Windows exporter mixin](../contrib/mixin/README.md). Preview the runbook site
+from the repository root with `hugo server --source docs`; its dedicated GitHub
+Actions workflow publishes default-branch changes to GitHub Pages.
+
 # Collectors
 - [`ad`](collector.ad.md)
 - [`adcs`](collector.adcs.md)

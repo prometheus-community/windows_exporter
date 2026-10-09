@@ -1,0 +1,17 @@
+:root {
+  color-scheme: light dark;
+  font-family: system-ui, sans-serif;
+  line-height: 1.6;
+  color: light-dark(#20252b, #e5e9ef);
+  background: light-dark(#fff, #15191f);
+}
+body { max-width: 64rem; margin: auto; padding: 1.5rem; }
+header { display: flex; justify-content: space-between; gap: 1rem; border-bottom: 1px solid #8993a0; padding-bottom: 1rem; }
+main { max-width: 54rem; margin: 2rem auto; }
+a { color: light-dark(#0059b3, #80bfff); overflow-wrap: anywhere; }
+h1, h2 { line-height: 1.3; overflow-wrap: anywhere; }
+h2 { margin-top: 2rem; }
+pre { overflow-x: auto; padding: 1rem; border: 1px solid #8993a0; border-radius: .3rem; }
+code { font-size: .95em; }
+li { margin: .4rem 0; }
+.runbooks { padding-left: 1.5rem; }

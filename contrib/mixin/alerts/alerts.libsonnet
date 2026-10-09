@@ -45,6 +45,41 @@
             'Windows memory usage is high',
             'Physical memory usage on {{ $labels.instance }} has exceeded %s%% for 15 minutes.' % c.memoryHighUsageThreshold
           ),
+          alert(
+            'WindowsMemoryCommitHighUsage',
+            q.metric('windows:memory_committed:ratio') + ' * 100 > %s' % c.memoryCommitHighUsageThreshold,
+            '15m',
+            'warning',
+            'Windows memory commit usage is high',
+            'Committed memory on {{ $labels.instance }} has exceeded %s%% of the commit limit for 15 minutes.' % c.memoryCommitHighUsageThreshold
+          ),
+        ] + [
+          alert(
+            'WindowsDisk%sLatencyHigh' % direction[0],
+            q.metric('windows:logical_disk_%s_latency:seconds' % direction[1], [c.volumeSelector]) + ' > %g' % c.diskLatencyThresholdSeconds,
+            '15m',
+            'warning',
+            'Windows disk %s latency is high' % direction[1],
+            'Volume {{ $labels.volume }} on {{ $labels.instance }} has averaged more than %g seconds per %s operation for 15 minutes.' % [c.diskLatencyThresholdSeconds, direction[1]]
+          )
+          for direction in [['Read', 'read'], ['Write', 'write']]
+        ] + [
+          alert(
+            'WindowsNetwork%s' % outcome[0],
+            '(%s + %s) > %g' % [
+              q.metric('windows:net_received_%s:rate' % outcome[1], [c.nicSelector]),
+              q.metric('windows:net_outbound_%s:rate' % outcome[1], [c.nicSelector]),
+              outcome[2],
+            ],
+            '15m',
+            'warning',
+            'Windows network packet %s are high' % outcome[3],
+            'Packet %s on interface {{ $labels.nic }} on {{ $labels.instance }} have exceeded %g per second for 15 minutes.' % [outcome[3], outcome[2]]
+          )
+          for outcome in [
+            ['Errors', 'errors', c.networkErrorRateThreshold, 'errors'],
+            ['Discards', 'discarded', c.networkDiscardRateThreshold, 'discards'],
+          ]
         ] + [
           alert(
             'WindowsDiskAlmostFull',
@@ -74,25 +109,47 @@
           ),
         ],
       },
-    ] + if c.enableActiveDirectory then [
+    ] + (if c.enableActiveDirectory then [
+           {
+             name: 'windows-active-directory',
+             rules: [
+               alert(
+                 'WindowsADPendingReplication',
+                 q.metric('windows_ad_replication_pending_operations') + ' > %s' % c.adPendingReplicationThreshold,
+                 '15m',
+                 'warning',
+                 'Active Directory replication queue is high',
+                 'Pending replication operations on {{ $labels.instance }} have exceeded %s for 15 minutes.' % c.adPendingReplicationThreshold
+               ),
+               alert(
+                 'WindowsADReplicationFailures',
+                 '(' + q.rate('windows_ad_replication_sync_requests_total') + ' - ' + q.rate('windows_ad_replication_sync_requests_success_total') + ') > %s' % c.adReplicationFailureRateThreshold,
+                 '15m',
+                 'warning',
+                 'Active Directory replication requests are failing',
+                 'Replication synchronization requests on {{ $labels.instance }} have been failing for 15 minutes.'
+               ),
+             ],
+           },
+         ] else []) + if c.enableTime then [
       {
-        name: 'windows-active-directory',
+        name: 'windows-time',
         rules: [
           alert(
-            'WindowsADPendingReplication',
-            q.metric('windows_ad_replication_pending_operations') + ' > %s' % c.adPendingReplicationThreshold,
-            '15m',
+            'WindowsClockNotSynchronising',
+            q.metric('windows_time_ntp_client_time_sources') + ' == 0',
+            '10m',
             'warning',
-            'Active Directory replication queue is high',
-            'Pending replication operations on {{ $labels.instance }} have exceeded %s for 15 minutes.' % c.adPendingReplicationThreshold
+            'Windows clock has no NTP time source',
+            'Windows Time on {{ $labels.instance }} has had no active NTP time source for 10 minutes.'
           ),
           alert(
-            'WindowsADReplicationFailures',
-            '(' + q.rate('windows_ad_replication_sync_requests_total') + ' - ' + q.rate('windows_ad_replication_sync_requests_success_total') + ') > %s' % c.adReplicationFailureRateThreshold,
-            '15m',
+            'WindowsClockSkewDetected',
+            'abs(%s) > %g' % [q.metric('windows_time_computed_time_offset_seconds'), c.clockOffsetThresholdSeconds],
+            '10m',
             'warning',
-            'Active Directory replication requests are failing',
-            'Replication synchronization requests on {{ $labels.instance }} have been failing for 15 minutes.'
+            'Windows clock offset is high',
+            'Windows Time on {{ $labels.instance }} reports a clock offset above %g seconds for 10 minutes.' % c.clockOffsetThresholdSeconds
           ),
         ],
       },
