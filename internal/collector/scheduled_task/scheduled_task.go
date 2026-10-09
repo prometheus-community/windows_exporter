@@ -87,10 +87,9 @@ const (
 	SCHED_S_TASK_QUEUED            TaskResult = 0x00041325
 )
 
+// ScheduledTask holds the task properties published as metrics.
 type ScheduledTask struct {
-	Name            string
 	Path            string
-	Enabled         bool
 	State           TaskState
 	MissedRunsCount float64
 	LastTaskResult  TaskResult
@@ -211,7 +210,7 @@ var TASK_RESULT_STATUSES = []string{
 }
 
 func (c *Collector) collect(ch chan<- prometheus.Metric) error {
-	scheduledTasks, err := getScheduledTasks()
+	scheduledTasks, err := getScheduledTasks(c.includeTask)
 	if errors.Is(err, errTasksSkipped) {
 		// Tasks and folders that can't be read are skipped, the other tasks are still collected.
 		c.logger.Warn("failed to read some scheduled tasks",
@@ -226,17 +225,17 @@ func (c *Collector) collect(ch chan<- prometheus.Metric) error {
 	return nil
 }
 
+// includeTask reports whether a task path matches include and does not match exclude.
+func (c *Collector) includeTask(path string) bool {
+	return c.config.TaskInclude.MatchString(path) && !c.config.TaskExclude.MatchString(path)
+}
+
 func (c *Collector) collectMetrics(ch chan<- prometheus.Metric, scheduledTasks ScheduledTasks) {
 	for _, task := range scheduledTasks {
-		if c.config.TaskExclude.MatchString(task.Path) ||
-			!c.config.TaskInclude.MatchString(task.Path) {
-			continue
-		}
-
 		for _, state := range TASK_STATES {
 			var stateValue float64
 
-			if strings.ToLower(task.State.String()) == state {
+			if strings.EqualFold(task.State.String(), state) {
 				stateValue = 1.0
 			}
 
@@ -295,7 +294,8 @@ func (c *Collector) collectMetrics(ch chan<- prometheus.Metric, scheduledTasks S
 // errTasksSkipped accompanies readable tasks when some tasks or folders could not be read.
 var errTasksSkipped = errors.New("tasks skipped")
 
-func getScheduledTasks() (ScheduledTasks, error) {
+// getScheduledTasks returns the tasks whose slash-separated paths pass include.
+func getScheduledTasks(include func(path string) bool) (ScheduledTasks, error) {
 	// COM initialization and every interface call stay on the same OS thread.
 	runtime.LockOSThread()
 
@@ -324,7 +324,7 @@ func getScheduledTasks() (ScheduledTasks, error) {
 	defer root.Release()
 
 	tasks := ScheduledTasks{}
-	if err := fetchTasksRecursively(root, `\`, &tasks); err != nil {
+	if err := fetchTasksRecursively(root, `\`, include, &tasks); err != nil {
 		return tasks, fmt.Errorf("%w: %w", errTasksSkipped, err)
 	}
 
@@ -332,7 +332,7 @@ func getScheduledTasks() (ScheduledTasks, error) {
 }
 
 // fetchTasksInFolder appends readable tasks and reports errors after reading the remaining tasks.
-func fetchTasksInFolder(folder *taskschd.TaskFolder, scheduledTasks *ScheduledTasks) error {
+func fetchTasksInFolder(folder *taskschd.TaskFolder, include func(path string) bool, scheduledTasks *ScheduledTasks) error {
 	tasks, err := folder.Tasks()
 	if err != nil {
 		return fmt.Errorf("get tasks: %w", err)
@@ -348,10 +348,14 @@ func fetchTasksInFolder(folder *taskschd.TaskFolder, scheduledTasks *ScheduledTa
 			continue
 		}
 
-		parsedTask, err := parseTask(task)
+		parsedTask, ok, err := parseTask(task, include)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("parse task: %w", err))
 
+			continue
+		}
+
+		if !ok {
 			continue
 		}
 
@@ -362,9 +366,11 @@ func fetchTasksInFolder(folder *taskschd.TaskFolder, scheduledTasks *ScheduledTa
 }
 
 // fetchTasksRecursively appends readable tasks, retaining errors from skipped folders or tasks.
-func fetchTasksRecursively(folder *taskschd.TaskFolder, folderPath string, scheduledTasks *ScheduledTasks) error {
+func fetchTasksRecursively(
+	folder *taskschd.TaskFolder, folderPath string, include func(path string) bool, scheduledTasks *ScheduledTasks,
+) error {
 	errs := []error{}
-	if err := fetchTasksInFolder(folder, scheduledTasks); err != nil {
+	if err := fetchTasksInFolder(folder, include, scheduledTasks); err != nil {
 		errs = append(errs, fmt.Errorf("folder %s: %w", folderPath, err))
 	}
 
@@ -386,7 +392,7 @@ func fetchTasksRecursively(folder *taskschd.TaskFolder, folderPath string, sched
 			subfolderPath = path
 		}
 
-		if err := fetchTasksRecursively(subfolder, subfolderPath, scheduledTasks); err != nil {
+		if err := fetchTasksRecursively(subfolder, subfolderPath, include, scheduledTasks); err != nil {
 			errs = append(errs, err)
 		}
 	}
@@ -394,45 +400,46 @@ func fetchTasksRecursively(folder *taskschd.TaskFolder, folderPath string, sched
 	return errors.Join(errs...)
 }
 
-func parseTask(task *taskschd.RegisteredTask) (ScheduledTask, error) {
-	name, err := task.Name()
-	if err != nil {
-		return ScheduledTask{}, fmt.Errorf("get task name: %w", err)
-	}
-
+// parseTask reads a task that passes include and reports false for filtered
+// tasks. Reading a task property other than Path is a round trip to the Task
+// Scheduler service, so filtered tasks are skipped before those reads, and only
+// properties that collectMetrics publishes are read.
+func parseTask(task *taskschd.RegisteredTask, include func(path string) bool) (ScheduledTask, bool, error) {
 	path, err := task.Path()
 	if err != nil {
-		return ScheduledTask{}, fmt.Errorf("get task path: %w", err)
+		return ScheduledTask{}, false, fmt.Errorf("get task path: %w", err)
 	}
 
-	enabled, err := task.Enabled()
-	if err != nil {
-		return ScheduledTask{}, fmt.Errorf("get task enabled: %w", err)
+	parsedTask := ScheduledTask{Path: strings.ReplaceAll(path, "\\", "/")}
+	if !include(parsedTask.Path) {
+		return ScheduledTask{}, false, nil
 	}
 
 	state, err := task.State()
 	if err != nil {
-		return ScheduledTask{}, fmt.Errorf("get task state: %w", err)
+		return ScheduledTask{}, false, fmt.Errorf("get task state: %w", err)
 	}
 
-	missed, err := task.NumberOfMissedRuns()
-	if err != nil {
-		return ScheduledTask{}, fmt.Errorf("get task missed runs: %w", err)
-	}
+	parsedTask.State = TaskState(state)
 
 	result, err := task.LastTaskResult()
 	if err != nil {
-		return ScheduledTask{}, fmt.Errorf("get task last result: %w", err)
+		return ScheduledTask{}, false, fmt.Errorf("get task last result: %w", err)
 	}
 
-	return ScheduledTask{
-		Name:            name,
-		Path:            strings.ReplaceAll(path, "\\", "/"),
-		Enabled:         enabled,
-		State:           TaskState(state),
-		MissedRunsCount: float64(missed),
-		LastTaskResult:  TaskResult(result),
-	}, nil
+	parsedTask.LastTaskResult = TaskResult(result)
+
+	// collectMetrics omits missed runs for tasks that have not run.
+	if parsedTask.LastTaskResult != SCHED_S_TASK_HAS_NOT_RUN {
+		missed, err := task.NumberOfMissedRuns()
+		if err != nil {
+			return ScheduledTask{}, false, fmt.Errorf("get task missed runs: %w", err)
+		}
+
+		parsedTask.MissedRunsCount = float64(missed)
+	}
+
+	return parsedTask, true, nil
 }
 
 func (t TaskState) String() string {

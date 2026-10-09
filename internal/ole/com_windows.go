@@ -21,8 +21,10 @@ import (
 	"errors"
 	"fmt"
 	"runtime"
+	"strings"
 	"syscall"
 	"unicode/utf16"
+	"unicode/utf8"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
@@ -234,8 +236,24 @@ func (b bstr) string() string {
 	}
 
 	n, _, _ := sysStringLen.Call(uintptr(unsafe.Pointer(b.ptr)))
+	units := unsafe.Slice(b.ptr, int(n))
 
-	return string(utf16.Decode(unsafe.Slice(b.ptr, int(n))))
+	for _, unit := range units {
+		if unit >= utf8.RuneSelf {
+			return string(utf16.Decode(units))
+		}
+	}
+
+	// ASCII needs no decoding, so copy it without an intermediate rune slice.
+	var value strings.Builder
+
+	value.Grow(len(units))
+
+	for _, unit := range units {
+		value.WriteByte(byte(unit))
+	}
+
+	return value.String()
 }
 
 // String calls a BSTR getter, copies its value, and frees the native string.

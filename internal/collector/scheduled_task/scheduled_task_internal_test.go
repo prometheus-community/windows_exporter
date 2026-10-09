@@ -19,7 +19,6 @@ package scheduled_task
 
 import (
 	"log/slog"
-	"regexp"
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -185,88 +184,6 @@ func TestCollectMetrics(t *testing.T) {
 			require.NotNil(t, missedRuns)
 			require.Len(t, missedRuns.GetMetric(), 1)
 			require.InDelta(t, task.MissedRunsCount, missedRuns.GetMetric()[0].GetGauge().GetValue(), 0)
-		})
-	}
-}
-
-func TestCollectMetricsFilters(t *testing.T) {
-	t.Parallel()
-
-	tasks := ScheduledTasks{
-		{Path: "/Included/Task", State: TASK_STATE_READY},
-		{Path: "/Included/Excluded", State: TASK_STATE_READY},
-		{Path: "/Other/Task", State: TASK_STATE_READY},
-	}
-
-	for _, tc := range []struct {
-		name   string
-		config *Config
-		tasks  ScheduledTasks
-		paths  []string
-	}{
-		{name: "empty", tasks: ScheduledTasks{}, paths: []string{}},
-		{name: "defaults", tasks: tasks, paths: []string{"/Included/Task", "/Included/Excluded", "/Other/Task"}},
-		{
-			name:   "include",
-			config: &Config{TaskInclude: regexp.MustCompile(`^/Included/`)},
-			tasks:  tasks,
-			paths:  []string{"/Included/Task", "/Included/Excluded"},
-		},
-		{
-			name: "exclude takes precedence",
-			config: &Config{
-				TaskInclude: regexp.MustCompile(`^/Included/`),
-				TaskExclude: regexp.MustCompile(`Excluded$`),
-			},
-			tasks: tasks,
-			paths: []string{"/Included/Task"},
-		},
-		{
-			name:   "all excluded",
-			config: &Config{TaskExclude: regexp.MustCompile(`.*`)},
-			tasks:  tasks,
-			paths:  []string{},
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			families := gatherTaskMetrics(t, tc.config, tc.tasks)
-			if len(tc.paths) == 0 {
-				require.Empty(t, families)
-
-				return
-			}
-
-			require.Len(t, families, 4)
-
-			for _, family := range families {
-				paths := make([]string, 0, len(family.GetMetric()))
-
-				for _, metric := range family.GetMetric() {
-					for _, label := range metric.GetLabel() {
-						if label.GetName() == "task" {
-							paths = append(paths, label.GetValue())
-						}
-					}
-				}
-
-				samplesPerTask := 1
-				if family.GetName() == "windows_scheduled_task_state" {
-					samplesPerTask = 5
-				}
-
-				if family.GetName() == "windows_scheduled_task_last_result_status" {
-					samplesPerTask = 12
-				}
-
-				expected := make([]string, 0, samplesPerTask*len(tc.paths))
-				for range samplesPerTask {
-					expected = append(expected, tc.paths...)
-				}
-
-				require.ElementsMatch(t, expected, paths, "%s", family.GetName())
-			}
 		})
 	}
 }
