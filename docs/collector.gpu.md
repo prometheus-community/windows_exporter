@@ -38,9 +38,9 @@ The `driver_version`, `wddm_version` and `architecture` labels of `windows_gpu_i
 
 The sensor metrics are read from the graphics kernel (dxgkrnl) with `D3DKMTQueryAdapterInfo`, the same source Task Manager
 uses. They are vendor-neutral, but depend on WDDM 2.4 or newer and on driver support. Drivers report 0 for values they do
-not support, so a metric is only exposed if the driver reported a non-zero value or capability for it at startup. Adapters
-without support, like the Microsoft Basic Render Driver, expose none of these metrics. Query failures are logged at debug level
-and never fail the scrape.
+not support, so a metric is only exposed if the driver reported a non-zero value or capability for it at startup. Microsoft
+software adapters, like the Microsoft Basic Render Driver, are skipped and never queried. Query failures are logged at debug
+level and never fail the scrape.
 
 | Name                                       | Description                                                                           | Type    | Labels                          |
 |--------------------------------------------|---------------------------------------------------------------------------------------|---------|---------------------------------|
@@ -52,8 +52,6 @@ and never fail the scrape.
 | `windows_gpu_power_usage_ratio`            | Current power draw as a ratio (0–1) of the maximum power (TDP) of the physical GPU    | gauge   | `device_id`,`luid`,`phys`       |
 | `windows_gpu_memory_frequency_hertz`       | Current clock frequency of the GPU memory in hertz                                    | gauge   | `device_id`,`luid`,`phys`       |
 | `windows_gpu_memory_frequency_max_hertz`   | Maximum clock frequency of the GPU memory in hertz, while not overclocked             | gauge   | `device_id`,`luid`,`phys`       |
-| `windows_gpu_memory_bandwidth_bytes_total` | Total amount of memory transferred by the physical GPU in bytes                       | counter | `device_id`,`luid`,`phys`       |
-| `windows_gpu_pcie_bandwidth_bytes_total`   | Total amount of memory transferred over PCIe by the physical GPU in bytes             | counter | `device_id`,`luid`,`phys`       |
 | `windows_gpu_engine_frequency_hertz`       | Current clock frequency of the GPU engine in hertz                                    | gauge   | `device_id`,`luid`,`phys`,`eng` |
 | `windows_gpu_engine_frequency_max_hertz`   | Maximum clock frequency of the GPU engine in hertz, while not overclocked             | gauge   | `device_id`,`luid`,`phys`,`eng` |
 

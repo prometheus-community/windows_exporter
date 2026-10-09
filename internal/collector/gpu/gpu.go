@@ -306,7 +306,7 @@ func (c *Collector) Build(logger *slog.Logger, _ *mi.Session) error {
 		c.gpuDeviceCache[luidKey] = gpuDevice{
 			gdi32:    gpu,
 			cfgmgr32: cfgmgr32Dev,
-			sensors:  discoverSensors(c.logger.With(slog.String("luid", luidKey)), gpu.LUID),
+			sensors:  discoverSensors(c.logger.With(slog.String("luid", luidKey)), gpu),
 			ID:       deviceID,
 		}
 

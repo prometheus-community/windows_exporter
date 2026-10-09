@@ -20,6 +20,7 @@ package gpu
 import (
 	"log/slog"
 	"strconv"
+	"strings"
 
 	"github.com/prometheus-community/windows_exporter/internal/headers/gdi32"
 	"github.com/prometheus-community/windows_exporter/internal/types"
@@ -40,8 +41,6 @@ type sensorMetrics struct {
 	powerUsage         *prometheus.Desc
 	memoryFrequency    *prometheus.Desc
 	memoryFrequencyMax *prometheus.Desc
-	memoryBandwidth    *prometheus.Desc
-	pcieBandwidth      *prometheus.Desc
 	engineFrequency    *prometheus.Desc
 	engineFrequencyMax *prometheus.Desc
 }
@@ -67,8 +66,6 @@ type physicalAdapterSensors struct {
 	fanSpeed        bool
 	powerUsage      bool
 	memoryFrequency bool
-	memoryBandwidth bool
-	pcieBandwidth   bool
 
 	// nodes are the engine node ordinals that report a frequency.
 	nodes []uint32
@@ -136,18 +133,6 @@ func newSensorMetrics() sensorMetrics {
 			labels,
 			nil,
 		),
-		memoryBandwidth: prometheus.NewDesc(
-			prometheus.BuildFQName(types.Namespace, Name, "memory_bandwidth_bytes_total"),
-			"Total amount of memory transferred by the physical GPU in bytes.",
-			labels,
-			nil,
-		),
-		pcieBandwidth: prometheus.NewDesc(
-			prometheus.BuildFQName(types.Namespace, Name, "pcie_bandwidth_bytes_total"),
-			"Total amount of memory transferred over PCIe by the physical GPU in bytes.",
-			labels,
-			nil,
-		),
 		engineFrequency: prometheus.NewDesc(
 			prometheus.BuildFQName(types.Namespace, Name, "engine_frequency_hertz"),
 			"Current clock frequency of the GPU engine in hertz.",
@@ -163,13 +148,26 @@ func newSensorMetrics() sensorMetrics {
 	}
 }
 
+// isSoftwareAdapter reports whether the adapter is a Microsoft software or virtual adapter,
+// like the Microsoft Basic Render Driver (PCI\VEN_1414&DEV_008C). These adapters have no
+// sensors and reject the perf data queries with STATUS_INVALID_PARAMETER.
+func isSoftwareAdapter(device gdi32.GPUDevice) bool {
+	return device.AdapterString == "" || strings.HasPrefix(device.DeviceID, `PCI\VEN_1414&`)
+}
+
 // discoverSensors reads the static adapter data and probes which sensors the driver supports.
 // The queries depend on WDDM 2.4+ and driver support. Failures are logged at debug level and
 // mark the sensor as unsupported.
-func discoverSensors(logger *slog.Logger, luid windows.LUID) gpuSensors {
+func discoverSensors(logger *slog.Logger, device gdi32.GPUDevice) gpuSensors {
 	var sensors gpuSensors
 
-	hAdapter, err := gdi32.OpenAdapterFromLUID(luid)
+	// Skip software adapters explicitly, so they are never queried, even if the
+	// device discovery stops filtering them out.
+	if isSoftwareAdapter(device) {
+		return sensors
+	}
+
+	hAdapter, err := gdi32.OpenAdapterFromLUID(device.LUID)
 	if err != nil {
 		logger.Debug("failed to open GPU adapter for sensor discovery", slog.Any("err", err))
 
@@ -242,8 +240,6 @@ func discoverPhysicalAdapterSensors(logger *slog.Logger, hAdapter gdi32.D3DKMT_H
 		physicalAdapter.fanSpeed = perfData.FanRPM > 0 || caps.MaxFanRPM > 0
 		physicalAdapter.powerUsage = perfData.Power > 0
 		physicalAdapter.memoryFrequency = perfData.MemoryFrequency > 0 || perfData.MaxMemoryFrequency > 0
-		physicalAdapter.memoryBandwidth = perfData.MemoryBandwidth > 0 || caps.MaxMemoryBandwidth > 0
-		physicalAdapter.pcieBandwidth = perfData.PCIEBandwidth > 0 || caps.MaxPCIEBandwidth > 0
 	}
 
 	for node := range uint32(maxNodes) {
@@ -268,6 +264,11 @@ func discoverPhysicalAdapterSensors(logger *slog.Logger, hAdapter gdi32.D3DKMT_H
 
 func (c *Collector) collectGpuSensorMetrics(ch chan<- prometheus.Metric) {
 	for luid, device := range c.gpuDeviceCache {
+		// The caps were read during discovery and need no adapter handle.
+		for _, physicalAdapter := range device.sensors.physicalAdapters {
+			c.collectPhysicalAdapterCaps(ch, []string{luid, device.ID, physicalAdapter.phys}, physicalAdapter.caps)
+		}
+
 		if !device.sensors.hasDynamicSensors() {
 			continue
 		}
@@ -291,16 +292,7 @@ func (c *Collector) collectGpuSensorMetrics(ch chan<- prometheus.Metric) {
 	}
 }
 
-func (c *Collector) collectPhysicalAdapterSensorMetrics(
-	ch chan<- prometheus.Metric,
-	logger *slog.Logger,
-	hAdapter gdi32.D3DKMT_HANDLE,
-	luid, deviceID string,
-	physicalAdapter physicalAdapterSensors,
-) {
-	labels := []string{luid, deviceID, physicalAdapter.phys}
-	caps := physicalAdapter.caps
-
+func (c *Collector) collectPhysicalAdapterCaps(ch chan<- prometheus.Metric, labels []string, caps gdi32.D3DKMT_ADAPTER_PERFDATACAPS) {
 	if caps.TemperatureWarning > 0 {
 		ch <- prometheus.MustNewConstMetric(
 			c.sensorMetrics.temperatureWarning,
@@ -327,6 +319,16 @@ func (c *Collector) collectPhysicalAdapterSensorMetrics(
 			labels...,
 		)
 	}
+}
+
+func (c *Collector) collectPhysicalAdapterSensorMetrics(
+	ch chan<- prometheus.Metric,
+	logger *slog.Logger,
+	hAdapter gdi32.D3DKMT_HANDLE,
+	luid, deviceID string,
+	physicalAdapter physicalAdapterSensors,
+) {
+	labels := []string{luid, deviceID, physicalAdapter.phys}
 
 	if physicalAdapter.perfData {
 		perfData, err := gdi32.QueryAdapterPerfData(hAdapter, physicalAdapter.index)
@@ -419,23 +421,5 @@ func (c *Collector) collectAdapterPerfData(
 				labels...,
 			)
 		}
-	}
-
-	if physicalAdapter.memoryBandwidth {
-		ch <- prometheus.MustNewConstMetric(
-			c.sensorMetrics.memoryBandwidth,
-			prometheus.CounterValue,
-			float64(perfData.MemoryBandwidth),
-			labels...,
-		)
-	}
-
-	if physicalAdapter.pcieBandwidth {
-		ch <- prometheus.MustNewConstMetric(
-			c.sensorMetrics.pcieBandwidth,
-			prometheus.CounterValue,
-			float64(perfData.PCIEBandwidth),
-			labels...,
-		)
 	}
 }
