@@ -135,6 +135,12 @@
         "golangci/golangci-lint",
         "golangci/golangci-lint-action"
       ]
+    },    
+    {
+      "description": "Keep Go dependencies compatible with the backport branches",
+      "matchManagers": ["gomod"],
+      "matchBaseBranches": ["/^0\\.\\d+$/"],
+      "constraintsFiltering": "strict"
     }
   ],
   "postUpdateOptions": [
