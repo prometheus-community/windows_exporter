@@ -56,7 +56,9 @@ type JobObjectBasicProcessIDList struct {
 	ProcessIdList             [1]uintptr
 }
 
-type PROCESS_VM_COUNTERS struct {
+// VM_COUNTERS_EX2 is the ProcessVmCounters layout used by NtQueryInformationProcess.
+// PrivateUsage is private commit; PrivateWorkingSetSize is resident private memory.
+type VM_COUNTERS_EX2 struct {
 	PeakVirtualSize            uintptr
 	VirtualSize                uintptr
 	PageFaultCount             uint32
@@ -68,5 +70,7 @@ type PROCESS_VM_COUNTERS struct {
 	QuotaNonPagedPoolUsage     uintptr
 	PagefileUsage              uintptr
 	PeakPagefileUsage          uintptr
+	PrivateUsage               uintptr
 	PrivateWorkingSetSize      uintptr
+	SharedCommitUsage          uintptr
 }
