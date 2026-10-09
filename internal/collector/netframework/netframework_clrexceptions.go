@@ -21,13 +21,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
-	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-func (c *Collector) buildClrExceptions() {
+func (c *Collector) describeClrExceptions() {
 	c.numberOfExceptionsThrown = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, collectorClrExceptions+"_exceptions_thrown_total"),
 		"Displays the total number of exceptions thrown since the application started. This includes both .NET exceptions and unmanaged exceptions that are converted into .NET exceptions.",
@@ -54,20 +52,28 @@ func (c *Collector) buildClrExceptions() {
 	)
 }
 
-type Win32_PerfRawData_NETFramework_NETCLRExceptions struct {
-	Name string `mi:"Name"`
+func (c *Collector) buildClrExceptions() error {
+	c.describeClrExceptions()
 
-	NumberofExcepsThrown       uint32 `mi:"NumberofExcepsThrown"`
-	NumberofExcepsThrownPersec uint32 `mi:"NumberofExcepsThrownPersec"`
-	NumberofFiltersPersec      uint32 `mi:"NumberofFiltersPersec"`
-	NumberofFinallysPersec     uint32 `mi:"NumberofFinallysPersec"`
-	ThrowToCatchDepthPersec    uint32 `mi:"ThrowToCatchDepthPersec"`
+	var err error
+
+	c.perfClrExceptions, err = newPerfCollector[perfDataClrExceptions](c.logger, ".NET CLR Exceptions")
+
+	return err
 }
 
-func (c *Collector) collectClrExceptions(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) error {
-	var dst []Win32_PerfRawData_NETFramework_NETCLRExceptions
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * FROM Win32_PerfRawData_NETFramework_NETCLRExceptions")), maxScrapeDuration); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
+type perfDataClrExceptions struct {
+	Name                    string
+	NumberofExcepsThrown    float64 `perfdata:"# of Exceps Thrown"`
+	NumberofFiltersPersec   float64 `perfdata:"# of Filters / sec"`
+	NumberofFinallysPersec  float64 `perfdata:"# of Finallys / sec"`
+	ThrowToCatchDepthPersec float64 `perfdata:"Throw To Catch Depth / sec"`
+}
+
+func (c *Collector) collectClrExceptions(ch chan<- prometheus.Metric, _ time.Duration) error {
+	var dst []perfDataClrExceptions
+	if err := c.perfClrExceptions.Collect(&dst); err != nil {
+		return fmt.Errorf("failed to collect .NET CLR Exceptions: %w", err)
 	}
 
 	for _, process := range dst {

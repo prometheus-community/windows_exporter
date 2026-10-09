@@ -21,13 +21,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
-	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-func (c *Collector) buildClrRemoting() {
+func (c *Collector) describeClrRemoting() {
 	c.channels = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, collectorClrRemoting+"_channels_total"),
 		"Displays the total number of remoting channels registered across all application domains since application started.",
@@ -66,22 +64,30 @@ func (c *Collector) buildClrRemoting() {
 	)
 }
 
-type Win32_PerfRawData_NETFramework_NETCLRRemoting struct {
-	Name string `mi:"Name"`
+func (c *Collector) buildClrRemoting() error {
+	c.describeClrRemoting()
 
-	Channels                       uint32 `mi:"Channels"`
-	ContextBoundClassesLoaded      uint32 `mi:"ContextBoundClassesLoaded"`
-	ContextBoundObjectsAllocPersec uint32 `mi:"ContextBoundObjectsAllocPersec"`
-	ContextProxies                 uint32 `mi:"ContextProxies"`
-	Contexts                       uint32 `mi:"Contexts"`
-	RemoteCallsPersec              uint32 `mi:"RemoteCallsPersec"`
-	TotalRemoteCalls               uint32 `mi:"TotalRemoteCalls"`
+	var err error
+
+	c.perfClrRemoting, err = newPerfCollector[perfDataClrRemoting](c.logger, ".NET CLR Remoting")
+
+	return err
 }
 
-func (c *Collector) collectClrRemoting(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) error {
-	var dst []Win32_PerfRawData_NETFramework_NETCLRRemoting
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * FROM Win32_PerfRawData_NETFramework_NETCLRRemoting")), maxScrapeDuration); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
+type perfDataClrRemoting struct {
+	Name                           string
+	Channels                       float64 `perfdata:"Channels"`
+	ContextBoundClassesLoaded      float64 `perfdata:"Context-Bound Classes Loaded"`
+	ContextBoundObjectsAllocPersec float64 `perfdata:"Context-Bound Objects Alloc / sec"`
+	ContextProxies                 float64 `perfdata:"Context Proxies"`
+	Contexts                       float64 `perfdata:"Contexts"`
+	TotalRemoteCalls               float64 `perfdata:"Total Remote Calls"`
+}
+
+func (c *Collector) collectClrRemoting(ch chan<- prometheus.Metric, _ time.Duration) error {
+	var dst []perfDataClrRemoting
+	if err := c.perfClrRemoting.Collect(&dst); err != nil {
+		return fmt.Errorf("failed to collect .NET CLR Remoting: %w", err)
 	}
 
 	for _, process := range dst {

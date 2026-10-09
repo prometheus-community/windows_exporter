@@ -21,13 +21,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/prometheus-community/windows_exporter/internal/mi"
 	"github.com/prometheus-community/windows_exporter/internal/types"
-	"github.com/prometheus-community/windows_exporter/internal/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-func (c *Collector) buildClrLoading() {
+func (c *Collector) describeClrLoading() {
 	c.bytesInLoaderHeap = prometheus.NewDesc(
 		prometheus.BuildFQName(types.Namespace, Name, collectorClrLoading+"_loader_heap_size_bytes"),
 		"Displays the current size, in bytes, of the memory committed by the class loader across all application domains. Committed memory is the physical space reserved in the disk paging file.",
@@ -84,31 +82,33 @@ func (c *Collector) buildClrLoading() {
 	)
 }
 
-type Win32_PerfRawData_NETFramework_NETCLRLoading struct {
-	Name string `mi:"Name"`
+func (c *Collector) buildClrLoading() error {
+	c.describeClrLoading()
 
-	AssemblySearchLength      uint32 `mi:"AssemblySearchLength"`
-	BytesinLoaderHeap         uint64 `mi:"BytesinLoaderHeap"`
-	Currentappdomains         uint32 `mi:"Currentappdomains"`
-	CurrentAssemblies         uint32 `mi:"CurrentAssemblies"`
-	CurrentClassesLoaded      uint32 `mi:"CurrentClassesLoaded"`
-	PercentTimeLoading        uint64 `mi:"PercentTimeLoading"`
-	Rateofappdomains          uint32 `mi:"Rateofappdomains"`
-	Rateofappdomainsunloaded  uint32 `mi:"Rateofappdomainsunloaded"`
-	RateofAssemblies          uint32 `mi:"RateofAssemblies"`
-	RateofClassesLoaded       uint32 `mi:"RateofClassesLoaded"`
-	RateofLoadFailures        uint32 `mi:"RateofLoadFailures"`
-	TotalAppdomains           uint32 `mi:"TotalAppdomains"`
-	Totalappdomainsunloaded   uint32 `mi:"Totalappdomainsunloaded"`
-	TotalAssemblies           uint32 `mi:"TotalAssemblies"`
-	TotalClassesLoaded        uint32 `mi:"TotalClassesLoaded"`
-	TotalNumberofLoadFailures uint32 `mi:"TotalNumberofLoadFailures"`
+	var err error
+
+	c.perfClrLoading, err = newPerfCollector[perfDataClrLoading](c.logger, ".NET CLR Loading")
+
+	return err
 }
 
-func (c *Collector) collectClrLoading(ch chan<- prometheus.Metric, maxScrapeDuration time.Duration) error {
-	var dst []Win32_PerfRawData_NETFramework_NETCLRLoading
-	if err := c.miSession.Query(&dst, mi.NamespaceRootCIMv2, utils.Must(mi.NewQuery("SELECT * FROM Win32_PerfRawData_NETFramework_NETCLRLoading")), maxScrapeDuration); err != nil {
-		return fmt.Errorf("WMI query failed: %w", err)
+type perfDataClrLoading struct {
+	Name                      string
+	BytesinLoaderHeap         float64 `perfdata:"Bytes in Loader Heap"`
+	CurrentAssemblies         float64 `perfdata:"Current Assemblies"`
+	CurrentClassesLoaded      float64 `perfdata:"Current Classes Loaded"`
+	Currentappdomains         float64 `perfdata:"Current appdomains"`
+	TotalAppdomains           float64 `perfdata:"Total Appdomains"`
+	TotalAssemblies           float64 `perfdata:"Total Assemblies"`
+	TotalClassesLoaded        float64 `perfdata:"Total Classes Loaded"`
+	TotalNumberofLoadFailures float64 `perfdata:"Total # of Load Failures"`
+	Totalappdomainsunloaded   float64 `perfdata:"Total appdomains unloaded"`
+}
+
+func (c *Collector) collectClrLoading(ch chan<- prometheus.Metric, _ time.Duration) error {
+	var dst []perfDataClrLoading
+	if err := c.perfClrLoading.Collect(&dst); err != nil {
+		return fmt.Errorf("failed to collect .NET CLR Loading: %w", err)
 	}
 
 	for _, process := range dst {
