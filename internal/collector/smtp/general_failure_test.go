@@ -67,3 +67,8 @@ func (generalFailureFixture) Collect(dst *[]perfDataCounterValues) error {
 	return nil
 }
 func (generalFailureFixture) Close() {}
+
+func TestCloseBeforeProviderInitialization(t *testing.T) {
+	t.Parallel()
+	require.NoError(t, New(nil).Close())
+}
