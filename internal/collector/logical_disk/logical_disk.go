@@ -720,7 +720,7 @@ func getVolumeInfo(volumes map[string]string, rootDrive string) (volumeInfo, err
 
 func getAllMountedVolumes() (map[string]string, error) {
 	guidBuf := make([]uint16, windows.MAX_PATH+1)
-	guidBufLen := uint32(len(guidBuf) * 2)
+	guidBufLen := uint32(len(guidBuf))
 
 	hFindVolume, err := windows.FindFirstVolume(&guidBuf[0], guidBufLen)
 	if err != nil {
@@ -743,38 +743,57 @@ func getAllMountedVolumes() (map[string]string, error) {
 			}
 		}
 
-		var rootPathLen uint32
-
-		rootPathBuf := make([]uint16, windows.MAX_PATH+1)
-		rootPathBufLen := uint32(len(rootPathBuf) * 2)
-
-		for {
-			err = windows.GetVolumePathNamesForVolumeName(&guidBuf[0], &rootPathBuf[0], rootPathBufLen, &rootPathLen)
-			if err == nil {
-				break
-			}
-
-			if errors.Is(err, windows.ERROR_FILE_NOT_FOUND) {
-				// the volume is not mounted
-				break
-			}
-
-			if errors.Is(err, windows.ERROR_NO_MORE_FILES) {
-				rootPathBuf = make([]uint16, (rootPathLen+1)/2)
-
-				continue
-			}
-
+		mountPoints, err := getVolumeMountPaths(&guidBuf[0], windows.GetVolumePathNamesForVolumeName)
+		if err != nil {
 			return nil, fmt.Errorf("GetVolumePathNamesForVolumeName: %w", err)
 		}
 
-		mountPoint := windows.UTF16ToString(rootPathBuf)
+		volumeName := strings.TrimSuffix(windows.UTF16ToString(guidBuf), `\`)
+		for _, mountPoint := range mountPoints {
+			volumes[strings.TrimSuffix(mountPoint, `\`)] = volumeName
+		}
+	}
+}
 
-		// Skip unmounted volumes
-		if len(mountPoint) == 0 {
+// getVolumeMountPaths reads the MULTI_SZ mount paths. The API measures both
+// buffer capacity and required capacity in UTF-16 characters, not bytes.
+func getVolumeMountPaths(volumeName *uint16, query func(*uint16, *uint16, uint32, *uint32) error) ([]string, error) {
+	buf := make([]uint16, windows.MAX_PATH+1)
+
+	for {
+		var required uint32
+
+		err := query(volumeName, &buf[0], uint32(len(buf)), &required)
+		if errors.Is(err, windows.ERROR_FILE_NOT_FOUND) {
+			return nil, nil
+		}
+
+		if errors.Is(err, windows.ERROR_MORE_DATA) {
+			if required <= uint32(len(buf)) {
+				return nil, fmt.Errorf("invalid required mount path buffer size: %d", required)
+			}
+
+			buf = make([]uint16, required)
+
 			continue
 		}
 
-		volumes[strings.TrimSuffix(mountPoint, `\`)] = strings.TrimSuffix(windows.UTF16ToString(guidBuf), `\`)
+		if err != nil {
+			return nil, err
+		}
+
+		var paths []string
+
+		for len(buf) > 0 && buf[0] != 0 {
+			end := slices.Index(buf, uint16(0))
+			if end < 0 {
+				return nil, errors.New("unterminated mount path")
+			}
+
+			paths = append(paths, windows.UTF16ToString(buf[:end]))
+			buf = buf[end+1:]
+		}
+
+		return paths, nil
 	}
 }
