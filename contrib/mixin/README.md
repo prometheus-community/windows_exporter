@@ -1,12 +1,13 @@
 # Windows exporter mixin
 
-Configurable Prometheus recording rules and alerts for windows_exporter. The
-source uses Jsonnet and exposes the standard `prometheusRules` and
-`prometheusAlerts` mixin fields. Dashboard source is maintained separately.
+Configurable Prometheus recording rules and alerts for windows_exporter, and the
+source of the sample dashboard. The source uses Jsonnet and exposes the standard
+`prometheusRules`, `prometheusAlerts` and `grafanaDashboards` mixin fields.
 
 ## Generate rules
 
-Install the pinned Jsonnet and [pint](https://github.com/cloudflare/pint) tools:
+Install the pinned Jsonnet, [jsonnet-bundler](https://github.com/jsonnet-bundler/jsonnet-bundler)
+and [pint](https://github.com/cloudflare/pint) tools:
 
 ```sh
 cd contrib/mixin
@@ -15,8 +16,8 @@ export PATH="$(go env GOPATH)/bin:$PATH"
 make generate
 ```
 
-The mixin has no Jsonnet library dependencies, so `jb install` is not required
-to generate rules. Generated files are ignored by Git:
+Only the dashboard depends on Jsonnet libraries, so `jb install` is not required
+to generate rules. Generated rule files are ignored by Git:
 
 - `windows_rules.yaml`: recording rules.
 - `windows_alerts.yaml`: alerting rules.
@@ -193,6 +194,31 @@ repository's GitHub Pages **Source: GitHub Actions** setting. The workflow reads
 the configured Pages URL, including custom domains and repository subpaths.
 Fork users should override `runbookURLPattern` to match their published URL.
 
+## Dashboard
+
+`grafanaDashboards` contains `windows-exporter.json`, the sample dashboard in
+[dashboard/windows-exporter-dashboard.json](../../dashboard/windows-exporter-dashboard.json).
+It is a Grafana v2 dashboard with tabs and needs Grafana 13 or later. See the
+[dashboard documentation](../../dashboard/README.md) for its content.
+
+The dashboard is built with [grafonnet](https://github.com/grafana/grafonnet),
+pinned in `jsonnetfile.json`:
+
+- `dashboards/windows-exporter.libsonnet` defines the tabs, panels and queries.
+- `lib/dashboard.libsonnet` wraps grafonnet panel options and queries into v2
+  panels, and lays them out in tabs, rows and grids.
+- `lib/manifest.libsonnet` renders JSON with the four-space indentation of the
+  committed file.
+
+Regenerate the committed file after changing the dashboard source:
+
+```sh
+make dashboard
+```
+
+This runs `jb install` and writes `../../dashboard/windows-exporter-dashboard.json`.
+The dashboard uses its own variables and does not read `_config`.
+
 ## Validate
 
 Install Python 3 and `promtool` from a [Prometheus release](https://github.com/prometheus/prometheus/releases),
@@ -202,7 +228,8 @@ then run:
 make test
 ```
 
-This checks Jsonnet formatting, validates generated rules with `promtool`, runs
+This checks Jsonnet formatting, checks that the committed dashboard is up to
+date, validates generated rules with `promtool`, runs
 `pint --offline lint`, and evaluates the rules against synthetic time series.
 Tests cover all 25 recordings, alert timing and recovery, threshold
 boundaries, counter resets, zero denominators, disk forecasts, target-label
@@ -217,9 +244,10 @@ If you prefer to run `promtool` through Docker:
 make test PROMTOOL="docker run --rm --entrypoint promtool -v \"$PWD:/mixin:ro\" -w /mixin prom/prometheus:v3.15.0"
 ```
 
-The dedicated `Mixin` workflow runs on changes to `contrib/mixin/**` or its own
-workflow file, and can also be started manually. It caches pinned tool binaries
-and runs the same `make test` checks used locally.
+The dedicated `Mixin` workflow runs on changes to `contrib/mixin/**`, the
+committed dashboard JSON or its own workflow file, and can also be started
+manually. It caches pinned tool binaries and runs the same `make test` checks
+used locally.
 
 `.pint.hcl` requires a non-empty severity label, summary/description annotations,
 and an HTTP(S) runbook URL on alerts, in addition to pint's built-in checks.
