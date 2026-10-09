@@ -1,0 +1,7 @@
+{{ define "main" }}
+<nav aria-label="Breadcrumb"><a href="{{ "runbooks/" | relURL }}">All runbooks</a></nav>
+<article>
+  <h1>{{ .Title }}</h1>
+  {{ .Content }}
+</article>
+{{ end }}

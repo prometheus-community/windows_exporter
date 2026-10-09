@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ if not .IsHome }}{{ .Title }} | {{ end }}{{ site.Title }}</title>
+    <link rel="stylesheet" href="{{ "runbooks.css" | relURL }}">
+  </head>
+  <body>
+    <header>
+      <a href="{{ "" | relURL }}">{{ site.Title }}</a>
+      <a href="https://github.com/prometheus-community/windows_exporter">GitHub</a>
+    </header>
+    <main>{{ block "main" . }}{{ end }}</main>
+  </body>
+</html>

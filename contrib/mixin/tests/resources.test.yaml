@@ -1,0 +1,183 @@
+rule_files:
+  - ../windows_rules.yaml
+  - ../windows_alerts.yaml
+evaluation_interval: 1m
+group_eval_order:
+  - windows-exporter-recording
+  - windows-exporter-alerts
+
+tests:
+  - name: Memory cache includes all lists, commit is a ratio and paging is a rate
+    interval: 1m
+    input_series:
+      - series: 'windows_memory_cache_bytes{job="windows_exporter", instance="host:9182", cluster="a"}'
+        values: '10x10'
+      - series: 'windows_memory_modified_page_list_bytes{job="windows_exporter", instance="host:9182", cluster="a"}'
+        values: '20x10'
+      - series: 'windows_memory_standby_cache_core_bytes{job="windows_exporter", instance="host:9182", cluster="a"}'
+        values: '30x10'
+      - series: 'windows_memory_standby_cache_normal_priority_bytes{job="windows_exporter", instance="host:9182", cluster="a"}'
+        values: '40x10'
+      - series: 'windows_memory_standby_cache_reserve_bytes{job="windows_exporter", instance="host:9182", cluster="a"}'
+        values: '50x10'
+      - series: 'windows_memory_committed_bytes{job="windows_exporter", instance="host:9182", cluster="a"}'
+        values: '80x10'
+      - series: 'windows_memory_commit_limit{job="windows_exporter", instance="host:9182", cluster="a"}'
+        values: '100x10'
+      - series: 'windows_memory_swap_page_operations_total{job="windows_exporter", instance="host:9182", cluster="a"}'
+        values: '0+120x10'
+      - series: 'windows_memory_committed_bytes{job="other", instance="host:9182"}'
+        values: '95x10'
+      - series: 'windows_memory_commit_limit{job="other", instance="host:9182"}'
+        values: '100x10'
+    promql_expr_test:
+      - expr: windows:memory_cached:bytes
+        eval_time: 10m
+        exp_samples:
+          - labels: 'windows:memory_cached:bytes{job="windows_exporter", instance="host:9182", cluster="a"}'
+            value: 150
+      - expr: windows:memory_committed:ratio
+        eval_time: 10m
+        exp_samples:
+          - labels: 'windows:memory_committed:ratio{job="windows_exporter", instance="host:9182", cluster="a"}'
+            value: 0.8
+      - expr: windows:memory_swap_page_operations:rate
+        eval_time: 10m
+        exp_samples:
+          - labels: 'windows:memory_swap_page_operations:rate{job="windows_exporter", instance="host:9182", cluster="a"}'
+            value: 2
+
+  - name: Disk latency uses operations, handles resets and busy time stays bounded
+    interval: 1m
+    input_series:
+      - series: 'windows_logical_disk_read_seconds_total{job="windows_exporter", instance="host:9182", cluster="a", volume="C:"}'
+        values: '0+12x5 12+12x4'
+      - series: 'windows_logical_disk_reads_total{job="windows_exporter", instance="host:9182", cluster="a", volume="C:"}'
+        values: '0+120x5 120+120x4'
+      - series: 'windows_logical_disk_write_seconds_total{job="windows_exporter", instance="host:9182", cluster="a", volume="C:"}'
+        values: '0+24x10'
+      - series: 'windows_logical_disk_writes_total{job="windows_exporter", instance="host:9182", cluster="a", volume="C:"}'
+        values: '0+240x10'
+      - series: 'windows_logical_disk_idle_seconds_total{job="windows_exporter", instance="host:9182", cluster="a", volume="C:"}'
+        values: '0+30x10'
+      - series: 'windows_logical_disk_idle_seconds_total{job="windows_exporter", instance="host:9182", cluster="a", volume="D:"}'
+        values: '0+90x10'
+    promql_expr_test:
+      - expr: windows:logical_disk_read_operations:rate
+        eval_time: 8m
+        exp_samples:
+          - labels: 'windows:logical_disk_read_operations:rate{job="windows_exporter", instance="host:9182", cluster="a", volume="C:"}'
+            value: 2
+      - expr: windows:logical_disk_write_operations:rate
+        eval_time: 10m
+        exp_samples:
+          - labels: 'windows:logical_disk_write_operations:rate{job="windows_exporter", instance="host:9182", cluster="a", volume="C:"}'
+            value: 4
+      - expr: windows:logical_disk_read_latency:seconds
+        eval_time: 8m
+        exp_samples:
+          - labels: 'windows:logical_disk_read_latency:seconds{job="windows_exporter", instance="host:9182", cluster="a", volume="C:"}'
+            value: 0.1
+      - expr: windows:logical_disk_write_latency:seconds
+        eval_time: 10m
+        exp_samples:
+          - labels: 'windows:logical_disk_write_latency:seconds{job="windows_exporter", instance="host:9182", cluster="a", volume="C:"}'
+            value: 0.1
+      - expr: windows:logical_disk_busy:ratio
+        eval_time: 10m
+        exp_samples:
+          - labels: 'windows:logical_disk_busy:ratio{job="windows_exporter", instance="host:9182", cluster="a", volume="C:"}'
+            value: 0.5
+          - labels: 'windows:logical_disk_busy:ratio{job="windows_exporter", instance="host:9182", cluster="a", volume="D:"}'
+            value: 0
+
+  - name: Full duplex network utilization uses bytes and keeps directions separate
+    interval: 1m
+    input_series:
+      - series: 'windows_net_bytes_received_total{job="windows_exporter", instance="host:9182", cluster="a", nic="Ethernet"}'
+        values: '0+600x10'
+      - series: 'windows_net_bytes_sent_total{job="windows_exporter", instance="host:9182", cluster="a", nic="Ethernet"}'
+        values: '0+1200x10'
+      - series: 'windows_net_current_bandwidth_bytes{job="windows_exporter", instance="host:9182", cluster="a", nic="Ethernet"}'
+        values: '100x10'
+      - series: 'windows_net_packets_received_errors_total{job="windows_exporter", instance="host:9182", cluster="a", nic="Ethernet"}'
+        values: '0+60x10'
+      - series: 'windows_net_packets_outbound_errors_total{job="windows_exporter", instance="host:9182", cluster="a", nic="Ethernet"}'
+        values: '0+120x10'
+      - series: 'windows_net_packets_received_discarded_total{job="windows_exporter", instance="host:9182", cluster="a", nic="Ethernet"}'
+        values: '0+180x10'
+      - series: 'windows_net_packets_outbound_discarded_total{job="windows_exporter", instance="host:9182", cluster="a", nic="Ethernet"}'
+        values: '0+240x10'
+    promql_expr_test:
+      - expr: windows:net_received_utilization:ratio
+        eval_time: 10m
+        exp_samples:
+          - labels: 'windows:net_received_utilization:ratio{job="windows_exporter", instance="host:9182", cluster="a", nic="Ethernet"}'
+            value: 0.1
+      - expr: windows:net_sent_utilization:ratio
+        eval_time: 10m
+        exp_samples:
+          - labels: 'windows:net_sent_utilization:ratio{job="windows_exporter", instance="host:9182", cluster="a", nic="Ethernet"}'
+            value: 0.2
+      - expr: windows:net_received_errors:rate
+        eval_time: 10m
+        exp_samples:
+          - labels: 'windows:net_received_errors:rate{job="windows_exporter", instance="host:9182", cluster="a", nic="Ethernet"}'
+            value: 1
+      - expr: windows:net_outbound_errors:rate
+        eval_time: 10m
+        exp_samples:
+          - labels: 'windows:net_outbound_errors:rate{job="windows_exporter", instance="host:9182", cluster="a", nic="Ethernet"}'
+            value: 2
+      - expr: windows:net_received_discarded:rate
+        eval_time: 10m
+        exp_samples:
+          - labels: 'windows:net_received_discarded:rate{job="windows_exporter", instance="host:9182", cluster="a", nic="Ethernet"}'
+            value: 3
+      - expr: windows:net_outbound_discarded:rate
+        eval_time: 10m
+        exp_samples:
+          - labels: 'windows:net_outbound_discarded:rate{job="windows_exporter", instance="host:9182", cluster="a", nic="Ethernet"}'
+            value: 4
+
+  - name: Zero capacity and idle devices produce no undefined ratios or latency alerts
+    interval: 1m
+    input_series:
+      - series: 'windows_memory_available_bytes{job="windows_exporter", instance="host:9182"}'
+        values: '1x20'
+      - series: 'windows_memory_physical_total_bytes{job="windows_exporter", instance="host:9182"}'
+        values: '0x20'
+      - series: 'windows_logical_disk_free_bytes{job="windows_exporter", instance="host:9182", volume="C:"}'
+        values: '1x20'
+      - series: 'windows_logical_disk_size_bytes{job="windows_exporter", instance="host:9182", volume="C:"}'
+        values: '0x20'
+      - series: 'windows_memory_committed_bytes{job="windows_exporter", instance="host:9182"}'
+        values: '1x20'
+      - series: 'windows_memory_commit_limit{job="windows_exporter", instance="host:9182"}'
+        values: '0x20'
+      - series: 'windows_logical_disk_read_seconds_total{job="windows_exporter", instance="host:9182", volume="C:"}'
+        values: '0x20'
+      - series: 'windows_logical_disk_reads_total{job="windows_exporter", instance="host:9182", volume="C:"}'
+        values: '0x20'
+      - series: 'windows_logical_disk_write_seconds_total{job="windows_exporter", instance="host:9182", volume="C:"}'
+        values: '0x20'
+      - series: 'windows_logical_disk_writes_total{job="windows_exporter", instance="host:9182", volume="C:"}'
+        values: '0x20'
+      - series: 'windows_net_bytes_received_total{job="windows_exporter", instance="host:9182", nic="Ethernet"}'
+        values: '0+600x20'
+      - series: 'windows_net_bytes_sent_total{job="windows_exporter", instance="host:9182", nic="Ethernet"}'
+        values: '0+600x20'
+      - series: 'windows_net_current_bandwidth_bytes{job="windows_exporter", instance="host:9182", nic="Ethernet"}'
+        values: '0x20'
+    promql_expr_test:
+      - {expr: 'windows:memory_usage:ratio', eval_time: 20m, exp_samples: []}
+      - {expr: 'windows:logical_disk_free:ratio', eval_time: 20m, exp_samples: []}
+      - {expr: 'windows:memory_committed:ratio', eval_time: 20m, exp_samples: []}
+      - {expr: 'windows:logical_disk_read_latency:seconds', eval_time: 20m, exp_samples: []}
+      - {expr: 'windows:logical_disk_write_latency:seconds', eval_time: 20m, exp_samples: []}
+      - {expr: 'windows:net_received_utilization:ratio', eval_time: 20m, exp_samples: []}
+      - {expr: 'windows:net_sent_utilization:ratio', eval_time: 20m, exp_samples: []}
+    alert_rule_test:
+      - {alertname: WindowsMemoryCommitHighUsage, eval_time: 20m, exp_alerts: []}
+      - {alertname: WindowsDiskReadLatencyHigh, eval_time: 20m, exp_alerts: []}
+      - {alertname: WindowsDiskWriteLatencyHigh, eval_time: 20m, exp_alerts: []}

@@ -6,8 +6,130 @@ group_eval_order:
   - windows-exporter-recording
   - windows-exporter-alerts
   - windows-active-directory
+  - windows-time
 
 tests:
+  - name: Custom commit, latency and network thresholds preserve selectors and device filters
+    interval: 1m
+    input_series:
+      - series: 'windows_memory_committed_bytes{job="windows-custom", instance="host:9182", cluster="test"}'
+        values: '85x20'
+      - series: 'windows_memory_commit_limit{job="windows-custom", instance="host:9182", cluster="test"}'
+        values: '100x20'
+      - series: 'windows_memory_committed_bytes{job="windows-custom", instance="host:9182", cluster="prod"}'
+        values: '99x20'
+      - series: 'windows_memory_commit_limit{job="windows-custom", instance="host:9182", cluster="prod"}'
+        values: '100x20'
+      - series: 'windows_logical_disk_read_seconds_total{job="windows-custom", instance="host:9182", cluster="test", volume="C:"}'
+        values: '0+3.6x20'
+      - series: 'windows_logical_disk_reads_total{job="windows-custom", instance="host:9182", cluster="test", volume="C:"}'
+        values: '0+120x20'
+      - series: 'windows_logical_disk_write_seconds_total{job="windows-custom", instance="host:9182", cluster="test", volume="C:"}'
+        values: '0+3.6x20'
+      - series: 'windows_logical_disk_writes_total{job="windows-custom", instance="host:9182", cluster="test", volume="C:"}'
+        values: '0+120x20'
+      - series: 'windows_logical_disk_read_seconds_total{job="windows-custom", instance="host:9182", cluster="test", volume="HarddiskVolume1"}'
+        values: '0+12x20'
+      - series: 'windows_logical_disk_reads_total{job="windows-custom", instance="host:9182", cluster="test", volume="HarddiskVolume1"}'
+        values: '0+120x20'
+      - series: 'windows_logical_disk_write_seconds_total{job="windows-custom", instance="host:9182", cluster="test", volume="HarddiskVolume1"}'
+        values: '0+12x20'
+      - series: 'windows_logical_disk_writes_total{job="windows-custom", instance="host:9182", cluster="test", volume="HarddiskVolume1"}'
+        values: '0+120x20'
+      - series: 'windows_net_packets_received_errors_total{job="windows-custom", instance="host:9182", cluster="test", nic="Ethernet"}'
+        values: '0+36x20'
+      - series: 'windows_net_packets_outbound_errors_total{job="windows-custom", instance="host:9182", cluster="test", nic="Ethernet"}'
+        values: '0x20'
+      - series: 'windows_net_packets_received_discarded_total{job="windows-custom", instance="host:9182", cluster="test", nic="Ethernet"}'
+        values: '0x20'
+      - series: 'windows_net_packets_outbound_discarded_total{job="windows-custom", instance="host:9182", cluster="test", nic="Ethernet"}'
+        values: '0+36x20'
+      - series: 'windows_net_packets_received_errors_total{job="windows-custom", instance="host:9182", cluster="test", nic="Loopback"}'
+        values: '0+120x20'
+      - series: 'windows_net_packets_outbound_errors_total{job="windows-custom", instance="host:9182", cluster="test", nic="Loopback"}'
+        values: '0+120x20'
+      - series: 'windows_net_packets_received_discarded_total{job="windows-custom", instance="host:9182", cluster="test", nic="Loopback"}'
+        values: '0+120x20'
+      - series: 'windows_net_packets_outbound_discarded_total{job="windows-custom", instance="host:9182", cluster="test", nic="Loopback"}'
+        values: '0+120x20'
+    alert_rule_test:
+      - alertname: WindowsMemoryCommitHighUsage
+        eval_time: 20m
+        exp_alerts:
+          - exp_labels: {job: windows-custom, instance: 'host:9182', cluster: test, severity: warning}
+            exp_annotations:
+              runbook_url: https://runbooks.example.com/windows/windowsmemorycommithighusage/
+              summary: Windows memory commit usage is high
+              description: 'Committed memory on host:9182 has exceeded 80% of the commit limit for 15 minutes.'
+      - alertname: WindowsDiskReadLatencyHigh
+        eval_time: 20m
+        exp_alerts:
+          - exp_labels: {job: windows-custom, instance: 'host:9182', cluster: test, volume: 'C:', severity: warning}
+            exp_annotations:
+              runbook_url: https://runbooks.example.com/windows/windowsdiskreadlatencyhigh/
+              summary: Windows disk read latency is high
+              description: 'Volume C: on host:9182 has averaged more than 0.02 seconds per read operation for 15 minutes.'
+      - alertname: WindowsDiskWriteLatencyHigh
+        eval_time: 20m
+        exp_alerts:
+          - exp_labels: {job: windows-custom, instance: 'host:9182', cluster: test, volume: 'C:', severity: warning}
+            exp_annotations:
+              runbook_url: https://runbooks.example.com/windows/windowsdiskwritelatencyhigh/
+              summary: Windows disk write latency is high
+              description: 'Volume C: on host:9182 has averaged more than 0.02 seconds per write operation for 15 minutes.'
+      - alertname: WindowsNetworkErrors
+        eval_time: 20m
+        exp_alerts:
+          - exp_labels: {job: windows-custom, instance: 'host:9182', cluster: test, nic: Ethernet, severity: warning}
+            exp_annotations:
+              runbook_url: https://runbooks.example.com/windows/windowsnetworkerrors/
+              summary: Windows network packet errors are high
+              description: 'Packet errors on interface Ethernet on host:9182 have exceeded 0.5 per second for 15 minutes.'
+      - alertname: WindowsNetworkDiscards
+        eval_time: 20m
+        exp_alerts:
+          - exp_labels: {job: windows-custom, instance: 'host:9182', cluster: test, nic: Ethernet, severity: warning}
+            exp_annotations:
+              runbook_url: https://runbooks.example.com/windows/windowsnetworkdiscards/
+              summary: Windows network packet discards are high
+              description: 'Packet discards on interface Ethernet on host:9182 have exceeded 0.5 per second for 15 minutes.'
+
+  - name: Clock alerts opt in, use absolute offset, custom URLs and recover
+    interval: 1m
+    input_series:
+      - series: 'windows_time_ntp_client_time_sources{job="windows-custom", instance="host:9182", cluster="test"}'
+        values: '0x10 1x10'
+      - series: 'windows_time_computed_time_offset_seconds{job="windows-custom", instance="host:9182", cluster="test"}'
+        values: '-0.2x10 0x10'
+      - series: 'windows_time_ntp_client_time_sources{job="windows-custom", instance="healthy:9182", cluster="test"}'
+        values: '1x21'
+      - series: 'windows_time_computed_time_offset_seconds{job="windows-custom", instance="healthy:9182", cluster="test"}'
+        values: '0.1x21'
+      - series: 'windows_time_ntp_client_time_sources{job="windows-custom", instance="host:9182", cluster="prod"}'
+        values: '0x21'
+      - series: 'windows_time_computed_time_offset_seconds{job="windows-custom", instance="host:9182", cluster="prod"}'
+        values: '-1x21'
+    alert_rule_test:
+      - {alertname: WindowsClockNotSynchronising, eval_time: 9m, exp_alerts: []}
+      - alertname: WindowsClockNotSynchronising
+        eval_time: 10m
+        exp_alerts:
+          - exp_labels: {job: windows-custom, instance: 'host:9182', cluster: test, severity: warning}
+            exp_annotations:
+              runbook_url: https://runbooks.example.com/windows/windowsclocknotsynchronising/
+              summary: Windows clock has no NTP time source
+              description: 'Windows Time on host:9182 has had no active NTP time source for 10 minutes.'
+      - {alertname: WindowsClockNotSynchronising, eval_time: 11m, exp_alerts: []}
+      - {alertname: WindowsClockSkewDetected, eval_time: 9m, exp_alerts: []}
+      - alertname: WindowsClockSkewDetected
+        eval_time: 10m
+        exp_alerts:
+          - exp_labels: {job: windows-custom, instance: 'host:9182', cluster: test, severity: warning}
+            exp_annotations:
+              runbook_url: https://runbooks.example.com/windows/windowsclockskewdetected/
+              summary: Windows clock offset is high
+              description: 'Windows Time on host:9182 reports a clock offset above 0.1 seconds for 10 minutes.'
+      - {alertname: WindowsClockSkewDetected, eval_time: 11m, exp_alerts: []}
   - name: Custom selectors, thresholds and critical severity propagate to alerts
     interval: 1m
     input_series:
@@ -50,6 +172,7 @@ tests:
         exp_alerts:
           - exp_labels: {job: windows-custom, instance: 'host:9182', cluster: test, severity: page}
             exp_annotations:
+              runbook_url: https://runbooks.example.com/windows/windowsexporterdown/
               summary: Windows exporter is unreachable
               description: 'Prometheus cannot scrape Windows exporter on host:9182 (job windows-custom).'
       - alertname: WindowsCPUHighUsage
@@ -57,6 +180,7 @@ tests:
         exp_alerts:
           - exp_labels: {job: windows-custom, instance: 'host:9182', cluster: test, severity: warning}
             exp_annotations:
+              runbook_url: https://runbooks.example.com/windows/windowscpuhighusage/
               summary: Windows CPU usage is high
               description: 'CPU usage on host:9182 has exceeded 80% for 15 minutes.'
       - alertname: WindowsMemoryHighUsage
@@ -64,6 +188,7 @@ tests:
         exp_alerts:
           - exp_labels: {job: windows-custom, instance: 'host:9182', cluster: test, severity: warning}
             exp_annotations:
+              runbook_url: https://runbooks.example.com/windows/windowsmemoryhighusage/
               summary: Windows memory usage is high
               description: 'Physical memory usage on host:9182 has exceeded 85% for 15 minutes.'
       - alertname: WindowsDiskAlmostFull
@@ -71,10 +196,12 @@ tests:
         exp_alerts:
           - exp_labels: {job: windows-custom, instance: 'host:9182', cluster: test, volume: 'C:', severity: warning}
             exp_annotations:
+              runbook_url: https://runbooks.example.com/windows/windowsdiskalmostfull/
               summary: Windows disk space is low
               description: 'Volume C: on host:9182 has less than 20% free space. Windows may delay space metrics by 10–15 minutes.'
           - exp_labels: {job: windows-custom, instance: 'host:9182', cluster: test, volume: 'C:', severity: page}
             exp_annotations:
+              runbook_url: https://runbooks.example.com/windows/windowsdiskalmostfull/
               summary: Windows disk space is low
               description: 'Volume C: on host:9182 has less than 10% free space. Windows may delay space metrics by 10–15 minutes.'
 
@@ -108,6 +235,7 @@ tests:
         exp_alerts:
           - exp_labels: {job: windows-custom, instance: 'host:9182', cluster: test, severity: warning}
             exp_annotations:
+              runbook_url: https://runbooks.example.com/windows/windowsadpendingreplication/
               summary: Active Directory replication queue is high
               description: 'Pending replication operations on host:9182 have exceeded 10 for 15 minutes.'
       - alertname: WindowsADPendingReplication
@@ -121,6 +249,7 @@ tests:
         exp_alerts:
           - exp_labels: {job: windows-custom, instance: 'host:9182', cluster: test, severity: warning}
             exp_annotations:
+              runbook_url: https://runbooks.example.com/windows/windowsadreplicationfailures/
               summary: Active Directory replication requests are failing
               description: 'Replication synchronization requests on host:9182 have been failing for 15 minutes.'
       - alertname: WindowsADReplicationFailures

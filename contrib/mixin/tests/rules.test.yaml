@@ -18,6 +18,20 @@ tests:
       - series: 'windows_cpu_time_total{job="other", instance="host:9182", core="0", mode="idle"}'
         values: '0+6x10'
     promql_expr_test:
+      - expr: windows:cpu_cores:count
+        eval_time: 10m
+        exp_samples:
+          - labels: 'windows:cpu_cores:count{job="windows_exporter", instance="host:9182", cluster="a"}'
+            value: 2
+          - labels: 'windows:cpu_cores:count{job="windows_exporter", instance="host:9182", cluster="b"}'
+            value: 1
+      - expr: 'windows:cpu_time:ratio_rate{mode="idle"}'
+        eval_time: 10m
+        exp_samples:
+          - labels: 'windows:cpu_time:ratio_rate{job="windows_exporter", instance="host:9182", cluster="a", mode="idle"}'
+            value: 0.4
+          - labels: 'windows:cpu_time:ratio_rate{job="windows_exporter", instance="host:9182", cluster="b", mode="idle"}'
+            value: 0.5
       - expr: windows:cpu_usage:ratio
         eval_time: 10m
         exp_samples:
@@ -42,6 +56,16 @@ tests:
       - series: 'windows_logical_disk_size_bytes{job="windows_exporter", instance="host:9182", volume=""}'
         values: '100x5'
     promql_expr_test:
+      - expr: windows:memory_used:bytes
+        eval_time: 5m
+        exp_samples:
+          - labels: 'windows:memory_used:bytes{job="windows_exporter", instance="host:9182", cluster="a"}'
+            value: 75
+      - expr: windows:logical_disk_used:bytes
+        eval_time: 5m
+        exp_samples:
+          - labels: 'windows:logical_disk_used:bytes{job="windows_exporter", instance="host:9182", cluster="a", volume="C:"}'
+            value: 80
       - expr: windows:memory_usage:ratio
         eval_time: 5m
         exp_samples:
