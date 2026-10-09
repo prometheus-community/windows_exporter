@@ -13,11 +13,11 @@ Enabled by default? | Yes
 
 ### `--collector.net.nic-include`
 
-If given, an interface name needs to match the include regexp in order for the corresponding metrics to be reported
+If given, an interface name needs to match the include regular expression in order for the corresponding metrics to be reported
 
 ### `--collector.net.nic-exclude`
 
-If given, an interface name needs to *not* match the exclude regexp in order for the corresponding metrics to be reported
+If given, an interface name needs to *not* match the exclude regular expression in order for the corresponding metrics to be reported
 
 ### `--collector.net.enabled`
 
