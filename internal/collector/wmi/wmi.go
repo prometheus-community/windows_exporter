@@ -451,7 +451,12 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, maxScrapeDuration time.
 		if err != nil {
 			// A failing query is reported via query_success. Like the registry
 			// collector, it does not fail the whole collector.
-			errs = append(errs, fmt.Errorf("failed to collect query %s: %w", query.Name, errors.Join(err, types.ErrNoData)))
+			errs = append(errs, fmt.Errorf(
+				"failed to collect query %s: %s: %w",
+				query.Name,
+				err.Error(),
+				types.ErrNoData,
+			))
 			success = 0.0
 
 			c.logger.Warn("wmi query failed",

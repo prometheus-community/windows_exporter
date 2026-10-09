@@ -337,7 +337,13 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric, _ time.Duration) error 
 func (c *Collector) collectKey(ch chan<- prometheus.Metric, key Key) error {
 	rk, err := winregistry.OpenKey(key.hive, key.subPath, winregistry.QUERY_VALUE)
 	if err != nil {
-		return fmt.Errorf("failed to open registry key %s: %w", key.label, errors.Join(err, types.ErrNoData))
+		// Child failures are reported by key_success and classified as no-data warnings here.
+		return fmt.Errorf(
+			"failed to open registry key %s: %s: %w",
+			key.label,
+			err.Error(),
+			types.ErrNoData,
+		)
 	}
 
 	defer func() {
@@ -349,7 +355,13 @@ func (c *Collector) collectKey(ch chan<- prometheus.Metric, key Key) error {
 	for _, value := range key.Values {
 		val, _, err := rk.GetIntegerValue(value.Name)
 		if err != nil {
-			errs = append(errs, fmt.Errorf("failed to read value %q of registry key %s: %w", value.Name, key.label, errors.Join(err, types.ErrNoData)))
+			errs = append(errs, fmt.Errorf(
+				"failed to read value %q of registry key %s: %s: %w",
+				value.Name,
+				key.label,
+				err.Error(),
+				types.ErrNoData,
+			))
 
 			continue
 		}
