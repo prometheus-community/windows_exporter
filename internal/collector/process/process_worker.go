@@ -93,22 +93,20 @@ func (c *Collector) collect(ch chan<- prometheus.Metric, maxScrapeDuration time.
 	return err
 }
 
-func (c *Collector) collectWorker() {
-	defer func() {
-		if r := recover(); r != nil {
-			c.logger.Error("Worker panic",
-				slog.Any("panic", r),
-				slog.String("stack", string(debug.Stack())),
-			)
+func (c *Collector) collectWorker(requests <-chan processWorkerRequest) {
+	defer c.workerWG.Done()
 
-			// Restart the collectWorker
-			go c.collectWorker()
-		}
-	}()
-
-	for req := range c.workerCh {
+	for req := range requests {
 		(func() {
 			defer req.waitGroup.Done()
+			defer func() {
+				if r := recover(); r != nil {
+					c.logger.Error("Worker panic",
+						slog.Any("panic", r),
+						slog.String("stack", string(debug.Stack())),
+					)
+				}
+			}()
 
 			ch := req.ch
 			name := req.name
