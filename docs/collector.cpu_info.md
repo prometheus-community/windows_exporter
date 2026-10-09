@@ -27,6 +27,14 @@ referenced SMBIOS Type 7 installed cache sizes and remain in KiB. Thread capacit
 is not replaced by the count of active logical processors. Firmware records are
 not associated with OS packages by enumeration order on hosts with multiple
 sockets; that correspondence and WMI device IDs remain unproven.
+The processor topology APIs used here are available on Windows Server 2016:
+`GetLogicalProcessorInformationEx` and `RelationProcessorPackage` predate that
+release. API availability does not establish the Server 2016 CIMWin32 provider's
+`DeviceID` ordering or its association with SMBIOS records. Live parity with the
+Server 2016 provider has not been verified by this change. Multiple-package
+hosts therefore retain WMI; single-package hosts still require the startup
+comparison before native scraping is selected.
+
 ## Flags
 
 None
