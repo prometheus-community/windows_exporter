@@ -1787,6 +1787,942 @@
                     }
                 }
             },
+            "panel-112": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "sum by (process, process_id) (rate(windows_process_cpu_time_total{job=~\"$job\", instance=\"$instance\", process=~\"$process\", process_id!=\"0\"}[$__rate_interval])) and on (process, process_id) topk($process_top, sum by (process, process_id) (rate(windows_process_cpu_time_total{job=~\"$job\", instance=\"$instance\", process=~\"$process\", process_id!=\"0\"}[$__rate_interval] @ end())))",
+                                                "instant": false,
+                                                "legendFormat": "{{process}} ({{process_id}})",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {
+                                "maxDataPoints": 300
+                            },
+                            "transformations": []
+                        }
+                    },
+                    "description": "User and privileged CPU time per process as a share of one logical processor. Values above 100% mean the process uses more than one core. Shows the Top N selected processes ranked at the end of the time range; that set stays fixed throughout the graph. Requires the process collector.",
+                    "id": 112,
+                    "links": [],
+                    "title": "Process CPU usage",
+                    "vizConfig": {
+                        "group": "timeseries",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "palette-classic"
+                                    },
+                                    "custom": {
+                                        "axisBorderShow": false,
+                                        "axisCenteredZero": false,
+                                        "axisColorMode": "text",
+                                        "axisLabel": "",
+                                        "axisPlacement": "auto",
+                                        "barAlignment": 0,
+                                        "drawStyle": "line",
+                                        "fillOpacity": 10,
+                                        "gradientMode": "opacity",
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineInterpolation": "linear",
+                                        "lineWidth": 1,
+                                        "pointSize": 4,
+                                        "scaleDistribution": {
+                                            "type": "linear"
+                                        },
+                                        "showPoints": "never",
+                                        "spanNulls": false,
+                                        "stacking": {
+                                            "group": "A",
+                                            "mode": "none"
+                                        },
+                                        "thresholdsStyle": {
+                                            "mode": "off"
+                                        }
+                                    },
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "percentunit"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "legend": {
+                                    "calcs": [
+                                        "mean",
+                                        "max",
+                                        "lastNotNull"
+                                    ],
+                                    "displayMode": "table",
+                                    "placement": "bottom",
+                                    "showLegend": true
+                                },
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "multi",
+                                    "sort": "desc"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-113": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "windows_process_working_set_bytes{job=~\"$job\", instance=\"$instance\", process=~\"$process\", process_id!=\"0\"} and on (process, process_id) topk($process_top, windows_process_working_set_bytes{job=~\"$job\", instance=\"$instance\", process=~\"$process\", process_id!=\"0\"} @ end())",
+                                                "instant": false,
+                                                "legendFormat": "{{process}} ({{process_id}})",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {
+                                "maxDataPoints": 300
+                            },
+                            "transformations": []
+                        }
+                    },
+                    "description": "Physical memory in the working set of each process, including shared pages. Shows the Top N selected processes ranked at the end of the time range; that set stays fixed throughout the graph. Requires the process collector.",
+                    "id": 113,
+                    "links": [],
+                    "title": "Process working set",
+                    "vizConfig": {
+                        "group": "timeseries",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "palette-classic"
+                                    },
+                                    "custom": {
+                                        "axisBorderShow": false,
+                                        "axisCenteredZero": false,
+                                        "axisColorMode": "text",
+                                        "axisLabel": "",
+                                        "axisPlacement": "auto",
+                                        "barAlignment": 0,
+                                        "drawStyle": "line",
+                                        "fillOpacity": 10,
+                                        "gradientMode": "opacity",
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineInterpolation": "linear",
+                                        "lineWidth": 1,
+                                        "pointSize": 4,
+                                        "scaleDistribution": {
+                                            "type": "linear"
+                                        },
+                                        "showPoints": "never",
+                                        "spanNulls": false,
+                                        "stacking": {
+                                            "group": "A",
+                                            "mode": "none"
+                                        },
+                                        "thresholdsStyle": {
+                                            "mode": "off"
+                                        }
+                                    },
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "bytes"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "legend": {
+                                    "calcs": [
+                                        "mean",
+                                        "max",
+                                        "lastNotNull"
+                                    ],
+                                    "displayMode": "table",
+                                    "placement": "bottom",
+                                    "showLegend": true
+                                },
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "multi",
+                                    "sort": "desc"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-114": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "windows_process_private_bytes{job=~\"$job\", instance=\"$instance\", process=~\"$process\", process_id!=\"0\"} and on (process, process_id) topk($process_top, windows_process_private_bytes{job=~\"$job\", instance=\"$instance\", process=~\"$process\", process_id!=\"0\"} @ end())",
+                                                "instant": false,
+                                                "legendFormat": "{{process}} ({{process_id}})",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {
+                                "maxDataPoints": 300
+                            },
+                            "transformations": []
+                        }
+                    },
+                    "description": "Memory allocated by each process that cannot be shared with other processes. Shows the Top N selected processes ranked at the end of the time range; that set stays fixed throughout the graph. Requires the process collector.",
+                    "id": 114,
+                    "links": [],
+                    "title": "Process private bytes",
+                    "vizConfig": {
+                        "group": "timeseries",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "palette-classic"
+                                    },
+                                    "custom": {
+                                        "axisBorderShow": false,
+                                        "axisCenteredZero": false,
+                                        "axisColorMode": "text",
+                                        "axisLabel": "",
+                                        "axisPlacement": "auto",
+                                        "barAlignment": 0,
+                                        "drawStyle": "line",
+                                        "fillOpacity": 10,
+                                        "gradientMode": "opacity",
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineInterpolation": "linear",
+                                        "lineWidth": 1,
+                                        "pointSize": 4,
+                                        "scaleDistribution": {
+                                            "type": "linear"
+                                        },
+                                        "showPoints": "never",
+                                        "spanNulls": false,
+                                        "stacking": {
+                                            "group": "A",
+                                            "mode": "none"
+                                        },
+                                        "thresholdsStyle": {
+                                            "mode": "off"
+                                        }
+                                    },
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "bytes"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "legend": {
+                                    "calcs": [
+                                        "mean",
+                                        "max",
+                                        "lastNotNull"
+                                    ],
+                                    "displayMode": "table",
+                                    "placement": "bottom",
+                                    "showLegend": true
+                                },
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "multi",
+                                    "sort": "desc"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-115": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "sum by (process, process_id) (rate(windows_process_io_bytes_total{job=~\"$job\", instance=\"$instance\", process=~\"$process\", process_id!=\"0\"}[$__rate_interval])) and on (process, process_id) topk($process_top, sum by (process, process_id) (rate(windows_process_io_bytes_total{job=~\"$job\", instance=\"$instance\", process=~\"$process\", process_id!=\"0\"}[$__rate_interval] @ end())))",
+                                                "instant": false,
+                                                "legendFormat": "{{process}} ({{process_id}})",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {
+                                "maxDataPoints": 300
+                            },
+                            "transformations": []
+                        }
+                    },
+                    "description": "Total bytes issued for read, write and other I/O per process, including file, network and device operations. Shows the Top N selected processes ranked at the end of the time range; that set stays fixed throughout the graph. Requires the process collector.",
+                    "id": 115,
+                    "links": [],
+                    "title": "Process I/O throughput",
+                    "vizConfig": {
+                        "group": "timeseries",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "palette-classic"
+                                    },
+                                    "custom": {
+                                        "axisBorderShow": false,
+                                        "axisCenteredZero": false,
+                                        "axisColorMode": "text",
+                                        "axisLabel": "",
+                                        "axisPlacement": "auto",
+                                        "barAlignment": 0,
+                                        "drawStyle": "line",
+                                        "fillOpacity": 10,
+                                        "gradientMode": "opacity",
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineInterpolation": "linear",
+                                        "lineWidth": 1,
+                                        "pointSize": 4,
+                                        "scaleDistribution": {
+                                            "type": "linear"
+                                        },
+                                        "showPoints": "never",
+                                        "spanNulls": false,
+                                        "stacking": {
+                                            "group": "A",
+                                            "mode": "none"
+                                        },
+                                        "thresholdsStyle": {
+                                            "mode": "off"
+                                        }
+                                    },
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "Bps"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "legend": {
+                                    "calcs": [
+                                        "mean",
+                                        "max",
+                                        "lastNotNull"
+                                    ],
+                                    "displayMode": "table",
+                                    "placement": "bottom",
+                                    "showLegend": true
+                                },
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "multi",
+                                    "sort": "desc"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-116": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "windows_process_threads{job=~\"$job\", instance=\"$instance\", process=~\"$process\", process_id!=\"0\"} and on (process, process_id) topk($process_top, windows_process_threads{job=~\"$job\", instance=\"$instance\", process=~\"$process\", process_id!=\"0\"} @ end())",
+                                                "instant": false,
+                                                "legendFormat": "{{process}} ({{process_id}})",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {
+                                "maxDataPoints": 300
+                            },
+                            "transformations": []
+                        }
+                    },
+                    "description": "Active threads in each process. Shows the Top N selected processes ranked at the end of the time range; that set stays fixed throughout the graph. Requires the process collector.",
+                    "id": 116,
+                    "links": [],
+                    "title": "Process threads",
+                    "vizConfig": {
+                        "group": "timeseries",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "palette-classic"
+                                    },
+                                    "custom": {
+                                        "axisBorderShow": false,
+                                        "axisCenteredZero": false,
+                                        "axisColorMode": "text",
+                                        "axisLabel": "",
+                                        "axisPlacement": "auto",
+                                        "barAlignment": 0,
+                                        "drawStyle": "line",
+                                        "fillOpacity": 10,
+                                        "gradientMode": "opacity",
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineInterpolation": "linear",
+                                        "lineWidth": 1,
+                                        "pointSize": 4,
+                                        "scaleDistribution": {
+                                            "type": "linear"
+                                        },
+                                        "showPoints": "never",
+                                        "spanNulls": false,
+                                        "stacking": {
+                                            "group": "A",
+                                            "mode": "none"
+                                        },
+                                        "thresholdsStyle": {
+                                            "mode": "off"
+                                        }
+                                    },
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "short"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "legend": {
+                                    "calcs": [
+                                        "mean",
+                                        "max",
+                                        "lastNotNull"
+                                    ],
+                                    "displayMode": "table",
+                                    "placement": "bottom",
+                                    "showLegend": true
+                                },
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "multi",
+                                    "sort": "desc"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-117": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "windows_process_handles{job=~\"$job\", instance=\"$instance\", process=~\"$process\", process_id!=\"0\"} and on (process, process_id) topk($process_top, windows_process_handles{job=~\"$job\", instance=\"$instance\", process=~\"$process\", process_id!=\"0\"} @ end())",
+                                                "instant": false,
+                                                "legendFormat": "{{process}} ({{process_id}})",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {
+                                "maxDataPoints": 300
+                            },
+                            "transformations": []
+                        }
+                    },
+                    "description": "Open handles in each process. Steady growth can indicate a handle leak. Shows the Top N selected processes ranked at the end of the time range; that set stays fixed throughout the graph. Requires the process collector.",
+                    "id": 117,
+                    "links": [],
+                    "title": "Process handles",
+                    "vizConfig": {
+                        "group": "timeseries",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "palette-classic"
+                                    },
+                                    "custom": {
+                                        "axisBorderShow": false,
+                                        "axisCenteredZero": false,
+                                        "axisColorMode": "text",
+                                        "axisLabel": "",
+                                        "axisPlacement": "auto",
+                                        "barAlignment": 0,
+                                        "drawStyle": "line",
+                                        "fillOpacity": 10,
+                                        "gradientMode": "opacity",
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineInterpolation": "linear",
+                                        "lineWidth": 1,
+                                        "pointSize": 4,
+                                        "scaleDistribution": {
+                                            "type": "linear"
+                                        },
+                                        "showPoints": "never",
+                                        "spanNulls": false,
+                                        "stacking": {
+                                            "group": "A",
+                                            "mode": "none"
+                                        },
+                                        "thresholdsStyle": {
+                                            "mode": "off"
+                                        }
+                                    },
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "short"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "legend": {
+                                    "calcs": [
+                                        "mean",
+                                        "max",
+                                        "lastNotNull"
+                                    ],
+                                    "displayMode": "table",
+                                    "placement": "bottom",
+                                    "showLegend": true
+                                },
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "multi",
+                                    "sort": "desc"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-118": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "sum by (process, process_id) (rate(windows_process_io_operations_total{job=~\"$job\", instance=\"$instance\", process=~\"$process\", process_id!=\"0\"}[$__rate_interval])) and on (process, process_id) topk($process_top, sum by (process, process_id) (rate(windows_process_io_operations_total{job=~\"$job\", instance=\"$instance\", process=~\"$process\", process_id!=\"0\"}[$__rate_interval] @ end())))",
+                                                "instant": false,
+                                                "legendFormat": "{{process}} ({{process_id}})",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {
+                                "maxDataPoints": 300
+                            },
+                            "transformations": []
+                        }
+                    },
+                    "description": "Total read, write and other I/O operations per second per process. Includes file, network and device I/O. Shows the Top N selected processes ranked at the end of the time range; that set stays fixed throughout the graph. Requires the process collector.",
+                    "id": 118,
+                    "links": [],
+                    "title": "Process I/O operations",
+                    "vizConfig": {
+                        "group": "timeseries",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "palette-classic"
+                                    },
+                                    "custom": {
+                                        "axisBorderShow": false,
+                                        "axisCenteredZero": false,
+                                        "axisColorMode": "text",
+                                        "axisLabel": "",
+                                        "axisPlacement": "auto",
+                                        "barAlignment": 0,
+                                        "drawStyle": "line",
+                                        "fillOpacity": 10,
+                                        "gradientMode": "opacity",
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineInterpolation": "linear",
+                                        "lineWidth": 1,
+                                        "pointSize": 4,
+                                        "scaleDistribution": {
+                                            "type": "linear"
+                                        },
+                                        "showPoints": "never",
+                                        "spanNulls": false,
+                                        "stacking": {
+                                            "group": "A",
+                                            "mode": "none"
+                                        },
+                                        "thresholdsStyle": {
+                                            "mode": "off"
+                                        }
+                                    },
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "iops"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "legend": {
+                                    "calcs": [
+                                        "mean",
+                                        "max",
+                                        "lastNotNull"
+                                    ],
+                                    "displayMode": "table",
+                                    "placement": "bottom",
+                                    "showLegend": true
+                                },
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "multi",
+                                    "sort": "desc"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-119": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "rate(windows_process_page_faults_total{job=~\"$job\", instance=\"$instance\", process=~\"$process\", process_id!=\"0\"}[$__rate_interval]) and on (process, process_id) topk($process_top, rate(windows_process_page_faults_total{job=~\"$job\", instance=\"$instance\", process=~\"$process\", process_id!=\"0\"}[$__rate_interval] @ end()))",
+                                                "instant": false,
+                                                "legendFormat": "{{process}} ({{process_id}})",
+                                                "range": true
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {
+                                "maxDataPoints": 300
+                            },
+                            "transformations": []
+                        }
+                    },
+                    "description": "Page faults per second by each process, including soft faults that do not require reading from disk. Shows the Top N selected processes ranked at the end of the time range; that set stays fixed throughout the graph. Requires the process collector.",
+                    "id": 119,
+                    "links": [],
+                    "title": "Process page faults",
+                    "vizConfig": {
+                        "group": "timeseries",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "palette-classic"
+                                    },
+                                    "custom": {
+                                        "axisBorderShow": false,
+                                        "axisCenteredZero": false,
+                                        "axisColorMode": "text",
+                                        "axisLabel": "",
+                                        "axisPlacement": "auto",
+                                        "barAlignment": 0,
+                                        "drawStyle": "line",
+                                        "fillOpacity": 10,
+                                        "gradientMode": "opacity",
+                                        "hideFrom": {
+                                            "legend": false,
+                                            "tooltip": false,
+                                            "viz": false
+                                        },
+                                        "insertNulls": false,
+                                        "lineInterpolation": "linear",
+                                        "lineWidth": 1,
+                                        "pointSize": 4,
+                                        "scaleDistribution": {
+                                            "type": "linear"
+                                        },
+                                        "showPoints": "never",
+                                        "spanNulls": false,
+                                        "stacking": {
+                                            "group": "A",
+                                            "mode": "none"
+                                        },
+                                        "thresholdsStyle": {
+                                            "mode": "off"
+                                        }
+                                    },
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "green",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "ops"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "legend": {
+                                    "calcs": [
+                                        "mean",
+                                        "max",
+                                        "lastNotNull"
+                                    ],
+                                    "displayMode": "table",
+                                    "placement": "bottom",
+                                    "showLegend": true
+                                },
+                                "tooltip": {
+                                    "hideZeros": false,
+                                    "mode": "multi",
+                                    "sort": "desc"
+                                }
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
             "panel-12": {
                 "kind": "Panel",
                 "spec": {
@@ -4565,6 +5501,504 @@
                             "options": {
                                 "colorMode": "value",
                                 "graphMode": "area",
+                                "justifyMode": "auto",
+                                "orientation": "auto",
+                                "percentChangeColorMode": "standard",
+                                "reduceOptions": {
+                                    "calcs": [
+                                        "lastNotNull"
+                                    ],
+                                    "fields": "",
+                                    "values": false
+                                },
+                                "showPercentChange": false,
+                                "textMode": "auto",
+                                "wideLayout": true
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-150": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "count(count by (process_id) (windows_process_info{job=~\"$job\", instance=\"$instance\", process=~\"$process\", process_id!=\"0\"}))",
+                                                "instant": true,
+                                                "legendFormat": "__auto",
+                                                "range": false
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Number of distinct process IDs currently collected, excluding Idle. Includes all selected processes, regardless of Top N. Requires the process collector.",
+                    "id": 150,
+                    "links": [],
+                    "title": "Processes",
+                    "vizConfig": {
+                        "group": "stat",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "thresholds"
+                                    },
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "text",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "short"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "colorMode": "value",
+                                "graphMode": "none",
+                                "justifyMode": "auto",
+                                "orientation": "auto",
+                                "percentChangeColorMode": "standard",
+                                "reduceOptions": {
+                                    "calcs": [
+                                        "lastNotNull"
+                                    ],
+                                    "fields": "",
+                                    "values": false
+                                },
+                                "showPercentChange": false,
+                                "textMode": "auto",
+                                "wideLayout": true
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-151": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "sum(windows_process_threads{job=~\"$job\", instance=\"$instance\", process=~\"$process\", process_id!=\"0\"})",
+                                                "instant": true,
+                                                "legendFormat": "__auto",
+                                                "range": false
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Total active threads in the selected processes. Includes all selected processes, regardless of Top N. Requires the process collector.",
+                    "id": 151,
+                    "links": [],
+                    "title": "Threads",
+                    "vizConfig": {
+                        "group": "stat",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "thresholds"
+                                    },
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "text",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "short"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "colorMode": "value",
+                                "graphMode": "none",
+                                "justifyMode": "auto",
+                                "orientation": "auto",
+                                "percentChangeColorMode": "standard",
+                                "reduceOptions": {
+                                    "calcs": [
+                                        "lastNotNull"
+                                    ],
+                                    "fields": "",
+                                    "values": false
+                                },
+                                "showPercentChange": false,
+                                "textMode": "auto",
+                                "wideLayout": true
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-152": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "sum(windows_process_handles{job=~\"$job\", instance=\"$instance\", process=~\"$process\", process_id!=\"0\"})",
+                                                "instant": true,
+                                                "legendFormat": "__auto",
+                                                "range": false
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Total open handles in the selected processes. Includes all selected processes, regardless of Top N. Requires the process collector.",
+                    "id": 152,
+                    "links": [],
+                    "title": "Handles",
+                    "vizConfig": {
+                        "group": "stat",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "thresholds"
+                                    },
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "text",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "short"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "colorMode": "value",
+                                "graphMode": "none",
+                                "justifyMode": "auto",
+                                "orientation": "auto",
+                                "percentChangeColorMode": "standard",
+                                "reduceOptions": {
+                                    "calcs": [
+                                        "lastNotNull"
+                                    ],
+                                    "fields": "",
+                                    "values": false
+                                },
+                                "showPercentChange": false,
+                                "textMode": "auto",
+                                "wideLayout": true
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-153": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "sum(rate(windows_process_cpu_time_total{job=~\"$job\", instance=\"$instance\", process=~\"$process\", process_id!=\"0\"}[$__rate_interval])) / scalar(max(windows_cpu_logical_processor{job=~\"$job\", instance=\"$instance\"}))",
+                                                "instant": true,
+                                                "legendFormat": "__auto",
+                                                "range": false
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "CPU time used by the selected processes as a share of all logical processors of the host, excluding Idle. Includes all selected processes, regardless of Top N. Requires the process collector.",
+                    "id": 153,
+                    "links": [],
+                    "title": "Process CPU busy",
+                    "vizConfig": {
+                        "group": "stat",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "thresholds"
+                                    },
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "text",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "percentunit"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "colorMode": "value",
+                                "graphMode": "none",
+                                "justifyMode": "auto",
+                                "orientation": "auto",
+                                "percentChangeColorMode": "standard",
+                                "reduceOptions": {
+                                    "calcs": [
+                                        "lastNotNull"
+                                    ],
+                                    "fields": "",
+                                    "values": false
+                                },
+                                "showPercentChange": false,
+                                "textMode": "auto",
+                                "wideLayout": true
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-154": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "sum(windows_process_working_set_private_bytes{job=~\"$job\", instance=\"$instance\", process=~\"$process\", process_id!=\"0\"})",
+                                                "instant": true,
+                                                "legendFormat": "__auto",
+                                                "range": false
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Physical memory private to the selected processes; shared pages are excluded. Includes all selected processes, regardless of Top N. Requires the process collector.",
+                    "id": 154,
+                    "links": [],
+                    "title": "Private working set",
+                    "vizConfig": {
+                        "group": "stat",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "thresholds"
+                                    },
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "text",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "bytes"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "colorMode": "value",
+                                "graphMode": "none",
+                                "justifyMode": "auto",
+                                "orientation": "auto",
+                                "percentChangeColorMode": "standard",
+                                "reduceOptions": {
+                                    "calcs": [
+                                        "lastNotNull"
+                                    ],
+                                    "fields": "",
+                                    "values": false
+                                },
+                                "showPercentChange": false,
+                                "textMode": "auto",
+                                "wideLayout": true
+                            }
+                        },
+                        "version": ""
+                    }
+                }
+            },
+            "panel-155": {
+                "kind": "Panel",
+                "spec": {
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {
+                            "queries": [
+                                {
+                                    "kind": "PanelQuery",
+                                    "spec": {
+                                        "hidden": false,
+                                        "query": {
+                                            "datasource": {
+                                                "name": "${datasource}"
+                                            },
+                                            "group": "prometheus",
+                                            "kind": "DataQuery",
+                                            "spec": {
+                                                "editorMode": "code",
+                                                "expr": "sum(windows_process_private_bytes{job=~\"$job\", instance=\"$instance\", process=~\"$process\", process_id!=\"0\"})",
+                                                "instant": true,
+                                                "legendFormat": "__auto",
+                                                "range": false
+                                            },
+                                            "version": "v0"
+                                        },
+                                        "refId": "A"
+                                    }
+                                }
+                            ],
+                            "queryOptions": {},
+                            "transformations": []
+                        }
+                    },
+                    "description": "Total memory allocated by the selected processes that cannot be shared; it may include nonresident memory. Includes all selected processes, regardless of Top N. Requires the process collector.",
+                    "id": 155,
+                    "links": [],
+                    "title": "Private bytes",
+                    "vizConfig": {
+                        "group": "stat",
+                        "kind": "VizConfig",
+                        "spec": {
+                            "fieldConfig": {
+                                "defaults": {
+                                    "color": {
+                                        "mode": "thresholds"
+                                    },
+                                    "min": 0,
+                                    "thresholds": {
+                                        "mode": "absolute",
+                                        "steps": [
+                                            {
+                                                "color": "text",
+                                                "value": null
+                                            }
+                                        ]
+                                    },
+                                    "unit": "bytes"
+                                },
+                                "overrides": []
+                            },
+                            "options": {
+                                "colorMode": "value",
+                                "graphMode": "none",
                                 "justifyMode": "auto",
                                 "orientation": "auto",
                                 "percentChangeColorMode": "standard",
@@ -16310,6 +17744,201 @@
                                             "spec": {
                                                 "element": {
                                                     "kind": "ElementReference",
+                                                    "name": "panel-150"
+                                                },
+                                                "height": 4,
+                                                "width": 4,
+                                                "x": 0,
+                                                "y": 0
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-151"
+                                                },
+                                                "height": 4,
+                                                "width": 4,
+                                                "x": 4,
+                                                "y": 0
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-152"
+                                                },
+                                                "height": 4,
+                                                "width": 4,
+                                                "x": 8,
+                                                "y": 0
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-153"
+                                                },
+                                                "height": 4,
+                                                "width": 4,
+                                                "x": 12,
+                                                "y": 0
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-154"
+                                                },
+                                                "height": 4,
+                                                "width": 4,
+                                                "x": 16,
+                                                "y": 0
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-155"
+                                                },
+                                                "height": 4,
+                                                "width": 4,
+                                                "x": 20,
+                                                "y": 0
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-112"
+                                                },
+                                                "height": 8,
+                                                "width": 12,
+                                                "x": 0,
+                                                "y": 4
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-113"
+                                                },
+                                                "height": 8,
+                                                "width": 12,
+                                                "x": 12,
+                                                "y": 4
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-114"
+                                                },
+                                                "height": 8,
+                                                "width": 12,
+                                                "x": 0,
+                                                "y": 12
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-115"
+                                                },
+                                                "height": 8,
+                                                "width": 12,
+                                                "x": 12,
+                                                "y": 12
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-116"
+                                                },
+                                                "height": 8,
+                                                "width": 12,
+                                                "x": 0,
+                                                "y": 20
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-117"
+                                                },
+                                                "height": 8,
+                                                "width": 12,
+                                                "x": 12,
+                                                "y": 20
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-118"
+                                                },
+                                                "height": 8,
+                                                "width": 12,
+                                                "x": 0,
+                                                "y": 28
+                                            }
+                                        },
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
+                                                    "name": "panel-119"
+                                                },
+                                                "height": 8,
+                                                "width": 12,
+                                                "x": 12,
+                                                "y": 28
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            "title": "Processes"
+                        }
+                    },
+                    {
+                        "kind": "TabsLayoutTab",
+                        "spec": {
+                            "layout": {
+                                "kind": "GridLayout",
+                                "spec": {
+                                    "items": [
+                                        {
+                                            "kind": "GridLayoutItem",
+                                            "spec": {
+                                                "element": {
+                                                    "kind": "ElementReference",
                                                     "name": "panel-50"
                                                 },
                                                 "height": 4,
@@ -17588,6 +19217,79 @@
                     "regex": "/^(?!isatap|Teredo|6to4).+$/",
                     "skipUrlSync": false,
                     "sort": "alphabeticalAsc"
+                }
+            },
+            {
+                "kind": "QueryVariable",
+                "spec": {
+                    "allowCustomValue": true,
+                    "current": {
+                        "text": [
+                            "All"
+                        ],
+                        "value": [
+                            "$__all"
+                        ]
+                    },
+                    "definition": "label_values(windows_process_info{job=~\"$job\", instance=\"$instance\", process_id!=\"0\"}, process)",
+                    "hide": "dontHide",
+                    "includeAll": true,
+                    "label": "Process",
+                    "multi": true,
+                    "name": "process",
+                    "options": [],
+                    "query": {
+                        "datasource": {
+                            "name": "${datasource}"
+                        },
+                        "group": "prometheus",
+                        "kind": "DataQuery",
+                        "spec": {
+                            "qryType": 1,
+                            "query": "label_values(windows_process_info{job=~\"$job\", instance=\"$instance\", process_id!=\"0\"}, process)",
+                            "refId": "PrometheusVariableQueryEditor-VariableQuery"
+                        },
+                        "version": "v0"
+                    },
+                    "refresh": "onTimeRangeChanged",
+                    "regex": "",
+                    "skipUrlSync": false,
+                    "sort": "alphabeticalAsc"
+                }
+            },
+            {
+                "kind": "CustomVariable",
+                "spec": {
+                    "allowCustomValue": false,
+                    "current": {
+                        "text": "10",
+                        "value": "10"
+                    },
+                    "description": "Maximum number of processes per graph. Summary counters include all selected processes.",
+                    "hide": "dontHide",
+                    "includeAll": false,
+                    "label": "Top N processes",
+                    "multi": false,
+                    "name": "process_top",
+                    "options": [
+                        {
+                            "selected": false,
+                            "text": "5",
+                            "value": "5"
+                        },
+                        {
+                            "selected": true,
+                            "text": "10",
+                            "value": "10"
+                        },
+                        {
+                            "selected": false,
+                            "text": "20",
+                            "value": "20"
+                        }
+                    ],
+                    "query": "5,10,20",
+                    "skipUrlSync": false
                 }
             }
         ]

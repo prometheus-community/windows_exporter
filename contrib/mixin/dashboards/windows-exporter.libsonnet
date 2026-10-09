@@ -7,6 +7,7 @@ local tabs = [
   import 'memory.libsonnet',
   import 'disk.libsonnet',
   import 'network.libsonnet',
+  import 'processes.libsonnet',
   import 'services.libsonnet',
   import 'gpu.libsonnet',
   import 'hyper_v.libsonnet',
