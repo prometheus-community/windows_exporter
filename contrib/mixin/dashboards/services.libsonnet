@@ -12,6 +12,7 @@ b.tab(
   ]),
   [
     b.panel.new(50, 'Running services', 'stat')
+    + b.panel.withDescription('Number of services currently in the running state, reported by the service collector. Compare unexpected drops with the stopped automatic services table and service change history.')
     + b.panel.withQueries([
       b.query.new('sum(windows_service_state{job=~"$job", instance="$instance", state="running"})', 'A')
       + b.query.withInstant(),
@@ -60,6 +61,7 @@ b.tab(
     }),
 
     b.panel.new(53, 'Disabled services', 'stat')
+    + b.panel.withDescription('Number of services configured with disabled startup. A disabled service cannot start until its startup mode changes; disabled services are not necessarily unhealthy.')
     + b.panel.withQueries([
       b.query.new('sum(windows_service_start_mode{job=~"$job", instance="$instance", start_mode="disabled"})', 'A')
       + b.query.withInstant(),

@@ -159,6 +159,7 @@ b.tab(
     }),
 
     b.panel.new(95, 'Samples per scrape', 'stat')
+    + b.panel.withDescription('Number of metric samples returned before Prometheus metric relabeling. Changes can reflect collector configuration or changing device/process counts; unexpected drops should be checked against scrape and collector success.')
     + b.panel.withQueries([
       b.query.new('scrape_samples_scraped{job=~"$job", instance="$instance"}', 'A'),
     ])
@@ -213,6 +214,7 @@ b.tab(
     ]),
 
     b.panel.new(99, 'Collectors', 'table')
+    + b.panel.withDescription('Latest success, timeout and duration for each enabled collector. Success is 1 for a completed collection and 0 for a failure; timeout is 1 when the scrape budget was exceeded. Disabled collectors are absent.')
     + b.panel.withQueries([
       b.query.new('windows_exporter_collector_success{job=~"$job", instance="$instance"}', 'A')
       + b.query.withInstant()

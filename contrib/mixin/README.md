@@ -285,9 +285,9 @@ used locally.
 
 Run `mise run lint-dashboards` to lint just the committed dashboard. `.dashboard-lint.yaml`
 documents exceptions for the sample dashboard's single-host selection, fleet
-queries, editable state, and existing panels without descriptions or numeric
-units. Other findings fail validation, including warnings. Remove panel
-exceptions when adding the missing descriptions.
+queries, editable state, and the service table without numeric units. All panels
+include descriptions; missing titles or descriptions fail validation, including
+warnings.
 
 `.pint.hcl` requires a non-empty severity label, summary/description annotations,
 and an HTTP(S) runbook URL on alerts, in addition to pint's built-in checks.

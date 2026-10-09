@@ -19,6 +19,7 @@ b.tab(
   ]),
   [
     b.panel.new(10, 'Operating system', 'stat')
+    + b.panel.withDescription('Windows product name and version reported by the os collector. Use this to distinguish hosts when investigating version-specific behavior.')
     + b.panel.withQueries([
       b.query.new('windows_os_info{job=~"$job", instance="$instance"}', 'A')
       + b.query.withInstant()
@@ -58,12 +59,14 @@ b.tab(
     }),
 
     b.panel.new(12, 'CPUs', 'stat')
+    + b.panel.withDescription('Number of logical processors available to Windows, including SMT threads. This is the logical CPU count rather than the number of physical sockets.')
     + b.panel.withQueries([
       b.query.new('windows_cpu_logical_processor{job=~"$job", instance="$instance"}', 'A')
       + b.query.withInstant(),
     ]),
 
     b.panel.new(13, 'RAM', 'stat')
+    + b.panel.withDescription('Total physical memory visible to Windows in bytes. Compare with used memory and commit charge when investigating memory pressure.')
     + b.panel.withQueries([
       b.query.new('windows_memory_physical_total_bytes{job=~"$job", instance="$instance"}', 'A')
       + b.query.withInstant(),
@@ -74,6 +77,7 @@ b.tab(
     }),
 
     b.panel.new(14, 'CPU busy', 'stat')
+    + b.panel.withDescription('Percentage of non-idle CPU time averaged across logical processors over the rate interval. Sustained high values together with a growing processor queue can indicate CPU contention.')
     + b.panel.withQueries([
       b.query.new('100 * (1 - avg by (instance) (clamp_max(rate(windows_cpu_time_total{job=~"$job", instance="$instance", mode="idle"}[$__rate_interval]), 1)))', 'A'),
     ])
@@ -104,6 +108,7 @@ b.tab(
     }),
 
     b.panel.new(15, 'Memory used', 'stat')
+    + b.panel.withDescription('Percentage of physical memory in use, calculated as total minus available memory. This differs from commit charge, which measures promised virtual memory against the commit limit.')
     + b.panel.withQueries([
       b.query.new('100 * (1 - windows_memory_physical_free_bytes{job=~"$job", instance="$instance"} / windows_memory_physical_total_bytes{job=~"$job", instance="$instance"})', 'A'),
     ])
@@ -186,6 +191,7 @@ b.tab(
     }),
 
     b.panel.new(18, 'CPU utilization', 'timeseries')
+    + b.panel.withDescription('Percentage of non-idle CPU time averaged across logical processors. This measures CPU time rather than the frequency-adjusted processor utility shown by Windows Task Manager.')
     + b.panel.withQueries([
       b.query.new('100 * (1 - avg by (instance) (clamp_max(rate(windows_cpu_time_total{job=~"$job", instance="$instance", mode="idle"}[$__rate_interval]), 1)))', 'A')
       + b.query.withLegendFormat('CPU busy'),
@@ -276,6 +282,7 @@ b.tab(
     ]),
 
     b.panel.new(20, 'Volumes', 'table')
+    + b.panel.withDescription('Size, available space and used percentage of each selected logical volume. Windows free-space counters can lag by 10 to 15 minutes; use trends rather than treating a single sample as immediate confirmation of reclaimed space.')
     + b.panel.withQueries([
       b.query.new('windows_logical_disk_size_bytes{job=~"$job", instance="$instance", volume=~"$volume"}', 'A')
       + b.query.withInstant()
