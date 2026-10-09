@@ -13,11 +13,11 @@ The printer collector exposes metrics about printers and their jobs.
 
 ### `--collector.printer.include`
 
-If given, a printer needs to match the include regexp in order for the corresponding printer metrics to be reported
+If given, a printer needs to match the include regular expression in order for the corresponding printer metrics to be reported
 
 ### `--collector.printer.exclude`
 
-If given, a printer needs to *not* match the exclude regexp in order for the corresponding printer metrics to be reported
+If given, a printer needs to *not* match the exclude regular expression in order for the corresponding printer metrics to be reported
 
 ## Metrics
 
